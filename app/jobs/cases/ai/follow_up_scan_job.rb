@@ -41,6 +41,7 @@ class Cases::Ai::FollowUpScanJob < ApplicationJob
   def stale_tickets(account)
     account.case_tickets
            .where(status: :waiting_on_customer)
+           .where(postponed_until: nil) # Plan-Clase-Comercial F3: pospuesta = espera acordada
            .where('updated_at < ?', STALE_HOURS.hours.ago)
            .where("COALESCE(metadata->'ai_follow_up'->>'status', '') <> 'pending'")
            .order(updated_at: :asc)

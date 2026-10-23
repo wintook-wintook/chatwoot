@@ -37,7 +37,7 @@
 #  fk_rails_...  (contact_id => contacts.id)
 #  fk_rails_...  (conversation_id => conversations.id)
 #  fk_rails_...  (inbox_id => inboxes.id)
-#  fk_rails_...  (user_id => users.id)
+#  fk_rails_...  (user_id => users.id) ON DELETE => cascade
 #
 
 class CommandSession < ApplicationRecord

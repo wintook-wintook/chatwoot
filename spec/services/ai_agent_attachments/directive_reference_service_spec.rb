@@ -19,6 +19,17 @@ RSpec.describe AiAgentAttachments::DirectiveReferenceService do
   end
 
   describe '.rename' do
+    # Renombrar usa update_columns, que se saltea el callback de la estructura por
+    # bloques: si no pasara las dos columnas, el formulario mostraría el nombre viejo.
+    it 'actualiza también la estructura por bloques del agente' do
+      template.update!(complementary_prompt: "[ARCHIVOS]\nMandá {{catalogo}}")
+
+      described_class.rename(template, 'catalogo', 'catalogo_2026')
+
+      bloque = template.reload.training_structure['blocks'].first
+      expect(bloque['body']).to eq('Mandá {{catalogo_2026}}')
+    end
+
     it 'reescribe la referencia en el prompt del agente' do
       template.update!(complementary_prompt: 'Envía {{catalogo}} ahora')
       described_class.rename(template, 'catalogo', 'catalogo_2026')

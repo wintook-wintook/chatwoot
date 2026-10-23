@@ -27,7 +27,13 @@ class Api::V1::Accounts::CaseNotesController < Api::V1::Accounts::BaseController
   end
 
   def create
-    note = @ticket.add_internal_note!(content: note_params[:content], actor: current_user)
+    note = @ticket.add_internal_note!(
+      content: note_params[:content],
+      actor: current_user,
+      # @tickets_cases — nota de una tarea del ticket (opcional). Se resuelve
+      # dentro del ticket para no aceptar tareas de otro caso.
+      case_task: resolve_case_task
+    )
     render json: { case_note: note_json(note) }, status: :created
   rescue StandardError => e
     render json: { error: e.message }, status: :unprocessable_entity
@@ -76,18 +82,32 @@ class Api::V1::Accounts::CaseNotesController < Api::V1::Accounts::BaseController
   # Orden cronológico (la más vieja arriba), como el hilo de osTicket: se lee
   # como bitácora de arriba abajo.
   def notes_scope
-    @ticket.case_events.where(event_type: :internal_note).order(created_at: :asc)
+    @ticket.case_events.where(event_type: :internal_note)
+           .includes(:case_task).order(created_at: :asc)
+  end
+
+  # @tickets_cases — resuelve la tarea (dentro del ticket) a la que se ata la
+  # nota. Sin `case_task_id` la nota es del ticket (case_task nil).
+  def resolve_case_task
+    task_id = note_params[:case_task_id]
+    return nil if task_id.blank?
+
+    @ticket.case_tasks.find(task_id)
   end
 
   def note_params
-    params.require(:case_note).permit(:content)
+    params.require(:case_note).permit(:content, :case_task_id)
   end
 
   def note_json(note)
     payload = note.payload || {}
     {
       id:           note.id,
+      sequence:     payload['sequence'],
       content:      payload['content'],
+      # @tickets_cases — tarea dueña de la nota (nil = nota del ticket mismo).
+      # `sequence` alimenta el folio T00N que pinta la columna "Tarea".
+      case_task:    ref_task(note.case_task),
       actor:        ref_user(note.actor),
       created_at:   note.created_at,
       edited_at:    payload['edited_at'],
@@ -111,5 +131,11 @@ class Api::V1::Accounts::CaseNotesController < Api::V1::Accounts::BaseController
     return nil unless user
 
     { id: user.id, name: user.name }
+  end
+
+  def ref_task(task)
+    return nil unless task
+
+    { id: task.id, sequence: task.sequence, title: task.title }
   end
 end

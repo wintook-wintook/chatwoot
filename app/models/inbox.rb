@@ -69,6 +69,7 @@ class Inbox < ApplicationRecord
   has_many :inbox_members, dependent: :destroy_async
   has_many :members, through: :inbox_members, source: :user
   has_many :conversations, dependent: :destroy_async
+  has_many :calls, dependent: :destroy_async # diag/llamadas_whatsapp
   has_many :messages, dependent: :destroy_async
 
   has_one :agent_bot_inbox, dependent: :destroy_async
@@ -102,8 +103,16 @@ class Inbox < ApplicationRecord
     channel_type == 'Channel::FacebookPage'
   end
 
+  # Canal nativo de Instagram (Instagram Login), sin Página de Facebook de por medio.
+  def native_instagram?
+    channel_type == 'Channel::Instagram'
+  end
+
+  # Cualquier ruta de Instagram: el canal nativo o la legacy, en la que Instagram viaja
+  # dentro de un Channel::FacebookPage con instagram_id. Los consumidores de este método
+  # (adjuntos, helpers de mensaje) valen igual para ambas.
   def instagram?
-    facebook? && channel.instagram_id.present?
+    native_instagram? || (facebook? && channel.instagram_id.present?)
   end
 
   def web_widget?

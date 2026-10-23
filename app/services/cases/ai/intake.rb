@@ -28,9 +28,13 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
   # conversation_text: transcripción reciente (Cliente/Bot: ...).
   # policy:            prompt complementario sin las directivas técnicas.
   def extract(conversation_text:, policy: nil)
-    types      = @account.case_types.order(:position).pluck(:id, :name)
-    services   = @account.case_services.where(active: true).pluck(:id, :name)
-    categories = @account.case_categories.where(active: true).pluck(:id, :name)
+    # [id, nombre, clase]: la clase le dice a la IA para qué es cada tipo.
+    types      = @account.case_types.active.order(:position).pluck(:id, :name, :case_class)
+    # Plan-Clase-Comercial F2: [id, nombre, case_type_id]; NULL = global. El tipo
+    # se elige en la misma respuesta, así que se listan todos con su etiqueta y
+    # `sanitize` descarta los que no sean del tipo elegido.
+    services   = @account.case_services.where(active: true).pluck(:id, :name, :case_type_id)
+    categories = @account.case_categories.where(active: true).pluck(:id, :name, :case_type_id)
 
     raw = chat(
       system: system_prompt(policy),
@@ -54,6 +58,11 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
           una queja o una intención concreta que amerite abrir un ticket para una persona.
           false para saludos, charla trivial, agradecimientos, o temas ya resueltos/atendidos
           (por ejemplo, una cita que ya se agendó). Ante la duda, false.
+          IMPORTANTE: evaluá la CONVERSACIÓN COMPLETA, no solo el último mensaje. Si en algún punto
+          anterior el cliente ya planteó una solicitud concreta y los mensajes siguientes son él
+          dando más datos, confirmando algo, o preguntando por el estado — es la MISMA solicitud
+          en curso: seguí devolviendo true, no la reevalúes como si el último mensaje fuera
+          charla trivial aislada.
         - "title": título claro y breve del problema (NO copies el mensaje literal).
         - "description": resumen de 2 a 4 líneas: qué pasa, desde cuándo y qué intentó el cliente.
         - "ticket_kind": uno de [#{KINDS.join(', ')}].
@@ -79,28 +88,49 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
       CONVERSACIÓN:
       #{conversation_text.presence || '(sin contexto)'}
 
-      TIPOS DE CASO DISPONIBLES (id: nombre):
-      #{listing(types)}
+      TIPOS DE CASO DISPONIBLES (id: nombre · clase):
+      #{type_listing(types)}
 
-      SERVICIOS DISPONIBLES (id: nombre):
-      #{listing(services)}
+      SERVICIOS DISPONIBLES (id: nombre; «solo tipo N» = únicamente para ese tipo de caso):
+      #{typed_listing(services)}
 
-      CATEGORÍAS DISPONIBLES (id: nombre):
-      #{listing(categories)}
+      CATEGORÍAS DISPONIBLES (id: nombre; «solo tipo N» = únicamente para ese tipo de caso):
+      #{typed_listing(categories)}
     PROMPT
   end
 
-  def listing(pairs)
-    return '(ninguno)' if pairs.blank?
+  # Qué significa cada clase, para que la IA elija bien el tipo.
+  CLASS_HINTS = {
+    'support' => 'Soporte: un problema, falla, queja o solicitud de servicio',
+    'commercial' => 'Comercial: interés de compra, cotización o venta',
+    'work_order' => 'Orden de trabajo: un trabajo o visita en sitio',
+    'project' => 'Proyecto: un trabajo largo con fases y entregas'
+  }.freeze
 
-    pairs.map { |id, name| "#{id}: #{name}" }.join("\n")
+  def type_listing(types)
+    return '(ninguno)' if types.blank?
+
+    types.map { |id, name, klass| "#{id}: #{name} · #{CLASS_HINTS[klass.presence || 'support']}" }.join("\n")
+  end
+
+  def typed_listing(rows)
+    return '(ninguno)' if rows.blank?
+
+    rows.map { |id, name, type_id| type_id ? "#{id}: #{name} (solo tipo #{type_id})" : "#{id}: #{name}" }.join("\n")
+  end
+
+  # El id elegido existe y es global o del tipo elegido; si no, nil.
+  def typed_pick(rows, raw_id, type_id)
+    row = rows.find { |id, _name, _type| id == raw_id }
+    return nil unless row && (row[2].nil? || row[2] == type_id)
+
+    raw_id
   end
 
   # Mantiene solo valores válidos; descarta enums fuera de rango e ids inexistentes.
   def sanitize(raw, types, services, categories)
-    type_ids     = types.map(&:first)
-    service_ids  = services.map(&:first)
-    category_ids = categories.map(&:first)
+    type_ids = types.map(&:first)
+    type_id  = type_ids.include?(raw['case_type_id']) ? raw['case_type_id'] : nil
 
     {
       'ticket_worthy'       => ActiveModel::Type::Boolean.new.cast(raw.fetch('ticket_worthy', true)),
@@ -109,9 +139,9 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
       'ticket_kind'         => KINDS.include?(raw['ticket_kind']) ? raw['ticket_kind'] : nil,
       'impact'              => IMPACTS.include?(raw['impact']) ? raw['impact'] : nil,
       'urgency'             => URGENCIES.include?(raw['urgency']) ? raw['urgency'] : nil,
-      'case_type_id'        => type_ids.include?(raw['case_type_id']) ? raw['case_type_id'] : nil,
-      'affected_service_id' => service_ids.include?(raw['affected_service_id']) ? raw['affected_service_id'] : nil,
-      'category_id'         => category_ids.include?(raw['category_id']) ? raw['category_id'] : nil,
+      'case_type_id'        => type_id,
+      'affected_service_id' => typed_pick(services, raw['affected_service_id'], type_id),
+      'category_id'         => typed_pick(categories, raw['category_id'], type_id),
       'churn_risk'          => ActiveModel::Type::Boolean.new.cast(raw['churn_risk']) || false,
       'missing_info'        => Array(raw['missing_info']).map { |s| s.to_s.strip }.reject(&:blank?).first(5),
       'confidence'          => raw['confidence'].to_f.clamp(0.0, 1.0),

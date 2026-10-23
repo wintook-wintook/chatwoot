@@ -168,7 +168,7 @@ Chatwoot **no tiene un modelo nativo de Organización** con esta riqueza. Lo má
 |----------|---------------|
 | Org agrupa usuarios | 🟡 solo `company_name` / id CRMZeus, sin roster real |
 | Account Manager (auto-asigna tickets) | ❌ |
-| Primary Contacts / auto-colaboradores | ❌ (liga con "Colaboradores/CC", pendiente P4) |
+| Primary Contacts / auto-colaboradores | ❌ (ligaba con "Colaboradores/CC", **descartado 2026-07-28**) |
 | Auto-Add por dominio de email | ❌ |
 | Custom fields de org | 🟡 vía custom attributes del contacto, no de una entidad org |
 
@@ -176,7 +176,8 @@ Chatwoot **no tiene un modelo nativo de Organización** con esta riqueza. Lo má
 - ❌ **Modelo Organization propio** (roster de contactos, no solo string/id externo).
 - ❌ **Account Manager** por organización → auto-asignación de tickets.
 - ❌ **Auto-add por dominio** de email.
-- ❌ **Colaboradores/CC** (ya listado en pendiente P4) — encaja con primary contacts.
+- ❌ **Colaboradores/CC** — **descartado (2026-07-28)**, ya no está en P4 ni en el
+  roadmap; encajaría con primary contacts si algún día se retoma.
 
 > Nota: este es el gap más "estructural" del recorrido hasta ahora. Evaluar si MGCI
 > necesita una entidad Organización real o si basta extender el contacto + CRMZeus.

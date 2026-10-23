@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <rect x="0" y="0" width="940" height="600" fill="#f4f6f9"/>
+
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28" letter-spacing="-0.4">admExistenciaCosto: el acumulado que da el costo vigente</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">59 columnas por producto × almacén × ejercicio · no hay CCOSTOPROMEDIO, el promedio se deriva</text>
+
+  <!-- Clave -->
+  <rect x="40" y="94" width="860" height="46" rx="8" fill="#ffffff" stroke="#0284c7" stroke-width="1.8"/>
+  <text x="60" y="122" font-size="12.5" fill="#151b28"><tspan font-weight="700">Clave:</tspan>  CIDPRODUCTO  ·  CIDALMACEN  ·  CIDEJERCICIO → admEjercicios  ·  CTIPOEXISTENCIA</text>
+
+  <!-- Bloques de columnas -->
+  <rect x="40" y="158" width="418" height="150" rx="9" fill="#ffffff" stroke="#dbe1ea"/>
+  <text x="62" y="184" font-size="13" font-weight="700" fill="#151b28">UNIDADES</text>
+  <rect x="62" y="196" width="374" height="34" rx="6" fill="#f0f9ff" stroke="#bae6fd"/>
+  <text x="76" y="218" font-size="11.5" fill="#075985">CENTRADASINICIALES / CSALIDASINICIALES</text>
+  <rect x="62" y="238" width="374" height="34" rx="6" fill="#f0f9ff" stroke="#bae6fd"/>
+  <text x="76" y="260" font-size="11.5" fill="#075985">CENTRADASPERIODO1..12 / CSALIDASPERIODO1..12</text>
+  <text x="62" y="292" font-size="11" fill="#5c6675">PERIODO1..12 = los 12 meses del ejercicio</text>
+
+  <rect x="482" y="158" width="418" height="150" rx="9" fill="#ffffff" stroke="#dbe1ea"/>
+  <text x="504" y="184" font-size="13" font-weight="700" fill="#151b28">IMPORTE</text>
+  <rect x="504" y="196" width="374" height="34" rx="6" fill="#faf5ff" stroke="#e9d5ff"/>
+  <text x="518" y="218" font-size="11.5" fill="#5b21b6">CCOSTOINICIALENTRADAS / CCOSTOINICIALSALIDAS</text>
+  <rect x="504" y="238" width="374" height="34" rx="6" fill="#faf5ff" stroke="#e9d5ff"/>
+  <text x="518" y="260" font-size="11.5" fill="#5b21b6">CCOSTOENTRADASPERIODO1..12 / CCOSTOSALIDAS…1..12</text>
+  <text x="504" y="292" font-size="11" fill="#5c6675">Todo en float — espera ruido de punto flotante</text>
+
+  <!-- Formulas -->
+  <rect x="40" y="326" width="860" height="120" rx="9" fill="#ffffff" stroke="#0284c7" stroke-width="1.8"/>
+  <text x="62" y="352" font-size="13" font-weight="700" fill="#075985">Fórmulas</text>
+  <text x="62" y="378" font-size="12" fill="#151b28" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">existencia = iniciales(E−S) + Σ entradas(1..12) − Σ salidas(1..12)</text>
+  <text x="62" y="400" font-size="12" fill="#151b28" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">costo_acum = inicial(E−S) + Σ costoEntradas(1..12) − Σ costoSalidas(1..12)</text>
+  <text x="62" y="426" font-size="12" font-weight="700" fill="#075985" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">costo_promedio = costo_acum / NULLIF(existencia, 0)</text>
+
+  <!-- Validacion -->
+  <rect x="40" y="464" width="418" height="112" rx="9" fill="#f0fdf4" stroke="#86efac"/>
+  <text x="62" y="490" font-size="12.5" font-weight="700" fill="#14532d">Cuadra donde el costeo está sano</text>
+  <text x="62" y="514" font-size="11.5" fill="#166534">Producto 61 · ejercicio 2026 · almacén 2</text>
+  <text x="62" y="534" font-size="12" font-weight="700" fill="#15803d" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">500.00 / 5 = 100.00 = CCOSTOH</text>
+  <text x="62" y="558" font-size="11.5" fill="#166534">Ese producto tiene CERRORCOSTO = 0.</text>
+
+  <rect x="482" y="464" width="418" height="112" rx="9" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="504" y="490" font-size="12.5" font-weight="700" fill="#991b1b">Y falla donde CONTPAQi ya marcó error</text>
+  <text x="504" y="514" font-size="11.5" fill="#7f1d1d">Productos 45 y 2 · CERRORCOSTO = 3 → no cuadra</text>
+  <text x="504" y="534" font-size="12" font-weight="700" fill="#dc2626" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">4 416.67 / 79 = 55.91  ≠  68.18</text>
+  <text x="504" y="558" font-size="11.5" fill="#7f1d1d">17 de los 31 con CERRORCOSTO=3 tienen existencia &lt; 0.</text>
+</svg>

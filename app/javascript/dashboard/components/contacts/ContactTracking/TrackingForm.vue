@@ -364,6 +364,7 @@
 
 <script>
 import { useTrackingForm } from '../../../composables/useTrackingForm';
+import AssistantAPI from 'dashboard/api/assistant'; // proyecto@asistente_agentes_ia
 import { formatDateTime, getAttemptEstimatedTime } from '../../../helper/trackingHelpers';
 import MultiselectDropdown from 'shared/components/ui/MultiselectDropdown.vue';
 
@@ -544,12 +545,41 @@ export default {
             this.$emit('clear-template');
         },
 
+        // Una sola pasada: acá no hay conversación donde preguntar, así que el
+        // asistente redacta con lo que haya y marca lo que falte como <PENDIENTE:>.
+        async generateTrainingWithAssistant() {
+            this.originalComplementaryPrompt = this.formData.complementary_prompt;
+            this.isImprovingAI = true;
+            try {
+                const { data } = await AssistantAPI.interview(
+                    [
+                        {
+                            role: 'user',
+                            content: [
+                                `Objetivo del agente: ${(this.formData.objective || '').trim()}`,
+                                `Contexto: ${(this.formData.ai_context || '').trim()}`,
+                                `Instrucciones adicionales: ${(this.formData.complementary_prompt || '').trim()}`,
+                            ].join('\n'),
+                        },
+                    ],
+                    null,
+                    { oneShot: true }
+                );
+                if (data.draft) {
+                    this.formData.complementary_prompt = data.draft;
+                }
+            } catch (error) {
+                this.originalComplementaryPrompt = null;
+            } finally {
+                this.isImprovingAI = false;
+            }
+        },
+
         async improveWithAI(field) {
             // [FEATURE:AI_LOADING_INDICATOR] - Evitar múltiples clicks
             if (this.isImprovingAI) return;
 
             const isGeneratePrompt = field === 'complementary_prompt';
-            const mode = isGeneratePrompt ? 'generate_prompt' : 'improve';
 
             // Para generar prompt: usar el texto actual o el contexto como base
             let text;
@@ -560,6 +590,17 @@ export default {
             }
 
             if (!text) return;
+
+            // proyecto@asistente_agentes_ia — generar el Entrenamiento pasa por el
+            // asistente nuevo, que redacta contra el inventario real de la cuenta y
+            // comprueba el resultado con el parser del motor. El generador anterior
+            // producía prosa que el motor no parsea: el agente nacía sin ejecutar nada.
+            if (isGeneratePrompt) {
+                await this.generateTrainingWithAssistant();
+                return;
+            }
+
+            const mode = 'improve';
 
             // Guardar original antes de mejorar
             if (field === 'ai_context') {
@@ -578,20 +619,9 @@ export default {
                     mode
                 };
 
-                // Para generar prompt, enviar contexto y objetivo como datos adicionales
-                if (isGeneratePrompt) {
-                    payload.context = (this.formData.ai_context || '').trim();
-                    payload.objective = (this.formData.objective || '').trim();
-                }
-
                 const response = await this.$store.dispatch('contactTrackings/improveText', payload);
                 if (response?.improved_text) {
-                    let generatedText = response.improved_text;
-                    // Al generar el prompt complementario, agregar el contexto al final como dato
-                    if (isGeneratePrompt && this.formData.ai_context?.trim()) {
-                        generatedText += `\n\nCONTEXTO:\n${this.formData.ai_context.trim()}`;
-                    }
-                    this.formData[field] = generatedText;
+                    this.formData[field] = response.improved_text;
                 }
             } catch (error) {
                 console.error('Error mejorando texto con IA:', error);

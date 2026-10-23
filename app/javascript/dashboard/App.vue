@@ -4,13 +4,14 @@ import router from '../dashboard/routes';
 import AddAccountModal from '../dashboard/components/layout/sidebarComponents/AddAccountModal.vue';
 import LoadingState from './components/widgets/LoadingState.vue';
 import NetworkNotification from './components/NetworkNotification.vue';
+import CaseToastNotification from './components/CaseToastNotification.vue';
 import UpdateBanner from './components/app/UpdateBanner.vue';
 import UpgradeBanner from './components/app/UpgradeBanner.vue';
 import PaymentPendingBanner from './components/app/PaymentPendingBanner.vue';
 import PendingEmailVerificationBanner from './components/app/PendingEmailVerificationBanner.vue';
 import vueActionCable from './helper/actionCable';
 import WootSnackbarBox from './components/SnackbarContainer.vue';
-import { setColorTheme } from './helper/themeHelper';
+import { setColorTheme, applyColorTint } from './helper/themeHelper';
 import { isOnOnboardingView } from 'v3/helpers/RouteHelper';
 import {
   registerSubscription,
@@ -18,6 +19,7 @@ import {
 } from './helper/pushHelper';
 import ReconnectService from 'dashboard/helper/ReconnectService';
 import Webphone from './components/layout/webphoneComponents/Webphone.vue';
+import WhatsappCallWidget from './components/widgets/calls/WhatsappCallWidget.vue'; // diag/llamadas_whatsapp
 
 export default {
   name: 'App',
@@ -26,12 +28,14 @@ export default {
     AddAccountModal,
     LoadingState,
     NetworkNotification,
+    CaseToastNotification,
     UpdateBanner,
     PaymentPendingBanner,
     WootSnackbarBox,
     UpgradeBanner,
     PendingEmailVerificationBanner,
     Webphone,
+    WhatsappCallWidget,
   },
   data() {
     return {
@@ -85,6 +89,7 @@ export default {
   methods: {
     initializeColorTheme() {
       setColorTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+      applyColorTint();
     },
     listenToThemeChanges() {
       const mql = window.matchMedia('(prefers-color-scheme: dark)');
@@ -127,6 +132,7 @@ export default {
     :dir="isRTL ? 'rtl' : 'ltr'"
   >
     <webphone />
+    <WhatsappCallWidget v-if="currentAccountId" />
     <UpdateBanner :latest-chatwoot-version="latestChatwootVersion" />
     <template v-if="currentAccountId">
       <PendingEmailVerificationBanner v-if="hideOnOnboardingView" />
@@ -139,6 +145,7 @@ export default {
     <AddAccountModal :show="showAddAccountModal" :has-accounts="hasAccounts" />
     <WootSnackbarBox />
     <NetworkNotification />
+    <CaseToastNotification />
   </div>
   <LoadingState v-else />
 </template>

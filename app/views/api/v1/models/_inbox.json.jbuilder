@@ -57,6 +57,12 @@ if resource.facebook?
   json.reauthorization_required resource.channel.try(:reauthorization_required?)
 end
 
+## Instagram Attributes (canal nativo; el legacy va dentro del bloque de Facebook)
+if resource.native_instagram?
+  json.instagram_id resource.channel.try(:instagram_id)
+  json.reauthorization_required resource.channel.try(:reauthorization_required?)
+end
+
 ## Twilio Attributes
 json.messaging_service_sid resource.channel.try(:messaging_service_sid)
 json.phone_number resource.channel.try(:phone_number)
@@ -110,4 +116,13 @@ json.provider resource.channel.try(:provider)
 if resource.whatsapp?
   json.message_templates resource.channel.try(:message_templates)
   json.provider_config resource.channel.try(:provider_config) if Current.account_user&.administrator?
+  # diag/llamadas_whatsapp (F5): qué llamadas permite (el botón «Llamar» y el widget lo leen)
+  if resource.channel.try(:voice_calling_supported?)
+    json.whatsapp_calls do
+      json.inbound resource.channel.inbound_calls_allowed?
+      json.outbound resource.channel.outbound_calls_allowed?
+      json.recording resource.channel.recording_enabled?
+      json.ringtone resource.channel.provider_config['ringtone'] # nil = el de omisión (marimba)
+    end
+  end
 end

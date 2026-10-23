@@ -1,0 +1,169 @@
+# frozen_string_literal: true
+
+# ================================================================================
+# proyecto@asistente_agentes_ia — GUARDAR EL ENTRENAMIENTO
+# ================================================================================
+# Lleva el borrador del asistente a un Agente IA: crea uno nuevo, o reemplaza el
+# Entrenamiento de uno que ya existe.
+#
+# POR QUÉ NO GUARDA SI HAY BLOQUEANTES:
+#   Todo el módulo existe porque hoy se puede guardar un agente que no ejecuta nada
+#   y nadie se entera. Dejar que el guardado se saltee el comprobador sería
+#   reintroducir el defecto por la puerta de atrás. Los hallazgos que DEGRADAN sí
+#   dejan guardar: avisan de algo que funciona mal, no de algo que no existe.
+#
+# AL REEMPLAZAR SE GUARDA EL ANTERIOR:
+#   En previous_complementary_prompt. Es una columna y no una tabla de versiones
+#   porque lo que hace falta acá es poder volver atrás UNA vez, en el momento: si el
+#   Entrenamiento nuevo sale peor, se revierte sin depender de que alguien haya
+#   copiado el viejo a mano antes de guardar.
+# ================================================================================
+
+class ContactTrackings::Assistant::SaveService
+  Result = Struct.new(:template, :error, :details, :warnings, keyword_init: true) do
+    def success? = error.blank?
+  end
+
+  # Lo que el comprobador NO puede saber sobre un borrador: hay directivas cuya
+  # ejecución depende de la configuración del AGENTE, no del texto ni de la
+  # cuenta. Sobre un borrador el agente todavía no existe; recién acá, con la
+  # plantilla guardada, se puede mirar.
+  #
+  # Hoy hay una: @agendar_calendar solo agenda si el agente tiene calendarios
+  # asignados (appointment_dispatchable? exige calendar_configured?). Escrita sin
+  # eso, la directiva parsea, se guarda, y el turno pasa de largo sin agendar.
+  # Es la última rendija por la que se colaba una falla silenciosa.
+  AGENDAR_RE = /@agendar_calendar\b/i
+
+  def initialize(account, user:, draft:, mode:, params: {})
+    @account = account
+    @user = user
+    @draft = draft.to_s
+    @mode = mode.to_s
+    @params = params
+  end
+
+  def call
+    return Result.new(error: :empty_draft) if @draft.blank?
+
+    validation = ContactTrackings::Assistant::ValidatorService.new(@draft, account: @account).call
+    return Result.new(error: :blocking_findings, details: validation[:blocking]) if validation[:blocking].any?
+
+    case @mode
+    when 'create'  then create
+    when 'replace' then replace
+    else Result.new(error: :unknown_mode)
+    end
+  end
+
+  private
+
+  # El aviso va DESPUÉS de guardar y no impide guardar: el agente quedó bien, lo
+  # que falta es asignarle el calendario en su ficha —otra pantalla— y frenar el
+  # guardado por eso obligaría a hacer las dos cosas en un orden que nadie
+  # adivina.
+  def warnings_for(template)
+    return [] unless @draft.match?(AGENDAR_RE)
+    return [] if template.calendar_integration_ids.present?
+
+    [{ code: :calendar_not_assigned,
+       message: I18n.t('tracking_assistant.warnings.calendar_not_assigned',
+                       name: template.name,
+                       locale: ContactTrackings::Assistant::Language.resolve) }]
+  end
+
+  def saved(template)
+    Result.new(template: template, warnings: warnings_for(template))
+  end
+
+  def create
+    template = @account.tracking_templates.new(
+      **version_origin,
+      name: @params[:name],
+      objective: @params[:objective],
+      # Solo lo que la persona dijo en la conversación. Vacío es una respuesta
+      # válida: rellenarlo de memoria le haría citar al agente cosas falsas.
+      ai_context: @params[:ai_context].presence,
+      inbox_id: resolved_inbox_id,
+      complementary_prompt: @draft,
+      user: @user
+    )
+    assign_calendars(template)
+    template.save ? saved(template) : Result.new(error: :invalid, details: template.errors.full_messages)
+  end
+
+  def replace
+    template = @account.tracking_templates.find_by(id: @params[:template_id])
+    return Result.new(error: :template_not_found) if template.nil?
+
+    conflicto = stale_draft(template)
+    return Result.new(error: :stale_draft, details: conflicto) if conflicto
+
+    # El anterior se guarda ANTES de pisarlo; si el update falla, no se perdió nada.
+    template.previous_complementary_prompt = template.complementary_prompt
+    template.complementary_prompt = @draft
+    template.assign_attributes(version_origin)
+    assign_calendars(template)
+    template.save ? saved(template) : Result.new(error: :invalid, details: template.errors.full_messages)
+  end
+
+  # Los calendarios elegidos al guardar (pedido del usuario, 24/09/2026: un agente con
+  # @agendar_calendar quedó sin calendario y no agendaba; el aviso de después se
+  # perdía). Solo integraciones de ESTA cuenta; sin la llave, no se tocan los que tiene.
+  def assign_calendars(template)
+    return unless @params.key?(:calendar_integration_ids)
+
+    pedidos = Array(@params[:calendar_integration_ids]).map(&:to_i)
+    template.calendar_integration_ids = UserCalendarIntegration.where(account: @account, id: pedidos).pluck(:id)
+  end
+
+  # feat/agentes_ia_unificado — ¿el Entrenamiento del agente cambió desde que esta
+  # conversación partió de él? Otro admin publicó, se restauró una versión o se editó
+  # la ficha: publicar lo pisaría sin que nadie se entere. Se avisa con la versión que
+  # lo cambió, quién y cuándo; `force` publica de todos modos (queda en Versiones).
+  # Sin base (conversación anterior a esto) no se revisa.
+  def stale_draft(template)
+    return if ActiveModel::Type::Boolean.new.cast(@params[:force])
+
+    base = session_record&.base_version
+    return if base.nil? || !prompt_changed_since?(template, base)
+
+    ultima = template.versions.includes(:user).ordered.first
+    { base_version: base, version: ultima&.version, source: ultima&.source,
+      author: ultima&.author_name, at: ultima&.created_at }
+  end
+
+  def prompt_changed_since?(template, base)
+    base_prompt = template.versions.find_by(version: base)&.snapshot&.dig('complementary_prompt')
+    base_prompt.present? && base_prompt != template.complementary_prompt
+  end
+
+  def session_record
+    return @session_record if defined?(@session_record)
+
+    @session_record = TrackingAssistantSession.find_by(id: @params[:session_id], account_id: @account.id)
+  end
+
+  # feat/agentes_ia_unificado — la versión del agente hereda el origen de la sesión.
+  # Lo cambiado desde que se cargó o se guardó por última vez: si todo salió de la
+  # pestaña «Configurar», es `configured`; si no, `assistant` (chat o editor). La nota
+  # junta lo que el Asistente declaró de cada cambio.
+  def version_origin
+    cambios = changes_since_checkpoint
+    fuentes = cambios.pluck('source').uniq - %w[loaded saved]
+    source = fuentes.present? && fuentes.all?('configured') ? 'configured' : 'assistant'
+    notas = cambios.flat_map { |v| [v['summary'], *Array(v['notes'])] }.compact_blank.uniq
+    { version_source: source, version_note: notas.join(' · ').truncate(255).presence }
+  end
+
+  def changes_since_checkpoint
+    versiones = Array(session_record&.draft_versions)
+    corte = versiones.rindex { |v| %w[loaded saved].include?(v['source']) }
+    corte ? versiones[(corte + 1)..] : versiones
+  end
+
+  # Un inbox de otra cuenta no se liga: se ignora, igual que hace el inventario.
+  def resolved_inbox_id
+    @account.inboxes.where(id: @params[:inbox_id]).pick(:id)
+  end
+end

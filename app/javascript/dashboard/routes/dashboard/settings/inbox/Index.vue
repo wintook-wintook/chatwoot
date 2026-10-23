@@ -38,6 +38,10 @@ const channelTypeOptions = computed(() => [
     label: t('INBOX_MGMT.CHANNELS.MESSENGER'),
   },
   {
+    value: 'Channel::Instagram',
+    label: t('INBOX_MGMT.CHANNELS.INSTAGRAM'),
+  },
+  {
     value: 'Channel::TwilioSms',
     label: t('INBOX_MGMT.CHANNELS.TWILIO_SMS'),
   },

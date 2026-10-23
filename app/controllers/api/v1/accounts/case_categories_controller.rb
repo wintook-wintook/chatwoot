@@ -9,6 +9,9 @@
 # POST   /api/v1/accounts/:account_id/case_categories       → create (parent_id opcional)
 # PATCH  /api/v1/accounts/:account_id/case_categories/:id   → update
 # DELETE /api/v1/accounts/:account_id/case_categories/:id   → destroy (borra subcategorías)
+#
+# Plan-Clase-Comercial F2: `case_type_id` NULL = global; lo fija la categoría raíz
+# y las subcategorías lo heredan. `?case_type_id=` filtra el index.
 # ================================================================================
 
 class Api::V1::Accounts::CaseCategoriesController < Api::V1::Accounts::BaseController
@@ -17,6 +20,7 @@ class Api::V1::Accounts::CaseCategoriesController < Api::V1::Accounts::BaseContr
   def index
     CaseCategory.ensure_defaults_for(Current.account)
     roots = Current.account.case_categories.roots.ordered.includes(:subcategories)
+    roots = roots.for_type(params[:case_type_id].to_i) if params[:case_type_id].present?
     render json: { case_categories: roots.map { |c| category_json(c) } }
   end
 
@@ -54,7 +58,7 @@ class Api::V1::Accounts::CaseCategoriesController < Api::V1::Accounts::BaseContr
   end
 
   def category_params
-    permitted = params.require(:case_category).permit(:name, :active, :position, :parent_id)
+    permitted = params.require(:case_category).permit(:name, :active, :position, :parent_id, :case_type_id)
     # parent_id debe pertenecer a la cuenta; si no, se ignora (queda raíz).
     if permitted[:parent_id].present?
       permitted[:parent_id] = Current.account.case_categories.where(id: permitted[:parent_id]).pick(:id)
@@ -69,6 +73,7 @@ class Api::V1::Accounts::CaseCategoriesController < Api::V1::Accounts::BaseContr
       parent_id:     category.parent_id,
       active:        category.active,
       position:      category.position,
+      case_type_id:  category.case_type_id,
       subcategories: category.subcategories.ordered.map { |s| category_json(s) },
       created_at:    category.created_at,
       updated_at:    category.updated_at

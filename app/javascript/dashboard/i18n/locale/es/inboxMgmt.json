@@ -390,7 +390,7 @@
           "PLACEHOLDER": "Configure channel token"
         },
         "SUBMIT_BUTTON": "Create NotificaMe Channel",
-        "API": { 
+        "API": {
           "ERROR_MESSAGE": "We were not able to save the NotificaMe channel"
         }
       },
@@ -501,6 +501,18 @@
         "PROCESSING": "Creando tu inbox, por favor espera...",
         "APP_ID_MISSING": "El Embedded Signup de WhatsApp no está configurado. Contacta a tu administrador.",
         "SDK_NOT_LOADED": "El SDK de Facebook aún no está cargado. Por favor inténtalo de nuevo."
+      },
+      "INSTAGRAM": {
+        "SIGN_IN": "Iniciar sesión con Instagram",
+        "HELP": "Para conectar una cuenta de Instagram Business, inicia sesión con Instagram. No hace falta una Página de Facebook.",
+        "ERROR_MESSAGE": "Hubo un error al conectar con Instagram, inténtalo de nuevo",
+        "ERROR": {
+          "DENIED": "Cancelaste la autorización de Instagram",
+          "INVALID_STATE": "La autorización caducó, inténtalo de nuevo",
+          "MISSING_CODE": "Instagram no devolvió el código de autorización, inténtalo de nuevo",
+          "ALREADY_CONNECTED": "Esa cuenta de Instagram ya está conectada en otra cuenta",
+          "FAILED": "Instagram rechazó la autorización, inténtalo de nuevo"
+        }
       }
     },
     "DETAILS": {
@@ -897,7 +909,8 @@
       "EMAIL": "Email",
       "TELEGRAM": "Telegram",
       "LINE": "Line",
-      "API": "API Channel"
+      "API": "API Channel",
+      "INSTAGRAM": "Instagram"
     }
   }
 }

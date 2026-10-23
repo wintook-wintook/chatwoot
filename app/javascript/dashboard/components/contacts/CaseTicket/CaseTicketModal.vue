@@ -8,7 +8,17 @@
 -->
 <script>
 import { mapGetters } from 'vuex';
+import { forType, idAvailable } from 'dashboard/helper/caseClassification';
+import { isCommercialType } from 'dashboard/helper/caseCommercial';
+import {
+  isWorkOrderType,
+  workOrderPayload,
+} from 'dashboard/helper/caseWorkOrder';
+import { isProjectType, projectPayload } from 'dashboard/helper/caseProject';
 import CaseTimeline from './CaseTimeline.vue';
+import { creatableTypes } from 'dashboard/helper/caseClasses';
+// Plan-Metricas-Comercial — «Comprometida por el cliente».
+import CommitmentFields from 'dashboard/views/gestorTickets/commercial/CommitmentFields.vue';
 
 // Espejo de Cases::PriorityMatrix (backend). impacto × urgencia → prioridad.
 const PRIORITY_MATRIX = {
@@ -19,7 +29,7 @@ const PRIORITY_MATRIX = {
 
 export default {
   name: 'CaseTicketModal',
-  components: { CaseTimeline },
+  components: { CaseTimeline, CommitmentFields },
   props: {
     show: { type: Boolean, default: false },
     contactId: { type: [Number, String], required: true },
@@ -36,6 +46,23 @@ export default {
       form: {
         case_type_id: null,
         ticket_kind: 'service_request',
+        // Plan-Clase-Comercial F4 — solo se envían si el tipo es Comercial.
+        amount: '',
+        currency: '',
+        expected_close_at: '',
+        probability: '',
+        committed: false,
+        commit_note: '',
+        // Plan-Clase-Orden-de-Trabajo F2a — solo se envían si el tipo es una orden.
+        work_address: '',
+        estimated_hours: '',
+        billable: false,
+        // Plan-Clase-Proyecto P1 — datos del proyecto (solo ese tipo).
+        project_start_on: '',
+        project_due_on: '',
+        budget_hours: '',
+        budget_amount: '',
+        progress: '',
         title: '',
         affected_service_id: null,
         category_id: null,
@@ -60,8 +87,46 @@ export default {
       getContactTickets: 'caseTickets/getContactTickets',
       agents: 'agents/getAgents', // @tickets_cases — asignación manual
       teams: 'teams/getTeams',
-      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
+      currentUser: 'getCurrentUser',
+      caseSettings: 'caseTickets/getCaseSettings',
     }),
+    // Plan-Clase-Comercial F4 — oportunidad: datos comerciales, sin ITIL.
+    isCommercial() {
+      return isCommercialType(this.selectedType);
+    },
+    isWorkOrder() {
+      return isWorkOrderType(this.selectedType);
+    },
+    isProject() {
+      return isProjectType(this.selectedType);
+    },
+    // Fila Impacto · Urgencia · Prioridad: en una orden es una fila flexible para
+    // que quepan las horas al lado de la prioridad.
+    priorityRowClass() {
+      if (this.isWorkOrder) return 'flex flex-wrap items-start';
+      return this.itilEnabled ? 'grid grid-cols-3' : '';
+    },
+    // Tipos con los que se crea un caso (sin los retirados).
+    newCaseTypes() {
+      return creatableTypes(this.types);
+    },
+    // Tipo de caso elegido en el form.
+    selectedType() {
+      return (this.types || []).find(t => t.id === this.form.case_type_id);
+    },
+    // @tickets_cases — modo ITIL propio del tipo elegido en el form (ya no es
+    // un ajuste global de cuenta).
+    itilEnabled() {
+      return !!this.selectedType?.itil_enabled && !this.isCommercial;
+    },
+    // @tickets_cases — al crear, el responsable arranca en el agente firmado.
+    // Solo si ese usuario figura entre los agentes de la cuenta (un superadmin
+    // que no es agente no aparece en el select y dejarlo daría un valor muerto).
+    defaultAssigneeId() {
+      const id = this.currentUser?.id;
+      if (!id) return '';
+      return this.agents.some(ag => ag.id === id) ? id : '';
+    },
     tickets() {
       return this.getContactTickets(this.contactId);
     },
@@ -85,6 +150,15 @@ export default {
         // @tickets_cases — asignación manual (antes de campos personalizados).
         { key: 'assign', label: this.$t('CASE_TICKETS.MODAL.TAB_ASSIGN') },
         { key: 'custom', label: this.$t('CASE_TICKETS.MODAL.TAB_CUSTOM') },
+        // Plan-Clase-Orden-de-Trabajo — dirección del servicio (solo orden).
+        ...(this.isWorkOrder
+          ? [
+              {
+                key: 'address',
+                label: this.$t('CASE_TICKETS.MODAL.TAB_ADDRESS'),
+              },
+            ]
+          : []),
       ];
     },
     activeTabIndex() {
@@ -103,10 +177,17 @@ export default {
     urgencyOptions() {
       return this.$t('CASE_TICKETS.URGENCY');
     },
+    // Plan-Clase-Comercial F2: solo la clasificación global o propia del tipo elegido.
+    typedServices() {
+      return forType(this.services, this.form.case_type_id);
+    },
+    typedCategories() {
+      return forType(this.categories, this.form.case_type_id);
+    },
     // Categorías raíz + subcategorías indentadas para el selector.
     flatCategories() {
       const out = [];
-      (this.categories || []).forEach(c => {
+      this.typedCategories.forEach(c => {
         out.push({ id: c.id, label: c.name });
         (c.subcategories || []).forEach(sub => {
           out.push({ id: sub.id, label: `— ${sub.name}` });
@@ -123,10 +204,7 @@ export default {
     },
     // 2K — campos personalizados del tipo de caso seleccionado.
     selectedTypeFields() {
-      const type = (this.types || []).find(
-        t => t.id === this.form.case_type_id
-      );
-      return (type && type.custom_fields) || [];
+      return this.selectedType?.custom_fields || [];
     },
     // ¿Todos los campos requeridos tienen valor?
     customFieldsValid() {
@@ -139,6 +217,18 @@ export default {
     },
   },
   watch: {
+    // Al cambiar de tipo, suelta el servicio/categoría que ya no aplica.
+    'form.case_type_id'() {
+      if (this.isCommercial && !this.form.currency) {
+        this.form.currency = this.caseSettings?.default_currency || 'MXN';
+      }
+      if (!idAvailable(this.typedServices, this.form.affected_service_id)) {
+        this.form.affected_service_id = null;
+      }
+      if (!idAvailable(this.typedCategories, this.form.category_id)) {
+        this.form.category_id = null;
+      }
+    },
     contactId(newId) {
       if (newId) this.fetchTickets();
     },
@@ -163,15 +253,18 @@ export default {
       this.view = this.tickets.length ? 'list' : 'create';
     });
     this.$store.dispatch('caseTickets/fetchTypes').then(() => {
-      if (!this.form.case_type_id && this.types.length) {
-        this.form.case_type_id = this.types[0].id;
+      if (!this.form.case_type_id && this.newCaseTypes.length) {
+        this.form.case_type_id = this.newCaseTypes[0].id;
       }
     });
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('caseTickets/fetchCategories');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
     // @tickets_cases — agentes y equipos para la asignación manual.
-    this.$store.dispatch('agents/get');
+    this.$store.dispatch('agents/get').then(() => {
+      if (!this.form.assignee_id)
+        this.form.assignee_id = this.defaultAssigneeId;
+    });
     this.$store.dispatch('teams/get');
   },
   methods: {
@@ -245,6 +338,9 @@ export default {
           custom_attributes: this.selectedTypeFields.length
             ? this.customValues
             : undefined,
+          ...this.commercialPayload(),
+          ...(this.isWorkOrder ? workOrderPayload(this.form) : {}),
+          ...(this.isProject ? projectPayload(this.form) : {}),
         });
         this.$emit('created', ticket);
         this.$emitter.emit('newToastMessage', {
@@ -261,10 +357,40 @@ export default {
         });
       }
     },
+    // Plan-Clase-Comercial F4 — vacío = no se manda (el backend pone moneda de
+    // la cuenta y la probabilidad de la etapa inicial).
+    commercialPayload() {
+      if (!this.isCommercial) return {};
+      const f = this.form;
+      return {
+        amount: f.amount === '' ? undefined : f.amount,
+        currency: f.currency.trim().toUpperCase() || undefined,
+        expected_close_at: f.expected_close_at || undefined,
+        probability: f.probability === '' ? undefined : f.probability,
+        committed: f.committed || undefined,
+        commit_note: (f.committed && f.commit_note.trim()) || undefined,
+      };
+    },
     resetForm() {
       this.form = {
-        case_type_id: this.types.length ? this.types[0].id : null,
+        case_type_id: this.newCaseTypes.length ? this.newCaseTypes[0].id : null,
         ticket_kind: 'service_request',
+        amount: '',
+        currency: '',
+        expected_close_at: '',
+        probability: '',
+        committed: false,
+        commit_note: '',
+        // Plan-Clase-Orden-de-Trabajo F2a — solo se envían si el tipo es una orden.
+        work_address: '',
+        estimated_hours: '',
+        billable: false,
+        // Plan-Clase-Proyecto P1 — datos del proyecto (solo ese tipo).
+        project_start_on: '',
+        project_due_on: '',
+        budget_hours: '',
+        budget_amount: '',
+        progress: '',
         title: '',
         affected_service_id: null,
         category_id: null,
@@ -272,7 +398,8 @@ export default {
         urgency: null,
         priority: 'medium',
         description: '',
-        assignee_id: '',
+        // Tras crear un caso el formulario vuelve al agente firmado, no a vacío.
+        assignee_id: this.defaultAssigneeId,
         team_id: '',
       };
     },
@@ -514,7 +641,7 @@ export default {
                 {{ $t('CASE_TICKETS.MODAL.CASE_TYPE_LABEL') }}
               </span>
               <select v-model="form.case_type_id" class="input" required>
-                <option v-for="t in types" :key="t.id" :value="t.id">
+                <option v-for="t in newCaseTypes" :key="t.id" :value="t.id">
                   {{ t.name }}
                 </option>
               </select>
@@ -569,18 +696,164 @@ export default {
               />
             </label>
 
+            <!-- Plan-Clase-Orden-de-Trabajo F2a — datos de la orden -->
+            <div
+              v-if="isWorkOrder"
+              class="flex items-center col-span-2 gap-3 px-3 py-2 rounded-lg bg-teal-50 dark:bg-slate-800/50"
+            >
+              <label class="flex items-center gap-2">
+                <input v-model="form.billable" type="checkbox" class="!mb-0" />
+                <span class="text-sm text-slate-700 dark:text-slate-300">
+                  {{ $t('CASE_TICKETS.WORK_ORDER.FIELDS.BILLABLE') }}
+                </span>
+              </label>
+            </div>
+
+            <!-- Plan-Clase-Proyecto P1 — datos del proyecto -->
+            <div
+              v-if="isProject"
+              class="grid grid-cols-4 col-span-2 gap-3 p-3 rounded-lg bg-indigo-50 dark:bg-slate-800/50"
+            >
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('CASE_TICKETS.PROJECT.FIELDS.START') }}
+                </span>
+                <input
+                  v-model="form.project_start_on"
+                  type="date"
+                  class="input"
+                />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('CASE_TICKETS.PROJECT.FIELDS.DUE') }}
+                </span>
+                <input
+                  v-model="form.project_due_on"
+                  type="date"
+                  class="input"
+                />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('CASE_TICKETS.PROJECT.FIELDS.BUDGET_HOURS') }}
+                </span>
+                <input
+                  v-model="form.budget_hours"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  class="input"
+                />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('CASE_TICKETS.PROJECT.FIELDS.BUDGET_AMOUNT') }}
+                </span>
+                <input
+                  v-model="form.budget_amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="input"
+                />
+              </label>
+            </div>
+
+            <!-- Plan-Clase-Comercial F4 — datos de la oportunidad -->
+            <div
+              v-if="isCommercial"
+              class="grid grid-cols-4 col-span-2 gap-3 p-3 rounded-lg bg-violet-50 dark:bg-slate-800/50"
+            >
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.AMOUNT') }}
+                </span>
+                <input
+                  v-model="form.amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="input"
+                />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.CURRENCY') }}
+                </span>
+                <input
+                  v-model="form.currency"
+                  type="text"
+                  maxlength="3"
+                  class="uppercase input"
+                />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{
+                    form.committed
+                      ? $t('CASE_TICKETS.COMMERCIAL.COMMITMENT.DATE')
+                      : $t('CASE_TICKETS.COMMERCIAL.FIELDS.EXPECTED_CLOSE')
+                  }}
+                </span>
+                <input
+                  v-model="form.expected_close_at"
+                  type="date"
+                  class="input"
+                  :required="form.committed"
+                />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.PROBABILITY') }} %
+                </span>
+                <input
+                  v-model="form.probability"
+                  type="number"
+                  min="0"
+                  max="100"
+                  class="input"
+                />
+              </label>
+              <!-- Plan-Metricas-Comercial — el cliente ya se comprometió -->
+              <CommitmentFields
+                :committed.sync="form.committed"
+                :note.sync="form.commit_note"
+              />
+            </div>
+
             <!-- Servicio afectado -->
             <label class="flex flex-col gap-1">
               <span
                 class="text-sm font-medium text-slate-700 dark:text-slate-300"
               >
-                {{ $t('CASE_TICKETS.MODAL.AFFECTED_SERVICE_LABEL') }}
+                {{
+                  isCommercial
+                    ? $t('CASE_TICKETS.MODAL.INTEREST_PRODUCTS_LABEL')
+                    : $t('CASE_TICKETS.MODAL.AFFECTED_SERVICE_LABEL')
+                }}
               </span>
               <select v-model="form.affected_service_id" class="input">
                 <option :value="null">
                   {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
                 </option>
-                <option v-for="s in services" :key="s.id" :value="s.id">
+                <option v-for="s in typedServices" :key="s.id" :value="s.id">
                   {{ s.name }}
                 </option>
               </select>
@@ -604,12 +877,13 @@ export default {
             </label>
 
             <!-- Impacto · Urgencia · Prioridad (impacto/urgencia ocultos en modo simple) -->
-            <div
-              class="col-span-2 gap-3"
-              :class="itilEnabled ? 'grid grid-cols-3' : ''"
-            >
+            <div class="col-span-2 gap-3" :class="priorityRowClass">
               <!-- Impacto -->
-              <label v-if="itilEnabled" class="flex flex-col gap-1">
+              <label
+                v-if="itilEnabled"
+                class="flex flex-col gap-1"
+                :class="isWorkOrder ? 'w-40' : ''"
+              >
                 <span
                   class="text-sm font-medium text-slate-700 dark:text-slate-300"
                 >
@@ -630,7 +904,11 @@ export default {
               </label>
 
               <!-- Urgencia -->
-              <label v-if="itilEnabled" class="flex flex-col gap-1">
+              <label
+                v-if="itilEnabled"
+                class="flex flex-col gap-1"
+                :class="isWorkOrder ? 'w-40' : ''"
+              >
                 <span
                   class="text-sm font-medium text-slate-700 dark:text-slate-300"
                 >
@@ -650,8 +928,11 @@ export default {
                 </select>
               </label>
 
-              <!-- Prioridad -->
-              <label class="flex flex-col gap-1">
+              <!-- Prioridad (más angosta en una orden: comparte fila con las horas) -->
+              <label
+                class="flex flex-col gap-1"
+                :class="isWorkOrder ? 'w-40' : ''"
+              >
                 <span
                   class="text-sm font-medium text-slate-700 dark:text-slate-300"
                 >
@@ -680,6 +961,21 @@ export default {
                     })
                   }}
                 </span>
+              </label>
+              <!-- Plan-Clase-Orden-de-Trabajo — horas en la fila de prioridad -->
+              <label v-if="isWorkOrder" class="flex flex-col w-32 gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('CASE_TICKETS.WORK_ORDER.FIELDS.ESTIMATED_HOURS') }}
+                </span>
+                <input
+                  v-model="form.estimated_hours"
+                  type="number"
+                  min="0"
+                  step="0.25"
+                  class="input"
+                />
               </label>
             </div>
           </div>
@@ -721,6 +1017,33 @@ export default {
             </label>
             <p class="col-span-2 text-xs text-slate-400 dark:text-slate-500">
               {{ $t('CASE_TICKETS.MODAL.ASSIGN_HINT') }}
+            </p>
+          </div>
+
+          <!-- Plan-Clase-Orden-de-Trabajo — Tab: Dirección del servicio (solo orden) -->
+          <div
+            v-if="isWorkOrder"
+            v-show="activeTab === 'address'"
+            class="flex flex-col gap-3 [&_.input]:!mb-0"
+          >
+            <label class="flex flex-col gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.WORK_ORDER.FIELDS.ADDRESS') }}
+              </span>
+              <textarea
+                v-model="form.work_address"
+                maxlength="255"
+                rows="3"
+                class="input"
+                :placeholder="
+                  $t('CASE_TICKETS.WORK_ORDER.FORM.ADDRESS_PLACEHOLDER')
+                "
+              />
+            </label>
+            <p class="m-0 text-xs text-slate-400 dark:text-slate-500">
+              {{ $t('CASE_TICKETS.WORK_ORDER.FORM.ADDRESS_HINT') }}
             </p>
           </div>
 

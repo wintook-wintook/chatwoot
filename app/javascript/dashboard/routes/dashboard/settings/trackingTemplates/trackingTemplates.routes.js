@@ -12,7 +12,6 @@ import {
 } from 'dashboard/constants/permissions.js';
 
 const SettingsWrapper = () => import('../SettingsWrapper.vue');
-const TrackingTemplatesIndex = () => import('./Index.vue');
 
 export default {
   routes: [
@@ -30,7 +29,13 @@ export default {
           meta: {
             permissions: [...ROLES, ...CONVERSATION_PERMISSIONS],
           },
-          component: TrackingTemplatesIndex,
+          // feat/agentes_ia_unificado: una sola lista de Agentes IA (la de
+          // Seguimientos). La de Ajustes lleva allá, conservando ?template_id.
+          redirect: to => ({
+            name: 'contact_trackings_agents',
+            params: { accountId: to.params.accountId },
+            query: to.query,
+          }),
         },
       ],
     },

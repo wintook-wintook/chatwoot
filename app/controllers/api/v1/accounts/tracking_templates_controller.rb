@@ -13,7 +13,7 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
   before_action :fetch_tracking_template, only: [:show, :update, :destroy]
 
   def index
-    @tracking_templates = Current.account.tracking_templates.includes(:user, :inbox).ordered
+    @tracking_templates = Current.account.tracking_templates.includes(:user, :inbox, :publication, :published_prompt).ordered
     @tracking_templates = @tracking_templates.search_by_name(params[:search]) if params[:search].present?
     @tracking_templates = @tracking_templates.by_tag(params[:tag]) if params[:tag].present?
     @tracking_templates = @tracking_templates.by_inbox(params[:inbox_id]) if params[:inbox_id].present?
@@ -36,7 +36,48 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
     render json: template_json(@tracking_template)
   end
 
+  # proyecto@asistente_agentes_ia — qué ofrece "Agregar sección": las del contrato del
+  # Asistente y las que más usa la cuenta. Medido: 110 nombres distintos en 28 prompts,
+  # así que la lista no puede ser fija, pero ofrecerlos todos sería una lista inusable.
+  def section_titles
+    render json: ContactTrackings::TrainingSectionTitles.new(Current.account).call
+  end
+
+  # proyecto@asistente_agentes_ia — las ramas que la cuenta ya escribió, para copiar
+  # una a un agente nuevo en vez de escribirla de cero. Ver TrainingRouteCatalog.
+  def route_catalog
+    render json: ContactTrackings::TrainingRouteCatalog.new(Current.account).call
+  end
+
+  # proyecto@asistente_agentes_ia — las secciones enteras que la cuenta ya escribió
+  # (section_titles trae solo los nombres). Ver TrainingSectionCatalog.
+  def section_catalog
+    render json: ContactTrackings::TrainingSectionCatalog.new(Current.account).call
+  end
+
+  # proyecto@asistente_agentes_ia — la ficha cambia entre la vista Secciones y la vista
+  # Texto sin guardar: esto convierte en cualquiera de los dos sentidos y comprueba el
+  # resultado. La conversión vive solo acá (TrainingStructure), no duplicada en el
+  # navegador: si hubiera dos implementaciones, las vistas podrían no coincidir.
+  def training_preview
+    texto = if params[:training_structure].present?
+              raw = params[:training_structure]
+              raw = raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+              ContactTrackings::TrainingStructure.compose('blocks' => sanitized_blocks(raw))
+            else
+              params[:text].to_s
+            end
+
+    render json: { text: texto, training_structure: ContactTrackings::TrainingStructure.parse(texto),
+                   validation: ContactTrackings::Assistant::ValidatorService.new(texto, account: Current.account).call }
+  end
+
+  # feat/agentes_ia_unificado: un agente en uso no se borra. Se dice en qué (seguimientos
+  # activos, campañas, automatizaciones) para que la pantalla lo explique.
   def destroy
+    uso = @tracking_template.usage
+    return render json: { error: 'in_use', usage: uso }, status: :unprocessable_entity if @tracking_template.in_use?(uso)
+
     @tracking_template.destroy!
     head :ok
   end
@@ -77,15 +118,50 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
       :name, :objective, :ai_context, :complementary_prompt, :inbox_id,
       :retry_interval_value, :retry_interval_unit, :calendar_event_duration, # proyecto@automatizacion_tracking
       :timezone, :slots_presentation, # proyecto@bot_seguimiento_calendar
+      :version_note, # feat/agentes_ia_unificado: nota del guardado, viaja a la versión
       whatsapp_templates: [],
       tags: [],
-      keyword_actions: [:keyword, :action, :direction], # proyecto@contact_tracking
+      keyword_actions: [:keyword, :action, :direction, :label, :assignee_id, :team_id], # proyecto@contact_tracking
       calendar_integration_ids: []
     )
     # booking_calendar_ids es un mapa de claves dinámicas { integration_id => [cal_ids] } que
     # strong-params no sabe permitir; lo saneamos a mano (claves int, valores arrays de strings).
     permitted[:booking_calendar_ids] = sanitized_booking_calendar_ids if params[:tracking_template].key?(:booking_calendar_ids)
+    with_training_structure(permitted)
+  end
+
+  # proyecto@asistente_agentes_ia — la vista Secciones de la ficha manda bloques en vez de
+  # texto. Si vienen, mandan sobre `complementary_prompt`: el texto se arma de los bloques
+  # y el modelo vuelve a separar la estructura al guardar (ver TrackingTemplate).
+  def with_training_structure(permitted)
+    raw = params.dig(:tracking_template, :training_structure)
+    return permitted if raw.blank?
+
+    raw = raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+    permitted.delete(:complementary_prompt)
+    permitted[:training_structure_from_form] = { 'blocks' => sanitized_blocks(raw) }
     permitted
+  end
+
+  TRAINING_BLOCK_KEYS = %w[type title style header body text gap lines].freeze
+  MAX_TRAINING_BLOCKS = 300
+
+  def sanitized_blocks(raw)
+    Array(raw['blocks'] || raw[:blocks]).first(MAX_TRAINING_BLOCKS).filter_map do |bloque|
+      bloque = bloque.to_unsafe_h if bloque.respond_to?(:to_unsafe_h)
+      next unless bloque.is_a?(Hash)
+
+      sanitized_block(bloque.stringify_keys.slice(*TRAINING_BLOCK_KEYS))
+    end
+  end
+
+  # Las ramas llegan como campos (nombre, etiqueta, frases, fuente, escalamiento) y se
+  # limpian con sus propias reglas: son líneas de una gramática exacta, no prosa.
+  def sanitized_block(bloque)
+    return bloque if bloque['lines'].blank?
+
+    lineas = Array(bloque['lines']).map { |linea| linea.respond_to?(:to_unsafe_h) ? linea.to_unsafe_h : linea }
+    bloque.merge('lines' => ContactTrackings::TrainingRoutes.sanitize(lineas.select { |l| l.is_a?(Hash) }))
   end
 
   # proyecto@bot_seguimiento_calendar — { integration_id => [google_calendar_id, ...] }: en qué
@@ -103,11 +179,12 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
 
   def template_json(template)
     json = template.as_json(except: [:user_id])
-    json['creator'] = if template.user
-                        { id: template.user.id, name: template.user.available_name || template.user.name }
-                      end
+    json['creator'] = ({ id: template.user.id, name: template.user.available_name || template.user.name } if template.user)
     json['inbox_name']      = template.inbox&.name
     json['keyword_actions'] = template.keyword_actions || [] # proyecto@contact_tracking
+    json['training_structure'] = template.training_blocks # proyecto@asistente_agentes_ia
+    json['publication'] = template.publication&.slice(:status, :version) # proyecto@publicar_prompts
+    json['published_prompt_update'] = template.published_prompt_update # proyecto@publicar_prompts (F7)
     json
   end
 end

@@ -8,6 +8,9 @@ Estos agentes viven en **Ajustes → Agentes IA** (cuenta 2). Cada uno demuestra
 capacidad distinta del intake IA. Para probarlos end-to-end, asigna el agente a un
 seguimiento sobre un inbox conectado (WhatsApp/Telegram) y escribe como cliente.
 
+Los tres traen **ambas directivas**: `@crear_ticket` (levantar el caso) y
+`@estado_ticket` (consultar el estado del caso por el mismo canal).
+
 ---
 
 ## Directivas usadas
@@ -48,7 +51,12 @@ Al armar el ticket:
 - Si el cliente no menciona su número de cliente, pídelo antes de crear el ticket.
 
 Al levantar el ticket, confirma con el folio y avisa que un asesor lo contactará.
+
+Si el cliente pregunta por el estado de su caso ("¿cuál es mi ticket?", "¿cómo va mi caso?"),
+usa @estado_ticket para responderle con su folio y estado.
 ```
+
+> Directivas activas: `@crear_ticket(prioridad=alta)` + `@crear_ticket` + `@estado_ticket`.
 
 ### Ejemplo de uso
 ```
@@ -87,7 +95,12 @@ Al armar el ticket:
 - Si el cliente no da el folio o número de factura, pídeselo antes de crear el ticket.
 
 Confirma con el folio del ticket y dile que cobranza lo contactará.
+
+Si el cliente pregunta por el estado de su caso ("¿cuál es mi ticket?", "¿cómo va mi caso?"),
+usa @estado_ticket para responderle con su folio y estado.
 ```
+
+> Directivas activas: `@crear_ticket(tipo=Comercial)` + `@estado_ticket`.
 
 ### Ejemplo de uso
 ```
@@ -126,7 +139,12 @@ Al armar el ticket:
 - Si no menciona el nombre de la empresa o el número de usuarios, pídelo antes de crear el ticket.
 
 Confirma que un asesor comercial lo contactará.
+
+Si el cliente pregunta por el estado de su caso ("¿cuál es mi ticket?", "¿cómo va mi caso?"),
+usa @estado_ticket para responderle con su folio y estado.
 ```
+
+> Directivas activas: `@crear_ticket(tipo=Comercial)` + `@estado_ticket`.
 
 ### Ejemplo de uso
 ```
@@ -152,12 +170,51 @@ Cliente: necesito una cotización    → SÍ crea ticket
 ```
 
 ### Consulta de estado (`@estado_ticket`)
+
+Los **tres agentes ya la traen** en su prompt, así que responden el estado sin
+configuración extra. Dispara solo si el mensaje trae **un sustantivo de caso**
+(ticket, caso, folio, reporte, reclamo, solicitud, incidencia) **y** una **señal de
+consulta** (cuál, cómo, estado, status, seguimiento, avance, mi/mis, tengo, abierto).
+Así "quiero levantar un ticket" NO se confunde con "¿cuál es mi ticket?".
+
+**Un solo caso:**
 ```
 Cliente: ¿cuál es mi ticket?
 Bot:     Tu caso 01053 — “Consulta sobre disponibilidad de servicios” — está:
          Recibido, en revisión. Si necesitas algo más, escríbeme por aquí.
 ```
-Si tiene varios casos, los lista; si no tiene ninguno, ofrece levantar uno.
+
+**Varios casos** (lista los 3 más recientes, excluye cancelados):
+```
+Cliente: ¿cómo van mis casos?
+Bot:     Estos son tus casos más recientes:
+         • 01060 — En proceso (Aclaración de factura por pago ya realizado)
+         • 01053 — Recibido, en revisión (Consulta sobre disponibilidad de servicios)
+```
+
+**Sin casos:**
+```
+Cliente: ¿tengo algún reporte abierto?
+Bot:     No encuentro un caso registrado a tu nombre. ¿Quieres que levante uno?
+```
+
+Al cliente se le muestra un **estado amigable**, no la jerga interna:
+
+| Estado interno | Lo que ve el cliente |
+|---|---|
+| `open` / `classified` | Recibido, en revisión |
+| `assigned` | Asignado a un asesor |
+| `in_diagnosis` | En diagnóstico |
+| `in_progress` | En proceso |
+| `waiting_on_customer` | En espera de tu respuesta |
+| `waiting_on_third_party` | En espera de un tercero |
+| `waiting_on_internal` | En proceso (revisión interna) |
+| `escalated` | Escalado a un especialista |
+| `resolved` / `validating` | Resuelto / En validación |
+| `closed` | Cerrado |
+
+> Orden en el flujo: `@estado_ticket` se evalúa **antes** de `@crear_ticket`, porque
+> preguntar por un caso existente no debe abrir uno nuevo.
 
 ---
 
@@ -166,7 +223,8 @@ Si tiene varios casos, los lista; si no tiene ninguno, ofrece levantar uno.
 1. **Ajustes → Agentes IA** (cuenta 2): están los tres (🛠️ / 💳 / 📈).
 2. Crea un seguimiento sobre un inbox conectado (WhatsApp/Telegram) usando el agente.
 3. Escribe como cliente los mensajes de ejemplo. El bot arma el ticket solo y confirma con el folio.
-4. Para consulta de estado, agrega `@estado_ticket` al prompt del agente (además de `@crear_ticket`).
+4. Después pregunta "¿cuál es mi ticket?": los tres agentes ya traen `@estado_ticket`
+   y responden con folio + estado. En un agente nuevo, agrega esa línea al prompt.
 
 > Requisito: la cuenta debe tener la **integración OpenAI** activa y la IA de tickets
 > (clasificación) encendida; si no, `@crear_ticket` degrada al alta básica (título recortado).

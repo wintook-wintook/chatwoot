@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 430" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/></marker></defs>
+  <rect width="940" height="430" fill="#f4f6f9"/>
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28">Ruta de fases</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Verde = se hace sin número · ámbar = requiere número whatsapp_cloud real</text>
+  <g font-size="12.5">
+    <g><rect x="40" y="100" width="200" height="80" rx="10" fill="#fff" stroke="#16a34a" stroke-width="2"/><text x="56" y="126" font-weight="800" fill="#151b28">F1 · Datos</text><text x="56" y="148" fill="#5c6675">tabla calls, modelo,</text><text x="56" y="164" fill="#5c6675">voice_call, bandera</text></g>
+    <g><rect x="260" y="100" width="200" height="80" rx="10" fill="#fff" stroke="#16a34a" stroke-width="2"/><text x="276" y="126" font-weight="800" fill="#151b28">F2 · Meta + webhook</text><text x="276" y="148" fill="#5c6675">provider calls v22.0,</text><text x="276" y="164" fill="#5c6675">job en cola critical</text></g>
+    <g><rect x="480" y="100" width="200" height="80" rx="10" fill="#fff" stroke="#16a34a" stroke-width="2"/><text x="496" y="126" font-weight="800" fill="#151b28">F3 · Servicios + API</text><text x="496" y="148" fill="#5c6675">entrante, saliente,</text><text x="496" y="164" fill="#5c6675">permiso, controlador</text></g>
+    <g><rect x="700" y="100" width="200" height="80" rx="10" fill="#fff" stroke="#16a34a" stroke-width="2"/><text x="716" y="126" font-weight="800" fill="#151b28">F4 · Simulador</text><text x="716" y="148" fill="#5c6675">Meta simulada +</text><text x="716" y="164" fill="#5c6675">pestaña cliente</text></g>
+    <g><rect x="700" y="210" width="200" height="80" rx="10" fill="#fff" stroke="#16a34a" stroke-width="2"/><text x="716" y="236" font-weight="800" fill="#151b28">F5 · Cable + WebRTC</text><text x="716" y="258" fill="#5c6675">Vuex calls, widget,</text><text x="716" y="274" fill="#5c6675">burbuja, botón Llamar</text></g>
+    <g><rect x="480" y="210" width="200" height="80" rx="10" fill="#fff" stroke="#16a34a" stroke-width="2"/><text x="496" y="236" font-weight="800" fill="#151b28">F6 · Configuración</text><text x="496" y="258" fill="#5c6675">dirección, timbre,</text><text x="496" y="274" fill="#5c6675">pestaña Llamadas</text></g>
+    <g><rect x="260" y="210" width="200" height="80" rx="10" fill="#fff" stroke="#16a34a" stroke-width="2"/><text x="276" y="236" font-weight="800" fill="#151b28">F7 · Grabación</text><text x="276" y="258" fill="#5c6675">MediaRecorder, adjunto,</text><text x="276" y="274" fill="#5c6675">aviso al cliente</text></g>
+    <g><rect x="40" y="210" width="200" height="80" rx="10" fill="#fff" stroke="#16a34a" stroke-width="2"/><text x="56" y="236" font-weight="800" fill="#151b28">F8 · Llamada perdida</text><text x="56" y="258" fill="#5c6675">timeout 60 s + nota,</text><text x="56" y="274" fill="#5c6675">etiqueta, ticket, seguim.</text></g>
+    <g><rect x="40" y="320" width="420" height="80" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2"/><text x="56" y="346" font-weight="800" fill="#151b28">F0 · Requisitos Meta (cuando haya número)</text><text x="56" y="368" fill="#5c6675">elegibilidad, países, costo, activar calling</text></g>
+    <g><rect x="480" y="320" width="420" height="80" rx="10" fill="#fff" stroke="#f59e0b" stroke-width="2"/><text x="496" y="346" font-weight="800" fill="#151b28">F9 · Pruebas con número real</text><text x="496" y="368" fill="#5c6675">pila P1–P16 contra Meta de verdad</text></g>
+  </g>
+  <g stroke="#94a3b8" stroke-width="1.6" fill="none" marker-end="url(#a)">
+    <path d="M242,140 H256"/><path d="M462,140 H476"/><path d="M682,140 H696"/><path d="M800,182 V206"/>
+    <path d="M698,250 H684"/><path d="M478,250 H464"/><path d="M258,250 H244"/><path d="M462,360 H476"/>
+  </g>
+</svg>

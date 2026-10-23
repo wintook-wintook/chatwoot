@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="940" height="560" fill="#f4f6f9"/>
+
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28" letter-spacing="-0.4">Fecha de negocio ≠ orden de captura</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">CFECHACOSTOH coincide con admDocumentos.CFECHA en 72 de 72 filas · siempre a las 00:00:00</text>
+
+  <!-- Carril 1: captura -->
+  <rect x="40" y="98" width="860" height="132" rx="10" fill="#ffffff" stroke="#dbe1ea"/>
+  <text x="62" y="126" font-size="13.5" font-weight="700" fill="#151b28">Orden de captura</text>
+  <text x="62" y="145" font-size="11.5" fill="#5c6675">CIDCOSTOH (identity) · CTIMESTAMP "08/03/2026 19:16:36:653" · fechas reales de las filas #75-#78</text>
+
+  <line x1="62" y1="196" x2="878" y2="196" stroke="#cbd5e1" stroke-width="2"/>
+  <circle cx="150" cy="196" r="16" fill="#ffffff" stroke="#0284c7" stroke-width="2"/>
+  <text x="150" y="200" font-size="11" font-weight="700" fill="#075985" text-anchor="middle">#75</text>
+  <circle cx="330" cy="196" r="16" fill="#ffffff" stroke="#0284c7" stroke-width="2"/>
+  <text x="330" y="200" font-size="11" font-weight="700" fill="#075985" text-anchor="middle">#76</text>
+  <circle cx="510" cy="196" r="16" fill="#ffffff" stroke="#0284c7" stroke-width="2"/>
+  <text x="510" y="200" font-size="11" font-weight="700" fill="#075985" text-anchor="middle">#77</text>
+  <circle cx="690" cy="196" r="17" fill="#fee2e2" stroke="#dc2626" stroke-width="2.4"/>
+  <text x="690" y="200" font-size="11" font-weight="800" fill="#991b1b" text-anchor="middle">#78</text>
+  <text x="690" y="172" font-size="10.5" font-weight="700" fill="#b91c1c" text-anchor="middle">capturado hoy…</text>
+
+  <text x="150" y="228" font-size="10.5" fill="#5c6675" text-anchor="middle">24-jul</text>
+  <text x="330" y="228" font-size="10.5" fill="#5c6675" text-anchor="middle">28-jul</text>
+  <text x="510" y="228" font-size="10.5" fill="#5c6675" text-anchor="middle">31-jul</text>
+  <text x="690" y="228" font-size="10.5" font-weight="700" fill="#b91c1c" text-anchor="middle">03-ago</text>
+
+  <!-- Flecha de reubicacion -->
+  <path d="M690,246 C690,300 430,286 336,310" stroke="#dc2626" stroke-width="1.8" fill="none" stroke-dasharray="6 4" marker-end="url(#a4)"/>
+  <text x="560" y="288" font-size="11.5" font-weight="700" fill="#b91c1c">documento con fecha retroactiva → se intercala</text>
+
+  <!-- Carril 2: contable -->
+  <rect x="40" y="318" width="860" height="132" rx="10" fill="#ffffff" stroke="#7c3aed" stroke-width="1.8"/>
+  <text x="62" y="346" font-size="13.5" font-weight="700" fill="#5b21b6">Orden contable</text>
+  <text x="62" y="365" font-size="11.5" fill="#5c6675">CFECHACOSTOH = fecha del documento, no del grabado · <tspan font-weight="700" fill="#b91c1c">el #78 en 26-jul es un ejemplo hipotético</tspan></text>
+
+  <line x1="62" y1="416" x2="878" y2="416" stroke="#cbd5e1" stroke-width="2"/>
+  <circle cx="150" cy="416" r="16" fill="#ffffff" stroke="#0284c7" stroke-width="2"/>
+  <text x="150" y="420" font-size="11" font-weight="700" fill="#075985" text-anchor="middle">#75</text>
+  <circle cx="330" cy="416" r="17" fill="#fee2e2" stroke="#dc2626" stroke-width="2.4"/>
+  <text x="330" y="420" font-size="11" font-weight="800" fill="#991b1b" text-anchor="middle">#78</text>
+  <circle cx="510" cy="416" r="16" fill="#ffffff" stroke="#0284c7" stroke-width="2"/>
+  <text x="510" y="420" font-size="11" font-weight="700" fill="#075985" text-anchor="middle">#76</text>
+  <circle cx="690" cy="416" r="16" fill="#ffffff" stroke="#0284c7" stroke-width="2"/>
+  <text x="690" y="420" font-size="11" font-weight="700" fill="#075985" text-anchor="middle">#77</text>
+
+  <text x="150" y="448" font-size="10.5" fill="#5c6675" text-anchor="middle">24-jul</text>
+  <text x="330" y="448" font-size="10.5" font-weight="700" fill="#b91c1c" text-anchor="middle">26-jul (fecha del doc)</text>
+  <text x="510" y="448" font-size="10.5" fill="#5c6675" text-anchor="middle">28-jul</text>
+  <text x="690" y="448" font-size="10.5" fill="#5c6675" text-anchor="middle">31-jul</text>
+
+  <!-- Reglas -->
+  <rect x="40" y="472" width="418" height="66" rx="8" fill="#fffbeb" stroke="#fcd34d"/>
+  <text x="60" y="495" font-size="12" font-weight="700" fill="#92400e">Ordenar por PK ≠ ordenar por fecha</text>
+  <text x="60" y="514" font-size="11" fill="#78350f">Varias filas comparten la misma fecha (00:00:00):</text>
+  <text x="60" y="530" font-size="11" fill="#78350f">desempata con ORDER BY CFECHACOSTOH DESC, CIDCOSTOH DESC.</text>
+
+  <rect x="482" y="472" width="418" height="66" rx="8" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="502" y="495" font-size="12" font-weight="700" fill="#991b1b">CTIMESTAMP es varchar, no datetime</text>
+  <text x="502" y="514" font-size="11" fill="#7f1d1d">Formato US MM/DD/YYYY HH:MM:SS:mmm. Ordenar esa</text>
+  <text x="502" y="530" font-size="11" fill="#7f1d1d">columna como texto da resultados falsos: usa CIDCOSTOH.</text>
+</svg>

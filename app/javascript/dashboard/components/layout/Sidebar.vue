@@ -18,7 +18,7 @@ export default {
   components: {
     PrimarySidebar,
     SecondarySidebar,
-   // AddKanbanType, // Registrar el modal
+    // AddKanbanType, // Registrar el modal
   },
   props: {
     showSecondarySidebar: {
@@ -77,8 +77,6 @@ export default {
   data() {
     return {
       showOptionsMenu: false,
-      // NUEVO: Estado para controlar el colapso del sidebar secundario
-      isSecondarySidebarCollapsed: false,
       // NUEVO: Estado para controlar el modal de kanban type
       showAddKanbanTypeModal: false,
     };
@@ -100,13 +98,9 @@ export default {
 
     // NUEVA: Computed property para kanbanTypes
     kanbanTypes() {
-      console.log('🔄 Sidebar: Computando kanbanTypes desde store...');
-      
       const storeData = this.$store.state.kanbanTypeProcesses;
-      console.log('📊 Sidebar: Store data:', storeData);
-      
+
       if (!storeData || !storeData.records) {
-        console.log('❌ Sidebar: No hay datos en el store');
         return [];
       }
 
@@ -122,7 +116,6 @@ export default {
         kanban_processes: record.kanban_processes || [],
       }));
 
-      console.log('✅ Sidebar: Kanban types mapeados:', types);
       return types;
     },
 
@@ -147,14 +140,19 @@ export default {
       );
     },
     sideMenuConfig() {
-      return getSidebarItems(this.accountId);
+      // Menú v2: los enlaces de Servicio dependen de la clase de la ruta actual.
+      return getSidebarItems(this.accountId, this.$route);
     },
     primaryMenuItems() {
       const userPermissions = getUserPermissions(
         this.currentUser,
         this.accountId
       );
-      const menuItems = this.sideMenuConfig.primaryMenu;
+      // Menú v2: una entrada con `alternatives` usa la primera alternativa cuya
+      // función está activa si la suya no lo está (p. ej. Agenda sin casos → Calendario).
+      const menuItems = this.sideMenuConfig.primaryMenu.map(item =>
+        this.resolveAlternative(item)
+      );
       return menuItems.filter(menuItem => {
         if (
           menuItem.key === 'contacts' &&
@@ -190,22 +188,15 @@ export default {
       const { secondaryMenu } = this.sideMenuConfig;
       const { name: currentRoute } = this.$route;
 
-      console.log('🔍 Debug Sidebar - Ruta actual:', currentRoute);
-      console.log('🔍 Debug Sidebar - Menús secundarios:', secondaryMenu);
-
-      const activeSecondaryMenu =
-        secondaryMenu.find(menuItem => {
-          const isRouteIncluded = menuItem.routes.includes(currentRoute);
-          console.log(`🔍 Debug Sidebar - Menu ${menuItem.parentNav}:`, {
-            routes: menuItem.routes,
-            currentRoute,
-            isIncluded: isRouteIncluded
-          });
-          return isRouteIncluded;
-        }) || {};
-
-      console.log('🔍 Debug Sidebar - Menu activo encontrado:', activeSecondaryMenu);
-      return activeSecondaryMenu;
+      // Menú v2: un menú puede elegirse con `matches(route)` (Ventas y Servicio
+      // comparten las pantallas de casos y se distinguen por la clase).
+      return (
+        secondaryMenu.find(menuItem =>
+          menuItem.matches
+            ? menuItem.matches(this.$route)
+            : menuItem.routes.includes(currentRoute)
+        ) || {}
+      );
     },
     activePrimaryMenu() {
       const activePrimaryMenu =
@@ -229,8 +220,19 @@ export default {
 
       // Rutas que siempre muestran el sidebar sin importar la preferencia del usuario
       const alwaysShowRoutes = [
-        'kanban_dashboard', 'kanban_board', 'kanban_processes', 'kanban_label', 'kanban_status', 'kanban_type',
-        'gestorTickets_index', 'gestorTickets_detail', 'gestorTickets_rules', 'gestorTickets_metrics', // @tickets_cases
+        'kanban_dashboard',
+        'kanban_board',
+        'kanban_processes',
+        'kanban_label',
+        'kanban_status',
+        'kanban_type',
+        'gestorTickets_index',
+        'gestorTickets_detail',
+        'gestorTickets_rules',
+        'gestorTickets_metrics', // @tickets_cases
+        'gestorTickets_class_list',
+        'gestorTickets_class_board',
+        'gestorTickets_class_metrics', // Plan-Casos E1
       ];
       if (alwaysShowRoutes.includes(currentRoute)) return true;
 
@@ -264,51 +266,36 @@ export default {
     this.fetchCustomViews();
     // NUEVO: Cargar kanban types
     this.loadKanbanTypes();
-    
-    // NUEVO: Restaurar estado del sidebar desde localStorage
-    const savedState = localStorage.getItem('secondarySidebarCollapsed');
-    if (savedState !== null) {
-      this.isSecondarySidebarCollapsed = JSON.parse(savedState);
-    }
-
-    // DEBUG: Verificar configuración del sidebar
-    console.log('🔍 Debug Sidebar mounted:');
-    console.log('- Ruta actual:', this.$route.name);
-    console.log('- activeSecondaryMenu:', this.activeSecondaryMenu);
-    console.log('- shouldShowSecondarySidebar:', this.shouldShowSecondarySidebar);
   },
 
   methods: {
+    resolveAlternative(item) {
+      if (!item.alternatives) return item;
+      const enabled = option =>
+        !option.featureFlag ||
+        this.isFeatureEnabledonAccount(this.accountId, option.featureFlag);
+      if (enabled(item)) return item;
+      const alternative = item.alternatives.find(enabled);
+      return alternative ? { ...item, ...alternative } : item;
+    },
     fetchCustomViews() {
       if (this.isConversationOrContactActive) {
         this.$store.dispatch('customViews/get', this.activeCustomView);
       }
     },
 
-    // NUEVO: Método para alternar el colapso del sidebar secundario
-    toggleSecondarySidebar() {
-      this.isSecondarySidebarCollapsed = !this.isSecondarySidebarCollapsed;
-      // Opcional: Guardar el estado en localStorage
-      localStorage.setItem('secondarySidebarCollapsed', this.isSecondarySidebarCollapsed);
-    },
-
     // NUEVO: Método para cargar kanban types
     async loadKanbanTypes() {
       try {
-        console.log('🔄 Sidebar: Cargando kanbanTypes...');
         await this.$store.dispatch('kanbanTypeProcesses/get');
-        console.log('✅ Sidebar: kanbanTypes cargados correctamente');
       } catch (error) {
-        console.error('❌ Sidebar: Error cargando kanbanTypes:', error);
+        // Sin tipos de kanban el menú se pinta igual (sin esa sección).
       }
     },
 
     // NUEVO: Método para manejar la creación de nuevos tipos
     showAddKanbanTypePopup() {
-          console.log('AQUI🔄 Sidebar: Crear nuevo tipo de proceso');
-          console.log('🔄 Sidebar: showAddKanbanTypeModal antes:', this.showAddKanbanTypeModal);
-          this.showAddKanbanTypeModal = true;
-          console.log('🔄 Sidebar: showAddKanbanTypeModal después:', this.showAddKanbanTypeModal); 
+      this.showAddKanbanTypeModal = true;
     },
 
     // NUEVO: Método para cerrar el modal y recargar datos
@@ -349,13 +336,7 @@ export default {
     />
     <SecondarySidebar
       v-if="shouldShowSecondarySidebar"
-      :class="[
-        sidebarClassName,
-        {
-          'w-12 overflow-hidden': isSecondarySidebarCollapsed,
-          'w-48': !isSecondarySidebarCollapsed
-        }
-      ]"
+      :class="sidebarClassName"
       :account-id="accountId"
       :inboxes="inboxes"
       :labels="labels"
@@ -365,11 +346,9 @@ export default {
       :menu-config="activeSecondaryMenu"
       :current-user="currentUser"
       :is-on-chatwoot-cloud="isOnChatwootCloud"
-      :is-collapsed="isSecondarySidebarCollapsed"
       @addLabel="showAddLabelPopup"
       @addKanbanType="showAddKanbanTypePopup"
       @toggleAccounts="toggleAccountModal"
-      @toggleSidebar="toggleSecondarySidebar"
     />
 
     <!-- Modal para crear nuevo tipo de proceso -->

@@ -5,6 +5,11 @@ class Api::V1::Accounts::KanbanProcessesController < Api::V1::Accounts::BaseCont
   before_action :set_kanban_type_process, only: [:index, :create]
   before_action :check_authorization
 
+  # Embudo de contactos — un tipo de columna desconocido es un 422, no un 500.
+  rescue_from ArgumentError do |e|
+    render json: { errors: { stage_kind: [e.message] } }, status: :unprocessable_entity
+  end
+
   def index
     @kanban_processes = @kanban_type_process.kanban_processes.by_position
     
@@ -77,7 +82,11 @@ class Api::V1::Accounts::KanbanProcessesController < Api::V1::Accounts::BaseCont
   end
 
   def kanban_process_params
-    params.require(:kanban_process).permit(:type_process_name, :default, :is_system, :position)
+    params.require(:kanban_process).permit(:type_process_name, :default, :is_system, :position, :ai_criteria,
+                                           :stage_kind, :convert_case_type_id,
+                                           entry_triggers: [:type, :case_class, { labels: [] }]).tap do |permitted|
+      permitted[:entry_triggers] = permitted[:entry_triggers].map(&:to_h) if permitted[:entry_triggers]
+    end
   end
 
   def check_authorization

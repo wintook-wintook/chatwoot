@@ -90,4 +90,61 @@ RSpec.describe ContactTrackings::AvailabilitySlotService do
       expect(result.map { |s| s[:slot] }).to eq([morning[0], morning[1], afternoon[0]]) # orden cronológico
     end
   end
+
+  # proyecto@hoja_buscar, pieza 3 — @agendar_calendar(horario=24h) y servicios largos.
+  describe 'horario de 24 h y duración larga' do
+    let(:tz) { 'America/Mexico_City' }
+
+    it 'con ALL_DAY acepta domingo a las 03:00 y un servicio que cruza la medianoche' do
+      service = described_class.new(calendar_integration_ids: [1], timezone: tz, working_hours: described_class::ALL_DAY)
+      domingo = Time.find_zone(tz).local(2026, 8, 2, 3, 0)
+      noche = Time.find_zone(tz).local(2026, 6, 1, 18, 0)
+
+      expect(service.send(:within_work_hours?, domingo, domingo + 1.hour)).to be(true)
+      expect(service.send(:within_work_hours?, noche, noche + 6.hours)).to be(true)
+      expect(service.working_day?(domingo.to_date)).to be(true)
+    end
+
+    it 'un servicio largo se ofrece cada hora, no cada «duración»' do
+      service = described_class.new(calendar_integration_ids: [1], timezone: tz, slot_duration: 16 * 60,
+                                    working_hours: described_class::ALL_DAY)
+      integration = instance_double(UserCalendarIntegration, id: 1, user: nil)
+      allow(service).to receive(:calendar_name_for).and_return('TP-64')
+      desde = Time.find_zone(tz).local(2026, 10, 5, 7, 0)
+
+      slots = service.send(:free_slots_for, integration, 'c64', [], desde, desde + 1.day)
+      expect(slots.map { |s| s[:slot].strftime('%H:%M') }).to eq(%w[07:00 08:00 09:00 10:00 11:00])
+      expect(slots.first[:end_time] - slots.first[:slot]).to eq(16.hours)
+    end
+
+    it 'una cita corta sigue igual: cada 30 minutos' do
+      expect(described_class.new(calendar_integration_ids: [1]).send(:step)).to eq(30)
+    end
+  end
+
+  # F7 (26/09/2026): Google rechaza freeBusy de más de 90 días («timeRangeTooLong»).
+  describe '#free_for_period' do
+    let(:tz) { 'America/Mexico_City' }
+    let(:user) { create(:user) }
+    let!(:integration) do
+      UserCalendarIntegration.create!(account: user.accounts.first || create(:account), user: user, google_email: 'a@b.com', tokens: {})
+    end
+    let(:service) do
+      described_class.new(calendar_integration_ids: [integration.id], timezone: tz, booking_calendars: { integration.id.to_s => %w[c1 c2] })
+    end
+    let(:desde) { Time.find_zone(tz).local(2026, 11, 1) }
+
+    before { allow(service).to receive(:calendar_name_for) { |_i, gcal| gcal.upcase } }
+
+    it 'consulta en tramos de 60 días y ofrece solo los libres todo el periodo' do
+      allow(service).to receive(:fetch_busy_periods) do |_i, cals, _desde, _hasta|
+        cals == ['c2'] ? [{ start: desde + 100.days, end: desde + 101.days }] : []
+      end
+
+      libres = service.free_for_period(desde, desde + 181.days)
+      expect(libres.pluck(:google_calendar_id)).to eq(['c1'])
+      expect(service).to have_received(:fetch_busy_periods).with(integration, ['c1'], anything, anything).exactly(4).times
+      expect(libres.first).to include(all_day: true, calendar_name: 'C1')
+    end
+  end
 end

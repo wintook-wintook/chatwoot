@@ -37,6 +37,18 @@ en:
     inbox_deletetion_response: Your inbox deletion request will be processed in some time.
 
   errors:
+    # diag/llamadas_whatsapp
+    whatsapp:
+      calls:
+        not_supported: Calls only work with the official WhatsApp API (Cloud API).
+        recording_disabled: "This call is not recorded: recording was off when it started."
+        no_recording: "The recording file is missing."
+        recording_not_audio: "The recording must be an audio file."
+        no_message: "The call has no message in the conversation."
+        not_allowed: Only this inbox's agents and administrators can use its calls.
+        outbound_disabled: Outbound calls are not enabled for this inbox.
+        sdp_offer_required: The browser's audio offer (sdp_offer) is missing.
+        permission_request_failed: Could not ask the customer for permission to call.
     validations:
       presence: must not be blank
     webhook:
@@ -132,7 +144,48 @@ en:
         feedback: Feedback Comment
         recorded_at: Recorded date
 
+  kanban_funnel:
+    note: "Contact funnel: moved to «%{column}». %{reason}"
+    reasons:
+      conversation_created: "A new conversation arrived through %{inbox}."
+      first_reply: "First reply sent."
+      label_added: "Label «%{label}» was added."
+      appointment_scheduled: "An appointment was scheduled."
+      case_created: "Case %{folio} was created."
+      customer_returned: "The customer wrote again."
+      conversation_resolved: "The conversation was resolved without a case."
+      stale: "No reply from the customer in %{days} days."
+    ai:
+      moved: "🤖 Moved to «%{column}»: %{reason}"
+      suggested: "🤖 Could move to «%{column}» (I did not move it because I am not sure): %{reason}"
+      next_step: "Suggested next step: %{step}"
+    template:
+      columns:
+        new:
+          name: New
+          ai: "New conversation that has not been answered yet."
+        contacted:
+          name: Contacted
+          ai: "We already replied and are understanding what they need."
+        interested:
+          name: Interested
+          ai: "The customer asked for price, a quote, availability or terms of a product or service."
+        appointment:
+          name: Appointment
+          ai: "A meeting, visit, call or demo was agreed with the customer."
+        converted:
+          name: Converted
+          ai: "It is already a sales opportunity (the commercial case was created)."
+        discarded:
+          name: Discarded
+          ai: "The customer clearly said they are not interested, already bought elsewhere or is not a prospect."
   notifications:
+    case_stages:
+      tasks:
+        one: "1 new task · stage %{stage}: %{titles}"
+        other: "%{count} new tasks · stage %{stage}: %{titles}"
+      stage_ready: "The tasks for %{stage} are done: move to %{next}?"
+      stage_ready_doc: "The tasks for %{stage} are done: document to move to %{next}"
     notification_title:
       conversation_creation: "A conversation (#%{display_id}) has been created in %{inbox_name}"
       conversation_assignment: "A conversation (#%{display_id}) has been assigned to you"
@@ -143,6 +196,11 @@ en:
       sla_missed_resolution: "SLA target resolution missed for conversation (#%{display_id})"
       calendar_event_reminder: "Calendar reminder"
       case_ticket_assignment: "Ticket %{folio} has been assigned to you"
+      case_task_assignment: "A task was assigned to you in ticket %{folio}"
+      case_task_completed: "A task was completed in ticket %{folio}"
+      missed_call: "Missed call from %{name} (conversation #%{display_id})"
+      case_stage_tasks: "You have new tasks in case %{folio}"
+      case_stage_ready: "Case %{folio} is ready to move to the next stage"
     calendar_event_reminder:
       body: "\"%{title}\" starts in %{minutes} minutes"
       no_title: "Untitled event"
@@ -150,12 +208,36 @@ en:
     no_content: "No content"
   conversations:
     messages:
+      # diag/llamadas_whatsapp
+      voice_call:
+        whatsapp: WhatsApp call
+      whatsapp:
+        call_permission_request_body: "May we call you on WhatsApp? It helps us assist you faster."
+        call_recording_notice: "Just so you know, this call is recorded so we can serve you better."
+        missed_call_auto_reply: "We saw your call and could not answer. We will call you back as soon as we can."
       instagram_story_content: "%{story_sender} mentioned you in the story: "
       instagram_deleted_story_content: This story is no longer available.
       deleted: This message was deleted
       delivery_status:
         error_code: "Error code: %{error_code}"
     activity:
+      # diag/llamadas_whatsapp
+      whatsapp_call:
+        missed_actions:
+          missed: "Missed call from %{name}. It rang for: %{agents}."
+          missed_nobody: "Missed call from %{name}. No agents were available to answer."
+          ticket_no_type: "Missed call: no ticket was created because no type is selected in the inbox «Calls» tab."
+          ticket_title: "Missed call from %{name}"
+          ticket_created: "Missed call: ticket %{folio} was created."
+          ticket_note: "Missed call from %{name} (conversation #%{display_id})."
+          ticket_noted: "Missed call: a note was added to the open ticket %{folio}."
+          tracking_no_campaign: "Missed call: not enrolled in a follow-up because no campaign is selected in the inbox «Calls» tab."
+          tracking_enrolled: "Missed call: enrolled in the «%{campaign}» campaign."
+          tracking_active: "Missed call: not enrolled in «%{campaign}» because there is already an active follow-up in this inbox."
+          tracking_skipped: "Missed call: not enrolled in «%{campaign}» (reason: %{reason})."
+          auto_reply_window_closed: "Missed call: no message was sent to the customer because the WhatsApp 24 h window is closed."
+        permission_requested: "%{contact_name} was asked for permission to be called on WhatsApp"
+        permission_granted: "%{contact_name} allowed us to call them on WhatsApp"
       status:
         resolved: "Conversation was marked resolved by %{user_name}"
         contact_resolved: "Conversation was resolved by %{contact_name}"
@@ -259,7 +341,7 @@ en:
       name: "Captain"
       description: "Captain is a native AI assistant built for your product and trained on your company's knowledge base. It responds like a human and resolves customer queries effectively. Configure it to your inboxes easily."
     daiko:
-      name: "Sales Agent Activation"
+      name: "Transactional Sales Agent Activation"
       description: "Your automated 24/7 seller that responds to your customers in seconds, checks prices, products and stock, and generates quotes and orders."
   public_portal:
     search:

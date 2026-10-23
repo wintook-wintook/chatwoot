@@ -24,6 +24,7 @@ class Api::V1::Accounts::ContactTrackings::ListController < Api::V1::Accounts::B
 
     # Estado de entrega (WhatsApp) por conversación, en batch ([[Entrega-vs-ejecucion]]).
     @last_messages = last_messages_by_conversation(records)
+    @last_deliveries = last_deliveries_by_tracking(records)
 
     render json: {
       trackings: records.map { |t| row(t) },
@@ -55,6 +56,13 @@ class Api::V1::Accounts::ContactTrackings::ListController < Api::V1::Accounts::B
         error: message.content_attributes&.dig('external_error')
       }
     end
+  end
+
+  # proyecto@automatizacion_campanas — { tracking_id => TrackingDelivery } con el último
+  # envío registrado de cada seguimiento de la página (Fase 1).
+  def last_deliveries_by_tracking(records)
+    latest_ids = TrackingDelivery.where(contact_tracking_id: records.map(&:id)).group(:contact_tracking_id).select('MAX(id)')
+    TrackingDelivery.where(id: latest_ids).index_by(&:contact_tracking_id)
   end
 
   def filtered_scope
@@ -95,15 +103,28 @@ class Api::V1::Accounts::ContactTrackings::ListController < Api::V1::Accounts::B
       template_name: tracking.tracking_template&.name,
       conversation_id: tracking.conversation_id,
       conversation_display_id: tracking.conversation&.display_id
-    }.merge(delivery_fields(tracking))
+    }.merge(delivery_fields(tracking), rule_mark_fields(tracking))
+  end
+
+  # proyecto@contact_tracking: marcas de las reglas de palabra clave (filtros de campaña)
+  def rule_mark_fields(tracking)
+    { interested_at: tracking.interested_at, booked_at: tracking.booked_at,
+      rule_action: tracking.keyword_action_fired.is_a?(Hash) ? tracking.keyword_action_fired['action'] : nil }
   end
 
   # Estado de entrega (WhatsApp) del último mensaje saliente ([[Entrega-vs-ejecucion]]).
+  # proyecto@automatizacion_campanas: delivery_status / delivery_error salen del último envío
+  # registrado del seguimiento; sin envíos registrados (antes de la Fase 1), del último
+  # mensaje saliente de la conversación, como antes.
   def delivery_fields(tracking)
     last_message = @last_messages[tracking.conversation_id] || {}
+    delivery = @last_deliveries[tracking.id]
     {
       last_message_status: last_message[:status],
-      last_message_error: last_message[:error]
+      last_message_error: last_message[:error],
+      delivery_status: delivery ? delivery.bucket : (TrackingDelivery.bucket(last_message[:status]) if last_message[:status]),
+      delivery_error: delivery ? delivery.error_summary : last_message[:error],
+      delivery_retry_at: delivery&.next_retry_at
     }
   end
 

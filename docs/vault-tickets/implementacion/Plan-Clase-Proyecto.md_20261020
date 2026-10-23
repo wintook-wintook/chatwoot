@@ -1,0 +1,54 @@
+---
+titulo: Plan — Clase «Proyecto»
+tipo: implementación
+fase: P1–P3
+tags: [tickets, plan, proyecto, clase-de-caso]
+---
+
+# Plan — Clase «Proyecto»
+
+Rama `feat/nva_oportunidad`. Flag `case_project` (al final de `features.yml`). Continúa
+[[Plan-Casos-Hoja-de-ruta]] (E5). Reutiliza las capacidades por clase, la plantilla de columnas,
+las relaciones, las tareas y el patrón de [[Plan-Clase-Orden-de-Trabajo]].
+
+## Idea
+Trabajo **grande y por fases**, con fecha objetivo y presupuesto, que **agrupa** órdenes de
+trabajo y tickets. Suele nacer de una oportunidad ganada. Se mide por avance contra plan y horas
+contra presupuesto. Elementos: **«Proyectos»**. Color `#6366f1` (índigo).
+
+## Decisiones (2026-10-20)
+1. Avance **automático** (casos hijos + hitos terminados); a mano mientras no tenga hijos.
+2. Presupuesto = **horas + monto opcional** (moneda de la cuenta, en `currency`).
+3. Hijos = **órdenes de trabajo y tickets de Soporte** (no oportunidades).
+4. Hitos = **tareas con la casilla «Hito»**.
+5. Cliente **opcional** (proyecto interno).
+6. El cliente lo ve en el bot `@estado_ticket` (`bot_status`); en el portal no.
+
+## Fases
+| Fase | Contenido | Estado |
+|---|---|---|
+| P1 | Flag, clase, fases, datos (inicio, objetivo, presupuesto, avance), pestaña «Proyecto», formulario, Lista (combo de fases, columnas, aviso «Atrasados»), Tablero | ✅ 2026-10-20 |
+| P2 | Casos hijos (relación nueva, crear/ligar orden o ticket, pestaña «Casos del proyecto»), hitos (tareas «Hito»), avance automático, horas reales = suma de las órdenes hijas, «Crear proyecto» desde oportunidad ganada | ⏳ |
+| P3 | Línea de tiempo (hitos e hijos por fecha, hoy y objetivo) + métricas (en tiempo / en riesgo / atrasados, horas vs presupuesto, hitos vencidos, por responsable) | ⏳ |
+
+## P1 — lo construido
+- `CaseType::CLASS_CAPABILITIES['project'] = [:bot_status]`; `case_types_controller` lo ofrece con
+  su flag. `CaseTypeColumn::PROJECT_TEMPLATE`: Planeación (open, classified, assigned, in_diagnosis)
+  · Ejecución (in_progress, escalated) · Pausado (waiting_*) · Entrega (resolved, validating) ·
+  Cerrado · Cancelado.
+- Migración `20261021170000_add_project_to_case_tickets`: project_start_on, project_due_on,
+  budget_hours (8,2), budget_amount (14,2), progress (0–100) + índice parcial de la fecha objetivo.
+- `CaseTicket`: `PROJECT_FIELDS`, `project?`, `project_overdue?` (abierto con objetivo pasado),
+  `assign_project_data` + `log_project_change!` (`CaseEvent project_changed: 40`), objetivo ≥ inicio,
+  moneda de la cuenta al crear. **Cierre** sin causa/solución: resumen opcional en `closure_solution`.
+- API: alta/edición con los datos (`project:` en el orquestador), JSON (`is_project`, datos,
+  `project_overdue`), filtro `project_due_from/to`, aviso `alert_count` = atrasados.
+- Front: `helper/caseProject.js`; `CASE_CLASSES` + `CASE_PROJECT`; fases genéricas
+  (`CLASS_STAGES`, `stageToParams(stage, clase)`), filtro fino `due`, aviso «Atrasados (n)»;
+  `project/ProjectPanel.vue` en la pestaña «Proyecto» de la ficha; bloque índigo en los formularios;
+  Lista con Fecha objetivo, Avance y Fase; tarjeta del Tablero con fecha objetivo y avance; modal de
+  cierre con resumen. Métricas: aviso «llegan en P3».
+- Specs: `spec/requests/api/v1/accounts/case_projects_spec.rb` (4) + `caseProject.spec.js`.
+
+## 🔗 Relacionado
+[[00-Indice]] · [[Plan-Casos-Hoja-de-ruta]] · [[Plan-Clase-Orden-de-Trabajo]] · [[Trampas]]

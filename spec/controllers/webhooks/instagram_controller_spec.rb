@@ -22,6 +22,39 @@ RSpec.describe 'Webhooks::InstagramController', type: :request do
     end
   end
 
+  # El endpoint sirve al canal nativo y a la ruta legacy, así que admite los dos nombres:
+  # INSTAGRAM_VERIFY_TOKEN es el que documenta upstream, IG_VERIFY_TOKEN el que ya usaba
+  # esta instalación. Basta con tener configurado uno.
+  describe 'GET /webhooks/instagram with the upstream token name' do
+    it 'accepts INSTAGRAM_VERIFY_TOKEN' do
+      with_modified_env INSTAGRAM_VERIFY_TOKEN: 'upstream-token' do
+        get '/webhooks/instagram', params: { 'hub.challenge' => 'abc', 'hub.mode' => 'subscribe', 'hub.verify_token' => 'upstream-token' }
+        expect(response.body).to include 'abc'
+      end
+    end
+
+    it 'still accepts the legacy IG_VERIFY_TOKEN' do
+      with_modified_env IG_VERIFY_TOKEN: 'legacy-token' do
+        get '/webhooks/instagram', params: { 'hub.challenge' => 'abc', 'hub.mode' => 'subscribe', 'hub.verify_token' => 'legacy-token' }
+        expect(response.body).to include 'abc'
+      end
+    end
+
+    it 'rejects a token that matches neither' do
+      with_modified_env INSTAGRAM_VERIFY_TOKEN: 'upstream-token' do
+        get '/webhooks/instagram', params: { 'hub.challenge' => 'abc', 'hub.mode' => 'subscribe', 'hub.verify_token' => 'otro' }
+        expect(response).to have_http_status(:unauthorized)
+      end
+    end
+
+    # Con ambos sin configurar, GlobalConfigService devuelve nil: un token vacío no debe
+    # colar por comparación con nil
+    it 'rejects an empty token when nothing is configured' do
+      get '/webhooks/instagram', params: { 'hub.challenge' => 'abc', 'hub.mode' => 'subscribe', 'hub.verify_token' => '' }
+      expect(response).to have_http_status(:unauthorized)
+    end
+  end
+
   describe 'POST /webhooks/instagram' do
     let!(:dm_params) { build(:instagram_message_create_event).with_indifferent_access }
 
@@ -32,6 +65,26 @@ RSpec.describe 'Webhooks::InstagramController', type: :request do
       instagram_params = dm_params.merge(object: 'instagram')
       post '/webhooks/instagram', params: instagram_params
       expect(response).to have_http_status(:success)
+    end
+
+    # El eco puede llegar antes de que termine la llamada que envió el mensaje: entonces
+    # el source_id aún no está guardado, el dedupe por mid no lo reconoce y el mensaje
+    # sale duplicado en la conversación.
+    it 'delays echo events so the outgoing message is persisted first' do
+      echo_params = dm_params.deep_dup
+      echo_params[:entry][0][:messaging][0][:message][:is_echo] = true
+
+      post '/webhooks/instagram', params: echo_params.merge(object: 'instagram')
+
+      expect(response).to have_http_status(:success)
+      expect(Webhooks::InstagramEventsJob)
+        .to have_been_enqueued.at(a_value_within(1.second).of(2.seconds.from_now))
+    end
+
+    it 'processes a normal message without waiting' do
+      post '/webhooks/instagram', params: dm_params.merge(object: 'instagram')
+
+      expect(Webhooks::InstagramEventsJob).to have_been_enqueued.at(:no_wait)
     end
   end
 end

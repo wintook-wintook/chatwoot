@@ -31,7 +31,10 @@ class CaseSlaMonitorJob < ApplicationJob
   def update_sla_statuses
     active_statuses = CaseTicket.statuses.values_at('closed', 'cancelled', 'resolved')
 
+    # Plan-Clase-Comercial F3 (hallazgo #7): solo las clases con SLA (Soporte); ni
+    # oportunidades ni órdenes de trabajo (CaseType::CLASS_CAPABILITIES).
     CaseTicket
+      .with_capability(:sla)
       .where(sla_status: [CaseTicket.sla_statuses[:on_time], CaseTicket.sla_statuses[:at_risk]])
       .where.not(status: active_statuses)
       .find_each do |ticket|
@@ -64,7 +67,7 @@ class CaseSlaMonitorJob < ApplicationJob
   def auto_close_stale_resolved
     cutoff = AUTO_CLOSE_HOURS.hours.ago
 
-    CaseTicket.resolved.where('resolved_at < ?', cutoff).find_each do |ticket|
+    CaseTicket.with_capability(:sla).resolved.where('case_tickets.resolved_at < ?', cutoff).find_each do |ticket|
       next unless ticket.can_transition_to?(:closed)
 
       ticket.transition!(:closed)

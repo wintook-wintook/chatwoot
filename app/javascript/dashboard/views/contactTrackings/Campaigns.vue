@@ -1,31 +1,68 @@
 <script>
 // ================================================================================
 // @campanas_vendedor — Campañas de seguimiento (Dashboard de Seguimientos)
-// Vista con dos tabs: "Campañas" (listado de TrackingCampaign + stats) y
-// "Nueva campaña" (formulario inline con el preview de audiencia debajo).
+// Entra a la tabla de campañas; "+ Agregar campaña" abre el formulario (con el preview
+// de audiencia debajo) y "Volver a campañas" regresa. Una campaña Guardada no corre
+// hasta "Poner en curso" (proyecto@automatizacion_campanas, TrackingCampaigns::Launch);
+// mientras siga Guardada se puede modificar (clic en su fila, o ?edit=<id> desde el detalle).
+// La tabla es la de Contactos (VeTable): clic en una columna la ordena (en cliente).
 // ================================================================================
+import { VeTable } from 'vue-easytable';
 import { useAlert } from 'dashboard/composables';
 import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import CampaignForm from 'dashboard/components/contacts/BulkTrackingAssign/CampaignForm.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import { progressPct, sortCampaigns, sortFromParams } from './campaignsTable';
 
 const STATUS_COLOR = {
+  saved: 'text-woot-700 bg-woot-50 dark:text-woot-300 dark:bg-woot-900/30',
   draft: 'text-slate-500 bg-slate-100 dark:bg-slate-700',
   running: 'text-green-700 bg-green-100 dark:bg-green-900/30',
-  paused: 'text-amber-600 bg-amber-100 dark:bg-amber-900/30',
+  paused: 'text-amber-800 bg-amber-100 dark:bg-amber-900/30',
   finished: 'text-slate-600 bg-slate-100 dark:bg-slate-700',
 };
 
 export default {
-  components: { CampaignForm, TableFooter },
+  components: { CampaignForm, TableFooter, VeTable },
   data() {
     return {
       campaigns: [],
       isLoading: false,
+      // Actualizar recarga solo la tabla: no la quita ni muestra "Cargando".
+      isRefreshing: false,
+      // Orden de la tabla: { campo: 'asc' | 'desc' }; vacío = las más nuevas primero.
+      sortConfig: {},
+      sortOption: {
+        sortAlways: true,
+        sortChange: params => this.onSortChange(params),
+      },
+      // Fila: una Guardada abre el formulario para modificarla; las demás, su tablero
+      // de indicadores. Los botones de la fila cortan la propagación.
+      eventCustomOption: {
+        bodyRowEvents: ({ row }) => ({
+          click: () =>
+            row.status === 'saved'
+              ? this.openEdit(row)
+              : this.openCampaign(row),
+        }),
+      },
+      rowStyleOption: {
+        stripe: false,
+        clickHighlight: false,
+        hoverHighlight: true,
+      },
       deletingId: null,
       showDeleteModal: false,
       campaignToDelete: null,
-      activeTab: 'list',
+      // Poner en curso: la campaña a confirmar y la que se está lanzando
+      campaignToLaunch: null,
+      launchingId: null,
+      activeTab: 'list', // 'list' · 'new' · 'edit'
+      // La campaña Guardada que se está modificando (tab 'edit')
+      campaignToEdit: null,
+      // proyecto@automatizacion_campanas: la campaña continua recién creada, para
+      // ofrecer el siguiente paso (crear la automatización que la llena).
+      createdContinuous: null,
       // Filtro preestablecido cuando se llega desde Contactos (history.state).
       presetFilter: null,
       // Filtro + paginado (cliente) de la tabla de campañas.
@@ -55,11 +92,155 @@ export default {
       });
     },
     totalPages() {
-      return Math.max(1, Math.ceil(this.filteredCampaigns.length / this.perPage));
+      return Math.max(
+        1,
+        Math.ceil(this.filteredCampaigns.length / this.perPage)
+      );
+    },
+    sortedCampaigns() {
+      return sortCampaigns(this.filteredCampaigns, this.sortConfig);
     },
     pagedCampaigns() {
       const start = (this.currentPage - 1) * this.perPage;
-      return this.filteredCampaigns.slice(start, start + this.perPage);
+      return this.sortedCampaigns.slice(start, start + this.perPage);
+    },
+    columns() {
+      const col = (field, key, extra = {}) => ({
+        field,
+        key: field,
+        title: this.$t(`TRACKING_CAMPAIGNS_VIEW.COL.${key}`),
+        align: 'left',
+        sortBy: this.sortConfig[field] || '',
+        ...extra,
+      });
+      return [
+        col('name', 'NAME', {
+          renderBodyCell: ({ row }) => (
+            <span class="font-medium text-woot-600 dark:text-woot-400">
+              {row.name}
+            </span>
+          ),
+        }),
+        col('template_name', 'AGENT', {
+          renderBodyCell: ({ row }) => row.template_name || '—',
+        }),
+        col('inbox_name', 'CHANNEL', {
+          renderBodyCell: ({ row }) => row.inbox_name || '—',
+        }),
+        // Fecha arriba y hora abajo (como Ventana), para que no se pegue a Tipo
+        col('created_at', 'CREATED', {
+          width: 130,
+          renderBodyCell: ({ row }) => (
+            <div class="flex flex-col leading-5 whitespace-nowrap">
+              <span>{this.formatDay(row.created_at)}</span>
+              <span class="text-slate-500 dark:text-slate-400">
+                {this.formatTime(row.created_at)}
+              </span>
+            </div>
+          ),
+        }),
+        col('mode', 'TYPE', {
+          width: 110,
+          // Tooltip con qué significa cada tipo
+          renderBodyCell: ({ row }) => {
+            const mode = row.mode || 'batch';
+            const tooltip = {
+              content: this.$t(`TRACKING_CAMPAIGNS_VIEW.MODE_HINT.${mode}`),
+              classes: 'max-w-xs',
+            };
+            // Un solo spread (sin más atributos): el plugin de JSX no mezcla props.
+            const attrs = {
+              class: 'border-b border-dotted border-slate-400 cursor-help',
+              directives: [{ name: 'tooltip', value: tooltip }],
+            };
+            return (
+              <span {...attrs}>
+                {this.$t(`TRACKING_CAMPAIGNS_VIEW.MODE.${mode}`)}
+              </span>
+            );
+          },
+        }),
+        col('scheduled_for', 'WINDOW', {
+          width: 170,
+          renderBodyCell: ({ row }) => (
+            <div class="flex flex-col leading-5">
+              <span class="whitespace-nowrap">
+                {this.formatDate(row.scheduled_for)}
+              </span>
+              <span class="whitespace-nowrap text-slate-500 dark:text-slate-400">
+                → {this.windowEnd(row)}
+              </span>
+            </div>
+          ),
+        }),
+        // Guardada: en lugar del estado, el botón para ponerla en curso.
+        col('status', 'STATUS', {
+          width: 170,
+          renderBodyCell: ({ row }) =>
+            row.status === 'saved' ? (
+              <div onClick={e => e.stopPropagation()}>
+                <woot-button
+                  size="small"
+                  icon="send"
+                  isLoading={this.launchingId === row.id}
+                  onClick={() => this.openLaunch(row)}
+                >
+                  {this.$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH')}
+                </woot-button>
+              </div>
+            ) : (
+              <span
+                class={`px-2 py-0.5 rounded-full text-xs font-medium ${this.statusClass(
+                  row.status
+                )}`}
+                title={row.paused_reason || ''}
+              >
+                {this.statusLabel(row.status)}
+                {row.paused_reason ? ' ⚠️' : ''}
+              </span>
+            ),
+        }),
+        col('progress', 'PROGRESS', {
+          width: 150,
+          align: 'right',
+          renderBodyCell: ({ row }) => (
+            <div class="flex items-center justify-end gap-2">
+              <div class="w-20 h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                <div
+                  class="h-full bg-green-500"
+                  style={{ width: `${progressPct(row.stats)}%` }}
+                />
+              </div>
+              <span class="text-xs text-slate-400 w-9 text-right">
+                {progressPct(row.stats)}%
+              </span>
+            </div>
+          ),
+        }),
+        {
+          field: 'actions',
+          key: 'actions',
+          title: '',
+          align: 'right',
+          width: 60,
+          renderBodyCell: ({ row }) => (
+            <div
+              class="flex items-center justify-end gap-1 whitespace-nowrap"
+              onClick={e => e.stopPropagation()}
+            >
+              <woot-button
+                variant="clear"
+                color-scheme="alert"
+                size="small"
+                icon="delete"
+                isLoading={this.deletingId === row.id}
+                title={this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE')}
+                onClick={() => this.openDelete(row)}
+              />
+            </div>
+          ),
+        },
+      ];
     },
     // Estados disponibles para el selector (los que aparecen en STATUS_COLOR).
     statusOptions() {
@@ -72,10 +253,6 @@ export default {
         this.campaigns.length > 0 &&
         this.filteredCampaigns.length === 0
       );
-    },
-    // woot-tabs usa índice: 0 = listado, 1 = nueva campaña.
-    activeTabIndex() {
-      return this.activeTab === 'new' ? 1 : 0;
     },
     deleteMessageValue() {
       return this.campaignToDelete ? ` «${this.campaignToDelete.name}»?` : '';
@@ -109,6 +286,7 @@ export default {
       }
     }
     this.fetchCampaigns();
+    if (this.$route.query.edit) this.openEdit({ id: this.$route.query.edit });
   },
   methods: {
     async fetchCampaigns() {
@@ -122,8 +300,61 @@ export default {
         this.isLoading = false;
       }
     },
+    // Botón Actualizar: recarga los datos de la tabla sin quitarla de la pantalla.
+    async refreshTable() {
+      this.isRefreshing = true;
+      try {
+        const { data } = await TrackingCampaignsAPI.get();
+        this.campaigns = data;
+      } catch (error) {
+        // El detalle (respuesta del servidor o mensaje) para saber qué falló
+        const detail = error.response?.data?.error || error.message;
+        useAlert(
+          detail
+            ? `${this.$t('TRACKING_CAMPAIGNS_VIEW.REFRESH_ERROR')} (${detail})`
+            : this.$t('TRACKING_CAMPAIGNS_VIEW.REFRESH_ERROR')
+        );
+      } finally {
+        this.isRefreshing = false;
+      }
+    },
+    onSortChange(params) {
+      this.sortConfig = sortFromParams(params);
+      this.currentPage = 1;
+    },
     goToList() {
       this.activeTab = 'list';
+      this.campaignToEdit = null;
+      if (this.$route.query.edit) this.$router.replace({ query: {} });
+    },
+    // Trae la campaña completa (audiencia incluida) y abre el formulario con sus datos.
+    async openEdit(campaign) {
+      try {
+        const { data } = await TrackingCampaignsAPI.show(campaign.id);
+        if (data.status !== 'saved') {
+          useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.EDIT_ONLY_SAVED'));
+          return;
+        }
+        this.campaignToEdit = data;
+        this.activeTab = 'edit';
+      } catch (error) {
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.EDIT_ERROR'));
+      }
+    },
+    onCampaignUpdated(result) {
+      if (result?.launch) {
+        useAlert(
+          result.queued
+            ? this.$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_QUEUED', {
+                count: result.queued,
+              })
+            : this.$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_SUCCESS')
+        );
+      } else {
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.EDIT_SUCCESS'));
+      }
+      this.goToList();
+      this.fetchCampaigns();
     },
     onPageChange(page) {
       this.currentPage = page;
@@ -132,15 +363,64 @@ export default {
       this.presetFilter = null;
       this.activeTab = 'new';
     },
-    onPageTabChange(index) {
-      if (index === 1) this.goToNew();
-      else this.goToList();
+    openLaunch(campaign) {
+      this.campaignToLaunch = campaign;
+    },
+    closeLaunch() {
+      this.campaignToLaunch = null;
+    },
+    // Pone en curso una campaña Guardada: por lote inscribe a los contactos del momento.
+    async confirmLaunch() {
+      const campaign = this.campaignToLaunch;
+      if (!campaign) return;
+      this.campaignToLaunch = null;
+      this.launchingId = campaign.id;
+      try {
+        const { data } = await TrackingCampaignsAPI.launch(campaign.id);
+        useAlert(
+          data.queued
+            ? this.$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_QUEUED', {
+                count: data.queued,
+              })
+            : this.$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_SUCCESS')
+        );
+        this.refreshTable();
+      } catch (error) {
+        useAlert(
+          error.response?.data?.error ||
+            this.$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_ERROR')
+        );
+      } finally {
+        this.launchingId = null;
+      }
     },
     statusLabel(status) {
       return this.$t(`TRACKING_CAMPAIGNS_VIEW.STATUS.${status}`);
     },
     statusClass(status) {
       return STATUS_COLOR[status] || 'text-slate-500 bg-slate-100';
+    },
+    // proyecto@automatizacion_campanas: "01/10/2026 10:00 → sin fin"
+    // proyecto@automatizacion_campanas: la ventana va en dos renglones, inicio y "→ fin"
+    windowEnd(campaign) {
+      return campaign.ends_at
+        ? this.formatDate(campaign.ends_at)
+        : this.$t('TRACKING_CAMPAIGNS_VIEW.NO_END');
+    },
+    formatDay(value) {
+      if (!value) return '—';
+      return new Date(value).toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+    },
+    formatTime(value) {
+      if (!value) return '';
+      return new Date(value).toLocaleTimeString('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     },
     formatDate(value) {
       if (!value) return '—';
@@ -152,9 +432,14 @@ export default {
         minute: '2-digit',
       });
     },
-    progressPct(stats) {
-      if (!stats || !stats.total) return 0;
-      return Math.round((stats.completed / stats.total) * 100);
+    // Lleva a Automatizaciones con el modal de nueva regla abierto y la acción
+    // "Agregar a campaña" ya puesta en esta campaña.
+    createAutomationFor(campaign) {
+      this.$router.push({
+        name: 'automation_list',
+        params: { accountId: this.$route.params.accountId },
+        query: { add_to_campaign: campaign.id, campaign_name: campaign.name },
+      });
     },
     openCampaign(campaign) {
       this.$router.push({
@@ -189,11 +474,21 @@ export default {
       }
     },
     onCampaignCreated(result) {
-      useAlert(
-        this.$t('BULK_TRACKING_ASSIGN.MODAL.RESULT_QUEUED_BODY', {
-          count: result?.queued || 0,
-        })
-      );
+      if (result?.launch === false) {
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.SAVED_HINT'));
+      }
+      if (result?.mode === 'continuous') {
+        this.createdContinuous = {
+          id: result.campaign_id,
+          name: result.campaign_name,
+        };
+      } else if (result?.launch !== false) {
+        useAlert(
+          this.$t('BULK_TRACKING_ASSIGN.MODAL.RESULT_QUEUED_BODY', {
+            count: result?.queued || 0,
+          })
+        );
+      }
       this.presetFilter = null;
       this.activeTab = 'list';
       this.fetchCampaigns();
@@ -216,37 +511,44 @@ export default {
           </p>
         </div>
       </div>
+      <!-- Arriba a la derecha: Agregar campaña en la tabla, Volver a campañas en el formulario -->
+      <woot-button v-if="activeTab === 'list'" icon="add" @click="goToNew">
+        {{ $t('TRACKING_CAMPAIGNS_VIEW.ADD_CAMPAIGN') }}
+      </woot-button>
       <woot-button
-        v-if="activeTab === 'list'"
-        variant="clear"
-        icon="arrow-clockwise"
-        :is-loading="isLoading"
-        @click="fetchCampaigns"
+        v-else
+        variant="smooth"
+        color-scheme="secondary"
+        icon="chevron-left"
+        @click="goToList"
       >
-        {{ $t('TRACKING_CAMPAIGNS_VIEW.REFRESH') }}
+        {{ $t('TRACKING_CAMPAIGNS_VIEW.BACK_TO_LIST') }}
       </woot-button>
     </div>
 
-    <!-- Tabs nativos -->
-    <woot-tabs
-      :index="activeTabIndex"
-      class="mb-4 shrink-0"
-      @change="onPageTabChange"
-    >
-      <woot-tabs-item
-        :index="0"
-        :name="$t('TRACKING_CAMPAIGNS_VIEW.TAB_LIST')"
-        :count="campaigns.length"
+    <div v-if="activeTab !== 'list'" class="mb-4 shrink-0">
+      <h2 class="text-base font-semibold text-slate-700 dark:text-slate-200">
+        {{
+          activeTab === 'edit'
+            ? $t('TRACKING_CAMPAIGNS_VIEW.EDIT_CAMPAIGN', {
+                name: campaignToEdit.name,
+              })
+            : $t('TRACKING_CAMPAIGNS_VIEW.NEW_CAMPAIGN')
+        }}
+      </h2>
+    </div>
+
+    <!-- Modificar una Guardada -->
+    <div v-if="activeTab === 'edit'" class="flex-1 min-h-0 overflow-y-auto">
+      <CampaignForm
+        :key="campaignToEdit.id"
+        :campaign="campaignToEdit"
+        @updated="onCampaignUpdated"
       />
-      <woot-tabs-item
-        :index="1"
-        :name="$t('TRACKING_CAMPAIGNS_VIEW.TAB_NEW')"
-        :show-badge="false"
-      />
-    </woot-tabs>
+    </div>
 
     <!-- Tab: Nueva campaña -->
-    <div v-if="activeTab === 'new'" class="flex-1 min-h-0 overflow-y-auto">
+    <div v-else-if="activeTab === 'new'" class="flex-1 min-h-0 overflow-y-auto">
       <CampaignForm
         :preset-filter-payload="presetFilter"
         @created="onCampaignCreated"
@@ -255,6 +557,35 @@ export default {
 
     <!-- Tab: Campañas -->
     <template v-else>
+      <!-- proyecto@automatizacion_campanas: el siguiente paso de una campaña continua -->
+      <div
+        v-if="createdContinuous"
+        class="flex flex-wrap items-center justify-between gap-3 mb-4 p-3 rounded-md border border-woot-100 dark:border-woot-800 bg-woot-25 dark:bg-woot-900/20 text-sm text-slate-700 dark:text-slate-200"
+      >
+        <span>
+          {{
+            $t('TRACKING_CAMPAIGNS_VIEW.CONTINUOUS_CREATED', {
+              name: createdContinuous.name,
+            })
+          }}
+        </span>
+        <span class="flex items-center gap-2">
+          <woot-button
+            size="small"
+            @click="createAutomationFor(createdContinuous)"
+          >
+            {{ $t('TRACKING_CAMPAIGNS_VIEW.CREATE_AUTOMATION') }}
+          </woot-button>
+          <woot-button
+            size="small"
+            variant="clear"
+            color-scheme="secondary"
+            icon="dismiss"
+            :aria-label="$t('TRACKING_CAMPAIGNS_VIEW.DISMISS')"
+            @click="createdContinuous = null"
+          />
+        </span>
+      </div>
       <div v-if="isLoading" class="py-16 text-center text-slate-400">
         {{ $t('TRACKING_CAMPAIGNS_VIEW.LOADING') }}
       </div>
@@ -271,7 +602,7 @@ export default {
         <p>{{ $t('TRACKING_CAMPAIGNS_VIEW.EMPTY_TITLE') }}</p>
         <p class="text-sm">{{ $t('TRACKING_CAMPAIGNS_VIEW.EMPTY_HINT') }}</p>
         <woot-button class="mt-4" icon="add" @click="goToNew">
-          {{ $t('TRACKING_CAMPAIGNS_VIEW.NEW_CAMPAIGN') }}
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.ADD_CAMPAIGN') }}
         </woot-button>
       </div>
 
@@ -280,6 +611,16 @@ export default {
         <div
           class="flex items-center gap-3 mb-3 shrink-0 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
         >
+          <woot-button
+            variant="smooth"
+            color-scheme="secondary"
+            icon="arrow-clockwise"
+            class="shrink-0"
+            :is-loading="isRefreshing"
+            @click="refreshTable"
+          >
+            {{ $t('TRACKING_CAMPAIGNS_VIEW.REFRESH') }}
+          </woot-button>
           <div class="relative flex-1 min-w-[120px]">
             <fluent-icon
               icon="search"
@@ -315,82 +656,19 @@ export default {
 
         <div
           v-else
-          class="flex-1 min-h-0 overflow-auto rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+          class="campaigns-table-wrap flex-1 min-h-0 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
         >
-          <table class="w-full text-sm">
-        <thead class="sticky top-0 z-10 bg-white dark:bg-slate-800">
-          <tr
-            class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700"
-          >
-            <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.NAME') }}</th>
-            <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.AGENT') }}</th>
-            <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.CHANNEL') }}</th>
-            <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.START') }}</th>
-            <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.STATUS') }}</th>
-            <th class="p-3 text-right">
-              {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.PROGRESS') }}
-            </th>
-            <th class="p-3 w-10" aria-label="acciones" />
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="c in pagedCampaigns"
-            :key="c.id"
-            class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer"
-            @click="openCampaign(c)"
-          >
-            <td class="p-3 font-medium text-woot-600 dark:text-woot-400">
-              {{ c.name }}
-            </td>
-            <td class="p-3 text-slate-500 dark:text-slate-400">
-              {{ c.template_name || '—' }}
-            </td>
-            <td class="p-3 text-slate-500 dark:text-slate-400">
-              {{ c.inbox_name || '—' }}
-            </td>
-            <td
-              class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap"
-            >
-              {{ formatDate(c.scheduled_for) }}
-            </td>
-            <td class="p-3">
-              <span
-                class="px-2 py-0.5 rounded-full text-xs font-medium"
-                :class="statusClass(c.status)"
-              >
-                {{ statusLabel(c.status) }}
-              </span>
-            </td>
-            <td class="p-3 text-right whitespace-nowrap">
-              <div class="flex items-center justify-end gap-2">
-                <div
-                  class="w-20 h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden"
-                >
-                  <div
-                    class="h-full bg-green-500"
-                    :style="{ width: `${progressPct(c.stats)}%` }"
-                  />
-                </div>
-                <span class="text-xs text-slate-400 w-9 text-right">
-                  {{ progressPct(c.stats) }}%
-                </span>
-              </div>
-            </td>
-            <td class="p-3 text-right">
-              <woot-button
-                variant="clear"
-                color-scheme="alert"
-                size="small"
-                icon="delete"
-                :is-loading="deletingId === c.id"
-                :title="$t('TRACKING_CAMPAIGNS_VIEW.DELETE')"
-                @click.stop="openDelete(c)"
-              />
-            </td>
-          </tr>
-        </tbody>
-          </table>
+          <VeTable
+            fixed-header
+            max-height="100%"
+            row-key-field-name="id"
+            :columns="columns"
+            :table-data="pagedCampaigns"
+            :border-around="false"
+            :sort-option="sortOption"
+            :event-custom-option="eventCustomOption"
+            :row-style-option="rowStyleOption"
+          />
         </div>
 
         <!-- Pie de paginado nativo (mismo componente que Contactos) -->
@@ -415,5 +693,43 @@ export default {
       :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_YES')"
       :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
     />
+    <woot-delete-modal
+      :show="!!campaignToLaunch"
+      :on-close="closeLaunch"
+      :on-confirm="confirmLaunch"
+      :title="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH')"
+      :message="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_CONFIRM')"
+      :message-value="campaignToLaunch ? ` «${campaignToLaunch.name}»?` : ''"
+      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_YES')"
+      :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
+    />
   </div>
 </template>
+
+<style lang="scss" scoped>
+// Misma densidad que la tabla de Contactos; solo scrollean las filas.
+.campaigns-table-wrap {
+  overflow: hidden;
+}
+
+.campaigns-table-wrap::v-deep {
+  .ve-table {
+    height: 100%;
+  }
+
+  .ve-table-header-th {
+    padding: var(--space-small) var(--space-two) !important;
+    font-size: var(--font-size-mini) !important;
+  }
+
+  .ve-table-body-td {
+    padding: var(--space-small) var(--space-two) !important;
+    vertical-align: middle;
+    cursor: pointer;
+  }
+
+  .ve-table-sort {
+    @apply -top-1;
+  }
+}
+</style>

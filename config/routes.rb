@@ -20,6 +20,8 @@ Rails.application.routes.draw do
     get '/app/accounts/:account_id/settings/inboxes/new/microsoft', to: 'dashboard#index', as: 'app_new_microsoft_inbox'
     get '/app/accounts/:account_id/settings/inboxes/new/:inbox_id/agents', to: 'dashboard#index', as: 'app_twitter_inbox_agents'
     get '/app/accounts/:account_id/settings/inboxes/new/:inbox_id/agents', to: 'dashboard#index', as: 'app_email_inbox_agents'
+    get '/app/accounts/:account_id/settings/inboxes/new/instagram', to: 'dashboard#index', as: 'app_new_instagram_inbox'
+    get '/app/accounts/:account_id/settings/inboxes/new/:inbox_id/agents', to: 'dashboard#index', as: 'app_instagram_inbox_agents'
     get '/app/accounts/:account_id/settings/inboxes/:inbox_id', to: 'dashboard#index', as: 'app_email_inbox_settings'
 
     resource :widget, only: [:show]
@@ -44,6 +46,7 @@ Rails.application.routes.draw do
           # KANBAN0725
           resources :kanban_type_processes do
             get :conversation_kanban_info, on: :collection, path: 'conversation/:conversation_id/kanban_info'
+            get :funnel_metrics, on: :member # Embudo de contactos E3
             resources :kanban_processes do
               member do
                 patch :reorder
@@ -78,12 +81,48 @@ Rails.application.routes.draw do
             end
           end
           resources :canned_responses, only: [:index, :create, :update, :destroy]
+          # Sinónimos nativos (esquema legacy wintook; reemplaza al servicio WINTOOK_BOT)
+          resources :palabras_sinonimos, only: [:index, :create, :update, :destroy]
+          resources :sinonimos_semanticos, only: [:index]
+          # diag/llamadas_whatsapp (F4): el «cliente simulado» (solo con la Meta simulada)
+          resource :whatsapp_call_simulator, only: [], controller: 'whatsapp_call_simulator' do
+            get :inboxes
+            get :signals
+            post :call
+            post :answer
+            post :hangup
+            post :permission
+          end
+          # diag/llamadas_whatsapp (F3): contestar, rechazar, colgar y llamar
+          resources :whatsapp_calls, only: [:show] do
+            member do
+              post :accept
+              post :reject
+              post :terminate
+              post :upload_recording
+            end
+            collection do
+              post :initiate
+            end
+          end
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations
+              get :section_titles # proyecto@asistente_agentes_ia — sugerencias del formulario por secciones
+              get :route_catalog # proyecto@asistente_agentes_ia — las ramas que la cuenta ya escribió
+              get :section_catalog # proyecto@asistente_agentes_ia — las secciones enteras que ya escribió
+              post :training_preview # proyecto@asistente_agentes_ia — texto ↔ bloques + comprobador
             end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
+            # proyecto@publicar_prompts: publicar el prompt para que otras cuentas lo bajen
+            resource :publication, only: [:show, :create, :destroy], module: :tracking_templates
+            # feat/agentes_ia_unificado (rescate F4): historial, diff y restauración
+            resources :versions, only: [:index, :show], module: :tracking_templates do
+              member do
+                post :restore
+              end
+            end
           end
           # @query_databases — conexiones a ERPs + consultas predefinidas + consola
           resources :external_db_connections, only: [:index, :show, :create, :update, :destroy] do
@@ -96,17 +135,74 @@ Rails.application.routes.draw do
           get  'external_db_console/catalog', to: 'external_db_console#catalog'
           post 'external_db_console/run',     to: 'external_db_console#run'
           post 'external_db_console/ask',     to: 'external_db_console#ask'
+          post 'external_db_console/try_asked', to: 'external_db_console#try_asked' # proyecto@erp_productos
           resources :erp_collection_bots, only: [:index, :show, :create, :update, :destroy] do
             post :preview, on: :member
           end
           resources :contact_tracking_imports, only: [:create] # proyecto@import_seguimiento
-          resources :contact_tracking_bulk_assigns, only: [:create] do # proyecto@bulk_tracking_assign
+          resources :contact_tracking_bulk_assigns, only: [:create, :update] do # proyecto@bulk_tracking_assign
             post :preview, on: :collection # @campanas_vendedor — dry-run de buckets
           end
-          resources :tracking_campaigns, only: [:index, :show, :destroy] # @campanas_vendedor
+          # @campanas_vendedor / @automatizacion_campanas (create = campaña continua)
+          resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
+            get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
+            post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada
+            post :resume, on: :member, to: 'tracking_campaigns/resumes#create' # proyecto@automatizacion_campanas: reanudar pausada
+          end
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard
             resource :overview, only: [:show], controller: :overview
             get 'list', to: 'list#index' # listado filtrable a nivel cuenta
+            # proyecto@asistente_agentes_ia — generador de Entrenamientos
+            get  'assistant/inventory', to: 'assistant#inventory'
+            post 'assistant/validate',  to: 'assistant#validate'
+            post 'assistant/interview', to: 'assistant#interview'
+            get  'assistant/interview/:turn_id', to: 'assistant#interview_result'
+            post 'assistant/save',      to: 'assistant#save'
+            get  'assistant/session',   to: 'assistant#resume'
+            get  'assistant/sessions',      to: 'assistant#sessions'
+            get  'assistant/sessions/:id',  to: 'assistant#show_session'
+            delete 'assistant/sessions/:id', to: 'assistant#discard_session'
+            get  'assistant/sessions/:id/versions/:number', to: 'assistant#show_version'
+            get  'assistant/progress/:turn_id', to: 'assistant#progress'
+            post 'assistant/suggested_tests', to: 'assistant_tools#suggested_tests'
+            post 'assistant/optimize', to: 'assistant_tools#optimize'
+            get  'assistant/optimize/:turn_id', to: 'assistant_tools#optimize_result'
+            post 'assistant/explain', to: 'assistant_tools#explain'
+            post 'assistant/proofread', to: 'assistant_tools#proofread'
+            post 'assistant/transcribe', to: 'assistant_tools#transcribe'
+            post 'assistant/route_scope', to: 'assistant_tools#route_scope'
+            # proyecto@publicar_prompts — la Galería: los prompts publicados solo se ven y se bajan aquí
+            get  'assistant/published_prompts',     to: 'assistant_published_prompts#index'
+            get  'assistant/published_prompts/:id', to: 'assistant_published_prompts#show'
+            post 'assistant/published_prompts/:id/install', to: 'assistant_published_prompts#install'
+            post 'assistant/published_prompts/:id/seen',    to: 'assistant_published_prompts#seen'
+            get  'assistant/audit',     to: 'assistant#audit'
+            post 'assistant/dry_run',   to: 'assistant#dry_run'
+            # el encargo (.md) con la idea del agente — ver docs/importar_prompt_md_plan.md
+            post 'assistant/briefs', to: 'assistant_briefs#create'
+            post 'assistant/briefs/from_instructions', to: 'assistant_briefs#from_instructions'
+            get  'assistant/briefs/:id',         to: 'assistant_briefs#show'
+            get  'assistant/briefs/:id/content', to: 'assistant_briefs#content'
+            post 'assistant/briefs/:id/digest',  to: 'assistant_briefs#digest'
+            post 'assistant/briefs/:id/compose', to: 'assistant_briefs#compose'
+            post 'assistant/briefs/:id/cover',   to: 'assistant_briefs#cover'
+            post 'assistant/briefs/:id/knowledge', to: 'assistant_knowledge#suggestions'
+            post 'assistant/briefs/:id/knowledge/create', to: 'assistant_knowledge#create'
+            # «Probar el agente»: la pila de pruebas en vivo (docs/importar_prompt_extenso_plan.md, M5)
+            post 'assistant/test_battery', to: 'assistant_test_battery#create'
+            get  'assistant/test_battery/:id', to: 'assistant_test_battery#show'
+            get  'assistant/test_battery/:id/report', to: 'assistant_test_battery#report'
+            # armar un agente desde cero conversando (llena las instrucciones iniciales)
+            post 'assistant/drafting_chat', to: 'assistant_drafting#create'
+            put  'assistant/autosave', to: 'assistant_autosave#update'
+            patch 'assistant/sessions/:id/name', to: 'assistant_autosave#rename'
+            post 'assistant/conversation_review', to: 'assistant_review#create'
+            # proyecto@adaptar_prompts_publicados — pestaña «Configurar»: qué falta y aplicarlo
+            post 'assistant/adaptation', to: 'assistant_adaptation#index'
+            post 'assistant/adaptation/apply', to: 'assistant_adaptation#apply'
+            post 'assistant/adaptation/suggest_variables', to: 'assistant_adaptation#suggest_variables'
+            post 'assistant/adaptation/mark_variables', to: 'assistant_adaptation#mark_variables'
+            get  'assistant/conversation_review/:turn_id', to: 'assistant_review#show'
           end
 
           # @knowledge_sources
@@ -121,6 +217,7 @@ Rails.application.routes.draw do
           post   'knowledge_base/discourse_categories', to: 'knowledge_base#discourse_categories'
           get    'knowledge_base/search_settings',  to: 'knowledge_base#search_settings'
           patch  'knowledge_base/search_settings',  to: 'knowledge_base#update_search_settings'
+          post   'knowledge_base/directive',        to: 'knowledge_base#directive'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
           end
@@ -140,6 +237,7 @@ Rails.application.routes.draw do
             end
             member do
               patch :transition
+              patch :move # @tickets_cases — mover de columna en el Kanban por tipo
               patch :assign
               patch :escalate
               patch :change_approval
@@ -153,26 +251,69 @@ Rails.application.routes.draw do
               patch :lock   # @tickets_cases — bloqueo de ticket
               patch :unlock # @tickets_cases — bloqueo de ticket
               patch :reopen # @tickets_cases — reapertura de ticket cerrado
+              patch :outcome  # Plan-Clase-Comercial F3 — cerrar oportunidad con resultado
+              patch :postpone # Plan-Clase-Comercial F3
+              patch :resume   # Plan-Clase-Comercial F3
+              post :work_order # Plan-Clase-Orden-de-Trabajo F2b — crear orden desde este caso
+              post :project # Plan-Clase-Proyecto P2 — crear proyecto desde una oportunidad ganada
             end
             resources :case_events, only: [:index]
+            # @tickets_cases — ligar (o crear) la conversación de un caso que no tiene
+            resource :case_conversation, only: [:create], path: 'conversation'
             # @tickets_cases 2E — relaciones entre tickets
             resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
             # @tickets_cases — tareas/subtareas del ticket
             resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks'
+            # Plan-Clase-Orden-de-Trabajo F2a — materiales de la orden
+            resources :case_work_order_items, only: [:create, :update, :destroy], path: 'work_order_items'
+            # Plan-Clase-Proyecto P2 — casos dentro del proyecto (crear o ligar / quitar)
+            resources :case_project_children, only: [:index, :create, :destroy], path: 'project_children' do
+              collection { get :timeline } # Plan-Clase-Proyecto P3 — línea de tiempo
+            end
             # @tickets_cases — notas internas (viven en case_events, no en tabla propia)
             resources :case_notes, only: [:index, :create, :update, :destroy], path: 'notes'
-            # @tickets_cases P4 — colaboradores/CC del ticket
-            resources :case_collaborators, only: [:index, :create, :destroy], path: 'collaborators'
+            # @tickets_cases F1 — reuniones del ticket y sus series (plan §4.5)
+            resources :case_meetings, only: [:index, :create, :update, :destroy], path: 'meetings' do
+              collection do
+                get :upcoming # @tickets_cases F5 — reuniones futuras que quedarían huérfanas
+              end
+              member do
+                patch :hold   # marcar realizada / no asistió
+                patch :cancel # scope: 'one' | 'all'
+                post  :resync # reintentar el espejo con Google (F3)
+                patch :align_task_due # @tickets_cases F6 — mover el vencimiento de la tarea
+              end
+            end
+            resources :case_meeting_series, only: [:create, :update, :destroy], path: 'meeting-series'
           end
           resources :case_rules, only: [:index, :create, :update, :destroy]
+          # @tickets_cases — «Tienes avisos importantes» de Mi día (avisos sin leer con peso)
+          resources :case_notices, only: [:index]
+          # @tickets_cases — «Mi resumen» de la página Inicio
+          resource :my_summary, only: [:show], controller: 'my_summary'
+          # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
+          resources :case_tasks, only: [:index], controller: 'case_tasks_index' do
+            put :my_day_plan, on: :collection # Plan-Bandeja-Prioridad F2 — orden propio de «Mi día»
+            post :my_day_ai, on: :collection  # Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA
+          end
           resources :case_types, only: [:index, :create, :update, :destroy] do
+            post :change_class, on: :member # cambiar de clase: tipo nuevo + retirar el de antes
             resources :case_type_fields, only: [:index, :create, :update, :destroy], path: 'fields' # @tickets_cases 2K
+            # @tickets_cases — columnas del Kanban por tipo (Opción A+)
+            resources :case_type_columns, only: [:index, :create, :update, :destroy], path: 'columns' do
+              put :replace, on: :collection
+              # Plan-Plantilla-Tareas-Etapa — tareas plantilla de la etapa
+              resources :case_type_column_tasks, only: [:index, :create, :update, :destroy], path: 'tasks' do
+                put :reorder, on: :collection
+              end
+            end
           end
           resources :case_services, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
           resources :case_categories, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
           resources :case_sla_policies, only: [:index, :create, :update, :destroy] # @tickets_cases 2I
           resources :case_portals, only: [:index, :create, :update, :destroy] # @tickets_cases — User Portal
           resource  :case_setting, only: [:show, :update] # @tickets_cases — modo simple/ITIL
+          resources :case_outcome_reasons, only: [:index, :create, :update, :destroy] # Plan-Clase-Comercial F3
           resource  :case_folio_config, only: [:show, :update], controller: 'case_folio_configs'
           resource  :case_ai_config, only: [:show, :update], controller: 'case_ai_configs' # @tickets_cases 3A
           # =========================================================================
@@ -429,6 +570,8 @@ Rails.application.routes.draw do
             get :agent_bot, on: :member
             post :set_agent_bot, on: :member
             delete :avatar, on: :member
+            # diag/llamadas_whatsapp (F6): la pestaña «Llamadas»
+            resource :whatsapp_call_settings, only: [:show, :update], module: :inboxes
           end
           resources :inbox_members, only: [:create, :show], param: :inbox_id do
             collection do
@@ -478,6 +621,10 @@ Rails.application.routes.draw do
           end
 
           namespace :google do
+            resource :authorization, only: [:create]
+          end
+
+          namespace :instagram do
             resource :authorization, only: [:create]
           end
 
@@ -638,6 +785,25 @@ Rails.application.routes.draw do
               get :bot_metrics
             end
           end
+          # proyecto@metricas_casos — Informes de Casos (seguimiento de oportunidades)
+          resources :case_reports, only: [] do
+            collection do
+              get :funnel
+              get :outcome
+              get :timeseries
+              get :assignees
+              get :velocity
+              get :stalled
+              get :pipeline # Plan-Clase-Comercial F5
+              get :pipeline_stale   # Plan-Metricas-Comercial M2 — estancadas (a pedido)
+              get :pipeline_monthly # Plan-Metricas-Comercial M3 — mes a mes (a pedido)
+              get :work_orders # Plan-Clase-Orden-de-Trabajo F3
+              get :projects # Plan-Clase-Proyecto P3
+              get :business_summary # «Resumen del negocio» (admin + autorizados)
+              post :business_summary_ai # «Explícame la semana»
+              post :business_summary_conversations_ai # análisis de conversaciones (IA, a pedido)
+            end
+          end
         end
       end
     end
@@ -757,9 +923,13 @@ Rails.application.routes.draw do
     resources :delivery_status, only: [:create]
   end
 
+  get 'instagram/callback', to: 'instagram/callbacks#show'
   get 'microsoft/callback', to: 'microsoft/callbacks#show'
   get 'google/callback', to: 'google/callbacks#show'
   get 'google_calendar/callback', to: 'google_calendar_callback#show'
+  # @tickets_cases F7 — receptor del push de Google Calendar. Público a propósito
+  # (Google no manda credenciales): el ping se autentica con X-Goog-Channel-Token.
+  post 'google_calendar/notifications', to: 'google_calendar_notifications#create'
 
   # ----------------------------------------------------------------------
   # Routes for external service verifications

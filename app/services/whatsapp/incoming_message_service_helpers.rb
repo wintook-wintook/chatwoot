@@ -99,20 +99,24 @@ module Whatsapp::IncomingMessageServiceHelpers
     @message = Message.find_by(source_id: source_id)
   end
 
-  def message_under_process?
-    key = format(Redis::RedisKeys::MESSAGE_SOURCE_KEY, id: @processed_params[:messages].first[:id])
-    Redis::Alfred.get(key)
-  end
+  # Atomically acquires a per-message-id processing lock, so that only one of several concurrent webhook
+  # deliveries for the same message id proceeds to create the message/conversation. Returns true if the
+  # lock was acquired, false if another process already holds it.
+  def lock_message_source_id
+    return false if @processed_params.try(:[], :messages).blank?
 
-  def cache_message_source_id_in_redis
-    return if @processed_params.try(:[], :messages).blank?
-
-    key = format(Redis::RedisKeys::MESSAGE_SOURCE_KEY, id: @processed_params[:messages].first[:id])
-    ::Redis::Alfred.setex(key, true)
+    redis_lock_manager.lock(message_source_id_key, 1.day)
   end
 
   def clear_message_source_id_from_redis
-    key = format(Redis::RedisKeys::MESSAGE_SOURCE_KEY, id: @processed_params[:messages].first[:id])
-    ::Redis::Alfred.delete(key)
+    redis_lock_manager.unlock(message_source_id_key)
+  end
+
+  def redis_lock_manager
+    @redis_lock_manager ||= Redis::LockManager.new
+  end
+
+  def message_source_id_key
+    format(Redis::RedisKeys::MESSAGE_SOURCE_KEY, id: @processed_params[:messages].first[:id])
   end
 end

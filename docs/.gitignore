@@ -1,2 +1,6 @@
 # Config local del servidor (code-server), no documentación
 *.code-workspace
+
+# Derivados de build-inline.py: se regeneran desde el .md fuente, no se versionan
+*.inline.md
+*.b64.md

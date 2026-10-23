@@ -31,7 +31,8 @@ sigue siendo un chat. Eso es exactamente la sensación de "le falta algo".
    consultar estado (aunque sea por el mismo canal de chat, sin login).
 2. **Ticket por correo (email‑to‑ticket)** — osTicket vive de esto; nosotros solo
    creamos desde chat/manual.
-3. **Colaboradores + Tareas (subtareas)** — trabajo en equipo dentro del ticket.
+3. **Tareas (subtareas)** — trabajo en equipo dentro del ticket. (Colaboradores/CC
+   salió de esta lista el 2026-07-28: descartado por ahora, ver §4.5.)
 
 ---
 
@@ -150,10 +151,13 @@ Leyenda estado MGCI: ✅ tenemos · 🟡 parcial · ❌ falta · ➕ tenemos y o
   en `TicketDetail` (pestaña Avance ya existe, encaja ahí). Patrón idéntico a lo ya
   hecho; migración al final.
 
-**4.5 Colaboradores / CC** 🟡
+**4.5 Colaboradores / CC** ❌ **DESCARTADO (2026-07-28)**
 - *Qué:* sumar a otro contacto/agente al hilo del ticket.
 - *Factibilidad:* 🟡 Chatwoot ya tiene "participantes" en conversación; para tickets
   internos/externos sería tabla pivote `case_ticket_collaborators`. Medio.
+- *Estado:* **fuera del plan, no se desarrolla por ahora.** Hubo un backend a medias
+  (`case_collaborators`) que se **eliminó del repo** y cuya tabla se revirtió en la BD.
+  Si se retoma, se replantea desde cero. Ver [[Pendiente]].
 
 **4.6 Bloqueo / "alguien está respondiendo"** 🟢
 - *Factibilidad:* 🟢 campo `locked_by_id`/`locked_at` + aviso suave en el detalle.
@@ -198,7 +202,7 @@ Sprint 2 (la puerta de entrada que falta)
 
 Sprint 3 (colaboración)
   └─ 4.4 Tareas/subtareas                     🟡
-  └─ 4.5 Colaboradores/CC                     🟡
+  └─ 4.5 Colaboradores/CC                     ❌ descartado (2026-07-28)
 
 Evaluar con cliente (mayor costo, valida demanda)
   └─ 4.3 Portal público por folio            🟡/🔴

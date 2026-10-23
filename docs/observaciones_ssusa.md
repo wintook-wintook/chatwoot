@@ -1,0 +1,320 @@
+# Observaciones SSUSA
+
+Rama: `fix/observaciones_ssusa` (desde `develop`, 06/10/2026)
+
+## Pendientes
+
+- [ ] **1. Palabra "equipo".** Cuando el cliente menciona "equipo", el bot intenta relacionarlo con algo y no debe. Solo recomienda los relacionados; si no encuentra el pedido, ofrece uno relacionado.
+- [ ] **2. Campos obligatorios de "Renta Unidades".** El tipo de caso los marca como obligatorios, pero no se llenan. Si vienen en la solicitud, el bot los llena con eso; si no, los pregunta.
+- [ ] **3. Fecha de la agenda.** El evento en el calendario no se creó con la fecha que pidió el cliente.
+- [ ] **4. Describir la grúa antes de la disponibilidad.** Antes de dar horarios, el bot da la descripción y especificaciones de la grúa, para que el cliente confirme que le sirve.
+- [ ] **5. Disponibilidad según el horario.**
+  - Si el cliente da horario → responder si hay o no (sin lista).
+  - Si no da horario → pedirlo.
+  - Si no hay → decir qué disponibilidad sí hay.
+  - Si pide grúa y ya dice cuándo → agendar directo si hay.
+- [ ] **6. Conectar con CRM Zeus.** Validar si el contacto es cliente o no.
+- [ ] **7. No dado de alta → humano.** Mensajes de alguien que no es cliente se escalan directo a un agente.
+- [ ] **8. (PENDIENTE DESARROLLO) Estatus de la organización en CRM Zeus.** Validar el estatus del cliente/organización.
+- [ ] **9. Casos duplicados.** En una conversación se crearon 6 casos del mismo servicio; el bot no siguió el hilo de la conversación.
+
+---
+
+## Bitácora — puntos 2, 4 y 5 (06/10/2026)
+
+Agente: **Grúas SSUSA — prueba hoja_buscar** (#10368, cuenta 2). Solo cambia el código de
+`@solicitudes` (`app/services/contact_trackings/service_requests/`), que hoy usa únicamente este
+agente. El motor de agenda de los demás agentes no se tocó.
+
+### 1. Qué se hizo
+
+| Punto | Archivo | Cambio |
+|---|---|---|
+| 2 | `service_requests/fields.rb` (nuevo) | Llena los campos del tipo de caso de cada servicio con el mismo extractor que usa `@crear_ticket`. Los campos y cuáles son obligatorios salen del tipo de caso, no del código. |
+| 2 | `service_requests/registry.rb` | Al crear o actualizar el caso guarda los campos y anota los obligatorios que faltan (`metadata.faltan_campos`). `complete!` completa un caso con la respuesta del cliente. |
+| 2 | `service_requests/turn.rb` | «Me falta…» pregunta los obligatorios vacíos del tipo de caso (antes solo fecha y lugar). Si el mensaje solo trae los datos pedidos, completa el caso abierto. |
+| 2 | `contact_tracking_response_analyzer_job.rb` | Si la respuesta («a las 10», «es escombro») cae en otra ruta, igual completa el caso pendiente. |
+| 9 (de paso) | `registry.rb` | Un caso que no tenía fecha u origen se completa cuando llegan, en vez de abrir otro. |
+| 4 | `service_requests/scheduler.rb` + `turn.rb` | Antes del horario, una línea 🚛 con los datos de la unidad, sacados de la hoja. |
+| 5 | `scheduler.rb` + `turn.rb` + `choice.rb` | Con hora libre: se aparta directo. Con hora ocupada: «a las 08:00 no hay; lo que sí hay → …». Sin hora: se pide la hora, sin listar la agenda. |
+
+### 2. Cómo funciona
+
+Las columnas de la descripción las elige la ruta: la 1.ª columna que regresa `{{hoja_buscar:}}`
+es el calendario y las demás describen la unidad.
+
+```
+{{hoja_buscar: Servicio Gruas | tipo=?; peso_max_t>=? | Calendar_ID, tipo, peso_max_t, largo_m, placas}}
+                                                        └calendario┘ └──── descripción de la unidad ────┘
+```
+
+Ejemplo de respuesta (hora pedida y libre, modo tentativo):
+
+```
+Recibí 1 servicio:
+
+1️⃣ Plana 30 t · Centro → Paraíso · sáb 10 oct 08:00 · 📌 apartado (caso 01121)
+    🚛 TP-63: Plataforma plana extendible (se alarga) · Peso max t: 40.8 · Largo m: 16.15 · Placas: 92UN8A
+    ✅ Sí hay a las 08:00: te lo aparté de 08:00 a 10:00 (TP-63)
+
+Para programarlos me falta: del 1️⃣ Material a transportar y cantidad, Peso.
+Queda apartado; cuando me confirmes el servicio lo dejo en firme.
+```
+
+Sin hora: `Para programarlos me falta: del 1️⃣ …, a qué hora lo necesitas.` (no lista horarios).
+Hora ocupada: `a las 08:00 no hay; lo que sí hay → 1A 09:00–11:00 (TP-63) · 1B …`.
+
+### 3. Pila de pruebas
+
+- Specs actualizadas/nuevas: `spec/services/contact_trackings/service_requests/scheduler_spec.rb`,
+  `registry_spec.rb`, `turn_spec.rb`. **No corridas** (RSpec usa la base de dev).
+- Revisión en consola (solo lectura): la descripción de unidades sale de la hoja real
+  («Plataforma plana extendible (se alarga) · Peso max t: 40.8 · Largo m: 16.15 · Placas: 92UN8A»).
+- En vivo, Agents IA Test (493), agente #10368, 06/10/2026:
+
+| Conv. | Mensajes del cliente | Resultado |
+|---|---|---|
+| 378 | Plana 30 t, vie 9 oct 08:00, Centro → Paraíso, escombro 25 t | ✅ 6 campos llenos, unidad TP-111 descrita, apartado directo 08:00–09:00 (caso 01121) |
+| 379 | Plana vie 9 oct Villahermosa → Comalcalco · luego «a las 10 am, son 20 toneladas de varilla» | ⚠️ 1.er turno no pidió Material (copió «plana» del equipo). 2.º turno: mismo caso completado y apartado 10:00 (01122) |
+| 380 | Mismo 1.er mensaje (reproducir) | ❌ Material = «plana» → arreglado en `fields.rb` (el equipo no es la carga); 5/5 extracciones correctas después |
+| 381 | Mismo 1.er mensaje tras el arreglo | ✅ Pide Material, Peso y la hora; sin listar agenda (01124) |
+
+| 382 | Plana vie 9 oct Cárdenas → Huimanguillo · luego «a las 12:00 hrs, son 18 toneladas de tubería» | ✅ No pide «Unidad»; al apartar queda Unidad = TP-111 (caso 01125). Comprobador: válido, sin hallazgos |
+
+- Sin probar en vivo: hora pedida **ocupada** (con 13 planas siempre hay una libre); lo cubre la spec.
+
+### Campo de la unidad asignada — `@solicitudes(asignar=campo)`
+
+El campo «Unidad» de Renta Unidades es la grúa asignada, no la unidad del peso (antes salía «t»).
+Con `@solicitudes(asignar=unidad)` ese campo:
+- no lo llena la IA ni se le pregunta al cliente;
+- lo llena el sistema al apartar (directo o cuando el cliente elige «1A») con el nombre de la
+  unidad (TP-111). Si se mueve el servicio, se actualiza.
+
+`asignar=` recibe la **clave** del campo del tipo de caso; otro agente puede usar otro campo.
+
+### 4. Cómo pedírselo al Asistente
+
+> En la ruta solicitud_servicio, cambia el {{hoja_buscar:}} para que regrese también la
+> descripción de la unidad: `{{hoja_buscar: Servicio Gruas | tipo=?; peso_max_t>=? | Calendar_ID, tipo, peso_max_t, largo_m, placas}}`.
+> Calendar_ID tiene que quedar primero.
+
+> En la ruta solicitud_servicio cambia `@solicitudes` por `@solicitudes(asignar=unidad)`, para que
+> el campo Unidad del caso se llene con la grúa apartada.
+
+---
+
+## Bitácora — punto 9: casos duplicados (06/10/2026)
+
+Conversación real: **377** (inbox 4, Telegram) → 6 casos (01115–01120) para 2 servicios.
+
+### 1. Qué se hizo
+
+| Causa | Arreglo |
+|---|---|
+| «Serían los dos para el 3 de octubre»: los casos anteriores no tenían fecha y no coincidían | `registry.rb#same?`: un dato que el caso anterior no tenía ya no cuenta como diferencia (commit anterior) |
+| «de centro a paraíso, 14 t y 11 t»: el cliente **corrigió** lugar y capacidad | `extractor.rb`: la IA recibe los casos abiertos numerados (con folio) y dice cuál corrige (`"caso": N`; acepta también el folio) |
+| La IA a veces toma «Hiab 11 t» como otro equipo frente a «Hiab 12 t» | `registry.rb#same_kind_pending`: respaldo sin IA — un caso abierto del mismo tipo de equipo, sin tarea e incompleto se corrige; solo «adicional / además / agrega / otro más» abre otro |
+| Material = «Hiab 14 a 15 Ton», Peso = capacidad | `fields.rb`: el equipo y sus toneladas no son la carga; `registry.rb`: con varios servicios en un mensaje, cada caso se llena solo con sus datos (no con el mensaje completo) |
+
+Al actualizar un caso también se renueva su título (no se queda con el lugar viejo).
+
+### 2. Cómo funciona
+
+```
+Casos ya registrados en esta conversación:      ← se le pasa a la IA
+1. Hiab 14 a 15 t · KM10.5 Prefabricado · lun 12 oct (caso 01135)
+2. Hiab 12 t · KM10.5 Prefabricado · lun 12 oct (caso 01136)
+
+«…de uno de 14 t y el otro 11 t, de centro a paraíso»
+  → {"etiqueta": "Hiab 14 t", …, "caso": 1}, {"etiqueta": "Hiab 11 t", …, "caso": 2}
+  → «Actualicé 2 servicios que ya tenía»
+```
+
+### 3. Pila de pruebas (Agents IA Test, 493, agente #10368 — los 4 mensajes de la 377, fecha 12 oct)
+
+| Conv. | Resultado |
+|---|---|
+| 383 | ⚠️ Turno 2 ya no duplica; turno 4 abrió 2 (la IA contestó con el folio «01126» en vez de 1). Campos: Material = equipo |
+| 384 | ✅ 2 casos; ⚠️ Peso 11 t en los dos (mensaje completo mezclaba) |
+| 385 | ⚠️ 3 casos: la IA tomó «Hiab 11 t» como nuevo frente a «Hiab 12 t» → respaldo sin IA |
+| 386 | ✅ **2 casos**, cada uno con su peso, material y ruta; pidió Material y Peso desde el 1.er turno |
+
+Specs nuevas: `extractor_spec.rb` (número y folio), `registry_spec.rb` (case_ref, respaldo, «adicional»). No corridas.
+
+### 4. Cómo pedírselo al Asistente
+
+No hace falta: es del motor de `@solicitudes`; cualquier ruta con `@solicitudes` lo usa.
+
+### Pendiente — punto 3
+
+En la 377 no se creó ninguna cita: no hay hiab en la hoja «Servicio Gruas» («no tengo ese equipo
+en el catálogo»). Todas las citas de los agentes de Grúas tienen la fecha pedida, en la base y en
+Google (calendarios, cuenta y links de la hoja en America/Mexico_City). Falta que SSUSA aclare si
+«no se generó» (faltan los hiab en la hoja) o si fue otra conversación.
+
+---
+
+## Bitácora — punto 1: la palabra «equipo» y recomendar relacionados (06/10/2026)
+
+### 1. Qué se hizo
+
+| Causa | Arreglo |
+|---|---|
+| «flete de este **equipo**: plataforma articulada Haulotte» → el motor guardaba tipo = «plataforma» y lo relacionaba con las «Plataforma plana» de la hoja (conv. 257, 263) | `extractor.rb`: el tipo es la unidad **de la empresa**; la máquina/equipo **del cliente** es carga. Sin unidad dicha → tipo vacío |
+| Lo pedido no está en la hoja (hiab) → solo «no tengo ese equipo en el catálogo» (conv. 377) | `scheduler.rb`: se busca otra vez sin el filtro de texto (`tipo=?`) y con el de números (`peso_max_t>=?`): «ℹ️ No tengo hiab; lo más parecido que tengo» |
+| Sin peso ni capacidad para comparar | «no tengo hiab en el catálogo; manejo: Low boy, Plataforma plana extendible, Cama baja, Plataforma plana, Gondola / caja de volteo» (valores de la columna de la hoja) |
+| Lo relacionado se apartaba solo | `turn.rb`: lo relacionado solo se **recomienda**; el cliente confirma con «sí» |
+
+### 2. Cómo funciona
+
+```
+👤 Necesito un hiab de 14 toneladas … a las 11:00 am … 8 toneladas de varilla
+🤖 1️⃣ Hiab 14 t · KM10.5 Prefabricado · lun 12 oct 11:00 (caso 01139)
+       ℹ️ No tengo hiab; lo más parecido que tengo:
+       🚛 TP-111: Plataforma plana · Peso max t: 40.8 · Largo m: 14.02 · Placas: 74UR8D
+       sí hay a las 11:00 → 1A 11:00–12:00 (TP-111)
+👤 sí
+🤖 📌 Aparté: 1️⃣ Hiab 14 t · lun 12 oct 11:00–12:00 (TP-111)
+```
+
+### 3. Pila de pruebas (Agents IA Test 493, agente #10368)
+
+| Conv. | Mensaje | Resultado |
+|---|---|---|
+| 387 | Hiab 14 t, lun 12 oct 09:00, 8 t de varilla | ⚠️ «No tengo hiab; lo más parecido» ✅ pero lo apartó solo → corregido |
+| 388 | Flete de «plataforma articulada Haulotte HA20 de 9.4 t» | ✅ Haulotte = Material (no tipo); «Estas unidades aguantan la carga» (también apartó solo → corregido) |
+| 389 | Hiab 14 t 11:00 · luego «sí» | ✅ Recomienda TP-111 sin apartar; con «sí» la aparta y Unidad = TP-111 |
+| consola | «hiab» sin peso | ✅ «no tengo hiab en el catálogo; manejo: …» |
+
+Spec nueva: `scheduler_spec.rb` (búsqueda relacionada). No corrida.
+
+### 4. Cómo pedírselo al Asistente
+
+No hace falta: lo hace el motor en cualquier ruta con `@solicitudes` cuyo `{{hoja_buscar:}}`
+tenga un filtro de texto (`tipo=?`) y uno de números (`peso_max_t>=?`).
+
+---
+
+## Prueba del punto 5 en una conversación (07/10/2026)
+
+### Hallazgo: el pedido entraba por otra ruta
+Conv. **390**: «Necesito un low boy… para 30 toneladas» lo clasificó `disponibilidad_capacidad`
+(su ejemplo es «necesito un remolque para 50 toneladas»), que usaba la agenda general: listó 5
+horarios desde las 00:00 y pidió correo. Lo nuevo solo vivía en `@solicitudes`.
+
+**Arreglo (en el agente #10368, sin código):** `disponibilidad_capacidad` usa la misma cadena que
+`solicitud_servicio`:
+```
+- -> @solicitudes(asignar=unidad) -> @crear_ticket(tipo=Renta Unidades, prioridad=media)
+    -> @agendar_calendar(duracion=?, horario=24h, modo=tentativo)
+    -> {{hoja_buscar: Servicio Gruas | tipo=?; peso_max_t>=? | Calendar_ID, tipo, peso_max_t, largo_m, placas}}
+```
+`disponibilidad_remolque` queda igual (preguntas por una unidad nombrada). Comprobador: válido.
+
+### Hallazgo: «además otro» corregía el apartado
+Conv. **391**: «Necesito además otro low boy… a Cárdenas» cambió el destino del caso 1 ya apartado.
+**Arreglo** (`registry.rb`, `extractor.rb`): pedir otra unidad («además/también/necesito otro»,
+«adicional», «uno más») abre otro caso siempre; «el otro» (con artículo) sigue siendo corrección.
+Un caso apartado solo se trata como el mismo si no cambian día ni hora (para eso está «muévelo»).
+
+### Conversación de prueba: **393** (Agents IA Test)
+
+| Cliente | Bot |
+|---|---|
+| Low boy vie 16 oct, Paraíso → Comalcalco, excavadora 30 t (sin hora) | «me falta: a qué hora lo necesitas» — sin lista |
+| «a las 10:00 am» | 🚛 TP-64 descrita · «✅ Sí hay a las 10:00: te lo aparté» |
+| «además otro low boy… 10:00… retroexcavadora 25 t» | Caso 2 nuevo · 🚛 TP-93 · «✅ Sí hay a las 10:00» |
+| «además otro low boy… 10:00… motoconformadora 20 t» | Caso 3 · «a las 10:00 no hay; lo que sí hay → 3A 11:00 (TP-64) · 3B 12:00 (TP-93) · 3C 13:00 (TP-64)» |
+
+Regresión punto 9: conv. **394** (los 4 mensajes de la 377) → 2 casos ✅.
+
+---
+
+## Prueba del punto 9 en una conversación (07/10/2026)
+
+Un solo servicio del que se habla en 5 mensajes → tiene que quedar **1 caso**.
+
+### Hallazgo (conv. 396)
+«Perdón, el destino es Comalcalco, no Paraíso» lo clasificó `consulta_estado_caso`; como el caso ya
+estaba apartado no contaba como pendiente, y `@crear_ticket` contestó «Ya tienes el caso… sumé tu
+mensaje» sin corregir nada. El evento del calendario, además, conservaba el título viejo.
+
+### Arreglo
+- Job `handle_service_pending`: desde otra ruta se hace el turno de `@solicitudes` en modo
+  `corrections_only` (solo servicios que la IA marcó como corrección de un caso abierto, o lo que
+  completa uno pendiente). Desde otra ruta nunca se abre un caso nuevo.
+- `ServiceMeeting#retitle!` + `Registry#retitle_meeting`: el evento de Google toma el título
+  corregido, con su «[TENTATIVO]».
+- `Turn`: si todo ya estaba apartado, cierra con «Listo, quedó corregido y tu horario sigue apartado.»
+
+### Conversación de prueba: **399** (Agents IA Test)
+
+| Cliente | Bot | Casos |
+|---|---|---|
+| «necesito una plataforma plana para mover unas vigas» | Recibí 1 servicio · me falta Ubicación Recogida, Peso, Fecha | 1 |
+| «Sería para el martes 20 de octubre de 2026» | Actualicé 1 servicio · me falta …, a qué hora | 1 |
+| «Son 18 toneladas de vigas de acero, de Villahermosa a Paraíso» | Actualicé · me falta a qué hora | 1 |
+| «a las 1 pm» | 🚛 TP-111 · ✅ Sí hay a las 13:00: te lo aparté | 1 |
+| «Perdón, el destino es Comalcalco, no Paraíso» | Actualicé · Villahermosa → Comalcalco · 📌 apartado · «Listo, quedó corregido…» | **1** |
+
+Evento en Google después de la corrección: «[TENTATIVO] Plataforma plana — Villahermosa → Comalcalco».
+La conversación real (377) repetida: conv. 394 → 2 casos.
+
+---
+
+## Conversación real 398 (Telegram, 07/10/2026): doble reserva y «¿tienes otra?»
+
+### Qué pasó
+| Mensaje | Falla |
+|---|---|
+| «Del 1… domingo 6am 16 h; el segundo… misma fecha» | A los dos servicios se les ofreció la **misma** unidad (TP-111) a la misma hora |
+| «Si esta bien» | Se apartaron **los dos** en la TP-111, dom 11 oct 06:00–22:00 (tareas 256 y 257) |
+| «el segundo es la misma grúa… ¿tienes otra?» | Se tomó como corrección del 1️⃣ (ruta «KM10.5 → KM10.5») |
+| «no entendí, ¿son dos grúas?» | «¿Para cuál **peso_max_t** quieres agendar?» (nombre interno de la columna) |
+
+### Arreglo
+- `service_requests/taken.rb` (nuevo): lo que ya tienen apartado u ofrecido los otros servicios de la
+  conversación. `Scheduler` no ofrece esas unidades a esa hora; `Choice` no aparta una opción que
+  choque («⚠️ 2A: esa unidad ya la tiene otro de tus servicios…»).
+- `service_requests/other_unit.rb` (nuevo): «la misma grúa», «grúas diferentes», «¿tienes/hay
+  otra?», «cambia la grúa» → al servicio nombrado (número u ordinal) o al que comparte unidad: se
+  cancela su tarea, esa unidad queda excluida y se buscan horarios en otra. «Necesito otra grúa
+  para el martes» sigue siendo un servicio nuevo.
+- Job: la pregunta de la agenda general dice «¿Qué peso máximo necesitas?» (no «peso_max_t»).
+- `registry.rb`: dos paradas iguales («KM10.5 → KM10.5») se guardan como un solo sitio.
+- `fields.rb`: «con certificados», «en buenas condiciones», «5 extensiones» no son material.
+
+### Pruebas (Agents IA Test 493)
+| Conv. | Resultado |
+|---|---|
+| 401 | Mensajes de la 398 tal cual: 1️⃣ TP-46; al 2️⃣ le pidió la hora («misma fecha» no dice hora); «¿tienes otra?» fue al 2️⃣; la última pregunta ya no dice «peso_max_t» |
+| 402 | Controlada (los dos con hora): 1️⃣ **TP-47** y 2️⃣ **TP-58** — distintas; «sí» aparta las dos; «¿tienes otra?» cancela la TP-58 del 2️⃣ y ofrece la **TP-73** |
+
+Pendiente: «no entendí, ¿son dos grúas?» todavía cae en la agenda general («¿Qué tipo necesitas?»);
+lo natural sería contestar con el resumen de sus servicios.
+Datos de la 398 real: la TP-111 sigue con dos tareas tentativas el dom 11 oct 06:00–22:00.
+
+---
+
+## Pregunta de estado: «no entendí, ¿son dos grúas?» (07/10/2026)
+
+**Antes** (conv. 398/401): caía en la agenda general → «¿Qué tipo necesitas?».
+
+**Ahora** (`service_requests/status.rb`, enganchado al inicio del turno de `@solicitudes`, así que
+también funciona si la pregunta cae en otra ruta): si el cliente pregunta por **sus** servicios
+(«no entendí», «¿son dos…?», «¿cuántos servicios tengo?», «¿cómo quedaron mis grúas?», «¿qué me
+apartaste?») y hay casos abiertos, contesta con el resumen, sin IA:
+
+```
+Tienes 2 servicios:
+
+1️⃣ Hiab 14 a 15 t · KM10.5 Prefabricado · dom 11 oct 06:00 · 📌 apartado · TP-58 (caso 01159)
+2️⃣ Hiab 12 t · KM10.5 Prefabricado · dom 11 oct 06:00 · 📌 apartado · TP-73 (caso 01160)
+
+Los apartados quedan en firme cuando me confirmes el servicio.
+```
+Si a alguno le falta algo: «Al 2️⃣ le falta: la hora.» Una pregunta de catálogo («¿qué tipos de
+grúas manejan?») no entra.
+
+Prueba: conv. **403** (Agents IA Test) ✅. Spec: `status_spec.rb` (no corrida).

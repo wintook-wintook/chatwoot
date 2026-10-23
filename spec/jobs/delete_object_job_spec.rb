@@ -17,4 +17,19 @@ RSpec.describe DeleteObjectJob do
       expect { account.reload }.to raise_error(ActiveRecord::RecordNotFound)
     end
   end
+
+  # Las llaves foráneas a users sin ON DELETE impedían borrar al usuario (PG::ForeignKeyViolation).
+  context 'when the user has records in custom tables' do
+    let(:user) { create(:user, account: account) }
+    let!(:calendar) { UserCalendarIntegration.create!(user: user, account: account, google_email: 'agente@example.com') }
+    let!(:template) { create(:tracking_template, account: account, user: user) }
+
+    it 'deletes the user, drops its calendar and keeps the account template' do
+      described_class.perform_now(user)
+
+      expect { user.reload }.to raise_error(ActiveRecord::RecordNotFound)
+      expect(UserCalendarIntegration.exists?(calendar.id)).to be(false)
+      expect(template.reload.user_id).to be_nil
+    end
+  end
 end

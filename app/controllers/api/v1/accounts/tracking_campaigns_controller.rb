@@ -9,14 +9,27 @@
 # estadísticas se agregan en una sola consulta para evitar N+1.
 #
 # GET /api/v1/accounts/:account_id/tracking_campaigns        → listado con stats
+#     ?lite=true → solo lo que necesita un selector (automatizaciones), sin stats
 # GET /api/v1/accounts/:account_id/tracking_campaigns/:id     → una campaña con stats
+# POST /api/v1/accounts/:account_id/tracking_campaigns        → crea una campaña CONTINUA
+#     (proyecto@automatizacion_campanas): sin audiencia, la llenan las automatizaciones.
+#     Las por lote se crean por contact_tracking_bulk_assigns, que además asigna la audiencia.
+# PATCH /api/v1/accounts/:account_id/tracking_campaigns/:id → modifica una campaña Guardada
+#     como CONTINUA (mismos parámetros que create). Como por lote se modifica por
+#     PATCH contact_tracking_bulk_assigns/:id. Ya puesta en curso no se modifica.
+# GET /api/v1/accounts/:account_id/tracking_campaigns/:id/entries?page=N → inscritos y omitidos
+#     (proyecto@automatizacion_campanas, ver TrackingCampaignEntriesJson)
 # ================================================================================
 
 class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseController
-  # Intenciones que cuentan como "interesado" en el embudo (igual que el overview de cuenta).
-  INTERESTED_INTENTS = %w[interested book_appointment reschedule].freeze
+  include TrackingCampaignEntriesJson
+  include TrackingCampaignContinuousParams
+  ACTIVE_TRACKING_STATUSES = %w[pending scheduled active paused].freeze
+  EMPTY_FUNNEL = { replied: 0, interested: 0, appointment: 0, objective_met: 0, paused_rule: 0, cancelled_rule: 0 }.freeze
 
   def index
+    return render(json: lite_list) if ActiveModel::Type::Boolean.new.cast(params[:lite])
+
     campaigns = Current.account.tracking_campaigns
                        .includes(:tracking_template, :inbox)
                        .order(created_at: :desc)
@@ -40,21 +53,57 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   # Borra la campaña. Antes cancela los seguimientos aún vivos (detiene sus jobs)
   # para que no sigan enviando mensajes sin campaña. Los seguimientos NO se borran:
   # el modelo los desvincula (dependent: :nullify) y quedan sueltos en "Todos".
+  def entries
+    campaign = Current.account.tracking_campaigns.find(params[:id])
+    render json: entries_payload(campaign, [params[:page].to_i, 1].max)
+  end
+
+  def create
+    template, error = continuous_template
+    return render_error(error) if error
+
+    campaign = Current.account.tracking_campaigns.new(continuous_attributes(template).merge(user: current_user))
+    return render_error(campaign.errors.messages.values.flatten.to_sentence) unless campaign.save
+
+    render json: { campaign_id: campaign.id, campaign_name: campaign.name }
+  end
+
+  # Una Guardada se puede modificar (y pasar de por lote a continua); en curso, ya no.
+  # Sigue Guardada: ponerla en curso es POST :id/launch.
+  def update
+    campaign = Current.account.tracking_campaigns.find(params[:id])
+    return render_error('Solo se puede modificar una campaña Guardada.') unless campaign.saved?
+
+    template, error = continuous_template
+    return render_error(error) if error
+
+    attributes = continuous_attributes(template).merge(status: 'saved', audience: {})
+    return render_error(campaign.errors.messages.values.flatten.to_sentence) unless campaign.update(attributes)
+
+    render json: { campaign_id: campaign.id, campaign_name: campaign.name }
+  end
+
   def destroy
     campaign = Current.account.tracking_campaigns.find(params[:id])
     cancel_active_trackings(campaign)
+    # Al borrarla, los seguimientos se desvinculan: uno que siguiera vivo quedaría enviando
+    # sin campaña y fuera del dashboard. Si alguno no se pudo cancelar, no se borra.
+    return render_error('No se pudieron cancelar todos los seguimientos de la campaña.') if active_trackings(campaign).exists?
+
     campaign.destroy!
     head :no_content
   end
 
   private
 
+  def active_trackings(campaign)
+    campaign.contact_trackings.where(status: ACTIVE_TRACKING_STATUSES)
+  end
+
   # Cancela los seguimientos no terminales de la campaña (pending/scheduled/active/paused).
   # cancel! cancela los jobs programados y marca el estado como 'cancelled'.
   def cancel_active_trackings(campaign)
-    campaign.contact_trackings
-            .where(status: %w[pending scheduled active paused])
-            .find_each(&:cancel!)
+    active_trackings(campaign).find_each(&:cancel!)
   end
 
   # { campaign_id => { 'pending' => N, 'active' => N, ... } } en una sola query.
@@ -77,66 +126,46 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     acc
   end
 
-  # Eje de ENTREGA (WhatsApp), separado del de ejecución ([[Entrega-vs-ejecucion]]).
-  # Unidad = estado del ÚLTIMO mensaje saliente por conversación (1 por prospecto),
-  # NO mensajes crudos. Devuelve { campaign_id => { delivered:, sent:, failed: } }.
+  # Eje de ENTREGA (WhatsApp): ver TrackingCampaigns::DeliveryStats.
   def delivery_by_campaign(ids)
-    return {} if ids.blank?
-
-    # conversation_id => campaign_id (solo prospectos que ya tienen conversación)
-    conv_to_campaign = ContactTracking.where(tracking_campaign_id: ids)
-                                      .where.not(conversation_id: nil)
-                                      .pluck(:conversation_id, :tracking_campaign_id)
-                                      .to_h
-    return {} if conv_to_campaign.empty?
-
-    last_outgoing_messages(conv_to_campaign.keys).each_with_object({}) do |message, acc|
-      campaign_id = conv_to_campaign[message.conversation_id]
-      bucket = delivery_bucket(message.status)
-      (acc[campaign_id] ||= Hash.new(0))[bucket] += 1
-    end
+    TrackingCampaigns::DeliveryStats.new(ids).call
   end
 
-  # Último mensaje saliente (outgoing/template) por conversación, en 2 queries (sin N+1).
-  def last_outgoing_messages(conversation_ids)
-    # reorder(nil): Message tiene default_scope con ORDER BY que rompe el GROUP BY.
-    last_ids = Message.where(conversation_id: conversation_ids, message_type: %i[outgoing template])
-                      .reorder(nil).group(:conversation_id).maximum(:id)
-    return [] if last_ids.empty?
-
-    Message.where(id: last_ids.values).select(:id, :conversation_id, :status)
-  end
-
-  # Message.status (string del enum) → bucket de entrega. read cuenta como entregado;
-  # sent/progress = enviado sin confirmar; failed = rechazado por el canal.
-  def delivery_bucket(status)
-    case status
-    when 'delivered', 'read' then :delivered
-    when 'failed'            then :failed
-    else                          :sent
-    end
-  end
-
-  # Embudo de intención por campaña (respondieron/interesados/agendaron), mismo
-  # criterio que el overview de cuenta: replied = last_intent no nulo. 3 queries
-  # agregadas (sin N+1). Devuelve { campaign_id => { replied:, interested:, appointment: } }.
+  # Embudo por campaña, mismo criterio que el overview de cuenta: replied = last_intent
+  # no nulo; el resto solo por las reglas de palabra clave: interested_at / booked_at,
+  # status objective_met, y pausados/cancelados que siguen así porque los dejó una regla
+  # (keyword_action_fired). Queries agregadas (sin N+1).
+  # Devuelve { campaign_id => { replied:, interested:, appointment:, objective_met:, paused_rule:, cancelled_rule: } }.
   def funnel_by_campaign(ids)
     return {} if ids.blank?
 
     base = ContactTracking.where(tracking_campaign_id: ids)
-    replied = base.where.not(last_intent: nil).group(:tracking_campaign_id).count
-    interested = base.where(last_intent: INTERESTED_INTENTS).group(:tracking_campaign_id).count
-    appointment = base.where.not(appointment_at: nil).group(:tracking_campaign_id).count
-    objective_met = base.where(status: 'objective_met').group(:tracking_campaign_id).count
+    # siguen en `status` porque una regla de palabra clave con `action` los dejó así
+    by_rule = ->(status, action) { base.where(status: status).where("keyword_action_fired->>'action' = ?", action) }
+    counts = {
+      replied: base.where.not(last_intent: nil),
+      interested: base.where.not(interested_at: nil),
+      appointment: base.where.not(booked_at: nil),
+      objective_met: base.where(status: 'objective_met'),
+      paused_rule: by_rule.call('paused', 'pause'),
+      cancelled_rule: by_rule.call('cancelled', 'cancel')
+    }.transform_values { |relation| count_by_campaign(relation) }
 
-    ids.index_with do |id|
-      {
-        replied: replied[id].to_i,
-        interested: interested[id].to_i,
-        appointment: appointment[id].to_i,
-        objective_met: objective_met[id].to_i
-      }
-    end
+    ids.index_with { |id| counts.transform_values { |by_campaign| by_campaign[id].to_i } }
+  end
+
+  def count_by_campaign(relation)
+    relation.group(:tracking_campaign_id).count
+  end
+
+  def render_error(message)
+    render json: { error: message }, status: :unprocessable_entity
+  end
+
+  # proyecto@automatizacion_campanas — para el desplegable "Agregar a campaña".
+  def lite_list
+    Current.account.tracking_campaigns.order(created_at: :desc)
+           .map { |c| c.slice(:id, :name, :status, :mode, :scheduled_for, :ends_at, :inbox_id) }
   end
 
   def campaign_json(campaign, status_counts, delivery_counts, funnel_counts)
@@ -146,13 +175,26 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
       status: campaign.status,
       objective: campaign.objective,
       scheduled_for: campaign.scheduled_for,
+      # proyecto@automatizacion_campanas — la ventana y cómo se agenda a cada inscrito
+      mode: campaign.mode,
+      ends_at: campaign.ends_at,
+      entry_delay_minutes: campaign.entry_delay_minutes,
+      respect_working_hours: campaign.respect_working_hours,
+      daily_cap: campaign.daily_cap,
       created_at: campaign.created_at,
       template_name: campaign.tracking_template&.name,
       inbox_name: campaign.inbox&.name,
       stats: aggregate_stats(status_counts || {}),
       delivery: aggregate_delivery(delivery_counts || {}),
-      funnel: funnel_counts || { replied: 0, interested: 0, appointment: 0, objective_met: 0 }
-    }
+      funnel: funnel_counts || EMPTY_FUNNEL
+    }.merge(editable_json(campaign))
+  end
+
+  # Para modificar una Guardada: CampaignForm la vuelve a llenar con esto. Y, si está
+  # pausada por un error de configuración de Meta (proyecto@automatizacion_campanas), el motivo.
+  def editable_json(campaign)
+    { tracking_template_id: campaign.tracking_template_id, audience: campaign.audience,
+      paused_reason: campaign.paused_reason, paused_at: campaign.paused_at }
   end
 
   def aggregate_stats(status_counts)
@@ -175,7 +217,10 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     {
       delivered: delivery_counts[:delivered].to_i,
       sent: delivery_counts[:sent].to_i,
-      failed: delivery_counts[:failed].to_i
+      unconfirmed: delivery_counts[:unconfirmed].to_i,
+      retrying: delivery_counts[:retrying].to_i,
+      failed: delivery_counts[:failed].to_i,
+      failure_reasons: delivery_counts.fetch(:failure_reasons, [])
     }
   end
 end

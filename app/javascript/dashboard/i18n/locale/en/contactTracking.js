@@ -8,7 +8,8 @@ export default {
   CONTACT_TRACKING: {
     TITLE: 'Follow-up Management',
     DESCRIPTION: 'Schedule and manage automatic contact follow-ups',
-    INTEGRATION_NOT_AVAILABLE: 'The follow-up integration is not available for this inbox',
+    INTEGRATION_NOT_AVAILABLE:
+      'The follow-up integration is not available for this inbox',
 
     TABS: {
       FORM: 'New Follow-up',
@@ -42,7 +43,8 @@ export default {
       },
       AI_CONTEXT: {
         LABEL: 'Context for AI',
-        PLACEHOLDER: 'Provide additional information for the AI to generate better messages...',
+        PLACEHOLDER:
+          'Provide additional information for the AI to generate better messages...',
         HELP: 'The AI will use this context to personalize follow-up messages',
       },
       BUTTONS: {
@@ -108,7 +110,8 @@ export default {
       PAUSED_AT: 'Paused on',
       CURRENT_ATTEMPT: 'Current attempt',
       SCHEDULED_FOR: 'Date and time of next attempt',
-      SCHEDULED_FOR_HELP: 'The bot will send the message at the selected date and time',
+      SCHEDULED_FOR_HELP:
+        'The bot will send the message at the selected date and time',
       CANCEL: 'Cancel',
       SUBMIT: 'Resume',
       SUCCESS: 'Follow-up resumed successfully',
@@ -127,8 +130,9 @@ export default {
 
     // proyecto@contact_tracking: keyword-triggered actions
     KEYWORD_ACTIONS: {
-      SECTION_TITLE: 'Action keywords',
-      SECTION_DESCRIPTION: 'When a message contains exactly this keyword, the action is executed silently.',
+      SECTION_TITLE: '⌨️ Action keywords',
+      SECTION_DESCRIPTION:
+        'When a message contains exactly this keyword, the action is executed silently.',
       ADD_BTN: 'Add keyword',
       KEYWORD_PLACEHOLDER: 'e.g. #cancel',
       ACTIONS: {
@@ -136,6 +140,19 @@ export default {
         CANCEL: 'Cancel follow-up',
         PAUSE: 'Pause follow-up',
         OBJECTIVE_MET: 'Objective met',
+        INTERESTED: 'Interested',
+        BOOKED: 'Booked',
+      },
+      MARK: {
+        NO_LABEL: 'No label',
+        NO_AGENT: 'No agent',
+        NO_TEAM: 'No team',
+        HINT_INTERESTED:
+          "Counts toward the campaign's Interested indicator. Label, agent and team are optional. The bot keeps replying.",
+        HINT_BOOKED:
+          "Counts toward the campaign's Booked indicator. Label, agent and team are optional. The bot keeps replying.",
+        HINT_OBJECTIVE_MET:
+          "Counts toward the campaign's Objective met indicator and closes the follow-up.",
       },
       DIRECTIONS: {
         LABEL: 'Direction',

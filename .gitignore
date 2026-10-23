@@ -82,3 +82,6 @@ start-dev.sh
 
 # VSCode/code-server workspace files
 docs/vaults.code-workspace
+
+# Reportes de incidentes (notas locales, no versionadas)
+docs/incidentes/

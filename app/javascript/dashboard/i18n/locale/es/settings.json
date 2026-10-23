@@ -50,6 +50,29 @@
         "ERROR": "La firma de mensaje no puede estar vacía",
         "PLACEHOLDER": "Inserta tu firma de mensaje personal aquí."
       },
+      "APPEARANCE": {
+        "TITLE": "Apariencia",
+        "NOTE": "Elige cómo se ve el tablero. La preferencia se guarda en este navegador.",
+        "MODE_LABEL": "Modo",
+        "TINT_LABEL": "Tema de color",
+        "MODES": {
+          "LIGHT": "Claro",
+          "DARK": "Oscuro",
+          "AUTO": "Sistema"
+        },
+        "TINTS": {
+          "DEFAULT": "Predeterminado",
+          "CALIDO": "Cálido",
+          "BOSQUE": "Bosque",
+          "INDIGO": "Índigo",
+          "SEPIA": "Sepia",
+          "CONTRASTE": "Alto contraste",
+          "VIOLETA": "Violeta",
+          "TURQUESA": "Turquesa",
+          "ROSA": "Rosa",
+          "GRAFITO": "Grafito"
+        }
+      },
       "PASSWORD_SECTION": {
         "TITLE": "Contraseña",
         "NOTE": "Actualizar tu contraseña restablecerá tus inicios de sesión en múltiples dispositivos.",
@@ -172,6 +195,25 @@
         "LABEL": "Confirmar nueva contraseña",
         "ERROR": "La confirmación de la contraseña debe coincidir con la contraseña",
         "PLACEHOLDER": "Por favor reingresa tu nueva contraseña"
+      },
+      "LANDING": {
+        "TITLE": "Al iniciar sesión, ir a",
+        "NOTE": "La página que ves primero cuando entras a Kontrolya.",
+        "SAVED": "Listo: la próxima vez que entres irás ahí",
+        "OPTIONS": {
+          "summary": {
+            "LABEL": "Inicio (Mi resumen)",
+            "HINT": "Tus avisos, lo más urgente de Mi día, tu agenda, tus conversaciones y tus casos"
+          },
+          "conversations": {
+            "LABEL": "Conversaciones",
+            "HINT": "La bandeja de conversaciones, como siempre"
+          },
+          "my_day": {
+            "LABEL": "Mi día",
+            "HINT": "Tus tareas en el orden en que conviene hacerlas"
+          }
+        }
       }
     }
   },
@@ -227,6 +269,28 @@
     }
   },
   "SIDEBAR": {
+    "SALES": "Ventas",
+    "SERVICE": "Servicio",
+    "AGENDA": "Agenda",
+    "CLIENTS": "Clientes",
+    "AI_AGENTS": "Agentes IA",
+    "SETTINGS_V2": "Ajustes",
+    "MY_SUMMARY": "Mi resumen",
+    "MY_NOTICES": "Mis avisos",
+    "MY_BUSINESS": "Mi negocio",
+    "INBOX_VIEW_V2": "Vista de bandeja",
+    "CONTACT_FUNNEL": "Embudo de contactos",
+    "OPPORTUNITIES": "Oportunidades",
+    "OPPORTUNITY_BOARD": "Embudo de oportunidades",
+    "SALES_METRICS": "Métricas de ventas",
+    "SERVICE_CASES": "Casos",
+    "SERVICE_BOARD": "Tablero",
+    "SERVICE_METRICS": "Métricas",
+    "TASKS_V2": "Tareas",
+    "CALENDAR": "Calendario",
+    "ASSISTANT": "Asistente (Capitán)",
+    "CONTACT_FUNNELS": "Embudos de contactos",
+    "CASES_AND_STAGES": "Casos y etapas",
     "CURRENTLY_VIEWING_ACCOUNT": "Viendo actualmente:",
     "SWITCH": "Cambiar",
     "INBOX_VIEW": "Vista de Bandeja de Entrada",
@@ -240,19 +304,21 @@
     "SETTINGS": "Configuración",
     "CHATGPT": "Entrenamiento ChatGPT",
     "CONTACTS": "Contactos",
-    "KANBAN": "Tablero oportunidades",
-    "TICKETS": "Tickets",
+    "KANBAN": "Embudo de contactos",
+    "TICKETS": "Casos",
     "TRACKING_DASHBOARD": "Agente de Seguimientos",
     "TRACKING_LIST": "Todos los seguimientos",
     "TRACKING_AGENTS": "Agentes IA",
     "TRACKING_CAMPAIGNS": "Campañas Agentes IA",
+    "TRACKING_ASSISTANT": "Asistente",
     "TRACKING_SUMMARY": "Resumen",
     "ERP": "Cobranza / ERP",
     "ERP_CONSOLE": "Consola",
     "ERP_BOTS": "Bots",
     "ERP_CONNECTIONS": "Conexiones",
-    "ALL_TICKETS": "Todos los tickets",
+    "ALL_TICKETS": "Todos los casos",
     "TICKET_KANBAN": "Tablero",
+    "TICKET_TASKS": "Tareas",
     "TICKET_METRICS": "Métricas",
     "TICKET_RULES": "Reglas de automatización",
     "TICKET_TYPES": "Tipos de caso",
@@ -260,11 +326,16 @@
     "TICKET_SLA": "SLA",
     "TICKET_AI": "Inteligencia Artificial",
     "TICKET_PORTALS": "Portales del cliente",
+    "TICKET_COMMERCIAL_SETTINGS": "Comercial",
+    "TICKET_TASK_SETTINGS": "Tareas",
     "TICKET_SETTINGS": "Ajustes del módulo",
     "TICKET_CONFIG": "Configuración de folio",
-    "ALL_KANBAN": "Todo tablero oportunidades ",
-    "TIPO_DE_PROCESO": "Tableros disponibles",
-    "NEW_KANBAN_TYPE": "Agregar Tablero",
+    "TICKET_GROUP_DEFINITIONS": "Definiciones",
+    "TICKET_GROUP_AUTOMATION": "Automatización e IA",
+    "TICKET_GROUP_SETTINGS": "Ajustes",
+    "ALL_KANBAN": "Todos los embudos",
+    "TIPO_DE_PROCESO": "Embudos disponibles",
+    "NEW_KANBAN_TYPE": "Agregar embudo",
     "CAPTAIN": "Capitán",
     "HOME": "Inicio",
     "AGENTS": "Agentes",
@@ -298,6 +369,7 @@
     "ONGOING": "Campañas Webpage",
     "ONE_OFF": "Campañas SMS",
     "REPORTS_SLA": "SLA",
+    "REPORTS_OPPORTUNITY": "Oportunidades",
     "REPORTS_BOT": "Bot",
     "REPORTS_AGENT": "Agentes",
     "REPORTS_LABEL": "Etiquetas",
@@ -326,7 +398,14 @@
       "TEXT": "Marcar como desconectado automáticamente",
       "INFO_TEXT": "Permite que el sistema te marque como desconectado automáticamente cuando no estés usando la aplicación o el panel."
     },
-    "DOCS": "Leer documentos"
+    "DOCS": "Leer documentos",
+    "CASES_LIST": "Lista",
+    "CASES_BOARD": "Tablero",
+    "CASES_METRICS": "Métricas",
+    "CASES_GROUP_CONFIG": "Configuración",
+    "BUSINESS_SUMMARY": "Resumen del negocio",
+    "BUSINESS_SUMMARY_ACCESS": "Resumen del negocio: acceso",
+    "HOME_SUMMARY": "Inicio"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Facturación",

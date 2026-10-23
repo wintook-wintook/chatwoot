@@ -1,11 +1,16 @@
 <!--
   @tickets_cases — User Portal
-  Administración de portales públicos del cliente (estilo osTicket) — Tailwind + dark mode.
+  Administración de portales públicos del cliente. Ahora con tabla nativa de
+  Chatwoot (vue-easytable) + paginado inferior y estado como toggle, en lugar de
+  la lista de tarjetas. El modal de alta/edición se conserva íntegro.
 -->
 <script>
 import { mapGetters } from 'vuex';
+import { VeTable } from 'vue-easytable';
+import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 
 const LOCALES = ['es', 'en'];
+const PER_PAGE_OPTIONS = [25, 50, 100];
 
 const emptyForm = () => ({
   name: '',
@@ -28,6 +33,7 @@ const COMPATIBLE_CHANNELS = [
 
 export default {
   name: 'Portals',
+  components: { VeTable, TableFooter },
   data() {
     return {
       showModal: false,
@@ -37,6 +43,9 @@ export default {
       deletingId: null,
       showDeleteModal: false,
       portalToDelete: null,
+      currentPage: 1,
+      perPage: 25,
+      perPageOptions: PER_PAGE_OPTIONS,
     };
   },
   computed: {
@@ -68,6 +77,136 @@ export default {
     },
     deleteMessageValue() {
       return this.portalToDelete ? ` "${this.portalToDelete.name}"?` : '';
+    },
+    pagedPortals() {
+      const start = (this.currentPage - 1) * this.perPage;
+      return this.portals.slice(start, start + this.perPage);
+    },
+    columns() {
+      return [
+        {
+          field: 'name',
+          key: 'name',
+          title: this.$t('CASE_TICKETS.PORTALS.TABLE_NAME'),
+          align: 'left',
+          renderBodyCell: ({ row }) => (
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="flex items-center justify-center flex-shrink-0 w-8 h-8 font-bold text-white uppercase rounded-lg bg-woot-500">
+                {row.name.charAt(0)}
+              </span>
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-sm font-medium truncate text-slate-800 dark:text-slate-100">
+                  {row.name}
+                </span>
+                {!row.enabled ? (
+                  <span class="px-1.5 py-0.5 text-xs rounded bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                    {this.$t('CASE_TICKETS.PORTALS.DISABLED')}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          ),
+        },
+        {
+          field: 'url',
+          key: 'url',
+          title: this.$t('CASE_TICKETS.PORTALS.TABLE_URL'),
+          align: 'left',
+          renderBodyCell: ({ row }) => (
+            <div class="flex items-center gap-1 min-w-0">
+              <a
+                href={this.fullUrl(row)}
+                target="_blank"
+                rel="noopener"
+                class="font-mono text-xs truncate text-woot-500 hover:underline"
+              >
+                {this.fullUrl(row)}
+              </a>
+              <woot-button
+                size="tiny"
+                variant="clear"
+                color-scheme="secondary"
+                icon="copy"
+                title={this.$t('CASE_TICKETS.PORTALS.COPY')}
+                onClick={() => this.copyUrl(row)}
+              />
+            </div>
+          ),
+        },
+        {
+          field: 'destination',
+          key: 'destination',
+          title: this.$t('CASE_TICKETS.PORTALS.DESTINATION'),
+          align: 'left',
+          width: 180,
+          renderBodyCell: ({ row }) => (
+            <span class="text-sm text-slate-600 dark:text-slate-300">
+              {row.inbox_name || '—'}
+              {row.inbox_channel
+                ? ` · ${this.channelLabel(row.inbox_channel)}`
+                : ''}
+            </span>
+          ),
+        },
+        {
+          field: 'types',
+          key: 'types',
+          title: this.$t('CASE_TICKETS.PORTALS.TABLE_TYPES'),
+          align: 'center',
+          width: 90,
+          renderBodyCell: ({ row }) => (
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-woot-100 text-woot-700 dark:bg-woot-800 dark:text-woot-100">
+              {row.public_types_count}
+            </span>
+          ),
+        },
+        {
+          field: 'status',
+          key: 'status',
+          title: this.$t('CASE_TICKETS.PORTALS.TABLE_STATUS'),
+          align: 'left',
+          width: 120,
+          renderBodyCell: ({ row }) => (
+            <woot-button
+              size="tiny"
+              variant={row.enabled ? 'smooth' : 'clear'}
+              color-scheme={row.enabled ? 'success' : 'secondary'}
+              icon={row.enabled ? 'checkmark-circle' : 'dismiss-circle'}
+              onClick={() => this.toggleEnabled(row)}
+            >
+              {row.enabled
+                ? this.$t('CASE_TICKETS.PORTALS.ENABLED_BADGE')
+                : this.$t('CASE_TICKETS.PORTALS.DISABLED')}
+            </woot-button>
+          ),
+        },
+        {
+          field: 'actions',
+          key: 'actions',
+          title: '',
+          align: 'right',
+          width: 100,
+          renderBodyCell: ({ row }) => (
+            <div class="flex items-center justify-end gap-1">
+              <woot-button
+                size="tiny"
+                variant="clear"
+                color-scheme="secondary"
+                icon="edit"
+                onClick={() => this.openEdit(row)}
+              />
+              <woot-button
+                size="tiny"
+                variant="clear"
+                color-scheme="alert"
+                icon="delete"
+                isLoading={this.deletingId === row.id}
+                onClick={() => this.openDelete(row)}
+              />
+            </div>
+          ),
+        },
+      ];
     },
   },
   mounted() {
@@ -127,6 +266,16 @@ export default {
         this.$emitter.emit('newToastMessage', { message: msg });
       }
     },
+    async toggleEnabled(portal) {
+      try {
+        await this.$store.dispatch('caseTickets/updatePortal', {
+          id: portal.id,
+          enabled: !portal.enabled,
+        });
+      } catch (_e) {
+        /* silent */
+      }
+    },
     copyUrl(portal) {
       navigator.clipboard?.writeText(this.fullUrl(portal));
       this.$emitter.emit('newToastMessage', {
@@ -152,6 +301,12 @@ export default {
         this.deletingId = null;
         this.portalToDelete = null;
       }
+    },
+    changePage(page) {
+      this.currentPage = page;
+    },
+    changePerPage() {
+      this.currentPage = 1;
     },
   },
 };
@@ -184,24 +339,14 @@ export default {
       </woot-button>
     </div>
 
-    <!-- Loading -->
-    <div
-      v-if="isFetching"
-      class="flex items-center justify-center flex-1 text-slate-400 dark:text-slate-500"
-    >
-      <span>{{ $t('CASE_TICKETS.PORTALS.LOADING') }}</span>
-    </div>
-
-    <!-- Lista -->
-    <div v-else class="flex flex-col flex-1 gap-2 px-6 py-4 overflow-y-auto">
-      <p class="m-0 mb-2 text-sm text-slate-500 dark:text-slate-400">
+    <!-- Ayuda + aviso -->
+    <div class="flex flex-col flex-shrink-0 gap-2 px-6 pt-4">
+      <p class="m-0 text-sm text-slate-500 dark:text-slate-400">
         {{ $t('CASE_TICKETS.PORTALS.HELP') }}
       </p>
-
-      <!-- Aviso: sin tipos públicos el form del portal queda vacío -->
       <div
         v-if="publicTypesCount === 0"
-        class="flex items-center gap-2 p-3 mb-1 text-sm border rounded-lg text-amber-700 bg-amber-50 border-amber-100 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-900/40"
+        class="flex items-center gap-2 p-3 text-sm border rounded-lg text-amber-700 bg-amber-50 border-amber-100 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-900/40"
       >
         <fluent-icon icon="warning" size="16" />
         <span>{{ $t('CASE_TICKETS.PORTALS.NO_PUBLIC_TYPES') }}</span>
@@ -213,84 +358,62 @@ export default {
           {{ $t('CASE_TICKETS.PORTALS.GO_TO_TYPES') }}
         </woot-button>
       </div>
-
-      <div
-        v-if="!portals.length"
-        class="py-8 text-sm text-center text-slate-400 dark:text-slate-500"
-      >
-        {{ $t('CASE_TICKETS.PORTALS.EMPTY') }}
-      </div>
-
-      <div
-        v-for="portal in portals"
-        :key="portal.id"
-        class="flex items-center gap-3 p-3 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-      >
-        <span
-          class="flex-shrink-0 w-9 h-9 rounded-lg bg-woot-500 flex items-center justify-center text-white font-bold uppercase"
-          >{{ portal.name.charAt(0) }}</span
-        >
-        <div class="flex flex-col flex-1 min-w-0">
-          <div class="flex items-center gap-2">
-            <span
-              class="text-sm font-medium text-slate-800 dark:text-slate-100"
-              >{{ portal.name }}</span
-            >
-            <span
-              v-if="!portal.enabled"
-              class="px-1.5 py-0.5 text-xs rounded bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-              >{{ $t('CASE_TICKETS.PORTALS.DISABLED') }}</span
-            >
-            <span
-              class="px-1.5 py-0.5 text-xs rounded bg-woot-100 text-woot-700 dark:bg-woot-800 dark:text-woot-100"
-              >{{
-                $t('CASE_TICKETS.PORTALS.TYPES_COUNT', {
-                  count: portal.public_types_count,
-                })
-              }}</span
-            >
-          </div>
-          <a
-            :href="fullUrl(portal)"
-            target="_blank"
-            rel="noopener"
-            class="font-mono text-xs truncate text-woot-500 hover:underline"
-            >{{ fullUrl(portal) }}</a
-          >
-          <span class="text-xs text-slate-400 dark:text-slate-500">
-            {{ $t('CASE_TICKETS.PORTALS.DESTINATION') }}:
-            {{ portal.inbox_name || '—' }}
-            <template v-if="portal.inbox_channel">
-              · {{ channelLabel(portal.inbox_channel) }}</template
-            >
-          </span>
-        </div>
-        <woot-button
-          size="tiny"
-          variant="clear"
-          color-scheme="secondary"
-          icon="copy"
-          @click="copyUrl(portal)"
-        >
-          {{ $t('CASE_TICKETS.PORTALS.COPY') }}
-        </woot-button>
-        <woot-button
-          size="tiny"
-          variant="clear"
-          color-scheme="secondary"
-          icon="edit"
-          @click="openEdit(portal)"
-        />
-        <woot-button
-          size="tiny"
-          variant="clear"
-          color-scheme="alert"
-          icon="delete"
-          :is-loading="deletingId === portal.id"
-          @click="openDelete(portal)"
-        />
-      </div>
     </div>
+
+    <!-- Loading -->
+    <div
+      v-if="isFetching && !portals.length"
+      class="flex items-center justify-center flex-1 text-slate-400 dark:text-slate-500"
+    >
+      <span>{{ $t('CASE_TICKETS.PORTALS.LOADING') }}</span>
+    </div>
+
+    <!-- Empty -->
+    <div
+      v-else-if="!portals.length"
+      class="flex flex-col items-center justify-center flex-1 gap-3 text-slate-400 dark:text-slate-500"
+    >
+      <fluent-icon icon="globe" size="36" />
+      <p>{{ $t('CASE_TICKETS.PORTALS.EMPTY') }}</p>
+    </div>
+
+    <!-- Tabla + paginado -->
+    <template v-else>
+      <div class="flex-1 min-h-0 px-6 py-4 portals-table-wrap">
+        <VeTable
+          fixed-header
+          max-height="100%"
+          row-key-field-name="id"
+          :columns="columns"
+          :table-data="pagedPortals"
+          :border-around="false"
+        />
+      </div>
+      <div
+        class="flex items-center justify-between flex-shrink-0 bg-white border-t dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
+      >
+        <label
+          class="flex items-center gap-1 pl-6 text-xs text-slate-500 dark:text-slate-400"
+        >
+          {{ $t('CASE_TICKETS.PORTALS.PER_PAGE') }}
+          <select
+            v-model.number="perPage"
+            class="!mb-0 w-20 text-sm"
+            @change="changePerPage"
+          >
+            <option v-for="n in perPageOptions" :key="n" :value="n">
+              {{ n }}
+            </option>
+          </select>
+        </label>
+        <TableFooter
+          :current-page="currentPage"
+          :total-count="portals.length"
+          :page-size="perPage"
+          @pageChange="changePage"
+        />
+      </div>
+    </template>
 
     <!-- Modal crear/editar -->
     <woot-modal
@@ -326,7 +449,8 @@ export default {
           </label>
 
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
               >{{ $t('CASE_TICKETS.PORTALS.SLUG_LABEL') }}</span
             >
             <input
@@ -343,7 +467,8 @@ export default {
           </label>
 
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
               >{{ $t('CASE_TICKETS.PORTALS.LOCALE_LABEL') }}</span
             >
             <select v-model="form.locale" class="w-32">
@@ -352,7 +477,8 @@ export default {
           </label>
 
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
               >{{ $t('CASE_TICKETS.PORTALS.INBOX_LABEL') }}</span
             >
             <select v-model="form.inbox_id" class="w-full">
@@ -373,29 +499,34 @@ export default {
             v-if="isWhatsappDestination"
             class="flex flex-col gap-3 p-3 border border-dashed rounded-lg border-slate-300 dark:border-slate-600 bg-slate-25 dark:bg-slate-800/40"
           >
-            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{
-              $t('CASE_TICKETS.PORTALS.WA_TEMPLATE_TITLE')
-            }}</span>
+            <span
+              class="text-xs font-semibold text-slate-500 dark:text-slate-400"
+              >{{ $t('CASE_TICKETS.PORTALS.WA_TEMPLATE_TITLE') }}</span
+            >
             <label class="flex flex-col gap-1">
-              <span class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-200"
                 >{{ $t('CASE_TICKETS.PORTALS.WA_TEMPLATE_NAME') }} *</span
               >
               <input
                 v-model="form.acuse_template_name"
                 type="text"
                 class="w-full font-mono"
-                :placeholder="$t('CASE_TICKETS.PORTALS.WA_TEMPLATE_PLACEHOLDER')"
+                :placeholder="
+                  $t('CASE_TICKETS.PORTALS.WA_TEMPLATE_PLACEHOLDER')
+                "
               />
             </label>
             <label class="flex flex-col gap-1">
-              <span class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-200"
                 >{{ $t('CASE_TICKETS.PORTALS.WA_TEMPLATE_LANG') }}</span
               >
               <input
                 v-model="form.acuse_template_language"
                 type="text"
                 class="w-32 font-mono"
-                placeholder="es"
+                :placeholder="$t('CASE_TICKETS.PORTALS.WA_LANG_PLACEHOLDER')"
               />
             </label>
             <span class="text-xs text-slate-400 dark:text-slate-500">{{
@@ -404,7 +535,8 @@ export default {
           </div>
 
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
               >{{ $t('CASE_TICKETS.PORTALS.INTRO_LABEL') }}</span
             >
             <textarea
@@ -463,3 +595,23 @@ export default {
     />
   </div>
 </template>
+
+<style lang="scss" scoped>
+.portals-table-wrap {
+  overflow: hidden;
+}
+
+.portals-table-wrap::v-deep {
+  .ve-table {
+    height: 100%;
+  }
+  .ve-table-header-th {
+    padding: var(--space-small) var(--space-one) !important;
+    font-size: var(--font-size-mini) !important;
+  }
+  .ve-table-body-td {
+    padding: var(--space-small) var(--space-one) !important;
+    vertical-align: middle;
+  }
+}
+</style>

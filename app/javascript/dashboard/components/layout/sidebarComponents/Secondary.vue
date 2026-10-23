@@ -53,10 +53,29 @@ export default {
       type: Boolean,
       default: false,
     },
-    // NUEVA prop para el estado de colapso
-    isCollapsed: {
-      type: Boolean,
-      default: false,
+  },
+  data() {
+    // Acordeón del menú secundario: `toState` del único grupo colapsable
+    // abierto (null = todos plegados).
+    return {
+      openGroup: null,
+      caseSettingsRequested: false, // @tickets_cases
+    };
+  },
+  // @tickets_cases — los ítems con `visibleGetter` dependen de la configuración
+  // del módulo de casos: se pide una vez cuando el menú los trae.
+  watch: {
+    menuConfig: {
+      immediate: true,
+      handler(config) {
+        const needsSettings = ((config && config.menuItems) || []).some(
+          item => item.visibleGetter
+        );
+        if (needsSettings && !this.caseSettingsRequested) {
+          this.caseSettingsRequested = true;
+          this.$store.dispatch('caseTickets/fetchSettings').catch(() => {});
+        }
+      },
     },
   },
   computed: {
@@ -89,6 +108,10 @@ export default {
       return menuItemsFilteredByPermissions.filter(item => {
         if (item.showOnlyOnCloud) {
           return this.isOnChatwootCloud;
+        }
+        // @tickets_cases — permiso que decide el backend (p. ej. «Resumen del negocio»).
+        if (item.visibleGetter) {
+          return this.$store.getters[item.visibleGetter];
         }
         return true;
       });
@@ -376,6 +399,9 @@ export default {
     },
   },
   methods: {
+    onToggleGroup(groupId) {
+      this.openGroup = groupId;
+    },
     showAddLabelPopup() {
       this.$emit('addLabel');
     },
@@ -385,12 +411,7 @@ export default {
       console.log('🔄 Secondary: Emitiendo evento addKanbanType');
       this.$emit('addKanbanType');
     },
-    
-    // NUEVO: Método para alternar el sidebar
-    toggleSidebar() {
-      this.$emit('toggleSidebar');
-    },
-    
+
     toggleAccountModal() {
       this.$emit('toggleAccounts');
     },
@@ -404,85 +425,32 @@ export default {
 <template>
   <div
     v-if="hasSecondaryMenu"
-    :class="[
-      'flex flex-col h-full px-2 pb-8 text-sm bg-white border-r dark:bg-slate-900 dark:border-slate-800/50 rtl:border-r-0 rtl:border-l border-slate-50 transition-all duration-200',
-      {
-        'overflow-hidden': isCollapsed,
-        'overflow-auto': !isCollapsed,
-        'w-12': isCollapsed,
-        'w-48': !isCollapsed
-      }
-    ]"
+    class="flex flex-col h-full px-2 pb-8 overflow-auto text-sm bg-white border-r w-48 dark:bg-slate-900 dark:border-slate-800/50 rtl:border-r-0 rtl:border-l border-slate-50"
   >
-    <!-- Header con botón de colapso -->
     <div class="flex items-center justify-between pt-2 mb-2">
-      <AccountContext 
-        v-if="!isCollapsed" 
-        @toggleAccounts="toggleAccountModal" 
-      />
-      
-      <!-- Botón de colapso/expandir -->
-      <button
-        :class="[
-          'p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors',
-          {
-            'ml-auto': !isCollapsed,
-            'mx-auto': isCollapsed
-          }
-        ]"
-        @click="toggleSidebar"
-        :title="isCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'"
-      >
-        <fluent-icon
-          :icon="isCollapsed ? 'panel-right-expand' : 'panel-left-contract'"
-          size="16"
-          class="text-slate-600 dark:text-slate-400"
-        />
-      </button>
+      <AccountContext @toggleAccounts="toggleAccountModal" />
     </div>
 
     <!-- Menú items -->
-    <transition-group
-      name="menu-list"
-      tag="ul"
-      class="mb-0 ml-0 list-none"
-    >
-      <!-- Solo mostrar si no está colapsado -->
-      <template v-if="!isCollapsed">
-        <SecondaryNavItem
-          v-for="menuItem in accessibleMenuItems"
-          :key="menuItem.toState"
-          :menu-item="menuItem"
-        />
-        <SecondaryNavItem
-          v-for="menuItem in additionalSecondaryMenuItems[menuConfig.parentNav]"
-          :key="menuItem.key"
-          :menu-item="menuItem"
-          @addLabel="showAddLabelPopup"
-          @addKanbanType="showAddKanbanTypePopup"
-        />
-      </template>
-      
-      <!-- Iconos mínimos cuando está colapsado -->
-      <template v-else>
-        <li
-          v-for="menuItem in accessibleMenuItems"
-          :key="menuItem.toState + '-collapsed'"
-          class="mb-2"
-        >
-          <router-link
-            :to="menuItem.toState"
-            class="flex items-center justify-center w-8 h-8 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
-            :title="menuItem.label"
-          >
-            <fluent-icon
-              :icon="menuItem.icon"
-              size="16"
-              class="text-slate-600 dark:text-slate-400"
-            />
-          </router-link>
-        </li>
-      </template>
+    <transition-group name="menu-list" tag="ul" class="mb-0 ml-0 list-none">
+      <SecondaryNavItem
+        v-for="menuItem in accessibleMenuItems"
+        :key="menuItem.toState"
+        :menu-item="menuItem"
+        :open-group="openGroup"
+        @toggleGroup="onToggleGroup"
+      />
+      <SecondaryNavItem
+        v-for="menuItem in additionalSecondaryMenuItems[
+          menuConfig.extraSections || menuConfig.parentNav
+        ]"
+        :key="menuItem.key"
+        :menu-item="menuItem"
+        :open-group="openGroup"
+        @toggleGroup="onToggleGroup"
+        @addLabel="showAddLabelPopup"
+        @addKanbanType="showAddKanbanTypePopup"
+      />
     </transition-group>
   </div>
 </template>

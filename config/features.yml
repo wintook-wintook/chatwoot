@@ -150,3 +150,30 @@
 # IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags / FlagShihTzu).
 - name: knowledge_base_config
   enabled: false
+# Canal nativo de Instagram (Instagram Login), independiente de la Página de Facebook.
+# Off por defecto: nace apagado y se activa por cuenta desde el super admin cuando el
+# canal esté completo. IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en
+# feature_flags / FlagShihTzu).
+- name: channel_instagram
+  enabled: false
+# @tickets_cases — Clase de caso «Comercial» (oportunidades: embudo, monto, ganada/perdida).
+# Off por defecto; se activa por cuenta desde el super admin. Requiere case_management.
+# IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags / FlagShihTzu).
+- name: case_commercial
+  enabled: false
+# @tickets_cases — Clase de caso «Orden de trabajo» (trabajo planeado: programación,
+# técnico, horas, materiales, conformidad). Off por defecto; requiere case_management.
+# IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags / FlagShihTzu).
+- name: case_work_order
+  enabled: false
+# @tickets_cases — Clase de caso «Proyecto» (trabajo por fases: fecha objetivo,
+# presupuesto, avance; agrupa órdenes y tickets). Off por defecto; requiere case_management.
+# IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags / FlagShihTzu).
+- name: case_project
+  enabled: false
+# diag/llamadas_whatsapp — llamadas de voz de WhatsApp Cloud API (contestar y llamar desde
+# el navegador). Off por defecto; se activa por cuenta en el super admin. Además, cada
+# bandeja whatsapp_cloud las activa en su pestaña «Llamadas».
+# IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags / FlagShihTzu).
+- name: whatsapp_calls
+  enabled: false

@@ -80,13 +80,14 @@ class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Account
     end
   end
 
-  # Fase 2 — embudo de intención (usa last_intent / appointment_at)
+  # Fase 2 — embudo. Interesados/Agendaron cuentan solo por las reglas de palabra
+  # clave (interested_at / booked_at), igual que el embudo de campañas.
   def funnel(scope)
     {
       created:     scope.count,
       replied:     scope.where.not(last_intent: nil).count,
-      interested:  scope.where(last_intent: %w[interested book_appointment reschedule]).count,
-      appointment: scope.where.not(appointment_at: nil).count
+      interested:  scope.where.not(interested_at: nil).count,
+      appointment: scope.where.not(booked_at: nil).count
     }
   end
 

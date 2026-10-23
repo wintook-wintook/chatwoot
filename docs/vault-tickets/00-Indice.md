@@ -44,8 +44,9 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 
 - [[case_type-tabla-configurable]] — ⭐ `case_type` es tabla, NO enum
 - [[Archivos-reales]] — rutas exactas backend + frontend construidas
+- [[Vistas-guardadas]] — 🔖 filtros de la cola guardados con nombre, personales o compartidos
 - [[Rutas-Metricas-Builder]] — rutas frontend, endpoint de métricas, builder de reglas
-- [[Trampas]] — ⚠️ decisiones técnicas y gotchas (numeradas 1–25)
+- [[Trampas]] — ⚠️ decisiones técnicas y gotchas (numeradas 1–20)
 - [[Feature-flag-case_management]] — activar el módulo por cuenta
 - [[Pruebas-en-browser]] — credenciales, Chrome, Puppeteer
 - [[Pendiente]] — lo que falta
@@ -56,6 +57,20 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 - [[Plan-Notas-Internas]] — 📄 plan: bitácora de notas internas en el ticket (enum ya existe, falta UI/endpoint)
 - [[Plan-Widget-Embebible]] — 🔌 plan: launcher + iframe para capturar tickets desde la web del cliente
 - [[Plan-Ticket-Cerrado]] — 🔒 plan: reglas del ticket cerrado (reabrir con motivo, congelar edición, reapertura por respuesta del cliente)
+- [[Plan-Clase-Comercial]] — 💼 plan: Clase de caso (Soporte/Comercial/…) + oportunidades (F0–F5 hechas)
+- [[Plan-Clase-Proyecto]] — 📐 plan: clase Proyecto (P1 hecha; hijos, hitos, línea de tiempo y métricas pendientes)
+- [[Plan-Clase-Orden-de-Trabajo]] — 🛠️ plan: clase Orden de trabajo y capacidades por clase (F1 hecha)
+- [[Plan-Metricas-Comercial]] — 📊 plan: Métricas de Comercial en 4 pestañas (¿Cómo vamos? · Dinero en juego · Mes a mes · ¿Por qué perdemos?) — M1–M4 hechas
+- [[Plan-Resumen-Negocio]] — «Resumen del negocio» para el dueño: todas las clases en una pantalla, acceso por casilla, IA «Explícame la semana»
+- [[Plan-Empresa-Un-Solo-Hombre]] — 🧭 plan ABIERTO (en pausa): empresa de un solo hombre, todo ligado y automatizado (agentes hacen todo, el humano solo las excepciones) · base: docs/kontrolya_operacion_autonoma_analisis.md
+- [[Plan-Delegar-Agente-Caso]] — 🤖 plan (sin programar): delegar un caso a un agente IA; la Automatización es el eje, catálogo único de acciones y cada agente con sus automatizaciones · motor del plan de un solo hombre
+- [[Plan-Plantilla-Tareas-Etapa]] — ✅ hecho (T1–T4): plantilla, tareas al entrar, avance y «Documenta…», qué mueve cada etapa: plantilla de tareas por etapa en cada tipo de caso; se crean al entrar a la etapa, avance «sugerir» al terminar las obligatorias, nunca avanza sin documentar
+- [[Plan-Inicio-Mi-Resumen]] — ✅ hecho: Inicio «Mi resumen» donde aterriza cada usuario (avisos, Mi día, agenda, conversaciones, casos, semana) y preferencia «Al iniciar sesión, ir a»
+- [[Cambiar-Clase-Tipo]] — ✅ hecho: cambiar de clase un tipo; con casos se crea el tipo nuevo y el de antes queda retirado con sus casos tal cual
+- [[Plan-Embudo-Contactos]] — ✅ hecho (E1–E3): el tablero de conversaciones pasa a «Embudo de contactos»; la conversación mueve su tarjeta (reglas + IA), vencimientos, columna «Convertir» y métricas
+- [[Plan-Reacomodo-Menu]] — ✅ F1+F2: menú v2 (Inicio, Conversaciones, Ventas, Servicio, Agenda, Clientes, Agentes IA, Informes, Ajustes); interruptor `MENU_V2` para regresarlo
+- [[Plan-Bandeja-Prioridad]] — 🎯 plan: «Mi día» en la bandeja de tareas, orden por puntaje de urgencia, pesos configurables y plan con IA (F1–F4 hechas)
+- [[Plan-Casos-Hoja-de-ruta]] — 🧭 hoja de ruta: menú por clase (E1 hecho), clase fija, Comercial y Soporte completos
 - [[Historial-de-implementacion]] — changelog de todo lo resuelto
 
 ---
