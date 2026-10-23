@@ -46,6 +46,7 @@ Rails.application.routes.draw do
           # KANBAN0725
           resources :kanban_type_processes do
             get :conversation_kanban_info, on: :collection, path: 'conversation/:conversation_id/kanban_info'
+            get :funnel_metrics, on: :member # Embudo de contactos E3
             resources :kanban_processes do
               member do
                 patch :reorder

@@ -129,6 +129,41 @@ es:
         rating: Calificación
         feedback: Comentario de opinión
         recorded_at: Fecha registrada
+  kanban_funnel:
+    note: "Embudo de contactos: pasó a «%{column}». %{reason}"
+    reasons:
+      conversation_created: "Llegó una conversación nueva por %{inbox}."
+      first_reply: "Se le contestó por primera vez."
+      label_added: "Se agregó la etiqueta «%{label}»."
+      appointment_scheduled: "Se agendó una cita."
+      case_created: "Se creó el caso %{folio}."
+      customer_returned: "El cliente volvió a escribir."
+      conversation_resolved: "Se resolvió la conversación sin caso."
+      stale: "Sin respuesta del cliente en %{days} días."
+    ai:
+      moved: "🤖 Movida a «%{column}»: %{reason}"
+      suggested: "🤖 Podría pasar a «%{column}» (no la moví porque no estoy segura): %{reason}"
+      next_step: "Siguiente paso sugerido: %{step}"
+    template:
+      columns:
+        new:
+          name: Nuevo
+          ai: "Conversación nueva que todavía no recibe respuesta."
+        contacted:
+          name: En contacto
+          ai: "Ya le contestamos y estamos entendiendo qué necesita."
+        interested:
+          name: Interesado
+          ai: "El cliente preguntó precio, cotización, disponibilidad o condiciones de un producto o servicio."
+        appointment:
+          name: Cita
+          ai: "Se acordó una cita, visita, llamada o demostración con el cliente."
+        converted:
+          name: Convertido
+          ai: "Ya es una oportunidad de venta (se creó el caso comercial)."
+        discarded:
+          name: Descartado
+          ai: "El cliente dijo claramente que no le interesa, ya compró en otro lado o no es un cliente potencial."
   notifications:
     case_stages:
       tasks:

@@ -1,13 +1,101 @@
 {
   "KANBAN": {
-    "HEADER": "Tablero de conversación",
+    "FUNNEL": {
+      "METRICS": {
+        "BUTTON": "Métricas",
+        "TITLE": "Métricas del embudo",
+        "SINCE_NOTE": "Cuenta los movimientos desde que se activó el Embudo de contactos",
+        "DAYS": "{n} días",
+        "LOADING": "Calculando…",
+        "ERROR": "No se pudieron cargar las métricas",
+        "ENTRIES": "Entraron",
+        "CONVERTED": "Convertidas",
+        "AVG_DAYS": "Días para convertir",
+        "AI_ACCURACY": "Aciertos de la IA",
+        "AI_DETAIL": "{moves} movidas · {corrected} corregidas",
+        "REACH": "Hasta dónde llegaron",
+        "NOW": "hoy {n}",
+        "NOW_HINT": "Tarjetas que están hoy en la columna",
+        "DISCARDS": "Por qué se descartan",
+        "NONE": "Sin descartes en el periodo",
+        "NO_REASON": "Sin motivo",
+        "WHO_MOVED": "Quién movió las tarjetas",
+        "SOURCES": {
+          "manual": "Personas",
+          "rule": "Reglas",
+          "ai": "IA",
+          "automation": "Automatizaciones"
+        }
+      },
+      "BOARD": {
+        "SECTION": "Embudo de contactos",
+        "AUTO_MOVE": "Movimiento automático",
+        "AUTO_MOVE_HELP": "La propia conversación mueve su tarjeta: al llegar, al contestarle, al etiquetarla, al agendar una cita o al crear su caso. Solo avanza; mover a mano siempre gana.",
+        "ENTRY_INBOXES": "Bandejas que entran solas",
+        "ENTRY_INBOXES_HELP": "Las conversaciones nuevas de estas bandejas entran al embudo por su columna de entrada.",
+        "NO_INBOXES_WARNING": "Elige al menos una bandeja para que las conversaciones nuevas entren solas.",
+        "AI_MOVE": "La IA mueve tarjetas",
+        "AI_MOVE_HELP": "Cuando el cliente deja de escribir, la IA lee la conversación, la avanza a la columna cuyo criterio se cumple y deja una nota privada con el porqué.",
+        "COLD_AFTER": "Marcar «Frío» tras estos días sin respuesta del cliente",
+        "DISCARD_AFTER": "Descartar tras estos días sin respuesta del cliente",
+        "DAYS_PLACEHOLDER": "Vacío = nunca",
+        "SAVE": "Guardar embudo",
+        "SAVED": "Embudo guardado",
+        "TEMPLATE_HINT": "El embudo nuevo nace con sus columnas, reglas y criterios de IA listos. Solo elige las bandejas que entran solas."
+      },
+      "COLUMN": {
+        "SECTION": "Entra aquí cuando…",
+        "SECTION_HELP": "Solo aplica si el embudo tiene «Movimiento automático».",
+        "KIND": "Tipo de columna",
+        "KINDS": {
+          "open": "Normal",
+          "converted": "Convertido (ya es oportunidad)",
+          "discarded": "Descartado"
+        },
+        "TRIGGERS": {
+          "conversation_created": "Llega una conversación nueva (columna de entrada)",
+          "first_reply": "Se le contesta por primera vez (agente o IA)",
+          "label_added": "Se le pone una etiqueta",
+          "appointment_scheduled": "Se agenda una cita",
+          "case_created": "Se crea un caso",
+          "conversation_resolved": "Se resuelve la conversación sin caso"
+        },
+        "LABELS": "Etiquetas que la mueven",
+        "NO_LABELS": "La cuenta no tiene etiquetas todavía",
+        "CASE_CLASS": "De la clase",
+        "CASE_CLASSES": {
+          "any": "Cualquiera",
+          "commercial": "Comercial",
+          "support": "Soporte",
+          "work_order": "Orden de trabajo",
+          "project": "Proyecto"
+        },
+        "AI_CRITERIA": "Criterio para la IA",
+        "AI_CRITERIA_HELP": "Describe en palabras cuándo una conversación debe entrar aquí. La IA lo usa si el embudo tiene «La IA mueve tarjetas».",
+        "AI_CRITERIA_PLACEHOLDER": "Ej: El cliente preguntó precio, cotización o disponibilidad",
+        "CONVERT_TYPE": "Al soltar una tarjeta aquí, crear la oportunidad de tipo",
+        "CONVERT_NONE": "No crear nada",
+        "SUMMARY_RULES": "Reglas",
+        "SUMMARY_AI": "IA"
+      },
+      "CARD": {
+        "MOVED_RULE": "Movida sola",
+        "MOVED_AI": "Movida por la IA",
+        "MOVED_AUTOMATION": "Movida por automatización",
+        "MOVED_MANUAL": "Movida por {name}",
+        "MOVED_MANUAL_ANON": "Movida a mano",
+        "COLD": "Frío",
+        "OPEN_CASE": "Abrir caso {folio}"
+      }
+    },
+    "HEADER": "Embudo de contactos",
     "DESCRIPTION": "Gestiona tus flujos de trabajo con un sistema tablero visual",
     "LEARN_MORE": "Aprende más",
     "HEADER_BTN_TXT": "Agregar Etapa",
     
     "BOARD": {
-      "TITLE": "Tablero de conversación",
-      "SELECT_PROCESS": "Seleccionar tipo de conversación",
+      "TITLE": "Embudo de contactos",
+      "SELECT_PROCESS": "Seleccionar embudo",
       "NO_PROCESSES": "No hay etapas disponibles",
       "NO_TYPE_PROCESSES": "No hay columnas disponibles",
       "CREATE_FIRST_PROCESS": "Crear Primer etapa",
@@ -22,23 +110,23 @@
         },
 
     "TYPE_PROCESSES": {
-      "TITLE": "Tipos de conversación",
-      "DESCRIPTION": "Gestiona los diferentes tipos de conversación para tu organización",
-      "HEADER": "Tipos de conversación",
-      "ADD_NEW": "Agregar nuevo tipo de conversación",
-      "CREATE_FIRST": "Crear primer tipo de conversación",
+      "TITLE": "Embudos de contactos",
+      "DESCRIPTION": "Cada embudo tiene sus columnas, sus reglas y sus criterios para la IA",
+      "HEADER": "Embudos de contactos",
+      "ADD_NEW": "Agregar nuevo embudo",
+      "CREATE_FIRST": "Crear primer embudo",
       "NO_RECORDS": "No se encontraron tipos de conversación",
       "EDIT": "Editar",
       "DELETE": "Eliminar",
       "DEFAULT": "Por defecto",
       "SYSTEM": "Sistema",
-      "CONFIRM_DELETE": "¿Estás seguro de que deseas eliminar este tipo de conversación?",
+      "CONFIRM_DELETE": "¿Estás seguro de que deseas eliminar este embudo?",
       "FORM": {
         "PROCESS_NAME": {
           "LABEL": "Nombre del etapa",
           "PLACEHOLDER": "Ingresa el nombre del etapa",
-          "TYPE": "Nombre del tipo de conversación",
-          "TYPEP": "Ingresa el nombre del tipo de conversación"
+          "TYPE": "Nombre del embudo",
+          "TYPEP": "Ingresa el nombre del embudo"
         },
         "DESCRIPTION": {
           "LABEL": "Descripción",
@@ -47,52 +135,52 @@
         "COLOR": {
           "LABEL": "Color"
         },
-        "DEFAULT_PROCESS": "Establecer como tipo de conversación por defecto",
-        "SYSTEM_PROCESS": "tipo de conversación del sistema",
-        "CREATE": "Crear tipo de conversación",
-        "UPDATE": "Actualizar tipo de conversación",
+        "DEFAULT_PROCESS": "Establecer como embudo por defecto",
+        "SYSTEM_PROCESS": "Embudo del sistema",
+        "CREATE": "Crear embudo",
+        "UPDATE": "Actualizar embudo",
         "CANCEL": "Cancelar"
       },
       "ADD": {
-        "TITLE": "Agregar tipo de conversación",
-        "DESC": "Crea un nuevo tipo de conversación para organizar tus flujos de trabajo"
+        "TITLE": "Agregar embudo",
+        "DESC": "Crea un nuevo embudo para organizar tus flujos de trabajo"
       },
         "EDITETAPA": {
-        "TITLE": "Editar tipo de conversación",
-        "DESC": "Editar un nuevo tipo de conversación"
+        "TITLE": "Editar embudo",
+        "DESC": "Editar un nuevo embudo"
       },
      
       "SUCCESS": {
-        "CREATED": "tipo de conversación creado exitosamente",
-        "UPDATED": "tipo de conversación actualizado exitosamente",
-        "DELETED": "tipo de conversación eliminado exitosamente"
+        "CREATED": "Embudo creado exitosamente",
+        "UPDATED": "Embudo actualizado exitosamente",
+        "DELETED": "Embudo eliminado exitosamente"
       },
       "ERROR": {
-        "CREATING": "Error al crear el tipo de conversación",
-        "UPDATING": "Error al actuaºlizar el tipo de conversación",
-        "DELETING": "Error al eliminar el tipo de conversación",
+        "CREATING": "Error al crear el embudo",
+        "UPDATING": "Error al actualizar el embudo",
+        "DELETING": "Error al eliminar el embudo",
         "LOADING": "Error al cargar tipos de conversación"
       }
       
     },
 
     "PROCESSES": {
-      "TITLE": "Etapas de la conversación",
-      "DESCRIPTION": "Gestiona las etapas específicas dentro de cada tipo de conversación",
-      "HEADER": "Etapas de la conversación",
+      "TITLE": "Columnas del embudo",
+      "DESCRIPTION": "Configura las columnas de cada embudo y qué mueve una conversación a cada una",
+      "HEADER": "Columnas del embudo",
       "ADD_NEW": "Agregar nueva etapa",
       "NO_RECORDS": "No se encontraron etapas",
       "CREATE_FIRST": "Crear Primer etapa",
-      "SELECT_TYPE_FIRST": "Por favor selecciona un tipo de conversación primero",
+      "SELECT_TYPE_FIRST": "Por favor selecciona un embudo primero",
       "EDIT": "Editar",
       "DELETE": "Eliminar",
       "DEFAULT": "Por Defecto",
       "SYSTEM": "Sistema",
       "CONFIRM_DELETE": "¿Estás seguro de que quieres eliminar esta etapa?",
-      "SELECT_TYPE": "Seleccionar tipo de conversación",
-      "CHOOSE_TYPE": "Elige un tipo de conversación",
-      "SELECT_MESSAGE": "Selecciona un tipo de conversación",
-      "SELECT_DESCRIPTION": "Elige un tipo de conversación para ver y gestionar sus etapas",
+      "SELECT_TYPE": "Seleccionar embudo",
+      "CHOOSE_TYPE": "Elige un embudo",
+      "SELECT_MESSAGE": "Selecciona un embudo",
+      "SELECT_DESCRIPTION": "Elige un embudo para ver y gestionar sus etapas",
       "CREATE_MODAL_TITLE": "Crear Nuevo etapa",
       "EDIT_MODAL_TITLE": "Editar etapa",
       "FORM": {
@@ -122,9 +210,9 @@
       },
       "ADD": {
         "TITLE": "Agregar etapa de las conversaciones",
-        "DESC": "Crea una nueva etapa dentro del tipo de conversación seleccionado",
-        "TITLE2": "Agregar tipo de conversación",
-        "DESC2": "Crea un nuevo tipo de conversación"
+        "DESC": "Crea una nueva etapa dentro del embudo seleccionado",
+        "TITLE2": "Agregar embudo",
+        "DESC2": "Crea un nuevo embudo"
       },
       "EDITETAPA": {
         "TITLE": "Editar etapa"
@@ -149,8 +237,8 @@
     },
 
     "TYPE_PROCESSES": {
-      "TITLE": "Tipos de conversación",
-      "DESCRIPTION": "Gestiona los diferentes tipos de conversación para tu organización",
+      "TITLE": "Embudos de contactos",
+      "DESCRIPTION": "Cada embudo tiene sus columnas, sus reglas y sus criterios para la IA",
       "ADD_NEW": "Agregar",
       "NO_RECORDS": "No se encontraron columnas",
       "EDIT": "Editar",
@@ -162,7 +250,7 @@
       "CREATE_MODAL_TITLE": "Crear Nueva Columna",
       "EDIT_MODAL_TITLE": "Editar Columna",
        "EDITKANBAN": {
-        "TITLE": "Editar tipo de conversación"
+        "TITLE": "Editar embudo"
       },
       "FORM": {
         "TYPE_PROCESS_NAME": "Nombre de la Columna",
@@ -173,8 +261,8 @@
         "CREATE": "Crear",
         "UPDATE": "Actualizar",
         "PROCESS_NAME": {
-          "LABEL": "Nombre del tipo de conversación",
-          "PLACEHOLDER": "Ingresa el nombre del tipo de conversación"
+          "LABEL": "Nombre del embudo",
+          "PLACEHOLDER": "Ingresa el nombre del embudo"
         },
         "DESCRIPTION": {
           "LABEL": "Descripción",
@@ -183,8 +271,8 @@
         "COLOR": {
           "LABEL": "Color"
         },
-        "DEFAULT": "Establecer como tipo de conversación por defecto",
-        "DEFAULT_PROCESS": "Establecer como tipo de conversación por defecto",
+        "DEFAULT": "Establecer como embudo por defecto",
+        "DEFAULT_PROCESS": "Establecer como embudo por defecto",
         "SYSTEM_PROCESS": "etapa del sistema",
         "CANCEL": "Cancelar",
         "CREATE": "Crear",
@@ -195,12 +283,12 @@
         "POSITION_REQUIRED": "La posición debe ser un número positivo"
       },
        "ADD": {
-        "TITLE2": "Agregar tipo de conversación",
-        "DESC2": "Crea un nuevo tipo de conversación"
+        "TITLE2": "Agregar embudo",
+        "DESC2": "Crea un nuevo embudo"
       },
        "EDITETAPA": {
-        "TITLE": "Editar tipo de conversación",
-        "DESC": "Editar un nuevo tipo de conversación"
+        "TITLE": "Editar embudo",
+        "DESC": "Editar un nuevo embudo"
       },
       "SUCCESS": {
         "CREATED": "Columna creada exitosamente",
@@ -218,13 +306,13 @@
 
     "KANBAN_TYPE_MGMT": {
       "HEADER": {
-        "TITLE": "Tipos de conversación",
+        "TITLE": "Embudos de contactos",
         "DESCRIPTION": "Gestiona los tipos de conversación para organizar tu flujo de trabajo",
-        "ADD_BUTTON": "Agregar tipo de conversación"
+        "ADD_BUTTON": "Agregar embudo"
       },
       "EMPTY_STATE": {
         "MESSAGE": "No se encontraron tipos de conversación",
-        "NEW_BUTTON": "Crear Primer tipo de conversación"
+        "NEW_BUTTON": "Crear Primer embudo"
       },
       "BADGES": {
         "DEFAULT": "Por Defecto",
@@ -237,46 +325,46 @@
       },
       "DELETE": {
         "CONFIRM_MESSAGE": "¿Estás seguro de que quieres eliminar \"{name}\"?",
-        "SUCCESS_MESSAGE": "tipo de conversación eliminado exitosamente",
-        "ERROR_MESSAGE": "Error al eliminar tipo de conversación"
+        "SUCCESS_MESSAGE": "Embudo eliminado exitosamente",
+        "ERROR_MESSAGE": "Error al eliminar embudo"
       },
       "ADD": {
-        "TITLE": "Agregar tipo de conversación",
-        "DESC": "Crear un nuevo tipo de conversación para organizar tu tablero de conversaciones",
+        "TITLE": "Agregar embudo",
+        "DESC": "Crear un nuevo embudo para organizar tu tablero de conversaciones",
         "API": {
-          "SUCCESS_MESSAGE": "tipo de conversación creado exitosamente",
-          "ERROR_MESSAGE": "Error al crear tipo de conversación",
+          "SUCCESS_MESSAGE": "Embudo creado exitosamente",
+          "ERROR_MESSAGE": "Error al crear embudo",
           "ERROR_MESSAGE": {
-            "NAME_REQUIRED": "El nombre del tipo de conversación es requerido",
+            "NAME_REQUIRED": "El nombre del embudo es requerido",
             "NAME_MINIMUM_LENGTH": "El nombre debe tener al menos 2 caracteres"
           }
         }
       },
       "EDIT": {
-        "TITLE": "Editar tipo de conversación",
-        "DESC": "Actualizar la información del tipo de conversación",
+        "TITLE": "Editar embudo",
+        "DESC": "Actualizar la información del embudo",
         "API": {
-          "SUCCESS_MESSAGE": "tipo de conversación actualizado exitosamente",
-          "ERROR_MESSAGE": "Error al actualizar tipo de conversación"
+          "SUCCESS_MESSAGE": "Embudo actualizado exitosamente",
+          "ERROR_MESSAGE": "Error al actualizar embudo"
         }
       },
       "FORM": {
         "NAME": {
-          "LABEL": "Nombre del tipo de conversación",
+          "LABEL": "Nombre del embudo",
           "PLACEHOLDER": "ej: Ventas, Soporte, Desarrollo"
         },
         "DESCRIPTION": {
           "LABEL": "Descripción",
-          "PLACEHOLDER": "Describe el propósito de este tipo de conversación"
+          "PLACEHOLDER": "Describe el propósito de este embudo"
         },
         "COLOR": {
           "LABEL": "Color"
         },
         "IS_DEFAULT": {
-          "LABEL": "Establecer como tipo de conversación por defecto"
+          "LABEL": "Establecer como embudo por defecto"
         },
-        "CREATE": "Crear tipo de conversación",
-        "UPDATE": "Actualizar tipo de conversación",
+        "CREATE": "Crear embudo",
+        "UPDATE": "Actualizar embudo",
         "CANCEL": "Cancelar"
       }
     },

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_27_150000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_28_100100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1068,6 +1068,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_27_150000) do
     t.text "cached_label_list"
     t.bigint "kanban_type_process_id"
     t.bigint "kanban_process_id"
+    t.datetime "kanban_moved_at"
+    t.bigint "kanban_moved_by_id"
+    t.string "kanban_move_source"
+    t.string "kanban_move_reason"
     t.index ["account_id", "display_id"], name: "index_conversations_on_account_id_and_display_id", unique: true
     t.index ["account_id", "id"], name: "index_conversations_on_id_and_account_id"
     t.index ["account_id", "inbox_id", "status", "assignee_id"], name: "conv_acid_inbid_stat_asgnid_idx"
@@ -1314,6 +1318,20 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_27_150000) do
     t.jsonb "settings", default: {}
   end
 
+  create_table "kanban_moves", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "kanban_type_process_id", null: false
+    t.bigint "from_process_id"
+    t.bigint "to_process_id"
+    t.string "source", null: false
+    t.string "reason"
+    t.bigint "user_id"
+    t.datetime "created_at", null: false
+    t.index ["account_id", "kanban_type_process_id", "created_at"], name: "index_kanban_moves_on_account_board_created"
+    t.index ["conversation_id"], name: "index_kanban_moves_on_conversation_id"
+  end
+
   create_table "kanban_processes", force: :cascade do |t|
     t.string "type_process_name", null: false
     t.boolean "default", default: false
@@ -1323,6 +1341,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_27_150000) do
     t.bigint "kanban_type_process_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "entry_triggers", default: [], null: false
+    t.text "ai_criteria"
+    t.integer "stage_kind", default: 0, null: false
+    t.bigint "convert_case_type_id"
     t.index ["account_id"], name: "index_kanban_processes_on_account_id"
     t.index ["kanban_type_process_id"], name: "index_kanban_processes_on_kanban_type_process_id"
   end
@@ -1334,6 +1356,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_27_150000) do
     t.bigint "account_id", null: false
     t.datetime "created_at"
     t.datetime "updated_at"
+    t.boolean "auto_move", default: false, null: false
+    t.boolean "ai_move", default: false, null: false
+    t.jsonb "entry_inbox_ids", default: [], null: false
+    t.integer "cold_after_days"
+    t.integer "discard_after_days"
     t.index ["account_id"], name: "index_kanban_type_processes_on_account_id"
     t.index ["account_id"], name: "unique_default_kanban_type_process_per_account", unique: true, where: "(\"default\" = true)"
   end

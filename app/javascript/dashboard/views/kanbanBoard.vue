@@ -38,6 +38,7 @@ import KanbanColumn from '../components/kanban/kanbanColumn.vue';
 import KanbanConversationCard from '../components/kanban/KanbanConversationCard.vue';
 import ProcessModal from '../components/kanban/ProcessModal.vue';
 import TypeProcessModal from '../components/kanban/TypeProcessModal.vue';
+import FunnelMetricsModal from '../components/kanban/funnel/FunnelMetricsModal.vue';
 import { useAlert } from 'dashboard/composables';
 import kanbanMixin from 'dashboard/mixins/kanbanMixin';
 //import { frontendURL } from '../helper/URLHelper';
@@ -48,6 +49,7 @@ export default {
     KanbanConversationCard,
     ProcessModal,
     TypeProcessModal,
+    FunnelMetricsModal,
   },
 
   mixins: [kanbanMixin],
@@ -75,6 +77,7 @@ export default {
   data() {
     return {
       selectedProcessId: null,
+      showFunnelMetrics: false, // Embudo de contactos E3
       draggedItem: null,
       draggedConversation: null,
       showProcessModal: false,
@@ -839,6 +842,11 @@ export default {
             class="text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 pr-3">
             Actualizar
           </woot-button>
+          <woot-button v-if="selectedProcessId" variant="clear" size="small" icon="arrow-trending-lines"
+            class="text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 pr-3"
+            @click="showFunnelMetrics = true">
+            {{ $t('KANBAN.FUNNEL.METRICS.BUTTON') }}
+          </woot-button>
         </div>
       </div>
 
@@ -1104,6 +1112,10 @@ export default {
     <!-- Modals -->
     <ProcessModal v-if="showProcessModal" :show="showProcessModal" :process="selectedProcess" @close="closeProcessModal"
       @save="handleProcessSave" />
+
+    <FunnelMetricsModal v-if="showFunnelMetrics && selectedProcessId" :show="showFunnelMetrics"
+      :board-id="selectedProcessId" :board-name="selectedKanbanType ? selectedKanbanType.name : ''"
+      @close="showFunnelMetrics = false" />
 
     <TypeProcessModal v-if="showTypeProcessModal" :show="showTypeProcessModal" :type-process="selectedTypeProcess"
       @close="closeTypeProcessModal" @save="handleTypeProcessSave" />

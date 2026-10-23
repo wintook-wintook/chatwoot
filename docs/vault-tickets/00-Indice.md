@@ -67,6 +67,8 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 - [[Plan-Plantilla-Tareas-Etapa]] — ✅ hecho (T1–T4): plantilla, tareas al entrar, avance y «Documenta…», qué mueve cada etapa: plantilla de tareas por etapa en cada tipo de caso; se crean al entrar a la etapa, avance «sugerir» al terminar las obligatorias, nunca avanza sin documentar
 - [[Plan-Inicio-Mi-Resumen]] — ✅ hecho: Inicio «Mi resumen» donde aterriza cada usuario (avisos, Mi día, agenda, conversaciones, casos, semana) y preferencia «Al iniciar sesión, ir a»
 - [[Cambiar-Clase-Tipo]] — ✅ hecho: cambiar de clase un tipo; con casos se crea el tipo nuevo y el de antes queda retirado con sus casos tal cual
+- [[Plan-Embudo-Contactos]] — ✅ hecho (E1–E3): el tablero de conversaciones pasa a «Embudo de contactos»; la conversación mueve su tarjeta (reglas + IA), vencimientos, columna «Convertir» y métricas
+- [[Plan-Reacomodo-Menu]] — ✅ F1+F2: menú v2 (Inicio, Conversaciones, Ventas, Servicio, Agenda, Clientes, Agentes IA, Informes, Ajustes); interruptor `MENU_V2` para regresarlo
 - [[Plan-Bandeja-Prioridad]] — 🎯 plan: «Mi día» en la bandeja de tareas, orden por puntaje de urgencia, pesos configurables y plan con IA (F1–F4 hechas)
 - [[Plan-Casos-Hoja-de-ruta]] — 🧭 hoja de ruta: menú por clase (E1 hecho), clase fija, Comercial y Soporte completos
 - [[Historial-de-implementacion]] — changelog de todo lo resuelto

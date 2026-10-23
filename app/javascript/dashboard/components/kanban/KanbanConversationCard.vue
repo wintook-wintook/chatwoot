@@ -95,6 +95,32 @@
       </span>
     </div>
 
+    <!-- Embudo de contactos: quién movió la tarjeta, por qué, y su caso -->
+    <div v-if="funnelMoveText || caseTicket || isCold" class="flex flex-wrap items-center gap-1 mb-2">
+      <span
+        v-if="isCold"
+        class="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-200"
+      >
+        ❄ {{ $t('KANBAN.FUNNEL.CARD.COLD') }}
+      </span>
+      <span
+        v-if="funnelMoveText"
+        class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-full"
+        :title="funnelMoveReason"
+      >
+        {{ funnelMoveIcon }} {{ funnelMoveText }}
+      </span>
+      <button
+        v-if="caseTicket"
+        type="button"
+        class="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-200"
+        :title="$t('KANBAN.FUNNEL.CARD.OPEN_CASE', { folio: caseTicket.folio })"
+        @click.stop="openCase"
+      >
+        → {{ caseTicket.folio }}
+      </button>
+    </div>
+
     <!-- Footer con información adicional -->
     <div class="flex justify-between items-center text-xs">
       <!-- Información del inbox y asignado -->
@@ -182,6 +208,35 @@ export default {
   },
 
   computed: {
+    // Embudo de contactos
+    funnelMove() {
+      return this.conversation.kanban_move || null;
+    },
+    funnelMoveReason() {
+      return (this.funnelMove && this.funnelMove.reason) || '';
+    },
+    funnelMoveIcon() {
+      const source = this.funnelMove && this.funnelMove.source;
+      return { ai: '🤖', rule: '⚡', automation: '⚙', manual: '✋' }[source] || '';
+    },
+    funnelMoveText() {
+      const move = this.funnelMove;
+      if (!move || !move.source) return '';
+      if (move.source === 'manual') {
+        return move.by
+          ? this.$t('KANBAN.FUNNEL.CARD.MOVED_MANUAL', { name: move.by })
+          : this.$t('KANBAN.FUNNEL.CARD.MOVED_MANUAL_ANON');
+      }
+      const key = { ai: 'MOVED_AI', rule: 'MOVED_RULE' }[move.source] || 'MOVED_AUTOMATION';
+      const text = this.$t(`KANBAN.FUNNEL.CARD.${key}`);
+      return move.reason ? `${text}: ${move.reason}` : text;
+    },
+    caseTicket() {
+      return this.conversation.case_ticket || null;
+    },
+    isCold() {
+      return !!this.conversation.kanban_cold;
+    },
     // === INFORMACIÓN DEL CONTACTO ===
     contactName() {
       if (this.conversation.meta && this.conversation.meta.sender) {
@@ -349,6 +404,12 @@ export default {
   },
 
   methods: {
+    openCase() {
+      this.$router.push({
+        name: 'gestorTickets_detail',
+        params: { accountId: this.$route.params.accountId, id: this.caseTicket.id },
+      });
+    },
     // === NAVEGACIÓN ===
     openConversation() {
       if (this.isDragging) return; // No navegar si se está arrastrando

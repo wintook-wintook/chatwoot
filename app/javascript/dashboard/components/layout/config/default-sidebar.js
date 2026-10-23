@@ -10,7 +10,14 @@ import kanban from './sidebarItems/kanban'; // Añade esta línea
 // KANBAN0725
 import gestorTickets from './sidebarItems/gestorTickets'; // @tickets_cases
 
-export const getSidebarItems = accountId => ({
+import { getSidebarItemsV2 } from './sidebarItems/v2';
+
+// Menú v2 (reacomodo: Inicio, Conversaciones, Ventas, Servicio, Agenda, Clientes,
+// Agentes IA, Informes, Ajustes). En `false` vuelve el menú anterior tal cual:
+// ese es el respaldo para regresarlo.
+export const MENU_V2 = true;
+
+const getSidebarItemsV1 = accountId => ({
   primaryMenu: primaryMenu(accountId),
   secondaryMenu: [
     conversations(accountId),
@@ -25,3 +32,6 @@ export const getSidebarItems = accountId => ({
     gestorTickets(accountId), // @tickets_cases
   ],
 });
+
+export const getSidebarItems = (accountId, route) =>
+  MENU_V2 ? getSidebarItemsV2(accountId, route) : getSidebarItemsV1(accountId);

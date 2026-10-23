@@ -144,6 +144,41 @@ en:
         feedback: Feedback Comment
         recorded_at: Recorded date
 
+  kanban_funnel:
+    note: "Contact funnel: moved to «%{column}». %{reason}"
+    reasons:
+      conversation_created: "A new conversation arrived through %{inbox}."
+      first_reply: "First reply sent."
+      label_added: "Label «%{label}» was added."
+      appointment_scheduled: "An appointment was scheduled."
+      case_created: "Case %{folio} was created."
+      customer_returned: "The customer wrote again."
+      conversation_resolved: "The conversation was resolved without a case."
+      stale: "No reply from the customer in %{days} days."
+    ai:
+      moved: "🤖 Moved to «%{column}»: %{reason}"
+      suggested: "🤖 Could move to «%{column}» (I did not move it because I am not sure): %{reason}"
+      next_step: "Suggested next step: %{step}"
+    template:
+      columns:
+        new:
+          name: New
+          ai: "New conversation that has not been answered yet."
+        contacted:
+          name: Contacted
+          ai: "We already replied and are understanding what they need."
+        interested:
+          name: Interested
+          ai: "The customer asked for price, a quote, availability or terms of a product or service."
+        appointment:
+          name: Appointment
+          ai: "A meeting, visit, call or demo was agreed with the customer."
+        converted:
+          name: Converted
+          ai: "It is already a sales opportunity (the commercial case was created)."
+        discarded:
+          name: Discarded
+          ai: "The customer clearly said they are not interested, already bought elsewhere or is not a prospect."
   notifications:
     case_stages:
       tasks:
