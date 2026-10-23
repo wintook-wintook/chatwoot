@@ -1,9 +1,15 @@
-# Módulo de Licencias de Plataforma — Plan v1.0
+# Módulo de Licencias de Plataforma — Plan v1.1
 
-> **Versión:** 1.0 — documento vivo, se irá mejorando.
-> **Rama:** `feat/licencias` · **Fecha:** 2026-08-07 · **Estado:** PLAN (sin implementar)
+> **Versión:** 1.1 — documento vivo, se irá mejorando.
+> **Rama:** `feat/licencias` · **Fecha:** 2026-10-23 (v1.0: 2026-08-07) · **Estado:** PLAN (sin implementar)
 > **Sujeto de la licencia:** la **cuenta** (su uso de la plataforma), no software vendido a terceros.
-> **Administra:** personal de Wintook (`SuperAdmin`). El cliente solo consulta.
+> **Administra:** personal de Wintook con permiso dado **desde el super admin** (no por `.env`). El cliente solo consulta.
+
+> **Qué cambió en la v1.1 (23/10/2026):** quién ve y gestiona licencias se configura en el super
+> admin por agente y por cuenta (§8); al vencer, además de bloquear el acceso, **se callan los
+> Agentes IA, seguimientos y campañas** (§5.1); el interruptor general pasa del `.env` a la
+> configuración del super admin; las fases se reordenan para que la licencia funcione antes que el
+> tablero (§10); y se suman riesgos que aparecieron al revisar el código actual (§11).
 
 ---
 
@@ -119,6 +125,14 @@ la plataforma**. El módulo solo tiene que alimentarla con los datos correctos.
   <text x="40" y="273" font-family="system-ui, sans-serif" font-size="12.5" fill="#78350F">Ni el controlador de agentes ni la pantalla de agentes se tocan. Se modifica <tspan font-family="ui-monospace, monospace">una sola</tspan> función: la que resuelve el tope.</text>
 </svg>
 
+> **Revisado el 23/10/2026 contra el código actual:** los dos mecanismos siguen ahí
+> (`AgentsController#validate_limit` → 402 leyendo `usage_limits[:agents]`;
+> `ensure_current_account_helper.rb:11`). **Pero `suspended` solo cierra la puerta del
+> dashboard y la API:** de todo lo que procesa mensajes, seguimientos y campañas, solo la entrada
+> de WhatsApp revisa si la cuenta está activa. Una cuenta vencida seguiría recibiendo mensajes por
+> Telegram, Instagram, Facebook o el chat web, y sus Agentes IA y campañas seguirían contestando y
+> gastando OpenAI sin que nadie pudiera entrar. La v1.1 lo resuelve en §5.1.
+
 ---
 
 ## 3. Alcance
@@ -132,18 +146,22 @@ la plataforma**. El módulo solo tiene que alimentarla con los datos correctos.
 - **Demo automática** solo para cuentas nuevas.
 - **Cuentas existentes: fuera de licencia**, sin tope ni vencimiento, hasta que Wintook les
   asigne una.
-- **Dashboard de Licencias** (SuperAdmin) con KPIs, gráficos, tabla filtrable y acciones.
-- **Upgrade y renovación** desde el dashboard normal, con controles visibles solo a SuperAdmin.
+- **Dashboard de Licencias** con KPIs, gráficos, tabla filtrable y acciones, visible solo en
+  cuentas de Wintook para agentes con permiso dado en el super admin (§8).
+- **Upgrade y renovación** desde el dashboard normal, con controles visibles solo a quien tenga
+  «Gestionar licencias».
 - **Periodos encadenados** para pagos por adelantado.
 - **Avisos** 10 y 5 días antes por correo y banner.
-- **Suspensión al vencer**, con reactivación al renovar.
+- **Suspensión al vencer**, con reactivación al renovar, y **silencio del motor**: Agentes IA,
+  seguimientos y campañas no responden ni envían mientras la cuenta esté vencida (§5.1).
 - **Vista de solo lectura** para el administrador de la cuenta.
 
 ### Fuera de la v1
 
 Cobros y facturación · auto-renovación con cargo · portal de autoservicio · límites de otros
-recursos (inboxes, contactos, mensajes) · periodo de gracia tras el vencimiento · desactivar
-agentes sobrantes automáticamente · cortar en tiempo real un canal ya en uso.
+recursos (inboxes, contactos, mensajes) · **límites de Agentes IA, mensajes de IA o envíos de
+campaña** (pregunta abierta, §14) · periodo de gracia tras el vencimiento · desactivar agentes
+sobrantes automáticamente · cortar en tiempo real un canal ya en uso.
 
 ---
 
@@ -267,6 +285,36 @@ editar o borrar un plan del catálogo **no altera** las licencias ya emitidas.
   <text x="38" y="351" font-family="system-ui, sans-serif" font-size="11.5" fill="#334155">🔔 Antes de todo esto: aviso por correo a los administradores y banner en el dashboard, <tspan font-weight="700">10 y 5 días antes</tspan> del vencimiento. Al renovar una cuenta suspendida, se reactiva.</text>
 </svg>
 
+### 5.1 Qué pasa con la cuenta cuando vence (nuevo en v1.1)
+
+**Decisión 23/10/2026:** los mensajes siguen entrando y quedan guardados, pero **nada responde
+ni envía solo** hasta que se renueve.
+
+```
+ Licencia vencida (sin cola)  →  accounts.status = suspended
+ ┌──────────────────────────────┬──────────────────────────────────────────────┐
+ │ Sigue funcionando            │ Se detiene                                   │
+ ├──────────────────────────────┼──────────────────────────────────────────────┤
+ │ Entrada de mensajes de todos │ Entrar al dashboard y usar la API            │
+ │ los canales (quedan en la    │   (ya existe: «Account is suspended»)        │
+ │ conversación, sin perderse)  │ Agentes IA: no contestan                     │
+ │                              │ Seguimientos: no envían ni analizan          │
+ │                              │ Campañas: se pausan, no despachan            │
+ │                              │ Mensajes automáticos de llamadas perdidas    │
+ └──────────────────────────────┴──────────────────────────────────────────────┘
+ Al renovar: accounts.status = active y todo retoma; lo que entró queda en sus conversaciones.
+```
+
+- Se hace con **un solo chequeo compartido** (`account.active?`) en las puertas del motor: la
+  respuesta del Agente IA (`ContactTrackingResponseAnalyzerJob`, `KnowledgeBaseResponseService`),
+  el primer mensaje del seguimiento (`ContactTrackingJob`), el despacho de campañas
+  (`TrackingDispatch::SendJob`) y las acciones automáticas de llamada perdida. Es el mismo patrón
+  que ya usa `ContactTrackings::PendingSetup` para callar un agente con datos sin llenar.
+- La entrada de WhatsApp hoy **ignora** los mensajes de una cuenta suspendida
+  (`WhatsappChannelLookup#channel_is_inactive?`). Para que todos los canales se comporten igual,
+  ese chequeo se cambia: el mensaje entra y se guarda, y es el motor el que no contesta.
+- Las cuentas «fuera de licencia» (sin fila) y las «de Wintook» nunca se suspenden.
+
 ---
 
 ## 6. Cómo se aplica el tope de agentes
@@ -360,36 +408,85 @@ ya usa.
 
 ---
 
-## 8. Quién puede hacer qué
+## 8. Quién puede hacer qué — configurable en el super admin (v1.1)
 
-<svg viewBox="0 0 880 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diferencia entre SuperAdmin de Wintook y administrador de la cuenta cliente">
-  <rect x="20" y="16" width="410" height="200" rx="8" fill="#DCFCE7" stroke="#22C55E" stroke-width="2"/>
-  <text x="40" y="44" font-family="system-ui, sans-serif" font-size="13.5" font-weight="700" fill="#14532D">SuperAdmin de Wintook</text>
-  <text x="40" y="64" font-family="system-ui, sans-serif" font-size="11" font-style="italic" fill="#166534">personal interno</text>
-  <g font-family="system-ui, sans-serif" font-size="11.5" fill="#166534">
-    <text x="40" y="92">✓ Ver el Dashboard de Licencias completo</text>
-    <text x="40" y="114">✓ Crear y editar los planes del catálogo</text>
-    <text x="40" y="136">✓ Activar, renovar o programar licencias</text>
-    <text x="40" y="158">✓ Definir el número de agentes</text>
-    <text x="40" y="180">✓ Ver qué cuentas están fuera de licencia</text>
-    <text x="40" y="202">✓ Cancelar un periodo programado</text>
+**Decisión 23/10/2026:** quién ve y quién gestiona licencias **no** está fijo en el código ni en
+el `.env`: se marca en el super admin, por agente y por cuenta. Mismo patrón que el permiso de
+«Publicar prompts» (`users.custom_attributes['can_publish_prompts']`).
+
+<svg viewBox="0 0 880 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Permisos de licencias configurables desde el super admin">
+  <g font-family="system-ui, sans-serif">
+    <rect x="20" y="16" width="840" height="150" rx="8" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5"/>
+    <text x="38" y="42" font-size="13.5" font-weight="700" fill="#334155">Super admin de Wintook — donde se configura todo</text>
+
+    <rect x="38" y="56" width="260" height="96" rx="6" fill="#FFFFFF" stroke="#8B5CF6"/>
+    <text x="52" y="78" font-size="12" font-weight="700" fill="#4C1D95">Usuarios › editar agente</text>
+    <text x="52" y="102" font-size="11.5" fill="#5B21B6">☑ Ver licencias</text>
+    <text x="52" y="122" font-size="11.5" fill="#5B21B6">☑ Gestionar licencias</text>
+    <text x="52" y="142" font-size="10.5" font-style="italic" fill="#6D28D9">users.custom_attributes</text>
+
+    <rect x="310" y="56" width="260" height="96" rx="6" fill="#FFFFFF" stroke="#3B82F6"/>
+    <text x="324" y="78" font-size="12" font-weight="700" fill="#1E3A8A">Cuentas › editar cuenta</text>
+    <text x="324" y="102" font-size="11.5" fill="#1E40AF">☑ Cuenta de Wintook</text>
+    <text x="324" y="122" font-size="10.5" fill="#1E40AF">ahí aparece el dashboard y</text>
+    <text x="324" y="138" font-size="10.5" fill="#1E40AF">la cuenta nunca se suspende</text>
+
+    <rect x="582" y="56" width="260" height="96" rx="6" fill="#FFFFFF" stroke="#F59E0B"/>
+    <text x="596" y="78" font-size="12" font-weight="700" fill="#78350F">Configuración › Licencias</text>
+    <text x="596" y="102" font-size="11.5" fill="#92400E">☐ Aplicar licencias</text>
+    <text x="596" y="122" font-size="10.5" fill="#92400E">interruptor general (antes .env),</text>
+    <text x="596" y="138" font-size="10.5" fill="#92400E">apagado al desplegar</text>
+
+    <rect x="20" y="182" width="270" height="170" rx="8" fill="#DCFCE7" stroke="#22C55E" stroke-width="2"/>
+    <text x="38" y="208" font-size="13" font-weight="700" fill="#14532D">Agente con «Gestionar»</text>
+    <text x="38" y="226" font-size="10.5" font-style="italic" fill="#166534">en una cuenta de Wintook</text>
+    <g font-size="11.5" fill="#166534">
+      <text x="38" y="252">✓ Todo lo de «Ver»</text>
+      <text x="38" y="274">✓ Activar, renovar, programar</text>
+      <text x="38" y="296">✓ Cancelar un periodo en cola</text>
+      <text x="38" y="318">✓ Crear y editar planes</text>
+      <text x="38" y="340">✓ Ajustar agentes y días al emitir</text>
+    </g>
+
+    <rect x="305" y="182" width="270" height="170" rx="8" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
+    <text x="323" y="208" font-size="13" font-weight="700" fill="#1E3A8A">Agente con «Ver»</text>
+    <text x="323" y="226" font-size="10.5" font-style="italic" fill="#1E40AF">en una cuenta de Wintook (p. ej. ventas)</text>
+    <g font-size="11.5" fill="#1E40AF">
+      <text x="323" y="252">👁 Dashboard de Licencias completo</text>
+      <text x="323" y="274">👁 Por vencer, vencidas, en demo</text>
+      <text x="323" y="296">👁 Cuentas fuera de licencia</text>
+      <text x="323" y="318">✕ No cambia nada</text>
+    </g>
+
+    <rect x="590" y="182" width="270" height="170" rx="8" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2"/>
+    <text x="608" y="208" font-size="13" font-weight="700" fill="#78350F">Administrador de la cuenta</text>
+    <text x="608" y="226" font-size="10.5" font-style="italic" fill="#92400E">el cliente, sin permisos de licencias</text>
+    <g font-size="11.5" fill="#92400E">
+      <text x="608" y="252">👁 Su plan y su vencimiento</text>
+      <text x="608" y="274">👁 Agentes usados / disponibles</text>
+      <text x="608" y="296">👁 Su próximo periodo, si hay</text>
+      <text x="608" y="318">👁 Avisos y banner</text>
+      <text x="608" y="340" font-weight="700" fill="#7F1D1D">✕ No modifica su licencia</text>
+    </g>
+
+    <rect x="20" y="364" width="840" height="28" rx="6" fill="#F1F5F9"/>
+    <text x="38" y="383" font-size="11" fill="#334155">Un agente con permiso que también está en una cuenta de cliente NO ve el dashboard ahí. El servidor valida el permiso en cada consulta, no solo esconde el botón.</text>
   </g>
-
-  <rect x="450" y="16" width="410" height="200" rx="8" fill="#DBEAFE" stroke="#3B82F6" stroke-width="2"/>
-  <text x="470" y="44" font-family="system-ui, sans-serif" font-size="13.5" font-weight="700" fill="#1E3A8A">Administrador de la cuenta</text>
-  <text x="470" y="64" font-family="system-ui, sans-serif" font-size="11" font-style="italic" fill="#1E40AF">el cliente</text>
-  <g font-family="system-ui, sans-serif" font-size="11.5" fill="#1E40AF">
-    <text x="470" y="92">👁 Ver su plan y su fecha de vencimiento</text>
-    <text x="470" y="114">👁 Ver agentes usados / disponibles</text>
-    <text x="470" y="136">👁 Ver el próximo periodo si lo hay</text>
-    <text x="470" y="158">👁 Recibir avisos y ver el banner</text>
-  </g>
-  <rect x="466" y="170" width="378" height="34" rx="6" fill="#FEE2E2" stroke="#EF4444"/>
-  <text x="480" y="191" font-family="system-ui, sans-serif" font-size="11.5" font-weight="700" fill="#7F1D1D">✕ No puede modificar nada de su licencia</text>
-
-  <rect x="20" y="226" width="840" height="20" rx="6" fill="#F1F5F9"/>
-  <text x="38" y="240" font-family="system-ui, sans-serif" font-size="11" fill="#334155">Ambos entran por la misma pantalla (Configuración › Licencia); lo que cambia es lo que ve cada uno. La restricción se valida en el servidor, no solo en pantalla.</text>
 </svg>
+
+| Dónde se marca | Qué | Se guarda en | Efecto |
+|---|---|---|---|
+| Super admin › Usuarios | «Ver licencias» | `users.custom_attributes['can_view_licenses']` | Ve el dashboard (solo lectura) |
+| Super admin › Usuarios | «Gestionar licencias» | `users.custom_attributes['can_manage_licenses']` | Además emite, renueva, cancela y edita planes (incluye ver) |
+| Super admin › Cuentas | «Cuenta de Wintook» | `accounts.custom_attributes['wintook_internal']` | El dashboard solo aparece en estas cuentas; nunca se suspenden |
+| Super admin › Configuración | «Aplicar licencias» | `InstallationConfig` `LICENSE_ENFORCEMENT_ENABLED` (editable en pantalla) | Apagado: se registra todo pero no se bloquea ni se suspende |
+
+- La **policy** de licencias revisa las tres cosas en el servidor: permiso del usuario, cuenta de
+  Wintook y, para escribir, «Gestionar».
+- El payload del usuario actual lleva `can_view_licenses` / `can_manage_licenses` para mostrar el
+  enlace y los botones en el dashboard.
+- El administrador de una cuenta cliente sigue viendo su propia licencia en
+  Configuración › Licencia, en solo lectura, sin necesitar ningún permiso.
 
 ---
 
@@ -511,40 +608,48 @@ paginado): **cero librerías nuevas**.
 
 ---
 
-## 10. Fases de entrega
+## 10. Fases de entrega (reordenadas en v1.1)
 
-<svg viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Roadmap de fases del módulo de licencias">
+**Por qué cambia el orden:** en la v1.0 el dashboard (F3.5) iba antes que los vencimientos (F3).
+Pero una licencia que nunca vence ni suspende no vale nada: primero tiene que funcionar, después
+se mira en un tablero.
+
+<svg viewBox="0 0 880 352" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fases del módulo de licencias en el orden de la v1.1">
   <g font-family="system-ui, sans-serif">
-    <rect x="20" y="20" width="840" height="40" rx="6" fill="#DCFCE7" stroke="#22C55E"/>
-    <text x="38" y="38" font-size="12.5" font-weight="700" fill="#14532D">F0 · Cimientos y bloqueo</text>
-    <text x="200" y="38" font-size="11.5" fill="#166534">tablas, modelos y conexión del tope de agentes con la licencia</text>
-    <text x="200" y="53" font-size="10.5" font-style="italic" fill="#15803D">entregable: fijar un tope realmente impide dar de alta más agentes</text>
+    <rect x="20" y="20" width="840" height="46" rx="6" fill="#DCFCE7" stroke="#22C55E"/>
+    <text x="38" y="40" font-size="12.5" font-weight="700" fill="#14532D">F0 · Cimientos y tope</text>
+    <text x="230" y="40" font-size="11.5" fill="#166534">tablas, modelos, interruptor en super admin y tope de agentes desde la licencia</text>
+    <text x="230" y="57" font-size="10.5" font-style="italic" fill="#15803D">entregable: con el interruptor encendido, el tope impide dar de alta más agentes</text>
 
-    <rect x="20" y="68" width="840" height="40" rx="6" fill="#DCFCE7" stroke="#22C55E"/>
-    <text x="38" y="86" font-size="12.5" font-weight="700" fill="#14532D">F1 · Demo automática</text>
-    <text x="200" y="86" font-size="11.5" fill="#166534">toda cuenta nueva nace con prueba; las existentes no se tocan</text>
-    <text x="200" y="101" font-size="10.5" font-style="italic" fill="#15803D">entregable: cuenta nueva con demo activa desde el registro</text>
+    <rect x="20" y="74" width="840" height="46" rx="6" fill="#DCFCE7" stroke="#22C55E"/>
+    <text x="38" y="94" font-size="12.5" font-weight="700" fill="#14532D">F1 · Demo automática</text>
+    <text x="230" y="94" font-size="11.5" fill="#166534">toda cuenta nueva nace con el plan de registro; las existentes no se tocan</text>
+    <text x="230" y="111" font-size="10.5" font-style="italic" fill="#15803D">entregable: cuenta nueva con demo activa desde el registro</text>
 
-    <rect x="20" y="116" width="840" height="40" rx="6" fill="#DBEAFE" stroke="#3B82F6"/>
-    <text x="38" y="134" font-size="12.5" font-weight="700" fill="#1E3A8A">F2 · Catálogo y gestión</text>
-    <text x="200" y="134" font-size="11.5" fill="#1E40AF">planes personalizables, vista cruzada de cuentas y alta de licencias</text>
-    <text x="200" y="149" font-size="10.5" font-style="italic" fill="#2563EB">entregable: Wintook ve quién está fuera del sistema y le asigna un plan</text>
+    <rect x="20" y="128" width="840" height="46" rx="6" fill="#DBEAFE" stroke="#3B82F6"/>
+    <text x="38" y="148" font-size="12.5" font-weight="700" fill="#1E3A8A">F2 · Permisos, catálogo y gestión</text>
+    <text x="230" y="148" font-size="11.5" fill="#1E40AF">casillas en super admin, planes editables, vista cruzada y emitir licencias</text>
+    <text x="230" y="165" font-size="10.5" font-style="italic" fill="#2563EB">entregable: un agente con «Gestionar» asigna un plan a una cuenta fuera de licencia</text>
 
-    <rect x="20" y="164" width="840" height="40" rx="6" fill="#EDE9FE" stroke="#8B5CF6"/>
-    <text x="38" y="182" font-size="12.5" font-weight="700" fill="#4C1D95">F3.5 · Dashboard</text>
-    <text x="200" y="182" font-size="11.5" fill="#5B21B6">indicadores, gráficos, filtros por vencimiento y acciones directas</text>
-    <text x="200" y="197" font-size="10.5" font-style="italic" fill="#6D28D9">entregable: tablero de control del negocio de licencias</text>
+    <rect x="20" y="182" width="840" height="46" rx="6" fill="#FEF3C7" stroke="#F59E0B"/>
+    <text x="38" y="202" font-size="12.5" font-weight="700" fill="#78350F">F3 · Vencimientos, avisos y silencio</text>
+    <text x="230" y="202" font-size="11.5" fill="#92400E">revisión diaria, cola de periodos, avisos 10 y 5 días, suspender y callar el motor</text>
+    <text x="230" y="219" font-size="10.5" font-style="italic" fill="#B45309">entregable: vence → suspendida y sin bot ni campañas; renovar → todo retoma</text>
 
-    <rect x="20" y="212" width="840" height="40" rx="6" fill="#FEF3C7" stroke="#F59E0B"/>
-    <text x="38" y="230" font-size="12.5" font-weight="700" fill="#78350F">F3 · Vencimientos y avisos</text>
-    <text x="200" y="230" font-size="11.5" fill="#92400E">revisión diaria, correos 10 y 5 días antes, cola de periodos y suspensión</text>
-    <text x="200" y="245" font-size="10.5" font-style="italic" fill="#B45309">entregable: los periodos se encadenan solos; suspende solo si no hay cola</text>
+    <rect x="20" y="236" width="840" height="46" rx="6" fill="#EDE9FE" stroke="#8B5CF6"/>
+    <text x="38" y="256" font-size="12.5" font-weight="700" fill="#4C1D95">F4 · Dashboard de Licencias</text>
+    <text x="230" y="256" font-size="11.5" fill="#5B21B6">indicadores, gráficos, filtros 7/14/30/60 días y acciones directas</text>
+    <text x="230" y="273" font-size="10.5" font-style="italic" fill="#6D28D9">entregable: tablero visible solo en cuentas de Wintook para agentes con permiso</text>
 
-    <rect x="20" y="260" width="840" height="34" rx="6" fill="#F1F5F9" stroke="#94A3B8"/>
-    <text x="38" y="281" font-size="12.5" font-weight="700" fill="#334155">F4 · Vista del cliente</text>
-    <text x="200" y="281" font-size="11.5" fill="#475569">pantalla de solo lectura, banner de aviso y pantalla de cuenta vencida</text>
+    <rect x="20" y="290" width="840" height="46" rx="6" fill="#F1F5F9" stroke="#94A3B8"/>
+    <text x="38" y="310" font-size="12.5" font-weight="700" fill="#334155">F5 · Vista del cliente</text>
+    <text x="230" y="310" font-size="11.5" fill="#475569">Configuración › Licencia en solo lectura, banner de aviso y pantalla de cuenta vencida</text>
+    <text x="230" y="327" font-size="10.5" font-style="italic" fill="#64748B">entregable: el cliente ve su plan, sus agentes y cuándo vence</text>
   </g>
 </svg>
+
+Cada fase se entrega con el interruptor general **apagado**: se puede subir a producción sin que
+ninguna cuenta cambie, y se enciende cuando todo esté probado.
 
 ---
 
@@ -562,7 +667,21 @@ paginado): **cero librerías nuevas**.
 - **Agentes por encima del tope.** Por diseño no se expulsa a nadie, así que el conteo puede
   quedar temporalmente por encima del límite. Es esperado, no un error.
 - **Cancelar un periodo en cola** sin afectar al vigente debe ser posible.
-- **Despliegue seguro:** el enforcement se controla con una llave global apagada por defecto.
+- **Despliegue seguro:** el enforcement se controla con un interruptor general apagado por
+  defecto, **en la configuración del super admin** (no en `.env`).
+- **Ya casi no caben banderas (v1.1).** Los paquetes del plan usan las banderas de funciones de
+  la cuenta (`accounts.feature_flags`, un entero de 63 posiciones) y van **62 usadas**. Una función
+  nueva que se quiera vender aparte no tendría lugar. Si hace falta, la salida es una segunda
+  columna de banderas; queda fuera de la v1 pero hay que tenerlo en cuenta al armar el catálogo.
+- **La lista de funciones vendibles cambió desde agosto.** Hay módulos nuevos con bandera propia
+  (por ejemplo llamadas de WhatsApp, `whatsapp_calls`): el catálogo del plan debe leer la lista
+  de `config/features.yml` en vivo, no una copia escrita en el código.
+- **Callar el motor sin perder mensajes (v1.1).** Hoy la entrada de WhatsApp descarta los
+  mensajes de una cuenta suspendida; con §5.1 pasan a guardarse. Hay que cambiar ese chequeo y
+  probar los demás canales.
+- **El plan que apaga funciones.** Si el plan es autoritativo (§14.1), un cliente que hoy usa una
+  función que su plan no incluye la pierde al emitirle la licencia. El formulario de emisión debe
+  mostrar qué se va a apagar antes de confirmar.
 
 ---
 
@@ -589,7 +708,12 @@ eliminar.
 | Al vencer | Suspender toda la cuenta |
 | Tope al bajar de plan o vencer | Solo bloquear altas nuevas; nunca expulsar agentes |
 | Pago por adelantado | Periodo encolado que arranca solo al terminar el vigente |
-| Administración | Exclusiva de SuperAdmin de Wintook; el cliente solo consulta |
+| Administración | Personal de Wintook con permiso; el cliente solo consulta |
+| Permisos (v1.1) | En el super admin: «Ver licencias» y «Gestionar licencias» por agente; «Cuenta de Wintook» por cuenta. Nada en `.env` |
+| Dónde se ve el dashboard (v1.1) | Solo en cuentas marcadas «de Wintook», que además nunca se suspenden |
+| Al vencer (v1.1) | Se bloquea el acceso y se callan Agentes IA, seguimientos y campañas; los mensajes entrantes se guardan |
+| Interruptor general (v1.1) | En la configuración del super admin, apagado al desplegar |
+| Orden de fases (v1.1) | Tope → demo → gestión → vencimiento y silencio → dashboard → vista del cliente |
 | Avisos | Correo a administradores + banner, 10 y 5 días antes |
 | Planes | Catálogo propio con nombre, días, agentes y set de canales y funciones |
 | Datos del sistema viejo | No se importan; se muestran como referencia para decidir |
@@ -603,8 +727,70 @@ eliminar.
    no incluye, o solo encender los suyos y dejar lo demás como esté? La propuesta es que sea
    autoritativo al emitir, con ajustes manuales posteriores permitidos.
 2. **¿El vencimiento es al final del día** en la zona horaria de la cuenta?
-3. **¿Qué cuentas internas** deben quedar excluidas del enforcement?
+3. ~~¿Qué cuentas internas deben quedar excluidas?~~ **Resuelta en v1.1:** las marcadas «Cuenta de
+   Wintook» en el super admin.
 4. **Estructura de los catálogos viejos** para completar la referencia (§12).
+5. **¿Periodo de gracia?** (v1.1) Hoy la cuenta se suspende el mismo día que vence. ¿Unos días
+   de gracia, o un modo «solo lectura» antes de suspender? Por omisión: sin gracia.
+6. **¿Se licencia la IA?** (v1.1) El plan cuenta solo agentes humanos, y el costo está en los
+   Agentes IA, los mensajes de IA y las campañas. ¿El plan debe limitar cuántos Agentes IA, cuántos
+   mensajes de IA al mes o cuántos envíos? Por omisión: fuera de la v1.
+7. **¿Extender la demo de una cuenta?** (v1.1) Hoy habría que emitirle una licencia nueva. ¿Un
+   botón «Extender demo»? ¿Cuentas que se creen sin demo?
+8. **Catálogo comercial.** La dirección define qué planes se venden; F2 lo necesita para el seed.
+
+
+---
+
+## 15. Avance por fase
+
+### F0 — Cimientos y tope ✅ (23/10/2026)
+
+**Qué se hizo**
+
+| Pieza | Archivo |
+|---|---|
+| Catálogo de planes, con la Demo 15 días / 2 agentes ya creada y marcada de registro | `db/migrate/20261029100000_create_license_plans.rb`, `app/models/license_plan.rb` |
+| Licencias por cuenta: a lo sumo una activa (índice único parcial) y N en cola | `db/migrate/20261029100100_create_account_licenses.rb`, `app/models/account_license.rb` |
+| El tope de agentes desde la licencia | `app/models/concerns/account_licensable.rb`, `app/models/account.rb`, `enterprise/app/models/enterprise/account.rb` |
+| Interruptor «Aplicar licencias», apagado | `app/services/licenses/enforcement.rb`, `config/installation_config.yml` |
+| Tarjeta «Licencias» en Super admin › Configuración | `enterprise/app/helpers/super_admin/features.yml`, `enterprise/app/controllers/enterprise/super_admin/app_configs_controller.rb` |
+
+**Cómo funciona**
+
+```
+ Alta de un agente → AgentsController#validate_limit (ya existía)
+                       └─ usage_limits[:agents] ← Enterprise::Account#agent_limits
+                                                     └─ license_agent_limit
+   interruptor apagado ............ nil → manda lo de siempre (limits / config)
+   cuenta de Wintook .............. nil
+   sin ninguna licencia ........... nil → fuera de licencia, como hoy
+   licencia activa ................ max_agents de la licencia
+   tuvo licencia, ninguna activa .. 0   → no admite agentes nuevos
+ Si no alcanza → 402 «Please purchase more licenses» (ya existía). Nadie es expulsado.
+```
+
+- El interruptor vive en `InstallationConfig` (`LICENSE_ENFORCEMENT_ENABLED`) y se cambia en
+  Super admin › Configuración › Licencias. Guardar borra la caché de `GlobalConfig`: surte efecto
+  al momento.
+- Un plan marcado de registro desmarca al anterior (solo uno a la vez).
+- Todavía no hay pantalla para planes ni licencias: llega en F2. La Demo y las licencias se pueden
+  crear por consola para probar.
+
+**Pila de pruebas** (26/27 en verde; la que falla es previa: `FB_APP_ID` ya existe en la base de dev)
+
+- `spec/models/license_plan_spec.rb`: validaciones, `features` como lista, un solo plan de registro, el desactivado no cuenta.
+- `spec/models/account_license_spec.rb`: una sola activa (también por índice), varias en cola, vence después de empezar, la copia no cambia al editar el plan.
+- `spec/models/concerns/account_licensable_spec.rb`: interruptor apagado, sin licencia, activa por encima de `limits`, vencida → 0, cuenta de Wintook.
+- `spec/services/licenses/enforcement_spec.rb`: apagado por omisión y encendido desde `InstallationConfig`.
+- `spec/enterprise/controllers/api/v1/accounts/agents_license_spec.rb`: 402 al pasar el tope sin expulsar, alta con lugar.
+- `spec/controllers/super_admin/app_config_controller_spec.rb`: el grupo «licenses» muestra y guarda el interruptor.
+- Ojo: una prueba que enciende el interruptor deja su valor en la caché de Redis aunque la
+  transacción se deshaga → `GlobalConfig.clear_cache` al terminar.
+
+**Cómo probarlo a mano**: encender «Aplicar licencias» en el super admin, crear por consola
+`AccountLicense.create!(account: cuenta, name: 'Prueba', max_agents: 2, duration_days: 30)` y
+dar de alta agentes en esa cuenta: el tercero recibe el aviso de licencias.
 
 ---
 
@@ -612,4 +798,5 @@ eliminar.
 
 | Versión | Fecha | Cambios |
 |---|---|---|
+| **1.1** | 2026-10-23 | Permisos configurables en el super admin (Ver / Gestionar por agente, «Cuenta de Wintook» por cuenta), interruptor general fuera del `.env`, silencio del motor al vencer (§5.1), fases reordenadas (F0–F5), revisión contra el código actual (§2) y riesgos nuevos: banderas casi llenas, lista de funciones viva, plan que apaga funciones. Preguntas nuevas: gracia, licenciar la IA, extender demo. |
 | **1.0** | 2026-08-07 | Primera versión ilustrada: alcance del módulo y sus puntos fuertes, el mecanismo de bloqueo que ya existe, modelo de datos, ciclo de vida con cola de periodos, tope de agentes, planes como paquete de canales y funciones, reparto de permisos, maqueta del Dashboard de Licencias, fases F0–F4, riesgos y decisiones. |
