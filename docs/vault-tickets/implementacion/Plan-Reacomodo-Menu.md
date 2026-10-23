@@ -9,7 +9,7 @@ Clientes · Agentes IA · Informes · Centro de ayuda · Ajustes**.
 
 | Entrada | Submenú | Sale de |
 |---|---|---|
-| Inicio | Mi resumen · Mis avisos · Mi negocio (visibleGetter) | Inicio, notificaciones, Resumen del negocio |
+| Inicio | Mi resumen · Mi negocio (visibleGetter); sin opción de avisos (campanita y Mi resumen) | Inicio, Resumen del negocio |
 | Conversaciones | lo de antes + Vista de bandeja | Conversaciones + Vista de bandeja |
 | Ventas | Embudo de contactos (+ lista de embudos) · Oportunidades · Embudo de oportunidades · Métricas de ventas | Tableros de conversaciones + Casos Comercial |
 | Servicio | Casos · Tablero · Métricas (clase actual o última no Comercial) | Casos Soporte/OT/Proyecto |
