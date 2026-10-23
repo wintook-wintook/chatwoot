@@ -1,0 +1,106 @@
+{
+  "LICENSES": {
+    "HEADER": "Licenses",
+    "DESCRIPTION": "Which plan each account has, when it expires and how many agents it can have.",
+    "NO_ACCESS": "You don't have access to licenses from this account.",
+    "LOAD_ERROR": "Could not load. Try again.",
+    "TABS": { "ACCOUNTS": "Accounts", "PLANS": "Plans" },
+    "ACCOUNTS": {
+      "SEARCH": "Search by name or number",
+      "STATE_ALL": "All",
+      "DAYS": "days",
+      "EMPTY": "No accounts match this filter.",
+      "TABLE": {
+        "ACCOUNT": "Account",
+        "STATE": "State",
+        "PLAN": "Plan",
+        "AGENTS": "Agents",
+        "EXPIRES": "Expires",
+        "ACTIONS": "Actions"
+      },
+      "QUEUED": "+{count} queued",
+      "DAYS_LEFT": "in {count} days",
+      "EXPIRED_AGO": "{count} days ago",
+      "SUSPENDED": "Suspended",
+      "WINTOOK": "Wintook",
+      "ASSIGN": "Assign license",
+      "HISTORY": "History"
+    },
+    "STATE": {
+      "SIN_LICENCIA": "No license",
+      "DEMO": "Demo",
+      "PAID": "Active",
+      "VIGENTE": "Active",
+      "POR_VENCER": "Expiring",
+      "VENCIDA": "Expired"
+    },
+    "PLANS": {
+      "NEW": "New plan",
+      "EMPTY": "No plans yet.",
+      "TABLE": {
+        "NAME": "Plan",
+        "DAYS": "Days",
+        "AGENTS": "Agents",
+        "TYPE": "Type",
+        "FEATURES": "Channels and features",
+        "ACCOUNTS": "Active accounts"
+      },
+      "SIGNUP": "Signup",
+      "INACTIVE": "Inactive",
+      "FEATURES_COUNT": "{count} included",
+      "EDIT": "Edit"
+    },
+    "TYPE": { "DEMO": "Demo", "PAID": "Paid" },
+    "PLAN_FORM": {
+      "NEW_TITLE": "New plan",
+      "EDIT_TITLE": "Edit plan",
+      "DESC": "Changes apply to licenses issued afterwards; issued ones keep their copy.",
+      "NAME": "Name",
+      "DAYS": "Duration in days",
+      "AGENTS": "Default agents",
+      "TYPE": "Type",
+      "SIGNUP": "Signup plan: every new account starts with it (only one)",
+      "ACTIVE": "Active (otherwise it can't be issued)",
+      "CHANNELS": "Channels",
+      "FUNCTIONS": "Features",
+      "FEATURES_HINT": "For now they are only saved in the plan; they are not turned on or off in the account yet.",
+      "SAVE": "Save",
+      "CANCEL": "Cancel",
+      "SAVED": "Plan saved.",
+      "ERROR": "Could not save the plan."
+    },
+    "ISSUE": {
+      "TITLE": "Assign license to {name}",
+      "DESC": "The plan is copied and you can adjust the values for this account only.",
+      "PLAN": "Plan",
+      "CHOOSE_PLAN": "Choose a plan…",
+      "START": "When it starts",
+      "START_NOW": "Now: replaces the current license",
+      "START_QUEUE": "Queued: starts when the current one ends",
+      "NAME": "License name",
+      "AGENTS": "Agents",
+      "DAYS": "Days",
+      "NOTES": "Notes (optional)",
+      "SUBMIT": "Assign",
+      "CANCEL": "Cancel",
+      "DONE": "License assigned.",
+      "ERROR": "Could not assign the license."
+    },
+    "HISTORY": {
+      "TITLE": "Licenses of {name}",
+      "EMPTY": "This account has never had a license.",
+      "FROM_TO": "{from} → {to}",
+      "BY": "by {name}",
+      "CANCEL": "Cancel",
+      "CANCELLED": "Scheduled license cancelled.",
+      "CANCEL_ERROR": "Could not cancel.",
+      "CLOSE": "Close"
+    },
+    "STATUS": {
+      "ACTIVE": "Active",
+      "SCHEDULED": "Scheduled",
+      "EXPIRED": "Expired",
+      "CANCELLED": "Cancelled"
+    }
+  }
+}

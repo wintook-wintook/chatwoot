@@ -18,6 +18,7 @@ import { routes as eventsRoutes } from './events/routes'; // Plan-Eventos E1
 // proyecto@contact_tracking — Dashboard de Seguimientos
 import { routes as contactTrackingsRoutes } from './contactTrackings/routes';
 import { routes as whatsappCallsRoutes } from './whatsappCalls/routes'; // diag/llamadas_whatsapp
+import { routes as licensesRoutes } from './licenses/routes'; // feat/licencias
 
 const AppContainer = () => import('./Dashboard.vue');
 const Captain = () => import('./Captain.vue');
@@ -58,6 +59,7 @@ export default {
         // proyecto@contact_tracking — Dashboard de Seguimientos
         ...contactTrackingsRoutes,
         ...whatsappCallsRoutes,
+        ...licensesRoutes,
       ],
     },
     {

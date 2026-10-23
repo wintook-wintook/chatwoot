@@ -32,6 +32,7 @@ describe('Menú v2', () => {
       'agentes',
       'reports',
       'catalogos',
+      'licenses', // feat/licencias: Sidebar.vue la esconde salvo en cuentas de Wintook con permiso
       'settings',
     ]);
   });
@@ -348,6 +349,14 @@ describe('Menú v2', () => {
       route('home')
     ).secondaryMenu.find(m => m.parentNav === 'servicio');
     expect(servicio.menuItems[0].toState).toContain('tickets/support/list');
+  });
+
+  it('Licencias tiene su propio menú y va marcada para filtrarse por permiso', () => {
+    const { primaryMenu } = getSidebarItemsV2(ACCOUNT, route('home'));
+    expect(primaryMenu.find(item => item.key === 'licenses').licensesOnly).toBe(
+      true
+    );
+    expect(menuFor(route('licenses_index')).parentNav).toBe('licenses');
   });
 
   it('la configuración de casos queda en Ajustes', () => {

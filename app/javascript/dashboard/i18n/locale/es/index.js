@@ -51,6 +51,7 @@ import trackingCampaigns from './trackingCampaigns.json'; // @campanas_vendedor
 import trackingAssistant from './trackingAssistant.json'; // proyecto@asistente_agentes_ia
 import whatsappCalls from './whatsappCalls.json'; // diag/llamadas_whatsapp
 import internalChat from './internalChat.json'; // feat/chat_interno
+import licenses from './licenses.json'; // feat/licencias
 
 export default {
   ...advancedFilters,
@@ -104,4 +105,5 @@ export default {
   ...trackingAssistant, // proyecto@asistente_agentes_ia
   ...whatsappCalls, // diag/llamadas_whatsapp
   ...internalChat, // feat/chat_interno
+  ...licenses, // feat/licencias
 };

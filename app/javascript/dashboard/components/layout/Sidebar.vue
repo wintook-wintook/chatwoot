@@ -190,6 +190,7 @@ export default {
         if (!isAvailableForTheUser) {
           return false;
         }
+        if (menuItem.licensesOnly) return this.canSeeLicenses;
         if (
           menuItem.alwaysVisibleOnChatwootInstances &&
           !this.isACustomBrandedInstance
@@ -225,6 +226,18 @@ export default {
           menuItem => menuItem.key === this.activeSecondaryMenu.parentNav
         ) || {};
       return activePrimaryMenu;
+    },
+    // feat/licencias: el menú Licencias, solo en una cuenta de Wintook y con permiso.
+    canSeeLicenses() {
+      const account = this.$store.getters['accounts/getAccount'](
+        this.accountId
+      );
+      return Boolean(
+        account &&
+          account.wintook_internal &&
+          this.currentUser &&
+          this.currentUser.can_view_licenses
+      );
     },
     hideContactsForAgents() {
       return (
