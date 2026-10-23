@@ -107,6 +107,7 @@ Rails.application.routes.draw do
           end
           # feat/licencias (F2): gestión de licencias, solo desde cuentas de Wintook con permiso
           namespace :licenses do
+            resource :summary, only: [:show], controller: 'summary'
             resources :plans, only: [:index, :create, :update]
             resources :accounts, only: [:index, :show]
             resources :account_licenses, only: [:create] do

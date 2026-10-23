@@ -21,12 +21,15 @@ export default {
   props: {
     plans: { type: Array, default: () => [] },
     canManage: { type: Boolean, default: false },
+    // F4: una tarjeta del resumen abre esta pestaña ya filtrada.
+    initialEstado: { type: String, default: '' },
+    initialDias: { type: Number, default: SOON_DAYS },
   },
   data() {
     return {
       states: STATES,
-      estado: '',
-      dias: SOON_DAYS,
+      estado: this.initialEstado,
+      dias: this.initialDias,
       q: '',
       page: 1,
       rows: [],

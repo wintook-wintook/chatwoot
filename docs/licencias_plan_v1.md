@@ -986,6 +986,53 @@ La pantalla llega en F2b.
 - `whatsapp_events_job_spec.rb`: actualizado — con la cuenta suspendida el mensaje se guarda.
 - Existentes del despachador, `SendJob` y llamadas: en verde.
 
+
+### F4 — Tablero de licencias ✅ (23/10/2026)
+
+**Qué se hizo**
+
+| Pieza | Archivo |
+|---|---|
+| Los números, en pocas consultas agregadas | `app/services/licenses/summary.rb` |
+| `GET …/licenses/summary` (misma puerta: Wintook + «Ver licencias») | `…/licenses/summary_controller.rb`, `config/routes.rb` |
+| Pestaña «Resumen» (la primera) | `views/licenses/SummaryTab.vue`, `Index.vue` |
+| Cuentas puede abrirse ya filtrada | `views/licenses/AccountsTab.vue` (`initialEstado`, `initialDias`) |
+
+**Cómo se ve**
+
+```
+ [ Resumen ] [ Cuentas ] [ Planes ]
+ Por vencer en: (7 días) 14 días 30 días 60 días
+ ┌──────────┬──────────┬────────────────────┬──────────┬──────────────┬────────────────────────┐
+ │ De pago  │ En demo  │ Por vencer (7 días)│ Vencidas │ Sin licencia │ Conversión demo → pago │
+ │    4     │    2     │         1          │    1     │      9       │          25%           │
+ └──────────┴──────────┴────────────────────┴──────────┴──────────────┴────────────────────────┘
+   clic en una tarjeta → Cuentas con ese filtro (conversión no filtra)
+ ┌ Vencimientos de las próximas semanas ──┐  ┌ Cuentas por plan ───────────────┐
+ │ ▁ ▁ █ ▁ ▃ ▁ ▁ ▁ ▁   (9 semanas, 60 d)  │  │ █ Profesional  ▆ Básico  ▂ Demo │
+ └────────────────────────────────────────┘  └─────────────────────────────────┘
+```
+
+- **Forma elegida con la guía de visualización:** los indicadores son tarjetas (números, no
+  gráficas); vencimientos por semana y cuentas por plan son barras de una sola serie, sin leyenda
+  (el título la nombra), con tooltip al pasar el mouse.
+- **Color:** el `woot-600` del tema activo, leído en el navegador. Validado con
+  `validate_palette.js`: con el tema por omisión pasa luminosidad y contraste ≥ 3:1 en claro y
+  oscuro (el `woot-500` fallaba en los dos). Los valores exactos están en el tooltip y en la
+  tabla de Cuentas.
+- Componentes nativos: `ReportMetricCard`, `BarChart` (vue-chartjs), `woot-button`, `woot-tabs`.
+- Conversión = de las cuentas que alguna vez tuvieron demo, cuántas recibieron una licencia de pago
+  después de su primera demo.
+
+**Pila de pruebas**
+
+- `spec/services/licenses/summary_spec.rb`: cada indicador (midiendo la diferencia: la base de
+  pruebas es la de dev), conversión, 9 semanas de vencimientos y activas por plan.
+- `spec/controllers/api/v1/accounts/licenses/summary_api_spec.rb`: responde con permiso, 401 sin él.
+- `views/licenses/licenses.spec.js` (+3): tarjetas y ventana de días, clic abre Cuentas filtrada
+  (conversión no), una sola serie con color del tema.
+- En navegador: pendiente (incluye mirar la gráfica dibujada).
+
 ---
 
 ### Bitácora de versiones

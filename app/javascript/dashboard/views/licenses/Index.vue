@@ -4,6 +4,7 @@
 // Solo aparece en el menú de una cuenta de Wintook y para quien tenga «Ver licencias»
 // (Sidebar.vue); el servidor lo vuelve a validar y, si responde 401, la pantalla lo dice.
 //
+//   Resumen  indicadores y gráficos (F4); una tarjeta abre Cuentas con su filtro
 //   Cuentas  todas las cuentas con su estado de licencia; asignar y ver historial
 //   Planes   el catálogo (crear y editar; solo con «Gestionar licencias»)
 //
@@ -13,16 +14,22 @@
 import { mapGetters } from 'vuex';
 import LicensesAPI from 'dashboard/api/licenses';
 import BaseSettingsHeader from 'dashboard/routes/dashboard/settings/components/BaseSettingsHeader.vue';
+import SummaryTab from './SummaryTab.vue';
 import AccountsTab from './AccountsTab.vue';
 import PlansTab from './PlansTab.vue';
 
-const TABS = ['accounts', 'plans'];
+const TABS = ['summary', 'accounts', 'plans'];
 
 export default {
-  components: { BaseSettingsHeader, AccountsTab, PlansTab },
+  components: { BaseSettingsHeader, SummaryTab, AccountsTab, PlansTab },
   data() {
     return {
-      tab: 'accounts',
+      tab: 'summary',
+      tabs: TABS,
+      // Lo que pidió una tarjeta del resumen: { estado, dias }. Cambia la llave de la
+      // pestaña Cuentas para que arranque con ese filtro.
+      accountsFilter: { estado: '', dias: 7 },
+      accountsKey: 0,
       plans: [],
       availableFeatures: [],
       noAccess: false,
@@ -44,6 +51,11 @@ export default {
   methods: {
     t(key, args) {
       return this.$t(`LICENSES.${key}`, args);
+    },
+    openAccounts(filter) {
+      this.accountsFilter = filter;
+      this.accountsKey += 1;
+      this.tab = 'accounts';
     },
     async fetchPlans() {
       this.loadError = false;
@@ -76,16 +88,13 @@ export default {
           class="mt-4"
           :index="tabPosition"
           :border="false"
-          @change="tab = ['accounts', 'plans'][$event]"
+          @change="tab = tabs[$event]"
         >
           <woot-tabs-item
-            :index="0"
-            :name="t('TABS.ACCOUNTS')"
-            :show-badge="false"
-          />
-          <woot-tabs-item
-            :index="1"
-            :name="t('TABS.PLANS')"
+            v-for="(item, position) in tabs"
+            :key="item"
+            :index="position"
+            :name="t(`TABS.${item.toUpperCase()}`)"
             :show-badge="false"
           />
         </woot-tabs>
@@ -104,10 +113,14 @@ export default {
         {{ t('LOAD_ERROR') }}
       </p>
       <div v-else class="flex flex-col flex-1 min-h-0 mt-6">
+        <SummaryTab v-if="tab === 'summary'" @filter="openAccounts" />
         <AccountsTab
-          v-if="tab === 'accounts'"
+          v-else-if="tab === 'accounts'"
+          :key="`accounts-${accountsKey}`"
           :plans="plans"
           :can-manage="canManage"
+          :initial-estado="accountsFilter.estado"
+          :initial-dias="accountsFilter.dias"
         />
         <PlansTab
           v-else

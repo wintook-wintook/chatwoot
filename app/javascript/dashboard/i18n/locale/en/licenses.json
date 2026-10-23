@@ -4,7 +4,11 @@
     "DESCRIPTION": "Which plan each account has, when it expires and how many agents it can have.",
     "NO_ACCESS": "You don't have access to licenses from this account.",
     "LOAD_ERROR": "Could not load. Try again.",
-    "TABS": { "ACCOUNTS": "Accounts", "PLANS": "Plans" },
+    "TABS": {
+      "SUMMARY": "Summary",
+      "ACCOUNTS": "Accounts",
+      "PLANS": "Plans"
+    },
     "ACCOUNTS": {
       "SEARCH": "Search by name or number",
       "STATE_ALL": "All",
@@ -50,7 +54,10 @@
       "FEATURES_COUNT": "{count} included",
       "EDIT": "Edit"
     },
-    "TYPE": { "DEMO": "Demo", "PAID": "Paid" },
+    "TYPE": {
+      "DEMO": "Demo",
+      "PAID": "Paid"
+    },
     "PLAN_FORM": {
       "NEW_TITLE": "New plan",
       "EDIT_TITLE": "Edit plan",
@@ -101,6 +108,33 @@
       "SCHEDULED": "Scheduled",
       "EXPIRED": "Expired",
       "CANCELLED": "Cancelled"
+    },
+    "SUMMARY": {
+      "WINDOW": "Expiring within:",
+      "DAYS": "{count} days",
+      "CARDS": {
+        "PAID": "Paid",
+        "DEMO": "In demo",
+        "EXPIRING": "Expiring ({days} days)",
+        "EXPIRED": "Expired",
+        "WITHOUT": "No license",
+        "CONVERSION": "Demo → paid conversion"
+      },
+      "INFO": {
+        "PAID": "Paid licenses active today. Click to see them.",
+        "DEMO": "Accounts in their demo period. Click to see them.",
+        "EXPIRING": "Active licenses expiring within the chosen period. Click to see them.",
+        "EXPIRED": "Accounts that had a license and have none active now. Click to see them.",
+        "WITHOUT": "Accounts without a license: they work as before, with no limit or expiry. Click to see them.",
+        "CONVERSION": "Of {demo_accounts} accounts that had a demo, {converted} later got a paid license."
+      },
+      "EXPIRATIONS_TITLE": "Upcoming expirations",
+      "EXPIRATIONS_HINT": "Active licenses expiring each week in the next 60 days.",
+      "EXPIRATIONS_SERIES": "Licenses expiring",
+      "BY_PLAN_TITLE": "Accounts by plan",
+      "BY_PLAN_HINT": "Licenses active today, grouped by plan.",
+      "BY_PLAN_SERIES": "Active accounts",
+      "BY_PLAN_EMPTY": "No active licenses yet."
     }
   }
 }

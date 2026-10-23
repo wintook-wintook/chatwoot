@@ -8,6 +8,11 @@ class LicensesAPI extends ApiClient {
     super('licenses', { accountScoped: true });
   }
 
+  // F4: los números del tablero
+  getSummary() {
+    return axios.get(`${this.url}/summary`);
+  }
+
   getPlans() {
     return axios.get(`${this.url}/plans`);
   }
