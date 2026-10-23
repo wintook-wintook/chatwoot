@@ -50,8 +50,11 @@ class AccountBuilder
     end
   end
 
+  # feat/licencias (F1): toda cuenta nueva nace con la demo del catálogo, salvo la de la
+  # instalación inicial (super_admin), que es la de Wintook.
   def create_account
     @account = Account.create!(name: account_name, locale: I18n.locale)
+    Licenses::DemoIssuer.new(account: @account).perform unless @super_admin
     Current.account = @account
   end
 
