@@ -39,7 +39,10 @@ class UserDashboard < Administrate::BaseDashboard
     accounts: CountField,
     access_token: Field::HasOne,
     # proyecto@publicar_prompts — habilita el botón Publicar en sus Agentes IA
-    can_publish_prompts: Field::Boolean
+    can_publish_prompts: Field::Boolean,
+    # feat/licencias — ver y gestionar licencias (solo en cuentas de Wintook)
+    can_view_licenses: Field::Boolean,
+    can_manage_licenses: Field::Boolean
   }.freeze
 
   # COLLECTION_ATTRIBUTES
@@ -72,6 +75,8 @@ class UserDashboard < Administrate::BaseDashboard
     account_users
     access_token
     can_publish_prompts
+    can_view_licenses
+    can_manage_licenses
   ].freeze
 
   # FORM_ATTRIBUTES
@@ -86,6 +91,8 @@ class UserDashboard < Administrate::BaseDashboard
     confirmed_at
     type
     can_publish_prompts
+    can_view_licenses
+    can_manage_licenses
   ].freeze
 
   # COLLECTION_FILTERS

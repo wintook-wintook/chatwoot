@@ -49,10 +49,18 @@ class LicensePlan < ApplicationRecord
     available.find_by(signup_default: true)
   end
 
+  def self.feature_names
+    Featurable::FEATURE_LIST.pluck('name')
+  end
+
   private
 
+  # Solo nombres que existen en config/features.yml (la lista se lee en vivo: §11 del plan).
   def features_must_be_a_list
-    errors.add(:features, :invalid) unless features.is_a?(Array) && features.all?(String)
+    return errors.add(:features, :invalid) unless features.is_a?(Array) && features.all?(String)
+
+    desconocidas = features - self.class.feature_names
+    errors.add(:features, :invalid) if desconocidas.any?
   end
 
   # El índice único no deja dos planes de registro: se desmarca el anterior en la misma transacción.

@@ -1,0 +1,5 @@
+en:
+  licenses:
+    errors:
+      invalid_start: 'A license starts "now" or "queue".'
+      only_scheduled: 'Only a scheduled license can be cancelled. To change the current one, issue another starting now.'

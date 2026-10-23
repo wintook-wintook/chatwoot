@@ -21,9 +21,14 @@ module AccountLicensable
     has_one :current_license, -> { where(status: :active) }, class_name: 'AccountLicense', inverse_of: :account, dependent: nil
   end
 
-  # «Cuenta de Wintook» en el super admin (la casilla llega en F2).
+  # «Cuenta de Wintook» en el super admin: ahí aparece el dashboard de licencias y nunca se suspende.
   def wintook_internal?
     ActiveModel::Type::Boolean.new.cast(custom_attributes&.dig('wintook_internal')) || false
+  end
+  alias wintook_internal wintook_internal?
+
+  def wintook_internal=(value)
+    self.custom_attributes = (custom_attributes || {}).merge('wintook_internal' => ActiveModel::Type::Boolean.new.cast(value) || false)
   end
 
   # El tope que impone la licencia, o nil si la licencia no limita esta cuenta.

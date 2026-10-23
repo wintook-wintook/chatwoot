@@ -105,6 +105,14 @@ Rails.application.routes.draw do
               post :initiate
             end
           end
+          # feat/licencias (F2): gestión de licencias, solo desde cuentas de Wintook con permiso
+          namespace :licenses do
+            resources :plans, only: [:index, :create, :update]
+            resources :accounts, only: [:index, :show]
+            resources :account_licenses, only: [:create] do
+              member { post :cancel }
+            end
+          end
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations
