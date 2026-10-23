@@ -28,6 +28,13 @@ export const getters = {
   getUIFlags($state) {
     return $state.uiFlags;
   },
+  // feat/licencias (F5): la cuenta abierta tiene (o tuvo) licencia → «Licencia» en Configuración.
+  currentAccountHasLicense: ($state, _, rootState) => {
+    const accountId = rootState.route?.params?.accountId;
+    if (!accountId) return false;
+    const account = findRecordById($state, Number(accountId));
+    return Boolean(account && account.license);
+  },
   isRTL: ($state, _, rootState) => {
     const accountId = rootState.route?.params?.accountId;
     if (!accountId) return false;

@@ -15,6 +15,7 @@ const settings = accountId => ({
     'knowledge_sources_list', // @knowledge_sources
     'chatgpt_list',
     'general_settings_index',
+    'account_license_index', // feat/licencias
     'general_settings',
     'labels_list',
     'macros_edit',
@@ -61,6 +62,18 @@ const settings = accountId => ({
       },
       toState: frontendURL(`accounts/${accountId}/settings/general`),
       toStateName: 'general_settings_index',
+    },
+    // feat/licencias (F5): solo si la cuenta tiene licencia; solo lectura.
+    {
+      icon: 'lock-shield',
+      label: 'ACCOUNT_LICENSE',
+      hasSubMenu: false,
+      meta: {
+        permissions: ['administrator'],
+      },
+      visibleGetter: 'accounts/currentAccountHasLicense',
+      toState: frontendURL(`accounts/${accountId}/settings/license`),
+      toStateName: 'account_license_index',
     },
     {
       icon: 'people',
