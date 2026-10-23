@@ -82,7 +82,12 @@ class CaseEvent < ApplicationRecord
     # @tickets_cases — Plan-Clase-Proyecto P1. Al FINAL, sin reordenar nada de arriba.
     project_changed:    40, # cambiaron los datos del proyecto (fechas, presupuesto, avance)
     # @tickets_cases — Plan-Metricas-Comercial. Al FINAL, sin reordenar nada de arriba.
-    commitment_changed: 41  # el cliente se comprometió / movió la fecha / se quitó (payload.action)
+    commitment_changed: 41, # el cliente se comprometió / movió la fecha / se quitó (payload.action)
+    # @tickets_cases — ligar conversación. Al FINAL, sin reordenar nada de arriba.
+    conversation_link:  42, # se ligó (o creó) la conversación del caso (payload.display_id, created)
+    # Plan-Plantilla-Tareas-Etapa. Al FINAL, sin reordenar nada de arriba.
+    stage_tasks_added:  43, # nacieron las tareas de la plantilla al entrar a una etapa
+    stage_advanced:     44  # pasó sola a la siguiente etapa al terminar las obligatorias (payload.from/to)
   }
 
   enum origin: { bot: 0, agent: 1, system: 2 }

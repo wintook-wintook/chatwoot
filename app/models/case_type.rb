@@ -12,6 +12,7 @@
 #  position     :integer          default(0), not null
 #  prefix       :string           default(""), not null
 #  public       :boolean          default(FALSE), not null
+#  retired_at   :datetime
 #  created_at   :datetime         not null
 #  updated_at   :datetime         not null
 #  account_id   :bigint           not null
@@ -59,15 +60,18 @@ class CaseType < ApplicationRecord
 
   validates :name,  presence: true, length: { maximum: 100 }
   validates :color, presence: true
-  # Hoja de ruta E1.4 — la clase es fija: se elige al crear. El folio lleva el
-  # prefijo del tipo y es inmutable; cambiar la clase mezclaría las series.
+  # Hoja de ruta E1.4 — un tipo con casos no cambia de clase en su lugar (sus casos
+  # la heredan). Para eso está Cases::TypeClassChange: crea el tipo en la otra clase
+  # y retira este con sus casos tal cual. Sin casos sí se cambia directo.
   validate :case_class_unchanged, on: :update
   # El prefijo entra en el folio ({PREFIX}): fijo desde el primer caso del tipo.
   validate :prefix_unchanged, on: :update, if: :prefix_changed?
 
   scope :ordered, -> { order(:position, :id) }
+  # Retirado (cambió de clase): sigue con sus casos, pero ya no se usa para crear nuevos.
+  scope :active, -> { where(retired_at: nil) }
   # @tickets_cases — User Portal: tipos visibles en el formulario público del cliente.
-  scope :public_only, -> { where(public: true) }
+  scope :public_only, -> { where(public: true, retired_at: nil) }
 
   before_validation :ensure_prefix, on: :create
   # Plan-Clase-Comercial F3 (hallazgo #6): solo las clases con portal (Soporte) se
@@ -77,6 +81,8 @@ class CaseType < ApplicationRecord
   # tablero fijo: simple 5 / ITIL 6, según el modo de la cuenta) como punto de
   # partida editable. El admin puede editarlas o borrarlas desde el panel.
   after_create :seed_default_columns
+  # Sin casos se cambia la clase directo: las etapas pasan a ser las de la clase nueva.
+  after_update :reseed_columns_for_new_class, if: :saved_change_to_case_class?
 
   # Tipos por defecto que se crean cuando una cuenta abre el módulo sin tipos.
   DEFAULTS = [
@@ -102,6 +108,10 @@ class CaseType < ApplicationRecord
     persisted? && case_tickets.exists?
   end
 
+  def retired?
+    retired_at.present?
+  end
+
   private
 
   # Si no se especifica prefijo, autogenera uno de las 3 primeras letras del nombre.
@@ -112,7 +122,14 @@ class CaseType < ApplicationRecord
   end
 
   def case_class_unchanged
-    errors.add(:case_class, 'no se puede cambiar. Crea un tipo nuevo de la otra clase') if case_class_changed?
+    return unless case_class_changed? && case_tickets.exists?
+
+    errors.add(:case_class, 'no se cambia en un tipo con casos: usa «Cambiar de clase»')
+  end
+
+  def reseed_columns_for_new_class
+    case_type_columns.destroy_all
+    CaseTypeColumn.seed_defaults_for(self, itil: itil_enabled)
   end
 
   def prefix_unchanged

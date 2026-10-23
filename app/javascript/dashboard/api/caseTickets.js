@@ -84,6 +84,12 @@ class CaseTicketsAPI extends ApiClient {
   }
 
   // Plan-Clase-Proyecto P2 — casos dentro de un proyecto.
+  // Liga la conversación de un caso que no tiene: `{ conversation_id }` (display_id)
+  // o `{ inbox_id }` (reusa la abierta del contacto en esa bandeja o crea una).
+  linkConversation(ticketId, params) {
+    return axios.post(`${this.url}/${ticketId}/conversation`, params);
+  }
+
   getProjectChildren(projectId) {
     return axios.get(`${this.url}/${projectId}/project_children`);
   }

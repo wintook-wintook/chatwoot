@@ -380,7 +380,9 @@
           "OVERDUE": "Overdue",
           "TODAY": "Due today",
           "WEEK": "This week"
-        }
+        },
+        "TOAST_STAGE_TASKS": "New tasks: {task} · case {folio}",
+        "TOAST_STAGE_READY": "{task} · case {folio}"
       },
       "ADD_NOTE": "Add note",
       "REFRESH": "Refresh",
@@ -481,7 +483,23 @@
           "LATER": "Can wait until tomorrow",
           "ERROR": "Could not build the plan.",
           "DISCLAIMER": "AI suggestion: it does not change your order. Review it before following it."
+        },
+        "NOTICES": {
+          "BUTTON": "You have {count} important notices",
+          "ACK": "Got it"
         }
+      },
+      "STAGE": {
+        "REQUIRED": "Required",
+        "REQUIRED_HINT": "Required to leave stage “{stage}”",
+        "TEAM": "Team: {team}",
+        "UPCOMING": "Upcoming",
+        "UPCOMING_HINT": "created when entering each stage",
+        "EVENT": "{count} task(s) for stage “{stage}”: {titles}",
+        "DOC_AUTO": "Completes when documented",
+        "DOC_HINT": "This task completes itself when you document the move to the next stage (closure, outcome or date)",
+        "REQUIRED_LABEL": "Required to move on",
+        "REQUIRED_FORM_HINT": "The case won't leave “{stage}” until it's done"
       }
     },
     "MODAL": {
@@ -991,6 +1009,24 @@
           "PROJECT": "Project"
         },
         "LOCKED": "The class cannot be changed. For another class, create a new type and, if needed, cancel the old case and create it again."
+      },
+      "RETIRED": "Retired",
+      "RETIRED_HINT": "Changed class: keeps its {count} case(s) and no longer gets new ones",
+      "CHANGE_CLASS": {
+        "BUTTON": "Change class",
+        "TITLE": "Change class · {name}",
+        "CURRENT": "Current class: {from}",
+        "TARGET": "New class",
+        "CHOOSE": "Choose a class",
+        "NO_CASES": "“{name}” has no cases: it changes to {to} directly and its stages become those of {to}.",
+        "WITH_CASES_KEEP": "Its {count} case(s) stay in {from} unchanged: stages, data, history and metrics. The old type becomes “{name} (anterior)” and gets no new cases.",
+        "WITH_CASES_NEW": "“{name}” is created in {to} with the same folio prefix and fields; new cases are born there from now on.",
+        "WITH_CASES_MOVE": "“Assign case” automations move to the new type, case rules add it and @crear_ticket finds it by name.",
+        "CANCEL": "Cancel",
+        "CONFIRM": "Change class",
+        "ERROR": "Could not change the class",
+        "DONE_DIRECT": "“{name}” is now {to}",
+        "DONE_REPLACED": "Done: “{name}” is now {to}. Its {count} case(s) stay in {from} · {moved} automation(s) and {rules} rule(s) updated"
       }
     },
     "SETTINGS": {
@@ -1259,7 +1295,10 @@
       "postponed": "Opportunity postponed",
       "resumed": "Opportunity resumed",
       "amount_changed": "Commercial data",
-      "commitment_changed": "Customer commitment"
+      "commitment_changed": "Customer commitment",
+      "conversation_link": "Conversation linked",
+      "stage_tasks_added": "Stage tasks",
+      "stage_advanced": "Stage advance"
     },
     "COLUMNS_CFG": {
       "ADD_BUTTON": "Add column",
@@ -1288,7 +1327,65 @@
       "NEED_LABEL": "Every column needs a name.",
       "NEED_STATES": "Every column must cover at least one status.",
       "NEED_COVERAGE": "Some statuses are still uncovered; cover them before saving.",
-      "LOADING": "Loading columns..."
+      "LOADING": "Loading columns...",
+      "TASKS": {
+        "HEADER": "Tasks",
+        "BUTTON": "Tasks ({count})",
+        "SAVE_FIRST": "Save the columns first to set up this stage's tasks",
+        "TITLE": "Tasks for stage “{stage}”",
+        "SUBTITLE": "They are created when the case enters this stage. Changing them doesn't touch existing cases.",
+        "ADVANCE_LABEL": "When the required tasks are done",
+        "ADVANCE": {
+          "suggest": "Suggest moving to the next stage",
+          "automatic": "Move to the next stage automatically",
+          "manual": "Do nothing"
+        },
+        "ADVANCE_HINT": "It never moves on if the next stage needs documentation (closure, outcome or date): a required task to document it is created instead.",
+        "LIST_TITLE": "Tasks",
+        "ADD": "Add task",
+        "SAVE": "Save",
+        "CANCEL": "Cancel",
+        "CLOSE": "Close",
+        "REMOVE": "Remove",
+        "MOVE_UP": "Move up",
+        "MOVE_DOWN": "Move down",
+        "LOADING": "Loading…",
+        "EMPTY": "This stage has no tasks yet.",
+        "SAVE_ERROR": "Could not save",
+        "REQUIRED_BADGE": "Required",
+        "DUE_HOURS": "Due in {count} h",
+        "DUE_DAYS": "Due in {count} d",
+        "MINUTES": "{count} min",
+        "ASSIGNEE": {
+          "case_assignee": "Case owner",
+          "user": "Specific person",
+          "team": "Team"
+        },
+        "FIELDS": {
+          "TITLE": "Task",
+          "TITLE_PLACEHOLDER": "E.g.: Prepare quote",
+          "DESCRIPTION": "Description",
+          "DUE": "Due",
+          "UNIT_HOURS": "hours",
+          "UNIT_DAYS": "days",
+          "DUE_HINT": "After entering the stage. Empty = no due date.",
+          "PRIORITY": "Priority",
+          "ASSIGNEE": "Who does it",
+          "PERSON": "Person",
+          "TEAM": "Team",
+          "CHOOSE": "Choose…",
+          "MINUTES": "Estimated minutes",
+          "REQUIRED": "Required to move to the next stage"
+        },
+        "CLOSED_STAGE": "A closed-case stage has no tasks",
+        "EXIT": {
+          "automatic": "Moves on its own after {count} required task(s)",
+          "suggest": "Suggests moving after {count} required task(s)",
+          "manual": "Moved by hand"
+        },
+        "RULE_IN": "Rule “{rule}” brings cases here",
+        "CONFLICT": "Moves on its own and rule “{rule}” also changes its status: check they don't clash"
+      }
     },
     "DETAIL": {
       "BACK": "Back",
@@ -2292,6 +2389,91 @@
         "DISCLAIMER": "AI-generated from a sample; review the conversations before acting.",
         "ERROR": "Could not analyze."
       }
+    },
+    "CONVERSATION_ACTIONS": {
+      "LINK": "Link conversation",
+      "SCHEDULE": "Schedule message",
+      "SCHEDULE_HINT": "Schedule a message to the customer in the case conversation",
+      "DELEGATE": "Delegate to AI agent",
+      "DELEGATE_HINT": "The AI agent follows up with the customer for you",
+      "DELEGATE_MISSING": "To delegate to an AI agent, enable in Integrations: {missing}",
+      "NEED_CONTACT": "Assign a contact to the case to link a conversation",
+      "EVENT": "Conversation #{id} · {inbox}",
+      "EVENT_CREATED": "New conversation #{id} · {inbox}",
+      "LINK_MODAL": {
+        "TITLE": "Link conversation · {folio}",
+        "SUBTITLE": "The case keeps this conversation; it can't be changed later.",
+        "EXISTING": "Contact conversations",
+        "LOADING": "Loading…",
+        "EMPTY": "The contact has no conversations.",
+        "ROW": "#{id} · {inbox} · {status} · {date}",
+        "LINK_BUTTON": "Link",
+        "CREATE_TITLE": "Or use an inbox",
+        "CREATE_HINT": "If the contact already has an open conversation in that inbox it is used; otherwise a new one is created. On WhatsApp the first message must be an approved template.",
+        "INBOX_PLACEHOLDER": "Choose an inbox",
+        "CREATE": "Use inbox",
+        "CANCEL": "Cancel",
+        "LINKED": "Conversation #{id} linked to the case",
+        "CREATED": "Conversation #{id} was created and linked to the case",
+        "ERROR": "Could not link the conversation",
+        "STATUS": {
+          "open": "Open",
+          "pending": "Pending",
+          "resolved": "Resolved",
+          "snoozed": "Snoozed"
+        }
+      }
+    },
+    "STAGE_ADVANCE": {
+      "READY": "The required tasks for “{stage}” are done.",
+      "SUGGEST": "Move to “{next}”?",
+      "NEEDS_DOC": "Moving to “{next}” needs documentation.",
+      "BUTTON": "Move to {next}",
+      "DOCUMENT_BUTTON": "Document and move to {next}",
+      "EVENT": "Moved from “{from}” to “{to}” after finishing the required tasks",
+      "PROGRESS": "Stage “{stage}”: {done} of {total} required tasks done.",
+      "PROGRESS_EXIT": {
+        "automatic": "When done it moves to “{next}” on its own.",
+        "suggest": "When done it suggests moving to “{next}”.",
+        "manual": "Moved by hand."
+      }
+    },
+    "HOME": {
+      "GREETING": {
+        "MORNING": "Good morning, {name}",
+        "AFTERNOON": "Good afternoon, {name}",
+        "EVENING": "Good evening, {name}"
+      },
+      "SUBTITLE": "Here's what you have for today.",
+      "BUSINESS_SUMMARY": "Business summary",
+      "LOADING": "Loading your summary…",
+      "SEE_ALL": "See all",
+      "MY_DAY": "Most urgent in My day",
+      "MY_DAY_EMPTY": "No pending tasks. Nice!",
+      "AGENDA": "Today's agenda",
+      "CONVERSATIONS": "My conversations",
+      "CONVERSATIONS_COUNT": "{open} open · {waiting} waiting for your reply",
+      "WAITING_MIN": "waiting {count} min",
+      "WAITING_HOURS": "waiting {count} h",
+      "WAITING_DAYS": "waiting {count} d",
+      "CASES": "My cases",
+      "CASES_SLA": "SLA at risk or overdue ({count})",
+      "CASES_READY": "Ready to move stage",
+      "CASES_PROMISES": "Payment promises this week",
+      "READY_NEXT": "finished “{stage}”: move to “{next}”",
+      "READY_DOC": "finished “{stage}”: document to move to “{next}”",
+      "SLA": {
+        "at_risk": "SLA at risk",
+        "overdue": "SLA overdue",
+        "on_time": "On time"
+      },
+      "WEEK": "My week",
+      "WEEK_ROWS": {
+        "cases_done": "cases resolved",
+        "tasks_done": "tasks done",
+        "won": "deals won"
+      },
+      "WEEK_BEFORE": "last week: {count}"
     }
   }
 }

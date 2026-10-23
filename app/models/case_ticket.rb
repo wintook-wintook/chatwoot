@@ -248,6 +248,8 @@ class CaseTicket < ApplicationRecord
   # Solo en creación: si más tarde se borra el contacto (contact_id → NULL por
   # dependent: :nullify), el ticket histórico debe seguir siendo editable/cerrable.
   validate :contact_or_requester_present, on: :create
+  # Un tipo retirado (cambió de clase) conserva sus casos, pero no recibe nuevos.
+  validate :case_type_not_retired, if: -> { case_type_id.present? && (new_record? || will_save_change_to_case_type_id?) }
   # Plan-Casos E2 — una oportunidad siempre es de un cliente (no hay oportunidad interna).
   validate :commercial_needs_contact, on: :create
   # Hoja de ruta E1.4 — un caso no cambia de clase al cambiar de tipo (el folio es
@@ -312,6 +314,22 @@ class CaseTicket < ApplicationRecord
   before_create :assign_sla_targets
   before_create :assign_folio # @tickets_cases
   after_create  :create_ticket_created_event
+  # Plan-Plantilla-Tareas-Etapa T2 — al entrar a una etapa nacen las tareas de su
+  # plantilla (al crear el caso, al moverlo en el tablero o al cambiar su estado).
+  after_commit :create_stage_tasks, on: %i[create update],
+                                    if: lambda {
+                                      saved_change_to_id? || saved_change_to_case_type_column_id? ||
+                                        saved_change_to_status? || saved_change_to_case_type_id?
+                                    }
+
+  # Etapa en la que está el caso: su columna, o la primera del tipo que cubre su
+  # estado (el mismo criterio con el que el tablero pinta un caso sin columna).
+  def current_stage_column
+    return nil if case_type.nil?
+
+    columns = case_type.case_type_columns.ordered.to_a
+    columns.detect { |c| c.id == case_type_column_id } || columns.detect { |c| c.statuses.include?(status) }
+  end
 
   def can_transition_to?(new_status)
     VALID_TRANSITIONS[status].include?(new_status.to_s)
@@ -811,6 +829,12 @@ class CaseTicket < ApplicationRecord
   # status (o pertenece a otro tipo), se pone en NULL → el tablero lo pinta por el
   # fallback de status. Dejarlo en NULL (en vez de reasignar) es deliberado: NULL
   # significa "nadie ha decidido el sub-estado", que es la verdad en ese momento.
+  def create_stage_tasks
+    Cases::StageTasksService.new(self).call
+  rescue StandardError => e
+    Rails.logger.error("[GestorTickets] tareas de la etapa del caso #{id}: #{e.message}")
+  end
+
   def resync_type_column
     return if case_type_column_id.nil?
 
@@ -1115,6 +1139,12 @@ class CaseTicket < ApplicationRecord
 
   # @tickets_cases Fase C — todo ticket es de un contacto (externo) o de un agente
   # solicitante (interno). No puede quedarse sin ambos.
+  def case_type_not_retired
+    return unless case_type&.retired?
+
+    errors.add(:case_type_id, 'está retirado: usa el tipo nuevo de su clase')
+  end
+
   def contact_or_requester_present
     return if contact_id.present? || requester_id.present?
 

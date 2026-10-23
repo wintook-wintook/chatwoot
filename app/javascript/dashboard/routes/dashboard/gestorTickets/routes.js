@@ -142,6 +142,14 @@ export const routes = [
     component: () =>
       import('../../../views/gestorTickets/TaskPriorityConfig.vue'),
   },
+  // «Mi resumen» (Inicio): donde aterriza cada usuario al iniciar sesión, salvo que
+  // en su perfil elija otra página (ver routes/index.js → landingRoute).
+  {
+    path: frontendURL('accounts/:accountId/start'),
+    name: 'my_summary',
+    meta: AGENT,
+    component: () => import('../../../views/gestorTickets/home/MySummary.vue'),
+  },
   // «Resumen del negocio»: la ruta es de agente; el backend decide quién lo ve
   // (administradores y autorizados) y el menú lo oculta a los demás.
   {

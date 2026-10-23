@@ -352,7 +352,9 @@
         },
         "TICKET_COL": "Caso",
         "OPEN_TICKET": "Abrir caso",
-        "DELETE_ERROR": "No se pudo eliminar la tarea."
+        "DELETE_ERROR": "No se pudo eliminar la tarea.",
+        "TOAST_STAGE_TASKS": "Tareas nuevas: {task} · caso {folio}",
+        "TOAST_STAGE_READY": "{task} · caso {folio}"
       },
       "TABLE": {
         "NUM": "Folio",
@@ -484,7 +486,23 @@
           "LATER": "Puede esperar a mañana",
           "ERROR": "No se pudo generar el plan.",
           "DISCLAIMER": "Sugerencia de IA: no cambia tu orden. Revísala antes de seguirla."
+        },
+        "NOTICES": {
+          "BUTTON": "Tienes {count} avisos importantes",
+          "ACK": "Enterado"
         }
+      },
+      "STAGE": {
+        "REQUIRED": "Obligatoria",
+        "REQUIRED_HINT": "Obligatoria para pasar de la etapa «{stage}»",
+        "TEAM": "Equipo: {team}",
+        "UPCOMING": "Próximas",
+        "UPCOMING_HINT": "se crean al entrar a cada etapa",
+        "EVENT": "{count} tarea(s) de la etapa «{stage}»: {titles}",
+        "DOC_AUTO": "Se completa al documentar",
+        "DOC_HINT": "Esta tarea se completa sola cuando documentas el paso a la siguiente etapa (cierre, resultado o fecha)",
+        "REQUIRED_LABEL": "Obligatoria para avanzar",
+        "REQUIRED_FORM_HINT": "El caso no pasa de «{stage}» hasta que esté hecha"
       }
     },
     "MODAL": {
@@ -994,6 +1012,24 @@
           "PROJECT": "Proyecto"
         },
         "LOCKED": "La clase no se puede cambiar. Para otra clase crea un tipo nuevo y, si hace falta, cancela el caso anterior y créalo de nuevo."
+      },
+      "RETIRED": "Retirado",
+      "RETIRED_HINT": "Cambió de clase: conserva sus {count} caso(s) y ya no recibe nuevos",
+      "CHANGE_CLASS": {
+        "BUTTON": "Cambiar de clase",
+        "TITLE": "Cambiar de clase · {name}",
+        "CURRENT": "Clase actual: {from}",
+        "TARGET": "Nueva clase",
+        "CHOOSE": "Elige una clase",
+        "NO_CASES": "«{name}» no tiene casos: cambia directo a {to} y sus etapas pasan a las de {to}.",
+        "WITH_CASES_KEEP": "Sus {count} caso(s) se quedan en {from} con todo igual: etapas, datos, historia y métricas. El tipo de antes queda como «{name} (anterior)» y ya no recibe casos nuevos.",
+        "WITH_CASES_NEW": "Se crea «{name}» en {to} con el mismo prefijo de folio y los mismos campos; desde ahora los casos nuevos nacen ahí.",
+        "WITH_CASES_MOVE": "Las automatizaciones «Asignar Caso» pasan al tipo nuevo, las reglas de casos lo suman y @crear_ticket lo encuentra por nombre.",
+        "CANCEL": "Cancelar",
+        "CONFIRM": "Cambiar de clase",
+        "ERROR": "No se pudo cambiar la clase",
+        "DONE_DIRECT": "«{name}» ahora es de {to}",
+        "DONE_REPLACED": "Listo: «{name}» ahora es de {to}. Sus {count} caso(s) siguen en {from} · {moved} automatización(es) y {rules} regla(s) actualizadas"
       }
     },
     "SETTINGS": {
@@ -1104,7 +1140,65 @@
       "EDIT_TITLE": "Editar columna",
       "UNSAVED": "Tienes cambios sin guardar.",
       "REORDER": "Ordenar",
-      "DRAG_HINT": "Arrastra las filas para reordenar las columnas del tablero."
+      "DRAG_HINT": "Arrastra las filas para reordenar las columnas del tablero.",
+      "TASKS": {
+        "HEADER": "Tareas",
+        "BUTTON": "Tareas ({count})",
+        "SAVE_FIRST": "Guarda las columnas primero para armar las tareas de esta etapa",
+        "TITLE": "Tareas de la etapa «{stage}»",
+        "SUBTITLE": "Se crean solas cuando el caso entra a esta etapa. Cambiarlas no toca los casos que ya existen.",
+        "ADVANCE_LABEL": "Al terminar las tareas obligatorias",
+        "ADVANCE": {
+          "suggest": "Sugerir pasar a la siguiente etapa",
+          "automatic": "Pasar sola a la siguiente etapa",
+          "manual": "No hacer nada"
+        },
+        "ADVANCE_HINT": "Nunca avanza si la siguiente etapa pide documentar (cierre, resultado o fecha): en su lugar se crea una tarea obligatoria para documentarlo.",
+        "LIST_TITLE": "Tareas",
+        "ADD": "Agregar tarea",
+        "SAVE": "Guardar",
+        "CANCEL": "Cancelar",
+        "CLOSE": "Cerrar",
+        "REMOVE": "Quitar",
+        "MOVE_UP": "Subir",
+        "MOVE_DOWN": "Bajar",
+        "LOADING": "Cargando…",
+        "EMPTY": "Esta etapa todavía no tiene tareas.",
+        "SAVE_ERROR": "No se pudo guardar",
+        "REQUIRED_BADGE": "Obligatoria",
+        "DUE_HOURS": "Vence en {count} h",
+        "DUE_DAYS": "Vence en {count} d",
+        "MINUTES": "{count} min",
+        "ASSIGNEE": {
+          "case_assignee": "Responsable del caso",
+          "user": "Persona fija",
+          "team": "Equipo"
+        },
+        "FIELDS": {
+          "TITLE": "Tarea",
+          "TITLE_PLACEHOLDER": "Ej.: Armar cotización",
+          "DESCRIPTION": "Descripción",
+          "DUE": "Vence",
+          "UNIT_HOURS": "horas",
+          "UNIT_DAYS": "días",
+          "DUE_HINT": "Después de entrar a la etapa. Vacío = sin vencimiento.",
+          "PRIORITY": "Prioridad",
+          "ASSIGNEE": "Quién la hace",
+          "PERSON": "Persona",
+          "TEAM": "Equipo",
+          "CHOOSE": "Elige…",
+          "MINUTES": "Minutos estimados",
+          "REQUIRED": "Obligatoria para avanzar a la siguiente etapa"
+        },
+        "CLOSED_STAGE": "Una etapa de caso cerrado no lleva tareas",
+        "EXIT": {
+          "automatic": "Pasa sola al terminar {count} obligatoria(s)",
+          "suggest": "Sugiere pasar al terminar {count} obligatoria(s)",
+          "manual": "Se mueve a mano"
+        },
+        "RULE_IN": "Regla «{rule}» trae casos aquí",
+        "CONFLICT": "Avanza sola y la regla «{rule}» también le cambia el estado: revisa que no choquen"
+      }
     },
     "CUSTOM_FIELDS": {
       "MANAGE_BUTTON": "Campos",
@@ -1299,7 +1393,10 @@
       "postponed": "Oportunidad pospuesta",
       "resumed": "Oportunidad retomada",
       "amount_changed": "Datos comerciales",
-      "commitment_changed": "Compromiso del cliente"
+      "commitment_changed": "Compromiso del cliente",
+      "conversation_link": "Conversación ligada",
+      "stage_tasks_added": "Tareas de la etapa",
+      "stage_advanced": "Avance de etapa"
     },
     "DETAIL": {
       "BACK": "Volver",
@@ -2303,6 +2400,91 @@
         "DISCLAIMER": "Generado con IA sobre una muestra; revisa las conversaciones antes de actuar.",
         "ERROR": "No se pudo analizar."
       }
+    },
+    "CONVERSATION_ACTIONS": {
+      "LINK": "Ligar conversación",
+      "SCHEDULE": "Programar mensaje",
+      "SCHEDULE_HINT": "Programa un mensaje al cliente en la conversación del caso",
+      "DELEGATE": "Delegar a agente IA",
+      "DELEGATE_HINT": "El agente IA le da seguimiento al cliente por ti",
+      "DELEGATE_MISSING": "Para delegar a un agente IA activa en Integraciones: {missing}",
+      "NEED_CONTACT": "Asigna un contacto al caso para ligar una conversación",
+      "EVENT": "Conversación #{id} · {inbox}",
+      "EVENT_CREATED": "Conversación nueva #{id} · {inbox}",
+      "LINK_MODAL": {
+        "TITLE": "Ligar conversación · {folio}",
+        "SUBTITLE": "El caso queda con esta conversación; después no se cambia.",
+        "EXISTING": "Conversaciones del contacto",
+        "LOADING": "Cargando…",
+        "EMPTY": "El contacto no tiene conversaciones.",
+        "ROW": "#{id} · {inbox} · {status} · {date}",
+        "LINK_BUTTON": "Ligar",
+        "CREATE_TITLE": "O usa una bandeja",
+        "CREATE_HINT": "Si el contacto ya tiene una conversación abierta en esa bandeja se usa esa; si no, se crea una nueva. En WhatsApp el primer mensaje debe ser una plantilla aprobada.",
+        "INBOX_PLACEHOLDER": "Elige una bandeja",
+        "CREATE": "Usar bandeja",
+        "CANCEL": "Cancelar",
+        "LINKED": "Conversación #{id} ligada al caso",
+        "CREATED": "Se creó la conversación #{id} y quedó ligada al caso",
+        "ERROR": "No se pudo ligar la conversación",
+        "STATUS": {
+          "open": "Abierta",
+          "pending": "Pendiente",
+          "resolved": "Resuelta",
+          "snoozed": "Pospuesta"
+        }
+      }
+    },
+    "STAGE_ADVANCE": {
+      "READY": "Se terminaron las tareas obligatorias de «{stage}».",
+      "SUGGEST": "¿Pasar a «{next}»?",
+      "NEEDS_DOC": "Para pasar a «{next}» hay que documentarlo.",
+      "BUTTON": "Pasar a {next}",
+      "DOCUMENT_BUTTON": "Documentar y pasar a {next}",
+      "EVENT": "Pasó de «{from}» a «{to}» al terminar las tareas obligatorias",
+      "PROGRESS": "Etapa «{stage}»: {done} de {total} obligatorias hechas.",
+      "PROGRESS_EXIT": {
+        "automatic": "Al terminar pasa sola a «{next}».",
+        "suggest": "Al terminar se sugiere pasar a «{next}».",
+        "manual": "Se mueve a mano."
+      }
+    },
+    "HOME": {
+      "GREETING": {
+        "MORNING": "Buenos días, {name}",
+        "AFTERNOON": "Buenas tardes, {name}",
+        "EVENING": "Buenas noches, {name}"
+      },
+      "SUBTITLE": "Esto es lo que tienes para hoy.",
+      "BUSINESS_SUMMARY": "Resumen del negocio",
+      "LOADING": "Cargando tu resumen…",
+      "SEE_ALL": "Ver todo",
+      "MY_DAY": "Lo más urgente de Mi día",
+      "MY_DAY_EMPTY": "No tienes tareas pendientes. ¡Bien!",
+      "AGENDA": "Agenda de hoy",
+      "CONVERSATIONS": "Mis conversaciones",
+      "CONVERSATIONS_COUNT": "{open} abiertas · {waiting} esperan tu respuesta",
+      "WAITING_MIN": "espera {count} min",
+      "WAITING_HOURS": "espera {count} h",
+      "WAITING_DAYS": "espera {count} d",
+      "CASES": "Mis casos",
+      "CASES_SLA": "Con SLA en riesgo o vencido ({count})",
+      "CASES_READY": "Listos para pasar de etapa",
+      "CASES_PROMISES": "Promesas de pago de esta semana",
+      "READY_NEXT": "terminó «{stage}»: pasar a «{next}»",
+      "READY_DOC": "terminó «{stage}»: documenta para pasar a «{next}»",
+      "SLA": {
+        "at_risk": "SLA en riesgo",
+        "overdue": "SLA vencido",
+        "on_time": "A tiempo"
+      },
+      "WEEK": "Mi semana",
+      "WEEK_ROWS": {
+        "cases_done": "casos resueltos",
+        "tasks_done": "tareas hechas",
+        "won": "ventas ganadas"
+      },
+      "WEEK_BEFORE": "semana pasada: {count}"
     }
   }
 }

@@ -37,12 +37,16 @@ import ProjectPanel from './project/ProjectPanel.vue'; // Plan-Clase-Proyecto P1
 import ProjectChildren from './project/ProjectChildren.vue'; // Plan-Clase-Proyecto P2
 import ProjectTimeline from './project/ProjectTimeline.vue'; // Plan-Clase-Proyecto P3
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
-import { typesOfClass } from 'dashboard/helper/caseClasses';
+import { creatableTypes, typesOfClass } from 'dashboard/helper/caseClasses';
 import { WORK_ORDER_CLASS } from 'dashboard/helper/caseWorkOrder';
+import CaseConversationActions from './conversation/CaseConversationActions.vue';
+import StageAdvanceBanner from './stage/StageAdvanceBanner.vue';
 
 export default {
   name: 'TicketDetail',
   components: {
+    CaseConversationActions,
+    StageAdvanceBanner,
     JourneyView,
     CaseTicketInternalModal,
     TicketConversation,
@@ -198,7 +202,7 @@ export default {
     // Plan-Clase-Orden-de-Trabajo F2b — tipos de orden de la cuenta y si este
     // caso puede originar una (ticket de Soporte u oportunidad ganada).
     workOrderTypes() {
-      return typesOfClass(this.caseTypes, WORK_ORDER_CLASS);
+      return creatableTypes(typesOfClass(this.caseTypes, WORK_ORDER_CLASS));
     },
     canCreateWorkOrder() {
       if (!this.ticket || !this.workOrderTypes.length) return false;
@@ -215,7 +219,7 @@ export default {
     },
     // Plan-Clase-Proyecto P2 — «Crear proyecto» solo desde una oportunidad ganada.
     projectTypes() {
-      return typesOfClass(this.caseTypes, 'project');
+      return creatableTypes(typesOfClass(this.caseTypes, 'project'));
     },
     canCreateProject() {
       if (!this.ticket || !this.projectTypes.length) return false;
@@ -515,6 +519,16 @@ export default {
     isFrozen() {
       return !!this.ticket?.is_frozen;
     },
+    // Plan-Plantilla-Tareas-Etapa T3 — se terminaron las obligatorias de la etapa.
+    // T4 — si todavía no, la línea dice cuántas lleva y qué pasa al terminar.
+    stageAdvance() {
+      const a = this.ticket?.stage_advance;
+      if (!a || this.isFrozen) return null;
+      return a;
+    },
+    stageColumnId() {
+      return this.ticket?.case_type_column_id || null;
+    },
     canReopen() {
       return !!this.ticket?.can_reopen;
     },
@@ -740,6 +754,11 @@ export default {
     },
   },
   watch: {
+    // Plan-Plantilla-Tareas-Etapa — al cambiar de etapa nacen tareas nuevas.
+    stageColumnId(now, before) {
+      if (before !== undefined && now !== before)
+        this.$refs.ticketTasks?.load();
+    },
     ticketId() {
       // Cambiar de ticket es abrir un ticket: vuelve a Avance.
       this.activeDetailTab = 'journey';
@@ -810,6 +829,14 @@ export default {
       const tab = this.detailTabs[index];
       if (!tab) return;
       this.activeDetailTab = tab.key;
+    },
+    // Se ligó (o creó) la conversación: se vuelve a pedir el caso para pintar el
+    // hilo, y los eventos para la línea de tiempo.
+    onConversationLinked() {
+      this.$store.dispatch('caseTickets/fetchTicket', this.ticketId);
+      this.$store.dispatch('caseTickets/fetchEvents', {
+        ticketId: this.ticketId,
+      });
     },
     loadTicket() {
       if (!this.ticket) {
@@ -1681,6 +1708,11 @@ export default {
         this.applyEntryMeetings(q);
         return;
       }
+      // «Mi resumen» abre el caso directo en su pestaña Tareas.
+      if (q.tab === 'tasks') {
+        this.activeDetailTab = 'tasks';
+        return;
+      }
       if (q.tab !== 'notes') return;
       this.activeDetailTab = 'notes';
       const seq = Number(q.task);
@@ -2461,6 +2493,18 @@ export default {
       v-else-if="ticket"
       class="flex flex-col flex-1 gap-6 p-6 overflow-y-auto"
     >
+      <!-- Plan-Plantilla-Tareas-Etapa T3 — listo para pasar a la siguiente etapa -->
+      <StageAdvanceBanner
+        v-if="stageAdvance"
+        :advance="stageAdvance"
+        @advance="moveToColumn"
+      />
+      <!-- @tickets_cases — ligar conversación, programar mensaje y delegar a agente IA -->
+      <CaseConversationActions
+        v-show="currentTabKey === 'detail'"
+        :ticket="ticket"
+        @linked="onConversationLinked"
+      />
       <!-- ════ Pestaña Resumen (P2): conversación al frente + sidebar de datos ════ -->
       <div
         v-show="currentTabKey === 'detail'"
@@ -3241,12 +3285,13 @@ export default {
       <!-- ════ Pestaña Tareas (P4) — checklist a ancho completo ════ -->
       <TicketTasks
         v-show="currentTabKey === 'tasks'"
+        ref="ticketTasks"
         :key="`tasks-${ticket.id}`"
         :ticket-id="ticket.id"
         :is-frozen="isFrozen"
         :allow-milestones="isProject"
         class="flex-1 min-h-0"
-        @saved="isProject && refetch()"
+        @saved="refetch()"
         @count="taskCount = $event"
         @addNote="openNoteForTask"
         @viewNotes="openNotesForTask"

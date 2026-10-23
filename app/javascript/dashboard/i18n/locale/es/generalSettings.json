@@ -92,7 +92,11 @@
       "sla_missed_next_response": "SLA no cumplido",
       "sla_missed_resolution": "SLA no cumplido",
       "case_ticket_assignment": "Caso asignado",
-      "missed_call": "Llamada perdida"
+      "missed_call": "Llamada perdida",
+      "case_task_assignment": "Tarea asignada",
+      "case_task_completed": "Tarea completada",
+      "case_stage_tasks": "Tareas nuevas",
+      "case_stage_ready": "Etapa lista"
     }
   },
   "NETWORK": {

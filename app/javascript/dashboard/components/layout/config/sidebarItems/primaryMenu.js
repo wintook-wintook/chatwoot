@@ -2,6 +2,15 @@ import { FEATURE_FLAGS } from '../../../../featureFlags';
 import { frontendURL } from '../../../../helper/URLHelper';
 
 const primaryMenuItems = accountId => [
+  // @tickets_cases — «Inicio» (Mi resumen): lo primero que ve el usuario.
+  {
+    icon: 'home',
+    key: 'my_summary',
+    label: 'HOME_SUMMARY',
+    featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+    toState: frontendURL(`accounts/${accountId}/start`),
+    toStateName: 'my_summary',
+  },
   {
     icon: 'mail-inbox',
     key: 'inboxView',

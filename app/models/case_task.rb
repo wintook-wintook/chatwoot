@@ -4,27 +4,32 @@
 #
 # Table name: case_tasks
 #
-#  id                :bigint           not null, primary key
-#  completed_at      :datetime
-#  description       :text
-#  due_at            :datetime
-#  estimated_minutes :integer
-#  focus_position    :integer
-#  focused_at        :datetime
-#  milestone         :boolean          default(FALSE), not null
-#  planned_on        :date
-#  position          :integer          default(0), not null
-#  priority          :integer          default("medium"), not null
-#  sequence          :integer
-#  status            :integer          default("pending"), not null
-#  title             :string           not null
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  account_id        :bigint           not null
-#  assignee_id       :bigint
-#  case_ticket_id    :bigint           not null
-#  completed_by_id   :bigint
-#  requester_id      :bigint
+#  id                          :bigint           not null, primary key
+#  completed_at                :datetime
+#  description                 :text
+#  due_at                      :datetime
+#  estimated_minutes           :integer
+#  focus_position              :integer
+#  focused_at                  :datetime
+#  milestone                   :boolean          default(FALSE), not null
+#  planned_on                  :date
+#  position                    :integer          default(0), not null
+#  priority                    :integer          default("medium"), not null
+#  required                    :boolean          default(FALSE), not null
+#  sequence                    :integer
+#  status                      :integer          default("pending"), not null
+#  title                       :string           not null
+#  created_at                  :datetime         not null
+#  updated_at                  :datetime         not null
+#  account_id                  :bigint           not null
+#  assignee_id                 :bigint
+#  case_ticket_id              :bigint           not null
+#  case_type_column_id         :bigint
+#  case_type_column_task_id    :bigint
+#  completed_by_id             :bigint
+#  documentation_for_column_id :bigint
+#  requester_id                :bigint
+#  team_id                     :bigint
 #
 # Indexes
 #
@@ -37,13 +42,17 @@
 #  index_case_tasks_on_case_ticket_id_and_sequence  (case_ticket_id,sequence)
 #  index_case_tasks_on_completed_by_id              (completed_by_id)
 #  index_case_tasks_on_requester_id                 (requester_id)
+#  index_case_tasks_on_ticket_and_template          (case_ticket_id,case_type_column_task_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (assignee_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (case_ticket_id => case_tickets.id)
+#  fk_rails_...  (case_type_column_id => case_type_columns.id) ON DELETE => nullify
+#  fk_rails_...  (case_type_column_task_id => case_type_column_tasks.id) ON DELETE => nullify
 #  fk_rails_...  (completed_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (documentation_for_column_id => case_type_columns.id) ON DELETE => nullify
 #  fk_rails_...  (requester_id => users.id) ON DELETE => nullify
 #
 
@@ -61,6 +70,12 @@ class CaseTask < ApplicationRecord
   # borra la reunión: vuelve a ser del ticket (:nullify, igual que las notas).
   has_many :case_meetings, dependent: :nullify
   has_many :case_meeting_series, class_name: 'CaseMeetingSeries', dependent: :nullify, inverse_of: :case_task
+  # Plan-Plantilla-Tareas-Etapa — la tarea nació de la plantilla de una etapa.
+  belongs_to :case_type_column_task, optional: true
+  belongs_to :case_type_column, optional: true
+  belongs_to :team, optional: true
+  # T3 — la tarea «Documenta…» lleva a esta etapa; se completa sola, no a mano.
+  belongs_to :documentation_for_column, class_name: 'CaseTypeColumn', optional: true
 
   enum status: { pending: 0, done: 1 }
   # @tickets_cases — prioridad propia de la tarea: NO se hereda del ticket ni se
@@ -83,8 +98,22 @@ class CaseTask < ApplicationRecord
   # @tickets_cases — consecutivo estable por ticket (T001, T002…): se asigna al
   # crear y no se recicla al borrar. No lo acepta del cliente.
   before_create :assign_sequence
+  # Plan-Plantilla-Tareas-Etapa T3 — terminar (o quitar) una obligatoria puede dejar
+  # lista la etapa: sugerir o pasar a la siguiente, según su modo.
+  after_commit :check_stage_advance, on: %i[update destroy],
+                                     if: lambda {
+                                       saved_change_to_required? ||
+                                         (required? && (destroyed? || saved_change_to_status?))
+                                     }
 
   private
+
+  def check_stage_advance
+    ticket = CaseTicket.find_by(id: case_ticket_id)
+    Cases::StageAdvance.new(ticket).call if ticket
+  rescue StandardError => e
+    Rails.logger.error("[GestorTickets] avance de etapa por la tarea #{id}: #{e.message}")
+  end
 
   def assign_sequence
     self.sequence = (case_ticket.case_tasks.maximum(:sequence) || 0) + 1

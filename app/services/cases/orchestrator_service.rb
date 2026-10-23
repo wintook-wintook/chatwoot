@@ -278,14 +278,14 @@ class Cases::OrchestratorService
   # oportunidad, una orden o un proyecto solo porque ese tipo quedó primero en la
   # lista). Garantiza que la cuenta tenga sus tipos por defecto creados.
   def default_case_type
-    types = CaseType.ensure_defaults_for(@account).to_a
+    types = CaseType.ensure_defaults_for(@account).active.to_a
     types.find { |t| (t.case_class.presence || 'support') == 'support' } || types.first
   end
 
   def resolve_case_type(case_type_id)
     return default_case_type if case_type_id.blank?
 
-    @account.case_types.find_by(id: case_type_id) || default_case_type
+    @account.case_types.active.find_by(id: case_type_id) || default_case_type
   end
 
   def infer_origin(message)

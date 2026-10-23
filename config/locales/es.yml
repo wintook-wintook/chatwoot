@@ -130,6 +130,12 @@ es:
         feedback: Comentario de opinión
         recorded_at: Fecha registrada
   notifications:
+    case_stages:
+      tasks:
+        one: "1 tarea nueva · etapa %{stage}: %{titles}"
+        other: "%{count} tareas nuevas · etapa %{stage}: %{titles}"
+      stage_ready: "Se terminaron las tareas de %{stage}: ¿pasar a %{next}?"
+      stage_ready_doc: "Se terminaron las tareas de %{stage}: documenta para pasar a %{next}"
     notification_title:
       conversation_creation: "Una conversación (#%{display_id}) ha sido creada en %{inbox_name}"
       conversation_assignment: "Una conversación (#%{display_id}) te ha sido asignada"
@@ -143,6 +149,8 @@ es:
       case_task_assignment: "Se te asignó una tarea en el ticket %{folio}"
       case_task_completed: "Se completó una tarea en el ticket %{folio}"
       missed_call: "Llamada perdida de %{name} (conversación #%{display_id})"
+      case_stage_tasks: "Tienes tareas nuevas en el caso %{folio}"
+      case_stage_ready: "El caso %{folio} está listo para pasar de etapa"
     calendar_event_reminder:
       body: "\"%{title}\" comienza en %{minutes} minutos"
       no_title: "Evento sin título"
