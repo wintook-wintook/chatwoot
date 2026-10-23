@@ -59,6 +59,22 @@ RSpec.describe 'Super Admin Application Config API', type: :request do
 
         expect(GlobalConfig.get('FB_APP_SECRET')['FB_APP_SECRET']).not_to eq('HIJACKED')
       end
+
+      # feat/licencias (F0): el interruptor general se prende desde aquí, no desde .env. La
+      # transacción de la prueba se deshace, pero la caché de GlobalConfig vive en Redis.
+      it 'turns license enforcement on from its own group' do
+        sign_in(super_admin, scope: :super_admin)
+        get '/super_admin/app_config?config=licenses'
+        expect(response.body).to include('LICENSE_ENFORCEMENT_ENABLED')
+
+        sign_in(super_admin, scope: :super_admin)
+        post '/super_admin/app_config?config=licenses', params: { app_config: { LICENSE_ENFORCEMENT_ENABLED: 'true' } }
+
+        expect(response).to redirect_to(super_admin_settings_path)
+        expect(Licenses::Enforcement.enabled?).to be(true)
+      ensure
+        GlobalConfig.clear_cache
+      end
     end
   end
 end
