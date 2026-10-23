@@ -997,17 +997,17 @@
       "PREFIX_PLACEHOLDER": "SOP",
       "CLASS": {
         "LABEL": "Clase de caso",
-        "HELP": "La clase define el comportamiento: Soporte atiende tickets; Comercial maneja oportunidades (monto, embudo, ganada/perdida); Orden de trabajo, trabajo planeado (programación, técnico, horas); Proyecto, trabajo por fases (fecha objetivo, presupuesto, avance). Se elige al crear el tipo y no se puede cambiar después.",
+        "HELP": "La clase define el comportamiento: Soporte atiende tickets; Ventas maneja oportunidades (monto, embudo, ganada/perdida); Orden de trabajo, trabajo planeado (programación, técnico, horas); Proyecto, trabajo por fases (fecha objetivo, presupuesto, avance). Se elige al crear el tipo y no se puede cambiar después.",
         "OPTIONS": {
           "SUPPORT": "Soporte",
-          "COMMERCIAL": "Comercial",
+          "COMMERCIAL": "Ventas",
           "WORK_ORDER": "Orden de trabajo",
           "PROJECT": "Proyecto"
         },
         "FILTER": {
           "ALL": "Todas",
           "SUPPORT": "Soporte",
-          "COMMERCIAL": "Comercial",
+          "COMMERCIAL": "Ventas",
           "WORK_ORDER": "Orden de trabajo",
           "PROJECT": "Proyecto"
         },
@@ -1392,7 +1392,7 @@
       "outcome_set": "Resultado de la oportunidad",
       "postponed": "Oportunidad pospuesta",
       "resumed": "Oportunidad retomada",
-      "amount_changed": "Datos comerciales",
+      "amount_changed": "Datos de la oportunidad",
       "commitment_changed": "Compromiso del cliente",
       "conversation_link": "Conversación ligada",
       "stage_tasks_added": "Tareas de la etapa",
@@ -1526,7 +1526,7 @@
       "TOAST_DUE_ALIGNED": "Vencimiento de la tarea movido al {date}"
     },
     "COMMERCIAL": {
-      "NO_TYPES": "Aún no hay tipos de caso Comercial. Créalo en Tipos de caso.",
+      "NO_TYPES": "Aún no hay tipos de oportunidad. Crea uno de clase Ventas en Tipos de caso.",
       "FIELDS": {
         "AMOUNT": "Monto",
         "CURRENCY": "Moneda",
@@ -1551,11 +1551,11 @@
       },
       "COLUMN_TOTAL": "Total de la columna",
       "PANEL": {
-        "TITLE": "Datos comerciales",
+        "TITLE": "Datos de la oportunidad",
         "SAVE": "Guardar",
         "CANCEL": "Descartar",
-        "SAVED": "Datos comerciales guardados",
-        "SAVE_ERROR": "No se pudieron guardar los datos comerciales",
+        "SAVED": "Datos de la oportunidad guardados",
+        "SAVE_ERROR": "No se pudieron guardar los datos de la oportunidad",
         "PROBABILITY_HINT": "Al mover la oportunidad de etapa, toma la probabilidad de la nueva columna.",
         "FROZEN": "La oportunidad está cerrada: reábrela para cambiar sus datos."
       },
@@ -1602,8 +1602,8 @@
         "CURRENCY_INVALID": "Usa un código de 3 letras, p. ej. MXN",
         "REASONS_TITLE": "Motivos de cierre",
         "REASONS_DESC": "Lo que se elige al marcar una oportunidad como ganada, perdida, pospuesta o cancelada. Si un resultado tiene motivos activos, elegir uno es obligatorio. Desactiva un motivo en lugar de borrarlo para conservar la historia.",
-        "PAGE_TITLE": "Comercial",
-        "DISABLED": "La clase Comercial no está activa en esta cuenta.",
+        "PAGE_TITLE": "Ventas",
+        "DISABLED": "La clase Ventas no está activa en esta cuenta.",
         "GROUPS": {
           "won": "Ganada",
           "lost": "Perdida",
@@ -1930,11 +1930,16 @@
     },
     "CLASSES": {
       "SWITCHER_LABEL": "Clase de caso",
+      "VIEW_LABEL": "Forma de ver",
+      "VIEW_BOARD": "Tablero",
+      "VIEW_LIST": "Lista",
+      "VIEW_DASHBOARD": "Dashboard",
       "COMMERCIAL": {
-        "NAME": "Comercial",
+        "NAME": "Ventas",
+        "NEW": "Oportunidad",
         "LIST": "Oportunidades",
         "BOARD": "Embudo",
-        "METRICS": "Métricas comerciales",
+        "METRICS": "Dashboard de ventas",
         "SCOPES": {
           "mine": "Mías",
           "unassigned": "No asignadas",

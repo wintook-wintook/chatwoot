@@ -29,6 +29,7 @@
       },
       "BOARD": {
         "SECTION": "Embudo de contactos",
+        "PICKER": "Embudo",
         "AUTO_MOVE": "Movimiento automático",
         "AUTO_MOVE_HELP": "La propia conversación mueve su tarjeta: al llegar, al contestarle, al etiquetarla, al agendar una cita o al crear su caso. Solo avanza; mover a mano siempre gana.",
         "ENTRY_INBOXES": "Bandejas que entran solas",
@@ -65,7 +66,7 @@
         "CASE_CLASS": "De la clase",
         "CASE_CLASSES": {
           "any": "Cualquiera",
-          "commercial": "Comercial",
+          "commercial": "Ventas",
           "support": "Soporte",
           "work_order": "Orden de trabajo",
           "project": "Proyecto"

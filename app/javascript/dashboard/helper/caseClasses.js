@@ -117,6 +117,16 @@ export const saveCaseState = (accountId, caseClass, patch) =>
   );
 
 // Plan-Casos E1.1 — tipos de una clase (un tipo sin clase cuenta como Soporte).
+// Menú v2 — la forma de ver (Tablero | Lista | Embudo/Métricas) que cada clase
+// abrió por última vez: la opción del menú vuelve a ella.
+export const CASE_VIEWS = ['board', 'list', 'metrics'];
+export const lastCaseView = (accountId, caseClass, fallback) => {
+  const view = loadCaseState(accountId, caseClass).view;
+  return CASE_VIEWS.includes(view) ? view : fallback;
+};
+export const rememberCaseView = (accountId, caseClass, view) =>
+  saveCaseState(accountId, caseClass, { view });
+
 export const typesOfClass = (types, caseClass) =>
   (types || []).filter(t => (t.case_class || DEFAULT_CASE_CLASS) === caseClass);
 
