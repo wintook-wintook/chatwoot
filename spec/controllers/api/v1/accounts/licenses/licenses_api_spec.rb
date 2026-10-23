@@ -38,6 +38,12 @@ RSpec.describe 'Licenses API', type: :request do
     end
   end
 
+  it 'la cuenta le dice al navegador si es de Wintook (para mostrar el menú)' do
+    get "/api/v1/accounts/#{wintook.id}", headers: lector.create_new_auth_token, as: :json
+
+    expect(response.parsed_body['wintook_internal']).to be(true)
+  end
+
   describe 'catálogo' do
     it 'crea y edita planes, con canales y funciones que existen' do
       post "#{base}/plans", params: { plan: { name: 'Pro', duration_days: 180, default_max_agents: 10, features: %w[campaigns] } },

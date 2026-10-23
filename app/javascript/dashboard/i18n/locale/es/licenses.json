@@ -1,0 +1,106 @@
+{
+  "LICENSES": {
+    "HEADER": "Licencias",
+    "DESCRIPTION": "Qué plan tiene cada cuenta, cuándo vence y cuántos agentes puede tener.",
+    "NO_ACCESS": "No tienes acceso a las licencias desde esta cuenta.",
+    "LOAD_ERROR": "No se pudo cargar. Intenta otra vez.",
+    "TABS": { "ACCOUNTS": "Cuentas", "PLANS": "Planes" },
+    "ACCOUNTS": {
+      "SEARCH": "Buscar por nombre o número",
+      "STATE_ALL": "Todas",
+      "DAYS": "días",
+      "EMPTY": "No hay cuentas con este filtro.",
+      "TABLE": {
+        "ACCOUNT": "Cuenta",
+        "STATE": "Estado",
+        "PLAN": "Plan",
+        "AGENTS": "Agentes",
+        "EXPIRES": "Vence",
+        "ACTIONS": "Acciones"
+      },
+      "QUEUED": "+{count} en cola",
+      "DAYS_LEFT": "en {count} días",
+      "EXPIRED_AGO": "hace {count} días",
+      "SUSPENDED": "Suspendida",
+      "WINTOOK": "Wintook",
+      "ASSIGN": "Asignar licencia",
+      "HISTORY": "Historial"
+    },
+    "STATE": {
+      "SIN_LICENCIA": "Sin licencia",
+      "DEMO": "Demo",
+      "PAID": "Vigente",
+      "VIGENTE": "Vigente",
+      "POR_VENCER": "Por vencer",
+      "VENCIDA": "Vencida"
+    },
+    "PLANS": {
+      "NEW": "Nuevo plan",
+      "EMPTY": "Todavía no hay planes.",
+      "TABLE": {
+        "NAME": "Plan",
+        "DAYS": "Días",
+        "AGENTS": "Agentes",
+        "TYPE": "Tipo",
+        "FEATURES": "Canales y funciones",
+        "ACCOUNTS": "Cuentas activas"
+      },
+      "SIGNUP": "De registro",
+      "INACTIVE": "Desactivado",
+      "FEATURES_COUNT": "{count} incluidas",
+      "EDIT": "Editar"
+    },
+    "TYPE": { "DEMO": "Demo", "PAID": "De pago" },
+    "PLAN_FORM": {
+      "NEW_TITLE": "Nuevo plan",
+      "EDIT_TITLE": "Editar plan",
+      "DESC": "Los cambios valen para las licencias que se emitan después; las ya emitidas guardan su copia.",
+      "NAME": "Nombre",
+      "DAYS": "Duración en días",
+      "AGENTS": "Agentes por omisión",
+      "TYPE": "Tipo",
+      "SIGNUP": "Plan de registro: toda cuenta nueva nace con este (solo uno)",
+      "ACTIVE": "Activo (si no, no se puede emitir)",
+      "CHANNELS": "Canales",
+      "FUNCTIONS": "Funciones",
+      "FEATURES_HINT": "Por ahora solo se guardan en el plan; todavía no se encienden ni apagan en la cuenta.",
+      "SAVE": "Guardar",
+      "CANCEL": "Cancelar",
+      "SAVED": "Plan guardado.",
+      "ERROR": "No se pudo guardar el plan."
+    },
+    "ISSUE": {
+      "TITLE": "Asignar licencia a {name}",
+      "DESC": "Se copia el plan y puedes ajustar los valores solo para esta cuenta.",
+      "PLAN": "Plan",
+      "CHOOSE_PLAN": "Elige un plan…",
+      "START": "Cuándo empieza",
+      "START_NOW": "Ya: reemplaza la licencia actual",
+      "START_QUEUE": "En cola: empieza cuando termine la actual",
+      "NAME": "Nombre de la licencia",
+      "AGENTS": "Agentes",
+      "DAYS": "Días",
+      "NOTES": "Notas (opcional)",
+      "SUBMIT": "Asignar",
+      "CANCEL": "Cancelar",
+      "DONE": "Licencia asignada.",
+      "ERROR": "No se pudo asignar la licencia."
+    },
+    "HISTORY": {
+      "TITLE": "Licencias de {name}",
+      "EMPTY": "Esta cuenta nunca ha tenido licencia.",
+      "FROM_TO": "{from} → {to}",
+      "BY": "por {name}",
+      "CANCEL": "Cancelar",
+      "CANCELLED": "Licencia programada cancelada.",
+      "CANCEL_ERROR": "No se pudo cancelar.",
+      "CLOSE": "Cerrar"
+    },
+    "STATUS": {
+      "ACTIVE": "Activa",
+      "SCHEDULED": "Programada",
+      "EXPIRED": "Vencida",
+      "CANCELLED": "Cancelada"
+    }
+  }
+}

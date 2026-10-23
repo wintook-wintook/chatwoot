@@ -880,6 +880,60 @@ dar de alta agentes en esa cuenta: el tercero recibe el aviso de licencias.
 agente suyo «Gestionar licencias»; con su sesión, `GET /api/v1/accounts/<esa cuenta>/licenses/accounts?estado=sin_licencia`.
 La pantalla llega en F2b.
 
+
+### F2b — Pantallas de gestión ✅ (23/10/2026)
+
+**Qué se hizo**
+
+| Pieza | Archivo |
+|---|---|
+| Entrada «Licencias» en el menú, solo en cuentas de Wintook y con «Ver licencias» | `sidebarItems/v2/index.js` (`licensesOnly`), `Sidebar.vue` (`canSeeLicenses`), `_account.json.jbuilder` (`wintook_internal`) |
+| Ruta `/app/accounts/:id/licenses` | `routes/dashboard/licenses/routes.js` |
+| Pantalla con pestañas Cuentas / Planes | `views/licenses/Index.vue`, `AccountsTab.vue`, `PlansTab.vue` |
+| Formularios: plan, asignar licencia, historial | `views/licenses/PlanModal.vue`, `IssueModal.vue`, `HistoryModal.vue` |
+| Cliente de la API y textos es/en | `api/licenses.js`, `i18n/locale/{es,en}/licenses.json` |
+
+**Cómo se ve**
+
+```
+ Licencias
+ Qué plan tiene cada cuenta, cuándo vence y cuántos agentes puede tener.
+ [ Cuentas ] [ Planes ]
+
+ Cuentas:  [ Buscar por nombre o número ] [ Todas ▾ ]  (Por vencer → [ 7 ] días)
+   Cuenta              Estado        Plan          Agentes  Vence                Acciones
+   Grúas del Sur #12   [Demo]        Demo          1 / 2    6/11/2026 en 14 días [+ Asignar licencia] [Historial]
+   Comercial Norte #8  [Por vencer]  Profesional   7 / 10   26/10/2026 en 3 días
+                       +1 en cola
+   Servicios SA #5     [Sin licencia] —            12       —
+
+ Planes:                                                       [ Nuevo plan ]
+   Plan        Días  Agentes  Tipo     Canales y funciones  Cuentas activas
+   Demo [De registro]  15  2  Demo     0 incluidas          17              [Editar]
+```
+
+- **Asignar licencia**: eliges un plan activo y se precargan nombre, agentes y días; se ajustan
+  solo para esa cuenta. Si ya tiene licencia, propone «En cola» (empieza al terminar la actual);
+  «Ya» la reemplaza.
+- **Historial**: todas sus licencias con fechas, agentes y quién la dio; una programada se puede
+  cancelar.
+- **Planes**: crear y editar con días, agentes, tipo, «de registro», activo y canales/funciones
+  (agrupados; por ahora solo se guardan).
+- Sin «Gestionar licencias» se ve todo pero no aparecen los botones de asignar, editar ni cancelar.
+- Una fila con 7 días o menos se marca «Por vencer» aunque el filtro sea «Todas».
+- Solo componentes nativos del dashboard (BaseSettingsHeader, woot-tabs, woot-label, woot-button,
+  Modal, TableFooter).
+
+**Pila de pruebas**
+
+- `views/licenses/licenses.spec.js` (5): filtros que se mandan a la API, fila «por vencer» y su color, agentes usados/tope, asignar precarga el plan y manda lo ajustado, con licencia vigente propone «en cola», el plan separa canales de funciones.
+- `sidebarItems/v2/index.spec.js` (10): la entrada «Licencias» existe, va marcada `licensesOnly` y tiene su propio menú.
+- `licenses_api_spec.rb`: la cuenta le dice al navegador si es de Wintook.
+- En navegador: pendiente.
+
+**Cómo probarlo**: en el super admin marcar la cuenta como «Cuenta de Wintook» y a tu usuario
+«Gestionar licencias»; recargar el dashboard de esa cuenta: aparece «Licencias» en el menú.
+
 ---
 
 ### Bitácora de versiones

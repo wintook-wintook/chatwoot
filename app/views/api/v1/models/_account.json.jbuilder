@@ -20,4 +20,5 @@ json.locale @account.locale
 json.name @account.name
 json.support_email @account.support_email
 json.status @account.status
+json.wintook_internal @account.wintook_internal? # feat/licencias: aquí aparece el menú Licencias
 json.cache_keys @account.cache_keys

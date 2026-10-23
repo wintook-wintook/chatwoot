@@ -162,6 +162,16 @@ export const primaryMenuV2 = (accountId, route) => {
       toState: url('portals'),
       toStateName: 'default_portal_articles',
     },
+    // feat/licencias: solo en cuentas de Wintook y para quien tenga «Ver licencias»
+    // (Sidebar.vue lo filtra con `licensesOnly`).
+    {
+      icon: 'lock-shield',
+      key: 'licenses',
+      label: 'LICENSES',
+      licensesOnly: true,
+      toState: url('licenses'),
+      toStateName: 'licenses_index',
+    },
     {
       icon: 'settings',
       key: 'settings',
@@ -365,6 +375,21 @@ const ajustes = accountId => {
   };
 };
 
+// feat/licencias
+const licencias = accountId => ({
+  parentNav: 'licenses',
+  routes: ['licenses_index'],
+  menuItems: [
+    {
+      icon: 'lock-shield',
+      label: 'LICENSES',
+      hasSubMenu: false,
+      toState: frontendURL(`accounts/${accountId}/licenses`),
+      toStateName: 'licenses_index',
+    },
+  ],
+});
+
 // El orden importa: gana el primer menú cuya ruta coincide (los de `matches`
 // van antes que los de lista de rutas).
 export const getSidebarItemsV2 = (accountId, route) => ({
@@ -379,5 +404,6 @@ export const getSidebarItemsV2 = (accountId, route) => ({
     agentesIa(accountId),
     agenda(accountId),
     ajustes(accountId),
+    licencias(accountId),
   ],
 });
