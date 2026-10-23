@@ -1,5 +1,11 @@
 # Plan — Módulo de Licencias de Plataforma (por cuenta)
 
+> ⚠️ **Actualizado en `docs/licencias_plan_v1.md` (v1.1, 23/10/2026).** Donde este documento
+> diga «solo `SuperAdmin`» o `.env`, manda la v1.1: los permisos «Ver / Gestionar licencias» se
+> marcan por agente en el super admin, el dashboard solo aparece en cuentas «de Wintook», el
+> interruptor general vive en la configuración del super admin, al vencer se calla el motor y las
+> fases quedan F0–F5 en otro orden. El detalle técnico de aquí sigue sirviendo de referencia.
+
 > **Estado:** PLAN (solo revisión, sin implementar). Rama `feat/licencias`.
 > **Objetivo de negocio:** Wintook **licencia el uso de la plataforma (Chatwoot) a cada
 > cuenta**. Cada cuenta nace en **demo** (15 días / 2 agentes por defecto) y luego pasa a
