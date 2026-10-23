@@ -28,6 +28,7 @@ class Account < ApplicationRecord
   include Reportable
   include Featurable
   include CacheKeys
+  include AccountLicensable # feat/licencias
 
   has_many :scheduled_messages, dependent: :destroy
 
@@ -151,9 +152,10 @@ class Account < ApplicationRecord
     super.presence || ENV.fetch('MAILER_SENDER_EMAIL') { GlobalConfig.get('MAILER_SUPPORT_EMAIL')['MAILER_SUPPORT_EMAIL'] }
   end
 
+  # feat/licencias: con licencia activa (y el interruptor encendido) manda su tope.
   def usage_limits
     {
-      agents: ChatwootApp.max_limit.to_i,
+      agents: (license_agent_limit || ChatwootApp.max_limit).to_i,
       inboxes: ChatwootApp.max_limit.to_i
     }
   end

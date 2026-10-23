@@ -11,6 +11,8 @@ module Enterprise::SuperAdmin::AppConfigsController
       @allowed_configs = internal_config_options
     when 'captain'
       @allowed_configs = %w[CAPTAIN_API_URL CAPTAIN_APP_URL]
+    when 'licenses' # feat/licencias: el interruptor general vive aquí, no en .env
+      @allowed_configs = %w[LICENSE_ENFORCEMENT_ENABLED]
     else
       super
     end

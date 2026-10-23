@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_28_100100) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_29_100100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -25,6 +25,29 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_28_100100) do
     t.datetime "updated_at", precision: nil, null: false
     t.index ["owner_type", "owner_id"], name: "index_access_tokens_on_owner_type_and_owner_id"
     t.index ["token"], name: "index_access_tokens_on_token", unique: true
+  end
+
+  create_table "account_licenses", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "license_plan_id"
+    t.bigint "created_by_id"
+    t.string "name", null: false
+    t.integer "license_type", default: 1, null: false
+    t.integer "status", default: 0, null: false
+    t.integer "max_agents", null: false
+    t.integer "duration_days", null: false
+    t.datetime "starts_at"
+    t.datetime "expires_at"
+    t.jsonb "reminded_at", default: {}, null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "index_account_licenses_on_account_id_and_status"
+    t.index ["account_id"], name: "index_account_licenses_one_active_per_account", unique: true, where: "(status = 0)"
+    t.index ["created_by_id"], name: "index_account_licenses_on_created_by_id"
+    t.index ["license_plan_id"], name: "index_account_licenses_on_license_plan_id"
+    t.index ["status", "expires_at"], name: "index_account_licenses_on_status_and_expires_at"
   end
 
   create_table "account_users", force: :cascade do |t|
@@ -1410,6 +1433,20 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_28_100100) do
     t.index ["title", "account_id"], name: "index_labels_on_title_and_account_id", unique: true
   end
 
+  create_table "license_plans", force: :cascade do |t|
+    t.string "name", null: false
+    t.integer "duration_days", null: false
+    t.integer "default_max_agents", null: false
+    t.integer "license_type", default: 1, null: false
+    t.jsonb "features", default: [], null: false
+    t.boolean "signup_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["signup_default"], name: "index_license_plans_one_signup_default", unique: true, where: "signup_default"
+  end
+
   create_table "macros", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -2024,6 +2061,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_28_100100) do
     t.index ["inbox_id"], name: "index_working_hours_on_inbox_id"
   end
 
+  add_foreign_key "account_licenses", "accounts"
+  add_foreign_key "account_licenses", "license_plans", on_delete: :nullify
+  add_foreign_key "account_licenses", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "account_users", "contacts", column: "agent_contact_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"

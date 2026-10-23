@@ -19,7 +19,11 @@ module Enterprise::Account
     custom_attributes['plan_name']
   end
 
+  # feat/licencias: la licencia activa manda sobre lo demás (AccountLicensable).
   def agent_limits
+    tope = license_agent_limit
+    return tope unless tope.nil?
+
     subscribed_quantity = custom_attributes['subscribed_quantity']
     subscribed_quantity || get_limits(:agents)
   end

@@ -292,6 +292,14 @@
   value:
   description: 'Customize conversation, put your valid css'
 ## ------ End of Configs custom ------ ##
+## ----- Licencias (feat/licencias) ----- ##
+- name: LICENSE_ENFORCEMENT_ENABLED
+  display_title: 'Aplicar licencias'
+  value: false
+  locked: false
+  description: 'Apagado: las licencias se registran pero no limitan agentes ni suspenden cuentas. Encender cuando el módulo esté probado.'
+  type: boolean
+## ----- End of Licencias ----- ##
 ## ----- Captain Configs ----- ##
 - name: CAPTAIN_API_URL
   value:

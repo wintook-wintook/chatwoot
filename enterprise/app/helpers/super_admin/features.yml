@@ -96,3 +96,9 @@ unoapi:
   enabled: true
   icon: 'icon-chat-smile-3-line'
   config_key: 'unoapi'
+licenses: # feat/licencias
+  name: 'Licencias'
+  description: 'Licencias de plataforma por cuenta: interruptor general para aplicar topes y vencimientos.'
+  enabled: true
+  icon: 'icon-lock-line'
+  config_key: 'licenses'
