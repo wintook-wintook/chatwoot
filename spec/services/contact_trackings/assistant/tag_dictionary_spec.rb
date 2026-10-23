@@ -10,8 +10,7 @@ RSpec.describe ContactTrackings::Assistant::TagDictionary do
 
   def hallazgos(texto)
     findings = ContactTrackings::Assistant::Findings.new
-    map = ContactTrackings::RouteMap.parse(texto)
-    described_class.check(texto, map: map, account: account, findings: findings)
+    described_class.check(texto, findings: findings)
     findings.of(:degrading).map { |f| [f[:code], f[:line]] }
   end
 
@@ -36,10 +35,7 @@ RSpec.describe ContactTrackings::Assistant::TagDictionary do
     expect(hallazgos("[ETIQUETAS]\n#humano\n\n[ESTILO]\nBreve.")).to include([:bare_tag_line, 2])
   end
 
-  it 'avisa la etiqueta de estado que no existe en la cuenta' do
-    account.labels.create!(title: 'comercial1')
-
-    expect(hallazgos("[ETIQUETAS]\n#comercial1 = respondida\n#comercial3 = canalizar"))
-      .to eq([[:state_label_not_found, 3]])
+  it 'no revisa que la etiqueta de estado exista en la cuenta (va en el mensaje)' do
+    expect(hallazgos("[ETIQUETAS]\n#comercial1 = respondida\n#comercial3 = canalizar")).to be_empty
   end
 end

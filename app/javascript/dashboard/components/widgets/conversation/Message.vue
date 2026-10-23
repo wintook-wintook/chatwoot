@@ -9,6 +9,7 @@ import BubbleLocation from './bubble/Location.vue';
 import BubbleMailHead from './bubble/MailHead.vue';
 import BubbleReplyTo from './bubble/ReplyTo.vue';
 import BubbleText from './bubble/Text.vue';
+import BubbleVoiceCall from './bubble/VoiceCall.vue'; // diag/llamadas_whatsapp
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
 import InstagramStory from './bubble/InstagramStory.vue';
 import InstagramStoryReply from './bubble/InstagramStoryReply.vue';
@@ -25,6 +26,7 @@ import * as Sentry from '@sentry/browser';
 
 export default {
   components: {
+    BubbleVoiceCall,
     BubbleActions,
     BubbleContact,
     BubbleFile,
@@ -252,6 +254,9 @@ export default {
     },
     isOutgoing() {
       return this.data.message_type === MESSAGE_TYPE.OUTGOING;
+    },
+    isVoiceCall() {
+      return this.contentType === 'voice_call';
     },
     isTemplate() {
       return this.data.message_type === MESSAGE_TYPE.TEMPLATE;
@@ -501,6 +506,11 @@ export default {
             {{ $t('CONVERSATION.UNSUPPORTED_MESSAGE') }}
           </template>
         </div>
+        <!-- diag/llamadas_whatsapp: la burbuja de una llamada en lugar del texto -->
+        <BubbleVoiceCall
+          v-else-if="isVoiceCall"
+          :data="contentAttributes.data || {}"
+        />
         <BubbleText
           v-else-if="data.content"
           :message="message"

@@ -46,6 +46,7 @@ class AssistantAPI extends ApiClient {
       deliveredDraft = null,
       building = null,
       turnId = null,
+      templateId = null,
     } = {}
   ) {
     const body = {
@@ -59,6 +60,8 @@ class AssistantAPI extends ApiClient {
     if (deliveredDraft !== null) body.delivered_draft = deliveredDraft;
     // La entrevista sigue abierta. Sin la llave, el backend lo deduce de las marcas.
     if (building !== null) body.building = building;
+    // feat/agentes_ia_unificado: el agente que se edita; liga la conversación a él.
+    if (templateId) body.template_id = templateId;
     // Con él, el backend va dejando la etapa en curso para getProgress. Hace falta
     // siempre: el turno corre en segundo plano y el resultado se pide por este id.
     body.turn_id = turnId || newTurnId();
@@ -200,8 +203,21 @@ class AssistantAPI extends ApiClient {
   }
 
   // Guardado automático de lo editado a mano: crea la conversación si todavía no hay.
-  autosaveDraft(draft, sessionId = null) {
-    return axios.put(`${this.url}/autosave`, { draft, session_id: sessionId });
+  // source: 'configured' (pestaña «Configurar») queda como su propia versión, con notes.
+  // templateId (feat/agentes_ia_unificado): el agente que se edita; liga la
+  // conversación a él desde el primer guardado.
+  autosaveDraft(
+    draft,
+    sessionId = null,
+    { source = null, notes = [], templateId = null } = {}
+  ) {
+    return axios.put(`${this.url}/autosave`, {
+      draft,
+      session_id: sessionId,
+      source,
+      notes,
+      template_id: templateId,
+    });
   }
 
   // Revisar una conversación real: `text` es lo que se escribió en el chat, con el
@@ -316,6 +332,7 @@ class AssistantAPI extends ApiClient {
     templateId,
     sessionId,
     calendarIntegrationIds = null,
+    force = false,
   }) {
     const body = {
       draft,
@@ -327,6 +344,9 @@ class AssistantAPI extends ApiClient {
       template_id: templateId,
       session_id: sessionId,
     };
+    // feat/agentes_ia_unificado: publicar aunque el agente haya cambiado desde que
+    // esta conversación partió de él (el servidor avisó con stale_draft).
+    if (force) body.force = true;
     // Solo si el Entrenamiento agenda: sin la llave, el agente conserva los que tiene.
     if (calendarIntegrationIds)
       body.calendar_integration_ids = calendarIntegrationIds;
@@ -357,6 +377,48 @@ class AssistantAPI extends ApiClient {
   markPublishedPromptSeen(id, templateId) {
     return axios.post(`${this.url}/published_prompts/${id}/seen`, {
       template_id: templateId,
+    });
+  }
+
+  // proyecto@adaptar_prompts_publicados — pestaña «Configurar».
+  // Qué le falta a este texto en la cuenta → { items }
+  getAdaptation(text, templateId = null, sessionId = null) {
+    return axios.post(`${this.url}/adaptation`, {
+      text,
+      tracking_template_id: templateId,
+      session_id: sessionId,
+    });
+  }
+
+  // Escribe en el texto lo configurado ({ key: valor }); no guarda nada.
+  // → { text, applied, rejected, items, validation }
+  applyAdaptation(text, answers, templateId = null, sessionId = null) {
+    return axios.post(`${this.url}/adaptation/apply`, {
+      text,
+      answers,
+      tracking_template_id: templateId,
+      session_id: sessionId,
+    });
+  }
+
+  // F7: el modelo propone qué textos son datos de un negocio → { variables: [{ text, label, count }] }
+  // Sin los valores ya reemplazados en este agente o conversación.
+  suggestVariables(text, templateId = null, sessionId = null) {
+    return axios.post(`${this.url}/adaptation/suggest_variables`, {
+      text,
+      tracking_template_id: templateId,
+      session_id: sessionId,
+    });
+  }
+
+  // F7: los elegidos se reemplazan por su `value` (sin valor, por <PENDIENTE: label>); el
+  // texto no se guarda, lo reemplazado sí se recuerda → { text, items, validation }
+  markVariables(text, variables, templateId = null, sessionId = null) {
+    return axios.post(`${this.url}/adaptation/mark_variables`, {
+      text,
+      variables,
+      tracking_template_id: templateId,
+      session_id: sessionId,
     });
   }
 }

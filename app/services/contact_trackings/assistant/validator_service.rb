@@ -281,21 +281,12 @@ class ContactTrackings::Assistant::ValidatorService
     texto.to_s.unicode_normalize(:nfd).gsub(/\p{Mn}/, '').downcase.gsub(/[^a-z0-9 ]/, ' ').squish
   end
 
-  # ── D2 · la etiqueta no existe ──────────────────────────────────────────────
-  # También la sección [ETIQUETAS] como diccionario de estados: ver TagDictionary.
+  # ── D2 · etiquetas ──────────────────────────────────────────────────────────
+  # NO se revisa que existan en la cuenta (20/10/2026): las etiquetas de las rutas y
+  # de [ETIQUETAS] van en el mensaje y las lee una automatización; no son etiquetas de
+  # Chatwoot. Solo queda la forma de [ETIQUETAS]: ver TagDictionary.
   def check_tags_exist
-    ContactTrackings::Assistant::TagDictionary.check(text, map: map, account: account, findings: findings)
-    existentes = account.labels.pluck(:title)
-
-    map.routes.each do |route|
-      next if route.tag.blank?
-      next if existentes.any? { |t| t.casecmp?(route.tag) }
-
-      add(:degrading, :label_not_found,
-          t('findings.label_not_found', tag: route.hashtag, route: route.name,
-                                        available: listado(existentes, 'findings.label_none_created')),
-          wrote: route.hashtag, route: route.name)
-    end
+    ContactTrackings::Assistant::TagDictionary.check(text, findings: findings)
   end
 
   # ── D4, B9, B10 · {{consulta:}} (proyecto@erp_productos): ver ErpChecks ─────

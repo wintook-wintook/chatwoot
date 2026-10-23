@@ -75,10 +75,13 @@ class Cases::TicketStatusService
   end
 
   # Tickets del contacto, del más reciente al más viejo (excluye cancelados).
+  # Plan-Clase-Comercial F3 (hallazgo #6): solo las clases con `bot_status` (Soporte y
+  # Orden de trabajo); las oportunidades no se informan al cliente.
   def tickets
     return [] unless @contact
 
     @account.case_tickets
+            .with_capability(:bot_status)
             .where(contact_id: @contact.id)
             .where.not(status: 'cancelled')
             .order(created_at: :desc)

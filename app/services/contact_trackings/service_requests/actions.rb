@@ -35,8 +35,15 @@ class ContactTrackings::ServiceRequests::Actions
     return nil if @casos.empty?
     return confirm if confirm_route? && with_state('apartado').any?
     return cancel if @texto.match?(CANCEL_RE)
+    return other_unit if ContactTrackings::ServiceRequests::OtherUnit.asked?(@texto)
 
     move if moving?
+  end
+
+  # «el segundo es la misma grúa, ¿tienes otra?» (conv. 398): otra unidad para ese servicio.
+  def other_unit
+    numero = @texto.scan(REF_RE).flatten.compact.first&.to_i
+    ContactTrackings::ServiceRequests::OtherUnit.new(tracking: @tracking, message: @message, timezone: @timezone, referenced: numero).call
   end
 
   # «pásalo al martes», «muévelo a las 10»: el verbo y una fecha u hora nueva.

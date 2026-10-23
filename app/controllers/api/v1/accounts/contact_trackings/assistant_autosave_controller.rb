@@ -26,7 +26,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantAutosaveController < Api::V1
     return render json: { error: 'blank_draft' }, status: :unprocessable_entity if draft.strip.empty?
 
     sesion = find_session || TrackingAssistantSession.new(account: Current.account, user: Current.user)
-    sesion.autosave!(draft)
+    sesion.link_template(params[:template_id])
+    sesion.autosave!(draft, **version_info)
     render json: { session_id: sesion.id, versions: sesion.version_list, session: meta(sesion) }
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages.first }, status: :unprocessable_entity
@@ -43,6 +44,14 @@ class Api::V1::Accounts::ContactTrackings::AssistantAutosaveController < Api::V1
   end
 
   private
+
+  # proyecto@adaptar_prompts_publicados: lo aplicado en «Configurar» llega con
+  # source=configured y notes (qué se configuró); todo lo demás es edición a mano.
+  def version_info
+    return { source: 'manual' } unless params[:source] == 'configured'
+
+    { source: 'configured', notes: Array(params[:notes]).map(&:to_s) }
+  end
 
   def meta(sesion)
     { id: sesion.id, status: sesion.status, title: sesion.title, named: sesion.name.present?,

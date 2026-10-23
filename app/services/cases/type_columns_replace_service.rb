@@ -66,7 +66,10 @@ class Cases::TypeColumnsReplaceService
         label: raw[:label],
         color: raw[:color],
         position: raw[:position] || index,
-        statuses: raw[:statuses] || []
+        statuses: raw[:statuses] || [],
+        # Plan-Clase-Comercial F3 — vacío = columna de trabajo; con valor = resultado.
+        outcome: raw[:outcome].presence,
+        probability: raw[:probability].presence
       )
       column.save!
       column

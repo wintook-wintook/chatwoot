@@ -32,12 +32,11 @@
 // que no ejecuta nada es exactamente el problema que este módulo vino a arreglar.
 // ============================================================================
 import { useAlert } from 'dashboard/composables';
+import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import AssistantAPI from 'dashboard/api/assistant';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
 import Spinner from 'shared/components/Spinner.vue';
-import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
-import { sortRows, nextOrder, NUMBER, DATE, TEXT } from './assistant/tableSort';
 import {
   findRouteLine,
   lineRange,
@@ -46,17 +45,16 @@ import {
 } from './assistant/draftNavigation';
 import DraftLineMarks from './assistant/DraftLineMarks.vue';
 import ChangeLog from './assistant/ChangeLog.vue';
+import ConfigureTab from './assistant/ConfigureTab.vue';
 import { withCannedGroup } from './assistant/knowledgeGroup';
 import { emitter } from 'shared/helpers/mitt';
 import { ASSISTANT_SOURCES_CHANGED } from './assistant/sourceDirective';
 import { pendingCount } from './assistant/pendingMarkers';
 import InterviewPanel from './assistant/InterviewPanel.vue';
 import SessionCard from './assistant/SessionCard.vue';
-import SortableTh from './assistant/SortableTh.vue';
 import ProgressStrip from './assistant/ProgressStrip.vue';
 import ValidationBadge from './assistant/ValidationBadge.vue';
 import ReportModal from './assistant/ReportModal.vue';
-import EngineCatalog from './assistant/EngineCatalog.vue';
 import InstructionsPanel from './assistant/InstructionsPanel.vue';
 import {
   instructionsProgress,
@@ -103,63 +101,33 @@ const INBOX_STORAGE_KEY = 'tracking_assistant_inbox_id';
 // Entrenamiento desde un encargo.
 const SHOW_CHAT = true;
 
-// La pestaña de las conversaciones guardadas. Escondida el 18/09/2026 (el chat no se
-// usaba); vuelve el 23/09/2026 como «En construcción»: los agentes a medio armar,
-// que todavía no se guardaron como Agente IA (los guardados están en «Agentes IA»).
-const SHOW_SESSIONS_TAB = true;
+// Las pestañas «Versiones» y «Cambios» del Entrenamiento. Escondidas el 20/10/2026
+// por el momento; el historial se sigue guardando igual.
+const SHOW_HISTORY_TABS = false;
 
-// El backend devuelve hasta 50 conversaciones (TrackingAssistantSession::LIST_LIMIT),
-// así que el paginado es sobre lo que ya está en memoria: no hay una segunda página
-// que pedir. Diez por pantalla entran sin scroll en una laptop.
-const SESSIONS_PER_PAGE = 10;
-// La auditoría recorre TODOS los agentes de la cuenta —28 en esta— así que sin
-// paginar la pestaña era un scroll largo sin forma de comparar dos.
-const AGENTS_PER_PAGE = 10;
+// «Canal del agente» y sus modelos en la barra de arriba. Escondido el 22/10/2026 a
+// pedido: el canal sale solo del agente que se edita (loadTemplate → setInbox).
+const SHOW_INBOX_PICKER = false;
 
-// El tipo de cada columna ordenable, por tabla. Esta declaración ES la lista de
-// lo ordenable: una columna sin declarar no se ordena (ver tableSort.js).
-const SESSION_COLUMNS = {
-  id: NUMBER,
-  status: TEXT,
-  title: TEXT,
-  creator: TEXT,
-  template_name: TEXT,
-  routes: NUMBER,
-  created_at: DATE,
-  updated_at: DATE,
-};
-const AGENT_COLUMNS = {
-  status: TEXT,
-  name: TEXT,
-  routes: NUMBER,
-  defects: NUMBER,
-  degrading: NUMBER,
-};
-
-// Explícito y no armado por concatenación: una clave dinámica no la puede verificar
-// nadie —ni un linter ni quien traduce— y el día que el backend agregue un estado, el
-// cartel sale en blanco sin que falle nada.
-const AUDIT_STATUS_LABEL = {
-  broken: 'TRACKING_ASSISTANT_VIEW.AUDIT_BROKEN',
-  routed: 'TRACKING_ASSISTANT_VIEW.AUDIT_ROUTED',
-  conversational: 'TRACKING_ASSISTANT_VIEW.AUDIT_CONVERSATIONAL',
-  empty: 'TRACKING_ASSISTANT_VIEW.AUDIT_EMPTY',
-};
+// feat/agentes_ia_unificado (21/10/2026): el Asistente ya no es una pantalla con
+// pestañas propias. Vive dentro del espacio de cada agente (AgentWorkspace) y recibe
+// por props qué agente o qué conversación abrir. «En construcción», la auditoría y
+// «Recursos» se mudaron a la lista de Agentes IA (agents/SessionsPanel,
+// agents/InventoryPanel y la columna «Revisión»). Publicar ya no navega: avisa con
+// `saved` y el espacio sigue en el mismo agente.
 
 export default {
   components: {
-    TableFooter,
     EmptyState,
     Spinner,
     InterviewPanel,
     DraftLineMarks,
     ChangeLog,
+    ConfigureTab,
     SessionCard,
-    SortableTh,
     ProgressStrip,
     ValidationBadge,
     ReportModal,
-    EngineCatalog,
     InstructionsPanel,
     BriefModal,
     PublishedPromptsModal,
@@ -174,6 +142,15 @@ export default {
     SaveModal,
   },
   mixins: [trainingSectionsMixin],
+  props: {
+    // El agente a abrir; null = agente nuevo.
+    templateId: { type: Number, default: null },
+    // Retomar esta conversación (desde «En construcción»).
+    initialSessionId: { type: Number, default: null },
+    // Abrir la Galería al entrar («Nuevo agente › Bajar de la Galería»).
+    openGallery: { type: Boolean, default: false },
+  },
+  emits: ['saved', 'installed', 'session'],
   data() {
     return {
       // Las secciones tienen columna propia y no se apagan: el mixin siempre
@@ -209,6 +186,10 @@ export default {
       // qué muestra el panel derecho: el editor o la lista de versiones.
       versions: [],
       draftTab: 'editor',
+      // proyecto@adaptar_prompts_publicados — pestaña «Configurar»: lo que el texto
+      // usa y la cuenta no tiene (AdaptationInventory). Se pide junto con el comprobador.
+      adaptationItems: [],
+      isAdapting: false,
       // La etapa del turno en curso, consultada mientras se espera ({ stage, … }).
       turnStage: null,
       // El canal del agente. Decide con qué modelo clasifica y contesta el motor
@@ -228,11 +209,9 @@ export default {
       sessionMeta: null,
       isSaving: false,
       saveError: '',
+      // Conflicto al publicar: { base_version, version, source, author, at }.
+      staleDetails: null,
       validateTimer: null,
-      activeTab: 0,
-      audit: [],
-      isAuditing: false,
-      sessions: [],
       // F6 — probar sin enviar nada. Se dispara con botón, nunca al teclear.
       // El historial no se borra al editar el Entrenamiento: las corridas viejas
       // se marcan como de otra versión. Borrarlas perdería justo la comparación
@@ -284,8 +263,6 @@ export default {
       // 'chat'. Uno a la vez (pedido del usuario, 23/09/2026): con los dos, más el
       // Entrenamiento, eran tres columnas apretadas.
       leftPanel: 'structure',
-      // Qué muestra «En construcción»: 'open' · 'saved' · 'all'.
-      sessionsFilter: 'open',
       // Las instrucciones iniciales que se llenan conversando mientras no hay
       // Entrenamiento (DraftingChat). Se guardan con la conversación.
       instructions: '',
@@ -294,20 +271,17 @@ export default {
       isSendingInstructions: false,
       // Las cuentas de Google conectadas, para elegir el calendario al guardar.
       calendarIntegrations: [],
-      sessionsPage: 1,
-      SESSIONS_PER_PAGE,
-      // El orden arranca donde lo dejó el backend (recent_first): así el primer
-      // pintado y el que se ve después de tocar un encabezado son coherentes.
-      sessionsSort: { key: 'updated_at', order: 'desc' },
-      // La fila que se va a borrar, para nombrarla en la confirmación.
-      discardTarget: null,
-      agentsPage: 1,
-      AGENTS_PER_PAGE,
-      // Los roto primero: es la pestaña a la que se entra para arreglar algo.
-      agentsSort: { key: 'defects', order: 'desc' },
     };
   },
   computed: {
+    // proyecto@adaptar_prompts_publicados — cuántas cosas faltan configurar.
+    adaptationMissing() {
+      return this.adaptationItems.filter(item => item.status === 'missing')
+        .length;
+    },
+    editingTemplateId() {
+      return this.editingTemplate ? this.editingTemplate.id : null;
+    },
     // Las líneas del texto con hallazgos, para pintarlas en el editor.
     draftLineMarks() {
       return lineMarks(this.draft, this.validation);
@@ -335,37 +309,11 @@ export default {
     showChat() {
       return SHOW_CHAT;
     },
-    // Las pestañas visibles, en orden. `panel` es el número que usa activeTab y que
-    // decide qué se muestra (v-show="activeTab === N"); no cambia al esconder una.
-    tabs() {
-      return [
-        {
-          panel: 0,
-          label: 'TRACKING_ASSISTANT_VIEW.TAB_ASSISTANT',
-          count: null,
-        },
-        this.showSessionsTab && {
-          panel: 1,
-          label: 'TRACKING_ASSISTANT_VIEW.TAB_SESSIONS',
-          count: this.openSessions.length,
-        },
-        {
-          panel: 2,
-          label: 'TRACKING_ASSISTANT_VIEW.TAB_AUDIT',
-          count: this.brokenAgents.length,
-        },
-        {
-          panel: 3,
-          label: 'TRACKING_ASSISTANT_VIEW.TAB_INVENTORY',
-          count: null,
-        },
-      ].filter(Boolean);
+    showInboxPicker() {
+      return SHOW_INBOX_PICKER;
     },
-    activeTabPosition() {
-      return Math.max(
-        0,
-        this.tabs.findIndex(tab => tab.panel === this.activeTab)
-      );
+    showHistoryTabs() {
+      return SHOW_HISTORY_TABS;
     },
     // Qué puede ocupar la columna izquierda, con el texto de su botón.
     leftPanels() {
@@ -395,12 +343,25 @@ export default {
         },
       ];
     },
+    staleDescription() {
+      const d = this.staleDetails || {};
+      return this.$t('TRACKING_ASSISTANT_VIEW.STALE_DESCRIPTION', {
+        base: d.base_version,
+        version: d.version,
+        author: d.author || this.$t('TRACKING_ASSISTANT_VIEW.STALE_SOMEONE'),
+        at: d.at ? new Date(d.at).toLocaleString() : '',
+      });
+    },
+    // Con un agente abierto, guardar es publicar el borrador en él (deja versión);
+    // sin agente, es crearlo.
+    saveLabel() {
+      return this.editingTemplate
+        ? this.$t('TRACKING_ASSISTANT_VIEW.PUBLISH_CTA')
+        : this.$t('TRACKING_ASSISTANT_VIEW.CREATE_CTA');
+    },
     // El Entrenamiento agenda: al guardar hay que elegir el calendario.
     usesCalendar() {
       return /@agendar_calendar\b/i.test(this.draft);
-    },
-    showSessionsTab() {
-      return SHOW_SESSIONS_TAB;
     },
     // En la plantilla no: el loader de Vue 2 no entiende `?.` ahí.
     // Se comparan con los espacios normalizados: agregar un salto de línea no es
@@ -420,9 +381,6 @@ export default {
     },
     unsupported() {
       return this.inventory?.unsupported || [];
-    },
-    brokenAgents() {
-      return this.audit.filter(row => row.status === 'broken');
     },
     hasBlocking() {
       return Boolean(this.validation?.blocking?.length);
@@ -456,58 +414,6 @@ export default {
     templates() {
       return this.$store.getters['trackingTemplates/getTemplates'] || [];
     },
-    // Los encabezados salen de una lista y no repetidos en el markup: trece
-    // columnas ordenables entre las dos tablas es donde a una se le olvida el
-    // @sort y queda muerta sin que nada falle.
-    sessionHeaders() {
-      return [
-        { key: 'id', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ID' },
-        { key: 'status', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_STATUS' },
-        { key: 'title', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_TITLE' },
-        {
-          key: 'creator',
-          label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_CREATOR',
-        },
-        {
-          key: 'template_name',
-          label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_TEMPLATE',
-        },
-        { key: 'routes', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ROUTES' },
-        {
-          key: 'created_at',
-          label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_CREATED',
-        },
-        {
-          key: 'updated_at',
-          label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_UPDATED',
-        },
-      ];
-    },
-    agentHeaders() {
-      return [
-        { key: 'status', label: 'TRACKING_ASSISTANT_VIEW.AGENTS_COL_STATUS' },
-        { key: 'name', label: 'TRACKING_ASSISTANT_VIEW.AGENTS_COL_NAME' },
-        {
-          key: 'routes',
-          label: 'TRACKING_ASSISTANT_VIEW.AGENTS_COL_ROUTES',
-          right: true,
-        },
-        {
-          key: 'defects',
-          label: 'TRACKING_ASSISTANT_VIEW.AGENTS_COL_DEFECTS',
-          right: true,
-        },
-        {
-          key: 'degrading',
-          label: 'TRACKING_ASSISTANT_VIEW.AGENTS_COL_DEGRADING',
-          right: true,
-        },
-        {
-          key: 'headline',
-          label: 'TRACKING_ASSISTANT_VIEW.AGENTS_COL_HEADLINE',
-        },
-      ];
-    },
     // El último resultado, para la tira de hitos: "Probado" se apaga cuando el
     // borrador cambió después de la prueba.
     lastDryRun() {
@@ -516,64 +422,23 @@ export default {
         ? ultima.result
         : null;
     },
-    // Por defecto, los que siguen a medias; con el filtro, también los que ya se
-    // guardaron como Agente IA (pedido del usuario, 24/09/2026).
-    openSessions() {
-      return this.sessions.filter(sesion => sesion.status === 'open');
-    },
-    savedSessions() {
-      return this.sessions.filter(sesion => sesion.status === 'saved');
-    },
-    // En el computed y no en la plantilla: el compilador de plantillas de este
-    // webpack no acepta `?.` y la pantalla entera dejaba de cargar (25/09/2026).
-    discardDescription() {
-      const fila = this.discardTarget || {};
-      return this.$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_DESCRIPTION', {
-        id: fila.id,
-        title:
-          fila.title || this.$t('TRACKING_ASSISTANT_VIEW.SESSIONS_UNTITLED'),
-      });
-    },
-    visibleSessions() {
-      if (this.sessionsFilter === 'saved') return this.savedSessions;
-      if (this.sessionsFilter === 'all') return this.sessions;
-      return this.openSessions;
-    },
-    sessionFilters() {
-      return [
-        {
-          id: 'open',
-          label: 'SESSIONS_FILTER_OPEN',
-          count: this.openSessions.length,
-        },
-        {
-          id: 'saved',
-          label: 'SESSIONS_FILTER_SAVED',
-          count: this.savedSessions.length,
-        },
-        {
-          id: 'all',
-          label: 'SESSIONS_FILTER_ALL',
-          count: this.sessions.length,
-        },
-      ];
-    },
-    sortedSessions() {
-      return sortRows(this.visibleSessions, this.sessionsSort, SESSION_COLUMNS);
-    },
-    pagedSessions() {
-      const start = (this.sessionsPage - 1) * SESSIONS_PER_PAGE;
-      return this.sortedSessions.slice(start, start + SESSIONS_PER_PAGE);
-    },
-    sortedAgents() {
-      return sortRows(this.audit, this.agentsSort, AGENT_COLUMNS);
-    },
-    pagedAgents() {
-      const start = (this.agentsPage - 1) * AGENTS_PER_PAGE;
-      return this.sortedAgents.slice(start, start + AGENTS_PER_PAGE);
-    },
   },
   watch: {
+    // Publicar un agente nuevo o bajar uno de la Galería cambia la ruta a ese agente:
+    // si ya es el que está abierto, no se recarga (se perdería el chat de bienvenida).
+    templateId(id) {
+      if (id && this.editingTemplate && this.editingTemplate.id === id) return;
+      this.openFromProps();
+    },
+    initialSessionId(id) {
+      if (id && id !== this.sessionId) this.openFromProps();
+    },
+    // «Configurar» pide su lista al abrirse: cargar una conversación, un agente o una
+    // versión la deja vacía, y antes solo se volvía a pedir al editar el texto (sin
+    // eso decía «ya tiene todo» y no mostraba nada, 23/10/2026).
+    draftTab(tab) {
+      if (tab === 'configure') this.fetchAdaptation();
+    },
     // Los calendarios se piden al abrir Guardar y solo si el agente agenda: la
     // lista consulta Google por cada cuenta conectada.
     async showSaveModal(abierto) {
@@ -584,16 +449,6 @@ export default {
       } catch (error) {
         this.calendarIntegrations = [];
       }
-    },
-    // Descartar la última conversación de la página dejaba la tabla en blanco
-    // con el paginado marcando una página que ya no existe.
-    sessions(list) {
-      const pages = Math.max(1, Math.ceil(list.length / SESSIONS_PER_PAGE));
-      if (this.sessionsPage > pages) this.sessionsPage = pages;
-    },
-    audit(list) {
-      const pages = Math.max(1, Math.ceil(list.length / AGENTS_PER_PAGE));
-      if (this.agentsPage > pages) this.agentsPage = pages;
     },
   },
   updated() {
@@ -613,18 +468,14 @@ export default {
     // Una fuente creada desde el modal de una ruta (RouteFields): la lista de fuentes
     // se recarga y el Entrenamiento se vuelve a comprobar, sin salir del Asistente.
     emitter.on(ASSISTANT_SOURCES_CHANGED, this.onSourcesChanged);
+    // «Configurar» manda a otras pantallas en otra pestaña: al volver, se revisa.
+    window.addEventListener('focus', this.onWindowFocus);
     this.$store.dispatch('inboxes/get');
     // Se espera la lista antes de resolver el ?template_id de la URL: si no, se
     // entraría desde Agentes IA con el panel vacío y sin decir por qué.
     await this.$store.dispatch('trackingTemplates/get');
-    this.fetchAudit();
-    this.fetchSessions();
-    // Se entra SIEMPRE como para crear un agente nuevo (pedido del usuario,
-    // 23/09/2026). Hasta entonces se retomaba la última conversación a medias,
-    // pensado para cuando el chat era la forma de trabajar; ahora lo es la
-    // Estructura, y encontrarla llena con un agente anterior confundía. La única
-    // excepción es ?template_id: si se vino desde un agente concreto, es ese.
-    if (!this.loadTemplateFromRoute()) this.startFresh();
+    await this.openFromProps();
+    if (this.openGallery) this.showPublishedPrompts = true;
     // Sin nada que retomar, el formulario igual tiene que estar listo (los nombres
     // de sección que ofrece "Agregar sección" salen del backend).
     this.reloadTrainingSections();
@@ -635,6 +486,7 @@ export default {
     clearTimeout(this.validateTimer);
     clearInterval(this.progressTimer);
     emitter.off(ASSISTANT_SOURCES_CHANGED, this.onSourcesChanged);
+    window.removeEventListener('focus', this.onWindowFocus);
     // Lo que quedaba por guardar solo, se manda al salir de la pantalla.
     if (this.autosaveTimer) this.autosaveDraft();
   },
@@ -650,7 +502,8 @@ export default {
       try {
         const { data } = await AssistantAPI.autosaveDraft(
           texto,
-          this.sessionId
+          this.sessionId,
+          { templateId: this.editingTemplateId }
         );
         this.lastAutosaved = texto;
         this.sessionId = data.session_id || this.sessionId;
@@ -670,9 +523,6 @@ export default {
           title: data.title,
           named: data.named,
         };
-        this.sessions = this.sessions.map(s =>
-          s.id === data.id ? { ...s, title: data.title, named: data.named } : s
-        );
       } catch (error) {
         useAlert(this.$t('TRACKING_ASSISTANT_VIEW.SESSION_RENAME_ERROR'));
       }
@@ -684,18 +534,40 @@ export default {
       this.trainingValidation = null;
       this.validateDraft();
     },
-    // Entrada desde Agentes IA: /tracking-dashboard/assistant?template_id=123
-    // o ?nuevo=1 para armar uno nuevo, sin retomar lo que quedó a medias.
-    loadTemplateFromRoute() {
-      if (this.$route.query.nuevo) {
-        this.startFresh();
-        return true;
+    // feat/agentes_ia_unificado — qué abrir: la conversación pedida; si no, la que el
+    // agente tenga a medias DE QUIEN ENTRA (las de otros admins se retoman a propósito
+    // desde «En construcción»; salir del espacio no pierde la propia);
+    // si no, el agente tal como está publicado; sin agente, uno nuevo.
+    async openFromProps() {
+      if (this.initialSessionId) {
+        await this.openSession(this.initialSessionId);
+        return;
       }
-      const id = Number(this.$route.query.template_id);
-      if (!id) return false;
-
-      this.loadTemplate(this.templates.find(t => t.id === id));
-      return true;
+      if (!this.templateId) {
+        this.startFresh();
+        return;
+      }
+      const abierta = await this.openSessionFor(this.templateId);
+      if (abierta) return;
+      this.loadTemplate(this.templates.find(t => t.id === this.templateId));
+    },
+    async openSessionFor(templateId) {
+      try {
+        const { data } = await AssistantAPI.getSessions();
+        const sesion = (data || [])
+          .filter(
+            s =>
+              s.mine &&
+              s.status === 'open' &&
+              s.tracking_template_id === templateId
+          )
+          .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
+        if (!sesion) return false;
+        await this.openSession(sesion.id);
+        return true;
+      } catch (error) {
+        return false;
+      }
     },
     // Retomar y abrir una conversación cargan lo mismo. Estaba escrito dos veces
     // y sumar la identidad habría hecho una tercera copia: cada campo nuevo hay
@@ -716,6 +588,7 @@ export default {
       this.isBuilding = !data.draft || pendingCount(data.draft) > 0;
       this.versions = data.versions || [];
       this.draftTab = 'editor';
+      this.adaptationItems = [];
       this.reloadTrainingSections();
       this.dryRunHistory = [];
       this.suggestedTests = null;
@@ -749,14 +622,6 @@ export default {
         this.isLoadingInventory = false;
       }
     },
-    async fetchSessions() {
-      try {
-        const { data } = await AssistantAPI.getSessions();
-        this.sessions = data;
-      } catch (error) {
-        this.sessions = [];
-      }
-    },
     // Abrir una conversación guardada la deja como estaba: hilo, borrador y su
     // comprobación. Es lo que permite comparar dos intentos en vez de reescribir.
     async openSession(id) {
@@ -766,26 +631,9 @@ export default {
         this.editingTemplate = null;
         if (data.tracking_template_id)
           this.loadEditingFrom(data.tracking_template_id);
-        this.activeTab = 0;
+        this.$emit('session', data.id);
       } catch (error) {
         useAlert(this.$t('TRACKING_ASSISTANT_VIEW.SESSIONS_OPEN_ERROR'));
-      }
-    },
-    // Sin confirmación ni aviso (25/09/2026) la fila se iba y las de abajo subían a
-    // ocupar su lugar: parecía que el clic había ordenado la tabla, no borrado.
-    async discardSession(row) {
-      this.discardTarget = row;
-      const borrar = await this.$refs.discardSessionDialog.showConfirmation();
-      if (!borrar) return;
-      try {
-        await AssistantAPI.discardSession(row.id);
-        this.sessions = this.sessions.filter(s => s.id !== row.id);
-        if (this.sessionId === row.id) this.startFresh();
-        useAlert(
-          this.$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARDED', { id: row.id })
-        );
-      } catch (error) {
-        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_ERROR'));
       }
     },
     startFresh() {
@@ -809,46 +657,10 @@ export default {
       this.isBuilding = true;
       this.versions = [];
       this.draftTab = 'editor';
+      this.adaptationItems = [];
       this.reloadTrainingSections();
       this.editingTemplate = null;
-      this.activeTab = 0;
     },
-    async fetchAudit() {
-      this.isAuditing = true;
-      try {
-        const { data } = await AssistantAPI.audit();
-        this.audit = data;
-      } catch (error) {
-        this.audit = [];
-      } finally {
-        this.isAuditing = false;
-      }
-    },
-    // Tocar un encabezado vuelve a la primera página: quedarse en la página 3
-    // después de reordenar muestra filas del medio y se lee como un error.
-    sortSessionsBy(key) {
-      this.sessionsSort = nextOrder(this.sessionsSort, key);
-      this.sessionsPage = 1;
-    },
-    sortAgentsBy(key) {
-      this.agentsSort = nextOrder(this.agentsSort, key);
-      this.agentsPage = 1;
-    },
-    // El idioma sale del navegador y no de un 'es-MX' fijo: el Asistente ahora
-    // habla los dos idiomas, así que una fecha clavada en español le saldría en
-    // español a una cuenta en inglés.
-    formatDate(value) {
-      if (!value) return '—';
-
-      return new Date(value).toLocaleString(undefined, {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    },
-
     // ── El informe como índice ──────────────────────────────────────────
     // En un Entrenamiento de 645 líneas, saber que "la rama comercial no tiene
     // descripción" no sirve de nada si después hay que buscarla a mano. El
@@ -899,59 +711,13 @@ export default {
         this.isDryRunning = false;
       }
     },
-    // Cargar un agente roto en el panel lo deja listo para corregir y reemplazar:
-    // el arreglo pasa por el mismo comprobador y el mismo guardado que uno nuevo.
-    auditLabel(status) {
-      return AUDIT_STATUS_LABEL[status] || AUDIT_STATUS_LABEL.empty;
-    },
-    openInAssistant(row) {
-      this.loadTemplate(this.templates.find(t => t.id === row.id));
-    },
-    // Partir de un agente SANO para hacer otra versión. Distinto de "arreglarlo
-    // acá": ahí se corrige el que está roto y se lo reemplaza; acá el original
-    // sigue andando en producción y lo que se guarda es un agente nuevo.
-    //
-    // Por eso NO se marca editingTemplate: con él puesto, el modal abre en
-    // "reemplazar" y guardar pisaría justo el agente que se quería conservar.
-    // Se deja el borrador y una propuesta de nombre libre, y el modal abre en
-    // "crear nuevo".
-    duplicateInAssistant(row) {
-      const template = this.templates.find(t => t.id === row.id);
-      if (!template) return;
-
-      this.startFresh();
-      this.draft = template.complementary_prompt || '';
-      if (template.inbox_id) this.setInbox(template.inbox_id);
-      this.lastDelivered = this.draft;
-      this.isBuilding = false;
-      this.versions = [];
-      this.draftTab = 'editor';
-      this.reloadTrainingSections();
-      this.proposal = {
-        name: this.nextVersionName(template.name),
-        objective: template.objective || '',
-        ai_context: template.ai_context || '',
-      };
-      this.validateDraft();
-    },
-    // "Soporte" → "Soporte v2", y si ese ya existe → v3. El nombre es único por
-    // cuenta: proponer uno tomado hace fallar el guardado con un error del
-    // modelo, que es peor que resolverlo acá.
-    nextVersionName(base) {
-      const taken = new Set(
-        this.templates.map(t => (t.name || '').trim().toLowerCase())
-      );
-      for (let version = 2; version < 100; version += 1) {
-        const candidate = `${base} v${version}`;
-        if (!taken.has(candidate.toLowerCase())) return candidate;
-      }
-      return `${base} v100`;
-    },
     // proyecto@publicar_prompts (F5) — se bajó UN prompt publicado: la copia ya es un
     // Agente IA de la cuenta. Se abre aquí como cualquier agente cargado (guardar la
     // reemplaza a ella, nunca al original del autor) y el chat arranca diciendo qué se
     // bajó, qué falta configurar y qué contar para adecuarlo.
-    async onPromptInstalled({ tracking_template: copia, requirements }) {
+    // proyecto@adaptar_prompts_publicados (F3): se abre en «Configurar» — lo que falta
+    // se resuelve ahí, ya no se lista en el chat.
+    async onPromptInstalled({ tracking_template: copia }) {
       this.showPublishedPrompts = false;
       await this.$store.dispatch('trackingTemplates/get');
       const template = this.templates.find(t => t.id === copia.id);
@@ -964,34 +730,29 @@ export default {
 
       this.startFresh();
       this.loadTemplate(template);
+      this.$emit('installed', template.id);
+      this.draftTab = 'configure';
       this.messages = [
-        {
-          role: 'assistant',
-          content: this.installedIntro(copia.name, requirements || []),
-        },
+        { role: 'assistant', content: this.installedIntro(copia.name) },
       ];
       if (this.showChat) this.leftPanel = 'chat';
     },
-    installedIntro(name, requirements) {
+    installedIntro(name) {
       const t = (key, args) =>
         this.$t(`TRACKING_ASSISTANT_VIEW.GALLERY.${key}`, args);
-      const pendientes = requirements.map(req => {
-        const kind = this.$t(
-          `TRACKING_TEMPLATES.PUBLISH.REQUIREMENTS.${req.kind.toUpperCase()}`
-        );
-        return `- ${req.name ? `${kind}: ${req.name}` : kind}`;
-      });
       return [
         t('INTRO_DONE', { name }),
-        [t('INTRO_SETUP'), t('INTRO_INBOX'), ...pendientes].join('\n'),
+        t('INTRO_CONFIGURE'),
         t('INTRO_ASK'),
       ].join('\n\n');
     },
     // F7: el texto de la versión nueva va al editor SIN guardar. Cuenta como editado a
     // mano (lastDelivered sigue siendo el guardado): la persona revisa y guarda si quiere.
+    // proyecto@adaptar_prompts_publicados (F6): se abre en «Configurar», prellenada con lo
+    // que ya se había configurado en este agente (adaptation_answers): un clic en Aplicar.
     loadPublishedVersion(published) {
       this.draft = published.prompt || '';
-      this.draftTab = 'editor';
+      this.draftTab = 'configure';
       this.reloadTrainingSections();
       this.validateDraft();
       useAlert(this.$t('TRACKING_ASSISTANT_VIEW.GALLERY.UPDATE_LOADED'));
@@ -1023,7 +784,6 @@ export default {
       this.dryRunHistory = [];
       this.suggestedTests = null;
       this.optimizeResult = null;
-      this.activeTab = 0;
       this.validateDraft();
     },
     // oneShot: redacta de una, sin preguntar (lo usa el encargo, ver writeFromBrief).
@@ -1055,6 +815,7 @@ export default {
             deliveredDraft: this.lastDelivered,
             building: this.isBuilding,
             turnId,
+            templateId: this.editingTemplateId,
           }
         );
         this.sessionId = data.session_id || this.sessionId;
@@ -1424,6 +1185,20 @@ export default {
         .slice(selectionStart, selectionEnd)
         .trim();
     },
+    // Queda todo seleccionado en el editor: se ve qué se copió.
+    async copyDraft() {
+      const editor = this.$refs.draftEditor;
+      if (editor) {
+        editor.focus();
+        editor.select();
+      }
+      try {
+        await copyTextToClipboard(this.draft);
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.COPY_DRAFT_DONE'));
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.COPY_DRAFT_ERROR'));
+      }
+    },
     explainSelection() {
       if (this.draftSelection) this.explainFragment(this.draftSelection);
     },
@@ -1558,8 +1333,10 @@ export default {
     async validateDraft() {
       if (!this.draft.trim()) {
         this.validation = null;
+        this.adaptationItems = [];
         return;
       }
+      this.fetchAdaptation();
       this.isChecking = true;
       try {
         const { data } = await AssistantAPI.validate(this.draft);
@@ -1568,6 +1345,54 @@ export default {
         this.validation = null;
       } finally {
         this.isChecking = false;
+      }
+    },
+    // proyecto@adaptar_prompts_publicados — qué le falta al texto en esta cuenta.
+    // Se pide cada vez que se comprueba: el contador de la pestaña sigue al texto.
+    async fetchAdaptation() {
+      const texto = this.draft;
+      if (!texto.trim()) return;
+      this.isAdapting = true;
+      try {
+        const { data } = await AssistantAPI.getAdaptation(
+          texto,
+          this.editingTemplateId,
+          this.sessionId
+        );
+        // Una respuesta vieja (se siguió escribiendo) no pisa a la nueva.
+        if (texto === this.draft) this.adaptationItems = data.items || [];
+      } catch (error) {
+        // Sin inventario, la pestaña se queda con lo último que supo.
+      } finally {
+        this.isAdapting = false;
+      }
+    },
+    // Se volvió a esta pestaña del navegador: si faltaba algo, puede que se haya
+    // creado en la otra (fuente, calendario, tipo de caso).
+    onWindowFocus() {
+      if (this.adaptationMissing > 0) this.onSourcesChanged();
+    },
+    // Lo aplicado en «Configurar» entra al editor como cualquier edición, pero queda
+    // como su propia versión «Configurado», con qué se configuró.
+    async onAdaptationApplied({ text, validation, items, notes }) {
+      this.draft = text;
+      this.validation = validation;
+      this.adaptationItems = items || [];
+      this.reloadTrainingSections();
+      this.draftVersion += 1;
+      clearTimeout(this.autosaveTimer);
+      try {
+        const { data } = await AssistantAPI.autosaveDraft(
+          text,
+          this.sessionId,
+          { source: 'configured', notes, templateId: this.editingTemplateId }
+        );
+        this.lastAutosaved = text;
+        this.sessionId = data.session_id || this.sessionId;
+        if (data.session && !this.sessionMeta) this.sessionMeta = data.session;
+        if (Array.isArray(data.versions)) this.versions = data.versions;
+      } catch (error) {
+        // Queda en el editor; se guarda con el próximo autoguardado o al guardar.
       }
     },
     async saveDraft(payload) {
@@ -1580,22 +1405,25 @@ export default {
           sessionId: this.sessionId,
         });
         this.showSaveModal = false;
-        this.editingTemplate = null;
-        this.sessionId = null;
-        this.sessionMeta = null;
-        this.dryRunHistory = [];
-        this.suggestedTests = null;
         // Lo que el comprobador no podía revisar sobre el borrador: directivas
         // que dependen de la configuración del AGENTE, que recién ahora existe.
-        // El aviso se muestra ANTES de navegar a propósito: la pantalla a la que
-        // se llega es justo donde se asigna el calendario.
         (data.warnings || []).forEach(warning => useAlert(warning.message));
-        this.$router.push({
-          name: 'contact_trackings_agents',
-          query: { template_id: data.tracking_template_id },
-        });
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.PUBLISHED'));
+        // feat/agentes_ia_unificado: se sigue en el mismo agente, ya publicado. La
+        // conversación se cerró al guardar; lo que se edite ahora abre otra.
+        await this.$store.dispatch('trackingTemplates/get');
+        this.loadTemplate(
+          this.templates.find(t => t.id === data.tracking_template_id)
+        );
+        this.$emit('saved', data.tracking_template_id);
       } catch (error) {
-        const details = error?.response?.data?.details;
+        const respuesta = error?.response?.data || {};
+        if (respuesta.error === 'stale_draft') {
+          this.isSaving = false;
+          await this.confirmStalePublish(payload, respuesta.details || {});
+          return;
+        }
+        const details = respuesta.details;
         this.saveError = Array.isArray(details)
           ? details.join(' · ')
           : this.$t('TRACKING_ASSISTANT_VIEW.ERROR_SAVE');
@@ -1603,34 +1431,20 @@ export default {
         this.isSaving = false;
       }
     },
+    // feat/agentes_ia_unificado — el Entrenamiento del agente cambió desde que esta
+    // conversación partió de él. Se dice qué versión, quién y cuándo; publicar de
+    // todos modos lo reemplaza (lo anterior queda en Versiones para restaurarlo).
+    async confirmStalePublish(payload, details) {
+      this.staleDetails = details;
+      const publicar = await this.$refs.staleDialog.showConfirmation();
+      if (publicar) await this.saveDraft({ ...payload, force: true });
+    },
   },
 };
 </script>
 
 <template>
-  <div class="flex flex-col flex-1 w-full h-full min-h-0 overflow-hidden p-4">
-    <div class="flex items-start justify-between mb-3 shrink-0">
-      <div class="flex items-start gap-2">
-        <woot-sidemenu-icon />
-        <div>
-          <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">
-            {{ $t('TRACKING_ASSISTANT_VIEW.TITLE') }}
-          </h1>
-          <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
-            {{ $t('TRACKING_ASSISTANT_VIEW.DESCRIPTION') }}
-          </p>
-        </div>
-      </div>
-      <woot-button
-        variant="clear"
-        icon="arrow-clockwise"
-        :is-loading="isLoadingInventory"
-        @click="fetchInventory"
-      >
-        {{ $t('TRACKING_ASSISTANT_VIEW.REFRESH') }}
-      </woot-button>
-    </div>
-
+  <div class="flex flex-col flex-1 w-full h-full min-h-0 overflow-hidden">
     <div
       v-if="isLoadingInventory"
       class="flex items-center justify-center flex-1"
@@ -1649,30 +1463,7 @@ export default {
       />
 
       <template v-else>
-        <!-- ⚠ woot-tabs RENUMERA sus pestañas por posición (Tabs.js pisa el
-             `index` de cada una): con Conversaciones escondida, «Agentes IA»
-             abría Conversaciones y «Recursos» la tabla de agentes (visto por el
-             usuario el 23/09/2026). Por eso se trabaja con la POSICIÓN visible y
-             se traduce al panel (`tabs[n].panel`), que es lo que usa activeTab. -->
-        <woot-tabs
-          :index="activeTabPosition"
-          class="mb-4 shrink-0"
-          @change="activeTab = tabs[$event].panel"
-        >
-          <woot-tabs-item
-            v-for="(tab, position) in tabs"
-            :key="tab.panel"
-            :index="position"
-            :name="$t(tab.label)"
-            :count="tab.count || 0"
-            :show-badge="tab.count !== null"
-          />
-        </woot-tabs>
-
-        <div
-          v-show="activeTab === 0"
-          class="flex flex-col flex-1 min-h-0 gap-3"
-        >
+        <div class="flex flex-col flex-1 min-h-0 gap-3">
           <!-- De qué conversación se trata y con qué canal se prueba. Están fuera
                de las dos columnas porque valen para toda la pantalla: el canal
                decide con qué modelo se clasifica y se contesta, y la tarjeta dice
@@ -1690,7 +1481,7 @@ export default {
               @rename="renameSession"
             />
             <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <div class="flex flex-col gap-0.5 text-xs">
+              <div v-if="showInboxPicker" class="flex flex-col gap-0.5 text-xs">
                 <div class="flex items-center gap-2">
                   <label
                     for="assistant-inbox"
@@ -1750,15 +1541,18 @@ export default {
                 >
                   {{ $t('TRACKING_ASSISTANT_VIEW.GALLERY.OPEN') }}
                 </woot-button>
-                <!-- Empezar de cero: la puerta para armar un agente nuevo. -->
+                <!-- Un agente nuevo se empieza desde la lista («+ Nuevo agente»).
+                     Aquí queda recargar los recursos de la cuenta (fuentes,
+                     calendarios), que antes estaba en el encabezado. -->
                 <woot-button
+                  v-tooltip="$t('TRACKING_ASSISTANT_VIEW.REFRESH')"
                   size="small"
-                  color-scheme="success"
-                  icon="add"
-                  @click="startFresh"
-                >
-                  {{ $t('TRACKING_ASSISTANT_VIEW.NEW_AGENT') }}
-                </woot-button>
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="arrow-clockwise"
+                  :is-loading="isLoadingInventory"
+                  @click="fetchInventory"
+                />
               </div>
             </div>
           </div>
@@ -1902,7 +1696,32 @@ export default {
                     >
                       {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_EDITOR') }}
                     </button>
+                    <!-- proyecto@adaptar_prompts_publicados: lo que usa de la cuenta.
+                         Siempre a la vista: aunque no falte nada, ahí se cambia una
+                         fuente por otra y la IA busca datos de otro negocio. -->
                     <button
+                      class="mr-3 pb-0.5 border-b-2"
+                      :class="
+                        draftTab === 'configure'
+                          ? 'border-woot-500'
+                          : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                      "
+                      @click="draftTab = 'configure'"
+                    >
+                      {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_CONFIGURE') }}
+                      <span
+                        v-if="adaptationMissing"
+                        class="font-normal text-amber-700 dark:text-amber-400"
+                      >
+                        {{
+                          $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_COUNT', {
+                            count: adaptationMissing,
+                          })
+                        }}
+                      </span>
+                    </button>
+                    <button
+                      v-if="showHistoryTabs"
                       class="pb-0.5 border-b-2"
                       :class="
                         draftTab === 'versions'
@@ -1921,6 +1740,7 @@ export default {
                       </span>
                     </button>
                     <button
+                      v-if="showHistoryTabs"
                       class="ml-3 pb-0.5 border-b-2"
                       :class="
                         draftTab === 'log'
@@ -1966,11 +1786,33 @@ export default {
                       :pending-count="draftPendingCount"
                     />
                   </button>
+                  <!-- Seleccionar todo el Entrenamiento y copiarlo (pedido 22/10/2026).
+                     Solo en la pestaña Entrenamiento, donde se ve el texto. -->
+                  <woot-button
+                    v-if="draftTab === 'editor' && draft.trim()"
+                    variant="clear"
+                    size="tiny"
+                    color-scheme="secondary"
+                    icon="copy"
+                    :title="$t('TRACKING_ASSISTANT_VIEW.COPY_DRAFT_HINT')"
+                    @click="copyDraft"
+                  >
+                    {{ $t('TRACKING_ASSISTANT_VIEW.COPY_DRAFT') }}
+                  </woot-button>
                 </div>
                 <ChangeLog
                   v-if="draftTab === 'log'"
                   :versions="versions"
                   :title="(sessionMeta && sessionMeta.title) || ''"
+                />
+                <ConfigureTab
+                  v-else-if="draftTab === 'configure'"
+                  :items="adaptationItems"
+                  :draft="draft"
+                  :template-id="editingTemplateId"
+                  :session-id="sessionId"
+                  :loading="isAdapting"
+                  @applied="onAdaptationApplied"
                 />
                 <VersionsPanel
                   v-else-if="draftTab === 'versions'"
@@ -2060,396 +1902,12 @@ export default {
           </div>
         </div>
 
-        <!-- RECURSOS — la paleta de piezas de la cuenta.
-             Antes esto era una referencia: cuatro bloques de texto separados por
-             puntos, con lo que la cuenta tiene. El problema es que el motor
-             reconoce estas cadenas con patrones EXACTOS y falla en silencio si
-             no coinciden, así que había que retipearlas —y una @ruta con la
-             fuente mal escrita parsea perfecto y no consulta nada.
-             Ahora cada pieza se muestra como la cadena que hay que escribir, y
-             tocarla la copia. La pestaña deja de ser una referencia y pasa a ser
-             la paleta desde la que se arma el Entrenamiento. -->
-        <div v-show="activeTab === 3" class="flex-1 min-h-0 overflow-y-auto">
-          <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">
-            {{ $t('TRACKING_ASSISTANT_VIEW.CATALOG_HINT') }}
-          </p>
-
-          <!-- El catálogo del motor: una ficha por directiva, con su estado en la
-               cuenta y los nombres exactos para copiar (EngineCatalog). -->
-          <EngineCatalog :catalog="(inventory && inventory.catalog) || []" />
-
-          <!-- Las frases van ÚLTIMAS y aparte: son las únicas que no se escriben
-               en el Entrenamiento. Son el material con el que el asistente
-               redacta las descripciones de rama, y lo único de esta pantalla que
-               sale hacia OpenAI. -->
-          <section
-            class="p-4 mt-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
-          >
-            <h3
-              class="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-100"
-            >
-              {{ $t('TRACKING_ASSISTANT_VIEW.PHRASES_TITLE') }}
-            </h3>
-            <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">
-              {{ $t('TRACKING_ASSISTANT_VIEW.PHRASES_HINT') }}
-            </p>
-            <ul class="grid gap-1 md:grid-cols-2">
-              <li
-                v-for="phrase in inventory.customer_phrases"
-                :key="phrase"
-                class="text-xs text-slate-600 dark:text-slate-400"
-              >
-                · {{ phrase }}
-              </li>
-              <li
-                v-if="!inventory.customer_phrases.length"
-                class="text-xs text-slate-400 dark:text-slate-500"
-              >
-                {{ $t('TRACKING_ASSISTANT_VIEW.PHRASES_EMPTY') }}
-              </li>
-            </ul>
-          </section>
-        </div>
-
-        <!-- AGENTES IA — los ya cargados, pasados por el mismo comprobador.
-             En tabla y no como tarjetas: son 28 en esta cuenta, y como lista
-             había que scrollear todo para encontrar los roto. Ordenable por
-             encabezado y paginada, igual que Conversaciones. -->
-        <div v-show="activeTab === 2" class="flex flex-col flex-1 min-h-0">
-          <p class="mb-3 text-xs shrink-0 text-slate-500 dark:text-slate-400">
-            {{ $t('TRACKING_ASSISTANT_VIEW.AUDIT_HINT') }}
-          </p>
-
-          <div
-            v-if="isAuditing"
-            class="text-xs text-slate-500 dark:text-slate-400 py-4"
-          >
-            {{ $t('TRACKING_ASSISTANT_VIEW.REPORT_CHECKING') }}
-          </div>
-
-          <template v-else>
-            <div
-              class="flex-1 min-h-0 overflow-auto bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
-            >
-              <table class="w-full text-sm">
-                <thead class="sticky top-0 z-10 bg-white dark:bg-slate-800">
-                  <tr
-                    class="text-left border-b text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700"
-                  >
-                    <SortableTh
-                      v-for="col in agentHeaders"
-                      :key="col.key"
-                      :label="$t(col.label)"
-                      :sort-key="col.key"
-                      :sort="agentsSort"
-                      :align-right="col.right"
-                      @sort="sortAgentsBy"
-                    />
-                    <th
-                      class="p-3 w-44"
-                      :aria-label="
-                        $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ACTIONS')
-                      "
-                    />
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="row in pagedAgents"
-                    :key="row.id"
-                    class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30"
-                  >
-                    <td class="p-3">
-                      <span
-                        class="text-xs font-medium px-2 py-0.5 rounded whitespace-nowrap"
-                        :class="{
-                          'text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-300':
-                            row.status === 'broken',
-                          'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300':
-                            row.status === 'routed',
-                          'text-slate-600 bg-slate-100 dark:bg-slate-700 dark:text-slate-300':
-                            row.status === 'conversational' ||
-                            row.status === 'empty',
-                        }"
-                      >
-                        {{ $t(auditLabel(row.status)) }}
-                      </span>
-                    </td>
-                    <td
-                      class="p-3 font-medium text-slate-800 dark:text-slate-100"
-                    >
-                      {{ row.name }}
-                    </td>
-                    <td
-                      class="p-3 text-right text-slate-500 dark:text-slate-400"
-                    >
-                      {{ row.routes }}
-                    </td>
-                    <td class="p-3 text-right">
-                      <span
-                        :class="
-                          row.defects
-                            ? 'text-red-700 dark:text-red-300 font-medium'
-                            : 'text-slate-400 dark:text-slate-500'
-                        "
-                      >
-                        {{ row.defects }}
-                      </span>
-                    </td>
-                    <td class="p-3 text-right">
-                      <span
-                        :class="
-                          row.degrading
-                            ? 'text-amber-800 dark:text-amber-800'
-                            : 'text-slate-400 dark:text-slate-500'
-                        "
-                      >
-                        {{ row.degrading }}
-                      </span>
-                    </td>
-                    <!-- El primer defecto, truncado: alcanza para decidir si vale
-                         la pena abrirlo. El detalle sale al cargarlo. -->
-                    <td
-                      class="p-3 text-xs max-w-xs text-red-700 dark:text-red-300"
-                    >
-                      <span class="block truncate" :title="row.headline || ''">
-                        {{ row.headline || '—' }}
-                      </span>
-                    </td>
-                    <td class="p-3">
-                      <!-- Cada estado tiene su acción, y NINGUNO se queda sin
-                           una. El que no tiene Entrenamiento es el más inerte de
-                           todos —contesta sin ninguna configuración— y era
-                           justamente el único al que la pantalla no le ofrecía
-                           nada: se lo veía en rojo y ahí terminaba.
-
-                           Roto  -> arreglarlo y reemplazarlo.
-                           Vacío -> escribirle el Entrenamiento que no tiene.
-                           Sano  -> partir de él para otra versión, sin tocar el
-                                    que está andando en producción. -->
-                      <woot-button
-                        v-if="row.status === 'broken'"
-                        size="small"
-                        variant="clear"
-                        @click="openInAssistant(row)"
-                      >
-                        {{ $t('TRACKING_ASSISTANT_VIEW.AUDIT_FIX') }}
-                      </woot-button>
-                      <woot-button
-                        v-else-if="row.status === 'empty'"
-                        size="small"
-                        variant="clear"
-                        color-scheme="secondary"
-                        icon="wand"
-                        @click="openInAssistant(row)"
-                      >
-                        {{ $t('TRACKING_ASSISTANT_VIEW.AUDIT_WRITE') }}
-                      </woot-button>
-                      <woot-button
-                        v-else
-                        size="small"
-                        variant="clear"
-                        color-scheme="secondary"
-                        icon="copy"
-                        @click="duplicateInAssistant(row)"
-                      >
-                        {{ $t('TRACKING_ASSISTANT_VIEW.AUDIT_NEW_VERSION') }}
-                      </woot-button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <TableFooter
-              class="border-t shrink-0 border-slate-75 dark:border-slate-700/50"
-              :current-page="agentsPage"
-              :total-count="audit.length"
-              :page-size="AGENTS_PER_PAGE"
-              @pageChange="agentsPage = $event"
-            />
-          </template>
-        </div>
-
-        <!-- Las conversaciones: un Entrenamiento bueno rara vez sale de una
-             sentada, así que hay que poder volver a una y comparar intentos.
-             En tabla y con el paginado nativo —el mismo de Campañas y del
-             listado de seguimientos—: como lista de tarjetas, 50 conversaciones
-             eran 50 pantallazos de scroll y no había forma de comparar dos. -->
-        <div v-show="activeTab === 1" class="flex flex-col flex-1 min-h-0">
-          <div class="flex items-center justify-between mb-3 shrink-0">
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-              {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_HINT') }}
-            </p>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-1 mb-3 shrink-0">
-            <woot-button
-              v-for="filtro in sessionFilters"
-              :key="filtro.id"
-              size="small"
-              :variant="sessionsFilter === filtro.id ? 'smooth' : 'clear'"
-              :color-scheme="
-                sessionsFilter === filtro.id ? 'primary' : 'secondary'
-              "
-              @click="
-                sessionsFilter = filtro.id;
-                sessionsPage = 1;
-              "
-            >
-              {{
-                $t(`TRACKING_ASSISTANT_VIEW.${filtro.label}`, {
-                  count: filtro.count,
-                })
-              }}
-            </woot-button>
-          </div>
-
-          <div
-            v-if="!visibleSessions.length"
-            class="text-xs text-slate-500 dark:text-slate-400 py-4"
-          >
-            {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_EMPTY') }}
-          </div>
-
-          <template v-else>
-            <div
-              class="flex-1 min-h-0 overflow-auto bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
-            >
-              <table class="w-full text-sm">
-                <thead class="sticky top-0 z-10 bg-white dark:bg-slate-800">
-                  <tr
-                    class="text-left border-b text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700"
-                  >
-                    <SortableTh
-                      v-for="col in sessionHeaders"
-                      :key="col.key"
-                      :label="$t(col.label)"
-                      :sort-key="col.key"
-                      :sort="sessionsSort"
-                      @sort="sortSessionsBy"
-                    />
-                    <th
-                      class="w-24 p-3"
-                      :aria-label="
-                        $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ACTIONS')
-                      "
-                    />
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="row in pagedSessions"
-                    :key="row.id"
-                    class="border-b cursor-pointer border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30"
-                    @click="openSession(row.id)"
-                  >
-                    <!-- El identificador es el id de la fila y nada más: esta
-                         tabla no tiene folio ni serie. Se muestra igual porque
-                         es lo único con lo que dos conversaciones del mismo día
-                         y el mismo agente se pueden distinguir al hablar de
-                         ellas. -->
-                    <td
-                      class="p-3 font-mono text-xs text-slate-400 dark:text-slate-500"
-                    >
-                      #{{ row.id }}
-                    </td>
-                    <td class="p-3">
-                      <span
-                        class="text-xs font-medium px-2 py-0.5 rounded whitespace-nowrap"
-                        :class="
-                          row.status === 'saved'
-                            ? 'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300'
-                            : 'text-slate-600 bg-slate-100 dark:bg-slate-700 dark:text-slate-300'
-                        "
-                      >
-                        {{
-                          row.status === 'saved'
-                            ? $t('TRACKING_ASSISTANT_VIEW.SESSIONS_SAVED')
-                            : $t('TRACKING_ASSISTANT_VIEW.SESSIONS_OPEN')
-                        }}
-                      </span>
-                    </td>
-                    <td
-                      class="p-3 font-medium text-slate-800 dark:text-slate-100"
-                    >
-                      {{
-                        row.title ||
-                        $t('TRACKING_ASSISTANT_VIEW.SESSIONS_UNTITLED')
-                      }}
-                    </td>
-                    <!-- De quién es: desde que las conversaciones se comparten
-                         entre administradores, el listado tiene trabajo de
-                         varias personas. Siempre el nombre del agente, también
-                         en las propias (pedido del usuario, 23/09/2026: antes
-                         decía «vos»). -->
-                    <td class="p-3 text-slate-500 dark:text-slate-400">
-                      {{
-                        row.creator ||
-                        $t('TRACKING_ASSISTANT_VIEW.SESSIONS_NO_CREATOR')
-                      }}
-                    </td>
-                    <td class="p-3 text-slate-500 dark:text-slate-400">
-                      {{ row.template_name || '—' }}
-                    </td>
-                    <td class="p-3 text-slate-500 dark:text-slate-400">
-                      {{ row.routes }}
-                    </td>
-                    <!-- Creación y última modificación son dos preguntas
-                         distintas: cuándo se empezó a armar este agente, y
-                         cuándo se lo tocó por última vez. En una entrevista que
-                         se retoma tres días después, la diferencia es el dato. -->
-                    <td
-                      class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap"
-                    >
-                      {{ formatDate(row.created_at) }}
-                    </td>
-                    <td
-                      class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap"
-                    >
-                      {{ formatDate(row.updated_at) }}
-                    </td>
-                    <td class="p-3">
-                      <div class="flex items-center justify-end gap-1">
-                        <woot-button
-                          size="small"
-                          variant="clear"
-                          @click.stop="openSession(row.id)"
-                        >
-                          {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_RESUME') }}
-                        </woot-button>
-                        <woot-button
-                          size="small"
-                          variant="clear"
-                          color-scheme="alert"
-                          icon="delete"
-                          @click.stop="discardSession(row)"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <TableFooter
-              class="border-t shrink-0 border-slate-75 dark:border-slate-700/50"
-              :current-page="sessionsPage"
-              :total-count="visibleSessions.length"
-              :page-size="SESSIONS_PER_PAGE"
-              @pageChange="sessionsPage = $event"
-            />
-          </template>
-        </div>
         <!-- GUARDAR — vive fuera de los paneles porque es la salida de la
              pestaña Asistente, no de uno de sus bloques. Queda apagado mientras
              el comprobador encuentre algo bloqueante: guardar un agente que no
              ejecuta nada es exactamente el problema que este módulo vino a
              arreglar. -->
-        <div
-          v-show="activeTab === 0"
-          class="flex justify-end gap-2 pt-4 shrink-0"
-        >
+        <div class="flex justify-end gap-2 pt-4 shrink-0">
           <!-- Probar va ANTES de guardar, y en ese orden se lee: el comprobador
                dice si se ejecuta, esto dice si rutea bien, y recién después se
                guarda. -->
@@ -2488,7 +1946,7 @@ export default {
             {{ $t('TRACKING_ASSISTANT_VIEW.OPTIMIZE_CTA') }}
           </woot-button>
           <woot-button :is-disabled="!canSave" @click="showSaveModal = true">
-            {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_CTA') }}
+            {{ saveLabel }}
           </woot-button>
         </div>
       </template>
@@ -2504,13 +1962,6 @@ export default {
       @close="showOptimizeModal = false"
       @run="runOptimize"
       @apply="applyOptimization"
-    />
-    <woot-confirm-modal
-      ref="discardSessionDialog"
-      :title="$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_TITLE')"
-      :description="discardDescription"
-      :confirm-label="$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_YES')"
-      :cancel-label="$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_NO')"
     />
     <woot-confirm-modal
       ref="analyzePastedDialog"
@@ -2585,6 +2036,13 @@ export default {
       @suggest="runSuggestedTests"
     />
 
+    <woot-confirm-modal
+      ref="staleDialog"
+      :title="$t('TRACKING_ASSISTANT_VIEW.STALE_TITLE')"
+      :description="staleDescription"
+      :confirm-label="$t('TRACKING_ASSISTANT_VIEW.STALE_YES')"
+      :cancel-label="$t('TRACKING_ASSISTANT_VIEW.STALE_NO')"
+    />
     <SaveModal
       :show="showSaveModal"
       :templates="templates"

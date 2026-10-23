@@ -9,14 +9,44 @@ import { mapGetters } from 'vuex';
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
 import MessageApi from 'dashboard/api/inbox/message'; // @tickets_cases — notificar al mover
 import { toSimpleStatus } from 'dashboard/helper/caseSimpleStatus';
-
-// Filtros rápidos (pestañas) — mismo set que el listado (Index.vue).
-const QUICK_FILTERS = [
-  { key: 'mine', label: 'Mis Casos' },
-  { key: 'unassigned', label: 'Sin Asignar' },
-  { key: 'all', label: 'Todos' },
-  { key: 'sla_overdue', label: 'SLA vencidos' },
-];
+// Plan-Clase-Comercial F4 — tablero del embudo comercial.
+import OutcomeModal from './commercial/OutcomeModal.vue';
+import CaseClassSwitcher from './CaseClassSwitcher.vue'; // Plan-Casos E1
+// Plan-Casos E1.1 — filtros por niveles (mismos que la Lista).
+import CaseTypeSelect from './filters/CaseTypeSelect.vue';
+import CaseScopeBar from './filters/CaseScopeBar.vue';
+import CaseFineFilters from './filters/CaseFineFilters.vue';
+import {
+  BOARD_CLOSED_OPTIONS,
+  DEFAULT_BOARD_CLOSED,
+  SCOPES,
+  emptyFineFilters,
+  fineFiltersToParams,
+  normalizeFineFilters,
+  scopeToParams,
+  classAlertParams,
+} from 'dashboard/helper/caseFilters';
+import {
+  classHasSla,
+  classI18nBase,
+  loadCaseState,
+  saveCaseState,
+  typesOfClass,
+} from 'dashboard/helper/caseClasses';
+import PostponeModal from './commercial/PostponeModal.vue';
+import {
+  COMMERCIAL_CLASS,
+  COMMITTED_BADGE,
+  POSTPONED_BADGE,
+  PROMISE_OVERDUE_BADGE,
+  formatDay,
+  formatMoney,
+  totalsByCurrency,
+  isOpenCommitted,
+  isoDayFromToday,
+  promiseOverdue,
+} from 'dashboard/helper/caseCommercial';
+import { formatHours } from 'dashboard/helper/caseWorkOrder';
 
 // Columnas por defecto del tablero cuando no hay un tipo de caso filtrado (así
 // que no hay columnas propias de un tipo que mostrar). ITIL dejó de ser un modo
@@ -48,11 +78,20 @@ const DEFAULT_COLUMNS = [
   { key: 'closed', statuses: ['closed', 'cancelled'] },
 ];
 
-const PRIORITY_DOT = {
-  urgent: 'bg-red-500',
-  high: 'bg-orange-500',
-  medium: 'bg-blue-500',
-  low: 'bg-slate-400',
+// Diseño del Tablero (2026-10-20): la prioridad solo se marca cuando sale de lo
+// normal (Alta / Urgente), como píldora con texto y los colores de la Lista.
+const PRIORITY_PILL = {
+  urgent:
+    'bg-red-100 text-red-800 font-semibold dark:bg-red-900/40 dark:text-red-300',
+  high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
+};
+// Franja de color de las columnas fijas (sin columnas del tipo), por etapa.
+const DEFAULT_COLUMN_COLORS = {
+  new: '#0ea5e9',
+  progress: '#0ea5e9',
+  waiting: '#f59e0b',
+  resolved: '#10b981',
+  closed: '#64748b',
 };
 
 const SLA_BADGE = {
@@ -65,19 +104,34 @@ const SLA_BADGE = {
 
 export default {
   name: 'TicketKanban',
-  components: { CaseTicketInternalModal }, // @tickets_cases Fase C
+  components: {
+    CaseTicketInternalModal, // @tickets_cases Fase C
+    OutcomeModal,
+    PostponeModal,
+    CaseClassSwitcher,
+    CaseTypeSelect,
+    CaseScopeBar,
+    CaseFineFilters,
+  },
+  props: {
+    // Plan-Casos E1 — clase de la ruta `tickets/:caseClass/board`:
+    // 'commercial' = embudo de oportunidades; 'support' = tablero de tickets.
+    caseClass: { type: String, default: 'support' },
+  },
   data() {
     return {
-      quickFilters: QUICK_FILTERS,
+      // Plan-Casos E1.1 — ¿de quién? (mine|unassigned|all), aviso de SLA
+      // vencido aparte y filtros finos del botón «Filtros».
       quickFilter: 'mine',
+      slaOverdueOnly: false,
+      committedOnly: false, // Plan-Metricas-Comercial — «Solo comprometidas»
+      fine: emptyFineFilters(),
+      // Plan-Casos E1.3 — cerrados en el tablero: hide | 7 | 30 | 90 | all.
+      closedWindow: DEFAULT_BOARD_CLOSED,
       showInternalModal: false, // @tickets_cases Fase C
       filters: {
         q: '',
-        ticket_kind: '',
-        priority: '',
-        affected_service_id: '',
-        assignee_id: '',
-        case_type_id: '', // columnas por tipo (A+)
+        case_type_id: '', // columnas por tipo (A+) — lo elige CaseTypeSelect
       },
       searchDebounce: null,
       draggedTicket: null,
@@ -92,6 +146,10 @@ export default {
       // notificar al cliente al mover (reusa el envío de mensajes del inbox)
       notifyContact: false,
       notifyMessage: '',
+      // Plan-Clase-Comercial F4 — soltar en Perdida/Cancelada o en la espera
+      // pide datos: { ticket, column, outcome } / { ticket, column }.
+      outcomeMove: null,
+      postponeMove: null,
     };
   },
   computed: {
@@ -99,13 +157,52 @@ export default {
       boardTickets: 'caseTickets/getBoardTickets',
       boardUiFlags: 'caseTickets/getBoardUIFlags',
       slaOverdueCount: 'caseTickets/getBoardSlaOverdue',
-      services: 'caseTickets/getServices',
       agents: 'agents/getAgents',
       currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Casos"
       types: 'caseTickets/getTypes', // columnas por tipo (A+)
+      anyTypeItilEnabled: 'caseTickets/getAnyTypeItilEnabled',
     }),
+    // Naturaleza ITIL en «Filtros» solo si el tipo (o algún tipo) usa ITIL.
+    itilEnabled() {
+      const type = (this.types || []).find(
+        t => String(t.id) === String(this.filters.case_type_id)
+      );
+      return type ? !!type.itil_enabled : this.anyTypeItilEnabled;
+    },
     isFetching() {
       return this.boardUiFlags.isFetching;
+    },
+    // ── Plan-Clase-Comercial F4 ──
+    // Solo las clases con SLA (Soporte) muestran la etiqueta de SLA en la tarjeta.
+    hasSla() {
+      return classHasSla(this.caseClass);
+    },
+    isCommercialBoard() {
+      return this.caseClass === COMMERCIAL_CLASS;
+    },
+
+    // Plan-Clase-Orden-de-Trabajo F1 — solo los tipos de la clase del tablero.
+    visibleTypes() {
+      return typesOfClass(this.types, this.caseClass);
+    },
+    // Plan-Casos E2 — etiqueta del botón de alta: el tipo elegido o la clase.
+    createLabel() {
+      const type = (this.types || []).find(
+        t => String(t.id) === String(this.filters.case_type_id)
+      );
+      return (
+        type?.name || this.$t(`CASE_TICKETS.CLASSES.${this.caseClassKey}.NAME`)
+      );
+    },
+    boardTitle() {
+      return this.$t(`${classI18nBase(this.caseClass)}.BOARD`);
+    },
+    // Clave i18n de la clase (COMMERCIAL / SUPPORT / WORK_ORDER).
+    caseClassKey() {
+      return classI18nBase(this.caseClass).split('.').pop();
+    },
+    postponedBadge() {
+      return POSTPONED_BADGE;
     },
     // Columnas propias del tipo seleccionado (A+). Vienen ya en el JSON del tipo.
     selectedTypeColumns() {
@@ -130,12 +227,11 @@ export default {
       }
       return DEFAULT_COLUMNS;
     },
-    activeQuickTabIndex() {
-      const i = QUICK_FILTERS.findIndex(f => f.key === this.quickFilter);
-      return i < 0 ? 0 : i;
-    },
     priorityOptions() {
       return this.$t('CASE_TICKETS.PRIORITIES');
+    },
+    closedOptions() {
+      return BOARD_CLOSED_OPTIONS;
     },
     ticketKindOptions() {
       return this.$t('CASE_TICKETS.TICKET_KIND');
@@ -164,30 +260,90 @@ export default {
         : '';
     },
   },
+  watch: {
+    // Plan-Clase-Comercial F4 — misma instancia para las dos rutas: al cambiar
+    // de tablero se reinicia el tipo elegido y se vuelve a cargar.
+    caseClass() {
+      this.restoreState(); // Plan-Casos E1.2 — cada clase vuelve como la dejaste
+      this.loadBoard();
+    },
+  },
   mounted() {
-    this.fetch();
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
-    this.$store.dispatch('caseTickets/fetchTypes'); // columnas por tipo (A+)
+    this.restoreState();
+    this.loadBoard();
   },
   methods: {
+    // Plan-Casos E1.2 — el Tablero comparte con la Lista (misma clase) el tipo,
+    // ¿de quién?, el aviso de SLA, los filtros finos y la búsqueda: pasar de
+    // una vista a otra, o salir y volver, conserva lo elegido.
+    restoreState() {
+      const st = loadCaseState(this.$route.params.accountId, this.caseClass);
+      this.filters.q = st.search || '';
+      this.filters.case_type_id = st.type ?? '';
+      this.quickFilter = SCOPES.includes(st.scope) ? st.scope : 'mine';
+      this.slaOverdueOnly = !!st.sla;
+      this.committedOnly = !!st.committed;
+      this.fine = normalizeFineFilters(st.fine);
+      const closed = st.board?.closed;
+      this.closedWindow = BOARD_CLOSED_OPTIONS.includes(closed)
+        ? closed
+        : DEFAULT_BOARD_CLOSED;
+    },
+    persistState() {
+      saveCaseState(this.$route.params.accountId, this.caseClass, {
+        search: this.filters.q,
+        type: this.filters.case_type_id,
+        scope: this.quickFilter,
+        sla: this.slaOverdueOnly,
+        committed: this.committedOnly,
+        fine: this.fine,
+        board: { closed: this.closedWindow },
+      });
+    },
+    // Tipos primero (columnas por tipo A+): la clase del tablero decide qué se
+    // pide, y el embudo arranca en su primer tipo Comercial.
+    async loadBoard() {
+      try {
+        await this.$store.dispatch('caseTickets/fetchTypes');
+      } finally {
+        this.fetch();
+      }
+    },
     // @tickets_cases Fase C — tras crear un ticket interno, refresca el tablero.
     onInternalCreated() {
       this.showInternalModal = false;
       this.fetch();
     },
     fetch() {
-      const f = {};
-      Object.keys(this.filters).forEach(k => {
-        if (this.filters[k] !== '' && this.filters[k] != null) {
-          f[k] = this.filters[k];
-        }
-      });
-      // Filtro rápido (pestañas): sobrescribe assignee / añade sla_status.
-      if (this.quickFilter === 'sla_overdue') f.sla_status = 'overdue';
-      if (this.quickFilter === 'unassigned') f.assignee_id = 'unassigned';
-      if (this.quickFilter === 'mine') f.assignee_id = this.currentUserID;
+      // El embudo pinta las columnas de UN tipo: espera a que CaseTypeSelect lo elija.
+      if (this.isCommercialBoard && !this.filters.case_type_id) return;
+      this.persistState();
+      const f = {
+        ...scopeToParams(this.quickFilter, this.currentUserID),
+        ...fineFiltersToParams(this.fine, this.caseClass, this.quickFilter, {
+          itil: this.itilEnabled,
+          board: true,
+        }),
+      };
+      if (this.filters.q) f.q = this.filters.q;
+      if (this.filters.case_type_id) f.case_type_id = this.filters.case_type_id;
+      if (this.slaOverdueOnly && classHasSla(this.caseClass))
+        f.sla_status = 'overdue';
+      // Plan-Casos E1.3 — los cerrados de siempre no tapan a los abiertos
+      // (el tablero carga hasta 100 casos).
+      if (this.closedWindow === 'hide') f.status = 'pending';
+      else if (this.closedWindow !== 'all')
+        f.closed_within_days = this.closedWindow;
+      // Plan-Clase-Comercial F4 — las clases no se mezclan (Soporte incluye los
+      // casos sin tipo; ver CaseTicket.of_class).
+      f.case_class = this.caseClass;
+      if (this.isCommercialBoard && this.committedOnly) f.committed = true;
+      // Aviso rojo de Órdenes / Comercial (visitas / cierre vencido).
+      if (this.slaOverdueOnly)
+        Object.assign(f, classAlertParams(this.caseClass));
       this.$store.dispatch('caseTickets/fetchBoardTickets', f);
     },
     onSearchInput() {
@@ -198,9 +354,83 @@ export default {
       this.filters.q = '';
       this.fetch();
     },
-    onQuickTabChange(index) {
-      this.quickFilter = QUICK_FILTERS[index].key;
+    // ── Plan-Casos E1.1 — cambios de cada nivel de filtro ──
+    onTypeChange(id) {
+      this.filters.case_type_id = id;
       this.fetch();
+    },
+    onScopeChange(scope) {
+      this.quickFilter = scope;
+      this.fetch();
+    },
+    onSlaChange(on) {
+      this.slaOverdueOnly = on;
+      this.fetch();
+    },
+    onCommittedChange(on) {
+      this.committedOnly = on;
+      this.fetch();
+    },
+    onFineChange(fine) {
+      this.fine = fine;
+      this.fetch();
+    },
+    onClosedWindowChange(event) {
+      this.closedWindow = event.target.value;
+      this.fetch();
+    },
+    // ── Plan-Clase-Comercial F4 ──
+    money(amount, currency) {
+      return formatMoney(amount, currency);
+    },
+    day(value) {
+      return formatDay(value);
+    },
+    columnTotals(col) {
+      return totalsByCurrency(this.grouped[col.key]);
+    },
+    // El backend decide: soltar en Ganada cierra; en Perdida/Cancelada responde
+    // `requires_outcome` y en la espera `requires_postpone` → se abre el modal y
+    // se reintenta el mismo movimiento con los datos.
+    async commercialMove(ticket, column, extra = {}) {
+      try {
+        await this.$store.dispatch('caseTickets/moveTicketColumn', {
+          ticketId: ticket.id,
+          caseTypeColumnId: column.id,
+          ...extra,
+        });
+        this.fetch();
+      } catch (e) {
+        const data = e.response?.data || {};
+        if (data.requires_outcome) {
+          this.outcomeMove = { ticket, column, outcome: data.outcome || null };
+        } else if (data.requires_postpone) {
+          this.postponeMove = { ticket, column };
+        } else {
+          this.$emitter.emit('newToastMessage', {
+            message: data.error || this.$t('CASE_TICKETS.KANBAN.MOVE_ERROR'),
+            type: 'error',
+          });
+        }
+      }
+    },
+    confirmOutcomeMove(closure) {
+      const { ticket, column } = this.outcomeMove;
+      this.outcomeMove = null;
+      this.commercialMove(ticket, column, { closure });
+    },
+    confirmPostponeMove({
+      postponed_until: postponedUntil,
+      postpone_reason_id: postponeReasonId,
+      reason,
+    }) {
+      const { ticket, column } = this.postponeMove;
+      this.postponeMove = null;
+      this.commercialMove(ticket, column, {
+        postponedUntil,
+        postponeReasonId,
+        reason,
+      });
     },
     columnLabel(col) {
       // Columna del tipo (A+) → etiqueta libre de BD; fija → clave i18n.
@@ -214,8 +444,91 @@ export default {
     kindLabel(key) {
       return this.ticketKindOptions[key] || key;
     },
-    priorityDot(priority) {
-      return PRIORITY_DOT[priority] || 'bg-slate-400';
+    priorityPill(priority) {
+      return PRIORITY_PILL[priority] || '';
+    },
+    columnColor(col) {
+      return col.custom ? col.color : DEFAULT_COLUMN_COLORS[col.key];
+    },
+    // Iniciales del responsable para el circulito del pie (máx. 2 letras).
+    initials(name) {
+      return (name || '')
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(w => w[0].toUpperCase())
+        .join('');
+    },
+    isPastDay(value) {
+      return !!value && String(value).slice(0, 10) < isoDayFromToday(0);
+    },
+    // Abierta con el cierre estimado ya pasado (oportunidad).
+    closeOverdue(ticket) {
+      return (
+        ticket.is_commercial &&
+        !ticket.outcome &&
+        !['closed', 'cancelled'].includes(ticket.status) &&
+        this.isPastDay(ticket.expected_close_at)
+      );
+    },
+    // Excepción que se muestra arriba a la derecha (lo normal no se marca).
+    cardAlert(ticket) {
+      if (ticket.is_postponed) {
+        return {
+          label: this.$t('CASE_TICKETS.COMMERCIAL.POSTPONED_UNTIL', {
+            date: this.day(ticket.postponed_until),
+          }),
+          cls: POSTPONED_BADGE,
+        };
+      }
+      if (this.hasSla && ['at_risk', 'overdue'].includes(ticket.sla_status)) {
+        return {
+          label: this.statusLabel(ticket.sla_status),
+          cls: this.slaBadge(ticket.sla_status),
+        };
+      }
+      if (ticket.visit_overdue) {
+        return {
+          label: this.$t('CASE_TICKETS.WORK_ORDER.VISIT.OVERDUE'),
+          cls: SLA_BADGE.overdue,
+        };
+      }
+      // Plan-Metricas-Comercial — comprometida: la fecha es la promesa del cliente.
+      if (isOpenCommitted(ticket)) {
+        const overdue = promiseOverdue(ticket, isoDayFromToday(0));
+        const key = overdue ? 'PROMISE_OVERDUE' : 'COMMITTED_ON';
+        return {
+          label: this.$t(`CASE_TICKETS.COMMERCIAL.COMMITMENT.${key}`, {
+            date: this.day(ticket.expected_close_at),
+          }),
+          cls: overdue ? PROMISE_OVERDUE_BADGE : COMMITTED_BADGE,
+        };
+      }
+      if (this.closeOverdue(ticket)) {
+        return {
+          label: this.$t('CASE_TICKETS.KANBAN.CLOSE_OVERDUE'),
+          cls: SLA_BADGE.overdue,
+        };
+      }
+      if (ticket.project_overdue) {
+        return {
+          label: this.$t('CASE_TICKETS.PROJECT.OVERDUE'),
+          cls: SLA_BADGE.overdue,
+        };
+      }
+      return null;
+    },
+    // Borde rojo a la izquierda: algo vencido (SLA, visita o cierre).
+    isCardOverdue(ticket) {
+      return (
+        (this.hasSla && ticket.sla_status === 'overdue') ||
+        !!ticket.visit_overdue ||
+        !!ticket.project_overdue ||
+        this.closeOverdue(ticket)
+      );
+    },
+    hours(value) {
+      return formatHours(value);
     },
     slaBadge(sla) {
       return SLA_BADGE[sla] || SLA_BADGE.on_time;
@@ -282,6 +595,14 @@ export default {
       this.draggedTicket = null;
       this.dragOverKey = null;
       if (!ticket) return;
+
+      // Plan-Clase-Comercial F4 — en el embudo no hay modal de cambio de estado
+      // ni aviso al cliente: mover de etapa es interno del vendedor.
+      if (this.isCommercialBoard && column.custom) {
+        if (ticket.case_type_column_id === column.id) return; // misma columna
+        this.commercialMove(ticket, column);
+        return;
+      }
 
       // ── Tablero por tipo (A+): la columna destino ya cubre el estado actual →
       // movimiento libre, solo cambia el puntero, SIN modal de cambio de estado.
@@ -444,33 +765,39 @@ export default {
   >
     <!-- Header + filtros -->
     <div
-      class="flex flex-col flex-shrink-0 gap-3 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
+      class="flex flex-col flex-shrink-0 gap-3 px-6 pt-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
       <div class="flex items-center justify-between">
-        <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
-          {{ $t('CASE_TICKETS.KANBAN.TITLE') }}
-        </h1>
-        <!-- @tickets_cases Fase C — alta de ticket interno -->
+        <!-- Plan-Casos E1 — el selector Comercial | Soporte es el título -->
+        <CaseClassSwitcher :case-class="caseClass" :title="boardTitle" />
+        <!-- Plan-Casos E2 — «+ {tipo}» o, en «Todos los tipos», «+ {clase}» -->
         <woot-button size="small" icon="add" @click="showInternalModal = true">
-          {{ $t('CASE_TICKETS.INTERNAL.NEW_BUTTON') }}
+          {{ createLabel }}
         </woot-button>
       </div>
 
-      <!-- Filtros rápidos como pestañas nativas (mismo estilo que el listado) -->
-      <woot-tabs :index="activeQuickTabIndex" @change="onQuickTabChange">
-        <woot-tabs-item
-          v-for="(f, i) in quickFilters"
-          :key="f.key"
-          :index="i"
-          :name="f.label"
-          :count="f.key === 'sla_overdue' ? slaOverdueCount : 0"
-          :show-badge="f.key === 'sla_overdue' && slaOverdueCount > 0"
-        />
-      </woot-tabs>
-
-      <!-- Toolbar compacto: búsqueda + dropdowns -->
-      <div class="flex flex-wrap items-center gap-2">
-        <div class="relative flex-1 min-w-[220px]">
+      <!-- ¿De quién? y la fila de filtros (misma que la Lista): tipo · búsqueda ·
+           filtros finos · cerrados · SLA. Sin estado: las columnas ya lo muestran. -->
+      <CaseScopeBar
+        :case-class="caseClass"
+        :scope="quickFilter"
+        :sla-only="slaOverdueOnly"
+        :sla-count="slaOverdueCount"
+        :committed-only="committedOnly"
+        @scope="onScopeChange"
+        @sla="onSlaChange"
+        @committed="onCommittedChange"
+      >
+        <template #before>
+          <!-- E1.1 — el tipo decide las columnas; el embudo exige uno -->
+          <CaseTypeSelect
+            :case-class="caseClass"
+            :value="filters.case_type_id"
+            :allow-all="!isCommercialBoard"
+            @input="onTypeChange"
+          />
+        </template>
+        <div class="relative flex-1 min-w-[220px] max-w-md">
           <fluent-icon
             icon="search"
             size="16"
@@ -479,7 +806,7 @@ export default {
           <input
             v-model="filters.q"
             type="text"
-            class="w-full pl-9 pr-9 !mb-0 text-sm"
+            class="w-full !h-8 pl-9 pr-9 !mb-0 text-sm"
             :placeholder="$t('CASE_TICKETS.KANBAN.SEARCH_PLACEHOLDER')"
             @input="onSearchInput"
           />
@@ -492,70 +819,43 @@ export default {
             <fluent-icon icon="dismiss" size="14" />
           </button>
         </div>
-        <select
-          v-model="filters.case_type_id"
-          class="!mb-0 text-sm w-40"
-          @change="fetch"
+        <CaseFineFilters
+          :case-class="caseClass"
+          :value="fine"
+          :scope="quickFilter"
+          :case-type-id="filters.case_type_id"
+          :itil="itilEnabled"
+          board
+          @input="onFineChange"
+        />
+        <!-- E1.3 — cuántos cerrados se pintan (abiertos siempre completos) -->
+        <label
+          class="flex items-center gap-1.5 ml-auto text-sm text-slate-600 dark:text-slate-300"
+          :title="$t('CASE_TICKETS.FILTERS.BOARD_CLOSED_HINT')"
         >
-          <option value="">{{ $t('CASE_TICKETS.KANBAN.ALL_TYPES') }}</option>
-          <option v-for="t in types" :key="t.id" :value="t.id">
-            {{ t.name }}
-          </option>
-        </select>
-        <select
-          v-model="filters.ticket_kind"
-          class="!mb-0 text-sm w-40"
-          @change="fetch"
-        >
-          <option value="">{{ $t('CASE_TICKETS.KANBAN.ALL_KINDS') }}</option>
-          <option
-            v-for="(label, key) in ticketKindOptions"
-            :key="key"
-            :value="key"
+          {{ $t(`CASE_TICKETS.CLASSES.${caseClassKey}.CLOSED_LABEL`) }}
+          <select
+            :value="closedWindow"
+            class="!mb-0 text-sm w-40"
+            @change="onClosedWindowChange"
           >
-            {{ label }}
-          </option>
-        </select>
-        <select
-          v-model="filters.priority"
-          class="!mb-0 text-sm w-36"
-          @change="fetch"
-        >
-          <option value="">{{ $t('CASE_TICKETS.LIST.ALL_PRIORITIES') }}</option>
-          <option
-            v-for="(label, key) in priorityOptions"
-            :key="key"
-            :value="key"
-          >
-            {{ label }}
-          </option>
-        </select>
-        <select
-          v-model="filters.affected_service_id"
-          class="!mb-0 text-sm w-40"
-          @change="fetch"
-        >
-          <option value="">{{ $t('CASE_TICKETS.KANBAN.ALL_SERVICES') }}</option>
-          <option v-for="s in services" :key="s.id" :value="s.id">
-            {{ s.name }}
-          </option>
-        </select>
-        <select
-          v-model="filters.assignee_id"
-          class="!mb-0 text-sm w-40"
-          @change="fetch"
-        >
-          <option value="">{{ $t('CASE_TICKETS.KANBAN.ALL_AGENTS') }}</option>
-          <option v-for="a in agents" :key="a.id" :value="a.id">
-            {{ a.name }}
-          </option>
-        </select>
-      </div>
+            <option v-for="o in closedOptions" :key="o" :value="o">
+              {{ $t(`CASE_TICKETS.FILTERS.BOARD_CLOSED.${o}`) }}
+            </option>
+          </select>
+        </label>
+      </CaseScopeBar>
     </div>
 
     <!-- Tablero -->
     <div
-      v-if="isFetching"
+      v-if="isCommercialBoard && !isFetching && !visibleTypes.length"
+      class="flex items-center justify-center flex-1 px-6 text-sm text-center text-slate-400 dark:text-slate-500"
+    >
+      {{ $t('CASE_TICKETS.COMMERCIAL.NO_TYPES') }}
+    </div>
+    <div
+      v-else-if="isFetching"
       class="flex items-center justify-center flex-1 text-slate-400"
     >
       {{ $t('CASE_TICKETS.LIST.LOADING') }}
@@ -564,54 +864,66 @@ export default {
       <div
         v-for="col in columns"
         :key="col.key"
-        class="flex flex-col flex-shrink-0 w-72 rounded-lg bg-slate-100 dark:bg-slate-800/50"
+        class="flex flex-col flex-shrink-0 w-72 border-t-[3px] rounded-lg bg-slate-50 dark:bg-slate-800/40"
         :class="dragOverKey === col.key ? 'ring-2 ring-woot-500' : ''"
+        :style="{ borderTopColor: columnColor(col) || '#cbd5e1' }"
         @dragenter.prevent="dragOverKey = col.key"
         @dragover.prevent="onDragOver(col.key, $event)"
         @dragleave="onDragLeave(col.key, $event)"
         @drop.prevent="onDrop(col)"
       >
         <div
-          class="flex items-center justify-between px-3 py-2 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400"
+          class="flex items-center justify-between px-3 py-2 text-[13px] font-semibold text-slate-700 dark:text-slate-200"
         >
-          <span class="flex items-center gap-1.5 min-w-0">
-            <span
-              v-if="col.custom"
-              class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
-              :style="{ backgroundColor: col.color }"
-            />
-            <span class="truncate">{{ columnLabel(col) }}</span>
+          <span class="truncate">{{ columnLabel(col) }}</span>
+          <span
+            class="px-2 py-0.5 text-xs font-medium tabular-nums rounded-full bg-white text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600"
+            >{{ grouped[col.key].length }}</span
+          >
+        </div>
+        <!-- Plan-Clase-Comercial F4 — total de la columna, por moneda -->
+        <div
+          v-if="isCommercialBoard && columnTotals(col).length"
+          class="flex flex-wrap gap-x-2 px-3 -mt-1 mb-1 text-xs font-semibold text-slate-600 dark:text-slate-300"
+          :title="$t('CASE_TICKETS.COMMERCIAL.COLUMN_TOTAL')"
+        >
+          <span v-for="t in columnTotals(col)" :key="t.currency">
+            {{ money(t.total, t.currency) }}
           </span>
-          <span class="px-1.5 rounded bg-slate-200 dark:bg-slate-700">{{
-            grouped[col.key].length
-          }}</span>
         </div>
         <div class="flex flex-col flex-1 gap-2 p-2 overflow-y-auto">
           <div
             v-for="ticket in grouped[col.key]"
             :key="ticket.id"
             draggable="true"
-            class="p-3 bg-white border rounded-lg cursor-pointer dark:bg-slate-800 border-slate-75 dark:border-slate-700 hover:shadow"
+            class="p-3 bg-white border rounded-lg cursor-pointer dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-woot-200 hover:shadow-sm dark:hover:border-woot-700"
+            :class="
+              isCardOverdue(ticket)
+                ? 'border-l-[3px] !border-l-red-500 dark:!border-l-red-400'
+                : ''
+            "
             @dragstart="onDragStart(ticket, $event)"
             @dragend="onDragEnd"
             @click="openDetail(ticket)"
           >
-            <div class="flex items-center justify-between mb-1">
+            <!-- Folio + solo la excepción (lo normal no se marca) -->
+            <div class="flex items-center justify-between gap-2 mb-1">
               <span
                 class="font-mono text-xs text-slate-500 dark:text-slate-400"
               >
                 {{ ticket.folio || `#${ticket.id}` }}
               </span>
               <span
-                class="px-1.5 py-0.5 text-[10px] rounded"
-                :class="slaBadge(ticket.sla_status)"
+                v-if="cardAlert(ticket)"
+                class="px-2 py-0.5 text-[11px] font-medium rounded-full whitespace-nowrap truncate"
+                :class="cardAlert(ticket).cls"
               >
-                {{ statusLabel(ticket.sla_status) }}
+                {{ cardAlert(ticket).label }}
               </span>
             </div>
             <p
               v-if="cardHeading(ticket)"
-              class="flex items-center gap-1 m-0 text-sm font-medium text-slate-800 dark:text-slate-100"
+              class="flex items-center gap-1 m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
             >
               <fluent-icon
                 v-if="cardHeadingIcon(ticket)"
@@ -636,38 +948,174 @@ export default {
                 {{ cardSubheading(ticket) }}
               </span>
             </p>
+            <!-- Asunto: hasta 2 líneas -->
             <p
               v-if="cardTitle(ticket)"
-              class="m-0 mt-1 mb-2 text-xs truncate text-slate-600 dark:text-slate-300"
+              class="m-0 mt-1 text-[13px] leading-snug text-slate-600 dark:text-slate-300 line-clamp-2"
               :title="cardTitle(ticket)"
             >
               {{ cardTitle(ticket) }}
             </p>
-            <div class="flex items-center gap-2 text-xs text-slate-500">
+
+            <!-- Línea propia de la clase -->
+            <div
+              v-if="ticket.is_commercial"
+              class="flex items-center gap-2 mt-2 text-xs"
+            >
               <span
-                class="inline-block w-2 h-2 rounded-full"
-                :class="priorityDot(ticket.priority)"
-                :title="priorityOptions[ticket.priority]"
-              />
+                class="text-sm font-bold tabular-nums text-slate-800 dark:text-slate-100"
+              >
+                {{ money(ticket.amount, ticket.currency) }}
+              </span>
               <span
-                v-if="ticket.ticket_kind"
-                class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 dark:text-slate-300"
+                v-if="ticket.probability !== null"
+                class="inline-flex items-center gap-1"
+              >
+                <span
+                  class="inline-block w-8 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700"
+                >
+                  <span
+                    class="block h-full rounded-full bg-violet-500"
+                    :style="{ width: `${Math.min(100, ticket.probability)}%` }"
+                  />
+                </span>
+                <span class="tabular-nums text-slate-500 dark:text-slate-400"
+                  >{{ ticket.probability }}%</span
+                >
+              </span>
+              <span
+                v-if="ticket.expected_close_at"
+                class="inline-flex items-center gap-1 ml-auto tabular-nums"
+                :class="
+                  closeOverdue(ticket)
+                    ? 'font-semibold text-red-600 dark:text-red-400'
+                    : 'text-slate-500 dark:text-slate-400'
+                "
+                :title="$t('CASE_TICKETS.COMMERCIAL.FIELDS.EXPECTED_CLOSE')"
+              >
+                <fluent-icon icon="calendar" size="12" />
+                {{ day(ticket.expected_close_at) }}
+              </span>
+            </div>
+            <div
+              v-else-if="ticket.is_work_order"
+              class="flex items-center gap-2 mt-2 text-xs"
+            >
+              <span
+                class="inline-flex items-center gap-1 tabular-nums"
+                :class="
+                  ticket.visit_overdue
+                    ? 'font-semibold text-red-600 dark:text-red-400'
+                    : 'text-slate-500 dark:text-slate-400'
+                "
+                :title="$t('CASE_TICKETS.WORK_ORDER.TABLE.NEXT_VISIT')"
+              >
+                <fluent-icon icon="calendar" size="12" />
+                {{
+                  ticket.visit_overdue
+                    ? $t('CASE_TICKETS.WORK_ORDER.VISIT.OVERDUE')
+                    : ticket.next_visit_at
+                    ? day(ticket.next_visit_at)
+                    : $t('CASE_TICKETS.WORK_ORDER.VISIT.NONE')
+                }}
+              </span>
+              <span
+                class="ml-auto tabular-nums text-slate-500 dark:text-slate-400"
+                :title="$t('CASE_TICKETS.WORK_ORDER.TABLE.HOURS')"
+              >
+                {{ hours(ticket.actual_hours) }} /
+                {{ hours(ticket.estimated_hours) }}
+              </span>
+            </div>
+            <!-- Plan-Clase-Proyecto P1 — fecha objetivo y avance -->
+            <div
+              v-else-if="ticket.is_project"
+              class="flex items-center gap-2 mt-2 text-xs"
+            >
+              <span
+                class="inline-flex items-center gap-1 tabular-nums"
+                :class="
+                  ticket.project_overdue
+                    ? 'font-semibold text-red-600 dark:text-red-400'
+                    : 'text-slate-500 dark:text-slate-400'
+                "
+                :title="$t('CASE_TICKETS.PROJECT.TABLE.DUE')"
+              >
+                <fluent-icon icon="calendar" size="12" />
+                {{ ticket.project_due_on ? day(ticket.project_due_on) : '—' }}
+              </span>
+              <span
+                v-if="ticket.progress !== null"
+                class="inline-flex items-center gap-1 ml-auto"
+                :title="$t('CASE_TICKETS.PROJECT.TABLE.PROGRESS')"
+              >
+                <span
+                  class="inline-block w-10 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700"
+                >
+                  <span
+                    class="block h-full rounded-full bg-indigo-500"
+                    :style="{ width: `${Math.min(100, ticket.progress)}%` }"
+                  />
+                </span>
+                <span class="tabular-nums text-slate-500 dark:text-slate-400"
+                  >{{ ticket.progress }}%</span
+                >
+              </span>
+            </div>
+            <div
+              v-else-if="ticket.due_at"
+              class="flex items-center gap-1 mt-2 text-xs tabular-nums"
+              :class="
+                ticket.due_overdue
+                  ? 'font-semibold text-red-600 dark:text-red-400'
+                  : 'text-slate-500 dark:text-slate-400'
+              "
+              :title="$t('CASE_TICKETS.TABLE.DUE')"
+            >
+              <fluent-icon icon="calendar" size="12" />
+              {{ day(ticket.due_at) }}
+            </div>
+
+            <!-- Pie: prioridad (solo Alta / Urgente), naturaleza ITIL, responsable -->
+            <div class="flex items-center gap-2 mt-2 text-xs">
+              <span
+                v-if="priorityPill(ticket.priority)"
+                class="px-2 py-0.5 text-[11px] rounded-full"
+                :class="priorityPill(ticket.priority)"
+              >
+                {{ priorityOptions[ticket.priority] }}
+              </span>
+              <!-- Naturaleza ITIL: solo si el tipo usa ITIL (si no, todo caso
+                   trae «Solicitud de servicio» por defecto y no dice nada). -->
+              <span
+                v-if="
+                  ticket.ticket_kind &&
+                  ticket.case_type &&
+                  ticket.case_type.itil_enabled
+                "
+                class="px-2 py-0.5 text-[11px] rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
               >
                 {{ kindLabel(ticket.ticket_kind) }}
               </span>
               <span
                 v-if="assigneeName(ticket)"
-                class="ml-auto truncate max-w-[7rem]"
+                class="inline-flex items-center min-w-0 gap-1.5 ml-auto text-slate-600 dark:text-slate-300"
               >
-                {{ assigneeName(ticket) }}
+                <span
+                  class="inline-flex items-center justify-center flex-shrink-0 w-5 h-5 text-[10px] font-semibold rounded-full bg-woot-50 text-woot-700 dark:bg-woot-800/40 dark:text-woot-200"
+                  >{{ initials(assigneeName(ticket)) }}</span
+                >
+                <span class="truncate max-w-[7rem]">{{
+                  assigneeName(ticket)
+                }}</span>
               </span>
             </div>
           </div>
           <p
             v-if="!grouped[col.key].length"
-            class="px-2 py-4 text-xs text-center text-slate-400"
+            class="px-2 py-4 text-xs text-center text-slate-400 dark:text-slate-500"
           >
-            —
+            {{ $t('CASE_TICKETS.KANBAN.EMPTY_COLUMN') }}
           </p>
         </div>
       </div>
@@ -780,10 +1228,29 @@ export default {
       </div>
     </woot-modal>
 
+    <!-- Plan-Clase-Comercial F4 — datos que pide el embudo al soltar -->
+    <OutcomeModal
+      v-if="outcomeMove"
+      show
+      :folio="outcomeMove.ticket.folio || `#${outcomeMove.ticket.id}`"
+      :outcome="outcomeMove.outcome"
+      @close="outcomeMove = null"
+      @confirm="confirmOutcomeMove"
+    />
+    <PostponeModal
+      v-if="postponeMove"
+      show
+      :folio="postponeMove.ticket.folio || `#${postponeMove.ticket.id}`"
+      @close="postponeMove = null"
+      @confirm="confirmPostponeMove"
+    />
+
     <!-- @tickets_cases Fase C — modal de alta de ticket interno -->
     <CaseTicketInternalModal
       v-if="showInternalModal"
       :show="showInternalModal"
+      :case-class="caseClass"
+      :preset-type-id="filters.case_type_id"
       @created="onInternalCreated"
       @close="showInternalModal = false"
     />

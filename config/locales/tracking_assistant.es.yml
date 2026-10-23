@@ -58,11 +58,12 @@ es:
         @agendar_calendar no va a agendar nada. Asígnale un calendario en la ficha del Agente IA:
         tener el calendario conectado en la cuenta no alcanza, el motor lo busca en el agente.
     analysis:
+      configure: '**Falta configurar en tu cuenta** (%{count}): datos del negocio, fuentes, etiquetas o archivos que este Entrenamiento usa y tu cuenta no tiene. Resuélvelo en la pestaña «Configurar», junto a Entrenamiento: ahí lo creas, eliges uno tuyo o escribes el valor.'
       header: '**Lo que marca el comprobador** (%{count}):'
       clean: '**El comprobador no marca nada:** el motor lee y ejecuta todo lo que está escrito.'
       line: 'línea %{line} %{wrote}'
       groups:
-        labels: '**Etiquetas que no existen en la cuenta** (%{count}): no disparan ninguna automatización. Créalas en Etiquetas o cámbialas por una que exista.'
+        labels: '**Etiquetas que no existen en la cuenta** (%{count}): una persona tiene que ponerlas en la conversación. Créalas en Etiquetas.'
         loose: '**Directivas en la prosa que no se ejecutan** (%{count}): la búsqueda la hace el motor según la ruta. Nombra «la información consultada» en vez de la directiva.'
         nothing: '**Rutas que no consultan nada ni tienen «si no resuelve»** (%{count}): contestan solo con el Entrenamiento. Si es a propósito (saludo, despedida, pedir datos), déjalas así.'
         bare_tags: '**Etiquetas sueltas, sin significado** (%{count}): el agente las pega a todas sus respuestas. Escríbelas como diccionario («#x = cuándo se usa») o bórralas.'
@@ -140,9 +141,6 @@ es:
         Línea %{line}: %{tags} está suelta, sin decir qué significa. El agente la va a pegar a todas sus
         respuestas (pasó en una conversación real con #humano). Escríbela como diccionario —
         %{tags} = cuándo se usa— o bórrala: la etiqueta de cada ruta el motor la pone solo.
-      state_label_not_found: >-
-        La etiqueta %{tag} del Entrenamiento no existe en la cuenta: si el agente la usa, no dispara
-        ninguna automatización. Créala en Etiquetas o cámbiala por una que exista.
       promised_action_missing:
         calendar: >-
           Línea %{line}: «%{route}» dice que agenda, mueve o cancela citas, pero el Entrenamiento no tiene
@@ -197,10 +195,6 @@ es:
         La ruta '%{route}' no tiene descripción. La descripción es LO ÚNICO que el clasificador usa
         para decidir a qué ruta va un mensaje: sin ella, esta ruta casi nunca se va a elegir.
         Escríbela como lista de situaciones, en las palabras del cliente.
-      label_not_found: >-
-        La etiqueta %{tag} de la ruta '%{route}' no existe en la cuenta, así que no va a disparar
-        ninguna automatización. Hay que crearla en Etiquetas o usar una de las existentes: %{available}.
-      label_none_created: (no hay etiquetas creadas)
       erp_directive_not_isolated: >-
         Hay una directiva {{consulta:}} sin "?" que no es la fuente de una ruta, conviviendo con rutas o
         con prosa. El motor manda el Entrenamiento ENTERO interpolado como mensaje al cliente. Ponla como

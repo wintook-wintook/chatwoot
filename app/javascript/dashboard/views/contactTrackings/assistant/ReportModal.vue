@@ -44,7 +44,9 @@ export default {
   <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
     <div class="flex flex-col gap-3 p-8 text-sm max-h-[85vh]">
       <div class="flex flex-wrap items-center gap-3 shrink-0">
-        <h2 class="!m-0 text-lg font-medium text-slate-800 dark:text-slate-100">
+        <h2
+          class="!m-0 text-base font-semibold leading-6 text-slate-800 dark:text-slate-50"
+        >
           {{ $t('TRACKING_ASSISTANT_VIEW.REPORT_TITLE') }}
         </h2>
         <ValidationBadge

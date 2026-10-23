@@ -195,6 +195,25 @@
         "LABEL": "Confirm new password",
         "ERROR": "Password confirmation must match the password",
         "PLACEHOLDER": "Please re-enter your new password"
+      },
+      "LANDING": {
+        "TITLE": "When you sign in, go to",
+        "NOTE": "The page you see first when you open Kontrolya.",
+        "SAVED": "Done: next time you sign in you'll go there",
+        "OPTIONS": {
+          "summary": {
+            "LABEL": "Home (My summary)",
+            "HINT": "Your notices, the most urgent of My day, your agenda, your conversations and your cases"
+          },
+          "conversations": {
+            "LABEL": "Conversations",
+            "HINT": "The conversations inbox, as always"
+          },
+          "my_day": {
+            "LABEL": "My day",
+            "HINT": "Your tasks in the order it makes sense to do them"
+          }
+        }
       }
     }
   },
@@ -250,6 +269,28 @@
     }
   },
   "SIDEBAR": {
+    "SALES": "Sales",
+    "SERVICE": "Service",
+    "AGENDA": "Schedule",
+    "CLIENTS": "Customers",
+    "AI_AGENTS": "AI agents",
+    "SETTINGS_V2": "Settings",
+    "MY_SUMMARY": "My summary",
+    "MY_NOTICES": "My notices",
+    "MY_BUSINESS": "My business",
+    "INBOX_VIEW_V2": "Inbox view",
+    "CONTACT_FUNNEL": "Contact funnel",
+    "OPPORTUNITIES": "Opportunities",
+    "OPPORTUNITY_BOARD": "Opportunity board",
+    "SALES_METRICS": "Sales metrics",
+    "SERVICE_CASES": "Cases",
+    "SERVICE_BOARD": "Board",
+    "SERVICE_METRICS": "Metrics",
+    "TASKS_V2": "Tasks",
+    "CALENDAR": "Calendar",
+    "ASSISTANT": "Assistant (Captain)",
+    "CONTACT_FUNNELS": "Contact funnels",
+    "CASES_AND_STAGES": "Cases and stages",
     "CURRENTLY_VIEWING_ACCOUNT": "Currently viewing:",
     "SWITCH": "Switch",
     "INBOX_VIEW": "Inbox View",
@@ -263,7 +304,7 @@
     "SETTINGS": "Settings",
     "CHATGPT": "ChatGPT Training",
     "CONTACTS": "Contacts",
-    "KANBAN": "Conversations Board",
+    "KANBAN": "Contact funnel",
     "TICKETS": "Cases",
     "TRACKING_DASHBOARD": "Follow-up Agent",
     "TRACKING_LIST": "All follow-ups",
@@ -285,14 +326,16 @@
     "TICKET_SLA": "SLA",
     "TICKET_AI": "Artificial Intelligence",
     "TICKET_PORTALS": "Customer portals",
+    "TICKET_COMMERCIAL_SETTINGS": "Commercial",
+    "TICKET_TASK_SETTINGS": "Tasks",
     "TICKET_SETTINGS": "Module settings",
     "TICKET_CONFIG": "Folio settings",
     "TICKET_GROUP_DEFINITIONS": "Definitions",
     "TICKET_GROUP_AUTOMATION": "Automation & AI",
     "TICKET_GROUP_SETTINGS": "Settings",
-    "ALL_KANBAN": "All Conversations Board",
-    "TIPO_DE_PROCESO": "Available Conversations",
-    "NEW_KANBAN_TYPE": "Add Conversations",
+    "ALL_KANBAN": "All funnels",
+    "TIPO_DE_PROCESO": "Available funnels",
+    "NEW_KANBAN_TYPE": "Add funnel",
     "CAPTAIN": "Captain",
     "HOME": "Home",
     "AGENTS": "Agents",
@@ -355,7 +398,14 @@
       "TEXT": "Set as offline automatically",
       "INFO_TEXT": "Let the system automatically mark you as offline when you are not using the app or dashboard."
     },
-    "DOCS": "Read docs"
+    "DOCS": "Read docs",
+    "CASES_LIST": "List",
+    "CASES_BOARD": "Board",
+    "CASES_METRICS": "Metrics",
+    "CASES_GROUP_CONFIG": "Settings",
+    "BUSINESS_SUMMARY": "Business summary",
+    "BUSINESS_SUMMARY_ACCESS": "Business summary: access",
+    "HOME_SUMMARY": "Home"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Billing",

@@ -28,6 +28,12 @@ module ContactTrackings
       def perform
         # Encontrar todos los tracking que deben ejecutarse
         due_trackings = ContactTracking.due_for_execution
+        # proyecto@automatizacion_campanas — Fase 2: las cuentas con despachador las atiende
+        # TrackingDispatch::DispatchJob.
+        dispatcher_accounts = TrackingDispatch::Settings.account_scope
+        return if dispatcher_accounts == :all
+
+        due_trackings = due_trackings.where.not(account_id: dispatcher_accounts) if dispatcher_accounts.any?
   
         Rails.logger.info("proyecto@contact_tracking - ExecutePendingJob: Found #{due_trackings.count} trackings to execute")
   

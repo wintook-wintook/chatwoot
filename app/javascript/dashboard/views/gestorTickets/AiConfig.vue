@@ -13,6 +13,9 @@ const IMPLEMENTED = [
   'summarize',
   'duplicate',
   'follow_up',
+  'day_plan', // Plan-Bandeja-Prioridad F4
+  'business_summary', // Resumen del negocio — «Explícame la semana»
+  'conversation_analysis', // Resumen del negocio — análisis de conversaciones
 ];
 
 export default {

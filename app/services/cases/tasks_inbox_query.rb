@@ -23,15 +23,18 @@
 class Cases::TasksInboxQuery
   PER_PAGE = 25
 
-  MERGE_SORTABLE_FIELDS = %w[sequence title priority requester assignee due_at status ticket].freeze
+  MERGE_SORTABLE_FIELDS = %w[sequence title priority requester assignee due_at planned_on status ticket].freeze
 
   def initialize(account:, current_user:, params:)
+    @account = account
     @params = params
     @task_scope = TaskScope.new(account: account, current_user: current_user, params: params)
     @meeting_scope = MeetingScope.new(account: account, current_user: current_user, params: params)
   end
 
   def call
+    return my_day if params[:mode] == 'my_day'
+
     case params[:item_type]
     when 'meeting' then paginate_single(@meeting_scope, :meeting)
     when 'task' then paginate_single(@task_scope, :task)
@@ -41,7 +44,77 @@ class Cases::TasksInboxQuery
 
   private
 
-  attr_reader :params
+  attr_reader :params, :account
+
+  # Plan-Bandeja-Prioridad F1 — «Mi día»: las tareas PENDIENTES del agente por
+  # puntaje de urgencia (Cases::TaskPriorityScore), más las reuniones de hoy
+  # (agenda, no entran al ranking) y la carga del día (vencidas + hoy).
+  # Devuelve además `scores` (id → { score:, reasons: }) para serializar.
+  # F2 — primero el plan del agente para ese día (lo programado para hoy, en su
+  # orden), luego el resto por puntaje. Lo programado para DESPUÉS no aparece
+  # (solo se cuenta); lo programado para un día pasado vuelve al resto
+  # (`missed`). `new_urgent`: urgentes que llegaron después de armar el plan.
+  def my_day
+    tasks = @task_scope.filtered.pending.includes(*@task_scope.includes, case_ticket: :case_type).to_a
+    scores = Cases::TaskPriorityScore.new(tasks, account: account, day: day).call
+    planned, later, rest = split_plan(tasks)
+    ranked = planned + rank(rest, scores)
+
+    { rows: page_of(ranked).map { |t| [t, :task] }, total: ranked.size, page: page, scores: scores,
+      agenda: today_meetings, load: day_load(tasks).merge(plan_load(planned)) }
+      .merge(plan_meta(planned, later, rest, scores))
+  end
+
+  def page_of(list)
+    list.drop((page - 1) * PER_PAGE).first(PER_PAGE)
+  end
+
+  def plan_meta(planned, later, rest, scores)
+    { planned_ids: planned.map(&:id), later_count: later.size,
+      missed: rest.select { |t| t.planned_on && t.planned_on < day }.map(&:id),
+      new_urgent: new_urgent(planned, rest, scores) }
+  end
+
+  def day
+    @day ||= Cases::MyDayPlan.day_from(params[:day])
+  end
+
+  # → [hoy en su orden (sin posición al final), después, el resto]
+  def split_plan(tasks)
+    planned = tasks.select { |t| t.planned_on == day }
+    later = tasks.select { |t| t.planned_on && t.planned_on > day }
+    [planned.sort_by { |t| [t.focus_position ? 0 : 1, t.focus_position.to_i, t.id] }, later, tasks - planned - later]
+  end
+
+  def plan_load(planned)
+    { plan_minutes: planned.sum { |t| t.estimated_minutes.to_i },
+      plan_unestimated: planned.count { |t| t.estimated_minutes.nil? } }
+  end
+
+  def new_urgent(planned, rest, scores)
+    since = planned.filter_map(&:focused_at).min
+    return [] unless since
+
+    threshold = Cases::TaskPriorityScore.weights_for(account)[:urgent_score]
+    rest.select { |t| t.created_at > since && scores[t.id][:score] >= threshold }.map(&:id)
+  end
+
+  # Mayor puntaje primero; empate → la que vence antes (sin fecha al final).
+  def rank(tasks, scores)
+    tasks.sort_by { |t| [-scores[t.id][:score], t.due_at || Time.zone.at(2**31), t.id] }
+  end
+
+  def today_meetings
+    @meeting_scope.filtered_without_due.where(starts_at: Time.zone.today.all_day)
+                  .includes(*@meeting_scope.includes, case_ticket: :case_type).order(:starts_at).to_a
+  end
+
+  # Lo que hay que sacar hoy: vencidas + las que vencen hoy.
+  def day_load(tasks)
+    due = tasks.select { |t| t.due_at && t.due_at <= Time.zone.today.end_of_day }
+    { count: due.size, minutes: due.sum { |t| t.estimated_minutes.to_i },
+      unestimated: due.count { |t| t.estimated_minutes.nil? } }
+  end
 
   def page
     @page ||= [params[:page].to_i, 1].max
@@ -93,6 +166,7 @@ class Cases::TasksInboxQuery::TaskScope
     'priority' => 'case_tasks.priority',
     'status' => 'case_tasks.status',
     'due_at' => 'case_tasks.due_at',
+    'planned_on' => 'case_tasks.planned_on',
     'ticket' => 'case_tickets.folio',
     'assignee' => 'assignee_users.name',
     'requester' => 'requester_users.name'
@@ -105,6 +179,7 @@ class Cases::TasksInboxQuery::TaskScope
     'requester' => ->(t) { t.requester&.name&.downcase },
     'assignee' => ->(t) { t.assignee&.name&.downcase },
     'due_at' => ->(t) { t.due_at },
+    'planned_on' => ->(t) { t.planned_on },
     'status' => ->(t) { t.status },
     'ticket' => ->(t) { t.case_ticket&.folio }
   }.freeze
@@ -259,10 +334,14 @@ class Cases::TasksInboxQuery::MeetingScope
   end
 
   def filtered
+    filter_due(filtered_without_due)
+  end
+
+  # «Mi día» pide la agenda de hoy con los demás filtros (sin el de «Vence»).
+  def filtered_without_due
     scope = filter_assignee(base_scope)
     scope = filter_requester(scope)
     scope = filter_status(scope)
-    scope = filter_due(scope)
     scope = filter_case_type(scope)
     filter_search(scope)
   end

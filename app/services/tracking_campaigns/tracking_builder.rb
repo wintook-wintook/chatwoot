@@ -7,10 +7,14 @@
 # y la automatización (TrackingCampaigns::Enroll):
 #
 #   · el canal es SIEMPRE el inbox de la campaña: se reusa una conversación del contacto
-#     en ese inbox si la hay; si no, se abre una nueva con una nota privada;
+#     en ese inbox si la hay. Si no la hay, NO se abre al inscribir (Fase 2, plan §13 paso
+#     2.7): ContactTrackingJob la abre con #open_conversation cuando sale el primer mensaje.
+#     Así una campaña de 1,000 contactos programada para mañana no deja hoy 1,000
+#     conversaciones abiertas y asignadas;
 #   · el seguimiento copia la configuración de la plantilla (Agente IA) de la campaña;
 #   · se encola ContactTrackingJob para la hora calculada (ExecutePendingJob también lo
-#     toma a su hora, como siempre).
+#     toma a su hora, como siempre). Con despachador (TrackingDispatch) no se encola nada:
+#     TrackingDispatch::DispatchJob lo toma a su hora.
 # ================================================================================
 class TrackingCampaigns::TrackingBuilder
   DEFAULT_MAX_ATTEMPTS = 3
@@ -37,10 +41,26 @@ class TrackingCampaigns::TrackingBuilder
   # El id del ContactTracking creado, programado para `scheduled_for`.
   def create!(scheduled_for:)
     @scheduled_for = scheduled_for
-    conversation_id = existing_conversation&.id || open_conversation&.id
-    tracking_id = insert_tracking(conversation_id)
-    ContactTrackingJob.set(wait_until: @scheduled_for).perform_later(tracking_id)
+    tracking_id = insert_tracking(existing_conversation&.id)
+    ContactTrackingJob.set(wait_until: @scheduled_for).perform_later(tracking_id) unless TrackingDispatch.enabled_for?(@account.id)
     tracking_id
+  end
+
+  # Abre la conversación del contacto en el inbox de la campaña, asignada al agente y con la
+  # nota privada. La usa ContactTrackingJob al enviar el primer mensaje. nil si no se pudo.
+  def open_conversation
+    return nil unless @agent
+
+    contact_inbox = ContactInboxBuilder.new(contact: @contact, inbox: @campaign.inbox).perform
+    conversation = ConversationBuilder.new(
+      params: ActionController::Parameters.new(assignee_id: @agent.id),
+      contact_inbox: contact_inbox
+    ).perform
+    Messages::MessageBuilder.new(@agent, conversation, { content: @note, private: true }).perform
+    conversation
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingCampaigns::TrackingBuilder] No se pudo abrir conversación: #{e.message}"
+    nil
   end
 
   private
@@ -61,11 +81,20 @@ class TrackingCampaigns::TrackingBuilder
   end
   # rubocop:enable Rails/SkipsModelValidations
 
+  # Los intentos los define el Agente IA, igual que en la acción "Asignar Agente IA"
+  # (ActionService#assign_tracking_template): uno por plantilla WhatsApp; sin plantillas,
+  # DEFAULT_MAX_ATTEMPTS mensajes con IA. Con un número fijo, un agente con menos
+  # plantillas que intentos dejaba seguimientos que no pasan la validación y nunca salían.
+  def max_attempts
+    count = Array(template.whatsapp_templates).count(&:present?)
+    count.zero? ? DEFAULT_MAX_ATTEMPTS : count.clamp(1, 10)
+  end
+
   def tracking_attributes(conversation_id)
     {
       account_id: @account.id, contact_id: @contact.id, inbox_id: @campaign.inbox_id, conversation_id: conversation_id,
       tracking_template_id: template.id, tracking_campaign_id: @campaign.id, objective: template.objective,
-      scheduled_for: @scheduled_for, max_attempts: DEFAULT_MAX_ATTEMPTS, attempt_count: 0,
+      scheduled_for: @scheduled_for, max_attempts: max_attempts, attempt_count: 0,
       retry_interval_value: template.retry_interval_value || 30, retry_interval_unit: template.retry_interval_unit || 'minutes',
       ai_context: template.ai_context, complementary_prompt: template.complementary_prompt,
       whatsapp_templates: template.whatsapp_templates || [], keyword_actions: template.keyword_actions || [],
@@ -73,20 +102,5 @@ class TrackingCampaigns::TrackingBuilder
       calendar_event_duration: template.calendar_event_duration || 30,
       response_adjustments_count: 0, status: 'pending'
     }
-  end
-
-  def open_conversation
-    return nil unless @agent
-
-    contact_inbox = ContactInboxBuilder.new(contact: @contact, inbox: @campaign.inbox).perform
-    conversation = ConversationBuilder.new(
-      params: ActionController::Parameters.new(assignee_id: @agent.id),
-      contact_inbox: contact_inbox
-    ).perform
-    Messages::MessageBuilder.new(@agent, conversation, { content: @note, private: true }).perform
-    conversation
-  rescue StandardError => e
-    Rails.logger.warn "[TrackingCampaigns::TrackingBuilder] No se pudo abrir conversación: #{e.message}"
-    nil
   end
 end

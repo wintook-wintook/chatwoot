@@ -12,6 +12,8 @@
 #  mode                  :string           default("batch"), not null
 #  name                  :string           not null
 #  objective             :string
+#  paused_at             :datetime
+#  paused_reason         :string
 #  respect_working_hours :boolean          default(TRUE), not null
 #  scheduled_for         :datetime
 #  status                :string           default("running"), not null
@@ -35,7 +37,7 @@
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (inbox_id => inboxes.id)
 #  fk_rails_...  (tracking_template_id => tracking_templates.id)
-#  fk_rails_...  (user_id => users.id)
+#  fk_rails_...  (user_id => users.id) ON DELETE => nullify
 #
 
 # ================================================================================
@@ -51,10 +53,13 @@
 #   continuous  Continua: audiencia dinámica, la inscriben las automatizaciones.
 # `scheduled_for` es el INICIO de la ventana y `ends_at` su fin (opcional). Cada contacto
 # que entra, o que se intentó meter, es una TrackingCampaignEntry.
+#
+# Guardada (saved): la campaña existe pero no corre — no inscribe a nadie (ni por lote ni
+# por automatización) hasta que alguien la pone en curso (TrackingCampaigns::Launch).
 # ================================================================================
 
 class TrackingCampaign < ApplicationRecord
-  STATUSES = %w[draft running paused finished].freeze
+  STATUSES = %w[saved draft running paused finished].freeze
   MODES = %w[batch continuous].freeze
 
   belongs_to :account
@@ -76,10 +81,19 @@ class TrackingCampaign < ApplicationRecord
   validates :daily_cap, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validate :window_order
 
-  scope :active, -> { where(status: %w[draft running paused]) }
+  scope :active, -> { where(status: %w[saved draft running paused]) }
+
+  # Estado al ponerla en curso: inicio futuro → Programada (la abre WindowJob); si no, En curso.
+  def self.status_for(starts, now = Time.current)
+    starts > now ? 'draft' : 'running'
+  end
 
   def continuous?
     mode == 'continuous'
+  end
+
+  def saved?
+    status == 'saved'
   end
 
   # ¿La ventana acepta inscripciones en este momento? Pausada y terminada, nunca; antes del

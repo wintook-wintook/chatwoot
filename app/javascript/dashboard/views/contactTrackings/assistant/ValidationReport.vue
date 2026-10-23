@@ -23,8 +23,9 @@
 // ============================================================================
 import CreateLabelButton from './CreateLabelButton.vue';
 
-// Avisos de una etiqueta que la cuenta no tiene: se puede crear desde aquí.
-const LABEL_CODES = ['label_not_found', 'state_label_not_found'];
+// Avisos de una etiqueta que la cuenta no tiene: se puede crear desde aquí. Solo queda
+// pago_confirmado (@confirmar_servicio): las de las rutas y [ETIQUETAS] ya no se revisan.
+const LABEL_CODES = ['state_label_not_found'];
 
 export default {
   components: { CreateLabelButton },
@@ -56,7 +57,7 @@ export default {
 
 <template>
   <div>
-    <p v-if="!validation" class="text-xs text-slate-500 dark:text-slate-400">
+    <p v-if="!validation" class="text-sm text-slate-600 dark:text-slate-300">
       {{ $t('TRACKING_ASSISTANT_VIEW.REPORT_EMPTY') }}
     </p>
 
@@ -94,7 +95,7 @@ export default {
 
     <p
       v-if="validation && validation.default_route"
-      class="text-xs text-slate-500 dark:text-slate-400 mb-3"
+      class="text-sm text-slate-600 dark:text-slate-300 mb-3"
     >
       {{ $t('TRACKING_ASSISTANT_VIEW.REPORT_DEFAULT') }}:
       {{ validation.default_route }}

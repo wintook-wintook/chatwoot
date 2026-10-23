@@ -9,6 +9,7 @@
 <script>
 import { mapGetters } from 'vuex';
 import draggable from 'vuedraggable';
+import StageTasksModal from './StageTasksModal.vue';
 
 // Los 13 estados del ciclo de vida (mismo orden del enum).
 const STATUS_KEYS = [
@@ -44,7 +45,7 @@ const nextKey = () => {
 
 export default {
   name: 'ColumnsTab',
-  components: { Draggable: draggable },
+  components: { Draggable: draggable, StageTasksModal },
   props: {
     caseTypeId: {
       type: Number,
@@ -60,6 +61,8 @@ export default {
       showModal: false,
       editingIndex: null,
       modalForm: { label: '', color: COLUMN_PALETTE[0], statuses: [] },
+      // Plan-Plantilla-Tareas-Etapa — etapa cuya plantilla de tareas se edita.
+      tasksColumn: null,
     };
   },
   computed: {
@@ -125,6 +128,12 @@ export default {
         label: c.label,
         color: c.color || COLUMN_PALETTE[i % COLUMN_PALETTE.length],
         statuses: [...(c.statuses || [])],
+        advance_mode: c.advance_mode || 'suggest',
+        tasks_count: c.tasks_count || 0,
+        // T4 — qué mueve la etapa (obligatorias, reglas que traen casos, avisos).
+        required_count: c.required_count || 0,
+        rules_in: c.rules_in || [],
+        warnings: c.warnings || [],
       }));
       this.dirty = false;
     },
@@ -180,6 +189,40 @@ export default {
       }
       this.dirty = true;
       this.closeModal();
+    },
+    // Plan-Plantilla-Tareas-Etapa — la plantilla se guarda al momento, así que
+    // solo se abre en etapas ya guardadas (con id).
+    openTasks(col) {
+      if (!col.id) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.COLUMNS_CFG.TASKS.SAVE_FIRST'),
+        });
+        return;
+      }
+      this.tasksColumn = col;
+    },
+    // Una etapa de caso cerrado no lleva tareas: ahí son de solo lectura.
+    closedOnly(col) {
+      const statuses = col.statuses || [];
+      return (
+        !!statuses.length &&
+        statuses.every(s => ['closed', 'cancelled'].includes(s))
+      );
+    },
+    onTasksChanged({
+      tasks_count: count,
+      required_count: required,
+      advance_mode: mode,
+    }) {
+      if (!this.tasksColumn) return;
+      this.tasksColumn.tasks_count = count;
+      this.tasksColumn.required_count = required;
+      this.tasksColumn.advance_mode = mode;
+    },
+    // T4 — cómo sale el caso de la etapa: a mano si no hay obligatorias.
+    exitKey(col) {
+      if (col.advance_mode === 'manual' || !col.required_count) return 'manual';
+      return col.advance_mode;
     },
     remove(index) {
       this.draft.splice(index, 1);
@@ -310,6 +353,9 @@ export default {
               <th class="text-left">
                 {{ $t('CASE_TICKETS.COLUMNS_CFG.STATES_SUMMARY') }}
               </th>
+              <th class="text-left">
+                {{ $t('CASE_TICKETS.COLUMNS_CFG.TASKS.HEADER') }}
+              </th>
               <th class="w-24" />
             </tr>
           </thead>
@@ -373,6 +419,68 @@ export default {
                 }}</span>
               </td>
               <td>
+                <span
+                  v-if="closedOnly(col)"
+                  class="text-xs text-slate-400 dark:text-slate-500"
+                  :title="$t('CASE_TICKETS.COLUMNS_CFG.TASKS.CLOSED_STAGE')"
+                  >—</span
+                >
+                <woot-button
+                  v-else
+                  size="tiny"
+                  variant="smooth"
+                  color-scheme="secondary"
+                  icon="checkmark-circle"
+                  @click="openTasks(col)"
+                >
+                  {{
+                    $t('CASE_TICKETS.COLUMNS_CFG.TASKS.BUTTON', {
+                      count: col.tasks_count || 0,
+                    })
+                  }}
+                </woot-button>
+                <span
+                  v-if="col.id && !closedOnly(col)"
+                  class="block mt-1 text-[11px]"
+                  :class="{
+                    'text-green-700 dark:text-green-400':
+                      exitKey(col) === 'automatic',
+                    'text-amber-700 dark:text-amber-300':
+                      exitKey(col) === 'suggest',
+                    'text-slate-500 dark:text-slate-400':
+                      exitKey(col) === 'manual',
+                  }"
+                >
+                  {{
+                    $t(`CASE_TICKETS.COLUMNS_CFG.TASKS.EXIT.${exitKey(col)}`, {
+                      count: col.required_count,
+                    })
+                  }}
+                </span>
+                <span
+                  v-for="r in col.rules_in || []"
+                  :key="`in-${r.id}-${r.status}`"
+                  class="block mt-0.5 text-[11px] text-slate-500 dark:text-slate-400"
+                >
+                  {{
+                    $t('CASE_TICKETS.COLUMNS_CFG.TASKS.RULE_IN', {
+                      rule: r.name,
+                    })
+                  }}
+                </span>
+                <span
+                  v-for="w in col.warnings || []"
+                  :key="`warn-${w.id}`"
+                  class="block mt-0.5 text-[11px] font-medium text-red-600 dark:text-red-400"
+                >
+                  {{
+                    $t('CASE_TICKETS.COLUMNS_CFG.TASKS.CONFLICT', {
+                      rule: w.name,
+                    })
+                  }}
+                </span>
+              </td>
+              <td>
                 <div class="flex items-center justify-end gap-1">
                   <woot-button
                     size="tiny"
@@ -429,6 +537,16 @@ export default {
         </div>
       </div>
     </div>
+
+    <!-- Plan-Plantilla-Tareas-Etapa — plantilla de tareas de la etapa -->
+    <StageTasksModal
+      v-if="tasksColumn"
+      :show="!!tasksColumn"
+      :case-type-id="caseTypeId"
+      :column="tasksColumn"
+      @changed="onTasksChanged"
+      @close="tasksColumn = null"
+    />
 
     <!-- Modal alta/edición de columna -->
     <woot-modal

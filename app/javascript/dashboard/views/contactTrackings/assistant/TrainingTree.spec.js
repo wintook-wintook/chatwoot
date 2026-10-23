@@ -122,19 +122,26 @@ describe('TrainingTree', () => {
     expect(wrapper.vm.issueText('route:nada')).toBe('');
   });
 
-  // Medido: hay un agente con 31 secciones. Abiertas de entrada no se puede navegar.
-  it('con muchas secciones arranca plegado', () => {
-    const muchas = {
-      blocks: Array.from({ length: 9 }, (_, i) => ({
+  // 22/10/2026: las secciones ya no arrancan plegadas, aunque sean muchas, y
+  // modificar una no vuelve a plegar nada.
+  it('arranca con todo abierto aunque haya muchas secciones, y editar no lo pliega', async () => {
+    const muchas = (cuerpo = 'x') => ({
+      blocks: Array.from({ length: 31 }, (_, i) => ({
         type: 'section',
         title: `S${i}`,
-        body: 'x',
+        body: cuerpo,
         gap: 1,
       })),
-    };
+    });
+    const wrapper = montar({ value: muchas() });
+    expect(wrapper.vm.open).toEqual({
+      definition: true,
+      routes: true,
+      sections: true,
+    });
 
-    expect(montar({ value: muchas }).vm.open.sections).toBe(false);
-    expect(montar().vm.open.sections).toBe(true);
+    await wrapper.setProps({ value: muchas('editado') });
+    expect(wrapper.vm.open.sections).toBe(true);
   });
 
   it('recorta lo que se ve de cada nodo', () => {

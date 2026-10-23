@@ -62,7 +62,9 @@ class CasePortal < ApplicationRecord
 
   # Tipos de caso visibles en el formulario público del portal.
   def public_case_types
-    account.case_types.where(public: true).ordered
+    # Plan-Clase-Comercial F3 (hallazgo #6): solo clases con portal (Soporte), aunque
+    # un tipo de otra clase esté marcado.
+    account.case_types.where(public: true, case_class: CaseType.classes_with(:portal)).ordered
   end
 
   # Inbox "Portal" (Channel::Api) donde nacen las conversaciones del portal cuando

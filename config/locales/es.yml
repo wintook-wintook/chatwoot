@@ -23,6 +23,18 @@ es:
     reset_password_failure: '¡Uh ho! No hemos podido encontrar ningún usuario con el correo electrónico especificado.'
     inbox_deletetion_response: Su solicitud de eliminación de la bandeja de entrada será procesada en algún tiempo.
   errors:
+    # diag/llamadas_whatsapp
+    whatsapp:
+      calls:
+        not_supported: Las llamadas solo funcionan con la API oficial de WhatsApp (Cloud API).
+        recording_disabled: "Esta llamada no se graba: la grabación estaba apagada cuando empezó."
+        no_recording: "Falta el archivo de la grabación."
+        recording_not_audio: "La grabación debe ser un archivo de audio."
+        no_message: "La llamada no tiene mensaje en la conversación."
+        not_allowed: Solo los agentes de esta bandeja y los administradores pueden usar sus llamadas.
+        outbound_disabled: Esta bandeja no tiene activadas las llamadas salientes.
+        sdp_offer_required: Falta la oferta de audio del navegador (sdp_offer).
+        permission_request_failed: No se pudo pedir permiso al cliente para llamarle.
     validations:
       presence: no debe estar en blanco
     webhook:
@@ -117,7 +129,48 @@ es:
         rating: Calificación
         feedback: Comentario de opinión
         recorded_at: Fecha registrada
+  kanban_funnel:
+    note: "Embudo de contactos: pasó a «%{column}». %{reason}"
+    reasons:
+      conversation_created: "Llegó una conversación nueva por %{inbox}."
+      first_reply: "Se le contestó por primera vez."
+      label_added: "Se agregó la etiqueta «%{label}»."
+      appointment_scheduled: "Se agendó una cita."
+      case_created: "Se creó el caso %{folio}."
+      customer_returned: "El cliente volvió a escribir."
+      conversation_resolved: "Se resolvió la conversación sin caso."
+      stale: "Sin respuesta del cliente en %{days} días."
+    ai:
+      moved: "🤖 Movida a «%{column}»: %{reason}"
+      suggested: "🤖 Podría pasar a «%{column}» (no la moví porque no estoy segura): %{reason}"
+      next_step: "Siguiente paso sugerido: %{step}"
+    template:
+      columns:
+        new:
+          name: Nuevo
+          ai: "Conversación nueva que todavía no recibe respuesta."
+        contacted:
+          name: En contacto
+          ai: "Ya le contestamos y estamos entendiendo qué necesita."
+        interested:
+          name: Interesado
+          ai: "El cliente preguntó precio, cotización, disponibilidad o condiciones de un producto o servicio."
+        appointment:
+          name: Cita
+          ai: "Se acordó una cita, visita, llamada o demostración con el cliente."
+        converted:
+          name: Convertido
+          ai: "Ya es una oportunidad de venta (se creó el caso comercial)."
+        discarded:
+          name: Descartado
+          ai: "El cliente dijo claramente que no le interesa, ya compró en otro lado o no es un cliente potencial."
   notifications:
+    case_stages:
+      tasks:
+        one: "1 tarea nueva · etapa %{stage}: %{titles}"
+        other: "%{count} tareas nuevas · etapa %{stage}: %{titles}"
+      stage_ready: "Se terminaron las tareas de %{stage}: ¿pasar a %{next}?"
+      stage_ready_doc: "Se terminaron las tareas de %{stage}: documenta para pasar a %{next}"
     notification_title:
       conversation_creation: "Una conversación (#%{display_id}) ha sido creada en %{inbox_name}"
       conversation_assignment: "Una conversación (#%{display_id}) te ha sido asignada"
@@ -130,6 +183,9 @@ es:
       case_ticket_assignment: "El ticket %{folio} te ha sido asignado"
       case_task_assignment: "Se te asignó una tarea en el ticket %{folio}"
       case_task_completed: "Se completó una tarea en el ticket %{folio}"
+      missed_call: "Llamada perdida de %{name} (conversación #%{display_id})"
+      case_stage_tasks: "Tienes tareas nuevas en el caso %{folio}"
+      case_stage_ready: "El caso %{folio} está listo para pasar de etapa"
     calendar_event_reminder:
       body: "\"%{title}\" comienza en %{minutes} minutos"
       no_title: "Evento sin título"
@@ -137,12 +193,36 @@ es:
     no_content: "Sin contenido"
   conversations:
     messages:
+      # diag/llamadas_whatsapp
+      voice_call:
+        whatsapp: Llamada de WhatsApp
+      whatsapp:
+        call_permission_request_body: "¿Nos permites llamarte por WhatsApp? Así te atendemos más rápido."
+        call_recording_notice: "Te avisamos que esta llamada se graba para darte una mejor atención."
+        missed_call_auto_reply: "Vimos tu llamada y no pudimos contestar. Te la devolvemos en cuanto podamos."
       instagram_story_content: "%{story_sender} te mencionó en la historia: "
       instagram_deleted_story_content: Esta historia ya no está disponible.
       deleted: Este mensaje se ha eliminado
       delivery_status:
         error_code: "Código de error: %{error_code}"
     activity:
+      # diag/llamadas_whatsapp
+      whatsapp_call:
+        missed_actions:
+          missed: "Llamada perdida de %{name}. Sonó a: %{agents}."
+          missed_nobody: "Llamada perdida de %{name}. No había agentes para contestar."
+          ticket_no_type: "Llamada perdida: no se creó ticket porque falta elegir el tipo en la pestaña «Llamadas» de la bandeja."
+          ticket_title: "Llamada perdida de %{name}"
+          ticket_created: "Llamada perdida: se creó el ticket %{folio}."
+          ticket_note: "Llamada perdida de %{name} (conversación #%{display_id})."
+          ticket_noted: "Llamada perdida: se agregó una nota al ticket abierto %{folio}."
+          tracking_no_campaign: "Llamada perdida: no se inscribió en un seguimiento porque falta elegir la campaña en la pestaña «Llamadas» de la bandeja."
+          tracking_enrolled: "Llamada perdida: se inscribió en la campaña «%{campaign}»."
+          tracking_active: "Llamada perdida: no se inscribió en «%{campaign}» porque ya tiene un seguimiento activo en esta bandeja."
+          tracking_skipped: "Llamada perdida: no se inscribió en «%{campaign}» (motivo: %{reason})."
+          auto_reply_window_closed: "Llamada perdida: no se le envió mensaje al cliente porque la ventana de 24 h de WhatsApp está cerrada."
+        permission_requested: "Se le pidió a %{contact_name} permiso para llamarle por WhatsApp"
+        permission_granted: "%{contact_name} permitió que le llamemos por WhatsApp"
       status:
         resolved: "La conversación fue marcada por %{user_name}"
         contact_resolved: "Conversación fue resuelta por %{contact_name}"

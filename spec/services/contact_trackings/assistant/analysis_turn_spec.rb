@@ -21,6 +21,19 @@ RSpec.describe ContactTrackings::Assistant::AnalysisTurn do
     expect(texto).to include('🟡', '¿Qué quieres que revise?')
   end
 
+  # proyecto@adaptar_prompts_publicados (F7)
+  it 'si falta configurar algo en la cuenta, el análisis manda a la pestaña «Configurar»' do
+    texto = turno('Analiza mi prompt').reply('Lectura.')
+
+    expect(texto).to include('**Falta configurar en tu cuenta** (1)', '«Configurar»') # la hoja CATALOGO; #info no cuenta
+  end
+
+  it 'los archivos no cuentan: el turno no sabe qué agente es' do
+    texto = turno('Analiza mi prompt', draft: "[ROL]\nManda {{catalogo}}.").reply('Lectura.')
+
+    expect(texto).not_to include('Falta configurar')
+  end
+
   it 'una pregunta suelta no lleva la lista ni el botón' do
     t = turno('¿qué hace la ruta info?')
 
@@ -57,7 +70,7 @@ RSpec.describe ContactTrackings::Assistant::AnalysisTurn do
     texto = "@ruta(uno #uno_x: a): -\n@ruta(dos #dos_x: b): -\n\n[EVIDENCIA]\nUsa @discourse.\nY @buscar_predefinidas."
     bloque = turno('Analiza mi prompt', draft: texto).reply('')
 
-    expect(bloque).to include('**Etiquetas que no existen en la cuenta** (2)', '#uno_x · #dos_x')
+    expect(bloque).not_to include('Etiquetas que no existen') # 20/10/2026: van en el mensaje, no se revisan
     expect(bloque).to include('**Directivas en la prosa que no se ejecutan** (2)', 'línea 5 @discourse')
     expect(bloque).to include('**Rutas que no consultan nada', 'uno · dos')
   end

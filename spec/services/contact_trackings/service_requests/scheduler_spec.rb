@@ -30,20 +30,27 @@ RSpec.describe ContactTrackings::ServiceRequests::Scheduler do
     agenda.plan(caso(datos), 1)
   end
 
-  it 'con hora pedida libre, esa es la opción A (se ofrece, no se aparta)' do
+  it 'con hora pedida libre, solo esa y marcada exacta (Turn la aparta directo)' do
     allow(buscador).to receive_messages(slot_for: slot(9), call: [slot(9), slot(10)])
 
     plan = planear('date' => '2027-10-05', 'time' => '09:00')
-    expect(plan.offers.pluck('code')).to eq(%w[1A 1B])
-    expect(plan.note).to be_nil
-    expect(plan.ticket.reload.metadata['oferta'].size).to eq(2)
+    expect(plan.offers.pluck('code')).to eq(%w[1A])
+    expect([plan.exact, plan.note]).to eq([true, 'sí hay a las 09:00'])
   end
 
   it 'con hora ocupada, lo dice y ofrece las siguientes' do
     allow(buscador).to receive_messages(slot_for: nil, call: [slot(10), slot(11), slot(12), slot(13)])
 
     plan = planear('date' => '2027-10-05', 'time' => '09:00')
-    expect([plan.note, plan.offers.size]).to eq(['09:00 ocupado', 3])
+    expect([plan.note, plan.offers.size, plan.exact]).to eq(['a las 09:00 no hay; lo que sí hay', 3, false])
+  end
+
+  it 'sin hora no lista la agenda: pide la hora' do
+    allow(buscador).to receive(:call)
+
+    plan = planear('date' => '2027-10-05')
+    expect([plan.need_time, plan.offers]).to eq([true, []])
+    expect(buscador).not_to have_received(:call)
   end
 
   it 'fecha pasada o equipo que no está en la hoja' do
@@ -51,7 +58,16 @@ RSpec.describe ContactTrackings::ServiceRequests::Scheduler do
 
     agenda = described_class.new(tracking: tracking, route: ruta, timezone: tz)
     allow(agenda).to receive(:slot_service).and_return(nil)
-    expect(agenda.plan(caso('date' => '2027-10-05'), 1).note).to eq('no tengo ese equipo en el catálogo')
+    expect(agenda.plan(caso('date' => '2027-10-05'), 1).note).to eq('no tengo plana en el catálogo')
+  end
+
+  it 'sin el tipo pedido, la búsqueda relacionada quita el filtro de texto y deja el de capacidad (observación SSUSA 1)' do
+    ruta_capacidad = ContactTrackings::RouteMap::Route.new(name: 's', escalation: '@solicitudes -> @agendar_calendar ' \
+                                                                                  '-> {{hoja_buscar: Equipos | tipo=?; peso_max_t>=? | Calendar_ID}}')
+    agenda = described_class.new(tracking: tracking, route: ruta_capacidad, timezone: tz)
+
+    expect(agenda.send(:related_spec).filters.map(&:column)).to eq(['peso_max_t'])
+    expect(described_class.new(tracking: tracking, route: ruta, timezone: tz).send(:related_spec)).to be_nil
   end
 
   it 'una renta de 6 meses ofrece los equipos libres todo el periodo (F7)' do

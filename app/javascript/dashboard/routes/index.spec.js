@@ -1,4 +1,4 @@
-import { validateAuthenticateRoutePermission } from './index';
+import { validateAuthenticateRoutePermission, landingRoute } from './index';
 
 describe('#validateAuthenticateRoutePermission', () => {
   describe(`when route is protected`, () => {
@@ -76,5 +76,40 @@ describe('#validateAuthenticateRoutePermission', () => {
         });
       });
     });
+  });
+});
+
+// @tickets_cases — dónde aterriza el usuario al entrar a la app.
+describe('#landingRoute', () => {
+  const home = { name: 'home', params: { accountId: 1 } };
+  const start = { name: null };
+  const user = landing => ({
+    ui_settings: landing ? { landing_page: landing } : {},
+  });
+
+  it('al entrar sin preferencia va a «Mi resumen»', () => {
+    expect(landingRoute(home, start, user())).toEqual({
+      name: 'my_summary',
+      params: { accountId: 1 },
+    });
+  });
+
+  it('respeta la preferencia: Mi día abre la pestaña, Conversaciones no redirige', () => {
+    expect(landingRoute(home, start, user('my_day'))).toEqual({
+      name: 'gestorTickets_tasks',
+      query: { tab: 'my_day' },
+      params: { accountId: 1 },
+    });
+    expect(landingRoute(home, start, user('conversations'))).toBeNull();
+  });
+
+  it('dentro de la app, ir a Conversaciones no redirige', () => {
+    expect(landingRoute(home, { name: 'my_summary' }, user())).toBeNull();
+  });
+
+  it('solo actúa sobre la entrada a Conversaciones', () => {
+    expect(
+      landingRoute({ name: 'contacts_dashboard', params: {} }, start, user())
+    ).toBeNull();
   });
 });

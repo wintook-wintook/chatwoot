@@ -9,6 +9,9 @@
 # POST   /api/v1/accounts/:account_id/case_services       → create
 # PATCH  /api/v1/accounts/:account_id/case_services/:id   → update
 # DELETE /api/v1/accounts/:account_id/case_services/:id   → destroy
+#
+# Plan-Clase-Comercial F2: `case_type_id` NULL = global. `?case_type_id=` en el
+# index devuelve solo lo aplicable a ese tipo (globales + propios).
 # ================================================================================
 
 class Api::V1::Accounts::CaseServicesController < Api::V1::Accounts::BaseController
@@ -16,6 +19,7 @@ class Api::V1::Accounts::CaseServicesController < Api::V1::Accounts::BaseControl
 
   def index
     services = CaseService.ensure_defaults_for(Current.account)
+    services = services.for_type(params[:case_type_id].to_i) if params[:case_type_id].present?
     render json: { case_services: services.map { |s| service_json(s) } }
   end
 
@@ -52,7 +56,7 @@ class Api::V1::Accounts::CaseServicesController < Api::V1::Accounts::BaseControl
   end
 
   def service_params
-    params.require(:case_service).permit(:name, :color, :active, :position)
+    params.require(:case_service).permit(:name, :color, :active, :position, :case_type_id)
   end
 
   def service_json(service)
@@ -62,6 +66,7 @@ class Api::V1::Accounts::CaseServicesController < Api::V1::Accounts::BaseControl
       color:      service.color,
       active:     service.active,
       position:   service.position,
+      case_type_id: service.case_type_id,
       created_at: service.created_at,
       updated_at: service.updated_at
     }

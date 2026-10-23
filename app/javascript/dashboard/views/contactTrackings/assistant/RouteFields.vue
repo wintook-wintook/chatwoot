@@ -27,7 +27,6 @@ import { emitter } from 'shared/helpers/mitt';
 import KnowledgeBaseAPI from 'dashboard/routes/dashboard/settings/knowledgeSources/api';
 import AddSourceModal from 'dashboard/routes/dashboard/settings/knowledgeSources/AddSourceModal.vue';
 import ProofreadBar from './ProofreadBar.vue';
-import CreateLabelButton from './CreateLabelButton.vue';
 import {
   sourceFromDirective,
   integrationFromDirective,
@@ -35,7 +34,7 @@ import {
 } from './sourceDirective';
 
 export default {
-  components: { ProofreadBar, AddSourceModal, CreateLabelButton },
+  components: { ProofreadBar, AddSourceModal },
   props: {
     // La rama: { name, tag, description, source, action, case_type, priority, … }
     route: { type: Object, default: () => ({}) },
@@ -87,14 +86,10 @@ export default {
     labelOptions() {
       return this.options.labels || [];
     },
-    // Una etiqueta escrita que la cuenta no tiene (con la lista ya cargada: mientras
-    // llega, todas «faltarían»).
-    missingLabel() {
-      return Boolean(
-        this.route.tag &&
-          this.options.labels &&
-          !this.labelOptions.includes(this.route.tag)
-      );
+    // Una etiqueta que la cuenta no tiene se muestra tal cual, sin «no existe»: va en
+    // el mensaje y la lee una automatización, no hace falta crearla (20/10/2026).
+    hashtag() {
+      return `#${this.route.tag}`;
     },
     caseTypeOptions() {
       return this.options.caseTypes || [];
@@ -232,16 +227,9 @@ export default {
             v-if="extraOption(route.tag, labelOptions)"
             :value="route.tag"
           >
-            {{ marca(`#${route.tag}`) }}
+            {{ hashtag }}
           </option>
         </select>
-        <p
-          v-if="missingLabel"
-          class="flex flex-wrap items-center gap-2 !mt-1 !mb-0 text-xs text-amber-800 dark:text-amber-800"
-        >
-          {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_TAG_MISSING') }}
-          <CreateLabelButton :tag="route.tag" />
-        </p>
       </div>
     </div>
 

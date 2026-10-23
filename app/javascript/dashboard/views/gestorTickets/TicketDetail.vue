@@ -21,10 +21,32 @@ import {
   SIMPLE_TRANSITION_TARGETS,
   toSimpleStatus,
 } from '../../helper/caseSimpleStatus';
+// Plan-Casos E1 — al abrir un caso, la navegación pasa a su clase.
+import {
+  CLASS_VIEW_ROUTES,
+  caseClassOfTicket,
+  classHasSla,
+  rememberCaseClass,
+} from '../../helper/caseClasses';
+// Plan-Clase-Comercial F4 — oportunidades: datos comerciales, resultado, posponer.
+import CommercialPanel from './commercial/CommercialPanel.vue';
+import OutcomeModal from './commercial/OutcomeModal.vue';
+import PostponeModal from './commercial/PostponeModal.vue';
+import WorkOrderPanel from './workOrder/WorkOrderPanel.vue'; // Plan-Clase-Orden-de-Trabajo F2a
+import ProjectPanel from './project/ProjectPanel.vue'; // Plan-Clase-Proyecto P1
+import ProjectChildren from './project/ProjectChildren.vue'; // Plan-Clase-Proyecto P2
+import ProjectTimeline from './project/ProjectTimeline.vue'; // Plan-Clase-Proyecto P3
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { creatableTypes, typesOfClass } from 'dashboard/helper/caseClasses';
+import { WORK_ORDER_CLASS } from 'dashboard/helper/caseWorkOrder';
+import CaseConversationActions from './conversation/CaseConversationActions.vue';
+import StageAdvanceBanner from './stage/StageAdvanceBanner.vue';
 
 export default {
   name: 'TicketDetail',
   components: {
+    CaseConversationActions,
+    StageAdvanceBanner,
     JourneyView,
     CaseTicketInternalModal,
     TicketConversation,
@@ -34,6 +56,13 @@ export default {
     ContactInfoPanel,
     TicketMeetings,
     MultiselectDropdown,
+    CommercialPanel,
+    OutcomeModal,
+    PostponeModal,
+    WorkOrderPanel,
+    ProjectPanel,
+    ProjectChildren,
+    ProjectTimeline,
   },
   props: {
     ticketId: { type: Number, required: true },
@@ -45,6 +74,13 @@ export default {
       // Antes se recordaba la última pestaña en localStorage y podías caer en
       // Tareas o Notas de otro ticket sin haber visto el estado del actual.
       activeDetailTab: 'journey',
+      // Plan-Clase-Comercial F4 — cierre con resultado y posponer. Si vienen de
+      // un salto de columna (moveToColumn), se completa ese mismo movimiento.
+      showOutcomeModal: false,
+      outcomePreset: null,
+      outcomeColumnId: null,
+      showPostponeModal: false,
+      postponeColumnId: null,
       // @tickets_cases — al llegar desde la bandeja de tareas con ?tab=notes… se
       // abre la pestaña Notas (filtrada por la tarea, o el modal de alta si
       // compose=1) en cuanto el ticket termina de cargar. { seq, taskId, compose }.
@@ -65,6 +101,12 @@ export default {
       // @tickets_cases — bitácora de notas internas
       // @tickets_cases — reapertura de ticket cerrado (motivo obligatorio)
       showReopenModal: false,
+      // Plan-Clase-Orden-de-Trabajo F2b — «Crear orden de trabajo» desde este caso.
+      showWorkOrderModal: false,
+      workOrderTypeId: '',
+      // Plan-Clase-Proyecto P2 — el mismo modal crea una orden o un proyecto.
+      fromCaseTarget: 'work_order',
+      isCreatingWorkOrder: false,
       showEditModal: false, // @tickets_cases — modal de edición del ticket
       reopenReason: '',
       isReopening: false,
@@ -106,6 +148,10 @@ export default {
         closure_cause: '',
         closure_solution: '',
         customer_confirmed: false,
+        // Plan-Clase-Orden-de-Trabajo F2a — conformidad de una orden.
+        actual_hours: '',
+        received_by: '',
+        conformity_note: '',
       },
       // @tickets_cases — si el modal de cierre se abrió por un salto de columna
       // (moveToColumn) y no por el dropdown de estado, aquí va la columna destino
@@ -149,7 +195,66 @@ export default {
       teams: 'teams/getTeams',
       agents: 'agents/getAgents',
       currentUserID: 'getCurrentUserID', // @tickets_cases — bloqueo de ticket
+      caseTypes: 'caseTickets/getTypes',
+      accountId: 'getCurrentAccountId',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
     }),
+    // Plan-Clase-Orden-de-Trabajo F2b — tipos de orden de la cuenta y si este
+    // caso puede originar una (ticket de Soporte u oportunidad ganada).
+    workOrderTypes() {
+      return creatableTypes(typesOfClass(this.caseTypes, WORK_ORDER_CLASS));
+    },
+    canCreateWorkOrder() {
+      if (!this.ticket || !this.workOrderTypes.length) return false;
+      if (
+        !this.isFeatureEnabledonAccount(
+          this.accountId,
+          FEATURE_FLAGS.CASE_WORK_ORDER
+        )
+      )
+        return false;
+      return (
+        this.hasSla || (this.isCommercial && this.ticket.outcome === 'won')
+      );
+    },
+    // Plan-Clase-Proyecto P2 — «Crear proyecto» solo desde una oportunidad ganada.
+    projectTypes() {
+      return creatableTypes(typesOfClass(this.caseTypes, 'project'));
+    },
+    canCreateProject() {
+      if (!this.ticket || !this.projectTypes.length) return false;
+      if (
+        !this.isFeatureEnabledonAccount(
+          this.accountId,
+          FEATURE_FLAGS.CASE_PROJECT
+        )
+      )
+        return false;
+      return this.isCommercial && this.ticket.outcome === 'won';
+    },
+    fromCaseTypes() {
+      return this.fromCaseTarget === 'project'
+        ? this.projectTypes
+        : this.workOrderTypes;
+    },
+    // Textos del modal según lo que se crea (orden o proyecto).
+    fromCaseBase() {
+      return this.fromCaseTarget === 'project'
+        ? 'CASE_TICKETS.PROJECT.FROM_CASE'
+        : 'CASE_TICKETS.WORK_ORDER.FROM_CASE';
+    },
+    // Valores iniciales de «Programar visita»: la orden pone título, lugar y
+    // técnico (el responsable) en el alta de la reunión.
+    visitDefaults() {
+      if (!this.isWorkOrder) return null;
+      return {
+        title: this.$t('CASE_TICKETS.WORK_ORDER.VISIT.DEFAULT_TITLE', {
+          title: this.ticket.title,
+        }),
+        location: this.ticket.work_address || '',
+        organizer_id: this.ticket.assignee_id || '',
+      };
+    },
     // ¿Otro agente tiene bloqueado este ticket?
     lockedByOther() {
       const lb = this.ticket?.locked_by;
@@ -332,6 +437,28 @@ export default {
         label: this.$t('CASE_TICKETS.DETAIL_TABS.MEETINGS'),
         count: this.meetingCount,
       });
+      // Plan-Clase-Proyecto P1 — datos del proyecto, después de Tareas agendadas,
+      // y P2 — sus casos (órdenes y tickets).
+      if (this.isProject) {
+        tabs.push({
+          key: 'project',
+          label: this.$t('CASE_TICKETS.DETAIL_TABS.PROJECT'),
+        });
+        tabs.push({
+          key: 'project_cases',
+          label: this.$t('CASE_TICKETS.DETAIL_TABS.PROJECT_CASES'),
+          count: this.ticket?.project_summary?.children_total || 0,
+        });
+      }
+      // Plan-Clase-Orden-de-Trabajo — «Conceptos» de la orden (dirección, horas,
+      // facturable, materiales y conformidad), después de Tareas agendadas.
+      if (this.isWorkOrder) {
+        tabs.push({
+          key: 'concepts',
+          label: this.$t('CASE_TICKETS.DETAIL_TABS.CONCEPTS'),
+          count: this.ticket?.work_order_items?.length || 0,
+        });
+      }
       // @tickets_cases — el Resumen ya no muestra info (vive en el header); su
       // contenido real es la conversación, así que la pestaña se llama así.
       tabs.push({
@@ -392,6 +519,16 @@ export default {
     isFrozen() {
       return !!this.ticket?.is_frozen;
     },
+    // Plan-Plantilla-Tareas-Etapa T3 — se terminaron las obligatorias de la etapa.
+    // T4 — si todavía no, la línea dice cuántas lleva y qué pasa al terminar.
+    stageAdvance() {
+      const a = this.ticket?.stage_advance;
+      if (!a || this.isFrozen) return null;
+      return a;
+    },
+    stageColumnId() {
+      return this.ticket?.case_type_column_id || null;
+    },
     canReopen() {
       return !!this.ticket?.can_reopen;
     },
@@ -400,6 +537,12 @@ export default {
     },
     closeFormValid() {
       const f = this.closeForm;
+      // Proyecto: el resumen de cierre es opcional.
+      if (this.isProject) return true;
+      // Orden de trabajo: horas reales + quién recibió (no causa/solución).
+      if (this.isWorkOrder) {
+        return f.actual_hours !== '' && !!String(f.received_by).trim();
+      }
       return !!(
         f.closure_type &&
         f.closure_cause.trim() &&
@@ -467,7 +610,16 @@ export default {
       }
       const columnOf = status =>
         columns.find(c => (c.statuses || []).includes(status));
-      const currentColumn = columnOf(currentStatus);
+      // La etapa actual es la columna donde ESTÁ el caso (su puntero), no la
+      // primera que cubre su estado: varias etapas pueden compartir estado (en
+      // el embudo, Calificado/Propuesta/Negociación son in_progress) y deducirla
+      // por estado escondía Calificado aunque el caso estuviera en Propuesta.
+      const pointed = columns.find(
+        c =>
+          c.id === this.ticket?.case_type_column_id &&
+          (c.statuses || []).includes(currentStatus)
+      );
+      const currentColumn = pointed || columnOf(currentStatus);
       const options = [];
       all.forEach(status => {
         const col = columnOf(status);
@@ -498,9 +650,48 @@ export default {
       const lvl = (this.ticket?.escalation_level || 0) + 1;
       return `N${lvl}`;
     },
+    // Plan-Clase-Comercial F4 — oportunidad: sin SLA, nivel ni escalamiento.
+    // Plan-Clase-Orden-de-Trabajo F1 — SLA, nivel y escalamiento son de Soporte
+    // (CaseType::CLASS_CAPABILITIES): ni oportunidad ni orden de trabajo.
+    hasSla() {
+      return classHasSla(caseClassOfTicket(this.ticket));
+    },
+    isWorkOrder() {
+      return !!this.ticket?.is_work_order;
+    },
+    isProject() {
+      return !!this.ticket?.is_project;
+    },
+    // Proyecto al que pertenece el caso (null si no está dentro de uno).
+    parentProject() {
+      return this.ticket?.parent_project || null;
+    },
+    isCommercial() {
+      return !!this.ticket?.is_commercial;
+    },
+    // Plan-Casos E1 — «Volver» lleva a la lista de la clase del caso.
+    backRoute() {
+      if (this.returnPath) return this.returnPath;
+      return {
+        name: CLASS_VIEW_ROUTES.list,
+        params: { caseClass: caseClassOfTicket(this.ticket) },
+      };
+    },
+    // Abierto desde otra pantalla (p. ej. Métricas) que mandó `?back=<ruta>`:
+    // «Volver» regresa ahí. Solo rutas internas de la app.
+    returnPath() {
+      const back = this.$route.query.back;
+      if (typeof back !== 'string') return null;
+      return back.startsWith('/app/') ? back : null;
+    },
+    backLabel() {
+      if (this.returnPath && this.returnPath.split('?')[0].endsWith('/metrics'))
+        return this.$t('CASE_TICKETS.DETAIL.BACK_TO_METRICS');
+      return this.$t('CASE_TICKETS.DETAIL.BACK');
+    },
     canEscalate() {
       const t = this.ticket;
-      if (!t) return false;
+      if (!t || !this.hasSla) return false;
       return (
         t.escalation_level < 2 && !['closed', 'cancelled'].includes(t.status)
       );
@@ -563,6 +754,11 @@ export default {
     },
   },
   watch: {
+    // Plan-Plantilla-Tareas-Etapa — al cambiar de etapa nacen tareas nuevas.
+    stageColumnId(now, before) {
+      if (before !== undefined && now !== before)
+        this.$refs.ticketTasks?.load();
+    },
     ticketId() {
       // Cambiar de ticket es abrir un ticket: vuelve a Avance.
       this.activeDetailTab = 'journey';
@@ -571,6 +767,10 @@ export default {
     // @tickets_cases — cuando el ticket termina de cargar, si venimos de la
     // bandeja aplicamos la acción de notas pendiente (filtrar o componer).
     ticket(val) {
+      // Plan-Casos E1 — Lista/Tablero/Métricas del menú abren la clase de este caso.
+      if (val) {
+        rememberCaseClass(this.$route.params.accountId, caseClassOfTicket(val));
+      }
       if (val && this.entryNote) {
         const payload = this.entryNote;
         this.entryNote = null;
@@ -589,6 +789,7 @@ export default {
     this.$store.dispatch('teams/get');
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
+    this.$store.dispatch('caseTickets/fetchTypes'); // F2b — tipos de orden de trabajo
     this.acquireLock();
     this.applyEntryQuery();
   },
@@ -628,6 +829,14 @@ export default {
       const tab = this.detailTabs[index];
       if (!tab) return;
       this.activeDetailTab = tab.key;
+    },
+    // Se ligó (o creó) la conversación: se vuelve a pedir el caso para pintar el
+    // hilo, y los eventos para la línea de tiempo.
+    onConversationLinked() {
+      this.$store.dispatch('caseTickets/fetchTicket', this.ticketId);
+      this.$store.dispatch('caseTickets/fetchEvents', {
+        ticketId: this.ticketId,
+      });
     },
     loadTicket() {
       if (!this.ticket) {
@@ -677,14 +886,18 @@ export default {
         });
         this.refetch();
       } catch (e) {
+        // Plan-Clase-Comercial F4 — el embudo pide resultado o fecha.
+        if (e.response?.data?.requires_outcome) {
+          this.openOutcome(e.response.data.outcome || null, columnId);
+          return;
+        }
+        if (e.response?.data?.requires_postpone) {
+          this.openPostpone(columnId);
+          return;
+        }
         if (e.response?.data?.requires_closure) {
           this.closeViaColumnMoveId = columnId;
-          this.closeForm = {
-            closure_type: 'resolved',
-            closure_cause: '',
-            closure_solution: '',
-            customer_confirmed: false,
-          };
+          this.closeForm = this.emptyCloseForm();
           this.showCloseModal = true;
           return;
         }
@@ -697,12 +910,7 @@ export default {
       this.showTransitionMenu = false;
       // 2G — cerrar exige documentar el cierre (modal obligatorio).
       if (status === 'closed') {
-        this.closeForm = {
-          closure_type: 'resolved',
-          closure_cause: '',
-          closure_solution: '',
-          customer_confirmed: false,
-        };
+        this.closeForm = this.emptyCloseForm();
         this.closeViaColumnMoveId = null; // este cierre es un status directo, no un salto de columna
         this.showCloseModal = true;
         return;
@@ -763,15 +971,44 @@ export default {
       this.showCloseModal = false;
       this.closeViaColumnMoveId = null;
     },
+    // Formulario de cierre vacío; una orden arranca con sus horas reales si ya
+    // estaban capturadas.
+    emptyCloseForm() {
+      return {
+        closure_type: 'resolved',
+        closure_cause: '',
+        closure_solution: '',
+        customer_confirmed: false,
+        actual_hours: this.ticket?.actual_hours ?? '',
+        received_by: '',
+        conformity_note: '',
+      };
+    },
+    closurePayload() {
+      const f = this.closeForm;
+      if (this.isProject) {
+        return {
+          closure_solution: String(f.closure_solution || '').trim(),
+        };
+      }
+      if (this.isWorkOrder) {
+        return {
+          actual_hours: f.actual_hours,
+          received_by: String(f.received_by).trim(),
+          conformity_note: String(f.conformity_note).trim() || undefined,
+        };
+      }
+      return {
+        closure_type: f.closure_type,
+        closure_cause: f.closure_cause.trim(),
+        closure_solution: f.closure_solution.trim(),
+        customer_confirmed: f.customer_confirmed,
+      };
+    },
     // @tickets_cases 2G — confirmar cierre documentado
     async confirmClose() {
       if (!this.closeFormValid) return;
-      const closure = {
-        closure_type: this.closeForm.closure_type,
-        closure_cause: this.closeForm.closure_cause.trim(),
-        closure_solution: this.closeForm.closure_solution.trim(),
-        customer_confirmed: this.closeForm.customer_confirmed,
-      };
+      const closure = this.closurePayload();
       // @tickets_cases — el modal se abrió por un salto de columna (moveToColumn),
       // no por el dropdown de 13 estados: completa el movimiento por columna con
       // los datos de cierre en vez de transicionar directo a 'closed'.
@@ -1064,6 +1301,104 @@ export default {
       } catch (e) {
         this.$emitter.emit('newToastMessage', {
           message: e.response?.data?.error || 'No se pudo cambiar el estado',
+        });
+      }
+    },
+    // ── Plan-Clase-Comercial F4 — oportunidades ──
+    openOutcome(outcome = null, columnId = null) {
+      this.outcomePreset = outcome;
+      this.outcomeColumnId = columnId;
+      this.showOutcomeModal = true;
+    },
+    async confirmOutcome(payload) {
+      const columnId = this.outcomeColumnId;
+      try {
+        if (columnId) {
+          await this.$store.dispatch('caseTickets/moveTicketColumn', {
+            ticketId: this.ticketId,
+            caseTypeColumnId: columnId,
+            closure: payload,
+          });
+        } else {
+          await this.$store.dispatch('caseTickets/closeWithOutcome', {
+            ticketId: this.ticketId,
+            ...payload,
+          });
+        }
+        this.showOutcomeModal = false;
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.COMMERCIAL.OUTCOME_MODAL.SUCCESS', {
+            outcome: this.$t(
+              `CASE_TICKETS.COMMERCIAL.OUTCOMES.${payload.outcome}`
+            ),
+          }),
+        });
+        this.refetch();
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message:
+            e.response?.data?.error ||
+            this.$t('CASE_TICKETS.COMMERCIAL.OUTCOME_MODAL.ERROR'),
+          type: 'error',
+        });
+      }
+    },
+    openPostpone(columnId = null) {
+      this.postponeColumnId = columnId;
+      this.showPostponeModal = true;
+    },
+    async confirmPostpone({
+      postponed_until: postponedUntil,
+      postpone_reason_id: postponeReasonId,
+      reason,
+    }) {
+      const columnId = this.postponeColumnId;
+      try {
+        if (columnId) {
+          await this.$store.dispatch('caseTickets/moveTicketColumn', {
+            ticketId: this.ticketId,
+            caseTypeColumnId: columnId,
+            postponedUntil,
+            postponeReasonId,
+            reason,
+          });
+        } else {
+          await this.$store.dispatch('caseTickets/postponeTicket', {
+            ticketId: this.ticketId,
+            postponed_until: postponedUntil,
+            postpone_reason_id: postponeReasonId,
+            reason,
+          });
+        }
+        this.showPostponeModal = false;
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.COMMERCIAL.POSTPONE_MODAL.SUCCESS'),
+        });
+        this.refetch();
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message:
+            e.response?.data?.error ||
+            this.$t('CASE_TICKETS.COMMERCIAL.POSTPONE_MODAL.ERROR'),
+          type: 'error',
+        });
+      }
+    },
+    async resumeOpportunity() {
+      try {
+        await this.$store.dispatch('caseTickets/resumeTicket', {
+          ticketId: this.ticketId,
+        });
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.COMMERCIAL.RESUMED'),
+        });
+        this.refetch();
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message:
+            e.response?.data?.error ||
+            this.$t('CASE_TICKETS.COMMERCIAL.RESUME_ERROR'),
+          type: 'error',
         });
       }
     },
@@ -1373,6 +1708,11 @@ export default {
         this.applyEntryMeetings(q);
         return;
       }
+      // «Mi resumen» abre el caso directo en su pestaña Tareas.
+      if (q.tab === 'tasks') {
+        this.activeDetailTab = 'tasks';
+        return;
+      }
       if (q.tab !== 'notes') return;
       this.activeDetailTab = 'notes';
       const seq = Number(q.task);
@@ -1498,6 +1838,53 @@ export default {
     relationTypeLabel(type) {
       return this.$t(`CASE_TICKETS.RELATION_TYPES.${type}.outgoing`);
     },
+    // Plan-Clase-Orden-de-Trabajo F2b — abre el alta de reunión ya precargada
+    // con la orden (visitDefaults), en la pestaña Reuniones.
+    scheduleVisit() {
+      this.activeDetailTab = 'meetings';
+      this.$nextTick(() => this.$refs.ticketMeetings?.openCreate());
+    },
+    openWorkOrderModal(target = 'work_order') {
+      this.fromCaseTarget = target;
+      this.workOrderTypeId = this.fromCaseTypes[0]?.id || '';
+      this.showWorkOrderModal = true;
+    },
+    async createWorkOrder() {
+      if (!this.workOrderTypeId || this.isCreatingWorkOrder) return;
+      this.isCreatingWorkOrder = true;
+      try {
+        const create =
+          this.fromCaseTarget === 'project'
+            ? CaseTicketsAPI.createProject
+            : CaseTicketsAPI.createWorkOrder;
+        const { data } = await create.call(
+          CaseTicketsAPI,
+          this.ticketId,
+          this.workOrderTypeId
+        );
+        const order = data.case_ticket;
+        this.showWorkOrderModal = false;
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t(`${this.fromCaseBase}.SUCCESS`, {
+            folio: order.folio || `#${order.id}`,
+          }),
+        });
+        this.openRelatedTicket(order.id);
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message:
+            e.response?.data?.error || this.$t(`${this.fromCaseBase}.ERROR`),
+          type: 'error',
+        });
+      } finally {
+        this.isCreatingWorkOrder = false;
+      }
+    },
+    // Agregar o quitar un caso del proyecto cambia su avance y sus relaciones.
+    onProjectChildrenChanged() {
+      this.refetch();
+      this.$store.dispatch('caseTickets/fetchRelations', this.ticketId);
+    },
     openRelatedTicket(id) {
       this.$router.push({
         name: 'gestorTickets_detail',
@@ -1594,16 +1981,34 @@ export default {
     <div
       class="flex flex-col flex-shrink-0 gap-2 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
-      <woot-button
-        size="small"
-        variant="clear"
-        color-scheme="secondary"
-        icon="chevron-left"
-        class="self-start"
-        @click="$router.push({ name: 'gestorTickets_index' })"
-      >
-        {{ $t('CASE_TICKETS.DETAIL.BACK') }}
-      </woot-button>
+      <div class="flex flex-wrap items-center gap-2">
+        <woot-button
+          size="small"
+          variant="clear"
+          color-scheme="secondary"
+          icon="chevron-left"
+          @click="$router.push(backRoute)"
+        >
+          {{ backLabel }}
+        </woot-button>
+        <!-- Caso dentro de un proyecto: se ve de dónde viene y se vuelve a él. -->
+        <button
+          v-if="parentProject"
+          type="button"
+          class="flex items-center min-w-0 gap-1 px-2 py-1 text-xs font-medium border rounded-full text-indigo-700 border-indigo-200 bg-indigo-50 hover:bg-indigo-100 dark:text-indigo-300 dark:border-indigo-800 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50"
+          :title="$t('CASE_TICKETS.DETAIL.BACK_TO_PROJECT')"
+          @click="openRelatedTicket(parentProject.id)"
+        >
+          <fluent-icon icon="briefcase" size="12" />
+          <span>{{ $t('CASE_TICKETS.DETAIL.PARENT_PROJECT') }}</span>
+          <span v-if="parentProject.folio" class="font-mono">
+            {{ `#${parentProject.folio}` }}
+          </span>
+          <span class="max-w-xs font-normal truncate">
+            {{ `· ${parentProject.title}` }}
+          </span>
+        </button>
+      </div>
 
       <div v-if="ticket" class="flex items-start justify-between gap-4">
         <div class="flex flex-col gap-1 min-w-0">
@@ -1667,6 +2072,7 @@ export default {
             >
             <!-- Prioridad no va aquí: ya se ve (con color) en el botón "Prioridad". -->
             <span
+              v-if="hasSla"
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
               :class="slaBadge(ticket.sla_status)"
               >{{
@@ -1674,6 +2080,7 @@ export default {
               }}</span
             >
             <span
+              v-if="hasSla"
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
               :title="$t('CASE_TICKETS.ESCALATION.LEVEL_TITLE')"
               ><span class="font-normal opacity-75">{{
@@ -1845,6 +2252,81 @@ export default {
               {{ $t('CASE_TICKETS.NOTES.ADD') }}
             </woot-button>
 
+            <!-- Plan-Clase-Comercial F4 — cerrar con resultado / posponer -->
+            <template v-if="isCommercial && !isFrozen">
+              <woot-button
+                size="small"
+                variant="smooth"
+                color-scheme="success"
+                icon="checkmark-circle"
+                @click="openOutcome('won')"
+              >
+                {{ $t('CASE_TICKETS.COMMERCIAL.ACTIONS.WON') }}
+              </woot-button>
+              <woot-button
+                size="small"
+                variant="smooth"
+                color-scheme="alert"
+                icon="dismiss-circle"
+                @click="openOutcome('lost')"
+              >
+                {{ $t('CASE_TICKETS.COMMERCIAL.ACTIONS.LOST') }}
+              </woot-button>
+              <woot-button
+                size="small"
+                variant="smooth"
+                color-scheme="secondary"
+                icon="dismiss"
+                @click="openOutcome('cancelled')"
+              >
+                {{ $t('CASE_TICKETS.COMMERCIAL.ACTIONS.CANCEL') }}
+              </woot-button>
+              <woot-button
+                v-if="ticket.is_postponed"
+                size="small"
+                variant="smooth"
+                color-scheme="warning"
+                icon="arrow-rotate-counter-clockwise"
+                :is-loading="isTransitioning"
+                @click="resumeOpportunity"
+              >
+                {{ $t('CASE_TICKETS.COMMERCIAL.ACTIONS.RESUME') }}
+              </woot-button>
+              <woot-button
+                v-else
+                size="small"
+                variant="smooth"
+                color-scheme="warning"
+                icon="calendar-clock"
+                @click="openPostpone()"
+              >
+                {{ $t('CASE_TICKETS.COMMERCIAL.ACTIONS.POSTPONE') }}
+              </woot-button>
+            </template>
+
+            <!-- Plan-Clase-Orden-de-Trabajo F2b — orden nueva desde este caso -->
+            <woot-button
+              v-if="canCreateWorkOrder"
+              size="small"
+              variant="smooth"
+              color-scheme="secondary"
+              icon="briefcase"
+              @click="openWorkOrderModal('work_order')"
+            >
+              {{ $t('CASE_TICKETS.WORK_ORDER.FROM_CASE.BUTTON') }}
+            </woot-button>
+            <!-- Plan-Clase-Proyecto P2 — proyecto nuevo desde una oportunidad ganada -->
+            <woot-button
+              v-if="canCreateProject"
+              size="small"
+              variant="smooth"
+              color-scheme="secondary"
+              icon="briefcase"
+              @click="openWorkOrderModal('project')"
+            >
+              {{ $t('CASE_TICKETS.PROJECT.FROM_CASE.BUTTON') }}
+            </woot-button>
+
             <!-- @tickets_cases — Reabrir: solo si el backend lo autoriza -->
             <woot-button
               v-if="canReopen"
@@ -1964,6 +2446,13 @@ export default {
       </div>
     </div>
 
+    <!-- Plan-Clase-Comercial F4 — franja «Datos comerciales» -->
+    <CommercialPanel
+      v-if="ticket && isCommercial"
+      :ticket="ticket"
+      @updated="refetch"
+    />
+
     <!-- Pestañas del detalle (pinneadas, no scrollean) -->
     <!-- @tickets_cases — bloqueo: aviso si otro agente está trabajando el ticket -->
     <div
@@ -2004,6 +2493,18 @@ export default {
       v-else-if="ticket"
       class="flex flex-col flex-1 gap-6 p-6 overflow-y-auto"
     >
+      <!-- Plan-Plantilla-Tareas-Etapa T3 — listo para pasar a la siguiente etapa -->
+      <StageAdvanceBanner
+        v-if="stageAdvance"
+        :advance="stageAdvance"
+        @advance="moveToColumn"
+      />
+      <!-- @tickets_cases — ligar conversación, programar mensaje y delegar a agente IA -->
+      <CaseConversationActions
+        v-show="currentTabKey === 'detail'"
+        :ticket="ticket"
+        @linked="onConversationLinked"
+      />
       <!-- ════ Pestaña Resumen (P2): conversación al frente + sidebar de datos ════ -->
       <div
         v-show="currentTabKey === 'detail'"
@@ -2130,9 +2631,11 @@ export default {
             </div>
           </div>
 
-          <!-- Cierre documentado (2G) -->
+          <!-- Cierre documentado (2G). Una oportunidad muestra su resultado en la
+               franja comercial y una orden su conformidad en su franja, no
+               causa/solución. -->
           <div
-            v-if="isClosed"
+            v-if="isClosed && !isCommercial && !isWorkOrder && !isProject"
             v-show="currentTabKey === 'detail'"
             class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
           >
@@ -2782,10 +3285,13 @@ export default {
       <!-- ════ Pestaña Tareas (P4) — checklist a ancho completo ════ -->
       <TicketTasks
         v-show="currentTabKey === 'tasks'"
+        ref="ticketTasks"
         :key="`tasks-${ticket.id}`"
         :ticket-id="ticket.id"
         :is-frozen="isFrozen"
+        :allow-milestones="isProject"
         class="flex-1 min-h-0"
+        @saved="refetch()"
         @count="taskCount = $event"
         @addNote="openNoteForTask"
         @viewNotes="openNotesForTask"
@@ -2801,10 +3307,51 @@ export default {
         :ticket-id="ticket.id"
         :is-frozen="isFrozen"
         :contact-email="ticket.contact_email || ''"
+        :create-defaults="visitDefaults"
         class="flex-1 min-h-0"
         @count="meetingCount = $event"
         @changed="reloadEvents"
       />
+
+      <!-- ════ Pestaña Proyecto (Plan-Clase-Proyecto P1) ════ -->
+      <div
+        v-if="isProject"
+        v-show="currentTabKey === 'project'"
+        class="flex-1 min-h-0 p-4 overflow-y-auto"
+      >
+        <div class="flex flex-col gap-4">
+          <ProjectPanel :ticket="ticket" @updated="refetch" />
+          <ProjectTimeline :ticket="ticket" @open="openRelatedTicket" />
+        </div>
+      </div>
+
+      <!-- ════ Pestaña Casos del proyecto (Plan-Clase-Proyecto P2) ════ -->
+      <div
+        v-if="isProject"
+        v-show="currentTabKey === 'project_cases'"
+        class="flex-1 min-h-0 p-4 overflow-y-auto"
+      >
+        <ProjectChildren
+          :key="`project-cases-${ticket.id}`"
+          :ticket="ticket"
+          @changed="onProjectChildrenChanged"
+          @open="openRelatedTicket"
+        />
+      </div>
+
+      <!-- ════ Pestaña Conceptos (orden de trabajo) ════ -->
+      <div
+        v-if="isWorkOrder"
+        v-show="currentTabKey === 'concepts'"
+        class="flex-1 min-h-0 p-4 overflow-y-auto"
+      >
+        <WorkOrderPanel
+          :ticket="ticket"
+          as-tab
+          @updated="refetch"
+          @schedule="scheduleVisit"
+        />
+      </div>
 
       <!-- ════ Pestaña Avance del ticket (2L) — 3 vistas conmutables ════ -->
       <JourneyView
@@ -3374,6 +3921,54 @@ export default {
       </div>
     </woot-modal>
 
+    <!-- Plan-Clase-Orden-de-Trabajo F2b — elegir el tipo de la orden nueva -->
+    <woot-modal
+      v-if="showWorkOrderModal"
+      :show="showWorkOrderModal"
+      :on-close="() => (showWorkOrderModal = false)"
+      size="small"
+    >
+      <div class="flex flex-col h-auto overflow-auto">
+        <woot-modal-header :header-title="$t(`${fromCaseBase}.TITLE`)" />
+        <form
+          class="flex flex-col self-stretch w-full gap-4 pb-8"
+          @submit.prevent="createWorkOrder"
+        >
+          <p class="m-0 text-sm text-slate-600 dark:text-slate-300">
+            {{ $t(`${fromCaseBase}.HELP`) }}
+          </p>
+          <label class="flex flex-col gap-1">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >{{ $t('CASE_TICKETS.MODAL.CASE_TYPE_LABEL') }}</span
+            >
+            <select v-model="workOrderTypeId" class="input !mb-0">
+              <option v-for="t in fromCaseTypes" :key="t.id" :value="t.id">
+                {{ t.name }}
+              </option>
+            </select>
+          </label>
+          <div class="flex justify-end gap-2 mt-2">
+            <woot-button
+              variant="clear"
+              color-scheme="secondary"
+              type="button"
+              @click="showWorkOrderModal = false"
+            >
+              {{ $t('CASE_TICKETS.CLOSURE.CANCEL') }}
+            </woot-button>
+            <woot-button
+              type="submit"
+              :disabled="!workOrderTypeId"
+              :is-loading="isCreatingWorkOrder"
+            >
+              {{ $t(`${fromCaseBase}.CONFIRM`) }}
+            </woot-button>
+          </div>
+        </form>
+      </div>
+    </woot-modal>
+
     <!-- Modal de cierre documentado (2G) -->
     <woot-modal
       v-if="showCloseModal"
@@ -3383,9 +3978,123 @@ export default {
     >
       <div class="flex flex-col h-auto overflow-auto">
         <woot-modal-header
-          :header-title="$t('CASE_TICKETS.CLOSURE.MODAL_TITLE')"
+          :header-title="
+            isProject
+              ? $t('CASE_TICKETS.PROJECT.CLOSE.TITLE')
+              : isWorkOrder
+              ? $t('CASE_TICKETS.WORK_ORDER.CLOSE.TITLE')
+              : $t('CASE_TICKETS.CLOSURE.MODAL_TITLE')
+          "
         />
+        <!-- Plan-Clase-Proyecto P1 — cerrar un proyecto: resumen opcional -->
         <form
+          v-if="isProject"
+          class="flex flex-col self-stretch w-full gap-4 pb-8"
+          @submit.prevent="confirmClose"
+        >
+          <p class="m-0 text-sm text-slate-600 dark:text-slate-300">
+            {{ $t('CASE_TICKETS.PROJECT.CLOSE.HELP') }}
+          </p>
+          <label class="flex flex-col gap-1">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >{{ $t('CASE_TICKETS.PROJECT.CLOSE.SUMMARY') }}</span
+            >
+            <textarea
+              v-model="closeForm.closure_solution"
+              class="input !mb-0"
+              rows="3"
+              :placeholder="$t('CASE_TICKETS.PROJECT.CLOSE.PLACEHOLDER')"
+            />
+          </label>
+          <div class="flex justify-end gap-2 mt-2">
+            <woot-button
+              variant="clear"
+              color-scheme="secondary"
+              type="button"
+              @click="cancelCloseModal"
+            >
+              {{ $t('CASE_TICKETS.CLOSURE.CANCEL') }}
+            </woot-button>
+            <woot-button
+              type="submit"
+              color-scheme="primary"
+              :is-loading="isTransitioning"
+            >
+              {{ $t('CASE_TICKETS.PROJECT.CLOSE.CONFIRM') }}
+            </woot-button>
+          </div>
+        </form>
+        <!-- Plan-Clase-Orden-de-Trabajo F2a — cerrar una orden = conformidad -->
+        <form
+          v-else-if="isWorkOrder"
+          class="flex flex-col self-stretch w-full gap-4 pb-8"
+          @submit.prevent="confirmClose"
+        >
+          <p class="m-0 text-sm text-slate-600 dark:text-slate-300">
+            {{ $t('CASE_TICKETS.WORK_ORDER.CLOSE.HELP') }}
+          </p>
+          <label class="flex flex-col w-40 gap-1">
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >{{ $t('CASE_TICKETS.WORK_ORDER.FIELDS.ACTUAL_HOURS') }} *</span
+            >
+            <input
+              v-model="closeForm.actual_hours"
+              type="number"
+              min="0"
+              step="0.25"
+              class="input !mb-0"
+            />
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >{{ $t('CASE_TICKETS.WORK_ORDER.FIELDS.RECEIVED_BY') }} *</span
+            >
+            <input
+              v-model="closeForm.received_by"
+              type="text"
+              maxlength="255"
+              class="input !mb-0"
+              :placeholder="
+                $t('CASE_TICKETS.WORK_ORDER.CLOSE.RECEIVED_BY_PLACEHOLDER')
+              "
+            />
+          </label>
+          <label class="flex flex-col gap-1">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >{{ $t('CASE_TICKETS.WORK_ORDER.FIELDS.NOTE') }}</span
+            >
+            <textarea
+              v-model="closeForm.conformity_note"
+              class="input !mb-0"
+              rows="3"
+              :placeholder="
+                $t('CASE_TICKETS.WORK_ORDER.CLOSE.NOTE_PLACEHOLDER')
+              "
+            />
+          </label>
+          <div class="flex justify-end gap-2 mt-2">
+            <woot-button
+              variant="clear"
+              color-scheme="secondary"
+              type="button"
+              @click="cancelCloseModal"
+            >
+              {{ $t('CASE_TICKETS.CLOSURE.CANCEL') }}
+            </woot-button>
+            <woot-button
+              type="submit"
+              color-scheme="primary"
+              :disabled="!closeFormValid"
+              :is-loading="isTransitioning"
+            >
+              {{ $t('CASE_TICKETS.WORK_ORDER.CLOSE.CONFIRM') }}
+            </woot-button>
+          </div>
+        </form>
+        <form
+          v-else
           class="flex flex-col self-stretch w-full gap-4 pb-8"
           @submit.prevent="confirmClose"
         >
@@ -3589,6 +4298,26 @@ export default {
         />
       </div>
     </transition>
+
+    <!-- Plan-Clase-Comercial F4 — modales de oportunidad -->
+    <OutcomeModal
+      v-if="showOutcomeModal && ticket"
+      show
+      :folio="ticket.folio || `#${ticket.id}`"
+      :outcome="outcomePreset"
+      :is-saving="isTransitioning"
+      @close="showOutcomeModal = false"
+      @confirm="confirmOutcome"
+    />
+    <PostponeModal
+      v-if="showPostponeModal && ticket"
+      show
+      :folio="ticket.folio || `#${ticket.id}`"
+      :current="ticket.postponed_until || ''"
+      :is-saving="isTransitioning"
+      @close="showPostponeModal = false"
+      @confirm="confirmPostpone"
+    />
   </div>
 </template>
 

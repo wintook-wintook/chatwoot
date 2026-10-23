@@ -1,7 +1,11 @@
 # KANBAN0725-CONTROLLER
 # app/controllers/api/v1/accounts/kanban_type_processes_controller.rb
 class Api::V1::Accounts::KanbanTypeProcessesController < Api::V1::Accounts::BaseController
-  before_action :set_kanban_type_process, only: [:show, :update, :destroy]
+  # Embudo de contactos — campos de columna que ve la configuración.
+  KANBAN_PROCESS_FIELDS = %i[id type_process_name position default is_system entry_triggers ai_criteria stage_kind
+                             convert_case_type_id].freeze
+
+  before_action :set_kanban_type_process, only: [:show, :update, :destroy, :funnel_metrics]
   before_action :set_conversation, only: [:conversation_kanban_info]
   before_action :check_authorization
 
@@ -12,7 +16,7 @@ class Api::V1::Accounts::KanbanTypeProcessesController < Api::V1::Accounts::Base
     render json: @kanban_type_processes.as_json(
       include: {
         kanban_processes: {
-          only: [:id, :type_process_name, :position, :default, :is_system]
+          only: KANBAN_PROCESS_FIELDS
         }
       }
     )
@@ -33,17 +37,25 @@ class Api::V1::Accounts::KanbanTypeProcessesController < Api::V1::Accounts::Base
     render json: @kanban_type_process.as_json(
       include: {
         kanban_processes: {
-          only: [:id, :type_process_name, :position, :default, :is_system]
+          only: KANBAN_PROCESS_FIELDS
         }
       }
     )
+  end
+
+  # Embudo de contactos E3 — métricas del embudo en los últimos `days` días.
+  def funnel_metrics
+    render json: Kanban::FunnelMetrics.new(@kanban_type_process, days: params[:days].presence || 30).call
   end
 
   def create
     @kanban_type_process = Current.account.kanban_type_processes.build(kanban_type_process_params)
     
     if @kanban_type_process.save
-      render json: @kanban_type_process, status: :created
+      # Embudo de contactos — el tablero nuevo nace con sus columnas y reglas listas
+      # (blank: true lo deja vacío, como antes).
+      Kanban::FunnelTemplate.new(@kanban_type_process).apply! unless ActiveModel::Type::Boolean.new.cast(params[:blank])
+      render json: @kanban_type_process.reload, status: :created
     else
       render json: { errors: @kanban_type_process.errors }, status: :unprocessable_entity
     end
@@ -86,7 +98,8 @@ class Api::V1::Accounts::KanbanTypeProcessesController < Api::V1::Accounts::Base
   end
 
   def kanban_type_process_params
-    params.require(:kanban_type_process).permit(:process_name, :default, :is_system)
+    params.require(:kanban_type_process).permit(:process_name, :default, :is_system, :auto_move, :ai_move,
+                                                :cold_after_days, :discard_after_days, entry_inbox_ids: [])
   end
 
   def check_authorization

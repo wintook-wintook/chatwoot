@@ -106,7 +106,8 @@ class Public::CasePortalController < PublicController
   def lookup_ticket(identifier, folio)
     return nil if identifier.blank? || folio.blank?
 
-    ticket = @portal.account.case_tickets.where('LOWER(folio) = ?', folio.downcase).first
+    # Plan-Clase-Comercial F3 (hallazgo #6): una oportunidad no se consulta desde el portal.
+    ticket = @portal.account.case_tickets.with_capability(:portal).where('LOWER(case_tickets.folio) = ?', folio.downcase).first
     return nil unless ticket&.contact
 
     contact = ticket.contact

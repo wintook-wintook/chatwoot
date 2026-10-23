@@ -23,6 +23,9 @@ export default {
     // Tarea preseleccionada al abrir desde la fila de una tarea.
     contextTask: { type: Object, default: null },
     isSaving: { type: Boolean, default: false },
+    // Plan-Clase-Orden-de-Trabajo F2b — valores iniciales del ALTA (título,
+    // lugar, organizador); «Programar visita» los toma de la orden.
+    defaults: { type: Object, default: null },
   },
   data() {
     return {
@@ -167,16 +170,19 @@ export default {
   methods: {
     reset() {
       const m = this.meeting;
+      const d = m ? {} : this.defaults || {};
+      // El organizador sugerido solo si puede serlo (está en la lista).
+      const organizerOk = this.organizers.some(o => o.id === d.organizer_id);
       // Editar siempre es de una reunión concreta: el bloque de serie no aplica.
       this.mode = 'single';
       this.form = {
-        title: m?.title || '',
+        title: m?.title || d.title || '',
         description: m?.description || '',
         starts_at: this.toLocalInput(m?.starts_at) || this.defaultStart(),
         ends_at: this.toLocalInput(m?.ends_at) || this.defaultEnd(),
-        location: m?.location || '',
+        location: m?.location || d.location || '',
         case_task_id: m?.case_task?.id || this.contextTask?.id || '',
-        organizer_id: m?.organizer?.id || '',
+        organizer_id: m?.organizer?.id || (organizerOk ? d.organizer_id : ''),
         // Sin correo del contacto la casilla va deshabilitada: dejarla marcada
         // prometía un aviso al cliente que nunca iba a salir.
         notify_client: m ? m.notify_client : !!this.contactEmail,

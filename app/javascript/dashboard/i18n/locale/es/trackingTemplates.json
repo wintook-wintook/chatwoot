@@ -18,7 +18,10 @@
       "CHANNEL": "Canal",
       "ACTIONS": "Acciones",
       "CREATED_BY": "Creado por",
-      "CREATED_AT": "Creado"
+      "CREATED_AT": "Creado",
+      "REVIEW": "Revisión",
+      "CREATED_BY_HINT": "Creado el {date} por {name}",
+      "UPDATED_AT": "Actualizado"
     },
     "FORM": {
       "NAME": {
@@ -113,7 +116,6 @@
         "ROUTE_NAME_PLACEHOLDER": "comercial_precios",
         "ROUTE_TAG": "Etiqueta",
         "ROUTE_TAG_NONE": "Sin etiqueta",
-        "ROUTE_TAG_MISSING": "Esta etiqueta no existe en la cuenta.",
         "ROUTE_TAG_ADD": "Crearla",
         "ROUTE_PHRASES": "Frases del cliente (con esto se elige la ruta)",
         "ROUTE_PHRASES_PLACEHOLDER": "cuanto cuesta, precios, quiero cotizar",
@@ -208,6 +210,12 @@
       "API": {
         "SUCCESS_MESSAGE": "Agente IA eliminado correctamente",
         "ERROR_MESSAGE": "No se pudo eliminar el agente IA"
+      },
+      "IN_USE": {
+        "MESSAGE": "No se puede borrar «{name}» porque está en uso: {reasons}. Quítalo de ahí primero.",
+        "TRACKINGS": "{count} seguimiento(s) activo(s)",
+        "CAMPAIGNS": "{count} campaña(s)",
+        "AUTOMATIONS": "automatización(es): {names}"
       }
     },
     "SAVE_AS_TEMPLATE": {
@@ -262,8 +270,6 @@
       "TIMEZONE_INHERIT": "Usar la del canal (inbox)",
       "TIMEZONE_HELP": "Zona horaria con la que se ofrecen los horarios, se muestra la hora al cliente y se crea el evento. Si la dejas vacía, se usa la del canal."
     },
-    "IMPROVE_WITH_ASSISTANT": "Mejorar con el Asistente",
-    "HEADER_BTN_ASSISTANT": "Armar con el Asistente",
     "PUBLISH": {
       "BUTTON": "Publicar prompt",
       "BADGE": "Publicado v{version}",
@@ -315,9 +321,118 @@
         "TITLE": "Archivos del agente que se publican",
         "HELP": "Cualquier cuenta que baje el prompt recibirá una copia de los archivos marcados. No marques los que sean solo de tu empresa."
       },
+      "VARIABLES": {
+        "TITLE": "Datos de tu negocio (quien lo baje los va a llenar)",
+        "HELP": "Escribe los textos de tu Entrenamiento que son solo de tu empresa (nombre, teléfono, horario) y cómo se llaman. En la versión publicada se cambian por un dato por completar, y quien lo baje lo llena en la pestaña «Configurar». Tu agente no cambia.",
+        "TEXT_PLACEHOLDER": "Texto en tu Entrenamiento (ej. Grúas del Norte)",
+        "LABEL_PLACEHOLDER": "Se llamará (ej. Nombre del negocio)",
+        "COUNT": "Aparece {count} veces en el Entrenamiento",
+        "NOT_FOUND": "No aparece en el Entrenamiento (fuera de directivas y líneas de ruta): así no se puede publicar.",
+        "ELSEWHERE": "también está en Contexto u Objetivo: ahí no se cambia, déjalo genérico",
+        "ADD": "Agregar dato",
+        "REMOVE": "Quitar"
+      },
       "UPDATE_BADGE": "v{version} disponible",
       "UPDATE_HINT": "El autor publicó una versión nueva. Ábrelo en el Asistente para ver los cambios."
-    }
+    },
+    "LIST_TABS": {
+      "AGENTS": "Agentes",
+      "SESSIONS": "En construcción",
+      "RESOURCES": "Recursos"
+    },
+    "NEW_AGENT": {
+      "BUTTON": "Nuevo agente",
+      "ASSISTANT": "Con el Asistente (conversar, pegar o importar)",
+      "GALLERY": "Bajar de la Galería",
+      "FORM": "Formulario en blanco"
+    },
+    "OPEN_PROFILE": "Abrir la ficha",
+    "WORKSPACE": {
+      "BACK": "Agentes IA",
+      "NEW_TITLE": "Agente nuevo",
+      "ACTIVE_VERSION": "v{number} activa",
+      "SECTION_TRAINING": "Entrenamiento",
+      "SECTION_PROFILE": "Ficha",
+      "SECTION_VERSIONS": "Versiones",
+      "AGENT_ROLE_HINT": "El Entrenamiento con el Asistente lo editan los administradores.",
+      "VERSIONS": {
+        "HINT": "Cada guardado que cambia lo que hace el agente queda aquí, con desde dónde se hizo. Restaurar no borra nada: la versión elegida vuelve como una nueva.",
+        "LOADING": "Cargando versiones…",
+        "EMPTY": "Todavía no hay versiones: la primera se guarda con el próximo cambio.",
+        "LABEL": "v{number}",
+        "ACTIVE": "Activa",
+        "CHANGED": "Cambió: {fields}",
+        "SHOW_DIFF": "Ver cambios",
+        "HIDE_DIFF": "Ocultar cambios",
+        "RESTORE": "Restaurar",
+        "COMPARE_WITH": "Comparar con",
+        "COMPARE_PREVIOUS": "la anterior",
+        "NO_CHANGES": "No hay diferencias con esa versión.",
+        "STATS": "(+{added} −{removed})",
+        "SKIP": "⋯ {count} línea(s) iguales",
+        "LOAD_ERROR": "No se pudo cargar la versión.",
+        "RESTORE_TITLE": "¿Restaurar esta versión?",
+        "RESTORE_DESCRIPTION": "El agente vuelve a como estaba en la v{number}. No se borra nada: queda guardado como una versión nueva.",
+        "RESTORE_YES": "Sí, restaurar",
+        "RESTORE_NO": "Cancelar",
+        "RESTORED": "Listo: la v{number} volvió como v{version}.",
+        "RESTORE_ERROR": "No se pudo restaurar. Intenta otra vez.",
+        "SOURCE": {
+          "CREATE": "Alta",
+          "MANUAL": "A mano (ficha)",
+          "ASSISTANT": "Asistente",
+          "CONFIGURED": "Configurar",
+          "IMPORT": "Importado",
+          "GALLERY": "Galería",
+          "RESTORE": "Restaurada",
+          "BASELINE": "Estado inicial"
+        },
+        "FIELD": {
+          "NAME": "Nombre",
+          "OBJECTIVE": "Objetivo",
+          "AI_CONTEXT": "Contexto IA",
+          "COMPLEMENTARY_PROMPT": "Entrenamiento",
+          "INBOX_ID": "Bandeja",
+          "TAGS": "Etiquetas",
+          "WHATSAPP_TEMPLATES": "Plantillas de WhatsApp",
+          "KEYWORD_ACTIONS": "Palabras clave",
+          "RETRY_INTERVAL_VALUE": "Intervalo entre intentos",
+          "RETRY_INTERVAL_UNIT": "Unidad del intervalo",
+          "CALENDAR_INTEGRATION_IDS": "Calendarios",
+          "BOOKING_CALENDAR_IDS": "Calendarios para agendar",
+          "SLOTS_PRESENTATION": "Presentación de horarios",
+          "CALENDAR_EVENT_DURATION": "Duración de la cita",
+          "TIMEZONE": "Zona horaria",
+          "KBASE_HOOK_ID": "Integración de conocimiento"
+        },
+        "COLUMNS": {
+          "VERSION": "Versión",
+          "SOURCE": "Origen",
+          "NOTE": "Nota",
+          "CHANGED": "Qué cambió",
+          "AUTHOR": "Autor",
+          "DATE": "Fecha"
+        }
+      },
+      "NEW_DESCRIPTION": "Ármalo con el Asistente: conversa, pega o importa un prompt, o bájalo de la Galería."
+    },
+    "SESSIONS": {
+      "LOADING": "Cargando conversaciones…",
+      "DISCARD": "Borrar conversación",
+      "LAST_CHANGE": "Último cambio",
+      "NO_CHANGES": "Abierto, sin cambios todavía",
+      "AND_MORE": "(y {count} más)"
+    },
+    "RESOURCES_LOADING": "Cargando recursos…",
+    "REVIEW": {
+      "HINT": "Resultado del comprobador sobre el Entrenamiento publicado. Verde «con temas»: rutas que funcionan. Gris «conversacional»: sin temas, contesta solo con el modelo (no es un error). Gris «sin Entrenamiento»: no tiene instrucciones. Rojo «no ejecuta · N»: N errores que el motor no puede ejecutar; ábrelo y el Entrenamiento te marca dónde están.",
+      "ROUTED": "Con temas: tiene rutas que funcionan; clasifica lo que pide el cliente y responde según el tema.",
+      "CONVERSATIONAL": "Conversacional: no declara temas y contesta solo con el modelo. No es un error.",
+      "EMPTY": "Sin Entrenamiento: responde sin instrucciones propias.",
+      "BROKEN": "No ejecuta: tiene errores que el motor no puede ejecutar; esa parte no hace nada y falla sin avisar.",
+      "FIRST_ERROR": "Primer error: {message}"
+    },
+    "REFRESH": "Actualizar"
   },
   "TRACKING_IMPORT": {
     "BTN_OPEN": "Importar desde Excel",

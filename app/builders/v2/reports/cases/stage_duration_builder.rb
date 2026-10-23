@@ -12,7 +12,10 @@ class V2::Reports::Cases::StageDurationBuilder < V2::Reports::Cases::BaseBuilder
   # traer status nuevo (una escalada de nivel sin cambiar status no cuenta acá) —
   # por eso el filtro real es `payload['to']` presente, no la sola pertenencia
   # a esta lista.
-  TRANSITION_EVENT_TYPES = %w[assigned in_diagnosis escalated resolved validating closed reopened status_changed].freeze
+  # Plan-Clase-Comercial F5: una oportunidad cierra con `outcome_set` y entra/sale
+  # de la espera con `postponed`/`resumed` (todos traen `to`).
+  TRANSITION_EVENT_TYPES = %w[assigned in_diagnosis escalated resolved validating closed reopened status_changed
+                              outcome_set postponed resumed].freeze
   OPEN_STATUSES = (CaseTicket.statuses.keys - %w[closed cancelled]).freeze
   SECONDS_PER_DAY = 86_400.0
   DEFAULT_THRESHOLD_DAYS = 3
