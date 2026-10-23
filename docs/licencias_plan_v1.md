@@ -792,6 +792,45 @@ eliminar.
 `AccountLicense.create!(account: cuenta, name: 'Prueba', max_agents: 2, duration_days: 30)` y
 dar de alta agentes en esa cuenta: el tercero recibe el aviso de licencias.
 
+
+### F1 — Demo automática ✅ (23/10/2026)
+
+**Qué se hizo**
+
+| Pieza | Archivo |
+|---|---|
+| Emitir la demo copiando el plan de registro | `app/services/licenses/demo_issuer.rb` |
+| Engancharla al registro de cuentas | `app/builders/account_builder.rb` (`create_account`) |
+
+**Cómo funciona**
+
+```
+ Registro (API v1/v2, Google, onboarding) → AccountBuilder#create_account
+   └─ Account.create!
+   └─ ¿super_admin? (instalación inicial = cuenta de Wintook) → sin demo
+   └─ Licenses::DemoIssuer
+        plan de registro activo? ── no → la cuenta nace sin licencia (como hoy)
+        ¿ya tiene licencias?      ── sí → no se toca
+        sí → AccountLicense activa: nombre, tipo, agentes y días copiados del plan;
+             vence en starts_at + días; metadata.source = 'signup'
+```
+
+- **Se emite aunque el interruptor esté apagado** (decisión 23/10/2026): no limita nada hasta
+  encenderlo, pero la cuenta ya nace con su vencimiento.
+- **Nunca tumba un registro:** va en su propio savepoint; si falla, la cuenta nace sin licencia y
+  queda `[LICENSES] demo no emitida…` en el log.
+- Las cuentas creadas desde el panel del super admin o la API de plataforma (`Account.create!`
+  directo) nacen sin licencia: Wintook se la asigna en F2.
+- Los canales y funciones del plan todavía no se aplican a la cuenta (pregunta abierta 14.1, F2).
+
+**Pila de pruebas** (todas las nuevas en verde)
+
+- `spec/services/licenses/demo_issuer_spec.rb`: copia el plan con su vencimiento, no duplica, sin plan de registro → sin licencia, un error no rompe y queda en el log.
+- `spec/builders/account_builder_license_spec.rb`: cuenta nueva con demo, la de instalación inicial sin demo, registro sin plan de registro sigue funcionando.
+- Caminos de registro existentes (API v1/v2, enterprise v2): en verde. Onboarding y Google: 5 fallas que ya existían sin este cambio (comprobado apartándolo).
+
+**Cómo probarlo a mano**: registrar una cuenta nueva (o `AccountBuilder.new(email: …, user_password: …, confirmed: true).perform` en consola) y revisar `cuenta.current_license`: Demo, 15 días, 2 agentes.
+
 ---
 
 ### Bitácora de versiones
