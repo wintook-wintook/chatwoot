@@ -39,6 +39,7 @@ import { useAlert } from 'dashboard/composables';
 import { computed, onBeforeMount, ref, watch } from 'vue';
 import { useI18n } from 'dashboard/composables/useI18n';
 import { useStoreGetters, useStore } from 'dashboard/composables/store';
+import ColumnFunnelFields from 'dashboard/components/kanban/funnel/ColumnFunnelFields.vue';
 
 const getters = useStoreGetters();
 const store = useStore();
@@ -60,6 +61,11 @@ const formData = ref({
   position: 0,
   default: false,
   is_system: false,
+  // Embudo de contactos
+  entry_triggers: [],
+  stage_kind: 'open',
+  ai_criteria: '',
+  convert_case_type_id: null,
 });
 
 // Computed
@@ -130,6 +136,10 @@ const resetForm = () => {
     position: nextPosition.value,
     default: false,
     is_system: false,
+    entry_triggers: [],
+    stage_kind: 'open',
+    ai_criteria: '',
+    convert_case_type_id: null,
   };
 };
 
@@ -167,6 +177,10 @@ const handleEdit = item => {
     position: item.position,
     default: item.default,
     is_system: item.is_system,
+    entry_triggers: item.entry_triggers || [],
+    stage_kind: item.stage_kind || 'open',
+    ai_criteria: item.ai_criteria || '',
+    convert_case_type_id: item.convert_case_type_id || null,
   };
   showEditModal.value = true;
 };
@@ -377,6 +391,19 @@ onBeforeMount(async () => {
                 <div class="text-sm font-medium text-slate-900 dark:text-slate-100">
                   {{ record.type_process_name }}
                 </div>
+                <div
+                  v-if="(record.entry_triggers || []).length || record.ai_criteria || (record.stage_kind && record.stage_kind !== 'open')"
+                  class="mt-1 text-xs text-slate-500 dark:text-slate-400"
+                >
+                  <span v-if="record.stage_kind && record.stage_kind !== 'open'" class="mr-2 font-medium">
+                    {{ $t(`KANBAN.FUNNEL.COLUMN.KINDS.${record.stage_kind}`) }}
+                  </span>
+                  <span v-if="(record.entry_triggers || []).length" class="mr-2">
+                    {{ $t('KANBAN.FUNNEL.COLUMN.SUMMARY_RULES') }}:
+                    {{ record.entry_triggers.map(t => $t(`KANBAN.FUNNEL.COLUMN.TRIGGERS.${t.type}`)).join(' · ') }}
+                  </span>
+                  <span v-if="record.ai_criteria">🤖 {{ $t('KANBAN.FUNNEL.COLUMN.SUMMARY_AI') }}</span>
+                </div>
                 <div v-if="record.default || record.is_system" class="flex items-center mt-1 space-x-2">
                   <span
                     v-if="record.default"
@@ -520,6 +547,8 @@ onBeforeMount(async () => {
             required
           />
 
+          <ColumnFunnelFields v-model="formData" />
+
           <div class="flex items-center w-full gap-2 mb-4">
             <input
               v-model="formData.default"
@@ -612,6 +641,8 @@ onBeforeMount(async () => {
             :min="0"
             required
           />
+
+          <ColumnFunnelFields v-model="formData" />
 
           <div class="flex items-center w-full gap-2 mb-4">
             <input

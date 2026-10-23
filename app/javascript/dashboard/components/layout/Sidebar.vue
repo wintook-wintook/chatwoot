@@ -140,14 +140,19 @@ export default {
       );
     },
     sideMenuConfig() {
-      return getSidebarItems(this.accountId);
+      // Menú v2: los enlaces de Servicio dependen de la clase de la ruta actual.
+      return getSidebarItems(this.accountId, this.$route);
     },
     primaryMenuItems() {
       const userPermissions = getUserPermissions(
         this.currentUser,
         this.accountId
       );
-      const menuItems = this.sideMenuConfig.primaryMenu;
+      // Menú v2: una entrada con `alternatives` usa la primera alternativa cuya
+      // función está activa si la suya no lo está (p. ej. Agenda sin casos → Calendario).
+      const menuItems = this.sideMenuConfig.primaryMenu.map(item =>
+        this.resolveAlternative(item)
+      );
       return menuItems.filter(menuItem => {
         if (
           menuItem.key === 'contacts' &&
@@ -183,9 +188,13 @@ export default {
       const { secondaryMenu } = this.sideMenuConfig;
       const { name: currentRoute } = this.$route;
 
+      // Menú v2: un menú puede elegirse con `matches(route)` (Ventas y Servicio
+      // comparten las pantallas de casos y se distinguen por la clase).
       return (
         secondaryMenu.find(menuItem =>
-          menuItem.routes.includes(currentRoute)
+          menuItem.matches
+            ? menuItem.matches(this.$route)
+            : menuItem.routes.includes(currentRoute)
         ) || {}
       );
     },
@@ -260,6 +269,15 @@ export default {
   },
 
   methods: {
+    resolveAlternative(item) {
+      if (!item.alternatives) return item;
+      const enabled = option =>
+        !option.featureFlag ||
+        this.isFeatureEnabledonAccount(this.accountId, option.featureFlag);
+      if (enabled(item)) return item;
+      const alternative = item.alternatives.find(enabled);
+      return alternative ? { ...item, ...alternative } : item;
+    },
     fetchCustomViews() {
       if (this.isConversationOrContactActive) {
         this.$store.dispatch('customViews/get', this.activeCustomView);

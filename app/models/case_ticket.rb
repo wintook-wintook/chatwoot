@@ -322,6 +322,11 @@ class CaseTicket < ApplicationRecord
                                         saved_change_to_status? || saved_change_to_case_type_id?
                                     }
 
+  # Embudo de contactos — un caso que nace en (o se liga a) una conversación mueve
+  # su tarjeta a la columna «caso creado» del tablero de esa conversación.
+  after_commit :advance_contact_funnel, on: %i[create update],
+                                        if: -> { conversation_id.present? && saved_change_to_conversation_id? }
+
   # Etapa en la que está el caso: su columna, o la primera del tipo que cubre su
   # estado (el mismo criterio con el que el tablero pinta un caso sin columna).
   def current_stage_column
@@ -829,6 +834,12 @@ class CaseTicket < ApplicationRecord
   # status (o pertenece a otro tipo), se pone en NULL → el tablero lo pinta por el
   # fallback de status. Dejarlo en NULL (en vez de reasignar) es deliberado: NULL
   # significa "nadie ha decidido el sub-estado", que es la verdad en ese momento.
+  def advance_contact_funnel
+    Kanban::FunnelTriggerJob.perform_later(conversation_id, 'case_created', { 'case_class' => case_type&.case_class, 'folio' => folio })
+  rescue StandardError => e
+    Rails.logger.error("[GestorTickets] embudo de contactos del caso #{id}: #{e.message}")
+  end
+
   def create_stage_tasks
     Cases::StageTasksService.new(self).call
   rescue StandardError => e

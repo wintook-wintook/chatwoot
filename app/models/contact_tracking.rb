@@ -99,6 +99,15 @@ class ContactTracking < ApplicationRecord
   belongs_to :account
   belongs_to :tracking_template, optional: true
   belongs_to :tracking_campaign, optional: true # @campanas_vendedor
+
+  # Embudo de contactos — la cita que agenda el agente de seguimiento mueve la
+  # tarjeta de la conversación a la columna «se agenda cita».
+  after_commit :advance_contact_funnel, on: %i[create update],
+                                        if: -> { conversation_id.present? && appointment_at.present? && saved_change_to_appointment_at? }
+
+  def advance_contact_funnel
+    Kanban::FunnelTriggerJob.perform_later(conversation_id, 'appointment_scheduled')
+  end
   # @tickets_cases — al borrar el seguimiento, conserva el ticket como histórico (contact_tracking_id → NULL).
   has_many :case_tickets, dependent: :nullify
   # proyecto@automatizacion_campanas — cada envío real por WhatsApp y si Meta lo entregó.

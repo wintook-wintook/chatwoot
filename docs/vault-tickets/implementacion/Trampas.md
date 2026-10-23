@@ -129,6 +129,14 @@ tags: [tickets, trampas, gotchas, critico]
    nada, simplemente no pinta (el embudo de Comercial salió sin franjas, solo números). Antes de
    usar un color: `grep -n "^  <color>:" theme/colors.js`. Para verificar una clase, compilar
    Tailwind solo sobre el archivo (`npx tailwindcss -c <config con content=[archivo]> -i in.css`).
+27. **Las tablas del tablero de conversaciones (KANBAN0725) no tenían migración** — estaban en
+   `schema.rb` pero ninguna migración del repo las crea, así que una base nueva (desarrollo,
+   pruebas) no las tenía y `db:migrate` no las crea. Desde el Embudo de contactos las crea
+   `20261028100000_ensure_kanban_tables` con `if_not_exists` (en producción, donde ya existen,
+   no hace nada). Nunca la reviertas: su `down` está vacío a propósito.
+28. **`Message` tiene un orden por defecto (`created_at`)** — un `MAX(...)` o un
+   `group(...).maximum(...)` sobre mensajes truena con `PG::GroupingError` («must appear in the
+   GROUP BY clause»). Usa `Message.unscoped.where(...)` (o `reorder(nil)`) para agregados.
 
 ## 🔗 Relacionado
 - [[Pruebas-en-browser]] · [[Feature-flag-case_management]] · [[Historial-de-implementacion]] · [[Vistas-guardadas]]

@@ -237,3 +237,11 @@ calls_ringing_timeout_job:
   cron: '*/30 * * * * *'
   class: 'Calls::RingingTimeoutJob'
   queue: scheduled_jobs
+
+# Embudo de contactos E2 — descarta las tarjetas sin respuesta del cliente en
+# «Descartar tras N días» (solo tableros con Movimiento automático y ese valor).
+kanban_funnel_stale_job:
+  cron: "17 * * * *"
+  class: "Kanban::FunnelStaleJob"
+  queue: scheduled_jobs
+  description: "Discard contact-funnel cards with no customer reply after the board's limit"

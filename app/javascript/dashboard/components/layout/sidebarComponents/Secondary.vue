@@ -441,7 +441,9 @@ export default {
         @toggleGroup="onToggleGroup"
       />
       <SecondaryNavItem
-        v-for="menuItem in additionalSecondaryMenuItems[menuConfig.parentNav]"
+        v-for="menuItem in additionalSecondaryMenuItems[
+          menuConfig.extraSections || menuConfig.parentNav
+        ]"
         :key="menuItem.key"
         :menu-item="menuItem"
         :open-group="openGroup"

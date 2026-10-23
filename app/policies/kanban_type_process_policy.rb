@@ -21,6 +21,11 @@ class KanbanTypeProcessPolicy < ApplicationPolicy
       @user.administrator?
     end
 
+    # Embudo de contactos E3
+    def funnel_metrics?
+      show?
+    end
+
     def conversation_kanban_info?
       # Mismos permisos que para ver un kanban type process
       show?

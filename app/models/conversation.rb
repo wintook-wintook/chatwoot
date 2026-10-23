@@ -11,6 +11,9 @@
 #  custom_attributes      :jsonb
 #  first_reply_created_at :datetime
 #  identifier             :string
+#  kanban_move_reason     :string
+#  kanban_move_source     :string
+#  kanban_moved_at        :datetime
 #  last_activity_at       :datetime         not null
 #  priority               :integer
 #  snoozed_until          :datetime
@@ -26,6 +29,7 @@
 #  contact_inbox_id       :bigint
 #  display_id             :integer          not null
 #  inbox_id               :integer          not null
+#  kanban_moved_by_id     :bigint
 #  kanban_process_id      :bigint
 #  kanban_type_process_id :bigint
 #  sla_policy_id          :bigint
@@ -69,6 +73,7 @@ class Conversation < ApplicationRecord
   include SortHandler
   include PushDataHelper
   include ConversationMuteHelpers
+  include KanbanFunnelTrackable # Embudo de contactos — bitácora de movimientos del tablero
 
   has_many :scheduled_messages, dependent: :destroy
 
