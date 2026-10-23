@@ -39,6 +39,25 @@ RSpec.describe ContactTrackings::Assistant::AdaptationInventory do
     end
   end
 
+  # feat/reemplazo_directo_variables
+  describe 'datos ya reemplazados' do
+    it 'salen ✔ con su valor actual mientras sigan en la prosa' do
+      recordadas = { 'var:nombre del negocio' => 'Grúas del Sur', 'var:horario' => 'L-V' }
+      items = described_class.new("Somos Grúas del Sur.\nAdiós de Grúas del Sur.", account: account, answers: recordadas).call
+
+      expect(item(items, 'var:nombre del negocio')).to include(kind: 'variable', name: 'Nombre del negocio', status: 'ok',
+                                                               current: 'Grúas del Sur', occurrences: 2, group: :business)
+      expect(item(items, 'var:horario')).to be_nil
+    end
+
+    it 'si todavía hay marca, se pide como siempre (prellenada)' do
+      recordadas = { 'var:nombre del negocio' => 'Grúas' }
+      items = described_class.new('Somos <PENDIENTE: Nombre del negocio>.', account: account, answers: recordadas).call
+
+      expect(item(items, 'var:nombre del negocio')).to include(status: 'missing', remembered: 'Grúas')
+    end
+  end
+
   describe 'fuentes que se nombran' do
     before { account.enable_features!('google_calendar') }
 

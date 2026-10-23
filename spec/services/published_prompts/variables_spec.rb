@@ -36,6 +36,33 @@ RSpec.describe PublishedPrompts::Variables do
     end
   end
 
+  # feat/reemplazo_directo_variables
+  describe '.apply con valor' do
+    it 'escribe el valor directo, sin marca' do
+      con_valor = negocio.merge('value' => 'Grúas del Sur')
+
+      expect(described_class.apply('Somos Grúas del Norte. {{doc:Grúas del Norte}}', [con_valor]))
+        .to eq('Somos Grúas del Sur. {{doc:Grúas del Norte}}')
+    end
+
+    it 'un texto corto no se vuelve a reemplazar dentro del valor que dejó uno largo' do
+      lista = [{ 'text' => 'Grúas', 'label' => 'a', 'value' => 'Autos' },
+               { 'text' => 'Grúas del Norte', 'label' => 'b', 'value' => 'Grúas del Sur' }]
+
+      expect(described_class.apply('Grúas del Norte vende Grúas.', lista)).to eq('Grúas del Sur vende Autos.')
+    end
+
+    it 'no toca la llave de una ruta en [ALCANCE POR RAMA] ni las #etiquetas' do
+      texto = "- kontrolya: Presenta Kontrolya.
+#interes-kontrolya = interés en Kontrolya."
+      lista = [{ 'text' => 'Kontrolya', 'label' => 'Producto', 'value' => 'MiTablero' }]
+
+      expect(described_class.apply(texto, lista))
+        .to eq("- kontrolya: Presenta MiTablero.
+#interes-kontrolya = interés en MiTablero.")
+    end
+  end
+
   describe '.count' do
     it 'cuenta solo en la prosa' do
       expect(described_class.count('Grúas del Norte y {{doc:Grúas del Norte}}', 'grúas del norte')).to eq(1)
@@ -47,6 +74,13 @@ RSpec.describe PublishedPrompts::Variables do
       lista = [{ text: '  Grúas  del Norte ', label: ' Nombre ' }, { text: 'grúas del norte', label: 'Otro' }, { text: '', label: 'x' }]
 
       expect(described_class.normalize(lista)).to eq([{ 'text' => 'Grúas del Norte', 'label' => 'Nombre' }])
+    end
+
+    it 'conserva el valor solo si trae algo' do
+      lista = [{ text: 'Grúas', label: 'N', value: ' Autos ' }, { text: 'Horario', label: 'H', value: '' }]
+
+      expect(described_class.normalize(lista)).to eq([{ 'text' => 'Grúas', 'label' => 'N', 'value' => 'Autos' },
+                                                      { 'text' => 'Horario', 'label' => 'H' }])
     end
   end
 
@@ -64,6 +98,12 @@ RSpec.describe PublishedPrompts::Variables do
 
       expect(problemas.size).to eq(4)
       expect(problemas.last).to include('«Precios» no aparece en el Entrenamiento')
+    end
+
+    it 'un valor que es otra marca no pasa' do
+      problemas = described_class.problems([negocio.merge('value' => '<PENDIENTE: X>')], 'Somos Grúas del Norte.')
+
+      expect(problemas.first).to include('Grúas del Norte')
     end
 
     it 'sin problemas, nada' do

@@ -48,10 +48,13 @@ class ContactTrackings::Assistant::AdaptationInventory
     contpaq_support: 'contpaq_support'
   }.freeze
 
-  def initialize(text, account:, template: nil)
+  # answers: lo aplicado antes; por omisión, lo del agente (un borrador sin agente manda
+  # lo de su conversación).
+  def initialize(text, account:, template: nil, answers: nil)
     @text = text.to_s
     @account = account
     @template = template
+    @answers = (answers || template&.adaptation_answers).to_h
     @items = {}
   end
 
@@ -59,6 +62,7 @@ class ContactTrackings::Assistant::AdaptationInventory
     return [] if @text.blank?
 
     scan_variables
+    scan_filled_variables
     scan_named_sources
     scan_sheet_lookups
     scan_erp_queries
@@ -80,6 +84,22 @@ class ContactTrackings::Assistant::AdaptationInventory
       label = raw[/:\s*([^>]+)>/, 1].to_s.strip.presence || raw
       add("var:#{label.downcase}", line, group: :business, kind: 'variable', name: label,
                                          status: 'missing', fix: 'text')
+    end
+  end
+
+  # ── feat/reemplazo_directo_variables: datos ya escritos ───────────────────────
+  # Lo reemplazado antes ya no tiene marca: se reconoce por su valor recordado, que siga
+  # en la prosa. Sale ✔ con `current` y se cambia escribiendo otro (AdaptationApplier).
+  def scan_filled_variables
+    @answers.each do |key, value|
+      next unless key.to_s.start_with?('var:') && !@items.key?(key)
+
+      veces = PublishedPrompts::Variables.count(text, value.to_s) if value.to_s.strip.present?
+      next if veces.to_i.zero?
+
+      @items[key] = { key: key, occurrences: veces, line: line_of(value), options: [], group: :business,
+                      kind: 'variable', name: key.to_s.delete_prefix('var:').upcase_first,
+                      status: 'ok', fix: 'text', current: value.to_s }
     end
   end
 
@@ -203,7 +223,7 @@ class ContactTrackings::Assistant::AdaptationInventory
   # Una versión nueva del autor vuelve a traer las marcas y los nombres de su cuenta:
   # lo que ya se configuró sale escrito, y solo se piden a mano las cosas nuevas.
   def remember_answers
-    previas = template&.adaptation_answers.to_h
+    previas = @answers
     return if previas.blank?
 
     @items.each_value do |item|
