@@ -1,0 +1,5 @@
+es:
+  licenses:
+    errors:
+      invalid_start: 'La licencia arranca «ya» (now) o «en cola» (queue).'
+      only_scheduled: 'Solo se cancela una licencia programada. Para cambiar la vigente, emite otra que arranque ya.'

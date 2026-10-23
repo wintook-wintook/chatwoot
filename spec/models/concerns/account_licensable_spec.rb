@@ -45,4 +45,11 @@ RSpec.describe AccountLicensable do
       expect(account.license_agent_limit).to be_nil
     end
   end
+
+  it 'la marca «Cuenta de Wintook» no pisa otros atributos de la cuenta' do
+    account.update!(custom_attributes: { 'plan_name' => 'x' })
+    account.update!(wintook_internal: '1')
+
+    expect(account.reload.custom_attributes).to include('plan_name' => 'x', 'wintook_internal' => true)
+  end
 end

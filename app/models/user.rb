@@ -141,6 +141,26 @@ class User < ApplicationRecord
     )
   end
 
+  # feat/licencias (F2) — «Ver licencias» / «Gestionar licencias», marcadas en el super admin
+  # (docs/licencias_plan_v1.md §8). Gestionar incluye ver.
+  def can_view_licenses?
+    license_flag?('can_view_licenses') || can_manage_licenses?
+  end
+  alias can_view_licenses can_view_licenses?
+
+  def can_manage_licenses?
+    license_flag?('can_manage_licenses')
+  end
+  alias can_manage_licenses can_manage_licenses?
+
+  def can_view_licenses=(value)
+    self.custom_attributes = (custom_attributes || {}).merge('can_view_licenses' => ActiveModel::Type::Boolean.new.cast(value) || false)
+  end
+
+  def can_manage_licenses=(value)
+    self.custom_attributes = (custom_attributes || {}).merge('can_manage_licenses' => ActiveModel::Type::Boolean.new.cast(value) || false)
+  end
+
   def serializable_hash(options = nil)
     super(options).merge(confirmed: confirmed?)
   end
@@ -177,6 +197,10 @@ class User < ApplicationRecord
   end
 
   private
+
+  def license_flag?(key)
+    ActiveModel::Type::Boolean.new.cast(custom_attributes&.dig(key)) || false
+  end
 
   def remove_macros
     macros.personal.destroy_all

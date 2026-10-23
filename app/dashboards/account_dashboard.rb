@@ -27,7 +27,9 @@ class AccountDashboard < Administrate::BaseDashboard
     locale: Field::Select.with_options(collection: LANGUAGES_CONFIG.map { |_x, y| y[:iso_639_1_code] }),
     status: Field::Select.with_options(collection: [%w[Active active], %w[Suspended suspended]]),
     account_users: Field::HasMany,
-    internal_chat_enabled: Field::Boolean # feat/chat_interno
+    internal_chat_enabled: Field::Boolean, # feat/chat_interno
+    # feat/licencias — sus agentes con permiso ven el dashboard de licencias; nunca se suspende
+    wintook_internal: Field::Boolean
   }.merge(enterprise_attribute_types).freeze
 
   # COLLECTION_ATTRIBUTES
@@ -57,6 +59,7 @@ class AccountDashboard < Administrate::BaseDashboard
     conversations
     account_users
     internal_chat_enabled
+    wintook_internal
   ] + enterprise_show_page_attributes).freeze
 
   # FORM_ATTRIBUTES
@@ -68,6 +71,7 @@ class AccountDashboard < Administrate::BaseDashboard
     locale
     status
     internal_chat_enabled
+    wintook_internal
   ] + enterprise_form_attributes).freeze
 
   # COLLECTION_FILTERS

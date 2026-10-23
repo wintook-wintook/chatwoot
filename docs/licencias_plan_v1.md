@@ -831,6 +831,55 @@ dar de alta agentes en esa cuenta: el tercero recibe el aviso de licencias.
 
 **Cómo probarlo a mano**: registrar una cuenta nueva (o `AccountBuilder.new(email: …, user_password: …, confirmed: true).perform` en consola) y revisar `cuenta.current_license`: Demo, 15 días, 2 agentes.
 
+
+### F2a — Permisos, catálogo y gestión (servidor) ✅ (23/10/2026)
+
+**Qué se hizo**
+
+| Pieza | Archivo |
+|---|---|
+| Casillas «Ver licencias» / «Gestionar licencias» en Super admin › Usuarios | `app/models/user.rb`, `app/dashboards/user_dashboard.rb`, `_user.json.jbuilder` |
+| Casilla «Cuenta de Wintook» en Super admin › Cuentas | `app/models/concerns/account_licensable.rb`, `app/dashboards/account_dashboard.rb` |
+| La puerta doble de la API | `app/controllers/api/v1/accounts/licenses/base_controller.rb` |
+| Catálogo de planes | `…/licenses/plans_controller.rb` (+ validación de funciones en `LicensePlan`) |
+| Vista cruzada de cuentas con filtros | `…/licenses/accounts_controller.rb` |
+| Emitir (ya / en cola) y cancelar programadas | `…/licenses/account_licenses_controller.rb`, `app/services/licenses/issuer.rb` |
+
+**Cómo funciona**
+
+```
+ /api/v1/accounts/:cuenta/licenses/*
+   ¿:cuenta es «Cuenta de Wintook»? ─ no → 401
+   ¿el usuario tiene «Ver licencias»? ─ no → 401
+   escribir (planes, emitir, cancelar) además pide «Gestionar licencias»
+
+ GET   plans                       catálogo + available_features (de config/features.yml, en vivo)
+ POST  plans · PATCH plans/:id     crear / editar (no se borran: active = false)
+ GET   accounts?estado=&dias=&q=   sin_licencia · demo · vigente · por_vencer (7 d) · vencida
+ GET   accounts/:id                la cuenta + historial de licencias
+ POST  account_licenses            { target_account_id, license_plan_id, start: now|queue, max_agents?, duration_days?, name?, notes? }
+ POST  account_licenses/:id/cancel solo una programada
+```
+
+- **Emitir «ya»** cancela la activa anterior y, si la cuenta estaba suspendida, la reactiva.
+  **«En cola»** arranca al terminar la última vigente o programada; sin nada vigente, arranca ya.
+- La licencia guarda quién la dio (`created_by`) y `metadata.source = 'manual'`.
+- Los canales y funciones del plan **solo se guardan**; todavía no se aplican a la cuenta
+  (decisión 23/10/2026, pregunta 14.1).
+- «Gestionar» incluye «Ver». Un agente con permiso que entra desde una cuenta de cliente no ve nada.
+
+**Pila de pruebas** (45 de licencias en verde)
+
+- `spec/services/licenses/issuer_spec.rb`: activa ya y cancela la anterior, ajustes por cuenta sin tocar el plan, cola encadenada, cola sin vigente, reactiva suspendida, forma de arrancar inválida.
+- `spec/models/user_licenses_spec.rb`: sin marcar, gestionar incluye ver, no pisa otros atributos.
+- `spec/controllers/api/v1/accounts/licenses/licenses_api_spec.rb`: 401 sin permiso y desde cuenta de cliente, «Ver» no escribe, catálogo crear/editar/rechazar función inexistente, filtros por estado, detalle con historial, emitir a otra cuenta, cancelar solo programada.
+- `spec/controllers/super_admin/licenses_permissions_spec.rb`: las casillas del usuario y de la cuenta se guardan.
+- Fichas existentes del super admin: 3 fallas que ya existían sin este cambio (comprobado apartándolo).
+
+**Cómo probarlo a mano**: en el super admin marcar una cuenta como «Cuenta de Wintook» y a un
+agente suyo «Gestionar licencias»; con su sesión, `GET /api/v1/accounts/<esa cuenta>/licenses/accounts?estado=sin_licencia`.
+La pantalla llega en F2b.
+
 ---
 
 ### Bitácora de versiones
