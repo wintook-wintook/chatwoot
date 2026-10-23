@@ -3,3 +3,11 @@ en:
     errors:
       invalid_start: 'A license starts "now" or "queue".'
       only_scheduled: 'Only a scheduled license can be cancelled. To change the current one, issue another starting now.'
+  # feat/licencias — etiquetas de las casillas en el super admin (en español a pedido)
+  helpers:
+    label:
+      account:
+        wintook_internal: 'Cuenta de Wintook (ve licencias y nunca se suspende)'
+      user:
+        can_view_licenses: 'Ver licencias'
+        can_manage_licenses: 'Gestionar licencias (incluye ver)'
