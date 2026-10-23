@@ -86,6 +86,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       Rails.logger.warn "[TrackingBot] ⛔ Tracking ##{tracking.id}: #{ContactTrackings::PendingSetup.message(tracking)}"
       return false
     end
+    # feat/licencias (F3): cuenta suspendida → el mensaje queda guardado y el bot no contesta.
+    if Licenses::Silence.silenced?(tracking.account)
+      Rails.logger.info "[TrackingBot] 🔇 Tracking ##{tracking.id}: cuenta #{tracking.account_id} suspendida, no contesta"
+      return false
+    end
 
     # [Gestor de Tickets] hook — falla silenciosamente para no romper el bot @tickets_cases
     begin

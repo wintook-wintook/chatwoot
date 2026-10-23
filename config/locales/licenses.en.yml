@@ -1,5 +1,11 @@
 en:
   licenses:
+    mailer:
+      greeting: 'Hello,'
+      expiring_subject: 'Your license expires in %{days} days'
+      expiring_body: 'The "%{plan}" license of the account %{account} expires in %{days} days, on %{date}.'
+      expiring_after: "If it is not renewed before then, the account is suspended: nobody will be able to sign in and AI agents will stop replying. Your customers' messages will still be saved. To renew, get in touch with us."
+      cta: 'Open the account'
     errors:
       invalid_start: 'A license starts "now" or "queue".'
       only_scheduled: 'Only a scheduled license can be cancelled. To change the current one, issue another starting now.'

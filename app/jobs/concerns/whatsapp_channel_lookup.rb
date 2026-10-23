@@ -10,7 +10,9 @@ module WhatsappChannelLookup
   def channel_is_inactive?(channel)
     return true if channel.blank?
     return true if channel.reauthorization_required?
-    return true unless channel.account.active?
+
+    # feat/licencias (F3): una cuenta suspendida ya no descarta mensajes; se guardan y es el
+    # motor el que no contesta (Licenses::Silence), igual que en los demás canales.
 
     false
   end

@@ -43,6 +43,8 @@ class Webhooks::WhatsappCallEventsJob < MutexApplicationJob
     params = params.with_indifferent_access
     channel = find_channel_from_whatsapp_business_payload(params)
     return if channel_is_inactive?(channel) || !channel.voice_enabled?
+    # feat/licencias (F3): en una cuenta suspendida nadie puede entrar a contestar.
+    return if Licenses::Silence.silenced?(channel.account)
 
     return permission_reply(channel, params) if self.class.permission_reply?(params)
 

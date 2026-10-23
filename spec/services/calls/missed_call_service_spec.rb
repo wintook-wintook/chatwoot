@@ -117,6 +117,16 @@ RSpec.describe Calls::MissedCallService do
         .to eq([I18n.t('conversations.messages.whatsapp.missed_call_auto_reply', locale: :es)])
     end
 
+    # feat/licencias (F3)
+    it 'con la cuenta suspendida, no se manda y queda dicho' do
+      create(:message, account: account, inbox: channel.inbox, conversation: conversation, message_type: :incoming, content: 'hola')
+      account.update!(status: :suspended)
+      perdida!
+
+      expect(conversation.messages.outgoing).to be_empty
+      expect(lineas.last).to include('cuenta está suspendida')
+    end
+
     it 'con la ventana cerrada, no se manda y queda dicho' do
       perdida!
 

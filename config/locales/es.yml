@@ -221,6 +221,7 @@ es:
           tracking_active: "Llamada perdida: no se inscribió en «%{campaign}» porque ya tiene un seguimiento activo en esta bandeja."
           tracking_skipped: "Llamada perdida: no se inscribió en «%{campaign}» (motivo: %{reason})."
           auto_reply_window_closed: "Llamada perdida: no se le envió mensaje al cliente porque la ventana de 24 h de WhatsApp está cerrada."
+          auto_reply_account_suspended: "Llamada perdida: no se le envió mensaje al cliente porque la cuenta está suspendida."
         permission_requested: "Se le pidió a %{contact_name} permiso para llamarle por WhatsApp"
         permission_granted: "%{contact_name} permitió que le llamemos por WhatsApp"
       status:

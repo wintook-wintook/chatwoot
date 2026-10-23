@@ -245,3 +245,15 @@ kanban_funnel_stale_job:
   class: "Kanban::FunnelStaleJob"
   queue: scheduled_jobs
   description: "Discard contact-funnel cards with no customer reply after the board's limit"
+
+# feat/licencias (F3) — vencer licencias, promover la cola y suspender (cada hora, minuto 5).
+licenses_expiration_job:
+  cron: '5 * * * *'
+  class: 'Licenses::ExpirationJob'
+  queue: scheduled_jobs
+
+# feat/licencias (F3) — avisos 10 y 5 días antes de vencer (diario 15:00 UTC = 9:00 CDMX).
+licenses_reminder_job:
+  cron: '0 15 * * *'
+  class: 'Licenses::ReminderJob'
+  queue: scheduled_jobs

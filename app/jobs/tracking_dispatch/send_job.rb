@@ -35,7 +35,7 @@ class TrackingDispatch::SendJob < ContactTrackingJob
     begin
       tracking = ContactTracking.find_by(id: tracking_id)
       return unless claimed?(tracking, token)
-      return release(tracking) if tracking.tracking_campaign&.status == 'paused'
+      return release(tracking) if on_hold?(tracking)
 
       # proyecto@adaptar_prompts_publicados (F5): con <PENDIENTE:> no sale; queda fallido con el motivo.
       ContactTrackings::PendingSetup.ensure!(tracking)
@@ -50,6 +50,11 @@ class TrackingDispatch::SendJob < ContactTrackingJob
   end
 
   private
+
+  # Campaña pausada, o cuenta suspendida después de tomarlo (feat/licencias F3): vuelve a la fila.
+  def on_hold?(tracking)
+    tracking.tracking_campaign&.status == 'paused' || Licenses::Silence.silenced?(tracking.account)
+  end
 
   def claimed?(tracking, token)
     tracking&.active? && TrackingDispatch.token(tracking.dispatched_at) == token

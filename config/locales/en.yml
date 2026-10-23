@@ -236,6 +236,7 @@ en:
           tracking_active: "Missed call: not enrolled in «%{campaign}» because there is already an active follow-up in this inbox."
           tracking_skipped: "Missed call: not enrolled in «%{campaign}» (reason: %{reason})."
           auto_reply_window_closed: "Missed call: no message was sent to the customer because the WhatsApp 24 h window is closed."
+          auto_reply_account_suspended: "Missed call: no message was sent to the customer because the account is suspended."
         permission_requested: "%{contact_name} was asked for permission to be called on WhatsApp"
         permission_granted: "%{contact_name} allowed us to call them on WhatsApp"
       status:

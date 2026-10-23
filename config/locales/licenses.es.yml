@@ -1,5 +1,11 @@
 es:
   licenses:
+    mailer:
+      greeting: 'Hola,'
+      expiring_subject: 'Tu licencia vence en %{days} días'
+      expiring_body: 'La licencia «%{plan}» de la cuenta %{account} vence en %{days} días, el %{date}.'
+      expiring_after: 'Si no se renueva antes, la cuenta se suspende: nadie podrá entrar y los Agentes IA dejarán de contestar. Los mensajes de tus clientes se seguirán guardando. Para renovar, ponte en contacto con nosotros.'
+      cta: 'Entrar a la cuenta'
     errors:
       invalid_start: 'La licencia arranca «ya» (now) o «en cola» (queue).'
       only_scheduled: 'Solo se cancela una licencia programada. Para cambiar la vigente, emite otra que arranque ya.'
