@@ -2,11 +2,17 @@ import { shallowMount } from '@vue/test-utils';
 import AccountsTab from './AccountsTab.vue';
 import IssueModal from './IssueModal.vue';
 import PlanModal from './PlanModal.vue';
+import SummaryTab from './SummaryTab.vue';
 import LicensesAPI from 'dashboard/api/licenses';
 
 // feat/licencias (F2b)
 vi.mock('dashboard/api/licenses', () => ({
-  default: { getAccounts: vi.fn(), issue: vi.fn(), createPlan: vi.fn() },
+  default: {
+    getAccounts: vi.fn(),
+    issue: vi.fn(),
+    createPlan: vi.fn(),
+    getSummary: vi.fn(),
+  },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
@@ -150,5 +156,67 @@ describe('PlanModal', () => {
     expect(wrapper.vm.functions).toEqual(['campaigns', 'reports']);
     expect(wrapper.vm.featureLabel('channel_whatsapp')).toBe('whatsapp');
     expect(wrapper.vm.form.active).toBe(true);
+  });
+});
+
+describe('SummaryTab', () => {
+  const SUMMARY = {
+    kpis: {
+      paid: 4,
+      demo: 2,
+      expiring: { 7: 1, 14: 2, 30: 3, 60: 5 },
+      expired: 1,
+      without_license: 9,
+      suspended: 0,
+      conversion: { demo_accounts: 4, converted: 1, rate: 25 },
+    },
+    expirations: [{ week_start: '2026-10-19', count: 1 }],
+    by_plan: [{ name: 'Demo', count: 2 }],
+  };
+
+  beforeEach(() => {
+    LicensesAPI.getSummary.mockReset();
+    LicensesAPI.getSummary.mockResolvedValue({ data: SUMMARY });
+  });
+
+  const montarResumen = () =>
+    shallowMount(SummaryTab, {
+      mocks,
+      stubs: [...stubs, 'BarChart', 'ReportMetricCard'],
+    });
+
+  it('arma las tarjetas y «por vencer» sigue a la ventana elegida', async () => {
+    const wrapper = montarResumen();
+    await esperar();
+
+    const valor = clave => wrapper.vm.cards.find(c => c.key === clave).value;
+    expect(valor('PAID')).toBe(4);
+    expect(valor('EXPIRING')).toBe(1);
+    expect(valor('CONVERSION')).toBe('25%');
+
+    wrapper.vm.dias = 30;
+    expect(valor('EXPIRING')).toBe(3);
+  });
+
+  it('una tarjeta abre Cuentas con su filtro; conversión no', async () => {
+    const wrapper = montarResumen();
+    await esperar();
+    wrapper.vm.dias = 14;
+
+    wrapper.vm.open(wrapper.vm.cards.find(c => c.key === 'EXPIRING'));
+    wrapper.vm.open(wrapper.vm.cards.find(c => c.key === 'CONVERSION'));
+
+    expect(wrapper.emitted('filter')).toEqual([
+      [{ estado: 'por_vencer', dias: 14 }],
+    ]);
+  });
+
+  it('las barras usan un solo color del tema', async () => {
+    const wrapper = montarResumen();
+    await esperar();
+
+    const { datasets } = wrapper.vm.expirationsChart;
+    expect(datasets).toHaveLength(1);
+    expect(datasets[0].backgroundColor).toMatch(/^rgb\(/);
   });
 });

@@ -4,7 +4,11 @@
     "DESCRIPTION": "Qué plan tiene cada cuenta, cuándo vence y cuántos agentes puede tener.",
     "NO_ACCESS": "No tienes acceso a las licencias desde esta cuenta.",
     "LOAD_ERROR": "No se pudo cargar. Intenta otra vez.",
-    "TABS": { "ACCOUNTS": "Cuentas", "PLANS": "Planes" },
+    "TABS": {
+      "SUMMARY": "Resumen",
+      "ACCOUNTS": "Cuentas",
+      "PLANS": "Planes"
+    },
     "ACCOUNTS": {
       "SEARCH": "Buscar por nombre o número",
       "STATE_ALL": "Todas",
@@ -50,7 +54,10 @@
       "FEATURES_COUNT": "{count} incluidas",
       "EDIT": "Editar"
     },
-    "TYPE": { "DEMO": "Demo", "PAID": "De pago" },
+    "TYPE": {
+      "DEMO": "Demo",
+      "PAID": "De pago"
+    },
     "PLAN_FORM": {
       "NEW_TITLE": "Nuevo plan",
       "EDIT_TITLE": "Editar plan",
@@ -101,6 +108,33 @@
       "SCHEDULED": "Programada",
       "EXPIRED": "Vencida",
       "CANCELLED": "Cancelada"
+    },
+    "SUMMARY": {
+      "WINDOW": "Por vencer en:",
+      "DAYS": "{count} días",
+      "CARDS": {
+        "PAID": "De pago",
+        "DEMO": "En demo",
+        "EXPIRING": "Por vencer ({days} días)",
+        "EXPIRED": "Vencidas",
+        "WITHOUT": "Sin licencia",
+        "CONVERSION": "Conversión demo → pago"
+      },
+      "INFO": {
+        "PAID": "Licencias de pago activas hoy. Clic para verlas.",
+        "DEMO": "Cuentas en su periodo de demo. Clic para verlas.",
+        "EXPIRING": "Licencias activas que vencen dentro del periodo elegido. Clic para verlas.",
+        "EXPIRED": "Cuentas que tuvieron licencia y ya no tienen ninguna activa. Clic para verlas.",
+        "WITHOUT": "Cuentas fuera de licencia: funcionan como antes, sin tope ni vencimiento. Clic para verlas.",
+        "CONVERSION": "De {demo_accounts} cuentas que tuvieron demo, {converted} recibieron después una licencia de pago."
+      },
+      "EXPIRATIONS_TITLE": "Vencimientos de las próximas semanas",
+      "EXPIRATIONS_HINT": "Licencias activas que vencen cada semana en los próximos 60 días.",
+      "EXPIRATIONS_SERIES": "Licencias que vencen",
+      "BY_PLAN_TITLE": "Cuentas por plan",
+      "BY_PLAN_HINT": "Licencias activas hoy, agrupadas por plan.",
+      "BY_PLAN_SERIES": "Cuentas activas",
+      "BY_PLAN_EMPTY": "Todavía no hay licencias activas."
     }
   }
 }
