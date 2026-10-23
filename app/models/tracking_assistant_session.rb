@@ -5,6 +5,8 @@
 # Table name: tracking_assistant_sessions
 #
 #  id                   :bigint           not null, primary key
+#  adaptation_answers   :jsonb            not null
+#  base_version         :integer
 #  draft                :text
 #  draft_versions       :jsonb            not null
 #  messages             :jsonb            not null
@@ -87,8 +89,12 @@ class TrackingAssistantSession < ApplicationRecord
   # es trabajo del equipo, y quedaba escondido en la conversación de quien lo armó.
   # El módulo es de administradores (ver el controlador), así que "toda la cuenta"
   # son ellos.
+  #
+  # Solo las abiertas (feat/agentes_ia_unificado, 21/10/2026): una que ya terminó en
+  # un agente está en la lista de Agentes, con su historial en Versiones. Además el
+  # tope (LIST_LIMIT) ya no lo gastan conversaciones cerradas.
   def self.listable_for(account)
-    where(account: account, status: %w[open saved])
+    where(account: account, status: 'open')
       .includes(:tracking_template, :user).recent_first.limit(LIST_LIMIT)
   end
 
@@ -141,7 +147,8 @@ class TrackingAssistantSession < ApplicationRecord
   MAX_VERSIONS = 30
   # saved: lo que se guardó en el Agente IA (25/09/2026: reabrir la sesión mostraba el
   # texto de antes de las últimas ediciones a mano).
-  VERSION_SOURCES = %w[loaded manual assistant saved].freeze
+  # configured: lo aplicado desde la pestaña «Configurar» (proyecto@adaptar_prompts_publicados).
+  VERSION_SOURCES = %w[loaded manual assistant saved configured].freeze
   MAX_CHANGE_LINES = 15
 
   # Agrega una versión si el texto cambió respecto de la última. No guarda.
@@ -235,12 +242,43 @@ class TrackingAssistantSession < ApplicationRecord
       add_version(draft: draft, source: 'saved', summary: template.name)
       self.draft = draft
     end
+    carry_adaptation_answers(template)
     update!(status: 'saved', tracking_template: template)
   end
 
+  # feat/reemplazo_directo_variables — lo reemplazado en «Configurar» antes de que hubiera
+  # agente pasa al agente, para poder cambiarlo después desde ahí. Sin validaciones a
+  # propósito, igual que AssistantAdaptationController#remember.
+  def carry_adaptation_answers(template)
+    return if adaptation_answers.blank?
+
+    template.update_column(:adaptation_answers, template.adaptation_answers.to_h.merge(adaptation_answers)) # rubocop:disable Rails/SkipsModelValidations
+  end
+
   # El guardado automático de lo editado a mano (ver add_version, autosave:).
-  def autosave!(draft)
-    add_version(draft: draft, source: 'manual', autosave: true)
+  # Lo configurado en «Configurar» es su propia versión, con sus notas: no la pisa el
+  # siguiente guardado automático (eso solo pasa entre autoguardados seguidos).
+  # feat/agentes_ia_unificado — una conversación abierta sobre un agente queda ligada
+  # a él desde el primer guardado, no recién al publicar: así el espacio del agente
+  # retoma su borrador al volver, y «En construcción» la abre en ese agente (publicar
+  # lo actualiza en vez de crear otro). Solo un agente de la misma cuenta, y solo si
+  # la conversación no tenía uno. No guarda.
+  #
+  # Anota también de qué versión del agente parte (base_version): al publicar,
+  # SaveService avisa si el Entrenamiento cambió desde entonces.
+  def link_template(template_id)
+    return if tracking_template_id.present? || template_id.blank?
+
+    self.tracking_template = account.tracking_templates.find_by(id: template_id)
+    self.base_version = tracking_template&.versions&.maximum(:version)
+  end
+
+  def autosave!(draft, source: 'manual', notes: nil)
+    if source == 'configured'
+      add_version(draft: draft, source: 'configured', notes: notes)
+    else
+      add_version(draft: draft, source: 'manual', autosave: true)
+    end
     self.draft = draft
     save!
   end

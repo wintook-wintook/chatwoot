@@ -1,0 +1,196 @@
+---
+titulo: Plan — Clase de caso + Comercial (oportunidades)
+tipo: implementación
+fase: F0–F5
+tags: [tickets, plan, comercial, oportunidades, clase-de-caso]
+---
+
+# Plan — Clase de caso + Comercial (oportunidades)
+
+Rama: `feat/nva_oportunidad` (desde `develop` a9fef695, 2026-10-19). Flag: `case_commercial`.
+
+## Idea
+Nuevo nivel **Clase de caso** por encima del Tipo. La clase es fija en código
+(cada una tiene comportamiento propio); los tipos los define la cuenta.
+
+```
+Clase (código)       Tipos (configurables)
+├─ Soporte (0)       Soporte, Incidente del sistema…   ← todo lo existente
+├─ Comercial (1)     Oportunidad nueva, Renovación, Venta adicional…
+├─ Orden de trabajo (2)  reservado
+└─ Proyecto (3)          reservado
+```
+`case_types.case_class` (enum por posición: valores nuevos SIEMPRE al final, ver
+[[Trampas]] #17). El ticket hereda la clase de su tipo.
+
+## Decisiones tomadas
+- Todo lo existente queda como **Soporte**; la clase de un tipo **se puede cambiar**
+  (modal de impacto, 409 + `confirm_class_change`) y un caso puede moverse a un tipo
+  de otra clase. No se borra nada; queda `case_class_changed` en `case_events`.
+- **Datos comerciales en columnas reales** de `case_tickets` (solo los usa Comercial).
+- **Clasificación por tipo opcional**: servicio/categoría con `case_type_id` NULL = global.
+- **Resultado** (`outcome`) separado de `status`:
+  | UI | status | outcome | Filtro |
+  |---|---|---|---|
+  | Prospecto…Negociación | `in_progress` | — | Pendiente |
+  | Pospuesta | `waiting_on_customer` + `postponed_until` | — | Pendiente (etiqueta) |
+  | Ganada | `closed` | `won` | Cerrado |
+  | Perdida | `closed` | `lost` + motivo | Cerrado |
+  | Cancelada | `closed` | `cancelled` + motivo | Cerrado |
+  Las tres finales usan `closed` porque `cancelled` no se puede reabrir.
+- Respuesta del cliente → **se reabre la misma oportunidad** (sin ventana), con trazabilidad.
+- A) motivos = catálogo configurable + nota · B) pospuestas dentro de Pendiente ·
+  C) si hay cerrados de dos clases en la conversación, reabrir el más reciente y avisar
+  en el otro · D) automatización con tipo de otra clase → caso nuevo · E) borrar un tipo
+  borra sus servicios/categorías propios.
+
+## Hallazgos que el plan cubre
+1. `validate_closure!` exige causa/solución → Comercial cierra con resultado + motivo.
+2. Ventana de reapertura / ticket de seguimiento → Comercial siempre reabre.
+3. Listener reabre el último cerrado de la conversación sin mirar clase.
+4. `ActionService` (automatizaciones) cambia `case_type_id` sin preguntar.
+5. `@solicitudes` depende de la columna «Pagado» (`ServicePaidJob`) → aviso en el modal.
+6. Bot `@estado_ticket` y portal → excluir Comercial; tipo Comercial no puede ser público.
+7. SLA (`assign_sla_targets`, `CaseSlaMonitorJob`) → excluir Comercial.
+8. Lote no puede cerrar Comercial (necesita resultado).
+9. Métricas actuales → filtrar a Soporte.
+
+## Fases
+| Fase | Contenido | Estado |
+|---|---|---|
+| F0 | Flag `case_commercial` (al final de `features.yml`) + este plan | ✅ 2026-10-19 |
+| F1 | Clase de caso: columna, API, modal de impacto, eventos, UI de tipos | ✅ 2026-10-19 |
+| F2 | Clasificación por tipo (servicios/categorías, IA, modales) | ✅ 2026-10-19 |
+| F3 | Comercial backend: datos, resultado, motivos, columnas del embudo, pospuestas, protecciones #2–#8 | ✅ 2026-10-20 |
+| F4 | Comercial UI: menú, lista, Kanban con montos, panel comercial, modales | ✅ 2026-10-20 |
+| F5 | Métricas del embudo + métricas actuales solo Soporte | ✅ 2026-10-20 |
+| F6/F7 | Orden de trabajo / Proyecto (plan propio) | después |
+
+## F1 — lo construido
+- Migración `20261021120000_add_case_class_to_case_types` (`case_class` int default 0 + índice).
+- `CaseType`: enum `case_class` (`_prefix: :class`), `class_change_impact`, `log_class_change!`.
+- `CaseEvent`: `case_class_changed: 34`.
+- `case_types_controller`: `?case_class=`, `OFFERED_CLASSES` (support/commercial),
+  Comercial exige el flag, 409 + impacto sin `confirm_class_change`.
+- `case_tickets_controller#update`: evento al mover un caso a un tipo de otra clase;
+  `case_class` en el JSON del tipo del ticket.
+- Front: `TypeFormModal.vue` (selector + confirmación), `TicketTypes.vue` (columna
+  Clase + filtro), store `updateType({ confirmClassChange })`, i18n es/en.
+- Spec: `spec/requests/api/v1/accounts/case_types_class_spec.rb` (8 casos).
+
+## F2 — lo construido
+- Migración `20261021130000_add_case_type_to_case_classification` (`case_type_id` FK opcional
+  en `case_services` y `case_categories`; NULL = global).
+- `CaseService`/`CaseCategory`: `belongs_to :case_type`, scope `for_type(id)` (globales +
+  propios), `applies_to_type?`, valida que el tipo sea de la cuenta. La subcategoría hereda
+  el tipo del padre y lo sigue si el padre cambia.
+- `CaseType`: `has_many :case_services / :case_categories, dependent: :destroy` (decisión E).
+- `CaseTicket`: al crear o al cambiar de tipo, la clasificación ajena **se limpia sola**
+  (no rompe automatizaciones, IA ni @solicitudes); en otro caso es error de validación.
+- IA: `Classifier` usa `for_type(ticket.case_type_id)`; `Intake` lista todo con la etiqueta
+  «solo tipo N» y `typed_pick` descarta lo que no es del tipo elegido.
+- API: `case_type_id` en JSON y params; `?case_type_id=` filtra los index.
+- Front: helper `helper/caseClassification.js`; `CaseTicketModal` e `CaseTicketInternalModal`
+  filtran por el tipo elegido y sueltan lo que deja de aplicar; `Classification.vue` con
+  filtro «Aplica a», columna y selector en los modales (la subcategoría no lo muestra).
+- Spec: `spec/models/case_classification_by_type_spec.rb` (8 casos).
+
+## F3 — lo construido
+- Migración `20261021140000_add_commercial_to_case_tickets`: en `case_tickets` amount (14,2), currency,
+  expected_close_at, probability, outcome (won 0 / lost 1 / cancelled 2), outcome_at, outcome_reason_id
+  (FK nullify), outcome_note, postponed_until; `case_type_columns.outcome/probability`; tabla
+  `case_outcome_reasons`; `case_settings.default_currency` (MXN).
+- `CaseTicket`: `commercial?`, `postponed?`, `close_with_outcome!`, `postpone!`, `resume!`,
+  `assign_commercial_data` + `log_commercial_change!`; scopes `commercial`, `non_commercial`, `of_class`.
+  - `transition!` prohíbe resolved/validating/cancelled en Comercial; el cierre pasa por
+    `validate_outcome!` (motivo del catálogo para perdida/cancelada; sin catálogo, la nota).
+  - Salir de `closed` borra el resultado (`previous_outcome` en el evento); salir de la espera borra
+    `postponed_until`. Al cerrar, el caso se acomoda en la columna del resultado.
+  - Sin SLA ni matriz de prioridad. Nace con la moneda de la cuenta y la probabilidad de su etapa;
+    entrar a una columna con probabilidad la copia.
+  - `within_reopen_window?` siempre true para Comercial (#2).
+- `CaseType`: un tipo Comercial nunca es público; nace con el embudo `COMMERCIAL_TEMPLATE`
+  (Prospecto 10 · Calificado 25 · Propuesta 50 · Negociación 75 · Pospuesta · Ganada · Perdida · Cancelada).
+  Un tipo que CAMBIA a Comercial conserva sus columnas (no se reemplazan solas).
+- `CaseEvent`: `outcome_set 35`, `postponed 36`, `resumed 37`, `amount_changed 38`.
+- API: `PATCH /case_tickets/:id/outcome|postpone|resume`; `move` a columna de resultado
+  (`requires_outcome`) o de espera (`requires_postpone`); de Perdida a Ganada no se arrastra;
+  `?case_class=` y `?outcome=` en el index; orden por monto/cierre/probabilidad; JSON con
+  `is_commercial`, datos y resultado; `can_transition_to` sin resolved/cancelled/closed;
+  `case_outcome_reasons` CRUD (admin); `case_setting.default_currency`.
+- Protecciones: #3 el listener reabre el más reciente y deja `message_received` en el de otra clase;
+  #4 automatización con tipo de otra clase → caso nuevo (ActionService + `find_active_ticket_for_automation`);
+  #6 bot `@estado_ticket` y portal excluyen Comercial; #7 monitor SLA excluye Comercial;
+  #8 el lote no cierra oportunidades. Seguimientos IA ignoran pospuestas.
+- Job diario `Cases::ResumePostponedJob` (07:00, `schedule.yml`) con aviso de campana al asignado
+  (reutiliza `case_ticket_assignment`).
+- Specs: `spec/models/case_ticket_commercial_spec.rb` (11) y
+  `spec/requests/api/v1/accounts/case_tickets_commercial_spec.rb` (11).
+
+## F4 — lo construido
+- Menú **Comercial** (flag `case_commercial`): Oportunidades y Embudo. Rutas
+  `gestorTickets_commercial` / `gestorTickets_commercial_kanban` reutilizan `Index.vue` y
+  `Kanban.vue` con la prop `caseClass: 'commercial'` (van antes del catch-all `tickets/:id`).
+  Ambas vistas observan `caseClass`: la misma instancia sirve a las dos rutas.
+- Casos y oportunidades no se mezclan: con tipos Comercial en la cuenta, la cola y el tablero de
+  casos piden `case_class=support`; las de oportunidades, `commercial`. Los tipos se cargan antes
+  del primer fetch por eso.
+- `Index.vue` (modo Comercial): Monto, Probabilidad, Etapa (columna del embudo / resultado /
+  «Pospuesta hasta»), Cierre estimado en lugar de Vence; subfiltro por resultado en Cerradas;
+  orden por monto, cierre y probabilidad; sin pestaña de SLA. Prefs de la lista separadas por clase.
+- `Kanban.vue` (embudo): arranca en el primer tipo Comercial; total por columna **por moneda**;
+  tarjeta con monto, %, cierre y etiqueta de pospuesta. Soltar llama a `move` directo (sin modal de
+  aviso al cliente) y si el backend responde `requires_outcome` / `requires_postpone` abre
+  `OutcomeModal` / `PostponeModal` y reintenta.
+- `TicketDetail.vue`: franja `CommercialPanel` (edición en línea de monto/moneda/cierre/probabilidad
+  + ponderado; cerrada muestra resultado, motivo y nota); botones Ganada / Perdida / Cancelar /
+  Posponer o Retomar; sin SLA, nivel, escalamiento ni bloque de causa/solución; el salto de columna
+  del menú de estado también abre los modales. «Volver» regresa a Oportunidades.
+- `CaseTicketModal.vue`: con tipo Comercial pide monto, moneda (la de la cuenta), cierre y
+  probabilidad y oculta impacto/urgencia/naturaleza.
+- `Settings.vue` → `CommercialSettings.vue`: moneda por defecto y catálogo de motivos
+  (agregar, renombrar, activar/desactivar, borrar).
+- `JourneyView.vue`: resumen de `outcome_set`, `postponed`, `amount_changed` y del resultado previo al reabrir.
+- Nuevos: `views/gestorTickets/commercial/{OutcomeModal,PostponeModal,CommercialPanel,CommercialSettings}.vue`,
+  `helper/caseCommercial.js`, `api/caseOutcomeReasons.js`; store `closeWithOutcome`,
+  `postponeTicket`, `resumeTicket`, `updateCommercialData`, `moveTicketColumn({ postponedUntil, reason })`.
+- Pendiente fuera de F4: alta de oportunidad desde la lista (hoy nace en la conversación o el
+  contacto, la lista lo indica) y botón «Usar columnas del embudo» para un tipo que pasa a Comercial.
+
+## F5 — lo construido
+- `V2::Reports::Cases::PipelineBuilder` + `GET /api/v2/accounts/:id/case_reports/pipeline` (mismos
+  filtros: tipo, vendedor, equipo, `since`/`until` en segundos). Solo clase Comercial.
+  - Abierto = foto de hoy (sin fecha): valor en proceso y ponderado por moneda, pospuestas,
+    etapas (agrupadas por etiqueta de columna; sin columna → «Sin etapa»), pronóstico por mes de
+    `expected_close_at`.
+  - Decidido = `outcome_at` en el rango: ganadas/perdidas/canceladas, valor ganado por moneda,
+    tasa de cierre ganadas/(ganadas+perdidas), ciclo promedio alta→ganada, motivos, y
+    **recuperadas** (ganadas con un `reopened` cuyo `previous_outcome` fue lost/cancelled).
+  - Por vendedor y por tipo.
+- Hallazgo #9: `case_tickets#metrics` (Métricas de Tickets) ahora es `non_commercial`, y `by_type`
+  ya no lista tipos Comercial.
+- El informe existente de Informes → Oportunidades (`proyecto@metricas_casos`) ya lee `outcome`:
+  `outcome_bucket(status, closure, outcome)` → won/lost; cancelled = «otro cierre».
+  `StageDurationBuilder` cuenta `outcome_set`, `postponed` (ahora trae `to`) y `resumed`.
+- Scopes `commercial` / `non_commercial` / `of_class` reescritos con **subconsulta** (ver [[Trampas]] #21).
+- Front: `views/gestorTickets/commercial/CommercialMetrics.vue` (ruta
+  `gestorTickets_commercial_metrics`, menú Comercial → Métricas): KPIs, embudo por etapa y motivos en
+  barras de una serie con etiqueta directa, tooltip y vista de tabla; tablas por vendedor, por tipo y
+  pronóstico (meses pasados marcados «Fecha vencida»).
+- Specs: `spec/builders/v2/reports/cases/pipeline_builder_spec.rb` (7) + 1 en
+  `case_tickets_commercial_spec.rb` (métricas solo Soporte + endpoint).
+
+## Cambios del módulo posteriores al 2026-09-04 (no estaban en la bóveda)
+- `3b9daa35` ITIL configurable **por tipo** (`case_types.itil_enabled`), ya no global.
+- `7235e1ba` / `411637ec` avance y cambio de estado usan las columnas del tipo.
+- `b4a6782d` movimiento libre entre columnas personalizadas.
+- `eab21d0b` bandeja de tareas con reuniones agendadas y filtro pendiente/cerrado.
+- `@solicitudes` (proyecto aparte, 2026-09-26 → 10-07): un caso por servicio desde
+  `contact_trackings/service_requests`; `ServicePaidJob` al mover a la columna «Pagado».
+
+## Siguiente
+La continuación (menú por clase, Comercial y Soporte completos, Órdenes, Proyectos) está en
+[[Plan-Casos-Hoja-de-ruta]].
+
+## 🔗 Relacionado
+[[00-Indice]] · [[Trampas]] · [[Plan-Columnas-Por-Tipo]] · [[Pendiente]]

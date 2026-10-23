@@ -78,26 +78,13 @@ module ContactTrackings::Assistant::TagDictionary
     prose_lines(text).filter_map { |numero, linea| tags_in(linea) unless sueltas.include?(numero) }.flatten.uniq
   end
 
-  def check(text, map:, account:, findings:)
+  # Que la etiqueta exista en la cuenta no se revisa (20/10/2026): va en el mensaje y la
+  # lee una automatización, no es una etiqueta de Chatwoot.
+  def check(text, findings:)
     bare_lines(text).each do |numero, linea|
       findings.add(:degrading, :bare_tag_line, t('bare_tag_line', line: numero, tags: tags_in(linea).join(' ')),
                    line: numero, wrote: linea.strip)
     end
-    missing_state_tags(text, map, account, findings)
-  end
-
-  # Las de las rutas ya las revisa check_tags_exist (label_not_found).
-  def missing_state_tags(text, map, account, findings)
-    existentes = account.labels.pluck(:title).map { |titulo| "##{titulo.downcase}" }
-    de_rutas = map.routes.filter_map(&:hashtag).map(&:downcase)
-    (declared(text) - de_rutas - existentes).each do |tag|
-      findings.add(:degrading, :state_label_not_found, t('state_label_not_found', tag: tag),
-                   line: first_line_with(text, tag), wrote: tag)
-    end
-  end
-
-  def first_line_with(text, tag)
-    prose_lines(text).find { |_, linea| tags_in(linea).include?(tag) }&.first
   end
 
   def t(key, **args)

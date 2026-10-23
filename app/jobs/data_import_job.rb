@@ -30,14 +30,7 @@ class DataImportJob < ApplicationJob
   def parse_csv_and_build_contacts
     contacts = []
     rejected_contacts = []
-    # Ensuring that importing non utf-8 characters will not throw error
-    data = @data_import.import_file.download
-    utf8_data = data.force_encoding('UTF-8')
-
-    # Ensure that the data is valid UTF-8, preserving valid characters
-    clean_data = utf8_data.valid_encoding? ? utf8_data : utf8_data.encode('UTF-16le', invalid: :replace, replace: '').encode('UTF-8')
-
-    csv = CSV.parse(clean_data, headers: true)
+    csv = CSV.parse(clean_import_data, headers: true)
 
     csv.each do |row|
       current_contact = @contact_manager.build_contact(row.to_h.with_indifferent_access)
@@ -49,6 +42,19 @@ class DataImportJob < ApplicationJob
     end
 
     [contacts, rejected_contacts]
+  end
+
+  # proyecto@importar_contactos — se lee y limpia una sola vez: el CSV de rechazados usa los mismos encabezados
+  # ya en UTF-8 (antes releía el archivo en binario y tronaba con acentos o con el BOM de Excel).
+  def clean_import_data
+    @clean_import_data ||= begin
+      # Ensuring that importing non utf-8 characters will not throw error
+      utf8_data = @data_import.import_file.download.force_encoding('UTF-8')
+
+      # Ensure that the data is valid UTF-8, preserving valid characters
+      clean_data = utf8_data.valid_encoding? ? utf8_data : utf8_data.encode('UTF-16le', invalid: :replace, replace: '').encode('UTF-8')
+      clean_data.delete_prefix("\xEF\xBB\xBF")
+    end
   end
 
   def append_rejected_contact(row, contact, rejected_contacts)
@@ -75,11 +81,11 @@ class DataImportJob < ApplicationJob
   end
 
   def generate_csv_data(rejected_contacts)
-    headers = CSV.parse(@data_import.import_file.download, headers: true).headers
+    headers = CSV.parse(clean_import_data, headers: true).headers
     headers << 'errors'
     return if rejected_contacts.blank?
 
-    CSV.generate do |csv|
+    CSV.generate(String.new(encoding: Encoding::UTF_8)) do |csv|
       csv << headers
       rejected_contacts.each do |record|
         csv << record

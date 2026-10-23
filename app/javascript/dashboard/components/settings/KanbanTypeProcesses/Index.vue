@@ -38,6 +38,7 @@ import { useAlert } from 'dashboard/composables';
 import { computed, onBeforeMount, ref } from 'vue';
 import { useI18n } from 'dashboard/composables/useI18n';
 import { useStoreGetters, useStore } from 'dashboard/composables/store';
+import BoardFunnelFields from 'dashboard/components/kanban/funnel/BoardFunnelFields.vue';
 
 const getters = useStoreGetters();
 const store = useStore();
@@ -58,6 +59,7 @@ const formData = ref({
   color: '#6F2CE5',
   default: false,
   is_system: false,
+  entry_inbox_ids: [],
 });
 
 // Computed
@@ -95,6 +97,7 @@ const resetForm = () => {
     color: '#6F2CE5',
     default: false,
     is_system: false,
+    entry_inbox_ids: [],
   };
 };
 
@@ -115,6 +118,12 @@ const handleEdit = (item) => {
     color: item.color || '#6F2CE5',
     default: item.default,
     is_system: item.is_system,
+    // Embudo de contactos
+    auto_move: item.auto_move,
+    ai_move: item.ai_move,
+    entry_inbox_ids: item.entry_inbox_ids || [],
+    cold_after_days: item.cold_after_days,
+    discard_after_days: item.discard_after_days,
   };
   showEditModal.value = true;
 };
@@ -263,6 +272,10 @@ onBeforeMount(async () => {
                 <div class="text-sm font-medium text-slate-900 dark:text-slate-100">
                   {{ record.process_name }}
                 </div>
+                <div v-if="record.auto_move || record.ai_move" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  <span v-if="record.auto_move" class="mr-2">⚡ {{ $t('KANBAN.FUNNEL.BOARD.AUTO_MOVE') }}</span>
+                  <span v-if="record.ai_move">🤖 {{ $t('KANBAN.FUNNEL.BOARD.AI_MOVE') }}</span>
+                </div>
                 <div v-if="record.default || record.is_system" class="flex items-center mt-1 space-x-2">
                   <span v-if="record.default"
                     class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded dark:bg-green-900 dark:text-green-300">
@@ -352,6 +365,8 @@ onBeforeMount(async () => {
             </div>
           </div> -->
 
+          <BoardFunnelFields v-model="formData" creating />
+
           <div class="flex items-center w-full gap-2 mb-4">
             <input v-model="formData.default" type="checkbox" id="default_process" />
             <label for="default_process">{{ $t('KANBAN.TYPE_PROCESSES.FORM.DEFAULT_PROCESS') }}</label>
@@ -402,6 +417,8 @@ onBeforeMount(async () => {
                 placeholder="#6F2CE5" />
             </div>
           </div> -->
+
+          <BoardFunnelFields v-model="formData" />
 
           <div class="flex items-center w-full gap-2 mb-4">
             <input v-model="formData.default" type="checkbox" id="edit_default_process" />

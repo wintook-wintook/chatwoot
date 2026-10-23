@@ -1,0 +1,11 @@
+# proyecto@adaptar_prompts_publicados (F4 and F5) — publishing with variables and the engine lock
+en:
+  published_prompts:
+    variables:
+      text_length: "“%{text}”: the text must be between 3 and 200 characters."
+      label_invalid: "“%{text}”: it needs a name (up to 60 characters, without < or >)."
+      not_found: "“%{text}” does not appear in the Training (outside directives and route lines)."
+      value_invalid: "The value for “%{text}” is too long or contains a <PENDIENTE:> marker."
+    pending_setup:
+      blocked: "The AI Agent has details to set up (%{labels}). Fill them in the Assistant's «Set up» tab before using it."
+      inbox_blocked: "An inbox can't be assigned: the Training has details to set up (%{labels}). Fill them in the Assistant's «Set up» tab."

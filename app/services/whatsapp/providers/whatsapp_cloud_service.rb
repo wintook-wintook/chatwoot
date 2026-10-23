@@ -1,4 +1,6 @@
 class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseService
+  include Whatsapp::Providers::WhatsappCloudCalls # diag/llamadas_whatsapp: la Calling API de Meta
+
   # @waba_templates — resultado accionable de las operaciones de plantilla contra Meta.
   TemplateResult = Struct.new(:success, :meta_id, :status, :error, :rate_limited, keyword_init: true) do
     def success?

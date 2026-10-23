@@ -7,6 +7,8 @@ internal_check_new_versions_job:
   cron: '0 12 */1 * *'
   class: 'Internal::CheckNewVersionsJob'
   queue: scheduled_jobs
+  # Deshabilitado: el aviso al hub de Chatwoot nunca responde aquí y el job moría a diario (NoMethodError en nil).
+  status: disabled
 
 # @query_databases — bots cobradores: cada hora procesa los que tocan a esa hora.
 erp_collection_reminder_dispatch_job:
@@ -108,6 +110,22 @@ tracking_campaigns_window:
   queue: scheduled_jobs
   description: "Open and close tracking campaigns by their window"
 
+# proyecto@automatizacion_campanas — Fase 2: despachador de seguimientos. Solo actúa en las
+# cuentas de TRACKING_DISPATCHER_ACCOUNTS; sin esa variable no hace nada.
+tracking_dispatch:
+  cron: "* * * * *"
+  class: "TrackingDispatch::DispatchJob"
+  queue: scheduled_jobs
+  description: "Dispatch due tracking follow-ups (accounts in TRACKING_DISPATCHER_ACCOUNTS)"
+
+# proyecto@automatizacion_campanas — envíos de seguimiento que Meta aceptó pero no
+# confirmó en 24 h pasan a 'unconfirmed' (no se reenvían). Ver TrackingDeliveries::UnconfirmedJob.
+tracking_deliveries_unconfirmed:
+  cron: "17 * * * *"
+  class: "TrackingDeliveries::UnconfirmedJob"
+  queue: scheduled_jobs
+  description: "Mark tracking deliveries without delivery confirmation after 24h"
+
 # ==============================================================================
 # Job: Limpieza de trackings antiguos
 # ==============================================================================
@@ -115,11 +133,17 @@ tracking_campaigns_window:
 # Frecuencia: Diario a las 2 AM
 # Queue: low_priority
 # Retención: 90 días
+# proyecto@automatizacion_campanas: DESACTIVADO. La cola low_priority nunca estuvo en
+# sidekiq.yml (las copias se acumulaban sin correr) y el job borra con delete_all
+# trackings que tracking_campaign_entries y case_tickets referencian → rompería el
+# historial de campañas. Se deja declarado con status disabled (y no se quita) porque
+# load_from_hash no elimina de Redis los cron que ya existen.
 # ==============================================================================
 cleanup_old_trackings:
   cron: "0 2 * * *"
   class: "ContactTrackings::CleanupJob"
   queue: low_priority
+  status: disabled
   description: "Clean up old completed/cancelled trackings (older than 90 days)"
 
 # ==============================================================================
@@ -193,9 +217,31 @@ instagram_refresh_oauth_token_job:
   queue: scheduled_jobs
   description: "Refresh Instagram long lived tokens before they expire"
 
+# @tickets_cases — Plan-Clase-Comercial F3: el día de «retomar el», la oportunidad
+# pospuesta vuelve a trabajo activo y se avisa al vendedor.
+cases_resume_postponed_job:
+  cron: "0 7 * * *"
+  class: "Cases::ResumePostponedJob"
+  queue: scheduled_jobs
+  description: "Resume postponed commercial CaseTickets whose date arrived (Plan-Clase-Comercial F3)"
+
 # @tickets_cases 3F — redacta seguimientos para tickets en espera estancados
 case_ai_follow_up_scan_job:
   cron: "0 * * * *"
   class: "Cases::Ai::FollowUpScanJob"
   queue: scheduled_jobs
   description: "Draft AI follow-up messages for stale waiting CaseTickets"
+
+# diag/llamadas_whatsapp (F8): cada 30 s — las llamadas que se quedaron sonando quedan «Perdida».
+calls_ringing_timeout_job:
+  cron: '*/30 * * * * *'
+  class: 'Calls::RingingTimeoutJob'
+  queue: scheduled_jobs
+
+# Embudo de contactos E2 — descarta las tarjetas sin respuesta del cliente en
+# «Descartar tras N días» (solo tableros con Movimiento automático y ese valor).
+kanban_funnel_stale_job:
+  cron: "17 * * * *"
+  class: "Kanban::FunnelStaleJob"
+  queue: scheduled_jobs
+  description: "Discard contact-funnel cards with no customer reply after the board's limit"

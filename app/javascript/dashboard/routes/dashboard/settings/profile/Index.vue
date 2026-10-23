@@ -14,6 +14,7 @@ import NotificationPreferences from './NotificationPreferences.vue';
 import AudioNotifications from './AudioNotifications.vue';
 import FormSection from 'dashboard/components/FormSection.vue';
 import AppearanceSettings from './AppearanceSettings.vue';
+import LandingPageSetting from './LandingPageSetting.vue';
 import AccessToken from './AccessToken.vue';
 import Policy from 'dashboard/components/policy.vue';
 import {
@@ -26,6 +27,7 @@ export default {
     AppearanceSettings,
     MessageSignature,
     FormSection,
+    LandingPageSetting,
     UserProfilePicture,
     Policy,
     UserBasicDetails,
@@ -89,7 +91,13 @@ export default {
       currentUser: 'getCurrentUser',
       currentUserId: 'getCurrentUserID',
       globalConfig: 'globalConfig/get',
+      accountId: 'getCurrentAccountId',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
     }),
+    // @tickets_cases — «Inicio» y «Mi día» solo existen con el módulo de casos.
+    hasCaseManagement() {
+      return this.isFeatureEnabledonAccount(this.accountId, 'case_management');
+    },
   },
   mounted() {
     if (this.currentUserId) {
@@ -245,6 +253,14 @@ export default {
       :description="$t('PROFILE_SETTINGS.FORM.APPEARANCE.NOTE')"
     >
       <AppearanceSettings />
+    </FormSection>
+    <!-- @tickets_cases — dónde aterriza al iniciar sesión -->
+    <FormSection
+      v-if="hasCaseManagement"
+      :title="$t('PROFILE_SETTINGS.FORM.LANDING.TITLE')"
+      :description="$t('PROFILE_SETTINGS.FORM.LANDING.NOTE')"
+    >
+      <LandingPageSetting />
     </FormSection>
     <FormSection
       v-if="!globalConfig.disableUserProfileUpdate"

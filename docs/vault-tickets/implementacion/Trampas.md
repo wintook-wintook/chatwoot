@@ -90,5 +90,53 @@ tags: [tickets, trampas, gotchas, critico]
    `git diff db/schema.rb` y **dejar solo lo propio**, editando a mano si hace falta.
 
 
+21. **Filtrar casos por clase con JOIN rompe las métricas** — `case_types` también tiene
+   `created_at`/`updated_at`, y las métricas de `case_tickets_controller` usan SQL suelto
+   (`EXTRACT(EPOCH FROM (resolved_at - created_at))`, `DATE(created_at)`…). Con un
+   `joins(:case_type)` esas columnas pasan a ser **ambiguas** y la consulta revienta. Por eso
+   `CaseTicket.commercial / non_commercial / of_class` usan **subconsulta**
+   (`where(case_type_id: CaseType.class_commercial.select(:id))`). Ojo con `NOT IN`: un caso sin
+   tipo (`case_type_id NULL`) quedaría fuera, por eso `non_commercial` lleva el `.or(case_type_id: nil)`.
+   (Plan-Clase-Comercial F5.)
+
+22. **«No es Comercial» ya no significa «es Soporte»** — con la clase Orden de trabajo, `non_commercial`
+   mete órdenes en el monitor de SLA, el portal y las Métricas de Soporte. Para decidir qué hace una
+   clase usar las capacidades: `CaseTicket.with_capability(:sla|:portal|:bot_status)`,
+   `CaseType.classes_with(...)` y en el front `classHasSla(caseClass)`. Clase nueva = una línea en
+   `CaseType::CLASS_CAPABILITIES` (y en `SLA_CLASSES` de `helper/caseClasses.js`).
+   (Plan-Clase-Orden-de-Trabajo F1.)
+
+23. **Nada de `?.` (ni `??`) dentro de las plantillas Vue** — `vue-template-compiler` 2.7 lo acepta,
+   pero `vue-loader` 15 pasa el render por `vue-template-es2015-compiler` (buble), que falla con
+   «Unexpected token». No marca error en eslint ni en el compilador de plantillas: el componente
+   simplemente **no carga** (le pasó al Tablero de todas las clases). En la plantilla usar
+   `a && a.b`; o mover la lógica a un computed/método (en `<script>` y en JSX sí se puede usar `?.`).
+
+24. **`annotate` (al migrar) borra el comentario pegado al bloque de esquema** — si el comentario del
+   modelo va justo debajo de `# == Schema Information … #`, lo toma como suyo y lo reescribe (se
+   pierde). Dejar **una línea en blanco** entre el bloque de `annotate` y el comentario del modelo.
+   También reescribe modelos de otras ramas (columnas de la base compartida): revisar `git status
+   app/models` tras migrar y no commitear lo ajeno.
+25. **`<fluent-icon icon="x">` agrega `-outline` solo** — `Icon.vue` busca `${icon}-${type}` (tipo
+   por defecto `outline`). En `dashboard-icons.json` las llaves ya traen el sufijo
+   (`briefcase-outline`), así que en la plantilla va **sin** él: `icon="briefcase"`. Con el sufijo
+   busca `briefcase-outline-outline`, lanza «Icon not found» y el componente que lo usa no se
+   pinta. Verificar: `grep '"<nombre>-outline"' app/javascript/shared/components/FluentIcon/dashboard-icons.json`.
+26. **Tailwind de este proyecto NO tiene `blue` ni `emerald`** (ni el resto de la paleta por
+   defecto) — `tailwind.config.js` reemplaza `theme.colors` con `theme/colors.js`: `woot` (marca,
+   cambia con el tema de la cuenta), `green`, `slate`, `red`, `amber`, `yellow`, `violet`, `teal`,
+   `sky`, `indigo`, `orange`… Una clase `bg-blue-500` o `bg-emerald-600` **no genera CSS**: no falla
+   nada, simplemente no pinta (el embudo de Comercial salió sin franjas, solo números). Antes de
+   usar un color: `grep -n "^  <color>:" theme/colors.js`. Para verificar una clase, compilar
+   Tailwind solo sobre el archivo (`npx tailwindcss -c <config con content=[archivo]> -i in.css`).
+27. **Las tablas del tablero de conversaciones (KANBAN0725) no tenían migración** — estaban en
+   `schema.rb` pero ninguna migración del repo las crea, así que una base nueva (desarrollo,
+   pruebas) no las tenía y `db:migrate` no las crea. Desde el Embudo de contactos las crea
+   `20261028100000_ensure_kanban_tables` con `if_not_exists` (en producción, donde ya existen,
+   no hace nada). Nunca la reviertas: su `down` está vacío a propósito.
+28. **`Message` tiene un orden por defecto (`created_at`)** — un `MAX(...)` o un
+   `group(...).maximum(...)` sobre mensajes truena con `PG::GroupingError` («must appear in the
+   GROUP BY clause»). Usa `Message.unscoped.where(...)` (o `reorder(nil)`) para agregados.
+
 ## 🔗 Relacionado
 - [[Pruebas-en-browser]] · [[Feature-flag-case_management]] · [[Historial-de-implementacion]] · [[Vistas-guardadas]]

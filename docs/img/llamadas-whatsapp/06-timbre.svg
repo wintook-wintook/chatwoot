@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 420" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker></defs>
+  <rect width="940" height="420" fill="#f4f6f9"/>
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28">¿A quién le suena? — en cascada (recomendado)</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Todos los elegidos suenan a la vez; gana el primero que contesta, a los demás se les quita el timbre</text>
+  <g font-size="13" fill="#151b28">
+    <rect x="40" y="110" width="250" height="100" rx="12" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+    <text x="60" y="138" font-weight="800">1 · ¿La conversación</text><text x="60" y="156" font-weight="800">tiene asignado?</text>
+    <text x="60" y="182" font-size="12" fill="#5c6675">Sí y está en línea → suena</text><text x="60" y="198" font-size="12" fill="#5c6675">solo al asignado</text>
+    <rect x="345" y="110" width="250" height="100" rx="12" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+    <text x="365" y="138" font-weight="800">2 · Agentes EN LÍNEA</text><text x="365" y="156" font-weight="800">del inbox</text>
+    <text x="365" y="182" font-size="12" fill="#5c6675">Suenan todos a la vez</text><text x="365" y="198" font-size="12" fill="#5c6675">(los que tienen el dashboard abierto)</text>
+    <rect x="650" y="110" width="250" height="100" rx="12" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+    <text x="670" y="138" font-weight="800">3 · Nadie en línea:</text><text x="670" y="156" font-weight="800">miembros + admins</text>
+    <text x="670" y="182" font-size="12" fill="#5c6675">Por si alguno tiene la pestaña</text><text x="670" y="198" font-size="12" fill="#5c6675">abierta en modo «ausente»</text>
+  </g>
+  <g stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#a)"><path d="M292,160 H341"/><path d="M597,160 H646"/></g>
+  <text x="316" y="150" font-size="11" fill="#5c6675" text-anchor="middle">no / ausente</text><text x="621" y="150" font-size="11" fill="#5c6675" text-anchor="middle">nadie</text>
+  <rect x="40" y="244" width="420" height="140" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <text x="60" y="272" font-size="14" font-weight="800" fill="#151b28">Por qué no round-robin</text>
+  <g font-size="12.5" fill="#151b28">
+    <text x="60" y="298">• Meta timbra ~60 s; ir agente por agente gasta el</text><text x="72" y="316">tiempo y la llamada se pierde.</text>
+    <text x="60" y="340">• Si el agente en turno está en el baño, nadie más</text><text x="72" y="358">se entera de que están llamando.</text>
+  </g>
+  <rect x="480" y="244" width="420" height="140" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <text x="500" y="272" font-size="14" font-weight="800" fill="#151b28">Opción alterna: «Todos en línea»</text>
+  <g font-size="12.5" fill="#151b28">
+    <text x="500" y="298">• Ignora al asignado y suena a todos los agentes</text><text x="512" y="316">en línea del inbox.</text>
+    <text x="500" y="340">• Útil para un conmutador / recepción donde</text><text x="512" y="358">no importa quién lleve el caso.</text>
+  </g>
+</svg>

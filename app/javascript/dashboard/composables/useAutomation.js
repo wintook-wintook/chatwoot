@@ -2,6 +2,7 @@ import { computed } from 'vue';
 import { useStoreGetters, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from './useI18n';
+import { classI18nBase } from 'dashboard/helper/caseClasses'; // @tickets_cases
 import languages from 'dashboard/components/widgets/conversation/advancedFilterItems/languages';
 import countries from 'shared/constants/countries';
 import {
@@ -56,11 +57,16 @@ export function useAutomation() {
     }))
   );
 
+  // @tickets_cases — con su clase («Instalación · Órdenes»): hay tipos con el
+  // mismo nombre en clases distintas y la clase decide qué caso se crea.
+  // Sin los tipos retirados: ya no reciben casos nuevos.
   const caseTypeOptions = computed(() =>
-    (caseTypes.value || []).map(ct => ({
-      id: ct.id,
-      name: ct.name,
-    }))
+    (caseTypes.value || [])
+      .filter(ct => !ct.retired)
+      .map(ct => ({
+        id: ct.id,
+        name: `${ct.name} · ${t(`${classI18nBase(ct.case_class)}.NAME`)}`,
+      }))
   );
 
   const statusFilterOptions = computed(() => {

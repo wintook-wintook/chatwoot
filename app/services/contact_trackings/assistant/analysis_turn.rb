@@ -38,7 +38,7 @@ class ContactTrackings::Assistant::AnalysisTurn
   def reply(mensaje)
     return mensaje unless analysis_request? && result
 
-    [findings_block, own_reading(mensaje)].compact_blank.join("\n\n")
+    [findings_block, configure_line, own_reading(mensaje)].compact_blank.join("\n\n")
   end
 
   # [{ question:, choices: }] o nil.
@@ -78,7 +78,7 @@ class ContactTrackings::Assistant::AnalysisTurn
   # Agrupada por situación (25/09/2026: 18 avisos eran 7 etiquetas, 6 directivas y 3
   # rutas, cada una con el párrafo entero): qué pasa y qué hacer una sola vez, y a qué
   # afecta. Un aviso sin compañeros va completo, que trae más detalle.
-  GROUPS = { route_does_nothing: 'nothing', label_not_found: 'labels', state_label_not_found: 'labels',
+  GROUPS = { route_does_nothing: 'nothing', state_label_not_found: 'labels',
              loose_directive: 'loose', bare_tag_line: 'bare_tags', source_not_found: 'sources' }.freeze
 
   def findings_block
@@ -87,6 +87,15 @@ class ContactTrackings::Assistant::AnalysisTurn
     grupos = findings.group_by { |f| GROUPS[f[:code]] || f.object_id }
     lineas = grupos.values.first(MAX_ITEMS).map { |lista| group_line(lista) }
     ([t('analysis.header', count: findings.size)] + lineas).join("\n")
+  end
+
+  # proyecto@adaptar_prompts_publicados (F7): lo que falta en la cuenta se resuelve en la
+  # pestaña «Configurar»; aquí solo se dice cuánto y dónde (la lista ya está arriba o en la
+  # pestaña). Sin archivos: este turno no sabe qué agente es, y los daría todos por faltantes.
+  def configure_line
+    faltan = ContactTrackings::Assistant::AdaptationInventory.new(@draft, account: @account).call
+                                                             .count { |i| i[:status] == 'missing' && i[:kind] != 'attachment' }
+    t('analysis.configure', count: faltan) if faltan.positive?
   end
 
   def group_line(lista)

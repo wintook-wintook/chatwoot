@@ -69,7 +69,25 @@ class CaseEvent < ApplicationRecord
     meeting_scheduled:  30, # se agendó reunión o serie
     meeting_updated:    31, # se movió de fecha/hora
     meeting_cancelled:  32, # se canceló (una o toda la serie)
-    meeting_held:       33  # se marcó realizada / no asistió
+    meeting_held:       33, # se marcó realizada / no asistió
+    # @tickets_cases — Plan-Clase-Comercial F1. Al FINAL, sin reordenar nada de arriba.
+    case_class_changed: 34, # el caso pasó a otra clase (cambió su tipo, o la clase de su tipo)
+    # @tickets_cases — Plan-Clase-Comercial F3. Al FINAL, sin reordenar nada de arriba.
+    outcome_set:        35, # oportunidad cerrada como ganada/perdida/cancelada
+    postponed:          36, # oportunidad pospuesta hasta una fecha
+    resumed:            37, # oportunidad pospuesta que volvió a trabajarse
+    amount_changed:     38, # cambiaron los datos comerciales (monto, moneda, cierre, probabilidad)
+    # @tickets_cases — Plan-Clase-Orden-de-Trabajo F2a. Al FINAL, sin reordenar nada de arriba.
+    work_order_changed: 39, # cambiaron los datos de la orden (dirección, horas, facturable)
+    # @tickets_cases — Plan-Clase-Proyecto P1. Al FINAL, sin reordenar nada de arriba.
+    project_changed:    40, # cambiaron los datos del proyecto (fechas, presupuesto, avance)
+    # @tickets_cases — Plan-Metricas-Comercial. Al FINAL, sin reordenar nada de arriba.
+    commitment_changed: 41, # el cliente se comprometió / movió la fecha / se quitó (payload.action)
+    # @tickets_cases — ligar conversación. Al FINAL, sin reordenar nada de arriba.
+    conversation_link:  42, # se ligó (o creó) la conversación del caso (payload.display_id, created)
+    # Plan-Plantilla-Tareas-Etapa. Al FINAL, sin reordenar nada de arriba.
+    stage_tasks_added:  43, # nacieron las tareas de la plantilla al entrar a una etapa
+    stage_advanced:     44  # pasó sola a la siguiente etapa al terminar las obligatorias (payload.from/to)
   }
 
   enum origin: { bot: 0, agent: 1, system: 2 }

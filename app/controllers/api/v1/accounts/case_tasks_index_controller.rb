@@ -27,13 +27,63 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
     result = Cases::TasksInboxQuery.new(account: Current.account, current_user: current_user, params: params).call
     @notes_count_map = notes_count_map_for(result[:rows])
 
+    @scores = result[:scores] || {}
+    @planned_ids = result[:planned_ids]
     render json: {
       case_tasks: result[:rows].map { |record, kind| kind == :task ? task_json(record) : meeting_row_json(record) },
       meta: { current_page: result[:page], page_size: Cases::TasksInboxQuery::PER_PAGE, count: result[:total] }
+        .merge(my_day_meta(result))
     }
   end
 
+  # PUT /api/v1/accounts/:account_id/case_tasks/my_day_plan
+  # Plan-Bandeja-Prioridad F2 — guarda el orden propio de «Mi día» del agente
+  # actual: { day: 'YYYY-MM-DD' (local), task_ids: [...] en orden }. Reemplaza.
+  def my_day_plan
+    plan = Cases::MyDayPlan.new(account: Current.account, user: current_user, day: params[:day])
+    render json: { day: plan.day, task_ids: plan.save!(params[:task_ids]) }
+  end
+
+  # POST /api/v1/accounts/:account_id/case_tasks/my_day_ai
+  # Plan-Bandeja-Prioridad F4 — «Plan de mi día»: la IA explica «Mi día» del
+  # agente actual (no lo reordena). { day: 'YYYY-MM-DD', tz: 'America/Mexico_City' }.
+  def my_day_ai
+    return render_ai_error('La IA de «Plan de mi día» está desactivada.') unless CaseAiConfig.for_account(Current.account).active?(:day_plan)
+
+    planner = Cases::Ai::DayPlanner.new(account: Current.account)
+    return render_ai_error('Configura la integración de OpenAI para usar la IA.') unless planner.available?
+
+    tasks = my_day_for_ai
+    return render_ai_error('No tienes tareas pendientes.') if tasks.empty?
+
+    plan = planner.plan(user: current_user, tasks: tasks, agenda: @my_day[:agenda],
+                        zone: ActiveSupport::TimeZone[params[:tz].to_s] || Time.zone)
+    plan ? render(json: { plan: plan }) : render_ai_error('No se pudo generar el plan. Intenta de nuevo.')
+  end
+
   private
+
+  def render_ai_error(message)
+    render json: { error: message }, status: :unprocessable_entity
+  end
+
+  # «Mi día» del agente actual (primera página: el plan y las más urgentes).
+  def my_day_for_ai
+    query_params = params.permit(:day).merge(mode: 'my_day', assignee_id: current_user.id, page: 1)
+    @my_day = Cases::TasksInboxQuery.new(account: Current.account, current_user: current_user, params: query_params).call
+    @my_day[:rows].map do |task, _kind|
+      @my_day[:scores][task.id].merge(task: task, planned: @my_day[:planned_ids].include?(task.id))
+    end
+  end
+
+  # Plan-Bandeja-Prioridad F1 — «Mi día»: la agenda de hoy y la carga del día.
+  def my_day_meta(result)
+    return {} unless result.key?(:agenda)
+
+    { agenda: result[:agenda].map { |meeting| meeting_row_json(meeting) }, load: result[:load],
+      plan_count: result[:planned_ids].size, later_count: result[:later_count], missed: result[:missed],
+      new_urgent: result[:new_urgent] }
+  end
 
   # --- serialización: tareas ----------------------------------------------------
   # La tarea MÁS el contexto de su ticket: sin esto la bandeja no ahorra el
@@ -62,7 +112,15 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
       # @tickets_cases — nº de notas internas atadas a la tarea (columna "Notas").
       notes_count: (@notes_count_map || {})[task.id] || 0,
       case_ticket: ticket_context(task.case_ticket)
-    }
+    }.merge(priority_fields(task))
+  end
+
+  # Plan-Bandeja-Prioridad F1 — duración estimada, hito y, en «Mi día», el
+  # puntaje con sus motivos (score + reasons).
+  def priority_fields(task)
+    fields = { estimated_minutes: task.estimated_minutes, planned_on: task.planned_on, milestone: task.milestone }
+             .merge(@scores[task.id] || {})
+    @planned_ids ? fields.merge(planned: @planned_ids.include?(task.id)) : fields
   end
 
   # --- serialización: reuniones ("tareas agendadas") -----------------------------

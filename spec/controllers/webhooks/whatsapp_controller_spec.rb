@@ -29,5 +29,18 @@ RSpec.describe 'Webhooks::WhatsappController', type: :request do
       post '/webhooks/whatsapp/123221321', params: { content: 'hello' }
       expect(response).to have_http_status(:success)
     end
+
+    # diag/llamadas_whatsapp (F2): las llamadas van a su propia cola
+    it 'manda los eventos de llamadas al job de llamadas, no al de mensajes' do
+      allow(Webhooks::WhatsappCallEventsJob).to receive(:perform_later)
+      allow(Webhooks::WhatsappEventsJob).to receive(:perform_later)
+
+      post '/webhooks/whatsapp/123221321', params: { object: 'whatsapp_business_account',
+                                                     entry: [{ changes: [{ field: 'calls', value: { calls: [{ id: 'wacid.1' }] } }] }] },
+                                           as: :json
+
+      expect(Webhooks::WhatsappCallEventsJob).to have_received(:perform_later)
+      expect(Webhooks::WhatsappEventsJob).not_to have_received(:perform_later)
+    end
   end
 end

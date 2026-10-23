@@ -22,8 +22,11 @@
   Props:
     - presetFilterPayload: si viene (p. ej. desde Contactos), la audiencia es ese
       filtro y se oculta el selector de segmento/etiqueta (y el tipo: es por lote).
+    - campaign: una campaña Guardada para modificarla (el formulario arranca con sus
+      datos). Ya puesta en curso no se modifica.
   Emits:
     - created(result): tras lanzar la campaña ({ queued, campaign_id, campaign_name }).
+    - updated(result): tras guardar los cambios de la Guardada (y ponerla en curso, si se pidió).
   ================================================================================
 -->
 
@@ -36,17 +39,88 @@ import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import { getMinDateTime } from '../../../helper/trackingHelpers';
 import AudiencePreview from './AudiencePreview.vue';
 
-const MAX_BULK_ASSIGN = 100;
+// proyecto@automatizacion_campanas — Fase 2: igual que ContactTrackings::BulkAssignService
+const MAX_BULK_ASSIGN = 1000;
 // Nombre del enum filter_type de customViews para "contactos" (el backend lo serializa
 // como string "contact"; el getter getCustomViewsByFilterType compara por ese string).
 const FILTER_TYPE_CONTACT = 'contact';
+
+// Fecha → valor de un <input type="datetime-local"> (hora local). Se muestra aunque ya
+// haya pasado: al ponerla en curso, un inicio pasado se corre a ese momento.
+const toLocalInput = value => {
+  if (!value) return '';
+  const d = new Date(value);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
+};
+
+// A quién va una campaña Guardada: como se eligió al guardarla (audience.source) o, si no
+// quedó registrado, una etiqueta reconocible; si no, su filtro tal cual (savedFilterPayload),
+// que se sigue usando hasta que elijan otra audiencia (o se reconoce su segmento al cargar).
+const audienceFromCampaign = campaign => {
+  if (campaign.mode === 'continuous') return { audienceType: 'automation' };
+  const { source, filter_payload: payload = [] } = campaign.audience || {};
+  if (source?.type === 'segment') {
+    return {
+      audienceType: 'segment',
+      selectedSegmentId: Number(source.segment_id),
+    };
+  }
+  if (source?.type === 'label') {
+    return { audienceType: 'label', selectedLabel: source.label };
+  }
+  const [only] = payload;
+  if (
+    payload.length === 1 &&
+    only.attribute_key === 'labels' &&
+    only.values?.length === 1
+  ) {
+    return { audienceType: 'label', selectedLabel: only.values[0] };
+  }
+  return { savedFilterPayload: payload };
+};
+
+// Mismo filtro sin importar el orden de las claves (el JSONB las reordena).
+const stableJson = value => {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map(key => `${JSON.stringify(key)}:${stableJson(value[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+};
+
+const campaignState = campaign => {
+  if (!campaign) return {};
+  const audience = campaign.audience || {};
+  const state = {
+    campaignName: campaign.name,
+    selectedTemplateId: campaign.tracking_template_id || '',
+    scheduledFor: toLocalInput(campaign.scheduled_for),
+    endsAt: toLocalInput(campaign.ends_at),
+    entryDelayMinutes: campaign.entry_delay_minutes || 0,
+    respectWorkingHours: campaign.respect_working_hours !== false,
+    dailyCap: campaign.daily_cap || '',
+    skipActive: audience.skip_active !== false,
+    excludedContactIds: audience.excluded_contact_ids || [],
+    ...audienceFromCampaign(campaign),
+  };
+  state.showSendOptions =
+    !!state.entryDelayMinutes || !state.respectWorkingHours || !!state.dailyCap;
+  return state;
+};
 
 export default {
   components: { AudiencePreview },
   props: {
     presetFilterPayload: { type: Array, default: null },
+    campaign: { type: Object, default: null },
   },
-  emits: ['created'],
+  emits: ['created', 'updated'],
   data() {
     return {
       campaignName: '',
@@ -62,6 +136,14 @@ export default {
       audienceType: 'segment',
       selectedSegmentId: '',
       selectedLabel: '',
+      // La audiencia ya elegida: desde Contactos, o la de una Guardada que no la eligió
+      // por segmento ni etiqueta.
+      fixedFilterPayload: this.presetFilterPayload,
+      // Guardada sin cómo se eligió su audiencia: su filtro, hasta que elijan otra
+      savedFilterPayload: null,
+      // Al reconocer el segmento de la Guardada no se borran sus excluidos
+      restoringAudience: false,
+      ...campaignState(this.campaign),
       totalCount: 0,
       previewData: null,
       isLoadingPreview: false,
@@ -81,9 +163,20 @@ export default {
     minDateTime() {
       return getMinDateTime();
     },
+    isEditing() {
+      return !!this.campaign;
+    },
     // Cuando llega un filtro preestablecido (desde Contactos) no se elige audiencia.
     allowAudienceSelection() {
-      return !this.presetFilterPayload;
+      return !this.fixedFilterPayload;
+    },
+    // Cómo se eligió la audiencia, para volver a mostrarla al modificar la Guardada.
+    audienceSource() {
+      if (!this.allowAudienceSelection || this.savedFilterPayload) return null;
+      if (this.audienceType === 'segment') {
+        return { type: 'segment', segment_id: this.selectedSegmentId };
+      }
+      return { type: 'label', label: this.selectedLabel };
     },
     // Sin "tipo de campaña" en pantalla: sale de a quién va dirigida.
     mode() {
@@ -115,8 +208,19 @@ export default {
       });
     },
     // El fin, si lo hay, después del inicio (o de ahora, si la continua no tiene inicio).
+    // Modificando una Guardada: su inicio ya pasó (se corre a cuando la pongan en curso)
+    startPassed() {
+      return (
+        this.isEditing &&
+        !!this.scheduledFor &&
+        new Date(this.scheduledFor) <= new Date()
+      );
+    },
     windowError() {
       if (!this.endsAt) return '';
+      if (new Date(this.endsAt) <= new Date()) {
+        return this.$t('BULK_TRACKING_ASSIGN.MODAL.ENDS_PASSED');
+      }
       const start = this.scheduledFor
         ? new Date(this.scheduledFor)
         : new Date();
@@ -128,7 +232,7 @@ export default {
       return this.scheduledFor || this.minDateTime;
     },
     effectiveFilterPayload() {
-      if (!this.allowAudienceSelection) return this.presetFilterPayload;
+      if (!this.allowAudienceSelection) return this.fixedFilterPayload;
       if (this.audienceType === 'segment' && this.selectedSegmentId) {
         const segment = this.segments.find(
           s => s.id === Number(this.selectedSegmentId)
@@ -145,10 +249,10 @@ export default {
           },
         ];
       }
-      return [];
+      return this.savedFilterPayload || [];
     },
     hasAudienceSelected() {
-      if (!this.allowAudienceSelection) return true;
+      if (!this.allowAudienceSelection || this.savedFilterPayload) return true;
       return this.audienceType === 'segment'
         ? !!this.selectedSegmentId
         : !!this.selectedLabel;
@@ -212,9 +316,10 @@ export default {
       if (!this.isContinuous) this.fetchPreview();
     },
   },
-  mounted() {
+  async mounted() {
     this.loadTemplates();
-    this.loadAudienceData();
+    // La vista previa espera a los segmentos: la de una Guardada sale del suyo.
+    await this.loadAudienceData();
     this.fetchPreview();
   },
   methods: {
@@ -238,8 +343,28 @@ export default {
       } catch (error) {
         // silencioso
       }
+      this.matchSavedSegment();
+    },
+    // Guardada sin cómo se eligió: si su filtro es el de un segmento, queda elegido ese.
+    matchSavedSegment() {
+      if (!this.savedFilterPayload) return;
+      const saved = stableJson(this.savedFilterPayload);
+      const segment = this.segments.find(
+        s => stableJson(s.query?.payload || []) === saved
+      );
+      if (!segment) return;
+      this.restoringAudience = true;
+      this.selectedSegmentId = segment.id;
+      this.savedFilterPayload = null;
     },
     onAudienceChange() {
+      // Reconocer el segmento de la Guardada no es cambiar la audiencia
+      if (this.restoringAudience) {
+        this.restoringAudience = false;
+        return;
+      }
+      // Elegir otra audiencia deja de usar la guardada
+      this.savedFilterPayload = null;
       this.excludedContactIds = [];
       this.previewData = null;
       this.fetchPreview();
@@ -305,17 +430,17 @@ export default {
         respect_working_hours: this.respectWorkingHours,
       };
     },
-    createContinuous() {
-      return TrackingCampaignsAPI.create({
+    continuousBody() {
+      return {
         name: this.campaignName.trim(),
         tracking_template_id: this.selectedTemplateId,
         scheduled_for: this.toIso(this.scheduledFor),
         daily_cap: this.dailyCap ? Number(this.dailyCap) : null,
         ...this.windowPayload(),
-      });
+      };
     },
-    createBatch() {
-      return contactTrackingBulkAssignsAPI.create({
+    batchBody() {
+      return {
         payload: this.effectiveFilterPayload,
         campaignName: this.campaignName.trim(),
         templateId: this.selectedTemplateId,
@@ -323,15 +448,35 @@ export default {
         excludedContactIds: this.excludedContactIds,
         skipActive: this.skipActive,
         window: this.windowPayload(),
-      });
+        audienceSource: this.audienceSource,
+      };
     },
-    async onConfirm() {
+    create(launch) {
+      return this.isContinuous
+        ? TrackingCampaignsAPI.create({ ...this.continuousBody(), launch })
+        : contactTrackingBulkAssignsAPI.create({ ...this.batchBody(), launch });
+    },
+    // La Guardada sigue Guardada con sus cambios; "Guardar y poner en curso" además la lanza.
+    async saveChanges(launch) {
+      const { id } = this.campaign;
+      const { data } = this.isContinuous
+        ? await TrackingCampaignsAPI.update(id, this.continuousBody())
+        : await contactTrackingBulkAssignsAPI.update(id, this.batchBody());
+      if (!launch) return data;
+      const { data: launched } = await TrackingCampaignsAPI.launch(id);
+      return { ...data, ...launched };
+    },
+    // launch=false → solo guarda: la campaña queda Guardada hasta "Poner en curso".
+    async onConfirm(launch = true) {
       this.isSubmitting = true;
       try {
-        const { data } = this.isContinuous
-          ? await this.createContinuous()
-          : await this.createBatch();
-        this.$emit('created', { ...data, mode: this.mode });
+        if (this.isEditing) {
+          const data = await this.saveChanges(launch);
+          this.$emit('updated', { ...data, mode: this.mode, launch });
+          return;
+        }
+        const { data } = await this.create(launch);
+        this.$emit('created', { ...data, mode: this.mode, launch });
         this.resetForm();
       } catch (error) {
         useAlert(
@@ -475,6 +620,13 @@ export default {
         <p v-else class="m-0 text-sm text-slate-500 dark:text-slate-400 italic">
           {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_FROM_CONTACTS') }}
         </p>
+        <!-- Guardada cuyo filtro no es un segmento ni una etiqueta de ahora -->
+        <p
+          v-if="savedFilterPayload"
+          class="m-0 mt-2 text-sm text-slate-500 dark:text-slate-400 italic"
+        >
+          {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_SAVED_HINT') }}
+        </p>
       </section>
 
       <!-- 3 · ¿Cuándo? La ventana; las opciones de envío, plegadas. -->
@@ -514,6 +666,12 @@ export default {
         </div>
         <p v-if="windowError" class="m-0 mt-2 text-sm text-red-600">
           {{ windowError }}
+        </p>
+        <p
+          v-else-if="startPassed"
+          class="m-0 mt-2 text-sm text-amber-800 dark:text-amber-300"
+        >
+          {{ $t('BULK_TRACKING_ASSIGN.MODAL.START_PASSED') }}
         </p>
 
         <button
@@ -596,19 +754,24 @@ export default {
         <span class="text-sm text-slate-600 dark:text-slate-300">
           {{ summaryText }}
         </span>
-        <woot-button
-          :is-loading="isSubmitting"
-          :disabled="!canConfirm"
-          @click="onConfirm"
-        >
-          {{
-            $t(
-              isContinuous
-                ? 'BULK_TRACKING_ASSIGN.MODAL.CREATE'
-                : 'BULK_TRACKING_ASSIGN.MODAL.LAUNCH'
-            )
-          }}
-        </woot-button>
+        <span class="flex items-center gap-2 shrink-0">
+          <woot-button
+            variant="smooth"
+            color-scheme="secondary"
+            :is-loading="isSubmitting"
+            :disabled="!canConfirm"
+            @click="onConfirm(false)"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.SAVE') }}
+          </woot-button>
+          <woot-button
+            :is-loading="isSubmitting"
+            :disabled="!canConfirm"
+            @click="onConfirm(true)"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.SAVE_AND_LAUNCH') }}
+          </woot-button>
+        </span>
       </div>
     </div>
 
@@ -634,7 +797,7 @@ export default {
         :is-loading="isLoadingPreview"
         :skip-active="skipActive"
         :excluded-contact-ids="excludedContactIds"
-        @toggle-exclude="onToggleExclude"
+        @toggleExclude="onToggleExclude"
       />
     </div>
   </div>

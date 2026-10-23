@@ -84,17 +84,12 @@ export default {
   >
     {{ $t('TRACKING_ASSISTANT_VIEW.REPORT_CHECKING') }}
   </span>
-  <span
+  <!-- feat/agentes_ia_unificado (fase D): woot-label, como los estados nativos. -->
+  <woot-label
     v-else-if="validation"
-    class="text-xs font-medium px-2 py-0.5 rounded"
-    :class="
-      isBad
-        ? 'text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-300'
-        : isBuilding
-        ? 'text-amber-800 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-800'
-        : 'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300'
-    "
-  >
-    {{ label }}
-  </span>
+    small
+    class="!mb-0"
+    :title="label"
+    :color-scheme="isBad ? 'alert' : isBuilding ? 'warning' : 'success'"
+  />
 </template>

@@ -14,6 +14,7 @@ import { routes as kanbanRoutes } from './kanban/routes'; // Añade esta línea
 import { routes as gestorTicketsRoutes } from './gestorTickets/routes';
 // proyecto@contact_tracking — Dashboard de Seguimientos
 import { routes as contactTrackingsRoutes } from './contactTrackings/routes';
+import { routes as whatsappCallsRoutes } from './whatsappCalls/routes'; // diag/llamadas_whatsapp
 
 const AppContainer = () => import('./Dashboard.vue');
 const Captain = () => import('./Captain.vue');
@@ -47,6 +48,7 @@ export default {
         ...gestorTicketsRoutes,
         // proyecto@contact_tracking — Dashboard de Seguimientos
         ...contactTrackingsRoutes,
+        ...whatsappCallsRoutes,
       ],
     },
     {

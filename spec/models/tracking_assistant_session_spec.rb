@@ -97,6 +97,17 @@ RSpec.describe TrackingAssistantSession do
       expect(described_class.resumable_for(account, user)).to be_nil
     end
 
+    # feat/reemplazo_directo_variables
+    it 'pasa al agente lo reemplazado en «Configurar» antes de guardarlo' do
+      s = sesion(adaptation_answers: { 'var:nombre' => 'Grúas del Sur' })
+      template = account.tracking_templates.create!(name: 'Soporte', objective: 'Resolver dudas',
+                                                    adaptation_answers: { 'var:horario' => 'L-V' })
+
+      s.mark_saved!(template)
+
+      expect(template.reload.adaptation_answers).to eq('var:horario' => 'L-V', 'var:nombre' => 'Grúas del Sur')
+    end
+
     # 25/09/2026: reabrir la sesión mostraba el texto de antes de las ediciones a mano.
     it 'guarda el texto que quedó en el agente, como versión «guardado»' do
       s = sesion(draft: 'viejo')
@@ -147,11 +158,12 @@ RSpec.describe TrackingAssistantSession do
   end
 
   describe '.listable_for' do
-    it 'muestra las abiertas y las que terminaron en un agente' do
+    # feat/agentes_ia_unificado: las que ya terminaron en un agente están en Agentes.
+    it 'muestra solo las abiertas, no las que ya terminaron en un agente' do
       abierta = sesion
-      guardada = sesion(status: 'saved')
+      sesion(status: 'saved')
 
-      expect(described_class.listable_for(account)).to contain_exactly(abierta, guardada)
+      expect(described_class.listable_for(account)).to contain_exactly(abierta)
     end
 
     # Descartar no borra la fila: la saca de la vista. Un clic de más en una

@@ -55,7 +55,7 @@ export default {
         :disabled="busy"
         @input="$emit('input', $event.target.value)"
       />
-      <p class="!m-0 text-xs text-slate-500 dark:text-slate-400 shrink-0">
+      <p class="!m-0 text-sm text-slate-600 dark:text-slate-300 shrink-0">
         {{ $t('TRACKING_ASSISTANT_VIEW.INSTRUCTIONS_HINT') }}
       </p>
       <div class="flex flex-wrap items-center justify-end gap-2 shrink-0">

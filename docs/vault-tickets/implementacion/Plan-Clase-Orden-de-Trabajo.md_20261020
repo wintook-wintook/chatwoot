@@ -1,0 +1,70 @@
+---
+titulo: Plan — Clase «Orden de trabajo»
+tipo: implementación
+fase: F1–F3
+tags: [tickets, plan, orden-de-trabajo, clase-de-caso]
+---
+
+# Plan — Clase «Orden de trabajo»
+
+Rama `feat/nva_oportunidad`. Flag `case_work_order` (al final de `features.yml`). Continúa
+[[Plan-Casos-Hoja-de-ruta]] (E4). Reutiliza lo de [[Plan-Clase-Comercial]]: tipos con columnas,
+tareas, reuniones + Google Calendar, relaciones entre casos y la clase fija (E1.4).
+
+## Idea
+Trabajo **planeado** (Soporte es reactivo y se mide por SLA): fecha programada, técnico,
+dirección, horas, materiales, checklist y conformidad del cliente. Se mide por **cumplimiento**.
+Elementos: **«Órdenes»**. Color `#0d9488` (verde azulado).
+
+## Capacidades por clase (`CaseType::CLASS_CAPABILITIES`)
+En lugar de preguntar «¿es Comercial?» por el código, cada clase declara lo que hace:
+
+| Clase | `sla` | `portal` | `bot_status` |
+|---|---|---|---|
+| Soporte (y sin tipo) | ✅ | ✅ | ✅ |
+| Comercial | — | — | — |
+| Orden de trabajo | — | — | ✅ |
+| Proyecto (reservado) | — | — | — |
+
+- `sla` → metas de SLA (`assign_sla_targets`), monitor de SLA y cierre automático de resueltos,
+  Métricas de Soporte (`metrics`, `by_type`). Front: `classHasSla` (aviso de SLA, punto del folio,
+  SLA/nivel/escalamiento en la ficha y en la tarjeta del Tablero).
+- `portal` → tipo público (si no, `public` se apaga solo) y consulta por folio en el portal.
+- `bot_status` → el bot `@estado_ticket`.
+- Scope `CaseTicket.with_capability(:x)` (subconsulta, ver [[Trampas]] #21); `#class_capability?`.
+
+## Fases
+| Fase | Contenido | Estado |
+|---|---|---|
+| F1 | Flag, clase ofrecida, flujo de columnas, capacidades por clase, Lista/Tablero/Tipos, textos | ✅ 2026-10-20 |
+| F2 | Datos de la orden (dirección, horas est./real, facturable, conformidad) + materiales; formulario y panel; «Programar visita» (reuniones); cierre con conformidad; «Crear orden» desde ticket / oportunidad ganada; combo, filtros y columnas de la Lista | ⏳ |
+| F3 | Métricas (cumplimiento de fecha, horas real vs estimado, retrabajos, por técnico) + specs | ⏳ |
+
+## F1 — lo construido
+- `features.yml`: `case_work_order` al final. `featureFlags.js`: `CASE_WORK_ORDER`.
+- `case_types_controller`: `OFFERED_CLASSES` + `CLASS_FLAGS` (cada clase exige su flag).
+- `CaseTypeColumn::WORK_ORDER_TEMPLATE`: Por programar (open, classified) · Programada (assigned,
+  in_diagnosis) · En ejecución (in_progress, escalated) · Pausada (waiting_*) · Terminada
+  (resolved, validating) · Cerrada (closed) · Cancelada (cancelled).
+- Capacidades (arriba): `CaseType.classes_with`, `.class_capability?`; `CaseTicket#work_order?`.
+  Reemplazan `non_commercial` en el monitor de SLA, el bot, el portal y las Métricas de Soporte
+  (`non_commercial` sigue existiendo, ya sin uso en `app/`).
+- Front: `CASE_CLASSES` con `work_order`; `classI18nBase`, `classHasSla`, `caseClassOfTicket`
+  genérico. Lista y Tablero mandan siempre `case_class` y filtran tipos con `typesOfClass`.
+  `FINE_FILTERS_BY_CLASS.work_order`. `ClassMetrics`: aviso «llegan en la F3». Tipos: columna y
+  filtro de clase con las clases activas; modal de tipo ofrece la clase con su flag.
+- i18n `CASE_TICKETS.CLASSES.WORK_ORDER`, `TYPES.CLASS.FILTER.WORK_ORDER`, `TYPES.CLASS.HELP`.
+- Specs: `spec/models/case_work_order_class_spec.rb` (5) + helper/rutas (front).
+- Pendiente de F2: el cierre de una orden aún pide causa/solución como Soporte; una «Terminada»
+  no se cierra sola (no tiene `sla`), espera la conformidad de F2.
+
+## Pendiente de decidir (antes de F2)
+1. Conformidad: ¿nombre de quien recibe + nota, o firma dibujada? (recomendado: nombre + nota)
+2. Materiales: ¿concepto, cantidad, unidad, o también costo? (recomendado: costo opcional)
+3. Técnicos: ¿uno responsable + equipo, o varios? (recomendado: uno + equipo)
+4. Horas reales: ¿a mano al cerrar o registro inicio/fin? (recomendado: a mano)
+5. Cliente: ¿obligatorio u opcional? (recomendado: opcional)
+6. ¿El cliente la ve? (F1 ya: sí en el bot `@estado_ticket`, no en el portal)
+
+## 🔗 Relacionado
+[[00-Indice]] · [[Plan-Casos-Hoja-de-ruta]] · [[Plan-Clase-Comercial]] · [[Trampas]]

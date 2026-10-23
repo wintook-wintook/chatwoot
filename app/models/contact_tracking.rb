@@ -32,6 +32,7 @@
 #  calendar_event_duration    :integer          default(30)
 #  calendar_integration_ids   :jsonb            not null
 #  complementary_prompt       :text
+#  dispatched_at              :datetime
 #  interval_days              :integer
 #  keyword_action_fired       :jsonb
 #  keyword_actions            :jsonb            not null
@@ -44,6 +45,7 @@
 #  objective                  :string           not null
 #  outcome                    :string
 #  paused_at                  :datetime
+#  paused_by_campaign         :boolean          default(FALSE), not null
 #  response_adjustments_count :integer          default(0), not null
 #  retry_interval_unit        :string           default("minutes")
 #  retry_interval_value       :integer          default(30)
@@ -97,8 +99,19 @@ class ContactTracking < ApplicationRecord
   belongs_to :account
   belongs_to :tracking_template, optional: true
   belongs_to :tracking_campaign, optional: true # @campanas_vendedor
+
+  # Embudo de contactos — la cita que agenda el agente de seguimiento mueve la
+  # tarjeta de la conversación a la columna «se agenda cita».
+  after_commit :advance_contact_funnel, on: %i[create update],
+                                        if: -> { conversation_id.present? && appointment_at.present? && saved_change_to_appointment_at? }
+
+  def advance_contact_funnel
+    Kanban::FunnelTriggerJob.perform_later(conversation_id, 'appointment_scheduled')
+  end
   # @tickets_cases — al borrar el seguimiento, conserva el ticket como histórico (contact_tracking_id → NULL).
   has_many :case_tickets, dependent: :nullify
+  # proyecto@automatizacion_campanas — cada envío real por WhatsApp y si Meta lo entregó.
+  has_many :tracking_deliveries, dependent: :delete_all
 
   # ==============================================================================
   # Serializers - Para campos JSON
@@ -169,6 +182,12 @@ class ContactTracking < ApplicationRecord
   # Instance Methods - Control de estado
   # ==============================================================================
   
+  # proyecto@automatizacion_campanas — Fase 2: en las cuentas con despachador no hay job
+  # programado por seguimiento; TrackingDispatch::DispatchJob toma los vencidos.
+  def dispatched?
+    TrackingDispatch.enabled_for?(account_id)
+  end
+
   # Verifica si el seguimiento puede ejecutarse
   def can_execute?
     (pending? || scheduled? || active?) && scheduled_for <= Time.current
@@ -441,10 +460,14 @@ class ContactTracking < ApplicationRecord
   end
 
   # Cancela el seguimiento
+  # update_attribute (sin validaciones): cancelar no puede depender de que la configuración
+  # sea válida. Con update, un seguimiento inválido (p. ej. menos plantillas WhatsApp que
+  # intentos) no se guardaba, quedaba vivo y seguía reintentando cada minuto.
   def cancel!
     return false unless can_cancel?
+
     cancel_existing_jobs
-    update(status: 'cancelled')
+    update_attribute(:status, 'cancelled') # rubocop:disable Rails/SkipsModelValidations
   end
 
   # Marca el seguimiento como "objetivo cumplido" — el objetivo se alcanzó.
@@ -552,6 +575,8 @@ class ContactTracking < ApplicationRecord
   end
 
   def schedule_job
+    return if dispatched?
+
     # Programar nuevo job
     begin
       ContactTrackingJob.set(wait_until: scheduled_for).perform_later(id)
@@ -564,6 +589,9 @@ class ContactTracking < ApplicationRecord
 
   # ⭐ MEJORADO: Cancela todos los jobs existentes de este tracking en TODAS las colas de Sidekiq
   def cancel_existing_jobs
+    # Con despachador no hay jobs por seguimiento que cancelar: no se recorren las colas.
+    return 0 if dispatched?
+
     require 'sidekiq/api'
 
     cancelled_count = 0

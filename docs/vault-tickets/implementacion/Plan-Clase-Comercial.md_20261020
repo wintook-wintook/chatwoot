@@ -1,0 +1,107 @@
+---
+titulo: Plan — Clase de caso + Comercial (oportunidades)
+tipo: implementación
+fase: F0–F5
+tags: [tickets, plan, comercial, oportunidades, clase-de-caso]
+---
+
+# Plan — Clase de caso + Comercial (oportunidades)
+
+Rama: `feat/nva_oportunidad` (desde `develop` a9fef695, 2026-10-19). Flag: `case_commercial`.
+
+## Idea
+Nuevo nivel **Clase de caso** por encima del Tipo. La clase es fija en código
+(cada una tiene comportamiento propio); los tipos los define la cuenta.
+
+```
+Clase (código)       Tipos (configurables)
+├─ Soporte (0)       Soporte, Incidente del sistema…   ← todo lo existente
+├─ Comercial (1)     Oportunidad nueva, Renovación, Venta adicional…
+├─ Orden de trabajo (2)  reservado
+└─ Proyecto (3)          reservado
+```
+`case_types.case_class` (enum por posición: valores nuevos SIEMPRE al final, ver
+[[Trampas]] #17). El ticket hereda la clase de su tipo.
+
+## Decisiones tomadas
+- Todo lo existente queda como **Soporte**; la clase de un tipo **se puede cambiar**
+  (modal de impacto, 409 + `confirm_class_change`) y un caso puede moverse a un tipo
+  de otra clase. No se borra nada; queda `case_class_changed` en `case_events`.
+- **Datos comerciales en columnas reales** de `case_tickets` (solo los usa Comercial).
+- **Clasificación por tipo opcional**: servicio/categoría con `case_type_id` NULL = global.
+- **Resultado** (`outcome`) separado de `status`:
+  | UI | status | outcome | Filtro |
+  |---|---|---|---|
+  | Prospecto…Negociación | `in_progress` | — | Pendiente |
+  | Pospuesta | `waiting_on_customer` + `postponed_until` | — | Pendiente (etiqueta) |
+  | Ganada | `closed` | `won` | Cerrado |
+  | Perdida | `closed` | `lost` + motivo | Cerrado |
+  | Cancelada | `closed` | `cancelled` + motivo | Cerrado |
+  Las tres finales usan `closed` porque `cancelled` no se puede reabrir.
+- Respuesta del cliente → **se reabre la misma oportunidad** (sin ventana), con trazabilidad.
+- A) motivos = catálogo configurable + nota · B) pospuestas dentro de Pendiente ·
+  C) si hay cerrados de dos clases en la conversación, reabrir el más reciente y avisar
+  en el otro · D) automatización con tipo de otra clase → caso nuevo · E) borrar un tipo
+  borra sus servicios/categorías propios.
+
+## Hallazgos que el plan cubre
+1. `validate_closure!` exige causa/solución → Comercial cierra con resultado + motivo.
+2. Ventana de reapertura / ticket de seguimiento → Comercial siempre reabre.
+3. Listener reabre el último cerrado de la conversación sin mirar clase.
+4. `ActionService` (automatizaciones) cambia `case_type_id` sin preguntar.
+5. `@solicitudes` depende de la columna «Pagado» (`ServicePaidJob`) → aviso en el modal.
+6. Bot `@estado_ticket` y portal → excluir Comercial; tipo Comercial no puede ser público.
+7. SLA (`assign_sla_targets`, `CaseSlaMonitorJob`) → excluir Comercial.
+8. Lote no puede cerrar Comercial (necesita resultado).
+9. Métricas actuales → filtrar a Soporte.
+
+## Fases
+| Fase | Contenido | Estado |
+|---|---|---|
+| F0 | Flag `case_commercial` (al final de `features.yml`) + este plan | ✅ 2026-10-19 |
+| F1 | Clase de caso: columna, API, modal de impacto, eventos, UI de tipos | ✅ 2026-10-19 |
+| F2 | Clasificación por tipo (servicios/categorías, IA, modales) | ✅ 2026-10-19 |
+| F3 | Comercial backend: datos, resultado, motivos, columnas del embudo, pospuestas, protecciones #2–#8 | ⏳ |
+| F4 | Comercial UI: menú, lista, Kanban con montos, panel comercial, modales | ⏳ |
+| F5 | Métricas del embudo + métricas actuales solo Soporte | ⏳ |
+| F6/F7 | Orden de trabajo / Proyecto (plan propio) | después |
+
+## F1 — lo construido
+- Migración `20261021120000_add_case_class_to_case_types` (`case_class` int default 0 + índice).
+- `CaseType`: enum `case_class` (`_prefix: :class`), `class_change_impact`, `log_class_change!`.
+- `CaseEvent`: `case_class_changed: 34`.
+- `case_types_controller`: `?case_class=`, `OFFERED_CLASSES` (support/commercial),
+  Comercial exige el flag, 409 + impacto sin `confirm_class_change`.
+- `case_tickets_controller#update`: evento al mover un caso a un tipo de otra clase;
+  `case_class` en el JSON del tipo del ticket.
+- Front: `TypeFormModal.vue` (selector + confirmación), `TicketTypes.vue` (columna
+  Clase + filtro), store `updateType({ confirmClassChange })`, i18n es/en.
+- Spec: `spec/requests/api/v1/accounts/case_types_class_spec.rb` (8 casos).
+
+## F2 — lo construido
+- Migración `20261021130000_add_case_type_to_case_classification` (`case_type_id` FK opcional
+  en `case_services` y `case_categories`; NULL = global).
+- `CaseService`/`CaseCategory`: `belongs_to :case_type`, scope `for_type(id)` (globales +
+  propios), `applies_to_type?`, valida que el tipo sea de la cuenta. La subcategoría hereda
+  el tipo del padre y lo sigue si el padre cambia.
+- `CaseType`: `has_many :case_services / :case_categories, dependent: :destroy` (decisión E).
+- `CaseTicket`: al crear o al cambiar de tipo, la clasificación ajena **se limpia sola**
+  (no rompe automatizaciones, IA ni @solicitudes); en otro caso es error de validación.
+- IA: `Classifier` usa `for_type(ticket.case_type_id)`; `Intake` lista todo con la etiqueta
+  «solo tipo N» y `typed_pick` descarta lo que no es del tipo elegido.
+- API: `case_type_id` en JSON y params; `?case_type_id=` filtra los index.
+- Front: helper `helper/caseClassification.js`; `CaseTicketModal` e `CaseTicketInternalModal`
+  filtran por el tipo elegido y sueltan lo que deja de aplicar; `Classification.vue` con
+  filtro «Aplica a», columna y selector en los modales (la subcategoría no lo muestra).
+- Spec: `spec/models/case_classification_by_type_spec.rb` (8 casos).
+
+## Cambios del módulo posteriores al 2026-09-04 (no estaban en la bóveda)
+- `3b9daa35` ITIL configurable **por tipo** (`case_types.itil_enabled`), ya no global.
+- `7235e1ba` / `411637ec` avance y cambio de estado usan las columnas del tipo.
+- `b4a6782d` movimiento libre entre columnas personalizadas.
+- `eab21d0b` bandeja de tareas con reuniones agendadas y filtro pendiente/cerrado.
+- `@solicitudes` (proyecto aparte, 2026-09-26 → 10-07): un caso por servicio desde
+  `contact_trackings/service_requests`; `ServicePaidJob` al mover a la columna «Pagado».
+
+## 🔗 Relacionado
+[[00-Indice]] · [[Trampas]] · [[Plan-Columnas-Por-Tipo]] · [[Pendiente]]

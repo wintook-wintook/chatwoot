@@ -19,6 +19,11 @@
   - high
   - medium
   - default
+  # proyecto@automatizacion_campanas — Fase 2: envíos del despachador de seguimientos
+  # (TrackingDispatch::SendJob). Debajo de default para que las respuestas a clientes
+  # (ContactTrackingResponseAnalyzerJob) salgan primero. Con volumen conviene un proceso de
+  # Sidekiq aparte solo para esta cola: bundle exec sidekiq -C config/sidekiq.yml -q campaign_dispatch
+  - campaign_dispatch
   - mailers
   - action_mailbox_routing
   - low

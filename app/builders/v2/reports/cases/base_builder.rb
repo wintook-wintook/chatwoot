@@ -35,7 +35,12 @@ class V2::Reports::Cases::BaseBuilder
   # decide qué es "perdido": `status` y `closure_type` son ejes DISTINTOS acá
   # (closure_type solo se llena al cerrar por `status: closed`; un ticket puede
   # perderse sin pasar por ahí, `status: cancelled` directo).
-  def outcome_bucket(status, closure)
+  #
+  # Plan-Clase-Comercial F5: una oportunidad (clase Comercial) trae su resultado
+  # real en `outcome`, que manda sobre la regla de arriba: won → ganado,
+  # lost → perdido, cancelled → otro cierre (no se perdió contra nadie).
+  def outcome_bucket(status, closure, outcome = nil)
+    return { 'won' => :won, 'lost' => :lost, 'cancelled' => :other_closed }[outcome] if outcome.present?
     return :lost if status == 'cancelled'
     return :open unless status == 'closed'
 

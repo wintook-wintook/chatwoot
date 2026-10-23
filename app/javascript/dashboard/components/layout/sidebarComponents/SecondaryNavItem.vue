@@ -52,6 +52,14 @@ export default {
     hasSubMenu() {
       return !!this.menuItem.children;
     },
+    // Menú v2: una opción dentro de un grupo respeta su función activa.
+    visibleChildren() {
+      return (this.menuItem.children || []).filter(
+        child =>
+          !child.featureFlag ||
+          this.isFeatureEnabledonAccount(this.accountId, child.featureFlag)
+      );
+    },
     isCollapsibleGroup() {
       return this.hasSubMenu && !!this.menuItem.collapsible;
     },
@@ -134,6 +142,13 @@ export default {
       );
     },
     isCurrentRoute() {
+      // Menú v2: una opción que abre varias vistas (Tablero | Lista | Embudo) se
+      // marca activa en cualquiera de ellas.
+      if (this.menuItem.activeRoutes) {
+        return this.menuItem.activeRoutes.includes(
+          this.$store.state.route.name
+        );
+      }
       return this.$store.state.route.name.includes(this.menuItem.toStateName);
     },
 
@@ -292,7 +307,7 @@ export default {
       :class="{ 'pl-3 rtl:pl-0 rtl:pr-3': isCollapsibleGroup }"
     >
       <SecondaryChildNavItem
-        v-for="child in menuItem.children"
+        v-for="child in visibleChildren"
         :key="child.id"
         :to="child.toState"
         :label="child.translate ? $t(`SIDEBAR.${child.label}`) : child.label"

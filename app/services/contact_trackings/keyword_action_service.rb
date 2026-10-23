@@ -8,18 +8,26 @@
 #              clave de acción configurada en el seguimiento y ejecuta la acción.
 #
 # Match: exacto, case-insensitive, word-boundary (no substring parcial)
-# Acciones soportadas: cancel, pause, objective_met
+# Acciones soportadas: cancel, pause, objective_met, interested, booked
 # Respuesta: silenciosa — NO envía ningún mensaje al contacto
+#
+# interested / booked: marcan el seguimiento (interested_at / booked_at, que suman a
+#             los indicadores Interesados / Agendaron), opcionalmente etiquetan y/o
+#             asignan la conversación (label, assignee_id, team_id) y NO cortan el
+#             flujo: el bot sigue respondiendo.
 #
 # Uso:
 #   service = ContactTrackings::KeywordActionService.new(tracking, content, 'incoming')
-#   service.call  # => true si se ejecutó una acción, false si no hubo match
+#   service.call  # => true si se ejecutó una acción que corta el flujo
+#                 #    (cancel/pause/objective_met), false si no
 # ================================================================================
 
 module ContactTrackings
   class KeywordActionService
-    VALID_ACTIONS    = %w[cancel pause objective_met].freeze
+    VALID_ACTIONS    = %w[cancel pause objective_met interested booked].freeze
     VALID_DIRECTIONS = %w[incoming outgoing both].freeze
+    # Acciones que solo marcan el seguimiento y dejan seguir al bot → columna de la marca.
+    MARK_COLUMNS = { 'interested' => :interested_at, 'booked' => :booked_at }.freeze
 
     def initialize(tracking, message_content, direction)
       @tracking  = tracking
@@ -28,31 +36,41 @@ module ContactTrackings
     end
 
     def call
-      return false unless @tracking.keyword_actions.is_a?(Array)
-      return false if @tracking.keyword_actions.empty?
+      matched = matching_rules
+      return false if matched.empty?
 
-      matched = @tracking.keyword_actions.find do |ka|
-        next false unless ka.is_a?(Hash)
+      marks, terminal = matched.partition { |ka| MARK_COLUMNS.key?(ka['action'].to_s) }
+      marks.each { |ka| apply_mark(ka) }
 
-        keyword   = ka['keyword'].to_s.strip
-        action    = ka['action'].to_s
-        direction = ka['direction'].to_s
+      rule = terminal.first
+      return false unless rule
 
-        next false if keyword.blank?
-        next false unless VALID_ACTIONS.include?(action)
-        next false unless VALID_DIRECTIONS.include?(direction)
-        next false unless direction_matches?(direction)
-
-        keyword_present?(keyword)
-      end
-
-      return false unless matched
-
-      execute_action(matched['action'], matched['keyword'])
+      execute_action(rule['action'], rule['keyword'])
       true
     end
 
     private
+
+    def matching_rules
+      return [] unless @tracking.keyword_actions.is_a?(Array)
+
+      @tracking.keyword_actions.select { |ka| rule_matches?(ka) }
+    end
+
+    def rule_matches?(rule)
+      return false unless rule.is_a?(Hash)
+
+      keyword   = rule['keyword'].to_s.strip
+      action    = rule['action'].to_s
+      direction = rule['direction'].to_s
+
+      return false if keyword.blank?
+      return false unless VALID_ACTIONS.include?(action)
+      return false unless VALID_DIRECTIONS.include?(direction)
+      return false unless direction_matches?(direction)
+
+      keyword_present?(keyword)
+    end
 
     def direction_matches?(configured_direction)
       configured_direction == 'both' || configured_direction == @direction
@@ -79,6 +97,41 @@ module ContactTrackings
       record_keyword_fire(action, keyword) if performed
     rescue StandardError => e
       Rails.logger.error "[KeywordAction] ❌ Error ejecutando '#{action}': #{e.message}"
+    end
+
+    # Marca el seguimiento (solo la primera vez: el indicador cuenta seguimientos, no
+    # disparos) y etiqueta y/o asigna su conversación. La etiqueta, el agente y el
+    # equipo se buscan dentro de la cuenta: lo que ya no existe se ignora.
+    def apply_mark(rule)
+      action = rule['action'].to_s
+      column = MARK_COLUMNS[action]
+      @tracking.update_column(column, Time.current) if @tracking[column].nil? # rubocop:disable Rails/SkipsModelValidations
+
+      label, assignment = label_and_assign(@tracking.conversation, rule) if @tracking.conversation
+
+      Rails.logger.info "[KeywordAction] ⌨️  Match '#{rule['keyword']}' → #{action} en tracking ##{@tracking.id} " \
+                        "(label: #{label || '-'}, #{assignment.presence || 'sin asignación'})"
+    rescue StandardError => e
+      Rails.logger.error "[KeywordAction] ❌ Error ejecutando '#{action}': #{e.message}"
+    end
+
+    def label_and_assign(conversation, rule)
+      label = mark_label(conversation.account, rule)
+      conversation.add_labels([label]) if label
+      assignment = mark_assignment(conversation.account, rule)
+      conversation.update!(assignment) if assignment.any?
+      [label, assignment]
+    end
+
+    def mark_label(account, rule)
+      title = rule['label'].to_s.strip
+      title if title.present? && account.labels.exists?(title: title)
+    end
+
+    def mark_assignment(account, rule)
+      agent = account.users.find_by(id: rule['assignee_id']) if rule['assignee_id'].present?
+      team  = account.teams.find_by(id: rule['team_id']) if rule['team_id'].present?
+      { assignee_id: agent&.id, team_id: team&.id }.compact
     end
 
     # Atribución para KPIs de reglas: guarda qué regla disparó y cerró/pausó el

@@ -33,11 +33,83 @@ class CaseTicketsAPI extends ApiClient {
   // @tickets_cases — mueve el ticket a una columna del Kanban por tipo (A+). `closure`
   // es opcional: se manda cuando el movimiento aterriza en `closed` (el backend lo
   // exige, ver `requires_closure` en la respuesta de error si falta).
-  move(ticketId, caseTypeColumnId, closure) {
+  // Plan-Clase-Comercial F4 — `extra` lleva `postponed_until` al soltar una
+  // oportunidad en la columna de espera (`requires_postpone`).
+  move(ticketId, caseTypeColumnId, closure, extra = {}) {
     return axios.patch(`${this.url}/${ticketId}/move`, {
       case_type_column_id: caseTypeColumnId,
       ...(closure ? { closure } : {}),
+      ...extra,
     });
+  }
+
+  // Plan-Clase-Comercial F4 — oportunidades: cerrar con resultado, posponer, retomar.
+  closeWithOutcome(ticketId, params) {
+    return axios.patch(`${this.url}/${ticketId}/outcome`, params);
+  }
+
+  postpone(ticketId, params) {
+    return axios.patch(`${this.url}/${ticketId}/postpone`, params);
+  }
+
+  // Plan-Clase-Orden-de-Trabajo F2a — materiales de una orden de trabajo.
+  createWorkOrderItem(ticketId, item) {
+    return axios.post(`${this.url}/${ticketId}/work_order_items`, {
+      work_order_item: item,
+    });
+  }
+
+  updateWorkOrderItem(ticketId, itemId, item) {
+    return axios.patch(`${this.url}/${ticketId}/work_order_items/${itemId}`, {
+      work_order_item: item,
+    });
+  }
+
+  deleteWorkOrderItem(ticketId, itemId) {
+    return axios.delete(`${this.url}/${ticketId}/work_order_items/${itemId}`);
+  }
+
+  // Plan-Clase-Orden-de-Trabajo F2b — orden de trabajo nueva desde un caso.
+  createWorkOrder(ticketId, caseTypeId) {
+    return axios.post(`${this.url}/${ticketId}/work_order`, {
+      case_type_id: caseTypeId,
+    });
+  }
+
+  // Plan-Clase-Proyecto P2 — proyecto nuevo desde una oportunidad ganada.
+  createProject(ticketId, caseTypeId) {
+    return axios.post(`${this.url}/${ticketId}/project`, {
+      case_type_id: caseTypeId,
+    });
+  }
+
+  // Plan-Clase-Proyecto P2 — casos dentro de un proyecto.
+  // Liga la conversación de un caso que no tiene: `{ conversation_id }` (display_id)
+  // o `{ inbox_id }` (reusa la abierta del contacto en esa bandeja o crea una).
+  linkConversation(ticketId, params) {
+    return axios.post(`${this.url}/${ticketId}/conversation`, params);
+  }
+
+  getProjectChildren(projectId) {
+    return axios.get(`${this.url}/${projectId}/project_children`);
+  }
+
+  // `payload`: { case_type_id, title } (crear) o { ticket_id } (ligar).
+  addProjectChild(projectId, payload) {
+    return axios.post(`${this.url}/${projectId}/project_children`, payload);
+  }
+
+  // Plan-Clase-Proyecto P3 — hitos y casos con fecha para la línea de tiempo.
+  getProjectTimeline(projectId) {
+    return axios.get(`${this.url}/${projectId}/project_children/timeline`);
+  }
+
+  removeProjectChild(projectId, childId) {
+    return axios.delete(`${this.url}/${projectId}/project_children/${childId}`);
+  }
+
+  resume(ticketId, params = {}) {
+    return axios.patch(`${this.url}/${ticketId}/resume`, params);
   }
 
   assign(ticketId, params) {

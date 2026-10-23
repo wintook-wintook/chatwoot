@@ -149,7 +149,9 @@ export default {
 <template>
   <woot-modal :show="show" :on-close="() => $emit('close')">
     <div class="p-8">
-      <h2 class="text-lg font-medium text-slate-800 dark:text-slate-100 mb-4">
+      <h2
+        class="text-base font-semibold leading-6 text-slate-800 dark:text-slate-50 mb-4"
+      >
         {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_TITLE') }}
       </h2>
 
@@ -183,7 +185,7 @@ export default {
           {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_CONTEXT') }}
           <textarea v-model="aiContext" rows="3" />
         </label>
-        <p class="text-xs text-slate-500 dark:text-slate-400 -mt-2 mb-2">
+        <p class="text-sm text-slate-600 dark:text-slate-300 -mt-2 mb-2">
           {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_CONTEXT_HINT') }}
         </p>
 
@@ -246,7 +248,7 @@ export default {
           {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_CALENDAR_NONE') }}
         </p>
         <template v-else>
-          <p class="!m-0 text-xs text-slate-500 dark:text-slate-400">
+          <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_CALENDAR_HINT') }}
           </p>
           <label

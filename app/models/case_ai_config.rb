@@ -29,7 +29,8 @@ class CaseAiConfig < ApplicationRecord
   belongs_to :account
 
   # Acciones de IA disponibles (se irán implementando por bloque de la Fase 3).
-  ACTIONS = %w[classify reply summarize duplicate follow_up].freeze
+  # day_plan — Plan-Bandeja-Prioridad F4: «Plan de mi día» (a pedido; explica, no reordena).
+  ACTIONS = %w[classify reply summarize duplicate follow_up day_plan business_summary conversation_analysis].freeze
   MODES   = %w[off suggest auto].freeze
   DEFAULT_MODE = 'suggest'
 

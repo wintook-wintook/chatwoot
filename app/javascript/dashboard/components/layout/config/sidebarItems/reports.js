@@ -4,6 +4,7 @@ import { frontendURL } from '../../../../helper/URLHelper';
 const reports = accountId => ({
   parentNav: 'reports',
   routes: [
+    'business_summary_reports', // @tickets_cases — Resumen del negocio
     'account_overview_reports',
     'conversation_reports',
     'csat_reports',
@@ -13,9 +14,17 @@ const reports = accountId => ({
     'inbox_reports',
     'team_reports',
     'sla_reports',
-    'opportunity_reports', // proyecto@metricas_casos
   ],
   menuItems: [
+    // @tickets_cases — «Resumen del negocio» (la misma página que en Casos).
+    {
+      icon: 'briefcase',
+      label: 'BUSINESS_SUMMARY',
+      hasSubMenu: false,
+      toState: frontendURL(`accounts/${accountId}/reports/business-summary`),
+      toStateName: 'business_summary_reports',
+      visibleGetter: 'caseTickets/getCanViewBusinessSummary',
+    },
     {
       icon: 'arrow-trending-lines',
       label: 'REPORTS_OVERVIEW',
@@ -80,14 +89,6 @@ const reports = accountId => ({
       featureFlag: FEATURE_FLAGS.SLA,
       toState: frontendURL(`accounts/${accountId}/reports/sla`),
       toStateName: 'sla_reports',
-    },
-    // proyecto@metricas_casos
-    {
-      icon: 'briefcase',
-      label: 'REPORTS_OPPORTUNITY',
-      hasSubMenu: false,
-      toState: frontendURL(`accounts/${accountId}/reports/opportunities`),
-      toStateName: 'opportunity_reports',
     },
   ],
 });

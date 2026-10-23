@@ -55,6 +55,14 @@ RSpec.describe ContactTrackings::ServiceRequests::Choice do
     expect(firme).to have_received(:confirm!)
   end
 
+  it 'con @solicitudes(asignar=unidad), la unidad apartada queda en ese campo del caso' do
+    servicio = caso('Plana 40 t', %w[1A])
+    servicio.update!(metadata: servicio.metadata.merge('campo_asignado' => 'unidad'))
+
+    elegir('1A')
+    expect(servicio.reload.custom_attributes['unidad']).to eq('TP-1A')
+  end
+
   it 'sin ofertas abiertas o si el mensaje no elige nada, no interviene' do
     expect(elegir('1A')).to be_nil
     caso('Plana 40 t', %w[1A])

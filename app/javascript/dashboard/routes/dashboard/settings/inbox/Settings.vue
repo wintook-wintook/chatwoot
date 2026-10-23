@@ -18,6 +18,7 @@ import MicrosoftReauthorize from './channels/microsoft/Reauthorize.vue';
 import WidgetBuilder from './WidgetBuilder.vue';
 import BotConfiguration from './components/BotConfiguration.vue';
 import UnoapiConfiguration from './settingsPage/UnoapiConfiguration.vue';
+import WhatsappCallsPage from './settingsPage/WhatsappCallsPage.vue'; // diag/llamadas_whatsapp
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import SenderNameExamplePreview from './components/SenderNameExamplePreview.vue';
 
@@ -38,6 +39,7 @@ export default {
     SenderNameExamplePreview,
     MicrosoftReauthorize,
     UnoapiConfiguration,
+    WhatsappCallsPage,
   },
   mixins: [inboxMixin],
   setup() {
@@ -161,6 +163,23 @@ export default {
           {
             key: 'questions',
             name: 'Preguntas de Calificación (Beta)',
+          },
+        ];
+      }
+
+      // diag/llamadas_whatsapp (F6): solo WhatsApp Cloud y con la bandera de la cuenta
+      if (
+        this.isAWhatsAppCloudChannel &&
+        this.isFeatureEnabledonAccount(
+          this.accountId,
+          FEATURE_FLAGS.WHATSAPP_CALLS
+        )
+      ) {
+        visibleToAllChannelTabs = [
+          ...visibleToAllChannelTabs,
+          {
+            key: 'whatsappCalls',
+            name: this.$t('WHATSAPP_CALLS.SETTINGS.TAB'),
           },
         ];
       }
@@ -847,6 +866,9 @@ export default {
     </div>
     <div v-if="selectedTabKey === 'unoApiConfiguration'">
       <UnoapiConfiguration :inbox="inbox" />
+    </div>
+    <div v-if="selectedTabKey === 'whatsappCalls'">
+      <WhatsappCallsPage :inbox="inbox" />
     </div>
   </div>
 </template>

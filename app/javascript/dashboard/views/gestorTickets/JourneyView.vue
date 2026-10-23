@@ -8,6 +8,9 @@
     - stepper  → Ciclo de vida horizontal compacto.
 -->
 <script>
+// Plan-Clase-Comercial F4 — fecha corta de «retomar el» en el historial.
+import { formatDay } from 'dashboard/helper/caseCommercial';
+
 // Vistas con botón en la cabecera. 'stepper' (Ciclo de vida) sigue existiendo en
 // el template pero ya no se ofrece: el Recorrido cubre lo mismo.
 const VISIBLE_VIEWS = ['diagram', 'timeline'];
@@ -345,6 +348,9 @@ export default {
       if (event.event_type.startsWith('meeting_')) {
         return this.meetingSummary(p);
       }
+      // Plan-Clase-Comercial F4 — eventos de oportunidad.
+      const commercial = this.commercialSummary(event.event_type, p);
+      if (commercial) return commercial;
       // Vencimiento: from/to son fechas.
       if (event.event_type === 'due_date_changed') {
         return `${p.from ? this.formatDate(p.from) : '—'} → ${
@@ -360,6 +366,84 @@ export default {
         return `${label(p.from)} → ${label(p.to)}`;
       }
       if (p.content) return p.content.slice(0, 80);
+      return null;
+    },
+    // Plan-Clase-Comercial F4 — resultado + motivo + nota; fecha de «retomar el»;
+    // y qué datos comerciales cambiaron (monto, moneda, cierre, probabilidad).
+    commercialSummary(type, p) {
+      const fields = 'CASE_TICKETS.COMMERCIAL.FIELDS';
+      if (type === 'outcome_set') {
+        return [
+          p.outcome && this.$t(`CASE_TICKETS.COMMERCIAL.OUTCOMES.${p.outcome}`),
+          p.outcome_reason,
+          p.note,
+        ]
+          .filter(Boolean)
+          .join(' · ');
+      }
+      if (type === 'postponed') {
+        return [
+          this.$t('CASE_TICKETS.COMMERCIAL.POSTPONED_UNTIL', {
+            date: formatDay(p.until),
+          }),
+          p.reason,
+        ]
+          .filter(Boolean)
+          .join(' · ');
+      }
+      if (type === 'stage_advanced') {
+        return this.$t('CASE_TICKETS.STAGE_ADVANCE.EVENT', {
+          from: p.from,
+          to: p.to,
+        });
+      }
+      // Plan-Plantilla-Tareas-Etapa — nacieron las tareas de la etapa.
+      if (type === 'stage_tasks_added') {
+        return this.$t('CASE_TICKETS.TASKS.STAGE.EVENT', {
+          count: p.count,
+          stage: p.stage,
+          titles: (p.titles || []).join(', '),
+        });
+      }
+      // Se ligó (o se creó) la conversación del caso.
+      if (type === 'conversation_link') {
+        const key = p.created ? 'EVENT_CREATED' : 'EVENT';
+        return this.$t(`CASE_TICKETS.CONVERSATION_ACTIONS.${key}`, {
+          id: p.display_id,
+          inbox: p.inbox_name || '—',
+        });
+      }
+      // Plan-Metricas-Comercial — compromiso del cliente: se marcó, se movió la
+      // fecha, se quitó o cambió la nota.
+      if (type === 'commitment_changed') {
+        const c = 'CASE_TICKETS.COMMERCIAL.COMMITMENT.EVENTS';
+        const text = this.$t(`${c}.${p.action}`, {
+          on: formatDay(p.on),
+          from: formatDay(p.from),
+          to: formatDay(p.to),
+        });
+        return [text, p.note].filter(Boolean).join(' · ');
+      }
+      if (type === 'amount_changed') {
+        const labels = {
+          amount: `${fields}.AMOUNT`,
+          currency: `${fields}.CURRENCY`,
+          expected_close_at: `${fields}.EXPECTED_CLOSE`,
+          probability: `${fields}.PROBABILITY`,
+        };
+        return Object.keys(labels)
+          .filter(k => p[k])
+          .map(
+            k =>
+              `${this.$t(labels[k])}: ${p[k].from ?? '—'} → ${p[k].to ?? '—'}`
+          )
+          .join(' · ');
+      }
+      if (p.previous_outcome) {
+        return `${this.$t('CASE_TICKETS.COMMERCIAL.FIELDS.OUTCOME')}: ${this.$t(
+          `CASE_TICKETS.COMMERCIAL.OUTCOMES.${p.previous_outcome}`
+        )}${p.reason ? ` · ${p.reason}` : ''}`;
+      }
       return null;
     },
     formatDate(d) {

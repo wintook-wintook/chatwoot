@@ -170,7 +170,7 @@ export default {
         :current-page="currentPage"
         :page-size="pageSize"
         :total-count="totalCount"
-        @page-change="fetchEntries"
+        @pageChange="fetchEntries"
       />
     </template>
   </div>

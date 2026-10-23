@@ -59,11 +59,12 @@ en:
         anything. Assign a calendar on the AI Agent's own page: having the calendar connected in the
         account is not enough — the engine looks for it on the agent.
     analysis:
+      configure: '**Missing in your account** (%{count}): business details, sources, labels or files this Training uses that your account doesn''t have. Fix it in the «Set up» tab, next to Training: create it there, pick one of yours or type the value.'
       header: '**What the checker flags** (%{count}):'
       clean: '**The checker flags nothing:** the engine reads and runs everything written.'
       line: 'line %{line} %{wrote}'
       groups:
-        labels: '**Tags that do not exist in the account** (%{count}): they trigger no automation. Create them in Labels or change them for existing ones.'
+        labels: '**Labels that do not exist in the account** (%{count}): a person has to put them on the conversation. Create them in Labels.'
         loose: '**Directives in the prose that do not run** (%{count}): the engine searches according to the route. Name «la información consultada» instead of the directive.'
         nothing: '**Routes that query nothing and have no «if it cannot solve»** (%{count}): they answer only from the Training. If intended (greeting, goodbye, asking for data), leave them.'
         bare_tags: '**Loose tags without meaning** (%{count}): the agent sticks them to every reply. Write them as a dictionary («#x = when it is used») or delete them.'
@@ -141,9 +142,6 @@ en:
         Line %{line}: %{tags} stands alone, without saying what it means. The agent will stick it to
         every reply (it happened in a real conversation with #humano). Write it as a dictionary —
         %{tags} = when it is used— or delete it: the engine adds each route's tag by itself.
-      state_label_not_found: >-
-        Tag %{tag} in the Training does not exist in the account: if the agent uses it, it triggers no
-        automation. Create it in Labels or change it for an existing one.
       promised_action_missing:
         calendar: >-
           Line %{line}: "%{route}" says it books, moves or cancels appointments, but the Training has no
@@ -198,10 +196,6 @@ en:
         Branch '%{route}' has no description. The description is the ONLY thing the classifier uses
         to decide which branch a message goes to: without it, this branch will almost never be
         chosen. Write it as a list of situations, in the customer's own words.
-      label_not_found: >-
-        Label %{tag} on branch '%{route}' does not exist in the account, so it will not trigger any
-        automation. Create it under Labels or use one of the existing ones: %{available}.
-      label_none_created: (no labels created)
       erp_directive_not_isolated: >-
         There is a {{consulta:}} directive without "?" that is not a route source, living alongside
         branches or prose. The engine sends the WHOLE interpolated Training as the message. Make it a

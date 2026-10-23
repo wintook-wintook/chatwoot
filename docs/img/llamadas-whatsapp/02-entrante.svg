@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 640" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker></defs>
+  <rect width="940" height="640" fill="#f4f6f9"/>
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28">Llamada entrante</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">El cliente llama al número del negocio; contesta el primer agente que da clic</text>
+  <g font-size="14" font-weight="800" text-anchor="middle" fill="#151b28">
+    <rect x="50" y="92" width="120" height="34" rx="8" fill="#fff" stroke="#94a3b8"/><text x="110" y="114">Cliente</text>
+    <rect x="270" y="92" width="120" height="34" rx="8" fill="#fff" stroke="#16a34a" stroke-width="2"/><text x="330" y="114">Meta</text>
+    <rect x="500" y="92" width="140" height="34" rx="8" fill="#fff" stroke="#2563eb" stroke-width="2"/><text x="570" y="114">Chatwoot</text>
+    <rect x="740" y="92" width="150" height="34" rx="8" fill="#fff" stroke="#7c3aed" stroke-width="2"/><text x="815" y="114">Navegador</text>
+  </g>
+  <g stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 4"><path d="M110,126 V610"/><path d="M330,126 V610"/><path d="M570,126 V610"/><path d="M815,126 V610"/></g>
+  <g stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#a)">
+    <path d="M110,160 H326"/><path d="M330,195 H566"/><path d="M570,312 H811"/>
+    <path d="M815,400 H574"/><path d="M570,430 H334"/><path d="M570,470 H811"/>
+    <path d="M330,555 H566"/><path d="M570,585 H811"/>
+  </g>
+  <g font-size="12" fill="#151b28">
+    <text x="218" y="153" text-anchor="middle">llama por WhatsApp</text>
+    <text x="448" y="188" text-anchor="middle">webhook calls · connect · SDP offer</text>
+    <text x="692" y="305" text-anchor="middle" font-weight="700">voice_call.incoming</text>
+    <text x="692" y="393" text-anchor="middle">POST accept {sdp_answer}</text>
+    <text x="452" y="423" text-anchor="middle">pre_accept + accept</text>
+    <text x="692" y="463" text-anchor="middle">voice_call.accepted</text>
+    <text x="448" y="548" text-anchor="middle">webhook terminate (duración)</text>
+    <text x="692" y="578" text-anchor="middle">voice_call.ended</text>
+  </g>
+  <rect x="590" y="206" width="180" height="78" rx="8" fill="#eff6ff" stroke="#bfdbfe"/>
+  <g font-size="11.5" fill="#1e3a8a"><text x="602" y="228">• contacto + conversación</text><text x="602" y="246">• Call ringing · incoming</text><text x="602" y="264">• burbuja voice_call</text><text x="602" y="280">• ¿entrantes activas?</text></g>
+  <rect x="826" y="318" width="110" height="78" rx="8" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <g font-size="11" fill="#5b21b6"><text x="834" y="336">Contestar</text><text x="834" y="353">micrófono</text><text x="834" y="370">setRemote(offer)</text><text x="834" y="387">createAnswer</text></g>
+  <text x="602" y="492" font-size="11" fill="#5c6675">otras pestañas dejan de sonar</text>
+  <rect x="110" y="500" width="705" height="26" rx="13" fill="#dcfce7"/>
+  <text x="462" y="518" font-size="12.5" font-weight="700" fill="#166534" text-anchor="middle">AUDIO directo Cliente ⇄ Meta ⇄ Navegador · grabación opcional en el navegador</text>
+</svg>

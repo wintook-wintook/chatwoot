@@ -46,6 +46,7 @@ Rails.application.routes.draw do
           # KANBAN0725
           resources :kanban_type_processes do
             get :conversation_kanban_info, on: :collection, path: 'conversation/:conversation_id/kanban_info'
+            get :funnel_metrics, on: :member # Embudo de contactos E3
             resources :kanban_processes do
               member do
                 patch :reorder
@@ -83,6 +84,27 @@ Rails.application.routes.draw do
           # Sinónimos nativos (esquema legacy wintook; reemplaza al servicio WINTOOK_BOT)
           resources :palabras_sinonimos, only: [:index, :create, :update, :destroy]
           resources :sinonimos_semanticos, only: [:index]
+          # diag/llamadas_whatsapp (F4): el «cliente simulado» (solo con la Meta simulada)
+          resource :whatsapp_call_simulator, only: [], controller: 'whatsapp_call_simulator' do
+            get :inboxes
+            get :signals
+            post :call
+            post :answer
+            post :hangup
+            post :permission
+          end
+          # diag/llamadas_whatsapp (F3): contestar, rechazar, colgar y llamar
+          resources :whatsapp_calls, only: [:show] do
+            member do
+              post :accept
+              post :reject
+              post :terminate
+              post :upload_recording
+            end
+            collection do
+              post :initiate
+            end
+          end
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations
@@ -95,6 +117,12 @@ Rails.application.routes.draw do
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
             # proyecto@publicar_prompts: publicar el prompt para que otras cuentas lo bajen
             resource :publication, only: [:show, :create, :destroy], module: :tracking_templates
+            # feat/agentes_ia_unificado (rescate F4): historial, diff y restauración
+            resources :versions, only: [:index, :show], module: :tracking_templates do
+              member do
+                post :restore
+              end
+            end
           end
           # @query_databases — conexiones a ERPs + consultas predefinidas + consola
           resources :external_db_connections, only: [:index, :show, :create, :update, :destroy] do
@@ -112,12 +140,14 @@ Rails.application.routes.draw do
             post :preview, on: :member
           end
           resources :contact_tracking_imports, only: [:create] # proyecto@import_seguimiento
-          resources :contact_tracking_bulk_assigns, only: [:create] do # proyecto@bulk_tracking_assign
+          resources :contact_tracking_bulk_assigns, only: [:create, :update] do # proyecto@bulk_tracking_assign
             post :preview, on: :collection # @campanas_vendedor — dry-run de buckets
           end
           # @campanas_vendedor / @automatizacion_campanas (create = campaña continua)
-          resources :tracking_campaigns, only: [:index, :show, :create, :destroy] do
+          resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
+            post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada
+            post :resume, on: :member, to: 'tracking_campaigns/resumes#create' # proyecto@automatizacion_campanas: reanudar pausada
           end
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard
             resource :overview, only: [:show], controller: :overview
@@ -167,6 +197,11 @@ Rails.application.routes.draw do
             put  'assistant/autosave', to: 'assistant_autosave#update'
             patch 'assistant/sessions/:id/name', to: 'assistant_autosave#rename'
             post 'assistant/conversation_review', to: 'assistant_review#create'
+            # proyecto@adaptar_prompts_publicados — pestaña «Configurar»: qué falta y aplicarlo
+            post 'assistant/adaptation', to: 'assistant_adaptation#index'
+            post 'assistant/adaptation/apply', to: 'assistant_adaptation#apply'
+            post 'assistant/adaptation/suggest_variables', to: 'assistant_adaptation#suggest_variables'
+            post 'assistant/adaptation/mark_variables', to: 'assistant_adaptation#mark_variables'
             get  'assistant/conversation_review/:turn_id', to: 'assistant_review#show'
           end
 
@@ -216,12 +251,25 @@ Rails.application.routes.draw do
               patch :lock   # @tickets_cases — bloqueo de ticket
               patch :unlock # @tickets_cases — bloqueo de ticket
               patch :reopen # @tickets_cases — reapertura de ticket cerrado
+              patch :outcome  # Plan-Clase-Comercial F3 — cerrar oportunidad con resultado
+              patch :postpone # Plan-Clase-Comercial F3
+              patch :resume   # Plan-Clase-Comercial F3
+              post :work_order # Plan-Clase-Orden-de-Trabajo F2b — crear orden desde este caso
+              post :project # Plan-Clase-Proyecto P2 — crear proyecto desde una oportunidad ganada
             end
             resources :case_events, only: [:index]
+            # @tickets_cases — ligar (o crear) la conversación de un caso que no tiene
+            resource :case_conversation, only: [:create], path: 'conversation'
             # @tickets_cases 2E — relaciones entre tickets
             resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
             # @tickets_cases — tareas/subtareas del ticket
             resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks'
+            # Plan-Clase-Orden-de-Trabajo F2a — materiales de la orden
+            resources :case_work_order_items, only: [:create, :update, :destroy], path: 'work_order_items'
+            # Plan-Clase-Proyecto P2 — casos dentro del proyecto (crear o ligar / quitar)
+            resources :case_project_children, only: [:index, :create, :destroy], path: 'project_children' do
+              collection { get :timeline } # Plan-Clase-Proyecto P3 — línea de tiempo
+            end
             # @tickets_cases — notas internas (viven en case_events, no en tabla propia)
             resources :case_notes, only: [:index, :create, :update, :destroy], path: 'notes'
             # @tickets_cases F1 — reuniones del ticket y sus series (plan §4.5)
@@ -239,13 +287,25 @@ Rails.application.routes.draw do
             resources :case_meeting_series, only: [:create, :update, :destroy], path: 'meeting-series'
           end
           resources :case_rules, only: [:index, :create, :update, :destroy]
+          # @tickets_cases — «Tienes avisos importantes» de Mi día (avisos sin leer con peso)
+          resources :case_notices, only: [:index]
+          # @tickets_cases — «Mi resumen» de la página Inicio
+          resource :my_summary, only: [:show], controller: 'my_summary'
           # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
-          resources :case_tasks, only: [:index], controller: 'case_tasks_index'
+          resources :case_tasks, only: [:index], controller: 'case_tasks_index' do
+            put :my_day_plan, on: :collection # Plan-Bandeja-Prioridad F2 — orden propio de «Mi día»
+            post :my_day_ai, on: :collection  # Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA
+          end
           resources :case_types, only: [:index, :create, :update, :destroy] do
+            post :change_class, on: :member # cambiar de clase: tipo nuevo + retirar el de antes
             resources :case_type_fields, only: [:index, :create, :update, :destroy], path: 'fields' # @tickets_cases 2K
             # @tickets_cases — columnas del Kanban por tipo (Opción A+)
             resources :case_type_columns, only: [:index, :create, :update, :destroy], path: 'columns' do
               put :replace, on: :collection
+              # Plan-Plantilla-Tareas-Etapa — tareas plantilla de la etapa
+              resources :case_type_column_tasks, only: [:index, :create, :update, :destroy], path: 'tasks' do
+                put :reorder, on: :collection
+              end
             end
           end
           resources :case_services, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
@@ -253,6 +313,7 @@ Rails.application.routes.draw do
           resources :case_sla_policies, only: [:index, :create, :update, :destroy] # @tickets_cases 2I
           resources :case_portals, only: [:index, :create, :update, :destroy] # @tickets_cases — User Portal
           resource  :case_setting, only: [:show, :update] # @tickets_cases — modo simple/ITIL
+          resources :case_outcome_reasons, only: [:index, :create, :update, :destroy] # Plan-Clase-Comercial F3
           resource  :case_folio_config, only: [:show, :update], controller: 'case_folio_configs'
           resource  :case_ai_config, only: [:show, :update], controller: 'case_ai_configs' # @tickets_cases 3A
           # =========================================================================
@@ -509,6 +570,8 @@ Rails.application.routes.draw do
             get :agent_bot, on: :member
             post :set_agent_bot, on: :member
             delete :avatar, on: :member
+            # diag/llamadas_whatsapp (F6): la pestaña «Llamadas»
+            resource :whatsapp_call_settings, only: [:show, :update], module: :inboxes
           end
           resources :inbox_members, only: [:create, :show], param: :inbox_id do
             collection do
@@ -731,6 +794,14 @@ Rails.application.routes.draw do
               get :assignees
               get :velocity
               get :stalled
+              get :pipeline # Plan-Clase-Comercial F5
+              get :pipeline_stale   # Plan-Metricas-Comercial M2 — estancadas (a pedido)
+              get :pipeline_monthly # Plan-Metricas-Comercial M3 — mes a mes (a pedido)
+              get :work_orders # Plan-Clase-Orden-de-Trabajo F3
+              get :projects # Plan-Clase-Proyecto P3
+              get :business_summary # «Resumen del negocio» (admin + autorizados)
+              post :business_summary_ai # «Explícame la semana»
+              post :business_summary_conversations_ai # análisis de conversaciones (IA, a pedido)
             end
           end
         end

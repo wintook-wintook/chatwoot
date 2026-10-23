@@ -92,7 +92,8 @@ class Message < ApplicationRecord
     incoming_email: 8,
     input_csat: 9,
     integrations: 10,
-    sticker: 11
+    sticker: 11,
+    voice_call: 12 # diag/llamadas_whatsapp: la burbuja de una llamada (estado, duración, quién la tomó)
   }
   enum status: { progress: -1, sent: 0, delivered: 1, read: 2, failed: 3 }
   # [:submitted_email, :items, :submitted_values] : Used for bot message types
@@ -101,9 +102,10 @@ class Message < ApplicationRecord
   # [:deleted] : Used to denote whether the message was deleted by the agent
   # [:external_created_at] : Can specify if the message was created at a different timestamp externally
   # [:external_error : Can specify if the message creation failed due to an error at external API
+  # [:data] : diag/llamadas_whatsapp — datos de la llamada de una burbuja voice_call
   store :content_attributes, accessors: [:submitted_email, :items, :submitted_values, :email, :in_reply_to, :deleted,
                                          :external_created_at, :story_sender, :story_id, :external_error,
-                                         :translations, :in_reply_to_external_id, :in_reply_to_interactive_id, :is_unsupported], coder: JSON
+                                         :translations, :in_reply_to_external_id, :in_reply_to_interactive_id, :is_unsupported, :data], coder: JSON
 
   store :external_source_ids, accessors: [:slack], coder: JSON, prefix: :external_source_id
 
@@ -135,18 +137,23 @@ class Message < ApplicationRecord
 
   # ⭐ SENTIMENT ANALYSIS - proyecto@contact_tracking
   # Analiza respuestas de clientes y ajusta seguimientos automáticamente
-  after_create_commit :analyze_for_active_trackings, if: :incoming?
+  # diag/llamadas_whatsapp: la burbuja de una llamada (voice_call) no es algo que el
+  # cliente escribió ni que se le mande: no la ven seguimientos, bots ni palabras clave.
+  after_create_commit :analyze_for_active_trackings, if: :incoming?, unless: :voice_call?
 
   # @query_databases — Modo B: si el inbox tiene un bot cobrador con consulta IA, responde.
-  after_create_commit :respond_via_erp_bot, if: :incoming?
+  after_create_commit :respond_via_erp_bot, if: :incoming?, unless: :voice_call?
 
   # proyecto@contact_tracking: evalúa keywords de acción en mensajes salientes
-  after_create_commit :check_keyword_actions_for_outgoing, unless: :incoming?
+  after_create_commit :check_keyword_actions_for_outgoing, unless: -> { incoming? || voice_call? }
 
   # proyecto@botseller_webhook_saliente: notifica a INTERNAL_WEBHOOK_URL también en salientes
-  after_create_commit :dispatch_botseller_for_outgoing, if: :outgoing?
+  after_create_commit :dispatch_botseller_for_outgoing, if: :outgoing?, unless: :voice_call?
 
   after_update_commit :dispatch_update_event
+
+  # proyecto@automatizacion_campanas: el estado de entrega de WhatsApp llega al envío del seguimiento
+  include TrackingDeliverySync
 
   def content_attributes_for(user)
     if content_type == 'input_csat' && !inbox.csat_response_visible? && !user&.administrator?

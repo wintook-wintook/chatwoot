@@ -1,12 +1,101 @@
 {
   "KANBAN": {
-    "HEADER": "Conversation Board",
+    "FUNNEL": {
+      "METRICS": {
+        "BUTTON": "Metrics",
+        "TITLE": "Funnel metrics",
+        "SINCE_NOTE": "Counts moves since the Contact funnel was enabled",
+        "DAYS": "{n} days",
+        "LOADING": "Calculating…",
+        "ERROR": "Metrics could not be loaded",
+        "ENTRIES": "Entered",
+        "CONVERTED": "Converted",
+        "AVG_DAYS": "Days to convert",
+        "AI_ACCURACY": "AI accuracy",
+        "AI_DETAIL": "{moves} moved · {corrected} corrected",
+        "REACH": "How far they got",
+        "NOW": "now {n}",
+        "NOW_HINT": "Cards in the column today",
+        "DISCARDS": "Why they are discarded",
+        "NONE": "No discards in the period",
+        "NO_REASON": "No reason",
+        "WHO_MOVED": "Who moved the cards",
+        "SOURCES": {
+          "manual": "People",
+          "rule": "Rules",
+          "ai": "AI",
+          "automation": "Automations"
+        }
+      },
+      "BOARD": {
+        "SECTION": "Contact funnel",
+        "PICKER": "Funnel",
+        "AUTO_MOVE": "Automatic movement",
+        "AUTO_MOVE_HELP": "The conversation itself moves its card: when it arrives, is answered, is labeled, an appointment is set or its case is created. It only moves forward; moving by hand always wins.",
+        "ENTRY_INBOXES": "Inboxes that enter automatically",
+        "ENTRY_INBOXES_HELP": "New conversations from these inboxes enter the funnel through its entry column.",
+        "NO_INBOXES_WARNING": "Pick at least one inbox so new conversations enter automatically.",
+        "AI_MOVE": "AI moves cards",
+        "AI_MOVE_HELP": "When the customer stops typing, the AI reads the conversation, moves it to the column whose criterion is met and leaves a private note explaining why.",
+        "COLD_AFTER": "Mark «Cold» after these days without a customer reply",
+        "DISCARD_AFTER": "Discard after these days without a customer reply",
+        "DAYS_PLACEHOLDER": "Empty = never",
+        "SAVE": "Save funnel",
+        "SAVED": "Funnel saved",
+        "TEMPLATE_HINT": "A new funnel comes with its columns, rules and AI criteria ready. Just pick the inboxes that enter automatically."
+      },
+      "COLUMN": {
+        "SECTION": "Enters here when…",
+        "SECTION_HELP": "Only applies if the funnel has «Automatic movement».",
+        "KIND": "Column type",
+        "KINDS": {
+          "open": "Normal",
+          "converted": "Converted (already an opportunity)",
+          "discarded": "Discarded"
+        },
+        "TRIGGERS": {
+          "conversation_created": "A new conversation arrives (entry column)",
+          "first_reply": "It gets its first reply (agent or AI)",
+          "label_added": "A label is added",
+          "appointment_scheduled": "An appointment is scheduled",
+          "case_created": "A case is created",
+          "conversation_resolved": "The conversation is resolved without a case"
+        },
+        "LABELS": "Labels that move it",
+        "NO_LABELS": "The account has no labels yet",
+        "CASE_CLASS": "Of class",
+        "CASE_CLASSES": {
+          "any": "Any",
+          "commercial": "Sales",
+          "support": "Support",
+          "work_order": "Work order",
+          "project": "Project"
+        },
+        "AI_CRITERIA": "AI criterion",
+        "AI_CRITERIA_HELP": "Describe in words when a conversation should enter here. The AI uses it if the funnel has «AI moves cards».",
+        "AI_CRITERIA_PLACEHOLDER": "E.g.: The customer asked for price, a quote or availability",
+        "CONVERT_TYPE": "When a card is dropped here, create the opportunity of type",
+        "CONVERT_NONE": "Do not create anything",
+        "SUMMARY_RULES": "Rules",
+        "SUMMARY_AI": "AI"
+      },
+      "CARD": {
+        "MOVED_RULE": "Moved automatically",
+        "MOVED_AI": "Moved by AI",
+        "MOVED_AUTOMATION": "Moved by automation",
+        "MOVED_MANUAL": "Moved by {name}",
+        "MOVED_MANUAL_ANON": "Moved by hand",
+        "COLD": "Cold",
+        "OPEN_CASE": "Open case {folio}"
+      }
+    },
+    "HEADER": "Contact funnel",
     "DESCRIPTION": "Manage your workflows with a visual Conversations system",
     "LEARN_MORE": "Learn more",
     "HEADER_BTN_TXT": "Add Stage",
     
     "BOARD": {
-      "TITLE": "Conversation Board",
+      "TITLE": "Contact funnel",
       "SELECT_PROCESS": "Select Conversations Types",
       "NO_PROCESSES": "No processes available",
       "NO_TYPE_PROCESSES": "No columns available",
@@ -22,9 +111,9 @@
     },
 
     "TYPE_PROCESSES": {
-      "TITLE": "Conversations Types",
+      "TITLE": "Contact funnels",
       "DESCRIPTION": "Manage different Conversations Types for your organization",
-      "HEADER": "Conversations Types",
+      "HEADER": "Contact funnels",
       "ADD_NEW": "Add new Conversations Types",
       "CREATE_FIRST": "Create first Conversations Types",
       "NO_RECORDS": "No Conversations Types found",
@@ -77,9 +166,9 @@
     },
 
     "PROCESSES": {
-      "TITLE": "Conversations stages",
+      "TITLE": "Funnel columns",
       "DESCRIPTION": "Manage specific processes within each Conversations Types",
-      "HEADER": "Conversations stages",
+      "HEADER": "Funnel columns",
       "ADD_NEW": "Add New Stage",
       "NO_RECORDS": "No stages found",
       "CREATE_FIRST": "Create First stage",
@@ -149,7 +238,7 @@
     },
 
     "TYPE_PROCESSES": {
-      "TITLE": "Conversations Types",
+      "TITLE": "Contact funnels",
       "DESCRIPTION": "Manage different Conversations Types for your organization",
       "ADD_NEW": "Add",
       "NO_RECORDS": "No columns found",
@@ -218,7 +307,7 @@
 
     "KANBAN_TYPE_MGMT": {
       "HEADER": {
-        "TITLE": "Conversations Types",
+        "TITLE": "Contact funnels",
         "DESCRIPTION": "Manage Conversations Types to organize your workflow",
         "ADD_BUTTON": "Add Conversations Types"
       },

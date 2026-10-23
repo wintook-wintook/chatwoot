@@ -1,103 +1,186 @@
 <!--
   @tickets_cases
-  Vista principal del Gestor de Tickets — búsqueda, filtros (fecha/estado/prioridad/tipo),
-  orden configurable y paginación. Tailwind + dark mode.
+  Vista principal del Gestor de Tickets — Lista por clase (Plan-Casos E1/E1.1):
+  clase + tipo, ¿de quién?, estado, búsqueda y filtros finos; orden desde los
+  encabezados de la tabla y paginación. Tailwind + dark mode.
 -->
 <template>
   <div
     class="flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-25 dark:bg-slate-900"
   >
-    <!-- Header -->
+    <!-- Header — Plan-Casos E1.1: los filtros por niveles.
+         1) clase · vistas · nuevo  2) ¿de quién?
+         3) tipo + estado/resultado + búsqueda + filtros finos (+ SLA), todo a
+         32 px de alto. El orden se cambia desde los encabezados de la tabla. -->
     <div
       class="flex-shrink-0 px-6 pt-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
-      <div class="flex items-center justify-between mb-3">
-        <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
-          {{ $t('CASE_TICKETS.SIDEBAR.TITLE') }}
-        </h1>
-        <!-- @tickets_cases Fase C — alta de ticket interno (agente→agente) -->
-        <woot-button size="small" icon="add" @click="showInternalModal = true">
-          {{ $t('CASE_TICKETS.INTERNAL.NEW_BUTTON') }}
-        </woot-button>
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <!-- Plan-Casos E1 — el selector Comercial | Soporte es el título -->
+        <CaseClassSwitcher :case-class="caseClass" :title="listTitle" />
+
+        <div class="flex items-center gap-2">
+          <!-- @tickets_cases F3 — vistas guardadas, en un solo menú -->
+          <div v-on-clickaway="closeViewsMenu" class="relative">
+            <woot-button
+              size="small"
+              variant="smooth"
+              color-scheme="secondary"
+              icon="chevron-down"
+              @click="showViewsMenu = !showViewsMenu"
+            >
+              {{
+                activeView ? activeView.name : $t('CASE_TICKETS.FILTERS.VIEWS')
+              }}
+              <span
+                v-if="isViewDirty"
+                class="inline-block w-1.5 h-1.5 ml-1 rounded-full bg-amber-500"
+                :title="$t('CASE_TICKETS.VIEWS.DIRTY_HINT')"
+              />
+            </woot-button>
+            <woot-button
+              v-if="activeView"
+              size="small"
+              variant="clear"
+              color-scheme="secondary"
+              icon="dismiss"
+              class="!ml-0.5"
+              :title="$t('CASE_TICKETS.VIEWS.DETACH_HINT')"
+              :aria-label="$t('CASE_TICKETS.VIEWS.DETACH')"
+              @click="detachView"
+            />
+            <div
+              v-if="showViewsMenu"
+              class="absolute right-0 z-50 py-1 mt-1 overflow-y-auto bg-white border rounded-md shadow-md top-full dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[240px] max-h-96"
+            >
+              <button
+                v-if="activeView"
+                type="button"
+                class="flex items-center w-full gap-2 px-4 py-1.5 text-sm text-left text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                :title="$t('CASE_TICKETS.VIEWS.DETACH_HINT')"
+                @click="detachView"
+              >
+                <fluent-icon icon="dismiss" size="14" />
+                {{ $t('CASE_TICKETS.VIEWS.DETACH') }}
+              </button>
+              <div
+                v-if="activeView"
+                class="my-1 border-t border-slate-100 dark:border-slate-700"
+              />
+              <template v-for="group in viewGroups">
+                <p
+                  :key="`h-${group.key}`"
+                  class="px-4 pt-2 pb-1 m-0 text-[11px] font-semibold tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                >
+                  {{ group.label }}
+                </p>
+                <button
+                  v-for="v in group.views"
+                  :key="v.id"
+                  type="button"
+                  class="flex items-center w-full gap-2 px-4 py-1.5 text-sm text-left text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  @click="selectView(v)"
+                >
+                  <span class="flex-1 truncate">
+                    {{ v.name
+                    }}<span
+                      v-if="group.key === 'shared'"
+                      class="text-xs text-slate-400"
+                    >
+                      · {{ v.owner_name }}</span
+                    >
+                  </span>
+                  <fluent-icon
+                    v-if="v.id === activeViewId"
+                    icon="checkmark"
+                    size="14"
+                    class="text-woot-500"
+                  />
+                </button>
+              </template>
+              <p
+                v-if="!viewGroups.length"
+                class="px-4 py-2 m-0 text-sm text-slate-400 dark:text-slate-500"
+              >
+                {{ $t('CASE_TICKETS.VIEWS.PLACEHOLDER') }}
+              </p>
+              <div
+                class="my-1 border-t border-slate-100 dark:border-slate-700"
+              />
+              <button
+                v-if="isViewDirty && canOverwriteView"
+                type="button"
+                class="flex items-center w-full gap-2 px-4 py-1.5 text-sm text-left text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                @click="
+                  overwriteView();
+                  showViewsMenu = false;
+                "
+              >
+                <fluent-icon icon="save" size="14" />
+                {{ $t('CASE_TICKETS.VIEWS.SAVE') }}
+              </button>
+              <button
+                type="button"
+                class="flex items-center w-full gap-2 px-4 py-1.5 text-sm text-left text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                @click="
+                  showSaveViewModal = true;
+                  showViewsMenu = false;
+                "
+              >
+                <fluent-icon icon="copy" size="14" />
+                {{ $t('CASE_TICKETS.VIEWS.SAVE_AS') }}
+              </button>
+              <button
+                type="button"
+                class="flex items-center w-full gap-2 px-4 py-1.5 text-sm text-left text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                @click="
+                  showManageViewsModal = true;
+                  showViewsMenu = false;
+                "
+              >
+                <fluent-icon icon="settings" size="14" />
+                {{ $t('CASE_TICKETS.VIEWS.MANAGE.TITLE') }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Plan-Casos E2 — «+ {tipo}» o, en «Todos los tipos», «+ {clase}» -->
+          <woot-button
+            size="small"
+            icon="add"
+            @click="showInternalModal = true"
+          >
+            {{ createLabel }}
+          </woot-button>
+        </div>
       </div>
 
-      <!-- Filtros rápidos como pestañas nativas -->
-      <woot-tabs :index="activeQuickTabIndex" @change="onQuickTabChange">
-        <woot-tabs-item
-          v-for="(f, i) in quickFilters"
-          :key="f.key"
-          :index="i"
-          :name="f.label"
-          :count="f.key === 'sla_overdue' ? slaOverdueCount : 0"
-          :show-badge="f.key === 'sla_overdue' && slaOverdueCount > 0"
-        />
-      </woot-tabs>
-
-      <!-- Toolbar compacto: vistas + búsqueda + dropdowns + fecha + orden -->
-      <div class="flex flex-wrap items-center gap-2 py-3">
-        <!-- @tickets_cases F3 — vistas guardadas -->
-        <div class="flex items-center gap-1">
-          <select
-            v-model="activeViewId"
-            class="!mb-0 w-48 text-sm"
-            @change="onViewChange"
-          >
-            <option value="">{{ $t('CASE_TICKETS.VIEWS.PLACEHOLDER') }}</option>
-            <optgroup
-              v-if="myViews.length"
-              :label="$t('CASE_TICKETS.VIEWS.MINE')"
-            >
-              <option v-for="v in myViews" :key="v.id" :value="v.id">
-                {{ v.name }}
-              </option>
-            </optgroup>
-            <optgroup
-              v-if="sharedViews.length"
-              :label="$t('CASE_TICKETS.VIEWS.SHARED')"
-            >
-              <option v-for="v in sharedViews" :key="v.id" :value="v.id">
-                {{ v.name }} · {{ v.owner_name }}
-              </option>
-            </optgroup>
-          </select>
-          <span
-            v-if="isViewDirty"
-            class="flex gap-1 items-center text-xs whitespace-nowrap text-amber-600 dark:text-amber-400"
-            :title="$t('CASE_TICKETS.VIEWS.DIRTY_HINT')"
-          >
-            <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
-            {{ $t('CASE_TICKETS.VIEWS.DIRTY') }}
-          </span>
-          <woot-button
-            v-if="isViewDirty && canOverwriteView"
-            size="small"
-            variant="clear"
-            icon="save"
-            :title="$t('CASE_TICKETS.VIEWS.SAVE')"
-            @click="overwriteView"
-          >
-            {{ $t('CASE_TICKETS.VIEWS.SAVE') }}
-          </woot-button>
-          <woot-button
-            size="small"
-            variant="clear"
-            icon="copy"
-            :title="$t('CASE_TICKETS.VIEWS.SAVE_AS')"
-            @click="showSaveViewModal = true"
-          >
-            {{ $t('CASE_TICKETS.VIEWS.SAVE_AS') }}
-          </woot-button>
-          <woot-button
-            size="small"
-            variant="clear"
-            icon="settings"
-            :title="$t('CASE_TICKETS.VIEWS.MANAGE.TITLE')"
-            @click="showManageViewsModal = true"
+      <!-- ¿De quién? (fila 2) y la fila de filtros: tipo · estado/resultado ·
+           búsqueda · filtros finos · SLA -->
+      <CaseScopeBar
+        :case-class="caseClass"
+        :scope="activeFilter"
+        :status="statusFilter"
+        :outcome="outcomeFilter"
+        :stage="stageFilter"
+        :sla-only="slaOverdueOnly"
+        :sla-count="slaOverdueCount"
+        :committed-only="committedOnly"
+        @scope="applyFilter"
+        @status="onStatusChange"
+        @outcome="onOutcomeChange"
+        @stage="onStageChange"
+        @sla="onSlaChange"
+        @committed="onCommittedChange"
+      >
+        <template #before>
+          <CaseTypeSelect
+            :case-class="caseClass"
+            :value="activeType"
+            @input="onTypeChange"
           />
-        </div>
-
-        <!-- Búsqueda -->
-        <div class="relative flex-1 min-w-[220px]">
+        </template>
+        <div class="relative flex-1 min-w-[220px] max-w-md">
           <fluent-icon
             icon="search"
             size="16"
@@ -106,7 +189,7 @@
           <input
             v-model="search"
             type="text"
-            class="w-full pl-9 pr-9 !mb-0"
+            class="w-full !h-8 pl-9 pr-9 !mb-0 text-sm"
             :placeholder="$t('CASE_TICKETS.LIST.SEARCH_PLACEHOLDER')"
             @input="onSearchInput"
           />
@@ -119,107 +202,18 @@
             <fluent-icon icon="dismiss" size="14" />
           </button>
         </div>
-
-        <!-- Estado: agrupado (pendiente/cerrado/todos), no el estado exacto —
-             ver CASE_TICKETS.STATUS_QUICK para cambiar el estado exacto de un
-             caso puntual. Por default solo se ven los pendientes; los cerrados
-             (incluye resuelto y validando) quedan en su propio filtro. -->
-        <select
-          v-model="statusFilter"
-          class="!mb-0 w-40 text-sm"
-          @change="onFilterChange"
-        >
-          <option value="pending">
-            {{ $t('CASE_TICKETS.LIST.STATUS_PENDING') }}
-          </option>
-          <option value="closed">
-            {{ $t('CASE_TICKETS.LIST.STATUS_CLOSED') }}
-          </option>
-          <option value="">{{ $t('CASE_TICKETS.LIST.ALL_STATUSES') }}</option>
-        </select>
-
-        <!-- Prioridad -->
-        <select
-          v-model="priorityFilter"
-          class="!mb-0 w-36 text-sm"
-          @change="onFilterChange"
-        >
-          <option value="">{{ $t('CASE_TICKETS.LIST.ALL_PRIORITIES') }}</option>
-          <option v-for="p in priorityOptions" :key="p" :value="p">
-            {{ priorityLabel(p) }}
-          </option>
-        </select>
-
-        <!-- Tipo (dinámico desde la cuenta) -->
-        <select
-          v-model="activeType"
-          class="!mb-0 w-40 text-sm"
-          @change="onFilterChange"
-        >
-          <option v-for="t in typeFilters" :key="t.id" :value="t.id">
-            {{ t.name }}
-          </option>
-        </select>
-
-        <!-- Origen (@tickets_cases Fase C) -->
-        <select
-          v-model="originFilter"
-          class="!mb-0 w-36 text-sm"
-          @change="onFilterChange"
-        >
-          <option value="">{{ $t('CASE_TICKETS.LIST.ALL_ORIGINS') }}</option>
-          <option v-for="o in originOptions" :key="o" :value="o">
-            {{ originLabel(o) }}
-          </option>
-        </select>
-
-        <!-- Rango de fechas (no-margin + auto-width para alinear y acotar el ancho como los selects) -->
-        <WootDateRangePicker
-          class="no-margin auto-width w-56"
-          :value="dateRange"
-          :placeholder="$t('CASE_TICKETS.LIST.DATE_RANGE')"
-          :confirm-text="$t('CASE_TICKETS.LIST.APPLY')"
-          @change="onDateChange"
+        <CaseFineFilters
+          :case-class="caseClass"
+          :value="fine"
+          :scope="activeFilter"
+          :case-type-id="activeType"
+          :itil="filteredTypeItilEnabled"
+          :status="statusFilter"
+          :outcome="outcomeFilter"
+          :stage="stageFilter"
+          @input="onFineChange"
         />
-
-        <!-- Ordenar por -->
-        <div class="flex items-center gap-1">
-          <select
-            v-model="sortBy"
-            class="!mb-0 w-40 text-sm"
-            @change="onFilterChange"
-          >
-            <option v-for="o in sortOptions" :key="o.value" :value="o.value">
-              {{ $t('CASE_TICKETS.LIST.SORT_BY') }}: {{ o.label }}
-            </option>
-          </select>
-          <button
-            type="button"
-            class="flex items-center justify-center w-8 h-8 border rounded bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-woot-500"
-            :title="
-              sortOrder === 'asc'
-                ? $t('CASE_TICKETS.LIST.SORT_ASC')
-                : $t('CASE_TICKETS.LIST.SORT_DESC')
-            "
-            @click="toggleSortOrder"
-          >
-            <fluent-icon
-              :icon="sortOrder === 'asc' ? 'chevron-up' : 'chevron-down'"
-              size="16"
-            />
-          </button>
-        </div>
-
-        <!-- Limpiar -->
-        <button
-          v-if="hasActiveFilters"
-          type="button"
-          class="px-3 py-1 text-sm rounded text-woot-600 dark:text-woot-400 hover:bg-woot-50 dark:hover:bg-woot-800/30"
-          @click="clearFilters"
-        >
-          {{ $t('CASE_TICKETS.LIST.CLEAR_FILTERS') }}
-        </button>
-      </div>
+      </CaseScopeBar>
     </div>
 
     <!-- Loading (solo en la carga inicial; al ordenar/paginar la tabla se
@@ -397,6 +391,8 @@
     <CaseTicketInternalModal
       v-if="showInternalModal"
       :show="showInternalModal"
+      :case-class="caseClass"
+      :preset-type-id="activeType"
       @created="onInternalCreated"
       @close="showInternalModal = false"
     />
@@ -437,22 +433,55 @@
 import { mapGetters } from 'vuex';
 import { VeTable } from 'vue-easytable';
 import { useAlert } from 'dashboard/composables';
-import WootDateRangePicker from 'dashboard/components/ui/DateRangePicker.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue'; // @tickets_cases — paginado estándar
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
 import AddCustomViews from 'dashboard/routes/dashboard/customviews/AddCustomViews.vue'; // @tickets_cases F3 — vistas guardadas
 import SavedViewsModal from './SavedViewsModal.vue'; // @tickets_cases F5 — gestion de vistas
+import CaseClassSwitcher from './CaseClassSwitcher.vue'; // Plan-Casos E1
+// Plan-Casos E1.1 — filtros por niveles.
+import CaseTypeSelect from './filters/CaseTypeSelect.vue';
+import CaseScopeBar from './filters/CaseScopeBar.vue';
+import CaseFineFilters from './filters/CaseFineFilters.vue';
+import {
+  SCOPES,
+  emptyFineFilters,
+  fineFiltersToParams,
+  normalizeFineFilters,
+  scopeToParams,
+  statusForResult,
+  stageToParams,
+  hasStages,
+  alertApplies,
+  classAlertParams,
+  DEFAULT_COMMERCIAL_RESULT,
+  DEFAULT_WORK_ORDER_STAGE,
+} from 'dashboard/helper/caseFilters';
+import {
+  CLASS_VIEW_ROUTES,
+  classHasSla,
+  classI18nBase,
+  loadCaseState,
+  saveCaseState,
+  typesOfClass,
+} from 'dashboard/helper/caseClasses';
 import {
   SIMPLE_FILTER_STATUSES,
   toSimpleStatus,
 } from 'dashboard/helper/caseSimpleStatus'; // modo simple/ITIL
-
-const QUICK_FILTERS = [
-  { key: 'mine', label: 'Mis Casos' },
-  { key: 'unassigned', label: 'Sin Asignar' },
-  { key: 'all', label: 'Todos' },
-  { key: 'sla_overdue', label: 'SLA vencidos' },
-];
+// Plan-Clase-Comercial F4 — lista de oportunidades.
+import { formatHours } from 'dashboard/helper/caseWorkOrder'; // Plan-Clase-Orden-de-Trabajo F2b
+import {
+  COMMERCIAL_CLASS,
+  COMMITTED_BADGE,
+  OUTCOME_BADGE,
+  POSTPONED_BADGE,
+  PROMISE_OVERDUE_BADGE,
+  formatDay,
+  formatMoney,
+  isOpenCommitted,
+  isoDayFromToday,
+  promiseOverdue,
+} from 'dashboard/helper/caseCommercial';
 
 // Los 13 estados de ticket (sin los estados SLA que comparten el bloque STATUSES).
 // Orden = flujo del ciclo de vida ITIL (@tickets_cases 2A).
@@ -471,24 +500,84 @@ const STATUS_OPTIONS = [
   'closed',
   'cancelled',
 ];
-const PRIORITY_OPTIONS = ['low', 'medium', 'high', 'urgent'];
-// @tickets_cases Fase C — orígenes del ticket (incluye 'internal').
-const ORIGIN_OPTIONS = [
-  'whatsapp',
-  'web',
-  'email',
-  'bot',
-  'manual',
-  'internal',
-];
 const SORT_FIELDS = ['created_at', 'priority', 'status', 'sla_status'];
+
+// Diseño de la tabla (2026-10-20): una sola forma de etiqueta —píldora de 11 px,
+// sin mayúsculas— para tipo, prioridad, estado y etapa.
+const PILL =
+  'inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-full whitespace-nowrap';
+// Estado → color por grupo del ciclo de vida (en curso, en espera, resuelto,
+// cerrado). Se agrupa sobre el estado real, así sirve en modo simple e ITIL.
+const STATUS_PILL = {
+  open: 'bg-sky-50 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300',
+  in_progress: 'bg-sky-50 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300',
+  waiting_on_customer:
+    'bg-amber-50 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+  resolved:
+    'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
+  closed:
+    'bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300',
+  cancelled:
+    'bg-slate-100 text-slate-500 line-through dark:bg-slate-700/60 dark:text-slate-400',
+};
+// Etapa abierta de una oportunidad: el violeta de la clase Comercial.
+const STAGE_PILL =
+  'bg-violet-50 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300';
+// Plan-Clase-Comercial F4 — la lista de oportunidades ordena por sus datos, no por SLA.
+const COMMERCIAL_SORT_FIELDS = [
+  'created_at',
+  'amount',
+  'expected_close_at',
+  'probability',
+  'priority',
+  'status',
+];
 // @tickets_cases F3 — las vistas guardadas se direccionan por nombre de tipo,
 // igual que el Sidebar y el store de customViews.
 const VIEW_FILTER_TYPE = 'case_ticket';
-// Version de la forma del `query` guardado. Hoy no se ramifica sobre ella, pero
-// cuando entren filtros nuevos es lo que distingue "no lo guardo" de "lo guardo
-// vacio" en una vista vieja.
-const VIEW_QUERY_VERSION = 1;
+// Version de la forma del `query` guardado. v2 (Plan-Casos E1.1): clase,
+// SLA vencido como aviso y filtros finos en `fine`. Una vista v1 se sigue
+// abriendo: `normalizeViewQuery` traduce sus claves sueltas a la forma nueva.
+const VIEW_QUERY_VERSION = 2;
+
+// Cualquier `query` guardado (v1 o v2) → forma completa y comparable.
+const normalizeViewQuery = (q = {}) => {
+  const { postponed: legacyPostponed, ...savedFine } = q.fine || {};
+  // Las fechas viejas (una clave por fecha) pasan al bloque único de fecha.
+  const fine = normalizeFineFilters(savedFine);
+  if (!q.fine) {
+    fine.priority = q.priority || '';
+    fine.origin = q.origin || '';
+    const [from, to] = Array.isArray(q.date_range) ? q.date_range : [];
+    if (from || to) {
+      Object.assign(fine, {
+        date_field: 'created',
+        date_preset: 'custom',
+        date_from: from || '',
+        date_to: to || '',
+      });
+    }
+  }
+  // v1 tenía «SLA vencidos» como pestaña: ahora es «Todos» + el aviso de SLA.
+  const legacySla = q.quick === 'sla_overdue';
+  let quick = legacySla ? 'all' : 'mine';
+  if (SCOPES.includes(q.quick)) quick = q.quick;
+  return {
+    case_class: q.case_class || '',
+    search: q.search || '',
+    // E1.3: «Solo pospuestas» dejó de ser filtro fino; ahora es un resultado.
+    status: legacyPostponed ? 'pending' : q.status ?? 'pending',
+    outcome: legacyPostponed ? 'postponed' : q.outcome || '',
+    stage: q.stage || '', // Plan-Clase-Orden-de-Trabajo F2b
+    quick,
+    sla_overdue: !!q.sla_overdue || legacySla,
+    committed: !!q.committed, // Plan-Metricas-Comercial — «Solo comprometidas»
+    case_type_id: q.case_type_id || '',
+    fine,
+    sort_by: q.sort_by || 'created_at',
+    sort_order: q.sort_order === 'asc' ? 'asc' : 'desc',
+  };
+};
 const PER_PAGE_OPTIONS = [25, 50, 100];
 
 export default {
@@ -496,10 +585,18 @@ export default {
   components: {
     VeTable,
     TableFooter,
-    WootDateRangePicker,
     CaseTicketInternalModal,
     AddCustomViews,
     SavedViewsModal,
+    CaseClassSwitcher,
+    CaseTypeSelect,
+    CaseScopeBar,
+    CaseFineFilters,
+  },
+  props: {
+    // Plan-Casos E1 — clase de la ruta `tickets/:caseClass/list`:
+    // 'commercial' = oportunidades; 'support' = tickets.
+    caseClass: { type: String, default: 'support' },
   },
   data() {
     return {
@@ -538,20 +635,26 @@ export default {
       showBulkStatus: false,
       search: '',
       searchDebounce: null,
-      dateRange: [], // [Date, Date]
       // @tickets_cases — default: solo pendientes. 'closed' agrupa
       // resuelto/validando/cerrado/cancelado; '' es "todos los estados".
       statusFilter: 'pending',
-      priorityFilter: '',
-      originFilter: '', // @tickets_cases Fase C
+      // Plan-Casos E1.1 — ¿de quién? (mine|unassigned|all), aviso de SLA
+      // vencido aparte, y los filtros finos del botón «Filtros».
       activeFilter: 'mine',
+      slaOverdueOnly: false,
+      committedOnly: false, // Plan-Metricas-Comercial — «Solo comprometidas»
+      fine: emptyFineFilters(),
       activeType: '', // '' = todos, o un case_type_id
+      outcomeFilter: '', // Plan-Clase-Comercial F4 — won|lost|cancelled
+      stageFilter: '', // Plan-Clase-Orden-de-Trabajo F2b — etapa de una orden
       sortBy: 'created_at',
       sortOrder: 'desc',
       currentPage: 1,
       perPage: 25,
       // @tickets_cases F3 — vistas guardadas
       activeViewId: '',
+      pendingViewId: null, // vista de OTRA clase: se aplica al llegar a su ruta
+      showViewsMenu: false,
       showSaveViewModal: false,
       showManageViewsModal: false,
     };
@@ -561,9 +664,6 @@ export default {
       tickets: 'caseTickets/getTicketsList',
       meta: 'caseTickets/getTicketsMeta',
       uiFlags: 'caseTickets/getUIFlags',
-      // @tickets_cases — filtros/página recordados de la última visita a esta
-      // pantalla en la sesión (null = primera vez, se usan los defaults de abajo).
-      listPrefs: 'caseTickets/getTicketsListPrefs',
       types: 'caseTickets/getTypes',
       currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Casos"
       currentRole: 'getCurrentRole', // @tickets_cases F4 — quien puede sobreescribir una vista
@@ -592,15 +692,61 @@ export default {
     bulkStatusOptions() {
       return this.statusOptions;
     },
-    quickFilters() {
-      return QUICK_FILTERS;
+    // ── Plan-Clase-Comercial F4 ──
+    // Órdenes y Proyectos: combo de etapa en vez de Pendientes/Cerrados.
+    hasStageFilter() {
+      return hasStages(this.caseClass);
     },
-    activeQuickTabIndex() {
-      const i = QUICK_FILTERS.findIndex(f => f.key === this.activeFilter);
-      return i < 0 ? 0 : i;
+    isProjectList() {
+      return this.caseClass === 'project';
+    },
+    isWorkOrderList() {
+      return this.caseClass === 'work_order';
+    },
+    isCommercialList() {
+      return this.caseClass === COMMERCIAL_CLASS;
+    },
+    // Plan-Clase-Orden-de-Trabajo F1 — solo los tipos de la clase de la vista.
+    visibleTypes() {
+      return typesOfClass(this.types, this.caseClass);
+    },
+    // Plan-Casos E2 — etiqueta del botón de alta: el tipo elegido o la clase.
+    createLabel() {
+      const type = (this.types || []).find(
+        t => String(t.id) === String(this.activeType)
+      );
+      return (
+        type?.name ||
+        // Ventas crea «+ Oportunidad» (la cosa), no «+ Ventas» (la clase).
+        this.$t(
+          this.$te(`CASE_TICKETS.CLASSES.${this.caseClassKey}.NEW`)
+            ? `CASE_TICKETS.CLASSES.${this.caseClassKey}.NEW`
+            : `CASE_TICKETS.CLASSES.${this.caseClassKey}.NAME`
+        )
+      );
+    },
+    listTitle() {
+      return this.$t(`${classI18nBase(this.caseClass)}.LIST`);
+    },
+    // Clave i18n de la clase (COMMERCIAL / SUPPORT / WORK_ORDER).
+    caseClassKey() {
+      return classI18nBase(this.caseClass).split('.').pop();
+    },
+    sortFields() {
+      return this.isCommercialList ? COMMERCIAL_SORT_FIELDS : SORT_FIELDS;
+    },
+    // Contexto del aviso rojo: clase y lo que se ve (estado, resultado, etapa).
+    alertContext() {
+      return {
+        caseClass: this.caseClass,
+        status: this.statusFilter,
+        outcome: this.outcomeFilter,
+        stage: this.stageFilter,
+      };
     },
     slaOverdueCount() {
-      return this.meta.sla_overdue_count || 0;
+      // Aviso rojo de la clase: SLA vencido / visitas vencidas / cierre vencido.
+      return this.meta.alert_count || 0;
     },
     // Con un tipo filtrado, usa el modo de ESE tipo; sin filtro, no se oculta
     // nada relevante si al menos un tipo de la cuenta usa ITIL.
@@ -616,23 +762,8 @@ export default {
         ? STATUS_OPTIONS
         : SIMPLE_FILTER_STATUSES;
     },
-    priorityOptions() {
-      return PRIORITY_OPTIONS;
-    },
-    originOptions() {
-      return ORIGIN_OPTIONS;
-    },
     perPageOptions() {
       return PER_PAGE_OPTIONS;
-    },
-    sortOptions() {
-      return SORT_FIELDS.map(value => ({
-        value,
-        label: this.$t(`CASE_TICKETS.LIST.SORT_FIELDS.${value}`),
-      }));
-    },
-    typeFilters() {
-      return [{ id: '', name: 'Todos los tipos' }, ...this.types];
     },
     // @tickets_cases F3 — vistas guardadas de tickets, separadas en dos grupos:
     // las mias y las que alguien de la cuenta compartio.
@@ -652,6 +783,21 @@ export default {
     },
     activeView() {
       return this.savedViews.find(v => v.id === this.activeViewId) || null;
+    },
+    // Menú «Vistas»: mis vistas y las compartidas (solo grupos con algo).
+    viewGroups() {
+      return [
+        {
+          key: 'mine',
+          label: this.$t('CASE_TICKETS.VIEWS.MINE'),
+          views: this.myViews,
+        },
+        {
+          key: 'shared',
+          label: this.$t('CASE_TICKETS.VIEWS.SHARED'),
+          views: this.sharedViews,
+        },
+      ].filter(g => g.views.length);
     },
     // @tickets_cases F4 — ¿lo que se ve en pantalla sigue siendo la vista
     // cargada? Sin esta senal nadie sabe si esta viendo la vista o algo que
@@ -676,34 +822,26 @@ export default {
     viewQuery() {
       return {
         v: VIEW_QUERY_VERSION,
+        case_class: this.caseClass,
         search: this.search,
-        date_range: this.dateRange.map(d => this.formatDateParam(d)),
         status: this.statusFilter,
-        priority: this.priorityFilter,
-        origin: this.originFilter,
+        outcome: this.outcomeFilter,
+        stage: this.stageFilter,
         quick: this.activeFilter,
+        sla_overdue: this.slaOverdueOnly,
+        committed: this.committedOnly,
         case_type_id: this.activeType,
+        fine: this.fine,
         sort_by: this.sortBy,
         sort_order: this.sortOrder,
       };
-    },
-    hasActiveFilters() {
-      return (
-        !!this.search ||
-        this.dateRange.length > 0 ||
-        this.statusFilter !== 'pending' ||
-        !!this.priorityFilter ||
-        !!this.originFilter ||
-        this.activeFilter !== 'mine' ||
-        !!this.activeType
-      );
     },
     // @tickets_cases — columnas de la cola en VeTable (tabla nativa de Chatwoot,
     // igual que Contactos/Notas/Tareas). Las celdas se pintan con renderBodyCell
     // (JSX). El orden de prioridad/estado/vence/creado es en servidor: cada
     // columna declara su `sortBy` desde `sortConfig` y VeTable emite `sortChange`.
     columns() {
-      return [
+      const cols = [
         {
           field: 'select',
           key: 'select',
@@ -757,18 +895,37 @@ export default {
           key: 'folio',
           title: this.$t('CASE_TICKETS.TABLE.FOLIO'),
           align: 'left',
-          width: 130,
-          // El propio folio se colorea según el SLA (verde a tiempo, ámbar en
-          // riesgo, rojo vencido); reemplaza al punto de color anterior.
+          width: this.activeType ? 130 : 170,
+          // Folio en gris oscuro; el SLA va en un punto delante (verde a tiempo,
+          // ámbar en riesgo, rojo vencido) con su nombre al pasar el mouse.
+          // Solo las clases con SLA (Soporte) llevan punto.
+          // Con «Todos los tipos», debajo va el tipo de caso (punto de su color).
           renderBodyCell: ({ row }) => (
-            <span
-              class={`font-mono text-sm font-semibold whitespace-nowrap ${this.slaTextColor(
-                row.sla_status
-              )}`}
-              title={row.sla_status}
-            >
-              {row.folio || '—'}
-            </span>
+            <div class="min-w-0">
+              <span class="inline-flex items-center gap-1.5 font-mono text-sm font-semibold whitespace-nowrap text-slate-700 dark:text-slate-200">
+                {!classHasSla(row.case_type?.case_class || 'support') ? null : (
+                  <span
+                    class={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${this.slaDotColor(
+                      row.sla_status
+                    )}`}
+                    title={this.statusLabel(row.sla_status || 'on_time')}
+                  />
+                )}
+                {row.folio || '—'}
+              </span>
+              {!this.activeType && row.case_type ? (
+                <p
+                  class="flex items-center gap-1.5 m-0 mt-1 text-xs truncate text-slate-500 dark:text-slate-400"
+                  title={row.case_type.name}
+                >
+                  <span
+                    class="inline-block w-2 h-2 rounded-sm flex-shrink-0"
+                    style={{ backgroundColor: row.case_type.color }}
+                  />
+                  <span class="truncate">{row.case_type.name}</span>
+                </p>
+              ) : null}
+            </div>
           ),
         },
         {
@@ -780,24 +937,26 @@ export default {
           // Dos líneas: arriba el contacto, abajo el asunto (badges + título).
           renderBodyCell: ({ row }) => (
             <div class="min-w-0">
-              <p class="m-0 text-base font-semibold truncate text-slate-700 dark:text-slate-200">
+              <p class="m-0 text-sm font-semibold truncate text-slate-800 dark:text-slate-100">
                 {row.contact_name || this.noContactName(row)}
               </p>
-              <div class="flex items-center gap-2 mt-1.5 min-w-0">
-                {row.case_type ? (
+              <div class="flex items-center gap-2 mt-1 min-w-0">
+                {row.case_type && this.activeType ? (
                   <span
-                    class="px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded text-white flex-shrink-0"
+                    class={`${PILL} text-white flex-shrink-0`}
                     style={{ backgroundColor: row.case_type.color }}
                   >
                     {row.case_type.name}
                   </span>
                 ) : null}
                 {row.is_internal ? (
-                  <span class="px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-300 flex-shrink-0">
+                  <span
+                    class={`${PILL} flex-shrink-0 bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300`}
+                  >
                     {this.$t('CASE_TICKETS.INTERNAL.BADGE')}
                   </span>
                 ) : null}
-                <span class="text-xs truncate text-slate-500 dark:text-slate-400">
+                <span class="text-[13px] truncate text-slate-500 dark:text-slate-400">
                   {row.title}
                 </span>
               </div>
@@ -811,7 +970,7 @@ export default {
           align: 'left',
           width: 150,
           renderBodyCell: ({ row }) => (
-            <span class="whitespace-nowrap text-slate-600 dark:text-slate-300">
+            <span class="text-sm whitespace-nowrap text-slate-700 dark:text-slate-300">
               {this.assigneeName(row) || '—'}
             </span>
           ),
@@ -824,11 +983,7 @@ export default {
           width: 120,
           sortBy: this.sortConfig.priority || '',
           renderBodyCell: ({ row }) => (
-            <span
-              class={`px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded ${this.priorityBadge(
-                row.priority
-              )}`}
-            >
+            <span class={`${PILL} ${this.priorityBadge(row.priority)}`}>
               {this.priorityLabel(row.priority)}
             </span>
           ),
@@ -841,7 +996,7 @@ export default {
           width: 150,
           sortBy: this.sortConfig.status || '',
           renderBodyCell: ({ row }) => (
-            <span class="whitespace-nowrap text-slate-600 dark:text-slate-300">
+            <span class={`${PILL} ${this.statusPill(row.status)}`}>
               {this.statusLabel(this.displayStatus(row))}
             </span>
           ),
@@ -857,8 +1012,8 @@ export default {
             <span
               class={
                 row.due_overdue
-                  ? 'text-xs font-bold text-red-600 dark:text-red-400 whitespace-nowrap'
-                  : 'text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap'
+                  ? 'text-[13px] tabular-nums font-semibold text-red-600 dark:text-red-400 whitespace-nowrap'
+                  : 'text-[13px] tabular-nums text-slate-600 dark:text-slate-300 whitespace-nowrap'
               }
             >
               {this.formatDue(row)}
@@ -873,17 +1028,35 @@ export default {
           width: 130,
           sortBy: this.sortConfig.created_at || '',
           renderBodyCell: ({ row }) => (
-            <span class="text-xs whitespace-nowrap text-slate-400 dark:text-slate-500">
+            <span class="text-[13px] tabular-nums whitespace-nowrap text-slate-500 dark:text-slate-400">
               {this.formatDate(row.created_at)}
             </span>
           ),
         },
       ];
+      if (this.isCommercialList) return this.commercialColumns(cols);
+      if (this.isProjectList) return this.projectColumns(cols);
+      return this.isWorkOrderList ? this.workOrderColumns(cols) : cols;
     },
   },
   watch: {
-    // Mantiene el estado visual del orden en VeTable en sync con los controles
-    // del toolbar (select "Ordenar por" + botón asc/desc).
+    // Plan-Clase-Comercial F4 — la misma instancia sirve a las dos rutas: al
+    // pasar de casos a oportunidades (o al revés) se empieza de cero, salvo que
+    // el cambio lo haya pedido una vista guardada de esa clase.
+    caseClass() {
+      const view = this.savedViews.find(v => v.id === this.pendingViewId);
+      this.pendingViewId = null;
+      if (view) {
+        this.applyView(view);
+        return;
+      }
+      // Plan-Casos E1.2 — cada clase vuelve como la dejaste.
+      this.restoreState();
+      this.setSortConfig();
+      this.fetch();
+    },
+    // Mantiene el estado visual del orden en VeTable en sync con el orden
+    // elegido desde los encabezados de columna.
     sortBy() {
       this.setSortConfig();
     },
@@ -892,54 +1065,75 @@ export default {
     },
   },
   mounted() {
-    this.restoreListPrefs();
+    this.restoreState();
     this.setSortConfig();
-    this.$store.dispatch('caseTickets/fetchTypes');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
     this.$store.dispatch('agents/get'); // @tickets_cases P3 — para asignar y mostrar nombre
     this.$store.dispatch('customViews/get', VIEW_FILTER_TYPE); // @tickets_cases F3
-    this.fetch();
+    // Plan-Clase-Comercial F4 — los tipos primero: su clase decide si la cola
+    // se acota a Soporte (ver fetch).
+    this.$store.dispatch('caseTickets/fetchTypes').finally(() => this.fetch());
   },
   methods: {
-    // @tickets_cases — si ya se visitó el listado en esta sesión de la app,
-    // retoma filtros/orden/página donde se quedó (se perdían al entrar a un
-    // ticket y volver, porque el componente se destruye y se vuelve a montar).
-    // Tolerante a claves ausentes: un campo nuevo que se agregue después no
-    // rompe la restauración de una sesión ya en curso.
-    restoreListPrefs() {
-      const prefs = this.listPrefs;
-      if (!prefs) return;
-
-      this.search = prefs.search || '';
-      this.dateRange = prefs.dateRange || [];
-      this.statusFilter = prefs.statusFilter ?? 'pending';
-      this.priorityFilter = prefs.priorityFilter || '';
-      this.originFilter = prefs.originFilter || '';
-      this.activeFilter = prefs.activeFilter || 'mine';
-      this.activeType = prefs.activeType || '';
-      this.sortBy = prefs.sortBy || 'created_at';
-      this.sortOrder = prefs.sortOrder || 'desc';
-      this.currentPage = prefs.currentPage || 1;
-      this.perPage = prefs.perPage || 25;
-      this.activeViewId = prefs.activeViewId || '';
+    // Plan-Casos E1.2 — la Lista vuelve como la dejaste: lo compartido con el
+    // Tablero (tipo, ¿de quién?, SLA, filtros finos, búsqueda) y lo suyo
+    // (`list`: estado, resultado, orden, página, vista). Guardado por clase en
+    // localStorage (helper/caseClasses.js); tolerante a claves ausentes.
+    restoreState() {
+      const st = loadCaseState(this.$route.params.accountId, this.caseClass);
+      const list = st.list || {};
+      this.search = st.search || '';
+      this.activeFilter = SCOPES.includes(st.scope) ? st.scope : 'mine';
+      this.slaOverdueOnly = !!st.sla;
+      this.committedOnly = !!st.committed;
+      const { postponed: legacyPostponed, ...savedFine } = st.fine || {};
+      this.fine = normalizeFineFilters(savedFine);
+      this.activeType = st.type ?? '';
+      this.statusFilter = list.status ?? 'pending';
+      // Comercial arranca en «En curso»; '' guardado = el agente eligió «Todas».
+      this.outcomeFilter =
+        list.outcome ??
+        (this.isCommercialList ? DEFAULT_COMMERCIAL_RESULT : '');
+      // «Comprometidas» fue un resultado del combo un rato: ahora es la casilla.
+      if (this.outcomeFilter === 'committed') {
+        this.outcomeFilter = DEFAULT_COMMERCIAL_RESULT;
+        this.committedOnly = true;
+      }
+      // E1.3 — «Solo pospuestas» (filtro fino) pasó a ser el resultado Pospuestas.
+      if (legacyPostponed && this.isCommercialList) {
+        this.outcomeFilter = 'postponed';
+      }
+      this.syncCommercialStatus();
+      // Órdenes arranca en «Abiertas»; '' guardado = «Todas».
+      this.stageFilter =
+        list.stage ?? (this.hasStageFilter ? DEFAULT_WORK_ORDER_STAGE : '');
+      this.sortBy = this.sortFields.includes(list.sortBy)
+        ? list.sortBy
+        : 'created_at';
+      this.sortOrder = list.sortOrder === 'asc' ? 'asc' : 'desc';
+      this.currentPage = list.currentPage || 1;
+      this.perPage = list.perPage || 25;
+      this.activeViewId = list.viewId || '';
     },
-    // Guarda el estado actual para la próxima vez que se monte este componente
-    // en la misma sesión (ver restoreListPrefs). Se llama en cada fetch(): así
-    // no hay que enganchar un watcher aparte por cada filtro.
-    persistListPrefs() {
-      this.$store.dispatch('caseTickets/setTicketsListPrefs', {
+    // Se llama en cada fetch(): así no hay que vigilar cada filtro por separado.
+    persistState() {
+      saveCaseState(this.$route.params.accountId, this.caseClass, {
         search: this.search,
-        dateRange: this.dateRange,
-        statusFilter: this.statusFilter,
-        priorityFilter: this.priorityFilter,
-        originFilter: this.originFilter,
-        activeFilter: this.activeFilter,
-        activeType: this.activeType,
-        sortBy: this.sortBy,
-        sortOrder: this.sortOrder,
-        currentPage: this.currentPage,
-        perPage: this.perPage,
-        activeViewId: this.activeViewId,
+        scope: this.activeFilter,
+        sla: this.slaOverdueOnly,
+        committed: this.committedOnly,
+        fine: this.fine,
+        type: this.activeType,
+        list: {
+          status: this.statusFilter,
+          outcome: this.outcomeFilter,
+          stage: this.stageFilter,
+          sortBy: this.sortBy,
+          sortOrder: this.sortOrder,
+          currentPage: this.currentPage,
+          perPage: this.perPage,
+          viewId: this.activeViewId,
+        },
       });
     },
     // @tickets_cases Fase C — tras crear un ticket interno, refresca el listado.
@@ -959,23 +1153,56 @@ export default {
     },
     fetch() {
       this.selected = []; // @tickets_cases P3 — la selección es por vista
-      this.persistListPrefs();
-      const filters = { page: this.currentPage, per_page: this.perPage };
+      this.persistState();
+      const filters = {
+        page: this.currentPage,
+        per_page: this.perPage,
+        sort_by: this.sortBy,
+        sort_order: this.sortOrder,
+        ...scopeToParams(this.activeFilter, this.currentUserID),
+        // Plan-Casos E1.1 — filtros finos (assignee solo en «Todos»).
+        ...fineFiltersToParams(this.fine, this.caseClass, this.activeFilter, {
+          itil: this.filteredTypeItilEnabled,
+          status: this.statusFilter,
+          outcome: this.outcomeFilter,
+          stage: this.stageFilter,
+        }),
+      };
       if (this.search.trim()) filters.q = this.search.trim();
-      if (this.dateRange[0])
-        filters.date_from = this.formatDateParam(this.dateRange[0]);
-      if (this.dateRange[1])
-        filters.date_to = this.formatDateParam(this.dateRange[1]);
       if (this.statusFilter) filters.status = this.statusFilter;
-      if (this.priorityFilter) filters.priority = this.priorityFilter;
-      if (this.originFilter) filters.origin = this.originFilter;
-      if (this.activeFilter === 'sla_overdue') filters.sla_status = 'overdue';
-      if (this.activeFilter === 'unassigned') filters.assignee_id = 'null';
-      if (this.activeFilter === 'mine')
-        filters.assignee_id = this.currentUserID;
       if (this.activeType) filters.case_type_id = this.activeType;
-      filters.sort_by = this.sortBy;
-      filters.sort_order = this.sortOrder;
+      // El aviso de SLA cuenta solo pendientes: en «Todos» acota a pendientes
+      // (mismo número que el aviso) y en «Cerrados» no aplica.
+      if (
+        this.slaOverdueOnly &&
+        classHasSla(this.caseClass) &&
+        this.statusFilter !== 'closed'
+      ) {
+        filters.sla_status = 'overdue';
+        filters.status = 'pending';
+      }
+      // Plan-Clase-Comercial F4 — las clases no se mezclan (Soporte incluye los
+      // casos sin tipo; ver CaseTicket.of_class).
+      filters.case_class = this.caseClass;
+      // Plan-Casos E1.3 — resultado: Pospuestas es abierta (postponed); las
+      // otras tres son el `outcome` de una cerrada.
+      if (this.isCommercialList && this.outcomeFilter) {
+        if (this.outcomeFilter === 'postponed') filters.postponed = true;
+        else if (this.outcomeFilter === 'active') filters.postponed = false;
+        else filters.outcome = this.outcomeFilter;
+      }
+      // Plan-Clase-Orden-de-Trabajo F2b — en Órdenes y Proyectos la etapa manda
+      // sobre el estado.
+      if (this.hasStageFilter) {
+        delete filters.status;
+        Object.assign(filters, stageToParams(this.stageFilter, this.caseClass));
+      }
+      // Plan-Metricas-Comercial — se suma a todo (también al aviso de cierre vencido).
+      if (this.isCommercialList && this.committedOnly) filters.committed = true;
+      // Aviso rojo de Órdenes / Comercial (el de Soporte va arriba, por SLA).
+      if (this.slaOverdueOnly && alertApplies(this.alertContext)) {
+        Object.assign(filters, classAlertParams(this.caseClass));
+      }
       this.$store.dispatch('caseTickets/fetchTickets', filters);
     },
     onSearchInput() {
@@ -990,17 +1217,8 @@ export default {
       this.currentPage = 1;
       this.fetch();
     },
-    onDateChange(value) {
-      this.dateRange = value || [];
-      this.currentPage = 1;
-      this.fetch();
-    },
     onFilterChange() {
       this.currentPage = 1;
-      this.fetch();
-    },
-    toggleSortOrder() {
-      this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
       this.fetch();
     },
     applyFilter(key) {
@@ -1008,34 +1226,104 @@ export default {
       this.currentPage = 1;
       this.fetch();
     },
-    onQuickTabChange(index) {
-      this.applyFilter(QUICK_FILTERS[index].key);
+    // ── Plan-Casos E1.1 — cambios de cada nivel de filtro ──
+    onTypeChange(id) {
+      this.activeType = id;
+      this.onFilterChange();
+    },
+    // Un resultado que no cabe en el estado elegido se suelta (Ganadas no
+    // está entre las Abiertas); con «Todas» se conserva.
+    onStatusChange(status) {
+      this.statusFilter = status;
+      if (status && this.outcomeFilter) {
+        if (statusForResult(this.outcomeFilter) !== status)
+          this.outcomeFilter = '';
+      }
+      this.onFilterChange();
+    },
+    // Elegir un resultado ajusta el estado: Pospuestas → Abiertas; Ganadas,
+    // Perdidas y Canceladas → Cerradas.
+    onStageChange(stage) {
+      this.stageFilter = stage;
+      this.onFilterChange();
+    },
+    onOutcomeChange(outcome) {
+      this.outcomeFilter = outcome;
+      this.syncCommercialStatus();
+      this.onFilterChange();
+    },
+    // Comercial no ofrece Abiertas/Cerradas: el estado sale del resultado
+    // (Pospuestas → pendientes; las otras → cerradas) y sin resultado es «Todas».
+    // También corrige un estado guardado (local o en una vista) de antes.
+    syncCommercialStatus() {
+      if (!this.isCommercialList) return;
+      this.statusFilter = this.outcomeFilter
+        ? statusForResult(this.outcomeFilter)
+        : '';
+    },
+    onSlaChange(on) {
+      this.slaOverdueOnly = on;
+      this.onFilterChange();
+    },
+    onCommittedChange(on) {
+      this.committedOnly = on;
+      this.onFilterChange();
+    },
+    onFineChange(fine) {
+      this.fine = fine;
+      this.onFilterChange();
     },
     // @tickets_cases F3 — vistas guardadas ------------------------------------
-    onViewChange() {
-      const view = this.savedViews.find(v => v.id === this.activeViewId);
-      if (view) this.applyView(view);
-      else this.clearFilters();
+    closeViewsMenu() {
+      this.showViewsMenu = false;
+    },
+    selectView(view) {
+      // Volver a elegir la vista activa la quita.
+      if (view.id === this.activeViewId) {
+        this.detachView();
+        return;
+      }
+      this.showViewsMenu = false;
+      this.activeViewId = view.id;
+      this.applyView(view);
+    },
+    // Deja de aplicar la vista: los filtros se quedan como están en pantalla
+    // (decisión del usuario); solo se suelta el nombre y se recuerda así.
+    detachView() {
+      this.showViewsMenu = false;
+      this.activeViewId = '';
+      this.persistState();
     },
     // Tolerante a proposito: una clave ausente deja su default en pie y una
     // desconocida se ignora. Una vista vieja tiene que seguir abriendo cuando
     // agreguemos filtros nuevos.
     applyView(view) {
-      const q = view.query || {};
-
-      this.search = q.search || '';
-      this.dateRange = Array.isArray(q.date_range)
-        ? q.date_range.map(d => new Date(`${d}T00:00:00`))
-        : [];
-      this.statusFilter = q.status || '';
-      this.priorityFilter = q.priority || '';
-      this.originFilter = q.origin || '';
-      this.activeFilter = QUICK_FILTERS.some(f => f.key === q.quick)
-        ? q.quick
-        : 'mine';
+      const q = normalizeViewQuery(view.query);
+      // Plan-Casos E1.1 — una vista de oportunidades abierta desde Soporte (o
+      // al revés) primero cambia de clase; el watcher de caseClass la aplica.
+      if (q.case_class && q.case_class !== this.caseClass) {
+        this.pendingViewId = view.id;
+        this.$router.push({
+          name: CLASS_VIEW_ROUTES.list,
+          params: { caseClass: q.case_class },
+        });
+        return;
+      }
+      this.activeViewId = view.id;
+      this.search = q.search;
+      this.statusFilter = q.status;
+      this.outcomeFilter = q.outcome;
+      this.syncCommercialStatus();
+      this.stageFilter = q.stage;
+      this.activeFilter = q.quick;
+      this.slaOverdueOnly = q.sla_overdue;
+      this.committedOnly = q.committed;
+      this.fine = q.fine;
       this.activeType = this.resolveSavedType(q.case_type_id, view.name);
-      this.sortBy = SORT_FIELDS.includes(q.sort_by) ? q.sort_by : 'created_at';
-      this.sortOrder = q.sort_order === 'asc' ? 'asc' : 'desc';
+      this.sortBy = this.sortFields.includes(q.sort_by)
+        ? q.sort_by
+        : 'created_at';
+      this.sortOrder = q.sort_order;
 
       this.currentPage = 1;
       this.setSortConfig();
@@ -1054,18 +1342,9 @@ export default {
     // diferencia entre "ausente" y "vacio": el jsonb vuelve del servidor con
     // las claves en cualquier orden.
     canonicalQuery(q) {
-      const src = q || {};
-      const norm = {
-        search: src.search || '',
-        date_range: Array.isArray(src.date_range) ? src.date_range : [],
-        status: src.status || '',
-        priority: src.priority || '',
-        origin: src.origin || '',
-        quick: src.quick || 'mine',
-        case_type_id: src.case_type_id || '',
-        sort_by: src.sort_by || 'created_at',
-        sort_order: src.sort_order || 'desc',
-      };
+      const norm = normalizeViewQuery(q);
+      // La clase de una vista v1 es la de la lista donde se mira.
+      norm.case_class = norm.case_class || this.caseClass;
       return JSON.stringify(
         Object.keys(norm)
           .sort()
@@ -1097,11 +1376,16 @@ export default {
     clearFilters() {
       this.activeViewId = '';
       this.search = '';
-      this.dateRange = [];
       this.statusFilter = 'pending';
-      this.priorityFilter = '';
-      this.originFilter = '';
+      this.outcomeFilter = this.isCommercialList
+        ? DEFAULT_COMMERCIAL_RESULT
+        : '';
+      this.syncCommercialStatus();
+      this.stageFilter = this.hasStageFilter ? DEFAULT_WORK_ORDER_STAGE : '';
       this.activeFilter = 'mine';
+      this.slaOverdueOnly = false;
+      this.committedOnly = false;
+      this.fine = emptyFineFilters();
       this.activeType = '';
       this.currentPage = 1;
       this.fetch();
@@ -1221,37 +1505,296 @@ export default {
     bulkClose() {
       this.runBulk({ bulk_action: 'transition', status: 'closed' });
     },
-    formatDateParam(d) {
-      const date = d instanceof Date ? d : new Date(d);
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    },
-    // @tickets_cases — color del folio según el SLA (verde a tiempo, ámbar en
-    // riesgo, rojo vencido). Antes era un punto; ahora tiñe el propio número.
-    slaTextColor(sla) {
+    // @tickets_cases — punto de SLA delante del folio (verde a tiempo, ámbar
+    // en riesgo, rojo vencido).
+    slaDotColor(sla) {
       return (
         {
-          on_time: 'text-green-600 dark:text-green-400',
-          at_risk: 'text-yellow-600 dark:text-yellow-400',
-          overdue: 'text-red-600 dark:text-red-400',
-        }[sla] || 'text-green-600 dark:text-green-400'
+          on_time: 'bg-emerald-500',
+          at_risk: 'bg-amber-500',
+          overdue: 'bg-red-500',
+        }[sla] || 'bg-emerald-500'
       );
     },
+    // Media es neutra con borde: el azul queda para botones y fila elegida.
     priorityBadge(p) {
       return (
         {
-          low: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
+          low: 'bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300',
           medium:
-            'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-          high: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-          urgent: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-        }[p] || 'bg-slate-100 text-slate-700'
+            'bg-white text-slate-700 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-600',
+          high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
+          urgent:
+            'bg-red-100 text-red-800 font-semibold dark:bg-red-900/40 dark:text-red-300',
+        }[p] || 'bg-slate-100 text-slate-600'
       );
+    },
+    statusPill(status) {
+      return STATUS_PILL[toSimpleStatus(status)] || STATUS_PILL.closed;
     },
     statusLabel(key) {
       return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key;
+    },
+    // ── Plan-Clase-Comercial F4 — columnas de la lista de oportunidades ──
+    // Sobre la cola de siempre: Vence → Cierre estimado, se agregan Monto y
+    // Probabilidad, y Estado muestra la etapa (columna del embudo) o el resultado.
+    commercialColumns(cols) {
+      const amount = {
+        field: 'amount',
+        key: 'amount',
+        title: this.$t('CASE_TICKETS.COMMERCIAL.FIELDS.AMOUNT'),
+        align: 'right',
+        width: 150,
+        sortBy: this.sortConfig.amount || '',
+        renderBodyCell: ({ row }) => (
+          <span class="text-sm font-semibold tabular-nums whitespace-nowrap text-slate-800 dark:text-slate-100">
+            {formatMoney(row.amount, row.currency)}
+          </span>
+        ),
+      };
+      const probability = {
+        field: 'probability',
+        key: 'probability',
+        title: this.$t('CASE_TICKETS.COMMERCIAL.FIELDS.PROBABILITY'),
+        align: 'left',
+        width: 120,
+        sortBy: this.sortConfig.probability || '',
+        // Barra delgada + el %: se compara de un vistazo entre filas.
+        renderBodyCell: ({ row }) =>
+          row.probability === null || row.probability === undefined ? (
+            <span class="text-[13px] text-slate-400 dark:text-slate-500">
+              —
+            </span>
+          ) : (
+            <span class="inline-flex items-center gap-2 whitespace-nowrap">
+              <span class="inline-block w-10 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+                <span
+                  class="block h-full rounded-full bg-violet-500"
+                  style={{ width: `${Math.min(100, row.probability)}%` }}
+                />
+              </span>
+              <span class="text-[13px] tabular-nums text-slate-600 dark:text-slate-300">
+                {`${row.probability}%`}
+              </span>
+            </span>
+          ),
+      };
+      const expectedClose = {
+        field: 'expected_close_at',
+        key: 'expected_close_at',
+        title: this.$t('CASE_TICKETS.COMMERCIAL.FIELDS.EXPECTED_CLOSE'),
+        align: 'left',
+        width: 130,
+        sortBy: this.sortConfig.expected_close_at || '',
+        renderBodyCell: ({ row }) => (
+          <span class="text-[13px] tabular-nums whitespace-nowrap text-slate-600 dark:text-slate-300">
+            {formatDay(row.expected_close_at)}
+          </span>
+        ),
+      };
+      const stage = {
+        field: 'status',
+        key: 'status',
+        title: this.$t('CASE_TICKETS.COMMERCIAL.FIELDS.STAGE'),
+        align: 'left',
+        width: 170,
+        sortBy: this.sortConfig.status || '',
+        renderBodyCell: ({ row }) => this.renderStage(row),
+      };
+      const out = [];
+      cols.forEach(col => {
+        if (col.key === 'status') out.push(amount, probability, stage);
+        else if (col.key === 'due_at') out.push(expectedClose);
+        else out.push(col);
+      });
+      return out;
+    },
+    // ── Plan-Clase-Orden-de-Trabajo F2b — columnas de la lista de órdenes ──
+    // Sobre la cola de siempre: Responsable → Técnico, Vence → Próxima visita
+    // (en rojo si hay una vencida), se agregan Horas (real / estimado, con
+    // «Facturable») y Estado muestra la etapa (columna del tipo).
+    workOrderColumns(cols) {
+      const visit = {
+        field: 'next_visit_at',
+        key: 'next_visit_at',
+        title: this.$t('CASE_TICKETS.WORK_ORDER.TABLE.NEXT_VISIT'),
+        align: 'left',
+        width: 150,
+        renderBodyCell: ({ row }) => {
+          if (row.visit_overdue) {
+            return (
+              <span class="text-[13px] font-semibold whitespace-nowrap text-red-600 dark:text-red-400">
+                {this.$t('CASE_TICKETS.WORK_ORDER.VISIT.OVERDUE')}
+              </span>
+            );
+          }
+          return (
+            <span class="text-[13px] tabular-nums whitespace-nowrap text-slate-600 dark:text-slate-300">
+              {row.next_visit_at ? this.formatDate(row.next_visit_at) : '—'}
+            </span>
+          );
+        },
+      };
+      const hours = {
+        field: 'hours',
+        key: 'hours',
+        title: this.$t('CASE_TICKETS.WORK_ORDER.TABLE.HOURS'),
+        align: 'left',
+        width: 130,
+        renderBodyCell: ({ row }) => (
+          <span class="inline-flex items-center gap-2 whitespace-nowrap">
+            <span class="text-[13px] tabular-nums text-slate-600 dark:text-slate-300">
+              {`${formatHours(row.actual_hours)} / ${formatHours(
+                row.estimated_hours
+              )}`}
+            </span>
+            {row.billable ? (
+              <span
+                class="inline-block w-2 h-2 rounded-full bg-emerald-500"
+                title={this.$t('CASE_TICKETS.WORK_ORDER.FIELDS.BILLABLE')}
+              />
+            ) : null}
+          </span>
+        ),
+      };
+      const out = [];
+      cols.forEach(col => {
+        if (col.key === 'assignee') {
+          out.push({
+            ...col,
+            title: this.$t('CASE_TICKETS.WORK_ORDER.TABLE.TECHNICIAN'),
+          });
+        } else if (col.key === 'status') {
+          out.push(hours, {
+            ...col,
+            title: this.$t('CASE_TICKETS.WORK_ORDER.TABLE.STAGE'),
+            renderBodyCell: ({ row }) => this.renderWorkOrderStage(row),
+          });
+        } else if (col.key === 'due_at') out.push(visit);
+        else out.push(col);
+      });
+      return out;
+    },
+    // ── Plan-Clase-Proyecto P1 — columnas de la lista de proyectos ──
+    // Vence → Fecha objetivo (en rojo si está atrasado); Estado → Avance (barra
+    // índigo + %) y Fase (columna del tipo).
+    projectColumns(cols) {
+      const due = {
+        field: 'project_due_on',
+        key: 'project_due_on',
+        title: this.$t('CASE_TICKETS.PROJECT.TABLE.DUE'),
+        align: 'left',
+        width: 140,
+        renderBodyCell: ({ row }) => (
+          <span
+            class={
+              row.project_overdue
+                ? 'text-[13px] tabular-nums font-semibold whitespace-nowrap text-red-600 dark:text-red-400'
+                : 'text-[13px] tabular-nums whitespace-nowrap text-slate-600 dark:text-slate-300'
+            }
+          >
+            {row.project_due_on ? formatDay(row.project_due_on) : '—'}
+          </span>
+        ),
+      };
+      const progress = {
+        field: 'progress',
+        key: 'progress',
+        title: this.$t('CASE_TICKETS.PROJECT.TABLE.PROGRESS'),
+        align: 'left',
+        width: 130,
+        renderBodyCell: ({ row }) =>
+          row.progress === null || row.progress === undefined ? (
+            <span class="text-[13px] text-slate-400 dark:text-slate-500">
+              —
+            </span>
+          ) : (
+            <span class="inline-flex items-center gap-2 whitespace-nowrap">
+              <span class="inline-block w-12 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+                <span
+                  class="block h-full rounded-full bg-indigo-500"
+                  style={{ width: `${Math.min(100, row.progress)}%` }}
+                />
+              </span>
+              <span class="text-[13px] tabular-nums text-slate-600 dark:text-slate-300">
+                {`${row.progress}%`}
+              </span>
+            </span>
+          ),
+      };
+      const out = [];
+      cols.forEach(col => {
+        if (col.key === 'status') {
+          out.push(progress, {
+            ...col,
+            title: this.$t('CASE_TICKETS.PROJECT.TABLE.STAGE'),
+            renderBodyCell: ({ row }) => this.renderWorkOrderStage(row),
+          });
+        } else if (col.key === 'due_at') out.push(due);
+        else out.push(col);
+      });
+      return out;
+    },
+    renderWorkOrderStage(row) {
+      const column = (row.case_type?.columns || []).find(
+        c => c.id === row.case_type_column_id
+      );
+      return (
+        <span class={`${PILL} ${this.statusPill(row.status)}`}>
+          {column ? column.label : this.statusLabel(this.displayStatus(row))}
+        </span>
+      );
+    },
+    renderStage(row) {
+      const badge = PILL;
+      if (row.outcome) {
+        return (
+          <span class={`${badge} ${OUTCOME_BADGE[row.outcome]}`}>
+            {this.$t(`CASE_TICKETS.COMMERCIAL.OUTCOMES.${row.outcome}`)}
+          </span>
+        );
+      }
+      if (row.is_postponed) {
+        return (
+          <span class={`${badge} ${POSTPONED_BADGE}`}>
+            {this.$t('CASE_TICKETS.COMMERCIAL.POSTPONED_UNTIL', {
+              date: formatDay(row.postponed_until),
+            })}
+          </span>
+        );
+      }
+      const column = (row.case_type?.columns || []).find(
+        c => c.id === row.case_type_column_id
+      );
+      const stage = (
+        <span class={`${badge} ${STAGE_PILL}`}>
+          {column ? column.label : this.statusLabel(this.displayStatus(row))}
+        </span>
+      );
+      if (!isOpenCommitted(row)) return stage;
+      return (
+        <span class="flex flex-wrap items-center gap-1">
+          {stage}
+          {this.committedPill(row, badge)}
+        </span>
+      );
+    },
+    // Plan-Metricas-Comercial — «Comprometida · 24 oct» / «Promesa vencida · 24 oct».
+    committedPill(row, badge) {
+      const overdue = promiseOverdue(row, isoDayFromToday(0));
+      const key = overdue ? 'PROMISE_OVERDUE' : 'COMMITTED_ON';
+      return (
+        <span
+          class={`${badge} ${
+            overdue ? PROMISE_OVERDUE_BADGE : COMMITTED_BADGE
+          }`}
+          title={row.commit_note || ''}
+        >
+          {this.$t(`CASE_TICKETS.COMMERCIAL.COMMITMENT.${key}`, {
+            date: formatDay(row.expected_close_at),
+          })}
+        </span>
+      );
     },
     // Colapsa el estado ITIL a etiqueta simple según el modo del PROPIO tipo del
     // ticket (cada fila puede ser de un tipo distinto).

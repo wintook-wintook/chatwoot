@@ -63,6 +63,7 @@ import contactTrackings from './modules/contactTrackings';
 
 // proyecto@tracking_templates
 import trackingTemplates from './modules/trackingTemplates';
+import whatsappCalls from './modules/whatsappCalls'; // diag/llamadas_whatsapp
 // proyecto@automatizacion_campanas
 import trackingCampaignOptions from './modules/trackingCampaignOptions';
 // @tickets_cases
@@ -133,6 +134,7 @@ export default new Vuex.Store({
     // KANBAN0725
     contactTrackings, // proyecto@contact_tracking
     trackingTemplates, // proyecto@tracking_templates
+    whatsappCalls, // diag/llamadas_whatsapp
     trackingCampaignOptions, // proyecto@automatizacion_campanas
     googleCalendar, // proyecto@google_calendar
     caseTickets, // @tickets_cases
