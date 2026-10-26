@@ -50,7 +50,12 @@ const findCustomRole = agent =>
 
 const getAgentRoleName = agent => {
   if (!agent.custom_role_id) {
-    return t(`AGENT_MGMT.AGENT_TYPES.${agent.role.toUpperCase()}`);
+    // Plan-Roles-Permisos — el nombre del rol (Supervisor, Vendedor…).
+    const key =
+      agent.role === 'administrator'
+        ? 'administrator'
+        : agent.access_role_key || 'supervisor';
+    return t(`ACCESS_ROLES.ROLES.${key.toUpperCase()}`);
   }
   const customRole = findCustomRole(agent);
   return customRole ? customRole.name : '';
@@ -228,8 +233,12 @@ const confirmDeletion = () => {
             <!-- proyecto@user_contact -->
             <td class="py-4 ltr:pr-4 rtl:pl-4">
               <div v-if="agent.agent_contact" class="flex flex-col">
-                <span class="text-sm font-medium">{{ agent.agent_contact.name }}</span>
-                <span class="text-xs text-slate-500">{{ agent.agent_contact.phone_number }}</span>
+                <span class="text-sm font-medium">{{
+                  agent.agent_contact.name
+                }}</span>
+                <span class="text-xs text-slate-500">{{
+                  agent.agent_contact.phone_number
+                }}</span>
               </div>
               <span v-else class="text-xs text-slate-400">—</span>
             </td>
@@ -277,8 +286,9 @@ const confirmDeletion = () => {
         :type="currentAgent.role"
         :email="currentAgent.email"
         :availability="currentAgent.availability_status"
-        :current="currentAgent"
         :custom-role-id="currentAgent.custom_role_id"
+        :access-role-key="currentAgent.access_role_key"
+        :field-profile="currentAgent.field_profile || {}"
         :agent-contact-id="currentAgent.agent_contact_id"
         :agent-contact="currentAgent.agent_contact"
         @close="hideEditPopup"

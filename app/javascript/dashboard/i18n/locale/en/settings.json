@@ -358,6 +358,11 @@
     "CAPTAIN": "Captain",
     "HOME": "Home",
     "AGENTS": "Agents",
+    "ACCESS_ROLES": "Roles",
+    "CATALOG": "Catalog",
+    "FIELD_ROUTE": "My field route",
+    "DISPATCH": "Dispatch",
+    "QUOTES": "Quotes",
     "AGENT_BOTS": "Bots",
     "AUDIT_LOGS": "Audit Logs",
     "INBOXES": "Inboxes",
@@ -449,7 +454,8 @@
     },
     "SHOW_MORE": "Show more ({count})",
     "SHOW_LESS": "Show less",
-    "INTERNAL_CHAT_NEW": "New chat"
+    "INTERNAL_CHAT_NEW": "New chat",
+    "MAINTENANCE": "Maintenance"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Billing",

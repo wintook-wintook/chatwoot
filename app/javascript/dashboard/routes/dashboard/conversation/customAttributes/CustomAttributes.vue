@@ -23,6 +23,8 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  // Renglones «Nombre   valor» sin franjas (página del contacto › Datos).
+  inline: { type: Boolean, default: false },
   startAt: {
     type: String,
     default: 'even',
@@ -175,6 +177,7 @@ const oddClass = [
 ];
 
 const wrapperClass = computed(() => {
+  if (props.inline) return 'flex flex-col gap-2';
   return props.startAt === 'even' ? evenClass : oddClass;
 });
 </script>
@@ -195,7 +198,11 @@ const wrapperClass = computed(() => {
       :attribute-regex="attribute.regex_pattern"
       :regex-cue="attribute.regex_cue"
       :contact-id="contactId"
-      class="border-b border-solid border-slate-50 dark:border-slate-700/50"
+      :inline="inline"
+      :class="{
+        'border-b border-solid border-slate-50 dark:border-slate-700/50':
+          !inline,
+      }"
       @update="onUpdate"
       @delete="onDelete"
       @copy="onCopy"

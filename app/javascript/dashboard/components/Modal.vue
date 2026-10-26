@@ -137,6 +137,10 @@ export default {
   @apply justify-end;
   .modal-container {
     @apply rounded-none h-full w-[30rem];
+    // Formulario de contacto: campos a dos columnas.
+    &.wide {
+      @apply w-[45rem] max-w-full;
+    }
   }
 }
 .modal-enter,

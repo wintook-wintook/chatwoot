@@ -55,6 +55,8 @@ describe('Menú v2', () => {
     expect(ventas.menuItems.map(i => i.label)).toEqual([
       'CONTACT_FUNNEL',
       'OPPORTUNITIES',
+      'QUOTES',
+      'CATALOG',
       'WHATSAPP_TEMPLATES',
       'LABELS',
       'CANNED_RESPONSES',
@@ -96,7 +98,7 @@ describe('Menú v2', () => {
     const menus = getSidebarItemsV2(ACCOUNT, route('home')).secondaryMenu;
     const item = key => menus.find(m => m.parentNav === key).menuItems;
     expect(item('ventas')[1].toState).toContain('tickets/commercial/metrics');
-    expect(item('servicio')).toHaveLength(5);
+    expect(item('servicio')).toHaveLength(7);
     expect(item('servicio')[0].toState).toContain('tickets/support/board');
   });
 
@@ -155,12 +157,16 @@ describe('Menú v2', () => {
     );
     expect(servicio.menuItems.map(i => i.toStateName)).toEqual([
       'gestorTickets_class_list',
+      'gestorTickets_dispatch',
+      'gestorTickets_maintenance',
       'gestorTickets_classification',
       'gestorTickets_sla',
       'gestorTickets_portals',
       'default_portal_articles',
     ]);
     [
+      'gestorTickets_dispatch',
+      'gestorTickets_maintenance',
       'gestorTickets_classification',
       'gestorTickets_sla',
       'gestorTickets_portals',
@@ -189,6 +195,7 @@ describe('Menú v2', () => {
     const agenda = menuFor(route('gestorTickets_tasks'));
     expect(agenda.menuItems.map(i => i.label)).toEqual([
       'TASKS_V2',
+      'FIELD_ROUTE',
       'CALENDAR',
       'MY_DAY_PRIORITY',
     ]);

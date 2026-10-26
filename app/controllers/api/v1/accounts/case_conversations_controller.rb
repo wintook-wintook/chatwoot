@@ -33,7 +33,7 @@ class Api::V1::Accounts::CaseConversationsController < Api::V1::Accounts::BaseCo
   private
 
   def set_ticket
-    @ticket = Current.account.case_tickets.find(params[:case_ticket_id])
+    @ticket = account_case_tickets.find(params[:case_ticket_id])
     return render_error('El caso ya tiene una conversación') if @ticket.conversation_id
     return render_error('Asigna un contacto al caso para ligar una conversación') unless @ticket.contact
 

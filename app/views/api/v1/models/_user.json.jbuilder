@@ -26,6 +26,7 @@ json.accounts do
     json.active_at account_user.active_at
     json.role account_user.role
     json.permissions account_user.permissions
+    json.access account_user.access_grant.to_h # Plan-Roles-Permisos
     # the actual availability user has configured
     json.availability account_user.availability
     # availability derived from presence

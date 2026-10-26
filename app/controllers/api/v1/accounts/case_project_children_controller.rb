@@ -59,14 +59,14 @@ class Api::V1::Accounts::CaseProjectChildrenController < Api::V1::Accounts::Base
   private
 
   def set_project
-    @project = Current.account.case_tickets.find(params[:case_ticket_id])
+    @project = account_case_tickets.find(params[:case_ticket_id])
     render_error('Solo un proyecto tiene casos dentro') unless @project.project?
   rescue ActiveRecord::RecordNotFound
     render json: { error: 'Proyecto no encontrado' }, status: :not_found
   end
 
   def existing_child
-    child = Current.account.case_tickets.find_by(id: params[:ticket_id])
+    child = account_case_tickets.find_by(id: params[:ticket_id])
     return render_error('Caso no encontrado') unless child
     return render_error('Solo órdenes de trabajo y tickets de Soporte van dentro de un proyecto') unless child_class?(child)
     return render_error('Ese caso ya pertenece a un proyecto') if child.parent_project
@@ -147,7 +147,8 @@ class Api::V1::Accounts::CaseProjectChildrenController < Api::V1::Accounts::Base
       status: ticket.status,
       case_class: ticket.case_type&.case_class || 'support',
       case_type: type_ref(ticket.case_type),
-      assignee: ticket.assignee && { id: ticket.assignee.id, name: ticket.assignee.name }
+      assignee: ticket.assignee && { id: ticket.assignee.id, name: ticket.assignee.name },
+      report_sent_at: (ticket.report_sent_at if ticket.work_order?) # Plan-Trabajo-Campo R1
     }.merge(child_dates(ticket))
   end
 

@@ -2,7 +2,7 @@
   "WHATSAPP_CALLS": {
     "SIMULATOR": {
       "TITLE": "Cliente simulado",
-      "DESCRIPTION": "Prueba las llamadas de WhatsApp sin número: esta página hace de celular del cliente. Usa el camino real (webhook de Meta y servicios) y audio real con la pestaña del agente.",
+      "DESCRIPTION": "Prueba las llamadas de WhatsApp sin número: esta página hace de celular del cliente. Usa el camino real (webhook de Meta y servicios) y audio real con la pestaña del usuario.",
       "DISABLED": "La Meta simulada está apagada. Para usarla, el servidor debe tener WHATSAPP_CALLS_SIMULATOR=true (solo en desarrollo).",
       "NO_INBOXES": "No hay bandejas con llamadas activadas en esta cuenta. Activa la bandera whatsapp_calls y las llamadas de una bandeja de WhatsApp Cloud.",
       "INBOX": "Bandeja (número del negocio)",
@@ -34,7 +34,7 @@
         "REJECTED": "Rechazaste la llamada del negocio",
         "ALLOWED": "Permitiste que te llamen",
         "DENIED": "No permitiste que te llamen",
-        "AGENT_ANSWERED": "El agente contestó",
+        "AGENT_ANSWERED": "El usuario contestó",
         "AGENT_ENDED": "El negocio terminó la llamada ({reason})",
         "BUSINESS_CALLING": "El negocio te está llamando",
         "PERMISSION_ASKED": "El negocio pidió permiso para llamarte"
@@ -54,7 +54,7 @@
       "OPEN_CONVERSATION": "Ir a la conversación",
       "CALL_BUTTON": "Llamar",
       "CALL_BUTTON_HINT": "Llamar al cliente por WhatsApp desde el navegador",
-      "ALREADY_TAKEN": "Otro agente ya contestó la llamada.",
+      "ALREADY_TAKEN": "Otro usuario ya contestó la llamada.",
       "ANSWER_ERROR": "No se pudo contestar. Revisa que el navegador tenga permiso para usar el micrófono.",
       "BUSY": "Ya tienes una llamada en curso.",
       "CALL_ERROR": "No se pudo llamar. {message}",
@@ -105,7 +105,7 @@
         "ALL_ONLINE": "A todos los en línea de la bandeja (recepción)"
       },
       "RINGTONE_TITLE": "Tono del timbre",
-      "RINGTONE_HINT": "Lo que oyen los agentes cuando entra una llamada. Son tonos propios: el tono real de WhatsApp no se puede usar.",
+      "RINGTONE_HINT": "Lo que oyen los usuarios cuando entra una llamada. Son tonos propios: el tono real de WhatsApp no se puede usar.",
       "RINGTONE_PLAY": "Escuchar",
       "RINGTONE_STOP": "Detener",
       "RINGTONE": {
@@ -117,11 +117,11 @@
       "PERMISSION_TITLE": "Mensaje para pedir permiso",
       "PERMISSION_HINT": "WhatsApp pide permiso del cliente antes de que le llames. Se le envía este texto con el botón «Permitir llamadas» (máximo 1 vez al día y 2 por semana).",
       "RECORDING_TITLE": "Grabar las llamadas",
-      "RECORDING_HINT": "Se graba lo que dicen el agente y el cliente desde que contestan, y el audio queda en la burbuja de la llamada. Se graba en el navegador del agente: si cierra la pestaña a media llamada, esa grabación se pierde.",
+      "RECORDING_HINT": "Se graba lo que dicen el usuario y el cliente desde que contestan, y el audio queda en la burbuja de la llamada. Se graba en el navegador del usuario: si cierra la pestaña a media llamada, esa grabación se pierde.",
       "RECORDING_ON": "Se graban",
       "RECORDING_OFF": "No se graban",
       "RECORDING_NOTICE_LABEL": "Aviso al cliente",
-      "RECORDING_NOTICE_HINT": "Se le envía por WhatsApp en cuanto contesta. Déjalo vacío para usar el texto de ejemplo. Al agente se le muestra además un guion para decirlo en voz.",
+      "RECORDING_NOTICE_HINT": "Se le envía por WhatsApp en cuanto contesta. Déjalo vacío para usar el texto de ejemplo. Al usuario se le muestra además un guion para decirlo en voz.",
       "MISSED_TITLE": "Cuando nadie contesta",
       "MISSED_HINT": "Una llamada entrante que nadie toma en 60 segundos queda como «Perdida» y se avisa en la campana a quienes les sonó. Además puedes elegir qué más hacer:",
       "MISSED": {

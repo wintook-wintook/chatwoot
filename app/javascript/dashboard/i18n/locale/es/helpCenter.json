@@ -458,8 +458,8 @@
     },
     "UPGRADE_PAGE": {
       "TITLE": "Centro de Ayuda",
-      "DESCRIPTION": "Crea portales de autoservicio fáciles de usar. Ayuda a tus usuarios a acceder a los artículos y obtener soporte 24/7. Mejora tu suscripción para habilitar esta función.",
-      "SELF_HOSTED_DESCRIPTION": "Crea portales de autoservicio fáciles de usar. Ayuda a tus usuarios a acceder a los artículos y obtener soporte 24/7. Por favor, contacta a tu administrador para habilitar esta función.",
+      "DESCRIPTION": "Crea portales de autoservicio fáciles de usar. Ayuda a tus clientes a acceder a los artículos y obtener soporte 24/7. Mejora tu suscripción para habilitar esta función.",
+      "SELF_HOSTED_DESCRIPTION": "Crea portales de autoservicio fáciles de usar. Ayuda a tus clientes a acceder a los artículos y obtener soporte 24/7. Por favor, contacta a tu administrador para habilitar esta función.",
       "BUTTON": {
         "LEARN_MORE": "Aprender más",
         "UPGRADE": "Mejorar"

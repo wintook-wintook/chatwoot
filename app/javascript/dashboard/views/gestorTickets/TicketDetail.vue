@@ -33,6 +33,10 @@ import CommercialPanel from './commercial/CommercialPanel.vue';
 import OutcomeModal from './commercial/OutcomeModal.vue';
 import PostponeModal from './commercial/PostponeModal.vue';
 import WorkOrderPanel from './workOrder/WorkOrderPanel.vue'; // Plan-Clase-Orden-de-Trabajo F2a
+import ServiceReportPanel from './workOrder/ServiceReportPanel.vue'; // Plan-Trabajo-Campo R1
+import QuotesPanel from './quotes/QuotesPanel.vue'; // Plan-Catalogo-Cotizaciones
+import { backKind, backPath } from './backLink';
+import QuotesAPI from 'dashboard/api/quotes';
 import ProjectPanel from './project/ProjectPanel.vue'; // Plan-Clase-Proyecto P1
 import ProjectChildren from './project/ProjectChildren.vue'; // Plan-Clase-Proyecto P2
 import ProjectTimeline from './project/ProjectTimeline.vue'; // Plan-Clase-Proyecto P3
@@ -60,6 +64,8 @@ export default {
     OutcomeModal,
     PostponeModal,
     WorkOrderPanel,
+    ServiceReportPanel,
+    QuotesPanel,
     ProjectPanel,
     ProjectChildren,
     ProjectTimeline,
@@ -74,9 +80,14 @@ export default {
       // Antes se recordaba la última pestaña en localStorage y podías caer en
       // Tareas o Notas de otro ticket sin haber visto el estado del actual.
       activeDetailTab: 'journey',
+      // Descripción en la cabecera: un renglón; «Ver todo» la despliega ahí mismo.
+      descExpanded: false,
+      descOverflows: false,
       // Plan-Clase-Comercial F4 — cierre con resultado y posponer. Si vienen de
       // un salto de columna (moveToColumn), se completa ese mismo movimiento.
       showOutcomeModal: false,
+      quoteCount: 0, // Plan-Catalogo-Cotizaciones — contador de la pestaña
+      outcomeQuotes: [], // cotizaciones vivas de la oportunidad (¿cuál aceptó?)
       outcomePreset: null,
       outcomeColumnId: null,
       showPostponeModal: false,
@@ -459,6 +470,15 @@ export default {
           count: this.ticket?.work_order_items?.length || 0,
         });
       }
+      // Plan-Catalogo-Cotizaciones — sus cotizaciones (oportunidad) o las que
+      // salieron del caso (proyecto, orden, soporte).
+      if (this.ticket?.contact_id) {
+        tabs.push({
+          key: 'quotes',
+          label: this.$t('QUOTES.PANEL.TITLE'),
+          count: this.quoteCount,
+        });
+      }
       // @tickets_cases — el Resumen ya no muestra info (vive en el header); su
       // contenido real es la conversación, así que la pestaña se llama así.
       tabs.push({
@@ -677,17 +697,14 @@ export default {
         params: { caseClass: caseClassOfTicket(this.ticket) },
       };
     },
-    // Abierto desde otra pantalla (p. ej. Métricas) que mandó `?back=<ruta>`:
-    // «Volver» regresa ahí. Solo rutas internas de la app.
+    // Abierto desde otra pantalla (Métricas, Despacho, el contacto, una
+    // cotización…) que mandó `?back=<ruta>`: «Volver» regresa ahí (backLink.js).
     returnPath() {
-      const back = this.$route.query.back;
-      if (typeof back !== 'string') return null;
-      return back.startsWith('/app/') ? back : null;
+      return backPath(this.$route);
     },
     backLabel() {
-      if (this.returnPath && this.returnPath.split('?')[0].endsWith('/metrics'))
-        return this.$t('CASE_TICKETS.DETAIL.BACK_TO_METRICS');
-      return this.$t('CASE_TICKETS.DETAIL.BACK');
+      if (!this.returnPath) return this.$t('CASE_TICKETS.DETAIL.BACK');
+      return this.$t(`CASE_TICKETS.BACK_TO.${backKind(this.returnPath)}`);
     },
     canEscalate() {
       const t = this.ticket;
@@ -762,10 +779,14 @@ export default {
     ticketId() {
       // Cambiar de ticket es abrir un ticket: vuelve a Avance.
       this.activeDetailTab = 'journey';
+      this.descExpanded = false;
       this.loadTicket();
     },
     // @tickets_cases — cuando el ticket termina de cargar, si venimos de la
     // bandeja aplicamos la acción de notas pendiente (filtrar o componer).
+    'ticket.description': function onDescription() {
+      this.$nextTick(this.measureDescription);
+    },
     ticket(val) {
       // Plan-Casos E1 — Lista/Tablero/Métricas del menú abren la clase de este caso.
       if (val) {
@@ -792,11 +813,27 @@ export default {
     this.$store.dispatch('caseTickets/fetchTypes'); // F2b — tipos de orden de trabajo
     this.acquireLock();
     this.applyEntryQuery();
+    window.addEventListener('resize', this.measureDescription);
+  },
+  // La cabecera se dibuja después de cargar el caso: se vuelve a medir si la
+  // descripción cabe (solo cambia el valor si cambió, sin ciclo de renders).
+  updated() {
+    this.measureDescription();
   },
   beforeDestroy() {
     this.releaseLock();
+    window.removeEventListener('resize', this.measureDescription);
   },
   methods: {
+    // ¿La descripción no cabe en su renglón? (más ancha o con varios párrafos)
+    measureDescription() {
+      if (this.descExpanded) return;
+      const el = this.$refs.descriptionText;
+      const text = this.ticket?.description || '';
+      const overflows =
+        !!el && (el.scrollWidth > el.clientWidth || text.includes('\n'));
+      if (overflows !== this.descOverflows) this.descOverflows = overflows;
+    },
     // @tickets_cases — abre la ficha del contacto. Pide el contacto completo al
     // backend: el ticket solo trae nombre y correo, no el resto de sus datos.
     openContactPanel() {
@@ -1305,9 +1342,21 @@ export default {
       }
     },
     // ── Plan-Clase-Comercial F4 — oportunidades ──
-    openOutcome(outcome = null, columnId = null) {
+    async openOutcome(outcome = null, columnId = null) {
       this.outcomePreset = outcome;
       this.outcomeColumnId = columnId;
+      // Plan-Catalogo-Cotizaciones — con varias cotizaciones vivas, el modal
+      // pregunta cuál aceptó el cliente si se gana.
+      this.outcomeQuotes = [];
+      try {
+        const { data } = await QuotesAPI.list({
+          opportunity_id: this.ticketId,
+          status: 'open',
+        });
+        this.outcomeQuotes = data.quotes || [];
+      } catch {
+        this.outcomeQuotes = [];
+      }
       this.showOutcomeModal = true;
     },
     async confirmOutcome(payload) {
@@ -1708,9 +1757,10 @@ export default {
         this.applyEntryMeetings(q);
         return;
       }
-      // «Mi resumen» abre el caso directo en su pestaña Tareas.
-      if (q.tab === 'tasks') {
-        this.activeDetailTab = 'tasks';
+      // «Mi resumen» abre el caso directo en su pestaña Tareas; al volver de
+      // una cotización se regresa a la pestaña Cotizaciones.
+      if (q.tab === 'tasks' || q.tab === 'quotes') {
+        this.activeDetailTab = q.tab;
         return;
       }
       if (q.tab !== 'notes') return;
@@ -2098,26 +2148,33 @@ export default {
           >
             {{ ticket.title }}
           </h2>
-          <!-- @tickets_cases — descripción a UNA sola línea con "…". El enlace
-               "Ver" abre el modal del ticket, que es donde se leen título y
-               descripción completos: el tooltip nativo no se descubre solo y en
-               táctil no existe. Se oculta en cerrado, igual que el lápiz de
-               editar, para no ofrecer algo que el backend rechazaría. -->
-          <div class="flex items-baseline gap-1.5 min-w-0">
+          <!-- @tickets_cases — descripción a UNA sola línea con "…" para no
+               empujar las pestañas. Si no cabe, «Ver todo» la despliega a todo
+               lo ancho debajo de la cabecera (con sus saltos de línea y un alto
+               máximo con scroll) y «Ver menos» la regresa. Leer se puede
+               siempre, también cerrado; editar es solo el lápiz. -->
+          <div
+            v-if="ticket.description"
+            class="flex items-baseline min-w-0 gap-1.5"
+          >
             <p
-              v-if="ticket.description"
+              v-show="!descExpanded"
+              ref="descriptionText"
               class="m-0 text-sm truncate text-slate-600 dark:text-slate-300"
-              :title="ticket.description"
             >
               {{ ticket.description }}
             </p>
             <button
-              v-if="!isFrozen"
+              v-if="descOverflows"
               type="button"
-              class="flex-shrink-0 text-xs font-medium text-woot-600 dark:text-woot-300 hover:underline"
-              @click="showEditModal = true"
+              class="flex-shrink-0 p-0 text-xs font-medium text-woot-600 dark:text-woot-300 hover:underline"
+              @click="descExpanded = !descExpanded"
             >
-              {{ $t('CASE_TICKETS.DETAIL.VIEW_FULL') }}
+              {{
+                descExpanded
+                  ? $t('CASE_TICKETS.DETAIL.VIEW_LESS')
+                  : $t('CASE_TICKETS.DETAIL.VIEW_FULL')
+              }}
             </button>
           </div>
         </div>
@@ -2444,6 +2501,12 @@ export default {
           </div>
         </div>
       </div>
+      <p
+        v-if="ticket && ticket.description && descExpanded"
+        class="w-full p-3 m-0 mt-2 overflow-y-auto text-sm break-words rounded-md max-h-60 bg-slate-25 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+      >
+        <span class="whitespace-pre-line">{{ ticket.description }}</span>
+      </p>
     </div>
 
     <!-- Plan-Clase-Comercial F4 — franja «Datos comerciales» -->
@@ -3343,14 +3406,25 @@ export default {
       <div
         v-if="isWorkOrder"
         v-show="currentTabKey === 'concepts'"
-        class="flex-1 min-h-0 p-4 overflow-y-auto"
+        class="flex flex-col flex-1 min-h-0 gap-4 p-4 overflow-y-auto"
       >
+        <!-- Plan-Trabajo-Campo R1 — reporte de servicio (checklist, bitácora, horas) -->
+        <ServiceReportPanel :ticket="ticket" @updated="refetch" />
         <WorkOrderPanel
           :ticket="ticket"
           as-tab
           @updated="refetch"
           @schedule="scheduleVisit"
         />
+      </div>
+
+      <!-- ════ Pestaña Cotizaciones (Plan-Catalogo-Cotizaciones) ════ -->
+      <div
+        v-if="ticket && ticket.contact_id"
+        v-show="currentTabKey === 'quotes'"
+        class="flex-1 min-h-0 p-4 overflow-y-auto"
+      >
+        <QuotesPanel :ticket="ticket" @count="quoteCount = $event" />
       </div>
 
       <!-- ════ Pestaña Avance del ticket (2L) — 3 vistas conmutables ════ -->
@@ -4305,6 +4379,7 @@ export default {
       show
       :folio="ticket.folio || `#${ticket.id}`"
       :outcome="outcomePreset"
+      :quotes="outcomeQuotes"
       :is-saving="isTransitioning"
       @close="showOutcomeModal = false"
       @confirm="confirmOutcome"

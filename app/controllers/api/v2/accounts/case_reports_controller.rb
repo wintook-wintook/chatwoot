@@ -3,6 +3,8 @@
 # (CaseTicket) no tiene reporting_events ni comparte builders con Conversation.
 class Api::V2::Accounts::CaseReportsController < Api::V1::Accounts::BaseController
   SUMMARY_ACTIONS = %i[business_summary business_summary_ai business_summary_conversations_ai].freeze
+  # Plan-Roles-Permisos — de qué área es cada dashboard (el resto son de Ventas).
+  SERVICE_ACTIONS = %i[work_orders projects].freeze
 
   before_action :check_authorization, except: SUMMARY_ACTIONS
   # «Resumen del negocio»: administradores y los agentes que ellos autoricen.
@@ -111,14 +113,29 @@ class Api::V2::Accounts::CaseReportsController < Api::V1::Accounts::BaseControll
     params.permit(:case_type_id, :assignee_id, :team_id, :since, :until, :threshold_days,
                   :currency, :close, # Plan-Clase-Comercial — pestaña Embudo
                   :prev_since, :prev_until, :span) # Plan-Metricas-Comercial — comparación y Mes a mes
+          .merge(own_numbers_only)
   end
 
   def timeseries_params
     params.permit(:case_type_id, :assignee_id, :team_id, :since, :until, :group_by, :timezone_offset)
+          .merge(own_numbers_only)
   end
 
+  # Plan-Roles-Permisos — entra quien tiene Informes o el área del dashboard
+  # (Ventas o Servicio); el que solo ve lo suyo, ve solo sus números.
   def check_authorization
-    authorize :report, :view?
+    return if access_grant.allowed?(:reports) || access_grant.allowed?(dashboard_area)
+
+    render_access_denied
+  end
+
+  def dashboard_area
+    SERVICE_ACTIONS.include?(action_name.to_sym) ? :service : :sales
+  end
+
+  def own_numbers_only
+    sees_all = %w[all view].include?(access_grant.level(:reports)) || !access_grant.own?(dashboard_area)
+    sees_all ? {} : { assignee_id: current_user.id }
   end
 
   def check_summary_access

@@ -59,4 +59,17 @@ RSpec.describe 'Internal channel privacy', type: :request do
                                                           headers: admin.create_new_auth_token, as: :json
     expect(response.parsed_body.dig('payload', 'messages')).to be_blank
   end
+
+  # «Solo lo suyo» (Plan-Roles-Permisos) filtra por asignado; «Interno» no tiene asignado,
+  # así que sin «tomar sin asignar» desaparecería.
+  it 'keeps internal conversations for agents who only see their own', :aggregate_failures do
+    direct
+    seller = AccessRole.for_account(account).find { |r| r.key == 'seller' }
+    seller.update!(actions: seller.actions.merge('take_unassigned' => false))
+    account.account_users.find_by(user: ana).update!(access_role: seller)
+
+    expect(list_ids(ana)).to include(direct.display_id)
+    get "#{base}/#{direct.display_id}", headers: ana.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:success)
+  end
 end

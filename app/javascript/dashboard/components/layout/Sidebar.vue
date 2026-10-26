@@ -14,6 +14,11 @@ import {
   getUserPermissions,
   hasPermissions,
 } from '../../helper/permissionsHelper';
+import {
+  PRIMARY_AREAS,
+  canSeeArea,
+  getUserAccess,
+} from '../../helper/accessHelper';
 
 export default {
   components: {
@@ -160,7 +165,10 @@ export default {
       const menuItems = this.sideMenuConfig.primaryMenu.map(item =>
         this.resolveAlternative(item)
       );
+      // Plan-Roles-Permisos — las áreas que el rol no tiene no salen en el menú.
+      const access = getUserAccess(this.currentUser, this.accountId);
       return menuItems.filter(menuItem => {
+        if (!canSeeArea(access, PRIMARY_AREAS[menuItem.key])) return false;
         if (
           menuItem.key === 'contacts' &&
           this.currentRole === 'agent' &&

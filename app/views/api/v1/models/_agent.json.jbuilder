@@ -11,6 +11,11 @@ json.name resource.name
 json.role resource.role
 json.thumbnail resource.avatar_url
 json.custom_role_id resource.current_account_user&.custom_role_id if ChatwootApp.enterprise?
+# Plan-Roles-Permisos — el rol del agente (sin rol = Supervisor; el admin no lleva)
+if (account_user = resource.current_account_user) && !account_user.administrator?
+  json.access_role_key account_user.access_role&.key || AccessRole::DEFAULT_KEY
+end
+json.field_profile resource.current_account_user&.field_profile || {} # Plan-Trabajo-Campo R3
 # ================================================================================
 # proyecto@user_contact
 # ================================================================================

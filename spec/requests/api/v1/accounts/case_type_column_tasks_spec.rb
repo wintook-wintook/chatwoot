@@ -73,7 +73,7 @@ RSpec.describe 'Case Type Column Tasks API' do
 
   it 'un agente puede ver la plantilla pero no cambiarla' do
     json(:post, base, user: agent, params: { task: { title: 'X' } })
-    expect(response).to have_http_status(:unauthorized)
+    expect(response).to have_http_status(:forbidden) # Plan-Roles-Permisos: Ajustes cerrado por rol
 
     json(:get, base, user: agent)
     expect(response).to have_http_status(:ok)

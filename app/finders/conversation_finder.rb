@@ -90,7 +90,8 @@ class ConversationFinder
     # feat/chat_interno (plan v2): de «Interno» solo las conversaciones donde participa.
     @conversations = InternalChannel::Access.scope(@conversations, current_user, current_account)
     filter_by_conversation_type if params[:conversation_type]
-    @conversations
+    # Plan-Roles-Permisos — «solo lo suyo»: las suyas (y las sin asignar si puede tomarlas).
+    @conversations = Access::Grant.for(Current.account_user).conversations(@conversations)
   end
 
   def filter_by_assignee_type

@@ -1,18 +1,50 @@
+<!--
+  Página del contacto (reacomodo 2026-10-24): a lo ancho en vez de una columna.
+    · Encabezado: nombre, medios de contacto, responsable fijo, etiquetas y
+      acciones con nombre (ContactInfo con layout="header").
+    · Columna «Datos»: datos fijos y atributos personalizados, siempre a la vista.
+    · Pestañas: Resumen · Conversaciones · Casos · Tareas · Equipos · Notas (la
+      elegida queda en la dirección, ?tab=). Casos, Tareas y Equipos solo con
+      case_management (Equipos: Plan-Trabajo-Campo R4).
+  En pantallas angostas las tres partes quedan una debajo de otra.
+-->
 <script>
 import { mapGetters } from 'vuex';
-import ContactInfoPanel from '../components/ContactInfoPanel.vue';
+import ContactInfo from 'dashboard/routes/dashboard/conversation/contact/ContactInfo.vue';
+import ContactConversations from 'dashboard/routes/dashboard/conversation/ContactConversations.vue';
 import ContactNotes from 'dashboard/modules/notes/NotesOnContactPage.vue';
 import SettingsHeader from '../../settings/SettingsHeader.vue';
 import Spinner from 'shared/components/Spinner.vue';
-import Thumbnail from 'dashboard/components/widgets/Thumbnail.vue';
+import ContactDataColumn from '../components/ContactDataColumn.vue';
+import ContactSummaryTab from '../components/ContactSummaryTab.vue';
+import ContactCasesTab from '../components/ContactCasesTab.vue';
+import ContactTasksTab from '../components/ContactTasksTab.vue';
+import ContactAssetsTab from '../components/ContactAssetsTab.vue';
+import ContactQuotesTab from '../components/ContactQuotesTab.vue';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+
+const CASE_TABS = ['cases', 'quotes', 'tasks', 'assets'];
 
 export default {
   components: {
-    ContactInfoPanel,
+    ContactInfo,
+    ContactConversations,
     ContactNotes,
     SettingsHeader,
     Spinner,
-    Thumbnail,
+    ContactDataColumn,
+    ContactSummaryTab,
+    ContactCasesTab,
+    ContactTasksTab,
+    ContactAssetsTab,
+    ContactQuotesTab,
+  },
+  // Si se llegó desde otra pantalla de la app, «Regresar» vuelve ahí (con sus
+  // filtros); abierto directo (enlace, pestaña nueva) va a la lista de contactos.
+  beforeRouteEnter(to, from, next) {
+    next(vm => {
+      vm.cameFromApp = !!from.name;
+    });
   },
   props: {
     contactId: {
@@ -21,31 +53,58 @@ export default {
     },
   },
   data() {
-    return {
-      selectedTabIndex: 0,
-    };
+    return { cameFromApp: false };
   },
   computed: {
     ...mapGetters({
       uiFlags: 'contacts/getUIFlags',
+      accountId: 'getCurrentAccountId',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
     }),
+    hasCases() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.CASE_MANAGEMENT
+      );
+    },
     tabs() {
       return [
-        {
-          key: 0,
-          name: this.$t('NOTES.HEADER.TITLE'),
-        },
-      ];
+        'summary',
+        'conversations',
+        'cases',
+        'quotes',
+        'tasks',
+        'assets',
+        'notes',
+      ]
+        .filter(key => this.hasCases || !CASE_TABS.includes(key))
+        .map(key => ({
+          key,
+          name: this.$t(`CONTACT_PAGE.TABS.${key.toUpperCase()}`),
+        }));
     },
-    showEmptySearchResult() {
-      const hasEmptyResults = !!this.searchQuery && this.records.length === 0;
-      return hasEmptyResults;
+    activeTab() {
+      const { tab } = this.$route.query;
+      return this.tabs.some(t => t.key === tab) ? tab : 'summary';
+    },
+    activeTabIndex() {
+      return this.tabs.findIndex(t => t.key === this.activeTab);
     },
     contact() {
       return this.$store.getters['contacts/getContact'](this.contactId);
     },
+    numericContactId() {
+      return Number(this.contactId);
+    },
+    // '' = BackButton regresa con el historial.
     backUrl() {
+      if (this.cameFromApp) return '';
       return `/app/accounts/${this.$route.params.accountId}/contacts`;
+    },
+    backLabel() {
+      return this.cameFromApp
+        ? this.$t('CONTACT_PAGE.BACK')
+        : this.$t('CONTACT_PROFILE.BACK_BUTTON');
     },
   },
   mounted() {
@@ -53,7 +112,11 @@ export default {
   },
   methods: {
     onClickTabChange(index) {
-      this.selectedTabIndex = index;
+      this.openTab(this.tabs[index].key);
+    },
+    openTab(key) {
+      if (key === this.activeTab) return;
+      this.$router.replace({ query: { ...this.$route.query, tab: key } });
     },
     fetchContactDetails() {
       const { contactId: id } = this;
@@ -65,38 +128,43 @@ export default {
 
 <template>
   <div
-    class="flex justify-between flex-col h-full m-0 flex-1 bg-white dark:bg-slate-900"
+    class="flex flex-col flex-1 h-full m-0 overflow-hidden bg-white dark:bg-slate-900"
   >
     <SettingsHeader
       button-route="new"
-      :header-title="contact.name"
+      header-title=""
       show-back-button
-      :back-button-label="$t('CONTACT_PROFILE.BACK_BUTTON')"
+      :back-button-label="backLabel"
       :back-url="backUrl"
       :show-new-button="false"
-    >
-      <Thumbnail
-        v-if="contact.thumbnail"
-        :src="contact.thumbnail"
-        :username="contact.name"
-        size="32px"
-        class="mr-2 rtl:mr-0 rtl:ml-2"
-      />
-    </SettingsHeader>
+    />
 
-    <div v-if="uiFlags.isFetchingItem" class="text-center p-4 text-base h-full">
+    <div v-if="uiFlags.isFetchingItem" class="h-full p-4 text-base text-center">
       <Spinner size="" />
       <span>{{ $t('CONTACT_PROFILE.LOADING') }}</span>
     </div>
-    <div v-else-if="contact.id" class="overflow-hidden flex-1 min-w-0">
-      <div class="flex flex-wrap ml-auto mr-auto max-w-full h-full">
-        <ContactInfoPanel
-          :show-close-button="false"
-          :show-avatar="false"
-          :contact="contact"
-        />
-        <div class="w-3/4 h-full">
-          <woot-tabs :index="selectedTabIndex" @change="onClickTabChange">
+    <div
+      v-else-if="contact.id"
+      class="flex flex-col flex-1 min-h-0 overflow-y-auto md:overflow-hidden"
+    >
+      <ContactInfo
+        layout="header"
+        :contact="contact"
+        :show-close-button="false"
+        conversation-id=""
+      />
+      <div class="flex flex-col flex-1 min-h-0 md:flex-row">
+        <aside
+          class="flex-shrink-0 border-b md:w-80 md:overflow-y-auto md:border-b-0 ltr:md:border-r rtl:md:border-l border-slate-50 dark:border-slate-800/50"
+        >
+          <ContactDataColumn :contact="contact" />
+        </aside>
+        <main class="flex flex-col flex-1 min-w-0 min-h-0">
+          <woot-tabs
+            :index="activeTabIndex"
+            class="px-4"
+            @change="onClickTabChange"
+          >
             <woot-tabs-item
               v-for="tab in tabs"
               :key="tab.key"
@@ -105,14 +173,37 @@ export default {
             />
           </woot-tabs>
           <div
-            class="bg-slate-25 dark:bg-slate-800 h-[calc(100%-40px)] p-4 overflow-auto"
+            class="flex-1 p-4 md:overflow-y-auto bg-slate-25 dark:bg-slate-800"
           >
-            <ContactNotes
-              v-if="selectedTabIndex === 0"
-              :contact-id="Number(contactId)"
+            <ContactSummaryTab
+              v-if="activeTab === 'summary'"
+              :contact-id="numericContactId"
+              @openTab="openTab"
             />
+            <ContactConversations
+              v-else-if="activeTab === 'conversations'"
+              :contact-id="numericContactId"
+              conversation-id=""
+            />
+            <ContactCasesTab
+              v-else-if="activeTab === 'cases'"
+              :contact-id="numericContactId"
+            />
+            <ContactQuotesTab
+              v-else-if="activeTab === 'quotes'"
+              :contact-id="numericContactId"
+            />
+            <ContactTasksTab
+              v-else-if="activeTab === 'tasks'"
+              :contact-id="numericContactId"
+            />
+            <ContactAssetsTab
+              v-else-if="activeTab === 'assets'"
+              :contact-id="numericContactId"
+            />
+            <ContactNotes v-else :contact-id="numericContactId" />
           </div>
-        </div>
+        </main>
       </div>
     </div>
   </div>

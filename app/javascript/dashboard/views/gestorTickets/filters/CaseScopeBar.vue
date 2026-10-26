@@ -33,6 +33,10 @@ const STAGE_LABELS = {
   project: 'CASE_TICKETS.FILTERS.PROJECT_STAGES',
 };
 import { classI18nBase } from 'dashboard/helper/caseClasses';
+import {
+  allowedAssigneeTabs,
+  getUserAccess,
+} from 'dashboard/helper/accessHelper';
 
 const STATUSES = ['pending', 'closed', ''];
 
@@ -55,8 +59,15 @@ export default {
     i18nBase() {
       return classI18nBase(this.caseClass);
     },
+    // Plan-Roles-Permisos — con el área (Ventas o Servicio) en «solo lo suyo» no
+    // hay «Todas» (y «No asignadas» solo si el rol puede tomarlas).
     scopes() {
-      return SCOPES;
+      const access = getUserAccess(
+        this.$store.getters.getCurrentUser,
+        this.$route.params.accountId
+      );
+      const area = this.caseClass === 'commercial' ? 'sales' : 'service';
+      return allowedAssigneeTabs(access, area, SCOPES);
     },
     statuses() {
       return STATUSES;
@@ -65,7 +76,7 @@ export default {
       return COMMERCIAL_RESULTS;
     },
     scopeIndex() {
-      const i = SCOPES.indexOf(this.scope);
+      const i = this.scopes.indexOf(this.scope);
       return i < 0 ? 0 : i;
     },
     showStatus() {

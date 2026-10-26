@@ -16,6 +16,10 @@ class SearchService
 
   private
 
+  def access_grant
+    @access_grant ||= Access::Grant.for(Current.account_user)
+  end
+
   def accessable_inbox_ids
     @accessable_inbox_ids ||= @current_user.assigned_inboxes.pluck(:id)
   end
@@ -25,12 +29,13 @@ class SearchService
   end
 
   def filter_conversations
-    @conversations = current_account.conversations.where(inbox_id: accessable_inbox_ids)
-                                    .joins('INNER JOIN contacts ON conversations.contact_id = contacts.id')
-                                    .where("cast(conversations.display_id as text) ILIKE :search OR contacts.name ILIKE :search OR contacts.email
+    # Plan-Roles-Permisos — «solo lo suyo» también en la búsqueda.
+    @conversations = access_grant.conversations(current_account.conversations).where(inbox_id: accessable_inbox_ids)
+                                 .joins('INNER JOIN contacts ON conversations.contact_id = contacts.id')
+                                 .where("cast(conversations.display_id as text) ILIKE :search OR contacts.name ILIKE :search OR contacts.email
                             ILIKE :search OR contacts.phone_number ILIKE :search OR contacts.identifier ILIKE :search", search: "%#{search_query}%")
-                                    .order('conversations.created_at DESC')
-                                    .limit(10)
+                                 .order('conversations.created_at DESC')
+                                 .limit(10)
     # feat/chat_interno: de «Interno», solo donde participa.
     @conversations = InternalChannel::Access.scope(@conversations, @current_user, current_account)
   end
@@ -43,10 +48,14 @@ class SearchService
                                .limit(10)
     # feat/chat_interno: de «Interno», solo donde participa.
     @messages = InternalChannel::Access.scope(@messages, @current_user, current_account, column: :conversation_id)
+    # Plan-Roles-Permisos — «solo lo suyo»: solo mensajes de sus conversaciones.
+    return @messages unless access_grant.own?(:conversations)
+
+    @messages = @messages.where(conversation_id: access_grant.conversations(current_account.conversations).select(:id))
   end
 
   def filter_contacts
-    @contacts = current_account.contacts.where(
+    @contacts = access_grant.contacts(current_account.contacts).where(
       "name ILIKE :search OR email ILIKE :search OR phone_number
       ILIKE :search OR identifier ILIKE :search", search: "%#{search_query}%"
     ).resolved_contacts.order_on_last_activity_at('desc').limit(10)

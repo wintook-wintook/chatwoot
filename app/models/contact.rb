@@ -21,6 +21,7 @@
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #  account_id            :integer          not null
+#  owner_id              :bigint
 #
 # Indexes
 #
@@ -30,10 +31,15 @@
 #  index_contacts_on_lower_email_account_id              (lower((email)::text), account_id)
 #  index_contacts_on_name_email_phone_number_identifier  (name,email,phone_number,identifier) USING gin
 #  index_contacts_on_nonempty_fields                     (account_id,email,phone_number,identifier) WHERE (((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))
+#  index_contacts_on_owner_id                            (owner_id)
 #  index_contacts_on_phone_number_and_account_id         (phone_number,account_id)
 #  index_resolved_contact_account_id                     (account_id) WHERE (((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))
 #  uniq_email_per_account_contact                        (email,account_id) UNIQUE
 #  uniq_identifier_per_account_contact                   (identifier,account_id) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (owner_id => users.id) ON DELETE => nullify
 #
 
 # rubocop:enable Layout/LineLength
@@ -52,6 +58,13 @@ class Contact < ApplicationRecord
             format: { with: /\+[1-9]\d{1,14}\z/, message: I18n.t('errors.contacts.phone_number.invalid') }
 
   belongs_to :account
+  # Responsable fijo: sus conversaciones y sus casos nuevos van con esta persona
+  # (ver ContactOwnerAssignment). Se limpia si sale de la cuenta.
+  belongs_to :owner, class_name: 'User', optional: true
+  validate :owner_belongs_to_account, if: :will_save_change_to_owner_id?
+  has_many :quotes, dependent: :destroy_async # Plan-Catalogo-Cotizaciones
+  has_many :customer_assets, dependent: :destroy_async # Plan-Trabajo-Campo R4
+  has_many :maintenance_plans, dependent: :destroy_async # Plan-Trabajo-Campo R4
   # ================================================================================
   # proyecto@contact_tracking
   # ================================================================================
@@ -255,5 +268,11 @@ class Contact < ApplicationRecord
     new_labels.each do |label|
       Label.create!(name: label)
     end
+  end
+
+  def owner_belongs_to_account
+    return if owner_id.nil? || account.account_users.exists?(user_id: owner_id)
+
+    errors.add(:owner_id, 'no es un usuario de la cuenta')
   end
 end

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<%# Plan-Catalogo-Cotizaciones — documentos que ve el cliente por un enlace (cotización, reporte de servicio).
+    Plan-Trabajo-Campo R5: también el portal de la orden y la visita del técnico externo (content_for :hide_print). %>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= [content_for(:title), @account&.name].compact.join(' · ') %></title>
+  <meta name="robots" content="noindex" />
+  <%= csrf_meta_tags %>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print { .no-print { display: none !important; } body { background: #fff !important; } }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+  <header class="bg-white border-b border-slate-200 no-print">
+    <div class="flex items-center justify-between h-14 max-w-3xl px-4 mx-auto">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center justify-center font-bold text-white rounded-lg w-9 h-9 bg-indigo-600">
+          <%= @account&.name.to_s.first&.upcase %>
+        </div>
+        <span class="font-semibold"><%= @account&.name %></span>
+      </div>
+      <% unless content_for?(:hide_print) %>
+        <button type="button" onclick="window.print()" class="px-3 py-1.5 text-sm rounded-md border border-slate-300 hover:bg-slate-50">
+          <%= t('public_quotes.download_pdf') %>
+        </button>
+      <% end %>
+    </div>
+  </header>
+  <main class="max-w-3xl px-4 py-6 mx-auto">
+    <%= yield %>
+  </main>
+</body>
+</html>

@@ -2,7 +2,7 @@
   "CANNED_MGMT": {
     "HEADER": "Respuestas Predefinidas",
     "LEARN_MORE": "Aprende más sobre las respuestas predefinidas",
-    "DESCRIPTION": "Las Respuestas Predefinidas son plantillas de respuesta preescritas que te ayudan a responder rápidamente a una conversación. Los agentes pueden escribir el carácter '/' seguido del código corto para insertar una respuesta predefinida durante una conversación.",
+    "DESCRIPTION": "Las Respuestas Predefinidas son plantillas de respuesta preescritas que te ayudan a responder rápidamente a una conversación. Los usuarios pueden escribir el carácter '/' seguido del código corto para insertar una respuesta predefinida durante una conversación.",
     "HEADER_BTN_TXT": "Agregar respuesta predefinida",
     "LOADING": "Cargando respuestas predefinidas...",
     "SEARCH_404": "No hay elementos que coincidan con esta consulta.",

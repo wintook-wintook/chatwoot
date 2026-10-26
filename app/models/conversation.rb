@@ -74,6 +74,7 @@ class Conversation < ApplicationRecord
   include PushDataHelper
   include ConversationMuteHelpers
   include KanbanFunnelTrackable # Embudo de contactos — bitácora de movimientos del tablero
+  include ContactOwnerAssignment # Responsable fijo del contacto (después de AssignmentHandler)
 
   # TikTok da 48 h para responder, el doble que la ventana estándar de Meta.
   TIKTOK_MESSAGING_WINDOW_HOURS = 48

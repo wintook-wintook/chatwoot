@@ -69,6 +69,52 @@ export const routes = [
     component: () => import('../../../views/gestorTickets/ClassMetrics.vue'),
     props: classProps,
   },
+  // Plan-Trabajo-Campo R3 — Servicio › Despacho.
+  {
+    path: frontendURL('accounts/:accountId/tickets/dispatch'),
+    name: 'gestorTickets_dispatch',
+    meta: AGENT,
+    component: () =>
+      import('../../../views/gestorTickets/dispatch/Dispatch.vue'),
+  },
+  // Plan-Trabajo-Campo R4 — Servicio › Mantenimientos.
+  {
+    path: frontendURL('accounts/:accountId/tickets/maintenance'),
+    name: 'gestorTickets_maintenance',
+    meta: AGENT,
+    component: () =>
+      import('../../../views/gestorTickets/maintenance/MaintenancePlans.vue'),
+  },
+  // Plan-Catalogo-Cotizaciones — Ventas › Cotizaciones (lista, nueva y editor).
+  {
+    path: frontendURL('accounts/:accountId/tickets/quotes'),
+    name: 'gestorTickets_quotes',
+    meta: AGENT,
+    component: () =>
+      import('../../../views/gestorTickets/quotes/QuotesList.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/tickets/quotes/new'),
+    name: 'gestorTickets_quote_new',
+    meta: AGENT,
+    component: () =>
+      import('../../../views/gestorTickets/quotes/QuoteEditor.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/tickets/quotes/:id'),
+    name: 'gestorTickets_quote',
+    meta: AGENT,
+    component: () =>
+      import('../../../views/gestorTickets/quotes/QuoteEditor.vue'),
+    props: route => ({ quoteId: Number(route.params.id) }),
+  },
+  // Plan-Catalogo-Cotizaciones — Ventas › Catálogo.
+  {
+    path: frontendURL('accounts/:accountId/tickets/catalog'),
+    name: 'gestorTickets_catalog',
+    meta: AGENT,
+    component: () => import('../../../views/gestorTickets/catalog/Catalog.vue'),
+  },
   {
     path: frontendURL('accounts/:accountId/tickets/tasks'),
     name: 'gestorTickets_tasks',

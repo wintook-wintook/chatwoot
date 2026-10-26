@@ -19,6 +19,9 @@ import { routes as whatsappCallsRoutes } from './whatsappCalls/routes'; // diag/
 const AppContainer = () => import('./Dashboard.vue');
 const Captain = () => import('./Captain.vue');
 const Suspended = () => import('./suspended/Index.vue');
+// Plan-Trabajo-Campo R2 — portal del técnico (celular, sin el menú).
+const FieldApp = () => import('../../views/field/FieldApp.vue');
+const FIELD_META = { permissions: ['administrator', 'agent', 'custom_role'] };
 
 export default {
   routes: [
@@ -50,6 +53,18 @@ export default {
         ...contactTrackingsRoutes,
         ...whatsappCallsRoutes,
       ],
+    },
+    {
+      path: frontendURL('accounts/:accountId/campo'),
+      name: 'field_route',
+      meta: FIELD_META,
+      component: FieldApp,
+    },
+    {
+      path: frontendURL('accounts/:accountId/campo/visita/:ticketId'),
+      name: 'field_visit',
+      meta: FIELD_META,
+      component: FieldApp,
     },
     {
       path: frontendURL('accounts/:accountId/suspended'),
