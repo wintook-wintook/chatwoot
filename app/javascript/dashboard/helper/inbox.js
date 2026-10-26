@@ -90,6 +90,9 @@ export const getInboxClassByType = (type, phoneNumber) => {
     case INBOX_TYPES.LINE:
       return 'brand-line';
 
+    case INBOX_TYPES.INTERNAL: // feat/chat_interno
+      return 'chat-multiple';
+
     case INBOX_TYPES.TIKTOK:
       return 'brand-tiktok';
 

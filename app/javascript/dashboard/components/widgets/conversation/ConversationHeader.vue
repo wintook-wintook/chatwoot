@@ -1,5 +1,6 @@
 <script>
 import { mapGetters } from 'vuex';
+import { internalDisplay } from 'dashboard/helper/internalChat'; // feat/chat_interno
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import BackButton from '../BackButton.vue';
 import inboxMixin from 'shared/mixins/inboxMixin';
@@ -87,6 +88,14 @@ export default {
       return this.chatMetadata.hmac_verified;
     },
     currentContact() {
+      // feat/chat_interno (plan v2): en «Interno», la sala o el otro agente.
+      const internal = internalDisplay(this.chat, {
+        currentUserId: this.$store.getters.getCurrentUserID,
+        agents: this.$store.getters['agents/getAgents'],
+        teams: this.$store.getters['teams/getTeams'],
+        generalLabel: this.$t('INTERNAL_CHAT.GENERAL'),
+      });
+      if (internal) return internal;
       return this.$store.getters['contacts/getContact'](
         this.chat.meta.sender.id
       );

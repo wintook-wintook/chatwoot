@@ -60,10 +60,9 @@ class AccountUser < ApplicationRecord
     setting.save!
   end
 
-  # feat/chat_interno: quien sale de la cuenta sale de todas sus salas en ella.
+  # feat/chat_interno: quien sale de la cuenta sale de sus conversaciones en «Interno».
   def remove_internal_chat_memberships
-    InternalChatMember.where(user_id: user_id, room_id: account.internal_chat_rooms.select(:id)).delete_all
-    inbox = account.internal_channel&.inbox # plan v2: y de sus conversaciones en «Interno»
+    inbox = account.internal_channel&.inbox
     ConversationParticipant.where(user_id: user_id, conversation_id: inbox.conversations.select(:id)).delete_all if inbox
   end
 

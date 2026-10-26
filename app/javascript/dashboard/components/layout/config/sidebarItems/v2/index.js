@@ -267,12 +267,7 @@ const conversationsV2 = accountId => {
   const base = conversations(accountId);
   return {
     ...base,
-    routes: [
-      ...base.routes,
-      'inbox_view',
-      'inbox_view_conversation',
-      'internal_chat', // feat/chat_interno: vive dentro de Conversaciones
-    ],
+    routes: [...base.routes, 'inbox_view', 'inbox_view_conversation'],
     menuItems: [
       ...base.menuItems,
       {

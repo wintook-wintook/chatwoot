@@ -38,12 +38,6 @@ class ActionCableConnector extends BaseActionCableConnector {
       'voice_call.outbound_connected': this.onVoiceCall('onOutboundConnected'),
       'voice_call.outbound_accepted': this.onVoiceCall('onOutboundAccepted'),
       'voice_call.permission_granted': this.onVoiceCall('onPermissionGranted'),
-      // feat/chat_interno (F2): chat entre agentes
-      'internal_chat.message.created': this.onInternalChat(
-        'messageCreated',
-        'message'
-      ),
-      'internal_chat.room.updated': this.onInternalChat('roomUpdated', 'room'),
     };
   }
 
@@ -65,12 +59,6 @@ class ActionCableConnector extends BaseActionCableConnector {
   onVoiceCall = action => data => {
     if (!this.isAValidEvent(data)) return;
     this.app.$store.dispatch(`whatsappCalls/${action}`, data);
-  };
-
-  // feat/chat_interno: solo los de la cuenta abierta; cada evento a su acción del store.
-  onInternalChat = (action, key) => data => {
-    if (!this.isAValidEvent(data)) return;
-    this.app.$store.dispatch(`internalChat/${action}`, data[key]);
   };
 
   onMessageUpdated = data => {

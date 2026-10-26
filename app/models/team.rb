@@ -22,7 +22,6 @@ class Team < ApplicationRecord
   has_many :team_members, dependent: :destroy_async
   has_many :members, through: :team_members, source: :user
   has_many :conversations, dependent: :nullify
-  has_one :internal_chat_room, dependent: :destroy # feat/chat_interno: la sala del equipo
   # feat/chat_interno (plan v2): cada equipo tiene su conversación en «Interno».
   after_create_commit -> { InternalChannel::Setup.new(account).sync_team(self) }
   after_destroy_commit :remove_internal_conversation

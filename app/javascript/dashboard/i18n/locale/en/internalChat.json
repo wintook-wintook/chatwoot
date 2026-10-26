@@ -1,18 +1,6 @@
 {
   "INTERNAL_CHAT": {
-    "TITLE": "Team chat",
     "GENERAL": "general",
-    "PICK_ROOM": "Pick a chat from the list or start a new one with +.",
-    "DISABLED": "Team chat is not enabled for this account.",
-    "LOAD_ERROR": "Could not load the chat. Try again.",
-    "EVERYONE": "Every agent in the account",
-    "LOAD_OLDER": "Load older messages",
-    "NO_MESSAGES": "No messages yet. Write the first one.",
-    "PLACEHOLDER": "Write a message… (Enter to send, Shift+Enter for a new line)",
-    "SEND": "Send",
-    "SEND_ERROR": "Could not send the message.",
-    "DELETED": "Message deleted",
-    "YOU": "You",
     "NEW_ROOM": {
       "TITLE": "New chat",
       "DESCRIPTION": "Pick the agent you want to talk to. Groups are the account teams.",
@@ -21,9 +9,6 @@
       "CREATE": "Open chat",
       "CANCEL": "Cancel",
       "ERROR": "Could not open the chat."
-    },
-    "TEAM_MEMBERS": "Team · {count} members",
-    "EMPTY_LIST": "There are no chats in this tab.",
-    "DIRECT": "Direct chat"
+    }
   }
 }

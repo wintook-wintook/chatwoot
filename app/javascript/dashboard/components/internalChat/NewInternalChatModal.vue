@@ -1,12 +1,13 @@
 <script>
-// feat/chat_interno (F3) — NUEVO CHAT DIRECTO
-// Se elige un agente de la cuenta; si ya existe el chat con él, se abre el mismo.
+// feat/chat_interno (plan v2) — NUEVO CHAT DIRECTO EN «INTERNO»
+// Se elige un agente de la cuenta; si ya existe la conversación con él, se abre la misma.
 // Los grupos son los equipos de Chatwoot: no se crean aquí (Ajustes → Equipos).
 // Mismo molde que los modales nativos (settings/agents/AddAgent.vue): lo envuelve
-// <woot-modal> en Index.vue y el relleno del <form> lo pone Modal.vue.
+// <woot-modal> en ChatList.vue y el relleno del <form> lo pone Modal.vue.
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import Thumbnail from 'dashboard/components/widgets/Thumbnail.vue';
+import InternalChannelAPI from 'dashboard/api/internalChannel';
 
 export default {
   components: { Thumbnail },
@@ -38,11 +39,8 @@ export default {
       if (!this.canCreate) return;
       this.saving = true;
       try {
-        const room = await this.$store.dispatch(
-          'internalChat/openDirect',
-          this.agent.id
-        );
-        this.$emit('created', room);
+        const { data } = await InternalChannelAPI.openDirect(this.agent.id);
+        this.$emit('created', data);
       } catch (error) {
         useAlert(this.$t('INTERNAL_CHAT.NEW_ROOM.ERROR'));
       } finally {

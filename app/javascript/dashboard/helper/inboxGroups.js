@@ -19,7 +19,7 @@ export const INBOX_GROUPS = Object.freeze({
 });
 
 // Orden por omisión: Interno (chat entre agentes), WhatsApp, Telegram, Correo, Meta y
-// después todos los demás. «Interno» no agrupa bandejas: lo llena Secondary.vue.
+// después todos los demás. «Interno» es la bandeja del chat entre agentes.
 export const DEFAULT_INBOX_GROUP_ORDER = Object.freeze([
   INBOX_GROUPS.INTERNAL,
   INBOX_GROUPS.WHATSAPP,
@@ -41,6 +41,7 @@ const GROUP_BY_TYPE = {
   [INBOX_TYPES.INSTAGRAM]: INBOX_GROUPS.META,
   [INBOX_TYPES.WEB]: INBOX_GROUPS.WEB,
   [INBOX_TYPES.TIKTOK]: INBOX_GROUPS.TIKTOK,
+  [INBOX_TYPES.INTERNAL]: INBOX_GROUPS.INTERNAL, // feat/chat_interno: la bandeja «Interno»
 };
 
 // Twilio es WhatsApp o SMS según su número («whatsapp:+52…»), igual que el icono.

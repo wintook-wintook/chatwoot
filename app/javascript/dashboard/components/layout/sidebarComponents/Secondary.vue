@@ -12,7 +12,6 @@ import { routesWithPermissions } from '../../../routes';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import {
   UI_SETTINGS_KEY,
-  INBOX_GROUPS,
   groupInboxes,
   groupOrderFromUISettings,
   inboxGroupFor,
@@ -20,7 +19,6 @@ import {
   toggleOpenGroup,
 } from 'dashboard/helper/inboxGroups'; // feat/bandejas_por_tipo
 import InboxGroupsOrderModal from './InboxGroupsOrderModal.vue';
-import { roomTitle } from '../../../views/internalChat/roomHelpers'; // feat/chat_interno
 
 export default {
   components: {
@@ -104,7 +102,6 @@ export default {
             (item.children || []).some(child => child.toStateName === name)
         );
         if (group) this.openGroup = group.toState;
-        this.openGroupOfCurrentInbox(); // feat/chat_interno: en una sala, abre «Interno»
       },
     },
     menuConfig: {
@@ -124,9 +121,6 @@ export default {
     ...mapGetters({
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
       currentRole: 'getCurrentRole',
-      getAccount: 'accounts/getAccount', // feat/chat_interno
-      currentUserId: 'getCurrentUserID',
-      internalChatRooms: 'internalChat/rooms',
     }),
     hasSecondaryMenu() {
       return this.menuConfig.menuItems && this.menuConfig.menuItems.length;
@@ -181,40 +175,16 @@ export default {
     },
     inboxGroupCounts() {
       return Object.fromEntries(
-        this.menuGroups.map(group => [
-          group.key,
-          group.internal ? group.rooms.length : group.inboxes.length,
-        ])
+        this.inboxGroups.map(group => [group.key, group.inboxes.length])
       );
     },
     effectiveOpenInboxGroup() {
-      return resolveOpenGroup(this.openInboxGroup, this.menuGroups);
+      return resolveOpenGroup(this.openInboxGroup, this.inboxGroups);
     },
     canSeeInboxes() {
       return !(
         this.hideAllInboxForAgents && this.currentRole !== 'administrator'
       );
-    },
-    // feat/chat_interno: las salas del chat interno, como un grupo más («Interno»).
-    internalChatEnabled() {
-      const account = this.getAccount(this.accountId);
-      return Boolean(account && account.internal_chat_enabled);
-    },
-    // Grupos del menú en el orden del agente: los de bandejas y, si está encendido, Interno.
-    menuGroups() {
-      const byKey = Object.fromEntries(
-        this.inboxGroups.map(group => [group.key, group])
-      );
-      return this.inboxGroupOrder
-        .map(key => {
-          if (key === INBOX_GROUPS.INTERNAL) {
-            return this.internalChatEnabled
-              ? { key, internal: true, rooms: this.internalChatRooms }
-              : null;
-          }
-          return byKey[key] || null;
-        })
-        .filter(Boolean);
     },
     inboxSections() {
       if (!this.canSeeInboxes) return [];
@@ -226,20 +196,19 @@ export default {
         newLinkTag: 'NEW_INBOX',
         newLinkRouteName: 'settings_inbox_new',
       };
-      const fallback = {
-        ...base,
-        label: 'INBOXES',
-        key: 'inbox',
-        newLink: this.showNewLink(FEATURE_FLAGS.INBOX_MANAGEMENT),
-        children: [],
-      };
       // Sin bandejas queda la carpeta de siempre, para no perder «Nueva bandeja».
       if (!this.inboxGroups.length) {
-        return [...this.menuGroups.map(this.internalSection), fallback];
+        return [
+          {
+            ...base,
+            label: 'INBOXES',
+            key: 'inbox',
+            newLink: this.showNewLink(FEATURE_FLAGS.INBOX_MANAGEMENT),
+            children: [],
+          },
+        ];
       }
-      const lastInboxKey = this.inboxGroups.length
-        ? this.menuGroups.filter(group => !group.internal).slice(-1)[0].key
-        : null;
+      const last = this.inboxGroups.length - 1;
       // Título «Bandejas de entrada» arriba de los grupos (solo texto, no se pliega).
       const heading = {
         icon: 'folder',
@@ -247,33 +216,27 @@ export default {
         key: 'inbox_heading',
         children: [],
       };
-      const groups = this.menuGroups.map(group => {
-        if (group.internal) return this.internalSection(group);
-        return {
-          ...base,
-          nested: true,
-          label: `INBOX_GROUPS.${group.key.toUpperCase()}`,
-          key: `inbox_group_${group.key}`,
-          foldKey: group.key,
-          folded: group.key !== this.effectiveOpenInboxGroup,
-          labelCount: group.inboxes.length,
-          // «Nueva bandeja» una sola vez, al final del último grupo de bandejas.
-          newLink:
-            group.key === lastInboxKey &&
-            this.showNewLink(FEATURE_FLAGS.INBOX_MANAGEMENT),
-          children: group.inboxes.map(inbox => ({
-            id: inbox.id,
-            label: inbox.name,
-            truncateLabel: true,
-            toState: frontendURL(
-              `accounts/${this.accountId}/inbox/${inbox.id}`
-            ),
-            type: inbox.channel_type,
-            phoneNumber: inbox.phone_number,
-            reauthorizationRequired: inbox.reauthorization_required,
-          })),
-        };
-      });
+      const groups = this.inboxGroups.map((group, index) => ({
+        ...base,
+        nested: true,
+        label: `INBOX_GROUPS.${group.key.toUpperCase()}`,
+        key: `inbox_group_${group.key}`,
+        foldKey: group.key,
+        folded: group.key !== this.effectiveOpenInboxGroup,
+        labelCount: group.inboxes.length,
+        // «Nueva bandeja» una sola vez, al final del último grupo.
+        newLink:
+          index === last && this.showNewLink(FEATURE_FLAGS.INBOX_MANAGEMENT),
+        children: group.inboxes.map(inbox => ({
+          id: inbox.id,
+          label: inbox.name,
+          truncateLabel: true,
+          toState: frontendURL(`accounts/${this.accountId}/inbox/${inbox.id}`),
+          type: inbox.channel_type,
+          phoneNumber: inbox.phone_number,
+          reauthorizationRequired: inbox.reauthorization_required,
+        })),
+      }));
       return [heading, ...groups];
     },
     // Justo debajo de «No Atendidas»: abre el modal para ordenar los grupos.
@@ -541,46 +504,9 @@ export default {
       this.openInboxGroup = toggleOpenGroup(this.effectiveOpenInboxGroup, key);
     },
     openGroupOfCurrentInbox() {
-      if (this.$route.name === 'internal_chat') {
-        this.openInboxGroup = INBOX_GROUPS.INTERNAL;
-        return;
-      }
       const inboxId = Number(this.$route.params.inbox_id);
       const inbox = inboxId && this.inboxes.find(item => item.id === inboxId);
       if (inbox) this.openInboxGroup = inboxGroupFor(inbox);
-    },
-    // feat/chat_interno — el grupo «Interno»: una sala por renglón con sus no leídos y
-    // «Nuevo chat» al final (abre el modal en la pantalla del chat).
-    internalSection(group) {
-      const url = path => frontendURL(`accounts/${this.accountId}/${path}`);
-      const rooms = group.rooms.map(room => ({
-        id: `internal_chat_${room.id}`,
-        label: roomTitle(room, this.currentUserId, 'general'),
-        truncateLabel: true,
-        icon: room.kind === 'direct' ? 'person' : 'number-symbol',
-        toState: url(`internal-chat/${room.id}`),
-        count: room.unread_count ? room.unread_count : undefined,
-      }));
-      return {
-        icon: 'chat-multiple',
-        hasSubMenu: true,
-        nested: true,
-        label: 'INBOX_GROUPS.INTERNAL',
-        key: 'inbox_group_internal',
-        foldKey: group.key,
-        folded: group.key !== this.effectiveOpenInboxGroup,
-        labelCount: group.rooms.length,
-        children: [
-          ...rooms,
-          {
-            id: 'internal_chat_new',
-            label: 'INTERNAL_CHAT_NEW',
-            translate: true,
-            icon: 'add',
-            toState: url('internal-chat?new=1'),
-          },
-        ],
-      };
     },
     onMenuAction(action) {
       if (action === 'sortInboxes') this.showInboxOrderModal = true;

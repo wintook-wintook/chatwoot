@@ -1,18 +1,6 @@
 {
   "INTERNAL_CHAT": {
-    "TITLE": "Chat interno",
     "GENERAL": "general",
-    "PICK_ROOM": "Elige un chat de la lista o empieza uno nuevo con +.",
-    "DISABLED": "El chat interno no está activo en esta cuenta.",
-    "LOAD_ERROR": "No se pudo cargar el chat. Intenta otra vez.",
-    "EVERYONE": "Todos los agentes de la cuenta",
-    "LOAD_OLDER": "Cargar mensajes anteriores",
-    "NO_MESSAGES": "Todavía no hay mensajes. Escribe el primero.",
-    "PLACEHOLDER": "Escribe un mensaje… (Enter para enviar, Shift+Enter para otra línea)",
-    "SEND": "Enviar",
-    "SEND_ERROR": "No se pudo enviar el mensaje.",
-    "DELETED": "Mensaje borrado",
-    "YOU": "Tú",
     "NEW_ROOM": {
       "TITLE": "Nuevo chat",
       "DESCRIPTION": "Elige con qué agente quieres hablar. Los grupos son los equipos de la cuenta.",
@@ -21,9 +9,6 @@
       "CREATE": "Abrir chat",
       "CANCEL": "Cancelar",
       "ERROR": "No se pudo abrir el chat."
-    },
-    "TEAM_MEMBERS": "Equipo · {count} miembros",
-    "EMPTY_LIST": "No hay chats en esta pestaña.",
-    "DIRECT": "Chat directo"
+    }
   }
 }

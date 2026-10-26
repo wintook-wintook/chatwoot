@@ -151,13 +151,6 @@ Rails.application.routes.draw do
           resource :internal_channel, only: [:show] do
             post :directs
           end
-          # feat/chat_interno — chat entre los agentes de la cuenta
-          namespace :internal_chat do
-            resources :rooms, only: [:index, :show, :create] do
-              post :read, on: :member
-              resources :messages, only: [:index, :create]
-            end
-          end
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
             post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada

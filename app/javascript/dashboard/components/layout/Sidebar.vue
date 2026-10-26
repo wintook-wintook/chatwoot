@@ -1,4 +1,5 @@
 <script>
+import InternalChannelAPI from 'dashboard/api/internalChannel'; // feat/chat_interno
 // KANBAN0725
 import { mapGetters } from 'vuex';
 import { getSidebarItems } from './config/default-sidebar';
@@ -261,11 +262,19 @@ export default {
       },
       immediate: true,
     },
-    // feat/chat_interno: las salas se cargan al entrar para el grupo «Interno» del menú.
+    // feat/chat_interno (plan v2): al entrar se deja lista la bandeja «Interno» (la crea la
+    // primera vez y sincroniza equipos); si es nueva, se recargan las bandejas del menú.
     internalChatEnabled: {
       handler(enabled) {
-        if (enabled)
-          this.$store.dispatch('internalChat/fetchRooms').catch(() => {});
+        if (!enabled) return;
+        InternalChannelAPI.ensure()
+          .then(({ data }) => {
+            const known = this.inboxes.some(
+              inbox => inbox.id === data.inbox_id
+            );
+            if (!known) this.$store.dispatch('inboxes/get');
+          })
+          .catch(() => {});
       },
       immediate: true,
     },

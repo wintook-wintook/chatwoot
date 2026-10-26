@@ -15,7 +15,6 @@ import { routes as gestorTicketsRoutes } from './gestorTickets/routes';
 // proyecto@contact_tracking — Dashboard de Seguimientos
 import { routes as contactTrackingsRoutes } from './contactTrackings/routes';
 import { routes as whatsappCallsRoutes } from './whatsappCalls/routes'; // diag/llamadas_whatsapp
-import { routes as internalChatRoutes } from './internalChat/routes'; // feat/chat_interno
 
 const AppContainer = () => import('./Dashboard.vue');
 const Captain = () => import('./Captain.vue');
@@ -50,7 +49,6 @@ export default {
         // proyecto@contact_tracking — Dashboard de Seguimientos
         ...contactTrackingsRoutes,
         ...whatsappCallsRoutes,
-        ...internalChatRoutes,
       ],
     },
     {
