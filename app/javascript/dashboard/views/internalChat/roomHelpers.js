@@ -10,6 +10,6 @@ export const memberName = member =>
 export const roomTitle = (room, meId, generalLabel = 'general') => {
   if (!room) return '';
   if (room.kind === 'general') return `# ${generalLabel}`;
-  if (room.kind === 'group') return `# ${room.name}`;
+  if (room.kind === 'team') return `# ${room.name}`;
   return memberName(otherMember(room, meId));
 };

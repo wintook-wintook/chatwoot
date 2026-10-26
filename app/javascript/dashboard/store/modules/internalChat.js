@@ -3,8 +3,8 @@
 // rooms              las salas del agente (con unread_count y last_message)
 // messages[roomId]   los mensajes cargados de cada sala, del más viejo al más nuevo
 // activeRoomId       la sala abierta en pantalla: lo que llega ahí no cuenta como sin leer
-// Los eventos de tiempo real (helper/actionCable.js) entran por messageCreated,
-// roomUpdated y roomRemoved. Plan: docs/chat_interno_plan.md §5
+// Los eventos de tiempo real (helper/actionCable.js) entran por messageCreated y
+// roomUpdated. Plan: docs/chat_interno_plan.md §5
 // ============================================================================
 import InternalChatAPI from 'dashboard/api/internalChat';
 
@@ -158,23 +158,6 @@ export const actions = {
     commit('UPSERT_ROOM', data);
     return data;
   },
-  async createGroup({ commit }, { name, userIds }) {
-    const { data } = await InternalChatAPI.createGroup(name, userIds);
-    commit('UPSERT_ROOM', data);
-    return data;
-  },
-  async rename({ commit }, { roomId, name }) {
-    const { data } = await InternalChatAPI.rename(roomId, name);
-    commit('UPSERT_ROOM', data);
-  },
-  async addMembers({ commit }, { roomId, userIds }) {
-    const { data } = await InternalChatAPI.addMembers(roomId, userIds);
-    commit('UPSERT_ROOM', data);
-  },
-  async leaveRoom({ commit, rootGetters }, roomId) {
-    await InternalChatAPI.removeMember(roomId, rootGetters.getCurrentUserID);
-    commit('REMOVE_ROOM', roomId);
-  },
 
   // ── Tiempo real (helper/actionCable.js) ──────────────────────────────────
   messageCreated({ commit, dispatch, state: $state, rootGetters }, message) {
@@ -194,9 +177,6 @@ export const actions = {
   },
   roomUpdated({ commit }, room) {
     commit('UPSERT_ROOM', room);
-  },
-  roomRemoved({ commit }, roomId) {
-    commit('REMOVE_ROOM', roomId);
   },
 };
 

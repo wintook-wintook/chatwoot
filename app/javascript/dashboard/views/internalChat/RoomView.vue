@@ -50,12 +50,9 @@ export default {
         const other = otherMember(this.room, this.currentUserId);
         return other ? other.availability_status || '' : '';
       }
-      return this.$t('INTERNAL_CHAT.MEMBERS', {
+      return this.$t('INTERNAL_CHAT.TEAM_MEMBERS', {
         count: (this.room.member_ids || []).length,
       });
-    },
-    isGroup() {
-      return this.room.kind === 'group';
     },
     canSend() {
       return this.draft.trim().length > 0 && !this.uiFlags.sending;
@@ -136,12 +133,6 @@ export default {
         useAlert(this.$t('INTERNAL_CHAT.SEND_ERROR'));
       }
     },
-    async leave() {
-      // eslint-disable-next-line no-alert
-      if (!window.confirm(this.$t('INTERNAL_CHAT.LEAVE_CONFIRM'))) return;
-      await this.$store.dispatch('internalChat/leaveRoom', this.room.id);
-      this.$router.push({ name: 'internal_chat' });
-    },
   },
 };
 </script>
@@ -161,16 +152,6 @@ export default {
           {{ subtitle }}
         </p>
       </div>
-      <woot-button
-        v-if="isGroup"
-        size="small"
-        variant="clear"
-        color-scheme="secondary"
-        icon="power"
-        @click="leave"
-      >
-        {{ $t('INTERNAL_CHAT.LEAVE') }}
-      </woot-button>
     </header>
 
     <div ref="list" class="flex-1 min-h-0 px-4 py-3 overflow-auto">

@@ -60,6 +60,7 @@ describe('normalizeGroupOrder', () => {
 
   it('keeps the saved order and appends missing groups', () => {
     expect(normalizeGroupOrder(['email', 'whatsapp'])).toEqual([
+      'internal',
       'email',
       'whatsapp',
       'telegram',
@@ -71,19 +72,33 @@ describe('normalizeGroupOrder', () => {
   });
 
   it('drops unknown and duplicated groups', () => {
-    expect(normalizeGroupOrder(['meta', 'fax', 'meta'])[0]).toBe('meta');
+    expect(normalizeGroupOrder(['meta', 'fax', 'meta'])[1]).toBe('meta');
     expect(normalizeGroupOrder(['meta', 'fax', 'meta'])).not.toContain('fax');
-    expect(normalizeGroupOrder(['meta', 'meta'])).toHaveLength(7);
+    expect(normalizeGroupOrder(['meta', 'meta'])).toHaveLength(8);
+  });
+
+  it('puts Internal first when an old saved order does not have it, and respects it when it does', () => {
+    expect(normalizeGroupOrder(['email'])[0]).toBe('internal');
+    expect(normalizeGroupOrder(['email', 'internal'])).toEqual([
+      'email',
+      'internal',
+      'whatsapp',
+      'telegram',
+      'meta',
+      'web',
+      'tiktok',
+      'others',
+    ]);
   });
 });
 
 describe('groupOrderFromUISettings', () => {
   it('reads the order saved for that account only', () => {
     const settings = { inbox_group_order: { 2: ['tiktok'], 3: ['email'] } };
-    expect(groupOrderFromUISettings(settings, 2)[0]).toBe('tiktok');
-    expect(groupOrderFromUISettings(settings, 3)[0]).toBe('email');
-    expect(groupOrderFromUISettings(settings, 9)[0]).toBe('whatsapp');
-    expect(groupOrderFromUISettings(undefined, 2)[0]).toBe('whatsapp');
+    expect(groupOrderFromUISettings(settings, 2)[1]).toBe('tiktok');
+    expect(groupOrderFromUISettings(settings, 3)[1]).toBe('email');
+    expect(groupOrderFromUISettings(settings, 9)[0]).toBe('internal');
+    expect(groupOrderFromUISettings(undefined, 2)[1]).toBe('whatsapp');
   });
 });
 

@@ -149,10 +149,9 @@ Rails.application.routes.draw do
           # @campanas_vendedor / @automatizacion_campanas (create = campaña continua)
           # feat/chat_interno — chat entre los agentes de la cuenta
           namespace :internal_chat do
-            resources :rooms, only: [:index, :show, :create, :update] do
+            resources :rooms, only: [:index, :show, :create] do
               post :read, on: :member
               resources :messages, only: [:index, :create]
-              resources :members, only: [:create, :destroy]
             end
           end
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do

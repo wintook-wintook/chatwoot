@@ -1,29 +1,25 @@
 <script>
-// feat/chat_interno (F3) — CHAT INTERNO ENTRE AGENTES
+// feat/chat_interno (F3) — CHAT INTERNO, DENTRO DE CONVERSACIONES
 // ============================================================================
-// Izquierda: las salas del agente (Grupos con la general primero; Directos) con sus no
-// leídos. Derecha: la sala abierta. Sin sala en la dirección se abre la general.
+// Las salas se eligen en el menú de Conversaciones (grupo «Interno»: # general, # cada
+// equipo y los directos). Aquí solo se ve la sala abierta. Sin sala en la dirección se
+// abre la general; con ?new=1 se abre «Nuevo chat».
 // Lo que llega en tiempo real lo mete el store (internalChat/messageCreated…).
 // Plan: docs/chat_interno_plan.md §3
 // ============================================================================
 import { mapGetters } from 'vuex';
-import Thumbnail from 'dashboard/components/widgets/Thumbnail.vue';
 import RoomView from './RoomView.vue';
 import NewRoomModal from './NewRoomModal.vue';
-import { otherMember, roomTitle } from './roomHelpers';
 
 export default {
-  components: { Thumbnail, RoomView, NewRoomModal },
+  components: { RoomView, NewRoomModal },
   data() {
-    return { showNewRoom: false, loadError: false };
+    return { loadError: false };
   },
   computed: {
     ...mapGetters({
       accountId: 'getCurrentAccountId',
-      currentUserId: 'getCurrentUserID',
       getAccount: 'accounts/getAccount',
-      groupRooms: 'internalChat/groupRooms',
-      directRooms: 'internalChat/directRooms',
       rooms: 'internalChat/rooms',
       roomById: 'internalChat/roomById',
       uiFlags: 'internalChat/uiFlags',
@@ -37,6 +33,9 @@ export default {
     },
     activeRoom() {
       return this.roomId ? this.roomById(this.roomId) : null;
+    },
+    showNewRoom() {
+      return this.$route.query.new === '1';
     },
   },
   watch: {
@@ -61,33 +60,23 @@ export default {
     this.$store.commit('internalChat/SET_ACTIVE_ROOM', null);
   },
   methods: {
-    title(room) {
-      return roomTitle(
-        room,
-        this.currentUserId,
-        this.$t('INTERNAL_CHAT.GENERAL')
-      );
-    },
-    other(room) {
-      return otherMember(room, this.currentUserId) || {};
-    },
-    openRoom(room) {
-      if (room.id === this.roomId) return;
+    goToRoom(room, query = {}) {
       this.$router.push({
         name: 'internal_chat',
         params: { accountId: this.accountId, roomId: room.id },
+        query,
       });
     },
+    // Sin sala elegida: la general (conservando ?new=1 si se pidió «Nuevo chat»).
     openDefaultRoom() {
       const general = this.rooms.find(room => room.kind === 'general');
-      if (general) this.openRoom(general);
+      if (general) this.goToRoom(general, this.showNewRoom ? { new: '1' } : {});
+    },
+    closeNewRoom() {
+      this.$router.replace({ query: {} });
     },
     onCreated(room) {
-      this.showNewRoom = false;
-      this.openRoom(room);
-    },
-    isActive(room) {
-      return room.id === this.roomId;
+      this.goToRoom(room);
     },
   },
 };
@@ -101,107 +90,13 @@ export default {
     >
       {{ $t('INTERNAL_CHAT.DISABLED') }}
     </p>
+    <p
+      v-else-if="loadError"
+      class="m-auto text-sm text-red-600 dark:text-red-400"
+    >
+      {{ $t('INTERNAL_CHAT.LOAD_ERROR') }}
+    </p>
     <template v-else>
-      <aside
-        class="flex flex-col h-full min-h-0 border-r w-72 shrink-0 border-slate-50 dark:border-slate-800/50"
-      >
-        <div class="flex items-center justify-between h-14 px-4 shrink-0">
-          <h2
-            class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
-          >
-            {{ $t('INTERNAL_CHAT.TITLE') }}
-          </h2>
-          <woot-button
-            size="small"
-            variant="smooth"
-            color-scheme="primary"
-            icon="add"
-            @click="showNewRoom = true"
-          >
-            {{ $t('INTERNAL_CHAT.NEW') }}
-          </woot-button>
-        </div>
-        <p v-if="loadError" class="px-4 text-sm text-red-600 dark:text-red-400">
-          {{ $t('INTERNAL_CHAT.LOAD_ERROR') }}
-        </p>
-        <div class="flex-1 min-h-0 px-2 pb-4 overflow-auto">
-          <h3
-            class="px-2 mt-2 mb-1 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400"
-          >
-            {{ $t('INTERNAL_CHAT.GROUPS') }}
-          </h3>
-          <button
-            v-for="room in groupRooms"
-            :key="room.id"
-            type="button"
-            class="flex items-center w-full gap-2 px-2 py-1.5 text-sm text-left border-0 rounded-lg cursor-pointer"
-            :class="
-              isActive(room)
-                ? 'bg-woot-25 dark:bg-slate-800 text-woot-600 dark:text-woot-400'
-                : 'bg-transparent text-slate-700 dark:text-slate-200 hover:bg-slate-25 dark:hover:bg-slate-800'
-            "
-            @click="openRoom(room)"
-          >
-            <span
-              class="flex-1 truncate"
-              :class="{ 'font-semibold': room.unread_count }"
-            >
-              {{ title(room) }}
-            </span>
-            <span
-              v-if="room.unread_count"
-              class="px-1.5 text-xxs font-semibold text-white rounded-full bg-woot-500"
-            >
-              {{ room.unread_count }}
-            </span>
-          </button>
-
-          <h3
-            class="px-2 mt-4 mb-1 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400"
-          >
-            {{ $t('INTERNAL_CHAT.DIRECTS') }}
-          </h3>
-          <p
-            v-if="!directRooms.length"
-            class="px-2 text-xs text-slate-400 dark:text-slate-500"
-          >
-            {{ $t('INTERNAL_CHAT.EMPTY_DIRECTS') }}
-          </p>
-          <button
-            v-for="room in directRooms"
-            :key="room.id"
-            type="button"
-            class="flex items-center w-full gap-2 px-2 py-1.5 text-sm text-left border-0 rounded-lg cursor-pointer"
-            :class="
-              isActive(room)
-                ? 'bg-woot-25 dark:bg-slate-800 text-woot-600 dark:text-woot-400'
-                : 'bg-transparent text-slate-700 dark:text-slate-200 hover:bg-slate-25 dark:hover:bg-slate-800'
-            "
-            @click="openRoom(room)"
-          >
-            <Thumbnail
-              :src="other(room).avatar_url"
-              :username="title(room)"
-              :status="other(room).availability_status"
-              should-show-status-always
-              size="24px"
-            />
-            <span
-              class="flex-1 truncate"
-              :class="{ 'font-semibold': room.unread_count }"
-            >
-              {{ title(room) }}
-            </span>
-            <span
-              v-if="room.unread_count"
-              class="px-1.5 text-xxs font-semibold text-white rounded-full bg-woot-500"
-            >
-              {{ room.unread_count }}
-            </span>
-          </button>
-        </div>
-      </aside>
-
       <RoomView v-if="activeRoom" :key="activeRoom.id" :room="activeRoom" />
       <p
         v-else-if="!uiFlags.loadingRooms"
@@ -209,10 +104,9 @@ export default {
       >
         {{ $t('INTERNAL_CHAT.PICK_ROOM') }}
       </p>
-
       <NewRoomModal
         v-if="showNewRoom"
-        @close="showNewRoom = false"
+        @close="closeNewRoom"
         @created="onCreated"
       />
     </template>

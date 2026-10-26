@@ -299,6 +299,18 @@ Para arrastrar se usa `vuedraggable`, que Chatwoot ya trae.
 - Prueba en dev (cuenta 2): encendido por omisión; la general se crea con sus 5 agentes.
 - ⚠️ Falta probarlo en el navegador con dos agentes a la vez.
 
+**Ajustes del 26/10/2026 (pedidos después de F3)**
+- **Dentro de Conversaciones, como un canal más** («canal visual»): sale la entrada del menú principal; en
+  Conversaciones → Bandejas de entrada aparece el grupo **«Interno»** (primero por omisión, entra al acordeón
+  y a «Ordenar bandejas…»; si un orden guardado no lo tiene, va primero). Cada sala es un renglón con sus no
+  leídos, más «+ Nuevo chat». La sala se abre en el área de conversación (ruta dentro del menú de
+  Conversaciones). Por dentro sigue separado: IA, automatizaciones, reportes y SLA no lo tocan.
+- **Los grupos son los equipos de Chatwoot**: una sala por equipo (`kind: team`, `team_id`, migración
+  `20261026221347`), con los miembros del equipo; se crean solas y se cambian en Ajustes → Equipos. Se quitaron
+  crear grupos, renombrar, agregar/quitar miembros y «Salir del grupo». Borrar el equipo borra su sala.
+- Pruebas: RSpec 17 (equipos en lugar de grupos); Vitest 62. Dev (cuenta 2): sala del equipo «infra qa»
+  creada; no la ve nadie porque el equipo no tiene miembros.
+
 **Pendiente (F4–F6):** sonido y aviso del navegador, adjuntos, editar/borrar, «escribiendo…», buscar,
 `#4521` a la conversación, @menciones; renombrar y agregar miembros desde la pantalla (la API ya lo hace).
 

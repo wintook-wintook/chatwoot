@@ -6,8 +6,7 @@
 # ActionCableBroadcastJob manda a una lista de tokens. Solo les llega a los miembros de
 # la sala (en la general, a todos los agentes de la cuenta); nunca a toda la cuenta.
 #   internal_chat.message.created   un mensaje nuevo
-#   internal_chat.room.updated      sala nueva, renombrada o con otros miembros
-#   internal_chat.room.removed      a quien sacaron de una sala
+#   internal_chat.room.updated      sala nueva (p. ej. alguien abrió un directo contigo)
 # Plan: docs/chat_interno_plan.md §5
 # ============================================================================
 module InternalChat::Broadcaster
@@ -22,10 +21,6 @@ module InternalChat::Broadcaster
   def room_updated(room)
     deliver(room.member_user_ids, 'internal_chat.room.updated', room.account_id,
             room: InternalChat::Presenter.room(room))
-  end
-
-  def room_removed(room, user_ids)
-    deliver(user_ids, 'internal_chat.room.removed', room.account_id, room_id: room.id)
   end
 
   def deliver(user_ids, event, account_id, data)

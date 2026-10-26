@@ -427,6 +427,7 @@
     "HOME_SUMMARY": "Home",
     "SORT_INBOXES": "Sort inboxes…",
     "INBOX_GROUPS": {
+      "INTERNAL": "Internal",
       "WHATSAPP": "WhatsApp",
       "TELEGRAM": "Telegram",
       "EMAIL": "Email",
@@ -448,7 +449,8 @@
     },
     "SHOW_MORE": "Show more ({count})",
     "SHOW_LESS": "Show less",
-    "INTERNAL_CHAT": "Team chat"
+    "INTERNAL_CHAT": "Team chat",
+    "INTERNAL_CHAT_NEW": "New chat"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Billing",

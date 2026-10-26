@@ -8,6 +8,7 @@
 import { INBOX_TYPES } from 'shared/mixins/inboxMixin';
 
 export const INBOX_GROUPS = Object.freeze({
+  INTERNAL: 'internal', // feat/chat_interno: las salas del chat interno
   WHATSAPP: 'whatsapp',
   TELEGRAM: 'telegram',
   EMAIL: 'email',
@@ -17,8 +18,10 @@ export const INBOX_GROUPS = Object.freeze({
   OTHERS: 'others',
 });
 
-// Orden por omisión: WhatsApp, Telegram, Correo, Meta y después todos los demás.
+// Orden por omisión: Interno (chat entre agentes), WhatsApp, Telegram, Correo, Meta y
+// después todos los demás. «Interno» no agrupa bandejas: lo llena Secondary.vue.
 export const DEFAULT_INBOX_GROUP_ORDER = Object.freeze([
+  INBOX_GROUPS.INTERNAL,
   INBOX_GROUPS.WHATSAPP,
   INBOX_GROUPS.TELEGRAM,
   INBOX_GROUPS.EMAIL,
@@ -53,7 +56,7 @@ export const inboxGroupFor = inbox => {
 };
 
 // Un orden guardado puede venir viejo o roto: se quitan los grupos que ya no existen
-// y los que falten se agregan en su lugar por omisión, al final.
+// y los que falten se agregan al final. «Interno» llegó después: si falta, va primero.
 export const normalizeGroupOrder = saved => {
   const known = Object.values(INBOX_GROUPS);
   const valid = (Array.isArray(saved) ? saved : []).filter(
@@ -61,9 +64,12 @@ export const normalizeGroupOrder = saved => {
       known.includes(group) && list.indexOf(group) === index
   );
   const missing = DEFAULT_INBOX_GROUP_ORDER.filter(
-    group => !valid.includes(group)
+    group => !valid.includes(group) && group !== INBOX_GROUPS.INTERNAL
   );
-  return [...valid, ...missing];
+  const internal = valid.includes(INBOX_GROUPS.INTERNAL)
+    ? []
+    : [INBOX_GROUPS.INTERNAL];
+  return [...internal, ...valid, ...missing];
 };
 
 // El orden del agente para esta cuenta (o el de omisión).

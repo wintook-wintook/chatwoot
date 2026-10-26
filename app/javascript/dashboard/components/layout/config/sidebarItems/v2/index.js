@@ -160,17 +160,6 @@ export const primaryMenuV2 = (accountId, route) => {
       toState: url('dashboard'),
       toStateName: 'home',
     },
-    // feat/chat_interno — se ve si la cuenta tiene el chat encendido (ajuste de cuenta,
-    // no bandera: ver Sidebar.vue `accountSetting`). Con contador de no leídos.
-    {
-      icon: 'chat-multiple',
-      key: 'internal_chat',
-      label: 'INTERNAL_CHAT',
-      accountSetting: 'internal_chat_enabled',
-      badgeGetter: 'internalChat/totalUnread',
-      toState: url('internal-chat'),
-      toStateName: 'internal_chat',
-    },
     // Sin casos, Agenda es el calendario; sin calendario, las tareas.
     {
       icon: 'calendar',
@@ -278,7 +267,12 @@ const conversationsV2 = accountId => {
   const base = conversations(accountId);
   return {
     ...base,
-    routes: [...base.routes, 'inbox_view', 'inbox_view_conversation'],
+    routes: [
+      ...base.routes,
+      'inbox_view',
+      'inbox_view_conversation',
+      'internal_chat', // feat/chat_interno: vive dentro de Conversaciones
+    ],
     menuItems: [
       ...base.menuItems,
       {

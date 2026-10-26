@@ -31,29 +31,23 @@ module InternalChat::Presenter
     {
       id: room.id,
       kind: room.kind,
-      name: room.name,
+      name: room.display_name,
+      team_id: room.team_id,
       created_by_id: room.created_by_id,
       last_message_at: timestamp(room.last_message_at),
       member_ids: members.map(&:id),
       members: members.map { |member| user(member) },
-      owner_ids: owner_ids(room),
       unread_count: unread_count,
       last_message: last_message && message(last_message)
     }
-  end
-
-  def owner_ids(room)
-    room.members.select { |member| member.role == 'owner' }.map(&:user_id)
   end
 
   def timestamp(time)
     time&.to_i
   end
 
-  # La general es de toda la cuenta; las demás, de sus miembros.
+  # La general es de toda la cuenta; la de un equipo, de sus miembros; un directo, de los dos.
   def room_members(room)
-    return room.account.users.to_a if room.general?
-
-    room.users.to_a
+    room.member_users.to_a
   end
 end

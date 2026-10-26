@@ -22,6 +22,7 @@ class Team < ApplicationRecord
   has_many :team_members, dependent: :destroy_async
   has_many :members, through: :team_members, source: :user
   has_many :conversations, dependent: :nullify
+  has_one :internal_chat_room, dependent: :destroy # feat/chat_interno: la sala del equipo
 
   validates :name,
             presence: { message: I18n.t('errors.validations.presence') },

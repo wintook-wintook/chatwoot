@@ -1,15 +1,10 @@
 {
   "INTERNAL_CHAT": {
     "TITLE": "Chat interno",
-    "NEW": "Nuevo",
-    "GROUPS": "Grupos",
-    "DIRECTS": "Directos",
     "GENERAL": "general",
-    "EMPTY_DIRECTS": "Aún no tienes chats directos.",
     "PICK_ROOM": "Elige un chat o empieza uno nuevo.",
     "DISABLED": "El chat interno no está activo en esta cuenta.",
     "LOAD_ERROR": "No se pudo cargar el chat. Intenta otra vez.",
-    "MEMBERS": "{count} miembros",
     "EVERYONE": "Todos los agentes de la cuenta",
     "LOAD_OLDER": "Cargar mensajes anteriores",
     "NO_MESSAGES": "Todavía no hay mensajes. Escribe el primero.",
@@ -18,21 +13,15 @@
     "SEND_ERROR": "No se pudo enviar el mensaje.",
     "DELETED": "Mensaje borrado",
     "YOU": "Tú",
-    "LEAVE": "Salir del grupo",
-    "LEAVE_CONFIRM": "¿Salir de este grupo? Ya no verás sus mensajes.",
     "NEW_ROOM": {
       "TITLE": "Nuevo chat",
-      "DESCRIPTION": "Habla directo con un agente o arma un grupo con varios.",
-      "DIRECT": "Directo",
-      "GROUP": "Grupo",
+      "DESCRIPTION": "Elige con qué agente quieres hablar. Los grupos son los equipos de la cuenta.",
       "AGENT": "Agente",
-      "AGENTS": "Agentes",
-      "GROUP_NAME": "Nombre del grupo",
-      "GROUP_NAME_PLACEHOLDER": "Por ejemplo: ventas",
       "SELECT_PLACEHOLDER": "Busca un agente",
       "CREATE": "Abrir chat",
       "CANCEL": "Cancelar",
       "ERROR": "No se pudo abrir el chat."
-    }
+    },
+    "TEAM_MEMBERS": "Equipo · {count} miembros"
   }
 }

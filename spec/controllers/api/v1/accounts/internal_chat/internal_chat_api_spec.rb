@@ -75,30 +75,17 @@ RSpec.describe 'Internal chat API', type: :request do
 
   describe 'POST rooms' do
     it 'opens a direct only once between two agents' do
-      post_json(base, ana, kind: 'direct', user_id: luis.id)
+      post_json(base, ana, user_id: luis.id)
       first = response.parsed_body['id']
-      post_json(base, luis, kind: 'direct', user_id: ana.id)
+      post_json(base, luis, user_id: ana.id)
       expect(response.parsed_body['id']).to eq(first)
       expect(InternalChatRoom.where(kind: 'direct').count).to eq(1)
     end
 
     it 'refuses a direct with yourself or with someone outside the account' do
-      post_json(base, ana, kind: 'direct', user_id: ana.id)
+      post_json(base, ana, user_id: ana.id)
       expect(response).to have_http_status(:unprocessable_entity)
-      post_json(base, ana, kind: 'direct', user_id: outsider.id)
-      expect(response).to have_http_status(:unprocessable_entity)
-    end
-
-    it 'creates a group with the creator as owner and ignores outsiders', :aggregate_failures do
-      post_json(base, ana, kind: 'group', name: 'ventas', user_ids: [luis.id, outsider.id])
-      expect(response).to have_http_status(:created)
-      room = InternalChatRoom.find(response.parsed_body['id'])
-      expect(room.members.pluck(:user_id)).to contain_exactly(ana.id, luis.id)
-      expect(room.members.find_by(user_id: ana.id).role).to eq('owner')
-    end
-
-    it 'requires a name for groups' do
-      post_json(base, ana, kind: 'group', name: ' ', user_ids: [luis.id])
+      post_json(base, ana, user_id: outsider.id)
       expect(response).to have_http_status(:unprocessable_entity)
     end
   end
@@ -149,35 +136,53 @@ RSpec.describe 'Internal chat API', type: :request do
     end
   end
 
-  describe 'group management' do
-    let(:group) { InternalChat::Rooms.new(account: account, user: ana).group!('soporte', [luis.id]) }
+  describe 'team rooms' do
+    let!(:team) { create(:team, account: account, name: 'ventas') }
 
-    it 'lets the owner rename and add members, but not a plain member', :aggregate_failures do
-      patch "#{base}/#{group.id}", params: { name: 'soporte N2' }, headers: luis.create_new_auth_token, as: :json
-      expect(response).to have_http_status(:forbidden)
-
-      patch "#{base}/#{group.id}", params: { name: 'soporte N2' }, headers: ana.create_new_auth_token, as: :json
-      expect(group.reload.name).to eq('soporte N2')
-
-      post_json("#{base}/#{group.id}/members", ana, user_ids: [admin.id])
-      expect(group.reload.members.pluck(:user_id)).to include(admin.id)
+    before do
+      team.add_member(ana.id)
+      team.add_member(luis.id)
     end
 
-    it 'lets an administrator manage a group they do not own' do
-      post_json("#{base}/#{group.id}/members", admin, user_ids: [admin.id])
-      expect(response).to have_http_status(:not_found) # no es miembro: ni se entera de que existe
-
-      group.members.create!(user: admin)
-      patch "#{base}/#{group.id}", params: { name: 'nuevo' }, headers: admin.create_new_auth_token, as: :json
-      expect(group.reload.name).to eq('nuevo')
+    def team_room
+      InternalChatRoom.find_by!(account: account, team: team)
     end
 
-    it 'lets a member leave and tells them in real time' do
-      expect(InternalChat::Broadcaster).to receive(:room_removed).with(group, [luis.id])
-      allow(InternalChat::Broadcaster).to receive(:room_updated)
-      delete "#{base}/#{group.id}/members/#{luis.id}", headers: luis.create_new_auth_token, as: :json
-      expect(response).to have_http_status(:ok)
-      expect(group.reload.members.pluck(:user_id)).to eq([ana.id])
+    it 'creates one room per team, named like the team, only for its members', :aggregate_failures do
+      get_json(base, ana)
+      get_json(base, luis)
+      expect(InternalChatRoom.where(account: account, kind: 'team').count).to eq(1)
+      room = response.parsed_body['payload'].find { |item| item['kind'] == 'team' }
+      expect(room['name']).to eq('ventas')
+      expect(room['member_ids']).to contain_exactly(ana.id, luis.id)
+
+      get_json(base, admin)
+      expect(response.parsed_body['payload'].pluck('kind')).not_to include('team')
+    end
+
+    it 'keeps people outside the team out of its room' do
+      get_json(base, ana)
+      get_json("#{base}/#{team_room.id}/messages", admin)
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'sends team messages only to the team members' do
+      get_json(base, ana)
+      expect(ActionCableBroadcastJob).to receive(:perform_later) do |tokens, event, _data|
+        expect(event).to eq('internal_chat.message.created')
+        expect(tokens).to contain_exactly(ana.pubsub_token, luis.pubsub_token)
+      end
+      post_json("#{base}/#{team_room.id}/messages", ana, content: '¿quién cubre hoy?')
+      expect(response).to have_http_status(:created)
+    end
+
+    it 'follows the team: a removed member loses access and deleting the team deletes the room', :aggregate_failures do
+      get_json(base, ana)
+      room = team_room
+      team.remove_member(luis.id)
+      expect(room.accessible_by?(luis)).to be false
+      team.destroy!
+      expect(InternalChatRoom.exists?(room.id)).to be false
     end
   end
 

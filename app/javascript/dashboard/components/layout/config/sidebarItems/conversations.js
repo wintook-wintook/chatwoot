@@ -20,6 +20,7 @@ const conversations = accountId => ({
     'conversations_through_folders',
     'conversation_unattended',
     'conversation_through_unattended',
+    'internal_chat', // feat/chat_interno
   ],
   menuItems: [
     {

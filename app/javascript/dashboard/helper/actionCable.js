@@ -44,10 +44,6 @@ class ActionCableConnector extends BaseActionCableConnector {
         'message'
       ),
       'internal_chat.room.updated': this.onInternalChat('roomUpdated', 'room'),
-      'internal_chat.room.removed': this.onInternalChat(
-        'roomRemoved',
-        'room_id'
-      ),
     };
   }
 

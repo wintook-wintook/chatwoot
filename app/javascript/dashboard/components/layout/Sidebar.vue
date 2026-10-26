@@ -175,11 +175,6 @@ export default {
         if (!isAvailableForTheUser) {
           return false;
         }
-        // feat/chat_interno: entradas que dependen de un ajuste de la cuenta.
-        if (menuItem.accountSetting) {
-          const account = this.getAccount(this.accountId);
-          return Boolean(account && account[menuItem.accountSetting]);
-        }
         if (
           menuItem.alwaysVisibleOnChatwootInstances &&
           !this.isACustomBrandedInstance
@@ -266,7 +261,7 @@ export default {
       },
       immediate: true,
     },
-    // feat/chat_interno: las salas se cargan al entrar para el contador del menú.
+    // feat/chat_interno: las salas se cargan al entrar para el grupo «Interno» del menú.
     internalChatEnabled: {
       handler(enabled) {
         if (enabled)

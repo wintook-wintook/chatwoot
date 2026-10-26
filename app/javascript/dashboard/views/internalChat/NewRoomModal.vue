@@ -1,20 +1,14 @@
 <script>
-// feat/chat_interno (F3) — NUEVO CHAT: DIRECTO O GRUPO
-// Directo: un agente (si ya existe el chat con él, se abre el mismo). Grupo: nombre y
-// varios agentes; quien lo crea queda de dueño. La lista son los agentes de la cuenta.
+// feat/chat_interno (F3) — NUEVO CHAT DIRECTO
+// Se elige un agente de la cuenta; si ya existe el chat con él, se abre el mismo.
+// Los grupos son los equipos de Chatwoot: no se crean aquí (Ajustes → Equipos).
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 
 export default {
   emits: ['close', 'created'],
   data() {
-    return {
-      mode: 'direct',
-      direct: null,
-      groupName: '',
-      groupMembers: [],
-      saving: false,
-    };
+    return { direct: null, saving: false };
   },
   computed: {
     ...mapGetters({
@@ -30,9 +24,7 @@ export default {
         }));
     },
     canCreate() {
-      if (this.saving) return false;
-      if (this.mode === 'direct') return Boolean(this.direct);
-      return this.groupName.trim().length > 0 && this.groupMembers.length > 0;
+      return !this.saving && Boolean(this.direct);
     },
   },
   methods: {
@@ -40,16 +32,10 @@ export default {
       if (!this.canCreate) return;
       this.saving = true;
       try {
-        const room =
-          this.mode === 'direct'
-            ? await this.$store.dispatch(
-                'internalChat/openDirect',
-                this.direct.id
-              )
-            : await this.$store.dispatch('internalChat/createGroup', {
-                name: this.groupName.trim(),
-                userIds: this.groupMembers.map(member => member.id),
-              });
+        const room = await this.$store.dispatch(
+          'internalChat/openDirect',
+          this.direct.id
+        );
         this.$emit('created', room);
       } catch (error) {
         useAlert(this.$t('INTERNAL_CHAT.NEW_ROOM.ERROR'));
@@ -69,20 +55,7 @@ export default {
         :header-content="$t('INTERNAL_CHAT.NEW_ROOM.DESCRIPTION')"
       />
       <form class="flex flex-col gap-4 px-8 pb-6" @submit.prevent="create">
-        <div class="flex gap-2">
-          <woot-button
-            v-for="option in ['direct', 'group']"
-            :key="option"
-            size="small"
-            :variant="mode === option ? 'smooth' : 'clear'"
-            :color-scheme="mode === option ? 'primary' : 'secondary'"
-            @click.prevent="mode = option"
-          >
-            {{ $t(`INTERNAL_CHAT.NEW_ROOM.${option.toUpperCase()}`) }}
-          </woot-button>
-        </div>
-
-        <label v-if="mode === 'direct'">
+        <label>
           {{ $t('INTERNAL_CHAT.NEW_ROOM.AGENT') }}
           <multiselect
             v-model="direct"
@@ -97,32 +70,6 @@ export default {
           />
         </label>
 
-        <template v-else>
-          <label>
-            {{ $t('INTERNAL_CHAT.NEW_ROOM.GROUP_NAME') }}
-            <input
-              v-model="groupName"
-              type="text"
-              maxlength="80"
-              :placeholder="$t('INTERNAL_CHAT.NEW_ROOM.GROUP_NAME_PLACEHOLDER')"
-            />
-          </label>
-          <label>
-            {{ $t('INTERNAL_CHAT.NEW_ROOM.AGENTS') }}
-            <multiselect
-              v-model="groupMembers"
-              :options="options"
-              track-by="id"
-              label="name"
-              multiple
-              :close-on-select="false"
-              :placeholder="$t('INTERNAL_CHAT.NEW_ROOM.SELECT_PLACEHOLDER')"
-              selected-label=""
-              select-label=""
-              deselect-label=""
-            />
-          </label>
-        </template>
 
         <div class="flex justify-end gap-2">
           <woot-button
