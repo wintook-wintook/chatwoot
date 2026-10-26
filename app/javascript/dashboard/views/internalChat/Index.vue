@@ -104,7 +104,12 @@ export default {
       >
         {{ $t('INTERNAL_CHAT.PICK_ROOM') }}
       </p>
-      <woot-modal :show="showNewRoom" :on-close="closeNewRoom">
+      <!-- Sin scroll en el modal: la lista del selector flota por encima (size = clase del contenedor) -->
+      <woot-modal
+        :show="showNewRoom"
+        :on-close="closeNewRoom"
+        size="!overflow-visible"
+      >
         <NewRoomModal
           v-if="showNewRoom"
           @close="closeNewRoom"

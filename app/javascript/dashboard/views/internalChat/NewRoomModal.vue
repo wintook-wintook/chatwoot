@@ -54,7 +54,7 @@ export default {
 </script>
 
 <template>
-  <div class="flex flex-col h-auto overflow-auto">
+  <div class="flex flex-col h-auto">
     <woot-modal-header
       :header-title="$t('INTERNAL_CHAT.NEW_ROOM.TITLE')"
       :header-content="$t('INTERNAL_CHAT.NEW_ROOM.DESCRIPTION')"
