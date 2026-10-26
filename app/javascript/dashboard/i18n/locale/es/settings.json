@@ -445,7 +445,9 @@
       "RESET": "Restablecer",
       "CANCEL": "Cancelar",
       "SAVE": "Guardar"
-    }
+    },
+    "SHOW_MORE": "Mostrar más ({count})",
+    "SHOW_LESS": "Mostrar menos"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Facturación",
