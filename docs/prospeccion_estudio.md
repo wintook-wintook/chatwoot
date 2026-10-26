@@ -628,21 +628,147 @@ cuenta. Después, el **3 + 5**, que convierten las campañas en prospección de 
 
 ---
 
-## 8. Decisiones abiertas
+## 8. Arranque: etapas, ponderaciones y fórmulas (versión básica)
+
+> Acordado el 26/10/2026. Solo documento; todavía no se programa.
+
+### 8.1 Las etapas
+
+```
+  ┌─────────┐   ┌────────────┐   ┌───────────┐   ┌─────────────┐   ┌──────────────┐
+  │ 1 Nuevo │──▶│2 Contactado│──▶│3 Respondió│──▶│4 Interesado │──▶│5 Entregado a │
+  │ (lista) │   │ (1er toque)│   │           │   │ (calificado)│   │   vendedor   │
+  └─────────┘   └─────┬──────┘   └─────┬─────┘   └─────────────┘   └──────────────┘
+                      │                │
+                      ▼                ▼
+               ┌─────────────┐  ┌─────────────────────────────────────────┐
+               │Sin respuesta│  │ No ahora → se vuelve a buscar en N días │
+               │tras 3 toques│  │ No le interesa → se cierra              │
+               └─────────────┘  │ Baja / «no me escriban» → no contactar  │
+                                └─────────────────────────────────────────┘
+```
+
+Cinco etapas y tres salidas. Son las mismas categorías de P1 y la propuesta para D3.
+
+### 8.2 Las ponderaciones (puntuación del prospecto, 0 a 100)
+
+```
+Puntuación = Σ (peso × criterio)
+           = Perfil (¿se parece a mi cliente ideal?)  máx. 50
+           + Interés (¿qué hizo?)                     máx. 50
+```
+
+| Perfil | pts | Interés | pts |
+|---|---|---|---|
+| Giro o sector que sí atiendes | +20 | Respondió | +10 |
+| Tamaño o zona correctos | +15 | Pidió precio o información | +20 |
+| Habla quien decide | +15 | Pidió cita o llamada | +20 |
+| | | No responde en 30 días | −10 |
+| | | Dijo «no ahora» | −15 |
+
+- **Corte:** con 60 puntos o más pasa a *Interesado* y se entrega a un vendedor.
+- Los puntos negativos y el decaimiento evitan que un prospecto frío se quede arriba para siempre.
+- Variante sencilla: **BANT** (Presupuesto, Autoridad, Necesidad y Tiempo, 25 puntos cada uno). En frío el presupuesto se infiere; no se pregunta en el primer toque.
+- **Los pesos se calibran con datos reales.** Por eso la puntuación va al final del arranque (§8.5), igual que en P4.
+
+### 8.3 Las fórmulas
+
+**a) Tasa por etapa** (dónde se pierde la gente):
+```
+tasa = los que pasaron a la siguiente etapa ÷ los que entraron a esta
+```
+
+**b) Embudo inverso** (a cuántos hay que escribirles):
+```
+Meta: 10 ventas al mes
+  ÷ 25 % cierre               = 40 interesados entregados
+  ÷ 30 % respuesta→interesado = 134 que respondieron
+  ÷ 15 % tasa de respuesta    ≈ 900 contactos a prospectar
+```
+Los porcentajes son de ejemplo; los reales salen de las primeras semanas.
+
+**c) Embudo ponderado** (cuánto dinero hay en juego):
+```
+Valor esperado = Σ (valor del trato × probabilidad de su etapa)
+  ej.: Interesado 20 % · Cita 50 % · Cotización enviada 70 %
+```
+
+### 8.4 Canales: WhatsApp primero, correo después (D6)
+
+El canal **no lo elige la campaña: lo hereda del Agente IA**. Al crear la campaña se copia la
+bandeja del agente (`bulk_assign_service.rb:192`) y todo sale por ahí (`tracking_builder.rb:9`).
+Un Agente IA tiene **una sola bandeja**.
+
+```
+ FASE 1 (ahora)                            FASE 2 (con bandeja de correo)
+ ┌────────────────────────┐                ┌────────────────────────┐
+ │ Agente IA «Prospección │                │ Agente IA «Prospección │
+ │   WhatsApp»            │                │   Correo» (copia)      │
+ │ bandeja: WhatsApp      │                │ bandeja: Correo        │
+ └──────────┬─────────────┘                └──────────┬─────────────┘
+            ▼                                         ▼
+     Campaña WhatsApp                          Campaña Correo
+            └──────────────┬──────────────────────────┘
+                           ▼
+        mismas etapas · misma puntuación · UNA lista de baja
+        tasas y embudo inverso medidos POR CANAL
+```
+
+| Canal | ¿Se puede escribir en frío? | Requisito del contacto | En campañas hoy |
+|---|---|---|---|
+| WhatsApp | Sí, con plantilla aprobada por Meta (una por toque, `contact_tracking.rb:228`) | Teléfono | ✅ |
+| Correo | Sí | Correo | ✅ acepta el contacto (`eligibility.rb:39`); **nunca probado con agentes de IA** |
+| SMS | Sí | Teléfono | ✅ |
+| Telegram, Messenger, Instagram, TikTok | No: el cliente escribe primero | Conversación previa | Solo para seguimiento, no para prospectar |
+
+- **Baja por contacto, no por canal:** quien dice «no me escriban» por WhatsApp tampoco recibe correo.
+- **Tasas por canal:** el correo en frío responde mucho menos que WhatsApp; mezclarlas engaña.
+- Cuando exista «agente con varias bandejas», los dos agentes se juntan en uno.
+
+**Requisitos para el correo (fase 2):**
+1. Bandeja de correo con su propio SMTP e IMAP (no usa el correo del servidor).
+2. Subdominio aparte para correo en frío (ej. `ventas.tuempresa.com`), con SPF, DKIM y DMARC.
+3. Calentamiento: empezar con 20–30 correos al día e ir subiendo.
+4. Enlace de baja en cada correo (lo exigen Gmail y Yahoo).
+5. **Verificar** cómo sale el asunto y el formato cuando escribe el Agente IA (puede salir el asunto genérico de Chatwoot).
+
+**Probar correo en desarrollo:** producción ya tiene bandejas de correo; dev no tiene ninguna.
+El correo del sistema en dev falla (`SMTP_ADDRESS` vacío y sin `sendmail`), pero eso no afecta a las
+bandejas. La IMAP se revisa cada minuto (`config/schedule.yml:26`).
+- **Opción A (recomendada):** Gmail nuevo solo de pruebas, con contraseña de aplicación;
+  IMAP `imap.gmail.com:993` SSL, SMTP `smtp.gmail.com:587` STARTTLS. Ida y vuelta real.
+- **Opción B:** captura local (Mailpit / `letter_opener`): solo salida, sirve para ver el formato.
+- ⚠️ Nunca conectar en dev un buzón que usa producción: los dos lo leerían cada minuto.
+
+### 8.5 Orden de arranque
+
+```
+ Paso 1                 Paso 2                      Paso 3
+ Etapas + salidas  ──▶  Medir las tasas reales ──▶  Puntuación 0–100
+ + lista de baja        (embudo inverso,            con pesos calibrados
+ (P0 + P1), WhatsApp    por canal)
+ ahora                  después de 2–4 semanas      cuando ya hay datos
+```
+
+Correo entra como fase 2 en cualquier paso, en cuanto haya bandeja de correo y se verifique el asunto.
+
+---
+
+## 9. Decisiones abiertas
 
 | # | Pregunta |
 |---|---|
 | D1 | ¿«Prospección» es un módulo nuevo o la evolución de Campañas de seguimiento? (Recomendación: **evolución**: la campaña, la inscripción, los toques con IA y la medición de entrega ya existen) |
 | D2 | ¿A quién se le va a escribir? ¿Solo contactos con permiso (clientes, cotizaciones, formularios) o también bases externas? Esto define cuánto pesa P0 |
-| D3 | ¿Qué categorías de respuesta, exactamente? (propuesta en P1) |
+| D3 | ¿Qué categorías de respuesta, exactamente? (propuesta en P1 y en §8.1: 5 etapas + 3 salidas; falta OK) |
 | D4 | ¿Quién recibe al interesado: el embudo, un vendedor fijo, reparto por turnos? ¿Con qué plazo? |
 | D5 | ¿De dónde sale el «valor»: cotización, caso, lo declara el vendedor? |
-| D6 | ¿Solo WhatsApp o también llamada / correo como pasos? |
+| D6 | ~~¿Solo WhatsApp o también llamada / correo como pasos?~~ **Resuelta 26/10/2026:** WhatsApp primero y correo en fase 2 (§8.4); llamada, después |
 | D7 | Validación legal (LFPDPPP, REPEP) antes de ofrecerlo a clientes |
 
 ---
 
-## 9. Fuentes
+## 10. Fuentes
 
 Prácticas y plataformas:
 - Salesforce LATAM · Cómo realizar la prospección de ventas — https://www.salesforce.com/mx/blog/prospeccion-de-ventas/
