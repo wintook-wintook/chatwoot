@@ -35,7 +35,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     # Plan-Clase-Comercial F5 (hallazgo #9): estas métricas son de atención (SLA,
     # resolución, CSAT), solo de las clases con SLA (Soporte); las oportunidades y
     # las órdenes de trabajo tienen las suyas.
-    open_tickets = Current.account.case_tickets.with_capability(:sla).where.not(status: %w[closed cancelled])
+    open_tickets = report_case_tickets.with_capability(:sla).where.not(status: %w[closed cancelled])
     open_tickets = filter_metrics_scope(open_tickets)
 
     render json: {
@@ -86,7 +86,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
   # GET /api/v1/accounts/:account_id/case_tickets
   def index
-    tickets = Current.account.case_tickets
+    tickets = account_case_tickets
 
     tickets = apply_search(tickets)
     tickets = apply_status_filter(tickets)
@@ -117,7 +117,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       case_tickets: tickets.map { |t| ticket_json(t) },
       meta: pagination_meta(tickets).merge(
         # conteo global (sin filtros) para el badge del tab "SLA vencido"
-        sla_overdue_count: Current.account.case_tickets.where.not(status: %w[closed cancelled]).overdue.count,
+        sla_overdue_count: account_case_tickets.where.not(status: %w[closed cancelled]).overdue.count,
         # Plan-Clase-Orden-de-Trabajo — el aviso rojo de la clase pedida (sin filtros):
         # SLA vencido (Soporte), visitas vencidas (Orden), cierre vencido (Comercial).
         alert_count: class_alert_scope(params[:case_class]).count
@@ -136,6 +136,9 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     return create_internal_ticket if internal_ticket_requested?
 
     case_type = Current.account.case_types.find_by(id: ticket_params[:case_type_id])
+    return render_access_denied unless case_class_writable?(case_type)
+    return render_reassign_denied unless create_assignee_id.to_i == current_user.id || access_grant.can?(:reassign)
+
     custom = custom_field_values(case_type)
     missing = missing_required_fields(case_type, custom)
     if missing.any?
@@ -157,7 +160,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       affected_service_id: ticket_params[:affected_service_id],
       category_id:         ticket_params[:category_id],
       custom_attributes:   custom,
-      assignee_id:         ticket_params[:assignee_id], # @tickets_cases — asignación manual al crear
+      assignee_id:         create_assignee_id, # @tickets_cases — asignación manual al crear
       team_id:             ticket_params[:team_id],
       commercial:          commercial_params.to_h, # Plan-Clase-Comercial F3 (solo lo usa Comercial)
       work_order:          work_order_params.to_h, # Plan-Clase-Orden-de-Trabajo F2a (solo lo usa la orden)
@@ -335,6 +338,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
     previous_assignee_id = @ticket.assignee_id
     return render json: { error: 'Se requiere assignee_id o team_id' }, status: :unprocessable_entity unless apply_assignment_params
+    return render_reassign_denied unless access_grant.assignment_allowed?(previous_assignee_id, @ticket.assignee_id)
 
     @ticket.assignee_type = derived_assignee_type
     @ticket.save!
@@ -368,7 +372,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     # reporta cuántos tickets quedaron con citas vivas para revisarlos uno por uno.
     with_meetings = tickets_with_upcoming_meetings(ids, bulk_action)
 
-    Current.account.case_tickets.where(id: ids).find_each do |ticket|
+    account_case_tickets.where(id: ids).find_each do |ticket|
       case bulk_action
       when 'assign'
         bulk_assign(ticket)
@@ -400,7 +404,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # Cierra la oportunidad: outcome (won|lost|cancelled), outcome_reason_id, outcome_note.
   def outcome
     @ticket.close_with_outcome!(params[:outcome], actor: current_user,
-                                                  reason_id: params[:outcome_reason_id], note: params[:outcome_note])
+                                                  reason_id: params[:outcome_reason_id], note: params[:outcome_note],
+                                                  accepted_quote_id: params[:accepted_quote_id]) # Plan-Catalogo-Cotizaciones
     cancelled_meetings = cancel_orphan_meetings
     render json: { case_ticket: ticket_json(@ticket.reload), cancelled_meetings: cancelled_meetings }
   rescue StandardError => e
@@ -615,9 +620,28 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   end
 
   def set_ticket
-    @ticket = Current.account.case_tickets.find(params[:id])
+    @ticket = account_case_tickets.find(params[:id])
+    # Plan-Roles-Permisos — con el área en «solo ver» se lee pero no se cambia.
+    render_access_denied unless request.get? || access_grant.case_writable?(@ticket)
   rescue ActiveRecord::RecordNotFound
     render json: { error: 'Ticket no encontrado' }, status: :not_found
+  end
+
+  # Plan-Roles-Permisos — quien solo ve lo suyo, si no elige a nadie, se queda
+  # con el caso (si no, no lo vería después de crearlo).
+  def create_assignee_id
+    chosen = ticket_params[:assignee_id].presence
+    return chosen if chosen || access_grant.can?(:reassign)
+
+    current_user.id
+  end
+
+  def case_class_writable?(case_type)
+    access_grant.writable?(Access::Grant.area_for_case_class(case_type&.case_class || 'support'))
+  end
+
+  def render_reassign_denied
+    render json: { error: I18n.t('access_roles.reassign_denied') }, status: :forbidden
   end
 
   def ticket_params
@@ -868,13 +892,21 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       locked_at:                  (ticket.locked_at if ticket.lock_active?),
       is_internal:                ticket.internal?,                   # @tickets_cases Fase C
       can_transition_to:          valid_transitions_for(ticket)
-    }.merge(commercial_json(ticket)).merge(work_order_json(ticket)).merge(project_json(ticket))
+    }.merge(commercial_json(ticket)).merge(work_order_json(ticket)).merge(project_json(ticket)).then { |json| hide_amounts(json) }
   end
 
   # Plan-Clase-Proyecto P1 — datos del proyecto (el monto en `currency`, que ya
   # viaja en los datos comerciales).
   # P2: `progress` es el avance efectivo (automático con hijos/hitos, si no el
   # capturado); `progress_manual` es el capturado y `project_summary` el desglose.
+  # Plan-Roles-Permisos — sin «ver montos» los importes viajan vacíos.
+  def hide_amounts(json)
+    return json if access_grant.can?(:see_amounts)
+
+    json.merge(amount: nil, budget_amount: nil, work_order_total: nil,
+               work_order_items: json[:work_order_items].map { |item| item.merge(unit_cost: nil, total: nil) })
+  end
+
   def project_json(ticket)
     summary = ticket.project? ? ticket.project_progress_summary : nil
     {
@@ -1028,7 +1060,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
     ActiveRecord::Base.transaction do
       @ticket.close_with_outcome!(result, actor: current_user,
-                                          reason_id: closure['outcome_reason_id'], note: closure['outcome_note'])
+                                          reason_id: closure['outcome_reason_id'], note: closure['outcome_note'],
+                                          accepted_quote_id: params[:accepted_quote_id]) # Plan-Catalogo-Cotizaciones
       @ticket.update!(case_type_column_id: column.id)
     end
   end
@@ -1187,6 +1220,9 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     if params.key?(:team_id)
       ticket.team = blank_assignment?(params[:team_id]) ? nil : Current.account.teams.find(params[:team_id])
     end
+    raise ActionController::BadRequest, I18n.t('access_roles.reassign_denied') unless
+      access_grant.assignment_allowed?(previous_assignee_id, ticket.assignee_id)
+
     ticket.assignee_type = if ticket.assignee_id then :agent elsif ticket.team_id then :team else :bot end
     ticket.save!
     ticket.case_events.create!(account: Current.account, event_type: :assigned, origin: :agent, actor: current_user,
@@ -1354,7 +1390,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # Casos abiertos de la cuenta que encienden el aviso de su clase (mismo criterio
   # que el filtro que aplica el aviso en Lista y Tablero).
   def class_alert_scope(klass)
-    tickets = Current.account.case_tickets.where(status: CaseTicket::PENDING_STATUSES)
+    tickets = account_case_tickets.where(status: CaseTicket::PENDING_STATUSES)
     case klass.to_s
     when 'work_order'
       late = CaseMeeting.active.where(starts_at: ...Time.current).select(:case_ticket_id)
@@ -1477,7 +1513,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   end
 
   def scoped_tickets_for_metrics
-    tickets = Current.account.case_tickets
+    tickets = report_case_tickets
                      .with_capability(:sla)
                      .where(created_at: date_from.beginning_of_day..date_to.end_of_day)
     filter_metrics_scope(tickets)

@@ -137,6 +137,32 @@ tags: [tickets, trampas, gotchas, critico]
 28. **`Message` tiene un orden por defecto (`created_at`)** — un `MAX(...)` o un
    `group(...).maximum(...)` sobre mensajes truena con `PG::GroupingError` («must appear in the
    GROUP BY clause»). Usa `Message.unscoped.where(...)` (o `reorder(nil)`) para agregados.
+29. **Un controlador nuevo de un área tiene que ir en el mapa de `AccessAreaGuard`** —
+   el candado de roles (Plan-Roles-Permisos) decide el área por `controller_path`
+   (`app/controllers/concerns/access_area_guard.rb`). Un controlador que no esté en el mapa
+   **no se bloquea** para ningún rol. Y para casos: usa `account_case_tickets` (no
+   `Current.account.case_tickets`), que ya trae el alcance del rol («solo lo suyo», clases
+   de Ventas/Servicio). Un agente sin rol es **Supervisor**: en specs, el «agente sin
+   acceso» tiene que llevar un rol (Vendedor, Técnico) o verá Informes y podrá exportar.
+
+30. **Controladores de campo/ventas con candado propio** — `catalog_items`, `quotes`,
+   `field_dispatch`, `customer_assets` y `maintenance_plans` no están en `AREA_BY_CONTROLLER`:
+   cada uno revisa el rol él mismo (`catalog_readable?`, `quotes(scope)`, `check_dispatcher`,
+   `check_access`). Si se agrega uno al mapa, revisar que no choque con ese chequeo.
+31. **Páginas públicas sin usuario** (`/cotizacion`, `/reporte`, `/servicio`, `/tecnico`) usan
+   el layout `public_document` (Tailwind CDN) y el idioma de la cuenta; las fechas con
+   `strftime` (el `es` de Rails no trae formatos). La firma es un solo partial
+   (`public/shared/_signature_pad`), uno por página. `Field::Visit` acepta `user` nil
+   (técnico externo): no usar `@user.id`.
+32. **El webpack de `mariana` puede dejar de recompilar sin morirse** (proceso vivo, sin CPU,
+   `public/packs/manifest.json` sin cambiar). Corre bajo `foreman` con Rails: reiniciarlo tumba
+   también el servidor 3003, así que se reinicia todo junto, avisando antes.
+
+33. **«Volver» regresa al origen con `?back=`** (`views/gestorTickets/backLink.js`). Quien abre una
+   orden o una cotización le manda `query: backQuery(this.$route)`; la orden (`TicketDetail`) y la
+   cotización (`QuoteEditor`) lo leen con `backPath` y ponen el texto con `backKind`
+   (`CASE_TICKETS.BACK_TO.*`). Una pantalla nueva que abra casos debe mandarlo; si no, «Volver» cae en
+   la lista. El portal del técnico guarda su origen en `sessionStorage` (`wintook_field_origin`).
 
 ## 🔗 Relacionado
 - [[Pruebas-en-browser]] · [[Feature-flag-case_management]] · [[Historial-de-implementacion]] · [[Vistas-guardadas]]

@@ -74,6 +74,7 @@ class Conversation < ApplicationRecord
   include PushDataHelper
   include ConversationMuteHelpers
   include KanbanFunnelTrackable # Embudo de contactos — bitácora de movimientos del tablero
+  include ContactOwnerAssignment # Responsable fijo del contacto (después de AssignmentHandler)
 
   has_many :scheduled_messages, dependent: :destroy
 

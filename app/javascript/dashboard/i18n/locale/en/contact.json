@@ -38,6 +38,12 @@
         "CREATE_LABEL": "Create new label"
       }
     },
+    "ACTIONS": {
+      "MESSAGE": "Message",
+      "EDIT": "Edit",
+      "MORE": "More",
+      "SCHEDULE": "Schedule message"
+    },
     "MERGE_CONTACT": "Merge contact",
     "CONTACT_ACTIONS": "Contact actions",
     "MUTE_CONTACT": "Block Contact",
@@ -466,5 +472,101 @@
     "DROPDOWN_ITEM": {
       "ID": "(ID: {identifier})"
     }
+  },
+  "CONTACT_OWNER": {
+    "LABEL": "Contact owner",
+    "NONE": "No contact owner",
+    "HINT": "Their conversations and new cases always go to this person, regardless of assignment rules.",
+    "MISSING_INBOXES": "Not a member of {inboxes}: the usual rules apply there.",
+    "SAVED": "Contact owner updated",
+    "ERROR": "Could not change the contact owner"
+  },
+  "CONTACT_PAGE": {
+    "BACK": "Back",
+    "TABS": {
+      "SUMMARY": "Summary",
+      "CONVERSATIONS": "Conversations",
+      "CASES": "Cases",
+      "TASKS": "Tasks",
+      "NOTES": "Notes",
+      "ASSETS": "Equipment",
+      "QUOTES": "Quotes"
+    },
+    "DATA": {
+      "TITLE": "Details",
+      "COMPANY": "Company",
+      "LOCATION": "Location",
+      "CREATED_AT": "Created",
+      "LAST_ACTIVITY": "Last activity",
+      "DESCRIPTION": "Description",
+      "ATTRIBUTES": "Custom attributes"
+    },
+    "CASES": {
+      "EMPTY": "This contact has no cases or opportunities.",
+      "FOLIO": "Folio",
+      "TITLE": "Subject",
+      "TYPE": "Type",
+      "STATUS": "Status",
+      "ASSIGNEE": "Assignee",
+      "AMOUNT": "Amount",
+      "CREATED": "Created",
+      "SHOW_CLOSED": "Also show closed",
+      "NEW": "New case"
+    },
+    "TASKS": {
+      "EMPTY": "No tasks or meetings in this contact's cases.",
+      "PENDING": "Pending",
+      "ALL": "All",
+      "MEETING": "Meeting",
+      "DONE": "Done",
+      "NO_DUE": "No date"
+    },
+    "SUMMARY": {
+      "OPEN_CONVERSATIONS": "Open conversations",
+      "OPEN_CASES": "Open cases",
+      "OPPORTUNITIES": "Open opportunities",
+      "NEXT_TASK": "Next task",
+      "NONE": "None",
+      "HIDDEN_AMOUNT": "—",
+      "ACTIVITY": "Recent activity",
+      "NO_ACTIVITY": "No activity with this contact yet.",
+      "CONVERSATION": "Conversation #{id} via {inbox}",
+      "NOTE": "Note",
+      "AI": "AI agent «{name}»: {status}",
+      "BY": "by {name}",
+      "AI_STATUS": {
+        "pending": "pending",
+        "scheduled": "scheduled",
+        "active": "active",
+        "paused": "paused",
+        "completed": "completed",
+        "objective_met": "objective met",
+        "cancelled": "cancelled",
+        "failed": "failed"
+      }
+    },
+    "NO_EMAIL": "No email",
+    "NO_PHONE": "No phone",
+    "LABELS": "Labels",
+    "ADD_LABEL": "Add"
+  },
+  "CONTACT_FORM_V2": {
+    "SECTIONS": {
+      "CONTACT": "How to reach them",
+      "LOCATION": "Location",
+      "SOCIAL": "Social profiles"
+    },
+    "COMPANY": "Company",
+    "AVATAR_CHANGE": "Change photo",
+    "AVATAR_REMOVE": "Remove",
+    "ADD_SOCIAL": "Add profile",
+    "REMOVE_SOCIAL": "Remove",
+    "WEBSITE": "Website",
+    "SAVE": "Save changes",
+    "CREATE": "Create contact",
+    "CRM_SEARCH_HINT": "Press Enter to search the contact in CRMZeus",
+    "CRM_COMPANY_HINT": "New company: «Add». Existing company: «Search».",
+    "CRM_ADD": "Add",
+    "CRM_SEARCH": "Search"
   }
 }

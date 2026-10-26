@@ -110,7 +110,7 @@
           "LABEL": "Creado en"
         },
         "LAST_USER_MESSAGE_AT": {
-          "NAME": "Último mensaje del usuario en",
+          "NAME": "Último mensaje del cliente en",
           "LABEL": "Último mensaje"
         }
       }

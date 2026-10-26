@@ -1,0 +1,25 @@
+<%# Plan-Trabajo-Campo R5 — calificación del servicio (1 a 5) al terminar la orden. Locals: ticket, back ('portal'|'report'). %>
+<% if ticket.csat_rating %>
+  <section id="csat" class="p-4 mt-4 text-sm bg-white shadow-sm rounded-xl no-print">
+    <p class="m-0 font-semibold"><%= t('field_portal.csat.thanks') %></p>
+    <p class="m-0 mt-1 text-lg text-amber-500"><%= '★' * ticket.csat_rating %><span class="text-slate-300"><%= '★' * (5 - ticket.csat_rating) %></span></p>
+  </section>
+<% elsif ticket.rateable? %>
+  <form id="csat" action="<%= public_service_portal_rate_path(ticket.report_token) %>" method="post" class="p-4 mt-4 bg-white shadow-sm rounded-xl no-print">
+    <input type="hidden" name="back" value="<%= back %>" />
+    <h2 class="m-0 text-base font-semibold"><%= t('field_portal.csat.title') %></h2>
+    <p class="m-0 mt-1 text-sm text-slate-600"><%= t('field_portal.csat.help') %></p>
+    <div class="flex flex-row-reverse justify-end gap-1 mt-3 text-3xl">
+      <% 5.downto(1) do |n| %>
+        <input type="radio" name="rating" value="<%= n %>" id="rating-<%= n %>" class="hidden peer" required />
+        <label for="rating-<%= n %>" class="cursor-pointer text-slate-300 hover:text-amber-500 peer-hover:text-amber-500 peer-checked:text-amber-500" title="<%= n %>">★</label>
+      <% end %>
+    </div>
+    <label class="block mt-3 text-sm text-slate-600"><%= t('field_portal.csat.comment') %>
+      <textarea name="comment" rows="2" class="w-full px-3 py-2 mt-1 border rounded-md border-slate-300"></textarea>
+    </label>
+    <div class="flex justify-end mt-3">
+      <button class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700"><%= t('field_portal.csat.send') %></button>
+    </div>
+  </form>
+<% end %>

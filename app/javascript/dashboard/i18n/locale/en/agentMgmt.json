@@ -117,5 +117,57 @@
         }
       }
     }
+  },
+  "ACCESS_ROLES": {
+    "HEADER": "Roles",
+    "DESCRIPTION": "What each person sees and can do according to their role. Change a role's options and it applies to every agent with that role. The Administrator sees everything and cannot be edited.",
+    "LOADING": "Loading roles",
+    "AGENTS_COUNT": "No agents | 1 agent | {count} agents",
+    "CUSTOMIZED": "Modified",
+    "RESTORE": "Restore defaults",
+    "RESTORE_CONFIRM": "Restore the role «{name}» to its defaults? Your changes will be lost.",
+    "SAVED": "Role saved",
+    "RESTORED": "Role restored",
+    "ERROR": "Could not save the role",
+    "AREAS_TITLE": "Where they go and what they see",
+    "ACTIONS_TITLE": "What they can do",
+    "ADMIN_NOTE": "The Administrator can access, see and do everything. It cannot be edited so nobody gets locked out.",
+    "ROLES": {
+      "ADMINISTRATOR": "Administrator",
+      "SUPERVISOR": "Supervisor",
+      "SELLER": "Salesperson",
+      "TECHNICIAN": "Technician / Support",
+      "VIEWER": "Viewer"
+    },
+    "ROLE_HINTS": {
+      "SUPERVISOR": "Sees everything except Settings. Agents without another role get this one.",
+      "SELLER": "Sales, their conversations, agenda and clients; only their own.",
+      "TECHNICIAN": "Service, their conversations, agenda and clients; only their own and without amounts.",
+      "VIEWER": "Only Reports and My business, read-only (a partner, the accountant)."
+    },
+    "AREAS": {
+      "CONVERSATIONS": "Conversations",
+      "AGENDA": "Agenda",
+      "SALES": "Sales",
+      "SERVICE": "Service",
+      "CLIENTS": "Clients",
+      "CAMPAIGNS": "Campaigns",
+      "AI_AGENTS": "AI Agents",
+      "REPORTS": "Reports",
+      "SETTINGS": "Settings"
+    },
+    "LEVELS": {
+      "NONE": "No access",
+      "OWN": "Only their own",
+      "VIEW": "Sees all (read-only)",
+      "ALL": "Everything"
+    },
+    "ACTIONS": {
+      "REASSIGN": "Assign to someone else",
+      "TAKE_UNASSIGNED": "Take unowned items (sees «Unassigned»)",
+      "DELETE": "Delete",
+      "EXPORT": "Export",
+      "SEE_AMOUNTS": "See amounts"
+    }
   }
 }

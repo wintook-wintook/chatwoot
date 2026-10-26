@@ -51,6 +51,6 @@ RSpec.describe 'Case Settings API — pesos de prioridad de tareas' do
 
   it 'solo un administrador los cambia' do
     patch_weights({ sla_overdue: 50 }, user: agent)
-    expect(response).to have_http_status(:unauthorized)
+    expect(response).to have_http_status(:forbidden) # Plan-Roles-Permisos: Ajustes cerrado por rol
   end
 end

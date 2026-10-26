@@ -462,6 +462,8 @@ end
   def conversation
     @conversation ||= Current.account.conversations.find_by!(display_id: params[:id])
     authorize @conversation.inbox, :show?
+    # Plan-Roles-Permisos — quien ve solo lo suyo no abre las de otros por URL.
+    render_access_denied unless access_grant.conversation_visible?(@conversation)
   end
 
   def inbox

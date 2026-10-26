@@ -31,6 +31,10 @@ import {
   getUserPermissions,
   filterItemsByPermission,
 } from 'dashboard/helper/permissionsHelper.js';
+import {
+  allowedAssigneeTabs,
+  getUserAccess,
+} from 'dashboard/helper/accessHelper';
 import { ASSIGNEE_TYPE_TAB_PERMISSIONS } from 'dashboard/constants/permissions.js';
 
 export default {
@@ -215,7 +219,6 @@ export default {
       allChatList: 'getAllStatusChats',
       unAssignedChatsList: 'getUnAssignedChats',
       chatListLoading: 'getChatListLoadingStatus',
-      currentUserID: 'getCurrentUserID',
       activeInbox: 'getSelectedInbox',
       conversationStats: 'conversationStats/getStats',
       appliedFilters: 'getAppliedConversationFilters',
@@ -281,39 +284,29 @@ export default {
       return getUserPermissions(this.currentUser, this.currentAccountId);
     },
     assigneeTabItems() {
-      const agentList = this.agentList;
-      const currentUserID = this.currentUserID;
-      const agentCurrent = agentList.find(item => item.id === currentUserID);
-      const showOnlyMine =
-        agentCurrent?.custom_attributes?.showOnlyMine || false;
-
-      if (showOnlyMine) {
-        const ASSIGNEE_TYPE_TAB_PERMISSIONS_ME = {
-          me: ASSIGNEE_TYPE_TAB_PERMISSIONS.me
-        };
-
-        return filterItemsByPermission(
-          ASSIGNEE_TYPE_TAB_PERMISSIONS_ME,
-          this.userPermissions,
-          item => item.permissions
-        ).map(({ key, count: countKey }) => ({
-          key,
-          name: this.$t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
-          count: this.conversationStats[countKey] || 0,
-        }));
-
-      } else {
-
-        return filterItemsByPermission(
-          ASSIGNEE_TYPE_TAB_PERMISSIONS,
-          this.userPermissions,
-          item => item.permissions
-        ).map(({ key, count: countKey }) => ({
-          key,
-          name: this.$t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
-          count: this.conversationStats[countKey] || 0,
-        }));
-      }
+      // Plan-Roles-Permisos — con Conversaciones en «solo lo suyo» no hay
+      // «Todas» (y «No asignadas» solo si puede tomarlas). Reemplaza a la
+      // casilla «Mostrar solo conversaciones asignadas» del agente.
+      const access = getUserAccess(this.currentUser, this.currentAccountId);
+      const allowed = allowedAssigneeTabs(
+        access,
+        'conversations',
+        Object.keys(ASSIGNEE_TYPE_TAB_PERMISSIONS)
+      );
+      const tabs = Object.fromEntries(
+        Object.entries(ASSIGNEE_TYPE_TAB_PERMISSIONS).filter(([key]) =>
+          allowed.includes(key)
+        )
+      );
+      return filterItemsByPermission(
+        tabs,
+        this.userPermissions,
+        item => item.permissions
+      ).map(({ key, count: countKey }) => ({
+        key,
+        name: this.$t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
+        count: this.conversationStats[countKey] || 0,
+      }));
     },
     showAssigneeInConversationCard() {
       return (

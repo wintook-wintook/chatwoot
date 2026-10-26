@@ -358,6 +358,11 @@
     "CAPTAIN": "Captain",
     "HOME": "Home",
     "AGENTS": "Agents",
+    "ACCESS_ROLES": "Roles",
+    "CATALOG": "Catalog",
+    "FIELD_ROUTE": "My field route",
+    "DISPATCH": "Dispatch",
+    "QUOTES": "Quotes",
     "AGENT_BOTS": "Bots",
     "AUDIT_LOGS": "Audit Logs",
     "INBOXES": "Inboxes",
@@ -424,7 +429,8 @@
     "CASES_GROUP_CONFIG": "Settings",
     "BUSINESS_SUMMARY": "Business summary",
     "BUSINESS_SUMMARY_ACCESS": "Business summary: access",
-    "HOME_SUMMARY": "Home"
+    "HOME_SUMMARY": "Home",
+    "MAINTENANCE": "Maintenance"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Billing",

@@ -45,7 +45,7 @@ class Api::V1::Accounts::CaseWorkOrderItemsController < Api::V1::Accounts::BaseC
   private
 
   def set_ticket
-    @ticket = Current.account.case_tickets.find(params[:case_ticket_id])
+    @ticket = account_case_tickets.find(params[:case_ticket_id])
   rescue ActiveRecord::RecordNotFound
     render json: { error: 'Orden no encontrada' }, status: :not_found
   end
@@ -61,7 +61,10 @@ class Api::V1::Accounts::CaseWorkOrderItemsController < Api::V1::Accounts::BaseC
   end
 
   def item_params
-    params.require(:work_order_item).permit(:description, :quantity, :unit, :unit_cost, :position)
+    permitted = params.require(:work_order_item).permit(:description, :quantity, :unit, :unit_cost, :position, :catalog_item_id)
+    # Plan-Catalogo-Cotizaciones — solo un producto del catálogo de esta cuenta.
+    permitted[:catalog_item_id] = Current.account.catalog_items.where(id: permitted[:catalog_item_id]).pick(:id) if permitted.key?(:catalog_item_id)
+    permitted
   end
 
   def item_json(item)

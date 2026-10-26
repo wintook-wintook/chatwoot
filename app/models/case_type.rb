@@ -4,18 +4,19 @@
 #
 # Table name: case_types
 #
-#  id           :bigint           not null, primary key
-#  case_class   :integer          default("support"), not null
-#  color        :string           default("#3b82f6"), not null
-#  itil_enabled :boolean          default(FALSE), not null
-#  name         :string           not null
-#  position     :integer          default(0), not null
-#  prefix       :string           default(""), not null
-#  public       :boolean          default(FALSE), not null
-#  retired_at   :datetime
-#  created_at   :datetime         not null
-#  updated_at   :datetime         not null
-#  account_id   :bigint           not null
+#  id             :bigint           not null, primary key
+#  case_class     :integer          default("support"), not null
+#  color          :string           default("#3b82f6"), not null
+#  field_settings :jsonb            not null
+#  itil_enabled   :boolean          default(FALSE), not null
+#  name           :string           not null
+#  position       :integer          default(0), not null
+#  prefix         :string           default(""), not null
+#  public         :boolean          default(FALSE), not null
+#  retired_at     :datetime
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#  account_id     :bigint           not null
 #
 # Indexes
 #
@@ -49,6 +50,19 @@ class CaseType < ApplicationRecord
     'work_order' => %i[bot_status],
     'project' => %i[bot_status]
   }.freeze
+
+  # Plan-Trabajo-Campo R1 — opciones de campo del tipo (solo órdenes de trabajo).
+  FIELD_DEFAULTS = { 'on_site_default' => true, 'require_photos' => false, 'require_conformity' => false,
+                     'report_delivery' => 'auto' }.freeze
+
+  def field_setting(key)
+    value = (field_settings || {}).fetch(key.to_s, FIELD_DEFAULTS[key.to_s])
+    key.to_s == 'report_delivery' ? value : ActiveModel::Type::Boolean.new.cast(value)
+  end
+
+  def field_settings_effective
+    FIELD_DEFAULTS.keys.index_with { |key| field_setting(key) }
+  end
 
   def self.classes_with(capability)
     CLASS_CAPABILITIES.select { |_klass, caps| caps.include?(capability) }.keys

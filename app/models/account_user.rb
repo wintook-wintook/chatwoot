@@ -6,9 +6,11 @@
 #  active_at        :datetime
 #  auto_offline     :boolean          default(TRUE), not null
 #  availability     :integer          default("online"), not null
+#  field_profile    :jsonb            not null
 #  role             :integer          default("agent")
 #  created_at       :datetime         not null
 #  updated_at       :datetime         not null
+#  access_role_id   :bigint
 #  account_id       :bigint
 #  agent_contact_id :bigint
 #  custom_role_id   :bigint
@@ -17,6 +19,7 @@
 #
 # Indexes
 #
+#  index_account_users_on_access_role_id    (access_role_id)
 #  index_account_users_on_account_id        (account_id)
 #  index_account_users_on_agent_contact_id  (agent_contact_id)
 #  index_account_users_on_custom_role_id    (custom_role_id)
@@ -25,6 +28,7 @@
 #
 # Foreign Keys
 #
+#  fk_rails_...  (access_role_id => access_roles.id) ON DELETE => nullify
 #  fk_rails_...  (agent_contact_id => contacts.id)
 #
 
@@ -38,6 +42,8 @@ class AccountUser < ApplicationRecord
   # proyecto@user_contact
   # ================================================================================
   belongs_to :agent_contact, class_name: 'Contact', optional: true
+  # Plan-Roles-Permisos — sin rol = Supervisor (ver Access::Grant)
+  belongs_to :access_role, optional: true
   # ================================================================================
 
   enum role: { agent: 0, administrator: 1 }
@@ -62,8 +68,16 @@ class AccountUser < ApplicationRecord
     ::Agents::DestroyJob.perform_later(account, user)
   end
 
+  # Plan-Roles-Permisos — `report_manage` abre Informes en el front (rutas de
+  # Chatwoot) a los roles que tienen el área.
   def permissions
-    administrator? ? ['administrator'] : ['agent']
+    return ['administrator'] if administrator?
+
+    access_grant.allowed?(:reports) ? %w[agent report_manage] : ['agent']
+  end
+
+  def access_grant
+    Access::Grant.for(self)
   end
 
   def push_event_data

@@ -19,6 +19,12 @@ RSpec.describe AccountUser do
 
   describe 'permissions' do
     it 'returns the right permissions' do
+      expect(account_user.permissions).to eq(%w[agent report_manage]) # Plan-Roles-Permisos: Supervisor ve Informes
+    end
+
+    it 'un rol sin Informes no lleva report_manage' do
+      seller = AccessRole.for_account(account_user.account).find { |role| role.key == 'seller' }
+      account_user.update!(access_role: seller)
       expect(account_user.permissions).to eq(['agent'])
     end
 
