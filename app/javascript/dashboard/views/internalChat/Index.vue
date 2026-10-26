@@ -104,11 +104,13 @@ export default {
       >
         {{ $t('INTERNAL_CHAT.PICK_ROOM') }}
       </p>
-      <NewRoomModal
-        v-if="showNewRoom"
-        @close="closeNewRoom"
-        @created="onCreated"
-      />
+      <woot-modal :show="showNewRoom" :on-close="closeNewRoom">
+        <NewRoomModal
+          v-if="showNewRoom"
+          @close="closeNewRoom"
+          @created="onCreated"
+        />
+      </woot-modal>
     </template>
   </div>
 </template>

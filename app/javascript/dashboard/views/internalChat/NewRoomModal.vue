@@ -2,13 +2,17 @@
 // feat/chat_interno (F3) — NUEVO CHAT DIRECTO
 // Se elige un agente de la cuenta; si ya existe el chat con él, se abre el mismo.
 // Los grupos son los equipos de Chatwoot: no se crean aquí (Ajustes → Equipos).
+// Mismo molde que los modales nativos (settings/agents/AddAgent.vue): lo envuelve
+// <woot-modal> en Index.vue y el relleno del <form> lo pone Modal.vue.
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
+import Thumbnail from 'dashboard/components/widgets/Thumbnail.vue';
 
 export default {
+  components: { Thumbnail },
   emits: ['close', 'created'],
   data() {
-    return { direct: null, saving: false };
+    return { agent: null, saving: false };
   },
   computed: {
     ...mapGetters({
@@ -21,10 +25,12 @@ export default {
         .map(agent => ({
           id: agent.id,
           name: agent.available_name || agent.name,
+          thumbnail: agent.thumbnail,
+          availability_status: agent.availability_status,
         }));
     },
     canCreate() {
-      return !this.saving && Boolean(this.direct);
+      return !this.saving && Boolean(this.agent);
     },
   },
   methods: {
@@ -34,7 +40,7 @@ export default {
       try {
         const room = await this.$store.dispatch(
           'internalChat/openDirect',
-          this.direct.id
+          this.agent.id
         );
         this.$emit('created', room);
       } catch (error) {
@@ -48,42 +54,65 @@ export default {
 </script>
 
 <template>
-  <woot-modal show :on-close="() => $emit('close')">
-    <div class="flex flex-col h-auto overflow-visible">
-      <woot-modal-header
-        :header-title="$t('INTERNAL_CHAT.NEW_ROOM.TITLE')"
-        :header-content="$t('INTERNAL_CHAT.NEW_ROOM.DESCRIPTION')"
-      />
-      <form class="flex flex-col gap-4 px-8 pb-6" @submit.prevent="create">
+  <div class="flex flex-col h-auto overflow-auto">
+    <woot-modal-header
+      :header-title="$t('INTERNAL_CHAT.NEW_ROOM.TITLE')"
+      :header-content="$t('INTERNAL_CHAT.NEW_ROOM.DESCRIPTION')"
+    />
+    <form class="flex flex-col items-start w-full" @submit.prevent="create">
+      <div class="w-full">
         <label>
           {{ $t('INTERNAL_CHAT.NEW_ROOM.AGENT') }}
           <multiselect
-            v-model="direct"
+            v-model="agent"
             :options="options"
             track-by="id"
             label="name"
             :placeholder="$t('INTERNAL_CHAT.NEW_ROOM.SELECT_PLACEHOLDER')"
-            allow-empty
             selected-label=""
-            select-label=""
-            deselect-label=""
-          />
-        </label>
-
-
-        <div class="flex justify-end gap-2">
-          <woot-button
-            variant="clear"
-            color-scheme="secondary"
-            @click.prevent="$emit('close')"
+            :select-label="$t('FORMS.MULTISELECT.ENTER_TO_SELECT')"
+            :deselect-label="$t('FORMS.MULTISELECT.ENTER_TO_REMOVE')"
+            :max-height="240"
+            close-on-select
           >
+            <template #singleLabel="{ option }">
+              <span class="flex items-center gap-2">
+                <Thumbnail
+                  :src="option.thumbnail"
+                  :username="option.name"
+                  size="20px"
+                />
+                {{ option.name }}
+              </span>
+            </template>
+            <template #option="{ option }">
+              <span class="flex items-center gap-2">
+                <Thumbnail
+                  :src="option.thumbnail"
+                  :username="option.name"
+                  :status="option.availability_status"
+                  should-show-status-always
+                  size="24px"
+                />
+                {{ option.name }}
+              </span>
+            </template>
+          </multiselect>
+        </label>
+      </div>
+
+      <div class="flex flex-row justify-end w-full gap-2 px-0 py-2">
+        <div class="w-full">
+          <woot-submit-button
+            :disabled="!canCreate"
+            :button-text="$t('INTERNAL_CHAT.NEW_ROOM.CREATE')"
+            :loading="saving"
+          />
+          <button class="button clear" @click.prevent="$emit('close')">
             {{ $t('INTERNAL_CHAT.NEW_ROOM.CANCEL') }}
-          </woot-button>
-          <woot-button :is-disabled="!canCreate" :is-loading="saving">
-            {{ $t('INTERNAL_CHAT.NEW_ROOM.CREATE') }}
-          </woot-button>
+          </button>
         </div>
-      </form>
-    </div>
-  </woot-modal>
+      </div>
+    </form>
+  </div>
 </template>
