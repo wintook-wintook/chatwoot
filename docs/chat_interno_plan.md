@@ -4,6 +4,48 @@
 
 ---
 
+## ⚠️ Plan v2 · «Interno» como canal real (26/10/2026)
+
+> Decidido por el usuario tras F0–F3: **«que Interno sea como cualquier otro canal, pero interno»**.
+> Reemplaza al módulo aparte (secciones 2–7 y el registro de F0–F3 quedan como historia).
+
+### Idea
+
+```
+ Cuenta ──▶ Bandeja «Interno» (Channel::Internal, una por cuenta, todos los agentes son miembros)
+              │
+              ├─ Conversación «# general»   participantes: todos los agentes
+              ├─ Conversación «# ventas»    participantes: miembros del equipo (una por equipo)
+              └─ Conversación «Ana ↔ Luis»  participantes: los dos (directo, privado)
+
+ Todo lo de una conversación funciona tal cual: lista y filtros, búsqueda, adjuntos, emojis,
+ editor, predefinidas, @menciones, notas, etiquetas, escribiendo…, notificaciones, menú del mensaje.
+```
+
+### Lo que hay que ajustar (lo único que no es nativo)
+
+| # | Ajuste | Por qué |
+|---|---|---|
+| A1 | **Contacto oculto** «Chat interno», uno por cuenta, fuera de Clientes | Chatwoot exige contacto en cada conversación |
+| A2 | **Privacidad:** una conversación interna solo la ven sus participantes (lista, abrirla, búsqueda) | Un directo es de dos; un equipo, de sus miembros |
+| A3 | **Apagado** en Interno: IA/bots, automatizaciones, casos, embudo, reportes, SLA, CSAT, webhooks, integraciones, seguimientos, palabras clave, vendedor | No son clientes |
+| A4 | **Por quien mira:** lo de otros a la izquierda; nombre/foto de la sala (# general, # equipo, el otro agente) en tarjeta y cabecera | Todos los mensajes son de agentes (salientes) |
+| A5 | **No leídos por agente** (`conversation_participants.last_read_at`) | Chatwoot solo cuenta mensajes de clientes y tiene un «visto» compartido |
+| A6 | **«Nuevo chat»** (+) en la lista de la bandeja Interno: abre/crea el directo | No hay «nueva conversación» con un agente |
+| A7 | Salas de equipo **sincronizadas** con Equipos (alta, baja, miembros) | Grupos = equipos |
+
+### Fases
+
+| Fase | Qué |
+|---|---|
+| **R1** | `Channel::Internal`, bandeja por cuenta (respeta el interruptor), miembros = todos los agentes, contacto oculto, conversaciones de general/equipos/directos con participantes, sincronía con equipos |
+| **R2** | Privacidad (A2) en buscador, carga de conversación y búsqueda |
+| **R3** | Apagado (A3) con una sola regla `conversation.internal?` |
+| **R4** | Frontend: el grupo «Interno» del menú = la bandeja; dirección y título por quien mira (A4); no leídos por agente (A5); «Nuevo chat» (A6) |
+| **R5** | Pruebas, quitar el módulo aparte (tablas `internal_chat_*`, API, store, vistas) y lo que ya no se use en los componentes nativos |
+
+---
+
 ## 1. Qué se quiere
 
 Un **chat interno por cuenta**: los agentes de una misma cuenta conversan entre ellos dentro
