@@ -9,22 +9,28 @@
 // Plan: docs/chat_interno_plan.md §3
 // ============================================================================
 import { mapGetters } from 'vuex';
+import PopOverSearch from 'dashboard/routes/dashboard/conversation/search/PopOverSearch.vue';
+import EmptyStateMessage from 'dashboard/components/widgets/conversation/EmptyState/EmptyStateMessage.vue';
 import RoomView from './RoomView.vue';
 import NewRoomModal from './NewRoomModal.vue';
 import InternalChatList from './InternalChatList.vue';
 
 export default {
-  components: { RoomView, NewRoomModal, InternalChatList },
+  components: {
+    PopOverSearch,
+    EmptyStateMessage,
+    RoomView,
+    NewRoomModal,
+    InternalChatList,
+  },
   data() {
-    return { loadError: false };
+    return { loadError: false, isOnExpandedLayout: false };
   },
   computed: {
     ...mapGetters({
       accountId: 'getCurrentAccountId',
       getAccount: 'accounts/getAccount',
-      rooms: 'internalChat/rooms',
       roomById: 'internalChat/roomById',
-      uiFlags: 'internalChat/uiFlags',
     }),
     enabled() {
       const account = this.getAccount(this.accountId);
@@ -41,15 +47,12 @@ export default {
     },
   },
   watch: {
+    // Como una bandeja: sin sala elegida se ve el estado vacío («No Chat»).
     roomId: {
       immediate: true,
       handler(id) {
-        if (id) this.$store.dispatch('internalChat/openRoom', id);
-        else this.openDefaultRoom();
+        this.$store.dispatch('internalChat/openRoom', id || null);
       },
-    },
-    rooms() {
-      if (!this.roomId) this.openDefaultRoom();
     },
   },
   mounted() {
@@ -69,11 +72,6 @@ export default {
         query,
       });
     },
-    // Sin sala elegida: la general (conservando ?new=1 si se pidió «Nuevo chat»).
-    openDefaultRoom() {
-      const general = this.rooms.find(room => room.kind === 'general');
-      if (general) this.goToRoom(general, this.showNewRoom ? { new: '1' } : {});
-    },
     closeNewRoom() {
       this.$router.replace({ query: {} });
     },
@@ -81,6 +79,7 @@ export default {
       this.$router.replace({ query: { new: '1' } });
     },
     onSelect(room) {
+      this.isOnExpandedLayout = false;
       if (room.id !== this.roomId) this.goToRoom(room);
     },
     onCreated(room) {
@@ -91,7 +90,7 @@ export default {
 </script>
 
 <template>
-  <div class="flex w-full h-full min-h-0 bg-white dark:bg-slate-900">
+  <section class="bg-white conversation-page dark:bg-slate-900">
     <p
       v-if="!enabled"
       class="m-auto text-sm text-slate-500 dark:text-slate-400"
@@ -107,16 +106,24 @@ export default {
     <template v-else>
       <InternalChatList
         :active-room-id="roomId"
+        :is-on-expanded-layout="isOnExpandedLayout"
         @select="onSelect"
         @new="openNewRoom"
-      />
-      <RoomView v-if="activeRoom" :key="activeRoom.id" :room="activeRoom" />
-      <p
-        v-else-if="!uiFlags.loadingRooms"
-        class="m-auto text-sm text-slate-500 dark:text-slate-400"
       >
-        {{ $t('INTERNAL_CHAT.PICK_ROOM') }}
-      </p>
+        <PopOverSearch
+          :is-on-expanded-layout="isOnExpandedLayout"
+          @toggleConversationLayout="isOnExpandedLayout = !isOnExpandedLayout"
+        />
+      </InternalChatList>
+      <template v-if="!isOnExpandedLayout">
+        <RoomView v-if="activeRoom" :key="activeRoom.id" :room="activeRoom" />
+        <div
+          v-else
+          class="flex flex-col items-center justify-center flex-1 h-full min-w-0 px-0"
+        >
+          <EmptyStateMessage :message="$t('INTERNAL_CHAT.PICK_ROOM')" />
+        </div>
+      </template>
       <!-- Sin scroll en el modal: la lista del selector flota por encima (size = clase del contenedor) -->
       <woot-modal
         :show="showNewRoom"
@@ -130,5 +137,5 @@ export default {
         />
       </woot-modal>
     </template>
-  </div>
+  </section>
 </template>

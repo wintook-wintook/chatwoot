@@ -2,7 +2,7 @@
   "INTERNAL_CHAT": {
     "TITLE": "Team chat",
     "GENERAL": "general",
-    "PICK_ROOM": "Pick a chat or start a new one.",
+    "PICK_ROOM": "Pick a chat from the list or start a new one with +.",
     "DISABLED": "Team chat is not enabled for this account.",
     "LOAD_ERROR": "Could not load the chat. Try again.",
     "EVERYONE": "Every agent in the account",

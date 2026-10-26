@@ -1,6 +1,8 @@
 <script>
 // feat/chat_interno — LA LISTA DE SALAS, con el mismo marco que la lista de conversaciones
-// (components/ChatList.vue + ChatListHeader.vue + ChatTypeTabs.vue):
+// (components/ChatList.vue + ChatListHeader.vue + ChatTypeTabs.vue). Arriba, en el slot,
+// el buscador (PopOverSearch) como en ConversationView; al final «Todas las conversaciones
+// cargadas 🎉». La cabecera copia ChatListHeader sin su filtro de estado (es de clientes).
 //   Mías   tus directos
 //   Todas  # general, # tus equipos y tus directos
 // «No asignadas» no aplica al chat interno.
@@ -14,6 +16,7 @@ export default {
   components: { ChatTypeTabs, InternalChatCard },
   props: {
     activeRoomId: { type: Number, default: null },
+    isOnExpandedLayout: { type: Boolean, default: false },
   },
   emits: ['select', 'new'],
   data() {
@@ -49,15 +52,23 @@ export default {
 
 <template>
   <div
-    class="flex flex-col flex-shrink-0 overflow-hidden border-r conversations-list-wrap rtl:border-r-0 rtl:border-l border-slate-50 dark:border-slate-800/50 flex-basis-clamp"
+    class="flex flex-col flex-shrink-0 overflow-hidden border-r conversations-list-wrap rtl:border-r-0 rtl:border-l border-slate-50 dark:border-slate-800/50"
+    :class="isOnExpandedLayout ? 'basis-full' : 'flex-basis-clamp'"
   >
+    <slot />
     <div class="flex items-center justify-between px-4 py-0">
       <div class="flex max-w-[85%] justify-center items-center">
         <h1
           class="text-xl font-medium break-words truncate text-black-900 dark:text-slate-100"
+          :title="$t('SIDEBAR.INBOX_GROUPS.INTERNAL')"
         >
-          {{ $t('INTERNAL_CHAT.TITLE') }}
+          {{ $t('SIDEBAR.INBOX_GROUPS.INTERNAL') }}
         </h1>
+        <span
+          class="p-1 my-0.5 mx-1 rounded-md capitalize bg-slate-50 dark:bg-slate-800 text-xxs text-slate-600 dark:text-slate-300"
+        >
+          {{ $t('CHAT_LIST.CHAT_STATUS_FILTER_ITEMS.all.TEXT') }}
+        </span>
       </div>
       <woot-button
         v-tooltip.right="$t('SIDEBAR.INTERNAL_CHAT_NEW')"
@@ -90,6 +101,12 @@ export default {
         :is-active="room.id === activeRoomId"
         @select="$emit('select', $event)"
       />
+      <p
+        v-if="visibleRooms.length"
+        class="p-4 text-center text-slate-400 dark:text-slate-300"
+      >
+        {{ $t('CHAT_LIST.EOF') }}
+      </p>
     </div>
   </div>
 </template>

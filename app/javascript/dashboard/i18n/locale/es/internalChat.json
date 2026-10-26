@@ -2,7 +2,7 @@
   "INTERNAL_CHAT": {
     "TITLE": "Chat interno",
     "GENERAL": "general",
-    "PICK_ROOM": "Elige un chat o empieza uno nuevo.",
+    "PICK_ROOM": "Elige un chat de la lista o empieza uno nuevo con +.",
     "DISABLED": "El chat interno no está activo en esta cuenta.",
     "LOAD_ERROR": "No se pudo cargar el chat. Intenta otra vez.",
     "EVERYONE": "Todos los agentes de la cuenta",
