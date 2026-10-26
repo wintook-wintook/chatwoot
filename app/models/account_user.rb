@@ -46,7 +46,7 @@ class AccountUser < ApplicationRecord
   accepts_nested_attributes_for :account
 
   after_create_commit :notify_creation, :create_notification_setting
-  after_destroy :notify_deletion, :remove_user_from_account
+  after_destroy :notify_deletion, :remove_user_from_account, :remove_internal_chat_memberships
   after_save :update_presence_in_redis, if: :saved_change_to_availability?
 
   validates :user_id, uniqueness: { scope: :account_id }
@@ -56,6 +56,11 @@ class AccountUser < ApplicationRecord
     setting.selected_email_flags = [:email_conversation_assignment]
     setting.selected_push_flags = [:push_conversation_assignment]
     setting.save!
+  end
+
+  # feat/chat_interno: quien sale de la cuenta sale de todas sus salas en ella.
+  def remove_internal_chat_memberships
+    InternalChatMember.where(user_id: user_id, room_id: account.internal_chat_rooms.select(:id)).delete_all
   end
 
   def remove_user_from_account

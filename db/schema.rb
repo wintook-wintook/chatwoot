@@ -1319,6 +1319,43 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_28_100100) do
     t.jsonb "settings", default: {}
   end
 
+  create_table "internal_chat_members", force: :cascade do |t|
+    t.bigint "room_id", null: false
+    t.bigint "user_id", null: false
+    t.string "role", default: "member", null: false
+    t.datetime "last_read_at"
+    t.boolean "muted", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["room_id", "user_id"], name: "index_internal_chat_members_on_room_id_and_user_id", unique: true
+    t.index ["user_id"], name: "index_internal_chat_members_on_user_id"
+  end
+
+  create_table "internal_chat_messages", force: :cascade do |t|
+    t.bigint "room_id", null: false
+    t.bigint "user_id"
+    t.text "content"
+    t.datetime "edited_at"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["room_id", "id"], name: "index_internal_chat_messages_on_room_id_and_id"
+  end
+
+  create_table "internal_chat_rooms", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "kind", default: "group", null: false
+    t.string "name"
+    t.bigint "created_by_id"
+    t.string "direct_key"
+    t.datetime "last_message_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "direct_key"], name: "index_internal_chat_rooms_on_account_id_and_direct_key", unique: true, where: "(direct_key IS NOT NULL)"
+    t.index ["account_id", "kind"], name: "index_internal_chat_rooms_one_general", unique: true, where: "((kind)::text = 'general'::text)"
+    t.index ["account_id"], name: "index_internal_chat_rooms_on_account_id"
+  end
+
   create_table "kanban_moves", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "conversation_id", null: false

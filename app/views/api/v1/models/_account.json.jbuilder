@@ -15,6 +15,7 @@ if resource.custom_attributes.present?
 end
 json.domain @account.domain
 json.features @account.enabled_features
+json.internal_chat_enabled @account.internal_chat_enabled # feat/chat_interno
 json.id @account.id
 json.locale @account.locale
 json.name @account.name

@@ -1,0 +1,6 @@
+es:
+  # feat/chat_interno — etiqueta de la casilla en el super admin (en español a pedido)
+  helpers:
+    label:
+      account:
+        internal_chat_enabled: 'Chat interno (los agentes de la cuenta conversan entre ellos)'

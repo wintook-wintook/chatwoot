@@ -104,6 +104,7 @@ class User < ApplicationRecord
                      dependent: :nullify
   # rubocop:disable Rails/HasManyOrHasOneDependent
   # we are handling this in `remove_macros` callback
+  has_many :internal_chat_members, dependent: :delete_all # feat/chat_interno
   has_many :macros, foreign_key: 'created_by_id', inverse_of: :created_by
   # rubocop:enable Rails/HasManyOrHasOneDependent
 
