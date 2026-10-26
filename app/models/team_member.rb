@@ -18,6 +18,15 @@ class TeamMember < ApplicationRecord
   belongs_to :user
   belongs_to :team
   validates :user_id, uniqueness: { scope: :team_id }
+
+  # feat/chat_interno (plan v2): la conversación del equipo en «Interno» sigue a sus miembros.
+  after_commit :sync_internal_conversation, on: [:create, :destroy]
+
+  private
+
+  def sync_internal_conversation
+    InternalChannel::Setup.new(team.account).sync_team(team) if team.present?
+  end
 end
 
 TeamMember.include_mod_with('Audit::TeamMember')

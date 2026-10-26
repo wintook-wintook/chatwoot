@@ -115,6 +115,11 @@ class Inbox < ApplicationRecord
     native_instagram? || (facebook? && channel.instagram_id.present?)
   end
 
+  # feat/chat_interno (plan v2): la bandeja «Interno», donde conversan los agentes.
+  def internal?
+    channel_type == 'Channel::Internal'
+  end
+
   def tiktok?
     channel_type == 'Channel::Tiktok'
   end

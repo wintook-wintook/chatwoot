@@ -147,6 +147,10 @@ Rails.application.routes.draw do
             post :preview, on: :collection # @campanas_vendedor — dry-run de buckets
           end
           # @campanas_vendedor / @automatizacion_campanas (create = campaña continua)
+          # feat/chat_interno (plan v2) — la bandeja «Interno»
+          resource :internal_channel, only: [:show] do
+            post :directs
+          end
           # feat/chat_interno — chat entre los agentes de la cuenta
           namespace :internal_chat do
             resources :rooms, only: [:index, :show, :create] do

@@ -41,6 +41,7 @@ class Account < ApplicationRecord
   has_many :published_prompts, dependent: :destroy # proyecto@publicar_prompts
   has_many :tracking_campaigns, dependent: :destroy # @campanas_vendedor
   has_many :internal_chat_rooms, dependent: :destroy # feat/chat_interno
+  has_one :internal_channel, class_name: 'Channel::Internal', dependent: :destroy_async # feat/chat_interno (plan v2)
   has_many :case_tickets, dependent: :destroy # @tickets_cases
   has_many :external_db_connections, dependent: :destroy # @query_databases
   has_many :external_db_queries,     dependent: :destroy # @query_databases

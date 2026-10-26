@@ -216,6 +216,12 @@ class Conversation < ApplicationRecord
     agent_last_seen_at.present? ? messages.created_since(agent_last_seen_at) : messages
   end
 
+  # feat/chat_interno (plan v2): conversación entre agentes en la bandeja «Interno».
+  # Nada de lo que es para clientes (IA, automatizaciones, reportes, webhooks…) la toca.
+  def internal?
+    inbox.present? && inbox.internal?
+  end
+
   def unread_incoming_messages
     unread_messages.where(account_id: account_id).incoming.last(10)
   end
