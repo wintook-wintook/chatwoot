@@ -115,6 +115,10 @@ class Inbox < ApplicationRecord
     native_instagram? || (facebook? && channel.instagram_id.present?)
   end
 
+  def tiktok?
+    channel_type == 'Channel::Tiktok'
+  end
+
   def web_widget?
     channel_type == 'Channel::WebWidget'
   end

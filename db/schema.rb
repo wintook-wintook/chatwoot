@@ -926,6 +926,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_30_160000) do
     t.datetime "refresh_token_expires_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "provider_name"
     t.index ["account_id", "business_id"], name: "index_channel_tiktok_on_account_id_and_business_id", unique: true
     t.index ["business_id"], name: "index_channel_tiktok_on_business_id", unique: true
   end

@@ -78,6 +78,7 @@ export default {
         instagram: '',
         line: '',
         telegram: '',
+        tiktok: '',
         website: '',
       },
       socialProfileKeys: [
@@ -88,6 +89,7 @@ export default {
         { key: 'instagram', label: 'https://instagram.com/' },
         { key: 'line', label: 'Line User Id ' },
         { key: 'telegram', label: 'Telegram Username ' },
+        { key: 'tiktok', label: 'https://tiktok.com/@' },
         { key: 'website', label: 'Website: https://' },
       ],
       // Redes sociales a la vista: las que tienen dato + las que se agregan.
@@ -413,6 +415,7 @@ export default {
         instagram: socialProfiles.instagram || '',
         line: socialProfiles.line || '',
         telegram: socialProfiles.telegram || '',
+        tiktok: socialProfiles.tiktok || '',
         website: socialProfiles.website || '',
       };
       this.visibleSocial = this.socialProfileKeys
