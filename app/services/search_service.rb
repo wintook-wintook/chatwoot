@@ -31,6 +31,8 @@ class SearchService
                             ILIKE :search OR contacts.phone_number ILIKE :search OR contacts.identifier ILIKE :search", search: "%#{search_query}%")
                                     .order('conversations.created_at DESC')
                                     .limit(10)
+    # feat/chat_interno: de «Interno», solo donde participa.
+    @conversations = InternalChannel::Access.scope(@conversations, @current_user, current_account)
   end
 
   def filter_messages
@@ -39,6 +41,8 @@ class SearchService
                                .where('created_at >= ?', 3.months.ago)
                                .reorder('created_at DESC')
                                .limit(10)
+    # feat/chat_interno: de «Interno», solo donde participa.
+    @messages = InternalChannel::Access.scope(@messages, @current_user, current_account, column: :conversation_id)
   end
 
   def filter_contacts

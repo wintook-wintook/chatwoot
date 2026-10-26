@@ -288,9 +288,12 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   def update_last_seen
     update_last_seen_on_conversation(DateTime.now.utc, assignee?)
+    InternalChannel::Access.mark_read!(@conversation, Current.user) if @conversation.internal? # feat/chat_interno
   end
 
   def unread
+    return InternalChannel::Access.mark_unread!(@conversation, Current.user) if @conversation.internal? # feat/chat_interno
+
     last_incoming_message = @conversation.messages.incoming.last
     last_seen_at = last_incoming_message.created_at - 1.second if last_incoming_message.present?
     update_last_seen_on_conversation(last_seen_at, true)
@@ -462,6 +465,8 @@ end
   def conversation
     @conversation ||= Current.account.conversations.find_by!(display_id: params[:id])
     authorize @conversation.inbox, :show?
+    # feat/chat_interno (plan v2): una conversación de «Interno» solo la abren sus participantes.
+    raise Pundit::NotAuthorizedError unless InternalChannel::Access.can_see?(@conversation, Current.user)
   end
 
   def inbox

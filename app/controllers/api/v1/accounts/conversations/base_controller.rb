@@ -6,5 +6,7 @@ class Api::V1::Accounts::Conversations::BaseController < Api::V1::Accounts::Base
   def conversation
     @conversation ||= Current.account.conversations.find_by!(display_id: params[:conversation_id])
     authorize @conversation.inbox, :show?
+    # feat/chat_interno (plan v2): una conversación de «Interno» solo la abren sus participantes.
+    raise Pundit::NotAuthorizedError unless InternalChannel::Access.can_see?(@conversation, Current.user)
   end
 end
