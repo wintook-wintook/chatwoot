@@ -430,6 +430,31 @@
     "BUSINESS_SUMMARY": "Resumen del negocio",
     "BUSINESS_SUMMARY_ACCESS": "Resumen del negocio: acceso",
     "HOME_SUMMARY": "Inicio",
+    "SORT_INBOXES": "Ordenar bandejas…",
+    "INBOX_GROUPS": {
+      "INTERNAL": "Interno",
+      "WHATSAPP": "WhatsApp",
+      "TELEGRAM": "Telegram",
+      "EMAIL": "Correo",
+      "META": "Meta (Messenger e Instagram)",
+      "WEB": "Sitio web",
+      "TIKTOK": "TikTok",
+      "OTHERS": "Otros canales"
+    },
+    "INBOX_GROUPS_MODAL": {
+      "TITLE": "Ordenar bandejas por tipo",
+      "DESCRIPTION": "Elige en qué orden aparecen los grupos de bandejas en tu menú. Solo cambia tu menú, no el de los demás.",
+      "DRAG": "Arrastra para mover",
+      "UP": "Subir",
+      "DOWN": "Bajar",
+      "HINT": "Los grupos sin bandejas no aparecen en el menú.",
+      "RESET": "Restablecer",
+      "CANCEL": "Cancelar",
+      "SAVE": "Guardar"
+    },
+    "SHOW_MORE": "Mostrar más ({count})",
+    "SHOW_LESS": "Mostrar menos",
+    "INTERNAL_CHAT_NEW": "Nuevo chat",
     "MAINTENANCE": "Mantenimientos"
   },
   "BILLING_SETTINGS": {

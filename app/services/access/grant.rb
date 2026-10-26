@@ -110,9 +110,13 @@ class Access::Grant
   # ── Conversaciones y contactos ─────────────────────────────────────────────
   def conversations(scope)
     return scope if admin? || level(:conversations) == 'all' || level(:conversations) == 'view'
-    return scope.none unless allowed?(:conversations)
 
-    own_filter(scope, :conversations, :assignee_id)
+    # feat/chat_interno: «Interno» no es de clientes ni tiene asignado; ahí manda
+    # InternalChannel::Access (solo sus participantes), no «solo lo suyo».
+    internal = scope.where(inbox_id: InternalChannel::Access.internal_inbox_ids(account_user.account))
+    return internal unless allowed?(:conversations)
+
+    own_filter(scope, :conversations, :assignee_id).or(internal)
   end
 
   def conversation_visible?(conversation)

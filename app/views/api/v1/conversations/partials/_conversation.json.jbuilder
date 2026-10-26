@@ -46,7 +46,8 @@ json.status conversation.status
 json.created_at conversation.created_at.to_i
 json.timestamp conversation.last_activity_at.to_i
 json.first_reply_created_at conversation.first_reply_created_at.to_i
-json.unread_count conversation.unread_incoming_messages.count
+# feat/chat_interno (plan v2): en «Interno» los no leídos son por agente.
+json.unread_count conversation.internal? ? InternalChannel::Access.unread_count(conversation, Current.user) : conversation.unread_incoming_messages.count
 json.last_non_activity_message conversation.messages.where(account_id: conversation.account_id).non_activity_messages.first.try(:push_event_data)
 json.last_activity_at conversation.last_activity_at.to_i
 json.priority conversation.priority
