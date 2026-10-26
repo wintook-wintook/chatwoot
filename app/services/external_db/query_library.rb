@@ -11,6 +11,23 @@ module ExternalDb::QueryLibrary
   DESDE = { 'key' => 'desde', 'label' => 'Fecha desde', 'type' => 'date', 'required' => true }.freeze
   HASTA = { 'key' => 'hasta', 'label' => 'Fecha hasta', 'type' => 'date', 'required' => true }.freeze
 
+  # proyecto@erp_productos — `buscar_productos` (docs/erp_productos_plan.md §3.3). Los
+  # mismos parámetros en los tres ERP, todos opcionales, para que {{consulta:buscar_productos
+  # (…)}} funcione igual sea cual sea la conexión. `max` no está en el SQL: lo aplica quien
+  # consume el resultado (el SQL ya trae como mucho PRODUCTS_LIMIT filas).
+  PRODUCTS_LIMIT = 50
+  PRODUCT_PARAMS = [
+    { 'key' => 'texto', 'label' => 'Texto a buscar (nombre, descripción o código)', 'type' => 'words' },
+    { 'key' => 'codigo', 'label' => 'Código exacto del producto', 'type' => 'string' },
+    { 'key' => 'linea', 'label' => 'Línea o clasificación', 'type' => 'string' },
+    { 'key' => 'precio_min', 'label' => 'Precio mínimo', 'type' => 'number' },
+    { 'key' => 'precio_max', 'label' => 'Precio máximo', 'type' => 'number' },
+    { 'key' => 'con_existencia', 'label' => 'Solo con existencia (sí/no)', 'type' => 'boolean' },
+    { 'key' => 'lista', 'label' => 'Lista de precios (1 por defecto)', 'type' => 'integer' },
+    { 'key' => 'max', 'label' => 'Cuántos productos mostrar (5 por defecto, tope 10)', 'type' => 'integer' }
+  ].freeze
+  PRODUCTS_DESCRIPTION = 'Busca productos del catálogo: código, nombre, línea, precio de la lista elegida y existencia'
+
   # Devuelve las plantillas (con %{suffix} ya interpolado) para una conexión.
   def for_connection(connection)
     suffix = connection.company_suffix.to_s
@@ -26,6 +43,7 @@ module ExternalDb::QueryLibrary
   # ---------------- Aspel SAE (Firebird) ----------------
   def sae
     [
+      entry('buscar_productos', PRODUCTS_DESCRIPTION, ExternalDb::ProductQueries.sae, PRODUCT_PARAMS),
       entry('saldo_cliente', 'Saldo total que adeuda un cliente por su RFC',
             'SELECT NOMBRE, SALDO FROM CLIE%<suffix>s WHERE RFC = :rfc', [RFC], ai_enabled: true),
       entry('facturas_vencidas', 'Facturas vencidas de un cliente',
@@ -48,6 +66,7 @@ module ExternalDb::QueryLibrary
   # ---------------- Microsip (Firebird) ----------------
   def microsip # rubocop:disable Metrics/MethodLength
     [
+      entry('buscar_productos', PRODUCTS_DESCRIPTION, ExternalDb::ProductQueries.microsip, PRODUCT_PARAMS),
       entry('saldo_cliente', 'Saldo total que adeuda un cliente por su RFC',
             'SELECT SUM(s.CARGOS_CXC - s.CREDITOS_CXC) AS SALDO FROM SALDOS_CC s ' \
             'JOIN DIRS_CLIENTES d ON d.CLIENTE_ID = s.CLIENTE_ID WHERE d.RFC_CURP = :rfc', [RFC], ai_enabled: true),
@@ -73,6 +92,7 @@ module ExternalDb::QueryLibrary
   # ---------------- CONTPAQi (SQL Server) ----------------
   def contpaq # rubocop:disable Metrics/MethodLength
     [
+      entry('buscar_productos', PRODUCTS_DESCRIPTION, ExternalDb::ProductQueries.contpaq, PRODUCT_PARAMS),
       entry('saldo_cliente', 'Saldo total que adeuda un cliente por su RFC',
             'SELECT SUM(CPENDIENTE) AS saldo FROM admDocumentos WHERE CRFC = :rfc AND CCANCELADO = 0',
             [RFC], ai_enabled: true),

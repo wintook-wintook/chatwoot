@@ -17,9 +17,11 @@ class AsyncDispatcher < BaseDispatcher
       CsatSurveyListener.instance,
       HookListener.instance,
       InstallationWebhookListener.instance,
+      KanbanFunnelListener.instance, # Embudo de contactos — la conversación mueve su tarjeta
       NotificationListener.instance,
       ParticipationListener.instance,
       ReportingEventListener.instance,
+      ServiceConfirmationListener.instance, # proyecto@hoja_buscar — etiqueta «pago_confirmado»
       WebhookListener.instance
     ]
   end

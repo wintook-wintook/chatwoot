@@ -10,6 +10,10 @@ const CsatResponses = () => import('./CsatResponses.vue');
 const BotReports = () => import('./BotReports.vue');
 const LiveReports = () => import('./LiveReports.vue');
 const SLAReports = () => import('./SLAReports.vue');
+// @tickets_cases — «Resumen del negocio» (la misma página que en Casos). El
+// reporte viejo de «Oportunidades» se quitó: lo cubren los Números de Comercial.
+const BusinessSummary = () =>
+  import('../../../../views/gestorTickets/summary/BusinessSummary.vue');
 
 export default {
   routes: [
@@ -33,6 +37,28 @@ export default {
             permissions: ['administrator', 'report_manage'],
           },
           component: LiveReports,
+        },
+      ],
+    },
+    // @tickets_cases — va DESPUÉS del bloque de «Resumen»: todos comparten la ruta
+    // base `reports` y Vue Router se queda con el primero (el que redirige a overview).
+    {
+      path: frontendURL('accounts/:accountId/reports'),
+      component: SettingsContent,
+      props: {
+        headerTitle: 'CASE_TICKETS.BUSINESS_SUMMARY.TITLE',
+        icon: 'briefcase',
+        keepAlive: false,
+      },
+      children: [
+        {
+          path: 'business-summary',
+          name: 'business_summary_reports',
+          meta: {
+            permissions: ['administrator', 'report_manage'],
+          },
+          component: BusinessSummary,
+          props: { embedded: true },
         },
       ],
     },

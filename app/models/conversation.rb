@@ -11,6 +11,9 @@
 #  custom_attributes      :jsonb
 #  first_reply_created_at :datetime
 #  identifier             :string
+#  kanban_move_reason     :string
+#  kanban_move_source     :string
+#  kanban_moved_at        :datetime
 #  last_activity_at       :datetime         not null
 #  priority               :integer
 #  snoozed_until          :datetime
@@ -26,6 +29,7 @@
 #  contact_inbox_id       :bigint
 #  display_id             :integer          not null
 #  inbox_id               :integer          not null
+#  kanban_moved_by_id     :bigint
 #  kanban_process_id      :bigint
 #  kanban_type_process_id :bigint
 #  sla_policy_id          :bigint
@@ -69,6 +73,7 @@ class Conversation < ApplicationRecord
   include SortHandler
   include PushDataHelper
   include ConversationMuteHelpers
+  include KanbanFunnelTrackable # Embudo de contactos — bitácora de movimientos del tablero
 
   # TikTok da 48 h para responder, el doble que la ventana estándar de Meta.
   TIKTOK_MESSAGING_WINDOW_HOURS = 48
@@ -128,6 +133,7 @@ class Conversation < ApplicationRecord
 
   has_many :mentions, dependent: :destroy_async
   has_many :messages, dependent: :destroy_async, autosave: true
+  has_many :calls, dependent: :destroy_async # diag/llamadas_whatsapp
   has_one :csat_survey_response, dependent: :destroy_async
   has_many :conversation_participants, dependent: :destroy_async
   has_many :notifications, as: :primary_actor, dependent: :destroy_async

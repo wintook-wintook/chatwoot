@@ -3,12 +3,11 @@
     "TITLE": "Campañas Agentes IA",
     "DESCRIPTION": "Lanza un Agente IA sobre un grupo de contactos y sigue el avance de cada campaña.",
     "REFRESH": "Actualizar",
+    "REFRESH_ERROR": "No se pudo actualizar la tabla.",
     "NEW_CAMPAIGN": "Nueva campaña",
-    "TAB_LIST": "Campañas",
-    "TAB_NEW": "Nueva campaña",
     "LOADING": "Cargando campañas…",
     "EMPTY_TITLE": "Todavía no hay campañas.",
-    "EMPTY_HINT": "Crea una con el botón «Nueva campaña» o asigna un Agente IA de forma masiva desde Contactos.",
+    "EMPTY_HINT": "Crea una con el botón «Agregar campaña» o asigna un Agente IA de forma masiva desde Contactos.",
     "SEARCH_PLACEHOLDER": "Buscar por nombre, Agente IA o canal…",
     "FILTER_STATUS_ALL": "Todos los estados",
     "NO_RESULTS": "No hay campañas que coincidan con el filtro.",
@@ -20,23 +19,59 @@
     "DELETE_ERROR": "No se pudo borrar la campaña.",
     "COL": {
       "NAME": "Campaña",
+      "CREATED": "Creada",
       "AGENT": "Agente IA",
       "CHANNEL": "Canal",
       "START": "Inicio",
       "STATUS": "Estado",
       "CONTACTS": "Contactos",
-      "PENDING": "Pendientes",
+      "PENDING": "Programados",
       "ACTIVE": "Activos",
       "COMPLETED": "Completados",
       "FAILED": "Fallidos",
-      "PROGRESS": "Avance"
+      "PROGRESS": "Avance",
+      "TYPE": "Tipo",
+      "WINDOW": "Ventana"
     },
     "STATUS": {
-      "draft": "Borrador",
+      "saved": "Guardada",
+      "draft": "Programada",
       "running": "En curso",
       "paused": "Pausada",
       "finished": "Finalizada"
-    }
+    },
+    "MODE": {
+      "batch": "Por lote",
+      "continuous": "Continua"
+    },
+    "MODE_HINT": {
+      "batch": "Se eligió un segmento o una etiqueta: al ponerla en curso se inscriben de una vez los contactos que tenga en ese momento (máximo 100).",
+      "continuous": "No tiene lista fija: la van llenando tus automatizaciones con la acción «Agregar a campaña» mientras esté abierta."
+    },
+    "NO_END": "sin fin",
+    "CONTINUOUS_CREATED": "Campaña \"{name}\" creada. Para que reciba contactos, crea una automatización que la use.",
+    "CREATE_AUTOMATION": "Crear automatización para esta campaña",
+    "DISMISS": "Cerrar",
+    "ADD_CAMPAIGN": "Agregar campaña",
+    "BACK_TO_LIST": "Volver a campañas",
+    "LAUNCH": "Poner en curso",
+    "LAUNCH_CONFIRM": "Por lote se inscriben los contactos que tenga ahora el segmento o la etiqueta y empiezan los envíos; continua empieza a recibir contactos de las automatizaciones. ¿Poner en curso la campaña",
+    "LAUNCH_YES": "Sí, poner en curso",
+    "LAUNCH_SUCCESS": "Campaña en curso.",
+    "LAUNCH_QUEUED": "Campaña en curso: se están inscribiendo {count} contactos.",
+    "LAUNCH_ERROR": "No se pudo poner en curso la campaña.",
+    "SAVED_HINT": "Campaña guardada. No envía nada hasta que oprimas «Poner en curso».",
+    "SAVED_BANNER": "Guardada: no inscribe a nadie ni envía mensajes hasta que la pongas en curso.",
+    "EDIT": "Modificar",
+    "EDIT_CAMPAIGN": "Modificar campaña «{name}»",
+    "EDIT_SUCCESS": "Cambios guardados. Sigue Guardada hasta que la pongas en curso.",
+    "EDIT_ERROR": "No se pudo abrir la campaña para modificarla.",
+    "EDIT_ONLY_SAVED": "Solo se puede modificar una campaña Guardada: esta ya está en curso.",
+    "PAUSED_BANNER": "Pausada automáticamente: WhatsApp rechazó un envío por un problema de configuración, así que los demás también fallarían. Motivo: {reason}",
+    "PAUSED_BANNER_HINT": "Corrige el problema (plantilla, pago o cuenta de WhatsApp en Meta) y reanuda la campaña: los seguimientos pausados vuelven a enviar el intento que falló.",
+    "RESUME": "Reanudar campaña",
+    "RESUME_SUCCESS": "Campaña reanudada: {count} seguimientos vuelven a enviar en un minuto.",
+    "RESUME_ERROR": "No se pudo reanudar la campaña."
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campañas",
@@ -48,28 +83,31 @@
     "KPI": {
       "TITLE": "Control (ejecución)",
       "CONTACTS": "Contactos",
-      "PENDING": "Pendientes",
-      "ACTIVE": "Activos",
-      "PAUSED": "Pausados (Regla)",
+      "PENDING": "Programados",
       "COMPLETED_REPLIED": "Completados (con respuesta)",
       "COMPLETED_NO_REPLY": "Completados (sin respuesta)",
-      "CANCELLED": "Cancelados (Regla)",
       "FAILED": "Fallidos",
       "PROGRESS": "Avance"
     },
     "DELIVERY": {
       "TITLE": "Entrega de Mensajes",
       "DELIVERED": "Entregados",
-      "SENT": "Sin confirmar",
+      "SENT": "Esperando confirmación",
+      "UNCONFIRMED": "Sin confirmar (+24 h)",
+      "RETRYING": "En reintento",
       "FAILED": "Error de entrega",
-      "EMPTY": "Aún no se han enviado mensajes."
+      "EMPTY": "Aún no se han enviado mensajes.",
+      "REASONS_TITLE": "Motivos de error",
+      "RETRY_AT": "Reintento: {date}"
     },
     "FUNNEL": {
       "TITLE": "Intención",
       "REPLIED": "Respondieron",
       "INTERESTED": "Interesados",
       "APPOINTMENT": "Agendaron",
-      "OBJECTIVE_MET": "Objetivo cumplido"
+      "OBJECTIVE_MET": "Objetivo cumplido",
+      "PAUSED_RULE": "Pausados (Regla)",
+      "CANCELLED_RULE": "Cancelados (Regla)"
     },
     "PROSPECTS": "Prospectos",
     "PROSPECTS_EMPTY": "Esta campaña no tiene prospectos.",
@@ -78,18 +116,19 @@
     "FILTER_EMPTY": "Ningún prospecto coincide con este filtro.",
     "FILTER_DESC": {
       "intent_replied": "Contactos que respondieron al menos una vez desde que se creó el seguimiento (cuenta incluso si respondieron antes del primer mensaje).",
-      "intent_interested": "El contacto mostró interés o pidió agendar; suele pausarse para que lo atienda un asesor.",
-      "intent_appointment": "El contacto agendó una cita a través del Agente IA (quedó registrada su fecha y hora).",
+      "intent_interested": "Una regla de palabra clave con acción Interesado lo marcó (por ejemplo, el Agente IA escribió #interesado al final del mensaje).",
+      "intent_appointment": "Una regla de palabra clave con acción Agendó lo marcó (por ejemplo, el Agente IA escribió #agendado al final del mensaje).",
       "intent_objective": "Se logró la meta del seguimiento; se marca como éxito y se detienen los envíos.",
-      "ctrl_pending": "En cola o con próximo mensaje programado; aún no envían.",
-      "ctrl_active": "Seguimiento en marcha: enviando mensajes y respondiendo al contacto según el objetivo.",
-      "ctrl_paused": "Detenidos temporalmente (pueden reanudarse). Normalmente por una regla del Agente IA.",
+      "intent_paused_rule": "Pausados por una regla de palabra clave (por ejemplo, #pausar) y que siguen pausados. Pueden reanudarse.",
+      "intent_cancelled_rule": "Cancelados de forma definitiva por una regla de palabra clave (por ejemplo, #cancelar).",
+      "ctrl_pending": "Con su próximo mensaje programado. Pueden haber recibido ya intentos anteriores; se cuentan aquí hasta que se envíe el siguiente.",
       "ctrl_completed_replied": "Agotaron los intentos y sí hubo respuesta.",
       "ctrl_completed_no_reply": "Agotaron los intentos sin ninguna respuesta.",
-      "ctrl_cancelled": "Cancelados de forma definitiva (no se reanudan). Normalmente por una regla del Agente IA.",
       "ctrl_failed": "No se pudo ejecutar el seguimiento. Pasa el cursor por el ℹ️ del estado para ver la causa exacta.",
       "del_delivered": "El canal confirmó que el último mensaje llegó al contacto (o que ya lo leyó).",
-      "del_sent": "El mensaje salió del sistema, pero el canal aún no confirma que haya llegado al contacto.",
+      "del_sent": "El mensaje salió del sistema y WhatsApp lo aceptó, pero aún no confirma que haya llegado al contacto.",
+      "del_unconfirmed": "WhatsApp aceptó el mensaje hace más de 24 h y nunca confirmó la entrega. No se reenvía: si sí llegó, el contacto lo recibiría dos veces.",
+      "del_retrying": "WhatsApp rechazó el envío por algo temporal (límite de velocidad o falla de Meta); el mismo intento se vuelve a enviar solo.",
       "del_failed": "El canal no pudo entregar el último mensaje (número inválido, bloqueo u otro rechazo)."
     },
     "INTENT_VALUES": {
@@ -125,6 +164,44 @@
       "ATTEMPTS": "Intentos",
       "ACTION": "Acción"
     },
-    "OPEN_CONVERSATION": "Abrir conversación"
+    "OPEN_CONVERSATION": "Abrir conversación",
+    "TYPE": "Tipo",
+    "WINDOW": "Ventana",
+    "TABS": {
+      "PROSPECTS": "Prospectos",
+      "ENTRIES": "Inscritos"
+    },
+    "ENTRIES": {
+      "LOADING": "Cargando inscripciones…",
+      "EMPTY": "Todavía no se inscribió a nadie. En una campaña continua, los inscritos llegan por la acción \"Agregar a campaña\" de una automatización.",
+      "SUMMARY_ENROLLED": "Inscritos",
+      "SUMMARY_BATCH": "por lote",
+      "SUMMARY_AUTOMATION": "por automatización",
+      "SUMMARY_SKIPPED": "omitidos",
+      "COL": {
+        "CONTACT": "Contacto",
+        "SOURCE": "Entró por",
+        "STATUS": "Estado",
+        "WHEN": "Cuándo"
+      },
+      "SOURCE": {
+        "batch": "Lote",
+        "automation": "Automatización",
+        "automation_named": "Automatización \"{name}\"",
+        "missed_call": "Llamada perdida"
+      },
+      "STATUS": {
+        "enrolled": "Inscrito",
+        "skipped": "Omitido"
+      },
+      "REASON": {
+        "campaign_closed": "campaña cerrada",
+        "already_enrolled": "ya inscrito",
+        "active_tracking": "ya tiene un Agente IA activo",
+        "not_contactable": "el canal no lo puede contactar",
+        "outside_window": "fuera de la ventana",
+        "daily_cap": "tope del día"
+      }
+    }
   }
 }

@@ -5,12 +5,25 @@
 #   - convierte placeholders nombrados (:rfc) en bind params (Firebird) o literales
 #     tipados y escapados (SQL Server) — nunca interpolación cruda
 #   - trunca a row_limit y mide duración
+#
+# proyecto@erp_productos — dos tipos de parámetro más (docs/erp_productos_plan.md §3.3):
+#   words    texto libre del cliente ("laptop hp"): se parte en hasta WORDS_MAX palabras,
+#            cada una solo con letras, números, punto y guion (sin comodines ni comillas),
+#            y el SQL las usa como :clave_1, :clave_2, :clave_3 (las que falten, NULL).
+#            Cada palabra va a su singular ("cascos" → casco, "balones" → balon): la
+#            búsqueda es por "contiene", así que la raíz encuentra singular y plural
+#            (medido: "cascos" no encontraba "Casco de Baseball").
+#   boolean  "si/sí/true/1/yes" → 1; "no/false/0" → 0 (se bindea como entero).
 class ExternalDb::QueryRunner
   Result = Struct.new(:columns, :rows, :row_count, :duration_ms, keyword_init: true)
   ParamError = Class.new(StandardError)
 
   # `:identifier` evita capturar casts `::tipo` y horas '12:30' (consultas curadas).
   NAMED_PARAM = /(?<![:\w]):([a-zA-Z_]\w*)/
+  WORDS_MAX = 3
+  WORD_CHARS = /[^\p{L}\p{N}.-]/
+  TRUE_WORDS = %w[1 si sí true yes s y].freeze
+  FALSE_WORDS = %w[0 no false n].freeze
 
   def initialize(query, params = {})
     @query = query
@@ -39,8 +52,10 @@ class ExternalDb::QueryRunner
     types = {}
     Array(@query.params_schema).each do |spec|
       key, value, type = resolve_param(spec)
+      next expand_words(key, value, typed, types) if type == 'words'
+
       typed[key] = value
-      types[key] = type
+      types[key] = type == 'boolean' ? 'integer' : type
     end
     [typed, types]
   end
@@ -62,8 +77,35 @@ class ExternalDb::QueryRunner
     true
   end
 
+  # "laptop hp" → :texto_1 = LAPTOP, :texto_2 = HP, :texto_3 = NULL (y :texto, la frase limpia).
+  def expand_words(key, value, typed, types)
+    words = value.to_s.split.map { |w| singular(w.gsub(WORD_CHARS, '')) }.reject(&:blank?).first(WORDS_MAX)
+    typed[key] = words.join(' ').presence
+    types[key] = 'string'
+    WORDS_MAX.times do |i|
+      typed["#{key}_#{i + 1}"] = words[i]
+      types["#{key}_#{i + 1}"] = 'string'
+    end
+  end
+
+  def singular(word)
+    return word.delete_suffix('es') if word.length > 5 && word.downcase.end_with?('es')
+    return word.delete_suffix('s') if word.length > 3 && word.downcase.end_with?('s') && !word.match?(/\d/)
+
+    word
+  end
+
+  def coerce_boolean(raw, key)
+    word = raw.to_s.strip.downcase
+    return 1 if raw == true || TRUE_WORDS.include?(word)
+    return 0 if raw == false || FALSE_WORDS.include?(word)
+
+    raise ParamError, "parámetro inválido '#{key}': se esperaba sí o no"
+  end
+
   def coerce(raw, type, key)
     case type
+    when 'boolean' then coerce_boolean(raw, key)
     when 'integer' then Integer(raw.to_s)
     when 'number'  then Float(raw.to_s)
     when 'date'    then raw.is_a?(Date) ? raw : Date.parse(raw.to_s)
@@ -88,11 +130,18 @@ class ExternalDb::QueryRunner
     [sql, []]
   end
 
+  # proyecto@erp_productos — un parámetro vacío se escribe como NULL en el SQL en vez de
+  # mandarse como "?" vacío: la gem `fb` no puede bindear nil a un CAST(? AS …) (medido:
+  # "specified column is not permitted to be null"), y los filtros opcionales de
+  # `buscar_productos` son justo "(CAST(? AS …) IS NULL OR …)". Es seguro: NULL es una
+  # palabra fija, no un texto que venga del usuario.
   def bind_positional(template, typed)
     binds = []
     sql = template.gsub(NAMED_PARAM) do
       key = Regexp.last_match(1)
       ensure_known!(key, typed)
+      next 'NULL' if typed[key].nil?
+
       binds << typed[key]
       '?'
     end

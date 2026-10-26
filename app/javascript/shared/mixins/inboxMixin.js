@@ -10,6 +10,7 @@ export const INBOX_TYPES = {
   LINE: 'Channel::Line',
   SMS: 'Channel::Sms',
   TIKTOK: 'Channel::Tiktok',
+  INSTAGRAM: 'Channel::Instagram',
 };
 
 export const INBOX_FEATURES = {
@@ -22,6 +23,7 @@ export const INBOX_FEATURES = {
 export const INBOX_FEATURE_MAP = {
   [INBOX_FEATURES.REPLY_TO]: [
     INBOX_TYPES.FB,
+    INBOX_TYPES.INSTAGRAM,
     INBOX_TYPES.WEB,
     INBOX_TYPES.TWITTER,
     INBOX_TYPES.WHATSAPP,
@@ -61,6 +63,17 @@ export default {
     },
     isAFacebookInbox() {
       return this.channelType === INBOX_TYPES.FB;
+    },
+    // Canal nativo de Instagram (Instagram Login), sin Página de Facebook.
+    isAnInstagramInbox() {
+      return this.channelType === INBOX_TYPES.INSTAGRAM;
+    },
+    // Cualquier canal de Meta con buzón de mensajes. Instagram vivió siempre dentro de un
+    // inbox de Facebook, así que casi todo lo que la interfaz condicionaba a
+    // `isAFacebookInbox` quería decir en realidad «es de Meta»: eso es lo que hay que
+    // usar, y dejar `isAFacebookInbox` solo donde de verdad se hable de Messenger.
+    isAMetaInbox() {
+      return this.isAFacebookInbox || this.isAnInstagramInbox;
     },
     isAWebWidgetInbox() {
       return this.channelType === INBOX_TYPES.WEB;
@@ -126,6 +139,9 @@ export default {
       let badgeKey = '';
       if (this.isATwitterInbox) {
         badgeKey = this.twitterBadge;
+      } else if (this.isAnInstagramInbox) {
+        // Sin esto caería al channelType y Thumbnail no encontraría icono
+        badgeKey = 'instagram_direct_message';
       } else if (this.isAFacebookInbox) {
         badgeKey = this.facebookBadge;
       } else if (this.isATwilioChannel) {

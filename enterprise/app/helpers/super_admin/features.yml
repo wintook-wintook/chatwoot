@@ -47,6 +47,12 @@ tiktok:
   enabled: true
   icon: 'icon-tiktok-line'
   config_key: 'tiktok'
+instagram:
+  name: 'Instagram'
+  description: 'Conecta cuentas de Instagram Business directamente, sin Página de Facebook.'
+  enabled: true
+  icon: 'icon-instagram-line'
+  config_key: 'instagram'
 whatsapp:
   name: 'WhatsApp'
   description: 'Manage your WhatsApp business interactions from Chatwoot.'

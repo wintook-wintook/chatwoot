@@ -2,11 +2,18 @@ import { useAppearanceHotKeys } from '../useAppearanceHotKeys';
 import { useI18n } from 'dashboard/composables/useI18n';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
-import { setColorTheme } from 'dashboard/helper/themeHelper.js';
+import { setColorTheme, setColorTint } from 'dashboard/helper/themeHelper.js';
 
 vi.mock('dashboard/composables/useI18n');
 vi.mock('shared/helpers/localStorage');
-vi.mock('dashboard/helper/themeHelper.js');
+vi.mock('dashboard/helper/themeHelper.js', async importOriginal => {
+  const original = await importOriginal();
+  return {
+    ...original,
+    setColorTheme: vi.fn(),
+    setColorTint: vi.fn(),
+  };
+});
 
 describe('useAppearanceHotKeys', () => {
   beforeEach(() => {
@@ -24,7 +31,8 @@ describe('useAppearanceHotKeys', () => {
 
   it('should have the correct number of appearance options', () => {
     const { goToAppearanceHotKeys } = useAppearanceHotKeys();
-    expect(goToAppearanceHotKeys.value.length).toBe(4); // 1 parent + 3 theme options
+    // 1 parent + 3 mode options, 1 parent + 10 color theme options
+    expect(goToAppearanceHotKeys.value.length).toBe(15);
   });
 
   it('should have the correct parent option', () => {
@@ -33,7 +41,13 @@ describe('useAppearanceHotKeys', () => {
       option => option.id === 'appearance_settings'
     );
     expect(parentOption).toBeDefined();
-    expect(parentOption.children.length).toBe(3);
+    // los tres modos más la entrada que abre los temas de color
+    expect(parentOption.children).toEqual([
+      'light',
+      'dark',
+      'auto',
+      'appearance_tint',
+    ]);
   });
 
   it('should have the correct theme options', () => {
@@ -41,12 +55,45 @@ describe('useAppearanceHotKeys', () => {
     const themeOptions = goToAppearanceHotKeys.value.filter(
       option => option.parent === 'appearance_settings'
     );
-    expect(themeOptions.length).toBe(3);
     expect(themeOptions.map(option => option.id)).toEqual([
       'light',
       'dark',
       'auto',
+      'appearance_tint',
     ]);
+  });
+
+  it('should have the correct color theme options', () => {
+    const { goToAppearanceHotKeys } = useAppearanceHotKeys();
+    const parentOption = goToAppearanceHotKeys.value.find(
+      option => option.id === 'appearance_tint'
+    );
+    expect(parentOption).toBeDefined();
+    // cuelga de Cambiar apariencia, no del primer nivel
+    expect(parentOption.parent).toBe('appearance_settings');
+    expect(parentOption.children).toEqual([
+      'tint_default',
+      'tint_calido',
+      'tint_bosque',
+      'tint_indigo',
+      'tint_sepia',
+      'tint_contraste',
+      'tint_violeta',
+      'tint_turquesa',
+      'tint_rosa',
+      'tint_grafito',
+    ]);
+  });
+
+  it('should call setColorTint when a color theme is selected', () => {
+    const { goToAppearanceHotKeys } = useAppearanceHotKeys();
+    const tintOption = goToAppearanceHotKeys.value.find(
+      option => option.id === 'tint_bosque'
+    );
+
+    tintOption.handler();
+
+    expect(setColorTint).toHaveBeenCalledWith('bosque');
   });
 
   it('should call setAppearance when a theme option is selected', () => {

@@ -11,6 +11,7 @@
 
 <script>
 import { mapGetters } from 'vuex';
+import AssistantAPI from 'dashboard/api/assistant'; // proyecto@asistente_agentes_ia
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { extractTemplateBody } from 'dashboard/helper/trackingHelpers';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
@@ -43,6 +44,13 @@ export default {
       type: String,
       default: 'edit',
       validator: val => ['create', 'edit'].includes(val),
+    },
+    // feat/agentes_ia_unificado: en el espacio del agente, el Entrenamiento de un
+    // admin se edita en su sección (borrador + versiones). Aquí no se muestra ni se
+    // manda: guardar la ficha nunca pisa con texto viejo lo publicado allá.
+    hideTraining: {
+      type: Boolean,
+      default: false,
     },
   },
   emits: ['save', 'cancel'],
@@ -80,6 +88,8 @@ export default {
       originalAiContext: null,
       originalComplementaryPrompt: null,
       isImprovingAI: false,
+      // proyecto@asistente_agentes_ia — qué leyó el motor del Entrenamiento generado.
+      assistantValidation: null,
       showPromptModal: false, // proyecto@automatizacion_tracking: modal expandido para entrenamiento
       showAiContextModal: false,
       showValidationModal: false,
@@ -323,6 +333,14 @@ export default {
     agendasTabIndex() {
       return this.reglasTabIndex + 1;
     },
+    // woot-tabs numera por POSICIÓN: sin la pestaña Entrenamiento, la posición 1 es
+    // Reglas. Esto traduce posición ↔ panel (activeContextTab sigue siendo el panel).
+    contextPanels() {
+      return this.hideTraining ? [0, 2, 3, 4] : [0, 1, 2, 3, 4];
+    },
+    activeContextPosition() {
+      return Math.max(0, this.contextPanels.indexOf(this.activeContextTab));
+    },
     // proyecto@ai_agent_attachments: tab "📎 Archivos" tras "📅 Agendas"
     archivosTabIndex() {
       return this.agendasTabIndex + 1;
@@ -387,16 +405,28 @@ export default {
           const prefix = this.erpConnPrefix(conn);
           if (!prefix) return;
           (conn.queries || []).forEach(q => {
-            const keys = (q.params_schema || [])
-              .map(p => `${p.key}=`)
-              .join(', ');
+            // proyecto@erp_productos — una consulta de búsqueda (con un parámetro de
+            // texto libre, tipo "words") se ofrece con "?": los llena la IA con lo que
+            // escribe el cliente. Las demás, como siempre (valores fijos a completar).
+            const schema = q.params_schema || [];
+            const isSearch = schema.some(p => p.type === 'words');
+            const keys = isSearch
+              ? schema
+                  .filter(p => ['words', 'number', 'boolean'].includes(p.type))
+                  .filter(p => p.key !== 'precio_min')
+                  .map(p => `${p.key}=?`)
+                  .join(', ')
+              : schema.map(p => `${p.key}=`).join(', ');
             const args = keys ? `(${keys})` : '';
+            const askedHint = isSearch
+              ? '. Los «?» los llena la IA con lo que pide el cliente'
+              : '';
             items.push({
               group: 'erp',
               token: `{{consulta:${prefix}/${q.name}${args}}}`,
               label: `Consulta «${q.name}» en «${conn.name}»${
                 q.description ? ` (${q.description})` : ''
-              }.`,
+              }${askedHint}.`,
             });
           });
         });
@@ -582,10 +612,12 @@ export default {
       if (!this.isCreateMode) {
         payload.id = this.form.id;
       }
+      if (this.hideTraining)
+        delete payload.tracking_template.complementary_prompt;
       this.$emit('save', payload);
     },
-    onContextTabChange(index) {
-      this.activeContextTab = index;
+    onContextTabChange(position) {
+      this.activeContextTab = this.contextPanels[position];
     },
     onTopTabChange(index) {
       this.topTab = index;
@@ -594,7 +626,6 @@ export default {
       if (this.isImprovingAI) return;
 
       const isGeneratePrompt = field === 'complementary_prompt';
-      const mode = isGeneratePrompt ? 'generate_prompt' : 'improve';
 
       let text;
       if (isGeneratePrompt) {
@@ -605,6 +636,17 @@ export default {
         text = (this.form[field] || '').trim();
       }
       if (!text) return;
+
+      // proyecto@asistente_agentes_ia — generar el Entrenamiento pasa por el
+      // asistente nuevo: redacta contra el inventario real de la cuenta y comprueba
+      // el resultado con el parser del motor. El generador anterior producía prosa
+      // que el motor no parsea, así que el agente nacía sin ejecutar nada.
+      if (isGeneratePrompt) {
+        await this.generateTrainingWithAssistant();
+        return;
+      }
+
+      const mode = 'improve';
 
       // Guardar original
       if (field === 'ai_context') {
@@ -631,6 +673,37 @@ export default {
         if (field === 'ai_context') this.originalAiContext = null;
         else if (field === 'complementary_prompt')
           this.originalComplementaryPrompt = null;
+      } finally {
+        this.isImprovingAI = false;
+      }
+    },
+    // Una sola pasada: acá no hay conversación donde preguntar, así que el asistente
+    // redacta con lo que haya y marca lo que falte como <PENDIENTE:>.
+    async generateTrainingWithAssistant() {
+      this.originalComplementaryPrompt = this.form.complementary_prompt;
+      this.isImprovingAI = true;
+      this.assistantValidation = null;
+      try {
+        const { data } = await AssistantAPI.interview(
+          [
+            {
+              role: 'user',
+              content: [
+                `Objetivo del agente: ${(this.form.objective || '').trim()}`,
+                `Contexto: ${(this.form.ai_context || '').trim()}`,
+                `Instrucciones adicionales: ${(this.form.complementary_prompt || '').trim()}`,
+              ].join('\n'),
+            },
+          ],
+          this.selectedInboxId,
+          { oneShot: true }
+        );
+        if (data.draft) {
+          this.form.complementary_prompt = data.draft;
+          this.assistantValidation = data.validation;
+        }
+      } catch (error) {
+        this.originalComplementaryPrompt = null;
       } finally {
         this.isImprovingAI = false;
       }
@@ -1038,16 +1111,20 @@ export default {
 
 <template>
   <div class="max-w-6xl">
-    <!-- Title -->
-    <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">
+    <!-- Title — solo en el alta: en el espacio del agente el encabezado nativo
+         (BaseSettingsHeader) ya dice qué agente es. -->
+    <h2
+      v-if="isCreateMode"
+      class="mb-4 text-lg font-semibold font-interDisplay text-slate-900 dark:text-slate-25"
+    >
       {{ formTitle }}
     </h2>
 
     <form class="space-y-4" @submit.prevent="onSubmit">
       <!-- Row 1: Nombre (40%) + Objetivo (60%) -->
       <div class="flex gap-4">
-        <label class="w-2/5">
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300">
+        <label class="w-2/5" :class="{ error: form.name && !isNameValid }">
+          <span>
             {{ $t('TRACKING_TEMPLATES.FORM.NAME.LABEL') }}
             <span class="text-red-500">*</span>
           </span>
@@ -1055,17 +1132,15 @@ export default {
             v-model="form.name"
             type="text"
             :placeholder="$t('TRACKING_TEMPLATES.FORM.NAME.PLACEHOLDER')"
-            class="mt-1 w-full rounded-md border px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
-            :class="
-              form.name && !isNameValid
-                ? 'border-red-400'
-                : 'border-slate-200 dark:border-slate-600'
-            "
+            class="!mb-0 mt-1"
           />
         </label>
 
-        <label class="w-3/5">
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300">
+        <label
+          class="w-3/5"
+          :class="{ error: form.objective && !isObjectiveValid }"
+        >
+          <span>
             {{ $t('TRACKING_TEMPLATES.FORM.OBJECTIVE.LABEL') }}
             <span class="text-red-500">*</span>
           </span>
@@ -1073,12 +1148,7 @@ export default {
             v-model="form.objective"
             type="text"
             :placeholder="$t('TRACKING_TEMPLATES.FORM.OBJECTIVE.PLACEHOLDER')"
-            class="mt-1 w-full rounded-md border px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
-            :class="
-              form.objective && !isObjectiveValid
-                ? 'border-red-400'
-                : 'border-slate-200 dark:border-slate-600'
-            "
+            class="!mb-0 mt-1"
           />
         </label>
       </div>
@@ -1098,23 +1168,23 @@ export default {
       <!-- Intervalo entre intentos + Canal -->
       <div class="flex gap-3">
         <label class="flex-1">
-          <span class="text-xs font-medium text-slate-600 dark:text-slate-400"
+          <span
             >⏱️ Tiempo entre intentos</span
           >
           <input
             v-model.number="form.retry_interval_value"
             type="number"
             :min="minIntervalValue"
-            class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+            class="!mb-0 mt-1"
           />
         </label>
         <label class="flex-1">
-          <span class="text-xs font-medium text-slate-600 dark:text-slate-400"
+          <span
             >Intervalo</span
           >
           <select
             v-model="form.retry_interval_unit"
-            class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+            class="!mb-0 mt-1"
           >
             <option value="minutes">Minutos</option>
             <option value="hours">Horas</option>
@@ -1122,7 +1192,7 @@ export default {
           </select>
         </label>
         <label class="flex-1">
-          <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
+          <span>
             {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.MAX_ATTEMPTS') }}
           </span>
           <input
@@ -1130,17 +1200,17 @@ export default {
             type="number"
             min="1"
             max="6"
-            class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+            class="!mb-0 mt-1"
           />
         </label>
         <label class="flex-1">
-          <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
+          <span>
             {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.INBOX_LABEL') }}
             <span class="text-red-500">*</span>
           </span>
           <select
             v-model="selectedInboxId"
-            class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+            class="!mb-0 mt-1"
           >
             <option :value="null">
               {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.SELECT_INBOX') }}
@@ -1190,16 +1260,9 @@ export default {
             v-show="activeTemplateTab === idx"
             :key="'tpl-' + idx"
             class="space-y-2"
+            :class="{ error: !form.whatsapp_templates[idx] }"
           >
-            <select
-              v-model="form.whatsapp_templates[idx]"
-              class="w-full rounded-md border px-3 py-2 text-sm bg-white dark:bg-slate-800"
-              :class="
-                !form.whatsapp_templates[idx]
-                  ? 'border-red-400'
-                  : 'border-slate-200 dark:border-slate-600'
-              "
-            >
+            <select v-model="form.whatsapp_templates[idx]" class="!mb-0">
               <option value="">-- Selecciona una plantilla --</option>
               <option
                 v-for="tpl in availableWATemplates"
@@ -1242,11 +1305,15 @@ export default {
         <div class="flex items-end justify-between">
           <woot-tabs
             class="context-tabs [&_.tabs]:p-0 [&_.tabs]:mb-0 flex-1"
-            :index="activeContextTab"
+            :index="activeContextPosition"
             @change="onContextTabChange"
           >
             <woot-tabs-item name="Contexto IA *" :show-badge="false" />
-            <woot-tabs-item name="Entrenamiento *" :show-badge="false" />
+            <woot-tabs-item
+              v-if="!hideTraining"
+              name="Entrenamiento *"
+              :show-badge="false"
+            />
             <woot-tabs-item name="Reglas" :show-badge="false" />
             <woot-tabs-item name="Agendas" :show-badge="false" />
             <woot-tabs-item name="Archivos" :show-badge="false" />
@@ -1294,7 +1361,7 @@ export default {
             v-model="form.ai_context"
             rows="10"
             :placeholder="$t('TRACKING_TEMPLATES.FORM.AI_CONTEXT.PLACEHOLDER')"
-            class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+            class="!mb-0 !h-auto"
           />
           <div class="flex justify-between items-center mt-1">
             <span class="text-xs text-slate-500 dark:text-slate-400">
@@ -1348,7 +1415,7 @@ export default {
             :placeholder="
               $t('TRACKING_TEMPLATES.FORM.COMPLEMENTARY_PROMPT.PLACEHOLDER')
             "
-            class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+            class="!mb-0 !h-auto"
           />
           <div class="flex justify-between items-center mt-1">
             <span class="text-xs text-slate-500 dark:text-slate-400">
@@ -1407,7 +1474,7 @@ export default {
           <!-- Duración del evento -->
           <div class="mb-4">
             <span
-              class="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-2"
+              class="block mb-2 text-sm font-medium text-slate-800 dark:text-slate-200"
             >
               {{ $t('TRACKING_TEMPLATES.CALENDARS.EVENT_DURATION') }}
             </span>
@@ -1436,13 +1503,13 @@ export default {
           <!-- proyecto@bot_seguimiento_calendar: zona horaria del agente para agendar -->
           <div class="mb-4">
             <span
-              class="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-2"
+              class="block mb-2 text-sm font-medium text-slate-800 dark:text-slate-200"
             >
               {{ $t('TRACKING_TEMPLATES.CALENDARS.TIMEZONE') }}
             </span>
             <select
               v-model="form.timezone"
-              class="w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-200"
+              class="!mb-0"
             >
               <option value="">
                 {{ $t('TRACKING_TEMPLATES.CALENDARS.TIMEZONE_INHERIT') }}
@@ -1459,7 +1526,7 @@ export default {
           <!-- proyecto@bot_seguimiento_calendar: una sola lista de calendarios + modal árbol -->
           <div class="flex items-center justify-between mb-2">
             <span
-              class="text-xs font-medium text-slate-600 dark:text-slate-400"
+              class="text-sm font-medium text-slate-800 dark:text-slate-200"
             >
               {{ $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_LABEL') }}
             </span>
@@ -1537,7 +1604,7 @@ export default {
           <!-- proyecto@bot_seguimiento_calendar: formato de presentación de horarios -->
           <div class="mt-5">
             <span
-              class="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-2"
+              class="block mb-2 text-sm font-medium text-slate-800 dark:text-slate-200"
             >
               {{ $t('TRACKING_TEMPLATES.CALENDARS.PRESENTATION_LABEL') }}
             </span>
@@ -1606,7 +1673,7 @@ export default {
                   :placeholder="
                     $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.NAME_PLACEHOLDER')
                   "
-                  class="flex-1 min-w-0 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                  class="flex-1 min-w-0 !mb-0"
                 />
                 <!-- input nativo oculto: el filename largo no se muestra -->
                 <input
@@ -1895,7 +1962,7 @@ export default {
           v-model="form.ai_context"
           rows="20"
           :placeholder="$t('TRACKING_TEMPLATES.FORM.AI_CONTEXT.PLACEHOLDER')"
-          class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+          class="!mb-0 !h-auto"
         />
         <div
           class="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-700"
@@ -1945,7 +2012,7 @@ export default {
           :placeholder="
             $t('TRACKING_TEMPLATES.FORM.COMPLEMENTARY_PROMPT.PLACEHOLDER')
           "
-          class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+          class="!mb-0 !h-auto"
         />
         <div
           class="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-700"

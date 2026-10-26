@@ -9,6 +9,7 @@
 import { mapGetters } from 'vuex';
 import { VeTable } from 'vue-easytable';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import { forType } from 'dashboard/helper/caseClassification';
 
 const PALETTE = [
   '#3b82f6',
@@ -34,14 +35,26 @@ export default {
       servicesPerPage: 25,
       categoriesPage: 1,
       categoriesPerPage: 25,
+      // Plan-Clase-Comercial F2: 'all' | 'global' | id de tipo (lo que recibe ese tipo).
+      typeFilter: 'all',
       // servicios
       showServiceModal: false,
       serviceEditing: null,
-      serviceForm: { name: '', color: '#64748b', active: true },
+      serviceForm: {
+        name: '',
+        color: '#64748b',
+        active: true,
+        case_type_id: null,
+      },
       // categorías
       showCategoryModal: false,
       categoryEditing: null,
-      categoryForm: { name: '', active: true, parent_id: null },
+      categoryForm: {
+        name: '',
+        active: true,
+        parent_id: null,
+        case_type_id: null,
+      },
       parentName: '',
       // borrado
       showDeleteModal: false,
@@ -55,18 +68,25 @@ export default {
       servicesUiFlags: 'caseTickets/getServicesUIFlags',
       categories: 'caseTickets/getCategories',
       categoriesUiFlags: 'caseTickets/getCategoriesUIFlags',
+      types: 'caseTickets/getTypes',
     }),
+    filteredServices() {
+      return this.applyTypeFilter(this.services);
+    },
+    filteredCategories() {
+      return this.applyTypeFilter(this.categories);
+    },
     tabs() {
       return [
         {
           key: 'services',
           label: this.$t('CASE_TICKETS.CLASSIFICATION.TAB_SERVICES'),
-          count: this.services.length,
+          count: this.filteredServices.length,
         },
         {
           key: 'categories',
           label: this.$t('CASE_TICKETS.CLASSIFICATION.TAB_CATEGORIES'),
-          count: this.categories.length,
+          count: this.filteredCategories.length,
         },
       ];
     },
@@ -76,7 +96,7 @@ export default {
     // Aplana categorías → [padre, sus subcategorías, …] con nivel para la sangría.
     flattenedCategories() {
       const rows = [];
-      (this.categories || []).forEach(cat => {
+      this.filteredCategories.forEach(cat => {
         rows.push({ ...cat, level: 0, isSub: false });
         (cat.subcategories || []).forEach(sub => {
           rows.push({ ...sub, level: 1, isSub: true, parentName: cat.name });
@@ -86,7 +106,7 @@ export default {
     },
     pagedServices() {
       const start = (this.servicesPage - 1) * this.servicesPerPage;
-      return this.services.slice(start, start + this.servicesPerPage);
+      return this.filteredServices.slice(start, start + this.servicesPerPage);
     },
     pagedCategories() {
       const start = (this.categoriesPage - 1) * this.categoriesPerPage;
@@ -123,6 +143,14 @@ export default {
               </span>
             </div>
           ),
+        },
+        {
+          field: 'scope',
+          key: 'scope',
+          title: this.$t('CASE_TICKETS.CLASSIFICATION.TABLE_SCOPE'),
+          align: 'left',
+          width: 170,
+          renderBodyCell: ({ row }) => this.scopeBadge(row),
         },
         {
           field: 'status',
@@ -201,6 +229,14 @@ export default {
           ),
         },
         {
+          field: 'scope',
+          key: 'scope',
+          title: this.$t('CASE_TICKETS.CLASSIFICATION.TABLE_SCOPE'),
+          align: 'left',
+          width: 170,
+          renderBodyCell: ({ row }) => this.scopeBadge(row),
+        },
+        {
           field: 'status',
           key: 'status',
           title: this.$t('CASE_TICKETS.CLASSIFICATION.TABLE_STATUS'),
@@ -249,8 +285,37 @@ export default {
   mounted() {
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('caseTickets/fetchCategories');
+    this.$store.dispatch('caseTickets/fetchTypes');
   },
   methods: {
+    applyTypeFilter(list) {
+      if (this.typeFilter === 'all') return list || [];
+      if (this.typeFilter === 'global') {
+        return (list || []).filter(item => !item.case_type_id);
+      }
+      return forType(list, this.typeFilter);
+    },
+    onTypeFilterChange() {
+      this.servicesPage = 1;
+      this.categoriesPage = 1;
+    },
+    typeName(id) {
+      return (this.types.find(t => t.id === id) || {}).name || '—';
+    },
+    scopeBadge(row) {
+      if (!row.case_type_id) {
+        return (
+          <span class="text-xs text-slate-500 dark:text-slate-400">
+            {this.$t('CASE_TICKETS.CLASSIFICATION.SCOPE_ALL')}
+          </span>
+        );
+      }
+      return (
+        <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-woot-100 text-woot-700 dark:bg-woot-800 dark:text-woot-100">
+          {this.typeName(row.case_type_id)}
+        </span>
+      );
+    },
     onTabChange(index) {
       this.activeTabIndex = index;
     },
@@ -285,12 +350,24 @@ export default {
     // ── servicios ──
     openServiceCreate() {
       this.serviceEditing = null;
-      this.serviceForm = { name: '', color: '#64748b', active: true };
+      this.serviceForm = {
+        name: '',
+        color: '#64748b',
+        active: true,
+        // Si se está viendo un tipo concreto, el nuevo nace para ese tipo.
+        case_type_id:
+          typeof this.typeFilter === 'number' ? this.typeFilter : null,
+      };
       this.showServiceModal = true;
     },
     openServiceEdit(s) {
       this.serviceEditing = s;
-      this.serviceForm = { name: s.name, color: s.color, active: s.active };
+      this.serviceForm = {
+        name: s.name,
+        color: s.color,
+        active: s.active,
+        case_type_id: s.case_type_id || null,
+      };
       this.showServiceModal = true;
     },
     async saveService() {
@@ -319,6 +396,10 @@ export default {
         name: '',
         active: true,
         parent_id: parent ? parent.id : null,
+        // La subcategoría hereda el tipo del padre (el backend lo fuerza).
+        case_type_id: parent
+          ? parent.case_type_id || null
+          : (typeof this.typeFilter === 'number' && this.typeFilter) || null,
       };
       this.showCategoryModal = true;
     },
@@ -328,6 +409,7 @@ export default {
         name: c.name,
         active: c.active,
         parent_id: c.parent_id || null,
+        case_type_id: c.case_type_id || null,
       };
       this.showCategoryModal = true;
     },
@@ -425,6 +507,28 @@ export default {
       </woot-tabs>
     </div>
 
+    <!-- Plan-Clase-Comercial F2 — filtro por tipo de caso -->
+    <div class="flex items-center flex-shrink-0 gap-2 px-6 pt-3">
+      <span class="text-sm text-slate-600 dark:text-slate-300">{{
+        $t('CASE_TICKETS.CLASSIFICATION.FILTER_LABEL')
+      }}</span>
+      <select
+        v-model="typeFilter"
+        class="!mb-0 w-64 text-sm"
+        @change="onTypeFilterChange"
+      >
+        <option value="all">
+          {{ $t('CASE_TICKETS.CLASSIFICATION.FILTER_ALL') }}
+        </option>
+        <option value="global">
+          {{ $t('CASE_TICKETS.CLASSIFICATION.FILTER_GLOBAL') }}
+        </option>
+        <option v-for="t in types" :key="t.id" :value="t.id">
+          {{ t.name }}
+        </option>
+      </select>
+    </div>
+
     <!-- ── Servicios ─────────────────────────────────────── -->
     <template v-if="activeTab === 'services'">
       <div class="flex items-center justify-between flex-shrink-0 px-6 py-3">
@@ -442,7 +546,7 @@ export default {
       </div>
 
       <div
-        v-if="!services.length"
+        v-if="!filteredServices.length"
         class="flex flex-col items-center justify-center flex-1 gap-3 text-slate-400 dark:text-slate-500"
       >
         <fluent-icon icon="folder" size="36" />
@@ -479,7 +583,7 @@ export default {
           </label>
           <TableFooter
             :current-page="servicesPage"
-            :total-count="services.length"
+            :total-count="filteredServices.length"
             :page-size="servicesPerPage"
             @pageChange="changeServicesPage"
           />
@@ -580,6 +684,23 @@ export default {
               maxlength="100"
             />
           </label>
+          <label class="flex flex-col gap-1">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >{{ $t('CASE_TICKETS.CLASSIFICATION.SCOPE_LABEL') }}</span
+            >
+            <select v-model="serviceForm.case_type_id" class="w-full">
+              <option :value="null">
+                {{ $t('CASE_TICKETS.CLASSIFICATION.SCOPE_ALL') }}
+              </option>
+              <option v-for="t in types" :key="t.id" :value="t.id">
+                {{ t.name }}
+              </option>
+            </select>
+            <span class="text-xs text-slate-400 dark:text-slate-500">{{
+              $t('CASE_TICKETS.CLASSIFICATION.SCOPE_HELP')
+            }}</span>
+          </label>
           <div class="flex flex-col gap-1">
             <span
               class="text-sm font-medium text-slate-700 dark:text-slate-200"
@@ -667,6 +788,23 @@ export default {
               required
               maxlength="100"
             />
+          </label>
+          <label v-if="!categoryForm.parent_id" class="flex flex-col gap-1">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >{{ $t('CASE_TICKETS.CLASSIFICATION.SCOPE_LABEL') }}</span
+            >
+            <select v-model="categoryForm.case_type_id" class="w-full">
+              <option :value="null">
+                {{ $t('CASE_TICKETS.CLASSIFICATION.SCOPE_ALL') }}
+              </option>
+              <option v-for="t in types" :key="t.id" :value="t.id">
+                {{ t.name }}
+              </option>
+            </select>
+            <span class="text-xs text-slate-400 dark:text-slate-500">{{
+              $t('CASE_TICKETS.CLASSIFICATION.SCOPE_HELP')
+            }}</span>
           </label>
           <label class="flex items-center gap-2">
             <input v-model="categoryForm.active" type="checkbox" />

@@ -94,25 +94,65 @@ class ActionService
     end
   end
 
+  # proyecto@automatizaciones: asigna un Tipo de Caso a la conversación. Reutiliza el CaseTicket
+  # vigente ya vinculado a la conversación si existe (evita duplicar casos); si no hay ninguno
+  # vigente, crea uno nuevo con ese tipo. Un ticket en CaseTicket::CLOSED_STATUSES (resolved,
+  # validating, closed, cancelled) NO cuenta como vigente: si es lo último que hay en la
+  # conversación, se trata como si no hubiera ninguno y se crea un caso nuevo en vez de tocar
+  # el viejo con un simple cambio de tipo (que además no lo reabre: se queda cerrado/resuelto/
+  # cancelado, "fantasma"). Al asignar 'nil' limpia el tipo del caso vigente sin borrarlo
+  # (salvo en una oportunidad: la clase es fija).
+  def assign_case_type(params)
+    case_type_id = params[0]
+    case_ticket = @conversation.case_tickets.where.not(status: CaseTicket::CLOSED_STATUSES).order(created_at: :desc).first
+
+    if case_type_id.to_s == 'nil'
+      # Hoja de ruta E1.4: sin tipo cuenta como Soporte, así que a una oportunidad
+      # no se le quita el tipo (la clase es fija).
+      case_ticket.update!(case_type_id: nil) if case_ticket.present? && !case_ticket.commercial?
+      return
+    end
+
+    # Un tipo retirado (cambió de clase) ya no recibe casos nuevos.
+    case_type = @account.case_types.active.find_by(id: case_type_id)
+    return if case_type.blank?
+
+    # Plan-Clase-Comercial F3 (hallazgo #4): un tipo de OTRA clase no convierte en
+    # silencio el caso vigente (un ticket de soporte no se vuelve venta): abre uno nuevo.
+    if case_ticket.present? && same_case_class?(case_ticket, case_type)
+      case_ticket.update!(case_type_id: case_type.id)
+    else
+      Cases::OrchestratorService.new(
+        account: @account, contact: @conversation.contact, conversation: @conversation
+      ).create_from_automation(case_type_id: case_type.id)
+    end
+  end
+
+  # Un caso sin tipo cuenta como Soporte.
+  def same_case_class?(case_ticket, case_type)
+    (case_ticket.case_type&.case_class || 'support') == case_type.case_class
+  end
+
   # proyecto@automatizacion_tracking: crea un ContactTracking para el contacto de la conversación
   # usando los datos de la plantilla seleccionada (objective, ai_context, complementary_prompt, whatsapp_templates).
   # Usa el inbox_id de la plantilla si está definido, o el inbox de la conversación como fallback.
   # scheduled_for se fija 5 minutos adelante para pasar la validación de "no en el pasado".
+  # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
   def assign_tracking_template(params)
     template_id = params[0]
     return if template_id.to_s == 'nil' || template_id.blank?
 
     template = @account.tracking_templates.find_by(id: template_id)
-    return unless template.present?
+    return if template.blank?
 
     inbox_id = template.inbox_id || @conversation.inbox_id
 
     # No crear si el contacto ya tiene un seguimiento activo EN ESTE CANAL (inbox)
     active_statuses = %w[pending scheduled active paused]
-    return if ContactTracking.where(contact_id: @conversation.contact_id, inbox_id: inbox_id, status: active_statuses).exists?
+    return if ContactTracking.exists?(contact_id: @conversation.contact_id, inbox_id: inbox_id, status: active_statuses)
 
     templates = template.whatsapp_templates.is_a?(Array) ? template.whatsapp_templates : []
-    max_att = templates.count { |t| t.present? }.clamp(1, 10)
+    max_att = templates.count(&:present?).clamp(1, 10)
     max_att = 3 if max_att.zero?
 
     # proyecto@automatizacion_tracking: calcular scheduled_for usando el intervalo de la plantilla
@@ -122,7 +162,6 @@ class ActionService
     interval_minutes = case interval_unit
                        when 'minutes' then interval_value
                        when 'hours'   then interval_value * 60
-                       when 'days'    then interval_value * 1440
                        else interval_value * 1440
                        end
 
@@ -144,12 +183,13 @@ class ActionService
       retry_interval_unit: interval_unit
     )
 
-    # Note: no re-queuing here. The initial job in message.rb already runs with
+    # NOTE: no re-queuing here. The initial job in message.rb already runs with
     # a 5-second delay so it sees the tracking. Re-queuing caused double replies
     # because BotSeller responses lack the sentiment_auto_reply flag.
   rescue StandardError => e
     Rails.logger.error "[AutomationAction] assign_tracking_template error: #{e.message}"
   end
+  # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
 
   private
 

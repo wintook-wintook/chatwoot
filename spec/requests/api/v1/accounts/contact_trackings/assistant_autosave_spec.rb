@@ -1,0 +1,94 @@
+# frozen_string_literal: true
+
+require 'rails_helper'
+
+# proyecto@asistente_agentes_ia — PUT …/assistant/autosave
+RSpec.describe 'Asistente de Agentes IA — guardado automático' do
+  let(:account) { create(:account) }
+  let(:admin)   { create(:user, account: account, role: :administrator) }
+  let(:agent)   { create(:user, account: account, role: :agent) }
+  let(:url)     { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/autosave" }
+
+  it 'no deja entrar a un agente' do
+    put url, params: { draft: 'x' }, headers: agent.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unauthorized)
+  end
+
+  it 'sin conversación la crea, y con su id la sigue' do
+    put url, params: { draft: "# Mi prompt\n[ROL]\nAmable." }, headers: admin.create_new_auth_token, as: :json
+    id = response.parsed_body['session_id']
+
+    put url, params: { draft: "# Mi prompt\n[ROL]\nAmable y breve.", session_id: id }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response.parsed_body['session_id']).to eq(id)
+    expect(TrackingAssistantSession.find(id)).to have_attributes(draft: "# Mi prompt\n[ROL]\nAmable y breve.", title: 'Mi prompt')
+  end
+
+  # feat/agentes_ia_unificado: ligada al agente desde el primer guardado, no al publicar
+  it 'liga la conversación al agente que se edita, solo si es de la cuenta' do
+    template = account.tracking_templates.create!(name: 'Cobranza', objective: 'Cobrar a tiempo')
+    ajeno = create(:account).tracking_templates.create!(name: 'Ajeno', objective: 'Otro objetivo')
+    headers = admin.create_new_auth_token
+
+    put url, params: { draft: 'uno', template_id: template.id }, headers: headers, as: :json
+    expect(TrackingAssistantSession.find(response.parsed_body['session_id']).tracking_template).to eq(template)
+
+    put url, params: { draft: 'dos', template_id: ajeno.id }, headers: headers, as: :json
+    expect(TrackingAssistantSession.find(response.parsed_body['session_id']).tracking_template).to be_nil
+  end
+
+  # proyecto@adaptar_prompts_publicados (F2)
+  it 'lo aplicado en «Configurar» queda como su propia versión, con notas, y no lo pisa el autoguardado' do
+    headers = admin.create_new_auth_token
+    put url, params: { draft: "[ROL]\nDe <PENDIENTE: Negocio>." }, headers: headers, as: :json
+    id = response.parsed_body['session_id']
+
+    put url, params: { draft: "[ROL]\nDe Grúas.", session_id: id, source: 'configured', notes: ['var:negocio → Grúas'] },
+             headers: headers, as: :json
+    put url, params: { draft: "[ROL]\nDe Grúas del Norte.", session_id: id }, headers: headers, as: :json
+
+    versiones = TrackingAssistantSession.find(id).draft_versions
+    expect(versiones.pluck('source')).to eq(%w[manual configured manual])
+    expect(versiones.second).to include('notes' => ['var:negocio → Grúas'])
+  end
+
+  it 'un source desconocido cuenta como edición a mano' do
+    put url, params: { draft: "[ROL]\nx", source: 'saved' }, headers: admin.create_new_auth_token, as: :json
+
+    expect(TrackingAssistantSession.find(response.parsed_body['session_id']).draft_versions.pluck('source')).to eq(['manual'])
+  end
+
+  it 'no guarda un texto vacío' do
+    put url, params: { draft: '  ' }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response.parsed_body['error']).to eq('blank_draft')
+  end
+
+  describe 'renombrar' do
+    let(:sesion) do
+      TrackingAssistantSession.create!(account: account, user: admin, draft: "# PROMPT X\n[ROL]\nx",
+                                       messages: [{ 'role' => 'user', 'content' => 'Analiza mi prompt' }])
+    end
+    let(:rename_url) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/sessions/#{sesion.id}/name" }
+
+    it 'el nombre manda sobre el título automático; vacío lo quita' do
+      expect(sesion.title).to eq('🔎 PROMPT X')
+
+      patch rename_url, params: { name: 'Universidad — becas' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to include('title' => 'Universidad — becas', 'named' => true)
+
+      patch rename_url, params: { name: '' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to include('title' => '🔎 PROMPT X', 'named' => false)
+    end
+
+    it 'no renombra una conversación de otra cuenta' do
+      otra = create(:account)
+      ajena = TrackingAssistantSession.create!(account: otra, user: create(:user, account: otra))
+      patch "/api/v1/accounts/#{account.id}/contact_trackings/assistant/sessions/#{ajena.id}/name",
+            params: { name: 'x' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+end

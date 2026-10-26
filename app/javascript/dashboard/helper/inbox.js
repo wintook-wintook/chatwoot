@@ -24,6 +24,9 @@ export const getReadableInboxByType = (type, phoneNumber) => {
     case INBOX_TYPES.FB:
       return 'facebook';
 
+    case INBOX_TYPES.INSTAGRAM:
+      return 'instagram';
+
     case INBOX_TYPES.TWITTER:
       return 'twitter';
 
@@ -61,6 +64,9 @@ export const getInboxClassByType = (type, phoneNumber) => {
     case INBOX_TYPES.FB:
       return 'brand-facebook';
 
+    case INBOX_TYPES.INSTAGRAM:
+      return 'brand-instagram';
+
     case INBOX_TYPES.TWITTER:
       return 'brand-twitter';
 
@@ -95,6 +101,7 @@ export const getInboxClassByType = (type, phoneNumber) => {
 export const getInboxWarningIconClass = (type, reauthorizationRequired) => {
   const allowedInboxTypes = [
     INBOX_TYPES.FB,
+    INBOX_TYPES.INSTAGRAM,
     INBOX_TYPES.EMAIL,
     INBOX_TYPES.TIKTOK,
   ];

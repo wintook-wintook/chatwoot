@@ -11,7 +11,7 @@ import PaymentPendingBanner from './components/app/PaymentPendingBanner.vue';
 import PendingEmailVerificationBanner from './components/app/PendingEmailVerificationBanner.vue';
 import vueActionCable from './helper/actionCable';
 import WootSnackbarBox from './components/SnackbarContainer.vue';
-import { setColorTheme } from './helper/themeHelper';
+import { setColorTheme, applyColorTint } from './helper/themeHelper';
 import { isOnOnboardingView } from 'v3/helpers/RouteHelper';
 import {
   registerSubscription,
@@ -19,6 +19,7 @@ import {
 } from './helper/pushHelper';
 import ReconnectService from 'dashboard/helper/ReconnectService';
 import Webphone from './components/layout/webphoneComponents/Webphone.vue';
+import WhatsappCallWidget from './components/widgets/calls/WhatsappCallWidget.vue'; // diag/llamadas_whatsapp
 
 export default {
   name: 'App',
@@ -34,6 +35,7 @@ export default {
     UpgradeBanner,
     PendingEmailVerificationBanner,
     Webphone,
+    WhatsappCallWidget,
   },
   data() {
     return {
@@ -87,6 +89,7 @@ export default {
   methods: {
     initializeColorTheme() {
       setColorTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+      applyColorTint();
     },
     listenToThemeChanges() {
       const mql = window.matchMedia('(prefers-color-scheme: dark)');
@@ -129,6 +132,7 @@ export default {
     :dir="isRTL ? 'rtl' : 'ltr'"
   >
     <webphone />
+    <WhatsappCallWidget v-if="currentAccountId" />
     <UpdateBanner :latest-chatwoot-version="latestChatwootVersion" />
     <template v-if="currentAccountId">
       <PendingEmailVerificationBanner v-if="hideOnOnboardingView" />

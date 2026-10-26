@@ -10,27 +10,40 @@
 /* global axios */
 import ApiClient from './ApiClient';
 
+// El cuerpo de crear y de modificar (por lote).
+const campaignBody = ({
+  payload,
+  campaignName,
+  templateId,
+  scheduledFor,
+  excludedContactIds = [],
+  skipActive = true,
+  window = {}, // proyecto@automatizacion_campanas: ends_at, entry_delay_minutes, respect_working_hours
+  audienceSource = null, // { type: 'segment', segment_id } | { type: 'label', label }
+}) => ({
+  payload,
+  campaign_name: campaignName,
+  template_id: templateId,
+  scheduled_for: scheduledFor,
+  excluded_contact_ids: excludedContactIds,
+  skip_active: skipActive,
+  audience_source: audienceSource,
+  ...window,
+});
+
 class ContactTrackingBulkAssignsAPI extends ApiClient {
   constructor() {
     super('contact_tracking_bulk_assigns', { accountScoped: true });
   }
 
-  create({
-    payload,
-    campaignName,
-    templateId,
-    scheduledFor,
-    excludedContactIds = [],
-    skipActive = true,
-  }) {
-    return axios.post(this.url, {
-      payload,
-      campaign_name: campaignName,
-      template_id: templateId,
-      scheduled_for: scheduledFor,
-      excluded_contact_ids: excludedContactIds,
-      skip_active: skipActive,
-    });
+  // launch=false → la campaña queda Guardada, sin inscribir a nadie.
+  create({ launch = true, ...campaign }) {
+    return axios.post(this.url, { ...campaignBody(campaign), launch });
+  }
+
+  // Modifica una campaña Guardada como por lote (sigue Guardada).
+  update(id, campaign) {
+    return axios.patch(`${this.url}/${id}`, campaignBody(campaign));
   }
 
   // @campanas_vendedor — dry-run: clasifica la audiencia en buckets (sin crear nada).

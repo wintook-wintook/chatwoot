@@ -19,6 +19,7 @@ export default {
           article: 'library',
           google_doc: 'document',
           google_sheet: 'document',
+          contpaq_support: 'cloud',
         }[this.source.source_type] || 'globe'
       );
     },
@@ -29,15 +30,19 @@ export default {
           article: 'Centro de Ayuda',
           google_doc: 'Google Doc',
           google_sheet: 'Google Sheets',
+          contpaq_support: 'Agente de Servicio CONTPAQi',
         }[this.source.source_type] || 'Discourse'
       );
     },
     // Fuentes configurables por el usuario (se editan/borran): Discourse, Docs y Sheets.
     // Las nativas (Respuestas predefinidas, Centro de Ayuda) son fijas.
     isConfigurable() {
-      return ['discourse', 'google_doc', 'google_sheet'].includes(
-        this.source.source_type
-      );
+      return [
+        'discourse',
+        'google_doc',
+        'google_sheet',
+        'contpaq_support',
+      ].includes(this.source.source_type);
     },
     // Fuentes vectorizadas/indexadas localmente: el sync re-procesa.
     // Discourse queda fuera: se busca en vivo, no hay copia local que sincronizar.
@@ -76,8 +81,13 @@ export default {
         ? 'bg-green-50 text-green-700'
         : 'bg-slate-50 text-slate-500';
     },
-    discourseUrl() {
-      return this.source.config?.url || this.source.config?.file_url || null;
+    sourceUrl() {
+      return (
+        this.source.config?.url ||
+        this.source.config?.file_url ||
+        this.source.config?.base_url ||
+        null
+      );
     },
     discourseUsername() {
       return this.source.config?.username || null;
@@ -111,8 +121,8 @@ export default {
     </div>
 
     <!-- URL del foro -->
-    <div v-if="discourseUrl" class="text-sm text-slate-500 truncate">
-      {{ discourseUrl }}
+    <div v-if="sourceUrl" class="text-sm text-slate-500 truncate">
+      {{ sourceUrl }}
     </div>
 
     <!-- Usuario API -->

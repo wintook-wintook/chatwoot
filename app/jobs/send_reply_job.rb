@@ -14,7 +14,10 @@ class SendReplyJob < ApplicationJob
       'Channel::Telegram' => ::Telegram::SendOnTelegramService,
       'Channel::Whatsapp' => ::Whatsapp::SendOnWhatsappService,
       'Channel::Sms' => ::Sms::SendOnSmsService,
-      'Channel::Tiktok' => ::Tiktok::SendOnTiktokService
+      'Channel::Tiktok' => ::Tiktok::SendOnTiktokService,
+      # El canal nativo va directo al servicio; el legacy sigue pasando por
+      # send_on_facebook_page, que decide entre Messenger e Instagram por conversación.
+      'Channel::Instagram' => ::Instagram::SendOnInstagramService
     }
 
     case channel_name

@@ -106,8 +106,16 @@ class Messages::Instagram::MessageBuilder < Messages::Messenger::MessageBuilder
   end
 
   def build_message
-    return if @outgoing_echo && already_sent_from_chatwoot?
+    # Este descarte va primero a propósito: `message_already_created?` resuelve la
+    # conversación, y resolverla la crea si no existía. Comprobarlo antes dejaría
+    # conversaciones vacías para los mensajes que no llegan a materializarse.
     return if message_content.blank? && all_unsupported_files?
+
+    # Idempotencia por `mid`. La comprobación existía pero solo se aplicaba a los echoes
+    # salientes; aplicarla siempre es lo que permite que una cuenta entregue por la ruta
+    # legacy y por la nativa a la vez sin duplicar mensajes, y de paso cubre los reintentos
+    # de webhook de Meta y los del propio job. Ver docs/instagram_plan.md §5.1
+    return if message_already_created?
 
     @message = conversation.messages.create!(message_params)
     save_story_id
@@ -157,12 +165,10 @@ class Messages::Instagram::MessageBuilder < Messages::Messenger::MessageBuilder
     params
   end
 
-  def already_sent_from_chatwoot?
-    cw_message = conversation.messages.where(
-      source_id: @messaging[:message][:mid]
-    ).first
-
-    cw_message.present?
+  # Un `mid` ya presente significa o bien que el mensaje salió de Chatwoot y vuelve como
+  # echo, o bien que el mismo evento se ha entregado dos veces.
+  def message_already_created?
+    conversation.messages.exists?(source_id: @messaging[:message][:mid])
   end
 
   def all_unsupported_files?

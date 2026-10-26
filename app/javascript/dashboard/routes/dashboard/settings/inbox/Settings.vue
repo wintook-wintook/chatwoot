@@ -7,6 +7,7 @@ import SettingIntroBanner from 'dashboard/components/widgets/SettingIntroBanner.
 import SettingsSection from '../../../../components/SettingsSection.vue';
 import inboxMixin from 'shared/mixins/inboxMixin';
 import FacebookReauthorize from './facebook/Reauthorize.vue';
+import InstagramReauthorize from './instagram/Reauthorize.vue';
 import PreChatFormSettings from './PreChatForm/Settings.vue';
 import WeeklyAvailability from './components/WeeklyAvailability.vue';
 import GreetingsEditor from 'shared/components/GreetingsEditor.vue';
@@ -18,6 +19,7 @@ import TiktokReauthorize from './channels/tiktok/Reauthorize.vue';
 import WidgetBuilder from './WidgetBuilder.vue';
 import BotConfiguration from './components/BotConfiguration.vue';
 import UnoapiConfiguration from './settingsPage/UnoapiConfiguration.vue';
+import WhatsappCallsPage from './settingsPage/WhatsappCallsPage.vue'; // diag/llamadas_whatsapp
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import SenderNameExamplePreview from './components/SenderNameExamplePreview.vue';
 
@@ -28,6 +30,7 @@ export default {
     ConfigurationPage,
     QuestionsPage,
     FacebookReauthorize,
+    InstagramReauthorize,
     GreetingsEditor,
     PreChatFormSettings,
     SettingIntroBanner,
@@ -38,6 +41,7 @@ export default {
     MicrosoftReauthorize,
     TiktokReauthorize,
     UnoapiConfiguration,
+    WhatsappCallsPage,
   },
   mixins: [inboxMixin],
   setup() {
@@ -165,6 +169,23 @@ export default {
         ];
       }
 
+      // diag/llamadas_whatsapp (F6): solo WhatsApp Cloud y con la bandera de la cuenta
+      if (
+        this.isAWhatsAppCloudChannel &&
+        this.isFeatureEnabledonAccount(
+          this.accountId,
+          FEATURE_FLAGS.WHATSAPP_CALLS
+        )
+      ) {
+        visibleToAllChannelTabs = [
+          ...visibleToAllChannelTabs,
+          {
+            key: 'whatsappCalls',
+            name: this.$t('WHATSAPP_CALLS.SETTINGS.TAB'),
+          },
+        ];
+      }
+
       if (
         this.isFeatureEnabledonAccount(
           this.accountId,
@@ -207,7 +228,7 @@ export default {
       return (
         this.isASmsInbox ||
         this.isAWhatsAppChannel ||
-        this.isAFacebookInbox ||
+        this.isAMetaInbox ||
         this.isATiktokChannel
       );
     },
@@ -227,7 +248,7 @@ export default {
       if (
         this.isATwilioChannel ||
         this.isATwitterInbox ||
-        this.isAFacebookInbox
+        this.isAMetaInbox
       )
         return true;
       return false;
@@ -240,6 +261,11 @@ export default {
     },
     tiktokUnauthorized() {
       return this.isATiktokChannel && this.inbox.reauthorization_required;
+    },
+    // Instagram no se reautoriza con el SDK de Facebook: hay que rehacer el OAuth propio,
+    // así que se manda al agente a la pantalla del canal en vez de reusar el componente.
+    instagramUnauthorized() {
+      return this.isAnInstagramInbox && this.inbox.reauthorization_required;
     },
 
     isWavoipFeatureEnabled() {
@@ -422,6 +448,7 @@ export default {
     <MicrosoftReauthorize v-if="microsoftUnauthorized" :inbox="inbox" />
     <FacebookReauthorize v-if="facebookUnauthorized" :inbox="inbox" />
     <TiktokReauthorize v-if="tiktokUnauthorized" />
+    <InstagramReauthorize v-if="instagramUnauthorized" />
 
     <div v-if="selectedTabKey === 'inbox_settings'" class="mx-8">
       <SettingsSection
@@ -848,6 +875,9 @@ export default {
     </div>
     <div v-if="selectedTabKey === 'unoApiConfiguration'">
       <UnoapiConfiguration :inbox="inbox" />
+    </div>
+    <div v-if="selectedTabKey === 'whatsappCalls'">
+      <WhatsappCallsPage :inbox="inbox" />
     </div>
   </div>
 </template>

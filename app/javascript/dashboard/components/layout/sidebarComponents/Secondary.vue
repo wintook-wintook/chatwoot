@@ -59,7 +59,37 @@ export default {
     // abierto (null = todos plegados).
     return {
       openGroup: null,
+      caseSettingsRequested: false, // @tickets_cases
     };
+  },
+  // @tickets_cases — los ítems con `visibleGetter` dependen de la configuración
+  // del módulo de casos: se pide una vez cuando el menú los trae.
+  watch: {
+    // Menú v2: al estar en una pantalla de un grupo plegable, el grupo se abre.
+    '$route.name': {
+      immediate: true,
+      handler(name) {
+        const items = (this.menuConfig && this.menuConfig.menuItems) || [];
+        const group = items.find(
+          item =>
+            item.collapsible &&
+            (item.children || []).some(child => child.toStateName === name)
+        );
+        if (group) this.openGroup = group.toState;
+      },
+    },
+    menuConfig: {
+      immediate: true,
+      handler(config) {
+        const needsSettings = ((config && config.menuItems) || []).some(
+          item => item.visibleGetter
+        );
+        if (needsSettings && !this.caseSettingsRequested) {
+          this.caseSettingsRequested = true;
+          this.$store.dispatch('caseTickets/fetchSettings').catch(() => {});
+        }
+      },
+    },
   },
   computed: {
     ...mapGetters({
@@ -91,6 +121,10 @@ export default {
       return menuItemsFilteredByPermissions.filter(item => {
         if (item.showOnlyOnCloud) {
           return this.isOnChatwootCloud;
+        }
+        // @tickets_cases — permiso que decide el backend (p. ej. «Resumen del negocio»).
+        if (item.visibleGetter) {
+          return this.$store.getters[item.visibleGetter];
         }
         return true;
       });
@@ -420,7 +454,9 @@ export default {
         @toggleGroup="onToggleGroup"
       />
       <SecondaryNavItem
-        v-for="menuItem in additionalSecondaryMenuItems[menuConfig.parentNav]"
+        v-for="menuItem in additionalSecondaryMenuItems[
+          menuConfig.extraSections || menuConfig.parentNav
+        ]"
         :key="menuItem.key"
         :menu-item="menuItem"
         :open-group="openGroup"

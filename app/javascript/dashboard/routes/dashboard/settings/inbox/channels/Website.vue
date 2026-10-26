@@ -29,7 +29,7 @@ export default {
       if (
         this.isATwilioChannel ||
         this.isATwitterInbox ||
-        this.isAFacebookInbox
+        this.isAMetaInbox
       )
         return true;
       return false;

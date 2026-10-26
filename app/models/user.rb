@@ -51,7 +51,7 @@ class User < ApplicationRecord
   include UserAttributeHelpers
 
   has_many :scheduled_messages
-  
+
   devise :database_authenticatable,
          :registerable,
          :recoverable,
@@ -126,6 +126,19 @@ class User < ApplicationRecord
 
   def assigned_inboxes
     administrator? ? Current.account.inboxes : inboxes.where(account_id: Current.account.id)
+  end
+
+  # proyecto@publicar_prompts — solo el super admin lo marca (plan: docs/publicar_prompts_plan.md).
+  # Vive en custom_attributes: el perfil no deja escribir esa columna al propio usuario.
+  def can_publish_prompts?
+    ActiveModel::Type::Boolean.new.cast(custom_attributes&.dig('can_publish_prompts')) || false
+  end
+  alias can_publish_prompts can_publish_prompts?
+
+  def can_publish_prompts=(value)
+    self.custom_attributes = (custom_attributes || {}).merge(
+      'can_publish_prompts' => ActiveModel::Type::Boolean.new.cast(value) || false
+    )
   end
 
   def serializable_hash(options = nil)

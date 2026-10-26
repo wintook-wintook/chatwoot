@@ -19,13 +19,29 @@ module ContactTrackings
     # independiente: se mira su disponibilidad por separado y la cita se crea en el que esté
     # libre (se reparte si hay varios). Si una agenda no figura en el mapa → modo legado: se
     # leen sus `enabled_calendar_ids` (unión) y la cita se crea en 'primary' (comportamiento previo).
+    #
+    # `working_hours: ALL_DAY` — proyecto@hoja_buscar, pieza 3 (@agendar_calendar(horario=24h)):
+    # cualquier hora de cualquier día; el horario del canal no aplica.
+    ALL_DAY = :all_day
+
     def initialize(calendar_integration_ids:, timezone: 'America/Mexico_City', slot_duration: DEFAULT_DURATION,
                    working_hours: nil, booking_calendars: {})
       @calendar_integration_ids = Array(calendar_integration_ids).map(&:to_i).uniq
       @timezone      = timezone.presence || 'America/Mexico_City'
       @slot_duration = slot_duration.to_i.positive? ? slot_duration.to_i : DEFAULT_DURATION
-      @work_windows  = build_work_windows(working_hours)
+      @all_day       = working_hours == ALL_DAY
+      @work_windows  = @all_day ? ALL_DAY_WINDOWS : build_work_windows(working_hours)
       @booking_calendars = booking_calendars.is_a?(Hash) ? booking_calendars : {}
+    end
+
+    ALL_DAY_WINDOWS = (0..6).index_with { { open: 0, close: 24 * 60 } }.freeze
+    # Entre un horario ofrecido y el siguiente. Con citas cortas es la duración (como
+    # siempre); con servicios largos, cada hora: una jornada de 16 h no puede empezar solo
+    # a las 00:00 y a las 16:00.
+    MAX_STEP = 60
+
+    def step
+      [@slot_duration, MAX_STEP].min
     end
 
     # `from:` permite anclar la búsqueda cerca de un día/hora pedido por el cliente
@@ -44,7 +60,8 @@ module ContactTrackings
 
       integrations.each do |integration|
         resources_for(integration).each do |res|
-          busy = fetch_busy_periods(integration, res[:read], time_min, time_max)
+          # + la duración: un servicio largo que empieza al final del rango termina después.
+          busy = fetch_busy_periods(integration, res[:read], time_min, time_max + @slot_duration.minutes)
           # nil = no se pudo leer la disponibilidad (token revocado/expirado, API caída):
           # NO ofrecemos horarios de esta agenda, porque tampoco podríamos crear la cita
           # después (ofrecer un hueco que luego falla obliga a escalar a un humano).
@@ -58,6 +75,22 @@ module ContactTrackings
       end
 
       balance_slots(slots_by_resource)
+    end
+
+    # proyecto@solicitudes (pieza 5, F7) — rentas: los calendarios libres TODO el periodo
+    # [desde, hasta). Google no acepta rangos de más de 90 días en freeBusy
+    # («timeRangeTooLong», medido el 26/09/2026): se consulta en tramos.
+    PERIOD_CHUNK = 60.days
+
+    def free_for_period(desde, hasta)
+      UserCalendarIntegration.where(id: @calendar_integration_ids).flat_map do |integration|
+        resources_for(integration).filter_map do |res|
+          next unless free_all_period?(integration, res[:read], desde, hasta)
+
+          { slot: desde, end_time: hasta, calendar_integration_id: integration.id, google_calendar_id: res[:gcal],
+            calendar_name: calendar_name_for(integration, res[:gcal]) || integration.user&.name, all_day: true }
+        end
+      end
     end
 
     # Verifica si un horario EXACTO propuesto por el cliente está libre (dentro del
@@ -94,6 +127,13 @@ module ContactTrackings
     rescue StandardError => e
       Rails.logger.warn "[AvailabilitySlotService] ⚠️ slot_for falló: #{e.message}"
       nil
+    end
+
+    # ¿Ese día se trabaja? Con el horario del canal si está activo; si no, lun–vie. Lo usa
+    # el job para decir por qué no ofrece el día pedido: «no hay servicio» (día cerrado) no
+    # es lo mismo que «ya no tengo espacios» (día abierto pero lleno).
+    def working_day?(date)
+      open_day?(date.in_time_zone(@timezone).noon)
     end
 
     private
@@ -141,6 +181,18 @@ module ContactTrackings
     # Distinguir `nil` (no legible) de `[]` (legible y sin ocupación) es clave: quien
     # llama NO debe ofrecer horarios de una agenda cuya disponibilidad no pudo leerse,
     # porque tampoco podría crear la cita después.
+    def free_all_period?(integration, calendar_ids, desde, hasta)
+      inicio = desde
+      while inicio < hasta
+        fin = [inicio + PERIOD_CHUNK, hasta].min
+        ocupado = fetch_busy_periods(integration, calendar_ids, inicio, fin)
+        return false if ocupado.nil? || ocupado.any?
+
+        inicio = fin
+      end
+      true
+    end
+
     def fetch_busy_periods(integration, calendar_ids, time_min, time_max)
       calendar_ids = Array(calendar_ids).presence || ['primary']
       service   = GoogleCalendarService.new(integration)
@@ -182,7 +234,7 @@ module ContactTrackings
           break if slots.size >= MAX_SLOTS
         end
 
-        current += @slot_duration.minutes
+        current += step.minutes
       end
 
       slots
@@ -213,6 +265,8 @@ module ContactTrackings
     end
 
     def within_work_hours?(slot_start, slot_end)
+      return true if @all_day # también el servicio que cruza la medianoche (18:00–00:00)
+
       local_start = slot_start.in_time_zone(@timezone)
       local_end   = slot_end.in_time_zone(@timezone)
 
@@ -257,10 +311,10 @@ module ContactTrackings
     end
 
     def align_to_slot(time)
-      remainder = time.min % @slot_duration
+      remainder = time.min % step
       return time.change(sec: 0) if remainder.zero?
 
-      (time + (@slot_duration - remainder).minutes).change(sec: 0)
+      (time + (step - remainder).minutes).change(sec: 0)
     end
 
     # Avanza el horizonte de búsqueda contando solo días ABIERTOS (según working_hours del

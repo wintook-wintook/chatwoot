@@ -138,8 +138,8 @@ class ExternalDb::AiQueryService
     body = {
       model: MODEL,
       messages: [
-        { role: 'system', content: 'Sos un asistente de cobranza. Elegí la función que ' \
-                                   'responde la pregunta del usuario y completá sus parámetros.' },
+        { role: 'system', content: 'Eres un asistente de cobranza. Elige la función que ' \
+                                   'responde la pregunta del usuario y completa sus parámetros.' },
         { role: 'user', content: @question }
       ],
       tools: queries.map { |q| tool_for(q) },
@@ -158,8 +158,9 @@ class ExternalDb::AiQueryService
     body = {
       model: MODEL,
       messages: [
-        { role: 'system', content: 'Respondé en español, claro y breve, usando SOLO los datos ' \
-                                   'provistos. Montos con 2 decimales. Si no hay filas, decilo.' },
+        { role: 'system', content: 'Responde en español, claro y breve, usando SOLO los datos ' \
+                                   'provistos. Montos con 2 decimales. Si no hay filas, dilo. ' \
+                                   "#{ContactTrackings::CustomerTone::RULE}" },
         { role: 'user', content: "Pregunta: #{@question}\nConsulta: #{query.name}\nDatos: #{context}" }
       ],
       temperature: 0.2

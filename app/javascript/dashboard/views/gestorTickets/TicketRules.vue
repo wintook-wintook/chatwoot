@@ -139,7 +139,10 @@ export default {
       rules: 'caseTickets/getRules',
       rulesUiFlags: 'caseTickets/getRulesUIFlags',
       caseTypes: 'caseTickets/getTypes',
-      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
+      // ITIL es por tipo; una regla no está atada a un único tipo (el tipo es
+      // una condición opcional más), así que se ofrecen las opciones ITIL si
+      // al menos un tipo de la cuenta las usa.
+      itilEnabled: 'caseTickets/getAnyTypeItilEnabled',
     }),
     isFetching() {
       return this.rulesUiFlags.isFetching;
@@ -640,8 +643,9 @@ export default {
                 icon="add-circle"
                 type="button"
                 @click="addCondition"
-                >{{ $t('CASE_TICKETS.RULES.ADD_CONDITION') }}</woot-button
               >
+                {{ $t('CASE_TICKETS.RULES.ADD_CONDITION') }}
+              </woot-button>
             </div>
 
             <div
@@ -736,8 +740,9 @@ export default {
                 icon="add-circle"
                 type="button"
                 @click="addAction"
-                >{{ $t('CASE_TICKETS.RULES.ADD_ACTION') }}</woot-button
               >
+                {{ $t('CASE_TICKETS.RULES.ADD_ACTION') }}
+              </woot-button>
             </div>
 
             <div
@@ -820,8 +825,9 @@ export default {
               color-scheme="secondary"
               type="button"
               @click="showModal = false"
-              >{{ $t('CASE_TICKETS.RULES.CANCEL') }}</woot-button
             >
+              {{ $t('CASE_TICKETS.RULES.CANCEL') }}
+            </woot-button>
             <woot-button
               type="submit"
               :is-loading="isSaving"

@@ -19,6 +19,9 @@ export default {
     hasTiktokConfigured() {
       return window.chatwootConfig?.tiktokAppId;
     },
+    hasInstagramConfigured() {
+      return window.chatwootConfig?.instagramEnabled;
+    },
     isActive() {
       const { key } = this.channel;
       if (Object.keys(this.enabledFeatures).length === 0) {
@@ -29,6 +32,11 @@ export default {
       }
       if (key === 'facebook') {
         return this.enabledFeatures.channel_facebook && this.hasFbConfigured;
+      }
+      if (key === 'instagram') {
+        return (
+          this.enabledFeatures.channel_instagram && this.hasInstagramConfigured
+        );
       }
       if (key === 'email') {
         return this.enabledFeatures.channel_email;

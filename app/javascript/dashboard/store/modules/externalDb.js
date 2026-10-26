@@ -147,6 +147,17 @@ export const actions = {
     }
   },
 
+  // proyecto@erp_productos — "Probar como el agente".
+  async tryAsked({ commit }, { queryId, message, asked }) {
+    commit('SET_UI_FLAG', { runningQuery: true });
+    try {
+      const { data } = await consoleAPI.tryAsked({ queryId, message, asked });
+      return data;
+    } finally {
+      commit('SET_UI_FLAG', { runningQuery: false });
+    }
+  },
+
   async askQuestion({ commit }, { connectionId, question }) {
     commit('SET_UI_FLAG', { runningQuery: true });
     try {

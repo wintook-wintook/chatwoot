@@ -14,6 +14,8 @@ class HookListener < BaseListener
   private
 
   def execute_hooks(event, message)
+    return if message.voice_call? # diag/llamadas_whatsapp: la burbuja de una llamada no va a integraciones
+
     message.account.hooks.each do |hook|
       # In case of dialogflow, we would have a hook for each inbox.
       # Which means we will execute the same hook multiple times if the below filter isn't there

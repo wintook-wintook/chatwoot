@@ -31,6 +31,8 @@ export default {
       loadingItems: false,
       showAddModal: false,
       editingSource: null,
+      // proyecto@adaptar_prompts_publicados — ?nuevo=google_doc&nombre=X abre el alta así.
+      initialSource: null,
       saving: false,
       showDeleteModal: false,
       deletingSource: null,
@@ -147,6 +149,7 @@ export default {
           article: 'Centro de Ayuda',
           google_doc: 'Google Doc',
           google_sheet: 'Google Sheets',
+          contpaq_support: 'Agente de Servicio CONTPAQi',
         })[type] || 'Discourse';
     },
     sourceTypeIcon() {
@@ -156,6 +159,7 @@ export default {
           article: 'library',
           google_doc: 'document',
           google_sheet: 'document',
+          contpaq_support: 'cloud',
         })[type] || 'globe';
     },
     sourceById() {
@@ -200,11 +204,27 @@ export default {
   mounted() {
     this.fetchSources();
     this.fetchItems();
+    this.openFromQuery();
   },
   beforeUnmount() {
     this.stopSyncPolling();
   },
   methods: {
+    // proyecto@adaptar_prompts_publicados (D7) — los enlaces de la pestaña «Configurar»
+    // del Asistente llegan directo a lo que hay que crear:
+    //   ?tab=erp | ?tab=sources            abre esa pestaña
+    //   ?nuevo=google_doc&nombre=Precios   abre el alta con el tipo y el nombre puestos
+    openFromQuery() {
+      const { tab, nuevo, nombre } = this.$route.query;
+      if (tab === 'erp' && this.erpEnabled)
+        this.activeTab = this.erpConnTabIndex;
+      if (tab === 'sources') this.activeTab = 1;
+      if (!nuevo) return;
+
+      this.activeTab = 1;
+      this.initialSource = { source_type: nuevo, name: nombre || '' };
+      this.showAddModal = true;
+    },
     async fetchSources() {
       this.loadingSources = true;
       try {
@@ -988,9 +1008,11 @@ export default {
       :show="showAddModal"
       :saving="saving"
       :source="editingSource"
+      :initial="initialSource"
       @close="
         showAddModal = false;
         editingSource = null;
+        initialSource = null;
       "
       @save="onSaveSource"
     />

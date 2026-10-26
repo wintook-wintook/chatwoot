@@ -31,6 +31,13 @@ class ActionCableConnector extends BaseActionCableConnector {
       'conversation.read': this.onConversationRead,
       'conversation.updated': this.onConversationUpdated,
       'account.cache_invalidated': this.onCacheInvalidate,
+      // diag/llamadas_whatsapp (F5): llamadas de WhatsApp
+      'voice_call.incoming': this.onVoiceCall('onIncoming'),
+      'voice_call.accepted': this.onVoiceCall('onAccepted'),
+      'voice_call.ended': this.onVoiceCall('onEnded'),
+      'voice_call.outbound_connected': this.onVoiceCall('onOutboundConnected'),
+      'voice_call.outbound_accepted': this.onVoiceCall('onOutboundAccepted'),
+      'voice_call.permission_granted': this.onVoiceCall('onPermissionGranted'),
     };
   }
 
@@ -46,6 +53,12 @@ class ActionCableConnector extends BaseActionCableConnector {
 
   isAValidEvent = data => {
     return this.app.$store.getters.getCurrentAccountId === data.account_id;
+  };
+
+  // diag/llamadas_whatsapp: solo los de la cuenta abierta; cada evento a su acción.
+  onVoiceCall = action => data => {
+    if (!this.isAValidEvent(data)) return;
+    this.app.$store.dispatch(`whatsappCalls/${action}`, data);
   };
 
   onMessageUpdated = data => {
@@ -197,6 +210,15 @@ class ActionCableConnector extends BaseActionCableConnector {
       },
       case_task_completed: {
         key: 'CASE_TICKETS.TASKS.INBOX.TOAST_COMPLETED',
+        icon: 'checkmark-circle',
+      },
+      // Plan-Plantilla-Tareas-Etapa — tareas nuevas de la etapa y etapa lista.
+      case_stage_tasks: {
+        key: 'CASE_TICKETS.TASKS.INBOX.TOAST_STAGE_TASKS',
+        icon: 'checkmark-circle',
+      },
+      case_stage_ready: {
+        key: 'CASE_TICKETS.TASKS.INBOX.TOAST_STAGE_READY',
         icon: 'checkmark-circle',
       },
     };

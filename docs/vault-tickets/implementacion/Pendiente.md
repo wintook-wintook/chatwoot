@@ -6,6 +6,30 @@ tags: [tickets, pendiente, todo]
 
 ## Pendiente / no implementado
 
+### Reuniones — módulo COMPLETO (F0–F7), pendientes menores
+Ver [[Historial-de-implementacion]] y `docs/tickets_reuniones_plan.md`. Las 7 fases
+están implementadas, probadas y pusheadas a `origin/feat/tickets`.
+- **⏸️ Verificar el dominio en Google Cloud (§12.2)** — **aplazado por decisión del usuario (2026-08-13)**.
+  Es lo único que falta para que el push en tiempo real (F7) se encienda. Dos pasos:
+  (1) Search Console: verificar `wintook.com` como propiedad de tipo **Dominio** (TXT en DNS,
+  cubre todos los subdominios) **con la cuenta dueña del proyecto de Cloud**;
+  (2) Cloud Console → APIs y servicios → **Verificación de dominios** → agregar
+  `develop.wintook.com` (y `app.wintook.com` / `chatzeus.com` para producción).
+  **NO se toca la pantalla de Credenciales**: la URL del webhook no se registra ahí, la manda
+  el código en `events.watch`. Mientras no se haga, `events.watch` falla en silencio y el
+  módulo funciona igual con la reconciliación perezosa (§12.5).
+- **Prueba de punta a punta del push** — pendiente de lo anterior: agendar una reunión, moverla
+  desde Google Calendar y comprobar que el ticket se actualiza SIN abrirlo.
+- **Verificar en la bandeja cuántos correos manda Google** al cancelar/truncar una serie: MGCI
+  pide **un** aviso por operación (medido), pero cuántos correos emite Google por cada aviso solo
+  se ve en el buzón del invitado. Si resultara uno por ocurrencia, el plan B es cancelar el
+  maestro con `sendUpdates: 'none'` y avisar por el canal del ticket (§10.2c).
+- **Decir en la pantalla de conexión de Google Calendar** que MGCI solo lee y conserva las
+  reuniones creadas desde el sistema (§12.4): `events.watch` es por calendario, así que llegan
+  avisos de los eventos personales del agente (se descartan en memoria, pero conviene decirlo).
+- **F8 (diferido por el plan)**: recordatorios internos, bandeja de reuniones a nivel cuenta,
+  `scope: 'following'` al editar/cancelar una ocurrencia de serie.
+
 ### User Portal — pendientes tras la Fase P1 (ver [[Plan-User-Portal]])
 - **i18n `en` del portal** — la copy de las vistas ERB está hoy en español; `<html lang>` ya sale de `portal.locale`. Falta extraer textos a locales es/en.
 - **Tailwind por CDN** — las vistas del portal cargan Tailwind vía CDN (rápido para el MVP); migrar al build de assets para producción.

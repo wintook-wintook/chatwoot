@@ -37,6 +37,7 @@ class Account < ApplicationRecord
   # KANBAN0725
 
   has_many :tracking_templates, dependent: :destroy # proyecto@tracking_templates
+  has_many :published_prompts, dependent: :destroy # proyecto@publicar_prompts
   has_many :tracking_campaigns, dependent: :destroy # @campanas_vendedor
   has_many :case_tickets, dependent: :destroy # @tickets_cases
   has_many :external_db_connections, dependent: :destroy # @query_databases
@@ -53,6 +54,7 @@ class Account < ApplicationRecord
   has_many :case_portals,       dependent: :destroy # @tickets_cases — User Portal
   has_one  :case_setting,       dependent: :destroy # @tickets_cases — modo simple/ITIL
   has_one  :case_ai_config,     dependent: :destroy # @tickets_cases 3A
+  has_many :case_outcome_reasons, dependent: :destroy # @tickets_cases — Plan-Clase-Comercial F3
   DEFAULT_QUERY_SETTING = {
     flag_query_mode: :bit_operator,
     check_for_column: false
@@ -75,6 +77,7 @@ class Account < ApplicationRecord
   has_many :categories, dependent: :destroy_async, class_name: '::Category'
   has_many :contacts, dependent: :destroy_async
   has_many :conversations, dependent: :destroy_async
+  has_many :calls, dependent: :destroy_async # diag/llamadas_whatsapp
   has_many :csat_survey_responses, dependent: :destroy_async
   has_many :custom_attribute_definitions, dependent: :destroy_async
   has_many :custom_filters, dependent: :destroy_async
@@ -84,6 +87,7 @@ class Account < ApplicationRecord
   has_many :facebook_pages, dependent: :destroy_async, class_name: '::Channel::FacebookPage'
   has_many :hooks, dependent: :destroy_async, class_name: 'Integrations::Hook'
   has_many :inboxes, dependent: :destroy_async
+  has_many :instagram_channels, dependent: :destroy_async, class_name: '::Channel::Instagram'
   has_many :labels, dependent: :destroy_async
   has_many :line_channels, dependent: :destroy_async, class_name: '::Channel::Line'
   has_many :mentions, dependent: :destroy_async

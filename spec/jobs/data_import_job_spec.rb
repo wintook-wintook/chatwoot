@@ -90,6 +90,47 @@ RSpec.describe DataImportJob do
       end
     end
 
+    # proyecto@importar_contactos — el CSV de rechazados se armaba con el archivo crudo (binario): con acentos
+    # en encabezados/filas (o BOM de Excel) tronaba con Encoding::CompatibilityError y no se guardaba.
+    context 'when rejected rows and headers have accents' do
+      def import_with_bytes(bytes)
+        file = Tempfile.new(['contactos', '.csv'], binmode: true)
+        file.write(bytes)
+        file.rewind
+        create(:data_import, import_file: Rack::Test::UploadedFile.new(file.path, 'text/csv'))
+      end
+
+      let(:bytes) do
+        "\xEF\xBB\xBFname,email,ubicación\n" \
+        "José Pérez,jose@example.com,Querétaro\n" \
+        "Ana Núñez,correo-inválido,León\n".b
+      end
+
+      it 'imports the valid row and saves the rejected one in the failed records CSV' do
+        data_import = import_with_bytes(bytes)
+
+        described_class.perform_now(data_import)
+
+        expect(data_import.reload).to have_attributes(status: 'completed', processed_records: 1, total_records: 2)
+        expect(data_import.account.contacts.pluck(:name)).to eq(['José Pérez'])
+        failed = CSV.parse(data_import.failed_records.download.force_encoding('UTF-8'), headers: true)
+        expect(failed.headers).to eq(%w[name email ubicación errors])
+        expect(failed.first['name']).to eq('Ana Núñez')
+      end
+
+      it 'does not depend on the process locale' do
+        data_import = import_with_bytes(bytes)
+        original = Encoding.default_external
+        silence_warnings { Encoding.default_external = Encoding::US_ASCII }
+
+        described_class.perform_now(data_import)
+
+        expect(data_import.reload.failed_records).to be_attached
+      ensure
+        silence_warnings { Encoding.default_external = original }
+      end
+    end
+
     context 'when the data contains existing records' do
       let(:existing_data) do
         [

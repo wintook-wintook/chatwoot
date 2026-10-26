@@ -2,6 +2,7 @@ import { computed } from 'vue';
 import { useStoreGetters, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from './useI18n';
+import { classI18nBase } from 'dashboard/helper/caseClasses'; // @tickets_cases
 import languages from 'dashboard/components/widgets/conversation/advancedFilterItems/languages';
 import countries from 'shared/constants/countries';
 import {
@@ -34,8 +35,14 @@ export function useAutomation() {
   const slaPolicies = useMapGetter('sla/getSLA');
   // proyecto@automatizaciones: obtiene los tipos de oportunidad del store para la acción assign_kanban_type_process
   const kanbanTypeProcesses = useMapGetter('kanbanTypeProcesses/getKanbanTypeProcesses');
+  // proyecto@automatizaciones: obtiene los tipos de caso del store para la acción assign_case_type
+  const caseTypes = useMapGetter('caseTickets/getTypes');
   // proyecto@automatizacion_tracking: obtiene todas las plantillas de seguimiento del store
   const trackingTemplates = useMapGetter('trackingTemplates/getTemplates');
+  // proyecto@automatizacion_campanas: campañas para la acción "Agregar a campaña"
+  const trackingCampaigns = useMapGetter(
+    'trackingCampaignOptions/getCampaignOptions'
+  );
 
   const booleanFilterOptions = computed(() => [
     { id: true, name: t('FILTER.ATTRIBUTE_LABELS.TRUE') },
@@ -48,6 +55,18 @@ export function useAutomation() {
       id: ktp.id,
       name: ktp.process_name,
     }))
+  );
+
+  // @tickets_cases — con su clase («Instalación · Órdenes»): hay tipos con el
+  // mismo nombre en clases distintas y la clase decide qué caso se crea.
+  // Sin los tipos retirados: ya no reciben casos nuevos.
+  const caseTypeOptions = computed(() =>
+    (caseTypes.value || [])
+      .filter(ct => !ct.retired)
+      .map(ct => ({
+        id: ct.id,
+        name: `${ct.name} · ${t(`${classI18nBase(ct.case_class)}.NAME`)}`,
+      }))
   );
 
   const statusFilterOptions = computed(() => {
@@ -239,7 +258,9 @@ export function useAutomation() {
       teams: teams.value,
       slaPolicies: slaPolicies.value,
       kanbanTypeProcesses: kanbanTypeProcessOptions.value, // proyecto@automatizaciones
+      caseTypes: caseTypeOptions.value, // proyecto@automatizaciones
       trackingTemplates: trackingTemplateOptions, // proyecto@automatizacion_tracking
+      trackingCampaigns: trackingCampaigns.value, // proyecto@automatizacion_campanas
       languages,
       type,
     });

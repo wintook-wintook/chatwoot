@@ -237,9 +237,27 @@ const confirmDeletion = () => {
               :title="cannedItem.short_code"
             >
               {{ cannedItem.short_code }}
+              <!-- proyecto@predefinidas_prompt — esta respuesta tiene su propio prompt:
+                   el agente no la usa como las demás. -->
+              <span
+                v-if="cannedItem.content_prompts"
+                class="ml-1 px-1.5 py-0.5 text-xs font-normal rounded bg-woot-50 text-woot-600 dark:bg-woot-800 dark:text-woot-100"
+              >
+                {{ $t('CANNED_MGMT.FORM_PROMPT.LIST_BADGE') }}
+              </span>
+              <span
+                v-if="cannedItem.content_is_prompt"
+                class="ml-1 px-1.5 py-0.5 text-xs font-normal rounded bg-woot-50 text-woot-600 dark:bg-woot-800 dark:text-woot-100"
+              >
+                {{ $t('CANNED_MGMT.FORM_PROMPT.LIST_BADGE_IS_PROMPT') }}
+              </span>
             </td>
+            <!-- proyecto@predefinidas_prompt — en la lista el contenido se corta a 3 líneas
+                 (solo la vista; el texto completo se ve al editar y al pasar el mouse). -->
             <td class="py-4 pr-4 md:break-all whitespace-normal">
-              {{ cannedItem.content }}
+              <div class="line-clamp-3" :title="cannedItem.content">
+                {{ cannedItem.content }}
+              </div>
             </td>
             <td class="py-4 flex justify-end gap-1">
               <woot-button

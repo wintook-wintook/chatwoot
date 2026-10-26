@@ -8,7 +8,10 @@
 # CaseTicket BIEN FORMADO usando Cases::Ai::Intake (lee la conversación y arma
 # título/descripción/clasificación), aplicando además:
 #   - Directiva parametrizable:  @crear_ticket(prioridad=alta, tipo=Soporte)
-#   - Anti-duplicado (§11.2): si el contacto ya tiene un caso abierto, lo reusa.
+#   - Anti-duplicado (§11.2): si el contacto ya tiene un caso abierto DE LA MISMA
+#     CLASE, lo reusa (una oportunidad abierta no absorbe un ticket de soporte).
+#     Se revisa con la clase del tipo de la directiva (o la del tipo por defecto) y,
+#     si el intake eligió un tipo de otra clase, otra vez con esa.
 #   - Score de riesgo (§11.3): reincidencia + churn suben la prioridad.
 #   - Fase 2 (§6): si falta un dato clave, lo pide UNA vez antes de crear.
 #   - Degradación: si la IA no está disponible/falla, cae al alta básica de antes.
@@ -45,13 +48,31 @@ class Cases::TicketCreatorService
     "case_intake_pending::#{conversation_id}"
   end
 
+  # @crear_ticket(fallback=true): invierte la posición del alta de ticket dentro del
+  # turno. Por defecto el ticket se evalúa ANTES que la KBase (§11.1); con el flag pasa
+  # a ser el ÚLTIMO recurso: primero contesta la base de conocimiento y el caso solo se
+  # levanta si la búsqueda no resolvió el turno. Sin el flag, el orden de siempre.
+  def self.fallback?(tracking)
+    m = tracking&.complementary_prompt.to_s.match(DIRECTIVE_RE)
+    return false unless m && m[1].present?
+
+    m[1].split(',').any? do |pair|
+      k, v = pair.split('=', 2).map { |x| x.to_s.strip.downcase }
+      k == 'fallback' && %w[true si sí 1].include?(v)
+    end
+  end
+
   # Qué hizo el último create_if_needed: :no_directive, :linked_existing,
   # :not_worthy, :asked_missing_fields, :created o :error. Permite a callers como
   # el gate de @agendar_calendar distinguir "acabo de pedir un dato, no agendes
   # todavía" de "ya hay ticket / no aplica, seguí con el flujo normal".
   attr_reader :outcome
 
-  def initialize(message, tracking:)
+  # `directive:` permite pasar la directiva de UNA rama concreta (@ruta) en lugar de
+  # dejar que el servicio la busque en el prompt entero. Así cada rama puede escalar a
+  # su propio tipo y prioridad de ticket.
+  def initialize(message, tracking:, directive: nil)
+    @directive_text = directive
     @message      = message
     @tracking     = tracking
     @account      = message.account
@@ -62,21 +83,12 @@ class Cases::TicketCreatorService
 
   def create_if_needed
     return false unless directive_present?
-    # §11.2 Anti-duplicado: reusa caso abierto
-    return finish(:linked_existing, true) if reuse_existing_ticket
+    # §11.2 Anti-duplicado: reusa caso abierto de la misma clase
+    return finish(:linked_existing, true) if reuse_existing_ticket(directive_case_class)
 
     fields = intake_fields # nil = IA no disponible → degradar
-
-    if fields
-      # Gate: si la conversación no amerita un ticket (saludo, charla, tema resuelto),
-      # NO creamos nada y dejamos que el bot responda normal. Evita tickets espurios.
-      return finish(:not_worthy, false) if not_ticket_worthy?(fields)
-
-      # Campos particulares del tipo + Fase 2 (§6): extrae los case_type_fields de la
-      # conversación y, si faltan OBLIGATORIOS (o missing_info cuando el tipo no define
-      # campos), los pide y espera. true = el turno YA se atendió.
-      return finish(:asked_missing_fields, true) if request_missing_fields(fields)
-    end
+    early = fields && intake_outcome(fields)
+    return finish(*early) if early
 
     created = create_and_confirm(fields)
     finish(created ? :created : :error, created)
@@ -87,6 +99,21 @@ class Cases::TicketCreatorService
 
   private
 
+  # Lo que el intake decide ANTES de crear: [outcome, resultado] o nil para seguir.
+  def intake_outcome(fields)
+    # Gate: si la conversación no amerita un ticket (saludo, charla, tema resuelto),
+    # NO creamos nada y dejamos que el bot responda normal. Evita tickets espurios.
+    return [:not_worthy, false] if not_ticket_worthy?(fields)
+    # El intake eligió un tipo de otra clase y ya hay uno abierto de esa: se reusa.
+    return [:linked_existing, true] if reuse_for_intake_class?(fields)
+    # Campos particulares del tipo + Fase 2 (§6): extrae los case_type_fields de la
+    # conversación y, si faltan OBLIGATORIOS (o missing_info cuando el tipo no define
+    # campos), los pide y espera. true = el turno YA se atendió.
+    return [:asked_missing_fields, true] if request_missing_fields(fields)
+
+    nil
+  end
+
   # Registra el outcome de create_if_needed y devuelve `result` (azúcar para poder
   # usarlo en un `return` de una sola línea).
   def finish(outcome, result)
@@ -94,13 +121,25 @@ class Cases::TicketCreatorService
     result
   end
 
-  # §11.2 Anti-duplicado: si ya hay un caso abierto del contacto, lo reusa y avisa.
-  def reuse_existing_ticket
-    existing = orchestrator.find_active_ticket
+  # §11.2 Anti-duplicado: si ya hay un caso abierto del contacto de esa clase, lo
+  # reusa y avisa.
+  def reuse_existing_ticket(case_class)
+    existing = orchestrator.find_active_ticket(case_class: case_class)
     return false unless existing
 
     link_and_confirm_existing(existing)
     true
+  end
+
+  # Clase del tipo pedido en la directiva (@crear_ticket(tipo=…)) o la del tipo por defecto.
+  def directive_case_class
+    @directive_case_class ||= orchestrator.case_class_for(resolve_case_type_id(directive_overrides, {}))
+  end
+
+  # El intake eligió un tipo de OTRA clase: revisa también si ya hay uno abierto de esa.
+  def reuse_for_intake_class?(fields)
+    intake_class = orchestrator.case_class_for(resolve_case_type_id(directive_overrides, fields))
+    intake_class != directive_case_class && reuse_existing_ticket(intake_class)
   end
 
   # Construye el ticket (con campos capturados), aplica reglas y confirma al cliente.
@@ -113,8 +152,13 @@ class Cases::TicketCreatorService
     true
   end
 
+  # Texto sobre el que se lee la directiva: la de la rama si se pasó, o el prompt entero.
+  def directive_source
+    @directive_text.presence || @tracking&.complementary_prompt.to_s
+  end
+
   def directive_present?
-    @tracking&.complementary_prompt.to_s.match?(DIRECTIVE_RE)
+    directive_source.match?(DIRECTIVE_RE)
   end
 
   # true si la conversación NO amerita ticket (cierra el ciclo de Fase 2 si lo hubo).
@@ -178,7 +222,7 @@ class Cases::TicketCreatorService
   # Directiva parametrizable: @crear_ticket(prioridad=alta, tipo=Soporte)
   # ---------------------------------------------------------------------------
   def directive_overrides
-    m = @tracking.complementary_prompt.to_s.match(DIRECTIVE_RE)
+    m = directive_source.match(DIRECTIVE_RE)
     return {} unless m && m[1].present?
 
     m[1].split(',').each_with_object({}) do |pair, h|
@@ -236,7 +280,7 @@ class Cases::TicketCreatorService
   def resolve_case_type_id(overrides, fields)
     name = overrides['tipo']
     if name.present?
-      id = @account.case_types.where('LOWER(name) = ?', name.downcase).pick(:id)
+      id = @account.case_types.active.where('LOWER(name) = ?', name.downcase).pick(:id)
       return id if id
     end
     fields['case_type_id']

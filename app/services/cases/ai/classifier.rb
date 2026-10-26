@@ -18,8 +18,9 @@ class Cases::Ai::Classifier < Cases::Ai::BaseService
   URGENCIES = CaseTicket.urgencies.keys.freeze
 
   def classify(ticket)
-    services   = @account.case_services.where(active: true).pluck(:id, :name)
-    categories = @account.case_categories.where(active: true).pluck(:id, :name)
+    # Plan-Clase-Comercial F2: solo lo aplicable al tipo del caso (globales + propios).
+    services   = @account.case_services.where(active: true).for_type(ticket.case_type_id).pluck(:id, :name)
+    categories = @account.case_categories.where(active: true).for_type(ticket.case_type_id).pluck(:id, :name)
 
     raw = chat(
       system: system_prompt,

@@ -69,6 +69,9 @@ class DashboardController < ActionController::Base
       FACEBOOK_API_VERSION: GlobalConfigService.load('FACEBOOK_API_VERSION', 'v20.0'),
       # Solo el App ID: el secreto de TikTok nunca sale al navegador.
       TIKTOK_APP_ID: GlobalConfigService.load('TIKTOK_APP_ID', ''),
+      # Canal nativo de Instagram: solo se expone si está configurado, nunca el secreto.
+      # El front lo usa para atenuar la tarjeta; la URL de autorización se arma en backend.
+      INSTAGRAM_APP_ID: GlobalConfigService.load('INSTAGRAM_APP_ID', ''),
       IS_ENTERPRISE: ChatwootApp.enterprise?,
       AZURE_APP_ID: GlobalConfigService.load('AZURE_APP_ID', ''),
       UNOAPI_AUTH_TOKEN: GlobalConfigService.load('UNOAPI_AUTH_TOKEN', ''),

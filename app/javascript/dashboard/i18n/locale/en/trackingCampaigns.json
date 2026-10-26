@@ -3,12 +3,11 @@
     "TITLE": "AI Agent Campaigns",
     "DESCRIPTION": "Launch an AI Agent over a group of contacts and track each campaign's progress.",
     "REFRESH": "Refresh",
+    "REFRESH_ERROR": "The table could not be refreshed.",
     "NEW_CAMPAIGN": "New campaign",
-    "TAB_LIST": "Campaigns",
-    "TAB_NEW": "New campaign",
     "LOADING": "Loading campaigns…",
     "EMPTY_TITLE": "No campaigns yet.",
-    "EMPTY_HINT": "Create one with the “New campaign” button or bulk-assign an AI Agent from Contacts.",
+    "EMPTY_HINT": "Create one with the “Add campaign” button or bulk-assign an AI Agent from Contacts.",
     "SEARCH_PLACEHOLDER": "Search by name, AI Agent or channel…",
     "FILTER_STATUS_ALL": "All statuses",
     "NO_RESULTS": "No campaigns match the filter.",
@@ -20,23 +19,59 @@
     "DELETE_ERROR": "Could not delete the campaign.",
     "COL": {
       "NAME": "Campaign",
+      "CREATED": "Created",
       "AGENT": "AI Agent",
       "CHANNEL": "Channel",
       "START": "Start",
       "STATUS": "Status",
       "CONTACTS": "Contacts",
-      "PENDING": "Pending",
+      "PENDING": "Scheduled",
       "ACTIVE": "Active",
       "COMPLETED": "Completed",
       "FAILED": "Failed",
-      "PROGRESS": "Progress"
+      "PROGRESS": "Progress",
+      "TYPE": "Type",
+      "WINDOW": "Window"
     },
     "STATUS": {
-      "draft": "Draft",
+      "saved": "Saved",
+      "draft": "Scheduled",
       "running": "Running",
       "paused": "Paused",
       "finished": "Finished"
-    }
+    },
+    "MODE": {
+      "batch": "Batch",
+      "continuous": "Continuous"
+    },
+    "MODE_HINT": {
+      "batch": "A segment or label was chosen: when started, the contacts it has at that moment are enrolled at once (up to 100).",
+      "continuous": "No fixed list: your automations fill it with the “Add to campaign” action while it is open."
+    },
+    "NO_END": "no end",
+    "CONTINUOUS_CREATED": "Campaign \"{name}\" created. To receive contacts, create an automation that uses it.",
+    "CREATE_AUTOMATION": "Create automation for this campaign",
+    "DISMISS": "Close",
+    "ADD_CAMPAIGN": "Add campaign",
+    "BACK_TO_LIST": "Back to campaigns",
+    "LAUNCH": "Start",
+    "LAUNCH_CONFIRM": "Batch campaigns enroll the contacts the segment or label has right now and start sending; continuous ones start receiving contacts from automations. Start the campaign",
+    "LAUNCH_YES": "Yes, start",
+    "LAUNCH_SUCCESS": "Campaign started.",
+    "LAUNCH_QUEUED": "Campaign started: enrolling {count} contacts.",
+    "LAUNCH_ERROR": "Could not start the campaign.",
+    "SAVED_HINT": "Campaign saved. Nothing is sent until you press «Start».",
+    "SAVED_BANNER": "Saved: it does not enroll anyone or send messages until you start it.",
+    "EDIT": "Edit",
+    "EDIT_CAMPAIGN": "Edit campaign “{name}”",
+    "EDIT_SUCCESS": "Changes saved. It stays Saved until you start it.",
+    "EDIT_ERROR": "The campaign could not be opened for editing.",
+    "EDIT_ONLY_SAVED": "Only a Saved campaign can be edited: this one has already started.",
+    "PAUSED_BANNER": "Paused automatically: WhatsApp rejected a message because of a configuration problem, so the rest would fail too. Reason: {reason}",
+    "PAUSED_BANNER_HINT": "Fix the problem (template, payment or WhatsApp account in Meta) and resume the campaign: paused follow-ups resend the attempt that failed.",
+    "RESUME": "Resume campaign",
+    "RESUME_SUCCESS": "Campaign resumed: {count} follow-ups send again in a minute.",
+    "RESUME_ERROR": "The campaign could not be resumed."
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campaigns",
@@ -48,28 +83,31 @@
     "KPI": {
       "TITLE": "Control (execution)",
       "CONTACTS": "Contacts",
-      "PENDING": "Pending",
-      "ACTIVE": "Active",
-      "PAUSED": "Paused (Rule)",
+      "PENDING": "Scheduled",
       "COMPLETED_REPLIED": "Completed (replied)",
       "COMPLETED_NO_REPLY": "Completed (no reply)",
-      "CANCELLED": "Cancelled (Rule)",
       "FAILED": "Failed",
       "PROGRESS": "Progress"
     },
     "DELIVERY": {
       "TITLE": "Message Delivery",
       "DELIVERED": "Delivered",
-      "SENT": "Unconfirmed",
+      "SENT": "Awaiting confirmation",
+      "UNCONFIRMED": "Unconfirmed (24 h+)",
+      "RETRYING": "Retrying",
       "FAILED": "Delivery failed",
-      "EMPTY": "No messages sent yet."
+      "EMPTY": "No messages sent yet.",
+      "REASONS_TITLE": "Failure reasons",
+      "RETRY_AT": "Retry: {date}"
     },
     "FUNNEL": {
       "TITLE": "Intent",
       "REPLIED": "Replied",
       "INTERESTED": "Interested",
       "APPOINTMENT": "Booked",
-      "OBJECTIVE_MET": "Objective met"
+      "OBJECTIVE_MET": "Objective met",
+      "PAUSED_RULE": "Paused (Rule)",
+      "CANCELLED_RULE": "Cancelled (Rule)"
     },
     "PROSPECTS": "Prospects",
     "PROSPECTS_EMPTY": "This campaign has no prospects.",
@@ -78,18 +116,19 @@
     "FILTER_EMPTY": "No prospects match this filter.",
     "FILTER_DESC": {
       "intent_replied": "Contacts who replied at least once since the follow-up was created (counts even if they replied before the first message).",
-      "intent_interested": "The contact showed interest or asked to book; usually paused for an agent to take over.",
-      "intent_appointment": "The contact booked an appointment through the AI Agent (its date and time were recorded).",
+      "intent_interested": "A keyword rule with the Interested action marked it (e.g. the AI Agent wrote #interested at the end of its message).",
+      "intent_appointment": "A keyword rule with the Booked action marked it (e.g. the AI Agent wrote #booked at the end of its message).",
       "intent_objective": "The follow-up goal was achieved; marked as success and sending stops.",
-      "ctrl_pending": "Queued or with a scheduled next message; not sent yet.",
-      "ctrl_active": "Follow-up running: sending messages and replying to the contact toward the objective.",
-      "ctrl_paused": "Temporarily stopped (can resume). Usually by an AI Agent rule.",
+      "intent_paused_rule": "Paused by a keyword rule (e.g. #pause) and still paused. They can be resumed.",
+      "intent_cancelled_rule": "Permanently cancelled by a keyword rule (e.g. #cancel).",
+      "ctrl_pending": "With their next message scheduled. They may have already received earlier attempts; they stay here until the next one is sent.",
       "ctrl_completed_replied": "Exhausted attempts and got a reply.",
       "ctrl_completed_no_reply": "Exhausted attempts with no reply.",
-      "ctrl_cancelled": "Cancelled permanently (won't resume). Usually by an AI Agent rule.",
       "ctrl_failed": "The follow-up could not run. Hover the ℹ️ on the status to see the exact cause.",
       "del_delivered": "The channel confirmed the last message reached the contact (or was already read).",
-      "del_sent": "The message left the system, but the channel hasn't confirmed it reached the contact yet.",
+      "del_sent": "WhatsApp accepted the message but hasn't confirmed it reached the contact yet.",
+      "del_unconfirmed": "WhatsApp accepted the message over 24 h ago and never confirmed delivery. It is not resent: if it did arrive, the contact would get it twice.",
+      "del_retrying": "WhatsApp rejected the message for a temporary reason (rate limit or Meta failure); the same attempt is resent automatically.",
       "del_failed": "The channel couldn't deliver the last message (invalid number, block, or other rejection)."
     },
     "INTENT_VALUES": {
@@ -125,6 +164,44 @@
       "ATTEMPTS": "Attempts",
       "ACTION": "Action"
     },
-    "OPEN_CONVERSATION": "Open conversation"
+    "OPEN_CONVERSATION": "Open conversation",
+    "TYPE": "Type",
+    "WINDOW": "Window",
+    "TABS": {
+      "PROSPECTS": "Prospects",
+      "ENTRIES": "Enrolled"
+    },
+    "ENTRIES": {
+      "LOADING": "Loading enrollments…",
+      "EMPTY": "Nobody has been enrolled yet. In a continuous campaign, contacts arrive through the \"Add to campaign\" automation action.",
+      "SUMMARY_ENROLLED": "Enrolled",
+      "SUMMARY_BATCH": "batch",
+      "SUMMARY_AUTOMATION": "by automation",
+      "SUMMARY_SKIPPED": "skipped",
+      "COL": {
+        "CONTACT": "Contact",
+        "SOURCE": "Came from",
+        "STATUS": "Status",
+        "WHEN": "When"
+      },
+      "SOURCE": {
+        "batch": "Batch",
+        "automation": "Automation",
+        "automation_named": "Automation \"{name}\"",
+        "missed_call": "Missed call"
+      },
+      "STATUS": {
+        "enrolled": "Enrolled",
+        "skipped": "Skipped"
+      },
+      "REASON": {
+        "campaign_closed": "campaign closed",
+        "already_enrolled": "already enrolled",
+        "active_tracking": "already has an active AI Agent",
+        "not_contactable": "the channel can't reach them",
+        "outside_window": "outside the window",
+        "daily_cap": "daily limit"
+      }
+    }
   }
 }

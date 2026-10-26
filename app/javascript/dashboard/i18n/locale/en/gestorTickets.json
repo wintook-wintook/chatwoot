@@ -1,24 +1,26 @@
 {
   "CASE_TICKETS": {
-    "SECTION_TITLE": "Ticket",
+    "SECTION_TITLE": "Case",
     "SIDEBAR": {
-      "PRIMARY_LABEL": "Tickets",
-      "TITLE": "Ticket Manager",
-      "ALL_TICKETS": "All tickets",
+      "PRIMARY_LABEL": "Cases",
+      "TITLE": "Case Manager",
+      "ALL_TICKETS": "All cases",
       "METRICS": "Metrics",
       "RULES": "Automation rules"
     },
     "METRICS": {
-      "TITLE": "Ticket Metrics",
+      "TITLE": "Case Metrics",
+      "BACK": "Back",
       "LOADING": "Loading metrics...",
       "EMPTY": "No data for the selected period",
+      "NO_DATA": "No data",
       "GROUP_VOLUME": "Volume",
       "GROUP_SLA": "SLA",
       "GROUP_TIMES": "Handling times",
       "GROUP_ITIL": "ITIL & quality",
       "GROUP_QUALITY": "Quality",
-      "TOTAL_PERIOD": "Tickets in period",
-      "TOTAL_OPEN": "Active tickets",
+      "TOTAL_PERIOD": "Cases in period",
+      "TOTAL_OPEN": "Active cases",
       "SLA_OVERDUE": "SLA overdue",
       "SLA_AT_RISK": "SLA at risk",
       "SLA_COMPLIANCE": "SLA compliance",
@@ -43,15 +45,18 @@
       "PERIOD_TO": "to"
     },
     "KANBAN": {
-      "TITLE": "Ticket board",
+      "TITLE": "Case board",
       "SEARCH_PLACEHOLDER": "Search folio, title or contact…",
       "ALL_KINDS": "All types",
       "ALL_TYPES": "All case types",
       "ALL_SERVICES": "All services",
       "ALL_AGENTS": "All assignees",
       "UNASSIGNED": "Unassigned",
-      "INVALID_MOVE": "That move is not a valid transition for this ticket.",
-      "MOVE_ERROR": "Could not move the ticket.",
+      "INVALID_MOVE": "That move is not a valid transition for this case.",
+      "MOVE_ERROR": "Could not move the case.",
+      "CANCELLED_IMMUTABLE": "A cancelled case can no longer move to another stage.",
+      "REQUIRES_CLOSURE": "This move closes the case: you need to document the closure.",
+      "OPEN_TICKET_TO_CLOSE": "Go to ticket",
       "MOVE_TITLE": "Move {folio}",
       "MOVE_TARGET": "New status",
       "MOVE_TO": "Move to:",
@@ -59,9 +64,9 @@
       "MOVE_NOTE_PLACEHOLDER": "Optional: describe the action taken",
       "NOTIFY_LABEL": "Notify the customer on their channel",
       "NOTIFY_PLACEHOLDER": "Message the customer will receive",
-      "NOTIFY_HELP": "Sent through the ticket's channel (WhatsApp, email, etc.) when moving.",
+      "NOTIFY_HELP": "Sent through the case's channel (WhatsApp, email, etc.) when moving.",
       "NOTIFY_SENT": "Notification sent to the customer",
-      "NOTIFY_ERROR": "The ticket was moved, but the notification could not be sent.",
+      "NOTIFY_ERROR": "The case was moved, but the notification could not be sent.",
       "NOTIFY_TEMPLATES": {
         "in_progress": "Hi, your request {folio} is now being handled. We'll keep you posted.",
         "waiting_on_customer": "Hi, regarding your request {folio} we need some extra info to continue. Can you help?",
@@ -78,15 +83,19 @@
         "waiting": "Waiting",
         "resolved": "Resolved",
         "closed": "Closed"
-      }
+      },
+      "CLOSE_OVERDUE": "Close overdue",
+      "EMPTY_COLUMN": "No cases"
     },
     "LIST": {
-      "LOADING": "Loading tickets...",
-      "EMPTY": "No tickets match the current filters",
+      "LOADING": "Loading cases...",
+      "EMPTY": "No cases match the current filters",
       "SEARCH_PLACEHOLDER": "Search by folio, title or contact…",
       "DATE_RANGE": "Date range",
       "APPLY": "Apply",
       "ALL_STATUSES": "All statuses",
+      "STATUS_PENDING": "Pending",
+      "STATUS_CLOSED": "Closed",
       "ALL_PRIORITIES": "All priorities",
       "ALL_ORIGINS": "All origins",
       "SORT_BY": "Sort by",
@@ -94,17 +103,60 @@
         "created_at": "Date",
         "priority": "Priority",
         "status": "Status",
-        "sla_status": "SLA"
+        "sla_status": "SLA",
+        "amount": "Amount",
+        "expected_close_at": "Expected close",
+        "probability": "Probability"
       },
       "SORT_ASC": "Ascending",
       "SORT_DESC": "Descending",
-      "CLEAR_FILTERS": "Clear filters",
+      "CLEAR_FILTERS": "✕ Clear filters",
       "RESULTS_COUNT": "{from}–{to} of {total}",
       "PER_PAGE": "Per page",
       "FIRST": "First",
       "PREV": "Previous",
       "NEXT": "Next",
       "LAST": "Last"
+    },
+    "VIEWS": {
+      "PLACEHOLDER": "Saved views",
+      "DETACH": "Remove view",
+      "DETACH_HINT": "Stop applying the view; the filters stay as they are",
+      "MINE": "My views",
+      "SHARED": "Shared",
+      "SAVE_AS": "Save as",
+      "SAVED": "View saved",
+      "SHARE_LABEL": "Share with the account",
+      "MISSING_TYPE": "The view \"{name}\" pointed to a case type that no longer exists. Showing all types.",
+      "SAVE": "Save",
+      "UPDATED": "View updated",
+      "UPDATE_ERROR": "The view could not be updated",
+      "DIRTY": "modified",
+      "DIRTY_HINT": "The current filters no longer match the saved view",
+      "SHARED_BY_OTHERS": "Shared by others",
+      "MANAGE": {
+        "TITLE": "Manage views",
+        "SUBTITLE": "Rename, share or delete the saved views of the case manager.",
+        "EMPTY": "No saved views yet.",
+        "BADGE_SHARED": "shared",
+        "RENAME": "Rename",
+        "CONFIRM": "Save",
+        "CANCEL": "Cancel",
+        "SHARE": "Share with the account",
+        "UNSHARE": "Stop sharing",
+        "DELETE": "Delete",
+        "RENAMED": "View renamed",
+        "SHARED_OK": "The view is now visible to the whole account",
+        "UNSHARED": "The view is personal again",
+        "DELETED": "View deleted",
+        "DELETE_ERROR": "The view could not be deleted",
+        "DELETE_TITLE": "Delete view",
+        "DELETE_MESSAGE": "Are you sure you want to delete the view ",
+        "DELETE_MESSAGE_SHARED": "This view is shared: everyone in the account will lose it. Delete ",
+        "DELETE_YES": "Yes, delete",
+        "DELETE_NO": "No, keep it",
+        "QUOTA": "{count} case views. The limit is {max} per user, shared with Conversation folders and Contact segments."
+      }
     },
     "RULES": {
       "CREATE_BUTTON": "+ New rule",
@@ -135,7 +187,7 @@
       "THEN_SECTION_TITLE": "Run these actions",
       "ADD_CONDITION": "Add condition",
       "ADD_ACTION": "Add action",
-      "NO_CONDITIONS_HINT": "No conditions — the rule applies to all tickets",
+      "NO_CONDITIONS_HINT": "No conditions — the rule applies to all cases",
       "NEED_ACTION": "Add at least one action",
       "NAME_LABEL": "Name",
       "NAME_PLACEHOLDER": "e.g. Urgent support → escalate",
@@ -151,19 +203,27 @@
       "SAVE_EDIT": "Save changes",
       "CREATE": "Create rule"
     },
-    "CREATE_BUTTON": "+ Create ticket",
-    "PANEL_BUTTON": "Tickets ({count})",
-    "NO_TICKET": "No active ticket",
+    "CREATE_BUTTON": "+ Create case",
+    "PANEL_BUTTON": "Cases ({count})",
+    "NO_TICKET": "No active case",
     "VIEW_TIMELINE": "View history",
     "CHANGE_STATUS": "Change status",
     "SLA_OVERDUE": "SLA overdue",
+    "CONTACT_PANEL": {
+      "OPEN": "View contact details"
+    },
     "DETAIL_TABS": {
       "SUMMARY": "Summary",
       "CONVERSATION": "Conversation",
       "NOTES": "Notes",
+      "CONTACT_NOTES": "Contact Notes",
       "TASKS": "Tasks",
       "JOURNEY": "Progress",
-      "AI": "AI assistant"
+      "AI": "AI assistant",
+      "MEETINGS": "Scheduled tasks",
+      "CONCEPTS": "Items",
+      "PROJECT": "Project",
+      "PROJECT_CASES": "Project cases"
     },
     "CONVERSATION": {
       "SUBTITLE": "Thread with the customer",
@@ -182,7 +242,7 @@
       "SEND_ERROR": "Could not send the message."
     },
     "LOCK": {
-      "BANNER": "{name} is currently working on this ticket."
+      "BANNER": "{name} is currently working on this case."
     },
     "CLAIM": {
       "BUTTON": "Claim"
@@ -193,7 +253,10 @@
       "REASON_LABEL": "Reason (optional)",
       "REASON_PLACEHOLDER": "Why is the status changing? It shows in the Journey.",
       "REASON_CONFIRM": "Change status",
-      "REASON_CANCEL": "Cancel"
+      "REASON_CANCEL": "Cancel",
+      "MEETINGS_TITLE": "This case has {count} upcoming scheduled task(s)",
+      "MEETINGS_CANCEL": "Cancel them and notify the customer",
+      "MEETINGS_IRREVERSIBLE": "Cancelling cannot be undone: the customer gets the notice and the scheduled tasks do not come back, even if the case is reopened."
     },
     "PRIORITY_QUICK": {
       "LABEL": "Priority",
@@ -223,14 +286,15 @@
       "SELECTED": "{n} selected",
       "ASSIGN": "Assign to",
       "CLOSE": "Close",
-      "CLEAR": "Clear selection",
-      "SUCCESS": "{n} tickets updated",
-      "ERROR": "Could not apply the action"
+      "CLEAR": "✕ Clear selection",
+      "SUCCESS": "{n} cases updated",
+      "ERROR": "Could not apply the action",
+      "MEETINGS_PENDING": "{n} of the closed cases have upcoming scheduled tasks: review them one by one to cancel."
     },
     "TASKS": {
       "TITLE": "Tasks",
       "LOADING": "Loading tasks...",
-      "EMPTY": "No tasks yet. Add steps to resolve this ticket.",
+      "EMPTY": "No tasks yet. Add steps to resolve this case.",
       "UNASSIGNED": "Unassigned",
       "ADD_PLACEHOLDER": "New task...",
       "ADD": "New task",
@@ -246,7 +310,8 @@
         "ASSIGNEE": "Assignee",
         "DUE": "Due",
         "NOTES": "Notes",
-        "REQUESTER": "Requester"
+        "REQUESTER": "Requester",
+        "PLANNED": "Planned"
       },
       "STATUS": {
         "PENDING": "Pending",
@@ -266,15 +331,19 @@
         "SAVE": "Save",
         "CANCEL": "Cancel",
         "CLOSE": "Close",
-        "NEW_DESC": "Create a ticket task or subtask, with an assignee, priority and due date.",
+        "NEW_DESC": "Create a case task or subtask, with an assignee, priority and due date.",
         "EDIT_DESC": "Update the task details or change its status.",
         "VIEW_DESC": "Task detail.",
-        "REQUESTER_LABEL": "Requester"
+        "REQUESTER_LABEL": "Requester",
+        "ESTIMATE_LABEL": "Estimated time",
+        "ESTIMATE_NONE": "Not estimated",
+        "PLANNED_LABEL": "Planned for",
+        "PLANNED_AFTER_DUE": "After the due date: it will be late."
       },
       "INBOX": {
         "TITLE": "Tasks",
-        "TICKET_COL": "Ticket",
-        "OPEN_TICKET": "Open ticket",
+        "TICKET_COL": "Case",
+        "OPEN_TICKET": "Open case",
         "SEARCH_PLACEHOLDER": "Search in the title or description…",
         "EMPTY": "No tasks match the current filters.",
         "ALL_ASSIGNEES": "Assignee: all",
@@ -287,26 +356,33 @@
         "DUE_TODAY": "today",
         "SAVE_ERROR": "Could not update the task.",
         "DELETE_ERROR": "Could not delete the task.",
-        "FROZEN_HINT": "The ticket is closed: reopen it to modify its tasks.",
+        "FROZEN_HINT": "The case is closed: reopen it to modify its tasks.",
         "TOAST_ASSIGNED": "New task assigned: {task} · case {folio}",
         "TOAST_COMPLETED": "Task completed: {task} · case {folio}",
         "TABS": {
-          "mine": "My tasks",
+          "mine": "Mine",
           "unassigned": "Unassigned",
           "all": "All",
-          "overdue": "Overdue"
+          "my_day": "My day"
         },
         "STATUS": {
           "PENDING": "Pending",
           "DONE": "Completed",
           "ALL": "All statuses"
         },
+        "ITEM_TYPE": {
+          "ALL": "All",
+          "TASK": "Not scheduled",
+          "MEETING": "Scheduled"
+        },
         "DUE": {
           "ANY": "Any date",
           "OVERDUE": "Overdue",
           "TODAY": "Due today",
           "WEEK": "This week"
-        }
+        },
+        "TOAST_STAGE_TASKS": "New tasks: {task} · case {folio}",
+        "TOAST_STAGE_READY": "{task} · case {folio}"
       },
       "ADD_NOTE": "Add note",
       "REFRESH": "Refresh",
@@ -328,14 +404,110 @@
       },
       "ACTIONS": "Actions",
       "MENU": {
-        "NOTES": "Task notes ({count})"
+        "NOTES": "Task notes ({count})",
+        "ADD_MEETING": "Schedule task",
+        "ADD_MEETING_DONE_HINT": "The task is already completed",
+        "VIEW_MEETINGS": "View scheduled tasks"
+      },
+      "ORPHAN_MEETINGS": {
+        "TITLE": "Upcoming scheduled tasks remain",
+        "DESC": "Task \"{task}\" leaves {count} scheduled task(s) with the customer.",
+        "CANCEL_LABEL": "Cancel them and notify the customer",
+        "IRREVERSIBLE": "Cancelling cannot be undone: the customer gets the notice and the scheduled tasks do not come back, even if the task is reopened.",
+        "CANCEL": "Back",
+        "CONFIRM": "Complete task"
+      },
+      "TOAST_COMPLETED_MEETINGS": "Task \"{task}\" completed · {count} scheduled task(s) cancelled",
+      "MEETINGS_BEYOND_DUE": "{count} scheduled task(s) after the due date",
+      "MILESTONE": "Milestone",
+      "MILESTONE_LABEL": "This is a project milestone",
+      "MILESTONE_HINT": "It counts toward the project progress.",
+      "MY_DAY": {
+        "NEXT": "Next",
+        "LOAD": "For today: {count} tasks",
+        "LOAD_NONE": "Nothing due today",
+        "LOAD_TIME": "≈ {time} estimated",
+        "LOAD_UNESTIMATED": "({count} not estimated)",
+        "TOTAL": "{count} pending in total",
+        "DUE": "Due {date}",
+        "SCORE_TITLE": "Urgency score: higher goes first",
+        "AGENDA": "Today’s agenda",
+        "AGENDA_EMPTY": "No meetings today",
+        "EMPTY": "All clear: you have no pending tasks.",
+        "REASONS": {
+          "overdue": "Overdue {days} d",
+          "overdue_today": "Overdue",
+          "due_today": "Due today",
+          "due_tomorrow": "Due tomorrow",
+          "due_week": "Due in {days} d",
+          "priority_urgent": "Urgent",
+          "priority_high": "High priority",
+          "priority_medium": "Medium priority",
+          "project_overdue": "Project behind",
+          "milestone": "Milestone",
+          "project_due_soon": "Project due soon",
+          "sla_overdue": "SLA breached",
+          "sla_at_risk": "SLA at risk",
+          "case_urgent": "Urgent case",
+          "visit_overdue": "Visit overdue",
+          "visit_today": "Visit today",
+          "close_soon": "Close date near",
+          "age": "Created {days} d ago",
+          "waiting": "Case on hold",
+          "planned_missed": "Planned for {date}"
+        },
+        "MY_ORDER": "My order for today",
+        "MY_ORDER_HINT": "drag to reorder",
+        "MY_ORDER_EMPTY": "Drag here or move up (↑) the tasks you will do today, in the order you will do them.",
+        "SUGGESTED": "Suggested by priority",
+        "DRAG": "Drag",
+        "PIN": "Add to my order for today",
+        "UNPIN": "Remove from my order for today",
+        "PIN_FIRST": "Move to top",
+        "IGNORE": "Ignore",
+        "NEW_URGENT": "An urgent task arrived after you planned your day:",
+        "POSTPONE": "Move to tomorrow",
+        "POSTPONED": "Planned for tomorrow: {task}",
+        "PLAN_ERROR": "Could not save your plan for today.",
+        "LATER": "{count} planned for later",
+        "MISSED": "{count} planned tasks were left undone.",
+        "PASS_TO_TODAY": "Move them to today",
+        "PLAN_TIME": "≈ {time}",
+        "PLAN_OVERLOAD": "≈ {time} · over 8 h",
+        "AI": {
+          "BUTTON": "Plan my day (AI)",
+          "TITLE": "My day plan",
+          "LOADING": "Building your plan…",
+          "REGENERATE": "Regenerate",
+          "CLOSE": "Close",
+          "LATER": "Can wait until tomorrow",
+          "ERROR": "Could not build the plan.",
+          "DISCLAIMER": "AI suggestion: it does not change your order. Review it before following it."
+        },
+        "NOTICES": {
+          "BUTTON": "You have {count} important notices",
+          "ACK": "Got it"
+        }
+      },
+      "STAGE": {
+        "REQUIRED": "Required",
+        "REQUIRED_HINT": "Required to leave stage “{stage}”",
+        "TEAM": "Team: {team}",
+        "UPCOMING": "Upcoming",
+        "UPCOMING_HINT": "created when entering each stage",
+        "EVENT": "{count} task(s) for stage “{stage}”: {titles}",
+        "DOC_AUTO": "Completes when documented",
+        "DOC_HINT": "This task completes itself when you document the move to the next stage (closure, outcome or date)",
+        "REQUIRED_LABEL": "Required to move on",
+        "REQUIRED_FORM_HINT": "The case won't leave “{stage}” until it's done"
       }
     },
     "MODAL": {
-      "TITLE_CREATE": "Create ticket",
+      "TITLE_CREATE": "Create case",
       "CASE_TYPE_LABEL": "Case type",
       "TICKET_KIND_LABEL": "Case nature (ITIL)",
       "AFFECTED_SERVICE_LABEL": "Affected service",
+      "INTEREST_PRODUCTS_LABEL": "Products of interest",
       "CATEGORY_LABEL": "Category",
       "IMPACT_LABEL": "Impact",
       "URGENCY_LABEL": "Urgency",
@@ -347,20 +519,21 @@
       "DESCRIPTION_LABEL": "Description",
       "DESCRIPTION_PLACEHOLDER": "Additional detail (optional)",
       "CANCEL": "Cancel",
-      "SUBMIT": "Create ticket",
-      "SUCCESS": "Ticket created successfully",
-      "ERROR": "Error creating ticket",
-      "TITLE_LIST": "Contact tickets",
-      "EMPTY_LIST": "No tickets in progress",
-      "NEW_TICKET": "Create ticket",
+      "SUBMIT": "Create case",
+      "SUCCESS": "Case created successfully",
+      "ERROR": "Error creating case",
+      "TITLE_LIST": "Contact cases",
+      "EMPTY_LIST": "No cases in progress",
+      "NEW_TICKET": "Create case",
       "OPEN_DETAIL": "Open",
       "BACK": "Back",
-      "TAB_TICKET": "Ticket details",
+      "TAB_TICKET": "Case details",
       "TAB_ASSIGN": "Manual assignment",
       "TAB_CUSTOM": "Custom fields",
       "ASSIGN_AUTO": "— Automatic (rules) —",
       "ASSIGN_HINT": "If left automatic, the automation rules decide the assignment. What you pick here takes precedence over the rules.",
-      "NO_CUSTOM_FIELDS": "This type has no custom fields"
+      "NO_CUSTOM_FIELDS": "This type has no custom fields",
+      "TAB_ADDRESS": "Address"
     },
     "ASSIGN": {
       "TITLE": "Assignment",
@@ -372,20 +545,22 @@
     },
     "EDIT": {
       "BUTTON": "Edit",
-      "TITLE": "Edit ticket",
+      "TITLE": "Edit case",
       "SUBMIT": "Save changes",
-      "SUCCESS": "Ticket updated",
-      "ERROR": "Could not update the ticket"
+      "SUCCESS": "Case updated",
+      "ERROR": "Could not update the case",
+      "NO_CONTACT": "Internal case (no customer)",
+      "CONTACT_LOCKED": "The customer cannot be changed. If it is another customer, cancel this case and create a new one."
     },
     "INTERNAL": {
-      "TITLE": "Create internal ticket",
-      "NEW_BUTTON": "Internal ticket",
+      "TITLE": "Create internal case",
+      "NEW_BUTTON": "Internal case",
       "ASSIGNEE_LABEL": "Assign to (agent)",
       "ASSIGNEE_NONE": "— Unassigned —",
       "TITLE_PLACEHOLDER": "Briefly describe the request",
-      "SUBMIT": "Create internal ticket",
-      "SUCCESS": "Internal ticket created",
-      "ERROR": "Could not create the internal ticket",
+      "SUBMIT": "Create internal case",
+      "SUCCESS": "Internal case created",
+      "ERROR": "Could not create the internal case",
       "BADGE": "Internal",
       "NO_ASSIGNEE": "Unassigned",
       "REQUESTER_LABEL": "Requester",
@@ -394,16 +569,16 @@
     "ESCALATION": {
       "BUTTON": "Escalate",
       "LEVEL_TITLE": "Escalation level",
-      "TITLE": "Escalate ticket (current: {level})",
-      "HELP": "Move the ticket to the next support tier (N1→N2→N3) and optionally reassign it to a team.",
+      "TITLE": "Escalate case (current: {level})",
+      "HELP": "Move the case to the next support tier (N1→N2→N3) and optionally reassign it to a team.",
       "TEAM_LABEL": "Reassign to team",
       "NO_TEAM": "Keep current assignment",
       "REASON_LABEL": "Escalation reason",
       "REASON_PLACEHOLDER": "Why it is escalated and what was tried",
       "CANCEL": "Cancel",
       "CONFIRM": "Escalate",
-      "SUCCESS": "Ticket escalated",
-      "ERROR": "Could not escalate the ticket"
+      "SUCCESS": "Case escalated",
+      "ERROR": "Could not escalate the case"
     },
     "SLA": {
       "TITLE": "SLA policies",
@@ -429,7 +604,7 @@
       "ERROR": "Could not save the policy",
       "DELETE": {
         "TITLE": "Delete policy",
-        "MESSAGE": "Tickets will fall back to the default SLA. Delete policy",
+        "MESSAGE": "Cases will fall back to the default SLA. Delete policy",
         "YES": "Delete",
         "NO": "Cancel"
       },
@@ -460,7 +635,7 @@
     "CLOSURE": {
       "TITLE": "Closure",
       "MODAL_TITLE": "Document closure",
-      "HELP": "Document how this ticket was closed. Cause and solution are required.",
+      "HELP": "Document how this case was closed. Cause and solution are required.",
       "TYPE": "Closure type",
       "CAUSE": "Cause",
       "CAUSE_PLACEHOLDER": "What caused the issue",
@@ -470,7 +645,7 @@
       "YES": "Yes",
       "NO": "No",
       "CANCEL": "Cancel",
-      "CONFIRM": "Close ticket",
+      "CONFIRM": "Close case",
       "TYPES": {
         "resolved": "Resolved",
         "duplicate": "Duplicate",
@@ -525,15 +700,15 @@
     },
     "REOPEN": {
       "BUTTON": "Reopen",
-      "MODAL_TITLE": "Reopen ticket",
+      "MODAL_TITLE": "Reopen case",
       "REASON_LABEL": "Reason for reopening",
       "REASON_PLACEHOLDER": "Why is it being reopened? E.g. the customer reports it failed again.",
       "HINT": "Recorded in the Journey. The SLA clock restarts from zero.",
-      "CONFIRM": "Reopen ticket",
+      "CONFIRM": "Reopen case",
       "CANCEL": "Cancel",
-      "SUCCESS": "Ticket reopened",
-      "ERROR": "Could not reopen the ticket",
-      "FROZEN_HINT": "Ticket closed: reopen it to edit."
+      "SUCCESS": "Case reopened",
+      "ERROR": "Could not reopen the case",
+      "FROZEN_HINT": "Case closed: reopen it to edit."
     },
     "NOTES": {
       "ADD": "Note",
@@ -548,12 +723,12 @@
       "ADD_NEW": "New note",
       "TITLE": "Internal notes",
       "LOADING": "Loading notes...",
-      "EMPTY": "No notes yet. Keep a record of what you do on this ticket.",
+      "EMPTY": "No notes yet. Keep a record of what you do on this case.",
       "MODAL_EDIT_TITLE": "Edit internal note",
       "MODAL_VIEW_TITLE": "View internal note",
       "VIEW": "View note",
       "POST_CLOSURE": "post-close",
-      "POST_CLOSURE_HINT": "Written after the ticket was closed.",
+      "POST_CLOSURE_HINT": "Written after the case was closed.",
       "CLOSE": "Close",
       "EDIT": "Edit",
       "DELETE": "Delete",
@@ -577,29 +752,29 @@
       "FILTER_PLACEHOLDER": "Search notes (text, author, ref)…",
       "NO_MATCHES": "No matches for the filter.",
       "CREATED": "Created on {date}",
-      "MODAL_DESC": "Log what you did or what is pending in the ticket. Visible to agents only; the customer will not see it.",
+      "MODAL_DESC": "Log what you did or what is pending in the case. Visible to agents only; the customer will not see it.",
       "MODAL_EDIT_DESC": "Update the content. It will be logged that the note was edited and by whom.",
       "MODAL_VIEW_DESC": "Full detail of the internal note."
     },
     "RELATIONS": {
-      "TITLE": "Related tickets",
-      "ADD": "+ Link ticket",
-      "EMPTY": "No related tickets",
-      "MODAL_TITLE": "Link related ticket",
-      "SEARCH_LABEL": "Search ticket",
+      "TITLE": "Related cases",
+      "ADD": "+ Link case",
+      "EMPTY": "No related cases",
+      "MODAL_TITLE": "Link related case",
+      "SEARCH_LABEL": "Search case",
       "SEARCH_PLACEHOLDER": "Folio or title…",
       "SEARCHING": "Searching…",
-      "NO_RESULTS": "No tickets found",
+      "NO_RESULTS": "No cases found",
       "SELECTED": "Selected:",
       "TYPE_LABEL": "Relation type",
       "CANCEL": "Cancel",
       "CONFIRM": "Link",
-      "SUCCESS": "Ticket linked",
-      "ERROR": "Could not link the ticket",
+      "SUCCESS": "Case linked",
+      "ERROR": "Could not link the case",
       "REMOVE_SUCCESS": "Relation removed",
       "DELETE": {
         "TITLE": "Remove relation",
-        "MESSAGE": "This will unlink the tickets. Remove relation",
+        "MESSAGE": "This will unlink the cases. Remove relation",
         "YES": "Remove",
         "NO": "Cancel"
       }
@@ -624,23 +799,37 @@
       "change_problem": {
         "outgoing": "Resolves problem",
         "incoming": "Resolved by change"
+      },
+      "work_order_origin": {
+        "outgoing": "Work order of",
+        "incoming": "Work order created"
+      },
+      "project_member": {
+        "outgoing": "Belongs to project",
+        "incoming": "Project case"
+      },
+      "project_origin": {
+        "outgoing": "Project of",
+        "incoming": "Project created"
       }
     },
     "TIMELINE": {
-      "TITLE": "Ticket history",
+      "TITLE": "Case history",
       "EMPTY": "No events recorded",
       "CLOSE": "Close",
       "ACTOR_SYSTEM": "System",
       "ACTOR_BOT": "Bot"
     },
     "JOURNEY": {
-      "TITLE": "Ticket progress",
+      "TITLE": "Case progress",
       "LOADING": "Loading progress...",
       "CURRENT": "Current",
       "CREATED": "Created",
+      "MEETING_SCOPE_ALL": "Whole series",
       "CURRENTLY": "Currently",
       "RETURNED": "Returned",
       "REASON": "Reason",
+      "LEVEL_SUFFIX": "· N{level}",
       "VIEWS": {
         "diagram": "Journey",
         "timeline": "History",
@@ -658,9 +847,9 @@
       "SAVED": "AI settings saved",
       "SAVE_ERROR": "Could not save settings",
       "LOADING": "Loading settings...",
-      "HELP": "Configure how AI assists ticket management. For each action choose the mode: off, suggest to the agent, or apply automatically.",
+      "HELP": "Configure how AI assists case management. For each action choose the mode: off, suggest to the agent, or apply automatically.",
       "NO_KEY": "No active OpenAI integration on this account. AI won't work until you set it up in Integrations.",
-      "ENABLED_LABEL": "Enable AI in the Ticket Manager",
+      "ENABLED_LABEL": "Enable AI in the Case Manager",
       "ENABLED_HELP": "Master switch. If off, no AI action runs.",
       "SOON": "Coming soon",
       "MODES": {
@@ -671,7 +860,7 @@
       "ACTIONS": {
         "classify": {
           "LABEL": "Automatic classification",
-          "HELP": "On ticket creation, infers kind, service, category, impact and urgency."
+          "HELP": "On case creation, infers kind, service, category, impact and urgency."
         },
         "reply": {
           "LABEL": "Suggested reply",
@@ -687,7 +876,19 @@
         },
         "follow_up": {
           "LABEL": "Automatic follow-up",
-          "HELP": "Drafts customer follow-ups based on the ticket status."
+          "HELP": "Drafts customer follow-ups based on the case status."
+        },
+        "day_plan": {
+          "LABEL": "My day plan",
+          "HELP": "In «My day», explains in which order and time blocks to do the tasks and what can wait until tomorrow. It does not change the order."
+        },
+        "business_summary": {
+          "LABEL": "Business summary",
+          "HELP": "In the «Business summary», «Explain my week» tells how the business is doing, what's worrying and what to do today. Uses only the summary figures."
+        },
+        "conversation_analysis": {
+          "LABEL": "Conversation analysis",
+          "HELP": "In the «Business summary», analyzes on demand a sample of the period's conversations: topics, upset customers, missed sales and repeated complaints. Sends conversation text to OpenAI."
         }
       },
       "SUGGESTION": {
@@ -731,7 +932,7 @@
         "NONE": "No similar incidents found.",
         "SUGGEST_PROBLEM": "There are several similar incidents. Consider creating a Problem and linking them.",
         "LINK": "Link",
-        "LINKED": "Ticket linked as duplicate",
+        "LINKED": "Case linked as duplicate",
         "ERROR": "Could not analyze duplicates"
       },
       "FOLLOWUP": {
@@ -739,7 +940,7 @@
         "GENERATE": "Generate",
         "REGENERATE": "Regenerate",
         "AUTO_BADGE": "Auto-generated",
-        "HINT": "Draft a follow-up message for the customer based on the ticket status.",
+        "HINT": "Draft a follow-up message for the customer based on the case status.",
         "COPY": "Copy",
         "COPIED_BTN": "Copied",
         "COPIED": "Follow-up copied to clipboard",
@@ -748,26 +949,31 @@
     },
     "TYPES": {
       "TITLE": "Case types",
-      "HELP": "Define your account's case types. Each ticket is classified with one of these types.",
+      "HELP": "Define your account's case types. Each case is classified with one of these types.",
       "CREATE_BUTTON": "+ New type",
       "CREATE_TITLE": "Create case type",
       "EDIT_TITLE": "Edit case type",
       "NAME_LABEL": "Name",
       "COLOR_LABEL": "Color",
       "PREFIX_LABEL": "Folio prefix",
-      "PREFIX_HELP": "Used in the folio via the {PREFIX} token. Leave empty to auto-generate.",
+      "PREFIX_HELP": "Used in the folio via the {PREFIX} token. Leave empty to auto-generate. It becomes fixed once the type has its first case.",
+      "PREFIX_LOCKED": "The prefix cannot be changed: this type already has cases with a folio.",
       "PUBLIC_LABEL": "Visible on the customer portal",
       "PUBLIC_HELP": "If enabled, this type appears as an option in the public portal form.",
       "PUBLIC_ON": "Public",
       "PUBLIC_OFF": "Private",
+      "ITIL_LABEL": "Uses ITIL",
+      "ITIL_HELP_CREATE": "Sets the board's starting columns: ITIL (13 statuses, 6 stages) or simple (5 stages). Editable afterward.",
+      "ITIL_HELP_EDIT": "Changes which ITIL fields, statuses and KPIs are shown for cases of this type. Does not change already-configured columns or existing cases.",
       "DELETE": {
         "TITLE": "Delete case type",
-        "MESSAGE": "Tickets with this type will be left untyped. Delete",
+        "MESSAGE": "Cases with this type will be left untyped. Delete",
         "YES": "Delete",
         "NO": "Cancel"
       },
       "TABLE": {
         "NAME": "Name",
+        "CLASS": "Class",
         "PREFIX": "Prefix",
         "FIELDS": "Fields",
         "COLUMNS": "Columns",
@@ -785,27 +991,60 @@
         "LOADING": "Loading…"
       },
       "NAME_PLACEHOLDER": "e.g. After-sales",
-      "PREFIX_PLACEHOLDER": "SOP"
+      "PREFIX_PLACEHOLDER": "SOP",
+      "CLASS": {
+        "LABEL": "Case class",
+        "HELP": "The class defines the behavior: Support handles tickets; Sales handles opportunities (amount, pipeline, won/lost); Work order handles planned work (scheduling, technician, hours); Project handles phased work (target date, budget, progress). It is chosen when the type is created and cannot be changed later.",
+        "OPTIONS": {
+          "SUPPORT": "Support",
+          "COMMERCIAL": "Sales",
+          "WORK_ORDER": "Work order",
+          "PROJECT": "Project"
+        },
+        "FILTER": {
+          "ALL": "All",
+          "SUPPORT": "Support",
+          "COMMERCIAL": "Sales",
+          "WORK_ORDER": "Work order",
+          "PROJECT": "Project"
+        },
+        "LOCKED": "The class cannot be changed. For another class, create a new type and, if needed, cancel the old case and create it again."
+      },
+      "RETIRED": "Retired",
+      "RETIRED_HINT": "Changed class: keeps its {count} case(s) and no longer gets new ones",
+      "CHANGE_CLASS": {
+        "BUTTON": "Change class",
+        "TITLE": "Change class · {name}",
+        "CURRENT": "Current class: {from}",
+        "TARGET": "New class",
+        "CHOOSE": "Choose a class",
+        "NO_CASES": "“{name}” has no cases: it changes to {to} directly and its stages become those of {to}.",
+        "WITH_CASES_KEEP": "Its {count} case(s) stay in {from} unchanged: stages, data, history and metrics. The old type becomes “{name} (anterior)” and gets no new cases.",
+        "WITH_CASES_NEW": "“{name}” is created in {to} with the same folio prefix and fields; new cases are born there from now on.",
+        "WITH_CASES_MOVE": "“Assign case” automations move to the new type, case rules add it and @crear_ticket finds it by name.",
+        "CANCEL": "Cancel",
+        "CONFIRM": "Change class",
+        "ERROR": "Could not change the class",
+        "DONE_DIRECT": "“{name}” is now {to}",
+        "DONE_REPLACED": "Done: “{name}” is now {to}. Its {count} case(s) stay in {from} · {moved} automation(s) and {rules} rule(s) updated"
+      }
     },
     "SETTINGS": {
       "TITLE": "Module settings",
       "BACK": "Back",
       "LOADING": "Loading settings...",
-      "HELP": "Choose how the ticket manager behaves. Simple mode resembles osTicket; ITIL mode enables advanced management.",
-      "MODE_SIMPLE": "Simple mode (osTicket)",
-      "MODE_SIMPLE_DESC": "Streamlined experience: basic statuses and direct priority. Hides advanced ITIL fields.",
-      "MODE_ITIL": "ITIL mode (advanced)",
-      "MODE_ITIL_DESC": "Enables full ITIL statuses, Impact×Urgency matrix, ticket nature, problem/change and approvals.",
-      "NOTE_DATA": "No data is deleted or changed: the mode only affects what is shown.",
-      "NOTE_REVERSIBLE": "You can switch modes anytime.",
+      "HELP": "General settings for the case management module.",
+      "MODE_MOVED_TITLE": "ITIL mode is now set per case type",
+      "MODE_MOVED_DESC": "Each case type decides whether it uses ITIL or simple columns/fields. Configure it when creating or editing a type.",
+      "MODE_MOVED_CTA": "Go to Case types",
       "REOPEN": {
-        "SECTION": "Reopening closed tickets",
+        "SECTION": "Reopening closed cases",
         "WINDOW_TITLE": "Reopen window",
         "WINDOW_DESC": "Days after closing during which the assigned agent can reopen. After that, only an administrator. Use 0 for no limit.",
         "DAYS": "days",
         "SAVE": "Save",
         "ON_REPLY_TITLE": "Reopen on customer reply",
-        "ON_REPLY_DESC": "If the customer writes on their channel about a closed ticket, it reopens automatically (or a follow-up ticket is created if the window expired).",
+        "ON_REPLY_DESC": "If the customer writes on their channel about a closed case, it reopens automatically (or a follow-up case is created if the window expired).",
         "NOTE_WINDOW": "An administrator can always reopen, even after the window expired.",
         "NOTE_SLA": "On reopening, the SLA clock restarts from zero."
       },
@@ -814,7 +1053,7 @@
     },
     "PORTALS": {
       "TITLE": "Customer portals",
-      "HELP": "Create public portals (osTicket-style) where your customers open and track tickets without signing in.",
+      "HELP": "Create public portals (osTicket-style) where your customers open and track cases without signing in.",
       "BACK": "Back",
       "LOADING": "Loading portals...",
       "EMPTY": "No portals yet. Create the first one to give your customers a support page.",
@@ -895,11 +1134,11 @@
         "checkbox": "Checkbox"
       },
       "ADD_BUTTON": "Add field",
-      "SUBTITLE": "These fields are requested when creating or editing a ticket of this type.",
+      "SUBTITLE": "These fields are requested when creating or editing a case of this type.",
       "OPTIONS_HEADER": "Options",
       "DELETE": {
         "TITLE": "Delete field",
-        "MESSAGE": "This field will be removed from tickets of this type. Delete",
+        "MESSAGE": "This field will be removed from cases of this type. Delete",
         "YES": "Delete",
         "NO": "Cancel"
       }
@@ -909,8 +1148,8 @@
       "BACK": "Back",
       "TAB_SERVICES": "Affected services",
       "TAB_CATEGORIES": "Categories",
-      "SERVICES_HELP": "Services or systems that a ticket may affect (CRM, Microsip, Server, etc.).",
-      "CATEGORIES_HELP": "Categories and subcategories to classify tickets. Use + to add a subcategory.",
+      "SERVICES_HELP": "Services or systems that a case may affect.",
+      "CATEGORIES_HELP": "Categories and subcategories to classify cases. Use + to add a subcategory.",
       "NEW_SERVICE": "+ New service",
       "EDIT_SERVICE": "Edit service",
       "NEW_CATEGORY": "+ New category",
@@ -925,7 +1164,7 @@
       "CANCEL": "Cancel",
       "DELETE": {
         "TITLE": "Delete",
-        "MESSAGE": "Associated tickets will lose this value. Delete",
+        "MESSAGE": "Associated cases will lose this value. Delete",
         "YES": "Delete",
         "NO": "Cancel"
       },
@@ -938,12 +1177,19 @@
       "ADD_SUB": "Add subcategory",
       "PER_PAGE": "Per page",
       "EMPTY_SERVICES": "No services yet. Create the first one.",
-      "EMPTY_CATEGORIES": "No categories yet. Create the first one."
+      "EMPTY_CATEGORIES": "No categories yet. Create the first one.",
+      "FILTER_LABEL": "Applies to:",
+      "FILTER_ALL": "Everything",
+      "FILTER_GLOBAL": "Global only (all types)",
+      "TABLE_SCOPE": "Applies to",
+      "SCOPE_LABEL": "Applies to",
+      "SCOPE_ALL": "All types",
+      "SCOPE_HELP": "Pick a case type so it is only offered for that type. Subcategories inherit their category's type."
     },
     "FOLIO": {
       "TITLE": "Folio settings",
       "SAVE": "Save",
-      "ENABLED": "Auto-generate folio for new tickets",
+      "ENABLED": "Auto-generate folio for new cases",
       "TEMPLATE_LABEL": "Folio template",
       "PREVIEW": "Preview",
       "TOKENS_TITLE": "Available tokens",
@@ -956,7 +1202,7 @@
         "monthly": "Monthly",
         "yearly": "Yearly"
       },
-      "NOTE": "Changes only affect tickets created from now on. Existing folios are not modified.",
+      "NOTE": "Changes only affect cases created from now on. Existing folios are not modified.",
       "SAVED": "Folio settings saved",
       "SAVE_ERROR": "Error saving settings"
     },
@@ -1010,13 +1256,13 @@
       "high": "High"
     },
     "EVENT_TYPES": {
-      "ticket_created": "Ticket created",
-      "ticket_classified": "Ticket classified",
+      "ticket_created": "Case created",
+      "ticket_classified": "Case classified",
       "status_changed": "Status changed",
       "assigned": "Assigned",
       "in_diagnosis": "In diagnosis",
       "validating": "Validating with customer",
-      "related": "Ticket linked",
+      "related": "Case linked",
       "change_approved": "Change approved",
       "change_rejected": "Change rejected",
       "problem_propagated": "Resolution propagated to incidents",
@@ -1038,7 +1284,21 @@
       "error_detected": "Error detected",
       "internal_note": "Internal note",
       "priority_changed": "Priority changed",
-      "due_date_changed": "Due date changed"
+      "due_date_changed": "Due date changed",
+      "column_changed": "Column changed",
+      "meeting_scheduled": "Task scheduled",
+      "meeting_updated": "Scheduled task rescheduled",
+      "meeting_cancelled": "Scheduled task cancelled",
+      "meeting_held": "Scheduled task held",
+      "case_class_changed": "Case class changed",
+      "outcome_set": "Opportunity outcome",
+      "postponed": "Opportunity postponed",
+      "resumed": "Opportunity resumed",
+      "amount_changed": "Opportunity data",
+      "commitment_changed": "Customer commitment",
+      "conversation_link": "Conversation linked",
+      "stage_tasks_added": "Stage tasks",
+      "stage_advanced": "Stage advance"
     },
     "COLUMNS_CFG": {
       "ADD_BUTTON": "Add column",
@@ -1056,7 +1316,7 @@
       "STATES_LABEL": "Statuses it groups",
       "EMPTY": "This type has no columns of its own yet. It uses the standard board.",
       "REMOVE": "Remove column",
-      "OVERLAP_INFO": "These columns share a status. Moving a ticket between them does not change its status: that is correct and expected.",
+      "OVERLAP_INFO": "These columns share a status. Moving a case between them does not change its status: that is correct and expected.",
       "MISSING_COVERAGE": "Uncovered statuses:",
       "ASSIGN_REMAINING": "Assign to the last column",
       "COVERAGE_OK": "All statuses are covered.",
@@ -1067,7 +1327,65 @@
       "NEED_LABEL": "Every column needs a name.",
       "NEED_STATES": "Every column must cover at least one status.",
       "NEED_COVERAGE": "Some statuses are still uncovered; cover them before saving.",
-      "LOADING": "Loading columns..."
+      "LOADING": "Loading columns...",
+      "TASKS": {
+        "HEADER": "Tasks",
+        "BUTTON": "Tasks ({count})",
+        "SAVE_FIRST": "Save the columns first to set up this stage's tasks",
+        "TITLE": "Tasks for stage “{stage}”",
+        "SUBTITLE": "They are created when the case enters this stage. Changing them doesn't touch existing cases.",
+        "ADVANCE_LABEL": "When the required tasks are done",
+        "ADVANCE": {
+          "suggest": "Suggest moving to the next stage",
+          "automatic": "Move to the next stage automatically",
+          "manual": "Do nothing"
+        },
+        "ADVANCE_HINT": "It never moves on if the next stage needs documentation (closure, outcome or date): a required task to document it is created instead.",
+        "LIST_TITLE": "Tasks",
+        "ADD": "Add task",
+        "SAVE": "Save",
+        "CANCEL": "Cancel",
+        "CLOSE": "Close",
+        "REMOVE": "Remove",
+        "MOVE_UP": "Move up",
+        "MOVE_DOWN": "Move down",
+        "LOADING": "Loading…",
+        "EMPTY": "This stage has no tasks yet.",
+        "SAVE_ERROR": "Could not save",
+        "REQUIRED_BADGE": "Required",
+        "DUE_HOURS": "Due in {count} h",
+        "DUE_DAYS": "Due in {count} d",
+        "MINUTES": "{count} min",
+        "ASSIGNEE": {
+          "case_assignee": "Case owner",
+          "user": "Specific person",
+          "team": "Team"
+        },
+        "FIELDS": {
+          "TITLE": "Task",
+          "TITLE_PLACEHOLDER": "E.g.: Prepare quote",
+          "DESCRIPTION": "Description",
+          "DUE": "Due",
+          "UNIT_HOURS": "hours",
+          "UNIT_DAYS": "days",
+          "DUE_HINT": "After entering the stage. Empty = no due date.",
+          "PRIORITY": "Priority",
+          "ASSIGNEE": "Who does it",
+          "PERSON": "Person",
+          "TEAM": "Team",
+          "CHOOSE": "Choose…",
+          "MINUTES": "Estimated minutes",
+          "REQUIRED": "Required to move to the next stage"
+        },
+        "CLOSED_STAGE": "A closed-case stage has no tasks",
+        "EXIT": {
+          "automatic": "Moves on its own after {count} required task(s)",
+          "suggest": "Suggests moving after {count} required task(s)",
+          "manual": "Moved by hand"
+        },
+        "RULE_IN": "Rule “{rule}” brings cases here",
+        "CONFLICT": "Moves on its own and rule “{rule}” also changes its status: check they don't clash"
+      }
     },
     "DETAIL": {
       "BACK": "Back",
@@ -1076,7 +1394,1091 @@
       "LEVEL_LABEL": "Level:",
       "VIEW_FULL": "View",
       "NO_TRANSITIONS": "No transitions available",
-      "LOADING": "Loading ticket…"
+      "LOADING": "Loading case…",
+      "PARENT_PROJECT": "Project",
+      "BACK_TO_PROJECT": "Back to project",
+      "BACK_TO_METRICS": "Back to metrics"
+    },
+    "MEETINGS": {
+      "TITLE": "Scheduled tasks",
+      "ADD_NEW": "Schedule task",
+      "REFRESH": "Refresh",
+      "LOADING": "Loading scheduled tasks...",
+      "EMPTY": "No scheduled tasks for this case.",
+      "NO_MATCHES": "No scheduled task matches the filter",
+      "FILTER_PLACEHOLDER": "Search folio, title, task or location…",
+      "ACTIONS": "Actions",
+      "ERROR": "The scheduled task could not be saved.",
+      "TOAST_DELETED": "Scheduled task deleted",
+      "PAST_DUE_HINT": "It falls after its task's due date.",
+      "TABLE": {
+        "NUM": "#",
+        "TASK": "Task",
+        "MEETING": "Title",
+        "WHEN": "Date",
+        "STATUS": "Status",
+        "ORGANIZER": "Assignee"
+      },
+      "STATUS": {
+        "SCHEDULED": "Scheduled",
+        "HELD": "Held",
+        "NO_SHOW": "No show",
+        "CANCELLED": "Cancelled",
+        "RESCHEDULED": "Rescheduled"
+      },
+      "MENU": {
+        "EDIT": "Edit",
+        "HELD": "Mark as held",
+        "NO_SHOW": "Mark as no show",
+        "CANCEL_ONE": "Cancel just this one",
+        "CANCEL_ALL": "Cancel the whole series",
+        "DELETE": "Delete",
+        "RESYNC": "Retry sync",
+        "ALIGN_TASK_DUE": "Move the task due date"
+      },
+      "MODAL": {
+        "TITLE": "Schedule task",
+        "EDIT_TITLE": "Edit scheduled task",
+        "DESC": "It is recorded in the case's progress.",
+        "TITLE_LABEL": "Title",
+        "TITLE_PLACEHOLDER": "e.g. Progress review",
+        "STARTS_LABEL": "Starts",
+        "ENDS_LABEL": "Ends",
+        "DATE_ERROR": "The end time must be after the start time.",
+        "TASK_LABEL": "Task",
+        "TASK_NONE": "— Case (no task) —",
+        "ORGANIZER_LABEL": "Assignee",
+        "ORGANIZER_ME": "— Me —",
+        "LOCATION_LABEL": "Location",
+        "LOCATION_PLACEHOLDER": "e.g. Office, video call, phone…",
+        "DESCRIPTION_LABEL": "Description",
+        "DESCRIPTION_PLACEHOLDER": "Agenda or talking points (optional)",
+        "INVITE_CLIENT": "Invite the customer",
+        "NO_CLIENT_EMAIL": "This case has no contact with an email address",
+        "GUESTS_LABEL": "Other guests",
+        "GUESTS_PLACEHOLDER": "comma-separated emails",
+        "LOCAL_ONLY_HINT": "No agent has Google Calendar connected: the scheduled task is stored in the system only and no email invitation will be sent.",
+        "CANCEL": "Cancel",
+        "CREATE": "Schedule",
+        "SAVE": "Save changes",
+        "MODE_SINGLE": "One time",
+        "MODE_SERIES": "Series",
+        "REPEAT_EVERY": "Repeat every",
+        "DAYS_LABEL": "Days",
+        "END_AFTER": "Ends after",
+        "END_ON": "Ends on",
+        "PREVIEW": "{count} scheduled tasks will be created: {dates}",
+        "FREQ": {
+          "DAILY": "days",
+          "WEEKLY": "weeks",
+          "MONTHLY": "months"
+        },
+        "DAYS": {
+          "MO": "M",
+          "TU": "T",
+          "WE": "W",
+          "TH": "T",
+          "FR": "F",
+          "SA": "S",
+          "SU": "S"
+        }
+      },
+      "MINUTES": {
+        "TITLE": "Capture the minutes?",
+        "DESC": "Saved as an internal note on the case, linked to the same task.",
+        "LABEL": "Minutes",
+        "PLACEHOLDER": "Agreements, pending items and next steps…",
+        "SKIP": "Not now",
+        "SAVE": "Save minutes",
+        "SAVED": "Minutes saved as a note"
+      },
+      "DELETE_CONFIRM": {
+        "TITLE": "Delete scheduled task",
+        "MESSAGE": "This action cannot be undone. Delete the scheduled task",
+        "CONFIRM": "Delete",
+        "CANCEL": "Cancel"
+      },
+      "MEET_LINK": "Meet",
+      "SYNC": {
+        "PENDING": "Syncing…",
+        "PENDING_HINT": "The event is being copied to Google Calendar.",
+        "SYNCED": "In Google",
+        "SYNCED_HINT": "The event is in the organizer's calendar.",
+        "FAILED": "Sync failed",
+        "FAILED_HINT": "The event could not be copied to Google.",
+        "LOCAL_ONLY": "System only",
+        "LOCAL_ONLY_HINT": "The organizer has no Google Calendar connected: the event lives here only.",
+        "RETRYING": "Retrying the sync…"
+      },
+      "SERIES_CREATED": "Series {folio} created with {count} scheduled tasks",
+      "BEYOND_TICKET_HINT": "It falls beyond the due date committed to the customer. It is not moved from here: escalate the case if the case needs it.",
+      "TOAST_DUE_ALIGNED": "Task due date moved to {date}"
+    },
+    "COMMERCIAL": {
+      "NO_TYPES": "There are no opportunity types yet. Create one of class Sales in Case types.",
+      "FIELDS": {
+        "AMOUNT": "Amount",
+        "CURRENCY": "Currency",
+        "EXPECTED_CLOSE": "Expected close",
+        "PROBABILITY": "Probability",
+        "WEIGHTED": "Weighted",
+        "OUTCOME": "Outcome",
+        "REASON": "Reason",
+        "NOTE": "Note",
+        "OUTCOME_AT": "Closed on",
+        "STAGE": "Stage"
+      },
+      "OUTCOMES": {
+        "won": "Won",
+        "lost": "Lost",
+        "cancelled": "Cancelled"
+      },
+      "POSTPONED": "Postponed",
+      "POSTPONED_UNTIL": "Postponed until {date}",
+      "FILTER": {
+        "ALL_OUTCOMES": "All outcomes"
+      },
+      "COLUMN_TOTAL": "Column total",
+      "PANEL": {
+        "TITLE": "Opportunity data",
+        "SAVE": "Save",
+        "CANCEL": "Discard",
+        "SAVED": "Opportunity data saved",
+        "SAVE_ERROR": "Could not save the opportunity data",
+        "PROBABILITY_HINT": "When the opportunity moves to another stage, it takes that column's probability.",
+        "FROZEN": "The opportunity is closed: reopen it to change its data."
+      },
+      "ACTIONS": {
+        "WON": "Won",
+        "LOST": "Lost",
+        "CANCEL": "Cancel",
+        "POSTPONE": "Postpone",
+        "RESUME": "Resume"
+      },
+      "OUTCOME_MODAL": {
+        "TITLE": "Close opportunity {folio}",
+        "RESULT": "Outcome",
+        "REASON": "Reason",
+        "REASON_PLACEHOLDER": "Choose a reason",
+        "NOTE": "Note (optional)",
+        "NOTE_REQUIRED": "Note",
+        "NOTE_PLACEHOLDER": "Context for the team: who we lost to, what the customer asked for…",
+        "NO_REASONS": "There are no reasons in the catalog for this outcome: describe the reason in the note.",
+        "WON_HINT": "Probability becomes 100% and the amount counts as a won sale.",
+        "CONFIRM": "Close opportunity",
+        "CANCEL": "Cancel",
+        "SUCCESS": "Opportunity closed as {outcome}",
+        "ERROR": "Could not close the opportunity"
+      },
+      "POSTPONE_MODAL": {
+        "TITLE": "Postpone {folio}",
+        "UNTIL": "Resume on",
+        "REASON_CATALOG": "Reason",
+        "REASON": "Note (optional)",
+        "REASON_PLACEHOLDER": "E.g. the customer decides the budget in January",
+        "HINT": "On that day the opportunity returns to the stage it was in and the owner is notified.",
+        "CONFIRM": "Postpone",
+        "CANCEL": "Cancel",
+        "SUCCESS": "Opportunity postponed",
+        "ERROR": "Could not postpone the opportunity"
+      },
+      "RESUMED": "Opportunity resumed",
+      "RESUME_ERROR": "Could not resume the opportunity",
+      "SETTINGS": {
+        "CURRENCY_TITLE": "Default currency",
+        "CURRENCY_DESC": "Currency each new opportunity starts with (3-letter ISO code, e.g. MXN or USD). Each opportunity can change it.",
+        "SAVE": "Save",
+        "CURRENCY_INVALID": "Use a 3-letter code, e.g. USD",
+        "REASONS_TITLE": "Closing reasons",
+        "REASONS_DESC": "What is chosen when marking an opportunity as won, lost, postponed or cancelled. If an outcome has active reasons, choosing one is required. Deactivate a reason instead of deleting it to keep the history.",
+        "PAGE_TITLE": "Sales",
+        "DISABLED": "The Sales class is not active in this account.",
+        "GROUPS": {
+          "won": "Won",
+          "lost": "Lost",
+          "postponed": "Postponed",
+          "cancelled": "Cancelled"
+        },
+        "ADD": "Add",
+        "LABEL_PLACEHOLDER": "New reason",
+        "ACTIVE": "Active",
+        "DELETE": "Delete",
+        "EMPTY": "No reasons",
+        "SAVED": "Reason saved",
+        "DELETED": "Reason deleted",
+        "ERROR": "Could not save the reason"
+      },
+      "METRICS": {
+        "HELP": "Open data is today's snapshot; won, lost and cancelled are counted by the date they closed within the period. Amounts are per currency.",
+        "ALL_AGENTS": "All sellers",
+        "LOADING": "Loading metrics…",
+        "EMPTY": "No opportunities for these filters.",
+        "ERROR": "Could not load the metrics",
+        "KPI": {
+          "OPEN_VALUE": "In progress",
+          "OPEN_SUB": "{count} open · {postponed} postponed",
+          "WEIGHTED": "Weighted forecast",
+          "WEIGHTED_SUB": "Amount × probability",
+          "WON": "Won in period",
+          "WON_SUB": "{count} won",
+          "WIN_RATE": "Win rate",
+          "WIN_RATE_SUB": "{won} won out of {decided} decided",
+          "CYCLE": "Average cycle",
+          "CYCLE_SUB": "Days from creation to won",
+          "DAYS": "{days} days",
+          "LOST": "Lost / cancelled",
+          "LOST_SUB": "{recovered} recovered after reopening"
+        },
+        "STAGES": {
+          "TITLE": "Pipeline by stage (open)",
+          "NO_STAGE": "No stage",
+          "COUNT": "{count} opportunities"
+        },
+        "REASONS": {
+          "TITLE": "Loss and cancellation reasons",
+          "NO_REASON": "No reason"
+        },
+        "ASSIGNEES": {
+          "TITLE": "By seller",
+          "NAME": "Seller",
+          "OPEN": "Open",
+          "OPEN_VALUE": "In progress",
+          "WEIGHTED": "Weighted",
+          "WON": "Won",
+          "WON_VALUE": "Won value",
+          "LOST": "Lost",
+          "WIN_RATE": "Rate",
+          "UNASSIGNED": "Unassigned"
+        },
+        "TYPES": {
+          "TITLE": "By type",
+          "NAME": "Type"
+        },
+        "FORECAST": {
+          "TITLE": "Forecast by expected close month",
+          "MONTH": "Month",
+          "COUNT": "Opportunities",
+          "AMOUNT": "Amount",
+          "WEIGHTED": "Weighted",
+          "PAST": "Overdue date",
+          "EMPTY": "No open opportunity has an expected close date.",
+          "COMMITTED": "Committed"
+        },
+        "TABLE_VIEW": "View as table",
+        "CHART_VIEW": "View as bars",
+        "TABS": {
+          "overview": "How are we doing?",
+          "money": "Money at stake",
+          "monthly": "Month by month",
+          "losses": "Why do we lose?"
+        },
+        "TAB_HELP": {
+          "overview": "What was decided in the period",
+          "money": "What is open today: how much, in which stage and what needs attention. To see what's coming, filter by expected close.",
+          "monthly": "Month against month, with its own window (independent of the period). Calculated on demand.",
+          "losses": "What was lost and cancelled in the period, by reason"
+        },
+        "CALC": {
+          "CALCULATE": "Calculate",
+          "REFRESH": "Refresh",
+          "RECALCULATE": "Recalculate",
+          "DONE": "Calculated {ago}",
+          "FILTERS_CHANGED": "Filters changed since the calculation: these numbers belong to the previous filters."
+        },
+        "OVERVIEW": {
+          "SAME": "= same as {range}",
+          "POINTS": "{n} pts",
+          "AVG_TICKET": "Average deal",
+          "AVG_TICKET_SUB": "average amount won",
+          "RECOVERED": "Recovered",
+          "RECOVERED_SUB": "were lost and later won",
+          "RANKING": "Sales ranking",
+          "RANK_LINE": "{won} won · {rate} win rate · {open} open",
+          "VS_RANGE": "vs {range}",
+          "PROMISES": "Promises kept",
+          "PROMISES_SUB": "{kept} of {decided} committed were won on time, without moving the date"
+        },
+        "MONEY": {
+          "CLOSING": "Closing this month",
+          "STALE_TITLE": "Stalled opportunities",
+          "STALE_DESCRIPTION": "Checks every open opportunity and flags those over {days} days without changing stage.",
+          "THRESHOLD": "Days without moving",
+          "THRESHOLD_OPTION": "Over {days} days",
+          "STALE_RESULT": "{count} opportunities have been over {days} days in the same stage (flagged ⚠ in the funnel and below).",
+          "STALE_NONE": "No opportunity has been over {days} days without moving.",
+          "ATTENTION": "Need attention",
+          "ATTENTION_HELP": "Overdue promises first (the customer committed and hasn't paid), then overdue expected closes and, if calculated, stale ones. Click to open.",
+          "ATTENTION_NONE": "Nothing urgent: no overdue promises or closes.",
+          "OPPORTUNITY": "Opportunity",
+          "WHY": "Why",
+          "CLOSE_OVERDUE": "Close overdue ({date})",
+          "STALE_DAYS": "{days} days without moving",
+          "COMMITTED_WEEK": "Committed this week",
+          "COMMITTED_WEEK_SUB": "{count} the customer promised to pay this week",
+          "COMMITTED_MONTH": "Committed this month",
+          "COMMITTED_MONTH_SUB": "{count} promised this month · {overdue} overdue promises",
+          "CLOSING_SPLIT": "{count} opportunities · confirmed {confirmed} · probable {probable} (weighted)",
+          "PROMISE_OVERDUE": "Promised to pay on {date}"
+        },
+        "MONTHLY": {
+          "TITLE": {
+            "last_12": "Month by month · last 12 months",
+            "this_year": "Month by month · this year",
+            "last_year": "Month by month · last year"
+          },
+          "DESCRIPTION": "Compares month against month: won vs lost, win rate and new opportunities.",
+          "WON": "Won",
+          "LOST": "Lost",
+          "RATE": "Win rate",
+          "CREATED": "New",
+          "WON_VALUE": "Amount won",
+          "MEASURE": {
+            "count": "Count",
+            "amount": "Amount"
+          },
+          "PICK_CURRENCY": "Pick a currency to see amounts.",
+          "CHART_DECIDED": "Won vs lost",
+          "CHART_RATE": "Win rate",
+          "CHART_CREATED": "New opportunities",
+          "SPAN": "Window",
+          "SPANS": {
+            "last_12": "Last 12 months",
+            "this_year": "This year",
+            "last_year": "Last year"
+          }
+        },
+        "LOSSES": {
+          "LOST": "Lost",
+          "CANCELLED": "Cancelled",
+          "SHARE": "{pct} of what was decided in the period",
+          "TITLE_lost": "Loss reasons",
+          "TITLE_cancelled": "Cancellation reasons",
+          "NONE": "None in the period."
+        },
+        "SNAPSHOT": "Today's snapshot",
+        "SNAPSHOT_HINT": "What is open today does not depend on a period: an opportunity opened months ago is still in play. Filter by expected close below.",
+        "COMPARED_WITH": "compared with {range}"
+      },
+      "FUNNEL": {
+        "TITLE": "Sales funnel",
+        "SUBTITLE": "{count} open opportunities by stage · won in the period at the bottom",
+        "WON": "Won",
+        "IN_PERIOD": "(in the period)",
+        "WEIGHTED": "Weighted:",
+        "STAGE": "Stage",
+        "COUNT": "Count",
+        "CURRENCY": "Currency",
+        "ALL_CURRENCIES": "All currencies",
+        "CLOSE_LABEL": "Expected close",
+        "CLOSE_HINT": "Only narrows open opportunities; won ones still follow the period.",
+        "CLOSE": {
+          "any": "Close: any date",
+          "overdue": "Close: overdue",
+          "this_week": "Close: this week",
+          "this_month": "Close: this month",
+          "next_month": "Close: next month",
+          "this_quarter": "Close: this quarter",
+          "none": "Close: no date"
+        },
+        "SHOW_WEIGHTED": "Weighted value",
+        "SHOW_LOST": "Lost and cancelled",
+        "LOST": "Lost: {count}",
+        "CANCELLED": "Cancelled: {count}",
+        "WAITING": "{label} (outside the funnel): {count}",
+        "NO_STAGE": "No stage: {count}",
+        "EMPTY": "No open or won opportunities with these filters.",
+        "STALE_CHIP": "⚠ {count} stalled +{days} d"
+      },
+      "COMMITMENT": {
+        "LABEL": "Committed by the customer",
+        "HINT": "Check it when the customer already told you when they pay or sign. The close date becomes the promised date.",
+        "NOTE": "Commitment note",
+        "NOTE_PLACEHOLDER": "E.g. «Pays on Friday, confirmed by WhatsApp»",
+        "DATE": "Committed date",
+        "COMMITTED_ON": "Committed · {date}",
+        "PROMISE_OVERDUE": "Promise overdue · {date}",
+        "EVENTS": {
+          "set": "Committed for {on}",
+          "moved": "Moved the committed date: {from} → {to}",
+          "removed": "Commitment removed",
+          "note": "Commitment note changed"
+        }
+      }
+    },
+    "WORK_ORDER": {
+      "PANEL": {
+        "TITLE": "Work order",
+        "SAVE": "Save",
+        "CANCEL": "Discard",
+        "SAVED": "Work order details saved",
+        "SAVE_ERROR": "Could not save the work order details"
+      },
+      "FIELDS": {
+        "ADDRESS": "Service address",
+        "ESTIMATED_HOURS": "Estimated hours",
+        "ACTUAL_HOURS": "Actual hours",
+        "HOURS": "Hours (actual / estimated)",
+        "BILLABLE": "Billable",
+        "RECEIVED_BY": "Received by",
+        "RECEIVED_AT": "Sign-off date",
+        "NOTE": "Sign-off note"
+      },
+      "FORM": {
+        "ADDRESS_PLACEHOLDER": "Street, number, area, city",
+        "ADDRESS_HINT": "Used as the location when scheduling the visit."
+      },
+      "ITEMS": {
+        "TITLE": "Materials",
+        "DESCRIPTION": "Item",
+        "QUANTITY": "Quantity",
+        "UNIT": "Unit",
+        "UNIT_COST": "Unit cost",
+        "TOTAL": "Amount",
+        "GRAND_TOTAL": "Total",
+        "ADD": "Add",
+        "DELETE": "Remove item",
+        "EMPTY": "No materials.",
+        "ERROR": "Could not save the item",
+        "DESCRIPTION_PLACEHOLDER": "E.g. Cat 6 UTP cable"
+      },
+      "CLOSE": {
+        "TITLE": "Close work order",
+        "HELP": "To close the order, record the actual hours and who received the work.",
+        "RECEIVED_BY_PLACEHOLDER": "Name of the person receiving",
+        "NOTE_PLACEHOLDER": "Customer or technician remarks (optional)",
+        "CONFIRM": "Close order"
+      },
+      "VISIT": {
+        "NEXT": "Next visit:",
+        "NONE": "not scheduled",
+        "OVERDUE": "Visit overdue",
+        "SCHEDULE": "Schedule visit",
+        "DEFAULT_TITLE": "Visit · {title}"
+      },
+      "FROM_CASE": {
+        "BUTTON": "Create work order",
+        "TITLE": "Create work order",
+        "HELP": "The new order takes the customer, conversation, subject and description of this case, and stays linked to it.",
+        "CONFIRM": "Create order",
+        "SUCCESS": "Order {folio} created",
+        "ERROR": "Could not create the work order"
+      },
+      "TABLE": {
+        "NEXT_VISIT": "Next visit",
+        "HOURS": "Hours (actual / est.)",
+        "TECHNICIAN": "Technician",
+        "STAGE": "Stage"
+      },
+      "METRICS": {
+        "HELP": "Open work is a snapshot of today. Finished work counts by the day it was finished within the period. On time = finished no later than the day of its last visit.",
+        "LOADING": "Loading metrics…",
+        "EMPTY": "There are no work orders to show yet.",
+        "ERROR": "Could not load the work order metrics",
+        "TECHNICIAN": "Technician",
+        "ALL_TECHNICIANS": "All technicians",
+        "UNASSIGNED": "No technician",
+        "NO_TYPE": "No type",
+        "NO_STAGE": "No stage",
+        "BY_TECHNICIAN": "By technician",
+        "BY_TYPE": "By type",
+        "STAGES": "Open by stage",
+        "STAGE": "Stage",
+        "CHART_VIEW": "Show chart",
+        "TABLE_VIEW": "Show table",
+        "KPI": {
+          "OPEN": "Open",
+          "OPEN_SUB": "{toSchedule} to schedule · {signoff} awaiting sign-off",
+          "OVERDUE": "Overdue visits",
+          "OVERDUE_SUB": "Open orders with a visit whose time has passed",
+          "ON_TIME": "On-time rate",
+          "ON_TIME_SUB": "{onTime} on time · {late} late · {noVisit} no visit",
+          "HOURS": "Actual vs. estimated hours",
+          "HOURS_SUB": "{actual} actual / {estimated} estimated across {count} orders",
+          "REWORK": "Rework",
+          "REWORK_SUB": "{count} of {finished} finished were reopened",
+          "BILLABLE": "Billable materials",
+          "BILLABLE_SUB": "{count} billable orders · {cancelled} cancelled"
+        },
+        "TIMING": {
+          "TITLE": "Timeliness of finished work",
+          "EMPTY": "No orders finished in the period.",
+          "on_time": "On time",
+          "late": "Late",
+          "no_visit": "No visit",
+          "HINT": "The on-time rate only counts orders that had a visit."
+        },
+        "COLS": {
+          "OPEN": "Open",
+          "FINISHED": "Finished",
+          "ON_TIME": "On time",
+          "HOURS": "Hours (actual / est.)",
+          "VARIANCE": "Variance",
+          "REWORK": "Rework"
+        }
+      }
+    },
+    "CLASSES": {
+      "SWITCHER_LABEL": "Case class",
+      "VIEW_LABEL": "View as",
+      "VIEW_BOARD": "Board",
+      "VIEW_LIST": "List",
+      "VIEW_DASHBOARD": "Dashboard",
+      "COMMERCIAL": {
+        "NAME": "Sales",
+        "NEW": "Opportunity",
+        "LIST": "Opportunities",
+        "BOARD": "Pipeline",
+        "METRICS": "Sales dashboard",
+        "SCOPES": {
+          "mine": "Mine",
+          "unassigned": "Unassigned",
+          "all": "All"
+        },
+        "STATUS": {
+          "pending": "Open",
+          "closed": "Closed",
+          "all": "All"
+        },
+        "CLOSED_LABEL": "Show closed:"
+      },
+      "SUPPORT": {
+        "NAME": "Support",
+        "LIST": "Tickets",
+        "BOARD": "Ticket board",
+        "METRICS": "Support metrics",
+        "SCOPES": {
+          "mine": "Mine",
+          "unassigned": "Unassigned",
+          "all": "All"
+        },
+        "STATUS": {
+          "pending": "Pending",
+          "closed": "Closed",
+          "all": "All"
+        },
+        "CLOSED_LABEL": "Show closed:"
+      },
+      "WORK_ORDER": {
+        "NAME": "Work orders",
+        "LIST": "Work orders",
+        "BOARD": "Work order board",
+        "METRICS": "Work order metrics",
+        "SCOPES": {
+          "mine": "Mine",
+          "unassigned": "Unassigned",
+          "all": "All"
+        },
+        "STATUS": {
+          "pending": "Open",
+          "closed": "Closed",
+          "all": "All"
+        },
+        "CLOSED_LABEL": "Show closed:"
+      },
+      "PROJECT": {
+        "NAME": "Projects",
+        "LIST": "Projects",
+        "BOARD": "Project board",
+        "METRICS": "Project metrics",
+        "SCOPES": {
+          "mine": "Mine",
+          "unassigned": "Unassigned",
+          "all": "All"
+        },
+        "STATUS": {
+          "pending": "Open",
+          "closed": "Closed",
+          "all": "All"
+        },
+        "CLOSED_LABEL": "Show closed:"
+      }
+    },
+    "FILTERS": {
+      "TYPE": "Case type",
+      "ALL_TYPES": "All types",
+      "BUTTON": "Filters",
+      "ANY": "Any",
+      "REMOVE": "Remove filter",
+      "CLEAR": "Clear",
+      "SLA_OVERDUE": "SLA overdue ({count})",
+      "VIEWS": "Views",
+      "FIELDS": {
+        "priority": "Priority",
+        "origin": "Origin",
+        "affected_service_id": "Service",
+        "category_id": "Category",
+        "ticket_kind": "Kind",
+        "assignee_id": "Owner",
+        "billable": "Billable",
+        "date": "Date"
+      },
+      "RESULT": "Outcome",
+      "STATUS_LABEL": "Status",
+      "OUTCOMES_PLURAL": {
+        "active": "In progress",
+        "won": "Won",
+        "lost": "Lost",
+        "postponed": "Postponed",
+        "cancelled": "Cancelled"
+      },
+      "BOARD_CLOSED": {
+        "hide": "Don't show",
+        "7": "Last 7 days",
+        "30": "Last 30 days",
+        "90": "Last 90 days",
+        "all": "All history"
+      },
+      "ALL_AGENTS": "All owners",
+      "ALL_TEAMS": "All teams",
+      "STAGE_LABEL": "Stage",
+      "WO_STAGES": {
+        "open": "Open",
+        "to_schedule": "To schedule",
+        "scheduled": "Scheduled",
+        "in_execution": "In progress",
+        "paused": "Paused",
+        "finished": "Finished",
+        "closed": "Closed",
+        "cancelled": "Cancelled"
+      },
+      "BILLABLE": {
+        "yes": "Yes",
+        "no": "No"
+      },
+      "BOARD_CLOSED_HINT": "Only affects the final columns (closed, won, cancelled…): open cases are always shown.",
+      "VISIT_OVERDUE_ALERT": "Overdue visits ({count})",
+      "CLOSE_OVERDUE_ALERT": "Overdue close ({count})",
+      "PROJECT_STAGES": {
+        "open": "Open",
+        "planning": "Planning",
+        "execution": "Execution",
+        "paused": "Paused",
+        "delivery": "Delivery",
+        "closed": "Closed",
+        "cancelled": "Cancelled"
+      },
+      "PROJECT_OVERDUE_ALERT": "Late ({count})",
+      "CAL_PERIODS": {
+        "LABEL": "Period",
+        "this_month": "This month",
+        "last_month": "Last month",
+        "this_quarter": "This quarter",
+        "last_quarter": "Last quarter",
+        "this_year": "This year",
+        "last_year": "Last year",
+        "custom": "Custom",
+        "FROM": "From",
+        "TO": "To",
+        "INVALID": "«From» must be before «To»"
+      },
+      "COMMITTED_ONLY": "Committed only",
+      "COMMITTED_ONLY_HINT": "Only opportunities the customer already committed to pay. Combines with the other filters and the overdue-close alert.",
+      "DATE_FIELD": "Which date?",
+      "DATE_WHEN": "When?",
+      "DATE_FIELDS": {
+        "close": "Close / promise",
+        "closed": "Closed on",
+        "closed_commercial": "Won or lost on",
+        "created": "Created",
+        "visit": "Visit",
+        "due": "Target date"
+      },
+      "DATE_PRESETS": {
+        "overdue": "Overdue",
+        "today": "Today",
+        "this_week": "This week",
+        "next_week": "Next week",
+        "this_month": "This month",
+        "next_month": "Next month",
+        "next_30": "Next 30 days",
+        "last_month": "Last month",
+        "last_30": "Last 30 days",
+        "last_90": "Last 90 days",
+        "custom": "Custom"
+      }
+    },
+    "CREATE": {
+      "TITLE": "New: {name}",
+      "CONTACT": "Customer",
+      "CONTACT_OPTIONAL": "Customer (optional)",
+      "CONTACT_PLACEHOLDER": "Search by name, email or phone",
+      "CONTACT_REQUIRED": "An opportunity needs a customer.",
+      "CONTACT_INTERNAL_HINT": "Without a customer it is created as an internal case.",
+      "CHANGE_CONTACT": "Change customer",
+      "NO_CONTACTS": "No results",
+      "SUCCESS": "Case {folio} created"
+    },
+    "PROJECT": {
+      "PANEL": {
+        "TITLE": "Project",
+        "SAVE": "Save",
+        "CANCEL": "Discard",
+        "SAVED": "Project details saved",
+        "SAVE_ERROR": "Could not save the project details",
+        "AUTO": "{done} of {total} cases and milestones done",
+        "CHILDREN": "Cases done",
+        "MILESTONES": "Milestones done",
+        "HOURS": "Actual hours / budget",
+        "MANUAL_HINT": "While the project has no cases or milestones, progress is entered by hand."
+      },
+      "FIELDS": {
+        "START": "Start",
+        "DUE": "Target date",
+        "BUDGET_HOURS": "Budgeted hours",
+        "BUDGET_AMOUNT": "Budget",
+        "PROGRESS": "Progress"
+      },
+      "OVERDUE": "Late",
+      "TABLE": {
+        "DUE": "Target date",
+        "PROGRESS": "Progress",
+        "STAGE": "Phase"
+      },
+      "CLOSE": {
+        "TITLE": "Close project",
+        "HELP": "You can leave a summary of how the project was delivered (optional).",
+        "SUMMARY": "Closing summary",
+        "PLACEHOLDER": "E.g. Delivered and accepted by the customer on January 15",
+        "CONFIRM": "Close project"
+      },
+      "CHILDREN": {
+        "TITLE": "Project cases",
+        "HELP": "Work orders and Support tickets that are part of the project.",
+        "CREATE": "Create case",
+        "CREATE_CONFIRM": "Create inside the project",
+        "LINK": "Link existing case",
+        "SEARCH_PLACEHOLDER": "Search by folio or subject…",
+        "NO_RESULTS": "No matching work orders or tickets.",
+        "EMPTY": "The project has no cases yet.",
+        "REMOVE": "Remove from the project (the case is not deleted)",
+        "ERROR": "Could not update the project cases"
+      },
+      "FROM_CASE": {
+        "BUTTON": "Create project",
+        "TITLE": "Create project",
+        "HELP": "The new project takes the customer, conversation, subject and description of this opportunity, and stays linked to it.",
+        "CONFIRM": "Create project",
+        "SUCCESS": "Project {folio} created",
+        "ERROR": "Could not create the project"
+      },
+      "TIMELINE": {
+        "TITLE": "Timeline",
+        "MILESTONE": "Milestone",
+        "CASE": "Case",
+        "TODAY": "Today",
+        "LOADING": "Loading…",
+        "EMPTY": "No milestones or dated cases yet.",
+        "STATE": {
+          "done": "Done",
+          "overdue": "Overdue",
+          "pending": "Pending"
+        }
+      },
+      "METRICS": {
+        "HELP": "Open work is a snapshot of today. At risk = its progress is more than 20 points behind the elapsed time. Finished work counts by the day it was finished within the period.",
+        "LOADING": "Loading metrics…",
+        "EMPTY": "There are no projects to show yet.",
+        "ERROR": "Could not load the project metrics",
+        "ASSIGNEE": "Owner",
+        "ALL_ASSIGNEES": "All owners",
+        "UNASSIGNED": "No owner",
+        "NO_TYPE": "No type",
+        "NO_STAGE": "No phase",
+        "BY_ASSIGNEE": "By owner",
+        "BY_TYPE": "By type",
+        "STAGES": "Open by phase",
+        "CHART_VIEW": "Show chart",
+        "TABLE_VIEW": "Show table",
+        "KPI": {
+          "OPEN": "Open",
+          "OPEN_SUB": "{late} late · {risk} at risk",
+          "MILESTONES": "Overdue milestones",
+          "MILESTONES_SUB": "Pending milestones past their date",
+          "HOURS": "Budget hours used",
+          "HOURS_SUB": "{actual} actual / {budget} budgeted · {over} over budget",
+          "DELIVERY": "On-time delivery",
+          "DELIVERY_SUB": "{onTime} on time · {late} late of {finished} finished"
+        },
+        "HEALTH": {
+          "TITLE": "Health of open projects",
+          "on_track": "On track",
+          "at_risk": "At risk",
+          "late": "Late",
+          "no_dates": "No dates",
+          "HINT": "\"No dates\" = missing start or target date."
+        },
+        "COLS": {
+          "OPEN": "Open",
+          "LATE": "Late",
+          "RISK": "At risk",
+          "HOURS": "Hours (actual / budget)",
+          "FINISHED": "Finished",
+          "ON_TIME": "On time"
+        }
+      }
+    },
+    "TASK_PRIORITY": {
+      "PAGE_TITLE": "Tasks: «My day» priority",
+      "INTRO": "«My day» sorts each agent's pending tasks by a score: each situation adds the points below. More points = higher up. A negative weight subtracts; 0 ignores it.",
+      "GROUPS": {
+        "DUE": "Task due date",
+        "PRIORITY": "Task priority",
+        "PROJECT": "Project",
+        "SUPPORT": "Support (SLA)",
+        "WORK_ORDER": "Work order",
+        "COMMERCIAL": "Opportunity",
+        "OTHER": "Planning and others",
+        "ALERT": "Alert"
+      },
+      "WEIGHTS": {
+        "overdue": "Task overdue (base)",
+        "overdue_per_day": "Per day overdue",
+        "overdue_days_max": "Max points for overdue days",
+        "due_today": "Due today",
+        "due_tomorrow": "Due tomorrow",
+        "due_week": "Due in the next 7 days",
+        "priority_urgent": "Urgent priority",
+        "priority_high": "High priority",
+        "priority_medium": "Medium priority",
+        "project_overdue": "Project behind schedule",
+        "milestone": "Project milestone",
+        "project_due_soon": "Project due in 7 days or less",
+        "sla_overdue": "SLA breached",
+        "sla_at_risk": "SLA at risk",
+        "case_urgent": "Urgent case",
+        "visit_overdue": "Visit overdue",
+        "visit_today": "Visit today",
+        "close_soon": "Expected close overdue or within 7 days",
+        "planned_missed": "Planned for a past day",
+        "age_per_day": "Age: per day",
+        "age_max": "Max points for age",
+        "waiting": "Case on hold (customer / third party)",
+        "urgent_score": "Alert «New urgent» from this score"
+      },
+      "EXAMPLE_PROJECT": "Example A · urgent task, 2 days overdue, from a project behind schedule",
+      "EXAMPLE_SUPPORT": "Example B · medium task due today, from a case with breached SLA",
+      "EXAMPLE_PROJECT_FIRST": "With these weights, A goes before B.",
+      "EXAMPLE_SUPPORT_FIRST": "With these weights, B goes before A.",
+      "EXAMPLE_TIE": "With these weights, A and B tie (the one due first wins).",
+      "DEFAULT_WAS": "(default: {value})",
+      "RESTORE": "Restore defaults",
+      "SAVE": "Save",
+      "SAVED": "Weights saved.",
+      "SAVE_ERROR": "Could not save the weights."
+    },
+    "BUSINESS_SUMMARY": {
+      "TITLE": "Business summary",
+      "COMPARED_WITH": "compared with {range}",
+      "LOADING": "Loading summary…",
+      "ERROR": "Could not load the summary.",
+      "FORBIDDEN": "You don't have access to the Business summary. Ask an administrator.",
+      "VS": "vs {range}",
+      "SAME": "= same as {range}",
+      "POINTS": "{n} pts",
+      "MINUTES": "{n} min",
+      "HOURS": "{h} h {m} min",
+      "SEE": "View",
+      "MORE": "See the numbers →",
+      "ATTENTION_TITLE": "What needs your attention",
+      "ATTENTION_NONE": "Nothing urgent: all up to date.",
+      "ATTENTION": {
+        "promises_overdue": "{count} overdue payment promises ({amount})",
+        "sla_overdue": "{count} support cases past SLA",
+        "visits_overdue": "{count} overdue visits not done",
+        "projects_late": "{count} late projects",
+        "close_overdue": "{count} opportunities with an overdue expected close (review date)",
+        "unattended_conversations": "{count} unattended conversations"
+      },
+      "AI": {
+        "TITLE": "Explain my week",
+        "EXPLAIN": "Explain my week",
+        "AGAIN": "Explain again",
+        "HINT": "AI tells you in 30 seconds how the business is doing, what's worrying and what to do today, using this screen's figures.",
+        "good": "Going well",
+        "watch": "Worrying",
+        "today": "Today I'd do",
+        "DISCLAIMER": "AI-generated from these figures; review before deciding.",
+        "ERROR": "Could not generate the explanation."
+      },
+      "SALES": {
+        "TITLE": "Sales · how much did we sell and what's coming?",
+        "WON": "Sold (won)",
+        "WON_SUB": "{count} won opportunities",
+        "WIN_RATE": "Win rate",
+        "COMMITTED_WEEK": "Coming this week",
+        "COMMITTED_SUB": "{count} committed by the customer",
+        "COMMITTED_MONTH": "Coming this month",
+        "OVERDUE_SUB": "{count} overdue promises",
+        "OPEN": "In play",
+        "OPEN_SUB": "{count} open · weighted {weighted}"
+      },
+      "SUPPORT": {
+        "TITLE": "Support · are we serving well?",
+        "OPEN": "Open cases",
+        "CREATED_SUB": "{count} new in the period",
+        "SLA_OVERDUE": "Past SLA",
+        "AT_RISK_SUB": "{count} at risk",
+        "FIRST_RESPONSE": "First response (average)",
+        "CSAT": "Satisfaction",
+        "CSAT_SUB": "{count} surveys"
+      },
+      "WORK_ORDERS": {
+        "TITLE": "Work orders · are we delivering in the field?",
+        "OPEN": "Open orders",
+        "TO_SCHEDULE_SUB": "{count} to schedule",
+        "VISITS_OVERDUE": "Overdue visits",
+        "ON_TIME": "Finished on time",
+        "FINISHED_SUB": "{count} finished in the period",
+        "SIGNOFF": "Awaiting sign-off"
+      },
+      "PROJECTS": {
+        "TITLE": "Projects · on time?",
+        "OPEN": "Open projects",
+        "LATE": "Late",
+        "MILESTONES_SUB": "{count} overdue milestones",
+        "AT_RISK": "At risk",
+        "OVER_BUDGET": "Over budget"
+      },
+      "PEOPLE": {
+        "TOP_SELLERS": "Who is selling?",
+        "NO_SALES": "No won opportunities in the period.",
+        "WON": "{count} won",
+        "MOST_OVERDUE": "Who has the most overdue?",
+        "NONE_OVERDUE": "No one has overdue cases.",
+        "OVERDUE": "{count} overdue"
+      },
+      "ACCESS": {
+        "TITLE": "Business summary · Who can see it",
+        "INTRO": "Administrators always see it. Check the agents who can also see it (e.g. a sales manager or a supervisor).",
+        "ALWAYS": "Administrator · always",
+        "SAVE": "Save",
+        "SAVED": "Permissions saved",
+        "SAVE_ERROR": "Could not save permissions"
+      },
+      "CONVERSATIONS": {
+        "TITLE": "Conversations · how are we serving on chat?",
+        "NEW": "New conversations",
+        "RESOLVED_SUB": "{count} resolved",
+        "UNATTENDED": "Unattended now",
+        "OPEN_SUB": "{open} open · {unassigned} unassigned",
+        "FIRST_RESPONSE": "First response (average)",
+        "RESOLUTION": "Resolution time",
+        "CSAT": "Satisfaction",
+        "BY_CHANNEL": "By channel",
+        "NONE": "No conversations in the period.",
+        "TOP_LABELS": "What are they about? (top labels)",
+        "NO_LABELS": "No conversation in the period has labels."
+      },
+      "CHANNELS": {
+        "whatsapp": "WhatsApp",
+        "web_widget": "Website chat",
+        "email": "Email",
+        "api": "API",
+        "facebook_page": "Facebook",
+        "instagram": "Instagram",
+        "telegram": "Telegram",
+        "sms": "SMS",
+        "twilio_sms": "SMS / WhatsApp (Twilio)",
+        "line": "LINE"
+      },
+      "ANALYSIS": {
+        "TITLE": "AI conversation analysis",
+        "DESCRIPTION": "Reads a sample of up to 150 conversations from the period and finds topics, upset customers, missed sales and repeated complaints. Costs tokens: on demand.",
+        "SAMPLE": "Sample analyzed: {count} conversations",
+        "EMPTY": "No conversations in the period to analyze.",
+        "COUNT": "{count} conv.",
+        "topics": "What are they talking about?",
+        "complaints": "Repeated complaints",
+        "lost_sales": "Missed sales (no opportunity)",
+        "upset": "Upset customers",
+        "DISCLAIMER": "AI-generated from a sample; review the conversations before acting.",
+        "ERROR": "Could not analyze."
+      }
+    },
+    "CONVERSATION_ACTIONS": {
+      "LINK": "Link conversation",
+      "SCHEDULE": "Schedule message",
+      "SCHEDULE_HINT": "Schedule a message to the customer in the case conversation",
+      "DELEGATE": "Delegate to AI agent",
+      "DELEGATE_HINT": "The AI agent follows up with the customer for you",
+      "DELEGATE_MISSING": "To delegate to an AI agent, enable in Integrations: {missing}",
+      "NEED_CONTACT": "Assign a contact to the case to link a conversation",
+      "EVENT": "Conversation #{id} · {inbox}",
+      "EVENT_CREATED": "New conversation #{id} · {inbox}",
+      "LINK_MODAL": {
+        "TITLE": "Link conversation · {folio}",
+        "SUBTITLE": "The case keeps this conversation; it can't be changed later.",
+        "EXISTING": "Contact conversations",
+        "LOADING": "Loading…",
+        "EMPTY": "The contact has no conversations.",
+        "ROW": "#{id} · {inbox} · {status} · {date}",
+        "LINK_BUTTON": "Link",
+        "CREATE_TITLE": "Or use an inbox",
+        "CREATE_HINT": "If the contact already has an open conversation in that inbox it is used; otherwise a new one is created. On WhatsApp the first message must be an approved template.",
+        "INBOX_PLACEHOLDER": "Choose an inbox",
+        "CREATE": "Use inbox",
+        "CANCEL": "Cancel",
+        "LINKED": "Conversation #{id} linked to the case",
+        "CREATED": "Conversation #{id} was created and linked to the case",
+        "ERROR": "Could not link the conversation",
+        "STATUS": {
+          "open": "Open",
+          "pending": "Pending",
+          "resolved": "Resolved",
+          "snoozed": "Snoozed"
+        }
+      }
+    },
+    "STAGE_ADVANCE": {
+      "READY": "The required tasks for “{stage}” are done.",
+      "SUGGEST": "Move to “{next}”?",
+      "NEEDS_DOC": "Moving to “{next}” needs documentation.",
+      "BUTTON": "Move to {next}",
+      "DOCUMENT_BUTTON": "Document and move to {next}",
+      "EVENT": "Moved from “{from}” to “{to}” after finishing the required tasks",
+      "PROGRESS": "Stage “{stage}”: {done} of {total} required tasks done.",
+      "PROGRESS_EXIT": {
+        "automatic": "When done it moves to “{next}” on its own.",
+        "suggest": "When done it suggests moving to “{next}”.",
+        "manual": "Moved by hand."
+      }
+    },
+    "HOME": {
+      "GREETING": {
+        "MORNING": "Good morning, {name}",
+        "AFTERNOON": "Good afternoon, {name}",
+        "EVENING": "Good evening, {name}"
+      },
+      "SUBTITLE": "Here's what you have for today.",
+      "BUSINESS_SUMMARY": "Business summary",
+      "LOADING": "Loading your summary…",
+      "SEE_ALL": "See all",
+      "MY_DAY": "Most urgent in My day",
+      "MY_DAY_EMPTY": "No pending tasks. Nice!",
+      "AGENDA": "Today's agenda",
+      "CONVERSATIONS": "My conversations",
+      "CONVERSATIONS_COUNT": "{open} open · {waiting} waiting for your reply",
+      "WAITING_MIN": "waiting {count} min",
+      "WAITING_HOURS": "waiting {count} h",
+      "WAITING_DAYS": "waiting {count} d",
+      "CASES": "My cases",
+      "CASES_SLA": "SLA at risk or overdue ({count})",
+      "CASES_READY": "Ready to move stage",
+      "CASES_PROMISES": "Payment promises this week",
+      "READY_NEXT": "finished “{stage}”: move to “{next}”",
+      "READY_DOC": "finished “{stage}”: document to move to “{next}”",
+      "SLA": {
+        "at_risk": "SLA at risk",
+        "overdue": "SLA overdue",
+        "on_time": "On time"
+      },
+      "WEEK": "My week",
+      "WEEK_ROWS": {
+        "cases_done": "cases resolved",
+        "tasks_done": "tasks done",
+        "won": "deals won"
+      },
+      "WEEK_BEFORE": "last week: {count}"
     }
   }
 }

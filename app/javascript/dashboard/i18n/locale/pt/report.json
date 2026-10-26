@@ -560,5 +560,75 @@
       },
       "VIEW_DETAILS": "Ver Detalhes"
     }
+  },
+  "OPPORTUNITY_REPORTS": {
+    "HEADER": "Relatórios de Oportunidades",
+    "FILTERS": {
+      "ALL_CASE_TYPES": "Todos os tipos de caso",
+      "ALL_ASSIGNEES": "Todos os vendedores",
+      "ALL_TEAMS": "Todas as equipes",
+      "DATE_RANGE": "Intervalo de datas"
+    },
+    "FUNNEL": {
+      "TITLE": "Funil de oportunidades",
+      "LOADING": "Carregando funil...",
+      "EMPTY": "Nenhuma oportunidade neste período.",
+      "UNASSIGNED_COLUMN": "Sem coluna",
+      "STATUS_FALLBACK_NOTICE": "Escolha um tipo de caso para ver o funil por coluna do Kanban. Sem essa seleção, agrupa por status geral."
+    },
+    "OUTCOME": {
+      "TITLE": "Ganhos / perdidos",
+      "LOADING": "Carregando resultados...",
+      "EMPTY": "Nenhuma oportunidade fechada neste período.",
+      "CONVERSION_RATE": "Taxa de conversão",
+      "OPEN": "Abertas",
+      "WON": "Ganhas",
+      "LOST": "Perdidas",
+      "OTHER_CLOSED": "Outro encerramento"
+    },
+    "TIMESERIES": {
+      "TITLE": "Novas vs. encerradas",
+      "LOADING": "Carregando série temporal...",
+      "EMPTY": "Nenhum dado neste período.",
+      "CREATED": "Criadas",
+      "CLOSED": "Encerradas",
+      "GROUP_BY": {
+        "DAY": "Dia",
+        "WEEK": "Semana",
+        "MONTH": "Mês"
+      }
+    },
+    "ASSIGNEES": {
+      "TITLE": "Ranking de vendedores",
+      "LOADING": "Carregando ranking...",
+      "EMPTY": "Nenhuma oportunidade neste período.",
+      "UNASSIGNED": "Sem atribuição",
+      "HEADER": {
+        "ASSIGNEE": "Vendedor",
+        "OPEN": "Abertas",
+        "WON": "Ganhas",
+        "LOST": "Perdidas",
+        "CONVERSION_RATE": "Conversão",
+        "AVG_CLOSE_DAYS": "Dias méd. fechamento"
+      }
+    },
+    "VELOCITY": {
+      "TITLE": "Velocidade por etapa",
+      "LOADING": "Carregando velocidade...",
+      "EMPTY": "Ainda não há transições completas neste período."
+    },
+    "STALLED": {
+      "TITLE": "Oportunidades paradas",
+      "LOADING": "Carregando paradas...",
+      "EMPTY": "Nenhuma oportunidade parada com este limite.",
+      "THRESHOLD_OPTION": "Mais de {days} dias",
+      "HEADER": {
+        "FOLIO": "Folio",
+        "TITLE": "Título",
+        "STATUS": "Status",
+        "ASSIGNEE": "Vendedor",
+        "STALLED_DAYS": "Dias parada"
+      }
+    }
   }
 }

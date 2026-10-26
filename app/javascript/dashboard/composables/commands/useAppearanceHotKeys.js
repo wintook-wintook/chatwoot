@@ -8,7 +8,11 @@ import {
 } from 'dashboard/helper/commandbar/icons';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
-import { setColorTheme } from 'dashboard/helper/themeHelper.js';
+import {
+  setColorTheme,
+  setColorTint,
+  COLOR_TINTS,
+} from 'dashboard/helper/themeHelper.js';
 
 const getThemeOptions = t => [
   {
@@ -28,6 +32,13 @@ const getThemeOptions = t => [
   },
 ];
 
+const getTintOptions = t =>
+  COLOR_TINTS.map(tint => ({
+    key: tint,
+    label: t(`PROFILE_SETTINGS.FORM.APPEARANCE.TINTS.${tint.toUpperCase()}`),
+    icon: ICON_APPEARANCE,
+  }));
+
 const setAppearance = theme => {
   LocalStorage.set(LOCAL_STORAGE_KEYS.COLOR_SCHEME, theme);
   const isOSOnDarkMode = window.matchMedia(
@@ -40,6 +51,7 @@ export function useAppearanceHotKeys() {
   const { t } = useI18n();
 
   const themeOptions = computed(() => getThemeOptions(t));
+  const tintOptions = computed(() => getTintOptions(t));
 
   const goToAppearanceHotKeys = computed(() => {
     const options = themeOptions.value.map(theme => ({
@@ -52,15 +64,35 @@ export function useAppearanceHotKeys() {
         setAppearance(theme.key);
       },
     }));
+    const tints = tintOptions.value.map(tint => ({
+      id: `tint_${tint.key}`,
+      title: tint.label,
+      parent: 'appearance_tint',
+      section: t('COMMAND_BAR.SECTIONS.APPEARANCE'),
+      icon: tint.icon,
+      handler: () => {
+        setColorTint(tint.key);
+      },
+    }));
+
     return [
       {
         id: 'appearance_settings',
         title: t('COMMAND_BAR.COMMANDS.CHANGE_APPEARANCE'),
         section: t('COMMAND_BAR.SECTIONS.APPEARANCE'),
         icon: ICON_APPEARANCE,
-        children: options.map(option => option.id),
+        children: [...options.map(option => option.id), 'appearance_tint'],
       },
       ...options,
+      {
+        id: 'appearance_tint',
+        title: t('COMMAND_BAR.COMMANDS.COLOR_THEME'),
+        parent: 'appearance_settings',
+        section: t('COMMAND_BAR.SECTIONS.APPEARANCE'),
+        icon: ICON_APPEARANCE,
+        children: tints.map(tint => tint.id),
+      },
+      ...tints,
     ];
   });
 

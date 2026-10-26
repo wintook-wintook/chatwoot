@@ -8,12 +8,18 @@
 import { mapGetters } from 'vuex';
 import { VeTable } from 'vue-easytable';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
+import CaseMeetingsAPI from 'dashboard/api/caseMeetings';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
 import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
 import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
 import MessageFormatter from 'shared/helpers/MessageFormatter';
 import caseAiWriter from 'dashboard/mixins/caseAiWriter';
+import {
+  ESTIMATE_OPTIONS,
+  formatMinutes,
+  plannedAfterDue,
+} from 'dashboard/helper/caseTaskPriority';
 
 const PER_PAGE = 10;
 
@@ -44,10 +50,14 @@ export default {
     // Ticket cerrado/cancelado = solo lectura: se ocultan las acciones para no
     // ofrecer botones que el backend va a rechazar con 422.
     isFrozen: { type: Boolean, default: false },
+    // Plan-Clase-Proyecto P2 — en un proyecto una tarea puede ser «Hito».
+    allowMilestones: { type: Boolean, default: false },
   },
   data() {
     return {
       tasks: [],
+      // Plan-Plantilla-Tareas-Etapa — etapa actual y las siguientes con plantilla.
+      stagePlan: { current: null, upcoming: [] },
       isLoading: false,
       isSaving: false,
       // Paginación en cliente: un ticket tiene decenas de tareas, no miles;
@@ -73,6 +83,11 @@ export default {
         due_at: '',
         status: 'pending',
         priority: 'medium',
+        milestone: false,
+        required: false, // Plan-Plantilla-Tareas-Etapa — obligatoria para avanzar
+        documentation: false,
+        estimated_minutes: '', // Plan-Bandeja-Prioridad F1
+        planned_on: '', // «Programada para» (fecha sin hora)
         // Solicitante: si ya existe se muestra fijo (requester_locked=true); en
         // tareas antiguas sin solicitante se puede elegir de la lista y se guarda.
         requester_name: '',
@@ -84,6 +99,13 @@ export default {
       rowMenu: null,
       // Tarea que se está completando desde la fila (para el spinner del botón).
       completingId: null,
+      // @tickets_cases F5 (§11.2) — al completar una tarea con reuniones futuras
+      // se muestran ANTES de tocar nada, con la casilla marcada por defecto (el
+      // trabajo de esa tarea terminó) y el aviso de que cancelar no se deshace.
+      orphanFor: null,
+      orphanMeetings: [],
+      cancelOrphans: true,
+      isCompletingWithMeetings: false,
       // Modal de confirmación de borrado
       showDeleteConfirm: false,
       pendingDelete: null,
@@ -108,6 +130,16 @@ export default {
     // Etiquetas de prioridad: las mismas que usa el ticket, para no traducir dos veces.
     priorityOptions() {
       return this.$t('CASE_TICKETS.PRIORITIES');
+    },
+    estimateOptions() {
+      return ESTIMATE_OPTIONS;
+    },
+    // «Programada para» después del vencimiento: se avisa, no se bloquea.
+    plannedLate() {
+      return plannedAfterDue(
+        this.form.planned_on,
+        this.toIsoUtc(this.form.due_at)
+      );
     },
     // Filtro de texto: título, descripción y responsable.
     filteredTasks() {
@@ -214,6 +246,32 @@ export default {
                 }
                 title={row.title}
               >
+                {row.milestone ? (
+                  <span class="mr-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 no-underline inline-block">
+                    {this.$t('CASE_TICKETS.TASKS.MILESTONE')}
+                  </span>
+                ) : null}
+                {row.required ? (
+                  <span
+                    class="mr-2 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 no-underline inline-block"
+                    title={
+                      row.stage
+                        ? this.$t('CASE_TICKETS.TASKS.STAGE.REQUIRED_HINT', {
+                            stage: row.stage,
+                          })
+                        : ''
+                    }
+                  >
+                    {this.$t('CASE_TICKETS.TASKS.STAGE.REQUIRED')}
+                  </span>
+                ) : null}
+                {row.team && !row.assignee ? (
+                  <span class="mr-2 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 no-underline inline-block">
+                    {this.$t('CASE_TICKETS.TASKS.STAGE.TEAM', {
+                      team: row.team.name,
+                    })}
+                  </span>
+                ) : null}
                 {row.title}
               </p>
               {row.description ? (
@@ -275,15 +333,30 @@ export default {
           width: 160,
           sortBy: this.sortConfig.due_at || '',
           renderBodyCell: ({ row }) => (
-            <span
-              class={
-                this.isOverdue(row)
-                  ? 'text-xs font-bold text-red-600 dark:text-red-400'
-                  : 'text-xs text-slate-600 dark:text-slate-300'
-              }
-            >
-              {this.formatDate(row.due_at) || '—'}
-            </span>
+            <div class="flex items-center gap-1">
+              <span
+                class={
+                  this.isOverdue(row)
+                    ? 'text-xs font-bold text-red-600 dark:text-red-400'
+                    : 'text-xs text-slate-600 dark:text-slate-300'
+                }
+              >
+                {this.formatDate(row.due_at) || '—'}
+              </span>
+              {/* @tickets_cases F6 (§11.4) — la tarea tiene reuniones agendadas
+                  DESPUÉS de su vencimiento. Es el marcador hermano del de tarea
+                  vencida: señala, no corrige. */}
+              {row.meetings_beyond_due ? (
+                <fluent-icon
+                  icon="warning"
+                  size="14"
+                  class="text-amber-500"
+                  title={this.$t('CASE_TICKETS.TASKS.MEETINGS_BEYOND_DUE', {
+                    count: row.meetings_beyond_due,
+                  })}
+                />
+              ) : null}
+            </div>
           ),
         },
         {
@@ -305,6 +378,17 @@ export default {
                 return (
                   <span class="text-sm text-slate-600 dark:text-slate-300">
                     {this.statusLabel(row.status)}
+                  </span>
+                );
+              }
+              // Plan-Plantilla-Tareas-Etapa T3 — «Documenta…» no se palomea a mano.
+              if (row.documentation) {
+                return (
+                  <span
+                    class="text-xs text-amber-700 dark:text-amber-300"
+                    title={this.$t('CASE_TICKETS.TASKS.STAGE.DOC_HINT')}
+                  >
+                    {this.$t('CASE_TICKETS.TASKS.STAGE.DOC_AUTO')}
                   </span>
                 );
               }
@@ -422,6 +506,17 @@ export default {
       this.closeRowMenu();
       if (task) this.remove(task);
     },
+    // @tickets_cases F2 — reuniones de la tarea (mismo patrón que las notas).
+    menuAddMeeting() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) this.$emit('addMeeting', task);
+    },
+    menuViewMeetings() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) this.$emit('viewMeetings', task);
+    },
     // Click en el contador de notas: si hay notas las muestra; si no, solo avisa
     // (no tiene sentido ir a Notas para no encontrar nada).
     onNotesClick(task) {
@@ -481,6 +576,7 @@ export default {
       try {
         const { data } = await CaseTasksAPI.getAll(this.ticketId);
         this.tasks = data.case_tasks || [];
+        this.stagePlan = data.stage_plan || { current: null, upcoming: [] };
       } finally {
         this.isLoading = false;
       }
@@ -489,18 +585,65 @@ export default {
     // firma (fecha + quién) del cambio de estado, así que basta con el status.
     async complete(task) {
       if (this.completingId) return;
+      // F5 — ¿esta tarea deja reuniones futuras huérfanas? Si sí, se pregunta.
+      const orphans = await this.fetchOrphans(task);
+      if (orphans.length) {
+        this.orphanFor = task;
+        this.orphanMeetings = orphans;
+        this.cancelOrphans = true;
+        return;
+      }
+      await this.completeTask(task);
+    },
+    async fetchOrphans(task) {
+      try {
+        const { data } = await CaseMeetingsAPI.upcoming(this.ticketId, {
+          case_task_id: task.id,
+        });
+        return data.case_meetings || [];
+      } catch (e) {
+        return [];
+      }
+    },
+    closeOrphanDialog() {
+      this.orphanFor = null;
+      this.orphanMeetings = [];
+    },
+    async confirmComplete() {
+      const task = this.orphanFor;
+      const cancelMeetings = this.cancelOrphans;
+      this.isCompletingWithMeetings = true;
+      try {
+        await this.completeTask(task, cancelMeetings);
+        this.closeOrphanDialog();
+      } finally {
+        this.isCompletingWithMeetings = false;
+      }
+    },
+    async completeTask(task, cancelMeetings = false) {
       this.completingId = task.id;
       try {
-        const { data } = await CaseTasksAPI.updateTask(this.ticketId, task.id, {
-          status: 'done',
-        });
+        const { data } = await CaseTasksAPI.updateTask(
+          this.ticketId,
+          task.id,
+          { status: 'done' },
+          { cancel_meetings: cancelMeetings }
+        );
         this.replace(data.case_task);
         this.$emitter.emit('caseToastMessage', {
-          message: this.$t('CASE_TICKETS.TASKS.TOAST_COMPLETED', {
-            task: task.title,
-          }),
+          message: data.cancelled_meetings
+            ? this.$t('CASE_TICKETS.TASKS.TOAST_COMPLETED_MEETINGS', {
+                task: task.title,
+                count: data.cancelled_meetings,
+              })
+            : this.$t('CASE_TICKETS.TASKS.TOAST_COMPLETED', {
+                task: task.title,
+              }),
           icon: 'checkmark',
         });
+        // Las reuniones canceladas cambian el Avance y la pestaña Reuniones.
+        if (data.cancelled_meetings) this.$emit('changed');
+        this.$emit('saved'); // P2 — un hito hecho mueve el avance del proyecto
       } catch (e) {
         this.$emitter.emit('newToastMessage', {
           message: this.$t('CASE_TICKETS.TASKS.COMPLETE_ERROR'),
@@ -515,6 +658,9 @@ export default {
     priorityLabel(key) {
       return this.priorityOptions[key] || key;
     },
+    minutesLabel(value) {
+      return formatMinutes(value);
+    },
     openCreate() {
       this.editingId = null;
       this.viewing = false;
@@ -525,6 +671,11 @@ export default {
         due_at: '',
         status: 'pending',
         priority: 'medium',
+        milestone: false,
+        required: false, // Plan-Plantilla-Tareas-Etapa — obligatoria para avanzar
+        documentation: false,
+        estimated_minutes: '', // Plan-Bandeja-Prioridad F1
+        planned_on: '', // «Programada para» (fecha sin hora)
         // Solicitante = agente actual al crear (fijo; el backend lo confirma).
         requester_name: this.currentUserName,
         requester_id: '',
@@ -558,6 +709,11 @@ export default {
         due_at: this.toInputDate(task.due_at),
         status: task.status || 'pending',
         priority: task.priority || 'medium',
+        milestone: !!task.milestone,
+        required: !!task.required,
+        documentation: !!task.documentation,
+        estimated_minutes: task.estimated_minutes || '',
+        planned_on: task.planned_on || '',
         // Con solicitante: se muestra fijo. Sin solicitante (tarea antigua): la
         // lista queda editable para asignarlo y guardarlo.
         requester_name: (task.requester && task.requester.name) || '',
@@ -575,7 +731,12 @@ export default {
         due_at: this.toIsoUtc(this.form.due_at),
         status: this.form.status || 'pending',
         priority: this.form.priority || 'medium',
+        estimated_minutes: this.form.estimated_minutes || null,
+        planned_on: this.form.planned_on || null,
       };
+      if (this.allowMilestones) payload.milestone = !!this.form.milestone;
+      if (this.stagePlan.current && !this.form.documentation)
+        payload.required = !!this.form.required;
       // Solicitante editable (tarea sin solicitante previo): se manda para fijarlo.
       if (!this.form.requester_locked) {
         payload.requester_id = this.form.requester_id || '';
@@ -600,6 +761,7 @@ export default {
           this.currentPage = 1;
         }
         this.showModal = false;
+        this.$emit('saved');
       } finally {
         this.isSaving = false;
       }
@@ -634,6 +796,7 @@ export default {
       await CaseTasksAPI.deleteTask(this.ticketId, task.id);
       this.tasks = this.tasks.filter(t => t.id !== task.id);
       this.pendingDelete = null;
+      this.$emit('saved');
       // Aviso en rojo (mismo toast que asignar/completar, variante danger).
       this.$emitter.emit('caseToastMessage', {
         message: this.$t('CASE_TICKETS.TASKS.TOAST_DELETED', {
@@ -812,6 +975,45 @@ export default {
       @pageChange="changePage"
     />
 
+    <!-- Plan-Plantilla-Tareas-Etapa — tareas de las siguientes etapas (todavía
+         no son tareas del caso: nacen al entrar a cada etapa). -->
+    <div
+      v-if="stagePlan.upcoming.length"
+      class="flex flex-col flex-shrink-0 gap-2 pt-3 mt-3 border-t border-slate-75 dark:border-slate-700"
+    >
+      <p class="m-0 text-xs font-semibold text-slate-500 dark:text-slate-400">
+        {{ $t('CASE_TICKETS.TASKS.STAGE.UPCOMING') }}
+        <span class="font-normal">
+          · {{ $t('CASE_TICKETS.TASKS.STAGE.UPCOMING_HINT') }}
+        </span>
+      </p>
+      <div
+        v-for="stage in stagePlan.upcoming"
+        :key="stage.id"
+        class="flex flex-col gap-1"
+      >
+        <span class="text-xs font-medium text-slate-600 dark:text-slate-300">
+          {{ stage.label }}
+        </span>
+        <ul class="flex flex-col gap-0.5 p-0 m-0 list-none">
+          <li
+            v-for="(t, i) in stage.tasks"
+            :key="i"
+            class="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500"
+          >
+            <fluent-icon icon="checkmark-circle" size="12" />
+            <span>{{ t.title }}</span>
+            <span
+              v-if="t.required"
+              class="text-[10px] text-slate-400 dark:text-slate-500"
+            >
+              · {{ $t('CASE_TICKETS.TASKS.STAGE.REQUIRED') }}
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
     <!-- Modal de alta / edición -->
     <woot-modal
       v-if="showModal"
@@ -979,6 +1181,28 @@ export default {
               />
             </label>
 
+            <!-- Plan-Bandeja-Prioridad — cuándo PIENSA hacerla quien la hace
+                 (distinto del vencimiento). Hoy = entra a su «Mi día». -->
+            <label class="flex-1">
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CASE_TICKETS.TASKS.MODAL.PLANNED_LABEL')
+              }}</span>
+              <input
+                v-model="form.planned_on"
+                type="date"
+                :readonly="viewing"
+                class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+              />
+              <span
+                v-if="plannedLate"
+                class="block mt-1 text-xs text-amber-700 dark:text-amber-300"
+              >
+                {{ $t('CASE_TICKETS.TASKS.MODAL.PLANNED_AFTER_DUE') }}
+              </span>
+            </label>
+          </div>
+
+          <div class="flex gap-3">
             <label class="flex-1">
               <span class="text-sm text-slate-700 dark:text-slate-200">{{
                 $t('CASE_TICKETS.TASKS.MODAL.PRIORITY_LABEL')
@@ -990,6 +1214,21 @@ export default {
                   :value="key"
                 >
                   {{ label }}
+                </option>
+              </select>
+            </label>
+
+            <!-- Plan-Bandeja-Prioridad F1 — suma a la carga de «Mi día». -->
+            <label class="flex-1">
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CASE_TICKETS.TASKS.MODAL.ESTIMATE_LABEL')
+              }}</span>
+              <select v-model="form.estimated_minutes" :disabled="viewing">
+                <option value="">
+                  {{ $t('CASE_TICKETS.TASKS.MODAL.ESTIMATE_NONE') }}
+                </option>
+                <option v-for="m in estimateOptions" :key="m" :value="m">
+                  {{ minutesLabel(m) }}
                 </option>
               </select>
             </label>
@@ -1008,6 +1247,45 @@ export default {
               </select>
             </label>
           </div>
+
+          <!-- Plan-Clase-Proyecto P2 — hito del proyecto -->
+          <label v-if="allowMilestones" class="flex items-center gap-2 mt-3">
+            <input
+              v-model="form.milestone"
+              type="checkbox"
+              class="!mb-0"
+              :disabled="viewing"
+            />
+            <span class="text-sm text-slate-700 dark:text-slate-200">
+              {{ $t('CASE_TICKETS.TASKS.MILESTONE_LABEL') }}
+            </span>
+            <span class="text-xs text-slate-400 dark:text-slate-500">
+              {{ $t('CASE_TICKETS.TASKS.MILESTONE_HINT') }}
+            </span>
+          </label>
+
+          <!-- Plan-Plantilla-Tareas-Etapa — cuenta para pasar a la siguiente etapa -->
+          <label
+            v-if="stagePlan.current && !form.documentation"
+            class="flex items-center gap-2 mt-3"
+          >
+            <input
+              v-model="form.required"
+              type="checkbox"
+              class="!mb-0"
+              :disabled="viewing"
+            />
+            <span class="text-sm text-slate-700 dark:text-slate-200">
+              {{ $t('CASE_TICKETS.TASKS.STAGE.REQUIRED_LABEL') }}
+            </span>
+            <span class="text-xs text-slate-400 dark:text-slate-500">
+              {{
+                $t('CASE_TICKETS.TASKS.STAGE.REQUIRED_FORM_HINT', {
+                  stage: stagePlan.current.label,
+                })
+              }}
+            </span>
+          </label>
 
           <div class="flex items-center justify-end gap-2 mt-4">
             <woot-button
@@ -1031,6 +1309,78 @@ export default {
             </woot-button>
           </div>
         </form>
+      </div>
+    </woot-modal>
+
+    <!-- @tickets_cases F5 (§11.2) — reuniones huérfanas al completar la tarea.
+         Se muestran SIEMPRE antes de tocar nada, y el aviso de que cancelar no
+         se deshace va explícito, no implícito. -->
+    <woot-modal
+      v-if="orphanFor"
+      :show="!!orphanFor"
+      :on-close="closeOrphanDialog"
+      size="medium"
+    >
+      <div class="flex flex-col h-auto overflow-auto">
+        <woot-modal-header
+          :header-title="$t('CASE_TICKETS.TASKS.ORPHAN_MEETINGS.TITLE')"
+          :header-content="
+            $t('CASE_TICKETS.TASKS.ORPHAN_MEETINGS.DESC', {
+              count: orphanMeetings.length,
+              task: orphanFor.title,
+            })
+          "
+        />
+        <div class="flex flex-col self-stretch w-full gap-3 pb-8">
+          <ul class="m-0 list-none">
+            <li
+              v-for="m in orphanMeetings"
+              :key="m.id"
+              class="flex items-center gap-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+            >
+              <span
+                class="font-mono text-xs font-semibold text-slate-400 dark:text-slate-500"
+                >{{ m.folio }}</span
+              >
+              <span class="truncate">{{ m.title }}</span>
+              <span class="text-xs text-slate-500 dark:text-slate-400">{{
+                formatDate(m.starts_at)
+              }}</span>
+            </li>
+          </ul>
+
+          <label class="flex items-center gap-2 m-0">
+            <input v-model="cancelOrphans" type="checkbox" class="m-0" />
+            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+              $t('CASE_TICKETS.TASKS.ORPHAN_MEETINGS.CANCEL_LABEL')
+            }}</span>
+          </label>
+
+          <p
+            v-if="cancelOrphans"
+            class="flex items-center gap-1 m-0 text-xs text-amber-700 dark:text-amber-300"
+          >
+            <fluent-icon icon="info" size="14" />
+            {{ $t('CASE_TICKETS.TASKS.ORPHAN_MEETINGS.IRREVERSIBLE') }}
+          </p>
+
+          <div class="flex items-center justify-end gap-2">
+            <woot-button
+              variant="clear"
+              type="button"
+              @click="closeOrphanDialog"
+            >
+              {{ $t('CASE_TICKETS.TASKS.ORPHAN_MEETINGS.CANCEL') }}
+            </woot-button>
+            <woot-button
+              :is-loading="isCompletingWithMeetings"
+              type="button"
+              @click="confirmComplete"
+            >
+              {{ $t('CASE_TICKETS.TASKS.ORPHAN_MEETINGS.CONFIRM') }}
+            </woot-button>
+          </div>
+        </div>
       </div>
     </woot-modal>
 
@@ -1079,6 +1429,38 @@ export default {
             @click="menuAddNote"
           >
             {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
+          </woot-button>
+        </WootDropdownItem>
+        <!-- Una tarea concluida ya no se agenda: la opción queda visible pero
+             inhabilitada, con el motivo en el tooltip. -->
+        <WootDropdownItem
+          :disabled="rowMenu.row.status === 'done'"
+          :title="
+            rowMenu.row.status === 'done'
+              ? $t('CASE_TICKETS.TASKS.MENU.ADD_MEETING_DONE_HINT')
+              : ''
+          "
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="calendar"
+            :is-disabled="rowMenu.row.status === 'done'"
+            @click="menuAddMeeting"
+          >
+            {{ $t('CASE_TICKETS.TASKS.MENU.ADD_MEETING') }}
+          </woot-button>
+        </WootDropdownItem>
+        <WootDropdownItem>
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="calendar-clock"
+            @click="menuViewMeetings"
+          >
+            {{ $t('CASE_TICKETS.TASKS.MENU.VIEW_MEETINGS') }}
           </woot-button>
         </WootDropdownItem>
         <WootDropdownItem>

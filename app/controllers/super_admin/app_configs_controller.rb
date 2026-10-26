@@ -31,27 +31,29 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
     @config = params[:config] || 'general'
   end
 
+  # Como en Chatwoot 4.19: una tabla en vez de un `case` que crece con cada canal.
+  ALLOWED_CONFIGS = {
+    'facebook' => %w[FB_APP_ID FB_VERIFY_TOKEN FB_APP_SECRET IG_VERIFY_TOKEN FACEBOOK_API_VERSION ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT],
+    # Canal de TikTok. Grupo aparte: sus credenciales no tienen nada que ver con las de Meta.
+    'tiktok' => %w[TIKTOK_APP_ID TIKTOK_APP_SECRET TIKTOK_API_VERSION],
+    # Canal nativo de Instagram. Grupo aparte para no tocar el de facebook.
+    # IG_VERIFY_TOKEN y ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT aparecen en ambos
+    # grupos a propósito: son la misma fila de InstallationConfig y gobiernan
+    # las dos rutas, así que no pueden desincronizarse.
+    'instagram' => %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET INSTAGRAM_VERIFY_TOKEN IG_VERIFY_TOKEN INSTAGRAM_API_VERSION
+                      ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT],
+    'microsoft' => %w[AZURE_APP_ID AZURE_APP_SECRET],
+    'email' => ['MAILER_INBOUND_EMAIL_DOMAIN'],
+    'unoapi' => %w[UNOAPI_AUTH_TOKEN],
+    # proyecto@waba_chatwoot
+    'whatsapp_embedded' => %w[WHATSAPP_EMBEDDED_FACEBOOK_APP_ID WHATSAPP_EMBEDDED_FACEBOOK_APP_SECRET
+                              WHATSAPP_EMBEDDED_FACEBOOK_CONFIG_ID WHATSAPP_EMBEDDED_FACEBOOK_API_VERSION
+                              WABA_EMBEDDED_SIGNUP]
+  }.freeze
+  GENERAL_CONFIGS = %w[ENABLE_ACCOUNT_SIGNUP FIREBASE_PROJECT_ID FIREBASE_CREDENTIALS].freeze
+
   def allowed_configs
-    @allowed_configs = case @config
-                       when 'facebook'
-                         %w[FB_APP_ID FB_VERIFY_TOKEN FB_APP_SECRET IG_VERIFY_TOKEN FACEBOOK_API_VERSION ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT]
-                       # Canal de TikTok. Grupo aparte: sus credenciales no tienen nada
-                       # que ver con las de Meta.
-                       when 'tiktok'
-                         %w[TIKTOK_APP_ID TIKTOK_APP_SECRET TIKTOK_API_VERSION]
-                       when 'microsoft'
-                         %w[AZURE_APP_ID AZURE_APP_SECRET]
-                       when 'email'
-                         ['MAILER_INBOUND_EMAIL_DOMAIN']
-                       when 'unoapi'
-                         %w[UNOAPI_AUTH_TOKEN]
-                       when 'whatsapp_embedded' # proyecto@waba_chatwoot
-                         %w[WHATSAPP_EMBEDDED_FACEBOOK_APP_ID WHATSAPP_EMBEDDED_FACEBOOK_APP_SECRET
-                            WHATSAPP_EMBEDDED_FACEBOOK_CONFIG_ID WHATSAPP_EMBEDDED_FACEBOOK_API_VERSION
-                            WABA_EMBEDDED_SIGNUP]
-                       else
-                         %w[ENABLE_ACCOUNT_SIGNUP FIREBASE_PROJECT_ID FIREBASE_CREDENTIALS]
-                       end
+    @allowed_configs = ALLOWED_CONFIGS.fetch(@config, GENERAL_CONFIGS)
   end
 end
 
