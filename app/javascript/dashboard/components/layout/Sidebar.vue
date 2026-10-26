@@ -94,7 +94,13 @@ export default {
       isOnChatwootCloud: 'globalConfig/isOnChatwootCloud',
       labels: 'labels/getLabelsOnSidebar',
       teams: 'teams/getMyTeams',
+      getAccount: 'accounts/getAccount',
     }),
+    // feat/chat_interno: encendido salvo que el super admin lo apague en la cuenta.
+    internalChatEnabled() {
+      const account = this.getAccount(this.accountId);
+      return Boolean(account && account.internal_chat_enabled);
+    },
 
     // NUEVA: Computed property para kanbanTypes
     kanbanTypes() {
@@ -168,6 +174,11 @@ export default {
 
         if (!isAvailableForTheUser) {
           return false;
+        }
+        // feat/chat_interno: entradas que dependen de un ajuste de la cuenta.
+        if (menuItem.accountSetting) {
+          const account = this.getAccount(this.accountId);
+          return Boolean(account && account[menuItem.accountSetting]);
         }
         if (
           menuItem.alwaysVisibleOnChatwootInstances &&
@@ -252,6 +263,14 @@ export default {
         if (newAccountId) {
           this.loadKanbanTypes();
         }
+      },
+      immediate: true,
+    },
+    // feat/chat_interno: las salas se cargan al entrar para el contador del menú.
+    internalChatEnabled: {
+      handler(enabled) {
+        if (enabled)
+          this.$store.dispatch('internalChat/fetchRooms').catch(() => {});
       },
       immediate: true,
     },

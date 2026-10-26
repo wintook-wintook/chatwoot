@@ -51,6 +51,14 @@ export default {
     };
   },
   methods: {
+    // feat/chat_interno: contador de una entrada (p. ej. no leídos del chat interno).
+    badgeFor(menuItem) {
+      const count = menuItem.badgeGetter
+        ? this.$store.getters[menuItem.badgeGetter]
+        : 0;
+      if (!count) return '';
+      return count > 99 ? '99+' : String(count);
+    },
     frontendURL,
     toggleOptions() {
       this.showOptionsMenu = !this.showOptionsMenu;
@@ -86,6 +94,7 @@ export default {
         :icon="menuItem.icon"
         :name="menuItem.label"
         :to="menuItem.toState"
+        :count="badgeFor(menuItem)"
         :is-child-menu-active="menuItem.key === activeMenuItem"
       />
     </div>

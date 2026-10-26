@@ -260,4 +260,45 @@ Para arrastrar se usa `vuedraggable`, que Chatwoot ya trae.
 
 ## 11. Registro de fases
 
-_(se llena al cerrar cada fase: qué se hizo, cómo funciona y sus pruebas)_
+### F0 – F3 · 26/10/2026 (rama `feat/chat_interno`)
+
+**Qué se hizo**
+- **F0 · Datos e interruptor.** Tablas `internal_chat_rooms`, `internal_chat_members`, `internal_chat_messages`
+  (migración `20261026214739`). Tipos de sala: `general` (una por cuenta, de **todos** sus agentes, sin
+  miembros fijos), `direct` (uno por pareja, `direct_key`) y `group` (dueño + miembros).
+  ⚠️ **Cambio respecto al plan:** no es bandera de `features.yml`. Con 63 banderas el `bigint` ya está
+  lleno y la 64 se desbordaría (2^63 no cabe en un bigint con signo; Chatwoot 4.19 lo resolvió con otra
+  columna). Se guarda solo la excepción en `accounts.custom_attributes['internal_chat_disabled']`
+  (concern `InternalChatToggle`), con la casilla **«Chat interno»** en Super Admin → Accounts.
+- **F1 · API** `/api/v1/accounts/:id/internal_chat/rooms` (+ `messages`, `members`, `read`). Solo los
+  miembros abren una sala; quien no es miembro recibe 404 (ni se entera de que existe), también el
+  administrador (D2). Quitar a un agente de la cuenta lo saca de sus salas en ella.
+- **F2 · Tiempo real** por el `pubsub_token` de cada miembro (`ActionCableBroadcastJob`):
+  `internal_chat.message.created`, `internal_chat.room.updated`, `internal_chat.room.removed`.
+- **F3 · Pantalla.** Entrada **«Chat interno»** en el menú principal (después de Conversaciones), con el
+  contador de no leídos; ruta `/app/accounts/:id/internal-chat/:roomId?`. Izquierda: Grupos (la general
+  primero) y Directos con sus no leídos; derecha: la sala, con «Cargar anteriores», mensajes agrupados por
+  persona y caja de texto (Enter envía, Shift+Enter otra línea). Modal **«Nuevo chat»**: directo o grupo.
+  Los grupos tienen «Salir del grupo».
+
+**Cómo funciona**
+- Backend: `InternalChatRoom/Member/Message`, `InternalChat::RoomList` (no leídos y último mensaje en una
+  consulta cada uno), `InternalChat::Rooms` (abrir directo, crear grupo, miembros),
+  `InternalChat::Broadcaster`, `InternalChat::Presenter`; controladores en `api/v1/accounts/internal_chat/`.
+- Frontend: `api/internalChat.js`, store `internalChat` (eventos de tiempo real en `helper/actionCable.js`),
+  `views/internalChat/` (`Index`, `RoomView`, `NewRoomModal`, `roomHelpers`).
+- La primera vez que un agente entra, la general arranca «leída»: no le salen como pendientes los mensajes
+  viejos de la cuenta.
+
+**Pruebas**
+- RSpec `spec/controllers/api/v1/accounts/internal_chat/internal_chat_api_spec.rb` (18, en `chatwoot_test`):
+  puerta (apagado, otra cuenta), general única, no leídos, directos únicos, grupos, privacidad del
+  administrador, envío y tiempo real solo a miembros, páginas, dueño/administrador, salir, salir de la cuenta, interruptor.
+- Vitest `store/modules/specs/internalChat.spec.js` (9): orden, grupos/directos, no leídos, sin duplicados,
+  sala abierta marca leído, sala desconocida recarga. Menú y bandejas: 61/61.
+- Prueba en dev (cuenta 2): encendido por omisión; la general se crea con sus 5 agentes.
+- ⚠️ Falta probarlo en el navegador con dos agentes a la vez.
+
+**Pendiente (F4–F6):** sonido y aviso del navegador, adjuntos, editar/borrar, «escribiendo…», buscar,
+`#4521` a la conversación, @menciones; renombrar y agregar miembros desde la pantalla (la API ya lo hace).
+

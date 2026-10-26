@@ -46,6 +46,7 @@ import bulkTrackingAssign from './bulkTrackingAssign.json'; // proyecto@bulk_tra
 import trackingCampaigns from './trackingCampaigns.json'; // @campanas_vendedor
 import trackingAssistant from './trackingAssistant.json'; // proyecto@asistente_agentes_ia
 import whatsappCalls from './whatsappCalls.json'; // diag/llamadas_whatsapp
+import internalChat from './internalChat.json'; // feat/chat_interno
 
 export default {
   ...advancedFilters,
@@ -94,4 +95,5 @@ export default {
   ...trackingCampaigns, // @campanas_vendedor
   ...trackingAssistant, // proyecto@asistente_agentes_ia
   ...whatsappCalls, // diag/llamadas_whatsapp
+  ...internalChat, // feat/chat_interno
 };

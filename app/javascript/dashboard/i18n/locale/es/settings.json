@@ -447,7 +447,8 @@
       "SAVE": "Guardar"
     },
     "SHOW_MORE": "Mostrar más ({count})",
-    "SHOW_LESS": "Mostrar menos"
+    "SHOW_LESS": "Mostrar menos",
+    "INTERNAL_CHAT": "Chat interno"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Facturación",

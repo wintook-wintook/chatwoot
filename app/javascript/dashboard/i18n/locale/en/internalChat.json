@@ -1,0 +1,38 @@
+{
+  "INTERNAL_CHAT": {
+    "TITLE": "Team chat",
+    "NEW": "New",
+    "GROUPS": "Groups",
+    "DIRECTS": "Direct messages",
+    "GENERAL": "general",
+    "EMPTY_DIRECTS": "You have no direct chats yet.",
+    "PICK_ROOM": "Pick a chat or start a new one.",
+    "DISABLED": "Team chat is not enabled for this account.",
+    "LOAD_ERROR": "Could not load the chat. Try again.",
+    "MEMBERS": "{count} members",
+    "EVERYONE": "Every agent in the account",
+    "LOAD_OLDER": "Load older messages",
+    "NO_MESSAGES": "No messages yet. Write the first one.",
+    "PLACEHOLDER": "Write a message… (Enter to send, Shift+Enter for a new line)",
+    "SEND": "Send",
+    "SEND_ERROR": "Could not send the message.",
+    "DELETED": "Message deleted",
+    "YOU": "You",
+    "LEAVE": "Leave group",
+    "LEAVE_CONFIRM": "Leave this group? You will stop seeing its messages.",
+    "NEW_ROOM": {
+      "TITLE": "New chat",
+      "DESCRIPTION": "Talk to one agent or create a group with several.",
+      "DIRECT": "Direct",
+      "GROUP": "Group",
+      "AGENT": "Agent",
+      "AGENTS": "Agents",
+      "GROUP_NAME": "Group name",
+      "GROUP_NAME_PLACEHOLDER": "For example: sales",
+      "SELECT_PLACEHOLDER": "Search an agent",
+      "CREATE": "Open chat",
+      "CANCEL": "Cancel",
+      "ERROR": "Could not open the chat."
+    }
+  }
+}

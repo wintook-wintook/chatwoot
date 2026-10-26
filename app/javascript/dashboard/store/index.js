@@ -74,6 +74,7 @@ import externalDb from './modules/externalDb';
 import whatsappTemplates from './modules/whatsappTemplates';
 // proyecto@google_calendar
 import googleCalendar from './modules/googleCalendar';
+import internalChat from './modules/internalChat'; // feat/chat_interno
 
 const plugins = [];
 
@@ -141,6 +142,7 @@ export default new Vuex.Store({
     caseReports: CaseReports, // proyecto@metricas_casos
     externalDb, // @query_databases
     whatsappTemplates, // @waba_templates
+    internalChat, // feat/chat_interno
   },
   plugins,
 });

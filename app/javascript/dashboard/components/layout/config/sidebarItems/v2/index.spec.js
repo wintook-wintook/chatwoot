@@ -24,6 +24,7 @@ describe('Menú v2', () => {
     expect(primary.map(item => item.key)).toEqual([
       'inicio',
       'conversations',
+      'internal_chat', // feat/chat_interno
       'agenda',
       'ventas',
       'servicio',
