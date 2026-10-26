@@ -23,6 +23,7 @@
       "ERROR": "No se pudo abrir el chat."
     },
     "TEAM_MEMBERS": "Equipo · {count} miembros",
-    "EMPTY_LIST": "No hay chats en esta pestaña."
+    "EMPTY_LIST": "No hay chats en esta pestaña.",
+    "DIRECT": "Chat directo"
   }
 }

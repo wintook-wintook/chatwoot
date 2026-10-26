@@ -1,27 +1,26 @@
 <script>
-// feat/chat_interno (F3) — UNA SALA ABIERTA
+// feat/chat_interno — UNA SALA ABIERTA, con las piezas REALES de una conversación
 // ============================================================================
-// Mensajes del más viejo al más nuevo, agrupados por quien escribe (el nombre y la foto
-// salen solo cuando cambia de persona o pasan más de 5 minutos). «Cargar anteriores»
-// pide la página de antes. Enter envía; Shift+Enter hace otra línea.
-// El texto se pinta como texto ({{ }}), nunca como HTML.
+// Encabezado con el marcado de ConversationHeader, burbujas con Message.vue dentro del
+// mismo <ul class="conversation-panel"> que MessagesView (lo mío a la derecha, lo de
+// otros a la izquierda con su foto: showSenderAvatar; sin menú: hideContextMenu) y caja de
+// respuesta como ReplyBox en los canales sin texto enriquecido (ResizableTextArea).
+// Enter envía; Shift+Enter hace otra línea. Ver adapters.js.
 // ============================================================================
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import Thumbnail from 'dashboard/components/widgets/Thumbnail.vue';
+import Message from 'dashboard/components/widgets/conversation/Message.vue';
 import ResizableTextArea from 'shared/components/ResizableTextArea.vue';
-import { messageStamp } from 'shared/helpers/timeHelper';
-import { memberName, otherMember, roomTitle } from './roomHelpers';
-
-const GROUP_WINDOW_SECONDS = 5 * 60;
+import { roomContact, toMessage } from './adapters';
 
 export default {
-  components: { Thumbnail, ResizableTextArea },
+  components: { Thumbnail, Message, ResizableTextArea },
   props: {
     room: { type: Object, required: true },
   },
   data() {
-    return { draft: '', loadingOlder: false };
+    return { draft: '', loadingOlder: false, isFocused: false };
   },
   computed: {
     ...mapGetters({
@@ -29,30 +28,31 @@ export default {
       messagesFor: 'internalChat/messagesFor',
       hasMoreFor: 'internalChat/hasMoreFor',
       uiFlags: 'internalChat/uiFlags',
+      globalConfig: 'globalConfig/get',
     }),
-    messages() {
-      return this.messagesFor(this.room.id);
-    },
-    hasMore() {
-      return this.hasMoreFor(this.room.id);
-    },
-    title() {
-      return roomTitle(
+    contact() {
+      return roomContact(
         this.room,
         this.currentUserId,
         this.$t('INTERNAL_CHAT.GENERAL')
       );
     },
+    messages() {
+      return this.messagesFor(this.room.id).map(message =>
+        toMessage(message, this.currentUserId, this.room)
+      );
+    },
+    hasMore() {
+      return this.hasMoreFor(this.room.id);
+    },
     subtitle() {
-      if (this.room.kind === 'general')
-        return this.$t('INTERNAL_CHAT.EVERYONE');
-      if (this.room.kind === 'direct') {
-        const other = otherMember(this.room, this.currentUserId);
-        return other ? other.availability_status || '' : '';
+      if (this.room.kind === 'general') return this.$t('INTERNAL_CHAT.EVERYONE');
+      if (this.room.kind === 'team') {
+        return this.$t('INTERNAL_CHAT.TEAM_MEMBERS', {
+          count: (this.room.member_ids || []).length,
+        });
       }
-      return this.$t('INTERNAL_CHAT.TEAM_MEMBERS', {
-        count: (this.room.member_ids || []).length,
-      });
+      return this.$t('INTERNAL_CHAT.DIRECT');
     },
     canSend() {
       return this.draft.trim().length > 0 && !this.uiFlags.sending;
@@ -67,29 +67,6 @@ export default {
     this.$nextTick(this.scrollToBottom);
   },
   methods: {
-    senderName(message) {
-      if (message.sender && message.sender.id === this.currentUserId) {
-        return this.$t('INTERNAL_CHAT.YOU');
-      }
-      return memberName(message.sender);
-    },
-    // ¿Este mensaje abre un bloque nuevo (otra persona o pasaron 5 minutos)?
-    startsBlock(index) {
-      if (index === 0) return true;
-      const previous = this.messages[index - 1];
-      const current = this.messages[index];
-      const sameSender =
-        previous.sender &&
-        current.sender &&
-        previous.sender.id === current.sender.id;
-      return (
-        !sameSender ||
-        current.created_at - previous.created_at > GROUP_WINDOW_SECONDS
-      );
-    },
-    time(message) {
-      return messageStamp(message.created_at, 'HH:mm');
-    },
     scrollToBottom() {
       const list = this.$refs.list;
       if (list) list.scrollTop = list.scrollHeight;
@@ -138,99 +115,108 @@ export default {
 </script>
 
 <template>
-  <section class="flex flex-col flex-1 h-full min-w-0 min-h-0">
-    <header
-      class="flex items-center justify-between h-14 gap-2 px-4 border-b shrink-0 border-slate-50 dark:border-slate-800/50"
+  <section
+    class="flex flex-col flex-1 h-full min-w-0 min-h-0 bg-white dark:bg-slate-900"
+  >
+    <div
+      class="flex items-center justify-between px-4 py-2 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
-      <div class="min-w-0">
-        <h3
-          class="m-0 text-sm font-semibold truncate text-slate-800 dark:text-slate-100"
+      <div class="flex items-center justify-start max-w-full min-w-0 w-fit">
+        <Thumbnail
+          :src="contact.thumbnail"
+          :username="contact.name"
+          :status="contact.availability_status"
+        />
+        <div
+          class="flex flex-col items-start min-w-0 ml-2 overflow-hidden rtl:ml-0 rtl:mr-2 w-fit"
         >
-          {{ title }}
-        </h3>
-        <p class="m-0 text-xs truncate text-slate-500 dark:text-slate-400">
-          {{ subtitle }}
-        </p>
-      </div>
-    </header>
-
-    <div ref="list" class="flex-1 min-h-0 px-4 py-3 overflow-auto">
-      <div v-if="hasMore" class="flex justify-center mb-3">
-        <woot-button
-          size="small"
-          variant="clear"
-          color-scheme="secondary"
-          :is-loading="loadingOlder"
-          @click="loadOlder"
-        >
-          {{ $t('INTERNAL_CHAT.LOAD_OLDER') }}
-        </woot-button>
-      </div>
-      <p
-        v-if="!messages.length && !uiFlags.loadingMessages"
-        class="mt-8 text-sm text-center text-slate-500 dark:text-slate-400"
-      >
-        {{ $t('INTERNAL_CHAT.NO_MESSAGES') }}
-      </p>
-      <div
-        v-for="(message, index) in messages"
-        :key="message.id"
-        class="flex gap-2"
-        :class="startsBlock(index) ? 'mt-3' : 'mt-0.5'"
-      >
-        <div class="w-8 shrink-0">
-          <Thumbnail
-            v-if="startsBlock(index) && message.sender"
-            :src="message.sender.avatar_url"
-            :username="senderName(message)"
-            size="32px"
-          />
-        </div>
-        <div class="min-w-0">
-          <div v-if="startsBlock(index)" class="flex items-baseline gap-2">
-            <span
-              class="text-sm font-semibold text-slate-800 dark:text-slate-100"
-            >
-              {{ senderName(message) }}
-            </span>
-            <span class="text-xs text-slate-400 dark:text-slate-500">
-              {{ time(message) }}
-            </span>
-          </div>
-          <p
-            v-if="message.deleted"
-            class="m-0 text-sm italic text-slate-400 dark:text-slate-500"
+          <span
+            class="text-base font-medium leading-tight truncate text-slate-900 dark:text-slate-100"
           >
-            {{ $t('INTERNAL_CHAT.DELETED') }}
-          </p>
-          <p
-            v-else
-            class="m-0 text-sm break-words whitespace-pre-wrap text-slate-700 dark:text-slate-200"
+            {{ contact.name }}
+          </span>
+          <span
+            class="text-xs truncate conversation--header--actions text-slate-500 dark:text-slate-400"
           >
-            {{ message.content }}
-          </p>
+            {{ subtitle }}
+          </span>
         </div>
       </div>
     </div>
 
-    <footer
-      class="flex items-end gap-2 px-4 py-3 border-t shrink-0 border-slate-50 dark:border-slate-800/50"
-    >
-      <ResizableTextArea
-        v-model="draft"
-        class="flex-1 !mb-0 px-3 py-2 text-sm rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800"
-        :placeholder="$t('INTERNAL_CHAT.PLACEHOLDER')"
-        :min-height="2"
-        @keydown.enter.native="onEnter"
-      />
-      <woot-button
-        icon="send"
-        :is-disabled="!canSend"
-        :is-loading="uiFlags.sending"
-        @click="send"
-      >
-        {{ $t('INTERNAL_CHAT.SEND') }}
-      </woot-button>
-    </footer>
+    <div ref="list" class="flex flex-col flex-1 min-h-0 overflow-auto">
+      <ul class="conversation-panel" :style="globalConfig.conversationStyleCss">
+        <li v-if="hasMore" class="flex justify-center min-h-[4rem]">
+          <woot-button
+            size="small"
+            variant="clear"
+            color-scheme="secondary"
+            :is-loading="loadingOlder"
+            @click="loadOlder"
+          >
+            {{ $t('INTERNAL_CHAT.LOAD_OLDER') }}
+          </woot-button>
+        </li>
+        <li
+          v-if="!messages.length && !uiFlags.loadingMessages"
+          class="flex justify-center min-h-[4rem] text-sm text-slate-500 dark:text-slate-400"
+        >
+          {{ $t('INTERNAL_CHAT.NO_MESSAGES') }}
+        </li>
+        <Message
+          v-for="message in messages"
+          :key="message.id"
+          :data="message"
+          show-sender-avatar
+          hide-context-menu
+        />
+      </ul>
+    </div>
+
+    <div class="reply-box" :class="{ 'is-focused': isFocused }">
+      <div class="reply-box__top">
+        <ResizableTextArea
+          v-model="draft"
+          class="input"
+          :placeholder="$t('INTERNAL_CHAT.PLACEHOLDER')"
+          :min-height="4"
+          @focus="isFocused = true"
+          @blur="isFocused = false"
+          @keydown.enter.native="onEnter"
+        />
+      </div>
+      <div class="flex justify-end px-4 py-3">
+        <woot-button
+          size="small"
+          :is-disabled="!canSend"
+          :is-loading="uiFlags.sending"
+          @click="send"
+        >
+          {{ $t('INTERNAL_CHAT.SEND') }}
+        </woot-button>
+      </div>
+    </div>
   </section>
 </template>
+
+<style lang="scss" scoped>
+// El mismo marco que ReplyBox.vue (sus estilos son scoped, así que se repiten aquí).
+.reply-box {
+  transition: box-shadow 0.35s cubic-bezier(0.37, 0, 0.63, 1);
+  @apply relative border-t border-slate-50 dark:border-slate-700 bg-white dark:bg-slate-900;
+
+  &.is-focused {
+    box-shadow:
+      0 1px 3px 0 rgba(0, 0, 0, 0.1),
+      0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  }
+}
+
+.reply-box__top {
+  @apply relative py-0 px-4 -mt-px border-t border-solid border-slate-50 dark:border-slate-700;
+
+  ::v-deep textarea {
+    @apply shadow-none border-transparent bg-transparent m-0 max-h-60 min-h-[3rem] pt-4 pb-0 px-0 resize-none;
+  }
+}
+</style>

@@ -74,6 +74,18 @@ export default {
       type: Promise,
       default: Promise.resolve({}),
     },
+    // feat/chat_interno: la misma burbuja fuera de una conversación de cliente.
+    // hideContextMenu quita el menú (copiar/borrar/responder llaman a la API de mensajes);
+    // showSenderAvatar muestra foto y «Enviado por» también en los recibidos (en una
+    // sala del chat interno escriben varias personas). Apagadas por omisión.
+    hideContextMenu: {
+      type: Boolean,
+      default: false,
+    },
+    showSenderAvatar: {
+      type: Boolean,
+      default: false,
+    },
   },
   setup() {
     const { formatMessage } = useMessageFormatter();
@@ -285,7 +297,8 @@ export default {
       const { message_type: messageType } = this.data;
       const showTooltip =
         messageType === MESSAGE_TYPE.OUTGOING ||
-        messageType === MESSAGE_TYPE.TEMPLATE;
+        messageType === MESSAGE_TYPE.TEMPLATE ||
+        this.showSenderAvatar;
       return showTooltip
         ? {
             content: `${this.$t('CONVERSATION.SENT_BY')} ${name}`,
@@ -342,6 +355,7 @@ export default {
       if (this.isOutgoing || this.isTemplate) {
         return true;
       }
+      if (this.showSenderAvatar && this.isIncoming) return true;
       return this.isATweet && this.isIncoming && this.sender;
     },
     senderNameForAvatar() {
@@ -352,6 +366,7 @@ export default {
         const { name = this.$t('CONVERSATION.BOT') } = this.sender || {};
         return name;
       }
+      if (this.showSenderAvatar) return this.sender.name || '';
       return '';
     },
     isEmailContentType() {
@@ -604,7 +619,7 @@ export default {
       class="invisible context-menu-wrap group-hover:visible"
     >
       <ContextMenu
-        v-if="isBubble && !isMessageDeleted"
+        v-if="isBubble && !isMessageDeleted && !hideContextMenu"
         :context-menu-position="contextMenuPosition"
         :is-open="showContextMenu"
         :enabled-options="contextMenuEnabledOptions"

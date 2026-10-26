@@ -62,6 +62,15 @@ export default {
       type: Boolean,
       default: false,
     },
+    // feat/chat_interno: la misma tarjeta para algo que no es una conversación de cliente.
+    // { contact: { name, thumbnail, availability_status }, isActive, onSelect(chat) }:
+    // nombre y foto vienen de aquí (no de contactos), el marcado también, y el clic llama a
+    // onSelect en vez de abrir una conversación. Sin casilla de selección ni menú. Apagada
+    // por omisión: Conversaciones no cambia.
+    standalone: {
+      type: Object,
+      default: null,
+    },
     enableContextMenu: {
       type: Boolean,
       default: false,
@@ -86,6 +95,7 @@ export default {
       callInfo: 'webphone/getCallInfo',
     }),
     bulkActionCheck() {
+      if (this.standalone) return !this.hideThumbnail;
       return !this.hideThumbnail && !this.hovered && !this.selected;
     },
     chatMetadata() {
@@ -97,12 +107,14 @@ export default {
     },
 
     currentContact() {
+      if (this.standalone) return this.standalone.contact || {};
       return this.$store.getters['contacts/getContact'](
         this.chatMetadata.sender.id
       );
     },
 
     isActiveChat() {
+      if (this.standalone) return Boolean(this.standalone.isActive);
       return this.currentChat.id === this.chat.id;
     },
 
@@ -155,6 +167,10 @@ export default {
   },
   methods: {
     onCardClick(e) {
+      if (this.standalone) {
+        this.standalone.onSelect(this.chat);
+        return;
+      }
       const { activeInbox, chat } = this;
       const path = frontendURL(
         conversationUrl({
@@ -193,7 +209,7 @@ export default {
       this.$emit(action, this.chat.id, this.inbox.id);
     },
     openContextMenu(e) {
-      if (!this.enableContextMenu) return;
+      if (!this.enableContextMenu || this.standalone) return;
       e.preventDefault();
       this.$emit('contextMenuToggle', true);
       this.contextMenu.x = e.pageX || e.clientX;
@@ -254,7 +270,11 @@ export default {
     @click="onCardClick"
     @contextmenu="openContextMenu($event)"
   >
-    <label v-if="hovered || selected" class="checkbox-wrapper" @click.stop>
+    <label
+      v-if="!standalone && (hovered || selected)"
+      class="checkbox-wrapper"
+      @click.stop
+    >
       <input
         :value="selected"
         :checked="selected"
