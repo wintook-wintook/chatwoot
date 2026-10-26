@@ -762,7 +762,7 @@ El correo (prospección en frío) entra como fase 2 en cuanto haya bandeja de co
 |---|---|
 | D1 | ¿«Prospección» es un módulo nuevo o la evolución de Campañas de seguimiento? (Recomendación: **evolución**: la campaña, la inscripción, los toques con IA y la medición de entrega ya existen) |
 | D2 | ¿A quién se le va a escribir? ¿Solo contactos con permiso (clientes, cotizaciones, formularios) o también bases externas? Esto define cuánto pesa P0 |
-| D3 | ¿Qué categorías de respuesta, exactamente? (propuesta en P1 y en §8.1: 5 etapas + 3 salidas; falta OK) |
+| D3 | ~~¿Qué categorías de respuesta, exactamente?~~ **Resuelta 26/10/2026:** las 5 etapas + 3 salidas de §8.1 |
 | D4 | ¿Quién recibe al interesado: el embudo, un vendedor fijo, reparto por turnos? ¿Con qué plazo? |
 | D5 | ¿De dónde sale el «valor»: cotización, caso, lo declara el vendedor? |
 | D6 | ~~¿Solo WhatsApp o también llamada / correo como pasos?~~ **Resuelta 26/10/2026:** WhatsApp ya, solo con contactos con permiso; correo en fase 2 para el frío (§8.4); llamada, después |
