@@ -5,6 +5,8 @@ export const isASubmittedFormMessage = (message = {}) =>
 export const MESSAGE_MAX_LENGTH = {
   GENERAL: 10000,
   FACEBOOK: 1000,
+  // https://business-api.tiktok.com/portal/docs?id=1832184403754242
+  TIKTOK: 6000,
   TWILIO_SMS: 320,
   TWILIO_WHATSAPP: 1600,
   EMAIL: 25000,

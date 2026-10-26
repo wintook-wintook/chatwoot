@@ -101,6 +101,7 @@ class Account < ApplicationRecord
   has_many :telegram_bots, dependent: :destroy_async
   has_many :telegram_channels, dependent: :destroy_async, class_name: '::Channel::Telegram'
   has_many :twilio_sms, dependent: :destroy_async, class_name: '::Channel::TwilioSms'
+  has_many :tiktok_channels, dependent: :destroy_async, class_name: '::Channel::Tiktok'
   has_many :twitter_profiles, dependent: :destroy_async, class_name: '::Channel::TwitterProfile'
   has_many :users, through: :account_users
   has_many :web_widgets, dependent: :destroy_async, class_name: '::Channel::WebWidget'
