@@ -209,8 +209,16 @@ export default {
         ];
       }
       const last = this.inboxGroups.length - 1;
-      return this.inboxGroups.map((group, index) => ({
+      // Título «Bandejas de entrada» arriba de los grupos (solo texto, no se pliega).
+      const heading = {
+        icon: 'folder',
+        label: 'INBOXES',
+        key: 'inbox_heading',
+        children: [],
+      };
+      const groups = this.inboxGroups.map((group, index) => ({
         ...base,
+        nested: true,
         label: `INBOX_GROUPS.${group.key.toUpperCase()}`,
         key: `inbox_group_${group.key}`,
         foldKey: group.key,
@@ -229,6 +237,7 @@ export default {
           reauthorizationRequired: inbox.reauthorization_required,
         })),
       }));
+      return [heading, ...groups];
     },
     // Justo debajo de «No Atendidas»: abre el modal para ordenar los grupos.
     sortInboxesItem() {
