@@ -262,6 +262,7 @@ export default {
         showModalForNewItem: true,
         modalName: 'AddLabel',
         dataTestid: 'sidebar-new-label-button',
+        childLimit: 10, // «Mostrar más» después de las primeras 10
         children: this.labels.map(label => ({
           id: label.id,
           label: label.title,
@@ -279,6 +280,7 @@ export default {
         icon: 'number-symbol',
         label: 'TAGGED_WITH',
         hasSubMenu: true,
+        childLimit: 10, // «Mostrar más» después de las primeras 10
         key: 'label',
         newLink: this.showNewLink(FEATURE_FLAGS.TEAM_MANAGEMENT),
         newLinkTag: 'NEW_LABEL',

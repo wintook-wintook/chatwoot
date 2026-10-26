@@ -445,7 +445,9 @@
       "RESET": "Reset",
       "CANCEL": "Cancel",
       "SAVE": "Save"
-    }
+    },
+    "SHOW_MORE": "Show more ({count})",
+    "SHOW_LESS": "Show less"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Billing",

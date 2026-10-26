@@ -36,6 +36,10 @@ export default {
       isEnterprise,
     };
   },
+  data() {
+    // «Mostrar más» de una sección con `childLimit` (p. ej. Etiquetas).
+    return { showAllChildren: false };
+  },
   computed: {
     ...mapGetters({
       activeInbox: 'getSelectedInbox',
@@ -59,6 +63,24 @@ export default {
           !child.featureFlag ||
           this.isFeatureEnabledonAccount(this.accountId, child.featureFlag)
       );
+    },
+    // Con `childLimit` se ven los primeros N; los demás con «Mostrar más». La opción
+    // abierta en este momento se ve siempre, aunque esté más abajo.
+    hasChildLimit() {
+      const limit = this.menuItem.childLimit;
+      return !!limit && this.visibleChildren.length > limit;
+    },
+    shownChildren() {
+      if (!this.hasChildLimit || this.showAllChildren)
+        return this.visibleChildren;
+      const limit = this.menuItem.childLimit;
+      const current = this.$route && this.$route.path;
+      return this.visibleChildren.filter(
+        (child, index) => index < limit || child.toState === current
+      );
+    },
+    hiddenChildrenCount() {
+      return this.visibleChildren.length - this.shownChildren.length;
     },
     isCollapsibleGroup() {
       return this.hasSubMenu && !!this.menuItem.collapsible;
@@ -353,7 +375,7 @@ export default {
       :class="{ 'pl-3 rtl:pl-0 rtl:pr-3': hasHeaderToggle }"
     >
       <SecondaryChildNavItem
-        v-for="child in visibleChildren"
+        v-for="child in shownChildren"
         :key="child.id"
         :to="child.toState"
         :label="child.translate ? $t(`SIDEBAR.${child.label}`) : child.label"
@@ -364,6 +386,21 @@ export default {
         :show-child-count="showChildCount(child.count)"
         :child-item-count="child.count"
       />
+      <li v-if="hasChildLimit" class="pl-1">
+        <woot-button
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          :icon="showAllChildren ? 'chevron-up' : 'chevron-down'"
+          @click="showAllChildren = !showAllChildren"
+        >
+          {{
+            showAllChildren
+              ? $t('SIDEBAR.SHOW_LESS')
+              : $t('SIDEBAR.SHOW_MORE', { count: hiddenChildrenCount })
+          }}
+        </woot-button>
+      </li>
       <Policy :permissions="['administrator']">
         <router-link
           v-if="menuItem.newLink"

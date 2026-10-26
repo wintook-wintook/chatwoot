@@ -60,3 +60,12 @@
 - Pruebas existentes del menú: 53/53. Eslint sin avisos nuevos (los 24 de `Secondary.vue` ya venían de develop).
 - Backend: `profiles#update` acepta el orden anidado por cuenta en `ui_settings` (verificado).
 - ⚠️ Falta probarlo en el navegador.
+
+## Ajustes posteriores (26/10/2026)
+
+- **Título «Bandejas de entrada»** después de «Ordenar bandejas…»; los grupos cuelgan de él (un poco adentro).
+- **Etiquetas con «Mostrar más»:** la lista muestra las primeras **10**; abajo, «Mostrar más (N)» /
+  «Mostrar menos», con el mismo estilo que «Nueva etiqueta». La etiqueta abierta se ve siempre
+  aunque esté más abajo. Igual en «Etiquetado con» del menú de Contactos.
+  Es genérico: cualquier sección con `childLimit: N` en `Secondary.vue` lo usa
+  (`SecondaryNavItem.vue`: `hasChildLimit`, `shownChildren`, `hiddenChildrenCount`).
