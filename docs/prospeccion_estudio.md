@@ -693,14 +693,14 @@ Valor esperado = Σ (valor del trato × probabilidad de su etapa)
   ej.: Interesado 20 % · Cita 50 % · Cotización enviada 70 %
 ```
 
-### 8.4 Canales: WhatsApp primero, correo después (D6)
+### 8.4 Canales: WhatsApp con permiso ya; correo para el frío (D6)
 
 El canal **no lo elige la campaña: lo hereda del Agente IA**. Al crear la campaña se copia la
 bandeja del agente (`bulk_assign_service.rb:192`) y todo sale por ahí (`tracking_builder.rb:9`).
 Un Agente IA tiene **una sola bandeja**.
 
 ```
- FASE 1 (ahora)                            FASE 2 (con bandeja de correo)
+ FASE 1 (ahora): contactos CON permiso      FASE 2: prospección EN FRÍO
  ┌────────────────────────┐                ┌────────────────────────┐
  │ Agente IA «Prospección │                │ Agente IA «Prospección │
  │   WhatsApp»            │                │   Correo» (copia)      │
@@ -716,11 +716,12 @@ Un Agente IA tiene **una sola bandeja**.
 
 | Canal | ¿Se puede escribir en frío? | Requisito del contacto | En campañas hoy |
 |---|---|---|---|
-| WhatsApp | Sí, con plantilla aprobada por Meta (una por toque, `contact_tracking.rb:228`) | Teléfono | ✅ |
-| Correo | Sí | Correo | ✅ acepta el contacto (`eligibility.rb:39`); **nunca probado con agentes de IA** |
+| WhatsApp | **No.** La política de Meta exige que la persona te haya dado su número y su permiso (opt-in); la plantilla aprobada (una por toque, `contact_tracking.rb:228`) **no sustituye** el permiso | Teléfono + permiso | ✅ solo para contactos con permiso |
+| Correo | Sí (es el canal de entrada en frío; ver §3.2 para México) | Correo | ✅ acepta el contacto (`eligibility.rb:39`); **nunca probado con agentes de IA** |
 | SMS | Sí | Teléfono | ✅ |
 | Telegram, Messenger, Instagram, TikTok | No: el cliente escribe primero | Conversación previa | Solo para seguimiento, no para prospectar |
 
+- **WhatsApp no sirve para el primer contacto en frío** (objetivo del estudio: clientes que aún no nos conocen, D2 = bases externas). La fase 1 por WhatsApp prueba etapas, clasificación y medición con contactos que **ya dieron permiso** (clientes, cotizaciones, formularios). El frío entra por **correo** (fase 2) y pasa a WhatsApp solo cuando la persona da su número y su permiso.
 - **Baja por contacto, no por canal:** quien dice «no me escriban» por WhatsApp tampoco recibe correo.
 - **Tasas por canal:** el correo en frío responde mucho menos que WhatsApp; mezclarlas engaña.
 - Cuando exista «agente con varias bandejas», los dos agentes se juntan en uno.
@@ -747,10 +748,11 @@ bandejas. La IMAP se revisa cada minuto (`config/schedule.yml:26`).
  Etapas + salidas  ──▶  Medir las tasas reales ──▶  Puntuación 0–100
  + lista de baja        (embudo inverso,            con pesos calibrados
  (P0 + P1), WhatsApp    por canal)
+ con permiso
  ahora                  después de 2–4 semanas      cuando ya hay datos
 ```
 
-Correo entra como fase 2 en cualquier paso, en cuanto haya bandeja de correo y se verifique el asunto.
+El correo (prospección en frío) entra como fase 2 en cuanto haya bandeja de correo y se verifique el asunto.
 
 ---
 
@@ -763,7 +765,7 @@ Correo entra como fase 2 en cualquier paso, en cuanto haya bandeja de correo y s
 | D3 | ¿Qué categorías de respuesta, exactamente? (propuesta en P1 y en §8.1: 5 etapas + 3 salidas; falta OK) |
 | D4 | ¿Quién recibe al interesado: el embudo, un vendedor fijo, reparto por turnos? ¿Con qué plazo? |
 | D5 | ¿De dónde sale el «valor»: cotización, caso, lo declara el vendedor? |
-| D6 | ~~¿Solo WhatsApp o también llamada / correo como pasos?~~ **Resuelta 26/10/2026:** WhatsApp primero y correo en fase 2 (§8.4); llamada, después |
+| D6 | ~~¿Solo WhatsApp o también llamada / correo como pasos?~~ **Resuelta 26/10/2026:** WhatsApp ya, solo con contactos con permiso; correo en fase 2 para el frío (§8.4); llamada, después |
 | D7 | Validación legal (LFPDPPP, REPEP) antes de ofrecerlo a clientes |
 
 ---
