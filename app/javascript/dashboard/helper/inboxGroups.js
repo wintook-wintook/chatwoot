@@ -86,3 +86,15 @@ export const groupInboxes = (inboxes, order) => {
     .filter(key => buckets[key] && buckets[key].length)
     .map(key => ({ key, inboxes: buckets[key].sort(byName) }));
 };
+
+// ── Acordeón del menú: un solo grupo abierto ─────────────────────────────────
+// chosen: '' = el agente aún no elige (abre el primero), null = todos cerrados,
+// 'meta' = el que abrió.
+export const resolveOpenGroup = (chosen, groups) => {
+  if (chosen !== '') return chosen;
+  return groups && groups.length ? groups[0].key : null;
+};
+
+// Abrir uno cierra los demás; volver a tocar el abierto lo cierra.
+export const toggleOpenGroup = (openKey, clickedKey) =>
+  openKey === clickedKey ? null : clickedKey;

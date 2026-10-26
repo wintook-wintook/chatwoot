@@ -14,6 +14,9 @@ import {
   UI_SETTINGS_KEY,
   groupInboxes,
   groupOrderFromUISettings,
+  inboxGroupFor,
+  resolveOpenGroup,
+  toggleOpenGroup,
 } from 'dashboard/helper/inboxGroups'; // feat/bandejas_por_tipo
 import InboxGroupsOrderModal from './InboxGroupsOrderModal.vue';
 
@@ -73,11 +76,21 @@ export default {
       openGroup: null,
       caseSettingsRequested: false, // @tickets_cases
       showInboxOrderModal: false, // feat/bandejas_por_tipo
+      // Grupo de bandejas abierto (acordeón): '' = aún no elige → el primero;
+      // null = todos cerrados.
+      openInboxGroup: '',
     };
   },
   // @tickets_cases — los ítems con `visibleGetter` dependen de la configuración
   // del módulo de casos: se pide una vez cuando el menú los trae.
   watch: {
+    // feat/bandejas_por_tipo: al entrar a una bandeja se abre su grupo.
+    // (también cuando las bandejas terminan de cargar después de la ruta).
+    '$route.params.inbox_id': {
+      immediate: true,
+      handler: 'openGroupOfCurrentInbox',
+    },
+    inboxes: 'openGroupOfCurrentInbox',
     // Menú v2: al estar en una pantalla de un grupo plegable, el grupo se abre.
     '$route.name': {
       immediate: true,
@@ -165,6 +178,9 @@ export default {
         this.inboxGroups.map(group => [group.key, group.inboxes.length])
       );
     },
+    effectiveOpenInboxGroup() {
+      return resolveOpenGroup(this.openInboxGroup, this.inboxGroups);
+    },
     canSeeInboxes() {
       return !(
         this.hideAllInboxForAgents && this.currentRole !== 'administrator'
@@ -197,7 +213,8 @@ export default {
         ...base,
         label: `INBOX_GROUPS.${group.key.toUpperCase()}`,
         key: `inbox_group_${group.key}`,
-        foldKey: `${this.accountId}:${group.key}`,
+        foldKey: group.key,
+        folded: group.key !== this.effectiveOpenInboxGroup,
         labelCount: group.inboxes.length,
         // «Nueva bandeja» una sola vez, al final del último grupo.
         newLink:
@@ -471,6 +488,15 @@ export default {
     },
   },
   methods: {
+    // Acordeón: abrir uno cierra los demás; volver a tocar el abierto lo cierra.
+    onFoldInboxGroup(key) {
+      this.openInboxGroup = toggleOpenGroup(this.effectiveOpenInboxGroup, key);
+    },
+    openGroupOfCurrentInbox() {
+      const inboxId = Number(this.$route.params.inbox_id);
+      const inbox = inboxId && this.inboxes.find(item => item.id === inboxId);
+      if (inbox) this.openInboxGroup = inboxGroupFor(inbox);
+    },
     onMenuAction(action) {
       if (action === 'sortInboxes') this.showInboxOrderModal = true;
     },
@@ -534,6 +560,7 @@ export default {
         @addLabel="showAddLabelPopup"
         @addKanbanType="showAddKanbanTypePopup"
         @action="onMenuAction"
+        @fold="onFoldInboxGroup"
       />
     </transition-group>
     <InboxGroupsOrderModal

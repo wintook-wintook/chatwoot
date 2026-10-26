@@ -5,6 +5,8 @@ import {
   groupOrderFromUISettings,
   inboxGroupFor,
   normalizeGroupOrder,
+  resolveOpenGroup,
+  toggleOpenGroup,
 } from '../inboxGroups';
 
 const inbox = (id, name, channelType, extra = {}) => ({
@@ -128,5 +130,22 @@ describe('groupInboxes', () => {
 
   it('returns nothing without inboxes', () => {
     expect(groupInboxes([])).toEqual([]);
+  });
+});
+
+describe('accordion', () => {
+  const groups = [{ key: 'whatsapp' }, { key: 'email' }];
+
+  it('opens the first group until the agent chooses one', () => {
+    expect(resolveOpenGroup('', groups)).toBe('whatsapp');
+    expect(resolveOpenGroup('', [])).toBeNull();
+    expect(resolveOpenGroup('email', groups)).toBe('email');
+    expect(resolveOpenGroup(null, groups)).toBeNull();
+  });
+
+  it('opening one closes the rest, and clicking the open one closes it', () => {
+    expect(toggleOpenGroup('whatsapp', 'email')).toBe('email');
+    expect(toggleOpenGroup('email', 'email')).toBeNull();
+    expect(toggleOpenGroup(null, 'meta')).toBe('meta');
   });
 });

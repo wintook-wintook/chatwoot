@@ -14,17 +14,6 @@ import {
 } from '../../../store/modules/conversations/helpers/actionHelpers';
 import Policy from '../../policy.vue';
 
-// feat/bandejas_por_tipo — grupos de bandejas que se pliegan cada uno por su cuenta.
-// Se recuerda en este navegador (comodidad, no hace falta en el servidor).
-const FOLDED_STORAGE_KEY = 'inbox_groups_folded';
-const readFolded = () => {
-  try {
-    return JSON.parse(window.localStorage.getItem(FOLDED_STORAGE_KEY)) || {};
-  } catch (error) {
-    return {};
-  }
-};
-
 export default {
   components: { SecondaryChildNavItem, Policy },
   props: {
@@ -46,9 +35,6 @@ export default {
       isAdmin,
       isEnterprise,
     };
-  },
-  data() {
-    return { foldedKeys: readFolded() };
   },
   computed: {
     ...mapGetters({
@@ -80,12 +66,13 @@ export default {
     isExpanded() {
       return this.openGroup === this.menuItem.toState;
     },
-    // feat/bandejas_por_tipo: un grupo con `foldKey` se pliega solo, sin acordeón.
+    // feat/bandejas_por_tipo: grupo de bandejas en acordeón. Cuál está abierto lo
+    // decide `Secondary.vue` (menuItem.folded); aquí solo se avisa el clic.
     isFoldable() {
       return this.hasSubMenu && !!this.menuItem.foldKey;
     },
     isFolded() {
-      return this.isFoldable && !!this.foldedKeys[this.menuItem.foldKey];
+      return this.isFoldable && !!this.menuItem.folded;
     },
     hasHeaderToggle() {
       return this.isCollapsibleGroup || this.isFoldable;
@@ -250,18 +237,7 @@ export default {
     },
     toggleGroup() {
       if (this.isFoldable) {
-        this.foldedKeys = {
-          ...this.foldedKeys,
-          [this.menuItem.foldKey]: !this.isFolded,
-        };
-        try {
-          window.localStorage.setItem(
-            FOLDED_STORAGE_KEY,
-            JSON.stringify(this.foldedKeys)
-          );
-        } catch (error) {
-          // Sin almacenamiento el grupo solo se recuerda hasta recargar.
-        }
+        this.$emit('fold', this.menuItem.foldKey);
         return;
       }
       if (this.isCollapsibleGroup) {

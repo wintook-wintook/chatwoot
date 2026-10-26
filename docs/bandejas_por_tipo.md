@@ -2,7 +2,7 @@
 
 > Rama: `feat/bandejas_por_tipo` (desde `develop` fc062ced) · 26/10/2026
 > Plan: `docs/chat_interno_plan.md` §10 (parte B), en la rama `feat/chat_interno`.
-> Decisiones: D8 orden **por agente** · D9 grupos **plegables y recordados** · D10 **con contador** · D11 **PR propio**.
+> Decisiones: D8 orden **por agente** · D9 grupos en **acordeón** (ajuste del 26/10: uno abierto a la vez, el primero por omisión) · D10 **con contador** · D11 **PR propio**.
 
 ## Qué se hizo (B1–B3)
 
@@ -12,11 +12,12 @@
  ├─ Menciones
  ├─ No Atendidas
  ├─ ⇅ Ordenar bandejas…          ← abre el modal
- ├─ ▾ WhatsApp (3)                ← un grupo por tipo, plegable
- ├─ ▾ Telegram (1)
- ├─ ▾ Correo (2)
+ ├─ ▾ WhatsApp (3)                ← abierto: el primero por omisión
+ │    ├─ Ventas MX · Soporte · Cobranza
+ ├─ ▸ Telegram (1)                 ← los demás cerrados (acordeón)
+ ├─ ▸ Correo (2)
  ├─ ▸ Meta (Messenger e Instagram) (2)
- └─ ▾ … Sitio web, TikTok, Otros canales
+ └─ ▸ … Sitio web, TikTok, Otros canales
 ```
 
 - **Grupos por tipo** en lugar de la carpeta única «Bandejas de entrada». Orden por omisión:
@@ -24,7 +25,8 @@
   dentro de cada grupo, las bandejas siguen por nombre.
 - **«Ordenar bandejas…»** justo debajo de «No Atendidas»: modal para arrastrar o usar ▲▼, con
   «Restablecer» y el número de bandejas de cada grupo.
-- **Cada grupo se pliega** por su cuenta y se recuerda en el navegador.
+- **Acordeón:** solo un grupo abierto a la vez. Al entrar está abierto el primero; abrir otro cierra
+  el anterior, y tocar el abierto lo cierra. Al entrar a una bandeja se abre su grupo.
 - «Nueva bandeja» (administradores) aparece una sola vez, al final del último grupo. Sin bandejas
   queda la carpeta de siempre.
 - Se respeta «Ocultar todas las bandejas a los agentes».
@@ -46,12 +48,13 @@
   Meta = `Channel::FacebookPage` + `Channel::Instagram`; Correo = `Channel::Email`; Sitio web =
   `Channel::WebWidget`; TikTok = `Channel::Tiktok`; Otros = SMS, Twilio SMS, Line, API, Twitter y
   cualquier tipo nuevo.
-- **Plegado:** `localStorage['inbox_groups_folded']` con llave `<cuenta>:<grupo>`.
+- **Acordeón:** `Secondary.vue` guarda cuál está abierto (`openInboxGroup`: `''` = el primero, `null` =
+  ninguno); las reglas viven en `resolveOpenGroup` y `toggleOpenGroup` del helper. No se guarda entre recargas.
 
 ## Pruebas
 
-- Vitest `helper/specs/inboxGroups.spec.js` (21): cada tipo de canal, Twilio WhatsApp/SMS, normalizar
-  el orden, orden por cuenta, agrupado por omisión y a la medida, orden por nombre, sin bandejas.
+- Vitest `helper/specs/inboxGroups.spec.js` (23): cada tipo de canal, Twilio WhatsApp/SMS, normalizar
+  el orden, orden por cuenta, agrupado por omisión y a la medida, orden por nombre, sin bandejas y el acordeón.
 - Vitest `sidebarComponents/specs/InboxGroupsOrderModal.spec.js` (5): copia del orden, subir/bajar y
   bordes, restablecer, guardar, textos y contador.
 - Pruebas existentes del menú: 53/53. Eslint sin avisos nuevos (los 24 de `Secondary.vue` ya venían de develop).
