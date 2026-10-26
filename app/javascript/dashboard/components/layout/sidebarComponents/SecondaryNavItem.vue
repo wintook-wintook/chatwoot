@@ -256,7 +256,11 @@ export default {
 </script>
 
 <template>
-  <li v-show="isMenuItemVisible" class="mt-1">
+  <li
+    v-show="isMenuItemVisible"
+    class="mt-1"
+    :class="{ 'pl-2 rtl:pl-0 rtl:pr-2': menuItem.nested }"
+  >
     <div v-if="hasSubMenu" class="flex justify-between">
       <button
         v-if="hasHeaderToggle"
