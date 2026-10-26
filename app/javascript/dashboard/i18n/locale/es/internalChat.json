@@ -22,6 +22,7 @@
       "CANCEL": "Cancelar",
       "ERROR": "No se pudo abrir el chat."
     },
-    "TEAM_MEMBERS": "Equipo · {count} miembros"
+    "TEAM_MEMBERS": "Equipo · {count} miembros",
+    "EMPTY_LIST": "No hay chats en esta pestaña."
   }
 }

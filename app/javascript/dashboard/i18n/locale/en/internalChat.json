@@ -22,6 +22,7 @@
       "CANCEL": "Cancel",
       "ERROR": "Could not open the chat."
     },
-    "TEAM_MEMBERS": "Team · {count} members"
+    "TEAM_MEMBERS": "Team · {count} members",
+    "EMPTY_LIST": "There are no chats in this tab."
   }
 }

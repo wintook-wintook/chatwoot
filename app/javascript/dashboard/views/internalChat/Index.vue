@@ -1,18 +1,20 @@
 <script>
 // feat/chat_interno (F3) — CHAT INTERNO, DENTRO DE CONVERSACIONES
 // ============================================================================
-// Las salas se eligen en el menú de Conversaciones (grupo «Interno»: # general, # cada
-// equipo y los directos). Aquí solo se ve la sala abierta. Sin sala en la dirección se
-// abre la general; con ?new=1 se abre «Nuevo chat».
+// Mismo esquema que la pantalla de conversaciones: la lista de salas en medio (pestañas
+// Mías / Todas) y la sala abierta a la derecha. También se eligen desde el menú de
+// Conversaciones (grupo «Interno»). Sin sala en la dirección se abre la general; con
+// ?new=1 se abre «Nuevo chat».
 // Lo que llega en tiempo real lo mete el store (internalChat/messageCreated…).
 // Plan: docs/chat_interno_plan.md §3
 // ============================================================================
 import { mapGetters } from 'vuex';
 import RoomView from './RoomView.vue';
 import NewRoomModal from './NewRoomModal.vue';
+import InternalChatList from './InternalChatList.vue';
 
 export default {
-  components: { RoomView, NewRoomModal },
+  components: { RoomView, NewRoomModal, InternalChatList },
   data() {
     return { loadError: false };
   },
@@ -75,6 +77,12 @@ export default {
     closeNewRoom() {
       this.$router.replace({ query: {} });
     },
+    openNewRoom() {
+      this.$router.replace({ query: { new: '1' } });
+    },
+    onSelect(room) {
+      if (room.id !== this.roomId) this.goToRoom(room);
+    },
     onCreated(room) {
       this.goToRoom(room);
     },
@@ -97,6 +105,11 @@ export default {
       {{ $t('INTERNAL_CHAT.LOAD_ERROR') }}
     </p>
     <template v-else>
+      <InternalChatList
+        :active-room-id="roomId"
+        @select="onSelect"
+        @new="openNewRoom"
+      />
       <RoomView v-if="activeRoom" :key="activeRoom.id" :room="activeRoom" />
       <p
         v-else-if="!uiFlags.loadingRooms"
