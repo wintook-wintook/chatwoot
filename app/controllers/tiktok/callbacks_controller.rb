@@ -58,22 +58,24 @@ class Tiktok::CallbacksController < ApplicationController
 
   # Volver a autorizar es rehacer este mismo OAuth: se reconoce la cuenta por su
   # business_id y se refrescan credenciales en vez de crear un canal duplicado.
+  # El nombre del inbox NO se toca (paridad 4.19): pudo haberlo cambiado el usuario.
   def reauthorize_channel(channel, details)
-    channel.update!(token_attributes)
-    channel.inbox.update!(name: inbox_name(details))
+    channel.update!(channel_attributes(details))
     channel
   end
 
   def create_channel(details)
     ActiveRecord::Base.transaction do
-      channel = account.tiktok_channels.create!(token_attributes.merge(business_id: credentials[:business_id]))
+      channel = account.tiktok_channels.create!(channel_attributes(details).merge(business_id: credentials[:business_id]))
       account.inboxes.create!(account: account, channel: channel, name: inbox_name(details))
       channel
     end
   end
 
-  def token_attributes
+  # provider_name: el @usuario de TikTok de la cuenta conectada (paridad 4.19).
+  def channel_attributes(details)
     credentials.slice(:access_token, :refresh_token, :expires_at, :refresh_token_expires_at)
+               .merge(provider_name: details[:username])
   end
 
   def inbox_name(details)
