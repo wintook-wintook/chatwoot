@@ -26,6 +26,8 @@ class BulkActionsJob < ApplicationJob
     records.each do |conversation|
       bulk_add_labels(conversation)
       bulk_snoozed_until(conversation)
+      # Asignación en lote = a mano: puede cambiar al responsable fijo del contacto.
+      conversation.manual_assignment = params.to_h.stringify_keys.key?('assignee_id') if params
       conversation.update(params) if params
     end
   end

@@ -231,8 +231,9 @@ export default {
       :show.sync="show" 
       :on-close="handleModalClose" 
       modal-type="right-aligned"
+      size="wide"
     >
-      <div class="flex flex-col h-auto overflow-auto">
+      <div class="flex flex-col h-auto">
         <woot-modal-header 
           :header-title="`${$t('EDIT_CONTACT.TITLE')} - ${contact.name || contact.email}`"
           :header-content="$t('EDIT_CONTACT.DESC')" 

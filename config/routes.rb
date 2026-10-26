@@ -65,6 +65,47 @@ Rails.application.routes.draw do
           resources :agents, only: [:index, :create, :update, :destroy] do
             post :bulk_create, on: :collection
           end
+          # Plan-Roles-Permisos — Ajustes › Roles
+          resources :access_roles, only: [:index, :update] do
+            post :restore, on: :member
+          end
+          # Plan-Trabajo-Campo R4 — equipos del cliente y mantenimientos recurrentes
+          resources :customer_assets, only: [:index, :show, :create, :update]
+          resources :maintenance_plans, only: [:index, :create, :update, :destroy] do
+            post :generate, on: :member
+          end
+          # Plan-Trabajo-Campo R3 — despacho
+          resource :field_dispatch, only: [:show], controller: 'field_dispatch' do
+            post :assign
+          end
+          # Plan-Trabajo-Campo R2 — portal del técnico
+          resources :field_visits, only: [:index, :show] do
+            get :history, on: :collection
+            member do
+              post :on_my_way
+              post :arrive
+              post :finish
+              post :send_to_technician
+            end
+          end
+          # Plan-Catalogo-Cotizaciones V1 — Ventas › Cotizaciones
+          resources :quotes, only: [:index, :show, :create, :update, :destroy] do
+            get :summary, on: :collection
+            member do
+              post :transition
+              post :new_version
+              post :link_opportunity
+              post :deliver
+            end
+          end
+          # Plan-Catalogo-Cotizaciones C1 — Ventas › Catálogo
+          resources :catalog_items, only: [:index, :create, :update] do
+            collection do
+              get :categories
+              get :export
+              post :import
+            end
+          end
           resources :agent_bots, only: [:index, :create, :show, :update, :destroy] do
             delete :avatar, on: :member
           end
@@ -233,6 +274,17 @@ Rails.application.routes.draw do
           # @tickets_cases — Gestor de Tickets
           # =========================================================================
           resources :case_tickets, only: [:index, :show, :create, :update] do
+            # Plan-Trabajo-Campo R1 — reporte de servicio de la orden de trabajo
+            resource :service_report, only: [:show, :update], controller: 'case_service_reports' do
+              post :logs, action: :create_log
+              delete 'logs/:id', action: :destroy_log
+              post :timer
+              post :time_entries, action: :create_time_entry
+              delete 'time_entries/:id', action: :destroy_time_entry
+              post :deliver
+              post :external_link # Plan-Trabajo-Campo R5 — técnico externo
+              delete :external_link, action: :revoke_external_link
+            end
             collection do
               get :metrics
               get :kb_portals
@@ -418,6 +470,8 @@ Rails.application.routes.draw do
             scope module: :contacts do
               resources :conversations, only: [:index]
               resources :contact_inboxes, only: [:create]
+              resource :owner, only: [:show, :update] # Responsable fijo del contacto
+              resource :summary, only: [:show] # Página del contacto › Resumen
               resources :labels, only: [:create, :index]
               resources :notes
             end
@@ -896,7 +950,22 @@ Rails.application.routes.draw do
   # ----------------------------------------------------------------------
   # @tickets_cases — User Portal (P1): superficie pública del cliente (estilo osTicket).
   # Se resuelve por slug (/portal/:slug). HTML server-rendered.
-  get  'portal/:slug',         to: 'public/case_portal#show',   as: :case_portal
+  get  'portal/:slug', to: 'public/case_portal#show', as: :case_portal
+  # Plan-Catalogo-Cotizaciones V1 — la cotización que ve el cliente (enlace sin usuario).
+  get  'cotizacion/:token',          to: 'public/quotes#show', as: :public_quote
+  get  'reporte/:token',             to: 'public/service_reports#show', as: :public_service_report # Plan-Trabajo-Campo R1
+  post 'cotizacion/:token/aceptar',  to: 'public/quotes#accept', as: :public_quote_accept
+  post 'cotizacion/:token/rechazar', to: 'public/quotes#reject', as: :public_quote_reject
+
+  # Plan-Trabajo-Campo R5 — portal del cliente de su orden y visita del técnico externo.
+  get  'servicio/:token',            to: 'public/service_portals#show',  as: :public_service_portal
+  post 'servicio/:token/visita',     to: 'public/service_portals#visit', as: :public_service_portal_visit
+  post 'servicio/:token/calificar',  to: 'public/service_portals#rate',  as: :public_service_portal_rate
+  get  'tecnico/:token',             to: 'public/external_visits#show',   as: :public_external_visit
+  post 'tecnico/:token/llegue',      to: 'public/external_visits#arrive', as: :public_external_visit_arrive
+  post 'tecnico/:token/nota',        to: 'public/external_visits#log',    as: :public_external_visit_log
+  post 'tecnico/:token/termine',     to: 'public/external_visits#finish', as: :public_external_visit_finish
+
   get  'portal/:slug/new',     to: 'public/case_portal#new',    as: :new_case_portal_ticket
   post 'portal/:slug/tickets', to: 'public/case_portal#create', as: :case_portal_tickets
   get  'portal/:slug/status',  to: 'public/case_portal#status', as: :case_portal_status

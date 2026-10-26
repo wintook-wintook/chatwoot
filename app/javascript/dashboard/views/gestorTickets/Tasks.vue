@@ -19,6 +19,10 @@ import { LocalStorage } from 'shared/helpers/localStorage';
 import MyDay from './tasks/MyDay.vue';
 import { formatDay } from 'dashboard/helper/caseCommercial';
 import {
+  allowedAssigneeTabs,
+  getUserAccess,
+} from 'dashboard/helper/accessHelper';
+import {
   ESTIMATE_OPTIONS,
   formatMinutes,
   addDays,
@@ -100,7 +104,6 @@ export default {
   mixins: [caseAiWriter],
   data() {
     return {
-      quickFilters: QUICK_FILTERS,
       // La primera vez abre en Mi día; después, en la última pestaña usada.
       quickFilter: 'my_day',
       // Un juego de filtros por pestaña (ver `filters`, que apunta al de la activa).
@@ -173,8 +176,22 @@ export default {
     totalCount() {
       return this.meta.count || 0;
     },
+    // Plan-Roles-Permisos — con Agenda en «solo lo suyo» no hay «Todas» (y «No
+    // asignadas» solo si el rol puede tomarlas).
+    quickFilters() {
+      const access = getUserAccess(
+        this.currentUser,
+        this.$route.params.accountId
+      );
+      const allowed = allowedAssigneeTabs(
+        access,
+        'agenda',
+        QUICK_FILTERS.map(f => f.key)
+      );
+      return QUICK_FILTERS.filter(f => allowed.includes(f.key));
+    },
     activeQuickTabIndex() {
-      const i = QUICK_FILTERS.findIndex(f => f.key === this.quickFilter);
+      const i = this.quickFilters.findIndex(f => f.key === this.quickFilter);
       return i < 0 ? 0 : i;
     },
     // Filtros de la pestaña activa (el resto de pestañas conserva los suyos).
@@ -552,7 +569,10 @@ export default {
     this.restoreFilters();
     // «Mi resumen» → «Ver todo» abre directo en una pestaña (?tab=my_day).
     const { tab } = this.$route.query || {};
-    if (QUICK_FILTERS.some(f => f.key === tab)) this.quickFilter = tab;
+    if (this.quickFilters.some(f => f.key === tab)) this.quickFilter = tab;
+    if (!this.quickFilters.some(f => f.key === this.quickFilter)) {
+      this.quickFilter = 'my_day';
+    }
   },
   mounted() {
     this.$store.dispatch('agents/get');
@@ -661,7 +681,7 @@ export default {
     onQuickTabChange(index) {
       // Cambiar de pestaña cambia el juego de filtros activo (`filters` apunta
       // al de la pestaña): cada una conserva lo suyo.
-      this.quickFilter = QUICK_FILTERS[index].key;
+      this.quickFilter = this.quickFilters[index].key;
       this.currentPage = 1;
       this.persistFilters();
       this.fetch();

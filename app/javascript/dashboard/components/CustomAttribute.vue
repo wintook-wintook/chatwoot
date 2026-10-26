@@ -16,6 +16,8 @@ export default {
     HelperTextPopup,
   },
   props: {
+    // Un solo renglón «Nombre   valor», como los datos de la página del contacto.
+    inline: { type: Boolean, default: false },
     label: { type: String, required: true },
     description: { type: String, default: '' },
     values: { type: Array, default: () => [] },
@@ -192,8 +194,17 @@ export default {
 </script>
 
 <template>
-  <div class="px-4 py-3">
-    <div class="flex items-center mb-1">
+  <div
+    :class="
+      inline
+        ? 'grid grid-cols-[7.5rem_1fr] items-start gap-2 text-sm'
+        : 'px-4 py-3'
+    "
+  >
+    <div
+      class="flex items-center"
+      :class="{ 'mb-1': !inline, 'min-h-[1.75rem]': inline }"
+    >
       <h4 class="flex items-center w-full m-0 text-sm error">
         <div v-if="isAttributeTypeCheckbox" class="flex items-center">
           <input
@@ -205,12 +216,15 @@ export default {
         </div>
         <div class="flex items-center justify-between w-full">
           <span
-            class="w-full inline-flex gap-1.5 items-start font-medium whitespace-nowrap text-sm mb-0"
-            :class="
+            class="w-full inline-flex gap-1.5 items-start text-sm mb-0"
+            :class="[
+              inline ? 'font-normal' : 'font-medium whitespace-nowrap',
               v$.editedValue.$error
                 ? 'text-red-400 dark:text-red-500'
-                : 'text-slate-800 dark:text-slate-100'
-            "
+                : inline
+                ? 'text-slate-500 dark:text-slate-400'
+                : 'text-slate-800 dark:text-slate-100',
+            ]"
           >
             {{ label }}
             <HelperTextPopup
@@ -220,7 +234,7 @@ export default {
             />
           </span>
           <woot-button
-            v-if="showActions && value"
+            v-if="showActions && value && !inline"
             v-tooltip.left="$t('CUSTOM_ATTRIBUTES.ACTIONS.DELETE')"
             variant="link"
             size="medium"

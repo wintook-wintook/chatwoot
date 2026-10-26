@@ -174,7 +174,7 @@ export default {
     // 🆕 COMPUTED PARA OPCIONES DE FILTROS
     assigneeOptions() {
       const options = [
-        { id: 'all', name: 'Todos los agentes' },
+        { id: 'all', name: 'Todos los usuarios' },
         { id: 'me', name: 'Mis conversaciones' },
         { id: 'unassigned', name: 'Sin asignar' },
       ];

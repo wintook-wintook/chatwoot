@@ -8,11 +8,12 @@
 import { mapGetters } from 'vuex';
 import FieldsTab from './typeDetail/FieldsTab.vue';
 import ColumnsTab from './typeDetail/ColumnsTab.vue';
+import FieldWorkTab from './typeDetail/FieldWorkTab.vue'; // Plan-Trabajo-Campo R1
 import TypeFormModal from './typeDetail/TypeFormModal.vue';
 
 export default {
   name: 'TicketTypeDetail',
-  components: { FieldsTab, ColumnsTab, TypeFormModal },
+  components: { FieldsTab, ColumnsTab, FieldWorkTab, TypeFormModal },
   props: {
     typeId: {
       type: Number,
@@ -49,7 +50,7 @@ export default {
       return fromStore || (this.type ? (this.type.columns || []).length : 0);
     },
     tabs() {
-      return [
+      const tabs = [
         {
           key: 'fields',
           label: this.$t('CASE_TICKETS.TYPES.DETAIL.FIELDS_TAB'),
@@ -61,6 +62,14 @@ export default {
           count: this.columnsCount,
         },
       ];
+      // Plan-Trabajo-Campo R1 — solo las órdenes de trabajo.
+      if (this.type && this.type.case_class === 'work_order') {
+        tabs.push({
+          key: 'field_work',
+          label: this.$t('SERVICE_REPORT.TYPE_SETTINGS.TITLE'),
+        });
+      }
+      return tabs;
     },
   },
   mounted() {
@@ -194,6 +203,7 @@ export default {
         :case-type-id="typeId"
         @changed="refreshCounts"
       />
+      <FieldWorkTab v-if="activeTabIndex === 2 && type" :case-type="type" />
     </template>
 
     <!-- Modal de edición del tipo -->

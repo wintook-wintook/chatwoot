@@ -201,6 +201,7 @@ class Cases::TasksInboxQuery::TaskScope
     scope = filter_status(scope)
     scope = filter_due(scope)
     scope = filter_case_type(scope)
+    scope = filter_contact(scope)
     filter_search(scope)
   end
 
@@ -276,6 +277,13 @@ class Cases::TasksInboxQuery::TaskScope
     scope.joins(:case_ticket).where(case_tickets: { case_type_id: params[:case_type_id] })
   end
 
+  # Pestaña «Tareas» de la página del contacto: las de sus casos.
+  def filter_contact(scope)
+    return scope if params[:contact_id].blank?
+
+    scope.where(case_ticket_id: CaseTicket.where(account_id: account.id, contact_id: params[:contact_id]).select(:id))
+  end
+
   def filter_search(scope)
     return scope if params[:q].blank?
 
@@ -343,6 +351,7 @@ class Cases::TasksInboxQuery::MeetingScope
     scope = filter_requester(scope)
     scope = filter_status(scope)
     scope = filter_case_type(scope)
+    scope = filter_contact(scope)
     filter_search(scope)
   end
 
@@ -410,6 +419,13 @@ class Cases::TasksInboxQuery::MeetingScope
     return scope if params[:case_type_id].blank?
 
     scope.joins(:case_ticket).where(case_tickets: { case_type_id: params[:case_type_id] })
+  end
+
+  # Pestaña «Tareas» de la página del contacto: las de sus casos.
+  def filter_contact(scope)
+    return scope if params[:contact_id].blank?
+
+    scope.where(case_ticket_id: CaseTicket.where(account_id: account.id, contact_id: params[:contact_id]).select(:id))
   end
 
   def filter_search(scope)

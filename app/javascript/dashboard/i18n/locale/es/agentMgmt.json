@@ -1,18 +1,18 @@
 {
   "AGENT_MGMT": {
-    "HEADER": "Agentes",
-    "HEADER_BTN_TXT": "Agregar Agente",
-    "LOADING": "Obteniendo Lista de Agentes",
-    "DESCRIPTION": "Un agente es un miembro de su equipo de soporte al cliente que puede ver y responder a los mensajes de los usuarios. La lista a continuación muestra todos los agentes en su cuenta.",
+    "HEADER": "Usuarios",
+    "HEADER_BTN_TXT": "Agregar usuario",
+    "LOADING": "Obteniendo la lista de usuarios",
+    "DESCRIPTION": "Los usuarios son las personas de tu equipo que entran a Wintook: atienden conversaciones, casos y tareas según su rol. La lista muestra todos los usuarios de tu cuenta.",
     "LEARN_MORE": "Aprender sobre roles de usuario",
     "AGENT_TYPES": {
       "ADMINISTRATOR": "Administrador",
-      "AGENT": "Agente"
+      "AGENT": "Supervisor"
     },
     "LIST": {
-      "404": "No hay agentes asociados a esta cuenta",
-      "TITLE": "Gestionar agentes en su equipo",
-      "DESC": "Puede agregar/eliminar agentes en su equipo.",
+      "404": "No hay usuarios asociados a esta cuenta",
+      "TITLE": "Gestionar usuarios en su equipo",
+      "DESC": "Puede agregar/eliminar usuarios en su equipo.",
       "NAME": "Nombre",
       "EMAIL": "Correo Electrónico",
       "STATUS": "Estado",
@@ -22,13 +22,13 @@
       "AVAILABLE_CUSTOM_ROLE": "Permisos de rol personalizado disponibles"
     },
     "ADD": {
-      "TITLE": "Agregar agente a su equipo",
+      "TITLE": "Agregar usuario a su equipo",
       "DESC": "Puede agregar personas que podrán manejar el soporte para sus bandejas de entrada.",
       "CANCEL_BUTTON_TEXT": "Cancelar",
       "FORM": {
         "NAME": {
-          "LABEL": "Nombre del Agente",
-          "PLACEHOLDER": "Por favor ingrese el nombre del agente"
+          "LABEL": "Nombre del usuario",
+          "PLACEHOLDER": "Por favor ingrese el nombre del usuario"
         },
         "AGENT_TYPE": {
           "LABEL": "Rol",
@@ -37,20 +37,20 @@
         },
         "EMAIL": {
           "LABEL": "Dirección de Correo Electrónico",
-          "PLACEHOLDER": "Por favor ingrese una dirección de correo electrónico del agente"
+          "PLACEHOLDER": "Por favor ingrese una dirección de correo electrónico del usuario"
         },
-        "SUBMIT": "Agregar Agente"
+        "SUBMIT": "Agregar usuario"
       },
       "API": {
-        "SUCCESS_MESSAGE": "Agente agregado exitosamente",
-        "EXIST_MESSAGE": "El correo electrónico del agente ya está en uso, por favor intente con otra dirección de correo electrónico",
+        "SUCCESS_MESSAGE": "Usuario agregado exitosamente",
+        "EXIST_MESSAGE": "El correo electrónico del usuario ya está en uso, por favor intente con otra dirección de correo electrónico",
         "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot, por favor intente más tarde"
       }
     },
     "DELETE": {
       "BUTTON_TEXT": "Eliminar",
       "API": {
-        "SUCCESS_MESSAGE": "Agente eliminado exitosamente",
+        "SUCCESS_MESSAGE": "Usuario eliminado exitosamente",
         "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot, por favor intente más tarde"
       },
       "CONFIRM": {
@@ -61,11 +61,11 @@
       }
     },
     "EDIT": {
-      "TITLE": "Editar agente",
+      "TITLE": "Editar usuario",
       "FORM": {
         "NAME": {
-          "LABEL": "Nombre del Agente",
-          "PLACEHOLDER": "Por favor ingrese el nombre del agente"
+          "LABEL": "Nombre del usuario",
+          "PLACEHOLDER": "Por favor ingrese el nombre del usuario"
         },
         "AGENT_TYPE": {
           "LABEL": "Rol",
@@ -74,25 +74,25 @@
         },
         "EMAIL": {
           "LABEL": "Dirección de Correo Electrónico",
-          "PLACEHOLDER": "Por favor ingrese una dirección de correo electrónico del agente"
+          "PLACEHOLDER": "Por favor ingrese una dirección de correo electrónico del usuario"
         },
         "AGENT_AVAILABILITY": {
           "LABEL": "Disponibilidad",
           "PLACEHOLDER": "Por favor seleccione un estado de disponibilidad",
           "ERROR": "La disponibilidad es obligatoria"
         },
-        "SUBMIT": "Editar Agente"
+        "SUBMIT": "Guardar cambios"
       },
       "BUTTON_TEXT": "Editar",
       "CANCEL_BUTTON_TEXT": "Cancelar",
       "API": {
-        "SUCCESS_MESSAGE": "Agente actualizado exitosamente",
+        "SUCCESS_MESSAGE": "Usuario actualizado exitosamente",
         "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot, por favor intente más tarde"
       },
       "PASSWORD_RESET": {
         "ADMIN_RESET_BUTTON": "Restablecer Contraseña",
-        "ADMIN_SUCCESS_MESSAGE": "Se ha enviado un correo electrónico con instrucciones para restablecer la contraseña al agente",
-        "SUCCESS_MESSAGE": "Contraseña del agente restablecida exitosamente",
+        "ADMIN_SUCCESS_MESSAGE": "Se ha enviado un correo electrónico con instrucciones para restablecer la contraseña al usuario",
+        "SUCCESS_MESSAGE": "Contraseña del usuario restablecida exitosamente",
         "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot, por favor intente más tarde"
       }
     },
@@ -102,20 +102,72 @@
     "MULTI_SELECTOR": {
       "PLACEHOLDER": "Ninguno",
       "TITLE": {
-        "AGENT": "Seleccionar agente",
+        "AGENT": "Seleccionar usuario",
         "TEAM": "Seleccionar equipo"
       },
       "SEARCH": {
         "NO_RESULTS": {
-          "AGENT": "No se encontraron agentes",
+          "AGENT": "No se encontraron usuarios",
           "TEAM": "No se encontraron equipos"
         },
         "PLACEHOLDER": {
-          "AGENT": "Buscar agentes",
+          "AGENT": "Buscar usuarios",
           "TEAM": "Buscar equipos",
-          "INPUT": "Buscar agentes"
+          "INPUT": "Buscar usuarios"
         }
       }
+    }
+  },
+  "ACCESS_ROLES": {
+    "HEADER": "Roles",
+    "DESCRIPTION": "Qué ve y qué puede hacer cada persona según su rol. Cambia las casillas de un rol y se aplica a todos los usuarios que lo tienen. El Administrador ve todo y no se edita.",
+    "LOADING": "Cargando roles",
+    "AGENTS_COUNT": "Sin usuarios | 1 usuario | {count} usuarios",
+    "CUSTOMIZED": "Modificado",
+    "RESTORE": "Restaurar como venía",
+    "RESTORE_CONFIRM": "¿Regresar el rol «{name}» a como venía? Se pierden los cambios que le hiciste.",
+    "SAVED": "Rol guardado",
+    "RESTORED": "Rol restaurado",
+    "ERROR": "No se pudo guardar el rol",
+    "AREAS_TITLE": "A qué entra y qué ve",
+    "ACTIONS_TITLE": "Qué puede hacer",
+    "ADMIN_NOTE": "El Administrador entra a todo, ve todo y puede hacer todo. No se edita para que nadie se quede fuera.",
+    "ROLES": {
+      "ADMINISTRATOR": "Administrador",
+      "SUPERVISOR": "Supervisor",
+      "SELLER": "Vendedor",
+      "TECHNICIAN": "Técnico / Soporte",
+      "VIEWER": "Consulta"
+    },
+    "ROLE_HINTS": {
+      "SUPERVISOR": "Ve todo menos Ajustes. Es el rol de los usuarios que no tienen otro.",
+      "SELLER": "Ventas, sus conversaciones, su agenda y sus clientes; solo lo suyo.",
+      "TECHNICIAN": "Servicio, sus conversaciones, su agenda y sus clientes; solo lo suyo y sin montos.",
+      "VIEWER": "Solo Informes y Mi negocio, para mirar (un socio, el contador)."
+    },
+    "AREAS": {
+      "CONVERSATIONS": "Conversaciones",
+      "AGENDA": "Agenda",
+      "SALES": "Ventas",
+      "SERVICE": "Servicio",
+      "CLIENTS": "Clientes",
+      "CAMPAIGNS": "Campañas",
+      "AI_AGENTS": "Agentes IA",
+      "REPORTS": "Informes",
+      "SETTINGS": "Ajustes"
+    },
+    "LEVELS": {
+      "NONE": "No entra",
+      "OWN": "Solo lo suyo",
+      "VIEW": "Ve todo (sin cambiar)",
+      "ALL": "Todo"
+    },
+    "ACTIONS": {
+      "REASSIGN": "Asignar a otra persona",
+      "TAKE_UNASSIGNED": "Tomar lo que no tiene dueño (ve «No asignadas»)",
+      "DELETE": "Borrar",
+      "EXPORT": "Exportar",
+      "SEE_AMOUNTS": "Ver montos"
     }
   }
 }

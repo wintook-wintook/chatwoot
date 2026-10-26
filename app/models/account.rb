@@ -40,6 +40,11 @@ class Account < ApplicationRecord
   has_many :published_prompts, dependent: :destroy # proyecto@publicar_prompts
   has_many :tracking_campaigns, dependent: :destroy # @campanas_vendedor
   has_many :case_tickets, dependent: :destroy # @tickets_cases
+  has_many :access_roles, dependent: :destroy # Plan-Roles-Permisos
+  has_many :catalog_items, dependent: :destroy # Plan-Catalogo-Cotizaciones
+  has_many :quotes, dependent: :destroy # Plan-Catalogo-Cotizaciones
+  has_many :customer_assets, dependent: :destroy # Plan-Trabajo-Campo R4
+  has_many :maintenance_plans, dependent: :destroy # Plan-Trabajo-Campo R4
   has_many :external_db_connections, dependent: :destroy # @query_databases
   has_many :external_db_queries,     dependent: :destroy # @query_databases
   has_many :erp_collection_bots,     dependent: :destroy # @query_databases

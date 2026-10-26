@@ -1,6 +1,7 @@
 class Api::V1::Accounts::Contacts::ConversationsController < Api::V1::Accounts::Contacts::BaseController
   def index
-    @conversations = Current.account.conversations.includes(
+    # Plan-Roles-Permisos — «solo lo suyo» también en las conversaciones del contacto.
+    @conversations = access_grant.conversations(Current.account.conversations).includes(
       :assignee, :contact, :inbox, :taggings
     ).where(inbox_id: inbox_ids, contact_id: @contact.id).order(id: :desc).limit(20)
   end

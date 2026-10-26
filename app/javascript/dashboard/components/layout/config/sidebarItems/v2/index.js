@@ -57,6 +57,13 @@ const CASE_SETTINGS_ROUTES = [
 // Ventas (las mismas pantallas y direcciones; solo cambia el menú).
 const SALES_TOOLS = ['whatsapp_templates_index', 'labels_list', 'canned_list'];
 const SALES_TOOL_ROUTES = [...SALES_TOOLS, 'whatsapp_templates_wrapper'];
+// Plan-Catalogo-Cotizaciones — pantallas propias de Ventas.
+const SALES_ROUTES = [
+  'gestorTickets_quotes',
+  'gestorTickets_quote_new',
+  'gestorTickets_quote',
+  'gestorTickets_catalog',
+];
 // Los campos extra del contacto: pasan de Ajustes a Clientes.
 const CLIENT_TOOLS = ['attributes_list'];
 // Lo que define qué sabe y qué hace la IA: pasa de Ajustes a Agentes IA.
@@ -284,9 +291,10 @@ const conversationsV2 = accountId => {
 const ventas = accountId => {
   return {
     parentNav: 'ventas',
-    routes: [...KANBAN_ROUTES, ...SALES_TOOL_ROUTES],
+    routes: [...KANBAN_ROUTES, ...SALES_ROUTES, ...SALES_TOOL_ROUTES],
     matches: route =>
       KANBAN_ROUTES.includes(routeName(route)) ||
+      SALES_ROUTES.includes(routeName(route)) ||
       SALES_TOOL_ROUTES.includes(routeName(route)) ||
       caseClassOf(route, accountId) === COMMERCIAL,
     // Dos opciones: los prospectos (qué embudo ver se elige DENTRO del tablero;
@@ -300,11 +308,31 @@ const ventas = accountId => {
         toStateName: 'kanban_dashboard',
       },
       casesItem(accountId, COMMERCIAL, 'OPPORTUNITIES', 'board'),
+      {
+        icon: 'document',
+        label: 'QUOTES',
+        featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+        toState: frontendURL(`accounts/${accountId}/tickets/quotes`),
+        toStateName: 'gestorTickets_quotes',
+        activeRoutes: ['gestorTickets_quote_new', 'gestorTickets_quote'],
+      },
+      {
+        icon: 'book',
+        label: 'CATALOG',
+        featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+        toState: frontendURL(`accounts/${accountId}/tickets/catalog`),
+        toStateName: 'gestorTickets_catalog',
+      },
       // Mismos ítems (íconos, permisos y flags) que tenían en Ajustes.
       ...settingsItems(accountId, SALES_TOOLS),
     ],
   };
 };
+
+const FIELD_SERVICE_ROUTES = [
+  'gestorTickets_dispatch',
+  'gestorTickets_maintenance',
+];
 
 const servicio = (accountId, route) => {
   const klass = serviceClass(route, accountId);
@@ -313,11 +341,29 @@ const servicio = (accountId, route) => {
     routes: [],
     matches: route_ => {
       if (SERVICE_TOOLS.includes(routeName(route_))) return true;
+      // Plan-Trabajo-Campo R3/R4
+      if (FIELD_SERVICE_ROUTES.includes(routeName(route_))) return true;
       const current = caseClassOf(route_, accountId);
       return !!current && current !== COMMERCIAL;
     },
     menuItems: [
       casesItem(accountId, klass, 'SERVICE_CASES', 'list'),
+      // Plan-Trabajo-Campo R3 — el día de los técnicos.
+      {
+        icon: 'calendar-clock',
+        label: 'DISPATCH',
+        featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+        toState: frontendURL(`accounts/${accountId}/tickets/dispatch`),
+        toStateName: 'gestorTickets_dispatch',
+      },
+      // Plan-Trabajo-Campo R4 — mantenimientos recurrentes de todos los clientes.
+      {
+        icon: 'arrow-clockwise',
+        label: 'MAINTENANCE',
+        featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+        toState: frontendURL(`accounts/${accountId}/tickets/maintenance`),
+        toStateName: 'gestorTickets_maintenance',
+      },
       // Mismos ítems (íconos y permisos de administrador) que en Casos y etapas.
       ...caseSettingsChildren(accountId)
         .filter(child => SERVICE_TOOLS.includes(child.toStateName))
@@ -440,6 +486,14 @@ const agenda = accountId => ({
       featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
       toState: frontendURL(`accounts/${accountId}/tickets/tasks?tab=my_day`),
       toStateName: 'gestorTickets_tasks',
+    },
+    // Plan-Trabajo-Campo R2 — portal del técnico (abre la pantalla para celular).
+    {
+      icon: 'location',
+      label: 'FIELD_ROUTE',
+      featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+      toState: frontendURL(`accounts/${accountId}/campo`),
+      toStateName: 'field_route',
     },
     {
       icon: 'calendar',

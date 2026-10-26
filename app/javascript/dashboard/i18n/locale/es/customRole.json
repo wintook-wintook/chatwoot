@@ -2,7 +2,7 @@
   "CUSTOM_ROLE": {
     "HEADER": "Roles personalizados",
     "LEARN_MORE": "Aprende más sobre roles personalizados",
-    "DESCRIPTION": "Los roles personalizados son roles que son creados por el propietario de la cuenta o el administrador. Estos roles pueden ser asignados a agentes para definir su acceso y permisos dentro de la cuenta. Los roles personalizados pueden ser creados con permisos y niveles de acceso específicos para satisfacer los requisitos de la organización.",
+    "DESCRIPTION": "Los roles personalizados son roles que son creados por el propietario de la cuenta o el administrador. Estos roles pueden ser asignados a usuarios para definir su acceso y permisos dentro de la cuenta. Los roles personalizados pueden ser creados con permisos y niveles de acceso específicos para satisfacer los requisitos de la organización.",
     "HEADER_BTN_TXT": "Agregar rol personalizado",
     "LOADING": "Obteniendo roles personalizados...",
     "SEARCH_404": "No hay elementos que coincidan con esta consulta.",
@@ -15,13 +15,13 @@
     },
     "ENTERPRISE_PAYWALL": {
       "AVAILABLE_ON": "La función de rol personalizado solo está disponible en los planes de pago.",
-      "UPGRADE_PROMPT": "Actualiza a un plan de pago para acceder a funciones avanzadas como registros de auditoría, capacidad de agentes y más.",
+      "UPGRADE_PROMPT": "Actualiza a un plan de pago para acceder a funciones avanzadas como registros de auditoría, capacidad de usuarios y más.",
       "ASK_ADMIN": "Por favor, contacta a tu administrador para la actualización."
     },
     "LIST": {
       "404": "No hay roles personalizados disponibles en esta cuenta.",
       "TITLE": "Gestionar roles personalizados",
-      "DESC": "Los roles personalizados son roles que son creados por el propietario de la cuenta o el administrador. Estos roles pueden ser asignados a agentes para definir su acceso y permisos dentro de la cuenta. Los roles personalizados pueden ser creados con permisos y niveles de acceso específicos para satisfacer los requisitos de la organización.",
+      "DESC": "Los roles personalizados son roles que son creados por el propietario de la cuenta o el administrador. Estos roles pueden ser asignados a usuarios para definir su acceso y permisos dentro de la cuenta. Los roles personalizados pueden ser creados con permisos y niveles de acceso específicos para satisfacer los requisitos de la organización.",
       "TABLE_HEADER": ["Nombre", "Descripción", "Permisos", "Acciones"]
     },
     "PERMISSIONS": {

@@ -91,7 +91,7 @@ const VALUE_OPTIONS = {
 };
 
 const ACTION_TYPES = [
-  { value: 'assign_agent', label: 'Asignar agente', valueType: 'text' },
+  { value: 'assign_agent', label: 'Asignar responsable', valueType: 'text' },
   { value: 'assign_team', label: 'Asignar equipo', valueType: 'text' },
   {
     value: 'change_priority',
@@ -100,7 +100,7 @@ const ACTION_TYPES = [
   },
   { value: 'change_status', label: 'Cambiar estado', valueType: 'status' },
   { value: 'escalate', label: 'Escalar', valueType: 'none' },
-  { value: 'notify_agent', label: 'Notificar agente', valueType: 'text' },
+  { value: 'notify_agent', label: 'Notificar usuario', valueType: 'text' },
   { value: 'add_label', label: 'Agregar etiqueta', valueType: 'text' },
   { value: 'close_ticket', label: 'Cerrar ticket', valueType: 'none' },
   {
@@ -111,9 +111,9 @@ const ACTION_TYPES = [
 ];
 
 const ACTION_VALUE_PLACEHOLDERS = {
-  assign_agent: 'Nombre del agente',
+  assign_agent: 'Nombre del responsable',
   assign_team: 'Nombre del equipo',
-  notify_agent: 'Email del agente',
+  notify_agent: 'Correo del usuario',
   add_label: 'Nombre de la etiqueta',
   trigger_tracking: 'Nombre del tracking',
 };

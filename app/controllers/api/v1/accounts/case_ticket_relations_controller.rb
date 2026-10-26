@@ -20,7 +20,7 @@ class Api::V1::Accounts::CaseTicketRelationsController < Api::V1::Accounts::Base
   end
 
   def create
-    related = Current.account.case_tickets.find_by(id: params[:related_ticket_id])
+    related = account_case_tickets.find_by(id: params[:related_ticket_id])
     return render json: { error: 'Ticket relacionado no encontrado' }, status: :not_found unless related
 
     relation = CaseTicketRelation.new(
@@ -55,7 +55,7 @@ class Api::V1::Accounts::CaseTicketRelationsController < Api::V1::Accounts::Base
   private
 
   def set_ticket
-    @ticket = Current.account.case_tickets.find(params[:case_ticket_id])
+    @ticket = account_case_tickets.find(params[:case_ticket_id])
   rescue ActiveRecord::RecordNotFound
     render json: { error: 'Ticket no encontrado' }, status: :not_found
   end

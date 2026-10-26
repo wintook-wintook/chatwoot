@@ -13,6 +13,7 @@ import { isPhoneNumberValid } from 'shared/helpers/Validators';
 import parsePhoneNumber from 'libphonenumber-js';
 
 import AddOrganization from './AddOrganization.vue';
+import Thumbnail from 'dashboard/components/widgets/Thumbnail.vue';
 import ContactDetailsItem from '../ContactDetailsItem.vue';
 import Synchronizer from './Synchronizer';
 
@@ -20,6 +21,7 @@ export default {
   components: {
     ContactDetailsItem,
     AddOrganization,
+    Thumbnail,
   },
   mixins: [Synchronizer],
   props: {
@@ -90,6 +92,9 @@ export default {
         { key: 'tiktok', label: 'https://tiktok.com/@' },
         { key: 'website', label: 'Website: https://' },
       ],
+      // Redes sociales a la vista: las que tienen dato + las que se agregan.
+      visibleSocial: [],
+      showSocialMenu: false,
       showOrganizationModal: false,
       id_company: 0,
       id_contact: 0,
@@ -148,6 +153,21 @@ export default {
       return this.activeDialCode
         ? `${this.activeDialCode}${this.phoneNumber}`
         : '';
+    },
+    hiddenSocialProfiles() {
+      return this.socialProfileKeys.filter(
+        p => !this.visibleSocial.includes(p.key)
+      );
+    },
+    shownSocialProfiles() {
+      return this.socialProfileKeys.filter(p =>
+        this.visibleSocial.includes(p.key)
+      );
+    },
+    submitLabel() {
+      return this.isAddContact
+        ? this.$t('CONTACT_FORM_V2.CREATE')
+        : this.$t('CONTACT_FORM_V2.SAVE');
     },
     isContactEmpty() {
       return Object.keys(this.contact).length === 0;
@@ -398,6 +418,9 @@ export default {
         tiktok: socialProfiles.tiktok || '',
         website: socialProfiles.website || '',
       };
+      this.visibleSocial = this.socialProfileKeys
+        .map(p => p.key)
+        .filter(key => this.socialProfileUserNames[key]);
     },
 
     getContactObject() {
@@ -508,6 +531,33 @@ export default {
       this.showExistContactoModal = false;
     },
 
+    socialName(key) {
+      const names = {
+        facebook: 'Facebook',
+        twitter: 'X (Twitter)',
+        linkedin: 'LinkedIn',
+        github: 'GitHub',
+        instagram: 'Instagram',
+        line: 'Line',
+        telegram: 'Telegram',
+        website: this.$t('CONTACT_FORM_V2.WEBSITE'),
+      };
+      return names[key] || key;
+    },
+    addSocialProfile(key) {
+      this.showSocialMenu = false;
+      if (!this.visibleSocial.includes(key)) this.visibleSocial.push(key);
+    },
+    removeSocialProfile(key) {
+      this.socialProfileUserNames[key] = '';
+      this.visibleSocial = this.visibleSocial.filter(k => k !== key);
+    },
+    onAvatarPick(event) {
+      const [file] = event.target.files || [];
+      if (!file) return;
+      this.handleImageUpload({ file, url: URL.createObjectURL(file) });
+      event.target.value = '';
+    },
     handleImageUpload({ file, url }) {
       this.avatarFile = file;
       this.avatarUrl = url;
@@ -650,23 +700,73 @@ export default {
 
 <template>
   <div>
-    <form class="w-full px-8 pt-6 pb-8 contact--form" @submit.prevent="handleSubmit">
-      <div class="w-full">
-        <woot-avatar-uploader :label="$t('CONTACT_FORM.FORM.AVATAR.LABEL')" :src="avatarUrl" :username-avatar="name"
-          :delete-avatar="!!avatarUrl" class="settings-item" @change="handleImageUpload"
-          @onAvatarDelete="handleAvatarDelete" />
+    <!-- Reacomodo 2026-10-24: secciones, campos en pareja a dos columnas, foto con
+         vista previa, redes sociales solo las que tienen dato y botones fijos abajo.
+         Mismos campos, validaciones, avisos y búsqueda en CRMZeus que antes. -->
+    <form
+      class="flex flex-col w-full gap-1 px-8 pt-4 pb-0 self-stretch contact--form"
+      @submit.prevent="handleSubmit"
+    >
+      <!-- Foto -->
+      <div class="flex items-center gap-4 mb-4">
+        <Thumbnail :src="avatarUrl" :username="name" size="56px" />
+        <div class="flex items-center gap-3 text-sm">
+          <label class="mb-0 font-medium cursor-pointer text-woot-600 dark:text-woot-400">
+            {{ $t('CONTACT_FORM_V2.AVATAR_CHANGE') }}
+            <input type="file" accept="image/*" class="hidden" @change="onAvatarPick" />
+          </label>
+          <button
+            v-if="avatarUrl"
+            type="button"
+            class="p-0 text-slate-500 hover:text-red-600 dark:text-slate-400"
+            @click="handleAvatarDelete"
+          >
+            {{ $t('CONTACT_FORM_V2.AVATAR_REMOVE') }}
+          </button>
+        </div>
       </div>
 
-      <div class="w-full">
+      <!-- Identidad: nombre y empresa -->
+      <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
         <label :class="{ error: v$.name.$error }">
           {{ $t('CONTACT_FORM.FORM.NAME.LABEL') }}
           <input v-model.trim="name" type="text" :placeholder="$t('CONTACT_FORM.FORM.NAME.PLACEHOLDER')"
-            @input="v$.name.$touch" @keydown.enter.prevent.stop="console.log('Enter bloqueado en campo nombre')" />
+            @input="v$.name.$touch" @keydown.enter.prevent.stop="preventFormSubmitOnEnter" />
         </label>
+        <div>
+          <!-- Empresa (con Agregar/Buscar de CRMZeus cuando aplica) -->
+          <ContactDetailsItem compact :title="$t('CONTACT_FORM_V2.COMPANY')">
+            <template v-if="shouldShowOrganizationButtons" #button>
+              <woot-button icon="add" variant="link" size="small" @click.prevent="toggleAddOrganization">
+                {{ $t('CONTACT_FORM_V2.CRM_ADD') }}
+              </woot-button>
+              <woot-button icon="filter" variant="link" size="small" @click.prevent="toogleOrganizationModal">
+                {{ $t('CONTACT_FORM_V2.CRM_SEARCH') }}
+              </woot-button>
+            </template>
+          </ContactDetailsItem>
+          <!--
+            proyecto@organization_field: :readonly y :is-disabled comentados a propósito
+            para que el campo companyName sea siempre editable.
+            Original:
+            :readonly="isEditContact || isFoundInCRMZeus || readonlyOrganization || isSynchronized"
+            :is-disabled="isSynchronized"
+          -->
+          <woot-input v-model.trim="companyName" class="columns-ajuste"
+            :placeholder="$t('CONTACT_FORM.FORM.COMPANY_NAME.PLACEHOLDER')" />
+        </div>
+      </div>
+      <div v-if="isIntegrationEnabled"
+        class="relative mx-0 mt-0 mb-2.5 p-2 rounded-md text-sm border border-solid border-blue-500 text-blue-700 dark:border-blue-700 bg-blue-200/60 dark:bg-blue-200/20 dark:text-blue-400">
+        💡 {{ $t('CONTACT_FORM_V2.CRM_COMPANY_HINT') }}
       </div>
 
-      <div>
-        <div class="w-full">
+      <!-- Cómo contactarlo: teléfono y correo -->
+      <h3 class="mt-2 mb-2 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400">
+        {{ $t('CONTACT_FORM_V2.SECTIONS.CONTACT') }}
+      </h3>
+      <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+        <div>
           <label :class="{ error: isPhoneNumberNotValid }">
             {{ $t('CONTACT_FORM.FORM.PHONE_NUMBER.LABEL') }}
             <woot-phone-input v-model="phoneNumber" :value="phoneNumber" :error="isPhoneNumberNotValid"
@@ -676,67 +776,35 @@ export default {
               {{ phoneNumberError }}
             </span>
           </label>
-          <div v-if="isPhoneNumberNotValid || !phoneNumber"
-            class="relative mx-0 mt-0 mb-2.5 p-2 rounded-md text-sm border border-solid border-yellow-500 text-yellow-700 dark:border-yellow-700 bg-yellow-200/60 dark:bg-yellow-200/20 dark:text-yellow-400">
-            {{ $t('CONTACT_FORM.FORM.PHONE_NUMBER.HELP') }}
-          </div>
-          <!-- Ayuda para búsqueda -->
-          <div v-if="isAddContact && phoneNumber && !isPhoneNumberNotValid && isIntegrationEnabled"
-            class="relative mx-0 mt-0 mb-2.5 p-2 rounded-md text-sm border border-solid border-blue-500 text-blue-700 dark:border-blue-700 bg-blue-200/60 dark:bg-blue-200/20 dark:text-blue-400">
-            💡 Presione <kbd class="px-1 py-0.5 text-xs bg-blue-300/50 rounded">Enter</kbd> para buscar contacto en
-            CRMZeus
-          </div>
+        </div>
+        <div>
+          <label :class="{ error: v$.email.$error }">
+            {{ $t('CONTACT_FORM.FORM.EMAIL_ADDRESS.LABEL') }}
+            <input v-model.trim="email" type="text" :placeholder="$t('CONTACT_FORM.FORM.EMAIL_ADDRESS.PLACEHOLDER')"
+              @input="v$.email.$touch" @keydown.enter.prevent.stop="handleEmailEnterSearch" />
+            <span v-if="v$.email.$error" class="message">
+              {{ $t('CONTACT_FORM.FORM.EMAIL_ADDRESS.ERROR') }}
+            </span>
+          </label>
         </div>
       </div>
-
-      <div class="w-full">
-        <label :class="{ error: v$.email.$error }">
-          {{ $t('CONTACT_FORM.FORM.EMAIL_ADDRESS.LABEL') }}
-          <input v-model.trim="email" type="text" :placeholder="$t('CONTACT_FORM.FORM.EMAIL_ADDRESS.PLACEHOLDER')"
-            @input="v$.email.$touch" @keydown.enter.prevent.stop="handleEmailEnterSearch" />
-          <span v-if="v$.email.$error" class="message">
-            {{ $t('CONTACT_FORM.FORM.EMAIL_ADDRESS.ERROR') }}
-          </span>
-        </label>
-        <!-- Ayuda para búsqueda -->
-        <div v-if="isAddContact && email && !v$.email.$error && isIntegrationEnabled"
-          class="relative mx-0 mt-0 mb-2.5 p-2 rounded-md text-sm border border-solid border-blue-500 text-blue-700 dark:border-blue-700 bg-blue-200/60 dark:bg-blue-200/20 dark:text-blue-400">
-          💡 Presione <kbd class="px-1 py-0.5 text-xs bg-blue-300/50 rounded">Enter</kbd> para buscar contacto en
-          CRMZeus
-        </div>
+      <div v-if="isPhoneNumberNotValid || !phoneNumber"
+        class="relative mx-0 mt-0 mb-2.5 p-2 rounded-md text-sm border border-solid border-yellow-500 text-yellow-700 dark:border-yellow-700 bg-yellow-200/60 dark:bg-yellow-200/20 dark:text-yellow-400">
+        {{ $t('CONTACT_FORM.FORM.PHONE_NUMBER.HELP') }}
+      </div>
+      <!-- Ayuda para búsqueda en CRMZeus (al crear) -->
+      <div
+        v-if="isIntegrationEnabled && isAddContact && ((phoneNumber && !isPhoneNumberNotValid) || (email && !v$.email.$error))"
+        class="relative mx-0 mt-0 mb-2.5 p-2 rounded-md text-sm border border-solid border-blue-500 text-blue-700 dark:border-blue-700 bg-blue-200/60 dark:bg-blue-200/20 dark:text-blue-400">
+        💡 {{ $t('CONTACT_FORM_V2.CRM_SEARCH_HINT') }}
       </div>
 
-      <div class="w-full">
-        <!-- 🎯 SECCIÓN DE ORGANIZACIÓN LIMPIA Y ÚNICA -->
-        <ContactDetailsItem compact title="Organización">
-          <template v-if="shouldShowOrganizationButtons" #button>
-            <woot-button icon="add" variant="link" size="small" @click.prevent="toggleAddOrganization">
-              Agregar
-            </woot-button>
-            <woot-button icon="filter" variant="link" size="small" @click.prevent="toogleOrganizationModal">
-              Buscar
-            </woot-button>
-          </template>
-        </ContactDetailsItem>
-
-        <!-- Campo de compañía -->
-        <!--
-          proyecto@organization_field: :readonly y :is-disabled comentados a propósito
-          para que el campo companyName sea siempre editable.
-          Original:
-          :readonly="isEditContact || isFoundInCRMZeus || readonlyOrganization || isSynchronized"
-          :is-disabled="isSynchronized"
-        -->
-        <woot-input v-model.trim="companyName" class="columns-ajuste"
-          :placeholder="$t('CONTACT_FORM.FORM.COMPANY_NAME.PLACEHOLDER')" />
-        <div v-if="isIntegrationEnabled"
-          class="relative mx-0 mt-0 mb-2.5 p-2 rounded-md text-sm border border-solid border-blue-500 text-blue-700 dark:border-blue-700 bg-blue-200/60 dark:bg-blue-200/20 dark:text-blue-400">
-          💡 Nueva organización: <kbd class="px-1 py-0.5 text-xs bg-blue-300/50 rounded">Agregar</kbd>. Organización existente: <kbd class="px-1 py-0.5 text-xs bg-blue-300/50 rounded">Buscar</kbd>.
-        </div>
-      </div>
-
-      <div>
-        <div class="w-full">
+      <!-- Ubicación: país y ciudad -->
+      <h3 class="mt-2 mb-2 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400">
+        {{ $t('CONTACT_FORM_V2.SECTIONS.LOCATION') }}
+      </h3>
+      <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+        <div>
           <label>
             {{ $t('CONTACT_FORM.FORM.COUNTRY.LABEL') }}
           </label>
@@ -746,41 +814,66 @@ export default {
             :deselect-label="$t('CONTACT_FORM.FORM.COUNTRY.REMOVE')" :custom-label="countryNameWithCode"
             :max-height="160" :options="countries" allow-empty :option-height="104" />
         </div>
+        <woot-input v-model="city" class="w-full" :label="$t('CONTACT_FORM.FORM.CITY.LABEL')"
+          :placeholder="$t('CONTACT_FORM.FORM.CITY.PLACEHOLDER')"
+          @keydown.enter.prevent.stop="preventFormSubmitOnEnter" />
       </div>
 
-      <woot-input v-model="city" class="w-full" :label="$t('CONTACT_FORM.FORM.CITY.LABEL')"
-        :placeholder="$t('CONTACT_FORM.FORM.CITY.PLACEHOLDER')"
-        @keydown.enter.prevent.stop="console.log('Enter bloqueado en campo ciudad')" />
+      <label :class="{ error: v$.description.$error }">
+        {{ $t('CONTACT_FORM.FORM.BIO.LABEL') }}
+        <textarea v-model.trim="description" rows="3" :placeholder="$t('CONTACT_FORM.FORM.BIO.PLACEHOLDER')"
+          @input="v$.description.$touch" />
+      </label>
 
-      <div class="w-full">
-        <label :class="{ error: v$.description.$error }">
-          {{ $t('CONTACT_FORM.FORM.BIO.LABEL') }}
-          <textarea v-model.trim="description" type="text" :placeholder="$t('CONTACT_FORM.FORM.BIO.PLACEHOLDER')"
-            @input="v$.description.$touch" />
-        </label>
-      </div>
-
-      <div class="w-full">
-        <label>{{ $t('CONTACTS_PAGE.LIST.TABLE_HEADER.SOCIAL_PROFILES') }}</label>
-        <div v-for="socialProfile in socialProfileKeys" :key="socialProfile.key" class="flex items-stretch w-full mb-4">
+      <!-- Redes sociales: solo las que tienen dato; el resto con «Agregar red» -->
+      <h3 class="mt-2 mb-2 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400">
+        {{ $t('CONTACT_FORM_V2.SECTIONS.SOCIAL') }}
+      </h3>
+      <div v-for="socialProfile in shownSocialProfiles" :key="socialProfile.key" class="flex items-stretch w-full gap-2 mb-3">
+        <span
+          class="flex items-center flex-shrink-0 w-28 h-10 text-sm font-medium text-slate-700 dark:text-slate-200">
+          {{ socialName(socialProfile.key) }}
+        </span>
+        <div class="flex items-stretch flex-1 min-w-0">
           <span
             class="flex items-center h-10 px-2 text-sm border-solid bg-slate-50 border-y ltr:border-l rtl:border-r ltr:rounded-l-md rtl:rounded-r-md dark:bg-slate-700 text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-600">
             {{ socialProfile.label }}
           </span>
           <input v-model="socialProfileUserNames[socialProfile.key]"
             class="input-group-field ltr:!rounded-l-none rtl:rounded-r-none !mb-0" type="text"
-            @keydown.enter.prevent.stop="console.log('Enter bloqueado en campo social:', socialProfile.key)" />
+            @keydown.enter.prevent.stop="preventFormSubmitOnEnter" />
         </div>
+        <woot-button
+          v-tooltip="$t('CONTACT_FORM_V2.REMOVE_SOCIAL')"
+          icon="dismiss" variant="clear" size="small" color-scheme="secondary"
+          @click.prevent="removeSocialProfile(socialProfile.key)"
+        />
+      </div>
+      <div v-if="hiddenSocialProfiles.length" v-on-clickaway="() => (showSocialMenu = false)" class="relative mb-2">
+        <woot-button icon="add" variant="smooth" size="small" color-scheme="secondary"
+          @click.prevent="showSocialMenu = !showSocialMenu">
+          {{ $t('CONTACT_FORM_V2.ADD_SOCIAL') }}
+        </woot-button>
+        <ul v-if="showSocialMenu"
+          class="absolute z-50 w-48 p-1 m-0 mt-1 list-none bg-white border rounded-md shadow-xl top-full dark:bg-slate-800 border-slate-50 dark:border-slate-700">
+          <li v-for="socialProfile in hiddenSocialProfiles" :key="socialProfile.key">
+            <button type="button"
+              class="w-full px-3 py-2 text-sm text-left rounded-md text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700"
+              @click="addSocialProfile(socialProfile.key)">
+              {{ socialName(socialProfile.key) }}
+            </button>
+          </li>
+        </ul>
       </div>
 
-      <div class="flex flex-row justify-end w-full gap-2 px-0 py-2">
-        <div class="w-full">
-          <woot-submit-button :loading="inProgress" :button-text="$t('CONTACT_FORM.FORM.SUBMIT')"
-            :disabled="isSubmitDisabled && isIntegrationEnabled" />
-          <button class="button clear" @click.prevent="onCancel">
-            {{ $t('CONTACT_FORM.FORM.CANCEL') }}
-          </button>
-        </div>
+      <!-- Botones siempre a la vista -->
+      <div
+        class="sticky bottom-0 z-10 flex justify-end gap-2 py-3 mt-4 -mx-8 px-8 bg-white border-t dark:bg-slate-800 border-slate-50 dark:border-slate-700">
+        <button class="button clear" @click.prevent="onCancel">
+          {{ $t('CONTACT_FORM.FORM.CANCEL') }}
+        </button>
+        <woot-submit-button :loading="inProgress" :button-text="submitLabel"
+          :disabled="isSubmitDisabled && isIntegrationEnabled" />
       </div>
     </form>
 

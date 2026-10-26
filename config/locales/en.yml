@@ -151,6 +151,169 @@ en:
         feedback: Feedback Comment
         recorded_at: Recorded date
 
+  service_reports:
+    incomplete: 'The order cannot be completed: missing %{missing}.'
+    delivery_message: "Hi %{name}, here is the service report for %{folio}: %{url}"
+    missing:
+      required_tasks: 'completing the required tasks'
+      photo_before: 'a before photo'
+      photo_after: 'an after photo'
+      conformity: 'the conformity of whoever received it'
+    errors:
+      not_found: 'Order not found'
+      not_work_order: 'The service report belongs to work orders'
+      no_conversation: 'The customer has no conversations; copy the link and send it another way'
+  public_reports:
+    asset: 'Equipment'
+    title: 'Service report'
+    customer: 'Customer'
+    technician: 'Technician'
+    address: 'Address'
+    completed: 'Completed'
+    hours: 'Hours'
+    checklist: 'What was checked'
+    work_done: 'Work done'
+    photos: 'Photos'
+    materials: 'Materials and services'
+    received_by: 'Received by: %{name} (%{date})'
+    tags:
+      before: 'Before'
+      after: 'After'
+  field:
+    on_my_way: "Hi %{name}, this is %{technician}. I'm on my way, arriving around %{eta}. Follow your service here: %{url}"
+    on_my_way_note: 'On my way (arrival around %{eta})'
+    to_technician: "Hi %{name}, you have visit %{folio} · %{title}. Open it here: %{url}"
+    errors:
+      no_conversation: 'The customer has no conversations to notify'
+      no_technician: 'The order has no assignee'
+      no_technician_contact: "%{name} has no WhatsApp contact in Settings › Users"
+  field_portal:
+    title: 'Your service'
+    report: 'View the service report'
+    quotes: 'Quotes'
+    open_portal: 'See the status of your service'
+    states:
+      pending: 'To be scheduled'
+      scheduled: 'Visit scheduled'
+      on_the_way: 'The technician is on the way'
+      done: 'Completed'
+      cancelled: 'Cancelled'
+    quote_status:
+      draft: 'Draft'
+      sent: 'Awaiting approval'
+      won: 'Approved'
+      lost: 'Rejected'
+      postponed: 'Postponed'
+      cancelled: 'Cancelled'
+    visit:
+      title: 'Your visit'
+      technician: 'Technician: %{name}'
+      on_the_way: 'On the way since %{time}.'
+      confirm: 'Confirm the visit'
+      confirmed: 'Thanks, you confirmed the visit.'
+      reschedule: 'I need another date'
+      preferred: 'Which day and time works better?'
+      preferred_placeholder: 'e.g. Thursday afternoon'
+      note: 'Comment (optional)'
+      send_request: 'Send'
+      reschedule_sent: 'We received your request for another date; we will contact you to confirm it.'
+      not_scheduled: 'No visit scheduled yet. We will let you know.'
+    csat:
+      title: 'How would you rate the service?'
+      help: 'From 1 to 5 stars.'
+      comment: 'Comment (optional)'
+      send: 'Send rating'
+      thanks: 'Thanks for your rating!'
+    notes:
+      confirmed: 'The customer confirmed the visit from their portal'
+      reschedule: 'The customer asks for another date from their portal: %{when}'
+      rated: 'The customer rated the service: %{rating}/5 · %{comment}'
+    external:
+      title: 'Visit by %{name}'
+      directions: 'Directions'
+      call: 'Call the customer'
+      arrive: 'I arrived'
+      working: 'On the visit since %{time}'
+      note_placeholder: 'What was done, what was found…'
+      save: 'Save'
+      finish_title: 'Finish the visit'
+      received_by: 'Received by'
+      conformity_note: 'Customer comment (optional)'
+      finish: 'Finish'
+      done_title: 'Visit %{folio} finished'
+      done_help: 'Thank you. This link can no longer be used.'
+      expired_title: 'This link is no longer active'
+      expired_help: 'The visit was finished or the link expired. Ask whoever sent it for a new one.'
+      whatsapp: "Hi %{name}, you have visit %{folio} · %{title}. Open it here: %{url}"
+    errors:
+      name_required: 'Enter the external technician name'
+  maintenance_plans:
+    customer_notice: "Hi %{name}, your %{title} is due (%{date}). We will contact you to schedule the visit. Folio: %{folio}. Follow your service here: %{url}"
+    errors:
+      not_found: 'Maintenance plan not found'
+      asset_not_found: 'Equipment not found'
+  public_quotes:
+    title: 'Quote'
+    for: 'For %{name}'
+    date: 'Date'
+    valid_until: 'Valid until'
+    seller: 'Your advisor'
+    subtotal: 'Subtotal'
+    discount: 'Discount'
+    tax: 'Taxes'
+    total: 'Total'
+    terms: 'Terms'
+    download_pdf: 'Download PDF'
+    signature: 'Signature'
+    accepted_by: 'Accepted by %{name} on %{date}.'
+    accepted_note: 'Accepted by the customer (%{name}) from the link'
+    rejected_note: 'Rejected by the customer from the link'
+    expired_notice: 'This quote has expired. Ask your advisor for an updated version.'
+    accept_title: 'Looks good?'
+    your_name: 'Your name'
+    sign_here: 'Sign here (optional)'
+    clear: 'Clear signature'
+    accept: 'Accept quote'
+    reject_title: 'Not convinced?'
+    comment: 'Tell us why (optional)'
+    reject: 'Reject'
+    name_required: 'Type your name to accept.'
+    columns:
+      description: 'Item'
+      quantity: 'Quantity'
+      price: 'Price'
+      discount: 'Disc.'
+      total: 'Amount'
+    statuses:
+      draft: 'Draft'
+      sent: 'Sent'
+      won: 'Accepted'
+      lost: 'Rejected'
+      postponed: 'On hold'
+      cancelled: 'Cancelled'
+  quotes:
+    opportunity_title: 'Quote %{folio}'
+    replaced_by: 'Replaced by version %{version}'
+    delivery_message: "Hi %{name}, here is quote %{folio}. You can review and accept it here: %{url}"
+    errors:
+      not_found: 'Quote not found'
+      not_editable: 'Only draft or sent quotes can be edited. Create a new version.'
+      only_drafts: 'Only draft quotes can be deleted'
+      transition: 'That status change is not possible from the current status'
+      opportunity_not_found: 'Opportunity not found'
+      opportunity_locked: 'The quote is closed: its opportunity can no longer change'
+      opportunity_required: 'Your company requires every quote to have an opportunity'
+      no_sales_type: 'First create an opportunity type in Settings › Cases and stages'
+      no_conversation: 'The customer has no conversations; copy the link and send it another way'
+  catalog_items:
+    not_found: 'Product or service not found'
+    import:
+      no_file: 'Attach the catalog CSV file.'
+  access_roles:
+    denied: 'Your role does not have access to this option.'
+    reassign_denied: 'Your role cannot assign to someone else.'
+    export_denied: 'Your role cannot export.'
+    delete_denied: 'Your role cannot delete.'
   kanban_funnel:
     note: "Contact funnel: moved to «%{column}». %{reason}"
     reasons:
@@ -261,6 +424,8 @@ en:
         self_assigned: "%{user_name} self-assigned this conversation"
         assigned: "Assigned to %{assignee_name} by %{user_name}"
         removed: "Conversation unassigned by %{user_name}"
+        contact_owner: "Assigned to %{assignee_name} (contact owner)"
+        contact_owner_kept: "Kept with %{assignee_name} (contact owner); the assignment rule does not apply"
       team:
         assigned: "Assigned to %{team_name} by %{user_name}"
         assigned_with_assignee: "Assigned to %{assignee_name} via %{team_name} by %{user_name}"

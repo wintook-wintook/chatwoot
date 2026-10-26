@@ -71,6 +71,17 @@ export default {
         this.toast('CURRENCY_INVALID', 'error');
       }
     },
+    // Plan-Catalogo-Cotizaciones — ¿la cotización exige oportunidad? e impuesto por defecto.
+    async saveQuoteSetting(changes) {
+      try {
+        await this.$store.dispatch('caseTickets/updateSettings', changes);
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.SETTINGS.SAVED'),
+        });
+      } catch (_e) {
+        this.toast('ERROR', 'error');
+      }
+    },
     async fetchReasons() {
       this.isLoadingReasons = true;
       try {
@@ -128,6 +139,48 @@ export default {
 
 <template>
   <div class="flex flex-col gap-2">
+    <!-- Plan-Catalogo-Cotizaciones — cotizaciones -->
+    <div
+      class="flex flex-col gap-3 p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+    >
+      <span class="text-base font-semibold text-slate-800 dark:text-slate-100">
+        {{ $t('QUOTES.TITLE') }}
+      </span>
+      <label class="flex items-start gap-2 mb-0">
+        <input
+          type="checkbox"
+          class="mt-1"
+          :checked="settings.quotes_require_opportunity"
+          @change="
+            saveQuoteSetting({
+              quotes_require_opportunity: $event.target.checked,
+            })
+          "
+        />
+        <span class="flex flex-col">
+          <span class="text-sm text-slate-800 dark:text-slate-100">
+            {{ $t('QUOTES.SETTINGS.REQUIRE_OPPORTUNITY') }}
+          </span>
+          <span class="text-xs text-slate-500 dark:text-slate-400">
+            {{ $t('QUOTES.SETTINGS.REQUIRE_OPPORTUNITY_HINT') }}
+          </span>
+        </span>
+      </label>
+      <label class="flex items-center gap-2 mb-0 text-sm">
+        {{ $t('QUOTES.SETTINGS.DEFAULT_TAX') }}
+        <input
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          class="!mb-0 w-24"
+          :value="settings.default_tax_percent"
+          @change="
+            saveQuoteSetting({ default_tax_percent: $event.target.value })
+          "
+        />
+      </label>
+    </div>
     <!-- Moneda por defecto -->
     <div
       class="flex items-start gap-4 p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
