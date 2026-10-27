@@ -16,6 +16,7 @@ class NotificationListener < BaseListener
   def conversation_created(event)
     conversation, account = extract_conversation_and_account(event)
     return if conversation.pending?
+    return if conversation.internal? # feat/chat_interno: no avisar a toda la bandeja de cada sala
 
     conversation.inbox.members.each do |agent|
       NotificationBuilder.new(

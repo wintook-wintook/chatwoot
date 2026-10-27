@@ -52,7 +52,9 @@ class AccountUser < ApplicationRecord
   accepts_nested_attributes_for :account
 
   after_create_commit :notify_creation, :create_notification_setting
-  after_destroy :notify_deletion, :remove_user_from_account
+  # feat/chat_interno (plan v2): si la cuenta ya tiene «Interno», el agente nuevo entra a él.
+  after_create_commit -> { InternalChannel::Setup.new(account).call if Channel::Internal.exists?(account_id: account_id) }
+  after_destroy :notify_deletion, :remove_user_from_account, :remove_internal_chat_memberships
   after_save :update_presence_in_redis, if: :saved_change_to_availability?
 
   validates :user_id, uniqueness: { scope: :account_id }
@@ -62,6 +64,12 @@ class AccountUser < ApplicationRecord
     setting.selected_email_flags = [:email_conversation_assignment]
     setting.selected_push_flags = [:push_conversation_assignment]
     setting.save!
+  end
+
+  # feat/chat_interno: quien sale de la cuenta sale de sus conversaciones en «Interno».
+  def remove_internal_chat_memberships
+    inbox = account.internal_channel&.inbox
+    ConversationParticipant.where(user_id: user_id, conversation_id: inbox.conversations.select(:id)).delete_all if inbox
   end
 
   def remove_user_from_account

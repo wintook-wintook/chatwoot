@@ -145,10 +145,10 @@ class Message < ApplicationRecord
   after_create_commit :respond_via_erp_bot, if: :incoming?, unless: :voice_call?
 
   # proyecto@contact_tracking: evalúa keywords de acción en mensajes salientes
-  after_create_commit :check_keyword_actions_for_outgoing, unless: -> { incoming? || voice_call? }
+  after_create_commit :check_keyword_actions_for_outgoing, unless: -> { incoming? || voice_call? || internal_conversation? }
 
   # proyecto@botseller_webhook_saliente: notifica a INTERNAL_WEBHOOK_URL también en salientes
-  after_create_commit :dispatch_botseller_for_outgoing, if: :outgoing?, unless: :voice_call?
+  after_create_commit :dispatch_botseller_for_outgoing, if: :outgoing?, unless: -> { voice_call? || internal_conversation? }
 
   after_update_commit :dispatch_update_event
 
@@ -312,6 +312,11 @@ class Message < ApplicationRecord
 
   def ensure_content_type
     self.content_type ||= Message.content_types[:text]
+  end
+
+  # feat/chat_interno (plan v2): mensaje entre agentes en «Interno»: nada de lo de clientes.
+  def internal_conversation?
+    conversation.present? && conversation.internal?
   end
 
   def execute_after_create_commit_callbacks

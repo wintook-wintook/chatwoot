@@ -11,6 +11,7 @@ export const INBOX_TYPES = {
   SMS: 'Channel::Sms',
   TIKTOK: 'Channel::Tiktok',
   INSTAGRAM: 'Channel::Instagram',
+  INTERNAL: 'Channel::Internal', // feat/chat_interno: la bandeja «Interno»
 };
 
 export const INBOX_FEATURES = {

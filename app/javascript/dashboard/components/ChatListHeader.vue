@@ -23,6 +23,11 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  // feat/chat_interno: [+] «Nuevo chat» en la lista de la bandeja «Interno».
+  showNewInternalChat: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits([
@@ -31,6 +36,7 @@ const emit = defineEmits([
   'resetFilters',
   'basicFilterChange',
   'filtersModal',
+  'newInternalChat',
 ]);
 
 const onBasicFilterChange = (value, type) => {
@@ -109,6 +115,15 @@ const hasAppliedFiltersOrActiveFolders = computed(() => {
         icon="filter"
         size="tiny"
         @click="emit('filtersModal')"
+      />
+      <woot-button
+        v-if="showNewInternalChat"
+        v-tooltip.right="$t('SIDEBAR.INTERNAL_CHAT_NEW')"
+        variant="smooth"
+        color-scheme="secondary"
+        icon="add"
+        size="tiny"
+        @click="emit('newInternalChat')"
       />
       <ConversationBasicFilter
         v-if="!hasAppliedFiltersOrActiveFolders"

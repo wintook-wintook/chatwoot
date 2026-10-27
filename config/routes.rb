@@ -188,6 +188,10 @@ Rails.application.routes.draw do
             post :preview, on: :collection # @campanas_vendedor — dry-run de buckets
           end
           # @campanas_vendedor / @automatizacion_campanas (create = campaña continua)
+          # feat/chat_interno (plan v2) — la bandeja «Interno»
+          resource :internal_channel, only: [:show] do
+            post :directs
+          end
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
             post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada

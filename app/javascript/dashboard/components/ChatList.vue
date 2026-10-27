@@ -27,6 +27,9 @@ import {
 } from '../store/modules/conversations/helpers/actionHelpers';
 import { CONVERSATION_EVENTS } from '../helper/AnalyticsHelper/events';
 import IntersectionObserver from './IntersectionObserver.vue';
+import NewInternalChatModal from './internalChat/NewInternalChatModal.vue'; // feat/chat_interno
+import { INBOX_TYPES } from 'shared/mixins/inboxMixin';
+import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
 import {
   getUserPermissions,
   filterItemsByPermission,
@@ -40,6 +43,7 @@ import { ASSIGNEE_TYPE_TAB_PERMISSIONS } from 'dashboard/constants/permissions.j
 export default {
   components: {
     ChatListHeader,
+    NewInternalChatModal,
     AddCustomViews,
     ChatTypeTabs,
     // eslint-disable-next-line vue/no-unused-components
@@ -176,6 +180,7 @@ export default {
   },
   data() {
     return {
+      showNewInternalChat: false, // feat/chat_interno
       activeAssigneeTab: wootConstants.ASSIGNEE_TYPE.ME,
       activeStatus: wootConstants.STATUS_TYPE.OPEN,
       activeSortBy: wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC,
@@ -316,6 +321,10 @@ export default {
     },
     inbox() {
       return this.$store.getters['inboxes/getInbox'](this.activeInbox);
+    },
+    // feat/chat_interno: en la bandeja «Interno» se puede abrir un chat directo.
+    isInternalInbox() {
+      return this.inbox.channel_type === INBOX_TYPES.INTERNAL;
     },
     currentPage() {
       return this.$store.getters['conversationPage/getCurrentPageFilter'](
@@ -504,6 +513,19 @@ export default {
     });
   },
   methods: {
+    // feat/chat_interno: abre la conversación del directo recién abierto o creado.
+    onInternalChatCreated({ conversation_id: id, inbox_id: inboxId }) {
+      this.showNewInternalChat = false;
+      this.$router.push(
+        frontendURL(
+          conversationUrl({
+            accountId: this.accountId,
+            activeInbox: inboxId,
+            id,
+          })
+        )
+      );
+    },
     updateVirtualListProps(key, value) {
       this.virtualListExtraProps = {
         ...this.virtualListExtraProps,
@@ -960,6 +982,7 @@ export default {
   >
     <slot />
     <ChatListHeader
+      :show-new-internal-chat="isInternalInbox"
       :page-title="pageTitle"
       :has-applied-filters="hasAppliedFilters"
       :has-hide-filters-for-agents="hideFiltersForAgents"
@@ -970,6 +993,7 @@ export default {
       @filtersModal="onToggleAdvanceFiltersModal"
       @resetFilters="resetAndFetchData"
       @basicFilterChange="onBasicFilterChange"
+      @newInternalChat="showNewInternalChat = true"
     />
 
     <AddCustomViews
@@ -987,6 +1011,19 @@ export default {
       :open-last-item-after-delete="openLastItemAfterDeleteInFolder"
       @close="onCloseDeleteFoldersModal"
     />
+
+    <!-- feat/chat_interno: sin scroll en el modal (la lista del selector flota encima) -->
+    <woot-modal
+      :show="showNewInternalChat"
+      :on-close="() => (showNewInternalChat = false)"
+      size="!overflow-visible"
+    >
+      <NewInternalChatModal
+        v-if="showNewInternalChat"
+        @close="showNewInternalChat = false"
+        @created="onInternalChatCreated"
+      />
+    </woot-modal>
 
     <ChatTypeTabs
       v-if="!hasAppliedFiltersOrActiveFolders"

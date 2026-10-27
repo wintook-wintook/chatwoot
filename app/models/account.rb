@@ -28,6 +28,7 @@ class Account < ApplicationRecord
   include Reportable
   include Featurable
   include CacheKeys
+  include InternalChatToggle # feat/chat_interno
 
   has_many :scheduled_messages, dependent: :destroy
 
@@ -39,6 +40,7 @@ class Account < ApplicationRecord
   has_many :tracking_templates, dependent: :destroy # proyecto@tracking_templates
   has_many :published_prompts, dependent: :destroy # proyecto@publicar_prompts
   has_many :tracking_campaigns, dependent: :destroy # @campanas_vendedor
+  has_one :internal_channel, class_name: 'Channel::Internal', dependent: :destroy_async # feat/chat_interno (plan v2)
   has_many :case_tickets, dependent: :destroy # @tickets_cases
   has_many :access_roles, dependent: :destroy # Plan-Roles-Permisos
   has_many :catalog_items, dependent: :destroy # Plan-Catalogo-Cotizaciones

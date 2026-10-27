@@ -888,6 +888,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_30_160000) do
     t.index ["instagram_id"], name: "index_channel_instagram_on_instagram_id", unique: true
   end
 
+  create_table "channel_internal", force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_channel_internal_on_account_id", unique: true
+  end
+
   create_table "channel_line", force: :cascade do |t|
     t.integer "account_id", null: false
     t.string "line_channel_id", null: false
@@ -1123,6 +1130,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_30_160000) do
     t.bigint "conversation_id", null: false
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
+    t.datetime "last_read_at"
     t.index ["account_id"], name: "index_conversation_participants_on_account_id"
     t.index ["conversation_id"], name: "index_conversation_participants_on_conversation_id"
     t.index ["user_id", "conversation_id"], name: "index_conversation_participants_on_user_id_and_conversation_id", unique: true

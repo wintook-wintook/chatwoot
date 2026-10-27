@@ -9,11 +9,22 @@ import {
   hasPermissions,
 } from '../../../helper/permissionsHelper';
 import { routesWithPermissions } from '../../../routes';
+import { useUISettings } from 'dashboard/composables/useUISettings';
+import {
+  UI_SETTINGS_KEY,
+  groupInboxes,
+  groupOrderFromUISettings,
+  inboxGroupFor,
+  resolveOpenGroup,
+  toggleOpenGroup,
+} from 'dashboard/helper/inboxGroups'; // feat/bandejas_por_tipo
+import InboxGroupsOrderModal from './InboxGroupsOrderModal.vue';
 
 export default {
   components: {
     AccountContext,
     SecondaryNavItem,
+    InboxGroupsOrderModal,
   },
   props: {
     accountId: {
@@ -54,17 +65,32 @@ export default {
       default: false,
     },
   },
+  setup() {
+    const { uiSettings, updateUISettings } = useUISettings();
+    return { uiSettings, updateUISettings };
+  },
   data() {
     // Acordeón del menú secundario: `toState` del único grupo colapsable
     // abierto (null = todos plegados).
     return {
       openGroup: null,
       caseSettingsRequested: false, // @tickets_cases
+      showInboxOrderModal: false, // feat/bandejas_por_tipo
+      // Grupo de bandejas abierto (acordeón): '' = aún no elige → el primero;
+      // null = todos cerrados.
+      openInboxGroup: '',
     };
   },
   // @tickets_cases — los ítems con `visibleGetter` dependen de la configuración
   // del módulo de casos: se pide una vez cuando el menú los trae.
   watch: {
+    // feat/bandejas_por_tipo: al entrar a una bandeja se abre su grupo.
+    // (también cuando las bandejas terminan de cargar después de la ruta).
+    '$route.params.inbox_id': {
+      immediate: true,
+      handler: 'openGroupOfCurrentInbox',
+    },
+    inboxes: 'openGroupOfCurrentInbox',
     // Menú v2: al estar en una pantalla de un grupo plegable, el grupo se abre.
     '$route.name': {
       immediate: true,
@@ -139,35 +165,87 @@ export default {
       );
     },
     
-    inboxSection() {
-      if (this.hideAllInboxForAgents && this.currentRole !== 'administrator') {
-        return {};
-      }
-      return {
+    // feat/bandejas_por_tipo — en vez de una sola carpeta «Bandejas de entrada», un
+    // grupo por tipo de canal en el orden que eligió el agente (helper/inboxGroups.js).
+    inboxGroupOrder() {
+      return groupOrderFromUISettings(this.uiSettings, this.accountId);
+    },
+    inboxGroups() {
+      return groupInboxes(this.inboxes, this.inboxGroupOrder);
+    },
+    inboxGroupCounts() {
+      return Object.fromEntries(
+        this.inboxGroups.map(group => [group.key, group.inboxes.length])
+      );
+    },
+    effectiveOpenInboxGroup() {
+      return resolveOpenGroup(this.openInboxGroup, this.inboxGroups);
+    },
+    canSeeInboxes() {
+      return !(
+        this.hideAllInboxForAgents && this.currentRole !== 'administrator'
+      );
+    },
+    inboxSections() {
+      if (!this.canSeeInboxes) return [];
+      const base = {
         icon: 'folder',
-        label: 'INBOXES',
         hasSubMenu: true,
-        newLink: this.showNewLink(FEATURE_FLAGS.INBOX_MANAGEMENT),
-        newLinkTag: 'NEW_INBOX',
-        key: 'inbox',
         toState: frontendURL(`accounts/${this.accountId}/settings/inboxes/new`),
         toStateName: 'settings_inbox_new',
+        newLinkTag: 'NEW_INBOX',
         newLinkRouteName: 'settings_inbox_new',
-        children: this.inboxes
-          .map(inbox => ({
-            id: inbox.id,
-            label: inbox.name,
-            truncateLabel: true,
-            toState: frontendURL(
-              `accounts/${this.accountId}/inbox/${inbox.id}`
-            ),
-            type: inbox.channel_type,
-            phoneNumber: inbox.phone_number,
-            reauthorizationRequired: inbox.reauthorization_required,
-          }))
-          .sort((a, b) =>
-            a.label.toLowerCase() > b.label.toLowerCase() ? 1 : -1
-          ),
+      };
+      // Sin bandejas queda la carpeta de siempre, para no perder «Nueva bandeja».
+      if (!this.inboxGroups.length) {
+        return [
+          {
+            ...base,
+            label: 'INBOXES',
+            key: 'inbox',
+            newLink: this.showNewLink(FEATURE_FLAGS.INBOX_MANAGEMENT),
+            children: [],
+          },
+        ];
+      }
+      const last = this.inboxGroups.length - 1;
+      // Título «Bandejas de entrada» arriba de los grupos (solo texto, no se pliega).
+      const heading = {
+        icon: 'folder',
+        label: 'INBOXES',
+        key: 'inbox_heading',
+        children: [],
+      };
+      const groups = this.inboxGroups.map((group, index) => ({
+        ...base,
+        nested: true,
+        label: `INBOX_GROUPS.${group.key.toUpperCase()}`,
+        key: `inbox_group_${group.key}`,
+        foldKey: group.key,
+        folded: group.key !== this.effectiveOpenInboxGroup,
+        labelCount: group.inboxes.length,
+        // «Nueva bandeja» una sola vez, al final del último grupo.
+        newLink:
+          index === last && this.showNewLink(FEATURE_FLAGS.INBOX_MANAGEMENT),
+        children: group.inboxes.map(inbox => ({
+          id: inbox.id,
+          label: inbox.name,
+          truncateLabel: true,
+          toState: frontendURL(`accounts/${this.accountId}/inbox/${inbox.id}`),
+          type: inbox.channel_type,
+          phoneNumber: inbox.phone_number,
+          reauthorizationRequired: inbox.reauthorization_required,
+        })),
+      }));
+      return [heading, ...groups];
+    },
+    // Justo debajo de «No Atendidas»: abre el modal para ordenar los grupos.
+    sortInboxesItem() {
+      return {
+        key: 'sort_inboxes',
+        label: 'SORT_INBOXES',
+        icon: 'arrow-sort',
+        action: 'sortInboxes',
       };
     },
 
@@ -184,6 +262,7 @@ export default {
         showModalForNewItem: true,
         modalName: 'AddLabel',
         dataTestid: 'sidebar-new-label-button',
+        childLimit: 10, // «Mostrar más» después de las primeras 10
         children: this.labels.map(label => ({
           id: label.id,
           label: label.title,
@@ -201,6 +280,7 @@ export default {
         icon: 'number-symbol',
         label: 'TAGGED_WITH',
         hasSubMenu: true,
+        childLimit: 10, // «Mostrar más» después de las primeras 10
         key: 'label',
         newLink: this.showNewLink(FEATURE_FLAGS.TEAM_MANAGEMENT),
         newLinkTag: 'NEW_LABEL',
@@ -383,7 +463,7 @@ export default {
     },
 
     additionalSecondaryMenuItems() {
-      let conversationMenuItems = [this.inboxSection, this.labelSection];
+      let conversationMenuItems = [...this.inboxSections, this.labelSection];
       let contactMenuItems = [this.contactLabelSection];
       
       //KANBAN0725 - INI - Agregando tipos de proceso a kanban
@@ -404,6 +484,13 @@ export default {
         contactMenuItems = [this.contactSegmentsSection, ...contactMenuItems];
       }
       
+      // feat/bandejas_por_tipo: la opción va primero, pegada a «No Atendidas».
+      if (this.canSeeInboxes) {
+        conversationMenuItems = [
+          this.sortInboxesItem,
+          ...conversationMenuItems,
+        ];
+      }
       return {
         conversations: conversationMenuItems,
         contacts: contactMenuItems,
@@ -412,6 +499,26 @@ export default {
     },
   },
   methods: {
+    // Acordeón: abrir uno cierra los demás; volver a tocar el abierto lo cierra.
+    onFoldInboxGroup(key) {
+      this.openInboxGroup = toggleOpenGroup(this.effectiveOpenInboxGroup, key);
+    },
+    openGroupOfCurrentInbox() {
+      const inboxId = Number(this.$route.params.inbox_id);
+      const inbox = inboxId && this.inboxes.find(item => item.id === inboxId);
+      if (inbox) this.openInboxGroup = inboxGroupFor(inbox);
+    },
+    onMenuAction(action) {
+      if (action === 'sortInboxes') this.showInboxOrderModal = true;
+    },
+    saveInboxGroupOrder(order) {
+      const byAccount =
+        (this.uiSettings && this.uiSettings[UI_SETTINGS_KEY]) || {};
+      this.updateUISettings({
+        [UI_SETTINGS_KEY]: { ...byAccount, [this.accountId]: order },
+      });
+      this.showInboxOrderModal = false;
+    },
     onToggleGroup(groupId) {
       this.openGroup = groupId;
     },
@@ -463,7 +570,16 @@ export default {
         @toggleGroup="onToggleGroup"
         @addLabel="showAddLabelPopup"
         @addKanbanType="showAddKanbanTypePopup"
+        @action="onMenuAction"
+        @fold="onFoldInboxGroup"
       />
     </transition-group>
+    <InboxGroupsOrderModal
+      v-if="showInboxOrderModal"
+      :order="inboxGroupOrder"
+      :counts="inboxGroupCounts"
+      @close="showInboxOrderModal = false"
+      @save="saveInboxGroupOrder"
+    />
   </div>
 </template>
