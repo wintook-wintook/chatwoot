@@ -1,4 +1,5 @@
 <script>
+import InternalChannelAPI from 'dashboard/api/internalChannel'; // feat/chat_interno
 // KANBAN0725
 import { mapGetters } from 'vuex';
 import { getSidebarItems } from './config/default-sidebar';
@@ -13,6 +14,11 @@ import {
   getUserPermissions,
   hasPermissions,
 } from '../../helper/permissionsHelper';
+import {
+  PRIMARY_AREAS,
+  canSeeArea,
+  getUserAccess,
+} from '../../helper/accessHelper';
 
 export default {
   components: {
@@ -94,7 +100,13 @@ export default {
       isOnChatwootCloud: 'globalConfig/isOnChatwootCloud',
       labels: 'labels/getLabelsOnSidebar',
       teams: 'teams/getMyTeams',
+      getAccount: 'accounts/getAccount',
     }),
+    // feat/chat_interno: encendido salvo que el super admin lo apague en la cuenta.
+    internalChatEnabled() {
+      const account = this.getAccount(this.accountId);
+      return Boolean(account && account.internal_chat_enabled);
+    },
 
     // NUEVA: Computed property para kanbanTypes
     kanbanTypes() {
@@ -153,7 +165,10 @@ export default {
       const menuItems = this.sideMenuConfig.primaryMenu.map(item =>
         this.resolveAlternative(item)
       );
+      // Plan-Roles-Permisos — las áreas que el rol no tiene no salen en el menú.
+      const access = getUserAccess(this.currentUser, this.accountId);
       return menuItems.filter(menuItem => {
+        if (!canSeeArea(access, PRIMARY_AREAS[menuItem.key])) return false;
         if (
           menuItem.key === 'contacts' &&
           this.currentRole === 'agent' &&
@@ -252,6 +267,22 @@ export default {
         if (newAccountId) {
           this.loadKanbanTypes();
         }
+      },
+      immediate: true,
+    },
+    // feat/chat_interno (plan v2): al entrar se deja lista la bandeja «Interno» (la crea la
+    // primera vez y sincroniza equipos); si es nueva, se recargan las bandejas del menú.
+    internalChatEnabled: {
+      handler(enabled) {
+        if (!enabled) return;
+        InternalChannelAPI.ensure()
+          .then(({ data }) => {
+            const known = this.inboxes.some(
+              inbox => inbox.id === data.inbox_id
+            );
+            if (!known) this.$store.dispatch('inboxes/get');
+          })
+          .catch(() => {});
       },
       immediate: true,
     },

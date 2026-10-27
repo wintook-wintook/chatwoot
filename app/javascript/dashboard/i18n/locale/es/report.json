@@ -3,7 +3,7 @@
     "HEADER": "Conversaciones",
     "LOADING_CHART": "Cargando datos del gráfico...",
     "NO_ENOUGH_DATA": "No hemos recibido suficientes puntos de datos para generar el informe, por favor intente nuevamente más tarde.",
-    "DOWNLOAD_AGENT_REPORTS": "Descargar informes de agentes",
+    "DOWNLOAD_AGENT_REPORTS": "Descargar informes de usuarios",
     "DATA_FETCHING_FAILED": "Error al obtener datos, por favor intente nuevamente más tarde.",
     "SUMMARY_FETCHING_FAILED": "Error al obtener el resumen, por favor intente nuevamente más tarde.",
     "METRICS": {
@@ -145,11 +145,11 @@
     }
   },
   "AGENT_REPORTS": {
-    "HEADER": "Resumen de agentes",
+    "HEADER": "Resumen de usuarios",
     "LOADING_CHART": "Cargando datos del gráfico...",
     "NO_ENOUGH_DATA": "No hemos recibido suficientes puntos de datos para generar el informe, por favor intente nuevamente más tarde.",
-    "DOWNLOAD_AGENT_REPORTS": "Descargar informes de agentes",
-    "FILTER_DROPDOWN_LABEL": "Seleccionar agente",
+    "DOWNLOAD_AGENT_REPORTS": "Descargar informes de usuarios",
+    "FILTER_DROPDOWN_LABEL": "Seleccionar usuario",
     "METRICS": {
       "CONVERSATIONS": {
         "NAME": "Conversaciones",
@@ -419,13 +419,13 @@
     "DOWNLOAD_FAILED": "Error al descargar los informes de CSAT",
     "FILTERS": {
       "AGENTS": {
-        "PLACEHOLDER": "Elegir agentes"
+        "PLACEHOLDER": "Elegir usuarios"
       }
     },
     "TABLE": {
       "HEADER": {
         "CONTACT_NAME": "Contacto",
-        "AGENT_NAME": "Agente asignado",
+        "AGENT_NAME": "Responsable",
         "RATING": "Calificación",
         "FEEDBACK_TEXT": "Comentario de retroalimentación"
       }
@@ -462,7 +462,7 @@
       },
       "HANDOFF_RATE": {
         "LABEL": "Tasa de transferencia",
-        "TOOLTIP": "Número total de conversaciones transferidas a agentes / Número total de conversaciones manejadas por el bot * 100"
+        "TOOLTIP": "Número total de conversaciones transferidas a usuarios / Número total de conversaciones manejadas por el bot * 100"
       }
     }
   },
@@ -485,18 +485,18 @@
       "DOWNLOAD_REPORT": "Descargar informe"
     },
     "AGENT_CONVERSATIONS": {
-      "HEADER": "Conversaciones por agentes",
-      "LOADING_MESSAGE": "Cargando métricas de agentes...",
-      "NO_AGENTS": "No hay conversaciones por agentes",
+      "HEADER": "Conversaciones por usuarios",
+      "LOADING_MESSAGE": "Cargando métricas de usuarios...",
+      "NO_AGENTS": "No hay conversaciones por usuarios",
       "TABLE_HEADER": {
-        "AGENT": "Agente",
+        "AGENT": "Usuario",
         "OPEN": "ABIERTAS",
         "UNATTENDED": "Desatendidas",
         "STATUS": "Estado"
       }
     },
     "AGENT_STATUS": {
-      "HEADER": "Estado del agente",
+      "HEADER": "Estado del usuario",
       "ONLINE": "En línea",
       "BUSY": "Ocupado",
       "OFFLINE": "Desconectado"
@@ -526,14 +526,14 @@
       "SEARCH": "Buscar filtro",
       "INPUT_PLACEHOLDER": {
         "SLA": "Nombre de SLA",
-        "AGENTS": "Nombre del agente",
+        "AGENTS": "Nombre del usuario",
         "INBOXES": "Nombre del buzón",
         "LABELS": "Nombre de la etiqueta",
         "TEAMS": "Nombre del equipo"
       },
       "SLA": "Política de SLA",
       "INBOXES": "Buzón",
-      "AGENTS": "Agente",
+      "AGENTS": "Usuario",
       "LABELS": "Etiqueta",
       "TEAMS": "Equipo"
     },
@@ -556,7 +556,7 @@
       "HEADER": {
         "POLICY": "Política",
         "CONVERSATION": "Conversación",
-        "AGENT": "Agente"
+        "AGENT": "Usuario"
       },
       "VIEW_DETAILS": "Ver detalles"
     }

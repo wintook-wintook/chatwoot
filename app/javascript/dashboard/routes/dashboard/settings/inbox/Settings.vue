@@ -15,6 +15,7 @@ import ConfigurationPage from './settingsPage/ConfigurationPage.vue';
 import QuestionsPage from './settingsPage/QuestionsPage.vue';
 import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
 import MicrosoftReauthorize from './channels/microsoft/Reauthorize.vue';
+import TiktokReauthorize from './channels/tiktok/Reauthorize.vue';
 import WidgetBuilder from './WidgetBuilder.vue';
 import BotConfiguration from './components/BotConfiguration.vue';
 import UnoapiConfiguration from './settingsPage/UnoapiConfiguration.vue';
@@ -38,6 +39,7 @@ export default {
     WidgetBuilder,
     SenderNameExamplePreview,
     MicrosoftReauthorize,
+    TiktokReauthorize,
     UnoapiConfiguration,
     WhatsappCallsPage,
   },
@@ -224,7 +226,10 @@ export default {
     },
     canLocktoSingleConversation() {
       return (
-        this.isASmsInbox || this.isAWhatsAppChannel || this.isAMetaInbox
+        this.isASmsInbox ||
+        this.isAWhatsAppChannel ||
+        this.isAMetaInbox ||
+        this.isATiktokChannel
       );
     },
     inboxNameLabel() {
@@ -253,6 +258,9 @@ export default {
     },
     facebookUnauthorized() {
       return this.isAFacebookInbox && this.inbox.reauthorization_required;
+    },
+    tiktokUnauthorized() {
+      return this.isATiktokChannel && this.inbox.reauthorization_required;
     },
     // Instagram no se reautoriza con el SDK de Facebook: hay que rehacer el OAuth propio,
     // así que se manda al agente a la pantalla del canal en vez de reusar el componente.
@@ -439,6 +447,7 @@ export default {
 
     <MicrosoftReauthorize v-if="microsoftUnauthorized" :inbox="inbox" />
     <FacebookReauthorize v-if="facebookUnauthorized" :inbox="inbox" />
+    <TiktokReauthorize v-if="tiktokUnauthorized" />
     <InstagramReauthorize v-if="instagramUnauthorized" />
 
     <div v-if="selectedTabKey === 'inbox_settings'" class="mx-8">

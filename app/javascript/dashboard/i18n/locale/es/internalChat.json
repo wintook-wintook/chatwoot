@@ -1,0 +1,14 @@
+{
+  "INTERNAL_CHAT": {
+    "GENERAL": "general",
+    "NEW_ROOM": {
+      "TITLE": "Nuevo chat",
+      "DESCRIPTION": "Elige con qué agente quieres hablar. Los grupos son los equipos de la cuenta.",
+      "AGENT": "Agente",
+      "SELECT_PLACEHOLDER": "Busca un agente",
+      "CREATE": "Abrir chat",
+      "CANCEL": "Cancelar",
+      "ERROR": "No se pudo abrir el chat."
+    }
+  }
+}

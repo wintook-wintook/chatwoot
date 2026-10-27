@@ -245,3 +245,10 @@ kanban_funnel_stale_job:
   class: "Kanban::FunnelStaleJob"
   queue: scheduled_jobs
   description: "Discard contact-funnel cards with no customer reply after the board's limit"
+
+# Plan-Trabajo-Campo R4 — órdenes de los mantenimientos recurrentes
+maintenance_plans_generate_job:
+  cron: "0 7 * * *"
+  class: "MaintenancePlans::GenerateJob"
+  queue: scheduled_jobs
+  description: "Generate work orders for recurring maintenance plans within their lead days"

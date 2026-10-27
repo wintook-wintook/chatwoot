@@ -29,7 +29,7 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
 
   def update
     @agent.update!(agent_params.slice(:name, :custom_attributes).compact)
-    @agent.current_account_user.update!(agent_params.slice(*account_user_attributes).compact)
+    @agent.current_account_user.update!(agent_params.slice(*account_user_attributes).compact.merge(access_role_attributes))
   end
 
   def destroy
@@ -96,6 +96,24 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
 
   def agent_params
     params.require(:agent).permit(allowed_agent_params)
+  end
+
+  # Plan-Roles-Permisos — el combo «Rol» manda la clave (supervisor, seller…).
+  # Plan-Trabajo-Campo R3 — y el perfil de campo (habilidades y zona).
+  def access_role_attributes
+    attrs = field_profile_attributes
+    key = params.dig(:agent, :access_role_key).presence
+    return attrs unless key
+
+    role = AccessRole.for_account(Current.account).find { |access_role| access_role.key == key }
+    role ? attrs.merge(access_role: role) : attrs
+  end
+
+  def field_profile_attributes
+    profile = params.dig(:agent, :field_profile)
+    return {} unless profile
+
+    { field_profile: { 'skills' => Array(profile[:skills]).map(&:to_s).compact_blank, 'zone' => profile[:zone].to_s.strip.presence }.compact }
   end
 
   def new_agent_params

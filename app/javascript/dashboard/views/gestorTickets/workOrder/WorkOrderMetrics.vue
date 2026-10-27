@@ -345,6 +345,42 @@ export default {
             }}
           </p>
         </div>
+        <!-- Plan-Trabajo-Campo R5 — a la primera y calificación del cliente -->
+        <div
+          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+        >
+          <p class="m-0 text-xs uppercase text-slate-500 dark:text-slate-400">
+            {{ t('KPI.FIRST_TIME_FIX') }}
+          </p>
+          <p
+            class="m-0 mt-1 text-2xl font-bold tabular-nums text-slate-800 dark:text-slate-100"
+          >
+            {{ pct(summary.first_time_fix_rate) }}
+          </p>
+          <p class="m-0 mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {{
+              t('KPI.FIRST_TIME_FIX_SUB', {
+                count: summary.first_time_fix_count || 0,
+                revisits: summary.revisit_count || 0,
+              })
+            }}
+          </p>
+        </div>
+        <div
+          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+        >
+          <p class="m-0 text-xs uppercase text-slate-500 dark:text-slate-400">
+            {{ t('KPI.CSAT') }}
+          </p>
+          <p
+            class="m-0 mt-1 text-2xl font-bold tabular-nums text-slate-800 dark:text-slate-100"
+          >
+            {{ summary.csat_average ? `${summary.csat_average} / 5` : '—' }}
+          </p>
+          <p class="m-0 mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {{ t('KPI.CSAT_SUB', { count: summary.csat_count || 0 }) }}
+          </p>
+        </div>
         <div
           class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
         >
@@ -523,6 +559,8 @@ export default {
               <th class="py-1 text-right">{{ t('COLS.HOURS') }}</th>
               <th class="py-1 text-right">{{ t('COLS.VARIANCE') }}</th>
               <th class="py-1 text-right">{{ t('COLS.REWORK') }}</th>
+              <th class="py-1 text-right">{{ t('COLS.FIRST_TIME_FIX') }}</th>
+              <th class="py-1 text-right">{{ t('COLS.CSAT') }}</th>
             </tr>
           </thead>
           <tbody class="text-slate-700 dark:text-slate-200">
@@ -550,6 +588,12 @@ export default {
               </td>
               <td class="py-1.5 text-right tabular-nums">
                 {{ row.rework_count }}
+              </td>
+              <td class="py-1.5 text-right tabular-nums">
+                {{ pct(row.first_time_fix_rate) }}
+              </td>
+              <td class="py-1.5 text-right tabular-nums">
+                {{ row.csat_average || '—' }}
               </td>
             </tr>
           </tbody>

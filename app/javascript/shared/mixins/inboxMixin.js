@@ -9,7 +9,9 @@ export const INBOX_TYPES = {
   TELEGRAM: 'Channel::Telegram',
   LINE: 'Channel::Line',
   SMS: 'Channel::Sms',
+  TIKTOK: 'Channel::Tiktok',
   INSTAGRAM: 'Channel::Instagram',
+  INTERNAL: 'Channel::Internal', // feat/chat_interno: la bandeja «Interno»
 };
 
 export const INBOX_FEATURES = {
@@ -27,6 +29,7 @@ export const INBOX_FEATURE_MAP = {
     INBOX_TYPES.TWITTER,
     INBOX_TYPES.WHATSAPP,
     INBOX_TYPES.TELEGRAM,
+    INBOX_TYPES.TIKTOK,
     INBOX_TYPES.API,
   ],
   [INBOX_FEATURES.REPLY_TO_OUTGOING]: [
@@ -34,6 +37,7 @@ export const INBOX_FEATURE_MAP = {
     INBOX_TYPES.TWITTER,
     INBOX_TYPES.WHATSAPP,
     INBOX_TYPES.TELEGRAM,
+    INBOX_TYPES.TIKTOK,
     INBOX_TYPES.API,
   ],
 };
@@ -145,6 +149,8 @@ export default {
         badgeKey = this.twilioBadge;
       } else if (this.isAWhatsAppChannel) {
         badgeKey = 'whatsapp';
+      } else if (this.isATiktokChannel) {
+        badgeKey = 'tiktok';
       }
       return badgeKey || this.channelType;
     },
@@ -153,6 +159,9 @@ export default {
         this.channelType === INBOX_TYPES.WHATSAPP ||
         this.isATwilioWhatsAppChannel
       );
+    },
+    isATiktokChannel() {
+      return this.channelType === INBOX_TYPES.TIKTOK;
     },
   },
   methods: {

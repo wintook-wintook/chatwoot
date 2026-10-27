@@ -20,6 +20,11 @@ export default {
       type: String,
       required: true,
     },
+    // Texto cuando no hay valor (p. ej. «Sin correo»); por omisión «No disponible».
+    emptyText: {
+      type: String,
+      default: '',
+    },
     value: {
       type: String,
       default: '',
@@ -60,7 +65,7 @@ export default {
         {{ value }}
       </span>
       <span v-else class="text-sm text-slate-300 dark:text-slate-600">{{
-        $t('CONTACT_PANEL.NOT_AVAILABLE')
+        emptyText || $t('CONTACT_PANEL.NOT_AVAILABLE')
       }}</span>
 
       <woot-button
@@ -92,7 +97,7 @@ export default {
         {{ value }}
       </span>
       <span v-else class="text-sm text-slate-300 dark:text-slate-600">{{
-        $t('CONTACT_PANEL.NOT_AVAILABLE')
+        emptyText || $t('CONTACT_PANEL.NOT_AVAILABLE')
       }}</span>
     </div>
   </div>

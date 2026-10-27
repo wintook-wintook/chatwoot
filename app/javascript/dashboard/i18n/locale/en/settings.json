@@ -358,6 +358,11 @@
     "CAPTAIN": "Captain",
     "HOME": "Home",
     "AGENTS": "Agents",
+    "ACCESS_ROLES": "Roles",
+    "CATALOG": "Catalog",
+    "FIELD_ROUTE": "My field route",
+    "DISPATCH": "Dispatch",
+    "QUOTES": "Quotes",
     "AGENT_BOTS": "Bots",
     "AUDIT_LOGS": "Audit Logs",
     "INBOXES": "Inboxes",
@@ -424,7 +429,33 @@
     "CASES_GROUP_CONFIG": "Settings",
     "BUSINESS_SUMMARY": "Business summary",
     "BUSINESS_SUMMARY_ACCESS": "Business summary: access",
-    "HOME_SUMMARY": "Home"
+    "HOME_SUMMARY": "Home",
+    "SORT_INBOXES": "Sort inboxes…",
+    "INBOX_GROUPS": {
+      "INTERNAL": "Internal",
+      "WHATSAPP": "WhatsApp",
+      "TELEGRAM": "Telegram",
+      "EMAIL": "Email",
+      "META": "Meta (Messenger & Instagram)",
+      "WEB": "Website",
+      "TIKTOK": "TikTok",
+      "OTHERS": "Other channels"
+    },
+    "INBOX_GROUPS_MODAL": {
+      "TITLE": "Sort inboxes by type",
+      "DESCRIPTION": "Choose the order of the inbox groups in your menu. It only changes your menu, not anyone else’s.",
+      "DRAG": "Drag to move",
+      "UP": "Move up",
+      "DOWN": "Move down",
+      "HINT": "Groups without inboxes are not shown in the menu.",
+      "RESET": "Reset",
+      "CANCEL": "Cancel",
+      "SAVE": "Save"
+    },
+    "SHOW_MORE": "Show more ({count})",
+    "SHOW_LESS": "Show less",
+    "INTERNAL_CHAT_NEW": "New chat",
+    "MAINTENANCE": "Maintenance"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Billing",

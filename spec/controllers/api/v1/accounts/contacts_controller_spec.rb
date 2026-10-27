@@ -194,7 +194,13 @@ RSpec.describe 'Contacts API', type: :request do
     end
 
     context 'when it is an authenticated user with out permission' do
-      let(:agent) { create(:user, account: account, role: :agent) }
+      # Plan-Roles-Permisos — el Supervisor (rol por defecto) sí exporta; el Vendedor no.
+      let(:agent) do
+        create(:user, account: account, role: :agent).tap do |user|
+          seller = AccessRole.for_account(account).find { |role| role.key == 'seller' }
+          account.account_users.find_by(user: user).update!(access_role: seller)
+        end
+      end
 
       it 'returns unauthorized' do
         post "/api/v1/accounts/#{account.id}/contacts/export",

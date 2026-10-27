@@ -83,7 +83,8 @@ class Api::V1::Accounts::CaseTypesController < Api::V1::Accounts::BaseController
   end
 
   def type_params
-    params.require(:case_type).permit(:name, :color, :position, :prefix, :public, :itil_enabled, :case_class)
+    params.require(:case_type).permit(:name, :color, :position, :prefix, :public, :itil_enabled, :case_class,
+                                      field_settings: CaseType::FIELD_DEFAULTS.keys) # Plan-Trabajo-Campo R1
   end
 
   # nil = válida. Comercial y Orden de trabajo solo con su flag en la cuenta.
@@ -119,6 +120,7 @@ class Api::V1::Accounts::CaseTypesController < Api::V1::Accounts::BaseController
       public: type[:public],
       # @tickets_cases — modo ITIL propio del tipo (antes era un ajuste global de cuenta).
       itil_enabled: type.itil_enabled,
+      field_settings: type.field_settings_effective, # Plan-Trabajo-Campo R1
       # @tickets_cases — clase del tipo (support/commercial/…); el ticket la hereda.
       case_class: type.case_class,
       # Retirado (cambió de clase): conserva sus casos, ya no se usa para crear nuevos.

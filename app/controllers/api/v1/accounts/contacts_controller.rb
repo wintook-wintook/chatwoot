@@ -127,7 +127,8 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   def resolved_contacts
     return @resolved_contacts if @resolved_contacts
 
-    @resolved_contacts = Current.account.contacts.resolved_contacts
+    # Plan-Roles-Permisos — con Clientes en «solo lo suyo», solo sus contactos.
+    @resolved_contacts = access_grant.contacts(Current.account.contacts).resolved_contacts
 
     @resolved_contacts = @resolved_contacts.tagged_with(params[:labels], any: true) if params[:labels].present?
     @resolved_contacts

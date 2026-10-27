@@ -11,6 +11,11 @@ import BubbleReplyTo from './bubble/ReplyTo.vue';
 import BubbleText from './bubble/Text.vue';
 import BubbleVoiceCall from './bubble/VoiceCall.vue'; // diag/llamadas_whatsapp
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
+// feat/chat_interno: dirección de los mensajes según quién mira en «Interno».
+import {
+  isInternalChat,
+  viewerMessageType,
+} from 'dashboard/helper/internalChat';
 import InstagramStory from './bubble/InstagramStory.vue';
 import InstagramStoryReply from './bubble/InstagramStoryReply.vue';
 import Spinner from 'shared/components/Spinner.vue';
@@ -197,6 +202,17 @@ export default {
     sender() {
       return this.data.sender || {};
     },
+    // feat/chat_interno (plan v2): en «Interno» todos los mensajes son de agentes; lo de los
+    // demás se pinta como recibido (izquierda, con su foto) según quién mira.
+    isInternal() {
+      return isInternalChat(this.$store.getters.getSelectedChat);
+    },
+    messageType() {
+      return viewerMessageType(this.data, {
+        internal: this.isInternal,
+        currentUserId: this.$store.getters.getCurrentUserID,
+      });
+    },
     // proyecto@whatsapp_mobile_echo: mensajes reflejados de la WhatsApp Business App (móvil),
     // sin agente asociado en Chatwoot — ver Whatsapp::EchoMessageService
     isSentFromWhatsappMobile() {
@@ -226,7 +242,7 @@ export default {
       return `https://twitter.com/${screenName}`;
     },
     alignBubble() {
-      const { message_type: messageType } = this.data;
+      const { messageType } = this;
       const isCentered = messageType === MESSAGE_TYPE.ACTIVITY;
       const isLeftAligned = messageType === MESSAGE_TYPE.INCOMING;
       const isRightAligned =
@@ -247,19 +263,19 @@ export default {
       return this.contentAttributes.external_created_at || this.data.created_at;
     },
     isBubble() {
-      return [0, 1, 3].includes(this.data.message_type);
+      return [0, 1, 3].includes(this.messageType);
     },
     isIncoming() {
-      return this.data.message_type === MESSAGE_TYPE.INCOMING;
+      return this.messageType === MESSAGE_TYPE.INCOMING;
     },
     isOutgoing() {
-      return this.data.message_type === MESSAGE_TYPE.OUTGOING;
+      return this.messageType === MESSAGE_TYPE.OUTGOING;
     },
     isVoiceCall() {
       return this.contentType === 'voice_call';
     },
     isTemplate() {
-      return this.data.message_type === MESSAGE_TYPE.TEMPLATE;
+      return this.messageType === MESSAGE_TYPE.TEMPLATE;
     },
     isAnIntegrationMessage() {
       return this.contentType === 'integrations';
@@ -282,10 +298,11 @@ export default {
     },
     tooltipForSender() {
       const name = this.senderNameForAvatar;
-      const { message_type: messageType } = this.data;
+      const { messageType } = this;
       const showTooltip =
         messageType === MESSAGE_TYPE.OUTGOING ||
-        messageType === MESSAGE_TYPE.TEMPLATE;
+        messageType === MESSAGE_TYPE.TEMPLATE ||
+        this.isInternal;
       return showTooltip
         ? {
             content: `${this.$t('CONVERSATION.SENT_BY')} ${name}`,
@@ -342,6 +359,7 @@ export default {
       if (this.isOutgoing || this.isTemplate) {
         return true;
       }
+      if (this.isInternal && this.isIncoming) return true; // feat/chat_interno: varios agentes
       return this.isATweet && this.isIncoming && this.sender;
     },
     senderNameForAvatar() {
@@ -352,6 +370,7 @@ export default {
         const { name = this.$t('CONVERSATION.BOT') } = this.sender || {};
         return name;
       }
+      if (this.isInternal) return this.sender.name || ''; // feat/chat_interno
       return '';
     },
     isEmailContentType() {
@@ -492,7 +511,7 @@ export default {
           v-if="inReplyToMessageId && inboxSupportsReplyTo.incoming"
           :message="inReplyToMessage"
           :message-id="inReplyToMessageId"
-          :message-type="data.message_type"
+          :message-type="messageType"
           :parent-has-attachments="hasAttachments"
         />
         <div v-if="isUnsupported">
@@ -564,7 +583,7 @@ export default {
           :is-a-whatsapp-channel="isAWhatsAppChannel"
           :is-email="isEmailContentType"
           :is-private="data.private"
-          :message-type="data.message_type"
+          :message-type="messageType"
           :message-status="status"
           :source-id="data.source_id"
           :inbox-id="data.inbox_id"

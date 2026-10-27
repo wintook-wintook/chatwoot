@@ -28,7 +28,7 @@ RSpec.describe 'Case Types API — cambiar de clase' do
   it 'un agente no puede' do
     post url, params: { case_class: 'project' }, headers: agent.create_new_auth_token, as: :json
 
-    expect(response).to have_http_status(:unauthorized)
+    expect(response).to have_http_status(:forbidden) # Plan-Roles-Permisos: Ajustes cerrado por rol
   end
 
   it 'no cambia a una clase apagada en la cuenta' do

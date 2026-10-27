@@ -10,6 +10,7 @@ export default {
       type: [String, Number],
       required: true,
     },
+    addText: { type: String, default: '' },
   },
 
   computed: {
@@ -79,6 +80,7 @@ export default {
   <LabelSelector
     :all-labels="allLabels"
     :saved-labels="savedLabels"
+    :add-text="addText"
     @add="addItem"
     @remove="removeItem"
   />

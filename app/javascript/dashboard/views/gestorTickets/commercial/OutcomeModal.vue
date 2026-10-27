@@ -18,6 +18,8 @@ export default {
     // Resultado ya decidido (botón o columna); null = el agente lo elige.
     outcome: { type: String, default: null },
     isSaving: { type: Boolean, default: false },
+    // Plan-Catalogo-Cotizaciones — cotizaciones vivas de la oportunidad.
+    quotes: { type: Array, default: () => [] },
   },
   emits: ['close', 'confirm'],
   data() {
@@ -26,6 +28,7 @@ export default {
       reasonId: '',
       note: '',
       reasons: [],
+      acceptedQuoteId: this.quotes.length ? this.quotes[0].id : '',
     };
   },
   computed: {
@@ -67,6 +70,10 @@ export default {
     submit() {
       if (!this.canConfirm) return;
       this.$emit('confirm', {
+        accepted_quote_id:
+          this.result === 'won' && this.quotes.length > 1
+            ? this.acceptedQuoteId
+            : undefined,
         outcome: this.result,
         outcome_reason_id: this.reasonId || undefined,
         outcome_note: this.note.trim() || undefined,
@@ -117,6 +124,16 @@ export default {
         >
           {{ $t('CASE_TICKETS.COMMERCIAL.OUTCOME_MODAL.WON_HINT') }}
         </p>
+
+        <!-- Plan-Catalogo-Cotizaciones — varias cotizaciones vivas: ¿cuál aceptó? -->
+        <label v-if="result === 'won' && quotes.length > 1">
+          {{ $t('QUOTES.WHICH_QUOTE') }}
+          <select v-model="acceptedQuoteId">
+            <option v-for="q in quotes" :key="q.id" :value="q.id">
+              {{ q.folio }}
+            </option>
+          </select>
+        </label>
 
         <label v-if="reasonsForResult.length" class="flex flex-col gap-1">
           <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
