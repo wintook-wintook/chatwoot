@@ -1158,8 +1158,10 @@ se prospecta (Gmail empieza a mandar a spam o corta el envío). Dos piezas:
 >   y el rebote real que ya traía Chatwoot (`bounced_with_no_from.eml`); 1002 en verde
 >   (contact_trackings, tracking_campaigns, mailboxes, contacto, controlador de campañas).
 > - **Pedírselo al Asistente:** no aplica; es automático.
-> - **Falta probar en vivo:** desde la bandeja «Develop» (#35660), escribirle a un `noexiste…@gmail.com`
->   y ver que en ≤1 min llega el aviso, el contacto queda «Su correo rebotó» y el seguimiento se detiene.
+> - 🧪 **Probado en vivo (27/10/2026):** bandeja «Develop» (#35660) → `noexiste-004ae174@gmail.com`
+>   (contacto #33314, conversación 650, seguimiento #5691 en pausa). A los ~40 s: aviso «5.1.1 … does not
+>   exist» reconocido, contacto marcado, seguimiento `cancelled`/`bounced`, nota 📭 en la conversación,
+>   0 mensajes entrantes y ningún contacto «mailer-daemon». ✅
 > - **Solo IMAP:** las bandejas por reenvío (Action Mailbox) no pasan por aquí; hoy no hay ninguna
 >   (ver `docs/revision_correos.md`, rama `diag/revision_correos`).
 
