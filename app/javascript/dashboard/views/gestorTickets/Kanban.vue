@@ -47,6 +47,7 @@ import {
   promiseOverdue,
 } from 'dashboard/helper/caseCommercial';
 import { formatHours } from 'dashboard/helper/caseWorkOrder';
+import { backQuery } from './backLink';
 
 // Columnas por defecto del tablero cuando no hay un tipo de caso filtrado (así
 // que no hay columnas propias de un tipo que mostrar). ITIL dejó de ser un modo
@@ -570,6 +571,8 @@ export default {
       this.$router.push({
         name: 'gestorTickets_detail',
         params: { id: ticket.id },
+        // «Volver al tablero» (no a la lista).
+        query: backQuery(this.$route),
       });
     },
     // ── drag & drop ──

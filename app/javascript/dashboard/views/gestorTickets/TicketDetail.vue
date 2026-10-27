@@ -26,6 +26,7 @@ import {
   CLASS_VIEW_ROUTES,
   caseClassOfTicket,
   classHasSla,
+  lastCaseView,
   rememberCaseClass,
 } from '../../helper/caseClasses';
 // Plan-Clase-Comercial F4 — oportunidades: datos comerciales, resultado, posponer.
@@ -689,13 +690,17 @@ export default {
     isCommercial() {
       return !!this.ticket?.is_commercial;
     },
-    // Plan-Casos E1 — «Volver» lleva a la lista de la clase del caso.
+    // Plan-Casos E1 — «Volver» lleva a donde se abrió (`?back=`); abierto directo
+    // (enlace, aviso), a la última vista que se usó de su clase, como el menú.
     backRoute() {
       if (this.returnPath) return this.returnPath;
-      return {
-        name: CLASS_VIEW_ROUTES.list,
-        params: { caseClass: caseClassOfTicket(this.ticket) },
-      };
+      const caseClass = caseClassOfTicket(this.ticket);
+      const view = lastCaseView(
+        this.$route.params.accountId,
+        caseClass,
+        'list'
+      );
+      return { name: CLASS_VIEW_ROUTES[view], params: { caseClass } };
     },
     // Abierto desde otra pantalla (Métricas, Despacho, el contacto, una
     // cotización…) que mandó `?back=<ruta>`: «Volver» regresa ahí (backLink.js).

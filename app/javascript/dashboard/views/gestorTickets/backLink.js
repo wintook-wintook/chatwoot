@@ -10,7 +10,10 @@ export const backPath = route => {
 // Qué es la pantalla de origen, para el texto del botón (CASE_TICKETS.BACK_TO.*).
 export const backKind = path => {
   const bare = (path || '').split('?')[0];
-  if (bare.endsWith('/tickets/metrics')) return 'METRICS';
+  // Tablero / Lista / Métricas de una clase (/tickets/<clase>/board…) y las de órdenes.
+  if (bare.endsWith('/board')) return 'BOARD';
+  if (bare.endsWith('/list')) return 'LIST';
+  if (bare.endsWith('/metrics')) return 'METRICS';
   if (bare.endsWith('/tickets/dispatch')) return 'DISPATCH';
   if (/\/tickets\/quotes\/\d+$/.test(bare)) return 'QUOTE';
   if (/\/tickets\/\d+$/.test(bare)) return 'CASE';
