@@ -15,6 +15,7 @@
 #  objective             :string
 #  paused_at             :datetime
 #  paused_reason         :string
+#  purpose               :string           default("follow_up"), not null
 #  respect_working_hours :boolean          default(TRUE), not null
 #  scheduled_for         :datetime
 #  status                :string           default("running"), not null
@@ -27,11 +28,12 @@
 #
 # Indexes
 #
-#  index_tracking_campaigns_on_account_id             (account_id)
-#  index_tracking_campaigns_on_account_id_and_status  (account_id,status)
-#  index_tracking_campaigns_on_inbox_id               (inbox_id)
-#  index_tracking_campaigns_on_tracking_template_id   (tracking_template_id)
-#  index_tracking_campaigns_on_user_id                (user_id)
+#  index_tracking_campaigns_on_account_id              (account_id)
+#  index_tracking_campaigns_on_account_id_and_purpose  (account_id,purpose)
+#  index_tracking_campaigns_on_account_id_and_status   (account_id,status)
+#  index_tracking_campaigns_on_inbox_id                (inbox_id)
+#  index_tracking_campaigns_on_tracking_template_id    (tracking_template_id)
+#  index_tracking_campaigns_on_user_id                 (user_id)
 #
 # Foreign Keys
 #
@@ -62,6 +64,8 @@
 class TrackingCampaign < ApplicationRecord
   STATUSES = %w[saved draft running paused finished].freeze
   MODES = %w[batch continuous].freeze
+  # prospeccion V0: seguimiento (ya te conocen) o prospección (clientes nuevos).
+  PURPOSES = %w[follow_up prospecting].freeze
 
   belongs_to :account
   belongs_to :tracking_template, optional: true
@@ -80,6 +84,7 @@ class TrackingCampaign < ApplicationRecord
   # prospeccion F1: asunto del primer correo cuando la bandeja es de correo.
   validates :email_subject, length: { maximum: TrackingCampaigns::EmailSubject::MAX_LENGTH }, allow_nil: true
   validates :mode, inclusion: { in: MODES }
+  validates :purpose, inclusion: { in: PURPOSES }
   validates :entry_delay_minutes, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :daily_cap, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validate :window_order
@@ -93,6 +98,10 @@ class TrackingCampaign < ApplicationRecord
 
   def continuous?
     mode == 'continuous'
+  end
+
+  def prospecting?
+    purpose == 'prospecting'
   end
 
   def saved?

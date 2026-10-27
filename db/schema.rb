@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_31_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_31_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2029,7 +2029,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_100000) do
     t.string "email_subject"
     t.jsonb "audience", default: {}, null: false
     t.string "paused_reason"
+    t.string "purpose", default: "follow_up", null: false
     t.datetime "paused_at"
+    t.index ["account_id", "purpose"], name: "index_tracking_campaigns_on_account_id_and_purpose"
     t.index ["account_id", "status"], name: "index_tracking_campaigns_on_account_id_and_status"
     t.index ["account_id"], name: "index_tracking_campaigns_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_campaigns_on_inbox_id"

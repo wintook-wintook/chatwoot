@@ -100,6 +100,7 @@ const campaignState = campaign => {
   const state = {
     campaignName: campaign.name,
     selectedTemplateId: campaign.tracking_template_id || '',
+    purpose: campaign.purpose || 'follow_up',
     emailSubject: campaign.email_subject || '',
     scheduledFor: toLocalInput(campaign.scheduled_for),
     endsAt: toLocalInput(campaign.ends_at),
@@ -126,6 +127,8 @@ export default {
     return {
       campaignName: '',
       selectedTemplateId: '',
+      // prospeccion V0: seguimiento (ya te conocen) o prospección (clientes nuevos)
+      purpose: 'follow_up',
       emailSubject: '',
       showSendOptions: false,
       scheduledFor: '',
@@ -198,6 +201,20 @@ export default {
     },
     emailSubjectReady() {
       return !this.isEmailCampaign || !!this.emailSubject.trim();
+    },
+    purposeOptions() {
+      return [
+        {
+          value: 'follow_up',
+          label: this.$t('BULK_TRACKING_ASSIGN.MODAL.PURPOSE_FOLLOW_UP'),
+          hint: this.$t('BULK_TRACKING_ASSIGN.MODAL.PURPOSE_FOLLOW_UP_HINT'),
+        },
+        {
+          value: 'prospecting',
+          label: this.$t('BULK_TRACKING_ASSIGN.MODAL.PURPOSE_PROSPECTING'),
+          hint: this.$t('BULK_TRACKING_ASSIGN.MODAL.PURPOSE_PROSPECTING_HINT'),
+        },
+      ];
     },
     emailSubjectVariables() {
       return { contacto: '{{contacto}}', empresa: '{{empresa}}' };
@@ -459,6 +476,7 @@ export default {
         scheduled_for: this.toIso(this.scheduledFor),
         daily_cap: this.dailyCap ? Number(this.dailyCap) : null,
         email_subject: this.emailSubjectPayload(),
+        purpose: this.purpose,
         ...this.windowPayload(),
       };
     },
@@ -473,6 +491,7 @@ export default {
         window: this.windowPayload(),
         audienceSource: this.audienceSource,
         emailSubject: this.emailSubjectPayload(),
+        purpose: this.purpose,
       };
     },
     create(launch) {
@@ -515,6 +534,7 @@ export default {
     resetForm() {
       this.campaignName = '';
       this.selectedTemplateId = '';
+      this.purpose = 'follow_up';
       this.emailSubject = '';
       this.showSendOptions = false;
       this.scheduledFor = '';
@@ -544,6 +564,26 @@ export default {
         <h3 class="section-title">
           {{ $t('BULK_TRACKING_ASSIGN.MODAL.SECTION_WHAT') }}
         </h3>
+        <!-- prospeccion V0: ¿para qué es la campaña? -->
+        <span class="field-label">
+          {{ $t('BULK_TRACKING_ASSIGN.MODAL.PURPOSE_LABEL') }}
+        </span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1 mb-3">
+          <label
+            v-for="option in purposeOptions"
+            :key="option.value"
+            class="audience-card"
+            :class="{ 'audience-card--active': purpose === option.value }"
+          >
+            <span class="audience-radio">
+              <input v-model="purpose" type="radio" :value="option.value" />
+              {{ option.label }}
+            </span>
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              {{ option.hint }}
+            </span>
+          </label>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
           <label class="block">
             <span class="field-label">

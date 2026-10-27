@@ -938,6 +938,17 @@ Orden propuesto: **F1 → F2 → F4 → F3**. Las tres primeras son rápidas y s
 | **V5** | P1 · Clasificar cada respuesta: columna `contact_trackings.prospect_stage` (`contacted` · `replied` · `interested` · `handed_off`) y `prospect_exit` (`not_now` · `not_interested` · `opted_out` · `no_reply`); un clasificador propio (no el router apagado) que corre con cada respuesta del prospecto | servicio nuevo `TrackingCampaigns::ProspectClassifier` | Mediano |
 | **V6** | Embudo de prospección en `CampaignDetail.vue`: etapas, salidas y tasas; lista «Interesados» | `funnel_by_campaign` + detalle | Chico–mediano |
 
+> ✅ **V0 HECHA (27/10/2026).**
+> - **Qué se hizo:** migración `20261031110000_add_purpose_to_tracking_campaigns` (`purpose`:
+>   `follow_up` | `prospecting`, por omisión `follow_up`; índice por cuenta); `TrackingCampaign#prospecting?`;
+>   viaja por la API de lote y la de campaña continua (valor desconocido → `follow_up`); el detalle lo devuelve.
+> - **Pantalla:** en «Nueva campaña», «¿Para qué es?» con dos fichas (Seguimiento / Prospección);
+>   en la lista, pestañas **Todas · Seguimiento · Prospección** (`woot-tabs`) y 🎯 junto al nombre.
+>   Se puede cambiar mientras está Guardada (D12).
+> - **Pruebas:** 3 nuevas en `tracking_campaigns_controller_spec.rb`; 76 en verde.
+> - **Cómo usarlo:** Campañas → Agregar campaña → «¿Para qué es?» → Prospección.
+> - Todavía **no cambia ninguna regla**: eso llega con V1–V6.
+
 Orden: **V0 → V1 → V2 → V3 → V4 → V5 → V6**. Con V0–V4 el envío ya es correcto;
 con V5–V6 ya es prospección (se sabe quién está interesado y cuánto rinde la campaña).
 
@@ -958,7 +969,23 @@ con V5–V6 ya es prospección (se sabe quién está interesado y cuánto rinde 
 - A/B de asuntos y mensajes.
 - Multicanal en una misma campaña: correo → WhatsApp cuando el prospecto da su permiso (necesita «agente con varias bandejas»).
 
-### 10.6 Decisiones de este plan
+### 10.6 Cómo v1.0 cumple las buenas prácticas
+
+La lista de una prospección bien hecha (§1) no se pierde: cada punto cae en una fase o es tarea
+de la empresa (no código). Se marca conforme avanzan las fases.
+
+| Buena práctica | Dónde queda | Estado |
+|---|---|---|
+| 1 · A quién: cliente ideal, correos validados | Empresa: definir el cliente ideal · v1.1: validar correos antes de enviar | ⏳ empresa / v1.1 |
+| 2 · Mensaje: asunto, firma, prompt real | F1 ✅ · V1 firma · empresa: prompt de prospección | 🟡 |
+| 3 · Cadencia: se detiene al responder, días hábiles | V2 + V3 | ⏳ |
+| 4 · Cumplir: baja, no contactar, aviso de privacidad | V4 · D7 (legal) | ⏳ |
+| 5 · Que llegue: dominio, calentamiento, tope diario | V3 tope · empresa: dominio con SPF/DKIM/DMARC | ⏳ |
+| 6 · Calificar respuestas | V5 | ⏳ |
+| 7 · Entregar al vendedor | V6 lista «Interesados» · v1.1: P2 con plazo y avisos | ⏳ |
+| 8 · Medir | V6 embudo y tasas | ⏳ |
+
+### 10.7 Decisiones de este plan
 
 | # | Pregunta | Propuesta |
 |---|---|---|

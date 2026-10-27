@@ -10,6 +10,11 @@
     "EMPTY_HINT": "Create one with the “Add campaign” button or bulk-assign an AI Agent from Contacts.",
     "SEARCH_PLACEHOLDER": "Search by name, AI Agent or channel…",
     "FILTER_STATUS_ALL": "All statuses",
+    "PURPOSE_TABS": {
+      "ALL": "All",
+      "FOLLOW_UP": "Follow-up",
+      "PROSPECTING": "Prospecting"
+    },
     "NO_RESULTS": "No campaigns match the filter.",
     "DELETE": "Delete campaign",
     "DELETE_CONFIRM": "Its active follow-ups will be cancelled (they stop sending) and the rest will stay unlinked under “All”. Delete campaign",

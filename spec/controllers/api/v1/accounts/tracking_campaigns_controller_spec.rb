@@ -39,6 +39,13 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
                                   inbox: inbox, tracking_campaign_id: campaign.id)
       end
 
+      it 'dice para qué es la campaña (prospeccion V0)' do
+        campaign.update!(purpose: 'prospecting')
+        get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}", headers: admin.create_new_auth_token, as: :json
+
+        expect(response.parsed_body['purpose']).to eq('prospecting')
+      end
+
       it 'sin envíos registrados (antes de la Fase 1), la entrega sale del último mensaje saliente' do
         get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}",
             headers: admin.create_new_auth_token, as: :json
@@ -125,6 +132,18 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
       expect(response).to have_http_status(:success)
       expect(TrackingCampaign.find(response.parsed_body['campaign_id'])).to have_attributes(status: 'saved', mode: 'continuous')
     end
+
+    # prospeccion V0 — para qué es la campaña
+    it 'guarda si es de prospección; un valor desconocido queda en seguimiento' do
+      url = "/api/v1/accounts/#{account.id}/tracking_campaigns"
+      post url, params: { name: 'Frío', tracking_template_id: template.id, launch: false, purpose: 'prospecting' },
+                headers: admin.create_new_auth_token, as: :json
+      expect(TrackingCampaign.find(response.parsed_body['campaign_id'])).to be_prospecting
+
+      post url, params: { name: 'Raro', tracking_template_id: template.id, launch: false, purpose: 'otra' },
+                headers: admin.create_new_auth_token, as: :json
+      expect(TrackingCampaign.find(response.parsed_body['campaign_id']).purpose).to eq('follow_up')
+    end
   end
 
   describe 'PATCH una campaña Guardada' do
@@ -157,6 +176,16 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
                                               scheduled_for: start, ends_at: nil)
       expect(saved.audience).to include('excluded_contact_ids' => [contacts.first.id],
                                         'source' => { 'type' => 'label', 'label' => 'vip' })
+    end
+
+    it 'por lote: mientras está Guardada se puede volver de prospección (prospeccion V0)' do
+      patch "/api/v1/accounts/#{account.id}/contact_tracking_bulk_assigns/#{saved.id}",
+            params: { campaign_name: 'Lote', template_id: template.id, scheduled_for: 2.days.from_now.iso8601,
+                      purpose: 'prospecting' },
+            headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(saved.reload).to be_prospecting
     end
 
     it 'por lote: acepta un inicio que ya pasó (al ponerla en curso empieza ahora), no un fin vencido' do

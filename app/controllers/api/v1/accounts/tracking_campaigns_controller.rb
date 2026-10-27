@@ -177,6 +177,7 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
       scheduled_for: campaign.scheduled_for,
       # proyecto@automatizacion_campanas — la ventana y cómo se agenda a cada inscrito
       mode: campaign.mode,
+      purpose: campaign.purpose, # prospeccion V0
       ends_at: campaign.ends_at,
       entry_delay_minutes: campaign.entry_delay_minutes,
       respect_working_hours: campaign.respect_working_hours,

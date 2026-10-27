@@ -72,6 +72,7 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
       window: window_params,
       audience_source: audience_source_param,
       email_subject: params[:email_subject], # prospeccion F1
+      purpose: params[:purpose], # prospeccion V0
       **extra
     )
   end

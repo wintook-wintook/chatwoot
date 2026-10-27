@@ -22,6 +22,9 @@ const STATUS_COLOR = {
   finished: 'text-slate-600 bg-slate-100 dark:bg-slate-700',
 };
 
+// prospeccion V0: posición de la pestaña → purpose de la campaña
+const PURPOSE_TABS = ['all', 'follow_up', 'prospecting'];
+
 export default {
   components: { CampaignForm, TableFooter, VeTable },
   data() {
@@ -68,19 +71,28 @@ export default {
       // Filtro + paginado (cliente) de la tabla de campañas.
       searchQuery: '',
       statusFilter: 'all',
+      // prospeccion V0: pestañas Todas · Seguimiento · Prospección
+      purposeTab: 0,
       currentPage: 1,
       perPage: 10,
     };
   },
   computed: {
+    purposeTabKeys() {
+      return ['ALL', 'FOLLOW_UP', 'PROSPECTING'];
+    },
     isEmpty() {
       return !this.isLoading && this.campaigns.length === 0;
     },
     // Campañas tras aplicar búsqueda de texto + filtro de estado.
     filteredCampaigns() {
       const query = this.searchQuery.trim().toLowerCase();
+      const purpose = PURPOSE_TABS[this.purposeTab];
       return this.campaigns.filter(c => {
         if (this.statusFilter !== 'all' && c.status !== this.statusFilter) {
+          return false;
+        }
+        if (purpose !== 'all' && (c.purpose || 'follow_up') !== purpose) {
           return false;
         }
         if (!query) return true;
@@ -117,6 +129,7 @@ export default {
         col('name', 'NAME', {
           renderBodyCell: ({ row }) => (
             <span class="font-medium text-woot-600 dark:text-woot-400">
+              {row.purpose === 'prospecting' ? '🎯 ' : ''}
               {row.name}
             </span>
           ),
@@ -264,6 +277,9 @@ export default {
       this.currentPage = 1;
     },
     statusFilter() {
+      this.currentPage = 1;
+    },
+    purposeTab() {
       this.currentPage = 1;
     },
     // Si el listado se encoge (borrado/refetch), evitar quedar en página vacía.
@@ -607,6 +623,20 @@ export default {
       </div>
 
       <template v-else>
+        <!-- prospeccion V0: para qué es la campaña -->
+        <woot-tabs
+          class="mb-3 shrink-0"
+          :index="purposeTab"
+          @change="index => (purposeTab = index)"
+        >
+          <woot-tabs-item
+            v-for="(key, index) in purposeTabKeys"
+            :key="key"
+            :index="index"
+            :name="$t(`TRACKING_CAMPAIGNS_VIEW.PURPOSE_TABS.${key}`)"
+            :show-badge="false"
+          />
+        </woot-tabs>
         <!-- Barra de filtros (estilo unificado con el listado de Seguimientos) -->
         <div
           class="flex items-center gap-3 mb-3 shrink-0 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"

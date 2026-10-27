@@ -32,8 +32,14 @@ module TrackingCampaignContinuousParams
       entry_delay_minutes: params[:entry_delay_minutes].presence&.to_i || 0,
       respect_working_hours: ActiveModel::Type::Boolean.new.cast(params.fetch(:respect_working_hours, true)),
       daily_cap: params[:daily_cap].presence&.to_i,
-      email_subject: params[:email_subject].to_s.strip.presence # prospeccion F1
+      email_subject: params[:email_subject].to_s.strip.presence, # prospeccion F1
+      purpose: purpose_param # prospeccion V0
     }
+  end
+
+  # prospeccion V0: seguimiento por omisión si no viene o no se reconoce.
+  def purpose_param
+    TrackingCampaign::PURPOSES.include?(params[:purpose].to_s) ? params[:purpose].to_s : 'follow_up'
   end
 
   def parse_time(value)
