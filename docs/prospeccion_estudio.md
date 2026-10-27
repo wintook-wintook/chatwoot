@@ -887,11 +887,93 @@ Orden propuesto: **F1 → F2 → F4 → F3**. Las tres primeras son rápidas y s
 
 ---
 
-## 10. Decisiones abiertas
+## 10. Plan Prospección v1.0: un tipo de campaña
+
+> 27/10/2026 · Solo plan. Responde D1: **evolución de Campañas**, no módulo nuevo. Hoy una
+> campaña de prospección es una campaña de seguimiento que escribe por correo; nada en la
+> pantalla dice «Prospección» ni aplica sus reglas.
+
+### 10.1 Cómo se ve
+
+```
+ Campañas                                                    [ + Nueva campaña ]
+ ┌───────────────────────────────────────────────────────────────────────────┐
+ │ Todas · Seguimiento · Prospección                                          │
+ ├───────────────────────────────────────────────────────────────────────────┤
+ │ 🎯 Prospección · Grúas Monterrey     Correo   En curso   120 → 18 resp.    │
+ │ 🔁 Seguimiento · Cobranza octubre    WhatsApp Terminada  300 → 210 resp.   │
+ └───────────────────────────────────────────────────────────────────────────┘
+
+ Nueva campaña →  ¿Para qué es?   ( ) Seguimiento: contactos que ya conoces
+                                  (•) Prospección: clientes nuevos, hasta que muestren interés
+
+ Detalle de una campaña de prospección:
+ Contactados 120 → Respondieron 18 (15 %) → Interesados 6 (5 %) → Entregados 2
+ Salidas:  No ahora 4 · No le interesa 7 · Baja 1 · Sin respuesta 102
+ [ Interesados: lista para pasar a un vendedor ]
+```
+
+### 10.2 Qué trae el tipo «Prospección»
+
+| Regla | En Seguimiento | En Prospección |
+|---|---|---|
+| Asunto propio en correo (F1 ✅) | Opcional | Obligatorio |
+| Firma real, sin «#IA»/«-TB» (F2) | Solo en correo | Siempre en correo |
+| Se detiene al responder (F4) | Sí | Sí |
+| Baja con un clic + no contactar (F3) | Respeta la lista | Respeta la lista + enlace obligatorio en correo |
+| Tope diario (`daily_cap`) | Opcional | **Obligatorio** (sugerido 30) |
+| Solo días hábiles y horario de atención | Opcional | **Siempre** |
+| Canal | Cualquiera | Correo para el frío; WhatsApp solo a contactos con permiso |
+| Clasificar respuestas (P1) | No | **Sí**: 5 etapas + 3 salidas |
+
+### 10.3 Fases
+
+| Fase | Qué | Dónde | Tamaño |
+|---|---|---|---|
+| **V0** | Columna `tracking_campaigns.purpose` (`follow_up` / `prospecting`, por omisión `follow_up`); selector «¿Para qué es?» en `CampaignForm.vue`; pestañas y marca 🎯 en `Campaigns.vue` | migración + form + lista | Chico |
+| **V1** | F2 · Firma (§9) | `contact_tracking_job.rb:257`, `contact_tracking_response_analyzer_job.rb:629` | Chico |
+| **V2** | F4 · Se detiene al responder (§9) | analizador de respuestas | Chico–mediano |
+| **V3** | Reglas del tipo: tope diario y días hábiles obligatorios; asunto obligatorio en correo | `BulkAssignService`, `TrackingCampaignContinuousParams`, form | Chico |
+| **V4** | F3 · Baja + no contactar (§9) | migración `contacts.opted_out_*`, página pública, cabeceras, `Enroll` | Mediano |
+| **V5** | P1 · Clasificar cada respuesta: columna `contact_trackings.prospect_stage` (`contacted` · `replied` · `interested` · `handed_off`) y `prospect_exit` (`not_now` · `not_interested` · `opted_out` · `no_reply`); un clasificador propio (no el router apagado) que corre con cada respuesta del prospecto | servicio nuevo `TrackingCampaigns::ProspectClassifier` | Mediano |
+| **V6** | Embudo de prospección en `CampaignDetail.vue`: etapas, salidas y tasas; lista «Interesados» | `funnel_by_campaign` + detalle | Chico–mediano |
+
+Orden: **V0 → V1 → V2 → V3 → V4 → V5 → V6**. Con V0–V4 el envío ya es correcto;
+con V5–V6 ya es prospección (se sabe quién está interesado y cuánto rinde la campaña).
+
+### 10.4 Notas de lo que ya existe
+
+- **El embudo ya existe** (`tracking_campaigns_controller.rb:139`): respondió, interesado, cita,
+  objetivo cumplido. Pero «respondió» se cuenta con `last_intent`, que solo llena el router de
+  intención, **apagado** (`TRACKING_DETECT_INTENT=false`). V5 llena sus propias etapas sin depender del router.
+- **Tope diario y días hábiles ya existen** en la campaña (`daily_cap`, `respect_working_hours`);
+  V3 solo los vuelve obligatorios para Prospección.
+- **«Interesados» → vendedor** con plazo y avisos es P2 y queda para v1.1. En v1.0, la lista
+  de interesados basta para que alguien los tome a mano.
+
+### 10.5 Fuera de v1.0 (v1.1 en adelante)
+
+- P2 · Entregar al vendedor con plazo y avisos (necesita D4).
+- Puntuación 0–100 (cuando haya datos para calibrar los pesos, §8.5).
+- A/B de asuntos y mensajes.
+- Multicanal en una misma campaña: correo → WhatsApp cuando el prospecto da su permiso (necesita «agente con varias bandejas»).
+
+### 10.6 Decisiones de este plan
+
+| # | Pregunta | Propuesta |
+|---|---|---|
+| D12 | ¿El tipo se puede cambiar después de crear la campaña? | Solo mientras está **Guardada** |
+| D13 | Tope diario sugerido para Prospección | 30 por campaña al día (lo puede bajar o subir) |
+| D14 | ¿El clasificador de V5 usa qué modelo? | gpt-4o-mini con salida fija (solo elige una etiqueta); si falla, gpt-4o |
+| D15 | ¿Un prospecto «No ahora» se vuelve a buscar solo? | Sí, a los 30 días, con un solo toque |
+
+---
+
+## 11. Decisiones abiertas
 
 | # | Pregunta |
 |---|---|
-| D1 | ¿«Prospección» es un módulo nuevo o la evolución de Campañas de seguimiento? (Recomendación: **evolución**: la campaña, la inscripción, los toques con IA y la medición de entrega ya existen) |
+| D1 | ~~¿«Prospección» es un módulo nuevo o la evolución de Campañas de seguimiento?~~ **Resuelta 27/10/2026:** evolución; un tipo de campaña «Prospección» (§10) |
 | D2 | ¿A quién se le va a escribir? ¿Solo contactos con permiso (clientes, cotizaciones, formularios) o también bases externas? Esto define cuánto pesa P0 |
 | D3 | ~~¿Qué categorías de respuesta, exactamente?~~ **Resuelta 26/10/2026:** las 5 etapas + 3 salidas de §8.1 |
 | D4 | ¿Quién recibe al interesado: el embudo, un vendedor fijo, reparto por turnos? ¿Con qué plazo? |
@@ -901,7 +983,7 @@ Orden propuesto: **F1 → F2 → F4 → F3**. Las tres primeras son rápidas y s
 
 ---
 
-## 11. Fuentes
+## 12. Fuentes
 
 Prácticas y plataformas:
 - Salesforce LATAM · Cómo realizar la prospección de ventas — https://www.salesforce.com/mx/blog/prospeccion-de-ventas/
