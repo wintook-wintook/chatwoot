@@ -1165,6 +1165,79 @@ se prospecta (Gmail empieza a mandar a spam o corta el envío). Dos piezas:
 > - **Solo IMAP:** las bandejas por reenvío (Action Mailbox) no pasan por aquí; hoy no hay ninguna
 >   (ver `docs/revision_correos.md`, rama `diag/revision_correos`).
 
+### 10.9 v1.1 · P2 — Entregar al interesado, con plazo y avisos
+
+Decisión D4 (27/10/2026): el interesado entra al **embudo de Oportunidades**; el plazo es
+**configurable por campaña** y la pantalla explica cómo funciona.
+
+```
+ prospecto responde «me interesa» (V5 lo clasifica)
+        │
+        ▼  automático si la campaña tiene tablero de entrega · o botón «Entregar» (V6)
+ ┌──────────────────────────────── ENTREGA ────────────────────────────────┐
+ │ 1. la conversación entra al tablero/columna de Oportunidades elegidos    │
+ │    (Kanban::FunnelMover, nota de actividad, como cualquier movimiento)   │
+ │ 2. vendedor = el asignado de la conversación; si no hay, quien creó la   │
+ │    campaña (se le asigna)                                                │
+ │ 3. nota privada con @mención al vendedor → notificación de Chatwoot      │
+ │    «🎯 Interesado de la campaña X. Tienes hasta el mié 10:00.»          │
+ │ 4. reloj: vence = entrega + PLAZO horas hábiles                          │
+ │          escala = entrega + ESCALAR horas hábiles (opcional)             │
+ └─────────────────────────────────────────────────────────────────────────┘
+        │
+        ▼  cada 10 min (TrackingCampaigns::HandoffSweepJob)
+   ¿lo atendió?  = una persona del equipo le escribió al cliente (saliente sin
+                   marcas de bot, la regla de ConversationEvidence) o movió la
+                   tarjeta a mano en Oportunidades
+        ├─ sí → «✓ Atendido» (se para el reloj)
+        ├─ venció el PLAZO   → nota «⏰ venció el plazo» con @mención al vendedor
+        └─ venció ESCALAR    → nota «🚨» con @mención a los administradores
+```
+
+**Horas hábiles:** dentro del horario de atención de la bandeja; si la bandeja no tiene
+horario, de lunes a viernes (el sábado y el domingo no cuentan).
+
+**En la campaña (Prospección):** sección «Entrega de interesados»: tablero, columna, plazo
+(horas hábiles, vacío = sin plazo) y escalar (horas hábiles, vacío = no escalar), con la nota:
+«Cuando un prospecto dice que le interesa, entra a esta columna de Oportunidades y se le avisa
+a su vendedor. Si en el plazo nadie le escribe ni mueve la tarjeta, se le recuerda; si se
+cumple el tiempo para escalar, se avisa a los administradores.»
+
+**En el detalle:** en la fila del entregado, «Entregado · vence mié 10:00», «⏰ Vencido» o
+«✓ Atendido».
+
+| Fase | Qué | Tamaño |
+|---|---|---|
+| P2.1 | Migración (campaña: tablero, columna, plazo, escalar · seguimiento: entregado, vence, escala, atendido, recordado, escalado); `BusinessClock`; `TrackingCampaigns::HandOff` (botón y automático al «interesado») | mediano |
+| P2.2 | `HandoffSweepJob` cada 10 min: atendido / recordatorio / escalar | chico |
+| P2.3 | Pantalla: sección en el formulario de campaña con su explicación + estado en el detalle | mediano |
+
+**La IA no se apaga al entregar:** el Agente IA sigue contestando como hasta hoy; el vendedor
+entra a la conversación. (Si se quiere que la IA se calle al entregar, es otra decisión.)
+
+> ✅ **P2 HECHA (27/10/2026) — P2.1 + P2.2 + P2.3.**
+> - **Qué se hizo:** migración `20261031170000_add_handoff_to_tracking_campaigns` (campaña:
+>   `handoff_board_id`, `handoff_column_id`, `handoff_due_hours`, `handoff_escalate_hours`;
+>   seguimiento: `handed_off_at`, `handoff_due_at`, `handoff_escalate_at`, `handoff_attended_at`,
+>   `handoff_reminded_at`, `handoff_escalated_at`). `TrackingCampaigns::BusinessClock` (horas hábiles),
+>   `TrackingCampaigns::HandOff` (Oportunidades + vendedor + reloj + nota con @mención),
+>   `TrackingCampaigns::HandoffSweepJob` cada 10 min (`schedule.yml`), `PATCH
+>   /tracking_campaigns/:id/handoff_settings` (en cualquier estado de la campaña).
+> - **Cómo funciona:** el clasificador (V5) entrega solo cuando la campaña tiene tablero y columna;
+>   sin tablero, solo con el botón «Entregar», que ahora hace lo mismo (y el movimiento queda a nombre
+>   de quien entregó). «Atendido» = saliente público de un User sin marcas de bot y que no sea un
+>   toque registrado en `tracking_deliveries`, o mover la tarjeta a mano a otra columna. Cambiar la
+>   configuración vale para las entregas que vengan.
+> - **Pantalla:** en el detalle de una campaña de Prospección, tarjeta «🤝 Entrega de interesados» con
+>   las 4 notas de cómo funciona, tablero, columna, plazo y escalar. En la fila del entregado:
+>   «✓ Entregado · vence …», «⏰ Vencido» o «✓ Atendido».
+> - **Pruebas:** `business_clock_spec` (6), `hand_off_spec` (7), `handoff_sweep_job_spec` (6), 2 en
+>   `prospect_classifier_spec`, 2 en `tracking_campaigns_controller_spec`; 1049/1050 en verde (la que
+>   falla es `validator_service_spec:682`, del Asistente, pasa sola: depende del orden).
+> - **Pedírselo al Asistente:** no aplica; se configura en el detalle de la campaña.
+> - **Ojo:** los avisos son notificaciones dentro de Chatwoot (campana y push). El correo de
+>   notificación no sale en este servidor (SMTP del sistema roto: `docs/revision_correos.md`).
+
 ---
 
 ## 11. Decisiones abiertas
@@ -1174,7 +1247,7 @@ se prospecta (Gmail empieza a mandar a spam o corta el envío). Dos piezas:
 | D1 | ~~¿«Prospección» es un módulo nuevo o la evolución de Campañas de seguimiento?~~ **Resuelta 27/10/2026:** evolución; un tipo de campaña «Prospección» (§10) |
 | D2 | ¿A quién se le va a escribir? ¿Solo contactos con permiso (clientes, cotizaciones, formularios) o también bases externas? Esto define cuánto pesa P0 |
 | D3 | ~~¿Qué categorías de respuesta, exactamente?~~ **Resuelta 26/10/2026:** las 5 etapas + 3 salidas de §8.1 |
-| D4 | ¿Quién recibe al interesado: el embudo, un vendedor fijo, reparto por turnos? ¿Con qué plazo? |
+| D4 | ~~¿Quién recibe al interesado? ¿Con qué plazo?~~ **Resuelta 27/10/2026:** embudo de Oportunidades; plazo y escalar configurables por campaña (§10.9) |
 | D5 | ¿De dónde sale el «valor»: cotización, caso, lo declara el vendedor? |
 | D6 | ~~¿Solo WhatsApp o también llamada / correo como pasos?~~ **Resuelta 26/10/2026:** WhatsApp ya, solo con contactos con permiso; correo en fase 2 para el frío (§8.4); llamada, después |
 | D7 | Validación legal (LFPDPPP, REPEP) antes de ofrecerlo a clientes |

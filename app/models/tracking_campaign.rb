@@ -71,6 +71,9 @@ class TrackingCampaign < ApplicationRecord
   belongs_to :tracking_template, optional: true
   belongs_to :inbox, optional: true
   belongs_to :user, optional: true
+  # prospeccion P2: a qué tablero/columna de Oportunidades entra el interesado
+  belongs_to :handoff_board, class_name: 'KanbanTypeProcess', optional: true
+  belongs_to :handoff_column, class_name: 'KanbanProcess', optional: true
 
   has_many :contact_trackings, dependent: :nullify
   has_many :entries, class_name: 'TrackingCampaignEntry', dependent: :delete_all
@@ -87,6 +90,9 @@ class TrackingCampaign < ApplicationRecord
   validates :purpose, inclusion: { in: PURPOSES }
   validates :entry_delay_minutes, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :daily_cap, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  # prospeccion P2: horas hábiles (vacío = sin plazo / no escalar)
+  validates :handoff_due_hours, :handoff_escalate_hours, numericality: { only_integer: true, in: 1..720 }, allow_nil: true
+  validate :handoff_column_in_board
   validate :window_order
 
   scope :active, -> { where(status: %w[saved draft running paused]) }
@@ -102,6 +108,11 @@ class TrackingCampaign < ApplicationRecord
 
   def prospecting?
     purpose == 'prospecting'
+  end
+
+  # prospeccion P2: con tablero de entrega, el interesado se entrega solo.
+  def auto_handoff?
+    prospecting? && handoff_board_id.present? && handoff_column_id.present?
   end
 
   def saved?
@@ -132,5 +143,14 @@ class TrackingCampaign < ApplicationRecord
     return if ends_at.blank? || scheduled_for.blank? || ends_at > scheduled_for
 
     errors.add(:ends_at, 'debe ser posterior al inicio')
+  end
+
+  # prospeccion P2: la columna es del tablero elegido y los dos son de esta cuenta.
+  def handoff_column_in_board
+    return if handoff_board_id.blank? && handoff_column_id.blank?
+    return errors.add(:handoff_column_id, 'elige el tablero y la columna') if handoff_board.nil? || handoff_column.nil?
+    return errors.add(:handoff_board_id, 'no es de esta cuenta') if handoff_board.account_id != account_id
+
+    errors.add(:handoff_column_id, 'no es de ese tablero') if handoff_column.kanban_type_process_id != handoff_board_id
   end
 end

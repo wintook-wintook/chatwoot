@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_31_160000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_31_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1080,6 +1080,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_160000) do
     t.datetime "booked_at"
     t.boolean "paused_by_campaign", default: false, null: false
     t.datetime "dispatched_at"
+    t.datetime "handed_off_at"
+    t.datetime "handoff_due_at"
+    t.datetime "handoff_escalate_at"
+    t.datetime "handoff_attended_at"
+    t.datetime "handoff_reminded_at"
+    t.datetime "handoff_escalated_at"
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["dispatched_at"], name: "index_contact_trackings_dispatched", where: "((status)::text = 'active'::text)"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
@@ -1088,6 +1094,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_160000) do
     t.index ["contact_id"], name: "index_contact_trackings_on_contact_id"
     t.index ["conversation_id", "inbox_id"], name: "index_contact_trackings_on_conversation_id_and_inbox_id"
     t.index ["conversation_id"], name: "index_contact_trackings_on_conversation_id"
+    t.index ["handed_off_at"], name: "index_contact_trackings_on_pending_handoff", where: "((handed_off_at IS NOT NULL) AND (handoff_attended_at IS NULL))"
     t.index ["inbox_id"], name: "index_contact_trackings_on_inbox_id"
     t.index ["last_intent"], name: "index_contact_trackings_on_last_intent"
     t.index ["scheduled_for"], name: "index_contact_trackings_on_scheduled_for"
@@ -2093,6 +2100,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_160000) do
     t.string "paused_reason"
     t.string "purpose", default: "follow_up", null: false
     t.datetime "paused_at"
+    t.bigint "handoff_board_id"
+    t.bigint "handoff_column_id"
+    t.integer "handoff_due_hours"
+    t.integer "handoff_escalate_hours"
     t.index ["account_id", "purpose"], name: "index_tracking_campaigns_on_account_id_and_purpose"
     t.index ["account_id", "status"], name: "index_tracking_campaigns_on_account_id_and_status"
     t.index ["account_id"], name: "index_tracking_campaigns_on_account_id"

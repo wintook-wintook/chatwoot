@@ -11,6 +11,7 @@ import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import ContactTrackingsAPI from 'dashboard/api/contactTrackings';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import CampaignEntries from './CampaignEntries.vue';
+import CampaignHandoffSettings from './CampaignHandoffSettings.vue';
 
 const PAGE_SIZE = 25;
 // Cada cuánto se refrescan los indicadores mientras la pantalla está abierta
@@ -87,7 +88,7 @@ const PROSPECT_FILTERS = {
 };
 
 export default {
-  components: { TableFooter, CampaignEntries },
+  components: { TableFooter, CampaignEntries, CampaignHandoffSettings },
   data() {
     return {
       campaign: null,
@@ -392,8 +393,11 @@ export default {
     async handOff(prospect) {
       this.handingOff = prospect.id;
       try {
-        await TrackingCampaignsAPI.handOff(this.campaignId, prospect.id);
-        prospect.prospect_stage = 'handed_off';
+        const { data } = await TrackingCampaignsAPI.handOff(
+          this.campaignId,
+          prospect.id
+        );
+        Object.assign(prospect, data); // prospeccion P2: etapa y reloj
         useAlert(this.$t('TRACKING_CAMPAIGN_DETAIL.HAND_OFF_DONE'));
         this.refreshKpis();
       } catch (error) {
@@ -404,6 +408,32 @@ export default {
       } finally {
         this.handingOff = null;
       }
+    },
+    // prospeccion P2: la entrega guardada vuelve al detalle sin recargar.
+    onHandoffSaved(settings) {
+      this.campaign = { ...this.campaign, ...settings };
+    },
+    // prospeccion P2: atendido, vencido o entregado (con su vencimiento).
+    handoffLabel(p) {
+      if (p.handoff_attended_at) {
+        return this.$t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_ATTENDED');
+      }
+      if (p.handoff_due_at && new Date(p.handoff_due_at) <= new Date()) {
+        return this.$t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_OVERDUE');
+      }
+      if (p.handoff_due_at) {
+        return this.$t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_DUE', {
+          at: this.formatDate(p.handoff_due_at),
+        });
+      }
+      return this.$t('TRACKING_CAMPAIGN_DETAIL.HANDED_OFF');
+    },
+    handoffClass(p) {
+      if (p.handoff_attended_at) return 'text-green-600 dark:text-green-500';
+      if (p.handoff_due_at && new Date(p.handoff_due_at) <= new Date()) {
+        return 'text-red-500 dark:text-red-400';
+      }
+      return 'text-woot-600';
     },
     applyFilter(filterId, label) {
       if (!filterId) return; // KPI no filtrable (ej. Avance)
@@ -803,6 +833,14 @@ export default {
         </div>
       </div>
 
+      <!-- prospeccion P2: entrega de interesados (tablero, plazo y escalar) -->
+      <CampaignHandoffSettings
+        v-if="isProspecting"
+        :key="campaign.id"
+        :campaign="campaign"
+        @saved="onHandoffSaved"
+      />
+
       <!-- proyecto@automatizacion_campanas: Prospectos (sus seguimientos) e Inscritos
            (cada intento de inscripción, por lote o por automatización, y los omitidos). -->
       <woot-tabs
@@ -959,9 +997,10 @@ export default {
                   </woot-button>
                   <span
                     v-else-if="p.prospect_stage === 'handed_off'"
-                    class="mr-2 text-xs font-medium text-woot-600"
+                    class="mr-2 text-xs font-medium"
+                    :class="handoffClass(p)"
                   >
-                    {{ $t('TRACKING_CAMPAIGN_DETAIL.HANDED_OFF') }}
+                    {{ handoffLabel(p) }}
                   </span>
                   <router-link
                     v-if="conversationUrl(p)"

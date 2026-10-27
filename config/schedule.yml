@@ -252,3 +252,10 @@ maintenance_plans_generate_job:
   class: "MaintenancePlans::GenerateJob"
   queue: scheduled_jobs
   description: "Generate work orders for recurring maintenance plans within their lead days"
+
+# prospeccion P2 — interesados entregados: atendido / recordatorio al vendedor / escalar a admins.
+tracking_campaigns_handoff_sweep_job:
+  cron: "*/10 * * * *"
+  class: "TrackingCampaigns::HandoffSweepJob"
+  queue: scheduled_jobs
+  description: "Check handed-off prospects: attended, reminder to seller, escalation to admins"

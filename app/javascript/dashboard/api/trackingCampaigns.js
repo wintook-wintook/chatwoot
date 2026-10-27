@@ -40,6 +40,11 @@ class TrackingCampaignsAPI extends ApiClient {
       tracking_id: trackingId,
     });
   }
+
+  // prospeccion P2: tablero/columna de Oportunidades, plazo y escalar
+  updateHandoffSettings(id, settings) {
+    return axios.patch(`${this.url}/${id}/handoff_settings`, settings);
+  }
 }
 
 export default new TrackingCampaignsAPI();

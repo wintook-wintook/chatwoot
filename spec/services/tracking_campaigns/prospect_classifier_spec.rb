@@ -39,6 +39,27 @@ RSpec.describe TrackingCampaigns::ProspectClassifier do
     expect(tracking.interested_at).to be_present
   end
 
+  # prospeccion P2
+  it 'interesado con tablero de entrega en la campaña: se entrega solo a Oportunidades' do
+    board = create(:kanban_type_process, account: account)
+    campaign.update!(handoff_board: board, handoff_column: create(:kanban_process, kanban_type_process: board))
+    openai_says('interested')
+
+    described_class.call(tracking, message)
+
+    expect(tracking.reload).to have_attributes(prospect_stage: 'handed_off')
+    expect(tracking.handed_off_at).to be_present
+    expect(conversation.reload.kanban_process_id).to eq(campaign.handoff_column_id)
+  end
+
+  it 'interesado sin tablero de entrega: se queda «interesado» (se entrega con el botón)' do
+    openai_says('interested')
+
+    described_class.call(tracking, message)
+
+    expect(tracking.reload.prospect_stage).to eq('interested')
+  end
+
   it 'no ahora: un solo toque más, a los 30 días y nunca en fin de semana' do
     openai_says('not_now')
     described_class.call(tracking, message)

@@ -339,5 +339,29 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
       post url, params: { tracking_id: interested.id }, headers: admin.create_new_auth_token, as: :json
       expect(response).to have_http_status(:unprocessable_entity)
     end
+
+    # prospeccion P2
+    it 'configura la entrega (tablero, columna, plazo, escalar) en cualquier estado y la devuelve en el detalle' do
+      board = create(:kanban_type_process, account: account)
+      column = create(:kanban_process, kanban_type_process: board)
+      url = "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}/handoff_settings"
+
+      patch url, params: { handoff_board_id: board.id, handoff_column_id: column.id, handoff_due_hours: 4, handoff_escalate_hours: '' },
+                 headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:success)
+      expect(prospecting.reload).to have_attributes(handoff_column_id: column.id, handoff_due_hours: 4, handoff_escalate_hours: nil)
+
+      get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to include('handoff_board_id' => board.id, 'handoff_due_hours' => 4)
+    end
+
+    it 'una columna de otro tablero responde 422' do
+      column = create(:kanban_process, kanban_type_process: create(:kanban_type_process, account: account))
+      patch "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}/handoff_settings",
+            params: { handoff_board_id: create(:kanban_type_process, account: account).id, handoff_column_id: column.id },
+            headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
   end
 end

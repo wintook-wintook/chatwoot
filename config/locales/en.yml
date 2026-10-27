@@ -262,6 +262,11 @@ en:
   tracking_campaigns:
     hand_off:
       not_interested: "Only an interested prospect can be handed off."
+      board_reason: "Prospecting: interested in “%{campaign}”"
+      note: "Interested prospect from the “%{campaign}” campaign. Write to them or move their card in Opportunities."
+      deadline: " You have until %{at}."
+      reminder: "⏰ %{who}the deadline to attend this interested prospect (“%{campaign}” campaign) passed and nobody has written to them."
+      escalation: "🚨 %{who}this interested prospect from the “%{campaign}” campaign is still unattended since %{since}."
   contact_trackings:
     opt_out_footer: "Don't want more emails? Unsubscribe here: %{url}"
   public_quotes:

@@ -54,7 +54,19 @@ class TrackingCampaigns::ProspectClassifier
     attrs = { prospect_classified_at: Time.current,
               prospect_stage: stage_at_least(label == 'interested' ? 'interested' : 'replied') }
     attrs.merge!(outcome_attributes(label))
-    @tracking.update(attrs) || Rails.logger.warn("[ProspectClassifier] #{@tracking.errors.full_messages.join(', ')}")
+    return Rails.logger.warn("[ProspectClassifier] #{@tracking.errors.full_messages.join(', ')}") unless @tracking.update(attrs)
+
+    auto_hand_off
+  end
+
+  # prospeccion P2: con tablero de entrega, el interesado entra solo a Oportunidades.
+  # Si la entrega falla, el prospecto queda «interesado» (se puede entregar con el botón).
+  def auto_hand_off
+    return unless @tracking.prospect_stage == 'interested' && @tracking.tracking_campaign.auto_handoff?
+
+    TrackingCampaigns::HandOff.new(@tracking).call
+  rescue StandardError => e
+    Rails.logger.warn "[ProspectClassifier] entrega del tracking ##{@tracking.id}: #{e.message}"
   end
 
   def outcome_attributes(label)

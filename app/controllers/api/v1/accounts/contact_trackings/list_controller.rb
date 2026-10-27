@@ -110,6 +110,8 @@ class Api::V1::Accounts::ContactTrackings::ListController < Api::V1::Accounts::B
   def rule_mark_fields(tracking)
     { interested_at: tracking.interested_at, booked_at: tracking.booked_at,
       prospect_stage: tracking.prospect_stage, prospect_exit: tracking.prospect_exit, # prospeccion V6
+      handed_off_at: tracking.handed_off_at, handoff_due_at: tracking.handoff_due_at, # prospeccion P2
+      handoff_attended_at: tracking.handoff_attended_at, handoff_reminded_at: tracking.handoff_reminded_at,
       rule_action: tracking.keyword_action_fired.is_a?(Hash) ? tracking.keyword_action_fired['action'] : nil }
   end
 
