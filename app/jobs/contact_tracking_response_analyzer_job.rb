@@ -60,6 +60,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     end
     # prospeccion V2: respondió → no más toques automáticos (uno de recuperación en 3 días hábiles)
     active_trackings.each { |tracking| ContactTrackings::ProspectReply.call(tracking, at: message.created_at) }
+    # prospeccion V5: en Prospección, en qué va el prospecto (interesado, no ahora, no le interesa…)
+    active_trackings.each { |tracking| TrackingCampaigns::ProspectClassifier.call(tracking, message) }
 
     botseller_available = defined?(BotSeller::Dispatcher) && BotSeller::Dispatcher.configured?
 

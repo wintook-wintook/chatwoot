@@ -42,7 +42,9 @@ module ContactTrackings::OptOut
     return false if contact.nil? || contact.opted_out?
 
     contact.update_columns(opted_out_at: Time.current, opted_out_source: source.to_s, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-    contact.contact_trackings.where(status: ACTIVE_STATUSES).find_each(&:cancel!)
+    active = contact.contact_trackings.where(status: ACTIVE_STATUSES)
+    active.update_all(prospect_exit: 'opted_out') # rubocop:disable Rails/SkipsModelValidations -- prospeccion V5
+    active.find_each(&:cancel!)
     Rails.logger.info "[OptOut] Contacto ##{contact.id} pidió no ser contactado (#{source})"
     true
   end

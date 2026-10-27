@@ -46,6 +46,9 @@
 #  outcome                    :string
 #  paused_at                  :datetime
 #  paused_by_campaign         :boolean          default(FALSE), not null
+#  prospect_classified_at     :datetime
+#  prospect_exit              :string
+#  prospect_stage             :string
 #  response_adjustments_count :integer          default(0), not null
 #  retry_interval_unit        :string           default("minutes")
 #  retry_interval_value       :integer          default(30)
@@ -68,6 +71,7 @@
 #
 #  index_contact_trackings_on_account_id                    (account_id)
 #  index_contact_trackings_on_appointment_at                (appointment_at)
+#  index_contact_trackings_on_campaign_and_prospect_stage   (tracking_campaign_id,prospect_stage)
 #  index_contact_trackings_on_contact_id                    (contact_id)
 #  index_contact_trackings_on_conversation_id               (conversation_id)
 #  index_contact_trackings_on_conversation_id_and_inbox_id  (conversation_id,inbox_id)
@@ -138,6 +142,11 @@ class ContactTracking < ApplicationRecord
   # Validations
   # ==============================================================================
   validates :objective, presence: true, length: { minimum: 5, maximum: 500 }
+  # prospeccion V5: en qué va el prospecto (TrackingCampaigns::ProspectClassifier)
+  PROSPECT_STAGES = %w[replied interested handed_off].freeze
+  PROSPECT_EXITS = %w[not_now not_interested wrong_person opted_out].freeze
+  validates :prospect_stage, inclusion: { in: PROSPECT_STAGES }, allow_nil: true
+  validates :prospect_exit, inclusion: { in: PROSPECT_EXITS }, allow_nil: true
   validates :scheduled_for, presence: true
   validates :max_attempts, presence: true, 
             numericality: { greater_than: 0, less_than_or_equal_to: 10 }

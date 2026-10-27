@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_31_130000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_31_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1041,6 +1041,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_130000) do
     t.bigint "inbox_id", null: false
     t.bigint "account_id", null: false
     t.string "objective", null: false
+    t.datetime "prospect_classified_at"
+    t.string "prospect_exit"
+    t.string "prospect_stage"
     t.datetime "scheduled_for", null: false
     t.integer "max_attempts", default: 3, null: false
     t.integer "attempt_count", default: 0, null: false
@@ -1090,6 +1093,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_130000) do
     t.index ["scheduled_for"], name: "index_contact_trackings_on_scheduled_for"
     t.index ["status", "scheduled_for"], name: "index_contact_trackings_on_status_and_scheduled_for"
     t.index ["status"], name: "index_contact_trackings_on_status"
+    t.index ["tracking_campaign_id", "prospect_stage"], name: "index_contact_trackings_on_campaign_and_prospect_stage"
     t.index ["tracking_campaign_id"], name: "index_contact_trackings_on_tracking_campaign_id"
   end
 

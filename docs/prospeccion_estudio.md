@@ -1008,6 +1008,20 @@ Orden propuesto: **F1 → F2 → F4 → F3**. Las tres primeras son rápidas y s
 > - **Pruebas:** `opt_out_spec` (8), `public/opt_outs_controller_spec` (4), 2 en el mailer; 1000 en verde.
 > - **Pendiente legal (D7):** revisar con abogado el aviso de privacidad (LFPDPPP) que acompaña.
 
+> ✅ **V5 HECHA (27/10/2026) — clasificar cada respuesta.**
+> - **Qué se hizo:** migración `20261031140000_add_prospect_stage_to_contact_trackings`
+>   (`prospect_stage`: replied · interested · handed_off; `prospect_exit`: not_now · not_interested ·
+>   wrong_person · opted_out; `prospect_classified_at`). `TrackingCampaigns::ProspectClassifier`: solo
+>   en Prospección, con cada respuesta pregunta a gpt-4o-mini (JSON fijo; si falla, gpt-4o, D14):
+>   interesado → etapa «interesado» + `interested_at` (ya cuenta en el embudo de campañas);
+>   no ahora → un solo toque más a los 30 días, nunca en fin de semana (D15); no le interesa / no es
+>   la persona → se cierra (`completed`); otra cosa → «respondió». La etapa nunca baja. Si OpenAI
+>   falla, queda «respondió». La baja (V4) marca la salida `opted_out`.
+>   «Contactado» y «sin respuesta» no se guardan: salen de `attempt_count` y del estado (V6).
+> - **Pruebas:** `prospect_classifier_spec` (8, OpenAI simulado con WebMock); 953 en verde; las 7
+>   fallas del analizador son las previas.
+> - **Costo:** una llamada corta a gpt-4o-mini por respuesta, solo en campañas de Prospección.
+
 Orden: **V0 → V1 → V2 → V3 → V4 → V5 → V6**. Con V0–V4 el envío ya es correcto;
 con V5–V6 ya es prospección (se sabe quién está interesado y cuánto rinde la campaña).
 
@@ -1040,7 +1054,7 @@ de la empresa (no código). Se marca conforme avanzan las fases.
 | 3 · Cadencia: se detiene al responder, días hábiles | V2 ✅ + V3 ✅ | ✅ |
 | 4 · Cumplir: baja, no contactar, aviso de privacidad | V4 ✅ · D7 (legal) | 🟡 falta D7 |
 | 5 · Que llegue: dominio, calentamiento, tope diario | V3 ✅ tope · empresa: dominio con SPF/DKIM/DMARC | 🟡 falta el dominio |
-| 6 · Calificar respuestas | V5 | ⏳ |
+| 6 · Calificar respuestas | V5 ✅ | ✅ |
 | 7 · Entregar al vendedor | V6 lista «Interesados» · v1.1: P2 con plazo y avisos | ⏳ |
 | 8 · Medir | V6 embudo y tasas | ⏳ |
 
