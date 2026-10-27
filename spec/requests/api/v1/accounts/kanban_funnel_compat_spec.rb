@@ -62,6 +62,24 @@ RSpec.describe 'Tablero de conversaciones (compatibilidad)', type: :request do
     expect(card).to have_key('case_ticket')
   end
 
+  it 'en Convertido/Descartado con closed_days solo trae lo reciente y cuenta lo demás' do
+    second_column.update!(stage_kind: :converted)
+    old_one = create(:conversation, account: account, inbox: inbox)
+    [conversation, old_one].each { |c| c.update!(kanban_type_process_id: board.id, kanban_process_id: second_column.id) }
+    old_one.update_columns(kanban_moved_at: 40.days.ago) # rubocop:disable Rails/SkipsModelValidations
+    params = { kanban_type_process_id: board.id, kanban_process_id: second_column.id, closed_days: 30 }
+
+    get "#{base}/conversations/kanban/filter_by_both_kanban", params: params, headers: admin.create_new_auth_token
+
+    expect(response.parsed_body['data'].pluck('id')).to eq([conversation.display_id])
+    expect(response.parsed_body['meta']['older_count']).to eq(1)
+
+    second_column.update!(stage_kind: :open)
+    get "#{base}/conversations/kanban/filter_by_both_kanban", params: params, headers: admin.create_new_auth_token
+    expect(response.parsed_body['data'].size).to eq(2)
+    expect(response.parsed_body['meta']['older_count']).to eq(0)
+  end
+
   it 'marca «Frío» la tarjeta cuyo cliente no escribe en los días del embudo' do
     board.update!(cold_after_days: 3)
     conversation.update!(kanban_type_process_id: board.id, kanban_process_id: first_column.id)

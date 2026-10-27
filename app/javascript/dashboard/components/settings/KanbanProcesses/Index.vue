@@ -322,7 +322,7 @@ onBeforeMount(async () => {
       class="flex items-center justify-center py-12"
     >
       <div class="flex items-center space-x-3">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-woot-600"></div>
         <span class="text-slate-600 dark:text-slate-400">
           {{ $t('KANBAN.COMMON.FETCHING_PROCESSES') }}
         </span>

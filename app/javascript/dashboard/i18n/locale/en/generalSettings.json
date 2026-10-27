@@ -52,7 +52,19 @@
     "LEARN_MORE": "Learn more",
     "PAYMENT_PENDING": "Your payment is pending. Please update your payment information to continue using Chatwoot",
     "LIMITS_UPGRADE": "Your account has exceeded the usage limits, please upgrade your plan to continue using Chatwoot",
-    "OPEN_BILLING": "Open billing"
+    "OPEN_BILLING": "Open billing",
+    "BRAND": {
+      "TITLE": "Company brand",
+      "NOTE": "The logo shows at the top of the menu and the color is the theme of your whole team. Anyone can pick another in Profile › Appearance.",
+      "LOGO": "Logo",
+      "UPLOAD_LOGO": "Upload logo",
+      "CHANGE_LOGO": "Change logo",
+      "REMOVE_LOGO": "Remove logo",
+      "LOGO_HELP": "PNG, JPG, SVG or WebP up to 2 MB. Square works best.",
+      "COLOR": "Company color",
+      "SAVED": "Brand updated",
+      "ERROR": "Could not save the brand"
+    }
   },
   "FORMS": {
     "MULTISELECT": {

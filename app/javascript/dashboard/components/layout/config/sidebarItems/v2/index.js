@@ -151,6 +151,11 @@ const casesItem = (accountId, caseClass, label, fallbackView) => {
 
 export const primaryMenuV2 = (accountId, route) => {
   const url = path => frontendURL(`accounts/${accountId}/${path}`);
+  const serviceView = lastCaseView(
+    accountId,
+    serviceClass(route, accountId),
+    'list'
+  );
   return [
     {
       icon: 'home',
@@ -195,10 +200,11 @@ export const primaryMenuV2 = (accountId, route) => {
       key: 'servicio',
       label: 'SERVICE',
       featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
-      // A la lista de su clase, no a `tickets`: el menú principal marca activo por
+      // A la vista de su clase, no a `tickets`: el menú principal marca activo por
       // prefijo de la dirección y `tickets` también es prefijo de las de Ventas.
-      toState: url(`tickets/${serviceClass(route, accountId)}/list`),
-      toStateName: CLASS_VIEW_ROUTES.list,
+      // La vista es la última usada (Lista, Tablero o Dashboard), como en el submenú.
+      toState: url(`tickets/${serviceClass(route, accountId)}/${serviceView}`),
+      toStateName: CLASS_VIEW_ROUTES[serviceView],
     },
     {
       icon: 'book-contacts',

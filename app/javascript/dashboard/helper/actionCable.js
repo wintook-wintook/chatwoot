@@ -109,6 +109,8 @@ class ActionCableConnector extends BaseActionCableConnector {
     } = data;
     DashboardAudioNotificationHelper.onNewMessage(data);
     this.app.$store.dispatch('addMessage', data);
+    // feat/chat_interno_pulido: contador del menú «Chat interno» y sonido.
+    this.app.$store.dispatch('internalChat/messageCreated', data);
     if (lastActivityAt && conversationId) {
       this.app.$store.dispatch('updateConversationLastActivity', {
         lastActivityAt,

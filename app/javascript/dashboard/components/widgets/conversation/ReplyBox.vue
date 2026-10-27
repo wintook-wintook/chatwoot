@@ -42,6 +42,7 @@ import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { LocalStorage } from 'shared/helpers/localStorage';
 //
 import AssistanceBotElyzaModal from './AssistanceBotElyzaModal.vue';
+import { internalDisplay, isInternalChat } from 'dashboard/helper/internalChat'; // feat/chat_interno_pulido
 
 const EmojiInput = () => import('shared/components/emoji/EmojiInput.vue');
 
@@ -116,6 +117,21 @@ export default {
     };
   },
   computed: {
+    // feat/chat_interno_pulido: en «Chat interno» la caja es la de un chat de equipo:
+    // sin Responder / Nota privada (todo es interno), sin «asignarme», sin firma ni
+    // herramientas de clientes, Enter envía y @ menciona.
+    isInternal() {
+      return isInternalChat(this.currentChat);
+    },
+    internalRoomName() {
+      const display = internalDisplay(this.currentChat, {
+        currentUserId: this.currentUser.id,
+        agents: this.$store.getters['agents/getAgents'],
+        teams: this.$store.getters['teams/getTeams'],
+        generalLabel: this.$t('INTERNAL_CHAT.GENERAL'),
+      });
+      return (display && display.name) || '';
+    },
     ...mapGetters({
       isRTL: 'accounts/isRTL',
       currentChat: 'getSelectedChat',
@@ -138,7 +154,8 @@ export default {
       );
     },
     showRichContentEditor() {
-      if (this.isOnPrivateNote || this.isRichEditorEnabled) {
+      // feat/chat_interno_pulido: el editor completo en «Interno» (@menciones, Enter envía).
+      if (this.isOnPrivateNote || this.isRichEditorEnabled || this.isInternal) {
         return true;
       }
 
@@ -169,6 +186,7 @@ export default {
       },
     },
     showSelfAssignBanner() {
+      if (this.isInternal) return false;
       if (this.message !== '' && !this.isOnPrivateNote) {
         if (!this.assignedAgent) {
           return true;
@@ -197,6 +215,11 @@ export default {
       return this.$store.getters['inboxes/getInbox'](this.inboxId);
     },
     messagePlaceHolder() {
+      if (this.isInternal) {
+        return this.$t('INTERNAL_CHAT.COMPOSER.PLACEHOLDER', {
+          room: this.internalRoomName,
+        });
+      }
       return this.isPrivate
         ? this.$t('CONVERSATION.FOOTER.PRIVATE_MSG_INPUT')
         : this.$t('CONVERSATION.FOOTER.MSG_INPUT');
@@ -257,6 +280,7 @@ export default {
       const tiktokAttachmentSupported = imageSend ?? true;
 
       return (
+        this.isInternal || // feat/chat_interno_pulido: adjuntos entre agentes
         this.isAWebWidgetInbox ||
         this.isAMetaInbox ||
         this.isAWhatsAppChannel ||
@@ -273,9 +297,10 @@ export default {
       if (this.isPrivate) {
         sendMessageText = this.$t('CONVERSATION.REPLYBOX.CREATE');
       }
-      const keyLabel = this.isEditorHotKeyEnabled('cmd_enter')
-        ? '(⌘ + ↵)'
-        : '(↵)';
+      const keyLabel =
+        !this.isInternal && this.isEditorHotKeyEnabled('cmd_enter')
+          ? '(⌘ + ↵)'
+          : '(↵)';
       return `${sendMessageText} ${keyLabel}`;
     },
     replyBoxClass() {
@@ -346,6 +371,7 @@ export default {
       return !!this.signatureToApply;
     },
     sendWithSignature() {
+      if (this.isInternal) return false;
       return this.fetchSignatureFlagFromUISettings(this.channelType);
     },
     editorMessageKey() {
@@ -615,7 +641,7 @@ export default {
         !this.showCannedMenu &&
         !this.showVariablesMenu &&
         this.isFocused &&
-        this.isEditorHotKeyEnabled(selectedKey)
+        (this.isInternal || this.isEditorHotKeyEnabled(selectedKey))
       );
     },
     onPaste(e) {
@@ -1170,7 +1196,7 @@ export default {
     <Banner v-if="showSelfAssignBanner" action-button-variant="clear" color-scheme="secondary"
       class="banner--self-assign" :banner-message="$t('CONVERSATION.NOT_ASSIGNED_TO_YOU')" has-action-button
       :action-button-label="$t('CONVERSATION.ASSIGN_TO_ME')" @click="onClickSelfAssign" />
-    <ReplyTopPanel :mode="replyType" :is-message-length-reaching-threshold="isMessageLengthReachingThreshold"
+    <ReplyTopPanel v-if="!isInternal" :mode="replyType" :is-message-length-reaching-threshold="isMessageLengthReachingThreshold"
       :characters-remaining="charactersRemaining" :popout-reply-box="popoutReplyBox" @setReplyMode="setReplyMode"
       @click="$emit('click')" />
     <ArticleSearchPopover v-if="showArticleSearchPopover && connectedPortalSlug"
@@ -1190,7 +1216,7 @@ export default {
         :placeholder="messagePlaceHolder" :min-height="4" :signature="signatureToApply" allow-signature
         :send-with-signature="sendWithSignature" @typingOff="onTypingOff" @typingOn="onTypingOn" @focus="onFocus"
         @blur="onBlur" />
-      <WootMessageEditor v-else v-model="message" :editor-id="editorStateId" class="input" :is-private="isOnPrivateNote"
+      <WootMessageEditor v-else v-model="message" :editor-id="editorStateId" class="input" :is-private="isOnPrivateNote || isInternal" :force-enter-to-send="isInternal" :hide-menu-bar="isInternal"
         :placeholder="messagePlaceHolder" :update-selection-with="updateEditorSelectionWith" :min-height="4"
         enable-variables :variables="messageVariables" :signature="signatureToApply" allow-signature
         :channel-type="channelType" @typingOff="onTypingOff" @typingOn="onTypingOn" @focus="onFocus" @blur="onBlur"
@@ -1202,7 +1228,7 @@ export default {
     </div>
     <MessageSignatureMissingAlert v-if="isSignatureEnabledForInbox && !isSignatureAvailable" />
     <ReplyBottomPanel :popout-reply-box="popoutReplyBox" :conversation-id="conversationId" :enable-multiple-file-upload="enableMultipleFileUpload"
-      :has-whatsapp-templates="hasWhatsappTemplates" :inbox="inbox" :is-on-private-note="isOnPrivateNote"
+      :has-whatsapp-templates="hasWhatsappTemplates" :inbox="inbox" :is-on-private-note="isOnPrivateNote" :is-internal-chat="isInternal"
       :is-recording-audio="isRecordingAudio" :is-send-disabled="isReplyButtonDisabled" :mode="replyType"
       :on-file-upload="onFileUpload" :on-send="onSendReply" :recording-audio-duration-text="recordingAudioDurationText"
       :recording-audio-state="recordingAudioState" :send-button-text="replyButtonLabel"

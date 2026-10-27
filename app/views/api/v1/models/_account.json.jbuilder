@@ -16,6 +16,10 @@ end
 json.domain @account.domain
 json.features @account.enabled_features
 json.internal_chat_enabled @account.internal_chat_enabled # feat/chat_interno
+json.brand do # feat/apariencia B1
+  json.tint @account.brand_tint
+  json.logo_url @account.brand_logo_url
+end
 json.id @account.id
 json.locale @account.locale
 json.name @account.name

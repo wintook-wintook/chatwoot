@@ -117,6 +117,7 @@ class Account < ApplicationRecord
   has_many :working_hours, dependent: :destroy_async
 
   has_one_attached :contacts_export
+  has_one_attached :brand_logo # feat/apariencia B1: logo de la empresa en el menú
 
   enum locale: LANGUAGES_CONFIG.map { |key, val| [val[:iso_639_1_code], key] }.to_h
   enum status: { active: 0, suspended: 1 }
@@ -164,6 +165,17 @@ class Account < ApplicationRecord
       agents: ChatwootApp.max_limit.to_i,
       inboxes: ChatwootApp.max_limit.to_i
     }
+  end
+
+  # feat/apariencia B1 — marca de la empresa (Ajustes › Configuración de cuenta).
+  def brand_tint
+    custom_attributes['brand_tint'].presence || 'default'
+  end
+
+  def brand_logo_url
+    return unless brand_logo.attached?
+
+    Rails.application.routes.url_helpers.rails_blob_path(brand_logo, only_path: true)
   end
 
   private

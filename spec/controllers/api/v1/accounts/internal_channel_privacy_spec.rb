@@ -72,4 +72,22 @@ RSpec.describe 'Internal channel privacy', type: :request do
     get "#{base}/#{direct.display_id}", headers: ana.create_new_auth_token, as: :json
     expect(response).to have_http_status(:success)
   end
+
+  # feat/chat_interno_pulido — contador del menú y @menciones en «Interno».
+  it 'gives the menu counter with what the agent has unread in every room', :aggregate_failures do
+    say(direct, ana, 'hola')
+    say(direct, ana, '¿estás?')
+    get "/api/v1/accounts/#{account.id}/internal_channel/unread", headers: luis.create_new_auth_token, as: :json
+    expect(response.parsed_body).to include('inbox_id' => inbox.id, 'unread' => 2)
+    get "/api/v1/accounts/#{account.id}/internal_channel/unread", headers: ana.create_new_auth_token, as: :json
+    expect(response.parsed_body['unread']).to eq(0)
+  end
+
+  it 'notifies a mention in a room only to its members and never adds an outsider', :aggregate_failures do
+    message = say(direct, ana, "[@Luis](mention://user/#{luis.id}/Luis) y [@Admin](mention://user/#{admin.id}/Admin)")
+    Messages::MentionService.new(message: message).perform
+    expect(Notification.where(user: luis, notification_type: 'conversation_mention').count).to eq(1)
+    expect(Notification.where(user: admin, notification_type: 'conversation_mention').count).to eq(0)
+    expect(direct.conversation_participants.pluck(:user_id)).to contain_exactly(ana.id, luis.id)
+  end
 end

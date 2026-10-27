@@ -13,6 +13,7 @@ import BubbleVoiceCall from './bubble/VoiceCall.vue'; // diag/llamadas_whatsapp
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
 // feat/chat_interno: dirección de los mensajes según quién mira en «Interno».
 import {
+  internalInfo,
   isInternalChat,
   viewerMessageType,
 } from 'dashboard/helper/internalChat';
@@ -74,6 +75,12 @@ export default {
     inboxSupportsReplyTo: {
       type: Object,
       default: () => ({}),
+    },
+    // feat/chat_interno_pulido: el mensaje anterior es de la misma persona y de hace
+    // poco: en «Chat interno» no se repiten su nombre ni su foto.
+    grouped: {
+      type: Boolean,
+      default: false,
     },
     inReplyTo: {
       type: Promise,
@@ -186,12 +193,38 @@ export default {
       return this.contentAttributes.image_type === 'story_mention';
     },
     contextMenuEnabledOptions() {
+      // feat/chat_interno_pulido: en «Chat interno» sin traducir, sin enlace al mensaje,
+      // sin guardarlo como respuesta predefinida, y solo se borra lo propio.
+      if (this.isInternal) {
+        const mine =
+          this.sender &&
+          this.sender.id === this.$store.getters.getCurrentUserID;
+        return {
+          internal: true,
+          copy: this.hasText,
+          delete: mine && (this.hasText || this.hasAttachments),
+          cannedResponse: false,
+          replyTo: this.inboxSupportsReplyTo.outgoing,
+        };
+      }
       return {
         copy: this.hasText,
         delete: this.hasText || this.hasAttachments,
         cannedResponse: this.isOutgoing && this.hasText,
         replyTo: !this.data.private && this.inboxSupportsReplyTo.outgoing,
       };
+    },
+    // Nombre arriba de la burbuja de otro agente (el primero de cada grupo). En un
+    // directo no hace falta: solo escribe el otro agente.
+    showInternalSenderName() {
+      const room = internalInfo(this.$store.getters.getSelectedChat) || {};
+      return (
+        this.isInternal &&
+        this.isIncoming &&
+        !this.grouped &&
+        this.isBubble &&
+        room.kind !== 'direct'
+      );
     },
     contentAttributes() {
       return this.data.content_attributes || {};
@@ -356,10 +389,12 @@ export default {
       return !(this.isFailed || this.isPending || this.isUnsupported);
     },
     showAvatar() {
+      // feat/chat_interno_pulido: en «Chat interno» sin fotos dentro de la sala (como un
+      // chat de equipo): el nombre va arriba del primer mensaje de cada quien.
+      if (this.isInternal) return false;
       if (this.isOutgoing || this.isTemplate) {
         return true;
       }
-      if (this.isInternal && this.isIncoming) return true; // feat/chat_interno: varios agentes
       return this.isATweet && this.isIncoming && this.sender;
     },
     senderNameForAvatar() {
@@ -500,6 +535,12 @@ export default {
         />
       </div>
       <div :class="bubbleClass" @contextmenu="openContextMenu($event)">
+        <p
+          v-if="showInternalSenderName"
+          class="mb-0.5 text-xs font-semibold text-woot-600 dark:text-woot-300"
+        >
+          {{ sender.available_name || sender.name }}
+        </p>
         <BubbleMailHead
           :email-attributes="contentAttributes.email"
           :cc="emailHeadAttributes.cc"

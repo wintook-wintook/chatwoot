@@ -1,7 +1,8 @@
 <script>
 // Embudo de contactos — configuración del tablero: movimiento automático, por qué
 // bandejas entran solas las conversaciones nuevas, si la IA mueve tarjetas y los
-// vencimientos (Frío / Descartar). Trabaja sobre `value` (v-model).
+// vencimientos (Frío / Descartar, y si al descartar se resuelve la conversación).
+// Trabaja sobre `value` (v-model).
 import { mapGetters } from 'vuex';
 
 export default {
@@ -133,6 +134,21 @@ export default {
           />
         </label>
       </div>
+      <template v-if="value.discard_after_days">
+        <label
+          class="flex items-center gap-2 mt-3 text-sm text-slate-700 dark:text-slate-200"
+        >
+          <input
+            type="checkbox"
+            :checked="value.resolve_on_stale"
+            @change="update({ resolve_on_stale: $event.target.checked })"
+          />
+          {{ $t('KANBAN.FUNNEL.BOARD.RESOLVE_ON_STALE') }}
+        </label>
+        <p class="mb-1 ml-6 text-xs text-slate-500 dark:text-slate-400">
+          {{ $t('KANBAN.FUNNEL.BOARD.RESOLVE_ON_STALE_HELP') }}
+        </p>
+      </template>
     </template>
   </div>
 </template>

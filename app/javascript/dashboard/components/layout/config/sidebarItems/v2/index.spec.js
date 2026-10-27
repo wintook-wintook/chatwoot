@@ -100,6 +100,10 @@ describe('Menú v2', () => {
     expect(item('ventas')[1].toState).toContain('tickets/commercial/metrics');
     expect(item('servicio')).toHaveLength(7);
     expect(item('servicio')[0].toState).toContain('tickets/support/board');
+    const primary = primaryMenuV2(ACCOUNT, route('home'));
+    expect(primary.find(i => i.key === 'servicio').toState).toContain(
+      'tickets/support/board'
+    );
   });
 
   it('Informes: negocio, dashboards por área y conversaciones plegadas', () => {
