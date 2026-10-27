@@ -978,6 +978,19 @@ Orden propuesto: **F1 → F2 → F4 → F3**. Las tres primeras son rápidas y s
 >   analizador). Las 7 fallas de `contact_tracking_response_analyzer_job_spec` ya existían.
 > - **Cómo se ve:** el prospecto responde → en el seguimiento, «siguiente toque» pasa a 3 días hábiles.
 
+> ✅ **V3 HECHA (27/10/2026) — reglas del tipo Prospección.**
+> - **Qué se hizo:** `TrackingCampaigns::ProspectingRules` (tope 1..500 obligatorio; asunto obligatorio
+>   en correo), usado por la API de lote y la continua; en Prospección `respect_working_hours` es
+>   siempre true. **Por lote, el tope reparte**: el inscrito n sale el día hábil n ÷ tope
+>   (`Enroll#batch_day_offset` + `Schedule#send_at(day_offset:)`); en continua sigue omitiendo al que
+>   pasa del tope del día. `Schedule`: en Prospección, si la bandeja no tiene horario, nunca sábado ni
+>   domingo (pasa al lunes a la misma hora). El tope ya no se borra al guardar una campaña por lote.
+> - **Pantalla:** al elegir Prospección, se abren las opciones de envío, «Correos por día
+>   (obligatorio)» se llena con 30 (D13) y «Respetar el horario» queda marcado y fijo. Por lote,
+>   aviso «los demás salen los siguientes días hábiles».
+> - **Pruebas:** `prospecting_rules_spec` (3), 3 en `schedule_spec`, 2 en `enroll_spec`, 2 en
+>   `contact_tracking_bulk_assigns_controller_spec`; 95 en verde.
+
 Orden: **V0 → V1 → V2 → V3 → V4 → V5 → V6**. Con V0–V4 el envío ya es correcto;
 con V5–V6 ya es prospección (se sabe quién está interesado y cuánto rinde la campaña).
 
@@ -1007,9 +1020,9 @@ de la empresa (no código). Se marca conforme avanzan las fases.
 |---|---|---|
 | 1 · A quién: cliente ideal, correos validados | Empresa: definir el cliente ideal · v1.1: validar correos antes de enviar | ⏳ empresa / v1.1 |
 | 2 · Mensaje: asunto, firma, prompt real | F1 ✅ · V1 ✅ firma · empresa: prompt de prospección | 🟡 falta el prompt |
-| 3 · Cadencia: se detiene al responder, días hábiles | V2 ✅ + V3 | 🟡 falta V3 |
+| 3 · Cadencia: se detiene al responder, días hábiles | V2 ✅ + V3 ✅ | ✅ |
 | 4 · Cumplir: baja, no contactar, aviso de privacidad | V4 · D7 (legal) | ⏳ |
-| 5 · Que llegue: dominio, calentamiento, tope diario | V3 tope · empresa: dominio con SPF/DKIM/DMARC | ⏳ |
+| 5 · Que llegue: dominio, calentamiento, tope diario | V3 ✅ tope · empresa: dominio con SPF/DKIM/DMARC | 🟡 falta el dominio |
 | 6 · Calificar respuestas | V5 | ⏳ |
 | 7 · Entregar al vendedor | V6 lista «Interesados» · v1.1: P2 con plazo y avisos | ⏳ |
 | 8 · Medir | V6 embudo y tasas | ⏳ |

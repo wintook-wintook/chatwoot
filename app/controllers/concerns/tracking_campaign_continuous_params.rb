@@ -12,7 +12,9 @@ module TrackingCampaignContinuousParams
     return [nil, 'Plantilla no encontrada'] unless template
     return [nil, "La plantilla '#{template.name}' no tiene un inbox configurado."] if template.inbox_id.blank?
 
-    [template]
+    error = TrackingCampaigns::ProspectingRules.error_for(purpose: purpose_param, daily_cap: params[:daily_cap],
+                                                          email_subject: params[:email_subject], inbox: template.inbox)
+    error ? [nil, error] : [template]
   end
 
   # Sin inicio = desde ahora. Con inicio futuro nace Programada (la abre WindowJob).
@@ -30,7 +32,8 @@ module TrackingCampaignContinuousParams
     {
       ends_at: parse_time(params[:ends_at]),
       entry_delay_minutes: params[:entry_delay_minutes].presence&.to_i || 0,
-      respect_working_hours: ActiveModel::Type::Boolean.new.cast(params.fetch(:respect_working_hours, true)),
+      # prospeccion V3: en Prospección siempre días hábiles y horario de atención
+      respect_working_hours: purpose_param == 'prospecting' || ActiveModel::Type::Boolean.new.cast(params.fetch(:respect_working_hours, true)),
       daily_cap: params[:daily_cap].presence&.to_i,
       email_subject: params[:email_subject].to_s.strip.presence, # prospeccion F1
       purpose: purpose_param # prospeccion V0

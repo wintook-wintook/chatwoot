@@ -95,7 +95,8 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
     {
       ends_at: parse_scheduled_for(params[:ends_at]),
       entry_delay_minutes: params[:entry_delay_minutes].presence&.to_i,
-      respect_working_hours: params.key?(:respect_working_hours) ? ActiveModel::Type::Boolean.new.cast(params[:respect_working_hours]) : nil
+      respect_working_hours: params.key?(:respect_working_hours) ? ActiveModel::Type::Boolean.new.cast(params[:respect_working_hours]) : nil,
+      daily_cap: params[:daily_cap].presence&.to_i # prospeccion V3: por lote, reparte en días hábiles
     }
   end
 

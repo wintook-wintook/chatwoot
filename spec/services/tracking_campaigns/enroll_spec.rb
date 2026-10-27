@@ -83,6 +83,33 @@ RSpec.describe TrackingCampaigns::Enroll do
     expect(conversation.additional_attributes['mail_subject']).to be_nil
   end
 
+  # prospeccion V3 — por lote, el tope diario reparte en días hábiles en vez de omitir.
+  describe 'tope diario' do
+    let(:inbox) { create(:inbox, account: account, timezone: 'America/Mexico_City', working_hours_enabled: false) }
+    let(:monday_noon) { ActiveSupport::TimeZone['America/Mexico_City'].local(2026, 10, 5, 12, 0) }
+
+    it 'por lote reparte: 2 por día, el 3.º y el 4.º salen el siguiente día hábil' do
+      campaign.update!(mode: 'batch', purpose: 'prospecting', daily_cap: 2, scheduled_for: monday_noon - 1.hour)
+      entries = travel_to(monday_noon) do
+        create_list(:contact, 4, account: account, phone_number: nil).map.with_index do |c, i|
+          c.update!(phone_number: "+52155500000#{i}")
+          described_class.new(campaign, c, source: 'batch', at: monday_noon).call
+        end
+      end
+
+      expect(entries).to all(be_enrolled)
+      days = entries.map { |e| e.contact_tracking.scheduled_for.in_time_zone('America/Mexico_City').to_date.day }
+      expect(days).to eq([5, 5, 6, 6])
+    end
+
+    it 'en continua, el que pasa del tope del día sigue omitido' do
+      campaign.update!(daily_cap: 1)
+      enroll
+
+      expect(enroll(create(:contact, account: account)).reason).to eq('daily_cap')
+    end
+  end
+
   it 'reusa la conversación que el contacto ya tiene en el inbox de la campaña' do
     conversation = create(:conversation, account: account, inbox: inbox, contact: contact)
 

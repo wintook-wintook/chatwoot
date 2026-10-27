@@ -202,6 +202,17 @@ export default {
     emailSubjectReady() {
       return !this.isEmailCampaign || !!this.emailSubject.trim();
     },
+    // prospeccion V3: tope diario obligatorio; por lote reparte en días hábiles
+    isProspecting() {
+      return this.purpose === 'prospecting';
+    },
+    showDailyCap() {
+      return this.isContinuous || this.isProspecting;
+    },
+    prospectingReady() {
+      const cap = Number(this.dailyCap);
+      return !this.isProspecting || (cap >= 1 && cap <= 500);
+    },
     purposeOptions() {
       return [
         {
@@ -318,6 +329,7 @@ export default {
           !!this.campaignName.trim() &&
           !!this.selectedTemplateId &&
           this.emailSubjectReady &&
+          this.prospectingReady &&
           !this.windowError &&
           !this.isSubmitting
         );
@@ -329,6 +341,7 @@ export default {
         this.hasAudienceSelected &&
         !!this.selectedTemplateId &&
         this.emailSubjectReady &&
+        this.prospectingReady &&
         !!this.scheduledFor &&
         !this.windowError &&
         hasTargets &&
@@ -350,6 +363,13 @@ export default {
     },
     selectedTemplateId() {
       if (!this.isContinuous) this.fetchPreview();
+    },
+    // prospeccion V3: Prospección trae sus reglas puestas
+    purpose(value) {
+      if (value !== 'prospecting') return;
+      if (!this.dailyCap) this.dailyCap = 30;
+      this.respectWorkingHours = true;
+      this.showSendOptions = true;
     },
   },
   async mounted() {
@@ -488,7 +508,11 @@ export default {
         scheduledFor: this.toIso(this.scheduledFor),
         excludedContactIds: this.excludedContactIds,
         skipActive: this.skipActive,
-        window: this.windowPayload(),
+        window: {
+          ...this.windowPayload(),
+          daily_cap:
+            this.isProspecting && this.dailyCap ? Number(this.dailyCap) : null,
+        },
         audienceSource: this.audienceSource,
         emailSubject: this.emailSubjectPayload(),
         purpose: this.purpose,
@@ -792,9 +816,13 @@ export default {
               class="field-input"
             />
           </label>
-          <label v-if="isContinuous" class="block">
+          <label v-if="showDailyCap" class="block">
             <span class="field-label">
-              {{ $t('BULK_TRACKING_ASSIGN.MODAL.DAILY_CAP_LABEL') }}
+              {{
+                isProspecting
+                  ? $t('BULK_TRACKING_ASSIGN.MODAL.PROSPECTING_DAILY_CAP_LABEL')
+                  : $t('BULK_TRACKING_ASSIGN.MODAL.DAILY_CAP_LABEL')
+              }}
             </span>
             <input
               v-model.number="dailyCap"
@@ -805,6 +833,12 @@ export default {
               "
               class="field-input"
             />
+            <span
+              v-if="isProspecting && !isContinuous"
+              class="block mt-1 text-xs text-slate-500 dark:text-slate-400"
+            >
+              {{ $t('BULK_TRACKING_ASSIGN.MODAL.PROSPECTING_DAILY_CAP_HINT') }}
+            </span>
           </label>
           <!-- Mismo molde que los otros campos (título + caja del alto de un input)
                para que las tres columnas queden alineadas. -->
@@ -819,6 +853,7 @@ export default {
                 v-model="respectWorkingHours"
                 type="checkbox"
                 class="m-0"
+                :disabled="isProspecting"
               />
               {{ $t('BULK_TRACKING_ASSIGN.MODAL.RESPECT_WORKING_HOURS') }}
             </label>

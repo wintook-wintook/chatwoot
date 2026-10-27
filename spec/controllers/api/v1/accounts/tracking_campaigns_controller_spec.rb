@@ -136,7 +136,8 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
     # prospeccion V0 — para qué es la campaña
     it 'guarda si es de prospección; un valor desconocido queda en seguimiento' do
       url = "/api/v1/accounts/#{account.id}/tracking_campaigns"
-      post url, params: { name: 'Frío', tracking_template_id: template.id, launch: false, purpose: 'prospecting' },
+      post url, params: { name: 'Frío', tracking_template_id: template.id, launch: false, purpose: 'prospecting',
+                          daily_cap: 30 },
                 headers: admin.create_new_auth_token, as: :json
       expect(TrackingCampaign.find(response.parsed_body['campaign_id'])).to be_prospecting
 
@@ -181,7 +182,7 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
     it 'por lote: mientras está Guardada se puede volver de prospección (prospeccion V0)' do
       patch "/api/v1/accounts/#{account.id}/contact_tracking_bulk_assigns/#{saved.id}",
             params: { campaign_name: 'Lote', template_id: template.id, scheduled_for: 2.days.from_now.iso8601,
-                      purpose: 'prospecting' },
+                      purpose: 'prospecting', daily_cap: 30 },
             headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:success)

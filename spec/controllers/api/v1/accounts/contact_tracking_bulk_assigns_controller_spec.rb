@@ -54,4 +54,30 @@ RSpec.describe 'Contact Tracking Bulk Assigns API', type: :request do
       end
     end
   end
+
+  # prospeccion V3 (docs/prospeccion_estudio.md §10.2) — reglas de una campaña de prospección.
+  describe 'POST /api/v1/accounts/{account.id}/contact_tracking_bulk_assigns (Prospección)' do
+    let(:url) { "/api/v1/accounts/#{account.id}/contact_tracking_bulk_assigns" }
+    let(:body) do
+      { payload: match_all_payload, template_id: template.id, campaign_name: 'Frío', purpose: 'prospecting',
+        scheduled_for: 1.hour.from_now.iso8601, respect_working_hours: false }
+    end
+
+    before { create(:contact, :with_phone_number, account: account) }
+
+    it 'sin tope diario no la crea' do
+      post url, params: body, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to include('tope diario es obligatorio')
+    end
+
+    it 'con tope la crea con su tope y siempre en horario de atención' do
+      post url, params: body.merge(daily_cap: 30), headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(TrackingCampaign.find(response.parsed_body['campaign_id']))
+        .to have_attributes(purpose: 'prospecting', daily_cap: 30, respect_working_hours: true)
+    end
+  end
 end

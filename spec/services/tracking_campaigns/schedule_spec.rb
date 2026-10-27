@@ -63,4 +63,31 @@ RSpec.describe TrackingCampaigns::Schedule do
 
     expect(send_at(saturday)).to eq(saturday)
   end
+
+  # prospeccion V3 (docs/prospeccion_estudio.md §10.3)
+  describe 'Prospección' do
+    let(:open_inbox) { create(:inbox, account: account, timezone: 'America/Mexico_City', working_hours_enabled: false) }
+
+    it 'sin horario en la bandeja, nunca en fin de semana: pasa al lunes a la misma hora' do
+      campaign = build(:tracking_campaign, account: account, inbox: open_inbox, purpose: 'prospecting',
+                                           scheduled_for: monday_noon - 1.day)
+      saturday = zone.local(2026, 10, 10, 11, 0)
+
+      expect(described_class.new(campaign).send_at(saturday)).to eq(zone.local(2026, 10, 12, 11, 0))
+    end
+
+    it 'en seguimiento sin horario, el fin de semana se queda como estaba' do
+      campaign = build(:tracking_campaign, account: account, inbox: open_inbox, scheduled_for: monday_noon - 1.day)
+      saturday = zone.local(2026, 10, 10, 11, 0)
+
+      expect(described_class.new(campaign).send_at(saturday)).to eq(saturday)
+    end
+
+    it 'day_offset suma días hábiles y abre a la hora de apertura' do
+      friday_noon = zone.local(2026, 10, 9, 12, 0)
+
+      # viernes + 1 día hábil = lunes 9:00 (abre la bandeja)
+      expect(described_class.new(campaign).send_at(friday_noon, day_offset: 1)).to eq(zone.local(2026, 10, 12, 9, 0))
+    end
+  end
 end

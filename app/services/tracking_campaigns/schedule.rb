@@ -25,15 +25,46 @@ class TrackingCampaigns::Schedule
   end
 
   # La hora a la que se programa el seguimiento, o nil si cae fuera de la ventana.
-  def send_at(entered_at = Time.current)
+  # day_offset (prospeccion V3): días hábiles de más, para repartir un lote con tope diario.
+  def send_at(entered_at = Time.current, day_offset: 0)
     time = [entered_at + @campaign.entry_delay_minutes.to_i.minutes, @campaign.scheduled_for].compact.max
-    time = next_open(time) if working_hours?
+    time = business_days_later(time, day_offset) if day_offset.positive?
+    time = open_time(time)
     return nil if time.nil? || (@campaign.ends_at && time > @campaign.ends_at)
 
     time
   end
 
   private
+
+  # Dentro del horario de la bandeja; sin horario, Prospección al menos nunca en fin de semana.
+  def open_time(time)
+    return next_open(time) if working_hours?
+
+    @campaign.prospecting? ? next_weekday(time) : time
+  end
+
+  # Prospección: sin horario en la bandeja, al menos nunca sábado ni domingo (misma hora, el lunes).
+  def next_weekday(time)
+    local = time.in_time_zone(zone)
+    local += 1.day while local.saturday? || local.sunday?
+    local
+  end
+
+  # Al inicio de cada día hábil de más (a la hora de apertura si hay horario; si no, a la misma hora).
+  def business_days_later(time, days)
+    local = time.in_time_zone(zone)
+    count = 0
+    while count < days
+      local += 1.day
+      count += 1 unless local.saturday? || local.sunday?
+    end
+    working_hours? ? local.beginning_of_day : local
+  end
+
+  def zone
+    @inbox&.timezone.presence || 'UTC'
+  end
 
   def working_hours?
     @campaign.respect_working_hours && @inbox&.working_hours_enabled?

@@ -47,7 +47,7 @@ class TrackingCampaigns::Enroll
     reason = skip_reason
     return skip(reason) if reason
 
-    send_at = TrackingCampaigns::Schedule.new(@campaign).send_at(@at)
+    send_at = TrackingCampaigns::Schedule.new(@campaign).send_at(@at, day_offset: batch_day_offset)
     return skip('outside_window') unless send_at
 
     send_at = [send_at, @at + follow_up_delay].max if live_conversation?
@@ -72,11 +72,19 @@ class TrackingCampaigns::Enroll
     @campaign.accepting_entries?(@at) && @campaign.inbox.present? && @campaign.tracking_template.present?
   end
 
+  # Continua: el que pasa del tope del día queda omitido. Por lote se reparte (batch_day_offset).
   def daily_cap_reached?
-    return false if @campaign.daily_cap.blank?
+    return false if @campaign.daily_cap.blank? || !@campaign.continuous?
 
     day = @at.in_time_zone(@campaign.inbox.timezone.presence || 'UTC')
     @campaign.entries.enrolled.where(created_at: day.all_day).count >= @campaign.daily_cap
+  end
+
+  # prospeccion V3: por lote, con tope, el inscrito número n sale el día hábil n / tope.
+  def batch_day_offset
+    return 0 if @campaign.continuous? || @campaign.daily_cap.blank?
+
+    @campaign.entries.enrolled.count / @campaign.daily_cap
   end
 
   def active_tracking?

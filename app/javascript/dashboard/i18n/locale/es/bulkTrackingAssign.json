@@ -48,6 +48,8 @@
       "RESPECT_WORKING_HOURS": "Respetar el horario de atención del inbox",
       "DAILY_CAP_LABEL": "Tope de inscripciones por día (opcional)",
       "DAILY_CAP_PLACEHOLDER": "Sin tope",
+      "PROSPECTING_DAILY_CAP_LABEL": "Correos por día (obligatorio)",
+      "PROSPECTING_DAILY_CAP_HINT": "Si hay más contactos, los demás salen los siguientes días hábiles.",
       "SECTION_WHAT": "1 · ¿Qué?",
       "PURPOSE_LABEL": "¿Para qué es?",
       "PURPOSE_FOLLOW_UP": "Seguimiento",
