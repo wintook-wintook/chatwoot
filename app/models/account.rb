@@ -47,6 +47,8 @@ class Account < ApplicationRecord
   has_many :quotes, dependent: :destroy # Plan-Catalogo-Cotizaciones
   has_many :customer_assets, dependent: :destroy # Plan-Trabajo-Campo R4
   has_many :maintenance_plans, dependent: :destroy # Plan-Trabajo-Campo R4
+  has_many :contracts, dependent: :destroy # Plan-Contratos R1
+  has_many :contract_types, dependent: :destroy # Plan-Contratos R1
   has_many :external_db_connections, dependent: :destroy # @query_databases
   has_many :external_db_queries,     dependent: :destroy # @query_databases
   has_many :erp_collection_bots,     dependent: :destroy # @query_databases

@@ -466,13 +466,35 @@ const informes = (accountId, route) => {
 
 // Una sola opción de Tareas (Mi día | Mías | No asignadas | Todas van adentro) que
 // abre en Mi día; el calendario; y la prioridad de Mi día (solo administrador).
-// Clientes = lo de Contactos + los atributos personalizados.
+// Clientes = lo de Contactos + los contratos (y sus tipos) + los atributos personalizados.
 const clientes = accountId => {
   const base = contacts(accountId);
+  const url = path => frontendURL(`accounts/${accountId}/${path}`);
   return {
     ...base,
-    routes: [...base.routes, ...CLIENT_TOOLS],
-    menuItems: [...base.menuItems, ...settingsItems(accountId, CLIENT_TOOLS)],
+    routes: [
+      ...base.routes,
+      ...CLIENT_TOOLS,
+      'contracts_list',
+      'contract_types',
+    ],
+    menuItems: [
+      ...base.menuItems,
+      // Plan-Contratos R1 — servicios recurrentes de los clientes
+      {
+        icon: 'signature',
+        label: 'CONTRACTS',
+        toState: url('contracts'),
+        toStateName: 'contracts_list',
+      },
+      ...settingsItems(accountId, CLIENT_TOOLS),
+      {
+        icon: 'document',
+        label: 'CONTRACT_TYPES',
+        toState: url('contracts/types'),
+        toStateName: 'contract_types',
+      },
+    ],
   };
 };
 

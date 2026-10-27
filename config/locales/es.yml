@@ -559,3 +559,20 @@ es:
     seconds:
       one: "%{count} segundo"
       other: "%{count} segundos"
+  # Plan-Contratos R1
+  contracts:
+    errors:
+      not_found: 'No se encontró el contrato'
+      type_not_found: 'No se encontró el tipo de contrato'
+      no_term: 'El contrato no tiene plazo: no hay qué renovar'
+    import:
+      no_file: 'Elige un archivo CSV'
+      not_found: 'No existe el contrato con id %{id}'
+      contact_required: 'Falta el contacto (correo o teléfono)'
+      contact_not_found: 'No se encontró el contacto «%{value}»'
+      type_not_found: 'No existe el tipo de contrato «%{value}»'
+      item_not_found: 'No existe la clave «%{value}» en el catálogo'
+      user_not_found: 'No se encontró al usuario «%{value}»'
+      bad_unit: 'Periodo no válido «%{value}» (día, semana, mes o año)'
+      bad_number: 'Número no válido «%{value}»'
+      bad_date: 'Fecha no válida en %{column}: «%{value}» (AAAA-MM-DD o DD/MM/AAAA)'

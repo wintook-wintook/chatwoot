@@ -359,6 +359,8 @@
     "HOME": "Inicio",
     "AGENTS": "Usuarios",
     "ACCESS_ROLES": "Roles",
+    "CONTRACTS": "Contratos",
+    "CONTRACT_TYPES": "Tipos de contrato",
     "CATALOG": "Catálogo",
     "FIELD_ROUTE": "Mi ruta en campo",
     "DISPATCH": "Despacho",

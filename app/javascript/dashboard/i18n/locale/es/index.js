@@ -35,6 +35,7 @@ import general from './general.json';
 import datePicker from './datePicker.json';
 // Importar todos los archivos JSON de inglés
 import kanban from './kanban.json';
+import contracts from './contracts.json'; // Plan-Contratos R1
 import contactTracking from './contactTracking.js';
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
@@ -85,6 +86,7 @@ export default {
   ...general,
   ...datePicker,
   ...kanban,
+  ...contracts,
   ...contactTracking,
   ...trackingTemplates, // proyecto@tracking_templates
   ...knowledgeSources, // @knowledge_sources
