@@ -67,6 +67,9 @@ class TrackingCampaign < ApplicationRecord
   # prospeccion V0: seguimiento (ya te conocen) o prospección (clientes nuevos).
   PURPOSES = %w[follow_up prospecting].freeze
 
+  # §10.12 (D20, D25): qué hace la campaña con lo que la IA leyó en la respuesta del cliente.
+  REPLY_OPTIONS = %i[stop_when_not_interested stop_when_wrong_person retry_not_now].freeze
+
   belongs_to :account
   belongs_to :tracking_template, optional: true
   belongs_to :inbox, optional: true
@@ -113,9 +116,9 @@ class TrackingCampaign < ApplicationRecord
     purpose == 'prospecting'
   end
 
-  # prospeccion P2: con tablero de entrega, el interesado se entrega solo.
+  # prospeccion P2: con tablero de entrega, el interesado se entrega solo (§10.12: en todas).
   def auto_handoff?
-    prospecting? && handoff_board_id.present? && handoff_column_id.present?
+    handoff_board_id.present? && handoff_column_id.present?
   end
 
   # prospeccion P2: lo que muestran el detalle y el modal «Entrega de interesados».

@@ -53,8 +53,9 @@ class ContactTrackings::BulkAssignService
     @launch               = launch
     @audience_source      = audience_source.presence
     @email_subject        = email_subject.to_s.strip.presence # prospeccion F1
-    @purpose              = TrackingCampaign::PURPOSES.include?(purpose.to_s) ? purpose.to_s : 'follow_up' # prospeccion V0
-    @email_subject_b      = @purpose == 'prospecting' ? email_subject_b.to_s.strip.presence : nil # prospeccion P3
+    # §10.12: el tipo ya no cambia nada; las campañas nuevas quedan como 'prospecting'
+    @purpose              = TrackingCampaign::PURPOSES.include?(purpose.to_s) ? purpose.to_s : 'prospecting'
+    @email_subject_b      = email_subject_b.to_s.strip.presence # prospeccion P3
     @results              = { inserted: 0, skipped: 0, errors: [] }
   end
 
@@ -144,7 +145,7 @@ class ContactTrackings::BulkAssignService
   def creation_error(template)
     return 'El nombre de la campaña es obligatorio' if @campaign_name.blank?
 
-    error = window_error || prospecting_error(template)
+    error = window_error || campaign_rules_error(template)
     return error if error
     # La campaña fija su inbox; sin inbox no hay canal por el cual conversar.
     return if template.inbox_id.present?
@@ -152,9 +153,14 @@ class ContactTrackings::BulkAssignService
     "La plantilla '#{template.name}' no tiene un inbox configurado. Asígnale un inbox antes de lanzar la campaña."
   end
 
-  def prospecting_error(template)
-    TrackingCampaigns::ProspectingRules.error_for(purpose: @purpose, daily_cap: @window[:daily_cap],
-                                                  email_subject: @email_subject, inbox: template.inbox)
+  # §10.12 (D21): reglas por canal (correo: tope y asunto obligatorios).
+  def campaign_rules_error(template)
+    TrackingCampaigns::CampaignRules.error_for(daily_cap: @window[:daily_cap], email_subject: @email_subject,
+                                               inbox: template.inbox)
+  end
+
+  def reply_options
+    TrackingCampaign::REPLY_OPTIONS.index_with { |option| @window.fetch(option, true) }
   end
 
   def window_error
@@ -209,8 +215,8 @@ class ContactTrackings::BulkAssignService
                   source: @audience_source }.compact,
       ends_at: @window[:ends_at],
       entry_delay_minutes: @window[:entry_delay_minutes] || 0,
-      # prospeccion V3: en Prospección siempre días hábiles y horario de atención
-      respect_working_hours: @purpose == 'prospecting' || @window.fetch(:respect_working_hours, true),
+      respect_working_hours: @window.fetch(:respect_working_hours, true),
+      **reply_options, # §10.12 (D20, D25): qué hacer con lo que la IA leyó en la respuesta
       daily_cap: @window[:daily_cap],
       email_subject: @email_subject, # prospeccion F1: solo cuenta si la bandeja es de correo
       email_subject_b: @email_subject_b, # prospeccion P3

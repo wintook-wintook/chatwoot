@@ -45,10 +45,10 @@ RSpec.describe TrackingCampaigns::SubjectTest do
     expect(described_class.stats(campaign)[:winner]).to eq('b')
   end
 
-  it 'fuera de Prospección no hay prueba' do
+  it 'en cualquier campaña con asunto B hay prueba (§10.12)' do
     campaign.update!(purpose: 'follow_up')
 
-    expect(described_class.pick(campaign).last).to be_nil
+    expect(described_class.pick(campaign).last).to eq('a')
   end
 
   describe 'la comparación' do

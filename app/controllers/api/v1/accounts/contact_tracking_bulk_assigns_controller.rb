@@ -100,8 +100,14 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
       ends_at: parse_scheduled_for(params[:ends_at]),
       entry_delay_minutes: params[:entry_delay_minutes].presence&.to_i,
       respect_working_hours: params.key?(:respect_working_hours) ? ActiveModel::Type::Boolean.new.cast(params[:respect_working_hours]) : nil,
-      daily_cap: params[:daily_cap].presence&.to_i # prospeccion V3: por lote, reparte en días hábiles
+      daily_cap: params[:daily_cap].presence&.to_i, # prospeccion V3: por lote, reparte en días hábiles
+      **TrackingCampaign::REPLY_OPTIONS.index_with { |option| boolean_param(option) } # §10.12 (D20, D25)
     }
+  end
+
+  # nil si no viene (y BulkAssignService toma el valor por omisión).
+  def boolean_param(key)
+    params.key?(key) ? ActiveModel::Type::Boolean.new.cast(params[key]) : nil
   end
 
   def parse_scheduled_for(value)

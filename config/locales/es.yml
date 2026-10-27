@@ -245,8 +245,6 @@ es:
     done_title: "Listo, ya no te escribiremos"
     done_body: "%{name} no volverá a contactarte. Si fue un error, respóndenos y lo corregimos."
   tracking_campaigns:
-    scoring:
-      not_prospecting: "La puntuación solo aplica en campañas de Prospección."
     subject_test:
       invalid: "Elige el asunto A o B de una campaña con prueba de asuntos."
     hand_off:

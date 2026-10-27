@@ -260,8 +260,6 @@ en:
     done_title: "Done, we won't write to you again"
     done_body: "%{name} won't contact you again. If this was a mistake, reply to us and we'll fix it."
   tracking_campaigns:
-    scoring:
-      not_prospecting: "Scoring only applies to Prospecting campaigns."
     subject_test:
       invalid: "Choose subject A or B of a campaign with a subject test."
     hand_off:

@@ -37,14 +37,14 @@ class TrackingCampaigns::Schedule
 
   private
 
-  # Dentro del horario de la bandeja; sin horario, Prospección al menos nunca en fin de semana.
+  # Dentro del horario de la bandeja; sin horario, con «días hábiles» al menos nunca en fin de semana.
   def open_time(time)
     return next_open(time) if working_hours?
 
-    @campaign.prospecting? ? next_weekday(time) : time
+    @campaign.respect_working_hours ? next_weekday(time) : time
   end
 
-  # Prospección: sin horario en la bandeja, al menos nunca sábado ni domingo (misma hora, el lunes).
+  # §10.12: sin horario en la bandeja, al menos nunca sábado ni domingo (misma hora, el lunes).
   def next_weekday(time)
     local = time.in_time_zone(zone)
     local += 1.day while local.saturday? || local.sunday?

@@ -3,7 +3,7 @@
 # ================================================================================
 # prospeccion P3 — PRUEBA A/B DE ASUNTOS (§10.10)
 # ================================================================================
-# Solo en Prospección por correo, con asunto B. El asunto se elige al ABRIR la
+# En campañas por correo con asunto B (§10.12: cualquier campaña). El asunto se elige al ABRIR la
 # conversación (TrackingBuilder#open_conversation, con el primer toque):
 #
 #   sin asunto B             → A, sin anotar variante
@@ -21,8 +21,7 @@ module TrackingCampaigns::SubjectTest
   module_function
 
   def running?(campaign)
-    campaign.prospecting? && campaign.email_subject.present? && campaign.email_subject_b.present? &&
-      campaign.subject_ab_winner.blank?
+    campaign.email_subject.present? && campaign.email_subject_b.present? && campaign.subject_ab_winner.blank?
   end
 
   # [plantilla del asunto, variante a anotar o nil]
@@ -47,7 +46,7 @@ module TrackingCampaigns::SubjectTest
 
   # nil si la campaña nunca tuvo prueba.
   def stats(campaign)
-    return nil unless campaign.prospecting? && campaign.email_subject_b.present?
+    return nil if campaign.email_subject_b.blank?
 
     rows = VARIANTS.index_with { |variant| variant_stats(campaign, variant) }
     { variants: rows, winner: campaign.subject_ab_winner, leader: leader(rows), min_sample: MIN_SAMPLE }

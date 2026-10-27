@@ -19,7 +19,7 @@ module TrackingCampaigns::ProspectScore
 
   def call(tracking, config = nil)
     campaign = tracking.tracking_campaign
-    return unless campaign&.prospecting?
+    return if campaign.nil? # §10.12: todas las campañas
 
     config ||= TrackingCampaigns::ScoringConfig.for(campaign)
     parts = criteria(tracking, config['rules']).index_with { |key| config['weights'][key] }.reject { |_, points| points.zero? }

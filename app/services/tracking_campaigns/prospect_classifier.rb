@@ -5,13 +5,13 @@
 # ================================================================================
 # Plan: docs/prospeccion_estudio.md (§8.1 etapas y salidas, §10.3 V5, D14, D15).
 #
-#   Solo en campañas de Prospección. Con cada respuesta del prospecto, una llamada corta
+#   En todas las campañas (§10.12; antes solo Prospección). Con cada respuesta, una llamada corta
 #   (gpt-4o-mini con JSON fijo; si falla, gpt-4o) elige UNA categoría:
 #
 #     interested      → etapa «interesado» + interested_at (ya cuenta en el embudo de campañas)
-#     not_now         → salida «no ahora»: un solo toque más, en 30 días (nunca en fin de semana)
-#     not_interested  → salida «no le interesa»: se cierra, sin más toques
-#     wrong_person    → salida «no es la persona»: se cierra, sin más toques
+#     not_now         → salida «no ahora»: un solo toque más, en 30 días (casilla retry_not_now)
+#     not_interested  → salida «no le interesa»: se cierra (casilla stop_when_not_interested)
+#     wrong_person    → salida «no es la persona»: se cierra (casilla stop_when_wrong_person)
 #     other           → etapa «respondió»
 #
 #   La etapa nunca baja (un interesado que luego saluda sigue interesado). La IA sigue
@@ -40,7 +40,7 @@ class TrackingCampaigns::ProspectClassifier
 
   # La categoría elegida, o nil si no aplica.
   def call
-    return unless @tracking.tracking_campaign&.prospecting?
+    return if campaign.nil? # §10.12: en todas las campañas, cualquier canal
 
     answer = MODELS.lazy.filter_map { |model| ask(model) }.first || { 'categoria' => 'other' }
     label = answer['categoria']
@@ -78,26 +78,38 @@ class TrackingCampaigns::ProspectClassifier
   # prospeccion P2: con tablero de entrega, el interesado entra solo a Oportunidades.
   # Si la entrega falla, el prospecto queda «interesado» (se puede entregar con el botón).
   def auto_hand_off
-    return unless @tracking.prospect_stage == 'interested' && @tracking.tracking_campaign.auto_handoff?
+    return unless @tracking.prospect_stage == 'interested' && campaign.auto_handoff?
 
     TrackingCampaigns::HandOff.new(@tracking).call
   rescue StandardError => e
     Rails.logger.warn "[ProspectClassifier] entrega del tracking ##{@tracking.id}: #{e.message}"
   end
 
+  # La salida SIEMPRE se anota (cuenta en el embudo); detener o reprogramar los toques depende
+  # de las casillas de la campaña (§10.12, D20 y D25).
   def outcome_attributes(label)
     case label
     when 'interested' then { prospect_exit: nil, interested_at: @tracking.interested_at || Time.current }
     when 'not_now' then not_now_attributes
-    when 'not_interested', 'wrong_person' then { prospect_exit: label }.merge(waiting? ? { status: 'completed' } : {})
+    when 'not_interested' then stop_attributes(label, campaign.stop_when_not_interested)
+    when 'wrong_person' then stop_attributes(label, campaign.stop_when_wrong_person)
     else {}
     end
   end
 
-  # D15: un solo toque más, a los 30 días (solo si esperaba su siguiente toque).
+  def stop_attributes(label, stop)
+    { prospect_exit: label }.merge(stop && waiting? ? { status: 'completed' } : {})
+  end
+
+  def campaign
+    @tracking.tracking_campaign
+  end
+
+  # D15: un solo toque más, a los 30 días (solo si esperaba su siguiente toque y la campaña
+  # tiene prendida «ahora no → 30 días»).
   def not_now_attributes
     attrs = { prospect_exit: 'not_now' }
-    return attrs unless waiting?
+    return attrs unless waiting? && campaign.retry_not_now
 
     attrs.merge(scheduled_for: not_now_at, max_attempts: [@tracking.max_attempts, @tracking.attempt_count + 1].min)
   end

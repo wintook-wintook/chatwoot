@@ -206,6 +206,7 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
       paused_reason: campaign.paused_reason, paused_at: campaign.paused_at,
       email_subject: campaign.email_subject, # prospeccion F1
       email_subject_b: campaign.email_subject_b } # prospeccion P3
+      .merge(campaign.slice(*TrackingCampaign::REPLY_OPTIONS).symbolize_keys) # §10.12 (D20, D25)
   end
 
   def aggregate_stats(status_counts)

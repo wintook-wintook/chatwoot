@@ -118,11 +118,47 @@ RSpec.describe TrackingCampaigns::ProspectClassifier do
     expect(tracking.reload.prospect_stage).to eq('replied')
   end
 
-  it 'en campañas de seguimiento no clasifica' do
+  # §10.12: clasifica en todas las campañas; detener o reprogramar depende de las casillas
+  it 'también clasifica en una campaña de seguimiento' do
     campaign.update!(purpose: 'follow_up')
+    openai_says('interested')
+
+    expect(described_class.call(tracking, message)).to eq('interested')
+    expect(tracking.reload.prospect_stage).to eq('interested')
+  end
+
+  it 'sin tracking de campaña no clasifica' do
+    tracking.update!(tracking_campaign: nil)
 
     expect(described_class.call(tracking, message)).to be_nil
-    expect(tracking.reload.prospect_stage).to be_nil
+  end
+
+  describe 'casillas de la campaña (D20, D25)' do
+    it '«no le interesa» con la casilla apagada: anota la salida pero sigue con sus toques' do
+      campaign.update!(stop_when_not_interested: false)
+      openai_says('not_interested')
+      described_class.call(tracking, message)
+
+      expect(tracking.reload).to have_attributes(prospect_exit: 'not_interested', status: 'scheduled')
+    end
+
+    it '«no es la persona» tiene su propia casilla: se detiene aunque «no le interesa» esté apagada' do
+      campaign.update!(stop_when_not_interested: false, stop_when_wrong_person: true)
+      openai_says('wrong_person')
+      described_class.call(tracking, message)
+
+      expect(tracking.reload).to have_attributes(prospect_exit: 'wrong_person', status: 'completed')
+    end
+
+    it '«ahora no» con la casilla apagada: anota la salida y no reprograma a 30 días' do
+      campaign.update!(retry_not_now: false)
+      scheduled = tracking.scheduled_for
+      openai_says('not_now')
+      described_class.call(tracking, message)
+
+      expect(tracking.reload.prospect_exit).to eq('not_now')
+      expect(tracking.scheduled_for).to be_within(1.second).of(scheduled)
+    end
   end
 
   it 'la baja (V4) marca la salida «baja»' do

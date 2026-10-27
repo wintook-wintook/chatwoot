@@ -143,7 +143,7 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
 
       post url, params: { name: 'Raro', tracking_template_id: template.id, launch: false, purpose: 'otra' },
                 headers: admin.create_new_auth_token, as: :json
-      expect(TrackingCampaign.find(response.parsed_body['campaign_id']).purpose).to eq('follow_up')
+      expect(TrackingCampaign.find(response.parsed_body['campaign_id']).purpose).to eq('prospecting') # §10.12
     end
   end
 
@@ -388,12 +388,6 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
 
       patch url, params: { reset: true }, headers: admin.create_new_auth_token, as: :json
       expect(prospecting.reload.scoring).to eq({})
-    end
-
-    it 'puntuación: una campaña de seguimiento responde 422' do
-      patch "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}/scoring", params: { reset: true },
-                                                                                        headers: admin.create_new_auth_token, as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
     end
 
     it 'la ficha del contacto trae su puntuación más reciente (D19)' do

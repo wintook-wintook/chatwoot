@@ -38,11 +38,12 @@ RSpec.describe TrackingCampaigns::Schedule do
     expect(send_at(friday_night)).to eq(zone.local(2026, 10, 12, 9, 0))
   end
 
-  it 'sin horario: el inbox sin horario activado o la campaña que no lo pide escriben a cualquier hora' do
+  # §10.12: sin horario en la bandeja, «días hábiles» al menos salta el fin de semana (misma hora)
+  it 'sin horario: el inbox sin horario activado salta el fin de semana; la campaña que no lo pide, a cualquier hora' do
     saturday = zone.local(2026, 10, 10, 22, 0)
 
     inbox.update!(working_hours_enabled: false)
-    expect(send_at(saturday)).to eq(saturday)
+    expect(send_at(saturday)).to eq(zone.local(2026, 10, 12, 22, 0))
 
     inbox.update!(working_hours_enabled: true)
     campaign.respect_working_hours = false
@@ -64,20 +65,21 @@ RSpec.describe TrackingCampaigns::Schedule do
     expect(send_at(saturday)).to eq(saturday)
   end
 
-  # prospeccion V3 (docs/prospeccion_estudio.md §10.3)
-  describe 'Prospección' do
+  # prospeccion V3 · §10.12: depende de la casilla «días hábiles», no del tipo
+  describe 'días hábiles' do
     let(:open_inbox) { create(:inbox, account: account, timezone: 'America/Mexico_City', working_hours_enabled: false) }
 
-    it 'sin horario en la bandeja, nunca en fin de semana: pasa al lunes a la misma hora' do
-      campaign = build(:tracking_campaign, account: account, inbox: open_inbox, purpose: 'prospecting',
+    it 'sin horario en la bandeja, con «días hábiles» nunca en fin de semana: pasa al lunes a la misma hora' do
+      campaign = build(:tracking_campaign, account: account, inbox: open_inbox, respect_working_hours: true,
                                            scheduled_for: monday_noon - 1.day)
       saturday = zone.local(2026, 10, 10, 11, 0)
 
       expect(described_class.new(campaign).send_at(saturday)).to eq(zone.local(2026, 10, 12, 11, 0))
     end
 
-    it 'en seguimiento sin horario, el fin de semana se queda como estaba' do
-      campaign = build(:tracking_campaign, account: account, inbox: open_inbox, scheduled_for: monday_noon - 1.day)
+    it 'con «días hábiles» apagado, el fin de semana se queda como estaba' do
+      campaign = build(:tracking_campaign, account: account, inbox: open_inbox, respect_working_hours: false,
+                                           scheduled_for: monday_noon - 1.day)
       saturday = zone.local(2026, 10, 10, 11, 0)
 
       expect(described_class.new(campaign).send_at(saturday)).to eq(saturday)

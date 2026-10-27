@@ -69,10 +69,11 @@ RSpec.describe TrackingCampaigns::ProspectScore do
     expect(score!.prospect_score).to eq(35)
   end
 
-  it 'fuera de Prospección no puntúa' do
+  it 'una campaña de seguimiento también puntúa (§10.12)' do
     campaign.update!(purpose: 'follow_up')
+    tracking.update!(prospect_stage: 'replied')
 
-    expect(score!.prospect_score).to be_nil
+    expect(score!.prospect_score).to eq(10)
   end
 
   describe TrackingCampaigns::ScoringConfig do

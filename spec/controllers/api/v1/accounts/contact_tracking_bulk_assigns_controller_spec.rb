@@ -65,19 +65,28 @@ RSpec.describe 'Contact Tracking Bulk Assigns API', type: :request do
 
     before { create(:contact, :with_phone_number, account: account) }
 
-    it 'sin tope diario no la crea' do
+    # §10.12 (D21): fuera de correo el tope es opcional; «días hábiles» es casilla
+    it 'en SMS el tope es opcional; si viene, de 1 a 500' do
       post url, params: body, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:success)
 
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['error']).to include('tope diario es obligatorio')
+      post url, params: body.merge(daily_cap: 501), headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['error']).to include('va de 1 a 500')
     end
 
-    it 'con tope la crea con su tope y siempre en horario de atención' do
+    it 'con tope la crea con su tope y respeta la casilla de horario' do
       post url, params: body.merge(daily_cap: 30), headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:success)
       expect(TrackingCampaign.find(response.parsed_body['campaign_id']))
-        .to have_attributes(purpose: 'prospecting', daily_cap: 30, respect_working_hours: true)
+        .to have_attributes(purpose: 'prospecting', daily_cap: 30, respect_working_hours: false)
+    end
+
+    it 'guarda las casillas de qué hacer con la respuesta; por omisión, prendidas (D20, D25)' do
+      post url, params: body.merge(stop_when_not_interested: false), headers: admin.create_new_auth_token, as: :json
+
+      expect(TrackingCampaign.find(response.parsed_body['campaign_id']))
+        .to have_attributes(stop_when_not_interested: false, stop_when_wrong_person: true, retry_not_now: true)
     end
 
     # prospeccion P3
