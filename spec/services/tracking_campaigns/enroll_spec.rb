@@ -44,6 +44,45 @@ RSpec.describe TrackingCampaigns::Enroll do
     expect(conversation.messages.where(private: true).last.content).to eq(%(📋 Seguimiento de la campaña "#{campaign.name}"))
   end
 
+  # prospeccion F1 — el asunto de la campaña viaja a la conversación que abre el agente.
+  describe 'asunto del correo' do
+    let(:inbox) { create(:channel_email, account: account).inbox }
+    let(:contact) { create(:contact, account: account, name: 'Juan Pérez', email: 'juan@example.com') }
+
+    def open_for(tracking)
+      ContactTrackingJob.new.send(:find_or_create_conversation, tracking)
+    end
+
+    it 'en una bandeja de correo, la conversación nueva lleva el asunto armado' do
+      campaign.update!(email_subject: '{{contacto}}, una idea para tus envíos')
+
+      conversation = open_for(enroll.contact_tracking)
+
+      expect(conversation.additional_attributes['mail_subject']).to eq('Juan, una idea para tus envíos')
+    end
+
+    it 'si el contacto ya tenía hilo, se conserva el asunto del hilo' do
+      campaign.update!(email_subject: 'Asunto nuevo')
+      thread = create(:conversation, account: account, inbox: inbox, contact: contact,
+                                     additional_attributes: { 'mail_subject' => 'Demostracion' })
+
+      expect(open_for(enroll.contact_tracking)).to eq(thread)
+      expect(thread.reload.additional_attributes['mail_subject']).to eq('Demostracion')
+    end
+
+    it 'sin asunto en la campaña, la conversación queda como antes' do
+      expect(open_for(enroll.contact_tracking).additional_attributes['mail_subject']).to be_nil
+    end
+  end
+
+  it 'fuera de correo, el asunto de la campaña no se usa' do
+    campaign.update!(email_subject: 'No aplica')
+
+    conversation = ContactTrackingJob.new.send(:find_or_create_conversation, enroll.contact_tracking)
+
+    expect(conversation.additional_attributes['mail_subject']).to be_nil
+  end
+
   it 'reusa la conversación que el contacto ya tiene en el inbox de la campaña' do
     conversation = create(:conversation, account: account, inbox: inbox, contact: contact)
 

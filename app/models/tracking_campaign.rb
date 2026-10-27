@@ -7,6 +7,7 @@
 #  id                    :bigint           not null, primary key
 #  audience              :jsonb            not null
 #  daily_cap             :integer
+#  email_subject         :string
 #  ends_at               :datetime
 #  entry_delay_minutes   :integer          default(0), not null
 #  mode                  :string           default("batch"), not null
@@ -76,6 +77,8 @@ class TrackingCampaign < ApplicationRecord
   # validación explícita, la de ApplicationRecord lo limitaría a 255 y el
   # create! reventaría con RecordInvalid en plantillas de objective largo.
   validates :objective, length: { maximum: 500 }, allow_nil: true
+  # prospeccion F1: asunto del primer correo cuando la bandeja es de correo.
+  validates :email_subject, length: { maximum: TrackingCampaigns::EmailSubject::MAX_LENGTH }, allow_nil: true
   validates :mode, inclusion: { in: MODES }
   validates :entry_delay_minutes, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :daily_cap, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true

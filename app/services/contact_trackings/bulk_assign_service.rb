@@ -39,7 +39,7 @@ class ContactTrackings::BulkAssignService
   #   { type: 'label', label: }), para volver a mostrarla al modificar una Guardada.
   def initialize(account:, current_user:, filter_payload:, template_id:, scheduled_for:, # rubocop:disable Metrics/ParameterLists
                  campaign_name:, excluded_contact_ids: [], skip_active: true, campaign: nil, window: {}, launch: true,
-                 audience_source: nil)
+                 audience_source: nil, email_subject: nil)
     @account              = account
     @current_user         = current_user
     @filter_payload       = filter_payload
@@ -52,6 +52,7 @@ class ContactTrackings::BulkAssignService
     @window               = window.to_h.symbolize_keys.compact
     @launch               = launch
     @audience_source      = audience_source.presence
+    @email_subject        = email_subject.to_s.strip.presence # prospeccion F1
     @results              = { inserted: 0, skipped: 0, errors: [] }
   end
 
@@ -201,7 +202,8 @@ class ContactTrackings::BulkAssignService
                   source: @audience_source }.compact,
       ends_at: @window[:ends_at],
       entry_delay_minutes: @window[:entry_delay_minutes] || 0,
-      respect_working_hours: @window.fetch(:respect_working_hours, true)
+      respect_working_hours: @window.fetch(:respect_working_hours, true),
+      email_subject: @email_subject # prospeccion F1: solo cuenta si la bandeja es de correo
     }
   end
 

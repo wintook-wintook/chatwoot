@@ -100,6 +100,7 @@ const campaignState = campaign => {
   const state = {
     campaignName: campaign.name,
     selectedTemplateId: campaign.tracking_template_id || '',
+    emailSubject: campaign.email_subject || '',
     scheduledFor: toLocalInput(campaign.scheduled_for),
     endsAt: toLocalInput(campaign.ends_at),
     entryDelayMinutes: campaign.entry_delay_minutes || 0,
@@ -125,6 +126,7 @@ export default {
     return {
       campaignName: '',
       selectedTemplateId: '',
+      emailSubject: '',
       showSendOptions: false,
       scheduledFor: '',
       endsAt: '',
@@ -184,6 +186,21 @@ export default {
     },
     isContinuous() {
       return this.mode === 'continuous';
+    },
+    // prospeccion F1: si el agente escribe por correo, la campaña lleva su asunto.
+    isEmailCampaign() {
+      const template = this.templates.find(
+        t => String(t.id) === String(this.selectedTemplateId)
+      );
+      if (!template?.inbox_id) return false;
+      const inbox = this.$store.getters['inboxes/getInbox'](template.inbox_id);
+      return inbox?.channel_type === 'Channel::Email';
+    },
+    emailSubjectReady() {
+      return !this.isEmailCampaign || !!this.emailSubject.trim();
+    },
+    emailSubjectVariables() {
+      return { contacto: '{{contacto}}', empresa: '{{empresa}}' };
     },
     summaryText() {
       const base = 'BULK_TRACKING_ASSIGN.MODAL';
@@ -283,6 +300,7 @@ export default {
         return (
           !!this.campaignName.trim() &&
           !!this.selectedTemplateId &&
+          this.emailSubjectReady &&
           !this.windowError &&
           !this.isSubmitting
         );
@@ -293,6 +311,7 @@ export default {
         !!this.campaignName.trim() &&
         this.hasAudienceSelected &&
         !!this.selectedTemplateId &&
+        this.emailSubjectReady &&
         !!this.scheduledFor &&
         !this.windowError &&
         hasTargets &&
@@ -430,12 +449,16 @@ export default {
         respect_working_hours: this.respectWorkingHours,
       };
     },
+    emailSubjectPayload() {
+      return this.isEmailCampaign ? this.emailSubject.trim() : null;
+    },
     continuousBody() {
       return {
         name: this.campaignName.trim(),
         tracking_template_id: this.selectedTemplateId,
         scheduled_for: this.toIso(this.scheduledFor),
         daily_cap: this.dailyCap ? Number(this.dailyCap) : null,
+        email_subject: this.emailSubjectPayload(),
         ...this.windowPayload(),
       };
     },
@@ -449,6 +472,7 @@ export default {
         skipActive: this.skipActive,
         window: this.windowPayload(),
         audienceSource: this.audienceSource,
+        emailSubject: this.emailSubjectPayload(),
       };
     },
     create(launch) {
@@ -491,6 +515,7 @@ export default {
     resetForm() {
       this.campaignName = '';
       this.selectedTemplateId = '';
+      this.emailSubject = '';
       this.showSendOptions = false;
       this.scheduledFor = '';
       this.endsAt = '';
@@ -546,6 +571,32 @@ export default {
                 {{ t.name }}
               </option>
             </select>
+          </label>
+          <!-- prospeccion F1: solo si el agente escribe por correo -->
+          <label v-if="isEmailCampaign" class="block md:col-span-2">
+            <span class="field-label">
+              {{ $t('BULK_TRACKING_ASSIGN.MODAL.EMAIL_SUBJECT_LABEL') }}
+            </span>
+            <input
+              v-model="emailSubject"
+              type="text"
+              maxlength="150"
+              :placeholder="
+                $t(
+                  'BULK_TRACKING_ASSIGN.MODAL.EMAIL_SUBJECT_PLACEHOLDER',
+                  emailSubjectVariables
+                )
+              "
+              class="field-input"
+            />
+            <span class="block mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {{
+                $t(
+                  'BULK_TRACKING_ASSIGN.MODAL.EMAIL_SUBJECT_HINT',
+                  emailSubjectVariables
+                )
+              }}
+            </span>
           </label>
         </div>
       </section>

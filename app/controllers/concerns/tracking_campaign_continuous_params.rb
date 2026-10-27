@@ -31,7 +31,8 @@ module TrackingCampaignContinuousParams
       ends_at: parse_time(params[:ends_at]),
       entry_delay_minutes: params[:entry_delay_minutes].presence&.to_i || 0,
       respect_working_hours: ActiveModel::Type::Boolean.new.cast(params.fetch(:respect_working_hours, true)),
-      daily_cap: params[:daily_cap].presence&.to_i
+      daily_cap: params[:daily_cap].presence&.to_i,
+      email_subject: params[:email_subject].to_s.strip.presence # prospeccion F1
     }
   end
 

@@ -780,7 +780,8 @@ El correo (prospección en frío) entra como fase 2 en cuanto haya bandeja de co
 «[#N] Nuevos mensajes en esta conversación» (`conversation_reply_mailer.rb:114`).
 
 **Cómo.**
-- Columna nueva `tracking_campaigns.email_subject` (texto, máx. 150), con variables `{{nombre}}` y `{{empresa}}`.
+- Columna nueva `tracking_campaigns.email_subject` (texto, máx. 150), con variables `{{contacto}}` y `{{empresa}}`
+  (no `{{nombre}}`: en los agentes ya significa «adjunta el archivo»).
 - En `TrackingCampaigns::TrackingBuilder#open_conversation` (`tracking_builder.rb:52`), si la
   bandeja es de correo, guardar el asunto ya armado en `conversation.additional_attributes['mail_subject']`.
 - El mailer ya hace el resto: el primer correo va con el asunto y los siguientes con «Re: …»
@@ -789,6 +790,25 @@ El correo (prospección en frío) entra como fase 2 en cuanto haya bandeja de co
 - Pantalla: en el modal de campaña, el campo «Asunto del correo» aparece **solo si la bandeja del agente es de correo**, y es obligatorio.
 
 **Pruebas.** Conversación nueva con asunto · hilo existente conserva su asunto · bandeja WhatsApp sin cambios · variables vacías no dejan `{{…}}`.
+
+> ✅ **HECHA (27/10/2026).**
+> - **Qué se hizo:** migración `20261031100000_add_email_subject_to_tracking_campaigns`;
+>   `TrackingCampaigns::EmailSubject` (arma `{{contacto}}` = primer nombre y `{{empresa}}` =
+>   `company_name`; si falta un dato, la variable desaparece sin dejar «, ,»; máx. 150);
+>   `TrackingBuilder#email_subject_attributes` lo pone en `mail_subject` al abrir la conversación
+>   **solo si la bandeja es de correo**; viaja por la API de lote (`email_subject`) y la de campaña
+>   continua; `CampaignForm.vue` muestra «Asunto del correo» solo si el agente elegido escribe por
+>   correo, y sin él no deja confirmar.
+> - **Cómo funciona:** el primer correo sale con el asunto armado; los siguientes, «Re: asunto»
+>   (lo hace el mailer). Si el contacto ya tenía hilo, se conserva el asunto del hilo.
+> - **Pruebas:** `spec/services/tracking_campaigns/email_subject_spec.rb` (5) y 4 casos nuevos en
+>   `enroll_spec.rb` (asunto en conversación nueva · hilo conserva el suyo · sin asunto como antes ·
+>   fuera de correo no aplica). 47 + 26 en verde.
+> - **Cómo usarlo:** Campañas → Nueva campaña → elegir un Agente IA cuya bandeja sea de correo →
+>   aparece «Asunto del correo» (ej. «{{contacto}}, una idea para reducir tus costos de envío»).
+> - **Ojo al migrar en un servidor vivo:** reiniciar Rails y Sidekiq; si no, PostgreSQL rechaza las
+>   consultas preparadas de `tracking_campaigns` («cached plan must not change result type») y los
+>   toques fallan (pasó en dev con la campaña #306).
 
 ### F2 · Firma en lugar de «#IA» / «-TB»
 

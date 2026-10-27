@@ -20,6 +20,7 @@ const campaignBody = ({
   skipActive = true,
   window = {}, // proyecto@automatizacion_campanas: ends_at, entry_delay_minutes, respect_working_hours
   audienceSource = null, // { type: 'segment', segment_id } | { type: 'label', label }
+  emailSubject = null, // prospeccion F1: asunto si el agente escribe por correo
 }) => ({
   payload,
   campaign_name: campaignName,
@@ -28,6 +29,7 @@ const campaignBody = ({
   excluded_contact_ids: excludedContactIds,
   skip_active: skipActive,
   audience_source: audienceSource,
+  email_subject: emailSubject,
   ...window,
 });
 

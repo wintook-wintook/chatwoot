@@ -53,7 +53,7 @@ class TrackingCampaigns::TrackingBuilder
 
     contact_inbox = ContactInboxBuilder.new(contact: @contact, inbox: @campaign.inbox).perform
     conversation = ConversationBuilder.new(
-      params: ActionController::Parameters.new(assignee_id: @agent.id),
+      params: ActionController::Parameters.new(assignee_id: @agent.id, additional_attributes: email_subject_attributes),
       contact_inbox: contact_inbox
     ).perform
     Messages::MessageBuilder.new(@agent, conversation, { content: @note, private: true }).perform
@@ -64,6 +64,15 @@ class TrackingCampaigns::TrackingBuilder
   end
 
   private
+
+  # prospeccion F1: en correo, el asunto de la campaña (con {{contacto}} / {{empresa}}).
+  # Sin asunto, el mailer pone «[#N] Nuevos mensajes en esta conversación».
+  def email_subject_attributes
+    return {} unless @campaign.inbox&.email?
+
+    subject = TrackingCampaigns::EmailSubject.render(@campaign.email_subject, @contact)
+    subject ? { mail_subject: subject } : {}
+  end
 
   def template
     @template ||= @campaign.tracking_template

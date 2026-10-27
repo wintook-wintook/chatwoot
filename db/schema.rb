@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_30_160000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_31_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2026,6 +2026,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_30_160000) do
     t.integer "entry_delay_minutes", default: 0, null: false
     t.boolean "respect_working_hours", default: true, null: false
     t.integer "daily_cap"
+    t.string "email_subject"
     t.jsonb "audience", default: {}, null: false
     t.string "paused_reason"
     t.datetime "paused_at"

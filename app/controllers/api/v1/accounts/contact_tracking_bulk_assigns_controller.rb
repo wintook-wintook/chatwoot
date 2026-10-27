@@ -71,6 +71,7 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
       skip_active: ActiveModel::Type::Boolean.new.cast(params.fetch(:skip_active, true)),
       window: window_params,
       audience_source: audience_source_param,
+      email_subject: params[:email_subject], # prospeccion F1
       **extra
     )
   end

@@ -194,7 +194,8 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   # pausada por un error de configuración de Meta (proyecto@automatizacion_campanas), el motivo.
   def editable_json(campaign)
     { tracking_template_id: campaign.tracking_template_id, audience: campaign.audience,
-      paused_reason: campaign.paused_reason, paused_at: campaign.paused_at }
+      paused_reason: campaign.paused_reason, paused_at: campaign.paused_at,
+      email_subject: campaign.email_subject } # prospeccion F1
   end
 
   def aggregate_stats(status_counts)
