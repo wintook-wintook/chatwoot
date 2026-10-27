@@ -111,12 +111,13 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
         expect(response.parsed_body['funnel']).to include('paused_rule' => 1, 'cancelled_rule' => 1)
       end
 
-      it 'expone el embudo: interesados / agendaron solo por las reglas de palabra clave' do
+      # §10.12 (D27): el embudo único da los mismos números que «Intenciones» con palabras clave
+      it 'expone el embudo: interesados / agendaron por las reglas de palabra clave, igual que antes' do
         get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}",
             headers: admin.create_new_auth_token, as: :json
 
-        expect(response.parsed_body['funnel']).to eq('replied' => 3, 'interested' => 2, 'appointment' => 1, 'objective_met' => 0,
-                                                     'paused_rule' => 0, 'cancelled_rule' => 0)
+        expect(response.parsed_body['funnel']).to include('replied' => 3, 'interested' => 2, 'appointment' => 1, 'objective_met' => 0,
+                                                          'paused_rule' => 0, 'cancelled_rule' => 0)
       end
     end
   end
@@ -321,13 +322,14 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
                                 tracking_campaign: prospecting, attempt_count: 1, prospect_stage: 'interested')
     end
 
-    it 'el detalle trae el embudo de prospección; una de seguimiento no' do
+    it 'el detalle trae el mismo embudo en todas las campañas (§10.12)' do
       interested
       get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}", headers: admin.create_new_auth_token, as: :json
-      expect(response.parsed_body['prospecting_funnel']).to include('contacted' => 1, 'interested' => 1)
+      expect(response.parsed_body['funnel']).to include('contacted' => 1, 'interested' => 1)
 
       get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}", headers: admin.create_new_auth_token, as: :json
-      expect(response.parsed_body['prospecting_funnel']).to be_nil
+      expect(response.parsed_body['funnel'].keys).to include('contacted', 'handed_off', 'not_now', 'bounced')
+      expect(response.parsed_body['scoring']).to be_present
     end
 
     it 'entrega a un interesado y no a quien no lo es' do

@@ -44,9 +44,7 @@ export default {
   },
   computed: {
     otherCampaigns() {
-      return this.campaigns.filter(
-        c => c.purpose === 'prospecting' && c.id !== this.campaign.id
-      );
+      return this.campaigns.filter(c => c.id !== this.campaign.id);
     },
   },
   created() {

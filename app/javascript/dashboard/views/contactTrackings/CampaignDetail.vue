@@ -56,28 +56,31 @@ function deliveryBucket(prospect) {
 // Filtros client-side: cada KPI clicable mapea a un predicado sobre el prospecto.
 // 'clear' no está aquí (limpia el filtro); Avance/Progreso no es filtrable.
 const PROSPECT_FILTERS = {
-  intent_replied: p => !!p.last_intent,
-  // Interesados/Agendaron: solo por las reglas de palabra clave (igual que el embudo)
-  intent_interested: p => !!p.interested_at,
-  intent_appointment: p => !!p.booked_at,
-  intent_objective: p => p.status === 'objective_met',
-  // Pausados/Cancelados (Regla): siguen así porque los dejó una regla de palabra clave
-  intent_paused_rule: p => p.status === 'paused' && p.rule_action === 'pause',
-  intent_cancelled_rule: p =>
-    p.status === 'cancelled' && p.rule_action === 'cancel',
-  // prospeccion V6: embudo de prospección (etapas y salidas de V5)
+  // §10.12: un solo embudo (la IA, V5) + las palabras clave del agente; mismo criterio que
+  // TrackingCampaigns::CampaignFunnel.
   p_contacted: p => p.attempt_count > 0,
-  p_replied: p => !!p.prospect_stage,
-  p_interested: p => ['interested', 'handed_off'].includes(p.prospect_stage),
+  p_replied: p => !!p.prospect_stage || !!p.last_intent,
+  p_interested: p =>
+    ['interested', 'handed_off'].includes(p.prospect_stage) ||
+    !!p.interested_at,
+  p_appointment: p => !!p.booked_at,
   p_handed_off: p => p.prospect_stage === 'handed_off',
+  p_objective_met: p => p.status === 'objective_met',
+  p_hot: p => (p.prospect_score || 0) >= 60, // prospeccion P4: calientes
   p_not_now: p => p.prospect_exit === 'not_now',
   p_not_interested: p => p.prospect_exit === 'not_interested',
   p_wrong_person: p => p.prospect_exit === 'wrong_person',
   p_opted_out: p => p.prospect_exit === 'opted_out',
-  p_hot: p => (p.prospect_score || 0) >= 60, // prospeccion P4: calientes
   p_bounced: p => p.prospect_exit === 'bounced', // prospeccion V7b
   p_no_reply: p =>
-    p.status === 'completed' && !p.prospect_stage && !p.prospect_exit,
+    p.status === 'completed' &&
+    !p.prospect_stage &&
+    !p.prospect_exit &&
+    !p.last_intent,
+  // Pausados/Cancelados (Regla): siguen así porque los dejó una regla de palabra clave
+  intent_paused_rule: p => p.status === 'paused' && p.rule_action === 'pause',
+  intent_cancelled_rule: p =>
+    p.status === 'cancelled' && p.rule_action === 'cancel',
   ctrl_pending: p => p.status === 'pending' || p.status === 'scheduled',
   ctrl_completed_replied: p => p.status === 'completed' && !!p.last_intent,
   ctrl_completed_no_reply: p => p.status === 'completed' && !p.last_intent,
@@ -187,17 +190,9 @@ export default {
     funnel() {
       return this.campaign?.funnel || {};
     },
-    // Embudo de intención: se muestra solo si al menos un contacto respondió.
-    hasFunnel() {
-      return (this.funnel.replied || 0) > 0;
-    },
-    // prospeccion V6: en Prospección la tarjeta muestra su embudo
-    isProspecting() {
-      return this.campaign?.purpose === 'prospecting';
-    },
     // prospeccion P3: la prueba A/B de asuntos (nil si la campaña no tiene asunto B).
     subjectTest() {
-      return this.isProspecting ? this.campaign.subject_test : null;
+      return this.campaign?.subject_test || null;
     },
     subjectRows() {
       const test = this.subjectTest;
@@ -248,13 +243,9 @@ export default {
       }
       return parts.join(' · ');
     },
-    funnelTitle() {
-      return this.isProspecting
-        ? this.$t('TRACKING_CAMPAIGN_DETAIL.FUNNEL.P_TITLE')
-        : this.$t('TRACKING_CAMPAIGN_DETAIL.FUNNEL.TITLE');
-    },
-    prospectingKpis() {
-      const f = this.campaign?.prospecting_funnel || {};
+    // §10.12: un solo embudo para todas las campañas (TrackingCampaigns::CampaignFunnel).
+    funnelKpis() {
+      const f = this.funnel;
       const contacted = f.contacted || 0;
       const rate = n =>
         contacted ? `${Math.round(((n || 0) * 100) / contacted)} %` : '';
@@ -265,70 +256,33 @@ export default {
         filter: `p_${key.slice(2).toLowerCase()}`,
         ...extra,
       });
+      const strong = 'text-slate-800 dark:text-slate-100';
+      const red = 'text-red-500 dark:text-red-400';
       return [
-        kpi('P_CONTACTED', f.contacted, 'text-slate-800 dark:text-slate-100'),
-        kpi('P_REPLIED', f.replied, 'text-slate-800 dark:text-slate-100', {
-          rate: rate(f.replied),
-        }),
+        kpi('P_CONTACTED', f.contacted, strong),
+        kpi('P_REPLIED', f.replied, strong, { rate: rate(f.replied) }),
         kpi(
           'P_INTERESTED',
           f.interested,
           'text-green-600 dark:text-green-500',
-          { rate: rate(f.interested) }
+          {
+            rate: rate(f.interested),
+          }
         ),
+        kpi('P_APPOINTMENT', f.appointment, 'text-woot-600 dark:text-woot-500'),
         kpi('P_HANDED_OFF', f.handed_off, 'text-woot-600 dark:text-woot-500'),
+        kpi(
+          'P_OBJECTIVE_MET',
+          f.objective_met,
+          'text-emerald-600 dark:text-emerald-500'
+        ),
+        kpi('P_HOT', this.prospects.filter(PROSPECT_FILTERS.p_hot).length, red),
         kpi('P_NOT_NOW', f.not_now, 'text-amber-800 dark:text-amber-500'),
         kpi('P_NOT_INTERESTED', f.not_interested, 'text-slate-500'),
         kpi('P_WRONG_PERSON', f.wrong_person, 'text-slate-500'),
-        kpi('P_OPTED_OUT', f.opted_out, 'text-red-500 dark:text-red-400'),
-        kpi('P_BOUNCED', f.bounced, 'text-red-500 dark:text-red-400'),
-        kpi(
-          'P_HOT',
-          this.prospects.filter(PROSPECT_FILTERS.p_hot).length,
-          'text-red-500 dark:text-red-400'
-        ),
+        kpi('P_OPTED_OUT', f.opted_out, red),
+        kpi('P_BOUNCED', f.bounced, red),
         kpi('P_NO_REPLY', f.no_reply, 'text-slate-500'),
-      ];
-    },
-    funnelKpis() {
-      if (this.isProspecting) return this.prospectingKpis;
-      return [
-        {
-          key: 'REPLIED',
-          value: this.funnel.replied || 0,
-          color: 'text-slate-800 dark:text-slate-100',
-          filter: 'intent_replied',
-        },
-        {
-          key: 'INTERESTED',
-          value: this.funnel.interested || 0,
-          color: 'text-green-600 dark:text-green-500',
-          filter: 'intent_interested',
-        },
-        {
-          key: 'APPOINTMENT',
-          value: this.funnel.appointment || 0,
-          color: 'text-woot-600 dark:text-woot-500',
-          filter: 'intent_appointment',
-        },
-        {
-          key: 'OBJECTIVE_MET',
-          value: this.funnel.objective_met || 0,
-          color: 'text-emerald-600 dark:text-emerald-500',
-          filter: 'intent_objective',
-        },
-        {
-          key: 'PAUSED_RULE',
-          value: this.funnel.paused_rule || 0,
-          color: 'text-amber-800 dark:text-amber-800',
-          filter: 'intent_paused_rule',
-        },
-        {
-          key: 'CANCELLED_RULE',
-          value: this.funnel.cancelled_rule || 0,
-          color: 'text-red-500 dark:text-red-400',
-          filter: 'intent_cancelled_rule',
-        },
       ];
     },
     backRoute() {
@@ -359,6 +313,19 @@ export default {
           value: this.stats.failed || 0,
           color: 'text-red-700 dark:text-red-500',
           filter: 'ctrl_failed',
+        },
+        // §10.12: las pausas/cancelaciones por palabra clave pasan del embudo a Control
+        {
+          key: 'PAUSED_RULE',
+          value: this.funnel.paused_rule || 0,
+          color: 'text-amber-800 dark:text-amber-500',
+          filter: 'intent_paused_rule',
+        },
+        {
+          key: 'CANCELLED_RULE',
+          value: this.funnel.cancelled_rule || 0,
+          color: 'text-red-500 dark:text-red-400',
+          filter: 'intent_cancelled_rule',
         },
       ];
     },
@@ -435,8 +402,8 @@ export default {
           paused_reason: data.paused_reason,
           stats: data.stats,
           funnel: data.funnel,
-          prospecting_funnel: data.prospecting_funnel, // prospeccion V6
           subject_test: data.subject_test, // prospeccion P3
+          scoring: data.scoring, // prospeccion P4
           delivery: data.delivery,
         };
       } catch (error) {
@@ -851,12 +818,12 @@ export default {
 
       <!-- KPIs de la campaña — 3 ejes en columnas compactas (mismo layout que el Resumen) -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5 shrink-0">
-        <!-- 🎯 Intención -->
+        <!-- Embudo (§10.12: uno solo para todas las campañas) -->
         <div
           class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
         >
           <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-            🎯 {{ funnelTitle }}
+            {{ $t('TRACKING_CAMPAIGN_DETAIL.FUNNEL.TITLE') }}
           </span>
           <div class="grid grid-cols-2 gap-x-4 mt-2">
             <div
@@ -989,7 +956,6 @@ export default {
 
       <!-- prospeccion P2: entrega de interesados (resumen; se configura en el modal) -->
       <div
-        v-if="isProspecting"
         class="flex items-center justify-between gap-3 p-3 mb-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
       >
         <div class="min-w-0">
@@ -1011,7 +977,6 @@ export default {
       </div>
       <!-- prospeccion P4: puntuación (resumen; se configura en el modal) -->
       <div
-        v-if="isProspecting"
         class="flex items-center justify-between gap-3 p-3 mb-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
       >
         <div class="min-w-0">
@@ -1032,7 +997,6 @@ export default {
         </woot-button>
       </div>
       <woot-modal
-        v-if="isProspecting"
         :show.sync="showScoringModal"
         size="medium"
         :on-close="closeScoringModal"
@@ -1106,11 +1070,7 @@ export default {
           </div>
         </div>
       </div>
-      <woot-modal
-        v-if="isProspecting"
-        :show.sync="showHandoffModal"
-        :on-close="closeHandoffModal"
-      >
+      <woot-modal :show.sync="showHandoffModal" :on-close="closeHandoffModal">
         <CampaignHandoffSettings
           v-if="showHandoffModal"
           :campaign="campaign"
@@ -1213,7 +1173,6 @@ export default {
                 </th>
                 <!-- prospeccion P4: clic para ordenar de más a menos puntos -->
                 <th
-                  v-if="isProspecting"
                   class="p-3 text-center cursor-pointer select-none"
                   :class="sortByScore ? 'text-woot-600' : ''"
                   @click="sortByScore = !sortByScore"
@@ -1271,7 +1230,6 @@ export default {
                   {{ p.attempt_count }}/{{ p.max_attempts }}
                 </td>
                 <td
-                  v-if="isProspecting"
                   class="p-3 font-semibold text-center cursor-help"
                   :class="scoreClass(p)"
                   :title="scoreBreakdown(p)"

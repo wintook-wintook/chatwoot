@@ -25,18 +25,17 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   include TrackingCampaignEntriesJson
   include TrackingCampaignContinuousParams
   ACTIVE_TRACKING_STATUSES = %w[pending scheduled active paused].freeze
-  EMPTY_FUNNEL = { replied: 0, interested: 0, appointment: 0, objective_met: 0, paused_rule: 0, cancelled_rule: 0 }.freeze
 
   def index
     return render(json: lite_list) if ActiveModel::Type::Boolean.new.cast(params[:lite])
 
     campaigns = Current.account.tracking_campaigns
-                       .includes(:tracking_template, :inbox)
+                       .includes(:tracking_template, :inbox, :handoff_board, :handoff_column)
                        .order(created_at: :desc)
     ids = campaigns.map(&:id)
     stats = stats_by_campaign(ids)
     delivery = delivery_by_campaign(ids)
-    funnel = funnel_by_campaign(ids)
+    funnel = TrackingCampaigns::CampaignFunnel.by_campaign(ids) # §10.12: un solo embudo
 
     render json: campaigns.map { |campaign| campaign_json(campaign, stats[campaign.id], delivery[campaign.id], funnel[campaign.id]) }
   end
@@ -45,7 +44,7 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     campaign = Current.account.tracking_campaigns.find(params[:id])
     stats = stats_by_campaign([campaign.id])
     delivery = delivery_by_campaign([campaign.id])
-    funnel = funnel_by_campaign([campaign.id])
+    funnel = TrackingCampaigns::CampaignFunnel.by_campaign([campaign.id])
 
     render json: campaign_json(campaign, stats[campaign.id], delivery[campaign.id], funnel[campaign.id])
   end
@@ -136,28 +135,6 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   # status objective_met, y pausados/cancelados que siguen así porque los dejó una regla
   # (keyword_action_fired). Queries agregadas (sin N+1).
   # Devuelve { campaign_id => { replied:, interested:, appointment:, objective_met:, paused_rule:, cancelled_rule: } }.
-  def funnel_by_campaign(ids)
-    return {} if ids.blank?
-
-    base = ContactTracking.where(tracking_campaign_id: ids)
-    # siguen en `status` porque una regla de palabra clave con `action` los dejó así
-    by_rule = ->(status, action) { base.where(status: status).where("keyword_action_fired->>'action' = ?", action) }
-    counts = {
-      replied: base.where.not(last_intent: nil),
-      interested: base.where.not(interested_at: nil),
-      appointment: base.where.not(booked_at: nil),
-      objective_met: base.where(status: 'objective_met'),
-      paused_rule: by_rule.call('paused', 'pause'),
-      cancelled_rule: by_rule.call('cancelled', 'cancel')
-    }.transform_values { |relation| count_by_campaign(relation) }
-
-    ids.index_with { |id| counts.transform_values { |by_campaign| by_campaign[id].to_i } }
-  end
-
-  def count_by_campaign(relation)
-    relation.group(:tracking_campaign_id).count
-  end
-
   def render_error(message)
     render json: { error: message }, status: :unprocessable_entity
   end
@@ -187,16 +164,14 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
       inbox_name: campaign.inbox&.name,
       stats: aggregate_stats(status_counts || {}),
       delivery: aggregate_delivery(delivery_counts || {}),
-      funnel: funnel_counts || EMPTY_FUNNEL
+      funnel: funnel_counts || TrackingCampaigns::CampaignFunnel::EMPTY
     }.merge(editable_json(campaign), prospecting_json(campaign))
   end
 
-  # prospeccion V6: el embudo de prospección (solo en campañas de Prospección)
-  # prospeccion P2: y la entrega de interesados (tablero, columna, plazo, escalar)
+  # prospeccion P2/P3/P4 · §10.12: entrega, prueba de asuntos y puntuación, en todas las campañas
   def prospecting_json(campaign)
-    { prospecting_funnel: campaign.prospecting? ? TrackingCampaigns::ProspectingFunnel.for(campaign) : nil }
-      .merge(campaign.handoff_settings, subject_test: TrackingCampaigns::SubjectTest.stats(campaign), # P3: prueba A/B
-             scoring: campaign.prospecting? ? TrackingCampaigns::ScoringConfig.for(campaign) : nil) # P4: puntuación
+    campaign.handoff_settings.merge(subject_test: TrackingCampaigns::SubjectTest.stats(campaign),
+                                    scoring: TrackingCampaigns::ScoringConfig.for(campaign))
   end
 
   # Para modificar una Guardada: CampaignForm la vuelve a llenar con esto. Y, si está
