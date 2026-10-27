@@ -518,6 +518,8 @@
     "MARKED": "Marcado como «no contactar». Se cancelaron sus seguimientos.",
     "UNDONE": "Ya se le puede volver a contactar.",
     "ERROR": "No se pudo guardar. Intenta de nuevo.",
+    "BOUNCED": "Su correo rebotó",
+    "BOUNCED_HINT": "corrige el correo para volver a escribirle",
     "SOURCE": {
       "link": "desde el enlace del correo",
       "reply": "lo pidió al responder",

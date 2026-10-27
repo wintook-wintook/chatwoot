@@ -55,8 +55,11 @@ module ContactTrackings::Eligibility
   end
 
   # Sin correo no cuenta como inválido: eso es NO_EMAIL, más abajo.
+  # prospeccion V7b: el que ya rebotó también es inválido.
   def undeliverable_email?(contact)
-    contact.email.present? && !ContactTrackings::EmailCheck.deliverable?(contact.email)
+    return false if contact.email.blank?
+
+    contact.email_bounced? || !ContactTrackings::EmailCheck.deliverable?(contact.email)
   end
 
   # IDs de contactos (de la lista dada) con un seguimiento activo en el inbox.

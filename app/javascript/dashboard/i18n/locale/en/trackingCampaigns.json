@@ -122,6 +122,7 @@
       "P_NOT_INTERESTED": "Not interested",
       "P_WRONG_PERSON": "Wrong person",
       "P_OPTED_OUT": "Opted out",
+      "P_BOUNCED": "Bounced",
       "P_NO_REPLY": "No reply"
     },
     "PROSPECTS": "Prospects",
@@ -153,6 +154,7 @@
       "p_not_interested": "Said they're not interested; no more messages.",
       "p_wrong_person": "Not the right person; no more messages.",
       "p_opted_out": "Asked not to be contacted (email link, reply or an agent).",
+      "p_bounced": "Their email does not exist or does not accept mail: the follow-up stopped.",
       "p_no_reply": "Used up their touches without replying."
     },
     "INTENT_VALUES": {

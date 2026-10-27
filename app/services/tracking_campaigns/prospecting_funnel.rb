@@ -4,14 +4,14 @@
 # prospeccion V6 — EL EMBUDO DE UNA CAMPAÑA DE PROSPECCIÓN (§8.1, §10.1)
 # ================================================================================
 #   Contactados → Respondieron → Interesados → Entregados
-#   Salidas: No ahora · No le interesa · No es la persona · Baja · Sin respuesta
+#   Salidas: No ahora · No le interesa · No es la persona · Baja · Rebotó (V7b) · Sin respuesta
 #
 #   contacted  = ya se le escribió (attempt_count > 0)
 #   replied    = tiene etapa (respondió, interesado o entregado) — V5
 #   no_reply   = agotó sus toques sin etapa ni salida
 # ================================================================================
 module TrackingCampaigns::ProspectingFunnel
-  EXITS = %w[not_now not_interested wrong_person opted_out].freeze
+  EXITS = %w[not_now not_interested wrong_person opted_out bounced].freeze
 
   module_function
 

@@ -1081,7 +1081,7 @@ de la empresa (no código). Se marca conforme avanzan las fases.
 
 | Buena práctica | Dónde queda | Estado |
 |---|---|---|
-| 1 · A quién: cliente ideal, correos validados | Empresa: definir el cliente ideal · V7a ✅ validar antes de inscribir · V7b rebotes | 🟡 empresa / V7b |
+| 1 · A quién: cliente ideal, correos validados | Empresa: definir el cliente ideal · V7a ✅ validar antes de inscribir · V7b ✅ rebotes | 🟡 empresa |
 | 2 · Mensaje: asunto, firma, prompt real | F1 ✅ · V1 ✅ firma · empresa: prompt de prospección | 🟡 falta el prompt |
 | 3 · Cadencia: se detiene al responder, días hábiles | V2 ✅ + V3 ✅ | ✅ |
 | 4 · Cumplir: baja, no contactar, aviso de privacidad | V4 ✅ · D7 (legal) | 🟡 falta D7 |
@@ -1140,10 +1140,28 @@ se prospecta (Gmail empieza a mandar a spam o corta el envío). Dos piezas:
 > - **No detecta:** buzones que no existen en un dominio bueno (`noexiste@gmail.com`). Eso solo
 >   se sabe al enviar → V7b.
 
-> ⏳ **V7b (por hacer) — rebotes.** Detectar el aviso de no entrega que llega por IMAP
-> (`multipart/report; report-type=delivery-status`, `Final-Recipient`), marcar `contact.email`
-> como rebotado, detener el seguimiento de ese contacto (como la baja de V4), salida «rebotó» en
-> el embudo, y que V7a lo omita después. Antes de que Chatwoot lo descarte.
+> ✅ **V7b HECHA (27/10/2026) — rebotes.**
+> - **Qué se hizo:** migración `20261031160000_add_email_bounced_to_contacts` (`email_bounced_at`,
+>   `email_bounce_reason`). `ContactTrackings::EmailBounce.handle(mail, inbox)`, llamado en
+>   `Imap::ImapMailbox#process` **antes** de que Chatwoot descarte el correo automático. Lee el aviso
+>   con la gema `mail` (`bounced?`, `final_recipient`, `error_status`, `diagnostic_code`).
+> - **Cómo funciona:** solo rebote definitivo (`Action: failed` + `Status 5.x.x`): busca al contacto
+>   de la cuenta por el destinatario, marca su correo, cancela sus seguimientos **en bandejas de correo**
+>   (salida `bounced`) y deja una nota «📭 El correo a … rebotó: 5.1.1 …. Se detuvo el seguimiento.» en
+>   la conversación. Su WhatsApp sigue (no es baja). Rebote temporal (4.x.x / delayed) → nada, como
+>   antes. El rebote nunca se vuelve conversación. `Eligibility` lo trata como `INVALID_EMAIL`
+>   (V7a); si le cambian el correo, la marca se borra sola.
+> - **Pantalla:** en el panel del contacto, aviso ámbar «Su correo rebotó · fecha · corrige el correo
+>   para volver a escribirle» (el motivo técnico en el tooltip). En el embudo de Prospección, tarjeta
+>   «Rebotó» que filtra la lista.
+> - **Pruebas:** `email_bounce_spec` (9) con un aviso estilo Gmail (`spec/fixtures/files/gmail_bounce.eml`)
+>   y el rebote real que ya traía Chatwoot (`bounced_with_no_from.eml`); 1002 en verde
+>   (contact_trackings, tracking_campaigns, mailboxes, contacto, controlador de campañas).
+> - **Pedírselo al Asistente:** no aplica; es automático.
+> - **Falta probar en vivo:** desde la bandeja «Develop» (#35660), escribirle a un `noexiste…@gmail.com`
+>   y ver que en ≤1 min llega el aviso, el contacto queda «Su correo rebotó» y el seguimiento se detiene.
+> - **Solo IMAP:** las bandejas por reenvío (Action Mailbox) no pasan por aquí; hoy no hay ninguna
+>   (ver `docs/revision_correos.md`, rama `diag/revision_correos`).
 
 ---
 

@@ -72,6 +72,7 @@ const PROSPECT_FILTERS = {
   p_not_interested: p => p.prospect_exit === 'not_interested',
   p_wrong_person: p => p.prospect_exit === 'wrong_person',
   p_opted_out: p => p.prospect_exit === 'opted_out',
+  p_bounced: p => p.prospect_exit === 'bounced', // prospeccion V7b
   p_no_reply: p =>
     p.status === 'completed' && !p.prospect_stage && !p.prospect_exit,
   ctrl_pending: p => p.status === 'pending' || p.status === 'scheduled',
@@ -215,6 +216,7 @@ export default {
         kpi('P_NOT_INTERESTED', f.not_interested, 'text-slate-500'),
         kpi('P_WRONG_PERSON', f.wrong_person, 'text-slate-500'),
         kpi('P_OPTED_OUT', f.opted_out, 'text-red-500 dark:text-red-400'),
+        kpi('P_BOUNCED', f.bounced, 'text-red-500 dark:text-red-400'),
         kpi('P_NO_REPLY', f.no_reply, 'text-slate-500'),
       ];
     },

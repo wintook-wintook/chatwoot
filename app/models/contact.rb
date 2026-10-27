@@ -175,6 +175,11 @@ class Contact < ApplicationRecord
     opted_out_at.present?
   end
 
+  # prospeccion V7b: su correo rebotó (ContactTrackings::EmailBounce)
+  def email_bounced?
+    email_bounced_at.present?
+  end
+
   def push_event_data
     {
       additional_attributes: additional_attributes,
@@ -254,6 +259,15 @@ class Contact < ApplicationRecord
 
   def sync_contact_attributes
     ::Contacts::SyncAttributes.new(self).perform
+    clear_email_bounce
+  end
+
+  # prospeccion V7b: el rebote era del correo anterior; con otro correo se vuelve a intentar.
+  def clear_email_bounce
+    return unless email_changed? && email_bounced_at.present?
+
+    self.email_bounced_at = nil
+    self.email_bounce_reason = nil
   end
 
   def dispatch_create_event

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_31_150000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_31_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1102,6 +1102,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_150000) do
     t.string "email"
     t.datetime "opted_out_at"
     t.string "opted_out_source"
+    t.datetime "email_bounced_at"
+    t.string "email_bounce_reason"
     t.string "phone_number"
     t.integer "account_id", null: false
     t.datetime "created_at", precision: nil, null: false

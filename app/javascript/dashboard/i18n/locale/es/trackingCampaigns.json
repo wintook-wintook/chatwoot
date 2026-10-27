@@ -122,6 +122,7 @@
       "P_NOT_INTERESTED": "No le interesa",
       "P_WRONG_PERSON": "No es la persona",
       "P_OPTED_OUT": "Baja",
+      "P_BOUNCED": "Rebotó",
       "P_NO_REPLY": "Sin respuesta"
     },
     "PROSPECTS": "Prospectos",
@@ -153,6 +154,7 @@
       "p_not_interested": "Dijeron que no les interesa; ya no se les escribe.",
       "p_wrong_person": "No eran la persona indicada; ya no se les escribe.",
       "p_opted_out": "Pidieron no ser contactados (enlace del correo, respuesta o un agente).",
+      "p_bounced": "Su correo no existe o no recibe: se detuvo el seguimiento.",
       "p_no_reply": "Agotaron sus toques sin responder."
     },
     "INTENT_VALUES": {

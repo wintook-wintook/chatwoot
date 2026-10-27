@@ -144,7 +144,7 @@ class ContactTracking < ApplicationRecord
   validates :objective, presence: true, length: { minimum: 5, maximum: 500 }
   # prospeccion V5: en qué va el prospecto (TrackingCampaigns::ProspectClassifier)
   PROSPECT_STAGES = %w[replied interested handed_off].freeze
-  PROSPECT_EXITS = %w[not_now not_interested wrong_person opted_out].freeze
+  PROSPECT_EXITS = %w[not_now not_interested wrong_person opted_out bounced].freeze # bounced: prospeccion V7b
   validates :prospect_stage, inclusion: { in: PROSPECT_STAGES }, allow_nil: true
   validates :prospect_exit, inclusion: { in: PROSPECT_EXITS }, allow_nil: true
   validates :scheduled_for, presence: true

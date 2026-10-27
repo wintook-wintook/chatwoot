@@ -489,6 +489,8 @@
     "MARKED": "Marked as “do not contact”. Their follow-ups were cancelled.",
     "UNDONE": "They can be contacted again.",
     "ERROR": "Couldn't save. Please try again.",
+    "BOUNCED": "Their email bounced",
+    "BOUNCED_HINT": "fix the email to write to them again",
     "SOURCE": {
       "link": "from the email link",
       "reply": "asked when replying",
