@@ -1051,8 +1051,8 @@ Orden propuesto: **F1 → F2 → F4 → F3**. Las tres primeras son rápidas y s
 > | 12 | El cuarto contacto: 3 toques sin respuesta → «Sin respuesta» | ⏳ mañana (28/10) |
 >
 > 🎉 **Prospección v1.0 COMPLETA (V0–V6).** v1.1: ✅ entregar con plazo y avisos (P2/P2b, §10.9),
-> ✅ validar correos y rebotes (V7, §10.8), ✅ A/B de asuntos (P3, §10.10); faltan puntuación 0–100 con
-> datos reales y multicanal correo → WhatsApp con permiso.
+> ✅ validar correos y rebotes (V7, §10.8), ✅ A/B de asuntos (P3, §10.10); faltan puntuación 0–100 (P4, plan en
+> §10.11) y, si se quiere, correo → WhatsApp encadenando dos campañas.
 
 Orden: **V0 → V1 → V2 → V3 → V4 → V5 → V6**. Con V0–V4 el envío ya es correcto;
 con V5–V6 ya es prospección (se sabe quién está interesado y cuánto rinde la campaña).
@@ -1286,6 +1286,60 @@ tarjeta, ni el Agente IA ni BotSeller contestan más en esa conversación (P2b).
 > - **Pruebas:** `subject_test_spec` (7), 1 en `tracking_campaigns_controller_spec`, 1 en
 >   `contact_tracking_bulk_assigns_controller_spec`; 966/967 en verde (la inestable del Asistente).
 > - **Pedírselo al Asistente:** no aplica; se llena en el formulario de la campaña.
+
+### 10.11 v1.1 · P4 — Puntuación 0–100 (solo plan)
+
+**Decisión (27/10/2026):** la puntuación se construye **ya**, con los pesos de §8.2 como punto de
+partida y **configurables**; mientras no estén calibrados con datos, **solo ordena y prioriza** (no
+entrega a nadie). El corte «≥ 60 → Interesado → entregar» queda **apagado** hasta calibrar.
+
+```
+                    ┌──────────────── PUNTUACIÓN DEL PROSPECTO (0–100) ────────────────┐
+                    │                                                                   │
+  PERFIL  máx. 50   │  ¿se parece a mi cliente ideal?   (lo que YA es el contacto)      │
+                    │    giro correcto        +20   ← regla: etiqueta / atributo        │
+                    │    tamaño o zona        +15   ← regla: etiqueta / atributo        │
+                    │    habla quien decide   +15   ← regla, o lo infiere la IA (P4.2)  │
+                    │                                                                   │
+  INTERÉS máx. 50   │  ¿qué hizo?            (sale de lo que ya existe: V5, citas)      │
+                    │    respondió            +10   ← prospect_stage (V5)               │
+                    │    pidió precio / info  +20   ← motivo del «interesado» (P4.2)    │
+                    │    pidió cita / llamada +20   ← motivo (P4.2) o booked_at         │
+                    │    30 días sin responder −10  ← barrido diario                    │
+                    │    dijo «no ahora»      −15   ← prospect_exit = not_now           │
+                    └───────────────────────────────────────────────────────────────────┘
+                         │ se recalcula: al clasificar una respuesta, al agendar cita,
+                         │ al cambiar etiquetas del contacto, y una vez al día (decaimiento)
+                         ▼
+   Detalle de la campaña: columna «Puntos» (ordenable) · filtro «🔥 Calientes (≥ 60)» ·
+   al pasar el cursor, el desglose («Perfil 35 · Interés 30: respondió +10, pidió precio +20»)
+```
+
+**Por qué el Perfil va con reglas:** en la cuenta 2 no hay ni un atributo personalizado de contacto
+y casi ningún dato en `additional_attributes`; lo que sí se usa son **etiquetas** (27). Una regla
+dice qué significa cada criterio: «giro correcto = tiene la etiqueta *construcción* o *industrial*»,
+«zona = el atributo *ciudad* es Monterrey o Saltillo». Sin reglas, el Perfil vale 0 y solo cuenta
+el Interés (la puntuación igual sirve para ordenar).
+
+**Dónde se configura:** modal «🎯 Puntuación» en el detalle de la campaña (mismo molde que
+«Entrega de interesados»): los 8 pesos con sus valores de §8.2, las reglas del Perfil y una nota de
+cómo funciona. Botón «Volver a los valores sugeridos».
+
+| Fase | Qué | Tamaño |
+|---|---|---|
+| P4.1 | Migración (campaña: `scoring` jsonb con pesos y reglas · seguimiento: `prospect_score`, `prospect_score_parts` jsonb, `prospect_scored_at`); `TrackingCampaigns::ProspectScore` (calcula y guarda el desglose); se recalcula en el clasificador (V5), al agendar cita y en un barrido diario (30 días sin responder) | mediano |
+| P4.2 | El clasificador (V5) también devuelve el **motivo** del interés (precio · información · cita) y si **habla quien decide** (sí · no · no se sabe), en el mismo JSON y la misma llamada (sin costo extra) | chico |
+| P4.3 | Pantalla: modal «🎯 Puntuación», columna «Puntos» ordenable, filtro «Calientes», desglose | mediano |
+| P4.4 | **(después de calibrar)** interruptor «Entregar con ≥ N puntos» por campaña, apagado por omisión, y reporte de calibración: qué criterios separan a los que se entregaron/cerraron de los que no | mediano |
+
+**Decisiones abiertas de P4:**
+
+| # | Pregunta | Propuesta |
+|---|---|---|
+| D16 | ¿Los pesos y reglas son por campaña o por cuenta? | Por campaña, con «copiar de otra campaña» (cada campaña apunta a un cliente ideal distinto) |
+| D17 | «Habla quien decide»: ¿regla, IA o las dos? | Las dos: si hay regla manda la regla; si no, lo que infiera la IA de sus respuestas |
+| D18 | ¿El −10 por 30 días sin responder se aplica una vez o se repite? | Una vez (no seguir bajando: con «sin respuesta» ya sale del embudo) |
+| D19 | ¿La puntuación se ve también en la ficha del contacto? | Sí, la de su campaña más reciente, solo lectura |
 
 ---
 
