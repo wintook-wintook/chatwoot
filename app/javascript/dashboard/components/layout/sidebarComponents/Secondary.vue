@@ -11,20 +11,18 @@ import {
 import { routesWithPermissions } from '../../../routes';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import {
-  UI_SETTINGS_KEY,
   groupInboxes,
   groupOrderFromUISettings,
   inboxGroupFor,
   resolveOpenGroup,
   toggleOpenGroup,
 } from 'dashboard/helper/inboxGroups'; // feat/bandejas_por_tipo
-import InboxGroupsOrderModal from './InboxGroupsOrderModal.vue';
+import { INBOX_TYPES } from 'shared/mixins/inboxMixin';
 
 export default {
   components: {
     AccountContext,
     SecondaryNavItem,
-    InboxGroupsOrderModal,
   },
   props: {
     accountId: {
@@ -66,8 +64,8 @@ export default {
     },
   },
   setup() {
-    const { uiSettings, updateUISettings } = useUISettings();
-    return { uiSettings, updateUISettings };
+    const { uiSettings } = useUISettings();
+    return { uiSettings };
   },
   data() {
     // Acordeón del menú secundario: `toState` del único grupo colapsable
@@ -75,7 +73,6 @@ export default {
     return {
       openGroup: null,
       caseSettingsRequested: false, // @tickets_cases
-      showInboxOrderModal: false, // feat/bandejas_por_tipo
       // Grupo de bandejas abierto (acordeón): '' = aún no elige → el primero;
       // null = todos cerrados.
       openInboxGroup: '',
@@ -121,7 +118,32 @@ export default {
     ...mapGetters({
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
       currentRole: 'getCurrentRole',
+      internalChatUnread: 'internalChat/getUnread',
     }),
+    // feat/chat_interno_pulido: «Interno» no es una bandeja de clientes; va como
+    // «Chat interno» arriba del menú (con lo que el agente tiene sin leer) y no
+    // dentro de «Bandejas de entrada».
+    customerInboxes() {
+      return this.inboxes.filter(
+        inbox => inbox.channel_type !== INBOX_TYPES.INTERNAL
+      );
+    },
+    internalChatItem() {
+      const inbox = this.inboxes.find(
+        item => item.channel_type === INBOX_TYPES.INTERNAL
+      );
+      if (!inbox) return null;
+      return {
+        key: 'internal_chat',
+        label: 'INTERNAL_CHAT',
+        icon: 'chat-multiple',
+        toState: frontendURL(`accounts/${this.accountId}/inbox/${inbox.id}`),
+        count: this.internalChatUnread || undefined,
+      };
+    },
+    isHomeMenu() {
+      return !!this.menuConfig && this.menuConfig.parentNav === 'inicio';
+    },
     hasSecondaryMenu() {
       return this.menuConfig.menuItems && this.menuConfig.menuItems.length;
     },
@@ -164,19 +186,14 @@ export default {
         ) && this.currentRole !== 'administrator'
       );
     },
-    
+
     // feat/bandejas_por_tipo — en vez de una sola carpeta «Bandejas de entrada», un
     // grupo por tipo de canal en el orden que eligió el agente (helper/inboxGroups.js).
     inboxGroupOrder() {
       return groupOrderFromUISettings(this.uiSettings, this.accountId);
     },
     inboxGroups() {
-      return groupInboxes(this.inboxes, this.inboxGroupOrder);
-    },
-    inboxGroupCounts() {
-      return Object.fromEntries(
-        this.inboxGroups.map(group => [group.key, group.inboxes.length])
-      );
+      return groupInboxes(this.customerInboxes, this.inboxGroupOrder);
     },
     effectiveOpenInboxGroup() {
       return resolveOpenGroup(this.openInboxGroup, this.inboxGroups);
@@ -239,16 +256,6 @@ export default {
       }));
       return [heading, ...groups];
     },
-    // Justo debajo de «No Atendidas»: abre el modal para ordenar los grupos.
-    sortInboxesItem() {
-      return {
-        key: 'sort_inboxes',
-        label: 'SORT_INBOXES',
-        icon: 'arrow-sort',
-        action: 'sortInboxes',
-      };
-    },
-
     labelSection() {
       return {
         icon: 'number-symbol',
@@ -300,7 +307,7 @@ export default {
       };
     },
 
-    //KANBAN0725 - inicio
+    // KANBAN0725 - inicio
     kanbanLabelSection() {
       return {
         icon: 'number-symbol',
@@ -325,9 +332,9 @@ export default {
         })),
       };
     },
-    //KANBAN0725 - fin
+    // KANBAN0725 - fin
 
-    //KANBAN0725 - INI para los estados
+    // KANBAN0725 - INI para los estados
     kanbanStatesSection() {
       return {
         icon: 'workflow', // o 'status' o 'clipboard-flow'
@@ -346,7 +353,7 @@ export default {
             ),
           },
           {
-            id: 'pending', 
+            id: 'pending',
             label: 'NECESIDADES',
             color: '#f59e0b', // Amarillo para en progreso
             truncateLabel: false,
@@ -356,7 +363,7 @@ export default {
           },
           {
             id: 'resolved',
-            label: 'CIERRE', 
+            label: 'CIERRE',
             color: '#10b981', // Verde para completado
             truncateLabel: false,
             toState: frontendURL(
@@ -374,8 +381,8 @@ export default {
           },
         ],
       };
-    }, 
-    //KANBAN0725 -FIN para los estados 
+    },
+    // KANBAN0725 -FIN para los estados
 
     // Nueva sección para tipos de proceso kanban
     kanbanTypesSection() {
@@ -409,7 +416,8 @@ export default {
         icon: 'people-team',
         label: 'TEAMS',
         hasSubMenu: true,
-        newLink: this.showNewLink(FEATURE_FLAGS.TEAM_MANAGEMENT),
+        // Sin «+ Nuevo equipo»: los equipos se crean en Ajustes › Equipos.
+        newLink: false,
         newLinkTag: 'NEW_TEAM',
         key: 'team',
         toState: frontendURL(`accounts/${this.accountId}/settings/teams/new`),
@@ -465,15 +473,15 @@ export default {
     additionalSecondaryMenuItems() {
       let conversationMenuItems = [...this.inboxSections, this.labelSection];
       let contactMenuItems = [this.contactLabelSection];
-      
-      //KANBAN0725 - INI - Agregando tipos de proceso a kanban
+
+      // KANBAN0725 - INI - Agregando tipos de proceso a kanban
       let kanbanMenuItems = [
-       // this.kanbanStatesSection, 
+        // this.kanbanStatesSection,
         this.kanbanTypesSection, // Nueva sección para tipos de proceso
-        //this.kanbanLabelSection
+        // this.kanbanLabelSection
       ];
-      //KANBAN0725 - FIN 
-      
+      // KANBAN0725 - FIN
+
       if (this.teams.length) {
         conversationMenuItems = [this.teamSection, ...conversationMenuItems];
       }
@@ -483,11 +491,13 @@ export default {
       if (this.contactCustomViews.length) {
         contactMenuItems = [this.contactSegmentsSection, ...contactMenuItems];
       }
-      
-      // feat/bandejas_por_tipo: la opción va primero, pegada a «No Atendidas».
-      if (this.canSeeInboxes) {
+
+      // feat/chat_interno_pulido: «Ordenar bandejas» se fue a Ajustes › Bandejas de entrada
+      // («Ordenar en el menú»).
+      // feat/chat_interno_pulido: «Chat interno» antes de todo lo demás.
+      if (this.internalChatItem) {
         conversationMenuItems = [
-          this.sortInboxesItem,
+          this.internalChatItem,
           ...conversationMenuItems,
         ];
       }
@@ -507,17 +517,6 @@ export default {
       const inboxId = Number(this.$route.params.inbox_id);
       const inbox = inboxId && this.inboxes.find(item => item.id === inboxId);
       if (inbox) this.openInboxGroup = inboxGroupFor(inbox);
-    },
-    onMenuAction(action) {
-      if (action === 'sortInboxes') this.showInboxOrderModal = true;
-    },
-    saveInboxGroupOrder(order) {
-      const byAccount =
-        (this.uiSettings && this.uiSettings[UI_SETTINGS_KEY]) || {};
-      this.updateUISettings({
-        [UI_SETTINGS_KEY]: { ...byAccount, [this.accountId]: order },
-      });
-      this.showInboxOrderModal = false;
     },
     onToggleGroup(groupId) {
       this.openGroup = groupId;
@@ -547,9 +546,12 @@ export default {
     v-if="hasSecondaryMenu"
     class="flex flex-col h-full px-2 pb-8 overflow-auto text-sm bg-white border-r w-48 dark:bg-slate-900 dark:border-slate-800/50 rtl:border-r-0 rtl:border-l border-slate-50"
   >
-    <div class="flex items-center justify-between pt-2 mb-2">
+    <!-- Cambiar de cuenta: solo en el menú de Inicio (se usa poco; también está en el
+         menú de la foto, abajo). En los demás menús la lista empieza directo. -->
+    <div v-if="isHomeMenu" class="flex items-center justify-between pt-2 mb-2">
       <AccountContext @toggleAccounts="toggleAccountModal" />
     </div>
+    <div v-else class="pt-2" />
 
     <!-- Menú items -->
     <transition-group name="menu-list" tag="ul" class="mb-0 ml-0 list-none">
@@ -570,16 +572,8 @@ export default {
         @toggleGroup="onToggleGroup"
         @addLabel="showAddLabelPopup"
         @addKanbanType="showAddKanbanTypePopup"
-        @action="onMenuAction"
         @fold="onFoldInboxGroup"
       />
     </transition-group>
-    <InboxGroupsOrderModal
-      v-if="showInboxOrderModal"
-      :order="inboxGroupOrder"
-      :counts="inboxGroupCounts"
-      @close="showInboxOrderModal = false"
-      @save="saveInboxGroupOrder"
-    />
   </div>
 </template>

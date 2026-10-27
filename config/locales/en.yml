@@ -291,6 +291,10 @@ en:
       lost: 'Rejected'
       postponed: 'On hold'
       cancelled: 'Cancelled'
+  brand:
+    errors:
+      tint: 'That color does not exist'
+      logo: 'The logo must be a PNG, JPG, SVG or WebP up to 2 MB'
   quotes:
     opportunity_title: 'Quote %{folio}'
     replaced_by: 'Replaced by version %{version}'
@@ -325,6 +329,7 @@ en:
       customer_returned: "The customer wrote again."
       conversation_resolved: "The conversation was resolved without a case."
       stale: "No reply from the customer in %{days} days."
+      stale_resolved: "No reply from the customer in %{days} days; the conversation was resolved without notifying them."
     ai:
       moved: "🤖 Moved to «%{column}»: %{reason}"
       suggested: "🤖 Could move to «%{column}» (I did not move it because I am not sure): %{reason}"

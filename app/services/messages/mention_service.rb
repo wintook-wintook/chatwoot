@@ -15,7 +15,8 @@ class Messages::MentionService
   private
 
   def valid_mention_message?(message)
-    message.private? && message.content.present? && mentioned_ids.present?
+    # feat/chat_interno: en «Interno» los mensajes no son notas privadas y también avisan.
+    (message.private? || internal?) && message.content.present? && mentioned_ids.present?
   end
 
   def mentioned_ids
@@ -25,8 +26,14 @@ class Messages::MentionService
   def filter_mentioned_ids_by_inbox
     inbox = message.inbox
     valid_mentionable_ids = inbox.account.administrators.map(&:id) + inbox.members.map(&:id)
+    # En «Interno» solo quien ya está en la sala: un directo o el grupo de un equipo es privado.
+    valid_mentionable_ids &= message.conversation.conversation_participants.pluck(:user_id) if internal?
     # Intersection of ids
     mentioned_ids & valid_mentionable_ids.uniq.map(&:to_s)
+  end
+
+  def internal?
+    message.conversation.respond_to?(:internal?) && message.conversation.internal?
   end
 
   def generate_notifications_for_mentions(validated_mentioned_ids)
@@ -42,6 +49,8 @@ class Messages::MentionService
   end
 
   def add_mentioned_users_as_participants(validated_mentioned_ids)
+    return if internal?
+
     validated_mentioned_ids.each do |user_id|
       message.conversation.conversation_participants.find_or_create_by(user_id: user_id)
     end

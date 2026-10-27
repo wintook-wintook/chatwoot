@@ -54,7 +54,7 @@
                       </div>
                   </div>
                   <div class="forward__contacts-footer">
-                      <woot-button :disabled="showEmptySearchResult">Encaminhar</woot-button>
+                      <woot-button :disabled="showEmptySearchResult">{{ $t('CONVERSATION.CONTEXT_MENU.FORWARD') }}</woot-button>
                   </div>
               </form>
           </div>

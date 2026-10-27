@@ -52,7 +52,19 @@
     "LEARN_MORE": "Aprende más",
     "PAYMENT_PENDING": "Tu pago está pendiente. Por favor, actualiza tu información de pago para continuar usando Chatwoot",
     "LIMITS_UPGRADE": "Tu cuenta ha excedido los límites de uso, por favor, actualiza tu plan para continuar usando Chatwoot",
-    "OPEN_BILLING": "Abrir facturación"
+    "OPEN_BILLING": "Abrir facturación",
+    "BRAND": {
+      "TITLE": "Marca de la empresa",
+      "NOTE": "El logo aparece arriba del menú y el color es el tema de todo tu equipo. Cada quien puede elegir otro en su Perfil › Apariencia.",
+      "LOGO": "Logo",
+      "UPLOAD_LOGO": "Subir logo",
+      "CHANGE_LOGO": "Cambiar logo",
+      "REMOVE_LOGO": "Quitar logo",
+      "LOGO_HELP": "PNG, JPG, SVG o WebP de hasta 2 MB. Mejor cuadrado.",
+      "COLOR": "Color de la empresa",
+      "SAVED": "Marca actualizada",
+      "ERROR": "No se pudo guardar la marca"
+    }
   },
   "FORMS": {
     "MULTISELECT": {

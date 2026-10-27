@@ -9,6 +9,32 @@
       "CREATE": "Abrir chat",
       "CANCEL": "Cancelar",
       "ERROR": "No se pudo abrir el chat."
-    }
+    },
+    "TITLE": "Chat interno",
+    "EMPTY_ROOM": "Elige una sala o abre una con «Nuevo chat».",
+    "LIST": {
+      "GROUPS": "Grupos",
+      "DIRECTS": "Directos",
+      "EMPTY": "Todavía no tienes salas. Abre una con «Nuevo chat».",
+      "NO_MESSAGES": "Sin mensajes todavía",
+      "YOU": "Tú",
+      "ATTACHMENT": "📎 Archivo"
+    },
+    "MEMBERS": {
+      "TITLE": "Miembros ({count})",
+      "COUNT": "{count} miembros",
+      "CLOSE": "Cerrar",
+      "YOU": "(tú)"
+    },
+    "STATUS": {
+      "online": "En línea",
+      "busy": "Ocupado",
+      "offline": "Desconectado"
+    },
+    "COMPOSER": {
+      "PLACEHOLDER": "Escribe en {room}… (Shift + Enter para nueva línea, @ para mencionar)"
+    },
+    "NEW_CHAT": "Nuevo chat",
+    "NEW_CHAT_TOOLTIP": "Escribir a un agente"
   }
 }

@@ -7,10 +7,23 @@ import {
   setColorTheme,
   setColorTint,
   getColorTint,
+  announceAppearanceChange,
+  COMPANY_TINT,
+  TINT_CHOICES,
 } from 'dashboard/helper/themeHelper';
+import { useStoreGetters } from 'dashboard/composables/store';
 import AppearanceCard from './AppearanceCard.vue';
 
 const { t } = useI18n();
+const getters = useStoreGetters();
+
+// feat/apariencia B1: el color que eligió la empresa (Ajustes › Configuración de cuenta).
+const companyTint = computed(() => {
+  const account = getters['accounts/getAccount'].value(
+    getters.getCurrentAccountId.value
+  );
+  return (account && account.brand && account.brand.tint) || 'default';
+});
 
 const MODE_SWATCHES = {
   light: ['#FFFFFF', '#E6E8EB', '#C1C8CD', '#0090FF'],
@@ -45,27 +58,99 @@ const modes = computed(() =>
 );
 
 const tints = computed(() =>
-  Object.keys(TINT_SWATCHES).map(key => ({
-    key,
-    title: t(`PROFILE_SETTINGS.FORM.APPEARANCE.TINTS.${key.toUpperCase()}`),
-    swatches: TINT_SWATCHES[key],
-  }))
+  TINT_CHOICES.map(key => {
+    if (key === COMPANY_TINT) {
+      return {
+        key,
+        title: t('PROFILE_SETTINGS.FORM.APPEARANCE.TINTS.EMPRESA', {
+          name: t(
+            `PROFILE_SETTINGS.FORM.APPEARANCE.TINTS.${companyTint.value.toUpperCase()}`
+          ),
+        }),
+        swatches: TINT_SWATCHES[companyTint.value] || TINT_SWATCHES.default,
+      };
+    }
+    return {
+      key,
+      title: t(`PROFILE_SETTINGS.FORM.APPEARANCE.TINTS.${key.toUpperCase()}`),
+      swatches: TINT_SWATCHES[key],
+    };
+  })
 );
 
 const selectMode = key => {
   selectedMode.value = key;
   LocalStorage.set(LOCAL_STORAGE_KEYS.COLOR_SCHEME, key);
   setColorTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+  announceAppearanceChange();
 };
 
 const selectTint = key => {
   selectedTint.value = key;
   setColorTint(key);
+  announceAppearanceChange();
 };
 </script>
 
 <template>
   <div class="flex flex-col w-full gap-6">
+    <!-- feat/apariencia: vista previa en vivo (usa las mismas clases que el resto del
+         tablero, así que cambia al momento con el modo y el tema elegidos). -->
+    <div class="flex flex-col gap-3">
+      <span class="text-sm font-medium text-ash-900">
+        {{ $t('PROFILE_SETTINGS.FORM.APPEARANCE.PREVIEW.TITLE') }}
+      </span>
+      <div
+        class="flex overflow-hidden border border-solid rounded-xl border-slate-100 dark:border-slate-700 bg-slate-25 dark:bg-slate-800"
+      >
+        <ul
+          class="flex flex-col w-40 gap-1 p-3 m-0 list-none bg-white border-r border-solid dark:bg-slate-900 border-slate-50 dark:border-slate-700"
+        >
+          <li
+            class="px-2 py-1.5 text-xs font-medium rounded-md bg-woot-50 dark:bg-woot-800 text-woot-600 dark:text-woot-100"
+          >
+            {{ $t('PROFILE_SETTINGS.FORM.APPEARANCE.PREVIEW.MENU_1') }}
+          </li>
+          <li class="px-2 py-1.5 text-xs text-slate-600 dark:text-slate-300">
+            {{ $t('PROFILE_SETTINGS.FORM.APPEARANCE.PREVIEW.MENU_2') }}
+          </li>
+          <li class="px-2 py-1.5 text-xs text-slate-600 dark:text-slate-300">
+            {{ $t('PROFILE_SETTINGS.FORM.APPEARANCE.PREVIEW.MENU_3') }}
+          </li>
+        </ul>
+        <div class="flex flex-col flex-1 gap-3 p-4">
+          <p
+            class="m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
+          >
+            {{ $t('PROFILE_SETTINGS.FORM.APPEARANCE.PREVIEW.HEADING') }}
+          </p>
+          <div class="flex flex-wrap items-center gap-3 text-xs">
+            <span
+              class="font-medium underline text-woot-600 dark:text-woot-300"
+            >
+              {{ $t('PROFILE_SETTINGS.FORM.APPEARANCE.PREVIEW.LINK') }}
+            </span>
+            <span
+              class="px-2 py-0.5 rounded-full bg-woot-75 dark:bg-woot-800 text-woot-700 dark:text-woot-100"
+            >
+              {{ $t('PROFILE_SETTINGS.FORM.APPEARANCE.PREVIEW.CHIP') }}
+            </span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <span
+              class="px-3 py-1.5 text-xs font-medium text-white rounded-md bg-woot-500"
+            >
+              {{ $t('PROFILE_SETTINGS.FORM.APPEARANCE.PREVIEW.PRIMARY') }}
+            </span>
+            <span
+              class="px-3 py-1.5 text-xs font-medium rounded-md bg-primary-75 text-primary-700 dark:bg-primary-200 dark:text-primary-800"
+            >
+              {{ $t('PROFILE_SETTINGS.FORM.APPEARANCE.PREVIEW.SECONDARY') }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="flex flex-col gap-3">
       <span class="text-sm font-medium text-ash-900">
         {{ $t('PROFILE_SETTINGS.FORM.APPEARANCE.MODE_LABEL') }}

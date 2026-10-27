@@ -203,8 +203,10 @@ Rails.application.routes.draw do
           end
           # @campanas_vendedor / @automatizacion_campanas (create = campaña continua)
           # feat/chat_interno (plan v2) — la bandeja «Interno»
+          resource :brand, only: [:update, :destroy] # feat/apariencia B1: logo y color de la empresa
           resource :internal_channel, only: [:show] do
             post :directs
+            get :unread
           end
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos

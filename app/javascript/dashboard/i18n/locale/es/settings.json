@@ -52,7 +52,7 @@
       },
       "APPEARANCE": {
         "TITLE": "Apariencia",
-        "NOTE": "Elige cómo se ve el tablero. La preferencia se guarda en este navegador.",
+        "NOTE": "Elige cómo se ve el tablero. Se guarda en tu usuario: te sigue en cualquier navegador o dispositivo.",
         "MODE_LABEL": "Modo",
         "TINT_LABEL": "Tema de color",
         "MODES": {
@@ -61,6 +61,8 @@
           "AUTO": "Sistema"
         },
         "TINTS": {
+          "EMPRESA": "De la empresa ({name})",
+          "EMPRESA_SHORT": "De la empresa",
           "DEFAULT": "Predeterminado",
           "CALIDO": "Cálido",
           "BOSQUE": "Bosque",
@@ -71,6 +73,17 @@
           "TURQUESA": "Turquesa",
           "ROSA": "Rosa",
           "GRAFITO": "Grafito"
+        },
+        "PREVIEW": {
+          "TITLE": "Vista previa",
+          "MENU_1": "Conversaciones",
+          "MENU_2": "Ventas",
+          "MENU_3": "Servicio",
+          "HEADING": "Así se ve con este tema",
+          "LINK": "Un enlace",
+          "CHIP": "Etiqueta",
+          "PRIMARY": "Botón principal",
+          "SECONDARY": "Secundario"
         }
       },
       "PASSWORD_SECTION": {
@@ -457,7 +470,8 @@
     "SHOW_MORE": "Mostrar más ({count})",
     "SHOW_LESS": "Mostrar menos",
     "INTERNAL_CHAT_NEW": "Nuevo chat",
-    "MAINTENANCE": "Mantenimientos"
+    "MAINTENANCE": "Mantenimientos",
+    "INTERNAL_CHAT": "Chat interno"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Facturación",

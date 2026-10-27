@@ -1,5 +1,4 @@
 <script>
-import InternalChannelAPI from 'dashboard/api/internalChannel'; // feat/chat_interno
 // KANBAN0725
 import { mapGetters } from 'vuex';
 import { getSidebarItems } from './config/default-sidebar';
@@ -102,6 +101,13 @@ export default {
       teams: 'teams/getMyTeams',
       getAccount: 'accounts/getAccount',
     }),
+    // feat/apariencia B1: el logo de la empresa (Ajustes › Configuración de cuenta) en
+    // lugar del de la instalación.
+    brandLogo() {
+      const account = this.getAccount(this.accountId);
+      const logo = account && account.brand && account.brand.logo_url;
+      return logo || this.globalConfig.logoThumbnail;
+    },
     // feat/chat_interno: encendido salvo que el super admin lo apague en la cuenta.
     internalChatEnabled() {
       const account = this.getAccount(this.accountId);
@@ -275,11 +281,11 @@ export default {
     internalChatEnabled: {
       handler(enabled) {
         if (!enabled) return;
-        InternalChannelAPI.ensure()
-          .then(({ data }) => {
-            const known = this.inboxes.some(
-              inbox => inbox.id === data.inbox_id
-            );
+        // feat/chat_interno_pulido: el store guarda la bandeja y el contador del menú.
+        this.$store
+          .dispatch('internalChat/ensure')
+          .then(inboxId => {
+            const known = this.inboxes.some(inbox => inbox.id === inboxId);
             if (!known) this.$store.dispatch('inboxes/get');
           })
           .catch(() => {});
@@ -355,7 +361,7 @@ export default {
 <template>
   <aside class="flex h-full">
     <PrimarySidebar
-      :logo-source="globalConfig.logoThumbnail"
+      :logo-source="brandLogo"
       :installation-name="globalConfig.installationName"
       :is-a-custom-branded-instance="isACustomBrandedInstance"
       :account-id="accountId"

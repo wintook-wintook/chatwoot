@@ -5,6 +5,8 @@ import ConversationHeader from './ConversationHeader.vue';
 import DashboardAppFrame from '../DashboardApp/Frame.vue';
 import EmptyState from './EmptyState/EmptyState.vue';
 import MessagesView from './MessagesView.vue';
+import InternalMembersPanel from 'dashboard/components/internalChat/InternalMembersPanel.vue';
+import { isInternalChat } from 'dashboard/helper/internalChat';
 
 export default {
   components: {
@@ -13,6 +15,7 @@ export default {
     DashboardAppFrame,
     EmptyState,
     MessagesView,
+    InternalMembersPanel,
   },
 
   props: {
@@ -56,6 +59,10 @@ export default {
     },
     showContactPanel() {
       return this.isContactPanelOpen && this.currentChat.id;
+    },
+    // feat/chat_interno_pulido: en «Chat interno» el panel son los miembros de la sala.
+    isInternal() {
+      return isInternalChat(this.currentChat);
     },
   },
   watch: {
@@ -135,8 +142,13 @@ export default {
         v-show="showContactPanel"
         class="conversation-sidebar-wrap basis-full sm:basis-[17.5rem] md:basis-[18.75rem] lg:basis-[19.375rem] xl:basis-[20.625rem] 2xl:basis-[25rem] rtl:border-r border-slate-50 dark:border-slate-700 h-auto overflow-auto z-10 flex-shrink-0 flex-grow-0"
       >
+        <InternalMembersPanel
+          v-if="showContactPanel && isInternal"
+          :conversation-id="currentChat.id"
+          :on-toggle="onToggleContactPanel"
+        />
         <ContactPanel
-          v-if="showContactPanel"
+          v-else-if="showContactPanel"
           :conversation-id="currentChat.id"
           :inbox-id="currentChat.inbox_id"
           :on-toggle="onToggleContactPanel"

@@ -296,6 +296,7 @@
       "CREATE_A_CANNED_RESPONSE": "Add to canned responses",
       "TRANSLATE": "Translate",
       "COPY_PERMALINK": "Copy link to the message",
+      "FORWARD": "Forward",
       "LINK_COPIED": "Message URL copied to the clipboard",
       "DELETE_CONFIRMATION": {
         "TITLE": "Are you sure you want to delete this message?",
