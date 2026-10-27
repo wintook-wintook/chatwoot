@@ -120,6 +120,8 @@ export default {
       isResuming: false,
       showPauseModal: false,
       isPausing: false,
+      showDeleteModal: false,
+      isDeleting: false,
     };
   },
   computed: {
@@ -604,6 +606,23 @@ export default {
         this.isLaunching = false;
       }
     },
+    // Borra la campaña (el backend cancela sus seguimientos activos) y vuelve a la lista.
+    async confirmDelete() {
+      this.showDeleteModal = false;
+      this.isDeleting = true;
+      try {
+        await TrackingCampaignsAPI.delete(this.campaignId);
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE_SUCCESS'));
+        this.$router.push(this.backRoute);
+      } catch (error) {
+        useAlert(
+          error.response?.data?.error ||
+            this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE_ERROR')
+        );
+      } finally {
+        this.isDeleting = false;
+      }
+    },
     // «Pausar campaña»: no entra nadie y los envíos se detienen al llegar su turno.
     async confirmPause() {
       this.showPauseModal = false;
@@ -788,6 +807,16 @@ export default {
           @click="showPauseModal = true"
         >
           {{ $t('TRACKING_CAMPAIGNS_VIEW.PAUSE') }}
+        </woot-button>
+        <woot-button
+          variant="smooth"
+          color-scheme="alert"
+          size="small"
+          icon="delete"
+          :is-loading="isDeleting"
+          @click="showDeleteModal = true"
+        >
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.DELETE') }}
         </woot-button>
       </div>
       <p
@@ -1346,6 +1375,16 @@ export default {
         {{ $t('TRACKING_CAMPAIGNS_VIEW.BACK_TO_LIST') }}
       </woot-button>
     </div>
+    <woot-delete-modal
+      :show="showDeleteModal"
+      :on-close="() => (showDeleteModal = false)"
+      :on-confirm="confirmDelete"
+      :title="$t('TRACKING_CAMPAIGNS_VIEW.DELETE')"
+      :message="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_CONFIRM')"
+      :message-value="campaign ? ` «${campaign.name}»?` : ''"
+      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_YES')"
+      :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
+    />
     <woot-delete-modal
       :show="showPauseModal"
       :on-close="() => (showPauseModal = false)"
