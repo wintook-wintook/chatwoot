@@ -13,6 +13,11 @@ class InternalChannelAPI extends ApiClient {
     return axios.get(this.url);
   }
 
+  // feat/chat_interno_pulido: { inbox_id, unread } — lo que el agente tiene sin leer.
+  unread() {
+    return axios.get(`${this.url}/unread`);
+  }
+
   // El directo con ese agente (lo crea si no existe): { conversation_id, inbox_id }.
   openDirect(userId) {
     return axios.post(`${this.url}/directs`, { user_id: userId });

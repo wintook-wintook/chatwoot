@@ -67,6 +67,7 @@ class Contact < ApplicationRecord
   has_many :quotes, dependent: :destroy_async # Plan-Catalogo-Cotizaciones
   has_many :customer_assets, dependent: :destroy_async # Plan-Trabajo-Campo R4
   has_many :maintenance_plans, dependent: :destroy_async # Plan-Trabajo-Campo R4
+  has_many :contracts, dependent: :destroy_async # Plan-Contratos R1
   # ================================================================================
   # proyecto@contact_tracking
   # ================================================================================

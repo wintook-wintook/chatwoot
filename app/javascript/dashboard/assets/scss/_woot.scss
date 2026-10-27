@@ -536,6 +536,7 @@
     --color-slate-800: 28 28 28;
     --color-slate-900: 0 0 0;
   }
+
   body[data-tema='violeta'] {
     --color-woot-25: 251 250 255;
     --color-woot-50: 245 242 255;
@@ -646,5 +647,40 @@
     --color-slate-700: 76 81 75;
     --color-slate-800: 38 41 37;
     --color-slate-900: 21 23 21;
+  }
+
+
+  // feat/apariencia: la paleta `primary` (Perfil, formularios y las pantallas nuevas de
+  // Chatwoot) sigue al tema elegido, igual que `woot`. `primary` tiene una rampa propia
+  // para oscuro (fondos oscuros, textos claros), así que se arma invirtiendo la de `woot`.
+  // Sin tema (`default`) se queda el azul original de arriba.
+  body[data-tema] {
+    --color-primary-25: var(--color-woot-25);
+    --color-primary-50: var(--color-woot-50);
+    --color-primary-75: var(--color-woot-75);
+    --color-primary-100: var(--color-woot-100);
+    --color-primary-200: var(--color-woot-200);
+    --color-primary-300: var(--color-woot-300);
+    --color-primary-400: var(--color-woot-300);
+    --color-primary-500: var(--color-woot-400);
+    --color-primary-600: var(--color-woot-500);
+    --color-primary-700: var(--color-woot-600);
+    --color-primary-800: var(--color-woot-700);
+    --color-primary-900: var(--color-woot-900);
+  }
+
+  body.dark[data-tema] {
+    --color-primary-25: var(--color-woot-900);
+    --color-primary-50: var(--color-woot-900);
+    --color-primary-75: var(--color-woot-800);
+    --color-primary-100: var(--color-woot-800);
+    --color-primary-200: var(--color-woot-700);
+    --color-primary-300: var(--color-woot-700);
+    --color-primary-400: var(--color-woot-600);
+    --color-primary-500: var(--color-woot-600);
+    --color-primary-600: var(--color-woot-500);
+    --color-primary-700: var(--color-woot-400);
+    --color-primary-800: var(--color-woot-200);
+    --color-primary-900: var(--color-woot-100);
   }
 }

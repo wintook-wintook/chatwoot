@@ -6,7 +6,10 @@
 // «Restablecer» vuelve al orden por omisión. Plan: docs/chat_interno_plan.md §10.3
 // ============================================================================
 import draggable from 'vuedraggable';
-import { DEFAULT_INBOX_GROUP_ORDER } from 'dashboard/helper/inboxGroups';
+import {
+  DEFAULT_INBOX_GROUP_ORDER,
+  INBOX_GROUPS,
+} from 'dashboard/helper/inboxGroups';
 
 export default {
   components: { Draggable: draggable },
@@ -34,7 +37,10 @@ export default {
       this.draft = next;
     },
     reset() {
-      this.draft = [...DEFAULT_INBOX_GROUP_ORDER];
+      // «Interno» no se ordena aquí: va aparte como «Chat interno».
+      this.draft = DEFAULT_INBOX_GROUP_ORDER.filter(
+        key => key !== INBOX_GROUPS.INTERNAL
+      );
     },
     save() {
       this.$emit('save', [...this.draft]);

@@ -100,6 +100,10 @@ describe('Menú v2', () => {
     expect(item('ventas')[1].toState).toContain('tickets/commercial/metrics');
     expect(item('servicio')).toHaveLength(7);
     expect(item('servicio')[0].toState).toContain('tickets/support/board');
+    const primary = primaryMenuV2(ACCOUNT, route('home'));
+    expect(primary.find(i => i.key === 'servicio').toState).toContain(
+      'tickets/support/board'
+    );
   });
 
   it('Informes: negocio, dashboards por área y conversaciones plegadas', () => {
@@ -215,13 +219,16 @@ describe('Menú v2', () => {
     );
   });
 
-  it('Clientes: contactos y atributos personalizados (salen de Ajustes)', () => {
+  it('Clientes: contactos, contratos y atributos personalizados (salen de Ajustes)', () => {
     const clientes = menuFor(route('attributes_list'));
     expect(clientes.parentNav).toBe('contacts');
     expect(clientes.menuItems.map(i => i.label)).toEqual([
       'ALL_CONTACTS',
+      'CONTRACTS',
       'CUSTOM_ATTRIBUTES',
+      'CONTRACT_TYPES',
     ]);
+    expect(menuFor(route('contract_types')).parentNav).toBe('contacts');
     const ajustes = menuFor(route('agent_list'));
     expect(ajustes.menuItems.map(i => i.label)).not.toContain(
       'CUSTOM_ATTRIBUTES'

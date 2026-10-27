@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_31_140000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_31_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1130,6 +1130,59 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_140000) do
     t.index ["phone_number", "account_id"], name: "index_contacts_on_phone_number_and_account_id"
   end
 
+  create_table "contract_types", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.string "color", default: "#2781F6", null: false
+    t.integer "default_every", default: 1, null: false
+    t.integer "default_unit", default: 2, null: false
+    t.integer "default_term_months"
+    t.boolean "default_auto_renew", default: true, null: false
+    t.jsonb "custom_fields", default: [], null: false
+    t.boolean "active", default: true, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "name"], name: "index_contract_types_on_account_id_and_name", unique: true
+    t.index ["account_id"], name: "index_contract_types_on_account_id"
+  end
+
+  create_table "contracts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "contract_type_id", null: false
+    t.bigint "catalog_item_id"
+    t.bigint "customer_asset_id"
+    t.bigint "assignee_id"
+    t.string "title", null: false
+    t.decimal "quantity", precision: 12, scale: 2, default: "1.0", null: false
+    t.decimal "price", precision: 14, scale: 2, default: "0.0", null: false
+    t.string "currency", limit: 3, default: "MXN", null: false
+    t.integer "every", default: 1, null: false
+    t.integer "unit", default: 2, null: false
+    t.date "starts_on", null: false
+    t.date "next_charge_on"
+    t.date "last_paid_on"
+    t.integer "term_months"
+    t.date "ends_on"
+    t.boolean "auto_renew", default: true, null: false
+    t.integer "status", default: 0, null: false
+    t.date "cancelled_on"
+    t.string "cancel_reason"
+    t.jsonb "custom_attributes", default: {}, null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "ends_on"], name: "index_contracts_on_account_id_and_ends_on"
+    t.index ["account_id", "status", "next_charge_on"], name: "index_contracts_on_account_id_and_status_and_next_charge_on"
+    t.index ["account_id"], name: "index_contracts_on_account_id"
+    t.index ["assignee_id"], name: "index_contracts_on_assignee_id"
+    t.index ["catalog_item_id"], name: "index_contracts_on_catalog_item_id"
+    t.index ["contact_id"], name: "index_contracts_on_contact_id"
+    t.index ["contract_type_id"], name: "index_contracts_on_contract_type_id"
+    t.index ["customer_asset_id"], name: "index_contracts_on_customer_asset_id"
+  end
+
   create_table "conversation_participants", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "user_id", null: false
@@ -1482,6 +1535,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_140000) do
     t.jsonb "entry_inbox_ids", default: [], null: false
     t.integer "cold_after_days"
     t.integer "discard_after_days"
+    t.boolean "resolve_on_stale", default: false, null: false
     t.index ["account_id"], name: "index_kanban_type_processes_on_account_id"
     t.index ["account_id"], name: "unique_default_kanban_type_process_per_account", unique: true, where: "(\"default\" = true)"
   end
@@ -2307,6 +2361,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_140000) do
   add_foreign_key "contact_trackings", "inboxes"
   add_foreign_key "contact_trackings", "tracking_campaigns"
   add_foreign_key "contacts", "users", column: "owner_id", on_delete: :nullify
+  add_foreign_key "contract_types", "accounts"
+  add_foreign_key "contracts", "accounts"
+  add_foreign_key "contracts", "catalog_items", on_delete: :nullify
+  add_foreign_key "contracts", "contacts", on_delete: :cascade
+  add_foreign_key "contracts", "contract_types"
+  add_foreign_key "contracts", "customer_assets", on_delete: :nullify
+  add_foreign_key "contracts", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "conversations", "kanban_processes"
   add_foreign_key "conversations", "kanban_type_processes"
   add_foreign_key "customer_assets", "accounts"

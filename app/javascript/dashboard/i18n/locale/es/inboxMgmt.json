@@ -1,8 +1,9 @@
 {
   "INBOX_MGMT": {
-    "HEADER": "Inboxes",
-    "DESCRIPTION": "A channel is the mode of communication your customer chooses to interact with you. An inbox is where you manage interactions for a specific channel. It can include communications from various sources such as email, live chat, and social media.",
-    "LEARN_MORE": "Learn more about inboxes",
+    "HEADER": "Bandejas de entrada",
+    "SORT_IN_MENU": "Ordenar en el menú",
+    "DESCRIPTION": "Un canal es el medio que elige tu cliente para comunicarse contigo. Una bandeja de entrada es donde atiendes las conversaciones de un canal: WhatsApp, correo, chat del sitio web, redes sociales y otros.",
+    "LEARN_MORE": "Más información sobre las bandejas de entrada",
     "RECONNECTION_REQUIRED": "Your inbox is disconnected. You won't receive new messages until you reauthorize it.",
     "CLICK_TO_RECONNECT": "Click here to reconnect.",
     "LIST": {

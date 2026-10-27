@@ -334,6 +334,7 @@
       "CREATE_A_CANNED_RESPONSE": "Agregar a respuestas predefinidas",
       "TRANSLATE": "Traducir",
       "COPY_PERMALINK": "Copiar enlace al mensaje",
+      "FORWARD": "Reenviar",
       "LINK_COPIED": "URL del mensaje copiada al portapapeles",
       "DELETE_CONFIRMATION": {
         "TITLE": "¿Estás seguro de que deseas eliminar este mensaje?",

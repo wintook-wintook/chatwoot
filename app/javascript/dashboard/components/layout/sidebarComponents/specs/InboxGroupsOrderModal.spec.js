@@ -35,10 +35,12 @@ describe('InboxGroupsOrderModal', () => {
     expect(wrapper.vm.draft).toEqual(['email', 'meta', 'whatsapp']);
   });
 
-  it('resets to the default order', () => {
+  it('resets to the default order, without «Interno» (it is «Chat interno» now)', () => {
     const wrapper = mountModal();
     wrapper.vm.reset();
-    expect(wrapper.vm.draft).toEqual([...DEFAULT_INBOX_GROUP_ORDER]);
+    expect(wrapper.vm.draft).toEqual(
+      DEFAULT_INBOX_GROUP_ORDER.filter(key => key !== 'internal')
+    );
   });
 
   it('emits the new order on save', () => {

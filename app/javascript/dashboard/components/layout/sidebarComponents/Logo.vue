@@ -27,7 +27,11 @@ export default {
 <template>
   <div class="w-8 h-8">
     <router-link :to="dashboardPath" replace>
-      <img :src="source" :alt="name" />
+      <img
+        :src="source"
+        :alt="name"
+        class="object-contain w-8 h-8 rounded-md"
+      />
     </router-link>
   </div>
 </template>

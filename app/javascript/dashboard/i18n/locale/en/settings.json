@@ -52,7 +52,7 @@
       },
       "APPEARANCE": {
         "TITLE": "Appearance",
-        "NOTE": "Choose how the dashboard looks. The setting is saved in this browser.",
+        "NOTE": "Choose how the dashboard looks. It is saved in your user: it follows you on any browser or device.",
         "MODE_LABEL": "Mode",
         "TINT_LABEL": "Color theme",
         "MODES": {
@@ -61,6 +61,8 @@
           "AUTO": "System"
         },
         "TINTS": {
+          "EMPRESA": "Company ({name})",
+          "EMPRESA_SHORT": "Company",
           "DEFAULT": "Default",
           "CALIDO": "Warm",
           "BOSQUE": "Forest",
@@ -71,6 +73,17 @@
           "TURQUESA": "Teal",
           "ROSA": "Pink",
           "GRAFITO": "Graphite"
+        },
+        "PREVIEW": {
+          "TITLE": "Preview",
+          "MENU_1": "Conversations",
+          "MENU_2": "Sales",
+          "MENU_3": "Service",
+          "HEADING": "This is how this theme looks",
+          "LINK": "A link",
+          "CHIP": "Label",
+          "PRIMARY": "Primary button",
+          "SECONDARY": "Secondary"
         }
       },
       "PASSWORD_SECTION": {
@@ -359,6 +372,8 @@
     "HOME": "Home",
     "AGENTS": "Agents",
     "ACCESS_ROLES": "Roles",
+    "CONTRACTS": "Contracts",
+    "CONTRACT_TYPES": "Contract types",
     "CATALOG": "Catalog",
     "FIELD_ROUTE": "My field route",
     "DISPATCH": "Dispatch",
@@ -455,7 +470,8 @@
     "SHOW_MORE": "Show more ({count})",
     "SHOW_LESS": "Show less",
     "INTERNAL_CHAT_NEW": "New chat",
-    "MAINTENANCE": "Maintenance"
+    "MAINTENANCE": "Maintenance",
+    "INTERNAL_CHAT": "Internal chat"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Billing",

@@ -31,8 +31,8 @@ describe('useAppearanceHotKeys', () => {
 
   it('should have the correct number of appearance options', () => {
     const { goToAppearanceHotKeys } = useAppearanceHotKeys();
-    // 1 parent + 3 mode options, 1 parent + 10 color theme options
-    expect(goToAppearanceHotKeys.value.length).toBe(15);
+    // 1 parent + 3 mode options, 1 parent + 11 color theme options («De la empresa» + 10)
+    expect(goToAppearanceHotKeys.value.length).toBe(16);
   });
 
   it('should have the correct parent option', () => {
@@ -72,6 +72,7 @@ describe('useAppearanceHotKeys', () => {
     // cuelga de Cambiar apariencia, no del primer nivel
     expect(parentOption.parent).toBe('appearance_settings');
     expect(parentOption.children).toEqual([
+      'tint_empresa',
       'tint_default',
       'tint_calido',
       'tint_bosque',

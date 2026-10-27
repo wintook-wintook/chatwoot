@@ -2496,7 +2496,9 @@
       "CASE": "Back to the case",
       "CONVERSATION": "Back to the conversation",
       "CONTACT": "Back to the contact",
-      "OTHER": "Back"
+      "OTHER": "Back",
+      "BOARD": "Back to the board",
+      "LIST": "Back to the list"
     }
   },
   "CATALOG": {

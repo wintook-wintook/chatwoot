@@ -74,6 +74,20 @@ Rails.application.routes.draw do
           resources :maintenance_plans, only: [:index, :create, :update, :destroy] do
             post :generate, on: :member
           end
+          # Plan-Contratos R1 — servicios recurrentes del cliente
+          resources :contract_types, only: [:index, :create, :update]
+          resources :contracts, only: [:index, :create, :update] do
+            member do
+              post :register_payment
+              post :renew
+              post :cancel
+              post :reactivate
+            end
+            collection do
+              get :template
+              post :import
+            end
+          end
           # Plan-Trabajo-Campo R3 — despacho
           resource :field_dispatch, only: [:show], controller: 'field_dispatch' do
             post :assign
@@ -189,8 +203,10 @@ Rails.application.routes.draw do
           end
           # @campanas_vendedor / @automatizacion_campanas (create = campaña continua)
           # feat/chat_interno (plan v2) — la bandeja «Interno»
+          resource :brand, only: [:update, :destroy] # feat/apariencia B1: logo y color de la empresa
           resource :internal_channel, only: [:show] do
             post :directs
+            get :unread
           end
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos

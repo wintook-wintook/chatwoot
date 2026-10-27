@@ -86,11 +86,12 @@ export default {
         :icon="menuItem.icon"
         :name="menuItem.label"
         :to="menuItem.toState"
+        :area="menuItem.key"
         :is-child-menu-active="menuItem.key === activeMenuItem"
       />
     </div>
     <div class="flex flex-col items-center justify-end pb-6">
-      <webphone-minimized />
+      <WebphoneMinimized />
       <PrimaryNavItem
         v-if="!isACustomBrandedInstance"
         icon="book-open-globe"

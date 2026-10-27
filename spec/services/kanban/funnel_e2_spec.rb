@@ -126,6 +126,49 @@ RSpec.describe 'Embudo de contactos E2' do
       expect(conversation.kanban_move_reason).to include('5 días')
       expect(fresh.reload.kanban_process_id).to eq(columns['Interesado'].id)
     end
+
+    it 'con «resolver al descartar» resuelve la conversación sin encuesta ni aviso' do
+      board.update!(discard_after_days: 5, resolve_on_stale: true)
+      inbox.update!(csat_survey_enabled: true)
+      place(columns['Interesado'])
+      customer_says('luego te aviso', at: 8.days.ago)
+
+      described_class.perform_now
+
+      conversation.reload
+      expect(conversation.kanban_process_id).to eq(columns['Descartado'].id)
+      expect(conversation).to be_resolved
+      expect(conversation.kanban_move_reason).to include('se resolvió')
+      expect(conversation.messages.where(content_type: :input_csat)).to be_empty
+      expect(conversation.messages.outgoing).to be_empty
+    end
+
+    it 'sin la opción, descarta pero deja la conversación como estaba' do
+      board.update!(discard_after_days: 5, resolve_on_stale: false)
+      place(columns['Interesado'])
+      customer_says('luego te aviso', at: 8.days.ago)
+
+      described_class.perform_now
+
+      expect(conversation.reload.kanban_process_id).to eq(columns['Descartado'].id)
+      expect(conversation).to be_open
+    end
+  end
+
+  describe Kanban::FunnelTemplate do
+    it 'el tablero nuevo nace resolviendo al descartar y con Convertido listo para crear la oportunidad' do
+      venta = CaseType.create!(account: account, name: 'Venta', color: '#8b5cf6', case_class: :commercial)
+      nuevo = create(:kanban_type_process, account: account, process_name: 'Nuevo embudo')
+      described_class.new(nuevo).apply!
+
+      expect(nuevo.reload.resolve_on_stale).to be(true)
+      expect(nuevo.kanban_processes.stage_converted.first.convert_case_type_id).to eq(venta.id)
+      expect(nuevo.kanban_processes.stage_open.pluck(:convert_case_type_id).compact).to be_empty
+    end
+
+    it 'sin tipos comerciales, Convertido queda sin tipo (convierte solo por regla)' do
+      expect(board.kanban_processes.stage_converted.first.convert_case_type_id).to be_nil
+    end
   end
 
   describe 'columna «Convertir»' do
