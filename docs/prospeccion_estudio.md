@@ -1212,8 +1212,9 @@ cumple el tiempo para escalar, se avisa a los administradores.»
 | P2.2 | `HandoffSweepJob` cada 10 min: atendido / recordatorio / escalar | chico |
 | P2.3 | Pantalla: sección en el formulario de campaña con su explicación + estado en el detalle | mediano |
 
-**La IA no se apaga al entregar:** el Agente IA sigue contestando como hasta hoy; el vendedor
-entra a la conversación. (Si se quiere que la IA se calle al entregar, es otra decisión.)
+**Cuando entra el vendedor, la IA se calla** (decisión 27/10/2026). Entre la entrega y que el
+vendedor atienda, la IA sigue cubriendo al cliente; en cuanto el vendedor le escribe o mueve su
+tarjeta, ni el Agente IA ni BotSeller contestan más en esa conversación (P2b).
 
 > ✅ **P2 HECHA (27/10/2026) — P2.1 + P2.2 + P2.3.**
 > - **Qué se hizo:** migración `20261031170000_add_handoff_to_tracking_campaigns` (campaña:
@@ -1237,6 +1238,22 @@ entra a la conversación. (Si se quiere que la IA se calle al entregar, es otra 
 > - **Pedírselo al Asistente:** no aplica; se configura en el detalle de la campaña.
 > - **Ojo:** los avisos son notificaciones dentro de Chatwoot (campana y push). El correo de
 >   notificación no sale en este servidor (SMTP del sistema roto: `docs/revision_correos.md`).
+
+> ✅ **P2b HECHA (27/10/2026) — la IA se calla cuando entra el vendedor + modal.**
+> - **Qué se hizo:** `TrackingCampaigns::HandoffAttention` (la regla de «atendido», compartida) y
+>   `HandoffAttendedJob`. Ganchos: `Message` (saliente público de un User en una conversación con
+>   interesado entregado → revisión a los 20 s, porque la marca de bot se guarda justo después de
+>   crear el mensaje) y `KanbanMove` (movimiento a mano). Al atender: `handoff_attended_at`, el
+>   seguimiento pasa a «objetivo cumplido» (se cancelan sus toques) y nota 🤝 en la conversación.
+>   `ContactTrackingResponseAnalyzerJob` sale antes de contestar o escalar a BotSeller si la
+>   conversación ya es del vendedor (`seller_owns?`). El barrido de 10 min queda de red de seguridad.
+> - **Por qué no bastaba pausar:** el analizador también contesta seguimientos «en pausa», y si
+>   ningún seguimiento contesta, entra BotSeller. El corte tiene que ser por conversación.
+> - **Pantalla:** la configuración pasó a un **modal** (molde de AddAgent.vue, sin scroll): en el
+>   detalle queda un renglón «🤝 Entrega de interesados · Tablero › Columna · plazo 4 h hábiles ·
+>   escalar a las 8 h» con el botón «Configurar». El modal trae 5 notas de cómo funciona (la 5.ª:
+>   la IA se calla) y los 4 campos en 2×2.
+> - **Pruebas:** `handoff_attention_spec` (7); 1104/1105 en verde (la misma inestable del Asistente).
 
 ---
 

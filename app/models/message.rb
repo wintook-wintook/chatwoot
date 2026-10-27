@@ -150,6 +150,9 @@ class Message < ApplicationRecord
   # proyecto@botseller_webhook_saliente: notifica a INTERNAL_WEBHOOK_URL también en salientes
   after_create_commit :dispatch_botseller_for_outgoing, if: :outgoing?, unless: -> { voice_call? || internal_conversation? }
 
+  # prospeccion P2b: el vendedor le escribió a un interesado entregado → la IA se calla
+  after_create_commit :check_prospect_handoff, if: -> { outgoing? && !private? && sender_type == 'User' }
+
   after_update_commit :dispatch_update_event
 
   # proyecto@automatizacion_campanas: el estado de entrega de WhatsApp llega al envío del seguimiento
@@ -538,6 +541,15 @@ class Message < ApplicationRecord
     BotSeller::OutgoingDispatchJob.perform_later(id)
   rescue StandardError => e
     Rails.logger.error "[Message] Error queueing botseller outgoing dispatch: #{e.message}"
+  end
+
+  # Unos segundos después: la marca de bot (sentiment_auto_reply) se guarda tras crear el mensaje.
+  def check_prospect_handoff
+    return unless TrackingCampaigns::HandoffAttention.pending?(conversation_id)
+
+    TrackingCampaigns::HandoffAttendedJob.set(wait: TrackingCampaigns::HandoffAttendedJob::DELAY).perform_later(conversation_id)
+  rescue StandardError => e
+    Rails.logger.error "[Message] Error revisando la entrega del prospecto: #{e.message}"
   end
 end
 

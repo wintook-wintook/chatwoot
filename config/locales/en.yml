@@ -267,6 +267,8 @@ en:
       deadline: " You have until %{at}."
       reminder: "⏰ %{who}the deadline to attend this interested prospect (“%{campaign}” campaign) passed and nobody has written to them."
       escalation: "🚨 %{who}this interested prospect from the “%{campaign}” campaign is still unattended since %{since}."
+      attended: "🤝 %{seller} attended the interested prospect: the AI Agent stops replying in this conversation."
+      someone: "Someone on the team"
   contact_trackings:
     opt_out_footer: "Don't want more emails? Unsubscribe here: %{url}"
   public_quotes:

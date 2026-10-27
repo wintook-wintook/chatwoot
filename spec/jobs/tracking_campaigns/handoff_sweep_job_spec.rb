@@ -37,12 +37,13 @@ RSpec.describe TrackingCampaigns::HandoffSweepJob do
     conversation.messages.where(private: true).pluck(:content)
   end
 
-  it 'una persona del equipo le escribió: atendido, sin recordatorio' do
+  it 'una persona del equipo le escribió: atendido (la IA se calla), sin recordatorio' do
     message = reply
 
     described_class.perform_now
 
     expect(tracking.reload.handoff_attended_at).to be_within(1.second).of(message.created_at)
+    expect(tracking.status).to eq('objective_met')
     expect(notes).to be_empty
   end
 

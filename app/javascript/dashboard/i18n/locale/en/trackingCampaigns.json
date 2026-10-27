@@ -198,10 +198,12 @@
     "HANDOFF_DUE": "✓ Handed off · due {at}",
     "HANDOFF_SETTINGS": {
       "TITLE": "🤝 Interested prospects hand-off",
+      "DESC": "What happens when a prospect says they are interested. Applies to the next interested prospects.",
       "HOW_1": "When a prospect says they are interested, their conversation goes straight to the Opportunities column you choose. Without a board, hand-off is only through the “Hand off” button.",
       "HOW_2": "It is assigned to the conversation’s seller (if none, to whoever created the campaign) and they get a notification with their deadline.",
       "HOW_3": "Deadline: if within those business hours nobody writes to the customer or moves their card, the seller gets a reminder. Empty = no deadline.",
       "HOW_4": "Escalate: if that time passes and it is still unattended, administrators are notified. Empty = no escalation. Business hours = the inbox working hours; without them, Monday to Friday.",
+      "HOW_5": "When the seller writes to the customer or moves their card, the AI Agent stops replying in that conversation.",
       "BOARD": "Opportunities board",
       "NO_BOARD": "None (button only)",
       "COLUMN": "Column",
@@ -211,8 +213,13 @@
       "ESCALATE": "Escalate to admins (business hours)",
       "NO_ESCALATE": "Do not escalate",
       "SAVE": "Save hand-off",
+      "CANCEL": "Cancel",
       "SAVED": "Hand-off saved. It applies to the next interested prospects.",
-      "ERROR": "Could not save. Try again."
+      "ERROR": "Could not save. Try again.",
+      "CONFIGURE": "Configure",
+      "SUMMARY_MANUAL": "Only with the “Hand off” button",
+      "SUMMARY_DUE": "{hours} business hours deadline",
+      "SUMMARY_ESCALATE": "escalate at {hours} h"
     },
     "HAND_OFF_DONE": "Handed off. Take it from the conversation.",
     "HAND_OFF_ERROR": "Couldn't hand off. Please try again.",

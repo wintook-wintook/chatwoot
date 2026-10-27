@@ -115,6 +115,13 @@ class TrackingCampaign < ApplicationRecord
     prospecting? && handoff_board_id.present? && handoff_column_id.present?
   end
 
+  # prospeccion P2: lo que muestran el detalle y el modal «Entrega de interesados».
+  def handoff_settings
+    { handoff_board_id: handoff_board_id, handoff_column_id: handoff_column_id,
+      handoff_due_hours: handoff_due_hours, handoff_escalate_hours: handoff_escalate_hours,
+      handoff_board_name: handoff_board&.process_name, handoff_column_name: handoff_column&.type_process_name }
+  end
+
   def saved?
     status == 'saved'
   end

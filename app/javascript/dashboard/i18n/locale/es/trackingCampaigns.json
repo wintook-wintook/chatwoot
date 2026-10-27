@@ -198,10 +198,12 @@
     "HANDOFF_DUE": "✓ Entregado · vence {at}",
     "HANDOFF_SETTINGS": {
       "TITLE": "🤝 Entrega de interesados",
+      "DESC": "Qué pasa cuando un prospecto dice que le interesa. Vale para los próximos interesados.",
       "HOW_1": "Cuando un prospecto dice que le interesa, su conversación entra sola a la columna de Oportunidades que elijas. Sin tablero, se entrega solo con el botón «Entregar».",
       "HOW_2": "Se le asigna al vendedor de la conversación (si no tiene, a quien creó la campaña) y le llega una notificación con su plazo.",
       "HOW_3": "Plazo: si en esas horas hábiles nadie le escribe al cliente ni mueve su tarjeta, se le recuerda al vendedor. Vacío = sin plazo.",
       "HOW_4": "Escalar: si se cumple ese tiempo y sigue sin atender, se avisa a los administradores. Vacío = no se escala. Horas hábiles = el horario de atención de la bandeja; sin horario, de lunes a viernes.",
+      "HOW_5": "Cuando el vendedor le escribe al cliente o mueve su tarjeta, el Agente IA deja de contestar en esa conversación.",
       "BOARD": "Tablero de Oportunidades",
       "NO_BOARD": "Ninguno (solo con el botón)",
       "COLUMN": "Columna",
@@ -211,8 +213,13 @@
       "ESCALATE": "Escalar a admins (horas hábiles)",
       "NO_ESCALATE": "No escalar",
       "SAVE": "Guardar entrega",
+      "CANCEL": "Cancelar",
       "SAVED": "Entrega guardada. Vale para los próximos interesados.",
-      "ERROR": "No se pudo guardar. Intenta de nuevo."
+      "ERROR": "No se pudo guardar. Intenta de nuevo.",
+      "CONFIGURE": "Configurar",
+      "SUMMARY_MANUAL": "Solo con el botón «Entregar»",
+      "SUMMARY_DUE": "plazo {hours} h hábiles",
+      "SUMMARY_ESCALATE": "escalar a las {hours} h"
     },
     "HAND_OFF_DONE": "Entregado. Tómalo desde su conversación.",
     "HAND_OFF_ERROR": "No se pudo entregar. Intenta de nuevo.",

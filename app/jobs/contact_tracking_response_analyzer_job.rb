@@ -58,6 +58,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       ContactTrackings::OptOut.call(message.conversation.contact, source: 'reply')
       return
     end
+    # prospeccion P2b: un vendedor ya atendió al interesado → ni el Agente IA ni BotSeller contestan
+    if TrackingCampaigns::HandoffAttention.seller_owns?(message.conversation)
+      Rails.logger.info "[Coordinator] 🤝 Conversación ##{message.conversation_id}: la atiende el vendedor, la IA no contesta"
+      return
+    end
     # prospeccion V2: respondió → no más toques automáticos (uno de recuperación en 3 días hábiles)
     active_trackings.each { |tracking| ContactTrackings::ProspectReply.call(tracking, at: message.created_at) }
     # prospeccion V5: en Prospección, en qué va el prospecto (interesado, no ahora, no le interesa…)

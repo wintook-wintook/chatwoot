@@ -195,7 +195,7 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   # prospeccion P2: y la entrega de interesados (tablero, columna, plazo, escalar)
   def prospecting_json(campaign)
     { prospecting_funnel: campaign.prospecting? ? TrackingCampaigns::ProspectingFunnel.for(campaign) : nil }
-      .merge(campaign.slice(*Api::V1::Accounts::TrackingCampaigns::HandoffSettingsController::FIELDS).symbolize_keys)
+      .merge(campaign.handoff_settings)
   end
 
   # Para modificar una Guardada: CampaignForm la vuelve a llenar con esto. Y, si está

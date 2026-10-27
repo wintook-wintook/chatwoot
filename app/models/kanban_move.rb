@@ -14,4 +14,15 @@ class KanbanMove < ApplicationRecord
   belongs_to :user, optional: true
 
   validates :source, inclusion: { in: SOURCES }
+
+  # prospeccion P2b: mover a mano la tarjeta de un interesado entregado cuenta como atenderlo
+  after_create_commit :check_prospect_handoff, if: -> { source == 'manual' && user_id.present? }
+
+  private
+
+  def check_prospect_handoff
+    return unless TrackingCampaigns::HandoffAttention.pending?(conversation_id)
+
+    TrackingCampaigns::HandoffAttendedJob.perform_later(conversation_id)
+  end
 end

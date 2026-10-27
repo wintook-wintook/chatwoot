@@ -94,6 +94,7 @@ export default {
       campaign: null,
       prospects: [],
       handingOff: null, // prospeccion V6
+      showHandoffModal: false, // prospeccion P2
       isLoading: false,
       currentPage: 1,
       pageSize: PAGE_SIZE,
@@ -183,6 +184,33 @@ export default {
     // prospeccion V6: en Prospección la tarjeta muestra su embudo
     isProspecting() {
       return this.campaign?.purpose === 'prospecting';
+    },
+    // prospeccion P2: «Oportunidades › Columna · plazo 4 h · escalar 8 h» o «solo con el botón».
+    handoffSummary() {
+      const c = this.campaign || {};
+      const t = key =>
+        this.$t(`TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.${key}`);
+      const parts = [
+        c.handoff_board_name
+          ? `${c.handoff_board_name} › ${c.handoff_column_name}`
+          : t('SUMMARY_MANUAL'),
+        c.handoff_due_hours
+          ? this.$t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.SUMMARY_DUE', {
+              hours: c.handoff_due_hours,
+            })
+          : t('NO_DUE'),
+      ];
+      if (c.handoff_escalate_hours) {
+        parts.push(
+          this.$t(
+            'TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.SUMMARY_ESCALATE',
+            {
+              hours: c.handoff_escalate_hours,
+            }
+          )
+        );
+      }
+      return parts.join(' · ');
     },
     funnelTitle() {
       return this.isProspecting
@@ -412,6 +440,9 @@ export default {
     // prospeccion P2: la entrega guardada vuelve al detalle sin recargar.
     onHandoffSaved(settings) {
       this.campaign = { ...this.campaign, ...settings };
+    },
+    closeHandoffModal() {
+      this.showHandoffModal = false;
     },
     // prospeccion P2: atendido, vencido o entregado (con su vencimiento).
     handoffLabel(p) {
@@ -833,13 +864,40 @@ export default {
         </div>
       </div>
 
-      <!-- prospeccion P2: entrega de interesados (tablero, plazo y escalar) -->
-      <CampaignHandoffSettings
+      <!-- prospeccion P2: entrega de interesados (resumen; se configura en el modal) -->
+      <div
         v-if="isProspecting"
-        :key="campaign.id"
-        :campaign="campaign"
-        @saved="onHandoffSaved"
-      />
+        class="flex items-center justify-between gap-3 p-3 mb-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
+      >
+        <div class="min-w-0">
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+            {{ $t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.TITLE') }}
+          </span>
+          <p class="mb-0 text-xs truncate text-slate-500 dark:text-slate-400">
+            {{ handoffSummary }}
+          </p>
+        </div>
+        <woot-button
+          size="small"
+          variant="smooth"
+          icon="settings"
+          @click="showHandoffModal = true"
+        >
+          {{ $t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.CONFIGURE') }}
+        </woot-button>
+      </div>
+      <woot-modal
+        v-if="isProspecting"
+        :show.sync="showHandoffModal"
+        :on-close="closeHandoffModal"
+      >
+        <CampaignHandoffSettings
+          v-if="showHandoffModal"
+          :campaign="campaign"
+          @saved="onHandoffSaved"
+          @close="closeHandoffModal"
+        />
+      </woot-modal>
 
       <!-- proyecto@automatizacion_campanas: Prospectos (sus seguimientos) e Inscritos
            (cada intento de inscripción, por lote o por automatización, y los omitidos). -->

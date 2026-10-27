@@ -252,6 +252,8 @@ es:
       deadline: " Tienes hasta el %{at}."
       reminder: "⏰ %{who}venció el plazo para atender a este interesado (campaña «%{campaign}») y nadie le ha escrito."
       escalation: "🚨 %{who}este interesado de la campaña «%{campaign}» sigue sin atender desde el %{since}."
+      attended: "🤝 %{seller} atendió al interesado: el Agente IA deja de contestar en esta conversación."
+      someone: "Alguien del equipo"
   contact_trackings:
     opt_out_footer: "¿No quieres recibir más correos? Date de baja aquí: %{url}"
   public_quotes:
