@@ -1429,7 +1429,9 @@ cada agente; el embudo de la IA sí cuenta, pero solo se ve si alguien eligió �
  │       Solo días hábiles y en horario de atención  [✓]                          │
  │       Espera antes del primer mensaje [0 min]                                  │
  │   ▸ Cuando el cliente responde                                                 │
- │       [✓] Dejar de escribirle si dice que no le interesa o no es la persona    │
+ │       [✓] Dejar de escribirle si dice que no le interesa                      │
+ │       [✓] Dejar de escribirle si dice que no es la persona (número o correo    │
+ │           equivocado) — prendida por omisión en TODAS, también en cobranza     │
  │       [✓] Si dice «ahora no», un solo mensaje más en 30 días                   │
  │       (la IA siempre lee cada respuesta para el embudo; esto solo decide       │
  │        qué hacer con lo que leyó)                                              │
@@ -1465,6 +1467,15 @@ cada agente; el embudo de la IA sí cuenta, pero solo se ve si alguien eligió �
 Las palabras clave del agente **no se pierden**: siguen marcando y suman al mismo número.
 Las pausas/cancelaciones por palabra clave siguen en «⚙️ Control».
 
+**Garantía para las palabras clave (WhatsApp y cualquier canal):**
+- `ContactTrackings::KeywordActionService` **no se toca**: sigue marcando (`interested_at`, `booked_at`),
+  etiquetando, asignando, pausando y cancelando exactamente igual.
+- La IA escribe en otros campos (`prospect_stage`, `prospect_exit`); nunca borra ni pisa una marca de
+  palabra clave. El embudo junta los dos con «o»: cada prospecto cuenta una vez.
+- **Ningún indicador baja** respecto a hoy: Respondieron, Interesados, Con cita, Objetivo cumplido y
+  Pausados/Cancelados por regla cuentan lo mismo o más. Esto se prueba en U2 con un caso que solo tiene
+  marcas de palabra clave (sin IA) y debe dar los mismos números que «Intenciones» hoy.
+
 #### 10.12.3 Reglas que dejan de depender del tipo
 
 | Regla | Antes (solo Prospección) | Después (todas) |
@@ -1477,10 +1488,11 @@ Las pausas/cancelaciones por palabra clave siguen en «⚙️ Control».
 
 #### 10.12.4 Datos y campañas que ya existen
 
-- **Columnas nuevas** en `tracking_campaigns`: `stop_when_not_interested` (bool, default true) y
-  `retry_not_now` (bool, default true).
-- **Migración de datos:** las campañas que hoy son `follow_up` quedan con las dos opciones en **false**,
-  así su comportamiento no cambia; las `prospecting`, en true (como hoy).
+- **Columnas nuevas** en `tracking_campaigns`: `stop_when_not_interested`, `stop_when_wrong_person` y
+  `retry_not_now` (bool, default true las tres).
+- **Migración de datos:** las campañas que hoy son `follow_up` quedan con las tres en **false**, así su
+  comportamiento no cambia; las `prospecting`, en true (como hoy). En campañas nuevas, «no es la persona»
+  viene prendida aunque se apaguen las otras (D25).
 - `purpose` **se queda en la tabla** (no se borra: la historia y los reportes lo usan), pero ya no se pide
   ni cambia nada. Las campañas nuevas se guardan con `prospecting` para que todo lo anterior las trate igual.
 - Las campañas de seguimiento ya en curso empiezan a llenar el embudo **desde ese día**; las respuestas
@@ -1522,6 +1534,52 @@ por correo con el mismo formulario y ver el mismo embudo en las dos.
 | D22 | La lista de campañas: ¿filtro por canal en lugar de las pestañas de tipo? | Sí |
 | D23 | ¿Reclasificar respuestas viejas (U6)? | No por ahora; el embudo cuenta desde que se active |
 | D24 | El nombre de la tarjeta | «Embudo» (sin «de prospección») |
+| D25 | ¿«No es la persona» con su propia casilla? | ✅ Sí, prendida por omisión en todas, también en cobranza (aceptada 27/10/2026) |
+| D26 | ¿Etiquetas del embudo según el objetivo («Prometió pagar» en cobranza)? | ✅ No por ahora: se quedan como están; queda para después (aceptada 27/10/2026) |
+| D27 | ¿Las palabras clave siguen contando? | ✅ Sí, igual que hoy y sumando con la IA; ningún indicador baja (confirmado 27/10/2026) |
+
+
+#### 10.12.8 Dos ejemplos de principio a fin
+
+**A · Cobranza por WhatsApp** — «Cobranza octubre», Agente IA «Cobranza amable», segmento «Saldo
+vencido» (120). Tope vacío (opcional en WhatsApp); casillas «no le interesa» y «ahora no» **apagadas**;
+«no es la persona» **prendida**.
+
+| Cliente | Responde | La IA lee | Qué pasa |
+|---|---|---|---|
+| Ana | «Ya pagué ayer, te mando el comprobante» | otra (respondió) | sigue el agente; si se marca pagado → objetivo cumplido |
+| Beto | «Te pago el viernes» | ahora no | sigue normal (casilla apagada) |
+| Carla | «No te voy a pagar» | no le interesa | sigue escribiéndole (casilla apagada) |
+| Daniel | «No soy Daniel, cambié de número» | no es la persona | **deja de escribirle** (D25) |
+
+```
+ Embudo   Contactados 120 · Respondieron 48 · Interesados 9 · Con cita 0
+          Ahora no 15 · No le interesa 6 · No es la persona 4 · Sin respuesta 30 · Objetivo cumplido 22
+ Hoy, «Intenciones» mostraría Respondieron 48 y casi todo lo demás en 0 (sin palabras clave).
+```
+
+**B · Prospección por correo** — «Constructoras Monterrey», Agente IA «Vendedor grúas», etiqueta
+«constructora» (300). Asunto + asunto B; tope 30 (obligatorio en correo); las tres casillas prendidas;
+entrega a «Ventas › Nuevos interesados» con plazo 4 h y escalar 8 h; puntuación «giro = constructora».
+
+| Prospecto | Responde | La IA lee | Qué pasa |
+|---|---|---|---|
+| (3 contactos) | — | — | dominio inexistente → omitidos «correo inválido» (V7a) |
+| (5 contactos) | — | — | rebote «la cuenta no existe» → marcados, envíos detenidos (V7b) |
+| Ing. Ruiz | «Mándame precios de la de 30 t» | interesado · precio · decide | entrega automática a Oportunidades, aviso a Laura con plazo; 65 pts 🔥 |
+| (Laura le escribe) | — | — | «✓ Atendido» y la IA se calla (P2b) |
+| Sra. Paz | «Ahora no, llámame en enero» | ahora no | un solo correo más en 30 días |
+| Sr. Lima | «Ya tenemos proveedor» | no le interesa | ya no se le escribe |
+| Contadora | «Es con el gerente» | no es la persona | ya no se le escribe |
+| Alguien | «BAJA» | baja | «no contactar» en todas las campañas (V4) |
+
+```
+ Embudo   Contactados 289 · Respondieron 41 · Interesados 12 · Con cita 3 · Entregados 12 · 🔥 7
+          Ahora no 8 · No le interesa 14 · No es la persona 5 · Baja 2 · Rebotó 5
+ Asuntos  A 10.3 % · B 18.1 % ← va ganando
+```
+
+Lo único que cambia entre A y B es lo que el usuario configura, no un «tipo» que tenga que adivinar.
 
 ---
 
