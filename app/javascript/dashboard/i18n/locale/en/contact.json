@@ -481,6 +481,22 @@
     "SAVED": "Contact owner updated",
     "ERROR": "Could not change the contact owner"
   },
+  "CONTACT_OPT_OUT": {
+    "LABEL": "Asked not to be contacted",
+    "HINT": "No campaign will enroll them and their follow-ups are cancelled. Use it if they ask by phone or in person.",
+    "MARK": "Do not contact",
+    "UNDO": "Remove",
+    "MARKED": "Marked as “do not contact”. Their follow-ups were cancelled.",
+    "UNDONE": "They can be contacted again.",
+    "ERROR": "Couldn't save. Please try again.",
+    "BOUNCED": "Their email bounced",
+    "BOUNCED_HINT": "fix the email to write to them again",
+    "SOURCE": {
+      "link": "from the email link",
+      "reply": "asked when replying",
+      "agent": "marked by an agent"
+    }
+  },
   "CONTACT_PAGE": {
     "BACK": "Back",
     "TABS": {

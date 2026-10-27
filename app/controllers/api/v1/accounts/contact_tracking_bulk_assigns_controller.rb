@@ -71,8 +71,14 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
       skip_active: ActiveModel::Type::Boolean.new.cast(params.fetch(:skip_active, true)),
       window: window_params,
       audience_source: audience_source_param,
+      **prospecting_params,
       **extra
     )
+  end
+
+  # prospeccion F1 / V0 / P3: asunto, propósito y asunto B de la prueba A/B
+  def prospecting_params
+    { email_subject: params[:email_subject], purpose: params[:purpose], email_subject_b: params[:email_subject_b] }
   end
 
   def render_result(result)
@@ -93,8 +99,15 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
     {
       ends_at: parse_scheduled_for(params[:ends_at]),
       entry_delay_minutes: params[:entry_delay_minutes].presence&.to_i,
-      respect_working_hours: params.key?(:respect_working_hours) ? ActiveModel::Type::Boolean.new.cast(params[:respect_working_hours]) : nil
+      respect_working_hours: params.key?(:respect_working_hours) ? ActiveModel::Type::Boolean.new.cast(params[:respect_working_hours]) : nil,
+      daily_cap: params[:daily_cap].presence&.to_i, # prospeccion V3: por lote, reparte en días hábiles
+      **TrackingCampaign::REPLY_OPTIONS.index_with { |option| boolean_param(option) } # §10.12 (D20, D25)
     }
+  end
+
+  # nil si no viene (y BulkAssignService toma el valor por omisión).
+  def boolean_param(key)
+    params.key?(key) ? ActiveModel::Type::Boolean.new.cast(params[key]) : nil
   end
 
   def parse_scheduled_for(value)

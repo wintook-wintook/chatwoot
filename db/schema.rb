@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_31_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_31_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1041,6 +1041,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_100000) do
     t.bigint "inbox_id", null: false
     t.bigint "account_id", null: false
     t.string "objective", null: false
+    t.datetime "prospect_classified_at"
+    t.string "prospect_exit"
+    t.string "prospect_stage"
     t.datetime "scheduled_for", null: false
     t.integer "max_attempts", default: 3, null: false
     t.integer "attempt_count", default: 0, null: false
@@ -1077,6 +1080,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_100000) do
     t.datetime "booked_at"
     t.boolean "paused_by_campaign", default: false, null: false
     t.datetime "dispatched_at"
+    t.datetime "handed_off_at"
+    t.datetime "handoff_due_at"
+    t.datetime "handoff_escalate_at"
+    t.datetime "handoff_attended_at"
+    t.datetime "handoff_reminded_at"
+    t.datetime "handoff_escalated_at"
+    t.string "subject_variant"
+    t.integer "prospect_score"
+    t.jsonb "prospect_score_parts", default: {}, null: false
+    t.datetime "prospect_scored_at"
+    t.jsonb "prospect_signals", default: [], null: false
+    t.string "prospect_decision_maker"
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["dispatched_at"], name: "index_contact_trackings_dispatched", where: "((status)::text = 'active'::text)"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
@@ -1085,17 +1100,25 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_100000) do
     t.index ["contact_id"], name: "index_contact_trackings_on_contact_id"
     t.index ["conversation_id", "inbox_id"], name: "index_contact_trackings_on_conversation_id_and_inbox_id"
     t.index ["conversation_id"], name: "index_contact_trackings_on_conversation_id"
+    t.index ["handed_off_at"], name: "index_contact_trackings_on_pending_handoff", where: "((handed_off_at IS NOT NULL) AND (handoff_attended_at IS NULL))"
     t.index ["inbox_id"], name: "index_contact_trackings_on_inbox_id"
     t.index ["last_intent"], name: "index_contact_trackings_on_last_intent"
     t.index ["scheduled_for"], name: "index_contact_trackings_on_scheduled_for"
     t.index ["status", "scheduled_for"], name: "index_contact_trackings_on_status_and_scheduled_for"
     t.index ["status"], name: "index_contact_trackings_on_status"
+    t.index ["tracking_campaign_id", "prospect_score"], name: "index_contact_trackings_on_campaign_and_score"
+    t.index ["tracking_campaign_id", "prospect_stage"], name: "index_contact_trackings_on_campaign_and_prospect_stage"
+    t.index ["tracking_campaign_id", "subject_variant"], name: "index_contact_trackings_on_campaign_and_subject_variant", where: "(subject_variant IS NOT NULL)"
     t.index ["tracking_campaign_id"], name: "index_contact_trackings_on_tracking_campaign_id"
   end
 
   create_table "contacts", id: :serial, force: :cascade do |t|
     t.string "name", default: ""
     t.string "email"
+    t.datetime "opted_out_at"
+    t.string "opted_out_source"
+    t.datetime "email_bounced_at"
+    t.string "email_bounce_reason"
     t.string "phone_number"
     t.integer "account_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -2080,9 +2103,22 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_100000) do
     t.integer "entry_delay_minutes", default: 0, null: false
     t.boolean "respect_working_hours", default: true, null: false
     t.integer "daily_cap"
+    t.string "email_subject"
     t.jsonb "audience", default: {}, null: false
     t.string "paused_reason"
+    t.string "purpose", default: "follow_up", null: false
     t.datetime "paused_at"
+    t.bigint "handoff_board_id"
+    t.bigint "handoff_column_id"
+    t.integer "handoff_due_hours"
+    t.integer "handoff_escalate_hours"
+    t.string "email_subject_b"
+    t.string "subject_ab_winner"
+    t.jsonb "scoring", default: {}, null: false
+    t.boolean "stop_when_not_interested", default: true, null: false
+    t.boolean "stop_when_wrong_person", default: true, null: false
+    t.boolean "retry_not_now", default: true, null: false
+    t.index ["account_id", "purpose"], name: "index_tracking_campaigns_on_account_id_and_purpose"
     t.index ["account_id", "status"], name: "index_tracking_campaigns_on_account_id_and_status"
     t.index ["account_id"], name: "index_tracking_campaigns_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_campaigns_on_inbox_id"
@@ -2135,6 +2171,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_100000) do
 
   create_table "tracking_templates", force: :cascade do |t|
     t.bigint "account_id", null: false
+    t.text "email_signature"
     t.string "name", null: false
     t.string "objective", null: false
     t.text "ai_context"

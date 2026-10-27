@@ -211,7 +211,12 @@ Rails.application.routes.draw do
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
             post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada
+            post :pause, on: :member, to: 'tracking_campaigns/pauses#create' # pausar a mano
             post :resume, on: :member, to: 'tracking_campaigns/resumes#create' # proyecto@automatizacion_campanas: reanudar pausada
+            post :hand_off, on: :member, to: 'tracking_campaigns/hand_offs#create' # prospeccion V6: entregar un interesado
+            patch :handoff_settings, on: :member, to: 'tracking_campaigns/handoff_settings#update' # prospeccion P2: tablero, plazo y escalar
+            post :subject_winner, on: :member, to: 'tracking_campaigns/subject_winners#create' # prospeccion P3: quedarse con un asunto
+            patch :scoring, on: :member, to: 'tracking_campaigns/scorings#update' # prospeccion P4: pesos y reglas de la puntuación
           end
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard
             resource :overview, only: [:show], controller: :overview
@@ -492,6 +497,8 @@ Rails.application.routes.draw do
               resources :contact_inboxes, only: [:create]
               resource :owner, only: [:show, :update] # Responsable fijo del contacto
               resource :summary, only: [:show] # Página del contacto › Resumen
+              resource :opt_out, only: [:create, :destroy] # prospeccion V4: marcar / quitar «no contactar»
+              resource :prospect_score, only: [:show] # prospeccion P4 (D19): su puntuación más reciente
               resources :labels, only: [:create, :index]
               resources :notes
             end
@@ -976,6 +983,9 @@ Rails.application.routes.draw do
   get  'reporte/:token',             to: 'public/service_reports#show', as: :public_service_report # Plan-Trabajo-Campo R1
   post 'cotizacion/:token/aceptar',  to: 'public/quotes#accept', as: :public_quote_accept
   post 'cotizacion/:token/rechazar', to: 'public/quotes#reject', as: :public_quote_reject
+  # prospeccion V4 — baja desde el enlace de un correo del Agente IA (GET confirma, POST da de baja)
+  get  'baja/:token', to: 'public/opt_outs#show', as: :public_opt_out
+  post 'baja/:token', to: 'public/opt_outs#create'
 
   # Plan-Trabajo-Campo R5 — portal del cliente de su orden y visita del técnico externo.
   get  'servicio/:token',            to: 'public/service_portals#show',  as: :public_service_portal

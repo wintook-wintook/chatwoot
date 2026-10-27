@@ -510,6 +510,22 @@
     "SAVED": "Responsable fijo actualizado",
     "ERROR": "No se pudo cambiar el responsable fijo"
   },
+  "CONTACT_OPT_OUT": {
+    "LABEL": "Pidió no ser contactado",
+    "HINT": "Ninguna campaña lo inscribirá y se cancelan sus seguimientos. Úsalo si lo pide por teléfono o en persona.",
+    "MARK": "No contactar",
+    "UNDO": "Quitar",
+    "MARKED": "Marcado como «no contactar». Se cancelaron sus seguimientos.",
+    "UNDONE": "Ya se le puede volver a contactar.",
+    "ERROR": "No se pudo guardar. Intenta de nuevo.",
+    "BOUNCED": "Su correo rebotó",
+    "BOUNCED_HINT": "corrige el correo para volver a escribirle",
+    "SOURCE": {
+      "link": "desde el enlace del correo",
+      "reply": "lo pidió al responder",
+      "agent": "lo marcó un agente"
+    }
+  },
   "CONTACT_PAGE": {
     "BACK": "Regresar",
     "TABS": {

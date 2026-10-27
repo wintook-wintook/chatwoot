@@ -18,6 +18,7 @@
 #  calendar_event_duration       :integer          default(30)
 #  calendar_integration_ids      :jsonb            not null
 #  complementary_prompt          :text
+#  email_signature               :text
 #  keyword_actions               :jsonb            not null
 #  name                          :string           not null
 #  objective                     :string           not null

@@ -252,6 +252,27 @@ en:
     errors:
       not_found: 'Maintenance plan not found'
       asset_not_found: 'Equipment not found'
+  # prospeccion V4 — opt-out from the link in an AI Agent email
+  public_opt_out:
+    title: "Don't want to receive our emails anymore?"
+    body: "Confirm and %{name} won't write to you again."
+    confirm: "Yes, unsubscribe me"
+    done_title: "Done, we won't write to you again"
+    done_body: "%{name} won't contact you again. If this was a mistake, reply to us and we'll fix it."
+  tracking_campaigns:
+    subject_test:
+      invalid: "Choose subject A or B of a campaign with a subject test."
+    hand_off:
+      not_interested: "Only an interested prospect can be handed off."
+      board_reason: "Prospecting: interested in “%{campaign}”"
+      note: "Interested prospect from the “%{campaign}” campaign. Write to them or move their card in Opportunities."
+      deadline: " You have until %{at}."
+      reminder: "⏰ %{who}the deadline to attend this interested prospect (“%{campaign}” campaign) passed and nobody has written to them."
+      escalation: "🚨 %{who}this interested prospect from the “%{campaign}” campaign is still unattended since %{since}."
+      attended: "🤝 %{seller} attended the interested prospect: the AI Agent stops replying in this conversation."
+      someone: "Someone on the team"
+  contact_trackings:
+    opt_out_footer: "Don't want more emails? Unsubscribe here: %{url}"
   public_quotes:
     title: 'Quote'
     for: 'For %{name}'

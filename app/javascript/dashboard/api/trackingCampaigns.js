@@ -29,9 +29,36 @@ class TrackingCampaignsAPI extends ApiClient {
     return axios.post(`${this.url}/${id}/launch`);
   }
 
-  // proyecto@automatizacion_campanas — reanuda una campaña pausada por error de Meta.
+  // Botón «Pausar campaña»: pausa a mano una Programada o En curso.
+  pause(id) {
+    return axios.post(`${this.url}/${id}/pause`);
+  }
+
+  // proyecto@automatizacion_campanas — reanuda una campaña pausada (por error de Meta o a mano).
   resume(id) {
     return axios.post(`${this.url}/${id}/resume`);
+  }
+
+  // prospeccion V6: entregar un prospecto interesado a un vendedor
+  handOff(id, trackingId) {
+    return axios.post(`${this.url}/${id}/hand_off`, {
+      tracking_id: trackingId,
+    });
+  }
+
+  // prospeccion P4: pesos y reglas de la puntuación ({ scoring } · { copy_from_campaign_id } · { reset: true })
+  updateScoring(id, body) {
+    return axios.patch(`${this.url}/${id}/scoring`, body);
+  }
+
+  // prospeccion P3: quedarse con el asunto A o B de la prueba
+  chooseSubject(id, variant) {
+    return axios.post(`${this.url}/${id}/subject_winner`, { variant });
+  }
+
+  // prospeccion P2: tablero/columna de Oportunidades, plazo y escalar
+  updateHandoffSettings(id, settings) {
+    return axios.patch(`${this.url}/${id}/handoff_settings`, settings);
   }
 }
 

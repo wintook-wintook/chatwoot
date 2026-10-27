@@ -7,6 +7,7 @@
 #  id                    :bigint           not null, primary key
 #  audience              :jsonb            not null
 #  daily_cap             :integer
+#  email_subject         :string
 #  ends_at               :datetime
 #  entry_delay_minutes   :integer          default(0), not null
 #  mode                  :string           default("batch"), not null
@@ -14,6 +15,7 @@
 #  objective             :string
 #  paused_at             :datetime
 #  paused_reason         :string
+#  purpose               :string           default("follow_up"), not null
 #  respect_working_hours :boolean          default(TRUE), not null
 #  scheduled_for         :datetime
 #  status                :string           default("running"), not null
@@ -26,11 +28,12 @@
 #
 # Indexes
 #
-#  index_tracking_campaigns_on_account_id             (account_id)
-#  index_tracking_campaigns_on_account_id_and_status  (account_id,status)
-#  index_tracking_campaigns_on_inbox_id               (inbox_id)
-#  index_tracking_campaigns_on_tracking_template_id   (tracking_template_id)
-#  index_tracking_campaigns_on_user_id                (user_id)
+#  index_tracking_campaigns_on_account_id              (account_id)
+#  index_tracking_campaigns_on_account_id_and_purpose  (account_id,purpose)
+#  index_tracking_campaigns_on_account_id_and_status   (account_id,status)
+#  index_tracking_campaigns_on_inbox_id                (inbox_id)
+#  index_tracking_campaigns_on_tracking_template_id    (tracking_template_id)
+#  index_tracking_campaigns_on_user_id                 (user_id)
 #
 # Foreign Keys
 #
@@ -61,11 +64,19 @@
 class TrackingCampaign < ApplicationRecord
   STATUSES = %w[saved draft running paused finished].freeze
   MODES = %w[batch continuous].freeze
+  # prospeccion V0: seguimiento (ya te conocen) o prospección (clientes nuevos).
+  PURPOSES = %w[follow_up prospecting].freeze
+
+  # §10.12 (D20, D25): qué hace la campaña con lo que la IA leyó en la respuesta del cliente.
+  REPLY_OPTIONS = %i[stop_when_not_interested stop_when_wrong_person retry_not_now].freeze
 
   belongs_to :account
   belongs_to :tracking_template, optional: true
   belongs_to :inbox, optional: true
   belongs_to :user, optional: true
+  # prospeccion P2: a qué tablero/columna de Oportunidades entra el interesado
+  belongs_to :handoff_board, class_name: 'KanbanTypeProcess', optional: true
+  belongs_to :handoff_column, class_name: 'KanbanProcess', optional: true
 
   has_many :contact_trackings, dependent: :nullify
   has_many :entries, class_name: 'TrackingCampaignEntry', dependent: :delete_all
@@ -76,9 +87,18 @@ class TrackingCampaign < ApplicationRecord
   # validación explícita, la de ApplicationRecord lo limitaría a 255 y el
   # create! reventaría con RecordInvalid en plantillas de objective largo.
   validates :objective, length: { maximum: 500 }, allow_nil: true
+  # prospeccion F1: asunto del primer correo cuando la bandeja es de correo.
+  validates :email_subject, length: { maximum: TrackingCampaigns::EmailSubject::MAX_LENGTH }, allow_nil: true
+  # prospeccion P3: prueba A/B de asuntos (el A es email_subject)
+  validates :email_subject_b, length: { maximum: TrackingCampaigns::EmailSubject::MAX_LENGTH }, allow_nil: true
+  validates :subject_ab_winner, inclusion: { in: TrackingCampaigns::SubjectTest::VARIANTS }, allow_nil: true
   validates :mode, inclusion: { in: MODES }
+  validates :purpose, inclusion: { in: PURPOSES }
   validates :entry_delay_minutes, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :daily_cap, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  # prospeccion P2: horas hábiles (vacío = sin plazo / no escalar)
+  validates :handoff_due_hours, :handoff_escalate_hours, numericality: { only_integer: true, in: 1..720 }, allow_nil: true
+  validate :handoff_column_in_board
   validate :window_order
 
   scope :active, -> { where(status: %w[saved draft running paused]) }
@@ -90,6 +110,22 @@ class TrackingCampaign < ApplicationRecord
 
   def continuous?
     mode == 'continuous'
+  end
+
+  def prospecting?
+    purpose == 'prospecting'
+  end
+
+  # prospeccion P2: con tablero de entrega, el interesado se entrega solo (§10.12: en todas).
+  def auto_handoff?
+    handoff_board_id.present? && handoff_column_id.present?
+  end
+
+  # prospeccion P2: lo que muestran el detalle y el modal «Entrega de interesados».
+  def handoff_settings
+    { handoff_board_id: handoff_board_id, handoff_column_id: handoff_column_id,
+      handoff_due_hours: handoff_due_hours, handoff_escalate_hours: handoff_escalate_hours,
+      handoff_board_name: handoff_board&.process_name, handoff_column_name: handoff_column&.type_process_name }
   end
 
   def saved?
@@ -120,5 +156,14 @@ class TrackingCampaign < ApplicationRecord
     return if ends_at.blank? || scheduled_for.blank? || ends_at > scheduled_for
 
     errors.add(:ends_at, 'debe ser posterior al inicio')
+  end
+
+  # prospeccion P2: la columna es del tablero elegido y los dos son de esta cuenta.
+  def handoff_column_in_board
+    return if handoff_board_id.blank? && handoff_column_id.blank?
+    return errors.add(:handoff_column_id, 'elige el tablero y la columna') if handoff_board.nil? || handoff_column.nil?
+    return errors.add(:handoff_board_id, 'no es de esta cuenta') if handoff_board.account_id != account_id
+
+    errors.add(:handoff_column_id, 'no es de ese tablero') if handoff_column.kanban_type_process_id != handoff_board_id
   end
 end

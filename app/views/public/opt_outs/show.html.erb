@@ -1,0 +1,17 @@
+<%# prospeccion V4 — confirmar la baja (Public::OptOutsController) %>
+<% content_for :title, t('public_opt_out.title') %>
+<% content_for :hide_print, true %>
+<div class="p-6 mt-6 bg-white border rounded-xl border-slate-200">
+  <% if @contact.opted_out? %>
+    <h1 class="text-xl font-semibold"><%= t('public_opt_out.done_title') %></h1>
+    <p class="mt-2 text-slate-600"><%= t('public_opt_out.done_body', name: @account.name) %></p>
+  <% else %>
+    <h1 class="text-xl font-semibold"><%= t('public_opt_out.title') %></h1>
+    <p class="mt-2 text-slate-600"><%= t('public_opt_out.body', name: @account.name) %></p>
+    <%= form_with url: public_opt_out_path(params[:token]), method: :post, local: true, class: 'mt-5' do %>
+      <button type="submit" class="px-4 py-2 font-medium text-white rounded-md bg-indigo-600 hover:bg-indigo-700">
+        <%= t('public_opt_out.confirm') %>
+      </button>
+    <% end %>
+  <% end %>
+</div>
