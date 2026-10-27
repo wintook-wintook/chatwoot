@@ -112,7 +112,17 @@
       "APPOINTMENT": "Agendaron",
       "OBJECTIVE_MET": "Objetivo cumplido",
       "PAUSED_RULE": "Pausados (Regla)",
-      "CANCELLED_RULE": "Cancelados (Regla)"
+      "CANCELLED_RULE": "Cancelados (Regla)",
+      "P_TITLE": "Embudo de prospección",
+      "P_CONTACTED": "Contactados",
+      "P_REPLIED": "Respondieron",
+      "P_INTERESTED": "Interesados",
+      "P_HANDED_OFF": "Entregados",
+      "P_NOT_NOW": "No ahora",
+      "P_NOT_INTERESTED": "No le interesa",
+      "P_WRONG_PERSON": "No es la persona",
+      "P_OPTED_OUT": "Baja",
+      "P_NO_REPLY": "Sin respuesta"
     },
     "PROSPECTS": "Prospectos",
     "PROSPECTS_EMPTY": "Esta campaña no tiene prospectos.",
@@ -134,7 +144,16 @@
       "del_sent": "El mensaje salió del sistema y WhatsApp lo aceptó, pero aún no confirma que haya llegado al contacto.",
       "del_unconfirmed": "WhatsApp aceptó el mensaje hace más de 24 h y nunca confirmó la entrega. No se reenvía: si sí llegó, el contacto lo recibiría dos veces.",
       "del_retrying": "WhatsApp rechazó el envío por algo temporal (límite de velocidad o falla de Meta); el mismo intento se vuelve a enviar solo.",
-      "del_failed": "El canal no pudo entregar el último mensaje (número inválido, bloqueo u otro rechazo)."
+      "del_failed": "El canal no pudo entregar el último mensaje (número inválido, bloqueo u otro rechazo).",
+      "p_contacted": "Ya se les escribió al menos una vez.",
+      "p_replied": "Respondieron al menos una vez (se clasificó su respuesta).",
+      "p_interested": "Mostraron interés: pidieron precio, información, una cita o una llamada. Incluye a los ya entregados.",
+      "p_handed_off": "Interesados que ya se entregaron a un vendedor.",
+      "p_not_now": "Les interesa, pero no ahora: se les vuelve a escribir una sola vez a los 30 días.",
+      "p_not_interested": "Dijeron que no les interesa; ya no se les escribe.",
+      "p_wrong_person": "No eran la persona indicada; ya no se les escribe.",
+      "p_opted_out": "Pidieron no ser contactados (enlace del correo, respuesta o un agente).",
+      "p_no_reply": "Agotaron sus toques sin responder."
     },
     "INTENT_VALUES": {
       "tracking": "Respondió",
@@ -170,6 +189,10 @@
       "ACTION": "Acción"
     },
     "OPEN_CONVERSATION": "Abrir conversación",
+    "HAND_OFF": "Entregar",
+    "HANDED_OFF": "✓ Entregado",
+    "HAND_OFF_DONE": "Entregado. Tómalo desde su conversación.",
+    "HAND_OFF_ERROR": "No se pudo entregar. Intenta de nuevo.",
     "TYPE": "Tipo",
     "WINDOW": "Ventana",
     "TABS": {

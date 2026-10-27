@@ -33,6 +33,13 @@ class TrackingCampaignsAPI extends ApiClient {
   resume(id) {
     return axios.post(`${this.url}/${id}/resume`);
   }
+
+  // prospeccion V6: entregar un prospecto interesado a un vendedor
+  handOff(id, trackingId) {
+    return axios.post(`${this.url}/${id}/hand_off`, {
+      tracking_id: trackingId,
+    });
+  }
 }
 
 export default new TrackingCampaignsAPI();

@@ -1022,6 +1022,21 @@ Orden propuesto: **F1 → F2 → F4 → F3**. Las tres primeras son rápidas y s
 >   fallas del analizador son las previas.
 > - **Costo:** una llamada corta a gpt-4o-mini por respuesta, solo en campañas de Prospección.
 
+> ✅ **V6 HECHA (27/10/2026) — embudo de prospección y entregar.**
+> - **Qué se hizo:** `TrackingCampaigns::ProspectingFunnel` (contactados · respondieron · interesados ·
+>   entregados · no ahora · no le interesa · no es la persona · baja · sin respuesta) en el JSON de la
+>   campaña (`prospecting_funnel`, solo en Prospección); la lista de prospectos trae `prospect_stage` y
+>   `prospect_exit`; `POST /tracking_campaigns/:id/hand_off` marca a un interesado como entregado.
+> - **Pantalla:** en el detalle de una campaña de Prospección, la tarjeta «🎯» pasa a «Embudo de
+>   prospección», con tasas sobre contactados; cada número filtra la lista (con su explicación).
+>   En la fila de un interesado, botón «Entregar»; los entregados muestran «✓ Entregado».
+> - **Pruebas:** `prospecting_funnel_spec` y 2 en `tracking_campaigns_controller_spec`.
+> - **Ojo:** respuestas anteriores a V5 no tienen etapa (la campaña #308 sale «sin respuesta»).
+>
+> 🎉 **Prospección v1.0 COMPLETA (V0–V6).** Lo que sigue (v1.1): entregar con plazo y avisos (P2,
+> necesita D4), validar correos antes de enviar, puntuación 0–100 con datos reales, A/B de asuntos,
+> multicanal correo → WhatsApp con permiso.
+
 Orden: **V0 → V1 → V2 → V3 → V4 → V5 → V6**. Con V0–V4 el envío ya es correcto;
 con V5–V6 ya es prospección (se sabe quién está interesado y cuánto rinde la campaña).
 
@@ -1055,8 +1070,8 @@ de la empresa (no código). Se marca conforme avanzan las fases.
 | 4 · Cumplir: baja, no contactar, aviso de privacidad | V4 ✅ · D7 (legal) | 🟡 falta D7 |
 | 5 · Que llegue: dominio, calentamiento, tope diario | V3 ✅ tope · empresa: dominio con SPF/DKIM/DMARC | 🟡 falta el dominio |
 | 6 · Calificar respuestas | V5 ✅ | ✅ |
-| 7 · Entregar al vendedor | V6 lista «Interesados» · v1.1: P2 con plazo y avisos | ⏳ |
-| 8 · Medir | V6 embudo y tasas | ⏳ |
+| 7 · Entregar al vendedor | V6 ✅ «Entregar» · v1.1: P2 con plazo y avisos | 🟡 falta P2 |
+| 8 · Medir | V6 ✅ embudo y tasas | ✅ |
 
 ### 10.7 Decisiones de este plan
 

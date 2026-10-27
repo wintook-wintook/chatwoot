@@ -188,7 +188,12 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
       stats: aggregate_stats(status_counts || {}),
       delivery: aggregate_delivery(delivery_counts || {}),
       funnel: funnel_counts || EMPTY_FUNNEL
-    }.merge(editable_json(campaign))
+    }.merge(editable_json(campaign), prospecting_json(campaign))
+  end
+
+  # prospeccion V6: el embudo de prospección (solo en campañas de Prospección)
+  def prospecting_json(campaign)
+    { prospecting_funnel: campaign.prospecting? ? TrackingCampaigns::ProspectingFunnel.for(campaign) : nil }
   end
 
   # Para modificar una Guardada: CampaignForm la vuelve a llenar con esto. Y, si está

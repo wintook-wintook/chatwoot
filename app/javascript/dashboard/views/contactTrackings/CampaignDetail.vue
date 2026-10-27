@@ -63,6 +63,17 @@ const PROSPECT_FILTERS = {
   intent_paused_rule: p => p.status === 'paused' && p.rule_action === 'pause',
   intent_cancelled_rule: p =>
     p.status === 'cancelled' && p.rule_action === 'cancel',
+  // prospeccion V6: embudo de prospección (etapas y salidas de V5)
+  p_contacted: p => p.attempt_count > 0,
+  p_replied: p => !!p.prospect_stage,
+  p_interested: p => ['interested', 'handed_off'].includes(p.prospect_stage),
+  p_handed_off: p => p.prospect_stage === 'handed_off',
+  p_not_now: p => p.prospect_exit === 'not_now',
+  p_not_interested: p => p.prospect_exit === 'not_interested',
+  p_wrong_person: p => p.prospect_exit === 'wrong_person',
+  p_opted_out: p => p.prospect_exit === 'opted_out',
+  p_no_reply: p =>
+    p.status === 'completed' && !p.prospect_stage && !p.prospect_exit,
   ctrl_pending: p => p.status === 'pending' || p.status === 'scheduled',
   ctrl_completed_replied: p => p.status === 'completed' && !!p.last_intent,
   ctrl_completed_no_reply: p => p.status === 'completed' && !p.last_intent,
@@ -80,6 +91,7 @@ export default {
     return {
       campaign: null,
       prospects: [],
+      handingOff: null, // prospeccion V6
       isLoading: false,
       currentPage: 1,
       pageSize: PAGE_SIZE,
@@ -166,7 +178,48 @@ export default {
     hasFunnel() {
       return (this.funnel.replied || 0) > 0;
     },
+    // prospeccion V6: en Prospección la tarjeta muestra su embudo
+    isProspecting() {
+      return this.campaign?.purpose === 'prospecting';
+    },
+    funnelTitle() {
+      return this.isProspecting
+        ? this.$t('TRACKING_CAMPAIGN_DETAIL.FUNNEL.P_TITLE')
+        : this.$t('TRACKING_CAMPAIGN_DETAIL.FUNNEL.TITLE');
+    },
+    prospectingKpis() {
+      const f = this.campaign?.prospecting_funnel || {};
+      const contacted = f.contacted || 0;
+      const rate = n =>
+        contacted ? `${Math.round(((n || 0) * 100) / contacted)} %` : '';
+      const kpi = (key, value, color, extra = {}) => ({
+        key,
+        value: value || 0,
+        color,
+        filter: `p_${key.slice(2).toLowerCase()}`,
+        ...extra,
+      });
+      return [
+        kpi('P_CONTACTED', f.contacted, 'text-slate-800 dark:text-slate-100'),
+        kpi('P_REPLIED', f.replied, 'text-slate-800 dark:text-slate-100', {
+          rate: rate(f.replied),
+        }),
+        kpi(
+          'P_INTERESTED',
+          f.interested,
+          'text-green-600 dark:text-green-500',
+          { rate: rate(f.interested) }
+        ),
+        kpi('P_HANDED_OFF', f.handed_off, 'text-woot-600 dark:text-woot-500'),
+        kpi('P_NOT_NOW', f.not_now, 'text-amber-800 dark:text-amber-500'),
+        kpi('P_NOT_INTERESTED', f.not_interested, 'text-slate-500'),
+        kpi('P_WRONG_PERSON', f.wrong_person, 'text-slate-500'),
+        kpi('P_OPTED_OUT', f.opted_out, 'text-red-500 dark:text-red-400'),
+        kpi('P_NO_REPLY', f.no_reply, 'text-slate-500'),
+      ];
+    },
     funnelKpis() {
+      if (this.isProspecting) return this.prospectingKpis;
       return [
         {
           key: 'REPLIED',
@@ -281,6 +334,7 @@ export default {
           paused_reason: data.paused_reason,
           stats: data.stats,
           funnel: data.funnel,
+          prospecting_funnel: data.prospecting_funnel, // prospeccion V6
           delivery: data.delivery,
         };
       } catch (error) {
@@ -333,6 +387,22 @@ export default {
       this.currentPage = page;
     },
     // Clic en un KPI: 'clear' o volver a clicar el activo limpia; si no, filtra.
+    async handOff(prospect) {
+      this.handingOff = prospect.id;
+      try {
+        await TrackingCampaignsAPI.handOff(this.campaignId, prospect.id);
+        prospect.prospect_stage = 'handed_off';
+        useAlert(this.$t('TRACKING_CAMPAIGN_DETAIL.HAND_OFF_DONE'));
+        this.refreshKpis();
+      } catch (error) {
+        useAlert(
+          error.response?.data?.error ||
+            this.$t('TRACKING_CAMPAIGN_DETAIL.HAND_OFF_ERROR')
+        );
+      } finally {
+        this.handingOff = null;
+      }
+    },
     applyFilter(filterId, label) {
       if (!filterId) return; // KPI no filtrable (ej. Avance)
       if (filterId === 'clear' || filterId === this.activeFilter) {
@@ -600,7 +670,7 @@ export default {
           class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
         >
           <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-            🎯 {{ $t('TRACKING_CAMPAIGN_DETAIL.FUNNEL.TITLE') }}
+            🎯 {{ funnelTitle }}
           </span>
           <div class="grid grid-cols-2 gap-x-4 mt-2">
             <div
@@ -873,7 +943,24 @@ export default {
                 <td class="p-3 text-center text-slate-500">
                   {{ p.attempt_count }}/{{ p.max_attempts }}
                 </td>
-                <td class="p-3 text-right">
+                <td class="p-3 text-right whitespace-nowrap">
+                  <!-- prospeccion V6: entregar un interesado a un vendedor -->
+                  <woot-button
+                    v-if="p.prospect_stage === 'interested'"
+                    size="tiny"
+                    variant="smooth"
+                    class="mr-2"
+                    :is-loading="handingOff === p.id"
+                    @click="handOff(p)"
+                  >
+                    {{ $t('TRACKING_CAMPAIGN_DETAIL.HAND_OFF') }}
+                  </woot-button>
+                  <span
+                    v-else-if="p.prospect_stage === 'handed_off'"
+                    class="mr-2 text-xs font-medium text-woot-600"
+                  >
+                    {{ $t('TRACKING_CAMPAIGN_DETAIL.HANDED_OFF') }}
+                  </span>
                   <router-link
                     v-if="conversationUrl(p)"
                     :to="conversationUrl(p)"

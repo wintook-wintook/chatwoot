@@ -259,6 +259,9 @@ en:
     confirm: "Yes, unsubscribe me"
     done_title: "Done, we won't write to you again"
     done_body: "%{name} won't contact you again. If this was a mistake, reply to us and we'll fix it."
+  tracking_campaigns:
+    hand_off:
+      not_interested: "Only an interested prospect can be handed off."
   contact_trackings:
     opt_out_footer: "Don't want more emails? Unsubscribe here: %{url}"
   public_quotes:

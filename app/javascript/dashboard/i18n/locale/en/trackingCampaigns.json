@@ -112,7 +112,17 @@
       "APPOINTMENT": "Booked",
       "OBJECTIVE_MET": "Objective met",
       "PAUSED_RULE": "Paused (Rule)",
-      "CANCELLED_RULE": "Cancelled (Rule)"
+      "CANCELLED_RULE": "Cancelled (Rule)",
+      "P_TITLE": "Prospecting funnel",
+      "P_CONTACTED": "Contacted",
+      "P_REPLIED": "Replied",
+      "P_INTERESTED": "Interested",
+      "P_HANDED_OFF": "Handed off",
+      "P_NOT_NOW": "Not now",
+      "P_NOT_INTERESTED": "Not interested",
+      "P_WRONG_PERSON": "Wrong person",
+      "P_OPTED_OUT": "Opted out",
+      "P_NO_REPLY": "No reply"
     },
     "PROSPECTS": "Prospects",
     "PROSPECTS_EMPTY": "This campaign has no prospects.",
@@ -134,7 +144,16 @@
       "del_sent": "WhatsApp accepted the message but hasn't confirmed it reached the contact yet.",
       "del_unconfirmed": "WhatsApp accepted the message over 24 h ago and never confirmed delivery. It is not resent: if it did arrive, the contact would get it twice.",
       "del_retrying": "WhatsApp rejected the message for a temporary reason (rate limit or Meta failure); the same attempt is resent automatically.",
-      "del_failed": "The channel couldn't deliver the last message (invalid number, block, or other rejection)."
+      "del_failed": "The channel couldn't deliver the last message (invalid number, block, or other rejection).",
+      "p_contacted": "Written to at least once.",
+      "p_replied": "Replied at least once (their reply was classified).",
+      "p_interested": "Showed interest: asked for a price, information, a meeting or a call. Includes those already handed off.",
+      "p_handed_off": "Interested prospects already handed off to a salesperson.",
+      "p_not_now": "Interested, but not now: written to once more after 30 days.",
+      "p_not_interested": "Said they're not interested; no more messages.",
+      "p_wrong_person": "Not the right person; no more messages.",
+      "p_opted_out": "Asked not to be contacted (email link, reply or an agent).",
+      "p_no_reply": "Used up their touches without replying."
     },
     "INTENT_VALUES": {
       "tracking": "Replied",
@@ -170,6 +189,10 @@
       "ACTION": "Action"
     },
     "OPEN_CONVERSATION": "Open conversation",
+    "HAND_OFF": "Hand off",
+    "HANDED_OFF": "✓ Handed off",
+    "HAND_OFF_DONE": "Handed off. Take it from the conversation.",
+    "HAND_OFF_ERROR": "Couldn't hand off. Please try again.",
     "TYPE": "Type",
     "WINDOW": "Window",
     "TABS": {

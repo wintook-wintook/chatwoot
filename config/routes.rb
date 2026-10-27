@@ -196,6 +196,7 @@ Rails.application.routes.draw do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
             post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada
             post :resume, on: :member, to: 'tracking_campaigns/resumes#create' # proyecto@automatizacion_campanas: reanudar pausada
+            post :hand_off, on: :member, to: 'tracking_campaigns/hand_offs#create' # prospeccion V6: entregar un interesado
           end
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard
             resource :overview, only: [:show], controller: :overview

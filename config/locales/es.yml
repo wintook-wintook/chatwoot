@@ -244,6 +244,9 @@ es:
     confirm: "Sí, darme de baja"
     done_title: "Listo, ya no te escribiremos"
     done_body: "%{name} no volverá a contactarte. Si fue un error, respóndenos y lo corregimos."
+  tracking_campaigns:
+    hand_off:
+      not_interested: "Solo se puede entregar a un prospecto interesado."
   contact_trackings:
     opt_out_footer: "¿No quieres recibir más correos? Date de baja aquí: %{url}"
   public_quotes:

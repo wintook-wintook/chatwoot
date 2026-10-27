@@ -312,4 +312,32 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
     end
   end
+
+  # prospeccion V6 — embudo de prospección y «Entregar»
+  describe 'Prospección: embudo y entregar' do
+    let(:prospecting) { create(:tracking_campaign, account: account, inbox: inbox, purpose: 'prospecting', daily_cap: 30) }
+    let(:interested) do
+      create(:contact_tracking, account: account, inbox: inbox, contact: create(:contact, account: account),
+                                tracking_campaign: prospecting, attempt_count: 1, prospect_stage: 'interested')
+    end
+
+    it 'el detalle trae el embudo de prospección; una de seguimiento no' do
+      interested
+      get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['prospecting_funnel']).to include('contacted' => 1, 'interested' => 1)
+
+      get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['prospecting_funnel']).to be_nil
+    end
+
+    it 'entrega a un interesado y no a quien no lo es' do
+      url = "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}/hand_off"
+      post url, params: { tracking_id: interested.id }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:success)
+      expect(interested.reload.prospect_stage).to eq('handed_off')
+
+      post url, params: { tracking_id: interested.id }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
 end
