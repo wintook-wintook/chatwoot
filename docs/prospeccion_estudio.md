@@ -1033,6 +1033,23 @@ Orden propuesto: **F1 → F2 → F4 → F3**. Las tres primeras son rápidas y s
 > - **Pruebas:** `prospecting_funnel_spec` y 2 en `tracking_campaigns_controller_spec`.
 > - **Ojo:** respuestas anteriores a V5 no tienen etapa (la campaña #308 sale «sin respuesta»).
 >
+> 🧪 **Prueba general en vivo (27/10/2026, campaña #309, bandeja «Develop», agente #12877, tope 3):**
+>
+> | # | Caso | Resultado |
+> |---|---|---|
+> | 1 | Campaña en la pestaña «Prospección» con 🎯 | ✅ |
+> | 2 | Asunto propio en conversación nueva | ✅ (probado antes, campaña #308; aquí había hilos) |
+> | 3 | Firma y pie de baja, sin «#IA» | ✅ |
+> | 4 | Tope 3: tres hoy, el cuarto al día hábil siguiente | ✅ |
+> | 5 | «Me interesa, ¿cuánto cuesta?» → Interesado; siguiente toque a 3 días hábiles, uno solo | ✅ |
+> | 6 | «Ahorita no, en diciembre» → No ahora; toque el 26/11 (30 días), uno solo | ✅ |
+> | 7 | Clic en «Date de baja» → confirma → baja (link); seguimiento cancelado | ✅ |
+> | 8 | Ningún toque a quien respondió o se dio de baja | ✅ |
+> | 9 | Vista previa de otra campaña: el dado de baja sale «Pidió no ser contactado» | ✅ |
+> | 10 | Embudo: 3 contactados · 2 respondieron · 1 interesado · 1 no ahora · 1 baja | ✅ |
+> | 11 | «Entregar» y aviso rojo en la ficha | ⏳ a revisar en pantalla |
+> | 12 | El cuarto contacto: 3 toques sin respuesta → «Sin respuesta» | ⏳ mañana (28/10) |
+>
 > 🎉 **Prospección v1.0 COMPLETA (V0–V6).** Lo que sigue (v1.1): entregar con plazo y avisos (P2,
 > necesita D4), validar correos antes de enviar, puntuación 0–100 con datos reales, A/B de asuntos,
 > multicanal correo → WhatsApp con permiso.
