@@ -806,6 +806,11 @@ El correo (prospección en frío) entra como fase 2 en cuanto haya bandeja de co
 >   fuera de correo no aplica). 47 + 26 en verde.
 > - **Cómo usarlo:** Campañas → Nueva campaña → elegir un Agente IA cuya bandeja sea de correo →
 >   aparece «Asunto del correo» (ej. «{{contacto}}, una idea para reducir tus costos de envío»).
+> - **Prueba en vivo (campaña #308, 27/10/2026):** contacto sin hilo → «Wintook, ¿ya elegiste tu carrera?» ✅.
+>   Los que ya tenían hilo salen con el asunto del hilo, como se diseñó.
+> - **Ojo al borrar conversaciones de correo:** al borrarlas se borran sus mensajes, y el lector IMAP
+>   vuelve a importar los correos recientes del buzón (ya no los reconoce) y crea conversaciones
+>   nuevas con los asuntos viejos. Pasó en dev: 3 de 4 contactos quedaron en hilos reimportados.
 > - **Ojo al migrar en un servidor vivo:** reiniciar Rails y Sidekiq; si no, PostgreSQL rechaza las
 >   consultas preparadas de `tracking_campaigns` («cached plan must not change result type») y los
 >   toques fallan (pasó en dev con la campaña #306).
