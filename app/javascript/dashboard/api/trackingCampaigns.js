@@ -29,7 +29,12 @@ class TrackingCampaignsAPI extends ApiClient {
     return axios.post(`${this.url}/${id}/launch`);
   }
 
-  // proyecto@automatizacion_campanas — reanuda una campaña pausada por error de Meta.
+  // Botón «Pausar campaña»: pausa a mano una Programada o En curso.
+  pause(id) {
+    return axios.post(`${this.url}/${id}/pause`);
+  }
+
+  // proyecto@automatizacion_campanas — reanuda una campaña pausada (por error de Meta o a mano).
   resume(id) {
     return axios.post(`${this.url}/${id}/resume`);
   }

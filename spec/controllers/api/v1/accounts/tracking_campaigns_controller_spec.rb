@@ -293,6 +293,45 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
     end
   end
 
+  # Botón «Pausar campaña»: a mano, sin motivo; se reanuda igual que la pausada por Meta
+  describe 'POST /api/v1/accounts/{account.id}/tracking_campaigns/{id}/pause' do
+    let(:url) { "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}" }
+
+    it 'pausa una campaña en curso sin motivo, no la deja inscribir y se reanuda' do
+      campaign.update!(status: 'running', scheduled_for: 1.hour.ago)
+
+      post "#{url}/pause", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(campaign.reload).to have_attributes(status: 'paused', paused_reason: nil)
+      expect(campaign.paused_at).to be_present
+      expect(campaign.accepting_entries?).to be(false)
+
+      post "#{url}/resume", headers: admin.create_new_auth_token, as: :json
+      expect(campaign.reload.status).to eq('running')
+    end
+
+    it 'una Guardada, ya pausada o terminada no se pausa: 422' do
+      %w[saved paused finished].each do |status|
+        campaign.update_columns(status: status) # rubocop:disable Rails/SkipsModelValidations
+        post "#{url}/pause", headers: admin.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+    end
+
+    it 'un seguimiento de la campaña pausada se detiene al llegar su turno' do
+      campaign.update!(status: 'running')
+      tracking = create(:contact_tracking, account: account, inbox: inbox, contact: create(:contact, account: account),
+                                           tracking_campaign: campaign, status: 'scheduled', scheduled_for: 1.minute.from_now)
+      tracking.update_column(:scheduled_for, 1.minute.ago) # rubocop:disable Rails/SkipsModelValidations
+      post "#{url}/pause", headers: admin.create_new_auth_token, as: :json
+
+      ContactTrackingJob.perform_now(tracking.id)
+
+      expect(tracking.reload).to have_attributes(status: 'paused', paused_by_campaign: true)
+    end
+  end
+
   # proyecto@automatizacion_campanas — reanudar una campaña pausada por error de Meta
   describe 'POST /api/v1/accounts/{account.id}/tracking_campaigns/{id}/resume' do
     it 'reanuda la campaña pausada y devuelve su estado y los seguimientos a reanudar' do

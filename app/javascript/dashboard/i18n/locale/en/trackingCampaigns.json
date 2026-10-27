@@ -69,6 +69,13 @@
     "EDIT_ONLY_SAVED": "Only a Saved campaign can be edited: this one has already started.",
     "PAUSED_BANNER": "Paused automatically: WhatsApp rejected a message because of a configuration problem, so the rest would fail too. Reason: {reason}",
     "PAUSED_BANNER_HINT": "Fix the problem (template, payment or WhatsApp account in Meta) and resume the campaign: paused follow-ups resend the attempt that failed.",
+    "PAUSE": "Pause campaign",
+    "PAUSE_CONFIRM": "No new contacts will enter and pending messages stop when their turn comes. The AI Agent keeps answering whoever already replied. You can resume it anytime. Pause the campaign",
+    "PAUSE_YES": "Yes, pause",
+    "PAUSE_SUCCESS": "Campaign paused.",
+    "PAUSE_ERROR": "The campaign could not be paused.",
+    "PAUSED_MANUAL_BANNER": "Campaign paused: no new contacts enter and no campaign messages go out.",
+    "PAUSED_MANUAL_HINT": "The AI Agent keeps answering whoever already replied. When resumed, the stopped messages go out again starting in a minute.",
     "RESUME": "Resume campaign",
     "RESUME_SUCCESS": "Campaign resumed: {count} follow-ups send again in a minute.",
     "RESUME_ERROR": "The campaign could not be resumed."

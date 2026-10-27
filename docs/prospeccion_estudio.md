@@ -1561,6 +1561,13 @@ por correo con el mismo formulario y ver el mismo embudo en las dos.
 >   (el usuario pidió quitar también las pestañas por canal, 27/10/2026).
 > - **Pruebas:** 1162 en verde (seguimientos, campañas, Kanban, correo, mensajes, tablero general).
 
+> - **Pausar a mano** (27/10/2026): botón «Pausar campaña» en el detalle de una Programada o En curso
+>   (POST `tracking_campaigns/:id/pause`, `TrackingCampaigns::Pause` sin motivo). No entra nadie; cada
+>   seguimiento se detiene al llegar su turno (`paused_by_campaign`); **la IA sigue contestando** a quien
+>   ya respondió. Aviso propio («Campaña pausada») con «Reanudar campaña»: los detenidos salen a partir de
+>   un minuto; los pausados a mano o por palabra clave se quedan pausados. Motivo vacío = pausa a mano;
+>   con motivo = la pausó un error de Meta.
+
 #### 10.12.8 Dos ejemplos de principio a fin
 
 **A · Cobranza por WhatsApp** — «Cobranza octubre», Agente IA «Cobranza amable», segmento «Saldo

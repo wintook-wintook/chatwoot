@@ -69,6 +69,13 @@
     "EDIT_ONLY_SAVED": "Solo se puede modificar una campaña Guardada: esta ya está en curso.",
     "PAUSED_BANNER": "Pausada automáticamente: WhatsApp rechazó un envío por un problema de configuración, así que los demás también fallarían. Motivo: {reason}",
     "PAUSED_BANNER_HINT": "Corrige el problema (plantilla, pago o cuenta de WhatsApp en Meta) y reanuda la campaña: los seguimientos pausados vuelven a enviar el intento que falló.",
+    "PAUSE": "Pausar campaña",
+    "PAUSE_CONFIRM": "No entrarán contactos nuevos y los envíos pendientes se detienen al llegar su turno. El Agente IA sigue contestando a quien ya respondió. Puedes reanudarla cuando quieras. ¿Pausar la campaña",
+    "PAUSE_YES": "Sí, pausar",
+    "PAUSE_SUCCESS": "Campaña pausada.",
+    "PAUSE_ERROR": "No se pudo pausar la campaña.",
+    "PAUSED_MANUAL_BANNER": "Campaña pausada: no entran contactos nuevos ni salen envíos de la campaña.",
+    "PAUSED_MANUAL_HINT": "El Agente IA sigue contestando a quien ya respondió. Al reanudarla, los envíos detenidos salen de nuevo a partir de un minuto.",
     "RESUME": "Reanudar campaña",
     "RESUME_SUCCESS": "Campaña reanudada: {count} seguimientos vuelven a enviar en un minuto.",
     "RESUME_ERROR": "No se pudo reanudar la campaña."

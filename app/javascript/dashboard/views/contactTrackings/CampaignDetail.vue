@@ -118,6 +118,8 @@ export default {
       showLaunchModal: false,
       isLaunching: false,
       isResuming: false,
+      showPauseModal: false,
+      isPausing: false,
     };
   },
   computed: {
@@ -152,6 +154,13 @@ export default {
       return (
         this.campaign?.status === 'paused' && !!this.campaign.paused_reason
       );
+    },
+    // Pausada a mano con «Pausar campaña» (sin motivo)
+    isPausedByUser() {
+      return this.campaign?.status === 'paused' && !this.campaign.paused_reason;
+    },
+    canPause() {
+      return ['draft', 'running'].includes(this.campaign?.status);
     },
     deliveryKpis() {
       return [
@@ -595,7 +604,24 @@ export default {
         this.isLaunching = false;
       }
     },
-    // proyecto@automatizacion_campanas: reanuda la pausada por error de Meta; sus
+    // «Pausar campaña»: no entra nadie y los envíos se detienen al llegar su turno.
+    async confirmPause() {
+      this.showPauseModal = false;
+      this.isPausing = true;
+      try {
+        await TrackingCampaignsAPI.pause(this.campaignId);
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_SUCCESS'));
+        await this.fetchAll();
+      } catch (error) {
+        useAlert(
+          error.response?.data?.error ||
+            this.$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_ERROR')
+        );
+      } finally {
+        this.isPausing = false;
+      }
+    },
+    // proyecto@automatizacion_campanas: reanuda la pausada (por error de Meta o a mano); sus
     // seguimientos pausados se reprograman en background a partir de un minuto.
     async resumeCampaign() {
       this.isResuming = true;
@@ -755,6 +781,18 @@ export default {
         >
           {{ $t('TRACKING_CAMPAIGNS_VIEW.LAUNCH') }}
         </woot-button>
+        <woot-button
+          v-if="canPause"
+          variant="smooth"
+          color-scheme="warning"
+          size="small"
+          icon="snooze"
+          class="ml-auto"
+          :is-loading="isPausing"
+          @click="showPauseModal = true"
+        >
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.PAUSE') }}
+        </woot-button>
       </div>
       <p
         v-if="campaign.status === 'saved'"
@@ -777,6 +815,28 @@ export default {
           </p>
           <p class="mt-1">
             {{ $t('TRACKING_CAMPAIGNS_VIEW.PAUSED_BANNER_HINT') }}
+          </p>
+        </div>
+        <woot-button
+          size="small"
+          icon="arrow-clockwise"
+          :is-loading="isResuming"
+          @click="resumeCampaign"
+        >
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.RESUME') }}
+        </woot-button>
+      </div>
+      <!-- Pausada a mano con «Pausar campaña» -->
+      <div
+        v-if="isPausedByUser"
+        class="flex items-start gap-3 p-3 mb-3 rounded-lg shrink-0 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+      >
+        <div class="flex-1 text-sm text-amber-900 dark:text-amber-200">
+          <p class="font-medium">
+            {{ $t('TRACKING_CAMPAIGNS_VIEW.PAUSED_MANUAL_BANNER') }}
+          </p>
+          <p class="mt-1">
+            {{ $t('TRACKING_CAMPAIGNS_VIEW.PAUSED_MANUAL_HINT') }}
           </p>
         </div>
         <woot-button
@@ -1278,6 +1338,16 @@ export default {
         />
       </div>
     </template>
+    <woot-delete-modal
+      :show="showPauseModal"
+      :on-close="() => (showPauseModal = false)"
+      :on-confirm="confirmPause"
+      :title="$t('TRACKING_CAMPAIGNS_VIEW.PAUSE')"
+      :message="$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_CONFIRM')"
+      :message-value="campaign ? ` «${campaign.name}»?` : ''"
+      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_YES')"
+      :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
+    />
     <woot-delete-modal
       :show="showLaunchModal"
       :on-close="() => (showLaunchModal = false)"

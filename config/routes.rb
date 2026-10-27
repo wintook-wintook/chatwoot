@@ -211,6 +211,7 @@ Rails.application.routes.draw do
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
             post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada
+            post :pause, on: :member, to: 'tracking_campaigns/pauses#create' # pausar a mano
             post :resume, on: :member, to: 'tracking_campaigns/resumes#create' # proyecto@automatizacion_campanas: reanudar pausada
             post :hand_off, on: :member, to: 'tracking_campaigns/hand_offs#create' # prospeccion V6: entregar un interesado
             patch :handoff_settings, on: :member, to: 'tracking_campaigns/handoff_settings#update' # prospeccion P2: tablero, plazo y escalar
