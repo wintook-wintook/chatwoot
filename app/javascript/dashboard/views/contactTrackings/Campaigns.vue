@@ -22,20 +22,6 @@ const STATUS_COLOR = {
   finished: 'text-slate-600 bg-slate-100 dark:bg-slate-700',
 };
 
-// §10.12 (U4, D22): sin pestañas de tipo; filtro por canal (solo si hay más de uno).
-const CHANNEL_KEYS = {
-  'Channel::Whatsapp': 'WHATSAPP',
-  'Channel::Email': 'EMAIL',
-  'Channel::Telegram': 'TELEGRAM',
-  'Channel::Sms': 'SMS',
-  'Channel::TwilioSms': 'SMS',
-  'Channel::FacebookPage': 'MESSENGER',
-  'Channel::Instagram': 'INSTAGRAM',
-  'Channel::Api': 'API',
-  'Channel::WebWidget': 'WEBSITE',
-};
-const channelKey = channelType => CHANNEL_KEYS[channelType] || 'OTHER';
-
 export default {
   components: { CampaignForm, TableFooter, VeTable },
   data() {
@@ -82,32 +68,19 @@ export default {
       // Filtro + paginado (cliente) de la tabla de campañas.
       searchQuery: '',
       statusFilter: 'all',
-      // §10.12 (U4): pestaña de canal (0 = Todas)
-      channelTab: 0,
       currentPage: 1,
       perPage: 10,
     };
   },
   computed: {
-    // Los canales que tienen campañas, en orden de aparición; con uno solo no hay pestañas.
-    channelTabKeys() {
-      const keys = [
-        ...new Set(this.campaigns.map(c => channelKey(c.channel_type))),
-      ];
-      return keys.length > 1 ? ['ALL', ...keys] : [];
-    },
     isEmpty() {
       return !this.isLoading && this.campaigns.length === 0;
     },
     // Campañas tras aplicar búsqueda de texto + filtro de estado.
     filteredCampaigns() {
       const query = this.searchQuery.trim().toLowerCase();
-      const channel = this.channelTabKeys[this.channelTab] || 'ALL';
       return this.campaigns.filter(c => {
         if (this.statusFilter !== 'all' && c.status !== this.statusFilter) {
-          return false;
-        }
-        if (channel !== 'ALL' && channelKey(c.channel_type) !== channel) {
           return false;
         }
         if (!query) return true;
@@ -291,9 +264,6 @@ export default {
       this.currentPage = 1;
     },
     statusFilter() {
-      this.currentPage = 1;
-    },
-    channelTab() {
       this.currentPage = 1;
     },
     // Si el listado se encoge (borrado/refetch), evitar quedar en página vacía.
@@ -637,21 +607,6 @@ export default {
       </div>
 
       <template v-else>
-        <!-- §10.12 (U4): por canal, solo si hay campañas de más de uno -->
-        <woot-tabs
-          v-if="channelTabKeys.length"
-          class="mb-3 shrink-0"
-          :index="channelTab"
-          @change="index => (channelTab = index)"
-        >
-          <woot-tabs-item
-            v-for="(key, index) in channelTabKeys"
-            :key="key"
-            :index="index"
-            :name="$t(`TRACKING_CAMPAIGNS_VIEW.CHANNEL_TABS.${key}`)"
-            :show-badge="false"
-          />
-        </woot-tabs>
         <!-- Barra de filtros (estilo unificado con el listado de Seguimientos) -->
         <div
           class="flex items-center gap-3 mb-3 shrink-0 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"

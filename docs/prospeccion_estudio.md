@@ -1513,7 +1513,7 @@ fueran 10,000 al mes serían ≈ 1.5 USD. Solo se clasifica si la cuenta tiene l
 | U1 | Backend: clasificar en todas las campañas; las dos opciones nuevas (migración + datos); entrega, puntuación y asunto B sin `prospecting?`; reglas por **canal** (`ProspectingRules` → `CampaignRules`); fin de semana según «días hábiles» | `prospect_classifier.rb`, `schedule.rb`, `prospecting_rules.rb`, `subject_test.rb`, `prospect_score.rb`, `scorings_controller.rb`, `bulk_assign_service.rb`, `tracking_campaign_continuous_params.rb`, `tracking_campaign.rb` | mediano |
 | U2 | Un solo embudo: `ProspectingFunnel` → `CampaignFunnel` para todas (con palabras clave sumando); el detalle muestra «Embudo» siempre y quita «Intenciones»; entrega, puntuación y asuntos para todas | `tracking_campaigns_controller.rb`, `CampaignDetail.vue` | mediano |
 | U3 | Formulario único: sin «¿Para qué es?»; «Opciones de envío» y «Cuando el cliente responde»; validaciones por canal | `CampaignForm.vue`, i18n | mediano |
-| U4 | Lista de campañas sin pestañas de tipo; filtro por canal | `Campaigns.vue`, i18n | chico |
+| U4 | Lista de campañas sin pestañas (una sola lista; el canal se ve en su columna) | `Campaigns.vue`, i18n | chico |
 | U5 | Tablero general de Seguimientos con las mismas definiciones del embudo | `overview_controller.rb` y su vista | chico |
 | U6 | (opcional) reclasificar la última respuesta de los seguimientos activos de campañas de seguimiento; limpiar textos que dicen «prospección» donde ya no aplica | job + i18n | chico |
 
@@ -1557,7 +1557,8 @@ por correo con el mismo formulario y ver el mismo embudo en las dos.
 > - **U3 + U4 · pantallas**: formulario sin «¿Para qué es?»; tope visible siempre (en correo se sugiere 30
 >   y es obligatorio); «Solo días hábiles y en el horario de atención» como casilla; sección «Cuando el
 >   cliente responde» con las tres casillas; asunto B en cualquier campaña por correo. Lista de campañas
->   sin pestañas de tipo: pestañas por canal, solo si hay campañas de más de uno.
+>   sin pestañas: una sola lista con todas las campañas; la columna «Canal» dice la bandeja de cada una
+>   (el usuario pidió quitar también las pestañas por canal, 27/10/2026).
 > - **Pruebas:** 1162 en verde (seguimientos, campañas, Kanban, correo, mensajes, tablero general).
 
 #### 10.12.8 Dos ejemplos de principio a fin
