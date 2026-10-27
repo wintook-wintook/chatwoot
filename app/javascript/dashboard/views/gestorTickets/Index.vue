@@ -468,6 +468,7 @@ import {
   SIMPLE_FILTER_STATUSES,
   toSimpleStatus,
 } from 'dashboard/helper/caseSimpleStatus'; // modo simple/ITIL
+import { backQuery } from './backLink';
 // Plan-Clase-Comercial F4 — lista de oportunidades.
 import { formatHours } from 'dashboard/helper/caseWorkOrder'; // Plan-Clase-Orden-de-Trabajo F2b
 import {
@@ -1402,6 +1403,8 @@ export default {
       this.$router.push({
         name: 'gestorTickets_detail',
         params: { id: ticket.id },
+        // «Volver a la lista» (sus filtros quedan guardados por clase).
+        query: backQuery(this.$route),
       });
     },
     // @tickets_cases P3 — selección múltiple
