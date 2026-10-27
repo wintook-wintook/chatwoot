@@ -626,7 +626,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return false if reply_text.blank?
 
     reply_text = with_branch_tag(reply_text, tracking, message)
-    reply_text = "#{reply_text}\n\n-TB"
+    reply_text = ContactTrackings::Signature.apply(reply_text, tracking, "\n\n-TB") # prospeccion V1: en correo, la firma
     send_auto_reply(tracking, message, reply_text)
     Rails.logger.info '[TrackingBot] ✅ Respuesta enviada → respondió TrackingBot'
     true

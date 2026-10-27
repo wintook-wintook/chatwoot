@@ -954,6 +954,18 @@ Orden propuesto: **F1 → F2 → F4 → F3**. Las tres primeras son rápidas y s
 > - **Cómo usarlo:** Campañas → Agregar campaña → «¿Para qué es?» → Prospección.
 > - Todavía **no cambia ninguna regla**: eso llega con V1–V6.
 
+> ✅ **V1 HECHA (27/10/2026) — firma en correo.**
+> - **Qué se hizo:** migración `20261031120000_add_email_signature_to_tracking_templates`;
+>   `ContactTrackings::Signature.apply(texto, tracking, marca)`: fuera de correo, texto + marca de
+>   siempre; en correo, texto + firma del agente (sin firma, solo el texto). Se usa en el toque con IA
+>   (`contact_tracking_job.rb`), en el mensaje simple de respaldo y en la respuesta conversacional
+>   (`contact_tracking_response_analyzer_job.rb`). La firma entra en las versiones del agente.
+> - **Pantalla:** en el agente, pestaña del canal, «Firma para correo» (solo si la bandeja es de correo).
+> - **Pruebas:** `spec/services/contact_trackings/signature_spec.rb` (4). Los 9 fallos de
+>   `contact_tracking_response_analyzer_job_spec` y `versions_controller_spec` ya existían antes de V1.
+> - **Ojo:** migrar **antes** de guardar código que use la columna; si no, el Sidekiq de dev recarga
+>   el código, no encuentra la columna y los toques fallan (pasó con la campaña #308).
+
 Orden: **V0 → V1 → V2 → V3 → V4 → V5 → V6**. Con V0–V4 el envío ya es correcto;
 con V5–V6 ya es prospección (se sabe quién está interesado y cuánto rinde la campaña).
 
@@ -982,7 +994,7 @@ de la empresa (no código). Se marca conforme avanzan las fases.
 | Buena práctica | Dónde queda | Estado |
 |---|---|---|
 | 1 · A quién: cliente ideal, correos validados | Empresa: definir el cliente ideal · v1.1: validar correos antes de enviar | ⏳ empresa / v1.1 |
-| 2 · Mensaje: asunto, firma, prompt real | F1 ✅ · V1 firma · empresa: prompt de prospección | 🟡 |
+| 2 · Mensaje: asunto, firma, prompt real | F1 ✅ · V1 ✅ firma · empresa: prompt de prospección | 🟡 falta el prompt |
 | 3 · Cadencia: se detiene al responder, días hábiles | V2 + V3 | ⏳ |
 | 4 · Cumplir: baja, no contactar, aviso de privacidad | V4 · D7 (legal) | ⏳ |
 | 5 · Que llegue: dominio, calentamiento, tope diario | V3 tope · empresa: dominio con SPF/DKIM/DMARC | ⏳ |

@@ -66,6 +66,7 @@ export default {
         whatsapp_templates: ['', '', ''],
         retry_interval_value: 1, // proyecto@automatizacion_tracking
         retry_interval_unit: 'days', // proyecto@automatizacion_tracking
+        email_signature: '', // prospeccion V1: firma en correo
         keyword_actions: [], // proyecto@contact_tracking
         calendar_integration_ids: [],
         // proyecto@bot_seguimiento_calendar: { integration_id: google_calendar_id } — en qué
@@ -308,6 +309,13 @@ export default {
     hasTrackingBotInboxes() {
       return this.trackingBotInboxes.length > 0;
     },
+    // prospeccion V1: en correo, la firma reemplaza las marcas « #IA» / «-TB»
+    selectedInboxIsEmail() {
+      const inbox = this.trackingBotInboxes.find(
+        ib => ib.id === Number(this.selectedInboxId)
+      );
+      return !!inbox && inbox.channelType === 'Channel::Email';
+    },
     selectedInboxIsWhatsApp() {
       if (!this.selectedInboxId) return false;
       const inbox = this.trackingBotInboxes.find(
@@ -506,6 +514,7 @@ export default {
               : ['', '', ''],
             retry_interval_value: val.retry_interval_value || 1, // proyecto@automatizacion_tracking
             retry_interval_unit: val.retry_interval_unit || 'days', // proyecto@automatizacion_tracking
+            email_signature: val.email_signature || '', // prospeccion V1
             keyword_actions: Array.isArray(val.keyword_actions) // proyecto@contact_tracking
               ? val.keyword_actions.map(ka => ({ ...ka }))
               : [],
@@ -601,6 +610,7 @@ export default {
             : [],
           retry_interval_value: this.form.retry_interval_value, // proyecto@automatizacion_tracking
           retry_interval_unit: this.form.retry_interval_unit, // proyecto@automatizacion_tracking
+          email_signature: this.form.email_signature, // prospeccion V1
           keyword_actions: this.form.keyword_actions || [], // proyecto@contact_tracking
           calendar_integration_ids: this.form.calendar_integration_ids || [],
           booking_calendar_ids: this.bookingCalendarIdsPayload(),
@@ -1225,6 +1235,23 @@ export default {
           </select>
         </label>
       </div>
+
+        <!-- prospeccion V1: firma del agente en correo -->
+        <label v-if="selectedInboxIsEmail" class="block">
+          <span>{{ $t('TRACKING_TEMPLATES.FORM.EMAIL_SIGNATURE_LABEL') }}</span>
+          <textarea
+            v-model="form.email_signature"
+            rows="3"
+            maxlength="500"
+            :placeholder="
+              $t('TRACKING_TEMPLATES.FORM.EMAIL_SIGNATURE_PLACEHOLDER')
+            "
+            class="!mb-0 mt-1"
+          />
+          <span class="block mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {{ $t('TRACKING_TEMPLATES.FORM.EMAIL_SIGNATURE_HINT') }}
+          </span>
+        </label>
 
       <!-- Plantillas WhatsApp por intento (solo cuando el canal es WhatsApp) -->
       <div v-if="selectedInboxIsWhatsApp" class="mt-2">

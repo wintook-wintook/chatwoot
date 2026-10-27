@@ -183,7 +183,10 @@
         "ROUTE_SCOPE_REGENERATE": "Generate again from the phrases",
         "ROUTE_SCOPE_NEEDS_PHRASES": "Write the customer phrases first.",
         "ROUTE_SCOPE_GENERATE_ERROR": "It could not be generated. Try again or write it by hand."
-      }
+      },
+      "EMAIL_SIGNATURE_LABEL": "Email signature",
+      "EMAIL_SIGNATURE_PLACEHOLDER": "Ana López\nSales · Wintook\n81 1234 5678",
+      "EMAIL_SIGNATURE_HINT": "Added at the end of every email the agent writes, instead of “#IA”. Not used on WhatsApp or other channels."
     },
     "CREATE": {
       "TITLE": "New AI Agent",
@@ -403,7 +406,8 @@
           "SLOTS_PRESENTATION": "Slot presentation",
           "CALENDAR_EVENT_DURATION": "Appointment length",
           "TIMEZONE": "Time zone",
-          "KBASE_HOOK_ID": "Knowledge integration"
+          "KBASE_HOOK_ID": "Knowledge integration",
+          "EMAIL_SIGNATURE": "Email signature"
         },
         "COLUMNS": {
           "VERSION": "Version",

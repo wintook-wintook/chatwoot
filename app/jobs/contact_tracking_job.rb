@@ -254,13 +254,14 @@ class ContactTrackingJob < ApplicationJob
     # Intentar generar mensaje con IA si está disponible
     if tracking.account.hooks.find_by(app_id: 'openai', status: 'enabled')
       ai_message = generate_ai_message(tracking, template_content)
-      return "#{ai_message} #IA" if ai_message.present?
+      # prospeccion V1: en correo, firma del agente en lugar de « #IA»
+      return ContactTrackings::Signature.apply(ai_message, tracking, ' #IA') if ai_message.present?
     end
 
     # ⭐ FALLBACK MEJORADO: SIEMPRE generar mensaje simple, nunca plantilla cruda
     # Esto evita enviar mensajes con "[valor]" o plantillas sin personalizar
     Rails.logger.warn "[ContactTracking] ⚠️ IA no disponible o falló - usando mensaje simple"
-    generate_simple_message(tracking)
+    ContactTrackings::Signature.apply(generate_simple_message(tracking), tracking)
   end
 
   def generate_ai_message(tracking, template_content = nil)
