@@ -74,6 +74,20 @@ Rails.application.routes.draw do
           resources :maintenance_plans, only: [:index, :create, :update, :destroy] do
             post :generate, on: :member
           end
+          # Plan-Contratos R1 — servicios recurrentes del cliente
+          resources :contract_types, only: [:index, :create, :update]
+          resources :contracts, only: [:index, :create, :update] do
+            member do
+              post :register_payment
+              post :renew
+              post :cancel
+              post :reactivate
+            end
+            collection do
+              get :template
+              post :import
+            end
+          end
           # Plan-Trabajo-Campo R3 — despacho
           resource :field_dispatch, only: [:show], controller: 'field_dispatch' do
             post :assign

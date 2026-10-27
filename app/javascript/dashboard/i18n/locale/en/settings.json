@@ -372,6 +372,8 @@
     "HOME": "Home",
     "AGENTS": "Agents",
     "ACCESS_ROLES": "Roles",
+    "CONTRACTS": "Contracts",
+    "CONTRACT_TYPES": "Contract types",
     "CATALOG": "Catalog",
     "FIELD_ROUTE": "My field route",
     "DISPATCH": "Dispatch",

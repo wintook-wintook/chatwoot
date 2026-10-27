@@ -1,0 +1,158 @@
+{
+  "CONTRACTS": {
+    "TITLE": "Contratos",
+    "DESCRIPTION": "Lo que tus clientes pagan o renuevan cada cierto tiempo: monitoreos, igualas, licencias, pólizas, membresías…",
+    "NEW": "Nuevo contrato",
+    "SEARCH": "Buscar por cliente o concepto",
+    "ALL_TYPES": "Todos los tipos",
+    "EMPTY": "No hay contratos con estos filtros.",
+    "EMPTY_CONTACT": "Este cliente no tiene contratos.",
+    "IMPORT": "Importar",
+    "IMPORT_HELP": "Archivo CSV (en Excel: Guardar como › CSV UTF-8). Descarga la plantilla para ver las columnas.",
+    "TEMPLATE": "Plantilla",
+    "IMPORT_DONE": "Importados: {created} nuevos y {updated} actualizados",
+    "IMPORT_ERRORS": "{count} filas con error. Fila {line}: {error}",
+    "SAVED": "Contrato guardado",
+    "ERROR": "No se pudo guardar el contrato",
+    "TOTAL": "{count} contratos",
+    "STATES": {
+      "all": "Todos",
+      "active": "Al corriente",
+      "renewal_due": "Por renovar",
+      "overdue": "Pago vencido",
+      "ended": "Terminado",
+      "suspended": "Suspendido",
+      "cancelled": "Cancelado"
+    },
+    "EVERY_ONE": {
+      "day": "Diario",
+      "week": "Semanal",
+      "month": "Mensual",
+      "year": "Anual"
+    },
+    "EVERY_MANY": {
+      "day": "Cada {n} días",
+      "week": "Cada {n} semanas",
+      "month": "Cada {n} meses",
+      "year": "Cada {n} años"
+    },
+    "UNITS": {
+      "day": "días",
+      "week": "semanas",
+      "month": "meses",
+      "year": "años"
+    },
+    "COLUMNS": {
+      "CLIENT": "Cliente",
+      "TYPE": "Tipo",
+      "CONCEPT": "Concepto",
+      "AMOUNT": "Monto",
+      "NEXT_CHARGE": "Próximo cobro",
+      "ENDS": "Fin del plazo",
+      "STATE": "Estado",
+      "ASSIGNEE": "Responsable"
+    },
+    "CARD": {
+      "NEXT_CHARGE": "Próximo cobro: {date}",
+      "ENDS": "Plazo hasta {date}",
+      "NO_TERM": "Sin plazo",
+      "AUTO_RENEW": "se renueva solo",
+      "LAST_PAID": "Último pago: {date}",
+      "ASSET": "Equipo: {name}",
+      "CANCELLED": "Cancelado el {date}",
+      "REASON": "Motivo: {reason}"
+    },
+    "ACTIONS": {
+      "MENU": "Acciones",
+      "REGISTER_PAYMENT": "Registrar pago",
+      "RENEW": "Renovar",
+      "CANCEL": "Cancelar contrato",
+      "REACTIVATE": "Reactivar",
+      "SUSPEND": "Suspender",
+      "EDIT": "Editar",
+      "PAID": "Pago registrado. Próximo cobro: {date}",
+      "RENEWED": "Renovado hasta {date}",
+      "CANCEL_PROMPT": "¿Por qué se cancela? (opcional)",
+      "CANCELLED_OK": "Contrato cancelado",
+      "REACTIVATED": "Contrato reactivado",
+      "SUSPENDED": "Contrato suspendido"
+    },
+    "FORM": {
+      "NEW_TITLE": "Nuevo contrato",
+      "EDIT_TITLE": "Editar contrato",
+      "CONTACT": "Cliente",
+      "CONTACT_PLACEHOLDER": "Busca por nombre, correo o teléfono",
+      "TYPE": "Tipo de contrato",
+      "NO_TYPES": "Primero da de alta un tipo de contrato en Clientes › Tipos de contrato.",
+      "CONCEPT": "Concepto",
+      "CONCEPT_PLACEHOLDER": "Ej. Monitoreo 24/7",
+      "FROM_CATALOG": "Del catálogo (opcional)",
+      "NONE": "— Ninguno —",
+      "QUANTITY": "Cantidad",
+      "PRICE": "Precio por periodo",
+      "CURRENCY": "Moneda",
+      "EVERY": "Se cobra cada",
+      "STARTS": "Inicio",
+      "NEXT_CHARGE": "Próximo cobro",
+      "NEXT_CHARGE_HINT": "Vacío = el día de inicio",
+      "TERM": "Plazo (meses)",
+      "TERM_HINT": "Vacío = sin plazo",
+      "AUTO_RENEW": "Se renueva solo al terminar el plazo",
+      "ASSET": "Equipo ligado (opcional)",
+      "ASSIGNEE": "Responsable",
+      "ASSIGNEE_NONE": "Sin responsable",
+      "STATUS": "Estado",
+      "NOTES": "Notas",
+      "EXTRA": "Datos de «{type}»",
+      "SAVE": "Guardar",
+      "CANCEL": "Cancelar"
+    },
+    "STATUS": {
+      "active": "Activo",
+      "suspended": "Suspendido",
+      "cancelled": "Cancelado"
+    },
+    "TYPES": {
+      "TITLE": "Tipos de contrato",
+      "DESCRIPTION": "Da de alta los que vende tu empresa (monitoreo, iguala de soporte, licencia, póliza…) con sus valores por omisión y los datos propios que pide cada uno.",
+      "NEW": "Nuevo tipo",
+      "EMPTY": "Todavía no hay tipos de contrato.",
+      "SAVED": "Tipo de contrato guardado",
+      "ERROR": "No se pudo guardar el tipo",
+      "MONTHS": "{n} meses",
+      "NO_TERM": "Sin plazo",
+      "COLUMNS": {
+        "NAME": "Nombre",
+        "BILLING": "Cobro",
+        "TERM": "Plazo",
+        "FIELDS": "Datos propios",
+        "CONTRACTS": "Contratos",
+        "ACTIVE": "Activo"
+      },
+      "FORM": {
+        "NEW_TITLE": "Nuevo tipo de contrato",
+        "EDIT_TITLE": "Editar tipo de contrato",
+        "NAME": "Nombre",
+        "NAME_PLACEHOLDER": "Ej. Monitoreo de alarma",
+        "COLOR": "Color",
+        "EVERY": "Se cobra cada",
+        "TERM": "Plazo por omisión (meses)",
+        "TERM_HINT": "Vacío = sin plazo",
+        "AUTO_RENEW": "Se renueva solo al terminar el plazo",
+        "FIELDS": "Datos propios",
+        "FIELDS_HINT": "Lo que pide este tipo además de lo general, por ejemplo «Número de cuenta» o «Usuarios».",
+        "ADD_FIELD": "Agregar dato",
+        "FIELD_LABEL": "Nombre del dato",
+        "FIELD_TYPES": {
+          "text": "Texto",
+          "number": "Número",
+          "date": "Fecha"
+        },
+        "REMOVE": "Quitar",
+        "ACTIVE": "Activo (se puede elegir en contratos nuevos)",
+        "SAVE": "Guardar",
+        "CANCEL": "Cancelar"
+      }
+    }
+  }
+}

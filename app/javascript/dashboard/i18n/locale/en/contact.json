@@ -490,7 +490,8 @@
       "TASKS": "Tasks",
       "NOTES": "Notes",
       "ASSETS": "Equipment",
-      "QUOTES": "Quotes"
+      "QUOTES": "Quotes",
+      "CONTRACTS": "Contracts"
     },
     "DATA": {
       "TITLE": "Details",

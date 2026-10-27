@@ -219,13 +219,16 @@ describe('Menú v2', () => {
     );
   });
 
-  it('Clientes: contactos y atributos personalizados (salen de Ajustes)', () => {
+  it('Clientes: contactos, contratos y atributos personalizados (salen de Ajustes)', () => {
     const clientes = menuFor(route('attributes_list'));
     expect(clientes.parentNav).toBe('contacts');
     expect(clientes.menuItems.map(i => i.label)).toEqual([
       'ALL_CONTACTS',
+      'CONTRACTS',
       'CUSTOM_ATTRIBUTES',
+      'CONTRACT_TYPES',
     ]);
+    expect(menuFor(route('contract_types')).parentNav).toBe('contacts');
     const ajustes = menuFor(route('agent_list'));
     expect(ajustes.menuItems.map(i => i.label)).not.toContain(
       'CUSTOM_ATTRIBUTES'

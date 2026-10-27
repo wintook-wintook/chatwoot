@@ -577,3 +577,20 @@ en:
     seconds:
       one: "%{count} second"
       other: "%{count} seconds"
+  # Plan-Contratos R1
+  contracts:
+    errors:
+      not_found: 'Contract not found'
+      type_not_found: 'Contract type not found'
+      no_term: 'The contract has no term: there is nothing to renew'
+    import:
+      no_file: 'Choose a CSV file'
+      not_found: 'There is no contract with id %{id}'
+      contact_required: 'The contact is missing (email or phone)'
+      contact_not_found: 'Contact «%{value}» not found'
+      type_not_found: 'Contract type «%{value}» does not exist'
+      item_not_found: 'Catalog code «%{value}» does not exist'
+      user_not_found: 'User «%{value}» not found'
+      bad_unit: 'Invalid period «%{value}» (day, week, month or year)'
+      bad_number: 'Invalid number «%{value}»'
+      bad_date: 'Invalid date in %{column}: «%{value}» (YYYY-MM-DD or DD/MM/YYYY)'
