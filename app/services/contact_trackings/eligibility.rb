@@ -27,13 +27,19 @@ module ContactTrackings::Eligibility
   REASON_NO_PHONE = 'NO_PHONE'
   REASON_NO_EMAIL = 'NO_EMAIL'
   REASON_UNSUPPORTED_CHANNEL = 'UNSUPPORTED_CHANNEL'
+  REASON_OPTED_OUT = 'OPTED_OUT' # prospeccion V4
 
   # Devuelve [contactable?(Boolean), reason(String|nil)].
   #   reusable: true cuando el contacto ya tiene una conversación en ese inbox,
   #   en cuyo caso el bulk reutiliza la conversación y no invoca ContactInboxBuilder.
   def channel_contactability(contact, channel_type, reusable: false)
+    return [false, REASON_OPTED_OUT] if contact.opted_out? # prospeccion V4: pidió no ser contactado
     return [true, nil] if reusable
 
+    channel_requirement(contact, channel_type)
+  end
+
+  def channel_requirement(contact, channel_type)
     if PHONE_CHANNELS.include?(channel_type)
       contact.phone_number.present? ? [true, nil] : [false, REASON_NO_PHONE]
     elsif EMAIL_CHANNELS.include?(channel_type)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_31_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_31_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1096,6 +1096,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_120000) do
   create_table "contacts", id: :serial, force: :cascade do |t|
     t.string "name", default: ""
     t.string "email"
+    t.datetime "opted_out_at"
+    t.string "opted_out_source"
     t.string "phone_number"
     t.integer "account_id", null: false
     t.datetime "created_at", precision: nil, null: false

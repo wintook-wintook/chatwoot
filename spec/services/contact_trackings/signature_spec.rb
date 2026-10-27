@@ -18,13 +18,17 @@ RSpec.describe ContactTrackings::Signature do
     expect(described_class.apply('Claro', tracking_in(other_inbox), "\n\n-TB")).to eq("Claro\n\n-TB")
   end
 
-  it 'en correo quita la marca y pone la firma del agente' do
-    expect(described_class.apply('Hola', tracking_in(email_inbox), ' #IA')).to eq("Hola\n\nAna López\nVentas · Wintook")
+  it 'en correo quita la marca y pone la firma del agente y el pie de baja (V4)' do
+    text = described_class.apply('Hola', tracking_in(email_inbox), ' #IA')
+
+    expect(text).to start_with("Hola\n\nAna López\nVentas · Wintook\n\n")
+    expect(text).not_to include('#IA')
+    expect(text).to match(%r{/baja/\S+\z})
   end
 
-  it 'en correo sin firma solo deja el texto' do
+  it 'en correo sin firma: el texto y el pie de baja' do
     template.email_signature = '  '
-    expect(described_class.apply('Hola', tracking_in(email_inbox), ' #IA')).to eq('Hola')
+    expect(described_class.apply('Hola', tracking_in(email_inbox), ' #IA')).to match(%r{\AHola\n\n.+/baja/\S+\z})
   end
 
   it 'texto vacío se queda vacío' do

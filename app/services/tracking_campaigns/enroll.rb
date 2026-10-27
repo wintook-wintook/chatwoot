@@ -64,6 +64,13 @@ class TrackingCampaigns::Enroll
     return 'daily_cap' if daily_cap_reached?
     return 'active_tracking' if @skip_active && active_tracking?
 
+    contact_reason
+  end
+
+  # prospeccion V4: quien pidió no ser contactado nunca se inscribe, aunque el canal pudiera.
+  def contact_reason
+    return 'opted_out' if @contact.opted_out?
+
     'not_contactable' unless contactable?
   end
 

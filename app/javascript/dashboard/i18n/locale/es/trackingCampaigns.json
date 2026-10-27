@@ -205,7 +205,8 @@
         "active_tracking": "ya tiene un Agente IA activo",
         "not_contactable": "el canal no lo puede contactar",
         "outside_window": "fuera de la ventana",
-        "daily_cap": "tope del día"
+        "daily_cap": "tope del día",
+        "opted_out": "pidió no ser contactado"
       }
     }
   }

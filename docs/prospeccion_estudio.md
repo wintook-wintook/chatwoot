@@ -991,6 +991,23 @@ Orden propuesto: **F1 → F2 → F4 → F3**. Las tres primeras son rápidas y s
 > - **Pruebas:** `prospecting_rules_spec` (3), 3 en `schedule_spec`, 2 en `enroll_spec`, 2 en
 >   `contact_tracking_bulk_assigns_controller_spec`; 95 en verde.
 
+> ✅ **V4 HECHA (27/10/2026) — baja con un clic y lista de no contactar.**
+> - **Qué se hizo:** migración `20261031130000_add_opted_out_to_contacts` (`opted_out_at`,
+>   `opted_out_source`: link · reply · agent); `ContactTrackings::OptOut` (marca, cancela seguimientos
+>   activos, enlace firmado con `signed_id`, detecta la petición en una respuesta).
+>   Página pública `/baja/:token` (`Public::OptOutsController`): GET pide confirmar (abrir no da de
+>   baja: los antivirus abren enlaces), POST da de baja; la baja con un clic de Gmail/Yahoo responde 200.
+>   Correos del agente: pie «¿No quieres recibir más correos? Date de baja aquí: …» (en `Signature`) y
+>   cabeceras `List-Unsubscribe` + `List-Unsubscribe-Post` (en `ConversationReplyMailer`).
+>   `Enroll` omite con motivo `opted_out`; la vista previa lo cuenta como «Pidió no ser contactado».
+>   Analizador: «no me escriban», «dame de baja», «baja», «stop»… → baja y la IA no contesta.
+>   Solo formas de petición: «no me escribieron los precios» o «no me interesa» NO son baja.
+> - **Pantalla:** en el panel del contacto, aviso rojo «Pidió no ser contactado · fecha · cómo» con
+>   «Quitar», o botón «No contactar» para marcarlo a mano (`ContactOptOutField.vue`,
+>   `POST|DELETE /contacts/:id/opt_out`).
+> - **Pruebas:** `opt_out_spec` (8), `public/opt_outs_controller_spec` (4), 2 en el mailer; 1000 en verde.
+> - **Pendiente legal (D7):** revisar con abogado el aviso de privacidad (LFPDPPP) que acompaña.
+
 Orden: **V0 → V1 → V2 → V3 → V4 → V5 → V6**. Con V0–V4 el envío ya es correcto;
 con V5–V6 ya es prospección (se sabe quién está interesado y cuánto rinde la campaña).
 
@@ -1021,7 +1038,7 @@ de la empresa (no código). Se marca conforme avanzan las fases.
 | 1 · A quién: cliente ideal, correos validados | Empresa: definir el cliente ideal · v1.1: validar correos antes de enviar | ⏳ empresa / v1.1 |
 | 2 · Mensaje: asunto, firma, prompt real | F1 ✅ · V1 ✅ firma · empresa: prompt de prospección | 🟡 falta el prompt |
 | 3 · Cadencia: se detiene al responder, días hábiles | V2 ✅ + V3 ✅ | ✅ |
-| 4 · Cumplir: baja, no contactar, aviso de privacidad | V4 · D7 (legal) | ⏳ |
+| 4 · Cumplir: baja, no contactar, aviso de privacidad | V4 ✅ · D7 (legal) | 🟡 falta D7 |
 | 5 · Que llegue: dominio, calentamiento, tope diario | V3 ✅ tope · empresa: dominio con SPF/DKIM/DMARC | 🟡 falta el dominio |
 | 6 · Calificar respuestas | V5 | ⏳ |
 | 7 · Entregar al vendedor | V6 lista «Interesados» · v1.1: P2 con plazo y avisos | ⏳ |

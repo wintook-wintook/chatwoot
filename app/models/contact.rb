@@ -17,6 +17,8 @@
 #  location              :string           default("")
 #  middle_name           :string           default("")
 #  name                  :string           default("")
+#  opted_out_at          :datetime
+#  opted_out_source      :string
 #  phone_number          :string
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
@@ -165,6 +167,11 @@ class Contact < ApplicationRecord
 
   def get_source_id(inbox_id)
     contact_inboxes.find_by!(inbox_id: inbox_id).source_id
+  end
+
+  # prospeccion V4: pidió no ser contactado (ContactTrackings::OptOut)
+  def opted_out?
+    opted_out_at.present?
   end
 
   def push_event_data

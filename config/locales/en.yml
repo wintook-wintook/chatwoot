@@ -252,6 +252,15 @@ en:
     errors:
       not_found: 'Maintenance plan not found'
       asset_not_found: 'Equipment not found'
+  # prospeccion V4 — opt-out from the link in an AI Agent email
+  public_opt_out:
+    title: "Don't want to receive our emails anymore?"
+    body: "Confirm and %{name} won't write to you again."
+    confirm: "Yes, unsubscribe me"
+    done_title: "Done, we won't write to you again"
+    done_body: "%{name} won't contact you again. If this was a mistake, reply to us and we'll fix it."
+  contact_trackings:
+    opt_out_footer: "Don't want more emails? Unsubscribe here: %{url}"
   public_quotes:
     title: 'Quote'
     for: 'For %{name}'

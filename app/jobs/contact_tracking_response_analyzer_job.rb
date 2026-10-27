@@ -53,6 +53,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     Rails.logger.info "[Coordinator] 🔍 Mensaje ##{message_id}: \"#{message_text_for_ai(message).truncate(80)}\""
 
     active_trackings = find_active_trackings(message)
+    # prospeccion V4: pidió no ser contactado → baja, se cancelan sus seguimientos y la IA no contesta
+    if active_trackings.any? && ContactTrackings::OptOut.requested_in?(message_text_for_ai(message))
+      ContactTrackings::OptOut.call(message.conversation.contact, source: 'reply')
+      return
+    end
     # prospeccion V2: respondió → no más toques automáticos (uno de recuperación en 3 días hábiles)
     active_trackings.each { |tracking| ContactTrackings::ProspectReply.call(tracking, at: message.created_at) }
 

@@ -476,6 +476,7 @@ Rails.application.routes.draw do
               resources :contact_inboxes, only: [:create]
               resource :owner, only: [:show, :update] # Responsable fijo del contacto
               resource :summary, only: [:show] # Página del contacto › Resumen
+              resource :opt_out, only: [:create, :destroy] # prospeccion V4: marcar / quitar «no contactar»
               resources :labels, only: [:create, :index]
               resources :notes
             end
@@ -960,6 +961,9 @@ Rails.application.routes.draw do
   get  'reporte/:token',             to: 'public/service_reports#show', as: :public_service_report # Plan-Trabajo-Campo R1
   post 'cotizacion/:token/aceptar',  to: 'public/quotes#accept', as: :public_quote_accept
   post 'cotizacion/:token/rechazar', to: 'public/quotes#reject', as: :public_quote_reject
+  # prospeccion V4 — baja desde el enlace de un correo del Agente IA (GET confirma, POST da de baja)
+  get  'baja/:token', to: 'public/opt_outs#show', as: :public_opt_out
+  post 'baja/:token', to: 'public/opt_outs#create'
 
   # Plan-Trabajo-Campo R5 — portal del cliente de su orden y visita del técnico externo.
   get  'servicio/:token',            to: 'public/service_portals#show',  as: :public_service_portal

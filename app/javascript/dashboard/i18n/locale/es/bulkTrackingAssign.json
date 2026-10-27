@@ -103,7 +103,8 @@
         "NO_PHONE": "El canal requiere teléfono y el contacto no tiene",
         "NO_EMAIL": "El canal requiere correo y el contacto no tiene",
         "UNSUPPORTED_CHANNEL": "El canal no permite iniciar la conversación",
-        "IN_TRACKING": "Ya tiene un seguimiento activo en este canal"
+        "IN_TRACKING": "Ya tiene un seguimiento activo en este canal",
+        "OPTED_OUT": "Pidió no ser contactado"
       },
       "WILL_CREATE": "Se crearán {count} seguimientos al confirmar.",
       "TOO_MANY_TITLE": "Audiencia demasiado grande",

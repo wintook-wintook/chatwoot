@@ -103,7 +103,8 @@
         "NO_PHONE": "Channel needs a phone number and the contact has none",
         "NO_EMAIL": "Channel needs an email and the contact has none",
         "UNSUPPORTED_CHANNEL": "This channel can't start the conversation",
-        "IN_TRACKING": "Already has an active follow-up on this channel"
+        "IN_TRACKING": "Already has an active follow-up on this channel",
+        "OPTED_OUT": "Asked not to be contacted"
       },
       "WILL_CREATE": "{count} follow-ups will be created on confirm.",
       "TOO_MANY_TITLE": "Audience too large",

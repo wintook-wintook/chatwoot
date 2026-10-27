@@ -205,7 +205,8 @@
         "active_tracking": "already has an active AI Agent",
         "not_contactable": "the channel can't reach them",
         "outside_window": "outside the window",
-        "daily_cap": "daily limit"
+        "daily_cap": "daily limit",
+        "opted_out": "asked not to be contacted"
       }
     }
   }

@@ -237,6 +237,15 @@ es:
     errors:
       not_found: 'Mantenimiento no encontrado'
       asset_not_found: 'Equipo no encontrado'
+  # prospeccion V4 — baja desde el enlace de un correo del Agente IA
+  public_opt_out:
+    title: "¿Ya no quieres recibir nuestros correos?"
+    body: "Confirma y %{name} no volverá a escribirte."
+    confirm: "Sí, darme de baja"
+    done_title: "Listo, ya no te escribiremos"
+    done_body: "%{name} no volverá a contactarte. Si fue un error, respóndenos y lo corregimos."
+  contact_trackings:
+    opt_out_footer: "¿No quieres recibir más correos? Date de baja aquí: %{url}"
   public_quotes:
     title: 'Cotización'
     for: 'Para %{name}'

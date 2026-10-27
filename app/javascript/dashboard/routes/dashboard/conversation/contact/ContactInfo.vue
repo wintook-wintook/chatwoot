@@ -19,6 +19,7 @@ import { dynamicTime } from 'shared/helpers/timeHelper';
 import { useAdmin } from 'dashboard/composables/useAdmin';
 import ContactInfoRow from './ContactInfoRow.vue';
 import ContactOwnerField from './ContactOwnerField.vue'; // Responsable fijo del contacto
+import ContactOptOutField from './ContactOptOutField.vue'; // prospeccion V4: no contactar
 import ContactMoreActions from './ContactMoreActions.vue';
 import ContactLabel from 'dashboard/routes/dashboard/contacts/components/ContactLabels.vue';
 import Thumbnail from 'dashboard/components/widgets/Thumbnail.vue';
@@ -46,6 +47,7 @@ import { backQuery } from 'dashboard/views/gestorTickets/backLink'; // Plan-Cata
 export default {
   components: {
     ContactOwnerField,
+    ContactOptOutField,
     ContactMoreActions,
     ContactLabel,
     ContactInfoRow,
@@ -573,6 +575,7 @@ export default {
 
           <!-- Responsable fijo del contacto -->
           <ContactOwnerField v-if="contact.id" :contact-id="contact.id" />
+          <ContactOptOutField v-if="contact.id" :contact="contact" />
         </div>
       </div>
       <!-- Acciones con nombre: las principales a la vista, el resto en «Más» -->
@@ -620,6 +623,7 @@ export default {
         <div class="flex flex-wrap items-start gap-x-8 gap-y-2">
           <div class="w-full sm:w-auto sm:min-w-[20rem]">
             <ContactOwnerField v-if="contact.id" :contact-id="contact.id" />
+            <ContactOptOutField v-if="contact.id" :contact="contact" />
           </div>
           <div class="flex items-start flex-1 min-w-[16rem] gap-2">
             <span class="flex items-center flex-shrink-0 h-7 gap-2 text-sm text-slate-600 dark:text-slate-300">
