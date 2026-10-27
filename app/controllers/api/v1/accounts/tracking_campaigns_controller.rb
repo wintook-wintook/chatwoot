@@ -165,12 +165,14 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
       stats: aggregate_stats(status_counts || {}),
       delivery: aggregate_delivery(delivery_counts || {}),
       funnel: funnel_counts || TrackingCampaigns::CampaignFunnel::EMPTY
-    }.merge(editable_json(campaign), prospecting_json(campaign))
+    }.merge(editable_json(campaign), extras_json(campaign))
   end
 
-  # prospeccion P2/P3/P4 · §10.12: entrega, prueba de asuntos y puntuación, en todas las campañas
-  def prospecting_json(campaign)
-    campaign.handoff_settings.merge(subject_test: TrackingCampaigns::SubjectTest.stats(campaign),
+  # §10.12: el canal (filtro de la lista, U4) y, en todas las campañas, entrega (P2), prueba de
+  # asuntos (P3) y puntuación (P4).
+  def extras_json(campaign)
+    campaign.handoff_settings.merge(channel_type: campaign.inbox&.channel_type,
+                                    subject_test: TrackingCampaigns::SubjectTest.stats(campaign),
                                     scoring: TrackingCampaigns::ScoringConfig.for(campaign))
   end
 

@@ -10,10 +10,17 @@
     "EMPTY_HINT": "Crea una con el botón «Agregar campaña» o asigna un Agente IA de forma masiva desde Contactos.",
     "SEARCH_PLACEHOLDER": "Buscar por nombre, Agente IA o canal…",
     "FILTER_STATUS_ALL": "Todos los estados",
-    "PURPOSE_TABS": {
+    "CHANNEL_TABS": {
       "ALL": "Todas",
-      "FOLLOW_UP": "Seguimiento",
-      "PROSPECTING": "Prospección"
+      "WHATSAPP": "WhatsApp",
+      "EMAIL": "Correo",
+      "TELEGRAM": "Telegram",
+      "SMS": "SMS",
+      "MESSENGER": "Messenger",
+      "INSTAGRAM": "Instagram",
+      "API": "API",
+      "WEBSITE": "Sitio web",
+      "OTHER": "Otros"
     },
     "NO_RESULTS": "No hay campañas que coincidan con el filtro.",
     "DELETE": "Borrar campaña",
@@ -257,7 +264,7 @@
         "not_now": "Dijo «no ahora»"
       },
       "COPY_FROM": "Copiar de otra campaña",
-      "COPY_PLACEHOLDER": "Elige una campaña de Prospección",
+      "COPY_PLACEHOLDER": "Elige una campaña",
       "RESET": "Volver a los valores sugeridos",
       "SAVE": "Guardar puntuación",
       "CANCEL": "Cancelar",

@@ -100,7 +100,10 @@ const campaignState = campaign => {
   const state = {
     campaignName: campaign.name,
     selectedTemplateId: campaign.tracking_template_id || '',
-    purpose: campaign.purpose || 'follow_up',
+    // §10.12 (D20, D25): qué hacer con lo que la IA leyó en la respuesta
+    stopWhenNotInterested: campaign.stop_when_not_interested !== false,
+    stopWhenWrongPerson: campaign.stop_when_wrong_person !== false,
+    retryNotNow: campaign.retry_not_now !== false,
     emailSubject: campaign.email_subject || '',
     emailSubjectB: campaign.email_subject_b || '', // prospeccion P3
     scheduledFor: toLocalInput(campaign.scheduled_for),
@@ -128,8 +131,10 @@ export default {
     return {
       campaignName: '',
       selectedTemplateId: '',
-      // prospeccion V0: seguimiento (ya te conocen) o prospección (clientes nuevos)
-      purpose: 'follow_up',
+      // §10.12 (D20, D25): qué hacer con lo que la IA leyó en la respuesta
+      stopWhenNotInterested: true,
+      stopWhenWrongPerson: true,
+      retryNotNow: true,
       emailSubject: '',
       emailSubjectB: '', // prospeccion P3: asunto B (prueba A/B)
       showSendOptions: false,
@@ -204,30 +209,12 @@ export default {
     emailSubjectReady() {
       return !this.isEmailCampaign || !!this.emailSubject.trim();
     },
-    // prospeccion V3: tope diario obligatorio; por lote reparte en días hábiles
-    isProspecting() {
-      return this.purpose === 'prospecting';
-    },
-    showDailyCap() {
-      return this.isContinuous || this.isProspecting;
-    },
-    prospectingReady() {
+    // §10.12 (D21): el tope es obligatorio en correo; en otros canales es opcional, pero si
+    // se pone va de 1 a 500. Por lote reparte en días hábiles.
+    capReady() {
+      if (!this.dailyCap) return !this.isEmailCampaign;
       const cap = Number(this.dailyCap);
-      return !this.isProspecting || (cap >= 1 && cap <= 500);
-    },
-    purposeOptions() {
-      return [
-        {
-          value: 'follow_up',
-          label: this.$t('BULK_TRACKING_ASSIGN.MODAL.PURPOSE_FOLLOW_UP'),
-          hint: this.$t('BULK_TRACKING_ASSIGN.MODAL.PURPOSE_FOLLOW_UP_HINT'),
-        },
-        {
-          value: 'prospecting',
-          label: this.$t('BULK_TRACKING_ASSIGN.MODAL.PURPOSE_PROSPECTING'),
-          hint: this.$t('BULK_TRACKING_ASSIGN.MODAL.PURPOSE_PROSPECTING_HINT'),
-        },
-      ];
+      return cap >= 1 && cap <= 500;
     },
     emailSubjectVariables() {
       return { contacto: '{{contacto}}', empresa: '{{empresa}}' };
@@ -331,7 +318,7 @@ export default {
           !!this.campaignName.trim() &&
           !!this.selectedTemplateId &&
           this.emailSubjectReady &&
-          this.prospectingReady &&
+          this.capReady &&
           !this.windowError &&
           !this.isSubmitting
         );
@@ -343,7 +330,7 @@ export default {
         this.hasAudienceSelected &&
         !!this.selectedTemplateId &&
         this.emailSubjectReady &&
-        this.prospectingReady &&
+        this.capReady &&
         !!this.scheduledFor &&
         !this.windowError &&
         hasTargets &&
@@ -365,13 +352,11 @@ export default {
     },
     selectedTemplateId() {
       if (!this.isContinuous) this.fetchPreview();
-    },
-    // prospeccion V3: Prospección trae sus reglas puestas
-    purpose(value) {
-      if (value !== 'prospecting') return;
-      if (!this.dailyCap) this.dailyCap = 30;
-      this.respectWorkingHours = true;
-      this.showSendOptions = true;
+      // §10.12 (D21): por correo el tope es obligatorio; se sugiere 30 y se muestra.
+      if (this.isEmailCampaign && !this.dailyCap) {
+        this.dailyCap = 30;
+        this.showSendOptions = true;
+      }
     },
   },
   async mounted() {
@@ -493,9 +478,15 @@ export default {
     },
     // prospeccion P3: el asunto B solo vale en Prospección por correo.
     emailSubjectBPayload() {
-      return this.isEmailCampaign && this.isProspecting
-        ? this.emailSubjectB.trim() || null
-        : null;
+      return this.isEmailCampaign ? this.emailSubjectB.trim() || null : null;
+    },
+    // §10.12 (D20, D25)
+    replyOptionsPayload() {
+      return {
+        stop_when_not_interested: this.stopWhenNotInterested,
+        stop_when_wrong_person: this.stopWhenWrongPerson,
+        retry_not_now: this.retryNotNow,
+      };
     },
     continuousBody() {
       return {
@@ -505,8 +496,8 @@ export default {
         daily_cap: this.dailyCap ? Number(this.dailyCap) : null,
         email_subject: this.emailSubjectPayload(),
         email_subject_b: this.emailSubjectBPayload(),
-        purpose: this.purpose,
         ...this.windowPayload(),
+        ...this.replyOptionsPayload(),
       };
     },
     batchBody() {
@@ -519,13 +510,12 @@ export default {
         skipActive: this.skipActive,
         window: {
           ...this.windowPayload(),
-          daily_cap:
-            this.isProspecting && this.dailyCap ? Number(this.dailyCap) : null,
+          daily_cap: this.dailyCap ? Number(this.dailyCap) : null,
+          ...this.replyOptionsPayload(),
         },
         audienceSource: this.audienceSource,
         emailSubject: this.emailSubjectPayload(),
         emailSubjectB: this.emailSubjectBPayload(),
-        purpose: this.purpose,
       };
     },
     create(launch) {
@@ -568,7 +558,9 @@ export default {
     resetForm() {
       this.campaignName = '';
       this.selectedTemplateId = '';
-      this.purpose = 'follow_up';
+      this.stopWhenNotInterested = true;
+      this.stopWhenWrongPerson = true;
+      this.retryNotNow = true;
       this.emailSubject = '';
       this.emailSubjectB = '';
       this.showSendOptions = false;
@@ -599,26 +591,6 @@ export default {
         <h3 class="section-title">
           {{ $t('BULK_TRACKING_ASSIGN.MODAL.SECTION_WHAT') }}
         </h3>
-        <!-- prospeccion V0: ¿para qué es la campaña? -->
-        <span class="field-label">
-          {{ $t('BULK_TRACKING_ASSIGN.MODAL.PURPOSE_LABEL') }}
-        </span>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1 mb-3">
-          <label
-            v-for="option in purposeOptions"
-            :key="option.value"
-            class="audience-card"
-            :class="{ 'audience-card--active': purpose === option.value }"
-          >
-            <span class="audience-radio">
-              <input v-model="purpose" type="radio" :value="option.value" />
-              {{ option.label }}
-            </span>
-            <span class="text-xs text-slate-500 dark:text-slate-400">
-              {{ option.hint }}
-            </span>
-          </label>
-        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
           <label class="block">
             <span class="field-label">
@@ -674,10 +646,7 @@ export default {
             </span>
           </label>
           <!-- prospeccion P3: prueba A/B de asuntos (opcional) -->
-          <label
-            v-if="isEmailCampaign && isProspecting"
-            class="block md:col-span-2"
-          >
+          <label v-if="isEmailCampaign" class="block md:col-span-2">
             <span class="field-label">
               {{ $t('BULK_TRACKING_ASSIGN.MODAL.EMAIL_SUBJECT_B_LABEL') }}
             </span>
@@ -848,11 +817,11 @@ export default {
               class="field-input"
             />
           </label>
-          <label v-if="showDailyCap" class="block">
+          <label class="block">
             <span class="field-label">
               {{
-                isProspecting
-                  ? $t('BULK_TRACKING_ASSIGN.MODAL.PROSPECTING_DAILY_CAP_LABEL')
+                isEmailCampaign
+                  ? $t('BULK_TRACKING_ASSIGN.MODAL.EMAIL_DAILY_CAP_LABEL')
                   : $t('BULK_TRACKING_ASSIGN.MODAL.DAILY_CAP_LABEL')
               }}
             </span>
@@ -866,7 +835,7 @@ export default {
               class="field-input"
             />
             <span
-              v-if="isProspecting && !isContinuous"
+              v-if="dailyCap && !isContinuous"
               class="block mt-1 text-xs text-slate-500 dark:text-slate-400"
             >
               {{ $t('BULK_TRACKING_ASSIGN.MODAL.PROSPECTING_DAILY_CAP_HINT') }}
@@ -885,11 +854,36 @@ export default {
                 v-model="respectWorkingHours"
                 type="checkbox"
                 class="m-0"
-                :disabled="isProspecting"
               />
               {{ $t('BULK_TRACKING_ASSIGN.MODAL.RESPECT_WORKING_HOURS') }}
             </label>
           </div>
+        </div>
+
+        <!-- §10.12 (D20, D25): qué hacer con lo que la IA leyó en la respuesta -->
+        <h4 class="mt-4 field-label">
+          {{ $t('BULK_TRACKING_ASSIGN.MODAL.ON_REPLY_TITLE') }}
+        </h4>
+        <p class="mt-0.5 mb-1 text-xs text-slate-500 dark:text-slate-400">
+          {{ $t('BULK_TRACKING_ASSIGN.MODAL.ON_REPLY_HINT') }}
+        </p>
+        <div class="flex flex-col gap-1.5">
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              v-model="stopWhenNotInterested"
+              type="checkbox"
+              class="m-0"
+            />
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.ON_REPLY_NOT_INTERESTED') }}
+          </label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input v-model="stopWhenWrongPerson" type="checkbox" class="m-0" />
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.ON_REPLY_WRONG_PERSON') }}
+          </label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input v-model="retryNotNow" type="checkbox" class="m-0" />
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.ON_REPLY_NOT_NOW') }}
+          </label>
         </div>
       </section>
 

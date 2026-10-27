@@ -330,6 +330,7 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
       get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}", headers: admin.create_new_auth_token, as: :json
       expect(response.parsed_body['funnel'].keys).to include('contacted', 'handed_off', 'not_now', 'bounced')
       expect(response.parsed_body['scoring']).to be_present
+      expect(response.parsed_body['channel_type']).to eq(inbox.channel_type) # U4: filtro por canal
     end
 
     it 'entrega a un interesado y no a quien no lo es' do

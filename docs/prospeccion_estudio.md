@@ -1363,7 +1363,7 @@ cómo funciona. Botón «Volver a los valores sugeridos».
 | D18 ✅ | ¿El −10 por 30 días sin responder se aplica una vez o se repite? | Una vez (no seguir bajando: con «sin respuesta» ya sale del embudo) |
 | D19 ✅ | ¿La puntuación se ve también en la ficha del contacto? | Sí, la de su campaña más reciente, solo lectura |
 
-### 10.12 Una sola campaña: sin «Seguimiento / Prospección» y un solo embudo (plan)
+### 10.12 Una sola campaña: sin «Seguimiento / Prospección» y un solo embudo
 
 **Pedido (27/10/2026):** el usuario se pierde con dos tipos de campaña. Que el formulario sea uno,
 que sirva igual para cualquier campaña y canal, y que el embudo no dependa de palabras clave ni
@@ -1538,6 +1538,27 @@ por correo con el mismo formulario y ver el mismo embudo en las dos.
 | D26 | ¿Etiquetas del embudo según el objetivo («Prometió pagar» en cobranza)? | ✅ No por ahora: se quedan como están; queda para después (aceptada 27/10/2026) |
 | D27 | ¿Las palabras clave siguen contando? | ✅ Sí, igual que hoy y sumando con la IA; ningún indicador baja (confirmado 27/10/2026) |
 
+
+#### 10.12.9 Cómo quedó (27/10/2026)
+
+> ✅ **U1–U5 HECHAS** (U6, reclasificar respuestas viejas, no se hace por D23). Retorno: tag
+> `estable-2026-10-27-antes-unificar-campanas`.
+> - **U1 · backend** (`69904c05`): migración `20261031200000_add_reply_options_to_tracking_campaigns`
+>   (`stop_when_not_interested`, `stop_when_wrong_person`, `retry_not_now`; las `follow_up` existentes
+>   quedaron en false: en dev la #256). `TrackingCampaigns::CampaignRules` reemplaza a `ProspectingRules`
+>   (por canal). El clasificador corre en todas las campañas y respeta las casillas (la salida siempre se
+>   anota). Entrega, puntuación y asunto B sin `prospecting?`. «Días hábiles» decide el fin de semana.
+>   `purpose` se queda en la tabla; las nuevas se guardan como `prospecting` y ya no cambia nada.
+> - **U2 + U5 · un solo embudo** (`37e284aa`): `TrackingCampaigns::CampaignFunnel` (consultas agrupadas;
+>   reemplaza «Intenciones» y `ProspectingFunnel`). Detalle: tarjeta «🎯 Embudo» en todas las campañas
+>   (con «Con cita» y «Objetivo cumplido»); pausados/cancelados por regla en «⚙️ Control». El tablero
+>   general cuenta igual. Garantía D27 probada: `campaign_funnel_spec` y el caso de palabras clave del
+>   controlador dan los mismos números que antes.
+> - **U3 + U4 · pantallas**: formulario sin «¿Para qué es?»; tope visible siempre (en correo se sugiere 30
+>   y es obligatorio); «Solo días hábiles y en el horario de atención» como casilla; sección «Cuando el
+>   cliente responde» con las tres casillas; asunto B en cualquier campaña por correo. Lista de campañas
+>   sin pestañas de tipo: pestañas por canal, solo si hay campañas de más de uno.
+> - **Pruebas:** 1162 en verde (seguimientos, campañas, Kanban, correo, mensajes, tablero general).
 
 #### 10.12.8 Dos ejemplos de principio a fin
 
