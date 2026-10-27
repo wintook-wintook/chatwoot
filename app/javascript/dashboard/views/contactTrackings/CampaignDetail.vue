@@ -730,19 +730,6 @@ export default {
 
 <template>
   <div class="flex flex-col flex-1 w-full h-full overflow-hidden p-4">
-    <!-- Volver a la tabla de campañas -->
-    <div class="mb-3 shrink-0">
-      <woot-button
-        variant="smooth"
-        color-scheme="secondary"
-        size="small"
-        icon="chevron-left"
-        @click="$router.push(backRoute)"
-      >
-        {{ $t('TRACKING_CAMPAIGNS_VIEW.BACK_TO_LIST') }}
-      </woot-button>
-    </div>
-
     <!-- Cargando -->
     <div v-if="isLoading" class="py-16 text-center text-slate-400">
       {{ $t('TRACKING_CAMPAIGN_DETAIL.LOADING') }}
@@ -760,6 +747,17 @@ export default {
         >
           {{ campaignStatusLabel(campaign.status) }}
         </span>
+        <!-- Volver a la tabla de campañas: a la izquierda de las acciones -->
+        <woot-button
+          variant="smooth"
+          color-scheme="secondary"
+          size="small"
+          icon="chevron-left"
+          class="ml-auto"
+          @click="$router.push(backRoute)"
+        >
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.BACK_TO_LIST') }}
+        </woot-button>
         <!-- Guardada: se puede modificar (en el formulario de Campañas) -->
         <woot-button
           v-if="campaign.status === 'saved'"
@@ -767,7 +765,6 @@ export default {
           color-scheme="secondary"
           size="small"
           icon="edit"
-          class="ml-auto"
           @click="$router.push({ ...backRoute, query: { edit: campaign.id } })"
         >
           {{ $t('TRACKING_CAMPAIGNS_VIEW.EDIT') }}
@@ -787,7 +784,6 @@ export default {
           color-scheme="warning"
           size="small"
           icon="snooze"
-          class="ml-auto"
           :is-loading="isPausing"
           @click="showPauseModal = true"
         >
@@ -1338,6 +1334,18 @@ export default {
         />
       </div>
     </template>
+    <!-- No se pudo cargar: que siempre haya cómo volver -->
+    <div v-else class="py-16 text-center">
+      <woot-button
+        variant="smooth"
+        color-scheme="secondary"
+        size="small"
+        icon="chevron-left"
+        @click="$router.push(backRoute)"
+      >
+        {{ $t('TRACKING_CAMPAIGNS_VIEW.BACK_TO_LIST') }}
+      </woot-button>
+    </div>
     <woot-delete-modal
       :show="showPauseModal"
       :on-close="() => (showPauseModal = false)"
