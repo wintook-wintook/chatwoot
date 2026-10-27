@@ -16,11 +16,14 @@
 #
 #   La etapa nunca baja (un interesado que luego saluda sigue interesado). La IA sigue
 #   contestando como siempre. Si la llamada falla, queda «respondió»: nunca rompe el turno.
+#   prospeccion P4.2: en la misma llamada, el motivo del interés (price · info · meeting) y si
+#   quien responde decide; con eso se recalcula la puntuación (TrackingCampaigns::ProspectScore).
 # ================================================================================
 require 'net/http'
 
 class TrackingCampaigns::ProspectClassifier
   LABELS = %w[interested not_now not_interested wrong_person other].freeze
+  REASONS = %w[price info meeting].freeze # prospeccion P4.2: motivo del interés
   MODELS = %w[gpt-4o-mini gpt-4o].freeze
   STAGE_RANK = { nil => 0, 'replied' => 1, 'interested' => 2, 'handed_off' => 3 }.freeze
   WAITING_STATUSES = %w[pending scheduled].freeze
@@ -39,8 +42,9 @@ class TrackingCampaigns::ProspectClassifier
   def call
     return unless @tracking.tracking_campaign&.prospecting?
 
-    label = MODELS.lazy.filter_map { |model| ask(model) }.first || 'other'
-    apply(label)
+    answer = MODELS.lazy.filter_map { |model| ask(model) }.first || { 'categoria' => 'other' }
+    label = answer['categoria']
+    apply(label, answer)
     Rails.logger.info "[ProspectClassifier] Tracking ##{@tracking.id}: #{label}"
     label
   rescue StandardError => e
@@ -50,13 +54,25 @@ class TrackingCampaigns::ProspectClassifier
 
   private
 
-  def apply(label)
+  def apply(label, answer = {})
     attrs = { prospect_classified_at: Time.current,
               prospect_stage: stage_at_least(label == 'interested' ? 'interested' : 'replied') }
-    attrs.merge!(outcome_attributes(label))
+    attrs.merge!(outcome_attributes(label), signal_attributes(label, answer))
     return Rails.logger.warn("[ProspectClassifier] #{@tracking.errors.full_messages.join(', ')}") unless @tracking.update(attrs)
 
+    TrackingCampaigns::ProspectScore.call(@tracking) # prospeccion P4
     auto_hand_off
+  end
+
+  # prospeccion P4.2: lo que la IA leyó para la puntuación. Los motivos se acumulan (pidió precio
+  # y luego cita = los dos); «no se sabe» no borra un sí/no anterior.
+  def signal_attributes(label, answer)
+    attrs = {}
+    reason = answer['motivo'].to_s
+    attrs[:prospect_signals] = (Array(@tracking.prospect_signals) | [reason]) if label == 'interested' && REASONS.include?(reason)
+    decides = answer['decide'].to_s
+    attrs[:prospect_decision_maker] = decides if %w[yes no].include?(decides)
+    attrs
   end
 
   # prospeccion P2: con tablero de entrega, el interesado entra solo a Oportunidades.
@@ -106,8 +122,8 @@ class TrackingCampaigns::ProspectClassifier
     return if api_key.blank?
 
     raw = JSON.parse(post_json(api_key, model)).dig('choices', 0, 'message', 'content').to_s
-    label = JSON.parse(raw)['categoria'].to_s.strip
-    LABELS.include?(label) ? label : nil
+    answer = JSON.parse(raw).transform_values { |value| value.to_s.strip }
+    LABELS.include?(answer['categoria']) ? answer : nil
   rescue StandardError => e
     Rails.logger.warn "[ProspectClassifier] #{model}: #{e.message}"
     nil
@@ -121,7 +137,7 @@ class TrackingCampaigns::ProspectClassifier
     request = Net::HTTP::Post.new(uri)
     request['Authorization'] = "Bearer #{api_key}"
     request['Content-Type'] = 'application/json'
-    request.body = { model: model, messages: [{ role: 'user', content: prompt }], max_tokens: 30, temperature: 0,
+    request.body = { model: model, messages: [{ role: 'user', content: prompt }], max_tokens: 60, temperature: 0,
                      response_format: { type: 'json_object' } }.to_json
     http.request(request).body
   end
@@ -140,7 +156,16 @@ class TrackingCampaigns::ProspectClassifier
       - wrong_person: no es la persona indicada, no decide o el dato es equivocado.
       - other: saludo, duda general o algo que no encaja en las anteriores.
 
-      Responde SOLO un JSON: {"categoria": "<interested|not_now|not_interested|wrong_person|other>"}
+      Si es interested, di el motivo principal:
+      - price: pide precio, cotización o costos.
+      - info: pide información, catálogo o detalles.
+      - meeting: pide una cita, reunión, visita o llamada.
+
+      ¿Quien responde decide la compra? yes (lo dice o se nota: dueño, gerente, «yo autorizo»),
+      no (dice que no decide, lo pasa a otra persona), unknown (no se sabe).
+
+      Responde SOLO un JSON: {"categoria": "<interested|not_now|not_interested|wrong_person|other>",
+      "motivo": "<price|info|meeting|none>", "decide": "<yes|no|unknown>"}
     PROMPT
   end
 

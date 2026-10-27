@@ -123,7 +123,8 @@
       "P_WRONG_PERSON": "Wrong person",
       "P_OPTED_OUT": "Opted out",
       "P_BOUNCED": "Bounced",
-      "P_NO_REPLY": "No reply"
+      "P_NO_REPLY": "No reply",
+      "P_HOT": "🔥 Hot"
     },
     "PROSPECTS": "Prospects",
     "PROSPECTS_EMPTY": "This campaign has no prospects.",
@@ -155,7 +156,8 @@
       "p_wrong_person": "Not the right person; no more messages.",
       "p_opted_out": "Asked not to be contacted (email link, reply or an agent).",
       "p_bounced": "Their email does not exist or does not accept mail: the follow-up stopped.",
-      "p_no_reply": "Used up their touches without replying."
+      "p_no_reply": "Used up their touches without replying.",
+      "p_hot": "Prospects with 60 points or more: the closest to your ideal customer and the most interested."
     },
     "INTENT_VALUES": {
       "tracking": "Replied",
@@ -188,7 +190,8 @@
       "OUTCOME": "Outcome",
       "SCHEDULED": "Scheduled",
       "ATTEMPTS": "Attempts",
-      "ACTION": "Action"
+      "ACTION": "Action",
+      "SCORE": "Score"
     },
     "OPEN_CONVERSATION": "Open conversation",
     "HAND_OFF": "Hand off",
@@ -231,6 +234,45 @@
       "WINNER": "🏆 Winner",
       "CHOSEN": "Done: new prospects get that subject.",
       "ERROR": "Could not save. Try again."
+    },
+    "SCORING": {
+      "TITLE": "🎯 Scoring",
+      "DESC": "How much each prospect looks like your ideal customer and how much interest they showed, 0 to 100.",
+      "HOW_1": "Score = Profile (up to 50) + Interest (up to 50). The suggested points can be changed.",
+      "HOW_2": "Profile: tell it which labels or attribute value your ideal customer has. Without a rule that criterion is 0; “Talks to the decision maker” without a rule is inferred by the AI from their replies.",
+      "HOW_3": "Interest: comes only from what the prospect replies and their appointments. It is recalculated with each reply and once a day.",
+      "HOW_4": "For now it only sorts and marks “🔥 Hot” prospects (60 or more); it hands nothing to sellers. With a few weeks of data, the points get tuned.",
+      "PROFILE": "Profile (do they look like my ideal customer?)",
+      "INTEREST": "Interest (what did they do?)",
+      "POINTS": "Points",
+      "LABELS": "Labels (comma separated)",
+      "LABELS_PLACEHOLDER": "construction, industrial",
+      "ATTRIBUTE": "Attribute",
+      "ATTRIBUTE_PLACEHOLDER": "city",
+      "VALUES": "Values (comma separated)",
+      "VALUES_PLACEHOLDER": "Monterrey, Saltillo",
+      "CRITERIA": {
+        "industry": "Right industry",
+        "size": "Size or area",
+        "decider": "Talks to the decision maker",
+        "replied": "Replied",
+        "asked_price": "Asked price or info",
+        "asked_meeting": "Asked for a meeting",
+        "no_reply_30": "30 days without reply",
+        "not_now": "Said “not now”"
+      },
+      "COPY_FROM": "Copy from another campaign",
+      "COPY_PLACEHOLDER": "Choose a Prospecting campaign",
+      "RESET": "Back to suggested values",
+      "SAVE": "Save scoring",
+      "CANCEL": "Cancel",
+      "SAVED": "Scoring saved. Prospects are recalculated in a few seconds.",
+      "COPIED": "Copied. Review and save if you want to adjust something.",
+      "RESET_DONE": "Done: suggested values.",
+      "ERROR": "Could not save. Try again.",
+      "SUMMARY_NO_RULES": "No Profile rules: only Interest counts",
+      "SUMMARY_RULES": "Profile rules: {rules}",
+      "NO_POINTS": "No points yet"
     },
     "HAND_OFF_DONE": "Handed off. Take it from the conversation.",
     "HAND_OFF_ERROR": "Couldn't hand off. Please try again.",

@@ -165,7 +165,7 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   # proyecto@automatizacion_campanas — para el desplegable "Agregar a campaña".
   def lite_list
     Current.account.tracking_campaigns.order(created_at: :desc)
-           .map { |c| c.slice(:id, :name, :status, :mode, :scheduled_for, :ends_at, :inbox_id) }
+           .map { |c| c.slice(:id, :name, :status, :mode, :scheduled_for, :ends_at, :inbox_id, :purpose) } # purpose: prospeccion P4
   end
 
   def campaign_json(campaign, status_counts, delivery_counts, funnel_counts)
@@ -195,7 +195,8 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   # prospeccion P2: y la entrega de interesados (tablero, columna, plazo, escalar)
   def prospecting_json(campaign)
     { prospecting_funnel: campaign.prospecting? ? TrackingCampaigns::ProspectingFunnel.for(campaign) : nil }
-      .merge(campaign.handoff_settings, subject_test: TrackingCampaigns::SubjectTest.stats(campaign)) # P3: prueba A/B
+      .merge(campaign.handoff_settings, subject_test: TrackingCampaigns::SubjectTest.stats(campaign), # P3: prueba A/B
+             scoring: campaign.prospecting? ? TrackingCampaigns::ScoringConfig.for(campaign) : nil) # P4: puntuación
   end
 
   # Para modificar una Guardada: CampaignForm la vuelve a llenar con esto. Y, si está

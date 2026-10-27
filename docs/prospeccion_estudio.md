@@ -1287,7 +1287,7 @@ tarjeta, ni el Agente IA ni BotSeller contestan más en esa conversación (P2b).
 >   `contact_tracking_bulk_assigns_controller_spec`; 966/967 en verde (la inestable del Asistente).
 > - **Pedírselo al Asistente:** no aplica; se llena en el formulario de la campaña.
 
-### 10.11 v1.1 · P4 — Puntuación 0–100 (solo plan)
+### 10.11 v1.1 · P4 — Puntuación 0–100
 
 **Decisión (27/10/2026):** la puntuación se construye **ya**, con los pesos de §8.2 como punto de
 partida y **configurables**; mientras no estén calibrados con datos, **solo ordena y prioriza** (no
@@ -1332,14 +1332,36 @@ cómo funciona. Botón «Volver a los valores sugeridos».
 | P4.3 | Pantalla: modal «🎯 Puntuación», columna «Puntos» ordenable, filtro «Calientes», desglose | mediano |
 | P4.4 | **(después de calibrar)** interruptor «Entregar con ≥ N puntos» por campaña, apagado por omisión, y reporte de calibración: qué criterios separan a los que se entregaron/cerraron de los que no | mediano |
 
-**Decisiones abiertas de P4:**
+> ✅ **P4.1 + P4.2 + P4.3 HECHAS (27/10/2026)** — D16–D19 aceptadas como se propusieron. P4.4 queda
+> para cuando haya datos.
+> - **Qué se hizo:** migración `20261031190000_add_prospect_score` (campaña: `scoring` jsonb ·
+>   seguimiento: `prospect_score`, `prospect_score_parts`, `prospect_scored_at`, `prospect_signals`,
+>   `prospect_decision_maker`). `TrackingCampaigns::ScoringConfig` (pesos sugeridos de §8.2, reglas por
+>   etiqueta o atributo, limpieza de lo que manda la pantalla), `TrackingCampaigns::ProspectScore`
+>   (calcula y guarda el desglose), `TrackingCampaigns::ProspectScoreJob` (diario 6:15 y al guardar la
+>   configuración). `PATCH /tracking_campaigns/:id/scoring` (guardar · copiar de otra · volver a los
+>   sugeridos) y `GET /contacts/:id/prospect_score` (D19).
+> - **P4.2:** el clasificador pide en la misma llamada `motivo` (price · info · meeting) y `decide`
+>   (yes · no · unknown); los motivos se acumulan y «no se sabe» no borra lo ya sabido.
+> - **Cuándo se recalcula:** con cada respuesta clasificada, al agendar cita (marca de palabra clave),
+>   al guardar la configuración y una vez al día (etiquetas que cambiaron, 30 días sin responder).
+> - **Pantalla:** renglón «🎯 Puntuación» con «Configurar» → modal ancho (Perfil: puntos + etiquetas +
+>   atributo + valores por criterio; Interés: 5 pesos; copiar de otra campaña; valores sugeridos;
+>   4 notas de cómo funciona). En la lista: columna «Puntos» (clic = ordenar de más a menos; desglose al
+>   pasar el cursor) y tarjeta «🔥 Calientes» en el embudo, que filtra. En la ficha del contacto:
+>   «🎯 Puntuación 65 · campaña» con el desglose.
+> - **Pruebas:** `prospect_score_spec` (10), 2 en `prospect_classifier_spec`, 3 en
+>   `tracking_campaigns_controller_spec`; 1067 en verde.
+> - **Pedírselo al Asistente:** no aplica; se configura en el detalle de la campaña.
+
+**Decisiones de P4 (aceptadas 27/10/2026):**
 
 | # | Pregunta | Propuesta |
 |---|---|---|
-| D16 | ¿Los pesos y reglas son por campaña o por cuenta? | Por campaña, con «copiar de otra campaña» (cada campaña apunta a un cliente ideal distinto) |
-| D17 | «Habla quien decide»: ¿regla, IA o las dos? | Las dos: si hay regla manda la regla; si no, lo que infiera la IA de sus respuestas |
-| D18 | ¿El −10 por 30 días sin responder se aplica una vez o se repite? | Una vez (no seguir bajando: con «sin respuesta» ya sale del embudo) |
-| D19 | ¿La puntuación se ve también en la ficha del contacto? | Sí, la de su campaña más reciente, solo lectura |
+| D16 ✅ | ¿Los pesos y reglas son por campaña o por cuenta? | Por campaña, con «copiar de otra campaña» (cada campaña apunta a un cliente ideal distinto) |
+| D17 ✅ | «Habla quien decide»: ¿regla, IA o las dos? | Las dos: si hay regla manda la regla; si no, lo que infiera la IA de sus respuestas |
+| D18 ✅ | ¿El −10 por 30 días sin responder se aplica una vez o se repite? | Una vez (no seguir bajando: con «sin respuesta» ya sale del embudo) |
+| D19 ✅ | ¿La puntuación se ve también en la ficha del contacto? | Sí, la de su campaña más reciente, solo lectura |
 
 ---
 

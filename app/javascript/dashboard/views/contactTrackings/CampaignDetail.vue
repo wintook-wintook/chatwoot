@@ -12,6 +12,7 @@ import ContactTrackingsAPI from 'dashboard/api/contactTrackings';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import CampaignEntries from './CampaignEntries.vue';
 import CampaignHandoffSettings from './CampaignHandoffSettings.vue';
+import CampaignScoringSettings from './CampaignScoringSettings.vue';
 
 const PAGE_SIZE = 25;
 // Cada cuánto se refrescan los indicadores mientras la pantalla está abierta
@@ -73,6 +74,7 @@ const PROSPECT_FILTERS = {
   p_not_interested: p => p.prospect_exit === 'not_interested',
   p_wrong_person: p => p.prospect_exit === 'wrong_person',
   p_opted_out: p => p.prospect_exit === 'opted_out',
+  p_hot: p => (p.prospect_score || 0) >= 60, // prospeccion P4: calientes
   p_bounced: p => p.prospect_exit === 'bounced', // prospeccion V7b
   p_no_reply: p =>
     p.status === 'completed' && !p.prospect_stage && !p.prospect_exit,
@@ -88,13 +90,20 @@ const PROSPECT_FILTERS = {
 };
 
 export default {
-  components: { TableFooter, CampaignEntries, CampaignHandoffSettings },
+  components: {
+    TableFooter,
+    CampaignEntries,
+    CampaignHandoffSettings,
+    CampaignScoringSettings,
+  },
   data() {
     return {
       campaign: null,
       prospects: [],
       handingOff: null, // prospeccion V6
       showHandoffModal: false, // prospeccion P2
+      showScoringModal: false, // prospeccion P4
+      sortByScore: false, // prospeccion P4: ordenar por puntos
       choosingSubject: null, // prospeccion P3
       isLoading: false,
       currentPage: 1,
@@ -273,6 +282,11 @@ export default {
         kpi('P_WRONG_PERSON', f.wrong_person, 'text-slate-500'),
         kpi('P_OPTED_OUT', f.opted_out, 'text-red-500 dark:text-red-400'),
         kpi('P_BOUNCED', f.bounced, 'text-red-500 dark:text-red-400'),
+        kpi(
+          'P_HOT',
+          this.prospects.filter(PROSPECT_FILTERS.p_hot).length,
+          'text-red-500 dark:text-red-400'
+        ),
         kpi('P_NO_REPLY', f.no_reply, 'text-slate-500'),
       ];
     },
@@ -358,7 +372,36 @@ export default {
     // Prospectos tras aplicar el filtro por KPI (client-side sobre lo cargado).
     filteredProspects() {
       const predicate = PROSPECT_FILTERS[this.activeFilter];
-      return predicate ? this.prospects.filter(predicate) : this.prospects;
+      const list = predicate
+        ? this.prospects.filter(predicate)
+        : this.prospects;
+      if (!this.sortByScore) return list;
+      // prospeccion P4: de más a menos puntos; sin puntuación, al final.
+      return [...list].sort(
+        (a, b) => (b.prospect_score ?? -1) - (a.prospect_score ?? -1)
+      );
+    },
+    scoreHeader() {
+      const arrow = this.sortByScore ? '↓' : '↕';
+      return `${this.$t('TRACKING_CAMPAIGN_DETAIL.COL.SCORE')} ${arrow}`;
+    },
+    // prospeccion P4: «Pesos sugeridos · reglas: giro, zona» para el renglón de puntuación.
+    scoringSummary() {
+      const scoring = this.campaign && this.campaign.scoring;
+      if (!scoring) return '';
+      const t = (key, args) =>
+        this.$t(`TRACKING_CAMPAIGN_DETAIL.SCORING.${key}`, args);
+      const withRules = ['industry', 'size', 'decider'].filter(key => {
+        const rule = scoring.rules[key];
+        return (
+          rule.labels.length ||
+          (rule.attribute_key && rule.attribute_values.length)
+        );
+      });
+      if (!withRules.length) return t('SUMMARY_NO_RULES');
+      return t('SUMMARY_RULES', {
+        rules: withRules.map(key => t(`CRITERIA.${key}`)).join(', '),
+      });
     },
     totalProspects() {
       return this.filteredProspects.length;
@@ -471,6 +514,42 @@ export default {
     },
     closeHandoffModal() {
       this.showHandoffModal = false;
+    },
+    // prospeccion P4: los pesos guardados se recalculan en segundo plano; se recargan los
+    // prospectos unos segundos después para ver las nuevas puntuaciones.
+    onScoringSaved(scoring) {
+      this.campaign = { ...this.campaign, scoring };
+      setTimeout(async () => {
+        this.prospects = await this.fetchProspects();
+      }, 4000);
+    },
+    // prospeccion P4: «Perfil: giro +20 · Interés: respondió +10, pidió precio +20»
+    scoreBreakdown(p) {
+      const parts = p.prospect_score_parts || {};
+      const keys = Object.keys(parts);
+      if (!keys.length)
+        return this.$t('TRACKING_CAMPAIGN_DETAIL.SCORING.NO_POINTS');
+      return keys
+        .map(key => {
+          const points = parts[key] > 0 ? `+${parts[key]}` : parts[key];
+          return `${this.$t(
+            `TRACKING_CAMPAIGN_DETAIL.SCORING.CRITERIA.${key}`
+          )} ${points}`;
+        })
+        .join(' · ');
+    },
+    scoreLabel(p) {
+      return p.prospect_score ?? '—';
+    },
+    closeScoringModal() {
+      this.showScoringModal = false;
+    },
+    scoreClass(p) {
+      if ((p.prospect_score || 0) >= 60)
+        return 'text-red-500 dark:text-red-400';
+      if ((p.prospect_score || 0) >= 30)
+        return 'text-amber-700 dark:text-amber-500';
+      return 'text-slate-500 dark:text-slate-400';
     },
     // prospeccion P3: quedarse con el asunto A o B.
     async chooseSubject(variant) {
@@ -930,6 +1009,42 @@ export default {
           {{ $t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.CONFIGURE') }}
         </woot-button>
       </div>
+      <!-- prospeccion P4: puntuación (resumen; se configura en el modal) -->
+      <div
+        v-if="isProspecting"
+        class="flex items-center justify-between gap-3 p-3 mb-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
+      >
+        <div class="min-w-0">
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+            {{ $t('TRACKING_CAMPAIGN_DETAIL.SCORING.TITLE') }}
+          </span>
+          <p class="mb-0 text-xs truncate text-slate-500 dark:text-slate-400">
+            {{ scoringSummary }}
+          </p>
+        </div>
+        <woot-button
+          size="small"
+          variant="smooth"
+          icon="settings"
+          @click="showScoringModal = true"
+        >
+          {{ $t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.CONFIGURE') }}
+        </woot-button>
+      </div>
+      <woot-modal
+        v-if="isProspecting"
+        :show.sync="showScoringModal"
+        size="medium"
+        :on-close="closeScoringModal"
+      >
+        <CampaignScoringSettings
+          v-if="showScoringModal"
+          :campaign="campaign"
+          @saved="onScoringSaved"
+          @close="closeScoringModal"
+        />
+      </woot-modal>
+
       <!-- prospeccion P3: prueba A/B de asuntos -->
       <div
         v-if="subjectTest"
@@ -1096,6 +1211,15 @@ export default {
                 <th class="p-3 text-center">
                   {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.ATTEMPTS') }}
                 </th>
+                <!-- prospeccion P4: clic para ordenar de más a menos puntos -->
+                <th
+                  v-if="isProspecting"
+                  class="p-3 text-center cursor-pointer select-none"
+                  :class="sortByScore ? 'text-woot-600' : ''"
+                  @click="sortByScore = !sortByScore"
+                >
+                  {{ scoreHeader }}
+                </th>
                 <th class="p-3 text-right">
                   {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.ACTION') }}
                 </th>
@@ -1145,6 +1269,14 @@ export default {
                 </td>
                 <td class="p-3 text-center text-slate-500">
                   {{ p.attempt_count }}/{{ p.max_attempts }}
+                </td>
+                <td
+                  v-if="isProspecting"
+                  class="p-3 font-semibold text-center cursor-help"
+                  :class="scoreClass(p)"
+                  :title="scoreBreakdown(p)"
+                >
+                  {{ scoreLabel(p) }}
                 </td>
                 <td class="p-3 text-right whitespace-nowrap">
                   <!-- prospeccion V6: entregar un interesado a un vendedor -->

@@ -215,6 +215,7 @@ Rails.application.routes.draw do
             post :hand_off, on: :member, to: 'tracking_campaigns/hand_offs#create' # prospeccion V6: entregar un interesado
             patch :handoff_settings, on: :member, to: 'tracking_campaigns/handoff_settings#update' # prospeccion P2: tablero, plazo y escalar
             post :subject_winner, on: :member, to: 'tracking_campaigns/subject_winners#create' # prospeccion P3: quedarse con un asunto
+            patch :scoring, on: :member, to: 'tracking_campaigns/scorings#update' # prospeccion P4: pesos y reglas de la puntuación
           end
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard
             resource :overview, only: [:show], controller: :overview
@@ -496,6 +497,7 @@ Rails.application.routes.draw do
               resource :owner, only: [:show, :update] # Responsable fijo del contacto
               resource :summary, only: [:show] # Página del contacto › Resumen
               resource :opt_out, only: [:create, :destroy] # prospeccion V4: marcar / quitar «no contactar»
+              resource :prospect_score, only: [:show] # prospeccion P4 (D19): su puntuación más reciente
               resources :labels, only: [:create, :index]
               resources :notes
             end

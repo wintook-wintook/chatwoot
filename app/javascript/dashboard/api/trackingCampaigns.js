@@ -41,6 +41,11 @@ class TrackingCampaignsAPI extends ApiClient {
     });
   }
 
+  // prospeccion P4: pesos y reglas de la puntuación ({ scoring } · { copy_from_campaign_id } · { reset: true })
+  updateScoring(id, body) {
+    return axios.patch(`${this.url}/${id}/scoring`, body);
+  }
+
   // prospeccion P3: quedarse con el asunto A o B de la prueba
   chooseSubject(id, variant) {
     return axios.post(`${this.url}/${id}/subject_winner`, { variant });

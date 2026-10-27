@@ -23,9 +23,9 @@ RSpec.describe TrackingCampaigns::ProspectClassifier do
 
   before { create(:integrations_hook, account: account, app_id: 'openai', settings: { 'api_key' => 'sk-test' }) }
 
-  def openai_says(*labels)
+  def openai_says(*labels, **extra)
     responses = labels.map do |label|
-      content = label.nil? ? 'no json' : { categoria: label }.to_json
+      content = label.nil? ? 'no json' : { categoria: label }.merge(extra).to_json
       { status: 200, body: { choices: [{ message: { content: content } }] }.to_json }
     end
     stub_request(:post, 'https://api.openai.com/v1/chat/completions').to_return(*responses)
@@ -37,6 +37,25 @@ RSpec.describe TrackingCampaigns::ProspectClassifier do
     expect(described_class.call(tracking, message)).to eq('interested')
     expect(tracking.reload).to have_attributes(prospect_stage: 'interested', prospect_exit: nil)
     expect(tracking.interested_at).to be_present
+  end
+
+  # prospeccion P4.2
+  it 'interesado: guarda el motivo y si decide, y recalcula la puntuación' do
+    openai_says('interested', motivo: 'price', decide: 'yes')
+
+    described_class.call(tracking, message)
+
+    expect(tracking.reload).to have_attributes(prospect_signals: ['price'], prospect_decision_maker: 'yes')
+    expect(tracking.prospect_score_parts).to include('replied' => 10, 'asked_price' => 20)
+  end
+
+  it 'los motivos se acumulan y «no se sabe» no borra lo que ya se sabía' do
+    tracking.update!(prospect_signals: ['price'], prospect_decision_maker: 'yes')
+    openai_says('interested', motivo: 'meeting', decide: 'unknown')
+
+    described_class.call(tracking, message)
+
+    expect(tracking.reload).to have_attributes(prospect_signals: %w[price meeting], prospect_decision_maker: 'yes')
   end
 
   # prospeccion P2

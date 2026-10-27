@@ -371,6 +371,38 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
     end
 
+    # prospeccion P4
+    it 'puntuación: guarda pesos y reglas, recalcula en segundo plano, copia de otra y vuelve a los sugeridos' do
+      url = "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}/scoring"
+      expect do
+        patch url, params: { scoring: { weights: { replied: 30 }, rules: { industry: { labels: ['Industrial'] } } } },
+                   headers: admin.create_new_auth_token, as: :json
+      end.to have_enqueued_job(TrackingCampaigns::ProspectScoreJob).with(prospecting.id)
+      expect(response.parsed_body['weights']).to include('replied' => 30, 'asked_price' => 20)
+      expect(response.parsed_body.dig('rules', 'industry', 'labels')).to eq(['industrial'])
+
+      other = create(:tracking_campaign, account: account, inbox: inbox, purpose: 'prospecting', daily_cap: 30)
+      patch "/api/v1/accounts/#{account.id}/tracking_campaigns/#{other.id}/scoring", params: { copy_from_campaign_id: prospecting.id },
+                                                                                     headers: admin.create_new_auth_token, as: :json
+      expect(other.reload.scoring.dig('weights', 'replied')).to eq(30)
+
+      patch url, params: { reset: true }, headers: admin.create_new_auth_token, as: :json
+      expect(prospecting.reload.scoring).to eq({})
+    end
+
+    it 'puntuación: una campaña de seguimiento responde 422' do
+      patch "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}/scoring", params: { reset: true },
+                                                                                        headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it 'la ficha del contacto trae su puntuación más reciente (D19)' do
+      interested.update_columns(prospect_score: 40, prospect_score_parts: { 'replied' => 10 }) # rubocop:disable Rails/SkipsModelValidations
+      get "/api/v1/accounts/#{account.id}/contacts/#{interested.contact_id}/prospect_score", headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body).to include('score' => 40, 'campaign_name' => prospecting.name)
+    end
+
     it 'una columna de otro tablero responde 422' do
       column = create(:kanban_process, kanban_type_process: create(:kanban_type_process, account: account))
       patch "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}/handoff_settings",
