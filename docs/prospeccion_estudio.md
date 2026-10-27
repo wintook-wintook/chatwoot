@@ -1081,7 +1081,7 @@ de la empresa (no código). Se marca conforme avanzan las fases.
 
 | Buena práctica | Dónde queda | Estado |
 |---|---|---|
-| 1 · A quién: cliente ideal, correos validados | Empresa: definir el cliente ideal · v1.1: validar correos antes de enviar | ⏳ empresa / v1.1 |
+| 1 · A quién: cliente ideal, correos validados | Empresa: definir el cliente ideal · V7a ✅ validar antes de inscribir · V7b rebotes | 🟡 empresa / V7b |
 | 2 · Mensaje: asunto, firma, prompt real | F1 ✅ · V1 ✅ firma · empresa: prompt de prospección | 🟡 falta el prompt |
 | 3 · Cadencia: se detiene al responder, días hábiles | V2 ✅ + V3 ✅ | ✅ |
 | 4 · Cumplir: baja, no contactar, aviso de privacidad | V4 ✅ · D7 (legal) | 🟡 falta D7 |
@@ -1098,6 +1098,52 @@ de la empresa (no código). Se marca conforme avanzan las fases.
 | D13 | Tope diario sugerido para Prospección | 30 por campaña al día (lo puede bajar o subir) |
 | D14 | ¿El clasificador de V5 usa qué modelo? | gpt-4o-mini con salida fija (solo elige una etiqueta); si falla, gpt-4o |
 | D15 | ¿Un prospecto «No ahora» se vuelve a buscar solo? | Sí, a los 30 días, con un solo toque |
+
+### 10.8 v1.1 · V7 — Correos que sí llegan
+
+Escribirle a una dirección muerta rebota, y cada rebote baja la reputación del buzón con el que
+se prospecta (Gmail empieza a mandar a spam o corta el envío). Dos piezas:
+
+```
+ ANTES de inscribir (V7a)                         DESPUÉS de enviar (V7b)
+ ────────────────────────                         ───────────────────────
+ contacto.email                                   Gmail devuelve «Address not found»
+   │                                                │  (llega por IMAP a la bandeja)
+   ├─ ¿bien escrito? ── no ──► omitido               ▼
+   │                         «correo inválido»     hoy: Chatwoot lo TIRA en silencio
+   ├─ ¿el dominio tiene MX                         (incoming_email_validity_helper, su TODO)
+   │   o A? ── no ─────────► omitido                 │
+   │                         «correo inválido»      V7b: reconocer el rebote (DSN), marcar el
+   └─ ¿el DNS no contestó? ─► se deja pasar         correo del contacto como rebotado, detener
+                                                    su seguimiento y contarlo en el embudo;
+   dominio recordado 7 días (si recibe)             la próxima campaña lo omite (V7a lo lee)
+   o 1 día (si no)
+```
+
+> ✅ **V7a HECHA (27/10/2026) — revisar el correo antes de inscribir.**
+> - **Qué se hizo:** `ContactTrackings::EmailCheck.deliverable?(email)`: sintaxis con
+>   `Devise.email_regexp` y DNS del dominio (MX; si no hay, A, como dice el RFC 5321; «MX nulo» = no
+>   recibe). Usa `raise_timeout_errors` para distinguir «no existe» de «no contestó»: si el DNS no
+>   contesta, deja pasar y no lo recuerda. Caché por dominio: 7 días bueno, 1 día malo.
+>   `ContactTrackings::Eligibility` lo aplica en bandejas de correo, **aunque ya haya conversación**
+>   (el correo igual se le manda a `contact.email`), con el motivo `INVALID_EMAIL`; `Enroll` guarda
+>   la omisión como `invalid_email`.
+> - **Cómo funciona:** vale para toda campaña por correo, no solo Prospección. Como lo usan la
+>   inscripción, el lote y su vista previa, los tres omiten a los mismos contactos.
+> - **Pantalla:** en la vista previa del lote, «Correo mal escrito o su dominio no recibe correo»;
+>   en Inscritos de la campaña, «Omitido · correo inválido». Sin componentes nuevos (solo i18n).
+> - **Pruebas:** `email_check_spec` (6), 2 en `eligibility_spec`, 1 en `enroll_spec`; 97 en verde
+>   (contact_trackings + tracking_campaigns + vista previa). En pruebas el DNS está simulado para
+>   todos (`spec/support/email_check_stub.rb`). En vivo: gmail.com y kontrolya.com ✓,
+>   dominio inexistente ✗, `mal@@correo` ✗.
+> - **Pedírselo al Asistente:** no aplica; es automático al crear o alimentar una campaña por correo.
+> - **No detecta:** buzones que no existen en un dominio bueno (`noexiste@gmail.com`). Eso solo
+>   se sabe al enviar → V7b.
+
+> ⏳ **V7b (por hacer) — rebotes.** Detectar el aviso de no entrega que llega por IMAP
+> (`multipart/report; report-type=delivery-status`, `Final-Recipient`), marcar `contact.email`
+> como rebotado, detener el seguimiento de ese contacto (como la baja de V4), salida «rebotó» en
+> el embudo, y que V7a lo omita después. Antes de que Chatwoot lo descarte.
 
 ---
 

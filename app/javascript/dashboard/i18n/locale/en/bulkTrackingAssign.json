@@ -104,7 +104,8 @@
         "NO_EMAIL": "Channel needs an email and the contact has none",
         "UNSUPPORTED_CHANNEL": "This channel can't start the conversation",
         "IN_TRACKING": "Already has an active follow-up on this channel",
-        "OPTED_OUT": "Asked not to be contacted"
+        "OPTED_OUT": "Asked not to be contacted",
+        "INVALID_EMAIL": "Email is malformed or its domain does not accept mail"
       },
       "WILL_CREATE": "{count} follow-ups will be created on confirm.",
       "TOO_MANY_TITLE": "Audience too large",

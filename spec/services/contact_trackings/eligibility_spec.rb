@@ -39,5 +39,17 @@ RSpec.describe ContactTrackings::Eligibility do
     it 'reusable=true: contactable aunque falte teléfono (reutiliza conversación)' do
       expect(host.channel_contactability(contact_blank, 'Channel::Whatsapp', reusable: true)).to eq([true, nil])
     end
+
+    # prospeccion V7a
+    it 'canal de email: correo inválido, aunque reutilice conversación' do
+      allow(ContactTrackings::EmailCheck).to receive(:lookup).and_return(false)
+      expect(host.channel_contactability(contact_with_email, 'Channel::Email', reusable: true)).to eq([false, 'INVALID_EMAIL'])
+    end
+
+    it 'canal de teléfono: el correo inválido no importa' do
+      allow(ContactTrackings::EmailCheck).to receive(:lookup).and_return(false)
+      contact = build_stubbed(:contact, phone_number: '+5215512345678', email: 'x@dominio-muerto.mx')
+      expect(host.channel_contactability(contact, 'Channel::Whatsapp')).to eq([true, nil])
+    end
   end
 end

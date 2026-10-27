@@ -13,6 +13,7 @@
 #   ya tiene un Agente IA activo en el inbox     → omitido "active_tracking"
 #   el canal no lo puede contactar (sin teléfono → omitido "not_contactable"
 #     en WhatsApp, sin correo en Email…)
+#   correo mal escrito o dominio que no recibe   → omitido "invalid_email" (prospeccion V7a)
 #   la hora calculada cae después del fin        → omitido "outside_window"
 #   si no                                        → inscrito + ContactTracking programado
 #
@@ -68,10 +69,14 @@ class TrackingCampaigns::Enroll
   end
 
   # prospeccion V4: quien pidió no ser contactado nunca se inscribe, aunque el canal pudiera.
+  # prospeccion V7a: correo mal escrito o dominio que no recibe → su propio motivo.
   def contact_reason
     return 'opted_out' if @contact.opted_out?
 
-    'not_contactable' unless contactable?
+    contactable, reason = contactability
+    return if contactable
+
+    reason == REASON_INVALID_EMAIL ? 'invalid_email' : 'not_contactable'
   end
 
   # Cerrada también si le falta el canal o el Agente IA: no hay por dónde ni con qué escribir.
@@ -98,9 +103,9 @@ class TrackingCampaigns::Enroll
     ContactTracking.exists?(contact_id: @contact.id, inbox_id: @campaign.inbox_id, status: ACTIVE_STATUSES)
   end
 
-  def contactable?
+  def contactability
     reusable = builder.existing_conversation.present?
-    channel_contactability(@contact, @campaign.inbox.channel_type, reusable: reusable).first
+    channel_contactability(@contact, @campaign.inbox.channel_type, reusable: reusable)
   end
 
   def builder

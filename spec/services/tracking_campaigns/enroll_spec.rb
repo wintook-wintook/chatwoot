@@ -146,6 +146,17 @@ RSpec.describe TrackingCampaigns::Enroll do
       expect(enroll.reason).to eq('not_contactable')
     end
 
+    # prospeccion V7a
+    it 'correo inválido en una bandeja de correo, aunque ya tenga conversación' do
+      allow(campaign.inbox).to receive(:channel_type).and_return('Channel::Email')
+      allow(ContactTrackings::EmailCheck).to receive(:lookup).and_return(false)
+      contact.update!(email: 'juan@dominio-muerto.mx')
+      create(:conversation, account: account, inbox: inbox, contact: contact)
+
+      expect(enroll.reason).to eq('invalid_email')
+      expect(ContactTracking.count).to eq(0)
+    end
+
     it 'el tope del día' do
       campaign.update!(daily_cap: 1)
       enroll

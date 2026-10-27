@@ -28,12 +28,15 @@ module ContactTrackings::Eligibility
   REASON_NO_EMAIL = 'NO_EMAIL'
   REASON_UNSUPPORTED_CHANNEL = 'UNSUPPORTED_CHANNEL'
   REASON_OPTED_OUT = 'OPTED_OUT' # prospeccion V4
+  REASON_INVALID_EMAIL = 'INVALID_EMAIL' # prospeccion V7a
 
   # Devuelve [contactable?(Boolean), reason(String|nil)].
   #   reusable: true cuando el contacto ya tiene una conversación en ese inbox,
   #   en cuyo caso el bulk reutiliza la conversación y no invoca ContactInboxBuilder.
   def channel_contactability(contact, channel_type, reusable: false)
     return [false, REASON_OPTED_OUT] if contact.opted_out? # prospeccion V4: pidió no ser contactado
+    # prospeccion V7a: aunque ya haya conversación, el correo se le manda a contact.email.
+    return [false, REASON_INVALID_EMAIL] if EMAIL_CHANNELS.include?(channel_type) && undeliverable_email?(contact)
     return [true, nil] if reusable
 
     channel_requirement(contact, channel_type)
@@ -49,6 +52,11 @@ module ContactTrackings::Eligibility
     else
       [false, REASON_UNSUPPORTED_CHANNEL]
     end
+  end
+
+  # Sin correo no cuenta como inválido: eso es NO_EMAIL, más abajo.
+  def undeliverable_email?(contact)
+    contact.email.present? && !ContactTrackings::EmailCheck.deliverable?(contact.email)
   end
 
   # IDs de contactos (de la lista dada) con un seguimiento activo en el inbox.
