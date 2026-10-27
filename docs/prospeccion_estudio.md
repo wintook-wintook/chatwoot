@@ -1363,6 +1363,166 @@ cómo funciona. Botón «Volver a los valores sugeridos».
 | D18 ✅ | ¿El −10 por 30 días sin responder se aplica una vez o se repite? | Una vez (no seguir bajando: con «sin respuesta» ya sale del embudo) |
 | D19 ✅ | ¿La puntuación se ve también en la ficha del contacto? | Sí, la de su campaña más reciente, solo lectura |
 
+### 10.12 Una sola campaña: sin «Seguimiento / Prospección» y un solo embudo (plan)
+
+**Pedido (27/10/2026):** el usuario se pierde con dos tipos de campaña. Que el formulario sea uno,
+que sirva igual para cualquier campaña y canal, y que el embudo no dependa de palabras clave ni
+se llame «de prospección» (la prospección también es por WhatsApp).
+**Decisión (27/10/2026):** la IA clasifica las respuestas en **todas** las campañas; lo que hace con
+esa clasificación (detener toques, «no ahora» a 30 días) es una **opción de la campaña, prendida por
+omisión**.
+
+#### 10.12.1 Cómo está hoy (inventario)
+
+El tipo (`purpose`: `follow_up` · `prospecting`) aparece en **tres pantallas** y cambia el comportamiento
+en **doce archivos**:
+
+| Dónde | Seguimiento (`follow_up`) | Prospección (`prospecting`) |
+|---|---|---|
+| Lista de campañas | pestañas «Todas · Seguimiento · Prospección» | ← |
+| Formulario: «¿Para qué es?» | selector de dos opciones | ← |
+| Tope diario | opcional (solo continua) | obligatorio, 1–500, sugerido 30 (V3) |
+| Días hábiles / horario | opción «Respetar horario» | siempre, y sin horario nunca fin de semana (V3) |
+| Asunto del correo | opcional | obligatorio en correo (V3) · asunto B (P3) |
+| Clasificar respuestas con IA | **no** | sí: etapa y salida (V5) + motivo y «decide» (P4.2) |
+| «No le interesa / no es la persona» | sigue mandando toques | se detiene (V5) |
+| «No ahora» | sigue | un solo toque más a los 30 días (V5) |
+| Al responder: siguiente toque a 3 días hábiles | **sí** (V2 ya es para todas) | sí |
+| Detalle: tarjeta de números | «🎯 Intenciones» | «Embudo de prospección» (V6) |
+| Entrega a Oportunidades · Puntuación · Asuntos A/B | no | sí (P2, P4, P3) |
+| Tablero general de Seguimientos | «Intenciones» | ← |
+
+**Cómo cuenta cada tarjeta hoy:**
+
+```
+ «Intenciones»                                 «Embudo de prospección»
+ ─────────────                                 ───────────────────────
+ Respondieron = la IA procesó una respuesta    Contactados = ya se le escribió
+               (last_intent = 'tracking')      Respondieron / Interesados / Entregados /
+ Interesados  = interested_at ← SOLO si el     No ahora / No le interesa / No es la persona
+ Citas        = booked_at       agente tiene      ← lo decide la IA leyendo la respuesta
+               palabras clave («me interesa»     (gpt-4o-mini, una llamada corta por respuesta,
+               → marcar interesado)              instrucción fija en el código, no en el prompt
+ Objetivo cumplido = status                       del agente): entiende el sentido, no busca
+                                                  palabras («pásame precios» = interesado)
+ Medido en dev (60 días, 369 seguimientos): 1 interesado y 0 citas por palabra clave.
+```
+
+Conclusión: «Intenciones» casi no cuenta porque depende de que alguien escriba palabras clave en
+cada agente; el embudo de la IA sí cuenta, pero solo se ve si alguien eligió «Prospección».
+
+#### 10.12.2 Cómo queda
+
+```
+ LISTA DE CAMPAÑAS                         ANTES: [Todas][Seguimiento][Prospección]
+ ─────────────────                         AHORA: una lista · filtro opcional por canal
+                                                  (Todas · WhatsApp · Correo · …)
+
+ FORMULARIO (uno solo)
+ ┌──────────────────────────────────────────────────────────────────────────────┐
+ │ 1 · ¿Qué?     Nombre · Agente IA                                              │
+ │               (si el agente escribe por correo) Asunto · Asunto B (opcional)   │
+ │ 2 · ¿A quién? Segmento · Etiqueta · Automatizaciones   (igual que hoy)         │
+ │ 3 · ¿Cuándo?  Inicio · Fin                              (igual que hoy)        │
+ │   ▸ Opciones de envío                                                         │
+ │       Tope diario ........ [30]   correo: obligatorio · WhatsApp: opcional     │
+ │       Solo días hábiles y en horario de atención  [✓]                          │
+ │       Espera antes del primer mensaje [0 min]                                  │
+ │   ▸ Cuando el cliente responde                                                 │
+ │       [✓] Dejar de escribirle si dice que no le interesa o no es la persona    │
+ │       [✓] Si dice «ahora no», un solo mensaje más en 30 días                   │
+ │       (la IA siempre lee cada respuesta para el embudo; esto solo decide       │
+ │        qué hacer con lo que leyó)                                              │
+ └──────────────────────────────────────────────────────────────────────────────┘
+
+ DETALLE DE LA CAMPAÑA (todas, cualquier canal)
+ ┌─ Embudo ─────────────────────────────┐ ┌─ ⚙️ Control ─┐ ┌─ 📬 Entrega ─┐
+ │ Contactados  Respondieron  Interesados │ │ (igual)      │ │ (igual)      │
+ │ Con cita  Entregados  🔥 Calientes     │ └──────────────┘ └──────────────┘
+ │ No ahora · No le interesa · No es la   │
+ │ persona · Baja · Rebotó · Sin respuesta│
+ │ Objetivo cumplido                      │
+ └────────────────────────────────────────┘
+ 🤝 Entrega de interesados ............ [Configurar]
+ 🎯 Puntuación ......................... [Configurar]
+ 🔤 Prueba de asuntos (solo si hay asunto B)
+```
+
+**El embudo único, cómo se cuenta cada número:**
+
+| Número | Cuenta si… | Viene de |
+|---|---|---|
+| Contactados | ya se le escribió | `attempt_count > 0` |
+| Respondieron | la IA clasificó al menos una respuesta | `prospect_stage` (V5) |
+| Interesados | la IA lo vio interesado **o** una palabra clave del agente lo marcó | `prospect_stage` ∈ interesado/entregado **o** `interested_at` |
+| Con cita | agendó **o** la palabra clave de cita lo marcó | `booked_at` / `appointment_at` |
+| Entregados | se entregó a un vendedor | `prospect_stage = handed_off` (P2) |
+| 🔥 Calientes | 60 puntos o más | `prospect_score` (P4) |
+| Salidas | no ahora · no le interesa · no es la persona · baja · rebotó | `prospect_exit` |
+| Sin respuesta | agotó sus toques sin responder | estado + sin etapa |
+| Objetivo cumplido | el agente cumplió su objetivo (o lo atendió el vendedor, P2b) | `status` |
+
+Las palabras clave del agente **no se pierden**: siguen marcando y suman al mismo número.
+Las pausas/cancelaciones por palabra clave siguen en «⚙️ Control».
+
+#### 10.12.3 Reglas que dejan de depender del tipo
+
+| Regla | Antes (solo Prospección) | Después (todas) |
+|---|---|---|
+| Tope diario | obligatorio | **correo: obligatorio** (cuida el buzón; sugerido 30) · WhatsApp: opcional (Meta tiene sus propios límites) |
+| Días hábiles / horario | forzado | casilla prendida por omisión; sin horario en la bandeja, nunca sábado ni domingo |
+| Asunto | obligatorio en correo | obligatorio en correo (sin asunto sale «[#N] Nuevos mensajes…») |
+| Asunto B, entrega, puntuación | solo Prospección | todas |
+| Detener toques por «no le interesa» / «no ahora» | siempre | opción por campaña, prendida por omisión |
+
+#### 10.12.4 Datos y campañas que ya existen
+
+- **Columnas nuevas** en `tracking_campaigns`: `stop_when_not_interested` (bool, default true) y
+  `retry_not_now` (bool, default true).
+- **Migración de datos:** las campañas que hoy son `follow_up` quedan con las dos opciones en **false**,
+  así su comportamiento no cambia; las `prospecting`, en true (como hoy).
+- `purpose` **se queda en la tabla** (no se borra: la historia y los reportes lo usan), pero ya no se pide
+  ni cambia nada. Las campañas nuevas se guardan con `prospecting` para que todo lo anterior las trate igual.
+- Las campañas de seguimiento ya en curso empiezan a llenar el embudo **desde ese día**; las respuestas
+  viejas no se reclasifican (opcional U6).
+- En producción las campañas todavía no se usan (ver memoria «Capacidad envíos masivos»): el riesgo de
+  migración es bajo.
+
+#### 10.12.5 Costo
+
+Una llamada corta a gpt-4o-mini por respuesta del cliente (≈ 700 tokens de entrada y 60 de salida).
+A precios de lista ≈ **0.15 USD por cada 1,000 respuestas**. En dev hubo 9 respuestas en 30 días; aunque
+fueran 10,000 al mes serían ≈ 1.5 USD. Solo se clasifica si la cuenta tiene la integración de OpenAI.
+
+#### 10.12.6 Fases
+
+| Fase | Qué | Archivos principales | Tamaño |
+|---|---|---|---|
+| U1 | Backend: clasificar en todas las campañas; las dos opciones nuevas (migración + datos); entrega, puntuación y asunto B sin `prospecting?`; reglas por **canal** (`ProspectingRules` → `CampaignRules`); fin de semana según «días hábiles» | `prospect_classifier.rb`, `schedule.rb`, `prospecting_rules.rb`, `subject_test.rb`, `prospect_score.rb`, `scorings_controller.rb`, `bulk_assign_service.rb`, `tracking_campaign_continuous_params.rb`, `tracking_campaign.rb` | mediano |
+| U2 | Un solo embudo: `ProspectingFunnel` → `CampaignFunnel` para todas (con palabras clave sumando); el detalle muestra «Embudo» siempre y quita «Intenciones»; entrega, puntuación y asuntos para todas | `tracking_campaigns_controller.rb`, `CampaignDetail.vue` | mediano |
+| U3 | Formulario único: sin «¿Para qué es?»; «Opciones de envío» y «Cuando el cliente responde»; validaciones por canal | `CampaignForm.vue`, i18n | mediano |
+| U4 | Lista de campañas sin pestañas de tipo; filtro por canal | `Campaigns.vue`, i18n | chico |
+| U5 | Tablero general de Seguimientos con las mismas definiciones del embudo | `overview_controller.rb` y su vista | chico |
+| U6 | (opcional) reclasificar la última respuesta de los seguimientos activos de campañas de seguimiento; limpiar textos que dicen «prospección» donde ya no aplica | job + i18n | chico |
+
+**Pruebas por fase:** las de V2–V7, P2–P4 deben seguir verdes sin cambiar lo que prueban (solo quitar
+`purpose: 'prospecting'` donde ya no importa) + nuevas: clasifica en una campaña de seguimiento; con la
+opción apagada no detiene toques; tope obligatorio solo en correo; embudo cuenta palabra clave e IA sin
+duplicar; la lista ya no filtra por tipo. Al final, en el navegador: crear una campaña por WhatsApp y otra
+por correo con el mismo formulario y ver el mismo embudo en las dos.
+
+**Retorno:** tag `estable-2026-10-27-antes-unificar-campanas` en `prospeccion` antes de U1.
+
+#### 10.12.7 Decisiones de este plan
+
+| # | Pregunta | Propuesta |
+|---|---|---|
+| D20 | ¿Detener toques / «no ahora» a 30 días son opción de campaña? | ✅ Sí, prendidas por omisión (aceptada 27/10/2026) |
+| D21 | Tope diario: ¿obligatorio solo en correo? | Sí: correo obligatorio (sugerido 30), WhatsApp opcional |
+| D22 | La lista de campañas: ¿filtro por canal en lugar de las pestañas de tipo? | Sí |
+| D23 | ¿Reclasificar respuestas viejas (U6)? | No por ahora; el embudo cuenta desde que se active |
+| D24 | El nombre de la tarjeta | «Embudo» (sin «de prospección») |
+
 ---
 
 ## 11. Decisiones abiertas
