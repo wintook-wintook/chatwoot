@@ -47,6 +47,20 @@ La tarjeta muestra el motivo del último movimiento, el chip «→ folio» del c
   vencimientos, columna «Convertir».
 - **E3** ✅ métricas del embudo (incluye correcciones de la IA: movida a mano ≤ 72 h después).
 
+## Mejoras (27/10/2026, rama `feat/chat_interno_pulido`)
+- **Que no se acumulen:** en Convertido y Descartado el tablero trae solo lo que llegó en los
+  últimos N días (selector «Convertidas y descartadas»: 7 / 30 / 90 / Todas; 30 por omisión,
+  lo recuerda cada quien en el navegador). Al pie de la columna «+ N más antiguas · ver».
+  Servidor: `closed_days` en `filter_by_both_kanban` (fecha = `COALESCE(kanban_moved_at,
+  created_at)`) y `meta.older_count`. No borra nada; las métricas cuentan todo.
+- **Resolver al descartar:** `kanban_type_processes.resolve_on_stale` (migración 20261030170000).
+  Si el vencimiento descarta la tarjeta, la conversación se resuelve con `update_columns`: sin
+  mensaje de actividad (→ sin encuesta CSAT), sin CONVERSATION_RESOLVED ni webhooks. La nota
+  dice «…se resolvió la conversación sin avisarle». Tableros nuevos en true; existentes en false.
+  La casilla sale en Ajustes › Embudos solo si hay «Descartar tras N días».
+- **Convertido listo:** la plantilla pone en la columna Convertido el primer tipo comercial
+  vigente (`convert_case_type_id`); sin tipos comerciales se queda vacío (convierte solo por regla).
+
 ## Specs
 `spec/requests/api/v1/accounts/kanban_funnel_compat_spec.rb` (lo de antes sigue igual),
 `spec/services/kanban/funnel_mover_spec.rb`, `funnel_e2_spec.rb`, `funnel_metrics_spec.rb`,

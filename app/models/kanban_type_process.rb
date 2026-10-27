@@ -11,6 +11,7 @@
 #  entry_inbox_ids    :jsonb            not null
 #  is_system          :boolean          default(FALSE)
 #  process_name       :string           not null
+#  resolve_on_stale   :boolean          default(FALSE), not null
 #  created_at         :datetime
 #  updated_at         :datetime
 #  account_id         :bigint           not null

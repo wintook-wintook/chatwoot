@@ -28,6 +28,7 @@ import {
 import { CONVERSATION_EVENTS } from '../helper/AnalyticsHelper/events';
 import IntersectionObserver from './IntersectionObserver.vue';
 import NewInternalChatModal from './internalChat/NewInternalChatModal.vue'; // feat/chat_interno
+import InternalChatList from './internalChat/InternalChatList.vue'; // feat/chat_interno_pulido
 import { INBOX_TYPES } from 'shared/mixins/inboxMixin';
 import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
 import {
@@ -46,6 +47,7 @@ export default {
     NewInternalChatModal,
     AddCustomViews,
     ChatTypeTabs,
+    InternalChatList,
     // eslint-disable-next-line vue/no-unused-components
     ConversationItem,
     ConversationAdvancedFilter,
@@ -384,6 +386,7 @@ export default {
       return this.currentPage + 1;
     },
     pageTitle() {
+      if (this.isInternalInbox) return this.$t('INTERNAL_CHAT.TITLE');
       if (this.hasAppliedFilters) {
         return this.$t('CHAT_LIST.TAB_HEADING');
       }
@@ -458,6 +461,18 @@ export default {
     },
   },
   watch: {
+    // feat/chat_interno_pulido: en «Chat interno» no hay «Mías / No asignadas»: se ven
+    // todas las salas del agente. Al salir se regresa a «Mías».
+    isInternalInbox: {
+      immediate: true,
+      handler(internal, wasInternal) {
+        if (internal) {
+          this.updateAssigneeTab(wootConstants.ASSIGNEE_TYPE.ALL);
+        } else if (wasInternal) {
+          this.updateAssigneeTab(wootConstants.ASSIGNEE_TYPE.ME);
+        }
+      },
+    },
     teamId() {
       this.updateVirtualListProps('teamId', this.teamId);
     },
@@ -513,6 +528,25 @@ export default {
     });
   },
   methods: {
+    // feat/chat_interno_pulido: abre una sala desde la lista de «Chat interno».
+    openInternalRoom(chat, event) {
+      const path = frontendURL(
+        conversationUrl({
+          accountId: this.accountId,
+          activeInbox: chat.inbox_id,
+          id: chat.id,
+        })
+      );
+      if (event && (event.metaKey || event.ctrlKey)) {
+        window.open(
+          window.chatwootConfig.hostURL + path,
+          '_blank',
+          'noopener noreferrer nofollow'
+        );
+        return;
+      }
+      if (this.$route.path !== path) this.$router.push(path);
+    },
     // feat/chat_interno: abre la conversación del directo recién abierto o creado.
     onInternalChatCreated({ conversation_id: id, inbox_id: inboxId }) {
       this.showNewInternalChat = false;
@@ -983,6 +1017,7 @@ export default {
     <slot />
     <ChatListHeader
       :show-new-internal-chat="isInternalInbox"
+      :is-internal-chat="isInternalInbox"
       :page-title="pageTitle"
       :has-applied-filters="hasAppliedFilters"
       :has-hide-filters-for-agents="hideFiltersForAgents"
@@ -1026,7 +1061,7 @@ export default {
     </woot-modal>
 
     <ChatTypeTabs
-      v-if="!hasAppliedFiltersOrActiveFolders"
+      v-if="!hasAppliedFiltersOrActiveFolders && !isInternalInbox"
       :items="assigneeTabItems"
       :active-tab="activeAssigneeTab"
       @chatTabChange="updateAssigneeTab"
@@ -1036,10 +1071,14 @@ export default {
       v-if="!chatListLoading && !conversationList.length"
       class="flex items-center justify-center p-4 overflow-auto"
     >
-      {{ $t('CHAT_LIST.LIST.404') }}
+      {{
+        isInternalInbox
+          ? $t('INTERNAL_CHAT.LIST.EMPTY')
+          : $t('CHAT_LIST.LIST.404')
+      }}
     </p>
     <ConversationBulkActions
-      v-if="selectedConversations.length"
+      v-if="selectedConversations.length && !isInternalInbox"
       :conversations="selectedConversations"
       :all-conversations-selected="allConversationsSelected"
       :selected-inboxes="uniqueInboxes"
@@ -1052,7 +1091,20 @@ export default {
       @assignLabels="onAssignLabels"
       @assignTeam="onAssignTeamsForBulk"
     />
+    <!-- feat/chat_interno_pulido: Grupos y Directos en lugar de las tarjetas de clientes -->
     <div
+      v-if="isInternalInbox"
+      class="flex-1 overflow-y-auto conversations-list"
+    >
+      <InternalChatList :chats="conversationList" @open="openInternalRoom" />
+      <IntersectionObserver
+        v-if="!showEndOfListMessage && !chatListLoading"
+        :options="infiniteLoaderOptions"
+        @observed="loadMoreConversations"
+      />
+    </div>
+    <div
+      v-else
       ref="conversationListRef"
       class="flex-1 conversations-list"
       :class="{ 'overflow-hidden': isContextMenuOpen }"

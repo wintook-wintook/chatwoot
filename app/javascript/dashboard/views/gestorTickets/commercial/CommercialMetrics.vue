@@ -192,7 +192,9 @@ export default {
     <div
       class="flex flex-col flex-shrink-0 gap-3 px-6 pt-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
-      <div class="flex flex-wrap items-center justify-between gap-3">
+      <div
+        class="flex flex-wrap items-center justify-between gap-3 [&_select]:!h-8 [&_select]:!py-0"
+      >
         <div class="flex flex-wrap items-center gap-3">
           <!-- Plan-Casos E1 — el selector Comercial | Soporte es el título -->
           <CaseClassSwitcher

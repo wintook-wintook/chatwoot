@@ -192,9 +192,12 @@ const actions = {
     commit(types.CLEAR_ALL_MESSAGES_LOADED);
     if (data.dataFetched === undefined) {
       try {
+        // Sin mensajes (p. ej. una sala nueva de «Interno») no hay «antes de»: trae
+        // los últimos. Antes tronaba aquí y la conversación nunca quedaba cargada.
+        const [firstMessage] = data.messages || [];
         await dispatch('fetchPreviousMessages', {
           after,
-          before: data.messages[0].id,
+          before: firstMessage ? firstMessage.id : undefined,
           conversationId: data.id,
         });
         Vue.set(data, 'dataFetched', true);

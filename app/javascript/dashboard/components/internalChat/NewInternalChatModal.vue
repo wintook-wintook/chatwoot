@@ -58,45 +58,49 @@ export default {
       :header-content="$t('INTERNAL_CHAT.NEW_ROOM.DESCRIPTION')"
     />
     <form class="flex flex-col items-start w-full" @submit.prevent="create">
+      <!-- El selector va fuera de <label>: dentro, el clic en una opción también
+           «activaba» la etiqueta y reabría la lista sin elegir (solo servía Enter). -->
       <div class="w-full">
-        <label>
+        <span
+          class="block mb-1 text-sm font-medium text-slate-800 dark:text-slate-100"
+        >
           {{ $t('INTERNAL_CHAT.NEW_ROOM.AGENT') }}
-          <multiselect
-            v-model="agent"
-            :options="options"
-            track-by="id"
-            label="name"
-            :placeholder="$t('INTERNAL_CHAT.NEW_ROOM.SELECT_PLACEHOLDER')"
-            selected-label=""
-            :select-label="$t('FORMS.MULTISELECT.ENTER_TO_SELECT')"
-            :deselect-label="$t('FORMS.MULTISELECT.ENTER_TO_REMOVE')"
-            :max-height="240"
-            close-on-select
-          >
-            <template #singleLabel="{ option }">
-              <span class="flex items-center gap-2">
-                <Thumbnail
-                  :src="option.thumbnail"
-                  :username="option.name"
-                  size="20px"
-                />
-                {{ option.name }}
-              </span>
-            </template>
-            <template #option="{ option }">
-              <span class="flex items-center gap-2">
-                <Thumbnail
-                  :src="option.thumbnail"
-                  :username="option.name"
-                  :status="option.availability_status"
-                  should-show-status-always
-                  size="24px"
-                />
-                {{ option.name }}
-              </span>
-            </template>
-          </multiselect>
-        </label>
+        </span>
+        <multiselect
+          v-model="agent"
+          :options="options"
+          track-by="id"
+          label="name"
+          :placeholder="$t('INTERNAL_CHAT.NEW_ROOM.SELECT_PLACEHOLDER')"
+          selected-label=""
+          :select-label="$t('FORMS.MULTISELECT.ENTER_TO_SELECT')"
+          :deselect-label="$t('FORMS.MULTISELECT.ENTER_TO_REMOVE')"
+          :max-height="240"
+          close-on-select
+        >
+          <template #singleLabel="{ option }">
+            <span class="flex items-center gap-2">
+              <Thumbnail
+                :src="option.thumbnail"
+                :username="option.name"
+                size="20px"
+              />
+              {{ option.name }}
+            </span>
+          </template>
+          <template #option="{ option }">
+            <span class="flex items-center gap-2">
+              <Thumbnail
+                :src="option.thumbnail"
+                :username="option.name"
+                :status="option.availability_status"
+                should-show-status-always
+                size="24px"
+              />
+              {{ option.name }}
+            </span>
+          </template>
+        </multiselect>
       </div>
 
       <div class="flex flex-row justify-end w-full gap-2 px-0 py-2">

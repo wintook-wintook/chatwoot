@@ -52,7 +52,7 @@
           ></div>
           <div 
             v-else
-            class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold"
+            class="w-8 h-8 rounded-full bg-gradient-to-br from-woot-400 to-woot-600 flex items-center justify-center text-white text-xs font-bold"
           >
             {{ contactInitials }}
           </div>
@@ -137,7 +137,7 @@
         </div>
         
         <!-- Asignado -->
-        <div v-if="assigneeName" class="flex items-center space-x-1 text-blue-600 dark:text-blue-400">
+        <div v-if="assigneeName" class="flex items-center space-x-1 text-woot-600 dark:text-woot-400">
           <span>👨‍💻</span>
           <span class="truncate">{{ assigneeName }}</span>
         </div>
@@ -152,7 +152,7 @@
         <!-- Avatar del asignado -->
         <div 
           v-if="assigneeInitials" 
-          class="h-6 w-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-medium"
+          class="h-6 w-6 rounded-full bg-woot-500 text-white flex items-center justify-center text-xs font-medium"
           :title="assigneeName"
         >
           {{ assigneeInitials }}

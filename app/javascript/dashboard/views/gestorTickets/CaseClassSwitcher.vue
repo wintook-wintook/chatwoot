@@ -27,6 +27,12 @@ import { MENU_V2 } from 'dashboard/components/layout/config/menuVersion';
 const COMMERCIAL = 'commercial';
 const VIEWS = ['list', 'board', 'metrics'];
 // Ícono + texto: el selector debe notarse (si no, nadie descubre el Dashboard).
+// La opción activa en el color del tema (texto e ícono), sobre blanco: se nota dónde
+// estás sin competir con el botón relleno de «+ Nuevo», que es la acción principal.
+const ACTIVE_CLASS =
+  'bg-white font-semibold text-woot-600 shadow-sm dark:bg-slate-700 dark:text-woot-200';
+const IDLE_CLASS =
+  'font-medium text-slate-500 hover:text-slate-800 hover:bg-white/60 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-700/50';
 const VIEW_ICONS = {
   list: 'list',
   board: 'kanban',
@@ -41,7 +47,11 @@ export default {
     title: { type: String, default: '' },
   },
   data() {
-    return { menuV2: MENU_V2 };
+    return {
+      menuV2: MENU_V2,
+      activeClass: ACTIVE_CLASS,
+      idleClass: IDLE_CLASS,
+    };
   },
   computed: {
     ...mapGetters({
@@ -142,7 +152,7 @@ export default {
     </h1>
     <div
       v-else
-      class="inline-flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800"
+      class="inline-flex flex-shrink-0 p-1 rounded-lg bg-slate-100 dark:bg-slate-800"
       role="tablist"
       :aria-label="$t('CASE_TICKETS.CLASSES.SWITCHER_LABEL')"
     >
@@ -152,12 +162,8 @@ export default {
         type="button"
         role="tab"
         :aria-selected="c.key === caseClass"
-        class="flex items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-md"
-        :class="
-          c.key === caseClass
-            ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-700 dark:text-slate-100'
-            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-        "
+        class="flex items-center gap-1.5 h-8 px-3 text-sm rounded-md transition-colors"
+        :class="c.key === caseClass ? activeClass : idleClass"
         @click="go(c.key)"
       >
         <span
@@ -171,7 +177,7 @@ export default {
     <!-- Menú v2 — forma de ver: Lista | Tablero | Dashboard -->
     <div
       v-if="menuV2 && currentView"
-      class="inline-flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800"
+      class="inline-flex flex-shrink-0 p-1 rounded-lg bg-slate-100 dark:bg-slate-800"
       role="group"
       :aria-label="$t('CASE_TICKETS.CLASSES.VIEW_LABEL')"
     >
@@ -180,15 +186,11 @@ export default {
         :key="view.key"
         type="button"
         :aria-pressed="view.key === currentView"
-        class="flex items-center gap-1.5 h-8 px-3 text-sm font-medium rounded-md"
-        :class="
-          view.key === currentView
-            ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-700 dark:text-slate-100'
-            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-        "
+        class="flex items-center gap-2 h-8 px-3.5 text-sm rounded-md transition-colors"
+        :class="view.key === currentView ? activeClass : idleClass"
         @click="goView(view.key)"
       >
-        <fluent-icon :icon="view.icon" size="16" />
+        <fluent-icon :icon="view.icon" size="18" />
         {{ view.label }}
       </button>
     </div>

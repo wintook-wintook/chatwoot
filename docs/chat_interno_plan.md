@@ -44,6 +44,19 @@
 | **R4** | Frontend: el grupo «Interno» del menú = la bandeja; dirección y título por quien mira (A4); no leídos por agente (A5); «Nuevo chat» (A6) |
 | **R5** | Pruebas, quitar el módulo aparte (tablas `internal_chat_*`, API, store, vistas) y lo que ya no se use en los componentes nativos |
 
+
+### Pulido (27/10/2026, rama `feat/chat_interno_pulido`)
+
+«Interno» se veía y manejaba como una bandeja de clientes. Ahora es un chat de equipo:
+
+| Fase | Qué quedó |
+|---|---|
+| **P1** | Arreglado: la sala sin mensajes se quedaba cargando (`setActiveChat` tomaba `messages[0].id`; afectaba a toda conversación vacía), la lista abría en «Mías 0» y el texto vacío hablaba de clientes. Oculto en Interno: Mías/No asignadas/Todas, «Abiertas», filtros, orden, Resolver y acciones de la cabecera, panel del contacto, Responder/Nota privada, aviso «asignarme», firma, plantillas, bots de sugerencia, artículos; menú del mensaje sin Traducir / Copiar enlace / Respuesta predefinida, y cada quien borra lo suyo. Enter envía (Shift+Enter, salto). «Encaminhar» → «Reenviar» (en todas las conversaciones). |
+| **P2** | Menú: **«Chat interno»** con contador de no leídos (store `internalChat`, `GET internal_channel/unread`), fuera de «Bandejas de entrada». Lista propia (`InternalChatList.vue`): Grupos y Directos por último mensaje, negritas + contador, vista previa «Ana: …». Cabecera: «N miembros» o el estado del otro agente. Panel derecho = **Miembros** (`InternalMembersPanel.vue`). Adjuntos y audio. |
+| **P3** | @menciones en Interno (editor completo sin barra de formato; `Messages::MentionService` acepta Interno, solo avisa a quien está en la sala y **no** agrega a nadie a un directo). Sonido si llega un mensaje de otro agente y la sala no está a la vista. Mensajes seguidos de la misma persona (< 5 min) sin repetir nombre; sin fotos dentro de la sala; nombre arriba solo en grupos. |
+
+Pruebas: `internal_channel_privacy_spec` (+2: contador, menciones), `store/modules/specs/internalChat.spec.js` (5).
+
 ---
 
 ## 1. Qué se quiere

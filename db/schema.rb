@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_30_160000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_30_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1476,6 +1476,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_30_160000) do
     t.jsonb "entry_inbox_ids", default: [], null: false
     t.integer "cold_after_days"
     t.integer "discard_after_days"
+    t.boolean "resolve_on_stale", default: false, null: false
     t.index ["account_id"], name: "index_kanban_type_processes_on_account_id"
     t.index ["account_id"], name: "unique_default_kanban_type_process_per_account", unique: true, where: "(\"default\" = true)"
   end
