@@ -204,6 +204,62 @@ export default {
               </span>
             ),
         }),
+        // Acciones por campaña (antes del avance): solo las que aplican a su estado.
+        {
+          field: 'actions',
+          key: 'actions',
+          title: this.$t('TRACKING_CAMPAIGNS_VIEW.COL.ACTIONS'),
+          align: 'left',
+          width: 150,
+          renderBodyCell: ({ row }) => (
+            <div
+              class="flex items-center gap-1.5 whitespace-nowrap"
+              onClick={e => e.stopPropagation()}
+            >
+              {row.status === 'saved' && (
+                <woot-button
+                  variant="smooth"
+                  color-scheme="secondary"
+                  size="small"
+                  icon="edit"
+                  title={this.$t('TRACKING_CAMPAIGNS_VIEW.EDIT')}
+                  onClick={() => this.openEdit(row)}
+                />
+              )}
+              {['draft', 'running'].includes(row.status) && (
+                <woot-button
+                  variant="smooth"
+                  color-scheme="warning"
+                  size="small"
+                  icon="snooze"
+                  isLoading={this.pausingId === row.id}
+                  title={this.$t('TRACKING_CAMPAIGNS_VIEW.PAUSE')}
+                  onClick={() => this.openPause(row)}
+                />
+              )}
+              {row.status === 'paused' && (
+                <woot-button
+                  variant="smooth"
+                  color-scheme="success"
+                  size="small"
+                  icon="play-circle"
+                  isLoading={this.resumingId === row.id}
+                  title={this.$t('TRACKING_CAMPAIGNS_VIEW.RESUME')}
+                  onClick={() => this.resumeCampaign(row)}
+                />
+              )}
+              <woot-button
+                variant="smooth"
+                color-scheme="alert"
+                size="small"
+                icon="delete"
+                isLoading={this.deletingId === row.id}
+                title={this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE')}
+                onClick={() => this.openDelete(row)}
+              />
+            </div>
+          ),
+        },
         col('progress', 'PROGRESS', {
           width: 150,
           align: 'right',
@@ -221,62 +277,6 @@ export default {
             </div>
           ),
         }),
-        // Opciones por campaña: solo las que aplican a su estado.
-        {
-          field: 'actions',
-          key: 'actions',
-          title: '',
-          align: 'right',
-          width: 150,
-          renderBodyCell: ({ row }) => (
-            <div
-              class="flex items-center justify-end gap-1 whitespace-nowrap"
-              onClick={e => e.stopPropagation()}
-            >
-              {row.status === 'saved' && (
-                <woot-button
-                  variant="clear"
-                  color-scheme="secondary"
-                  size="small"
-                  icon="edit"
-                  title={this.$t('TRACKING_CAMPAIGNS_VIEW.EDIT')}
-                  onClick={() => this.openEdit(row)}
-                />
-              )}
-              {['draft', 'running'].includes(row.status) && (
-                <woot-button
-                  variant="clear"
-                  color-scheme="warning"
-                  size="small"
-                  icon="snooze"
-                  isLoading={this.pausingId === row.id}
-                  title={this.$t('TRACKING_CAMPAIGNS_VIEW.PAUSE')}
-                  onClick={() => this.openPause(row)}
-                />
-              )}
-              {row.status === 'paused' && (
-                <woot-button
-                  variant="clear"
-                  color-scheme="success"
-                  size="small"
-                  icon="play-circle"
-                  isLoading={this.resumingId === row.id}
-                  title={this.$t('TRACKING_CAMPAIGNS_VIEW.RESUME')}
-                  onClick={() => this.resumeCampaign(row)}
-                />
-              )}
-              <woot-button
-                variant="clear"
-                color-scheme="alert"
-                size="small"
-                icon="delete"
-                isLoading={this.deletingId === row.id}
-                title={this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE')}
-                onClick={() => this.openDelete(row)}
-              />
-            </div>
-          ),
-        },
       ];
     },
     // Estados disponibles para el selector (los que aparecen en STATUS_COLOR).

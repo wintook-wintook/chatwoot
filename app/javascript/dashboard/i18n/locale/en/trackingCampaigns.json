@@ -29,6 +29,7 @@
       "ACTIVE": "Active",
       "COMPLETED": "Completed",
       "FAILED": "Failed",
+      "ACTIONS": "Actions",
       "PROGRESS": "Progress",
       "TYPE": "Type",
       "WINDOW": "Window"
