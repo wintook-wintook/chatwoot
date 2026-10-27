@@ -966,6 +966,18 @@ Orden propuesto: **F1 → F2 → F4 → F3**. Las tres primeras son rápidas y s
 > - **Ojo:** migrar **antes** de guardar código que use la columna; si no, el Sidekiq de dev recarga
 >   el código, no encuentra la columna y los toques fallan (pasó con la campaña #308).
 
+> ✅ **V2 HECHA (27/10/2026) — se detiene cuando el prospecto responde.**
+> - **Qué se hizo:** `ContactTrackings::ProspectReply` y una línea en
+>   `ContactTrackingResponseAnalyzerJob#perform`: al entrar el mensaje del contacto, cada seguimiento
+>   que espera toque (pending / scheduled) mueve su siguiente toque a **3 días hábiles** (sin sábado
+>   ni domingo, misma hora, zona de la bandeja) y queda con **un solo toque más** (`max_attempts` =
+>   intentos hechos + 1). Cada respuesta nueva vuelve a empujar la fecha. La IA sigue contestando.
+> - **Alcance:** todos los seguimientos y canales (no solo Prospección), como dice §10.2.
+>   Cambia el comportamiento en producción: hoy, tras una respuesta, los toques siguen a su intervalo.
+> - **Pruebas:** `spec/services/contact_trackings/prospect_reply_spec.rb` (5, incluida una desde el
+>   analizador). Las 7 fallas de `contact_tracking_response_analyzer_job_spec` ya existían.
+> - **Cómo se ve:** el prospecto responde → en el seguimiento, «siguiente toque» pasa a 3 días hábiles.
+
 Orden: **V0 → V1 → V2 → V3 → V4 → V5 → V6**. Con V0–V4 el envío ya es correcto;
 con V5–V6 ya es prospección (se sabe quién está interesado y cuánto rinde la campaña).
 
@@ -995,7 +1007,7 @@ de la empresa (no código). Se marca conforme avanzan las fases.
 |---|---|---|
 | 1 · A quién: cliente ideal, correos validados | Empresa: definir el cliente ideal · v1.1: validar correos antes de enviar | ⏳ empresa / v1.1 |
 | 2 · Mensaje: asunto, firma, prompt real | F1 ✅ · V1 ✅ firma · empresa: prompt de prospección | 🟡 falta el prompt |
-| 3 · Cadencia: se detiene al responder, días hábiles | V2 + V3 | ⏳ |
+| 3 · Cadencia: se detiene al responder, días hábiles | V2 ✅ + V3 | 🟡 falta V3 |
 | 4 · Cumplir: baja, no contactar, aviso de privacidad | V4 · D7 (legal) | ⏳ |
 | 5 · Que llegue: dominio, calentamiento, tope diario | V3 tope · empresa: dominio con SPF/DKIM/DMARC | ⏳ |
 | 6 · Calificar respuestas | V5 | ⏳ |

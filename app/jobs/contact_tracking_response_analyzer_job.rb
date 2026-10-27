@@ -53,6 +53,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     Rails.logger.info "[Coordinator] 🔍 Mensaje ##{message_id}: \"#{message_text_for_ai(message).truncate(80)}\""
 
     active_trackings = find_active_trackings(message)
+    # prospeccion V2: respondió → no más toques automáticos (uno de recuperación en 3 días hábiles)
+    active_trackings.each { |tracking| ContactTrackings::ProspectReply.call(tracking, at: message.created_at) }
 
     botseller_available = defined?(BotSeller::Dispatcher) && BotSeller::Dispatcher.configured?
 
