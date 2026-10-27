@@ -756,7 +756,118 @@ El correo (prospección en frío) entra como fase 2 en cuanto haya bandeja de co
 
 ---
 
-## 9. Decisiones abiertas
+## 9. Plan: correo listo para prospectar (F1–F4)
+
+> 27/10/2026 · Solo plan. Sale de la prueba real en dev: bandeja «Develop» (Gmail, IMAP + SMTP),
+> agente #12877, campañas #304 y #305. **Ya funciona** la ida y vuelta: la IA escribe, el prospecto
+> responde, la IA contesta en el mismo hilo (~9 s). Falta lo que hace que el correo se abra,
+> no parezca spam y respete la baja.
+
+```
+ Hoy                                              Con F1–F4
+ ───────────────────────────────────────────      ───────────────────────────────────────────
+ Asunto: [#642] Nuevos mensajes en esta conv.     Asunto: Juan, una idea para tus envíos   (F1)
+ Hola Juan, ... ¿te interesa? #IA                 Hola Juan, ... ¿te interesa?
+                                                  —
+                                                  Ana López · Wintook                      (F2)
+                                                  ¿No quieres más correos? Darte de baja   (F3)
+ Responde → al día siguiente otro toque           Responde → ya no hay más toques          (F4)
+```
+
+### F1 · Asunto propio por campaña
+
+**Problema.** Una conversación que abre el agente no tiene `mail_subject`, y el correo sale con
+«[#N] Nuevos mensajes en esta conversación» (`conversation_reply_mailer.rb:114`).
+
+**Cómo.**
+- Columna nueva `tracking_campaigns.email_subject` (texto, máx. 150), con variables `{{nombre}}` y `{{empresa}}`.
+- En `TrackingCampaigns::TrackingBuilder#open_conversation` (`tracking_builder.rb:52`), si la
+  bandeja es de correo, guardar el asunto ya armado en `conversation.additional_attributes['mail_subject']`.
+- El mailer ya hace el resto: el primer correo va con el asunto y los siguientes con «Re: …»
+  (cuenta solo mensajes no privados, `message.rb:118`; la nota privada inicial no estorba).
+- Si el contacto **ya tenía hilo** en la bandeja, se conserva el asunto del hilo («Re: …»).
+- Pantalla: en el modal de campaña, el campo «Asunto del correo» aparece **solo si la bandeja del agente es de correo**, y es obligatorio.
+
+**Pruebas.** Conversación nueva con asunto · hilo existente conserva su asunto · bandeja WhatsApp sin cambios · variables vacías no dejan `{{…}}`.
+
+### F2 · Firma en lugar de «#IA» / «-TB»
+
+**Problema.** Se agregan dos marcas al texto: « #IA» al toque (`contact_tracking_job.rb:257`) y
+«\n\n-TB» a la respuesta (`contact_tracking_response_analyzer_job.rb:629`). En correo se ven raras y delatan el envío automático.
+
+**Cómo.**
+- **Solo en bandejas de correo:** no agregar las marcas y poner la **firma** del agente.
+- Firma = campo nuevo del agente (`tracking_templates.email_signature`, texto corto), p. ej. «Ana López · Ventas · Wintook».
+- WhatsApp y los demás canales siguen igual (decidir aparte si las marcas se quedan ahí).
+- La marca sirve para saber qué escribió la IA: se conserva como dato del mensaje
+  (`content_attributes`), no como texto visible.
+
+**Pruebas.** Correo sin marcas y con firma · WhatsApp con marcas como hoy · agente sin firma = sin firma.
+
+### F3 · Baja: enlace + lista de no contactar (P0)
+
+**Problema.** No hay forma de darse de baja ni de recordar quién la pidió. Gmail y Yahoo exigen la
+baja con un clic, y la ley en México exige respetarla.
+
+**Cómo.**
+```
+ Correo ──▶ pie «Darte de baja» + cabeceras List-Unsubscribe / List-Unsubscribe-Post
+              │
+              ▼
+ GET/POST /p/baja/:token  (enlace firmado, sin sesión)  ──▶  contacts.opted_out_at = ahora
+              ▲                                              opted_out_source = 'link'
+ Respuesta «no me escriban» / «baja» ── IA lo detecta ──────┘  (source = 'reply')
+              │
+              ▼
+ Enroll omite con motivo "opted_out" · seguimientos activos del contacto se cancelan
+```
+- Columnas nuevas en `contacts`: `opted_out_at`, `opted_out_source`. **No** se usa `contacts.blocked`, porque bloquea también lo que el contacto escribe.
+- La baja es **por contacto, en todos los canales** (§8.4).
+- Enlace: token firmado (`MessageVerifier`), con página pública mínima «Listo, ya no te escribiremos».
+- Cabeceras `List-Unsubscribe` (mailto + URL) y `List-Unsubscribe-Post: List-Unsubscribe=One-Click` en `ConversationReplyMailer`, **solo** en correos de seguimiento/campaña.
+- `TrackingCampaigns::Enroll`: nuevo motivo `opted_out` (junto a los de `enroll.rb:10-16`) y en la vista previa.
+- Detección por respuesta: frase fija («baja», «no me escriban», «unsubscribe») + la IA cuando el router se encienda; hoy el router está apagado (`TRACKING_DETECT_INTENT=false`).
+- Ficha del contacto: indicador «Pidió no ser contactado (fecha, cómo)» y botón para quitarlo.
+
+**Pruebas.** Enlace marca la baja · token alterado = 404 · contacto con baja no se inscribe · respuesta «baja» marca y cancela · cabeceras presentes solo en correos de campaña.
+
+### F4 · Dejar de mandar toques cuando el prospecto responde
+
+**Problema.** En la prueba, el prospecto respondió y el seguimiento siguió `scheduled` con otro toque
+al día siguiente. Con el router apagado, la respuesta siempre va a «conversar» y no cambia el estado.
+
+**Cómo.**
+- Cuando entra un mensaje del contacto en la conversación del seguimiento, el seguimiento pasa a **«conversando»**:
+  se cancelan los toques pendientes (`cancel_existing_jobs`) y la IA sigue contestando.
+- Si el prospecto deja de responder N días (propuesta: 3 hábiles), se reanuda **un** toque de recuperación.
+- Aplica a todos los canales: en WhatsApp pasa lo mismo.
+- Es la base de P1: «Respondió» es la etapa 3 de §8.1.
+
+**Pruebas.** Respuesta cancela el toque programado · la IA sigue contestando · sin respuesta en N días se reanuda un toque · seguimiento cancelado no revive.
+
+### Orden y tamaño
+
+| Pieza | Tamaño | Depende de |
+|---|---|---|
+| F1 Asunto | Chico | — |
+| F2 Firma | Chico | — |
+| F4 Toques al responder | Chico–mediano | — |
+| F3 Baja | Mediano | — (F4 ayuda a cancelar al pedir baja) |
+
+Orden propuesto: **F1 → F2 → F4 → F3**. Las tres primeras son rápidas y se prueban con la bandeja «Develop»; F3 lleva migración, página pública y cabeceras.
+
+### Decisiones de este plan
+
+| # | Pregunta | Propuesta |
+|---|---|---|
+| D8 | ¿El asunto vive en la campaña o en el agente? | En la **campaña** (cada campaña, su gancho); el agente puede dar uno por omisión |
+| D9 | ¿Las marcas «#IA» / «-TB» se quitan también en WhatsApp? | No en esta fase; solo correo |
+| D10 | Al responder: ¿cancelar toques para siempre o reanudar uno a los N días? | Reanudar **uno** a los 3 días hábiles |
+| D11 | ¿La baja por enlace aplica a todos los canales? | Sí, por contacto (§8.4) |
+
+---
+
+## 10. Decisiones abiertas
 
 | # | Pregunta |
 |---|---|
@@ -770,7 +881,7 @@ El correo (prospección en frío) entra como fase 2 en cuanto haya bandeja de co
 
 ---
 
-## 10. Fuentes
+## 11. Fuentes
 
 Prácticas y plataformas:
 - Salesforce LATAM · Cómo realizar la prospección de ventas — https://www.salesforce.com/mx/blog/prospeccion-de-ventas/
