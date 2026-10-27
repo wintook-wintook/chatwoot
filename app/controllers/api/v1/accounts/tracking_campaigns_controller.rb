@@ -195,7 +195,7 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   # prospeccion P2: y la entrega de interesados (tablero, columna, plazo, escalar)
   def prospecting_json(campaign)
     { prospecting_funnel: campaign.prospecting? ? TrackingCampaigns::ProspectingFunnel.for(campaign) : nil }
-      .merge(campaign.handoff_settings)
+      .merge(campaign.handoff_settings, subject_test: TrackingCampaigns::SubjectTest.stats(campaign)) # P3: prueba A/B
   end
 
   # Para modificar una Guardada: CampaignForm la vuelve a llenar con esto. Y, si está
@@ -203,7 +203,8 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   def editable_json(campaign)
     { tracking_template_id: campaign.tracking_template_id, audience: campaign.audience,
       paused_reason: campaign.paused_reason, paused_at: campaign.paused_at,
-      email_subject: campaign.email_subject } # prospeccion F1
+      email_subject: campaign.email_subject, # prospeccion F1
+      email_subject_b: campaign.email_subject_b } # prospeccion P3
   end
 
   def aggregate_stats(status_counts)

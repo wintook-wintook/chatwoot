@@ -71,10 +71,14 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
       skip_active: ActiveModel::Type::Boolean.new.cast(params.fetch(:skip_active, true)),
       window: window_params,
       audience_source: audience_source_param,
-      email_subject: params[:email_subject], # prospeccion F1
-      purpose: params[:purpose], # prospeccion V0
+      **prospecting_params,
       **extra
     )
+  end
+
+  # prospeccion F1 / V0 / P3: asunto, propósito y asunto B de la prueba A/B
+  def prospecting_params
+    { email_subject: params[:email_subject], purpose: params[:purpose], email_subject_b: params[:email_subject_b] }
   end
 
   def render_result(result)

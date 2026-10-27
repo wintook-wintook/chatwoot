@@ -221,6 +221,17 @@
       "SUMMARY_DUE": "plazo {hours} h hábiles",
       "SUMMARY_ESCALATE": "escalar a las {hours} h"
     },
+    "SUBJECT_TEST": {
+      "TITLE": "🔤 Prueba de asuntos",
+      "STATUS_WAITING": "La mitad recibe el asunto A y la otra mitad el B. Faltan datos: se señala al que va ganando cuando cada uno tenga al menos {min} contactados.",
+      "STATUS_LEADER": "Va ganando el asunto {letter}. Cuando estés seguro, quédate con él y desde ahí todos lo reciben.",
+      "STATUS_WINNER": "Te quedaste con el asunto {letter}: todos los nuevos prospectos lo reciben. La comparación queda como estaba.",
+      "NUMBERS": "{contacted} contactados · {replied} respondieron",
+      "CHOOSE": "Quedarse con este",
+      "WINNER": "🏆 Ganador",
+      "CHOSEN": "Listo: los nuevos prospectos reciben ese asunto.",
+      "ERROR": "No se pudo guardar. Intenta de nuevo."
+    },
     "HAND_OFF_DONE": "Entregado. Tómalo desde su conversación.",
     "HAND_OFF_ERROR": "No se pudo entregar. Intenta de nuevo.",
     "TYPE": "Tipo",

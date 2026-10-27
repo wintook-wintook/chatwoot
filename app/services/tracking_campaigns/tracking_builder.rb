@@ -48,8 +48,11 @@ class TrackingCampaigns::TrackingBuilder
 
   # Abre la conversación del contacto en el inbox de la campaña, asignada al agente y con la
   # nota privada. La usa ContactTrackingJob al enviar el primer mensaje. nil si no se pudo.
-  def open_conversation
+  # tracking: el seguimiento que la abre (prospeccion P3: anota qué asunto recibió).
+  def open_conversation(tracking: nil)
     return nil unless @agent
+
+    @tracking = tracking
 
     contact_inbox = ContactInboxBuilder.new(contact: @contact, inbox: @campaign.inbox).perform
     conversation = ConversationBuilder.new(
@@ -67,11 +70,16 @@ class TrackingCampaigns::TrackingBuilder
 
   # prospeccion F1: en correo, el asunto de la campaña (con {{contacto}} / {{empresa}}).
   # Sin asunto, el mailer pone «[#N] Nuevos mensajes en esta conversación».
+  # prospeccion P3: con prueba A/B, el asunto A o B que toque, anotado en el seguimiento.
   def email_subject_attributes
     return {} unless @campaign.inbox&.email?
 
-    subject = TrackingCampaigns::EmailSubject.render(@campaign.email_subject, @contact)
-    subject ? { mail_subject: subject } : {}
+    template, variant = TrackingCampaigns::SubjectTest.pick(@campaign)
+    subject = TrackingCampaigns::EmailSubject.render(template, @contact)
+    return {} unless subject
+
+    @tracking&.update_column(:subject_variant, variant) if variant # rubocop:disable Rails/SkipsModelValidations
+    { mail_subject: subject }
   end
 
   def template

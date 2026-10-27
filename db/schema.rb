@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_31_170000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_31_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1086,6 +1086,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_170000) do
     t.datetime "handoff_attended_at"
     t.datetime "handoff_reminded_at"
     t.datetime "handoff_escalated_at"
+    t.string "subject_variant"
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["dispatched_at"], name: "index_contact_trackings_dispatched", where: "((status)::text = 'active'::text)"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
@@ -1101,6 +1102,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_170000) do
     t.index ["status", "scheduled_for"], name: "index_contact_trackings_on_status_and_scheduled_for"
     t.index ["status"], name: "index_contact_trackings_on_status"
     t.index ["tracking_campaign_id", "prospect_stage"], name: "index_contact_trackings_on_campaign_and_prospect_stage"
+    t.index ["tracking_campaign_id", "subject_variant"], name: "index_contact_trackings_on_campaign_and_subject_variant", where: "(subject_variant IS NOT NULL)"
     t.index ["tracking_campaign_id"], name: "index_contact_trackings_on_tracking_campaign_id"
   end
 
@@ -2104,6 +2106,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_170000) do
     t.bigint "handoff_column_id"
     t.integer "handoff_due_hours"
     t.integer "handoff_escalate_hours"
+    t.string "email_subject_b"
+    t.string "subject_ab_winner"
     t.index ["account_id", "purpose"], name: "index_tracking_campaigns_on_account_id_and_purpose"
     t.index ["account_id", "status"], name: "index_tracking_campaigns_on_account_id_and_status"
     t.index ["account_id"], name: "index_tracking_campaigns_on_account_id"

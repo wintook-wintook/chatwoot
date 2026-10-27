@@ -95,6 +95,7 @@ export default {
       prospects: [],
       handingOff: null, // prospeccion V6
       showHandoffModal: false, // prospeccion P2
+      choosingSubject: null, // prospeccion P3
       isLoading: false,
       currentPage: 1,
       pageSize: PAGE_SIZE,
@@ -184,6 +185,32 @@ export default {
     // prospeccion V6: en Prospección la tarjeta muestra su embudo
     isProspecting() {
       return this.campaign?.purpose === 'prospecting';
+    },
+    // prospeccion P3: la prueba A/B de asuntos (nil si la campaña no tiene asunto B).
+    subjectTest() {
+      return this.isProspecting ? this.campaign.subject_test : null;
+    },
+    subjectRows() {
+      const test = this.subjectTest;
+      if (!test) return [];
+      return ['a', 'b'].map(variant => ({
+        variant,
+        letter: variant.toUpperCase(),
+        ...test.variants[variant],
+        winner: test.winner === variant,
+        leader: !test.winner && test.leader === variant,
+      }));
+    },
+    subjectStatus() {
+      const test = this.subjectTest;
+      if (!test) return '';
+      const t = (key, args) =>
+        this.$t(`TRACKING_CAMPAIGN_DETAIL.SUBJECT_TEST.${key}`, args);
+      if (test.winner)
+        return t('STATUS_WINNER', { letter: test.winner.toUpperCase() });
+      if (test.leader)
+        return t('STATUS_LEADER', { letter: test.leader.toUpperCase() });
+      return t('STATUS_WAITING', { min: test.min_sample });
     },
     // prospeccion P2: «Oportunidades › Columna · plazo 4 h · escalar 8 h» o «solo con el botón».
     handoffSummary() {
@@ -366,6 +393,7 @@ export default {
           stats: data.stats,
           funnel: data.funnel,
           prospecting_funnel: data.prospecting_funnel, // prospeccion V6
+          subject_test: data.subject_test, // prospeccion P3
           delivery: data.delivery,
         };
       } catch (error) {
@@ -443,6 +471,22 @@ export default {
     },
     closeHandoffModal() {
       this.showHandoffModal = false;
+    },
+    // prospeccion P3: quedarse con el asunto A o B.
+    async chooseSubject(variant) {
+      this.choosingSubject = variant;
+      try {
+        const { data } = await TrackingCampaignsAPI.chooseSubject(
+          this.campaignId,
+          variant
+        );
+        this.campaign = { ...this.campaign, subject_test: data };
+        useAlert(this.$t('TRACKING_CAMPAIGN_DETAIL.SUBJECT_TEST.CHOSEN'));
+      } catch {
+        useAlert(this.$t('TRACKING_CAMPAIGN_DETAIL.SUBJECT_TEST.ERROR'));
+      } finally {
+        this.choosingSubject = null;
+      }
     },
     // prospeccion P2: atendido, vencido o entregado (con su vencimiento).
     handoffLabel(p) {
@@ -885,6 +929,67 @@ export default {
         >
           {{ $t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.CONFIGURE') }}
         </woot-button>
+      </div>
+      <!-- prospeccion P3: prueba A/B de asuntos -->
+      <div
+        v-if="subjectTest"
+        class="p-3 mb-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
+      >
+        <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+          {{ $t('TRACKING_CAMPAIGN_DETAIL.SUBJECT_TEST.TITLE') }}
+        </span>
+        <p class="mb-2 text-xs text-slate-500 dark:text-slate-400">
+          {{ subjectStatus }}
+        </p>
+        <div
+          v-for="row in subjectRows"
+          :key="row.variant"
+          class="flex items-center justify-between gap-3 py-1.5 border-b last:border-b-0 border-slate-100 dark:border-slate-700/60"
+        >
+          <div class="min-w-0 text-sm">
+            <span class="font-semibold text-slate-700 dark:text-slate-200">
+              {{ row.letter }}
+            </span>
+            <span class="ml-1 text-slate-600 dark:text-slate-300">
+              {{ row.subject }}
+            </span>
+          </div>
+          <div class="flex items-center gap-3 shrink-0 text-xs">
+            <span class="text-slate-500 dark:text-slate-400">
+              {{
+                $t('TRACKING_CAMPAIGN_DETAIL.SUBJECT_TEST.NUMBERS', {
+                  contacted: row.contacted,
+                  replied: row.replied,
+                })
+              }}
+            </span>
+            <span
+              class="font-semibold"
+              :class="
+                row.winner || row.leader
+                  ? 'text-green-600 dark:text-green-500'
+                  : 'text-slate-600 dark:text-slate-300'
+              "
+            >
+              {{ row.rate }}%
+            </span>
+            <span
+              v-if="row.winner"
+              class="font-medium text-green-600 dark:text-green-500"
+            >
+              {{ $t('TRACKING_CAMPAIGN_DETAIL.SUBJECT_TEST.WINNER') }}
+            </span>
+            <woot-button
+              v-else-if="!subjectTest.winner"
+              size="tiny"
+              variant="smooth"
+              :is-loading="choosingSubject === row.variant"
+              @click="chooseSubject(row.variant)"
+            >
+              {{ $t('TRACKING_CAMPAIGN_DETAIL.SUBJECT_TEST.CHOOSE') }}
+            </woot-button>
+          </div>
+        </div>
       </div>
       <woot-modal
         v-if="isProspecting"

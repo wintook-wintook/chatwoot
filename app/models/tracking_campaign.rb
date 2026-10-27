@@ -86,6 +86,9 @@ class TrackingCampaign < ApplicationRecord
   validates :objective, length: { maximum: 500 }, allow_nil: true
   # prospeccion F1: asunto del primer correo cuando la bandeja es de correo.
   validates :email_subject, length: { maximum: TrackingCampaigns::EmailSubject::MAX_LENGTH }, allow_nil: true
+  # prospeccion P3: prueba A/B de asuntos (el A es email_subject)
+  validates :email_subject_b, length: { maximum: TrackingCampaigns::EmailSubject::MAX_LENGTH }, allow_nil: true
+  validates :subject_ab_winner, inclusion: { in: TrackingCampaigns::SubjectTest::VARIANTS }, allow_nil: true
   validates :mode, inclusion: { in: MODES }
   validates :purpose, inclusion: { in: PURPOSES }
   validates :entry_delay_minutes, numericality: { only_integer: true, greater_than_or_equal_to: 0 }

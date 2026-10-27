@@ -79,5 +79,13 @@ RSpec.describe 'Contact Tracking Bulk Assigns API', type: :request do
       expect(TrackingCampaign.find(response.parsed_body['campaign_id']))
         .to have_attributes(purpose: 'prospecting', daily_cap: 30, respect_working_hours: true)
     end
+
+    # prospeccion P3
+    it 'guarda el asunto B de la prueba A/B' do
+      post url, params: body.merge(daily_cap: 30, email_subject: 'Asunto A', email_subject_b: ' Asunto B '),
+                headers: admin.create_new_auth_token, as: :json
+
+      expect(TrackingCampaign.find(response.parsed_body['campaign_id']).email_subject_b).to eq('Asunto B')
+    end
   end
 end

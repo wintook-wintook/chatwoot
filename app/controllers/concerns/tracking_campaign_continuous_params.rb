@@ -25,7 +25,7 @@ module TrackingCampaignContinuousParams
       objective: template.objective, mode: 'continuous', scheduled_for: starts,
       # launch=false → Guardada: no acepta inscripciones hasta que la pongan en curso.
       status: ActiveModel::Type::Boolean.new.cast(params.fetch(:launch, true)) ? TrackingCampaign.status_for(starts) : 'saved'
-    }.merge(window_attributes)
+    }.merge(window_attributes, subject_test_attributes)
   end
 
   def window_attributes
@@ -38,6 +38,11 @@ module TrackingCampaignContinuousParams
       email_subject: params[:email_subject].to_s.strip.presence, # prospeccion F1
       purpose: purpose_param # prospeccion V0
     }
+  end
+
+  # prospeccion P3: el asunto B de la prueba A/B, solo en Prospección.
+  def subject_test_attributes
+    { email_subject_b: purpose_param == 'prospecting' ? params[:email_subject_b].to_s.strip.presence : nil }
   end
 
   # prospeccion V0: seguimiento por omisión si no viene o no se reconoce.

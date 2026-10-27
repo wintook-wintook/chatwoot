@@ -41,6 +41,11 @@ class TrackingCampaignsAPI extends ApiClient {
     });
   }
 
+  // prospeccion P3: quedarse con el asunto A o B de la prueba
+  chooseSubject(id, variant) {
+    return axios.post(`${this.url}/${id}/subject_winner`, { variant });
+  }
+
   // prospeccion P2: tablero/columna de Oportunidades, plazo y escalar
   updateHandoffSettings(id, settings) {
     return axios.patch(`${this.url}/${id}/handoff_settings`, settings);

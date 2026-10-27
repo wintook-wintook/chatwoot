@@ -102,6 +102,7 @@ const campaignState = campaign => {
     selectedTemplateId: campaign.tracking_template_id || '',
     purpose: campaign.purpose || 'follow_up',
     emailSubject: campaign.email_subject || '',
+    emailSubjectB: campaign.email_subject_b || '', // prospeccion P3
     scheduledFor: toLocalInput(campaign.scheduled_for),
     endsAt: toLocalInput(campaign.ends_at),
     entryDelayMinutes: campaign.entry_delay_minutes || 0,
@@ -130,6 +131,7 @@ export default {
       // prospeccion V0: seguimiento (ya te conocen) o prospección (clientes nuevos)
       purpose: 'follow_up',
       emailSubject: '',
+      emailSubjectB: '', // prospeccion P3: asunto B (prueba A/B)
       showSendOptions: false,
       scheduledFor: '',
       endsAt: '',
@@ -489,6 +491,12 @@ export default {
     emailSubjectPayload() {
       return this.isEmailCampaign ? this.emailSubject.trim() : null;
     },
+    // prospeccion P3: el asunto B solo vale en Prospección por correo.
+    emailSubjectBPayload() {
+      return this.isEmailCampaign && this.isProspecting
+        ? this.emailSubjectB.trim() || null
+        : null;
+    },
     continuousBody() {
       return {
         name: this.campaignName.trim(),
@@ -496,6 +504,7 @@ export default {
         scheduled_for: this.toIso(this.scheduledFor),
         daily_cap: this.dailyCap ? Number(this.dailyCap) : null,
         email_subject: this.emailSubjectPayload(),
+        email_subject_b: this.emailSubjectBPayload(),
         purpose: this.purpose,
         ...this.windowPayload(),
       };
@@ -515,6 +524,7 @@ export default {
         },
         audienceSource: this.audienceSource,
         emailSubject: this.emailSubjectPayload(),
+        emailSubjectB: this.emailSubjectBPayload(),
         purpose: this.purpose,
       };
     },
@@ -560,6 +570,7 @@ export default {
       this.selectedTemplateId = '';
       this.purpose = 'follow_up';
       this.emailSubject = '';
+      this.emailSubjectB = '';
       this.showSendOptions = false;
       this.scheduledFor = '';
       this.endsAt = '';
@@ -660,6 +671,27 @@ export default {
                   emailSubjectVariables
                 )
               }}
+            </span>
+          </label>
+          <!-- prospeccion P3: prueba A/B de asuntos (opcional) -->
+          <label
+            v-if="isEmailCampaign && isProspecting"
+            class="block md:col-span-2"
+          >
+            <span class="field-label">
+              {{ $t('BULK_TRACKING_ASSIGN.MODAL.EMAIL_SUBJECT_B_LABEL') }}
+            </span>
+            <input
+              v-model="emailSubjectB"
+              type="text"
+              maxlength="150"
+              :placeholder="
+                $t('BULK_TRACKING_ASSIGN.MODAL.EMAIL_SUBJECT_B_PLACEHOLDER')
+              "
+              class="field-input"
+            />
+            <span class="block mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {{ $t('BULK_TRACKING_ASSIGN.MODAL.EMAIL_SUBJECT_B_HINT') }}
             </span>
           </label>
         </div>

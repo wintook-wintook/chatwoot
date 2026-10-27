@@ -902,7 +902,7 @@ class ContactTrackingJob < ApplicationJob
 
     TrackingCampaigns::TrackingBuilder.new(campaign, tracking.contact, agent: campaign.user,
                                                                        note: "📋 Seguimiento de la campaña \"#{campaign.name}\"")
-                                      .open_conversation
+                                      .open_conversation(tracking: tracking) # prospeccion P3: anota el asunto A/B
   end
 
   def find_or_create_contact_inbox(tracking)

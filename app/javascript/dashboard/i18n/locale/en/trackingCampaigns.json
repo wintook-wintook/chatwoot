@@ -221,6 +221,17 @@
       "SUMMARY_DUE": "{hours} business hours deadline",
       "SUMMARY_ESCALATE": "escalate at {hours} h"
     },
+    "SUBJECT_TEST": {
+      "TITLE": "🔤 Subject test",
+      "STATUS_WAITING": "Half get subject A and half get B. Not enough data yet: the leader is shown once each has at least {min} contacted.",
+      "STATUS_LEADER": "Subject {letter} is winning. When you are sure, keep it and every new prospect gets it.",
+      "STATUS_WINNER": "You kept subject {letter}: every new prospect gets it. The comparison stays as it was.",
+      "NUMBERS": "{contacted} contacted · {replied} replied",
+      "CHOOSE": "Keep this one",
+      "WINNER": "🏆 Winner",
+      "CHOSEN": "Done: new prospects get that subject.",
+      "ERROR": "Could not save. Try again."
+    },
     "HAND_OFF_DONE": "Handed off. Take it from the conversation.",
     "HAND_OFF_ERROR": "Couldn't hand off. Please try again.",
     "TYPE": "Type",

@@ -1050,9 +1050,9 @@ Orden propuesto: **F1 → F2 → F4 → F3**. Las tres primeras son rápidas y s
 > | 11 | «Entregar» y aviso rojo en la ficha | ⏳ a revisar en pantalla |
 > | 12 | El cuarto contacto: 3 toques sin respuesta → «Sin respuesta» | ⏳ mañana (28/10) |
 >
-> 🎉 **Prospección v1.0 COMPLETA (V0–V6).** Lo que sigue (v1.1): entregar con plazo y avisos (P2,
-> necesita D4), validar correos antes de enviar, puntuación 0–100 con datos reales, A/B de asuntos,
-> multicanal correo → WhatsApp con permiso.
+> 🎉 **Prospección v1.0 COMPLETA (V0–V6).** v1.1: ✅ entregar con plazo y avisos (P2/P2b, §10.9),
+> ✅ validar correos y rebotes (V7, §10.8), ✅ A/B de asuntos (P3, §10.10); faltan puntuación 0–100 con
+> datos reales y multicanal correo → WhatsApp con permiso.
 
 Orden: **V0 → V1 → V2 → V3 → V4 → V5 → V6**. Con V0–V4 el envío ya es correcto;
 con V5–V6 ya es prospección (se sabe quién está interesado y cuánto rinde la campaña).
@@ -1254,6 +1254,38 @@ tarjeta, ni el Agente IA ni BotSeller contestan más en esa conversación (P2b).
 >   escalar a las 8 h» con el botón «Configurar». El modal trae 5 notas de cómo funciona (la 5.ª:
 >   la IA se calla) y los 4 campos en 2×2.
 > - **Pruebas:** `handoff_attention_spec` (7); 1104/1105 en verde (la misma inestable del Asistente).
+
+### 10.10 v1.1 · P3 — Prueba A/B de asuntos
+
+```
+ Formulario (Prospección por correo)        Primer toque de cada prospecto
+ ──────────────────────────────────         ───────────────────────────────
+ Asunto       «{{contacto}}, una idea»      ¿ya tenía hilo? → conserva su asunto (no participa)
+ Asunto B     «¿{{contacto}}, 5 min?»       ¿hay ganador?   → el ganador
+ (opcional)                                 si no           → el que lleve menos: A, B, A, B…
+                                                              y se anota en el seguimiento
+        │
+        ▼  detalle de la campaña: «🔤 Prueba de asuntos»
+   A  «Juan, una idea»       24 contactados · 3 respondieron   12.5%   [Quedarse con este]
+   B  «¿Juan, 5 min?»        24 contactados · 7 respondieron   29.2%   [Quedarse con este]
+   «Va ganando el asunto B» (solo con ≥ 20 contactados en cada uno)
+        │
+        ▼  «Quedarse con este» → todos los nuevos reciben ese asunto; la comparación se congela
+```
+
+> ✅ **P3 HECHA (27/10/2026).**
+> - **Qué se hizo:** migración `20261031180000_add_subject_test_to_tracking_campaigns` (campaña:
+>   `email_subject_b`, `subject_ab_winner`; seguimiento: `subject_variant`).
+>   `TrackingCampaigns::SubjectTest` (repartir, comparar, ganador); `TrackingBuilder#open_conversation`
+>   elige el asunto y lo anota (lo llama `ContactTrackingJob` con el primer toque);
+>   `POST /tracking_campaigns/:id/subject_winner`; el detalle trae `subject_test`.
+> - **Cómo funciona:** solo en Prospección por correo y con asunto B. «Respondió» = tiene etapa de V5.
+>   No se señala ganador hasta tener 20 contactados en cada asunto; elegir el ganador es decisión tuya.
+> - **Pantalla:** en el formulario de la campaña, «Asunto B (opcional, prueba A/B)» bajo el asunto,
+>   con su explicación. En el detalle, la tarjeta «🔤 Prueba de asuntos».
+> - **Pruebas:** `subject_test_spec` (7), 1 en `tracking_campaigns_controller_spec`, 1 en
+>   `contact_tracking_bulk_assigns_controller_spec`; 966/967 en verde (la inestable del Asistente).
+> - **Pedírselo al Asistente:** no aplica; se llena en el formulario de la campaña.
 
 ---
 

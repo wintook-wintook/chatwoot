@@ -355,6 +355,22 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
       expect(response.parsed_body).to include('handoff_board_id' => board.id, 'handoff_due_hours' => 4)
     end
 
+    # prospeccion P3
+    it 'prueba de asuntos: el detalle trae la comparación y se puede elegir el ganador' do
+      prospecting.update!(email_subject: 'Asunto A', email_subject_b: 'Asunto B')
+      get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['subject_test']['variants'].keys).to eq(%w[a b])
+
+      post "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}/subject_winner",
+           params: { variant: 'b' }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:success)
+      expect(prospecting.reload.subject_ab_winner).to eq('b')
+
+      post "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}/subject_winner",
+           params: { variant: 'x' }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
     it 'una columna de otro tablero responde 422' do
       column = create(:kanban_process, kanban_type_process: create(:kanban_type_process, account: account))
       patch "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}/handoff_settings",

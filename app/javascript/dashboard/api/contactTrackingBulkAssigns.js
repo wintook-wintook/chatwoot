@@ -22,6 +22,7 @@ const campaignBody = ({
   audienceSource = null, // { type: 'segment', segment_id } | { type: 'label', label }
   emailSubject = null, // prospeccion F1: asunto si el agente escribe por correo
   purpose = 'follow_up', // prospeccion V0: follow_up | prospecting
+  emailSubjectB = null, // prospeccion P3: asunto B de la prueba A/B
 }) => ({
   payload,
   campaign_name: campaignName,
@@ -31,6 +32,7 @@ const campaignBody = ({
   skip_active: skipActive,
   audience_source: audienceSource,
   email_subject: emailSubject,
+  email_subject_b: emailSubjectB,
   purpose,
   ...window,
 });
