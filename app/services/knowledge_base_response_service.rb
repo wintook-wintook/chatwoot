@@ -70,6 +70,7 @@ class KnowledgeBaseResponseService
     question      = @message.content.strip
     @search_texts = search_queries(question)
     Rails.logger.info "[KBase] 🔍 Modo: #{directive[:mode]}#{" (#{directive[:source_name]})" if directive[:source_name]}"
+    ContactTrackings::EngineTrace.source(directive) # proyecto@diagrama_agente_ia F0
 
     case directive[:mode]
     when :erp_query
@@ -168,7 +169,9 @@ class KnowledgeBaseResponseService
     end
     return nil if lists.empty?
 
-    interleave(lists).uniq(&:id).first(kbase_setting('max_results'))
+    items = interleave(lists).uniq(&:id).first(kbase_setting('max_results'))
+    ContactTrackings::EngineTrace.fragments(items) # proyecto@diagrama_agente_ia F0
+    items
   end
 
   # ==============================================================================
@@ -1278,6 +1281,7 @@ class KnowledgeBaseResponseService
     end
 
     Rails.logger.info "[KBase] 🏷️ Sin etiqueta → se repone la de la rama '#{@route.name}': #{tag}"
+    ContactTrackings::EngineTrace.tag_restored(tag)
     "#{text.rstrip}\n\n#{tag}"
   end
 
@@ -1343,7 +1347,9 @@ class KnowledgeBaseResponseService
     response = ContactTrackings::OpenaiRequest.perform(http, request, 'KBase')
     return nil if response.nil? || response.body.blank?
 
-    ContactTrackings::OpenaiRequest.clean(JSON.parse(response.body).dig('choices', 0, 'message', 'content'))
+    body = JSON.parse(response.body)
+    ContactTrackings::EngineTrace.usage(resolved_model, body) # proyecto@diagrama_agente_ia F0
+    ContactTrackings::OpenaiRequest.clean(body.dig('choices', 0, 'message', 'content'))
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error OpenAI: #{e.message}"
     nil
