@@ -202,6 +202,38 @@ Columnas de izquierda a derecha, una por etapa del motor:
 | Ninguna prueba elegida | **Mapa de calor** (4.3) |
 | Pegar el link de una conversación en el chat | Se pinta su traza real (desde F0 en adelante) |
 
+### 4.2.1 F1 — hecho (28/10/2026)
+
+**Qué se hizo.** Pestaña **Diagrama** en el editor del Asistente, después de Configurar
+(`Assistant.vue`, `draftTab === 'diagram'`), siempre visible (D1). `AgentDiagram.vue` dibuja en SVG
+lo que calcula `agentDiagramLayout.js` (función pura).
+
+**Cómo funciona.**
+- Sale de la **misma estructura en bloques** que el árbol (`trainingStructure`, la que sincroniza
+  `training_preview`) y de los **mismos hallazgos** (`nodeIssues`): lo que dice el árbol lo dice el dibujo.
+- Una fila por ruta: **Cliente → Ruta → Fuente → Acción → Etiqueta**. La fuente se dice en palabras
+  (Google Doc · Lista, Respuestas predefinidas · Gestión, Consulta al ERP…); la directiva cruda va en el
+  tooltip. Sin acción, la fuente va directo a la etiqueta.
+- Punteado: ruta sin fuente (contesta conversando) y el ramal de **Bienvenida** (solo el primer mensaje).
+- Se marcan la **ruta por defecto**, la **etiqueta que falta** («no dispara automatizaciones») y la
+  línea de ruta **mal escrita**; el punto rojo/ámbar es el del comprobador, con su texto en el tooltip.
+- **Secciones** como fichas debajo: el motor las lee completas en cada respuesta (F0 §3.1), no son una
+  columna del camino.
+- Clic (o Enter) en un nodo → cambia a la pestaña del editor y selecciona su línea
+  (`goToRouteFromDiagram` / `goToSectionFromDiagram`, con `first_line` de la estructura).
+- Sin rutas: una sola fila «Sin rutas · contesta con todo el Entrenamiento» (estilo válido, no error).
+- Ids de nodo estables y por nombre (`route:cotizar`, `source:cotizar`…): son los que F2 ilumina.
+- Colores con `fill-`/`stroke-` de Tailwind (modo oscuro y temas `woot-*`); sin librería nueva.
+
+**Pila de pruebas.** `agentDiagramLayout.spec.js` (23) y `AgentDiagram.spec.js` (6): filas y columnas,
+sin acción, sin fuente punteada, por defecto, etiqueta faltante, bienvenida, cliente centrado, curvas,
+hallazgos por nodo y por grupo, sin rutas, secciones, ruta rota, medidas, vacío, fuentes y acciones en
+palabras; clic → `goToRoute`/`goToSection`, punto del comprobador, estado vacío. Toda la carpeta
+`contactTrackings`: 200/200. Webpack: «Compiled successfully». ⚠ **Sin probar en navegador.**
+
+**Cómo pedírselo al Asistente.** No hace falta: la pestaña está siempre; en el chat se puede decir
+«mira el diagrama: la ruta soporte no tiene etiqueta» y el Asistente la agrega en el Entrenamiento.
+
 ### 4.3 Mapa de calor de la pila
 
 ```
