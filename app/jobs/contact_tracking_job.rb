@@ -254,13 +254,14 @@ class ContactTrackingJob < ApplicationJob
     # Intentar generar mensaje con IA si está disponible
     if tracking.account.hooks.find_by(app_id: 'openai', status: 'enabled')
       ai_message = generate_ai_message(tracking, template_content)
-      return "#{ai_message} #IA" if ai_message.present?
+      # prospeccion V1: en correo, firma del agente en lugar de « #IA»
+      return ContactTrackings::Signature.apply(ai_message, tracking, ' #IA') if ai_message.present?
     end
 
     # ⭐ FALLBACK MEJORADO: SIEMPRE generar mensaje simple, nunca plantilla cruda
     # Esto evita enviar mensajes con "[valor]" o plantillas sin personalizar
     Rails.logger.warn "[ContactTracking] ⚠️ IA no disponible o falló - usando mensaje simple"
-    generate_simple_message(tracking)
+    ContactTrackings::Signature.apply(generate_simple_message(tracking), tracking)
   end
 
   def generate_ai_message(tracking, template_content = nil)
@@ -629,7 +630,8 @@ class ContactTrackingJob < ApplicationJob
         account: tracking.account,
         inbox: tracking.inbox,
         message_type: :outgoing,
-        content: message_content
+        content: message_content,
+        content_attributes: ContactTrackings::AgentIdentity.content_attributes(tracking.tracking_template)
       )
 
       # Enviar usando el servicio oficial con parámetros procesados
@@ -662,6 +664,7 @@ class ContactTrackingJob < ApplicationJob
           content: message_content,
           private: false,
           message_type: :outgoing,
+          ai_agent: ContactTrackings::AgentIdentity.for(tracking.tracking_template),
           source_id: message_id,  # ⭐ CLAVE: Ya tiene source_id
           content_attributes: {
             whatsapp_template_name: template_name,
@@ -726,6 +729,7 @@ class ContactTrackingJob < ApplicationJob
       {
         content: message_body,
         private: false,
+        ai_agent: ContactTrackings::AgentIdentity.for(tracking.tracking_template),
         content_attributes: {
           automation_rule_id: nil
         }
@@ -769,7 +773,8 @@ class ContactTrackingJob < ApplicationJob
       account: tracking.account,
       inbox: tracking.inbox,
       message_type: :outgoing,
-      content: message_body
+      content: message_body,
+      content_attributes: ContactTrackings::AgentIdentity.content_attributes(tracking.tracking_template)
     )
 
     # Enviar directamente por el canal
@@ -791,6 +796,7 @@ class ContactTrackingJob < ApplicationJob
       {
         content: message_body,
         private: false,
+        ai_agent: ContactTrackings::AgentIdentity.for(tracking.tracking_template),
         source_id: message_id,  # ⭐ CLAVE: Ya tiene source_id, SendReplyJob lo ignorará
         content_attributes: {
           automation_rule_id: nil
@@ -901,7 +907,7 @@ class ContactTrackingJob < ApplicationJob
 
     TrackingCampaigns::TrackingBuilder.new(campaign, tracking.contact, agent: campaign.user,
                                                                        note: "📋 Seguimiento de la campaña \"#{campaign.name}\"")
-                                      .open_conversation
+                                      .open_conversation(tracking: tracking) # prospeccion P3: anota el asunto A/B
   end
 
   def find_or_create_contact_inbox(tracking)

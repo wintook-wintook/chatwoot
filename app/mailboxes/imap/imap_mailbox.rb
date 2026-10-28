@@ -12,6 +12,9 @@ class Imap::ImapMailbox
 
     Rails.logger.info("Processing Email from: #{@processed_mail.original_sender} : inbox #{@inbox.id} : message_id #{@processed_mail.message_id}")
 
+    # prospeccion V7b: un rebote marca el correo del contacto y no se vuelve mensaje.
+    return if ContactTrackings::EmailBounce.handle(@inbound_mail, @inbox)
+
     # Skip processing email if it belongs to any of the edge cases
     return unless incoming_email_from_valid_email?
 

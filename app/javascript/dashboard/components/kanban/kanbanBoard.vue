@@ -398,7 +398,7 @@ filteredConversations() {
           </span>
           <router-link 
             :to="{ name: 'kanban_dashboard' }"
-            class="ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+            class="ml-2 text-woot-600 hover:text-woot-800 dark:text-woot-400 dark:hover:text-woot-300"
           >
             Limpiar filtro
           </router-link>

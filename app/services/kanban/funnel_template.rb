@@ -26,15 +26,22 @@ class Kanban::FunnelTemplate
         @board.kanban_processes.create!(
           account_id: @board.account_id, position: index, default: column[:default] || false,
           type_process_name: text("columns.#{column[:key]}.name"), ai_criteria: text("columns.#{column[:key]}.ai"),
-          entry_triggers: column[:triggers], stage_kind: column[:kind] || :open
+          entry_triggers: column[:triggers], stage_kind: column[:kind] || :open,
+          convert_case_type_id: column[:kind] == :converted ? commercial_type_id : nil
         )
       end
-      @board.update!(auto_move: true)
+      @board.update!(auto_move: true, resolve_on_stale: true)
     end
     ensure_labels
   end
 
   private
+
+  # «Convertido» nace sabiendo qué crear al soltar la tarjeta: el primer tipo comercial
+  # vigente de la cuenta (si no hay, se queda sin tipo y solo convierte por regla).
+  def commercial_type_id
+    @commercial_type_id ||= @board.account.case_types.active.class_commercial.order(:id).pick(:id)
+  end
 
   # La etiqueta que mueve a «Interesado» queda creada en la cuenta, lista para usarse.
   def ensure_labels

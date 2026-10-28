@@ -11,6 +11,8 @@ import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import ContactTrackingsAPI from 'dashboard/api/contactTrackings';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import CampaignEntries from './CampaignEntries.vue';
+import CampaignHandoffSettings from './CampaignHandoffSettings.vue';
+import CampaignScoringSettings from './CampaignScoringSettings.vue';
 
 const PAGE_SIZE = 25;
 // Cada cuánto se refrescan los indicadores mientras la pantalla está abierta
@@ -54,11 +56,27 @@ function deliveryBucket(prospect) {
 // Filtros client-side: cada KPI clicable mapea a un predicado sobre el prospecto.
 // 'clear' no está aquí (limpia el filtro); Avance/Progreso no es filtrable.
 const PROSPECT_FILTERS = {
-  intent_replied: p => !!p.last_intent,
-  // Interesados/Agendaron: solo por las reglas de palabra clave (igual que el embudo)
-  intent_interested: p => !!p.interested_at,
-  intent_appointment: p => !!p.booked_at,
-  intent_objective: p => p.status === 'objective_met',
+  // §10.12: un solo embudo (la IA, V5) + las palabras clave del agente; mismo criterio que
+  // TrackingCampaigns::CampaignFunnel.
+  p_contacted: p => p.attempt_count > 0,
+  p_replied: p => !!p.prospect_stage || !!p.last_intent,
+  p_interested: p =>
+    ['interested', 'handed_off'].includes(p.prospect_stage) ||
+    !!p.interested_at,
+  p_appointment: p => !!p.booked_at,
+  p_handed_off: p => p.prospect_stage === 'handed_off',
+  p_objective_met: p => p.status === 'objective_met',
+  p_hot: p => (p.prospect_score || 0) >= 60, // prospeccion P4: calientes
+  p_not_now: p => p.prospect_exit === 'not_now',
+  p_not_interested: p => p.prospect_exit === 'not_interested',
+  p_wrong_person: p => p.prospect_exit === 'wrong_person',
+  p_opted_out: p => p.prospect_exit === 'opted_out',
+  p_bounced: p => p.prospect_exit === 'bounced', // prospeccion V7b
+  p_no_reply: p =>
+    p.status === 'completed' &&
+    !p.prospect_stage &&
+    !p.prospect_exit &&
+    !p.last_intent,
   // Pausados/Cancelados (Regla): siguen así porque los dejó una regla de palabra clave
   intent_paused_rule: p => p.status === 'paused' && p.rule_action === 'pause',
   intent_cancelled_rule: p =>
@@ -75,11 +93,21 @@ const PROSPECT_FILTERS = {
 };
 
 export default {
-  components: { TableFooter, CampaignEntries },
+  components: {
+    TableFooter,
+    CampaignEntries,
+    CampaignHandoffSettings,
+    CampaignScoringSettings,
+  },
   data() {
     return {
       campaign: null,
       prospects: [],
+      handingOff: null, // prospeccion V6
+      showHandoffModal: false, // prospeccion P2
+      showScoringModal: false, // prospeccion P4
+      sortByScore: false, // prospeccion P4: ordenar por puntos
+      choosingSubject: null, // prospeccion P3
       isLoading: false,
       currentPage: 1,
       pageSize: PAGE_SIZE,
@@ -90,6 +118,10 @@ export default {
       showLaunchModal: false,
       isLaunching: false,
       isResuming: false,
+      showPauseModal: false,
+      isPausing: false,
+      showDeleteModal: false,
+      isDeleting: false,
     };
   },
   computed: {
@@ -124,6 +156,13 @@ export default {
       return (
         this.campaign?.status === 'paused' && !!this.campaign.paused_reason
       );
+    },
+    // Pausada a mano con «Pausar campaña» (sin motivo)
+    isPausedByUser() {
+      return this.campaign?.status === 'paused' && !this.campaign.paused_reason;
+    },
+    canPause() {
+      return ['draft', 'running'].includes(this.campaign?.status);
     },
     deliveryKpis() {
       return [
@@ -162,48 +201,99 @@ export default {
     funnel() {
       return this.campaign?.funnel || {};
     },
-    // Embudo de intención: se muestra solo si al menos un contacto respondió.
-    hasFunnel() {
-      return (this.funnel.replied || 0) > 0;
+    // prospeccion P3: la prueba A/B de asuntos (nil si la campaña no tiene asunto B).
+    subjectTest() {
+      return this.campaign?.subject_test || null;
     },
+    subjectRows() {
+      const test = this.subjectTest;
+      if (!test) return [];
+      return ['a', 'b'].map(variant => ({
+        variant,
+        letter: variant.toUpperCase(),
+        ...test.variants[variant],
+        winner: test.winner === variant,
+        leader: !test.winner && test.leader === variant,
+      }));
+    },
+    subjectStatus() {
+      const test = this.subjectTest;
+      if (!test) return '';
+      const t = (key, args) =>
+        this.$t(`TRACKING_CAMPAIGN_DETAIL.SUBJECT_TEST.${key}`, args);
+      if (test.winner)
+        return t('STATUS_WINNER', { letter: test.winner.toUpperCase() });
+      if (test.leader)
+        return t('STATUS_LEADER', { letter: test.leader.toUpperCase() });
+      return t('STATUS_WAITING', { min: test.min_sample });
+    },
+    // prospeccion P2: «Oportunidades › Columna · plazo 4 h · escalar 8 h» o «solo con el botón».
+    handoffSummary() {
+      const c = this.campaign || {};
+      const t = key =>
+        this.$t(`TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.${key}`);
+      const parts = [
+        c.handoff_board_name
+          ? `${c.handoff_board_name} › ${c.handoff_column_name}`
+          : t('SUMMARY_MANUAL'),
+        c.handoff_due_hours
+          ? this.$t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.SUMMARY_DUE', {
+              hours: c.handoff_due_hours,
+            })
+          : t('NO_DUE'),
+      ];
+      if (c.handoff_escalate_hours) {
+        parts.push(
+          this.$t(
+            'TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.SUMMARY_ESCALATE',
+            {
+              hours: c.handoff_escalate_hours,
+            }
+          )
+        );
+      }
+      return parts.join(' · ');
+    },
+    // §10.12: un solo embudo para todas las campañas (TrackingCampaigns::CampaignFunnel).
     funnelKpis() {
+      const f = this.funnel;
+      const contacted = f.contacted || 0;
+      const rate = n =>
+        contacted ? `${Math.round(((n || 0) * 100) / contacted)} %` : '';
+      const kpi = (key, value, color, extra = {}) => ({
+        key,
+        value: value || 0,
+        color,
+        filter: `p_${key.slice(2).toLowerCase()}`,
+        ...extra,
+      });
+      const strong = 'text-slate-800 dark:text-slate-100';
+      const red = 'text-red-500 dark:text-red-400';
       return [
-        {
-          key: 'REPLIED',
-          value: this.funnel.replied || 0,
-          color: 'text-slate-800 dark:text-slate-100',
-          filter: 'intent_replied',
-        },
-        {
-          key: 'INTERESTED',
-          value: this.funnel.interested || 0,
-          color: 'text-green-600 dark:text-green-500',
-          filter: 'intent_interested',
-        },
-        {
-          key: 'APPOINTMENT',
-          value: this.funnel.appointment || 0,
-          color: 'text-woot-600 dark:text-woot-500',
-          filter: 'intent_appointment',
-        },
-        {
-          key: 'OBJECTIVE_MET',
-          value: this.funnel.objective_met || 0,
-          color: 'text-emerald-600 dark:text-emerald-500',
-          filter: 'intent_objective',
-        },
-        {
-          key: 'PAUSED_RULE',
-          value: this.funnel.paused_rule || 0,
-          color: 'text-amber-800 dark:text-amber-800',
-          filter: 'intent_paused_rule',
-        },
-        {
-          key: 'CANCELLED_RULE',
-          value: this.funnel.cancelled_rule || 0,
-          color: 'text-red-500 dark:text-red-400',
-          filter: 'intent_cancelled_rule',
-        },
+        kpi('P_CONTACTED', f.contacted, strong),
+        kpi('P_REPLIED', f.replied, strong, { rate: rate(f.replied) }),
+        kpi(
+          'P_INTERESTED',
+          f.interested,
+          'text-green-600 dark:text-green-500',
+          {
+            rate: rate(f.interested),
+          }
+        ),
+        kpi('P_APPOINTMENT', f.appointment, 'text-woot-600 dark:text-woot-500'),
+        kpi('P_HANDED_OFF', f.handed_off, 'text-woot-600 dark:text-woot-500'),
+        kpi(
+          'P_OBJECTIVE_MET',
+          f.objective_met,
+          'text-emerald-600 dark:text-emerald-500'
+        ),
+        kpi('P_HOT', this.prospects.filter(PROSPECT_FILTERS.p_hot).length, red),
+        kpi('P_NOT_NOW', f.not_now, 'text-amber-800 dark:text-amber-500'),
+        kpi('P_NOT_INTERESTED', f.not_interested, 'text-slate-500'),
+        kpi('P_WRONG_PERSON', f.wrong_person, 'text-slate-500'),
+        kpi('P_OPTED_OUT', f.opted_out, red),
+        kpi('P_BOUNCED', f.bounced, red),
+        kpi('P_NO_REPLY', f.no_reply, 'text-slate-500'),
       ];
     },
     backRoute() {
@@ -235,6 +325,19 @@ export default {
           color: 'text-red-700 dark:text-red-500',
           filter: 'ctrl_failed',
         },
+        // §10.12: las pausas/cancelaciones por palabra clave pasan del embudo a Control
+        {
+          key: 'PAUSED_RULE',
+          value: this.funnel.paused_rule || 0,
+          color: 'text-amber-800 dark:text-amber-500',
+          filter: 'intent_paused_rule',
+        },
+        {
+          key: 'CANCELLED_RULE',
+          value: this.funnel.cancelled_rule || 0,
+          color: 'text-red-500 dark:text-red-400',
+          filter: 'intent_cancelled_rule',
+        },
       ];
     },
     // Descripción del KPI filtrado (qué significa) — se muestra junto a "Prospectos".
@@ -247,7 +350,36 @@ export default {
     // Prospectos tras aplicar el filtro por KPI (client-side sobre lo cargado).
     filteredProspects() {
       const predicate = PROSPECT_FILTERS[this.activeFilter];
-      return predicate ? this.prospects.filter(predicate) : this.prospects;
+      const list = predicate
+        ? this.prospects.filter(predicate)
+        : this.prospects;
+      if (!this.sortByScore) return list;
+      // prospeccion P4: de más a menos puntos; sin puntuación, al final.
+      return [...list].sort(
+        (a, b) => (b.prospect_score ?? -1) - (a.prospect_score ?? -1)
+      );
+    },
+    scoreHeader() {
+      const arrow = this.sortByScore ? '↓' : '↕';
+      return `${this.$t('TRACKING_CAMPAIGN_DETAIL.COL.SCORE')} ${arrow}`;
+    },
+    // prospeccion P4: «Pesos sugeridos · reglas: giro, zona» para el renglón de puntuación.
+    scoringSummary() {
+      const scoring = this.campaign && this.campaign.scoring;
+      if (!scoring) return '';
+      const t = (key, args) =>
+        this.$t(`TRACKING_CAMPAIGN_DETAIL.SCORING.${key}`, args);
+      const withRules = ['industry', 'size', 'decider'].filter(key => {
+        const rule = scoring.rules[key];
+        return (
+          rule.labels.length ||
+          (rule.attribute_key && rule.attribute_values.length)
+        );
+      });
+      if (!withRules.length) return t('SUMMARY_NO_RULES');
+      return t('SUMMARY_RULES', {
+        rules: withRules.map(key => t(`CRITERIA.${key}`)).join(', '),
+      });
     },
     totalProspects() {
       return this.filteredProspects.length;
@@ -281,6 +413,8 @@ export default {
           paused_reason: data.paused_reason,
           stats: data.stats,
           funnel: data.funnel,
+          subject_test: data.subject_test, // prospeccion P3
+          scoring: data.scoring, // prospeccion P4
           delivery: data.delivery,
         };
       } catch (error) {
@@ -333,6 +467,106 @@ export default {
       this.currentPage = page;
     },
     // Clic en un KPI: 'clear' o volver a clicar el activo limpia; si no, filtra.
+    async handOff(prospect) {
+      this.handingOff = prospect.id;
+      try {
+        const { data } = await TrackingCampaignsAPI.handOff(
+          this.campaignId,
+          prospect.id
+        );
+        Object.assign(prospect, data); // prospeccion P2: etapa y reloj
+        useAlert(this.$t('TRACKING_CAMPAIGN_DETAIL.HAND_OFF_DONE'));
+        this.refreshKpis();
+      } catch (error) {
+        useAlert(
+          error.response?.data?.error ||
+            this.$t('TRACKING_CAMPAIGN_DETAIL.HAND_OFF_ERROR')
+        );
+      } finally {
+        this.handingOff = null;
+      }
+    },
+    // prospeccion P2: la entrega guardada vuelve al detalle sin recargar.
+    onHandoffSaved(settings) {
+      this.campaign = { ...this.campaign, ...settings };
+    },
+    closeHandoffModal() {
+      this.showHandoffModal = false;
+    },
+    // prospeccion P4: los pesos guardados se recalculan en segundo plano; se recargan los
+    // prospectos unos segundos después para ver las nuevas puntuaciones.
+    onScoringSaved(scoring) {
+      this.campaign = { ...this.campaign, scoring };
+      setTimeout(async () => {
+        this.prospects = await this.fetchProspects();
+      }, 4000);
+    },
+    // prospeccion P4: «Perfil: giro +20 · Interés: respondió +10, pidió precio +20»
+    scoreBreakdown(p) {
+      const parts = p.prospect_score_parts || {};
+      const keys = Object.keys(parts);
+      if (!keys.length)
+        return this.$t('TRACKING_CAMPAIGN_DETAIL.SCORING.NO_POINTS');
+      return keys
+        .map(key => {
+          const points = parts[key] > 0 ? `+${parts[key]}` : parts[key];
+          return `${this.$t(
+            `TRACKING_CAMPAIGN_DETAIL.SCORING.CRITERIA.${key}`
+          )} ${points}`;
+        })
+        .join(' · ');
+    },
+    scoreLabel(p) {
+      return p.prospect_score ?? '—';
+    },
+    closeScoringModal() {
+      this.showScoringModal = false;
+    },
+    scoreClass(p) {
+      if ((p.prospect_score || 0) >= 60)
+        return 'text-red-500 dark:text-red-400';
+      if ((p.prospect_score || 0) >= 30)
+        return 'text-amber-700 dark:text-amber-500';
+      return 'text-slate-500 dark:text-slate-400';
+    },
+    // prospeccion P3: quedarse con el asunto A o B.
+    async chooseSubject(variant) {
+      this.choosingSubject = variant;
+      try {
+        const { data } = await TrackingCampaignsAPI.chooseSubject(
+          this.campaignId,
+          variant
+        );
+        this.campaign = { ...this.campaign, subject_test: data };
+        useAlert(this.$t('TRACKING_CAMPAIGN_DETAIL.SUBJECT_TEST.CHOSEN'));
+      } catch {
+        useAlert(this.$t('TRACKING_CAMPAIGN_DETAIL.SUBJECT_TEST.ERROR'));
+      } finally {
+        this.choosingSubject = null;
+      }
+    },
+    // prospeccion P2: atendido, vencido o entregado (con su vencimiento).
+    handoffLabel(p) {
+      if (p.handoff_attended_at) {
+        return this.$t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_ATTENDED');
+      }
+      if (p.handoff_due_at && new Date(p.handoff_due_at) <= new Date()) {
+        return this.$t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_OVERDUE');
+      }
+      if (p.handoff_due_at) {
+        return this.$t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_DUE', {
+          at: this.formatDate(p.handoff_due_at),
+        });
+      }
+      return this.$t('TRACKING_CAMPAIGN_DETAIL.HANDED_OFF');
+    },
+    handoffClass(p) {
+      if (p.handoff_attended_at) return 'text-green-600 dark:text-green-500';
+      if (p.handoff_due_at && new Date(p.handoff_due_at) <= new Date()) {
+        return 'text-red-500 dark:text-red-400';
+      }
+      return 'text-woot-600';
+    },
     applyFilter(filterId, label) {
       if (!filterId) return; // KPI no filtrable (ej. Avance)
       if (filterId === 'clear' || filterId === this.activeFilter) {
@@ -372,7 +606,41 @@ export default {
         this.isLaunching = false;
       }
     },
-    // proyecto@automatizacion_campanas: reanuda la pausada por error de Meta; sus
+    // Borra la campaña (el backend cancela sus seguimientos activos) y vuelve a la lista.
+    async confirmDelete() {
+      this.showDeleteModal = false;
+      this.isDeleting = true;
+      try {
+        await TrackingCampaignsAPI.delete(this.campaignId);
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE_SUCCESS'));
+        this.$router.push(this.backRoute);
+      } catch (error) {
+        useAlert(
+          error.response?.data?.error ||
+            this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE_ERROR')
+        );
+      } finally {
+        this.isDeleting = false;
+      }
+    },
+    // «Pausar campaña»: no entra nadie y los envíos se detienen al llegar su turno.
+    async confirmPause() {
+      this.showPauseModal = false;
+      this.isPausing = true;
+      try {
+        await TrackingCampaignsAPI.pause(this.campaignId);
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_SUCCESS'));
+        await this.fetchAll();
+      } catch (error) {
+        useAlert(
+          error.response?.data?.error ||
+            this.$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_ERROR')
+        );
+      } finally {
+        this.isPausing = false;
+      }
+    },
+    // proyecto@automatizacion_campanas: reanuda la pausada (por error de Meta o a mano); sus
     // seguimientos pausados se reprograman en background a partir de un minuto.
     async resumeCampaign() {
       this.isResuming = true;
@@ -481,19 +749,6 @@ export default {
 
 <template>
   <div class="flex flex-col flex-1 w-full h-full overflow-hidden p-4">
-    <!-- Volver a la tabla de campañas -->
-    <div class="mb-3 shrink-0">
-      <woot-button
-        variant="smooth"
-        color-scheme="secondary"
-        size="small"
-        icon="chevron-left"
-        @click="$router.push(backRoute)"
-      >
-        {{ $t('TRACKING_CAMPAIGNS_VIEW.BACK_TO_LIST') }}
-      </woot-button>
-    </div>
-
     <!-- Cargando -->
     <div v-if="isLoading" class="py-16 text-center text-slate-400">
       {{ $t('TRACKING_CAMPAIGN_DETAIL.LOADING') }}
@@ -511,6 +766,17 @@ export default {
         >
           {{ campaignStatusLabel(campaign.status) }}
         </span>
+        <!-- Volver a la tabla de campañas: a la izquierda de las acciones -->
+        <woot-button
+          variant="smooth"
+          color-scheme="secondary"
+          size="small"
+          icon="chevron-left"
+          class="ml-auto"
+          @click="$router.push(backRoute)"
+        >
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.BACK_TO_LIST') }}
+        </woot-button>
         <!-- Guardada: se puede modificar (en el formulario de Campañas) -->
         <woot-button
           v-if="campaign.status === 'saved'"
@@ -518,7 +784,6 @@ export default {
           color-scheme="secondary"
           size="small"
           icon="edit"
-          class="ml-auto"
           @click="$router.push({ ...backRoute, query: { edit: campaign.id } })"
         >
           {{ $t('TRACKING_CAMPAIGNS_VIEW.EDIT') }}
@@ -531,6 +796,27 @@ export default {
           @click="showLaunchModal = true"
         >
           {{ $t('TRACKING_CAMPAIGNS_VIEW.LAUNCH') }}
+        </woot-button>
+        <woot-button
+          v-if="canPause"
+          variant="smooth"
+          color-scheme="warning"
+          size="small"
+          icon="snooze"
+          :is-loading="isPausing"
+          @click="showPauseModal = true"
+        >
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.PAUSE') }}
+        </woot-button>
+        <woot-button
+          variant="smooth"
+          color-scheme="alert"
+          size="small"
+          icon="delete"
+          :is-loading="isDeleting"
+          @click="showDeleteModal = true"
+        >
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.DELETE') }}
         </woot-button>
       </div>
       <p
@@ -554,6 +840,28 @@ export default {
           </p>
           <p class="mt-1">
             {{ $t('TRACKING_CAMPAIGNS_VIEW.PAUSED_BANNER_HINT') }}
+          </p>
+        </div>
+        <woot-button
+          size="small"
+          icon="arrow-clockwise"
+          :is-loading="isResuming"
+          @click="resumeCampaign"
+        >
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.RESUME') }}
+        </woot-button>
+      </div>
+      <!-- Pausada a mano con «Pausar campaña» -->
+      <div
+        v-if="isPausedByUser"
+        class="flex items-start gap-3 p-3 mb-3 rounded-lg shrink-0 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+      >
+        <div class="flex-1 text-sm text-amber-900 dark:text-amber-200">
+          <p class="font-medium">
+            {{ $t('TRACKING_CAMPAIGNS_VIEW.PAUSED_MANUAL_BANNER') }}
+          </p>
+          <p class="mt-1">
+            {{ $t('TRACKING_CAMPAIGNS_VIEW.PAUSED_MANUAL_HINT') }}
           </p>
         </div>
         <woot-button
@@ -595,12 +903,12 @@ export default {
 
       <!-- KPIs de la campaña — 3 ejes en columnas compactas (mismo layout que el Resumen) -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5 shrink-0">
-        <!-- 🎯 Intención -->
+        <!-- Embudo (§10.12: uno solo para todas las campañas) -->
         <div
           class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
         >
           <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-            🎯 {{ $t('TRACKING_CAMPAIGN_DETAIL.FUNNEL.TITLE') }}
+            {{ $t('TRACKING_CAMPAIGN_DETAIL.FUNNEL.TITLE') }}
           </span>
           <div class="grid grid-cols-2 gap-x-4 mt-2">
             <div
@@ -731,6 +1039,131 @@ export default {
         </div>
       </div>
 
+      <!-- prospeccion P2: entrega de interesados (resumen; se configura en el modal) -->
+      <div
+        class="flex items-center justify-between gap-3 p-3 mb-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
+      >
+        <div class="min-w-0">
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+            {{ $t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.TITLE') }}
+          </span>
+          <p class="mb-0 text-xs truncate text-slate-500 dark:text-slate-400">
+            {{ handoffSummary }}
+          </p>
+        </div>
+        <woot-button
+          size="small"
+          variant="smooth"
+          icon="settings"
+          @click="showHandoffModal = true"
+        >
+          {{ $t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.CONFIGURE') }}
+        </woot-button>
+      </div>
+      <!-- prospeccion P4: puntuación (resumen; se configura en el modal) -->
+      <div
+        class="flex items-center justify-between gap-3 p-3 mb-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
+      >
+        <div class="min-w-0">
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+            {{ $t('TRACKING_CAMPAIGN_DETAIL.SCORING.TITLE') }}
+          </span>
+          <p class="mb-0 text-xs truncate text-slate-500 dark:text-slate-400">
+            {{ scoringSummary }}
+          </p>
+        </div>
+        <woot-button
+          size="small"
+          variant="smooth"
+          icon="settings"
+          @click="showScoringModal = true"
+        >
+          {{ $t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.CONFIGURE') }}
+        </woot-button>
+      </div>
+      <woot-modal
+        :show.sync="showScoringModal"
+        size="medium"
+        :on-close="closeScoringModal"
+      >
+        <CampaignScoringSettings
+          v-if="showScoringModal"
+          :campaign="campaign"
+          @saved="onScoringSaved"
+          @close="closeScoringModal"
+        />
+      </woot-modal>
+
+      <!-- prospeccion P3: prueba A/B de asuntos -->
+      <div
+        v-if="subjectTest"
+        class="p-3 mb-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
+      >
+        <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+          {{ $t('TRACKING_CAMPAIGN_DETAIL.SUBJECT_TEST.TITLE') }}
+        </span>
+        <p class="mb-2 text-xs text-slate-500 dark:text-slate-400">
+          {{ subjectStatus }}
+        </p>
+        <div
+          v-for="row in subjectRows"
+          :key="row.variant"
+          class="flex items-center justify-between gap-3 py-1.5 border-b last:border-b-0 border-slate-100 dark:border-slate-700/60"
+        >
+          <div class="min-w-0 text-sm">
+            <span class="font-semibold text-slate-700 dark:text-slate-200">
+              {{ row.letter }}
+            </span>
+            <span class="ml-1 text-slate-600 dark:text-slate-300">
+              {{ row.subject }}
+            </span>
+          </div>
+          <div class="flex items-center gap-3 shrink-0 text-xs">
+            <span class="text-slate-500 dark:text-slate-400">
+              {{
+                $t('TRACKING_CAMPAIGN_DETAIL.SUBJECT_TEST.NUMBERS', {
+                  contacted: row.contacted,
+                  replied: row.replied,
+                })
+              }}
+            </span>
+            <span
+              class="font-semibold"
+              :class="
+                row.winner || row.leader
+                  ? 'text-green-600 dark:text-green-500'
+                  : 'text-slate-600 dark:text-slate-300'
+              "
+            >
+              {{ row.rate }}%
+            </span>
+            <span
+              v-if="row.winner"
+              class="font-medium text-green-600 dark:text-green-500"
+            >
+              {{ $t('TRACKING_CAMPAIGN_DETAIL.SUBJECT_TEST.WINNER') }}
+            </span>
+            <woot-button
+              v-else-if="!subjectTest.winner"
+              size="tiny"
+              variant="smooth"
+              :is-loading="choosingSubject === row.variant"
+              @click="chooseSubject(row.variant)"
+            >
+              {{ $t('TRACKING_CAMPAIGN_DETAIL.SUBJECT_TEST.CHOOSE') }}
+            </woot-button>
+          </div>
+        </div>
+      </div>
+      <woot-modal :show.sync="showHandoffModal" :on-close="closeHandoffModal">
+        <CampaignHandoffSettings
+          v-if="showHandoffModal"
+          :campaign="campaign"
+          @saved="onHandoffSaved"
+          @close="closeHandoffModal"
+        />
+      </woot-modal>
+
       <!-- proyecto@automatizacion_campanas: Prospectos (sus seguimientos) e Inscritos
            (cada intento de inscripción, por lote o por automatización, y los omitidos). -->
       <woot-tabs
@@ -823,6 +1256,14 @@ export default {
                 <th class="p-3 text-center">
                   {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.ATTEMPTS') }}
                 </th>
+                <!-- prospeccion P4: clic para ordenar de más a menos puntos -->
+                <th
+                  class="p-3 text-center cursor-pointer select-none"
+                  :class="sortByScore ? 'text-woot-600' : ''"
+                  @click="sortByScore = !sortByScore"
+                >
+                  {{ scoreHeader }}
+                </th>
                 <th class="p-3 text-right">
                   {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.ACTION') }}
                 </th>
@@ -873,7 +1314,32 @@ export default {
                 <td class="p-3 text-center text-slate-500">
                   {{ p.attempt_count }}/{{ p.max_attempts }}
                 </td>
-                <td class="p-3 text-right">
+                <td
+                  class="p-3 font-semibold text-center cursor-help"
+                  :class="scoreClass(p)"
+                  :title="scoreBreakdown(p)"
+                >
+                  {{ scoreLabel(p) }}
+                </td>
+                <td class="p-3 text-right whitespace-nowrap">
+                  <!-- prospeccion V6: entregar un interesado a un vendedor -->
+                  <woot-button
+                    v-if="p.prospect_stage === 'interested'"
+                    size="tiny"
+                    variant="smooth"
+                    class="mr-2"
+                    :is-loading="handingOff === p.id"
+                    @click="handOff(p)"
+                  >
+                    {{ $t('TRACKING_CAMPAIGN_DETAIL.HAND_OFF') }}
+                  </woot-button>
+                  <span
+                    v-else-if="p.prospect_stage === 'handed_off'"
+                    class="mr-2 text-xs font-medium"
+                    :class="handoffClass(p)"
+                  >
+                    {{ handoffLabel(p) }}
+                  </span>
                   <router-link
                     v-if="conversationUrl(p)"
                     :to="conversationUrl(p)"
@@ -897,6 +1363,38 @@ export default {
         />
       </div>
     </template>
+    <!-- No se pudo cargar: que siempre haya cómo volver -->
+    <div v-else class="py-16 text-center">
+      <woot-button
+        variant="smooth"
+        color-scheme="secondary"
+        size="small"
+        icon="chevron-left"
+        @click="$router.push(backRoute)"
+      >
+        {{ $t('TRACKING_CAMPAIGNS_VIEW.BACK_TO_LIST') }}
+      </woot-button>
+    </div>
+    <woot-delete-modal
+      :show="showDeleteModal"
+      :on-close="() => (showDeleteModal = false)"
+      :on-confirm="confirmDelete"
+      :title="$t('TRACKING_CAMPAIGNS_VIEW.DELETE')"
+      :message="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_CONFIRM')"
+      :message-value="campaign ? ` «${campaign.name}»?` : ''"
+      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_YES')"
+      :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
+    />
+    <woot-delete-modal
+      :show="showPauseModal"
+      :on-close="() => (showPauseModal = false)"
+      :on-confirm="confirmPause"
+      :title="$t('TRACKING_CAMPAIGNS_VIEW.PAUSE')"
+      :message="$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_CONFIRM')"
+      :message-value="campaign ? ` «${campaign.name}»?` : ''"
+      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_YES')"
+      :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
+    />
     <woot-delete-modal
       :show="showLaunchModal"
       :on-close="() => (showLaunchModal = false)"

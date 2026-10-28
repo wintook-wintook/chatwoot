@@ -12,6 +12,7 @@ import { mapGetters } from 'vuex';
 import CaseTicketsAPI from 'dashboard/api/caseTickets';
 import { formatMoney } from 'dashboard/helper/caseCommercial';
 import { formatHours, workOrderPayload } from 'dashboard/helper/caseWorkOrder';
+import CatalogPicker from '../catalog/CatalogPicker.vue'; // Plan-Catalogo-Cotizaciones
 
 const FIELDS = ['work_address', 'estimated_hours', 'actual_hours', 'billable'];
 const emptyItem = () => ({
@@ -23,6 +24,7 @@ const emptyItem = () => ({
 
 export default {
   name: 'WorkOrderPanel',
+  components: { CatalogPicker },
   props: {
     ticket: { type: Object, required: true },
     // Dentro de la pestaña «Conceptos» de la ficha: tarjeta en vez de franja.
@@ -121,7 +123,20 @@ export default {
           item.unit_cost === '' || item.unit_cost === null
             ? null
             : item.unit_cost,
+        catalog_item_id: item.catalog_item_id || null,
       };
+    },
+    // Plan-Catalogo-Cotizaciones — un producto o refacción del catálogo se agrega
+    // directo con su unidad y su precio.
+    async addFromCatalog(entry) {
+      this.newItem = {
+        description: entry.name,
+        quantity: 1,
+        unit: entry.unit || '',
+        unit_cost: entry.price,
+        catalog_item_id: entry.id,
+      };
+      await this.addItem();
     },
     async addItem() {
       if (!String(this.newItem.description).trim()) return;
@@ -493,6 +508,10 @@ export default {
           </tr>
         </tfoot>
       </table>
+      <!-- Plan-Catalogo-Cotizaciones — agregar desde el catálogo -->
+      <div v-if="!isFrozen" class="mt-2 md:w-1/2">
+        <CatalogPicker :allow-free="false" @select="addFromCatalog" />
+      </div>
       <p v-else class="m-0 text-sm text-slate-400 dark:text-slate-500">
         {{ $t('CASE_TICKETS.WORK_ORDER.ITEMS.EMPTY') }}
       </p>

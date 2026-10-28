@@ -257,8 +257,9 @@ export default {
       :show.sync="show"
       :on-close="onCancel"
       modal-type="right-aligned"
+      size="wide"
     >
-      <div class="flex flex-col h-auto overflow-auto">
+      <div class="flex flex-col h-auto">
         <woot-modal-header
           :header-title="$t('CREATE_CONTACT.TITLE')"
           :header-content="$t('CREATE_CONTACT.DESC')"

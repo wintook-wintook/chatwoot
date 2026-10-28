@@ -153,6 +153,8 @@ export default {
       this.showDeleteModal = false;
     },
     canDeleteMessage() {
+      // feat/chat_interno_pulido: en «Chat interno» cada quien borra lo suyo.
+      if (this.enabledOptions.internal) return !!this.enabledOptions.delete;
       if (this.isAdmin) {
         return this.enabledOptions.delete;
       }
@@ -194,7 +196,7 @@ export default {
     />
     <!-- Confirm Deletion -->
     <!-- Forward Content -->
-    <forward-modal
+    <ForwardModal
       v-if="showForwardModal"
       :message="message"
       @close="onCloseForwardModal"
@@ -244,7 +246,7 @@ export default {
           @click="handleCopy"
         />
         <MenuItem
-          v-if="enabledOptions['copy']"
+          v-if="enabledOptions['copy'] && !enabledOptions['internal']"
           :option="{
             icon: 'translate',
             label: $t('CONVERSATION.CONTEXT_MENU.TRANSLATE'),
@@ -252,16 +254,17 @@ export default {
           variant="icon"
           @click="handleTranslate"
         />
-        <menu-item
+        <MenuItem
           :option="{
             icon: 'share',
-            label: 'Encaminhar',
+            label: $t('CONVERSATION.CONTEXT_MENU.FORWARD'),
           }"
           variant="icon"
           @click="handleForward"
         />
-        <hr />
+        <hr v-if="!enabledOptions['internal']" />
         <MenuItem
+          v-if="!enabledOptions['internal']"
           :option="{
             icon: 'link',
             label: $t('CONVERSATION.CONTEXT_MENU.COPY_PERMALINK'),
@@ -280,10 +283,10 @@ export default {
         />
         <template v-if="canDeleteMessage()">
           <hr />
-          <menu-item
+          <MenuItem
             :option="{
               icon: 'delete',
-              label: this.$t('CONVERSATION.CONTEXT_MENU.DELETE'),
+              label: $t('CONVERSATION.CONTEXT_MENU.DELETE'),
             }"
             variant="icon"
             @click="openDeleteModal"

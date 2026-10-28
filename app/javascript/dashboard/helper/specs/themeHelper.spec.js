@@ -1,4 +1,9 @@
-import { setColorTheme } from 'dashboard/helper/themeHelper.js';
+import {
+  setColorTheme,
+  syncAppearanceFromUser,
+  announceAppearanceChange,
+  APPEARANCE_EVENT,
+} from 'dashboard/helper/themeHelper.js';
 import { LocalStorage } from 'shared/helpers/localStorage';
 
 vi.mock('shared/helpers/localStorage');
@@ -72,5 +77,45 @@ describe('setColorTheme', () => {
     expect(document.documentElement.getAttribute('style')).toBe(
       'color-scheme: dark;'
     );
+  });
+});
+
+// feat/apariencia — la apariencia también vive en el usuario.
+describe('apariencia guardada en el usuario', () => {
+  beforeEach(() => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches: false });
+    LocalStorage.set.mockClear();
+  });
+
+  it('gana la del usuario al cargar', () => {
+    LocalStorage.get.mockImplementation(key =>
+      key === 'color_tint' ? 'bosque' : 'dark'
+    );
+    syncAppearanceFromUser({
+      appearance_mode: 'dark',
+      appearance_tint: 'bosque',
+    });
+    expect(LocalStorage.set).toHaveBeenCalledWith('color_scheme', 'dark');
+    expect(LocalStorage.set).toHaveBeenCalledWith('color_tint', 'bosque');
+    expect(document.body.getAttribute('data-tema')).toBe('bosque');
+  });
+
+  it('ignora valores que no existen', () => {
+    syncAppearanceFromUser({ appearance_mode: 'neon', appearance_tint: 'x' });
+    expect(LocalStorage.set).not.toHaveBeenCalled();
+  });
+
+  it('avisa el cambio con el modo y el tema actuales', () => {
+    LocalStorage.get.mockImplementation(key =>
+      key === 'color_tint' ? 'rosa' : 'light'
+    );
+    const listener = vi.fn();
+    window.addEventListener(APPEARANCE_EVENT, listener);
+    announceAppearanceChange();
+    window.removeEventListener(APPEARANCE_EVENT, listener);
+    expect(listener.mock.calls[0][0].detail).toEqual({
+      appearance_mode: 'light',
+      appearance_tint: 'rosa',
+    });
   });
 });

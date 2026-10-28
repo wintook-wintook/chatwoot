@@ -28,6 +28,7 @@ class Account < ApplicationRecord
   include Reportable
   include Featurable
   include CacheKeys
+  include InternalChatToggle # feat/chat_interno
 
   has_many :scheduled_messages, dependent: :destroy
 
@@ -39,7 +40,16 @@ class Account < ApplicationRecord
   has_many :tracking_templates, dependent: :destroy # proyecto@tracking_templates
   has_many :published_prompts, dependent: :destroy # proyecto@publicar_prompts
   has_many :tracking_campaigns, dependent: :destroy # @campanas_vendedor
+  has_one :internal_channel, class_name: 'Channel::Internal', dependent: :destroy_async # feat/chat_interno (plan v2)
   has_many :case_tickets, dependent: :destroy # @tickets_cases
+  has_many :access_roles, dependent: :destroy # Plan-Roles-Permisos
+  has_many :catalog_items, dependent: :destroy # Plan-Catalogo-Cotizaciones
+  has_many :quotes, dependent: :destroy # Plan-Catalogo-Cotizaciones
+  has_many :customer_assets, dependent: :destroy # Plan-Trabajo-Campo R4
+  has_many :maintenance_plans, dependent: :destroy # Plan-Trabajo-Campo R4
+  has_many :contracts, dependent: :destroy # Plan-Contratos R1
+  has_many :organizations, dependent: :destroy # Plan-Organizaciones O1
+  has_many :contract_types, dependent: :destroy # Plan-Contratos R1
   has_many :external_db_connections, dependent: :destroy # @query_databases
   has_many :external_db_queries,     dependent: :destroy # @query_databases
   has_many :erp_collection_bots,     dependent: :destroy # @query_databases
@@ -101,6 +111,7 @@ class Account < ApplicationRecord
   has_many :telegram_bots, dependent: :destroy_async
   has_many :telegram_channels, dependent: :destroy_async, class_name: '::Channel::Telegram'
   has_many :twilio_sms, dependent: :destroy_async, class_name: '::Channel::TwilioSms'
+  has_many :tiktok_channels, dependent: :destroy_async, class_name: '::Channel::Tiktok'
   has_many :twitter_profiles, dependent: :destroy_async, class_name: '::Channel::TwitterProfile'
   has_many :users, through: :account_users
   has_many :web_widgets, dependent: :destroy_async, class_name: '::Channel::WebWidget'
@@ -109,6 +120,7 @@ class Account < ApplicationRecord
   has_many :working_hours, dependent: :destroy_async
 
   has_one_attached :contacts_export
+  has_one_attached :brand_logo # feat/apariencia B1: logo de la empresa en el menú
 
   enum locale: LANGUAGES_CONFIG.map { |key, val| [val[:iso_639_1_code], key] }.to_h
   enum status: { active: 0, suspended: 1 }
@@ -156,6 +168,17 @@ class Account < ApplicationRecord
       agents: ChatwootApp.max_limit.to_i,
       inboxes: ChatwootApp.max_limit.to_i
     }
+  end
+
+  # feat/apariencia B1 — marca de la empresa (Ajustes › Configuración de cuenta).
+  def brand_tint
+    custom_attributes['brand_tint'].presence || 'default'
+  end
+
+  def brand_logo_url
+    return unless brand_logo.attached?
+
+    Rails.application.routes.url_helpers.rails_blob_path(brand_logo, only_path: true)
   end
 
   private

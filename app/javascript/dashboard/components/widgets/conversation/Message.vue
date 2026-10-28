@@ -11,6 +11,12 @@ import BubbleReplyTo from './bubble/ReplyTo.vue';
 import BubbleText from './bubble/Text.vue';
 import BubbleVoiceCall from './bubble/VoiceCall.vue'; // diag/llamadas_whatsapp
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
+// feat/chat_interno: dirección de los mensajes según quién mira en «Interno».
+import {
+  internalInfo,
+  isInternalChat,
+  viewerMessageType,
+} from 'dashboard/helper/internalChat';
 import InstagramStory from './bubble/InstagramStory.vue';
 import InstagramStoryReply from './bubble/InstagramStoryReply.vue';
 import Spinner from 'shared/components/Spinner.vue';
@@ -69,6 +75,12 @@ export default {
     inboxSupportsReplyTo: {
       type: Object,
       default: () => ({}),
+    },
+    // feat/chat_interno_pulido: el mensaje anterior es de la misma persona y de hace
+    // poco: en «Chat interno» no se repiten su nombre ni su foto.
+    grouped: {
+      type: Boolean,
+      default: false,
     },
     inReplyTo: {
       type: Promise,
@@ -181,12 +193,38 @@ export default {
       return this.contentAttributes.image_type === 'story_mention';
     },
     contextMenuEnabledOptions() {
+      // feat/chat_interno_pulido: en «Chat interno» sin traducir, sin enlace al mensaje,
+      // sin guardarlo como respuesta predefinida, y solo se borra lo propio.
+      if (this.isInternal) {
+        const mine =
+          this.sender &&
+          this.sender.id === this.$store.getters.getCurrentUserID;
+        return {
+          internal: true,
+          copy: this.hasText,
+          delete: mine && (this.hasText || this.hasAttachments),
+          cannedResponse: false,
+          replyTo: this.inboxSupportsReplyTo.outgoing,
+        };
+      }
       return {
         copy: this.hasText,
         delete: this.hasText || this.hasAttachments,
         cannedResponse: this.isOutgoing && this.hasText,
         replyTo: !this.data.private && this.inboxSupportsReplyTo.outgoing,
       };
+    },
+    // Nombre arriba de la burbuja de otro agente (el primero de cada grupo). En un
+    // directo no hace falta: solo escribe el otro agente.
+    showInternalSenderName() {
+      const room = internalInfo(this.$store.getters.getSelectedChat) || {};
+      return (
+        this.isInternal &&
+        this.isIncoming &&
+        !this.grouped &&
+        this.isBubble &&
+        room.kind !== 'direct'
+      );
     },
     contentAttributes() {
       return this.data.content_attributes || {};
@@ -196,6 +234,17 @@ export default {
     },
     sender() {
       return this.data.sender || {};
+    },
+    // feat/chat_interno (plan v2): en «Interno» todos los mensajes son de agentes; lo de los
+    // demás se pinta como recibido (izquierda, con su foto) según quién mira.
+    isInternal() {
+      return isInternalChat(this.$store.getters.getSelectedChat);
+    },
+    messageType() {
+      return viewerMessageType(this.data, {
+        internal: this.isInternal,
+        currentUserId: this.$store.getters.getCurrentUserID,
+      });
     },
     // proyecto@whatsapp_mobile_echo: mensajes reflejados de la WhatsApp Business App (móvil),
     // sin agente asociado en Chatwoot — ver Whatsapp::EchoMessageService
@@ -226,7 +275,7 @@ export default {
       return `https://twitter.com/${screenName}`;
     },
     alignBubble() {
-      const { message_type: messageType } = this.data;
+      const { messageType } = this;
       const isCentered = messageType === MESSAGE_TYPE.ACTIVITY;
       const isLeftAligned = messageType === MESSAGE_TYPE.INCOMING;
       const isRightAligned =
@@ -247,19 +296,19 @@ export default {
       return this.contentAttributes.external_created_at || this.data.created_at;
     },
     isBubble() {
-      return [0, 1, 3].includes(this.data.message_type);
+      return [0, 1, 3].includes(this.messageType);
     },
     isIncoming() {
-      return this.data.message_type === MESSAGE_TYPE.INCOMING;
+      return this.messageType === MESSAGE_TYPE.INCOMING;
     },
     isOutgoing() {
-      return this.data.message_type === MESSAGE_TYPE.OUTGOING;
+      return this.messageType === MESSAGE_TYPE.OUTGOING;
     },
     isVoiceCall() {
       return this.contentType === 'voice_call';
     },
     isTemplate() {
-      return this.data.message_type === MESSAGE_TYPE.TEMPLATE;
+      return this.messageType === MESSAGE_TYPE.TEMPLATE;
     },
     isAnIntegrationMessage() {
       return this.contentType === 'integrations';
@@ -282,10 +331,11 @@ export default {
     },
     tooltipForSender() {
       const name = this.senderNameForAvatar;
-      const { message_type: messageType } = this.data;
+      const { messageType } = this;
       const showTooltip =
         messageType === MESSAGE_TYPE.OUTGOING ||
-        messageType === MESSAGE_TYPE.TEMPLATE;
+        messageType === MESSAGE_TYPE.TEMPLATE ||
+        this.isInternal;
       return showTooltip
         ? {
             content: `${this.$t('CONVERSATION.SENT_BY')} ${name}`,
@@ -339,19 +389,33 @@ export default {
       return !(this.isFailed || this.isPending || this.isUnsupported);
     },
     showAvatar() {
+      // feat/chat_interno_pulido: en «Chat interno» sin fotos dentro de la sala (como un
+      // chat de equipo): el nombre va arriba del primer mensaje de cada quien.
+      if (this.isInternal) return false;
       if (this.isOutgoing || this.isTemplate) {
         return true;
       }
       return this.isATweet && this.isIncoming && this.sender;
     },
+    // Agentes IA: el mensaje es del agente (no del usuario con que se guarda).
+    isAiAgentMessage() {
+      return Boolean(this.contentAttributes.ai_agent);
+    },
     senderNameForAvatar() {
       if (this.isOutgoing || this.isTemplate) {
+        if (this.isAiAgentMessage) {
+          return (
+            this.contentAttributes.ai_agent_name ||
+            this.$t('CONVERSATION.AI_AGENT')
+          );
+        }
         if (this.isSentFromWhatsappMobile) {
           return this.$t('CONVERSATION.SENT_FROM_WHATSAPP_MOBILE');
         }
         const { name = this.$t('CONVERSATION.BOT') } = this.sender || {};
         return name;
       }
+      if (this.isInternal) return this.sender.name || ''; // feat/chat_interno
       return '';
     },
     isEmailContentType() {
@@ -481,6 +545,12 @@ export default {
         />
       </div>
       <div :class="bubbleClass" @contextmenu="openContextMenu($event)">
+        <p
+          v-if="showInternalSenderName"
+          class="mb-0.5 text-xs font-semibold text-woot-600 dark:text-woot-300"
+        >
+          {{ sender.available_name || sender.name }}
+        </p>
         <BubbleMailHead
           :email-attributes="contentAttributes.email"
           :cc="emailHeadAttributes.cc"
@@ -492,7 +562,7 @@ export default {
           v-if="inReplyToMessageId && inboxSupportsReplyTo.incoming"
           :message="inReplyToMessage"
           :message-id="inReplyToMessageId"
-          :message-type="data.message_type"
+          :message-type="messageType"
           :parent-has-attachments="hasAttachments"
         />
         <div v-if="isUnsupported">
@@ -564,7 +634,7 @@ export default {
           :is-a-whatsapp-channel="isAWhatsAppChannel"
           :is-email="isEmailContentType"
           :is-private="data.private"
-          :message-type="data.message_type"
+          :message-type="messageType"
           :message-status="status"
           :source-id="data.source_id"
           :inbox-id="data.inbox_id"
@@ -578,10 +648,16 @@ export default {
         class="sender--info relative"
       >
         <woot-thumbnail
-          :src="sender.thumbnail"
+          :src="isAiAgentMessage ? '' : sender.thumbnail"
           :username="senderNameForAvatar"
           size="30px"
         />
+        <div
+          v-if="isAiAgentMessage"
+          class="absolute bottom-0 right-0 flex items-center justify-center bg-violet-500 rounded-full w-3.5 h-3.5 ring-1 ring-white dark:ring-slate-900"
+        >
+          <fluent-icon icon="bot" size="10" class="text-white" />
+        </div>
         <div
           v-if="isSentFromWhatsappMobile"
           class="absolute bottom-0 right-0 flex items-center justify-center bg-green-500 rounded-full w-3.5 h-3.5 ring-1 ring-white dark:ring-slate-900"

@@ -26,8 +26,9 @@ import OverviewTab from './metrics/OverviewTab.vue';
 import MoneyTab from './metrics/MoneyTab.vue';
 import MonthlyTab from './metrics/MonthlyTab.vue';
 import LossesTab from './metrics/LossesTab.vue';
+import QuotesTab from './metrics/QuotesTab.vue'; // Plan-Catalogo-Cotizaciones
 
-const TABS = ['overview', 'money', 'monthly', 'losses'];
+const TABS = ['overview', 'money', 'monthly', 'losses', 'quotes'];
 // Pestañas guardadas con los nombres anteriores (Generales / Embudo).
 const LEGACY_TABS = { general: 'overview', funnel: 'money' };
 // Pestañas a las que les aplica el período de arriba (lo decidido).
@@ -36,6 +37,7 @@ const PERIOD_TABS = ['overview', 'losses'];
 export default {
   name: 'CommercialMetrics',
   components: {
+    QuotesTab,
     CaseClassSwitcher,
     CaseTypeSelect,
     CalendarPeriodPicker,
@@ -190,7 +192,9 @@ export default {
     <div
       class="flex flex-col flex-shrink-0 gap-3 px-6 pt-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
-      <div class="flex flex-wrap items-center justify-between gap-3">
+      <div
+        class="flex flex-wrap items-center justify-between gap-3 [&_select]:!h-8 [&_select]:!py-0"
+      >
         <div class="flex flex-wrap items-center gap-3">
           <!-- Plan-Casos E1 — el selector Comercial | Soporte es el título -->
           <CaseClassSwitcher
@@ -270,8 +274,9 @@ export default {
       </p>
 
       <!-- Mes a mes: su propio reporte, a pedido (no espera al general). -->
+      <QuotesTab v-if="tab === 'quotes'" />
       <MonthlyTab
-        v-if="tab === 'monthly'"
+        v-else-if="tab === 'monthly'"
         :base-filters="baseFilters"
         :currencies="(report && report.currencies) || []"
       />

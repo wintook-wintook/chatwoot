@@ -23,12 +23,12 @@
       "SEND_TO_CONTACT": "Enviar a contacto",
       "SEND_TO_CONTACT_DESC": "El mensaje se enviará directamente al contacto",
       "SEND_AS_REMINDER": "Enviar como recordatorio",
-      "SEND_AS_REMINDER_DESC": "Se enviará como recordatorio privado para agentes",
+      "SEND_AS_REMINDER_DESC": "Se enviará como recordatorio privado para tu equipo",
       
       "CONTROL_MESSAGES": "Control de mensajes",
       "ALL_RECIPIENTS": "Todos los destinatarios",
       "CONTACT_ONLY": "Solo contactos",
-      "AGENT_ONLY": "Solo agentes",
+      "AGENT_ONLY": "Solo usuarios",
       "MESSAGE_CONTENT": "Contenido del mensaje",
       "SCHEDULED_FOR": "Programado para",
       "STATUS": "Estado",
@@ -91,7 +91,7 @@
     "404": "Lo siento, no podemos encontrar la conversación. Por favor intenta de nuevo",
     "SWITCH_VIEW_LAYOUT": "Cambiar el diseño",
     "DASHBOARD_APP_TAB_MESSAGES": "Mensajes",
-    "UNVERIFIED_SESSION": "La identidad de este usuario no está verificada",
+    "UNVERIFIED_SESSION": "La identidad de este contacto no está verificada",
     "NO_MESSAGE_1": "¡Oh no! Parece que no hay mensajes de clientes en tu bandeja de entrada.",
     "NO_MESSAGE_2": " para enviar un mensaje a tu página!",
     "NO_INBOX_1": "¡Hola! Parece que aún no has agregado ninguna bandeja de entrada.",
@@ -123,6 +123,7 @@
     "LOADING_CONVERSATIONS": "Cargando conversaciones",
     "CANNOT_REPLY": "No puedes responder debido a",
     "24_HOURS_WINDOW": "restricción de ventana de 24 horas",
+    "48_HOURS_WINDOW": "restricción de ventana de 48 horas",
     "NOT_ASSIGNED_TO_YOU": "Esta conversación no está asignada a ti. ¿Te gustaría asignarte esta conversación?",
     "ASSIGN_TO_ME": "Asignar a mí",
     "TWILIO_WHATSAPP_CAN_REPLY": "Solo puedes responder a esta conversación usando un mensaje de plantilla debido a",
@@ -236,14 +237,14 @@
         "TOMORROW": "Hasta mañana",
         "NEXT_WEEK": "Hasta la próxima semana"
       },
-      "ASSIGN_AGENT": "Asignar agente",
+      "ASSIGN_AGENT": "Asignar responsable",
       "ASSIGN_LABEL": "Asignar etiqueta",
-      "AGENTS_LOADING": "Cargando agentes...",
+      "AGENTS_LOADING": "Cargando usuarios...",
       "ASSIGN_TEAM": "Asignar equipo",
       "API": {
         "AGENT_ASSIGNMENT": {
           "SUCCESFUL": "Conversación id %{conversationId} asignada a \"%{agentName}\"",
-          "FAILED": "No se pudo asignar el agente. Por favor intenta de nuevo."
+          "FAILED": "No se pudo asignar el responsable. Por favor intenta de nuevo."
         },
         "LABEL_ASSIGNMENT": {
           "SUCCESFUL": "Etiqueta #%{labelName} asignada a la conversación id %{conversationId}",
@@ -260,7 +261,7 @@
       "ENABLE_SIGN_TOOLTIP": "Habilitar firma",
       "DISABLE_SIGN_TOOLTIP": "Deshabilitar firma",
       "MSG_INPUT": "Shift + enter para nueva línea. Comienza con '/' para seleccionar una respuesta predefinida.",
-      "PRIVATE_MSG_INPUT": "Shift + enter para nueva línea. Esto será visible solo para los agentes",
+      "PRIVATE_MSG_INPUT": "Shift + enter para nueva línea. Esto será visible solo para tu equipo",
       "MESSAGE_SIGNATURE_NOT_CONFIGURED": "La firma del mensaje no está configurada, por favor configúrala en la configuración del perfil.",
       "CLICK_HERE": "Haz clic aquí para actualizar",
       "WHATSAPP_TEMPLATES": "Plantillas de Whatsapp"
@@ -318,11 +319,12 @@
     "MESSAGE_ERROR": "No se pudo enviar este mensaje, por favor intenta de nuevo más tarde",
     "SENT_BY": "Enviado por:",
     "BOT": "Bot",
+    "AI_AGENT": "Agente IA",
     "SENT_FROM_WHATSAPP_MOBILE": "WhatsApp Business App",
     "SEND_FAILED": "No se pudo enviar el mensaje. ¡Inténtalo de nuevo!",
     "TRY_AGAIN": "intentar de nuevo",
     "ASSIGNMENT": {
-      "SELECT_AGENT": "Seleccionar agente",
+      "SELECT_AGENT": "Seleccionar responsable",
       "REMOVE": "Eliminar",
       "ASSIGN": "Asignar"
     },
@@ -333,6 +335,7 @@
       "CREATE_A_CANNED_RESPONSE": "Agregar a respuestas predefinidas",
       "TRANSLATE": "Traducir",
       "COPY_PERMALINK": "Copiar enlace al mensaje",
+      "FORWARD": "Reenviar",
       "LINK_COPIED": "URL del mensaje copiada al portapapeles",
       "DELETE_CONFIRMATION": {
         "TITLE": "¿Estás seguro de que deseas eliminar este mensaje?",
@@ -351,7 +354,7 @@
     "SEND_EMAIL_ERROR": "Hubo un error, por favor intenta de nuevo",
     "FORM": {
       "SEND_TO_CONTACT": "Enviar la transcripción al cliente",
-      "SEND_TO_AGENT": "Enviar la transcripción al agente asignado",
+      "SEND_TO_AGENT": "Enviar la transcripción al responsable",
       "SEND_TO_OTHER_EMAIL_ADDRESS": "Enviar la transcripción a otra dirección de correo",
       "EMAIL": {
         "PLACEHOLDER": "Ingresa una dirección de correo",
@@ -383,12 +386,12 @@
     },
     "CANNED_RESPONSES": {
       "TITLE": "Crear respuestas predefinidas",
-      "DESCRIPTION": "Las plantillas de respuestas rápidas preescritas te ayudan a responder rápidamente a una conversación. Los agentes pueden escribir el carácter '/' seguido del código corto para insertar una respuesta.",
+      "DESCRIPTION": "Las plantillas de respuestas rápidas preescritas te ayudan a responder rápidamente a una conversación. Los usuarios pueden escribir el carácter '/' seguido del código corto para insertar una respuesta.",
       "NEW_LINK": "Haz clic aquí para crear una respuesta predefinida"
     }
   },
   "CONVERSATION_SIDEBAR": {
-    "ASSIGNEE_LABEL": "Agente asignado",
+    "ASSIGNEE_LABEL": "Responsable",
     "SELF_ASSIGN": "Asignar a mí",
     "TEAM_LABEL": "Equipo asignado",
     "SELECT": {

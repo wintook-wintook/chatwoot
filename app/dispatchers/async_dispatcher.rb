@@ -5,6 +5,12 @@ class AsyncDispatcher < BaseDispatcher
 
   def publish_event(event_name, timestamp, data)
     event_object = Events::Base.new(event_name, timestamp, data)
+    # feat/chat_interno (plan v2): en «Interno» solo avisos (ver InternalChannel::Events).
+    if InternalChannel::Events.internal?(data)
+      return InternalChannel::Events.publish_internal(listeners, InternalChannel::Events::ASYNC_LISTENERS,
+                                                      event_object.method_name, event_object)
+    end
+
     publish(event_object.method_name, event_object)
   end
 

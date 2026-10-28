@@ -11,8 +11,12 @@ class ContactPolicy < ApplicationPolicy
     @account_user.administrator?
   end
 
+  # Plan-Roles-Permisos — también los roles con «exportar» y acceso a Clientes.
   def export?
-    @account_user.administrator?
+    return true if @account_user.administrator?
+
+    grant = @account_user.access_grant
+    grant.can?(:export) && grant.allowed?(:clients)
   end
 
   def search?

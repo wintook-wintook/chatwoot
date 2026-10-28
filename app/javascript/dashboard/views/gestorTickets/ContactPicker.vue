@@ -1,25 +1,72 @@
 <!--
   @tickets_cases — Plan-Casos E2 (alta desde la Lista/Tablero)
   Buscador de cliente (contacto) para el alta de un caso fuera de la conversación.
-  v-model = contacto elegido { id, name, email, phone_number } o null.
+  v-model = contacto elegido { id, name, email, phone_number, organization_id } o null.
+  Con organization-id (Plan-Organizaciones O2) muestra solo los contactos de esa
+  organización, sin tener que escribir.
 -->
 <script>
 import ContactAPI from 'dashboard/api/contacts';
+import OrganizationsAPI from 'dashboard/api/organizations';
 
 export default {
   name: 'ContactPicker',
   props: {
     value: { type: Object, default: null },
+    organizationId: { type: Number, default: null },
   },
   emits: ['input'],
   data() {
-    return { query: '', results: [], isSearching: false, timer: null };
+    return {
+      query: '',
+      results: [],
+      isSearching: false,
+      timer: null,
+      organizationContacts: [],
+      focused: false,
+    };
+  },
+  computed: {
+    // Con organización: sus contactos, filtrados por lo escrito.
+    organizationResults() {
+      const q = this.query.trim().toLowerCase();
+      return this.organizationContacts.filter(contact =>
+        [contact.name, contact.email, contact.phone_number]
+          .filter(Boolean)
+          .some(text => text.toLowerCase().includes(q))
+      );
+    },
+    shownResults() {
+      return this.organizationId ? this.organizationResults : this.results;
+    },
+  },
+  watch: {
+    organizationId: { immediate: true, handler: 'fetchOrganizationContacts' },
   },
   beforeDestroy() {
     clearTimeout(this.timer);
   },
   methods: {
+    async fetchOrganizationContacts() {
+      this.organizationContacts = [];
+      if (!this.organizationId) return;
+      try {
+        const { data } = await OrganizationsAPI.find(this.organizationId);
+        this.organizationContacts = (data.organization.contacts || []).map(
+          contact => ({ ...contact, organization_id: this.organizationId })
+        );
+      } catch {
+        this.organizationContacts = [];
+      }
+    },
+    // Deja que el clic en la lista llegue antes de cerrarla.
+    onBlur() {
+      setTimeout(() => {
+        this.focused = false;
+      }, 150);
+    },
     onInput() {
+      if (this.organizationId) return;
       clearTimeout(this.timer);
       this.timer = setTimeout(this.search, 300);
     },
@@ -40,8 +87,20 @@ export default {
       }
     },
     pick(contact) {
-      const { id, name, email, phone_number: phoneNumber } = contact;
-      this.$emit('input', { id, name, email, phone_number: phoneNumber });
+      const {
+        id,
+        name,
+        email,
+        phone_number: phoneNumber,
+        organization_id: organizationId,
+      } = contact;
+      this.$emit('input', {
+        id,
+        name,
+        email,
+        phone_number: phoneNumber,
+        organization_id: organizationId || null,
+      });
       this.query = '';
       this.results = [];
     },
@@ -88,13 +147,19 @@ export default {
         class="input !mb-0"
         :placeholder="$t('CASE_TICKETS.CREATE.CONTACT_PLACEHOLDER')"
         @input="onInput"
+        @focus="focused = true"
+        @blur="onBlur"
       />
       <ul
-        v-if="results.length || (query.trim().length >= 2 && !isSearching)"
+        v-if="
+          organizationId
+            ? focused
+            : results.length || (query.trim().length >= 2 && !isSearching)
+        "
         class="absolute left-0 right-0 z-50 py-1 mt-1 overflow-y-auto list-none bg-white border rounded-md shadow-md top-full dark:bg-slate-800 border-slate-100 dark:border-slate-700 max-h-60"
       >
         <li
-          v-for="c in results"
+          v-for="c in shownResults"
           :key="c.id"
           class="px-3 py-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700"
           @click="pick(c)"
@@ -110,7 +175,7 @@ export default {
           </p>
         </li>
         <li
-          v-if="!results.length"
+          v-if="!shownResults.length"
           class="px-3 py-2 text-sm text-slate-400 dark:text-slate-500"
         >
           {{ $t('CASE_TICKETS.CREATE.NO_CONTACTS') }}

@@ -1,5 +1,9 @@
 <script>
 export default {
+  props: {
+    // Texto del botón; por omisión el de la conversación.
+    text: { type: String, default: '' },
+  },
   methods: {
     addLabel() {
       this.$emit('add');
@@ -16,7 +20,7 @@ export default {
     size="tiny"
     @click="addLabel"
   >
-    {{ $t('CONTACT_PANEL.LABELS.CONVERSATION.ADD_BUTTON') }}
+    {{ text || $t('CONTACT_PANEL.LABELS.CONVERSATION.ADD_BUTTON') }}
   </woot-button>
 </template>
 

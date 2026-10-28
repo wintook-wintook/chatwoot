@@ -1,8 +1,6 @@
 <script setup>
-import CustomBrandPolicyWrapper from 'dashboard/components/CustomBrandPolicyWrapper.vue';
-import { getHelpUrlForFeature } from '../../../../helper/featureHelper';
 import BackButton from '../../../../components/widgets/BackButton.vue';
-const props = defineProps({
+defineProps({
   title: {
     type: String,
     required: true,
@@ -15,10 +13,12 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  // eslint-disable-next-line vue/no-unused-properties -- se acepta, ya no se muestra
   linkText: {
     type: String,
     default: '',
   },
+  // eslint-disable-next-line vue/no-unused-properties -- se acepta, ya no se muestra
   featureName: {
     type: String,
     default: '',
@@ -29,12 +29,8 @@ const props = defineProps({
   },
 });
 
-const helpURL = getHelpUrlForFeature(props.featureName);
-
-const openInNewTab = url => {
-  if (!url) return;
-  window.open(url, '_blank', 'noopener noreferrer');
-};
+// Sin el enlace «Aprende más sobre…» a la ayuda de Chatwoot (en inglés): `linkText`
+// y `featureName` se siguen aceptando para no tocar cada página, pero ya no se muestran.
 </script>
 
 <template>
@@ -78,39 +74,11 @@ const openInNewTab = url => {
       >
         <slot name="description">{{ description }}</slot>
       </p>
-      <CustomBrandPolicyWrapper :show-on-custom-branded-instance="false">
-        <a
-          v-if="helpURL && linkText"
-          :href="helpURL"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="sm:inline-flex hidden gap-1 w-fit items-center text-woot-500 dark:text-woot-500 text-sm font-medium hover:underline"
-        >
-          {{ linkText }}
-          <fluent-icon
-            size="16"
-            icon="chevron-right"
-            type="outline"
-            class="flex-shrink-0 text-woot-500 dark:text-woot-500"
-          />
-        </a>
-      </CustomBrandPolicyWrapper>
     </div>
     <div
       class="flex items-start justify-start w-full gap-3 sm:hidden flex-wrap"
     >
       <slot name="actions" />
-      <CustomBrandPolicyWrapper :show-on-custom-branded-instance="false">
-        <woot-button
-          v-if="helpURL && linkText"
-          color-scheme="secondary"
-          icon="arrow-outwards"
-          class="flex-row-reverse rounded-md min-w-0 !bg-slate-50 !text-slate-900 dark:!text-white dark:!bg-slate-800"
-          @click="openInNewTab(helpURL)"
-        >
-          {{ linkText }}
-        </woot-button>
-      </CustomBrandPolicyWrapper>
     </div>
   </div>
 </template>

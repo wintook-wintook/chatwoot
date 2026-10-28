@@ -10,6 +10,8 @@
 # Cumplimiento: una orden terminada es «a tiempo» si se terminó a más tardar el día
 # de su última visita (programada, reprogramada o realizada); «tarde» si después;
 # «sin visita» si nunca se agendó. Retrabajo = se reabrió alguna vez (reopen_count).
+# Plan-Trabajo-Campo R5: arreglada a la primera = una sola visita y sin retrabajo;
+# revisita = más de una visita; CSAT = calificación del cliente desde su portal.
 class V2::Reports::Cases::WorkOrderBuilder < V2::Reports::Cases::BaseBuilder
   FINISHED_STATUSES = %w[resolved validating closed].freeze
   PLANNED_VISIT_STATUSES = %i[scheduled rescheduled held].freeze
@@ -46,9 +48,11 @@ class V2::Reports::Cases::WorkOrderBuilder < V2::Reports::Cases::BaseBuilder
   def finished_rows
     @finished_rows ||= begin
       tickets = finished_scope.to_a
-      last_visit = last_visits(tickets.map(&:id))
-      materials = materials_totals(tickets.map(&:id))
-      tickets.map { |t| finished_row(t, last_visit[t.id], materials[t.id]) }
+      ids = tickets.map(&:id)
+      last_visit = last_visits(ids)
+      materials = materials_totals(ids)
+      visits = visit_counts(ids)
+      tickets.map { |t| finished_row(t, last_visit[t.id], materials[t.id]).merge(visits: visits[t.id].to_i, csat: t.csat_rating) }
     end
   end
 
@@ -74,6 +78,10 @@ class V2::Reports::Cases::WorkOrderBuilder < V2::Reports::Cases::BaseBuilder
 
   def last_visits(ids)
     CaseMeeting.where(case_ticket_id: ids, status: PLANNED_VISIT_STATUSES).group(:case_ticket_id).maximum(:starts_at)
+  end
+
+  def visit_counts(ids)
+    CaseMeeting.where(case_ticket_id: ids, status: PLANNED_VISIT_STATUSES).group(:case_ticket_id).count
   end
 
   def materials_totals(ids)
@@ -110,7 +118,7 @@ class V2::Reports::Cases::WorkOrderBuilder < V2::Reports::Cases::BaseBuilder
 
   # Mismo cálculo para el total y para cada técnico / tipo.
   def finished_summary(rows)
-    { finished_count: rows.size }.merge(timing_summary(rows), hours_summary(rows), rework_summary(rows))
+    { finished_count: rows.size }.merge(timing_summary(rows), hours_summary(rows), rework_summary(rows), field_summary(rows))
   end
 
   def timing_summary(rows)
@@ -133,6 +141,16 @@ class V2::Reports::Cases::WorkOrderBuilder < V2::Reports::Cases::BaseBuilder
     billable = rows.select { |r| r[:billable] }
     { rework_count: reworked, rework_rate: rate(reworked, rows.size), billable_count: billable.size,
       billable_materials: billable.sum { |r| r[:materials] }.round(2) }
+  end
+
+  # Plan-Trabajo-Campo R5 — solo cuentan las órdenes con visita para «a la primera».
+  def field_summary(rows)
+    visited = rows.select { |r| r[:visits].positive? }
+    first_time = visited.count { |r| r[:visits] == 1 && !r[:rework] }
+    rated = rows.filter_map { |r| r[:csat] }
+    { first_time_fix_count: first_time, first_time_fix_rate: rate(first_time, visited.size),
+      revisit_count: visited.count { |r| r[:visits] > 1 }, csat_count: rated.size,
+      csat_average: rated.empty? ? nil : (rated.sum.to_f / rated.size).round(1) }
   end
 
   def timing_tally(rows)

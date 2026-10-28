@@ -22,6 +22,9 @@ class Team < ApplicationRecord
   has_many :team_members, dependent: :destroy_async
   has_many :members, through: :team_members, source: :user
   has_many :conversations, dependent: :nullify
+  # feat/chat_interno (plan v2): cada equipo tiene su conversación en «Interno».
+  after_create_commit -> { InternalChannel::Setup.new(account).sync_team(self) }
+  after_destroy_commit :remove_internal_conversation
 
   validates :name,
             presence: { message: I18n.t('errors.validations.presence') },
@@ -52,6 +55,13 @@ class Team < ApplicationRecord
       id: id,
       name: name
     }
+  end
+
+  private
+
+  def remove_internal_conversation
+    inbox = account.internal_channel&.inbox
+    inbox&.conversations&.where("additional_attributes -> 'internal' ->> 'key' = ?", "team:#{id}")&.destroy_all
   end
 end
 

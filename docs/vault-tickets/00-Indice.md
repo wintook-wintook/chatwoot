@@ -69,6 +69,10 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 - [[Cambiar-Clase-Tipo]] — ✅ hecho: cambiar de clase un tipo; con casos se crea el tipo nuevo y el de antes queda retirado con sus casos tal cual
 - [[Plan-Embudo-Contactos]] — ✅ hecho (E1–E3): el tablero de conversaciones pasa a «Embudo de contactos»; la conversación mueve su tarjeta (reglas + IA), vencimientos, columna «Convertir» y métricas
 - [[Plan-Reacomodo-Menu]] — ✅ F1+F2: menú v2 (Inicio, Conversaciones, Ventas, Servicio, Agenda, Clientes, Agentes IA, Informes, Ajustes); interruptor `MENU_V2` para regresarlo
+- [[Plan-Roles-Permisos]] — ✅ P1–P3: 5 roles por empresa (Administrador, Supervisor, Vendedor, Técnico, Consulta); candado en el servidor (`Access::Grant` + `AccessAreaGuard`), menú/pestañas por rol, Ajustes › Roles; agentes actuales → Supervisor
+- [[Plan-Responsable-Fijo]] — ✅ F1+F2: «Responsable fijo» en la ficha del contacto; sus conversaciones y casos nuevos van con él por encima de turnos/reglas/IA; a mano sí se cambia
+- [[Plan-Trabajo-Campo]] — ✅ R1–R5 hechos 2026-10-26 (sin commit): trabajo en campo siempre en una Orden de trabajo; reporte de servicio (campo y oficina), portal web del técnico, despacho, equipos y contratos; análisis de la competencia
+- [[Plan-Catalogo-Cotizaciones]] — ✅ C1+V1 hechos 2026-10-26 (sin commit): catálogo único (Ventas › Catálogo) y cotizaciones solas o ligadas (oportunidad, proyecto, orden, caso), mismos estados que la oportunidad
 - [[Plan-Bandeja-Prioridad]] — 🎯 plan: «Mi día» en la bandeja de tareas, orden por puntaje de urgencia, pesos configurables y plan con IA (F1–F4 hechas)
 - [[Plan-Casos-Hoja-de-ruta]] — 🧭 hoja de ruta: menú por clase (E1 hecho), clase fija, Comercial y Soporte completos
 - [[Historial-de-implementacion]] — changelog de todo lo resuelto

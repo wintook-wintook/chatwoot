@@ -1,0 +1,99 @@
+<% content_for(:title, @ticket.folio) %>
+<% day = ->(time) { time&.strftime('%d/%m/%Y %H:%M') } %>
+<article class="p-6 bg-white shadow-sm rounded-xl">
+  <p class="m-0 text-xs font-semibold tracking-wide uppercase text-slate-500"><%= t('public_reports.title') %></p>
+  <h1 class="m-0 text-2xl font-bold"><%= @ticket.folio %> · <%= @ticket.title %></h1>
+  <dl class="grid grid-cols-1 gap-1 mt-3 text-sm sm:grid-cols-2">
+    <% if @ticket.contact %>
+      <div><dt class="inline text-slate-500"><%= t('public_reports.customer') %>:</dt> <dd class="inline m-0"><%= @ticket.contact.name %></dd></div>
+    <% end %>
+    <% if @ticket.assignee %>
+      <div><dt class="inline text-slate-500"><%= t('public_reports.technician') %>:</dt> <dd class="inline m-0"><%= @ticket.assignee.name %></dd></div>
+    <% end %>
+    <% if @ticket.work_address.present? %>
+      <div class="sm:col-span-2"><dt class="inline text-slate-500"><%= t('public_reports.address') %>:</dt> <dd class="inline m-0"><%= @ticket.work_address %></dd></div>
+    <% end %>
+    <% if @ticket.customer_asset %>
+      <% asset = @ticket.customer_asset %>
+      <div class="sm:col-span-2"><dt class="inline text-slate-500"><%= t('public_reports.asset') %>:</dt> <dd class="inline m-0"><%= [asset.name, asset.brand, asset.model, (asset.serial.present? ? "S/N #{asset.serial}" : nil)].compact_blank.join(' · ') %></dd></div>
+    <% end %>
+    <% if @ticket.resolved_at %>
+      <div><dt class="inline text-slate-500"><%= t('public_reports.completed') %>:</dt> <dd class="inline m-0"><%= day.call(@ticket.resolved_at) %></dd></div>
+    <% end %>
+    <% if @ticket.actual_hours.to_f.positive? %>
+      <div><dt class="inline text-slate-500"><%= t('public_reports.hours') %>:</dt> <dd class="inline m-0"><%= number_with_precision(@ticket.actual_hours, precision: 2, strip_insignificant_zeros: true) %> h</dd></div>
+    <% end %>
+  </dl>
+
+  <% if @tasks.any? %>
+    <section class="mt-6">
+      <h2 class="mb-2 text-sm font-semibold"><%= t('public_reports.checklist') %></h2>
+      <ul class="pl-0 m-0 space-y-1 text-sm list-none">
+        <% @tasks.each do |task| %>
+          <li>✅ <%= task.title %></li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <% notes = @logs.select(&:note?) %>
+  <% if notes.any? %>
+    <section class="mt-6">
+      <h2 class="mb-2 text-sm font-semibold"><%= t('public_reports.work_done') %></h2>
+      <% notes.each do |log| %>
+        <p class="m-0 mb-2 text-sm whitespace-pre-line"><%= log.content %></p>
+      <% end %>
+    </section>
+  <% end %>
+
+  <% photos = @logs.select { |log| log.photo? && log.file.attached? } %>
+  <% if photos.any? %>
+    <section class="mt-6">
+      <h2 class="mb-2 text-sm font-semibold"><%= t('public_reports.photos') %></h2>
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <% photos.each do |log| %>
+          <figure class="m-0">
+            <img src="<%= rails_blob_path(log.file, only_path: true) %>" alt="" class="object-cover w-full h-40 rounded-lg" />
+            <figcaption class="mt-1 text-xs text-slate-500">
+              <%= log.tag ? t("public_reports.tags.#{log.tag}") : '' %>
+            </figcaption>
+          </figure>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+
+  <% if @ticket.work_order_items.any? %>
+    <section class="mt-6">
+      <h2 class="mb-2 text-sm font-semibold"><%= t('public_reports.materials') %></h2>
+      <table class="w-full text-sm">
+        <tbody class="divide-y divide-slate-100">
+          <% @ticket.work_order_items.ordered.each do |item| %>
+            <tr>
+              <td class="py-1"><%= item.description %></td>
+              <td class="py-1 text-right whitespace-nowrap"><%= number_with_precision(item.quantity, precision: 2, strip_insignificant_zeros: true) %> <%= item.unit %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </section>
+  <% end %>
+
+  <% if @ticket.received_by.present? %>
+    <section class="pt-4 mt-6 text-sm border-t border-slate-200">
+      <p class="m-0"><%= t('public_reports.received_by', name: @ticket.received_by, date: day.call(@ticket.received_at)) %></p>
+      <% if @ticket.conformity_note.present? %>
+        <p class="m-0 mt-1 text-slate-600"><%= @ticket.conformity_note %></p>
+      <% end %>
+      <% if @ticket.conformity_signature.present? %>
+        <img src="<%= @ticket.conformity_signature %>" alt="<%= t('public_quotes.signature') %>" class="h-20 mt-2" />
+      <% end %>
+    </section>
+  <% end %>
+</article>
+
+<%# Plan-Trabajo-Campo R5 — calificar el servicio y volver al portal de la orden. %>
+<%= render 'public/shared/csat', ticket: @ticket, back: 'report' %>
+<p class="mt-4 text-sm text-center no-print">
+  <a href="<%= public_service_portal_path(@ticket.report_token) %>" class="text-indigo-600 hover:underline"><%= t('field_portal.open_portal') %></a>
+</p>

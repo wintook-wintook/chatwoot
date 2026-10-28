@@ -57,6 +57,10 @@ export default {
       // Poner en curso: la campaña a confirmar y la que se está lanzando
       campaignToLaunch: null,
       launchingId: null,
+      // Pausar / reanudar desde la fila
+      campaignToPause: null,
+      pausingId: null,
+      resumingId: null,
       activeTab: 'list', // 'list' · 'new' · 'edit'
       // La campaña Guardada que se está modificando (tab 'edit')
       campaignToEdit: null,
@@ -200,6 +204,62 @@ export default {
               </span>
             ),
         }),
+        // Acciones por campaña (antes del avance): solo las que aplican a su estado.
+        {
+          field: 'actions',
+          key: 'actions',
+          title: this.$t('TRACKING_CAMPAIGNS_VIEW.COL.ACTIONS'),
+          align: 'left',
+          width: 150,
+          renderBodyCell: ({ row }) => (
+            <div
+              class="flex items-center gap-1.5 whitespace-nowrap"
+              onClick={e => e.stopPropagation()}
+            >
+              {row.status === 'saved' && (
+                <woot-button
+                  variant="smooth"
+                  color-scheme="secondary"
+                  size="small"
+                  icon="edit"
+                  title={this.$t('TRACKING_CAMPAIGNS_VIEW.EDIT')}
+                  onClick={() => this.openEdit(row)}
+                />
+              )}
+              {['draft', 'running'].includes(row.status) && (
+                <woot-button
+                  variant="smooth"
+                  color-scheme="warning"
+                  size="small"
+                  icon="snooze"
+                  isLoading={this.pausingId === row.id}
+                  title={this.$t('TRACKING_CAMPAIGNS_VIEW.PAUSE')}
+                  onClick={() => this.openPause(row)}
+                />
+              )}
+              {row.status === 'paused' && (
+                <woot-button
+                  variant="smooth"
+                  color-scheme="success"
+                  size="small"
+                  icon="play-circle"
+                  isLoading={this.resumingId === row.id}
+                  title={this.$t('TRACKING_CAMPAIGNS_VIEW.RESUME')}
+                  onClick={() => this.resumeCampaign(row)}
+                />
+              )}
+              <woot-button
+                variant="smooth"
+                color-scheme="alert"
+                size="small"
+                icon="delete"
+                isLoading={this.deletingId === row.id}
+                title={this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE')}
+                onClick={() => this.openDelete(row)}
+              />
+            </div>
+          ),
+        },
         col('progress', 'PROGRESS', {
           width: 150,
           align: 'right',
@@ -217,29 +277,6 @@ export default {
             </div>
           ),
         }),
-        {
-          field: 'actions',
-          key: 'actions',
-          title: '',
-          align: 'right',
-          width: 60,
-          renderBodyCell: ({ row }) => (
-            <div
-              class="flex items-center justify-end gap-1 whitespace-nowrap"
-              onClick={e => e.stopPropagation()}
-            >
-              <woot-button
-                variant="clear"
-                color-scheme="alert"
-                size="small"
-                icon="delete"
-                isLoading={this.deletingId === row.id}
-                title={this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE')}
-                onClick={() => this.openDelete(row)}
-              />
-            </div>
-          ),
-        },
       ];
     },
     // Estados disponibles para el selector (los que aparecen en STATUS_COLOR).
@@ -446,6 +483,47 @@ export default {
         name: 'contact_trackings_campaign_detail',
         params: { campaignId: campaign.id },
       });
+    },
+    openPause(campaign) {
+      this.campaignToPause = campaign;
+    },
+    // Pausa a mano: no entra nadie y los envíos se detienen al llegar su turno.
+    async confirmPause() {
+      const campaign = this.campaignToPause;
+      if (!campaign) return;
+      this.campaignToPause = null;
+      this.pausingId = campaign.id;
+      try {
+        await TrackingCampaignsAPI.pause(campaign.id);
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_SUCCESS'));
+        this.refreshTable();
+      } catch (error) {
+        useAlert(
+          error.response?.data?.error ||
+            this.$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_ERROR')
+        );
+      } finally {
+        this.pausingId = null;
+      }
+    },
+    async resumeCampaign(campaign) {
+      this.resumingId = campaign.id;
+      try {
+        const { data } = await TrackingCampaignsAPI.resume(campaign.id);
+        useAlert(
+          this.$t('TRACKING_CAMPAIGNS_VIEW.RESUME_SUCCESS', {
+            count: data.trackings,
+          })
+        );
+        this.refreshTable();
+      } catch (error) {
+        useAlert(
+          error.response?.data?.error ||
+            this.$t('TRACKING_CAMPAIGNS_VIEW.RESUME_ERROR')
+        );
+      } finally {
+        this.resumingId = null;
+      }
     },
     openDelete(campaign) {
       this.campaignToDelete = campaign;
@@ -691,6 +769,16 @@ export default {
       :message="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_CONFIRM')"
       :message-value="deleteMessageValue"
       :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_YES')"
+      :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
+    />
+    <woot-delete-modal
+      :show="!!campaignToPause"
+      :on-close="() => (campaignToPause = null)"
+      :on-confirm="confirmPause"
+      :title="$t('TRACKING_CAMPAIGNS_VIEW.PAUSE')"
+      :message="$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_CONFIRM')"
+      :message-value="campaignToPause ? ` «${campaignToPause.name}»?` : ''"
+      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_YES')"
       :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
     />
     <woot-delete-modal

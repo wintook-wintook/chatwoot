@@ -509,7 +509,7 @@ export default {
   >
     <!-- Header -->
     <div
-      class="flex flex-wrap items-center justify-between flex-shrink-0 gap-4 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
+      class="flex flex-wrap items-center justify-between flex-shrink-0 gap-4 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50 [&_select]:!h-8 [&_select]:!py-0"
     >
       <div class="flex items-center gap-4">
         <woot-button

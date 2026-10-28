@@ -18,6 +18,11 @@ import { useAlert } from 'dashboard/composables';
 import { dynamicTime } from 'shared/helpers/timeHelper';
 import { useAdmin } from 'dashboard/composables/useAdmin';
 import ContactInfoRow from './ContactInfoRow.vue';
+import ContactOwnerField from './ContactOwnerField.vue'; // Responsable fijo del contacto
+import ContactOptOutField from './ContactOptOutField.vue'; // prospeccion V4: no contactar
+import ContactProspectScore from './ContactProspectScore.vue'; // prospeccion P4: puntuación
+import ContactMoreActions from './ContactMoreActions.vue';
+import ContactLabel from 'dashboard/routes/dashboard/contacts/components/ContactLabels.vue';
 import Thumbnail from 'dashboard/components/widgets/Thumbnail.vue';
 import SocialIcons from './SocialIcons.vue';
 import EditContact from './EditContact.vue';
@@ -38,9 +43,15 @@ import Synchronizer from './Synchronizer';
 import ScheduleMessageModal from 'dashboard/components/widgets/conversation/ScheduleMessageModal';
 import CreateEventModal from 'dashboard/components/GoogleCalendar/CreateEventModal.vue'; // google_calendar
 import { FEATURE_FLAGS } from 'dashboard/featureFlags'; // google_calendar
+import { backQuery } from 'dashboard/views/gestorTickets/backLink'; // Plan-Catalogo-Cotizaciones
 
 export default {
   components: {
+    ContactOwnerField,
+    ContactOptOutField,
+    ContactProspectScore,
+    ContactMoreActions,
+    ContactLabel,
     ContactInfoRow,
     EditContact,
     Thumbnail,
@@ -79,6 +90,12 @@ export default {
     showAlert: {
       type: Boolean,
       default: false,
+    },
+    // 'panel' (columna angosta: conversación) o 'header' (a todo lo ancho:
+    // página del contacto). Las acciones y sus modales son los mismos.
+    layout: {
+      type: String,
+      default: 'panel',
     },
   },
   setup() {
@@ -125,6 +142,56 @@ export default {
       return this.crmzeusIntegration?.enabled || false;
     },
 
+    isHeader() {
+      return this.layout === 'header';
+    },
+    // Acciones que no son las principales (Mensaje, Editar): van en «Más».
+    moreActions() {
+      const list = [
+        { key: 'merge', icon: 'merge', label: this.$t('CONTACT_PANEL.MERGE_CONTACT'), disabled: this.uiFlags.isMerging },
+        { key: 'notes', icon: 'document', label: this.$t('NOTES.HEADER.TITLE') },
+      ];
+      if (this.conversationId) {
+        list.push({ key: 'schedule', icon: 'clock', label: this.$t('CONTACT_PANEL.ACTIONS.SCHEDULE') });
+        list.push({ key: 'fromContacts', icon: 'chat', label: this.$t('NEW_CONVERSATION.FROM_CONTACTS.BUTTON') });
+      } else {
+        list.push({ key: 'private', icon: 'lock-closed', label: this.$t('CONTACT_PANEL.PRIVATE_CONVERSATION') });
+      }
+      // Plan-Catalogo-Cotizaciones — cotizar desde la conversación o el contacto.
+      if (this.isFeatureEnabledonAccount(this.accountId, FEATURE_FLAGS.CASE_MANAGEMENT)) {
+        list.push({ key: 'quote', icon: 'document', label: this.$t('QUOTES.PANEL.NEW') });
+      }
+      if (this.showCalendarButton) {
+        list.push({ key: 'calendar', icon: 'calendar', label: this.$t('GOOGLE_CALENDAR.CREATE_FROM_CONVERSATION') });
+      }
+      if (this.isAdmin) {
+        list.push({ key: 'delete', icon: 'delete', label: this.$t('DELETE_CONTACT.BUTTON_LABEL'), danger: true, disabled: this.uiFlags.isDeleting });
+      }
+      return list;
+    },
+    // Página del contacto: en el encabezado lo que se hace CON el contacto;
+    // lo que se crea PARA él (caso, cotización, nota) está en su pestaña.
+    //   Mensaje ▾ → hablar con él (la flecha: conversación privada, interna)
+    //   Editar    → sus datos
+    //   ···       → lo delicado y poco frecuente (fusionar, eliminar)
+    headerMessageActions() {
+      return [{ key: 'private', icon: 'lock-closed', label: this.$t('CONTACT_PANEL.PRIVATE_CONVERSATION') }];
+    },
+    headerMoreActions() {
+      const list = [
+        { key: 'merge', icon: 'merge', label: this.$t('CONTACT_PANEL.MERGE_CONTACT'), disabled: this.uiFlags.isMerging },
+      ];
+      if (this.isAdmin) {
+        list.push({ key: 'delete', icon: 'delete', label: this.$t('DELETE_CONTACT.BUTTON_LABEL'), danger: true, disabled: this.uiFlags.isDeleting });
+      }
+      return list;
+    },
+    // En el encabezado no va el enlace wa.me: abre el WhatsApp personal y no
+    // queda en Wintook; para escribirle está «Mensaje» (la línea de la empresa).
+    headerSocialProfiles() {
+      const { phone, ...rest } = this.socialProfiles;
+      return rest;
+    },
     contactProfileLink() {
       return `/app/accounts/${this.$route.params.accountId}/contacts/${this.contact.id}`;
     },
@@ -354,6 +421,25 @@ export default {
 
 
     // Modificar para pasar el estado de contactFoundInCRM
+    runMoreAction(key) {
+      const handlers = {
+        merge: this.openMergeModal,
+        notes: () => { this.showNotesCrudModal = true; },
+        schedule: this.openScheduleModal,
+        fromContacts: () => { this.showNewConversationFromContacts = true; },
+        private: this.togglePrivateConversationModal,
+        calendar: () => { this.showCreateEventModal = true; },
+        quote: () => {
+          this.$router.push({
+            name: 'gestorTickets_quote_new',
+            params: { accountId: this.accountId },
+            query: { contact_id: this.contact.id, ...backQuery(this.$route) },
+          });
+        },
+        delete: this.toggleDeleteModal,
+      };
+      if (handlers[key]) handlers[key]();
+    },
     toggleEditModal() {
       this.showEditModal = !this.showEditModal;
     },
@@ -438,8 +524,11 @@ export default {
 </script>
 
 <template>
-  <div class="relative items-center w-full p-4 bg-white dark:bg-slate-900">
-    <div class="flex flex-col w-full gap-2 text-left rtl:text-right">
+  <div
+    class="relative items-center w-full p-4 bg-white dark:bg-slate-900"
+    :class="{ 'border-b border-slate-50 dark:border-slate-800/50': isHeader }"
+  >
+    <div v-if="!isHeader" class="flex flex-col w-full gap-2 text-left rtl:text-right">
       <div class="flex flex-row justify-between">
         <Thumbnail v-if="showAvatar" :src="contact.thumbnail" size="56px" :username="contact.name"
           :status="contact.availability_status" />
@@ -486,72 +575,96 @@ export default {
           <ContactInfoRow v-if="isIntegrationEnabled" :value="idOrganizacionCRMzeus" icon="building-bank"
             :title="'ID Organizacion CRMZeus'" />
 
+          <!-- Responsable fijo del contacto -->
+          <ContactOwnerField v-if="contact.id" :contact-id="contact.id" />
+          <ContactOptOutField v-if="contact.id" :contact="contact" />
+          <ContactProspectScore v-if="contact.id" :contact-id="contact.id" />
         </div>
       </div>
+      <!-- Acciones con nombre: las principales a la vista, el resto en «Más» -->
       <div class="flex items-center w-full mt-0.5 gap-2">
-        <woot-button v-tooltip="$t('CONTACT_PANEL.NEW_MESSAGE')" :title="$t('CONTACT_PANEL.NEW_MESSAGE')" icon="chat"
-          size="small" @click="toggleConversationModal" />
-
-        <woot-button v-if="conversationId" v-tooltip="'Programacion : envio de mensaje...'"
-          :title="$t('CONTACT_PANEL.NEW_MESSAGE')" icon="clock" size="small" color-scheme="success"
-          @click="openScheduleModal" />
-
-        <woot-button v-tooltip="$t('EDIT_CONTACT.BUTTON_LABEL')" :title="$t('EDIT_CONTACT.BUTTON_LABEL')" icon="edit"
-          variant="smooth" size="small" @click="toggleEditModal" />
-        <woot-button v-tooltip="$t('CONTACT_PANEL.MERGE_CONTACT')" :title="$t('CONTACT_PANEL.MERGE_CONTACT')"
-          icon="merge" variant="smooth" size="small" color-scheme="secondary" :disabled="uiFlags.isMerging"
-          @click="openMergeModal" />
-
-        <!-- proyecto@contacts_notes - botón para abrir modal CRUD de notas -->
-        <woot-button
-          v-tooltip="$t('NOTES.HEADER.TITLE')"
-          :title="$t('NOTES.HEADER.TITLE')"
-          icon="document"
-          variant="smooth"
-          size="small"
-          color-scheme="secondary"
-          @click="showNotesCrudModal = true"
-        />
-
-         <!-- proyecto@conversation_private - botón solo en contactos (sin conversationId): inicia nota privada -->
-         <woot-button v-if="!conversationId" v-tooltip="$t('CONTACT_PANEL.PRIVATE_CONVERSATION')" :title="$t('CONTACT_PANEL.PRIVATE_CONVERSATION')"
-          icon="lock-closed" size="small" color-scheme="warning" @click="togglePrivateConversationModal" />
-
-        <!-- proyecto@conversation_private - botón solo en conversaciones (con conversationId): seleccionar contacto nuevo -->
-        <woot-button v-if="conversationId" v-tooltip="$t('NEW_CONVERSATION.FROM_CONTACTS.BUTTON')" :title="$t('NEW_CONVERSATION.FROM_CONTACTS.BUTTON')"
-          icon="chat" size="small" color-scheme="warning" @click="showNewConversationFromContacts = true" />
-
-        <!-- google_calendar - crear evento desde conversación -->
-        <woot-button
-          v-if="showCalendarButton"
-          v-tooltip="$t('GOOGLE_CALENDAR.CREATE_FROM_CONVERSATION')"
-          icon="calendar"
-          variant="smooth"
-          size="small"
-          @click="showCreateEventModal = true"
-        />
-
-        <woot-button v-if="isAdmin" v-tooltip="$t('DELETE_CONTACT.BUTTON_LABEL')"
-          :title="$t('DELETE_CONTACT.BUTTON_LABEL')" icon="delete" variant="smooth" size="small" color-scheme="alert"
-          :disabled="uiFlags.isDeleting" @click="toggleDeleteModal" />
-
+        <woot-button icon="chat" size="small" @click="toggleConversationModal">
+          {{ $t('CONTACT_PANEL.ACTIONS.MESSAGE') }}
+        </woot-button>
+        <woot-button icon="edit" variant="smooth" size="small" @click="toggleEditModal">
+          {{ $t('CONTACT_PANEL.ACTIONS.EDIT') }}
+        </woot-button>
+        <ContactMoreActions :actions="moreActions" @select="runMoreAction" />
       </div>
-      <EditContact v-if="showEditModal" :show="showEditModal" :contact="contact" :crm-contact="crmContact"
-        :contact-found-in-crm="contactFoundInCRM" @cancel="toggleEditModal" @suppress-alerts="handleSuppressAlerts" 
-        :is-integration-enabled="isIntegrationEnabled" />
-      <NewConversation v-if="contact.id" :show="showConversationModal" :contact="contact"
-        @cancel="toggleConversationModal" />
-      <!-- proyecto@conversation_private - modal conversación privada (desde contactos) -->
-      <NewPrivateConversation v-if="contact.id" :show="showPrivateConversationModal" :contact="contact"
-        @cancel="togglePrivateConversationModal" />
-      <!-- proyecto@conversation_private - modal selección de contacto nuevo (desde conversaciones) -->
-      <NewConversationFromContacts
-        :show="showNewConversationFromContacts"
-        @cancel="showNewConversationFromContacts = false"
-      />
-      <ContactMergeModal v-if="showMergeModal" :primary-contact="contact" :show="showMergeModal"
-        @close="toggleMergeModal" />
     </div>
+    <!-- Encabezado de la página del contacto: lo esencial a lo ancho -->
+    <div v-else class="flex flex-col gap-4 md:flex-row md:items-start">
+      <Thumbnail
+        :src="contact.thumbnail"
+        size="56px"
+        :username="contact.name"
+        :status="contact.availability_status"
+      />
+      <div class="flex flex-col flex-1 min-w-0 gap-2">
+        <div class="flex flex-wrap items-baseline gap-x-2">
+          <h2 class="m-0 text-xl font-semibold capitalize break-words text-slate-800 dark:text-slate-100">
+            {{ crmContact.name || contact.name }}
+          </h2>
+          <span v-if="additionalAttributes.company_name" class="text-sm text-slate-600 dark:text-slate-300">
+            · {{ additionalAttributes.company_name }}
+          </span>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-8 gap-y-1.5">
+          <ContactInfoRow class="!w-auto" :href="contact.email ? `mailto:${contact.email}` : ''" :value="contact.email" icon="mail"
+            emoji="✉️" :title="$t('CONTACT_PANEL.EMAIL_ADDRESS')" :empty-text="$t('CONTACT_PAGE.NO_EMAIL')" show-copy />
+          <ContactInfoRow class="!w-auto" :href="contact.phone_number ? `tel:${contact.phone_number}` : ''"
+            :value="contact.phone_number" icon="call" emoji="📞" :title="$t('CONTACT_PANEL.PHONE_NUMBER')"
+            :empty-text="$t('CONTACT_PAGE.NO_PHONE')" show-copy />
+          <ContactInfoRow class="!w-auto" v-if="contact.identifier" :value="contact.identifier" icon="contact-identify" emoji="🪪"
+            :title="$t('CONTACT_PANEL.IDENTIFIER')" />
+          <ContactInfoRow class="!w-auto" v-if="isIntegrationEnabled" :value="idContactoCRMzeus" icon="contact-identify"
+            :title="'ID Contacto CRMZeus'" />
+          <ContactInfoRow class="!w-auto" v-if="isIntegrationEnabled" :value="idOrganizacionCRMzeus" icon="building-bank"
+            :title="'ID Organizacion CRMZeus'" />
+          <SocialIcons :social-profiles="headerSocialProfiles" />
+        </div>
+        <div class="flex flex-wrap items-start gap-x-8 gap-y-2">
+          <div class="w-full sm:w-auto sm:min-w-[20rem]">
+            <ContactOwnerField v-if="contact.id" :contact-id="contact.id" />
+            <ContactOptOutField v-if="contact.id" :contact="contact" />
+            <ContactProspectScore v-if="contact.id" :contact-id="contact.id" />
+          </div>
+          <div class="flex items-start flex-1 min-w-[16rem] gap-2">
+            <span class="flex items-center flex-shrink-0 h-7 gap-2 text-sm text-slate-600 dark:text-slate-300">
+              <fluent-icon icon="tag" size="16" class="text-slate-500 dark:text-slate-400" />
+              {{ $t('CONTACT_PAGE.LABELS') }}
+            </span>
+            <ContactLabel v-if="contact.id" :contact-id="contact.id" :add-text="$t('CONTACT_PAGE.ADD_LABEL')" />
+          </div>
+        </div>
+      </div>
+      <!-- Mensaje ▾ (hablar) · Editar · ··· (fusionar, eliminar); crear va en cada pestaña -->
+      <div class="flex flex-wrap items-center flex-shrink-0 gap-2">
+        <ContactMoreActions split :label="$t('CONTACT_PANEL.ACTIONS.MESSAGE')" icon="chat" variant="solid"
+          color-scheme="primary" :actions="headerMessageActions" @main="toggleConversationModal"
+          @select="runMoreAction" />
+        <woot-button icon="edit" variant="smooth" size="small" color-scheme="secondary" @click="toggleEditModal">
+          {{ $t('CONTACT_PANEL.ACTIONS.EDIT') }}
+        </woot-button>
+        <ContactMoreActions icon-only :actions="headerMoreActions" @select="runMoreAction" />
+      </div>
+    </div>
+    <!-- Modales de las acciones (los comparten el panel y el encabezado) -->
+    <EditContact v-if="showEditModal" :show="showEditModal" :contact="contact" :crm-contact="crmContact"
+      :contact-found-in-crm="contactFoundInCRM" @cancel="toggleEditModal" @suppress-alerts="handleSuppressAlerts" 
+      :is-integration-enabled="isIntegrationEnabled" />
+    <NewConversation v-if="contact.id" :show="showConversationModal" :contact="contact"
+      @cancel="toggleConversationModal" />
+    <!-- proyecto@conversation_private - modal conversación privada (desde contactos) -->
+    <NewPrivateConversation v-if="contact.id" :show="showPrivateConversationModal" :contact="contact"
+      @cancel="togglePrivateConversationModal" />
+    <!-- proyecto@conversation_private - modal selección de contacto nuevo (desde conversaciones) -->
+    <NewConversationFromContacts
+      :show="showNewConversationFromContacts"
+      @cancel="showNewConversationFromContacts = false"
+    />
+    <ContactMergeModal v-if="showMergeModal" :primary-contact="contact" :show="showMergeModal"
+      @close="toggleMergeModal" />
     <!-- proyecto@contacts_notes - modal CRUD completo de notas del contacto -->
     <ContactNotesCrudModal
       v-if="showNotesCrudModal && contact.id"

@@ -53,6 +53,20 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     Rails.logger.info "[Coordinator] 🔍 Mensaje ##{message_id}: \"#{message_text_for_ai(message).truncate(80)}\""
 
     active_trackings = find_active_trackings(message)
+    # prospeccion V4: pidió no ser contactado → baja, se cancelan sus seguimientos y la IA no contesta
+    if active_trackings.any? && ContactTrackings::OptOut.requested_in?(message_text_for_ai(message))
+      ContactTrackings::OptOut.call(message.conversation.contact, source: 'reply')
+      return
+    end
+    # prospeccion P2b: un vendedor ya atendió al interesado → ni el Agente IA ni BotSeller contestan
+    if TrackingCampaigns::HandoffAttention.seller_owns?(message.conversation)
+      Rails.logger.info "[Coordinator] 🤝 Conversación ##{message.conversation_id}: la atiende el vendedor, la IA no contesta"
+      return
+    end
+    # prospeccion V2: respondió → no más toques automáticos (uno de recuperación en 3 días hábiles)
+    active_trackings.each { |tracking| ContactTrackings::ProspectReply.call(tracking, at: message.created_at) }
+    # prospeccion V5: en Prospección, en qué va el prospecto (interesado, no ahora, no le interesa…)
+    active_trackings.each { |tracking| TrackingCampaigns::ProspectClassifier.call(tracking, message) }
 
     botseller_available = defined?(BotSeller::Dispatcher) && BotSeller::Dispatcher.configured?
 
@@ -626,7 +640,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return false if reply_text.blank?
 
     reply_text = with_branch_tag(reply_text, tracking, message)
-    reply_text = "#{reply_text}\n\n-TB"
+    reply_text = ContactTrackings::Signature.apply(reply_text, tracking, "\n\n-TB") # prospeccion V1: en correo, la firma
     send_auto_reply(tracking, message, reply_text)
     Rails.logger.info '[TrackingBot] ✅ Respuesta enviada → respondió TrackingBot'
     true
@@ -2192,7 +2206,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     clean_content, attachment_signed_ids = resolve_attachment_directives(tracking, reply_content)
     return if clean_content.blank? && attachment_signed_ids.empty?
 
-    builder_params = { content: clean_content, private: false }
+    builder_params = { content: clean_content, private: false,
+                       ai_agent: ContactTrackings::AgentIdentity.for(tracking.tracking_template) }
     builder_params[:attachments] = attachment_signed_ids if attachment_signed_ids.any?
 
     reply_message = Messages::MessageBuilder.new(
