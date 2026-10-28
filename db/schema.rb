@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_31_200000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_01_100100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1265,6 +1265,190 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_200000) do
     t.index ["waiting_since"], name: "index_conversations_on_waiting_since"
   end
 
+  create_table "crm_cities", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "state_id", null: false
+    t.string "name", limit: 50, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "state_id, lower((name)::text)", name: "index_crm_cities_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_cities_on_account_id"
+    t.index ["state_id"], name: "index_crm_cities_on_state_id"
+  end
+
+  create_table "crm_countries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 50, null: false
+    t.string "abbreviation", limit: 10
+    t.string "iso_code", limit: 3
+    t.boolean "is_default", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_crm_countries_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_countries_on_account_id"
+  end
+
+  create_table "crm_currencies", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 50, null: false
+    t.string "iso_code", limit: 3
+    t.string "symbol", limit: 10
+    t.string "amount_in_words", limit: 50
+    t.boolean "is_local", default: false, null: false
+    t.decimal "fixed_exchange_rate", precision: 14, scale: 6
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_crm_currencies_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_currencies_on_account_id"
+  end
+
+  create_table "crm_lookups", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.integer "kind", null: false
+    t.string "name", limit: 100, null: false
+    t.boolean "is_default", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, kind, lower((name)::text)", name: "index_crm_lookups_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_lookups_on_account_id"
+  end
+
+  create_table "crm_organization_addresses", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "organization_id", null: false
+    t.string "consignee_name", limit: 100, null: false
+    t.string "street", limit: 100
+    t.string "exterior_number", limit: 10
+    t.string "interior_number", limit: 10
+    t.string "neighborhood", limit: 100
+    t.string "town", limit: 100
+    t.string "reference", limit: 100
+    t.bigint "city_id"
+    t.string "postal_code", limit: 10
+    t.string "tax_id", limit: 18
+    t.string "phone", limit: 35
+    t.string "phone2", limit: 35
+    t.string "email"
+    t.string "contact_name", limit: 100
+    t.boolean "is_primary", default: false, null: false
+    t.boolean "for_billing", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_organization_addresses_on_account_id"
+    t.index ["city_id"], name: "index_crm_organization_addresses_on_city_id"
+    t.index ["organization_id"], name: "index_crm_organization_addresses_on_organization_id"
+    t.index ["organization_id"], name: "index_crm_organization_addresses_one_billing", unique: true, where: "for_billing"
+    t.index ["organization_id"], name: "index_crm_organization_addresses_one_primary", unique: true, where: "is_primary"
+  end
+
+  create_table "crm_organizations", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.integer "organization_type", default: 2, null: false
+    t.string "key", limit: 20
+    t.string "legal_name", limit: 100, null: false
+    t.string "trade_name", limit: 100, null: false
+    t.string "phone", limit: 35
+    t.string "email"
+    t.string "tax_id", limit: 18
+    t.bigint "customer_type_id"
+    t.bigint "rating_id"
+    t.bigint "industry_id"
+    t.bigint "origin_id"
+    t.bigint "zone_id"
+    t.bigint "collector_id"
+    t.bigint "seller_id"
+    t.bigint "payment_term_id"
+    t.bigint "currency_id"
+    t.boolean "respect_seller", default: false, null: false
+    t.decimal "credit_limit", precision: 14, scale: 2, default: "0.0", null: false
+    t.string "status", limit: 1, default: "A", null: false
+    t.date "suspended_on"
+    t.string "suspension_reason", limit: 250
+    t.boolean "charge_taxes", default: true, null: false
+    t.boolean "withholds_taxes", default: false, null: false
+    t.string "cfdi_use", limit: 4
+    t.string "sat_payment_form", limit: 3
+    t.string "invoice_email"
+    t.text "notes"
+    t.datetime "converted_at"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((key)::text)", name: "index_crm_organizations_unique_key", unique: true, where: "(key IS NOT NULL)"
+    t.index "account_id, lower((legal_name)::text)", name: "index_crm_organizations_unique_legal_name", unique: true
+    t.index "account_id, lower((trade_name)::text)", name: "index_crm_organizations_unique_trade_name", unique: true
+    t.index ["account_id", "organization_type"], name: "index_crm_organizations_on_account_id_and_organization_type"
+    t.index ["account_id"], name: "index_crm_organizations_on_account_id"
+    t.index ["collector_id"], name: "index_crm_organizations_on_collector_id"
+    t.index ["created_by_id"], name: "index_crm_organizations_on_created_by_id"
+    t.index ["currency_id"], name: "index_crm_organizations_on_currency_id"
+    t.index ["customer_type_id"], name: "index_crm_organizations_on_customer_type_id"
+    t.index ["industry_id"], name: "index_crm_organizations_on_industry_id"
+    t.index ["origin_id"], name: "index_crm_organizations_on_origin_id"
+    t.index ["payment_term_id"], name: "index_crm_organizations_on_payment_term_id"
+    t.index ["rating_id"], name: "index_crm_organizations_on_rating_id"
+    t.index ["seller_id"], name: "index_crm_organizations_on_seller_id"
+    t.index ["updated_by_id"], name: "index_crm_organizations_on_updated_by_id"
+    t.index ["zone_id"], name: "index_crm_organizations_on_zone_id"
+  end
+
+  create_table "crm_payment_term_installments", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "payment_term_id", null: false
+    t.integer "days", default: 0, null: false
+    t.decimal "percent", precision: 5, scale: 2, default: "100.0", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_payment_term_installments_on_account_id"
+    t.index ["payment_term_id"], name: "index_crm_payment_term_installments_on_payment_term_id"
+  end
+
+  create_table "crm_payment_terms", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 100, null: false
+    t.decimal "early_payment_discount_percent", precision: 5, scale: 2, default: "0.0", null: false
+    t.integer "early_payment_days", default: 0, null: false
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_crm_payment_terms_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_payment_terms_on_account_id"
+  end
+
+  create_table "crm_sellers", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 100, null: false
+    t.text "notes"
+    t.bigint "user_id"
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_crm_sellers_unique_name", unique: true
+    t.index ["account_id", "user_id"], name: "index_crm_sellers_unique_user", unique: true, where: "(user_id IS NOT NULL)"
+    t.index ["account_id"], name: "index_crm_sellers_on_account_id"
+    t.index ["user_id"], name: "index_crm_sellers_on_user_id"
+  end
+
+  create_table "crm_states", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "country_id", null: false
+    t.string "name", limit: 50, null: false
+    t.string "abbreviation", limit: 10
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "country_id, lower((name)::text)", name: "index_crm_states_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_states_on_account_id"
+    t.index ["country_id"], name: "index_crm_states_on_country_id"
+  end
+
   create_table "csat_survey_responses", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "conversation_id", null: false
@@ -2397,6 +2581,33 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_200000) do
   add_foreign_key "contracts", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "conversations", "kanban_processes"
   add_foreign_key "conversations", "kanban_type_processes"
+  add_foreign_key "crm_cities", "accounts"
+  add_foreign_key "crm_cities", "crm_states", column: "state_id", on_delete: :cascade
+  add_foreign_key "crm_countries", "accounts"
+  add_foreign_key "crm_currencies", "accounts"
+  add_foreign_key "crm_lookups", "accounts"
+  add_foreign_key "crm_organization_addresses", "accounts"
+  add_foreign_key "crm_organization_addresses", "crm_cities", column: "city_id", on_delete: :nullify
+  add_foreign_key "crm_organization_addresses", "crm_organizations", column: "organization_id", on_delete: :cascade
+  add_foreign_key "crm_organizations", "accounts"
+  add_foreign_key "crm_organizations", "crm_currencies", column: "currency_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_lookups", column: "collector_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_lookups", column: "customer_type_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_lookups", column: "industry_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_lookups", column: "origin_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_lookups", column: "rating_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_lookups", column: "zone_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_payment_terms", column: "payment_term_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_sellers", column: "seller_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "crm_payment_term_installments", "accounts"
+  add_foreign_key "crm_payment_term_installments", "crm_payment_terms", column: "payment_term_id", on_delete: :cascade
+  add_foreign_key "crm_payment_terms", "accounts"
+  add_foreign_key "crm_sellers", "accounts"
+  add_foreign_key "crm_sellers", "users", on_delete: :nullify
+  add_foreign_key "crm_states", "accounts"
+  add_foreign_key "crm_states", "crm_countries", column: "country_id", on_delete: :cascade
   add_foreign_key "customer_assets", "accounts"
   add_foreign_key "customer_assets", "contacts", on_delete: :cascade
   add_foreign_key "inboxes", "portals"
