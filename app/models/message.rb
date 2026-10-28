@@ -207,7 +207,10 @@ class Message < ApplicationRecord
     data
   end
 
+  # Agentes IA: su nombre para el cliente (o ninguno), no el del usuario con que se guardan.
   def sender_name
+    return content_attributes[:ai_agent_name].presence if content_attributes[:ai_agent]
+
     sender&.try(:available_name) || sender&.try(:name)
   end
 

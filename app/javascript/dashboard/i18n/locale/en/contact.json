@@ -287,6 +287,7 @@
       "404": "No contacts matches your search 🔍",
       "NO_CONTACTS": "There are no available contacts",
       "TABLE_HEADER": {
+        "ORGANIZATION": "Organization",
         "NAME": "Name",
         "PHONE_NUMBER": "Phone Number",
         "CONVERSATIONS": "Conversations",

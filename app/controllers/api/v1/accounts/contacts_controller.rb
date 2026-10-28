@@ -140,7 +140,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
   def fetch_contacts(contacts)
     contacts_with_avatar = filtrate(contacts)
-                           .includes([{ avatar_attachment: [:blob] }])
+                           .includes([{ avatar_attachment: [:blob] }], :organization) # Plan-Organizaciones: columna de la lista
                            .page(@current_page).per(RESULTS_PER_PAGE)
 
     return contacts_with_avatar.includes([{ contact_inboxes: [:inbox] }]) if @include_contact_inboxes

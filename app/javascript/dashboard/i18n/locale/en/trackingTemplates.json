@@ -185,6 +185,10 @@
         "ROUTE_SCOPE_GENERATE_ERROR": "It could not be generated. Try again or write it by hand."
       },
       "EMAIL_SIGNATURE_LABEL": "Email signature",
+      "CUSTOMER_NAME_LABEL": "Name the customer will see",
+      "CUSTOMER_NAME_PLACEHOLDER": "E.g. Sofia · Virtual assistant",
+      "CUSTOMER_NAME_HINT": "On WhatsApp it goes at the start of every agent message. Leave it empty to send messages without a name.",
+      "CUSTOMER_NAME_PREVIEW": "Hi, happy to help…",
       "EMAIL_SIGNATURE_PLACEHOLDER": "Ana López\nSales · Wintook\n81 1234 5678",
       "EMAIL_SIGNATURE_HINT": "Added at the end of every email the agent writes, instead of “#IA”. Not used on WhatsApp or other channels."
     },

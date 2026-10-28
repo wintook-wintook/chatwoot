@@ -2206,7 +2206,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     clean_content, attachment_signed_ids = resolve_attachment_directives(tracking, reply_content)
     return if clean_content.blank? && attachment_signed_ids.empty?
 
-    builder_params = { content: clean_content, private: false }
+    builder_params = { content: clean_content, private: false,
+                       ai_agent: ContactTrackings::AgentIdentity.for(tracking.tracking_template) }
     builder_params[:attachments] = attachment_signed_ids if attachment_signed_ids.any?
 
     reply_message = Messages::MessageBuilder.new(

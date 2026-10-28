@@ -9,6 +9,9 @@ json.thumbnail resource.avatar_url
 json.custom_attributes resource.custom_attributes
 # Plan-Organizaciones O1 — la ficha la carga aparte (/organizations/:id)
 json.organization_id resource.organization_id
+# La lista de contactos la precarga (columna Organización con su etapa); en lo demás no se
+# pide, para no hacer una consulta por contacto.
+json.organization resource.organization&.slice(:id, :name, :stage) if resource.association(:organization).loaded?
 json.last_activity_at resource.last_activity_at.to_i if resource[:last_activity_at].present?
 json.created_at resource.created_at.to_i if resource[:created_at].present?
 # prospeccion V4: pidió no ser contactado (enlace, respuesta o a mano)

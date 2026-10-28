@@ -630,7 +630,8 @@ class ContactTrackingJob < ApplicationJob
         account: tracking.account,
         inbox: tracking.inbox,
         message_type: :outgoing,
-        content: message_content
+        content: message_content,
+        content_attributes: ContactTrackings::AgentIdentity.content_attributes(tracking.tracking_template)
       )
 
       # Enviar usando el servicio oficial con parámetros procesados
@@ -663,6 +664,7 @@ class ContactTrackingJob < ApplicationJob
           content: message_content,
           private: false,
           message_type: :outgoing,
+          ai_agent: ContactTrackings::AgentIdentity.for(tracking.tracking_template),
           source_id: message_id,  # ⭐ CLAVE: Ya tiene source_id
           content_attributes: {
             whatsapp_template_name: template_name,
@@ -727,6 +729,7 @@ class ContactTrackingJob < ApplicationJob
       {
         content: message_body,
         private: false,
+        ai_agent: ContactTrackings::AgentIdentity.for(tracking.tracking_template),
         content_attributes: {
           automation_rule_id: nil
         }
@@ -770,7 +773,8 @@ class ContactTrackingJob < ApplicationJob
       account: tracking.account,
       inbox: tracking.inbox,
       message_type: :outgoing,
-      content: message_body
+      content: message_body,
+      content_attributes: ContactTrackings::AgentIdentity.content_attributes(tracking.tracking_template)
     )
 
     # Enviar directamente por el canal
@@ -792,6 +796,7 @@ class ContactTrackingJob < ApplicationJob
       {
         content: message_body,
         private: false,
+        ai_agent: ContactTrackings::AgentIdentity.for(tracking.tracking_template),
         source_id: message_id,  # ⭐ CLAVE: Ya tiene source_id, SendReplyJob lo ignorará
         content_attributes: {
           automation_rule_id: nil
