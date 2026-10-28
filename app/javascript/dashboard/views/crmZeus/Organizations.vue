@@ -1,7 +1,7 @@
 <!--
   CrmZeus O1 — lista de organizaciones (clientes y prospectos), como «Clientes» /
   «Prospectos» de CRMZeus. Paginación en servidor (50 por página). La búsqueda cubre
-  clave, razón social y nombre comercial. El formulario llega en O2.
+  clave, razón social y nombre comercial. Un clic abre el formulario (O2).
 -->
 <script>
 import CrmOrganizations from 'dashboard/api/crmOrganizations';
@@ -85,6 +85,15 @@ export default {
       this.page = page;
       this.fetch();
     },
+    openNew() {
+      this.$router.push({ name: 'crmzeus_organization_new' });
+    },
+    open(row) {
+      this.$router.push({
+        name: 'crmzeus_organization_edit',
+        params: { organizationId: row.id },
+      });
+    },
     statusBadge(status) {
       return STATUS_BADGES[status] || WARNING_BADGE;
     },
@@ -97,7 +106,7 @@ export default {
     class="flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-25 dark:bg-slate-900"
   >
     <div
-      class="flex flex-col flex-shrink-0 gap-3 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
+      class="relative flex flex-col flex-shrink-0 gap-3 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
       <div>
         <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
@@ -106,6 +115,11 @@ export default {
         <p class="m-0 text-sm text-slate-500 dark:text-slate-400">
           {{ $t('CRM_ZEUS.ORGANIZATIONS.SUBTITLE') }}
         </p>
+      </div>
+      <div v-if="meta.can_edit" class="absolute right-6 top-4">
+        <woot-button size="small" icon="add" @click="openNew">
+          {{ $t('CRM_ZEUS.ORGANIZATIONS.NEW') }}
+        </woot-button>
       </div>
       <div class="flex flex-wrap gap-1">
         <button
@@ -217,7 +231,8 @@ export default {
           <tr
             v-for="row in rows"
             :key="row.id"
-            class="border-t border-slate-50 dark:border-slate-700"
+            class="border-t cursor-pointer border-slate-50 dark:border-slate-700 hover:bg-slate-25 dark:hover:bg-slate-700/50"
+            @click="open(row)"
           >
             <td class="px-3 py-2 text-slate-500">{{ row.key || '—' }}</td>
             <td

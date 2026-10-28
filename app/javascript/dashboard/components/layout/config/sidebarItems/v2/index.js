@@ -634,13 +634,24 @@ const ajustes = accountId => {
 // CrmZeus — organizaciones (después: catálogos, cotizaciones…).
 const crmZeus = accountId => ({
   parentNav: 'crmzeus',
-  routes: ['crmzeus_organizations'],
+  routes: [
+    'crmzeus_organizations',
+    'crmzeus_organization_new',
+    'crmzeus_organization_edit',
+    'crmzeus_catalogs',
+  ],
   menuItems: [
     {
       icon: 'briefcase',
       label: 'CRM_ZEUS_ORGANIZATIONS',
       toState: frontendURL(`accounts/${accountId}/crm-zeus/organizations`),
       toStateName: 'crmzeus_organizations',
+    },
+    {
+      icon: 'library',
+      label: 'CRM_ZEUS_CATALOGS',
+      toState: frontendURL(`accounts/${accountId}/crm-zeus/catalogs`),
+      toStateName: 'crmzeus_catalogs',
     },
   ],
 });
