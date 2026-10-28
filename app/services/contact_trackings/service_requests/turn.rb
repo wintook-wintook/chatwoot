@@ -119,24 +119,11 @@ class ContactTrackings::ServiceRequests::Turn
 
     # Un servicio que ya tiene su tarea (apartado, esperando pago, confirmado) no se vuelve a
     # ofrecer al reiterarlo: su línea dice en qué estado está.
+    # D3 (SSUSA 22/10): la hora pedida libre ya no se aparta directo (observación 5); va como A
+    # junto a las 2 siguientes y el cliente elige.
     entries.reject { |entry| entry.ticket.metadata['meeting_id'].present? }
-           .to_h { |entry| [entry.ticket.id, hold_if_exact(agenda.plan(entry.ticket, position(entry.ticket)))] }
+           .to_h { |entry| [entry.ticket.id, agenda.plan(entry.ticket, position(entry.ticket))] }
   end
-
-  # Observación SSUSA 5: pidió una hora y está libre → se aparta directo (tentativo si la ruta
-  # dice modo=tentativo), sin hacerle elegir de una lista.
-  # Lo relacionado (no era lo que pidió, observación SSUSA 1) solo se recomienda: lo confirma él.
-  def hold_if_exact(plan)
-    return plan unless plan.exact && plan.offers.one? && plan.related.blank?
-
-    ContactTrackings::ServiceRequests::Choice.new(tracking: @tracking, message: @message, timezone: @timezone,
-                                                  tentative: tentative?).hold(plan.ticket, plan.offers.first)
-    plan.held = plan.offers.first
-    plan.offers = []
-    plan
-  end
-
-  def tentative? = ContactTrackings::CalendarOptions.parse(@branch&.escalation)&.tentative || false
 
   def position(ticket)
     ContactTrackings::ServiceRequests::Registry.open_cases(@message.conversation).pluck(:id).index(ticket.id).to_i + 1
@@ -169,7 +156,6 @@ class ContactTrackings::ServiceRequests::Turn
     pistas = []
     ofertas = planes.flat_map { |plan| Array(plan.offers) }
     pistas << choose_hint(planes, ofertas) if ofertas.any?
-    pistas << 'Queda apartado; cuando me confirmes el servicio lo dejo en firme.' if planes.any?(&:held) && tentative?
     pistas
   end
 

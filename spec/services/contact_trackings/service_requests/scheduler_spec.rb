@@ -30,12 +30,22 @@ RSpec.describe ContactTrackings::ServiceRequests::Scheduler do
     agenda.plan(caso(datos), 1)
   end
 
-  it 'con hora pedida libre, solo esa y marcada exacta (Turn la aparta directo)' do
-    allow(buscador).to receive_messages(slot_for: slot(9), call: [slot(9), slot(10)])
+  it 'con hora pedida libre, esa como A y las 2 siguientes horas libres (D3, SSUSA 22/10)' do
+    # la misma hora en otra unidad (9:00 TP-2) no cuenta como otra opción
+    allow(buscador).to receive_messages(slot_for: slot(9), call: [slot(9), slot(9, 'TP-2'), slot(10, 'TP-2'), slot(11), slot(12)])
 
     plan = planear('date' => '2027-10-05', 'time' => '09:00')
-    expect(plan.offers.pluck('code')).to eq(%w[1A])
+    expect(plan.offers.map { |o| [o['code'], Time.zone.parse(o['slot']).in_time_zone(tz).hour, o['calendar_name']] })
+      .to eq([['1A', 9, 'TP-1'], ['1B', 10, 'TP-2'], ['1C', 11, 'TP-1']])
     expect([plan.exact, plan.note]).to eq([true, 'sí hay a las 09:00'])
+  end
+
+  it 'sin nada el día pedido, lo dice y ofrece lo más cercano' do
+    otro_dia = slot(9).transform_values { |v| v.is_a?(Time) ? v + 1.day : v }
+    allow(buscador).to receive_messages(slot_for: nil, call: [otro_dia])
+
+    plan = planear('date' => '2027-10-05', 'time' => '09:00')
+    expect(plan.note).to eq('no hay horario el martes 5; lo más cercano es')
   end
 
   it 'con hora ocupada, lo dice y ofrece las siguientes' do

@@ -47,8 +47,7 @@ class ContactTrackings::ServiceRequests::Choice
     end
   end
 
-  # Aparta UNA opción. Público para Turn: con la hora pedida libre se aparta sin preguntar
-  # (observación SSUSA 5). Devuelve [caso, tarea, oferta].
+  # Aparta UNA opción. Devuelve [caso, tarea, oferta].
   def hold(caso, oferta)
     cancel_previous(caso) # al mover (F4): la tarea anterior se cancela al apartar la nueva
     slot = { slot: Time.zone.parse(oferta['slot']), end_time: Time.zone.parse(oferta['end_time']),

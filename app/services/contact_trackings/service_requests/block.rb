@@ -33,11 +33,11 @@ class ContactTrackings::ServiceRequests::Block
     @channel = conversation.inbox&.channel_type
   end
 
-  # plan: el del Scheduler (opciones, nota, unidades). held: la opción ya apartada ({'slot', 'end_time',
+  # plan: el del Scheduler (opciones, nota, unidades). held: la opción recién apartada ({'slot', 'end_time',
   # 'calendar_name'}); sin ella, la tarea del caso. missing: etiquetas de lo que falta.
   def service(caso, plan: nil, missing: [], held: nil, sync_failed: false)
     datos = caso.metadata[ContactTrackings::ServiceRequests::Registry::META_KEY].to_h
-    held ||= plan&.held || meeting_slot(caso)
+    held ||= meeting_slot(caso)
     ofertas = Array(plan&.offers)
     lineas = [title(caso, datos), related(plan), unit_lines(plan, datos, ofertas.presence || [held].compact, route(datos)),
               date_line(caso, datos), state_line(caso, plan), note_line(plan),
@@ -83,12 +83,17 @@ class ContactTrackings::ServiceRequests::Block
   # La unidad con sus datos («Cama baja · 40 t · 16.15 m»); con varias, una por renglón con su nombre.
   # Sin datos de la hoja, lo que pidió el cliente (si no salió ya en el título).
   def unit_lines(plan, datos, ofertas, ruta)
-    unidades = plan&.units.to_h
+    unidades = plan&.units.presence || offer_units(ofertas)
     return ruta && datos['label'].presence if unidades.empty?
 
     return unidades.values.first if unidades.one?
 
     named_units(unidades, ofertas)
+  end
+
+  # Lo que guardó el Scheduler en cada opción (para la pregunta de Choice y lo apartado).
+  def offer_units(ofertas)
+    ofertas.select { |oferta| oferta['unidad'].present? }.to_h { |oferta| [oferta['gcal'], oferta['unidad']] }
   end
 
   def named_units(unidades, ofertas)

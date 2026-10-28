@@ -170,7 +170,7 @@ pregunta «¿Confirmo el servicio?». Un segundo «sí» lo deja en firme vía `
 |---|---|---|
 | D1 | El documento escribe con **usted** («Responda», «Su solicitud»); el bot y la regla del módulo usan **tú** | ✅ **Decidido (28/10/2026): tú** |
 | D2 | **Familia** de unidades: la hoja no la tiene y `tipo` es texto libre | SSUSA agrega la columna `familia`. Deducirla de la primera palabra del tipo es frágil |
-| D3 | Hora pedida libre: hoy se aparta directo (obs. SSUSA 5); el cambio 2 pide mostrarla como A junto a 2 más y esperar | Cambiar la regla de la obs. 5, como pide el documento |
+| D3 | Hora pedida libre: hoy se aparta directo (obs. SSUSA 5); el cambio 2 pide mostrarla como A junto a 2 más y esperar | ✅ **Decidido (28/10/2026): se cambia, como pide el documento** |
 | D4 | Operador en la hoja de unidades o en una de tractos (`jalado_por`) | Leer de la unidad y, si está vacío, del tracto: sirve para los dos casos |
 
 ---
@@ -292,3 +292,23 @@ Visto en la misma prueba, para F2/F3: todavía ofrece una plataforma plana de 40
 - Falta: ver en un celular real (WhatsApp y Telegram), sección 7.
 
 **Asistente / configuración:** nada que configurar. Quitar `placas` de la directiva ya no es necesario.
+
+### F2 (parte D3) · Hasta 3 opciones (28/10/2026)
+
+**Qué se hizo**
+- `scheduler.rb`: con la hora pedida libre, esa es la A (`exact`) y después las 2 siguientes horas libres, de
+  cualquier unidad que aguante la carga (la misma hora en otra unidad no cuenta). Sin nada el día pedido:
+  «No hay horario el lunes 2; lo más cercano es.». Cada opción guarda la descripción de su unidad (`unidad`).
+- `turn.rb`: ya no aparta directo la hora libre (regla de la observación 5 reemplazada por D3); el cliente elige.
+- `interpreter.rb`: con un solo servicio, «la primera / segunda / tercera» = A / B / C (conv. 654 lo tomaba como ambiguo).
+- `block.rb`: sin unidades en el plan (pregunta de Choice, lo apartado) usa la unidad guardada en la opción
+  (conv. 654 decía «Rabón» justo después de «No tengo rabón»).
+
+**Pruebas**
+- RSpec: scheduler (A + 2 siguientes, otro día), block (unidad guardada); motor + job + Telegram: 168, 0 fallas.
+- En vivo, bandeja 493: **conv 655** — 3 opciones (12:00 TP-111 · 13:00 TP-117 · 14:00 TP-49) → «la segunda»
+  aparta la B con su unidad → «¿Confirmo el servicio?». Caso 01185 y su tarea cancelados después.
+
+**Falta de F2:** el sustituto por **familia** (D2). Hoy, por un rabón, sigue ofreciendo plataforma plana y góndola
+(todo lo que aguanta 3 t).
+

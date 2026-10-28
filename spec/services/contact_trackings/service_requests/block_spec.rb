@@ -74,6 +74,13 @@ RSpec.describe ContactTrackings::ServiceRequests::Block do
     expect(texto).not_to include('```')
   end
 
+  it 'sin unidades en el plan (pregunta de Choice) usa la unidad guardada en cada opción' do
+    ofertas = [oferta('1A', 0, 'TP-46').merge('unidad' => 'Cama baja · 40 t'), oferta('1B', 1, 'TP-73').merge('unidad' => 'Plana · 30 t')]
+    texto = bloque('Channel::Whatsapp', plan: plan_class.new(ticket: caso, offers: ofertas, requested: inicio))
+
+    expect(texto).to include("TP-46: Cama baja · 40 t\nTP-73: Plana · 30 t")
+  end
+
   it 'lo más parecido va antes de la unidad' do
     texto = bloque('Channel::Whatsapp', plan: plan(related: 'no tengo rabón; lo más parecido que tengo:'))
     expect(texto).to include("No tengo rabón; lo más parecido que tengo:\nCama baja · 40 t")

@@ -109,12 +109,13 @@ class ContactTrackings::ServiceRequests::Interpreter
     - "elegir": acepta o escoge.
       · Afirmación general sin decir cuál («sí», «adelante», «ok», «va», «perfecto», «confirmo»,
         «adelante con el horario», «está bien», «sale», «me parece»): general = true, codigos = [].
-      · Dice cuál: por letra («la B», si hay un solo servicio), por hora («la de las 14» =
+      · Dice cuál: por letra («la B», si hay un solo servicio), por orden con un solo servicio
+        («la primera» = A, «la segunda» = B, «la tercera» = C), por hora («la de las 14» =
         la opción que empieza a las 14:00), por unidad («la TP-73»), por servicio y hora
         («el 2 a las 16») o por código («1B y 2A»): codigos = esos códigos, general = false.
         Solo códigos que estén en la lista.
     - "ambigua": acepta pero no se sabe cuál, o pide algo que no se puede ubicar en las
-      opciones sin preguntar («sí pero más tarde», «el otro», «la segunda» con varios servicios).
+      opciones sin preguntar («sí pero más tarde», «el otro», «la segunda» si hay VARIOS servicios).
     - "rechazo": no le sirve ninguna («ninguna», «no me sirve», «no puedo a esas horas»).
     - "otra": no responde a las opciones: hace una pregunta, da datos del servicio, pide una
       hora o un día concretos que NO están en las opciones («mejor el jueves a las 10»), cancela,
