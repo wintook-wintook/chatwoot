@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_31_240000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_31_250000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2245,6 +2245,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_240000) do
     t.jsonb "adaptation_answers", default: {}, null: false
     t.datetime "archived_at"
     t.text "email_signature"
+    t.string "customer_display_name"
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["archived_at"], name: "index_tracking_templates_on_archived_at"

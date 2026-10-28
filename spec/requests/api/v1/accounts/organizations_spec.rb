@@ -88,6 +88,14 @@ RSpec.describe 'Organizations API' do
                                            { 'month' => '2026-10', 'prospects' => 1, 'customers' => 1 }])
   end
 
+  it 'la lista de contactos trae su organización con la etapa (columna de la tabla)' do
+    org = account.organizations.create!(name: 'Acme', stage: :customer)
+    contact.update!(organization: org)
+    get "/api/v1/accounts/#{account.id}/contacts", headers: admin.create_new_auth_token, as: :json
+    row = response.parsed_body['payload'].find { |c| c['id'] == contact.id }
+    expect(row['organization']).to eq('id' => org.id, 'name' => 'Acme', 'stage' => 'customer')
+  end
+
   it 'con «solo lo suyo» ve las que tiene a cargo o las de sus contactos; sin Clientes, nada' do
     give_role(agent, 'seller')
     suya = account.organizations.create!(name: 'Suya', owner: agent)

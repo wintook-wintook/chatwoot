@@ -1204,7 +1204,7 @@ class KnowledgeBaseResponseService
   def send_reply(text)
     text = ContactTrackings::ConversationVariables.settle(@tracking, @conversation, text) if @tracking
     content, attachments = ContactTrackings::AgentAttachments.resolve(@tracking&.tracking_template, text)
-    params = { content: content, private: false }
+    params = { content: content, private: false, ai_agent: ContactTrackings::AgentIdentity.for(@tracking&.tracking_template) }
     params[:attachments] = attachments if attachments.any?
     reply_message = Messages::MessageBuilder.new(bot_user, @conversation, params).perform
 

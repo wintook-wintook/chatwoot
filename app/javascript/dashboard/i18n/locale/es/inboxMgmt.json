@@ -245,9 +245,9 @@
           "ERROR": "This field is required"
         },
         "SEND_AGENT_NAME": {
-          "LABEL": "Send agent name",
-          "PLACEHOLDER": "Check to send agent name.",
-          "ERROR": "Check to send agent name."
+          "LABEL": "Enviar el nombre de quien atiende",
+          "PLACEHOLDER": "Marca para que cada mensaje salga con el nombre de quien lo envía.",
+          "ERROR": "Marca para que cada mensaje salga con el nombre de quien lo envía."
         },
         "IGNORE_HISTORY": {
           "LABEL": "Ignore history on connect",
