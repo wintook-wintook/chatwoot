@@ -24,10 +24,7 @@ class Api::V1::Accounts::Crm::CatalogBaseController < Api::V1::Accounts::Crm::Ba
 
   def destroy
     in_use = usage_count(@record)
-    if in_use.positive?
-      return render json: { message: "Lo usan #{in_use} organizaciones; desactívalo en lugar de borrarlo" },
-                    status: :unprocessable_entity
-    end
+    return render json: { message: in_use_message(in_use) }, status: :unprocessable_entity if in_use.positive?
 
     @record.destroy!
     head :ok
@@ -41,5 +38,14 @@ class Api::V1::Accounts::Crm::CatalogBaseController < Api::V1::Accounts::Crm::Ba
 
   def usage_count(record)
     Current.account.crm_organizations.where(usage_column => record.id).count
+  end
+
+  def in_use_message(count)
+    "#{used_by(count, 'organización', 'organizaciones')}; desactívalo en lugar de borrarlo"
+  end
+
+  # «Lo usa 1 organización» / «Lo usan 3 organizaciones».
+  def used_by(count, singular, plural)
+    count == 1 ? "Lo usa 1 #{singular}" : "Lo usan #{count} #{plural}"
   end
 end

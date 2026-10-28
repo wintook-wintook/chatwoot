@@ -160,7 +160,9 @@
         "COLLECTOR": "Cobradores",
         "SELLERS": "Vendedores",
         "PAYMENT_TERMS": "Condiciones de pago",
-        "CURRENCIES": "Monedas"
+        "CURRENCIES": "Monedas",
+        "COUNTRIES": "Países",
+        "STATES": "Estados"
       },
       "COLUMNS": {
         "NAME": "Nombre",
@@ -199,9 +201,20 @@
         "COLLECTOR": "cobrador",
         "SELLERS": "vendedor",
         "PAYMENT_TERMS": "condición de pago",
-        "CURRENCIES": "moneda"
+        "CURRENCIES": "moneda",
+        "COUNTRIES": "país",
+        "STATES": "estado"
       },
-      "ISO_PLACEHOLDER": "USD"
+      "ISO_PLACEHOLDER": "USD",
+      "COUNTRY": "País",
+      "ABBREVIATION": "Abreviatura",
+      "STATE_ABBR_PLACEHOLDER": "COA",
+      "COUNTRY_ABBR_PLACEHOLDER": "MX",
+      "COUNTRY_ISO_PLACEHOLDER": "MEX",
+      "STATE_HINT": "En México la abreviatura es la clave c_Estado del SAT (COA, JAL, NLE…).",
+      "STATES_COUNT": "{n} estados",
+      "CONFIRM_DELETE_COUNTRY": "Se eliminará «{name}» con todos sus estados y ciudades. No se puede si alguna dirección usa una de sus ciudades.",
+      "CONFIRM_DELETE_STATE": "Se eliminará «{name}» con sus ciudades. No se puede si alguna dirección usa una de ellas."
     }
   }
 }

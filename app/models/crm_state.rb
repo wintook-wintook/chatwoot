@@ -34,6 +34,13 @@ class CrmState < ApplicationRecord
   before_validation { self.account_id ||= country&.account_id }
 
   validates :name, length: { maximum: 50 }
+  validate :country_belongs_to_account
 
   scope :ordered, -> { order(:name) }
+
+  private
+
+  def country_belongs_to_account
+    errors.add(:country, 'no pertenece a la cuenta') if country && country.account_id != account_id
+  end
 end

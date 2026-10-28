@@ -123,6 +123,8 @@ Rails.application.routes.draw do
             resources :sellers, only: [:index, :create, :update, :destroy]
             resources :currencies, only: [:index, :create, :update, :destroy]
             resources :payment_terms, only: [:index, :create, :update, :destroy]
+            resources :countries, only: [:index, :create, :update, :destroy]
+            resources :states, only: [:index, :create, :update, :destroy]
             resources :cities, only: [:index, :create]
           end
           # Plan-Catalogo-Cotizaciones C1 — Ventas › Catálogo

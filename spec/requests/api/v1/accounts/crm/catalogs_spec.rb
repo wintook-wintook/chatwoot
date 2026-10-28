@@ -81,4 +81,58 @@ RSpec.describe 'CrmZeus Catalogs API' do
     get "#{base}/cities", params: { q: 'tor' }, headers: agent.create_new_auth_token, as: :json
     expect(response.parsed_body['cities'].pluck('name')).to eq(['Torreón'])
   end
+
+  describe 'países y estados' do
+    before { Crm::DefaultCatalogs.ensure!(account) }
+
+    let(:mexico) { account.crm_countries.find_by!(iso_code: 'MEX') }
+
+    it 'el Administrador da de alta un país y sus estados; el agente solo consulta' do
+      post "#{base}/countries", params: { country: { name: 'Guatemala', abbreviation: 'GT', iso_code: 'GTM' } },
+                                headers: agent.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:forbidden)
+
+      post "#{base}/countries", params: { country: { name: 'Guatemala', abbreviation: 'GT', iso_code: 'gtm' } },
+                                headers: admin.create_new_auth_token, as: :json
+      guatemala = response.parsed_body['item']
+      expect(guatemala).to include('name' => 'Guatemala', 'iso_code' => 'GTM', 'states' => [])
+
+      post "#{base}/states", params: { state: { name: 'Petén', abbreviation: 'PE', country_id: guatemala['id'] } },
+                             headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['item']).to include('country_name' => 'Guatemala')
+
+      get "#{base}/states", params: { country_id: mexico.id }, headers: agent.create_new_auth_token, as: :json
+      expect(response.parsed_body['items'].size).to eq(32)
+    end
+
+    it 'no deja crear un estado en el país de otra cuenta ni moverlo de país' do
+      other = create(:account)
+      Crm::DefaultCatalogs.ensure!(other)
+      post "#{base}/states", params: { state: { name: 'Ajeno', country_id: other.crm_countries.first.id } },
+                             headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+
+      coahuila = mexico.states.find_by!(abbreviation: 'COA')
+      guatemala = account.crm_countries.create!(name: 'Guatemala')
+      patch "#{base}/states/#{coahuila.id}", params: { state: { name: 'Coahuila de Zaragoza', country_id: guatemala.id } },
+                                             headers: admin.create_new_auth_token, as: :json
+      expect(coahuila.reload).to have_attributes(name: 'Coahuila de Zaragoza', country_id: mexico.id)
+    end
+
+    it 'no borra un país o estado cuyas ciudades usa una dirección; si no se usan, se van con sus ciudades' do
+      coahuila = mexico.states.find_by!(abbreviation: 'COA')
+      torreon = coahuila.cities.create!(name: 'Torreón')
+      org = account.crm_organizations.create!(legal_name: 'X', trade_name: 'X', home_address_attributes: { city_id: torreon.id })
+
+      delete "#{base}/states/#{coahuila.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['message']).to eq('Lo usa 1 dirección; no se puede borrar')
+      delete "#{base}/countries/#{mexico.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+
+      org.destroy!
+      delete "#{base}/states/#{coahuila.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      expect(CrmCity.exists?(torreon.id)).to be(false)
+    end
+  end
 end

@@ -160,7 +160,9 @@
         "COLLECTOR": "Collectors",
         "SELLERS": "Sellers",
         "PAYMENT_TERMS": "Payment terms",
-        "CURRENCIES": "Currencies"
+        "CURRENCIES": "Currencies",
+        "COUNTRIES": "Countries",
+        "STATES": "States"
       },
       "COLUMNS": {
         "NAME": "Name",
@@ -199,9 +201,20 @@
         "COLLECTOR": "collector",
         "SELLERS": "seller",
         "PAYMENT_TERMS": "payment term",
-        "CURRENCIES": "currency"
+        "CURRENCIES": "currency",
+        "COUNTRIES": "country",
+        "STATES": "state"
       },
-      "ISO_PLACEHOLDER": "USD"
+      "ISO_PLACEHOLDER": "USD",
+      "COUNTRY": "Country",
+      "ABBREVIATION": "Abbreviation",
+      "STATE_ABBR_PLACEHOLDER": "COA",
+      "COUNTRY_ABBR_PLACEHOLDER": "MX",
+      "COUNTRY_ISO_PLACEHOLDER": "MEX",
+      "STATE_HINT": "In Mexico the abbreviation is the SAT c_Estado key (COA, JAL, NLE…).",
+      "STATES_COUNT": "{n} states",
+      "CONFIRM_DELETE_COUNTRY": "«{name}» will be deleted with all its states and cities. Not allowed if an address uses one of its cities.",
+      "CONFIRM_DELETE_STATE": "«{name}» will be deleted with its cities. Not allowed if an address uses one of them."
     }
   }
 }

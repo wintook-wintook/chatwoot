@@ -30,7 +30,10 @@ class CrmCountry < ApplicationRecord
 
   has_many :states, class_name: 'CrmState', foreign_key: :country_id, inverse_of: :country, dependent: :destroy
 
+  before_validation { self.iso_code = iso_code.to_s.strip.upcase.presence }
+
   validates :name, length: { maximum: 50 }
+  validates :iso_code, format: { with: /\A[A-Z]{3}\z/ }, allow_nil: true
 
   scope :ordered, -> { order(is_default: :desc, name: :asc) }
 end

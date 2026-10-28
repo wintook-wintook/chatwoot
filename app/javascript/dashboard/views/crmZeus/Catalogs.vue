@@ -1,8 +1,9 @@
 <!--
   CrmZeus O2 — Catálogos de organizaciones (los cambia el Administrador; los demás
   solo los consultan): tipo de cliente, calificación, giro, origen, zona, cobrador,
-  vendedores (con su agente de Wintook), condiciones de pago (con plazos) y monedas.
-  Lo que ya usa alguna organización no se borra: se desactiva.
+  vendedores (con su agente de Wintook), condiciones de pago (con plazos), monedas,
+  países y estados (por país). Lo que ya usa alguna organización no se borra: se
+  desactiva; un país o estado cuyas ciudades usa una dirección no se puede borrar.
 -->
 <script>
 import { mapGetters } from 'vuex';
@@ -11,7 +12,8 @@ import CrmCatalogs from 'dashboard/api/crmCatalogs';
 import Spinner from 'shared/components/Spinner.vue';
 import { LOOKUP_KINDS, crmAccess, errorMessage } from './crmHelpers';
 
-// resource = ruta de la API · key = nombre del parámetro.
+// resource = ruta de la API · key = nombre del parámetro · hasActive / hasDefault =
+// si el catálogo tiene «activo» / «predeterminado» (países y estados no los tienen todos).
 const CATALOGS = [
   ...LOOKUP_KINDS.map(kind => ({
     id: kind,
@@ -22,6 +24,14 @@ const CATALOGS = [
   { id: 'sellers', resource: 'sellers', key: 'seller' },
   { id: 'payment_terms', resource: 'payment_terms', key: 'payment_term' },
   { id: 'currencies', resource: 'currencies', key: 'currency' },
+  { id: 'countries', resource: 'countries', key: 'country', hasActive: false },
+  {
+    id: 'states',
+    resource: 'states',
+    key: 'state',
+    hasActive: false,
+    hasDefault: false,
+  },
 ];
 
 // Rails borra un plazo existente con `_destroy` (accepts_nested_attributes_for).
@@ -54,6 +64,13 @@ const BLANKS = {
     is_default: false,
     active: true,
   }),
+  countries: () => ({
+    name: '',
+    abbreviation: '',
+    iso_code: '',
+    is_default: false,
+  }),
+  states: () => ({ name: '', abbreviation: '' }),
 };
 
 export default {
@@ -67,6 +84,8 @@ export default {
       loading: true,
       form: null,
       saving: false,
+      countries: [],
+      countryId: null,
     };
   },
   computed: {
@@ -79,6 +98,28 @@ export default {
     },
     resource() {
       return this.current.resource;
+    },
+    hasActive() {
+      return this.current.hasActive !== false;
+    },
+    hasDefault() {
+      return this.current.hasDefault !== false;
+    },
+    isGeo() {
+      return ['countries', 'states'].includes(this.resource);
+    },
+    deleteDescription() {
+      const keys = {
+        countries: 'CONFIRM_DELETE_COUNTRY',
+        states: 'CONFIRM_DELETE_STATE',
+      };
+      return this.$t(
+        `CRM_ZEUS.CATALOGS.${keys[this.resource] || 'CONFIRM_DELETE'}`,
+        {
+          name: this.form ? this.form.name : '',
+          catalog: this.label(this.current),
+        }
+      );
     },
     installmentsTotal() {
       if (!this.form || !this.form.installments) return 0;
@@ -104,10 +145,22 @@ export default {
       this.form = null;
       this.fetch();
     },
+    async fetchCountries() {
+      const { data } = await CrmCatalogs.list('countries');
+      this.countries = data.items;
+      if (!this.countries.some(country => country.id === this.countryId)) {
+        const preferred = this.countries.find(country => country.is_default);
+        this.countryId = (preferred || this.countries[0] || {}).id || null;
+      }
+    },
     async fetch() {
       this.loading = true;
       try {
         const params = this.current.kind ? { kind: this.current.kind } : {};
+        if (this.resource === 'states') {
+          await this.fetchCountries();
+          params.country_id = this.countryId;
+        }
         const { data } = await CrmCatalogs.list(this.resource, params);
         this.items = data.items;
       } catch (error) {
@@ -132,6 +185,16 @@ export default {
           .filter(Boolean)
           .join(' · ');
       }
+      if (this.resource === 'countries') {
+        return [
+          item.abbreviation,
+          item.iso_code,
+          this.$t('CRM_ZEUS.CATALOGS.STATES_COUNT', { n: item.states.length }),
+        ]
+          .filter(Boolean)
+          .join(' · ');
+      }
+      if (this.resource === 'states') return item.abbreviation || '';
       if (this.resource === 'payment_terms') {
         return (
           item.installments
@@ -170,9 +233,13 @@ export default {
         installments,
         credit_days: _,
         user_name: __,
+        states: ___,
+        country_name: ____,
+        country_id: _____,
         ...rest
       } = this.form;
       const data = { ...rest };
+      if (this.resource === 'states' && !id) data.country_id = this.countryId;
       if (this.current.kind && !id) data.kind = this.current.kind;
       if (this.resource === 'sellers') data.user_id = data.user_id || null;
       if (this.resource === 'currencies') {
@@ -267,6 +334,21 @@ export default {
       </nav>
 
       <div class="flex-1 overflow-auto">
+        <label
+          v-if="resource === 'states'"
+          class="flex items-center max-w-sm gap-2 mb-3 text-sm"
+        >
+          {{ $t('CRM_ZEUS.CATALOGS.COUNTRY') }}
+          <select v-model="countryId" class="!mb-0" @change="fetch">
+            <option
+              v-for="country in countries"
+              :key="country.id"
+              :value="country.id"
+            >
+              {{ country.name }}
+            </option>
+          </select>
+        </label>
         <Spinner v-if="loading" />
         <p
           v-else-if="!items.length"
@@ -285,10 +367,10 @@ export default {
               <th class="px-3 py-2 font-medium">
                 {{ $t('CRM_ZEUS.CATALOGS.COLUMNS.DETAIL') }}
               </th>
-              <th class="px-3 py-2 font-medium">
+              <th v-if="hasDefault" class="px-3 py-2 font-medium">
                 {{ $t('CRM_ZEUS.CATALOGS.COLUMNS.DEFAULT') }}
               </th>
-              <th class="px-3 py-2 font-medium">
+              <th v-if="hasActive" class="px-3 py-2 font-medium">
                 {{ $t('CRM_ZEUS.CATALOGS.COLUMNS.ACTIVE') }}
               </th>
             </tr>
@@ -300,7 +382,7 @@ export default {
               :class="{
                 'cursor-pointer hover:bg-slate-25 dark:hover:bg-slate-800':
                   isAdmin,
-                'opacity-60': !item.active,
+                'opacity-60': hasActive && !item.active,
               }"
               @click="openEdit(item)"
             >
@@ -312,7 +394,7 @@ export default {
               <td class="px-3 py-2 text-slate-600 dark:text-slate-300">
                 {{ detail(item) || '—' }}
               </td>
-              <td class="px-3 py-2">
+              <td v-if="hasDefault" class="px-3 py-2">
                 <fluent-icon
                   v-if="item.is_default"
                   icon="star"
@@ -320,7 +402,7 @@ export default {
                   class="text-amber-500"
                 />
               </td>
-              <td class="px-3 py-2">
+              <td v-if="hasActive" class="px-3 py-2">
                 <fluent-icon
                   v-if="item.active"
                   icon="checkmark"
@@ -354,8 +436,44 @@ export default {
         >
           <label>
             {{ $t('CRM_ZEUS.CATALOGS.COLUMNS.NAME') }}
-            <input v-model="form.name" type="text" maxlength="100" required />
+            <input
+              v-model="form.name"
+              type="text"
+              :maxlength="isGeo ? 50 : 100"
+              required
+            />
           </label>
+
+          <div v-if="isGeo" class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <label>
+              {{ $t('CRM_ZEUS.CATALOGS.ABBREVIATION') }}
+              <input
+                v-model="form.abbreviation"
+                type="text"
+                maxlength="10"
+                :placeholder="
+                  resource === 'states'
+                    ? $t('CRM_ZEUS.CATALOGS.STATE_ABBR_PLACEHOLDER')
+                    : $t('CRM_ZEUS.CATALOGS.COUNTRY_ABBR_PLACEHOLDER')
+                "
+              />
+            </label>
+            <label v-if="resource === 'countries'">
+              {{ $t('CRM_ZEUS.CATALOGS.ISO_CODE') }}
+              <input
+                v-model="form.iso_code"
+                type="text"
+                maxlength="3"
+                :placeholder="$t('CRM_ZEUS.CATALOGS.COUNTRY_ISO_PLACEHOLDER')"
+              />
+            </label>
+          </div>
+          <p
+            v-if="resource === 'states'"
+            class="mt-0 text-xs text-slate-500 dark:text-slate-400"
+          >
+            {{ $t('CRM_ZEUS.CATALOGS.STATE_HINT') }}
+          </p>
 
           <template v-if="resource === 'sellers'">
             <label>
@@ -505,11 +623,11 @@ export default {
             </div>
           </template>
 
-          <label class="flex items-center gap-2 mt-3">
+          <label v-if="hasDefault" class="flex items-center gap-2 mt-3">
             <input v-model="form.is_default" type="checkbox" class="!m-0" />
             {{ $t('CRM_ZEUS.CATALOGS.IS_DEFAULT') }}
           </label>
-          <label class="flex items-center gap-2">
+          <label v-if="hasActive" class="flex items-center gap-2">
             <input v-model="form.active" type="checkbox" class="!m-0" />
             {{ $t('CRM_ZEUS.CATALOGS.ACTIVE') }}
           </label>
@@ -545,12 +663,7 @@ export default {
     <woot-confirm-modal
       ref="deleteDialog"
       :title="$t('CRM_ZEUS.CATALOGS.DELETE_TITLE', { item: singular(current) })"
-      :description="
-        $t('CRM_ZEUS.CATALOGS.CONFIRM_DELETE', {
-          name: form ? form.name : '',
-          catalog: label(current),
-        })
-      "
+      :description="deleteDescription"
       :confirm-label="$t('CRM_ZEUS.DELETE')"
       :cancel-label="$t('CRM_ZEUS.CANCEL')"
     />

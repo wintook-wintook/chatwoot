@@ -27,6 +27,10 @@ module Crm::CatalogJson
         .merge(states: item.states.sort_by(&:name).map { |state| state.slice(:id, :name, :abbreviation) })
   end
 
+  def state(item)
+    item.slice(:id, :name, :abbreviation, :country_id).merge(country_name: item.country&.name)
+  end
+
   def city(item)
     { id: item.id, name: item.name, state_id: item.state_id, full_name: item.full_name }
   end
