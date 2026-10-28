@@ -1,7 +1,9 @@
 <!--
   Plan-Contratos R1 — alta y edición de un contrato (panel lateral, como el del
   catálogo). Al elegir el tipo se llenan sus valores por omisión (cada cuánto se
-  cobra, plazo, si se renueva solo) y aparecen sus datos propios.
+  cobra, plazo, si se renueva solo) y aparecen sus datos propios. Al ligar un producto
+  se marca «Usar el precio del producto»: el precio sigue al del catálogo; sin la
+  casilla, el contrato tiene su precio especial.
 -->
 <script>
 import { mapGetters } from 'vuex';
@@ -56,6 +58,9 @@ export default {
     selectedType() {
       return this.types.find(type => type.id === this.form.contract_type_id);
     },
+    selectedItem() {
+      return this.catalog.find(item => item.id === this.form.catalog_item_id);
+    },
     customFields() {
       return (this.selectedType && this.selectedType.custom_fields) || [];
     },
@@ -102,6 +107,7 @@ export default {
         title: '',
         quantity: 1,
         price: '',
+        price_from_catalog: false,
         currency: 'MXN',
         every: 1,
         unit: 'month',
@@ -147,11 +153,20 @@ export default {
     },
     chooseItem(id) {
       this.form.catalog_item_id = id || null;
-      const item = this.catalog.find(entry => entry.id === id);
-      if (!item) return;
+      const item = this.selectedItem;
+      if (!item) {
+        this.form.price_from_catalog = false;
+        return;
+      }
       if (!this.form.title) this.form.title = item.name;
-      if (this.form.price === '' || this.form.price === null)
-        this.form.price = item.price;
+      this.setPriceFromCatalog(true);
+    },
+    // Con la casilla se muestra el precio del producto (el servidor lo vuelve a tomar).
+    setPriceFromCatalog(value) {
+      this.form.price_from_catalog = value;
+      const item = this.selectedItem;
+      if (!value || !item) return;
+      this.form.price = item.price;
       this.form.currency = item.currency || this.form.currency;
     },
     setCustom(key, value) {
@@ -179,7 +194,11 @@ export default {
         notes: form.notes,
         custom_attributes: form.custom_attributes,
       };
-      if (this.showAmounts) data.price = orNull(form.price) || 0;
+      if (this.showAmounts) {
+        data.price = orNull(form.price) || 0;
+        data.price_from_catalog =
+          !!form.catalog_item_id && form.price_from_catalog;
+      }
       if (this.isEdit) data.status = form.status;
       else data.contact_id = this.chosenContactId;
       return data;
@@ -287,7 +306,13 @@ export default {
           </label>
           <label v-if="showAmounts">
             {{ $t('CONTRACTS.FORM.PRICE') }}
-            <input v-model="form.price" type="number" min="0" step="0.01" />
+            <input
+              v-model="form.price"
+              type="number"
+              min="0"
+              step="0.01"
+              :disabled="form.price_from_catalog"
+            />
           </label>
           <label v-if="showAmounts">
             {{ $t('CONTRACTS.FORM.CURRENCY') }}
@@ -296,9 +321,27 @@ export default {
               type="text"
               maxlength="3"
               class="uppercase"
+              :disabled="form.price_from_catalog"
             />
           </label>
         </div>
+        <label
+          v-if="showAmounts && form.catalog_item_id"
+          class="flex items-start gap-2 mb-3"
+        >
+          <input
+            type="checkbox"
+            class="!m-0 mt-1"
+            :checked="form.price_from_catalog"
+            @change="setPriceFromCatalog($event.target.checked)"
+          />
+          <span class="flex flex-col">
+            {{ $t('CONTRACTS.FORM.PRICE_FROM_CATALOG') }}
+            <span class="text-xs text-slate-500 dark:text-slate-400">{{
+              $t('CONTRACTS.FORM.PRICE_FROM_CATALOG_HINT')
+            }}</span>
+          </span>
+        </label>
 
         <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-3">
           <label>

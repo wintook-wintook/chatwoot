@@ -1603,7 +1603,7 @@
         "CURRENCY_INVALID": "Usa un código de 3 letras, p. ej. MXN",
         "REASONS_TITLE": "Motivos de cierre",
         "REASONS_DESC": "Lo que se elige al marcar una oportunidad como ganada, perdida, pospuesta o cancelada. Si un resultado tiene motivos activos, elegir uno es obligatorio. Desactiva un motivo en lugar de borrarlo para conservar la historia.",
-        "PAGE_TITLE": "Ventas",
+        "PAGE_TITLE": "Parámetros de ventas",
         "DISABLED": "La clase Ventas no está activa en esta cuenta.",
         "GROUPS": {
           "won": "Ganada",
@@ -2238,7 +2238,7 @@
       }
     },
     "TASK_PRIORITY": {
-      "PAGE_TITLE": "Tareas: prioridad de «Mi día»",
+      "PAGE_TITLE": "Puntaje de tareas: cómo se ordena «Mi día»",
       "INTRO": "«Mi día» ordena las tareas pendientes de cada consultor por un puntaje: cada situación suma los puntos de abajo. Más puntos = más arriba. Un peso negativo resta; en 0 no cuenta.",
       "GROUPS": {
         "DUE": "Vencimiento de la tarea",

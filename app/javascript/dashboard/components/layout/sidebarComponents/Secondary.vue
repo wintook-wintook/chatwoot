@@ -119,6 +119,7 @@ export default {
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
       currentRole: 'getCurrentRole',
       internalChatUnread: 'internalChat/getUnread',
+      notificationMetadata: 'notifications/getMeta',
     }),
     // feat/chat_interno_pulido: «Interno» no es una bandeja de clientes; va como
     // «Chat interno» arriba del menú (con lo que el agente tiene sin leer) y no
@@ -166,16 +167,23 @@ export default {
           );
         }
       );
-      return menuItemsFilteredByPermissions.filter(item => {
-        if (item.showOnlyOnCloud) {
-          return this.isOnChatwootCloud;
-        }
-        // @tickets_cases — permiso que decide el backend (p. ej. «Resumen del negocio»).
-        if (item.visibleGetter) {
-          return this.$store.getters[item.visibleGetter];
-        }
-        return true;
-      });
+      return menuItemsFilteredByPermissions
+        .filter(item => {
+          if (item.showOnlyOnCloud) {
+            return this.isOnChatwootCloud;
+          }
+          // @tickets_cases — permiso que decide el backend (p. ej. «Resumen del negocio»).
+          if (item.visibleGetter) {
+            return this.$store.getters[item.visibleGetter];
+          }
+          return true;
+        })
+        .map(item =>
+          // Inicio › Notificaciones: los avisos sin leer (solo si hay).
+          item.showUnreadNotifications && this.notificationMetadata.unreadCount
+            ? { ...item, count: this.notificationMetadata.unreadCount }
+            : item
+        );
     },
 
     hideAllInboxForAgents() {
@@ -526,8 +534,6 @@ export default {
     },
     // Nuevo método para tipos de proceso kanban
     showAddKanbanTypePopup() {
-      console.log('🔄 Secondary: showAddKanbanTypePopup llamado');
-      console.log('🔄 Secondary: Emitiendo evento addKanbanType');
       this.$emit('addKanbanType');
     },
 

@@ -31,6 +31,7 @@ describe('Menú v2', () => {
       'campaigns',
       'agentes',
       'reports',
+      'catalogos',
       'settings',
     ]);
   });
@@ -53,16 +54,12 @@ describe('Menú v2', () => {
     const ventas = menuFor(route('kanban_dashboard'));
     expect(ventas.extraSections).toBeUndefined();
     expect(ventas.menuItems.map(i => i.label)).toEqual([
-      'CONTACT_FUNNEL',
       'OPPORTUNITIES',
+      'CONTACT_FUNNEL',
       'QUOTES',
-      'CATALOG',
-      'WHATSAPP_TEMPLATES',
-      'LABELS',
-      'CANNED_RESPONSES',
     ]);
     // Oportunidades abre el tablero la primera vez y se marca en las tres vistas.
-    const opportunities = ventas.menuItems[1];
+    const opportunities = ventas.menuItems[0];
     expect(opportunities.toState).toContain('tickets/commercial/board');
     expect(opportunities.activeRoutes).toEqual(
       expect.arrayContaining([
@@ -97,8 +94,8 @@ describe('Menú v2', () => {
     rememberCaseView(ACCOUNT, 'support', 'board');
     const menus = getSidebarItemsV2(ACCOUNT, route('home')).secondaryMenu;
     const item = key => menus.find(m => m.parentNav === key).menuItems;
-    expect(item('ventas')[1].toState).toContain('tickets/commercial/metrics');
-    expect(item('servicio')).toHaveLength(7);
+    expect(item('ventas')[0].toState).toContain('tickets/commercial/metrics');
+    expect(item('servicio')).toHaveLength(5);
     expect(item('servicio')[0].toState).toContain('tickets/support/board');
     const primary = primaryMenuV2(ACCOUNT, route('home'));
     expect(primary.find(i => i.key === 'servicio').toState).toContain(
@@ -141,21 +138,68 @@ describe('Menú v2', () => {
     );
   });
 
-  it('plantillas, etiquetas y respuestas predefinidas pasan de Ajustes a Ventas', () => {
+  it('Catálogos: las listas que se usan en todo el sistema', () => {
+    const catalogos = menuFor(route('labels_list'));
+    expect(catalogos.parentNav).toBe('catalogos');
+    expect(catalogos.menuItems.map(i => i.label)).toEqual([
+      'LABELS',
+      'CUSTOM_ATTRIBUTES',
+      'CANNED_RESPONSES',
+      'WHATSAPP_TEMPLATES',
+      'CATALOG_PRODUCTS',
+      'TICKET_CLOSE_REASONS',
+      'CONTACT_FUNNELS',
+      'TICKET_TYPES',
+      'CATALOG_CLASSIFICATIONS',
+      'CATALOG_SLA_POLICIES',
+      'CONTRACT_TYPES',
+    ]);
     [
       'labels_list',
+      'attributes_list',
       'canned_list',
       'whatsapp_templates_index',
       'whatsapp_templates_wrapper',
-    ].forEach(name => expect(menuFor(route(name)).parentNav).toBe('ventas'));
-    const ajustes = menuFor(route('agent_list'));
-    const labels = ajustes.menuItems.map(i => i.label);
-    ['LABELS', 'CANNED_RESPONSES', 'WHATSAPP_TEMPLATES'].forEach(label =>
-      expect(labels).not.toContain(label)
+      'gestorTickets_catalog',
+      'gestorTickets_close_reasons',
+      'kanban_types_list',
+      'gestorTickets_types',
+      'gestorTickets_type_detail',
+      'gestorTickets_classification',
+      'gestorTickets_sla',
+      'contract_types',
+    ].forEach(name => expect(menuFor(route(name)).parentNav).toBe('catalogos'));
+    // Salen de Ajustes y de Casos y etapas.
+    const ajustes = menuFor(route('agent_list')).menuItems;
+    const labels = ajustes.map(i => i.label);
+    [
+      'LABELS',
+      'CANNED_RESPONSES',
+      'WHATSAPP_TEMPLATES',
+      'CUSTOM_ATTRIBUTES',
+      'CONTACT_FUNNELS',
+    ].forEach(label => expect(labels).not.toContain(label));
+    const grupo = ajustes.find(i => i.label === 'CASES_AND_STAGES');
+    expect(grupo.toStateName).toBe('gestorTickets_rules');
+    expect(grupo.children.map(c => c.toStateName)).not.toEqual(
+      expect.arrayContaining([
+        'gestorTickets_close_reasons',
+        'gestorTickets_types',
+        'gestorTickets_classification',
+        'gestorTickets_sla',
+      ])
+    );
+    // En el menú principal abre el primero; los demás son alternativas (por permiso).
+    const primary = primaryMenuV2(ACCOUNT, route('home')).find(
+      i => i.key === 'catalogos'
+    );
+    expect(primary.toStateName).toBe('labels_list');
+    expect(primary.alternatives.map(a => a.toStateName)).toEqual(
+      catalogos.menuItems.slice(1).map(i => i.toStateName)
     );
   });
 
-  it('Servicio: casos, clasificación, SLA, portales y Centro de ayuda', () => {
+  it('Servicio: casos, despacho, mantenimientos, portales y Centro de ayuda', () => {
     const servicio = menuFor(
       route('gestorTickets_class_list', { caseClass: 'support' })
     );
@@ -163,16 +207,12 @@ describe('Menú v2', () => {
       'gestorTickets_class_list',
       'gestorTickets_dispatch',
       'gestorTickets_maintenance',
-      'gestorTickets_classification',
-      'gestorTickets_sla',
       'gestorTickets_portals',
       'default_portal_articles',
     ]);
     [
       'gestorTickets_dispatch',
       'gestorTickets_maintenance',
-      'gestorTickets_classification',
-      'gestorTickets_sla',
       'gestorTickets_portals',
     ].forEach(name => expect(menuFor(route(name)).parentNav).toBe('servicio'));
     // Dentro del Centro de ayuda solo se marca Servicio (su menú es el suyo).
@@ -187,29 +227,33 @@ describe('Menú v2', () => {
     const grupo = menuFor(route('agent_list')).menuItems.find(
       i => i.label === 'CASES_AND_STAGES'
     );
-    expect(grupo.children.map(c => c.toStateName)).not.toEqual(
-      expect.arrayContaining(['gestorTickets_sla'])
+    expect(grupo.children.map(c => c.toStateName)).not.toContain(
+      'gestorTickets_portals'
     );
     expect(grupo.children.map(c => c.toStateName)).toContain(
-      'gestorTickets_types'
+      'gestorTickets_rules'
     );
   });
 
-  it('Agenda: Tareas (abre en Mi día), Calendario y Prioridad de Mi día', () => {
+  it('Agenda: Tareas (abre en Mi día), Ruta de campo y Calendario', () => {
     const agenda = menuFor(route('gestorTickets_tasks'));
     expect(agenda.menuItems.map(i => i.label)).toEqual([
       'TASKS_V2',
       'FIELD_ROUTE',
       'CALENDAR',
-      'MY_DAY_PRIORITY',
     ]);
     expect(agenda.menuItems[0].toState).toContain('tickets/tasks?tab=my_day');
+    // El puntaje de tareas de «Mi día» es una regla: va en Ajustes, como opción
+    // propia (fuera de Casos y etapas) y justo antes de ese grupo.
     expect(menuFor(route('gestorTickets_task_settings')).parentNav).toBe(
-      'agenda'
+      'settings'
     );
-    const grupo = menuFor(route('agent_list')).menuItems.find(
-      i => i.label === 'CASES_AND_STAGES'
+    const ajustes = menuFor(route('agent_list')).menuItems;
+    const labels = ajustes.map(i => i.label);
+    expect(labels.indexOf('TASK_SCORING')).toBe(
+      labels.indexOf('CASES_AND_STAGES') - 1
     );
+    const grupo = ajustes.find(i => i.label === 'CASES_AND_STAGES');
     expect(grupo.children.map(c => c.toStateName)).not.toContain(
       'gestorTickets_task_settings'
     );
@@ -219,20 +263,13 @@ describe('Menú v2', () => {
     );
   });
 
-  it('Clientes: contactos, contratos y atributos personalizados (salen de Ajustes)', () => {
-    const clientes = menuFor(route('attributes_list'));
+  it('Clientes: contactos y contratos', () => {
+    const clientes = menuFor(route('contracts_list'));
     expect(clientes.parentNav).toBe('contacts');
     expect(clientes.menuItems.map(i => i.label)).toEqual([
       'ALL_CONTACTS',
       'CONTRACTS',
-      'CUSTOM_ATTRIBUTES',
-      'CONTRACT_TYPES',
     ]);
-    expect(menuFor(route('contract_types')).parentNav).toBe('contacts');
-    const ajustes = menuFor(route('agent_list'));
-    expect(ajustes.menuItems.map(i => i.label)).not.toContain(
-      'CUSTOM_ATTRIBUTES'
-    );
   });
 
   it('Agentes IA y Campañas son dos áreas; lo de IA sale de Ajustes', () => {
@@ -245,9 +282,13 @@ describe('Menú v2', () => {
       'CHATGPT',
       'SITE_ANALYSIS',
       'AUTOMATION',
+      'MACROS',
     ]);
     [
       'automation_list',
+      'macros_wrapper',
+      'macros_new',
+      'macros_edit',
       'knowledge_sources_list',
       'tracking_templates_list',
     ].forEach(name => expect(menuFor(route(name)).parentNav).toBe('agentes'));
@@ -266,6 +307,7 @@ describe('Menú v2', () => {
     const ajustes = menuFor(route('agent_list')).menuItems.map(i => i.label);
     [
       'AUTOMATION',
+      'MACROS',
       'KNOWLEDGE_SOURCES',
       'CHATGPT',
       'TRACKING_TEMPLATES',
@@ -282,21 +324,21 @@ describe('Menú v2', () => {
     expect(servicio.menuItems[0].toState).toContain('tickets/support/list');
   });
 
-  it('la configuración de casos y los embudos quedan en Ajustes', () => {
+  it('la configuración de casos queda en Ajustes', () => {
     expect(menuFor(route('gestorTickets_rules')).parentNav).toBe('settings');
-    expect(menuFor(route('kanban_types_list')).parentNav).toBe('settings');
     const ajustes = menuFor(route('agent_list'));
-    expect(ajustes.menuItems.map(i => i.label)).toEqual(
-      expect.arrayContaining(['CONTACT_FUNNELS', 'CASES_AND_STAGES'])
-    );
+    expect(ajustes.menuItems.map(i => i.label)).toContain('CASES_AND_STAGES');
   });
 
-  it('Inicio no tiene opción de avisos', () => {
+  it('Inicio: Notificaciones (antes la campanita), Mi resumen y Mi negocio', () => {
     const inicio = menuFor(route('my_summary'));
     expect(inicio.menuItems.map(i => i.label)).toEqual([
+      'NOTIFICATIONS',
       'MY_SUMMARY',
       'MY_BUSINESS',
     ]);
+    expect(inicio.menuItems[0].toStateName).toBe('notifications_index');
+    expect(inicio.menuItems[0].showUnreadNotifications).toBe(true);
   });
 
   it('Inicio, Agenda, Agentes IA y Vista de bandeja', () => {

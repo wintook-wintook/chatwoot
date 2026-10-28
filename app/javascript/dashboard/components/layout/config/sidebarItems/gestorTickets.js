@@ -31,6 +31,7 @@ const gestorTickets = accountId => {
       'gestorTickets_portals',
       'gestorTickets_settings',
       'gestorTickets_commercial_settings',
+      'gestorTickets_close_reasons',
       'gestorTickets_task_settings',
       'gestorTickets_config',
       'gestorTickets_business_summary',
@@ -141,6 +142,14 @@ const gestorTickets = accountId => {
             translate: true,
             toState: url('commercial-settings'),
             toStateName: 'gestorTickets_commercial_settings',
+          },
+          {
+            id: 'ticket-close-reasons',
+            label: 'TICKET_CLOSE_REASONS',
+            icon: 'list',
+            translate: true,
+            toState: url('close-reasons'),
+            toStateName: 'gestorTickets_close_reasons',
           },
           {
             id: 'ticket-task-settings',
