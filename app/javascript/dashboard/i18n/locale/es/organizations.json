@@ -60,7 +60,12 @@
     },
     "EVENTS": {
       "STAGE": "Pasó de {from} a {to}",
-      "CREATED": "Se creó como {to}"
+      "CREATED": "Se creó como {to}",
+      "JOINED": "{contact} llegó desde {from}",
+      "JOINED_WITH": "{contact} llegó desde {from} con todo lo suyo",
+      "LEFT": "{contact} se fue a {to}; lo suyo se queda aquí con {replacement}",
+      "LEFT_WITH": "{contact} se fue a {to} y se llevó todo lo suyo",
+      "NOWHERE": "ninguna organización"
     },
     "FORM": {
       "NEW_TITLE": "Nueva organización",
@@ -90,7 +95,10 @@
       "CONVERT": "Convertir en prospecto",
       "LINK_EXISTING": "Ligar a una organización existente",
       "SEARCH": "Buscar organización",
-      "UNLINK": "Quitar de la organización"
+      "UNLINK": "Quitar de la organización",
+      "CHANGE": "Cambiar de organización",
+      "UNLINK_CONFIRM": "¿Quitarlo de {name}? Lo suyo que ya está en {name} se queda ahí.",
+      "OTHER_ORGANIZATION": "Pertenece a esta organización, no a la que tiene hoy el contacto"
     },
     "PICKER": {
       "LABEL": "Organización (opcional)",
@@ -176,6 +184,37 @@
         "NEW_CUSTOMERS": "Clientes nuevos",
         "CONVERSION": "Conversión a cliente",
         "AVG_DAYS": "Días de prospecto a cliente"
+      }
+    },
+    "REMOVE_CONTACT_CONFIRM": "¿Quitar a {name} de esta organización? Lo suyo que ya está aquí se queda aquí.",
+    "CHANGE": {
+      "TITLE": "Cambiar de organización a {name}",
+      "CURRENT": "Hoy está en {name}.",
+      "STEP_TARGET": "1. ¿A qué organización se va?",
+      "NO_ORGANIZATION": "A ninguna (se queda sin organización)",
+      "SAME": "Ya está en esa organización: elige otra.",
+      "STEP_MOVE": "2. ¿Pasar también lo suyo?",
+      "HAS": "En {name} tiene: {items}.",
+      "HAS_NOTHING": "En {name} no tiene oportunidades, casos, cotizaciones, contratos ni equipos.",
+      "MOVE_YES": "Sí, pasar todo a la nueva",
+      "MOVE_YES_HINT": "Para cuando estaba en la organización equivocada.",
+      "MOVE_NO": "No, que todo se quede",
+      "MOVE_NO_HINT": "Para cuando se cambió de empresa: lo suyo sigue siendo de {name}.",
+      "STEP_REPLACEMENT": "3. ¿Quién queda en {name} en lugar de {contact}?",
+      "CHOOSE": "Elige un contacto",
+      "NEW_CONTACT": "+ Dar de alta uno nuevo",
+      "NEW_NAME": "Nombre",
+      "NEW_EMAIL": "Correo",
+      "NEW_PHONE": "Teléfono",
+      "REPLACEMENT_HINT": "Esa persona queda como contacto de lo que sigue vivo (casos y oportunidades abiertos, cotizaciones sin decidir, contratos, equipos y mantenimientos). Lo cerrado se queda con quien lo atendió.",
+      "CONFIRM": "Cambiar de organización",
+      "DONE": "Organización cambiada",
+      "KINDS": {
+        "case_tickets": "oportunidades y casos: {count}",
+        "quotes": "cotizaciones: {count}",
+        "contracts": "contratos: {count}",
+        "customer_assets": "equipos: {count}",
+        "maintenance_plans": "mantenimientos: {count}"
       }
     }
   }

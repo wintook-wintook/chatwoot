@@ -2108,12 +2108,12 @@
     },
     "CREATE": {
       "TITLE": "New: {name}",
-      "CONTACT": "Customer",
-      "CONTACT_OPTIONAL": "Customer (optional)",
+      "CONTACT": "Contact",
+      "CONTACT_OPTIONAL": "Contact (optional)",
       "CONTACT_PLACEHOLDER": "Search by name, email or phone",
-      "CONTACT_REQUIRED": "An opportunity needs a customer.",
-      "CONTACT_INTERNAL_HINT": "Without a customer it is created as an internal case.",
-      "CHANGE_CONTACT": "Change customer",
+      "CONTACT_REQUIRED": "An opportunity needs a contact.",
+      "CONTACT_INTERNAL_HINT": "Without a contact it is created as an internal case.",
+      "CHANGE_CONTACT": "Change contact",
       "NO_CONTACTS": "No results",
       "SUCCESS": "Case {folio} created"
     },

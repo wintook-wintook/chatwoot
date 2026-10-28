@@ -75,7 +75,8 @@ class DataImport::ContactManager
 
   def assign_organization(params, contact)
     value = params.values_at(*ORGANIZATION_COLUMNS).find(&:present?).to_s.strip
-    return if value.blank?
+    # Solo a quien no tiene: cambiar de una a otra es «Cambiar de organización».
+    return if value.blank? || contact.organization_id.present?
 
     contact.organization = Organizations::CsvImport.find(@account, value) ||
                            @account.organizations.create!(name: value, stage: :prospect)

@@ -60,7 +60,12 @@
     },
     "EVENTS": {
       "STAGE": "Moved from {from} to {to}",
-      "CREATED": "Created as {to}"
+      "CREATED": "Created as {to}",
+      "JOINED": "{contact} arrived from {from}",
+      "JOINED_WITH": "{contact} arrived from {from} with all their records",
+      "LEFT": "{contact} moved to {to}; their records stay here with {replacement}",
+      "LEFT_WITH": "{contact} moved to {to} and took all their records",
+      "NOWHERE": "no organization"
     },
     "FORM": {
       "NEW_TITLE": "New organization",
@@ -90,7 +95,10 @@
       "CONVERT": "Turn into prospect",
       "LINK_EXISTING": "Link to an existing organization",
       "SEARCH": "Search organization",
-      "UNLINK": "Remove from the organization"
+      "UNLINK": "Remove from the organization",
+      "CHANGE": "Change organization",
+      "UNLINK_CONFIRM": "Remove from {name}? What is already in {name} stays there.",
+      "OTHER_ORGANIZATION": "Belongs to this organization, not the contact's current one"
     },
     "PICKER": {
       "LABEL": "Organization (optional)",
@@ -176,6 +184,37 @@
         "NEW_CUSTOMERS": "New customers",
         "CONVERSION": "Conversion to customer",
         "AVG_DAYS": "Days from prospect to customer"
+      }
+    },
+    "REMOVE_CONTACT_CONFIRM": "Remove {name} from this organization? What is already here stays here.",
+    "CHANGE": {
+      "TITLE": "Change {name}'s organization",
+      "CURRENT": "Currently in {name}.",
+      "STEP_TARGET": "1. Which organization are they moving to?",
+      "NO_ORGANIZATION": "None (no organization)",
+      "SAME": "They are already in that organization: choose another one.",
+      "STEP_MOVE": "2. Move their records too?",
+      "HAS": "In {name} they have: {items}.",
+      "HAS_NOTHING": "In {name} they have no opportunities, cases, quotes, contracts or equipment.",
+      "MOVE_YES": "Yes, move everything to the new one",
+      "MOVE_YES_HINT": "When they were in the wrong organization.",
+      "MOVE_NO": "No, keep everything here",
+      "MOVE_NO_HINT": "When they changed companies: their records still belong to {name}.",
+      "STEP_REPLACEMENT": "3. Who stays in {name} instead of {contact}?",
+      "CHOOSE": "Choose a contact",
+      "NEW_CONTACT": "+ Add a new one",
+      "NEW_NAME": "Name",
+      "NEW_EMAIL": "Email",
+      "NEW_PHONE": "Phone",
+      "REPLACEMENT_HINT": "That person becomes the contact of what is still running (open cases and opportunities, undecided quotes, contracts, equipment and maintenance). Closed items stay with whoever handled them.",
+      "CONFIRM": "Change organization",
+      "DONE": "Organization changed",
+      "KINDS": {
+        "case_tickets": "opportunities and cases: {count}",
+        "quotes": "quotes: {count}",
+        "contracts": "contracts: {count}",
+        "customer_assets": "equipment: {count}",
+        "maintenance_plans": "maintenance plans: {count}"
       }
     }
   }

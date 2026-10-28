@@ -8,6 +8,7 @@ import { mapGetters } from 'vuex';
 import ContractsAPI from 'dashboard/api/contracts';
 import ContractTypesAPI from 'dashboard/api/contractTypes';
 import Spinner from 'shared/components/Spinner.vue';
+import OrganizationTag from './OrganizationTag.vue'; // Plan-Organizaciones
 import ContractForm from 'dashboard/views/contracts/ContractForm.vue';
 import ContractActions from 'dashboard/views/contracts/ContractActions.vue';
 import {
@@ -20,7 +21,7 @@ import {
 
 export default {
   name: 'ContactContractsTab',
-  components: { Spinner, ContractForm, ContractActions },
+  components: { Spinner, ContractForm, ContractActions, OrganizationTag },
   props: {
     contactId: { type: Number, required: true },
   },
@@ -133,6 +134,10 @@ export default {
             >
               {{ contract.title }}
             </span>
+            <OrganizationTag
+              :organization-id="contract.organization_id"
+              :contact-id="contactId"
+            />
             <span
               class="px-2 py-0.5 text-xs font-medium rounded-full"
               :class="stateChipClass(contract.state)"
