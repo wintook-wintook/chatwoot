@@ -1,0 +1,260 @@
+# Diagrama del Agente IA — plan
+
+> Rama: `feat/diagrama_agente_ia` (desde `develop` 09f0278c, 28/10/2026)
+> Estado: **solo plan**. No se implementa nada hasta el OK por fase.
+> Pantalla: `/app/accounts/:id/tracking-dashboard/agents/:templateId` → Entrenamiento (el Asistente)
+
+---
+
+## 1. Para qué
+
+Hoy un agente se crea conversando (chat del Asistente) y se prueba con dos herramientas
+que **responden en texto y tablas**:
+
+- **Prueba en seco** (`DryRunModal` + `dry_run_service.rb`): ruta, fuente, fragmentos, etiqueta
+  y caso, pero **sin redactar la respuesta**.
+- **Pila de pruebas** (`TestBatteryModal` + `test_battery*.rb`): el motor real contesta en el
+  canal de pruebas y un juez califica. La ruta se **adivina** por la `#etiqueta` del texto.
+
+Lo que falta es **ver** el agente: qué forma tiene, por dónde pasó cada respuesta y en qué
+punto falla. Y que esa evidencia se pueda **llevar al chat de creación** para corregir con
+pruebas en la mano, no a ciegas.
+
+```
+   CREAR ──────────► PROBAR ──────────► VER ──────────► CORREGIR ─┐
+   (chat)            (pila)             (diagrama)      (chat +    │
+     ▲                                                  evidencia) │
+     └─────────────────── volver a correr la misma pila ◄──────────┘
+                          y comparar antes / después
+```
+
+---
+
+## 2. Lo que ya existe y se reutiliza
+
+| Pieza | Archivo | Aporta al diagrama |
+|---|---|---|
+| Estructura (Definición · Rutas · Secciones) | `assistant/AgentStructure.vue`, `contact_trackings/training_structure.rb`, `training_routes.rb` | Los **nodos** |
+| Comprobador | `ValidatorService`, `ValidationBadge.vue` | Puntos rojos sobre los nodos |
+| Prueba en seco | `assistant/dry_run_service.rb` | Camino barato (sin respuesta) |
+| Pila: escenarios | `assistant/test_battery_scenarios.rb` (por ruta / por regla) | «Generar pruebas» |
+| Pila: correr + juez | `assistant/test_battery.rb`, `test_battery_judge.rb`, `TestBatteryJob` | Veredicto por prueba |
+| Ir a una línea | `assistant/draftNavigation.js` | Clic en nodo → línea del Entrenamiento |
+| Revisar conversación real | `assistant/conversationReview.js`, `conversation_review.rb` | Pintar una conversación real |
+| Pestañas del editor | `Assistant.vue` → `draftTab`: `editor · configure · log · versions` | Aquí entra **Diagrama** |
+| Panel izquierdo | `Assistant.vue` → `leftPanel`: `chat · instructions · structure` | Aquí entra **Pruebas** |
+
+---
+
+## 3. El hueco: el motor no deja traza
+
+Cuando el agente contesta de verdad, **no queda registrado por dónde pasó**. Hoy:
+
+```
+KnowledgeBaseResponseService#perform
+   detect_directive ─► perform_<fuente> ─► generate_contextual_reply ─► with_branch_tag ─► send_reply
+        │                    │                       │                        │               │
+     (modo)            (fragmentos)            (modelo, tokens)          (#etiqueta)     Message ✗ sin traza
+```
+
+`test_battery_judge.rb#route_ok` busca la `#etiqueta` dentro del texto. Eso falla en tres casos:
+cuando el modelo pone otra etiqueta, cuando la ruta no tiene etiqueta y cuando se trata de una
+ruta de información.
+
+**F0 agrega la traza** en `send_reply`, que es donde ya se conocen `@route`, la directiva y el
+texto final:
+
+```ruby
+reply_message.content_attributes[:traza] = {
+  v: 1,
+  ruta:       { nombre:, etiqueta:, por_qué:, por_defecto: bool },   # router / clasificador
+  secciones:  ["Tono", "Precios"],                                   # las que entraron al prompt
+  fuente:     { modo: "google_doc", nombre: "Lista", ejecutada: true },
+  fragmentos: [{ titulo:, similitud: 0.82 }],                         # máx. 5, sin el texto completo
+  directivas: ["@crear_ticket", "{{catalogo}}"],                     # las que dispararon
+  etiqueta:   "#cotizar", etiqueta_repuesta: bool,                   # with_branch_tag
+  variables:  { cambiaron: ["nombre"] },
+  agenda:     bool,                                                  # calendar_took_over
+  modelo:, tokens:, ms:
+}
+```
+
+- La traza **no** guarda el texto del cliente ni los fragmentos completos: solo nombres,
+  títulos y números. Así no crece la BD ni se duplican datos sensibles.
+- La `v: 1` permite cambiar el formato sin romper los diagramas de conversaciones viejas.
+- ⚠ Verificar en F0 si los **seguimientos** (`ContactTrackingJob` y el analizador) contestan
+  por otro camino que no pasa por `send_reply`. Si es así, la traza también se escribe ahí.
+
+---
+
+## 4. Cómo se ve
+
+### 4.1 Distribución en pantalla
+
+```
+ Nombre del agente                                ← Agentes IA · Bandeja · v12
+ [ Entrenamiento ]  Ficha   Versiones
+┌─[Chat] [Pruebas] [Estructura]──────┐┌─ Editor · Configurar · Registro · Diagrama ───────────┐
+│                                    ││                                                       │
+│  PILA DE PRUEBAS (12)   ✅9  ❌3    ││                  (ver 4.2)                            │
+│  ┌──────────────────────────────┐  ││                                                       │
+│  │▸❌ ¿precio del kit?    Cotizar│  ││                                                       │
+│  │ ✅ quiero agendar      Agenda │  ││                                                       │
+│  │ ✅ no me llegó         Soporte│  ││                                                       │
+│  │ ❌ ¿eres un robot?     regla  │  ││                                                       │
+│  └──────────────────────────────┘  ││                                                       │
+│  [+ Generar]  [+ Escribir]         ││                                                       │
+│  [▶ Correr todo]   ~$0.04 · 12     ││                                                       │
+│  ──────────────────────────────    ││                                                       │
+│  Cliente: ¿precio del kit?         ││                                                       │
+│  Agente : Claro, el kit cuesta...  ││                                                       │
+│  ❌ Inventó un precio (regla 3)     ││                                                       │
+│  [💬 Llevar al chat] [↻ Volver a correr]                                                   │
+└────────────────────────────────────┘└───────────────────────────────────────────────────────┘
+```
+
+- **Pruebas** es un panel nuevo de la columna izquierda, igual que Chat y Estructura (uno a la vez).
+- **Diagrama** es una pestaña nueva del editor, después de Configurar.
+- La pila y la prueba en seco dejan de ser modales y se mueven a este panel.
+  Los modales actuales se reutilizan por dentro como componentes.
+
+### 4.2 El diagrama (SVG)
+
+Columnas de izquierda a derecha, una por etapa del motor:
+
+```
+ MENSAJE      RUTA              SECCIONES        FUENTE              ACCIONES        SALIDA
+┌───────┐   ┌──────────┐      ┌───────────┐    ┌──────────────┐    ┌────────────┐  ┌─────────┐
+│Cliente│═══│▣ Cotizar │══════│ Tono      │════│{{doc:Lista}} │════│@crear_ticket│══│#cotizar │══► Respuesta
+└───────┘ ╔═└──────────┘      │ Precios   │    │ 3 frag · 0.41⚠│   └────────────┘  └─────────┘
+          ║ ┌──────────┐      └───────────┘    └──────────────┘
+          ╟─│░ Soporte │──────── ░ ─────────────── ░ predefinidas
+          ║ └──────────┘
+          ║ ┌──────────┐
+          ╚─│░ Agenda  │──────── ░ ─────────────── ░ calendario
+            └──────────┘
+            ┌──────────┐
+            │◇ Por def.│  (ruta por defecto, línea punteada)
+            └──────────┘
+
+  ══ camino recorrido     ░ no tocado     ⚠ punto débil (similitud baja, fuente no ejecutada)
+  ● rojo = aviso del comprobador          ✕ = donde el juez dice que falló
+```
+
+**Interacción**
+
+| Acción | Resultado |
+|---|---|
+| Elegir una prueba en la pila | Se ilumina su camino; el resto queda tenue |
+| Clic en un nodo | Ficha lateral: por qué se eligió la ruta, los fragmentos con su similitud, la línea del Entrenamiento |
+| «Ir a la línea» en la ficha | Salta al Editor en esa línea (`draftNavigation`) |
+| Ninguna prueba elegida | **Mapa de calor** (4.3) |
+| Pegar el link de una conversación en el chat | Se pinta su traza real (desde F0 en adelante) |
+
+### 4.3 Mapa de calor de la pila
+
+```
+                ┌──────────────┐
+          ┌─────│ Cotizar  7 ❌2│  ← rojo: aquí está el problema
+ Cliente ─┤     └──────────────┘
+   12     │     ┌──────────────┐
+          ├─────│ Soporte  4 ✅ │
+          │     └──────────────┘
+          │     ┌──────────────┐
+          └─────│ Agenda   0    │  ← gris: ninguna prueba la toca → [+ Generar para Agenda]
+                └──────────────┘
+```
+
+El grosor de cada línea es proporcional al número de pruebas que pasaron por ahí.
+
+### 4.4 Antes / después
+
+Tras corregir y volver a correr la **misma** pila:
+
+```
+ Prueba «¿precio del kit?»
+   antes (v12)  Cliente ══► Soporte ══► predefinidas ══► #soporte      ❌
+   ahora (v13)  Cliente ══► Cotizar ══► {{doc:Lista}} ══► #cotizar     ✅
+
+ Pila: 9/12 ✅ → 11/12 ✅    ⚠ 1 prueba que antes pasaba ahora falla: «quiero agendar»
+```
+
+---
+
+## 5. Evidencia → chat de creación
+
+«💬 Llevar al chat» inserta en el chat del Asistente una tarjeta con la prueba:
+
+```
+┌ Evidencia · prueba 1 de la pila (v12) ─────────────────┐
+│ Cliente: ¿precio del kit?                               │
+│ Agente : Claro, el kit cuesta $450...                   │
+│ Camino : Cotizar → {{doc:Lista}} (0.41 ⚠) → #cotizar    │
+│ Juez   : ❌ Inventó un precio que no está en la Lista     │
+└─────────────────────────────────────────────────────────┘
+ ¿Qué cambiarías para que no pase?
+```
+
+- Al Asistente le llega la traza completa como contexto. Propone el cambio con el mismo
+  mecanismo que ya usa para editar el Entrenamiento.
+- Después de aplicarlo, el chat ofrece «↻ Volver a correr la pila» y muestra el antes y
+  después (4.4).
+- Se puede llevar **varias** pruebas a la vez (por ejemplo, todas las rojas de Cotizar).
+
+---
+
+## 6. Qué más lo hace eficiente
+
+1. **La pila se guarda con el agente**: hoy vive en la caché (`Rails.cache`) y se pierde. Se
+   guarda en BD por agente y se vuelve a correr después de cada «Publicar cambios», para
+   detectar si el cambio rompió algo.
+2. **Comparar versiones**: correr la misma pila contra la v11 y la v12.
+3. **Pruebas de varios turnos**: un diálogo corto (2–4 mensajes del cliente) para probar agenda,
+   variables y `@crear_ticket`, que dependen de lo que ya se habló.
+4. **Costo visible**: tokens y $ por prueba y por pila, antes de correr («~$0.04») y después.
+5. **Seco o vivo por prueba**: la prueba en seco es barata y da solo el camino; la prueba en
+   vivo da el camino y la respuesta. El diagrama dibuja las dos y marca cuál fue.
+6. **Exportar evidencia**: el diagrama en SVG/PNG y la pila en .md (como en Grúas).
+7. **Generar faltantes**: en el mapa de calor, «+ Generar para Agenda» sobre cualquier nodo gris.
+
+---
+
+## 7. Fases
+
+| Fase | Qué | Archivos principales | Se puede probar así |
+|---|---|---|---|
+| **F0** | Traza en el motor (`content_attributes.traza`) + spec | `knowledge_base_response_service.rb` (`send_reply`, `with_branch_tag`), router/clasificador, ¿camino de seguimientos? | Conversación en el canal de pruebas → la traza aparece en el mensaje |
+| **F1** | Diagrama **sin iluminar** en la pestaña Diagrama (nodos desde la Estructura + avisos del comprobador) | `assistant/AgentDiagram.vue` (nuevo), `agentDiagramLayout.js` (nuevo, función pura + spec), `Assistant.vue` | Abrir agente #12877 → se ve su forma |
+| **F2** | Panel **Pruebas** a la izquierda (pila + escribir una) y una prueba ilumina su camino | `assistant/TestsPanel.vue` (nuevo), reutiliza `TestBatteryModal`/`DryRunModal` por dentro, juez usa la traza en vez de la `#etiqueta` | Correr 1 prueba → se pinta |
+| **F3** | Pila guardada en BD + mapa de calor + generar faltantes | migración `assistant_test_runs` (o similar), `test_battery.rb` | Correr la pila 2 veces, ver las dos |
+| **F4** | Llevar al chat + volver a correr + antes/después | `Assistant.vue` (chat), servicio del Asistente | Corregir 1 falla desde el chat |
+| **F5** | Varios turnos, comparar versiones, costo, exportar | `test_battery_scenarios.rb`, `AgentVersions` | — |
+
+Al cerrar cada fase se registra en este .md qué se hizo, cómo funciona, su pila de pruebas
+y cómo pedírselo al Asistente.
+
+---
+
+## 8. Reglas técnicas
+
+- **SVG dibujado a mano en Vue**, sin librería nueva. El layout es una función pura
+  (`agentDiagramLayout.js`) con su spec. Los colores salen del tema (incluido modo oscuro)
+  y de los 10 temas del dashboard.
+- Panel, ficha lateral, botones y tabla con **componentes nativos de Chatwoot**.
+- `<template>` **sin `?.` ni `??`** (webpack 4): todo va a `computed`; verificar «Compiled successfully».
+- Textos visibles en español de México con tú, y «ruta», nunca «rama».
+- Las pruebas en vivo solo corren en el canal de pruebas (API sin webhook); nunca llegan a un cliente.
+- RSpec con `POSTGRES_DATABASE=chatwoot_test`.
+
+---
+
+## 9. Decisiones abiertas
+
+| # | Pregunta | Recomendación |
+|---|---|---|
+| **D1** | ¿El diagrama aparece solo con Pruebas abierto, o siempre (sin iluminar) mientras se crea? | **Siempre**, tenue; se ilumina con pruebas. Ver la forma ya ayuda a encontrar huecos |
+| **D2** | ¿La traza se guarda en **todas** las conversaciones o solo en el canal de pruebas? | **Todas**: así «Revisar conversación real» también se pinta. Es pequeña (sin textos) |
+| **D3** | ¿Las pruebas son de un solo mensaje o también de varios turnos? | Un mensaje en F2–F4; varios turnos en F5 |
+| **D4** | ¿La pila y la prueba en seco dejan de ser modales y se mueven al panel Pruebas? | **Sí**; los modales quedan solo como componentes internos |
+| **D5** | ¿Volver a correr la pila automáticamente al «Publicar cambios»? Cuesta tokens | Preguntar al publicar, con el costo estimado; nunca en automático |
+| **D6** | Quién puede correr pruebas en vivo (costo): ¿solo admin o también el agente humano? | Solo admin, igual que el Entrenamiento |
