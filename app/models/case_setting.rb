@@ -9,6 +9,7 @@
 #  default_currency           :string(3)        default("MXN"), not null
 #  default_tax_percent        :decimal(5, 2)    default(0.0), not null
 #  itil_enabled               :boolean          default(FALSE), not null
+#  organization_rules         :jsonb            not null
 #  quotes_require_opportunity :boolean          default(FALSE), not null
 #  reopen_on_customer_reply   :boolean          default(TRUE), not null
 #  reopen_window_days         :integer          default(30), not null
@@ -43,6 +44,12 @@ class CaseSetting < ApplicationRecord
   validate :task_priority_weights_in_range
   # «Resumen del negocio» — agentes autorizados (los administradores siempre lo ven).
   before_validation :normalize_business_summary_user_ids
+
+  # Plan-Organizaciones O3 — solo las reglas conocidas, en verdadero/falso.
+  def organization_rules=(value)
+    rules = value.respond_to?(:to_h) ? value.to_h.stringify_keys : {}
+    super(rules.slice(*Organizations::StageRules::RULES).transform_values { |v| ActiveModel::Type::Boolean.new.cast(v) == true })
+  end
 
   def self.for_account(account)
     account.case_setting || account.create_case_setting!

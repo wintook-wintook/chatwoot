@@ -379,6 +379,8 @@
     "ACCESS_ROLES": "Roles",
     "CONTRACTS": "Contratos",
     "CONTRACT_TYPES": "Tipos de contrato",
+    "ORGANIZATIONS": "Organizaciones",
+    "CLIENTS_DASHBOARD": "Dashboard de clientes",
     "CATALOG": "Catálogo",
     "FIELD_ROUTE": "Mi ruta en campo",
     "DISPATCH": "Despacho",

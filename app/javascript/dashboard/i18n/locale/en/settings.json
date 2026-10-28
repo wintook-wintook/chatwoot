@@ -379,6 +379,8 @@
     "ACCESS_ROLES": "Roles",
     "CONTRACTS": "Contracts",
     "CONTRACT_TYPES": "Contract types",
+    "ORGANIZATIONS": "Organizations",
+    "CLIENTS_DASHBOARD": "Customers dashboard",
     "CATALOG": "Catalog",
     "FIELD_ROUTE": "My field route",
     "DISPATCH": "Dispatch",

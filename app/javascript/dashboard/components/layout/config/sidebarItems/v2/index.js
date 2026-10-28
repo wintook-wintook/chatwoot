@@ -490,6 +490,7 @@ const informes = (accountId, route) => {
   });
   return {
     ...base,
+    routes: [...base.routes, 'organizations_dashboard'],
     menuItems: [
       byName('business_summary_reports'),
       dashboard(
@@ -502,6 +503,15 @@ const informes = (accountId, route) => {
         CLASS_VIEW_ROUTES.metrics,
         'SERVICE_DASHBOARD'
       ),
+      // Plan-Organizaciones O5 — prospectos y clientes.
+      {
+        ...dashboard(
+          'organizations-dashboard',
+          'organizations_dashboard',
+          'CLIENTS_DASHBOARD'
+        ),
+        featureFlag: undefined,
+      },
       {
         ...dashboard(
           'tracking-dashboard/metrics',
@@ -536,15 +546,28 @@ const informes = (accountId, route) => {
   };
 };
 
-// Clientes = lo de Contactos + los contratos (sus tipos y los atributos
-// personalizados están en Catálogos).
+// Clientes = lo de Contactos + las organizaciones (prospectos y clientes) + los
+// contratos (sus tipos y los atributos personalizados están en Catálogos).
 const clientes = accountId => {
   const base = contacts(accountId);
   return {
     ...base,
-    routes: [...base.routes, 'contracts_list'],
+    routes: [
+      ...base.routes,
+      'organizations_list',
+      'organization_detail',
+      'contracts_list',
+    ],
     menuItems: [
       ...base.menuItems,
+      // Plan-Organizaciones O1 — prospectos y clientes con sus contactos
+      {
+        icon: 'building-bank',
+        label: 'ORGANIZATIONS',
+        toState: frontendURL(`accounts/${accountId}/organizations`),
+        toStateName: 'organizations_list',
+        activeRoutes: ['organization_detail'],
+      },
       // Plan-Contratos R1 — servicios recurrentes de los clientes
       {
         icon: 'signature',

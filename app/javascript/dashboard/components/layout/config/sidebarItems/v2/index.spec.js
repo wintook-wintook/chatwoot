@@ -110,14 +110,16 @@ describe('Menú v2', () => {
       'BUSINESS_SUMMARY',
       'SALES_DASHBOARD',
       'SERVICE_DASHBOARD',
+      'CLIENTS_DASHBOARD',
       'CAMPAIGNS_DASHBOARD_REPORT',
       'REPORTS_GROUP_CONVERSATIONS',
     ]);
+    expect(menuFor(route('organizations_dashboard')).parentNav).toBe('reports');
     expect(informes.menuItems[1].toState).toContain(
       'tickets/commercial/metrics'
     );
     expect(informes.menuItems[2].toState).toContain('tickets/support/metrics');
-    const grupo = informes.menuItems[4];
+    const grupo = informes.menuItems[5];
     expect(grupo.collapsible).toBe(true);
     expect(grupo.children.map(c => c.label)).toEqual([
       'REPORTS_LIVE',
@@ -263,13 +265,17 @@ describe('Menú v2', () => {
     );
   });
 
-  it('Clientes: contactos y contratos', () => {
+  it('Clientes: contactos, organizaciones y contratos', () => {
     const clientes = menuFor(route('contracts_list'));
     expect(clientes.parentNav).toBe('contacts');
     expect(clientes.menuItems.map(i => i.label)).toEqual([
       'ALL_CONTACTS',
+      'ORGANIZATIONS',
       'CONTRACTS',
     ]);
+    ['organizations_list', 'organization_detail'].forEach(name =>
+      expect(menuFor(route(name)).parentNav).toBe('contacts')
+    );
   });
 
   it('Agentes IA y Campañas son dos áreas; lo de IA sale de Ajustes', () => {

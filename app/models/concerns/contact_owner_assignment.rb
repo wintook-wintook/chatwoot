@@ -53,7 +53,7 @@ module ContactOwnerAssignment
   end
 
   def contact_owner_id_for_inbox
-    owner_id = contact&.owner_id
+    owner_id = contact&.effective_owner_id # el suyo o el de su organización (Plan-Organizaciones O3)
     return if owner_id.nil?
 
     owner_id if inbox.inbox_members.exists?(user_id: owner_id)

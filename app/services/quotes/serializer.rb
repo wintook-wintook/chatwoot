@@ -40,6 +40,7 @@ class Quotes::Serializer
   def links
     q = @quote
     { contact: q.contact && { id: q.contact.id, name: q.contact.name },
+      organization: q.organization && { id: q.organization.id, name: q.organization.name }, # Plan-Organizaciones O2
       assignee: q.assignee && { id: q.assignee.id, name: q.assignee.name },
       opportunity: ticket_ref(q.opportunity), origin_ticket: ticket_ref(q.origin_ticket),
       outcome_reason: q.outcome_reason && { id: q.outcome_reason.id, label: q.outcome_reason.label } }

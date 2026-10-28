@@ -102,7 +102,7 @@ class Cases::RuleEngineService
     case type
     when 'assign_agent'
       return if @skip_assignment # asignación manual ya definida → no reasignar
-      return if @ticket.contact&.owner_id # responsable fijo del contacto → gana sobre las reglas
+      return if @ticket.contact&.effective_owner_id # responsable fijo (del contacto o su organización) → gana sobre las reglas
 
       user = find_user(value)
       @ticket.update!(assignee: user, assignee_type: :agent) if user

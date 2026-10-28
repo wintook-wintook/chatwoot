@@ -14,7 +14,7 @@ class Api::V1::Accounts::ContractsController < Api::V1::Accounts::BaseController
   require 'csv'
 
   PER_PAGE = 50
-  FIELDS = %i[contact_id contract_type_id catalog_item_id customer_asset_id assignee_id title quantity price currency
+  FIELDS = %i[contact_id organization_id contract_type_id catalog_item_id customer_asset_id assignee_id title quantity price currency
               price_from_catalog every unit starts_on next_charge_on term_months auto_renew status notes].freeze
 
   before_action :check_read_access
@@ -108,6 +108,7 @@ class Api::V1::Accounts::ContractsController < Api::V1::Accounts::BaseController
   def filtered_without_state
     contracts = scope
     contracts = contracts.where(contact_id: params[:contact_id]) if params[:contact_id].present?
+    contracts = contracts.where(organization_id: params[:organization_id]) if params[:organization_id].present?
     contracts = contracts.where(contract_type_id: params[:contract_type_id]) if params[:contract_type_id].present?
     params[:q].present? ? search(contracts, params[:q]) : contracts
   end
@@ -151,7 +152,7 @@ class Api::V1::Accounts::ContractsController < Api::V1::Accounts::BaseController
   end
 
   def contract_json(contract)
-    contract.slice(:id, :contact_id, :contract_type_id, :catalog_item_id, :customer_asset_id, :assignee_id, :title,
+    contract.slice(:id, :contact_id, :organization_id, :contract_type_id, :catalog_item_id, :customer_asset_id, :assignee_id, :title,
                    :currency, :every, :unit, :starts_on, :next_charge_on, :last_paid_on, :term_months, :ends_on,
                    :auto_renew, :status, :cancelled_on, :cancel_reason, :custom_attributes, :notes,
                    :price_from_catalog)

@@ -1,9 +1,11 @@
 <!--
   Página del contacto › columna «Datos»: lo fijo del contacto y sus campos
-  particulares (atributos personalizados) en un solo bloque, un renglón cada uno.
+  particulares (atributos personalizados) en un solo bloque, un renglón cada uno. Arriba,
+  su organización y etapa (Plan-Organizaciones O1).
 -->
 <script>
 import CustomAttributes from 'dashboard/routes/dashboard/conversation/customAttributes/CustomAttributes.vue';
+import ContactOrganization from './ContactOrganization.vue';
 
 const formatDate = unix =>
   unix
@@ -16,7 +18,7 @@ const formatDate = unix =>
 
 export default {
   name: 'ContactDataColumn',
-  components: { CustomAttributes },
+  components: { CustomAttributes, ContactOrganization },
   props: {
     contact: { type: Object, required: true },
   },
@@ -46,6 +48,7 @@ export default {
 
 <template>
   <div class="flex flex-col gap-6 p-4">
+    <ContactOrganization :contact="contact" />
     <section>
       <h3
         class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400"

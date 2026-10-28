@@ -82,6 +82,7 @@
 #  kb_article_id              :bigint
 #  locked_by_id               :bigint
 #  maintenance_plan_id        :bigint
+#  organization_id            :bigint
 #  outcome_reason_id          :bigint
 #  postpone_reason_id         :bigint
 #  requester_id               :bigint
@@ -110,6 +111,7 @@
 #  index_case_tickets_on_locked_by_id                 (locked_by_id)
 #  index_case_tickets_on_maintenance_plan_id          (maintenance_plan_id)
 #  index_case_tickets_on_metadata                     (metadata) USING gin
+#  index_case_tickets_on_organization_id              (organization_id)
 #  index_case_tickets_on_postponed_until              (postponed_until) WHERE (postponed_until IS NOT NULL)
 #  index_case_tickets_on_project_due_on               (project_due_on) WHERE (project_due_on IS NOT NULL)
 #  index_case_tickets_on_report_token                 (report_token) UNIQUE
@@ -124,6 +126,7 @@
 #  fk_rails_...  (customer_asset_id => customer_assets.id) ON DELETE => nullify
 #  fk_rails_...  (locked_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (maintenance_plan_id => maintenance_plans.id) ON DELETE => nullify
+#  fk_rails_...  (organization_id => organizations.id) ON DELETE => nullify
 #  fk_rails_...  (outcome_reason_id => case_outcome_reasons.id) ON DELETE => nullify
 #  fk_rails_...  (postpone_reason_id => case_outcome_reasons.id) ON DELETE => nullify
 #  fk_rails_...  (requester_id => users.id) ON DELETE => nullify
@@ -213,6 +216,11 @@ class CaseTicket < ApplicationRecord
 
   belongs_to :account
   belongs_to :contact,           optional: true # @tickets_cases Fase C — nil en tickets internos
+  include OrganizationLinked # Plan-Organizaciones O2
+  # Plan-Organizaciones O3 — oportunidad nueva → prospecto; ganada → cliente (si la regla está encendida).
+  after_create_commit -> { Organizations::StageRules.call(:prospect_on_opportunity, self) }, if: :commercial?
+  after_update_commit -> { Organizations::StageRules.call(:customer_on_won, self) },
+                      if: -> { saved_change_to_outcome? && outcome_won? }
   # Plan-Catalogo-Cotizaciones — cotizaciones de la oportunidad y las que salieron del caso.
   has_many :quotes, foreign_key: :opportunity_id, dependent: :nullify, inverse_of: :opportunity
   has_many :origin_quotes, class_name: 'Quote', foreign_key: :origin_ticket_id, dependent: :nullify,
@@ -1026,9 +1034,9 @@ class CaseTicket < ApplicationRecord
   # Moneda en mayúsculas; al crear una oportunidad, moneda de la cuenta y la
   # probabilidad de la columna donde nace.
   def assign_contact_owner
-    return if assignee_id.present? || contact&.owner_id.nil?
+    return if assignee_id.present? || contact&.effective_owner_id.nil?
 
-    self.assignee_id = contact.owner_id
+    self.assignee_id = contact.effective_owner_id
     self.assignee_type = :agent
   end
 
