@@ -26,6 +26,14 @@ RSpec.describe Channel::Telegram do
       end
     end
 
+    context 'when text contains bullet and numbered lists' do
+      let(:text) { "Te comparto:\n- Opción uno\n- **Opción dos**\n\nPasos:\n3. Entra\n4. Paga" }
+
+      it 'keeps the dashes and numbers as written' do
+        expect(subject).to eq("Te comparto:\n- Opción uno\n- <strong>Opción dos</strong>\n\nPasos:\n3. Entra\n4. Paga")
+      end
+    end
+
     context 'when text contains broken markdown' do
       let(:text) { 'This is a **broken markdown with <b>HTML</b> tags.' }
 

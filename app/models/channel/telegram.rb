@@ -135,12 +135,28 @@ class Channel::Telegram < ApplicationRecord
     # Remove opening and closing <p> tags
     html_with_breaks = html_with_breaks.gsub(%r{</?p>}, '')
 
+    # Telegram no tiene <ul>/<ol>: sin esto, las listas perdían el «- » y el «1.»
+    html_with_breaks = restore_list_markers(html_with_breaks)
+
     # Sanitize to only allowed tags
     stripped_html = Rails::HTML5::SafeListSanitizer.new.sanitize(html_with_breaks, tags: %w[b strong i em u ins s strike del a code pre blockquote],
                                                                                    attributes: %w[href])
 
     # Convert <br /> tags to newlines for Telegram
     stripped_html.gsub(%r{<br\s*/?>}, "\n")
+  end
+
+  LIST_RE = %r{\n?<(ul|ol)(?: start="(\d+)")?>\n(.*?)</\1>\n?}m
+
+  def restore_list_markers(html)
+    html.gsub(LIST_RE) do
+      tipo = Regexp.last_match(1)
+      numero = Regexp.last_match(2).to_i.clamp(1..) - 1
+      items = Regexp.last_match(3).scan(%r{<li>(.*?)</li>}m).flatten
+      lineas = items.map { |item| tipo == 'ul' ? "- #{item.strip}" : "#{numero += 1}. #{item.strip}" }
+      # Lo que sigue a una lista es otro párrafo (si no, CommonMarker lo deja dentro del último <li>).
+      "\n#{lineas.join("\n")}\n\n"
+    end.strip
   end
 
   def message_request(chat_id, text, reply_markup = nil, reply_to_message_id = nil)
