@@ -101,7 +101,7 @@ export default {
       <span class="sr-only">{{ name }}</span>
       <span
         v-if="count"
-        class="text-black-900 bg-yellow-500 absolute -top-1 -right-1"
+        class="text-black-900 bg-yellow-300 absolute -top-0.5 -right-1 text-xxs min-w-[1rem] rounded-full text-center"
       >
         {{ count }}
       </span>

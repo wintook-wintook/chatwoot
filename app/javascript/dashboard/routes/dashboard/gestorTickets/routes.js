@@ -180,6 +180,14 @@ export const routes = [
     component: () =>
       import('../../../views/gestorTickets/CommercialConfig.vue'),
   },
+  // Catálogos › Motivos de cierre (salió de la página de arriba).
+  {
+    path: frontendURL('accounts/:accountId/tickets/close-reasons'),
+    name: 'gestorTickets_close_reasons',
+    meta: { permissions: ['administrator'] },
+    component: () =>
+      import('../../../views/gestorTickets/OutcomeReasonsConfig.vue'),
+  },
   // Plan-Bandeja-Prioridad F3 — pesos del puntaje de «Mi día».
   {
     path: frontendURL('accounts/:accountId/tickets/task-settings'),

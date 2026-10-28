@@ -1592,7 +1592,7 @@
         "CURRENCY_INVALID": "Use a 3-letter code, e.g. USD",
         "REASONS_TITLE": "Closing reasons",
         "REASONS_DESC": "What is chosen when marking an opportunity as won, lost, postponed or cancelled. If an outcome has active reasons, choosing one is required. Deactivate a reason instead of deleting it to keep the history.",
-        "PAGE_TITLE": "Sales",
+        "PAGE_TITLE": "Sales settings",
         "DISABLED": "The Sales class is not active in this account.",
         "GROUPS": {
           "won": "Won",
@@ -2227,7 +2227,7 @@
       }
     },
     "TASK_PRIORITY": {
-      "PAGE_TITLE": "Tasks: «My day» priority",
+      "PAGE_TITLE": "Task scoring: how «My day» is sorted",
       "INTRO": "«My day» sorts each agent's pending tasks by a score: each situation adds the points below. More points = higher up. A negative weight subtracts; 0 ignores it.",
       "GROUPS": {
         "DUE": "Task due date",

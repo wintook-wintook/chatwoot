@@ -308,9 +308,19 @@ export default {
   methods: {
     resolveAlternative(item) {
       if (!item.alternatives) return item;
+      // La función activa y, además, la ruta permitida al usuario (Catálogos abre
+      // el primero que puede ver).
+      const userPermissions = getUserPermissions(
+        this.currentUser,
+        this.accountId
+      );
       const enabled = option =>
-        !option.featureFlag ||
-        this.isFeatureEnabledonAccount(this.accountId, option.featureFlag);
+        (!option.featureFlag ||
+          this.isFeatureEnabledonAccount(this.accountId, option.featureFlag)) &&
+        hasPermissions(
+          routesWithPermissions[option.toStateName],
+          userPermissions
+        );
       if (enabled(item)) return item;
       const alternative = item.alternatives.find(enabled);
       return alternative ? { ...item, ...alternative } : item;
@@ -363,7 +373,6 @@ export default {
     <PrimarySidebar
       :logo-source="brandLogo"
       :installation-name="globalConfig.installationName"
-      :is-a-custom-branded-instance="isACustomBrandedInstance"
       :account-id="accountId"
       :menu-items="primaryMenuItems"
       :active-menu-item="activePrimaryMenu.key"
