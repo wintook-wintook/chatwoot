@@ -585,6 +585,22 @@ es:
     seconds:
       one: "%{count} segundo"
       other: "%{count} segundos"
+  # Plan-Organizaciones O1
+  organizations:
+    stages:
+      prospect: 'Prospecto'
+      customer: 'Cliente'
+    kinds:
+      company: 'Empresa'
+      general_public: 'Público en general'
+    errors:
+      not_found: 'No se encontró la organización'
+      stage: 'La etapa debe ser prospecto o cliente'
+    import:
+      no_file: 'Elige un archivo CSV'
+      not_found: 'No existe la organización con id %{id}'
+      owner_not_found: 'No hay un usuario con el correo «%{value}»'
+      contact_not_found: 'No se encontró el contacto «%{value}»'
   # Plan-Contratos R1
   contracts:
     errors:
@@ -598,6 +614,7 @@ es:
       contact_not_found: 'No se encontró el contacto «%{value}»'
       type_not_found: 'No existe el tipo de contrato «%{value}»'
       item_not_found: 'No existe la clave «%{value}» en el catálogo'
+      organization_not_found: 'No existe la organización «%{value}» (por RFC o nombre)'
       user_not_found: 'No se encontró al usuario «%{value}»'
       bad_unit: 'Periodo no válido «%{value}» (día, semana, mes o año)'
       bad_number: 'Número no válido «%{value}»'

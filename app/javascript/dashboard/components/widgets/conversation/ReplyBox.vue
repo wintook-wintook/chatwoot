@@ -43,6 +43,7 @@ import { LocalStorage } from 'shared/helpers/localStorage';
 //
 import AssistanceBotElyzaModal from './AssistanceBotElyzaModal.vue';
 import { internalDisplay, isInternalChat } from 'dashboard/helper/internalChat'; // feat/chat_interno_pulido
+import OrganizationsAPI from 'dashboard/api/organizations'; // Plan-Organizaciones O5
 
 const EmojiInput = () => import('shared/components/emoji/EmojiInput.vue');
 
@@ -89,6 +90,8 @@ export default {
   data() {
     return {
       message: '',
+      // Plan-Organizaciones O5 — {{organizacion.*}} de la organización del contacto.
+      organizationVariables: {},
       inReplyTo: {},
       isFocused: false,
       showEmojiPicker: false,
@@ -407,7 +410,12 @@ export default {
         conversation: this.currentChat,
         contact: this.currentContact,
       });
-      return variables;
+      return { ...variables, ...this.organizationVariables };
+    },
+    contactOrganizationId() {
+      return (
+        (this.currentContact && this.currentContact.organization_id) || null
+      );
     },
     // ensure that the signature is plain text depending on `showRichContentEditor`
     signatureToApply() {
@@ -422,6 +430,10 @@ export default {
     },
   },
   watch: {
+    contactOrganizationId: {
+      immediate: true,
+      handler: 'fetchOrganizationVariables',
+    },
     currentChat(conversation) {
       const { can_reply: canReply } = conversation;
 
@@ -517,6 +529,31 @@ export default {
     );
   },
   methods: {
+    // Plan-Organizaciones O5 — sin organización las variables quedan vacías (no faltantes).
+    async fetchOrganizationVariables(id) {
+      const empty = {
+        'organizacion.nombre': '',
+        'organizacion.rfc': '',
+        'organizacion.etapa': '',
+        'organizacion.tipo': '',
+      };
+      if (!id) {
+        this.organizationVariables = empty;
+        return;
+      }
+      try {
+        const { data } = await OrganizationsAPI.find(id);
+        const org = data.organization;
+        this.organizationVariables = {
+          'organizacion.nombre': org.name,
+          'organizacion.rfc': org.tax_id || '',
+          'organizacion.etapa': this.$t(`ORGANIZATIONS.STAGES.${org.stage}`),
+          'organizacion.tipo': this.$t(`ORGANIZATIONS.KINDS.${org.kind}`),
+        };
+      } catch {
+        this.organizationVariables = empty;
+      }
+    },
     handleInsert(article) {
       const { url, title } = article;
       if (this.isRichEditorEnabled) {

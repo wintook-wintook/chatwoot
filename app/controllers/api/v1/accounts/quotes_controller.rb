@@ -165,7 +165,7 @@ class Api::V1::Accounts::QuotesController < Api::V1::Accounts::BaseController
     end
   end
 
-  LINK_FILTERS = %i[assignee_id contact_id opportunity_id origin_ticket_id].freeze
+  LINK_FILTERS = %i[assignee_id contact_id opportunity_id origin_ticket_id organization_id].freeze
 
   def filtered
     quotes = filter_status(visible_quotes)
@@ -197,7 +197,7 @@ class Api::V1::Accounts::QuotesController < Api::V1::Accounts::BaseController
   end
 
   def quote_params
-    params.require(:quote).permit(:contact_id, :assignee_id, :opportunity_id, :origin_ticket_id, :currency,
+    params.require(:quote).permit(:contact_id, :organization_id, :assignee_id, :opportunity_id, :origin_ticket_id, :currency,
                                   :valid_until, :terms, :notes)
   end
 

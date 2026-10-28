@@ -61,6 +61,17 @@ RSpec.describe 'Contracts API' do
     expect(response.parsed_body['contract']).to include('price' => 4200.0, 'price_from_catalog' => true)
   end
 
+  it 'la columna «organizacion» del CSV liga el contrato a esa organización' do
+    org = account.organizations.create!(name: 'Acme', tax_id: 'ACM010101AAA')
+    csv = "contacto,tipo,concepto,precio,inicio,organizacion\nana@example.com,Iguala de soporte,Iguala,100,2026-01-01,acm010101aaa\n" \
+          "ana@example.com,Iguala de soporte,Iguala,100,2026-01-01,Nadie\n"
+    file = Rack::Test::UploadedFile.new(StringIO.new(csv), 'text/csv', original_filename: 'contratos.csv')
+    post "#{base}/contracts/import", params: { file: file }, headers: admin.create_new_auth_token
+    expect(response.parsed_body).to include('created' => 1)
+    expect(response.parsed_body['errors'].first).to include('line' => 3)
+    expect(account.contracts.last.organization).to eq(org)
+  end
+
   it 'sin «Ver montos» no viaja el precio' do
     account.contracts.create!(contact: contact, contract_type: iguala, title: 'Iguala', price: 3500, starts_on: Date.current)
     give_role(agent, 'technician')

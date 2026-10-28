@@ -35,6 +35,7 @@ class Api::V1::Accounts::CaseSettingsController < Api::V1::Accounts::BaseControl
     permitted = params.require(:case_setting).permit(:reopen_window_days, :reopen_on_customer_reply, :default_currency,
                                                      :quotes_require_opportunity, :default_tax_percent, # Plan-Catalogo-Cotizaciones
                                                      task_priority_weights: Cases::TaskPriorityScore::DEFAULT_WEIGHTS.keys,
+                                                     organization_rules: Organizations::StageRules::RULES, # Plan-Organizaciones O3
                                                      business_summary_user_ids: [])
     # La ventana no puede ser negativa; 0 = sin límite.
     permitted[:reopen_window_days] = [permitted[:reopen_window_days].to_i, 0].max if permitted.key?(:reopen_window_days)
@@ -51,6 +52,7 @@ class Api::V1::Accounts::CaseSettingsController < Api::V1::Accounts::BaseControl
       # Plan-Catalogo-Cotizaciones — ¿la cotización exige oportunidad? e impuesto de las partidas nuevas.
       quotes_require_opportunity: @setting.quotes_require_opportunity,
       default_tax_percent: @setting.default_tax_percent.to_f,
+      organization_rules: @setting.organization_rules, # Plan-Organizaciones O3
       # Plan-Bandeja-Prioridad F3 — vigentes y de fábrica (para «Restaurar»).
       task_priority_weights: @setting.task_priority_weights_effective,
       task_priority_defaults: Cases::TaskPriorityScore::DEFAULT_WEIGHTS,

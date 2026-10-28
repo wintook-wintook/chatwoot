@@ -7,6 +7,16 @@
 <script>
 import { mapGetters } from 'vuex';
 
+// Plan-Organizaciones O3 — qué pasa a una organización a prospecto o a cliente sola.
+const ORGANIZATION_RULES = {
+  prospect: ['prospect_on_opportunity', 'prospect_on_quote_sent'],
+  customer: [
+    'customer_on_won',
+    'customer_on_contract',
+    'customer_on_quote_accepted',
+  ],
+};
+
 export default {
   name: 'CommercialSettings',
   data() {
@@ -21,6 +31,12 @@ export default {
     }),
     currencyValid() {
       return /^[A-Z]{3}$/.test(this.currencyDraft);
+    },
+    organizationRuleGroups() {
+      return ORGANIZATION_RULES;
+    },
+    organizationRules() {
+      return this.settings.organization_rules || {};
     },
     currencyDirty() {
       return this.currencyDraft !== (this.settings.default_currency || '');
@@ -54,6 +70,11 @@ export default {
         this.currencyDraft = this.settings.default_currency || '';
         this.toast('CURRENCY_INVALID', 'error');
       }
+    },
+    toggleOrganizationRule(rule, value) {
+      this.saveQuoteSetting({
+        organization_rules: { ...this.organizationRules, [rule]: value },
+      });
     },
     // Plan-Catalogo-Cotizaciones — ¿la cotización exige oportunidad? e impuesto por defecto.
     async saveQuoteSetting(changes) {
@@ -113,6 +134,47 @@ export default {
           "
         />
       </label>
+    </div>
+    <!-- Plan-Organizaciones O3 — prospectos y clientes automáticos -->
+    <div
+      class="flex flex-col gap-3 p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+    >
+      <div>
+        <span
+          class="text-base font-semibold text-slate-800 dark:text-slate-100"
+        >
+          {{ $t('ORGANIZATIONS.RULES.TITLE') }}
+        </span>
+        <p class="mt-1 mb-0 text-sm text-slate-500 dark:text-slate-400">
+          {{ $t('ORGANIZATIONS.RULES.DESCRIPTION') }}
+        </p>
+      </div>
+      <div
+        v-for="(rules, group) in organizationRuleGroups"
+        :key="group"
+        class="flex flex-col gap-2"
+      >
+        <span
+          class="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400"
+        >
+          {{ $t(`ORGANIZATIONS.RULES.GROUPS.${group}`) }}
+        </span>
+        <label
+          v-for="rule in rules"
+          :key="rule"
+          class="flex items-start gap-2 mb-0"
+        >
+          <input
+            type="checkbox"
+            class="mt-1"
+            :checked="organizationRules[rule] === true"
+            @change="toggleOrganizationRule(rule, $event.target.checked)"
+          />
+          <span class="text-sm text-slate-800 dark:text-slate-100">
+            {{ $t(`ORGANIZATIONS.RULES.ITEMS.${rule}`) }}
+          </span>
+        </label>
+      </div>
     </div>
     <!-- Moneda por defecto -->
     <div

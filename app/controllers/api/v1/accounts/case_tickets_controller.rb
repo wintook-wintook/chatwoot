@@ -105,6 +105,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     tickets = tickets.where(sla_status:  CaseTicket.sla_statuses[params[:sla_status]]) if params[:sla_status].present?
     tickets = apply_assignee(tickets)
     tickets = tickets.where(contact_id:  params[:contact_id])                        if params[:contact_id].present?
+    tickets = tickets.where(organization_id: params[:organization_id])               if params[:organization_id].present?
     tickets = apply_date_range(tickets)
     tickets = apply_closed_range(tickets)
     tickets = apply_sort(tickets)
@@ -167,6 +168,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       project:             project_params.to_h # Plan-Clase-Proyecto P1 (solo lo usa el proyecto)
     )
     notify_assignee(ticket) # @tickets_cases Fase A — avisa al agente si se asignó a mano
+    apply_chosen_organization(ticket)
 
     render json: { case_ticket: ticket_json(ticket) }, status: :created
   rescue ActiveRecord::RecordNotFound => e
@@ -649,7 +651,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       :contact_id, :conversation_id, :case_type_id, :title,
       :priority, :description,
       :ticket_kind, :impact, :urgency, :affected_service_id, :category_id,
-      :internal, :assignee_id, :team_id # @tickets_cases — interno + asignación manual al crear
+      :internal, :assignee_id, :team_id, # @tickets_cases — interno + asignación manual al crear
+      :organization_id # Plan-Organizaciones O2 — sin ella, la del contacto
     )
   end
 
@@ -820,9 +823,16 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     end
   end
 
+  # Plan-Organizaciones O2 — la organización elegida en el alta (si no, quedó la del contacto).
+  def apply_chosen_organization(ticket)
+    chosen = ticket_params[:organization_id].presence
+    ticket.update!(organization: Current.account.organizations.find(chosen)) if chosen && chosen.to_i != ticket.organization_id
+  end
+
   def ticket_json(ticket)
     {
       id:                         ticket.id,
+      organization_id:            ticket.organization_id, # Plan-Organizaciones O2
       folio:                      ticket.folio,
       title:                      ticket.title,
       description:                ticket.description,

@@ -4,10 +4,11 @@
 # si no existen, la fila se reporta con su número y no se crea nada (no se inventan
 # clientes). Con la columna «id» se actualiza ese contrato en vez de crear otro.
 # Fechas: AAAA-MM-DD o DD/MM/AAAA. Periodo: día, semana, mes o año. Los datos propios del
-# tipo van en columnas extra con su nombre.
+# tipo van en columnas extra con su nombre. «organizacion» (RFC o nombre, opcional) la liga;
+# vacía, toma la del contacto (Plan-Organizaciones O4).
 class Contracts::CsvImport
   COLUMNS = %w[id contacto tipo concepto clave_catalogo cantidad precio moneda cada periodo inicio proximo_cobro
-               plazo_meses renovacion_automatica responsable notas].freeze
+               plazo_meses renovacion_automatica responsable notas organizacion].freeze
   UNITS = {
     'dia' => 'day', 'día' => 'day', 'dias' => 'day', 'días' => 'day', 'day' => 'day',
     'semana' => 'week', 'semanas' => 'week', 'week' => 'week',
@@ -71,7 +72,14 @@ class Contracts::CsvImport
 
   def text_attributes(row, item)
     { title: row['concepto'].presence || item&.name, currency: row['moneda'].presence, notes: row['notas'].presence,
-      assignee: find_user(row['responsable']) }
+      assignee: find_user(row['responsable']), organization: find_organization(row['organizacion']) }
+  end
+
+  def find_organization(value)
+    return if value.blank?
+
+    Organizations::CsvImport.find(@account, value) ||
+      raise(ArgumentError, I18n.t('contracts.import.organization_not_found', value: value))
   end
 
   def terms(row, item)

@@ -11,6 +11,8 @@
 #  country_code          :string           default("")
 #  custom_attributes     :jsonb
 #  email                 :string
+#  email_bounce_reason   :string
+#  email_bounced_at      :datetime
 #  identifier            :string
 #  last_activity_at      :datetime
 #  last_name             :string           default("")
@@ -23,6 +25,7 @@
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #  account_id            :integer          not null
+#  organization_id       :bigint
 #  owner_id              :bigint
 #
 # Indexes
@@ -33,6 +36,7 @@
 #  index_contacts_on_lower_email_account_id              (lower((email)::text), account_id)
 #  index_contacts_on_name_email_phone_number_identifier  (name,email,phone_number,identifier) USING gin
 #  index_contacts_on_nonempty_fields                     (account_id,email,phone_number,identifier) WHERE (((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))
+#  index_contacts_on_organization_id                     (organization_id)
 #  index_contacts_on_owner_id                            (owner_id)
 #  index_contacts_on_phone_number_and_account_id         (phone_number,account_id)
 #  index_resolved_contact_account_id                     (account_id) WHERE (((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))
@@ -41,6 +45,7 @@
 #
 # Foreign Keys
 #
+#  fk_rails_...  (organization_id => organizations.id) ON DELETE => nullify
 #  fk_rails_...  (owner_id => users.id) ON DELETE => nullify
 #
 
@@ -64,6 +69,9 @@ class Contact < ApplicationRecord
   # (ver ContactOwnerAssignment). Se limpia si sale de la cuenta.
   belongs_to :owner, class_name: 'User', optional: true
   validate :owner_belongs_to_account, if: :will_save_change_to_owner_id?
+  # Plan-Organizaciones O1 — la empresa o el público en general que es prospecto o cliente.
+  belongs_to :organization, optional: true
+  validate :organization_in_account, if: :will_save_change_to_organization_id?
   has_many :quotes, dependent: :destroy_async # Plan-Catalogo-Cotizaciones
   has_many :customer_assets, dependent: :destroy_async # Plan-Trabajo-Campo R4
   has_many :maintenance_plans, dependent: :destroy_async # Plan-Trabajo-Campo R4
@@ -222,6 +230,11 @@ class Contact < ApplicationRecord
     find_by(email: email&.downcase)
   end
 
+  # Plan-Organizaciones O3 — su responsable fijo o, si no tiene, el de su organización.
+  def effective_owner_id
+    owner_id || organization&.owner_id
+  end
+
   private
 
   def ip_lookup
@@ -290,6 +303,12 @@ class Contact < ApplicationRecord
     new_labels.each do |label|
       Label.create!(name: label)
     end
+  end
+
+  def organization_in_account
+    return if organization.nil? || organization.account_id == account_id
+
+    errors.add(:organization_id, 'no es de la cuenta')
   end
 
   def owner_belongs_to_account

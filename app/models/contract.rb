@@ -29,6 +29,7 @@
 #  contact_id         :bigint           not null
 #  contract_type_id   :bigint           not null
 #  customer_asset_id  :bigint
+#  organization_id    :bigint
 #
 # Indexes
 #
@@ -40,6 +41,7 @@
 #  index_contracts_on_contact_id                                (contact_id)
 #  index_contracts_on_contract_type_id                          (contract_type_id)
 #  index_contracts_on_customer_asset_id                         (customer_asset_id)
+#  index_contracts_on_organization_id                           (organization_id)
 #
 # Foreign Keys
 #
@@ -49,6 +51,7 @@
 #  fk_rails_...  (contact_id => contacts.id) ON DELETE => cascade
 #  fk_rails_...  (contract_type_id => contract_types.id)
 #  fk_rails_...  (customer_asset_id => customer_assets.id) ON DELETE => nullify
+#  fk_rails_...  (organization_id => organizations.id) ON DELETE => nullify
 #
 class Contract < ApplicationRecord
   RENEWAL_NOTICE_DAYS = 30
@@ -56,6 +59,9 @@ class Contract < ApplicationRecord
 
   belongs_to :account
   belongs_to :contact
+  include OrganizationLinked # Plan-Organizaciones O2
+  # Plan-Organizaciones O3 — contrato nuevo → cliente (si la regla está encendida).
+  after_create_commit -> { Organizations::StageRules.call(:customer_on_contract, self) }
   belongs_to :contract_type
   belongs_to :catalog_item, optional: true
   belongs_to :customer_asset, optional: true

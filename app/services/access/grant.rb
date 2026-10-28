@@ -133,7 +133,9 @@ class Access::Grant
 
     mine = Conversation.where(assignee_id: user_id).select(:contact_id)
     cases = CaseTicket.where(assignee_id: user_id).select(:contact_id)
+    owned_orgs = Organization.where(owner_id: user_id).select(:id) # Plan-Organizaciones O3
     scope.where(id: mine).or(scope.where(id: cases)).or(scope.where(owner_id: user_id))
+         .or(scope.where(organization_id: owned_orgs))
   end
 
   # ── Asignación ─────────────────────────────────────────────────────────────

@@ -598,6 +598,22 @@ en:
     seconds:
       one: "%{count} second"
       other: "%{count} seconds"
+  # Plan-Organizaciones O1
+  organizations:
+    stages:
+      prospect: 'Prospect'
+      customer: 'Customer'
+    kinds:
+      company: 'Company'
+      general_public: 'General public'
+    errors:
+      not_found: 'Organization not found'
+      stage: 'The stage must be prospect or customer'
+    import:
+      no_file: 'Choose a CSV file'
+      not_found: 'There is no organization with id %{id}'
+      owner_not_found: 'There is no user with the email «%{value}»'
+      contact_not_found: 'Contact «%{value}» not found'
   # Plan-Contratos R1
   contracts:
     errors:
@@ -611,6 +627,7 @@ en:
       contact_not_found: 'Contact «%{value}» not found'
       type_not_found: 'Contract type «%{value}» does not exist'
       item_not_found: 'Catalog code «%{value}» does not exist'
+      organization_not_found: 'Organization «%{value}» does not exist (by tax ID or name)'
       user_not_found: 'User «%{value}» not found'
       bad_unit: 'Invalid period «%{value}» (day, week, month or year)'
       bad_number: 'Invalid number «%{value}»'

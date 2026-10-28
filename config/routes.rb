@@ -74,6 +74,22 @@ Rails.application.routes.draw do
           resources :maintenance_plans, only: [:index, :create, :update, :destroy] do
             post :generate, on: :member
           end
+          # Plan-Organizaciones O1 — prospectos y clientes con sus contactos
+          resources :organizations, only: [:index, :show, :create, :update, :destroy] do
+            member do
+              get :summary
+              post :change_stage
+              post :add_contact
+              post :remove_contact
+            end
+            collection do
+              get :suggestions
+              post :apply_suggestions
+              get :metrics
+              get :template
+              post :import
+            end
+          end
           # Plan-Contratos R1 — servicios recurrentes del cliente
           resources :contract_types, only: [:index, :create, :update]
           resources :contracts, only: [:index, :create, :update] do

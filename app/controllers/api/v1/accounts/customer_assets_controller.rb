@@ -1,16 +1,16 @@
 # Plan-Trabajo-Campo R4 — equipos del cliente.
 #
-#   GET    /customer_assets?contact_id=   (los activos; &all=true también los dados de baja)
+#   GET    /customer_assets?contact_id= | ?organization_id=   (los activos; &all=true también los dados de baja)
 #   GET    /customer_assets/:id           con su historial de órdenes
 #   POST   /customer_assets               PATCH /customer_assets/:id
 class Api::V1::Accounts::CustomerAssetsController < Api::V1::Accounts::BaseController
-  FIELDS = %i[contact_id name brand model serial location installed_on warranty_until notes active].freeze
+  FIELDS = %i[contact_id organization_id name brand model serial location installed_on warranty_until notes active].freeze
 
   before_action :check_access
   before_action :set_asset, only: %i[show update]
 
   def index
-    assets = Current.account.customer_assets.where(contact_id: params[:contact_id]).ordered
+    assets = owner_assets.ordered
     assets = assets.active unless ActiveModel::Type::Boolean.new.cast(params[:all])
     counts = account_case_tickets.where(customer_asset_id: assets.select(:id)).group(:customer_asset_id).count
     render json: { customer_assets: assets.map { |asset| asset_json(asset, counts[asset.id].to_i) } }
@@ -50,8 +50,16 @@ class Api::V1::Accounts::CustomerAssetsController < Api::V1::Accounts::BaseContr
     render json: { error: record.errors.full_messages.join(', ') }, status: :unprocessable_entity
   end
 
+  # Del contacto o, con organization_id, de toda la organización (Plan-Organizaciones O2).
+  def owner_assets
+    assets = Current.account.customer_assets
+    return assets.where(organization_id: params[:organization_id]) if params[:organization_id].present?
+
+    assets.where(contact_id: params[:contact_id])
+  end
+
   def asset_json(asset, orders_count)
-    { id: asset.id, contact_id: asset.contact_id, name: asset.name, brand: asset.brand, model: asset.model,
+    { id: asset.id, contact_id: asset.contact_id, organization_id: asset.organization_id, name: asset.name, brand: asset.brand, model: asset.model,
       serial: asset.serial, location: asset.location, installed_on: asset.installed_on,
       warranty_until: asset.warranty_until, under_warranty: asset.under_warranty?, notes: asset.notes,
       active: asset.active, orders_count: orders_count }

@@ -11,7 +11,7 @@ import { useAlert } from 'dashboard/composables';
 import ContractsAPI from 'dashboard/api/contracts';
 import CatalogItemsAPI from 'dashboard/api/catalogItems';
 import CustomerAssetsAPI from 'dashboard/api/customerAssets';
-import ContactPicker from 'dashboard/views/gestorTickets/ContactPicker.vue';
+import OrganizationContactFields from 'dashboard/views/organizations/OrganizationContactFields.vue';
 import { STATUSES, UNITS } from './contractHelpers';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -19,7 +19,7 @@ const orNull = value => (value === '' || value === undefined ? null : value);
 
 export default {
   name: 'ContractForm',
-  components: { ContactPicker },
+  components: { OrganizationContactFields },
   props: {
     show: { type: Boolean, default: false },
     contract: { type: Object, default: null },
@@ -33,6 +33,7 @@ export default {
     return {
       form: this.blank(),
       contact: null,
+      organization: null, // Plan-Organizaciones O2
       catalog: [],
       assets: [],
       saving: false,
@@ -86,6 +87,7 @@ export default {
         this.contact = this.contract
           ? this.contract.links && this.contract.links.contact
           : null;
+        this.organization = null;
         if (!this.contract && this.typeOptions.length === 1)
           this.chooseType(this.typeOptions[0].id);
         this.fetchAssets();
@@ -200,7 +202,10 @@ export default {
           !!form.catalog_item_id && form.price_from_catalog;
       }
       if (this.isEdit) data.status = form.status;
-      else data.contact_id = this.chosenContactId;
+      else {
+        data.contact_id = this.chosenContactId;
+        if (this.organization) data.organization_id = this.organization.id;
+      }
       return data;
     },
     async save() {
@@ -248,12 +253,11 @@ export default {
           {{ $t('CONTRACTS.FORM.NO_TYPES') }}
         </p>
 
-        <div v-if="!contactId && !isEdit" class="mb-3">
-          <span class="text-sm font-medium text-slate-800 dark:text-slate-100">
-            {{ $t('CONTRACTS.FORM.CONTACT') }}
-          </span>
-          <ContactPicker v-model="contact" />
-        </div>
+        <OrganizationContactFields
+          v-if="!contactId && !isEdit"
+          v-model="contact"
+          :organization.sync="organization"
+        />
 
         <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
           <label>

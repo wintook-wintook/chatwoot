@@ -19,12 +19,19 @@ import QuoteOutcomeModal from './QuoteOutcomeModal.vue';
 import { formatMoney } from 'dashboard/helper/caseCommercial';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import { backKind, backPath, backQuery } from '../backLink';
+import OrganizationContactFields from 'dashboard/views/organizations/OrganizationContactFields.vue';
 
 const round = value => Math.round((Number(value) || 0) * 100) / 100;
 
 export default {
   name: 'QuoteEditor',
-  components: { Spinner, CatalogPicker, QuoteStatusChip, QuoteOutcomeModal },
+  components: {
+    Spinner,
+    CatalogPicker,
+    QuoteStatusChip,
+    QuoteOutcomeModal,
+    OrganizationContactFields,
+  },
   props: {
     quoteId: { type: Number, default: null },
   },
@@ -35,8 +42,6 @@ export default {
       saving: false,
       form: this.blankForm(),
       items: [],
-      contactQuery: '',
-      contactResults: [],
       openOpportunities: [],
       outcomeStatus: null,
       showMore: false,
@@ -144,6 +149,7 @@ export default {
     blankForm() {
       return {
         contact: null,
+        organization: null, // Plan-Organizaciones O2
         assignee_id: '',
         currency: '',
         valid_until: '',
@@ -179,6 +185,7 @@ export default {
       this.quote = quote;
       this.form = {
         contact: quote.contact,
+        organization: quote.organization || null,
         assignee_id: quote.assignee ? quote.assignee.id : '',
         currency: quote.currency,
         valid_until: quote.valid_until || '',
@@ -227,23 +234,8 @@ export default {
         this.openOpportunities = [];
       }
     },
-    async searchContacts() {
-      const term = this.contactQuery.trim();
-      if (term.length < 2) {
-        this.contactResults = [];
-        return;
-      }
-      try {
-        const { data } = await ContactAPI.search(term, 1);
-        this.contactResults = data.payload || [];
-      } catch {
-        this.contactResults = [];
-      }
-    },
     chooseContact(contact) {
       this.form.contact = { id: contact.id, name: contact.name };
-      this.contactQuery = '';
-      this.contactResults = [];
       this.form.opportunity_id = this.opportunityRequired ? 'new' : '';
       this.fetchOpenOpportunities(contact.id);
     },
@@ -296,12 +288,18 @@ export default {
       this.items.splice(index, 1);
     },
     payload() {
-      const { contact, opportunity_id: opportunityId, ...rest } = this.form;
+      const {
+        contact,
+        organization,
+        opportunity_id: opportunityId,
+        ...rest
+      } = this.form;
       const create = opportunityId === 'new';
       return {
         quote: {
           ...rest,
           contact_id: contact && contact.id,
+          organization_id: organization && organization.id,
           opportunity_id: create ? '' : opportunityId,
         },
         create_opportunity: create,
@@ -606,6 +604,9 @@ export default {
             <span class="font-medium text-slate-800 dark:text-slate-100">{{
               form.contact.name
             }}</span>
+            <span v-if="form.organization" class="text-xs text-slate-500">
+              {{ form.organization.name }}
+            </span>
             <woot-button
               v-if="isNew"
               size="tiny"
@@ -614,32 +615,13 @@ export default {
               @click="clearContact"
             />
           </div>
-          <div v-else class="relative">
-            <input
-              v-model="contactQuery"
-              type="search"
-              class="!mb-0"
-              :placeholder="$t('QUOTES.EDITOR.CONTACT_SEARCH')"
-              @input="searchContacts"
-            />
-            <ul
-              v-if="contactResults.length"
-              class="absolute z-50 w-full p-1 m-0 mt-1 overflow-y-auto list-none bg-white border rounded-md shadow-xl max-h-60 dark:bg-slate-800 border-slate-50 dark:border-slate-700"
-            >
-              <li v-for="contact in contactResults" :key="contact.id">
-                <button
-                  type="button"
-                  class="w-full px-3 py-2 text-sm text-left rounded-md hover:bg-slate-50 dark:hover:bg-slate-700"
-                  @click="chooseContact(contact)"
-                >
-                  {{ contact.name }}
-                  <span class="text-xs text-slate-500">{{
-                    contact.phone_number || contact.email
-                  }}</span>
-                </button>
-              </li>
-            </ul>
-          </div>
+          <!-- Plan-Organizaciones O2 — organización (opcional) y su contacto -->
+          <OrganizationContactFields
+            v-else
+            :value="form.contact"
+            :organization.sync="form.organization"
+            @input="contact => contact && chooseContact(contact)"
+          />
         </div>
         <label>
           {{ $t('QUOTES.EDITOR.ASSIGNEE') }}
