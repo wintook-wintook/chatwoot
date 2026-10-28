@@ -1,0 +1,241 @@
+<script>
+// proyecto@diagrama_agente_ia — F1: LA PESTAÑA «DIAGRAMA»
+// ============================================================================
+// Plan: docs/diagrama_agente_ia_plan.md §4.2. Dibuja lo que calcula
+// agentDiagramLayout.js (función pura, con su spec): una fila por ruta, de
+// izquierda a derecha en el orden en que el motor la recorre, y debajo las
+// secciones, que el agente lee completas en cada respuesta.
+//
+// SIN ILUMINAR (decisión D1): se ve siempre, mientras se crea el agente; la forma
+// sola ya deja ver huecos (una ruta sin etiqueta, una fuente que falta). En F2 el
+// camino de una prueba se pinta encima con los mismos ids de nodo.
+//
+// Clic en un nodo → su línea en el Entrenamiento (`goToRoute` / `goToSection`; la
+// pantalla cambia a la pestaña del editor). El punto rojo/ámbar es el mismo
+// hallazgo del comprobador que marca el árbol de la Estructura.
+//
+// Colores con clases de Tailwind sobre el SVG (fill-/stroke-), así sigue al modo
+// oscuro y a los temas del dashboard (woot-*) sin una paleta propia.
+// ============================================================================
+import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
+import { buildDiagram, NODE_H } from './agentDiagramLayout';
+
+export default {
+  name: 'AgentDiagram',
+  components: { EmptyState },
+  props: {
+    structure: { type: Object, default: () => ({ blocks: [] }) },
+    issues: { type: Object, default: () => ({}) },
+  },
+  emits: ['goToRoute', 'goToSection'],
+  computed: {
+    blocks() {
+      return (this.structure && this.structure.blocks) || [];
+    },
+    diagram() {
+      return buildDiagram(this.blocks, this.issues);
+    },
+    isEmpty() {
+      return !this.blocks.length;
+    },
+    issueCount() {
+      return this.diagram.nodes.filter(n => n.issue).length;
+    },
+    nodeHeight() {
+      return NODE_H;
+    },
+  },
+  methods: {
+    t(key, args) {
+      return this.$t(`TRACKING_ASSISTANT_VIEW.DIAGRAM.${key}`, args);
+    },
+    columnLabel(id) {
+      return this.t(`COLUMN_${id.toUpperCase()}`);
+    },
+    // Las dos líneas de cada nodo: qué es y cuál.
+    heading(n) {
+      if (n.kind === 'client') return this.t('NODE_CLIENT');
+      if (n.kind === 'welcome') return this.t('NODE_WELCOME');
+      if (n.kind === 'conversational') return this.t('NODE_CONVERSATIONAL');
+      if (n.kind === 'source') return this.t(`SOURCE_${n.sourceKind}`);
+      if (n.kind === 'action') return this.t(`ACTION_${n.actionKind}`);
+      if (n.kind === 'tag') return n.missing ? this.t('NODE_NO_TAG') : n.label;
+      return n.label;
+    },
+    detail(n) {
+      if (n.kind === 'client') return this.t('NODE_CLIENT_SUB');
+      if (n.kind === 'welcome') return this.t('NODE_WELCOME_SUB');
+      if (n.kind === 'conversational') return this.t('NODE_CONVERSATIONAL_SUB');
+      if (n.kind === 'route')
+        return n.isDefault ? this.t('NODE_DEFAULT') : n.sub;
+      if (n.kind === 'source' && n.sourceKind === 'NONE')
+        return this.t('SOURCE_NONE_SUB');
+      if (n.kind === 'tag') return n.missing ? this.t('NODE_NO_TAG_SUB') : '';
+      return n.label;
+    },
+    tooltip(n) {
+      const partes = [n.title];
+      if (n.issue) partes.push(...n.issue.messages);
+      return partes.filter(Boolean).join('\n');
+    },
+    boxClass(n) {
+      if (n.issue && n.issue.level === 'blocking')
+        return 'fill-white dark:fill-slate-800 stroke-red-400 dark:stroke-red-500';
+      if (n.kind === 'client')
+        return 'fill-woot-50 dark:fill-slate-700 stroke-woot-300 dark:stroke-woot-600';
+      if (n.muted || n.missing)
+        return 'fill-slate-50 dark:fill-slate-900 stroke-slate-300 dark:stroke-slate-600';
+      return 'fill-white dark:fill-slate-800 stroke-slate-200 dark:stroke-slate-600';
+    },
+    headingClass(n) {
+      if (n.missing) return 'fill-amber-700 dark:fill-amber-400';
+      if (n.muted) return 'fill-slate-500 dark:fill-slate-400';
+      return 'fill-slate-800 dark:fill-slate-100';
+    },
+    dotClass(issue) {
+      return issue.level === 'blocking'
+        ? 'fill-red-500'
+        : 'fill-amber-500 dark:fill-amber-400';
+    },
+    open(n) {
+      if (!n.target) return;
+      if (n.target.type === 'route') this.$emit('goToRoute', n.target.name);
+      if (n.target.type === 'section')
+        this.$emit('goToSection', n.target.index);
+    },
+  },
+};
+</script>
+
+<template>
+  <div class="flex flex-col flex-1 min-h-0 gap-3">
+    <EmptyState
+      v-if="isEmpty"
+      :title="t('EMPTY_TITLE')"
+      :message="t('EMPTY_MESSAGE')"
+    />
+    <template v-else>
+      <p class="m-0 text-xs text-slate-500 dark:text-slate-400 shrink-0">
+        {{ t('INTRO', { count: diagram.routeCount }) }}
+        <span v-if="issueCount" class="text-amber-700 dark:text-amber-400">
+          {{ t('ISSUES', { count: issueCount }) }}
+        </span>
+      </p>
+
+      <div class="flex-1 min-h-0 overflow-auto">
+        <svg
+          :width="diagram.width"
+          :height="diagram.height"
+          :viewBox="`0 0 ${diagram.width} ${diagram.height}`"
+          role="img"
+          :aria-label="t('ARIA', { count: diagram.routeCount })"
+          class="block"
+        >
+          <text
+            v-for="col in diagram.columns"
+            :key="`col-${col.id}`"
+            :x="col.center"
+            y="18"
+            text-anchor="middle"
+            class="text-[10px] font-semibold tracking-wide uppercase fill-slate-400 dark:fill-slate-500"
+          >
+            {{ columnLabel(col.id) }}
+          </text>
+
+          <path
+            v-for="edge in diagram.edges"
+            :key="edge.id"
+            :d="edge.d"
+            fill="none"
+            stroke-width="1.5"
+            :stroke-dasharray="edge.dashed ? '4 4' : null"
+            class="stroke-slate-300 dark:stroke-slate-600"
+          />
+
+          <g
+            v-for="n in diagram.nodes"
+            :key="n.id"
+            :transform="`translate(${n.x},${n.y})`"
+            :class="n.target ? 'cursor-pointer group' : ''"
+            :role="n.target ? 'button' : null"
+            :tabindex="n.target ? 0 : null"
+            @click="open(n)"
+            @keydown.enter="open(n)"
+          >
+            <title>{{ tooltip(n) }}</title>
+            <rect
+              :width="n.w"
+              :height="n.h"
+              rx="8"
+              stroke-width="1.5"
+              :stroke-dasharray="n.muted ? '4 3' : null"
+              :class="[
+                boxClass(n),
+                n.target ? 'group-hover:stroke-woot-500' : '',
+              ]"
+            />
+            <text
+              x="12"
+              :y="nodeHeight / 2 - 3"
+              class="text-xs font-medium"
+              :class="headingClass(n)"
+            >
+              {{ heading(n) }}
+            </text>
+            <text
+              x="12"
+              :y="nodeHeight / 2 + 12"
+              class="text-[11px] fill-slate-500 dark:fill-slate-400"
+            >
+              {{ detail(n) }}
+            </text>
+            <circle
+              v-if="n.issue"
+              :cx="n.w - 10"
+              cy="10"
+              r="4"
+              :class="dotClass(n.issue)"
+            />
+          </g>
+        </svg>
+      </div>
+
+      <div
+        v-if="diagram.sections.length"
+        class="flex flex-col gap-2 pt-3 border-t shrink-0 border-slate-100 dark:border-slate-700"
+      >
+        <p class="m-0 text-xs text-slate-500 dark:text-slate-400">
+          {{ t('SECTIONS_HINT') }}
+        </p>
+        <div class="flex flex-wrap gap-1.5">
+          <button
+            v-for="s in diagram.sections"
+            :key="`s-${s.index}`"
+            type="button"
+            class="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-md border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:border-woot-500"
+            :title="s.issue ? s.issue.messages.join('\n') : s.title"
+            @click="$emit('goToSection', s.index)"
+          >
+            <span
+              v-if="s.issue"
+              class="inline-block w-2 h-2 rounded-full"
+              :class="
+                s.issue.level === 'blocking' ? 'bg-red-500' : 'bg-amber-500'
+              "
+            />
+            {{ s.title }}
+          </button>
+        </div>
+      </div>
+
+      <p
+        class="flex flex-wrap m-0 text-[11px] gap-x-4 gap-y-1 text-slate-500 dark:text-slate-400 shrink-0"
+      >
+        <span>{{ t('LEGEND_DASHED') }}</span>
+        <span>{{ t('LEGEND_DOT') }}</span>
+        <span>{{ t('LEGEND_CLICK') }}</span>
+        <span>{{ t('LEGEND_SOON') }}</span>
+      </p>
+    </template>
+  </div>
+</template>
