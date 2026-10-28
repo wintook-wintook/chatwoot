@@ -10,6 +10,9 @@ export const LOOKUP_KINDS = [
   'collector',
 ];
 
+// Catálogos de crm_lookups que usan los artículos (no salen en el formulario de organizaciones).
+export const ARTICLE_LOOKUP_KINDS = ['price_list', 'line_group'];
+
 export const ADDRESS_FIELDS = [
   'street',
   'exterior_number',

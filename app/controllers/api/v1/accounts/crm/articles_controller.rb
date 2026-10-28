@@ -9,8 +9,8 @@
 #   POST   /crm/articles/:id/image     multipart `image` · DELETE /crm/articles/:id/image
 class Api::V1::Accounts::Crm::ArticlesController < Api::V1::Accounts::Crm::BaseController
   PER_PAGE = 50
-  FIELDS = %i[catalog_status key name line_id unit_id status is_stockable purchase_unit purchase_unit_content
-              unit_weight notes].freeze
+  FIELDS = %i[catalog_status key name line_id unit_id status suspended_on suspension_reason is_stockable is_kit
+              purchase_unit purchase_unit_content unit_weight notes].freeze
 
   before_action :check_sales_write_access, except: %i[index show]
   before_action :set_article, except: %i[index create]

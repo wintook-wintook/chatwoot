@@ -101,6 +101,14 @@ export default {
     isSuspended() {
       return this.org.status && this.org.status !== 'active';
     },
+    // «Baja» pide fecha y motivo de baja; las suspensiones, de suspensión.
+    suspensionLabels() {
+      const kind = this.org.status === 'inactive' ? 'INACTIVE' : 'SUSPENDED';
+      return {
+        date: this.$t(`CRM_ZEUS.SUSPENSION.${kind}_ON`),
+        reason: this.$t(`CRM_ZEUS.SUSPENSION.${kind}_REASON`),
+      };
+    },
     title() {
       return this.isNew
         ? this.$t('CRM_ZEUS.FORM.NEW_TITLE')
@@ -499,11 +507,11 @@ export default {
               class="grid grid-cols-1 gap-x-4 sm:grid-cols-[1fr_3fr]"
             >
               <label>
-                {{ $t('CRM_ZEUS.FIELDS.SUSPENDED_ON') }}
+                {{ suspensionLabels.date }}
                 <input v-model="org.suspended_on" type="date" />
               </label>
               <label>
-                {{ $t('CRM_ZEUS.FIELDS.SUSPENSION_REASON') }}
+                {{ suspensionLabels.reason }}
                 <input
                   v-model="org.suspension_reason"
                   type="text"

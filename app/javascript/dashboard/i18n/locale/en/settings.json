@@ -304,6 +304,7 @@
     "SALES": "Sales",
     "CRM_ZEUS": "CrmZeus",
     "CRM_ZEUS_ORGANIZATIONS": "Organizations",
+    "CRM_ZEUS_ARTICLES": "Articles",
     "CRM_ZEUS_CATALOGS": "Catalogs",
     "SERVICE": "Service",
     "AGENDA": "Schedule",

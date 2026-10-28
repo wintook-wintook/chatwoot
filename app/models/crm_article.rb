@@ -5,6 +5,7 @@
 #  id                    :bigint           not null, primary key
 #  catalog_status        :integer          default("uncatalogued"), not null
 #  cataloged_at          :datetime
+#  is_kit                :boolean          default(FALSE), not null
 #  is_stockable          :boolean          default(TRUE), not null
 #  key                   :string(20)
 #  name                  :string(200)      not null
@@ -13,6 +14,8 @@
 #  purchase_unit         :string(20)
 #  purchase_unit_content :decimal(18, 5)   default(1.0), not null
 #  status                :string(1)        default("active"), not null
+#  suspended_on          :date
+#  suspension_reason     :string(250)
 #  unit_weight           :decimal(18, 5)   default(0.0), not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
@@ -81,6 +84,7 @@ class CrmArticle < ApplicationRecord
   validates :purchase_unit, length: { maximum: 20 }
   validates :purchase_unit_content, numericality: { greater_than: 0 }
   validates :unit_weight, numericality: { greater_than_or_equal_to: 0 }
+  validates :suspension_reason, length: { maximum: 250 }
   validate :references_belong_to_account
   validate :image_is_valid
 
@@ -115,7 +119,18 @@ class CrmArticle < ApplicationRecord
     self.name = name.to_s.squish
     self.normalized_name = self.class.normalize_name(name)
     self.key = key.to_s.strip.upcase.presence
-    self.purchase_unit = purchase_unit.to_s.strip.presence
+    clean(%i[purchase_unit suspension_reason]) { |value| value.strip.presence }
+    clear_suspension if status_active?
+  end
+
+  def clean(fields)
+    fields.each { |field| self[field] = yield(self[field].to_s) }
+  end
+
+  # Fecha y motivo de baja / suspensión solo aplican si no está activo (como las organizaciones).
+  def clear_suspension
+    self.suspended_on = nil
+    self.suspension_reason = nil
   end
 
   # El nombre repetido se informa en `name` (lo que ve la persona), no en la columna interna.

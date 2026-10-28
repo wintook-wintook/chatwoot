@@ -2,7 +2,8 @@
   CrmZeus O2 — Catálogos de organizaciones (los cambia el Administrador; los demás
   solo los consultan): tipo de cliente, calificación, giro, origen, zona, cobrador,
   vendedores (con su agente de Wintook), condiciones de pago (con plazos), monedas,
-  países y estados (por país). Lo que ya usa alguna organización no se borra: se
+  países y estados (por país); y los de artículos: listas de precios, grupos de líneas,
+  líneas, unidades (con clave SAT) e impuestos. Lo que ya se usa no se borra: se
   desactiva; un país o estado cuyas ciudades usa una dirección no se puede borrar.
 -->
 <script>
@@ -10,29 +11,72 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import CrmCatalogs from 'dashboard/api/crmCatalogs';
 import Spinner from 'shared/components/Spinner.vue';
-import { LOOKUP_KINDS, crmAccess, errorMessage } from './crmHelpers';
+import {
+  ARTICLE_LOOKUP_KINDS,
+  LOOKUP_KINDS,
+  crmAccess,
+  errorMessage,
+} from './crmHelpers';
 
 // resource = ruta de la API · key = nombre del parámetro · hasActive / hasDefault =
-// si el catálogo tiene «activo» / «predeterminado» (países y estados no los tienen todos).
+// si el catálogo tiene «activo» / «predeterminado» (países y estados no los tienen todos)
+// · group = sección de la lista de la izquierda.
+const lookup = (kind, group) => ({
+  id: kind,
+  resource: 'lookups',
+  key: 'lookup',
+  kind,
+  group,
+});
 const CATALOGS = [
-  ...LOOKUP_KINDS.map(kind => ({
-    id: kind,
-    resource: 'lookups',
-    key: 'lookup',
-    kind,
-  })),
-  { id: 'sellers', resource: 'sellers', key: 'seller' },
-  { id: 'payment_terms', resource: 'payment_terms', key: 'payment_term' },
-  { id: 'currencies', resource: 'currencies', key: 'currency' },
-  { id: 'countries', resource: 'countries', key: 'country', hasActive: false },
+  ...LOOKUP_KINDS.map(kind => lookup(kind, 'organizations')),
+  { id: 'sellers', resource: 'sellers', key: 'seller', group: 'organizations' },
+  {
+    id: 'payment_terms',
+    resource: 'payment_terms',
+    key: 'payment_term',
+    group: 'organizations',
+  },
+  {
+    id: 'currencies',
+    resource: 'currencies',
+    key: 'currency',
+    group: 'organizations',
+  },
+  ...ARTICLE_LOOKUP_KINDS.map(kind => lookup(kind, 'articles')),
+  {
+    id: 'article_lines',
+    resource: 'article_lines',
+    key: 'article_line',
+    group: 'articles',
+  },
+  { id: 'units', resource: 'units', key: 'unit', group: 'articles' },
+  { id: 'taxes', resource: 'taxes', key: 'tax', group: 'articles' },
+  {
+    id: 'countries',
+    resource: 'countries',
+    key: 'country',
+    hasActive: false,
+    group: 'locations',
+  },
   {
     id: 'states',
     resource: 'states',
     key: 'state',
     hasActive: false,
     hasDefault: false,
+    group: 'locations',
   },
 ];
+const GROUPS = ['organizations', 'articles', 'locations'];
+// Largo máximo del nombre por catálogo (el de la base); el resto, 100.
+const NAME_MAX = {
+  countries: 50,
+  states: 50,
+  article_lines: 50,
+  units: 20,
+  taxes: 30,
+};
 
 // Rails borra un plazo existente con `_destroy` (accepts_nested_attributes_for).
 const DESTROY = '_destroy';
@@ -71,6 +115,21 @@ const BLANKS = {
     is_default: false,
   }),
   states: () => ({ name: '', abbreviation: '' }),
+  article_lines: () => ({
+    name: '',
+    key: '',
+    group_id: '',
+    is_default: false,
+    active: true,
+  }),
+  units: () => ({ name: '', sat_key: '', is_default: false, active: true }),
+  taxes: () => ({
+    name: '',
+    tax_type: 'vat',
+    percent: 0,
+    is_default: false,
+    active: true,
+  }),
 };
 
 export default {
@@ -86,6 +145,8 @@ export default {
       saving: false,
       countries: [],
       countryId: null,
+      lineGroups: [],
+      taxTypes: [],
     };
   },
   computed: {
@@ -107,6 +168,15 @@ export default {
     },
     isGeo() {
       return ['countries', 'states'].includes(this.resource);
+    },
+    groupedCatalogs() {
+      return GROUPS.map(group => ({
+        group,
+        items: this.catalogs.filter(catalog => catalog.group === group),
+      }));
+    },
+    nameMax() {
+      return NAME_MAX[this.resource] || 100;
     },
     deleteDescription() {
       const keys = {
@@ -153,6 +223,12 @@ export default {
         this.countryId = (preferred || this.countries[0] || {}).id || null;
       }
     },
+    async fetchLineGroups() {
+      const { data } = await CrmCatalogs.list('lookups', {
+        kind: 'line_group',
+      });
+      this.lineGroups = data.items;
+    },
     async fetch() {
       this.loading = true;
       try {
@@ -160,6 +236,11 @@ export default {
         if (this.resource === 'states') {
           await this.fetchCountries();
           params.country_id = this.countryId;
+        }
+        if (this.resource === 'article_lines') await this.fetchLineGroups();
+        if (this.resource === 'taxes' && !this.taxTypes.length) {
+          const response = await CrmCatalogs.fetch();
+          this.taxTypes = response.data.tax_types;
         }
         const { data } = await CrmCatalogs.list(this.resource, params);
         this.items = data.items;
@@ -195,6 +276,15 @@ export default {
           .join(' · ');
       }
       if (this.resource === 'states') return item.abbreviation || '';
+      if (this.resource === 'article_lines') {
+        return [item.key, item.group_name].filter(Boolean).join(' · ');
+      }
+      if (this.resource === 'units') return item.sat_key || '';
+      if (this.resource === 'taxes') {
+        return `${this.$t(
+          `CRM_ZEUS.TAX_TYPE.${item.tax_type.toUpperCase()}`
+        )} · ${item.percent} %`;
+      }
       if (this.resource === 'payment_terms') {
         return (
           item.installments
@@ -235,6 +325,7 @@ export default {
         user_name: __,
         states: ___,
         country_name: ____,
+        group_name: ______,
         country_id: _____,
         ...rest
       } = this.form;
@@ -316,21 +407,28 @@ export default {
     </header>
 
     <div class="flex flex-1 min-h-0 gap-4 px-6 pb-4">
-      <nav class="flex flex-col flex-shrink-0 w-52 gap-0.5">
-        <button
-          v-for="catalog in catalogs"
-          :key="catalog.id"
-          type="button"
-          class="px-3 py-2 text-sm text-left rounded-md"
-          :class="
-            current.id === catalog.id
-              ? 'bg-woot-50 text-woot-700 font-medium dark:bg-woot-800/30'
-              : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800'
-          "
-          @click="select(catalog)"
-        >
-          {{ label(catalog) }}
-        </button>
+      <nav class="flex flex-col flex-shrink-0 w-52 gap-0.5 overflow-auto">
+        <div v-for="section in groupedCatalogs" :key="section.group">
+          <p
+            class="px-3 pt-3 pb-1 m-0 text-xs font-medium tracking-wide uppercase text-slate-400"
+          >
+            {{ $t(`CRM_ZEUS.CATALOGS.GROUPS.${section.group.toUpperCase()}`) }}
+          </p>
+          <button
+            v-for="catalog in section.items"
+            :key="catalog.id"
+            type="button"
+            class="w-full px-3 py-2 text-sm text-left rounded-md"
+            :class="
+              current.id === catalog.id
+                ? 'bg-woot-50 text-woot-700 font-medium dark:bg-woot-800/30'
+                : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800'
+            "
+            @click="select(catalog)"
+          >
+            {{ label(catalog) }}
+          </button>
+        </div>
       </nav>
 
       <div class="flex-1 overflow-auto">
@@ -439,10 +537,70 @@ export default {
             <input
               v-model="form.name"
               type="text"
-              :maxlength="isGeo ? 50 : 100"
+              :maxlength="nameMax"
               required
             />
           </label>
+
+          <div
+            v-if="resource === 'article_lines'"
+            class="grid grid-cols-1 gap-x-4 sm:grid-cols-[1fr_2fr]"
+          >
+            <label>
+              {{ $t('CRM_ZEUS.CATALOGS.LINE_KEY') }}
+              <input v-model="form.key" type="text" maxlength="20" />
+            </label>
+            <label>
+              {{ $t('CRM_ZEUS.CATALOGS.LINE_GROUP') }}
+              <select v-model="form.group_id">
+                <option value="">—</option>
+                <option
+                  v-for="group in lineGroups"
+                  :key="group.id"
+                  :value="group.id"
+                >
+                  {{ group.name }}
+                </option>
+              </select>
+            </label>
+          </div>
+
+          <label v-if="resource === 'units'">
+            {{ $t('CRM_ZEUS.CATALOGS.SAT_UNIT_KEY') }}
+            <input
+              v-model="form.sat_key"
+              type="text"
+              maxlength="3"
+              :placeholder="$t('CRM_ZEUS.CATALOGS.SAT_UNIT_PLACEHOLDER')"
+            />
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              {{ $t('CRM_ZEUS.CATALOGS.SAT_UNIT_HINT') }}
+            </span>
+          </label>
+
+          <div
+            v-if="resource === 'taxes'"
+            class="grid grid-cols-1 gap-x-4 sm:grid-cols-[2fr_1fr]"
+          >
+            <label>
+              {{ $t('CRM_ZEUS.CATALOGS.TAX_TYPE') }}
+              <select v-model="form.tax_type">
+                <option v-for="type in taxTypes" :key="type" :value="type">
+                  {{ $t(`CRM_ZEUS.TAX_TYPE.${type.toUpperCase()}`) }}
+                </option>
+              </select>
+            </label>
+            <label>
+              {{ $t('CRM_ZEUS.CATALOGS.TAX_PERCENT') }}
+              <input
+                v-model.number="form.percent"
+                type="number"
+                min="0"
+                max="100"
+                step="0.000001"
+              />
+            </label>
+          </div>
 
           <div v-if="isGeo" class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
             <label>

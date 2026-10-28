@@ -76,6 +76,7 @@ es:
         unit_weight: Peso
         image: Imagen
         prices: Precios
+        suspension_reason: Motivo
       crm_article/prices:
         price_list: Lista de precios
         price: Precio

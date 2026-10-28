@@ -162,7 +162,12 @@
         "PAYMENT_TERMS": "Condiciones de pago",
         "CURRENCIES": "Monedas",
         "COUNTRIES": "Países",
-        "STATES": "Estados"
+        "STATES": "Estados",
+        "PRICE_LIST": "Listas de precios",
+        "LINE_GROUP": "Grupos de líneas",
+        "ARTICLE_LINES": "Líneas",
+        "UNITS": "Unidades",
+        "TAXES": "Impuestos"
       },
       "COLUMNS": {
         "NAME": "Nombre",
@@ -203,7 +208,12 @@
         "PAYMENT_TERMS": "condición de pago",
         "CURRENCIES": "moneda",
         "COUNTRIES": "país",
-        "STATES": "estado"
+        "STATES": "estado",
+        "PRICE_LIST": "lista de precios",
+        "LINE_GROUP": "grupo de líneas",
+        "ARTICLE_LINES": "línea",
+        "UNITS": "unidad",
+        "TAXES": "impuesto"
       },
       "ISO_PLACEHOLDER": "USD",
       "COUNTRY": "País",
@@ -214,7 +224,111 @@
       "STATE_HINT": "En México la abreviatura es la clave c_Estado del SAT (COA, JAL, NLE…).",
       "STATES_COUNT": "{n} estados",
       "CONFIRM_DELETE_COUNTRY": "Se eliminará «{name}» con todos sus estados y ciudades. No se puede si alguna dirección usa una de sus ciudades.",
-      "CONFIRM_DELETE_STATE": "Se eliminará «{name}» con sus ciudades. No se puede si alguna dirección usa una de ellas."
+      "CONFIRM_DELETE_STATE": "Se eliminará «{name}» con sus ciudades. No se puede si alguna dirección usa una de ellas.",
+      "GROUPS": {
+        "ORGANIZATIONS": "Organizaciones",
+        "ARTICLES": "Artículos",
+        "LOCATIONS": "Ubicación"
+      },
+      "LINE_KEY": "Clave",
+      "LINE_GROUP": "Grupo de líneas",
+      "SAT_UNIT_KEY": "Clave SAT",
+      "SAT_UNIT_PLACEHOLDER": "H87",
+      "SAT_UNIT_HINT": "Clave de unidad del SAT (H87 pieza, E48 servicio, KGM kilogramo).",
+      "TAX_TYPE": "Tipo",
+      "TAX_PERCENT": "Porcentaje"
+    },
+    "ARTICLES": {
+      "TITLE": "Artículos",
+      "SUBTITLE": "Catalogados y no catalogados de la cuenta",
+      "NEW": "Nuevo artículo",
+      "TABS": {
+        "CATALOGUED": "Catalogados",
+        "UNCATALOGUED": "No catalogados",
+        "ALL": "Todos"
+      },
+      "ALL_STATUSES": "Todos los estatus",
+      "ALL_LINES": "Todas las líneas",
+      "SEARCH": "Buscar por nombre o clave",
+      "EMPTY": "No hay artículos con estos filtros",
+      "COLUMNS": {
+        "KEY": "Clave",
+        "NAME": "Nombre",
+        "TYPE": "Tipo",
+        "LINE": "Línea",
+        "UNIT": "Unidad",
+        "PRICE": "Precio",
+        "STATUS": "Estatus"
+      }
+    },
+    "CATALOG_STATUS": {
+      "CATALOGUED": "Catalogado",
+      "UNCATALOGUED": "No catalogado"
+    },
+    "ARTICLE_STATUS": {
+      "ACTIVE": "Activo",
+      "INACTIVE": "Baja",
+      "PURCHASES_SUSPENDED": "Suspensión de compras",
+      "SALES_SUSPENDED": "Suspensión de ventas",
+      "SUSPENDED": "Suspensión de compras y ventas"
+    },
+    "TAX_TYPE": {
+      "VAT": "IVA",
+      "VAT_EXEMPT": "IVA exento",
+      "VAT_WITHHOLDING": "Retención de IVA",
+      "ISR_WITHHOLDING": "Retención de ISR",
+      "IEPS": "IEPS"
+    },
+    "ARTICLE_FIELDS": {
+      "KEY": "Clave principal",
+      "CATALOG_STATUS": "Tipo",
+      "NAME": "Nombre",
+      "LINE": "Línea",
+      "UNIT": "Unidad de venta",
+      "STATUS": "Estatus",
+      "IS_STOCKABLE": "Almacenable",
+      "PURCHASE_UNIT": "Unidad de compra",
+      "PURCHASE_UNIT_CONTENT": "Contenido",
+      "UNIT_WEIGHT": "Peso unitario",
+      "NOTES": "Notas",
+      "IMAGE": "Imagen",
+      "IS_KIT": "Juego (kit)"
+    },
+    "ARTICLE_FORM": {
+      "NEW_TITLE": "Nuevo artículo",
+      "EDIT_TITLE": "Artículo",
+      "BACK": "← Artículos",
+      "TABS": {
+        "GENERAL": "General",
+        "PRICES": "Precios",
+        "OTHERS": "Otros"
+      },
+      "REQUIRED": "El nombre es obligatorio",
+      "CREATED": "Artículo creado",
+      "SAVED": "Cambios guardados",
+      "PRICES": "Precios por lista",
+      "NO_PRICES": "Sin precios todavía",
+      "ADD_PRICE": "Agregar precio",
+      "TAXES": "Impuestos",
+      "CATALOG": "Catalogar",
+      "CONFIRM_CATALOG": "«{name}» pasará de no catalogado a catalogado. Conserva sus precios, impuestos e imagen.",
+      "CATALOGED": "Ahora está catalogado",
+      "DELETE_TITLE": "Eliminar artículo",
+      "CONFIRM_DELETE": "Se eliminará «{name}» con sus precios e impuestos. No se puede deshacer.",
+      "DELETED": "Artículo eliminado",
+      "ADD_IMAGE": "Agregar imagen",
+      "CHANGE_IMAGE": "Cambiar imagen",
+      "REMOVE_IMAGE": "Quitar imagen",
+      "IMAGE_HINT": "JPG, PNG, WebP o GIF de hasta 5 MB.",
+      "IMAGE_INVALID": "La imagen debe ser JPG, PNG, WebP o GIF de hasta 5 MB",
+      "ALL_LISTS_USED": "Cada lista de precios lleva un precio. Para otro precio, agrega otra lista de precios en",
+      "GO_TO_CATALOGS": "Catálogos › Listas de precios"
+    },
+    "SUSPENSION": {
+      "INACTIVE_ON": "Fecha de baja",
+      "INACTIVE_REASON": "Motivo de la baja",
+      "SUSPENDED_ON": "Fecha de suspensión",
+      "SUSPENDED_REASON": "Causa de suspensión"
     }
   }
 }

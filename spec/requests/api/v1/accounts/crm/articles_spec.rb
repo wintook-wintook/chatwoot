@@ -27,15 +27,15 @@ RSpec.describe 'CrmZeus Articles API' do
 
   it 'crea con precios por lista e impuestos; el Vendedor también puede (sin restricción por tipo)' do
     give_role(agent, 'seller')
-    post url, params: { article: { catalog_status: 'catalogued', key: 'cas-01', name: 'Casco de seguridad', unit_id: pieza.id,
+    post url, params: { article: { catalog_status: 'catalogued', key: 'cas-01', name: 'Casco de seguridad', unit_id: pieza.id, is_kit: true,
                                    tax_ids: [iva.id],
                                    prices_attributes: [{ price_list_id: list_price.id, price: 350.5, currency_id: peso.id }] } },
               headers: agent.create_new_auth_token, as: :json
     expect(response).to have_http_status(:created)
     created = response.parsed_body['article']
-    expect(created).to include('catalog_status' => 'catalogued', 'key' => 'CAS-01', 'tax_ids' => [iva.id])
+    expect(created).to include('catalog_status' => 'catalogued', 'key' => 'CAS-01', 'tax_ids' => [iva.id], 'is_kit' => true)
     expect(created['prices'].first).to include('price_list' => 'Precio de lista', 'price' => 350.5, 'currency' => 'MXN')
-    expect(created['default_price']).to eq('price' => 350.5, 'price_list' => 'Precio de lista')
+    expect(created['default_price']).to eq('price' => 350.5, 'price_list' => 'Precio de lista', 'currency' => 'MXN')
     expect(created['created_by']['id']).to eq(agent.id)
   end
 

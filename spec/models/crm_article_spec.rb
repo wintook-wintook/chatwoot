@@ -81,6 +81,15 @@ RSpec.describe CrmArticle do
     expect(retention).to be_withholding
   end
 
+  it 'guarda fecha y motivo de baja, y los borra al volver a activo' do
+    record = article(status: :inactive, suspended_on: Date.new(2026, 10, 1), suspension_reason: 'Descontinuado')
+    expect(record.suspension_reason).to eq('Descontinuado')
+
+    record.update!(status: :active)
+    expect(record.suspended_on).to be_nil
+    expect(record.suspension_reason).to be_nil
+  end
+
   it 'catalogar conserva el id y no se puede dos veces' do
     record = article
     id = record.id

@@ -631,13 +631,16 @@ const ajustes = accountId => {
   };
 };
 
-// CrmZeus — organizaciones (después: catálogos, cotizaciones…).
+// CrmZeus — organizaciones, artículos y catálogos (después: cotizaciones…).
 const crmZeus = accountId => ({
   parentNav: 'crmzeus',
   routes: [
     'crmzeus_organizations',
     'crmzeus_organization_new',
     'crmzeus_organization_edit',
+    'crmzeus_articles',
+    'crmzeus_article_new',
+    'crmzeus_article_edit',
     'crmzeus_catalogs',
   ],
   menuItems: [
@@ -646,6 +649,12 @@ const crmZeus = accountId => ({
       label: 'CRM_ZEUS_ORGANIZATIONS',
       toState: frontendURL(`accounts/${accountId}/crm-zeus/organizations`),
       toStateName: 'crmzeus_organizations',
+    },
+    {
+      icon: 'tag',
+      label: 'CRM_ZEUS_ARTICLES',
+      toState: frontendURL(`accounts/${accountId}/crm-zeus/articles`),
+      toStateName: 'crmzeus_articles',
     },
     {
       icon: 'library',

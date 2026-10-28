@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_01_100200) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_01_100400) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1316,6 +1316,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100200) do
     t.bigint "unit_id"
     t.string "status", limit: 1, default: "A", null: false
     t.boolean "is_stockable", default: true, null: false
+    t.boolean "is_kit", default: false, null: false
+    t.date "suspended_on"
+    t.string "suspension_reason", limit: 250
     t.string "purchase_unit", limit: 20
     t.decimal "purchase_unit_content", precision: 18, scale: 5, default: "1.0", null: false
     t.decimal "unit_weight", precision: 18, scale: 5, default: "0.0", null: false

@@ -162,7 +162,12 @@
         "PAYMENT_TERMS": "Payment terms",
         "CURRENCIES": "Currencies",
         "COUNTRIES": "Countries",
-        "STATES": "States"
+        "STATES": "States",
+        "PRICE_LIST": "Price lists",
+        "LINE_GROUP": "Line groups",
+        "ARTICLE_LINES": "Lines",
+        "UNITS": "Units",
+        "TAXES": "Taxes"
       },
       "COLUMNS": {
         "NAME": "Name",
@@ -203,7 +208,12 @@
         "PAYMENT_TERMS": "payment term",
         "CURRENCIES": "currency",
         "COUNTRIES": "country",
-        "STATES": "state"
+        "STATES": "state",
+        "PRICE_LIST": "price list",
+        "LINE_GROUP": "line group",
+        "ARTICLE_LINES": "line",
+        "UNITS": "unit",
+        "TAXES": "tax"
       },
       "ISO_PLACEHOLDER": "USD",
       "COUNTRY": "Country",
@@ -214,7 +224,111 @@
       "STATE_HINT": "In Mexico the abbreviation is the SAT c_Estado key (COA, JAL, NLE…).",
       "STATES_COUNT": "{n} states",
       "CONFIRM_DELETE_COUNTRY": "«{name}» will be deleted with all its states and cities. Not allowed if an address uses one of its cities.",
-      "CONFIRM_DELETE_STATE": "«{name}» will be deleted with its cities. Not allowed if an address uses one of them."
+      "CONFIRM_DELETE_STATE": "«{name}» will be deleted with its cities. Not allowed if an address uses one of them.",
+      "GROUPS": {
+        "ORGANIZATIONS": "Organizations",
+        "ARTICLES": "Articles",
+        "LOCATIONS": "Locations"
+      },
+      "LINE_KEY": "Key",
+      "LINE_GROUP": "Line group",
+      "SAT_UNIT_KEY": "SAT key",
+      "SAT_UNIT_PLACEHOLDER": "H87",
+      "SAT_UNIT_HINT": "SAT unit key (H87 piece, E48 service, KGM kilogram).",
+      "TAX_TYPE": "Type",
+      "TAX_PERCENT": "Percent"
+    },
+    "ARTICLES": {
+      "TITLE": "Articles",
+      "SUBTITLE": "Catalogued and uncatalogued articles of the account",
+      "NEW": "New article",
+      "TABS": {
+        "CATALOGUED": "Catalogued",
+        "UNCATALOGUED": "Uncatalogued",
+        "ALL": "All"
+      },
+      "ALL_STATUSES": "All statuses",
+      "ALL_LINES": "All lines",
+      "SEARCH": "Search by name or key",
+      "EMPTY": "No articles match these filters",
+      "COLUMNS": {
+        "KEY": "Key",
+        "NAME": "Name",
+        "TYPE": "Type",
+        "LINE": "Line",
+        "UNIT": "Unit",
+        "PRICE": "Price",
+        "STATUS": "Status"
+      }
+    },
+    "CATALOG_STATUS": {
+      "CATALOGUED": "Catalogued",
+      "UNCATALOGUED": "Uncatalogued"
+    },
+    "ARTICLE_STATUS": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "PURCHASES_SUSPENDED": "Purchases suspended",
+      "SALES_SUSPENDED": "Sales suspended",
+      "SUSPENDED": "Purchases and sales suspended"
+    },
+    "TAX_TYPE": {
+      "VAT": "VAT",
+      "VAT_EXEMPT": "VAT exempt",
+      "VAT_WITHHOLDING": "VAT withholding",
+      "ISR_WITHHOLDING": "ISR withholding",
+      "IEPS": "IEPS"
+    },
+    "ARTICLE_FIELDS": {
+      "KEY": "Main key",
+      "CATALOG_STATUS": "Type",
+      "NAME": "Name",
+      "LINE": "Line",
+      "UNIT": "Sales unit",
+      "STATUS": "Status",
+      "IS_STOCKABLE": "Stockable",
+      "PURCHASE_UNIT": "Purchase unit",
+      "PURCHASE_UNIT_CONTENT": "Content",
+      "UNIT_WEIGHT": "Unit weight",
+      "NOTES": "Notes",
+      "IMAGE": "Image",
+      "IS_KIT": "Kit"
+    },
+    "ARTICLE_FORM": {
+      "NEW_TITLE": "New article",
+      "EDIT_TITLE": "Article",
+      "BACK": "← Articles",
+      "TABS": {
+        "GENERAL": "General",
+        "PRICES": "Prices",
+        "OTHERS": "Other"
+      },
+      "REQUIRED": "Name is required",
+      "CREATED": "Article created",
+      "SAVED": "Changes saved",
+      "PRICES": "Prices by list",
+      "NO_PRICES": "No prices yet",
+      "ADD_PRICE": "Add price",
+      "TAXES": "Taxes",
+      "CATALOG": "Catalogue",
+      "CONFIRM_CATALOG": "«{name}» will change from uncatalogued to catalogued. Its prices, taxes and image are kept.",
+      "CATALOGED": "It is now catalogued",
+      "DELETE_TITLE": "Delete article",
+      "CONFIRM_DELETE": "«{name}» will be deleted with its prices and taxes. This cannot be undone.",
+      "DELETED": "Article deleted",
+      "ADD_IMAGE": "Add image",
+      "CHANGE_IMAGE": "Change image",
+      "REMOVE_IMAGE": "Remove image",
+      "IMAGE_HINT": "JPG, PNG, WebP or GIF up to 5 MB.",
+      "IMAGE_INVALID": "The image must be JPG, PNG, WebP or GIF up to 5 MB",
+      "ALL_LISTS_USED": "Each price list holds one price. For another price, add a price list in",
+      "GO_TO_CATALOGS": "Catalogs › Price lists"
+    },
+    "SUSPENSION": {
+      "INACTIVE_ON": "Deactivation date",
+      "INACTIVE_REASON": "Deactivation reason",
+      "SUSPENDED_ON": "Suspension date",
+      "SUSPENDED_REASON": "Suspension reason"
     }
   }
 }
