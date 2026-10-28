@@ -35,7 +35,7 @@ RSpec.describe ContactTrackings::ServiceRequests::Choice do
     texto = elegir('1A y 2B')
     expect(ContactTrackings::ServiceMeeting).to have_received(:hold!).with(hash_including(slot: hash_including(google_calendar_id: 'g1A')))
     expect(ContactTrackings::ServiceMeeting).to have_received(:hold!).with(hash_including(slot: hash_including(google_calendar_id: 'g2B')))
-    expect(texto).to start_with('📌 Aparté:').and include('Falta elegir horario de: 3️⃣.')
+    expect(texto).to start_with('Listo, aparté tus horarios:').and include('Falta elegir horario del servicio 3.')
   end
 
   it '«sí» aparta la primera opción de cada servicio' do
@@ -51,7 +51,7 @@ RSpec.describe ContactTrackings::ServiceRequests::Choice do
     firme = instance_double(ContactTrackings::ServiceMeeting, confirm!: true)
     allow(ContactTrackings::ServiceMeeting).to receive(:new).and_return(firme)
 
-    expect(elegir('1A', tentative: false)).to start_with('✅ Agendé:')
+    expect(elegir('1A', tentative: false)).to start_with('Listo, quedó agendado:').and include('Estado: Confirmado')
     expect(firme).to have_received(:confirm!)
   end
 
@@ -81,7 +81,7 @@ RSpec.describe ContactTrackings::ServiceRequests::Choice do
     it 'sin IA, «Adelante con el horario» aparta la opción ofrecida (ejemplo real)' do
       caso('Rabón', %w[1A])
 
-      expect(elegir('Adelante con el horario')).to start_with('📌 Aparté:')
+      expect(elegir('Adelante con el horario')).to start_with('Listo, aparté tu horario:').and include('Estado: Apartado')
       expect(ContactTrackings::ServiceMeeting).to have_received(:hold!).once
     end
 
@@ -106,7 +106,7 @@ RSpec.describe ContactTrackings::ServiceRequests::Choice do
       caso('Plana 40 t', %w[1A 1B])
       la_ia_lee(:elegir, general: true)
 
-      expect(elegir('va')).to start_with('Aparté la opción A de cada servicio.')
+      expect(elegir('va')).to start_with('Aparté la opción A de cada servicio:')
     end
 
     it 'si no se sabe cuál, una sola pregunta con las opciones y no aparta nada' do
@@ -114,8 +114,15 @@ RSpec.describe ContactTrackings::ServiceRequests::Choice do
       la_ia_lee(:ambigua)
 
       texto = elegir('sí pero más tarde')
-      expect(texto).to start_with('¿Cuál horario prefieres?').and include('1️⃣ Plana 40 t: 1A 09:00–12:00 (TP-1A) · 1B')
+      expect(texto).to start_with('¿Cuál horario prefieres?').and include("A · 09:00-12:00 · TP-1A\nB · 09:00-12:00 · TP-1B")
       expect(ContactTrackings::ServiceMeeting).not_to have_received(:hold!)
+    end
+
+    it 'con una sola opción, «sí pero más tarde» pregunta la hora en vez de repetir la opción' do
+      caso('Plana 40 t', %w[1A])
+      la_ia_lee(:ambigua)
+
+      expect(elegir('sí pero más tarde')).to eq(described_class::OTHER_TIME_TEXT)
     end
 
     it '«ninguna» pide otro día u hora' do

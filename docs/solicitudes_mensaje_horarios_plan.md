@@ -264,3 +264,31 @@ Punta a punta en la bandeja 493 = **conv 652** (28/10/2026): rabón Carmen → V
 horario» aparta 1A (TP-111) y pregunta «¿Confirmo el servicio?» → «sí» → esperando pago (ruta con `requiere=pago`).
 Caso 01182 y su tarea se cancelaron después para liberar el calendario de TP-111.
 Visto en la misma prueba, para F2/F3: todavía ofrece una plataforma plana de 40.8 t por un rabón y muestra placas.
+
+### F3 · Formato del mensaje (28/10/2026)
+
+**Qué se hizo**
+- `service_requests/block.rb` (nuevo): un bloque por servicio, siempre en el mismo orden (título con ruta ·
+  lo más parecido · unidad · día y caso · estado · nota · tabla u horario apartado · «Falta: …»).
+  - Tabla: WhatsApp y Telegram en ``` (Op 4 · Horario al ancho del más largo + 2 · Unidad), ≤ 30 caracteres,
+    sin íconos. Otros canales: «A · 12:00-13:00 · TP-46», una por renglón.
+  - Título en negritas: WhatsApp `*…*`, Telegram `**…**` (→ `<strong>`), otros sin marca.
+  - Estados fijos: Por confirmar · Apartado · Esperando pago · Confirmado · Cancelado. La hora pedida libre va en
+    el estado: «(la de las 12:00 es la que pediste)».
+- `turn.rb`: encabezado «Tu solicitud tiene N servicios:» (o «Así quedó el servicio 2:» si solo cambian algunos);
+  lo que falta va en el bloque; cierre una sola vez con un ejemplo real («la de las 14:00» o «1B»).
+- `choice.rb`: lo apartado y la pregunta de «ambigua» usan el mismo bloque; sin emojis. Con una sola opción,
+  «sí pero más tarde» pregunta la hora (conv. 653).
+- `scheduler.rb`: unidad con sufijos (`_t` → «t», `_m` → «m», `_kg` → «kg»), tipo sin su paréntesis, y nunca
+  `placas, serie, tracto, jalado_por` aunque la ruta los pida. Nota: «a las 12:00 no hay; estas son las más cercanas».
+- `channel/telegram.rb`: conversión de v4.19 (CommonMarker con HARDBREAKS) → los bloques ``` llegan como `<pre>`.
+  Sin la extensión de tachado de v4.19, para no tachar cualquier «~x~».
+
+**Pruebas**
+- RSpec: `block_spec.rb` (5, incluye el ancho ≤ 30), describe_unit en `scheduler_spec.rb`, Telegram con bloque;
+  motor + job + Telegram: 166, 0 fallas.
+- En vivo, bandeja 493 (API, formato sin bloque) = **conv 653**; vista WhatsApp/Telegram del mismo caso armada en
+  memoria (sin enviar): tabla alineada y `<pre><code>` en Telegram. Sin placas.
+- Falta: ver en un celular real (WhatsApp y Telegram), sección 7.
+
+**Asistente / configuración:** nada que configurar. Quitar `placas` de la directiva ya no es necesario.

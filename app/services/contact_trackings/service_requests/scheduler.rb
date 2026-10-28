@@ -15,6 +15,7 @@
 #   · unidades (observación SSUSA 4): la 1.ª columna que regresa {{hoja_buscar:}} es el
 #     calendario; las demás describen la unidad antes de su horario
 #     ({{hoja_buscar: Servicio Gruas | tipo=? | Calendar_ID, tipo, peso_max_t, placas}}).
+#     Con etiquetas legibles («40 t · 16.15 m») y nunca placas, serie ni tracto (SSUSA 22/10).
 # Las opciones quedan en metadata['oferta'] del caso; la elección la resuelve Choice.
 # ================================================================================
 
@@ -140,7 +141,7 @@ class ContactTrackings::ServiceRequests::Scheduler
     return "sí hay a las #{at.strftime('%H:%M')}" if exacto
     return "a las #{at.strftime('%H:%M')} no hay, ni más tarde ese día" if slots.empty?
 
-    "a las #{at.strftime('%H:%M')} no hay; lo que sí hay"
+    "a las #{at.strftime('%H:%M')} no hay; estas son las más cercanas"
   end
 
   # Solo las unidades que se ofrecen, en el orden en que aparecen.
@@ -204,14 +205,25 @@ class ContactTrackings::ServiceRequests::Scheduler
     filas.index_by { |fila| ContactTrackings::SheetLookup.calendar_id(cell(fila, @spec.returns.first)) }
   end
 
-  # «Low boy (cama muy baja) · Peso max t: 60 · Placas: 66UL2B»: las columnas que la ruta pidió
-  # después del calendario. La primera va sin nombre (suele ser el tipo).
+  # «Low boy · 60 t · 16.15 m»: las columnas que la ruta pidió después del calendario. La primera va
+  # sin nombre y sin su aclaración entre paréntesis (suele ser el tipo); las de medida, con su unidad
+  # (peso_max_t → «40 t»). Datos internos, aunque la ruta los pida, nunca (SSUSA 22/10).
+  HIDDEN_COLUMNS = %w[placas serie tracto jalado_por].freeze
+  UNIT_SUFFIXES = { '_t' => 't', '_m' => 'm', '_kg' => 'kg' }.freeze
+
   def describe_unit(fila)
-    partes = @spec.returns.drop(1).filter_map do |columna|
+    columnas = @spec.returns.drop(1).reject { |columna| HIDDEN_COLUMNS.include?(columna.to_s.strip.downcase) }
+    partes = columnas.filter_map do |columna|
       valor = cell(fila, columna)
       [columna, valor] if valor.present?
     end
-    partes.each_with_index.map { |(columna, valor), i| i.zero? ? valor.to_s : "#{columna.tr('_', ' ').capitalize}: #{valor}" }.join(' · ')
+    partes.each_with_index.map { |(columna, valor), i| i.zero? ? valor.to_s.sub(/\s*\(.*\)\s*\z/, '') : labeled(columna, valor) }.join(' · ')
+  end
+
+  def labeled(columna, valor)
+    clave = columna.to_s.strip.downcase
+    sufijo = UNIT_SUFFIXES.find { |final, _| clave.end_with?(final) }&.last
+    sufijo ? "#{valor} #{sufijo}" : "#{clave.tr('_', ' ').capitalize}: #{valor}"
   end
 
   def cell(fila, columna)

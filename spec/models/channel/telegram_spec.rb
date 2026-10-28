@@ -14,6 +14,18 @@ RSpec.describe Channel::Telegram do
       end
     end
 
+    context 'when text contains a fenced code block (tabla de horarios de @solicitudes)' do
+      let(:text) do
+        "**Servicio 1** · Carmen → Villahermosa\nEstado: Por confirmar\n```\nOp  Horario      Unidad\nA   12:00-13:00  TP-46\n```\nFalta: destino"
+      end
+
+      it 'keeps the block monospaced and aligned' do
+        expect(subject).to include("<pre><code>Op  Horario      Unidad\nA   12:00-13:00  TP-46\n</code></pre>")
+        expect(subject).to start_with("<strong>Servicio 1</strong> · Carmen → Villahermosa\nEstado: Por confirmar")
+        expect(subject).to end_with('Falta: destino')
+      end
+    end
+
     context 'when text contains broken markdown' do
       let(:text) { 'This is a **broken markdown with <b>HTML</b> tags.' }
 

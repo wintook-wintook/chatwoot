@@ -5,8 +5,9 @@
 # ================================================================================
 # El mensaje cae en una ruta con @solicitudes:
 #   Extractor (servicios) → Registry (un caso por servicio, reiteraciones) → respuesta con todos,
-#   numerados por conversación (1️⃣ 2️⃣ 3️⃣), y UNA pregunta con lo que falta de cada uno.
-# F3 agrega los horarios de cada servicio. Plan: docs/solicitudes_multiservicio_plan.md §4
+#   numerados por conversación, un bloque por servicio (Block) con lo que falta dentro, y el cierre
+#   una sola vez. F3 agrega los horarios de cada servicio. Plan: docs/solicitudes_multiservicio_plan.md §4
+#   Formato: docs/solicitudes_mensaje_horarios_plan.md §3 (observaciones SSUSA 22/10).
 #
 # nil = el mensaje no pide servicios (saludo, pregunta): el motor sigue como siempre.
 # ================================================================================
@@ -141,19 +142,19 @@ class ContactTrackings::ServiceRequests::Turn
     ContactTrackings::ServiceRequests::Registry.open_cases(@message.conversation).pluck(:id).index(ticket.id).to_i + 1
   end
 
+  # Observaciones SSUSA 22/10 (F3): un bloque por servicio (Block) y el cierre una sola vez.
   def reply(entries, planes)
-    lineas = entries.map do |entry|
-      plan = planes[entry.ticket.id]
-      [line(entry), related_line(plan), units_lines(plan), options_line(plan)].compact.join("\n")
+    bloque = ContactTrackings::ServiceRequests::Block.new(conversation: @message.conversation, timezone: @timezone)
+    faltan = entries.to_h { |entry| [entry.ticket.id, missing(entry, planes[entry.ticket.id])] }
+    servicios = entries.map do |entry|
+      bloque.service(entry.ticket, plan: planes[entry.ticket.id], missing: faltan[entry.ticket.id])
     end
-    faltan = entries.filter_map { |entry| missing(entry, planes[entry.ticket.id]) }
-    "#{header(entries)}\n\n#{lineas.join("\n")}\n\n#{closing(faltan, planes, entries)}"
+    "#{header(entries)}\n\n#{servicios.join("\n\n")}\n\n#{closing(faltan.values.any?(&:present?), planes, entries)}"
   end
 
   def closing(faltan, planes, entries)
-    partes = []
-    partes << "Para programarlos me falta: #{faltan.join('; ')}." if faltan.any?
-    partes.concat(schedule_hints(planes.values))
+    partes = schedule_hints(planes.values)
+    partes << MISSING_CLOSING if faltan && partes.empty?
     partes << fallback_closing(entries) if partes.empty?
     partes.join("\n")
   end
@@ -162,70 +163,37 @@ class ContactTrackings::ServiceRequests::Turn
   def fallback_closing(entries) = entries.all? { |e| e.ticket.metadata['meeting_id'].present? } ? HELD_CLOSING : ADVISOR_CLOSING
   HELD_CLOSING = 'Listo, quedó corregido y tu horario sigue apartado.'
   ADVISOR_CLOSING = 'Un asesor revisa la disponibilidad y te confirma.'
+  MISSING_CLOSING = 'Cuando me pases lo que falta, lo programo.'
 
   def schedule_hints(planes)
     pistas = []
-    if planes.any? { |plan| plan.offers.present? }
-      pistas << 'Responde con los horarios que quieres apartar (por ejemplo «1A y 3B»), o «sí» para la primera opción de cada uno.'
-    end
+    ofertas = planes.flat_map { |plan| Array(plan.offers) }
+    pistas << choose_hint(planes, ofertas) if ofertas.any?
     pistas << 'Queda apartado; cuando me confirmes el servicio lo dejo en firme.' if planes.any?(&:held) && tentative?
     pistas
   end
 
-  # Observación SSUSA 1: no hay lo pedido y se ofrece lo más parecido («No tengo hiab; …»).
-  def related_line(plan)
-    "    ℹ️ #{plan.related[0].upcase}#{plan.related[1..]}" if plan&.related.present? && plan.units.present?
+  # El ejemplo sale de lo ofrecido: una opción B real («la de las 14:00» o «1B»).
+  def choose_hint(planes, ofertas)
+    return 'Responde «sí» para apartarlo, o dime qué otra hora te acomoda.' if ofertas.one?
+
+    otra = planes.find { |plan| Array(plan.offers).many? }&.offers&.second
+    ejemplo = if otra && !otra['all_day']
+                "«la de las #{Time.zone.parse(otra['slot']).in_time_zone(@timezone).strftime('%H:%M')}» o «#{otra['code']}»"
+              else
+                "«#{ofertas.last['code']}»"
+              end
+    "Responde «sí» para apartar la opción A de cada servicio, o dime cuál prefieres (por ejemplo #{ejemplo})."
   end
 
-  # Observación SSUSA 4: antes del horario, qué unidad es («🚛 TP-64: Low boy · Peso max t: 60»),
-  # para que el cliente vea si le sirve. Las columnas las elige la ruta (ver Scheduler).
-  def units_lines(plan)
-    return nil if plan.nil? || plan.units.blank?
-
-    nombres = (plan.offers + [plan.held].compact).to_h { |oferta| [oferta['gcal'], oferta['calendar_name']] }
-    plan.units.map { |gcal, descripcion| "    🚛 #{nombres[gcal] || 'Unidad'}: #{descripcion}" }.join("\n")
-  end
-
-  # «   a las 08:00 no hay; lo que sí hay → 1A 09:00–10:00 (TP-64) · 1B …», o lo que se apartó.
-  def options_line(plan)
-    return nil if plan.nil?
-    return "    ✅ #{plan.note.capitalize}: #{held_text(plan.held)}" if plan.held
-    return nil if plan.offers.empty? && plan.note.nil?
-
-    opciones = plan.offers.map { |oferta| option_text(oferta, plan.requested) }
-    "    #{[plan.note, opciones.join(' · ').presence].compact.join(' → ')}"
-  end
-
-  def held_text(oferta)
-    inicio = Time.zone.parse(oferta['slot']).in_time_zone(@timezone)
-    fin = Time.zone.parse(oferta['end_time']).in_time_zone(@timezone)
-    "#{tentative? ? 'te lo aparté' : 'te lo agendé'} de #{inicio.strftime('%H:%M')} a #{fin.strftime('%H:%M')} (#{oferta['calendar_name']})"
-  end
-
-  def option_text(oferta, pedido)
-    return "#{oferta['code']} #{self.class.period_text(oferta, @timezone)} (#{oferta['calendar_name']})" if oferta['all_day']
-
-    inicio = Time.zone.parse(oferta['slot']).in_time_zone(@timezone)
-    fin = Time.zone.parse(oferta['end_time']).in_time_zone(@timezone)
-    dia = pedido && inicio.to_date == pedido.to_date ? '' : "#{DAYS[inicio.wday]} #{inicio.day} #{MONTHS[inicio.month - 1]} "
-    "#{oferta['code']} #{dia}#{inicio.strftime('%H:%M')}–#{fin.strftime('%H:%M')} (#{oferta['calendar_name']})"
-  end
-
+  # «Tu solicitud tiene 2 servicios:» si se muestran todos; si solo cambian algunos, cuáles.
   def header(entries)
-    nuevos = entries.count(&:created)
-    return "Recibí #{entries.size == 1 ? '1 servicio' : "#{entries.size} servicios"}:" if nuevos == entries.size
+    abiertos = ContactTrackings::ServiceRequests::Registry.open_cases(@message.conversation).pluck(:id)
+    total = abiertos.size
+    return "Tu solicitud tiene #{total == 1 ? '1 servicio' : "#{total} servicios"}:" if (abiertos - entries.map { |e| e.ticket.id }).empty?
 
-    "Actualicé #{entries.size - nuevos == 1 ? '1 servicio' : "#{entries.size - nuevos} servicios"} que ya tenía" \
-      "#{nuevos.positive? ? " y agregué #{nuevos}" : ''}:"
-  end
-
-  STATES = { 'apartado' => '📌 apartado', 'esperando_pago' => '💳 esperando pago', 'confirmado' => '✅ confirmado' }.freeze
-
-  def line(entry)
-    datos = entry.ticket.metadata[ContactTrackings::ServiceRequests::Registry::META_KEY]
-    partes = [datos['label'].presence || 'Servicio', route(datos), when_text(datos),
-              STATES[entry.ticket.metadata['estado']]].compact_blank
-    "#{self.class.number(entry.ticket, @message.conversation)} #{partes.join(' · ')} (caso #{entry.ticket.folio.presence || entry.ticket.id})"
+    numeros = entries.map { |entry| abiertos.index(entry.ticket.id).to_i + 1 }
+    numeros.one? ? "Así quedó el servicio #{numeros.first}:" : "Así quedaron los servicios #{numeros[0..-2].join(', ')} y #{numeros.last}:"
   end
 
   def route(datos)
@@ -247,10 +215,8 @@ class ContactTrackings::ServiceRequests::Turn
   def missing(entry, plan = nil)
     faltan = ContactTrackings::ServiceRequests::Fields.missing_labels(entry.ticket) + basic_missing(entry.ticket)
     faltan << 'a qué hora lo necesitas' if plan&.need_time
-    return nil if faltan.empty?
 
-    # Con comas: las etiquetas de los campos ya traen «y» («Material a transportar y cantidad»).
-    "del #{self.class.number(entry.ticket, @message.conversation)} #{faltan.join(', ')}"
+    faltan
   end
 
   def basic_missing(caso)
