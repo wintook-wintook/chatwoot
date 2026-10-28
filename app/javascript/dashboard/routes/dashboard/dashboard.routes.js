@@ -13,6 +13,7 @@ import { routes as kanbanRoutes } from './kanban/routes'; // Añade esta línea
 // @tickets_cases
 import { routes as gestorTicketsRoutes } from './gestorTickets/routes';
 import { routes as contractsRoutes } from './contracts/routes'; // Plan-Contratos R1
+import { routes as crmZeusRoutes } from './crmZeus/routes'; // CrmZeus
 // proyecto@contact_tracking — Dashboard de Seguimientos
 import { routes as contactTrackingsRoutes } from './contactTrackings/routes';
 import { routes as whatsappCallsRoutes } from './whatsappCalls/routes'; // diag/llamadas_whatsapp
@@ -51,6 +52,7 @@ export default {
         // @tickets_cases
         ...gestorTicketsRoutes,
         ...contractsRoutes,
+        ...crmZeusRoutes, // CrmZeus
         // proyecto@contact_tracking — Dashboard de Seguimientos
         ...contactTrackingsRoutes,
         ...whatsappCallsRoutes,

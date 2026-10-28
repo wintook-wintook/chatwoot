@@ -206,6 +206,14 @@ export const primaryMenuV2 = (accountId, route) => {
       toState: url(`tickets/${serviceClass(route, accountId)}/${serviceView}`),
       toStateName: CLASS_VIEW_ROUTES[serviceView],
     },
+    // CrmZeus — lo traído de CRMZeus (sin feature flag: lo filtra el área de Ventas).
+    {
+      icon: 'briefcase',
+      key: 'crmzeus',
+      label: 'CRM_ZEUS',
+      toState: url('crm-zeus/organizations'),
+      toStateName: 'crmzeus_organizations',
+    },
     {
       icon: 'book-contacts',
       key: 'contacts',
@@ -623,6 +631,20 @@ const ajustes = accountId => {
   };
 };
 
+// CrmZeus — organizaciones (después: catálogos, cotizaciones…).
+const crmZeus = accountId => ({
+  parentNav: 'crmzeus',
+  routes: ['crmzeus_organizations'],
+  menuItems: [
+    {
+      icon: 'briefcase',
+      label: 'CRM_ZEUS_ORGANIZATIONS',
+      toState: frontendURL(`accounts/${accountId}/crm-zeus/organizations`),
+      toStateName: 'crmzeus_organizations',
+    },
+  ],
+});
+
 // El orden importa: gana el primer menú cuya ruta coincide (los de `matches`
 // van antes que los de lista de rutas).
 export const getSidebarItemsV2 = (accountId, route) => ({
@@ -637,6 +659,7 @@ export const getSidebarItemsV2 = (accountId, route) => ({
     informes(accountId, route),
     agentesIa(accountId),
     campanas(accountId),
+    crmZeus(accountId),
     agenda(accountId),
     ajustes(accountId),
   ],

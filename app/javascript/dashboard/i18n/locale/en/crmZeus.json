@@ -1,0 +1,41 @@
+{
+  "CRM_ZEUS": {
+    "REFRESH": "Refresh",
+    "LOADING": "Loading…",
+    "TYPE": {
+      "CUSTOMER": "Customer",
+      "PROSPECT": "Prospect"
+    },
+    "STATUS": {
+      "ACTIVE": "Active",
+      "CREDIT_SUSPENDED": "Credit suspended",
+      "SALES_SUSPENDED": "Sales suspended",
+      "DELINQUENT": "Delinquent",
+      "INACTIVE": "Inactive"
+    },
+    "ORGANIZATIONS": {
+      "TITLE": "Organizations",
+      "SUBTITLE": "Customers and prospects of the account",
+      "TABS": {
+        "CUSTOMER": "Customers",
+        "PROSPECT": "Prospects",
+        "ALL": "All"
+      },
+      "ALL_STATUSES": "All statuses",
+      "ALL_SELLERS": "All sellers",
+      "SEARCH": "Search by key, legal name or trade name",
+      "EMPTY": "No organizations match these filters",
+      "COLUMNS": {
+        "KEY": "Key",
+        "TRADE_NAME": "Trade name",
+        "LEGAL_NAME": "Legal name",
+        "TYPE": "Type",
+        "SELLER": "Seller",
+        "RATING": "Rating",
+        "PHONE": "Phone",
+        "CITY": "City",
+        "STATUS": "Status"
+      }
+    }
+  }
+}

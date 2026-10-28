@@ -302,6 +302,8 @@
     "SALES_DASHBOARD": "Sales dashboard",
     "SERVICE_DASHBOARD": "Service dashboard",
     "SALES": "Sales",
+    "CRM_ZEUS": "CrmZeus",
+    "CRM_ZEUS_ORGANIZATIONS": "Organizations",
     "SERVICE": "Service",
     "AGENDA": "Schedule",
     "CLIENTS": "Customers",

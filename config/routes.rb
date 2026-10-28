@@ -112,6 +112,19 @@ Rails.application.routes.draw do
               post :deliver
             end
           end
+          # CrmZeus O1 — organizaciones (clientes / prospectos), consignatarios y catálogos
+          namespace :crm do
+            resources :organizations, only: [:index, :show, :create, :update, :destroy] do
+              post :convert, on: :member
+              resources :consignees, only: [:index, :create, :update, :destroy]
+            end
+            resource :catalogs, only: [:show]
+            resources :lookups, only: [:index, :create, :update, :destroy]
+            resources :sellers, only: [:index, :create, :update, :destroy]
+            resources :currencies, only: [:index, :create, :update, :destroy]
+            resources :payment_terms, only: [:index, :create, :update, :destroy]
+            resources :cities, only: [:index, :create]
+          end
           # Plan-Catalogo-Cotizaciones C1 — Ventas › Catálogo
           resources :catalog_items, only: [:index, :create, :update] do
             collection do

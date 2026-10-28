@@ -36,6 +36,7 @@ import datePicker from './datePicker.json';
 // Importar todos los archivos JSON de inglés
 import kanban from './kanban.json';
 import contracts from './contracts.json'; // Plan-Contratos R1
+import crmZeus from './crmZeus.json'; // CrmZeus
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
 import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
@@ -98,4 +99,5 @@ export default {
   ...trackingAssistant, // proyecto@asistente_agentes_ia
   ...whatsappCalls, // diag/llamadas_whatsapp
   ...internalChat, // feat/chat_interno
+  ...crmZeus, // CrmZeus
 };

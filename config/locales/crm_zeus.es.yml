@@ -1,0 +1,59 @@
+# CrmZeus — nombres de los campos en los mensajes de error («Razón social ya está dado de alta…»).
+es:
+  activerecord:
+    attributes:
+      crm_organization:
+        organization_type: Tipo
+        key: Clave
+        legal_name: Razón social
+        trade_name: Nombre comercial
+        phone: Teléfono
+        email: Correo
+        tax_id: RFC
+        customer_type: Tipo de cliente
+        rating: Calificación
+        industry: Giro
+        origin: Origen
+        zone: Zona
+        collector: Cobrador
+        seller: Vendedor
+        payment_term: Condición de pago
+        currency: Moneda
+        credit_limit: Límite de crédito
+        status: Estatus
+        suspension_reason: Causa de suspensión
+      crm_organization_address:
+        consignee_name: Consignatario
+        street: Calle
+        exterior_number: No. exterior
+        interior_number: No. interior
+        neighborhood: Colonia
+        town: Población
+        reference: Referencia
+        city: Ciudad
+        postal_code: Código postal
+        tax_id: RFC
+        phone: Teléfono
+        phone2: Teléfono 2
+        contact_name: Contacto
+        is_primary: Domicilio
+      crm_lookup:
+        name: Nombre
+        kind: Catálogo
+      crm_seller:
+        name: Nombre
+        user: Agente
+      crm_currency:
+        name: Nombre
+        iso_code: Clave ISO
+        fixed_exchange_rate: Tipo de cambio fijo
+      crm_payment_term:
+        name: Nombre
+        installments: Plazos
+        early_payment_discount_percent: Descuento por pronto pago
+        early_payment_days: Días de pronto pago
+      crm_payment_term_installment:
+        days: Días
+        percent: Porcentaje
+      crm_city:
+        name: Nombre
