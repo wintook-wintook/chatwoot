@@ -225,3 +225,39 @@ cambió a propósito y las pruebas no se actualizaron. Ninguna toca `service_req
 
 Pruebas del motor de @solicitudes (`spec/services/contact_trackings/service_requests/`): **39, 0 fallas**.
 Cómo correrlas: `RAILS_ENV=test POSTGRES_DATABASE=chatwoot_test bundle exec rspec <archivo>`.
+
+### F1 · Respuestas naturales (28/10/2026)
+
+**Qué se hizo**
+- `service_requests/interpreter.rb` (nuevo): la IA lee la respuesta frente a las opciones abiertas y devuelve
+  `elegir` (general o códigos), `ambigua`, `rechazo` u `otra`. Ruby descarta códigos que no se ofrecieron;
+  «elegir» sin nada válido pasa a pregunta. Mismo modelo y clave que el Extractor (piso gpt-4o).
+- `choice.rb`:
+  - Orden: códigos escritos («1A») → IA → patrones de respaldo (`YES_RE` con adelante, confirmo, listo, sale…).
+  - `CODE_RE` corregido: con espacio solo mayúscula. Antes «el 2 a las 16» se leía como «2A».
+  - `ambigua` → «¿Cuál horario prefieres?» con las opciones, sin apartar. `rechazo` → pide otro día u hora.
+  - Afirmación general con varias opciones → «Aparté la opción A de cada servicio.»
+  - Apartado y sin campos pendientes, con `@confirmar_servicio` en alguna ruta del agente → «¿Confirmo el servicio?»
+    y marca `confirmar_pendiente`; el «sí» siguiente lo confirma con Actions (ruta de confirmación) aunque el
+    router mande el mensaje a otra ruta. Con `requiere=pago` queda «esperando pago», como antes.
+
+**Cómo funciona:** solo cuando hay opciones abiertas en la conversación; un mensaje con opciones abiertas = una
+llamada corta a la IA (200 tokens máx.). Sin clave o con error, se comporta como antes, con más palabras de «sí».
+
+**Pruebas**
+- RSpec: `interpreter_spec.rb` (5) + 8 nuevas en `choice_spec.rb`; motor de solicitudes y job: 147, 0 fallas.
+- IA real (cuenta 2, sin escribir en la base): 11/11 correctas.
+
+| Mensaje | Resultado |
+|---|---|
+| Adelante con el horario | elegir general |
+| va · sí, perfecto | elegir general |
+| la de las 14 | 1B |
+| mejor la TP-73 | 1C |
+| el 2 a las 14 y el 1 la primera | 2B, 1A |
+| sí pero más tarde · la segunda (2 servicios) | ambigua |
+| ninguna me sirve | rechazo |
+| mejor el jueves a las 10 · ¿cuánto cuesta? | otra (sigue el motor) |
+
+**Asistente / configuración:** no hay nada que configurar; aplica a todo agente con `@solicitudes`.
+Pendiente: prueba de punta a punta en la bandeja 493 (aparta en el calendario real).

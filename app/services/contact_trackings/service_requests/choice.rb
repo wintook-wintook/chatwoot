@@ -6,14 +6,24 @@
 # Con opciones ofrecidas (metadata['oferta'] de cada caso-servicio):
 #   «1A y 3B»            → esas
 #   «sí» / «apártalos»   → la primera opción de cada servicio con oferta
+#   lo demás             → lo lee la IA (Interpreter, observaciones SSUSA 22/10): «adelante»,
+#                          «la de las 14», «el 2 a las 16»; si no se sabe cuál, una pregunta;
+#                          «ninguna» → pide otro día u hora. Sin IA quedan los patrones.
+# Apartado y sin datos pendientes, con @confirmar_servicio en el agente: «¿Confirmo el
+# servicio?»; el «sí» siguiente lo confirma con Actions aunque el router no elija esa ruta.
 # Cada una se aparta como Tarea agendada en el calendario de SU equipo (ServiceMeeting);
 # con @agendar_calendar(modo=tentativo) queda «[TENTATIVO]», si no, en firme.
 # nil = no hay ofertas abiertas o el mensaje no elige nada: el motor sigue.
 # ================================================================================
 
 class ContactTrackings::ServiceRequests::Choice
-  CODE_RE = /\b(\d{1,2})\s*([abc])\b/i
-  YES_RE = /\A\W*(s[ií]|ok|va|claro|dale|de acuerdo|ap[aá]rta\w*|todos?|perfecto)\b/i
+  # «1A», «1a», «1 A»; con espacio solo mayúscula: «el 2 a las 16» no es «2A».
+  CODE_RE = /\b(\d{1,2})(?:([aAbBcC])|\s+([ABC]))\b/
+  YES_RE = /\A\W*(s[ií]|ok|va|vale|claro|dale|de acuerdo|ap[aá]rta\w*|todos?|perfecto|adelante|confirm\w*|listo|sale|
+               [oó]rale|est[aá]\s+bien|me\s+parece|correcto|excelente)\b/ix
+  ASKED_KEY = 'confirmar_pendiente'
+  REJECT_TEXT = 'Entendido. ¿Qué otro día u hora te acomoda? Te busco horarios para entonces.'
+  Pick = ContactTrackings::ServiceRequests::Interpreter::Result
 
   def initialize(tracking:, message:, timezone:, tentative:)
     @tracking = tracking
@@ -25,10 +35,14 @@ class ContactTrackings::ServiceRequests::Choice
   def call
     abiertos = ContactTrackings::ServiceRequests::Registry.open_cases(@message.conversation).to_a
     con_oferta = abiertos.select { |caso| caso.metadata['oferta'].present? }
-    return nil if con_oferta.empty?
+    return confirm_asked(abiertos) if con_oferta.empty?
 
-    elegidos = chosen(abiertos, con_oferta)
-    elegidos.empty? ? nil : apply(elegidos, con_oferta)
+    respuesta = read(abiertos, con_oferta)
+    case respuesta.action
+    when :elegir then answer(abiertos, con_oferta, respuesta)
+    when :ambigua then question(con_oferta)
+    when :rechazo then REJECT_TEXT
+    end
   end
 
   # Aparta UNA opción. Público para Turn: con la hora pedida libre se aparta sin preguntar
@@ -39,24 +53,77 @@ class ContactTrackings::ServiceRequests::Choice
              calendar_integration_id: oferta['cal_id'], google_calendar_id: oferta['gcal'], all_day: oferta['all_day'] }
     tarea = ContactTrackings::ServiceMeeting.hold!(ticket: caso, slot: slot, title: caso.title, timezone: @timezone)
     ContactTrackings::ServiceMeeting.new(tarea).confirm! unless @tentative
-    caso.update!(metadata: caso.metadata.except('oferta').merge('meeting_id' => tarea.id,
-                                                                'estado' => @tentative ? 'apartado' : 'confirmado'),
-                 custom_attributes: assigned_unit(caso, oferta))
+    estado = { 'meeting_id' => tarea.id, 'estado' => @tentative ? 'apartado' : 'confirmado' }
+    caso.update!(metadata: caso.metadata.except('oferta', ASKED_KEY).merge(estado), custom_attributes: assigned_unit(caso, oferta))
     [caso, tarea.reload, oferta]
   end
 
   private
 
-  def chosen(abiertos, con_oferta)
+  # Códigos escritos → esos (sin IA). Si no, la IA; sin IA, el «sí» de los patrones.
+  def read(abiertos, con_oferta)
     texto = @message.content.to_s
-    codigos = texto.scan(CODE_RE)
-    if codigos.any?
-      codigos.filter_map { |num, letra| pick(abiertos[num.to_i - 1], "#{num}#{letra}") }.uniq { |caso, _| caso.id }
-    elsif texto.match?(YES_RE)
-      con_oferta.map { |caso| [caso, caso.metadata['oferta'].first] }
-    else
-      []
+    codigos = texto.scan(CODE_RE).map { |num, letra, mayuscula| "#{num}#{letra || mayuscula}".upcase }
+    return Pick.new(action: :elegir, general: false, codes: codigos) if codigos.any?
+
+    interpreter(abiertos, con_oferta).call ||
+      Pick.new(action: texto.match?(YES_RE) ? :elegir : :otra, general: true, codes: [])
+  end
+
+  def interpreter(abiertos, con_oferta)
+    numerados = con_oferta.map { |caso| [abiertos.index(caso) + 1, caso] }
+    ContactTrackings::ServiceRequests::Interpreter.new(account: @message.account, text: @message.content, cases: numerados,
+                                                       timezone: @timezone, tracking: @tracking)
+  end
+
+  def answer(abiertos, con_oferta, respuesta)
+    elegidos = picks(abiertos, con_oferta, respuesta)
+    return question(con_oferta) if elegidos.empty?
+
+    # Antes de apartar: al apartar, la oferta sale del caso.
+    first_of_each = respuesta.general && con_oferta.any? { |caso| caso.metadata['oferta'].many? }
+    texto = apply(elegidos, con_oferta)
+    first_of_each ? "Aparté la opción A de cada servicio.\n\n#{texto}" : texto
+  end
+
+  def picks(abiertos, con_oferta, respuesta)
+    return con_oferta.map { |caso| [caso, caso.metadata['oferta'].first] } if respuesta.general
+
+    respuesta.codes.filter_map { |codigo| pick(abiertos[codigo.to_i - 1], codigo) }.uniq { |caso, _| caso.id }
+  end
+
+  # «sí pero más tarde», «el otro»: una sola pregunta con las opciones, sin repetir la propuesta.
+  def question(con_oferta)
+    lineas = con_oferta.map do |caso|
+      "#{number(caso)} #{label(caso)}: #{caso.metadata['oferta'].map { |oferta| option_text(oferta) }.join(' · ')}"
     end
+    ejemplo = con_oferta.first.metadata['oferta'].last
+    "¿Cuál horario prefieres?\n#{lineas.join("\n")}\n\nDime el código o la hora, por ejemplo «#{ejemplo['code']}»."
+  end
+
+  def option_text(oferta)
+    return "#{oferta['code']} #{ContactTrackings::ServiceRequests::Turn.period_text(oferta, @timezone)}" if oferta['all_day']
+
+    inicio = Time.zone.parse(oferta['slot']).in_time_zone(@timezone)
+    fin = Time.zone.parse(oferta['end_time']).in_time_zone(@timezone)
+    unidad = oferta['calendar_name'].present? ? " (#{oferta['calendar_name']})" : ''
+    "#{oferta['code']} #{inicio.strftime('%H:%M')}–#{fin.strftime('%H:%M')}#{unidad}"
+  end
+
+  # El «sí» a «¿Confirmo el servicio?»: lo confirma Actions con la ruta de @confirmar_servicio.
+  def confirm_asked(abiertos)
+    preguntados = abiertos.select { |caso| caso.metadata[ASKED_KEY] && caso.metadata['estado'] == 'apartado' }
+    return nil if preguntados.empty? || !@message.content.to_s.match?(YES_RE) || confirm_route.nil?
+
+    ContactTrackings::ServiceRequests::Actions.new(tracking: @tracking, message: @message, branch: confirm_route,
+                                                   timezone: @timezone).call
+  end
+
+  def confirm_route
+    return @confirm_route if defined?(@confirm_route)
+
+    rutas = @tracking ? ContactTrackings::RouteMap.parse(@tracking.complementary_prompt.to_s).routes : []
+    @confirm_route = rutas.find { |ruta| ruta.escalation.to_s.match?(ContactTrackings::ServiceConfirmation::DIRECTIVE_RE) }
   end
 
   def pick(caso, codigo)
@@ -101,8 +168,17 @@ class ContactTrackings::ServiceRequests::Choice
 
     titulo = @tentative ? '📌 Aparté:' : '✅ Agendé:'
     partes = ["#{titulo}\n#{apartados.map { |caso, tarea, oferta| line(caso, tarea, oferta) }.join("\n")}"]
-    partes << 'Quedan pendientes de confirmar: cuando me confirmes el servicio, los dejo en firme.' if @tentative
+    partes << confirm_text(apartados.map(&:first)) if @tentative
     partes
+  end
+
+  # Con todos los datos y @confirmar_servicio en el agente, se pregunta en el mismo mensaje.
+  def confirm_text(casos)
+    completos = casos.none? { |caso| Array(caso.metadata[ContactTrackings::ServiceRequests::Fields::PENDING_KEY]).any? }
+    return 'Quedan pendientes de confirmar: cuando me confirmes el servicio, los dejo en firme.' unless completos && confirm_route
+
+    casos.each { |caso| caso.update!(metadata: caso.metadata.merge(ASKED_KEY => true)) }
+    casos.one? ? '¿Confirmo el servicio?' : '¿Confirmo los servicios?'
   end
 
   def clash_text(chocan)
@@ -130,5 +206,9 @@ class ContactTrackings::ServiceRequests::Choice
 
   def number(caso)
     ContactTrackings::ServiceRequests::Turn.number(caso, @message.conversation)
+  end
+
+  def label(caso)
+    caso.metadata.dig('servicio', 'label') || caso.title
   end
 end
