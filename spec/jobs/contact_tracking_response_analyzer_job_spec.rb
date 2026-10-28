@@ -206,7 +206,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
 
       it 'borra el evento del calendario' do
         job.send(:handle_cancel_appointment, tracking, message)
-        expect(calendar_service).to have_received(:delete_event).with('evt_1')
+        expect(calendar_service).to have_received(:delete_event).with('evt_1', calendar_id: 'primary')
       end
 
       it 'limpia los campos de cita y marca el outcome cancelled' do
@@ -451,12 +451,12 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       end
 
       it ':query degrada a ofrecer agendar una nueva' do
-        expect(job).to receive(:handle_book_appointment).with(tracking, message)
+        expect(job).to receive(:handle_book_appointment).with(tracking, message, { appointment_action: :query })
         job.send(:dispatch_appointment_action, tracking, message, { appointment_action: :query })
       end
 
       it ':book_new ofrece agendar' do
-        expect(job).to receive(:handle_book_appointment).with(tracking, message)
+        expect(job).to receive(:handle_book_appointment).with(tracking, message, { appointment_action: :book_new })
         job.send(:dispatch_appointment_action, tracking, message, { appointment_action: :book_new })
       end
     end
@@ -725,7 +725,9 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
         ai_context: "📅 [PENDING_SLOT] Esperando.\nSlots ofrecidos: [{}]"
       )
     end
-    let(:current_slots) { [{ 'slot' => 'x', 'cal_id' => 1 }] }
+    let(:current_slots) do
+      [{ 'slot' => 2.days.from_now.change(hour: 9).iso8601, 'end_time' => 2.days.from_now.change(hour: 10).iso8601, 'cal_id' => 1 }]
+    end
     let(:slot_service) { instance_double(ContactTrackings::AvailabilitySlotService) }
 
     def slot_hash(hour)
@@ -743,7 +745,9 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     end
 
     context 'cuando propone una hora exacta disponible' do
+      # Con número de día: «el jueves» solo es ambiguo y se ofrece en vez de confirmar (AmbiguousDate).
       before do
+        message.update!(content: 'mejor el jueves 30 a las 5')
         allow(job).to receive(:parse_requested_datetime).and_return({ at: 1.day.from_now.change(hour: 17), exact: true })
         allow(slot_service).to receive(:slot_for).and_return(slot_hash(17))
         allow(job).to receive(:confirm_and_create_appointment)
@@ -940,7 +944,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       expect(ContactTrackings::AvailabilitySlotService).not_to receive(:new)
 
       job.send(:handle_book_appointment, tracking, message)
-      expect(job).to have_received(:send_auto_reply).with(tracking, message, /¿Para cuál remolque quieres agendar\?/)
+      expect(job).to have_received(:send_auto_reply).with(tracking, message, /¿Qué remolque necesitas\?/)
     end
 
     it 'busca horarios solo en el calendario del remolque' do

@@ -210,3 +210,18 @@ reales. Revisarlas leyendo el código o con una base de pruebas aparte.
 ## 8. Registro de fases
 
 _(se llena al cerrar cada fase: qué se hizo, cómo funciona, pruebas y cómo pedírselo al Asistente)_
+
+### Paso 0 · Revisión de las 7 pruebas que fallaban (28/10/2026)
+
+Corridas contra `chatwoot_test` (schema de la rama + `vector`). **Ninguna es un fallo real del bot**: el código
+cambió a propósito y las pruebas no se actualizaron. Ninguna toca `service_requests/`.
+
+| Prueba (línea) | Por qué falla |
+|---|---|
+| 207 cancelar cita | El código ya manda `calendar_id:` al borrar el evento (multi-calendario, b2f7a775) |
+| 453, 458 cita sin cita activa | El código pasa además `appointment_action:` a `handle_book_appointment` |
+| 752, 765, 788 negociación de horario | La prueba usa `'slot' => 'x'`; el código ahora lee la fecha del primer horario ofrecido → `Time.parse('x')` truena y cae en el rescue |
+| 938 hoja_buscar sin remolque | Cambió el texto: «¿Qué remolque necesitas? Dímelo y te paso los horarios.» |
+
+Pruebas del motor de @solicitudes (`spec/services/contact_trackings/service_requests/`): **39, 0 fallas**.
+Cómo correrlas: `RAILS_ENV=test POSTGRES_DATABASE=chatwoot_test bundle exec rspec <archivo>`.
