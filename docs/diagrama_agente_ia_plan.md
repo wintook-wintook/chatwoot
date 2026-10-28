@@ -130,8 +130,8 @@ del cliente ni el de los fragmentos.
 **Pila de pruebas.** `spec/services/contact_trackings/engine_trace_spec.rb`: lo que anota cada
 etapa, varias respuestas por turno (1/2, 2/2), que no guarda textos, que no toca otra conversación
 ni los entrantes, no-op fuera de turno, limpieza si el turno falla, fuera del webhook, y el job de
-punta a punta por la bienvenida. ⚠ **Sin correr aún**: `chatwoot_test` tiene `schema_migrations`
-vacía y hay que recargarle el esquema.
+punta a punta por la bienvenida. **8/8 en verde**, y 777/777 en las suites del job, la base de
+conocimiento, el Asistente, la bienvenida, las rutas y `Message` (commit 553300a1).
 
 **Cómo verlo.** En una conversación del canal de pruebas, después de que conteste el agente:
 `Message.where(conversation_id: N).outgoing.last.content_attributes['traza']`.
