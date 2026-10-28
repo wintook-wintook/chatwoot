@@ -26,32 +26,39 @@ module ContactTrackings
     # Devuelve la Route elegida, o nil si no se pudo decidir y no hay rama por defecto.
     def classify
       return nil if @route_map.blank?
-      return @route_map.routes.first if @route_map.routes.one?
+      return traced(@route_map.routes.first, :unica) if @route_map.routes.one?
 
       name = ask_llm
       route = @route_map[name]
       if route
         Rails.logger.info "[BranchClassifier] 🧭 Rama: #{route.name}"
-        return route
+        return traced(route, :clasificada)
       end
 
       fallback = @route_map.default
       Rails.logger.info "[BranchClassifier] ⚠️ Sin rama reconocida (#{name.inspect}) → " \
                         "#{fallback ? "por defecto: #{fallback.name}" : 'sin ruteo'}"
-      fallback
+      traced(fallback, :por_defecto)
     rescue StandardError => e
       Rails.logger.warn "[BranchClassifier] ⚠️ #{e.message} → rama por defecto"
-      @route_map.default
+      traced(@route_map.default, :por_defecto)
     end
 
     private
+
+    # proyecto@diagrama_agente_ia F0: la ruta del turno y cómo se eligió, para la traza.
+    def traced(route, como)
+      ContactTrackings::EngineTrace.route(route, como)
+      route
+    end
 
     def ask_llm
       api_key = openai_api_key
       return nil if api_key.blank?
 
-      body = post_json(api_key)
-      raw  = JSON.parse(body).dig('choices', 0, 'message', 'content').to_s
+      body = JSON.parse(post_json(api_key))
+      ContactTrackings::EngineTrace.usage(ContactTrackings::EngineConfig.model_for_tracking(@tracking, :router), body)
+      raw = body.dig('choices', 0, 'message', 'content').to_s
       JSON.parse(raw)['rama'].to_s.strip.downcase.presence
     rescue StandardError => e
       Rails.logger.warn "[BranchClassifier] ⚠️ LLM: #{e.message}"

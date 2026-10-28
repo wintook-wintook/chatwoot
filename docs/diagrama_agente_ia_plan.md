@@ -87,6 +87,57 @@ reply_message.content_attributes[:traza] = {
 
 ---
 
+### 3.1 F0 — hecho (28/10/2026)
+
+**Qué se hizo.** `ContactTrackings::EngineTrace` (`app/services/contact_trackings/engine_trace.rb`)
+abre un registro mientras `ContactTrackingResponseAnalyzerJob` atiende un mensaje del cliente
+(`EngineTrace.run` en `perform`; el reparto pasó tal cual a `coordinate`). Cada etapa anota lo suyo
+y, al terminar el turno, la traza se escribe en `content_attributes['traza']` de **cada respuesta
+del bot creada en ese turno** (todas las conversaciones, decisión D2).
+
+**Cómo funciona.** Se escribe al FINAL y no al crear el mensaje: el camino se sabe cuando el
+handler devuelve, y el mensaje se crea adentro del handler. `Message` anota sus salientes con
+`after_create :register_in_engine_trace` (un no-op fuera de un turno) y la traza se guarda con
+`update_columns`: no dispara eventos ni callbacks. La traza **no sale en los webhooks**
+(`Message#webhook_data` la quita).
+
+**Formato real (v1)** — distinto del borrador de arriba:
+
+```json
+{
+  "v": 1, "mensaje_id": 812, "camino": "kbase", "respuesta": "1/1", "ms": 2140,
+  "ruta":       { "nombre": "cotizar", "etiqueta": "#cotizar", "como": "clasificada" },
+  "fuente":     { "modo": "google_doc", "nombre": "Lista" },
+  "fragmentos": [{ "titulo": "Lista de precios", "similitud": 0.82 }],
+  "etiqueta_repuesta": "#cotizar",
+  "uso":        { "llamadas": 2, "tokens": 1830, "modelos": ["gpt-4o"] }
+}
+```
+
+| Llave | Quién la anota | Valores |
+|---|---|---|
+| `camino` | el job (`answered`) | bienvenida · palabra_clave · eleccion_horario · correo_cita · confirmar_servicio · solicitudes · rechazo · interes · agenda · botseller · estado_ticket · ticket · kbase · conversacional |
+| `ruta.como` | `BranchClassifierService` | unica · clasificada · por_defecto · sin_ruta |
+| `fuente` | `KnowledgeBaseResponseService#perform` | la directiva de la ruta (o la global) |
+| `fragmentos` | `search_items` (búsqueda local) | máx. 5, título + similitud; **sin el texto** |
+| `etiqueta_repuesta` | los dos `with_branch_tag` | solo si el motor tuvo que reponerla |
+| `uso` | clasificador, respuesta conversacional, `call_openai_simple` | suma de todas las llamadas del turno |
+
+**Lo que NO trae, y por qué.** `secciones`: el Entrenamiento entra completo al prompt, el motor no
+elige secciones; el diagrama las dibuja desde la Estructura, no desde la traza. Tampoco el texto
+del cliente ni el de los fragmentos.
+
+**Pila de pruebas.** `spec/services/contact_trackings/engine_trace_spec.rb`: lo que anota cada
+etapa, varias respuestas por turno (1/2, 2/2), que no guarda textos, que no toca otra conversación
+ni los entrantes, no-op fuera de turno, limpieza si el turno falla, fuera del webhook, y el job de
+punta a punta por la bienvenida. ⚠ **Sin correr aún**: `chatwoot_test` tiene `schema_migrations`
+vacía y hay que recargarle el esquema.
+
+**Cómo verlo.** En una conversación del canal de pruebas, después de que conteste el agente:
+`Message.where(conversation_id: N).outgoing.last.content_attributes['traza']`.
+
+---
+
 ## 4. Cómo se ve
 
 ### 4.1 Distribución en pantalla

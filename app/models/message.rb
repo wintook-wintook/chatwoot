@@ -153,6 +153,9 @@ class Message < ApplicationRecord
   # prospeccion P2b: el vendedor le escribió a un interesado entregado → la IA se calla
   after_create_commit :check_prospect_handoff, if: -> { outgoing? && !private? && sender_type == 'User' }
 
+  # proyecto@diagrama_agente_ia F0: la respuesta del bot queda anotada para recibir su traza
+  after_create :register_in_engine_trace, if: :outgoing?
+
   after_update_commit :dispatch_update_event
 
   # proyecto@automatizacion_campanas: el estado de entrega de WhatsApp llega al envío del seguimiento
@@ -218,7 +221,8 @@ class Message < ApplicationRecord
     data = {
       account: account.webhook_data,
       additional_attributes: additional_attributes,
-      content_attributes: content_attributes,
+      # La traza del motor (proyecto@diagrama_agente_ia) es interna: no sale del sistema.
+      content_attributes: content_attributes.except('traza'),
       content_type: content_type,
       content: content,
       conversation: conversation.webhook_data,
@@ -547,6 +551,10 @@ class Message < ApplicationRecord
   end
 
   # Unos segundos después: la marca de bot (sentiment_auto_reply) se guarda tras crear el mensaje.
+  def register_in_engine_trace
+    ContactTrackings::EngineTrace.register(self) if ContactTrackings::EngineTrace.active?
+  end
+
   def check_prospect_handoff
     return unless TrackingCampaigns::HandoffAttention.pending?(conversation_id)
 
