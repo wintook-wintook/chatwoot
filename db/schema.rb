@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_01_100100) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_01_100200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1265,6 +1265,76 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100100) do
     t.index ["waiting_since"], name: "index_conversations_on_waiting_since"
   end
 
+  create_table "crm_article_lines", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 50, null: false
+    t.string "key", limit: 20
+    t.bigint "group_id"
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_crm_article_lines_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_article_lines_on_account_id"
+    t.index ["group_id"], name: "index_crm_article_lines_on_group_id"
+  end
+
+  create_table "crm_article_prices", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "article_id", null: false
+    t.bigint "price_list_id", null: false
+    t.decimal "price", precision: 18, scale: 6, default: "0.0", null: false
+    t.bigint "currency_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_article_prices_on_account_id"
+    t.index ["article_id", "price_list_id"], name: "index_crm_article_prices_on_article_id_and_price_list_id", unique: true
+    t.index ["article_id"], name: "index_crm_article_prices_on_article_id"
+    t.index ["currency_id"], name: "index_crm_article_prices_on_currency_id"
+    t.index ["price_list_id"], name: "index_crm_article_prices_on_price_list_id"
+  end
+
+  create_table "crm_article_taxes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "article_id", null: false
+    t.bigint "tax_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_article_taxes_on_account_id"
+    t.index ["article_id", "tax_id"], name: "index_crm_article_taxes_on_article_id_and_tax_id", unique: true
+    t.index ["article_id"], name: "index_crm_article_taxes_on_article_id"
+    t.index ["tax_id"], name: "index_crm_article_taxes_on_tax_id"
+  end
+
+  create_table "crm_articles", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.integer "catalog_status", default: 2, null: false
+    t.string "key", limit: 20
+    t.string "name", limit: 200, null: false
+    t.string "normalized_name", limit: 200, null: false
+    t.bigint "line_id"
+    t.bigint "unit_id"
+    t.string "status", limit: 1, default: "A", null: false
+    t.boolean "is_stockable", default: true, null: false
+    t.string "purchase_unit", limit: 20
+    t.decimal "purchase_unit_content", precision: 18, scale: 5, default: "1.0", null: false
+    t.decimal "unit_weight", precision: 18, scale: 5, default: "0.0", null: false
+    t.text "notes"
+    t.datetime "cataloged_at"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((key)::text)", name: "index_crm_articles_unique_key", unique: true, where: "(key IS NOT NULL)"
+    t.index ["account_id", "catalog_status"], name: "index_crm_articles_on_account_id_and_catalog_status"
+    t.index ["account_id", "normalized_name"], name: "index_crm_articles_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_articles_on_account_id"
+    t.index ["created_by_id"], name: "index_crm_articles_on_created_by_id"
+    t.index ["line_id"], name: "index_crm_articles_on_line_id"
+    t.index ["unit_id"], name: "index_crm_articles_on_unit_id"
+    t.index ["updated_by_id"], name: "index_crm_articles_on_updated_by_id"
+  end
+
   create_table "crm_cities", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "state_id", null: false
@@ -1447,6 +1517,31 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100100) do
     t.index "country_id, lower((name)::text)", name: "index_crm_states_unique_name", unique: true
     t.index ["account_id"], name: "index_crm_states_on_account_id"
     t.index ["country_id"], name: "index_crm_states_on_country_id"
+  end
+
+  create_table "crm_taxes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 30, null: false
+    t.integer "tax_type", default: 1, null: false
+    t.decimal "percent", precision: 9, scale: 6, default: "0.0", null: false
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_crm_taxes_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_taxes_on_account_id"
+  end
+
+  create_table "crm_units", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 20, null: false
+    t.string "sat_key", limit: 3
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_crm_units_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_units_on_account_id"
   end
 
   create_table "csat_survey_responses", force: :cascade do |t|
@@ -2581,6 +2676,20 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100100) do
   add_foreign_key "contracts", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "conversations", "kanban_processes"
   add_foreign_key "conversations", "kanban_type_processes"
+  add_foreign_key "crm_article_lines", "accounts"
+  add_foreign_key "crm_article_lines", "crm_lookups", column: "group_id", on_delete: :nullify
+  add_foreign_key "crm_article_prices", "accounts"
+  add_foreign_key "crm_article_prices", "crm_articles", column: "article_id", on_delete: :cascade
+  add_foreign_key "crm_article_prices", "crm_currencies", column: "currency_id", on_delete: :nullify
+  add_foreign_key "crm_article_prices", "crm_lookups", column: "price_list_id", on_delete: :cascade
+  add_foreign_key "crm_article_taxes", "accounts"
+  add_foreign_key "crm_article_taxes", "crm_articles", column: "article_id", on_delete: :cascade
+  add_foreign_key "crm_article_taxes", "crm_taxes", column: "tax_id", on_delete: :cascade
+  add_foreign_key "crm_articles", "accounts"
+  add_foreign_key "crm_articles", "crm_article_lines", column: "line_id", on_delete: :nullify
+  add_foreign_key "crm_articles", "crm_units", column: "unit_id", on_delete: :nullify
+  add_foreign_key "crm_articles", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "crm_articles", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "crm_cities", "accounts"
   add_foreign_key "crm_cities", "crm_states", column: "state_id", on_delete: :cascade
   add_foreign_key "crm_countries", "accounts"
@@ -2608,6 +2717,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100100) do
   add_foreign_key "crm_sellers", "users", on_delete: :nullify
   add_foreign_key "crm_states", "accounts"
   add_foreign_key "crm_states", "crm_countries", column: "country_id", on_delete: :cascade
+  add_foreign_key "crm_taxes", "accounts"
+  add_foreign_key "crm_units", "accounts"
   add_foreign_key "customer_assets", "accounts"
   add_foreign_key "customer_assets", "contacts", on_delete: :cascade
   add_foreign_key "inboxes", "portals"

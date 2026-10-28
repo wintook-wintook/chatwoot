@@ -55,6 +55,10 @@ class Account < ApplicationRecord
   has_many :crm_payment_terms, dependent: :destroy # CrmZeus O0
   has_many :crm_currencies, dependent: :destroy # CrmZeus O0
   has_many :crm_countries, dependent: :destroy # CrmZeus O0
+  has_many :crm_articles, dependent: :destroy # CrmZeus A0
+  has_many :crm_article_lines, dependent: :destroy # CrmZeus A0
+  has_many :crm_units, dependent: :destroy # CrmZeus A0
+  has_many :crm_taxes, dependent: :destroy # CrmZeus A0
   has_many :external_db_connections, dependent: :destroy # @query_databases
   has_many :external_db_queries,     dependent: :destroy # @query_databases
   has_many :erp_collection_bots,     dependent: :destroy # @query_databases

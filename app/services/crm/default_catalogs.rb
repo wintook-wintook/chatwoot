@@ -1,5 +1,6 @@
-# CrmZeus O0 — catálogos con los que arranca una cuenta: México con sus 32 estados (clave
-# c_Estado del SAT), peso mexicano como moneda local y «Contado» como condición de pago.
+# CrmZeus O0/A0 — catálogos con los que arranca una cuenta: México con sus 32 estados (clave
+# c_Estado del SAT), peso mexicano como moneda local, «Contado» como condición de pago y,
+# para artículos, IVA 16 % / IVA 0 % / Exento, «Precio de lista» y las unidades pieza y servicio.
 # Idempotente: solo crea lo que falta y no toca lo que la cuenta ya editó.
 class Crm::DefaultCatalogs
   MEXICAN_STATES = {
@@ -25,6 +26,7 @@ class Crm::DefaultCatalogs
       ensure_mexico
       ensure_local_currency
       ensure_cash_payment_term
+      ensure_article_catalogs
     end
   end
 
@@ -48,5 +50,21 @@ class Crm::DefaultCatalogs
     return if CrmPaymentTerm.exists?(account: @account)
 
     CrmPaymentTerm.create!(account: @account, name: 'Contado', is_default: true)
+  end
+
+  # Artículos: IVA 16 % (predeterminado), IVA 0 % y Exento; «Precio de lista»; pieza y servicio.
+  def ensure_article_catalogs
+    unless CrmTax.exists?(account: @account)
+      CrmTax.create!(account: @account, name: 'IVA 16%', tax_type: :vat, percent: 16, is_default: true)
+      CrmTax.create!(account: @account, name: 'IVA 0%', tax_type: :vat, percent: 0)
+      CrmTax.create!(account: @account, name: 'Exento', tax_type: :vat_exempt, percent: 0)
+    end
+    unless CrmLookup.price_list.exists?(account: @account)
+      CrmLookup.create!(account: @account, kind: :price_list, name: 'Precio de lista', is_default: true)
+    end
+    return if CrmUnit.exists?(account: @account)
+
+    CrmUnit.create!(account: @account, name: 'Pieza', sat_key: 'H87', is_default: true)
+    CrmUnit.create!(account: @account, name: 'Servicio', sat_key: 'E48')
   end
 end

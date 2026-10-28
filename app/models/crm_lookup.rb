@@ -28,7 +28,8 @@
 class CrmLookup < ApplicationRecord
   include CrmCatalogEntry
 
-  enum kind: { customer_type: 1, rating: 2, industry: 3, origin: 4, zone: 5, collector: 6 }
+  # price_list / line_group: catálogos de artículos (listas de precios, grupos de líneas).
+  enum kind: { customer_type: 1, rating: 2, industry: 3, origin: 4, zone: 5, collector: 6, price_list: 7, line_group: 8 }
 
   crm_catalog_entry unique_within: %i[account_id kind], default_within: %i[account_id kind]
 
