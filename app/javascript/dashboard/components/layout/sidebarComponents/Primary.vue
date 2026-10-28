@@ -43,7 +43,7 @@ export default {
   },
   data() {
     return {
-      helpDocsURL: wootConstants.DOCS_URL,
+      helpDocsURL: window.chatwootConfig?.helpDocsURL || wootConstants.DOCS_URL,
       showOptionsMenu: false,
     };
   },
