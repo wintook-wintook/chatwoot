@@ -11,10 +11,11 @@
 // tiene que estar guardado: se prueba lo que van a recibir los clientes.
 // ============================================================================
 import AssistantAPI from 'dashboard/api/assistant';
-
-const POLL_MS = 4000;
+// proyecto@diagrama_agente_ia F2: arrancar y seguir la pila lo comparte con el panel Pruebas.
+import testBatteryRunner from './testBatteryRunner';
 
 export default {
+  mixins: [testBatteryRunner],
   props: {
     show: { type: Boolean, default: false },
     templateId: { type: Number, default: null },
@@ -23,81 +24,15 @@ export default {
     briefId: { type: Number, default: null },
   },
   emits: ['close'],
-  data() {
-    return {
-      batteryId: null,
-      state: null,
-      error: '',
-      starting: false,
-      timer: null,
-    };
-  },
   computed: {
-    results() {
-      return (this.state && this.state.results) || [];
+    batteryTemplateId() {
+      return this.templateId;
     },
-    running() {
-      return this.starting || ['queued', 'running'].includes(this.stateStatus);
+    batteryBriefId() {
+      return this.briefId;
     },
-    stateStatus() {
-      return this.state ? this.state.status : '';
-    },
-    passed() {
-      return this.results.filter(r => r.cumple).length;
-    },
-    progress() {
-      if (!this.state || !this.state.total) return '';
-      return this.$t('TRACKING_ASSISTANT_VIEW.BATTERY_PROGRESS', {
-        done: this.state.done || 0,
-        total: this.state.total,
-      });
-    },
-  },
-  beforeDestroy() {
-    this.stop();
   },
   methods: {
-    async start() {
-      if (!this.templateId || this.running) return;
-      this.error = '';
-      this.state = null;
-      this.starting = true;
-      try {
-        const { data } = await AssistantAPI.startTestBattery(this.templateId, {
-          briefId: this.briefId,
-        });
-        this.batteryId = data.id;
-        this.poll();
-      } catch (error) {
-        const code =
-          error.response && error.response.data && error.response.data.error;
-        this.error = this.$t(
-          code === 'no_sandbox'
-            ? 'TRACKING_ASSISTANT_VIEW.BATTERY_NO_SANDBOX'
-            : 'TRACKING_ASSISTANT_VIEW.BATTERY_ERROR'
-        );
-      } finally {
-        this.starting = false;
-      }
-    },
-    async poll() {
-      this.stop();
-      try {
-        const { data } = await AssistantAPI.testBattery(this.batteryId);
-        this.state = data;
-        if (data.status === 'failed') {
-          this.error = this.$t('TRACKING_ASSISTANT_VIEW.BATTERY_ERROR');
-          return;
-        }
-        if (data.status !== 'done') this.timer = setTimeout(this.poll, POLL_MS);
-      } catch (error) {
-        this.timer = setTimeout(this.poll, POLL_MS);
-      }
-    },
-    stop() {
-      if (this.timer) clearTimeout(this.timer);
-      this.timer = null;
-    },
     async download() {
       const { data } = await AssistantAPI.downloadTestBatteryReport(
         this.batteryId
@@ -141,7 +76,7 @@ export default {
           icon="play-circle"
           :is-loading="running"
           :is-disabled="running || !templateId"
-          @click="start"
+          @click="start()"
         >
           {{ $t('TRACKING_ASSISTANT_VIEW.BATTERY_RUN') }}
         </woot-button>

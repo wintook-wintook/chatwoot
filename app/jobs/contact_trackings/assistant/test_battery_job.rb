@@ -23,14 +23,14 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
   WAIT_SECONDS = 120
   QUIET_SECONDS = 8
 
-  def perform(battery_id, account_id, template_id, brief_id = nil)
+  def perform(battery_id, account_id, template_id, brief_id = nil, messages = nil)
     @id = battery_id
     @account = Account.find(account_id)
     @template = TrackingTemplate.find(template_id)
     @inbox = ContactTrackings::Assistant::TestBattery.sandbox_inbox(@account)
     return save!(status: 'failed', error: 'no_sandbox') if @inbox.nil?
 
-    run(scenarios_for(brief_id))
+    run(messages.present? ? ContactTrackings::Assistant::TestBatteryScenarios.own(messages) : scenarios_for(brief_id))
   rescue StandardError => e
     Rails.logger.error "[TestBattery] #{e.class}: #{e.message}"
     save!(status: 'failed', error: 'unavailable')
@@ -69,8 +69,15 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
     conversacion.messages.create!(account: @account, inbox: @inbox, sender: conversacion.contact,
                                   message_type: :incoming, content: escenario.message)
     respuesta = wait_reply(conversacion, ultimo)
-    escenario.to_h.merge(conversation: conversacion.display_id, reply: respuesta, cases: cases(conversacion),
-                         **juez.call(escenario, respuesta))
+    traza = trace(conversacion, ultimo)
+    escenario.to_h.merge(conversation: conversacion.display_id, reply: respuesta, cases: cases(conversacion), traza: traza,
+                         **juez.call(escenario, respuesta, traza: traza))
+  end
+
+  # proyecto@diagrama_agente_ia F2: por dónde pasó (F0). La de la primera respuesta del turno.
+  def trace(conversacion, desde)
+    conversacion.messages.where('id > ?', desde).where(message_type: :outgoing, private: false).order(:id)
+                .filter_map { |m| m.content_attributes['traza'] }.first
   end
 
   def new_conversation(escenario)

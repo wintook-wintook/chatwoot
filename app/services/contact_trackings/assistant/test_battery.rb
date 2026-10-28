@@ -21,11 +21,16 @@ module ContactTrackings::Assistant::TestBattery
     account.inboxes.where(channel_type: 'Channel::Api').find { |i| i.channel.webhook_url.blank? }
   end
 
-  def start(account, template, brief: nil)
+  # proyecto@diagrama_agente_ia F2: `messages` son pruebas escritas a mano en el panel
+  # Pruebas; con ellas no se generan las de ruta ni las de regla.
+  MAX_OWN_MESSAGES = 10
+
+  def start(account, template, brief: nil, messages: nil)
     id = SecureRandom.alphanumeric(16).downcase
+    propias = Array(messages).map { |m| m.to_s.strip.truncate(500) }.compact_blank.first(MAX_OWN_MESSAGES)
     Rails.cache.write(key(id), { 'status' => 'queued', 'template' => template.name, 'template_id' => template.id,
                                  'started_at' => Time.current.iso8601 }, expires_in: TTL)
-    ContactTrackings::Assistant::TestBatteryJob.perform_later(id, account.id, template.id, brief&.id)
+    ContactTrackings::Assistant::TestBatteryJob.perform_later(id, account.id, template.id, brief&.id, propias.presence)
     id
   end
 

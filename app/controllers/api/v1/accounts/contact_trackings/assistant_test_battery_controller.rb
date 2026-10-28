@@ -3,7 +3,9 @@
 # ================================================================================
 # proyecto@asistente_agentes_ia — «PROBAR EL AGENTE» (M5 de docs/importar_prompt_extenso_plan.md)
 # ================================================================================
-# POST …/assistant/test_battery  (template_id, brief_id opcional)
+# POST …/assistant/test_battery  (template_id, brief_id opcional, messages[] opcional)
+#   messages[]: pruebas escritas a mano (proyecto@diagrama_agente_ia F2); con ellas solo
+#   se corren esas.
 #   Arranca la pila de pruebas en vivo del agente guardado (ver TestBatteryJob). 202 con
 #   { id }. 422 { error: 'no_sandbox' } si la cuenta no tiene un canal API sin webhook donde
 #   probar: ahí nunca se manda nada a un cliente.
@@ -32,7 +34,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantTestBatteryController < Api:
     return render json: { error: 'no_sandbox' }, status: :unprocessable_entity if Battery.sandbox_inbox(Current.account).nil?
 
     encargo = params[:brief_id].present? ? TrackingAgentBrief.find_by(id: params[:brief_id], account: Current.account) : nil
-    render json: { id: Battery.start(Current.account, plantilla, brief: encargo) }, status: :accepted
+    propias = params[:messages].is_a?(Array) ? params[:messages] : nil
+    render json: { id: Battery.start(Current.account, plantilla, brief: encargo, messages: propias) }, status: :accepted
   end
 
   def report

@@ -78,4 +78,39 @@ describe('AgentDiagram', () => {
     expect(wrapper.find('svg').exists()).toBe(false);
     expect(wrapper.findComponent({ name: 'EmptyState' }).exists()).toBe(true);
   });
+
+  // proyecto@diagrama_agente_ia F2
+  it('con una prueba elegida enciende su camino y atenúa el resto', () => {
+    const wrapper = montar({
+      test: {
+        mode: 'live',
+        traza: { camino: 'conversacional', ruta: { nombre: 'cotizar' } },
+        reply: 'hola',
+      },
+    });
+
+    expect(nodo(wrapper, 'cotizar').attributes('opacity')).toBe('1');
+    expect(nodo(wrapper, 'soporte').attributes('opacity')).toBe('0.35');
+    // la fuente de cotizar no trajo nada: punto débil
+    expect(wrapper.text()).toContain('⚠');
+    expect(wrapper.text()).toContain('DIAGRAM.MODE_LIVE');
+  });
+
+  it('quitar la prueba avisa a la pantalla', async () => {
+    const wrapper = shallowMount(AgentDiagram, {
+      propsData: {
+        structure: estructura(),
+        test: { mode: 'dry', result: { routes: {} } },
+      },
+      mocks: { $t: clave => clave },
+      stubs: {
+        'woot-button': {
+          template: '<button @click="$emit(\'click\')"><slot /></button>',
+        },
+      },
+    });
+    await wrapper.find('button').trigger('click');
+
+    expect(wrapper.emitted('clearHighlight')).toHaveLength(1);
+  });
 });

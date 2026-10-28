@@ -8,7 +8,8 @@
 # En la pila a mano de ADAM eso fue lo que se miró: usted o tú, una sola pregunta, sin
 # precios, sin prometer acciones que no hace.
 #
-# La ruta no la califica la IA: la dice la #etiqueta con la que cerró (código).
+# La ruta no la califica la IA: la dice la traza del motor (proyecto@diagrama_agente_ia
+# F0) y, en respuestas sin traza, la #etiqueta con la que cerró (código).
 # ================================================================================
 
 class ContactTrackings::Assistant::TestBatteryJudge
@@ -30,12 +31,12 @@ class ContactTrackings::Assistant::TestBatteryJudge
   end
 
   # { cumple:, fallas: [], motivo:, ruta_ok: true|false|nil } — nil si no hubo respuesta.
-  def call(scenario, reply)
+  def call(scenario, reply, traza: nil)
     return { cumple: false, fallas: ['No contestó.'], motivo: 'Sin respuesta del agente.' } if reply.blank?
 
     raw = ask(scenario, reply)
     { cumple: raw.is_a?(Hash) ? raw['cumple'] == true : nil, fallas: Array(raw.is_a?(Hash) ? raw['fallas'] : nil).map(&:to_s),
-      motivo: raw.is_a?(Hash) ? raw['motivo'].to_s : 'No se pudo calificar.', ruta_ok: route_ok(scenario, reply) }
+      motivo: raw.is_a?(Hash) ? raw['motivo'].to_s : 'No se pudo calificar.', ruta_ok: route_ok(scenario, reply, traza) }
   end
 
   attr_reader :usage
@@ -57,9 +58,14 @@ class ContactTrackings::Assistant::TestBatteryJudge
     raw
   end
 
-  # La etiqueta con la que cerró dice la ruta. Solo en las pruebas de ruta con etiqueta.
-  def route_ok(scenario, reply)
-    return nil if scenario.kind != 'ruta' || scenario.tag.blank?
+  # Solo en las pruebas de ruta. Con traza manda la ruta que eligió el motor: la etiqueta
+  # falla si el modelo pone otra, o si la ruta no tiene. Sin traza, la etiqueta.
+  def route_ok(scenario, reply, traza = nil)
+    return nil if scenario.kind != 'ruta'
+
+    elegida = traza.is_a?(Hash) ? traza.dig('ruta', 'nombre') : nil
+    return elegida.to_s.casecmp(scenario.route.to_s).zero? if elegida.present?
+    return nil if scenario.tag.blank?
 
     reply.scan(TAG_RE).flatten.map(&:downcase).include?(scenario.tag.downcase)
   end

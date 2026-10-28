@@ -38,6 +38,15 @@ class ContactTrackings::Assistant::TestBatteryScenarios
     route_scenarios + rule_scenarios
   end
 
+  # proyecto@diagrama_agente_ia F2: las pruebas escritas a mano. Sin ruta esperada: lo que
+  # se mira es el camino que tomó (la traza) y que conteste según el Entrenamiento.
+  def self.own(messages)
+    Array(messages).each_with_index.map do |texto, i|
+      Scenario.new(id: "propia:#{i + 1}", kind: 'propia', message: texto,
+                   check: 'Que conteste bien y según su Entrenamiento.')
+    end
+  end
+
   private
 
   def map = @map ||= ContactTrackings::RouteMap.parse(@template.complementary_prompt.to_s)
