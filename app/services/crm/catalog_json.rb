@@ -31,6 +31,18 @@ module Crm::CatalogJson
     item.slice(:id, :name, :abbreviation, :country_id).merge(country_name: item.country&.name)
   end
 
+  def article_line(item)
+    item.slice(:id, :name, :key, :group_id, :is_default, :active).merge(group_name: item.group&.name)
+  end
+
+  def unit(item)
+    item.slice(:id, :name, :sat_key, :is_default, :active)
+  end
+
+  def tax(item)
+    item.slice(:id, :name, :tax_type, :is_default, :active).merge(percent: item.percent.to_f)
+  end
+
   def city(item)
     { id: item.id, name: item.name, state_id: item.state_id, full_name: item.full_name }
   end

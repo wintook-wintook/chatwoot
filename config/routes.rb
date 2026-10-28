@@ -125,6 +125,17 @@ Rails.application.routes.draw do
             resources :payment_terms, only: [:index, :create, :update, :destroy]
             resources :countries, only: [:index, :create, :update, :destroy]
             resources :states, only: [:index, :create, :update, :destroy]
+            # CrmZeus A1 — artículos y sus catálogos
+            resources :articles, only: [:index, :show, :create, :update, :destroy] do
+              member do
+                post :catalog
+                post :image
+                delete :image
+              end
+            end
+            resources :article_lines, only: [:index, :create, :update, :destroy]
+            resources :units, only: [:index, :create, :update, :destroy]
+            resources :taxes, only: [:index, :create, :update, :destroy]
             resources :cities, only: [:index, :create]
           end
           # Plan-Catalogo-Cotizaciones C1 — Ventas › Catálogo

@@ -96,6 +96,12 @@ class CrmArticle < ApplicationRecord
     I18n.transliterate(value.to_s.squish).downcase
   end
 
+  def image_url
+    return unless image.attached?
+
+    Rails.application.routes.url_helpers.rails_blob_path(image, only_path: true)
+  end
+
   # No catalogado → catalogado. Conserva el id (las partidas que lo apunten siguen ligadas).
   def catalog!(user = nil)
     raise ActiveRecord::RecordInvalid.new(self), 'ya está catalogado' if catalogued?

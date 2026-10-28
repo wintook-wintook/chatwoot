@@ -57,3 +57,43 @@ es:
         percent: Porcentaje
       crm_city:
         name: Nombre
+      crm_state:
+        name: Nombre
+        country: País
+      crm_country:
+        name: Nombre
+        iso_code: Clave ISO
+      # CrmZeus A1 — artículos y sus catálogos
+      crm_article:
+        catalog_status: Tipo
+        key: Clave
+        name: Nombre
+        line: Línea
+        unit: Unidad
+        status: Estatus
+        purchase_unit: Unidad de compra
+        purchase_unit_content: Contenido
+        unit_weight: Peso
+        image: Imagen
+        prices: Precios
+      crm_article/prices:
+        price_list: Lista de precios
+        price: Precio
+        currency: Moneda
+      crm_article_price:
+        price_list: Lista de precios
+        price: Precio
+        currency: Moneda
+      crm_article_tax:
+        tax: Impuesto
+      crm_article_line:
+        name: Nombre
+        key: Clave
+        group: Grupo de líneas
+      crm_unit:
+        name: Nombre
+        sat_key: Clave SAT
+      crm_tax:
+        name: Nombre
+        tax_type: Tipo
+        percent: Porcentaje
