@@ -8,13 +8,16 @@
 #   · duración: la de @agendar_calendar(duracion=…) o la que dijo el cliente, o la del agente
 #   · horario: 24 h si la ruta lo dice; si no, el del canal
 #   · opciones (observaciones SSUSA 5, 06/10/2026 — reemplaza la decisión 2):
-#       con hora pedida y libre → UNA opción, exacta: Turn la aparta directo
+#       con hora pedida y libre → esa como A (exact) y las 2 siguientes horas libres; el cliente
+#                                 elige (D3, SSUSA 22/10: antes se apartaba directo)
 #       con hora pedida ocupada → «a las 08:00 no hay» y hasta 3 de las siguientes (1A, 1B, 1C)
+#       nada ese día            → «no hay horario el lunes 2; lo más cercano es»
 #       sin hora                → ninguna: Turn pide la hora (need_time)
 #     Una renta por días no lleva hora: ofrece los equipos libres todo el periodo (F7).
 #   · unidades (observación SSUSA 4): la 1.ª columna que regresa {{hoja_buscar:}} es el
 #     calendario; las demás describen la unidad antes de su horario
 #     ({{hoja_buscar: Servicio Gruas | tipo=? | Calendar_ID, tipo, peso_max_t, placas}}).
+#     Con etiquetas legibles («40 t · 16.15 m») y nunca placas, serie ni tracto (SSUSA 22/10).
 # Las opciones quedan en metadata['oferta'] del caso; la elección la resuelve Choice.
 # ================================================================================
 
@@ -23,10 +26,10 @@ class ContactTrackings::ServiceRequests::Scheduler
   LETTERS = %w[A B C].freeze
 
   # La nota explica por qué no hay opciones (o aclara algo) en la línea del servicio.
-  # exact: la hora pedida está libre (una sola opción). units: { calendario => descripción }.
-  # held: la opción que Turn apartó directo (exact). related: no había lo pedido y se ofrece lo
-  # más parecido (observación SSUSA 1); el texto va antes de las unidades.
-  Plan = Struct.new(:ticket, :offers, :note, :requested, :exact, :need_time, :units, :held, :related, keyword_init: true)
+  # exact: la hora pedida está libre (es la opción A). units: { calendario => descripción }.
+  # related: no había lo pedido y se ofrece lo más parecido (observación SSUSA 1); el texto va
+  # antes de las unidades.
+  Plan = Struct.new(:ticket, :offers, :note, :requested, :exact, :need_time, :units, :related, keyword_init: true)
 
   def initialize(tracking:, route:, timezone:)
     @tracking = tracking
@@ -108,8 +111,8 @@ class ContactTrackings::ServiceRequests::Scheduler
     ocupadas = @taken.calendars_between(at, at + duration(datos).minutes) + @excluded
     libres = ocupadas.empty? ? buscador : slot_service(datos, excluir: ocupadas)
     exacto = libres&.slot_for(at)
-    slots = exacto ? [exacto] : following(buscador, at)
-    ofertas = slots.each_with_index.map { |slot, i| payload(slot, "#{number}#{LETTERS[i]}") }
+    slots = exacto ? with_requested(exacto, buscador, at) : following(buscador, at)
+    ofertas = described(slots.each_with_index.map { |slot, i| payload(slot, "#{number}#{LETTERS[i]}") })
     ticket.update!(metadata: ticket.metadata.merge('oferta' => ofertas))
     Plan.new(ticket: ticket, offers: ofertas, note: note_for(slots, exacto, at), requested: at, exact: exacto.present?,
              units: units_for(ofertas))
@@ -119,16 +122,23 @@ class ContactTrackings::ServiceRequests::Scheduler
   def rental_offer(ticket, number, buscador, desde, dias)
     libres = buscador.free_for_period(desde, desde + dias.days)
                      .reject { |slot| unavailable?(slot) }.first(MAX_OPTIONS)
-    ofertas = libres.each_with_index.map { |slot, i| payload(slot, "#{number}#{LETTERS[i]}").merge('all_day' => true) }
+    ofertas = described(libres.each_with_index.map { |slot, i| payload(slot, "#{number}#{LETTERS[i]}").merge('all_day' => true) })
     ticket.update!(metadata: ticket.metadata.merge('oferta' => ofertas))
     Plan.new(ticket: ticket, offers: ofertas, note: libres.empty? ? 'ningún equipo libre en todo ese periodo' : nil, requested: desde,
              units: units_for(ofertas))
   end
 
+  # La hora pedida está libre: es la A, y después las 2 siguientes horas libres (de cualquier
+  # unidad que aguante la carga; la misma hora en otra unidad no cuenta como otra opción).
+  def with_requested(exacto, buscador, at)
+    siguientes = following(buscador, at, limit: nil).select { |slot| slot[:slot] > exacto[:slot] }.uniq { |slot| slot[:slot] }
+    [exacto] + siguientes.first(MAX_OPTIONS - 1)
+  end
+
   # La hora pedida está ocupada: las siguientes libres.
-  def following(buscador, desde)
-    buscador.call(from: desde).uniq { |s| [s[:slot], s[:google_calendar_id]] }
-            .reject { |s| unavailable?(s) }.first(MAX_OPTIONS)
+  def following(buscador, desde, limit: MAX_OPTIONS)
+    libres = buscador.call(from: desde).uniq { |s| [s[:slot], s[:google_calendar_id]] }.reject { |s| unavailable?(s) }
+    limit ? libres.first(limit) : libres
   end
 
   # Tomada por otro servicio de la conversación, o una unidad que el cliente ya pidió cambiar.
@@ -140,7 +150,16 @@ class ContactTrackings::ServiceRequests::Scheduler
     return "sí hay a las #{at.strftime('%H:%M')}" if exacto
     return "a las #{at.strftime('%H:%M')} no hay, ni más tarde ese día" if slots.empty?
 
-    "a las #{at.strftime('%H:%M')} no hay; lo que sí hay"
+    dia = "#{ContactTrackings::AmbiguousDate::DAY_NAMES[at.wday]} #{at.day}"
+    return "no hay horario el #{dia}; lo más cercano es" if slots.first[:slot].in_time_zone(@timezone).to_date != at.to_date
+
+    "a las #{at.strftime('%H:%M')} no hay; estas son las más cercanas"
+  end
+
+  # Cada opción guarda su unidad descrita, para la pregunta de Choice y lo apartado (conv. 654).
+  def described(ofertas)
+    unidades = @units.to_h
+    ofertas.map { |oferta| unidades[oferta['gcal']].present? ? oferta.merge('unidad' => unidades[oferta['gcal']]) : oferta }
   end
 
   # Solo las unidades que se ofrecen, en el orden en que aparecen.
@@ -204,14 +223,25 @@ class ContactTrackings::ServiceRequests::Scheduler
     filas.index_by { |fila| ContactTrackings::SheetLookup.calendar_id(cell(fila, @spec.returns.first)) }
   end
 
-  # «Low boy (cama muy baja) · Peso max t: 60 · Placas: 66UL2B»: las columnas que la ruta pidió
-  # después del calendario. La primera va sin nombre (suele ser el tipo).
+  # «Low boy · 60 t · 16.15 m»: las columnas que la ruta pidió después del calendario. La primera va
+  # sin nombre y sin su aclaración entre paréntesis (suele ser el tipo); las de medida, con su unidad
+  # (peso_max_t → «40 t»). Datos internos, aunque la ruta los pida, nunca (SSUSA 22/10).
+  HIDDEN_COLUMNS = %w[placas serie tracto jalado_por].freeze
+  UNIT_SUFFIXES = { '_t' => 't', '_m' => 'm', '_kg' => 'kg' }.freeze
+
   def describe_unit(fila)
-    partes = @spec.returns.drop(1).filter_map do |columna|
+    columnas = @spec.returns.drop(1).reject { |columna| HIDDEN_COLUMNS.include?(columna.to_s.strip.downcase) }
+    partes = columnas.filter_map do |columna|
       valor = cell(fila, columna)
       [columna, valor] if valor.present?
     end
-    partes.each_with_index.map { |(columna, valor), i| i.zero? ? valor.to_s : "#{columna.tr('_', ' ').capitalize}: #{valor}" }.join(' · ')
+    partes.each_with_index.map { |(columna, valor), i| i.zero? ? valor.to_s.sub(/\s*\(.*\)\s*\z/, '') : labeled(columna, valor) }.join(' · ')
+  end
+
+  def labeled(columna, valor)
+    clave = columna.to_s.strip.downcase
+    sufijo = UNIT_SUFFIXES.find { |final, _| clave.end_with?(final) }&.last
+    sufijo ? "#{valor} #{sufijo}" : "#{clave.tr('_', ' ').capitalize}: #{valor}"
   end
 
   def cell(fila, columna)
