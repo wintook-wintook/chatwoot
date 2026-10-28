@@ -88,6 +88,30 @@ RSpec.describe 'Organizations API' do
                                            { 'month' => '2026-10', 'prospects' => 1, 'customers' => 1 }])
   end
 
+  it 'la lista de contactos trae su organización con la etapa (columna de la tabla)' do
+    org = account.organizations.create!(name: 'Acme', stage: :customer)
+    contact.update!(organization: org)
+    get "/api/v1/accounts/#{account.id}/contacts", headers: admin.create_new_auth_token, as: :json
+    row = response.parsed_body['payload'].find { |c| c['id'] == contact.id }
+    expect(row['organization']).to eq('id' => org.id, 'name' => 'Acme', 'stage' => 'customer')
+  end
+
+  it 'desde la organización no se liga a quien ya está en otra; se cambia desde su ficha' do
+    acme = account.organizations.create!(name: 'Acme')
+    globex = account.organizations.create!(name: 'Globex')
+    contact.update!(organization: acme)
+    post "#{base}/#{globex.id}/add_contact", params: { contact_id: contact.id }, headers: admin.create_new_auth_token,
+                                             as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(contact.reload.organization).to eq(acme)
+
+    get "#{base}/change_preview", params: { contact_id: contact.id }, headers: admin.create_new_auth_token, as: :json
+    expect(response.parsed_body['organization']).to include('name' => 'Acme')
+    post "#{base}/change_contact", params: { contact_id: contact.id, to_organization_id: globex.id, move: true },
+                                   headers: admin.create_new_auth_token, as: :json
+    expect(contact.reload.organization).to eq(globex)
+  end
+
   it 'con «solo lo suyo» ve las que tiene a cargo o las de sus contactos; sin Clientes, nada' do
     give_role(agent, 'seller')
     suya = account.organizations.create!(name: 'Suya', owner: agent)

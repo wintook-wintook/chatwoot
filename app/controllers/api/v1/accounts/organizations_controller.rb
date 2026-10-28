@@ -13,6 +13,9 @@
 #   POST   /organizations/apply_suggestions  (groups) crea o liga lo confirmado
 #   GET    /organizations/template        CSV con las columnas · POST /organizations/import (file)
 #   GET    /organizations/metrics         O5: ?months= (Informes › Dashboard de clientes)
+#   GET    /organizations/change_preview  ?contact_id= qué tiene en su organización y quién puede quedar
+#   POST   /organizations/change_contact  «Cambiar de organización» (contact_id, to_organization_id,
+#                                         move, replacement_contact_id | new_contact)
 #
 # Área Clientes. Con «solo lo suyo» se ven las que tiene a su cargo y las de sus contactos.
 class Api::V1::Accounts::OrganizationsController < Api::V1::Accounts::BaseController
@@ -21,7 +24,8 @@ class Api::V1::Accounts::OrganizationsController < Api::V1::Accounts::BaseContro
   PER_PAGE = 50
   FIELDS = %i[name kind tax_id website email_domain industry phone_number address owner_id notes].freeze
 
-  before_action :set_organization, except: %i[index create suggestions apply_suggestions template import metrics]
+  before_action :set_organization, except: %i[index create suggestions apply_suggestions template import metrics
+                                              change_preview change_contact]
   before_action :set_contact, only: %i[add_contact remove_contact]
 
   def index
@@ -100,9 +104,31 @@ class Api::V1::Accounts::OrganizationsController < Api::V1::Accounts::BaseContro
     render_organization
   end
 
+  # Solo a quien no tiene organización: al que está en otra se le cambia desde su ficha.
   def add_contact
+    if @contact.organization_id && @contact.organization_id != @organization.id
+      return render_errors_message(I18n.t('organizations.change.use_change', name: @contact.organization.name))
+    end
+
     @contact.update!(organization: @organization)
     render_organization
+  end
+
+  def change_preview
+    contact = visible_contacts.find(params[:contact_id])
+    return render_errors_message(I18n.t('organizations.change.no_organization')) unless contact.organization
+
+    render json: Organizations::ChangeContactOrganization.preview(contact)
+  end
+
+  def change_contact
+    contact = visible_contacts.find(params[:contact_id])
+    Organizations::ChangeContactOrganization.new(contact: contact, user: Current.user, to: target_organization,
+                                                 move: ActiveModel::Type::Boolean.new.cast(params[:move]),
+                                                 substitute: substitute).call
+    render json: { contact_id: contact.id, organization_id: contact.reload.organization_id }
+  rescue Organizations::ChangeContactOrganization::Error, ActiveRecord::RecordInvalid => e
+    render_errors_message(e.message)
   end
 
   def remove_contact
@@ -111,6 +137,16 @@ class Api::V1::Accounts::OrganizationsController < Api::V1::Accounts::BaseContro
   end
 
   private
+
+  def target_organization
+    scope.find(params[:to_organization_id]) if params[:to_organization_id].present?
+  end
+
+  # Quién queda en lugar del que se va: uno de la organización o uno nuevo.
+  def substitute
+    { contact: params[:replacement_contact_id].present? ? visible_contacts.find(params[:replacement_contact_id]) : nil,
+      new_contact: params[:new_contact]&.permit(:name, :email, :phone_number) }
+  end
 
   def suggestions_service
     Organizations::Suggestions.new(account: Current.account, contacts: visible_contacts)

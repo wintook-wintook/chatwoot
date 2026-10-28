@@ -116,6 +116,27 @@ Specs: `spec/models/organization_spec.rb`, `spec/requests/api/v1/accounts/organi
 | O4 Datos existentes | Asistente con vista previa (agrupa por empresa escrita, dominio no gratuito o cliente-persona; propone etapa por contratos/ganadas; liga a la existente si coincide). Importar/plantilla CSV de organizaciones. Columna «organizacion» en importación de contratos (debe existir) y de contactos (si no existe, se crea como prospecto) | `Organizations::Suggestions`, `Organizations::CsvImport`, `OrganizationSuggestions.vue`, `DataImport::ContactManager` |
 | O5 Informes e IA | Informes › Dashboard de clientes (totales, nuevos, conversión, días a cliente, llegadas por mes). Variables `{{organizacion.nombre|rfc|etapa|tipo|giro}}` (y `organization.*`) en mensajes, correos y la caja de respuesta. El agente IA recibe la organización del contacto | `Organizations::Metrics`, `OrganizationsDashboard.vue`, `OrganizationDrop`, `ReplyBox` (`organizationVariables`), `Organizations::PromptContext` |
 
+## Contactos que entran y salen (2026-10-28)
+Decisiones del usuario: el contacto es lo único obligatorio y la organización sale de él; un
+contacto que ya tiene organización solo se cambia con una acción deliberada.
+- **Ligar por primera vez** (a mano, asistente, importaciones, reglas): lo suyo **sin**
+  organización pasa a ella (`Contact#adopt_unlinked_records`). Migración `20261031260000`
+  rellenó una vez lo que ya existía.
+- **«Cambiar de organización»** en la ficha del contacto (`ChangeOrganizationModal`,
+  `Organizations::ChangeContactOrganization`, `GET /organizations/change_preview`,
+  `POST /organizations/change_contact`):
+  - «Sí, pasar todo» (estaba en la equivocada): todo lo suyo en la anterior pasa a la nueva.
+  - «No, que todo se quede» (se cambió de empresa): **obligatorio** elegir quién queda en su
+    lugar (otro contacto de la anterior o uno nuevo que se da de alta ahí). Lo **vivo** (casos
+    y oportunidades abiertos, cotizaciones draft/sent/postponed, contratos no cancelados,
+    equipos y planes activos) pasa a esa persona; lo **cerrado** se queda con él como historial.
+  - Bitácora en las dos organizaciones.
+- La organización muestra lo que tiene su `organization_id` (no lo de sus contactos): lo cerrado
+  que se quedó en Acme no aparece en Globex. En la ficha del contacto, lo de otra organización
+  lleva su etiqueta (`OrganizationTag`).
+- Desde la organización, la importación CSV o la de contactos no se «roba» un contacto de otra:
+  avisan que se use «Cambiar de organización». Quitar pide confirmación.
+
 ## Fases
 - **O1 · Base:** tabla y modelo, `contacts.organization_id`, API, Clientes › Organizaciones
   (lista con pestañas), página de la organización, campo Organización en el contacto, botones

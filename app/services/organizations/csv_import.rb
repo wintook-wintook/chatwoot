@@ -84,11 +84,18 @@ class Organizations::CsvImport
       raise(ArgumentError, I18n.t('organizations.import.owner_not_found', value: email))
   end
 
+  def find_contact(key)
+    @contacts.find_by('LOWER(contacts.email) = ?', key.downcase) ||
+      @contacts.find_by(phone_number: key.start_with?('+') ? key : "+#{key}") ||
+      raise(ArgumentError, I18n.t('organizations.import.contact_not_found', value: key))
+  end
+
   def link_contacts(organization, value)
     value.to_s.split(';').map(&:strip).compact_blank.each do |key|
-      contact = @contacts.find_by('LOWER(contacts.email) = ?', key.downcase) ||
-                @contacts.find_by(phone_number: key.start_with?('+') ? key : "+#{key}")
-      raise ArgumentError, I18n.t('organizations.import.contact_not_found', value: key) unless contact
+      contact = find_contact(key)
+      next if contact.organization_id == organization.id
+      # Uno que ya está en otra no se cambia aquí: «Cambiar de organización» en el contacto.
+      raise ArgumentError, I18n.t('organizations.import.contact_elsewhere', value: key) if contact.organization_id
 
       contact.update!(organization: organization)
     end

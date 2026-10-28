@@ -185,6 +185,10 @@
         "ROUTE_SCOPE_GENERATE_ERROR": "No se pudo generar. Inténtalo de nuevo o escríbela a mano."
       },
       "EMAIL_SIGNATURE_LABEL": "Firma para correo",
+      "CUSTOMER_NAME_LABEL": "Nombre que verá el cliente",
+      "CUSTOMER_NAME_PLACEHOLDER": "Ej. Sofía · Asistente virtual",
+      "CUSTOMER_NAME_HINT": "En WhatsApp va al inicio de cada mensaje del agente. Si lo dejas vacío, sus mensajes salen sin nombre.",
+      "CUSTOMER_NAME_PREVIEW": "Hola, con gusto te ayudo…",
       "EMAIL_SIGNATURE_PLACEHOLDER": "Ana López\nVentas · Wintook\n81 1234 5678",
       "EMAIL_SIGNATURE_HINT": "Va al final de cada correo que escribe el agente, en lugar de «#IA». En WhatsApp y otros canales no se usa."
     },

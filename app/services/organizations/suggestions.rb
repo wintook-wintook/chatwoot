@@ -44,7 +44,9 @@ class Organizations::Suggestions
         next if contacts.empty?
 
         organization = target_for(group, result, user)
+        ids = contacts.pluck(:id)
         result[:linked] += contacts.update_all(organization_id: organization.id) # rubocop:disable Rails/SkipsModelValidations
+        Organizations::ContactRecords.adopt_unlinked_for!(@account, ids, organization.id)
       end
     end
     result

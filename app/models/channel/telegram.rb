@@ -117,18 +117,46 @@ class Channel::Telegram < ApplicationRecord
   def convert_markdown_to_telegram_html(text)
     # ref: https://core.telegram.org/bots/api#html-style
 
-    # escape html tags in text. We are subbing \n to <br> since commonmark will strip exta '\n'
-    text = CGI.escapeHTML(text.gsub("\n", '<br>'))
+    # Tomado de Chatwoot v4.19. Antes los \n se cambiaban por <br> ANTES de CommonMarker y un
+    # bloque ``` no se reconocía: la tabla de horarios de @solicitudes llegaba sin alinear.
 
-    # convert markdown to html
-    html = CommonMarker.render_html(text).strip
+    # Escape HTML entities first to prevent HTML injection
+    # This ensures only markdown syntax is converted, not raw HTML
+    escaped_text = CGI.escapeHTML(text)
 
-    # remove all html tags except b, strong, i, em, u, ins, s, strike, del, a, code, pre, blockquote
-    stripped_html = Rails::HTML5::SafeListSanitizer.new.sanitize(html, tags: %w[b strong i em u ins s strike del a code pre blockquote],
-                                                                       attributes: %w[href])
+    # Parse markdown with hardbreaks: preserve all newlines as <br>
+    # (sin la extensión strikethrough de v4.19: aquí no se usaba y tacharía cualquier «~x~»)
+    html = CommonMarker.render_html(escaped_text, [:HARDBREAKS]).strip
 
-    # converted escaped br tags to \n
-    stripped_html.gsub('&lt;br&gt;', "\n")
+    # Convert paragraph breaks to double newlines to preserve them
+    # CommonMarker creates <p> tags for paragraph breaks, but Telegram doesn't support <p>
+    html_with_breaks = html.gsub(%r{</p>\s*<p>}, "\n\n")
+
+    # Remove opening and closing <p> tags
+    html_with_breaks = html_with_breaks.gsub(%r{</?p>}, '')
+
+    # Telegram no tiene <ul>/<ol>: sin esto, las listas perdían el «- » y el «1.»
+    html_with_breaks = restore_list_markers(html_with_breaks)
+
+    # Sanitize to only allowed tags
+    stripped_html = Rails::HTML5::SafeListSanitizer.new.sanitize(html_with_breaks, tags: %w[b strong i em u ins s strike del a code pre blockquote],
+                                                                                   attributes: %w[href])
+
+    # Convert <br /> tags to newlines for Telegram
+    stripped_html.gsub(%r{<br\s*/?>}, "\n")
+  end
+
+  LIST_RE = %r{\n?<(ul|ol)(?: start="(\d+)")?>\n(.*?)</\1>\n?}m
+
+  def restore_list_markers(html)
+    html.gsub(LIST_RE) do
+      tipo = Regexp.last_match(1)
+      numero = Regexp.last_match(2).to_i.clamp(1..) - 1
+      items = Regexp.last_match(3).scan(%r{<li>(.*?)</li>}m).flatten
+      lineas = items.map { |item| tipo == 'ul' ? "- #{item.strip}" : "#{numero += 1}. #{item.strip}" }
+      # Lo que sigue a una lista es otro párrafo (si no, CommonMarker lo deja dentro del último <li>).
+      "\n#{lineas.join("\n")}\n\n"
+    end.strip
   end
 
   def message_request(chat_id, text, reply_markup = nil, reply_to_message_id = nil)

@@ -86,6 +86,8 @@ Rails.application.routes.draw do
               get :suggestions
               post :apply_suggestions
               get :metrics
+              get :change_preview
+              post :change_contact
               get :template
               post :import
             end

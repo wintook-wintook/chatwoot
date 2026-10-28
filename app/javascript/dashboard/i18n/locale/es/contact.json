@@ -290,6 +290,7 @@
       "404": "No se encontraron contactos que coincidan con tu búsqueda 🔍",
       "NO_CONTACTS": "No hay contactos disponibles",
       "TABLE_HEADER": {
+        "ORGANIZATION": "Organización",
         "NAME": "Nombre",
         "PHONE_NUMBER": "Número de teléfono",
         "CONVERSATIONS": "Conversaciones",

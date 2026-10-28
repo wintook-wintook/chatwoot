@@ -7,6 +7,7 @@
 import CustomerAssetsAPI from 'dashboard/api/customerAssets';
 import MaintenancePlansAPI from 'dashboard/api/maintenancePlans';
 import Spinner from 'shared/components/Spinner.vue';
+import OrganizationTag from './OrganizationTag.vue'; // Plan-Organizaciones
 import AssetForm from 'dashboard/views/gestorTickets/maintenance/AssetForm.vue';
 import MaintenancePlanForm from 'dashboard/views/gestorTickets/maintenance/MaintenancePlanForm.vue';
 import PlanList from 'dashboard/views/gestorTickets/maintenance/PlanList.vue';
@@ -14,7 +15,13 @@ import { backQuery } from 'dashboard/views/gestorTickets/backLink';
 
 export default {
   name: 'ContactAssetsTab',
-  components: { Spinner, AssetForm, MaintenancePlanForm, PlanList },
+  components: {
+    Spinner,
+    AssetForm,
+    MaintenancePlanForm,
+    PlanList,
+    OrganizationTag,
+  },
   props: {
     contactId: { type: Number, required: true },
   },
@@ -157,6 +164,10 @@ export default {
                   class="text-sm font-medium truncate text-slate-800 dark:text-slate-100"
                 >
                   {{ asset.name }}
+                  <OrganizationTag
+                    :organization-id="asset.organization_id"
+                    :contact-id="contactId"
+                  />
                   <span
                     v-if="asset.under_warranty"
                     class="px-1.5 ml-1 text-xs font-normal text-green-700 bg-green-50 rounded dark:bg-green-900/30 dark:text-green-300"

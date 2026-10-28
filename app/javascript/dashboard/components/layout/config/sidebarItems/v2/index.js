@@ -213,6 +213,7 @@ export const primaryMenuV2 = (accountId, route) => {
     serviceClass(route, accountId),
     'list'
   );
+  const salesView = lastCaseView(accountId, COMMERCIAL, 'board');
   return [
     {
       icon: 'home',
@@ -249,8 +250,18 @@ export const primaryMenuV2 = (accountId, route) => {
       icon: 'heart-handshake',
       key: 'ventas',
       label: 'SALES',
-      toState: url('kanban'),
-      toStateName: 'kanban_dashboard',
+      // Abre la primera opción del menú (Oportunidades, en su última vista); sin casos,
+      // el Embudo de contactos.
+      featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+      toState: url(`tickets/${COMMERCIAL}/${salesView}`),
+      toStateName: CLASS_VIEW_ROUTES[salesView],
+      alternatives: [
+        {
+          featureFlag: null,
+          toState: url('kanban'),
+          toStateName: 'kanban_dashboard',
+        },
+      ],
     },
     {
       icon: 'clipboard',
@@ -268,8 +279,9 @@ export const primaryMenuV2 = (accountId, route) => {
       key: 'contacts',
       label: 'CLIENTS',
       featureFlag: FEATURE_FLAGS.CRM,
-      toState: url('contacts'),
-      toStateName: 'contacts_dashboard',
+      // La primera opción del menú: Organizaciones.
+      toState: url('organizations'),
+      toStateName: 'organizations_list',
     },
     {
       icon: 'megaphone',
@@ -558,8 +570,8 @@ const clientes = accountId => {
       'organization_detail',
       'contracts_list',
     ],
+    // Primero las organizaciones (prospectos y clientes), luego sus contactos.
     menuItems: [
-      ...base.menuItems,
       // Plan-Organizaciones O1 — prospectos y clientes con sus contactos
       {
         icon: 'building-bank',
@@ -568,6 +580,12 @@ const clientes = accountId => {
         toStateName: 'organizations_list',
         activeRoutes: ['organization_detail'],
       },
+      // «Contactos» y no «Todos los contactos» (el mismo ítem de Contactos).
+      ...base.menuItems.map(item =>
+        item.toStateName === 'contacts_dashboard'
+          ? { ...item, label: 'CONTACTS' }
+          : item
+      ),
       // Plan-Contratos R1 — servicios recurrentes de los clientes
       {
         icon: 'signature',

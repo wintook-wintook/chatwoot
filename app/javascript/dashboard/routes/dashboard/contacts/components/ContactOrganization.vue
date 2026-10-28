@@ -1,13 +1,16 @@
 <!--
   Plan-Organizaciones O1 — página del contacto › su organización y etapa. Sin
   organización: «Convertir en prospecto» (la crea con su empresa escrita o su nombre) o
-  ligarlo a una que ya existe. Con organización: el enlace a su página y «Quitar».
+  ligarlo a una que ya existe (lo suyo sin organización pasa a ella). Con organización: el
+  enlace a su página, «Cambiar de organización» (ChangeOrganizationModal) y «Quitar»
+  (con confirmación).
 -->
 <script>
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import OrganizationsAPI from 'dashboard/api/organizations';
 import OrganizationForm from 'dashboard/views/organizations/OrganizationForm.vue';
+import ChangeOrganizationModal from './ChangeOrganizationModal.vue';
 import {
   organizationAccess,
   stageChipClass,
@@ -15,7 +18,7 @@ import {
 
 export default {
   name: 'ContactOrganization',
-  components: { OrganizationForm },
+  components: { OrganizationForm, ChangeOrganizationModal },
   props: {
     contact: { type: Object, required: true },
   },
@@ -23,6 +26,7 @@ export default {
     return {
       organization: null,
       showForm: false,
+      showChange: false,
       linking: false,
       query: '',
       results: [],
@@ -92,7 +96,18 @@ export default {
         useAlert(this.$t('ORGANIZATIONS.ERROR'));
       }
     },
+    onChanged() {
+      this.showChange = false;
+      this.refreshContact();
+    },
     async unlink() {
+      // eslint-disable-next-line no-alert
+      const ok = window.confirm(
+        this.$t('ORGANIZATIONS.CONTACT.UNLINK_CONFIRM', {
+          name: this.organization.name,
+        })
+      );
+      if (!ok) return;
       try {
         await OrganizationsAPI.removeContact(
           this.organization.id,
@@ -143,14 +158,22 @@ export default {
       <span class="text-xs text-slate-500">
         {{ $t(`ORGANIZATIONS.KINDS.${organization.kind}`) }}
       </span>
-      <button
-        v-if="access.canEdit"
-        type="button"
-        class="self-start p-0 text-xs text-slate-500 hover:underline"
-        @click="unlink"
-      >
-        {{ $t('ORGANIZATIONS.CONTACT.UNLINK') }}
-      </button>
+      <div v-if="access.canEdit" class="flex flex-wrap gap-3 mt-1">
+        <button
+          type="button"
+          class="p-0 text-xs text-woot-600 dark:text-woot-300 hover:underline"
+          @click="showChange = true"
+        >
+          {{ $t('ORGANIZATIONS.CONTACT.CHANGE') }}
+        </button>
+        <button
+          type="button"
+          class="p-0 text-xs text-slate-500 hover:underline"
+          @click="unlink"
+        >
+          {{ $t('ORGANIZATIONS.CONTACT.UNLINK') }}
+        </button>
+      </div>
     </div>
 
     <div v-else class="flex flex-col gap-2 text-sm">
@@ -198,6 +221,13 @@ export default {
       </template>
     </div>
 
+    <ChangeOrganizationModal
+      v-if="showChange"
+      :show="showChange"
+      :contact="contact"
+      @close="showChange = false"
+      @changed="onChanged"
+    />
     <OrganizationForm
       :show="showForm"
       :contact="contact"

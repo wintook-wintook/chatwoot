@@ -110,9 +110,36 @@ export default {
       this.picked = null;
     },
     removeContact(contact) {
+      // eslint-disable-next-line no-alert
+      const ok = window.confirm(
+        this.$t('ORGANIZATIONS.REMOVE_CONTACT_CONFIRM', { name: contact.name })
+      );
+      if (!ok) return;
       this.run(() =>
         OrganizationsAPI.removeContact(this.organizationId, contact.id)
       );
+    },
+    contactEventText(event) {
+      const d = event.data;
+      if (event.action === 'contact_joined') {
+        return this.$t(
+          d.moved
+            ? 'ORGANIZATIONS.EVENTS.JOINED_WITH'
+            : 'ORGANIZATIONS.EVENTS.JOINED',
+          { contact: d.contact_name, from: d.from }
+        );
+      }
+      const to = d.to || this.$t('ORGANIZATIONS.EVENTS.NOWHERE');
+      return d.moved
+        ? this.$t('ORGANIZATIONS.EVENTS.LEFT_WITH', {
+            contact: d.contact_name,
+            to,
+          })
+        : this.$t('ORGANIZATIONS.EVENTS.LEFT', {
+            contact: d.contact_name,
+            to,
+            replacement: d.replacement_name,
+          });
     },
     async destroy() {
       // eslint-disable-next-line no-alert
@@ -142,8 +169,11 @@ export default {
       this.organization = { ...this.organization, ...organization };
     },
     // «Pasó de Prospecto a Cliente» o «Se creó como Prospecto», y el motivo si fue automático.
+    // «Luis se fue a Globex (sus cosas quedan aquí con Ana)» / «Luis llegó desde Acme».
     eventText(event) {
       const { from, to, reason } = event.data || {};
+      if (event.action === 'contact_left' || event.action === 'contact_joined')
+        return this.contactEventText(event);
       const text =
         event.action === 'created'
           ? this.$t('ORGANIZATIONS.EVENTS.CREATED', {

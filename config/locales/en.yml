@@ -600,6 +600,12 @@ en:
       other: "%{count} seconds"
   # Plan-Organizaciones O1
   organizations:
+    change:
+      no_organization: 'The contact has no organization: link it to one'
+      same: 'Choose an organization other than the current one'
+      replacement_required: 'Choose who takes their place or add a new one'
+      replacement_invalid: 'The replacement must be another contact of the same organization'
+      use_change: 'This contact already belongs to «%{name}». To change it use «Change organization» on the contact'
     stages:
       prospect: 'Prospect'
       customer: 'Customer'
@@ -614,6 +620,7 @@ en:
       not_found: 'There is no organization with id %{id}'
       owner_not_found: 'There is no user with the email «%{value}»'
       contact_not_found: 'Contact «%{value}» not found'
+      contact_elsewhere: 'Contact «%{value}» already belongs to another organization: change it from the contact'
   # Plan-Contratos R1
   contracts:
     errors:

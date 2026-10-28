@@ -397,8 +397,18 @@ export default {
       }
       return this.isATweet && this.isIncoming && this.sender;
     },
+    // Agentes IA: el mensaje es del agente (no del usuario con que se guarda).
+    isAiAgentMessage() {
+      return Boolean(this.contentAttributes.ai_agent);
+    },
     senderNameForAvatar() {
       if (this.isOutgoing || this.isTemplate) {
+        if (this.isAiAgentMessage) {
+          return (
+            this.contentAttributes.ai_agent_name ||
+            this.$t('CONVERSATION.AI_AGENT')
+          );
+        }
         if (this.isSentFromWhatsappMobile) {
           return this.$t('CONVERSATION.SENT_FROM_WHATSAPP_MOBILE');
         }
@@ -638,10 +648,16 @@ export default {
         class="sender--info relative"
       >
         <woot-thumbnail
-          :src="sender.thumbnail"
+          :src="isAiAgentMessage ? '' : sender.thumbnail"
           :username="senderNameForAvatar"
           size="30px"
         />
+        <div
+          v-if="isAiAgentMessage"
+          class="absolute bottom-0 right-0 flex items-center justify-center bg-violet-500 rounded-full w-3.5 h-3.5 ring-1 ring-white dark:ring-slate-900"
+        >
+          <fluent-icon icon="bot" size="10" class="text-white" />
+        </div>
         <div
           v-if="isSentFromWhatsappMobile"
           class="absolute bottom-0 right-0 flex items-center justify-center bg-green-500 rounded-full w-3.5 h-3.5 ring-1 ring-white dark:ring-slate-900"

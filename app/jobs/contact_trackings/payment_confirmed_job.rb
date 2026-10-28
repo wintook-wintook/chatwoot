@@ -43,7 +43,8 @@ class ContactTrackings::PaymentConfirmedJob < ApplicationJob
 
   def say(tracking, conversation, texto, privado:)
     mensaje = Messages::MessageBuilder.new(bot_user(tracking.account), conversation,
-                                           { content: texto, private: privado, message_type: 'outgoing' }).perform
+                                           { content: texto, private: privado, message_type: 'outgoing',
+                                             ai_agent: ContactTrackings::AgentIdentity.for(tracking.tracking_template) }).perform
     return if privado || mensaje.blank?
 
     mensaje.content_attributes[:sentiment_auto_reply] = true
