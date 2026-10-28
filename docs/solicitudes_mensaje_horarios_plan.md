@@ -168,7 +168,7 @@ pregunta «¿Confirmo el servicio?». Un segundo «sí» lo deja en firme vía `
 
 | # | Pregunta | Recomendación |
 |---|---|---|
-| D1 | El documento escribe con **usted** («Responda», «Su solicitud»); el bot y la regla del módulo usan **tú** | Seguir con tú, salvo que SSUSA lo pida expresamente |
+| D1 | El documento escribe con **usted** («Responda», «Su solicitud»); el bot y la regla del módulo usan **tú** | ✅ **Decidido (28/10/2026): tú** |
 | D2 | **Familia** de unidades: la hoja no la tiene y `tipo` es texto libre | SSUSA agrega la columna `familia`. Deducirla de la primera palabra del tipo es frágil |
 | D3 | Hora pedida libre: hoy se aparta directo (obs. SSUSA 5); el cambio 2 pide mostrarla como A junto a 2 más y esperar | Cambiar la regla de la obs. 5, como pide el documento |
 | D4 | Operador en la hoja de unidades o en una de tractos (`jalado_por`) | Leer de la unidad y, si está vacío, del tracto: sirve para los dos casos |
