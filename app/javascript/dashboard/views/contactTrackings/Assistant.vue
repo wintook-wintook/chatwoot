@@ -78,6 +78,8 @@ import OptimizeModal from './assistant/OptimizeModal.vue';
 import ExplainModal from './assistant/ExplainModal.vue';
 import DryRunModal from './assistant/DryRunModal.vue';
 import TestBatteryModal from './assistant/TestBatteryModal.vue';
+// proyecto@diagrama_agente_ia F1: la pestaña «Diagrama» (docs/diagrama_agente_ia_plan.md).
+import AgentDiagram from './assistant/AgentDiagram.vue';
 import SaveModal from './assistant/SaveModal.vue';
 
 // El teclado va más rápido que un request: se espera a que la persona pare.
@@ -138,6 +140,7 @@ export default {
     OptimizeModal,
     ExplainModal,
     DryRunModal,
+    AgentDiagram,
     TestBatteryModal,
     SaveModal,
   },
@@ -683,6 +686,20 @@ export default {
 
     goToRoute(name) {
       this.goToLine(findRouteLine(this.draft, name));
+    },
+
+    // proyecto@diagrama_agente_ia F1: del nodo del diagrama a su línea. El editor
+    // no existe mientras se ve el diagrama: se cambia de pestaña y se espera a que
+    // aparezca.
+    goToRouteFromDiagram(name) {
+      this.draftTab = 'editor';
+      this.$nextTick(() => this.goToRoute(name));
+    },
+    goToSectionFromDiagram(index) {
+      const bloque = (this.trainingStructure.blocks || [])[index];
+      if (!bloque) return;
+      this.draftTab = 'editor';
+      this.$nextTick(() => this.goToLine(bloque.first_line));
     },
 
     // F6 — probar sin enviar nada. A diferencia de validateDraft, esto NO corre
@@ -1720,6 +1737,18 @@ export default {
                         }}
                       </span>
                     </button>
+                    <!-- proyecto@diagrama_agente_ia F1: el agente dibujado (D1: siempre). -->
+                    <button
+                      class="mr-3 pb-0.5 border-b-2"
+                      :class="
+                        draftTab === 'diagram'
+                          ? 'border-woot-500'
+                          : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                      "
+                      @click="draftTab = 'diagram'"
+                    >
+                      {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_DIAGRAM') }}
+                    </button>
                     <button
                       v-if="showHistoryTabs"
                       class="pb-0.5 border-b-2"
@@ -1804,6 +1833,13 @@ export default {
                   v-if="draftTab === 'log'"
                   :versions="versions"
                   :title="(sessionMeta && sessionMeta.title) || ''"
+                />
+                <AgentDiagram
+                  v-else-if="draftTab === 'diagram'"
+                  :structure="trainingStructure"
+                  :issues="nodeIssues"
+                  @goToRoute="goToRouteFromDiagram"
+                  @goToSection="goToSectionFromDiagram"
                 />
                 <ConfigureTab
                   v-else-if="draftTab === 'configure'"
