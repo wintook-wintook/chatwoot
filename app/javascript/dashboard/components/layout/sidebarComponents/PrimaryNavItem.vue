@@ -82,12 +82,29 @@ export default {
     tone() {
       return TONES[this.area] || NEUTRAL;
     },
+    isExternal() {
+      return /^(https?:)?\/\//.test(this.to);
+    },
   },
 };
 </script>
 
 <template>
-  <router-link v-slot="{ href, isActive, navigate }" :to="to" custom>
+  <!-- Link externo (el foro de ayuda): router-link lo tomaría como ruta interna
+       y abriría /https://… dentro de la app. -->
+  <a
+    v-if="isExternal"
+    v-tooltip.right="$t(`SIDEBAR.${name}`)"
+    :href="to"
+    class="relative flex items-center justify-center w-10 h-10 my-2 transition-colors rounded-lg"
+    :class="tone.idle"
+    :rel="openInNewPage ? 'noopener noreferrer nofollow' : undefined"
+    :target="openInNewPage ? '_blank' : undefined"
+  >
+    <fluent-icon :icon="icon" />
+    <span class="sr-only">{{ name }}</span>
+  </a>
+  <router-link v-else v-slot="{ href, isActive, navigate }" :to="to" custom>
     <a
       v-tooltip.right="$t(`SIDEBAR.${name}`)"
       :href="href"
