@@ -150,10 +150,13 @@ class AssistantAPI extends ApiClient {
   // «Probar el agente»: la pila de pruebas en vivo del agente guardado (M5 de
   // docs/importar_prompt_extenso_plan.md). Devuelve { id }; el avance se lee con
   // testBattery(id) y el informe .md con downloadTestBatteryReport(id).
-  startTestBattery(templateId, { briefId = null } = {}) {
+  // `messages`: pruebas escritas a mano (proyecto@diagrama_agente_ia F2); con ellas
+  // se corren solo esas.
+  startTestBattery(templateId, { briefId = null, messages = null } = {}) {
     return axios.post(`${this.url}/test_battery`, {
       template_id: templateId,
       brief_id: briefId,
+      messages,
     });
   }
 

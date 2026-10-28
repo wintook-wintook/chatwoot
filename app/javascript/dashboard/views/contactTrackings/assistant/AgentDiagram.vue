@@ -7,8 +7,13 @@
 // secciones, que el agente lee completas en cada respuesta.
 //
 // SIN ILUMINAR (decisión D1): se ve siempre, mientras se crea el agente; la forma
-// sola ya deja ver huecos (una ruta sin etiqueta, una fuente que falta). En F2 el
-// camino de una prueba se pinta encima con los mismos ids de nodo.
+// sola ya deja ver huecos (una ruta sin etiqueta, una fuente que falta).
+//
+// ILUMINADO (F2): `test` es la prueba elegida en el panel Pruebas; su camino lo
+// calcula testPath.js contra ESTE dibujo (`highlight`): lo
+// recorrido con el color del tema, el punto débil (`failed`) en ámbar con ⚠, y lo
+// demás tenue. Los detalles del camino (fragmentos, «por defecto») reemplazan la
+// segunda línea del nodo.
 //
 // Clic en un nodo → su línea en el Entrenamiento (`goToRoute` / `goToSection`; la
 // pantalla cambia a la pestaña del editor). El punto rojo/ámbar es el mismo
@@ -19,6 +24,7 @@
 // ============================================================================
 import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
 import { buildDiagram, NODE_H } from './agentDiagramLayout';
+import { pathFromTrace, pathFromDryRun } from './testPath';
 
 export default {
   name: 'AgentDiagram',
@@ -26,8 +32,11 @@ export default {
   props: {
     structure: { type: Object, default: () => ({ blocks: [] }) },
     issues: { type: Object, default: () => ({}) },
+    // proyecto@diagrama_agente_ia F2: la prueba elegida ({ mode: 'dry', result } o
+    // { mode: 'live', traza, reply }), o null.
+    test: { type: Object, default: null },
   },
-  emits: ['goToRoute', 'goToSection'],
+  emits: ['goToRoute', 'goToSection', 'clearHighlight'],
   computed: {
     blocks() {
       return (this.structure && this.structure.blocks) || [];
@@ -43,6 +52,34 @@ export default {
     },
     nodeHeight() {
       return NODE_H;
+    },
+    // El ⚠ del punto débil: un símbolo, no un texto que traducir.
+    warnMark() {
+      return '⚠';
+    },
+    highlight() {
+      if (!this.test) return null;
+      return this.test.mode === 'dry'
+        ? pathFromDryRun(this.test.result, this.diagram)
+        : pathFromTrace(this.test.traza, this.diagram, this.test.reply);
+    },
+    litNodes() {
+      return new Set(this.highlight ? this.highlight.nodes : []);
+    },
+    litEdges() {
+      return new Set(this.highlight ? this.highlight.edges : []);
+    },
+    failedNodes() {
+      return new Set(this.highlight ? this.highlight.failed : []);
+    },
+    highlightNote() {
+      const nota = this.highlight && this.highlight.note;
+      if (!nota) return '';
+      return this.t(nota.key, this.noteArgs(nota.args));
+    },
+    highlightMode() {
+      if (!this.highlight) return '';
+      return this.t(this.highlight.mode === 'dry' ? 'MODE_DRY' : 'MODE_LIVE');
     },
   },
   methods: {
@@ -63,6 +100,8 @@ export default {
       return n.label;
     },
     detail(n) {
+      const extra = this.highlight && this.highlight.details[n.id];
+      if (extra) return this.t(extra.key, extra.args);
       if (n.kind === 'client') return this.t('NODE_CLIENT_SUB');
       if (n.kind === 'welcome') return this.t('NODE_WELCOME_SUB');
       if (n.kind === 'conversational') return this.t('NODE_CONVERSATIONAL_SUB');
@@ -78,7 +117,23 @@ export default {
       if (n.issue) partes.push(...n.issue.messages);
       return partes.filter(Boolean).join('\n');
     },
+    // El camino de la nota se dice en palabras (CAMINO_kbase…), no con la llave.
+    noteArgs(args) {
+      if (!args || !args.camino) return args;
+      return { ...args, camino: this.t(`CAMINO_${args.camino.toUpperCase()}`) };
+    },
+    dimmed(id) {
+      return Boolean(this.highlight) && !this.litNodes.has(id);
+    },
+    edgeClass(edge) {
+      if (this.litEdges.has(edge.id)) return 'stroke-woot-500';
+      return 'stroke-slate-300 dark:stroke-slate-600';
+    },
     boxClass(n) {
+      if (this.failedNodes.has(n.id))
+        return 'fill-amber-50 dark:fill-slate-800 stroke-amber-500';
+      if (this.litNodes.has(n.id))
+        return 'fill-woot-50 dark:fill-slate-700 stroke-woot-500';
       if (n.issue && n.issue.level === 'blocking')
         return 'fill-white dark:fill-slate-800 stroke-red-400 dark:stroke-red-500';
       if (n.kind === 'client')
@@ -115,7 +170,25 @@ export default {
       :message="t('EMPTY_MESSAGE')"
     />
     <template v-else>
-      <p class="m-0 text-xs text-slate-500 dark:text-slate-400 shrink-0">
+      <div
+        v-if="highlight"
+        class="flex items-center justify-between gap-2 px-3 py-2 text-xs rounded-lg shrink-0 bg-woot-50 dark:bg-slate-700 text-slate-700 dark:text-slate-100"
+      >
+        <span>
+          <strong>{{ highlightMode }}</strong>
+          <span v-if="highlightNote"> · {{ highlightNote }}</span>
+        </span>
+        <woot-button
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          icon="dismiss"
+          @click="$emit('clearHighlight')"
+        >
+          {{ t('CLEAR_HIGHLIGHT') }}
+        </woot-button>
+      </div>
+      <p v-else class="m-0 text-xs text-slate-500 dark:text-slate-400 shrink-0">
         {{ t('INTRO', { count: diagram.routeCount }) }}
         <span v-if="issueCount" class="text-amber-700 dark:text-amber-400">
           {{ t('ISSUES', { count: issueCount }) }}
@@ -147,15 +220,17 @@ export default {
             :key="edge.id"
             :d="edge.d"
             fill="none"
-            stroke-width="1.5"
+            :stroke-width="litEdges.has(edge.id) ? 2.5 : 1.5"
             :stroke-dasharray="edge.dashed ? '4 4' : null"
-            class="stroke-slate-300 dark:stroke-slate-600"
+            :opacity="highlight && !litEdges.has(edge.id) ? 0.35 : 1"
+            :class="edgeClass(edge)"
           />
 
           <g
             v-for="n in diagram.nodes"
             :key="n.id"
             :transform="`translate(${n.x},${n.y})`"
+            :opacity="dimmed(n.id) ? 0.35 : 1"
             :class="n.target ? 'cursor-pointer group' : ''"
             :role="n.target ? 'button' : null"
             :tabindex="n.target ? 0 : null"
@@ -188,6 +263,14 @@ export default {
               class="text-[11px] fill-slate-500 dark:fill-slate-400"
             >
               {{ detail(n) }}
+            </text>
+            <text
+              v-if="failedNodes.has(n.id)"
+              :x="n.w - 18"
+              :y="nodeHeight - 8"
+              class="text-xs fill-amber-600"
+            >
+              {{ warnMark }}
             </text>
             <circle
               v-if="n.issue"
