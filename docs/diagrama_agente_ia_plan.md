@@ -307,5 +307,35 @@ y cómo pedírselo al Asistente.
 | **D2** | ¿La traza se guarda en **todas** las conversaciones o solo en el canal de pruebas? | **Todas**: así «Revisar conversación real» también se pinta. Es pequeña (sin textos) |
 | **D3** | ¿Las pruebas son de un solo mensaje o también de varios turnos? | Un mensaje en F2–F4; varios turnos en F5 |
 | **D4** | ¿La pila y la prueba en seco dejan de ser modales y se mueven al panel Pruebas? | **Sí**; los modales quedan solo como componentes internos |
-| **D5** | ¿Volver a correr la pila automáticamente al «Publicar cambios»? Cuesta tokens | Preguntar al publicar, con el costo estimado; nunca en automático |
+| **D5** | ¿Volver a correr la pila automáticamente al «Publicar cambios»? Cuesta tokens | ✅ **Decidida (28/10/2026)**, ver 9.1: en seco toda la pila siempre; en vivo solo lo que cambió, con OK y costo |
 | **D6** | Quién puede correr pruebas en vivo (costo): ¿solo admin o también el agente humano? | Solo admin, igual que el Entrenamiento |
+
+### 9.1 D5 — decidida (28/10/2026)
+
+Importan las dos cosas: el gasto **y** que un cambio rompa algo sin que nadie lo note.
+
+```
+ Publicar cambios
+       │
+       ▼
+ 1. EN SECO toda la pila — automático, sin preguntar (DryRunService: ruta, fuente,
+    fragmentos; no redacta) · ~1 llamada corta por prueba
+       │
+       ├── todas con el mismo camino ──────► ✅ «La pila sigue igual (12/12)»
+       └── alguna cambió de ruta / fuente,
+           o su similitud bajó ────────────► ⚠ «3 pruebas cambiaron de camino»
+                                               [Probar en vivo esas 3 · ~$0.01] [Ahora no]
+                                                      │
+ 2. EN VIVO solo las que cambiaron + las que ya estaban rojas + las reglas fijadas,
+    con OK y costo a la vista → antes / después en el diagrama
+```
+
+- **Que no se rompa sin notarlo**: el seco corre siempre y sobre todo; no depende de acordarse.
+- **El gasto**: lo caro (redactar + juez) solo en lo que cambió, y con OK. Sin cambios, $0 en vivo.
+- **Punto ciego del seco**: el tono o una regla rota con el mismo camino. Por eso las pruebas de
+  regla se pueden **fijar** para que siempre se ofrezcan en vivo, y queda «Correr todo en vivo».
+- **Tope por publicación** (sugerido $0.10, configurable): si la corrida en vivo lo pasa, vuelve a
+  pedir confirmación.
+- **Estimado de costo**: promedio de `traza.uso.tokens` de las corridas anteriores de esa pila (F0).
+- Se implementa en **F3** (pila guardada) + **F4** (antes/después).
+
