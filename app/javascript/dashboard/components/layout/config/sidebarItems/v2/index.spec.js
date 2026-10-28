@@ -36,6 +36,17 @@ describe('Menú v2', () => {
     ]);
   });
 
+  it('Ventas y Clientes abren la primera opción de su menú', () => {
+    rememberCaseView(ACCOUNT, 'commercial', 'list');
+    const primary = primaryMenuV2(ACCOUNT, route('home'));
+    const ventas = primary.find(i => i.key === 'ventas');
+    expect(ventas.toState).toContain('tickets/commercial/list');
+    expect(ventas.alternatives[0].toStateName).toBe('kanban_dashboard');
+    expect(primary.find(i => i.key === 'contacts').toStateName).toBe(
+      'organizations_list'
+    );
+  });
+
   it('cada menú secundario tiene su entrada en el principal', () => {
     const keys = primaryMenuV2(ACCOUNT, route('home')).map(item => item.key);
     getSidebarItemsV2(ACCOUNT, route('home')).secondaryMenu.forEach(menu => {
@@ -269,8 +280,8 @@ describe('Menú v2', () => {
     const clientes = menuFor(route('contracts_list'));
     expect(clientes.parentNav).toBe('contacts');
     expect(clientes.menuItems.map(i => i.label)).toEqual([
-      'ALL_CONTACTS',
       'ORGANIZATIONS',
+      'CONTACTS',
       'CONTRACTS',
     ]);
     ['organizations_list', 'organization_detail'].forEach(name =>

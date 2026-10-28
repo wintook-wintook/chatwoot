@@ -63,6 +63,18 @@ class OrganizationsAPI extends ApiClient {
     return axios.post(`${this.url}/import`, data);
   }
 
+  // «Cambiar de organización» del contacto: { organization, counts: { all, live }, candidates }
+  changePreview(contactId) {
+    return axios.get(`${this.url}/change_preview`, {
+      params: { contact_id: contactId },
+    });
+  }
+
+  // { contact_id, to_organization_id, move, replacement_contact_id | new_contact }
+  changeContact(data) {
+    return axios.post(`${this.url}/change_contact`, data);
+  }
+
   changeStage(id, stage) {
     return axios.post(`${this.url}/${id}/change_stage`, { stage });
   }

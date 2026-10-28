@@ -587,6 +587,12 @@ es:
       other: "%{count} segundos"
   # Plan-Organizaciones O1
   organizations:
+    change:
+      no_organization: 'El contacto no tiene organización: lígalo a una'
+      same: 'Elige una organización distinta a la actual'
+      replacement_required: 'Elige quién queda en su lugar o da de alta uno nuevo'
+      replacement_invalid: 'Quien queda en su lugar debe ser otro contacto de la misma organización'
+      use_change: 'Este contacto ya es de «%{name}». Para cambiarlo usa «Cambiar de organización» en su ficha'
     stages:
       prospect: 'Prospecto'
       customer: 'Cliente'
@@ -601,6 +607,7 @@ es:
       not_found: 'No existe la organización con id %{id}'
       owner_not_found: 'No hay un usuario con el correo «%{value}»'
       contact_not_found: 'No se encontró el contacto «%{value}»'
+      contact_elsewhere: 'El contacto «%{value}» ya es de otra organización: cámbialo desde su ficha'
   # Plan-Contratos R1
   contracts:
     errors:

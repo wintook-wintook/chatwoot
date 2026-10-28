@@ -72,6 +72,9 @@ class Contact < ApplicationRecord
   # Plan-Organizaciones O1 — la empresa o el público en general que es prospecto o cliente.
   belongs_to :organization, optional: true
   validate :organization_in_account, if: :will_save_change_to_organization_id?
+  # Al ligarlo por primera vez, lo suyo que no tenía organización pasa a ella. Cambiar de
+  # una a otra solo con Organizations::ChangeContactOrganization.
+  after_update_commit :adopt_unlinked_records, if: -> { saved_change_to_organization_id?(from: nil) }
   has_many :quotes, dependent: :destroy_async # Plan-Catalogo-Cotizaciones
   has_many :customer_assets, dependent: :destroy_async # Plan-Trabajo-Campo R4
   has_many :maintenance_plans, dependent: :destroy_async # Plan-Trabajo-Campo R4
@@ -303,6 +306,10 @@ class Contact < ApplicationRecord
     new_labels.each do |label|
       Label.create!(name: label)
     end
+  end
+
+  def adopt_unlinked_records
+    Organizations::ContactRecords.new(self).adopt_unlinked!(organization_id) if organization_id
   end
 
   def organization_in_account
