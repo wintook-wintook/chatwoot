@@ -260,4 +260,7 @@ llamada corta a la IA (200 tokens máx.). Sin clave o con error, se comporta com
 | mejor el jueves a las 10 · ¿cuánto cuesta? | otra (sigue el motor) |
 
 **Asistente / configuración:** no hay nada que configurar; aplica a todo agente con `@solicitudes`.
-Pendiente: prueba de punta a punta en la bandeja 493 (aparta en el calendario real).
+Punta a punta en la bandeja 493 = **conv 652** (28/10/2026): rabón Carmen → Villahermosa 12:00 → «Adelante con el
+horario» aparta 1A (TP-111) y pregunta «¿Confirmo el servicio?» → «sí» → esperando pago (ruta con `requiere=pago`).
+Caso 01182 y su tarea se cancelaron después para liberar el calendario de TP-111.
+Visto en la misma prueba, para F2/F3: todavía ofrece una plataforma plana de 40.8 t por un rabón y muestra placas.
