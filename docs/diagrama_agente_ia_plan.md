@@ -234,6 +234,44 @@ palabras; clic → `goToRoute`/`goToSection`, punto del comprobador, estado vac�
 **Cómo pedírselo al Asistente.** No hace falta: la pestaña está siempre; en el chat se puede decir
 «mira el diagrama: la ruta soporte no tiene etiqueta» y el Asistente la agrega en el Entrenamiento.
 
+### 4.2.2 F2 — hecho (28/10/2026)
+
+**Qué se hizo.**
+- Panel **Pruebas** en la columna izquierda (`leftPanel === 'tests'`, junto a Estructura, Chat e
+  Instrucciones): `assistant/TestsPanel.vue`.
+- Elegir una prueba → la pestaña **Diagrama** se abre con su camino iluminado (`diagramTest`).
+- Backend: la pila acepta **pruebas escritas a mano** (`messages[]` en `POST …/test_battery`,
+  máx. 10, `TestBatteryScenarios.own`, `kind: 'propia'`); cada resultado trae su **traza** (la de la
+  primera respuesta del turno, `TestBatteryJob#trace`); el juez decide la ruta con la **traza** y solo
+  sin traza cae a la `#etiqueta` (`TestBatteryJudge#route_ok`).
+
+**Cómo funciona.**
+- **En seco** (barato, contra el borrador, sin guardar): `dryRun` → `pathFromDryRun`.
+- **En vivo** (el agente guardado contesta en el canal de pruebas): una prueba escrita o **Correr la
+  pila** (las generadas) → `pathFromTrace`. La última pila del agente se retoma al volver (su id en
+  `localStorage` por agente; el resultado vive dos días en la caché).
+- `testPath.js` (puro) traduce cada resultado a ids de nodo del diagrama actual; **no inventa**: si la
+  ruta ya no existe, no pinta y lo dice. El diagrama calcula el camino él mismo (`test` → `highlight`).
+- Lo recorrido con el color del tema, lo demás tenue; **⚠ punto débil**: la fuente que no trajo nada y
+  el turno cayó a conversar (en vivo), o la búsqueda vacía / fuente rota (en seco). Detalles en el nodo:
+  «3 fragmentos · mejor 0.82», «cayó por defecto», «fuente en vivo: no se consulta en seco».
+- Camino que contestó antes de las rutas (palabra clave, solicitudes, estado de caso…): se dice en la
+  nota y solo se enciende el cliente.
+- `testBatteryRunner.js` (mixin): arrancar y seguir la pila; lo usan el panel y `TestBatteryModal`.
+
+**Lo que quedó para F3 (D4 a medias).** Los botones «Probar sin enviar nada» y «Probar el agente» de
+la barra **siguen abriendo sus modales**: el modal en seco tiene historial y pruebas sugeridas que el
+panel aún no tiene. Se quitan cuando la pila se guarde en BD (F3). Las pruebas en seco del panel viven
+mientras la pantalla esté abierta.
+
+**Pila de pruebas.** `testPath.spec.js` (12), `TestsPanel.spec.js` (4), `AgentDiagram.spec.js` (+2),
+`test_battery_spec.rb` (+5: ruta por traza, pruebas propias, tope y limpieza, sin propias, traza de la
+primera respuesta). Carpeta `contactTrackings`: 218/218; backend del Asistente: 569/569. Webpack:
+«Compiled successfully». ⚠ **Sin probar en navegador ni contra un agente real.**
+
+**Cómo pedírselo al Asistente.** Desde el panel Pruebas; en F4 «Llevar al chat» manda la prueba con
+su camino al chat de creación.
+
 ### 4.3 Mapa de calor de la pila
 
 ```

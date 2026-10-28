@@ -80,6 +80,8 @@ import DryRunModal from './assistant/DryRunModal.vue';
 import TestBatteryModal from './assistant/TestBatteryModal.vue';
 // proyecto@diagrama_agente_ia F1: la pestaña «Diagrama» (docs/diagrama_agente_ia_plan.md).
 import AgentDiagram from './assistant/AgentDiagram.vue';
+// F2: el panel «Pruebas»; la prueba elegida se ilumina en el diagrama.
+import TestsPanel from './assistant/TestsPanel.vue';
 import SaveModal from './assistant/SaveModal.vue';
 
 // El teclado va más rápido que un request: se espera a que la persona pare.
@@ -141,6 +143,7 @@ export default {
     ExplainModal,
     DryRunModal,
     AgentDiagram,
+    TestsPanel,
     TestBatteryModal,
     SaveModal,
   },
@@ -245,6 +248,8 @@ export default {
       // «Probar el agente» (pila en vivo, M5) y el encargo del que salió el agente.
       showTestBattery: false,
       batteryBriefId: null,
+      // proyecto@diagrama_agente_ia F2: la prueba elegida en el panel Pruebas.
+      diagramTest: null,
       draftVersion: 0,
       isDryRunning: false,
       dryRunError: '',
@@ -326,6 +331,11 @@ export default {
           id: 'structure',
           icon: 'list',
           label: this.$t('TRACKING_ASSISTANT_VIEW.TREE_TITLE'),
+        },
+        {
+          id: 'tests',
+          icon: 'play-circle',
+          label: this.$t('TRACKING_ASSISTANT_VIEW.TESTS.PANEL'),
         },
         {
           id: 'chat',
@@ -694,6 +704,11 @@ export default {
     goToRouteFromDiagram(name) {
       this.draftTab = 'editor';
       this.$nextTick(() => this.goToRoute(name));
+    },
+    // F2: la prueba elegida en el panel Pruebas se ve iluminada en el diagrama.
+    onTestSelect(prueba) {
+      this.diagramTest = prueba;
+      this.draftTab = 'diagram';
     },
     goToSectionFromDiagram(index) {
       const bloque = (this.trainingStructure.blocks || [])[index];
@@ -1633,6 +1648,23 @@ export default {
                 />
               </section>
 
+              <!-- proyecto@diagrama_agente_ia F2: escribir y correr pruebas; la
+                 elegida se ilumina en la pestaña Diagrama. v-show: la pila sigue
+                 corriendo aunque se cambie de panel. -->
+              <section
+                v-if="showChat"
+                v-show="leftPanel === 'tests'"
+                class="flex flex-col flex-1 min-h-0 p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+              >
+                <TestsPanel
+                  :template-id="editingTemplateId"
+                  :draft="draft"
+                  :inbox-id="inboxId"
+                  :brief-id="batteryBriefId"
+                  @select="onTestSelect"
+                />
+              </section>
+
               <!-- Las instrucciones iniciales que se llenan conversando. -->
               <section
                 v-if="showChat"
@@ -1838,6 +1870,8 @@ export default {
                   v-else-if="draftTab === 'diagram'"
                   :structure="trainingStructure"
                   :issues="nodeIssues"
+                  :test="diagramTest"
+                  @clearHighlight="diagramTest = null"
                   @goToRoute="goToRouteFromDiagram"
                   @goToSection="goToSectionFromDiagram"
                 />
