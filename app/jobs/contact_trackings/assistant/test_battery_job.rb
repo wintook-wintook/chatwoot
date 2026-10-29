@@ -74,14 +74,31 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
   # es la del último turno y el juez califica el diálogo entero.
   def one(escenario, juez)
     conversacion = new_conversation(escenario)
+    return without_tracking(escenario, conversacion) unless ContactTracking.exists?(conversation_id: conversacion.id)
+
     dialogo, ultimo = converse(conversacion, Array(escenario.turns).presence || [escenario.message])
     respuesta = dialogo.last[:reply]
     traza = trace(conversacion, ultimo)
     fila = escenario.to_h.merge(conversation: conversacion.display_id, reply: respuesta, cases: cases(conversacion),
                                 traza: traza, dialog: (dialogo if dialogo.size > 1),
                                 **juez.call(graded(escenario, dialogo), respuesta, traza: traza))
-    # F3: una prueba de la pila guardada se queda con su resultado.
-    ContactTrackings::Assistant::TestCases.store_live(@account, escenario.id.delete_prefix('caso:'), fila) if escenario.id.to_s.start_with?('caso:')
+    remember(escenario, fila)
+    fila
+  end
+
+  # F3: una prueba de la pila guardada se queda con su resultado.
+  def remember(escenario, fila)
+    return unless escenario.id.to_s.start_with?('caso:')
+
+    ContactTrackings::Assistant::TestCases.store_live(@account, escenario.id.delete_prefix('caso:'), fila)
+  end
+
+  # Sin seguimiento el agente no contesta: la prueba sale en rojo con el motivo en vez de
+  # esperar WAIT_SECONDS una respuesta que no va a llegar.
+  def without_tracking(escenario, conversacion)
+    fila = escenario.to_h.merge(conversation: conversacion.display_id, reply: '', cases: [], traza: nil, cumple: false,
+                                fallas: [], ruta_ok: nil, motivo: 'No se pudo asignar el agente a la conversación de prueba.')
+    remember(escenario, fila)
     fila
   end
 
@@ -123,7 +140,8 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
     contacto_canal = ContactInbox.create!(contact: contacto, inbox: @inbox, source_id: SecureRandom.uuid)
     conversacion = Conversation.create!(account: @account, inbox: @inbox, contact: contacto,
                                         contact_inbox: contacto_canal, status: :open)
-    ActionService.new(conversacion).assign_tracking_template([@template.id])
+    # En el canal de pruebas, no en la bandeja del agente: ver ActionService#assign_tracking_template.
+    ActionService.new(conversacion).assign_tracking_template([@template.id], inbox_id: @inbox.id)
     conversacion
   end
 

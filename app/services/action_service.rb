@@ -138,14 +138,19 @@ class ActionService
   # Usa el inbox_id de la plantilla si está definido, o el inbox de la conversación como fallback.
   # scheduled_for se fija 5 minutos adelante para pasar la validación de "no en el pasado".
   # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
-  def assign_tracking_template(params)
+  # inbox_id: (proyecto@diagrama_agente_ia) la pila de pruebas lo fija en el canal de
+  # pruebas. El seguimiento debe estar en la bandeja de SU conversación
+  # (ContactTracking#conversation_belongs_to_inbox): con la del agente (p. ej. Telegram)
+  # la validación fallaba en silencio y el agente nunca contestaba la prueba. Las
+  # automatizaciones lo llaman como siempre, solo con params.
+  def assign_tracking_template(params, inbox_id: nil)
     template_id = params[0]
     return if template_id.to_s == 'nil' || template_id.blank?
 
     template = @account.tracking_templates.find_by(id: template_id)
     return if template.blank?
 
-    inbox_id = template.inbox_id || @conversation.inbox_id
+    inbox_id ||= template.inbox_id || @conversation.inbox_id
 
     # No crear si el contacto ya tiene un seguimiento activo EN ESTE CANAL (inbox)
     active_statuses = %w[pending scheduled active paused]

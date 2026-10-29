@@ -79,6 +79,36 @@ RSpec.describe ContactTrackings::Assistant::TestBattery do
         .with(anything, account.id, template.id, nil, ['uno', *Array.new(9) { |i| "m#{i}" }], nil)
     end
 
+    # 29/10/2026: con el agente en otra bandeja (Telegram) el seguimiento no se creaba
+    # («Conversation must belong to the selected inbox») y nadie contestaba la prueba.
+    it 'el seguimiento de la prueba queda en el canal de pruebas aunque el agente tenga otra bandeja' do
+      otra = create(:inbox, account: account)
+      template.update!(inbox_id: otra.id)
+      sandbox = create(:inbox, account: account, channel: create(:channel_api, account: account, webhook_url: ''))
+      job = ContactTrackings::Assistant::TestBatteryJob.new
+      job.instance_variable_set(:@account, account)
+      job.instance_variable_set(:@template, template)
+      job.instance_variable_set(:@inbox, sandbox)
+      escenario = ContactTrackings::Assistant::TestBatteryScenarios::Scenario.new(id: 'ruta:web', message: 'hola')
+
+      conversacion = job.send(:new_conversation, escenario)
+
+      expect(ContactTracking.where(conversation_id: conversacion.id).pluck(:inbox_id)).to eq([sandbox.id])
+    end
+
+    it 'sin seguimiento la prueba sale en rojo con el motivo, sin esperar' do
+      job = ContactTrackings::Assistant::TestBatteryJob.new
+      job.instance_variable_set(:@account, account)
+      allow(job).to receive(:new_conversation).and_return(create(:conversation, account: account))
+      allow(job).to receive(:wait_reply)
+      escenario = ContactTrackings::Assistant::TestBatteryScenarios::Scenario.new(id: 'ruta:web', message: 'hola')
+
+      fila = job.send(:one, escenario, instance_double(ContactTrackings::Assistant::TestBatteryJudge))
+
+      expect(fila).to include(cumple: false, motivo: include('No se pudo asignar'))
+      expect(job).not_to have_received(:wait_reply)
+    end
+
     it 'el job toma la traza de la primera respuesta del turno' do
       conversacion = create(:conversation, account: account)
       desde = create(:message, conversation: conversacion, account: account, inbox: conversacion.inbox, message_type: :incoming).id
