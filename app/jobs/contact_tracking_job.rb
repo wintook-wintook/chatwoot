@@ -624,6 +624,11 @@ class ContactTrackingJob < ApplicationJob
       # ⭐ PASO 1: ENVIAR PLANTILLA PRIMERO (sin crear mensaje en BD)
       channel = tracking.inbox.channel
 
+      # feat/plantillas_whatsapp_mejoras F5: si la plantilla lleva imagen, video o documento
+      # en el encabezado, va el archivo guardado en la plantilla; sin archivo no se envía.
+      header = ContactTrackings::TemplateHeader.for(channel, template_name, language_code)
+      return reject_missing_header(tracking, header) if header&.error
+
       # Crear mensaje temporal solo para enviar (no se guarda en BD, ni si Meta lo rechaza)
       temp_message = TrackingDeliveries::Recorder.unsaved_message(
         conversation: conversation,
@@ -642,7 +647,7 @@ class ContactTrackingJob < ApplicationJob
           name: template_name,
           namespace: nil,
           lang_code: language_code,
-          parameters: processed_parameters
+          parameters: header ? header.components(processed_parameters) : processed_parameters
         }
       )
 
@@ -670,13 +675,16 @@ class ContactTrackingJob < ApplicationJob
             whatsapp_template_name: template_name,
             whatsapp_template_language: language_code
           },
-          additional_attributes: {
-            template_params: {
-              'name' => template_name,
-              'namespace' => nil,
-              'language' => language_code,
-              'processed_params' => {}
-            }
+          # MessageBuilder lee template_params suelto (no dentro de additional_attributes):
+          # así se guardaba en ningún lado. No se reenvía: el mensaje ya lleva source_id
+          # (Base::SendOnChannelService#invalid_message?).
+          # Sin namespace: es nil y Message::TEMPLATE_PARAMS_SCHEMA lo pide string.
+          template_params: {
+            'name' => template_name,
+            'language' => language_code,
+            # feat/plantillas_whatsapp_mejoras F5: el archivo del encabezado, para que la
+            # burbuja lo muestre (F3).
+            'processed_params' => header ? { 'header' => header.processed_header } : {}
           }
         }
       ).perform
@@ -832,6 +840,15 @@ class ContactTrackingJob < ApplicationJob
     error = JSON.parse(raw)['error'] rescue nil
     summary = error ? "#{error['code']}: #{error.dig('error_data', 'details') || error['message']}" : raw.to_s
     "Meta #{summary}".truncate(250)
+  end
+
+  # feat/plantillas_whatsapp_mejoras F5: la plantilla lleva archivo y no se puede mandar.
+  # Queda como entrega rechazada con el motivo (código config → HandleFailure pausa).
+  def reject_missing_header(tracking, header)
+    @send_error = header.error
+    Rails.logger.warn "[ContactTracking] ⚠️ #{header.error}"
+    @rejected_delivery = TrackingDeliveries::Recorder.new(tracking, kind: 'template').rejected(header.external_error)
+    false
   end
 
   # proyecto@automatizacion_campanas: rechazo al momento → envío fallido con el error de

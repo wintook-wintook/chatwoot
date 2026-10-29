@@ -343,6 +343,32 @@ successfully». ⚠ **Sin probar en navegador.**
 **Ojo — lint.** `ScheduleMessageModal.vue` trae 311 hallazgos de eslint (sigue en 311): el `eslint --fix` del
 hook lo reformatearía entero → commit con `--no-verify`.
 
+## 7.7 F5 — hecho (29/10/2026)
+
+**Qué se hizo.** `ContactTrackings::TemplateHeader` (nuevo): para la plantilla de un seguimiento (las campañas
+envían por el mismo `ContactTrackingJob`) dice si lleva imagen/video/documento en el encabezado y toma el
+archivo guardado en la plantilla (`header_media_url` de su fila en `whatsapp_templates`, mismo idioma o el que
+haya; F6 permitirá subirlo). En `send_whatsapp_template`:
+- **lleva archivo y está guardado** → components `header` (archivo, con nombre si es documento) + `body` de
+  siempre; el mensaje guarda el encabezado en `template_params` → la burbuja lo muestra (F3);
+- **lleva archivo y no está guardado**, o la bandeja no es WhatsApp Cloud → **no se envía**; entrega rechazada
+  con el motivo y el código propio `template_media_missing`, que `ErrorClassifier` cuenta como **config** →
+  `HandleFailure` pausa el seguimiento/campaña con el motivo (no es culpa del contacto);
+- **sin archivo en la plantilla** → igual que antes.
+
+**Fallo viejo corregido de paso.** El job pasaba `additional_attributes: { template_params: … }` a
+`MessageBuilder`, que solo lee `template_params` suelto: **los mensajes de seguimiento nunca guardaron sus
+template_params**. Ahora sí (sin `namespace`, que era nil y el esquema lo pide string). No se reenvía: el
+mensaje ya lleva `source_id` y `Base::SendOnChannelService#invalid_message?` lo descarta (probado).
+
+**Pila de pruebas.** `template_header_spec.rb` (5): sin archivo nada cambia, con archivo encabezado + cuerpo,
+otro idioma, sin archivo guardado → error config, fuera de Cloud → error. `contact_tracking_job_template_header_spec.rb`
+(2): manda el documento como encabezado, guarda el encabezado en el mensaje y no lo reenvía; sin archivo no manda
+nada y queda la entrega fallida `template_media_missing`/config. Seguimientos, entregas y campañas: 897/897.
+⚠ **Sin probar contra Meta con un seguimiento real.**
+
+**Botones variables en seguimientos:** fuera de alcance (D5).
+
 ---
 
 ## 8. Pila de pruebas en navegador (al cerrar cada fase)
