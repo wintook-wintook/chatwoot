@@ -222,8 +222,25 @@ llama a Meta, editar con otra liga vuelve a subir), `template_component_builder_
 `providers/whatsapp_cloud_service` (5) y `send_on_whatsapp_service` (2). Las dos últimas son justo lo que
 toca F1: entenderlas antes de cambiar el envío.
 
-**Falta (pide OK).** Mandar a Meta una plantilla de prueba con video y otra con documento desde una bandeja
-WhatsApp Cloud real, y ver que queden en revisión (PENDING). Sin eso F0 solo está probado con dobles.
+**Probado contra Meta real (29/10/2026, con OK del usuario).** Bandeja «Whatsapp» (inbox 1563, cuenta 2,
+WABA real), app de Meta «Wintook WA API» (App ID `1177974373661702`, leído con `GET /app` y el token de la
+bandeja). Se crearon dos plantillas de ejemplo, las dos quedaron **PENDING** en Meta:
+
+| Plantilla | Tipo | Meta id |
+|---|---|---|
+| `ejemplo_documento_adjunto` (UTILITY, es_MX) | PDF de muestra (W3C dummy.pdf) | 39933694202910553 |
+| `ejemplo_video_adjunto` (MARKETING, es_MX) | MP4 de 5 s (samplelib) | 939121985747837 |
+
+Salieron dos fallos que los dobles no veían, ya corregidos:
+1. **`META_APP_ID` del super admin se ignoraba**: el servicio solo lo leía de la variable de entorno. Ahora
+   va por `GlobalConfigService` (entorno o super admin) y luego `FB_APP_ID`. En dev se guardó en
+   `META_APP_ID` (no en `FB_APP_ID`, que también usan Messenger y el login de Facebook).
+2. **El handle de un video pasa de 255 caracteres**: el de documento midió 199, el de video no cabía y
+   `ApplicationRecord` lo rechazaba → Meta creó la plantilla pero el guardado local falló (drift). Ahora
+   `WhatsappTemplate` valida `header_handle` ≤ 4000 y `header_media_url` ≤ 2048. La de video se reconcilió
+   con «Sync» (`TemplateSyncService`).
+
+Para borrar los ejemplos: pantalla de plantillas → borrar (llama a Meta por su id).
 
 ---
 

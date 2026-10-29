@@ -6,7 +6,9 @@
 #   1. POST /{APP_ID}/uploads (crea la sesión)
 #   2. POST /{upload_session_id} con los bytes → devuelve el handle `h`
 #
-# App ID: META_APP_ID si existe, si no FB_APP_ID (config global de Chatwoot).
+# App ID: META_APP_ID (variable de entorno o la config del super admin «Meta App ID (WhatsApp
+# templates)»), si no FB_APP_ID. Antes la de META_APP_ID solo se leía del entorno: lo que se
+# ponía en el super admin se ignoraba.
 #
 # feat/plantillas_whatsapp_mejoras F0: imagen, video y documento (antes solo imagen; video y
 # documento mandaban la liga cruda como handle y Meta las rechazaba). Límites de Meta:
@@ -57,7 +59,7 @@ class Whatsapp::ResumableUploadService
   private
 
   def resolve_app_id
-    ENV['META_APP_ID'].presence || GlobalConfigService.load('FB_APP_ID', nil)
+    GlobalConfigService.load('META_APP_ID', nil).presence || GlobalConfigService.load('FB_APP_ID', nil)
   end
 
   # Descarga los bytes de la URL y valida tipo + tamaño.

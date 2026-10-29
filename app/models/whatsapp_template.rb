@@ -62,6 +62,12 @@ class WhatsappTemplate < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
   validates :header_type, inclusion: { in: HEADER_TYPES }, allow_nil: true
   validates :quality_score, inclusion: { in: QUALITY_SCORES }, allow_blank: true
+  # feat/plantillas_whatsapp_mejoras F0: el handle que devuelve Meta al subir un VIDEO pasa de
+  # los 255 que ApplicationRecord pone por defecto a las columnas string (el de documento
+  # cabía): Meta creaba la plantilla y el guardado local fallaba (drift). Una liga firmada
+  # también puede pasar de 255. Un validador propio reemplaza al de 255.
+  validates :header_handle, length: { maximum: 4000 }
+  validates :header_media_url, length: { maximum: 2048 }
 
   scope :for_channel, ->(channel_id) { where(channel_whatsapp_id: channel_id) }
   scope :by_meta_id, ->(meta_id) { where(meta_template_id: meta_id) }

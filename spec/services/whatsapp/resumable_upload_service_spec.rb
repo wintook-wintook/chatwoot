@@ -10,6 +10,7 @@ RSpec.describe Whatsapp::ResumableUploadService do
   let(:graph) { 'https://graph.facebook.com/v20.0' }
 
   before do
+    allow(GlobalConfigService).to receive(:load).with('META_APP_ID', nil).and_return(nil)
     allow(GlobalConfigService).to receive(:load).with('FB_APP_ID', nil).and_return('APP123')
   end
 
@@ -43,6 +44,16 @@ RSpec.describe Whatsapp::ResumableUploadService do
     result = described_class.new(channel: whatsapp_channel, media_url: media_url).perform
     expect(result.success?).to be(false)
     expect(result.error).to match(/supera/)
+  end
+
+  it 'usa META_APP_ID (env o super admin) antes que FB_APP_ID' do
+    allow(GlobalConfigService).to receive(:load).with('META_APP_ID', nil).and_return('META999')
+    stub_media
+    stub_request(:post, "#{graph}/META999/uploads").with(query: hash_including({}))
+                                                   .to_return(status: 200, body: { id: 'upload:m' }.to_json, headers: json)
+    stub_request(:post, "#{graph}/upload:m").to_return(status: 200, body: { h: 'HM' }.to_json, headers: json)
+
+    expect(described_class.new(channel: whatsapp_channel, media_url: media_url).perform.handle).to eq('HM')
   end
 
   it 'falla si no hay App ID configurado' do
