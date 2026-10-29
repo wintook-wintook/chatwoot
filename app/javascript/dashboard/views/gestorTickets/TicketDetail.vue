@@ -15,6 +15,7 @@ import NotesOnContactPage from '../../modules/notes/NotesOnContactPage.vue';
 import ContactInfoPanel from 'dashboard/routes/dashboard/contacts/components/ContactInfoPanel.vue';
 import TicketMeetings from '../../components/contacts/CaseTicket/TicketMeetings.vue';
 import MultiselectDropdown from 'shared/components/ui/MultiselectDropdown.vue';
+import CaseRelations from './CaseRelations.vue';
 import CaseTicketsAPI from 'dashboard/api/caseTickets';
 import CaseMeetingsAPI from 'dashboard/api/caseMeetings';
 import {
@@ -61,6 +62,7 @@ export default {
     ContactInfoPanel,
     TicketMeetings,
     MultiselectDropdown,
+    CaseRelations,
     CommercialPanel,
     OutcomeModal,
     PostponeModal,
@@ -449,6 +451,15 @@ export default {
         label: this.$t('CASE_TICKETS.DETAIL_TABS.MEETINGS'),
         count: this.meetingCount,
       });
+      // Casos vinculados (duplicado, padre/hijo, la orden o el proyecto que nació de
+      // aquí…), como «Casos del proyecto» en los proyectos, que ya tienen la suya.
+      if (!this.isProject) {
+        tabs.push({
+          key: 'relations',
+          label: this.$t('CASE_TICKETS.DETAIL_TABS.RELATIONS'),
+          count: this.relations.length,
+        });
+      }
       // Plan-Clase-Proyecto P1 — datos del proyecto, después de Tareas agendadas,
       // y P2 — sus casos (órdenes y tickets).
       if (this.isProject) {
@@ -2191,129 +2202,6 @@ export default {
             v-on-clickaway="closeActionMenus"
             class="relative flex flex-wrap items-center justify-end gap-2"
           >
-            <!-- Tomar (claim): autoasignar al agente actual en 1 clic -->
-            <woot-button
-              v-if="canClaim"
-              size="small"
-              variant="smooth"
-              color-scheme="secondary"
-              icon="person-add"
-              :is-loading="isTransitioning"
-              @click="claimTicket"
-            >
-              {{ $t('CASE_TICKETS.CLAIM.BUTTON') }}
-            </woot-button>
-
-            <!-- Prioridad: dropdown inline -->
-            <div class="relative">
-              <woot-button
-                size="small"
-                variant="smooth"
-                :color-scheme="priorityScheme(ticket.priority)"
-                icon="chevron-down"
-                :disabled="isFrozen"
-                :title="isFrozen ? $t('CASE_TICKETS.REOPEN.FROZEN_HINT') : ''"
-                @click="
-                  showPriorityMenu = !showPriorityMenu;
-                  showTransitionMenu = false;
-                "
-              >
-                {{ $t('CASE_TICKETS.PRIORITY_QUICK.LABEL') }}:
-                {{ priorityLabel(ticket.priority) }}
-              </woot-button>
-              <ul
-                v-if="showPriorityMenu"
-                class="absolute right-0 z-50 py-1 mt-1 list-none bg-white border rounded-md shadow-md dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[160px]"
-              >
-                <li
-                  v-for="p in priorityOptions"
-                  :key="p"
-                  class="flex items-center gap-2 px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  @click="setPriority(p)"
-                >
-                  <span class="w-2 h-2 rounded-full" :class="priorityDot(p)" />
-                  {{ priorityLabel(p) }}
-                  <fluent-icon
-                    v-if="p === ticket.priority"
-                    icon="checkmark"
-                    size="14"
-                    class="ml-auto text-woot-500"
-                  />
-                </li>
-              </ul>
-            </div>
-
-            <!-- @tickets_cases P4 — Vencimiento inline (osTicket "Due Date") -->
-            <div class="relative">
-              <woot-button
-                size="small"
-                variant="smooth"
-                :color-scheme="ticket.due_overdue ? 'alert' : 'secondary'"
-                icon="calendar-clock"
-                :disabled="isFrozen"
-                :title="isFrozen ? $t('CASE_TICKETS.REOPEN.FROZEN_HINT') : ''"
-                @click="openDueMenu"
-              >
-                {{ $t('CASE_TICKETS.DUE_QUICK.LABEL') }}: {{ dueLabel }}
-              </woot-button>
-              <div
-                v-if="showDueMenu"
-                class="absolute right-0 z-50 p-3 mt-1 bg-white border rounded-md shadow-md dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[240px]"
-              >
-                <input
-                  v-model="dueDraft"
-                  type="datetime-local"
-                  class="w-full mb-2 text-sm"
-                />
-                <div class="flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    class="text-xs text-red-600 hover:underline dark:text-red-400 disabled:opacity-40"
-                    :disabled="!ticket.due_at"
-                    @click="clearDueAt"
-                  >
-                    {{ $t('CASE_TICKETS.DUE_QUICK.CLEAR') }}
-                  </button>
-                  <woot-button
-                    size="tiny"
-                    color-scheme="primary"
-                    @click="saveDueAt"
-                  >
-                    {{ $t('CASE_TICKETS.DUE_QUICK.SAVE') }}
-                  </woot-button>
-                </div>
-                <p
-                  class="mt-2 mb-0 text-[11px] text-slate-400 dark:text-slate-500"
-                >
-                  {{ $t('CASE_TICKETS.DUE_QUICK.HINT') }}
-                </p>
-              </div>
-            </div>
-
-            <!-- @tickets_cases — Vincular ticket, entre Vence y Escalar -->
-            <woot-button
-              size="small"
-              variant="smooth"
-              color-scheme="secondary"
-              icon="link"
-              @click="openRelationModal"
-            >
-              {{ $t('CASE_TICKETS.RELATIONS.ADD') }}
-            </woot-button>
-
-            <!-- @tickets_cases — bitácora: nota interna (no visible al cliente).
-                 En un ticket cerrado no se ofrece: cerrado = solo lectura. -->
-            <woot-button
-              v-if="!isFrozen"
-              size="small"
-              variant="smooth"
-              color-scheme="secondary"
-              icon="comment-add"
-              @click="openNoteModal"
-            >
-              {{ $t('CASE_TICKETS.NOTES.ADD') }}
-            </woot-button>
-
             <!-- Plan-Clase-Comercial F4 — cerrar con resultado / posponer -->
             <template v-if="isCommercial && !isFrozen">
               <woot-button
@@ -2447,46 +2335,104 @@ export default {
                ticket (no dependen de la pestaña). 'Vence' no va aquí: ya está en
                el botón de vencimiento. -->
           <div class="flex flex-col items-end gap-3">
-            <!-- Asignación con el dropdown nativo de Chatwoot (avatar + buscador) -->
-            <div class="grid w-[28rem] max-w-full grid-cols-2 gap-x-4 gap-y-1">
-              <div class="flex flex-col gap-1 text-left">
-                <label
-                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-                  >{{ $t('CASE_TICKETS.ASSIGN.TEAM_LABEL') }}</label
-                >
-                <MultiselectDropdown
-                  :options="teamsList"
-                  :selected-item="assignedTeamItem"
-                  :has-thumbnail="false"
-                  :multiselector-title="$t('CASE_TICKETS.ASSIGN.TEAM_LABEL')"
-                  :multiselector-placeholder="$t('CASE_TICKETS.ASSIGN.NONE')"
-                  :no-search-result="
-                    $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.NO_RESULTS.TEAM')
-                  "
-                  :input-placeholder="
-                    $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.PLACEHOLDER.INPUT')
-                  "
-                  @click="onSelectTeam"
-                />
+            <!-- Vence, a la altura de Equipo y Responsable (Vincular caso está en su pestaña) -->
+            <div
+              v-on-clickaway="closeActionMenus"
+              class="flex flex-wrap items-end justify-end gap-2"
+            >
+              <div class="flex items-center gap-2 pb-0.5">
+                <!-- @tickets_cases P4 — Vencimiento inline (osTicket "Due Date") -->
+                <div class="relative">
+                  <woot-button
+                    size="small"
+                    variant="smooth"
+                    :color-scheme="ticket.due_overdue ? 'alert' : 'secondary'"
+                    icon="calendar-clock"
+                    :disabled="isFrozen"
+                    :title="
+                      isFrozen ? $t('CASE_TICKETS.REOPEN.FROZEN_HINT') : ''
+                    "
+                    @click="openDueMenu"
+                  >
+                    {{ $t('CASE_TICKETS.DUE_QUICK.LABEL') }}: {{ dueLabel }}
+                  </woot-button>
+                  <div
+                    v-if="showDueMenu"
+                    class="absolute right-0 z-50 p-3 mt-1 bg-white border rounded-md shadow-md dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[240px]"
+                  >
+                    <input
+                      v-model="dueDraft"
+                      type="datetime-local"
+                      class="w-full mb-2 text-sm"
+                    />
+                    <div class="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        class="text-xs text-red-600 hover:underline dark:text-red-400 disabled:opacity-40"
+                        :disabled="!ticket.due_at"
+                        @click="clearDueAt"
+                      >
+                        {{ $t('CASE_TICKETS.DUE_QUICK.CLEAR') }}
+                      </button>
+                      <woot-button
+                        size="tiny"
+                        color-scheme="primary"
+                        @click="saveDueAt"
+                      >
+                        {{ $t('CASE_TICKETS.DUE_QUICK.SAVE') }}
+                      </woot-button>
+                    </div>
+                    <p
+                      class="mt-2 mb-0 text-[11px] text-slate-400 dark:text-slate-500"
+                    >
+                      {{ $t('CASE_TICKETS.DUE_QUICK.HINT') }}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div class="flex flex-col gap-1 text-left">
-                <label
-                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-                  >{{ $t('CASE_TICKETS.ASSIGN.AGENT_LABEL') }}</label
-                >
-                <MultiselectDropdown
-                  :options="agentsList"
-                  :selected-item="assignedAgentItem"
-                  :multiselector-title="$t('CASE_TICKETS.ASSIGN.AGENT_LABEL')"
-                  :multiselector-placeholder="$t('CASE_TICKETS.ASSIGN.NONE')"
-                  :no-search-result="
-                    $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.NO_RESULTS.AGENT')
-                  "
-                  :input-placeholder="
-                    $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.PLACEHOLDER.AGENT')
-                  "
-                  @click="onSelectAgent"
-                />
+              <!-- Asignación con el dropdown nativo de Chatwoot (avatar + buscador) -->
+              <div
+                class="grid w-[28rem] max-w-full grid-cols-2 gap-x-4 gap-y-1"
+              >
+                <div class="flex flex-col gap-1 text-left">
+                  <label
+                    class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                    >{{ $t('CASE_TICKETS.ASSIGN.TEAM_LABEL') }}</label
+                  >
+                  <MultiselectDropdown
+                    :options="teamsList"
+                    :selected-item="assignedTeamItem"
+                    :has-thumbnail="false"
+                    :multiselector-title="$t('CASE_TICKETS.ASSIGN.TEAM_LABEL')"
+                    :multiselector-placeholder="$t('CASE_TICKETS.ASSIGN.NONE')"
+                    :no-search-result="
+                      $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.NO_RESULTS.TEAM')
+                    "
+                    :input-placeholder="
+                      $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.PLACEHOLDER.INPUT')
+                    "
+                    @click="onSelectTeam"
+                  />
+                </div>
+                <div class="flex flex-col gap-1 text-left">
+                  <label
+                    class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                    >{{ $t('CASE_TICKETS.ASSIGN.AGENT_LABEL') }}</label
+                  >
+                  <MultiselectDropdown
+                    :options="agentsList"
+                    :selected-item="assignedAgentItem"
+                    :multiselector-title="$t('CASE_TICKETS.ASSIGN.AGENT_LABEL')"
+                    :multiselector-placeholder="$t('CASE_TICKETS.ASSIGN.NONE')"
+                    :no-search-result="
+                      $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.NO_RESULTS.AGENT')
+                    "
+                    :input-placeholder="
+                      $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.PLACEHOLDER.AGENT')
+                    "
+                    @click="onSelectAgent"
+                  />
+                </div>
               </div>
             </div>
             <!-- Solicitante (tickets internos) -->
@@ -2940,59 +2886,20 @@ export default {
               </div>
             </div>
           </div>
-
-          <!-- Tickets relacionados (2E) — solo si hay vínculos; vincular se hace
-               desde el botón de la barra de acciones. -->
-          <div
-            v-if="relations.length"
-            v-show="currentTabKey === 'detail'"
-            class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-          >
-            <div class="mb-4">
-              <h3
-                class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
-              >
-                {{ $t('CASE_TICKETS.RELATIONS.TITLE') }}
-              </h3>
-            </div>
-
-            <ul class="flex flex-col gap-2 p-0 m-0 list-none">
-              <li
-                v-for="rel in relations"
-                :key="rel.id"
-                class="flex items-center justify-between gap-3 px-3 py-2 border rounded-md border-slate-75 dark:border-slate-700"
-              >
-                <div class="flex items-center min-w-0 gap-2">
-                  <span
-                    class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300 flex-shrink-0"
-                    >{{ relationLabel(rel) }}</span
-                  >
-                  <button
-                    class="font-mono text-xs text-woot-500 hover:underline flex-shrink-0"
-                    @click="openRelatedTicket(rel.ticket.id)"
-                  >
-                    {{ rel.ticket.folio || `#${rel.ticket.id}` }}
-                  </button>
-                  <span
-                    class="text-sm truncate text-slate-600 dark:text-slate-300"
-                    >{{ rel.ticket.title }}</span
-                  >
-                </div>
-                <woot-button
-                  size="tiny"
-                  variant="clear"
-                  color-scheme="secondary"
-                  icon="dismiss"
-                  @click="openDeleteRelation(rel)"
-                />
-              </li>
-            </ul>
-          </div>
-          <!-- /tarjeta de tickets relacionados -->
         </div>
         <!-- /sidebar de datos -->
       </div>
       <!-- /Resumen: dos columnas -->
+
+      <!-- ════ Pestaña Casos relacionados: como «Casos del proyecto» ════ -->
+      <CaseRelations
+        v-if="!isProject && ticket"
+        v-show="currentTabKey === 'relations'"
+        :ticket="ticket"
+        :relations="relations"
+        @open="openRelatedTicket"
+        @changed="$store.dispatch('caseTickets/fetchRelations', ticketId)"
+      />
 
       <!-- ════ Pestaña IA: Respuesta sugerida desde KB (3C) ════ -->
       <div

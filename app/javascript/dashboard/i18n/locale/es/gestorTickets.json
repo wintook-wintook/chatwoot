@@ -226,7 +226,8 @@
       "MEETINGS": "Tareas agendadas",
       "CONCEPTS": "Reporte de servicio",
       "PROJECT": "Proyecto",
-      "PROJECT_CASES": "Casos del proyecto"
+      "PROJECT_CASES": "Casos del proyecto",
+      "RELATIONS": "Casos relacionados"
     },
     "CONVERSATION": {
       "SUBTITLE": "Hilo con el cliente",
@@ -780,7 +781,10 @@
         "MESSAGE": "Se desvincularán los casos. Eliminar relación",
         "YES": "Eliminar",
         "NO": "Cancelar"
-      }
+      },
+      "HELP": "Los casos ligados a este: los que nacieron de aquí y los que se vincularon.",
+      "CREATE_CONFIRM": "Crear y ligar",
+      "REMOVE": "Quitar el vínculo (el caso no se borra)"
     },
     "RELATION_TYPES": {
       "duplicate": {
@@ -814,6 +818,10 @@
       "project_origin": {
         "outgoing": "Proyecto de",
         "incoming": "Proyecto creado"
+      },
+      "related": {
+        "outgoing": "Relacionado",
+        "incoming": "Relacionado"
       }
     },
     "TIMELINE": {

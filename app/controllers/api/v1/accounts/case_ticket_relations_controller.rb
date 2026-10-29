@@ -19,27 +19,10 @@ class Api::V1::Accounts::CaseTicketRelationsController < Api::V1::Accounts::Base
     render json: { case_ticket_relations: relations_json }
   end
 
+  # Con case_type_id (y title) crea un caso nuevo dentro de este (hereda el contacto, de
+  # cualquier tipo) y lo liga como hijo; si no, liga el related_ticket_id que ya existe.
   def create
-    related = account_case_tickets.find_by(id: params[:related_ticket_id])
-    return render json: { error: 'Ticket relacionado no encontrado' }, status: :not_found unless related
-
-    relation = CaseTicketRelation.new(
-      account:        Current.account,
-      ticket:         @ticket,
-      related_ticket: related,
-      relation_type:  params[:relation_type]
-    )
-
-    if relation.save
-      @ticket.case_events.create!(
-        account: Current.account, event_type: :related, origin: :agent, actor: current_user,
-        payload: { relation_type: relation.relation_type, related_folio: related.folio,
-                   related_title: related.title, related_ticket_id: related.id }.compact
-      )
-      render json: { case_ticket_relation: relation_json(relation, :outgoing) }, status: :created
-    else
-      render json: { error: relation.errors.full_messages }, status: :unprocessable_entity
-    end
+    params[:case_type_id].present? ? create_child : link_existing
   end
 
   def destroy
@@ -54,6 +37,66 @@ class Api::V1::Accounts::CaseTicketRelationsController < Api::V1::Accounts::Base
 
   private
 
+  def link_existing
+    related = account_case_tickets.find_by(id: params[:related_ticket_id])
+    return render json: { error: 'Ticket relacionado no encontrado' }, status: :not_found unless related
+
+    relation = CaseTicketRelation.new(
+      account: Current.account,
+      ticket: @ticket,
+      related_ticket: related,
+      relation_type: params[:relation_type]
+    )
+
+    if relation.save
+      @ticket.case_events.create!(
+        account: Current.account, event_type: :related, origin: :agent, actor: current_user,
+        payload: { relation_type: relation.relation_type, related_folio: related.folio,
+                   related_title: related.title, related_ticket_id: related.id }.compact
+      )
+      render json: { case_ticket_relation: relation_json(relation, :outgoing) }, status: :created
+    else
+      render json: { error: relation.errors.full_messages }, status: :unprocessable_entity
+    end
+  end
+
+  def create_child
+    case_type = Current.account.case_types.find_by(id: params[:case_type_id])
+    return render json: { error: 'Elige un tipo de caso' }, status: :unprocessable_entity unless case_type
+
+    child = nil
+    ActiveRecord::Base.transaction do
+      child = new_child(case_type)
+      relation = CaseTicketRelation.create!(account: Current.account, ticket: @ticket, related_ticket: child,
+                                            relation_type: :parent_child)
+      log_related(@ticket, child, relation)
+      log_related(child, @ticket, relation)
+    end
+    render json: { case_ticket_relation: relation_json(@ticket.ticket_relations.find_by(related_ticket: child), :outgoing) },
+           status: :created
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
+  end
+
+  # Igual que los casos de un proyecto: con contacto, a su nombre; sin él, interno.
+  def new_child(case_type)
+    attrs = { case_type_id: case_type.id, title: params[:title].presence || @ticket.title }
+    if @ticket.contact
+      Cases::OrchestratorService.new(account: Current.account, contact: @ticket.contact,
+                                     conversation: @ticket.conversation).create_for_manual(**attrs)
+    else
+      Cases::OrchestratorService.new(account: Current.account).create_internal(requester: current_user, **attrs)
+    end
+  end
+
+  def log_related(ticket, other, relation)
+    ticket.case_events.create!(
+      account: Current.account, event_type: :related, origin: :agent, actor: current_user,
+      payload: { relation_type: relation.relation_type, related_folio: other.folio, related_title: other.title,
+                 related_ticket_id: other.id }.compact
+    )
+  end
+
   def set_ticket
     @ticket = account_case_tickets.find(params[:case_ticket_id])
   rescue ActiveRecord::RecordNotFound
@@ -61,30 +104,32 @@ class Api::V1::Accounts::CaseTicketRelationsController < Api::V1::Accounts::Base
   end
 
   def relations_json
-    outgoing = @ticket.ticket_relations.includes(:related_ticket).map { |r| relation_json(r, :outgoing) }
-    incoming = @ticket.inverse_ticket_relations.includes(:ticket).map { |r| relation_json(r, :incoming) }
+    outgoing = @ticket.ticket_relations.includes(related_ticket: %i[case_type assignee]).map { |r| relation_json(r, :outgoing) }
+    incoming = @ticket.inverse_ticket_relations.includes(ticket: %i[case_type assignee]).map { |r| relation_json(r, :incoming) }
     (outgoing + incoming).sort_by { |r| r[:created_at] }.reverse
   end
 
   def relation_json(relation, direction)
     other = direction == :outgoing ? relation.related_ticket : relation.ticket
     {
-      id:            relation.id,
+      id: relation.id,
       relation_type: relation.relation_type,
-      direction:     direction,
-      created_at:    relation.created_at,
-      ticket:        ticket_ref(other)
+      direction: direction,
+      created_at: relation.created_at,
+      ticket: ticket_ref(other)
     }
   end
 
   def ticket_ref(ticket)
     {
-      id:          ticket.id,
-      folio:       ticket.folio,
-      title:       ticket.title,
-      status:      ticket.status,
+      id: ticket.id,
+      folio: ticket.folio,
+      title: ticket.title,
+      status: ticket.status,
       ticket_kind: ticket.ticket_kind,
-      priority:    ticket.priority
+      priority: ticket.priority,
+      case_class: ticket.case_type&.case_class || 'support', # la pestaña muestra el tipo y el estado
+      assignee: ticket.assignee&.slice(:id, :name)
     }
   end
 end
