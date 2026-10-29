@@ -69,19 +69,47 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
     ActiveSupport::Dependencies.interlock.permit_concurrent_loads { hilos.map(&:value) }
   end
 
-  # Una prueba: una conversación nueva, un mensaje del cliente, la respuesta y su calificación.
+  # Una prueba: una conversación nueva, el mensaje (o los del diálogo, F5) del cliente, la
+  # respuesta y su calificación. En un diálogo cada mensaje espera su respuesta, la traza
+  # es la del último turno y el juez califica el diálogo entero.
   def one(escenario, juez)
     conversacion = new_conversation(escenario)
-    ultimo = conversacion.messages.maximum(:id).to_i
-    conversacion.messages.create!(account: @account, inbox: @inbox, sender: conversacion.contact,
-                                  message_type: :incoming, content: escenario.message)
-    respuesta = wait_reply(conversacion, ultimo)
+    dialogo, ultimo = converse(conversacion, Array(escenario.turns).presence || [escenario.message])
+    respuesta = dialogo.last[:reply]
     traza = trace(conversacion, ultimo)
     fila = escenario.to_h.merge(conversation: conversacion.display_id, reply: respuesta, cases: cases(conversacion),
-                                traza: traza, **juez.call(escenario, respuesta, traza: traza))
+                                traza: traza, dialog: (dialogo if dialogo.size > 1),
+                                **juez.call(graded(escenario, dialogo), respuesta, traza: traza))
     # F3: una prueba de la pila guardada se queda con su resultado.
     ContactTrackings::Assistant::TestCases.store_live(@account, escenario.id.delete_prefix('caso:'), fila) if escenario.id.to_s.start_with?('caso:')
     fila
+  end
+
+  # En un diálogo el juez ve como «cliente» todo lo anterior y califica la última respuesta.
+  def graded(escenario, dialogo)
+    return escenario if dialogo.size < 2
+
+    escenario.dup.tap { |e| e.message = transcript(dialogo) }
+  end
+
+  # [[{ customer:, reply: }, …], id del último mensaje antes del último turno]
+  def converse(conversacion, mensajes)
+    ultimo = nil
+    dialogo = mensajes.map do |texto|
+      ultimo = conversacion.messages.maximum(:id).to_i
+      conversacion.messages.create!(account: @account, inbox: @inbox, sender: conversacion.contact,
+                                    message_type: :incoming, content: texto)
+      { customer: texto, reply: wait_reply(conversacion, ultimo) }
+    end
+    [dialogo, ultimo]
+  end
+
+  # El diálogo para el juez, sin la última respuesta (es la que se califica).
+  def transcript(dialogo)
+    lineas = dialogo.each_with_index.flat_map do |turno, i|
+      ["Cliente: #{turno[:customer]}", i < dialogo.size - 1 ? "Agente: #{turno[:reply]}" : nil]
+    end
+    lineas.compact.join("\n")
   end
 
   # proyecto@diagrama_agente_ia F2: por dónde pasó (F0). La de la primera respuesta del turno.

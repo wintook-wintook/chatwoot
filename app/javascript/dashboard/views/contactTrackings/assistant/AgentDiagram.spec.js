@@ -1,5 +1,11 @@
 import { shallowMount } from '@vue/test-utils';
 import AgentDiagram from './AgentDiagram.vue';
+import { downloadSvg, downloadPng } from './svgExport';
+
+vi.mock('./svgExport', () => ({
+  downloadSvg: vi.fn(),
+  downloadPng: vi.fn(() => Promise.resolve()),
+}));
 
 // proyecto@diagrama_agente_ia F1 — docs/diagrama_agente_ia_plan.md §4.2
 const estructura = () => ({
@@ -26,6 +32,7 @@ const montar = (props = {}) =>
     mocks: {
       $t: (clave, args) => (args ? `${clave} ${JSON.stringify(args)}` : clave),
     },
+    stubs: ['woot-button'],
   });
 
 const nodo = (wrapper, texto) =>
@@ -132,5 +139,28 @@ describe('AgentDiagram', () => {
     });
 
     expect(wrapper.text()).not.toContain('DIAGRAM.HEAT_ROUTE');
+  });
+
+  // F5
+  it('exporta el dibujo con el nombre del agente', async () => {
+    const wrapper = shallowMount(AgentDiagram, {
+      propsData: { structure: estructura(), exportName: 'diagrama-ventas' },
+      mocks: { $t: clave => clave },
+      stubs: {
+        'woot-button': {
+          template: '<button @click="$emit(\'click\')"><slot /></button>',
+        },
+      },
+    });
+    const botones = wrapper.findAll('button').wrappers;
+    await botones.find(b => b.text().includes('EXPORT_SVG')).trigger('click');
+    await botones.find(b => b.text().includes('EXPORT_PNG')).trigger('click');
+
+    expect(downloadSvg).toHaveBeenCalledWith(
+      wrapper.find('svg').element,
+      'diagrama-ventas.svg',
+      expect.any(String)
+    );
+    expect(downloadPng.mock.calls[0][1]).toBe('diagrama-ventas.png');
   });
 });
