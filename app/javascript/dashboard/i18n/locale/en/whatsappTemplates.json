@@ -11,7 +11,9 @@
             "LABELS": {
                 "LANGUAGE": "Language",
                 "TEMPLATE_BODY": "Template Body",
-                "CATEGORY": "Category"
+                "CATEGORY": "Category",
+                "HEADER": "Header",
+                "BUTTONS": "Buttons"
             }
         },
         "PARSER": {
@@ -19,7 +21,24 @@
             "VARIABLE_PLACEHOLDER": "Enter %{variable} value",
             "GO_BACK_LABEL": "Go Back",
             "SEND_MESSAGE_LABEL": "Send Message",
-            "FORM_ERROR_MESSAGE": "Please fill all variables before sending"
+            "FORM_ERROR_MESSAGE": "Please fill all variables before sending",
+            "HEADER_LABEL": "Header",
+            "MEDIA_IMAGE": "Image",
+            "MEDIA_VIDEO": "Video",
+            "MEDIA_DOCUMENT": "Document",
+            "MEDIA_URL_PLACEHOLDER": "Public link to the file (https://…)",
+            "MEDIA_NAME_LABEL": "Name",
+            "MEDIA_NAME_PLACEHOLDER": "Name the customer will see (e.g. Invoice A1.pdf)",
+            "BUTTONS_LABEL": "Buttons",
+            "BUTTON_URL": "Link",
+            "BUTTON_COPY_CODE": "Code (max %{max})",
+            "ERRORS": {
+                "BODY": "Fill in all the body variables.",
+                "HEADER": "Fill in the header variables.",
+                "MEDIA_URL": "Enter the public link to the file (must start with http:// or https://).",
+                "BUTTON": "Fill in each button's value.",
+                "COPY_CODE_LENGTH": "The copy code can have up to %{max} characters."
+            }
         }
     }
 }

@@ -11,7 +11,9 @@
             "LABELS": {
                 "LANGUAGE": "Idioma",
                 "TEMPLATE_BODY": "Cuerpo de la Plantilla",
-                "CATEGORY": "Categoría"
+                "CATEGORY": "Categoría",
+                "HEADER": "Encabezado",
+                "BUTTONS": "Botones"
             }
         },
         "PARSER": {
@@ -19,7 +21,24 @@
             "VARIABLE_PLACEHOLDER": "Ingrese el valor de %{variable}",
             "GO_BACK_LABEL": "Regresar",
             "SEND_MESSAGE_LABEL": "Enviar Mensaje",
-            "FORM_ERROR_MESSAGE": "Por favor complete todas las variables antes de enviar"
+            "FORM_ERROR_MESSAGE": "Por favor complete todas las variables antes de enviar",
+            "HEADER_LABEL": "Encabezado",
+            "MEDIA_IMAGE": "Imagen",
+            "MEDIA_VIDEO": "Video",
+            "MEDIA_DOCUMENT": "Documento",
+            "MEDIA_URL_PLACEHOLDER": "Liga pública del archivo (https://…)",
+            "MEDIA_NAME_LABEL": "Nombre",
+            "MEDIA_NAME_PLACEHOLDER": "Nombre con que lo verá el cliente (p. ej. Factura A1.pdf)",
+            "BUTTONS_LABEL": "Botones",
+            "BUTTON_URL": "Liga",
+            "BUTTON_COPY_CODE": "Código (máx. %{max})",
+            "ERRORS": {
+                "BODY": "Completa todas las variables del cuerpo.",
+                "HEADER": "Completa las variables del encabezado.",
+                "MEDIA_URL": "Pon la liga pública del archivo (debe empezar con http:// o https://).",
+                "BUTTON": "Completa el dato de cada botón.",
+                "COPY_CODE_LENGTH": "El código de copiar puede tener hasta %{max} caracteres."
+            }
         }
     }
 }

@@ -282,6 +282,32 @@ y hace lo mismo que el procesador con otro formato; se puede borrar cuando F2–
 
 **Todavía no se ve nada en pantalla**: el formulario de la conversación es F2.
 
+## 7.4 F2 — hecho (29/10/2026)
+
+**Qué se hizo.**
+- `templateForm.js` (nuevo, puro, con spec): qué pide una plantilla (`describeTemplate`: archivo del
+  encabezado y su nombre si es documento, variables del encabezado de texto y del cuerpo, botones con dato:
+  URL con `{{1}}` y copiar código), qué se manda (`buildProcessedParams`), qué falta (`validateValues`) y la
+  vista previa (`renderPreview`).
+- **Selector** (`TemplatesPicker.vue`): en **WhatsApp Cloud** ya no oculta las de imagen/video/documento; en
+  360dialog/UnoAPI siguen ocultas. Cada plantilla muestra su encabezado (texto o «Imagen/Video/Documento») y
+  sus botones.
+- **Formulario** (`TemplateParser.vue`, prop `fullTemplate`): liga del archivo (+ nombre si es documento),
+  variables del encabezado, del cuerpo y de los botones; vista previa con encabezado, cuerpo, pie y botones;
+  errores por campo (liga pública http/https, código ≤ 15).
+- `fullTemplate` lo pasan el modal de la conversación (`Modal.vue`) y el panel del contacto
+  (`contact/WhatsappTemplates.vue`) según el `provider` de la bandeja.
+
+**Qué se manda.** Formato por componente `{ header, body, buttons }` **solo** en WhatsApp Cloud y solo si la
+plantilla lleva algo más que el cuerpo; si no, el formato de siempre `{ "1": "Juan" }` (360dialog y UnoAPI no
+cambian). El contenido del mensaje sigue siendo el cuerpo; el adjunto en la burbuja es F3.
+
+**Pila de pruebas.** `templateForm.spec.js` (14), `TemplatesPicker.spec.js` (2: Cloud ofrece las de archivo
+con encabezado y botones; 360dialog no), `whatsappTemplates.spec.js` (+3: Cloud manda el documento por
+componente, sin liga no manda y dice qué falta, fuera de Cloud como siempre; las 4 de antes siguen),
+`message_builder_spec.rb` (+1: el `processed_params` anidado se guarda completo). Webpack: «Compiled
+successfully». ⚠ **Sin probar en navegador ni enviando a un teléfono real.**
+
 ---
 
 ## 8. Pila de pruebas en navegador (al cerrar cada fase)
