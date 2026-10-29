@@ -308,6 +308,22 @@ componente, sin liga no manda y dice qué falta, fuera de Cloud como siempre; la
 `message_builder_spec.rb` (+1: el `processed_params` anidado se guarda completo). Webpack: «Compiled
 successfully». ⚠ **Sin probar en navegador ni enviando a un teléfono real.**
 
+## 7.5 F3 — hecho (29/10/2026)
+
+**Qué se hizo.** `bubble/TemplateHeader.vue` (nuevo): en la burbuja del mensaje, arriba del texto, el archivo
+del encabezado de la plantilla, leído de `additional_attributes.template_params.processed_params.header`
+(F2 ya lo guarda; sin migración): **imagen** (con liga para abrirla), **video** (reproductor) o
+**documento** (`BubbleFile` con el nombre con que se mandó; `BubbleFile` acepta ahora `name`, si no lo saca
+de la liga como siempre). `Message.vue` lo pinta y lo cuenta para mostrar la burbuja.
+
+**Por qué no es un adjunto.** No se crea attachment (podría cruzarse con la ruta de envío de adjuntos) y no
+se usa `BubbleImageAudioVideo`: su clic abre la galería de los adjuntos reales, donde este archivo no está.
+
+**Pila de pruebas.** `bubble/specs/TemplateHeader.spec.js` (4): imagen con liga, video con controles,
+documento con su nombre, `BubbleFile` con y sin nombre. `Message.vue` sin hallazgos nuevos de lint. Fallan
+4 de `specs/MoreActions.spec.js` **con y sin F3** (ya venían de develop). Webpack: «Compiled successfully».
+⚠ **Sin probar en navegador.** Mensajes de plantilla viejos (solo cuerpo) se ven igual que antes.
+
 ---
 
 ## 8. Pila de pruebas en navegador (al cerrar cada fase)

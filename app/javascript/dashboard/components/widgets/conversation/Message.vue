@@ -3,6 +3,7 @@ import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import BubbleActions from './bubble/Actions.vue';
 import BubbleContact from './bubble/Contact.vue';
 import BubbleFile from './bubble/File.vue';
+import BubbleTemplateHeader from './bubble/TemplateHeader.vue';
 import BubbleImageAudioVideo from './bubble/ImageAudioVideo.vue';
 import BubbleIntegration from './bubble/Integration.vue';
 import BubbleLocation from './bubble/Location.vue';
@@ -36,6 +37,7 @@ export default {
     BubbleActions,
     BubbleContact,
     BubbleFile,
+    BubbleTemplateHeader,
     BubbleImageAudioVideo,
     BubbleIntegration,
     BubbleLocation,
@@ -111,6 +113,17 @@ export default {
         created_at: this.data.created_at || '',
       }));
     },
+    // feat/plantillas_whatsapp_mejoras F3: el archivo del encabezado de una plantilla (lo
+    // recibe el cliente; el mensaje solo guarda el texto del cuerpo).
+    templateHeaderMedia() {
+      const attrs = (this.data && this.data.additional_attributes) || {};
+      const params = (attrs.template_params || {}).processed_params || {};
+      const header = params.header || {};
+      const tipos = ['image', 'video', 'document'];
+      return header.media_url && tipos.includes(header.media_type)
+        ? header
+        : null;
+    },
     hasOneDayPassed() {
       // Disable retry button if the message is failed and the message is older than 24 hours
       return getDayDifferenceFromNow(new Date(), this.data?.created_at) >= 1;
@@ -118,6 +131,7 @@ export default {
     shouldRenderMessage() {
       return (
         this.hasAttachments ||
+        Boolean(this.templateHeaderMedia) ||
         this.data.content ||
         this.isEmailContentType ||
         this.isUnsupported ||
@@ -564,6 +578,10 @@ export default {
           :message-id="inReplyToMessageId"
           :message-type="messageType"
           :parent-has-attachments="hasAttachments"
+        />
+        <BubbleTemplateHeader
+          v-if="templateHeaderMedia"
+          :header="templateHeaderMedia"
         />
         <div v-if="isUnsupported">
           <template v-if="isAMetaInbox && isInstagram">
