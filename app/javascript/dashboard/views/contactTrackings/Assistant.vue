@@ -77,11 +77,11 @@ import trainingSectionsMixin from './assistant/trainingSectionsMixin';
 import OptimizeModal from './assistant/OptimizeModal.vue';
 import ExplainModal from './assistant/ExplainModal.vue';
 import DryRunModal from './assistant/DryRunModal.vue';
-import TestBatteryModal from './assistant/TestBatteryModal.vue';
 // proyecto@diagrama_agente_ia F1: la pestaña «Diagrama» (docs/diagrama_agente_ia_plan.md).
 import AgentDiagram from './assistant/AgentDiagram.vue';
 // F2: el panel «Pruebas»; la prueba elegida se ilumina en el diagrama.
 import TestsPanel from './assistant/TestsPanel.vue';
+import { heatFromCases } from './assistant/testPath';
 import SaveModal from './assistant/SaveModal.vue';
 
 // El teclado va más rápido que un request: se espera a que la persona pare.
@@ -144,7 +144,6 @@ export default {
     DryRunModal,
     AgentDiagram,
     TestsPanel,
-    TestBatteryModal,
     SaveModal,
   },
   mixins: [trainingSectionsMixin],
@@ -245,11 +244,12 @@ export default {
       isSuggesting: false,
       suggestStage: null,
       showDryRunModal: false,
-      // «Probar el agente» (pila en vivo, M5) y el encargo del que salió el agente.
-      showTestBattery: false,
+      // El encargo del que salió el agente: de ahí salen las reglas de la pila.
       batteryBriefId: null,
       // proyecto@diagrama_agente_ia F2: la prueba elegida en el panel Pruebas.
       diagramTest: null,
+      // F3: la pila guardada del agente, para el mapa de calor del diagrama.
+      testCases: [],
       draftVersion: 0,
       isDryRunning: false,
       dryRunError: '',
@@ -429,6 +429,9 @@ export default {
     },
     // El último resultado, para la tira de hitos: "Probado" se apaga cuando el
     // borrador cambió después de la prueba.
+    diagramHeat() {
+      return heatFromCases(this.testCases);
+    },
     lastDryRun() {
       const ultima = this.dryRunHistory[this.dryRunHistory.length - 1];
       return ultima && ultima.version === this.draftVersion
@@ -709,6 +712,15 @@ export default {
     onTestSelect(prueba) {
       this.diagramTest = prueba;
       this.draftTab = 'diagram';
+    },
+    // F3 (D4): «Probar el agente» ya no abre un modal: la pila vive en el panel.
+    openTestsPanel() {
+      this.leftPanel = 'tests';
+      this.draftTab = 'diagram';
+    },
+    // Una prueba en seco del panel también cuenta como «Probado» en la tira.
+    onPanelDryRun({ question, result }) {
+      this.dryRunHistory.push({ question, result, version: this.draftVersion });
     },
     goToSectionFromDiagram(index) {
       const bloque = (this.trainingStructure.blocks || [])[index];
@@ -1662,6 +1674,8 @@ export default {
                   :inbox-id="inboxId"
                   :brief-id="batteryBriefId"
                   @select="onTestSelect"
+                  @cases="testCases = $event"
+                  @dryRun="onPanelDryRun"
                 />
               </section>
 
@@ -1871,6 +1885,7 @@ export default {
                   :structure="trainingStructure"
                   :issues="nodeIssues"
                   :test="diagramTest"
+                  :heat="diagramHeat"
                   @clearHighlight="diagramTest = null"
                   @goToRoute="goToRouteFromDiagram"
                   @goToSection="goToSectionFromDiagram"
@@ -2003,7 +2018,7 @@ export default {
             v-if="editingTemplate"
             variant="clear"
             color-scheme="secondary"
-            @click="showTestBattery = true"
+            @click="openTestsPanel"
           >
             {{ $t('TRACKING_ASSISTANT_VIEW.BATTERY_CTA') }}
           </woot-button>
@@ -2082,14 +2097,6 @@ export default {
       :is-running="isExplaining"
       :error="explainError"
       @close="showExplainModal = false"
-    />
-    <TestBatteryModal
-      v-if="editingTemplate"
-      :show="showTestBattery"
-      :template-id="editingTemplate.id"
-      :template-name="editingTemplate.name"
-      :brief-id="batteryBriefId"
-      @close="showTestBattery = false"
     />
     <DryRunModal
       :show="showDryRunModal"

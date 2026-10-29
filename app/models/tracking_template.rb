@@ -83,6 +83,8 @@ class TrackingTemplate < ApplicationRecord
   # Se itera sobre el MISMO agente en vez de duplicarlo; cada guardado que cambia su
   # comportamiento deja un snapshot con autor, nota y desde dónde se hizo.
   has_many :versions, class_name: 'TrackingTemplateVersion', dependent: :delete_all
+  # proyecto@diagrama_agente_ia F3: la pila de pruebas del agente.
+  has_many :test_cases, class_name: 'TrackingTestCase', dependent: :delete_all
 
   # Nota y origen del guardado en curso. Los ponen el controlador y los servicios que
   # guardan (Asistente, Galería); no se persisten en la plantilla, viajan al snapshot.

@@ -9,6 +9,11 @@
 // SIN ILUMINAR (decisión D1): se ve siempre, mientras se crea el agente; la forma
 // sola ya deja ver huecos (una ruta sin etiqueta, una fuente que falta).
 //
+// MAPA DE CALOR (F3): sin prueba elegida, `heat` (heatFromCases) dice cuántas pruebas
+// de la pila pasan por cada ruta y cuántas fallaron en vivo: la línea del cliente a
+// la ruta engorda con las pruebas, la ruta con fallas va en ámbar y la que no tiene
+// ninguna, punteada («sin pruebas»: falta generarlas).
+//
 // ILUMINADO (F2): `test` es la prueba elegida en el panel Pruebas; su camino lo
 // calcula testPath.js contra ESTE dibujo (`highlight`): lo
 // recorrido con el color del tema, el punto débil (`failed`) en ámbar con ⚠, y lo
@@ -35,6 +40,8 @@ export default {
     // proyecto@diagrama_agente_ia F2: la prueba elegida ({ mode: 'dry', result } o
     // { mode: 'live', traza, reply }), o null.
     test: { type: Object, default: null },
+    // F3: { ruta: { total, failed } } de la pila del agente, o null.
+    heat: { type: Object, default: null },
   },
   emits: ['goToRoute', 'goToSection', 'clearHighlight'],
   computed: {
@@ -56,6 +63,18 @@ export default {
     // El ⚠ del punto débil: un símbolo, no un texto que traducir.
     warnMark() {
       return '⚠';
+    },
+    // El mapa de calor solo cuando hay pila y ninguna prueba elegida.
+    showHeat() {
+      return (
+        !this.test && Boolean(this.heat) && Object.keys(this.heat).length > 0
+      );
+    },
+    untestedRoutes() {
+      if (!this.showHeat) return 0;
+      return this.diagram.nodes.filter(
+        n => n.kind === 'route' && !this.heatOf(n)
+      ).length;
     },
     highlight() {
       if (!this.test) return null;
@@ -99,9 +118,19 @@ export default {
       if (n.kind === 'tag') return n.missing ? this.t('NODE_NO_TAG') : n.label;
       return n.label;
     },
+    heatOf(n) {
+      if (!this.heat || n.kind !== 'route') return null;
+      return this.heat[n.target.name] || null;
+    },
     detail(n) {
       const extra = this.highlight && this.highlight.details[n.id];
       if (extra) return this.t(extra.key, extra.args);
+      if (this.showHeat && n.kind === 'route') {
+        const calor = this.heatOf(n);
+        return calor
+          ? this.t('HEAT_ROUTE', { total: calor.total, failed: calor.failed })
+          : this.t('HEAT_NONE');
+      }
       if (n.kind === 'client') return this.t('NODE_CLIENT_SUB');
       if (n.kind === 'welcome') return this.t('NODE_WELCOME_SUB');
       if (n.kind === 'conversational') return this.t('NODE_CONVERSATIONAL_SUB');
@@ -129,11 +158,27 @@ export default {
       if (this.litEdges.has(edge.id)) return 'stroke-woot-500';
       return 'stroke-slate-300 dark:stroke-slate-600';
     },
+    // Con el mapa de calor, la línea del cliente a cada ruta engorda con sus pruebas.
+    edgeWidth(edge) {
+      if (this.litEdges.has(edge.id)) return 2.5;
+      if (!this.showHeat || edge.from !== 'client') return 1.5;
+      const ruta = this.diagram.nodes.find(n => n.id === edge.to);
+      const calor = ruta && this.heatOf(ruta);
+      return calor ? 1.5 + Math.min(calor.total, 6) * 0.75 : 1;
+    },
+    boxDash(n) {
+      if (n.muted) return '4 3';
+      if (this.showHeat && n.kind === 'route' && !this.heatOf(n)) return '4 3';
+      return null;
+    },
     boxClass(n) {
       if (this.failedNodes.has(n.id))
         return 'fill-amber-50 dark:fill-slate-800 stroke-amber-500';
       if (this.litNodes.has(n.id))
         return 'fill-woot-50 dark:fill-slate-700 stroke-woot-500';
+      const calor = this.showHeat && this.heatOf(n);
+      if (calor && calor.failed)
+        return 'fill-amber-50 dark:fill-slate-800 stroke-amber-500';
       if (n.issue && n.issue.level === 'blocking')
         return 'fill-white dark:fill-slate-800 stroke-red-400 dark:stroke-red-500';
       if (n.kind === 'client')
@@ -193,6 +238,9 @@ export default {
         <span v-if="issueCount" class="text-amber-700 dark:text-amber-400">
           {{ t('ISSUES', { count: issueCount }) }}
         </span>
+        <span v-if="untestedRoutes" class="text-amber-700 dark:text-amber-400">
+          {{ t('HEAT_UNTESTED', { count: untestedRoutes }) }}
+        </span>
       </p>
 
       <div class="flex-1 min-h-0 overflow-auto">
@@ -220,7 +268,7 @@ export default {
             :key="edge.id"
             :d="edge.d"
             fill="none"
-            :stroke-width="litEdges.has(edge.id) ? 2.5 : 1.5"
+            :stroke-width="edgeWidth(edge)"
             :stroke-dasharray="edge.dashed ? '4 4' : null"
             :opacity="highlight && !litEdges.has(edge.id) ? 0.35 : 1"
             :class="edgeClass(edge)"
@@ -243,7 +291,7 @@ export default {
               :height="n.h"
               rx="8"
               stroke-width="1.5"
-              :stroke-dasharray="n.muted ? '4 3' : null"
+              :stroke-dasharray="boxDash(n)"
               :class="[
                 boxClass(n),
                 n.target ? 'group-hover:stroke-woot-500' : '',

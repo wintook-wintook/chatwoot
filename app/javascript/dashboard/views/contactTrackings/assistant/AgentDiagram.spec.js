@@ -113,4 +113,24 @@ describe('AgentDiagram', () => {
 
     expect(wrapper.emitted('clearHighlight')).toHaveLength(1);
   });
+
+  // F3 — el mapa de calor
+  it('sin prueba elegida muestra cuántas pasan por cada ruta y cuáles no tienen', () => {
+    const wrapper = montar({ heat: { cotizar: { total: 3, failed: 1 } } });
+
+    expect(nodo(wrapper, 'cotizar').text()).toContain(
+      'DIAGRAM.HEAT_ROUTE {"total":3,"failed":1}'
+    );
+    expect(nodo(wrapper, 'soporte').text()).toContain('DIAGRAM.HEAT_NONE');
+    expect(wrapper.text()).toContain('DIAGRAM.HEAT_UNTESTED {"count":1}');
+  });
+
+  it('con una prueba elegida el mapa de calor se aparta', () => {
+    const wrapper = montar({
+      heat: { cotizar: { total: 3, failed: 1 } },
+      test: { mode: 'dry', result: { routes: { chosen: 'cotizar' } } },
+    });
+
+    expect(wrapper.text()).not.toContain('DIAGRAM.HEAT_ROUTE');
+  });
 });
