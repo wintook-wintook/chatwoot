@@ -169,6 +169,29 @@ conocimiento, el Asistente, la bienvenida, las rutas y `Message` (commit 553300a
 - La pila y la prueba en seco dejan de ser modales y se mueven a este panel.
   Los modales actuales se reutilizan por dentro como componentes.
 
+### 4.1.1 Cambio de lugar (29/10/2026): pestaña propia «Pruebas y diagrama»
+
+A pedido del usuario, para aprovechar el espacio, las pruebas y el diagrama dejaron de compartir las
+columnas del Entrenamiento (el panel izquierdo y una pestaña del editor). Ahora son una pestaña del
+espacio del agente:
+
+```
+ Nombre del agente                                       ← Agentes IA · Bandeja · v12
+ Entrenamiento   [ Pruebas y diagrama ]   Ficha   Versiones
+┌─ Pruebas (2/5) ───────────────────┐┌─ Diagrama (3/5) ──────────────────────────────────┐
+│ escribir · diálogo · generar      ││ Cliente ══► cotizar ══► Google Doc ⚠ ──► #cotizar │
+│ seco / vivo / comparar versión    ││          ░ soporte                                 │
+│ ❌ ¿precio del kit?   cotizar      ││ secciones · leyenda · Descargar SVG / PNG          │
+│ antes / ahora · Llevar al chat    ││                                                    │
+└───────────────────────────────────┘└────────────────────────────────────────────────────┘
+```
+
+- Es **el mismo Asistente** con otra vista (`view="tests"`, una sola instancia con la misma key en
+  `AgentWorkspace`): cambiar de pestaña no pierde el borrador, el chat ni la pila en curso.
+- «Llevar al chat», «ir a la línea» (clic en un nodo) y los botones «Probar…» cambian de pestaña solos
+  (`openTraining` / `openTests`).
+- La pestaña es solo para administradores, como el Entrenamiento; también con un agente nuevo (en seco).
+
 ### 4.2 El diagrama (SVG)
 
 Columnas de izquierda a derecha, una por etapa del motor:
