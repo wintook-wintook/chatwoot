@@ -58,6 +58,15 @@ RSpec.describe Whatsapp::TemplateComponentBuilder do
     expect(header).to eq(type: 'HEADER', format: 'IMAGE', example: { header_handle: ['h:abc123'] })
   end
 
+  # F0: con la liga cruda como handle Meta rechazaba las de video y documento.
+  it 'cabecera multimedia nunca manda la liga como header_handle' do
+    payload = build(
+      name: 't', language: 'es', category: 'UTILITY', body_text: 'x',
+      header_type: 'video', header_media_url: 'https://cdn.example.com/v.mp4'
+    )
+    expect(payload[:components].first).to eq(type: 'HEADER', format: 'VIDEO')
+  end
+
   it 'mapea cada tipo de botón' do
     payload = build(
       name: 't', language: 'es', category: 'UTILITY', body_text: 'x',

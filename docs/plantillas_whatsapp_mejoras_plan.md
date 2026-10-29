@@ -174,6 +174,19 @@ Resultado: hoy se puede **crear y aprobar** una plantilla con adjunto, pero **no
 
 ---
 
+## 7. Decisiones (cerradas 29/10/2026: «ok a todas tus recomendaciones»)
+
+| # | Decisión |
+|---|---|
+| D1 | **Sí**: F3 (burbuja con el adjunto) entra en esta rama |
+| D2 | **No por ahora**: F7 (subir archivo desde la conversación) queda fuera |
+| D3 | Se quitan **solo `< >`** de las variables (no las comillas) |
+| D4 | Mensajes programados: **ocultar** las plantillas con adjunto por ahora |
+| D5 | Seguimientos/campañas: **solo el adjunto**, sin botones variables |
+| D6 | Variables con nombre al **crear**: después (el envío sí las soporta en F1) |
+
+<details><summary>Texto original de las decisiones</summary>
+
 ## 7. Decisiones abiertas
 
 - **D1** — ¿F3 (burbuja) entra en esta rama o después?
@@ -182,6 +195,35 @@ Resultado: hoy se puede **crear y aprobar** una plantilla con adjunto, pero **no
 - **D4** — Mensajes programados: ¿formulario completo (F4) u ocultar las de adjunto por ahora?
 - **D5** — ¿Seguimientos/campañas necesitan botones variables o solo el adjunto?
 - **D6** — ¿Agregar variables con nombre (`{{nombre}}`) al **crear** plantillas? Hoy solo `{{1}}`; el envío sí las soportará (F1).
+
+</details>
+
+---
+
+## 7.1 F0 — hecho (29/10/2026)
+
+**Qué se hizo.**
+- `Whatsapp::ResumableUploadService` sube la muestra de **imagen, video y documento** (`header_type:`),
+  cada uno con los límites de Meta: imagen JPEG/PNG ≤ 5 MB · video MP4/3GPP ≤ 16 MB · documento PDF ≤ 100 MB.
+  Mensajes por tipo («El video supera 16 MB», «Tipo no permitido (image/png); solo PDF»).
+- `SubmitTemplateService#ensure_header_handle` sube la muestra en los tres tipos (antes solo imagen).
+- `TemplateComponentBuilder` **nunca** manda la liga cruda como `header_handle` (era lo que hacía que Meta
+  rechazara video y documento): solo el handle de la subida.
+- Al **editar** con otra liga de muestra se descarta el handle viejo y se vuelve a subir (si no, Meta
+  revisaría el archivo anterior).
+
+**Pila de pruebas.** `resumable_upload_service_spec.rb` (+4: video, documento, tope de 16 MB, formato por
+tipo), `submit_template_service_spec.rb` (+5: los tres tipos suben y mandan su handle, subida fallida no
+llama a Meta, editar con otra liga vuelve a subir), `template_component_builder_spec.rb` (+1: nunca la liga).
+54/54 en los specs de plantillas.
+
+**Ojo — fallas que ya traía `develop`.** En `spec/services/whatsapp` fallan 29 pruebas **con y sin F0**
+(comparado con stash): `incoming_message_service` (19), `incoming_message_whatsapp_cloud_service` (3),
+`providers/whatsapp_cloud_service` (5) y `send_on_whatsapp_service` (2). Las dos últimas son justo lo que
+toca F1: entenderlas antes de cambiar el envío.
+
+**Falta (pide OK).** Mandar a Meta una plantilla de prueba con video y otra con documento desde una bandeja
+WhatsApp Cloud real, y ver que queden en revisión (PENDING). Sin eso F0 solo está probado con dobles.
 
 ---
 

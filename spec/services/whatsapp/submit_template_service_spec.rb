@@ -93,6 +93,62 @@ RSpec.describe Whatsapp::SubmitTemplateService do
     end
   end
 
+  # feat/plantillas_whatsapp_mejoras F0
+  describe 'archivo de muestra de la cabecera' do
+    before { allow(GlobalConfigService).to receive(:load).with('WHATSAPP_TEMPLATES_DRY_RUN', false).and_return(false) }
+
+    def upload_ok(handle = 'H-NUEVO')
+      Whatsapp::ResumableUploadService::Result.new(success: true, handle: handle)
+    end
+
+    %w[image video document].each do |tipo|
+      it "sube la muestra de #{tipo} y manda su handle a Meta" do
+        servicio = instance_double(Whatsapp::ResumableUploadService, perform: upload_ok)
+        allow(Whatsapp::ResumableUploadService).to receive(:new).and_return(servicio)
+        allow(provider).to receive(:create_template).and_return(result_ok)
+
+        result = described_class.new(channel: channel, params: valid_params.merge(
+          header_type: tipo, header_media_url: "https://cdn.example.com/muestra.#{tipo}"
+        )).create
+
+        expect(result).to be_success
+        expect(Whatsapp::ResumableUploadService).to have_received(:new)
+          .with(channel: channel, media_url: "https://cdn.example.com/muestra.#{tipo}", header_type: tipo)
+        expect(provider).to have_received(:create_template) do |payload|
+          header = payload[:components].find { |c| c[:type] == 'HEADER' }
+          expect(header).to eq(type: 'HEADER', format: tipo.upcase, example: { header_handle: ['H-NUEVO'] })
+        end
+      end
+    end
+
+    it 'si la subida falla no llama a Meta' do
+      fallo = Whatsapp::ResumableUploadService::Result.new(success: false, error: 'El video supera 16 MB')
+      allow(Whatsapp::ResumableUploadService).to receive(:new).and_return(instance_double(Whatsapp::ResumableUploadService,
+                                                                                          perform: fallo))
+      allow(provider).to receive(:create_template)
+
+      result = described_class.new(channel: channel, params: valid_params.merge(
+        header_type: 'video', header_media_url: 'https://cdn.example.com/v.mp4'
+      )).create
+
+      expect(result.error).to eq('El video supera 16 MB')
+      expect(provider).not_to have_received(:create_template)
+    end
+
+    it 'al editar con otra liga vuelve a subir la muestra' do
+      template = create(:whatsapp_template, channel_whatsapp: channel, account: channel.account, status: 'REJECTED',
+                                            meta_template_id: '999', header_type: 'video',
+                                            header_media_url: 'https://cdn.example.com/viejo.mp4', header_handle: 'H-VIEJO')
+      allow(Whatsapp::ResumableUploadService).to receive(:new).and_return(instance_double(Whatsapp::ResumableUploadService,
+                                                                                          perform: upload_ok))
+      allow(provider).to receive(:edit_template).and_return(result_ok)
+
+      described_class.new(template: template, params: { header_media_url: 'https://cdn.example.com/nuevo.mp4' }).update
+
+      expect(template.reload.header_handle).to eq('H-NUEVO')
+    end
+  end
+
   describe '#destroy' do
     it 'borra fila local (dry-run) sin llamar a Meta' do
       template = create(:whatsapp_template, account: channel.account, channel_whatsapp: channel,

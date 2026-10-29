@@ -1,18 +1,27 @@
 # frozen_string_literal: true
 
 # @waba_templates
-# Resumable Upload de Meta para la cabecera de imagen de una plantilla. Meta NO acepta una
-# URL plana al crear: exige `example.header_handle`. Flujo de 2 pasos:
+# Resumable Upload de Meta para el archivo de muestra de la cabecera de una plantilla. Meta
+# NO acepta una URL plana al crear: exige `example.header_handle`. Flujo de 2 pasos:
 #   1. POST /{APP_ID}/uploads (crea la sesión)
 #   2. POST /{upload_session_id} con los bytes → devuelve el handle `h`
 #
 # App ID: META_APP_ID si existe, si no FB_APP_ID (config global de Chatwoot).
-# Alcance v1: SOLO imagen (JPEG/PNG, ≤5 MB).
-# TODO(waba): mismo flujo para video/document.
+#
+# feat/plantillas_whatsapp_mejoras F0: imagen, video y documento (antes solo imagen; video y
+# documento mandaban la liga cruda como handle y Meta las rechazaba). Límites de Meta:
+#   imagen JPEG/PNG ≤ 5 MB · video MP4/3GPP ≤ 16 MB · documento PDF ≤ 100 MB
 class Whatsapp::ResumableUploadService
   GRAPH_VERSION = ENV.fetch('WHATSAPP_GRAPH_VERSION', 'v20.0')
-  MAX_BYTES = 5 * 1024 * 1024
-  ALLOWED_TYPES = %w[image/jpeg image/png].freeze
+  MB = 1024 * 1024
+  LIMITS = {
+    'image' => { types: %w[image/jpeg image/png], max: 5 * MB, label: 'La imagen', allowed: 'JPEG/PNG' },
+    'video' => { types: %w[video/mp4 video/3gpp], max: 16 * MB, label: 'El video', allowed: 'MP4/3GPP' },
+    'document' => { types: %w[application/pdf], max: 100 * MB, label: 'El documento', allowed: 'PDF' }
+  }.freeze
+  # Compatibilidad: lo que antes era la única regla (imagen).
+  MAX_BYTES = LIMITS['image'][:max]
+  ALLOWED_TYPES = LIMITS['image'][:types]
 
   Result = Struct.new(:success, :handle, :error, keyword_init: true) do
     def success?
@@ -20,14 +29,15 @@ class Whatsapp::ResumableUploadService
     end
   end
 
-  def initialize(channel:, media_url:)
+  def initialize(channel:, media_url:, header_type: 'image')
     @channel = channel
     @media_url = media_url
+    @limits = LIMITS.fetch(header_type.to_s, LIMITS['image'])
   end
 
   def perform
     app_id = resolve_app_id
-    return failure('Falta META_APP_ID / FB_APP_ID para subir la imagen de cabecera') if app_id.blank?
+    return failure('Falta META_APP_ID / FB_APP_ID para subir el archivo de cabecera') if app_id.blank?
 
     file = download_media
     return file if file.is_a?(Result) # error de descarga/validación
@@ -36,7 +46,7 @@ class Whatsapp::ResumableUploadService
     return failure('Meta no devolvió sesión de subida') if session_id.blank?
 
     handle = upload_bytes(session_id, file[:bytes])
-    return failure('Meta no devolvió el handle de la imagen') if handle.blank?
+    return failure('Meta no devolvió el handle del archivo') if handle.blank?
 
     Result.new(success: true, handle: handle)
   rescue StandardError => e
@@ -52,15 +62,15 @@ class Whatsapp::ResumableUploadService
 
   # Descarga los bytes de la URL y valida tipo + tamaño.
   def download_media
-    tempfile = Down.download(@media_url, max_size: MAX_BYTES)
+    tempfile = Down.download(@media_url, max_size: @limits[:max])
     content_type = tempfile.content_type
-    return failure("Tipo no permitido (#{content_type}); solo JPEG/PNG") unless ALLOWED_TYPES.include?(content_type)
+    return failure("Tipo no permitido (#{content_type}); solo #{@limits[:allowed]}") unless @limits[:types].include?(content_type)
 
     { bytes: tempfile.read, content_type: content_type, length: tempfile.size }
   rescue Down::TooLarge
-    failure("La imagen supera #{MAX_BYTES / (1024 * 1024)} MB")
+    failure("#{@limits[:label]} supera #{@limits[:max] / MB} MB")
   rescue Down::Error => e
-    failure("No se pudo descargar la imagen: #{e.message}")
+    failure("No se pudo descargar el archivo: #{e.message}")
   end
 
   # Paso 1: crea la sesión de subida. Devuelve el id "upload:...".
