@@ -52,8 +52,18 @@ class Channel::Whatsapp < ApplicationRecord
     end
   end
 
+  # La ventana de 24 h de Meta (fuera de ella solo se puede mandar plantilla).
+  # feat/plantillas_whatsapp_mejoras: antes solo valía si la bandeja tenía la liga
+  # 'https://graph.facebook.com' escrita; una WhatsApp Cloud con la liga vacía (la normal)
+  # nunca la respetaba: pasadas 24 h el texto libre salía y Meta lo rechazaba, y el empate
+  # «este texto es una plantilla» nunca se activaba. Como en Chatwoot original, salvo UnoAPI
+  # (no es la API oficial: no tiene ventana).
   def messaging_window_enabled?
-    provider_config['url'] == 'https://graph.facebook.com'
+    return false if provider == 'unoapi'
+    return true unless provider == 'whatsapp_cloud'
+
+    url = provider_config['url'].to_s
+    url.blank? || url.start_with?('https://graph.facebook.com')
   end
 
   def mark_message_templates_updated
