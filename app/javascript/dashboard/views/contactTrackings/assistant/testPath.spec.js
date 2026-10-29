@@ -1,5 +1,10 @@
 import { buildDiagram } from './agentDiagramLayout';
-import { pathFromTrace, pathFromDryRun } from './testPath';
+import {
+  pathFromTrace,
+  pathFromDryRun,
+  heatFromCases,
+  caseRoute,
+} from './testPath';
 
 // proyecto@diagrama_agente_ia F2 — docs/diagrama_agente_ia_plan.md §4.2
 const bloques = () => [
@@ -195,5 +200,23 @@ describe('pathFromDryRun (en seco)', () => {
       pathFromDryRun({ routes: { none_declared: true } }, buildDiagram([]))
         .nodes
     ).toEqual(['conversational', 'client']);
+  });
+});
+
+// F3 — el mapa de calor
+describe('heatFromCases', () => {
+  it('cuenta por ruta, con la traza en vivo antes que el seco y lo esperado', () => {
+    const casos = [
+      { last_live: { cumple: false, traza: { ruta: { nombre: 'Cotizar' } } } },
+      { last_dry: { informe: { routes: { chosen: 'cotizar' } } } },
+      { expected_route: 'soporte', last_live: {}, last_dry: {} },
+      { last_live: {}, last_dry: {} },
+    ];
+
+    expect(heatFromCases(casos)).toEqual({
+      cotizar: { total: 2, failed: 1 },
+      soporte: { total: 1, failed: 0 },
+    });
+    expect(caseRoute(casos[3])).toBe('');
   });
 });

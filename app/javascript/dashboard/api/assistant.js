@@ -164,6 +164,51 @@ class AssistantAPI extends ApiClient {
     return axios.get(`${this.url}/test_battery/${id}`);
   }
 
+  // proyecto@diagrama_agente_ia F3: la pila guardada de cada agente. testCases trae
+  // { cases, dry_run, live_offer }; la corrida en vivo se sigue con testBattery(id).
+  testCases(templateId) {
+    return axios.get(`${this.url}/test_cases`, {
+      params: { template_id: templateId },
+    });
+  }
+
+  addTestCase(templateId, message) {
+    return axios.post(`${this.url}/test_cases`, {
+      template_id: templateId,
+      message,
+    });
+  }
+
+  generateTestCases(templateId, { briefId = null } = {}) {
+    return axios.post(`${this.url}/test_cases/generate`, {
+      template_id: templateId,
+      brief_id: briefId,
+    });
+  }
+
+  pinTestCase(id, pinned) {
+    return axios.patch(`${this.url}/test_cases/${id}`, { pinned });
+  }
+
+  deleteTestCase(id) {
+    return axios.delete(`${this.url}/test_cases/${id}`);
+  }
+
+  runTestCasesDry(templateId, draft, inboxId) {
+    return axios.post(`${this.url}/test_cases/run_dry`, {
+      template_id: templateId,
+      draft,
+      inbox_id: inboxId,
+    });
+  }
+
+  runTestCasesLive(templateId, caseIds) {
+    return axios.post(`${this.url}/test_cases/run_live`, {
+      template_id: templateId,
+      case_ids: caseIds,
+    });
+  }
+
   downloadTestBatteryReport(id) {
     return axios.get(`${this.url}/test_battery/${id}/report`, {
       responseType: 'blob',

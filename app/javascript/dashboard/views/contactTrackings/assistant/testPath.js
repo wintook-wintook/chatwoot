@@ -182,3 +182,34 @@ export function pathFromDryRun(informe, diagram) {
   if (informe.tag) b.add(`tag:${nombre}`);
   return b.result();
 }
+
+// proyecto@diagrama_agente_ia F3 — la ruta por la que pasó una prueba de la pila: la
+// de su última corrida en vivo (la traza), si no la de su última en seco, y si nunca
+// corrió, la que se esperaba (la de su ruta, en las generadas).
+export const caseRoute = caso => {
+  const vivo = caso.last_live || {};
+  const traza = vivo.traza || {};
+  if (traza.ruta && traza.ruta.nombre) return traza.ruta.nombre.toLowerCase();
+  const seco = (caso.last_dry && caso.last_dry.informe) || {};
+  if (seco.routes && seco.routes.chosen)
+    return seco.routes.chosen.toLowerCase();
+  return (caso.expected_route || '').toLowerCase();
+};
+
+// El mapa de calor (§4.3): por ruta, cuántas pruebas de la pila pasan por ahí y
+// cuántas fallaron en vivo. Una ruta que no aparece no tiene pruebas.
+export function heatFromCases(cases = []) {
+  return cases.reduce((mapa, caso) => {
+    const ruta = caseRoute(caso);
+    if (!ruta) return mapa;
+    const actual = mapa[ruta] || { total: 0, failed: 0 };
+    const fallo = caso.last_live && caso.last_live.cumple === false;
+    return {
+      ...mapa,
+      [ruta]: {
+        total: actual.total + 1,
+        failed: actual.failed + (fallo ? 1 : 0),
+      },
+    };
+  }, {});
+}

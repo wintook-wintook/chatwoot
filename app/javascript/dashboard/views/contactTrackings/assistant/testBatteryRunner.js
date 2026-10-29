@@ -1,7 +1,7 @@
 // proyecto@diagrama_agente_ia — F2: ARRANCAR Y SEGUIR UNA PILA EN VIVO
 // ============================================================================
-// Lo que antes vivía dentro de TestBatteryModal, para que lo usen igual el modal
-// y el panel Pruebas (TestsPanel): arrancar la pila (las generadas o las escritas
+// Lo que antes vivía dentro de TestBatteryModal (eliminado en F3: la pila vive en
+// el panel Pruebas, TestsPanel): arrancar la pila (las generadas o las escritas
 // a mano), leer su avance cada POLL_MS y dejar de leer al terminar o al salir.
 //
 // El componente pone `batteryTemplateId` (y, si quiere, `batteryBriefId`).

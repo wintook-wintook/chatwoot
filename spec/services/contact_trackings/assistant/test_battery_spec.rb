@@ -76,7 +76,7 @@ RSpec.describe ContactTrackings::Assistant::TestBattery do
       described_class.start(account, template, messages: mensajes)
 
       expect(ContactTrackings::Assistant::TestBatteryJob).to have_received(:perform_later)
-        .with(anything, account.id, template.id, nil, ['uno', *Array.new(9) { |i| "m#{i}" }])
+        .with(anything, account.id, template.id, nil, ['uno', *Array.new(9) { |i| "m#{i}" }], nil)
     end
 
     it 'el job toma la traza de la primera respuesta del turno' do
@@ -96,7 +96,7 @@ RSpec.describe ContactTrackings::Assistant::TestBattery do
       described_class.start(account, template)
 
       expect(ContactTrackings::Assistant::TestBatteryJob).to have_received(:perform_later)
-        .with(anything, account.id, template.id, nil, nil)
+        .with(anything, account.id, template.id, nil, nil, nil)
     end
   end
 

@@ -167,6 +167,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
     return render json: { error: result.error, details: result.details }, status: :unprocessable_entity unless result.success?
 
     close_session(result.template)
+    # proyecto@diagrama_agente_ia F3 (D5): al publicar, toda la pila en seco contra lo publicado.
+    ContactTrackings::Assistant::TestCases.after_publish(Current.account, result.template)
 
     # `warnings` no es un error: el agente se guardó. Son las directivas que
     # dependen de la configuración del AGENTE y que el comprobador no podía
