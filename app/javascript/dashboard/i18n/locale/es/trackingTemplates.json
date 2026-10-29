@@ -359,6 +359,7 @@
       "NEW_TITLE": "Agente nuevo",
       "ACTIVE_VERSION": "v{number} activa",
       "SECTION_TRAINING": "Entrenamiento",
+      "SECTION_TESTS": "Pruebas y diagrama",
       "SECTION_PROFILE": "Ficha",
       "SECTION_VERSIONS": "Versiones",
       "AGENT_ROLE_HINT": "El Entrenamiento con el Asistente lo editan los administradores.",

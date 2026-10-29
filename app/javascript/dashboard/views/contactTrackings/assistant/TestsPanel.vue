@@ -1,9 +1,10 @@
 <script>
 // proyecto@diagrama_agente_ia — F2/F3: EL PANEL «PRUEBAS»
 // ============================================================================
-// Plan: docs/diagrama_agente_ia_plan.md §4.1, §6 y §9.1. Columna izquierda, junto a
-// Chat y Estructura (uno a la vez). Al elegir una prueba su camino se ilumina en la
-// pestaña Diagrama (`select`); la pila entera alimenta el mapa de calor (`cases`).
+// Plan: docs/diagrama_agente_ia_plan.md §4.1, §6 y §9.1. La columna izquierda de la
+// pestaña «Pruebas y diagrama» del espacio del agente; a la derecha, el diagrama. Al
+// elegir una prueba su camino se ilumina ahí (`select`); la pila entera alimenta el
+// mapa de calor (`cases`).
 //
 // CON EL AGENTE GUARDADO (F3) la pila es la SUYA, en la base (TrackingTestCase):
 //   Generar         las de ruta y regla que falten (no duplica)

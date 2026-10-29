@@ -467,7 +467,6 @@
     "LOG_SOURCE_SAVED": "Saved to the agent",
     "LOG_SOURCE_CONFIGURED": "Configured",
     "DRAFT_TAB_CONFIGURE": "Set up",
-    "DRAFT_TAB_DIAGRAM": "Diagram",
     "DIAGRAM": {
       "INTRO": "This is how your agent is built: one row per route, in the order it answers. Click any box to jump to its line.",
       "ISSUES": "· %{count} need a look",
@@ -536,7 +535,6 @@
       "EXPORT_PNG": "Download PNG"
     },
     "TESTS": {
-      "PANEL": "Tests",
       "HINT": "Your agent's test suite: it is saved and re-run as a dry run every time you publish. Pick a test to see its path in the Diagram.",
       "PLACEHOLDER": "E.g.: how much is the full kit?",
       "RUN_DRY": "Dry run",

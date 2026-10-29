@@ -8,7 +8,10 @@
 //   Nombre                    ← Agentes IA · Bandeja · v12
 //   ┌──────────────┬───────────────────────────────────────────┐
 //   │ Entrenamiento│  el Asistente (Estructura/Chat + Editor,   │  solo admin
-//   │ Ficha        │  Configurar…) · «Publicar cambios»         │
+//   │ Pruebas y    │  Configurar…) · «Publicar cambios»         │
+//   │  diagrama    │  la pila y el agente dibujado (mismo       │  solo admin
+//   │              │  Asistente, otra vista: no se recarga)     │
+//   │ Ficha        │                                           │
 //   │ Versiones    │  la ficha (sin Entrenamiento para admin)   │
 //   │              │  el historial con su origen y restaurar    │
 //   └──────────────┴───────────────────────────────────────────┘
@@ -16,7 +19,7 @@
 // Rutas: /tracking-dashboard/agents/:templateId (un número, o «new»).
 //   ?session=ID   retomar una conversación de «En construcción»
 //   ?galeria=1    abrir la Galería al entrar (agente nuevo)
-//   ?seccion=     training · profile · versions
+//   ?seccion=     training · tests · profile · versions
 //
 // El Entrenamiento trabaja sobre un BORRADOR (la conversación del Asistente, que se
 // guarda sola) y «Publicar cambios» lo aplica al agente dejando una versión. Al
@@ -72,6 +75,8 @@ export default {
     sections() {
       return [
         this.isAdmin && { id: 'training', label: 'SECTION_TRAINING' },
+        // proyecto@diagrama_agente_ia: pruebas y diagrama en su propia pestaña, a lo ancho.
+        this.isAdmin && { id: 'tests', label: 'SECTION_TESTS' },
         !this.isNew && { id: 'profile', label: 'SECTION_PROFILE' },
         !this.isNew && { id: 'versions', label: 'SECTION_VERSIONS' },
       ].filter(Boolean);
@@ -247,15 +252,20 @@ export default {
       </div>
 
       <div class="flex flex-col flex-1 min-h-0 mt-6">
+        <!-- Entrenamiento y Pruebas son el MISMO Asistente con otra vista: un solo
+             elemento con la misma key, así cambiar de pestaña no lo vuelve a montar. -->
         <Assistant
-          v-if="section === 'training'"
+          v-if="section === 'training' || section === 'tests'"
           :key="`training-${reloadKey}`"
+          :view="section"
           :template-id="templateId"
           :initial-session-id="sessionId"
           :open-gallery="!!$route.query.galeria"
           @saved="goToAgent"
           @installed="goToAgent"
           @session="onAssistantSession"
+          @openTests="goSection('tests')"
+          @openTraining="goSection('training')"
         />
         <div
           v-else-if="section === 'profile' && template"

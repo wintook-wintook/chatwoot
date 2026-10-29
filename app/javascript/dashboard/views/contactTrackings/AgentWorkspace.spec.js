@@ -50,10 +50,11 @@ const montar = ({
 };
 
 describe('AgentWorkspace', () => {
-  it('un admin ve Entrenamiento, Ficha y Versiones, y entra al Entrenamiento', () => {
+  it('un admin ve Entrenamiento, Pruebas, Ficha y Versiones, y entra al Entrenamiento', () => {
     const { wrapper } = montar();
     expect(wrapper.vm.sections.map(s => s.id)).toEqual([
       'training',
+      'tests',
       'profile',
       'versions',
     ]);
@@ -68,10 +69,29 @@ describe('AgentWorkspace', () => {
     expect(wrapper.vm.section).toBe('profile');
   });
 
-  it('un agente nuevo solo tiene Entrenamiento', () => {
+  it('un agente nuevo solo tiene Entrenamiento y Pruebas', () => {
     const { wrapper } = montar({ templateId: 'new' });
     expect(wrapper.vm.templateId).toBeNull();
-    expect(wrapper.vm.sections.map(s => s.id)).toEqual(['training']);
+    expect(wrapper.vm.sections.map(s => s.id)).toEqual(['training', 'tests']);
+  });
+
+  // proyecto@diagrama_agente_ia: Pruebas es el mismo Asistente con otra vista.
+  it('Entrenamiento y Pruebas comparten el Asistente sin volver a montarlo', async () => {
+    const { wrapper } = montar();
+    await wrapper.vm.$nextTick();
+    const antes = wrapper.findComponent({ name: 'Assistant' });
+    expect(antes.attributes('view')).toBe('training');
+
+    antes.vm.$emit('openTests');
+    await wrapper.vm.$nextTick();
+    const despues = wrapper.findComponent({ name: 'Assistant' });
+    expect(wrapper.vm.section).toBe('tests');
+    expect(despues.attributes('view')).toBe('tests');
+    expect(despues.vm).toBe(antes.vm);
+
+    despues.vm.$emit('openTraining');
+    await wrapper.vm.$nextTick();
+    expect(wrapper.vm.section).toBe('training');
   });
 
   it('respeta ?seccion= y ?session=', () => {

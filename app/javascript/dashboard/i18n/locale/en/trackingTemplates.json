@@ -359,6 +359,7 @@
       "NEW_TITLE": "New agent",
       "ACTIVE_VERSION": "v{number} active",
       "SECTION_TRAINING": "Training",
+      "SECTION_TESTS": "Tests & diagram",
       "SECTION_PROFILE": "Profile",
       "SECTION_VERSIONS": "Versions",
       "AGENT_ROLE_HINT": "Training with the Assistant is edited by administrators.",
