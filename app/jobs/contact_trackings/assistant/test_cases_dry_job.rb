@@ -40,13 +40,7 @@ class ContactTrackings::Assistant::TestCasesDryJob < ApplicationJob
 
   # true si su camino cambió respecto de la corrida anterior.
   def run_one(account, caso, draft, inbox)
-    pregunta, contexto = TestCases.dry_inputs(caso)
-    resultado = ContactTrackings::Assistant::DryRunService.new(account, draft: draft, question: pregunta, inbox: inbox,
-                                                                        recent_context: contexto).call
-    return false unless resultado.success?
-
-    caso.store_dry!('path' => TestCases.dry_path(resultado.payload), 'informe' => resultado.payload.deep_stringify_keys)
-    caso.dry_changed? == true
+    TestCases.run_one_dry(account, caso, draft: draft, inbox: inbox)
   rescue StandardError => e
     Rails.logger.warn "[TestCasesDry] prueba ##{caso.id}: #{e.message}"
     false

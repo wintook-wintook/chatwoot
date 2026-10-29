@@ -11,6 +11,8 @@
 # PATCH  …/assistant/test_cases/:id                 fijarla (pinned)
 # DELETE …/assistant/test_cases/:id
 # POST   …/assistant/test_cases/run_dry             toda la pila en seco contra `draft`
+# POST   …/assistant/test_cases/:id/dry             UNA en seco, al momento (la recién
+#                                                   agregada o la elegida sin correr)
 # POST   …/assistant/test_cases/run_live            las `case_ids` en vivo → { id } de la
 #                                                   corrida (se sigue con test_battery/:id)
 # POST   …/assistant/test_cases/compare             F5: toda la pila en seco contra la versión
@@ -23,8 +25,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantTestCasesController < Api::V
   TestCases = ContactTrackings::Assistant::TestCases
 
   before_action :check_authorization
-  before_action :fetch_template, except: [:update, :destroy]
-  before_action :fetch_case, only: [:update, :destroy]
+  before_action :fetch_template, except: [:update, :destroy, :dry_one]
+  before_action :fetch_case, only: [:update, :destroy, :dry_one]
 
   def index
     render json: pile_json
@@ -36,7 +38,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantTestCasesController < Api::V
                                                                            turns: turnos)
     return render json: { error: caso.errors.full_messages.join(' · ') }, status: :unprocessable_entity unless caso.persisted?
 
-    render json: TestCases.as_json_for(caso), status: :created
+    render json: case_json(caso), status: :created
   end
 
   def generate
@@ -47,12 +49,19 @@ class Api::V1::Accounts::ContactTrackings::AssistantTestCasesController < Api::V
 
   def update
     @case.update!(pinned: ActiveModel::Type::Boolean.new.cast(params[:pinned]))
-    render json: TestCases.as_json_for(@case)
+    render json: case_json(@case)
   end
 
   def destroy
     @case.destroy!
     head :no_content
+  end
+
+  def dry_one
+    @template = @case.tracking_template
+    TestCases.run_one_dry(Current.account, @case, draft: params[:draft].presence || @template.complementary_prompt,
+                                                  inbox: inbox)
+    render json: case_json(@case.reload)
   end
 
   def run_dry
@@ -85,9 +94,15 @@ class Api::V1::Accounts::ContactTrackings::AssistantTestCasesController < Api::V
 
   private
 
+  def case_json(caso)
+    { id: caso.id, message: caso.message, kind: caso.kind, expected_route: caso.expected_route, rule: caso.rule,
+      pinned: caso.pinned, turns: caso.turns, last_dry: caso.last_dry, previous_dry: caso.previous_dry,
+      last_live: caso.last_live, previous_live: caso.previous_live, dry_changed: caso.dry_changed? }
+  end
+
   def pile_json
     candidatos = TestCases.live_candidates(@template)
-    { cases: @template.test_cases.ordered.map { |c| TestCases.as_json_for(c) },
+    { cases: @template.test_cases.ordered.map { |c| case_json(c) },
       dry_run: TestCases.dry_status(@template),
       compare: TestCases.compare_status(@template),
       live_offer: { case_ids: candidatos.map(&:id), tokens: TestCases.estimate_tokens(@template, candidatos),
