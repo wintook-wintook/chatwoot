@@ -1,0 +1,81 @@
+{
+  "EVENTS": {
+    "TITLE": "Events",
+    "DESCRIPTION": "Fairs, courses and demos: who confirmed and who attended, to run campaigns afterwards.",
+    "NEW": "New event",
+    "SEARCH": "Search by name or place",
+    "ALL_STATUSES": "All statuses",
+    "TOTAL": "{count} events",
+    "EMPTY": "No events yet.",
+    "NOT_FOUND": "Event not found.",
+    "SAVED": "Done",
+    "ERROR": "Could not save",
+    "EDIT": "Edit",
+    "DELETE": "Delete event",
+    "DELETE_CONFIRM": "Delete the event and its list? Contacts are not deleted.",
+    "CLOSE": "Close event",
+    "REOPEN": "Reopen",
+    "CLOSE_CONFIRM": "When closed, those who confirmed and did not check in become «No show». Close?",
+    "ALL": "All",
+    "SEARCH_ATTENDEES": "Search contact",
+    "ADD_AS": "Add as",
+    "ADD_CONTACT": "Add contact",
+    "NO_ATTENDEES": "No contacts here.",
+    "CHECK_IN": "Attended",
+    "REMOVE": "Remove from event",
+    "REMOVE_CONFIRM": "Remove this contact from the event?",
+    "TEMPLATE": "CSV template",
+    "IMPORT": "Import",
+    "IMPORT_HELP": "Columns: contacto (email or phone) and estado (invitado, confirmó, asistió, no asistió, canceló). If already there, the status is updated.",
+    "IMPORT_DONE": "Import done: {added} added and {updated} updated",
+    "IMPORT_ERRORS": "{count} rows with errors. First: line {line}, {error}",
+    "CONTACT_EMPTY": "This contact is not in any event.",
+    "KINDS": {
+      "fair": "Fair",
+      "course": "Course",
+      "demo": "Demo",
+      "webinar": "Webinar",
+      "other": "Other"
+    },
+    "STATUSES": {
+      "draft": "Draft",
+      "open": "Open",
+      "closed": "Closed"
+    },
+    "ATTENDEE_STATUSES": {
+      "invited": "Invited",
+      "confirmed": "Confirmed",
+      "attended": "Attended",
+      "no_show": "No show",
+      "cancelled": "Cancelled"
+    },
+    "COLUMNS": {
+      "NAME": "Event",
+      "DATE": "Date",
+      "STATUS": "Status"
+    },
+    "FORM": {
+      "NEW_TITLE": "New event",
+      "EDIT_TITLE": "Edit event",
+      "NAME": "Name",
+      "KIND": "Type",
+      "STATUS": "Status",
+      "STARTS": "Starts",
+      "ENDS": "Ends",
+      "LOCATION": "Place",
+      "MEETING_URL": "Link (if online)",
+      "CAPACITY": "Capacity",
+      "OWNER": "Owner",
+      "OWNER_NONE": "No owner",
+      "DESCRIPTION": "Description",
+      "CANCEL": "Cancel",
+      "SAVE": "Save"
+    },
+    "ADD_SEGMENT": "Add a segment",
+    "CHOOSE_SEGMENT": "Choose a segment",
+    "ADD": "Add",
+    "SEGMENT_ADDED": "{added} contacts added from the segment",
+    "CAMPAIGNS": "Campaigns for this event",
+    "CAMPAIGN_OF": "Event: {event} · {status}"
+  }
+}

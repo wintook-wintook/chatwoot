@@ -37,6 +37,7 @@ import datePicker from './datePicker.json';
 import kanban from './kanban.json';
 import contracts from './contracts.json'; // Plan-Contratos R1
 import organizations from './organizations.json'; // Plan-Organizaciones O1
+import events from './events.json'; // Plan-Eventos E1
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
 import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
@@ -89,6 +90,7 @@ export default {
   ...kanban,
   ...contracts,
   ...organizations,
+  ...events,
   ...trackingTemplates, // proyecto@tracking_templates
   ...knowledgeSources, // @knowledge_sources
   ...contactTracking, // proyecto@contact_tracking

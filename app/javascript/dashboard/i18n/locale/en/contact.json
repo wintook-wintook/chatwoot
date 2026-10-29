@@ -508,7 +508,8 @@
       "NOTES": "Notes",
       "ASSETS": "Equipment",
       "QUOTES": "Quotes",
-      "CONTRACTS": "Contracts"
+      "CONTRACTS": "Contracts",
+      "EVENTS": "Events"
     },
     "DATA": {
       "TITLE": "Details",

@@ -71,7 +71,13 @@
       "NOW": "desde ahora",
       "NO_END": "sin fin",
       "SAVE_AND_LAUNCH": "Guardar y poner en curso",
-      "WORKING_HOURS_LABEL": "Horario"
+      "WORKING_HOURS_LABEL": "Horario",
+      "SECTION_EVENT": "¿Es de un evento? (opcional)",
+      "EVENT_LABEL": "Evento",
+      "EVENT_NONE": "No, sin evento",
+      "EVENT_STATUS_LABEL": "Contactos que",
+      "EVENT_HINT_BATCH": "Solo entran los contactos de este evento con ese estado (y del segmento o etiqueta, si elegiste uno).",
+      "EVENT_HINT_CONTINUOUS": "Entra solo quien llegue a ese estado en el evento (p. ej. al marcarlo «Asistió»)."
     },
     "REVIEW": {
       "TITLE": "Revisar contactos seleccionados",

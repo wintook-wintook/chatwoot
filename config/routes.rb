@@ -74,6 +74,23 @@ Rails.application.routes.draw do
           resources :maintenance_plans, only: [:index, :create, :update, :destroy] do
             post :generate, on: :member
           end
+          # Plan-Eventos E1 — eventos y su lista de contactos con estado
+          resources :events, only: [:index, :show, :create, :update, :destroy] do
+            member do
+              post :close
+              post :reopen
+              get :attendees
+              post :add_attendees
+              post :add_segment
+              post :update_attendee
+              post :remove_attendee
+              post :import
+            end
+            collection do
+              get :template
+              get :for_contact
+            end
+          end
           # Plan-Organizaciones O1 — prospectos y clientes con sus contactos
           resources :organizations, only: [:index, :show, :create, :update, :destroy] do
             member do

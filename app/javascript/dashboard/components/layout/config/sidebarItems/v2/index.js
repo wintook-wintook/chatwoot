@@ -674,12 +674,22 @@ const campanas = accountId => ({
     'ongoing_campaigns',
     'one_off',
     'contact_trackings_metrics',
+    'events_list',
+    'event_detail',
   ],
   menuItems: [
     campaignItem(accountId, 'contact_trackings_campaigns', 'CAMPAIGNS_AI'),
     campaignItem(accountId, 'ongoing_campaigns', 'CAMPAIGNS_WEB'),
     campaignItem(accountId, 'one_off', 'CAMPAIGNS_SMS'),
     campaignItem(accountId, 'contact_trackings_metrics', 'CAMPAIGNS_DASHBOARD'),
+    // Plan-Eventos E1 — confirmaron y asistieron, para hacerles campañas.
+    {
+      icon: 'calendar',
+      label: 'EVENTS',
+      toState: frontendURL(`accounts/${accountId}/events`),
+      toStateName: 'events_list',
+      activeRoutes: ['event_detail'],
+    },
   ],
 });
 

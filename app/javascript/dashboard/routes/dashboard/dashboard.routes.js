@@ -14,6 +14,7 @@ import { routes as kanbanRoutes } from './kanban/routes'; // Añade esta línea
 import { routes as gestorTicketsRoutes } from './gestorTickets/routes';
 import { routes as contractsRoutes } from './contracts/routes'; // Plan-Contratos R1
 import { routes as organizationsRoutes } from './organizations/routes'; // Plan-Organizaciones O1
+import { routes as eventsRoutes } from './events/routes'; // Plan-Eventos E1
 // proyecto@contact_tracking — Dashboard de Seguimientos
 import { routes as contactTrackingsRoutes } from './contactTrackings/routes';
 import { routes as whatsappCallsRoutes } from './whatsappCalls/routes'; // diag/llamadas_whatsapp
@@ -53,6 +54,7 @@ export default {
         ...gestorTicketsRoutes,
         ...contractsRoutes,
         ...organizationsRoutes,
+        ...eventsRoutes,
         // proyecto@contact_tracking — Dashboard de Seguimientos
         ...contactTrackingsRoutes,
         ...whatsappCallsRoutes,

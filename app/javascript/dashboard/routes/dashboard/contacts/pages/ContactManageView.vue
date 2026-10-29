@@ -22,6 +22,7 @@ import ContactTasksTab from '../components/ContactTasksTab.vue';
 import ContactAssetsTab from '../components/ContactAssetsTab.vue';
 import ContactQuotesTab from '../components/ContactQuotesTab.vue';
 import ContactContractsTab from '../components/ContactContractsTab.vue'; // Plan-Contratos R1
+import ContactEventsTab from '../components/ContactEventsTab.vue'; // Plan-Eventos E1
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 const CASE_TABS = ['cases', 'quotes', 'tasks', 'assets'];
@@ -40,6 +41,7 @@ export default {
     ContactAssetsTab,
     ContactQuotesTab,
     ContactContractsTab,
+    ContactEventsTab,
   },
   // Si se llegó desde otra pantalla de la app, «Regresar» vuelve ahí (con sus
   // filtros); abierto directo (enlace, pestaña nueva) va a la lista de contactos.
@@ -78,6 +80,7 @@ export default {
         'tasks',
         'assets',
         'contracts',
+        'events',
         'notes',
       ]
         .filter(key => this.hasCases || !CASE_TABS.includes(key))
@@ -206,6 +209,10 @@ export default {
             />
             <ContactContractsTab
               v-else-if="activeTab === 'contracts'"
+              :contact-id="numericContactId"
+            />
+            <ContactEventsTab
+              v-else-if="activeTab === 'events'"
               :contact-id="numericContactId"
             />
             <ContactNotes v-else :contact-id="numericContactId" />
