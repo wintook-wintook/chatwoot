@@ -43,9 +43,10 @@ class Whatsapp::SubmitTemplateService
     return failure('La plantilla no es editable en su estado actual') unless @template.editable?
 
     @template.assign_attributes(@params)
-    # Otra liga de muestra = otro archivo: el handle viejo es del archivo anterior y Meta
-    # revisaría ese. Se vuelve a subir.
-    @template.header_handle = nil if @template.header_media_url_changed? && !@params.key?(:header_handle)
+    # Otra liga de muestra (u otro archivo subido, F6) = otro archivo: el handle viejo es del
+    # archivo anterior y Meta revisaría ese. Se vuelve a subir.
+    otro_archivo = @template.header_media_url_changed? || @template.header_sample_changed?
+    @template.header_handle = nil if otro_archivo && !@params.key?(:header_handle)
     validation = Whatsapp::TemplateValidator.call(@template)
     return invalid(validation) unless validation.valid?
 
@@ -113,9 +114,11 @@ class Whatsapp::SubmitTemplateService
   # setea el handle en la plantilla. Meta no acepta la liga cruda como muestra.
   def ensure_header_handle(template)
     return unless MEDIA_HEADERS.include?(template.header_type.to_s)
-    return unless template.header_handle.blank? && template.header_media_url.present?
 
-    upload = Whatsapp::ResumableUploadService.new(channel: @channel, media_url: template.header_media_url,
+    link = template.header_media_link
+    return unless template.header_handle.blank? && link.present?
+
+    upload = Whatsapp::ResumableUploadService.new(channel: @channel, media_url: link,
                                                   header_type: template.header_type).perform
     return failure(upload.error) unless upload.success?
 

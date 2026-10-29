@@ -44,6 +44,17 @@ RSpec.describe ContactTrackings::TemplateHeader do
     expect(header.processed_header).to include('media_type' => 'document', 'media_url' => 'https://cdn.mx/docs/Factura%20A1.pdf')
   end
 
+  it 'con el archivo subido en la pantalla (F6) usa ese y su nombre original' do
+    fila = guardar(nil)
+    fila.header_sample.attach(io: Rails.root.join('spec/assets/sample.pdf').open, filename: 'Factura A1.pdf',
+                              content_type: 'application/pdf')
+
+    media = described_class.for(channel, 'factura', 'es_MX').media
+
+    expect(media[:url]).to include('/rails/active_storage/')
+    expect(media[:name]).to eq('Factura A1.pdf')
+  end
+
   it 'si no hay del mismo idioma usa el que haya' do
     guardar('https://cdn.mx/f.pdf', language: 'es')
 

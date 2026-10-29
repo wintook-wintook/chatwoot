@@ -93,8 +93,10 @@ class Whatsapp::TemplateValidator
 
   def validate_header_media
     return if @t.header_media_url.to_s.present? || @t.header_handle.to_s.present?
+    # feat/plantillas_whatsapp_mejoras F6: o el archivo subido desde la pantalla.
+    return if @t.respond_to?(:header_sample) && @t.header_sample.attached?
 
-    @errors << 'Cabecera multimedia: falta el archivo (URL o handle)'
+    @errors << 'Cabecera multimedia: falta el archivo (súbelo o pega una liga)'
   end
 
   # ---- footer ----------------------------------------------------------------

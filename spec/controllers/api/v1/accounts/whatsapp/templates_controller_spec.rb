@@ -81,6 +81,64 @@ RSpec.describe 'WhatsApp Templates API', type: :request do
     end
   end
 
+  # feat/plantillas_whatsapp_mejoras F6: subir el archivo de muestra del encabezado.
+  describe 'POST /api/v1/accounts/{id}/whatsapp/templates/header_samples' do
+    let(:url) { "/api/v1/accounts/#{account.id}/whatsapp/templates/header_samples" }
+
+    it 'guarda un PDF para un encabezado de documento y devuelve su signed_id' do
+      post url, params: { header_type: 'document', file: fixture_file_upload('spec/assets/sample.pdf', 'application/pdf') },
+                headers: admin.create_new_auth_token
+
+      expect(response).to have_http_status(:created)
+      body = response.parsed_body
+      expect(body).to include('filename' => 'sample.pdf', 'content_type' => 'application/pdf')
+      expect(ActiveStorage::Blob.find_signed(body['signed_id'])).to be_present
+      expect(body['url']).to include('/rails/active_storage/')
+    end
+
+    it 'rechaza un tipo que Meta no acepta para ese encabezado' do
+      post url, params: { header_type: 'document', file: fixture_file_upload('spec/assets/sample.png', 'image/png') },
+                headers: admin.create_new_auth_token
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('Tipo no permitido (image/png); solo PDF')
+    end
+
+    it 'sin archivo o con un tipo de encabezado raro no guarda nada' do
+      post url, params: { header_type: 'document' }, headers: admin.create_new_auth_token
+      expect(response.parsed_body['error']).to eq('Falta el archivo')
+
+      post url, params: { header_type: 'text', file: fixture_file_upload('spec/assets/sample.pdf', 'application/pdf') },
+                headers: admin.create_new_auth_token
+      expect(response.parsed_body['error']).to eq('Tipo de encabezado no válido')
+    end
+
+    it 'agentes no pueden subir' do
+      post url, params: { header_type: 'document', file: fixture_file_upload('spec/assets/sample.pdf', 'application/pdf') },
+                headers: agent.create_new_auth_token
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'al crear la plantilla el archivo subido queda pegado y cuenta como su muestra' do
+      allow(GlobalConfigService).to receive(:load).and_call_original
+      allow(GlobalConfigService).to receive(:load).with('WHATSAPP_TEMPLATES_DRY_RUN', false).and_return('true')
+      post url, params: { header_type: 'document', file: fixture_file_upload('spec/assets/sample.pdf', 'application/pdf') },
+                headers: admin.create_new_auth_token
+      signed_id = response.parsed_body['signed_id']
+
+      post "/api/v1/accounts/#{account.id}/whatsapp/templates",
+           params: { inbox_id: inbox.id, whatsapp_template: { name: 'factura', language: 'es', category: 'UTILITY',
+                                                              header_type: 'document', header_sample: signed_id,
+                                                              body_text: 'Tu factura' } },
+           headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body['header_sample']).to eq('filename' => 'sample.pdf')
+      expect(WhatsappTemplate.find(response.parsed_body['id']).header_sample).to be_attached
+    end
+  end
+
   describe 'POST /api/v1/accounts/{id}/whatsapp/templates/sync' do
     it 'reconcilia desde Meta y devuelve el conteo' do
       allow_any_instance_of(Whatsapp::TemplateSyncService).to receive(:perform)

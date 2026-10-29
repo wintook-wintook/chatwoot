@@ -37,6 +37,25 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
     head :ok
   end
 
+  # feat/plantillas_whatsapp_mejoras F6: sube el archivo de muestra del encabezado ANTES de
+  # crear la plantilla (Meta lo pide al crearla). Se revisa con los límites de Meta del tipo
+  # (los de ResumableUploadService) y se devuelve su signed_id: al crear o editar va como
+  # `header_sample` y ActiveStorage lo pega a la plantilla.
+  def header_samples
+    archivo = params[:file]
+    limites = Whatsapp::ResumableUploadService::LIMITS[params[:header_type].to_s]
+    return render json: { error: 'Tipo de encabezado no válido' }, status: :unprocessable_entity if limites.nil?
+    return render json: { error: 'Falta el archivo' }, status: :unprocessable_entity unless archivo.respond_to?(:content_type)
+
+    error = sample_error(archivo, limites)
+    return render json: { error: error }, status: :unprocessable_entity if error
+
+    blob = ActiveStorage::Blob.create_and_upload!(io: archivo, filename: archivo.original_filename,
+                                                  content_type: archivo.content_type)
+    render json: { signed_id: blob.signed_id, filename: blob.filename.to_s, byte_size: blob.byte_size,
+                   content_type: blob.content_type, url: blob_link(blob) }, status: :created
+  end
+
   # Reconcilia desde Meta (upsert por fila) — fallback si el webhook no está suscrito.
   def sync
     result = Whatsapp::TemplateSyncService.new(@channel).perform
@@ -60,6 +79,17 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
   end
 
   private
+
+  def sample_error(archivo, limites)
+    return "Tipo no permitido (#{archivo.content_type}); solo #{limites[:allowed]}" unless limites[:types].include?(archivo.content_type)
+
+    "#{limites[:label]} supera #{limites[:max] / Whatsapp::ResumableUploadService::MB} MB" if archivo.size > limites[:max]
+  end
+
+  def blob_link(blob)
+    ActiveStorage::Current.url_options = Rails.application.routes.default_url_options if ActiveStorage::Current.url_options.blank?
+    blob.url(expires_in: 1.hour)
+  end
 
   def whatsapp_channels
     Current.account.inboxes.map(&:channel).grep(Channel::Whatsapp)
@@ -90,7 +120,7 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
 
   def template_params
     params.require(:whatsapp_template).permit(
-      :name, :category, :language, :header_type, :header_content, :header_media_url,
+      :name, :category, :language, :header_type, :header_content, :header_media_url, :header_sample,
       :body_text, :footer_text,
       buttons: [:type, :text, :url, :phone_number, { example: [] }],
       sample_values: { body: [], header: [] }
@@ -129,6 +159,13 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
       last_submitted_at: template.last_submitted_at,
       editable: template.editable?,
       local_only: template.local_only?
-    }
+    }.merge(sample_json(template))
+  end
+
+  # F6: el archivo subido (si lo hay) y una liga fresca para la vista previa.
+  def sample_json(template)
+    archivo = template.header_sample
+    { header_sample: archivo.attached? ? { filename: archivo.filename.to_s } : nil,
+      header_media_link: template.header_media_link }
   end
 end

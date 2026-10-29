@@ -15,4 +15,21 @@ RSpec.describe WhatsappTemplate do
 
     expect(template).not_to be_valid
   end
+
+  # feat/plantillas_whatsapp_mejoras F6
+  describe '#header_media_link' do
+    it 'sin archivo subido es la liga pegada a mano' do
+      expect(build(:whatsapp_template, header_media_url: 'https://cdn.mx/f.pdf').header_media_link).to eq('https://cdn.mx/f.pdf')
+    end
+
+    it 'con archivo subido es una liga fresca suya, aunque haya una pegada' do
+      canal = create(:channel_whatsapp, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false)
+      template = create(:whatsapp_template, channel_whatsapp: canal, account: canal.account, header_type: 'document',
+                                            header_media_url: 'https://cdn.mx/viejo.pdf')
+      template.header_sample.attach(io: Rails.root.join('spec/assets/sample.pdf').open, filename: 'Factura.pdf',
+                                    content_type: 'application/pdf')
+
+      expect(template.header_media_link).to include('/rails/active_storage/').and include('Factura.pdf')
+    end
+  end
 end

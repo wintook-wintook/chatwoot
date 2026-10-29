@@ -69,7 +69,7 @@ RSpec.describe Whatsapp::TemplateValidator do
     end
 
     it 'media: exige archivo (url o handle)' do
-      expect(build(header_type: 'image').errors).to include('Cabecera multimedia: falta el archivo (URL o handle)')
+      expect(build(header_type: 'image').errors).to include('Cabecera multimedia: falta el archivo (súbelo o pega una liga)')
     end
 
     it 'media: acepta con header_media_url' do

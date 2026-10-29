@@ -446,6 +446,8 @@ Rails.application.routes.draw do
               collection do
                 post :sync
                 post :import
+                # feat/plantillas_whatsapp_mejoras F6: subir el archivo de muestra del encabezado
+                post :header_samples
               end
             end
           end

@@ -121,6 +121,19 @@ RSpec.describe Whatsapp::SubmitTemplateService do
       end
     end
 
+    it 'con el archivo subido en la pantalla (F6) sube ese archivo como muestra' do
+      blob = ActiveStorage::Blob.create_and_upload!(io: Rails.root.join('spec/assets/sample.pdf').open, filename: 'f.pdf',
+                                                    content_type: 'application/pdf')
+      allow(Whatsapp::ResumableUploadService).to receive(:new).and_return(instance_double(Whatsapp::ResumableUploadService,
+                                                                                          perform: upload_ok))
+      allow(provider).to receive(:create_template).and_return(result_ok)
+
+      described_class.new(channel: channel, params: valid_params.merge(header_type: 'document', header_sample: blob.signed_id)).create
+
+      expect(Whatsapp::ResumableUploadService).to have_received(:new)
+        .with(channel: channel, media_url: include('/rails/active_storage/'), header_type: 'document')
+    end
+
     it 'si la subida falla no llama a Meta' do
       fallo = Whatsapp::ResumableUploadService::Result.new(success: false, error: 'El video supera 16 MB')
       allow(Whatsapp::ResumableUploadService).to receive(:new).and_return(instance_double(Whatsapp::ResumableUploadService,

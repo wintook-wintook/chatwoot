@@ -45,6 +45,11 @@ class WhatsappTemplate < ApplicationRecord
   belongs_to :account
   belongs_to :channel_whatsapp, class_name: 'Channel::Whatsapp'
 
+  # feat/plantillas_whatsapp_mejoras F6: el archivo de muestra del encabezado, subido desde la
+  # pantalla de plantillas. De él salen la muestra para Meta (F0) y el archivo que mandan los
+  # seguimientos y campañas (F5). Ver #header_media_link.
+  has_one_attached :header_sample
+
   # Estados crudos de Meta. EDITABLES: se pueden re-enviar (vuelven a PENDING).
   # TERMINALES: no admiten acción. RECUPERABLES: reintentables desde la UI.
   STATUSES = %w[DRAFT PENDING APPROVED REJECTED PAUSED DISABLED IN_APPEAL PENDING_DELETION].freeze
@@ -71,6 +76,23 @@ class WhatsappTemplate < ApplicationRecord
 
   scope :for_channel, ->(channel_id) { where(channel_whatsapp_id: channel_id) }
   scope :by_meta_id, ->(meta_id) { where(meta_template_id: meta_id) }
+
+  # La liga del archivo del encabezado para dársela a Meta AHORA (subir la muestra, mandar la
+  # plantilla). Si se subió un archivo, una liga fresca suya: las de ActiveStorage para
+  # servicios externos caducan en minutos (y rails_blob_url es una redirección que muchos no
+  # siguen), así que no sirven guardadas en header_media_url para usarse días después. Si no,
+  # la liga pegada a mano.
+  def header_media_link(expires_in: 1.hour)
+    return header_media_url.presence unless header_sample.attached?
+
+    ActiveStorage::Current.url_options = Rails.application.routes.default_url_options if ActiveStorage::Current.url_options.blank?
+    header_sample.blob.url(expires_in: expires_in)
+  end
+
+  # ¿Se subió un archivo nuevo en esta edición? (hay que volver a subir la muestra a Meta)
+  def header_sample_changed?
+    attachment_changes.key?('header_sample')
+  end
 
   # ¿Se puede editar en Meta? (Meta reemplaza los components y la vuelve a PENDING.)
   def editable?

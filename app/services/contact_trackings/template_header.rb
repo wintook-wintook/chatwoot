@@ -9,8 +9,8 @@
 # lleva:
 #
 #   nil                 la plantilla no lleva archivo: se envía como siempre
-#   Result(media:)      lleva archivo y está guardado en la plantilla (header_media_url
-#                       de su fila en whatsapp_templates; F6 permitirá subirlo): va como
+#   Result(media:)      lleva archivo y está guardado en la plantilla (el subido en la
+#                       pantalla, F6, o el header_media_url de su fila): va como
 #                       encabezado, igual que en la conversación (F1)
 #   Result(error:)      lleva archivo y no se puede mandar (no hay archivo guardado, o la
 #                       bandeja no es WhatsApp Cloud): NO se envía y queda el motivo
@@ -60,8 +60,8 @@ module ContactTrackings::TemplateHeader
                                'puede mandarlo (solo WhatsApp Cloud).')
     end
 
-    url = stored_url(channel, template_name, language)
-    return Result.new(media: { type: tipo, url: url, name: file_name(url, tipo) }) if url.present?
+    fila = stored_template(channel, template_name, language)
+    return Result.new(media: { type: tipo, url: fila.header_media_link, name: file_name(fila, tipo) }) if fila
 
     Result.new(error: "La plantilla «#{template_name}» lleva #{NAMES[tipo]} en el encabezado y no tiene archivo guardado: " \
                       'súbelo en la pantalla de plantillas.')
@@ -75,16 +75,20 @@ module ContactTrackings::TemplateHeader
     MEDIA_FORMATS.include?(formato) ? formato.downcase : nil
   end
 
-  def stored_url(channel, template_name, language)
-    filas = channel.whatsapp_templates.where(name: template_name).where.not(header_media_url: [nil, ''])
-    (filas.find_by(language: language) || filas.first)&.header_media_url
+  # La fila con archivo guardado: el subido en la pantalla (F6, liga fresca) o la liga pegada
+  # a mano. La del mismo idioma, o la que haya.
+  def stored_template(channel, template_name, language)
+    filas = channel.whatsapp_templates.where(name: template_name).to_a.select { |t| t.header_media_link.present? }
+    filas.find { |t| t.language == language } || filas.first
   end
 
-  # Solo el documento lleva nombre: el de la liga.
-  def file_name(url, tipo)
+  # Solo el documento lleva nombre: el del archivo subido o, si se pegó una liga, el de la liga
+  # (la liga de un archivo subido es una clave firmada, no un nombre).
+  def file_name(fila, tipo)
     return unless tipo == 'document'
+    return fila.header_sample.filename.to_s if fila.header_sample.attached?
 
-    File.basename(URI.parse(url).path).presence
+    File.basename(URI.parse(fila.header_media_url.to_s).path).presence
   rescue URI::InvalidURIError
     nil
   end
