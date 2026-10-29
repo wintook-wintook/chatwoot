@@ -2,6 +2,11 @@
   @waba_templates — Sección de Configuración: TODAS las plantillas de TODOS los canales de
   WhatsApp, con filtro por canal. Crear/editar/borrar/sincronizar contra Meta.
   Validación en vivo replicada del backend. Strings en español; commit --no-verify.
+
+  feat/plantillas_whatsapp_mejoras F6 (docs/plantillas_whatsapp_mejoras_plan.md): subir el
+  archivo de muestra del encabezado, vista previa con el archivo real, filtros por idioma y
+  tipo, «se puede enviar» por plantilla, errores de sincronización por bandeja y «Ver en Meta».
+  La lógica nueva vive en templateScreen.js (puro, con spec).
 -->
 <script>
 import { mapGetters } from 'vuex';
@@ -15,6 +20,13 @@ import {
   templateVariables,
   substituteVariables,
 } from 'dashboard/helper/whatsappTemplateValidator';
+import WhatsappTemplatesAPI from 'dashboard/api/whatsapp/templates';
+import {
+  KIND_OPTIONS,
+  templateKinds,
+  sendability,
+  metaManagerUrl,
+} from './templateScreen';
 
 const emptyForm = () => ({
   inbox_id: null,
@@ -24,6 +36,10 @@ const emptyForm = () => ({
   header_type: 'text',
   header_content: '',
   header_media_url: '',
+  // F6: el archivo subido (signed_id que se manda), su nombre y una liga para la vista previa.
+  header_sample: null,
+  header_sample_name: '',
+  header_preview_url: '',
   body_text: '',
   footer_text: '',
   buttons: [],
@@ -42,11 +58,21 @@ export default {
       channelFilter: '',
       statusFilter: '',
       categoryFilter: '',
+      languageFilter: '',
+      kindFilter: '',
+      kindOptions: KIND_OPTIONS,
+      uploadingSample: false,
       searchQuery: '',
       currentPage: 1,
       perPage: 10,
       showFiltersModal: false,
-      draftFilters: { channel: '', status: '', category: '' },
+      draftFilters: {
+        channel: '',
+        status: '',
+        category: '',
+        language: '',
+        kind: '',
+      },
       showForm: false,
       editingId: null,
       form: emptyForm(),
@@ -90,11 +116,19 @@ export default {
         ...new Set(this.templates.map(t => t.status).filter(Boolean)),
       ].sort();
     },
+    // F6: los idiomas que de verdad hay en las plantillas.
+    languageFilterOptions() {
+      return [
+        ...new Set(this.templates.map(t => t.language).filter(Boolean)),
+      ].sort();
+    },
     hasActiveFilters() {
       return Boolean(
         this.channelFilter ||
           this.statusFilter ||
           this.categoryFilter ||
+          this.languageFilter ||
+          this.kindFilter ||
           this.searchQuery.trim()
       );
     },
@@ -119,6 +153,16 @@ export default {
           label: `Categoría: ${this.categoryFilter}`,
         });
       }
+      if (this.languageFilter) {
+        chips.push({ key: 'language', label: `Idioma: ${this.languageFilter}` });
+      }
+      if (this.kindFilter) {
+        const tipo = KIND_OPTIONS.find(k => k.value === this.kindFilter);
+        chips.push({
+          key: 'kind',
+          label: `Tipo: ${tipo ? tipo.label : this.kindFilter}`,
+        });
+      }
       return chips;
     },
     activeFilterCount() {
@@ -135,6 +179,12 @@ export default {
         }
         if (this.statusFilter && t.status !== this.statusFilter) return false;
         if (this.categoryFilter && t.category !== this.categoryFilter) {
+          return false;
+        }
+        if (this.languageFilter && t.language !== this.languageFilter) {
+          return false;
+        }
+        if (this.kindFilter && !templateKinds(t).includes(this.kindFilter)) {
           return false;
         }
         if (q && !(t.name || '').toLowerCase().includes(q)) return false;
@@ -209,6 +259,17 @@ export default {
         this.form.sample_values.header
       );
     },
+    // F6: el archivo real del encabezado en la vista previa (subido o pegado).
+    previewMediaUrl() {
+      if (!['image', 'video', 'document'].includes(this.form.header_type))
+        return '';
+      return this.form.header_preview_url || this.form.header_media_url || '';
+    },
+    previewDocName() {
+      if (this.form.header_sample_name) return this.form.header_sample_name;
+      const liga = this.form.header_media_url || '';
+      return liga.split('?')[0].split('/').pop() || 'Documento';
+    },
     headerMediaLabel() {
       return (
         {
@@ -254,6 +315,12 @@ export default {
     categoryFilter() {
       this.currentPage = 1;
     },
+    languageFilter() {
+      this.currentPage = 1;
+    },
+    kindFilter() {
+      this.currentPage = 1;
+    },
     // Enforca la regla de Meta al escribir: solo [a-z0-9_], sin espacios ni acentos.
     'form.name'(val) {
       const clean = this.sanitizeName(val);
@@ -281,6 +348,8 @@ export default {
       this.channelFilter = '';
       this.statusFilter = '';
       this.categoryFilter = '';
+      this.languageFilter = '';
+      this.kindFilter = '';
       this.searchQuery = '';
     },
     openFiltersModal() {
@@ -288,6 +357,8 @@ export default {
         channel: this.channelFilter,
         status: this.statusFilter,
         category: this.categoryFilter,
+        language: this.languageFilter,
+        kind: this.kindFilter,
       };
       this.showFiltersModal = true;
     },
@@ -295,18 +366,28 @@ export default {
       this.showFiltersModal = false;
     },
     clearDraftFilters() {
-      this.draftFilters = { channel: '', status: '', category: '' };
+      this.draftFilters = {
+        channel: '',
+        status: '',
+        category: '',
+        language: '',
+        kind: '',
+      };
     },
     applyFiltersFromModal() {
       this.channelFilter = this.draftFilters.channel;
       this.statusFilter = this.draftFilters.status;
       this.categoryFilter = this.draftFilters.category;
+      this.languageFilter = this.draftFilters.language;
+      this.kindFilter = this.draftFilters.kind;
       this.showFiltersModal = false;
     },
     removeFilter(key) {
       if (key === 'channel') this.channelFilter = '';
       if (key === 'status') this.statusFilter = '';
       if (key === 'category') this.categoryFilter = '';
+      if (key === 'language') this.languageFilter = '';
+      if (key === 'kind') this.kindFilter = '';
     },
     onPageChange(page) {
       this.currentPage = page;
@@ -322,6 +403,67 @@ export default {
           PENDING_DELETION: 'En proceso de borrado: no se puede editar.',
         }[status] || 'No editable en su estado actual.'
       );
+    },
+    inboxForChannel(channelWhatsappId) {
+      return (
+        this.whatsappInboxes.find(i => i.channel_id === channelWhatsappId) ||
+        null
+      );
+    },
+    // F6: ¿se puede mandar en la conversación y en seguimientos/campañas?
+    sendabilityOf(template) {
+      return sendability(
+        template,
+        this.inboxForChannel(template.channel_whatsapp_id)
+      );
+    },
+    openInMeta(template) {
+      const liga = metaManagerUrl(
+        this.inboxForChannel(template.channel_whatsapp_id)
+      );
+      if (liga) window.open(liga, '_blank', 'noopener');
+    },
+    hasMetaLink(template) {
+      return Boolean(
+        metaManagerUrl(this.inboxForChannel(template.channel_whatsapp_id))
+      );
+    },
+    // F6: sube el archivo de muestra; el signed_id se manda al crear o editar.
+    async uploadSample(event) {
+      const archivo = event.target.files && event.target.files[0];
+      event.target.value = '';
+      if (!archivo) return;
+      this.uploadingSample = true;
+      try {
+        const { data } = await WhatsappTemplatesAPI.uploadHeaderSample(
+          this.form.header_type,
+          archivo
+        );
+        this.form.header_sample = data.signed_id;
+        this.form.header_sample_name = data.filename;
+        this.form.header_preview_url = data.url;
+      } catch (e) {
+        useAlert(
+          (e.response && e.response.data && e.response.data.error) ||
+            'No se pudo subir el archivo.'
+        );
+      } finally {
+        this.uploadingSample = false;
+      }
+    },
+    clearSample() {
+      this.form.header_sample = null;
+      this.form.header_sample_name = '';
+      this.form.header_preview_url = '';
+    },
+    // Lo que se manda: el archivo subido solo si se subió uno nuevo (un null lo borraría).
+    templatePayload() {
+      const payload = { ...this.form };
+      ['header_sample_name', 'header_preview_url', 'header_media_link'].forEach(
+        llave => delete payload[llave]
+      );
+      if (!payload.header_sample) delete payload.header_sample;
+      return payload;
     },
     inboxNameForChannel(channelWhatsappId) {
       const inbox = this.whatsappInboxes.find(
@@ -351,13 +493,26 @@ export default {
       });
       await this.fetchAll();
 
-      const failed = results.filter(r => r.status === 'rejected');
+      // F6: qué bandeja falló y por qué (antes solo el primer motivo, sin decir cuál).
+      const failed = results
+        .map((r, i) => ({ r, id: targets[i] }))
+        .filter(({ r }) => r.status === 'rejected');
       if (failed.length) {
-        // Mostramos el motivo real que devuelve Meta (token vencido, config, etc.).
-        const reason =
-          failed[0].reason?.response?.data?.error ||
-          'No se pudo sincronizar con Meta.';
-        useAlert(reason);
+        const detalle = failed
+          .map(({ r, id }) => {
+            const inbox = this.whatsappInboxes.find(i => i.id === id);
+            const motivo =
+              (r.reason &&
+                r.reason.response &&
+                r.reason.response.data &&
+                r.reason.response.data.error) ||
+              'No se pudo sincronizar con Meta.';
+            return `«${inbox ? inbox.name : id}»: ${motivo}`;
+          })
+          .join(' · ');
+        useAlert(
+          `Se sincronizaron ${targets.length - failed.length} de ${targets.length} bandejas. Falló ${detalle}`
+        );
         return;
       }
       useAlert(`Sincronizado: ${created} nuevas, ${updated} actualizadas.`);
@@ -423,6 +578,11 @@ export default {
             (template.sample_values && template.sample_values.header) || [],
         },
         buttons: [...(template.buttons || [])],
+        // F6: el archivo ya guardado se muestra; solo se manda si se sube otro.
+        header_sample: null,
+        header_sample_name:
+          (template.header_sample && template.header_sample.filename) || '',
+        header_preview_url: template.header_media_link || '',
       };
       this.showForm = true;
     },
@@ -472,13 +632,13 @@ export default {
         if (this.editingId) {
           await this.$store.dispatch('whatsappTemplates/update', {
             id: this.editingId,
-            template: this.form,
+            template: this.templatePayload(),
           });
           useAlert('Plantilla enviada a revisión (PENDING).');
         } else {
           await this.$store.dispatch('whatsappTemplates/create', {
             inboxId: this.form.inbox_id,
-            template: this.form,
+            template: this.templatePayload(),
           });
           useAlert('Plantilla creada.');
         }
@@ -661,6 +821,34 @@ export default {
                 </option>
               </select>
             </label>
+            <label
+              class="flex flex-col gap-1 text-sm font-medium text-slate-600 dark:text-slate-300"
+            >
+              Idioma
+              <select
+                v-model="draftFilters.language"
+                class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
+              >
+                <option value="">Todos</option>
+                <option v-for="l in languageFilterOptions" :key="l" :value="l">
+                  {{ l }}
+                </option>
+              </select>
+            </label>
+            <label
+              class="flex flex-col gap-1 text-sm font-medium text-slate-600 dark:text-slate-300"
+            >
+              Tipo
+              <select
+                v-model="draftFilters.kind"
+                class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
+              >
+                <option value="">Todos</option>
+                <option v-for="k in kindOptions" :key="k.value" :value="k.value">
+                  {{ k.label }}
+                </option>
+              </select>
+            </label>
             <div class="flex items-center justify-end gap-2 mt-2">
               <woot-button variant="clear" @click="clearDraftFilters">
                 Limpiar
@@ -698,6 +886,7 @@ export default {
             <th class="py-2 font-medium">Categoría</th>
             <th class="py-2 font-medium">Estado</th>
             <th class="py-2 font-medium">Calidad</th>
+            <th class="py-2 font-medium">Se puede enviar</th>
             <th class="py-2 font-medium text-right">Acciones</th>
           </tr>
         </thead>
@@ -744,7 +933,55 @@ export default {
               </span>
               <span v-else class="text-slate-300">—</span>
             </td>
+            <!-- F6: dónde se puede mandar. Las de archivo: conversación solo en WhatsApp
+                 Cloud; seguimientos y campañas además necesitan el archivo guardado. -->
+            <td class="py-3 text-xs">
+              <template v-if="sendabilityOf(t).conversation === null">
+                <span class="text-slate-300">—</span>
+              </template>
+              <div v-else class="flex flex-col gap-0.5">
+                <span
+                  :class="
+                    sendabilityOf(t).conversation
+                      ? 'text-green-700 dark:text-green-300'
+                      : 'text-slate-400'
+                  "
+                >
+                  {{ sendabilityOf(t).conversation ? '✓' : '✗' }} Conversación
+                </span>
+                <span
+                  :class="{
+                    'text-green-700 dark:text-green-300':
+                      sendabilityOf(t).trackings === 'ok',
+                    'text-amber-700 dark:text-amber-400':
+                      sendabilityOf(t).trackings === 'missing_file',
+                    'text-slate-400': sendabilityOf(t).trackings === 'no',
+                  }"
+                  :title="
+                    sendabilityOf(t).trackings === 'missing_file'
+                      ? 'Sube el archivo de muestra en Editar: los seguimientos y campañas lo mandan.'
+                      : ''
+                  "
+                >
+                  {{
+                    sendabilityOf(t).trackings === 'ok'
+                      ? '✓ Seguimientos'
+                      : sendabilityOf(t).trackings === 'missing_file'
+                      ? '⚠ Seguimientos: falta archivo'
+                      : '✗ Seguimientos'
+                  }}
+                </span>
+              </div>
+            </td>
             <td class="py-3 text-right">
+              <woot-button
+                v-if="hasMetaLink(t)"
+                variant="clear"
+                size="small"
+                icon="open"
+                title="Ver en Meta (WhatsApp Manager)"
+                @click="openInMeta(t)"
+              />
               <!-- El editar SIEMPRE se ve; si no aplica, va deshabilitado con el motivo
                    en el tooltip (Meta solo permite editar APPROVED/REJECTED/PAUSED). -->
               <span
@@ -891,13 +1128,61 @@ export default {
             {{ headerTextCounter }}
           </span>
         </div>
-        <woot-input
-          v-else
-          v-model="form.header_media_url"
-          label="Archivo de la cabecera"
-          placeholder="URL del archivo de cabecera"
-          class="mt-2"
-        />
+        <!-- F6: subir el archivo de muestra (o pegar una liga pública). El subido es el que
+             se manda a Meta como muestra y el que usan los seguimientos y campañas. -->
+        <div v-else class="mt-2">
+          <span class="text-sm">Archivo de la cabecera</span>
+          <div class="flex flex-wrap items-center gap-2 mt-1">
+            <label
+              class="inline-flex items-center gap-1 px-3 h-9 text-sm rounded-md cursor-pointer bg-woot-50 text-woot-700 dark:bg-woot-800 dark:text-woot-100"
+              :class="{ 'opacity-60 pointer-events-none': uploadingSample }"
+            >
+              <fluent-icon icon="attach" size="16" />
+              {{ uploadingSample ? 'Subiendo…' : 'Subir archivo' }}
+              <input
+                type="file"
+                class="hidden"
+                :accept="
+                  {
+                    image: 'image/jpeg,image/png',
+                    video: 'video/mp4,video/3gpp',
+                    document: 'application/pdf',
+                  }[form.header_type]
+                "
+                @change="uploadSample"
+              />
+            </label>
+            <span
+              v-if="form.header_sample_name"
+              class="inline-flex items-center gap-1 text-sm text-slate-700 dark:text-slate-200"
+            >
+              {{ form.header_sample_name }}
+              <button
+                v-if="form.header_sample"
+                type="button"
+                class="text-slate-400 hover:text-red-500"
+                title="Quitar el archivo subido"
+                @click="clearSample"
+              >
+                <fluent-icon icon="dismiss" size="12" />
+              </button>
+            </span>
+            <span class="text-xs text-slate-400">
+              {{
+                {
+                  image: 'JPG o PNG, hasta 5 MB',
+                  video: 'MP4, hasta 16 MB',
+                  document: 'PDF, hasta 100 MB',
+                }[form.header_type]
+              }}
+            </span>
+          </div>
+          <woot-input
+            v-model="form.header_media_url"
+            placeholder="…o pega una liga pública del archivo (https://…)"
+            class="mt-2 !mb-0"
+          />
+        </div>
 
         <label class="block mt-2">
           <span class="flex items-center justify-between text-sm">
@@ -1034,6 +1319,27 @@ export default {
             >
             <div v-if="previewHeaderText" class="font-semibold mb-1">
               {{ previewHeaderText }}
+            </div>
+            <!-- F6: el archivo real si ya hay uno (subido o pegado). -->
+            <img
+              v-else-if="previewMediaUrl && form.header_type === 'image'"
+              :src="previewMediaUrl"
+              alt=""
+              class="mb-2 rounded max-h-48 w-full object-cover"
+            />
+            <video
+              v-else-if="previewMediaUrl && form.header_type === 'video'"
+              :src="previewMediaUrl"
+              controls
+              preload="metadata"
+              class="mb-2 rounded max-h-48 w-full"
+            />
+            <div
+              v-else-if="previewMediaUrl && form.header_type === 'document'"
+              class="flex items-center gap-2 mb-2 rounded px-3 py-3 bg-black/5 dark:bg-white/10"
+            >
+              <fluent-icon icon="document" size="24" class="text-red-500" />
+              <span class="truncate">{{ previewDocName }}</span>
             </div>
             <div
               v-else-if="headerMediaLabel"

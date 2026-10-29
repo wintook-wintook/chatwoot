@@ -369,6 +369,40 @@ nada y queda la entrega fallida `template_media_missing`/config. Seguimientos, e
 
 **Botones variables en seguimientos:** fuera de alcance (D5).
 
+## 7.8 F6 — hecho (29/10/2026)
+
+**Backend (commit 893cecb2).**
+- `WhatsappTemplate has_one_attached :header_sample` y `#header_media_link`: liga **fresca** del archivo subido
+  (las de ActiveStorage para servicios externos caducan en minutos y `rails_blob_url` es una redirección que
+  muchos no siguen: guardadas no sirven días después) o la liga pegada a mano.
+- `POST whatsapp/templates/header_samples` (`header_type`, `file`): revisa tipo y tamaño con los límites de
+  Meta (los de `ResumableUploadService`), guarda el blob y devuelve `{ signed_id, filename, url }`. Al crear o
+  editar va como `header_sample` y queda pegado (se sube ANTES de crear porque Meta pide la muestra al crear).
+- La muestra a Meta (F0) y los seguimientos/campañas (F5) usan `header_media_link`; F5 toma el **nombre
+  original** del documento. Subir otro archivo al editar vuelve a subir la muestra. El validador (Ruby y JS)
+  acepta el archivo subido como «tiene archivo».
+
+**Pantalla (`settings/whatsappTemplates/Index.vue` + `templateScreen.js` puro con spec).**
+1. **Subir archivo** en el formulario (JPG/PNG ≤ 5 MB · MP4 ≤ 16 MB · PDF ≤ 100 MB), con su nombre y quitar;
+   sigue la opción de pegar una liga. Al editar se ve el archivo guardado y solo se manda si se sube otro.
+2. **Vista previa con el archivo real** (imagen, video, documento con nombre) en la pestaña Vista previa.
+3. **Filtros por idioma y por tipo** (solo texto, imagen, video, documento, con botones, con copiar código).
+4. **«Se puede enviar»** por plantilla: Conversación ✓/✗ y Seguimientos ✓ / ⚠ falta archivo / ✗.
+5. **Errores de sincronización por bandeja**: «Se sincronizaron 3 de 4 bandejas. Falló «X»: motivo».
+6. **Ver en Meta**: abre WhatsApp Manager de la cuenta de negocio de la bandeja.
+
+**Pila de pruebas.** Backend: controlador (+5: sube PDF, tipo no permitido, sin archivo/tipo raro, agentes no,
+crear con el archivo lo pega), modelo (+2: liga pegada vs liga fresca del subido), `SubmitTemplateService`
+(+1: sube el archivo como muestra), `TemplateHeader` (+1: archivo subido y su nombre). `spec/services/whatsapp`:
+solo las 22 de `incoming_message*` de develop. Frontend: `templateScreen.spec.js` (4); 434/434 en las carpetas
+de plantillas. Webpack: «Compiled successfully».
+
+**Lint.** `Index.vue` ya traía 486 hallazgos (textos en español sin i18n + prettier; su cabecera dice
+`--no-verify`); los nuevos son de esas mismas dos reglas (prettier, no-bare-strings). Sin reformatear el archivo.
+
+**No entró.** Vista previa en la tabla (solo en el formulario); que el formulario de la conversación (F2)
+proponga el archivo guardado de la plantilla en vez de pedir la liga. ⚠ **Sin probar en navegador.**
+
 ---
 
 ## 8. Pila de pruebas en navegador (al cerrar cada fase)

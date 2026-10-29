@@ -106,8 +106,11 @@ export const validateTemplate = t => {
       errors.push('Cabecera: la variable debe ser exactamente {{1}}');
     }
   } else if (['image', 'video', 'document'].includes(t.header_type)) {
-    if (!t.header_media_url && !t.header_handle) {
-      errors.push('Cabecera multimedia: falta el archivo (URL o handle)');
+    // feat/plantillas_whatsapp_mejoras F6: o el archivo subido (header_sample).
+    if (!t.header_media_url && !t.header_handle && !t.header_sample) {
+      errors.push(
+        'Cabecera multimedia: falta el archivo (súbelo o pega una liga)'
+      );
     }
   }
 
