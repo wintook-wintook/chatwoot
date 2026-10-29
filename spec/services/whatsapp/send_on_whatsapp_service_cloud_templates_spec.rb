@@ -1,0 +1,148 @@
+# frozen_string_literal: true
+
+require 'rails_helper'
+
+# feat/plantillas_whatsapp_mejoras F1 — envío de plantillas por WhatsApp Cloud con todos sus
+# components (docs/plantillas_whatsapp_mejoras_plan.md §3–§4). Se compara el JSON EXACTO que
+# llega a Meta: lo que hoy se envía tiene que seguir saliendo igual.
+describe Whatsapp::SendOnWhatsappService do
+  let(:messages_url) { 'https://graph.facebook.com/v20.0/123456789/messages' }
+  let(:plantillas) do
+    [
+      { 'name' => 'sample_shipping_confirmation', 'status' => 'approved', 'language' => 'en_US', 'namespace' => 'ns1',
+        'components' => [{ 'type' => 'BODY', 'text' => 'Your package has been shipped. It will be delivered in {{1}} business days.' },
+                         { 'type' => 'FOOTER', 'text' => 'This message is from an unverified business.' }] },
+      { 'name' => 'promo_imagen', 'status' => 'approved', 'language' => 'es_MX',
+        'components' => [{ 'type' => 'HEADER', 'format' => 'IMAGE' }, { 'type' => 'BODY', 'text' => 'Hola {{1}}' }] },
+      { 'name' => 'promo_video', 'status' => 'approved', 'language' => 'es_MX',
+        'components' => [{ 'type' => 'HEADER', 'format' => 'VIDEO' }, { 'type' => 'BODY', 'text' => 'Mira esto' }] },
+      { 'name' => 'factura', 'status' => 'approved', 'language' => 'es_MX',
+        'components' => [{ 'type' => 'HEADER', 'format' => 'DOCUMENT' }, { 'type' => 'BODY', 'text' => 'Tu factura {{1}}' }] },
+      { 'name' => 'pedido', 'status' => 'approved', 'language' => 'es_MX',
+        'components' => [{ 'type' => 'HEADER', 'format' => 'TEXT', 'text' => 'Pedido {{1}}' },
+                         { 'type' => 'BODY', 'text' => 'Gracias {{1}}' },
+                         { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'URL', 'url' => 'https://x.mx/{{1}}' },
+                                                              { 'type' => 'COPY_CODE' }] }] },
+      { 'name' => 'saludo_nombre', 'status' => 'approved', 'language' => 'es_MX', 'parameter_format' => 'NAMED',
+        'components' => [{ 'type' => 'BODY', 'text' => 'Hola {{nombre}}' }] }
+    ]
+  end
+  let(:channel) do
+    create(:channel_whatsapp, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false,
+                              message_templates: plantillas)
+  end
+  let(:contact_inbox) { create(:contact_inbox, inbox: channel.inbox, source_id: '123456789') }
+  let(:conversation) { create(:conversation, contact_inbox: contact_inbox, inbox: channel.inbox) }
+
+  before do
+    stub_request(:post, messages_url).to_return(status: 200, body: { messages: [{ id: 'wamid.1' }] }.to_json,
+                                                headers: { 'Content-Type' => 'application/json' })
+  end
+
+  def send_template(name, language, processed_params)
+    message = create(:message, message_type: :outgoing, content: 'plantilla', conversation: conversation,
+                               additional_attributes: { template_params: { name: name, language: language,
+                                                                           processed_params: processed_params } })
+    described_class.new(message: message).perform
+    message
+  end
+
+  # Los components que recibió Meta en el último envío.
+  def sent_components
+    body = nil
+    expect(WebMock).to(have_requested(:post, messages_url).with { |req| body = JSON.parse(req.body) })
+    body.dig('template', 'components')
+  end
+
+  it 'el formato viejo {"1": "3"} manda el mismo JSON que antes' do
+    send_template('sample_shipping_confirmation', 'en_US', { '1' => '3' })
+
+    expect(sent_components).to eq([{ 'type' => 'body', 'parameters' => [{ 'type' => 'text', 'text' => '3' }] }])
+  end
+
+  it 'una plantilla que no está en la lista de la bandeja sale como antes' do
+    send_template('no_existe', 'es_MX', { '1' => 'Ana' })
+
+    expect(sent_components).to eq([{ 'type' => 'body', 'parameters' => [{ 'type' => 'text', 'text' => 'Ana' }] }])
+  end
+
+  it 'manda la imagen del encabezado y las variables del cuerpo' do
+    send_template('promo_imagen', 'es_MX', { 'header' => { 'media_url' => 'https://cdn.example.com/p.png', 'media_type' => 'image' },
+                                             'body' => { '1' => 'Ana' } })
+
+    expect(sent_components).to eq([
+                                    { 'type' => 'header',
+                                      'parameters' => [{ 'type' => 'image', 'image' => { 'link' => 'https://cdn.example.com/p.png' } }] },
+                                    { 'type' => 'body', 'parameters' => [{ 'type' => 'text', 'text' => 'Ana' }] }
+                                  ])
+  end
+
+  it 'manda un video sin variables en el cuerpo' do
+    send_template('promo_video', 'es_MX', { 'header' => { 'media_url' => 'https://cdn.example.com/v.mp4', 'media_type' => 'video' } })
+
+    expect(sent_components).to eq([{ 'type' => 'header',
+                                     'parameters' => [{ 'type' => 'video', 'video' => { 'link' => 'https://cdn.example.com/v.mp4' } }] }])
+  end
+
+  it 'el documento lleva su nombre de archivo' do
+    send_template('factura', 'es_MX', { 'header' => { 'media_url' => 'https://cdn.example.com/f.pdf', 'media_type' => 'document',
+                                                      'media_name' => 'Factura A1.pdf' },
+                                        'body' => { '1' => 'A1' } })
+
+    expect(sent_components.first).to eq('type' => 'header', 'parameters' => [
+                                          { 'type' => 'document',
+                                            'document' => { 'link' => 'https://cdn.example.com/f.pdf', 'filename' => 'Factura A1.pdf' } }
+                                        ])
+  end
+
+  it 'encabezado de texto con variable, botón con liga variable y copiar código' do
+    send_template('pedido', 'es_MX', { 'header' => { '1' => 'A1' }, 'body' => { '1' => 'Ana' },
+                                       'buttons' => [{ 'type' => 'url', 'parameter' => 'A1' },
+                                                     { 'type' => 'copy_code', 'parameter' => 'PROMO10' }] })
+
+    expect(sent_components).to eq([
+                                    { 'type' => 'header', 'parameters' => [{ 'type' => 'text', 'text' => 'A1' }] },
+                                    { 'type' => 'body', 'parameters' => [{ 'type' => 'text', 'text' => 'Ana' }] },
+                                    { 'type' => 'button', 'sub_type' => 'url', 'index' => 0,
+                                      'parameters' => [{ 'type' => 'text', 'text' => 'A1' }] },
+                                    { 'type' => 'button', 'sub_type' => 'copy_code', 'index' => 1,
+                                      'parameters' => [{ 'type' => 'coupon_code', 'coupon_code' => 'PROMO10' }] }
+                                  ])
+  end
+
+  it 'variables con nombre van con parameter_name' do
+    send_template('saludo_nombre', 'es_MX', { 'body' => { 'nombre' => 'Ana' } })
+
+    expect(sent_components).to eq([{ 'type' => 'body',
+                                     'parameters' => [{ 'type' => 'text', 'parameter_name' => 'nombre', 'text' => 'Ana' }] }])
+  end
+
+  it 'D3: conserva las comillas del texto y quita solo < >' do
+    send_template('promo_imagen', 'es_MX', { 'header' => { 'media_url' => 'https://cdn.example.com/p.png', 'media_type' => 'image' },
+                                             'body' => { '1' => 'el "Plan Plus" <b>' } })
+
+    expect(sent_components.last).to eq('type' => 'body', 'parameters' => [{ 'type' => 'text', 'text' => 'el "Plan Plus" b' }])
+  end
+
+  it 'un dato inválido deja el mensaje fallido con el motivo y no se envía' do
+    message = send_template('pedido', 'es_MX', { 'body' => { '1' => 'Ana' },
+                                                 'buttons' => [nil, { 'type' => 'copy_code', 'parameter' => 'CODIGO_DEMASIADO_LARGO' }] })
+
+    expect(message.reload).to have_attributes(status: 'failed', external_error: include('15'))
+    expect(WebMock).not_to have_requested(:post, messages_url)
+  end
+
+  describe Whatsapp::Providers::WhatsappCloudService do
+    let(:service) { described_class.new(whatsapp_channel: channel) }
+
+    it 'la lista de siempre (seguimientos, campañas) sigue yendo como un solo body' do
+      componentes = service.send(:template_components, [{ type: 'text', text: 'Ana' }])
+
+      expect(componentes).to eq([{ type: 'body', parameters: [{ type: 'text', text: 'Ana' }] }])
+    end
+
+    it 'sin parámetros, igual que antes' do
+      expect(service.send(:template_components, nil)).to eq([{ type: 'body', parameters: nil }])
+    end
+  end
+end

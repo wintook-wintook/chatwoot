@@ -242,6 +242,46 @@ Salieron dos fallos que los dobles no veían, ya corregidos:
 
 Para borrar los ejemplos: pantalla de plantillas → borrar (llama a Meta por su id).
 
+## 7.2 Antes de F1 — ventana de 24 h y pruebas al día (29/10/2026, commit a3075991)
+
+- **Fallo real encontrado (con OK del usuario):** `Channel::Whatsapp#messaging_window_enabled?` solo valía
+  si la bandeja tenía escrita la liga `https://graph.facebook.com` (viene de la base del fork, dic 2023). La
+  bandeja WhatsApp Cloud de dev (651) tiene la liga vacía → **nunca respetaba la ventana**: pasadas 24 h el
+  texto libre salía y Meta lo rechazaba, y el empate «este texto es una plantilla» no se activaba. Ahora:
+  360dialog y WhatsApp Cloud con liga vacía o de Meta respetan la ventana; UnoAPI y una liga propia no.
+  ⚠ Cambia lo que ven los agentes: pasadas 24 h el cuadro pide plantilla.
+- Pruebas de `WhatsappCloudService` y del canal puestas al día (Graph v14.0 para la cuenta de negocio, orden
+  de `send_template`). Quedan las 22 de mensajes que **llegan** (`incoming_message*`), que no son del envío.
+
+## 7.3 F1 — hecho (29/10/2026)
+
+**Qué se hizo.**
+- Traídas de Chatwoot 4.19: `PopulateTemplateParametersService`, `TemplateParameterConverterService` y
+  `TemplateProcessorService`, con sus specs de la 4.19 (30, pasan sin tocar). Cambio local **D3**: la
+  limpieza quita solo `< >` (la 4.19 también quitaba comillas).
+- `SendOnWhatsappService#processable_channel_message_template`: en **WhatsApp Cloud**, con `template_params`,
+  usa el procesador (`enhanced_template_params`) → encabezado de texto o archivo, cuerpo, pie y botones. Si
+  no hay components (la plantilla no está en `message_templates` o no lleva variables) se arma como siempre.
+  Un dato inválido (liga mala, código > 15) deja el mensaje **fallido con el motivo** y no se envía.
+  360dialog y UnoAPI: igual que antes (`legacy_template_params`). El empate por texto fuera de 24 h no cambia.
+- `WhatsappCloudService#template_body_parameters` → `template_components`: si los parámetros ya son
+  components (header/body/footer/button) van tal cual; si es la lista de siempre (seguimientos, campañas,
+  empate por texto), dentro de un solo `body`, como antes.
+
+**Cómo funciona — compatibilidad.** El JSON a Meta de todo lo de hoy es el mismo: formato viejo
+`{"1":"3"}`, plantilla fuera de la lista, lista directa de seguimientos y sin parámetros (probado).
+
+**Pila de pruebas.** `send_on_whatsapp_service_cloud_templates_spec.rb` (11): formato viejo igual que antes,
+plantilla fuera de la lista, imagen + cuerpo, video sin variables, documento con nombre, encabezado de texto
++ botón URL variable + copiar código, variables con nombre, D3 (comillas sí, `< >` no), dato inválido →
+fallido sin enviar, lista de siempre → un body, sin parámetros. `spec/services/whatsapp` + canal: 219, solo
+fallan las 22 de `incoming_message*` (ya venían de develop).
+
+**Pendiente de limpiar (fuera de alcance).** `Whatsapp::TemplateSendComponentBuilder` (+ su spec) nunca se usó
+y hace lo mismo que el procesador con otro formato; se puede borrar cuando F2–F5 estén en uso.
+
+**Todavía no se ve nada en pantalla**: el formulario de la conversación es F2.
+
 ---
 
 ## 8. Pila de pruebas en navegador (al cerrar cada fase)

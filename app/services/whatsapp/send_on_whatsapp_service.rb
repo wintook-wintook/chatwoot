@@ -32,13 +32,9 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
 
   def processable_channel_message_template
     if template_params.present?
-      return [
-        template_params['name'],
-        template_params['namespace'],
-        template_params['language'],
-        # template_params['processed_params']&.map { |_, value| { type: 'text', text: value } }
-        build_processed_parameters(template_params['name'], template_params['processed_params'])
-      ]
+      return enhanced_template_params if channel.provider == 'whatsapp_cloud'
+
+      return legacy_template_params
     end
 
     # Delete the following logic once the update for template_params is stable
@@ -56,6 +52,33 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
       # no need to look up further end the search
       return [template['name'], template['namespace'], template['language'], processed_parameters]
     end
+    [nil, nil, nil, nil]
+  end
+
+  # 360dialog y UnoAPI: solo el cuerpo, como siempre.
+  def legacy_template_params
+    [
+      template_params['name'],
+      template_params['namespace'],
+      template_params['language'],
+      build_processed_parameters(template_params['name'], template_params['processed_params'])
+    ]
+  end
+
+  # feat/plantillas_whatsapp_mejoras F1: en WhatsApp Cloud la plantilla sale con TODOS sus
+  # components (encabezado de texto o archivo, cuerpo, pie, botones) vía el procesador de la
+  # 4.19, que también entiende el formato viejo {"1": "Juan"}. Si no hay components (la
+  # plantilla no está en message_templates o no lleva variables) se arma como siempre: el JSON
+  # que llega a Meta es el mismo que antes. Un dato inválido (liga mala, código > 15) deja el
+  # mensaje fallido con el motivo en vez de mandarlo roto.
+  def enhanced_template_params
+    name, namespace, language, components = Whatsapp::TemplateProcessorService.new(
+      channel: channel, template_params: template_params.deep_dup, message: message
+    ).call
+    components = build_processed_parameters(template_params['name'], template_params['processed_params']) if components.blank?
+    [name, namespace, language, components]
+  rescue ArgumentError => e
+    message.update!(status: :failed, external_error: e.message)
     [nil, nil, nil, nil]
   end
 
