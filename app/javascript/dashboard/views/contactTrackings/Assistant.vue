@@ -152,8 +152,12 @@ export default {
     initialSessionId: { type: Number, default: null },
     // Abrir la Galería al entrar («Nuevo agente › Bajar de la Galería»).
     openGallery: { type: Boolean, default: false },
+    // proyecto@diagrama_agente_ia: 'training' (Entrenamiento) o 'tests' (la pestaña
+    // «Pruebas y diagrama» del espacio del agente). Es la MISMA instancia en las dos
+    // pestañas: cambiar de una a otra no pierde el borrador ni el chat.
+    view: { type: String, default: 'training' },
   },
-  emits: ['saved', 'installed', 'session'],
+  emits: ['saved', 'installed', 'session', 'openTests', 'openTraining'],
   data() {
     return {
       // Las secciones tienen columna propia y no se apagan: el mixin siempre
@@ -322,11 +326,6 @@ export default {
           id: 'structure',
           icon: 'list',
           label: this.$t('TRACKING_ASSISTANT_VIEW.TREE_TITLE'),
-        },
-        {
-          id: 'tests',
-          icon: 'play-circle',
-          label: this.$t('TRACKING_ASSISTANT_VIEW.TESTS.PANEL'),
         },
         {
           id: 'chat',
@@ -705,22 +704,23 @@ export default {
     // no existe mientras se ve el diagrama: se cambia de pestaña y se espera a que
     // aparezca.
     goToRouteFromDiagram(name) {
+      this.$emit('openTraining');
       this.draftTab = 'editor';
       this.$nextTick(() => this.goToRoute(name));
     },
     // F2: la prueba elegida en el panel Pruebas se ve iluminada en el diagrama.
+    // El diagrama está al lado del panel: solo se ilumina.
     onTestSelect(prueba) {
       this.diagramTest = prueba;
-      this.draftTab = 'diagram';
     },
     // D4: «Probar el agente» y «Probar sin enviar nada» ya no abren modales: las
     // pruebas viven en el panel (F3, F4).
     openTestsPanel() {
-      this.leftPanel = 'tests';
-      this.draftTab = 'diagram';
+      this.$emit('openTests');
     },
     // F4: la prueba (o las rojas) al chat de creación, con su camino y su veredicto.
     sendEvidence(texto) {
+      this.$emit('openTraining');
       this.leftPanel = 'chat';
       this.sendMessage(texto, { evidence: true });
     },
@@ -731,6 +731,7 @@ export default {
     goToSectionFromDiagram(index) {
       const bloque = (this.trainingStructure.blocks || [])[index];
       if (!bloque) return;
+      this.$emit('openTraining');
       this.draftTab = 'editor';
       this.$nextTick(() => this.goToLine(bloque.first_line));
     },
@@ -1571,7 +1572,10 @@ export default {
             </woot-button>
           </div>
 
-          <div class="grid flex-1 min-h-0 gap-4 md:grid-cols-2">
+          <div
+            v-show="view !== 'tests'"
+            class="grid flex-1 min-h-0 gap-4 md:grid-cols-2"
+          >
             <!-- La columna izquierda: la Estructura del Agente o la conversación,
                  una a la vez, con el selector arriba. -->
             <div class="flex flex-col min-h-0 gap-2">
@@ -1610,27 +1614,6 @@ export default {
                   :is-editing="Boolean(draft.trim())"
                   :stage="turnStage"
                   @send="sendMessage"
-                />
-              </section>
-
-              <!-- proyecto@diagrama_agente_ia F2: escribir y correr pruebas; la
-                 elegida se ilumina en la pestaña Diagrama. v-show: la pila sigue
-                 corriendo aunque se cambie de panel. -->
-              <section
-                v-if="showChat"
-                v-show="leftPanel === 'tests'"
-                class="flex flex-col flex-1 min-h-0 p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
-              >
-                <TestsPanel
-                  :template-id="editingTemplateId"
-                  :draft="draft"
-                  :inbox-id="inboxId"
-                  :brief-id="batteryBriefId"
-                  :can-send-to-chat="Boolean(draft.trim())"
-                  @select="onTestSelect"
-                  @cases="testCases = $event"
-                  @dryRun="onPanelDryRun"
-                  @evidence="sendEvidence"
                 />
               </section>
 
@@ -1738,18 +1721,6 @@ export default {
                         }}
                       </span>
                     </button>
-                    <!-- proyecto@diagrama_agente_ia F1: el agente dibujado (D1: siempre). -->
-                    <button
-                      class="mr-3 pb-0.5 border-b-2"
-                      :class="
-                        draftTab === 'diagram'
-                          ? 'border-woot-500'
-                          : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
-                      "
-                      @click="draftTab = 'diagram'"
-                    >
-                      {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_DIAGRAM') }}
-                    </button>
                     <button
                       v-if="showHistoryTabs"
                       class="pb-0.5 border-b-2"
@@ -1834,17 +1805,6 @@ export default {
                   v-if="draftTab === 'log'"
                   :versions="versions"
                   :title="(sessionMeta && sessionMeta.title) || ''"
-                />
-                <AgentDiagram
-                  v-else-if="draftTab === 'diagram'"
-                  :structure="trainingStructure"
-                  :issues="nodeIssues"
-                  :test="diagramTest"
-                  :heat="diagramHeat"
-                  :export-name="diagramExportName"
-                  @clearHighlight="diagramTest = null"
-                  @goToRoute="goToRouteFromDiagram"
-                  @goToSection="goToSectionFromDiagram"
                 />
                 <ConfigureTab
                   v-else-if="draftTab === 'configure'"
@@ -1939,6 +1899,45 @@ export default {
                   </div>
                 </template>
               </div>
+            </section>
+          </div>
+
+          <!-- proyecto@diagrama_agente_ia: la pestaña «Pruebas y diagrama». Las pruebas a
+               la izquierda y el agente dibujado a la derecha, cada uno con su columna
+               (antes compartían la del chat y la del editor). v-show: la pila sigue
+               corriendo y el camino elegido sigue iluminado al ir y volver. -->
+          <div
+            v-show="view === 'tests'"
+            class="grid flex-1 min-h-0 gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
+          >
+            <section
+              class="flex flex-col min-h-0 p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+            >
+              <TestsPanel
+                :template-id="editingTemplateId"
+                :draft="draft"
+                :inbox-id="inboxId"
+                :brief-id="batteryBriefId"
+                :can-send-to-chat="Boolean(draft.trim())"
+                @select="onTestSelect"
+                @cases="testCases = $event"
+                @dryRun="onPanelDryRun"
+                @evidence="sendEvidence"
+              />
+            </section>
+            <section
+              class="flex flex-col min-h-0 p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+            >
+              <AgentDiagram
+                :structure="trainingStructure"
+                :issues="nodeIssues"
+                :test="diagramTest"
+                :heat="diagramHeat"
+                :export-name="diagramExportName"
+                @clearHighlight="diagramTest = null"
+                @goToRoute="goToRouteFromDiagram"
+                @goToSection="goToSectionFromDiagram"
+              />
             </section>
           </div>
         </div>
