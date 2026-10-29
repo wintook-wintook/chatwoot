@@ -351,6 +351,14 @@ pila») queda para F4.
 1074/1074; carpeta `contactTrackings`: 223/223. Webpack: «Compiled successfully».
 ⚠ **Sin probar en navegador ni contra un agente real.**
 
+**Arreglo 29/10/2026 — «Toda en vivo» no contestaba.** El seguimiento de cada prueba tomaba la bandeja
+del agente (p. ej. la 4, Telegram) y la conversación de prueba vive en el canal de pruebas: la validación
+`ContactTracking#conversation_belongs_to_inbox` fallaba, `ActionService` se tragaba el error y el agente
+nunca contestaba (venía de la pila de M5). Ahora el seguimiento de prueba queda en el canal de pruebas
+(`assign_tracking_template(..., inbox_id:)`; las automatizaciones no cambian) y, si aun así no se crea,
+la prueba sale en rojo al momento con el motivo. Ojo: en vivo se contesta con el **modelo del canal de
+pruebas** (EngineConfig lee la bandeja del seguimiento), que puede no ser el de la bandeja real del agente.
+
 ### 4.4 Antes / después
 
 Tras corregir y volver a correr la **misma** pila:
