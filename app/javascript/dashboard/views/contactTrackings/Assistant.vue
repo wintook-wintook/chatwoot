@@ -76,7 +76,6 @@ import AgentStructure from './assistant/AgentStructure.vue';
 import trainingSectionsMixin from './assistant/trainingSectionsMixin';
 import OptimizeModal from './assistant/OptimizeModal.vue';
 import ExplainModal from './assistant/ExplainModal.vue';
-import DryRunModal from './assistant/DryRunModal.vue';
 // proyecto@diagrama_agente_ia F1: la pestaña «Diagrama» (docs/diagrama_agente_ia_plan.md).
 import AgentDiagram from './assistant/AgentDiagram.vue';
 // F2: el panel «Pruebas»; la prueba elegida se ilumina en el diagrama.
@@ -141,7 +140,6 @@ export default {
     AgentStructure,
     OptimizeModal,
     ExplainModal,
-    DryRunModal,
     AgentDiagram,
     TestsPanel,
     SaveModal,
@@ -222,8 +220,6 @@ export default {
       // se marcan como de otra versión. Borrarlas perdería justo la comparación
       // que se vino a hacer.
       dryRunHistory: [],
-      // Fase E: tests sugeridos ({ cases, generated_by, version }) y su avance.
-      suggestedTests: null,
       // Fase E: optimizar ({ …, version }) y explicar lo seleccionado en el editor.
       showOptimizeModal: false,
       optimizeResult: null,
@@ -241,9 +237,6 @@ export default {
       explainResult: null,
       isExplaining: false,
       explainError: '',
-      isSuggesting: false,
-      suggestStage: null,
-      showDryRunModal: false,
       // El encargo del que salió el agente: de ahí salen las reglas de la pila.
       batteryBriefId: null,
       // proyecto@diagrama_agente_ia F2: la prueba elegida en el panel Pruebas.
@@ -251,8 +244,6 @@ export default {
       // F3: la pila guardada del agente, para el mapa de calor del diagrama.
       testCases: [],
       draftVersion: 0,
-      isDryRunning: false,
-      dryRunError: '',
       // Las preguntas del último turno, para mostrarlas como botones.
       interviewOptions: null,
       // El comprobador arranca ABIERTO y la prueba CERRADA. El comprobador es el
@@ -607,7 +598,6 @@ export default {
       this.adaptationItems = [];
       this.reloadTrainingSections();
       this.dryRunHistory = [];
-      this.suggestedTests = null;
       this.optimizeResult = null;
       this.sessionMeta = {
         id: data.id,
@@ -659,7 +649,6 @@ export default {
       this.sessionMeta = null;
       this.interviewOptions = null;
       this.dryRunHistory = [];
-      this.suggestedTests = null;
       this.optimizeResult = null;
       this.messages = [];
       this.draft = '';
@@ -713,10 +702,16 @@ export default {
       this.diagramTest = prueba;
       this.draftTab = 'diagram';
     },
-    // F3 (D4): «Probar el agente» ya no abre un modal: la pila vive en el panel.
+    // D4: «Probar el agente» y «Probar sin enviar nada» ya no abren modales: las
+    // pruebas viven en el panel (F3, F4).
     openTestsPanel() {
       this.leftPanel = 'tests';
       this.draftTab = 'diagram';
+    },
+    // F4: la prueba (o las rojas) al chat de creación, con su camino y su veredicto.
+    sendEvidence(texto) {
+      this.leftPanel = 'chat';
+      this.sendMessage(texto, { evidence: true });
     },
     // Una prueba en seco del panel también cuenta como «Probado» en la tira.
     onPanelDryRun({ question, result }) {
@@ -729,32 +724,6 @@ export default {
       this.$nextTick(() => this.goToLine(bloque.first_line));
     },
 
-    // F6 — probar sin enviar nada. A diferencia de validateDraft, esto NO corre
-    // solo: clasifica la rama con el modelo y vectoriza la pregunta.
-    async runDryRun(question) {
-      this.isDryRunning = true;
-      this.dryRunError = '';
-      try {
-        const { data } = await AssistantAPI.dryRun(
-          this.draft,
-          question,
-          this.inboxId
-        );
-        // Con la versión del borrador contra la que se corrió: es lo que después
-        // permite decir "esto ya no describe el texto actual".
-        this.dryRunHistory.push({
-          question,
-          result: data,
-          version: this.draftVersion,
-        });
-      } catch (error) {
-        this.dryRunError =
-          error?.response?.data?.error ||
-          this.$t('TRACKING_ASSISTANT_VIEW.DRY_RUN_FAILED');
-      } finally {
-        this.isDryRunning = false;
-      }
-    },
     // proyecto@publicar_prompts (F5) — se bajó UN prompt publicado: la copia ya es un
     // Agente IA de la cuenta. Se abre aquí como cualquier agente cargado (guardar la
     // reemplaza a ella, nunca al original del autor) y el chat arranca diciendo qué se
@@ -826,7 +795,6 @@ export default {
       this.sessionMeta = null;
       this.interviewOptions = null;
       this.dryRunHistory = [];
-      this.suggestedTests = null;
       this.optimizeResult = null;
       this.validateDraft();
     },
@@ -836,8 +804,10 @@ export default {
     //
     // Un link a una conversación (…/conversations/173) no es un turno: es pedir que
     // se revise esa conversación real (reviewConversation).
-    async sendMessage(content, { oneShot = false } = {}) {
-      if (!oneShot && mentionsConversation(content)) {
+    // evidence (proyecto@diagrama_agente_ia F4): la evidencia de una prueba es un turno
+    // normal aunque el mensaje del cliente diga «conversación 5».
+    async sendMessage(content, { oneShot = false, evidence = false } = {}) {
+      if (!oneShot && !evidence && mentionsConversation(content)) {
         await this.reviewConversation(content);
         return;
       }
@@ -1200,7 +1170,6 @@ export default {
       const nuevo = id ? Number(id) : null;
       if (nuevo === this.inboxId) return;
       this.inboxId = nuevo;
-      this.suggestedTests = null;
       this.optimizeResult = null;
       try {
         if (nuevo)
@@ -1265,33 +1234,6 @@ export default {
         this.explainError = this.$t('TRACKING_ASSISTANT_VIEW.EXPLAIN_ERROR');
       } finally {
         this.isExplaining = false;
-      }
-    },
-    // Fase E: la batería de tests sugeridos. Se anota contra qué versión del
-    // borrador corrió, para avisar si después se editó.
-    async runSuggestedTests() {
-      if (this.isSuggesting || !this.draft.trim()) return;
-      this.isSuggesting = true;
-      this.suggestStage = null;
-      const version = this.draftVersion;
-      const turnId = this.startProgress(data => {
-        this.suggestStage = data;
-      });
-      try {
-        const { data } = await AssistantAPI.suggestedTests(
-          this.draft,
-          turnId,
-          this.inboxId
-        );
-        this.suggestedTests = { ...data, version };
-      } catch (error) {
-        this.dryRunError =
-          error?.response?.data?.error ||
-          this.$t('TRACKING_ASSISTANT_VIEW.TESTS_ERROR');
-      } finally {
-        this.stopProgress();
-        this.isSuggesting = false;
-        this.suggestStage = null;
       }
     },
     // Volver a una versión anterior. Pasa a ser la base: lo que se cambie desde acá
@@ -1673,9 +1615,11 @@ export default {
                   :draft="draft"
                   :inbox-id="inboxId"
                   :brief-id="batteryBriefId"
+                  :can-send-to-chat="Boolean(draft.trim())"
                   @select="onTestSelect"
                   @cases="testCases = $event"
                   @dryRun="onPanelDryRun"
+                  @evidence="sendEvidence"
                 />
               </section>
 
@@ -2010,7 +1954,7 @@ export default {
             variant="clear"
             color-scheme="secondary"
             :is-disabled="!draft.trim()"
-            @click="showDryRunModal = true"
+            @click="openTestsPanel"
           >
             {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_TITLE') }}
           </woot-button>
@@ -2097,20 +2041,6 @@ export default {
       :is-running="isExplaining"
       :error="explainError"
       @close="showExplainModal = false"
-    />
-    <DryRunModal
-      :show="showDryRunModal"
-      :draft="draft"
-      :history="dryRunHistory"
-      :draft-version="draftVersion"
-      :is-running="isDryRunning"
-      :error="dryRunError"
-      :suggested="suggestedTests"
-      :is-suggesting="isSuggesting"
-      :suggest-stage="suggestStage"
-      @close="showDryRunModal = false"
-      @run="runDryRun"
-      @suggest="runSuggestedTests"
     />
 
     <woot-confirm-modal

@@ -14,6 +14,7 @@ vi.mock('dashboard/api/assistant', () => ({
     deleteTestCase: vi.fn(),
     runTestCasesDry: vi.fn(),
     runTestCasesLive: vi.fn(),
+    suggestedTests: vi.fn(),
   },
 }));
 
@@ -213,6 +214,129 @@ describe('TestsPanel', () => {
       await flushPromises();
 
       expect(wrapper.text()).toContain('TESTS.PUBLISH_SAME {"total":4}');
+    });
+  });
+
+  // F4 — la prueba como evidencia
+  describe('evidencia, antes / ahora y sugeridas', () => {
+    const conHistoria = () =>
+      pila({
+        cases: [
+          {
+            id: 1,
+            message: '¿precio?',
+            kind: 'ruta',
+            pinned: false,
+            last_dry: {},
+            previous_dry: {},
+            last_live: {
+              at: 'y',
+              cumple: false,
+              motivo: 'inventó',
+              reply: 'Claro',
+              traza: { camino: 'conversacional', ruta: { nombre: 'cotizar' } },
+            },
+            previous_live: {
+              at: 'x',
+              cumple: true,
+              reply: 'Antes',
+              traza: { camino: 'kbase', ruta: { nombre: 'cotizar' } },
+            },
+          },
+        ],
+      });
+
+    it('lleva la prueba elegida y las rojas al chat', async () => {
+      AssistantAPI.testCases.mockResolvedValue(conHistoria());
+      const wrapper = montar({ templateId: 5, canSendToChat: true });
+      await flushPromises();
+
+      await boton(wrapper, 'TESTS.SEND_FAILING').trigger('click');
+      await wrapper.find('li button').trigger('click');
+      await boton(wrapper, 'TESTS.SEND_TO_CHAT').trigger('click');
+
+      const enviadas = wrapper.emitted('evidence');
+      expect(enviadas).toHaveLength(2);
+      enviadas.forEach(([texto]) => expect(texto).toContain('¿precio?'));
+    });
+
+    it('sin Entrenamiento en pantalla no ofrece llevar al chat', async () => {
+      AssistantAPI.testCases.mockResolvedValue(conHistoria());
+      const wrapper = montar({ templateId: 5, canSendToChat: false });
+      await flushPromises();
+
+      expect(boton(wrapper, 'TESTS.SEND_FAILING')).toBeUndefined();
+    });
+
+    it('avisa lo que se rompió, muestra antes y ahora, y deja ver el antes', async () => {
+      AssistantAPI.testCases.mockResolvedValue(conHistoria());
+      const wrapper = montar({ templateId: 5 });
+      await flushPromises();
+
+      expect(wrapper.text()).toContain(
+        'TESTS.COMPARE {"before":1,"after":0,"total":1}'
+      );
+      expect(wrapper.text()).toContain('TESTS.COMPARE_BROKEN');
+      await wrapper.find('li button').trigger('click');
+      expect(wrapper.text()).toContain('TESTS.BEFORE');
+      await boton(wrapper, 'TESTS.VIEW_BEFORE').trigger('click');
+
+      expect(wrapper.emitted('select').pop()[0]).toEqual({
+        mode: 'live',
+        traza: { camino: 'kbase', ruta: { nombre: 'cotizar' } },
+        reply: 'Antes',
+      });
+    });
+
+    it('agrega una sugerida a la pila con su ruta esperada', async () => {
+      AssistantAPI.testCases.mockResolvedValue(pila({ cases: [] }));
+      AssistantAPI.suggestedTests.mockResolvedValue({
+        data: {
+          cases: [
+            {
+              message: '¿cuánto sale?',
+              expected: 'cotizar',
+              chosen: 'cotizar',
+              pass: true,
+            },
+          ],
+        },
+      });
+      AssistantAPI.addTestCase.mockResolvedValue({});
+      const wrapper = montar({ templateId: 5, inboxId: 2 });
+      await flushPromises();
+
+      await boton(wrapper, 'TESTS.SUGGEST').trigger('click');
+      await flushPromises();
+      expect(AssistantAPI.suggestedTests).toHaveBeenCalledWith(
+        '@ruta(cotizar #cotizar: precios): -',
+        null,
+        2
+      );
+      await boton(wrapper, 'TESTS.ADD_SHORT').trigger('click');
+      await flushPromises();
+
+      expect(AssistantAPI.addTestCase).toHaveBeenCalledWith(
+        5,
+        '¿cuánto sale?',
+        'cotizar'
+      );
+    });
+
+    it('sin guardar, la sugerida queda como prueba suelta', async () => {
+      AssistantAPI.suggestedTests.mockResolvedValue({
+        data: {
+          cases: [{ message: 'hola', chosen: 'soporte', tag: '#soporte' }],
+        },
+      });
+      const wrapper = montar();
+
+      await boton(wrapper, 'TESTS.SUGGEST').trigger('click');
+      await flushPromises();
+      await boton(wrapper, 'TESTS.ADD_SHORT').trigger('click');
+
+      expect(wrapper.find('li').text()).toContain('hola');
+      expect(AssistantAPI.addTestCase).not.toHaveBeenCalled();
     });
   });
 });
