@@ -71,6 +71,7 @@ class Contact < ApplicationRecord
   validate :owner_belongs_to_account, if: :will_save_change_to_owner_id?
   # Plan-Organizaciones O1 — la empresa o el público en general que es prospecto o cliente.
   belongs_to :organization, optional: true
+  has_many :event_attendees, dependent: :destroy # Plan-Eventos E1
   validate :organization_in_account, if: :will_save_change_to_organization_id?
   # Al ligarlo por primera vez, lo suyo que no tenía organización pasa a ella. Cambiar de
   # una a otra solo con Organizations::ChangeContactOrganization.

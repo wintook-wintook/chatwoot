@@ -598,6 +598,15 @@ en:
     seconds:
       one: "%{count} second"
       other: "%{count} seconds"
+  # Plan-Eventos E1
+  events:
+    errors:
+      not_found: 'Event not found'
+      segment_not_found: 'Segment not found'
+      status: 'The status is not valid'
+    import:
+      no_file: 'Choose a CSV file'
+      contact_not_found: 'Contact «%{value}» not found'
   # Plan-Organizaciones O1
   organizations:
     change:

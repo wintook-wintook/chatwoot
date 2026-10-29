@@ -223,7 +223,8 @@
       "MEETINGS": "Scheduled tasks",
       "CONCEPTS": "Service report",
       "PROJECT": "Project",
-      "PROJECT_CASES": "Project cases"
+      "PROJECT_CASES": "Project cases",
+      "RELATIONS": "Related cases"
     },
     "CONVERSATION": {
       "SUBTITLE": "Thread with the customer",
@@ -777,7 +778,10 @@
         "MESSAGE": "This will unlink the cases. Remove relation",
         "YES": "Remove",
         "NO": "Cancel"
-      }
+      },
+      "HELP": "Cases linked to this one: those created from here and those linked.",
+      "CREATE_CONFIRM": "Create and link",
+      "REMOVE": "Remove the link (the case is not deleted)"
     },
     "RELATION_TYPES": {
       "duplicate": {
@@ -811,6 +815,10 @@
       "project_origin": {
         "outgoing": "Project of",
         "incoming": "Project created"
+      },
+      "related": {
+        "outgoing": "Related",
+        "incoming": "Related"
       }
     },
     "TIMELINE": {

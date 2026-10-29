@@ -38,6 +38,8 @@ import contactTrackingBulkAssignsAPI from 'dashboard/api/contactTrackingBulkAssi
 import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import { getMinDateTime } from '../../../helper/trackingHelpers';
 import AudiencePreview from './AudiencePreview.vue';
+import EventsAPI from 'dashboard/api/events';
+import { ATTENDEE_STATUSES } from 'dashboard/views/events/eventHelpers';
 
 // proyecto@automatizacion_campanas — Fase 2: igual que ContactTrackings::BulkAssignService
 const MAX_BULK_ASSIGN = 1000;
@@ -114,6 +116,8 @@ const campaignState = campaign => {
     skipActive: audience.skip_active !== false,
     excludedContactIds: audience.excluded_contact_ids || [],
     ...audienceFromCampaign(campaign),
+    eventId: campaign.event_id || '', // Plan-Eventos E3
+    eventStatus: campaign.event_status || 'attended',
   };
   state.showSendOptions =
     !!state.entryDelayMinutes || !state.respectWorkingHours || !!state.dailyCap;
@@ -148,6 +152,10 @@ export default {
       audienceType: 'segment',
       selectedSegmentId: '',
       selectedLabel: '',
+      // Plan-Eventos E3 — apartado «Evento»: la campaña de un evento y con qué estado
+      events: [],
+      eventId: '',
+      eventStatus: 'attended',
       // La audiencia ya elegida: desde Contactos, o la de una Guardada que no la eligió
       // por segmento ni etiqueta.
       fixedFilterPayload: this.presetFilterPayload,
@@ -265,8 +273,30 @@ export default {
     endsAtMin() {
       return this.scheduledFor || this.minDateTime;
     },
+    eventStatuses() {
+      return ATTENDEE_STATUSES;
+    },
+    // La audiencia + la condición «Evento» (la misma del filtro de contactos), si hay evento.
     effectiveFilterPayload() {
-      if (!this.allowAudienceSelection) return this.fixedFilterPayload;
+      const base = this.baseFilterPayload.filter(
+        condition => condition.attribute_key !== 'event'
+      );
+      if (!this.eventId) return base;
+      const event = {
+        attribute_key: 'event',
+        filter_operator: 'equal_to',
+        values: [`${this.eventId}:${this.eventStatus}`],
+        query_operator: null,
+      };
+      const joined = base.map((condition, i) =>
+        i === base.length - 1
+          ? { ...condition, query_operator: 'and' }
+          : condition
+      );
+      return [...joined, event];
+    },
+    baseFilterPayload() {
+      if (!this.allowAudienceSelection) return this.fixedFilterPayload || [];
       if (this.audienceType === 'segment' && this.selectedSegmentId) {
         const segment = this.segments.find(
           s => s.id === Number(this.selectedSegmentId)
@@ -287,6 +317,7 @@ export default {
     },
     hasAudienceSelected() {
       if (!this.allowAudienceSelection || this.savedFilterPayload) return true;
+      if (this.eventId) return true; // solo los del evento
       return this.audienceType === 'segment'
         ? !!this.selectedSegmentId
         : !!this.selectedLabel;
@@ -350,6 +381,12 @@ export default {
     selectedLabel() {
       this.onAudienceChange();
     },
+    eventId() {
+      if (!this.isContinuous) this.fetchPreview();
+    },
+    eventStatus() {
+      if (!this.isContinuous && this.eventId) this.fetchPreview();
+    },
     selectedTemplateId() {
       if (!this.isContinuous) this.fetchPreview();
       // §10.12 (D21): por correo el tope es obligatorio; se sugiere 30 y se muestra.
@@ -361,11 +398,26 @@ export default {
   },
   async mounted() {
     this.loadTemplates();
+    this.loadEvents();
     // La vista previa espera a los segmentos: la de una Guardada sale del suyo.
     await this.loadAudienceData();
     this.fetchPreview();
   },
   methods: {
+    async loadEvents() {
+      try {
+        const { data } = await EventsAPI.list();
+        this.events = data.events || [];
+      } catch {
+        this.events = [];
+      }
+    },
+    eventPayload() {
+      return {
+        event_id: this.eventId || null,
+        event_status: this.eventId ? this.eventStatus : null,
+      };
+    },
     async loadTemplates() {
       if (this.templates.length) return;
       try {
@@ -498,6 +550,7 @@ export default {
         email_subject_b: this.emailSubjectBPayload(),
         ...this.windowPayload(),
         ...this.replyOptionsPayload(),
+        ...this.eventPayload(),
       };
     },
     batchBody() {
@@ -516,6 +569,8 @@ export default {
         audienceSource: this.audienceSource,
         emailSubject: this.emailSubjectPayload(),
         emailSubjectB: this.emailSubjectBPayload(),
+        eventId: this.eventId || null,
+        eventStatus: this.eventId ? this.eventStatus : null,
       };
     },
     create(launch) {
@@ -742,6 +797,53 @@ export default {
           class="m-0 mt-2 text-sm text-slate-500 dark:text-slate-400 italic"
         >
           {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_SAVED_HINT') }}
+        </p>
+      </section>
+
+      <!-- Plan-Eventos E3 — ¿De un evento? Por lote suma la condición a la audiencia;
+           continua inscribe sola a quien llegue a ese estado. -->
+      <section v-if="events.length" class="mt-5">
+        <h3 class="section-title">
+          {{ $t('BULK_TRACKING_ASSIGN.MODAL.SECTION_EVENT') }}
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
+          <label class="block">
+            <span class="field-label">
+              {{ $t('BULK_TRACKING_ASSIGN.MODAL.EVENT_LABEL') }}
+            </span>
+            <select v-model="eventId" class="field-input">
+              <option value="">
+                {{ $t('BULK_TRACKING_ASSIGN.MODAL.EVENT_NONE') }}
+              </option>
+              <option v-for="e in events" :key="e.id" :value="e.id">
+                {{ e.name }}
+              </option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="field-label">
+              {{ $t('BULK_TRACKING_ASSIGN.MODAL.EVENT_STATUS_LABEL') }}
+            </span>
+            <select
+              v-model="eventStatus"
+              :disabled="!eventId"
+              class="field-input"
+            >
+              <option v-for="key in eventStatuses" :key="key" :value="key">
+                {{ $t(`EVENTS.ATTENDEE_STATUSES.${key}`) }}
+              </option>
+            </select>
+          </label>
+        </div>
+        <p
+          v-if="eventId"
+          class="m-0 mt-2 text-sm text-slate-500 dark:text-slate-400"
+        >
+          {{
+            isContinuous
+              ? $t('BULK_TRACKING_ASSIGN.MODAL.EVENT_HINT_CONTINUOUS')
+              : $t('BULK_TRACKING_ASSIGN.MODAL.EVENT_HINT_BATCH')
+          }}
         </p>
       </section>
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_31_260000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_31_280000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1402,6 +1402,47 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_260000) do
     t.index ["account_id"], name: "index_erp_collection_bots_on_account_id"
   end
 
+  create_table "event_attendees", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "event_id", null: false
+    t.bigint "contact_id", null: false
+    t.integer "status", default: 0, null: false
+    t.string "source", default: "manual", null: false
+    t.datetime "invited_at"
+    t.datetime "confirmed_at"
+    t.datetime "attended_at"
+    t.datetime "cancelled_at"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "index_event_attendees_on_account_id_and_status"
+    t.index ["account_id"], name: "index_event_attendees_on_account_id"
+    t.index ["contact_id"], name: "index_event_attendees_on_contact_id"
+    t.index ["event_id", "contact_id"], name: "index_event_attendees_on_event_id_and_contact_id", unique: true
+    t.index ["event_id"], name: "index_event_attendees_on_event_id"
+    t.index ["updated_by_id"], name: "index_event_attendees_on_updated_by_id"
+  end
+
+  create_table "events", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.integer "kind", default: 0, null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "starts_at", null: false
+    t.datetime "ends_at"
+    t.string "location"
+    t.string "meeting_url"
+    t.integer "capacity"
+    t.text "description"
+    t.bigint "owner_id"
+    t.datetime "closed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "starts_at"], name: "index_events_on_account_id_and_starts_at"
+    t.index ["account_id"], name: "index_events_on_account_id"
+    t.index ["owner_id"], name: "index_events_on_owner_id"
+  end
+
   create_table "external_db_connections", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -2166,9 +2207,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_260000) do
     t.boolean "stop_when_not_interested", default: true, null: false
     t.boolean "stop_when_wrong_person", default: true, null: false
     t.boolean "retry_not_now", default: true, null: false
+    t.bigint "event_id"
+    t.string "event_status"
     t.index ["account_id", "purpose"], name: "index_tracking_campaigns_on_account_id_and_purpose"
     t.index ["account_id", "status"], name: "index_tracking_campaigns_on_account_id_and_status"
     t.index ["account_id"], name: "index_tracking_campaigns_on_account_id"
+    t.index ["event_id"], name: "index_tracking_campaigns_on_event_id"
     t.index ["inbox_id"], name: "index_tracking_campaigns_on_inbox_id"
     t.index ["tracking_template_id"], name: "index_tracking_campaigns_on_tracking_template_id"
     t.index ["user_id"], name: "index_tracking_campaigns_on_user_id"
@@ -2452,6 +2496,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_260000) do
   add_foreign_key "customer_assets", "accounts"
   add_foreign_key "customer_assets", "contacts", on_delete: :cascade
   add_foreign_key "customer_assets", "organizations", on_delete: :nullify
+  add_foreign_key "event_attendees", "accounts"
+  add_foreign_key "event_attendees", "contacts", on_delete: :cascade
+  add_foreign_key "event_attendees", "events", on_delete: :cascade
+  add_foreign_key "event_attendees", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "events", "accounts"
+  add_foreign_key "events", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "inboxes", "portals"
   add_foreign_key "kanban_processes", "accounts"
   add_foreign_key "kanban_processes", "kanban_type_processes"
@@ -2501,6 +2551,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_260000) do
   add_foreign_key "tracking_campaign_entries", "conversations", on_delete: :nullify
   add_foreign_key "tracking_campaign_entries", "tracking_campaigns", on_delete: :cascade
   add_foreign_key "tracking_campaigns", "accounts"
+  add_foreign_key "tracking_campaigns", "events", on_delete: :nullify
   add_foreign_key "tracking_campaigns", "inboxes"
   add_foreign_key "tracking_campaigns", "tracking_templates"
   add_foreign_key "tracking_campaigns", "users", on_delete: :nullify

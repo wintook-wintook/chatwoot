@@ -316,7 +316,11 @@ describe('Menú v2', () => {
       'CAMPAIGNS_WEB',
       'CAMPAIGNS_SMS',
       'CAMPAIGNS_DASHBOARD',
+      'EVENTS',
     ]);
+    ['events_list', 'event_detail'].forEach(name =>
+      expect(menuFor(route(name)).parentNav).toBe('campaigns')
+    );
     expect(menuFor(route('contact_trackings_metrics')).parentNav).toBe(
       'campaigns'
     );

@@ -23,6 +23,8 @@ const campaignBody = ({
   emailSubject = null, // prospeccion F1: asunto si el agente escribe por correo
   purpose = 'follow_up', // prospeccion V0: follow_up | prospecting
   emailSubjectB = null, // prospeccion P3: asunto B de la prueba A/B
+  eventId = null, // Plan-Eventos E3: la campaña de un evento
+  eventStatus = null,
 }) => ({
   payload,
   campaign_name: campaignName,
@@ -34,6 +36,8 @@ const campaignBody = ({
   email_subject: emailSubject,
   email_subject_b: emailSubjectB,
   purpose,
+  event_id: eventId,
+  event_status: eventStatus,
   ...window,
 });
 

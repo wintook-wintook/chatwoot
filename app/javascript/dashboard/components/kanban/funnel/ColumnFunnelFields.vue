@@ -50,6 +50,12 @@ export default {
     isConverted() {
       return this.value.stage_kind === 'converted';
     },
+    // El tipo guardado aunque ya no esté entre los que se pueden crear (para no mostrar
+    // «Ninguno» y borrarlo sin querer).
+    savedTypeMissing() {
+      const id = Number(this.value.convert_case_type_id);
+      return !!id && !this.caseTypes.some(type => type.id === id);
+    },
   },
   watch: {
     isConverted: {
@@ -136,12 +142,18 @@ export default {
       >
         {{ $t('KANBAN.FUNNEL.COLUMN.CONVERT_TYPE') }}
       </label>
+      <!-- :key — las opciones llegan después de abrir: se vuelve a pintar con ellas para
+           que muestre el tipo guardado y no «Ninguno». -->
       <select
+        :key="caseTypes.length"
         class="w-full"
         :value="value.convert_case_type_id || ''"
         @change="update({ convert_case_type_id: $event.target.value || null })"
       >
         <option value="">{{ $t('KANBAN.FUNNEL.COLUMN.CONVERT_NONE') }}</option>
+        <option v-if="savedTypeMissing" :value="value.convert_case_type_id">
+          {{ $t('KANBAN.FUNNEL.COLUMN.CONVERT_UNAVAILABLE') }}
+        </option>
         <option v-for="type in caseTypes" :key="type.id" :value="type.id">
           {{ type.name }}
         </option>

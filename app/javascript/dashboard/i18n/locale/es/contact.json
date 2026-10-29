@@ -537,7 +537,8 @@
       "NOTES": "Notas",
       "ASSETS": "Equipos",
       "QUOTES": "Cotizaciones",
-      "CONTRACTS": "Contratos"
+      "CONTRACTS": "Contratos",
+      "EVENTS": "Eventos"
     },
     "DATA": {
       "TITLE": "Datos",

@@ -13,6 +13,9 @@ vi.mock('dashboard/api/contacts', () => ({
   default: { filter: vi.fn(() => ({ data: { meta: { count: 0 } } })) },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('dashboard/api/events', () => ({
+  default: { list: vi.fn(() => Promise.resolve({ data: { events: [] } })) },
+}));
 
 // proyecto@automatizacion_campanas — F4 (docs/automatizacion_campanas_plan.md §7.1)
 const mountForm = (props = {}, segments = []) =>
@@ -382,5 +385,52 @@ describe('CampaignForm al modificar una Guardada', () => {
       'BULK_TRACKING_ASSIGN.MODAL.ENDS_PASSED'
     );
     expect(wrapper.vm.canConfirm).toBe(false);
+  });
+});
+
+// Plan-Eventos E3 — apartado «Evento»: suma la condición a la audiencia (por lote).
+describe('CampaignForm › Evento', () => {
+  const segment = {
+    id: 7,
+    name: 'Monterrey',
+    query: {
+      payload: [
+        {
+          attribute_key: 'city',
+          filter_operator: 'equal_to',
+          values: ['monterrey'],
+          query_operator: null,
+        },
+      ],
+    },
+  };
+
+  it('con evento, la audiencia es el segmento Y el evento con su estado', async () => {
+    const wrapper = mountForm({}, [segment]);
+    await wrapper.setData({
+      selectedSegmentId: 7,
+      eventId: 4,
+      eventStatus: 'no_show',
+    });
+    expect(wrapper.vm.effectiveFilterPayload).toEqual([
+      { ...segment.query.payload[0], query_operator: 'and' },
+      {
+        attribute_key: 'event',
+        filter_operator: 'equal_to',
+        values: ['4:no_show'],
+        query_operator: null,
+      },
+    ]);
+    expect(wrapper.vm.batchBody()).toMatchObject({
+      eventId: 4,
+      eventStatus: 'no_show',
+    });
+  });
+
+  it('solo con evento (sin segmento) ya hay audiencia', async () => {
+    const wrapper = mountForm();
+    await wrapper.setData({ eventId: 4, eventStatus: 'attended' });
+    expect(wrapper.vm.hasAudienceSelected).toBe(true);
+    expect(wrapper.vm.effectiveFilterPayload).toHaveLength(1);
   });
 });

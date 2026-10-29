@@ -120,9 +120,22 @@ export default {
       return [
         col('name', 'NAME', {
           renderBodyCell: ({ row }) => (
-            <span class="font-medium text-woot-600 dark:text-woot-400">
-              {row.name}
-            </span>
+            <div class="flex flex-col leading-5">
+              <span class="font-medium text-woot-600 dark:text-woot-400">
+                {row.name}
+              </span>
+              {/* Plan-Eventos E3 — la campaña de un evento y con qué estado */}
+              {row.event_name ? (
+                <span class="text-xs text-slate-500 dark:text-slate-400">
+                  {this.$t('EVENTS.CAMPAIGN_OF', {
+                    event: row.event_name,
+                    status: this.$t(
+                      `EVENTS.ATTENDEE_STATUSES.${row.event_status}`
+                    ),
+                  })}
+                </span>
+              ) : null}
+            </div>
           ),
         }),
         col('template_name', 'AGENT', {

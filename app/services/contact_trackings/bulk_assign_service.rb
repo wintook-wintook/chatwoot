@@ -37,9 +37,9 @@ class ContactTrackings::BulkAssignService
   #   { ends_at:, entry_delay_minutes:, respect_working_hours: } — todo opcional.
   # audience_source: cómo se eligió la audiencia ({ type: 'segment', segment_id: } o
   #   { type: 'label', label: }), para volver a mostrarla al modificar una Guardada.
-  def initialize(account:, current_user:, filter_payload:, template_id:, scheduled_for:, # rubocop:disable Metrics/ParameterLists
+  def initialize(account:, current_user:, filter_payload:, template_id:, scheduled_for:, # rubocop:disable Metrics/ParameterLists, Metrics/AbcSize
                  campaign_name:, excluded_contact_ids: [], skip_active: true, campaign: nil, window: {}, launch: true,
-                 audience_source: nil, email_subject: nil, purpose: nil, email_subject_b: nil)
+                 audience_source: nil, email_subject: nil, purpose: nil, email_subject_b: nil, event: {})
     @account              = account
     @current_user         = current_user
     @filter_payload       = filter_payload
@@ -56,6 +56,7 @@ class ContactTrackings::BulkAssignService
     # §10.12: el tipo ya no cambia nada; las campañas nuevas quedan como 'prospecting'
     @purpose              = TrackingCampaign::PURPOSES.include?(purpose.to_s) ? purpose.to_s : 'prospecting'
     @email_subject_b      = email_subject_b.to_s.strip.presence # prospeccion P3
+    @event                = event.to_h.symbolize_keys.slice(:event_id, :event_status) # Plan-Eventos E3
     @results              = { inserted: 0, skipped: 0, errors: [] }
   end
 
@@ -221,7 +222,7 @@ class ContactTrackings::BulkAssignService
       email_subject: @email_subject, # prospeccion F1: solo cuenta si la bandeja es de correo
       email_subject_b: @email_subject_b, # prospeccion P3
       purpose: @purpose # prospeccion V0
-    }
+    }.merge(@event) # Plan-Eventos E3: la audiencia ya trae la condición «Evento» (la arma el formulario)
   end
 
   def resolve_contacts

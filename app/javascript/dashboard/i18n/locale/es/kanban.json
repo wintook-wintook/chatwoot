@@ -79,7 +79,9 @@
         "CONVERT_TYPE": "Al soltar una tarjeta aquí, crear la oportunidad de tipo",
         "CONVERT_NONE": "No crear nada",
         "SUMMARY_RULES": "Reglas",
-        "SUMMARY_AI": "IA"
+        "SUMMARY_AI": "IA",
+        "SUMMARY_CONVERTS": "→ crea: {type}",
+        "CONVERT_UNAVAILABLE": "Tipo guardado (ya no disponible)"
       },
       "CLOSED": {
         "LABEL": "Convertidas y descartadas:",

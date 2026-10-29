@@ -71,6 +71,7 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
       skip_active: ActiveModel::Type::Boolean.new.cast(params.fetch(:skip_active, true)),
       window: window_params,
       audience_source: audience_source_param,
+      event: Events::CampaignEvent.attributes(Current.account, params), # Plan-Eventos E3
       **prospecting_params,
       **extra
     )

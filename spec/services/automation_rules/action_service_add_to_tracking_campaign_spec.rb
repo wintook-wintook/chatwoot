@@ -84,7 +84,8 @@ RSpec.describe AutomationRules::ActionService, '#add_to_tracking_campaign' do
                                                                headers: agent.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:success)
-      expect(response.parsed_body.first.keys).to match_array(%w[id name status mode scheduled_for ends_at inbox_id])
+      expect(response.parsed_body.first.keys)
+        .to match_array(%w[id name status mode scheduled_for ends_at inbox_id purpose event_id event_status])
       expect(response.parsed_body.first['mode']).to eq('continuous')
     end
   end
