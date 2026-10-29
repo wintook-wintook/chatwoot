@@ -79,4 +79,25 @@ RSpec.describe 'Api::V1::Accounts::ContactTrackings::AssistantTestCasesControlle
     expect(ContactTrackings::Assistant::TestCasesDryJob).to have_received(:perform_later)
       .with(account.id, template.id, template.complementary_prompt, template.inbox_id, 'publish')
   end
+
+  # F5
+  it 'agrega un diálogo' do
+    post base_url, params: { template_id: template.id, message: 'x', turns: ['quiero cita', 'el martes'] },
+                   headers: headers, as: :json
+
+    expect(response.parsed_body).to include('message' => 'quiero cita', 'turns' => ['quiero cita', 'el martes'])
+  end
+
+  it 'compara la pila contra una versión guardada' do
+    template.test_cases.create!(account: account, message: 'hola')
+    version = template.versions.create!(account: account, version: 3, snapshot: { 'complementary_prompt' => 'v3' })
+    allow(ContactTrackings::Assistant::TestCasesCompareJob).to receive(:perform_later)
+
+    post "#{base_url}/compare", params: { template_id: template.id, version_id: version.id, draft: 'ahora' },
+                                headers: headers, as: :json
+
+    expect(response).to have_http_status(:accepted)
+    expect(ContactTrackings::Assistant::TestCasesCompareJob).to have_received(:perform_later)
+      .with(account.id, template.id, version.id, 'ahora', nil)
+  end
 end

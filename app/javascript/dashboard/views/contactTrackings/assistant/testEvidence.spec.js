@@ -136,3 +136,36 @@ describe('compareRuns', () => {
     expect(comparado.fixed.map(c => c.id)).toEqual([2]);
   });
 });
+
+// F5
+describe('evidencia de un diálogo', () => {
+  it('lleva cada turno, no solo el primero', () => {
+    const texto = evidenceMessage(
+      [
+        {
+          message: 'quiero cita',
+          turns: ['quiero cita', 'el martes'],
+          live: vivo({
+            dialog: [
+              { customer: 'quiero cita', reply: '¿Qué día?' },
+              { customer: 'el martes', reply: 'Listo' },
+            ],
+          }),
+        },
+      ],
+      t
+    );
+
+    expect(texto).toContain('CUSTOMER quiero cita\nAGENT ¿Qué día?');
+    expect(texto).toContain('CUSTOMER el martes\nAGENT Listo');
+  });
+
+  it('en seco lleva los mensajes del cliente', () => {
+    const texto = evidenceMessage(
+      [{ message: 'a', turns: ['a', 'b'], dry: { routes: { chosen: 'x' } } }],
+      t
+    );
+
+    expect(texto).toContain('CUSTOMER a\nCUSTOMER b');
+  });
+});

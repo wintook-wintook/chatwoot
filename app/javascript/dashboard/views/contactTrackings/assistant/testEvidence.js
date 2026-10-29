@@ -95,19 +95,31 @@ const verdict = vivo => {
     .join(' ');
 };
 
-// Una prueba de la pila (como la arma TestsPanel: message, live, dry, conversation).
-const evidenceBlock = (fila, t, n) => {
-  const lineas = [
-    t('EVIDENCE_TITLE', {
-      n,
-      mode: fila.live ? t('EVIDENCE_LIVE') : t('EVIDENCE_DRY'),
-    }),
-  ];
-  lineas.push(`${t('CUSTOMER')} ${fila.message}`);
-  if (fila.live) {
+// Una prueba de la pila (como la arma TestsPanel: message, turns, live, dry). En un
+// diálogo (F5) va cada turno: el Asistente necesita ver qué se habló antes.
+const conversationLines = (fila, t) => {
+  const dialogo = fila.live && fila.live.dialog;
+  if (dialogo && dialogo.length) {
+    return dialogo.flatMap(turno => [
+      `${t('CUSTOMER')} ${turno.customer}`,
+      `${t('AGENT')} ${truncate(turno.reply, MAX_REPLY) || t('NO_REPLY')}`,
+    ]);
+  }
+  const clientes =
+    fila.turns && fila.turns.length > 1 ? fila.turns : [fila.message];
+  const lineas = clientes.map(m => `${t('CUSTOMER')} ${m}`);
+  if (fila.live)
     lineas.push(
       `${t('AGENT')} ${truncate(fila.live.reply, MAX_REPLY) || t('NO_REPLY')}`
     );
+  return lineas;
+};
+
+const evidenceBlock = (fila, t, n) => {
+  const modo = fila.live ? t('EVIDENCE_LIVE') : t('EVIDENCE_DRY');
+  const lineas = [t('EVIDENCE_TITLE', { n, mode: modo })];
+  lineas.push(...conversationLines(fila, t));
+  if (fila.live) {
     lineas.push(`${t('EVIDENCE_PATH')} ${pathSummary('live', fila.live, t)}`);
     lineas.push(`${t('VERDICT')} ${verdict(fila.live)}`);
     if (fila.live.conversation)

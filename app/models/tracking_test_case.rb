@@ -17,6 +17,7 @@
 #  previous_live        :jsonb            not null
 #  rule                 :text
 #  source_key           :string
+#  turns                :jsonb            not null
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  account_id           :bigint           not null
@@ -44,6 +45,10 @@
 #   last_live / previous_live  { at, reply, cumple, motivo, fallas, ruta_ok, traza,
 #                                conversation, tokens }  — TestBatteryJob
 #
+# `turns` (F5): una prueba puede ser un DIÁLOGO de 2–4 mensajes del cliente; `message`
+# es el primero. Vacío = un solo mensaje. Sirve para lo que depende de lo ya hablado:
+# agenda, variables, el dato que pide @crear_ticket.
+#
 # `path` es la FIRMA del camino en seco (ruta · fuente · si trajo fragmentos · si abre
 # caso · etiqueta): dos corridas con la misma firma tomaron el mismo camino. Es lo que
 # decide, al publicar, qué pruebas «cambiaron» y vale la pena correr en vivo.
@@ -52,6 +57,7 @@
 class TrackingTestCase < ApplicationRecord
   KINDS = %w[ruta regla propia].freeze
   MAX_PER_TEMPLATE = 40
+  MAX_TURNS = 4
 
   belongs_to :account
   belongs_to :tracking_template
@@ -59,8 +65,18 @@ class TrackingTestCase < ApplicationRecord
   validates :message, presence: true, length: { maximum: 500 }
   validates :kind, inclusion: { in: KINDS }
   validate :within_limit, on: :create
+  validate :turns_shape
 
   scope :ordered, -> { order(:position, :id) }
+
+  # Los mensajes del cliente, en orden: el diálogo, o el único mensaje.
+  def customer_turns
+    turns.presence || [message]
+  end
+
+  def dialog?
+    customer_turns.size > 1
+  end
 
   # ¿El último camino en seco es distinto del anterior? nil si no hay con qué comparar.
   def dry_changed?
@@ -85,6 +101,13 @@ class TrackingTestCase < ApplicationRecord
   end
 
   private
+
+  def turns_shape
+    return if turns.blank?
+    return errors.add(:turns, :invalid) unless turns.is_a?(Array) && turns.all? { |t| t.is_a?(String) && t.present? }
+
+    errors.add(:turns, :too_long, count: MAX_TURNS) if turns.size > MAX_TURNS
+  end
 
   def within_limit
     return if tracking_template.nil?
