@@ -41,6 +41,19 @@ import TypeProcessModal from '../components/kanban/TypeProcessModal.vue';
 import FunnelMetricsModal from '../components/kanban/funnel/FunnelMetricsModal.vue';
 import { useAlert } from 'dashboard/composables';
 import kanbanMixin from 'dashboard/mixins/kanbanMixin';
+
+// Embudo de contactos — cuántos días de Convertido/Descartado se ven (lo recuerda cada quien).
+const CLOSED_DAYS_KEY = 'kanban_closed_days';
+const CLOSED_DAYS_OPTIONS = [7, 30, 90, 0];
+const DEFAULT_CLOSED_DAYS = 30;
+const readClosedDays = () => {
+  try {
+    const saved = parseInt(localStorage.getItem(CLOSED_DAYS_KEY), 10);
+    return CLOSED_DAYS_OPTIONS.includes(saved) ? saved : DEFAULT_CLOSED_DAYS;
+  } catch {
+    return DEFAULT_CLOSED_DAYS;
+  }
+};
 //import { frontendURL } from '../helper/URLHelper';
 export default {
   name: 'KanbanBoard',
@@ -87,6 +100,9 @@ export default {
       expandedProcessId: null,
       activeView: 'board', // 'board' o 'management'
       filteredTypeProcesses: [],
+
+      // Embudo de contactos — en «Convertido» y «Descartado» solo lo de estos días (0 = todo)
+      closedDays: readClosedDays(),
 
       // 🆕 NUEVAS PROPIEDADES PARA FILTROS
       filters: {
@@ -153,6 +169,10 @@ export default {
       );
     },
 
+    closedDaysOptions() {
+      return CLOSED_DAYS_OPTIONS;
+    },
+
     pageTitle() {
       console.log('🔍 COMPUTING pageTitle...');
 
@@ -174,7 +194,7 @@ export default {
     // 🆕 COMPUTED PARA OPCIONES DE FILTROS
     assigneeOptions() {
       const options = [
-        { id: 'all', name: 'Todos los agentes' },
+        { id: 'all', name: 'Todos los usuarios' },
         { id: 'me', name: 'Mis conversaciones' },
         { id: 'unassigned', name: 'Sin asignar' },
       ];
@@ -491,6 +511,15 @@ export default {
     },
 
     // 🆕 REFRESCAR DATOS CON FILTROS
+    onClosedDaysChange(event) {
+      this.closedDays = parseInt(event.target.value, 10) || 0;
+      try {
+        localStorage.setItem(CLOSED_DAYS_KEY, String(this.closedDays));
+      } catch {
+        // Sin almacenamiento: vale para esta visita.
+      }
+    },
+
     async refreshBoardData() {
       console.log('🔄 Refrescando datos del tablero con filtros:', this.filters);
       await this.loadBoardData();
@@ -856,6 +885,17 @@ export default {
                 </option>
               </select>
             </label>
+            <label v-if="kanbanTypes.length && !label && !statusFilter"
+              class="flex items-center gap-2 pl-2 text-sm text-slate-600 dark:text-slate-300"
+              :title="$t('KANBAN.FUNNEL.CLOSED.HELP')">
+              {{ $t('KANBAN.FUNNEL.CLOSED.LABEL') }}
+              <select :value="closedDays" class="!mb-0 !py-1 !h-8 text-sm w-auto min-w-[9rem]"
+                @change="onClosedDaysChange">
+                <option v-for="days in closedDaysOptions" :key="days" :value="days">
+                  {{ days ? $t('KANBAN.FUNNEL.CLOSED.LAST_DAYS', { days }) : $t('KANBAN.FUNNEL.CLOSED.ALL') }}
+                </option>
+              </select>
+            </label>
           </div>
           <woot-button variant="clear" size="small" icon="arrow-clockwise" :is-loading="isLoading"
             @click="refreshBoardData"
@@ -973,7 +1013,7 @@ export default {
                 <KanbanColumn ref="kanbanColumns" :type-process="typeProcess" :process-id="selectedProcessId"
                   :label-filter="filters.labelFilter || label"
                   :status-filter="filters.statusFilter !== 'all' ? filters.statusFilter : (statusFilter || null)"
-                  :assignee-filter="filters.assigneeFilter" style="width: 100%; height: 100%;"
+                  :assignee-filter="filters.assigneeFilter" :closed-days="closedDays" style="width: 100%; height: 100%;"
                   @drag-start="onGlobalDragStart" @drag-end="onGlobalDragEnd"
                   @card-click="(conversation) => $emit('conversation-select', conversation)" />
               </div>

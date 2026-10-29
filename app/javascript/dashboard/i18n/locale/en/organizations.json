@@ -1,0 +1,221 @@
+{
+  "ORGANIZATIONS": {
+    "TITLE": "Organizations",
+    "DESCRIPTION": "Prospects and customers, companies or general public, with their contacts.",
+    "NEW": "New organization",
+    "SEARCH": "Search by name, tax ID or domain",
+    "ALL_KINDS": "Companies and general public",
+    "TOTAL": "{count} organizations",
+    "EMPTY": "There are no organizations here yet.",
+    "NOT_FOUND": "Organization not found.",
+    "SAVED": "Organization saved",
+    "ERROR": "The organization could not be saved",
+    "DELETED": "Organization deleted",
+    "DELETE": "Delete organization",
+    "DELETE_CONFIRM": "Delete this organization? Its contacts stay, just without an organization.",
+    "EDIT": "Edit",
+    "MARK_CUSTOMER": "Mark as customer",
+    "BACK_TO_PROSPECT": "Back to prospect",
+    "DATA": "Details",
+    "CONTACTS": "Contacts ({count})",
+    "NO_CONTACTS": "No contacts linked yet.",
+    "ADD_CONTACT": "Link a contact",
+    "REMOVE_CONTACT": "Remove from the organization",
+    "HISTORY": "History",
+    "TABS": {
+      "prospect": "Prospects",
+      "customer": "Customers",
+      "all": "All"
+    },
+    "STAGES": {
+      "prospect": "Prospect",
+      "customer": "Customer"
+    },
+    "KINDS": {
+      "company": "Company",
+      "general_public": "General public"
+    },
+    "KIND_HINTS": {
+      "company": "Invoiced (with tax ID)",
+      "general_public": "No invoice"
+    },
+    "COLUMNS": {
+      "NAME": "Name",
+      "STAGE": "Stage",
+      "TAX_ID": "Tax ID",
+      "CONTACTS": "Contacts",
+      "OWNER": "Owner"
+    },
+    "FIELDS": {
+      "TAX_ID": "Tax ID",
+      "INDUSTRY": "Industry",
+      "WEBSITE": "Website",
+      "EMAIL_DOMAIN": "Email domain",
+      "PHONE": "Phone",
+      "ADDRESS": "Address",
+      "OWNER": "Owner",
+      "PROSPECT_SINCE": "Prospect since",
+      "CUSTOMER_SINCE": "Customer since",
+      "NOTES": "Notes"
+    },
+    "EVENTS": {
+      "STAGE": "Moved from {from} to {to}",
+      "CREATED": "Created as {to}",
+      "JOINED": "{contact} arrived from {from}",
+      "JOINED_WITH": "{contact} arrived from {from} with all their records",
+      "LEFT": "{contact} moved to {to}; their records stay here with {replacement}",
+      "LEFT_WITH": "{contact} moved to {to} and took all their records",
+      "NOWHERE": "no organization"
+    },
+    "FORM": {
+      "NEW_TITLE": "New organization",
+      "EDIT_TITLE": "Edit organization",
+      "FROM_CONTACT_TITLE": "Turn {name} into a prospect",
+      "KIND": "Type",
+      "NAME": "Name or legal name",
+      "PERSON_NAME": "Name",
+      "STAGE": "Stage",
+      "TAX_ID": "Tax ID",
+      "TAX_ID_HINT": "Optional: it can be filled in when invoicing.",
+      "INDUSTRY": "Industry",
+      "WEBSITE": "Website",
+      "EMAIL_DOMAIN": "Email domain",
+      "EMAIL_DOMAIN_PLACEHOLDER": "company.com",
+      "PHONE": "Phone",
+      "OWNER": "Owner",
+      "OWNER_NONE": "No owner",
+      "ADDRESS": "Address",
+      "NOTES": "Notes",
+      "CANCEL": "Cancel",
+      "SAVE": "Save"
+    },
+    "CONTACT": {
+      "TITLE": "Organization",
+      "NONE": "No organization: it is a contact.",
+      "CONVERT": "Turn into prospect",
+      "LINK_EXISTING": "Link to an existing organization",
+      "SEARCH": "Search organization",
+      "UNLINK": "Remove from the organization",
+      "CHANGE": "Change organization",
+      "UNLINK_CONFIRM": "Remove from {name}? What is already in {name} stays there.",
+      "OTHER_ORGANIZATION": "Belongs to this organization, not the contact's current one"
+    },
+    "PICKER": {
+      "LABEL": "Organization (optional)",
+      "CONTACT": "Contact",
+      "PLACEHOLDER": "Search organization by name or tax ID",
+      "CLEAR": "Remove organization"
+    },
+    "ACTIVITY": {
+      "TABS": {
+        "opportunities": "Opportunities",
+        "cases": "Cases",
+        "quotes": "Quotes",
+        "contracts": "Contracts",
+        "assets": "Equipment"
+      },
+      "EMPTY": "Nothing here yet.",
+      "OUTCOME": {
+        "won": "Won",
+        "lost": "Lost",
+        "cancelled": "Cancelled"
+      },
+      "QUOTE_STATUS": {
+        "draft": "Draft",
+        "sent": "Sent",
+        "won": "Accepted",
+        "lost": "Rejected",
+        "postponed": "Postponed",
+        "cancelled": "Cancelled"
+      }
+    },
+    "RULES": {
+      "TITLE": "Automatic prospects and customers",
+      "DESCRIPTION": "What turns an organization into a prospect or a customer without doing it by hand. It can always be changed by hand from the organization.",
+      "GROUPS": {
+        "prospect": "Becomes a prospect (if the contact has no organization, one is created)",
+        "customer": "Becomes a customer"
+      },
+      "ITEMS": {
+        "prospect_on_opportunity": "When an opportunity is created (includes «Converted» in the contact funnel)",
+        "prospect_on_quote_sent": "When a quote is sent",
+        "customer_on_won": "When an opportunity is won",
+        "customer_on_contract": "When a contract is created",
+        "customer_on_quote_accepted": "When a quote is accepted"
+      },
+      "REASONS": {
+        "prospect_on_opportunity": "new opportunity",
+        "prospect_on_quote_sent": "quote sent",
+        "customer_on_won": "opportunity won",
+        "customer_on_contract": "new contract",
+        "customer_on_quote_accepted": "quote accepted"
+      }
+    },
+    "TEMPLATE": "CSV template",
+    "IMPORT": "Import",
+    "IMPORT_HELP": "Columns: id, nombre, tipo (empresa or publico_en_general), etapa (prospecto or cliente), rfc, giro, sitio_web, dominio_correo, telefono, direccion, responsable (email), notas, contactos (emails or phones separated by «;»). Matched by id, tax ID or name: if it exists it is updated.",
+    "IMPORT_DONE": "Import done: {created} new and {updated} updated",
+    "IMPORT_ERRORS": "{count} rows with errors. First: line {line}, {error}",
+    "ASSISTANT": {
+      "OPEN": "Group existing contacts",
+      "TITLE": "Organizations for your contacts",
+      "DESCRIPTION": "Proposal for the contacts that have no organization yet. Review, remove or fix what you don't want and then apply.",
+      "EMPTY": "Nothing to propose: all your contacts with a company, domain or activity already have an organization.",
+      "SOURCES": {
+        "company": "By the company written on the contact",
+        "domain": "By their email domain",
+        "person": "Customer without a company (has a contract or a won opportunity)"
+      },
+      "EXISTING": "already exists: they will be linked to it",
+      "CONTACTS": "{count} contacts: {names}",
+      "SELECTED": "{count} selected",
+      "APPLY": "Apply",
+      "DONE": "Done: {created} new organizations and {linked} contacts linked"
+    },
+    "DASHBOARD": {
+      "TITLE": "Customers dashboard",
+      "DESCRIPTION": "Prospects and customers: how many there are, how many arrived and how long they take to buy.",
+      "PERIOD": "Last {months} months",
+      "MONTHLY": "Arrivals per month",
+      "TILES": {
+        "PROSPECTS": "Prospects today",
+        "CUSTOMERS": "Customers today",
+        "NEW_PROSPECTS": "New prospects",
+        "NEW_CUSTOMERS": "New customers",
+        "CONVERSION": "Conversion to customer",
+        "AVG_DAYS": "Days from prospect to customer"
+      }
+    },
+    "REMOVE_CONTACT_CONFIRM": "Remove {name} from this organization? What is already here stays here.",
+    "CHANGE": {
+      "TITLE": "Change {name}'s organization",
+      "CURRENT": "Currently in {name}.",
+      "STEP_TARGET": "1. Which organization are they moving to?",
+      "NO_ORGANIZATION": "None (no organization)",
+      "SAME": "They are already in that organization: choose another one.",
+      "STEP_MOVE": "2. Move their records too?",
+      "HAS": "In {name} they have: {items}.",
+      "HAS_NOTHING": "In {name} they have no opportunities, cases, quotes, contracts or equipment.",
+      "MOVE_YES": "Yes, move everything to the new one",
+      "MOVE_YES_HINT": "When they were in the wrong organization.",
+      "MOVE_NO": "No, keep everything here",
+      "MOVE_NO_HINT": "When they changed companies: their records still belong to {name}.",
+      "STEP_REPLACEMENT": "3. Who stays in {name} instead of {contact}?",
+      "CHOOSE": "Choose a contact",
+      "NEW_CONTACT": "+ Add a new one",
+      "NEW_NAME": "Name",
+      "NEW_EMAIL": "Email",
+      "NEW_PHONE": "Phone",
+      "REPLACEMENT_HINT": "That person becomes the contact of what is still running (open cases and opportunities, undecided quotes, contracts, equipment and maintenance). Closed items stay with whoever handled them.",
+      "CONFIRM": "Change organization",
+      "DONE": "Organization changed",
+      "KINDS": {
+        "case_tickets": "opportunities and cases: {count}",
+        "quotes": "quotes: {count}",
+        "contracts": "contracts: {count}",
+        "customer_assets": "equipment: {count}",
+        "maintenance_plans": "maintenance plans: {count}"
+      }
+    }
+  }
+}

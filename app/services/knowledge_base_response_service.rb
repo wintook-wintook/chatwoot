@@ -1030,6 +1030,8 @@ class KnowledgeBaseResponseService
     system_content += "\n\n#{attachments_hint}" if attachments_hint
     system_content += "\n\nContenido relevante del foro:\n#{context}#{SOURCE_FIDELITY_RULE}" if context.present?
     system_content += "\n\n#{variables_rule}" if variables_rule.present?
+    organization_line = Organizations::PromptContext.for(@conversation&.contact) # Plan-Organizaciones O5
+    system_content += "\n\n#{organization_line}" if organization_line
     system_content += "\n\n#{branch_scope_rule}" if branch_scope_rule.present?
 
     messages = [{ role: 'system', content: system_content }]
@@ -1202,7 +1204,7 @@ class KnowledgeBaseResponseService
   def send_reply(text)
     text = ContactTrackings::ConversationVariables.settle(@tracking, @conversation, text) if @tracking
     content, attachments = ContactTrackings::AgentAttachments.resolve(@tracking&.tracking_template, text)
-    params = { content: content, private: false }
+    params = { content: content, private: false, ai_agent: ContactTrackings::AgentIdentity.for(@tracking&.tracking_template) }
     params[:attachments] = attachments if attachments.any?
     reply_message = Messages::MessageBuilder.new(bot_user, @conversation, params).perform
 

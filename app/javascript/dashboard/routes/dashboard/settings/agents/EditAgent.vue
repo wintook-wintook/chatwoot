@@ -2,7 +2,7 @@
 // ================================================================================
 // proyecto@user_contact
 // ================================================================================
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required, minLength } from '@vuelidate/validators';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -34,14 +34,19 @@ const props = defineProps({
     type: String,
     default: '',
   },
-  // Andres Liverio
-  current: {
-    type: Object,
-    default: () => ({}), // Corrected
-  },
   customRoleId: {
     type: Number,
     default: null,
+  },
+  // Plan-Roles-Permisos — supervisor, seller, technician o viewer (nil en admin).
+  accessRoleKey: {
+    type: String,
+    default: null,
+  },
+  // Plan-Trabajo-Campo R3 — habilidades y zona (despacho).
+  fieldProfile: {
+    type: Object,
+    default: () => ({}),
   },
   // proyecto@user_contact
   agentContactId: {
@@ -61,10 +66,6 @@ const { AVAILABILITY_STATUS_KEYS } = wootConstants;
 const store = useStore();
 const { t } = useI18n();
 
-// Andres Liverio
-const showOnlyMine = ref(false);
-const disabledOnlyMine = ref(false);
-
 // proyecto@user_contact
 const agentContactId = ref(props.agentContactId);
 const contactSearch = ref('');
@@ -74,8 +75,17 @@ const showContactDropdown = ref(false);
 
 const agentName = ref(props.name);
 const agentAvailability = ref(props.availability);
-const selectedRoleId = ref(props.customRoleId || props.type);
+// Plan-Roles-Permisos — un agente sin rol es Supervisor.
+const ACCESS_ROLE_KEYS = ['supervisor', 'seller', 'technician', 'viewer'];
+const initialRoleId = () => {
+  if (props.customRoleId) return props.customRoleId;
+  if (props.type === 'administrator') return 'administrator';
+  return `access_${props.accessRoleKey || 'supervisor'}`;
+};
+const selectedRoleId = ref(initialRoleId());
 const agentCredentials = ref({ email: props.email });
+const skills = ref((props.fieldProfile.skills || []).join(', '));
+const zone = ref(props.fieldProfile.zone || '');
 
 const rules = {
   agentName: { required, minLength: minLength(1) },
@@ -92,12 +102,6 @@ const v$ = useVuelidate(rules, {
 const pageTitle = computed(
   () => `${t('AGENT_MGMT.EDIT.TITLE')} - ${props.name}`
 );
-
-// Andres Liverio
-onMounted(() => {
-  const agent = props.current;
-  showOnlyMine.value = agent?.custom_attributes?.showOnlyMine || false; // Andres Liverio
-});
 
 const onContactSearch = async () => {
   if (contactSearch.value.length < 2) {
@@ -132,17 +136,19 @@ const uiFlags = useMapGetter('agents/getUIFlags');
 const getCustomRoles = useMapGetter('customRole/getCustomRoles');
 
 const roles = computed(() => {
+  // Plan-Roles-Permisos — los 5 roles (Ajustes › Roles) en lugar de «Agente».
   const defaultRoles = [
     {
       id: 'administrator',
       name: 'administrator',
-      label: t('AGENT_MGMT.AGENT_TYPES.ADMINISTRATOR'),
+      label: t('ACCESS_ROLES.ROLES.ADMINISTRATOR'),
     },
-    {
-      id: 'agent',
-      name: 'agent',
-      label: t('AGENT_MGMT.AGENT_TYPES.AGENT'),
-    },
+    ...ACCESS_ROLE_KEYS.map(key => ({
+      id: `access_${key}`,
+      name: `access_${key}`,
+      accessRoleKey: key,
+      label: t(`ACCESS_ROLES.ROLES.${key.toUpperCase()}`),
+    })),
   ];
 
   const customRoles = getCustomRoles.value.map(role => ({
@@ -180,12 +186,23 @@ const editAgent = async () => {
       id: props.id,
       name: agentName.value,
       availability: agentAvailability.value,
-      custom_attributes: { showOnlyMine: showOnlyMine.value }, // Andres Liverio
       agent_contact_id: agentContactId.value, // proyecto@user_contact
+      // Plan-Trabajo-Campo R3
+      field_profile: {
+        skills: skills.value
+          .split(',')
+          .map(skill => skill.trim())
+          .filter(Boolean),
+        zone: zone.value.trim(),
+      },
     };
 
     if (selectedRole.value.name.startsWith('custom_')) {
       payload.custom_role_id = selectedRole.value.id;
+    } else if (selectedRole.value.accessRoleKey) {
+      payload.role = 'agent';
+      payload.access_role_key = selectedRole.value.accessRoleKey;
+      payload.custom_role_id = null;
     } else {
       payload.role = selectedRole.value.name;
       payload.custom_role_id = null;
@@ -239,11 +256,23 @@ const resetPassword = async () => {
         </label>
       </div>
 
-      <div class="flex gap-2 w-full">
-        <input v-model="showOnlyMine" type="checkbox" 
-          :value="false" :disabled="disabledOnlyMine"/>
+      <!-- Plan-Trabajo-Campo R3 — para el despacho de técnicos -->
+      <div class="grid w-full grid-cols-1 gap-x-4 sm:grid-cols-2">
         <label>
-          {{ 'Mostar solo conversaciones asignadas al agente.' }}
+          {{ $t('DISPATCH.PROFILE.SKILLS') }}
+          <input
+            v-model="skills"
+            type="text"
+            :placeholder="$t('DISPATCH.PROFILE.SKILLS_PLACEHOLDER')"
+          />
+        </label>
+        <label>
+          {{ $t('DISPATCH.PROFILE.ZONE') }}
+          <input
+            v-model="zone"
+            type="text"
+            :placeholder="$t('DISPATCH.PROFILE.ZONE_PLACEHOLDER')"
+          />
         </label>
       </div>
 
@@ -270,11 +299,17 @@ const resetPassword = async () => {
 
       <!-- proyecto@user_contact: selector de contacto vinculado al agente -->
       <div class="w-full mt-2">
-        <label>{{ 'Contacto WhatsApp del agente' }}</label>
-        <div v-if="selectedContact" class="flex items-center gap-2 p-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+        <label>{{ 'Contacto WhatsApp del usuario' }}</label>
+        <div
+          v-if="selectedContact"
+          class="flex items-center gap-2 p-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+        >
           <span class="flex-1 text-sm">
             {{ selectedContact.name }}
-            <span v-if="selectedContact.phone_number" class="text-slate-500 ml-1">
+            <span
+              v-if="selectedContact.phone_number"
+              class="text-slate-500 ml-1"
+            >
               ({{ selectedContact.phone_number }})
             </span>
           </span>

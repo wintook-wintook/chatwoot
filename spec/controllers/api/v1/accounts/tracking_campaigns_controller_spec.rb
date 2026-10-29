@@ -39,6 +39,13 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
                                   inbox: inbox, tracking_campaign_id: campaign.id)
       end
 
+      it 'dice para qué es la campaña (prospeccion V0)' do
+        campaign.update!(purpose: 'prospecting')
+        get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}", headers: admin.create_new_auth_token, as: :json
+
+        expect(response.parsed_body['purpose']).to eq('prospecting')
+      end
+
       it 'sin envíos registrados (antes de la Fase 1), la entrega sale del último mensaje saliente' do
         get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}",
             headers: admin.create_new_auth_token, as: :json
@@ -104,12 +111,13 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
         expect(response.parsed_body['funnel']).to include('paused_rule' => 1, 'cancelled_rule' => 1)
       end
 
-      it 'expone el embudo: interesados / agendaron solo por las reglas de palabra clave' do
+      # §10.12 (D27): el embudo único da los mismos números que «Intenciones» con palabras clave
+      it 'expone el embudo: interesados / agendaron por las reglas de palabra clave, igual que antes' do
         get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}",
             headers: admin.create_new_auth_token, as: :json
 
-        expect(response.parsed_body['funnel']).to eq('replied' => 3, 'interested' => 2, 'appointment' => 1, 'objective_met' => 0,
-                                                     'paused_rule' => 0, 'cancelled_rule' => 0)
+        expect(response.parsed_body['funnel']).to include('replied' => 3, 'interested' => 2, 'appointment' => 1, 'objective_met' => 0,
+                                                          'paused_rule' => 0, 'cancelled_rule' => 0)
       end
     end
   end
@@ -124,6 +132,19 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
 
       expect(response).to have_http_status(:success)
       expect(TrackingCampaign.find(response.parsed_body['campaign_id'])).to have_attributes(status: 'saved', mode: 'continuous')
+    end
+
+    # prospeccion V0 — para qué es la campaña
+    it 'guarda si es de prospección; un valor desconocido queda en seguimiento' do
+      url = "/api/v1/accounts/#{account.id}/tracking_campaigns"
+      post url, params: { name: 'Frío', tracking_template_id: template.id, launch: false, purpose: 'prospecting',
+                          daily_cap: 30 },
+                headers: admin.create_new_auth_token, as: :json
+      expect(TrackingCampaign.find(response.parsed_body['campaign_id'])).to be_prospecting
+
+      post url, params: { name: 'Raro', tracking_template_id: template.id, launch: false, purpose: 'otra' },
+                headers: admin.create_new_auth_token, as: :json
+      expect(TrackingCampaign.find(response.parsed_body['campaign_id']).purpose).to eq('prospecting') # §10.12
     end
   end
 
@@ -157,6 +178,16 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
                                               scheduled_for: start, ends_at: nil)
       expect(saved.audience).to include('excluded_contact_ids' => [contacts.first.id],
                                         'source' => { 'type' => 'label', 'label' => 'vip' })
+    end
+
+    it 'por lote: mientras está Guardada se puede volver de prospección (prospeccion V0)' do
+      patch "/api/v1/accounts/#{account.id}/contact_tracking_bulk_assigns/#{saved.id}",
+            params: { campaign_name: 'Lote', template_id: template.id, scheduled_for: 2.days.from_now.iso8601,
+                      purpose: 'prospecting', daily_cap: 30 },
+            headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(saved.reload).to be_prospecting
     end
 
     it 'por lote: acepta un inicio que ya pasó (al ponerla en curso empieza ahora), no un fin vencido' do
@@ -262,6 +293,45 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
     end
   end
 
+  # Botón «Pausar campaña»: a mano, sin motivo; se reanuda igual que la pausada por Meta
+  describe 'POST /api/v1/accounts/{account.id}/tracking_campaigns/{id}/pause' do
+    let(:url) { "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}" }
+
+    it 'pausa una campaña en curso sin motivo, no la deja inscribir y se reanuda' do
+      campaign.update!(status: 'running', scheduled_for: 1.hour.ago)
+
+      post "#{url}/pause", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(campaign.reload).to have_attributes(status: 'paused', paused_reason: nil)
+      expect(campaign.paused_at).to be_present
+      expect(campaign.accepting_entries?).to be(false)
+
+      post "#{url}/resume", headers: admin.create_new_auth_token, as: :json
+      expect(campaign.reload.status).to eq('running')
+    end
+
+    it 'una Guardada, ya pausada o terminada no se pausa: 422' do
+      %w[saved paused finished].each do |status|
+        campaign.update_columns(status: status) # rubocop:disable Rails/SkipsModelValidations
+        post "#{url}/pause", headers: admin.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+    end
+
+    it 'un seguimiento de la campaña pausada se detiene al llegar su turno' do
+      campaign.update!(status: 'running')
+      tracking = create(:contact_tracking, account: account, inbox: inbox, contact: create(:contact, account: account),
+                                           tracking_campaign: campaign, status: 'scheduled', scheduled_for: 1.minute.from_now)
+      tracking.update_column(:scheduled_for, 1.minute.ago) # rubocop:disable Rails/SkipsModelValidations
+      post "#{url}/pause", headers: admin.create_new_auth_token, as: :json
+
+      ContactTrackingJob.perform_now(tracking.id)
+
+      expect(tracking.reload).to have_attributes(status: 'paused', paused_by_campaign: true)
+    end
+  end
+
   # proyecto@automatizacion_campanas — reanudar una campaña pausada por error de Meta
   describe 'POST /api/v1/accounts/{account.id}/tracking_campaigns/{id}/resume' do
     it 'reanuda la campaña pausada y devuelve su estado y los seguimientos a reanudar' do
@@ -278,6 +348,102 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
     it 'una campaña que no está pausada responde 422' do
       post "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}/resume",
            headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
+  # prospeccion V6 — embudo de prospección y «Entregar»
+  describe 'Prospección: embudo y entregar' do
+    let(:prospecting) { create(:tracking_campaign, account: account, inbox: inbox, purpose: 'prospecting', daily_cap: 30) }
+    let(:interested) do
+      create(:contact_tracking, account: account, inbox: inbox, contact: create(:contact, account: account),
+                                tracking_campaign: prospecting, attempt_count: 1, prospect_stage: 'interested')
+    end
+
+    it 'el detalle trae el mismo embudo en todas las campañas (§10.12)' do
+      interested
+      get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['funnel']).to include('contacted' => 1, 'interested' => 1)
+
+      get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['funnel'].keys).to include('contacted', 'handed_off', 'not_now', 'bounced')
+      expect(response.parsed_body['scoring']).to be_present
+      expect(response.parsed_body['channel_type']).to eq(inbox.channel_type) # U4: filtro por canal
+    end
+
+    it 'entrega a un interesado y no a quien no lo es' do
+      url = "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}/hand_off"
+      post url, params: { tracking_id: interested.id }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:success)
+      expect(interested.reload.prospect_stage).to eq('handed_off')
+
+      post url, params: { tracking_id: interested.id }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    # prospeccion P2
+    it 'configura la entrega (tablero, columna, plazo, escalar) en cualquier estado y la devuelve en el detalle' do
+      board = create(:kanban_type_process, account: account)
+      column = create(:kanban_process, kanban_type_process: board)
+      url = "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}/handoff_settings"
+
+      patch url, params: { handoff_board_id: board.id, handoff_column_id: column.id, handoff_due_hours: 4, handoff_escalate_hours: '' },
+                 headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:success)
+      expect(prospecting.reload).to have_attributes(handoff_column_id: column.id, handoff_due_hours: 4, handoff_escalate_hours: nil)
+
+      get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to include('handoff_board_id' => board.id, 'handoff_due_hours' => 4)
+    end
+
+    # prospeccion P3
+    it 'prueba de asuntos: el detalle trae la comparación y se puede elegir el ganador' do
+      prospecting.update!(email_subject: 'Asunto A', email_subject_b: 'Asunto B')
+      get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['subject_test']['variants'].keys).to eq(%w[a b])
+
+      post "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}/subject_winner",
+           params: { variant: 'b' }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:success)
+      expect(prospecting.reload.subject_ab_winner).to eq('b')
+
+      post "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}/subject_winner",
+           params: { variant: 'x' }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    # prospeccion P4
+    it 'puntuación: guarda pesos y reglas, recalcula en segundo plano, copia de otra y vuelve a los sugeridos' do
+      url = "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}/scoring"
+      expect do
+        patch url, params: { scoring: { weights: { replied: 30 }, rules: { industry: { labels: ['Industrial'] } } } },
+                   headers: admin.create_new_auth_token, as: :json
+      end.to have_enqueued_job(TrackingCampaigns::ProspectScoreJob).with(prospecting.id)
+      expect(response.parsed_body['weights']).to include('replied' => 30, 'asked_price' => 20)
+      expect(response.parsed_body.dig('rules', 'industry', 'labels')).to eq(['industrial'])
+
+      other = create(:tracking_campaign, account: account, inbox: inbox, purpose: 'prospecting', daily_cap: 30)
+      patch "/api/v1/accounts/#{account.id}/tracking_campaigns/#{other.id}/scoring", params: { copy_from_campaign_id: prospecting.id },
+                                                                                     headers: admin.create_new_auth_token, as: :json
+      expect(other.reload.scoring.dig('weights', 'replied')).to eq(30)
+
+      patch url, params: { reset: true }, headers: admin.create_new_auth_token, as: :json
+      expect(prospecting.reload.scoring).to eq({})
+    end
+
+    it 'la ficha del contacto trae su puntuación más reciente (D19)' do
+      interested.update_columns(prospect_score: 40, prospect_score_parts: { 'replied' => 10 }) # rubocop:disable Rails/SkipsModelValidations
+      get "/api/v1/accounts/#{account.id}/contacts/#{interested.contact_id}/prospect_score", headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body).to include('score' => 40, 'campaign_name' => prospecting.name)
+    end
+
+    it 'una columna de otro tablero responde 422' do
+      column = create(:kanban_process, kanban_type_process: create(:kanban_type_process, account: account))
+      patch "/api/v1/accounts/#{account.id}/tracking_campaigns/#{prospecting.id}/handoff_settings",
+            params: { handoff_board_id: create(:kanban_type_process, account: account).id, handoff_column_id: column.id },
+            headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end

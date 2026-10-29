@@ -35,6 +35,9 @@ import general from './general.json';
 import datePicker from './datePicker.json';
 // Importar todos los archivos JSON de inglés
 import kanban from './kanban.json';
+import contracts from './contracts.json'; // Plan-Contratos R1
+import organizations from './organizations.json'; // Plan-Organizaciones O1
+import events from './events.json'; // Plan-Eventos E1
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
 import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
@@ -46,6 +49,7 @@ import bulkTrackingAssign from './bulkTrackingAssign.json'; // proyecto@bulk_tra
 import trackingCampaigns from './trackingCampaigns.json'; // @campanas_vendedor
 import trackingAssistant from './trackingAssistant.json'; // proyecto@asistente_agentes_ia
 import whatsappCalls from './whatsappCalls.json'; // diag/llamadas_whatsapp
+import internalChat from './internalChat.json'; // feat/chat_interno
 
 export default {
   ...advancedFilters,
@@ -84,6 +88,9 @@ export default {
   ...general,
   ...datePicker,
   ...kanban,
+  ...contracts,
+  ...organizations,
+  ...events,
   ...trackingTemplates, // proyecto@tracking_templates
   ...knowledgeSources, // @knowledge_sources
   ...contactTracking, // proyecto@contact_tracking
@@ -94,4 +101,5 @@ export default {
   ...trackingCampaigns, // @campanas_vendedor
   ...trackingAssistant, // proyecto@asistente_agentes_ia
   ...whatsappCalls, // diag/llamadas_whatsapp
+  ...internalChat, // feat/chat_interno
 };

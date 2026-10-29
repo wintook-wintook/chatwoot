@@ -345,6 +345,13 @@ export default {
           class="text-xs text-slate-500 dark:text-slate-400"
           >{{ child.assignee.name }}</span
         >
+        <!-- Plan-Trabajo-Campo R1 — la orden ya mandó su reporte al cliente -->
+        <span
+          v-if="child.report_sent_at"
+          class="px-1.5 text-[11px] rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+        >
+          {{ $t('SERVICE_REPORT.REPORT_SENT') }}
+        </span>
         <span
           v-if="detail(child)"
           class="w-full text-xs tabular-nums text-slate-500 dark:text-slate-400"

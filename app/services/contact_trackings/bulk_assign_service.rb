@@ -37,9 +37,9 @@ class ContactTrackings::BulkAssignService
   #   { ends_at:, entry_delay_minutes:, respect_working_hours: } — todo opcional.
   # audience_source: cómo se eligió la audiencia ({ type: 'segment', segment_id: } o
   #   { type: 'label', label: }), para volver a mostrarla al modificar una Guardada.
-  def initialize(account:, current_user:, filter_payload:, template_id:, scheduled_for:, # rubocop:disable Metrics/ParameterLists
+  def initialize(account:, current_user:, filter_payload:, template_id:, scheduled_for:, # rubocop:disable Metrics/ParameterLists, Metrics/AbcSize
                  campaign_name:, excluded_contact_ids: [], skip_active: true, campaign: nil, window: {}, launch: true,
-                 audience_source: nil)
+                 audience_source: nil, email_subject: nil, purpose: nil, email_subject_b: nil, event: {})
     @account              = account
     @current_user         = current_user
     @filter_payload       = filter_payload
@@ -52,6 +52,11 @@ class ContactTrackings::BulkAssignService
     @window               = window.to_h.symbolize_keys.compact
     @launch               = launch
     @audience_source      = audience_source.presence
+    @email_subject        = email_subject.to_s.strip.presence # prospeccion F1
+    # §10.12: el tipo ya no cambia nada; las campañas nuevas quedan como 'prospecting'
+    @purpose              = TrackingCampaign::PURPOSES.include?(purpose.to_s) ? purpose.to_s : 'prospecting'
+    @email_subject_b      = email_subject_b.to_s.strip.presence # prospeccion P3
+    @event                = event.to_h.symbolize_keys.slice(:event_id, :event_status) # Plan-Eventos E3
     @results              = { inserted: 0, skipped: 0, errors: [] }
   end
 
@@ -75,7 +80,7 @@ class ContactTrackings::BulkAssignService
     error, contacts_count = validation(template)
     return error_result(error) if error
 
-    @campaign.update!(campaign_attributes(template).merge(status: 'saved', daily_cap: nil))
+    @campaign.update!(campaign_attributes(template).merge(status: 'saved'))
     saved_result(@campaign, contacts_count)
   end
 
@@ -141,12 +146,22 @@ class ContactTrackings::BulkAssignService
   def creation_error(template)
     return 'El nombre de la campaña es obligatorio' if @campaign_name.blank?
 
-    error = window_error
+    error = window_error || campaign_rules_error(template)
     return error if error
     # La campaña fija su inbox; sin inbox no hay canal por el cual conversar.
     return if template.inbox_id.present?
 
     "La plantilla '#{template.name}' no tiene un inbox configurado. Asígnale un inbox antes de lanzar la campaña."
+  end
+
+  # §10.12 (D21): reglas por canal (correo: tope y asunto obligatorios).
+  def campaign_rules_error(template)
+    TrackingCampaigns::CampaignRules.error_for(daily_cap: @window[:daily_cap], email_subject: @email_subject,
+                                               inbox: template.inbox)
+  end
+
+  def reply_options
+    TrackingCampaign::REPLY_OPTIONS.index_with { |option| @window.fetch(option, true) }
   end
 
   def window_error
@@ -201,8 +216,13 @@ class ContactTrackings::BulkAssignService
                   source: @audience_source }.compact,
       ends_at: @window[:ends_at],
       entry_delay_minutes: @window[:entry_delay_minutes] || 0,
-      respect_working_hours: @window.fetch(:respect_working_hours, true)
-    }
+      respect_working_hours: @window.fetch(:respect_working_hours, true),
+      **reply_options, # §10.12 (D20, D25): qué hacer con lo que la IA leyó en la respuesta
+      daily_cap: @window[:daily_cap],
+      email_subject: @email_subject, # prospeccion F1: solo cuenta si la bandeja es de correo
+      email_subject_b: @email_subject_b, # prospeccion P3
+      purpose: @purpose # prospeccion V0
+    }.merge(@event) # Plan-Eventos E3: la audiencia ya trae la condición «Evento» (la arma el formulario)
   end
 
   def resolve_contacts

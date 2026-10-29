@@ -27,16 +27,18 @@ class CaseTicketRelation < ApplicationRecord
   belongs_to :related_ticket, class_name: 'CaseTicket'
 
   enum relation_type: {
-    duplicate:         0, # ticket es duplicado de related
-    parent_child:      1, # ticket es padre de related
-    incident_problem:  2, # ticket (incidente) pertenece a related (problema)
-    incident_change:   3, # ticket (incidente) asociado a related (cambio)
-    change_problem:    4, # ticket (cambio) resuelve related (problema)
+    duplicate: 0, # ticket es duplicado de related
+    parent_child: 1, # ticket es padre de related
+    incident_problem: 2, # ticket (incidente) pertenece a related (problema)
+    incident_change: 3, # ticket (incidente) asociado a related (cambio)
+    change_problem: 4, # ticket (cambio) resuelve related (problema)
     # Plan-Clase-Orden-de-Trabajo F2b. Al FINAL, sin reordenar nada de arriba.
     work_order_origin: 5, # ticket (orden de trabajo) nació de related (ticket u oportunidad)
     # Plan-Clase-Proyecto P2. Al FINAL, sin reordenar nada de arriba.
-    project_member:    6, # ticket (orden o ticket de Soporte) pertenece a related (proyecto)
-    project_origin:    7  # ticket (proyecto) nació de related (oportunidad ganada)
+    project_member: 6, # ticket (orden o ticket de Soporte) pertenece a related (proyecto)
+    project_origin: 7, # ticket (proyecto) nació de related (oportunidad ganada)
+    # Pestaña «Casos relacionados»: vínculo simple, sin jerarquía. Al FINAL.
+    related: 8 # ticket está relacionado con related
   }
 
   validates :relation_type, presence: true
@@ -54,9 +56,9 @@ class CaseTicketRelation < ApplicationRecord
   def same_account
     return if ticket.blank? || related_ticket.blank?
 
-    if ticket.account_id != related_ticket.account_id || ticket.account_id != account_id
-      errors.add(:related_ticket_id, 'debe pertenecer a la misma cuenta')
-    end
+    return unless ticket.account_id != related_ticket.account_id || ticket.account_id != account_id
+
+    errors.add(:related_ticket_id, 'debe pertenecer a la misma cuenta')
   end
 
   # Evita ciclo inmediato: si ya existe la relación inversa del mismo tipo (related → ticket),

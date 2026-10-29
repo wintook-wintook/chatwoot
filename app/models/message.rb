@@ -145,10 +145,13 @@ class Message < ApplicationRecord
   after_create_commit :respond_via_erp_bot, if: :incoming?, unless: :voice_call?
 
   # proyecto@contact_tracking: evalúa keywords de acción en mensajes salientes
-  after_create_commit :check_keyword_actions_for_outgoing, unless: -> { incoming? || voice_call? }
+  after_create_commit :check_keyword_actions_for_outgoing, unless: -> { incoming? || voice_call? || internal_conversation? }
 
   # proyecto@botseller_webhook_saliente: notifica a INTERNAL_WEBHOOK_URL también en salientes
-  after_create_commit :dispatch_botseller_for_outgoing, if: :outgoing?, unless: :voice_call?
+  after_create_commit :dispatch_botseller_for_outgoing, if: :outgoing?, unless: -> { voice_call? || internal_conversation? }
+
+  # prospeccion P2b: el vendedor le escribió a un interesado entregado → la IA se calla
+  after_create_commit :check_prospect_handoff, if: -> { outgoing? && !private? && sender_type == 'User' }
 
   after_update_commit :dispatch_update_event
 
@@ -204,7 +207,10 @@ class Message < ApplicationRecord
     data
   end
 
+  # Agentes IA: su nombre para el cliente (o ninguno), no el del usuario con que se guardan.
   def sender_name
+    return content_attributes[:ai_agent_name].presence if content_attributes[:ai_agent]
+
     sender&.try(:available_name) || sender&.try(:name)
   end
 
@@ -312,6 +318,11 @@ class Message < ApplicationRecord
 
   def ensure_content_type
     self.content_type ||= Message.content_types[:text]
+  end
+
+  # feat/chat_interno (plan v2): mensaje entre agentes en «Interno»: nada de lo de clientes.
+  def internal_conversation?
+    conversation.present? && conversation.internal?
   end
 
   def execute_after_create_commit_callbacks
@@ -533,6 +544,15 @@ class Message < ApplicationRecord
     BotSeller::OutgoingDispatchJob.perform_later(id)
   rescue StandardError => e
     Rails.logger.error "[Message] Error queueing botseller outgoing dispatch: #{e.message}"
+  end
+
+  # Unos segundos después: la marca de bot (sentiment_auto_reply) se guarda tras crear el mensaje.
+  def check_prospect_handoff
+    return unless TrackingCampaigns::HandoffAttention.pending?(conversation_id)
+
+    TrackingCampaigns::HandoffAttendedJob.set(wait: TrackingCampaigns::HandoffAttendedJob::DELAY).perform_later(conversation_id)
+  rescue StandardError => e
+    Rails.logger.error "[Message] Error revisando la entrega del prospecto: #{e.message}"
   end
 end
 

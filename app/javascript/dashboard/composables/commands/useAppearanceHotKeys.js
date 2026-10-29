@@ -11,7 +11,8 @@ import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import {
   setColorTheme,
   setColorTint,
-  COLOR_TINTS,
+  announceAppearanceChange,
+  TINT_CHOICES,
 } from 'dashboard/helper/themeHelper.js';
 
 const getThemeOptions = t => [
@@ -33,9 +34,12 @@ const getThemeOptions = t => [
 ];
 
 const getTintOptions = t =>
-  COLOR_TINTS.map(tint => ({
+  TINT_CHOICES.map(tint => ({
     key: tint,
-    label: t(`PROFILE_SETTINGS.FORM.APPEARANCE.TINTS.${tint.toUpperCase()}`),
+    label:
+      tint === 'empresa'
+        ? t('PROFILE_SETTINGS.FORM.APPEARANCE.TINTS.EMPRESA_SHORT')
+        : t(`PROFILE_SETTINGS.FORM.APPEARANCE.TINTS.${tint.toUpperCase()}`),
     icon: ICON_APPEARANCE,
   }));
 
@@ -45,6 +49,7 @@ const setAppearance = theme => {
     '(prefers-color-scheme: dark)'
   ).matches;
   setColorTheme(isOSOnDarkMode);
+  announceAppearanceChange();
 };
 
 export function useAppearanceHotKeys() {
@@ -72,6 +77,7 @@ export function useAppearanceHotKeys() {
       icon: tint.icon,
       handler: () => {
         setColorTint(tint.key);
+        announceAppearanceChange();
       },
     }));
 

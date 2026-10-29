@@ -40,6 +40,8 @@
         "COLD_AFTER": "Mark «Cold» after these days without a customer reply",
         "DISCARD_AFTER": "Discard after these days without a customer reply",
         "DAYS_PLACEHOLDER": "Empty = never",
+        "RESOLVE_ON_STALE": "When discarding for days without a reply, resolve the conversation",
+        "RESOLVE_ON_STALE_HELP": "It is resolved without notifying the customer: no survey or messages. If they write again, it reopens and the card goes back to the entry column.",
         "SAVE": "Save funnel",
         "SAVED": "Funnel saved",
         "TEMPLATE_HINT": "A new funnel comes with its columns, rules and AI criteria ready. Just pick the inboxes that enter automatically."
@@ -77,7 +79,17 @@
         "CONVERT_TYPE": "When a card is dropped here, create the opportunity of type",
         "CONVERT_NONE": "Do not create anything",
         "SUMMARY_RULES": "Rules",
-        "SUMMARY_AI": "AI"
+        "SUMMARY_AI": "AI",
+        "SUMMARY_CONVERTS": "→ creates: {type}",
+        "CONVERT_UNAVAILABLE": "Saved type (no longer available)"
+      },
+      "CLOSED": {
+        "LABEL": "Converted and discarded:",
+        "HELP": "So those columns do not grow forever. Nothing is deleted and the metrics count everything.",
+        "LAST_DAYS": "Last {days} days",
+        "ALL": "All",
+        "OLDER": "+ {count} older · show",
+        "ONLY_RECENT": "Show only the last {days} days"
       },
       "CARD": {
         "MOVED_RULE": "Moved automatically",

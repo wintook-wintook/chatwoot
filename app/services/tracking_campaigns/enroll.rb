@@ -13,6 +13,7 @@
 #   ya tiene un Agente IA activo en el inbox     → omitido "active_tracking"
 #   el canal no lo puede contactar (sin teléfono → omitido "not_contactable"
 #     en WhatsApp, sin correo en Email…)
+#   correo mal escrito o dominio que no recibe   → omitido "invalid_email" (prospeccion V7a)
 #   la hora calculada cae después del fin        → omitido "outside_window"
 #   si no                                        → inscrito + ContactTracking programado
 #
@@ -47,7 +48,7 @@ class TrackingCampaigns::Enroll
     reason = skip_reason
     return skip(reason) if reason
 
-    send_at = TrackingCampaigns::Schedule.new(@campaign).send_at(@at)
+    send_at = TrackingCampaigns::Schedule.new(@campaign).send_at(@at, day_offset: batch_day_offset)
     return skip('outside_window') unless send_at
 
     send_at = [send_at, @at + follow_up_delay].max if live_conversation?
@@ -64,7 +65,18 @@ class TrackingCampaigns::Enroll
     return 'daily_cap' if daily_cap_reached?
     return 'active_tracking' if @skip_active && active_tracking?
 
-    'not_contactable' unless contactable?
+    contact_reason
+  end
+
+  # prospeccion V4: quien pidió no ser contactado nunca se inscribe, aunque el canal pudiera.
+  # prospeccion V7a: correo mal escrito o dominio que no recibe → su propio motivo.
+  def contact_reason
+    return 'opted_out' if @contact.opted_out?
+
+    contactable, reason = contactability
+    return if contactable
+
+    reason == REASON_INVALID_EMAIL ? 'invalid_email' : 'not_contactable'
   end
 
   # Cerrada también si le falta el canal o el Agente IA: no hay por dónde ni con qué escribir.
@@ -72,20 +84,28 @@ class TrackingCampaigns::Enroll
     @campaign.accepting_entries?(@at) && @campaign.inbox.present? && @campaign.tracking_template.present?
   end
 
+  # Continua: el que pasa del tope del día queda omitido. Por lote se reparte (batch_day_offset).
   def daily_cap_reached?
-    return false if @campaign.daily_cap.blank?
+    return false if @campaign.daily_cap.blank? || !@campaign.continuous?
 
     day = @at.in_time_zone(@campaign.inbox.timezone.presence || 'UTC')
     @campaign.entries.enrolled.where(created_at: day.all_day).count >= @campaign.daily_cap
+  end
+
+  # prospeccion V3: por lote, con tope, el inscrito número n sale el día hábil n / tope.
+  def batch_day_offset
+    return 0 if @campaign.continuous? || @campaign.daily_cap.blank?
+
+    @campaign.entries.enrolled.count / @campaign.daily_cap
   end
 
   def active_tracking?
     ContactTracking.exists?(contact_id: @contact.id, inbox_id: @campaign.inbox_id, status: ACTIVE_STATUSES)
   end
 
-  def contactable?
+  def contactability
     reusable = builder.existing_conversation.present?
-    channel_contactability(@contact, @campaign.inbox.channel_type, reusable: reusable).first
+    channel_contactability(@contact, @campaign.inbox.channel_type, reusable: reusable)
   end
 
   def builder

@@ -25,6 +25,7 @@ export const FEATURE_FLAGS = {
   RESPONSE_BOT: 'response_bot',
   CHANNEL_EMAIL: 'channel_email',
   CHANNEL_FACEBOOK: 'channel_facebook',
+  CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_TWITTER: 'channel_twitter',
   CHANNEL_WEBSITE: 'channel_website',
   CUSTOM_REPLY_DOMAIN: 'custom_reply_domain',

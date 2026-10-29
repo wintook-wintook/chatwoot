@@ -7,9 +7,11 @@ import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useConfig } from 'dashboard/composables/useConfig';
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import semver from 'semver';
+import AccountBrandSettings from './AccountBrandSettings.vue'; // feat/apariencia B1
 import { getLanguageDirection } from 'dashboard/components/widgets/conversation/advancedFilterItems/languages';
 
 export default {
+  components: { AccountBrandSettings },
   setup() {
     const { updateUISettings } = useUISettings();
     const { enabledLanguages } = useConfig();
@@ -284,6 +286,7 @@ export default {
         :loading="isUpdating"
       />
     </form>
+    <AccountBrandSettings v-if="!uiFlags.isFetchingItem" />
 
     <woot-loading-state v-if="uiFlags.isFetchingItem" />
   </div>

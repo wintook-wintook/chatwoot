@@ -133,14 +133,14 @@ export default {
                 <button
                   v-if="showCancelButton"
                   @click="onCancel"
-                  class="px-3 py-1.5 text-sm font-medium text-blue-600 bg-transparent rounded hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-150"
+                  class="px-3 py-1.5 text-sm font-medium text-woot-600 bg-transparent rounded hover:bg-woot-50 focus:outline-none focus:ring-2 focus:ring-woot-500 focus:ring-offset-1 transition-colors duration-150"
                   type="button"
                 >
                   {{ cancelButtonText }}
                 </button>
                 <button
                   @click="onAccept"
-                  class="px-3 py-1.5 text-sm font-medium text-white bg-blue-500 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-150"
+                  class="px-3 py-1.5 text-sm font-medium text-white bg-woot-500 rounded hover:bg-woot-600 focus:outline-none focus:ring-2 focus:ring-woot-500 focus:ring-offset-1 transition-colors duration-150"
                   type="button"
                 >
                   {{ acceptButtonText }}

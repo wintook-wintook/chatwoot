@@ -4,6 +4,7 @@ import Vuex from 'vuex';
 import accounts from './modules/accounts';
 import agentBots from './modules/agentBots';
 import agents from './modules/agents';
+import internalChat from './modules/internalChat'; // feat/chat_interno_pulido
 import articles from './modules/helpCenterArticles';
 import attributes from './modules/attributes';
 import auth from './modules/auth';
@@ -83,6 +84,7 @@ export default new Vuex.Store({
     accounts,
     agentBots,
     agents,
+    internalChat,
     articles,
     attributes,
     auth,

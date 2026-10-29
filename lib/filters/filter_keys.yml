@@ -128,6 +128,14 @@ conversations:
 
 ### ----- Contact Filters ----- ###
 contacts:
+  # Plan-Eventos E2 — «Evento»: el contacto está en un evento con un estado. Valor
+  # «<event_id|any>:<estado|any>» (Contacts::FilterService#event_filter_query).
+  event:
+    attribute_type: "standard"
+    data_type: "event_status"
+    filter_operators:
+      - "equal_to"
+      - "not_equal_to"
   name:
     attribute_type: "standard"
     data_type: "text_case_insensitive"

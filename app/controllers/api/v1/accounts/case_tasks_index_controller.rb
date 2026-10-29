@@ -24,6 +24,7 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
   include CaseMeetingSerializer
 
   def index
+    limit_to_own_tasks
     result = Cases::TasksInboxQuery.new(account: Current.account, current_user: current_user, params: params).call
     @notes_count_map = notes_count_map_for(result[:rows])
 
@@ -62,6 +63,15 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
   end
 
   private
+
+  # Plan-Roles-Permisos — con Agenda en «solo lo suyo» se piden solo las propias
+  # (o las sin asignar, si el rol puede tomarlas); cualquier otro valor → las mías.
+  def limit_to_own_tasks
+    return unless access_grant.own?(:agenda)
+    return if params[:assignee_id].to_s == 'unassigned' && access_grant.can?(:take_unassigned)
+
+    params[:assignee_id] = current_user.id.to_s
+  end
 
   def render_ai_error(message)
     render json: { error: message }, status: :unprocessable_entity

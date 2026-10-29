@@ -18,6 +18,10 @@
 #  commit_note                :text
 #  committed_at               :datetime
 #  conformity_note            :text
+#  conformity_signature       :text
+#  csat_at                    :datetime
+#  csat_comment               :text
+#  csat_rating                :integer
 #  currency                   :string(3)
 #  custom_attributes          :jsonb            not null
 #  customer_confirmed         :boolean          default(FALSE), not null
@@ -26,12 +30,16 @@
 #  escalation_level           :integer          default(0), not null
 #  estimated_hours            :decimal(6, 2)
 #  expected_close_at          :date
+#  external_technician        :jsonb            not null
+#  external_token             :string
+#  external_token_expires_at  :datetime
 #  first_response_at          :datetime
 #  first_response_time_target :integer
 #  folio                      :string
 #  impact                     :integer
 #  locked_at                  :datetime
 #  metadata                   :jsonb            not null
+#  on_site                    :boolean
 #  origin                     :integer          default("whatsapp"), not null
 #  outcome                    :integer
 #  outcome_at                 :datetime
@@ -46,6 +54,8 @@
 #  received_by                :string
 #  reopen_count               :integer          default(0), not null
 #  reopened_at                :datetime
+#  report_sent_at             :datetime
+#  report_token               :string
 #  resolution_time_target     :integer
 #  resolved_at                :datetime
 #  sla_paused_minutes         :integer          default(0), not null
@@ -55,6 +65,7 @@
 #  ticket_kind                :integer          default("service_request"), not null
 #  title                      :string           not null
 #  urgency                    :integer
+#  visit_response             :jsonb            not null
 #  work_address               :string
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
@@ -67,8 +78,11 @@
 #  contact_id                 :bigint
 #  contact_tracking_id        :bigint
 #  conversation_id            :bigint
+#  customer_asset_id          :bigint
 #  kb_article_id              :bigint
 #  locked_by_id               :bigint
+#  maintenance_plan_id        :bigint
+#  organization_id            :bigint
 #  outcome_reason_id          :bigint
 #  postpone_reason_id         :bigint
 #  requester_id               :bigint
@@ -91,11 +105,16 @@
 #  index_case_tickets_on_contact_id                   (contact_id)
 #  index_case_tickets_on_contact_tracking_id          (contact_tracking_id)
 #  index_case_tickets_on_conversation_id              (conversation_id)
+#  index_case_tickets_on_customer_asset_id            (customer_asset_id)
+#  index_case_tickets_on_external_token               (external_token) UNIQUE
 #  index_case_tickets_on_kb_article_id                (kb_article_id)
 #  index_case_tickets_on_locked_by_id                 (locked_by_id)
+#  index_case_tickets_on_maintenance_plan_id          (maintenance_plan_id)
 #  index_case_tickets_on_metadata                     (metadata) USING gin
+#  index_case_tickets_on_organization_id              (organization_id)
 #  index_case_tickets_on_postponed_until              (postponed_until) WHERE (postponed_until IS NOT NULL)
 #  index_case_tickets_on_project_due_on               (project_due_on) WHERE (project_due_on IS NOT NULL)
+#  index_case_tickets_on_report_token                 (report_token) UNIQUE
 #  index_case_tickets_on_requester_id                 (requester_id)
 #
 # Foreign Keys
@@ -104,13 +123,18 @@
 #  fk_rails_...  (contact_id => contacts.id) ON DELETE => nullify
 #  fk_rails_...  (contact_tracking_id => contact_trackings.id) ON DELETE => nullify
 #  fk_rails_...  (conversation_id => conversations.id) ON DELETE => nullify
+#  fk_rails_...  (customer_asset_id => customer_assets.id) ON DELETE => nullify
 #  fk_rails_...  (locked_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (maintenance_plan_id => maintenance_plans.id) ON DELETE => nullify
+#  fk_rails_...  (organization_id => organizations.id) ON DELETE => nullify
 #  fk_rails_...  (outcome_reason_id => case_outcome_reasons.id) ON DELETE => nullify
 #  fk_rails_...  (postpone_reason_id => case_outcome_reasons.id) ON DELETE => nullify
 #  fk_rails_...  (requester_id => users.id) ON DELETE => nullify
 #
 
 class CaseTicket < ApplicationRecord
+  include ServiceReportable # Plan-Trabajo-Campo R1 — reporte de servicio de la orden
+  include FieldPortal # Plan-Trabajo-Campo R5 — portal del cliente y técnico externo
   # @tickets_cases 2A: state machine ITIL ampliado a 13 estados.
   # 'open' se etiqueta "Nuevo" en la UI; los valores enteros 0–8 no cambian, 9–12 son nuevos.
   VALID_TRANSITIONS = {
@@ -192,6 +216,15 @@ class CaseTicket < ApplicationRecord
 
   belongs_to :account
   belongs_to :contact,           optional: true # @tickets_cases Fase C — nil en tickets internos
+  include OrganizationLinked # Plan-Organizaciones O2
+  # Plan-Organizaciones O3 — oportunidad nueva → prospecto; ganada → cliente (si la regla está encendida).
+  after_create_commit -> { Organizations::StageRules.call(:prospect_on_opportunity, self) }, if: :commercial?
+  after_update_commit -> { Organizations::StageRules.call(:customer_on_won, self) },
+                      if: -> { saved_change_to_outcome? && outcome_won? }
+  # Plan-Catalogo-Cotizaciones — cotizaciones de la oportunidad y las que salieron del caso.
+  has_many :quotes, foreign_key: :opportunity_id, dependent: :nullify, inverse_of: :opportunity
+  has_many :origin_quotes, class_name: 'Quote', foreign_key: :origin_ticket_id, dependent: :nullify,
+                           inverse_of: :origin_ticket
   belongs_to :requester,         class_name: 'User', optional: true # @tickets_cases Fase C — agente solicitante (interno)
   belongs_to :conversation,      optional: true
   belongs_to :contact_tracking,  optional: true
@@ -275,6 +308,8 @@ class CaseTicket < ApplicationRecord
   validate  :project_due_after_start
   before_validation -> { self.work_address = work_address.to_s.strip.presence }, if: :will_save_change_to_work_address?
   before_validation :normalize_commercial_data
+  # Responsable fijo del contacto: un caso nuevo sin responsable elegido es suyo.
+  before_validation :assign_contact_owner, on: :create
 
   # @tickets_cases Fase C — tickets internos (origin: internal, sin contacto).
   scope :internal, -> { where(origin: :internal) }
@@ -374,6 +409,7 @@ class CaseTicket < ApplicationRecord
 
     closing    = new_status.to_s == 'closed'
     closure    = validate_closure!(closure) if closing # @tickets_cases 2G
+    ensure_service_report_complete!(status, new_status) # Plan-Trabajo-Campo R1
 
     old_status  = status
     old_outcome = outcome
@@ -396,6 +432,7 @@ class CaseTicket < ApplicationRecord
       actor:      actor,
       payload:    payload.compact
     )
+    deliver_report_after_completion(old_status, new_status) # Plan-Trabajo-Campo R1
   end
 
   # @tickets_cases — Reapertura de un ticket cerrado (osTicket "Reopen").
@@ -523,12 +560,15 @@ class CaseTicket < ApplicationRecord
 
   # Cierra la oportunidad como ganada, perdida o cancelada. Pasa por transition!
   # (force: el embudo no sigue la espina ITIL), que valida motivo y deja el evento.
-  def close_with_outcome!(result, actor: nil, reason_id: nil, note: nil)
+  def close_with_outcome!(result, actor: nil, reason_id: nil, note: nil, accepted_quote_id: nil)
     raise 'Solo las oportunidades se cierran con un resultado' unless commercial?
     raise 'La oportunidad ya está cerrada; reábrela para cambiar su resultado' if closed? || cancelled?
 
-    transition!('closed', actor: actor, force: true,
-                          closure: { 'outcome' => result.to_s, 'outcome_reason_id' => reason_id, 'outcome_note' => note })
+    closed = transition!('closed', actor: actor, force: true,
+                                   closure: { 'outcome' => result.to_s, 'outcome_reason_id' => reason_id, 'outcome_note' => note })
+    # Plan-Catalogo-Cotizaciones — sus cotizaciones vivas siguen el resultado.
+    Quotes::OpportunitySync.from_opportunity(self, result, actor: actor, accepted_quote_id: accepted_quote_id)
+    closed
   end
 
   # Deja la oportunidad en espera hasta `until_date`; Cases::ResumePostponedJob la
@@ -543,6 +583,7 @@ class CaseTicket < ApplicationRecord
             case_type_column_id: postponed_column_id || case_type_column_id)
     case_events.create!(account: account, event_type: :postponed, origin: actor ? :agent : :system,
                         actor: actor, payload: payload.compact)
+    Quotes::OpportunitySync.from_opportunity(self, :postponed, actor: actor) # Plan-Catalogo-Cotizaciones
     self
   end
 
@@ -555,6 +596,7 @@ class CaseTicket < ApplicationRecord
     case_events.create!(account: account, event_type: :resumed, origin: actor ? :agent : :system, actor: actor,
                         payload: { from: 'waiting_on_customer', to: 'in_progress',
                                    postponed_until: was_until.iso8601, reason: reason.presence }.compact)
+    Quotes::OpportunitySync.from_opportunity(self, :resumed, actor: actor) # Plan-Catalogo-Cotizaciones
     self
   end
 
@@ -991,6 +1033,13 @@ class CaseTicket < ApplicationRecord
 
   # Moneda en mayúsculas; al crear una oportunidad, moneda de la cuenta y la
   # probabilidad de la columna donde nace.
+  def assign_contact_owner
+    return if assignee_id.present? || contact&.effective_owner_id.nil?
+
+    self.assignee_id = contact.effective_owner_id
+    self.assignee_type = :agent
+  end
+
   def normalize_commercial_data
     self.currency = currency.to_s.strip.upcase.presence
     # Plan-Clase-Proyecto P1 — el presupuesto también va en la moneda de la cuenta.

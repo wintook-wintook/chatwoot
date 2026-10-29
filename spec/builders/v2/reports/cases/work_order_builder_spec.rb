@@ -43,6 +43,18 @@ RSpec.describe V2::Reports::Cases::WorkOrderBuilder do
                                         overdue_visits_count: 1)
   end
 
+  # Plan-Trabajo-Campo R5 — a la primera (una visita, sin retrabajo), revisitas y CSAT.
+  it 'mide arreglado a la primera, revisitas y la calificación del cliente' do
+    revisit = finished(finished_ago: 1.day, visit_ago: 3.days, csat_rating: 3)
+    CaseMeeting.create!(account: account, case_ticket: revisit, title: 'Regreso', starts_at: 2.days.ago,
+                        ends_at: 2.days.ago + 1.hour)
+    CaseTicket.where(account: account, status: :resolved).where.not(id: revisit.id).first.update_columns(csat_rating: 5)
+
+    expect(report[:summary]).to include(first_time_fix_count: 2, first_time_fix_rate: 67, revisit_count: 1,
+                                        csat_count: 2, csat_average: 4.0)
+    expect(report[:by_assignee].first).to include(first_time_fix_rate: 67, csat_average: 4.0)
+  end
+
   it 'mide cumplimiento, horas y retrabajos de lo terminado' do
     expect(report[:summary]).to include(finished_count: 3, on_time_count: 1, late_count: 1, no_visit_count: 1,
                                         on_time_rate: 50, estimated_hours: 4.0, actual_hours: 4.0,

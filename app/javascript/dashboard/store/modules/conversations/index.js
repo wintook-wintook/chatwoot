@@ -3,7 +3,8 @@ import types from '../../mutation-types';
 import getters, { getSelectedChatConversation } from './getters';
 import actions from './actions';
 import { findPendingMessageIndex } from './helpers';
-import { MESSAGE_STATUS } from 'shared/constants/messages';
+import { MESSAGE_STATUS, MESSAGE_TYPE } from 'shared/constants/messages';
+import { isInternalChat } from 'dashboard/helper/internalChat'; // feat/chat_interno
 import wootConstants from 'dashboard/constants/globals';
 import { BUS_EVENTS } from '../../../../shared/constants/busEvents';
 import { emitter } from 'shared/helpers/mitt';
@@ -194,8 +195,23 @@ export const mutations = {
     } else {
       chat.messages.push(message);
       chat.timestamp = message.created_at;
-      const { conversation: { unread_count: unreadCount = 0 } = {} } = message;
-      chat.unread_count = unreadCount;
+      if (isInternalChat(chat)) {
+        // feat/chat_interno: en «Interno» los no leídos son de quien mira (el del servidor
+        // es global): suma uno si es de otro agente y la conversación no está abierta.
+        const mine = message.sender && message.sender.id === message.viewer_id;
+        const isOpen = selectedChatId === conversationId;
+        if (
+          !mine &&
+          !isOpen &&
+          message.message_type !== MESSAGE_TYPE.ACTIVITY
+        ) {
+          chat.unread_count = (chat.unread_count || 0) + 1;
+        }
+      } else {
+        const { conversation: { unread_count: unreadCount = 0 } = {} } =
+          message;
+        chat.unread_count = unreadCount;
+      }
       if (selectedChatId === conversationId) {
         emitter.emit(BUS_EVENTS.FETCH_LABEL_SUGGESTIONS);
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
@@ -214,6 +230,11 @@ export const mutations = {
     );
     if (currentConversationIndex > -1) {
       const { messages, ...conversationAttributes } = conversation;
+      // feat/chat_interno: el contador de «Interno» es de quien mira; el evento trae el global.
+      if (isInternalChat(allConversations[currentConversationIndex])) {
+        conversationAttributes.unread_count =
+          allConversations[currentConversationIndex].unread_count;
+      }
       const currentConversation = {
         ...allConversations[currentConversationIndex],
         ...conversationAttributes,

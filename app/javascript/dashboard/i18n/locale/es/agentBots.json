@@ -22,7 +22,7 @@
     },
     "BOT_CONFIGURATION": {
       "TITLE": "Selecciona un bot agente",
-      "DESC": "Asigna un Bot Agente a tu bandeja de entrada. Pueden manejar conversaciones iniciales y transferirlas a un agente en vivo cuando sea necesario.",
+      "DESC": "Asigna un Bot Agente a tu bandeja de entrada. Pueden manejar conversaciones iniciales y transferirlas a un usuario de tu equipo cuando sea necesario.",
       "SUBMIT": "Actualizar",
       "DISCONNECT": "Desconectar bot",
       "SUCCESS_MESSAGE": "Bot agente actualizado con éxito.",

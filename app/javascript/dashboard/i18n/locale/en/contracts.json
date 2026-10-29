@@ -1,0 +1,160 @@
+{
+  "CONTRACTS": {
+    "TITLE": "Contracts",
+    "DESCRIPTION": "What your customers pay or renew every so often: monitoring, retainers, licenses, policies, memberships…",
+    "NEW": "New contract",
+    "SEARCH": "Search by customer or concept",
+    "ALL_TYPES": "All types",
+    "EMPTY": "No contracts match these filters.",
+    "EMPTY_CONTACT": "This customer has no contracts.",
+    "IMPORT": "Import",
+    "IMPORT_HELP": "CSV file (in Excel: Save as › CSV UTF-8). Download the template to see the columns.",
+    "TEMPLATE": "Template",
+    "IMPORT_DONE": "Imported: {created} new and {updated} updated",
+    "IMPORT_ERRORS": "{count} rows with errors. Row {line}: {error}",
+    "SAVED": "Contract saved",
+    "ERROR": "Could not save the contract",
+    "TOTAL": "{count} contracts",
+    "STATES": {
+      "all": "All",
+      "active": "Up to date",
+      "renewal_due": "Renewal due",
+      "overdue": "Payment overdue",
+      "ended": "Ended",
+      "suspended": "Suspended",
+      "cancelled": "Cancelled"
+    },
+    "EVERY_ONE": {
+      "day": "Daily",
+      "week": "Weekly",
+      "month": "Monthly",
+      "year": "Yearly"
+    },
+    "EVERY_MANY": {
+      "day": "Every {n} days",
+      "week": "Every {n} weeks",
+      "month": "Every {n} months",
+      "year": "Every {n} years"
+    },
+    "UNITS": {
+      "day": "days",
+      "week": "weeks",
+      "month": "months",
+      "year": "years"
+    },
+    "COLUMNS": {
+      "CLIENT": "Customer",
+      "TYPE": "Type",
+      "CONCEPT": "Concept",
+      "AMOUNT": "Amount",
+      "NEXT_CHARGE": "Next charge",
+      "ENDS": "Term ends",
+      "STATE": "State",
+      "ASSIGNEE": "Owner"
+    },
+    "CARD": {
+      "NEXT_CHARGE": "Next charge: {date}",
+      "ENDS": "Term until {date}",
+      "NO_TERM": "No term",
+      "AUTO_RENEW": "renews automatically",
+      "LAST_PAID": "Last payment: {date}",
+      "ASSET": "Equipment: {name}",
+      "CANCELLED": "Cancelled on {date}",
+      "REASON": "Reason: {reason}"
+    },
+    "ACTIONS": {
+      "MENU": "Actions",
+      "REGISTER_PAYMENT": "Register payment",
+      "RENEW": "Renew",
+      "CANCEL": "Cancel contract",
+      "REACTIVATE": "Reactivate",
+      "SUSPEND": "Suspend",
+      "EDIT": "Edit",
+      "PAID": "Payment registered. Next charge: {date}",
+      "RENEWED": "Renewed until {date}",
+      "CANCEL_PROMPT": "Why is it being cancelled? (optional)",
+      "CANCELLED_OK": "Contract cancelled",
+      "REACTIVATED": "Contract reactivated",
+      "SUSPENDED": "Contract suspended"
+    },
+    "FORM": {
+      "NEW_TITLE": "New contract",
+      "EDIT_TITLE": "Edit contract",
+      "CONTACT": "Customer",
+      "CONTACT_PLACEHOLDER": "Search by name, email or phone",
+      "TYPE": "Contract type",
+      "NO_TYPES": "First create a contract type in Catalogs › Contract types.",
+      "CONCEPT": "Concept",
+      "CONCEPT_PLACEHOLDER": "E.g. 24/7 monitoring",
+      "FROM_CATALOG": "From the catalog (optional)",
+      "NONE": "— None —",
+      "QUANTITY": "Quantity",
+      "PRICE": "Price per period",
+      "PRICE_FROM_CATALOG": "Use the product price",
+      "PRICE_FROM_CATALOG_HINT": "When the price changes in Catalogs › Products and services, this contract updates on its own. Uncheck it to give this customer a special price.",
+      "CURRENCY": "Currency",
+      "EVERY": "Charged every",
+      "STARTS": "Start",
+      "NEXT_CHARGE": "Next charge",
+      "NEXT_CHARGE_HINT": "Empty = the start date",
+      "TERM": "Term (months)",
+      "TERM_HINT": "Empty = no term",
+      "AUTO_RENEW": "Renews automatically when the term ends",
+      "ASSET": "Linked equipment (optional)",
+      "ASSIGNEE": "Owner",
+      "ASSIGNEE_NONE": "No owner",
+      "STATUS": "Status",
+      "NOTES": "Notes",
+      "EXTRA": "«{type}» details",
+      "SAVE": "Save",
+      "CANCEL": "Cancel"
+    },
+    "STATUS": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "cancelled": "Cancelled"
+    },
+    "TYPES": {
+      "TITLE": "Contract types",
+      "DESCRIPTION": "Create the ones your company sells (monitoring, support retainer, license, policy…) with their defaults and the extra details each one needs.",
+      "NEW": "New type",
+      "EMPTY": "There are no contract types yet.",
+      "SAVED": "Contract type saved",
+      "ERROR": "Could not save the type",
+      "MONTHS": "{n} months",
+      "NO_TERM": "No term",
+      "COLUMNS": {
+        "NAME": "Name",
+        "BILLING": "Billing",
+        "TERM": "Term",
+        "FIELDS": "Extra details",
+        "CONTRACTS": "Contracts",
+        "ACTIVE": "Active"
+      },
+      "FORM": {
+        "NEW_TITLE": "New contract type",
+        "EDIT_TITLE": "Edit contract type",
+        "NAME": "Name",
+        "NAME_PLACEHOLDER": "E.g. Alarm monitoring",
+        "COLOR": "Color",
+        "EVERY": "Charged every",
+        "TERM": "Default term (months)",
+        "TERM_HINT": "Empty = no term",
+        "AUTO_RENEW": "Renews automatically when the term ends",
+        "FIELDS": "Extra details",
+        "FIELDS_HINT": "What this type asks for besides the general data, e.g. «Account number» or «Users».",
+        "ADD_FIELD": "Add detail",
+        "FIELD_LABEL": "Detail name",
+        "FIELD_TYPES": {
+          "text": "Text",
+          "number": "Number",
+          "date": "Date"
+        },
+        "REMOVE": "Remove",
+        "ACTIVE": "Active (can be chosen for new contracts)",
+        "SAVE": "Save",
+        "CANCEL": "Cancel"
+      }
+    }
+  }
+}

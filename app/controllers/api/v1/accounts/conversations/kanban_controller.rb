@@ -18,6 +18,7 @@ class Api::V1::Accounts::Conversations::KanbanController < Api::V1::Accounts::Ba
     def filter_by_both_kanban
       conversations = build_conversations_query
       conversations = apply_kanban_filters(conversations)
+      conversations = recent_in_closed_column(conversations)
       render_response(conversations)
     end
   
@@ -35,6 +36,22 @@ class Api::V1::Accounts::Conversations::KanbanController < Api::V1::Accounts::Ba
       conversations
     end
   
+    # Embudo de contactos — para que «Convertido» y «Descartado» no crezcan sin fin, con
+    # `closed_days` solo van las tarjetas que llegaron a esa columna en esos días (o, si
+    # se movieron antes de que hubiera bitácora, las conversaciones de esos días). Las
+    # que quedan fuera solo se cuentan (`older_count`), para el «+ N más antiguas».
+    def recent_in_closed_column(conversations)
+      days = params[:closed_days].to_i
+      return conversations unless days.positive? && params[:kanban_process_id].present?
+
+      column = Current.account.kanban_processes.find_by(id: params[:kanban_process_id])
+      return conversations unless column && (column.stage_converted? || column.stage_discarded?)
+
+      arrived = 'COALESCE(conversations.kanban_moved_at, conversations.created_at)'
+      @older_count = conversations.where("#{arrived} < ?", days.days.ago).count
+      conversations.where("#{arrived} >= ?", days.days.ago)
+    end
+
     # Embudo de contactos — la tarjeta muestra quién la movió y por qué, y el último
     # caso que nació de la conversación (el chip «→ F-102»).
     def with_funnel_info(conversations)
@@ -85,6 +102,7 @@ class Api::V1::Accounts::Conversations::KanbanController < Api::V1::Accounts::Ba
         data: with_funnel_info(conversations),
         meta: {
           count: conversations.count,
+          older_count: @older_count.to_i,
           current_page: 1,
           filters_applied: {
             kanban_type_process_id: params[:kanban_type_process_id],

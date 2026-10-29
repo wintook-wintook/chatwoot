@@ -24,6 +24,8 @@ import {
 } from 'dashboard/helper/caseWorkOrder';
 import { isProjectType, projectPayload } from 'dashboard/helper/caseProject';
 import ContactPicker from './ContactPicker.vue';
+import OrganizationsAPI from 'dashboard/api/organizations';
+import OrganizationPicker from 'dashboard/views/organizations/OrganizationPicker.vue';
 import CommitmentFields from './commercial/CommitmentFields.vue'; // Plan-Metricas-Comercial
 
 // Espejo de Cases::PriorityMatrix (backend). impacto × urgencia → prioridad.
@@ -35,7 +37,7 @@ const PRIORITY_MATRIX = {
 
 export default {
   name: 'CaseTicketInternalModal',
-  components: { ContactPicker, CommitmentFields },
+  components: { ContactPicker, OrganizationPicker, CommitmentFields },
   props: {
     show: { type: Boolean, default: false },
     // @tickets_cases — si viene un ticket, el modal es de EDICIÓN.
@@ -80,6 +82,7 @@ export default {
         progress: '',
       },
       contact: null, // Plan-Casos E2 — cliente elegido (null = caso interno)
+      organization: null, // Plan-Organizaciones O2 — opcional; filtra los contactos
       // 2K — valores de los campos personalizados del tipo seleccionado
       customValues: {},
     };
@@ -297,6 +300,28 @@ export default {
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
   },
   methods: {
+    // Plan-Organizaciones O2 — si el contacto no es de la organización elegida, se quita.
+    chooseOrganization(organization) {
+      this.organization = organization;
+      if (
+        organization &&
+        this.contact &&
+        this.contact.organization_id !== organization.id
+      )
+        this.contact = null;
+    },
+    // Elegir primero el contacto llena su organización.
+    async chooseContact(contact) {
+      this.contact = contact;
+      if (!contact || this.organization || !contact.organization_id) return;
+      try {
+        const { data } = await OrganizationsAPI.find(contact.organization_id);
+        const { id, name, stage } = data.organization;
+        this.organization = { id, name, stage };
+      } catch {
+        // Sin acceso a la organización: el servidor la toma del contacto igual.
+      }
+    },
     onTabChange(index) {
       const tab = this.tabs[index];
       if (tab) this.activeTab = tab.key;
@@ -345,7 +370,11 @@ export default {
         const ticket = await this.$store.dispatch('caseTickets/createTicket', {
           // Plan-Casos E2 — con cliente es un caso suyo; sin cliente, interno.
           ...(this.contact
-            ? { contact_id: this.contact.id, ...this.commercialPayload() }
+            ? {
+                contact_id: this.contact.id,
+                organization_id: this.organization && this.organization.id,
+                ...this.commercialPayload(),
+              }
             : { internal: true }),
           assignee_id: this.form.assignee_id || undefined,
           team_id: this.form.team_id || undefined,
@@ -568,6 +597,22 @@ export default {
               </span>
             </div>
 
+            <!-- Plan-Organizaciones O2 — organización (opcional; filtra los contactos) -->
+            <div
+              v-if="!isEdit && caseClass"
+              class="flex flex-col col-span-2 gap-1"
+            >
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('ORGANIZATIONS.PICKER.LABEL') }}
+              </span>
+              <OrganizationPicker
+                :value="organization"
+                @input="chooseOrganization"
+              />
+            </div>
+
             <!-- Plan-Casos E2 — cliente (solo en el alta por clase) -->
             <div
               v-if="!isEdit && caseClass"
@@ -582,7 +627,11 @@ export default {
                     : $t('CASE_TICKETS.CREATE.CONTACT_OPTIONAL')
                 }}
               </span>
-              <ContactPicker v-model="contact" />
+              <ContactPicker
+                :value="contact"
+                :organization-id="organization && organization.id"
+                @input="chooseContact"
+              />
               <span
                 v-if="!contact"
                 class="text-xs"

@@ -11,6 +11,9 @@ import {
   REPORTS_PERMISSIONS,
   PORTAL_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
+import { MENU_V2 } from 'dashboard/components/layout/config/menuVersion';
+import { getSidebarItemsV2 } from 'dashboard/components/layout/config/sidebarItems/v2';
+import { areaForRoute, canSeeArea, getUserAccess } from './accessHelper';
 
 export const routeIsAccessibleFor = (route, userPermissions = []) => {
   const { meta: { permissions: routePermissions = [] } = {} } = route;
@@ -37,6 +40,21 @@ export const defaultRedirectPage = (to, permissions) => {
   return `accounts/${accountId}/${route ? route.path : 'dashboard'}`;
 };
 
+// Plan-Roles-Permisos — una pantalla de un área que el rol no tiene (entrando
+// por URL o por un enlace) manda a Inicio, que todos tienen.
+const areaRedirect = (to, user) => {
+  if (!MENU_V2) return null;
+  const { accountId } = to.params;
+  const access = getUserAccess(user, accountId);
+  if (access.role === 'administrator') return null;
+
+  const { secondaryMenu } = getSidebarItemsV2(accountId, to);
+  const area = areaForRoute(to, secondaryMenu);
+  return !area || canSeeArea(access, area)
+    ? null
+    : `accounts/${accountId}/start`;
+};
+
 const validateActiveAccountRoutes = (to, user) => {
   // If the current account is active, then check for the route permissions
   const accountDashboardURL = `accounts/${to.params.accountId}/dashboard`;
@@ -50,7 +68,8 @@ const validateActiveAccountRoutes = (to, user) => {
 
   const isAccessible = routeIsAccessibleFor(to, userPermissions);
   // If the route is not accessible for the user, return to dashboard screen
-  return isAccessible ? null : defaultRedirectPage(to, userPermissions);
+  if (!isAccessible) return defaultRedirectPage(to, userPermissions);
+  return areaRedirect(to, user);
 };
 
 export const validateLoggedInRoutes = (to, user) => {

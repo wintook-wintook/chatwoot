@@ -157,7 +157,8 @@ $spinner-before-border-color: rgba(255, 255, 255, 0.7);
     animation: spinner .9s linear infinite;
     border: 2px solid $spinner-before-border-color;
     border-radius: 50%;
-    border-top-color: lighten($color-woot, 10%);
+    // feat/apariencia: el color del tema (con el azul de siempre si no hay tema).
+    border-top-color: rgb(var(--color-woot-400, 82 169 255));
     box-sizing: border-box;
     content: '';
     height: $space-medium;

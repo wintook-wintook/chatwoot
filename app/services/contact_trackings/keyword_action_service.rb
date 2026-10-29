@@ -106,6 +106,7 @@ module ContactTrackings
       action = rule['action'].to_s
       column = MARK_COLUMNS[action]
       @tracking.update_column(column, Time.current) if @tracking[column].nil? # rubocop:disable Rails/SkipsModelValidations
+      TrackingCampaigns::ProspectScore.call(@tracking) if column == :booked_at # prospeccion P4: agendó cita
 
       label, assignment = label_and_assign(@tracking.conversation, rule) if @tracking.conversation
 

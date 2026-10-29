@@ -9,11 +9,53 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'dashboard/composables/useI18n';
 import { useStoreGetters, useStore } from 'dashboard/composables/store';
 import ChannelName from './components/ChannelName.vue';
+import InboxGroupsOrderModal from 'dashboard/components/layout/sidebarComponents/InboxGroupsOrderModal.vue';
+import { useUISettings } from 'dashboard/composables/useUISettings';
+import {
+  INBOX_GROUPS,
+  UI_SETTINGS_KEY,
+  groupInboxes,
+  groupOrderFromUISettings,
+} from 'dashboard/helper/inboxGroups';
+import { INBOX_TYPES } from 'shared/mixins/inboxMixin';
 
 const getters = useStoreGetters();
 const store = useStore();
 const { t } = useI18n();
 const { isAdmin } = useAdmin();
+
+// feat/chat_interno_pulido — «Ordenar en el menú» (antes «Ordenar bandejas» en el menú de
+// Conversaciones): el orden de los grupos de bandejas en el menú. Es de cada agente
+// (uiSettings) y no incluye «Interno», que va aparte como «Chat interno».
+const { uiSettings, updateUISettings } = useUISettings();
+const showOrderModal = ref(false);
+const accountId = computed(() => getters.getCurrentAccountId.value);
+const customerInboxes = computed(() =>
+  getters['inboxes/getInboxes'].value.filter(
+    inbox => inbox.channel_type !== INBOX_TYPES.INTERNAL
+  )
+);
+const menuGroupOrder = computed(() =>
+  groupOrderFromUISettings(uiSettings.value, accountId.value).filter(
+    key => key !== INBOX_GROUPS.INTERNAL
+  )
+);
+const menuGroupCounts = computed(() =>
+  Object.fromEntries(
+    groupInboxes(customerInboxes.value, menuGroupOrder.value).map(group => [
+      group.key,
+      group.inboxes.length,
+    ])
+  )
+);
+const saveMenuGroupOrder = order => {
+  const byAccount =
+    (uiSettings.value && uiSettings.value[UI_SETTINGS_KEY]) || {};
+  updateUISettings({
+    [UI_SETTINGS_KEY]: { ...byAccount, [accountId.value]: order },
+  });
+  showOrderModal.value = false;
+};
 
 const showDeletePopup = ref(false);
 const selectedInbox = ref({});
@@ -24,7 +66,9 @@ const selectedChannelType = ref('');
 const currentPage = ref(1);
 const PAGE_SIZE = 5;
 
-const inboxesList = computed(() => getters['inboxes/getInboxes'].value);
+// feat/chat_interno_pulido: «Interno» no se configura ni se borra aquí (no es una bandeja
+// de clientes; borrarla quitaría el chat interno de la cuenta).
+const inboxesList = computed(() => customerInboxes.value);
 const uiFlags = computed(() => getters['inboxes/getUIFlags'].value);
 
 // Channel type options for the filter dropdown
@@ -57,9 +101,7 @@ const filteredInboxes = computed(() => {
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
-    result = result.filter(inbox =>
-      inbox.name.toLowerCase().includes(query)
-    );
+    result = result.filter(inbox => inbox.name.toLowerCase().includes(query));
   }
 
   if (selectedChannelType.value) {
@@ -97,8 +139,7 @@ const deleteRejectText = computed(
 );
 
 const confirmDeleteMessage = computed(
-  () =>
-    `${t('INBOX_MGMT.DELETE.CONFIRM.MESSAGE')} ${selectedInbox.value.name}?`
+  () => `${t('INBOX_MGMT.DELETE.CONFIRM.MESSAGE')} ${selectedInbox.value.name}?`
 );
 const confirmPlaceHolderText = computed(
   () =>
@@ -140,10 +181,17 @@ const openDelete = inbox => {
       <BaseSettingsHeader
         :title="$t('INBOX_MGMT.HEADER')"
         :description="$t('INBOX_MGMT.DESCRIPTION')"
-        :link-text="$t('INBOX_MGMT.LEARN_MORE')"
         feature-name="inboxes"
       >
         <template #actions>
+          <woot-button
+            variant="smooth"
+            color-scheme="secondary"
+            icon="arrow-sort"
+            @click="showOrderModal = true"
+          >
+            {{ $t('INBOX_MGMT.SORT_IN_MENU') }}
+          </woot-button>
           <router-link
             v-if="isAdmin"
             class="button nice rounded-md"
@@ -157,10 +205,7 @@ const openDelete = inbox => {
     </template>
 
     <template #preBody>
-      <div
-        v-if="inboxesList.length"
-        class="flex items-center gap-3 mb-4"
-      >
+      <div v-if="inboxesList.length" class="flex items-center gap-3 mb-4">
         <div class="relative w-[70%]">
           <fluent-icon
             icon="search"
@@ -289,6 +334,13 @@ const openDelete = inbox => {
       />
     </template>
 
+    <InboxGroupsOrderModal
+      v-if="showOrderModal"
+      :order="menuGroupOrder"
+      :counts="menuGroupCounts"
+      @close="showOrderModal = false"
+      @save="saveMenuGroupOrder"
+    />
     <woot-confirm-delete-modal
       v-if="showDeletePopup"
       :show.sync="showDeletePopup"

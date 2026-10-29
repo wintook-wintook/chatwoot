@@ -44,6 +44,72 @@ RSpec.describe TrackingCampaigns::Enroll do
     expect(conversation.messages.where(private: true).last.content).to eq(%(📋 Seguimiento de la campaña "#{campaign.name}"))
   end
 
+  # prospeccion F1 — el asunto de la campaña viaja a la conversación que abre el agente.
+  describe 'asunto del correo' do
+    let(:inbox) { create(:channel_email, account: account).inbox }
+    let(:contact) { create(:contact, account: account, name: 'Juan Pérez', email: 'juan@example.com') }
+
+    def open_for(tracking)
+      ContactTrackingJob.new.send(:find_or_create_conversation, tracking)
+    end
+
+    it 'en una bandeja de correo, la conversación nueva lleva el asunto armado' do
+      campaign.update!(email_subject: '{{contacto}}, una idea para tus envíos')
+
+      conversation = open_for(enroll.contact_tracking)
+
+      expect(conversation.additional_attributes['mail_subject']).to eq('Juan, una idea para tus envíos')
+    end
+
+    it 'si el contacto ya tenía hilo, se conserva el asunto del hilo' do
+      campaign.update!(email_subject: 'Asunto nuevo')
+      thread = create(:conversation, account: account, inbox: inbox, contact: contact,
+                                     additional_attributes: { 'mail_subject' => 'Demostracion' })
+
+      expect(open_for(enroll.contact_tracking)).to eq(thread)
+      expect(thread.reload.additional_attributes['mail_subject']).to eq('Demostracion')
+    end
+
+    it 'sin asunto en la campaña, la conversación queda como antes' do
+      expect(open_for(enroll.contact_tracking).additional_attributes['mail_subject']).to be_nil
+    end
+  end
+
+  it 'fuera de correo, el asunto de la campaña no se usa' do
+    campaign.update!(email_subject: 'No aplica')
+
+    conversation = ContactTrackingJob.new.send(:find_or_create_conversation, enroll.contact_tracking)
+
+    expect(conversation.additional_attributes['mail_subject']).to be_nil
+  end
+
+  # prospeccion V3 — por lote, el tope diario reparte en días hábiles en vez de omitir.
+  describe 'tope diario' do
+    let(:inbox) { create(:inbox, account: account, timezone: 'America/Mexico_City', working_hours_enabled: false) }
+    let(:monday_noon) { ActiveSupport::TimeZone['America/Mexico_City'].local(2026, 10, 5, 12, 0) }
+
+    it 'por lote reparte: 2 por día, el 3.º y el 4.º salen el siguiente día hábil' do
+      campaign.update!(mode: 'batch', purpose: 'prospecting', daily_cap: 2, scheduled_for: monday_noon - 1.hour)
+      entries = travel_to(monday_noon) do
+        create_list(:contact, 4, account: account, phone_number: nil).map.with_index do |c, i|
+          c.update!(phone_number: "+52155500000#{i}")
+          described_class.new(campaign, c, source: 'batch', at: monday_noon).call
+        end
+      end
+
+      expect(entries).to all(be_enrolled)
+      days = entries.map { |e| e.contact_tracking.scheduled_for.in_time_zone('America/Mexico_City').to_date.day }
+      expect(days).to eq([5, 5, 6, 6])
+    end
+
+    it 'en continua, el que pasa del tope del día sigue omitido' do
+      campaign.update!(daily_cap: 1)
+      enroll
+
+      expect(enroll(create(:contact, account: account)).reason).to eq('daily_cap')
+    end
+  end
+
   it 'reusa la conversación que el contacto ya tiene en el inbox de la campaña' do
     conversation = create(:conversation, account: account, inbox: inbox, contact: contact)
 
@@ -78,6 +144,17 @@ RSpec.describe TrackingCampaigns::Enroll do
       contact.update!(phone_number: nil)
 
       expect(enroll.reason).to eq('not_contactable')
+    end
+
+    # prospeccion V7a
+    it 'correo inválido en una bandeja de correo, aunque ya tenga conversación' do
+      allow(campaign.inbox).to receive(:channel_type).and_return('Channel::Email')
+      allow(ContactTrackings::EmailCheck).to receive(:lookup).and_return(false)
+      contact.update!(email: 'juan@dominio-muerto.mx')
+      create(:conversation, account: account, inbox: inbox, contact: contact)
+
+      expect(enroll.reason).to eq('invalid_email')
+      expect(ContactTracking.count).to eq(0)
     end
 
     it 'el tope del día' do

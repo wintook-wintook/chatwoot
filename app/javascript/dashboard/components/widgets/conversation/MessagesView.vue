@@ -9,6 +9,7 @@ import { useAI } from 'dashboard/composables/useAI';
 // components
 import ReplyBox from './ReplyBox.vue';
 import Message from './Message.vue';
+import { isInternalChat } from 'dashboard/helper/internalChat'; // feat/chat_interno_pulido
 import ConversationLabelSuggestion from './conversation/LabelSuggestion.vue';
 import Banner from 'dashboard/components/ui/Banner.vue';
 
@@ -211,6 +212,9 @@ export default {
       if (this.isAWhatsAppChannel) {
         return REPLY_POLICY.FACEBOOK;
       }
+      if (this.isATiktokChannel) {
+        return REPLY_POLICY.TIKTOK;
+      }
       if (!this.isAPIInbox) {
         return REPLY_POLICY.TWILIO_WHATSAPP;
       }
@@ -219,6 +223,9 @@ export default {
     replyWindowLinkText() {
       if (this.isAWhatsAppChannel) {
         return this.$t('CONVERSATION.24_HOURS_WINDOW');
+      }
+      if (this.isATiktokChannel) {
+        return this.$t('CONVERSATION.48_HOURS_WINDOW');
       }
       if (!this.isAPIInbox) {
         return this.$t('CONVERSATION.TWILIO_WHATSAPP_24_HOURS_WINDOW');
@@ -396,6 +403,29 @@ export default {
       this.scrollTopBeforeLoad = this.conversationPanel.scrollTop;
     },
 
+    // feat/chat_interno_pulido: en «Chat interno», el mensaje va pegado al anterior si es
+    // de la misma persona y de menos de 5 minutos después (sin repetir nombre ni foto).
+    isGroupedMessage(list, index) {
+      if (!isInternalChat(this.currentChat)) return false;
+      const message = list[index];
+      // El primero de los no leídos va después del último leído.
+      let previous = list[index - 1];
+      if (index === 0 && list !== this.readMessages) {
+        previous = this.readMessages[this.readMessages.length - 1];
+      }
+      if (!previous) return false;
+      const bubble = item => [0, 1, 3].includes(item.message_type);
+      const senderOf = item =>
+        item.sender && `${item.sender.type || ''}-${item.sender.id}`;
+      return (
+        bubble(message) &&
+        bubble(previous) &&
+        !!senderOf(message) &&
+        senderOf(message) === senderOf(previous) &&
+        message.created_at >= previous.created_at &&
+        message.created_at - previous.created_at < 5 * 60
+      );
+    },
     async fetchPreviousMessages(scrollTop = 0) {
       this.setScrollParams();
       const shouldLoadMoreMessages =
@@ -500,8 +530,9 @@ export default {
         </li>
       </transition>
       <Message
-        v-for="message in readMessages"
+        v-for="(message, index) in readMessages"
         :key="message.id"
+        :grouped="isGroupedMessage(readMessages, index)"
         class="message--read ph-no-capture"
         data-clarity-mask="True"
         :data="message"
@@ -525,8 +556,9 @@ export default {
         </span>
       </li>
       <Message
-        v-for="message in unReadMessages"
+        v-for="(message, index) in unReadMessages"
         :key="message.id"
+        :grouped="isGroupedMessage(unReadMessages, index)"
         class="message--unread ph-no-capture"
         data-clarity-mask="True"
         :data="message"

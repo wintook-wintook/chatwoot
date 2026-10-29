@@ -1,0 +1,221 @@
+{
+  "ORGANIZATIONS": {
+    "TITLE": "Organizaciones",
+    "DESCRIPTION": "Los prospectos y clientes, empresas o público en general, con sus contactos.",
+    "NEW": "Nueva organización",
+    "SEARCH": "Buscar por nombre, RFC o dominio",
+    "ALL_KINDS": "Empresas y público en general",
+    "TOTAL": "{count} organizaciones",
+    "EMPTY": "No hay organizaciones aquí todavía.",
+    "NOT_FOUND": "No se encontró la organización.",
+    "SAVED": "Organización guardada",
+    "ERROR": "No se pudo guardar la organización",
+    "DELETED": "Organización eliminada",
+    "DELETE": "Eliminar organización",
+    "DELETE_CONFIRM": "¿Eliminar esta organización? Sus contactos se quedan, solo sin organización.",
+    "EDIT": "Editar",
+    "MARK_CUSTOMER": "Marcar como cliente",
+    "BACK_TO_PROSPECT": "Regresar a prospecto",
+    "DATA": "Datos",
+    "CONTACTS": "Contactos ({count})",
+    "NO_CONTACTS": "Todavía no tiene contactos ligados.",
+    "ADD_CONTACT": "Ligar un contacto",
+    "REMOVE_CONTACT": "Quitar de la organización",
+    "HISTORY": "Bitácora",
+    "TABS": {
+      "prospect": "Prospectos",
+      "customer": "Clientes",
+      "all": "Todas"
+    },
+    "STAGES": {
+      "prospect": "Prospecto",
+      "customer": "Cliente"
+    },
+    "KINDS": {
+      "company": "Empresa",
+      "general_public": "Público en general"
+    },
+    "KIND_HINTS": {
+      "company": "Se le factura (con RFC)",
+      "general_public": "Sin factura"
+    },
+    "COLUMNS": {
+      "NAME": "Nombre",
+      "STAGE": "Etapa",
+      "TAX_ID": "RFC",
+      "CONTACTS": "Contactos",
+      "OWNER": "Responsable"
+    },
+    "FIELDS": {
+      "TAX_ID": "RFC",
+      "INDUSTRY": "Giro",
+      "WEBSITE": "Sitio web",
+      "EMAIL_DOMAIN": "Dominio de correo",
+      "PHONE": "Teléfono",
+      "ADDRESS": "Dirección",
+      "OWNER": "Responsable",
+      "PROSPECT_SINCE": "Prospecto desde",
+      "CUSTOMER_SINCE": "Cliente desde",
+      "NOTES": "Notas"
+    },
+    "EVENTS": {
+      "STAGE": "Pasó de {from} a {to}",
+      "CREATED": "Se creó como {to}",
+      "JOINED": "{contact} llegó desde {from}",
+      "JOINED_WITH": "{contact} llegó desde {from} con todo lo suyo",
+      "LEFT": "{contact} se fue a {to}; lo suyo se queda aquí con {replacement}",
+      "LEFT_WITH": "{contact} se fue a {to} y se llevó todo lo suyo",
+      "NOWHERE": "ninguna organización"
+    },
+    "FORM": {
+      "NEW_TITLE": "Nueva organización",
+      "EDIT_TITLE": "Editar organización",
+      "FROM_CONTACT_TITLE": "Convertir a {name} en prospecto",
+      "KIND": "Tipo",
+      "NAME": "Nombre o razón social",
+      "PERSON_NAME": "Nombre",
+      "STAGE": "Etapa",
+      "TAX_ID": "RFC",
+      "TAX_ID_HINT": "Opcional: se puede completar cuando se vaya a facturar.",
+      "INDUSTRY": "Giro",
+      "WEBSITE": "Sitio web",
+      "EMAIL_DOMAIN": "Dominio de correo",
+      "EMAIL_DOMAIN_PLACEHOLDER": "empresa.com",
+      "PHONE": "Teléfono",
+      "OWNER": "Responsable",
+      "OWNER_NONE": "Sin responsable",
+      "ADDRESS": "Dirección",
+      "NOTES": "Notas",
+      "CANCEL": "Cancelar",
+      "SAVE": "Guardar"
+    },
+    "CONTACT": {
+      "TITLE": "Organización",
+      "NONE": "Sin organización: es un contacto.",
+      "CONVERT": "Convertir en prospecto",
+      "LINK_EXISTING": "Ligar a una organización existente",
+      "SEARCH": "Buscar organización",
+      "UNLINK": "Quitar de la organización",
+      "CHANGE": "Cambiar de organización",
+      "UNLINK_CONFIRM": "¿Quitarlo de {name}? Lo suyo que ya está en {name} se queda ahí.",
+      "OTHER_ORGANIZATION": "Pertenece a esta organización, no a la que tiene hoy el contacto"
+    },
+    "PICKER": {
+      "LABEL": "Organización (opcional)",
+      "CONTACT": "Contacto",
+      "PLACEHOLDER": "Buscar organización por nombre o RFC",
+      "CLEAR": "Quitar organización"
+    },
+    "ACTIVITY": {
+      "TABS": {
+        "opportunities": "Oportunidades",
+        "cases": "Casos",
+        "quotes": "Cotizaciones",
+        "contracts": "Contratos",
+        "assets": "Equipos"
+      },
+      "EMPTY": "Nada por aquí todavía.",
+      "OUTCOME": {
+        "won": "Ganada",
+        "lost": "Perdida",
+        "cancelled": "Cancelada"
+      },
+      "QUOTE_STATUS": {
+        "draft": "Borrador",
+        "sent": "Enviada",
+        "won": "Aceptada",
+        "lost": "Rechazada",
+        "postponed": "Pospuesta",
+        "cancelled": "Cancelada"
+      }
+    },
+    "RULES": {
+      "TITLE": "Prospectos y clientes automáticos",
+      "DESCRIPTION": "Qué pasa a una organización a prospecto o a cliente sin hacerlo a mano. Siempre se puede cambiar a mano desde la organización.",
+      "GROUPS": {
+        "prospect": "Pasa a prospecto (si el contacto no tiene organización, se le crea)",
+        "customer": "Pasa a cliente"
+      },
+      "ITEMS": {
+        "prospect_on_opportunity": "Al crear una oportunidad (incluye «Convertido» en el Embudo de contactos)",
+        "prospect_on_quote_sent": "Al enviar una cotización",
+        "customer_on_won": "Al ganar una oportunidad",
+        "customer_on_contract": "Al dar de alta un contrato",
+        "customer_on_quote_accepted": "Al aceptarse una cotización"
+      },
+      "REASONS": {
+        "prospect_on_opportunity": "oportunidad nueva",
+        "prospect_on_quote_sent": "cotización enviada",
+        "customer_on_won": "oportunidad ganada",
+        "customer_on_contract": "contrato nuevo",
+        "customer_on_quote_accepted": "cotización aceptada"
+      }
+    },
+    "TEMPLATE": "Plantilla CSV",
+    "IMPORT": "Importar",
+    "IMPORT_HELP": "Columnas: id, nombre, tipo (empresa o publico_en_general), etapa (prospecto o cliente), rfc, giro, sitio_web, dominio_correo, telefono, direccion, responsable (correo), notas, contactos (correos o teléfonos separados por «;»). Se busca por id, RFC o nombre: si existe se actualiza.",
+    "IMPORT_DONE": "Importación lista: {created} nuevas y {updated} actualizadas",
+    "IMPORT_ERRORS": "{count} filas con error. Primera: renglón {line}, {error}",
+    "ASSISTANT": {
+      "OPEN": "Agrupar contactos existentes",
+      "TITLE": "Organizaciones para tus contactos",
+      "DESCRIPTION": "Propuesta con los contactos que todavía no tienen organización. Revisa, quita o corrige lo que no quieras y luego aplica.",
+      "EMPTY": "No hay nada que proponer: todos tus contactos con empresa, dominio o actividad ya tienen organización.",
+      "SOURCES": {
+        "company": "Por la empresa escrita en el contacto",
+        "domain": "Por el dominio de su correo",
+        "person": "Cliente sin empresa (tiene contrato u oportunidad ganada)"
+      },
+      "EXISTING": "ya existe: se ligan a ella",
+      "CONTACTS": "{count} contactos: {names}",
+      "SELECTED": "{count} seleccionadas",
+      "APPLY": "Aplicar",
+      "DONE": "Listo: {created} organizaciones nuevas y {linked} contactos ligados"
+    },
+    "DASHBOARD": {
+      "TITLE": "Dashboard de clientes",
+      "DESCRIPTION": "Prospectos y clientes: cuántos hay, cuántos llegaron y cuánto tardan en comprar.",
+      "PERIOD": "Últimos {months} meses",
+      "MONTHLY": "Llegadas por mes",
+      "TILES": {
+        "PROSPECTS": "Prospectos hoy",
+        "CUSTOMERS": "Clientes hoy",
+        "NEW_PROSPECTS": "Prospectos nuevos",
+        "NEW_CUSTOMERS": "Clientes nuevos",
+        "CONVERSION": "Conversión a cliente",
+        "AVG_DAYS": "Días de prospecto a cliente"
+      }
+    },
+    "REMOVE_CONTACT_CONFIRM": "¿Quitar a {name} de esta organización? Lo suyo que ya está aquí se queda aquí.",
+    "CHANGE": {
+      "TITLE": "Cambiar de organización a {name}",
+      "CURRENT": "Hoy está en {name}.",
+      "STEP_TARGET": "1. ¿A qué organización se va?",
+      "NO_ORGANIZATION": "A ninguna (se queda sin organización)",
+      "SAME": "Ya está en esa organización: elige otra.",
+      "STEP_MOVE": "2. ¿Pasar también lo suyo?",
+      "HAS": "En {name} tiene: {items}.",
+      "HAS_NOTHING": "En {name} no tiene oportunidades, casos, cotizaciones, contratos ni equipos.",
+      "MOVE_YES": "Sí, pasar todo a la nueva",
+      "MOVE_YES_HINT": "Para cuando estaba en la organización equivocada.",
+      "MOVE_NO": "No, que todo se quede",
+      "MOVE_NO_HINT": "Para cuando se cambió de empresa: lo suyo sigue siendo de {name}.",
+      "STEP_REPLACEMENT": "3. ¿Quién queda en {name} en lugar de {contact}?",
+      "CHOOSE": "Elige un contacto",
+      "NEW_CONTACT": "+ Dar de alta uno nuevo",
+      "NEW_NAME": "Nombre",
+      "NEW_EMAIL": "Correo",
+      "NEW_PHONE": "Teléfono",
+      "REPLACEMENT_HINT": "Esa persona queda como contacto de lo que sigue vivo (casos y oportunidades abiertos, cotizaciones sin decidir, contratos, equipos y mantenimientos). Lo cerrado se queda con quien lo atendió.",
+      "CONFIRM": "Cambiar de organización",
+      "DONE": "Organización cambiada",
+      "KINDS": {
+        "case_tickets": "oportunidades y casos: {count}",
+        "quotes": "cotizaciones: {count}",
+        "contracts": "contratos: {count}",
+        "customer_assets": "equipos: {count}",
+        "maintenance_plans": "mantenimientos: {count}"
+      }
+    }
+  }
+}

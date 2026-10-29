@@ -50,6 +50,11 @@ Clientes · Campañas · Agentes IA · Informes · Ajustes**.
   crea «+ Oportunidad» (`CASE_TICKETS.CLASSES.COMMERCIAL.NEW`). **Tipos de oportunidad** = los tipos
   de caso de la clase Ventas.
 - Servicio: clases Soporte · Orden de trabajo · Proyecto; la pantalla es **Casos**.
+- **Usuarios** = las personas del equipo (antes «agentes»; 2026-10-24). «Agente» queda **solo para
+  la IA** (Agentes IA). Al asignar (conversación, caso, reportes de asignación) se dice
+  **Responsable**. Solo cambian textos en español (`i18n/locale/es`, `config/locales/es.yml` y
+  algunos textos fijos); código, API y rutas siguen con `agent`. Donde Chatwoot decía «usuario»
+  por el **cliente** se cambió a «cliente»/«contacto» para que no se confunda.
 
 ## Detalles del menú
 - Un grupo plegable se abre solo cuando estás en una de sus pantallas (`Secondary.vue`), y una
@@ -66,3 +71,26 @@ Clientes · Campañas · Agentes IA · Informes · Ajustes**.
 - F3: botón «+ Nuevo» y contadores en el menú. F5: Ctrl K con casos/tareas.
 - Cotizaciones y Productos (módulo del sistema administrativo).
 - «Agentes IA» también es el nombre de las plantillas de seguimiento dentro de Ajustes (renombrar).
+
+## Página del contacto (reacomodo 2026-10-24, C1–C3)
+Antes todo iba apilado en una columna angosta y el área grande solo tenía «Notas». Ahora:
+- **Encabezado a lo ancho** (`ContactInfo` con `layout="header"`): nombre, empresa, medios de
+  contacto, **Responsable fijo**, etiquetas y acciones con nombre: **Mensaje · Editar · Más ▾**
+  (`ContactMoreActions.vue`: Fusionar, Notas, Conversación privada / Programar mensaje y Nueva
+  conversación en el panel de la conversación, Crear evento, Eliminar).
+- **Columna «Datos»** (`ContactDataColumn.vue`): empresa, ubicación, alta, último contacto,
+  descripción y atributos personalizados, siempre a la vista.
+- **Pestañas** (`?tab=` en la dirección): **Resumen** (4 tarjetas + actividad reciente mezclada,
+  `GET /contacts/:id/summary`) · **Conversaciones** · **Casos** (`ContactCasesTab`, abiertos o
+  todos) · **Tareas** (`ContactTasksTab`, bandeja con `contact_id`) · **Notas**. Casos y Tareas
+  solo con `case_management`. En celular las tres partes van una debajo de otra.
+- El panel del contacto **dentro de una conversación** sigue angosto, con Mensaje · Editar · Más.
+- Todo respeta el rol (Plan-Roles-Permisos): el resumen y las conversaciones del contacto
+  cuentan solo lo que el usuario puede ver, y sin «ver montos» no van importes.
+- **Editar / Nuevo contacto** (`ContactForm.vue`, 2026-10-24): panel más ancho (`size="wide"` en
+  `Modal.vue`, 45rem), secciones (Cómo contactarlo, Ubicación, Redes sociales), campos en pareja a
+  dos columnas, foto con vista previa («Cambiar foto · Quitar»), redes sociales solo las que tienen
+  dato (+ «Agregar red»), botones fijos abajo («Guardar cambios» / «Crear contacto»). Mismos
+  campos, validaciones, avisos y búsqueda en CRMZeus (Enter en teléfono/correo, Agregar/Buscar
+  empresa). ⚠️ Ya venía de antes: la foto elegida al editar NO se guarda (`getContactObject` no la
+  manda); «Quitar» sí funciona.

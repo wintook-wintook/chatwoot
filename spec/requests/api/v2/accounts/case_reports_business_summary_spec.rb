@@ -14,6 +14,13 @@ RSpec.describe 'Case Reports API — Resumen del negocio' do
   let(:base)    { "/api/v2/accounts/#{account.id}/case_reports" }
   let(:won_reason) { CaseOutcomeReason.ensure_defaults_for(account).find_by(outcome: :won) }
 
+  # Plan-Roles-Permisos — el Supervisor (rol por defecto) ve Informes y el
+  # Resumen; para probar la autorización se usa un Vendedor.
+  def make_seller(user)
+    seller = AccessRole.for_account(account).find { |role| role.key == 'seller' }
+    account.account_users.find_by(user: user).update!(access_role: seller)
+  end
+
   def summary_as(user)
     get "#{base}/business_summary", headers: user.create_new_auth_token, as: :json
   end
@@ -25,6 +32,7 @@ RSpec.describe 'Case Reports API — Resumen del negocio' do
 
   describe 'quién puede verlo' do
     it 'los administradores siempre; un agente solo si lo autorizan' do
+      make_seller(agent)
       summary_as(admin)
       expect(response).to have_http_status(:ok)
 
@@ -37,6 +45,7 @@ RSpec.describe 'Case Reports API — Resumen del negocio' do
     end
 
     it 'el administrador elige a los autorizados (solo usuarios de la cuenta) y cada quien sabe si puede' do
+      make_seller(agent)
       stranger = create(:user)
       patch "/api/v1/accounts/#{account.id}/case_setting",
             params: { case_setting: { business_summary_user_ids: [agent.id, stranger.id, agent.id] } },
@@ -48,7 +57,7 @@ RSpec.describe 'Case Reports API — Resumen del negocio' do
 
       patch "/api/v1/accounts/#{account.id}/case_setting",
             params: { case_setting: { business_summary_user_ids: [] } }, headers: agent.create_new_auth_token, as: :json
-      expect(response).to have_http_status(:unauthorized)
+      expect(response).to have_http_status(:forbidden) # Plan-Roles-Permisos: Ajustes cerrado por rol
     end
   end
 
@@ -141,12 +150,25 @@ RSpec.describe 'Case Reports API — Resumen del negocio' do
     end
 
     it 'respeta si la IA está apagada y a quién no tiene acceso' do
+      make_seller(agent)
       CaseAiConfig.for_account(account).update!(modes: CaseAiConfig.default_modes.merge('business_summary' => 'off'))
       post "#{base}/business_summary_ai", headers: admin.create_new_auth_token, as: :json
       expect(response).to have_http_status(:unprocessable_entity)
 
       post "#{base}/business_summary_ai", headers: agent.create_new_auth_token, as: :json
       expect(response).to have_http_status(:forbidden)
+    end
+  end
+
+  describe 'roles' do
+    it 'el Supervisor y Consulta lo ven sin autorización' do
+      summary_as(agent)
+      expect(response).to have_http_status(:ok)
+
+      viewer = AccessRole.for_account(account).find { |role| role.key == 'viewer' }
+      account.account_users.find_by(user: agent).update!(access_role: viewer)
+      summary_as(agent)
+      expect(response).to have_http_status(:ok)
     end
   end
 end

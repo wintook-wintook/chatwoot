@@ -6,6 +6,7 @@ import {
 
 import account from './account/account.routes';
 import agent from './agents/agent.routes';
+import accessRoles from './accessRoles/accessRoles.routes'; // Plan-Roles-Permisos
 import agentBot from './agentBots/agentBot.routes';
 import attributes from './attributes/attributes.routes';
 import automation from './automation/automation.routes';
@@ -53,6 +54,7 @@ export default {
     },
     ...account.routes,
     ...agent.routes,
+    ...accessRoles.routes,
     ...agentBot.routes,
     ...attributes.routes,
     ...automation.routes,

@@ -154,6 +154,19 @@ RSpec.describe ConversationReplyMailer do
         expect(mail.message_id).to eq message.source_id
       end
 
+      # prospeccion V4 — baja con un clic en los correos de un Agente IA
+      it 'sin seguimiento no lleva cabeceras de baja' do
+        expect(mail['List-Unsubscribe']).to be_nil
+      end
+
+      it 'con seguimiento lleva List-Unsubscribe y List-Unsubscribe-Post' do
+        create(:contact_tracking, account: account, inbox: email_channel.inbox, contact: conversation.contact,
+                                  conversation: conversation)
+
+        expect(mail['List-Unsubscribe'].value).to match(%r{\A<.+/baja/.+>\z})
+        expect(mail['List-Unsubscribe-Post'].value).to eq('List-Unsubscribe=One-Click')
+      end
+
 #nwe code
       context 'with previous message' do
         let!(:prev_message) { create(:message, conversation: conversation, account: account, message_type: 'incoming', content: 'Prev Message') }
