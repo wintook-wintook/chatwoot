@@ -5,7 +5,8 @@
 # ================================================================================
 # GET    …/assistant/test_cases?template_id=        la pila, la corrida en seco en curso
 #                                                   y lo que se ofrece en vivo (D5)
-# POST   …/assistant/test_cases                     agregar una escrita a mano (message)
+# POST   …/assistant/test_cases                     agregar una escrita a mano (message) o
+#                                                   una sugerida (message + expected_route)
 # POST   …/assistant/test_cases/generate            las de ruta y regla que falten
 # PATCH  …/assistant/test_cases/:id                 fijarla (pinned)
 # DELETE …/assistant/test_cases/:id
@@ -28,7 +29,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantTestCasesController < Api::V
   end
 
   def create
-    caso = TestCases.add_own(Current.account, @template, params[:message])
+    caso = TestCases.add_own(Current.account, @template, params[:message], expected_route: params[:expected_route])
     return render json: { error: caso.errors.full_messages.join(' · ') }, status: :unprocessable_entity unless caso.persisted?
 
     render json: TestCases.as_json_for(caso), status: :created
