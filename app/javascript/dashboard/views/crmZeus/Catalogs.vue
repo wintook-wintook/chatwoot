@@ -15,6 +15,7 @@ import {
   ARTICLE_LOOKUP_KINDS,
   LOOKUP_KINDS,
   crmAccess,
+  defaultId,
   errorMessage,
 } from './crmHelpers';
 
@@ -296,6 +297,10 @@ export default {
     },
     openNew() {
       this.form = BLANKS[this.resource]();
+      // Una línea nueva propone el grupo predeterminado, como el artículo propone su línea.
+      if (this.resource === 'article_lines') {
+        this.form.group_id = defaultId(this.lineGroups) || '';
+      }
     },
     openEdit(item) {
       if (!this.isAdmin) return;
@@ -495,7 +500,7 @@ export default {
               <td v-if="hasDefault" class="px-3 py-2">
                 <fluent-icon
                   v-if="item.is_default"
-                  icon="star"
+                  icon="star-emphasis"
                   size="16"
                   class="text-amber-500"
                 />

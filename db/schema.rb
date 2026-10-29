@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_01_100400) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_01_100500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1263,6 +1263,22 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100400) do
     t.index ["team_id"], name: "index_conversations_on_team_id"
     t.index ["uuid"], name: "index_conversations_on_uuid", unique: true
     t.index ["waiting_since"], name: "index_conversations_on_waiting_since"
+  end
+
+  create_table "crm_article_components", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "article_id", null: false
+    t.bigint "component_id", null: false
+    t.decimal "quantity", precision: 18, scale: 5, default: "1.0", null: false
+    t.boolean "replaceable", default: false, null: false
+    t.boolean "units_editable", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_article_components_on_account_id"
+    t.index ["article_id", "component_id"], name: "index_crm_article_components_on_article_id_and_component_id", unique: true
+    t.index ["article_id"], name: "index_crm_article_components_on_article_id"
+    t.index ["component_id"], name: "index_crm_article_components_on_component_id"
   end
 
   create_table "crm_article_lines", force: :cascade do |t|
@@ -2679,6 +2695,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100400) do
   add_foreign_key "contracts", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "conversations", "kanban_processes"
   add_foreign_key "conversations", "kanban_type_processes"
+  add_foreign_key "crm_article_components", "accounts"
+  add_foreign_key "crm_article_components", "crm_articles", column: "article_id", on_delete: :cascade
+  add_foreign_key "crm_article_components", "crm_articles", column: "component_id"
   add_foreign_key "crm_article_lines", "accounts"
   add_foreign_key "crm_article_lines", "crm_lookups", column: "group_id", on_delete: :nullify
   add_foreign_key "crm_article_prices", "accounts"

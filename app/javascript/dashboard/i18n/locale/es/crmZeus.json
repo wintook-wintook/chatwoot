@@ -259,7 +259,8 @@
         "UNIT": "Unidad",
         "PRICE": "Precio",
         "STATUS": "Estatus"
-      }
+      },
+      "KIT": "Kit"
     },
     "CATALOG_STATUS": {
       "CATALOGUED": "Catalogado",
@@ -301,7 +302,8 @@
       "TABS": {
         "GENERAL": "General",
         "PRICES": "Precios",
-        "OTHERS": "Otros"
+        "OTHERS": "Otros",
+        "COMPONENTS": "Componentes"
       },
       "REQUIRED": "El nombre es obligatorio",
       "CREATED": "Artículo creado",
@@ -322,7 +324,17 @@
       "IMAGE_HINT": "JPG, PNG, WebP o GIF de hasta 5 MB.",
       "IMAGE_INVALID": "La imagen debe ser JPG, PNG, WebP o GIF de hasta 5 MB",
       "ALL_LISTS_USED": "Cada lista de precios lleva un precio. Para otro precio, agrega otra lista de precios en",
-      "GO_TO_CATALOGS": "Catálogos › Listas de precios"
+      "GO_TO_CATALOGS": "Catálogos › Listas de precios",
+      "COMPONENTS_HINT": "Artículos que forman el kit y cuántas unidades lleva de cada uno. El precio y los impuestos son los del kit. Al cotizar, un kit no almacenable se desglosa en estos componentes.",
+      "NO_COMPONENTS": "Sin componentes todavía",
+      "COMPONENT_SEARCH": "Agregar componente: busca por nombre o clave",
+      "COMPONENT_NONE": "No hay artículos (los kits no pueden ser componentes)",
+      "COMPONENT_QUANTITY": "Unidades",
+      "COMPONENT_REPLACEABLE": "Reemplazable",
+      "COMPONENT_UNITS_EDITABLE": "Permite cambiar unidades",
+      "UNKIT_TITLE": "Dejar de ser kit",
+      "CONFIRM_UNKIT": "Se quitarán sus {count} componentes al guardar.",
+      "UNKIT_CONFIRM": "Quitar componentes"
     },
     "SUSPENSION": {
       "INACTIVE_ON": "Fecha de baja",

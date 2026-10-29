@@ -251,6 +251,12 @@ export default {
               class="px-3 py-2 font-medium text-slate-800 dark:text-slate-100"
             >
               {{ row.name }}
+              <span
+                v-if="row.is_kit"
+                class="ml-1 px-1.5 py-0.5 text-xs font-normal rounded bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+              >
+                {{ $t('CRM_ZEUS.ARTICLES.KIT') }}
+              </span>
             </td>
             <td v-if="tab === 'all'" class="px-3 py-2">
               {{

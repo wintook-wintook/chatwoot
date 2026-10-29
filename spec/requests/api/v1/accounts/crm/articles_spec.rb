@@ -139,4 +139,41 @@ RSpec.describe 'CrmZeus Articles API' do
       end
     end
   end
+
+  describe 'componentes del kit' do
+    let(:helmet) { article(key: 'CAS-01', unit: pieza) }
+    let(:gloves) { article(name: 'Guantes') }
+
+    it 'los guarda anidados, los regresa con clave y unidad, y los quita con _destroy' do
+      kit = article(name: 'Kit de seguridad', is_kit: true)
+      patch "#{url}/#{kit.id}", params: { article: { components_attributes: [
+        { component_id: helmet.id, quantity: 1, position: 0 }, { component_id: gloves.id, quantity: 2.5, position: 1, replaceable: true }
+      ] } }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      rows = response.parsed_body['article']['components']
+      expect(rows.first).to include('component_id' => helmet.id, 'key' => 'CAS-01', 'name' => 'Casco de seguridad', 'unit' => 'Pieza',
+                                    'quantity' => 1.0, 'replaceable' => false)
+      expect(rows.last).to include('name' => 'Guantes', 'quantity' => 2.5, 'replaceable' => true)
+
+      patch "#{url}/#{kit.id}", params: { article: { components_attributes: [{ id: rows.first['id'], _destroy: true }] } },
+                                headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['article']['components'].pluck('name')).to eq(['Guantes'])
+    end
+
+    it 'rechaza otro kit como componente, en español' do
+      kit = article(name: 'Kit de seguridad', is_kit: true)
+      other = article(name: 'Kit de lluvia', is_kit: true)
+      patch "#{url}/#{kit.id}", params: { article: { components_attributes: [{ component_id: other.id, quantity: 1 }] } },
+                                headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['message']).to eq('Componente no puede ser otro kit')
+    end
+
+    it 'no elimina un artículo que es componente de un kit' do
+      article(name: 'Kit de seguridad', is_kit: true).components.create!(component: helmet)
+      delete "#{url}/#{helmet.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['message']).to eq('No se puede eliminar: es componente de «Kit de seguridad»')
+    end
+  end
 end

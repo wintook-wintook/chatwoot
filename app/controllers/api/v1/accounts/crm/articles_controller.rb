@@ -2,15 +2,16 @@
 #
 #   GET    /crm/articles          ?type=catalogued|uncatalogued &q= &status= &line_id= &page=
 #   GET    /crm/articles/:id      con precios por lista e impuestos
-#   POST   /crm/articles          { article: {..., prices_attributes: [...], tax_ids: [...]} }
+#   POST   /crm/articles          { article: {..., prices_attributes: [...], tax_ids: [...], components_attributes: [...]} }
 #   PATCH  /crm/articles/:id
-#   DELETE /crm/articles/:id
+#   DELETE /crm/articles/:id      no se borra si es componente de un kit
 #   POST   /crm/articles/:id/catalog   no catalogado → catalogado
 #   POST   /crm/articles/:id/image     multipart `image` · DELETE /crm/articles/:id/image
 class Api::V1::Accounts::Crm::ArticlesController < Api::V1::Accounts::Crm::BaseController
   PER_PAGE = 50
   FIELDS = %i[catalog_status key name line_id unit_id status suspended_on suspension_reason is_stockable is_kit
               purchase_unit purchase_unit_content unit_weight notes].freeze
+  COMPONENT_FIELDS = %i[id component_id quantity replaceable units_editable position _destroy].freeze
 
   before_action :check_sales_write_access, except: %i[index show]
   before_action :set_article, except: %i[index create]
@@ -43,7 +44,8 @@ class Api::V1::Accounts::Crm::ArticlesController < Api::V1::Accounts::Crm::BaseC
   end
 
   def destroy
-    @article.destroy!
+    return render_errors(@article) unless @article.destroy
+
     head :ok
   end
 
@@ -93,9 +95,11 @@ class Api::V1::Accounts::Crm::ArticlesController < Api::V1::Accounts::Crm::BaseC
   end
 
   # Los impuestos llegan como ids de la cuenta; uno ajeno se rechaza (no se ignora en silencio).
+  # Los componentes se validan en el modelo (de la cuenta, que no sean kits ni el mismo).
   def article_params
     permitted = params.require(:article).permit(*FIELDS, tax_ids: [],
-                                                         prices_attributes: %i[id price_list_id price currency_id _destroy])
+                                                         prices_attributes: %i[id price_list_id price currency_id _destroy],
+                                                         components_attributes: COMPONENT_FIELDS)
     permitted[:tax_ids] = Current.account.crm_taxes.find(permitted[:tax_ids].compact_blank).map(&:id) if permitted.key?(:tax_ids)
     permitted
   end

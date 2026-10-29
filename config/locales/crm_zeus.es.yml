@@ -76,11 +76,19 @@ es:
         unit_weight: Peso
         image: Imagen
         prices: Precios
+        components: Componentes
+        is_kit: Juego (kit)
         suspension_reason: Motivo
       crm_article/prices:
         price_list: Lista de precios
         price: Precio
         currency: Moneda
+      crm_article/components:
+        component: Componente
+        quantity: Unidades
+      crm_article_component:
+        component: Componente
+        quantity: Unidades
       crm_article_price:
         price_list: Lista de precios
         price: Precio

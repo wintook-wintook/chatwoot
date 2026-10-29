@@ -64,7 +64,13 @@ class CrmArticle < ApplicationRecord
                                        dependent: :destroy
   has_many :article_taxes, class_name: 'CrmArticleTax', foreign_key: :article_id, inverse_of: :article, dependent: :destroy
   has_many :taxes, through: :article_taxes
+  has_many :components, -> { order(:position, :id) }, class_name: 'CrmArticleComponent', foreign_key: :article_id,
+                                                      inverse_of: :article, dependent: :destroy
+  # Renglones de los kits que llevan este artículo.
+  has_many :component_uses, class_name: 'CrmArticleComponent', foreign_key: :component_id, inverse_of: :component,
+                            dependent: nil
   accepts_nested_attributes_for :prices, allow_destroy: true
+  accepts_nested_attributes_for :components, allow_destroy: true
 
   has_one_attached :image
 
@@ -87,6 +93,8 @@ class CrmArticle < ApplicationRecord
   validates :suspension_reason, length: { maximum: 250 }
   validate :references_belong_to_account
   validate :image_is_valid
+  validate :kit_is_not_component, if: :is_kit?
+  before_destroy :check_not_component, prepend: true
 
   scope :search, lambda { |term|
     next all if term.blank?
@@ -121,6 +129,7 @@ class CrmArticle < ApplicationRecord
     self.key = key.to_s.strip.upcase.presence
     clean(%i[purchase_unit suspension_reason]) { |value| value.strip.presence }
     clear_suspension if status_active?
+    components.each(&:mark_for_destruction) unless is_kit?
   end
 
   def clean(fields)
@@ -143,6 +152,22 @@ class CrmArticle < ApplicationRecord
     { line: line, unit: unit }.each do |name, record|
       errors.add(name, 'no pertenece a la cuenta') if record && record.account_id != account_id
     end
+  end
+
+  # Un kit no va dentro de otro kit (sin ciclos ni desglose en cascada).
+  def kit_is_not_component
+    errors.add(:is_kit, "no aplica: es componente de #{kit_names}") if persisted? && component_uses.exists?
+  end
+
+  def check_not_component
+    return unless component_uses.exists?
+
+    errors.add(:base, "No se puede eliminar: es componente de #{kit_names}")
+    throw :abort
+  end
+
+  def kit_names
+    CrmArticle.where(id: component_uses.select(:article_id)).order(:name).pluck(:name).map { |name| "«#{name}»" }.join(', ')
   end
 
   def image_is_valid

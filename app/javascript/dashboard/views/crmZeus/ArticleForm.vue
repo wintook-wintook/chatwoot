@@ -1,8 +1,9 @@
 <!--
   CrmZeus A2 — alta y edición de un artículo (catalogado o no catalogado), en página
   aparte con las pestañas de CRMZeus: General · Precios (precio por lista e impuestos) ·
-  Otros (unidad de compra, contenido, peso, notas e imagen). Al dar de alta se proponen
-  los predeterminados (línea, unidad, impuesto y un precio en la lista predeterminada).
+  Otros (unidad de compra, contenido, peso, notas e imagen), y Componentes si es kit (A3).
+  Al dar de alta se proponen los predeterminados (línea, unidad, impuesto y un precio en
+  la lista predeterminada).
 -->
 <script>
 import { mapGetters } from 'vuex';
@@ -10,9 +11,10 @@ import { useAlert } from 'dashboard/composables';
 import CrmArticles from 'dashboard/api/crmArticles';
 import CrmCatalogs from 'dashboard/api/crmCatalogs';
 import Spinner from 'shared/components/Spinner.vue';
+import ArticlePicker from './ArticlePicker.vue';
 import { crmAccess, defaultId, errorMessage } from './crmHelpers';
 
-const TABS = ['general', 'prices', 'others'];
+const TABS = ['general', 'prices', 'others', 'components'];
 const FIELDS = [
   'catalog_status',
   'key',
@@ -29,7 +31,7 @@ const FIELDS = [
   'unit_weight',
   'notes',
 ];
-// Rails borra un precio existente con `_destroy` (accepts_nested_attributes_for).
+// Rails borra un precio o componente existente con `_destroy` (accepts_nested_attributes_for).
 const DESTROY = '_destroy';
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const IMAGE_MAX_SIZE = 5 * 1024 * 1024;
@@ -44,18 +46,18 @@ const blankArticle = () => ({
   unit_weight: 0,
   tax_ids: [],
   prices: [],
+  components: [],
   image_url: null,
 });
 
 export default {
   name: 'CrmZeusArticleForm',
-  components: { Spinner },
+  components: { ArticlePicker, Spinner },
   props: {
     articleId: { type: String, default: '' },
   },
   data() {
     return {
-      tabs: TABS,
       tab: 'general',
       article: blankArticle(),
       catalogs: {
@@ -78,6 +80,10 @@ export default {
     isNew() {
       return !this.articleId;
     },
+    // «Componentes» solo para kits.
+    tabs() {
+      return this.article.is_kit ? TABS : TABS.filter(t => t !== 'components');
+    },
     canEdit() {
       return crmAccess(this.currentUser, this.$route.params.accountId).canEdit;
     },
@@ -86,6 +92,16 @@ export default {
     },
     visiblePrices() {
       return this.article.prices.filter(price => !price[DESTROY]);
+    },
+    visibleComponents() {
+      return this.article.components.filter(row => !row[DESTROY]);
+    },
+    // Ni el propio kit ni los que ya lleva.
+    componentExcludeIds() {
+      return [
+        this.article.id,
+        ...this.visibleComponents.map(row => row.component_id),
+      ].filter(Boolean);
     },
     isSuspended() {
       return this.article.status && this.article.status !== 'active';
@@ -179,6 +195,7 @@ export default {
         price: price.price,
         currency_id: price.currency_id,
       }));
+      result.components = data.components.map(row => ({ ...row }));
       result.image_url = data.image_url;
       return result;
     },
@@ -197,7 +214,26 @@ export default {
         ...price,
         currency_id: price.currency_id || null,
       }));
+      article.components_attributes = this.componentsPayload();
       return { article };
+    },
+    // El orden de la tabla queda en `position`; los quitados van con `_destroy`.
+    componentsPayload() {
+      const fields = row => ({
+        id: row.id,
+        component_id: row.component_id,
+        quantity: row.quantity,
+        replaceable: row.replaceable,
+        units_editable: row.units_editable,
+      });
+      const kept = this.visibleComponents.map((row, index) => ({
+        ...fields(row),
+        position: index,
+      }));
+      const removed = this.article.components
+        .filter(row => row[DESTROY])
+        .map(row => ({ id: row.id, [DESTROY]: true }));
+      return [...kept, ...removed];
     },
     addPrice() {
       const free = this.priceLists.find(
@@ -212,6 +248,34 @@ export default {
     removePrice(price) {
       if (price.id) this.$set(price, DESTROY, true);
       else this.article.prices.splice(this.article.prices.indexOf(price), 1);
+    },
+    addComponent(item) {
+      this.article.components.push({
+        component_id: item.id,
+        key: item.key,
+        name: item.name,
+        catalog_status: item.catalog_status,
+        unit: item.unit ? item.unit.name : null,
+        quantity: 1,
+        replaceable: false,
+        units_editable: false,
+      });
+    },
+    removeComponent(row) {
+      if (row.id) this.$set(row, DESTROY, true);
+      else
+        this.article.components.splice(this.article.components.indexOf(row), 1);
+    },
+    // Al desmarcar «Juego (kit)» con componentes se confirma; al guardar se borran.
+    async onKitChange(event) {
+      const checked = event.target.checked;
+      if (!checked && this.visibleComponents.length) {
+        event.target.checked = true;
+        if (!(await this.$refs.unkitDialog.showConfirmation())) return;
+        [...this.visibleComponents].forEach(this.removeComponent);
+      }
+      this.article.is_kit = checked;
+      if (!checked && this.tab === 'components') this.tab = 'general';
     },
     toggleTax(taxId, checked) {
       const ids = this.article.tax_ids.filter(id => id !== taxId);
@@ -522,7 +586,12 @@ export default {
                 {{ $t('CRM_ZEUS.ARTICLE_FIELDS.IS_STOCKABLE') }}
               </label>
               <label class="flex items-center gap-2">
-                <input v-model="article.is_kit" type="checkbox" class="!m-0" />
+                <input
+                  :checked="article.is_kit"
+                  type="checkbox"
+                  class="!m-0"
+                  @change="onKitChange"
+                />
                 {{ $t('CRM_ZEUS.ARTICLE_FIELDS.IS_KIT') }}
               </label>
             </div>
@@ -714,6 +783,98 @@ export default {
               </p>
             </div>
           </div>
+
+          <!-- Componentes del kit -->
+          <div v-show="tab === 'components'" class="flex flex-col gap-3">
+            <p class="m-0 text-sm text-slate-500 dark:text-slate-400">
+              {{ $t('CRM_ZEUS.ARTICLE_FORM.COMPONENTS_HINT') }}
+            </p>
+            <p
+              v-if="!visibleComponents.length"
+              class="m-0 text-sm text-slate-500"
+            >
+              {{ $t('CRM_ZEUS.ARTICLE_FORM.NO_COMPONENTS') }}
+            </p>
+            <table v-else class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-slate-500">
+                  <th class="px-2 py-1 font-medium">
+                    {{ $t('CRM_ZEUS.ARTICLES.COLUMNS.KEY') }}
+                  </th>
+                  <th class="px-2 py-1 font-medium">
+                    {{ $t('CRM_ZEUS.ARTICLES.COLUMNS.NAME') }}
+                  </th>
+                  <th class="px-2 py-1 font-medium">
+                    {{ $t('CRM_ZEUS.ARTICLES.COLUMNS.UNIT') }}
+                  </th>
+                  <th class="px-2 py-1 font-medium text-right">
+                    {{ $t('CRM_ZEUS.ARTICLE_FORM.COMPONENT_QUANTITY') }}
+                  </th>
+                  <th class="px-2 py-1 font-medium text-center">
+                    {{ $t('CRM_ZEUS.ARTICLE_FORM.COMPONENT_REPLACEABLE') }}
+                  </th>
+                  <th class="px-2 py-1 font-medium text-center">
+                    {{ $t('CRM_ZEUS.ARTICLE_FORM.COMPONENT_UNITS_EDITABLE') }}
+                  </th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(row, index) in visibleComponents"
+                  :key="row.id || `new-${row.component_id}-${index}`"
+                  class="border-t border-slate-50 dark:border-slate-700"
+                >
+                  <td class="px-2 py-1 text-slate-500">{{ row.key || '—' }}</td>
+                  <td class="px-2 py-1 text-slate-800 dark:text-slate-100">
+                    {{ row.name }}
+                  </td>
+                  <td class="px-2 py-1">{{ row.unit || '—' }}</td>
+                  <td class="w-32 px-2 py-1">
+                    <input
+                      v-model.number="row.quantity"
+                      type="number"
+                      min="0.00001"
+                      step="0.00001"
+                      required
+                      class="!mb-0 text-right"
+                    />
+                  </td>
+                  <td class="px-2 py-1 text-center">
+                    <input
+                      v-model="row.replaceable"
+                      type="checkbox"
+                      class="!m-0"
+                    />
+                  </td>
+                  <td class="px-2 py-1 text-center">
+                    <input
+                      v-model="row.units_editable"
+                      type="checkbox"
+                      class="!m-0"
+                    />
+                  </td>
+                  <td class="px-2 py-1 text-right">
+                    <woot-button
+                      type="button"
+                      size="tiny"
+                      variant="clear"
+                      color-scheme="alert"
+                      icon="dismiss"
+                      :title="$t('CRM_ZEUS.DELETE')"
+                      @click="removeComponent(row)"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <ArticlePicker
+              v-if="canEdit"
+              class="max-w-md"
+              :exclude-ids="componentExcludeIds"
+              @pick="addComponent"
+            />
+          </div>
         </fieldset>
       </form>
     </template>
@@ -725,6 +886,17 @@ export default {
         $t('CRM_ZEUS.ARTICLE_FORM.CONFIRM_CATALOG', { name: article.name })
       "
       :confirm-label="$t('CRM_ZEUS.ARTICLE_FORM.CATALOG')"
+      :cancel-label="$t('CRM_ZEUS.CANCEL')"
+    />
+    <woot-confirm-modal
+      ref="unkitDialog"
+      :title="$t('CRM_ZEUS.ARTICLE_FORM.UNKIT_TITLE')"
+      :description="
+        $t('CRM_ZEUS.ARTICLE_FORM.CONFIRM_UNKIT', {
+          count: visibleComponents.length,
+        })
+      "
+      :confirm-label="$t('CRM_ZEUS.ARTICLE_FORM.UNKIT_CONFIRM')"
       :cancel-label="$t('CRM_ZEUS.CANCEL')"
     />
     <woot-confirm-modal

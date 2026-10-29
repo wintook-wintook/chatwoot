@@ -259,7 +259,8 @@
         "UNIT": "Unit",
         "PRICE": "Price",
         "STATUS": "Status"
-      }
+      },
+      "KIT": "Kit"
     },
     "CATALOG_STATUS": {
       "CATALOGUED": "Catalogued",
@@ -301,7 +302,8 @@
       "TABS": {
         "GENERAL": "General",
         "PRICES": "Prices",
-        "OTHERS": "Other"
+        "OTHERS": "Other",
+        "COMPONENTS": "Components"
       },
       "REQUIRED": "Name is required",
       "CREATED": "Article created",
@@ -322,7 +324,17 @@
       "IMAGE_HINT": "JPG, PNG, WebP or GIF up to 5 MB.",
       "IMAGE_INVALID": "The image must be JPG, PNG, WebP or GIF up to 5 MB",
       "ALL_LISTS_USED": "Each price list holds one price. For another price, add a price list in",
-      "GO_TO_CATALOGS": "Catalogs › Price lists"
+      "GO_TO_CATALOGS": "Catalogs › Price lists",
+      "COMPONENTS_HINT": "Items that make up the kit and how many units of each. Price and taxes are the kit’s. When quoting, a non-stockable kit is broken down into these components.",
+      "NO_COMPONENTS": "No components yet",
+      "COMPONENT_SEARCH": "Add component: search by name or key",
+      "COMPONENT_NONE": "No items found (kits cannot be components)",
+      "COMPONENT_QUANTITY": "Units",
+      "COMPONENT_REPLACEABLE": "Replaceable",
+      "COMPONENT_UNITS_EDITABLE": "Units can be changed",
+      "UNKIT_TITLE": "Stop being a kit",
+      "CONFIRM_UNKIT": "Its {count} components will be removed on save.",
+      "UNKIT_CONFIRM": "Remove components"
     },
     "SUSPENSION": {
       "INACTIVE_ON": "Deactivation date",
