@@ -16,12 +16,22 @@
 // aviso: «sigue igual», o «N cambiaron de camino» con el botón para probar en vivo
 // solo esas (más las rojas y las fijadas) y su costo estimado en tokens.
 //
+// F4 — LA PRUEBA COMO EVIDENCIA (§4.4 y §5):
+//   💬 Llevar al chat   la prueba elegida (o todas las rojas) va al chat de creación
+//                       con su camino y su veredicto (`evidence`); el Asistente
+//                       propone el cambio
+//   Antes / ahora       la corrida anterior contra la última, y «Ver antes» la
+//                       ilumina en el diagrama
+//   Sugerir con IA      las pruebas sugeridas (antes en el modal «Probar sin enviar
+//                       nada»), cada una con su ruta esperada, para agregarlas
+//
 // SIN GUARDAR solo hay pruebas en seco sueltas contra el borrador, que viven
 // mientras la pantalla esté abierta (`looseTests`). Cada una avisa a la pantalla
 // (`dryRun`) para que cuente en la tira de avance («Probado»).
 // ============================================================================
 import AssistantAPI from 'dashboard/api/assistant';
 import testBatteryRunner from './testBatteryRunner';
+import { evidenceMessage, pathSummary, compareRuns } from './testEvidence';
 
 const DRY_POLL_MS = 3000;
 const SEEN_PREFIX = 'assistant/tests/publish-seen/';
@@ -35,8 +45,10 @@ export default {
     draft: { type: String, default: '' },
     inboxId: { type: Number, default: null },
     briefId: { type: Number, default: null },
+    // F4: hay Entrenamiento en pantalla, así que el chat puede corregirlo.
+    canSendToChat: { type: Boolean, default: false },
   },
-  emits: ['select', 'cases', 'dryRun'],
+  emits: ['select', 'cases', 'dryRun', 'evidence'],
   data() {
     return {
       question: '',
@@ -50,6 +62,7 @@ export default {
       selectedMode: null,
       dryTimer: null,
       publishSeen: false,
+      suggestions: null,
     };
   },
   computed: {
@@ -86,6 +99,10 @@ export default {
         changed: c.dry_changed === true,
         live: c.last_live && c.last_live.at ? c.last_live : null,
         dry: c.last_dry && c.last_dry.at ? c.last_dry.informe : null,
+        prevLive:
+          c.previous_live && c.previous_live.at ? c.previous_live : null,
+        prevDry:
+          c.previous_dry && c.previous_dry.at ? c.previous_dry.informe : null,
       }));
       const sueltas = this.looseTests.map(p => ({
         key: p.key,
@@ -98,6 +115,29 @@ export default {
     },
     selected() {
       return this.rows.find(r => r.key === this.selectedKey) || null;
+    },
+    failingRows() {
+      return this.rows.filter(r => r.live && r.live.cumple === false);
+    },
+    comparison() {
+      return compareRuns(this.cases);
+    },
+    // Antes / ahora de la prueba elegida, en el modo que se está viendo.
+    history() {
+      const fila = this.selected;
+      if (!fila) return null;
+      const vivo = this.selectedMode === 'live';
+      const antes = vivo ? fila.prevLive : fila.prevDry;
+      const ahora = vivo ? fila.live : fila.dry;
+      if (!antes || !ahora) return null;
+      const modo = vivo ? 'live' : 'dry';
+      const tt = (k, a) => this.t(k, a);
+      return {
+        before: pathSummary(modo, antes, tt),
+        now: pathSummary(modo, ahora, tt),
+        beforeMark: vivo ? this.mark({ live: antes }) : '·',
+        nowMark: vivo ? this.mark({ live: ahora }) : '·',
+      };
     },
     liveSummary() {
       const corridas = this.rows.filter(r => r.live);
@@ -290,6 +330,64 @@ export default {
       enlace.click();
       URL.revokeObjectURL(enlace.href);
     },
+    // F4: al chat de creación, con su camino y su veredicto.
+    sendEvidence(filas) {
+      const texto = evidenceMessage(filas, (k, a) => this.t(k, a));
+      if (texto) this.$emit('evidence', texto);
+    },
+    viewBefore() {
+      const fila = this.selected;
+      if (!fila) return;
+      if (this.selectedMode === 'live' && fila.prevLive) {
+        this.$emit('select', {
+          mode: 'live',
+          traza: fila.prevLive.traza || null,
+          reply: fila.prevLive.reply,
+        });
+      } else if (fila.prevDry) {
+        this.$emit('select', { mode: 'dry', result: fila.prevDry });
+      }
+    },
+    // Las pruebas sugeridas por IA (Fase E), contra el borrador.
+    suggest() {
+      return this.act('suggest', async () => {
+        const { data } = await AssistantAPI.suggestedTests(
+          this.draft,
+          null,
+          this.inboxId
+        );
+        this.suggestions = data.cases || [];
+      });
+    },
+    addSuggestion(sugerida) {
+      if (!this.saved) {
+        // Sin guardar queda como prueba suelta: se sabe a qué ruta cayó, no más.
+        this.looseTests.unshift({
+          key: `loose:${Date.now()}:${this.looseTests.length}`,
+          message: sugerida.message,
+          result: {
+            routes: { chosen: sugerida.chosen },
+            tag: sugerida.tag,
+          },
+        });
+        this.suggestions = this.suggestions.filter(s => s !== sugerida);
+        return null;
+      }
+      return this.act('add', async () => {
+        await AssistantAPI.addTestCase(
+          this.templateId,
+          sugerida.message,
+          sugerida.expected || null
+        );
+        this.suggestions = this.suggestions.filter(s => s !== sugerida);
+        await this.fetchPile();
+      });
+    },
+    suggestionMark(sugerida) {
+      if (sugerida.pass === true) return '✅';
+      if (sugerida.pass === false) return '❌';
+      return '·';
+    },
     onEnter() {
       return this.saved ? this.addCase() : this.runLooseDry();
     },
@@ -419,43 +517,132 @@ export default {
     </div>
 
     <div
-      v-if="saved"
       class="flex flex-wrap items-center gap-2 pt-2 border-t shrink-0 border-slate-100 dark:border-slate-700"
     >
       <woot-button
         size="small"
         variant="clear"
-        icon="add"
-        :is-loading="busy === 'generate'"
-        :is-disabled="Boolean(busy)"
-        :title="t('GENERATE_HINT')"
-        @click="generate"
+        icon="wand"
+        :is-loading="busy === 'suggest'"
+        :is-disabled="!draft.trim() || Boolean(busy)"
+        :title="t('SUGGEST_HINT')"
+        @click="suggest"
       >
-        {{ t('GENERATE') }}
+        {{ t('SUGGEST') }}
       </woot-button>
-      <woot-button
-        size="small"
-        variant="clear"
-        color-scheme="secondary"
-        icon="flash-on"
-        :is-loading="dryRunning || busy === 'dry'"
-        :is-disabled="!cases.length || dryRunning || Boolean(busy)"
-        :title="t('RUN_ALL_DRY_HINT')"
-        @click="runAllDry"
+      <template v-if="saved">
+        <woot-button
+          size="small"
+          variant="clear"
+          icon="add"
+          :is-loading="busy === 'generate'"
+          :is-disabled="Boolean(busy)"
+          :title="t('GENERATE_HINT')"
+          @click="generate"
+        >
+          {{ t('GENERATE') }}
+        </woot-button>
+        <woot-button
+          size="small"
+          variant="clear"
+          color-scheme="secondary"
+          icon="flash-on"
+          :is-loading="dryRunning || busy === 'dry'"
+          :is-disabled="!cases.length || dryRunning || Boolean(busy)"
+          :title="t('RUN_ALL_DRY_HINT')"
+          @click="runAllDry"
+        >
+          {{ t('RUN_ALL_DRY') }}
+        </woot-button>
+        <woot-button
+          size="small"
+          variant="clear"
+          color-scheme="secondary"
+          icon="play-circle"
+          :is-loading="running || busy === 'live'"
+          :is-disabled="!cases.length || running || Boolean(busy)"
+          :title="t('RUN_ALL_LIVE_HINT')"
+          @click="runAllLive"
+        >
+          {{ t('RUN_ALL_LIVE') }}
+        </woot-button>
+      </template>
+    </div>
+
+    <div
+      v-if="suggestions"
+      class="flex flex-col gap-1 p-2 rounded-lg shrink-0 bg-slate-50 dark:bg-slate-900 max-h-48 overflow-y-auto"
+    >
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-medium text-slate-700 dark:text-slate-200">
+          {{ t('SUGGESTIONS', { count: suggestions.length }) }}
+        </span>
+        <woot-button
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          icon="dismiss"
+          @click="suggestions = null"
+        />
+      </div>
+      <div
+        v-for="(sugerida, i) in suggestions"
+        :key="`sug-${i}`"
+        class="flex items-center gap-2 text-xs"
       >
-        {{ t('RUN_ALL_DRY') }}
-      </woot-button>
-      <woot-button
-        size="small"
-        variant="clear"
-        color-scheme="secondary"
-        icon="play-circle"
-        :is-loading="running || busy === 'live'"
-        :is-disabled="!cases.length || running || Boolean(busy)"
-        :title="t('RUN_ALL_LIVE_HINT')"
-        @click="runAllLive"
+        <span class="shrink-0">{{ suggestionMark(sugerida) }}</span>
+        <span
+          class="flex-1 min-w-0 truncate text-slate-800 dark:text-slate-100"
+        >
+          {{ sugerida.message }}
+        </span>
+        <span class="shrink-0 text-slate-500 dark:text-slate-400">
+          {{ sugerida.chosen || '—' }}
+        </span>
+        <woot-button
+          size="tiny"
+          variant="smooth"
+          :is-disabled="Boolean(busy)"
+          @click="addSuggestion(sugerida)"
+        >
+          {{ t('ADD_SHORT') }}
+        </woot-button>
+      </div>
+    </div>
+
+    <div
+      v-if="comparison.compared || (canSendToChat && failingRows.length)"
+      class="flex flex-col gap-1 text-xs shrink-0"
+    >
+      <span
+        v-if="comparison.compared"
+        class="text-slate-600 dark:text-slate-300"
       >
-        {{ t('RUN_ALL_LIVE') }}
+        {{
+          t('COMPARE', {
+            before: comparison.before,
+            after: comparison.after,
+            total: comparison.compared,
+          })
+        }}
+      </span>
+      <span
+        v-for="roto in comparison.broken"
+        :key="`roto-${roto.id}`"
+        class="text-amber-700 dark:text-amber-400"
+      >
+        {{ t('COMPARE_BROKEN', { message: roto.message }) }}
+      </span>
+      <woot-button
+        v-if="canSendToChat && failingRows.length"
+        size="tiny"
+        variant="smooth"
+        color-scheme="secondary"
+        icon="chat"
+        class="self-start"
+        @click="sendEvidence(failingRows)"
+      >
+        {{ t('SEND_FAILING', { count: failingRows.length }) }}
       </woot-button>
     </div>
     <div
@@ -527,7 +714,7 @@ export default {
             size="tiny"
             variant="clear"
             :color-scheme="fila.pinned ? 'primary' : 'secondary'"
-            icon="pin"
+            icon="star-emphasis"
             :title="fila.pinned ? t('UNPIN') : t('PIN')"
             @click="togglePin(fila)"
           />
@@ -595,6 +782,37 @@ export default {
         {{ t('DRY_NOTE') }}
       </p>
       <p v-else class="m-0 text-slate-500">{{ t('NEVER_RUN') }}</p>
+      <div
+        v-if="history"
+        class="flex flex-col gap-0.5 p-2 rounded-md bg-slate-50 dark:bg-slate-900"
+      >
+        <span class="text-slate-500 dark:text-slate-400">
+          {{ t('BEFORE') }} {{ history.beforeMark }} {{ history.before }}
+        </span>
+        <span class="text-slate-800 dark:text-slate-100">
+          {{ t('NOW') }} {{ history.nowMark }} {{ history.now }}
+        </span>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 pt-1">
+        <woot-button
+          v-if="canSendToChat && (selected.live || selected.dry)"
+          size="tiny"
+          variant="smooth"
+          icon="chat"
+          @click="sendEvidence([selected])"
+        >
+          {{ t('SEND_TO_CHAT') }}
+        </woot-button>
+        <woot-button
+          v-if="history"
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          @click="viewBefore"
+        >
+          {{ t('VIEW_BEFORE') }}
+        </woot-button>
+      </div>
     </div>
   </div>
 </template>
