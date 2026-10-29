@@ -66,6 +66,26 @@ describe('describeTemplate', () => {
     ]);
   });
 
+  // F4: los programados solo llenan el cuerpo y ocultan las que piden más.
+  it('botones de respuesta rápida o teléfono no piden dato: basta el cuerpo', () => {
+    const conBotonesFijos = {
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Aviso' },
+        { type: 'BODY', text: 'Hola {{1}}' },
+        {
+          type: 'BUTTONS',
+          buttons: [
+            { type: 'QUICK_REPLY', text: 'Sí' },
+            { type: 'PHONE_NUMBER', text: 'Llamar' },
+            { type: 'URL', text: 'Sitio', url: 'https://x.mx' },
+          ],
+        },
+      ],
+    };
+
+    expect(describeTemplate(conBotonesFijos).needsComponents).toBe(false);
+  });
+
   it('variables con nombre', () => {
     expect(variablesIn('Hola {{nombre}} y {{ apellido }}')).toEqual([
       'nombre',

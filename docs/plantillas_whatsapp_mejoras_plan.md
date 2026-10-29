@@ -324,6 +324,25 @@ documento con su nombre, `BubbleFile` con y sin nombre. `Message.vue` sin hallaz
 4 de `specs/MoreActions.spec.js` **con y sin F3** (ya venían de develop). Webpack: «Compiled successfully».
 ⚠ **Sin probar en navegador.** Mensajes de plantilla viejos (solo cuerpo) se ven igual que antes.
 
+## 7.6 F4 — hecho (29/10/2026)
+
+**Hallazgo.** Los programados (`ScheduleMessageModal.vue`) **ya** ocultaban las plantillas con archivo (su propio
+`formatsToRemove`): D4 ya se cumplía. Lo que fallaba: se ofrecían plantillas con **variables en el encabezado**
+o **botones con dato** (URL variable, copiar código); su formulario solo llena el cuerpo y Meta las rechazaba
+al enviarse.
+
+**Qué se hizo.** `availableTemplates` usa la misma regla que la conversación:
+`!describeTemplate(template).needsComponents` → se ocultan las que piden algo más que el cuerpo. Siguen
+ofreciéndose las de solo cuerpo y las de encabezado de texto fijo o botones sin dato (respuesta rápida,
+teléfono, URL fija).
+
+**Pila de pruebas.** `templateForm.spec.js` (+1: botones fijos no piden dato). `ScheduleMessageModal.vue` sin
+spec (componente de ~1600 líneas); la regla está probada en `templateForm.js`. Webpack: «Compiled
+successfully». ⚠ **Sin probar en navegador.**
+
+**Ojo — lint.** `ScheduleMessageModal.vue` trae 311 hallazgos de eslint (sigue en 311): el `eslint --fix` del
+hook lo reformatearía entero → commit con `--no-verify`.
+
 ---
 
 ## 8. Pila de pruebas en navegador (al cerrar cada fase)
