@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_01_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_01_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2272,6 +2272,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100000) do
     t.jsonb "previous_live", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "turns", default: [], null: false
     t.index ["account_id"], name: "index_tracking_test_cases_on_account_id"
     t.index ["tracking_template_id", "source_key"], name: "index_tracking_test_cases_on_template_and_source_key", unique: true, where: "(source_key IS NOT NULL)"
     t.index ["tracking_template_id"], name: "index_tracking_test_cases_on_tracking_template_id"

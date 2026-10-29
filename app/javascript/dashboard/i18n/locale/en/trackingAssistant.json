@@ -531,7 +531,9 @@
       "CAMINO_BOTSELLER": "BotSeller",
       "HEAT_ROUTE": "%{total} tests · %{failed} failing",
       "HEAT_NONE": "no tests",
-      "HEAT_UNTESTED": "· %{count} routes without tests: generate them in the Tests panel"
+      "HEAT_UNTESTED": "· %{count} routes without tests: generate them in the Tests panel",
+      "EXPORT_SVG": "Download SVG",
+      "EXPORT_PNG": "Download PNG"
     },
     "TESTS": {
       "PANEL": "Tests",
@@ -598,7 +600,20 @@
       "EVIDENCE_NO_SOURCE": "no source",
       "EVIDENCE_ANSWERED_BY": "answered via %{camino}",
       "EVIDENCE_REASON": "source: %{reason}",
-      "EVIDENCE_CASE": "opens a case"
+      "EVIDENCE_CASE": "opens a case",
+      "PLACEHOLDER_DIALOG": "One customer message per line, in order. E.g.:\nI'd like an appointment\nTuesday afternoon",
+      "DIALOG_MODE": "Dialog (several messages)",
+      "DIALOG_COUNT": "%{count} of %{max} messages",
+      "DIALOG_BADGE": "💬%{count}",
+      "COMPARE_VERSION": "Compare with a version",
+      "COMPARE_VERSION_HINT": "The whole suite as a dry run against a saved version and against the draft: which tests take a different path",
+      "NO_VERSIONS": "This agent has no saved versions yet.",
+      "VERSION_OPTION": "v%{number} %{note}",
+      "COMPARE_RUN": "Compare",
+      "COMPARE_PROGRESS": "Comparing: %{done} of %{total}",
+      "COMPARE_RESULT": "Against v%{version}: %{count} of %{total} tests take a different path.",
+      "DIFFERS_IN": "differs in v%{version}",
+      "VIEW_IN_VERSION": "View in v%{version} (%{route})"
     },
     "CONFIGURE": {
       "HINT": "What this Training uses from your account. Fill in or create what's missing here; what you already have (✔) can be swapped for another. Applying writes it into the text and keeps it as a version.",

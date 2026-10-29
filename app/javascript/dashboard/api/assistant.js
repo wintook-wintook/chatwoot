@@ -173,11 +173,23 @@ class AssistantAPI extends ApiClient {
   }
 
   // expectedRoute: la de una prueba sugerida; con ella el juez califica la ruta.
-  addTestCase(templateId, message, expectedRoute = null) {
+  // turns (F5): los mensajes de un diálogo (2–4); message es el primero.
+  addTestCase(templateId, message, expectedRoute = null, turns = null) {
     return axios.post(`${this.url}/test_cases`, {
       template_id: templateId,
       message,
       expected_route: expectedRoute,
+      turns,
+    });
+  }
+
+  // F5: toda la pila en seco contra una versión guardada y contra el borrador.
+  compareTestCases(templateId, versionId, draft, inboxId) {
+    return axios.post(`${this.url}/test_cases/compare`, {
+      template_id: templateId,
+      version_id: versionId,
+      draft,
+      inbox_id: inboxId,
     });
   }
 
@@ -363,11 +375,13 @@ class AssistantAPI extends ApiClient {
   // Probar sin enviar nada: qué haría el motor con UNA pregunta. No escribe nada,
   // pero sí gasta (clasifica la rama y vectoriza la pregunta), así que va con
   // botón — a diferencia de validate, que corre al teclear.
-  dryRun(draft, question, inboxId) {
+  // recentContext (F5): los mensajes anteriores de un diálogo («Cliente: …»).
+  dryRun(draft, question, inboxId, recentContext = null) {
     return axios.post(`${this.url}/dry_run`, {
       draft,
       question,
       inbox_id: inboxId,
+      recent_context: recentContext,
     });
   }
 

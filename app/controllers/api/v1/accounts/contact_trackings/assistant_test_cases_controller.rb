@@ -13,6 +13,8 @@
 # POST   …/assistant/test_cases/run_dry             toda la pila en seco contra `draft`
 # POST   …/assistant/test_cases/run_live            las `case_ids` en vivo → { id } de la
 #                                                   corrida (se sigue con test_battery/:id)
+# POST   …/assistant/test_cases/compare             F5: toda la pila en seco contra la versión
+#                                                   `version_id` y contra `draft`
 #
 # Mismo permiso que el resto del Asistente: administradores.
 # ================================================================================
@@ -29,7 +31,9 @@ class Api::V1::Accounts::ContactTrackings::AssistantTestCasesController < Api::V
   end
 
   def create
-    caso = TestCases.add_own(Current.account, @template, params[:message], expected_route: params[:expected_route])
+    turnos = params[:turns].is_a?(Array) ? params[:turns] : nil
+    caso = TestCases.add_own(Current.account, @template, params[:message], expected_route: params[:expected_route],
+                                                                           turns: turnos)
     return render json: { error: caso.errors.full_messages.join(' · ') }, status: :unprocessable_entity unless caso.persisted?
 
     render json: TestCases.as_json_for(caso), status: :created
@@ -59,6 +63,15 @@ class Api::V1::Accounts::ContactTrackings::AssistantTestCasesController < Api::V
     render json: estado, status: :accepted
   end
 
+  def compare
+    version = @template.versions.find(params[:version_id])
+    estado = TestCases.run_compare(Current.account, @template, version: version, inbox: inbox,
+                                                               draft: params[:draft].presence || @template.complementary_prompt)
+    return render json: { error: 'empty' }, status: :unprocessable_entity if estado.nil?
+
+    render json: estado, status: :accepted
+  end
+
   def run_live
     if ContactTrackings::Assistant::TestBattery.sandbox_inbox(Current.account).nil?
       return render json: { error: 'no_sandbox' }, status: :unprocessable_entity
@@ -76,6 +89,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantTestCasesController < Api::V
     candidatos = TestCases.live_candidates(@template)
     { cases: @template.test_cases.ordered.map { |c| TestCases.as_json_for(c) },
       dry_run: TestCases.dry_status(@template),
+      compare: TestCases.compare_status(@template),
       live_offer: { case_ids: candidatos.map(&:id), tokens: TestCases.estimate_tokens(@template, candidatos),
                     max: TestCases::MAX_LIVE_OFFER } }
   end

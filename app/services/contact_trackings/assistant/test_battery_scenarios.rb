@@ -24,7 +24,8 @@ class ContactTrackings::Assistant::TestBatteryScenarios
     Contesta SOLO el JSON: {"mensajes": [{"id": "…", "mensaje": "…"}]}
   PROMPT
 
-  Scenario = Struct.new(:id, :kind, :message, :route, :tag, :rule, :check, keyword_init: true)
+  # turns (proyecto@diagrama_agente_ia F5): los mensajes de un diálogo; vacío = uno solo.
+  Scenario = Struct.new(:id, :kind, :message, :route, :tag, :rule, :check, :turns, keyword_init: true)
 
   attr_reader :usage
 
@@ -47,7 +48,7 @@ class ContactTrackings::Assistant::TestBatteryScenarios
     template.test_cases.where(id: ids).ordered.map do |caso|
       Scenario.new(id: "caso:#{caso.id}", kind: caso.kind, message: caso.message, route: caso.expected_route,
                    tag: caso.expected_route.present? ? mapa[caso.expected_route]&.tag : nil, rule: caso.rule,
-                   check: caso.check_text.presence || 'Que conteste bien y según su Entrenamiento.')
+                   check: caso.check_text.presence || 'Que conteste bien y según su Entrenamiento.', turns: caso.turns)
     end
   end
 

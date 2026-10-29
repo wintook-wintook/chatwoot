@@ -1,5 +1,6 @@
 import { shallowMount } from '@vue/test-utils';
 import AssistantAPI from 'dashboard/api/assistant';
+import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import TestsPanel from './TestsPanel.vue';
 
 // proyecto@diagrama_agente_ia F2/F3 — docs/diagrama_agente_ia_plan.md §4.1 y §9.1
@@ -15,7 +16,11 @@ vi.mock('dashboard/api/assistant', () => ({
     runTestCasesDry: vi.fn(),
     runTestCasesLive: vi.fn(),
     suggestedTests: vi.fn(),
+    compareTestCases: vi.fn(),
   },
+}));
+vi.mock('dashboard/api/trackingTemplates', () => ({
+  default: { getVersions: vi.fn() },
 }));
 
 // @vue/test-utils 1.x no trae flushPromises: basta con dejar correr la cola.
@@ -86,7 +91,8 @@ describe('TestsPanel', () => {
       expect(AssistantAPI.dryRun).toHaveBeenCalledWith(
         '@ruta(cotizar #cotizar: precios): -',
         '¿cuánto cuesta?',
-        7
+        7,
+        null
       );
       expect(wrapper.emitted('select')).toEqual([
         [{ mode: 'dry', result: informe }],
@@ -137,7 +143,12 @@ describe('TestsPanel', () => {
       await boton(wrapper, 'TESTS.RUN_ALL_DRY').trigger('click');
       await flushPromises();
 
-      expect(AssistantAPI.addTestCase).toHaveBeenCalledWith(5, 'hola');
+      expect(AssistantAPI.addTestCase).toHaveBeenCalledWith(
+        5,
+        'hola',
+        null,
+        null
+      );
       expect(AssistantAPI.generateTestCases).toHaveBeenCalledWith(5, {
         briefId: 9,
       });
@@ -337,6 +348,128 @@ describe('TestsPanel', () => {
 
       expect(wrapper.find('li').text()).toContain('hola');
       expect(AssistantAPI.addTestCase).not.toHaveBeenCalled();
+    });
+  });
+
+  // F5 — diálogos y comparar versiones
+  describe('diálogos y versiones', () => {
+    it('un diálogo se agrega con sus mensajes, uno por línea', async () => {
+      AssistantAPI.testCases.mockResolvedValue(pila({ cases: [] }));
+      AssistantAPI.addTestCase.mockResolvedValue({});
+      const wrapper = montar({ templateId: 5 });
+      await flushPromises();
+
+      await wrapper.find('input[type="checkbox"]').setChecked(true);
+      await wrapper.find('textarea').setValue('quiero cita\n\nel martes\n');
+      await boton(wrapper, 'TESTS.ADD').trigger('click');
+      await flushPromises();
+
+      expect(AssistantAPI.addTestCase).toHaveBeenCalledWith(
+        5,
+        'quiero cita',
+        null,
+        ['quiero cita', 'el martes']
+      );
+    });
+
+    it('en seco, el diálogo suelto clasifica el último con contexto', async () => {
+      AssistantAPI.dryRun.mockResolvedValue({ data: { routes: {} } });
+      const wrapper = montar({ inboxId: 1 });
+
+      await wrapper.find('input[type="checkbox"]').setChecked(true);
+      await wrapper.find('textarea').setValue('quiero cita\nel martes');
+      await boton(wrapper, 'TESTS.RUN_DRY').trigger('click');
+      await flushPromises();
+
+      expect(AssistantAPI.dryRun).toHaveBeenCalledWith(
+        '@ruta(cotizar #cotizar: precios): -',
+        'el martes',
+        1,
+        'Cliente: quiero cita'
+      );
+    });
+
+    it('muestra el diálogo en vivo turno por turno', async () => {
+      AssistantAPI.testCases.mockResolvedValue(
+        pila({
+          cases: [
+            {
+              id: 1,
+              message: 'quiero cita',
+              turns: ['quiero cita', 'el martes'],
+              last_dry: {},
+              last_live: {
+                at: 'y',
+                cumple: true,
+                reply: 'Listo',
+                dialog: [
+                  { customer: 'quiero cita', reply: '¿Qué día?' },
+                  { customer: 'el martes', reply: 'Listo' },
+                ],
+              },
+            },
+          ],
+        })
+      );
+      const wrapper = montar({ templateId: 5 });
+      await flushPromises();
+      expect(wrapper.find('li').text()).toContain('TESTS.DIALOG_BADGE');
+      await wrapper.find('li button').trigger('click');
+
+      expect(wrapper.text()).toContain('¿Qué día?');
+      expect(wrapper.text()).toContain('el martes');
+    });
+
+    it('compara contra una versión y deja ver el camino de esa versión', async () => {
+      AssistantAPI.testCases.mockResolvedValueOnce(pila());
+      TrackingTemplatesAPI.getVersions.mockResolvedValue({
+        data: { versions: [{ id: 30, version: 7, note: 'antes' }] },
+      });
+      AssistantAPI.compareTestCases.mockResolvedValue({});
+      AssistantAPI.testCases.mockResolvedValue(
+        pila({
+          compare: {
+            status: 'done',
+            version: 7,
+            total: 1,
+            results: {
+              1: {
+                same: false,
+                version: {
+                  route: 'soporte',
+                  informe: { routes: { chosen: 'soporte' } },
+                },
+                draft: { route: 'cotizar' },
+              },
+            },
+          },
+        })
+      );
+      const wrapper = montar({ templateId: 5, inboxId: 4 });
+      await flushPromises();
+
+      await boton(wrapper, 'TESTS.COMPARE_VERSION').trigger('click');
+      await flushPromises();
+      await boton(wrapper, 'TESTS.COMPARE_RUN').trigger('click');
+      await flushPromises();
+
+      expect(AssistantAPI.compareTestCases).toHaveBeenCalledWith(
+        5,
+        30,
+        '@ruta(cotizar #cotizar: precios): -',
+        4
+      );
+      expect(wrapper.text()).toContain(
+        'TESTS.COMPARE_RESULT {"version":7,"count":1,"total":1}'
+      );
+      expect(wrapper.find('li').text()).toContain('TESTS.DIFFERS_IN');
+      await wrapper.find('li button').trigger('click');
+      await boton(wrapper, 'TESTS.VIEW_IN_VERSION').trigger('click');
+
+      expect(wrapper.emitted('select').pop()[0]).toEqual({
+        mode: 'dry',
+        result: { routes: { chosen: 'soporte' } },
+      });
     });
   });
 });

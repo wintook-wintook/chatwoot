@@ -531,7 +531,9 @@
       "CAMINO_BOTSELLER": "BotSeller",
       "HEAT_ROUTE": "%{total} pruebas · %{failed} con falla",
       "HEAT_NONE": "sin pruebas",
-      "HEAT_UNTESTED": "· %{count} rutas sin pruebas: genéralas en el panel Pruebas"
+      "HEAT_UNTESTED": "· %{count} rutas sin pruebas: genéralas en el panel Pruebas",
+      "EXPORT_SVG": "Descargar SVG",
+      "EXPORT_PNG": "Descargar PNG"
     },
     "TESTS": {
       "PANEL": "Pruebas",
@@ -598,7 +600,20 @@
       "EVIDENCE_NO_SOURCE": "sin fuente",
       "EVIDENCE_ANSWERED_BY": "contestó por %{camino}",
       "EVIDENCE_REASON": "fuente: %{reason}",
-      "EVIDENCE_CASE": "abre caso"
+      "EVIDENCE_CASE": "abre caso",
+      "PLACEHOLDER_DIALOG": "Un mensaje del cliente por línea, en orden. Ej.:\nquiero una cita\nel martes en la tarde",
+      "DIALOG_MODE": "Diálogo (varios mensajes)",
+      "DIALOG_COUNT": "%{count} de %{max} mensajes",
+      "DIALOG_BADGE": "💬%{count}",
+      "COMPARE_VERSION": "Comparar con una versión",
+      "COMPARE_VERSION_HINT": "Toda la pila en seco contra una versión guardada y contra el borrador: qué pruebas toman otro camino",
+      "NO_VERSIONS": "Este agente todavía no tiene versiones guardadas.",
+      "VERSION_OPTION": "v%{number} %{note}",
+      "COMPARE_RUN": "Comparar",
+      "COMPARE_PROGRESS": "Comparando: %{done} de %{total}",
+      "COMPARE_RESULT": "Contra la v%{version}: %{count} de %{total} pruebas toman otro camino.",
+      "DIFFERS_IN": "distinta en v%{version}",
+      "VIEW_IN_VERSION": "Ver en la v%{version} (%{route})"
     },
     "CONFIGURE": {
       "HINT": "Lo que este Entrenamiento usa de tu cuenta. Lo que falta, llénalo o créalo aquí; lo que ya tienes (✔) puedes cambiarlo por otro. Al aplicar se escribe en el texto y queda como una versión.",

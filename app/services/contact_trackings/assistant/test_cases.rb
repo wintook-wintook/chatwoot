@@ -28,6 +28,7 @@ module ContactTrackings::Assistant::TestCases
   module_function
 
   def dry_key(template_id) = "assistant/test_cases/#{template_id}/dry"
+  def compare_key(template_id) = "assistant/test_cases/#{template_id}/compare"
 
   def generate(account, template, brief: nil)
     escenarios = ContactTrackings::Assistant::TestBatteryScenarios.new(account, template: template, brief: brief).call
@@ -44,11 +45,25 @@ module ContactTrackings::Assistant::TestCases
   end
 
   # F4: con `expected_route` (una prueba sugerida) es de ruta: el juez califica a dónde cayó.
-  def add_own(account, template, message, expected_route: nil)
+  # F5: con `turns` (2+ mensajes) es un diálogo; `message` queda como el primero.
+  def add_own(account, template, message, expected_route: nil, turns: nil)
     ruta = expected_route.to_s.strip.downcase.presence
-    template.test_cases.create(account: account, message: message.to_s.strip.truncate(500), kind: ruta ? 'ruta' : 'propia',
-                               expected_route: ruta, position: template.test_cases.maximum(:position).to_i + 1,
-                               check_text: ruta ? "Que atienda como la ruta #{ruta}." : 'Que conteste bien y según su Entrenamiento.')
+    mensajes = Array(turns).map { |m| m.to_s.strip.truncate(500) }.compact_blank
+    mensajes = [] if mensajes.size < 2
+    template.test_cases.create(account: account, message: (mensajes.first || message).to_s.strip.truncate(500),
+                               turns: mensajes, kind: ruta ? 'ruta' : 'propia', expected_route: ruta,
+                               position: template.test_cases.maximum(:position).to_i + 1, check_text: check_for(ruta))
+  end
+
+  def check_for(ruta)
+    ruta ? "Que atienda como la ruta #{ruta}." : 'Que conteste bien y según su Entrenamiento.'
+  end
+
+  # F5: el último mensaje de un diálogo se clasifica con los anteriores como contexto,
+  # como en producción (BranchClassifierService con recent_context).
+  def dry_inputs(caso)
+    mensajes = caso.customer_turns
+    [mensajes.last, mensajes[0...-1].map { |m| "Cliente: #{m}" }.join("\n").presence]
   end
 
   # La firma del camino en seco: dos corridas con la misma firma tomaron el mismo camino.
@@ -74,6 +89,21 @@ module ContactTrackings::Assistant::TestCases
 
   def dry_status(template)
     Rails.cache.read(dry_key(template.id))
+  end
+
+  # F5: la pila en seco contra una versión guardada y contra el borrador (TestCasesCompareJob).
+  def run_compare(account, template, version:, draft:, inbox: nil)
+    return nil if template.test_cases.none?
+
+    estado = { 'status' => 'queued', 'version' => version.version, 'version_id' => version.id,
+               'total' => template.test_cases.count, 'done' => 0, 'results' => {}, 'started_at' => Time.current.iso8601 }
+    Rails.cache.write(compare_key(template.id), estado, expires_in: TTL)
+    ContactTrackings::Assistant::TestCasesCompareJob.perform_later(account.id, template.id, version.id, draft.to_s, inbox&.id)
+    estado
+  end
+
+  def compare_status(template)
+    Rails.cache.read(compare_key(template.id))
   end
 
   # Al publicar: en seco toda la pila, contra lo que se acaba de guardar. Sin pila, nada.
@@ -114,13 +144,13 @@ module ContactTrackings::Assistant::TestCases
     return if caso.nil?
 
     traza = fila[:traza] || fila['traza']
-    caso.store_live!(fila.stringify_keys.slice('reply', 'cumple', 'motivo', 'fallas', 'ruta_ok', 'conversation', 'cases')
+    caso.store_live!(fila.stringify_keys.slice('reply', 'cumple', 'motivo', 'fallas', 'ruta_ok', 'conversation', 'cases', 'dialog')
                          .merge('traza' => traza, 'tokens' => traza.is_a?(Hash) ? traza.dig('uso', 'tokens').to_i : 0))
   end
 
   def as_json_for(caso)
     { id: caso.id, message: caso.message, kind: caso.kind, expected_route: caso.expected_route, rule: caso.rule,
-      pinned: caso.pinned, last_dry: caso.last_dry, previous_dry: caso.previous_dry, last_live: caso.last_live,
+      pinned: caso.pinned, turns: caso.turns, last_dry: caso.last_dry, previous_dry: caso.previous_dry, last_live: caso.last_live,
       previous_live: caso.previous_live, dry_changed: caso.dry_changed? }
   end
 end

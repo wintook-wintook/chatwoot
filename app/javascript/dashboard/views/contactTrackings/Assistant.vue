@@ -420,6 +420,17 @@ export default {
     },
     // El último resultado, para la tira de hitos: "Probado" se apaga cuando el
     // borrador cambió después de la prueba.
+    // F5: el archivo del diagrama lleva el nombre del agente.
+    diagramExportName() {
+      const nombre = (this.editingTemplate && this.editingTemplate.name) || '';
+      const limpio = nombre
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+      return limpio ? `diagrama-${limpio}` : 'diagrama-agente';
+    },
     diagramHeat() {
       return heatFromCases(this.testCases);
     },
@@ -1830,6 +1841,7 @@ export default {
                   :issues="nodeIssues"
                   :test="diagramTest"
                   :heat="diagramHeat"
+                  :export-name="diagramExportName"
                   @clearHighlight="diagramTest = null"
                   @goToRoute="goToRouteFromDiagram"
                   @goToSection="goToSectionFromDiagram"

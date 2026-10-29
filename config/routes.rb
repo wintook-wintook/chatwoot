@@ -285,6 +285,7 @@ Rails.application.routes.draw do
             post   'assistant/test_cases/generate', to: 'assistant_test_cases#generate'
             post   'assistant/test_cases/run_dry',  to: 'assistant_test_cases#run_dry'
             post   'assistant/test_cases/run_live', to: 'assistant_test_cases#run_live'
+            post   'assistant/test_cases/compare',  to: 'assistant_test_cases#compare'
             patch  'assistant/test_cases/:id',      to: 'assistant_test_cases#update'
             delete 'assistant/test_cases/:id',      to: 'assistant_test_cases#destroy'
             # armar un agente desde cero conversando (llena las instrucciones iniciales)

@@ -24,12 +24,18 @@
 // pantalla cambia a la pestaña del editor). El punto rojo/ámbar es el mismo
 // hallazgo del comprobador que marca el árbol de la Estructura.
 //
+// EXPORTAR (F5): SVG o PNG (svgExport.js), con los estilos ya calculados y el fondo
+// del panel, para pegarlo en un documento o mandarlo como evidencia.
+//
 // Colores con clases de Tailwind sobre el SVG (fill-/stroke-), así sigue al modo
 // oscuro y a los temas del dashboard (woot-*) sin una paleta propia.
 // ============================================================================
 import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
 import { buildDiagram, NODE_H } from './agentDiagramLayout';
 import { pathFromTrace, pathFromDryRun } from './testPath';
+import { downloadSvg, downloadPng } from './svgExport';
+
+const TRANSPARENT = ['rgba(0, 0, 0, 0)', 'transparent', ''];
 
 export default {
   name: 'AgentDiagram',
@@ -42,6 +48,8 @@ export default {
     test: { type: Object, default: null },
     // F3: { ruta: { total, failed } } de la pila del agente, o null.
     heat: { type: Object, default: null },
+    // F5: el nombre del archivo exportado, sin extensión.
+    exportName: { type: String, default: 'diagrama-agente' },
   },
   emits: ['goToRoute', 'goToSection', 'clearHighlight'],
   computed: {
@@ -197,6 +205,24 @@ export default {
         ? 'fill-red-500'
         : 'fill-amber-500 dark:fill-amber-400';
     },
+    // El primer fondo no transparente hacia arriba: el del panel (claro u oscuro).
+    background() {
+      let el = this.$el;
+      while (el && el.nodeType === 1) {
+        const color = window.getComputedStyle(el).backgroundColor;
+        if (!TRANSPARENT.includes(color)) return color;
+        el = el.parentElement;
+      }
+      return '#ffffff';
+    },
+    exportSvg() {
+      downloadSvg(this.$refs.svg, `${this.exportName}.svg`, this.background());
+    },
+    exportPng() {
+      return Promise.resolve(
+        downloadPng(this.$refs.svg, `${this.exportName}.png`, this.background())
+      ).catch(() => {});
+    },
     open(n) {
       if (!n.target) return;
       if (n.target.type === 'route') this.$emit('goToRoute', n.target.name);
@@ -245,6 +271,7 @@ export default {
 
       <div class="flex-1 min-h-0 overflow-auto">
         <svg
+          ref="svg"
           :width="diagram.width"
           :height="diagram.height"
           :viewBox="`0 0 ${diagram.width} ${diagram.height}`"
@@ -359,6 +386,26 @@ export default {
         </div>
       </div>
 
+      <div class="flex flex-wrap items-center gap-2 shrink-0">
+        <woot-button
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          icon="arrow-download"
+          @click="exportSvg"
+        >
+          {{ t('EXPORT_SVG') }}
+        </woot-button>
+        <woot-button
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          icon="arrow-download"
+          @click="exportPng"
+        >
+          {{ t('EXPORT_PNG') }}
+        </woot-button>
+      </div>
       <p
         class="flex flex-wrap m-0 text-[11px] gap-x-4 gap-y-1 text-slate-500 dark:text-slate-400 shrink-0"
       >
