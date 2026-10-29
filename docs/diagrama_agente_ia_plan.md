@@ -288,6 +288,46 @@ su camino al chat de creación.
 
 El grosor de cada línea es proporcional al número de pruebas que pasaron por ahí.
 
+### 4.3.1 F3 — hecho (28/10/2026)
+
+**Qué se hizo.**
+- **Pila guardada por agente**: tabla `tracking_test_cases` (`TrackingTestCase`, migración
+  `20261101100000`), tope 40 por agente. Cada prueba guarda su último resultado y el anterior, en seco y
+  en vivo (`last_dry`/`previous_dry`, `last_live`/`previous_live`): el «antes» de F4 ya está.
+- `ContactTrackings::Assistant::TestCases` + `AssistantTestCasesController`
+  (`…/assistant/test_cases`: index, create, generate, update=fijar, destroy, run_dry, run_live).
+- **Generar las que faltan**: una por ruta y una por regla (`TestBatteryScenarios`); `source_key`
+  («ruta:cotizar», «regla:p1») evita duplicar.
+- **Toda en seco** (`TestCasesDryJob`, contra el borrador) y **toda en vivo** (`TestBatteryJob` con
+  `case_ids`: cada resultado vuelve a su prueba con su traza y sus tokens).
+- **D5 al publicar**: `AssistantController#save` → `TestCases.after_publish` corre toda la pila en seco
+  contra lo publicado, en el backend (la pantalla se vuelve a montar al publicar). Al abrir el panel:
+  «la pila sigue igual (N)» o «N cambiaron de camino» + **Probar en vivo esas N · ~X tokens**
+  (`live_candidates`: cambiaron de camino + rojas + fijadas 📌, tope `MAX_LIVE_OFFER` = 10). El aviso se
+  da por visto por corrida (`localStorage`).
+- **Mapa de calor** en el Diagrama sin prueba elegida (`heatFromCases`): «3 pruebas · 1 con falla» en cada
+  ruta, la línea del cliente engorda con las pruebas, ruta con fallas en ámbar, ruta **sin pruebas**
+  punteada y contada arriba («N rutas sin pruebas: genéralas en el panel Pruebas»).
+- **D4**: «Probar el agente» abre el panel (y el Diagrama); `TestBatteryModal.vue` se eliminó (su lógica
+  quedó en `testBatteryRunner.js`, el informe .md se descarga desde el panel).
+
+**Cómo funciona la firma del camino.** `TestCases.dry_path`: ruta · modo y nombre de la fuente · motivo ·
+¿trajo fragmentos? · ¿abre caso? · etiqueta. No entra la similitud: cambia con cualquier edición del
+corpus y no es «otro camino».
+
+**Costo.** Se muestra en **tokens** (de `traza.uso.tokens` de F0, o el promedio de la pila si una prueba
+nunca corrió), no en $: el precio depende del modelo de la bandeja.
+
+**Lo que sigue abierto (D4 a medias).** «Probar sin enviar nada» conserva su modal: ahí viven las
+**pruebas sugeridas por IA** (Fase E) y el historial que alimenta el hito «Probado». Las pruebas en seco
+del panel ya cuentan para «Probado» (`onPanelDryRun`). Pasar las sugeridas al panel (como «agregar a la
+pila») queda para F4.
+
+**Pila de pruebas.** `test_cases_spec.rb` (9), `assistant_test_cases_controller_spec.rb` (7),
+`TestsPanel.spec.js` (6), `AgentDiagram.spec.js` (+2), `testPath.spec.js` (+1). Backend relacionado:
+1074/1074; carpeta `contactTrackings`: 223/223. Webpack: «Compiled successfully».
+⚠ **Sin probar en navegador ni contra un agente real.**
+
 ### 4.4 Antes / después
 
 Tras corregir y volver a correr la **misma** pila:

@@ -40,6 +40,17 @@ class ContactTrackings::Assistant::TestBatteryScenarios
 
   # proyecto@diagrama_agente_ia F2: las pruebas escritas a mano. Sin ruta esperada: lo que
   # se mira es el camino que tomó (la traza) y que conteste según el Entrenamiento.
+  # proyecto@diagrama_agente_ia F3: las pruebas de la pila guardada. El id lleva el de la
+  # prueba («caso:12») para devolverle su resultado; la etiqueta esperada sale de la ruta.
+  def self.from_cases(template, ids)
+    mapa = ContactTrackings::RouteMap.parse(template.complementary_prompt.to_s)
+    template.test_cases.where(id: ids).ordered.map do |caso|
+      Scenario.new(id: "caso:#{caso.id}", kind: caso.kind, message: caso.message, route: caso.expected_route,
+                   tag: caso.expected_route.present? ? mapa[caso.expected_route]&.tag : nil, rule: caso.rule,
+                   check: caso.check_text.presence || 'Que conteste bien y según su Entrenamiento.')
+    end
+  end
+
   def self.own(messages)
     Array(messages).each_with_index.map do |texto, i|
       Scenario.new(id: "propia:#{i + 1}", kind: 'propia', message: texto,
