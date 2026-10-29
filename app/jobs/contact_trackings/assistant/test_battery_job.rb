@@ -23,20 +23,27 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
   WAIT_SECONDS = 120
   QUIET_SECONDS = 8
 
-  def perform(battery_id, account_id, template_id, brief_id = nil, messages = nil)
+  def perform(battery_id, account_id, template_id, brief_id = nil, messages = nil, case_ids = nil) # rubocop:disable Metrics/ParameterLists
     @id = battery_id
     @account = Account.find(account_id)
     @template = TrackingTemplate.find(template_id)
     @inbox = ContactTrackings::Assistant::TestBattery.sandbox_inbox(@account)
     return save!(status: 'failed', error: 'no_sandbox') if @inbox.nil?
 
-    run(messages.present? ? ContactTrackings::Assistant::TestBatteryScenarios.own(messages) : scenarios_for(brief_id))
+    run(scenarios(brief_id, messages, case_ids))
   rescue StandardError => e
     Rails.logger.error "[TestBattery] #{e.class}: #{e.message}"
     save!(status: 'failed', error: 'unavailable')
   end
 
   private
+
+  def scenarios(brief_id, messages, case_ids)
+    return ContactTrackings::Assistant::TestBatteryScenarios.from_cases(@template, case_ids) if case_ids.present?
+    return ContactTrackings::Assistant::TestBatteryScenarios.own(messages) if messages.present?
+
+    scenarios_for(brief_id)
+  end
 
   def scenarios_for(brief_id)
     brief = brief_id && TrackingAgentBrief.find_by(id: brief_id, account: @account)
@@ -70,8 +77,11 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
                                   message_type: :incoming, content: escenario.message)
     respuesta = wait_reply(conversacion, ultimo)
     traza = trace(conversacion, ultimo)
-    escenario.to_h.merge(conversation: conversacion.display_id, reply: respuesta, cases: cases(conversacion), traza: traza,
-                         **juez.call(escenario, respuesta, traza: traza))
+    fila = escenario.to_h.merge(conversation: conversacion.display_id, reply: respuesta, cases: cases(conversacion),
+                                traza: traza, **juez.call(escenario, respuesta, traza: traza))
+    # F3: una prueba de la pila guardada se queda con su resultado.
+    ContactTrackings::Assistant::TestCases.store_live(@account, escenario.id.delete_prefix('caso:'), fila) if escenario.id.to_s.start_with?('caso:')
+    fila
   end
 
   # proyecto@diagrama_agente_ia F2: por dónde pasó (F0). La de la primera respuesta del turno.

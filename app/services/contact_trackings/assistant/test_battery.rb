@@ -25,12 +25,15 @@ module ContactTrackings::Assistant::TestBattery
   # Pruebas; con ellas no se generan las de ruta ni las de regla.
   MAX_OWN_MESSAGES = 10
 
-  def start(account, template, brief: nil, messages: nil)
+  # F3: `case_ids` son pruebas de la pila guardada del agente (TrackingTestCase); su
+  # resultado vuelve a cada prueba.
+  def start(account, template, brief: nil, messages: nil, case_ids: nil)
     id = SecureRandom.alphanumeric(16).downcase
     propias = Array(messages).map { |m| m.to_s.strip.truncate(500) }.compact_blank.first(MAX_OWN_MESSAGES)
     Rails.cache.write(key(id), { 'status' => 'queued', 'template' => template.name, 'template_id' => template.id,
                                  'started_at' => Time.current.iso8601 }, expires_in: TTL)
-    ContactTrackings::Assistant::TestBatteryJob.perform_later(id, account.id, template.id, brief&.id, propias.presence)
+    ContactTrackings::Assistant::TestBatteryJob.perform_later(id, account.id, template.id, brief&.id, propias.presence,
+                                                              Array(case_ids).map(&:to_i).presence)
     id
   end
 
