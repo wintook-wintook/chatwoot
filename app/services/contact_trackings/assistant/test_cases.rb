@@ -43,10 +43,12 @@ module ContactTrackings::Assistant::TestCases
                                check_text: escenario.check, position: posicion)
   end
 
-  def add_own(account, template, message)
-    template.test_cases.create(account: account, message: message.to_s.strip.truncate(500), kind: 'propia',
-                               check_text: 'Que conteste bien y según su Entrenamiento.',
-                               position: template.test_cases.maximum(:position).to_i + 1)
+  # F4: con `expected_route` (una prueba sugerida) es de ruta: el juez califica a dónde cayó.
+  def add_own(account, template, message, expected_route: nil)
+    ruta = expected_route.to_s.strip.downcase.presence
+    template.test_cases.create(account: account, message: message.to_s.strip.truncate(500), kind: ruta ? 'ruta' : 'propia',
+                               expected_route: ruta, position: template.test_cases.maximum(:position).to_i + 1,
+                               check_text: ruta ? "Que atienda como la ruta #{ruta}." : 'Que conteste bien y según su Entrenamiento.')
   end
 
   # La firma del camino en seco: dos corridas con la misma firma tomaron el mismo camino.

@@ -172,10 +172,12 @@ class AssistantAPI extends ApiClient {
     });
   }
 
-  addTestCase(templateId, message) {
+  // expectedRoute: la de una prueba sugerida; con ella el juez califica la ruta.
+  addTestCase(templateId, message, expectedRoute = null) {
     return axios.post(`${this.url}/test_cases`, {
       template_id: templateId,
       message,
+      expected_route: expectedRoute,
     });
   }
 

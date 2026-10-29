@@ -138,6 +138,26 @@ export function pathFromTrace(traza, diagram, reply = '') {
   );
 }
 
+const dryRunSource = (b, fuente, id) => {
+  const motivo = fuente.reason;
+  if (!motivo || motivo === 'no_source') {
+    const items = fuente.items || [];
+    if (motivo === 'no_source' || items.length) {
+      b.add(id);
+      fragmentDetail(b, id, items);
+    } else {
+      b.fail(id);
+      b.detail(id, 'PATH_SOURCE_EMPTY');
+    }
+  } else if (motivo === 'live_source') {
+    b.add(id);
+    b.detail(id, 'PATH_SOURCE_LIVE');
+  } else {
+    b.fail(id);
+    b.detail(id, 'PATH_SOURCE_BROKEN');
+  }
+};
+
 // El informe de la prueba en seco (DryRunService): no redacta, así que la etiqueta
 // es la de la ruta y la acción es el pronóstico del caso.
 export function pathFromDryRun(informe, diagram) {
@@ -158,25 +178,9 @@ export function pathFromDryRun(informe, diagram) {
   b.add(`route:${nombre}`);
   if (rutas.default === ruta) b.detail(`route:${nombre}`, 'PATH_IS_DEFAULT');
 
-  const fuente = informe.source || {};
-  const id = `source:${nombre}`;
-  const motivo = fuente.reason;
-  if (!motivo || motivo === 'no_source') {
-    const items = fuente.items || [];
-    if (motivo === 'no_source' || items.length) {
-      b.add(id);
-      fragmentDetail(b, id, items);
-    } else {
-      b.fail(id);
-      b.detail(id, 'PATH_SOURCE_EMPTY');
-    }
-  } else if (motivo === 'live_source') {
-    b.add(id);
-    b.detail(id, 'PATH_SOURCE_LIVE');
-  } else {
-    b.fail(id);
-    b.detail(id, 'PATH_SOURCE_BROKEN');
-  }
+  // Sin informe de fuente (una prueba sugerida solo dice a qué ruta cayó) la fuente
+  // no se pinta: no se sabe, y marcarla como fallida sería inventar.
+  if (informe.source) dryRunSource(b, informe.source, `source:${nombre}`);
 
   if (informe.case && informe.case.creates) b.add(`action:${nombre}`);
   if (informe.tag) b.add(`tag:${nombre}`);

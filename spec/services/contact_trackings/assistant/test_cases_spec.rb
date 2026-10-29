@@ -37,6 +37,12 @@ RSpec.describe ContactTrackings::Assistant::TestCases do
       expect(caso).to have_attributes(kind: 'propia', message: '¿abren domingo?', position: 4)
     end
 
+    it 'una sugerida con su ruta esperada es de ruta' do
+      caso = described_class.add_own(account, template, '¿cuánto sale?', expected_route: 'Cotizar')
+
+      expect(caso).to have_attributes(kind: 'ruta', expected_route: 'cotizar', check_text: include('cotizar'))
+    end
+
     it 'no pasa del tope por agente' do
       stub_const('TrackingTestCase::MAX_PER_TEMPLATE', 1)
       described_class.add_own(account, template, 'uno')

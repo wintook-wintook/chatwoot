@@ -362,6 +362,40 @@ Tras corregir y volver a correr la **misma** pila:
   después (4.4).
 - Se puede llevar **varias** pruebas a la vez (por ejemplo, todas las rojas de Cotizar).
 
+### 5.1 F4 — hecho (29/10/2026)
+
+**Qué se hizo.**
+- **💬 Llevar al chat** (panel Pruebas): la prueba elegida, o **todas las rojas** a la vez (máx. 5), van
+  al chat de creación como un turno normal (`testEvidence.js#evidenceMessage`): cliente, respuesta,
+  camino (`pathSummary`), veredicto con sus fallas, «Prueba #N del canal de pruebas» y la pregunta
+  «¿qué cambiarías en el Entrenamiento… dime qué cambia y por qué antes de aplicarlo?». El Asistente
+  propone el cambio con el mecanismo de siempre (cambios visibles, nunca solo). Solo aparece con un
+  Entrenamiento en pantalla.
+- **Antes / ahora** por prueba (corrida anterior contra la última, en vivo o en seco) y **Ver antes en el
+  Diagrama**, que ilumina la corrida anterior.
+- **Pila antes / ahora** (`compareRuns`): «antes 9 de 12 cumplían, ahora 11» y **⚠ antes pasaba y ahora
+  falla: «…»** por cada una que se rompió.
+- **Sugerir con IA** en el panel (las pruebas sugeridas de la Fase E, con el clasificador real): cada una
+  con su ruta esperada → **Agregar** a la pila como prueba de ruta (el juez califica a dónde cayó); sin
+  guardar, queda como prueba suelta.
+- **D4 cerrada**: «Probar sin enviar nada» y «Probar el agente» abren el panel y el Diagrama. Se
+  eliminaron `DryRunModal.vue`, `DryRunPanel.vue` y `SuggestedTestsPanel.vue` (y 54 llaves de i18n que
+  solo usaban ellos y el modal de la pila). Las pruebas en seco del panel siguen contando para el hito
+  «Probado».
+
+**Cómo funciona.** La evidencia es texto, no un formato nuevo para el backend: entra a
+`sendMessage(texto, { evidence: true })`. `evidence` evita que un mensaje del cliente que diga
+«conversación 5» desvíe el turno a la revisión de conversación (`mentionsConversation`); por lo mismo el
+número de la prueba va como «Prueba #N», que no coincide con ese patrón (probado en el spec).
+
+**Pila de pruebas.** `testEvidence.spec.js` (8), `TestsPanel.spec.js` (+5), `test_cases_spec.rb` (+1:
+sugerida con ruta esperada). Carpeta `contactTrackings`: 235/235; backend del Asistente verde.
+Webpack: «Compiled successfully». ⚠ **Sin probar en navegador ni contra un agente real.**
+
+**Cómo pedírselo al Asistente.** Panel Pruebas → elegir la roja → **Llevar al chat** (o «Llevar las N
+rojas al chat»). Después de aplicar el cambio: **Toda en vivo** (o publicar, y aceptar «Probar en vivo esas
+N») y mirar «antes / ahora».
+
 ---
 
 ## 6. Qué más lo hace eficiente
