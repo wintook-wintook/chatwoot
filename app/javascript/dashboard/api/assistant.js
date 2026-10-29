@@ -208,6 +208,14 @@ class AssistantAPI extends ApiClient {
     return axios.delete(`${this.url}/test_cases/${id}`);
   }
 
+  // Una sola prueba en seco, al momento: devuelve la prueba con su camino.
+  dryTestCase(id, draft, inboxId) {
+    return axios.post(`${this.url}/test_cases/${id}/dry`, {
+      draft,
+      inbox_id: inboxId,
+    });
+  }
+
   runTestCasesDry(templateId, draft, inboxId) {
     return axios.post(`${this.url}/test_cases/run_dry`, {
       template_id: templateId,
