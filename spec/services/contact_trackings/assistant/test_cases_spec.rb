@@ -143,4 +143,66 @@ RSpec.describe ContactTrackings::Assistant::TestCases do
       expect(escenario.to_h).to include(id: "caso:#{caso.id}", kind: 'ruta', route: 'cotizar', tag: 'cotizar')
     end
   end
+
+  # proyecto@diagrama_agente_ia F5
+  describe 'diálogos' do
+    it 'guarda los mensajes y el primero como message; uno solo no es diálogo' do
+      caso = described_class.add_own(account, template, 'x', turns: ['quiero cita', ' el martes ', ''])
+
+      expect(caso).to have_attributes(message: 'quiero cita', turns: ['quiero cita', 'el martes'])
+      expect(caso).to be_dialog
+      expect(described_class.add_own(account, template, 'sola', turns: ['sola'])).to have_attributes(turns: [])
+    end
+
+    it 'no pasa de cuatro mensajes' do
+      caso = template.test_cases.create(account: account, message: 'a', turns: %w[a b c d e])
+
+      expect(caso.errors[:turns]).to be_present
+    end
+
+    it 'en seco clasifica el último con los anteriores como contexto' do
+      caso = described_class.add_own(account, template, 'x', turns: ['quiero cita', 'el martes'])
+
+      expect(described_class.dry_inputs(caso)).to eq(['el martes', 'Cliente: quiero cita'])
+      expect(described_class.dry_inputs(described_class.add_own(account, template, 'hola'))).to eq(['hola', nil])
+    end
+
+    it 'en vivo contesta cada mensaje y el juez ve el diálogo hasta la última respuesta' do
+      job = ContactTrackings::Assistant::TestBatteryJob.new
+      job.instance_variable_set(:@account, account)
+      job.instance_variable_set(:@inbox, create(:inbox, account: account))
+      conversacion = create(:conversation, account: account, inbox: job.instance_variable_get(:@inbox))
+      allow(job).to receive(:wait_reply).and_return('¿Qué día?', 'Listo, el martes')
+
+      dialogo, = job.send(:converse, conversacion, ['quiero cita', 'el martes'])
+      escenario = ContactTrackings::Assistant::TestBatteryScenarios::Scenario.new(id: 'caso:1', message: 'quiero cita')
+
+      expect(dialogo).to eq([{ customer: 'quiero cita', reply: '¿Qué día?' }, { customer: 'el martes', reply: 'Listo, el martes' }])
+      expect(conversacion.messages.incoming.pluck(:content)).to eq(['quiero cita', 'el martes'])
+      expect(job.send(:graded, escenario, dialogo).message).to eq("Cliente: quiero cita\nAgente: ¿Qué día?\nCliente: el martes")
+    end
+  end
+
+  describe 'TestCasesCompareJob' do
+    it 'corre la pila contra la versión y el borrador, sin tocar sus resultados' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      caso = described_class.add_own(account, template, '¿precio?')
+      version = template.versions.create!(account: account, version: 7, snapshot: { 'complementary_prompt' => 'viejo' })
+      servicio = ContactTrackings::Assistant::DryRunService
+      allow(servicio).to receive(:new) do |_cuenta, draft:, **|
+        ruta = draft == 'viejo' ? 'soporte' : 'cotizar'
+        instance_double(servicio, call: servicio::Result.new(payload: { routes: { chosen: ruta } }))
+      end
+
+      described_class.run_compare(account, template, version: version, draft: 'nuevo')
+      ContactTrackings::Assistant::TestCasesCompareJob.perform_now(account.id, template.id, version.id, 'nuevo')
+
+      resultado = described_class.compare_status(template)
+      expect(resultado).to include('status' => 'done', 'version' => 7)
+      expect(resultado.dig('results', caso.id.to_s)).to include('same' => false)
+      expect(resultado.dig('results', caso.id.to_s, 'version', 'route')).to eq('soporte')
+      expect(resultado.dig('results', caso.id.to_s, 'draft', 'route')).to eq('cotizar')
+      expect(caso.reload.last_dry).to eq({})
+    end
+  end
 end

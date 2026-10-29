@@ -25,15 +25,23 @@
 //   Sugerir con IA      las pruebas sugeridas (antes en el modal «Probar sin enviar
 //                       nada»), cada una con su ruta esperada, para agregarlas
 //
+// F5:
+//   Diálogo            un mensaje por línea (2–4): en vivo el agente contesta cada uno;
+//                      en seco el último se clasifica con los anteriores de contexto
+//   Comparar           toda la pila en seco contra una versión guardada y contra el
+//                      borrador: qué pruebas toman otro camino («Ver en la v7»)
+//
 // SIN GUARDAR solo hay pruebas en seco sueltas contra el borrador, que viven
 // mientras la pantalla esté abierta (`looseTests`). Cada una avisa a la pantalla
 // (`dryRun`) para que cuente en la tira de avance («Probado»).
 // ============================================================================
 import AssistantAPI from 'dashboard/api/assistant';
+import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import testBatteryRunner from './testBatteryRunner';
 import { evidenceMessage, pathSummary, compareRuns } from './testEvidence';
 
 const DRY_POLL_MS = 3000;
+const MAX_TURNS = 4;
 const SEEN_PREFIX = 'assistant/tests/publish-seen/';
 
 export default {
@@ -63,6 +71,10 @@ export default {
       dryTimer: null,
       publishSeen: false,
       suggestions: null,
+      dialogMode: false,
+      compare: null,
+      versions: null,
+      versionId: null,
     };
   },
   computed: {
@@ -74,6 +86,61 @@ export default {
     },
     saved() {
       return Boolean(this.templateId);
+    },
+    // F5: con «Diálogo», un mensaje del cliente por línea.
+    turns() {
+      if (!this.dialogMode) return [this.question.trim()].filter(Boolean);
+      return this.question
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean)
+        .slice(0, MAX_TURNS);
+    },
+    canAdd() {
+      return this.dialogMode ? this.turns.length >= 2 : this.turns.length === 1;
+    },
+    compareRunning() {
+      return Boolean(
+        this.compare && ['queued', 'running'].includes(this.compare.status)
+      );
+    },
+    compareDone() {
+      return Boolean(this.compare && this.compare.status === 'done');
+    },
+    compareDiffers() {
+      if (!this.compareDone) return [];
+      const resultados = this.compare.results || {};
+      return Object.keys(resultados).filter(id => !resultados[id].same);
+    },
+    compareLine() {
+      if (this.compareRunning)
+        return this.t('COMPARE_PROGRESS', {
+          done: this.compare.done || 0,
+          total: this.compare.total || 0,
+        });
+      return this.t('COMPARE_RESULT', {
+        version: this.compare.version,
+        count: this.compareDiffers.length,
+        total: this.compare.total,
+      });
+    },
+    compareClass() {
+      return this.compareDiffers.length
+        ? 'text-amber-700 dark:text-amber-400'
+        : 'text-slate-600 dark:text-slate-300';
+    },
+    viewComparedLabel() {
+      const resultado = this.selectedCompare;
+      return this.t('VIEW_IN_VERSION', {
+        version: this.compare ? this.compare.version : '',
+        route:
+          (resultado && resultado.version && resultado.version.route) || '—',
+      });
+    },
+    // La comparación de la prueba elegida, si la hay.
+    selectedCompare() {
+      if (!this.compareDone || !this.selected || !this.selected.id) return null;
+      return (this.compare.results || {})[String(this.selected.id)] || null;
     },
     dryRunning() {
       return Boolean(
@@ -103,6 +170,7 @@ export default {
           c.previous_live && c.previous_live.at ? c.previous_live : null,
         prevDry:
           c.previous_dry && c.previous_dry.at ? c.previous_dry.informe : null,
+        turns: c.turns || [],
       }));
       const sueltas = this.looseTests.map(p => ({
         key: p.key,
@@ -216,8 +284,9 @@ export default {
         this.cases = data.cases || [];
         this.dryRun = data.dry_run || null;
         this.liveOffer = data.live_offer || null;
+        this.compare = data.compare || null;
         this.publishSeen = this.seenPublish();
-        if (this.dryRunning)
+        if (this.dryRunning || this.compareRunning)
           this.dryTimer = setTimeout(this.fetchPile, DRY_POLL_MS);
       } catch (error) {
         this.panelError = this.t('LOAD_FAILED');
@@ -270,13 +339,49 @@ export default {
       });
     },
     addCase() {
-      const texto = this.question.trim();
-      if (!texto) return null;
+      if (!this.canAdd) return null;
+      const mensajes = this.turns;
       return this.act('add', async () => {
-        await AssistantAPI.addTestCase(this.templateId, texto);
+        await AssistantAPI.addTestCase(
+          this.templateId,
+          mensajes[0],
+          null,
+          mensajes.length > 1 ? mensajes : null
+        );
         this.question = '';
         await this.fetchPile();
       });
+    },
+    // F5: comparar contra una versión guardada.
+    loadVersions() {
+      return this.act('versions', async () => {
+        const { data } = await TrackingTemplatesAPI.getVersions(
+          this.templateId
+        );
+        this.versions = data.versions || [];
+        this.versionId = this.versions.length ? this.versions[0].id : null;
+      });
+    },
+    runCompare() {
+      if (!this.versionId) return null;
+      return this.act('compare', async () => {
+        await AssistantAPI.compareTestCases(
+          this.templateId,
+          this.versionId,
+          this.draft,
+          this.inboxId
+        );
+        this.versions = null;
+        await this.fetchPile();
+      });
+    },
+    viewCompared() {
+      const resultado = this.selectedCompare;
+      if (resultado && resultado.version && resultado.version.informe)
+        this.$emit('select', {
+          mode: 'dry',
+          result: resultado.version.informe,
+        });
     },
     runAllDry() {
       return this.act('dry', async () => {
@@ -388,18 +493,28 @@ export default {
       if (sugerida.pass === false) return '❌';
       return '·';
     },
-    onEnter() {
+    // Enter agrega (o prueba en seco); en un diálogo, Enter es otra línea.
+    onEnterKey(evento) {
+      if (this.dialogMode) return null;
+      evento.preventDefault();
       return this.saved ? this.addCase() : this.runLooseDry();
     },
-    // Una en seco suelta, contra el borrador (también sin guardar).
+    // Una en seco suelta, contra el borrador (también sin guardar). En un diálogo,
+    // el último mensaje con los anteriores de contexto.
     runLooseDry() {
-      const pregunta = this.question.trim();
-      if (!pregunta) return null;
+      const mensajes = this.turns;
+      if (!mensajes.length) return null;
+      const pregunta = mensajes[mensajes.length - 1];
+      const contexto = mensajes
+        .slice(0, -1)
+        .map(m => `Cliente: ${m}`)
+        .join('\n');
       return this.act('loose', async () => {
         const { data } = await AssistantAPI.dryRun(
           this.draft,
           pregunta,
-          this.inboxId
+          this.inboxId,
+          contexto || null
         );
         const key = `loose:${Date.now()}`;
         this.looseTests.unshift({ key, message: pregunta, result: data });
@@ -484,11 +599,20 @@ export default {
     <div class="flex flex-col gap-2 shrink-0">
       <textarea
         v-model="question"
-        rows="2"
+        :rows="dialogMode ? 4 : 2"
         class="text-sm resize-none !mb-0"
-        :placeholder="t('PLACEHOLDER')"
-        @keydown.enter.exact.prevent="onEnter"
+        :placeholder="dialogMode ? t('PLACEHOLDER_DIALOG') : t('PLACEHOLDER')"
+        @keydown.enter.exact="onEnterKey"
       />
+      <label
+        class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300"
+      >
+        <input v-model="dialogMode" type="checkbox" class="!m-0" />
+        {{ t('DIALOG_MODE') }}
+        <span v-if="dialogMode" class="text-slate-400">
+          {{ t('DIALOG_COUNT', { count: turns.length, max: 4 }) }}
+        </span>
+      </label>
       <div class="flex flex-wrap items-center gap-2">
         <woot-button
           v-if="saved"
@@ -496,7 +620,7 @@ export default {
           variant="smooth"
           icon="add"
           :is-loading="busy === 'add'"
-          :is-disabled="!question.trim() || Boolean(busy)"
+          :is-disabled="!canAdd || Boolean(busy)"
           @click="addCase"
         >
           {{ t('ADD') }}
@@ -566,8 +690,57 @@ export default {
         >
           {{ t('RUN_ALL_LIVE') }}
         </woot-button>
+        <woot-button
+          size="small"
+          variant="clear"
+          color-scheme="secondary"
+          icon="arrow-swap"
+          :is-loading="compareRunning || busy === 'versions'"
+          :is-disabled="!cases.length || compareRunning || Boolean(busy)"
+          :title="t('COMPARE_VERSION_HINT')"
+          @click="loadVersions"
+        >
+          {{ t('COMPARE_VERSION') }}
+        </woot-button>
       </template>
     </div>
+
+    <div
+      v-if="versions"
+      class="flex flex-wrap items-center gap-2 text-xs shrink-0"
+    >
+      <span v-if="!versions.length" class="text-slate-500">
+        {{ t('NO_VERSIONS') }}
+      </span>
+      <template v-else>
+        <select v-model="versionId" class="!mb-0 !w-auto text-xs">
+          <option v-for="v in versions" :key="v.id" :value="v.id">
+            {{ t('VERSION_OPTION', { number: v.version, note: v.note || '' }) }}
+          </option>
+        </select>
+        <woot-button
+          size="tiny"
+          :is-disabled="Boolean(busy)"
+          @click="runCompare"
+        >
+          {{ t('COMPARE_RUN') }}
+        </woot-button>
+      </template>
+      <woot-button
+        size="tiny"
+        variant="clear"
+        color-scheme="secondary"
+        icon="dismiss"
+        @click="versions = null"
+      />
+    </div>
+    <p
+      v-if="compareRunning || compareDone"
+      class="m-0 text-xs shrink-0"
+      :class="compareClass"
+    >
+      {{ compareLine }}
+    </p>
 
     <div
       v-if="suggestions"
@@ -700,10 +873,23 @@ export default {
               {{ fila.message }}
             </span>
             <span
+              v-if="fila.turns && fila.turns.length > 1"
+              class="shrink-0 text-[10px] text-slate-500 dark:text-slate-400"
+              :title="fila.turns.join(' / ')"
+            >
+              {{ t('DIALOG_BADGE', { count: fila.turns.length }) }}
+            </span>
+            <span
               v-if="fila.changed"
               class="shrink-0 px-1 rounded text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
             >
               {{ t('CHANGED') }}
+            </span>
+            <span
+              v-if="fila.id && compareDiffers.includes(String(fila.id))"
+              class="shrink-0 px-1 rounded text-[10px] bg-slate-200 text-slate-700 dark:bg-slate-600 dark:text-slate-100"
+            >
+              {{ t('DIFFERS_IN', { version: compare.version }) }}
             </span>
             <span class="shrink-0 text-slate-500 dark:text-slate-400">
               {{ routeOf(fila) }}
@@ -757,7 +943,22 @@ export default {
         <strong>{{ t('CUSTOMER') }}</strong> {{ selected.message }}
       </p>
       <template v-if="selectedMode === 'live' && selected.live">
-        <p class="m-0 whitespace-pre-line text-slate-800 dark:text-slate-100">
+        <template v-if="selected.live.dialog && selected.live.dialog.length">
+          <p
+            v-for="(turno, i) in selected.live.dialog"
+            :key="`turno-${i}`"
+            class="m-0 whitespace-pre-line text-slate-800 dark:text-slate-100"
+          >
+            <strong>{{ t('CUSTOMER') }}</strong> {{ turno.customer }}
+            <br />
+            <strong>{{ t('AGENT') }}</strong>
+            {{ turno.reply || t('NO_REPLY') }}
+          </p>
+        </template>
+        <p
+          v-else
+          class="m-0 whitespace-pre-line text-slate-800 dark:text-slate-100"
+        >
           <strong>{{ t('AGENT') }}</strong>
           {{ selected.live.reply || t('NO_REPLY') }}
         </p>
@@ -811,6 +1012,15 @@ export default {
           @click="viewBefore"
         >
           {{ t('VIEW_BEFORE') }}
+        </woot-button>
+        <woot-button
+          v-if="selectedCompare && !selectedCompare.same"
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          @click="viewCompared"
+        >
+          {{ viewComparedLabel }}
         </woot-button>
       </div>
     </div>

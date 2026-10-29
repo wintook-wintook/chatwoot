@@ -84,8 +84,10 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   # Prueba en seco: qué haría el motor con UNA pregunta. No envía nada ni escribe
   # nada; lo único que gasta es la clasificación de rama y el embedding.
   def dry_run
+    # recent_context (proyecto@diagrama_agente_ia F5): los mensajes anteriores de un diálogo.
     result = ContactTrackings::Assistant::DryRunService
-             .new(Current.account, draft: params[:draft], question: params[:question], inbox: inbox).call
+             .new(Current.account, draft: params[:draft], question: params[:question], inbox: inbox,
+                                   recent_context: params[:recent_context].presence).call
 
     return render json: { error: result.error }, status: :unprocessable_entity unless result.success?
 

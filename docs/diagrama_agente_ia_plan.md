@@ -412,6 +412,37 @@ N») y mirar «antes / ahora».
 6. **Exportar evidencia**: el diagrama en SVG/PNG y la pila en .md (como en Grúas).
 7. **Generar faltantes**: en el mapa de calor, «+ Generar para Agenda» sobre cualquier nodo gris.
 
+### 6.1 F5 — hecho (29/10/2026)
+
+**Qué se hizo.**
+- **Pruebas de varios mensajes** (punto 3): `tracking_test_cases.turns` (migración `20261101110000`),
+  2–4 mensajes del cliente. En el panel, casilla **Diálogo**: un mensaje por línea (Enter es otra línea).
+  - **En vivo**: los mensajes van uno por uno a la misma conversación de prueba y cada uno espera su
+    respuesta (`TestBatteryJob#converse`); la traza es la del último turno; el juez ve como «cliente»
+    todo el diálogo hasta el último mensaje y califica la última respuesta (`#graded`). El panel muestra
+    el diálogo turno por turno.
+  - **En seco**: el último mensaje se clasifica con los anteriores como contexto
+    (`TestCases.dry_inputs` → `DryRunService` con `recent_context`, como en producción); también la prueba
+    suelta (`dry_run` acepta `recent_context`).
+  - La evidencia al chat lleva cada turno.
+- **Comparar versiones** (punto 2): **Comparar con una versión** → elegir la versión guardada →
+  `TestCasesCompareJob` corre toda la pila en seco contra el texto de esa versión
+  (`TrackingTemplateVersion#snapshot['complementary_prompt']`) y contra el borrador. «Contra la v7: 3 de 12
+  toman otro camino», marca «distinta en v7» en cada prueba y **Ver en la v7 (soporte)** ilumina ese
+  camino. Solo en seco (en vivo siempre contesta el agente guardado); no toca `last_dry`: es una consulta.
+- **Exportar** (punto 6): **Descargar SVG / PNG** debajo del diagrama (`svgExport.js`): copia a cada
+  elemento su estilo ya calculado (las clases de Tailwind no existen fuera del dashboard) y le pone el fondo
+  del panel, así sale igual en claro u oscuro; el PNG va al doble de tamaño. Nombre: `diagrama-<agente>`.
+
+**Costo (punto 4).** Ya estaba desde F3: tokens por prueba (`traza.uso.tokens`) y el estimado del aviso
+de publicar. No se agregó un tablero de costo aparte.
+
+**Pila de pruebas.** `test_cases_spec.rb` (+5: diálogo, tope de 4, contexto en seco, el job contesta cada
+turno y lo que ve el juez, comparar versiones sin tocar resultados), controlador (+2), `TestsPanel.spec.js`
+(+4), `testEvidence.spec.js` (+2), `svgExport.spec.js` (2), `AgentDiagram.spec.js` (+1). Frontend 244/244;
+backend relacionado verde. Webpack: «Compiled successfully». ⚠ **Sin probar en navegador ni contra un
+agente real.**
+
 ---
 
 ## 7. Fases
