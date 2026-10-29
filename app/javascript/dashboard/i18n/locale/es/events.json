@@ -1,0 +1,81 @@
+{
+  "EVENTS": {
+    "TITLE": "Eventos",
+    "DESCRIPTION": "Ferias, cursos y demostraciones: quién confirmó y quién asistió, para después hacerles campañas.",
+    "NEW": "Nuevo evento",
+    "SEARCH": "Buscar por nombre o lugar",
+    "ALL_STATUSES": "Todos los estados",
+    "TOTAL": "{count} eventos",
+    "EMPTY": "No hay eventos todavía.",
+    "NOT_FOUND": "No se encontró el evento.",
+    "SAVED": "Listo",
+    "ERROR": "No se pudo guardar",
+    "EDIT": "Editar",
+    "DELETE": "Eliminar evento",
+    "DELETE_CONFIRM": "¿Eliminar el evento y su lista? Los contactos no se borran.",
+    "CLOSE": "Cerrar evento",
+    "REOPEN": "Reabrir",
+    "CLOSE_CONFIRM": "Al cerrarlo, los que confirmaron y no hicieron check-in quedan como «No asistió». ¿Cerrar?",
+    "ALL": "Todos",
+    "SEARCH_ATTENDEES": "Buscar contacto",
+    "ADD_AS": "Agregar como",
+    "ADD_CONTACT": "Agregar contacto",
+    "NO_ATTENDEES": "Sin contactos aquí.",
+    "CHECK_IN": "Asistió",
+    "REMOVE": "Quitar del evento",
+    "REMOVE_CONFIRM": "¿Quitar a este contacto del evento?",
+    "TEMPLATE": "Plantilla CSV",
+    "IMPORT": "Importar",
+    "IMPORT_HELP": "Columnas: contacto (correo o teléfono) y estado (invitado, confirmó, asistió, no asistió, canceló). Si ya está, se le cambia el estado.",
+    "IMPORT_DONE": "Importación lista: {added} agregados y {updated} actualizados",
+    "IMPORT_ERRORS": "{count} filas con error. Primera: renglón {line}, {error}",
+    "CONTACT_EMPTY": "Este contacto no está en ningún evento.",
+    "KINDS": {
+      "fair": "Feria",
+      "course": "Curso",
+      "demo": "Demostración",
+      "webinar": "Webinar",
+      "other": "Otro"
+    },
+    "STATUSES": {
+      "draft": "Borrador",
+      "open": "Abierto",
+      "closed": "Cerrado"
+    },
+    "ATTENDEE_STATUSES": {
+      "invited": "Invitado",
+      "confirmed": "Confirmó",
+      "attended": "Asistió",
+      "no_show": "No asistió",
+      "cancelled": "Canceló"
+    },
+    "COLUMNS": {
+      "NAME": "Evento",
+      "DATE": "Fecha",
+      "STATUS": "Estado"
+    },
+    "FORM": {
+      "NEW_TITLE": "Nuevo evento",
+      "EDIT_TITLE": "Editar evento",
+      "NAME": "Nombre",
+      "KIND": "Tipo",
+      "STATUS": "Estado",
+      "STARTS": "Inicia",
+      "ENDS": "Termina",
+      "LOCATION": "Lugar",
+      "MEETING_URL": "Enlace (si es en línea)",
+      "CAPACITY": "Cupo",
+      "OWNER": "Responsable",
+      "OWNER_NONE": "Sin responsable",
+      "DESCRIPTION": "Descripción",
+      "CANCEL": "Cancelar",
+      "SAVE": "Guardar"
+    },
+    "ADD_SEGMENT": "Agregar un segmento",
+    "CHOOSE_SEGMENT": "Elige un segmento",
+    "ADD": "Agregar",
+    "SEGMENT_ADDED": "{added} contactos agregados del segmento",
+    "CAMPAIGNS": "Campañas de este evento",
+    "CAMPAIGN_OF": "Evento: {event} · {status}"
+  }
+}

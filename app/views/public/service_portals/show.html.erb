@@ -1,0 +1,79 @@
+<% content_for(:title, @ticket.folio) %>
+<% content_for(:hide_print, true) %>
+<% day = ->(time) { time&.in_time_zone&.strftime('%d/%m/%Y') } %>
+<% hour = ->(time) { time&.in_time_zone&.strftime('%H:%M') } %>
+<% done = @ticket.completed_for_portal? %>
+<article class="p-6 bg-white shadow-sm rounded-xl">
+  <p class="m-0 text-xs font-semibold tracking-wide uppercase text-slate-500"><%= t('field_portal.title') %></p>
+  <h1 class="m-0 text-2xl font-bold"><%= @ticket.folio %> · <%= @ticket.title %></h1>
+  <p class="inline-block px-2 py-0.5 mt-2 text-sm rounded-full <%= done ? 'bg-green-100 text-green-800' : 'bg-indigo-50 text-indigo-700' %>">
+    <%= t("field_portal.states.#{done ? (@ticket.status == 'cancelled' ? 'cancelled' : 'done') : (@on_my_way_at && @on_my_way_at > 12.hours.ago ? 'on_the_way' : (@visit ? 'scheduled' : 'pending'))}") %>
+  </p>
+  <dl class="grid grid-cols-1 gap-1 mt-3 text-sm sm:grid-cols-2">
+    <% if @ticket.work_address.present? %>
+      <div class="sm:col-span-2"><dt class="inline text-slate-500"><%= t('public_reports.address') %>:</dt> <dd class="inline m-0"><%= @ticket.work_address %></dd></div>
+    <% end %>
+    <% if @ticket.customer_asset %>
+      <div class="sm:col-span-2"><dt class="inline text-slate-500"><%= t('public_reports.asset') %>:</dt> <dd class="inline m-0"><%= @ticket.customer_asset.name %></dd></div>
+    <% end %>
+  </dl>
+</article>
+
+<% if @visit && !done %>
+  <section class="p-4 mt-4 bg-white shadow-sm rounded-xl">
+    <h2 class="m-0 text-base font-semibold"><%= t('field_portal.visit.title') %></h2>
+    <p class="m-0 mt-1 text-lg"><%= day.call(@visit.starts_at) %> · <%= hour.call(@visit.starts_at) %>–<%= hour.call(@visit.ends_at) %></p>
+    <p class="m-0 mt-1 text-sm text-slate-600"><%= t('field_portal.visit.technician', name: (@visit.organizer || @ticket.assignee)&.name || '—') %></p>
+    <% if @on_my_way_at && @on_my_way_at > 12.hours.ago %>
+      <p class="m-0 mt-2 text-sm font-medium text-indigo-700"><%= t('field_portal.visit.on_the_way', time: hour.call(@on_my_way_at)) %></p>
+    <% end %>
+
+    <% if @response['status'] == 'confirmed' %>
+      <p class="p-2 m-0 mt-3 text-sm text-green-800 rounded-md bg-green-50"><%= t('field_portal.visit.confirmed') %></p>
+    <% elsif @response['status'] == 'reschedule' %>
+      <p class="p-2 m-0 mt-3 text-sm text-yellow-900 rounded-md bg-yellow-50"><%= t('field_portal.visit.reschedule_sent') %></p>
+    <% else %>
+      <div class="grid gap-3 mt-3 sm:grid-cols-2">
+        <form action="<%= public_service_portal_visit_path(@ticket.report_token) %>" method="post">
+          <input type="hidden" name="response" value="confirmed" />
+          <button class="w-full px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-md hover:bg-green-700"><%= t('field_portal.visit.confirm') %></button>
+        </form>
+        <details class="text-sm">
+          <summary class="px-4 py-2 font-semibold text-center border rounded-md cursor-pointer text-slate-700 border-slate-300 hover:bg-slate-50"><%= t('field_portal.visit.reschedule') %></summary>
+          <form action="<%= public_service_portal_visit_path(@ticket.report_token) %>" method="post" class="mt-2">
+            <input type="hidden" name="response" value="reschedule" />
+            <label class="block text-slate-600"><%= t('field_portal.visit.preferred') %>
+              <input name="preferred" required class="w-full px-3 py-2 mt-1 border rounded-md border-slate-300" placeholder="<%= t('field_portal.visit.preferred_placeholder') %>" />
+            </label>
+            <label class="block mt-2 text-slate-600"><%= t('field_portal.visit.note') %>
+              <textarea name="note" rows="2" class="w-full px-3 py-2 mt-1 border rounded-md border-slate-300"></textarea>
+            </label>
+            <button class="w-full px-4 py-2 mt-2 font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-700"><%= t('field_portal.visit.send_request') %></button>
+          </form>
+        </details>
+      </div>
+    <% end %>
+  </section>
+<% elsif !done %>
+  <p class="p-4 mt-4 text-sm bg-white shadow-sm rounded-xl text-slate-600"><%= t('field_portal.visit.not_scheduled') %></p>
+<% end %>
+
+<% if done || @ticket.report_sent_at %>
+  <a href="<%= public_service_report_path(@ticket.report_token) %>" class="flex items-center justify-between p-4 mt-4 text-sm bg-white shadow-sm rounded-xl hover:bg-slate-50">
+    <span class="font-semibold"><%= t('field_portal.report') %></span><span class="text-indigo-600">→</span>
+  </a>
+<% end %>
+
+<% if @quotes.any? %>
+  <section class="p-4 mt-4 bg-white shadow-sm rounded-xl">
+    <h2 class="m-0 mb-2 text-base font-semibold"><%= t('field_portal.quotes') %></h2>
+    <% @quotes.each do |quote| %>
+      <a href="<%= public_quote_path(quote.public_token) %>" class="flex items-center justify-between py-2 text-sm border-t border-slate-100 first:border-t-0 hover:text-indigo-700">
+        <span><%= quote.folio %></span>
+        <span class="text-slate-500"><%= t("field_portal.quote_status.#{quote.status}") %> · <%= number_to_currency(quote.total, unit: '$', precision: 2) %> <%= quote.currency %></span>
+      </a>
+    <% end %>
+  </section>
+<% end %>
+
+<%= render 'public/shared/csat', ticket: @ticket, back: 'portal' %>

@@ -23,6 +23,16 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  // feat/chat_interno: [+] «Nuevo chat» en la lista de la bandeja «Interno».
+  showNewInternalChat: {
+    type: Boolean,
+    default: false,
+  },
+  // feat/chat_interno_pulido: «Chat interno» sin estado (Abiertas), filtros ni orden.
+  isInternalChat: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits([
@@ -31,6 +41,7 @@ const emit = defineEmits([
   'resetFilters',
   'basicFilterChange',
   'filtersModal',
+  'newInternalChat',
 ]);
 
 const onBasicFilterChange = (value, type) => {
@@ -58,7 +69,7 @@ const hasAppliedFiltersOrActiveFolders = computed(() => {
         {{ pageTitle }}
       </h1>
       <span
-        v-if="!hasAppliedFiltersOrActiveFolders"
+        v-if="!hasAppliedFiltersOrActiveFolders && !isInternalChat"
         class="p-1 my-0.5 mx-1 rounded-md capitalize bg-slate-50 dark:bg-slate-800 text-xxs text-slate-600 dark:text-slate-300"
       >
         {{ $t(`CHAT_LIST.CHAT_STATUS_FILTER_ITEMS.${activeStatus}.TEXT`) }}
@@ -102,7 +113,7 @@ const hasAppliedFiltersOrActiveFolders = computed(() => {
         />
       </div>
       <woot-button
-        v-if="!hasHideFiltersForAgents && !hasActiveFolders"
+        v-if="!hasHideFiltersForAgents && !hasActiveFolders && !isInternalChat"
         v-tooltip.right="$t('FILTER.TOOLTIP_LABEL')"
         variant="smooth"
         color-scheme="secondary"
@@ -110,8 +121,20 @@ const hasAppliedFiltersOrActiveFolders = computed(() => {
         size="tiny"
         @click="emit('filtersModal')"
       />
+      <!-- feat/chat_interno_pulido: botón con texto en lugar de un [+] suelto -->
+      <woot-button
+        v-if="showNewInternalChat"
+        v-tooltip.bottom="$t('INTERNAL_CHAT.NEW_CHAT_TOOLTIP')"
+        variant="smooth"
+        color-scheme="primary"
+        icon="edit"
+        size="small"
+        @click="emit('newInternalChat')"
+      >
+        {{ $t('INTERNAL_CHAT.NEW_CHAT') }}
+      </woot-button>
       <ConversationBasicFilter
-        v-if="!hasAppliedFiltersOrActiveFolders"
+        v-if="!hasAppliedFiltersOrActiveFolders && !isInternalChat"
         @changeFilter="onBasicFilterChange"
       />
     </div>

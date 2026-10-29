@@ -98,6 +98,11 @@ export default {
     channelType: { type: String, default: '' },
     showImageResizeToolbar: { type: Boolean, default: false }, // A kill switch to show or hide the image toolbar
     focusOnMount: { type: Boolean, default: true },
+    // feat/chat_interno_pulido: «Chat interno» envía con Enter (Shift+Enter, salto de
+    // línea) sin importar lo que el agente eligió para las conversaciones con clientes.
+    forceEnterToSend: { type: Boolean, default: false },
+    // Sin la barra de formato (negritas, listas…): un chat no la necesita.
+    hideMenuBar: { type: Boolean, default: false },
   },
   setup() {
     const {
@@ -525,10 +530,10 @@ export default {
       }
     },
     isEnterToSendEnabled() {
-      return this.isEditorHotKeyEnabled('enter');
+      return this.forceEnterToSend || this.isEditorHotKeyEnabled('enter');
     },
     isCmdPlusEnterToSendEnabled() {
-      return this.isEditorHotKeyEnabled('cmd_enter');
+      return !this.forceEnterToSend && this.isEditorHotKeyEnabled('cmd_enter');
     },
     getKeyboardEvents() {
       return {
@@ -700,7 +705,11 @@ export default {
 </script>
 
 <template>
-  <div ref="editorRoot" class="relative editor-root">
+  <div
+    ref="editorRoot"
+    class="relative editor-root"
+    :class="{ 'editor-root--no-menu': hideMenuBar }"
+  >
     <TagAgents
       v-if="showUserMentions && isPrivate"
       :search-key="mentionSearchKey"
@@ -752,6 +761,10 @@ export default {
 
 <style lang="scss">
 @import '~@chatwoot/prosemirror-schema/src/styles/base.scss';
+
+.editor-root--no-menu .ProseMirror-menubar {
+  display: none !important;
+}
 
 .ProseMirror-menubar-wrapper {
   @apply flex flex-col;

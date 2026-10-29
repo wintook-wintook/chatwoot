@@ -27,7 +27,7 @@
             <woot-button
               @click="setLabelsBots()"
               v-if="!readOnlyLabelBot"
-              class="bg-blue-500 text-white rounded disabled:opacity-50"
+              class="bg-woot-500 text-white rounded disabled:opacity-50"
               >{{ "Guardar" }}</woot-button
             >
             <woot-button @click="editLabelsBots()" v-if="readOnlyLabelBot" 

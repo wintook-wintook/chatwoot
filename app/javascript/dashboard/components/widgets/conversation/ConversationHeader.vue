@@ -1,5 +1,6 @@
 <script>
 import { mapGetters } from 'vuex';
+import { internalDisplay, internalInfo } from 'dashboard/helper/internalChat'; // feat/chat_interno
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import BackButton from '../BackButton.vue';
 import inboxMixin from 'shared/mixins/inboxMixin';
@@ -87,9 +88,31 @@ export default {
       return this.chatMetadata.hmac_verified;
     },
     currentContact() {
+      // feat/chat_interno (plan v2): en «Interno», la sala o el otro agente.
+      const internal = internalDisplay(this.chat, {
+        currentUserId: this.$store.getters.getCurrentUserID,
+        agents: this.$store.getters['agents/getAgents'],
+        teams: this.$store.getters['teams/getTeams'],
+        generalLabel: this.$t('INTERNAL_CHAT.GENERAL'),
+      });
+      if (internal) return internal;
       return this.$store.getters['contacts/getContact'](
         this.chat.meta.sender.id
       );
+    },
+    // feat/chat_interno_pulido: una sala de «Chat interno» no tiene acciones de cliente
+    // (Resolver, silenciar, transcripción…): debajo del nombre, los miembros o el estado.
+    internalRoom() {
+      return internalInfo(this.chat);
+    },
+    internalSubtitle() {
+      if (!this.internalRoom) return '';
+      if (this.internalRoom.kind === 'direct') {
+        const status = this.currentContact.availability_status || 'offline';
+        return this.$t(`INTERNAL_CHAT.STATUS.${status}`);
+      }
+      const members = this.$store.getters['conversationWatchers/getByConversationId'](this.chat.id) || [];
+      return this.$t('INTERNAL_CHAT.MEMBERS.COUNT', { count: members.length });
     },
     isSnoozed() {
       return this.currentChat.status === wootConstants.STATUS_TYPE.SNOOZED;
@@ -133,7 +156,18 @@ export default {
   },
   watch: {
     'chat.messages'() {
+      // feat/chat_interno_pulido: en «Interno» no hay bot del cliente que consultar.
+      if (this.internalRoom) return;
       this.getBotConversation();
+    },
+    // Los miembros de la sala para «N miembros» (el panel los usa también).
+    'chat.id': {
+      immediate: true,
+      handler(id) {
+        if (id && this.internalRoom) {
+          this.$store.dispatch('conversationWatchers/show', { conversationId: id });
+        }
+      },
     },
   },
 
@@ -182,7 +216,13 @@ export default {
               class="text-yellow-600 dark:text-yellow-500 my-0 mx-0 min-w-[14px]" icon="warning" />
           </div>
 
-          <div
+          <div v-if="internalRoom" class="flex items-center gap-2 text-xs">
+            <woot-button class="p-0" size="small" variant="link" color-scheme="secondary"
+              @click="$emit('contactPanelToggle')">
+              {{ internalSubtitle }}
+            </woot-button>
+          </div>
+          <div v-else
             class="flex items-center gap-2 overflow-hidden text-xs conversation--header--actions text-ellipsis whitespace-nowrap">
             <InboxName v-if="hasMultipleInboxes" :inbox="inbox" />
             <span v-if="isSnoozed" class="font-medium text-yellow-600 dark:text-yellow-500">
@@ -194,7 +234,7 @@ export default {
           </div>
         </div>
       </div>
-      <div class="flex flex-row items-center justify-end flex-grow gap-2 mt-3 header-actions-wrap lg:mt-0"
+      <div v-if="!internalRoom" class="flex flex-row items-center justify-end flex-grow gap-2 mt-3 header-actions-wrap lg:mt-0"
         :class="{ 'justify-end': isContactPanelOpen }">
         <SLACardLabel v-if="hasSlaPolicyId" :chat="chat" show-extended-info />
         <Linear v-if="isLinearIntegrationEnabled && isLinearFeatureEnabled" :conversation-id="currentChat.id" />

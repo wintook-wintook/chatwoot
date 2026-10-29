@@ -38,6 +38,12 @@
         "CREATE_LABEL": "Crear nueva etiqueta"
       }
     },
+    "ACTIONS": {
+      "MESSAGE": "Mensaje",
+      "EDIT": "Editar",
+      "MORE": "Más",
+      "SCHEDULE": "Programar mensaje"
+    },
     "MERGE_CONTACT": "Fusionar contacto",
     "CONTACT_ACTIONS": "Acciones de contacto",
     "MUTE_CONTACT": "Bloquear contacto",
@@ -146,8 +152,8 @@
         "LABEL": "Nombre completo"
       },
       "BIO": {
-        "PLACEHOLDER": "Ingresa la biografía del contacto",
-        "LABEL": "Biografía"
+        "PLACEHOLDER": "Algo que el equipo deba saber de este contacto",
+        "LABEL": "Descripción"
       },
       "EMAIL_ADDRESS": {
         "PLACEHOLDER": "Ingresa la dirección de correo electrónico del contacto",
@@ -174,14 +180,14 @@
       },
       "COUNTRY": {
         "PLACEHOLDER": "Ingresa el nombre del país",
-        "LABEL": "Nombre del país",
+        "LABEL": "País",
         "SELECT_PLACEHOLDER": "Seleccionar",
         "REMOVE": "Eliminar",
         "SELECT_COUNTRY": "Seleccionar país"
       },
       "CITY": {
         "PLACEHOLDER": "Ingresa el nombre de la ciudad",
-        "LABEL": "Nombre de la ciudad"
+        "LABEL": "Ciudad"
       },
       "SOCIAL_PROFILES": {
         "FACEBOOK": {
@@ -247,8 +253,8 @@
     },
     "PRIVATE": {
       "TITLE": "Nueva conversación privada",
-      "DESC": "Inicia una nueva conversación con una nota privada. Este mensaje solo será visible para los agentes.",
-      "NOTE_LABEL": "Nota privada (solo visible para agentes)",
+      "DESC": "Inicia una nueva conversación con una nota privada. Este mensaje solo será visible para tu equipo.",
+      "NOTE_LABEL": "Nota privada (solo visible para tu equipo)",
       "PLACEHOLDER": "Escribe tu nota privada aquí...",
       "SUBMIT": "Crear conversación",
       "SUCCESS_MESSAGE": "¡Conversación privada creada!",
@@ -284,6 +290,7 @@
       "404": "No se encontraron contactos que coincidan con tu búsqueda 🔍",
       "NO_CONTACTS": "No hay contactos disponibles",
       "TABLE_HEADER": {
+        "ORGANIZATION": "Organización",
         "NAME": "Nombre",
         "PHONE_NUMBER": "Número de teléfono",
         "CONVERSATIONS": "Conversaciones",
@@ -495,5 +502,119 @@
       "INVALID_RESPONSE": "Respuesta inválida del CRM",
       "UNEXPECTED_ERROR": "Error inesperado al buscar contacto"
     }
+  },
+  "CONTACT_OWNER": {
+    "LABEL": "Responsable fijo",
+    "NONE": "Sin responsable fijo",
+    "HINT": "Sus conversaciones y casos nuevos van siempre con esta persona, sin importar las reglas de asignación.",
+    "MISSING_INBOXES": "No está en {inboxes}: ahí siguen las reglas normales.",
+    "SAVED": "Responsable fijo actualizado",
+    "ERROR": "No se pudo cambiar el responsable fijo"
+  },
+  "CONTACT_OPT_OUT": {
+    "LABEL": "Pidió no ser contactado",
+    "HINT": "Ninguna campaña lo inscribirá y se cancelan sus seguimientos. Úsalo si lo pide por teléfono o en persona.",
+    "MARK": "No contactar",
+    "UNDO": "Quitar",
+    "MARKED": "Marcado como «no contactar». Se cancelaron sus seguimientos.",
+    "UNDONE": "Ya se le puede volver a contactar.",
+    "ERROR": "No se pudo guardar. Intenta de nuevo.",
+    "BOUNCED": "Su correo rebotó",
+    "BOUNCED_HINT": "corrige el correo para volver a escribirle",
+    "SOURCE": {
+      "link": "desde el enlace del correo",
+      "reply": "lo pidió al responder",
+      "agent": "lo marcó un agente"
+    }
+  },
+  "CONTACT_PAGE": {
+    "BACK": "Regresar",
+    "TABS": {
+      "SUMMARY": "Resumen",
+      "CONVERSATIONS": "Conversaciones",
+      "CASES": "Casos",
+      "TASKS": "Tareas",
+      "NOTES": "Notas",
+      "ASSETS": "Equipos",
+      "QUOTES": "Cotizaciones",
+      "CONTRACTS": "Contratos",
+      "EVENTS": "Eventos"
+    },
+    "DATA": {
+      "TITLE": "Datos",
+      "COMPANY": "Empresa",
+      "LOCATION": "Ubicación",
+      "CREATED_AT": "Alta",
+      "LAST_ACTIVITY": "Último contacto",
+      "DESCRIPTION": "Descripción",
+      "ATTRIBUTES": "Atributos personalizados"
+    },
+    "CASES": {
+      "EMPTY": "Este contacto no tiene casos ni oportunidades.",
+      "FOLIO": "Folio",
+      "TITLE": "Asunto",
+      "TYPE": "Tipo",
+      "STATUS": "Estado",
+      "ASSIGNEE": "Responsable",
+      "AMOUNT": "Monto",
+      "CREATED": "Creado",
+      "SHOW_CLOSED": "Ver también los cerrados",
+      "NEW": "Nuevo caso"
+    },
+    "TASKS": {
+      "EMPTY": "No hay tareas ni reuniones de los casos de este contacto.",
+      "PENDING": "Pendientes",
+      "ALL": "Todas",
+      "MEETING": "Reunión",
+      "DONE": "Hecha",
+      "NO_DUE": "Sin fecha"
+    },
+    "SUMMARY": {
+      "OPEN_CONVERSATIONS": "Conversaciones abiertas",
+      "OPEN_CASES": "Casos abiertos",
+      "OPPORTUNITIES": "Oportunidades en curso",
+      "NEXT_TASK": "Próxima tarea",
+      "NONE": "Ninguna",
+      "HIDDEN_AMOUNT": "—",
+      "ACTIVITY": "Actividad reciente",
+      "NO_ACTIVITY": "Todavía no hay actividad con este contacto.",
+      "CONVERSATION": "Conversación #{id} por {inbox}",
+      "NOTE": "Nota",
+      "AI": "Agente IA «{name}»: {status}",
+      "BY": "por {name}",
+      "AI_STATUS": {
+        "pending": "pendiente",
+        "scheduled": "programado",
+        "active": "en curso",
+        "paused": "en pausa",
+        "completed": "terminado",
+        "objective_met": "objetivo cumplido",
+        "cancelled": "cancelado",
+        "failed": "con error"
+      }
+    },
+    "NO_EMAIL": "Sin correo",
+    "NO_PHONE": "Sin teléfono",
+    "LABELS": "Etiquetas",
+    "ADD_LABEL": "Agregar"
+  },
+  "CONTACT_FORM_V2": {
+    "SECTIONS": {
+      "CONTACT": "Cómo contactarlo",
+      "LOCATION": "Ubicación",
+      "SOCIAL": "Redes sociales"
+    },
+    "COMPANY": "Empresa",
+    "AVATAR_CHANGE": "Cambiar foto",
+    "AVATAR_REMOVE": "Quitar",
+    "ADD_SOCIAL": "Agregar red",
+    "REMOVE_SOCIAL": "Quitar",
+    "WEBSITE": "Sitio web",
+    "SAVE": "Guardar cambios",
+    "CREATE": "Crear contacto",
+    "CRM_SEARCH_HINT": "Presiona Enter para buscar el contacto en CRMZeus",
+    "CRM_COMPANY_HINT": "Empresa nueva: «Agregar». Empresa que ya existe: «Buscar».",
+    "CRM_ADD": "Agregar",
+    "CRM_SEARCH": "Buscar"
   }
 }

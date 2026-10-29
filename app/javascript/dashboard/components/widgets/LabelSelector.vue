@@ -14,6 +14,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  addText: {
+    type: String,
+    default: '',
+  },
 });
 
 const emit = defineEmits(['add', 'remove']);
@@ -60,7 +64,7 @@ useKeyboardEvents(keyboardEvents);
 
 <template>
   <div v-on-clickaway="closeDropdownLabel" class="relative leading-6">
-    <AddLabel @add="toggleLabels" />
+    <AddLabel :text="addText" @add="toggleLabels" />
     <woot-label
       v-for="label in savedLabels"
       :key="label.id"

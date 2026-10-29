@@ -1,4 +1,5 @@
 <script>
+import { mapGetters } from 'vuex';
 import Logo from './Logo.vue';
 import PrimaryNavItem from './PrimaryNavItem.vue';
 import OptionsMenu from './OptionsMenu.vue';
@@ -19,10 +20,6 @@ export default {
     WebphoneMinimized,
   },
   props: {
-    isACustomBrandedInstance: {
-      type: Boolean,
-      default: false,
-    },
     logoSource: {
       type: String,
       default: '',
@@ -46,9 +43,22 @@ export default {
   },
   data() {
     return {
-      helpDocsURL: wootConstants.DOCS_URL,
+      helpDocsURL: window.chatwootConfig?.helpDocsURL || wootConstants.DOCS_URL,
       showOptionsMenu: false,
     };
+  },
+  computed: {
+    ...mapGetters({ notificationMetadata: 'notifications/getMeta' }),
+    // Los avisos sin leer van en el ícono de Inicio (su menú tiene Notificaciones).
+    unreadNotifications() {
+      const { unreadCount } = this.notificationMetadata;
+      if (!unreadCount) return '';
+      return unreadCount < 100 ? `${unreadCount}` : '99+';
+    },
+    // Sin Inicio (cuenta sin casos) no hay dónde verlos: vuelve la campanita.
+    hasHomeArea() {
+      return this.menuItems.some(item => item.key === 'inicio');
+    },
   },
   methods: {
     frontendURL,
@@ -78,7 +88,12 @@ export default {
         :source="logoSource"
         :name="installationName"
         :account-id="accountId"
-        class="m-4 mb-10"
+        class="m-4 mb-2"
+      />
+      <NotificationBell
+        v-if="!hasHomeArea"
+        class="!mb-2"
+        @openNotificationPanel="openNotificationPanel"
       />
       <PrimaryNavItem
         v-for="menuItem in menuItems"
@@ -86,19 +101,20 @@ export default {
         :icon="menuItem.icon"
         :name="menuItem.label"
         :to="menuItem.toState"
+        :area="menuItem.key"
+        :count="menuItem.key === 'inicio' ? unreadNotifications : ''"
         :is-child-menu-active="menuItem.key === activeMenuItem"
       />
     </div>
     <div class="flex flex-col items-center justify-end pb-6">
-      <webphone-minimized />
+      <WebphoneMinimized />
+      <!-- El foro de Kontrolya (antes el manual de Chatwoot, solo sin marca propia). -->
       <PrimaryNavItem
-        v-if="!isACustomBrandedInstance"
-        icon="book-open-globe"
+        icon="chat-help"
         name="DOCS"
         open-in-new-page
         :to="helpDocsURL"
       />
-      <NotificationBell @openNotificationPanel="openNotificationPanel" />
       <AgentDetails @toggleMenu="toggleOptions" />
       <OptionsMenu
         :show="showOptionsMenu"

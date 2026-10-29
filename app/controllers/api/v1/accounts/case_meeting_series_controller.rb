@@ -78,7 +78,7 @@ class Api::V1::Accounts::CaseMeetingSeriesController < Api::V1::Accounts::BaseCo
   private
 
   def set_ticket
-    @ticket = Current.account.case_tickets.find(params[:case_ticket_id])
+    @ticket = account_case_tickets.find(params[:case_ticket_id])
   rescue ActiveRecord::RecordNotFound
     render json: { error: 'Ticket no encontrado' }, status: :not_found
   end

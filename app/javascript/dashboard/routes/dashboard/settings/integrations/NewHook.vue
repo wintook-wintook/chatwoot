@@ -32,11 +32,12 @@ export default {
     ...mapGetters({
       uiFlags: 'integrations/getUIFlags',
       dialogFlowEnabledInboxes: 'inboxes/dialogFlowEnabledInboxes',
+      allInboxes: 'inboxes/getInboxes', // prospeccion: el agente de seguimiento también va por correo
       allAgents: 'agents/getAgents', // proyecto@commands_agents
       currentUser: 'getCurrentUser',
     }),
     inboxes() {
-      return this.dialogFlowEnabledInboxes
+      return this.hookInboxes
         .filter(inbox => {
           if (!this.isIntegrationDialogflow) {
             return true;
@@ -61,6 +62,17 @@ export default {
       }
       // proyecto@commands_agents: FIN
       return this.integration.settings_form_schema;
+    },
+    // prospeccion: la lista base quita el correo (regla de Dialogflow). El agente de
+    // seguimiento sí escribe por correo; «Interno» (chat entre agentes) nunca lleva IA.
+    hookInboxes() {
+      if (!this.isTrackingBot) return this.dialogFlowEnabledInboxes;
+      return this.allInboxes.filter(
+        inbox => inbox.channel_type !== 'Channel::Internal'
+      );
+    },
+    isTrackingBot() {
+      return this.integration.id === 'tracking_bot';
     },
     isIntegrationDialogflow() {
       return this.integration.id === 'dialogflow';

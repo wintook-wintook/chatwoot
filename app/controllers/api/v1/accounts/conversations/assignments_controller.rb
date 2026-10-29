@@ -14,7 +14,13 @@ class Api::V1::Accounts::Conversations::AssignmentsController < Api::V1::Account
 
   def set_agent
     @agent = Current.account.users.find_by(id: params[:assignee_id])
+    # Plan-Roles-Permisos — sin «reasignar» solo puede tomarla para sí.
+    unless access_grant.assignment_allowed?(@conversation.assignee_id, @agent&.id)
+      return render json: { error: I18n.t('access_roles.reassign_denied') }, status: :forbidden
+    end
+
     @conversation.assignee = @agent
+    @conversation.manual_assignment = true # puede cambiar al responsable fijo del contacto
     @conversation.save!
     render_agent
   end

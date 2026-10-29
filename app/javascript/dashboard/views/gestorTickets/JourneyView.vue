@@ -171,10 +171,11 @@ export default {
           isStart: true,
         },
         ...this.transitions,
-      ];
+        ...this.columnMoves,
+      ].sort((a, b) => new Date(a.at) - new Date(b.at));
       let curIdx = 0;
       steps.forEach(s => {
-        const idx = this.phases.findIndex(p => p.states.includes(s.to));
+        const idx = this.phaseIndexFor(s, curIdx);
         if (idx >= 0) {
           const ph = phases[idx];
           ph.reached = true;
@@ -207,13 +208,31 @@ export default {
       if (curPhaseIdx < 0) {
         curPhaseIdx = this.phases.findIndex(p => p.states.includes(cur));
       }
-      if (curPhaseIdx >= 0) phases[curPhaseIdx].current = true;
+      if (curPhaseIdx >= 0) {
+        // La etapa en la que está siempre se ve alcanzada (aunque falte su evento).
+        phases[curPhaseIdx].current = true;
+        phases[curPhaseIdx].reached = true;
+        phases[curPhaseIdx].subState = phases[curPhaseIdx].subState || cur;
+      }
       phases.forEach(ph =>
         ph.detoursAfter.forEach(d => {
           d.current = d.state === cur;
         })
       );
       return phases;
+    },
+    // Movimientos entre columnas con el mismo estado (p. ej. Propuesta → Negociación):
+    // no son transiciones, pero sí son avance en las fases del tipo de caso.
+    columnMoves() {
+      return this.events
+        .filter(e => e.event_type === 'column_changed' && e.payload)
+        .map(e => ({
+          to: e.payload.status,
+          columnId: e.payload.to,
+          reason: '',
+          actor: this.actorName(e),
+          at: e.created_at,
+        }));
     },
     // Nodos del recorrido: creación (open) + cada destino de transición.
     journeyNodes() {
@@ -286,6 +305,20 @@ export default {
     },
   },
   methods: {
+    // La fase de un paso: la de su columna si la trae; si no, la que tiene su estado,
+    // empezando por la actual (varias columnas pueden compartir estado).
+    phaseIndexFor(step, fromIdx) {
+      if (step.columnId != null) {
+        const byColumn = this.phases.findIndex(p => p.id === step.columnId);
+        if (byColumn >= 0) return byColumn;
+      }
+      const ahead = this.phases.findIndex(
+        (p, i) => i >= fromIdx && p.states.includes(step.to)
+      );
+      return ahead >= 0
+        ? ahead
+        : this.phases.findIndex(p => p.states.includes(step.to));
+    },
     setView(v) {
       this.view = v;
     },

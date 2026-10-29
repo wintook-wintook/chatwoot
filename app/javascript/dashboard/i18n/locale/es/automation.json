@@ -1,7 +1,7 @@
 {
   "AUTOMATION": {
     "HEADER": "Automatización",
-    "DESCRIPTION": "La automatización puede reemplazar y optimizar procesos existentes que requieren esfuerzo manual, como agregar etiquetas y asignar conversaciones al agente más adecuado. Esto permite al equipo enfocarse en sus fortalezas mientras reduce el tiempo dedicado a tareas rutinarias.",
+    "DESCRIPTION": "La automatización puede reemplazar y optimizar procesos existentes que requieren esfuerzo manual, como agregar etiquetas y asignar conversaciones al responsable más adecuado. Esto permite al equipo enfocarse en sus fortalezas mientras reduce el tiempo dedicado a tareas rutinarias.",
     "LEARN_MORE": "Aprende más sobre la automatización",
     "HEADER_BTN_TXT": "Agregar Regla de Automatización",
     "LOADING": "Obteniendo reglas de automatización",

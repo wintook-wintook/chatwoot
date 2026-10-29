@@ -22,8 +22,9 @@ class Conversations::FilterService < FilterService
     }
   end
 
+  # Plan-Roles-Permisos — «solo lo suyo» también en los filtros avanzados.
   def base_relation
-    @account.conversations.includes(
+    Access::Grant.for(Current.account_user).conversations(@account.conversations).includes(
       :taggings, :inbox, { assignee: { avatar_attachment: [:blob] } }, { contact: { avatar_attachment: [:blob] } }, :team, :messages, :contact_inbox
     )
   end

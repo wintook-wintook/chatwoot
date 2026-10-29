@@ -12,6 +12,9 @@ import { routes as kanbanRoutes } from './kanban/routes'; // Añade esta línea
 // KANBAN0725
 // @tickets_cases
 import { routes as gestorTicketsRoutes } from './gestorTickets/routes';
+import { routes as contractsRoutes } from './contracts/routes'; // Plan-Contratos R1
+import { routes as organizationsRoutes } from './organizations/routes'; // Plan-Organizaciones O1
+import { routes as eventsRoutes } from './events/routes'; // Plan-Eventos E1
 // proyecto@contact_tracking — Dashboard de Seguimientos
 import { routes as contactTrackingsRoutes } from './contactTrackings/routes';
 import { routes as whatsappCallsRoutes } from './whatsappCalls/routes'; // diag/llamadas_whatsapp
@@ -19,6 +22,9 @@ import { routes as whatsappCallsRoutes } from './whatsappCalls/routes'; // diag/
 const AppContainer = () => import('./Dashboard.vue');
 const Captain = () => import('./Captain.vue');
 const Suspended = () => import('./suspended/Index.vue');
+// Plan-Trabajo-Campo R2 — portal del técnico (celular, sin el menú).
+const FieldApp = () => import('../../views/field/FieldApp.vue');
+const FIELD_META = { permissions: ['administrator', 'agent', 'custom_role'] };
 
 export default {
   routes: [
@@ -46,10 +52,25 @@ export default {
         // KANBAN0725
         // @tickets_cases
         ...gestorTicketsRoutes,
+        ...contractsRoutes,
+        ...organizationsRoutes,
+        ...eventsRoutes,
         // proyecto@contact_tracking — Dashboard de Seguimientos
         ...contactTrackingsRoutes,
         ...whatsappCallsRoutes,
       ],
+    },
+    {
+      path: frontendURL('accounts/:accountId/campo'),
+      name: 'field_route',
+      meta: FIELD_META,
+      component: FieldApp,
+    },
+    {
+      path: frontendURL('accounts/:accountId/campo/visita/:ticketId'),
+      name: 'field_visit',
+      meta: FIELD_META,
+      component: FieldApp,
     },
     {
       path: frontendURL('accounts/:accountId/suspended'),

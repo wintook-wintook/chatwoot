@@ -4,25 +4,28 @@
 #
 # Table name: case_work_order_items
 #
-#  id             :bigint           not null, primary key
-#  description    :string           not null
-#  position       :integer          default(0), not null
-#  quantity       :decimal(10, 2)   default(1.0), not null
-#  unit           :string
-#  unit_cost      :decimal(14, 2)
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  account_id     :bigint           not null
-#  case_ticket_id :bigint           not null
+#  id              :bigint           not null, primary key
+#  description     :string           not null
+#  position        :integer          default(0), not null
+#  quantity        :decimal(10, 2)   default(1.0), not null
+#  unit            :string
+#  unit_cost       :decimal(14, 2)
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  account_id      :bigint           not null
+#  case_ticket_id  :bigint           not null
+#  catalog_item_id :bigint
 #
 # Indexes
 #
-#  index_case_work_order_items_on_case_ticket_id  (case_ticket_id)
+#  index_case_work_order_items_on_case_ticket_id   (case_ticket_id)
+#  index_case_work_order_items_on_catalog_item_id  (catalog_item_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (case_ticket_id => case_tickets.id) ON DELETE => cascade
+#  fk_rails_...  (catalog_item_id => catalog_items.id) ON DELETE => nullify
 #
 
 # @tickets_cases — Plan-Clase-Orden-de-Trabajo F2a: un material de una orden de

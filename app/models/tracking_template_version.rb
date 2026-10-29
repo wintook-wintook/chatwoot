@@ -49,6 +49,7 @@ class TrackingTemplateVersion < ApplicationRecord
     retry_interval_value retry_interval_unit
     calendar_integration_ids booking_calendar_ids
     slots_presentation calendar_event_duration timezone kbase_hook_id
+    email_signature
   ].freeze
 
   # Desde dónde se guardó:

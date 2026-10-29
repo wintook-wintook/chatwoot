@@ -80,13 +80,13 @@ class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Account
     end
   end
 
-  # Fase 2 — embudo. Interesados/Agendaron cuentan solo por las reglas de palabra
-  # clave (interested_at / booked_at), igual que el embudo de campañas.
+  # Fase 2 — embudo. §10.12 (U5): mismas reglas que TrackingCampaigns::CampaignFunnel:
+  # respondió / interesado = lo vio la IA (V5) O lo marcó una palabra clave; nunca menos que antes.
   def funnel(scope)
     {
       created:     scope.count,
-      replied:     scope.where.not(last_intent: nil).count,
-      interested:  scope.where.not(interested_at: nil).count,
+      replied:     scope.where('prospect_stage IS NOT NULL OR last_intent IS NOT NULL').count,
+      interested:  scope.where("prospect_stage IN ('interested', 'handed_off') OR interested_at IS NOT NULL").count,
       appointment: scope.where.not(booked_at: nil).count
     }
   end

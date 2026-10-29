@@ -127,7 +127,8 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   def resolved_contacts
     return @resolved_contacts if @resolved_contacts
 
-    @resolved_contacts = Current.account.contacts.resolved_contacts
+    # Plan-Roles-Permisos — con Clientes en «solo lo suyo», solo sus contactos.
+    @resolved_contacts = access_grant.contacts(Current.account.contacts).resolved_contacts
 
     @resolved_contacts = @resolved_contacts.tagged_with(params[:labels], any: true) if params[:labels].present?
     @resolved_contacts
@@ -139,7 +140,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
   def fetch_contacts(contacts)
     contacts_with_avatar = filtrate(contacts)
-                           .includes([{ avatar_attachment: [:blob] }])
+                           .includes([{ avatar_attachment: [:blob] }], :organization) # Plan-Organizaciones: columna de la lista
                            .page(@current_page).per(RESULTS_PER_PAGE)
 
     return contacts_with_avatar.includes([{ contact_inboxes: [:inbox] }]) if @include_contact_inboxes

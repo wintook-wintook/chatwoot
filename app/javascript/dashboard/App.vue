@@ -11,7 +11,13 @@ import PaymentPendingBanner from './components/app/PaymentPendingBanner.vue';
 import PendingEmailVerificationBanner from './components/app/PendingEmailVerificationBanner.vue';
 import vueActionCable from './helper/actionCable';
 import WootSnackbarBox from './components/SnackbarContainer.vue';
-import { setColorTheme, applyColorTint } from './helper/themeHelper';
+import {
+  APPEARANCE_EVENT,
+  applyColorTint,
+  setColorTheme,
+  setCompanyTint,
+  syncAppearanceFromUser,
+} from './helper/themeHelper';
 import { isOnOnboardingView } from 'v3/helpers/RouteHelper';
 import {
   registerSubscription,
@@ -59,6 +65,17 @@ export default {
       const { accounts = [] } = this.currentUser || {};
       return accounts.length > 0;
     },
+    companyTint() {
+      const account = this.$store.getters['accounts/getAccount'](
+        this.currentAccountId
+      );
+      return (account && account.brand && account.brand.tint) || '';
+    },
+    userAppearance() {
+      const settings = (this.currentUser && this.currentUser.ui_settings) || {};
+      const { appearance_mode: mode, appearance_tint: tint } = settings;
+      return mode || tint ? `${mode || ''}|${tint || ''}` : '';
+    },
     hideOnOnboardingView() {
       return !isOnOnboardingView(this.$route);
     },
@@ -70,6 +87,21 @@ export default {
         this.showAddAccountModal = true;
       }
     },
+    // feat/apariencia: la apariencia guardada en el usuario gana a la del navegador
+    // (al entrar y si cambia en otro dispositivo).
+    // feat/apariencia B1: el color de la empresa (lo usa quien no eligió otro).
+    companyTint: {
+      immediate: true,
+      handler(tint) {
+        if (tint) setCompanyTint(tint);
+      },
+    },
+    userAppearance: {
+      immediate: true,
+      handler(value) {
+        if (value) syncAppearanceFromUser(this.currentUser.ui_settings);
+      },
+    },
     currentAccountId() {
       if (this.currentAccountId) {
         this.initializeAccount();
@@ -79,9 +111,11 @@ export default {
   mounted() {
     this.initializeColorTheme();
     this.listenToThemeChanges();
+    window.addEventListener(APPEARANCE_EVENT, this.saveAppearance);
     this.setLocale(window.chatwootConfig.selectedLocale);
   },
   beforeDestroy() {
+    window.removeEventListener(APPEARANCE_EVENT, this.saveAppearance);
     if (this.reconnectService) {
       this.reconnectService.disconnect();
     }
@@ -90,6 +124,13 @@ export default {
     initializeColorTheme() {
       setColorTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
       applyColorTint();
+    },
+    // feat/apariencia: lo que el agente elige en Perfil o en la barra de comandos.
+    saveAppearance(event) {
+      const { ui_settings: uiSettings = {} } = this.currentUser || {};
+      this.$store.dispatch('updateUISettings', {
+        uiSettings: { ...uiSettings, ...event.detail },
+      });
     },
     listenToThemeChanges() {
       const mql = window.matchMedia('(prefers-color-scheme: dark)');
@@ -131,7 +172,7 @@ export default {
     :class="{ 'app-rtl--wrapper': isRTL }"
     :dir="isRTL ? 'rtl' : 'ltr'"
   >
-    <webphone />
+    <Webphone />
     <WhatsappCallWidget v-if="currentAccountId" />
     <UpdateBanner :latest-chatwoot-version="latestChatwootVersion" />
     <template v-if="currentAccountId">

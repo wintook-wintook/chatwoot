@@ -42,6 +42,8 @@ import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { LocalStorage } from 'shared/helpers/localStorage';
 //
 import AssistanceBotElyzaModal from './AssistanceBotElyzaModal.vue';
+import { internalDisplay, isInternalChat } from 'dashboard/helper/internalChat'; // feat/chat_interno_pulido
+import OrganizationsAPI from 'dashboard/api/organizations'; // Plan-Organizaciones O5
 
 const EmojiInput = () => import('shared/components/emoji/EmojiInput.vue');
 
@@ -88,6 +90,8 @@ export default {
   data() {
     return {
       message: '',
+      // Plan-Organizaciones O5 — {{organizacion.*}} de la organización del contacto.
+      organizationVariables: {},
       inReplyTo: {},
       isFocused: false,
       showEmojiPicker: false,
@@ -116,6 +120,21 @@ export default {
     };
   },
   computed: {
+    // feat/chat_interno_pulido: en «Chat interno» la caja es la de un chat de equipo:
+    // sin Responder / Nota privada (todo es interno), sin «asignarme», sin firma ni
+    // herramientas de clientes, Enter envía y @ menciona.
+    isInternal() {
+      return isInternalChat(this.currentChat);
+    },
+    internalRoomName() {
+      const display = internalDisplay(this.currentChat, {
+        currentUserId: this.currentUser.id,
+        agents: this.$store.getters['agents/getAgents'],
+        teams: this.$store.getters['teams/getTeams'],
+        generalLabel: this.$t('INTERNAL_CHAT.GENERAL'),
+      });
+      return (display && display.name) || '';
+    },
     ...mapGetters({
       isRTL: 'accounts/isRTL',
       currentChat: 'getSelectedChat',
@@ -138,7 +157,8 @@ export default {
       );
     },
     showRichContentEditor() {
-      if (this.isOnPrivateNote || this.isRichEditorEnabled) {
+      // feat/chat_interno_pulido: el editor completo en «Interno» (@menciones, Enter envía).
+      if (this.isOnPrivateNote || this.isRichEditorEnabled || this.isInternal) {
         return true;
       }
 
@@ -169,6 +189,7 @@ export default {
       },
     },
     showSelfAssignBanner() {
+      if (this.isInternal) return false;
       if (this.message !== '' && !this.isOnPrivateNote) {
         if (!this.assignedAgent) {
           return true;
@@ -197,6 +218,11 @@ export default {
       return this.$store.getters['inboxes/getInbox'](this.inboxId);
     },
     messagePlaceHolder() {
+      if (this.isInternal) {
+        return this.$t('INTERNAL_CHAT.COMPOSER.PLACEHOLDER', {
+          room: this.internalRoomName,
+        });
+      }
       return this.isPrivate
         ? this.$t('CONVERSATION.FOOTER.PRIVATE_MSG_INPUT')
         : this.$t('CONVERSATION.FOOTER.MSG_INPUT');
@@ -244,10 +270,20 @@ export default {
       if (this.isAnEmailChannel) {
         return MESSAGE_MAX_LENGTH.EMAIL;
       }
+      if (this.isATiktokChannel) {
+        return MESSAGE_MAX_LENGTH.TIKTOK;
+      }
       return MESSAGE_MAX_LENGTH.GENERAL;
     },
     showFileUpload() {
+      // TikTok decide por conversación si admite imágenes; si no lo sabemos, se deja
+      // intentar en vez de esconder el botón.
+      const { image_send: imageSend } =
+        this.currentChat?.additional_attributes?.tiktok_capabilities ?? {};
+      const tiktokAttachmentSupported = imageSend ?? true;
+
       return (
+        this.isInternal || // feat/chat_interno_pulido: adjuntos entre agentes
         this.isAWebWidgetInbox ||
         this.isAMetaInbox ||
         this.isAWhatsAppChannel ||
@@ -255,7 +291,8 @@ export default {
         this.isAnEmailChannel ||
         this.isASmsInbox ||
         this.isATelegramChannel ||
-        this.isALineChannel
+        this.isALineChannel ||
+        (this.isATiktokChannel && tiktokAttachmentSupported)
       );
     },
     replyButtonLabel() {
@@ -263,9 +300,10 @@ export default {
       if (this.isPrivate) {
         sendMessageText = this.$t('CONVERSATION.REPLYBOX.CREATE');
       }
-      const keyLabel = this.isEditorHotKeyEnabled('cmd_enter')
-        ? '(⌘ + ↵)'
-        : '(↵)';
+      const keyLabel =
+        !this.isInternal && this.isEditorHotKeyEnabled('cmd_enter')
+          ? '(⌘ + ↵)'
+          : '(↵)';
       return `${sendMessageText} ${keyLabel}`;
     },
     replyBoxClass() {
@@ -336,6 +374,7 @@ export default {
       return !!this.signatureToApply;
     },
     sendWithSignature() {
+      if (this.isInternal) return false;
       return this.fetchSignatureFlagFromUISettings(this.channelType);
     },
     editorMessageKey() {
@@ -371,7 +410,12 @@ export default {
         conversation: this.currentChat,
         contact: this.currentContact,
       });
-      return variables;
+      return { ...variables, ...this.organizationVariables };
+    },
+    contactOrganizationId() {
+      return (
+        (this.currentContact && this.currentContact.organization_id) || null
+      );
     },
     // ensure that the signature is plain text depending on `showRichContentEditor`
     signatureToApply() {
@@ -386,6 +430,10 @@ export default {
     },
   },
   watch: {
+    contactOrganizationId: {
+      immediate: true,
+      handler: 'fetchOrganizationVariables',
+    },
     currentChat(conversation) {
       const { can_reply: canReply } = conversation;
 
@@ -481,6 +529,31 @@ export default {
     );
   },
   methods: {
+    // Plan-Organizaciones O5 — sin organización las variables quedan vacías (no faltantes).
+    async fetchOrganizationVariables(id) {
+      const empty = {
+        'organizacion.nombre': '',
+        'organizacion.rfc': '',
+        'organizacion.etapa': '',
+        'organizacion.tipo': '',
+      };
+      if (!id) {
+        this.organizationVariables = empty;
+        return;
+      }
+      try {
+        const { data } = await OrganizationsAPI.find(id);
+        const org = data.organization;
+        this.organizationVariables = {
+          'organizacion.nombre': org.name,
+          'organizacion.rfc': org.tax_id || '',
+          'organizacion.etapa': this.$t(`ORGANIZATIONS.STAGES.${org.stage}`),
+          'organizacion.tipo': this.$t(`ORGANIZATIONS.KINDS.${org.kind}`),
+        };
+      } catch {
+        this.organizationVariables = empty;
+      }
+    },
     handleInsert(article) {
       const { url, title } = article;
       if (this.isRichEditorEnabled) {
@@ -605,7 +678,7 @@ export default {
         !this.showCannedMenu &&
         !this.showVariablesMenu &&
         this.isFocused &&
-        this.isEditorHotKeyEnabled(selectedKey)
+        (this.isInternal || this.isEditorHotKeyEnabled(selectedKey))
       );
     },
     onPaste(e) {
@@ -668,7 +741,9 @@ export default {
           this.isATwilioWhatsAppChannel ||
           this.isAWhatsAppCloudChannel ||
           this.is360DialogWhatsAppChannel;
-        if (isOnWhatsApp && !this.isPrivate) {
+        // TikTok rechaza el mensaje si mezcla texto y adjunto, así que el texto y cada
+        // fichero salen como mensajes independientes.
+        if ((isOnWhatsApp || this.isATiktokChannel) && !this.isPrivate) {
           this.sendMessageAsMultipleMessages(this.message);
         } else {
           const messagePayload = this.getMessagePayload(this.message);
@@ -685,7 +760,7 @@ export default {
       }
     },
     sendMessageAsMultipleMessages(message) {
-      const messages = this.getMessagePayloadForWhatsapp(message);
+      const messages = this.getMultipleMessagesPayload(message);
       messages.forEach(messagePayload => {
         this.sendMessage(messagePayload);
       });
@@ -926,11 +1001,13 @@ export default {
 
       return payload;
     },
-    getMessagePayloadForWhatsapp(message) {
+    // Usado por los canales que no admiten texto y adjunto en el mismo mensaje.
+    // WhatsApp sí acepta pie de foto en el primer adjunto; TikTok no acepta ninguno.
+    getMultipleMessagesPayload(message) {
       const multipleMessagePayload = [];
 
       if (this.attachedFiles && this.attachedFiles.length) {
-        let caption = message;
+        let caption = this.isATiktokChannel ? '' : message;
         this.attachedFiles.forEach(attachment => {
           const attachedFile = this.globalConfig.directUploadsEnabled
             ? attachment.blobSignedId
@@ -947,7 +1024,16 @@ export default {
           multipleMessagePayload.push(attachmentPayload);
           caption = '';
         });
-      } else {
+      }
+
+      const hasNoAttachments =
+        !this.attachedFiles || !this.attachedFiles.length;
+      // En TikTok el texto siempre viaja en su propio mensaje, haya adjuntos o no.
+      // En WhatsApp solo hace falta cuando no hay adjuntos, porque va como pie de foto.
+      if (
+        (this.isATiktokChannel && message) ||
+        (!this.isATiktokChannel && hasNoAttachments)
+      ) {
         let messagePayload = {
           conversationId: this.currentChat.id,
           message,
@@ -1147,7 +1233,7 @@ export default {
     <Banner v-if="showSelfAssignBanner" action-button-variant="clear" color-scheme="secondary"
       class="banner--self-assign" :banner-message="$t('CONVERSATION.NOT_ASSIGNED_TO_YOU')" has-action-button
       :action-button-label="$t('CONVERSATION.ASSIGN_TO_ME')" @click="onClickSelfAssign" />
-    <ReplyTopPanel :mode="replyType" :is-message-length-reaching-threshold="isMessageLengthReachingThreshold"
+    <ReplyTopPanel v-if="!isInternal" :mode="replyType" :is-message-length-reaching-threshold="isMessageLengthReachingThreshold"
       :characters-remaining="charactersRemaining" :popout-reply-box="popoutReplyBox" @setReplyMode="setReplyMode"
       @click="$emit('click')" />
     <ArticleSearchPopover v-if="showArticleSearchPopover && connectedPortalSlug"
@@ -1167,7 +1253,7 @@ export default {
         :placeholder="messagePlaceHolder" :min-height="4" :signature="signatureToApply" allow-signature
         :send-with-signature="sendWithSignature" @typingOff="onTypingOff" @typingOn="onTypingOn" @focus="onFocus"
         @blur="onBlur" />
-      <WootMessageEditor v-else v-model="message" :editor-id="editorStateId" class="input" :is-private="isOnPrivateNote"
+      <WootMessageEditor v-else v-model="message" :editor-id="editorStateId" class="input" :is-private="isOnPrivateNote || isInternal" :force-enter-to-send="isInternal" :hide-menu-bar="isInternal"
         :placeholder="messagePlaceHolder" :update-selection-with="updateEditorSelectionWith" :min-height="4"
         enable-variables :variables="messageVariables" :signature="signatureToApply" allow-signature
         :channel-type="channelType" @typingOff="onTypingOff" @typingOn="onTypingOn" @focus="onFocus" @blur="onBlur"
@@ -1179,7 +1265,7 @@ export default {
     </div>
     <MessageSignatureMissingAlert v-if="isSignatureEnabledForInbox && !isSignatureAvailable" />
     <ReplyBottomPanel :popout-reply-box="popoutReplyBox" :conversation-id="conversationId" :enable-multiple-file-upload="enableMultipleFileUpload"
-      :has-whatsapp-templates="hasWhatsappTemplates" :inbox="inbox" :is-on-private-note="isOnPrivateNote"
+      :has-whatsapp-templates="hasWhatsappTemplates" :inbox="inbox" :is-on-private-note="isOnPrivateNote" :is-internal-chat="isInternal"
       :is-recording-audio="isRecordingAudio" :is-send-disabled="isReplyButtonDisabled" :mode="replyType"
       :on-file-upload="onFileUpload" :on-send="onSendReply" :recording-audio-duration-text="recordingAudioDurationText"
       :recording-audio-state="recordingAudioState" :send-button-text="replyButtonLabel"

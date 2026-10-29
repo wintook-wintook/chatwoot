@@ -192,9 +192,12 @@ const actions = {
     commit(types.CLEAR_ALL_MESSAGES_LOADED);
     if (data.dataFetched === undefined) {
       try {
+        // Sin mensajes (p. ej. una sala nueva de «Interno») no hay «antes de»: trae
+        // los últimos. Antes tronaba aquí y la conversación nunca quedaba cargada.
+        const [firstMessage] = data.messages || [];
         await dispatch('fetchPreviousMessages', {
           after,
-          before: data.messages[0].id,
+          before: firstMessage ? firstMessage.id : undefined,
           conversationId: data.id,
         });
         Vue.set(data, 'dataFetched', true);
@@ -301,8 +304,13 @@ const actions = {
     }
   },
 
-  addMessage({ commit }, message) {
-    commit(types.ADD_MESSAGE, message);
+  addMessage({ commit, rootGetters }, message) {
+    // feat/chat_interno: quién mira, para los no leídos por agente de «Interno».
+    const viewerId = rootGetters && rootGetters.getCurrentUserID;
+    commit(
+      types.ADD_MESSAGE,
+      viewerId ? { ...message, viewer_id: viewerId } : message
+    );
     if (message.message_type === MESSAGE_TYPE.INCOMING) {
       commit(types.SET_CONVERSATION_CAN_REPLY, {
         conversationId: message.conversation_id,

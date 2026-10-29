@@ -3,7 +3,7 @@
       <div v-for="(answer, index) in dataRow.answers" :key="answer.answer_id"
         class="flex items-center bg-gray-100 border border-gray-300 rounded-full px-3 py-1 m-1 text-sm">
         <!-- Botón para editar -->
-        <a class="text-blue-500 hover:text-blue-700 cursor-pointer" @click="onEdit(answer)">
+        <a class="text-woot-500 hover:text-woot-700 cursor-pointer" @click="onEdit(answer)">
           {{ answer.answer }}
         </a>
         <!-- Botón para eliminar -->

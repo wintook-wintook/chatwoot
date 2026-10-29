@@ -40,6 +40,8 @@
         "COLD_AFTER": "Marcar «Frío» tras estos días sin respuesta del cliente",
         "DISCARD_AFTER": "Descartar tras estos días sin respuesta del cliente",
         "DAYS_PLACEHOLDER": "Vacío = nunca",
+        "RESOLVE_ON_STALE": "Al descartar por días sin respuesta, resolver la conversación",
+        "RESOLVE_ON_STALE_HELP": "Se resuelve sin avisarle al cliente: sin encuesta ni mensajes. Si vuelve a escribir, se reabre y la tarjeta regresa a la entrada.",
         "SAVE": "Guardar embudo",
         "SAVED": "Embudo guardado",
         "TEMPLATE_HINT": "El embudo nuevo nace con sus columnas, reglas y criterios de IA listos. Solo elige las bandejas que entran solas."
@@ -77,7 +79,17 @@
         "CONVERT_TYPE": "Al soltar una tarjeta aquí, crear la oportunidad de tipo",
         "CONVERT_NONE": "No crear nada",
         "SUMMARY_RULES": "Reglas",
-        "SUMMARY_AI": "IA"
+        "SUMMARY_AI": "IA",
+        "SUMMARY_CONVERTS": "→ crea: {type}",
+        "CONVERT_UNAVAILABLE": "Tipo guardado (ya no disponible)"
+      },
+      "CLOSED": {
+        "LABEL": "Convertidas y descartadas:",
+        "HELP": "Para que esas columnas no crezcan sin fin. No se borra nada y las métricas cuentan todo.",
+        "LAST_DAYS": "Últimos {days} días",
+        "ALL": "Todas",
+        "OLDER": "+ {count} más antiguas · ver",
+        "ONLY_RECENT": "Ver solo los últimos {days} días"
       },
       "CARD": {
         "MOVED_RULE": "Movida sola",

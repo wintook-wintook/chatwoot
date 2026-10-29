@@ -26,9 +26,10 @@ RSpec.describe ContactTrackings::ServiceRequests::Turn do
                                                   ])
 
     texto = turno
-    expect(texto).to start_with('Recibí 2 servicios:')
-    expect(texto).to include('1️⃣ Grúa 60 t · km 14+500 → Blue Giant · sáb 29 may 08:00')
-    expect(texto).to include('Para programarlos me falta: del 2️⃣ la fecha, dónde es.')
+    expect(texto).to start_with('Tu solicitud tiene 2 servicios:')
+    expect(texto).to include("Servicio 1 · km 14+500 → Blue Giant\nGrúa 60 t\nsáb 29 may · Caso")
+    expect(texto).to include("Servicio 2 · Hiab\nCaso").and include("Estado: Por confirmar\nFalta: la fecha, dónde es")
+    expect(texto).to end_with('Cuando me pases lo que falta, lo programo.')
   end
 
   it 'sin servicios en el mensaje devuelve nil: el motor sigue como siempre' do
@@ -49,7 +50,7 @@ RSpec.describe ContactTrackings::ServiceRequests::Turn do
     expect(ContactTrackings::ServiceRequests::Scheduler).to receive(:new).and_call_original
 
     texto = described_class.new(tracking: nil, message: message, branch: ruta_agenda, timezone: 'America/Mexico_City').call
-    expect(texto).to include('Plana 40 t · km 14 · sáb 29 may · 📌 apartado')
+    expect(texto).to include("Servicio 1 · km 14\nPlana 40 t\nsáb 29 may · Caso").and include('Estado: Apartado')
     expect(apartado.reload.metadata['oferta']).to be_nil
   end
 end

@@ -1,7 +1,7 @@
 <template>
     <div
       class="flex flex-col w-80 bg-slate-100 dark:bg-slate-800 rounded-lg kanban-column"
-      :class="{ 'bg-blue-100 border-2 border-blue-400 border-dashed': isDragOver }"
+      :class="{ 'bg-woot-50 border-2 border-woot-400 border-dashed': isDragOver }"
       @dragover="onDragOver"
       @drop="onDrop"
       @dragenter="onDragEnter"
@@ -103,9 +103,23 @@
           />
         </div>
   
+        <!-- Embudo de contactos — lo que quedó fuera de los días elegidos, a un clic -->
+        <button
+          v-if="!loading && (olderCount > 0 || showOlder)"
+          type="button"
+          class="w-full py-1 text-xs text-center text-woot-600 dark:text-woot-300 hover:underline"
+          @click="toggleOlder"
+        >
+          {{
+            showOlder
+              ? $t('KANBAN.FUNNEL.CLOSED.ONLY_RECENT', { days: closedDays })
+              : $t('KANBAN.FUNNEL.CLOSED.OLDER', { count: olderCount })
+          }}
+        </button>
+
         <!-- Refresh Button -->
         <button
-          class="w-full p-3 text-sm text-slate-600 border-2 border-dashed rounded-lg border-slate-300 dark:border-slate-600 dark:text-slate-400 hover:border-blue-500 hover:text-blue-500 transition-colors"
+          class="w-full p-3 text-sm text-slate-600 border-2 border-dashed rounded-lg border-slate-300 dark:border-slate-600 dark:text-slate-400 hover:border-woot-500 hover:text-woot-500 transition-colors"
           @click="refreshConversations"
           :disabled="loading"
         >
@@ -160,6 +174,11 @@
         type: String,
         default: '',
       },
+      // Embudo de contactos — en Convertido/Descartado, solo lo que llegó en estos días (0 = todo)
+      closedDays: {
+        type: Number,
+        default: 30,
+      },
     },
   
     data() {
@@ -170,7 +189,25 @@
         lastLoadTime: null,
         draggingConversation: null,
         isDragOver: false,
+        olderCount: 0,
+        showOlder: false,
       };
+    },
+
+    computed: {
+      isClosedColumn() {
+        return ['converted', 'discarded'].includes(this.typeProcess.stage_kind);
+      },
+      limitsByDays() {
+        return this.isClosedColumn && this.closedDays > 0 && !this.showOlder;
+      },
+    },
+
+    watch: {
+      closedDays() {
+        this.showOlder = false;
+        this.loadConversations();
+      },
     },
   
     async mounted() {
@@ -207,6 +244,7 @@
             kanban_type_process_id: this.processId,
             kanban_process_id: this.typeProcess.id,
           };
+          if (this.limitsByDays) filters.closed_days = this.closedDays;
           
           // Agregar assignee si no es 'all'
           if (this.assigneeFilter && this.assigneeFilter !== 'all') {
@@ -230,6 +268,8 @@
           
           // Asignar directamente
           this.columnConversations = [...conversations];
+          const meta = dispatchResult && dispatchResult.data && dispatchResult.data.meta;
+          this.olderCount = this.limitsByDays && meta ? meta.older_count || 0 : 0;
           
           console.log(`✅ SUCCESS: ${this.columnConversations.length} conversations for "${this.typeProcess.type_process_name}"`);
           
@@ -255,6 +295,11 @@
         return [];
       },
   
+      toggleOlder() {
+        this.showOlder = !this.showOlder;
+        this.loadConversations();
+      },
+
       async refreshConversations() {
         console.log(`🔄 REFRESH: "${this.typeProcess.type_process_name}"`);
         await this.loadConversations();

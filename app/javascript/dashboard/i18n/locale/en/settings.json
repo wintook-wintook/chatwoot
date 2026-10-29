@@ -52,7 +52,7 @@
       },
       "APPEARANCE": {
         "TITLE": "Appearance",
-        "NOTE": "Choose how the dashboard looks. The setting is saved in this browser.",
+        "NOTE": "Choose how the dashboard looks. It is saved in your user: it follows you on any browser or device.",
         "MODE_LABEL": "Mode",
         "TINT_LABEL": "Color theme",
         "MODES": {
@@ -61,6 +61,8 @@
           "AUTO": "System"
         },
         "TINTS": {
+          "EMPRESA": "Company ({name})",
+          "EMPRESA_SHORT": "Company",
           "DEFAULT": "Default",
           "CALIDO": "Warm",
           "BOSQUE": "Forest",
@@ -71,6 +73,17 @@
           "TURQUESA": "Teal",
           "ROSA": "Pink",
           "GRAFITO": "Graphite"
+        },
+        "PREVIEW": {
+          "TITLE": "Preview",
+          "MENU_1": "Conversations",
+          "MENU_2": "Sales",
+          "MENU_3": "Service",
+          "HEADING": "This is how this theme looks",
+          "LINK": "A link",
+          "CHIP": "Label",
+          "PRIMARY": "Primary button",
+          "SECONDARY": "Secondary"
         }
       },
       "PASSWORD_SECTION": {
@@ -285,7 +298,11 @@
     "CAMPAIGNS_SMS": "SMS",
     "CAMPAIGNS_DASHBOARD": "Dashboard",
     "SITE_ANALYSIS": "Site analysis",
-    "MY_DAY_PRIORITY": "My day priority",
+    "TASK_SCORING": "Task scoring",
+    "CATALOGS": "Catalogs",
+    "CATALOG_PRODUCTS": "Products and services",
+    "CATALOG_CLASSIFICATIONS": "Classifications",
+    "CATALOG_SLA_POLICIES": "SLA policies",
     "SALES_DASHBOARD": "Sales dashboard",
     "SERVICE_DASHBOARD": "Service dashboard",
     "SALES": "Sales",
@@ -345,7 +362,8 @@
     "TICKET_SLA": "SLA",
     "TICKET_AI": "Artificial Intelligence",
     "TICKET_PORTALS": "Customer portals",
-    "TICKET_COMMERCIAL_SETTINGS": "Sales",
+    "TICKET_COMMERCIAL_SETTINGS": "Sales settings",
+    "TICKET_CLOSE_REASONS": "Close reasons",
     "TICKET_TASK_SETTINGS": "Tasks",
     "TICKET_SETTINGS": "Module settings",
     "TICKET_CONFIG": "Folio settings",
@@ -358,6 +376,16 @@
     "CAPTAIN": "Captain",
     "HOME": "Home",
     "AGENTS": "Agents",
+    "ACCESS_ROLES": "Roles",
+    "CONTRACTS": "Contracts",
+    "CONTRACT_TYPES": "Contract types",
+    "ORGANIZATIONS": "Organizations",
+    "EVENTS": "Events",
+    "CLIENTS_DASHBOARD": "Customers dashboard",
+    "CATALOG": "Catalog",
+    "FIELD_ROUTE": "My field route",
+    "DISPATCH": "Dispatch",
+    "QUOTES": "Quotes",
     "AGENT_BOTS": "Bots",
     "AUDIT_LOGS": "Audit Logs",
     "INBOXES": "Inboxes",
@@ -417,14 +445,41 @@
       "TEXT": "Set as offline automatically",
       "INFO_TEXT": "Let the system automatically mark you as offline when you are not using the app or dashboard."
     },
-    "DOCS": "Read docs",
+    "DOCS": "Help",
     "CASES_LIST": "List",
     "CASES_BOARD": "Board",
     "CASES_METRICS": "Metrics",
     "CASES_GROUP_CONFIG": "Settings",
     "BUSINESS_SUMMARY": "Business summary",
     "BUSINESS_SUMMARY_ACCESS": "Business summary: access",
-    "HOME_SUMMARY": "Home"
+    "HOME_SUMMARY": "Home",
+    "SORT_INBOXES": "Sort inboxes…",
+    "INBOX_GROUPS": {
+      "INTERNAL": "Internal",
+      "WHATSAPP": "WhatsApp",
+      "TELEGRAM": "Telegram",
+      "EMAIL": "Email",
+      "META": "Meta (Messenger & Instagram)",
+      "WEB": "Website",
+      "TIKTOK": "TikTok",
+      "OTHERS": "Other channels"
+    },
+    "INBOX_GROUPS_MODAL": {
+      "TITLE": "Sort inboxes by type",
+      "DESCRIPTION": "Choose the order of the inbox groups in your menu. It only changes your menu, not anyone else’s.",
+      "DRAG": "Drag to move",
+      "UP": "Move up",
+      "DOWN": "Move down",
+      "HINT": "Groups without inboxes are not shown in the menu.",
+      "RESET": "Reset",
+      "CANCEL": "Cancel",
+      "SAVE": "Save"
+    },
+    "SHOW_MORE": "Show more ({count})",
+    "SHOW_LESS": "Show less",
+    "INTERNAL_CHAT_NEW": "New chat",
+    "MAINTENANCE": "Maintenance",
+    "INTERNAL_CHAT": "Internal chat"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Billing",

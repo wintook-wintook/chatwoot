@@ -94,6 +94,12 @@ export default {
       type: Boolean,
       default: false,
     },
+    // feat/chat_interno_pulido: en «Chat interno» solo emojis, adjuntos y audio (nada de
+    // firma, plantillas de WhatsApp, videollamada, bots de sugerencia ni artículos).
+    isInternalChat: {
+      type: Boolean,
+      default: false,
+    },
     enableMultipleFileUpload: {
       type: Boolean,
       default: true,
@@ -182,7 +188,7 @@ export default {
       return this.showFileUpload || this.isNote;
     },
     showAudioRecorderButton() {
-      if (this.isALineChannel) {
+      if (this.isALineChannel || this.isATiktokChannel) {
         return false;
       }
       // Disable audio recorder for safari browser as recording is not supported
@@ -228,7 +234,10 @@ export default {
       }
     },
     showMessageSignatureButton() {
-      return !this.isOnPrivateNote;
+      return !this.isOnPrivateNote && !this.isInternalChat;
+    },
+    showCustomerTools() {
+      return !this.isInternalChat;
     },
     sendWithSignature() {
       // channelType is sourced from inboxMixin
@@ -292,18 +301,18 @@ export default {
       <woot-button v-if="showMessageSignatureButton" v-tooltip.top-end="signatureToggleTooltip" icon="signature"
         color-scheme="secondary" variant="smooth" size="small" :title="signatureToggleTooltip"
         @click="toggleMessageSignature" />
-      <woot-button v-if="hasWhatsappTemplates" v-tooltip.top-end="$t('CONVERSATION.FOOTER.WHATSAPP_TEMPLATES')"
+      <woot-button v-if="hasWhatsappTemplates && showCustomerTools" v-tooltip.top-end="$t('CONVERSATION.FOOTER.WHATSAPP_TEMPLATES')"
         icon="whatsapp" color-scheme="secondary" variant="smooth" size="small"
         :title="$t('CONVERSATION.FOOTER.WHATSAPP_TEMPLATES')" @click="$emit('selectWhatsappTemplate')" />
-      <VideoCallButton v-if="(isAWebWidgetInbox || isAPIInbox) && !isOnPrivateNote" :conversation-id="conversationId" />
-      <AIAssistanceButton v-if="!isFetchingAppIntegrations && popoutReplyBox" :conversation-id="conversationId"
+      <VideoCallButton v-if="(isAWebWidgetInbox || isAPIInbox) && !isOnPrivateNote && showCustomerTools" :conversation-id="conversationId" />
+      <AIAssistanceButton v-if="!isFetchingAppIntegrations && popoutReplyBox && showCustomerTools" :conversation-id="conversationId"
         :is-private-note="isOnPrivateNote" :message="message" @replaceText="replaceText" />
 
-      <woot-button v-if="!isFetchingAppIntegrations && popoutReplyBox" v-tooltip.top-end="'Sugerencia respuesta botEVA'"
+      <woot-button v-if="!isFetchingAppIntegrations && popoutReplyBox && showCustomerTools" v-tooltip.top-end="'Sugerencia respuesta botEVA'"
         icon="bot" color-scheme="primary" variant="smooth" size="small"
         :title="$t('CONVERSATION.FOOTER.WHATSAPP_TEMPLATES')" @click="eventSuggestionResponseBotEva" />
 
-      <woot-button v-if="!isFetchingAppIntegrations && popoutReplyBox"
+      <woot-button v-if="!isFetchingAppIntegrations && popoutReplyBox && showCustomerTools"
         v-tooltip.top-end="'Sugerencia respuesta botEliza'" icon="wand" color-scheme="primary" variant="smooth"
         size="small" :title="$t('CONVERSATION.FOOTER.WHATSAPP_TEMPLATES')" @click="eventSuggestionResponseBotElyza" />
 
@@ -316,7 +325,7 @@ export default {
           </h4>
         </div>
       </transition>
-      <woot-button v-if="enableInsertArticleInReply"
+      <woot-button v-if="enableInsertArticleInReply && showCustomerTools"
         v-tooltip.top-end="$t('HELP_CENTER.ARTICLE_SEARCH.OPEN_ARTICLE_SEARCH')" icon="document-text-link"
         color-scheme="secondary" variant="smooth" size="small"
         :title="$t('HELP_CENTER.ARTICLE_SEARCH.OPEN_ARTICLE_SEARCH')" @click="toggleInsertArticle" />

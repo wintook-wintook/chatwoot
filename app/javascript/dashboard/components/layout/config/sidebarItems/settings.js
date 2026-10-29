@@ -6,6 +6,7 @@ const settings = accountId => ({
   routes: [
     'agent_bots',
     'agent_list',
+    'access_roles_list', // Plan-Roles-Permisos
     'attributes_list',
     'automation_list',
     'auditlogs_list',
@@ -44,7 +45,7 @@ const settings = accountId => ({
     'settings_teams_new',
     'sla_list',
     'custom_roles_list',
-    'website_sketch_list', // ← Website Sketch API MNDN 
+    'website_sketch_list', // ← Website Sketch API MNDN
     'tracking_templates_list', // proyecto@tracking_templates
   ],
   menuItems: [
@@ -69,6 +70,18 @@ const settings = accountId => ({
       toStateName: 'agent_list',
       featureFlag: FEATURE_FLAGS.AGENT_MANAGEMENT,
     },
+    // Plan-Roles-Permisos — qué ve y qué puede hacer cada rol.
+    {
+      icon: 'key',
+      label: 'ACCESS_ROLES',
+      hasSubMenu: false,
+      meta: {
+        permissions: ['administrator'],
+      },
+      toState: frontendURL(`accounts/${accountId}/settings/roles/list`),
+      toStateName: 'access_roles_list',
+      featureFlag: FEATURE_FLAGS.AGENT_MANAGEMENT,
+    },
     {
       icon: 'people-team',
       label: 'TEAMS',
@@ -91,7 +104,8 @@ const settings = accountId => ({
       toStateName: 'settings_inbox_list',
       featureFlag: FEATURE_FLAGS.INBOX_MANAGEMENT,
     },
-    { // @waba_templates
+    {
+      // @waba_templates
       icon: 'chat-multiple',
       label: 'WHATSAPP_TEMPLATES',
       hasSubMenu: false,
@@ -175,7 +189,8 @@ const settings = accountId => ({
       toStateName: 'canned_list',
       featureFlag: FEATURE_FLAGS.CANNED_RESPONSES,
     },
-    { // @knowledge_sources
+    {
+      // @knowledge_sources
       icon: 'library',
       label: 'KNOWLEDGE_SOURCES',
       hasSubMenu: false,
@@ -198,7 +213,8 @@ const settings = accountId => ({
       toStateName: 'chatgpt_list',
       featureFlag: FEATURE_FLAGS.CANNED_RESPONSES,
     },
-    { // proyecto@tracking_templates
+    {
+      // proyecto@tracking_templates
       icon: 'document-list-clock',
       label: 'TRACKING_TEMPLATES',
       hasSubMenu: false,
@@ -229,7 +245,9 @@ const settings = accountId => ({
       meta: {
         permissions: ['administrator'],
       },
-      toState: frontendURL(`accounts/${accountId}/settings/website-sketch/list`),
+      toState: frontendURL(
+        `accounts/${accountId}/settings/website-sketch/list`
+      ),
       toStateName: 'website_sketch_list',
     },
     // Website Sketch API MNDN -FIN

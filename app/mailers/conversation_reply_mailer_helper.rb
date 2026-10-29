@@ -16,6 +16,7 @@ module ConversationReplyMailerHelper
     ms_smtp_settings
     google_smtp_settings
     set_delivery_method
+    add_opt_out_headers
 
     Rails.logger.info("Email sent from #{email_from} to #{to_emails} with subject #{mail_subject}")
 
@@ -23,6 +24,15 @@ module ConversationReplyMailerHelper
   end
 
   private
+
+  # prospeccion V4: correo de un Agente IA → baja con un clic (RFC 8058; la piden Gmail y Yahoo)
+  def add_opt_out_headers
+    url = ContactTrackings::OptOut.url_for_conversation(@conversation)
+    return unless url
+
+    @options['List-Unsubscribe'] = "<#{url}>"
+    @options['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click'
+  end
 
   def google_smtp_settings
     return unless @inbox.email? && @channel.imap_enabled && @inbox.channel.google?

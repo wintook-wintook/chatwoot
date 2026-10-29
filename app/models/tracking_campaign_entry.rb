@@ -37,23 +37,12 @@
 #  fk_rails_...  (conversation_id => conversations.id) ON DELETE => nullify
 #  fk_rails_...  (tracking_campaign_id => tracking_campaigns.id) ON DELETE => cascade
 #
-# ================================================================================
-# proyecto@automatizacion_campanas — UNA INSCRIPCIÓN A UNA CAMPAÑA
-# ================================================================================
-# Plan: docs/automatizacion_campanas_plan.md (§5.2). Cada intento de meter a un contacto
-# en una TrackingCampaign, entre o no, por lote o por una automatización.
-#
-#   enrolled  entró: `contact_tracking` es el seguimiento del Agente IA que se le creó
-#   skipped   no entró: `reason` dice por qué
-#
-# Un contacto se inscribe UNA vez por campaña (índice único parcial sobre los inscritos);
-# los omitidos se repiten y cuentan, para que la campaña pueda decir cuántos intentos
-# hubo y por qué no entraron.
-# ================================================================================
 class TrackingCampaignEntry < ApplicationRecord
-  SOURCES = %w[batch automation missed_call].freeze # missed_call: diag/llamadas_whatsapp (F8)
+  SOURCES = %w[batch automation missed_call event].freeze # missed_call: diag/llamadas_whatsapp (F8); event: Plan-Eventos E3
   STATUSES = %w[enrolled skipped].freeze
-  REASONS = %w[campaign_closed already_enrolled active_tracking not_contactable outside_window daily_cap].freeze
+  # invalid_email: prospeccion V7a
+  REASONS = %w[campaign_closed already_enrolled active_tracking not_contactable outside_window daily_cap opted_out
+               invalid_email].freeze
 
   belongs_to :account
   belongs_to :tracking_campaign

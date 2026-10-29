@@ -1,5 +1,6 @@
 <script>
 import { mapGetters } from 'vuex';
+import { internalDisplay } from 'dashboard/helper/internalChat'; // feat/chat_interno
 import { getLastMessage } from 'dashboard/helper/conversationHelper';
 import Thumbnail from '../Thumbnail.vue';
 import MessagePreview from './MessagePreview.vue';
@@ -97,6 +98,15 @@ export default {
     },
 
     currentContact() {
+      // feat/chat_interno (plan v2): en «Interno» se ve la sala o el otro agente, no el
+      // contacto oculto «Chat interno».
+      const internal = internalDisplay(this.chat, {
+        currentUserId: this.$store.getters.getCurrentUserID,
+        agents: this.$store.getters['agents/getAgents'],
+        teams: this.$store.getters['teams/getTeams'],
+        generalLabel: this.$t('INTERNAL_CHAT.GENERAL'),
+      });
+      if (internal) return internal;
       return this.$store.getters['contacts/getContact'](
         this.chatMetadata.sender.id
       );

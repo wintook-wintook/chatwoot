@@ -3,7 +3,14 @@ require 'rails_helper'
 RSpec.describe 'Case Reports API', type: :request do
   let(:account) { create(:account) }
   let(:admin)   { create(:user, account: account, role: :administrator) }
-  let(:agent)   { create(:user, account: account, role: :agent) }
+  # Plan-Roles-Permisos — un agente sin rol es Supervisor (ve Informes); el
+  # «agente sin acceso» de estos specs es un Técnico.
+  let(:agent) do
+    create(:user, account: account, role: :agent).tap do |user|
+      technician = AccessRole.for_account(account).find { |role| role.key == 'technician' }
+      account.account_users.find_by(user: user).update!(access_role: technician)
+    end
+  end
 
   describe 'GET /api/v2/accounts/:account_id/case_reports/funnel' do
     context 'when it is an unauthenticated user' do
@@ -20,7 +27,7 @@ RSpec.describe 'Case Reports API', type: :request do
             headers: agent.create_new_auth_token,
             as: :json
 
-        expect(response).to have_http_status(:unauthorized)
+        expect(response).to have_http_status(:forbidden)
       end
 
       it 'calls V2::Reports::Cases::DistributionBuilder with the right params if the user is an admin' do
@@ -62,7 +69,7 @@ RSpec.describe 'Case Reports API', type: :request do
             headers: agent.create_new_auth_token,
             as: :json
 
-        expect(response).to have_http_status(:unauthorized)
+        expect(response).to have_http_status(:forbidden)
       end
 
       it 'calls V2::Reports::Cases::DistributionBuilder with the right params if the user is an admin' do
@@ -103,7 +110,7 @@ RSpec.describe 'Case Reports API', type: :request do
             headers: agent.create_new_auth_token,
             as: :json
 
-        expect(response).to have_http_status(:unauthorized)
+        expect(response).to have_http_status(:forbidden)
       end
 
       it 'calls V2::Reports::Cases::TimeseriesBuilder with the right params if the user is an admin' do
@@ -146,7 +153,7 @@ RSpec.describe 'Case Reports API', type: :request do
             headers: agent.create_new_auth_token,
             as: :json
 
-        expect(response).to have_http_status(:unauthorized)
+        expect(response).to have_http_status(:forbidden)
       end
 
       it 'calls V2::Reports::Cases::AssigneeSummaryBuilder with the right params if the user is an admin' do
@@ -189,7 +196,7 @@ RSpec.describe 'Case Reports API', type: :request do
             headers: agent.create_new_auth_token,
             as: :json
 
-        expect(response).to have_http_status(:unauthorized)
+        expect(response).to have_http_status(:forbidden)
       end
 
       it 'calls V2::Reports::Cases::StageDurationBuilder with the right params if the user is an admin' do
@@ -230,7 +237,7 @@ RSpec.describe 'Case Reports API', type: :request do
             headers: agent.create_new_auth_token,
             as: :json
 
-        expect(response).to have_http_status(:unauthorized)
+        expect(response).to have_http_status(:forbidden)
       end
 
       it 'calls V2::Reports::Cases::StageDurationBuilder with the right threshold if the user is an admin' do

@@ -99,7 +99,7 @@ class Api::V1::Accounts::KanbanTypeProcessesController < Api::V1::Accounts::Base
 
   def kanban_type_process_params
     params.require(:kanban_type_process).permit(:process_name, :default, :is_system, :auto_move, :ai_move,
-                                                :cold_after_days, :discard_after_days, entry_inbox_ids: [])
+                                                :cold_after_days, :discard_after_days, :resolve_on_stale, entry_inbox_ids: [])
   end
 
   def check_authorization

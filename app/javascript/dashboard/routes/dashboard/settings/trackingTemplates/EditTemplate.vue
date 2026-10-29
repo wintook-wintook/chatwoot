@@ -66,6 +66,8 @@ export default {
         whatsapp_templates: ['', '', ''],
         retry_interval_value: 1, // proyecto@automatizacion_tracking
         retry_interval_unit: 'days', // proyecto@automatizacion_tracking
+        email_signature: '', // prospeccion V1: firma en correo
+        customer_display_name: '', // el nombre con que el cliente ve al agente
         keyword_actions: [], // proyecto@contact_tracking
         calendar_integration_ids: [],
         // proyecto@bot_seguimiento_calendar: { integration_id: google_calendar_id } — en qué
@@ -308,6 +310,13 @@ export default {
     hasTrackingBotInboxes() {
       return this.trackingBotInboxes.length > 0;
     },
+    // prospeccion V1: en correo, la firma reemplaza las marcas « #IA» / «-TB»
+    selectedInboxIsEmail() {
+      const inbox = this.trackingBotInboxes.find(
+        ib => ib.id === Number(this.selectedInboxId)
+      );
+      return !!inbox && inbox.channelType === 'Channel::Email';
+    },
     selectedInboxIsWhatsApp() {
       if (!this.selectedInboxId) return false;
       const inbox = this.trackingBotInboxes.find(
@@ -506,6 +515,8 @@ export default {
               : ['', '', ''],
             retry_interval_value: val.retry_interval_value || 1, // proyecto@automatizacion_tracking
             retry_interval_unit: val.retry_interval_unit || 'days', // proyecto@automatizacion_tracking
+            email_signature: val.email_signature || '', // prospeccion V1
+            customer_display_name: val.customer_display_name || '',
             keyword_actions: Array.isArray(val.keyword_actions) // proyecto@contact_tracking
               ? val.keyword_actions.map(ka => ({ ...ka }))
               : [],
@@ -601,6 +612,8 @@ export default {
             : [],
           retry_interval_value: this.form.retry_interval_value, // proyecto@automatizacion_tracking
           retry_interval_unit: this.form.retry_interval_unit, // proyecto@automatizacion_tracking
+          email_signature: this.form.email_signature, // prospeccion V1
+          customer_display_name: this.form.customer_display_name,
           keyword_actions: this.form.keyword_actions || [], // proyecto@contact_tracking
           calendar_integration_ids: this.form.calendar_integration_ids || [],
           booking_calendar_ids: this.bookingCalendarIdsPayload(),
@@ -1153,6 +1166,35 @@ export default {
         </label>
       </div>
 
+      <!-- El nombre con que el cliente ve al agente (en WhatsApp va al inicio de sus
+           mensajes). 30 caracteres: va en negritas antes de cada mensaje. -->
+      <label class="block w-2/5">
+        <span class="flex items-center justify-between">
+          {{ $t('TRACKING_TEMPLATES.FORM.CUSTOMER_NAME_LABEL') }}
+          <span class="text-xs font-normal text-slate-500 tabular-nums">
+            {{ `${form.customer_display_name.length}/30` }}
+          </span>
+        </span>
+        <input
+          v-model="form.customer_display_name"
+          type="text"
+          maxlength="30"
+          :placeholder="$t('TRACKING_TEMPLATES.FORM.CUSTOMER_NAME_PLACEHOLDER')"
+          class="!mb-0 mt-1"
+        />
+        <span class="block mt-1 text-xs text-slate-500 dark:text-slate-400">
+          {{ $t('TRACKING_TEMPLATES.FORM.CUSTOMER_NAME_HINT') }}
+        </span>
+        <span
+          v-if="form.customer_display_name.trim()"
+          class="inline-block px-3 py-2 mt-2 text-sm text-slate-800 bg-green-50 rounded-lg dark:bg-green-900/30 dark:text-slate-100"
+        >
+          <strong>{{ `${form.customer_display_name.trim()}:` }}</strong>
+          <br />
+          {{ $t('TRACKING_TEMPLATES.FORM.CUSTOMER_NAME_PREVIEW') }}
+        </span>
+      </label>
+
       <!-- Tabs de nivel superior: Agente IA / Agente seguimiento -->
       <woot-tabs
         class="[&_.tabs]:p-0 [&_.tabs]:mb-0"
@@ -1225,6 +1267,23 @@ export default {
           </select>
         </label>
       </div>
+
+        <!-- prospeccion V1: firma del agente en correo -->
+        <label v-if="selectedInboxIsEmail" class="block">
+          <span>{{ $t('TRACKING_TEMPLATES.FORM.EMAIL_SIGNATURE_LABEL') }}</span>
+          <textarea
+            v-model="form.email_signature"
+            rows="3"
+            maxlength="500"
+            :placeholder="
+              $t('TRACKING_TEMPLATES.FORM.EMAIL_SIGNATURE_PLACEHOLDER')
+            "
+            class="!mb-0 mt-1"
+          />
+          <span class="block mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {{ $t('TRACKING_TEMPLATES.FORM.EMAIL_SIGNATURE_HINT') }}
+          </span>
+        </label>
 
       <!-- Plantillas WhatsApp por intento (solo cuando el canal es WhatsApp) -->
       <div v-if="selectedInboxIsWhatsApp" class="mt-2">

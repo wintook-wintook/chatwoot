@@ -14,11 +14,14 @@
 #   - Si ya estaba pausada, se conserva el primer motivo.
 #
 # Se reanuda con TrackingCampaigns::Resume.
+#
+# Pausa a mano (botón «Pausar campaña», PausesController): sin motivo. paused_reason vacío
+# es lo que distingue en el detalle «la pausaste tú» de «la pausó un error de Meta».
 # ================================================================================
 class TrackingCampaigns::Pause
   PAUSABLE_STATUSES = %w[draft running].freeze
 
-  def initialize(campaign, reason:)
+  def initialize(campaign, reason: nil)
     @campaign = campaign
     @reason = reason
   end
@@ -27,9 +30,9 @@ class TrackingCampaigns::Pause
     return false unless PAUSABLE_STATUSES.include?(@campaign.status)
 
     # update_columns: la pausa no puede depender de que la campaña pase sus validaciones.
-    @campaign.update_columns(status: 'paused', paused_reason: @reason.to_s.truncate(250), # rubocop:disable Rails/SkipsModelValidations
+    @campaign.update_columns(status: 'paused', paused_reason: @reason.to_s.truncate(250).presence, # rubocop:disable Rails/SkipsModelValidations
                              paused_at: Time.current, updated_at: Time.current)
-    Rails.logger.warn "[TrackingCampaigns::Pause] campaña #{@campaign.id} pausada: #{@reason}"
+    Rails.logger.warn "[TrackingCampaigns::Pause] campaña #{@campaign.id} pausada: #{@reason.presence || 'a mano'}"
     true
   end
 end
