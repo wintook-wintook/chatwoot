@@ -467,7 +467,6 @@
     "LOG_SOURCE_SAVED": "Guardado en el agente",
     "LOG_SOURCE_CONFIGURED": "Configurado",
     "DRAFT_TAB_CONFIGURE": "Configurar",
-    "DRAFT_TAB_DIAGRAM": "Diagrama",
     "DIAGRAM": {
       "INTRO": "Así está armado tu agente: una fila por ruta, en el orden en que contesta. Haz clic en cualquier cuadro para ir a su línea.",
       "ISSUES": "· %{count} con algo por revisar",
@@ -536,7 +535,6 @@
       "EXPORT_PNG": "Descargar PNG"
     },
     "TESTS": {
-      "PANEL": "Pruebas",
       "HINT": "La pila de tu agente: se guarda y se vuelve a correr en seco cada vez que publicas. Elige una prueba para ver su camino en el Diagrama.",
       "PLACEHOLDER": "Ej.: ¿cuánto cuesta el kit completo?",
       "RUN_DRY": "Probar en seco",
