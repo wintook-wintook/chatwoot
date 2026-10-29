@@ -17,6 +17,7 @@ vi.mock('dashboard/api/assistant', () => ({
     runTestCasesLive: vi.fn(),
     suggestedTests: vi.fn(),
     compareTestCases: vi.fn(),
+    dryTestCase: vi.fn(),
   },
 }));
 vi.mock('dashboard/api/trackingTemplates', () => ({
@@ -76,6 +77,8 @@ describe('TestsPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
+    AssistantAPI.addTestCase.mockResolvedValue({ data: { id: 1 } });
+    AssistantAPI.dryTestCase.mockResolvedValue({});
   });
 
   describe('sin guardar', () => {
@@ -129,7 +132,6 @@ describe('TestsPanel', () => {
 
     it('agrega, genera y corre toda en seco contra el borrador', async () => {
       AssistantAPI.testCases.mockResolvedValue(pila());
-      AssistantAPI.addTestCase.mockResolvedValue({});
       AssistantAPI.generateTestCases.mockResolvedValue({});
       AssistantAPI.runTestCasesDry.mockResolvedValue({});
       const wrapper = montar({ templateId: 5, inboxId: 3, briefId: 9 });
@@ -313,7 +315,6 @@ describe('TestsPanel', () => {
           ],
         },
       });
-      AssistantAPI.addTestCase.mockResolvedValue({});
       const wrapper = montar({ templateId: 5, inboxId: 2 });
       await flushPromises();
 
@@ -355,7 +356,6 @@ describe('TestsPanel', () => {
   describe('diálogos y versiones', () => {
     it('un diálogo se agrega con sus mensajes, uno por línea', async () => {
       AssistantAPI.testCases.mockResolvedValue(pila({ cases: [] }));
-      AssistantAPI.addTestCase.mockResolvedValue({});
       const wrapper = montar({ templateId: 5 });
       await flushPromises();
 
@@ -470,6 +470,81 @@ describe('TestsPanel', () => {
         mode: 'dry',
         result: { routes: { chosen: 'soporte' } },
       });
+    });
+  });
+
+  // Consulta del usuario 29/10: «agrego y no se ve la ruta en el diagrama».
+  describe('se ilumina sin pasos de más', () => {
+    const sinCorrer = {
+      id: 2,
+      message: 'quiero cita',
+      kind: 'propia',
+      last_dry: {},
+      last_live: {},
+    };
+    const corrida = {
+      ...sinCorrer,
+      last_dry: { at: 'x', informe: { routes: { chosen: 'agendar_cita' } } },
+    };
+
+    it('al agregar, la corre en seco al momento y la elige', async () => {
+      AssistantAPI.addTestCase.mockResolvedValue({ data: { id: 2 } });
+      AssistantAPI.testCases
+        .mockResolvedValueOnce(pila({ cases: [] }))
+        .mockResolvedValue(pila({ cases: [corrida] }));
+      const wrapper = montar({ templateId: 5, inboxId: 3 });
+      await flushPromises();
+
+      await wrapper.find('textarea').setValue('quiero cita');
+      await boton(wrapper, 'TESTS.ADD').trigger('click');
+      await flushPromises();
+
+      expect(AssistantAPI.dryTestCase).toHaveBeenCalledWith(
+        2,
+        '@ruta(cotizar #cotizar: precios): -',
+        3
+      );
+      expect(wrapper.emitted('select').pop()[0]).toEqual({
+        mode: 'dry',
+        result: { routes: { chosen: 'agendar_cita' } },
+      });
+    });
+
+    it('elegir una que nunca corrió la corre en seco en vez de no mostrar nada', async () => {
+      AssistantAPI.testCases
+        .mockResolvedValueOnce(pila({ cases: [sinCorrer] }))
+        .mockResolvedValue(pila({ cases: [corrida] }));
+      const wrapper = montar({ templateId: 5 });
+      await flushPromises();
+
+      await wrapper.find('li button').trigger('click');
+      await flushPromises();
+
+      expect(AssistantAPI.dryTestCase).toHaveBeenCalledWith(
+        2,
+        '@ruta(cotizar #cotizar: precios): -',
+        null
+      );
+      expect(wrapper.emitted('select').pop()[0].result.routes.chosen).toBe(
+        'agendar_cita'
+      );
+    });
+
+    it('una sola prueba se puede correr en vivo', async () => {
+      AssistantAPI.testCases.mockResolvedValue(pila());
+      AssistantAPI.runTestCasesLive.mockResolvedValue({ data: { id: 'z' } });
+      AssistantAPI.testBattery.mockResolvedValue({
+        data: { status: 'running', results: [] },
+      });
+      const wrapper = montar({ templateId: 5 });
+      await flushPromises();
+
+      await wrapper.find('li button').trigger('click');
+      await boton(wrapper, 'TESTS.RUN_LIVE_ONE').trigger('click');
+      await flushPromises();
+
+      expect(AssistantAPI.runTestCasesLive).toHaveBeenCalledWith(5, [1]);
+      wrapper.destroy();
     });
   });
 });

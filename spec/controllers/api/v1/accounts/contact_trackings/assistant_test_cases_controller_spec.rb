@@ -100,4 +100,17 @@ RSpec.describe 'Api::V1::Accounts::ContactTrackings::AssistantTestCasesControlle
     expect(ContactTrackings::Assistant::TestCasesCompareJob).to have_received(:perform_later)
       .with(account.id, template.id, version.id, 'ahora', nil)
   end
+
+  it 'corre una sola en seco al momento y devuelve su camino' do
+    caso = template.test_cases.create!(account: account, message: '¿precio?')
+    resultado = ContactTrackings::Assistant::DryRunService::Result.new(payload: { routes: { chosen: 'cotizar' } })
+    allow(ContactTrackings::Assistant::DryRunService).to receive(:new)
+      .and_return(instance_double(ContactTrackings::Assistant::DryRunService, call: resultado))
+
+    post "#{base_url}/#{caso.id}/dry", params: { draft: 'borrador' }, headers: headers, as: :json
+
+    expect(response.parsed_body.dig('last_dry', 'informe', 'routes', 'chosen')).to eq('cotizar')
+    expect(ContactTrackings::Assistant::DryRunService).to have_received(:new)
+      .with(account, hash_including(draft: 'borrador', question: '¿precio?'))
+  end
 end

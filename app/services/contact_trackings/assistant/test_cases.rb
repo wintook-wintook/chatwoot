@@ -87,6 +87,19 @@ module ContactTrackings::Assistant::TestCases
     estado
   end
 
+  # Una prueba en seco contra `draft`: se guarda su resultado (el que había pasa a
+  # previous_dry). true si cambió de camino. Lo usan TestCasesDryJob (toda la pila) y la
+  # prueba recién agregada o elegida sin correr (al momento, para que se ilumine ya).
+  def run_one_dry(account, caso, draft:, inbox: nil)
+    pregunta, contexto = dry_inputs(caso)
+    resultado = ContactTrackings::Assistant::DryRunService.new(account, draft: draft, question: pregunta, inbox: inbox,
+                                                                        recent_context: contexto).call
+    return false unless resultado.success?
+
+    caso.store_dry!('path' => dry_path(resultado.payload), 'informe' => resultado.payload.deep_stringify_keys)
+    caso.dry_changed? == true
+  end
+
   def dry_status(template)
     Rails.cache.read(dry_key(template.id))
   end
@@ -146,11 +159,5 @@ module ContactTrackings::Assistant::TestCases
     traza = fila[:traza] || fila['traza']
     caso.store_live!(fila.stringify_keys.slice('reply', 'cumple', 'motivo', 'fallas', 'ruta_ok', 'conversation', 'cases', 'dialog')
                          .merge('traza' => traza, 'tokens' => traza.is_a?(Hash) ? traza.dig('uso', 'tokens').to_i : 0))
-  end
-
-  def as_json_for(caso)
-    { id: caso.id, message: caso.message, kind: caso.kind, expected_route: caso.expected_route, rule: caso.rule,
-      pinned: caso.pinned, turns: caso.turns, last_dry: caso.last_dry, previous_dry: caso.previous_dry, last_live: caso.last_live,
-      previous_live: caso.previous_live, dry_changed: caso.dry_changed? }
   end
 end

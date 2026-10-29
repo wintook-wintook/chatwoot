@@ -343,15 +343,29 @@ export default {
       if (!this.canAdd) return null;
       const mensajes = this.turns;
       return this.act('add', async () => {
-        await AssistantAPI.addTestCase(
+        const { data } = await AssistantAPI.addTestCase(
           this.templateId,
           mensajes[0],
           null,
           mensajes.length > 1 ? mensajes : null
         );
         this.question = '';
-        await this.fetchPile();
+        // Recién agregada se corre en seco al momento: así se ilumina ya, sin
+        // esperar a «Toda en seco» (cuesta una clasificación).
+        await this.dryCase(data.id);
       });
+    },
+    // Una prueba en seco contra el borrador, y queda elegida en el diagrama.
+    async dryCase(id) {
+      await AssistantAPI.dryTestCase(id, this.draft, this.inboxId);
+      await this.fetchPile();
+      this.choose(
+        this.rows.find(r => r.id === id),
+        'dry'
+      );
+    },
+    runCaseLive(fila) {
+      return this.runLive([fila.id]);
     },
     // F5: comparar contra una versión guardada.
     loadVersions() {
@@ -527,9 +541,15 @@ export default {
         );
       });
     },
-    // En vivo si corrió en vivo; si no, en seco.
+    // En vivo si corrió en vivo; si no, en seco. Una que nunca corrió se corre en seco
+    // al elegirla: si no, el diagrama no tendría camino que iluminar.
     choose(fila, modo = null) {
       if (!fila) return;
+      if (fila.id && !fila.live && !fila.dry) {
+        this.selectedKey = fila.key;
+        this.act('dryOne', () => this.dryCase(fila.id));
+        return;
+      }
       const elegido = modo || (fila.live ? 'live' : 'dry');
       this.selectedKey = fila.key;
       this.selectedMode = elegido;
@@ -983,7 +1003,9 @@ export default {
       <p v-else-if="selected.dry" class="m-0 text-slate-500">
         {{ t('DRY_NOTE') }}
       </p>
-      <p v-else class="m-0 text-slate-500">{{ t('NEVER_RUN') }}</p>
+      <p v-else class="m-0 text-slate-500">
+        {{ busy === 'dryOne' ? t('RUNNING_DRY') : t('NEVER_RUN') }}
+      </p>
       <div
         v-if="history"
         class="flex flex-col gap-0.5 p-2 rounded-md bg-slate-50 dark:bg-slate-900"
@@ -996,6 +1018,18 @@ export default {
         </span>
       </div>
       <div class="flex flex-wrap items-center gap-2 pt-1">
+        <woot-button
+          v-if="selected.id"
+          size="tiny"
+          variant="smooth"
+          color-scheme="secondary"
+          icon="play-circle"
+          :is-disabled="running || Boolean(busy)"
+          :title="t('RUN_LIVE_ONE_HINT')"
+          @click="runCaseLive(selected)"
+        >
+          {{ t('RUN_LIVE_ONE') }}
+        </woot-button>
         <woot-button
           v-if="canSendToChat && (selected.live || selected.dry)"
           size="tiny"

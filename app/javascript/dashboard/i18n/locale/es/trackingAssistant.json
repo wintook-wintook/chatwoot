@@ -611,7 +611,10 @@
       "COMPARE_PROGRESS": "Comparando: %{done} de %{total}",
       "COMPARE_RESULT": "Contra la v%{version}: %{count} de %{total} pruebas toman otro camino.",
       "DIFFERS_IN": "distinta en v%{version}",
-      "VIEW_IN_VERSION": "Ver en la v%{version} (%{route})"
+      "VIEW_IN_VERSION": "Ver en la v%{version} (%{route})",
+      "RUN_LIVE_ONE": "Probar en vivo",
+      "RUN_LIVE_ONE_HINT": "El agente guardado contesta esta prueba en el canal de pruebas y se califica",
+      "RUNNING_DRY": "Probando en seco…"
     },
     "CONFIGURE": {
       "HINT": "Lo que este Entrenamiento usa de tu cuenta. Lo que falta, llénalo o créalo aquí; lo que ya tienes (✔) puedes cambiarlo por otro. Al aplicar se escribe en el texto y queda como una versión.",

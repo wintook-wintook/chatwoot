@@ -611,7 +611,10 @@
       "COMPARE_PROGRESS": "Comparing: %{done} of %{total}",
       "COMPARE_RESULT": "Against v%{version}: %{count} of %{total} tests take a different path.",
       "DIFFERS_IN": "differs in v%{version}",
-      "VIEW_IN_VERSION": "View in v%{version} (%{route})"
+      "VIEW_IN_VERSION": "View in v%{version} (%{route})",
+      "RUN_LIVE_ONE": "Test live",
+      "RUN_LIVE_ONE_HINT": "The saved agent answers this test in the test channel and gets graded",
+      "RUNNING_DRY": "Running dry…"
     },
     "CONFIGURE": {
       "HINT": "What this Training uses from your account. Fill in or create what's missing here; what you already have (✔) can be swapped for another. Applying writes it into the text and keeps it as a version.",
