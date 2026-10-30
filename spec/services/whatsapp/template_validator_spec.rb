@@ -9,7 +9,7 @@ RSpec.describe Whatsapp::TemplateValidator do
     base = {
       name: 'cobro_vencido',
       language: 'es',
-      body_text: 'Hola {{1}}, tu saldo es {{2}}',
+      body_text: 'Hola {{1}}, tu saldo es {{2}}.',
       sample_values: { 'body' => %w[Juan $100] }
     }
     described_class.call(WhatsappTemplate.new(base.merge(attrs)))
@@ -19,6 +19,25 @@ RSpec.describe Whatsapp::TemplateValidator do
     result = build
     expect(result).to be_valid
     expect(result.errors).to be_empty
+  end
+
+  # feat/plantillas_whatsapp_mejoras
+  describe 'categoría y orillas del cuerpo' do
+    it 'rechaza autenticación (formato fijo de Meta)' do
+      expect(build(category: 'AUTHENTICATION').errors).to include(a_string_matching(/autenticación.*WhatsApp Manager/))
+      expect(build(category: 'UTILITY')).to be_valid
+    end
+
+    it 'rechaza un cuerpo que empieza o termina con variable' do
+      inicio = build(body_text: '{{1}}, tu saldo es {{2}} pesos', sample_values: { 'body' => %w[Juan 100] })
+      final = build(body_text: 'Hola {{1}}, tu saldo es {{2}}', sample_values: { 'body' => %w[Juan 100] })
+      expect(inicio.errors).to include('Body: no puede empezar con una variable')
+      expect(final.errors).to include('Body: no puede terminar con una variable (agrega un punto o texto después)')
+    end
+
+    it 'con un punto después de la variable pasa' do
+      expect(build(body_text: 'Hola {{1}}, tu saldo es {{2}}.')).to be_valid
+    end
   end
 
   describe 'nombre' do
@@ -69,7 +88,7 @@ RSpec.describe Whatsapp::TemplateValidator do
     end
 
     it 'media: exige archivo (url o handle)' do
-      expect(build(header_type: 'image').errors).to include('Cabecera multimedia: falta el archivo (URL o handle)')
+      expect(build(header_type: 'image').errors).to include('Cabecera multimedia: falta el archivo (súbelo o pega una liga)')
     end
 
     it 'media: acepta con header_media_url' do
@@ -99,7 +118,12 @@ RSpec.describe Whatsapp::TemplateValidator do
 
     it 'URL con {{1}} exige example' do
       result = build(buttons: [{ 'type' => 'URL', 'text' => 'Ver', 'url' => 'https://x/{{1}}' }])
-      expect(result.errors).to include('Botón #1 (URL) con {{1}} exige example')
+      expect(result.errors).to include('Botón #1 (URL): falta el ejemplo de la liga completa')
+    end
+
+    it 'URL con {{1}} y su example pasa' do
+      result = build(buttons: [{ 'type' => 'URL', 'text' => 'Ver', 'url' => 'https://x/{{1}}', 'example' => ['https://x/123'] }])
+      expect(result).to be_valid
     end
 
     it 'teléfono sin phone_number' do
@@ -107,7 +131,13 @@ RSpec.describe Whatsapp::TemplateValidator do
     end
 
     it 'COPY_CODE exige example' do
-      expect(build(buttons: [{ 'type' => 'COPY_CODE' }]).errors).to include('Botón #1 (código) exige example')
+      expect(build(buttons: [{ 'type' => 'COPY_CODE' }]).errors).to include('Botón #1 (código): falta el código de ejemplo')
+    end
+
+    it 'COPY_CODE con example de hasta 15 pasa; de más, no' do
+      expect(build(buttons: [{ 'type' => 'COPY_CODE', 'example' => ['DESCUENTO2026'] }])).to be_valid
+      expect(build(buttons: [{ 'type' => 'COPY_CODE', 'example' => ['A' * 16] }]).errors)
+        .to include('Botón #1 (código): el ejemplo admite hasta 15 caracteres')
     end
 
     it 'máximo 2 botones URL' do

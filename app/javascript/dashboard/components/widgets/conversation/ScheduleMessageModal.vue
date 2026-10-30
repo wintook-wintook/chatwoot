@@ -337,9 +337,7 @@ import { mapActions, mapGetters } from 'vuex';
 import messageAPI from 'dashboard/api/inbox/message';
 import scheduledMessagesAPI from 'dashboard/api/scheduledMessages';
 import timeZoneData from './timezones.json';
-
-// TODO: Remove this when we support all formats
-const formatsToRemove = ['DOCUMENT', 'IMAGE', 'VIDEO'];
+import { describeTemplate } from './WhatsappTemplates/templateForm';
 
 export default {
   components: {
@@ -482,16 +480,16 @@ export default {
     },
 
     // Plantillas disponibles (similar a TemplatesPicker.vue)
+    // feat/plantillas_whatsapp_mejoras F4 (D4): este formulario solo llena el CUERPO.
+    // Se ocultan las que piden algo más —archivo en el encabezado, variables en el
+    // encabezado, botón con liga variable o copiar código—: Meta las rechazaría al
+    // enviarse. Antes solo se ocultaban las de archivo. Misma regla que la conversación.
     availableTemplates() {
       if (!this.inboxId) return [];
 
       return this.$store.getters['inboxes/getWhatsAppTemplates'](this.inboxId)
         .filter(template => template.status.toLowerCase() === 'approved')
-        .filter(template => {
-          return template.components.every(component => {
-            return !formatsToRemove.includes(component.format);
-          });
-        });
+        .filter(template => !describeTemplate(template).needsComponents);
     },
 
     // Plantillas filtradas por búsqueda

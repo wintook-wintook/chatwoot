@@ -17,11 +17,14 @@ class Whatsapp::TemplateValidator
 
   NAME_FORMAT = /\A[a-z0-9_]{1,512}\z/
   VAR_REGEX = /\{\{\s*(\d+)\s*\}\}/
+  STARTS_WITH_VAR = /\A#{VAR_REGEX}/
+  ENDS_WITH_VAR = /#{VAR_REGEX}\z/
 
   MAX_BODY = 1024
   MAX_FOOTER = 60
   MAX_HEADER_TEXT = 60
   MAX_BUTTON_TEXT = 25
+  MAX_COPY_CODE = 15
 
   MAX_BUTTONS = 10
   MAX_URL_BUTTONS = 2
@@ -41,6 +44,7 @@ class Whatsapp::TemplateValidator
 
   def call
     validate_name
+    validate_category
     validate_body
     validate_header
     validate_footer
@@ -66,6 +70,25 @@ class Whatsapp::TemplateValidator
 
     @errors << "Body: excede #{MAX_BODY} caracteres (#{body.length})" if body.length > MAX_BODY
     check_contiguous(variables(body), 'Body')
+    check_edges(body)
+  end
+
+  # feat/plantillas_whatsapp_mejoras: Meta rechaza un cuerpo que empieza o termina con una
+  # variable («{{1}}, gracias…» o «…tu pedido {{1}}»). Basta un punto después para que pase.
+  def check_edges(body)
+    texto = body.strip
+    @errors << 'Body: no puede empezar con una variable' if texto.match?(STARTS_WITH_VAR)
+    @errors << 'Body: no puede terminar con una variable (agrega un punto o texto después)' if texto.match?(ENDS_WITH_VAR)
+  end
+
+  # ---- categoría ------------------------------------------------------------
+  # feat/plantillas_whatsapp_mejoras: las de autenticación (códigos de verificación) tienen
+  # un formato fijo de Meta (sin texto libre, botón de código y caducidad) que este
+  # formulario no arma: Meta las rechazaba. Se crean y editan en WhatsApp Manager.
+  def validate_category
+    return unless @t.category.to_s.casecmp?('AUTHENTICATION')
+
+    @errors << 'Categoría: las de autenticación (códigos de verificación) se crean en WhatsApp Manager de Meta'
   end
 
   # ---- header ----------------------------------------------------------------
@@ -93,8 +116,10 @@ class Whatsapp::TemplateValidator
 
   def validate_header_media
     return if @t.header_media_url.to_s.present? || @t.header_handle.to_s.present?
+    # feat/plantillas_whatsapp_mejoras F6: o el archivo subido desde la pantalla.
+    return if @t.respond_to?(:header_sample) && @t.header_sample.attached?
 
-    @errors << 'Cabecera multimedia: falta el archivo (URL o handle)'
+    @errors << 'Cabecera multimedia: falta el archivo (súbelo o pega una liga)'
   end
 
   # ---- footer ----------------------------------------------------------------
@@ -161,7 +186,7 @@ class Whatsapp::TemplateValidator
     # URL con variable exige example para la revisión de Meta.
     return unless variables(url).any?
 
-    @errors << "Botón ##{pos} (URL) con {{1}} exige example" if Array(btn_field(btn, 'example')).all? { |v| v.to_s.blank? }
+    @errors << "Botón ##{pos} (URL): falta el ejemplo de la liga completa" if Array(btn_field(btn, 'example')).all? { |v| v.to_s.blank? }
   end
 
   def validate_phone_button(btn, pos)
@@ -169,7 +194,10 @@ class Whatsapp::TemplateValidator
   end
 
   def validate_copy_code_button(btn, pos)
-    @errors << "Botón ##{pos} (código) exige example" if Array(btn_field(btn, 'example')).all? { |v| v.to_s.blank? }
+    ejemplo = Array(btn_field(btn, 'example')).first.to_s
+    return @errors << "Botón ##{pos} (código): falta el código de ejemplo" if ejemplo.blank?
+
+    @errors << "Botón ##{pos} (código): el ejemplo admite hasta #{MAX_COPY_CODE} caracteres" if ejemplo.length > MAX_COPY_CODE
   end
 
   # ---- samples ---------------------------------------------------------------

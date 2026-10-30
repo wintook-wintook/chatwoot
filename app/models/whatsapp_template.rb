@@ -33,17 +33,26 @@
 #  updated_at          :datetime         not null
 #  account_id          :bigint           not null
 #  channel_whatsapp_id :bigint           not null
+#  created_by_id       :bigint
 #  meta_template_id    :string
 #
 # Indexes
 #
 #  index_whatsapp_templates_on_account_id             (account_id)
 #  index_whatsapp_templates_on_channel_name_language  (channel_whatsapp_id,name,language) UNIQUE
+#  index_whatsapp_templates_on_created_by_id          (created_by_id)
 #  index_whatsapp_templates_on_meta_template_id       (meta_template_id)
 #
 class WhatsappTemplate < ApplicationRecord
   belongs_to :account
   belongs_to :channel_whatsapp, class_name: 'Channel::Whatsapp'
+  # Quién la creó desde la pantalla de plantillas; nil = llegó sincronizada desde Meta.
+  belongs_to :created_by, class_name: 'User', optional: true
+
+  # feat/plantillas_whatsapp_mejoras F6: el archivo de muestra del encabezado, subido desde la
+  # pantalla de plantillas. De él salen la muestra para Meta (F0) y el archivo que mandan los
+  # seguimientos y campañas (F5). Ver #header_media_link.
+  has_one_attached :header_sample
 
   # Estados crudos de Meta. EDITABLES: se pueden re-enviar (vuelven a PENDING).
   # TERMINALES: no admiten acción. RECUPERABLES: reintentables desde la UI.
@@ -62,13 +71,51 @@ class WhatsappTemplate < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
   validates :header_type, inclusion: { in: HEADER_TYPES }, allow_nil: true
   validates :quality_score, inclusion: { in: QUALITY_SCORES }, allow_blank: true
+  # feat/plantillas_whatsapp_mejoras F0: el handle que devuelve Meta al subir un VIDEO pasa de
+  # los 255 que ApplicationRecord pone por defecto a las columnas string (el de documento
+  # cabía): Meta creaba la plantilla y el guardado local fallaba (drift). Una liga firmada
+  # también puede pasar de 255. Un validador propio reemplaza al de 255.
+  validates :header_handle, length: { maximum: 4000 }
+  validates :header_media_url, length: { maximum: 2048 }
 
   scope :for_channel, ->(channel_id) { where(channel_whatsapp_id: channel_id) }
   scope :by_meta_id, ->(meta_id) { where(meta_template_id: meta_id) }
 
-  # ¿Se puede editar en Meta? (Meta reemplaza los components y la vuelve a PENDING.)
+  # La liga del archivo del encabezado para dársela a Meta AHORA (subir la muestra, mandar la
+  # plantilla). Si se subió un archivo, una liga fresca suya: las de ActiveStorage para
+  # servicios externos caducan en minutos (y rails_blob_url es una redirección que muchos no
+  # siguen), así que no sirven guardadas en header_media_url para usarse días después. Si no,
+  # la liga pegada a mano.
+  def header_media_link(expires_in: 1.hour)
+    return header_media_url.presence unless header_sample.attached?
+
+    ActiveStorage::Current.url_options = Rails.application.routes.default_url_options if ActiveStorage::Current.url_options.blank?
+    header_sample.blob.url(expires_in: expires_in)
+  end
+
+  # La liga para VERLO en el panel (la burbuja del mensaje enviado, el formulario de la
+  # conversación): la redirección de ActiveStorage no caduca y el navegador sí la sigue. No
+  # sirve para Meta (ver #header_media_link). Sin archivo subido, la liga pegada a mano.
+  def header_display_link
+    return header_media_url.presence unless header_sample.attached?
+
+    Rails.application.routes.url_helpers.rails_blob_url(header_sample)
+  end
+
+  # ¿Se subió un archivo nuevo en esta edición? (hay que volver a subir la muestra a Meta)
+  def header_sample_changed?
+    attachment_changes.key?('header_sample')
+  end
+
+  # ¿Se puede editar? En Meta (reemplaza los components y la vuelve a PENDING), o un borrador
+  # que nunca llegó a Meta (F10: «Guardar borrador», o un envío que falló): se edita y se
+  # manda a revisión como plantilla nueva.
   def editable?
-    EDITABLE_STATUSES.include?(status)
+    EDITABLE_STATUSES.include?(status) || local_draft?
+  end
+
+  def local_draft?
+    status == 'DRAFT' && local_only?
   end
 
   def terminal?

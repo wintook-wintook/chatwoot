@@ -19,10 +19,12 @@
 module TrackingDeliveries::ErrorClassifier
   TEMPORARY_CODES = %w[1 2 4 80007 130429 131000 131016 131048 131056 133004 132069].freeze
   MARKETING_CODES = %w[131049].freeze
-  CONFIG_CODES = %w[
+  CONFIG_CODES = (%w[
     0 3 10 190 368 131031 131037 131042 131045 133010
     132000 132001 132005 132007 132012 132015 132016 132068
-  ].freeze
+  ] + [ContactTrackings::TemplateHeader::MISSING_CODE]).freeze
+  # ↑ feat/plantillas_whatsapp_mejoras F5: código propio (no de Meta) para «la plantilla lleva
+  #   archivo y no hay uno guardado»: es de configuración, se pausa con el motivo.
   # Permanentes que además dejan al seguimiento sin sentido: el número no tiene
   # WhatsApp o no puede recibir, o el contacto pidió no recibir marketing.
   UNREACHABLE_CODES = %w[131021 131026 131050].freeze

@@ -2394,8 +2394,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_03_100000) do
     t.datetime "last_submitted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "created_by_id"
     t.index ["account_id"], name: "index_whatsapp_templates_on_account_id"
     t.index ["channel_whatsapp_id", "name", "language"], name: "index_whatsapp_templates_on_channel_name_language", unique: true
+    t.index ["created_by_id"], name: "index_whatsapp_templates_on_created_by_id"
     t.index ["meta_template_id"], name: "index_whatsapp_templates_on_meta_template_id"
   end
 

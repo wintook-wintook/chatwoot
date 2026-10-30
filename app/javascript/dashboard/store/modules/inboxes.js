@@ -65,15 +65,11 @@ export const getters = {
     const messagesTemplates =
       whatsAppMessageTemplates || apiInboxMessageTemplates;
 
-    // filtering out the whatsapp templates with media
-    if (messagesTemplates instanceof Array) {
-      return messagesTemplates.filter(template => {
-        return !template.components.some(
-          i => i.format === 'IMAGE' || i.format === 'VIDEO'
-        );
-      });
-    }
-    return [];
+    // feat/plantillas_whatsapp_mejoras: TODAS, también las de imagen o video. Antes aquí se
+    // quitaban siempre, aun en WhatsApp Cloud, que sí las manda (F1/F2) y los seguimientos
+    // con su archivo guardado (F5). Cada pantalla decide qué puede mandar: el selector de
+    // la conversación (TemplatesPicker) y los programados (ScheduleMessageModal).
+    return messagesTemplates instanceof Array ? messagesTemplates : [];
   },
   getNewConversationInboxes($state) {
     return $state.records.filter(inbox => {

@@ -46,9 +46,11 @@ class Whatsapp::TemplateComponentBuilder
   end
 
   def header_media_component(type)
-    # En creación Meta exige el handle del resumable upload (no una URL plana).
-    handle = @t.header_handle.presence || @t.header_media_url
-    { type: 'HEADER', format: type.upcase, example: { header_handle: [handle] } }
+    # En creación Meta exige el handle del resumable upload, nunca una URL plana (con la liga
+    # cruda las de video y documento se rechazaban). SubmitTemplateService sube antes la muestra.
+    comp = { type: 'HEADER', format: type.upcase }
+    comp[:example] = { header_handle: [@t.header_handle] } if @t.header_handle.present?
+    comp
   end
 
   def body_component

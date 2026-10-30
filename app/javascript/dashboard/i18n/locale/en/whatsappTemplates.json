@@ -11,7 +11,9 @@
             "LABELS": {
                 "LANGUAGE": "Language",
                 "TEMPLATE_BODY": "Template Body",
-                "CATEGORY": "Category"
+                "CATEGORY": "Category",
+                "HEADER": "Header",
+                "BUTTONS": "Buttons"
             }
         },
         "PARSER": {
@@ -19,7 +21,285 @@
             "VARIABLE_PLACEHOLDER": "Enter %{variable} value",
             "GO_BACK_LABEL": "Go Back",
             "SEND_MESSAGE_LABEL": "Send Message",
-            "FORM_ERROR_MESSAGE": "Please fill all variables before sending"
+            "FORM_ERROR_MESSAGE": "Please fill all variables before sending",
+            "HEADER_LABEL": "Header",
+            "MEDIA_IMAGE": "Image",
+            "MEDIA_VIDEO": "Video",
+            "MEDIA_DOCUMENT": "Document",
+            "MEDIA_URL_PLACEHOLDER": "Public link to the file (https://…)",
+            "MEDIA_NAME_LABEL": "Name",
+            "MEDIA_NAME_PLACEHOLDER": "Name the customer will see (e.g. Invoice A1.pdf)",
+            "TEMPLATE_FILE": "The template's file will be sent:",
+            "TEMPLATE_FILE_OPEN": "View file",
+            "SOURCE_TEMPLATE": "Template's file",
+            "SOURCE_UPLOAD": "Upload file",
+            "SOURCE_LINK": "Paste link",
+            "CHOOSE_FILE": "Choose file",
+            "CHANGE_FILE": "Change file",
+            "BUTTONS_LABEL": "Buttons",
+            "BUTTON_URL": "Link",
+            "BUTTON_COPY_CODE": "Code (max %{max})",
+            "ERRORS": {
+                "BODY": "Fill in all the body variables.",
+                "HEADER": "Fill in the header variables.",
+                "MEDIA_URL": "Enter the public link to the file (must start with http:// or https://).",
+                "MEDIA_FILE": "Choose the file to send.",
+                "BUTTON": "Fill in each button's value.",
+                "COPY_CODE_LENGTH": "The copy code can have up to %{max} characters."
+            }
         }
+    },
+    "WHATSAPP_TEMPLATE_EDITOR": {
+        "HEADER": "WhatsApp templates",
+        "NEW_TITLE": "New template",
+        "EDIT_TITLE": "Edit “%{name}”",
+        "DRAFT_BADGE": "Draft",
+        "NEW_DESC": "Build the message, check the preview and send it to Meta for review. If you don't finish it, save it as a draft.",
+        "DRAFT_DESC": "This is a draft: it hasn't reached Meta yet. You can change everything except the inbox.",
+        "EDIT_DESC": "Meta only lets you change the category and the content; name, language and inbox stay fixed. Saving sends the template back to review.",
+        "LOADING": "Loading template…",
+        "NOT_FOUND": "We couldn't find this template.",
+        "NO_INBOX": "Inbox: choose the WhatsApp inbox",
+        "SECTIONS": {
+            "HEADER": "Header",
+            "BODY": "Message",
+            "FOOTER": "Footer (optional)",
+            "PREVIEW": "Preview"
+        },
+        "FIELDS": {
+            "INBOX": "WhatsApp inbox",
+            "INBOX_PLACEHOLDER": "Choose an inbox",
+            "NAME": "Name",
+            "NAME_PLACEHOLDER": "payment_reminder",
+            "NAME_HINT": "Formatted automatically: lowercase, no spaces or accents. It can't change once it reaches Meta.",
+            "LANGUAGE": "Language",
+            "CATEGORY": "Category",
+            "HEADER_TEXT_PLACEHOLDER": "Header text (max. 60; may include %{variable})",
+            "UPLOAD": "Upload file",
+            "REMOVE_FILE": "Remove the uploaded file",
+            "OR_LINK": "…or paste a public link to the file (https://…)",
+            "BODY_PLACEHOLDER": "Write the message. Use variables like %{variable} for data that changes on each send.",
+            "EXAMPLES": "Variable examples: Meta reviews them and they show in the preview.",
+            "EXAMPLE_OF": "Example for %{variable}",
+            "FOOTER_PLACEHOLDER": "Short footer, no variables (e.g. your company name)",
+            "HEADER_TEXT": "Header text",
+            "HEADER_FILE": "Header file",
+            "NO_VARIABLES": "The message has no variables. Type %{variable} in the text to add one.",
+            "EXAMPLE_OF_HEADER": "Example for header %{variable}",
+            "OR_DROP": "or drop the file here"
+        },
+        "CATEGORIES": {
+            "UTILITY": "Utility",
+            "MARKETING": "Marketing",
+            "AUTHENTICATION": "Authentication"
+        },
+        "CATEGORY_HINTS": {
+            "UTILITY": "Updates about something the customer already asked for: payments, appointments, orders, shipping.",
+            "MARKETING": "Promotions, offers and invitations. Meta reviews and charges them differently from utility ones.",
+            "AUTHENTICATION": "Verification codes: they have a fixed format and are created in Meta's WhatsApp Manager."
+        },
+        "HEADER_TYPES": {
+            "NONE": "None",
+            "TEXT": "Text",
+            "IMAGE": "Image",
+            "VIDEO": "Video",
+            "DOCUMENT": "Document"
+        },
+        "LIMITS": {
+            "IMAGE": "JPG or PNG, up to 5 MB",
+            "VIDEO": "MP4, up to 16 MB",
+            "DOCUMENT": "PDF, up to 100 MB"
+        },
+        "BUTTONS": {
+            "TYPES": {
+                "QUICK_REPLY": "Quick reply",
+                "URL": "Link",
+                "PHONE_NUMBER": "Phone",
+                "COPY_CODE": "Copy code"
+            },
+            "TEXT_PLACEHOLDER": "E.g. See my order",
+            "PHONE_PLACEHOLDER": "+1…",
+            "EXAMPLE_CODE": "Sample code (max. %{max})",
+            "EXAMPLE_URL": "Full link example (https://…/12345)",
+            "REMOVE": "Remove button",
+            "EMPTY": "No buttons (they're optional). Add one with the buttons above.",
+            "GROUP_QUICK": "Quick replies",
+            "GROUP_ACTIONS": "Actions",
+            "TEXT": "Button text",
+            "TEXT_PLACEHOLDER_QUICK": "E.g. Confirm appointment",
+            "URL": "Link",
+            "URL_FIXED": "Fixed link",
+            "URL_DYNAMIC": "Ends with customer data",
+            "URL_EXAMPLE": "Full link example",
+            "URL_DYNAMIC_HINT": "When sending the template you type the end of the link (e.g. the order number).",
+            "PHONE": "Phone",
+            "PHONE_HINT": "Type the full number with the country code (+1…).",
+            "CODE_HINT": "The real code is typed when sending the template; this one is only for Meta's review.",
+            "LIMIT_TOTAL": "Meta allows up to %{max} buttons.",
+            "LIMIT_TYPE": "Meta allows %{max} of type “%{type}”."
+        },
+        "PREVIEW": {
+            "CAPTION": "This is how the customer will see it in WhatsApp.",
+            "BODY_EMPTY": "The message will show here…",
+            "COPY_CODE": "Copy code",
+            "BUTTON": "Button",
+            "DOCUMENT": "Document"
+        },
+        "ACTIONS": {
+            "SAVE_DRAFT": "Save draft",
+            "SUBMIT": "Send for review",
+            "RESUBMIT": "Save and resend"
+        },
+        "ALERTS": {
+            "DRAFT_SAVED": "Draft saved.",
+            "SUBMITTED": "Template sent to Meta for review.",
+            "RESUBMITTED": "Changes sent: the template goes back to review.",
+            "SAVE_ERROR": "The template couldn't be saved.",
+            "UPLOAD_ERROR": "The file couldn't be uploaded.",
+            "WRONG_TYPE": "That file doesn't work for this header. Accepted: %{allowed}."
+        },
+        "TABS": {
+            "CONTENT": "Content",
+            "BUTTONS": "Buttons",
+            "VARIABLES": "Variables"
+        },
+        "FORMAT": {
+            "BOLD": "Bold",
+            "ITALIC": "Italic",
+            "STRIKE": "Strike",
+            "CODE": "Code",
+            "HINT": "Wraps the selection with %{marker} (WhatsApp format)",
+            "ADD_VARIABLE": "Variable"
+        },
+        "READY": {
+            "TITLE": "Ready for Meta",
+            "ALL_GOOD": "All good: you can send it for review."
+        },
+        "LEAVE": {
+            "TITLE": "Leave without saving?",
+            "DESCRIPTION": "You have unsaved changes in this template. If you leave now, they'll be lost.",
+            "CONFIRM": "Leave without saving",
+            "CANCEL": "Keep editing"
+        },
+        "PRESETS": {
+            "LABEL": "Start from:",
+            "BLANK": "Blank",
+            "PAYMENT": "Payment reminder",
+            "APPOINTMENT": "Appointment confirmation",
+            "PROMO": "Promotion with image"
+        },
+        "NAME_TAKEN": "Name: there's already a template with that name and language in this inbox"
+    },
+    "WHATSAPP_TEMPLATE_DETAIL": {
+        "STATUS_TITLE": "Status in Meta",
+        "SUBMITTED_AT": "Last sent to Meta: %{date}",
+        "REJECTED_BECAUSE": "Meta rejected it (%{reason})",
+        "LAST_ERROR": "The last submission failed:",
+        "DETAILS_TITLE": "Details",
+        "STEPS": {
+            "DRAFT": "Draft",
+            "SUBMITTED": "Sent",
+            "PENDING": "In review",
+            "REVIEWED": "Reviewed",
+            "RESULT": "Result",
+            "APPROVED": "Approved",
+            "REJECTED": "Rejected",
+            "PAUSED": "Paused by Meta",
+            "DISABLED": "Disabled by Meta",
+            "IN_APPEAL": "In appeal",
+            "PENDING_DELETION": "Being deleted"
+        },
+        "REJECTIONS": {
+            "ABUSIVE_CONTENT": "Meta considered it abusive content. Review the text and remove anything that may sound aggressive or misleading.",
+            "INCORRECT_CATEGORY": "The category doesn't match the content. If it offers or invites to buy, it's Marketing; if it updates on something the customer already asked for, it's Utility.",
+            "INVALID_FORMAT": "The format is invalid: check the variables (no gaps, not at the start or end), the examples and that the text has no odd characters.",
+            "PROMOTIONAL": "It has promotional content in a non-Marketing category. Change it to Marketing or remove the promotion.",
+            "SCAM": "Meta considered it a possible scam. Avoid asking for sensitive data or payments in a suspicious way.",
+            "TAG_CONTENT_MISMATCH": "The content doesn't match the chosen category. Change the category or adjust the text.",
+            "OTHER": "Check the reason in WhatsApp Manager, fix it with “Edit” and send it again."
+        },
+        "QUALITY": {
+            "TITLE": "Quality",
+            "GREEN": "High",
+            "YELLOW": "Medium",
+            "RED": "Low",
+            "NONE": "Not rated"
+        },
+        "SEND": {
+            "TITLE": "Can be sent",
+            "NOT_YET": "It can be sent once Meta approves it.",
+            "CONVERSATION": "In the conversation",
+            "TRACKINGS_OK": "In follow-ups and campaigns",
+            "TRACKINGS_MISSING_FILE": "Follow-ups and campaigns: the file is missing (Edit)",
+            "TRACKINGS_NO": "Not in follow-ups and campaigns (this inbox doesn't allow it)"
+        },
+        "FIELDS": {
+            "HEADER": "Header",
+            "VARIABLES": "Variables",
+            "BUTTONS": "Buttons",
+            "META_ID": "Meta ID"
+        },
+        "ACTIONS": {
+            "META": "View in Meta",
+            "DUPLICATE": "Duplicate",
+            "EDIT": "Edit",
+            "CONTINUE_DRAFT": "Continue draft",
+            "EDIT_LOCKED": "It can't be edited while Meta reviews it or in its current status."
+        }
+    },
+    "WHATSAPP_TEMPLATE_LIST": {
+        "SEARCH": "Template name…",
+        "EMPTY": "No templates to show. Create one or sync from Meta.",
+        "EMPTY_FILTERED": "No template matches the filters.",
+        "REJECTED": "Rejected: %{reason}",
+        "QUALITY": "Quality: %{level}",
+        "FROM_META": "From Meta",
+        "FILTERS": {
+            "ALL_STATUSES": "All statuses",
+            "ALL_CHANNELS": "All inboxes",
+            "ALL_CATEGORIES": "All categories",
+            "ALL_LANGUAGES": "All languages",
+            "ALL_KINDS": "All types",
+            "CLEAR": "Clear"
+        },
+        "COLUMNS": {
+            "NAME": "Name",
+            "CHANNEL": "Inbox",
+            "LANGUAGE": "Language",
+            "CATEGORY": "Category",
+            "STATUS": "Status",
+            "SENDABLE": "Can be sent",
+            "CREATED_AT": "Created",
+            "UPDATED_AT": "Updated",
+            "ACTIONS": "Actions"
+        },
+        "SEND": {
+            "CONV_YES": "✓ Conversation",
+            "CONV_NO": "✗ Conversation",
+            "TRACK_OK": "✓ Follow-ups",
+            "TRACK_MISSING_FILE": "⚠ Follow-ups",
+            "TRACK_NO": "✗ Follow-ups"
+        },
+        "PER_PAGE": "Rows per page",
+        "DELETE": "Delete"
+    },
+    "WHATSAPP_TEMPLATE_DELETE": {
+        "TITLE": "Delete “%{name}”",
+        "DRAFT": "It's a draft: it never reached Meta, so it's only deleted here.",
+        "IN_META": "It's also deleted in Meta (this language only), and Meta won't let you reuse that name for 30 days.",
+        "CHECKING": "Checking where it's used…",
+        "USAGE_FAILED": "We couldn't check where this template is used: some sends may depend on it.",
+        "IN_USE": "This template is in use:",
+        "AGENTS": "Follow-up agents:",
+        "TRACKINGS": "Follow-ups in progress: %{count}",
+        "CAMPAIGNS": "Campaigns:",
+        "PORTALS": "Portal acknowledgment: %{names}",
+        "WILL_FAIL": "If you delete it, those sends will fail. Change the template there first.",
+        "ACKNOWLEDGE": "I understand those sends may fail until the template is changed.",
+        "CANCEL": "Cancel",
+        "CONFIRM": "Delete",
+        "CONFIRM_ANYWAY": "Delete anyway",
+        "DONE": "Template deleted.",
+        "ERROR": "The template couldn't be deleted."
     }
 }
