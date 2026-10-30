@@ -514,8 +514,149 @@ conversación.
 **Lo que hay que saber.** El nombre se fija al crear (cambiarlo = editar y volver a revisión). Contacto sin el
 dato → campo vacío y en rojo en la conversación; en automático no se manda. Las plantillas `{{1}}` siguen igual.
 
-**Decisiones abiertas.** D9a ¿lista final de nombres reservados (español, inglés o ambos)? · D9b ¿F9.4 entra? ·
-D9c sin dato en seguimientos/campañas: ¿no mandar (recomendado) o mandar con un texto por omisión?
+**Decisiones (cerradas 30/10/2026: «de los puntos D ok»).**
+- **D9a** Nombres reservados **en español** (`nombre`, `primer_nombre`, `correo`, `telefono`…), que es como
+  escriben las plantillas los clientes; los atributos personalizados entran con su clave tal cual.
+- **D9b** **Sí entra F9.4**: asociar las `{{1}}` de las plantillas viejas a un campo.
+- **D9c** Sin el dato en seguimientos/campañas: **no se manda** y queda el motivo (como `template_media_missing`).
+
+
+## 7.12 F10 — crear y editar plantillas a página completa (PLAN, sin código)
+
+**Por qué.** El modal (`Index.vue`, 1 447 líneas) junta tabla, filtros, formulario con 3 pestañas, vista previa
+y borrado. Crear una plantilla obliga a brincar entre pestañas; los ejemplos de las variables están lejos de
+su variable; los errores salen en una lista; un clic fuera o una recarga pierde lo escrito.
+
+**Molde nativo.** Macros: lista en `SettingsWrapper` + editor en página propia con `Wrapper.vue`
+(`headerTitle`, `icon`, `showBackButton`) en `/new` y `/:id/edit`. Se copia esa forma.
+
+### Rutas
+
+```
+ /settings/whatsapp-templates/list        tabla (la de hoy, sin el modal)
+ /settings/whatsapp-templates/new         crear            ?from=<id> duplicar · ?ejemplo=<clave> desde ejemplo
+ /settings/whatsapp-templates/:id         ficha (ver)
+ /settings/whatsapp-templates/:id/edit    editar
+```
+
+### Editor (`/new`, `/:id/edit`)
+
+```
+ ← Plantillas de WhatsApp  /  Nueva plantilla                [Cancelar] [Enviar a revisión]
+ ┌──────────────────────────────────────────────┬──────────────────────────────┐
+ │ 1 · DATOS                                     │  VISTA PREVIA (sticky)       │
+ │  Bandeja [Whatsapp #1563 ▾]  Idioma [es_MX ▾] │  ┌────────────────────────┐  │
+ │  Nombre  [recordatorio_pago] (se arma solo)   │  │ ▓▓▓ Factura A1.pdf     │  │
+ │  Categoría  (•) Servicio  ( ) Marketing       │  │ Hola Juan, tu pago de  │  │
+ │   «Servicio: avisos de algo que ya pidió…»    │  │ $1,250 vence el 5/11.  │  │
+ │                                               │  │ Kontrolya · No respond.│  │
+ │ 2 · ENCABEZADO                                │  │ ───────────────────────│  │
+ │  [Ninguno][Texto][Imagen][Video][Documento]   │  │   🔗 Ver estado de cta │  │
+ │  ┌ - - - - - - - - - - - - - - - - - - - ┐    │  │   📋 Copiar código     │  │
+ │  │  Arrastra el PDF aquí o Elegir archivo│    │  └────────────────────────┘  │
+ │  └ - - - - - - - - - - - - - - - - - - - ┘    │                              │
+ │                                               │  LISTA PARA META             │
+ │ 3 · MENSAJE                                   │  ✓ Datos                     │
+ │  [B] [I] [S] [</>]  [+ Variable ▾]   86/1024  │  ✓ Encabezado                │
+ │  Hola {{1}}, tu pago de {{2}} vence el {{3}}. │  ✗ Mensaje: falta ejemplo {{3}}│
+ │   {{1}} ejemplo [Juan  ]                      │  ✓ Botones (3 de 10)         │
+ │   {{2}} ejemplo [$1,250]                      │                              │
+ │   {{3}} ejemplo [      ] ← en rojo            │  Revisión de Meta: minutos   │
+ │                                               │  a 24 h                      │
+ │ 4 · PIE (opcional)  [Kontrolya · No responder]│                              │
+ │                                               │                              │
+ │ 5 · BOTONES  (3 de 10)                        │                              │
+ │  [+ Respuesta rápida] [+ Liga] [+ Teléfono]   │                              │
+ │  [+ Copiar código]                            │                              │
+ │  ⋮⋮ 🔗 Ver estado de cta  https://…/{{1}}  🗑 │                              │
+ │       ejemplo [https://…/A-1043]              │                              │
+ └──────────────────────────────────────────────┴──────────────────────────────┘
+   (pantalla angosta: la vista previa y la lista bajan al final)
+```
+
+1. **Secciones apiladas, sin pestañas**, en el orden en que se lee el mensaje.
+2. **Vista previa en vivo y fija** con forma de burbuja de WhatsApp: archivo real, texto con los ejemplos,
+   pie y botones (reusa la vista previa de F6).
+3. **Ejemplo junto a su variable**: aparece al escribir `{{n}}` y se va al borrarla; ya no hay sección aparte.
+4. **«+ Variable»** inserta la siguiente `{{n}}` en el cursor (sin huecos de numeración). Con F9 ofrece los
+   campos de Chatwoot (`{{nombre}}`, atributos).
+5. **Formato** B / I / S / `</>` (los `*` `_` `~` ``` de WhatsApp) y contador de caracteres por campo.
+6. **«Lista para Meta»**: los errores de `validateTemplate` agrupados por sección (por su prefijo: `Nombre:`,
+   `Categoría:`, `Cabecera`, `Body:`, `Pie:`, `Botón #n`, `Ejemplos:`) y además marcados en su campo.
+   «Enviar a revisión» se activa solo con todo en verde.
+7. **Botones por tipo**: se agregan con un clic, se reordenan arrastrando (`vuedraggable`, ya en el proyecto),
+   muestran «3 de 10» y se desactiva el tipo que ya llegó a su límite (2 URL, 1 teléfono, 1 código). Las
+   respuestas rápidas se acomodan solas al inicio.
+8. **Archivo de muestra**: arrastrar y soltar o elegir, con los límites de Meta escritos ahí.
+9. **Categoría con explicación** corta (Servicio vs Marketing: Meta revisa y cobra distinto).
+10. **Aviso al salir sin guardar** (ruta y cierre de pestaña).
+11. Al editar: solo cambian categoría y contenido (Meta deja fijos nombre, idioma y bandeja) y se avisa que
+    vuelve a revisión.
+
+### Ficha (`/:id`)
+
+```
+ ← Plantillas de WhatsApp  /  recordatorio_pago            [Duplicar] [Ver en Meta] [Editar]
+ ┌──────────────────────────────────────────────┬──────────────────────────────┐
+ │ ESTADO EN META                                │  VISTA PREVIA                │
+ │  Enviada 30/10 18:20 → En revisión → ✓ Aprobada│  (la burbuja)               │
+ │  Calidad: 🟢 Alta                              │                              │
+ │  (si se rechazó: el motivo de Meta y qué hacer)│                              │
+ │ SE PUEDE ENVIAR                               │                              │
+ │  Conversación ✓ · Seguimientos ✓ (con archivo)│                              │
+ │ DATOS                                         │                              │
+ │  Bandeja · Idioma · Categoría · Variables     │                              │
+ └──────────────────────────────────────────────┴──────────────────────────────┘
+```
+
+Clic en una fila de la tabla → ficha. Borrar sigue en la tabla (con su confirmación).
+
+### Empezar desde un ejemplo
+
+`/new` arranca con tres tarjetas: **En blanco** · **Recordatorio de pago** (Servicio, documento, «Hola {{1}},
+tu pago de {{2}} vence el {{3}}.», botón liga) · **Confirmación de cita** (Servicio, texto, respuestas rápidas
+Confirmar / Cambiar) · **Promoción con imagen** (Marketing, imagen, botón copiar código). Elegir una llena el
+formulario; todo se puede cambiar. Los ejemplos viven en un archivo puro (`templatePresets.js`).
+
+### Piezas (frontend; el backend no cambia)
+
+```
+ whatsappTemplates/
+   Index.vue                 tabla + filtros + borrar (sin el formulario)
+   TemplateEditor.vue        página /new y /:id/edit (carga, guarda, aviso al salir)
+   TemplateDetail.vue        página /:id
+   editor/SectionData.vue · SectionHeader.vue · SectionBody.vue · SectionFooter.vue · SectionButtons.vue
+   editor/TemplatePreview.vue   burbuja (sale de Index.vue, F6)
+   editor/ReadyChecklist.vue    «Lista para Meta»
+   templateScreen.js · templatePresets.js · editorSections.js (errores → sección)   puros, con spec
+```
+
+Componentes nativos: `Wrapper.vue` (encabezado con regreso), `woot-input`, `woot-button`, `ResizableTextArea`,
+`woot-loading-state`. Los textos nuevos en i18n (es / en), con tú. Plantillas `.vue` sin `?.` ni `??`.
+
+### Fases
+
+- **F10.1** Rutas + `TemplateEditor` con las secciones y la vista previa (paridad con el modal) · quitar el modal.
+- **F10.2** Ejemplos junto a su variable, «+ Variable», formato, contadores, «Lista para Meta».
+- **F10.3** Botones por tipo con límites y arrastrar · archivo con arrastrar y soltar · aviso al salir.
+- **F10.4** Ficha `/:id` + Duplicar.
+- **F10.5** Empezar desde un ejemplo.
+
+### Riesgos
+
+| Riesgo | Mitigación |
+|---|---|
+| Partir `Index.vue` rompe lo que ya funciona (F6: subir, filtros, «se puede enviar») | Mover sin reescribir; la lógica ya está en `templateScreen.js` / validador con spec |
+| `Index.vue` arrastra 640+ hallazgos de lint | Los archivos nuevos nacen limpios (eslint en verde); `Index.vue` adelgaza |
+| Aviso al salir molesto | Solo si hubo cambios (`isDirty`) |
+
+### Decisiones (cerradas 30/10/2026: «de los puntos D ok»)
+
+- **D10a** Los tres ejemplos de arranque **como están** (Recordatorio de pago, Confirmación de cita,
+  Promoción con imagen).
+- **D10b** **Sí «Guardar borrador»**: guarda la fila en DRAFT sin llamar a Meta (el estado ya existe); se manda
+  a revisión después desde el editor o la ficha. Entra en F10.1.
+- **D10c** **Un idioma por vez**, como hoy; para otro idioma: Duplicar y cambiar idioma.
 
 ---
 
@@ -538,3 +679,6 @@ D9c sin dato en seguimientos/campañas: ¿no mandar (recomendado) o mandar con u
 - [ ] F8: «Autenticación» ya no aparece al crear; cuerpo que termina en `{{1}}` avisa antes de guardar
 - [ ] F7: «Subir archivo» → elegir un PDF de la máquina → el cliente lo recibe con su nombre; la burbuja lo muestra
 - [ ] F7: subir una imagen en una plantilla de documento → no deja elegirla / avisa el motivo
+- [ ] F10: crear desde «Recordatorio de pago» → ejemplos junto a sus variables → «Lista para Meta» en verde → enviar
+- [ ] F10: salir con cambios sin guardar → avisa; recargar `/:id/edit` → sigue en la misma plantilla
+- [ ] F10: clic en una fila → ficha con estado en Meta → Duplicar abre el editor con todo copiado
