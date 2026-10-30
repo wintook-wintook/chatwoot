@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_31_280000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_03_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2020,6 +2020,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_31_280000) do
     t.json "additional_attributes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "template_name"
+    t.string "template_language"
+    t.string "template_category"
+    t.string "template_namespace"
+    t.json "template_params"
+    t.boolean "is_template", default: false
     t.index ["account_id"], name: "index_scheduled_messages_on_account_id"
     t.index ["conversation_id"], name: "index_scheduled_messages_on_conversation_id"
     t.index ["scheduled_at"], name: "index_scheduled_messages_on_scheduled_at"
