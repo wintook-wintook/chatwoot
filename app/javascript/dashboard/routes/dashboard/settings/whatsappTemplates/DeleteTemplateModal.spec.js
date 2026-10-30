@@ -11,6 +11,7 @@ const sinUso = {
   agents: [],
   trackings_count: 0,
   campaigns: [],
+  scheduled_count: 0,
   portals: [],
 };
 const enMeta = { id: 7, name: 'pago', status: 'APPROVED', local_only: false };

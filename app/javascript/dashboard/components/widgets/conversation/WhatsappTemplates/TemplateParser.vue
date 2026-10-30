@@ -19,14 +19,7 @@
  * el agente sube de su máquina para este envío, o una liga pública.
  */
 import { ref, computed, onMounted } from 'vue';
-import WhatsappTemplateHeaderAPI from 'dashboard/api/whatsappTemplateHeader';
-
-// Lo que Meta acepta en el encabezado (Whatsapp::ResumableUploadService::LIMITS).
-const ACCEPTED_TYPES = {
-  image: 'image/jpeg,image/png',
-  video: 'video/mp4,video/3gpp',
-  document: 'application/pdf',
-};
+import TemplateExtraFields from './TemplateExtraFields.vue';
 import {
   describeTemplate,
   buildProcessedParams,
@@ -36,6 +29,7 @@ import {
 } from './templateForm';
 
 export default {
+  components: { TemplateExtraFields },
   props: {
     template: {
       type: Object,
@@ -59,30 +53,12 @@ export default {
     };
 
     const processedParams = ref({});
-    const headerParams = ref({});
-    const buttonParams = ref({});
-    const mediaUrl = ref('');
-    const mediaName = ref('');
+    // Archivo, encabezado y botones: los captura TemplateExtraFields.
+    const extraValues = ref({});
     const errors = ref([]);
-    // El archivo guardado de la plantilla ({ media_name, preview_url }), el subido para este
-    // envío ({ signed_id, filename, preview_url }) y cuál se usa.
-    const templateFile = ref(null);
-    const uploadedFile = ref(null);
-    const mediaSource = ref('link');
-    const uploading = ref(false);
-    const uploadError = ref('');
-    const fileInput = ref(null);
 
     const info = computed(() => describeTemplate(props.template));
-    // Lo que pide además del cuerpo, solo si la bandeja lo puede mandar.
-    const extras = computed(() =>
-      props.fullTemplate
-        ? info.value
-        : { media: null, headerVars: [], buttons: [] }
-    );
-    const paramButtons = computed(() =>
-      extras.value.buttons.filter(b => b.needsParam)
-    );
+    const showMedia = computed(() => props.fullTemplate && info.value.media);
 
     const templateString = computed(() => {
       return props.template.components.find(
@@ -102,82 +78,21 @@ export default {
     });
 
     const values = computed(() => ({
+      ...extraValues.value,
       body: processedParams.value,
-      header: headerParams.value,
-      buttons: buttonParams.value,
-      mediaUrl: mediaUrl.value,
-      mediaName: mediaName.value,
-      templateFile:
-        mediaSource.value === 'template' ? templateFile.value : null,
-      mediaSource: mediaSource.value,
-      uploadedFile: uploadedFile.value,
     }));
-    const mediaSources = computed(() =>
-      (templateFile.value ? ['template'] : []).concat(['upload', 'link'])
-    );
-    const acceptedTypes = computed(
-      () => ACCEPTED_TYPES[extras.value.media] || ''
-    );
-
-    const chooseFile = () => {
-      if (fileInput.value) fileInput.value.click();
-    };
-    const onFileChosen = async event => {
-      const [file] = event.target.files || [];
-      event.target.value = '';
-      if (!file) return;
-      uploading.value = true;
-      uploadError.value = '';
-      try {
-        const { data } = await WhatsappTemplateHeaderAPI.upload(props.inboxId, {
-          mediaType: extras.value.media,
-          file,
-        });
-        uploadedFile.value = data;
-        if (extras.value.media === 'document') mediaName.value = data.filename;
-      } catch (error) {
-        const data = (error && error.response && error.response.data) || {};
-        uploadError.value = data.error || '';
-        uploadedFile.value = null;
-      } finally {
-        uploading.value = false;
-      }
-    };
-
-    const loadTemplateFile = async () => {
-      if (!extras.value.media || !props.inboxId) return;
-      try {
-        const { data } = await WhatsappTemplateHeaderAPI.show(props.inboxId, {
-          name: props.template.name,
-          language: props.template.language,
-        });
-        if (!data.available) return;
-        templateFile.value = {
-          media_name: data.media_name,
-          preview_url: data.preview_url,
-        };
-        mediaSource.value = 'template';
-      } catch {
-        // Sin el archivo guardado se pide la liga, como antes.
-      }
-    };
 
     const preview = computed(() => renderPreview(props.template, values.value));
 
     const generateVariables = () => {
-      const blank = list =>
-        list.reduce((acc, variable) => ({ ...acc, [variable]: '' }), {});
-      headerParams.value = blank(extras.value.headerVars);
-      buttonParams.value = paramButtons.value.reduce(
-        (acc, b) => ({ ...acc, [b.index]: '' }),
-        {}
-      );
-
       const matchedVariables = templateString.value.match(/{{([^}]+)}}/g);
       if (!matchedVariables) return;
 
       const finalVars = matchedVariables.map(i => processVariable(i));
-      processedParams.value = blank(finalVars);
+      processedParams.value = finalVars.reduce(
+        (acc, variable) => ({ ...acc, [variable]: '' }),
+        {}
+      );
     };
 
     const resetTemplate = () => {
@@ -206,30 +121,13 @@ export default {
       emit('sendMessage', payload);
     };
 
-    onMounted(() => {
-      generateVariables();
-      loadTemplateFile();
-    });
+    onMounted(generateVariables);
 
     return {
       processedParams,
-      headerParams,
-      buttonParams,
-      mediaUrl,
-      mediaName,
+      extraValues,
       errors,
-      templateFile,
-      uploadedFile,
-      mediaSource,
-      mediaSources,
-      uploading,
-      uploadError,
-      fileInput,
-      acceptedTypes,
-      chooseFile,
-      onFileChosen,
-      extras,
-      paramButtons,
+      showMedia,
       preview,
       variables,
       templateString,
@@ -245,7 +143,7 @@ export default {
 <template>
   <div class="w-full">
     <div class="template__preview">
-      <p v-if="preview.media && extras.media" class="preview__media">
+      <p v-if="showMedia" class="preview__media">
         {{
           $t(`WHATSAPP_TEMPLATES.PARSER.MEDIA_${preview.media.toUpperCase()}`)
         }}
@@ -266,165 +164,33 @@ export default {
       </div>
     </div>
 
-    <div v-if="extras.media" class="template__variables-container">
-      <p class="variables-label">
-        {{ $t('WHATSAPP_TEMPLATES.PARSER.HEADER_LABEL') }}
-      </p>
-      <div class="media-sources">
-        <woot-button
-          v-for="origen in mediaSources"
-          :key="origen"
-          size="small"
-          :variant="mediaSource === origen ? 'smooth' : 'clear'"
-          @click="mediaSource = origen"
+    <TemplateExtraFields
+      :template="template"
+      :enabled="fullTemplate"
+      :inbox-id="inboxId"
+      @change="extraValues = $event"
+    >
+      <div v-if="variables" class="template__variables-container">
+        <p class="variables-label">
+          {{ $t('WHATSAPP_TEMPLATES.PARSER.VARIABLES_LABEL') }}
+        </p>
+        <div
+          v-for="(variable, key) in processedParams"
+          :key="key"
+          class="template__variable-item"
         >
-          {{ $t(`WHATSAPP_TEMPLATES.PARSER.SOURCE_${origen.toUpperCase()}`) }}
-        </woot-button>
+          <span class="variable-label">
+            {{ key }}
+          </span>
+          <woot-input
+            v-model="processedParams[key]"
+            type="text"
+            class="variable-input"
+            :styles="{ marginBottom: 0 }"
+          />
+        </div>
       </div>
-      <div v-if="mediaSource === 'template'" class="template-file">
-        <span>{{ $t('WHATSAPP_TEMPLATES.PARSER.TEMPLATE_FILE') }}</span>
-        <a
-          :href="templateFile.preview_url"
-          target="_blank"
-          rel="noreferrer noopener nofollow"
-        >
-          {{
-            templateFile.media_name ||
-            $t('WHATSAPP_TEMPLATES.PARSER.TEMPLATE_FILE_OPEN')
-          }}
-        </a>
-      </div>
-      <div v-else-if="mediaSource === 'upload'" class="template-file">
-        <input
-          ref="fileInput"
-          type="file"
-          class="hidden"
-          :accept="acceptedTypes"
-          @change="onFileChosen"
-        />
-        <woot-button
-          size="small"
-          variant="smooth"
-          icon="attach"
-          :is-loading="uploading"
-          @click="chooseFile"
-        >
-          {{
-            uploadedFile
-              ? $t('WHATSAPP_TEMPLATES.PARSER.CHANGE_FILE')
-              : $t('WHATSAPP_TEMPLATES.PARSER.CHOOSE_FILE')
-          }}
-        </woot-button>
-        <a
-          v-if="uploadedFile"
-          :href="uploadedFile.preview_url"
-          target="_blank"
-          rel="noreferrer noopener nofollow"
-        >
-          {{ uploadedFile.filename }}
-        </a>
-        <span v-if="uploadError" class="error">{{ uploadError }}</span>
-      </div>
-      <div v-else class="template__variable-item">
-        <span class="variable-label">
-          {{
-            $t(`WHATSAPP_TEMPLATES.PARSER.MEDIA_${extras.media.toUpperCase()}`)
-          }}
-        </span>
-        <woot-input
-          v-model="mediaUrl"
-          type="url"
-          class="variable-input"
-          :placeholder="$t('WHATSAPP_TEMPLATES.PARSER.MEDIA_URL_PLACEHOLDER')"
-          :styles="{ marginBottom: 0 }"
-        />
-      </div>
-      <div
-        v-if="extras.media === 'document' && mediaSource !== 'template'"
-        class="template__variable-item"
-      >
-        <span class="variable-label">
-          {{ $t('WHATSAPP_TEMPLATES.PARSER.MEDIA_NAME_LABEL') }}
-        </span>
-        <woot-input
-          v-model="mediaName"
-          type="text"
-          class="variable-input"
-          :placeholder="$t('WHATSAPP_TEMPLATES.PARSER.MEDIA_NAME_PLACEHOLDER')"
-          :styles="{ marginBottom: 0 }"
-        />
-      </div>
-    </div>
-
-    <div v-if="extras.headerVars.length" class="template__variables-container">
-      <p class="variables-label">
-        {{ $t('WHATSAPP_TEMPLATES.PARSER.HEADER_LABEL') }}
-      </p>
-      <div
-        v-for="(variable, key) in headerParams"
-        :key="`h-${key}`"
-        class="template__variable-item"
-      >
-        <span class="variable-label">
-          {{ key }}
-        </span>
-        <woot-input
-          v-model="headerParams[key]"
-          type="text"
-          class="variable-input"
-          :styles="{ marginBottom: 0 }"
-        />
-      </div>
-    </div>
-
-    <div v-if="variables" class="template__variables-container">
-      <p class="variables-label">
-        {{ $t('WHATSAPP_TEMPLATES.PARSER.VARIABLES_LABEL') }}
-      </p>
-      <div
-        v-for="(variable, key) in processedParams"
-        :key="key"
-        class="template__variable-item"
-      >
-        <span class="variable-label">
-          {{ key }}
-        </span>
-        <woot-input
-          v-model="processedParams[key]"
-          type="text"
-          class="variable-input"
-          :styles="{ marginBottom: 0 }"
-        />
-      </div>
-    </div>
-
-    <div v-if="paramButtons.length" class="template__variables-container">
-      <p class="variables-label">
-        {{ $t('WHATSAPP_TEMPLATES.PARSER.BUTTONS_LABEL') }}
-      </p>
-      <div
-        v-for="boton in paramButtons"
-        :key="`b-${boton.index}`"
-        class="template__variable-item"
-      >
-        <span class="variable-label">
-          {{
-            boton.type === 'COPY_CODE'
-              ? $t('WHATSAPP_TEMPLATES.PARSER.BUTTON_COPY_CODE', {
-                  max: copyCodeMax,
-                })
-              : boton.text || $t('WHATSAPP_TEMPLATES.PARSER.BUTTON_URL')
-          }}
-        </span>
-        <woot-input
-          v-model="buttonParams[boton.index]"
-          type="text"
-          class="variable-input"
-          :placeholder="boton.url"
-          :styles="{ marginBottom: 0 }"
-        />
-      </div>
-    </div>
+    </TemplateExtraFields>
 
     <p v-for="error in errors" :key="error" class="error">
       {{
@@ -469,18 +235,6 @@ export default {
 
 .template__variables-container {
   @apply p-2.5;
-}
-
-.media-sources {
-  @apply flex flex-wrap gap-1 mb-2.5;
-}
-
-.template-file {
-  @apply flex flex-wrap items-center gap-2 mb-2.5 text-sm text-slate-700 dark:text-slate-200;
-
-  a {
-    @apply text-woot-600 dark:text-woot-300 underline break-all;
-  }
 }
 
 .variables-label {

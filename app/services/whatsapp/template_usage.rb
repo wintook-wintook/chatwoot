@@ -9,13 +9,11 @@
 #   agentes       tracking_templates.whatsapp_templates (los seguimientos nuevos la heredan)
 #   seguimientos  contact_trackings.whatsapp_templates, en los que siguen vivos
 #   campañas      las que no han terminado y usan uno de esos agentes
+#   programados   scheduled_messages sin enviar (por nombre e idioma)
 #   portales      case_portals.acuse_template_name (por nombre e idioma)
 #
 # Agentes, seguimientos y campañas guardan solo el nombre: si queda el mismo nombre en otro
 # idioma pueden seguir mandándolo, así que ahí no hay nada que avisar.
-#
-# Los mensajes programados no cuentan: su tabla no tiene las columnas de plantilla que usa
-# ScheduledMessage (is_template, template_name…), así que hoy no se pueden guardar.
 # ================================================================================
 class Whatsapp::TemplateUsage
   LIVE_TRACKINGS = %w[pending scheduled active paused].freeze
@@ -37,6 +35,7 @@ class Whatsapp::TemplateUsage
       agents: agentes.map { |a| { id: a.id, name: a.name } },
       trackings_count: other_language? ? 0 : trackings_count,
       campaigns: campaigns_of(agentes).map { |c| { id: c.id, name: c.name } },
+      scheduled_count: scheduled_count,
       portals: portals.map { |p| { id: p.id, name: p.name } }
     }
   end
@@ -63,6 +62,13 @@ class Whatsapp::TemplateUsage
     return [] if agentes.empty?
 
     TrackingCampaign.where(tracking_template_id: agentes.map(&:id)).where.not(status: 'finished').select(:id, :name)
+  end
+
+  def scheduled_count
+    ScheduledMessage.joins(:conversation)
+                    .where(sent: false, is_template: true, template_name: @template.name, template_language: @template.language,
+                           conversations: { inbox_id: @inbox.id })
+                    .count
   end
 
   def portals

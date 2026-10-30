@@ -118,18 +118,50 @@ export function buildProcessedParams(
   } else if (info.headerVars.length) {
     params.header = { ...(valores.header || {}) };
   }
-  // Un lugar por botón, en su orden: el índice es el que lee Meta. Los que no llevan
-  // dato van vacíos y el procesador los salta.
-  if (info.buttons.some(b => b.needsParam)) {
-    params.buttons = info.buttons.map(b => {
-      if (!b.needsParam) return null;
-      return {
-        type: b.type === 'COPY_CODE' ? 'copy_code' : 'url',
-        parameter: ((valores.buttons || {})[b.index] || '').trim(),
-      };
-    });
+  // Solo los que llevan dato, cada uno con su posición en la plantilla (es la que lee
+  // Meta): dejar un null en el lugar de los otros no sirve, Rails los quita al recibirlos.
+  const conDato = info.buttons.filter(b => b.needsParam);
+  if (conDato.length) {
+    params.buttons = conDato.map(b => ({
+      type: b.type === 'COPY_CODE' ? 'copy_code' : 'url',
+      index: b.index,
+      parameter: ((valores.buttons || {})[b.index] || '').trim(),
+    }));
   }
   return params;
+}
+
+// El camino de regreso de buildProcessedParams, para editar un programado: separa el
+// cuerpo de lo que captura TemplateExtraFields. { body, initial }
+export function valuesFromProcessedParams(params) {
+  const guardado = params || {};
+  const porComponente = ['body', 'header', 'buttons'].some(k => k in guardado);
+  if (!porComponente) return { body: { ...guardado }, initial: {} };
+
+  const header = guardado.header || {};
+  const archivo = 'source' in header || 'media_url' in header;
+  const initial = {
+    buttons: (guardado.buttons || []).reduce(
+      (acc, b) => (b ? { ...acc, [b.index]: b.parameter } : acc),
+      {}
+    ),
+  };
+  if (!archivo)
+    return { body: guardado.body || {}, initial: { ...initial, header } };
+
+  return {
+    body: guardado.body || {},
+    initial: {
+      ...initial,
+      mediaSource: header.source || 'link',
+      mediaUrl: header.media_url || '',
+      mediaName: header.media_name || '',
+      uploadedFile:
+        header.source === 'upload'
+          ? { signed_id: header.signed_id, filename: header.media_name }
+          : null,
+    },
+  };
 }
 
 // Qué falta o está mal, para no mandar algo que Meta va a rechazar.

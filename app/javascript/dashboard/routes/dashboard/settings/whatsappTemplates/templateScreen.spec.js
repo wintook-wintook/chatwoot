@@ -104,6 +104,42 @@ describe('sendability fuera de WhatsApp Cloud', () => {
   });
 });
 
+describe('sendability en seguimientos', () => {
+  const base = { status: 'APPROVED', header_type: 'text', buttons: [] };
+
+  it('no sirven las que piden un dato que seguimientos no llena', () => {
+    const copiar = { ...base, buttons: [{ type: 'COPY_CODE' }] };
+    const liga = {
+      ...base,
+      buttons: [{ type: 'URL', url: 'https://x.mx/{{1}}' }],
+    };
+    const encabezado = { ...base, header_content: 'Pedido {{1}}' };
+    const conArchivo = {
+      ...copiar,
+      header_type: 'document',
+      header_media_url: 'x',
+    };
+
+    [copiar, liga, encabezado, conArchivo].forEach(plantilla => {
+      expect(sendability(plantilla, cloud)).toEqual({
+        conversation: true,
+        trackings: 'needs_data',
+      });
+    });
+  });
+
+  it('la liga fija y las respuestas rápidas sí sirven', () => {
+    const fijos = [
+      { type: 'URL', url: 'https://x.mx' },
+      { type: 'QUICK_REPLY' },
+    ];
+
+    expect(sendability({ ...base, buttons: fijos }, cloud).trackings).toBe(
+      'ok'
+    );
+  });
+});
+
 describe('statusSteps', () => {
   const estados = status => statusSteps(status).map(p => `${p.key}:${p.state}`);
 
@@ -176,6 +212,7 @@ describe('templateInUse', () => {
     agents: [],
     trackings_count: 0,
     campaigns: [],
+    scheduled_count: 0,
     portals: [],
   };
 
@@ -184,5 +221,6 @@ describe('templateInUse', () => {
     expect(templateInUse(null)).toBe(false);
     expect(templateInUse({ ...vacio, trackings_count: 2 })).toBe(true);
     expect(templateInUse({ ...vacio, portals: [{ id: 1 }] })).toBe(true);
+    expect(templateInUse({ ...vacio, scheduled_count: 1 })).toBe(true);
   });
 });

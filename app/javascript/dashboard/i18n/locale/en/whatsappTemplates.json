@@ -231,7 +231,8 @@
             "CONVERSATION": "In the conversation",
             "TRACKINGS_OK": "In follow-ups and campaigns",
             "TRACKINGS_MISSING_FILE": "Follow-ups and campaigns: the file is missing (Edit)",
-            "TRACKINGS_NO": "Not in follow-ups and campaigns (this inbox doesn't allow it)"
+            "TRACKINGS_NO": "Not in follow-ups and campaigns (this inbox doesn't allow it)",
+            "TRACKINGS_NEEDS_DATA": "Not in follow-ups and campaigns: it needs header or button data they can't fill"
         },
         "FIELDS": {
             "HEADER": "Header",
@@ -278,7 +279,8 @@
             "CONV_NO": "✗ Conversation",
             "TRACK_OK": "✓ Follow-ups",
             "TRACK_MISSING_FILE": "⚠ Follow-ups",
-            "TRACK_NO": "✗ Follow-ups"
+            "TRACK_NO": "✗ Follow-ups",
+            "TRACK_NEEDS_DATA": "✗ Follow-ups"
         },
         "PER_PAGE": "Rows per page",
         "DELETE": "Delete"
@@ -300,6 +302,7 @@
         "CONFIRM": "Delete",
         "CONFIRM_ANYWAY": "Delete anyway",
         "DONE": "Template deleted.",
-        "ERROR": "The template couldn't be deleted."
+        "ERROR": "The template couldn't be deleted.",
+        "SCHEDULED": "Scheduled messages not sent yet: %{count}"
     }
 }

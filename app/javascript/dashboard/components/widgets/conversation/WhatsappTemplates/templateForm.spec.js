@@ -4,6 +4,7 @@ import {
   validateValues,
   renderPreview,
   variablesIn,
+  valuesFromProcessedParams,
 } from './templateForm';
 
 // feat/plantillas_whatsapp_mejoras F2 — docs/plantillas_whatsapp_mejoras_plan.md §4
@@ -146,10 +147,10 @@ describe('buildProcessedParams', () => {
     ).toEqual({
       body: { 1: 'Ana' },
       header: { 1: 'A1' },
+      // Sin null: Rails los quita y los botones cambiarían de posición.
       buttons: [
-        null,
-        { type: 'url', parameter: 'A1' },
-        { type: 'copy_code', parameter: 'PROMO10' },
+        { type: 'url', index: 1, parameter: 'A1' },
+        { type: 'copy_code', index: 2, parameter: 'PROMO10' },
       ],
     });
   });
@@ -300,5 +301,69 @@ describe('con un archivo subido', () => {
         { components: true }
       )
     ).toEqual(['MEDIA_FILE']);
+  });
+});
+
+// feat/plantillas_variables_nombre F4 — editar un programado
+describe('valuesFromProcessedParams', () => {
+  it('el formato de siempre es solo el cuerpo', () => {
+    expect(valuesFromProcessedParams({ 1: 'Ana' })).toEqual({
+      body: { 1: 'Ana' },
+      initial: {},
+    });
+    expect(valuesFromProcessedParams(null).body).toEqual({});
+  });
+
+  it('recupera liga, botones y variables del encabezado', () => {
+    expect(
+      valuesFromProcessedParams({
+        body: { 1: 'Ana' },
+        header: { media_url: 'https://x.mx/f.pdf', media_name: 'F.pdf' },
+        buttons: [{ type: 'url', index: 1, parameter: 'A1' }],
+      })
+    ).toEqual({
+      body: { 1: 'Ana' },
+      initial: {
+        buttons: { 1: 'A1' },
+        mediaSource: 'link',
+        mediaUrl: 'https://x.mx/f.pdf',
+        mediaName: 'F.pdf',
+        uploadedFile: null,
+      },
+    });
+    expect(
+      valuesFromProcessedParams({ header: { 1: 'A1' } }).initial.header
+    ).toEqual({ 1: 'A1' });
+  });
+
+  it('recupera el archivo de la plantilla y el subido', () => {
+    expect(
+      valuesFromProcessedParams({ header: { source: 'template' } }).initial
+        .mediaSource
+    ).toBe('template');
+    expect(
+      valuesFromProcessedParams({
+        header: { source: 'upload', signed_id: 'abc', media_name: 'C.pdf' },
+      }).initial.uploadedFile
+    ).toEqual({ signed_id: 'abc', filename: 'C.pdf' });
+  });
+
+  it('ida y vuelta: lo capturado regresa igual', () => {
+    const valores = {
+      body: { 1: 'Ana' },
+      header: { 1: 'A1' },
+      buttons: { 1: 'A1', 2: 'PROMO10' },
+    };
+    const guardado = buildProcessedParams(conTodo, valores, {
+      components: true,
+    });
+
+    const { body, initial } = valuesFromProcessedParams(guardado);
+
+    expect(body).toEqual(valores.body);
+    expect(initial).toMatchObject({
+      header: valores.header,
+      buttons: valores.buttons,
+    });
   });
 });

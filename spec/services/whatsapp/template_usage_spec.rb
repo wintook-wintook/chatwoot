@@ -23,7 +23,7 @@ RSpec.describe Whatsapp::TemplateUsage do
   end
 
   it 'sin uso devuelve todo vacío' do
-    expect(uso).to eq(agents: [], trackings_count: 0, campaigns: [], portals: [])
+    expect(uso).to eq(agents: [], trackings_count: 0, campaigns: [], scheduled_count: 0, portals: [])
   end
 
   it 'cuenta agentes y seguimientos vivos de esa bandeja, no los terminados ni otra plantilla' do
@@ -51,5 +51,19 @@ RSpec.describe Whatsapp::TemplateUsage do
                                 acuse_template_language: 'es_MX')
 
     expect(uso).to include(campaigns: [{ id: viva.id, name: viva.name }], portals: [{ id: portal.id, name: portal.name }])
+  end
+
+  it 'cuenta los programados sin enviar de esa bandeja, por nombre e idioma' do
+    conversation = create(:conversation, account: account, inbox: inbox, contact: contact)
+    datos = { account: account, conversation: conversation, user: create(:user, account: account), content: 'x',
+              scheduled_at: 1.day.from_now, is_template: true, template_name: 'pago', template_language: 'es_MX',
+              template_category: 'UTILITY' }
+    ScheduledMessage.create!(datos)
+    ScheduledMessage.create!(datos.merge(sent: true))
+    ScheduledMessage.create!(datos.merge(template_language: 'en_US'))
+    otra = create(:conversation, account: account, inbox: create(:inbox, account: account), contact: contact)
+    ScheduledMessage.create!(datos.merge(conversation: otra))
+
+    expect(uso[:scheduled_count]).to eq(1)
   end
 end

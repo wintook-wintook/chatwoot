@@ -231,7 +231,8 @@
             "CONVERSATION": "En la conversación",
             "TRACKINGS_OK": "En seguimientos y campañas",
             "TRACKINGS_MISSING_FILE": "Seguimientos y campañas: falta subir el archivo (Editar)",
-            "TRACKINGS_NO": "En seguimientos y campañas no (esta bandeja no lo permite)"
+            "TRACKINGS_NO": "En seguimientos y campañas no (esta bandeja no lo permite)",
+            "TRACKINGS_NEEDS_DATA": "Seguimientos y campañas no: pide un dato en el encabezado o un botón que no pueden llenar"
         },
         "FIELDS": {
             "HEADER": "Encabezado",
@@ -278,7 +279,8 @@
             "CONV_NO": "✗ Conversación",
             "TRACK_OK": "✓ Seguimientos",
             "TRACK_MISSING_FILE": "⚠ Seguimientos",
-            "TRACK_NO": "✗ Seguimientos"
+            "TRACK_NO": "✗ Seguimientos",
+            "TRACK_NEEDS_DATA": "✗ Seguimientos"
         },
         "PER_PAGE": "Filas por página",
         "DELETE": "Eliminar"
@@ -300,6 +302,7 @@
         "CONFIRM": "Eliminar",
         "CONFIRM_ANYWAY": "Eliminar de todos modos",
         "DONE": "Plantilla eliminada.",
-        "ERROR": "No se pudo eliminar la plantilla."
+        "ERROR": "No se pudo eliminar la plantilla.",
+        "SCHEDULED": "Mensajes programados sin enviar: %{count}"
     }
 }
