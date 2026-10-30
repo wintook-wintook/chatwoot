@@ -71,6 +71,24 @@ RSpec.describe 'WhatsApp Templates API', type: :request do
       expect(body[:meta_template_id]).to start_with('dry-run-')
     end
 
+    # feat/plantillas_whatsapp_mejoras F10 (D10b)
+    it 'con draft guarda un borrador sin llamar a Meta, y luego se edita y se manda' do
+      payload[:whatsapp_template][:body_text] = 'a medias'
+      post "/api/v1/accounts/#{account.id}/whatsapp/templates",
+           params: payload.merge(draft: true), headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:created)
+      borrador = response.parsed_body
+      expect(borrador).to include('status' => 'DRAFT', 'editable' => true, 'local_only' => true)
+
+      patch "/api/v1/accounts/#{account.id}/whatsapp/templates/#{borrador['id']}",
+            params: { whatsapp_template: { body_text: 'Hola {{1}}.', sample_values: { body: ['Juan'] } } },
+            headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['status']).to eq('PENDING')
+    end
+
     it 'devuelve 422 con error por campo si es inválido' do
       payload[:whatsapp_template][:name] = 'Mal Nombre'
       post "/api/v1/accounts/#{account.id}/whatsapp/templates",

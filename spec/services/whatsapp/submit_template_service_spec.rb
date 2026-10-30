@@ -162,6 +162,58 @@ RSpec.describe Whatsapp::SubmitTemplateService do
     end
   end
 
+  # feat/plantillas_whatsapp_mejoras F10: «Guardar borrador» (D10b).
+  describe '#save_draft' do
+    before { allow(GlobalConfigService).to receive(:load).with('WHATSAPP_TEMPLATES_DRY_RUN', false).and_return(false) }
+
+    it 'guarda una plantilla a medias como DRAFT sin llamar a Meta ni exigir sus reglas' do
+      allow(provider).to receive(:create_template)
+
+      result = described_class.new(channel: channel, params: { name: 'a_medias', language: 'es', body_text: '{{1}}' }).save_draft
+
+      expect(result).to be_success
+      expect(result.template).to have_attributes(status: 'DRAFT', meta_template_id: nil, body_text: '{{1}}')
+      expect(result.template).to be_editable
+      expect(provider).not_to have_received(:create_template)
+    end
+
+    it 'sin nombre no se puede guardar' do
+      result = described_class.new(channel: channel, params: { name: '', language: 'es' }).save_draft
+
+      expect(result).not_to be_success
+    end
+
+    it 'una plantilla que ya está en Meta no se regresa a borrador' do
+      create(:whatsapp_template, channel_whatsapp: channel, account: channel.account, name: 'cobro_vencido', language: 'es',
+                                 status: 'APPROVED', meta_template_id: '555')
+
+      result = described_class.new(channel: channel, params: valid_params).save_draft
+
+      expect(result).not_to be_success
+      expect(result.error).to include('ya está en Meta')
+    end
+
+    it 'un borrador se manda a revisión como plantilla nueva (crear, no editar)' do
+      allow(provider).to receive(:create_template).and_return(result_ok(meta_id: '777'))
+      borrador = described_class.new(channel: channel, params: { name: 'cobro_vencido', language: 'es' }).save_draft.template
+
+      result = described_class.new(template: borrador, params: valid_params).update
+
+      expect(result).to be_success
+      expect(result.template).to have_attributes(status: 'PENDING', meta_template_id: '777')
+      expect(provider).to have_received(:create_template)
+    end
+
+    it 'un borrador incompleto no se manda: dice qué falta' do
+      borrador = described_class.new(channel: channel, params: { name: 'a_medias', language: 'es' }).save_draft.template
+
+      result = described_class.new(template: borrador, params: {}).update
+
+      expect(result).not_to be_success
+      expect(result.error).to include('Body')
+    end
+  end
+
   describe '#destroy' do
     it 'borra fila local (dry-run) sin llamar a Meta' do
       template = create(:whatsapp_template, account: channel.account, channel_whatsapp: channel,

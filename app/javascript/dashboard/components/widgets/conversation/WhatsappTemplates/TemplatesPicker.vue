@@ -1,8 +1,10 @@
 <script>
 // feat/plantillas_whatsapp_mejoras F2: las plantillas con imagen, video o documento se
 // pueden mandar en WhatsApp Cloud (F1). En 360dialog y UnoAPI el envío sigue siendo solo
-// el cuerpo, así que ahí siguen ocultas.
-import { describeTemplate, MEDIA_FORMATS } from './templateForm';
+// el cuerpo, así que ahí se ocultan las que piden algo más (archivo, variable en el
+// encabezado, liga con {{1}} o copiar código): Meta las rechazaría. Misma regla que los
+// programados.
+import { describeTemplate } from './templateForm';
 
 export default {
   props: {
@@ -24,12 +26,10 @@ export default {
     whatsAppTemplateMessages() {
       return this.$store.getters['inboxes/getWhatsAppTemplates'](this.inboxId)
         .filter(template => template.status.toLowerCase() === 'approved')
-        .filter(template => {
-          if (this.isCloud) return true;
-          return template.components.every(component => {
-            return !MEDIA_FORMATS.includes(component.format);
-          });
-        });
+        .filter(
+          template =>
+            this.isCloud || !describeTemplate(template).needsComponents
+        );
     },
     filteredTemplateMessages() {
       return this.whatsAppTemplateMessages.filter(template =>

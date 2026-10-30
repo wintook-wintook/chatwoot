@@ -38,21 +38,26 @@ class Whatsapp::SubmitTemplateService
     submit_new(template)
   end
 
+  # --- borrador (F10) ----------------------------------------------------------
+  # Guarda sin llamar a Meta ni exigir sus reglas (solo nombre e idioma, por el índice único):
+  # se termina y se manda a revisión después. Solo una plantilla nueva o un borrador local;
+  # una que ya está en Meta no se «regresa» a borrador.
+  def save_draft
+    template = @template || @channel.whatsapp_templates.find_or_initialize_by(name: @params[:name], language: @params[:language])
+    return failure('Esta plantilla ya está en Meta: no se puede guardar como borrador') if template.persisted? && !template.local_draft?
+
+    template.assign_attributes(@params.merge(account: @account, status: 'DRAFT'))
+    return failure(template.errors.full_messages.join(' · ')) unless template.save
+
+    Result.new(success: true, template: template)
+  end
+
   # --- editar (PATCH) --------------------------------------------------------
   def update
     return failure('La plantilla no es editable en su estado actual') unless @template.editable?
+    return submit_draft if @template.local_draft?
 
-    @template.assign_attributes(@params)
-    # Otra liga de muestra (u otro archivo subido, F6) = otro archivo: el handle viejo es del
-    # archivo anterior y Meta revisaría ese. Se vuelve a subir.
-    otro_archivo = @template.header_media_url_changed? || @template.header_sample_changed?
-    @template.header_handle = nil if otro_archivo && !@params.key?(:header_handle)
-    validation = Whatsapp::TemplateValidator.call(@template)
-    return invalid(validation) unless validation.valid?
-
-    return dry_run_persist(@template) if dry_run?
-
-    submit_edit(@template)
+    edit_in_meta
   end
 
   # --- borrar ----------------------------------------------------------------
@@ -73,6 +78,32 @@ class Whatsapp::SubmitTemplateService
   end
 
   private
+
+  # Una plantilla que ya está en Meta: Meta reemplaza los components y la vuelve a PENDING.
+  def edit_in_meta
+    @template.assign_attributes(@params)
+    # Otra liga de muestra (u otro archivo subido, F6) = otro archivo: el handle viejo es del
+    # archivo anterior y Meta revisaría ese. Se vuelve a subir.
+    otro_archivo = @template.header_media_url_changed? || @template.header_sample_changed?
+    @template.header_handle = nil if otro_archivo && !@params.key?(:header_handle)
+    validation = Whatsapp::TemplateValidator.call(@template)
+    return invalid(validation) unless validation.valid?
+
+    return dry_run_persist(@template) if dry_run?
+
+    submit_edit(@template)
+  end
+
+  # Un borrador que nunca llegó a Meta se manda como plantilla NUEVA (crear, no editar).
+  def submit_draft
+    @template.assign_attributes(@params)
+    validation = Whatsapp::TemplateValidator.call(@template)
+    return invalid(validation) unless validation.valid?
+
+    return dry_run_persist(@template) if dry_run?
+
+    submit_new(@template)
+  end
 
   # Modo A: sin red. Fila PENDING con meta_template_id sintético.
   def dry_run_persist(template)

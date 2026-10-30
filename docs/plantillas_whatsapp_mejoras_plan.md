@@ -658,6 +658,58 @@ Componentes nativos: `Wrapper.vue` (encabezado con regreso), `woot-input`, `woot
   a revisión después desde el editor o la ficha. Entra en F10.1.
 - **D10c** **Un idioma por vez**, como hoy; para otro idioma: Duplicar y cambiar idioma.
 
+
+## 7.13 F10.1 — hecho (30/10/2026): el editor a página completa
+
+**Qué cambió para el usuario.** «Nueva plantilla» y el lápiz ya no abren un modal: llevan a
+`/settings/whatsapp-templates/new` y `/:id/edit`, con el **mismo encabezado nativo que la lista**
+(`SettingsLayout` + `BaseSettingsHeader`: «← Plantillas de WhatsApp», título, descripción y las acciones
+Cancelar / Guardar borrador / Enviar a revisión arriba). El formulario conserva **las pestañas del modal**
+(Contenido · Botones · Variables, apiladas en la misma celda: el alto no cambia y no hay que bajar) con los
+controles de siempre (`select`, `woot-input`, `ResizableTextArea`); la vista previa y lo que falta para Meta
+quedan siempre a la derecha (antes era otra pestaña).
+
+> Primera versión (descartada el mismo día): secciones apiladas y `Wrapper.vue` (molde de Macros). El usuario:
+> «los tabs estaban bien», «el botón tipo hamburguesa no funciona» (la hamburguesa de `Wrapper.vue` abre el menú
+> secundario, que con nuestro menú reacomodado no se ve), «no se usan componentes comunes», «no les gustan los
+> scrolls». Ver memoria `feedback_formularios_pestanas_sin_scroll`.
+
+**Guardar borrador (D10b).** `POST/PATCH whatsapp/templates` con `draft: true` → `SubmitTemplateService#save_draft`:
+guarda en DRAFT sin Meta ni sus reglas (solo bandeja, nombre e idioma); una plantilla que ya está en Meta no se
+regresa a borrador. `WhatsappTemplate#editable?` ahora incluye el borrador local (`local_draft?`: DRAFT que nunca
+llegó a Meta, incluidos los envíos que fallaron — antes había que borrarlos y crearlos de nuevo). Al mandar un
+borrador a revisión se **crea** en Meta (`submit_draft`), no se edita. En el editor de un borrador también se
+cambian nombre e idioma (la bandeja no).
+
+**Piezas.** `TemplateEditor.vue` (página, en `SettingsWrapper` junto a la lista; recarga al volver porque
+`SettingsWrapper` guarda en caché), `TemplatePreview.vue` (la burbuja, sale del modal), `templateEditor.js`
+(puro: formulario vacío / desde una plantilla, lo que se manda, nombre, ejemplos, categorías, idiomas) con spec.
+`Index.vue` quedó con la tabla, filtros, sincronizar y borrar (1 447 → 752 líneas; lint 649 → 338). Textos
+nuevos en i18n (`WHATSAPP_TEMPLATE_EDITOR`, es/en).
+
+**Pila de pruebas.** Backend 91 en verde (+5 `save_draft`: guarda a medias sin Meta, sin nombre no, la de Meta
+no se regresa, el borrador se manda como nueva, incompleto dice qué falta; +1 controlador: borrador y luego
+mandarlo). Frontend 28 en verde (`templateEditor.spec.js` nuevo, 9). Webpack: «Compiled successfully».
+⚠ **Sin probar en navegador.**
+
+**Ajustes de la misma ronda (30/10/2026).**
+- «‹ Plantillas de WhatsApp» va con las acciones a la derecha (no arriba del título, para ganar espacio) y
+  reemplaza a «Cancelar», que hacía lo mismo.
+- **Las de imagen o video no salían en ningún selector**: el getter `inboxes/getWhatsAppTemplates` las quitaba
+  siempre (herencia de Chatwoot), aun en WhatsApp Cloud. Ahora devuelve todas y cada pantalla decide: el selector
+  de la conversación y los programados.
+- **Bandejas que no son Cloud** (360dialog, UnoAPI): el selector oculta todo lo que pide más que el cuerpo
+  (archivo, variable en el encabezado, liga con `{{1}}`, copiar código) — antes solo las de archivo y Meta
+  rechazaba las de botón con dato. Misma regla que los programados.
+- **La burbuja muestra los botones** de la plantilla enviada (`bubble/TemplateButtons.vue`), con el dato que
+  escribió el agente (terminación de la liga o código). Salen de la plantilla de la bandeja por nombre e idioma,
+  así que también se ven en mensajes viejos y en los de seguimientos.
+
+Frontend 83 en verde (+1 getter, +1 selector). Webpack: «Compiled successfully».
+
+**Sigue (F10.2–F10.5).** «+ Variable», formato, «Lista para Meta» por sección; botones por tipo con límites y
+arrastrar; archivo con arrastrar y soltar; aviso al salir; ficha `/:id` + Duplicar; empezar desde un ejemplo.
+
 ---
 
 ## 8. Pila de pruebas en navegador (al cerrar cada fase)
@@ -682,3 +734,6 @@ Componentes nativos: `Wrapper.vue` (encabezado con regreso), `woot-input`, `woot
 - [ ] F10: crear desde «Recordatorio de pago» → ejemplos junto a sus variables → «Lista para Meta» en verde → enviar
 - [ ] F10: salir con cambios sin guardar → avisa; recargar `/:id/edit` → sigue en la misma plantilla
 - [ ] F10: clic en una fila → ficha con estado en Meta → Duplicar abre el editor con todo copiado
+- [ ] Conversación (Cloud): `ejemplo_video_adjunto` aparece en el selector (antes la tienda la escondía)
+- [ ] Burbuja: una plantilla con botones muestra sus botones (y el código o la terminación de la liga)
+- [ ] Bandeja 360dialog/UnoAPI: no aparecen plantillas con liga `{{1}}` o copiar código

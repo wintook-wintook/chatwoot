@@ -48,5 +48,107 @@
                 "COPY_CODE_LENGTH": "The copy code can have up to %{max} characters."
             }
         }
+    },
+    "WHATSAPP_TEMPLATE_EDITOR": {
+        "HEADER": "WhatsApp templates",
+        "NEW_TITLE": "New template",
+        "EDIT_TITLE": "Edit “%{name}”",
+        "DRAFT_BADGE": "Draft",
+        "NEW_DESC": "Build the message, check the preview and send it to Meta for review. If you don't finish it, save it as a draft.",
+        "DRAFT_DESC": "This is a draft: it hasn't reached Meta yet. You can change everything except the inbox.",
+        "EDIT_DESC": "Meta only lets you change the category and the content; name, language and inbox stay fixed. Saving sends the template back to review.",
+        "LOADING": "Loading template…",
+        "NOT_FOUND": "We couldn't find this template.",
+        "NO_INBOX": "Inbox: choose the WhatsApp inbox",
+        "SECTIONS": {
+            "HEADER": "Header",
+            "BODY": "Message",
+            "FOOTER": "Footer (optional)",
+            "PREVIEW": "Preview"
+        },
+        "FIELDS": {
+            "INBOX": "WhatsApp inbox",
+            "INBOX_PLACEHOLDER": "Choose an inbox",
+            "NAME": "Name",
+            "NAME_PLACEHOLDER": "payment_reminder",
+            "NAME_HINT": "Formatted automatically: lowercase, no spaces or accents. It can't change once it reaches Meta.",
+            "LANGUAGE": "Language",
+            "CATEGORY": "Category",
+            "HEADER_TEXT_PLACEHOLDER": "Header text (max. 60; may include %{variable})",
+            "UPLOAD": "Upload file",
+            "REMOVE_FILE": "Remove the uploaded file",
+            "OR_LINK": "…or paste a public link to the file (https://…)",
+            "BODY_PLACEHOLDER": "Write the message. Use variables like %{variable} for data that changes on each send.",
+            "EXAMPLES": "Variable examples: Meta reviews them and they show in the preview.",
+            "EXAMPLE_OF": "Example for %{variable}",
+            "FOOTER_PLACEHOLDER": "Short footer, no variables (e.g. your company name)",
+            "HEADER_TEXT": "Header text",
+            "HEADER_FILE": "Header file",
+            "NO_VARIABLES": "The message has no variables. Type %{variable} in the text to add one.",
+            "EXAMPLE_OF_HEADER": "Example for header %{variable}"
+        },
+        "CATEGORIES": {
+            "UTILITY": "Utility",
+            "MARKETING": "Marketing",
+            "AUTHENTICATION": "Authentication"
+        },
+        "CATEGORY_HINTS": {
+            "UTILITY": "Updates about something the customer already asked for: payments, appointments, orders, shipping.",
+            "MARKETING": "Promotions, offers and invitations. Meta reviews and charges them differently from utility ones.",
+            "AUTHENTICATION": "Verification codes: they have a fixed format and are created in Meta's WhatsApp Manager."
+        },
+        "HEADER_TYPES": {
+            "NONE": "None",
+            "TEXT": "Text",
+            "IMAGE": "Image",
+            "VIDEO": "Video",
+            "DOCUMENT": "Document"
+        },
+        "LIMITS": {
+            "IMAGE": "JPG or PNG, up to 5 MB",
+            "VIDEO": "MP4, up to 16 MB",
+            "DOCUMENT": "PDF, up to 100 MB"
+        },
+        "BUTTONS": {
+            "ADD": "Add button",
+            "HINT": "Quick replies go first; then link (max. 2), phone (1) and copy code (1).",
+            "TYPES": {
+                "QUICK_REPLY": "Quick reply",
+                "URL": "Link",
+                "PHONE_NUMBER": "Phone",
+                "COPY_CODE": "Copy code"
+            },
+            "TEXT_PLACEHOLDER": "Button text (max. 25)",
+            "URL_PLACEHOLDER": "https://… (may end with %{variable})",
+            "PHONE_PLACEHOLDER": "+1…",
+            "EXAMPLE_CODE": "Sample code (max. %{max})",
+            "EXAMPLE_URL": "Full link example (https://…/12345)",
+            "REMOVE": "Remove button",
+            "EMPTY": "No buttons. They are optional."
+        },
+        "PREVIEW": {
+            "CAPTION": "This is how the customer will see it in WhatsApp.",
+            "BODY_EMPTY": "The message will show here…",
+            "COPY_CODE": "Copy code",
+            "BUTTON": "Button",
+            "DOCUMENT": "Document"
+        },
+        "ACTIONS": {
+            "SAVE_DRAFT": "Save draft",
+            "SUBMIT": "Send for review",
+            "RESUBMIT": "Save and resend"
+        },
+        "ALERTS": {
+            "DRAFT_SAVED": "Draft saved.",
+            "SUBMITTED": "Template sent to Meta for review.",
+            "RESUBMITTED": "Changes sent: the template goes back to review.",
+            "SAVE_ERROR": "The template couldn't be saved.",
+            "UPLOAD_ERROR": "The file couldn't be uploaded."
+        },
+        "TABS": {
+            "CONTENT": "Content",
+            "BUTTONS": "Buttons",
+            "VARIABLES": "Variables"
+        }
     }
 }

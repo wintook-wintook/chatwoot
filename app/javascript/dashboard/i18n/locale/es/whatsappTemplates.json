@@ -48,5 +48,107 @@
                 "COPY_CODE_LENGTH": "El código de copiar puede tener hasta %{max} caracteres."
             }
         }
+    },
+    "WHATSAPP_TEMPLATE_EDITOR": {
+        "HEADER": "Plantillas de WhatsApp",
+        "NEW_TITLE": "Nueva plantilla",
+        "EDIT_TITLE": "Editar «%{name}»",
+        "DRAFT_BADGE": "Borrador",
+        "NEW_DESC": "Arma el mensaje, revisa la vista previa y mándalo a revisión de Meta. Si no lo terminas, guárdalo como borrador.",
+        "DRAFT_DESC": "Es un borrador: todavía no llega a Meta. Puedes cambiar todo menos la bandeja.",
+        "EDIT_DESC": "Meta solo deja cambiar la categoría y el contenido; el nombre, el idioma y la bandeja quedan fijos. Al guardar, la plantilla vuelve a revisión.",
+        "LOADING": "Cargando plantilla…",
+        "NOT_FOUND": "No encontramos esta plantilla.",
+        "NO_INBOX": "Bandeja: elige la bandeja de WhatsApp",
+        "SECTIONS": {
+            "HEADER": "Encabezado",
+            "BODY": "Mensaje",
+            "FOOTER": "Pie (opcional)",
+            "PREVIEW": "Vista previa"
+        },
+        "FIELDS": {
+            "INBOX": "Bandeja de WhatsApp",
+            "INBOX_PLACEHOLDER": "Elige una bandeja",
+            "NAME": "Nombre",
+            "NAME_PLACEHOLDER": "recordatorio_pago",
+            "NAME_HINT": "Se arma solo: minúsculas, sin espacios ni acentos. No se puede cambiar una vez que llega a Meta.",
+            "LANGUAGE": "Idioma",
+            "CATEGORY": "Categoría",
+            "HEADER_TEXT_PLACEHOLDER": "Texto del encabezado (máx. 60; puede llevar %{variable})",
+            "UPLOAD": "Subir archivo",
+            "REMOVE_FILE": "Quitar el archivo subido",
+            "OR_LINK": "…o pega una liga pública del archivo (https://…)",
+            "BODY_PLACEHOLDER": "Escribe el mensaje. Usa variables como %{variable} para los datos que cambian en cada envío.",
+            "EXAMPLES": "Ejemplos de las variables: Meta los revisa y salen en la vista previa.",
+            "EXAMPLE_OF": "Ejemplo de %{variable}",
+            "FOOTER_PLACEHOLDER": "Pie corto, sin variables (p. ej. el nombre de tu empresa)",
+            "HEADER_TEXT": "Texto del encabezado",
+            "HEADER_FILE": "Archivo del encabezado",
+            "NO_VARIABLES": "El mensaje no lleva variables. Escribe %{variable} en el texto para agregar una.",
+            "EXAMPLE_OF_HEADER": "Ejemplo de %{variable} del encabezado"
+        },
+        "CATEGORIES": {
+            "UTILITY": "Servicio",
+            "MARKETING": "Marketing",
+            "AUTHENTICATION": "Autenticación"
+        },
+        "CATEGORY_HINTS": {
+            "UTILITY": "Avisos de algo que el cliente ya pidió o contrató: pagos, citas, pedidos, envíos.",
+            "MARKETING": "Promociones, ofertas e invitaciones. Meta las revisa y las cobra distinto que las de servicio.",
+            "AUTHENTICATION": "Códigos de verificación: tienen formato fijo y se crean en WhatsApp Manager de Meta."
+        },
+        "HEADER_TYPES": {
+            "NONE": "Ninguno",
+            "TEXT": "Texto",
+            "IMAGE": "Imagen",
+            "VIDEO": "Video",
+            "DOCUMENT": "Documento"
+        },
+        "LIMITS": {
+            "IMAGE": "JPG o PNG, hasta 5 MB",
+            "VIDEO": "MP4, hasta 16 MB",
+            "DOCUMENT": "PDF, hasta 100 MB"
+        },
+        "BUTTONS": {
+            "ADD": "Agregar botón",
+            "HINT": "Las respuestas rápidas van primero; después liga (máx. 2), teléfono (1) y copiar código (1).",
+            "TYPES": {
+                "QUICK_REPLY": "Respuesta rápida",
+                "URL": "Liga",
+                "PHONE_NUMBER": "Teléfono",
+                "COPY_CODE": "Copiar código"
+            },
+            "TEXT_PLACEHOLDER": "Texto del botón (máx. 25)",
+            "URL_PLACEHOLDER": "https://… (puede terminar en %{variable})",
+            "PHONE_PLACEHOLDER": "+52…",
+            "EXAMPLE_CODE": "Código de ejemplo (máx. %{max})",
+            "EXAMPLE_URL": "Ejemplo de la liga completa (https://…/12345)",
+            "REMOVE": "Quitar botón",
+            "EMPTY": "Sin botones. Son opcionales."
+        },
+        "PREVIEW": {
+            "CAPTION": "Así lo verá el cliente en WhatsApp.",
+            "BODY_EMPTY": "El mensaje aparecerá aquí…",
+            "COPY_CODE": "Copiar código",
+            "BUTTON": "Botón",
+            "DOCUMENT": "Documento"
+        },
+        "ACTIONS": {
+            "SAVE_DRAFT": "Guardar borrador",
+            "SUBMIT": "Enviar a revisión",
+            "RESUBMIT": "Guardar y reenviar"
+        },
+        "ALERTS": {
+            "DRAFT_SAVED": "Borrador guardado.",
+            "SUBMITTED": "Plantilla enviada a revisión de Meta.",
+            "RESUBMITTED": "Cambios enviados: la plantilla vuelve a revisión.",
+            "SAVE_ERROR": "No se pudo guardar la plantilla.",
+            "UPLOAD_ERROR": "No se pudo subir el archivo."
+        },
+        "TABS": {
+            "CONTENT": "Contenido",
+            "BUTTONS": "Botones",
+            "VARIABLES": "Variables"
+        }
     }
 }

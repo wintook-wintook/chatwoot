@@ -4,6 +4,8 @@ import BubbleActions from './bubble/Actions.vue';
 import BubbleContact from './bubble/Contact.vue';
 import BubbleFile from './bubble/File.vue';
 import BubbleTemplateHeader from './bubble/TemplateHeader.vue';
+import BubbleTemplateButtons from './bubble/TemplateButtons.vue';
+import { describeTemplate } from './WhatsappTemplates/templateForm';
 import BubbleImageAudioVideo from './bubble/ImageAudioVideo.vue';
 import BubbleIntegration from './bubble/Integration.vue';
 import BubbleLocation from './bubble/Location.vue';
@@ -38,6 +40,7 @@ export default {
     BubbleContact,
     BubbleFile,
     BubbleTemplateHeader,
+    BubbleTemplateButtons,
     BubbleImageAudioVideo,
     BubbleIntegration,
     BubbleLocation,
@@ -115,6 +118,28 @@ export default {
     },
     // feat/plantillas_whatsapp_mejoras F3: el archivo del encabezado de una plantilla (lo
     // recibe el cliente; el mensaje solo guarda el texto del cuerpo).
+    // feat/plantillas_whatsapp_mejoras: los botones de la plantilla enviada (los recibe el
+    // cliente; el mensaje solo guarda el texto). Salen de la plantilla de la bandeja.
+    templateParams() {
+      const attrs = (this.data && this.data.additional_attributes) || {};
+      return attrs.template_params || null;
+    },
+    templateButtons() {
+      const params = this.templateParams;
+      if (!params || !params.name) return [];
+      const plantillas =
+        this.$store.getters['inboxes/getWhatsAppTemplates'](
+          this.data.inbox_id
+        ) || [];
+      const mismas = plantillas.filter(t => t.name === params.name);
+      const plantilla =
+        mismas.find(t => t.language === params.language) || mismas[0];
+      return plantilla ? describeTemplate(plantilla).buttons : [];
+    },
+    templateButtonValues() {
+      const processed = (this.templateParams || {}).processed_params || {};
+      return Array.isArray(processed.buttons) ? processed.buttons : [];
+    },
     templateHeaderMedia() {
       const attrs = (this.data && this.data.additional_attributes) || {};
       const params = (attrs.template_params || {}).processed_params || {};
@@ -606,6 +631,11 @@ export default {
           :message="message"
           :is-email="isEmailContentType"
           :display-quoted-button="displayQuotedButton"
+        />
+        <BubbleTemplateButtons
+          v-if="templateButtons.length"
+          :buttons="templateButtons"
+          :values="templateButtonValues"
         />
         <BubbleIntegration
           :message-id="data.id"

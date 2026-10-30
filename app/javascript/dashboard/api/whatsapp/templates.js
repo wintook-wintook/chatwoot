@@ -12,15 +12,20 @@ class WhatsappTemplatesAPI extends ApiClient {
     return axios.get(this.url, { params: { inbox_id: inboxId } });
   }
 
-  create(inboxId, template) {
+  // feat/plantillas_whatsapp_mejoras F10: con `draft` se guarda como borrador, sin Meta.
+  create(inboxId, template, { draft = false } = {}) {
     return axios.post(this.url, {
       inbox_id: inboxId,
       whatsapp_template: template,
+      draft,
     });
   }
 
-  update(id, template) {
-    return axios.patch(`${this.url}/${id}`, { whatsapp_template: template });
+  update(id, template, { draft = false } = {}) {
+    return axios.patch(`${this.url}/${id}`, {
+      whatsapp_template: template,
+      draft,
+    });
   }
 
   sync(inboxId) {

@@ -20,14 +20,15 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
     render json: template_json(@template)
   end
 
+  # F10: con `draft: true` se guarda como borrador, sin llamar a Meta.
   def create
-    result = Whatsapp::SubmitTemplateService.new(channel: @channel, params: template_params).create
-    render_result(result, ok_status: :created)
+    servicio = Whatsapp::SubmitTemplateService.new(channel: @channel, params: template_params)
+    render_result(draft? ? servicio.save_draft : servicio.create, ok_status: :created)
   end
 
   def update
-    result = Whatsapp::SubmitTemplateService.new(template: @template, params: template_params).update
-    render_result(result)
+    servicio = Whatsapp::SubmitTemplateService.new(template: @template, params: template_params)
+    render_result(draft? ? servicio.save_draft : servicio.update)
   end
 
   def destroy
@@ -102,6 +103,10 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
 
   def inbox_channel_id
     Current.account.inboxes.find(params[:inbox_id]).channel_id
+  end
+
+  def draft?
+    ActiveModel::Type::Boolean.new.cast(params[:draft])
   end
 
   def fetch_template

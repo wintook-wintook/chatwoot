@@ -103,9 +103,15 @@ class WhatsappTemplate < ApplicationRecord
     attachment_changes.key?('header_sample')
   end
 
-  # ¿Se puede editar en Meta? (Meta reemplaza los components y la vuelve a PENDING.)
+  # ¿Se puede editar? En Meta (reemplaza los components y la vuelve a PENDING), o un borrador
+  # que nunca llegó a Meta (F10: «Guardar borrador», o un envío que falló): se edita y se
+  # manda a revisión como plantilla nueva.
   def editable?
-    EDITABLE_STATUSES.include?(status)
+    EDITABLE_STATUSES.include?(status) || local_draft?
+  end
+
+  def local_draft?
+    status == 'DRAFT' && local_only?
   end
 
   def terminal?

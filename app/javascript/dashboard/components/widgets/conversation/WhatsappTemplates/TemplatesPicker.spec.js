@@ -21,6 +21,16 @@ const plantillas = [
       { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'Ver', url: 'x' }] },
     ],
   },
+  {
+    name: 'cupon',
+    status: 'APPROVED',
+    language: 'es_MX',
+    category: 'MARKETING',
+    components: [
+      { type: 'BODY', text: 'Tu cupón' },
+      { type: 'BUTTONS', buttons: [{ type: 'COPY_CODE', text: 'Copiar' }] },
+    ],
+  },
 ];
 
 const montar = provider =>
@@ -45,6 +55,7 @@ describe('TemplatesPicker', () => {
     expect(wrapper.vm.filteredTemplateMessages.map(t => t.name)).toEqual([
       'saludo',
       'factura',
+      'cupon',
     ]);
     expect(wrapper.text()).toContain(
       'WHATSAPP_TEMPLATES.PARSER.MEDIA_DOCUMENT'
@@ -52,7 +63,7 @@ describe('TemplatesPicker', () => {
     expect(wrapper.text()).toContain('Ver');
   });
 
-  it('en 360dialog o UnoAPI las de archivo siguen ocultas', () => {
+  it('en 360dialog o UnoAPI se ocultan las que piden archivo o dato de botón', () => {
     expect(
       montar('default').vm.filteredTemplateMessages.map(t => t.name)
     ).toEqual(['saludo']);
