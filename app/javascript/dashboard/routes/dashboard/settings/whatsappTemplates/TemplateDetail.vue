@@ -334,7 +334,9 @@ export default {
                     :class="{
                       'text-green-600': sendable.trackings === 'ok',
                       'text-amber-600': sendable.trackings === 'missing_file',
-                      'text-slate-400': sendable.trackings === 'no',
+                      'text-slate-400': ['no', 'needs_data'].includes(
+                        sendable.trackings
+                      ),
                     }"
                   />
                   {{ trackingsLabel }}

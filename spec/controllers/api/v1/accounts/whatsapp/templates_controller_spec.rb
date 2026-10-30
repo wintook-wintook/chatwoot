@@ -111,7 +111,7 @@ RSpec.describe 'WhatsApp Templates API', type: :request do
       get "/api/v1/accounts/#{account.id}/whatsapp/templates/#{template.id}/usage", headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to eq('agents' => [], 'trackings_count' => 0, 'campaigns' => [], 'portals' => [])
+      expect(response.parsed_body).to eq('agents' => [], 'trackings_count' => 0, 'campaigns' => [], 'scheduled_count' => 0, 'portals' => [])
 
       agente = create(:user, account: account, role: :agent)
       get "/api/v1/accounts/#{account.id}/whatsapp/templates/#{template.id}/usage", headers: agente.create_new_auth_token, as: :json

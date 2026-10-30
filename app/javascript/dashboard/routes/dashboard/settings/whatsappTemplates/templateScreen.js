@@ -58,8 +58,11 @@ function needsMoreThanBody(template) {
   );
 }
 
-// { conversation: true|false|null, trackings: 'ok'|'missing_file'|'no'|null }
+// { conversation: true|false|null,
+//   trackings: 'ok'|'missing_file'|'needs_data'|'no'|null }
 // null = todavía no se puede mandar por nada (no está aprobada).
+// needs_data: pide un dato en el encabezado o en un botón que seguimientos y campañas no
+// llenan (solo mandan el cuerpo y el archivo): Meta la rechazaría.
 export function sendability(template, inbox) {
   if (template.status !== 'APPROVED')
     return { conversation: null, trackings: null };
@@ -67,9 +70,11 @@ export function sendability(template, inbox) {
   const cloud = Boolean(inbox && inbox.provider === 'whatsapp_cloud');
   // Fuera de WhatsApp Cloud solo sale el cuerpo: las que piden un dato en el encabezado
   // o en un botón tampoco se pueden mandar (el selector las oculta).
-  if (!conArchivo && (cloud || !needsMoreThanBody(template)))
-    return { conversation: true, trackings: 'ok' };
-  if (!cloud) return { conversation: false, trackings: 'no' };
+  const pideDato = needsMoreThanBody(template);
+  if (!cloud && (conArchivo || pideDato))
+    return { conversation: false, trackings: 'no' };
+  if (pideDato) return { conversation: true, trackings: 'needs_data' };
+  if (!conArchivo) return { conversation: true, trackings: 'ok' };
   return {
     conversation: true,
     trackings: hasFile(template) ? 'ok' : 'missing_file',
@@ -161,4 +166,5 @@ export const templateInUse = usage =>
   (usage.agents.length > 0 ||
     usage.trackings_count > 0 ||
     usage.campaigns.length > 0 ||
+    usage.scheduled_count > 0 ||
     usage.portals.length > 0);

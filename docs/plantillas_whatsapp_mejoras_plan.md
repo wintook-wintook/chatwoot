@@ -884,6 +884,33 @@ Frontend 50 en verde (`templatePresets.spec.js` 6, `nameTaken` 2). ⚠ **Sin pro
 
 **F10 COMPLETO** (F10.1–F10.5). Falta la ronda de pruebas en navegador (§8) y el PR a develop.
 
+
+## 7.14 Después de los PR #127 y #128 (30/10/2026, rama `feat/plantillas_variables_nombre`)
+
+**Aviso de borrado cuenta los programados.** `Whatsapp::TemplateUsage` cuenta los `scheduled_messages` sin enviar
+de esa bandeja, por nombre e idioma (`is_template`, `template_name`, `template_language`).
+
+**Error corregido: botones en la posición equivocada (estaba en develop).** `buildProcessedParams` mandaba
+`buttons: [null, {...}]` para respetar la posición, pero Rails quita los `null` de los arreglos que recibe: una
+plantilla con «respuesta rápida + liga variable» salía a Meta con `index: 0` en vez de `1`. Comprobado con una
+petición real. Ahora cada botón lleva su `index` y `TemplateProcessorService` lo respeta (los mensajes viejos sin
+`index` siguen por su lugar en la lista).
+
+**F4, opción A: programados igual que la conversación.** `TemplateExtraFields.vue` (archivo de la plantilla /
+subido / liga, variables del encabezado y botones con dato) sale de `TemplateParser.vue` y lo usan los dos; las
+variables del cuerpo van en su slot. En `ScheduleMessageModal.vue`: en WhatsApp Cloud ya no se ocultan esas
+plantillas (fuera de Cloud, misma regla que el selector), valida con `validateValues` y guarda con
+`buildProcessedParams`. Con `source: 'template'` la liga para Meta se saca al entregar, no al programar.
+
+**Editar un programado** (`valuesFromProcessedParams`): recupera cuerpo, archivo y botones. De paso se corrigió
+que las variables salían vacías al editar: el `watch` de `selectedTemplate` las borraba después de cargarlas.
+
+**«Se puede enviar» en seguimientos.** Estado nuevo `needs_data`: las plantillas con dato en el encabezado o en un
+botón se marcan «✗ Seguimientos», porque seguimientos y campañas solo mandan cuerpo y archivo y Meta las rechazaría.
+
+Pruebas: frontend 88 en verde (+4 `valuesFromProcessedParams`, +3 `TemplateExtraFields`, +1 aviso); backend en verde
+(+1 uso, +1 botón con su posición, +1 punta a punta de programado con archivo y botón). ⚠ **Sin probar en navegador.**
+
 ---
 
 ## 8. Pila de pruebas en navegador (al cerrar cada fase)
@@ -917,3 +944,5 @@ Frontend 50 en verde (`templatePresets.spec.js` 6, `nameTaken` 2). ⚠ **Sin pro
 - [ ] Borrar: un borrador dice «solo se borra aquí»; una en uso pide la casilla y enlaza a su agente; al borrarla ya no sale en el selector
 - [ ] Seguimiento con plantilla borrada: no manda texto libre; queda el motivo y la campaña se pausa
 - [ ] F10.5: en `/new` elegir «Confirmación de cita» llena todo y se puede cambiar por otro ejemplo; al escribir se oculta la fila; un nombre repetido avisa
+- [ ] Botones: plantilla con respuesta rápida + liga variable sale bien desde la conversación (antes Meta la rechazaba)
+- [ ] Programados: plantilla con documento y botón en bandeja Cloud; editarla conserva lo capturado; llega a su hora

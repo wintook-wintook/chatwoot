@@ -119,17 +119,21 @@ class Whatsapp::TemplateProcessorService
     button_params = processed_params['buttons'].filter_map.with_index do |button, index|
       next if button.blank?
 
-      if button['type'] == 'url' || button['parameter'].present?
-        {
-          type: 'button',
-          sub_type: button['type'] || 'url',
-          index: index,
-          parameters: [parameter_builder.build_button_parameter(button)]
-        }
-      end
+      build_button_component(button, index) if button['type'] == 'url' || button['parameter'].present?
     end
 
     button_params.compact
+  end
+
+  def build_button_component(button, index)
+    {
+      type: 'button',
+      sub_type: button['type'] || 'url',
+      # Su posición en la plantilla: Rails quita los null de los arreglos que recibe, así que
+      # el lugar en la lista no sirve. Los mensajes viejos no traen `index`.
+      index: button['index'] || index,
+      parameters: [parameter_builder.build_button_parameter(button)]
+    }
   end
 
   def parameter_builder

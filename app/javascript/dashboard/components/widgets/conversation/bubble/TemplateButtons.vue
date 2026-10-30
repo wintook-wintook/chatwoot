@@ -21,7 +21,8 @@ export default {
       type: Array,
       required: true,
     },
-    // processed_params.buttons: [{ type, parameter } | null], en el orden de los botones
+    // processed_params.buttons: [{ type, index, parameter }]. Los mensajes viejos no traen
+    // `index`: ahí la posición en la lista es la del botón.
     values: {
       type: Array,
       default: () => [],
@@ -30,7 +31,10 @@ export default {
   computed: {
     items() {
       return this.buttons.map(boton => {
-        const valor = (this.values[boton.index] || {}).parameter || '';
+        const dato =
+          this.values.find(v => v && v.index === boton.index) ||
+          this.values[boton.index];
+        const valor = (dato || {}).parameter || '';
         return {
           key: boton.index,
           icon: ICONS[boton.type] || 'arrow-reply',

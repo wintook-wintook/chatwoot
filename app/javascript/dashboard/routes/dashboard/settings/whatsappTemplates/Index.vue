@@ -691,7 +691,9 @@ export default {
                           sendabilityOf(t).trackings === 'ok',
                         'text-amber-700 dark:text-amber-400':
                           sendabilityOf(t).trackings === 'missing_file',
-                        'text-slate-400': sendabilityOf(t).trackings === 'no',
+                        'text-slate-400': ['no', 'needs_data'].includes(
+                          sendabilityOf(t).trackings
+                        ),
                       }"
                     >
                       {{

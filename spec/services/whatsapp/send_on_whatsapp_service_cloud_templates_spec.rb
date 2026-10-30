@@ -110,6 +110,14 @@ describe Whatsapp::SendOnWhatsappService do
                                   ])
   end
 
+  # Rails quita los null de los arreglos: la posición tiene que viajar en cada botón.
+  it 'el botón con dato sale con su posición real, aunque haya otro antes' do
+    send_template('pedido', 'es_MX', { 'header' => { '1' => 'A1' }, 'body' => { '1' => 'Ana' },
+                                       'buttons' => [{ 'type' => 'copy_code', 'index' => 1, 'parameter' => 'PROMO10' }] })
+
+    expect(sent_components.last).to include('sub_type' => 'copy_code', 'index' => 1)
+  end
+
   it 'variables con nombre van con parameter_name' do
     send_template('saludo_nombre', 'es_MX', { 'body' => { 'nombre' => 'Ana' } })
 

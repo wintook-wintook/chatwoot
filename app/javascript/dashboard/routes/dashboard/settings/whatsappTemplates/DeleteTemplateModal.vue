@@ -130,6 +130,13 @@ export default {
               </router-link>
             </template>
           </li>
+          <li v-if="usage.scheduled_count">
+            {{
+              $t('WHATSAPP_TEMPLATE_DELETE.SCHEDULED', {
+                count: usage.scheduled_count,
+              })
+            }}
+          </li>
           <li v-if="usage.portals.length">
             {{
               $t('WHATSAPP_TEMPLATE_DELETE.PORTALS', {
