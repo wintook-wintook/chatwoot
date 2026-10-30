@@ -179,7 +179,7 @@ Resultado: hoy se puede **crear y aprobar** una plantilla con adjunto, pero **no
 | # | Decisión |
 |---|---|
 | D1 | **Sí**: F3 (burbuja con el adjunto) entra en esta rama |
-| D2 | **No por ahora**: F7 (subir archivo desde la conversación) queda fuera |
+| D2 | **No por ahora**: F7 (subir archivo desde la conversación) queda fuera — **reabierta 30/10: sí, hecha (§7.10)** |
 | D3 | Se quitan **solo `< >`** de las variables (no las comillas) |
 | D4 | Mensajes programados: **ocultar** las plantillas con adjunto por ahora |
 | D5 | Seguimientos/campañas: **solo el adjunto**, sin botones variables |
@@ -403,6 +403,120 @@ de plantillas. Webpack: «Compiled successfully».
 **No entró.** Vista previa en la tabla (solo en el formulario); que el formulario de la conversación (F2)
 proponga el archivo guardado de la plantilla en vez de pedir la liga. ⚠ **Sin probar en navegador.**
 
+## 7.9 F8 — archivo de la plantilla en la conversación + huecos del modal de crear (30/10/2026)
+
+Salió al probar: el formulario de la conversación pedía una liga pública aunque la plantilla ya tuviera su
+archivo subido, y el modal de crear dejaba elegir cosas que nunca pasaban (o que Meta rechazaba).
+
+**Conversación: el archivo de la plantilla ya puesto.**
+- `GET inboxes/:inbox_id/whatsapp_template_header?name=&language=` (cualquier agente de la bandeja; la API de
+  plantillas es solo de administradores) → `{ available, media_type, media_name, preview_url }`, o el motivo
+  si lleva archivo y no hay guardado. Reusa `ContactTrackings::TemplateHeader` (F5).
+- El formulario (`TemplateParser.vue`) lo trae elegido: «Se manda el archivo de la plantilla: Factura A1.pdf»
+  con «Usar otra liga» (y de regreso «Usar el archivo de la plantilla»). Sin archivo guardado, la liga como
+  antes.
+- Va como `header: { source: 'template', media_type }`, **sin liga**: `SendOnWhatsappService` saca la liga
+  para Meta al mandar (caduca en una hora; así no importa cuánto estuvo abierto el formulario). Sin archivo
+  guardado → mensaje fallido con el motivo, no se manda.
+
+**La burbuja ya no se rompe a la hora.** Antes se guardaba en el mensaje la liga de Meta (caduca en una hora):
+pasaba en F5 (seguimientos/campañas) y habría pasado aquí. Ahora el mensaje guarda `preview_url`
+(`WhatsappTemplate#header_display_link`: la redirección de ActiveStorage, no caduca y el navegador la sigue) y
+la burbuja la prefiere. Mensajes viejos: siguen con su `media_url`.
+
+**Modal de crear (`Index.vue` + `whatsappTemplateValidator.js` + `Whatsapp::TemplateValidator`).**
+1. **Ejemplo en los botones** de copiar código (≤ 15) y de liga con `{{1}}` (la liga completa): el validador
+   del servidor los exigía pero el formulario no tenía dónde escribirlos → esos dos tipos nunca se podían crear.
+   El del navegador ahora también los revisa (antes el error salía hasta guardar).
+2. **Autenticación fuera**: tiene formato fijo de Meta (sin texto libre, botón de código, caducidad) que el
+   formulario no arma. Solo aparece al editar una que ya la tenga, con el aviso de crearla en WhatsApp Manager.
+3. **Cuerpo que empieza o termina con variable**: aviso antes de mandar a Meta (Meta lo rechaza; basta un punto
+   después). Ninguna de las 60 plantillas de la base estaba en ese caso ni era de autenticación.
+
+**Pila de pruebas.** Backend 92 + 9 en verde: validador (+5), `TemplateHeader` (+1: `preview_url`), envío con
+`source: template` (+2: liga fresca y guarda la que no caduca; sin archivo → fallido), consulta nueva (+4:
+agente ve el archivo, sin archivo guardado dice por qué, sin archivo, agente de otra bandeja no). Fábrica y
+specs de crear: cuerpos con punto final. Frontend 37 en verde: `templateForm` (+4), `TemplateHeader` (+1),
+`whatsappTemplateValidator.spec.js` nuevo (5). Webpack: «Compiled successfully».
+
+**Cómo pedírselo al Asistente / probarlo.** En una conversación de WhatsApp Cloud → plantillas →
+`ejemplo_documento_adjunto`: debe salir el PDF ya elegido; «Enviar» y el cliente lo recibe; la burbuja lo
+muestra (también mañana). ⚠ **Sin probar en navegador.**
+
+
+## 7.10 F7 — subir otro archivo desde la conversación (30/10/2026)
+
+El encabezado con archivo tiene ahora **tres orígenes** en el formulario de la conversación:
+
+```
+ Encabezado:  [ Archivo de la plantilla ] [ Subir archivo ] [ Pegar liga ]
+               └ Factura A1.pdf ↗          └ 📎 Elegir archivo  └ https://…
+                 (si la plantilla lo tiene,     Cotizacion 77.pdf ↗
+                  viene elegido)
+ Nombre (documento): [ Cotizacion 77.pdf ]   ← se pone solo con el del archivo
+```
+
+- `POST inboxes/:inbox_id/whatsapp_template_header` (`media_type`, `file`; cualquier agente de la bandeja):
+  revisa tipo y tamaño con los límites de Meta (`ResumableUploadService.file_error`, que ahora usa también la
+  pantalla de plantillas) y devuelve `{ signed_id, filename, preview_url }`. El navegador solo deja elegir
+  los tipos que Meta acepta.
+- Va como `header: { source: 'upload', signed_id, media_type, media_name }`. Al mandar, el servidor saca la
+  liga fresca para Meta y guarda en el mensaje la que no caduca (igual que el archivo de la plantilla). Si el
+  archivo ya no existe → mensaje fallido «vuelve a subirlo».
+- El archivo queda como blob suelto (no es adjunto del mensaje, igual que en F3); no hay tarea que borre blobs
+  sueltos, así que la burbuja lo sigue mostrando.
+
+**Pila de pruebas.** Backend 107 en verde (+2 subir: PDF de un agente, tipo no aceptado; +2 enviar: archivo
+subido con su nombre y liga que no caduca, archivo que ya no existe). Frontend 33 en verde (+2 `templateForm`).
+Webpack: «Compiled successfully». ⚠ **Sin probar en navegador.**
+
+## 7.11 F9 — variables con nombre ligadas a datos de Chatwoot (PLAN, sin código)
+
+**Idea.** Meta acepta variables con nombre (`parameter_format: NAMED`): `{{nombre}}`, `{{edad}}` (minúsculas,
+números y `_`; **sin puntos**, así que `{{contact.name}}` no). Para Meta el nombre es solo una etiqueta; el
+significado lo damos nosotros al enviar, **por convención de nombres**.
+
+```
+ Plantilla:  Hola {{nombre}}, por tu edad ({{edad}}) te toca el plan {{plan}}.
+
+ {{nombre}}  → campo reservado         → contacto.name        "Juan Pérez"
+ {{edad}}    → atributo personalizado  → custom_attributes.edad  "34"
+ {{plan}}    → no existe en Chatwoot   → lo escribe el agente
+```
+
+**Nombres reservados** (campos fijos): `nombre`, `primer_nombre`, `apellido`, `correo`, `telefono`, `empresa`,
+`agente`, `conversacion`, `bandeja`, `fecha_hoy`. **Atributos personalizados**: la variable se llama igual que
+la clave del atributo (Chatwoot ya las guarda en minúsculas con `_`); primero el del contacto, luego el de la
+conversación.
+
+```
+            ┌──────────── Whatsapp::TemplateVariableResolver (nuevo, puro) ────────────┐
+ plantilla ─┤  nombre → reservado | atributo contacto | atributo conversación | nada  ├─► valores
+ contacto  ─┤  {{1}} viejas → asociación guardada en la plantilla (opcional, F9.4)     │
+            └──────────────────────────────────────────────────────────────────────────┘
+        │                 │                         │                       │
+   Conversación       Programados            Seguimientos IA            Campañas
+   (prellenado,       (prellenado al         (deja de adivinar:         (igual; sin dato →
+    editable)          programar)             TemplateParamsProcessor)   no se envía + motivo)
+```
+
+**Fases.**
+- **F9.1 Crear con nombre** (era D6): el modal acepta `{{nombre}}`, manda `parameter_format: NAMED` y los
+  ejemplos en `body_text_named_params`; no mezclar `{{1}}` y `{{nombre}}` en la misma plantilla. Al escribir,
+  dice qué reconoció: «`{{edad}}` → atributo Edad ✓ · `{{plan}}` → lo escribe el agente». Ejemplos propuestos
+  con un contacto real.
+- **F9.2 Resolver** (servidor + réplica pura en JS para la conversación): nombre → valor del contacto.
+- **F9.3 Usarlo en todos lados**: conversación (llega llenado y editable, con el campo de origen visible),
+  programados, seguimientos y campañas (sin dato → no se envía y queda el motivo, como `template_media_missing`).
+- **F9.4 (opcional) Plantillas viejas con `{{1}}`**: en Configuración → Plantillas, «Datos de las variables»
+  (`{{1}}` → Contacto · Primer nombre), guardado en la fila `whatsapp_templates` (`variable_mapping` jsonb).
+
+**Lo que hay que saber.** El nombre se fija al crear (cambiarlo = editar y volver a revisión). Contacto sin el
+dato → campo vacío y en rojo en la conversación; en automático no se manda. Las plantillas `{{1}}` siguen igual.
+
+**Decisiones abiertas.** D9a ¿lista final de nombres reservados (español, inglés o ambos)? · D9b ¿F9.4 entra? ·
+D9c sin dato en seguimientos/campañas: ¿no mandar (recomendado) o mandar con un texto por omisión?
+
 ---
 
 ## 8. Pila de pruebas en navegador (al cerrar cada fase)
@@ -418,3 +532,9 @@ proponga el archivo guardado de la plantilla en vez de pedir la liga. ⚠ **Sin 
 - [ ] F4: programar una plantilla (con o sin adjunto según D4)
 - [ ] F5: seguimiento con plantilla de imagen → llega con la imagen; sin archivo → queda registrado el motivo
 - [ ] F6: subir archivo de muestra, filtros nuevos, indicador, "Ver en Meta", errores por bandeja
+- [ ] F8: plantilla con documento guardado → en la conversación sale ya elegido; «Usar otra liga» pide la liga
+- [ ] F8: la burbuja sigue mostrando el archivo al día siguiente
+- [ ] F8: crear plantilla con botón de copiar código y con liga `{{1}}` (con su ejemplo) → Meta las acepta
+- [ ] F8: «Autenticación» ya no aparece al crear; cuerpo que termina en `{{1}}` avisa antes de guardar
+- [ ] F7: «Subir archivo» → elegir un PDF de la máquina → el cliente lo recibe con su nombre; la burbuja lo muestra
+- [ ] F7: subir una imagen en una plantilla de documento → no deja elegirla / avisa el motivo

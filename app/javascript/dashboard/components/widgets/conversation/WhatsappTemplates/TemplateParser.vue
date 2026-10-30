@@ -13,8 +13,20 @@
  * (liga y, si es documento, su nombre), las variables del encabezado de texto y los
  * botones con dato (URL con {{1}}, copiar código). Qué se pide y qué se manda lo decide
  * templateForm.js (puro, con su spec). Sin `fullTemplate` se comporta como siempre.
+ *
+ * El archivo del encabezado tiene tres orígenes: el guardado en la plantilla (subido en la
+ * pantalla de plantillas; si existe, viene elegido y el agente solo da «Enviar»), uno que
+ * el agente sube de su máquina para este envío, o una liga pública.
  */
 import { ref, computed, onMounted } from 'vue';
+import WhatsappTemplateHeaderAPI from 'dashboard/api/whatsappTemplateHeader';
+
+// Lo que Meta acepta en el encabezado (Whatsapp::ResumableUploadService::LIMITS).
+const ACCEPTED_TYPES = {
+  image: 'image/jpeg,image/png',
+  video: 'video/mp4,video/3gpp',
+  document: 'application/pdf',
+};
 import {
   describeTemplate,
   buildProcessedParams,
@@ -35,6 +47,11 @@ export default {
       type: Boolean,
       default: false,
     },
+    // La bandeja: para traer el archivo guardado de la plantilla.
+    inboxId: {
+      type: Number,
+      default: undefined,
+    },
   },
   setup(props, { emit }) {
     const processVariable = str => {
@@ -47,6 +64,14 @@ export default {
     const mediaUrl = ref('');
     const mediaName = ref('');
     const errors = ref([]);
+    // El archivo guardado de la plantilla ({ media_name, preview_url }), el subido para este
+    // envío ({ signed_id, filename, preview_url }) y cuál se usa.
+    const templateFile = ref(null);
+    const uploadedFile = ref(null);
+    const mediaSource = ref('link');
+    const uploading = ref(false);
+    const uploadError = ref('');
+    const fileInput = ref(null);
 
     const info = computed(() => describeTemplate(props.template));
     // Lo que pide además del cuerpo, solo si la bandeja lo puede mandar.
@@ -82,7 +107,60 @@ export default {
       buttons: buttonParams.value,
       mediaUrl: mediaUrl.value,
       mediaName: mediaName.value,
+      templateFile:
+        mediaSource.value === 'template' ? templateFile.value : null,
+      mediaSource: mediaSource.value,
+      uploadedFile: uploadedFile.value,
     }));
+    const mediaSources = computed(() =>
+      (templateFile.value ? ['template'] : []).concat(['upload', 'link'])
+    );
+    const acceptedTypes = computed(
+      () => ACCEPTED_TYPES[extras.value.media] || ''
+    );
+
+    const chooseFile = () => {
+      if (fileInput.value) fileInput.value.click();
+    };
+    const onFileChosen = async event => {
+      const [file] = event.target.files || [];
+      event.target.value = '';
+      if (!file) return;
+      uploading.value = true;
+      uploadError.value = '';
+      try {
+        const { data } = await WhatsappTemplateHeaderAPI.upload(props.inboxId, {
+          mediaType: extras.value.media,
+          file,
+        });
+        uploadedFile.value = data;
+        if (extras.value.media === 'document') mediaName.value = data.filename;
+      } catch (error) {
+        const data = (error && error.response && error.response.data) || {};
+        uploadError.value = data.error || '';
+        uploadedFile.value = null;
+      } finally {
+        uploading.value = false;
+      }
+    };
+
+    const loadTemplateFile = async () => {
+      if (!extras.value.media || !props.inboxId) return;
+      try {
+        const { data } = await WhatsappTemplateHeaderAPI.show(props.inboxId, {
+          name: props.template.name,
+          language: props.template.language,
+        });
+        if (!data.available) return;
+        templateFile.value = {
+          media_name: data.media_name,
+          preview_url: data.preview_url,
+        };
+        mediaSource.value = 'template';
+      } catch {
+        // Sin el archivo guardado se pide la liga, como antes.
+      }
+    };
 
     const preview = computed(() => renderPreview(props.template, values.value));
 
@@ -128,7 +206,10 @@ export default {
       emit('sendMessage', payload);
     };
 
-    onMounted(generateVariables);
+    onMounted(() => {
+      generateVariables();
+      loadTemplateFile();
+    });
 
     return {
       processedParams,
@@ -137,6 +218,16 @@ export default {
       mediaUrl,
       mediaName,
       errors,
+      templateFile,
+      uploadedFile,
+      mediaSource,
+      mediaSources,
+      uploading,
+      uploadError,
+      fileInput,
+      acceptedTypes,
+      chooseFile,
+      onFileChosen,
       extras,
       paramButtons,
       preview,
@@ -179,7 +270,62 @@ export default {
       <p class="variables-label">
         {{ $t('WHATSAPP_TEMPLATES.PARSER.HEADER_LABEL') }}
       </p>
-      <div class="template__variable-item">
+      <div class="media-sources">
+        <woot-button
+          v-for="origen in mediaSources"
+          :key="origen"
+          size="small"
+          :variant="mediaSource === origen ? 'smooth' : 'clear'"
+          @click="mediaSource = origen"
+        >
+          {{ $t(`WHATSAPP_TEMPLATES.PARSER.SOURCE_${origen.toUpperCase()}`) }}
+        </woot-button>
+      </div>
+      <div v-if="mediaSource === 'template'" class="template-file">
+        <span>{{ $t('WHATSAPP_TEMPLATES.PARSER.TEMPLATE_FILE') }}</span>
+        <a
+          :href="templateFile.preview_url"
+          target="_blank"
+          rel="noreferrer noopener nofollow"
+        >
+          {{
+            templateFile.media_name ||
+            $t('WHATSAPP_TEMPLATES.PARSER.TEMPLATE_FILE_OPEN')
+          }}
+        </a>
+      </div>
+      <div v-else-if="mediaSource === 'upload'" class="template-file">
+        <input
+          ref="fileInput"
+          type="file"
+          class="hidden"
+          :accept="acceptedTypes"
+          @change="onFileChosen"
+        />
+        <woot-button
+          size="small"
+          variant="smooth"
+          icon="attach"
+          :is-loading="uploading"
+          @click="chooseFile"
+        >
+          {{
+            uploadedFile
+              ? $t('WHATSAPP_TEMPLATES.PARSER.CHANGE_FILE')
+              : $t('WHATSAPP_TEMPLATES.PARSER.CHOOSE_FILE')
+          }}
+        </woot-button>
+        <a
+          v-if="uploadedFile"
+          :href="uploadedFile.preview_url"
+          target="_blank"
+          rel="noreferrer noopener nofollow"
+        >
+          {{ uploadedFile.filename }}
+        </a>
+        <span v-if="uploadError" class="error">{{ uploadError }}</span>
+      </div>
+      <div v-else class="template__variable-item">
         <span class="variable-label">
           {{
             $t(`WHATSAPP_TEMPLATES.PARSER.MEDIA_${extras.media.toUpperCase()}`)
@@ -193,7 +339,10 @@ export default {
           :styles="{ marginBottom: 0 }"
         />
       </div>
-      <div v-if="extras.media === 'document'" class="template__variable-item">
+      <div
+        v-if="extras.media === 'document' && mediaSource !== 'template'"
+        class="template__variable-item"
+      >
         <span class="variable-label">
           {{ $t('WHATSAPP_TEMPLATES.PARSER.MEDIA_NAME_LABEL') }}
         </span>
@@ -320,6 +469,18 @@ export default {
 
 .template__variables-container {
   @apply p-2.5;
+}
+
+.media-sources {
+  @apply flex flex-wrap gap-1 mb-2.5;
+}
+
+.template-file {
+  @apply flex flex-wrap items-center gap-2 mb-2.5 text-sm text-slate-700 dark:text-slate-200;
+
+  a {
+    @apply text-woot-600 dark:text-woot-300 underline break-all;
+  }
 }
 
 .variables-label {

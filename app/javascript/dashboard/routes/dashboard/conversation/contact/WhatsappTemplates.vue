@@ -54,6 +54,7 @@ export default {
       v-else
       :template="selectedWaTemplate"
       :full-template="isCloud"
+      :inbox-id="inboxId"
       @resetTemplate="onResetTemplate"
       @sendMessage="onSendMessage"
     />

@@ -120,7 +120,9 @@ export default {
       const params = (attrs.template_params || {}).processed_params || {};
       const header = params.header || {};
       const tipos = ['image', 'video', 'document'];
-      return header.media_url && tipos.includes(header.media_type)
+      // preview_url: el archivo guardado de la plantilla (no se guarda la liga de Meta).
+      return (header.preview_url || header.media_url) &&
+        tipos.includes(header.media_type)
         ? header
         : null;
     },

@@ -223,3 +223,82 @@ describe('renderPreview', () => {
     );
   });
 });
+
+// El archivo guardado de la plantilla: el servidor saca la liga para Meta al mandar.
+describe('con el archivo de la plantilla', () => {
+  const templateFile = {
+    media_name: 'Factura A1.pdf',
+    preview_url:
+      'https://app.mx/rails/active_storage/blobs/redirect/x/Factura%20A1.pdf',
+  };
+  const valores = { body: { 1: 'A1' }, templateFile };
+
+  it('manda source: template sin liga', () => {
+    expect(
+      buildProcessedParams(conFactura, valores, { components: true })
+    ).toEqual({
+      body: { 1: 'A1' },
+      header: { source: 'template', media_type: 'document' },
+    });
+  });
+
+  it('no pide la liga del archivo', () => {
+    expect(validateValues(conFactura, valores, { components: true })).toEqual(
+      []
+    );
+  });
+
+  it('la vista previa muestra el nombre del archivo de la plantilla', () => {
+    expect(
+      renderPreview(conFactura, { ...valores, mediaName: 'otro.pdf' }).mediaName
+    ).toBe('Factura A1.pdf');
+  });
+
+  it('si el agente cambia a otra liga, se manda esa', () => {
+    const otra = {
+      body: { 1: 'A1' },
+      templateFile: null,
+      mediaUrl: 'https://cdn.mx/otra.pdf',
+    };
+    expect(
+      buildProcessedParams(conFactura, otra, { components: true }).header
+    ).toEqual({ media_url: 'https://cdn.mx/otra.pdf', media_type: 'document' });
+  });
+});
+
+// Otro archivo, subido de la máquina del agente para este envío.
+describe('con un archivo subido', () => {
+  const subido = {
+    signed_id: 'abc',
+    filename: 'Cotizacion 77.pdf',
+    preview_url:
+      'https://app.mx/rails/active_storage/blobs/redirect/abc/Cotizacion%2077.pdf',
+  };
+
+  it('manda source: upload con su signed_id y el nombre', () => {
+    const valores = {
+      body: { 1: 'A1' },
+      mediaSource: 'upload',
+      uploadedFile: subido,
+      mediaName: 'Cotizacion 77.pdf',
+    };
+    expect(
+      buildProcessedParams(conFactura, valores, { components: true }).header
+    ).toEqual({
+      source: 'upload',
+      signed_id: 'abc',
+      media_type: 'document',
+      media_name: 'Cotizacion 77.pdf',
+    });
+  });
+
+  it('pide elegir el archivo antes de mandar', () => {
+    expect(
+      validateValues(
+        conFactura,
+        { body: { 1: 'A1' }, mediaSource: 'upload', uploadedFile: null },
+        { components: true }
+      )
+    ).toEqual(['MEDIA_FILE']);
+  });
+});

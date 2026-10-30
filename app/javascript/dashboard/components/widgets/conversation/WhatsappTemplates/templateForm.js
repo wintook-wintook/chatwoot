@@ -17,6 +17,12 @@
 //   - WhatsApp Cloud con archivo, variables en el encabezado o botones con dato: el
 //     formato por componente que entiende Whatsapp::TemplateProcessorService (F1):
 //     { header: {...}, body: {...}, buttons: [...] }.
+//
+// EL ARCHIVO DE LA PLANTILLA: si la plantilla tiene archivo guardado (el subido en la
+// pantalla de plantillas), el formulario lo trae ya puesto (valores.templateFile). Entonces
+// el encabezado va como { source: 'template', media_type } sin liga: la liga para Meta la
+// saca el servidor al mandar (caduca en una hora). El agente puede cambiarlo por un archivo
+// de su máquina (valores.uploadedFile: { source: 'upload', signed_id }) o por otra liga.
 // ============================================================================
 
 export const MEDIA_FORMATS = ['IMAGE', 'VIDEO', 'DOCUMENT'];
@@ -76,7 +82,10 @@ const fill = (text, values) =>
     values && values[clave] ? values[clave] : match
   );
 
-// valores: { body: {"1": ...}, header: {"1": ...}, mediaUrl, mediaName, buttons: {index: valor} }
+// valores: { body: {"1": ...}, header: {"1": ...}, mediaUrl, mediaName, buttons: {index: valor},
+//            templateFile: { media_name, preview_url } | null  (usar el archivo de la plantilla),
+//            mediaSource: 'template' | 'upload' | 'link',
+//            uploadedFile: { signed_id, filename, preview_url } | null  (subido para este envío) }
 export function buildProcessedParams(
   template,
   valores,
@@ -88,7 +97,18 @@ export function buildProcessedParams(
 
   const params = {};
   if (Object.keys(body).length) params.body = body;
-  if (info.media) {
+  if (info.media && valores.mediaSource === 'upload') {
+    const archivo = valores.uploadedFile || {};
+    params.header = {
+      source: 'upload',
+      signed_id: archivo.signed_id,
+      media_type: info.media,
+    };
+    if (info.media === 'document' && (valores.mediaName || '').trim())
+      params.header.media_name = valores.mediaName.trim();
+  } else if (info.media && valores.templateFile) {
+    params.header = { source: 'template', media_type: info.media };
+  } else if (info.media) {
     params.header = {
       media_url: (valores.mediaUrl || '').trim(),
       media_type: info.media,
@@ -123,7 +143,13 @@ export function validateValues(template, valores, { components = false } = {}) {
 
   if (info.headerVars.some(v => !lleno(valores.header, v)))
     errores.push('HEADER');
-  if (info.media && !/^https?:\/\/\S+$/i.test((valores.mediaUrl || '').trim()))
+  if (info.media && valores.mediaSource === 'upload') {
+    if (!valores.uploadedFile) errores.push('MEDIA_FILE');
+  } else if (
+    info.media &&
+    !valores.templateFile &&
+    !/^https?:\/\/\S+$/i.test((valores.mediaUrl || '').trim())
+  )
     errores.push('MEDIA_URL');
   info.buttons
     .filter(b => b.needsParam)
@@ -143,7 +169,10 @@ export function renderPreview(template, valores) {
     header:
       info.headerFormat === 'TEXT' ? fill(info.headerText, valores.header) : '',
     media: info.media,
-    mediaName: (valores.mediaName || '').trim(),
+    mediaName:
+      valores.templateFile && valores.mediaSource !== 'upload'
+        ? valores.templateFile.media_name || ''
+        : (valores.mediaName || '').trim(),
     body: fill(info.bodyText, valores.body),
     footer: info.footerText,
     buttons: info.buttons.map(b => b.text).filter(Boolean),

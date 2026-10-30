@@ -3,6 +3,12 @@
 
 const NAME_FORMAT = /^[a-z0-9_]{1,512}$/;
 const VAR_REGEX = /\{\{\s*(\d+)\s*\}\}/g;
+const STARTS_WITH_VAR = /^\{\{\s*\d+\s*\}\}/;
+const ENDS_WITH_VAR = /\{\{\s*\d+\s*\}\}$/;
+export const COPY_CODE_MAX = 15;
+
+const firstExample = b =>
+  String((Array.isArray(b.example) ? b.example[0] : b.example) || '').trim();
 
 export const templateVariables = text => {
   const matches = String(text || '').match(VAR_REGEX) || [];
@@ -66,6 +72,20 @@ const validateButtons = (buttons, errors) => {
       errors.push(`Botón #${pos}: el texto excede 25 caracteres`);
     }
     if (type === 'URL' && !b.url) errors.push(`Botón #${pos} (URL) sin url`);
+    // feat/plantillas_whatsapp_mejoras: Meta pide un ejemplo de la liga con {{1}} y del código.
+    if (type === 'URL' && templateVariables(b.url).length && !firstExample(b)) {
+      errors.push(`Botón #${pos} (URL): falta el ejemplo de la liga completa`);
+    }
+    if (type === 'COPY_CODE') {
+      const ejemplo = firstExample(b);
+      if (!ejemplo)
+        errors.push(`Botón #${pos} (código): falta el código de ejemplo`);
+      else if (ejemplo.length > COPY_CODE_MAX) {
+        errors.push(
+          `Botón #${pos} (código): el ejemplo admite hasta ${COPY_CODE_MAX} caracteres`
+        );
+      }
+    }
     if (type === 'PHONE_NUMBER' && !b.phone_number) {
       errors.push(`Botón #${pos} (teléfono) sin phone_number`);
     }
@@ -85,6 +105,13 @@ export const validateTemplate = t => {
     errors.push('Nombre: solo minúsculas, números y _ (1-512 caracteres)');
   }
 
+  // feat/plantillas_whatsapp_mejoras: autenticación tiene formato fijo de Meta.
+  if (String(t.category || '').toUpperCase() === 'AUTHENTICATION') {
+    errors.push(
+      'Categoría: las de autenticación (códigos de verificación) se crean en WhatsApp Manager de Meta'
+    );
+  }
+
   // body
   if (!t.body_text) errors.push('Body: el cuerpo es obligatorio');
   else {
@@ -92,6 +119,15 @@ export const validateTemplate = t => {
       errors.push(`Body: excede 1024 caracteres (${t.body_text.length})`);
     }
     checkContiguous(templateVariables(t.body_text), 'Body', errors);
+    // feat/plantillas_whatsapp_mejoras: Meta rechaza variables en la orilla del cuerpo.
+    const texto = t.body_text.trim();
+    if (STARTS_WITH_VAR.test(texto))
+      errors.push('Body: no puede empezar con una variable');
+    if (ENDS_WITH_VAR.test(texto)) {
+      errors.push(
+        'Body: no puede terminar con una variable (agrega un punto o texto después)'
+      );
+    }
   }
 
   // header

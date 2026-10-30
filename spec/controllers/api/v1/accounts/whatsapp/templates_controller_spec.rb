@@ -56,7 +56,7 @@ RSpec.describe 'WhatsApp Templates API', type: :request do
         inbox_id: inbox.id,
         whatsapp_template: {
           name: 'cobro_vencido', language: 'es', category: 'UTILITY',
-          body_text: 'Hola {{1}}', sample_values: { body: ['Juan'] }
+          body_text: 'Hola {{1}}.', sample_values: { body: ['Juan'] }
         }
       }
     end

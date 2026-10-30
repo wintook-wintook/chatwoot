@@ -29,6 +29,13 @@
             "MEDIA_URL_PLACEHOLDER": "Public link to the file (https://…)",
             "MEDIA_NAME_LABEL": "Name",
             "MEDIA_NAME_PLACEHOLDER": "Name the customer will see (e.g. Invoice A1.pdf)",
+            "TEMPLATE_FILE": "The template's file will be sent:",
+            "TEMPLATE_FILE_OPEN": "View file",
+            "SOURCE_TEMPLATE": "Template's file",
+            "SOURCE_UPLOAD": "Upload file",
+            "SOURCE_LINK": "Paste link",
+            "CHOOSE_FILE": "Choose file",
+            "CHANGE_FILE": "Change file",
             "BUTTONS_LABEL": "Buttons",
             "BUTTON_URL": "Link",
             "BUTTON_COPY_CODE": "Code (max %{max})",
@@ -36,6 +43,7 @@
                 "BODY": "Fill in all the body variables.",
                 "HEADER": "Fill in the header variables.",
                 "MEDIA_URL": "Enter the public link to the file (must start with http:// or https://).",
+                "MEDIA_FILE": "Choose the file to send.",
                 "BUTTON": "Fill in each button's value.",
                 "COPY_CODE_LENGTH": "The copy code can have up to %{max} characters."
             }

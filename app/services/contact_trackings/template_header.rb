@@ -33,8 +33,11 @@ module ContactTrackings::TemplateHeader
     end
 
     # Para template_params.processed_params del mensaje: así la burbuja muestra el archivo (F3).
+    # media_url es la liga que recibió Meta (caduca en una hora); preview_url, la que no
+    # caduca, es la que pinta la burbuja.
     def processed_header
-      { 'media_url' => media[:url], 'media_type' => media[:type], 'media_name' => media[:name] }.compact
+      { 'media_url' => media[:url], 'media_type' => media[:type], 'media_name' => media[:name],
+        'preview_url' => media[:preview_url] }.compact
     end
 
     # El error en el formato que guardan las entregas (TrackingDelivery.parse_error).
@@ -61,7 +64,10 @@ module ContactTrackings::TemplateHeader
     end
 
     fila = stored_template(channel, template_name, language)
-    return Result.new(media: { type: tipo, url: fila.header_media_link, name: file_name(fila, tipo) }) if fila
+    if fila
+      return Result.new(media: { type: tipo, url: fila.header_media_link, name: file_name(fila, tipo),
+                                 preview_url: fila.header_display_link })
+    end
 
     Result.new(error: "La plantilla «#{template_name}» lleva #{NAMES[tipo]} en el encabezado y no tiene archivo guardado: " \
                       'súbelo en la pantalla de plantillas.')

@@ -43,11 +43,7 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
   # `header_sample` y ActiveStorage lo pega a la plantilla.
   def header_samples
     archivo = params[:file]
-    limites = Whatsapp::ResumableUploadService::LIMITS[params[:header_type].to_s]
-    return render json: { error: 'Tipo de encabezado no válido' }, status: :unprocessable_entity if limites.nil?
-    return render json: { error: 'Falta el archivo' }, status: :unprocessable_entity unless archivo.respond_to?(:content_type)
-
-    error = sample_error(archivo, limites)
+    error = Whatsapp::ResumableUploadService.file_error(archivo, params[:header_type])
     return render json: { error: error }, status: :unprocessable_entity if error
 
     blob = ActiveStorage::Blob.create_and_upload!(io: archivo, filename: archivo.original_filename,
@@ -79,12 +75,6 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
   end
 
   private
-
-  def sample_error(archivo, limites)
-    return "Tipo no permitido (#{archivo.content_type}); solo #{limites[:allowed]}" unless limites[:types].include?(archivo.content_type)
-
-    "#{limites[:label]} supera #{limites[:max] / Whatsapp::ResumableUploadService::MB} MB" if archivo.size > limites[:max]
-  end
 
   def blob_link(blob)
     ActiveStorage::Current.url_options = Rails.application.routes.default_url_options if ActiveStorage::Current.url_options.blank?

@@ -31,6 +31,17 @@ class Whatsapp::ResumableUploadService
     end
   end
 
+  # Lo que tiene mal un archivo subido para el encabezado del tipo dado (nil = sirve). Lo
+  # usan la pantalla de plantillas (muestra) y la conversación (archivo para un envío).
+  def self.file_error(archivo, header_type)
+    limites = LIMITS[header_type.to_s]
+    return 'Tipo de encabezado no válido' if limites.nil?
+    return 'Falta el archivo' unless archivo.respond_to?(:content_type)
+    return "Tipo no permitido (#{archivo.content_type}); solo #{limites[:allowed]}" unless limites[:types].include?(archivo.content_type)
+
+    "#{limites[:label]} supera #{limites[:max] / MB} MB" if archivo.size > limites[:max]
+  end
+
   def initialize(channel:, media_url:, header_type: 'image')
     @channel = channel
     @media_url = media_url

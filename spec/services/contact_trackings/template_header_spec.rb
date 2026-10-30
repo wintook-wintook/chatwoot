@@ -55,6 +55,17 @@ RSpec.describe ContactTrackings::TemplateHeader do
     expect(media[:name]).to eq('Factura A1.pdf')
   end
 
+  it 'para la burbuja guarda una liga que no caduca, distinta de la de Meta' do
+    fila = guardar(nil)
+    fila.header_sample.attach(io: Rails.root.join('spec/assets/sample.pdf').open, filename: 'Factura A1.pdf',
+                              content_type: 'application/pdf')
+
+    header = described_class.for(channel, 'factura', 'es_MX')
+
+    expect(header.processed_header['preview_url']).to include('/rails/active_storage/blobs/redirect/')
+    expect(header.processed_header['preview_url']).not_to eq(header.processed_header['media_url'])
+  end
+
   it 'si no hay del mismo idioma usa el que haya' do
     guardar('https://cdn.mx/f.pdf', language: 'es')
 

@@ -17,6 +17,18 @@ describe('TemplateHeader', () => {
     expect(wrapper.find('a').attributes('href')).toBe('https://cdn.mx/p.png');
   });
 
+  it('prefiere la liga que no caduca (archivo guardado de la plantilla)', () => {
+    const wrapper = montar({
+      media_url: 'https://cdn.mx/caduca.png',
+      preview_url: 'https://app.mx/rails/active_storage/blobs/redirect/x/p.png',
+      media_type: 'image',
+    });
+
+    expect(wrapper.find('img').attributes('src')).toBe(
+      'https://app.mx/rails/active_storage/blobs/redirect/x/p.png'
+    );
+  });
+
   it('pinta el video con controles', () => {
     const wrapper = montar({
       media_url: 'https://cdn.mx/v.mp4',

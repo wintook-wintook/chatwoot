@@ -72,14 +72,61 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
   # que llega a Meta es el mismo que antes. Un dato inválido (liga mala, código > 15) deja el
   # mensaje fallido con el motivo en vez de mandarlo roto.
   def enhanced_template_params
+    params = with_template_file(template_params.deep_dup)
+    return [nil, nil, nil, nil] if params.nil?
+
     name, namespace, language, components = Whatsapp::TemplateProcessorService.new(
-      channel: channel, template_params: template_params.deep_dup, message: message
+      channel: channel, template_params: params, message: message
     ).call
     components = build_processed_parameters(template_params['name'], template_params['processed_params']) if components.blank?
     [name, namespace, language, components]
   rescue ArgumentError => e
     message.update!(status: :failed, external_error: e.message)
     [nil, nil, nil, nil]
+  end
+
+  # El encabezado con archivo que no trae liga: el guardado en la plantilla (header.source =
+  # 'template') o uno que el agente subió para este envío ('upload', con su signed_id). La liga
+  # para Meta se saca AHORA (caduca en una hora) y no se guarda; en el mensaje queda la que no
+  # caduca, para la burbuja. Si no hay archivo, el mensaje queda fallido con el motivo.
+  # nil = no se manda.
+  def with_template_file(params)
+    header = params.dig('processed_params', 'header')
+    return params unless header.is_a?(Hash) && %w[template upload].include?(header['source'])
+
+    datos, error = header['source'] == 'upload' ? uploaded_file(header) : stored_template_file(params)
+    if error
+      message.update!(status: :failed, external_error: error)
+      return
+    end
+
+    save_template_file(datos.except('media_url'))
+    header.merge!(datos).except!('source', 'signed_id')
+    params
+  end
+
+  def stored_template_file(params)
+    resultado = ContactTrackings::TemplateHeader.for(channel, params['name'], params['language'])
+    return [nil, 'La plantilla no lleva archivo en el encabezado.'] if resultado.nil?
+    return [nil, resultado.error] if resultado.error.present?
+
+    [resultado.processed_header, nil]
+  end
+
+  def uploaded_file(header)
+    blob = ActiveStorage::Blob.find_signed(header['signed_id'].to_s)
+    return [nil, 'El archivo subido ya no existe: vuelve a subirlo.'] if blob.nil?
+
+    ActiveStorage::Current.url_options = Rails.application.routes.default_url_options if ActiveStorage::Current.url_options.blank?
+    nombre = header['media_name'].presence || blob.filename.to_s if header['media_type'] == 'document'
+    [{ 'media_url' => blob.url(expires_in: 1.hour), 'media_type' => header['media_type'], 'media_name' => nombre,
+       'preview_url' => Rails.application.routes.url_helpers.rails_blob_url(blob) }.compact, nil]
+  end
+
+  def save_template_file(datos)
+    atributos = message.additional_attributes.deep_dup
+    atributos['template_params']['processed_params']['header'].merge!(datos)
+    message.update!(additional_attributes: atributos)
   end
 
   def build_processed_parameters(template_name, processed_params)

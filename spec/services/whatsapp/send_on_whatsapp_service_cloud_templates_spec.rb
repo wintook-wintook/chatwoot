@@ -132,6 +132,64 @@ describe Whatsapp::SendOnWhatsappService do
     expect(WebMock).not_to have_requested(:post, messages_url)
   end
 
+  # El agente manda el archivo guardado de la plantilla: la liga para Meta se saca al enviar.
+  describe 'con el archivo de la plantilla (source: template)' do
+    let(:fila) do
+      create(:whatsapp_template, channel_whatsapp: channel, account: channel.account, name: 'factura', language: 'es_MX',
+                                 header_type: 'document')
+    end
+
+    it 'manda una liga fresca del archivo y guarda en el mensaje la que no caduca' do
+      fila.header_sample.attach(io: Rails.root.join('spec/assets/sample.pdf').open, filename: 'Factura A1.pdf',
+                                content_type: 'application/pdf')
+
+      message = send_template('factura', 'es_MX', { 'header' => { 'source' => 'template', 'media_type' => 'document' },
+                                                    'body' => { '1' => 'A1' } })
+
+      documento = sent_components.first['parameters'].first['document']
+      expect(documento['link']).to include('/rails/active_storage/')
+      expect(documento['filename']).to eq('Factura A1.pdf')
+
+      guardado = message.reload.additional_attributes.dig('template_params', 'processed_params', 'header')
+      expect(guardado).to include('media_name' => 'Factura A1.pdf', 'media_type' => 'document')
+      expect(guardado['preview_url']).to include('/rails/active_storage/blobs/redirect/')
+      expect(guardado).not_to have_key('media_url')
+    end
+
+    it 'un archivo subido para este envío: liga fresca, su nombre y la liga que no caduca' do
+      blob = ActiveStorage::Blob.create_and_upload!(io: Rails.root.join('spec/assets/sample.pdf').open,
+                                                    filename: 'Cotizacion 77.pdf', content_type: 'application/pdf')
+
+      message = send_template('factura', 'es_MX', { 'header' => { 'source' => 'upload', 'signed_id' => blob.signed_id,
+                                                                  'media_type' => 'document' },
+                                                    'body' => { '1' => 'A1' } })
+
+      documento = sent_components.first['parameters'].first['document']
+      expect(documento).to include('filename' => 'Cotizacion 77.pdf')
+      expect(documento['link']).to include('/rails/active_storage/')
+      guardado = message.reload.additional_attributes.dig('template_params', 'processed_params', 'header')
+      expect(guardado['preview_url']).to include('/rails/active_storage/blobs/redirect/')
+      expect(guardado).not_to have_key('media_url')
+    end
+
+    it 'un archivo subido que ya no existe deja el mensaje fallido' do
+      message = send_template('factura', 'es_MX', { 'header' => { 'source' => 'upload', 'signed_id' => 'no-existe',
+                                                                  'media_type' => 'document' },
+                                                    'body' => { '1' => 'A1' } })
+
+      expect(message.reload).to have_attributes(status: 'failed', external_error: include('vuelve a subirlo'))
+      expect(WebMock).not_to have_requested(:post, messages_url)
+    end
+
+    it 'sin archivo guardado deja el mensaje fallido con el motivo y no se envía' do
+      message = send_template('factura', 'es_MX', { 'header' => { 'source' => 'template', 'media_type' => 'document' },
+                                                    'body' => { '1' => 'A1' } })
+
+      expect(message.reload).to have_attributes(status: 'failed', external_error: include('no tiene archivo guardado'))
+      expect(WebMock).not_to have_requested(:post, messages_url)
+    end
+  end
+
   describe Whatsapp::Providers::WhatsappCloudService do
     let(:service) { described_class.new(whatsapp_channel: channel) }
 

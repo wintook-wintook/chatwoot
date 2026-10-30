@@ -89,6 +89,15 @@ class WhatsappTemplate < ApplicationRecord
     header_sample.blob.url(expires_in: expires_in)
   end
 
+  # La liga para VERLO en el panel (la burbuja del mensaje enviado, el formulario de la
+  # conversación): la redirección de ActiveStorage no caduca y el navegador sí la sigue. No
+  # sirve para Meta (ver #header_media_link). Sin archivo subido, la liga pegada a mano.
+  def header_display_link
+    return header_media_url.presence unless header_sample.attached?
+
+    Rails.application.routes.url_helpers.rails_blob_url(header_sample)
+  end
+
   # ¿Se subió un archivo nuevo en esta edición? (hay que volver a subir la muestra a Meta)
   def header_sample_changed?
     attachment_changes.key?('header_sample')

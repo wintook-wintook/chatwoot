@@ -8,7 +8,7 @@ FactoryBot.define do
     sequence(:name) { |n| "plantilla_#{n}" }
     language { 'es' }
     category { 'UTILITY' }
-    body_text { 'Hola {{1}}' }
+    body_text { 'Hola {{1}}.' }
     sample_values { { 'body' => ['Juan'] } }
     status { 'DRAFT' }
   end

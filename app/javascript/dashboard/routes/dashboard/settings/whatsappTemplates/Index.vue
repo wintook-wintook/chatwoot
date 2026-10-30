@@ -19,6 +19,7 @@ import {
   validateTemplate,
   templateVariables,
   substituteVariables,
+  COPY_CODE_MAX as copyCodeMax,
 } from 'dashboard/helper/whatsappTemplateValidator';
 import WhatsappTemplatesAPI from 'dashboard/api/whatsapp/templates';
 import {
@@ -96,6 +97,8 @@ export default {
       bodyHint: 'Cuerpo (obligatorio) — usa {{1}}, {{2}}… para variables',
       headerTextHint: 'Texto de cabecera (máx 60, opcional {{1}})',
       sampleLabel: n => `Valor de {{${n}}}`,
+      // En el script: Vue 2 no deja escribir {{1}} dentro de un atributo de la plantilla.
+      urlButtonPlaceholder: 'https://… (puede terminar en {{1}})',
       nameHint:
         'Se formatea automáticamente (minúsculas, sin espacios ni acentos). No se puede cambiar después.',
     };
@@ -231,6 +234,14 @@ export default {
           f.header_media_url ||
           (f.buttons && f.buttons.length)
       );
+    },
+    // feat/plantillas_whatsapp_mejoras: autenticación no se crea aquí (formato fijo de Meta);
+    // solo aparece al editar una que ya la tenga, para que el validador diga por qué.
+    formCategories() {
+      const base = this.categories.filter(c => c !== 'AUTHENTICATION');
+      return this.form.category === 'AUTHENTICATION'
+        ? [...base, 'AUTHENTICATION']
+        : base;
     },
     modalTitle() {
       return this.editingId ? 'Editar plantilla' : 'Nueva plantilla';
@@ -612,6 +623,23 @@ export default {
     },
     removeButton(index) {
       this.form.buttons.splice(index, 1);
+    },
+    // feat/plantillas_whatsapp_mejoras: el ejemplo que Meta pide para revisar el botón de
+    // código y el de liga con {{1}} (va en `example`, un arreglo de un valor).
+    needsButtonExample(btn) {
+      if (btn.type === 'COPY_CODE') return true;
+      return btn.type === 'URL' && templateVariables(btn.url).length > 0;
+    },
+    buttonExample(btn) {
+      return (Array.isArray(btn.example) ? btn.example[0] : btn.example) || '';
+    },
+    setButtonExample(btn, value) {
+      this.$set(btn, 'example', [value]);
+    },
+    buttonExamplePlaceholder(btn) {
+      return btn.type === 'COPY_CODE'
+        ? `Código de ejemplo (máx ${copyCodeMax})`
+        : 'Ejemplo de la liga completa (https://…/12345)';
     },
     // Etiqueta del botón en la vista previa (icono según tipo + texto).
     buttonPreviewLabel(btn) {
@@ -1090,7 +1118,9 @@ export default {
           <label class="block">
             Categoría
             <select v-model="form.category" class="w-full">
-              <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
+              <option v-for="c in formCategories" :key="c" :value="c">
+                {{ c }}
+              </option>
             </select>
           </label>
           <label class="block">
@@ -1254,8 +1284,15 @@ export default {
             <woot-input
               v-if="btn.type === 'URL'"
               v-model="btn.url"
-              placeholder="https://…"
+              :placeholder="urlButtonPlaceholder"
               class="flex-1 !mb-0"
+            />
+            <woot-input
+              v-if="needsButtonExample(btn)"
+              :value="buttonExample(btn)"
+              :placeholder="buttonExamplePlaceholder(btn)"
+              class="flex-1 !mb-0"
+              @input="setButtonExample(btn, $event)"
             />
             <woot-input
               v-if="btn.type === 'PHONE_NUMBER'"

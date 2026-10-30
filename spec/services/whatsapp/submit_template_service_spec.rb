@@ -10,7 +10,7 @@ RSpec.describe Whatsapp::SubmitTemplateService do
   let(:valid_params) do
     {
       name: 'cobro_vencido', language: 'es', category: 'UTILITY',
-      body_text: 'Hola {{1}}, saldo {{2}}',
+      body_text: 'Hola {{1}}, saldo {{2}}.',
       sample_values: { 'body' => %w[Juan $100] }
     }
   end

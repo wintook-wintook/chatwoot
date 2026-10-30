@@ -693,6 +693,8 @@ Rails.application.routes.draw do
             delete :avatar, on: :member
             # diag/llamadas_whatsapp (F6): la pestaña «Llamadas»
             resource :whatsapp_call_settings, only: [:show, :update], module: :inboxes
+            # feat/plantillas_whatsapp_mejoras: el archivo de una plantilla en la conversación (guardado o subido)
+            resource :whatsapp_template_header, only: [:show, :create], module: :inboxes
           end
           resources :inbox_members, only: [:create, :show], param: :inbox_id do
             collection do

@@ -16,7 +16,7 @@ import BubbleFile from './File.vue';
 export default {
   components: { BubbleFile },
   props: {
-    // { media_url, media_type: 'image' | 'video' | 'document', media_name }
+    // { media_url, media_type: 'image' | 'video' | 'document', media_name, preview_url }
     header: {
       type: Object,
       required: true,
@@ -24,8 +24,10 @@ export default {
   },
   emits: ['error'],
   computed: {
+    // preview_url no caduca (el archivo guardado de la plantilla); media_url es la liga que
+    // recibió Meta, que en ese caso caduca en una hora.
     url() {
-      return this.header.media_url;
+      return this.header.preview_url || this.header.media_url;
     },
     type() {
       return this.header.media_type;
