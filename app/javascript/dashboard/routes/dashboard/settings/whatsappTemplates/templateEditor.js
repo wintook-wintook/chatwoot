@@ -183,3 +183,55 @@ export const buildUrl = (base, dynamic) =>
 // El teléfono debe llevar la lada del país (+52…).
 export const phoneNeedsCountryCode = telefono =>
   Boolean(telefono) && !/^\+\d{6,}$/.test(String(telefono).replace(/\s/g, ''));
+
+// ---- Mensaje (F10.2) --------------------------------------------------------
+// La siguiente variable libre: {{1}} si no hay, si no la mayor + 1 (sin huecos que Meta
+// rechace).
+export const nextVariable = text => {
+  const nums = templateVariables(text);
+  return `{{${nums.length ? Math.max(...nums) + 1 : 1}}}`;
+};
+
+// Pone `snippet` en lugar de la selección [start, end) y deja el cursor después.
+export const insertAt = (text, start, end, snippet) => {
+  const base = String(text || '');
+  return {
+    text: base.slice(0, start) + snippet + base.slice(end),
+    cursor: start + snippet.length,
+  };
+};
+
+// Formato de WhatsApp: *negrita*, _cursiva_, ~tachado~, ```código```.
+export const FORMAT_MARKERS = {
+  BOLD: '*',
+  ITALIC: '_',
+  STRIKE: '~',
+  CODE: '```',
+};
+
+// Envuelve la selección con la marca; sin selección deja las dos marcas y el cursor en medio.
+export const wrapSelection = (text, start, end, marker) => {
+  const base = String(text || '');
+  const elegido = base.slice(start, end);
+  return {
+    text: base.slice(0, start) + marker + elegido + marker + base.slice(end),
+    selectionStart: start + marker.length,
+    selectionEnd: end + marker.length,
+  };
+};
+
+// «Lista para Meta» por pestaña: los errores del validador según su prefijo.
+export const errorsByTab = errors => {
+  const pestanas = { content: [], buttons: [], variables: [] };
+  errors.forEach(error => {
+    if (/^Bot(ón|ones)/.test(error)) pestanas.buttons.push(error);
+    else if (/^Ejemplos/.test(error)) pestanas.variables.push(error);
+    else pestanas.content.push(error);
+  });
+  return pestanas;
+};
+
+// ---- Aviso al salir (F10.3) -------------------------------------------------
+// Lo que importa para saber si hay cambios sin guardar: lo que se manda y la bandeja.
+export const formSnapshot = form =>
+  JSON.stringify({ ...templatePayload(form), inbox_id: form.inbox_id });

@@ -734,8 +734,45 @@ Frontend 83 en verde (+1 getter, +1 selector). Webpack: «Compiled successfully�
 Frontend 25 en verde en la carpeta (+5 botones en `templateEditor.spec.js`, +4 `TemplateButtonsEditor.spec.js`);
 menú 17 en verde. Webpack: «Compiled successfully». ⚠ **Sin probar en navegador.**
 
-**Sigue (F10.2, F10.4, F10.5).** «+ Variable», formato, «Lista para Meta» por pestaña; archivo con arrastrar y
-soltar; aviso al salir; ficha `/:id` + Duplicar; empezar desde un ejemplo.
+**F10.2 — hecho (30/10/2026).**
+
+```
+ Mensaje        [Negrita] [Cursiva] [Tachado] [Código]  [+ Variable]   86 / 1024
+ ┌──────────────────────────────────────────────────────────────────┐
+ │ Hola {{1}}, tu pago de *{{2}}* vence el {{3}}.                    │
+ └──────────────────────────────────────────────────────────────────┘
+                                           Lista para Meta
+ Contenido │ Botones • │ Variables (3) •    ✓ Contenido
+                                           ✗ Botones
+                                             • Botón #1 (URL): falta el ejemplo…
+                                           ✗ Variables
+                                             • Ejemplos: hay valores de body vacíos
+```
+- **«+ Variable»** pone la siguiente `{{n}}` (sin huecos) donde está el cursor o en lugar de lo seleccionado; en
+  el encabezado de texto agrega `{{1}}` (Meta permite una) y se oculta si ya la tiene.
+- **Formato de WhatsApp**: Negrita / Cursiva / Tachado / Código envuelven lo seleccionado con `*` `_` `~` ```` ``` ````
+  (sin selección dejan las dos marcas y el cursor en medio). Botones nativos con texto: este set de íconos no trae
+  negrita ni cursiva.
+- **«Lista para Meta» por pestaña**: los errores del validador repartidos por su prefijo (`errorsByTab`); cada
+  renglón ✓/✗ lleva a su pestaña, y la pestaña con pendientes lleva un «•» en su nombre. Con todo en verde:
+  «Todo en orden: ya la puedes mandar a revisión».
+
+Frontend: `templateEditor.spec.js` +4 (siguiente variable, insertar en el cursor, envolver, errores por pestaña).
+Webpack: «Compiled successfully». ⚠ **Sin probar en navegador.**
+
+**F10.3 resto — hecho (30/10/2026).**
+- **Arrastrar y soltar** el archivo de muestra en la zona punteada del encabezado (se resalta al pasar); antes de
+  subir revisa el tipo con lo que acepta Meta y si no sirve lo dice («Acepta: PDF, hasta 100 MB»).
+- **Aviso al salir sin guardar**: el editor guarda una foto del formulario al abrir y al guardar
+  (`formSnapshot`: lo que se manda + la bandeja, no lo que solo se ve). Con cambios, salir por el menú,
+  «‹ Plantillas de WhatsApp» o el navegador pregunta con el modal nativo (`woot-confirm-modal`: «Seguir editando» /
+  «Salir sin guardar»); cerrar o recargar la pestaña da el aviso del propio navegador. Guardar (o que Meta lo
+  rechace y quede en borrador) no pregunta.
+
+Frontend 30 en verde en la carpeta (+1 `formSnapshot`). Webpack: «Compiled successfully». ⚠ **Sin probar en
+navegador.**
+
+**Sigue (F10.4, F10.5).** Ficha `/:id` + Duplicar; empezar desde un ejemplo.
 
 ---
 
@@ -760,6 +797,8 @@ soltar; aviso al salir; ficha `/:id` + Duplicar; empezar desde un ejemplo.
 - [ ] F7: subir una imagen en una plantilla de documento → no deja elegirla / avisa el motivo
 - [ ] F10: crear desde «Recordatorio de pago» → ejemplos junto a sus variables → «Lista para Meta» en verde → enviar
 - [ ] F10: salir con cambios sin guardar → avisa; recargar `/:id/edit` → sigue en la misma plantilla
+- [ ] F10: arrastrar un PDF a la zona punteada de un encabezado de documento → se sube; una imagen → avisa
+- [ ] F10: + Variable en medio del texto, Negrita sobre una palabra, «Lista para Meta» lleva a la pestaña
 - [ ] F10: clic en una fila → ficha con estado en Meta → Duplicar abre el editor con todo copiado
 - [ ] Conversación (Cloud): `ejemplo_video_adjunto` aparece en el selector (antes la tienda la escondía)
 - [ ] Burbuja: una plantilla con botones muestra sus botones (y el código o la terminación de la liga)

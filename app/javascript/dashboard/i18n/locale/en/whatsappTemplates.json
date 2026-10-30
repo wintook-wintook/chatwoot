@@ -85,7 +85,8 @@
             "HEADER_TEXT": "Header text",
             "HEADER_FILE": "Header file",
             "NO_VARIABLES": "The message has no variables. Type %{variable} in the text to add one.",
-            "EXAMPLE_OF_HEADER": "Example for header %{variable}"
+            "EXAMPLE_OF_HEADER": "Example for header %{variable}",
+            "OR_DROP": "or drop the file here"
         },
         "CATEGORIES": {
             "UTILITY": "Utility",
@@ -154,12 +155,31 @@
             "SUBMITTED": "Template sent to Meta for review.",
             "RESUBMITTED": "Changes sent: the template goes back to review.",
             "SAVE_ERROR": "The template couldn't be saved.",
-            "UPLOAD_ERROR": "The file couldn't be uploaded."
+            "UPLOAD_ERROR": "The file couldn't be uploaded.",
+            "WRONG_TYPE": "That file doesn't work for this header. Accepted: %{allowed}."
         },
         "TABS": {
             "CONTENT": "Content",
             "BUTTONS": "Buttons",
             "VARIABLES": "Variables"
+        },
+        "FORMAT": {
+            "BOLD": "Bold",
+            "ITALIC": "Italic",
+            "STRIKE": "Strike",
+            "CODE": "Code",
+            "HINT": "Wraps the selection with %{marker} (WhatsApp format)",
+            "ADD_VARIABLE": "Variable"
+        },
+        "READY": {
+            "TITLE": "Ready for Meta",
+            "ALL_GOOD": "All good: you can send it for review."
+        },
+        "LEAVE": {
+            "TITLE": "Leave without saving?",
+            "DESCRIPTION": "You have unsaved changes in this template. If you leave now, they'll be lost.",
+            "CONFIRM": "Leave without saving",
+            "CANCEL": "Keep editing"
         }
     }
 }

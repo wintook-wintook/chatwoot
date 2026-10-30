@@ -29,8 +29,14 @@ import {
   formFromTemplate,
   isLocalDraft,
   languageOptions,
+  FORMAT_MARKERS,
+  errorsByTab,
+  formSnapshot,
+  insertAt,
+  nextVariable,
   sanitizeName,
   syncSamples,
+  wrapSelection,
   templatePayload,
 } from './templateEditor';
 
@@ -44,6 +50,14 @@ export default {
     TemplateButtonsEditor,
     TemplatePreview,
   },
+  // Salir con cambios sin guardar: se pregunta con el modal nativo.
+  async beforeRouteLeave(to, from, next) {
+    if (!this.hasUnsavedChanges) {
+      next();
+      return;
+    }
+    next(await this.$refs.leaveDialog.showConfirmation());
+  },
   data() {
     return {
       form: emptyForm(),
@@ -51,6 +65,9 @@ export default {
       loading: false,
       notFound: false,
       uploadingSample: false,
+      draggingFile: false,
+      // Cómo estaba el formulario al abrirlo o al guardar: para avisar si se sale con cambios.
+      savedSnapshot: '',
       formTabIndex: 0,
       // SettingsWrapper guarda la página en caché (keep-alive): al volver se recarga.
       inactive: false,
@@ -125,6 +142,12 @@ export default {
       }
       return errors;
     },
+    hasUnsavedChanges() {
+      return (
+        Boolean(this.savedSnapshot) &&
+        formSnapshot(this.form) !== this.savedSnapshot
+      );
+    },
     canSubmit() {
       return this.validationErrors.length === 0;
     },
@@ -153,13 +176,37 @@ export default {
             this.form.sample_values.body.length +
             this.form.sample_values.header.length,
         },
-      ].map(tab => ({
-        ...tab,
-        name: this.$t(`WHATSAPP_TEMPLATE_EDITOR.TABS.${tab.key.toUpperCase()}`),
-      }));
+      ].map(tab => {
+        const nombre = this.$t(
+          `WHATSAPP_TEMPLATE_EDITOR.TABS.${tab.key.toUpperCase()}`
+        );
+        const errores = this.tabErrors[tab.key];
+        // La pestaña con algo pendiente lleva un punto (woot-tabs-item solo tiene nombre).
+        return {
+          ...tab,
+          label: nombre,
+          errors: errores,
+          name: errores.length ? `${nombre} •` : nombre,
+        };
+      });
+    },
+    tabErrors() {
+      return errorsByTab(this.validationErrors);
     },
     activeTab() {
       return this.formTabs[this.formTabIndex].key;
+    },
+    formatButtons() {
+      return Object.keys(FORMAT_MARKERS).map(key => ({
+        key,
+        label: this.$t(`WHATSAPP_TEMPLATE_EDITOR.FORMAT.${key}`),
+        title: this.$t('WHATSAPP_TEMPLATE_EDITOR.FORMAT.HINT', {
+          marker: FORMAT_MARKERS[key],
+        }),
+      }));
+    },
+    headerHasVariable() {
+      return /\{\{\s*\d+\s*\}\}/.test(this.form.header_content);
     },
     hasVariables() {
       return this.headerSampleKeys.length + this.bodySampleKeys.length > 0;
@@ -192,12 +239,18 @@ export default {
   mounted() {
     this.$store.dispatch('inboxes/get');
     this.load();
+    window.addEventListener('beforeunload', this.onBeforeUnload);
   },
   activated() {
+    window.addEventListener('beforeunload', this.onBeforeUnload);
     if (this.inactive) this.load();
   },
   deactivated() {
     this.inactive = true;
+    window.removeEventListener('beforeunload', this.onBeforeUnload);
+  },
+  beforeDestroy() {
+    window.removeEventListener('beforeunload', this.onBeforeUnload);
   },
   methods: {
     async load() {
@@ -208,6 +261,7 @@ export default {
         this.template = null;
         this.form = emptyForm();
         this.form.inbox_id = Number(this.$route.query.inbox_id) || null;
+        this.markSaved();
         return;
       }
       this.loading = true;
@@ -222,6 +276,7 @@ export default {
         }
         this.template = template;
         this.form = formFromTemplate(template);
+        this.markSaved();
       } finally {
         this.loading = false;
       }
@@ -237,6 +292,54 @@ export default {
     onTabChange(index) {
       this.formTabIndex = index;
     },
+    goToTab(key) {
+      this.formTabIndex = this.formTabs.findIndex(t => t.key === key);
+    },
+    // El <textarea> del mensaje (ResizableTextArea lo expone en su ref).
+    bodyTextarea() {
+      const area = this.$refs.bodyInput;
+      return area && area.$refs.textarea;
+    },
+    // Cambia el mensaje y deja el cursor (o la selección) donde corresponde.
+    setBody(texto, inicio, fin = inicio) {
+      this.form.body_text = texto;
+      this.$nextTick(() => {
+        const area = this.bodyTextarea();
+        if (!area) return;
+        area.focus();
+        area.setSelectionRange(inicio, fin);
+      });
+    },
+    addBodyVariable() {
+      const area = this.bodyTextarea();
+      const largo = this.form.body_text.length;
+      const inicio = area ? area.selectionStart : largo;
+      const fin = area ? area.selectionEnd : largo;
+      const { text, cursor } = insertAt(
+        this.form.body_text,
+        inicio,
+        fin,
+        nextVariable(this.form.body_text)
+      );
+      this.setBody(text, cursor);
+    },
+    applyFormat(key) {
+      const area = this.bodyTextarea();
+      const largo = this.form.body_text.length;
+      const { text, selectionStart, selectionEnd } = wrapSelection(
+        this.form.body_text,
+        area ? area.selectionStart : largo,
+        area ? area.selectionEnd : largo,
+        FORMAT_MARKERS[key]
+      );
+      this.setBody(text, selectionStart, selectionEnd);
+    },
+    // Meta deja una sola variable en el encabezado: {{1}}.
+    addHeaderVariable() {
+      if (this.headerHasVariable) return;
+      const texto = this.form.header_content.trimEnd();
+      this.form.header_content = texto ? `${texto} {{1}}` : '{{1}}';
+    },
     headerTypeLabel(tipo) {
       return this.$t(
         `WHATSAPP_TEMPLATE_EDITOR.HEADER_TYPES.${(
@@ -244,10 +347,40 @@ export default {
         ).toUpperCase()}`
       );
     },
-    async uploadSample(event) {
+    // Después de que corren los watchers (ejemplos, nombre), para no contar eso como cambio.
+    markSaved() {
+      this.$nextTick(() => {
+        this.savedSnapshot = formSnapshot(this.form);
+      });
+    },
+    // Cerrar la pestaña o recargar con cambios: el aviso del propio navegador.
+    onBeforeUnload(event) {
+      if (!this.hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = '';
+    },
+    uploadSample(event) {
       const archivo = event.target.files && event.target.files[0];
       event.target.value = '';
+      if (archivo) this.uploadFile(archivo);
+    },
+    onFileDrop(event) {
+      this.draggingFile = false;
+      const archivo = event.dataTransfer && event.dataTransfer.files[0];
       if (!archivo) return;
+      if (!this.acceptedTypes.split(',').includes(archivo.type)) {
+        useAlert(
+          this.$t('WHATSAPP_TEMPLATE_EDITOR.ALERTS.WRONG_TYPE', {
+            allowed: this.$t(
+              `WHATSAPP_TEMPLATE_EDITOR.LIMITS.${this.form.header_type.toUpperCase()}`
+            ),
+          })
+        );
+        return;
+      }
+      this.uploadFile(archivo);
+    },
+    async uploadFile(archivo) {
       this.uploadingSample = true;
       try {
         const { data } = await WhatsappTemplatesAPI.uploadHeaderSample(
@@ -288,6 +421,7 @@ export default {
               template,
               draft,
             });
+        this.savedSnapshot = formSnapshot(this.form);
         if (draft) {
           useAlert(this.$t('WHATSAPP_TEMPLATE_EDITOR.ALERTS.DRAFT_SAVED'));
           this.openSaved(data);
@@ -304,8 +438,11 @@ export default {
         useAlert(
           data.error || this.$t('WHATSAPP_TEMPLATE_EDITOR.ALERTS.SAVE_ERROR')
         );
-        // Meta lo rechazó y quedó como borrador: se sigue editando ese.
-        if (data.template) this.openSaved(data.template);
+        // Meta lo rechazó y quedó como borrador (ya guardado): se sigue editando ese.
+        if (data.template) {
+          this.savedSnapshot = formSnapshot(this.form);
+          this.openSaved(data.template);
+        }
       }
     },
     // Lo guardado sigue en el editor (una plantilla nueva pasa a su /edit).
@@ -474,12 +611,28 @@ export default {
                 >
                   {{ headerTextCount }}
                 </span>
+                <woot-button
+                  v-if="!headerHasVariable"
+                  variant="clear"
+                  size="tiny"
+                  icon="add"
+                  class="-mt-3 mb-2"
+                  @click="addHeaderVariable"
+                >
+                  {{ $t('WHATSAPP_TEMPLATE_EDITOR.FORMAT.ADD_VARIABLE') }}
+                </woot-button>
               </div>
               <div v-else-if="isMediaHeader" class="mb-4">
                 <span class="text-sm">
                   {{ $t('WHATSAPP_TEMPLATE_EDITOR.FIELDS.HEADER_FILE') }}
                 </span>
-                <div class="flex flex-wrap items-center gap-2 mt-1">
+                <div
+                  class="drop-zone"
+                  :class="{ 'drop-zone--active': draggingFile }"
+                  @dragover.prevent="draggingFile = true"
+                  @dragleave.prevent="draggingFile = false"
+                  @drop.prevent="onFileDrop"
+                >
                   <woot-button
                     variant="smooth"
                     size="small"
@@ -512,6 +665,7 @@ export default {
                     />
                   </span>
                   <span class="text-xs text-slate-400">
+                    {{ $t('WHATSAPP_TEMPLATE_EDITOR.FIELDS.OR_DROP') }} ·
                     {{
                       $t(
                         `WHATSAPP_TEMPLATE_EDITOR.LIMITS.${form.header_type.toUpperCase()}`
@@ -526,13 +680,33 @@ export default {
                 />
               </div>
 
-              <label class="block">
-                <span class="flex items-center justify-between">
-                  <span>{{
-                    $t('WHATSAPP_TEMPLATE_EDITOR.SECTIONS.BODY')
-                  }}</span>
+              <div class="mb-4">
+                <div class="flex flex-wrap items-center gap-1 mb-1">
+                  <span class="text-sm">
+                    {{ $t('WHATSAPP_TEMPLATE_EDITOR.SECTIONS.BODY') }}
+                  </span>
+                  <span class="flex-1" />
+                  <woot-button
+                    v-for="boton in formatButtons"
+                    :key="boton.key"
+                    variant="clear"
+                    size="tiny"
+                    color-scheme="secondary"
+                    :title="boton.title"
+                    @click="applyFormat(boton.key)"
+                  >
+                    {{ boton.label }}
+                  </woot-button>
+                  <woot-button
+                    variant="smooth"
+                    size="tiny"
+                    icon="add"
+                    @click="addBodyVariable"
+                  >
+                    {{ $t('WHATSAPP_TEMPLATE_EDITOR.FORMAT.ADD_VARIABLE') }}
+                  </woot-button>
                   <span
-                    class="text-xs"
+                    class="ml-1 text-xs"
                     :class="
                       form.body_text.length > 1024
                         ? 'text-red-500'
@@ -541,8 +715,9 @@ export default {
                   >
                     {{ bodyCount }}
                   </span>
-                </span>
+                </div>
                 <ResizableTextArea
+                  ref="bodyInput"
                   v-model="form.body_text"
                   :rows="4"
                   :placeholder="
@@ -550,9 +725,9 @@ export default {
                       variable: variableSample,
                     })
                   "
-                  class="!h-28 overflow-y-auto"
+                  class="!h-28 !mb-0 overflow-y-auto"
                 />
-              </label>
+              </div>
 
               <div class="relative">
                 <woot-input
@@ -641,16 +816,73 @@ export default {
             {{ $t('WHATSAPP_TEMPLATE_EDITOR.SECTIONS.PREVIEW') }}
           </span>
           <TemplatePreview :form="form" />
-          <ul
-            v-if="validationErrors.length"
-            class="pl-4 m-0 text-xs text-red-600 list-disc dark:text-red-400"
-          >
-            <li v-for="(error, i) in validationErrors" :key="i">
-              {{ error }}
-            </li>
-          </ul>
+          <div class="ready-list">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
+              {{ $t('WHATSAPP_TEMPLATE_EDITOR.READY.TITLE') }}
+            </span>
+            <div v-for="tab in formTabs" :key="tab.key">
+              <button
+                type="button"
+                class="ready-list__row"
+                @click="goToTab(tab.key)"
+              >
+                <fluent-icon
+                  :icon="
+                    tab.errors.length ? 'error-circle' : 'checkmark-circle'
+                  "
+                  size="16"
+                  :class="
+                    tab.errors.length
+                      ? 'text-red-500'
+                      : 'text-green-600 dark:text-green-400'
+                  "
+                />
+                <span>{{ tab.label }}</span>
+              </button>
+              <ul
+                v-if="tab.errors.length"
+                class="pl-8 m-0 mb-1 text-xs text-red-600 list-disc dark:text-red-400"
+              >
+                <li v-for="(error, i) in tab.errors" :key="i">{{ error }}</li>
+              </ul>
+            </div>
+            <p
+              v-if="canSubmit"
+              class="mt-1 mb-0 text-xs text-green-700 dark:text-green-300"
+            >
+              {{ $t('WHATSAPP_TEMPLATE_EDITOR.READY.ALL_GOOD') }}
+            </p>
+          </div>
         </aside>
       </div>
     </template>
+
+    <woot-confirm-modal
+      ref="leaveDialog"
+      :title="$t('WHATSAPP_TEMPLATE_EDITOR.LEAVE.TITLE')"
+      :description="$t('WHATSAPP_TEMPLATE_EDITOR.LEAVE.DESCRIPTION')"
+      :confirm-label="$t('WHATSAPP_TEMPLATE_EDITOR.LEAVE.CONFIRM')"
+      :cancel-label="$t('WHATSAPP_TEMPLATE_EDITOR.LEAVE.CANCEL')"
+    />
   </SettingsLayout>
 </template>
+
+<style scoped lang="scss">
+.drop-zone {
+  @apply flex flex-wrap items-center gap-2 p-3 mt-1 rounded-lg border border-dashed border-slate-200 dark:border-slate-600;
+}
+
+.drop-zone--active {
+  @apply border-woot-500 bg-woot-25 dark:bg-woot-800;
+}
+
+.ready-list {
+  @apply flex flex-col gap-1 p-3 rounded-lg border border-solid border-slate-100 dark:border-slate-700;
+}
+
+.ready-list__row {
+  @apply flex items-center w-full gap-2 py-1 text-sm text-left text-slate-700 dark:text-slate-200 bg-transparent border-0 cursor-pointer;
+}
+</style>

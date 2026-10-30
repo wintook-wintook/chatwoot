@@ -16,6 +16,11 @@ import {
   urlBase,
   buildUrl,
   phoneNeedsCountryCode,
+  nextVariable,
+  insertAt,
+  wrapSelection,
+  errorsByTab,
+  formSnapshot,
 } from './templateEditor';
 
 // feat/plantillas_whatsapp_mejoras F10 — el formulario del editor a página completa
@@ -189,5 +194,67 @@ describe('botones', () => {
     expect(phoneNeedsCountryCode('+52')).toBe(true);
     expect(phoneNeedsCountryCode('+52 55 1234 5678')).toBe(false);
     expect(phoneNeedsCountryCode('')).toBe(false);
+  });
+});
+
+// F10.2 — el mensaje y la lista para Meta
+describe('mensaje', () => {
+  it('la siguiente variable no deja huecos', () => {
+    expect(nextVariable('')).toBe('{{1}}');
+    expect(nextVariable('Hola {{1}}, vence {{2}}.')).toBe('{{3}}');
+    expect(nextVariable('Hola {{2}}')).toBe('{{3}}');
+  });
+
+  it('inserta en el cursor y reemplaza lo seleccionado', () => {
+    expect(insertAt('Hola , gracias.', 5, 5, '{{1}}')).toEqual({
+      text: 'Hola {{1}}, gracias.',
+      cursor: 10,
+    });
+    expect(insertAt('Hola Juan.', 5, 9, '{{1}}').text).toBe('Hola {{1}}.');
+  });
+
+  it('envuelve la selección con la marca de WhatsApp', () => {
+    expect(wrapSelection('Paga hoy.', 5, 8, '*')).toEqual({
+      text: 'Paga *hoy*.',
+      selectionStart: 6,
+      selectionEnd: 9,
+    });
+    expect(wrapSelection('ab', 1, 1, '```').text).toBe('a``````b');
+  });
+
+  it('reparte los errores del validador por pestaña', () => {
+    expect(
+      errorsByTab([
+        'Nombre: es obligatorio',
+        'Body: no puede terminar con una variable',
+        'Botón #1 (URL): falta el ejemplo de la liga completa',
+        'Botones: máximo 2 de tipo URL',
+        'Ejemplos: hay valores de body vacíos',
+      ])
+    ).toEqual({
+      content: [
+        'Nombre: es obligatorio',
+        'Body: no puede terminar con una variable',
+      ],
+      buttons: [
+        'Botón #1 (URL): falta el ejemplo de la liga completa',
+        'Botones: máximo 2 de tipo URL',
+      ],
+      variables: ['Ejemplos: hay valores de body vacíos'],
+    });
+  });
+});
+
+// F10.3 — aviso al salir sin guardar
+describe('formSnapshot', () => {
+  it('cambia con lo que se manda o la bandeja, no con lo que solo se ve', () => {
+    const form = { ...emptyForm(), name: 'x', inbox_id: 1 };
+    const foto = formSnapshot(form);
+
+    expect(formSnapshot({ ...form, header_preview_url: 'https://…' })).toBe(
+      foto
+    );
+    expect(formSnapshot({ ...form, body_text: 'Hola' })).not.toBe(foto);
+    expect(formSnapshot({ ...form, inbox_id: 2 })).not.toBe(foto);
   });
 });

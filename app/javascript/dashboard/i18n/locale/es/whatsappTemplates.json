@@ -85,7 +85,8 @@
             "HEADER_TEXT": "Texto del encabezado",
             "HEADER_FILE": "Archivo del encabezado",
             "NO_VARIABLES": "El mensaje no lleva variables. Escribe %{variable} en el texto para agregar una.",
-            "EXAMPLE_OF_HEADER": "Ejemplo de %{variable} del encabezado"
+            "EXAMPLE_OF_HEADER": "Ejemplo de %{variable} del encabezado",
+            "OR_DROP": "o arrastra el archivo aquí"
         },
         "CATEGORIES": {
             "UTILITY": "Servicio",
@@ -154,12 +155,31 @@
             "SUBMITTED": "Plantilla enviada a revisión de Meta.",
             "RESUBMITTED": "Cambios enviados: la plantilla vuelve a revisión.",
             "SAVE_ERROR": "No se pudo guardar la plantilla.",
-            "UPLOAD_ERROR": "No se pudo subir el archivo."
+            "UPLOAD_ERROR": "No se pudo subir el archivo.",
+            "WRONG_TYPE": "Ese archivo no sirve para este encabezado. Acepta: %{allowed}."
         },
         "TABS": {
             "CONTENT": "Contenido",
             "BUTTONS": "Botones",
             "VARIABLES": "Variables"
+        },
+        "FORMAT": {
+            "BOLD": "Negrita",
+            "ITALIC": "Cursiva",
+            "STRIKE": "Tachado",
+            "CODE": "Código",
+            "HINT": "Encierra lo seleccionado con %{marker} (formato de WhatsApp)",
+            "ADD_VARIABLE": "Variable"
+        },
+        "READY": {
+            "TITLE": "Lista para Meta",
+            "ALL_GOOD": "Todo en orden: ya la puedes mandar a revisión."
+        },
+        "LEAVE": {
+            "TITLE": "¿Salir sin guardar?",
+            "DESCRIPTION": "Tienes cambios en la plantilla que no se han guardado. Si sales ahora, se pierden.",
+            "CONFIRM": "Salir sin guardar",
+            "CANCEL": "Seguir editando"
         }
     }
 }
