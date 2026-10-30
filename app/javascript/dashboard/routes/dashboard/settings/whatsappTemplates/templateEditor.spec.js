@@ -21,6 +21,7 @@ import {
   wrapSelection,
   errorsByTab,
   formSnapshot,
+  duplicateForm,
 } from './templateEditor';
 
 // feat/plantillas_whatsapp_mejoras F10 — el formulario del editor a página completa
@@ -256,5 +257,31 @@ describe('formSnapshot', () => {
     );
     expect(formSnapshot({ ...form, body_text: 'Hola' })).not.toBe(foto);
     expect(formSnapshot({ ...form, inbox_id: 2 })).not.toBe(foto);
+  });
+});
+
+// F10.4 — duplicar
+describe('duplicateForm', () => {
+  it('copia todo con «_copia», en la bandeja y con el mismo archivo', () => {
+    const copia = duplicateForm(
+      {
+        ...guardada,
+        header_sample: { filename: 'Factura A1.pdf', signed_id: 'blob-1' },
+      },
+      3
+    );
+
+    expect(copia).toMatchObject({
+      name: 'recordatorio_pago_copia',
+      inbox_id: 3,
+      language: 'es_MX',
+      category: 'UTILITY',
+      body_text: 'Hola {{1}}, tu pago vence el {{2}}.',
+      header_sample: 'blob-1',
+      header_sample_name: 'Factura A1.pdf',
+    });
+    expect(copia).not.toHaveProperty('id');
+    expect(copia).not.toHaveProperty('status');
+    expect(templatePayload(copia).header_sample).toBe('blob-1');
   });
 });

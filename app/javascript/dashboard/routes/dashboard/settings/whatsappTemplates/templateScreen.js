@@ -39,21 +39,89 @@ const hasFile = template =>
       template.header_media_url
   );
 
+const VARIABLE_RE = /\{\{\s*\d+\s*\}\}/;
+
+// Lleva un dato fuera del cuerpo: variable en el encabezado de texto, liga con {{1}} o
+// copiar código.
+function needsMoreThanBody(template) {
+  const botones = template.buttons || [];
+  return (
+    (template.header_type === 'text' &&
+      VARIABLE_RE.test(template.header_content || '')) ||
+    botones.some(b => {
+      const tipo = (b.type || '').toUpperCase();
+      return (
+        tipo === 'COPY_CODE' ||
+        (tipo === 'URL' && VARIABLE_RE.test(b.url || ''))
+      );
+    })
+  );
+}
+
 // { conversation: true|false|null, trackings: 'ok'|'missing_file'|'no'|null }
 // null = todavía no se puede mandar por nada (no está aprobada).
 export function sendability(template, inbox) {
   if (template.status !== 'APPROVED')
     return { conversation: null, trackings: null };
   const conArchivo = MEDIA_TYPES.includes(template.header_type);
-  if (!conArchivo) return { conversation: true, trackings: 'ok' };
-
   const cloud = Boolean(inbox && inbox.provider === 'whatsapp_cloud');
+  // Fuera de WhatsApp Cloud solo sale el cuerpo: las que piden un dato en el encabezado
+  // o en un botón tampoco se pueden mandar (el selector las oculta).
+  if (!conArchivo && (cloud || !needsMoreThanBody(template)))
+    return { conversation: true, trackings: 'ok' };
   if (!cloud) return { conversation: false, trackings: 'no' };
   return {
     conversation: true,
     trackings: hasFile(template) ? 'ok' : 'missing_file',
   };
 }
+
+// feat/plantillas_whatsapp_mejoras F10.4 — los pasos del estado en Meta para la ficha:
+// [{ key, state: 'done' | 'current' | 'pending' | 'failed' | 'warning' }]
+export function statusSteps(status) {
+  const paso = (key, state) => ({ key, state });
+  if (status === 'DRAFT')
+    return [
+      paso('DRAFT', 'current'),
+      paso('PENDING', 'pending'),
+      paso('RESULT', 'pending'),
+    ];
+  if (status === 'PENDING')
+    return [
+      paso('SUBMITTED', 'done'),
+      paso('PENDING', 'current'),
+      paso('RESULT', 'pending'),
+    ];
+  const tercero = {
+    APPROVED: paso('APPROVED', 'done'),
+    REJECTED: paso('REJECTED', 'failed'),
+    PAUSED: paso('PAUSED', 'warning'),
+    DISABLED: paso('DISABLED', 'failed'),
+    IN_APPEAL: paso('IN_APPEAL', 'warning'),
+    PENDING_DELETION: paso('PENDING_DELETION', 'warning'),
+  }[status];
+  return [
+    paso('SUBMITTED', 'done'),
+    paso('REVIEWED', 'done'),
+    tercero || paso('RESULT', 'pending'),
+  ];
+}
+
+// Los motivos de rechazo que manda Meta (rejected_reason) con explicación propia; el
+// resto se muestra tal cual.
+export const KNOWN_REJECTIONS = [
+  'ABUSIVE_CONTENT',
+  'INCORRECT_CATEGORY',
+  'INVALID_FORMAT',
+  'PROMOTIONAL',
+  'SCAM',
+  'TAG_CONTENT_MISMATCH',
+];
+
+export const rejectionKey = reason => {
+  const clave = String(reason || '').toUpperCase();
+  return KNOWN_REJECTIONS.includes(clave) ? clave : null;
+};
 
 export function metaManagerUrl(inbox) {
   const config = (inbox && inbox.provider_config) || {};

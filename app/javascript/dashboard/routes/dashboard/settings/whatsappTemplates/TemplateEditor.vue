@@ -30,6 +30,7 @@ import {
   isLocalDraft,
   languageOptions,
   FORMAT_MARKERS,
+  duplicateForm,
   errorsByTab,
   formSnapshot,
   insertAt,
@@ -235,6 +236,9 @@ export default {
     templateId() {
       this.load();
     },
+    '$route.query.from'() {
+      if (!this.isEditing) this.load();
+    },
   },
   mounted() {
     this.$store.dispatch('inboxes/get');
@@ -261,6 +265,7 @@ export default {
         this.template = null;
         this.form = emptyForm();
         this.form.inbox_id = Number(this.$route.query.inbox_id) || null;
+        await this.loadDuplicate();
         this.markSaved();
         return;
       }
@@ -280,6 +285,20 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+    // «Duplicar» desde la ficha (F10.4): /new?from=<id> arranca con todo copiado.
+    async loadDuplicate() {
+      const origen = Number(this.$route.query.from);
+      if (!origen) return;
+      if (!this.templates.length) {
+        await this.$store.dispatch('whatsappTemplates/fetch');
+      }
+      const template = this.templates.find(t => t.id === origen);
+      if (!template) return;
+      const inbox = this.whatsappInboxes.find(
+        i => i.channel_id === template.channel_whatsapp_id
+      );
+      this.form = duplicateForm(template, inbox ? inbox.id : null);
     },
     syncHeaderSamples() {
       const texto =

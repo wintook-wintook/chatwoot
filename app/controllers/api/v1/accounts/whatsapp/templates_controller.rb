@@ -160,7 +160,8 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
   # F6: el archivo subido (si lo hay) y una liga fresca para la vista previa.
   def sample_json(template)
     archivo = template.header_sample
-    { header_sample: archivo.attached? ? { filename: archivo.filename.to_s } : nil,
+    # signed_id: para «Duplicar» (F10.4), la copia pega el mismo archivo.
+    { header_sample: archivo.attached? ? { filename: archivo.filename.to_s, signed_id: archivo.blob.signed_id } : nil,
       header_media_link: template.header_media_link }
   end
 end

@@ -181,5 +181,62 @@
             "CONFIRM": "Salir sin guardar",
             "CANCEL": "Seguir editando"
         }
+    },
+    "WHATSAPP_TEMPLATE_DETAIL": {
+        "STATUS_TITLE": "Estado en Meta",
+        "SUBMITTED_AT": "Último envío a Meta: %{date}",
+        "REJECTED_BECAUSE": "Meta la rechazó (%{reason})",
+        "LAST_ERROR": "El último envío falló:",
+        "DETAILS_TITLE": "Datos",
+        "STEPS": {
+            "DRAFT": "Borrador",
+            "SUBMITTED": "Enviada",
+            "PENDING": "En revisión",
+            "REVIEWED": "Revisada",
+            "RESULT": "Resultado",
+            "APPROVED": "Aprobada",
+            "REJECTED": "Rechazada",
+            "PAUSED": "Pausada por Meta",
+            "DISABLED": "Deshabilitada por Meta",
+            "IN_APPEAL": "En apelación",
+            "PENDING_DELETION": "Borrándose"
+        },
+        "REJECTIONS": {
+            "ABUSIVE_CONTENT": "Meta la consideró contenido abusivo. Revisa el texto y quita lo que pueda sonar agresivo o engañoso.",
+            "INCORRECT_CATEGORY": "La categoría no corresponde al contenido. Si ofrece algo o invita a comprar, es Marketing; si avisa de algo que el cliente ya pidió, es Servicio.",
+            "INVALID_FORMAT": "El formato no es válido: revisa las variables (sin huecos, ni al inicio ni al final), los ejemplos y que el texto no tenga caracteres raros.",
+            "PROMOTIONAL": "Tiene contenido promocional en una categoría que no es Marketing. Cámbiala a Marketing o quita la promoción.",
+            "SCAM": "Meta la consideró un posible fraude. Evita pedir datos sensibles o pagos de forma sospechosa.",
+            "TAG_CONTENT_MISMATCH": "El contenido no coincide con la categoría elegida. Cambia la categoría o ajusta el texto.",
+            "OTHER": "Revisa el motivo en WhatsApp Manager, corrígela con «Editar» y vuelve a mandarla."
+        },
+        "QUALITY": {
+            "TITLE": "Calidad",
+            "GREEN": "Alta",
+            "YELLOW": "Media",
+            "RED": "Baja",
+            "NONE": "Sin calificar"
+        },
+        "SEND": {
+            "TITLE": "Se puede enviar",
+            "NOT_YET": "Se podrá enviar cuando Meta la apruebe.",
+            "CONVERSATION": "En la conversación",
+            "TRACKINGS_OK": "En seguimientos y campañas",
+            "TRACKINGS_MISSING_FILE": "Seguimientos y campañas: falta subir el archivo (Editar)",
+            "TRACKINGS_NO": "En seguimientos y campañas no (esta bandeja no lo permite)"
+        },
+        "FIELDS": {
+            "HEADER": "Encabezado",
+            "VARIABLES": "Variables",
+            "BUTTONS": "Botones",
+            "META_ID": "ID en Meta"
+        },
+        "ACTIONS": {
+            "META": "Ver en Meta",
+            "DUPLICATE": "Duplicar",
+            "EDIT": "Editar",
+            "CONTINUE_DRAFT": "Seguir el borrador",
+            "EDIT_LOCKED": "No se puede editar mientras Meta la revisa o en su estado actual."
+        }
     }
 }

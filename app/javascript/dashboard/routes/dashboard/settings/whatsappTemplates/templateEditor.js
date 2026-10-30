@@ -235,3 +235,22 @@ export const errorsByTab = errors => {
 // Lo que importa para saber si hay cambios sin guardar: lo que se manda y la bandeja.
 export const formSnapshot = form =>
   JSON.stringify({ ...templatePayload(form), inbox_id: form.inbox_id });
+
+// ---- Duplicar (F10.4) -------------------------------------------------------
+// La copia de una plantilla: todo igual (también el archivo subido) con «_copia» en el
+// nombre, en la misma bandeja, como plantilla nueva.
+export const duplicateForm = (template, inboxId) => {
+  const form = formFromTemplate(template);
+  const archivo = template.header_sample || {};
+  const copia = { ...emptyForm(), inbox_id: inboxId || null };
+  SERVER_FIELDS.forEach(campo => {
+    copia[campo] = form[campo];
+  });
+  return {
+    ...copia,
+    name: sanitizeName(`${template.name}_copia`),
+    header_sample: archivo.signed_id || null,
+    header_sample_name: form.header_sample_name,
+    header_preview_url: form.header_preview_url,
+  };
+};

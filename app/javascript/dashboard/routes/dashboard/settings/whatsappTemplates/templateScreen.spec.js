@@ -1,4 +1,10 @@
-import { templateKinds, sendability, metaManagerUrl } from './templateScreen';
+import {
+  templateKinds,
+  sendability,
+  metaManagerUrl,
+  statusSteps,
+  rejectionKey,
+} from './templateScreen';
 
 // feat/plantillas_whatsapp_mejoras F6 — la pantalla de plantillas
 const cloud = {
@@ -73,5 +79,57 @@ describe('metaManagerUrl', () => {
     );
     expect(metaManagerUrl(dialog360)).toBeNull();
     expect(metaManagerUrl(null)).toBeNull();
+  });
+});
+
+// F10.4 — la ficha
+describe('sendability fuera de WhatsApp Cloud', () => {
+  it('las que piden un dato en un botón o en el encabezado no se mandan', () => {
+    const base = { status: 'APPROVED', header_type: 'text', buttons: [] };
+    expect(sendability(base, dialog360).conversation).toBe(true);
+    expect(
+      sendability({ ...base, buttons: [{ type: 'COPY_CODE' }] }, dialog360)
+        .conversation
+    ).toBe(false);
+    expect(
+      sendability({ ...base, header_content: 'Pedido {{1}}' }, dialog360)
+        .conversation
+    ).toBe(false);
+    expect(
+      sendability({ ...base, buttons: [{ type: 'COPY_CODE' }] }, cloud)
+        .conversation
+    ).toBe(true);
+  });
+});
+
+describe('statusSteps', () => {
+  const estados = status => statusSteps(status).map(p => `${p.key}:${p.state}`);
+
+  it('borrador, en revisión y aprobada', () => {
+    expect(estados('DRAFT')).toEqual([
+      'DRAFT:current',
+      'PENDING:pending',
+      'RESULT:pending',
+    ]);
+    expect(estados('PENDING')).toEqual([
+      'SUBMITTED:done',
+      'PENDING:current',
+      'RESULT:pending',
+    ]);
+    expect(estados('APPROVED')[2]).toBe('APPROVED:done');
+  });
+
+  it('rechazada, pausada y deshabilitada', () => {
+    expect(estados('REJECTED')[2]).toBe('REJECTED:failed');
+    expect(estados('PAUSED')[2]).toBe('PAUSED:warning');
+    expect(estados('DISABLED')[2]).toBe('DISABLED:failed');
+  });
+});
+
+describe('rejectionKey', () => {
+  it('explica los motivos conocidos de Meta; el resto se muestra tal cual', () => {
+    expect(rejectionKey('incorrect_category')).toBe('INCORRECT_CATEGORY');
+    expect(rejectionKey('ALGO_NUEVO')).toBeNull();
+    expect(rejectionKey(null)).toBeNull();
   });
 });

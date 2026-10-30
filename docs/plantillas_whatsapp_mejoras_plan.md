@@ -772,7 +772,38 @@ Webpack: «Compiled successfully». ⚠ **Sin probar en navegador.**
 Frontend 30 en verde en la carpeta (+1 `formSnapshot`). Webpack: «Compiled successfully». ⚠ **Sin probar en
 navegador.**
 
-**Sigue (F10.4, F10.5).** Ficha `/:id` + Duplicar; empezar desde un ejemplo.
+**F10.4 — hecho (30/10/2026): la ficha y Duplicar.**
+
+```
+ recordatorio_pago                 [‹ Plantillas de WhatsApp] [Ver en Meta] [Duplicar] [Editar]
+ Servicio · es_MX · Whatsapp
+ ┌ Estado en Meta ───────────────────────────────────────┐  Vista previa
+ │ ✓ Enviada  ›  ✓ Revisada  ›  ✗ Rechazada              │  ┌───────────────┐
+ │ Último envío a Meta: 30/10/2026 18:20                  │  │ ▓▓ Factura… │
+ │ ┌ Meta la rechazó (INCORRECT_CATEGORY) ──────────────┐ │  │ Hola Juan, … │
+ │ │ La categoría no corresponde al contenido. Si…      │ │  └───────────────┘
+ │ └────────────────────────────────────────────────────┘ │
+ ├ Se puede enviar ──────────┬ Datos ──────────────────────┤
+ │ ✓ En la conversación      │ Calidad ● Alta              │
+ │ ⚠ Seguimientos: falta…    │ Encabezado · Variables · …  │
+ └───────────────────────────┴─────────────────────────────┘
+```
+- Ruta `/whatsapp-templates/:id` (`TemplateDetail.vue`, después de `list` y `new`), en el menú; el nombre en la
+  tabla abre la ficha. Mismo encabezado nativo y regreso junto a las acciones.
+- Estado en Meta como pasos (`statusSteps`: borrador / en revisión / aprobada / rechazada / pausada /
+  deshabilitada / en apelación), fecha del último envío, **motivo del rechazo con qué hacer** (`rejectionKey`:
+  ABUSIVE_CONTENT, INCORRECT_CATEGORY, INVALID_FORMAT, PROMOTIONAL, SCAM, TAG_CONTENT_MISMATCH; el resto tal cual)
+  y el error del último envío. Calidad, «se puede enviar», encabezado, variables, botones e ID en Meta.
+- **Editar** (o «Seguir el borrador»; deshabilitado con su motivo si Meta la revisa), **Ver en Meta** y
+  **Duplicar**: `/new?from=<id>` abre el editor con todo copiado (`duplicateForm`: nombre `_copia`, misma bandeja
+  y el mismo archivo subido — la API ahora da su `signed_id`).
+- De paso, «se puede enviar» fuera de WhatsApp Cloud ya marca «no» las que piden dato en botón o encabezado
+  (igual que el selector).
+
+Pruebas: frontend 52 en verde (pantalla + menú; +4 ficha/sendability, +1 duplicar); backend 39 en verde
+(controlador: `header_sample` con `signed_id`). Webpack: «Compiled successfully». ⚠ **Sin probar en navegador.**
+
+**Sigue (F10.5).** Empezar desde un ejemplo.
 
 ---
 

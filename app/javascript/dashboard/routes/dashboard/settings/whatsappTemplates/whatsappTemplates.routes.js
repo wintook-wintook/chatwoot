@@ -7,6 +7,7 @@ import { frontendURL } from '../../../../helper/URLHelper';
 const SettingsWrapper = () => import('../SettingsWrapper.vue');
 const Index = () => import('./Index.vue');
 const TemplateEditor = () => import('./TemplateEditor.vue');
+const TemplateDetail = () => import('./TemplateDetail.vue');
 
 const meta = { permissions: ['administrator'] };
 
@@ -33,6 +34,13 @@ export default {
           name: 'whatsapp_templates_new',
           meta,
           component: TemplateEditor,
+        },
+        // Después de 'list' y 'new': si no, ':templateId' también las atraparía.
+        {
+          path: ':templateId',
+          name: 'whatsapp_templates_show',
+          meta,
+          component: TemplateDetail,
         },
         {
           path: ':templateId/edit',

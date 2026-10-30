@@ -152,7 +152,8 @@ RSpec.describe 'WhatsApp Templates API', type: :request do
            headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:created)
-      expect(response.parsed_body['header_sample']).to eq('filename' => 'sample.pdf')
+      # F10.4: también su signed_id, para que «Duplicar» pegue el mismo archivo.
+      expect(response.parsed_body['header_sample']).to include('filename' => 'sample.pdf', 'signed_id' => signed_id)
       expect(WhatsappTemplate.find(response.parsed_body['id']).header_sample).to be_attached
     end
   end

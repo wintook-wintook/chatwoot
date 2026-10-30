@@ -175,6 +175,7 @@ describe('Menú v2', () => {
       'whatsapp_templates_wrapper',
       'whatsapp_templates_new',
       'whatsapp_templates_edit',
+      'whatsapp_templates_show',
       'gestorTickets_catalog',
       'gestorTickets_close_reasons',
       'kanban_types_list',

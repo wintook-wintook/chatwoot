@@ -617,9 +617,16 @@ export default {
             class="border-b border-slate-50 dark:border-slate-800"
           >
             <td class="py-3">
-              <div class="font-medium text-slate-700 dark:text-slate-200">
+              <!-- F10.4: el nombre abre la ficha (estado en Meta, duplicar, editar). -->
+              <router-link
+                :to="{
+                  name: 'whatsapp_templates_show',
+                  params: { templateId: t.id },
+                }"
+                class="font-medium text-slate-700 dark:text-slate-200 hover:text-woot-600 hover:underline"
+              >
                 {{ t.name }}
-              </div>
+              </router-link>
               <div v-if="t.rejection_reason" class="text-xs text-red-500">
                 Rechazo: {{ t.rejection_reason }}
               </div>
