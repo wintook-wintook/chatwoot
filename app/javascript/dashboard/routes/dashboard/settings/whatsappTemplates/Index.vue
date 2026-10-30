@@ -23,7 +23,20 @@ import {
   templateKinds,
   sendability,
   metaManagerUrl,
+  sortTemplates,
 } from './templateScreen';
+
+const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+const PER_PAGE_KEY = 'waba_templates_per_page';
+
+const storedPerPage = () => {
+  try {
+    const guardado = Number(window.localStorage.getItem(PER_PAGE_KEY));
+    return PER_PAGE_OPTIONS.includes(guardado) ? guardado : 25;
+  } catch {
+    return 25;
+  }
+};
 
 export default {
   components: {
@@ -41,15 +54,12 @@ export default {
       kindOptions: KIND_OPTIONS,
       searchQuery: '',
       currentPage: 1,
-      perPage: 10,
-      showFiltersModal: false,
-      draftFilters: {
-        channel: '',
-        status: '',
-        category: '',
-        language: '',
-        kind: '',
-      },
+      // F10: filas por página a elegir (25 por omisión); se recuerda en este navegador.
+      perPage: storedPerPage(),
+      perPageOptions: PER_PAGE_OPTIONS,
+      // F10: clic en la columna para ordenar; por omisión, la última actualización primero.
+      sortKey: 'updated_at',
+      sortDir: 'desc',
       deletePopup: false,
       deleteTarget: null,
       categories: ['UTILITY', 'MARKETING', 'AUTHENTICATION'],
@@ -87,42 +97,6 @@ export default {
           this.searchQuery.trim()
       );
     },
-    // Chips de los filtros activos (sin la búsqueda, que tiene su propio input).
-    activeFilterChips() {
-      const chips = [];
-      if (this.channelFilter) {
-        const ib = this.whatsappInboxes.find(
-          i => i.channel_id === Number(this.channelFilter)
-        );
-        chips.push({
-          key: 'channel',
-          label: `Canal: ${ib ? ib.name : this.channelFilter}`,
-        });
-      }
-      if (this.statusFilter) {
-        chips.push({ key: 'status', label: `Estado: ${this.statusFilter}` });
-      }
-      if (this.categoryFilter) {
-        chips.push({
-          key: 'category',
-          label: `Categoría: ${this.categoryFilter}`,
-        });
-      }
-      if (this.languageFilter) {
-        chips.push({ key: 'language', label: `Idioma: ${this.languageFilter}` });
-      }
-      if (this.kindFilter) {
-        const tipo = KIND_OPTIONS.find(k => k.value === this.kindFilter);
-        chips.push({
-          key: 'kind',
-          label: `Tipo: ${tipo ? tipo.label : this.kindFilter}`,
-        });
-      }
-      return chips;
-    },
-    activeFilterCount() {
-      return this.activeFilterChips.length;
-    },
     filteredTemplates() {
       const q = this.searchQuery.trim().toLowerCase();
       return this.templates.filter(t => {
@@ -149,7 +123,31 @@ export default {
     // Recorte de la página actual (paginación en cliente sobre lo ya filtrado).
     pagedTemplates() {
       const start = (this.currentPage - 1) * this.perPage;
-      return this.filteredTemplates.slice(start, start + this.perPage);
+      return this.sortedTemplates.slice(start, start + this.perPage);
+    },
+    sortedTemplates() {
+      return sortTemplates(
+        this.filteredTemplates,
+        { key: this.sortKey, dir: this.sortDir },
+        t => this.inboxNameForChannel(t.channel_whatsapp_id)
+      );
+    },
+    columns() {
+      return [
+        'name',
+        'actions',
+        'channel',
+        'language',
+        'category',
+        'status',
+        'sendable',
+        'created_at',
+        'updated_at',
+      ].map(key => ({
+        key,
+        sortable: !['sendable', 'actions'].includes(key),
+        label: this.$t(`WHATSAPP_TEMPLATE_LIST.COLUMNS.${key.toUpperCase()}`),
+      }));
     },
   },
   watch: {
@@ -171,6 +169,14 @@ export default {
     },
     kindFilter() {
       this.currentPage = 1;
+    },
+    perPage(valor) {
+      this.currentPage = 1;
+      try {
+        window.localStorage.setItem(PER_PAGE_KEY, String(valor));
+      } catch {
+        // Sin almacenamiento (ventana privada): solo dura esta visita.
+      }
     },
   },
   async mounted() {
@@ -198,45 +204,40 @@ export default {
       this.kindFilter = '';
       this.searchQuery = '';
     },
-    openFiltersModal() {
-      this.draftFilters = {
-        channel: this.channelFilter,
-        status: this.statusFilter,
-        category: this.categoryFilter,
-        language: this.languageFilter,
-        kind: this.kindFilter,
-      };
-      this.showFiltersModal = true;
-    },
-    closeFiltersModal() {
-      this.showFiltersModal = false;
-    },
-    clearDraftFilters() {
-      this.draftFilters = {
-        channel: '',
-        status: '',
-        category: '',
-        language: '',
-        kind: '',
-      };
-    },
-    applyFiltersFromModal() {
-      this.channelFilter = this.draftFilters.channel;
-      this.statusFilter = this.draftFilters.status;
-      this.categoryFilter = this.draftFilters.category;
-      this.languageFilter = this.draftFilters.language;
-      this.kindFilter = this.draftFilters.kind;
-      this.showFiltersModal = false;
-    },
-    removeFilter(key) {
-      if (key === 'channel') this.channelFilter = '';
-      if (key === 'status') this.statusFilter = '';
-      if (key === 'category') this.categoryFilter = '';
-      if (key === 'language') this.languageFilter = '';
-      if (key === 'kind') this.kindFilter = '';
-    },
     onPageChange(page) {
       this.currentPage = page;
+    },
+    // Clic en una columna: la misma cambia el sentido; otra ordena por ella (fechas, de la
+    // más reciente).
+    sortBy(key) {
+      if (this.sortKey === key) {
+        this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.sortKey = key;
+        this.sortDir = ['created_at', 'updated_at'].includes(key)
+          ? 'desc'
+          : 'asc';
+      }
+      this.currentPage = 1;
+    },
+    sortIcon(key) {
+      if (this.sortKey !== key) return 'arrow-sort';
+      return this.sortDir === 'asc' ? 'chevron-up' : 'chevron-down';
+    },
+    formatDate(fecha) {
+      if (!fecha) return '—';
+      return new Date(fecha).toLocaleString(this.$i18n.locale || 'es', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    },
+    creatorName(template) {
+      return template.created_by
+        ? template.created_by.name
+        : this.$t('WHATSAPP_TEMPLATE_LIST.FROM_META');
     },
     // Motivo por el que una plantilla no es editable (tooltip del icono deshabilitado).
     editableHint(status) {
@@ -363,6 +364,12 @@ export default {
         query: inboxId ? { inbox_id: inboxId } : {},
       });
     },
+    duplicate(template) {
+      this.$router.push({
+        name: 'whatsapp_templates_new',
+        query: { from: template.id },
+      });
+    },
     openEdit(template) {
       this.$router.push({
         name: 'whatsapp_templates_edit',
@@ -422,19 +429,18 @@ export default {
     </template>
 
     <template #body>
-      <!-- Cuerpo a altura fija: solo la tabla scrollea por dentro y el paginado queda fijo
-           abajo (mismo comportamiento que el tracking-dashboard). -->
-      <div class="flex flex-col h-[calc(100vh-13rem)] min-h-[20rem]">
-      <!-- Barra de filtros: búsqueda + botón modal + chips activos (patrón del tracking-dashboard) -->
-      <div
-        class="shrink-0 flex flex-col gap-3 p-3 mb-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
-      >
-        <div class="flex items-center gap-3">
-          <div class="relative flex-1 min-w-[120px]">
+      <!-- F10: los filtros a la vista (Estado y Canal; Categoría, Idioma y Tipo a la
+           derecha), sin modal. A alto de pantalla: filtros y paginado quedan fijos y solo
+           la tabla hace scroll (con su encabezado fijo). Clic en la columna para ordenar. -->
+      <div class="flex flex-col w-full h-[calc(100vh-13rem)] min-h-[20rem]">
+        <div
+          class="flex flex-wrap items-center gap-2 p-3 mb-4 border border-solid rounded-lg shrink-0 bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+        >
+          <div class="relative w-56">
             <input
               v-model="searchQuery"
               type="text"
-              placeholder="Nombre de la plantilla…"
+              :placeholder="$t('WHATSAPP_TEMPLATE_LIST.SEARCH')"
               class="reset-base box-border w-full h-9 m-0 text-sm rounded-md border border-solid border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 pl-8 pr-2 outline-none focus:border-woot-500 dark:focus:border-woot-600"
             />
             <fluent-icon
@@ -443,306 +449,287 @@ export default {
               class="absolute -translate-y-1/2 left-2 top-1/2 text-slate-400"
             />
           </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <woot-button
-              variant="smooth"
-              size="small"
-              class="!h-9"
-              icon="filter"
-              @click="openFiltersModal"
+          <select v-model="statusFilter" class="list-filter">
+            <option value="">
+              {{ $t('WHATSAPP_TEMPLATE_LIST.FILTERS.ALL_STATUSES') }}
+            </option>
+            <option
+              v-for="estado in statusOptions"
+              :key="estado"
+              :value="estado"
             >
-              Filtros<span v-if="activeFilterCount"> ({{ activeFilterCount }})</span>
-            </woot-button>
-            <woot-button
-              v-if="hasActiveFilters"
-              variant="clear"
-              size="small"
-              class="!h-9"
-              @click="clearFilters"
+              {{ estado }}
+            </option>
+          </select>
+          <select v-model="channelFilter" class="list-filter">
+            <option value="">
+              {{ $t('WHATSAPP_TEMPLATE_LIST.FILTERS.ALL_CHANNELS') }}
+            </option>
+            <option
+              v-for="i in whatsappInboxes"
+              :key="i.id"
+              :value="i.channel_id"
             >
-              Limpiar
-            </woot-button>
-          </div>
+              {{ i.name }}
+            </option>
+          </select>
+          <span class="flex-1" />
+          <select v-model="categoryFilter" class="list-filter">
+            <option value="">
+              {{ $t('WHATSAPP_TEMPLATE_LIST.FILTERS.ALL_CATEGORIES') }}
+            </option>
+            <option v-for="c in categories" :key="c" :value="c">
+              {{ $t(`WHATSAPP_TEMPLATE_EDITOR.CATEGORIES.${c}`) }}
+            </option>
+          </select>
+          <select v-model="languageFilter" class="list-filter">
+            <option value="">
+              {{ $t('WHATSAPP_TEMPLATE_LIST.FILTERS.ALL_LANGUAGES') }}
+            </option>
+            <option v-for="l in languageFilterOptions" :key="l" :value="l">
+              {{ l }}
+            </option>
+          </select>
+          <select v-model="kindFilter" class="list-filter">
+            <option value="">
+              {{ $t('WHATSAPP_TEMPLATE_LIST.FILTERS.ALL_KINDS') }}
+            </option>
+            <option v-for="k in kindOptions" :key="k.value" :value="k.value">
+              {{ k.label }}
+            </option>
+          </select>
+          <woot-button
+            v-if="hasActiveFilters"
+            variant="clear"
+            size="small"
+            @click="clearFilters"
+          >
+            {{ $t('WHATSAPP_TEMPLATE_LIST.FILTERS.CLEAR') }}
+          </woot-button>
         </div>
 
-        <!-- Chips de filtros activos -->
+        <div class="flex-1 min-h-0 overflow-y-auto">
+          <div
+            v-if="!filteredTemplates.length"
+            class="py-16 text-center border border-dashed rounded-lg text-slate-400 border-slate-200 dark:border-slate-700"
+          >
+            {{
+              hasActiveFilters
+                ? $t('WHATSAPP_TEMPLATE_LIST.EMPTY_FILTERED')
+                : $t('WHATSAPP_TEMPLATE_LIST.EMPTY')
+            }}
+          </div>
+
+          <table v-else class="w-full text-sm">
+            <thead
+              class="sticky top-0 z-10 text-left bg-white border-b text-slate-400 border-slate-100 dark:border-slate-700 dark:bg-slate-900"
+            >
+              <tr>
+                <th
+                  v-for="col in columns"
+                  :key="col.key"
+                  class="py-2 pr-3 font-medium whitespace-nowrap"
+                >
+                  <button
+                    v-if="col.sortable"
+                    type="button"
+                    class="sort-header"
+                    :class="{ 'sort-header--active': sortKey === col.key }"
+                    @click="sortBy(col.key)"
+                  >
+                    {{ col.label }}
+                    <fluent-icon :icon="sortIcon(col.key)" size="12" />
+                  </button>
+                  <span v-else>{{ col.label }}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="t in pagedTemplates"
+                :key="t.id"
+                class="border-b border-slate-50 dark:border-slate-800"
+              >
+                <td class="py-2 pr-3">
+                  <!-- F10.4: el nombre abre la ficha (estado en Meta, duplicar, editar). -->
+                  <router-link
+                    :to="{
+                      name: 'whatsapp_templates_show',
+                      params: { templateId: t.id },
+                    }"
+                    class="font-medium text-slate-700 dark:text-slate-200 hover:text-woot-600 hover:underline"
+                  >
+                    {{ t.name }}
+                  </router-link>
+                  <div
+                    v-if="t.rejection_reason"
+                    class="text-xs text-red-500 truncate max-w-[16rem]"
+                    :title="t.rejection_reason"
+                  >
+                    {{
+                      $t('WHATSAPP_TEMPLATE_LIST.REJECTED', {
+                        reason: t.rejection_reason,
+                      })
+                    }}
+                  </div>
+                </td>
+                <!-- F10: acciones junto al nombre, con los botones como en Campañas. -->
+                <td class="py-2 pr-3">
+                  <div class="flex items-center gap-1.5 whitespace-nowrap">
+                    <span
+                      :title="
+                        t.editable
+                          ? $t('WHATSAPP_TEMPLATE_DETAIL.ACTIONS.EDIT')
+                          : editableHint(t.status)
+                      "
+                      class="inline-block"
+                    >
+                      <woot-button
+                        variant="smooth"
+                        color-scheme="secondary"
+                        size="small"
+                        icon="edit"
+                        :is-disabled="!t.editable"
+                        @click="openEdit(t)"
+                      />
+                    </span>
+                    <woot-button
+                      variant="smooth"
+                      color-scheme="secondary"
+                      size="small"
+                      icon="copy"
+                      :title="$t('WHATSAPP_TEMPLATE_DETAIL.ACTIONS.DUPLICATE')"
+                      @click="duplicate(t)"
+                    />
+                    <woot-button
+                      v-if="hasMetaLink(t)"
+                      variant="smooth"
+                      color-scheme="secondary"
+                      size="small"
+                      icon="open"
+                      :title="$t('WHATSAPP_TEMPLATE_DETAIL.ACTIONS.META')"
+                      @click="openInMeta(t)"
+                    />
+                    <woot-button
+                      variant="smooth"
+                      color-scheme="alert"
+                      size="small"
+                      icon="delete"
+                      :title="$t('WHATSAPP_TEMPLATE_LIST.DELETE')"
+                      @click="confirmDelete(t)"
+                    />
+                  </div>
+                </td>
+                <td class="py-2 pr-3 text-slate-500">
+                  {{ inboxNameForChannel(t.channel_whatsapp_id) }}
+                </td>
+                <td class="py-2 pr-3 text-slate-500">{{ t.language }}</td>
+                <td class="py-2 pr-3 text-slate-500">
+                  {{ $t(`WHATSAPP_TEMPLATE_EDITOR.CATEGORIES.${t.category}`) }}
+                </td>
+                <td class="py-2 pr-3 whitespace-nowrap">
+                  <span
+                    class="px-2 py-0.5 rounded-full text-xs font-medium"
+                    :class="statusClass(t.status)"
+                  >
+                    {{ t.status }}
+                  </span>
+                  <span
+                    v-if="t.quality_score"
+                    class="inline-block w-2 h-2 ml-1 rounded-full"
+                    :class="qualityDot(t.quality_score)"
+                    :title="
+                      $t('WHATSAPP_TEMPLATE_LIST.QUALITY', {
+                        level: t.quality_score,
+                      })
+                    "
+                  />
+                </td>
+                <!-- F6: dónde se puede mandar, en un renglón: conversación · seguimientos. -->
+                <td class="py-2 pr-3 text-xs whitespace-nowrap">
+                  <span
+                    v-if="sendabilityOf(t).conversation === null"
+                    class="text-slate-300"
+                  >
+                    —
+                  </span>
+                  <span v-else class="inline-flex items-center gap-2">
+                    <span
+                      :title="$t('WHATSAPP_TEMPLATE_DETAIL.SEND.CONVERSATION')"
+                      :class="
+                        sendabilityOf(t).conversation
+                          ? 'text-green-700 dark:text-green-300'
+                          : 'text-slate-400'
+                      "
+                    >
+                      {{
+                        $t(
+                          sendabilityOf(t).conversation
+                            ? 'WHATSAPP_TEMPLATE_LIST.SEND.CONV_YES'
+                            : 'WHATSAPP_TEMPLATE_LIST.SEND.CONV_NO'
+                        )
+                      }}
+                    </span>
+                    <span
+                      :title="
+                        $t(
+                          `WHATSAPP_TEMPLATE_DETAIL.SEND.TRACKINGS_${sendabilityOf(
+                            t
+                          ).trackings.toUpperCase()}`
+                        )
+                      "
+                      :class="{
+                        'text-green-700 dark:text-green-300':
+                          sendabilityOf(t).trackings === 'ok',
+                        'text-amber-700 dark:text-amber-400':
+                          sendabilityOf(t).trackings === 'missing_file',
+                        'text-slate-400': sendabilityOf(t).trackings === 'no',
+                      }"
+                    >
+                      {{
+                        $t(
+                          `WHATSAPP_TEMPLATE_LIST.SEND.TRACK_${sendabilityOf(
+                            t
+                          ).trackings.toUpperCase()}`
+                        )
+                      }}
+                    </span>
+                  </span>
+                </td>
+                <td class="py-2 pr-3 text-xs text-slate-500 whitespace-nowrap">
+                  <div>{{ formatDate(t.created_at) }}</div>
+                  <div class="text-slate-400">{{ creatorName(t) }}</div>
+                </td>
+                <td class="py-2 pr-3 text-xs text-slate-500 whitespace-nowrap">
+                  {{ formatDate(t.updated_at) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <div
-          v-if="activeFilterChips.length"
-          class="flex flex-wrap items-center gap-2"
+          v-if="filteredTemplates.length"
+          class="flex items-center gap-3 border-t shrink-0 border-slate-100 dark:border-slate-700"
         >
-          <span
-            v-for="chip in activeFilterChips"
-            :key="chip.key"
-            class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200"
+          <label
+            class="flex items-center gap-2 mb-0 text-xs whitespace-nowrap text-slate-500"
           >
-            {{ chip.label }}
-            <button
-              class="flex items-center text-slate-400 hover:text-red-500"
-              title="Quitar filtro"
-              @click="removeFilter(chip.key)"
-            >
-              <fluent-icon icon="dismiss" size="12" />
-            </button>
-          </span>
+            {{ $t('WHATSAPP_TEMPLATE_LIST.PER_PAGE') }}
+            <select v-model.number="perPage" class="!w-auto h-8 !mb-0 text-xs">
+              <option v-for="n in perPageOptions" :key="n" :value="n">
+                {{ n }}
+              </option>
+            </select>
+          </label>
+          <TableFooter
+            class="flex-1"
+            :current-page="currentPage"
+            :total-count="filteredTemplates.length"
+            :page-size="perPage"
+            @pageChange="onPageChange"
+          />
         </div>
-      </div>
-
-      <!-- Modal de filtros -->
-      <woot-modal
-        :show.sync="showFiltersModal"
-        :on-close="closeFiltersModal"
-      >
-        <div class="flex flex-col h-auto overflow-auto">
-          <woot-modal-header header-title="Filtrar plantillas" />
-          <div class="flex flex-col gap-4 p-8">
-            <label
-              class="flex flex-col gap-1 text-sm font-medium text-slate-600 dark:text-slate-300"
-            >
-              Canal
-              <select
-                v-model="draftFilters.channel"
-                class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
-              >
-                <option value="">Todos</option>
-                <option
-                  v-for="i in whatsappInboxes"
-                  :key="i.id"
-                  :value="i.channel_id"
-                >
-                  {{ i.name }}
-                </option>
-              </select>
-            </label>
-            <label
-              class="flex flex-col gap-1 text-sm font-medium text-slate-600 dark:text-slate-300"
-            >
-              Estado
-              <select
-                v-model="draftFilters.status"
-                class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
-              >
-                <option value="">Todos</option>
-                <option v-for="s in statusOptions" :key="s" :value="s">
-                  {{ s }}
-                </option>
-              </select>
-            </label>
-            <label
-              class="flex flex-col gap-1 text-sm font-medium text-slate-600 dark:text-slate-300"
-            >
-              Categoría
-              <select
-                v-model="draftFilters.category"
-                class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
-              >
-                <option value="">Todas</option>
-                <option v-for="c in categories" :key="c" :value="c">
-                  {{ c }}
-                </option>
-              </select>
-            </label>
-            <label
-              class="flex flex-col gap-1 text-sm font-medium text-slate-600 dark:text-slate-300"
-            >
-              Idioma
-              <select
-                v-model="draftFilters.language"
-                class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
-              >
-                <option value="">Todos</option>
-                <option v-for="l in languageFilterOptions" :key="l" :value="l">
-                  {{ l }}
-                </option>
-              </select>
-            </label>
-            <label
-              class="flex flex-col gap-1 text-sm font-medium text-slate-600 dark:text-slate-300"
-            >
-              Tipo
-              <select
-                v-model="draftFilters.kind"
-                class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
-              >
-                <option value="">Todos</option>
-                <option v-for="k in kindOptions" :key="k.value" :value="k.value">
-                  {{ k.label }}
-                </option>
-              </select>
-            </label>
-            <div class="flex items-center justify-end gap-2 mt-2">
-              <woot-button variant="clear" @click="clearDraftFilters">
-                Limpiar
-              </woot-button>
-              <woot-button @click="applyFiltersFromModal">
-                Aplicar filtros
-              </woot-button>
-            </div>
-          </div>
-        </div>
-      </woot-modal>
-
-      <!-- Zona scrollable: SOLO la tabla scrollea; filtros y paginado quedan fijos. -->
-      <div class="flex-1 min-h-0 overflow-y-auto">
-      <div
-        v-if="!filteredTemplates.length"
-        class="text-center text-slate-400 py-16 border border-dashed border-slate-200 dark:border-slate-700 rounded-lg"
-      >
-        <template v-if="hasActiveFilters">
-          Ninguna plantilla coincide con los filtros.
-        </template>
-        <template v-else>
-          No hay plantillas para mostrar. Crea una o sincroniza desde Meta.
-        </template>
-      </div>
-
-      <table v-else class="w-full text-sm">
-        <thead
-          class="sticky top-0 z-10 text-left text-slate-400 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700"
-        >
-          <tr>
-            <th class="py-2 font-medium">Nombre</th>
-            <th class="py-2 font-medium">Canal</th>
-            <th class="py-2 font-medium">Idioma</th>
-            <th class="py-2 font-medium">Categoría</th>
-            <th class="py-2 font-medium">Estado</th>
-            <th class="py-2 font-medium">Calidad</th>
-            <th class="py-2 font-medium">Se puede enviar</th>
-            <th class="py-2 font-medium text-right">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="t in pagedTemplates"
-            :key="t.id"
-            class="border-b border-slate-50 dark:border-slate-800"
-          >
-            <td class="py-3">
-              <!-- F10.4: el nombre abre la ficha (estado en Meta, duplicar, editar). -->
-              <router-link
-                :to="{
-                  name: 'whatsapp_templates_show',
-                  params: { templateId: t.id },
-                }"
-                class="font-medium text-slate-700 dark:text-slate-200 hover:text-woot-600 hover:underline"
-              >
-                {{ t.name }}
-              </router-link>
-              <div v-if="t.rejection_reason" class="text-xs text-red-500">
-                Rechazo: {{ t.rejection_reason }}
-              </div>
-              <div v-if="t.submission_error" class="text-xs text-amber-600">
-                {{ t.submission_error }}
-              </div>
-            </td>
-            <td class="py-3 text-slate-500">
-              {{ inboxNameForChannel(t.channel_whatsapp_id) }}
-            </td>
-            <td class="py-3 text-slate-500">{{ t.language }}</td>
-            <td class="py-3 text-slate-500">{{ t.category }}</td>
-            <td class="py-3">
-              <span
-                class="px-2 py-0.5 rounded-full text-xs font-medium"
-                :class="statusClass(t.status)"
-              >
-                {{ t.status }}
-              </span>
-            </td>
-            <td class="py-3">
-              <span
-                v-if="t.quality_score"
-                class="inline-flex items-center gap-1"
-              >
-                <span
-                  class="w-2 h-2 rounded-full"
-                  :class="qualityDot(t.quality_score)"
-                />
-                <span class="text-xs text-slate-500">{{ t.quality_score }}</span>
-              </span>
-              <span v-else class="text-slate-300">—</span>
-            </td>
-            <!-- F6: dónde se puede mandar. Las de archivo: conversación solo en WhatsApp
-                 Cloud; seguimientos y campañas además necesitan el archivo guardado. -->
-            <td class="py-3 text-xs">
-              <template v-if="sendabilityOf(t).conversation === null">
-                <span class="text-slate-300">—</span>
-              </template>
-              <div v-else class="flex flex-col gap-0.5">
-                <span
-                  :class="
-                    sendabilityOf(t).conversation
-                      ? 'text-green-700 dark:text-green-300'
-                      : 'text-slate-400'
-                  "
-                >
-                  {{ sendabilityOf(t).conversation ? '✓' : '✗' }} Conversación
-                </span>
-                <span
-                  :class="{
-                    'text-green-700 dark:text-green-300':
-                      sendabilityOf(t).trackings === 'ok',
-                    'text-amber-700 dark:text-amber-400':
-                      sendabilityOf(t).trackings === 'missing_file',
-                    'text-slate-400': sendabilityOf(t).trackings === 'no',
-                  }"
-                  :title="
-                    sendabilityOf(t).trackings === 'missing_file'
-                      ? 'Sube el archivo de muestra en Editar: los seguimientos y campañas lo mandan.'
-                      : ''
-                  "
-                >
-                  {{
-                    sendabilityOf(t).trackings === 'ok'
-                      ? '✓ Seguimientos'
-                      : sendabilityOf(t).trackings === 'missing_file'
-                      ? '⚠ Seguimientos: falta archivo'
-                      : '✗ Seguimientos'
-                  }}
-                </span>
-              </div>
-            </td>
-            <td class="py-3 text-right">
-              <woot-button
-                v-if="hasMetaLink(t)"
-                variant="clear"
-                size="small"
-                icon="open"
-                title="Ver en Meta (WhatsApp Manager)"
-                @click="openInMeta(t)"
-              />
-              <!-- El editar SIEMPRE se ve; si no aplica, va deshabilitado con el motivo
-                   en el tooltip (Meta solo permite editar APPROVED/REJECTED/PAUSED). -->
-              <span
-                :title="t.editable ? 'Editar' : editableHint(t.status)"
-                class="inline-block"
-              >
-                <woot-button
-                  variant="clear"
-                  size="small"
-                  icon="edit"
-                  :is-disabled="!t.editable"
-                  @click="openEdit(t)"
-                />
-              </span>
-              <woot-button
-                variant="clear"
-                size="small"
-                color-scheme="alert"
-                icon="delete"
-                @click="confirmDelete(t)"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      </div>
-
-      <TableFooter
-        :current-page="currentPage"
-        :total-count="filteredTemplates.length"
-        :page-size="perPage"
-        class="shrink-0 border-t border-slate-100 dark:border-slate-700"
-        @pageChange="onPageChange"
-      />
       </div>
     </template>
 
@@ -757,3 +744,17 @@ export default {
     />
   </SettingsLayout>
 </template>
+
+<style scoped lang="scss">
+.list-filter {
+  @apply w-auto h-9 mb-0 text-sm;
+}
+
+.sort-header {
+  @apply inline-flex items-center gap-1 p-0 font-medium bg-transparent border-0 cursor-pointer text-slate-400 hover:text-slate-700 dark:hover:text-slate-200;
+}
+
+.sort-header--active {
+  @apply text-slate-700 dark:text-slate-200;
+}
+</style>

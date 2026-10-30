@@ -803,6 +803,34 @@ navegador.**
 Pruebas: frontend 52 en verde (pantalla + menú; +4 ficha/sendability, +1 duplicar); backend 39 en verde
 (controlador: `header_sample` con `signed_id`). Webpack: «Compiled successfully». ⚠ **Sin probar en navegador.**
 
+**La lista (30/10/2026).**
+
+```
+ [🔍 Nombre…] [Todos los estados ▾] [Todas las bandejas ▾]    [Categorías ▾] [Idiomas ▾] [Tipos ▾] Limpiar
+ Nombre ↕ │ Acciones     │ Bandeja ↕ │ Idioma ↕ │ Categoría ↕ │ Estado ↕ │ Se puede enviar │ Creada ↕ │ Actualizada ▼
+ cobro_x  │ [✎][⧉][↗][🗑] │ Whatsapp  │ es_MX    │ Servicio    │ APPROVED●│ ✓ Conv ✓ Seg    │ 30 oct · Ana │ 30 oct 18:20
+```
+- **Filtros a la vista** (sin modal ni chips): Estado y Bandeja a la izquierda; Categoría, Idioma y Tipo a la
+  derecha; «Limpiar» si hay alguno.
+- **Columnas Creada (fecha + quién) y Actualizada**; **clic en la columna para ordenar** (`sortTemplates`; la
+  misma columna cambia el sentido); **por omisión, la última actualización primero**. La calidad va como punto
+  junto al estado y «se puede enviar» en un renglón, para que las filas sean bajas.
+- **Filas por página a elegir** (10 · 25 · 50 · 100; **25 por omisión**; se recuerda en el navegador). A alto de
+  pantalla: filtros y paginado quedan fijos y **solo la tabla hace scroll**, con el encabezado de columnas fijo
+  (primero se había quitado la caja con scroll; el usuario prefirió el paginado siempre abajo).
+- **Quién la creó**: migración `20261102100000_add_created_by_to_whatsapp_templates` (`created_by_id`); lo llena
+  `SubmitTemplateService` (`user: Current.user`) al crear o guardar borrador; las sincronizadas desde Meta quedan
+  sin autor («Desde Meta»). La API da `created_at`, `updated_at` y `created_by { id, name }`.
+- **Acciones justo después del nombre**, con los botones como en Campañas (`smooth`, `small`, con color):
+  Editar (deshabilitado con su motivo) · Duplicar · Ver en Meta · Eliminar (rojo).
+- `Index.vue`: lint 338 → 7 (lo que queda es de antes).
+
+Pruebas: frontend 38 en verde (+3 `sortTemplates`); backend 99 en verde (+1 autor en el servicio, +1 en el
+controlador). Webpack: «Compiled successfully». ⚠ **Sin probar en navegador.**
+
+> Base de pruebas: tenía 218 migraciones «pendientes» (la cargó un schema viejo). Se recargó con
+> `db:schema:load` en `chatwoot_test`, que pide antes `CREATE EXTENSION vector` (schema.rb no la declara).
+
 **Sigue (F10.5).** Empezar desde un ejemplo.
 
 ---
@@ -834,3 +862,4 @@ Pruebas: frontend 52 en verde (pantalla + menú; +4 ficha/sendability, +1 duplic
 - [ ] Conversación (Cloud): `ejemplo_video_adjunto` aparece en el selector (antes la tienda la escondía)
 - [ ] Burbuja: una plantilla con botones muestra sus botones (y el código o la terminación de la liga)
 - [ ] Bandeja 360dialog/UnoAPI: no aparecen plantillas con liga `{{1}}` o copiar código
+- [ ] Lista: filtros a la vista, 25 por página (cambiar a 50 se recuerda), paginado siempre abajo y scroll solo en la tabla, clic en «Creada» ordena, una nueva dice quién la creó

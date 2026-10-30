@@ -4,6 +4,7 @@ import {
   metaManagerUrl,
   statusSteps,
   rejectionKey,
+  sortTemplates,
 } from './templateScreen';
 
 // feat/plantillas_whatsapp_mejoras F6 — la pantalla de plantillas
@@ -131,5 +132,40 @@ describe('rejectionKey', () => {
     expect(rejectionKey('incorrect_category')).toBe('INCORRECT_CATEGORY');
     expect(rejectionKey('ALGO_NUEVO')).toBeNull();
     expect(rejectionKey(null)).toBeNull();
+  });
+});
+
+describe('sortTemplates', () => {
+  const lista = [
+    {
+      name: 'b',
+      status: 'APPROVED',
+      updated_at: '2026-10-01T10:00:00Z',
+      channel_whatsapp_id: 1,
+    },
+    {
+      name: 'a',
+      status: 'PENDING',
+      updated_at: '2026-10-30T10:00:00Z',
+      channel_whatsapp_id: 2,
+    },
+    { name: 'c', status: 'APPROVED', updated_at: null, channel_whatsapp_id: 1 },
+  ];
+  const nombres = (key, dir, canal) =>
+    sortTemplates(lista, { key, dir }, canal).map(t => t.name);
+
+  it('por omisión, la última actualización primero', () => {
+    expect(nombres('updated_at', 'desc')).toEqual(['a', 'b', 'c']);
+  });
+
+  it('por texto, en los dos sentidos', () => {
+    expect(nombres('name', 'asc')).toEqual(['a', 'b', 'c']);
+    expect(nombres('name', 'desc')).toEqual(['c', 'b', 'a']);
+    expect(nombres('status', 'asc')).toEqual(['b', 'c', 'a']);
+  });
+
+  it('por bandeja usa su nombre', () => {
+    const canal = t => (t.channel_whatsapp_id === 1 ? 'Zeta' : 'Alfa');
+    expect(nombres('channel', 'asc', canal)).toEqual(['a', 'b', 'c']);
   });
 });

@@ -131,3 +131,26 @@ export function metaManagerUrl(inbox) {
     waba
   )}`;
 }
+
+// feat/plantillas_whatsapp_mejoras F10 — ordenar la lista al hacer clic en una columna.
+// key: 'name' | 'channel' | 'language' | 'category' | 'status' | 'created_at' | 'updated_at'
+// (por omisión, la última actualización primero). channelName(t) da el nombre de su bandeja.
+const DATE_KEYS = ['created_at', 'updated_at'];
+
+export function sortTemplates(templates, { key, dir }, channelName = () => '') {
+  const valor = t => {
+    if (key === 'channel') return channelName(t) || '';
+    if (DATE_KEYS.includes(key)) return t[key] ? new Date(t[key]).getTime() : 0;
+    return String(t[key] || '');
+  };
+  const signo = dir === 'asc' ? 1 : -1;
+  return [...templates].sort((a, b) => {
+    const va = valor(a);
+    const vb = valor(b);
+    const cmp =
+      typeof va === 'number'
+        ? va - vb
+        : va.localeCompare(vb, 'es', { sensitivity: 'base' });
+    return cmp * signo || String(a.name).localeCompare(String(b.name));
+  });
+}

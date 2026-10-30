@@ -238,5 +238,41 @@
             "CONTINUE_DRAFT": "Seguir el borrador",
             "EDIT_LOCKED": "No se puede editar mientras Meta la revisa o en su estado actual."
         }
+    },
+    "WHATSAPP_TEMPLATE_LIST": {
+        "SEARCH": "Nombre de la plantilla…",
+        "EMPTY": "No hay plantillas para mostrar. Crea una o sincroniza desde Meta.",
+        "EMPTY_FILTERED": "Ninguna plantilla coincide con los filtros.",
+        "REJECTED": "Rechazo: %{reason}",
+        "QUALITY": "Calidad: %{level}",
+        "FROM_META": "Desde Meta",
+        "FILTERS": {
+            "ALL_STATUSES": "Todos los estados",
+            "ALL_CHANNELS": "Todas las bandejas",
+            "ALL_CATEGORIES": "Todas las categorías",
+            "ALL_LANGUAGES": "Todos los idiomas",
+            "ALL_KINDS": "Todos los tipos",
+            "CLEAR": "Limpiar"
+        },
+        "COLUMNS": {
+            "NAME": "Nombre",
+            "CHANNEL": "Bandeja",
+            "LANGUAGE": "Idioma",
+            "CATEGORY": "Categoría",
+            "STATUS": "Estado",
+            "SENDABLE": "Se puede enviar",
+            "CREATED_AT": "Creada",
+            "UPDATED_AT": "Actualizada",
+            "ACTIONS": "Acciones"
+        },
+        "SEND": {
+            "CONV_YES": "✓ Conversación",
+            "CONV_NO": "✗ Conversación",
+            "TRACK_OK": "✓ Seguimientos",
+            "TRACK_MISSING_FILE": "⚠ Seguimientos",
+            "TRACK_NO": "✗ Seguimientos"
+        },
+        "PER_PAGE": "Filas por página",
+        "DELETE": "Eliminar"
     }
 }

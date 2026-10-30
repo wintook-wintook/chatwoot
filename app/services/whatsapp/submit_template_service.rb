@@ -14,11 +14,13 @@ class Whatsapp::SubmitTemplateService
     end
   end
 
-  def initialize(channel: nil, template: nil, params: {})
+  # user: quien la crea desde la pantalla (queda en created_by; las de Meta, en nil).
+  def initialize(channel: nil, template: nil, params: {}, user: nil)
     @template = template
     @channel = channel || template&.channel_whatsapp
     @account = @channel&.account || template&.account
     @params = normalize_params(params)
+    @user = user
   end
 
   # --- crear -----------------------------------------------------------------
@@ -30,6 +32,7 @@ class Whatsapp::SubmitTemplateService
     template = @channel.whatsapp_templates
                        .find_or_initialize_by(name: @params[:name], language: @params[:language])
     template.assign_attributes(@params.merge(account: @account))
+    template.created_by ||= @user if template.new_record?
     validation = Whatsapp::TemplateValidator.call(template)
     return invalid(validation) unless validation.valid?
 
@@ -47,6 +50,7 @@ class Whatsapp::SubmitTemplateService
     return failure('Esta plantilla ya está en Meta: no se puede guardar como borrador') if template.persisted? && !template.local_draft?
 
     template.assign_attributes(@params.merge(account: @account, status: 'DRAFT'))
+    template.created_by ||= @user if template.new_record?
     return failure(template.errors.full_messages.join(' · ')) unless template.save
 
     Result.new(success: true, template: template)

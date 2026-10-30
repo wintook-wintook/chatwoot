@@ -80,6 +80,9 @@ RSpec.describe 'WhatsApp Templates API', type: :request do
       expect(response).to have_http_status(:created)
       borrador = response.parsed_body
       expect(borrador).to include('status' => 'DRAFT', 'editable' => true, 'local_only' => true)
+      # F10: la lista muestra quién la creó y sus fechas.
+      expect(borrador['created_by']).to include('id' => admin.id, 'name' => admin.name)
+      expect(borrador).to include('created_at', 'updated_at')
 
       patch "/api/v1/accounts/#{account.id}/whatsapp/templates/#{borrador['id']}",
             params: { whatsapp_template: { body_text: 'Hola {{1}}.', sample_values: { body: ['Juan'] } } },

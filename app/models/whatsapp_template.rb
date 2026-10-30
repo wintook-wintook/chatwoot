@@ -33,17 +33,21 @@
 #  updated_at          :datetime         not null
 #  account_id          :bigint           not null
 #  channel_whatsapp_id :bigint           not null
+#  created_by_id       :bigint
 #  meta_template_id    :string
 #
 # Indexes
 #
 #  index_whatsapp_templates_on_account_id             (account_id)
 #  index_whatsapp_templates_on_channel_name_language  (channel_whatsapp_id,name,language) UNIQUE
+#  index_whatsapp_templates_on_created_by_id          (created_by_id)
 #  index_whatsapp_templates_on_meta_template_id       (meta_template_id)
 #
 class WhatsappTemplate < ApplicationRecord
   belongs_to :account
   belongs_to :channel_whatsapp, class_name: 'Channel::Whatsapp'
+  # Quién la creó desde la pantalla de plantillas; nil = llegó sincronizada desde Meta.
+  belongs_to :created_by, class_name: 'User', optional: true
 
   # feat/plantillas_whatsapp_mejoras F6: el archivo de muestra del encabezado, subido desde la
   # pantalla de plantillas. De él salen la muestra para Meta (F0) y el archivo que mandan los

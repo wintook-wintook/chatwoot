@@ -11,7 +11,7 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
   # Nivel cuenta: todas las plantillas de todos los canales de WhatsApp.
   # Filtro opcional por canal vía inbox_id (para la tabla del dashboard).
   def index
-    templates = Current.account.whatsapp_templates.order(:name)
+    templates = Current.account.whatsapp_templates.includes(:created_by).order(updated_at: :desc)
     templates = templates.for_channel(inbox_channel_id) if params[:inbox_id].present?
     render json: templates.map { |t| template_json(t) }
   end
@@ -22,7 +22,7 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
 
   # F10: con `draft: true` se guarda como borrador, sin llamar a Meta.
   def create
-    servicio = Whatsapp::SubmitTemplateService.new(channel: @channel, params: template_params)
+    servicio = Whatsapp::SubmitTemplateService.new(channel: @channel, params: template_params, user: Current.user)
     render_result(draft? ? servicio.save_draft : servicio.create, ok_status: :created)
   end
 
@@ -154,7 +154,14 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
       last_submitted_at: template.last_submitted_at,
       editable: template.editable?,
       local_only: template.local_only?
-    }.merge(sample_json(template))
+    }.merge(sample_json(template), audit_json(template))
+  end
+
+  # La lista muestra cuándo se creó, la última actualización y quién la creó (F10).
+  def audit_json(template)
+    autor = template.created_by
+    { created_at: template.created_at, updated_at: template.updated_at,
+      created_by: autor ? { id: autor.id, name: autor.name } : nil }
   end
 
   # F6: el archivo subido (si lo hay) y una liga fresca para la vista previa.

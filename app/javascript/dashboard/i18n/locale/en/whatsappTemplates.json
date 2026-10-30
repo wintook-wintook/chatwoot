@@ -238,5 +238,41 @@
             "CONTINUE_DRAFT": "Continue draft",
             "EDIT_LOCKED": "It can't be edited while Meta reviews it or in its current status."
         }
+    },
+    "WHATSAPP_TEMPLATE_LIST": {
+        "SEARCH": "Template name…",
+        "EMPTY": "No templates to show. Create one or sync from Meta.",
+        "EMPTY_FILTERED": "No template matches the filters.",
+        "REJECTED": "Rejected: %{reason}",
+        "QUALITY": "Quality: %{level}",
+        "FROM_META": "From Meta",
+        "FILTERS": {
+            "ALL_STATUSES": "All statuses",
+            "ALL_CHANNELS": "All inboxes",
+            "ALL_CATEGORIES": "All categories",
+            "ALL_LANGUAGES": "All languages",
+            "ALL_KINDS": "All types",
+            "CLEAR": "Clear"
+        },
+        "COLUMNS": {
+            "NAME": "Name",
+            "CHANNEL": "Inbox",
+            "LANGUAGE": "Language",
+            "CATEGORY": "Category",
+            "STATUS": "Status",
+            "SENDABLE": "Can be sent",
+            "CREATED_AT": "Created",
+            "UPDATED_AT": "Updated",
+            "ACTIONS": "Actions"
+        },
+        "SEND": {
+            "CONV_YES": "✓ Conversation",
+            "CONV_NO": "✗ Conversation",
+            "TRACK_OK": "✓ Follow-ups",
+            "TRACK_MISSING_FILE": "⚠ Follow-ups",
+            "TRACK_NO": "✗ Follow-ups"
+        },
+        "PER_PAGE": "Rows per page",
+        "DELETE": "Delete"
     }
 }

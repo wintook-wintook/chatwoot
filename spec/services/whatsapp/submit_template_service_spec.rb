@@ -177,6 +177,14 @@ RSpec.describe Whatsapp::SubmitTemplateService do
       expect(provider).not_to have_received(:create_template)
     end
 
+    it 'guarda quién la creó (las sincronizadas desde Meta quedan sin autor)' do
+      usuario = create(:user, account: channel.account)
+
+      result = described_class.new(channel: channel, params: { name: 'con_autor', language: 'es' }, user: usuario).save_draft
+
+      expect(result.template.created_by).to eq(usuario)
+    end
+
     it 'sin nombre no se puede guardar' do
       result = described_class.new(channel: channel, params: { name: '', language: 'es' }).save_draft
 
