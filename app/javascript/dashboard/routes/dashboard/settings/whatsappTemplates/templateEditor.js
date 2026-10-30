@@ -254,3 +254,15 @@ export const duplicateForm = (template, inboxId) => {
     header_preview_url: form.header_preview_url,
   };
 };
+
+// ---- Nombre repetido (F10.5) ------------------------------------------------
+// Otra plantilla con ese nombre e idioma en la misma bandeja: Meta la rechazaría y el
+// servidor reutiliza esa fila, así que una aprobada podría quedar como borrador.
+export const nameTaken = (templates, { id, name, language, channelId }) =>
+  templates.some(
+    t =>
+      t.id !== id &&
+      t.name === name &&
+      t.language === language &&
+      t.channel_whatsapp_id === channelId
+  );

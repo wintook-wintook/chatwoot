@@ -180,7 +180,15 @@
             "DESCRIPTION": "Tienes cambios en la plantilla que no se han guardado. Si sales ahora, se pierden.",
             "CONFIRM": "Salir sin guardar",
             "CANCEL": "Seguir editando"
-        }
+        },
+        "PRESETS": {
+            "LABEL": "Empezar desde:",
+            "BLANK": "En blanco",
+            "PAYMENT": "Recordatorio de pago",
+            "APPOINTMENT": "Confirmación de cita",
+            "PROMO": "Promoción con imagen"
+        },
+        "NAME_TAKEN": "Nombre: ya hay una plantilla con ese nombre e idioma en esta bandeja"
     },
     "WHATSAPP_TEMPLATE_DETAIL": {
         "STATUS_TITLE": "Estado en Meta",

@@ -867,7 +867,22 @@ Pruebas: backend en verde (`template_usage_spec` 4, servicio +1, controlador +1,
 (`DeleteTemplateModal.spec.js` 3, `templateInUse` 1). Webpack: «Compiled successfully». ⚠ **Sin probar en
 navegador.** Los 30 días son de la documentación de Meta, no se probaron.
 
-**Sigue (F10.5).** Empezar desde un ejemplo.
+**F10.5 — hecho (30/10/2026): empezar desde un ejemplo.**
+
+```
+ Empezar desde: [En blanco] [Recordatorio de pago] [Confirmación de cita] [Promoción con imagen]
+ Contenido │ Botones │ Variables
+```
+- Fila compacta sobre las pestañas, no tarjetas en una pantalla previa como decía el plan: es un paso menos y sin
+  scroll. Solo en `/new`, y se oculta al empezar a escribir (o al duplicar).
+- `templatePresets.js`: llena el formulario y conserva bandeja e idioma. Ligas y archivos van vacíos a propósito:
+  los pone el usuario, para que no llegue a Meta nada inventado (la lista de lo que falta los pide).
+- **Nombre repetido** (`nameTaken`): al crear o en borrador, avisa si ya hay ese nombre e idioma en la bandeja.
+  El servidor reutiliza esa fila al crear, y si Meta rechaza el envío una aprobada podía quedar como borrador.
+
+Frontend 50 en verde (`templatePresets.spec.js` 6, `nameTaken` 2). ⚠ **Sin probar en navegador.**
+
+**F10 COMPLETO** (F10.1–F10.5). Falta la ronda de pruebas en navegador (§8) y el PR a develop.
 
 ---
 
@@ -901,3 +916,4 @@ navegador.** Los 30 días son de la documentación de Meta, no se probaron.
 - [ ] Lista: filtros a la vista, 25 por página (cambiar a 50 se recuerda), paginado siempre abajo y scroll solo en la tabla, clic en «Creada» ordena, una nueva dice quién la creó
 - [ ] Borrar: un borrador dice «solo se borra aquí»; una en uso pide la casilla y enlaza a su agente; al borrarla ya no sale en el selector
 - [ ] Seguimiento con plantilla borrada: no manda texto libre; queda el motivo y la campaña se pausa
+- [ ] F10.5: en `/new` elegir «Confirmación de cita» llena todo y se puede cambiar por otro ejemplo; al escribir se oculta la fila; un nombre repetido avisa

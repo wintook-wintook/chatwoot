@@ -22,6 +22,7 @@ import {
   errorsByTab,
   formSnapshot,
   duplicateForm,
+  nameTaken,
 } from './templateEditor';
 
 // feat/plantillas_whatsapp_mejoras F10 — el formulario del editor a página completa
@@ -283,5 +284,22 @@ describe('duplicateForm', () => {
     expect(copia).not.toHaveProperty('id');
     expect(copia).not.toHaveProperty('status');
     expect(templatePayload(copia).header_sample).toBe('blob-1');
+  });
+});
+
+describe('nameTaken', () => {
+  const lista = [
+    { id: 1, name: 'pago', language: 'es', channel_whatsapp_id: 5 },
+  ];
+  const datos = { name: 'pago', language: 'es', channelId: 5 };
+
+  it('solo cuenta el mismo nombre e idioma en la misma bandeja', () => {
+    expect(nameTaken(lista, datos)).toBe(true);
+    expect(nameTaken(lista, { ...datos, language: 'en' })).toBe(false);
+    expect(nameTaken(lista, { ...datos, channelId: 6 })).toBe(false);
+  });
+
+  it('no se cuenta a sí misma', () => {
+    expect(nameTaken(lista, { ...datos, id: 1 })).toBe(false);
   });
 });

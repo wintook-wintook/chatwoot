@@ -18,6 +18,7 @@ import WhatsappTemplatesAPI from 'dashboard/api/whatsapp/templates';
 import { validateTemplate } from 'dashboard/helper/whatsappTemplateValidator';
 import SettingsLayout from '../SettingsLayout.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
+import { PRESET_KEYS, applyPreset } from './templatePresets';
 import TemplatePreview from './TemplatePreview.vue';
 import TemplateButtonsEditor from './TemplateButtonsEditor.vue';
 import {
@@ -33,6 +34,7 @@ import {
   duplicateForm,
   errorsByTab,
   formSnapshot,
+  nameTaken,
   insertAt,
   nextVariable,
   sanitizeName,
@@ -72,6 +74,8 @@ export default {
       formTabIndex: 0,
       // SettingsWrapper guarda la página en caché (keep-alive): al volver se recarga.
       inactive: false,
+      presetKeys: [null, ...PRESET_KEYS],
+      presetKey: null,
       headerTypes: HEADER_TYPES,
       // Vue 2 no deja escribir {{1}} dentro de un texto traducido ni de un atributo.
       variableSample: '{{1}}',
@@ -138,10 +142,34 @@ export default {
     },
     validationErrors() {
       const errors = validateTemplate(this.form);
+      if (this.isNameTaken) {
+        errors.unshift(this.$t('WHATSAPP_TEMPLATE_EDITOR.NAME_TAKEN'));
+      }
       if (!this.isEditing && !this.form.inbox_id) {
         errors.unshift(this.$t('WHATSAPP_TEMPLATE_EDITOR.NO_INBOX'));
       }
       return errors;
+    },
+    // La bandeja de la plantilla: al editar, la suya; al crear, la elegida.
+    channelId() {
+      if (this.template) return this.template.channel_whatsapp_id;
+      const inbox = this.whatsappInboxes.find(i => i.id === this.form.inbox_id);
+      return inbox ? inbox.channel_id : null;
+    },
+    isNameTaken() {
+      if (!this.isDraft || !this.form.name) return false;
+      return nameTaken(this.templates, {
+        id: this.templateId,
+        name: this.form.name,
+        language: this.form.language,
+        channelId: this.channelId,
+      });
+    },
+    // Los ejemplos: solo al empezar una nueva, mientras no se haya escrito nada.
+    showPresets() {
+      return (
+        !this.isEditing && !this.$route.query.from && !this.hasUnsavedChanges
+      );
     },
     hasUnsavedChanges() {
       return (
@@ -265,6 +293,11 @@ export default {
         this.template = null;
         this.form = emptyForm();
         this.form.inbox_id = Number(this.$route.query.inbox_id) || null;
+        this.presetKey = null;
+        // Hacen falta para avisar si el nombre ya existe.
+        if (!this.templates.length) {
+          await this.$store.dispatch('whatsappTemplates/fetch');
+        }
         await this.loadDuplicate();
         this.markSaved();
         return;
@@ -285,6 +318,16 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+    // El ejemplo se puede cambiar por otro mientras no se escriba nada (no cuenta como cambio).
+    usePreset(clave) {
+      this.presetKey = clave;
+      this.form = applyPreset(this.form, clave);
+      this.formTabIndex = 0;
+      this.markSaved();
+    },
+    presetLabel(clave) {
+      return this.$t(`WHATSAPP_TEMPLATE_EDITOR.PRESETS.${clave || 'BLANK'}`);
     },
     // «Duplicar» desde la ficha (F10.4): /new?from=<id> arranca con todo copiado.
     async loadDuplicate() {
@@ -519,6 +562,24 @@ export default {
         class="grid w-full grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] items-start"
       >
         <div class="min-w-0">
+          <div
+            v-if="showPresets"
+            class="flex flex-wrap items-center gap-2 mb-3 text-sm"
+          >
+            <span class="text-slate-600 dark:text-slate-300">
+              {{ $t('WHATSAPP_TEMPLATE_EDITOR.PRESETS.LABEL') }}
+            </span>
+            <woot-button
+              v-for="clave in presetKeys"
+              :key="clave || 'BLANK'"
+              size="small"
+              color-scheme="secondary"
+              :variant="presetKey === clave ? 'smooth' : 'hollow'"
+              @click="usePreset(clave)"
+            >
+              {{ presetLabel(clave) }}
+            </woot-button>
+          </div>
           <woot-tabs :index="formTabIndex" border @change="onTabChange">
             <woot-tabs-item
               v-for="tab in formTabs"
