@@ -139,3 +139,47 @@ export const buttonExample = boton =>
 // Un borrador que nunca llegó a Meta: también se cambian nombre e idioma (la bandeja no).
 export const isLocalDraft = template =>
   Boolean(template && template.status === 'DRAFT' && template.local_only);
+
+// ---- Botones (F10.3) --------------------------------------------------------
+// Los topes de Meta por tipo (además del total de 10). Las respuestas rápidas van
+// siempre antes que las acciones: el editor las muestra en dos grupos y así se guardan.
+export const MAX_BUTTONS = 10;
+export const BUTTON_LIMITS = { URL: 2, PHONE_NUMBER: 1, COPY_CODE: 1 };
+export const MAX_BUTTON_TEXT = 25;
+const VARIABLE_RE = /\{\{\s*\d+\s*\}\}/g;
+
+export const isQuickReply = boton => boton.type === 'QUICK_REPLY';
+
+// ¿Se puede agregar otro de este tipo? null = sí; si no, el motivo ('TOTAL' o el tipo).
+export const addButtonBlocker = (buttons, type) => {
+  if (buttons.length >= MAX_BUTTONS) return 'TOTAL';
+  const tope = BUTTON_LIMITS[type];
+  if (tope && buttons.filter(b => b.type === type).length >= tope) return type;
+  return null;
+};
+
+// Un botón nuevo del tipo, con lo que ya se sabe (el teléfono arranca con la lada de México).
+export const newButton = type => ({
+  ...emptyButton(type),
+  phone_number: type === 'PHONE_NUMBER' ? '+52' : '',
+});
+
+// Las respuestas rápidas primero (lo que pide Meta), cada grupo en su orden.
+export const orderButtons = buttons => [
+  ...buttons.filter(isQuickReply),
+  ...buttons.filter(b => !isQuickReply(b)),
+];
+
+// Liga «fija» o «termina con un dato del cliente» ({{1}} al final, como pide Meta).
+export const isDynamicUrl = boton =>
+  templateVariables(boton.url || '').length > 0;
+
+export const urlBase = boton =>
+  String(boton.url || '').replace(VARIABLE_RE, '');
+
+export const buildUrl = (base, dynamic) =>
+  dynamic ? `${String(base || '').replace(VARIABLE_RE, '')}{{1}}` : base;
+
+// El teléfono debe llevar la lada del país (+52…).
+export const phoneNeedsCountryCode = telefono =>
+  Boolean(telefono) && !/^\+\d{6,}$/.test(String(telefono).replace(/\s/g, ''));

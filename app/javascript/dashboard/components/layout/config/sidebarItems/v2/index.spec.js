@@ -173,6 +173,8 @@ describe('Menú v2', () => {
       'canned_list',
       'whatsapp_templates_index',
       'whatsapp_templates_wrapper',
+      'whatsapp_templates_new',
+      'whatsapp_templates_edit',
       'gestorTickets_catalog',
       'gestorTickets_close_reasons',
       'kanban_types_list',

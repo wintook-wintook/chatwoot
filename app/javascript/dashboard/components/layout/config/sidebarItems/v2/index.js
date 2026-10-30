@@ -66,6 +66,9 @@ const CATALOG_SETTINGS = [
 const CATALOG_SETTINGS_ROUTES = [
   ...CATALOG_SETTINGS,
   'whatsapp_templates_wrapper',
+  // feat/plantillas_whatsapp_mejoras F10: crear y editar en su página (el menú sigue a la vista).
+  'whatsapp_templates_new',
+  'whatsapp_templates_edit',
 ];
 // De Ajustes › Casos y etapas: los motivos de cierre (de Ventas) y los de Servicio.
 const CLOSE_REASONS = 'gestorTickets_close_reasons';

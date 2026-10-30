@@ -9,6 +9,13 @@ import {
   needsButtonExample,
   buttonExample,
   isLocalDraft,
+  addButtonBlocker,
+  newButton,
+  orderButtons,
+  isDynamicUrl,
+  urlBase,
+  buildUrl,
+  phoneNeedsCountryCode,
 } from './templateEditor';
 
 // feat/plantillas_whatsapp_mejoras F10 — el formulario del editor a página completa
@@ -125,5 +132,62 @@ describe('ayudas del formulario', () => {
     expect(isLocalDraft({ status: 'DRAFT', local_only: true })).toBe(true);
     expect(isLocalDraft({ status: 'DRAFT', local_only: false })).toBe(false);
     expect(isLocalDraft({ status: 'APPROVED', local_only: false })).toBe(false);
+  });
+});
+
+// F10.3 — los botones
+describe('botones', () => {
+  const de = tipo => newButton(tipo);
+
+  it('respeta los topes de Meta por tipo y el total', () => {
+    expect(addButtonBlocker([de('URL')], 'URL')).toBeNull();
+    expect(addButtonBlocker([de('URL'), de('URL')], 'URL')).toBe('URL');
+    expect(addButtonBlocker([de('PHONE_NUMBER')], 'PHONE_NUMBER')).toBe(
+      'PHONE_NUMBER'
+    );
+    expect(addButtonBlocker([de('COPY_CODE')], 'COPY_CODE')).toBe('COPY_CODE');
+    const diez = Array.from({ length: 10 }, () => de('QUICK_REPLY'));
+    expect(addButtonBlocker(diez, 'QUICK_REPLY')).toBe('TOTAL');
+  });
+
+  it('el teléfono nuevo arranca con la lada de México', () => {
+    expect(de('PHONE_NUMBER').phone_number).toBe('+52');
+    expect(de('URL').phone_number).toBe('');
+  });
+
+  it('las respuestas rápidas van primero, cada grupo en su orden', () => {
+    const botones = [
+      { type: 'URL', text: 'a' },
+      { type: 'QUICK_REPLY', text: 'b' },
+      { type: 'COPY_CODE', text: 'c' },
+      { type: 'QUICK_REPLY', text: 'd' },
+    ];
+    expect(orderButtons(botones).map(b => b.text)).toEqual([
+      'b',
+      'd',
+      'a',
+      'c',
+    ]);
+  });
+
+  it('liga fija o con dato del cliente: el {{1}} lo pone el editor', () => {
+    expect(buildUrl('https://x.mx/pedido/', true)).toBe(
+      'https://x.mx/pedido/{{1}}'
+    );
+    expect(buildUrl('https://x.mx/pedido/{{1}}', true)).toBe(
+      'https://x.mx/pedido/{{1}}'
+    );
+    expect(buildUrl('https://x.mx', false)).toBe('https://x.mx');
+    const boton = { url: 'https://x.mx/pedido/{{1}}' };
+    expect(isDynamicUrl(boton)).toBe(true);
+    expect(urlBase(boton)).toBe('https://x.mx/pedido/');
+    expect(isDynamicUrl({ url: 'https://x.mx' })).toBe(false);
+  });
+
+  it('avisa si al teléfono le falta la lada', () => {
+    expect(phoneNeedsCountryCode('5512345678')).toBe(true);
+    expect(phoneNeedsCountryCode('+52')).toBe(true);
+    expect(phoneNeedsCountryCode('+52 55 1234 5678')).toBe(false);
+    expect(phoneNeedsCountryCode('')).toBe(false);
   });
 });

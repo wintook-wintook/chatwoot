@@ -110,21 +110,32 @@
             "DOCUMENT": "PDF, up to 100 MB"
         },
         "BUTTONS": {
-            "ADD": "Add button",
-            "HINT": "Quick replies go first; then link (max. 2), phone (1) and copy code (1).",
             "TYPES": {
                 "QUICK_REPLY": "Quick reply",
                 "URL": "Link",
                 "PHONE_NUMBER": "Phone",
                 "COPY_CODE": "Copy code"
             },
-            "TEXT_PLACEHOLDER": "Button text (max. 25)",
-            "URL_PLACEHOLDER": "https://… (may end with %{variable})",
+            "TEXT_PLACEHOLDER": "E.g. See my order",
             "PHONE_PLACEHOLDER": "+1…",
             "EXAMPLE_CODE": "Sample code (max. %{max})",
             "EXAMPLE_URL": "Full link example (https://…/12345)",
             "REMOVE": "Remove button",
-            "EMPTY": "No buttons. They are optional."
+            "EMPTY": "No buttons (they're optional). Add one with the buttons above.",
+            "GROUP_QUICK": "Quick replies",
+            "GROUP_ACTIONS": "Actions",
+            "TEXT": "Button text",
+            "TEXT_PLACEHOLDER_QUICK": "E.g. Confirm appointment",
+            "URL": "Link",
+            "URL_FIXED": "Fixed link",
+            "URL_DYNAMIC": "Ends with customer data",
+            "URL_EXAMPLE": "Full link example",
+            "URL_DYNAMIC_HINT": "When sending the template you type the end of the link (e.g. the order number).",
+            "PHONE": "Phone",
+            "PHONE_HINT": "Type the full number with the country code (+1…).",
+            "CODE_HINT": "The real code is typed when sending the template; this one is only for Meta's review.",
+            "LIMIT_TOTAL": "Meta allows up to %{max} buttons.",
+            "LIMIT_TYPE": "Meta allows %{max} of type “%{type}”."
         },
         "PREVIEW": {
             "CAPTION": "This is how the customer will see it in WhatsApp.",

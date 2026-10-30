@@ -707,8 +707,35 @@ mandarlo). Frontend 28 en verde (`templateEditor.spec.js` nuevo, 9). Webpack: «
 
 Frontend 83 en verde (+1 getter, +1 selector). Webpack: «Compiled successfully».
 
-**Sigue (F10.2–F10.5).** «+ Variable», formato, «Lista para Meta» por sección; botones por tipo con límites y
-arrastrar; archivo con arrastrar y soltar; aviso al salir; ficha `/:id` + Duplicar; empezar desde un ejemplo.
+**F10.3 botones + acomodo (30/10/2026, misma tarde).**
+- **Menú secundario**: en `/new` y `/:id/edit` no se veía; el menú solo se muestra en las rutas que conoce →
+  `whatsapp_templates_new` / `_edit` agregadas en `sidebarItems/settings.js` y en `v2/index.js` (Catálogos).
+- **Contenido en dos renglones**: Bandeja · Nombre, y Idioma · Categoría · Encabezado (la explicación de la
+  categoría debajo). Al editar, la bandeja se ve en su `select` deshabilitado.
+- **Pestaña Botones** (`TemplateButtonsEditor.vue`):
+
+```
+ [↩ Respuesta rápida] [🔗 Liga] [📞 Teléfono] [📋 Copiar código]                    3 / 10
+                       (se apaga al tope: «Meta permite 2 de tipo Liga»)
+ Respuestas rápidas · 1 / 10             Acciones
+ ┌ ⋮⋮ ↩ Texto del botón [Confirmar] 🗑 ┐  ┌ ⋮⋮ 🔗 Liga                              🗑 ┐
+ └─────────────────────────────────────┘  │   Texto del botón [Ver mi pedido]  12 / 25│
+                                          │   Liga [https://tienda.mx/pedido/]       │
+                                          │   ( ) Liga fija (•) Termina con un dato  │
+                                          │   Ejemplo de la liga completa [ …/A-1043]│
+                                          └──────────────────────────────────────────┘
+```
+  un «+» por tipo (adiós al «Agregar» que siempre ponía respuesta rápida), topes de Meta que apagan el botón
+  con el motivo, dos grupos fijos (el orden que pide Meta sale solo), tarjeta con etiquetas y contador, arrastrar
+  ⋮⋮ dentro de cada grupo (`vuedraggable`), liga «fija» o «termina con un dato del cliente» (el `{{1}}` lo pone
+  el editor), teléfono con `+52` y aviso si falta la lada, código de ejemplo con su explicación.
+  Lógica pura en `templateEditor.js` (`addButtonBlocker`, `orderButtons`, `buildUrl`, `phoneNeedsCountryCode`).
+
+Frontend 25 en verde en la carpeta (+5 botones en `templateEditor.spec.js`, +4 `TemplateButtonsEditor.spec.js`);
+menú 17 en verde. Webpack: «Compiled successfully». ⚠ **Sin probar en navegador.**
+
+**Sigue (F10.2, F10.4, F10.5).** «+ Variable», formato, «Lista para Meta» por pestaña; archivo con arrastrar y
+soltar; aviso al salir; ficha `/:id` + Duplicar; empezar desde un ejemplo.
 
 ---
 

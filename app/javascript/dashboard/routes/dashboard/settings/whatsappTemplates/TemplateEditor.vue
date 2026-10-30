@@ -15,26 +15,20 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import ResizableTextArea from 'shared/components/ResizableTextArea.vue';
 import WhatsappTemplatesAPI from 'dashboard/api/whatsapp/templates';
-import {
-  validateTemplate,
-  COPY_CODE_MAX,
-} from 'dashboard/helper/whatsappTemplateValidator';
+import { validateTemplate } from 'dashboard/helper/whatsappTemplateValidator';
 import SettingsLayout from '../SettingsLayout.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import TemplatePreview from './TemplatePreview.vue';
+import TemplateButtonsEditor from './TemplateButtonsEditor.vue';
 import {
   ACCEPTED_TYPES,
-  BUTTON_TYPES,
   HEADER_TYPES,
   MEDIA_HEADER_TYPES,
-  buttonExample,
-  emptyButton,
   emptyForm,
   formCategories,
   formFromTemplate,
   isLocalDraft,
   languageOptions,
-  needsButtonExample,
   sanitizeName,
   syncSamples,
   templatePayload,
@@ -47,6 +41,7 @@ export default {
     BaseSettingsHeader,
     ResizableTextArea,
     SettingsLayout,
+    TemplateButtonsEditor,
     TemplatePreview,
   },
   data() {
@@ -60,8 +55,6 @@ export default {
       // SettingsWrapper guarda la página en caché (keep-alive): al volver se recarga.
       inactive: false,
       headerTypes: HEADER_TYPES,
-      buttonTypes: BUTTON_TYPES,
-      copyCodeMax: COPY_CODE_MAX,
       // Vue 2 no deja escribir {{1}} dentro de un texto traducido ni de un atributo.
       variableSample: '{{1}}',
     };
@@ -278,24 +271,6 @@ export default {
       this.form.header_sample_name = '';
       this.form.header_preview_url = '';
     },
-    addButton() {
-      this.form.buttons.push(emptyButton());
-    },
-    removeButton(index) {
-      this.form.buttons.splice(index, 1);
-    },
-    needsButtonExample,
-    buttonExample,
-    setButtonExample(boton, value) {
-      this.$set(boton, 'example', [value]);
-    },
-    buttonExamplePlaceholder(boton) {
-      return boton.type === 'COPY_CODE'
-        ? this.$t('WHATSAPP_TEMPLATE_EDITOR.BUTTONS.EXAMPLE_CODE', {
-            max: this.copyCodeMax,
-          })
-        : this.$t('WHATSAPP_TEMPLATE_EDITOR.BUTTONS.EXAMPLE_URL');
-    },
     goToList() {
       this.$router.push({ name: LIST_ROUTE });
     },
@@ -406,29 +381,30 @@ export default {
               class="col-start-1 row-start-1 pt-4"
               :class="{ invisible: activeTab !== 'content' }"
             >
-              <label v-if="!isEditing" class="block">
-                {{ $t('WHATSAPP_TEMPLATE_EDITOR.FIELDS.INBOX') }}
-                <select v-model="form.inbox_id">
-                  <option :value="null" disabled>
-                    {{
-                      $t('WHATSAPP_TEMPLATE_EDITOR.FIELDS.INBOX_PLACEHOLDER')
-                    }}
-                  </option>
-                  <option
-                    v-for="i in whatsappInboxes"
-                    :key="i.id"
-                    :value="i.id"
-                  >
-                    {{ i.name }}
-                  </option>
-                </select>
-              </label>
-              <p v-else class="mb-4 text-sm text-slate-600 dark:text-slate-300">
-                {{ $t('WHATSAPP_TEMPLATE_EDITOR.FIELDS.INBOX') }}:
-                <strong>{{ inboxName }}</strong>
-              </p>
-
+              <!-- Renglón 1: Bandeja · Nombre -->
               <div class="grid grid-cols-2 gap-4">
+                <label class="block">
+                  {{ $t('WHATSAPP_TEMPLATE_EDITOR.FIELDS.INBOX') }}
+                  <select v-model="form.inbox_id" :disabled="isEditing">
+                    <option v-if="isEditing" :value="form.inbox_id">
+                      {{ inboxName }}
+                    </option>
+                    <option v-else :value="null" disabled>
+                      {{
+                        $t('WHATSAPP_TEMPLATE_EDITOR.FIELDS.INBOX_PLACEHOLDER')
+                      }}
+                    </option>
+                    <template v-if="!isEditing">
+                      <option
+                        v-for="i in whatsappInboxes"
+                        :key="i.id"
+                        :value="i.id"
+                      >
+                        {{ i.name }}
+                      </option>
+                    </template>
+                  </select>
+                </label>
                 <woot-input
                   v-model="form.name"
                   :label="$t('WHATSAPP_TEMPLATE_EDITOR.FIELDS.NAME')"
@@ -438,6 +414,10 @@ export default {
                   :help-text="$t('WHATSAPP_TEMPLATE_EDITOR.FIELDS.NAME_HINT')"
                   :readonly="!isDraft"
                 />
+              </div>
+
+              <!-- Renglón 2: Idioma · Categoría · Encabezado -->
+              <div class="grid grid-cols-3 gap-4">
                 <label class="block">
                   {{ $t('WHATSAPP_TEMPLATE_EDITOR.FIELDS.LANGUAGE') }}
                   <select v-model="form.language" :disabled="!isDraft">
@@ -446,9 +426,6 @@ export default {
                     </option>
                   </select>
                 </label>
-              </div>
-
-              <div class="grid grid-cols-2 gap-4">
                 <label class="block">
                   {{ $t('WHATSAPP_TEMPLATE_EDITOR.FIELDS.CATEGORY') }}
                   <select v-model="form.category">
@@ -456,13 +433,6 @@ export default {
                       {{ $t(`WHATSAPP_TEMPLATE_EDITOR.CATEGORIES.${c}`) }}
                     </option>
                   </select>
-                  <span class="help-text">
-                    {{
-                      $t(
-                        `WHATSAPP_TEMPLATE_EDITOR.CATEGORY_HINTS.${form.category}`
-                      )
-                    }}
-                  </span>
                 </label>
                 <label class="block">
                   {{ $t('WHATSAPP_TEMPLATE_EDITOR.SECTIONS.HEADER') }}
@@ -477,6 +447,11 @@ export default {
                   </select>
                 </label>
               </div>
+              <p class="-mt-2 mb-4 help-text">
+                {{
+                  $t(`WHATSAPP_TEMPLATE_EDITOR.CATEGORY_HINTS.${form.category}`)
+                }}
+              </p>
 
               <div v-if="form.header_type === 'text'" class="relative">
                 <woot-input
@@ -606,78 +581,7 @@ export default {
               class="col-start-1 row-start-1 pt-4"
               :class="{ invisible: activeTab !== 'buttons' }"
             >
-              <div class="flex items-center justify-between">
-                <p class="mb-0 text-xs text-slate-400">
-                  {{ $t('WHATSAPP_TEMPLATE_EDITOR.BUTTONS.HINT') }}
-                </p>
-                <woot-button
-                  variant="clear"
-                  size="small"
-                  icon="add"
-                  :is-disabled="form.buttons.length >= 10"
-                  @click="addButton"
-                >
-                  {{ $t('WHATSAPP_TEMPLATE_EDITOR.BUTTONS.ADD') }}
-                </woot-button>
-              </div>
-              <p
-                v-if="!form.buttons.length"
-                class="py-8 text-sm text-center text-slate-400"
-              >
-                {{ $t('WHATSAPP_TEMPLATE_EDITOR.BUTTONS.EMPTY') }}
-              </p>
-              <div
-                v-for="(boton, i) in form.buttons"
-                :key="i"
-                class="flex items-center gap-2 mt-2"
-              >
-                <select v-model="boton.type" class="w-40 !mb-0 shrink-0">
-                  <option v-for="tipo in buttonTypes" :key="tipo" :value="tipo">
-                    {{ $t(`WHATSAPP_TEMPLATE_EDITOR.BUTTONS.TYPES.${tipo}`) }}
-                  </option>
-                </select>
-                <woot-input
-                  v-if="boton.type !== 'COPY_CODE'"
-                  v-model="boton.text"
-                  :placeholder="
-                    $t('WHATSAPP_TEMPLATE_EDITOR.BUTTONS.TEXT_PLACEHOLDER')
-                  "
-                  class="flex-1 !mb-0"
-                />
-                <woot-input
-                  v-if="boton.type === 'URL'"
-                  v-model="boton.url"
-                  :placeholder="
-                    $t('WHATSAPP_TEMPLATE_EDITOR.BUTTONS.URL_PLACEHOLDER', {
-                      variable: variableSample,
-                    })
-                  "
-                  class="flex-1 !mb-0"
-                />
-                <woot-input
-                  v-if="boton.type === 'PHONE_NUMBER'"
-                  v-model="boton.phone_number"
-                  :placeholder="
-                    $t('WHATSAPP_TEMPLATE_EDITOR.BUTTONS.PHONE_PLACEHOLDER')
-                  "
-                  class="flex-1 !mb-0"
-                />
-                <woot-input
-                  v-if="needsButtonExample(boton)"
-                  :value="buttonExample(boton)"
-                  :placeholder="buttonExamplePlaceholder(boton)"
-                  class="flex-1 !mb-0"
-                  @input="setButtonExample(boton, $event)"
-                />
-                <woot-button
-                  variant="clear"
-                  size="small"
-                  color-scheme="alert"
-                  icon="delete"
-                  :title="$t('WHATSAPP_TEMPLATE_EDITOR.BUTTONS.REMOVE')"
-                  @click="removeButton(i)"
-                />
-              </div>
+              <TemplateButtonsEditor v-model="form.buttons" />
             </div>
 
             <!-- Variables: los ejemplos que revisa Meta y salen en la vista previa -->

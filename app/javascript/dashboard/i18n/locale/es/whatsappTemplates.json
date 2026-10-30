@@ -110,21 +110,32 @@
             "DOCUMENT": "PDF, hasta 100 MB"
         },
         "BUTTONS": {
-            "ADD": "Agregar botón",
-            "HINT": "Las respuestas rápidas van primero; después liga (máx. 2), teléfono (1) y copiar código (1).",
             "TYPES": {
                 "QUICK_REPLY": "Respuesta rápida",
                 "URL": "Liga",
                 "PHONE_NUMBER": "Teléfono",
                 "COPY_CODE": "Copiar código"
             },
-            "TEXT_PLACEHOLDER": "Texto del botón (máx. 25)",
-            "URL_PLACEHOLDER": "https://… (puede terminar en %{variable})",
+            "TEXT_PLACEHOLDER": "Ej. Ver mi pedido",
             "PHONE_PLACEHOLDER": "+52…",
             "EXAMPLE_CODE": "Código de ejemplo (máx. %{max})",
             "EXAMPLE_URL": "Ejemplo de la liga completa (https://…/12345)",
             "REMOVE": "Quitar botón",
-            "EMPTY": "Sin botones. Son opcionales."
+            "EMPTY": "Sin botones (son opcionales). Agrega uno con los botones de arriba.",
+            "GROUP_QUICK": "Respuestas rápidas",
+            "GROUP_ACTIONS": "Acciones",
+            "TEXT": "Texto del botón",
+            "TEXT_PLACEHOLDER_QUICK": "Ej. Confirmar cita",
+            "URL": "Liga",
+            "URL_FIXED": "Liga fija",
+            "URL_DYNAMIC": "Termina con un dato del cliente",
+            "URL_EXAMPLE": "Ejemplo de la liga completa",
+            "URL_DYNAMIC_HINT": "Al mandar la plantilla se escribe el final de la liga (p. ej. el número de pedido).",
+            "PHONE": "Teléfono",
+            "PHONE_HINT": "Escribe el número completo con la lada del país (+52…).",
+            "CODE_HINT": "El código real se escribe al mandar la plantilla; este es solo para la revisión de Meta.",
+            "LIMIT_TOTAL": "Meta permite hasta %{max} botones.",
+            "LIMIT_TYPE": "Meta permite %{max} de tipo «%{type}»."
         },
         "PREVIEW": {
             "CAPTION": "Así lo verá el cliente en WhatsApp.",
