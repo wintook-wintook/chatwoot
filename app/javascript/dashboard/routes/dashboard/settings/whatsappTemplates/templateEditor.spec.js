@@ -111,6 +111,9 @@ describe('ayudas del formulario', () => {
       '',
     ]);
     expect(syncSamples(['Juan', '5/11'], 'Hola {{1}}.')).toEqual(['Juan']);
+    expect(syncSamples([], 'Hola {{nombre}} y {{edad}} y {{nombre}}.')).toEqual(
+      ['', '']
+    );
   });
 
   it('autenticación solo aparece si la plantilla ya la tiene', () => {
@@ -205,6 +208,8 @@ describe('mensaje', () => {
     expect(nextVariable('')).toBe('{{1}}');
     expect(nextVariable('Hola {{1}}, vence {{2}}.')).toBe('{{3}}');
     expect(nextVariable('Hola {{2}}')).toBe('{{3}}');
+    expect(nextVariable('Hola {{edad}}')).toBe('{{dato}}');
+    expect(nextVariable('Hola {{dato}}.')).toBe('{{dato_2}}');
   });
 
   it('inserta en el cursor y reemplaza lo seleccionado', () => {
@@ -228,21 +233,21 @@ describe('mensaje', () => {
     expect(
       errorsByTab([
         'Nombre: es obligatorio',
-        'Body: no puede terminar con una variable',
-        'Botón #1 (URL): falta el ejemplo de la liga completa',
-        'Botones: máximo 2 de tipo URL',
-        'Ejemplos: hay valores de body vacíos',
+        'Mensaje: no puede terminar con una variable',
+        'Botón #1 (liga): falta el ejemplo de la liga completa',
+        'Botones: máximo 2 de tipo liga',
+        'Ejemplos: hay ejemplos del mensaje vacíos',
       ])
     ).toEqual({
       content: [
         'Nombre: es obligatorio',
-        'Body: no puede terminar con una variable',
+        'Mensaje: no puede terminar con una variable',
       ],
       buttons: [
-        'Botón #1 (URL): falta el ejemplo de la liga completa',
-        'Botones: máximo 2 de tipo URL',
+        'Botón #1 (liga): falta el ejemplo de la liga completa',
+        'Botones: máximo 2 de tipo liga',
       ],
-      variables: ['Ejemplos: hay valores de body vacíos'],
+      variables: ['Ejemplos: hay ejemplos del mensaje vacíos'],
     });
   });
 });

@@ -911,6 +911,37 @@ botón se marcan «✗ Seguimientos», porque seguimientos y campañas solo mand
 Pruebas: frontend 88 en verde (+4 `valuesFromProcessedParams`, +3 `TemplateExtraFields`, +1 aviso); backend en verde
 (+1 uso, +1 botón con su posición, +1 punta a punta de programado con archivo y botón). ⚠ **Sin probar en navegador.**
 
+
+## 7.15 F9.1 — crear plantillas con variables con nombre (30/10/2026, rama `feat/plantillas_variables_chatwoot`)
+
+**Qué hace.** El mensaje y el encabezado aceptan `{{nombre}}`, `{{edad}}`: minúsculas, números y `_`, empezando con
+letra. Una plantilla usa números o nombres, nunca los dos (entre encabezado y cuerpo tampoco); el editor y el
+servidor lo avisan. Las plantillas con `{{1}}` no cambian en nada.
+
+**En el editor.** Lista **«Datos del sistema»** junto a «+ Variable»: inserta el campo o atributo donde está el
+cursor. En la pestaña Variables, cada ejemplo dice qué se reconoció: «Se llena con: Edad» o «Lo escribe el agente
+al mandarla» (`templateVariableSources.js`). Nombres reservados en español (D9a): `nombre`, `primer_nombre`,
+`apellido`, `correo`, `telefono`, `empresa`, `agente`, `conversacion`, `bandeja`, `fecha_hoy`; ganan sobre un
+atributo con la misma clave. Con un mensaje con nombres, «+ Variable» agrega `{{dato}}`, `{{dato_2}}`.
+
+**Hacia Meta.** `TemplateComponentBuilder` manda `parameter_format: 'NAMED'` y `body_text_named_params` /
+`header_text_named_params`. Los ejemplos siguen en `sample_values` como lista, por orden de aparición del nombre;
+sin migración. La sincronización lee ese formato. Reglas en `Whatsapp::TemplateVariables`; réplica en
+`whatsappTemplateValidator.js`.
+
+**Todavía no.** Reconocer no llena: el dato real del contacto llega en F9.2 y F9.3. ⚠ El formato hacia Meta sale de
+su documentación y **no se ha probado contra Meta real**; tampoco en navegador. En plantillas con nombres, la liga
+variable de un botón sigue como `{{1}}`: hay que confirmar con Meta que acepta esa combinación.
+
+Pruebas: servidor en verde (`template_validator` +4, `template_component_builder` +2, sync +1); frontend 97 en
+verde (`templateVariableSources.spec.js` 4, validador +6, editor +2). Webpack: «Compiled successfully».
+
+
+**Ajustes de pantalla (30/10/2026).** La lista del editor se llama «Datos del sistema» (ningún texto visible dice
+«Chatwoot»). Editor: encabezado y pestañas fijos, scroll solo dentro de la pestaña; Vista previa como cuarta pestaña
+y a la derecha solo «Lista para Meta» (16rem). Los avisos usan las palabras de la pantalla (Mensaje, Encabezado,
+liga) y los estados se muestran en español en la lista y su filtro.
+
 ---
 
 ## 8. Pila de pruebas en navegador (al cerrar cada fase)
@@ -946,3 +977,4 @@ Pruebas: frontend 88 en verde (+4 `valuesFromProcessedParams`, +3 `TemplateExtra
 - [ ] F10.5: en `/new` elegir «Confirmación de cita» llena todo y se puede cambiar por otro ejemplo; al escribir se oculta la fila; un nombre repetido avisa
 - [ ] Botones: plantilla con respuesta rápida + liga variable sale bien desde la conversación (antes Meta la rechazaba)
 - [ ] Programados: plantilla con documento y botón en bandeja Cloud; editarla conserva lo capturado; llega a su hora
+- [ ] F9.1: crear una plantilla con «Datos del sistema» y `{{edad}}`: dice qué reconoció; mezclar con `{{1}}` avisa; Meta la acepta

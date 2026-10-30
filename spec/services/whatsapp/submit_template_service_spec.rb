@@ -218,7 +218,7 @@ RSpec.describe Whatsapp::SubmitTemplateService do
       result = described_class.new(template: borrador, params: {}).update
 
       expect(result).not_to be_success
-      expect(result.error).to include('Body')
+      expect(result.error).to include('Mensaje')
     end
   end
 

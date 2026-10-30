@@ -5,7 +5,10 @@
 // sale de una plantilla guardada, lo que se manda al servidor y los ejemplos de las
 // variables. La validación sigue en dashboard/helper/whatsappTemplateValidator.js.
 // ============================================================================
-import { templateVariables } from 'dashboard/helper/whatsappTemplateValidator';
+import {
+  templateVariables,
+  variableKeys,
+} from 'dashboard/helper/whatsappTemplateValidator';
 
 export const CATEGORIES = ['UTILITY', 'MARKETING', 'AUTHENTICATION'];
 export const HEADER_TYPES = ['', 'text', 'image', 'video', 'document'];
@@ -113,7 +116,7 @@ export const sanitizeName = val =>
 
 // Un ejemplo por variable distinta, conservando los ya escritos.
 export const syncSamples = (current, text) => {
-  const count = new Set(templateVariables(text)).size;
+  const count = variableKeys(text).length;
   return Array.from({ length: count }, (_, i) => (current || [])[i] || '');
 };
 
@@ -186,8 +189,15 @@ export const phoneNeedsCountryCode = telefono =>
 
 // ---- Mensaje (F10.2) --------------------------------------------------------
 // La siguiente variable libre: {{1}} si no hay, si no la mayor + 1 (sin huecos que Meta
-// rechace).
+// rechace). Si el mensaje ya usa nombres, otro nombre: no se pueden mezclar.
 export const nextVariable = text => {
+  const claves = variableKeys(text);
+  if (claves.some(c => !/^\d+$/.test(c))) {
+    let n = 1;
+    const nombre = () => (n === 1 ? 'dato' : `dato_${n}`);
+    while (claves.includes(nombre())) n += 1;
+    return `{{${nombre()}}}`;
+  }
   const nums = templateVariables(text);
   return `{{${nums.length ? Math.max(...nums) + 1 : 1}}}`;
 };

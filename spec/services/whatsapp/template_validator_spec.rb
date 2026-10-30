@@ -31,12 +31,44 @@ RSpec.describe Whatsapp::TemplateValidator do
     it 'rechaza un cuerpo que empieza o termina con variable' do
       inicio = build(body_text: '{{1}}, tu saldo es {{2}} pesos', sample_values: { 'body' => %w[Juan 100] })
       final = build(body_text: 'Hola {{1}}, tu saldo es {{2}}', sample_values: { 'body' => %w[Juan 100] })
-      expect(inicio.errors).to include('Body: no puede empezar con una variable')
-      expect(final.errors).to include('Body: no puede terminar con una variable (agrega un punto o texto después)')
+      expect(inicio.errors).to include('Mensaje: no puede empezar con una variable')
+      expect(final.errors).to include('Mensaje: no puede terminar con una variable (agrega un punto o texto después)')
     end
 
     it 'con un punto después de la variable pasa' do
       expect(build(body_text: 'Hola {{1}}, tu saldo es {{2}}.')).to be_valid
+    end
+  end
+
+  # feat/plantillas_variables_chatwoot F9.1
+  describe 'variables con nombre' do
+    it 'acepta nombres, con un ejemplo por cada nombre distinto' do
+      result = build(body_text: 'Hola {{nombre}}, tu edad es {{edad}} y {{nombre}} sigue.', sample_values: { 'body' => %w[Juan 34] })
+      expect(result).to be_valid
+    end
+
+    it 'no deja mezclar números con nombres, ni entre encabezado y cuerpo' do
+      mezcla = build(body_text: 'Hola {{1}} y {{edad}}.', sample_values: { 'body' => %w[a b] })
+      expect(mezcla.errors).to include(a_string_matching(/no mezcles/))
+
+      cruzada = build(header_type: 'text', header_content: 'Pedido {{pedido}}', body_text: 'Hola {{1}}.',
+                      sample_values: { 'body' => ['a'], 'header' => ['b'] })
+      expect(cruzada.errors).to include(a_string_matching(/no mezcles/))
+    end
+
+    it 'rechaza nombres que Meta no acepta' do
+      ['{{Edad}}', '{{contact.name}}', '{{mi dato}}', '{{1a}}'].each do |variable|
+        expect(build(body_text: "Hola #{variable}.", sample_values: { 'body' => ['a'] }).errors)
+          .to include(a_string_matching(/no es válida/))
+      end
+    end
+
+    it 'aplica las reglas de orilla, pie y encabezado a los nombres' do
+      expect(build(body_text: '{{nombre}}, hola.', sample_values: { 'body' => ['a'] }).errors)
+        .to include('Mensaje: no puede empezar con una variable')
+      expect(build(footer_text: 'Hola {{nombre}}').errors).to include('Pie: no puede contener variables')
+      expect(build(header_type: 'text', header_content: '{{a}} {{b}}', sample_values: { 'body' => %w[Juan $100], 'header' => ['x'] }).errors)
+        .to include('Encabezado: máximo 1 variable')
     end
   end
 
@@ -52,21 +84,21 @@ RSpec.describe Whatsapp::TemplateValidator do
 
   describe 'body' do
     it 'exige cuerpo' do
-      expect(build(body_text: '', sample_values: {}).errors).to include('Body: el cuerpo es obligatorio')
+      expect(build(body_text: '', sample_values: {}).errors).to include('Mensaje: es obligatorio')
     end
 
     it 'rechaza body > 1024' do
-      expect(build(body_text: 'a' * 1025, sample_values: {}).errors).to include(a_string_matching(/Body: excede/))
+      expect(build(body_text: 'a' * 1025, sample_values: {}).errors).to include(a_string_matching(/Mensaje: excede/))
     end
 
     it 'exige variables contiguas ({{1}} {{3}} → falta {{2}})' do
       result = build(body_text: '{{1}} y {{3}}', sample_values: { 'body' => %w[a b] })
-      expect(result.errors).to include('Body: falta la variable {{2}}')
+      expect(result.errors).to include('Mensaje: falta la variable {{2}}')
     end
 
     it 'exige que la primera variable sea {{1}}' do
       result = build(body_text: 'solo {{2}}', sample_values: { 'body' => %w[a] })
-      expect(result.errors).to include('Body: la primera variable debe ser {{1}}')
+      expect(result.errors).to include('Mensaje: la primera variable debe ser {{1}}')
     end
   end
 
@@ -74,21 +106,21 @@ RSpec.describe Whatsapp::TemplateValidator do
     it 'texto: máximo 1 variable' do
       result = build(header_type: 'text', header_content: '{{1}} {{2}}',
                      sample_values: { 'body' => %w[Juan $100], 'header' => ['x'] })
-      expect(result.errors).to include('Cabecera: máximo 1 variable')
+      expect(result.errors).to include('Encabezado: máximo 1 variable')
     end
 
     it 'texto: la variable debe ser {{1}}' do
       result = build(header_type: 'text', header_content: 'Hola {{2}}',
                      sample_values: { 'body' => %w[Juan $100], 'header' => ['x'] })
-      expect(result.errors).to include('Cabecera: la variable debe ser exactamente {{1}}')
+      expect(result.errors).to include('Encabezado: la variable debe ser exactamente {{1}}')
     end
 
     it 'texto: rechaza > 60 caracteres' do
-      expect(build(header_type: 'text', header_content: 'a' * 61).errors).to include(a_string_matching(/Cabecera: excede/))
+      expect(build(header_type: 'text', header_content: 'a' * 61).errors).to include(a_string_matching(/Encabezado: excede/))
     end
 
     it 'media: exige archivo (url o handle)' do
-      expect(build(header_type: 'image').errors).to include('Cabecera multimedia: falta el archivo (súbelo o pega una liga)')
+      expect(build(header_type: 'image').errors).to include('Encabezado: falta el archivo (súbelo o pega una liga)')
     end
 
     it 'media: acepta con header_media_url' do
@@ -113,12 +145,12 @@ RSpec.describe Whatsapp::TemplateValidator do
     end
 
     it 'URL sin url' do
-      expect(build(buttons: [{ 'type' => 'URL', 'text' => 'Ver' }]).errors).to include('Botón #1 (URL) sin url')
+      expect(build(buttons: [{ 'type' => 'URL', 'text' => 'Ver' }]).errors).to include('Botón #1 (liga): falta la liga')
     end
 
     it 'URL con {{1}} exige example' do
       result = build(buttons: [{ 'type' => 'URL', 'text' => 'Ver', 'url' => 'https://x/{{1}}' }])
-      expect(result.errors).to include('Botón #1 (URL): falta el ejemplo de la liga completa')
+      expect(result.errors).to include('Botón #1 (liga): falta el ejemplo de la liga completa')
     end
 
     it 'URL con {{1}} y su example pasa' do
@@ -127,7 +159,7 @@ RSpec.describe Whatsapp::TemplateValidator do
     end
 
     it 'teléfono sin phone_number' do
-      expect(build(buttons: [{ 'type' => 'PHONE_NUMBER', 'text' => 'Llamar' }]).errors).to include('Botón #1 (teléfono) sin phone_number')
+      expect(build(buttons: [{ 'type' => 'PHONE_NUMBER', 'text' => 'Llamar' }]).errors).to include('Botón #1 (teléfono): falta el número')
     end
 
     it 'COPY_CODE exige example' do
@@ -142,7 +174,7 @@ RSpec.describe Whatsapp::TemplateValidator do
 
     it 'máximo 2 botones URL' do
       btns = Array.new(3) { { 'type' => 'URL', 'text' => 'Ver', 'url' => 'https://x' } }
-      expect(build(buttons: btns).errors).to include('Botones: máximo 2 de tipo URL')
+      expect(build(buttons: btns).errors).to include('Botones: máximo 2 de tipo liga')
     end
 
     it 'texto de botón > 25' do
@@ -175,13 +207,13 @@ RSpec.describe Whatsapp::TemplateValidator do
 
     it 'rechaza valores de body vacíos' do
       result = build(body_text: 'Hola {{1}}', sample_values: { 'body' => [''] })
-      expect(result.errors).to include('Ejemplos: hay valores de body vacíos')
+      expect(result.errors).to include('Ejemplos: hay ejemplos del mensaje vacíos')
     end
 
     it 'exige el sample de la cabecera de texto con variable' do
       result = build(header_type: 'text', header_content: 'Hola {{1}}',
                      sample_values: { 'body' => %w[Juan $100] })
-      expect(result.errors).to include('Ejemplos: falta el valor de la cabecera')
+      expect(result.errors).to include('Ejemplos: falta el ejemplo del encabezado')
     end
   end
 end

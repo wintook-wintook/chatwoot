@@ -17,8 +17,6 @@ class Whatsapp::TemplateValidator
 
   NAME_FORMAT = /\A[a-z0-9_]{1,512}\z/
   VAR_REGEX = /\{\{\s*(\d+)\s*\}\}/
-  STARTS_WITH_VAR = /\A#{VAR_REGEX}/
-  ENDS_WITH_VAR = /#{VAR_REGEX}\z/
 
   MAX_BODY = 1024
   MAX_FOOTER = 60
@@ -45,6 +43,7 @@ class Whatsapp::TemplateValidator
   def call
     validate_name
     validate_category
+    validate_variable_format
     validate_body
     validate_header
     validate_footer
@@ -66,19 +65,16 @@ class Whatsapp::TemplateValidator
   # ---- body ------------------------------------------------------------------
   def validate_body
     body = @t.body_text.to_s
-    return @errors << 'Body: el cuerpo es obligatorio' if body.blank?
+    return @errors << 'Mensaje: es obligatorio' if body.blank?
 
-    @errors << "Body: excede #{MAX_BODY} caracteres (#{body.length})" if body.length > MAX_BODY
-    check_contiguous(variables(body), 'Body')
-    check_edges(body)
+    @errors << "Mensaje: excede #{MAX_BODY} caracteres (#{body.length})" if body.length > MAX_BODY
+    @errors.concat(Whatsapp::TemplateVariables.body_errors(body))
   end
 
-  # feat/plantillas_whatsapp_mejoras: Meta rechaza un cuerpo que empieza o termina con una
-  # variable («{{1}}, gracias…» o «…tu pedido {{1}}»). Basta un punto después para que pase.
-  def check_edges(body)
-    texto = body.strip
-    @errors << 'Body: no puede empezar con una variable' if texto.match?(STARTS_WITH_VAR)
-    @errors << 'Body: no puede terminar con una variable (agrega un punto o texto después)' if texto.match?(ENDS_WITH_VAR)
+  # ---- variables -------------------------------------------------------------
+  def validate_variable_format
+    header = @t.header_type.to_s == 'text' ? @t.header_content : nil
+    @errors.concat(Whatsapp::TemplateVariables.format_errors(header, @t.body_text))
   end
 
   # ---- categoría ------------------------------------------------------------
@@ -105,13 +101,13 @@ class Whatsapp::TemplateValidator
 
   def validate_header_text
     text = @t.header_content.to_s
-    return @errors << 'Cabecera de texto: falta el contenido' if text.blank?
+    return @errors << 'Encabezado: falta el texto' if text.blank?
 
-    @errors << "Cabecera: excede #{MAX_HEADER_TEXT} caracteres (#{text.length})" if text.length > MAX_HEADER_TEXT
+    @errors << "Encabezado: excede #{MAX_HEADER_TEXT} caracteres (#{text.length})" if text.length > MAX_HEADER_TEXT
 
-    vars = variables(text)
-    @errors << 'Cabecera: máximo 1 variable' if vars.uniq.size > 1
-    @errors << 'Cabecera: la variable debe ser exactamente {{1}}' if vars.any? && vars.uniq != [1]
+    vars = tokens(text).uniq
+    @errors << 'Encabezado: máximo 1 variable' if vars.size > 1
+    @errors << 'Encabezado: la variable debe ser exactamente {{1}}' if Whatsapp::TemplateVariables.numbers(text).uniq.then { |n| n.any? && n != [1] }
   end
 
   def validate_header_media
@@ -119,7 +115,7 @@ class Whatsapp::TemplateValidator
     # feat/plantillas_whatsapp_mejoras F6: o el archivo subido desde la pantalla.
     return if @t.respond_to?(:header_sample) && @t.header_sample.attached?
 
-    @errors << 'Cabecera multimedia: falta el archivo (súbelo o pega una liga)'
+    @errors << 'Encabezado: falta el archivo (súbelo o pega una liga)'
   end
 
   # ---- footer ----------------------------------------------------------------
@@ -128,7 +124,7 @@ class Whatsapp::TemplateValidator
     return if footer.blank?
 
     @errors << "Pie: excede #{MAX_FOOTER} caracteres (#{footer.length})" if footer.length > MAX_FOOTER
-    @errors << 'Pie: no puede contener variables' if variables(footer).any?
+    @errors << 'Pie: no puede contener variables' if tokens(footer).any?
   end
 
   # ---- botones ---------------------------------------------------------------
@@ -144,7 +140,7 @@ class Whatsapp::TemplateValidator
 
   def validate_button_type_limits(buttons)
     counts = buttons.group_by { |b| btn_type(b) }.transform_values(&:size)
-    @errors << "Botones: máximo #{MAX_URL_BUTTONS} de tipo URL" if counts.fetch('URL', 0) > MAX_URL_BUTTONS
+    @errors << "Botones: máximo #{MAX_URL_BUTTONS} de tipo liga" if counts.fetch('URL', 0) > MAX_URL_BUTTONS
     @errors << "Botones: máximo #{MAX_PHONE_BUTTONS} de tipo teléfono" if counts.fetch('PHONE_NUMBER', 0) > MAX_PHONE_BUTTONS
     @errors << "Botones: máximo #{MAX_COPY_CODE_BUTTONS} de tipo código" if counts.fetch('COPY_CODE', 0) > MAX_COPY_CODE_BUTTONS
   end
@@ -181,16 +177,16 @@ class Whatsapp::TemplateValidator
 
   def validate_url_button(btn, pos)
     url = btn_field(btn, 'url').to_s
-    return @errors << "Botón ##{pos} (URL) sin url" if url.blank?
+    return @errors << "Botón ##{pos} (liga): falta la liga" if url.blank?
 
     # URL con variable exige example para la revisión de Meta.
     return unless variables(url).any?
 
-    @errors << "Botón ##{pos} (URL): falta el ejemplo de la liga completa" if Array(btn_field(btn, 'example')).all? { |v| v.to_s.blank? }
+    @errors << "Botón ##{pos} (liga): falta el ejemplo de la liga completa" if Array(btn_field(btn, 'example')).all? { |v| v.to_s.blank? }
   end
 
   def validate_phone_button(btn, pos)
-    @errors << "Botón ##{pos} (teléfono) sin phone_number" if btn_field(btn, 'phone_number').to_s.blank?
+    @errors << "Botón ##{pos} (teléfono): falta el número" if btn_field(btn, 'phone_number').to_s.blank?
   end
 
   def validate_copy_code_button(btn, pos)
@@ -207,20 +203,20 @@ class Whatsapp::TemplateValidator
   end
 
   def validate_body_samples
-    expected = variables(@t.body_text).uniq.size
+    expected = tokens(@t.body_text).uniq.size
     given = Array(samples['body'])
     if given.size != expected
-      @errors << "Ejemplos: se requieren #{expected} valor(es) de body (hay #{given.size})"
+      @errors << "Ejemplos: se requieren #{expected} valor(es) del mensaje (hay #{given.size})"
     elsif given.any? { |v| v.to_s.strip.empty? }
-      @errors << 'Ejemplos: hay valores de body vacíos'
+      @errors << 'Ejemplos: hay ejemplos del mensaje vacíos'
     end
   end
 
   def validate_header_samples
-    return unless @t.header_type.to_s == 'text' && variables(@t.header_content).any?
+    return unless @t.header_type.to_s == 'text' && tokens(@t.header_content).any?
 
     given = Array(samples['header'])
-    @errors << 'Ejemplos: falta el valor de la cabecera' if given.size != 1 || given.first.to_s.strip.empty?
+    @errors << 'Ejemplos: falta el ejemplo del encabezado' if given.size != 1 || given.first.to_s.strip.empty?
   end
 
   # ---- helpers ---------------------------------------------------------------
@@ -228,15 +224,8 @@ class Whatsapp::TemplateValidator
     text.to_s.scan(VAR_REGEX).flatten.map(&:to_i)
   end
 
-  # Chequea que las variables sean contiguas empezando en 1 ({{1}} {{3}} → inválido).
-  def check_contiguous(nums, field)
-    return if nums.empty?
-
-    sorted = nums.uniq.sort
-    return @errors << "#{field}: la primera variable debe ser {{1}}" if sorted.first != 1
-
-    missing = (1..sorted.max).to_a - sorted
-    @errors << "#{field}: falta la variable {{#{missing.first}}}" if missing.any?
+  def tokens(text)
+    Whatsapp::TemplateVariables.tokens(text)
   end
 
   def samples

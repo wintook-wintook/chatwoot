@@ -34,8 +34,8 @@ describe('applyPreset', () => {
   it.each(PRESET_KEYS)('%s no trae errores propios', clave => {
     const errores = validateTemplate(applyPreset(base, clave));
 
-    expect(errores.filter(e => !/falta el archivo|sin url/.test(e))).toEqual(
-      []
-    );
+    expect(
+      errores.filter(e => !/falta el archivo|falta la liga/.test(e))
+    ).toEqual([]);
   });
 });
