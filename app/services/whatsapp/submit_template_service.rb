@@ -77,11 +77,21 @@ class Whatsapp::SubmitTemplateService
     result = provider.delete_template(name: @template.name, meta_template_id: @template.meta_template_id)
     return failure(result.error) unless result.success?
 
+    remove_from_channel_cache
     @template.destroy!
     Result.new(success: true, template: @template)
   end
 
   private
+
+  # Lo que leen los selectores es la copia de Meta en el canal: sin esto, la plantilla borrada
+  # se seguía ofreciendo hasta la siguiente sincronización y Meta la rechazaba al mandarla.
+  def remove_from_channel_cache
+    lista = @channel.message_templates
+    return unless lista.is_a?(Array)
+
+    @channel.update(message_templates: lista.reject { |t| t['name'] == @template.name && t['language'] == @template.language })
+  end
 
   # Una plantilla que ya está en Meta: Meta reemplaza los components y la vuelve a PENDING.
   def edit_in_meta

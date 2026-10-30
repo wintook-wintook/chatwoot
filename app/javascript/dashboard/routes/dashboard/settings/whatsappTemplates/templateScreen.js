@@ -154,3 +154,11 @@ export function sortTemplates(templates, { key, dir }, channelName = () => '') {
     return cmp * signo || String(a.name).localeCompare(String(b.name));
   });
 }
+
+// ¿Hay algo que deje de funcionar al borrarla? (lo que devuelve GET templates/:id/usage)
+export const templateInUse = usage =>
+  Boolean(usage) &&
+  (usage.agents.length > 0 ||
+    usage.trackings_count > 0 ||
+    usage.campaigns.length > 0 ||
+    usage.portals.length > 0);

@@ -274,5 +274,24 @@
         },
         "PER_PAGE": "Rows per page",
         "DELETE": "Delete"
+    },
+    "WHATSAPP_TEMPLATE_DELETE": {
+        "TITLE": "Delete “%{name}”",
+        "DRAFT": "It's a draft: it never reached Meta, so it's only deleted here.",
+        "IN_META": "It's also deleted in Meta (this language only), and Meta won't let you reuse that name for 30 days.",
+        "CHECKING": "Checking where it's used…",
+        "USAGE_FAILED": "We couldn't check where this template is used: some sends may depend on it.",
+        "IN_USE": "This template is in use:",
+        "AGENTS": "Follow-up agents:",
+        "TRACKINGS": "Follow-ups in progress: %{count}",
+        "CAMPAIGNS": "Campaigns:",
+        "PORTALS": "Portal acknowledgment: %{names}",
+        "WILL_FAIL": "If you delete it, those sends will fail. Change the template there first.",
+        "ACKNOWLEDGE": "I understand those sends may fail until the template is changed.",
+        "CANCEL": "Cancel",
+        "CONFIRM": "Delete",
+        "CONFIRM_ANYWAY": "Delete anyway",
+        "DONE": "Template deleted.",
+        "ERROR": "The template couldn't be deleted."
     }
 }

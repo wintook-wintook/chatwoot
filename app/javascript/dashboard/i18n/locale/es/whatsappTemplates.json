@@ -274,5 +274,24 @@
         },
         "PER_PAGE": "Filas por página",
         "DELETE": "Eliminar"
+    },
+    "WHATSAPP_TEMPLATE_DELETE": {
+        "TITLE": "Eliminar «%{name}»",
+        "DRAFT": "Es un borrador: nunca llegó a Meta, así que solo se borra aquí.",
+        "IN_META": "Se borra también en Meta (solo este idioma), y Meta no deja volver a usar ese nombre durante 30 días.",
+        "CHECKING": "Revisando dónde se usa…",
+        "USAGE_FAILED": "No se pudo revisar dónde se usa esta plantilla: puede que algún envío dependa de ella.",
+        "IN_USE": "Esta plantilla está en uso:",
+        "AGENTS": "Agentes de seguimiento:",
+        "TRACKINGS": "Seguimientos en curso: %{count}",
+        "CAMPAIGNS": "Campañas:",
+        "PORTALS": "Acuse del portal: %{names}",
+        "WILL_FAIL": "Si la borras, esos envíos van a fallar. Cambia la plantilla ahí primero.",
+        "ACKNOWLEDGE": "Entiendo que esos envíos pueden fallar hasta que cambie la plantilla.",
+        "CANCEL": "Cancelar",
+        "CONFIRM": "Eliminar",
+        "CONFIRM_ANYWAY": "Eliminar de todos modos",
+        "DONE": "Plantilla eliminada.",
+        "ERROR": "No se pudo eliminar la plantilla."
     }
 }

@@ -571,6 +571,13 @@ class ContactTrackingJob < ApplicationJob
 
     Rails.logger.info "[ContactTracking] 📱 Usando plantilla WhatsApp: #{template_name}"
 
+    # feat/plantillas_whatsapp_mejoras: la plantilla ya no está en la bandeja (se borró aquí o
+    # en Meta) o no está aprobada → envío rechazado con el motivo, clasificado como
+    # configuración (se pausa la campaña). Antes caía en «parámetros que no se pudieron
+    # resolver» y, con la ventana abierta, mandaba texto libre en su lugar.
+    missing = missing_template_error(tracking, template_name)
+    return reject_template(tracking, missing) if missing
+
     begin
       conversation = find_or_create_conversation(tracking)
       return false unless conversation
@@ -844,6 +851,29 @@ class ContactTrackingJob < ApplicationJob
 
   # feat/plantillas_whatsapp_mejoras F5: la plantilla lleva archivo y no se puede mandar.
   # Queda como entrega rechazada con el motivo (código config → HandleFailure pausa).
+  # { code:, message: } si la plantilla no se puede mandar; nil si está y está aprobada.
+  # 132001 / 132015: los códigos de Meta para «no existe» y «no está activa» (ambos config).
+  def missing_template_error(tracking, template_name)
+    plantilla = Array(tracking.inbox.channel.try(:message_templates)).find { |t| t['name'] == template_name }
+    if plantilla.nil?
+      return { code: '132001',
+               message: "La plantilla «#{template_name}» ya no existe en esta bandeja (se borró o Meta la quitó): " \
+                        'cámbiala en el agente de seguimiento.' }
+    end
+    return if plantilla['status'].to_s.casecmp?('approved')
+
+    { code: '132015',
+      message: "La plantilla «#{template_name}» no está aprobada en Meta (estado: #{plantilla['status']}): " \
+               'no se puede mandar hasta que Meta la apruebe.' }
+  end
+
+  def reject_template(tracking, error)
+    @send_error = error[:message]
+    Rails.logger.warn "[ContactTracking] ⚠️ #{error[:message]}"
+    @rejected_delivery = TrackingDeliveries::Recorder.new(tracking, kind: 'template').rejected({ error: error }.to_json)
+    false
+  end
+
   def reject_missing_header(tracking, header)
     @send_error = header.error
     Rails.logger.warn "[ContactTracking] ⚠️ #{header.error}"

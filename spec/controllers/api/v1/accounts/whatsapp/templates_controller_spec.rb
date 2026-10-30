@@ -103,6 +103,23 @@ RSpec.describe 'WhatsApp Templates API', type: :request do
   end
 
   # feat/plantillas_whatsapp_mejoras F6: subir el archivo de muestra del encabezado.
+  # feat/plantillas_whatsapp_mejoras: el modal de borrar avisa dónde se usa.
+  describe 'GET /api/v1/accounts/{id}/whatsapp/templates/:id/usage' do
+    let(:template) { create(:whatsapp_template, channel_whatsapp: inbox.channel, account: account) }
+
+    it 'dice dónde se usa, solo a administradores' do
+      get "/api/v1/accounts/#{account.id}/whatsapp/templates/#{template.id}/usage", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq('agents' => [], 'trackings_count' => 0, 'campaigns' => [], 'portals' => [])
+
+      agente = create(:user, account: account, role: :agent)
+      get "/api/v1/accounts/#{account.id}/whatsapp/templates/#{template.id}/usage", headers: agente.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+  end
+
   describe 'POST /api/v1/accounts/{id}/whatsapp/templates/header_samples' do
     let(:url) { "/api/v1/accounts/#{account.id}/whatsapp/templates/header_samples" }
 

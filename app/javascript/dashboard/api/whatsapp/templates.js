@@ -28,6 +28,11 @@ class WhatsappTemplatesAPI extends ApiClient {
     });
   }
 
+  // Dónde se usa la plantilla (agentes, seguimientos, campañas, portales).
+  usage(id) {
+    return axios.get(`${this.url}/${id}/usage`);
+  }
+
   sync(inboxId) {
     return axios.post(`${this.url}/sync`, { inbox_id: inboxId });
   }

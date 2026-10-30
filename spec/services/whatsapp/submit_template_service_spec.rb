@@ -241,5 +241,17 @@ RSpec.describe Whatsapp::SubmitTemplateService do
       expect(described_class.new(template: template).destroy).to be_success
       expect(provider).to have_received(:delete_template).with(name: template.name, meta_template_id: '999')
     end
+
+    # feat/plantillas_whatsapp_mejoras: si no, los selectores la siguen ofreciendo.
+    it 'la quita de la lista del canal (solo ese idioma)' do
+      channel.update!(message_templates: [{ 'name' => 'x', 'language' => 'es' }, { 'name' => 'x', 'language' => 'en' },
+                                          { 'name' => 'y', 'language' => 'es' }])
+      template = create(:whatsapp_template, channel_whatsapp: channel, account: channel.account, name: 'x', language: 'es',
+                                            status: 'APPROVED', meta_template_id: '999')
+      allow(provider).to receive(:delete_template).and_return(result_ok)
+
+      expect(described_class.new(template: template).destroy).to be_success
+      expect(channel.reload.message_templates).to eq([{ 'name' => 'x', 'language' => 'en' }, { 'name' => 'y', 'language' => 'es' }])
+    end
   end
 end

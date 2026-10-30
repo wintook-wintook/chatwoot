@@ -61,4 +61,25 @@ RSpec.describe ContactTrackingJob do
                                                                  error_kind: 'config')
     expect(tracking.reload.status).not_to eq('completed')
   end
+
+  # La plantilla se borró (aquí o en Meta) o ya no está aprobada: no se manda nada (ni texto
+  # libre en su lugar) y queda el motivo como error de configuración.
+  it 'si la plantilla ya no existe en la bandeja no manda nada y queda el motivo' do
+    tracking.update!(whatsapp_templates: %w[borrada borrada borrada])
+
+    described_class.perform_now(tracking.id)
+
+    expect(envio).not_to have_been_made
+    expect(tracking.tracking_deliveries.last).to have_attributes(status: 'failed', error_code: '132001', error_kind: 'config')
+    expect(tracking.tracking_deliveries.last.error_title).to include('ya no existe')
+  end
+
+  it 'si la plantilla no está aprobada no se manda' do
+    channel.update!(message_templates: channel.message_templates.map { |t| t.merge('status' => 'PAUSED') })
+
+    described_class.perform_now(tracking.id)
+
+    expect(envio).not_to have_been_made
+    expect(tracking.tracking_deliveries.last).to have_attributes(error_code: '132015', error_kind: 'config')
+  end
 end

@@ -18,6 +18,7 @@ import { useAlert } from 'dashboard/composables';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
+import DeleteTemplateModal from './DeleteTemplateModal.vue';
 import {
   KIND_OPTIONS,
   templateKinds,
@@ -43,6 +44,7 @@ export default {
     TableFooter,
     SettingsLayout,
     BaseSettingsHeader,
+    DeleteTemplateModal,
   },
   data() {
     return {
@@ -62,6 +64,7 @@ export default {
       sortDir: 'desc',
       deletePopup: false,
       deleteTarget: null,
+      deleting: false,
       categories: ['UTILITY', 'MARKETING', 'AUTHENTICATION'],
     };
   },
@@ -385,16 +388,21 @@ export default {
       this.deleteTarget = null;
     },
     async doDelete() {
+      this.deleting = true;
       try {
         await this.$store.dispatch(
           'whatsappTemplates/delete',
           this.deleteTarget.id
         );
-        useAlert('Plantilla eliminada.');
-      } catch (e) {
-        useAlert('No se pudo eliminar.');
-      } finally {
+        // Los selectores leen las plantillas de la bandeja: que ya no ofrezcan la borrada.
+        this.$store.dispatch('inboxes/get');
+        useAlert(this.$t('WHATSAPP_TEMPLATE_DELETE.DONE'));
         this.closeDelete();
+      } catch (e) {
+        const data = (e.response && e.response.data) || {};
+        useAlert(data.error || this.$t('WHATSAPP_TEMPLATE_DELETE.ERROR'));
+      } finally {
+        this.deleting = false;
       }
     },
   },
@@ -733,15 +741,15 @@ export default {
       </div>
     </template>
 
-    <woot-delete-modal
-      :show.sync="deletePopup"
-      :on-close="closeDelete"
-      :on-confirm="doDelete"
-      title="Eliminar plantilla"
-      :message="`¿Eliminar la plantilla &quot;${deleteTarget && deleteTarget.name}&quot;? También se borra en Meta.`"
-      confirm-text="Eliminar"
-      reject-text="Cancelar"
-    />
+    <woot-modal :show.sync="deletePopup" :on-close="closeDelete">
+      <DeleteTemplateModal
+        v-if="deleteTarget"
+        :template="deleteTarget"
+        :deleting="deleting"
+        @close="closeDelete"
+        @confirm="doDelete"
+      />
+    </woot-modal>
   </SettingsLayout>
 </template>
 

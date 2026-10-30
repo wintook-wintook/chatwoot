@@ -5,6 +5,7 @@ import {
   statusSteps,
   rejectionKey,
   sortTemplates,
+  templateInUse,
 } from './templateScreen';
 
 // feat/plantillas_whatsapp_mejoras F6 — la pantalla de plantillas
@@ -167,5 +168,21 @@ describe('sortTemplates', () => {
   it('por bandeja usa su nombre', () => {
     const canal = t => (t.channel_whatsapp_id === 1 ? 'Zeta' : 'Alfa');
     expect(nombres('channel', 'asc', canal)).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('templateInUse', () => {
+  const vacio = {
+    agents: [],
+    trackings_count: 0,
+    campaigns: [],
+    portals: [],
+  };
+
+  it('avisa si algo depende de la plantilla', () => {
+    expect(templateInUse(vacio)).toBe(false);
+    expect(templateInUse(null)).toBe(false);
+    expect(templateInUse({ ...vacio, trackings_count: 2 })).toBe(true);
+    expect(templateInUse({ ...vacio, portals: [{ id: 1 }] })).toBe(true);
   });
 });

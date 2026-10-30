@@ -6,7 +6,7 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
   before_action :check_admin_authorization?
   before_action :check_feature_enabled
   before_action :fetch_channel, only: [:create, :sync]
-  before_action :fetch_template, only: [:show, :update, :destroy]
+  before_action :fetch_template, only: [:show, :update, :destroy, :usage]
 
   # Nivel cuenta: todas las plantillas de todos los canales de WhatsApp.
   # Filtro opcional por canal vía inbox_id (para la tabla del dashboard).
@@ -36,6 +36,11 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
     return render json: { error: result.error }, status: :unprocessable_entity unless result.success?
 
     head :ok
+  end
+
+  # Dónde se usa: el modal de borrar avisa qué envíos van a fallar.
+  def usage
+    render json: Whatsapp::TemplateUsage.call(@template)
   end
 
   # feat/plantillas_whatsapp_mejoras F6: sube el archivo de muestra del encabezado ANTES de

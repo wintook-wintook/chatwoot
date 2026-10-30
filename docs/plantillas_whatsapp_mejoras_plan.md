@@ -831,6 +831,42 @@ controlador). Webpack: «Compiled successfully». ⚠ **Sin probar en navegador.
 > Base de pruebas: tenía 218 migraciones «pendientes» (la cargó un schema viejo). Se recargó con
 > `db:schema:load` en `chatwoot_test`, que pide antes `CREATE EXTENSION vector` (schema.rb no la declara).
 
+**Borrar con aviso (30/10/2026).**
+
+```
+ Eliminar «recordatorio_pago»
+ Se borra también en Meta (solo este idioma), y Meta no deja volver a usar ese nombre durante 30 días.
+ ⚠ Esta plantilla está en uso:
+   • Agentes de seguimiento: Cobranza, Recordatorios ↗
+   • Seguimientos en curso: 14
+   • Campañas: Octubre ↗
+   Si la borras, esos envíos van a fallar. Cambia la plantilla ahí primero.
+ ☐ Entiendo que esos envíos pueden fallar hasta que cambie la plantilla.
+                                          [Cancelar] [Eliminar de todos modos]
+```
+- **Avisa, no bloquea** (decisión del usuario): la plantilla puede desaparecer sin pasar por aquí (Meta la pausa o
+  se borra en WhatsApp Manager), y bloquear estorba al reemplazarla. Si está en uso pide la casilla; si no se
+  pudo revisar el uso, también.
+- `GET whatsapp/templates/:id/usage` → `Whatsapp::TemplateUsage`: agentes, seguimientos vivos, campañas sin
+  terminar y portales de esa bandeja. Si queda el mismo nombre en otro idioma, agentes, seguimientos y campañas
+  no se rompen y no se avisan.
+- `DeleteTemplateModal.vue` (molde de `AddAgent.vue`): texto según sea borrador o esté en Meta; el motivo real
+  si Meta rechaza el borrado.
+- Al borrar en Meta, la plantilla sale al momento de `channel.message_templates`: antes los selectores la seguían
+  ofreciendo hasta la siguiente sincronización.
+- **Seguimiento cuya plantilla ya no existe o no está aprobada** (`ContactTrackingJob#missing_template_error`):
+  envío rechazado con motivo claro y código 132001 / 132015 (config: se pausa la campaña). Antes decía «parámetros
+  que no se pudieron resolver» y, con la ventana abierta, mandaba texto libre en su lugar.
+
+> ⚠ **Mensajes programados rotos (fuera de esta rama):** `ScheduledMessage` valida `is_template?` y usa
+> `template_name`, etc., pero `scheduled_messages` no tiene esas columnas ni hay migración que las agregue:
+> crear cualquier programado truena con `NoMethodError`. Por eso no cuentan en el aviso de uso. F4 (ocultar
+> plantillas ahí) queda sin efecto práctico hasta arreglarlo.
+
+Pruebas: backend en verde (`template_usage_spec` 4, servicio +1, controlador +1, job +2); frontend 42 en verde
+(`DeleteTemplateModal.spec.js` 3, `templateInUse` 1). Webpack: «Compiled successfully». ⚠ **Sin probar en
+navegador.** Los 30 días son de la documentación de Meta, no se probaron.
+
 **Sigue (F10.5).** Empezar desde un ejemplo.
 
 ---
@@ -863,3 +899,5 @@ controlador). Webpack: «Compiled successfully». ⚠ **Sin probar en navegador.
 - [ ] Burbuja: una plantilla con botones muestra sus botones (y el código o la terminación de la liga)
 - [ ] Bandeja 360dialog/UnoAPI: no aparecen plantillas con liga `{{1}}` o copiar código
 - [ ] Lista: filtros a la vista, 25 por página (cambiar a 50 se recuerda), paginado siempre abajo y scroll solo en la tabla, clic en «Creada» ordena, una nueva dice quién la creó
+- [ ] Borrar: un borrador dice «solo se borra aquí»; una en uso pide la casilla y enlaza a su agente; al borrarla ya no sale en el selector
+- [ ] Seguimiento con plantilla borrada: no manda texto libre; queda el motivo y la campaña se pausa
