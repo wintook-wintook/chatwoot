@@ -84,7 +84,7 @@ class Whatsapp::TemplateProcessorService
     return [] if processed_params['body'].blank?
 
     body_parameters = processed_params['body']
-    body_parameters = body_parameters.sort_by { |key, _value| key.to_i } unless template['parameter_format'] == 'NAMED'
+    body_parameters = body_parameters.sort_by { |key, _value| key.to_i } unless Whatsapp::TemplateVariables.named_template?(template)
 
     body_params = body_parameters.filter_map do |key, value|
       next if value.blank?
@@ -96,7 +96,7 @@ class Whatsapp::TemplateProcessorService
   end
 
   def build_text_parameter(key, value, template)
-    return parameter_builder.build_named_parameter(key, value) if template['parameter_format'] == 'NAMED'
+    return parameter_builder.build_named_parameter(key, value) if Whatsapp::TemplateVariables.named_template?(template)
 
     parameter_builder.build_parameter(value)
   end

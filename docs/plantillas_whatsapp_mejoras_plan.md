@@ -942,6 +942,51 @@ verde (`templateVariableSources.spec.js` 4, validador +6, editor +2). Webpack: �
 y a la derecha solo «Lista para Meta» (16rem). Los avisos usan las palabras de la pantalla (Mensaje, Encabezado,
 liga) y los estados se muestran en español en la lista y su filtro.
 
+
+## 7.16 F9.2 — de la variable a su dato (31/10/2026, rama `feat/plantillas_variables_resolver`)
+
+**Qué hace.** Dada una variable y un contacto, dice qué texto le toca o que no hay dato. Hay dos copias:
+`Whatsapp::TemplateVariableResolver` en el servidor y `dashboard/helper/whatsappTemplateVariables.js` en el navegador
+(`resolve` / `resolveVariables` devuelven `values` y `missing`). Solo lee. **Todavía nadie la usa: no cambia nada en
+pantalla ni en los envíos**; eso es F9.3.
+
+| Variable | Dato |
+| --- | --- |
+| `nombre` | El nombre del contacto, tal como está guardado |
+| `primer_nombre` | Su primera palabra |
+| `apellido` | Su última palabra, si tiene dos o más |
+| `correo`, `telefono` | Los del contacto, tal como están guardados |
+| `empresa` | `additional_attributes.company_name` |
+| `agente` | El agente dado, o el asignado a la conversación (`available_name`) |
+| `conversacion`, `bandeja` | El número de la conversación y el nombre de la bandeja |
+| `fecha_hoy` | Hoy en la zona horaria de la bandeja, `31/10/2026` (sin bandeja, UTC) |
+| Cualquier otro nombre | Atributo personalizado: primero el del contacto, luego el de la conversación |
+
+**Reglas que no estaban en el plan.**
+- Un reservado sin dato queda sin dato: no busca un atributo con el mismo nombre.
+- Un nombre sin letras (cuando quedó guardado el teléfono) no cuenta: `nombre`, `primer_nombre` y `apellido` salen sin
+  dato, para no mandar «Hola +5255…».
+- `apellido` no usa la columna `contacts.last_name`: ninguna pantalla la llena y la API no la entrega al navegador, así
+  que las dos copias darían resultados distintos.
+- El nombre no se pasa a mayúsculas iniciales: «MCDONALD» y «McDonald» se quedan como están.
+- Las fechas de los atributos salen `31/10/2026`, en la zona de la bandeja. Una casilla sale «Sí» o «No», y el 0 sí es
+  dato. El texto queda en una línea porque Meta rechaza saltos, tabuladores y varios espacios seguidos en una variable.
+
+**Formato de la plantilla.** `Whatsapp::TemplateVariables.named_template?` usa `parameter_format` si Meta lo manda; si
+no, lo deduce del texto. Sin esto, una plantilla con nombres saldría como numerada y Meta la rechazaría. Lo usan
+`TemplateProcessorService` y `SendOnWhatsappService`.
+
+**Las dos copias no pueden separarse.** `spec/fixtures/whatsapp_template_variables.json` tiene los casos y la lista de
+reservados, y lo leen las pruebas de los dos lados. `templateVariableSources.js` ya toma la lista de la copia del
+navegador.
+
+**Para F9.3.** `describeTemplate` repite las variables que aparecen dos veces (`variablesIn` no quita repetidas): hay
+que revisarlo al prellenar el formulario. En la conversación, el `id` del store es el número de conversación, y `agent`
+conviene pasarlo solo si no hay asignado. Una variable numerada siempre sale en `missing`, así que los seguimientos con
+`{{1}}` no deben pasar por aquí hasta F9.4.
+
+Pruebas: 43 de servidor y 71 de navegador en verde en los archivos relacionados. Sin probar contra Meta real.
+
 ---
 
 ## 8. Pila de pruebas en navegador (al cerrar cada fase)

@@ -24,7 +24,9 @@ describe Whatsapp::SendOnWhatsappService do
                          { 'type' => 'BUTTONS', 'buttons' => [{ 'type' => 'URL', 'url' => 'https://x.mx/{{1}}' },
                                                               { 'type' => 'COPY_CODE' }] }] },
       { 'name' => 'saludo_nombre', 'status' => 'approved', 'language' => 'es_MX', 'parameter_format' => 'NAMED',
-        'components' => [{ 'type' => 'BODY', 'text' => 'Hola {{nombre}}' }] }
+        'components' => [{ 'type' => 'BODY', 'text' => 'Hola {{nombre}}' }] },
+      { 'name' => 'saludo_sin_formato', 'status' => 'approved', 'language' => 'es_MX',
+        'components' => [{ 'type' => 'BODY', 'text' => 'Hola {{nombre}}, tienes {{edad}}.' }] }
     ]
   end
   let(:channel) do
@@ -123,6 +125,15 @@ describe Whatsapp::SendOnWhatsappService do
 
     expect(sent_components).to eq([{ 'type' => 'body',
                                      'parameters' => [{ 'type' => 'text', 'parameter_name' => 'nombre', 'text' => 'Ana' }] }])
+  end
+
+  # F9.2: la lista de Meta puede no traer parameter_format.
+  it 'sin parameter_format, las variables con nombre se reconocen por el texto y conservan su orden' do
+    send_template('saludo_sin_formato', 'es_MX', { 'nombre' => 'Ana', 'edad' => '34' })
+
+    expect(sent_components).to eq([{ 'type' => 'body',
+                                     'parameters' => [{ 'type' => 'text', 'parameter_name' => 'nombre', 'text' => 'Ana' },
+                                                      { 'type' => 'text', 'parameter_name' => 'edad', 'text' => '34' }] }])
   end
 
   it 'D3: conserva las comillas del texto y quita solo < >' do

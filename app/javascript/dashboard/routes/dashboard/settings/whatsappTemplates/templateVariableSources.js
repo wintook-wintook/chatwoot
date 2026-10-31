@@ -4,20 +4,11 @@
 // variable se llama como un campo reservado (en español, D9a) o como la clave de un atributo
 // personalizado, ese es su dato. Si no, la escribe el agente al mandarla.
 // ============================================================================
-const VALID_NAME = /^[a-z][a-z0-9_]*$/;
+import { RESERVED_FIELDS } from 'dashboard/helper/whatsappTemplateVariables';
 
-export const RESERVED_FIELDS = [
-  'nombre',
-  'primer_nombre',
-  'apellido',
-  'correo',
-  'telefono',
-  'empresa',
-  'agente',
-  'conversacion',
-  'bandeja',
-  'fecha_hoy',
-];
+export { RESERVED_FIELDS };
+
+const VALID_NAME = /^[a-z][a-z0-9_]*$/;
 
 // { kind: 'field', key } | { kind: 'attribute', label } | { kind: 'manual' }
 // null: una variable numerada ({{1}}), que no se reconoce por nombre.

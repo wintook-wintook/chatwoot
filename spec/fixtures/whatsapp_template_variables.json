@@ -1,0 +1,111 @@
+{
+  "reserved": [
+    "nombre",
+    "primer_nombre",
+    "apellido",
+    "correo",
+    "telefono",
+    "empresa",
+    "agente",
+    "conversacion",
+    "bandeja",
+    "fecha_hoy"
+  ],
+  "now": "2026-11-01T03:30:00Z",
+  "cases": [
+    {
+      "title": "los campos reservados",
+      "contact": {
+        "name": "Juan Pablo  Pérez",
+        "email": "juan@example.com",
+        "phone_number": "+525512345678",
+        "additional_attributes": { "company_name": "Grúas del Norte" }
+      },
+      "conversation": { "number": 77, "assignee": { "name": "Ana Ruiz", "available_name": "Anita" } },
+      "inbox": { "name": "Ventas", "timezone": "America/Mexico_City" },
+      "expected": {
+        "nombre": "Juan Pablo Pérez",
+        "primer_nombre": "Juan",
+        "apellido": "Pérez",
+        "correo": "juan@example.com",
+        "telefono": "+525512345678",
+        "empresa": "Grúas del Norte",
+        "agente": "Anita",
+        "conversacion": "77",
+        "bandeja": "Ventas",
+        "fecha_hoy": "31/10/2026"
+      }
+    },
+    {
+      "title": "un nombre de una palabra no tiene apellido",
+      "contact": { "name": "Juan" },
+      "expected": { "nombre": "Juan", "primer_nombre": "Juan", "apellido": null }
+    },
+    {
+      "title": "un nombre sin letras no es un nombre",
+      "contact": { "name": "+525512345678", "phone_number": "+525512345678" },
+      "expected": { "nombre": null, "primer_nombre": null, "apellido": null, "telefono": "+525512345678" }
+    },
+    {
+      "title": "sin contacto ni conversación solo queda la fecha, en UTC",
+      "expected": { "nombre": null, "correo": null, "agente": null, "conversacion": null, "bandeja": null, "fecha_hoy": "01/11/2026" }
+    },
+    {
+      "title": "el agente dado gana sobre el asignado y usa su nombre si no tiene otro",
+      "conversation": { "number": 1, "assignee": { "name": "Ana", "available_name": "Anita" } },
+      "agent": { "name": "Beto" },
+      "expected": { "agente": "Beto" }
+    },
+    {
+      "title": "los atributos: primero el contacto y luego la conversación",
+      "contact": { "custom_attributes": { "edad": 34, "plan": "Plus", "vacio": "   " } },
+      "conversation": { "number": 1, "custom_attributes": { "plan": "Básico", "pedido": "A-1", "vacio": "lleno" } },
+      "expected": { "edad": "34", "plan": "Plus", "pedido": "A-1", "vacio": "lleno", "no_existe": null }
+    },
+    {
+      "title": "cero y falso son datos",
+      "contact": { "custom_attributes": { "saldo": 0, "activo": false, "vip": true } },
+      "expected": { "saldo": "0", "activo": "No", "vip": "Sí" }
+    },
+    {
+      "title": "un reservado sin dato no busca el atributo con su nombre",
+      "contact": { "custom_attributes": { "correo": "otro@example.com" } },
+      "expected": { "correo": null }
+    },
+    {
+      "title": "el texto queda en una línea",
+      "contact": { "custom_attributes": { "nota": "  uno\n\tdos   tres  " } },
+      "expected": { "nota": "uno dos tres" }
+    },
+    {
+      "title": "las fechas se leen como fechas, en la zona de la bandeja",
+      "contact": {
+        "custom_attributes": {
+          "alta": "2026-11-01T03:00:00.000Z",
+          "solo_fecha": "2026-10-31",
+          "con_zona": "2026-10-31T23:00:00-06:00",
+          "sin_zona": "2026-10-31T06:00:00",
+          "fecha_mala": "2026-13-45T06:00:00Z"
+        }
+      },
+      "inbox": { "name": "Ventas", "timezone": "America/Mexico_City" },
+      "expected": {
+        "alta": "31/10/2026",
+        "solo_fecha": "31/10/2026",
+        "con_zona": "31/10/2026",
+        "sin_zona": "2026-10-31T06:00:00",
+        "fecha_mala": "2026-13-45T06:00:00Z"
+      }
+    },
+    {
+      "title": "los datos que no son texto no se mandan",
+      "contact": { "custom_attributes": { "lista": ["a"], "objeto": { "a": 1 } } },
+      "expected": { "lista": null, "objeto": null }
+    },
+    {
+      "title": "las variables numeradas no se reconocen por nombre",
+      "contact": { "name": "Juan", "custom_attributes": { "1": "uno" } },
+      "expected": { "1": null }
+    }
+  ]
+}
