@@ -18,7 +18,7 @@ class Api::V1::Accounts::FieldVisitsController < Api::V1::Accounts::BaseControll
 
   def index
     day = parse_day
-    render json: { day: day, visits: Field::Route.new(account_case_tickets, current_user, day).visits }
+    render json: { day: day, visits: Field::Route.new(account_case_tickets, current_user, day, user_zone).visits }
   end
 
   def history
@@ -69,6 +69,10 @@ class Api::V1::Accounts::FieldVisitsController < Api::V1::Accounts::BaseControll
 
   def check_writable
     render_access_denied unless access_grant.case_writable?(@order)
+  end
+
+  def user_zone
+    ActiveSupport::TimeZone[params[:tz].to_s] || Time.zone
   end
 
   def parse_day(key = :day, fallback = Time.zone.today)

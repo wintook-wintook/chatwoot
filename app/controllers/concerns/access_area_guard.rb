@@ -21,7 +21,7 @@ module AccessAreaGuard
                     organizations],
     'cases' => %w[case_tickets case_notes case_events case_conversations case_ticket_relations case_project_children
                   case_work_order_items case_tasks case_meetings case_meeting_series case_notices case_service_reports field_visits],
-    'agenda' => %w[case_tasks_index],
+    'agenda' => %w[case_tasks_index agenda_items quick_tasks agenda_visits],
     'campaigns' => %w[campaigns tracking_campaigns events]
   }.transform_values { |names| names.map { |name| "api/v1/accounts/#{name}" } }.freeze
 
@@ -29,7 +29,7 @@ module AccessAreaGuard
     'sales' => %w[conversations/kanban],
     'ai_agents' => %w[tracking_templates knowledge_base],
     'settings' => %w[case_types case_type_columns case_type_fields case_type_column_tasks case_categories case_services
-                     case_sla_policies case_portals case_settings case_folio_configs case_outcome_reasons case_rules
+                     case_sla_policies case_portals case_settings case_folio_configs case_outcome_reasons task_outcomes case_rules
                      case_ai_configs kanban_processes kanban_type_processes access_roles]
   }.transform_values { |names| names.map { |name| "api/v1/accounts/#{name}" } }.freeze
 

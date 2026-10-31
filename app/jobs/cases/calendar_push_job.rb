@@ -56,6 +56,7 @@ class Cases::CalendarPushJob < ApplicationJob
       ticket.case_meetings.where(google_event_id: ids).update_all(reconciled_at: nil) # rubocop:disable Rails/SkipsModelValidations
       Cases::Meetings::ReconcileService.new(ticket).perform
     end
+    Cases::Meetings::ReconcileService.without_case(integration.account_id, ids)
   end
 
   # Tickets con reuniones nuestras entre los ids que cambiaron. Una ocurrencia de

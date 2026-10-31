@@ -1,9 +1,9 @@
 <script>
 import { mapGetters } from 'vuex';
-import Logo from './Logo.vue';
 import PrimaryNavItem from './PrimaryNavItem.vue';
 import OptionsMenu from './OptionsMenu.vue';
 import AgentDetails from './AgentDetails.vue';
+import QuickActions from './QuickActions.vue';
 import NotificationBell from './NotificationBell.vue';
 import wootConstants from 'dashboard/constants/globals';
 import { frontendURL } from 'dashboard/helper/URLHelper';
@@ -12,10 +12,10 @@ import WebphoneMinimized from './WebphoneMinimized.vue';
 
 export default {
   components: {
-    Logo,
     PrimaryNavItem,
     OptionsMenu,
     AgentDetails,
+    QuickActions,
     NotificationBell,
     WebphoneMinimized,
   },
@@ -27,10 +27,6 @@ export default {
     installationName: {
       type: String,
       default: '',
-    },
-    accountId: {
-      type: Number,
-      default: 0,
     },
     menuItems: {
       type: Array,
@@ -84,11 +80,10 @@ export default {
     class="flex flex-col justify-between w-16 h-full bg-white border-r dark:bg-slate-900 border-slate-50 dark:border-slate-800/50 rtl:border-l rtl:border-r-0"
   >
     <div class="flex flex-col items-center">
-      <Logo
-        :source="logoSource"
+      <QuickActions
+        :logo-source="logoSource"
         :name="installationName"
-        :account-id="accountId"
-        class="m-4 mb-2"
+        :show-task="hasHomeArea"
       />
       <NotificationBell
         v-if="!hasHomeArea"

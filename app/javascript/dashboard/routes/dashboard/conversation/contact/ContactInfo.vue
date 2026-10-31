@@ -678,6 +678,7 @@ export default {
       v-if="showCalendarButton"
       :show="showCreateEventModal"
       :prefill-email="calendarPrefillEmail"
+      :prefill-contact="contact"
       @close="showCreateEventModal = false"
       @created="showCreateEventModal = false"
     />

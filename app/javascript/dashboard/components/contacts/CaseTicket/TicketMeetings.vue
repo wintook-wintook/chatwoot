@@ -10,7 +10,8 @@
 import { VeTable } from 'vue-easytable';
 import { mixin as clickaway } from 'vue-clickaway';
 import CaseMeetingsAPI from 'dashboard/api/caseMeetings';
-import CaseNotesAPI from 'dashboard/api/caseNotes';
+import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal.vue';
+import taskReportFlow from 'dashboard/mixins/taskReportFlow';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
@@ -27,8 +28,9 @@ export default {
     WootDropdownMenu,
     WootDropdownItem,
     MeetingFormModal,
+    TaskReportModal,
   },
-  mixins: [clickaway],
+  mixins: [clickaway, taskReportFlow],
   props: {
     ticketId: { type: [Number, String], required: true },
     // Ticket cerrado/cancelado = solo lectura: se ocultan las acciones para no
@@ -60,10 +62,6 @@ export default {
       contextTask: null,
       // Menú de acciones de la fila (posición fija anclada al botón "…").
       rowMenu: null,
-      // Minuta: al marcar realizada se OFRECE capturarla, no se impone (§6.3).
-      minutesFor: null,
-      minutesText: '',
-      isSavingMinutes: false,
       showDeleteConfirm: false,
       pendingDelete: null,
     };
@@ -459,7 +457,14 @@ export default {
       }
     },
     // ── Acciones ──────────────────────────────────────────────────────────
-    async hold(meeting, status) {
+    // El reporte de cierre sustituye a la minuta, y se pide también si no asistió.
+    hold(meeting, status) {
+      const { id, title } = meeting;
+      this.askReport({ type: 'meeting', id, title }, () =>
+        this.finishHold(meeting, status)
+      );
+    },
+    async finishHold(meeting, status) {
       try {
         const { data } = await CaseMeetingsAPI.hold(
           this.ticketId,
@@ -468,9 +473,6 @@ export default {
         );
         this.replace(data.case_meeting);
         this.$emit('changed');
-        // Cierre del círculo con las notas: se OFRECE la minuta (§6.3).
-        this.minutesFor = data.case_meeting;
-        this.minutesText = '';
       } catch (e) {
         this.toastError(e);
       }
@@ -507,34 +509,6 @@ export default {
         icon: 'delete',
         variant: 'danger',
       });
-    },
-    // ── Minuta (§6.3): nota interna ligada a la MISMA tarea de la reunión ──
-    closeMinutes() {
-      this.minutesFor = null;
-      this.minutesText = '';
-    },
-    async saveMinutes() {
-      const content = this.minutesText.trim();
-      if (!content || this.isSavingMinutes) return;
-      this.isSavingMinutes = true;
-      try {
-        await CaseNotesAPI.createNote(this.ticketId, {
-          content,
-          case_task_id: this.minutesFor?.case_task?.id || null,
-        });
-        this.closeMinutes();
-        // La nota vive en case_events: refresca Notas y Avance.
-        this.$emit('changed');
-        this.$emit('minutesSaved');
-        this.$emitter.emit('caseToastMessage', {
-          message: this.$t('CASE_TICKETS.MEETINGS.MINUTES.SAVED'),
-          icon: 'clipboard',
-        });
-      } catch (e) {
-        this.toastError(e);
-      } finally {
-        this.isSavingMinutes = false;
-      }
     },
     // ── Auxiliares ────────────────────────────────────────────────────────
     replace(meeting) {
@@ -781,48 +755,11 @@ export default {
       @close="showModal = false"
     />
 
-    <!-- Minuta: se ofrece al marcar la reunión como realizada (§6.3). La nota
-         queda ligada a la MISMA tarea de la reunión. -->
-    <woot-modal
-      v-if="minutesFor"
-      :show="!!minutesFor"
-      :on-close="closeMinutes"
-      size="medium"
-    >
-      <div class="flex flex-col h-auto overflow-auto">
-        <woot-modal-header
-          :header-title="$t('CASE_TICKETS.MEETINGS.MINUTES.TITLE')"
-          :header-content="$t('CASE_TICKETS.MEETINGS.MINUTES.DESC')"
-        />
-        <form
-          class="flex flex-col self-stretch w-full gap-3 pb-8"
-          @submit.prevent="saveMinutes"
-        >
-          <label class="block">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CASE_TICKETS.MEETINGS.MINUTES.LABEL')
-            }}</span>
-            <textarea
-              v-model="minutesText"
-              rows="6"
-              :placeholder="$t('CASE_TICKETS.MEETINGS.MINUTES.PLACEHOLDER')"
-            />
-          </label>
-          <div class="flex items-center justify-end gap-2">
-            <woot-button variant="clear" type="button" @click="closeMinutes">
-              {{ $t('CASE_TICKETS.MEETINGS.MINUTES.SKIP') }}
-            </woot-button>
-            <woot-button
-              :is-loading="isSavingMinutes"
-              :disabled="!minutesText.trim()"
-              type="submit"
-            >
-              {{ $t('CASE_TICKETS.MEETINGS.MINUTES.SAVE') }}
-            </woot-button>
-          </div>
-        </form>
-      </div>
-    </woot-modal>
+    <TaskReportModal
+      :item="reportItem"
+      @close="cancelReport"
+      @reported="onReported"
+    />
 
     <woot-delete-modal
       :show="showDeleteConfirm"

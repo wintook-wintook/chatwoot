@@ -1,4 +1,78 @@
 {
+  "VISIT_ARRIVALS": {
+    "EXPORT": "Export CSV",
+    "EMPTY": "No arrivals in that period.",
+    "ERROR": "Could not load arrivals.",
+    "WHEN": "When",
+    "WHO": "Who",
+    "CLIENT": "Customer",
+    "VISIT": "Visit",
+    "LOCATION": "Location",
+    "NO_LOCATION": "No location"
+  },
+  "TASK_REPORT": {
+    "TITLE": "Closing report",
+    "CONTENT": "What was done",
+    "CONTENT_PLACEHOLDER": "Write what you did and how it ended",
+    "OUTCOME": "Result",
+    "NO_OUTCOME": "No result",
+    "EVIDENCE": "Evidence (optional)",
+    "TOO_MANY": "Up to {max} files.",
+    "REQUIRED": "Write what was done.",
+    "ERROR": "Could not save the report. Try again.",
+    "CANCEL": "Cancel",
+    "SUBMIT": "Conclude",
+    "VIEW": "View report",
+    "EMPTY": "No reports.",
+    "MORE": "See more",
+    "HISTORY": "Concluded tasks",
+    "PAGE_TITLE": "Reports",
+    "ALL_PEOPLE": "Everyone",
+    "FROM": "From",
+    "TO": "To",
+    "TABS": {
+      "REPORTS": "Reports",
+      "ARRIVALS": "Arrivals"
+    },
+    "SERVICE_REPORT": "View service report",
+    "ARRIVAL": "Arrived",
+    "CATALOG": {
+      "TITLE": "Task results",
+      "ACTIVE": "Active",
+      "DELETE": "Delete",
+      "ADD": "Add",
+      "PLACEHOLDER": "New result",
+      "ERROR": "Could not save."
+    }
+  },
+  "QUICK_ACTIONS": {
+    "TITLE": "Quick actions",
+    "NEW_TASK": "Task",
+    "NEW_CONTACT": "New contact",
+    "TASK": {
+      "TITLE": "New task",
+      "NAME": "What needs to be done",
+      "NAME_PLACEHOLDER": "Write the task",
+      "VISIT_TIME_REQUIRED": "A visit needs a date and time.",
+      "IS_VISIT": "This is a customer visit",
+      "ADDRESS": "Visit address",
+      "ADDRESS_PLACEHOLDER": "If empty, the case or organization address is used",
+      "ASSIGNEE": "Assignee",
+      "PLANNED": "Planned date",
+      "TIME": "Time (optional)",
+      "DUE": "Due date",
+      "CASE": "Case (optional)",
+      "NO_CASE": "No case",
+      "SCHEDULED_HINT": "With a time it becomes a scheduled task and goes to Google, if connected.",
+      "ONLY_MY_DAY": "Without contact or organization it only shows in My day.",
+      "CANCEL": "Cancel",
+      "SUBMIT": "Create task",
+      "SUCCESS": "Task created",
+      "ERROR": "Could not create it. Try again.",
+      "TITLE_REQUIRED": "Write what needs to be done.",
+      "DATE_REQUIRED": "With a time, pick the planned date."
+    }
+  },
   "CASE_TICKETS": {
     "SECTION_TITLE": "Case",
     "SIDEBAR": {
@@ -2772,6 +2846,9 @@
     "FROM_PLAN": "From maintenance “{title}”"
   },
   "FIELD": {
+    "ERROR": "Could not save. Try again.",
+    "ETA_OPTION": "{n} min",
+    "NO_LOCATION": "No location: check the browser permission",
     "TITLE": "My route",
     "TODAY": "Today",
     "BACK_TO_APP": "Go to Wintook",
@@ -2880,6 +2957,9 @@
     }
   },
   "DISPATCH": {
+    "AREA_ALL": "Everyone",
+    "AREA_SERVICE": "Support",
+    "AREA_SALES": "Sales",
     "TITLE": "Dispatch",
     "HELP": "Drag an order to a technician's column. Orders without a visit will ask for the time.",
     "UNSCHEDULED": "To schedule",

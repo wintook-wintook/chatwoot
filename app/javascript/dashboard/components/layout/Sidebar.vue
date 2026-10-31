@@ -373,7 +373,6 @@ export default {
     <PrimarySidebar
       :logo-source="brandLogo"
       :installation-name="globalConfig.installationName"
-      :account-id="accountId"
       :menu-items="primaryMenuItems"
       :active-menu-item="activePrimaryMenu.key"
       @toggleAccounts="toggleAccountModal"

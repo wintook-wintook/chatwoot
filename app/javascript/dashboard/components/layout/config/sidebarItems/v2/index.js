@@ -49,6 +49,7 @@ const CASE_SETTINGS_ROUTES = [
   'gestorTickets_settings',
   'gestorTickets_commercial_settings',
   'gestorTickets_close_reasons',
+  'gestorTickets_task_outcomes',
   'gestorTickets_task_settings',
   'gestorTickets_config',
   'gestorTickets_business_summary_access',
@@ -73,12 +74,17 @@ const CATALOG_SETTINGS_ROUTES = [
 ];
 // De Ajustes › Casos y etapas: los motivos de cierre (de Ventas) y los de Servicio.
 const CLOSE_REASONS = 'gestorTickets_close_reasons';
+const TASK_OUTCOMES = 'gestorTickets_task_outcomes';
 const SERVICE_CATALOGS = [
   'gestorTickets_types',
   'gestorTickets_classification',
   'gestorTickets_sla',
 ];
-const CATALOG_CASE_SETTINGS = [CLOSE_REASONS, ...SERVICE_CATALOGS];
+const CATALOG_CASE_SETTINGS = [
+  CLOSE_REASONS,
+  TASK_OUTCOMES,
+  ...SERVICE_CATALOGS,
+];
 // Plan-Catalogo-Cotizaciones — pantallas propias de Ventas.
 const SALES_ROUTES = [
   'gestorTickets_quotes',
@@ -174,7 +180,7 @@ const catalogItems = accountId => {
       toState: url('tickets/catalog'),
       toStateName: 'gestorTickets_catalog',
     },
-    ...caseSettingsItems(accountId, [CLOSE_REASONS]),
+    ...caseSettingsItems(accountId, [CLOSE_REASONS, TASK_OUTCOMES]),
     {
       icon: 'kanban',
       label: 'CONTACT_FUNNELS',
@@ -615,10 +621,14 @@ const catalogos = accountId => ({
 });
 
 // Una sola opción de Tareas (Mi día | Mías | No asignadas | Todas van adentro) que
-// abre en Mi día; la ruta de campo; y el calendario.
+// abre en Mi día; el calendario; reportes y llegadas; y la ruta de campo.
 const agenda = accountId => ({
   parentNav: 'agenda',
-  routes: ['gestorTickets_tasks', 'google_calendar'],
+  routes: [
+    'gestorTickets_tasks',
+    'gestorTickets_task_reports',
+    'google_calendar',
+  ],
   menuItems: [
     {
       icon: 'checkmark-circle',
@@ -627,6 +637,21 @@ const agenda = accountId => ({
       toState: frontendURL(`accounts/${accountId}/tickets/tasks?tab=my_day`),
       toStateName: 'gestorTickets_tasks',
     },
+    {
+      icon: 'calendar',
+      label: 'CALENDAR',
+      featureFlag: FEATURE_FLAGS.GOOGLE_CALENDAR,
+      toState: frontendURL(`accounts/${accountId}/google-calendar`),
+      toStateName: 'google_calendar',
+    },
+    // Reportes de cierre y llegadas, en dos pestañas.
+    {
+      icon: 'clipboard',
+      label: 'TASK_REPORTS',
+      featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+      toState: frontendURL(`accounts/${accountId}/tickets/task-reports`),
+      toStateName: 'gestorTickets_task_reports',
+    },
     // Plan-Trabajo-Campo R2 — portal del técnico (abre la pantalla para celular).
     {
       icon: 'location',
@@ -634,13 +659,6 @@ const agenda = accountId => ({
       featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
       toState: frontendURL(`accounts/${accountId}/campo`),
       toStateName: 'field_route',
-    },
-    {
-      icon: 'calendar',
-      label: 'CALENDAR',
-      featureFlag: FEATURE_FLAGS.GOOGLE_CALENDAR,
-      toState: frontendURL(`accounts/${accountId}/google-calendar`),
-      toStateName: 'google_calendar',
     },
   ],
 });

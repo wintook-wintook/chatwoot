@@ -161,6 +161,7 @@ describe('Menú v2', () => {
       'WHATSAPP_TEMPLATES',
       'CATALOG_PRODUCTS',
       'TICKET_CLOSE_REASONS',
+      'TICKET_TASK_OUTCOMES',
       'CONTACT_FUNNELS',
       'TICKET_TYPES',
       'CATALOG_CLASSIFICATIONS',
@@ -251,12 +252,13 @@ describe('Menú v2', () => {
     );
   });
 
-  it('Agenda: Tareas (abre en Mi día), Ruta de campo y Calendario', () => {
+  it('Agenda: Tareas (abre en Mi día), Calendario, Reportes y Ruta de campo', () => {
     const agenda = menuFor(route('gestorTickets_tasks'));
     expect(agenda.menuItems.map(i => i.label)).toEqual([
       'TASKS_V2',
-      'FIELD_ROUTE',
       'CALENDAR',
+      'TASK_REPORTS',
+      'FIELD_ROUTE',
     ]);
     expect(agenda.menuItems[0].toState).toContain('tickets/tasks?tab=my_day');
     // El puntaje de tareas de «Mi día» es una regla: va en Ajustes, como opción

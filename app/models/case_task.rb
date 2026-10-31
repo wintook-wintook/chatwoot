@@ -23,11 +23,13 @@
 #  updated_at                  :datetime         not null
 #  account_id                  :bigint           not null
 #  assignee_id                 :bigint
-#  case_ticket_id              :bigint           not null
+#  case_ticket_id              :bigint
 #  case_type_column_id         :bigint
 #  case_type_column_task_id    :bigint
 #  completed_by_id             :bigint
+#  contact_id                  :bigint
 #  documentation_for_column_id :bigint
+#  organization_id             :bigint
 #  requester_id                :bigint
 #  team_id                     :bigint
 #
@@ -41,6 +43,8 @@
 #  index_case_tasks_on_case_ticket_id_and_position  (case_ticket_id,position)
 #  index_case_tasks_on_case_ticket_id_and_sequence  (case_ticket_id,sequence)
 #  index_case_tasks_on_completed_by_id              (completed_by_id)
+#  index_case_tasks_on_contact_id                   (contact_id)
+#  index_case_tasks_on_organization_id              (organization_id)
 #  index_case_tasks_on_requester_id                 (requester_id)
 #  index_case_tasks_on_ticket_and_template          (case_ticket_id,case_type_column_task_id)
 #
@@ -52,14 +56,19 @@
 #  fk_rails_...  (case_type_column_id => case_type_columns.id) ON DELETE => nullify
 #  fk_rails_...  (case_type_column_task_id => case_type_column_tasks.id) ON DELETE => nullify
 #  fk_rails_...  (completed_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (contact_id => contacts.id) ON DELETE => cascade
 #  fk_rails_...  (documentation_for_column_id => case_type_columns.id) ON DELETE => nullify
+#  fk_rails_...  (organization_id => organizations.id) ON DELETE => nullify
 #  fk_rails_...  (requester_id => users.id) ON DELETE => nullify
 #
 
 # @tickets_cases — Tarea/subtarea de un ticket (osTicket "Tasks").
 class CaseTask < ApplicationRecord
   belongs_to :account
-  belongs_to :case_ticket
+  # Plan-Agenda — sin caso es una tarea de captura rápida.
+  belongs_to :case_ticket, optional: true
+  include AgendaLink
+  include TaskReportable
   belongs_to :assignee, class_name: 'User', optional: true
   # @tickets_cases — solicitante: quién dio de alta la tarea. Se fija al crear con
   # el agente actual y no se edita desde la UI (a diferencia del responsable).
@@ -92,6 +101,20 @@ class CaseTask < ApplicationRecord
 
   scope :ordered, -> { order(:position, :id) }
 
+  def concluded?
+    done?
+  end
+
+  # La orden de trabajo ya cierra con su reporte de servicio y firma: su lista de
+  # verificación no lleva un reporte por punto.
+  def report_required?
+    !case_ticket&.work_order?
+  end
+
+  def report_ready?
+    !report_required? || super
+  end
+
   # @tickets_cases P4 — el "quién/cuándo" se deriva del cambio de estado, no se
   # acepta del cliente: así no hay forma de falsear la firma desde la API.
   before_save :track_completion, if: :will_save_change_to_status?
@@ -116,7 +139,8 @@ class CaseTask < ApplicationRecord
   end
 
   def assign_sequence
-    self.sequence = (case_ticket.case_tasks.maximum(:sequence) || 0) + 1
+    siblings = case_ticket ? case_ticket.case_tasks : self.class.without_case.where(account_id: account_id)
+    self.sequence = (siblings.maximum(:sequence) || 0) + 1
   end
 
   def track_completion

@@ -73,6 +73,12 @@ export default {
       component: FieldApp,
     },
     {
+      path: frontendURL('accounts/:accountId/campo/cita/:meetingId'),
+      name: 'field_agenda_visit',
+      meta: FIELD_META,
+      component: FieldApp,
+    },
+    {
       path: frontendURL('accounts/:accountId/suspended'),
       name: 'account_suspended',
       meta: {

@@ -165,6 +165,7 @@ es:
       before: 'Antes'
       after: 'Después'
   field:
+    on_my_way_visit: "Hola %{name}, soy %{technician}. Voy en camino, llego aproximadamente a las %{eta}."
     on_my_way: "Hola %{name}, soy %{technician}. Voy en camino, llego aproximadamente a las %{eta}. Sigue tu servicio aquí: %{url}"
     on_my_way_note: 'Voy en camino (llegada aprox. %{eta})'
     to_technician: "Hola %{name}, tienes la visita %{folio} · %{title}. Ábrela aquí: %{url}"
@@ -319,6 +320,15 @@ es:
     not_found: 'Producto o servicio no encontrado'
     import:
       no_file: 'Adjunta el archivo CSV del catálogo.'
+  task_reports:
+    visit_done: 'Visita terminada'
+    received_by: 'Recibió: %{name}'
+    required: 'Para concluirla, escribe qué se hizo'
+    note_title: 'Reporte de cierre: %{title}'
+  agenda_items:
+    already_linked: 'Ese evento ya tiene una tarea agendada'
+    all_day: 'Un evento de todo el día no tiene hora: se queda solo en Google'
+    untitled: 'Sin título'
   access_roles:
     denied: 'Tu rol no tiene acceso a esta opción.'
     reassign_denied: 'Tu rol no permite asignar a otra persona.'

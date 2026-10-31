@@ -15,6 +15,8 @@ const KINDS = [
   'contracts',
   'customer_assets',
   'maintenance_plans',
+  'case_tasks',
+  'case_meetings',
 ];
 
 export default {

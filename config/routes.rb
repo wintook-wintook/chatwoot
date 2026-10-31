@@ -125,6 +125,7 @@ Rails.application.routes.draw do
           end
           # Plan-Trabajo-Campo R3 — despacho
           resource :field_dispatch, only: [:show], controller: 'field_dispatch' do
+            post :move_visit
             post :assign
           end
           # Plan-Trabajo-Campo R2 — portal del técnico
@@ -407,6 +408,19 @@ Rails.application.routes.draw do
           # @tickets_cases — «Mi resumen» de la página Inicio
           resource :my_summary, only: [:show], controller: 'my_summary'
           # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
+          resources :task_reports, only: [:index, :create] # Reporte de cierre
+          resources :agenda_visits, only: [:show] do # Visitas sin orden de trabajo
+            get :arrivals, on: :collection
+            post :on_my_way, on: :member
+            post :arrive, on: :member
+          end
+          resources :task_outcomes, only: [:index, :create, :update, :destroy]
+          # Plan-Agenda — tareas sin caso de la captura rápida (solo en Kontrolya).
+          resources :quick_tasks, only: [:create, :update, :destroy]
+          # Plan-Agenda — lo agendado desde el calendario: con caso o solo con su contacto.
+          resources :agenda_items, only: [:index, :create, :update, :destroy] do
+            get :cases, on: :collection
+          end
           resources :case_tasks, only: [:index], controller: 'case_tasks_index' do
             put :my_day_plan, on: :collection # Plan-Bandeja-Prioridad F2 — orden propio de «Mi día»
             post :my_day_ai, on: :collection  # Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA

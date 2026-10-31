@@ -456,6 +456,12 @@ export default {
               >
                 {{ m.case_ticket.folio }}
               </span>
+              <span
+                v-else-if="m.contact"
+                class="block text-xs truncate text-slate-500 dark:text-slate-400"
+              >
+                {{ m.contact.name }}
+              </span>
             </span>
           </button>
         </li>

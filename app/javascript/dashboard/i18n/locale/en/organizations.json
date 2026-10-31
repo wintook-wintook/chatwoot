@@ -106,6 +106,7 @@
       "PLACEHOLDER": "Search organization by name or tax ID",
       "CLEAR": "Remove organization"
     },
+    "TASKS_TITLE": "Tasks",
     "ACTIVITY": {
       "TABS": {
         "opportunities": "Opportunities",
@@ -214,7 +215,9 @@
         "quotes": "quotes: {count}",
         "contracts": "contracts: {count}",
         "customer_assets": "equipment: {count}",
-        "maintenance_plans": "maintenance plans: {count}"
+        "maintenance_plans": "maintenance plans: {count}",
+        "case_tasks": "tasks: {count}",
+        "case_meetings": "scheduled tasks: {count}"
       }
     }
   }

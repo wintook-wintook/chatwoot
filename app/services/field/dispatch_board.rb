@@ -2,10 +2,12 @@
 # con sus visitas (y los choques de horario), las visitas sin técnico y las
 # órdenes en campo que todavía no tienen visita.
 class Field::DispatchBoard
-  def initialize(account, scope, day)
+  # `zone`: la del usuario. El día se cuenta en su hora, no en la del servidor (UTC).
+  def initialize(account, scope, day, zone = Time.zone)
     @account = account
     @scope = scope
     @day = day
+    @hours = day.in_time_zone(zone).all_day
   end
 
   def build
@@ -14,24 +16,46 @@ class Field::DispatchBoard
       day: @day,
       technicians: technicians(meetings).map { |user| technician_json(user, meetings) },
       unassigned: meetings.select { |m| m.case_ticket.assignee_id.nil? }.map { |m| visit_json(m) },
-      unscheduled: unscheduled_orders.map { |order| order_json(order) }
+      unscheduled: unscheduled_orders.map { |order| order_json(order) },
+      salespeople: salespeople
     }
   end
 
   private
+
+  # Visitas — las tareas agendadas marcadas como visita, una columna por persona.
+  def salespeople
+    agenda_visits.group_by(&:organizer).filter_map do |user, visits|
+      next if user.nil?
+
+      { id: user.id, name: user.name, skills: [], zone: nil, visits: visits.map { |m| agenda_visit_json(m) }, conflicts: conflicts(visits) }
+    end
+  end
+
+  def agenda_visits
+    CaseMeeting.active.where(account_id: @account.id, is_visit: true, starts_at: @hours)
+               .includes(:organizer, :contact, :organization, case_ticket: %i[contact organization case_type])
+               .order(:starts_at).reject { |meeting| meeting.case_ticket&.work_order? }
+  end
+
+  def agenda_visit_json(meeting)
+    visit = Field::AgendaVisitSerializer.new(meeting).summary
+    visit.merge(contact: visit[:contact]&.fetch(:name), meeting: visit[:meeting])
+  end
 
   def field_orders
     @scope.where(case_type_id: CaseType.where(case_class: :work_order).select(:id)).where.not(status: %w[closed cancelled])
   end
 
   def day_meetings
-    CaseMeeting.active.where(case_ticket_id: field_orders.select(:id), starts_at: @day.all_day)
+    CaseMeeting.active.where(case_ticket_id: field_orders.select(:id), starts_at: @hours)
                .includes(case_ticket: %i[contact case_type assignee]).order(:starts_at)
                .select { |meeting| meeting.case_ticket.on_site_effective }
   end
 
   def unscheduled_orders
-    upcoming = CaseMeeting.active.where(starts_at: Time.current.beginning_of_day..).select(:case_ticket_id)
+    # Sin las de la agenda: un case_ticket_id nulo dejaría vacío el NOT IN de abajo.
+    upcoming = CaseMeeting.active.where(starts_at: Time.current.beginning_of_day..).where.not(case_ticket_id: nil).select(:case_ticket_id)
     field_orders.where.not(id: upcoming).where.not(status: ServiceReportable::COMPLETION_STATUSES)
                 .includes(:contact, :case_type, :assignee).order(:created_at).limit(100)
                 .select(&:on_site_effective)

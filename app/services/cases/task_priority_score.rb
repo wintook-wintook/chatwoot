@@ -36,11 +36,12 @@ class Cases::TaskPriorityScore
   end
 
   # `day`: el día LOCAL del agente («Mi día» lo manda el navegador); sin él, el
-  # del servidor.
-  def initialize(tasks, account:, now: Time.current, day: nil)
+  # del servidor. `zone`: la suya, para saber en qué día local cae una fecha.
+  def initialize(tasks, account:, now: Time.current, day: nil, zone: Time.zone)
     @tasks = tasks.to_a
     @weights = self.class.weights_for(account)
     @now = now
+    @zone = zone
     @today = day || now.to_date
   end
 
@@ -50,7 +51,7 @@ class Cases::TaskPriorityScore
 
   private
 
-  attr_reader :weights, :now, :today
+  attr_reader :weights, :now, :today, :zone
 
   def score(task)
     reasons = []
@@ -77,7 +78,11 @@ class Cases::TaskPriorityScore
       return add(reasons, :overdue, weights[:overdue] + extra, days: days)
     end
 
-    add_upcoming(reasons, (task.due_at.to_date - today).to_i)
+    add_upcoming(reasons, (local_date(task.due_at) - today).to_i)
+  end
+
+  def local_date(time)
+    time.in_time_zone(zone).to_date
   end
 
   def add_upcoming(reasons, days_left)
@@ -144,7 +149,7 @@ class Cases::TaskPriorityScore
     starts = visits[ticket.id] || []
     if starts.any? { |t| t < now }
       add(reasons, :visit_overdue)
-    elsif starts.any? { |t| t.to_date == today }
+    elsif starts.any? { |t| local_date(t) == today }
       add(reasons, :visit_today)
     end
   end
