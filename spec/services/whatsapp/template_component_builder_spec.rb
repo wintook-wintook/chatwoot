@@ -58,6 +58,15 @@ RSpec.describe Whatsapp::TemplateComponentBuilder do
     expect(header).to eq(type: 'HEADER', format: 'IMAGE', example: { header_handle: ['h:abc123'] })
   end
 
+  # F0: con la liga cruda como handle Meta rechazaba las de video y documento.
+  it 'cabecera multimedia nunca manda la liga como header_handle' do
+    payload = build(
+      name: 't', language: 'es', category: 'UTILITY', body_text: 'x',
+      header_type: 'video', header_media_url: 'https://cdn.example.com/v.mp4'
+    )
+    expect(payload[:components].first).to eq(type: 'HEADER', format: 'VIDEO')
+  end
+
   it 'mapea cada tipo de botón' do
     payload = build(
       name: 't', language: 'es', category: 'UTILITY', body_text: 'x',
@@ -83,5 +92,32 @@ RSpec.describe Whatsapp::TemplateComponentBuilder do
   it 'body sin variables no incluye example' do
     payload = build(name: 't', language: 'es', category: 'UTILITY', body_text: 'Texto fijo')
     expect(payload[:components].first).to eq(type: 'BODY', text: 'Texto fijo')
+  end
+
+  # feat/plantillas_variables_chatwoot F9.1
+  describe 'variables con nombre' do
+    let(:named) do
+      WhatsappTemplate.new(name: 'cita', language: 'es', category: 'UTILITY', header_type: 'text', header_content: 'Pedido {{pedido}}',
+                           body_text: 'Hola {{nombre}}, tu cita es el {{fecha}} y {{nombre}} confirma.',
+                           sample_values: { 'body' => %w[Juan 5/11], 'header' => ['A1'] })
+    end
+
+    it 'manda parameter_format NAMED y los ejemplos por nombre' do
+      payload = described_class.call(named)
+
+      expect(payload[:parameter_format]).to eq('NAMED')
+      expect(payload[:components].first[:example])
+        .to eq(header_text_named_params: [{ param_name: 'pedido', example: 'A1' }])
+      expect(payload[:components].second[:example])
+        .to eq(body_text_named_params: [{ param_name: 'nombre', example: 'Juan' }, { param_name: 'fecha', example: '5/11' }])
+    end
+
+    it 'las numeradas salen igual que siempre' do
+      numerada = WhatsappTemplate.new(name: 'x', language: 'es', body_text: 'Hola {{1}}.', sample_values: { 'body' => ['Juan'] })
+      payload = described_class.call(numerada)
+
+      expect(payload).not_to have_key(:parameter_format)
+      expect(payload[:components].last[:example]).to eq(body_text: [['Juan']])
+    end
   end
 end

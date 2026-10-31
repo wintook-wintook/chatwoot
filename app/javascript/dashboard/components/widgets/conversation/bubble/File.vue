@@ -5,9 +5,16 @@ export default {
       type: String,
       required: true,
     },
+    // feat/plantillas_whatsapp_mejoras F3: el nombre con que se mandó (el documento de una
+    // plantilla); si no hay, se saca de la liga como siempre.
+    name: {
+      type: String,
+      default: '',
+    },
   },
   computed: {
     fileName() {
+      if (this.name) return this.name;
       if (this.url) {
         const filename = this.url.substring(this.url.lastIndexOf('/') + 1);
         return filename || this.$t('CONVERSATION.UNKNOWN_FILE_TYPE');

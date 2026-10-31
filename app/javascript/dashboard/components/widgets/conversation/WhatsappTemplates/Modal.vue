@@ -22,6 +22,11 @@ export default {
     };
   },
   computed: {
+    // feat/plantillas_whatsapp_mejoras F2: en WhatsApp Cloud la plantilla sale completa.
+    isCloud() {
+      const inbox = this.$store.getters['inboxes/getInbox'](this.inboxId);
+      return Boolean(inbox && inbox.provider === 'whatsapp_cloud');
+    },
     modalHeaderContent() {
       return this.selectedWaTemplate
         ? this.$t('WHATSAPP_TEMPLATES.MODAL.TEMPLATE_SELECTED_SUBTITLE', {
@@ -63,6 +68,8 @@ export default {
       <TemplateParser
         v-else
         :template="selectedWaTemplate"
+        :full-template="isCloud"
+        :inbox-id="inboxId"
         @resetTemplate="onResetTemplate"
         @sendMessage="onSendMessage"
       />

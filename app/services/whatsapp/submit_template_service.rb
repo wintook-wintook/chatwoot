@@ -14,11 +14,13 @@ class Whatsapp::SubmitTemplateService
     end
   end
 
-  def initialize(channel: nil, template: nil, params: {})
+  # user: quien la crea desde la pantalla (queda en created_by; las de Meta, en nil).
+  def initialize(channel: nil, template: nil, params: {}, user: nil)
     @template = template
     @channel = channel || template&.channel_whatsapp
     @account = @channel&.account || template&.account
     @params = normalize_params(params)
+    @user = user
   end
 
   # --- crear -----------------------------------------------------------------
@@ -30,6 +32,7 @@ class Whatsapp::SubmitTemplateService
     template = @channel.whatsapp_templates
                        .find_or_initialize_by(name: @params[:name], language: @params[:language])
     template.assign_attributes(@params.merge(account: @account))
+    template.created_by ||= @user if template.new_record?
     validation = Whatsapp::TemplateValidator.call(template)
     return invalid(validation) unless validation.valid?
 
@@ -38,17 +41,27 @@ class Whatsapp::SubmitTemplateService
     submit_new(template)
   end
 
+  # --- borrador (F10) ----------------------------------------------------------
+  # Guarda sin llamar a Meta ni exigir sus reglas (solo nombre e idioma, por el índice único):
+  # se termina y se manda a revisión después. Solo una plantilla nueva o un borrador local;
+  # una que ya está en Meta no se «regresa» a borrador.
+  def save_draft
+    template = @template || @channel.whatsapp_templates.find_or_initialize_by(name: @params[:name], language: @params[:language])
+    return failure('Esta plantilla ya está en Meta: no se puede guardar como borrador') if template.persisted? && !template.local_draft?
+
+    template.assign_attributes(@params.merge(account: @account, status: 'DRAFT'))
+    template.created_by ||= @user if template.new_record?
+    return failure(template.errors.full_messages.join(' · ')) unless template.save
+
+    Result.new(success: true, template: template)
+  end
+
   # --- editar (PATCH) --------------------------------------------------------
   def update
     return failure('La plantilla no es editable en su estado actual') unless @template.editable?
+    return submit_draft if @template.local_draft?
 
-    @template.assign_attributes(@params)
-    validation = Whatsapp::TemplateValidator.call(@template)
-    return invalid(validation) unless validation.valid?
-
-    return dry_run_persist(@template) if dry_run?
-
-    submit_edit(@template)
+    edit_in_meta
   end
 
   # --- borrar ----------------------------------------------------------------
@@ -64,11 +77,47 @@ class Whatsapp::SubmitTemplateService
     result = provider.delete_template(name: @template.name, meta_template_id: @template.meta_template_id)
     return failure(result.error) unless result.success?
 
+    remove_from_channel_cache
     @template.destroy!
     Result.new(success: true, template: @template)
   end
 
   private
+
+  # Lo que leen los selectores es la copia de Meta en el canal: sin esto, la plantilla borrada
+  # se seguía ofreciendo hasta la siguiente sincronización y Meta la rechazaba al mandarla.
+  def remove_from_channel_cache
+    lista = @channel.message_templates
+    return unless lista.is_a?(Array)
+
+    @channel.update(message_templates: lista.reject { |t| t['name'] == @template.name && t['language'] == @template.language })
+  end
+
+  # Una plantilla que ya está en Meta: Meta reemplaza los components y la vuelve a PENDING.
+  def edit_in_meta
+    @template.assign_attributes(@params)
+    # Otra liga de muestra (u otro archivo subido, F6) = otro archivo: el handle viejo es del
+    # archivo anterior y Meta revisaría ese. Se vuelve a subir.
+    otro_archivo = @template.header_media_url_changed? || @template.header_sample_changed?
+    @template.header_handle = nil if otro_archivo && !@params.key?(:header_handle)
+    validation = Whatsapp::TemplateValidator.call(@template)
+    return invalid(validation) unless validation.valid?
+
+    return dry_run_persist(@template) if dry_run?
+
+    submit_edit(@template)
+  end
+
+  # Un borrador que nunca llegó a Meta se manda como plantilla NUEVA (crear, no editar).
+  def submit_draft
+    @template.assign_attributes(@params)
+    validation = Whatsapp::TemplateValidator.call(@template)
+    return invalid(validation) unless validation.valid?
+
+    return dry_run_persist(@template) if dry_run?
+
+    submit_new(@template)
+  end
 
   # Modo A: sin red. Fila PENDING con meta_template_id sintético.
   def dry_run_persist(template)
@@ -104,11 +153,18 @@ class Whatsapp::SubmitTemplateService
     Result.new(success: true, template: template)
   end
 
-  # Sube la imagen de cabecera si hace falta y setea el handle en la plantilla.
-  def ensure_header_handle(template)
-    return unless template.header_type == 'image' && template.header_handle.blank? && template.header_media_url.present?
+  MEDIA_HEADERS = %w[image video document].freeze
 
-    upload = Whatsapp::ResumableUploadService.new(channel: @channel, media_url: template.header_media_url).perform
+  # Sube el archivo de muestra de la cabecera (imagen, video o documento: F0) si hace falta y
+  # setea el handle en la plantilla. Meta no acepta la liga cruda como muestra.
+  def ensure_header_handle(template)
+    return unless MEDIA_HEADERS.include?(template.header_type.to_s)
+
+    link = template.header_media_link
+    return unless template.header_handle.blank? && link.present?
+
+    upload = Whatsapp::ResumableUploadService.new(channel: @channel, media_url: link,
+                                                  header_type: template.header_type).perform
     return failure(upload.error) unless upload.success?
 
     template.header_handle = upload.handle

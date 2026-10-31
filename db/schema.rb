@@ -2033,6 +2033,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_04_140000) do
     t.json "additional_attributes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "template_name"
+    t.string "template_language"
+    t.string "template_category"
+    t.string "template_namespace"
+    t.json "template_params"
+    t.boolean "is_template", default: false
     t.index ["account_id"], name: "index_scheduled_messages_on_account_id"
     t.index ["conversation_id"], name: "index_scheduled_messages_on_conversation_id"
     t.index ["scheduled_at"], name: "index_scheduled_messages_on_scheduled_at"
@@ -2439,8 +2445,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_04_140000) do
     t.datetime "last_submitted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "created_by_id"
     t.index ["account_id"], name: "index_whatsapp_templates_on_account_id"
     t.index ["channel_whatsapp_id", "name", "language"], name: "index_whatsapp_templates_on_channel_name_language", unique: true
+    t.index ["created_by_id"], name: "index_whatsapp_templates_on_created_by_id"
     t.index ["meta_template_id"], name: "index_whatsapp_templates_on_meta_template_id"
   end
 

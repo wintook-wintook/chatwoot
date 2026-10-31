@@ -136,6 +136,9 @@
     "UPLOADING_ATTACHMENTS": "Subiendo archivos adjuntos...",
     "REPLIED_TO_STORY": "Respondió a tu historia",
     "UNSUPPORTED_MESSAGE": "Este mensaje no es compatible.",
+    "TEMPLATE_BUTTONS": {
+      "COPY_CODE": "Copiar código"
+    },
     "UNSUPPORTED_MESSAGE_FACEBOOK": "Este mensaje no es compatible. Puedes ver este mensaje en la aplicación de Facebook Messenger.",
     "UNSUPPORTED_MESSAGE_INSTAGRAM": "Este mensaje no es compatible. Puedes ver este mensaje en la aplicación de Instagram.",
     "SUCCESS_DELETE_MESSAGE": "Mensaje eliminado con éxito",
