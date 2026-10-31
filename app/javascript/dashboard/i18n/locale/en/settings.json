@@ -364,6 +364,8 @@
     "TICKET_PORTALS": "Customer portals",
     "TICKET_COMMERCIAL_SETTINGS": "Sales settings",
     "TICKET_CLOSE_REASONS": "Close reasons",
+    "TICKET_TASK_OUTCOMES": "Task results",
+    "TASK_REPORTS": "Reports",
     "TICKET_TASK_SETTINGS": "Tasks",
     "TICKET_SETTINGS": "Module settings",
     "TICKET_CONFIG": "Folio settings",

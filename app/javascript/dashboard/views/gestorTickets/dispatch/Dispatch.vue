@@ -1,6 +1,6 @@
 <!--
-  Plan-Trabajo-Campo R3 — Servicio › Despacho: el día de los técnicos. Una
-  columna por técnico (zona, habilidades, choques de horario y su ruta en Google
+  Plan-Trabajo-Campo R3 — Servicio › Despacho: el día de técnicos y vendedores. Una
+  columna por persona (zona, habilidades, choques de horario y su ruta en Google
   Maps), y a la izquierda las órdenes por programar y las visitas sin técnico.
   Arrastrar una tarjeta a un técnico se la asigna; si no tiene visita, pide la
   hora y la agenda (se sincroniza con el calendario como cualquier visita).
@@ -35,6 +35,7 @@ export default {
       board: null,
       loading: true,
       zone: '',
+      area: 'all',
       dragged: null,
       pending: null,
       time: '09:00',
@@ -50,9 +51,24 @@ export default {
     },
     technicians() {
       if (!this.board) return [];
-      return this.board.technicians.filter(
+      const techs = this.board.technicians.filter(
         t => !this.zone || t.zone === this.zone
       );
+      const sales = this.zone ? [] : this.board.salespeople || [];
+      if (this.area === 'service') return techs;
+      if (this.area === 'sales') return sales;
+      // Quien es técnico y vendedor va en una sola columna.
+      const merged = techs.map(tech => {
+        const same = sales.find(s => s.id === tech.id);
+        return same
+          ? {
+              ...tech,
+              visits: [...tech.visits, ...same.visits],
+              conflicts: [...tech.conflicts, ...same.conflicts],
+            }
+          : tech;
+      });
+      return [...merged, ...sales.filter(s => !techs.some(t => t.id === s.id))];
     },
   },
   mounted() {
@@ -88,7 +104,7 @@ export default {
     },
     cardTitle(card) {
       return card.meeting
-        ? `${this.hour(card.meeting.starts_at)} · ${card.folio}`
+        ? `${this.hour(card.meeting.starts_at)} · ${card.folio || ''}`
         : card.folio;
     },
     hour(value) {
@@ -113,7 +129,11 @@ export default {
       const card = this.dragged;
       this.dragged = null;
       if (!card) return;
-      if (card.meeting) {
+      if (card.kind === 'visit') {
+        // El supervisor cambia a quién le toca y la hora.
+        this.time = this.timeOf(card.meeting.starts_at);
+        this.pending = { card, tech };
+      } else if (card.meeting) {
         this.assign(
           { order_id: card.id, user_id: tech.id, meeting_id: card.meeting.id },
           tech
@@ -122,12 +142,35 @@ export default {
         this.pending = { card, tech };
       }
     },
+    timeOf(value) {
+      const date = new Date(value);
+      const pad = n => String(n).padStart(2, '0');
+      return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    },
+    async moveVisit(card, tech, start) {
+      try {
+        const { data } = await FieldDispatchAPI.moveVisit({
+          meeting_id: card.meeting.id,
+          user_id: tech.id,
+          starts_at: start.toISOString(),
+          day: isoDay(this.day),
+        });
+        this.board = data;
+        useAlert(this.$t('DISPATCH.ASSIGNED', { name: tech.name }));
+      } catch (error) {
+        useAlert(error?.response?.data?.error || this.$t('DISPATCH.ERROR'));
+      }
+    },
     async confirmSchedule() {
       const { card, tech } = this.pending;
       const [h, m] = this.time.split(':').map(Number);
       const start = new Date(this.day);
       start.setHours(h, m, 0, 0);
       this.pending = null;
+      if (card.kind === 'visit') {
+        await this.moveVisit(card, tech, start);
+        return;
+      }
       await this.assign(
         {
           order_id: card.id,
@@ -151,6 +194,7 @@ export default {
       }
     },
     open(card) {
+      if (!card.id) return; // visita sin caso
       this.$router.push({
         name: 'gestorTickets_detail',
         params: { accountId: this.$route.params.accountId, id: card.id },
@@ -177,6 +221,11 @@ export default {
         </p>
       </div>
       <div class="flex items-center gap-2">
+        <select v-model="area" class="!mb-0 w-36">
+          <option value="all">{{ $t('DISPATCH.AREA_ALL') }}</option>
+          <option value="service">{{ $t('DISPATCH.AREA_SERVICE') }}</option>
+          <option value="sales">{{ $t('DISPATCH.AREA_SALES') }}</option>
+        </select>
         <select v-if="zones.length" v-model="zone" class="!mb-0 w-44">
           <option value="">{{ $t('DISPATCH.ALL_ZONES') }}</option>
           <option v-for="z in zones" :key="z" :value="z">{{ z }}</option>
@@ -306,7 +355,7 @@ export default {
             <span class="text-woot-600">{{
               hour(card.meeting.starts_at)
             }}</span>
-            · {{ card.folio }}
+            <template v-if="card.folio">· {{ card.folio }}</template>
             <span
               v-if="tech.conflicts.includes(card.meeting.id)"
               class="text-xs text-red-600"
@@ -355,7 +404,7 @@ export default {
       <woot-modal-header
         :header-title="
           $t('DISPATCH.SCHEDULE_TITLE', {
-            folio: pending.card.folio,
+            folio: pending.card.folio || pending.card.title,
             name: pending.tech.name,
           })
         "
@@ -369,7 +418,7 @@ export default {
             {{ $t('DISPATCH.TIME') }}
             <input v-model="time" type="time" required />
           </label>
-          <label>
+          <label v-if="pending.card.kind !== 'visit'">
             {{ $t('DISPATCH.DURATION') }}
             <input v-model.number="duration" type="number" min="15" step="15" />
           </label>

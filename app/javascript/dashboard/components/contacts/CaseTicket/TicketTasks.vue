@@ -15,6 +15,9 @@ import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
 import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
 import MessageFormatter from 'shared/helpers/MessageFormatter';
 import caseAiWriter from 'dashboard/mixins/caseAiWriter';
+import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal.vue';
+import taskReportFlow from 'dashboard/mixins/taskReportFlow';
+import TaskReportsDialog from 'dashboard/views/gestorTickets/tasks/TaskReportsDialog.vue';
 import {
   ESTIMATE_OPTIONS,
   formatMinutes,
@@ -43,8 +46,10 @@ export default {
     WootMessageEditor,
     WootDropdownMenu,
     WootDropdownItem,
+    TaskReportModal,
+    TaskReportsDialog,
   },
-  mixins: [caseAiWriter],
+  mixins: [caseAiWriter, taskReportFlow],
   props: {
     ticketId: { type: [Number, String], required: true },
     // Ticket cerrado/cancelado = solo lectura: se ocultan las acciones para no
@@ -55,6 +60,7 @@ export default {
   },
   data() {
     return {
+      reportsFilter: null,
       tasks: [],
       // Plan-Plantilla-Tareas-Etapa — etapa actual y las siguientes con plantilla.
       stagePlan: { current: null, upcoming: [] },
@@ -583,8 +589,18 @@ export default {
     },
     // Completa la tarea desde la fila, sin abrir el modal. El backend deriva la
     // firma (fecha + quién) del cambio de estado, así que basta con el status.
-    async complete(task) {
+    complete(task) {
       if (this.completingId) return;
+      // La lista de verificación de una orden cierra con su reporte de servicio.
+      if (task.report_required === false) {
+        this.continueComplete(task);
+        return;
+      }
+      this.askReport({ type: 'task', id: task.id, title: task.title }, () =>
+        this.continueComplete(task)
+      );
+    },
+    async continueComplete(task) {
       // F5 — ¿esta tarea deja reuniones futuras huérfanas? Si sí, se pregunta.
       const orphans = await this.fetchOrphans(task);
       if (orphans.length) {
@@ -641,8 +657,8 @@ export default {
               }),
           icon: 'checkmark',
         });
-        // Las reuniones canceladas cambian el Avance y la pestaña Reuniones.
-        if (data.cancelled_meetings) this.$emit('changed');
+        // El reporte entra a Notas y Avance; las canceladas, a la pestaña Reuniones.
+        this.$emit('changed');
         this.$emit('saved'); // P2 — un hito hecho mueve el avance del proyecto
       } catch (e) {
         this.$emitter.emit('newToastMessage', {
@@ -651,6 +667,11 @@ export default {
       } finally {
         this.completingId = null;
       }
+    },
+    menuViewReports() {
+      const row = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (row) this.reportsFilter = { case_task_id: row.id };
     },
     priorityDot(priority) {
       return PRIORITY_DOT[priority] || PRIORITY_DOT.medium;
@@ -721,9 +742,21 @@ export default {
         requester_locked: !!task.requester,
       };
     },
-    async submitForm() {
+    async submitForm(reported = false) {
       const title = this.form.title.trim();
       if (!title || this.isSaving) return;
+      // Concluirla desde el formulario también pide el reporte.
+      const editing = this.tasks.find(t => t.id === this.editingId);
+      const concludes =
+        editing &&
+        editing.status !== 'done' &&
+        editing.report_required !== false;
+      if (this.form.status === 'done' && concludes && !reported) {
+        this.askReport({ type: 'task', id: editing.id, title }, () =>
+          this.submitForm(true)
+        );
+        return;
+      }
       const payload = {
         title,
         description: this.form.description.trim(),
@@ -1038,7 +1071,7 @@ export default {
 
         <form
           class="flex flex-col self-stretch w-full gap-3 pb-8"
-          @submit.prevent="submitForm"
+          @submit.prevent="submitForm()"
         >
           <label class="block mb-3">
             <span class="text-sm text-slate-700 dark:text-slate-200">{{
@@ -1420,6 +1453,17 @@ export default {
             }}
           </woot-button>
         </WootDropdownItem>
+        <WootDropdownItem v-if="rowMenu.row.status === 'done'">
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="clipboard"
+            @click="menuViewReports"
+          >
+            {{ $t('TASK_REPORT.VIEW') }}
+          </woot-button>
+        </WootDropdownItem>
         <WootDropdownItem>
           <woot-button
             variant="clear"
@@ -1476,6 +1520,12 @@ export default {
         </WootDropdownItem>
       </WootDropdownMenu>
     </div>
+    <TaskReportModal
+      :item="reportItem"
+      @close="cancelReport"
+      @reported="onReported"
+    />
+    <TaskReportsDialog :filters="reportsFilter" @close="reportsFilter = null" />
   </div>
 </template>
 

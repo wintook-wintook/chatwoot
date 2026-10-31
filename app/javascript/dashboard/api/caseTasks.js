@@ -1,6 +1,7 @@
 /* global axios */
 // @tickets_cases — Tareas/subtareas de un ticket
 import ApiClient from './ApiClient';
+import { browserZone } from './fieldVisits';
 
 class CaseTasksAPI extends ApiClient {
   constructor() {
@@ -16,7 +17,7 @@ class CaseTasksAPI extends ApiClient {
   // item_type: '' (fusiona tareas + reuniones agendadas) | 'task' | 'meeting'
   getMine(filters = {}) {
     const base = this.url.replace(/case_tickets$/, 'case_tasks');
-    return axios.get(base, { params: filters });
+    return axios.get(base, { params: { tz: browserZone(), ...filters } });
   }
 
   // Plan-Bandeja-Prioridad F2 — orden propio de «Mi día» (reemplaza el plan del

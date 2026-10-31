@@ -152,4 +152,34 @@ RSpec.describe 'Case Tasks Index API — Mi día' do
     post url, params: { case_task: { title: 'Mal', estimated_minutes: 5000 } }, headers: agent.create_new_auth_token, as: :json
     expect(response).to have_http_status(:unprocessable_entity)
   end
+
+  describe 'el día en la hora del agente' do
+    around { |example| travel_to(Time.utc(2026, 10, 31, 2)) { example.run } } # 8 p. m. del 30 en México
+
+    let(:tz) { 'America/Mexico_City' }
+
+    it 'la agenda y el vencimiento de hoy son los de su día local' do
+      noche = CaseMeeting.create!(account: account, case_ticket: ticket, title: 'Esta noche', organizer: agent,
+                                  starts_at: Time.utc(2026, 10, 31, 3), ends_at: Time.utc(2026, 10, 31, 4))
+      CaseMeeting.create!(account: account, case_ticket: ticket, title: 'Mañana temprano', organizer: agent,
+                          starts_at: Time.utc(2026, 10, 31, 16), ends_at: Time.utc(2026, 10, 31, 17))
+      tarea('Antes de medianoche', due_at: Time.utc(2026, 10, 31, 5, 59))
+
+      body = mi_dia(day: '2026-10-30', tz: tz)
+
+      expect(body['meta']['agenda'].pluck('id')).to eq([noche.id])
+      expect(body['meta']['load']['count']).to eq(1)
+      expect(body['case_tasks'].first['reasons'].pluck('key')).to include('due_today')
+    end
+
+    it 'el filtro «Hoy» de Tareas usa su día local' do
+      tarea('Hoy local', due_at: Time.utc(2026, 10, 31, 5))
+      tarea('Mañana local', due_at: Time.utc(2026, 10, 31, 20))
+
+      get "/api/v1/accounts/#{account.id}/case_tasks", params: { item_type: 'task', due: 'today', tz: tz, assignee_id: agent.id },
+                                                       headers: agent.create_new_auth_token
+
+      expect(response.parsed_body['case_tasks'].pluck('title')).to eq(['Hoy local'])
+    end
+  end
 end

@@ -32,7 +32,7 @@ export default {
     EVENTS: {
       TITLE: 'Mi Calendario',
       EMPTY: 'No hay eventos para este período',
-      NEW_EVENT: 'Nuevo Evento',
+      NEW_EVENT: 'Nueva tarea agendada',
       ALL_DAY: 'Todo el día',
     },
     CALENDAR: {
@@ -81,9 +81,9 @@ export default {
       NOT_CONNECTED: 'Sin calendario',
     },
     CREATE_EVENT: {
-      TITLE: 'Crear Evento',
+      TITLE: 'Nueva tarea agendada',
       TYPE: {
-        EVENT: 'Evento',
+        EVENT: 'Tarea agendada',
         TASK: 'Tarea',
       },
       FIELDS: {
@@ -105,12 +105,31 @@ export default {
         ATTENDEES: 'Invitados',
         ATTENDEES_PLACEHOLDER: 'Escribe un email y presiona Enter',
       },
-      SUBMIT: 'Crear Evento',
+      SUBMIT: 'Crear tarea agendada',
       SUBMIT_TASK: 'Crear Tarea',
       CANCEL: 'Cancelar',
       SUCCESS: 'Evento creado exitosamente',
       SUCCESS_TASK: 'Tarea creada exitosamente',
       ERROR: 'No se pudo crear. Inténtalo de nuevo.',
+    },
+    AGENDA_LINK: {
+      IS_VISIT: 'Es una visita al cliente',
+      ADDRESS: 'Dirección de la visita',
+      ADDRESS_PLACEHOLDER:
+        'Si la dejas vacía, se usa la del caso o la organización',
+      CONTACT: 'Contacto',
+      ORGANIZATION: 'Organización',
+      CASE: 'Caso (opcional)',
+      NO_CASE: 'Sin caso',
+      OPEN_CASE: 'Abrir caso',
+      INTERNAL: 'Interno, sin cliente (solo en Google)',
+      NO_TASK:
+        'Este evento aún no tiene tarea agendada. Elige el contacto para crearla, o márcalo como interno.',
+      TITLE_REQUIRED: 'Escribe el título.',
+      CLIENT_REQUIRED: 'Elige el contacto o un caso, o márcalo como interno.',
+      NOT_CONNECTED:
+        'Sin Google conectado: lo que agendes queda solo en Kontrolya.',
+      LEGEND_NO_TASK: 'Borde punteado: evento sin tarea',
     },
     EDIT_EVENT: {
       TITLE: 'Editar Evento',

@@ -2,6 +2,8 @@
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import { format, parseISO } from 'date-fns';
+import AgendaItemsAPI from 'dashboard/api/agendaItems';
+import OrganizationContactFields from 'dashboard/views/organizations/OrganizationContactFields.vue';
 
 function toDatetimeLocal(isoString) {
   if (!isoString) return '';
@@ -32,11 +34,13 @@ function toIso(localDatetime) {
 
 export default {
   name: 'CreateEventModal',
+  components: { OrganizationContactFields },
   props: {
+    // Desde una conversación: el contacto ya está elegido.
+    prefillContact: { type: Object, default: null },
     show: { type: Boolean, default: false },
     prefillEmail: { type: String, default: '' },
     editEvent: { type: Object, default: null },
-    initialType: { type: String, default: 'event' },
     initialStart: { type: String, default: '' },
     initialEnd: { type: String, default: '' },
     initialAllDay: { type: Boolean, default: false },
@@ -62,6 +66,14 @@ export default {
       },
       attendees: [],
       attendeeInputValue: '',
+      // Plan-Agenda — de quién es. «Interno» se queda solo en Google.
+      internal: false,
+      isVisit: false,
+      address: '',
+      contact: null,
+      organization: null,
+      caseId: '',
+      cases: [],
     };
   },
   computed: {
@@ -90,11 +102,42 @@ export default {
     isEditing() {
       return !!this.editEvent;
     },
+    agendaItem() {
+      return this.editEvent?.extendedProps?.agendaItem || null;
+    },
+    // Lo que nació en Kontrolya y no está en Google no se edita por la vía de Google.
+    isGoogleEvent() {
+      return this.isEditing && !String(this.editEvent.id).startsWith('agenda-');
+    },
+    // En Google todo lo de Kontrolya lleva hora: el de todo el día se queda allá.
+    isAllDayEvent() {
+      return this.isGoogleEvent && !!this.editEvent.allDay;
+    },
+    // Tarea agendada de Kontrolya, salvo «Interno».
+    isAgenda() {
+      return !!this.agendaItem || (!this.internal && !this.isAllDayEvent);
+    },
+    needsClient() {
+      return !this.agendaItem && this.isAgenda;
+    },
+    canChooseCase() {
+      return (
+        this.isAgenda &&
+        !this.agendaItem?.case_ticket &&
+        (this.contact || this.organization)
+      );
+    },
+    showAttendees() {
+      return this.form.type === 'event' && !this.agendaItem;
+    },
     modalTitle() {
       if (this.isEditing) return this.$t('GOOGLE_CALENDAR.EDIT_EVENT.TITLE');
       return this.form.type === 'task'
         ? this.$t('GOOGLE_CALENDAR.CREATE_EVENT.TYPE.TASK')
         : this.$t('GOOGLE_CALENDAR.CREATE_EVENT.TITLE');
+    },
+    caseTicket() {
+      return this.agendaItem?.case_ticket || null;
     },
     submitLabel() {
       if (this.isEditing) return this.$t('GOOGLE_CALENDAR.EDIT_EVENT.SUBMIT');
@@ -107,6 +150,15 @@ export default {
     show(val) {
       if (val) this.initForm();
     },
+    contact() {
+      this.loadCases();
+    },
+    internal(val) {
+      if (!val) this.form.all_day = false;
+    },
+    organization() {
+      this.loadCases();
+    },
     'form.start_date'(val) {
       if (val && !this.form.end_date) this.form.end_date = val;
     },
@@ -118,9 +170,18 @@ export default {
   },
   methods: {
     initForm() {
-      this.form.type = this.initialType || 'event';
+      this.form.type = 'event';
       this.attendees = [];
       this.attendeeInputValue = '';
+      this.internal = false;
+      this.isVisit = false;
+      this.address = '';
+      this.contact = this.agendaItem?.contact || this.prefillContact || null;
+      this.organization = this.agendaItem?.organization || null;
+      this.caseId = '';
+      if (!this.calendars.length) {
+        this.$store.dispatch('googleCalendar/fetchCalendars');
+      }
 
       if (this.editEvent) {
         const isAllDay = this.editEvent.allDay;
@@ -138,22 +199,106 @@ export default {
           a => a.email
         );
       } else {
-        const timed = this.initialStart && !this.initialAllDay;
         this.form.summary = '';
         this.form.calendar_id = this.primaryCalendarId;
         this.form.all_day = false;
-        this.form.start_time = timed ? toDatetimeLocal(this.initialStart) : '';
-        this.form.end_time = timed ? toDatetimeLocal(this.initialEnd) : '';
+        this.setInitialTimes();
         this.form.start_date = '';
         this.form.end_date = '';
-        this.form.due_date =
-          this.initialAllDay && this.initialStart
-            ? toDateLocal(this.initialStart)
-            : '';
+        this.form.due_date = '';
         this.form.location = '';
         this.form.description = '';
         if (this.prefillEmail) this.attendees = [this.prefillEmail];
       }
+      this.loadCases();
+    },
+    // Clic en la franja de todo el día: siempre lleva hora, se propone de 9 a 10.
+    setInitialTimes() {
+      if (this.initialStart && this.initialAllDay) {
+        const day = toDateLocal(this.initialStart);
+        this.form.start_time = `${day}T09:00`;
+        this.form.end_time = `${day}T10:00`;
+        return;
+      }
+      this.form.start_time = toDatetimeLocal(this.initialStart);
+      this.form.end_time = toDatetimeLocal(this.initialEnd);
+    },
+    async loadCases() {
+      this.caseId = '';
+      this.cases = [];
+      if (!this.canChooseCase) return;
+      try {
+        const { data } = await AgendaItemsAPI.cases({
+          contact_id: this.contact?.id,
+          organization_id:
+            this.organization?.id || this.contact?.organization_id,
+        });
+        this.cases = data.cases;
+      } catch {
+        this.cases = [];
+      }
+    },
+    openCase() {
+      this.$router.push({
+        name: 'gestorTickets_detail',
+        params: { id: this.caseTicket.id },
+      });
+      this.onClose();
+    },
+    itemFields() {
+      return {
+        title: this.form.summary,
+        description: this.form.description,
+        starts_at: toIso(this.form.start_time),
+        ends_at: toIso(this.form.end_time),
+      };
+    },
+    clientFields() {
+      return {
+        contact_id: this.contact?.id,
+        case_ticket_id: this.caseId || undefined,
+      };
+    },
+    async saveAgendaItem() {
+      const { id } = this.agendaItem;
+      await AgendaItemsAPI.updateItem(id, this.itemFields());
+      if (this.caseId) {
+        await AgendaItemsAPI.updateItem(id, { case_ticket_id: this.caseId });
+      }
+    },
+    createAgendaItem() {
+      return this.$store.dispatch('googleCalendar/createAgendaItem', {
+        calendar_id: this.form.calendar_id,
+        attendee_emails: this.attendees,
+        is_visit: this.isVisit,
+        location: this.address.trim() || undefined,
+        ...this.itemFields(),
+        ...this.clientFields(),
+      });
+    },
+    // El evento de Google se guarda como está y la tarea nace de él.
+    linkGoogleEvent() {
+      return this.$store.dispatch('googleCalendar/createAgendaItem', {
+        google_event_id: this.editEvent.id,
+        calendar_id: this.form.calendar_id,
+        ...this.clientFields(),
+      });
+    },
+    async saveAgenda() {
+      if (this.agendaItem) {
+        await this.saveAgendaItem();
+      } else if (this.isGoogleEvent) {
+        await this.updateGoogleEvent(this.googlePayload());
+        await this.linkGoogleEvent();
+      } else {
+        await this.createAgendaItem();
+      }
+    },
+    updateGoogleEvent(payload) {
+      return this.$store.dispatch('googleCalendar/updateEvent', {
+        eventId: this.editEvent.id,
+        ...payload,
+      });
     },
     addAttendee() {
       const email = this.attendeeInputValue.trim().replace(/,$/, '');
@@ -164,8 +309,7 @@ export default {
     removeAttendee(email) {
       this.attendees = this.attendees.filter(e => e !== email);
     },
-    async submit() {
-      this.addAttendee();
+    googlePayload() {
       const isTask = this.form.type === 'task';
       let payload;
       if (isTask) {
@@ -194,16 +338,38 @@ export default {
         };
       }
       payload.calendar_id = this.form.calendar_id;
+      return payload;
+    },
+    async submit() {
+      this.addAttendee();
+      if (this.isAgenda && !this.form.summary.trim()) {
+        this.showAlert(this.$t('GOOGLE_CALENDAR.AGENDA_LINK.TITLE_REQUIRED'));
+        return;
+      }
+      if (this.needsClient && !this.contact && !this.caseId) {
+        this.showAlert(this.$t('GOOGLE_CALENDAR.AGENDA_LINK.CLIENT_REQUIRED'));
+        return;
+      }
+      const isTask = this.form.type === 'task';
 
       try {
-        if (this.isEditing) {
-          await this.$store.dispatch('googleCalendar/updateEvent', {
-            eventId: this.editEvent.id,
-            ...payload,
-          });
+        if (this.isAgenda) {
+          await this.saveAgenda();
+          this.showAlert(
+            this.$t(
+              this.isEditing
+                ? 'GOOGLE_CALENDAR.EDIT_EVENT.SUCCESS'
+                : 'GOOGLE_CALENDAR.CREATE_EVENT.SUCCESS_TASK'
+            )
+          );
+        } else if (this.isEditing) {
+          await this.updateGoogleEvent(this.googlePayload());
           this.showAlert(this.$t('GOOGLE_CALENDAR.EDIT_EVENT.SUCCESS'));
         } else {
-          await this.$store.dispatch('googleCalendar/createEvent', payload);
+          await this.$store.dispatch(
+            'googleCalendar/createEvent',
+            this.googlePayload()
+          );
           this.showAlert(
             isTask
               ? this.$t('GOOGLE_CALENDAR.CREATE_EVENT.SUCCESS_TASK')
@@ -212,11 +378,14 @@ export default {
         }
         this.$emit('created');
         this.onClose();
-      } catch {
+      } catch (error) {
+        // El motivo del servidor, si lo dio (p. ej. «Ese evento ya tiene una tarea»).
+        const reason = error?.response?.data?.error;
         this.showAlert(
-          this.isEditing
-            ? this.$t('GOOGLE_CALENDAR.EDIT_EVENT.ERROR')
-            : this.$t('GOOGLE_CALENDAR.CREATE_EVENT.ERROR')
+          [].concat(reason || []).join(', ') ||
+            (this.isEditing
+              ? this.$t('GOOGLE_CALENDAR.EDIT_EVENT.ERROR')
+              : this.$t('GOOGLE_CALENDAR.CREATE_EVENT.ERROR'))
         );
       }
     },
@@ -232,40 +401,75 @@ export default {
     <woot-modal-header :header-title="modalTitle" />
 
     <div class="px-6 pb-6 space-y-4">
-      <!-- Type selector -->
-      <div
-        v-if="!isEditing"
-        class="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden"
-      >
-        <button
-          type="button"
-          class="flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium transition-colors"
-          :class="
-            form.type === 'event'
-              ? 'bg-woot-500 text-white'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-          "
-          @click="form.type = 'event'"
-        >
-          <fluent-icon icon="calendar" size="14" />
-          {{ $t('GOOGLE_CALENDAR.CREATE_EVENT.TYPE.EVENT') }}
-        </button>
-        <button
-          type="button"
-          class="flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium transition-colors border-l border-slate-200 dark:border-slate-700"
-          :class="
-            form.type === 'task'
-              ? 'bg-woot-500 text-white'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-          "
-          @click="form.type = 'task'"
-        >
-          <fluent-icon icon="checkmark-circle" size="14" />
-          {{ $t('GOOGLE_CALENDAR.CREATE_EVENT.TYPE.TASK') }}
-        </button>
-      </div>
-
       <form class="space-y-4" @submit.prevent="submit">
+        <!-- Plan-Agenda — de quién es, y en qué caso queda -->
+        <div
+          v-if="agendaItem"
+          class="p-3 space-y-1 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+        >
+          <div v-if="agendaItem.contact">
+            {{ $t('GOOGLE_CALENDAR.AGENDA_LINK.CONTACT') }}:
+            {{ agendaItem.contact.name }}
+          </div>
+          <div v-if="agendaItem.organization">
+            {{ $t('GOOGLE_CALENDAR.AGENDA_LINK.ORGANIZATION') }}:
+            {{ agendaItem.organization.name }}
+          </div>
+          <button
+            v-if="caseTicket"
+            type="button"
+            class="p-0 text-woot-600 hover:underline"
+            @click="openCase"
+          >
+            {{ $t('GOOGLE_CALENDAR.AGENDA_LINK.OPEN_CASE') }}:
+            {{ caseTicket.folio }} · {{ caseTicket.title }}
+          </button>
+        </div>
+        <template v-else-if="!isAllDayEvent">
+          <p
+            v-if="isGoogleEvent"
+            class="m-0 text-xs text-amber-700 dark:text-amber-300"
+          >
+            {{ $t('GOOGLE_CALENDAR.AGENDA_LINK.NO_TASK') }}
+          </p>
+          <label
+            v-if="calendars.length"
+            class="flex items-center gap-2 cursor-pointer w-fit"
+          >
+            <input
+              v-model="internal"
+              type="checkbox"
+              class="w-4 h-4 rounded accent-woot-500 cursor-pointer"
+            />
+            <span class="text-sm text-slate-700 dark:text-slate-200">
+              {{ $t('GOOGLE_CALENDAR.AGENDA_LINK.INTERNAL') }}
+            </span>
+          </label>
+          <OrganizationContactFields
+            v-if="!internal"
+            v-model="contact"
+            :organization.sync="organization"
+          />
+        </template>
+        <div v-if="canChooseCase" class="space-y-1">
+          <label
+            class="block text-sm font-medium text-slate-700 dark:text-slate-200"
+          >
+            {{ $t('GOOGLE_CALENDAR.AGENDA_LINK.CASE') }}
+          </label>
+          <select
+            v-model="caseId"
+            class="w-full px-3 py-2 text-sm border rounded-md border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+          >
+            <option value="">
+              {{ $t('GOOGLE_CALENDAR.AGENDA_LINK.NO_CASE') }}
+            </option>
+            <option v-for="item in cases" :key="item.id" :value="item.id">
+              {{ item.folio }} · {{ item.title }}
+            </option>
+          </select>
+        </div>
+
         <!-- Calendar selector (only if the user has more than one writable calendar) -->
         <div v-if="writableCalendars.length > 1" class="space-y-1">
           <label
@@ -306,8 +510,11 @@ export default {
 
         <!-- Event: start + end -->
         <template v-if="form.type === 'event'">
-          <!-- All day toggle -->
-          <label class="flex items-center gap-2 cursor-pointer w-fit">
+          <!-- All day toggle: sin hora, lo de Kontrolya es una tarea -->
+          <label
+            v-if="!isAgenda"
+            class="flex items-center gap-2 cursor-pointer w-fit"
+          >
             <input
               v-model="form.all_day"
               type="checkbox"
@@ -379,8 +586,27 @@ export default {
           "
         />
 
+        <template v-if="isAgenda && !isEditing">
+          <label class="flex items-center gap-2 cursor-pointer w-fit">
+            <input
+              v-model="isVisit"
+              type="checkbox"
+              class="w-4 h-4 rounded accent-woot-500 cursor-pointer"
+            />
+            <span class="text-sm text-slate-700 dark:text-slate-200">
+              {{ $t('GOOGLE_CALENDAR.AGENDA_LINK.IS_VISIT') }}
+            </span>
+          </label>
+          <woot-input
+            v-if="isVisit"
+            v-model="address"
+            :label="$t('GOOGLE_CALENDAR.AGENDA_LINK.ADDRESS')"
+            :placeholder="$t('GOOGLE_CALENDAR.AGENDA_LINK.ADDRESS_PLACEHOLDER')"
+          />
+        </template>
+
         <!-- Attendees (event only) -->
-        <div v-if="form.type === 'event'" class="space-y-1">
+        <div v-if="showAttendees" class="space-y-1">
           <label
             class="block text-sm font-medium text-slate-700 dark:text-slate-200"
           >

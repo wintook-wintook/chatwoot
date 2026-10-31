@@ -14,6 +14,11 @@ import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
 import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
 import MessageFormatter from 'shared/helpers/MessageFormatter';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
+import QuickTasksAPI from 'dashboard/api/quickTasks';
+import QuickTaskModal from './tasks/QuickTaskModal.vue';
+import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal.vue';
+import taskReportFlow from 'dashboard/mixins/taskReportFlow';
+import TaskReportsDialog from 'dashboard/views/gestorTickets/tasks/TaskReportsDialog.vue';
 import caseAiWriter from 'dashboard/mixins/caseAiWriter';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import MyDay from './tasks/MyDay.vue';
@@ -100,8 +105,11 @@ export default {
     WootDropdownMenu,
     WootDropdownItem,
     MyDay,
+    QuickTaskModal,
+    TaskReportModal,
+    TaskReportsDialog,
   },
-  mixins: [caseAiWriter],
+  mixins: [caseAiWriter, taskReportFlow],
   data() {
     return {
       // La primera vez abre en Mi día; después, en la última pestaña usada.
@@ -125,6 +133,8 @@ export default {
       },
       // Modal de edición / lectura (no hay alta: una tarea nace dentro de un ticket).
       showModal: false,
+      showQuickTask: false,
+      reportsFilter: null,
       editingTask: null,
       viewing: false,
       isSaving: false,
@@ -305,7 +315,18 @@ export default {
           renderBodyCell: ({ row }) => {
             const t = row.case_ticket;
             if (!t) {
-              return <span class="text-slate-300 dark:text-slate-600">—</span>;
+              // Plan-Agenda — tarea agendada sin caso: la fila dice de quién es.
+              return row.contact ? (
+                <button
+                  type="button"
+                  class="text-sm text-left truncate hover:underline text-slate-700 dark:text-slate-200"
+                  onClick={() => this.openContact(row)}
+                >
+                  {row.contact.name}
+                </button>
+              ) : (
+                <span class="text-slate-300 dark:text-slate-600">—</span>
+              );
             }
             return (
               <div class="min-w-0">
@@ -574,7 +595,11 @@ export default {
       this.quickFilter = 'my_day';
     }
   },
+  beforeDestroy() {
+    this.$emitter.off('agendaChanged', this.fetch);
+  },
   mounted() {
+    this.$emitter.on('agendaChanged', this.fetch);
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchTypes');
     this.$store.dispatch('caseTickets/fetchAiConfig'); // F4 — ¿IA «Plan de mi día»?
@@ -728,16 +753,40 @@ export default {
       return st === 'closed' || st === 'cancelled';
     },
     openTicket(task) {
-      if (!task.case_ticket) return;
+      if (!task.case_ticket) {
+        this.openContact(task);
+        return;
+      }
       this.$router.push({
         name: 'gestorTickets_detail',
         params: { id: task.case_ticket.id },
       });
     },
+    // Plan-Agenda — la tarea sin caso se guarda por la captura rápida.
+    saveTask(task, data) {
+      return task.case_ticket
+        ? CaseTasksAPI.updateTask(task.case_ticket.id, task.id, data)
+        : QuickTasksAPI.update(task.id, data);
+    },
     // @tickets_cases — clic en una fila de reunión ("tarea agendada"): abre la
     // ficha del ticket directo en la pestaña Reuniones.
+    menuViewReports() {
+      const row = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (row) this.reportsFilter = { case_task_id: row.id };
+    },
+    openContact(row) {
+      if (!row.contact) return;
+      this.$router.push({
+        name: 'contact_profile_dashboard',
+        params: { contactId: row.contact.id },
+      });
+    },
     openMeetingTicket(meeting) {
-      if (!meeting.case_ticket) return;
+      if (!meeting.case_ticket) {
+        this.openContact(meeting);
+        return;
+      }
       this.$router.push({
         name: 'gestorTickets_detail',
         params: { id: meeting.case_ticket.id },
@@ -940,13 +989,21 @@ export default {
     },
     // Completa la tarea desde la fila, sin abrir el modal. La firma (fecha +
     // quién) la deriva el backend del cambio de estado.
-    async complete(task) {
-      if (this.completingId || !task.case_ticket) return;
+    complete(task) {
+      if (this.completingId) return;
+      // La lista de verificación de una orden cierra con su reporte de servicio.
+      if (task.report_required === false) {
+        this.finishComplete(task);
+        return;
+      }
+      this.askReport({ type: 'task', id: task.id, title: task.title }, () =>
+        this.finishComplete(task)
+      );
+    },
+    async finishComplete(task) {
       this.completingId = task.id;
       try {
-        await CaseTasksAPI.updateTask(task.case_ticket.id, task.id, {
-          status: 'done',
-        });
+        await this.saveTask(task, { status: 'done' });
         this.$emitter.emit('caseToastMessage', {
           message: this.$t('CASE_TICKETS.TASKS.TOAST_COMPLETED', {
             task: task.title,
@@ -962,9 +1019,18 @@ export default {
         this.completingId = null;
       }
     },
-    async submitForm() {
+    async submitForm(reported = false) {
       const title = this.form.title.trim();
       if (!title || this.isSaving || !this.editingTask) return;
+      // Concluirla desde el formulario también pide el reporte.
+      const { status, id, report_required: required } = this.editingTask;
+      const concludes = this.form.status === 'done' && status !== 'done';
+      if (concludes && required !== false && !reported) {
+        this.askReport({ type: 'task', id, title }, () =>
+          this.submitForm(true)
+        );
+        return;
+      }
       const payload = {
         title,
         description: this.form.description.trim(),
@@ -981,11 +1047,7 @@ export default {
       }
       this.isSaving = true;
       try {
-        await CaseTasksAPI.updateTask(
-          this.editingTask.case_ticket.id,
-          this.editingTask.id,
-          payload
-        );
+        await this.saveTask(this.editingTask, payload);
         this.showModal = false;
         this.fetch();
       } catch (e) {
@@ -1007,10 +1069,14 @@ export default {
     },
     async confirmRemove() {
       const task = this.pendingDelete;
-      if (!task || !task.case_ticket) return;
+      if (!task) return;
       this.showDeleteConfirm = false;
       try {
-        await CaseTasksAPI.deleteTask(task.case_ticket.id, task.id);
+        if (task.case_ticket) {
+          await CaseTasksAPI.deleteTask(task.case_ticket.id, task.id);
+        } else {
+          await QuickTasksAPI.delete(task.id);
+        }
         this.$emitter.emit('caseToastMessage', {
           message: this.$t('CASE_TICKETS.TASKS.TOAST_DELETED', {
             task: task.title,
@@ -1081,11 +1147,8 @@ export default {
     // «Posponer a mañana»: la programa para mañana (sale sola del orden de hoy).
     // El vencimiento NO se toca: es el compromiso, no la planeación.
     async postpone(task) {
-      if (!task.case_ticket) return;
       try {
-        await CaseTasksAPI.updateTask(task.case_ticket.id, task.id, {
-          planned_on: addDays(localDay(), 1),
-        });
+        await this.saveTask(task, { planned_on: addDays(localDay(), 1) });
         this.$emitter.emit('caseToastMessage', {
           message: this.$t('CASE_TICKETS.TASKS.MY_DAY.POSTPONED', {
             task: task.title,
@@ -1119,9 +1182,24 @@ export default {
     <div
       class="flex flex-col flex-shrink-0 gap-3 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
-      <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
-        {{ $t('CASE_TICKETS.TASKS.INBOX.TITLE') }}
-      </h1>
+      <div class="flex items-center justify-between gap-2">
+        <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
+          {{ $t('CASE_TICKETS.TASKS.INBOX.TITLE') }}
+        </h1>
+        <woot-button size="small" icon="add" @click="showQuickTask = true">
+          {{ $t('QUICK_ACTIONS.TASK.TITLE') }}
+        </woot-button>
+      </div>
+      <QuickTaskModal :show="showQuickTask" @close="showQuickTask = false" />
+      <TaskReportModal
+        :item="reportItem"
+        @close="cancelReport"
+        @reported="onReported"
+      />
+      <TaskReportsDialog
+        :filters="reportsFilter"
+        @close="reportsFilter = null"
+      />
 
       <woot-tabs :index="activeQuickTabIndex" @change="onQuickTabChange">
         <woot-tabs-item
@@ -1360,7 +1438,7 @@ export default {
 
         <form
           class="flex flex-col self-stretch w-full gap-3 pb-8"
-          @submit.prevent="submitForm"
+          @submit.prevent="submitForm()"
         >
           <label class="block mb-3">
             <span class="text-sm text-slate-700 dark:text-slate-200">{{
@@ -1626,6 +1704,17 @@ export default {
                 count: rowMenu.row.notes_count || 0,
               })
             }}
+          </woot-button>
+        </WootDropdownItem>
+        <WootDropdownItem v-if="rowMenu.row.status === 'done'">
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="clipboard"
+            @click="menuViewReports"
+          >
+            {{ $t('TASK_REPORT.VIEW') }}
           </woot-button>
         </WootDropdownItem>
         <WootDropdownItem>

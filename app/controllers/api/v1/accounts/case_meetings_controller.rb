@@ -20,6 +20,7 @@
 
 class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseController
   include CaseMeetingSerializer
+  include TaskReportGuard
 
   FROZEN_MSG = 'Ticket cerrado: no se pueden modificar las tareas agendadas. Reábrelo si necesitas cambiarlas.'
   NO_MIRROR_MSG = 'Esta tarea agendada vive solo en el sistema: el organizador no tiene Google Calendar conectado.'
@@ -104,6 +105,7 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
   def hold
     status = params[:status].presence || 'held'
     return render json: { error: 'Estado inválido' }, status: :unprocessable_entity unless %w[held no_show].include?(status)
+    return if missing_task_report?(@meeting)
 
     if @meeting.update(status: status)
       log_event(:meeting_held, @meeting)
@@ -201,7 +203,7 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
   def meeting_params
     permitted = params.require(:case_meeting).permit(
       :title, :description, :starts_at, :ends_at, :time_zone, :location,
-      :notify_client, :case_task_id, :case_meeting_series_id, :organizer_id,
+      :notify_client, :case_task_id, :case_meeting_series_id, :organizer_id, :is_visit,
       attendee_emails: []
     )
     # El organizador debe ser un usuario de la cuenta (si no, se ignora).

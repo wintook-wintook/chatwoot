@@ -180,6 +180,7 @@ en:
       before: 'Before'
       after: 'After'
   field:
+    on_my_way_visit: "Hi %{name}, this is %{technician}. I'm on my way, arriving at about %{eta}."
     on_my_way: "Hi %{name}, this is %{technician}. I'm on my way, arriving around %{eta}. Follow your service here: %{url}"
     on_my_way_note: 'On my way (arrival around %{eta})'
     to_technician: "Hi %{name}, you have visit %{folio} · %{title}. Open it here: %{url}"
@@ -334,6 +335,15 @@ en:
     not_found: 'Product or service not found'
     import:
       no_file: 'Attach the catalog CSV file.'
+  task_reports:
+    visit_done: 'Visit finished'
+    received_by: 'Received by: %{name}'
+    required: 'To conclude it, write what was done'
+    note_title: 'Closing report: %{title}'
+  agenda_items:
+    already_linked: 'That event already has a scheduled task'
+    all_day: 'An all-day event has no time: it stays in Google only'
+    untitled: 'Untitled'
   access_roles:
     denied: 'Your role does not have access to this option.'
     reassign_denied: 'Your role cannot assign to someone else.'

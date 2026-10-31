@@ -10,6 +10,8 @@
 # ================================================================================
 
 class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
+  include TaskReportGuard
+
   FROZEN_MSG = 'Ticket cerrado: no se pueden modificar las tareas. Reábrelo si necesitas cambiarlas.'
   DOC_TASK_MSG = 'Esta tarea se completa sola cuando documentas el paso a la siguiente etapa'
 
@@ -45,6 +47,7 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
 
     prev_assignee_id = @task.assignee_id
     was_done = @task.done?
+    return if !was_done && task_params[:status].to_s == 'done' && missing_task_report?(@task)
 
     # @tickets_cases — solicitante: solo se puede fijar si aún NO tiene (tareas
     # antiguas). Una vez puesto es firma inmutable, no se reasigna.
@@ -190,7 +193,7 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
     { milestone: task.milestone, estimated_minutes: task.estimated_minutes, planned_on: task.planned_on,
       # Plan-Plantilla-Tareas-Etapa — nació de la plantilla de una etapa.
       required: task.required, stage: task.case_type_column&.label, team: task.team && { id: task.team.id, name: task.team.name },
-      documentation: task.documentation_for_column_id.present? }
+      documentation: task.documentation_for_column_id.present?, report_required: task.report_required? }
   end
 
   # id de tarea → nº de reuniones vivas que caen después del vencimiento de esa

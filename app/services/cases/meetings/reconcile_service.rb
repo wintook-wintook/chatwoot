@@ -14,8 +14,17 @@ class Cases::Meetings::ReconcileService
   MAX_MEETINGS = 25
   THROTTLE = 60.seconds
 
-  def initialize(ticket)
+  # Plan-Agenda A2 — las de la agenda no tienen caso (ni bitácora): se reconcilian
+  # los eventos que Google avisó que cambiaron.
+  def self.without_case(account_id, google_event_ids)
+    meetings = CaseMeeting.without_case.where(account_id: account_id, google_event_id: google_event_ids)
+    meetings.update_all(reconciled_at: nil) # rubocop:disable Rails/SkipsModelValidations
+    new(nil, meetings: meetings).perform
+  end
+
+  def initialize(ticket, meetings: nil)
     @ticket = ticket
+    @meetings = meetings || ticket.case_meetings
   end
 
   def perform
@@ -24,7 +33,7 @@ class Cases::Meetings::ReconcileService
 
     reconcile_all(pending)
   rescue StandardError => e
-    Rails.logger.error("[GestorTickets] reconciliación del ticket #{@ticket.id}: #{e.message}")
+    Rails.logger.error("[GestorTickets] reconciliación del ticket #{@ticket&.id}: #{e.message}")
     0
   end
 
@@ -44,14 +53,13 @@ class Cases::Meetings::ReconcileService
   # Futuras, vivas, con evento en Google y organizador conectado; y no
   # releídas en el último minuto.
   def candidates
-    @ticket.case_meetings
-           .active
-           .where.not(google_event_id: [nil, ''])
-           .where(starts_at: Time.current..)
-           .where('reconciled_at IS NULL OR reconciled_at < ?', THROTTLE.ago)
-           .order(:starts_at)
-           .limit(MAX_MEETINGS)
-           .select { |m| service_for(m).present? }
+    @meetings.active
+             .where.not(google_event_id: [nil, ''])
+             .where(starts_at: Time.current..)
+             .where('reconciled_at IS NULL OR reconciled_at < ?', THROTTLE.ago)
+             .order(:starts_at)
+             .limit(MAX_MEETINGS)
+             .select { |m| service_for(m).present? }
   end
 
   # ── Reunión suelta: se consulta por su propio id ──────────────────────
@@ -187,6 +195,8 @@ class Cases::Meetings::ReconcileService
 
   # ── Bitácora ──────────────────────────────────────────────────────────
   def log_update(meeting, from, to)
+    return if @ticket.nil?
+
     @ticket.case_events.create!(
       account_id: @ticket.account_id,
       event_type: :meeting_updated,
@@ -205,6 +215,8 @@ class Cases::Meetings::ReconcileService
   end
 
   def log_cancel(meeting)
+    return if @ticket.nil?
+
     @ticket.case_events.create!(
       account_id: @ticket.account_id,
       event_type: :meeting_cancelled,

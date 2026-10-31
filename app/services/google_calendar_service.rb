@@ -74,6 +74,12 @@ class GoogleCalendarService
           query: { sendUpdates: 'none' })
   end
 
+  # Plan-Agenda A2 — solo la descripción: nunca le escribe a los invitados.
+  def set_description(event_id, description:, calendar_id: 'primary')
+    patch("/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(event_id)}", { description: description },
+          query: { sendUpdates: 'none' })
+  end
+
   # @tickets_cases F3 — un evento suelto por id. Devuelve :already_gone si Google
   # responde 404/410, para no confundir "borrado" con "falló la API".
   def get_event(event_id, calendar_id: 'primary')

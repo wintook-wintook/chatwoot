@@ -1,4 +1,78 @@
 {
+  "VISIT_ARRIVALS": {
+    "EXPORT": "Exportar CSV",
+    "EMPTY": "Sin llegadas en ese periodo.",
+    "ERROR": "No se pudieron cargar las llegadas.",
+    "WHEN": "Cuándo",
+    "WHO": "Quién",
+    "CLIENT": "Cliente",
+    "VISIT": "Visita",
+    "LOCATION": "Ubicación",
+    "NO_LOCATION": "Sin ubicación"
+  },
+  "TASK_REPORT": {
+    "TITLE": "Reporte de cierre",
+    "CONTENT": "Qué se hizo",
+    "CONTENT_PLACEHOLDER": "Escribe qué hiciste y cómo quedó",
+    "OUTCOME": "Resultado",
+    "NO_OUTCOME": "Sin resultado",
+    "EVIDENCE": "Evidencia (opcional)",
+    "TOO_MANY": "Máximo {max} archivos.",
+    "REQUIRED": "Escribe qué se hizo.",
+    "ERROR": "No se pudo guardar el reporte. Inténtalo de nuevo.",
+    "CANCEL": "Cancelar",
+    "SUBMIT": "Concluir",
+    "VIEW": "Ver reporte",
+    "EMPTY": "Sin reportes.",
+    "MORE": "Ver más",
+    "HISTORY": "Tareas concluidas",
+    "PAGE_TITLE": "Reportes",
+    "ALL_PEOPLE": "Todas las personas",
+    "FROM": "Desde",
+    "TO": "Hasta",
+    "TABS": {
+      "REPORTS": "Reportes",
+      "ARRIVALS": "Llegadas"
+    },
+    "SERVICE_REPORT": "Ver reporte de servicio",
+    "ARRIVAL": "Llegó",
+    "CATALOG": {
+      "TITLE": "Resultados de tareas",
+      "ACTIVE": "Activo",
+      "DELETE": "Eliminar",
+      "ADD": "Agregar",
+      "PLACEHOLDER": "Nuevo resultado",
+      "ERROR": "No se pudo guardar."
+    }
+  },
+  "QUICK_ACTIONS": {
+    "TITLE": "Accesos rápidos",
+    "NEW_TASK": "Tarea",
+    "NEW_CONTACT": "Nuevo contacto",
+    "TASK": {
+      "TITLE": "Nueva tarea",
+      "NAME": "Qué hay que hacer",
+      "NAME_PLACEHOLDER": "Escribe la tarea",
+      "VISIT_TIME_REQUIRED": "Una visita lleva fecha y hora.",
+      "IS_VISIT": "Es una visita al cliente",
+      "ADDRESS": "Dirección de la visita",
+      "ADDRESS_PLACEHOLDER": "Si la dejas vacía, se usa la del caso o la organización",
+      "ASSIGNEE": "Responsable",
+      "PLANNED": "Fecha programada",
+      "TIME": "Hora (opcional)",
+      "DUE": "Fecha de vencimiento",
+      "CASE": "Caso (opcional)",
+      "NO_CASE": "Sin caso",
+      "SCHEDULED_HINT": "Con hora queda como tarea agendada y va a Google, si está conectado.",
+      "ONLY_MY_DAY": "Sin contacto ni organización se ve solo en Mi día.",
+      "CANCEL": "Cancelar",
+      "SUBMIT": "Crear tarea",
+      "SUCCESS": "Tarea creada",
+      "ERROR": "No se pudo crear. Inténtalo de nuevo.",
+      "TITLE_REQUIRED": "Escribe qué hay que hacer.",
+      "DATE_REQUIRED": "Con hora, elige la fecha programada."
+    }
+  },
   "CASE_TICKETS": {
     "SECTION_TITLE": "Caso",
     "SIDEBAR": {
@@ -2783,6 +2857,9 @@
     "FROM_PLAN": "Del mantenimiento «{title}»"
   },
   "FIELD": {
+    "ERROR": "No se pudo guardar. Inténtalo de nuevo.",
+    "ETA_OPTION": "{n} min",
+    "NO_LOCATION": "Sin ubicación: revisa el permiso del navegador",
     "TITLE": "Mi ruta",
     "TODAY": "Hoy",
     "BACK_TO_APP": "Ir a Wintook",
@@ -2891,6 +2968,9 @@
     }
   },
   "DISPATCH": {
+    "AREA_ALL": "Todos",
+    "AREA_SERVICE": "Soporte",
+    "AREA_SALES": "Ventas",
     "TITLE": "Despacho",
     "HELP": "Arrastra una orden a la columna del técnico. Las que no tienen visita te piden la hora.",
     "UNSCHEDULED": "Por programar",
