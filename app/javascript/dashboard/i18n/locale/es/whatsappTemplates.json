@@ -161,7 +161,8 @@
         "TABS": {
             "CONTENT": "Contenido",
             "BUTTONS": "Botones",
-            "VARIABLES": "Variables"
+            "VARIABLES": "Variables",
+            "PREVIEW": "Vista previa"
         },
         "FORMAT": {
             "BOLD": "Negrita",
@@ -188,7 +189,24 @@
             "APPOINTMENT": "Confirmación de cita",
             "PROMO": "Promoción con imagen"
         },
-        "NAME_TAKEN": "Nombre: ya hay una plantilla con ese nombre e idioma en esta bandeja"
+        "NAME_TAKEN": "Nombre: ya hay una plantilla con ese nombre e idioma en esta bandeja",
+        "VARIABLES": {
+            "INSERT": "Datos del sistema",
+            "MANUAL": "Lo escribe el agente al mandarla",
+            "RECOGNIZED": "Se llena con: %{label}",
+            "FIELDS": {
+                "NOMBRE": "Nombre del contacto",
+                "PRIMER_NOMBRE": "Primer nombre",
+                "APELLIDO": "Apellido",
+                "CORREO": "Correo",
+                "TELEFONO": "Teléfono",
+                "EMPRESA": "Empresa",
+                "AGENTE": "Nombre del agente",
+                "CONVERSACION": "Número de conversación",
+                "BANDEJA": "Bandeja",
+                "FECHA_HOY": "Fecha de hoy"
+            }
+        }
     },
     "WHATSAPP_TEMPLATE_DETAIL": {
         "STATUS_TITLE": "Estado en Meta",

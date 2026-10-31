@@ -3,8 +3,8 @@
   Plan: docs/plantillas_whatsapp_mejoras_plan.md §7.12–7.13. Reemplaza al modal de Index.vue
   con el mismo encabezado nativo que la lista (SettingsLayout + BaseSettingsHeader, con
   «‹ Plantillas de WhatsApp» junto a las acciones, a la derecha) y las MISMAS pestañas del modal
-  (Contenido · Botones · Variables), apiladas en la misma celda para que el alto no cambie
-  y no haya que bajar. La vista previa queda siempre a la derecha.
+  (Contenido · Botones · Variables · Vista previa). A pantalla grande solo baja el contenido
+  de la pestaña; «Lista para Meta» queda siempre a la derecha.
 
   «Guardar borrador» guarda sin llamar a Meta (D10b); un borrador se manda a revisión
   después, desde aquí. La lógica pura vive en templateEditor.js (con spec); la validación,
@@ -15,10 +15,18 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import ResizableTextArea from 'shared/components/ResizableTextArea.vue';
 import WhatsappTemplatesAPI from 'dashboard/api/whatsapp/templates';
-import { validateTemplate } from 'dashboard/helper/whatsappTemplateValidator';
+import {
+  validateTemplate,
+  variableKeys,
+} from 'dashboard/helper/whatsappTemplateValidator';
 import SettingsLayout from '../SettingsLayout.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import { PRESET_KEYS, applyPreset } from './templatePresets';
+import {
+  RESERVED_FIELDS,
+  attributeVariables,
+  recognizeVariable,
+} from './templateVariableSources';
 import TemplatePreview from './TemplatePreview.vue';
 import TemplateButtonsEditor from './TemplateButtonsEditor.vue';
 import {
@@ -86,6 +94,7 @@ export default {
       templates: 'whatsappTemplates/getTemplates',
       uiFlags: 'whatsappTemplates/getUIFlags',
       inboxes: 'inboxes/getInboxes',
+      attributes: 'attributes/getAttributes',
     }),
     templateId() {
       return Number(this.$route.params.templateId) || null;
@@ -135,10 +144,26 @@ export default {
       return ACCEPTED_TYPES[this.form.header_type] || '';
     },
     bodySampleKeys() {
-      return this.form.sample_values.body.map((_, i) => `{{${i + 1}}}`);
+      return variableKeys(this.form.body_text);
     },
     headerSampleKeys() {
-      return this.form.sample_values.header.map((_, i) => `{{${i + 1}}}`);
+      return this.form.header_type === 'text'
+        ? variableKeys(this.form.header_content)
+        : [];
+    },
+    // Lo que se puede insertar con «Datos del sistema».
+    fieldOptions() {
+      const campos = RESERVED_FIELDS.map(key => ({
+        key,
+        label: this.$t(
+          `WHATSAPP_TEMPLATE_EDITOR.VARIABLES.FIELDS.${key.toUpperCase()}`
+        ),
+      }));
+      const atributos = attributeVariables(this.attributes).map(a => ({
+        key: a.attribute_key,
+        label: a.attribute_display_name || a.attribute_key,
+      }));
+      return [...campos, ...atributos];
     },
     validationErrors() {
       const errors = validateTemplate(this.form);
@@ -205,11 +230,12 @@ export default {
             this.form.sample_values.body.length +
             this.form.sample_values.header.length,
         },
+        { key: 'preview', count: 0 },
       ].map(tab => {
         const nombre = this.$t(
           `WHATSAPP_TEMPLATE_EDITOR.TABS.${tab.key.toUpperCase()}`
         );
-        const errores = this.tabErrors[tab.key];
+        const errores = this.tabErrors[tab.key] || [];
         // La pestaña con algo pendiente lleva un punto (woot-tabs-item solo tiene nombre).
         return {
           ...tab,
@@ -218,6 +244,10 @@ export default {
           name: errores.length ? `${nombre} •` : nombre,
         };
       });
+    },
+    // «Lista para Meta»: la vista previa no tiene nada que revisar.
+    readyTabs() {
+      return this.formTabs.filter(tab => tab.key !== 'preview');
     },
     tabErrors() {
       return errorsByTab(this.validationErrors);
@@ -235,7 +265,7 @@ export default {
       }));
     },
     headerHasVariable() {
-      return /\{\{\s*\d+\s*\}\}/.test(this.form.header_content);
+      return variableKeys(this.form.header_content).length > 0;
     },
     hasVariables() {
       return this.headerSampleKeys.length + this.bodySampleKeys.length > 0;
@@ -270,6 +300,7 @@ export default {
   },
   mounted() {
     this.$store.dispatch('inboxes/get');
+    this.$store.dispatch('attributes/get');
     this.load();
     window.addEventListener('beforeunload', this.onBeforeUnload);
   },
@@ -372,7 +403,7 @@ export default {
         area.setSelectionRange(inicio, fin);
       });
     },
-    addBodyVariable() {
+    insertInBody(snippet) {
       const area = this.bodyTextarea();
       const largo = this.form.body_text.length;
       const inicio = area ? area.selectionStart : largo;
@@ -381,9 +412,38 @@ export default {
         this.form.body_text,
         inicio,
         fin,
-        nextVariable(this.form.body_text)
+        snippet
       );
       this.setBody(text, cursor);
+    },
+    addBodyVariable() {
+      this.insertInBody(nextVariable(this.form.body_text));
+    },
+    insertField(event) {
+      const clave = event.target.value;
+      event.target.value = '';
+      if (clave) this.insertInBody(`{{${clave}}}`);
+    },
+    // Qué dato es cada variable con nombre; las numeradas no dicen nada.
+    variableHint(clave) {
+      const dato = recognizeVariable(clave, this.attributes);
+      if (!dato) return '';
+      if (dato.kind === 'manual') {
+        return this.$t('WHATSAPP_TEMPLATE_EDITOR.VARIABLES.MANUAL');
+      }
+      return this.$t('WHATSAPP_TEMPLATE_EDITOR.VARIABLES.RECOGNIZED', {
+        label:
+          dato.kind === 'field'
+            ? this.$t(
+                `WHATSAPP_TEMPLATE_EDITOR.VARIABLES.FIELDS.${dato.key.toUpperCase()}`
+              )
+            : dato.label,
+      });
+    },
+    sampleLabel(clave, llave) {
+      return this.$t(`WHATSAPP_TEMPLATE_EDITOR.FIELDS.${llave}`, {
+        variable: `{{${clave}}}`,
+      });
     },
     applyFormat(key) {
       const area = this.bodyTextarea();
@@ -559,9 +619,9 @@ export default {
 
     <template #body>
       <div
-        class="grid w-full grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] items-start"
+        class="grid w-full grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_16rem] lg:h-[calc(100vh-13rem)] lg:min-h-[20rem]"
       >
-        <div class="min-w-0">
+        <div class="flex flex-col min-w-0 lg:min-h-0">
           <div
             v-if="showPresets"
             class="flex flex-wrap items-center gap-2 mb-3 text-sm"
@@ -590,14 +650,10 @@ export default {
             />
           </woot-tabs>
 
-          <!-- Las 3 pestañas se apilan en la MISMA celda: el alto es el de la más alta
-               (Contenido) y no cambia al cambiar de pestaña. -->
-          <div class="grid">
+          <!-- A pantalla grande el encabezado y las pestañas quedan fijos: solo baja esto. -->
+          <div class="flex-1 min-h-0 lg:overflow-y-auto lg:pr-2">
             <!-- Contenido -->
-            <div
-              class="col-start-1 row-start-1 pt-4"
-              :class="{ invisible: activeTab !== 'content' }"
-            >
+            <div v-show="activeTab === 'content'" class="pt-4">
               <!-- Renglón 1: Bandeja · Nombre -->
               <div class="grid grid-cols-2 gap-4">
                 <label class="block">
@@ -777,6 +833,24 @@ export default {
                   >
                     {{ boton.label }}
                   </woot-button>
+                  <select
+                    class="field-select"
+                    :aria-label="
+                      $t('WHATSAPP_TEMPLATE_EDITOR.VARIABLES.INSERT')
+                    "
+                    @change="insertField"
+                  >
+                    <option value="">
+                      {{ $t('WHATSAPP_TEMPLATE_EDITOR.VARIABLES.INSERT') }}
+                    </option>
+                    <option
+                      v-for="campo in fieldOptions"
+                      :key="campo.key"
+                      :value="campo.key"
+                    >
+                      {{ campo.label }}
+                    </option>
+                  </select>
                   <woot-button
                     variant="smooth"
                     size="tiny"
@@ -832,18 +906,12 @@ export default {
             </div>
 
             <!-- Botones -->
-            <div
-              class="col-start-1 row-start-1 pt-4"
-              :class="{ invisible: activeTab !== 'buttons' }"
-            >
+            <div v-show="activeTab === 'buttons'" class="pt-4">
               <TemplateButtonsEditor v-model="form.buttons" />
             </div>
 
             <!-- Variables: los ejemplos que revisa Meta y salen en la vista previa -->
-            <div
-              class="col-start-1 row-start-1 pt-4"
-              :class="{ invisible: activeTab !== 'variables' }"
-            >
+            <div v-show="activeTab === 'variables'" class="pt-4">
               <p class="text-xs text-slate-400">
                 {{ $t('WHATSAPP_TEMPLATE_EDITOR.FIELDS.EXAMPLES') }}
               </p>
@@ -865,11 +933,8 @@ export default {
                   v-for="(clave, i) in headerSampleKeys"
                   :key="`h-${clave}`"
                   v-model="form.sample_values.header[i]"
-                  :label="
-                    $t('WHATSAPP_TEMPLATE_EDITOR.FIELDS.EXAMPLE_OF_HEADER', {
-                      variable: clave,
-                    })
-                  "
+                  :label="sampleLabel(clave, 'EXAMPLE_OF_HEADER')"
+                  :help-text="variableHint(clave)"
                 />
               </div>
               <div
@@ -880,29 +945,29 @@ export default {
                   v-for="(clave, i) in bodySampleKeys"
                   :key="`b-${clave}`"
                   v-model="form.sample_values.body[i]"
-                  :label="
-                    $t('WHATSAPP_TEMPLATE_EDITOR.FIELDS.EXAMPLE_OF', {
-                      variable: clave,
-                    })
-                  "
+                  :label="sampleLabel(clave, 'EXAMPLE_OF')"
+                  :help-text="variableHint(clave)"
                 />
+              </div>
+            </div>
+
+            <!-- Vista previa -->
+            <div v-show="activeTab === 'preview'" class="pt-4">
+              <div class="max-w-sm mx-auto">
+                <TemplatePreview :form="form" />
               </div>
             </div>
           </div>
         </div>
 
-        <aside class="flex flex-col gap-3 pt-2">
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-            {{ $t('WHATSAPP_TEMPLATE_EDITOR.SECTIONS.PREVIEW') }}
-          </span>
-          <TemplatePreview :form="form" />
+        <aside class="flex flex-col gap-3 pt-2 lg:min-h-0 lg:overflow-y-auto">
           <div class="ready-list">
             <span
               class="text-sm font-medium text-slate-700 dark:text-slate-200"
             >
               {{ $t('WHATSAPP_TEMPLATE_EDITOR.READY.TITLE') }}
             </span>
-            <div v-for="tab in formTabs" :key="tab.key">
+            <div v-for="tab in readyTabs" :key="tab.key">
               <button
                 type="button"
                 class="ready-list__row"
@@ -956,6 +1021,10 @@ export default {
 
 .drop-zone--active {
   @apply border-woot-500 bg-woot-25 dark:bg-woot-800;
+}
+
+.field-select {
+  @apply w-auto h-7 mb-0 py-0 pl-2 pr-6 text-xs;
 }
 
 .ready-list {

@@ -330,6 +330,15 @@ export default {
       }
       useAlert(`Sincronizado: ${created} nuevas, ${updated} actualizadas.`);
     },
+    // Los estados de Meta en español (los mismos nombres que la ficha); uno nuevo, tal cual.
+    statusLabel(status) {
+      const clave = `WHATSAPP_TEMPLATE_DETAIL.STEPS.${status}`;
+      return this.$te(clave) ? this.$t(clave) : status;
+    },
+    qualityLabel(nivel) {
+      const clave = `WHATSAPP_TEMPLATE_DETAIL.QUALITY.${nivel}`;
+      return this.$te(clave) ? this.$t(clave) : nivel;
+    },
     statusClass(status) {
       return (
         {
@@ -466,7 +475,7 @@ export default {
               :key="estado"
               :value="estado"
             >
-              {{ estado }}
+              {{ statusLabel(estado) }}
             </option>
           </select>
           <select v-model="channelFilter" class="list-filter">
@@ -640,7 +649,7 @@ export default {
                     class="px-2 py-0.5 rounded-full text-xs font-medium"
                     :class="statusClass(t.status)"
                   >
-                    {{ t.status }}
+                    {{ statusLabel(t.status) }}
                   </span>
                   <span
                     v-if="t.quality_score"
@@ -648,7 +657,7 @@ export default {
                     :class="qualityDot(t.quality_score)"
                     :title="
                       $t('WHATSAPP_TEMPLATE_LIST.QUALITY', {
-                        level: t.quality_score,
+                        level: qualityLabel(t.quality_score),
                       })
                     "
                   />

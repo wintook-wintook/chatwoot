@@ -161,7 +161,8 @@
         "TABS": {
             "CONTENT": "Content",
             "BUTTONS": "Buttons",
-            "VARIABLES": "Variables"
+            "VARIABLES": "Variables",
+            "PREVIEW": "Preview"
         },
         "FORMAT": {
             "BOLD": "Bold",
@@ -188,7 +189,24 @@
             "APPOINTMENT": "Appointment confirmation",
             "PROMO": "Promotion with image"
         },
-        "NAME_TAKEN": "Name: there's already a template with that name and language in this inbox"
+        "NAME_TAKEN": "Name: there's already a template with that name and language in this inbox",
+        "VARIABLES": {
+            "INSERT": "System data",
+            "MANUAL": "Typed by the agent when sending",
+            "RECOGNIZED": "Filled with: %{label}",
+            "FIELDS": {
+                "NOMBRE": "Contact name",
+                "PRIMER_NOMBRE": "First name",
+                "APELLIDO": "Last name",
+                "CORREO": "Email",
+                "TELEFONO": "Phone",
+                "EMPRESA": "Company",
+                "AGENTE": "Agent name",
+                "CONVERSACION": "Conversation number",
+                "BANDEJA": "Inbox",
+                "FECHA_HOY": "Today's date"
+            }
+        }
     },
     "WHATSAPP_TEMPLATE_DETAIL": {
         "STATUS_TITLE": "Status in Meta",

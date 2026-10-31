@@ -21,6 +21,7 @@ class Whatsapp::TemplateComponentBuilder
       name: @t.name,
       language: @t.language,
       category: @t.category,
+      parameter_format: named? ? 'NAMED' : nil,
       components: components
     }.compact
   end
@@ -30,6 +31,21 @@ class Whatsapp::TemplateComponentBuilder
   end
 
   private
+
+  # feat/plantillas_variables_chatwoot F9.1: variables con nombre ({{edad}}). Meta pide
+  # `parameter_format: NAMED` y los ejemplos por nombre. Los de `samples` van por orden de
+  # aparición de cada nombre. Las numeradas no cambian en nada.
+  def named?
+    [@t.body_text, header_text].any? { |text| Whatsapp::TemplateVariables.names(text).any? }
+  end
+
+  def header_text
+    @t.header_type.to_s == 'text' ? @t.header_content : nil
+  end
+
+  def named_examples(text, valores)
+    Whatsapp::TemplateVariables.names(text).zip(Array(valores)).map { |nombre, ejemplo| { param_name: nombre, example: ejemplo } }
+  end
 
   def header_component
     type = @t.header_type.to_s
@@ -41,7 +57,9 @@ class Whatsapp::TemplateComponentBuilder
   def header_text_component
     comp = { type: 'HEADER', format: 'TEXT', text: @t.header_content }
     sample = Array(samples['header']).first
-    comp[:example] = { header_text: [sample] } if sample.present?
+    return comp if sample.blank?
+
+    comp[:example] = named? ? { header_text_named_params: named_examples(@t.header_content, [sample]) } : { header_text: [sample] }
     comp
   end
 
@@ -58,7 +76,9 @@ class Whatsapp::TemplateComponentBuilder
 
     comp = { type: 'BODY', text: @t.body_text }
     body_samples = Array(samples['body']).compact
-    comp[:example] = { body_text: [body_samples] } if body_samples.any? # array 2D
+    return comp if body_samples.empty?
+
+    comp[:example] = named? ? { body_text_named_params: named_examples(@t.body_text, body_samples) } : { body_text: [body_samples] } # array 2D
     comp
   end
 

@@ -39,7 +39,7 @@ const hasFile = template =>
       template.header_media_url
   );
 
-const VARIABLE_RE = /\{\{\s*\d+\s*\}\}/;
+const VARIABLE_RE = /\{\{\s*[^{}]+?\s*\}\}/;
 
 // Lleva un dato fuera del cuerpo: variable en el encabezado de texto, liga con {{1}} o
 // copiar código.
