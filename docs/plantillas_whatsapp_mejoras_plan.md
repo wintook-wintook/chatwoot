@@ -987,6 +987,42 @@ conviene pasarlo solo si no hay asignado. Una variable numerada siempre sale en 
 
 Pruebas: 43 de servidor y 71 de navegador en verde en los archivos relacionados. Sin probar contra Meta real.
 
+
+## 7.17 F9.3 — usar el dato al mandar (31/10/2026, rama `feat/plantillas_variables_resolver`)
+
+**Conversación.** Al elegir una plantilla con nombres, las variables llegan llenadas y se pueden cambiar. Debajo dice
+«Se llenó con: Edad». Si el sistema conoce el dato y el contacto no lo tiene, sale en rojo y no deja mandar hasta
+escribirlo. Las variables que el sistema no conoce, como `{{plan}}` sin un atributo, las escribe el agente sin aviso.
+Las numeradas no cambian. También vale para el encabezado de texto y para una conversación nueva desde el contacto
+(ahí `{{conversacion}}` sale en rojo porque todavía no existe). `{{agente}}` es el asignado o, si no hay, quien manda.
+
+**Programados.** Igual que en la conversación, pero **el valor se fija al programar**: si el contacto cambia después,
+sale el valor de ese momento. Al editar un programado gana lo guardado. `ContactInfo` ya le pasa la conversación al
+modal; antes no se la daba.
+
+**Seguimientos y campañas.** `TemplateParamsProcessor` deja de adivinar en las plantillas con nombres: usa
+`TemplateVariableResolver`, también para el encabezado de texto. `{{agente}}` es el asignado o, si no hay, el nombre que
+el Agente IA muestra al cliente. El job le pasa la conversación del envío, porque en el primer intento el seguimiento
+aún no la tiene. El mensaje guardado ya sustituye los nombres. Las numeradas siguen por su camino de siempre.
+
+**Sin el dato (D9c): no se manda y queda el motivo.** Código propio `template_data_missing`, por ejemplo «La plantilla
+«saludo» pide {{plan}} y este contacto no tiene ese dato: no se mandó.»
+
+⚠ **Diferencia con el plan.** D9c decía «como `template_media_missing`», pero ese código es de configuración y **pausa
+la campaña**. Aquí el problema es de un contacto, no de la plantilla, así que cuenta como permanente: ese contacto no
+recibe nada y la campaña sigue con los demás. Con la ventana de 24 h abierta, el seguimiento no usa plantilla: manda su
+mensaje de texto como siempre.
+
+**La ficha de la plantilla.** Una plantilla con nombres en el encabezado ya no sale como «necesita datos» para
+seguimientos. Los botones con dato (liga con `{{1}}`, copiar código) siguen sin llenarse en automático: esas plantillas
+siguen avisando `needs_data`.
+
+Pruebas: 65 de servidor y 115 de navegador en verde en los archivos relacionados. Sin probar en navegador.
+
+**Prueba contra Meta (31/10/2026).** `prueba_variables_nombre` (fila 454, bandeja #1563, id de Meta `1066495953074899`):
+Meta recibió el formato con nombres y ejemplos y la dejó en revisión (PENDING). Falta que la apruebe y mandarla a un
+contacto de prueba para confirmar el envío; sigue sin probarse una plantilla con nombres más un botón de liga `{{1}}`.
+
 ---
 
 ## 8. Pila de pruebas en navegador (al cerrar cada fase)
@@ -1023,3 +1059,9 @@ Pruebas: 43 de servidor y 71 de navegador en verde en los archivos relacionados.
 - [ ] Botones: plantilla con respuesta rápida + liga variable sale bien desde la conversación (antes Meta la rechazaba)
 - [ ] Programados: plantilla con documento y botón en bandeja Cloud; editarla conserva lo capturado; llega a su hora
 - [ ] F9.1: crear una plantilla con «Datos del sistema» y `{{edad}}`: dice qué reconoció; mezclar con `{{1}}` avisa; Meta la acepta
+- [ ] F9.3 conversación: plantilla con `{{primer_nombre}}` y `{{edad}}`: llega llenada y dice «Se llenó con»; cambiar un valor quita el aviso; contacto sin edad sale en rojo y no deja mandar
+- [ ] F9.3 programados: programar con nombres llena igual; al editarlo conserva lo guardado; abrirlo desde el panel del contacto también llena
+- [ ] F9.3 conversación nueva desde el contacto: llena con sus datos; `{{conversacion}}` pide escribirse
+- [ ] F9.3 seguimiento con ventana cerrada: llega con los datos del contacto y la burbuja muestra el texto completo
+- [ ] F9.3 campaña con un contacto sin el dato: ese contacto no recibe nada y queda el motivo; la campaña sigue con los demás
+- [ ] F9.3 plantillas con `{{1}}`: la conversación y los seguimientos funcionan igual que antes

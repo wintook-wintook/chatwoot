@@ -10,6 +10,7 @@
 //                    necesitan el archivo guardado)
 //   metaManagerUrl   la página de plantillas de la cuenta en WhatsApp Manager
 // ============================================================================
+import { variableKeys } from 'dashboard/helper/whatsappTemplateValidator';
 
 export const MEDIA_TYPES = ['image', 'video', 'document'];
 
@@ -40,29 +41,33 @@ const hasFile = template =>
   );
 
 const VARIABLE_RE = /\{\{\s*[^{}]+?\s*\}\}/;
+const templateIsNamed = text =>
+  variableKeys(text).some(clave => !/^\d+$/.test(clave));
+
+const hasHeaderVariable = template =>
+  template.header_type === 'text' &&
+  VARIABLE_RE.test(template.header_content || '');
+
+const hasButtonData = template =>
+  (template.buttons || []).some(b => {
+    const tipo = (b.type || '').toUpperCase();
+    return (
+      tipo === 'COPY_CODE' || (tipo === 'URL' && VARIABLE_RE.test(b.url || ''))
+    );
+  });
 
 // Lleva un dato fuera del cuerpo: variable en el encabezado de texto, liga con {{1}} o
 // copiar código.
 function needsMoreThanBody(template) {
-  const botones = template.buttons || [];
-  return (
-    (template.header_type === 'text' &&
-      VARIABLE_RE.test(template.header_content || '')) ||
-    botones.some(b => {
-      const tipo = (b.type || '').toUpperCase();
-      return (
-        tipo === 'COPY_CODE' ||
-        (tipo === 'URL' && VARIABLE_RE.test(b.url || ''))
-      );
-    })
-  );
+  return hasHeaderVariable(template) || hasButtonData(template);
 }
 
 // { conversation: true|false|null,
 //   trackings: 'ok'|'missing_file'|'needs_data'|'no'|null }
 // null = todavía no se puede mandar por nada (no está aprobada).
 // needs_data: pide un dato en el encabezado o en un botón que seguimientos y campañas no
-// llenan (solo mandan el cuerpo y el archivo): Meta la rechazaría.
+// llenan (solo mandan el cuerpo y el archivo): Meta la rechazaría. El encabezado con nombres
+// sí lo llenan (F9.3).
 export function sendability(template, inbox) {
   if (template.status !== 'APPROVED')
     return { conversation: null, trackings: null };
@@ -73,7 +78,11 @@ export function sendability(template, inbox) {
   const pideDato = needsMoreThanBody(template);
   if (!cloud && (conArchivo || pideDato))
     return { conversation: false, trackings: 'no' };
-  if (pideDato) return { conversation: true, trackings: 'needs_data' };
+  const encabezadoConNumero =
+    hasHeaderVariable(template) &&
+    !templateIsNamed(template.header_content || '');
+  if (hasButtonData(template) || encabezadoConNumero)
+    return { conversation: true, trackings: 'needs_data' };
   if (!conArchivo) return { conversation: true, trackings: 'ok' };
   return {
     conversation: true,

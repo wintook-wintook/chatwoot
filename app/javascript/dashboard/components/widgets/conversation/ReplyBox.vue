@@ -1277,7 +1277,8 @@ export default {
       @toggleEditor="toggleRichContentEditor" @replaceText="replaceText" @toggleInsertArticle="toggleInsertArticle"
       :event-suggestion-response-bot-eva="eventSuggestionResponseBotEva"
       :event-suggestion-response-bot-elyza="eventSuggestionResponseBotElyza" />
-    <WhatsappTemplates :inbox-id="inbox.id" :show="showWhatsAppTemplatesModal" @close="hideWhatsappTemplatesModal"
+    <WhatsappTemplates :inbox-id="inbox.id" :show="showWhatsAppTemplatesModal" :conversation="currentChat"
+      :contact="currentContact" @close="hideWhatsappTemplatesModal"
       @onSend="onSendWhatsAppReply" @cancel="hideWhatsappTemplatesModal" />
 
     <woot-confirm-modal ref="confirmDialog" :title="$t('CONVERSATION.REPLYBOX.UNDEFINED_VARIABLES.TITLE')"

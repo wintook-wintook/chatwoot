@@ -52,6 +52,34 @@ describe('TemplateExtraFields', () => {
     expect(ultimo.buttons).toEqual({ 1: '' });
   });
 
+  describe('F9.3 variables con nombre del encabezado', () => {
+    const conNombre = {
+      name: 'titulo',
+      language: 'es_MX',
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Para {{primer_nombre}}' },
+        { type: 'BODY', text: 'Hola.' },
+      ],
+    };
+    const variableContext = { contact: { name: 'Juan Pérez' } };
+
+    it('llega llenado con el dato del contacto', async () => {
+      const wrapper = await montar({ template: conNombre, variableContext });
+
+      expect(wrapper.vm.headerParams).toEqual({ primer_nombre: 'Juan' });
+    });
+
+    it('al editar un programado gana lo guardado', async () => {
+      const wrapper = await montar({
+        template: conNombre,
+        variableContext,
+        initial: { header: { primer_nombre: 'Don Juan' } },
+      });
+
+      expect(wrapper.vm.headerParams).toEqual({ primer_nombre: 'Don Juan' });
+    });
+  });
+
   it('al editar respeta lo que ya se había elegido', async () => {
     const wrapper = await montar({
       initial: {

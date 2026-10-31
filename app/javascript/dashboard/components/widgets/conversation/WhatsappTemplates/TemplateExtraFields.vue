@@ -14,6 +14,8 @@
  * Sin `enabled` (bandejas que no son WhatsApp Cloud) solo muestra el slot.
  */
 import WhatsappTemplateHeaderAPI from 'dashboard/api/whatsappTemplateHeader';
+import { resolveVariables } from 'dashboard/helper/whatsappTemplateVariables';
+import TemplateVariableHint from './TemplateVariableHint.vue';
 import { describeTemplate, COPY_CODE_MAX } from './templateForm';
 
 // Lo que Meta acepta en el encabezado (Whatsapp::ResumableUploadService::LIMITS).
@@ -27,6 +29,7 @@ const blank = lista =>
   lista.reduce((acc, clave) => ({ ...acc, [clave]: '' }), {});
 
 export default {
+  components: { TemplateVariableHint },
   props: {
     template: {
       type: Object,
@@ -41,6 +44,11 @@ export default {
       default: undefined,
     },
     initial: {
+      type: Object,
+      default: () => ({}),
+    },
+    // F9.3: con qué llenar las variables con nombre del encabezado (chatVariableContext).
+    variableContext: {
       type: Object,
       default: () => ({}),
     },
@@ -103,6 +111,7 @@ export default {
   created() {
     this.headerParams = {
       ...blank(this.extras.headerVars),
+      ...resolveVariables(this.extras.headerVars, this.variableContext).values,
       ...(this.initial.header || {}),
     };
     this.buttonParams = {
@@ -263,7 +272,7 @@ export default {
       <div
         v-for="(variable, key) in headerParams"
         :key="`h-${key}`"
-        class="template__variable-item"
+        class="template__variable-item flex-wrap"
       >
         <span class="variable-label">{{ key }}</span>
         <woot-input
@@ -271,6 +280,11 @@ export default {
           type="text"
           class="variable-input"
           :styles="{ marginBottom: 0 }"
+        />
+        <TemplateVariableHint
+          :variable="key"
+          :value="headerParams[key]"
+          :context="variableContext"
         />
       </div>
     </div>

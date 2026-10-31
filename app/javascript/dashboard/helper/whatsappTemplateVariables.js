@@ -102,3 +102,23 @@ export const resolveVariables = (keys, context = {}) => {
   });
   return result;
 };
+
+// El context de una conversación del store, o de un contacto si todavía no hay conversación.
+// El contacto del store puede venir más al día que meta.sender. Quien manda cuenta como agente
+// solo si no hay asignado.
+export const chatVariableContext = ({
+  conversation,
+  contact,
+  inbox,
+  currentUser,
+} = {}) => {
+  const meta = (conversation || {}).meta || {};
+  const conContacto = meta.sender || contact;
+  if (!conContacto) return {};
+  return {
+    contact: { ...meta.sender, ...contact },
+    conversation,
+    inbox,
+    agent: meta.assignee ? undefined : currentUser,
+  };
+};

@@ -1,5 +1,6 @@
 import {
   RESERVED_FIELDS,
+  chatVariableContext,
   resolveVariable,
   resolveVariables,
 } from '../whatsappTemplateVariables';
@@ -49,5 +50,50 @@ describe('resolveVariables', () => {
       values: { nombre: 'Juan', edad: '34' },
       missing: ['plan', '1'],
     });
+  });
+});
+
+describe('chatVariableContext', () => {
+  const sender = { id: 1, name: 'Juan', custom_attributes: { plan: 'Plus' } };
+  const yo = { available_name: 'Yo' };
+
+  it('quien manda es el agente solo si no hay asignado', () => {
+    const asignado = { available_name: 'Ana' };
+
+    expect(
+      resolveVariable(
+        'agente',
+        chatVariableContext({
+          conversation: { meta: { sender } },
+          currentUser: yo,
+        })
+      )
+    ).toBe('Yo');
+    expect(
+      resolveVariable(
+        'agente',
+        chatVariableContext({
+          conversation: { meta: { sender, assignee: asignado } },
+          currentUser: yo,
+        })
+      )
+    ).toBe('Ana');
+  });
+
+  it('el contacto del store gana sobre meta.sender', () => {
+    const context = chatVariableContext({
+      conversation: { meta: { sender } },
+      contact: { custom_attributes: { plan: 'Oro' } },
+    });
+
+    expect(resolveVariable('plan', context)).toBe('Oro');
+    expect(resolveVariable('nombre', context)).toBe('Juan');
+  });
+
+  it('sirve sin conversación, y sin contacto no hay de dónde llenar', () => {
+    expect(
+      resolveVariable('nombre', chatVariableContext({ contact: sender }))
+    ).toBe('Juan');
+    expect(chatVariableContext({ conversation: {} })).toEqual({});
   });
 });

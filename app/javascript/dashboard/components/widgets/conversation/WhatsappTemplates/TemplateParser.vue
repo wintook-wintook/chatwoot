@@ -19,7 +19,9 @@
  * el agente sube de su máquina para este envío, o una liga pública.
  */
 import { ref, computed, onMounted } from 'vue';
+import { resolveVariables } from 'dashboard/helper/whatsappTemplateVariables';
 import TemplateExtraFields from './TemplateExtraFields.vue';
+import TemplateVariableHint from './TemplateVariableHint.vue';
 import {
   describeTemplate,
   buildProcessedParams,
@@ -29,7 +31,7 @@ import {
 } from './templateForm';
 
 export default {
-  components: { TemplateExtraFields },
+  components: { TemplateExtraFields, TemplateVariableHint },
   props: {
     template: {
       type: Object,
@@ -45,6 +47,11 @@ export default {
     inboxId: {
       type: Number,
       default: undefined,
+    },
+    // F9.3: con qué llenar las variables con nombre (chatVariableContext). Se pueden cambiar.
+    variableContext: {
+      type: Object,
+      default: () => ({}),
     },
   },
   setup(props, { emit }) {
@@ -89,8 +96,12 @@ export default {
       if (!matchedVariables) return;
 
       const finalVars = matchedVariables.map(i => processVariable(i));
+      const { values: resueltos } = resolveVariables(
+        finalVars,
+        props.variableContext
+      );
       processedParams.value = finalVars.reduce(
-        (acc, variable) => ({ ...acc, [variable]: '' }),
+        (acc, variable) => ({ ...acc, [variable]: resueltos[variable] || '' }),
         {}
       );
     };
@@ -168,6 +179,7 @@ export default {
       :template="template"
       :enabled="fullTemplate"
       :inbox-id="inboxId"
+      :variable-context="variableContext"
       @change="extraValues = $event"
     >
       <div v-if="variables" class="template__variables-container">
@@ -177,7 +189,7 @@ export default {
         <div
           v-for="(variable, key) in processedParams"
           :key="key"
-          class="template__variable-item"
+          class="template__variable-item flex-wrap"
         >
           <span class="variable-label">
             {{ key }}
@@ -187,6 +199,11 @@ export default {
             type="text"
             class="variable-input"
             :styles="{ marginBottom: 0 }"
+          />
+          <TemplateVariableHint
+            :variable="key"
+            :value="processedParams[key]"
+            :context="variableContext"
           />
         </div>
       </div>

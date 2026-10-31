@@ -18,6 +18,8 @@
         },
         "PARSER": {
             "VARIABLES_LABEL": "Variables",
+            "VARIABLE_FILLED": "Se llenó con: %{source}",
+            "VARIABLE_MISSING": "Este contacto no tiene el dato «%{source}»: escríbelo para mandar la plantilla.",
             "VARIABLE_PLACEHOLDER": "Ingrese el valor de %{variable}",
             "GO_BACK_LABEL": "Regresar",
             "SEND_MESSAGE_LABEL": "Enviar Mensaje",

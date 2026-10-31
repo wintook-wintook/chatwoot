@@ -4,7 +4,10 @@
 // variable se llama como un campo reservado (en español, D9a) o como la clave de un atributo
 // personalizado, ese es su dato. Si no, la escribe el agente al mandarla.
 // ============================================================================
-import { RESERVED_FIELDS } from 'dashboard/helper/whatsappTemplateVariables';
+import {
+  RESERVED_FIELDS,
+  resolveVariable,
+} from 'dashboard/helper/whatsappTemplateVariables';
 
 export { RESERVED_FIELDS };
 
@@ -21,6 +24,18 @@ export const recognizeVariable = (clave, attributes = []) => {
     kind: 'attribute',
     label: atributo.attribute_display_name || clave,
   };
+};
+
+// F9.3 — Qué decirle al agente de una variable ya prellenada. { kind, key|label, missing }
+// o null: sin aviso (numerada, de las que escribe el agente, o ya la cambió a mano).
+export const variableHint = (clave, valor, context, attributes = []) => {
+  if (!context || !context.contact) return null;
+  const dato = recognizeVariable(clave, attributes);
+  if (!dato || dato.kind === 'manual') return null;
+  if (!String(valor || '').trim()) return { ...dato, missing: true };
+  return valor === resolveVariable(clave, context)
+    ? { ...dato, missing: false }
+    : null;
 };
 
 // Los atributos que sirven como variable: Meta no acepta otras claves. Una vez cada clave

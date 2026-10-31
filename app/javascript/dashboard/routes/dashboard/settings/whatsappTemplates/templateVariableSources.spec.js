@@ -1,6 +1,7 @@
 import {
   attributeVariables,
   recognizeVariable,
+  variableHint,
 } from './templateVariableSources';
 
 // feat/plantillas_variables_chatwoot F9.1
@@ -38,5 +39,46 @@ describe('attributeVariables', () => {
     expect(attributeVariables(atributos).map(a => a.attribute_key)).toEqual([
       'edad',
     ]);
+  });
+});
+
+// F9.3 — el aviso bajo cada variable
+describe('variableHint', () => {
+  const context = {
+    contact: { name: 'Juan', custom_attributes: { edad: 34 } },
+  };
+
+  it('dice de dónde salió el dato', () => {
+    expect(variableHint('nombre', 'Juan', context)).toEqual({
+      kind: 'field',
+      key: 'nombre',
+      missing: false,
+    });
+    expect(variableHint('edad', '34', context, atributos)).toEqual({
+      kind: 'attribute',
+      label: 'Edad',
+      missing: false,
+    });
+  });
+
+  it('avisa si el contacto no tiene un dato que el sistema conoce', () => {
+    expect(variableHint('correo', '', context)).toMatchObject({
+      key: 'correo',
+      missing: true,
+    });
+    expect(variableHint('edad', '  ', context, atributos)).toMatchObject({
+      label: 'Edad',
+      missing: true,
+    });
+  });
+
+  it('sin aviso: lo cambió a mano, lo escribe el agente, o es numerada', () => {
+    expect(variableHint('nombre', 'Don Juan', context)).toBeNull();
+    expect(variableHint('plan', '', context, atributos)).toBeNull();
+    expect(variableHint('1', '', context)).toBeNull();
+  });
+
+  it('sin contacto no hay de dónde llenar: sin aviso', () => {
+    expect(variableHint('nombre', '', {})).toBeNull();
   });
 });
