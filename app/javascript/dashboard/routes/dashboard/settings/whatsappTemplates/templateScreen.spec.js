@@ -128,6 +128,17 @@ describe('sendability en seguimientos', () => {
     });
   });
 
+  it('el encabezado con nombres sí lo llenan (F9.3); con un botón con dato, no', () => {
+    const nombres = { ...base, header_content: 'Para {{primer_nombre}}' };
+
+    expect(sendability(nombres, cloud).trackings).toBe('ok');
+    expect(
+      sendability({ ...nombres, buttons: [{ type: 'COPY_CODE' }] }, cloud)
+        .trackings
+    ).toBe('needs_data');
+    expect(sendability(nombres, { provider: 'default' }).trackings).toBe('no');
+  });
+
   it('la liga fija y las respuestas rápidas sí sirven', () => {
     const fijos = [
       { type: 'URL', url: 'https://x.mx' },

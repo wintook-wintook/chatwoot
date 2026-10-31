@@ -589,8 +589,12 @@ class ContactTrackingJob < ApplicationJob
       template_body = get_template_body_text(tracking, template_name)
 
       # ⭐ PROCESAR PARÁMETROS AUTOMÁTICAMENTE
-      params_processor = Whatsapp::TemplateParamsProcessor.new(tracking, template_name)
+      params_processor = Whatsapp::TemplateParamsProcessor.new(tracking, template_name, conversation: conversation)
       params_result = params_processor.process
+
+      # feat/plantillas_variables_resolver F9.3: variable con nombre sin dato → no se manda nada,
+      # ni texto libre en su lugar (D9c).
+      return reject_template(tracking, params_result[:rejection]) if params_result[:rejection]
 
       if params_result[:success]
         processed_parameters = params_result[:parameters]
@@ -654,7 +658,7 @@ class ContactTrackingJob < ApplicationJob
           name: template_name,
           namespace: nil,
           lang_code: language_code,
-          parameters: header ? header.components(processed_parameters) : processed_parameters
+          parameters: header ? header.components(processed_parameters) : (params_result[:components] || processed_parameters)
         }
       )
 
@@ -992,9 +996,11 @@ class ContactTrackingJob < ApplicationJob
 
     result = template_text.dup
     parameters.each_with_index do |param, index|
-      param_num = index + 1
       value = param[:text] || param['text'] || ''
-      result = result.gsub("{{#{param_num}}}", value)
+      # feat/plantillas_variables_resolver F9.3: las variables con nombre traen el suyo.
+      nombre = param[:parameter_name]
+      variable = nombre ? /\{\{\s*#{Regexp.escape(nombre)}\s*\}\}/ : "{{#{index + 1}}}"
+      result = result.gsub(variable) { value }
     end
 
     result

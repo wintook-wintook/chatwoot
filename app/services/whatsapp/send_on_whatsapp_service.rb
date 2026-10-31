@@ -141,7 +141,7 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
 
   def named_parameter_template?(template_name)
     matching_template = channel.message_templates&.find { |template| template['name'] == template_name }
-    matching_template&.dig('parameter_format') == 'NAMED'
+    Whatsapp::TemplateVariables.named_template?(matching_template)
   end
 
   def template_match_object(template)

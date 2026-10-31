@@ -63,4 +63,13 @@ module Whatsapp::TemplateVariables
   def mixed?(todas)
     todas.grep(NUMBER).any? && todas.grep(NAME).any?
   end
+
+  # F9.2 — ¿La plantilla de message_templates va con nombres? Lo dice Meta; si su lista no lo
+  # trae, se ve en el texto. Un error aquí la manda como numerada y Meta la rechaza.
+  def named_template?(template)
+    formato = template.to_h['parameter_format']
+    return formato == 'NAMED' if formato.present?
+
+    Array(template.to_h['components']).any? { |component| names(component['text']).any? }
+  end
 end

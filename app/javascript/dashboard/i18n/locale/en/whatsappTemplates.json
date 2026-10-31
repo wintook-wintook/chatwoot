@@ -18,6 +18,8 @@
         },
         "PARSER": {
             "VARIABLES_LABEL": "Variables",
+            "VARIABLE_FILLED": "Filled with: %{source}",
+            "VARIABLE_MISSING": "This contact has no «%{source}»: type it to send the template.",
             "VARIABLE_PLACEHOLDER": "Enter %{variable} value",
             "GO_BACK_LABEL": "Go Back",
             "SEND_MESSAGE_LABEL": "Send Message",

@@ -173,19 +173,21 @@
                       <TemplateExtraFields
                         :key="`${selectedTemplate.name}-${selectedTemplate.language}-${editingMessageId}`"
                         :template="selectedTemplate" :enabled="isCloud" :inbox-id="inboxId"
-                        :initial="extraInitial" class="mt-4" @change="extraValues = $event">
+                        :initial="extraInitial" :variable-context="variableContext" class="mt-4"
+                        @change="extraValues = $event">
                       <div v-if="templateVariables && templateVariables.length > 0"
                         class="template__variables-container mt-4">
                         <p class="variables-label text-sm font-medium text-slate-600 mb-3">
                           {{ $t('CONVERSATION.SCHEDULE_MESSAGE.TEMPLATE_VARIABLES') }}
                         </p>
-                        <div v-for="(variable, key) in templateParams" :key="key" class="template__variable-item mb-3">
+                        <div v-for="(variable, key) in templateParams" :key="key" class="template__variable-item flex-wrap mb-3">
                           <span class="variable-label">
                             {{ key }}
                           </span>
                           <woot-input v-model="templateParams[key]" type="text" class="variable-input"
                             :styles="{ marginBottom: 0 }"
                             :placeholder="`${$t('CONVERSATION.SCHEDULE_MESSAGE.ENTER_VALUE_FOR')} ${key}`" />
+                          <TemplateVariableHint :variable="key" :value="templateParams[key]" :context="variableContext" />
                         </div>
                       </div>
                       </TemplateExtraFields>
@@ -343,6 +345,8 @@ import messageAPI from 'dashboard/api/inbox/message';
 import scheduledMessagesAPI from 'dashboard/api/scheduledMessages';
 import timeZoneData from './timezones.json';
 import TemplateExtraFields from './WhatsappTemplates/TemplateExtraFields.vue';
+import TemplateVariableHint from './WhatsappTemplates/TemplateVariableHint.vue';
+import { chatVariableContext, resolveVariables } from 'dashboard/helper/whatsappTemplateVariables';
 import {
   buildProcessedParams,
   describeTemplate,
@@ -358,6 +362,7 @@ export default {
     VeTable,
     EmptyState,
     TemplateExtraFields,
+    TemplateVariableHint,
   },
   props: {
     show: {
@@ -501,6 +506,15 @@ export default {
     isCloud() {
       const inbox = this.$store.getters['inboxes/getInbox'](this.inboxId);
       return Boolean(inbox && inbox.provider === 'whatsapp_cloud');
+    },
+
+    // F9.3: con qué llenar las variables con nombre al programar. Se guarda el valor de hoy.
+    variableContext() {
+      return chatVariableContext({
+        conversation: this.currentChat.id ? this.currentChat : null,
+        inbox: this.$store.getters['inboxes/getInbox'](this.inboxId),
+        currentUser: this.currentUser,
+      });
     },
 
     templateValues() {
@@ -940,8 +954,9 @@ export default {
       }
 
       const finalVars = matchedVariables.map(i => this.processVariable(i));
+      const { values: resueltos } = resolveVariables(finalVars, this.variableContext);
       this.templateParams = finalVars.reduce((acc, variable) => {
-        acc[variable] = '';
+        acc[variable] = resueltos[variable] || '';
         return acc;
       }, {});
     },
