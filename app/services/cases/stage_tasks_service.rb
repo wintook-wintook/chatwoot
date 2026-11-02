@@ -38,8 +38,11 @@ class Cases::StageTasksService
   # T3 — la tarea «Documenta…» se completa sola cuando el caso sale de la etapa en
   # la que nació (se documentó el cierre, el resultado o la fecha al moverlo).
   def close_documentation_tasks(column)
-    @ticket.case_tasks.pending.where.not(documentation_for_column_id: nil)
-           .where.not(case_type_column_id: column&.id).find_each { |task| task.update!(status: :done) }
+    # Las que canceló el cierre también: documentar el paso las cumple (oportunidad ganada).
+    tasks = @ticket.case_tasks.pending.or(@ticket.case_tasks.cancelled.where(cancel_reason: Cases::PendingTasksOnClose::REASON))
+    tasks.where.not(documentation_for_column_id: nil).where.not(case_type_column_id: column&.id).find_each do |task|
+      task.update!(status: :done, cancelled_at: nil, cancel_reason: nil)
+    end
   end
 
   def pending_templates(column)

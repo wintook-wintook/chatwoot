@@ -5,6 +5,8 @@
 # Table name: case_tasks
 #
 #  id                          :bigint           not null, primary key
+#  cancel_reason               :string
+#  cancelled_at                :datetime
 #  completed_at                :datetime
 #  description                 :text
 #  due_at                      :datetime
@@ -69,6 +71,7 @@ class CaseTask < ApplicationRecord
   belongs_to :case_ticket, optional: true
   include AgendaLink
   include TaskReportable
+  include CaseTaskActivity # Plan Actividad del caso
   belongs_to :assignee, class_name: 'User', optional: true
   # @tickets_cases — solicitante: quién dio de alta la tarea. Se fija al crear con
   # el agente actual y no se edita desde la UI (a diferencia del responsable).
@@ -86,7 +89,8 @@ class CaseTask < ApplicationRecord
   # T3 — la tarea «Documenta…» lleva a esta etapa; se completa sola, no a mano.
   belongs_to :documentation_for_column, class_name: 'CaseTypeColumn', optional: true
 
-  enum status: { pending: 0, done: 1 }
+  # Valores nuevos SIEMPRE al final. `cancelled`: su caso se cerró (Cases::PendingTasksOnClose).
+  enum status: { pending: 0, done: 1, cancelled: 2 }
   # @tickets_cases — prioridad propia de la tarea: NO se hereda del ticket ni se
   # deriva de impacto/urgencia como en CaseTicket. Mismos valores para que la UI
   # comparta etiquetas y colores. Con prefijo para que `low`/`high` no se

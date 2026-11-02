@@ -334,6 +334,14 @@ Rails.application.routes.draw do
           # =========================================================================
           # @tickets_cases — Gestor de Tickets
           # =========================================================================
+          # Asistente (Dali) — asistente conversacional de toda la plataforma
+          resource :assistant, only: [:show], controller: 'assistant' do
+            post :messages
+            post :reset
+            patch :settings
+            post 'proposals/:id/confirm', action: :confirm
+            post 'proposals/:id/cancel', action: :cancel
+          end
           resources :case_tickets, only: [:index, :show, :create, :update] do
             # Plan-Trabajo-Campo R1 — reporte de servicio de la orden de trabajo
             resource :service_report, only: [:show, :update], controller: 'case_service_reports' do
@@ -376,6 +384,9 @@ Rails.application.routes.draw do
             resources :case_events, only: [:index]
             # @tickets_cases — ligar (o crear) la conversación de un caso que no tiene
             resource :case_conversation, only: [:create], path: 'conversation'
+            # Plan Actividad del caso — conversaciones ligadas (principal y adicionales) y la actividad
+            resources :case_conversations, only: [:index, :destroy], path: 'conversations'
+            resource :case_activity, only: [:show], path: 'activity'
             # @tickets_cases 2E — relaciones entre tickets
             resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
             # @tickets_cases — tareas/subtareas del ticket

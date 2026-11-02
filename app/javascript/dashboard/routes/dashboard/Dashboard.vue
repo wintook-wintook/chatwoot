@@ -1,5 +1,6 @@
 <script>
 import Sidebar from '../../components/layout/Sidebar.vue';
+import AssistantPanel from 'dashboard/components/assistant/AssistantPanel.vue'; // Asistente (Dali)
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import WootKeyShortcutModal from 'dashboard/components/widgets/modal/WootKeyShortcutModal.vue';
 import AddAccountModal from 'dashboard/components/layout/sidebarComponents/AddAccountModal.vue';
@@ -12,6 +13,7 @@ const CommandBar = () => import('./commands/commandbar.vue');
 
 export default {
   components: {
+    AssistantPanel,
     Sidebar,
     CommandBar,
     WootKeyShortcutModal,
@@ -157,6 +159,7 @@ export default {
     <section class="flex flex-1 h-full min-h-0 px-0 overflow-hidden">
       <router-view />
       <CommandBar />
+      <AssistantPanel />
       <AccountSelector
         :show-account-modal="showAccountModal"
         @closeAccountModal="toggleAccountModal"

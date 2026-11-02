@@ -892,6 +892,9 @@ export default {
       return task.requester ? task.requester.name : '';
     },
     statusLabel(status) {
+      if (status === 'cancelled') {
+        return this.$t('CASE_TICKETS.TASKS.STATUS.CANCELLED');
+      }
       return status === 'done'
         ? this.$t('CASE_TICKETS.TASKS.STATUS.DONE')
         : this.$t('CASE_TICKETS.TASKS.STATUS.PENDING');
@@ -920,7 +923,7 @@ export default {
 
       return row.item_type === 'meeting'
         ? row.status === 'scheduled'
-        : row.status !== 'done';
+        : row.status === 'pending';
     },
     // Color del folio del ticket por SLA (verde a tiempo, ámbar en riesgo, rojo vencido).
     slaTextColor(sla) {
@@ -1640,6 +1643,9 @@ export default {
                 </option>
                 <option value="done">
                   {{ $t('CASE_TICKETS.TASKS.STATUS.DONE') }}
+                </option>
+                <option v-if="form.status === 'cancelled'" value="cancelled">
+                  {{ $t('CASE_TICKETS.TASKS.STATUS.CANCELLED') }}
                 </option>
               </select>
             </label>

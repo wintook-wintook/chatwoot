@@ -359,13 +359,24 @@ export const actions = {
 
   async transitionTicket(
     { commit },
-    { ticketId, contactId, status, reason, propagateToIncidents, closure }
+    {
+      ticketId,
+      contactId,
+      status,
+      reason,
+      propagateToIncidents,
+      closure,
+      cancel_meetings: cancelMeetings,
+      pending_tasks: pendingTasks,
+    }
   ) {
     commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
     try {
       const extra = {};
       if (propagateToIncidents) extra.propagate_to_incidents = true;
       if (closure) extra.closure = closure;
+      if (cancelMeetings) extra.cancel_meetings = true;
+      if (pendingTasks) extra.pending_tasks = pendingTasks;
       const { data } = await caseTicketsAPI.transition(
         ticketId,
         status,
@@ -392,11 +403,15 @@ export const actions = {
       postponedUntil,
       postponeReasonId,
       reason,
+      cancel_meetings: cancelMeetings,
+      pending_tasks: pendingTasks,
     }
   ) {
     commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
     try {
       const extra = {};
+      if (cancelMeetings) extra.cancel_meetings = true;
+      if (pendingTasks) extra.pending_tasks = pendingTasks;
       if (postponedUntil) extra.postponed_until = postponedUntil;
       if (postponeReasonId) extra.postpone_reason_id = postponeReasonId;
       if (reason) extra.reason = reason;

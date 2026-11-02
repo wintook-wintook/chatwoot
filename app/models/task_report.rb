@@ -84,7 +84,8 @@ class TaskReport < ApplicationRecord
 
   def log_on_case
     case_ticket.case_events.create!(account_id: account_id, event_type: :internal_note, origin: :agent, actor: user,
-                                    case_task_id: case_task_id, payload: { content: note_text })
+                                    case_task_id: case_task_id,
+                                    payload: { content: note_text, kind: 'task_report', task_report_id: id })
   end
 
   def note_text

@@ -38,11 +38,20 @@ describe('TaskReportModal', () => {
     const ctx = context();
     await methods.submit.call(ctx);
 
-    expect(TaskReportsAPI.send).toHaveBeenCalledWith(ctx.item, {
-      content: 'Le llamé',
-      outcomeId: 2,
-      files: [],
+    expect(TaskReportsAPI.send).toHaveBeenCalledWith(
+      { type: 'task', id: 1 },
+      { content: 'Le llamé', outcomeId: 2, files: [] }
+    );
+    expect(ctx.$emit).toHaveBeenCalledWith('reported');
+  });
+
+  it('con varias tareas manda un reporte por cada una', async () => {
+    const ctx = context({
+      item: { type: 'task', ids: [4, 5], title: 'Tareas' },
     });
+    await methods.submit.call(ctx);
+
+    expect(TaskReportsAPI.send.mock.calls.map(c => c[0].id)).toEqual([4, 5]);
     expect(ctx.$emit).toHaveBeenCalledWith('reported');
   });
 
