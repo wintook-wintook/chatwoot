@@ -1,7 +1,8 @@
 <!--
   prospeccion V4 — «no contactar»: el contacto pidió no volver a ser contactado (por el
   enlace del correo, respondiendo o porque un agente lo marcó). Mientras lo tenga, ninguna
-  campaña lo inscribe y sus seguimientos quedan cancelados. Aquí se ve y se marca o se quita.
+  campaña lo inscribe y sus seguimientos quedan cancelados. Aquí se ve y se quita (marcarlo a
+  mano desde aquí se quitó el 2026-11-02: por ahora no se usa).
   prospeccion V7b — arriba, si su correo rebotó (solo aviso: se quita al corregir el correo).
 -->
 <script>
@@ -54,9 +55,6 @@ export default {
         this.busy = false;
       }
     },
-    mark() {
-      this.run('mark', 'CONTACT_OPT_OUT.MARKED');
-    },
     undo() {
       this.run('undo', 'CONTACT_OPT_OUT.UNDONE');
     },
@@ -102,17 +100,7 @@ export default {
         {{ $t('CONTACT_OPT_OUT.UNDO') }}
       </woot-button>
     </div>
-    <woot-button
-      v-else
-      v-tooltip.left="$t('CONTACT_OPT_OUT.HINT')"
-      size="tiny"
-      variant="clear"
-      color-scheme="secondary"
-      icon="dismiss-circle"
-      :is-loading="busy"
-      @click="mark"
-    >
-      {{ $t('CONTACT_OPT_OUT.MARK') }}
-    </woot-button>
+    <!-- 2026-11-02 — se quitó el botón «No contactar» (por ahora no se usa): solo
+         quedan los avisos de quien lo pidió por el enlace o al responder. -->
   </div>
 </template>
