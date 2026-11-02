@@ -47,6 +47,27 @@ RSpec.describe KnowledgeBase::SheetRowFit do
     expect(resultado).to include('…')
   end
 
+  # Cuenta 1128, conv 60 (02/11/2026): la liga del plan de estudios llegaba cortada.
+  it 'no acorta un valor de una sola pieza (URL o archivo) aunque sea largo' do
+    url = 'https://neoclase.com/wp-content/uploads/2026/09/Plan-de-estudios-de-la-carrera-de-Administracion.pdf'
+    resultado = described_class.call([fila, "plan_estudios_url: #{url}"].join("\n"), 600)
+
+    expect(resultado.size).to be <= 600
+    expect(resultado).to include("plan_estudios_url: #{url}")
+    expect(resultado).to include("plan_estudios_url: https://neoclase.com/#{'x' * 90}")
+  end
+
+  # Misma cuenta, fila de Bienes Raíces: la celda sigue con una nota detrás de la URL.
+  it 'no parte una URL aunque la celda siga con más texto; corta después de ella' do
+    url = 'https://neoclase.com/wp-content/uploads/2026/09/Plan-de-estudios-de-la-carrera-de-INNeo.pdf'
+    celda = "plan_estudios_url: #{url} , nota: #{'dentro de la liga encontraras la ubicación de la universidad ' * 3}"
+    resultado = described_class.call([fila, celda].join("\n"), 600)
+    linea = resultado.lines.find { |l| l.start_with?('plan_estudios_url: https://neoclase.com/wp') }
+
+    expect(resultado.size).to be <= 600
+    expect(linea.chomp).to eq("plan_estudios_url: #{url}…")
+  end
+
   it 'si ni acortando todo cabe, corta el final como antes' do
     muchas = Array.new(40) { |n| "columna_#{n}: #{'v' * 70}" }.join("\n")
 
