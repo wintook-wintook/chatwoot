@@ -10,6 +10,7 @@ RSpec.describe Whatsapp::ResumableUploadService do
   let(:graph) { 'https://graph.facebook.com/v20.0' }
 
   before do
+    allow(GlobalConfigService).to receive(:load).with('META_APP_ID', nil).and_return(nil)
     allow(GlobalConfigService).to receive(:load).with('FB_APP_ID', nil).and_return('APP123')
   end
 
@@ -45,9 +46,59 @@ RSpec.describe Whatsapp::ResumableUploadService do
     expect(result.error).to match(/supera/)
   end
 
+  it 'usa META_APP_ID (env o super admin) antes que FB_APP_ID' do
+    allow(GlobalConfigService).to receive(:load).with('META_APP_ID', nil).and_return('META999')
+    stub_media
+    stub_request(:post, "#{graph}/META999/uploads").with(query: hash_including({}))
+                                                   .to_return(status: 200, body: { id: 'upload:m' }.to_json, headers: json)
+    stub_request(:post, "#{graph}/upload:m").to_return(status: 200, body: { h: 'HM' }.to_json, headers: json)
+
+    expect(described_class.new(channel: whatsapp_channel, media_url: media_url).perform.handle).to eq('HM')
+  end
+
   it 'falla si no hay App ID configurado' do
     allow(GlobalConfigService).to receive(:load).with('FB_APP_ID', nil).and_return(nil)
     result = described_class.new(channel: whatsapp_channel, media_url: media_url).perform
     expect(result.error).to match(/META_APP_ID/)
+  end
+
+  # feat/plantillas_whatsapp_mejoras F0: video y documento, cada uno con su límite.
+  describe 'video y documento' do
+    def stub_upload(type)
+      stub_request(:post, "#{graph}/APP123/uploads")
+        .with(query: hash_including({ 'file_type' => type }))
+        .to_return(status: 200, body: { id: 'upload:s1' }.to_json, headers: json)
+      stub_request(:post, "#{graph}/upload:s1").to_return(status: 200, body: { h: 'H-OK' }.to_json, headers: json)
+    end
+
+    it 'sube un video MP4 y devuelve su handle' do
+      stub_media(content_type: 'video/mp4', body: 'MP4')
+      stub_upload('video/mp4')
+
+      result = described_class.new(channel: whatsapp_channel, media_url: media_url, header_type: 'video').perform
+      expect(result).to have_attributes(success: true, handle: 'H-OK')
+    end
+
+    it 'sube un documento PDF y devuelve su handle' do
+      stub_media(content_type: 'application/pdf', body: '%PDF')
+      stub_upload('application/pdf')
+
+      result = described_class.new(channel: whatsapp_channel, media_url: media_url, header_type: 'document').perform
+      expect(result).to have_attributes(success: true, handle: 'H-OK')
+    end
+
+    it 'un video acepta hasta 16 MB y rechaza más' do
+      stub_media(content_type: 'video/mp4', length: (17 * 1024 * 1024).to_s)
+
+      result = described_class.new(channel: whatsapp_channel, media_url: media_url, header_type: 'video').perform
+      expect(result.error).to match(/El video supera 16 MB/)
+    end
+
+    it 'cada tipo solo acepta sus formatos' do
+      stub_media(content_type: 'image/png')
+
+      result = described_class.new(channel: whatsapp_channel, media_url: media_url, header_type: 'document').perform
+      expect(result.error).to match(%r{Tipo no permitido \(image/png\); solo PDF})
+    end
   end
 end

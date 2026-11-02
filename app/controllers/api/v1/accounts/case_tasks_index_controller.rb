@@ -79,7 +79,7 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
 
   # «Mi día» del agente actual (primera página: el plan y las más urgentes).
   def my_day_for_ai
-    query_params = params.permit(:day).merge(mode: 'my_day', assignee_id: current_user.id, page: 1)
+    query_params = params.permit(:day, :tz).merge(mode: 'my_day', assignee_id: current_user.id, page: 1)
     @my_day = Cases::TasksInboxQuery.new(account: Current.account, current_user: current_user, params: query_params).call
     @my_day[:rows].map do |task, _kind|
       @my_day[:scores][task.id].merge(task: task, planned: @my_day[:planned_ids].include?(task.id))
@@ -122,13 +122,14 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
       # @tickets_cases — nº de notas internas atadas a la tarea (columna "Notas").
       notes_count: (@notes_count_map || {})[task.id] || 0,
       case_ticket: ticket_context(task.case_ticket)
-    }.merge(priority_fields(task))
+    }.merge(priority_fields(task)).merge(agenda_client(task))
   end
 
   # Plan-Bandeja-Prioridad F1 — duración estimada, hito y, en «Mi día», el
   # puntaje con sus motivos (score + reasons).
   def priority_fields(task)
-    fields = { estimated_minutes: task.estimated_minutes, planned_on: task.planned_on, milestone: task.milestone }
+    fields = { estimated_minutes: task.estimated_minutes, planned_on: task.planned_on, milestone: task.milestone,
+               report_required: task.report_required? }
              .merge(@scores[task.id] || {})
     @planned_ids ? fields.merge(planned: @planned_ids.include?(task.id)) : fields
   end
@@ -141,7 +142,12 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
     meeting_json(meeting).merge(
       item_type: 'meeting',
       case_ticket: ticket_context(meeting.case_ticket)
-    )
+    ).merge(agenda_client(meeting))
+  end
+
+  # Plan-Agenda A1 — sin caso, la fila dice de quién es.
+  def agenda_client(record)
+    { contact: record.contact&.slice(:id, :name), organization: record.organization&.slice(:id, :name) }
   end
 
   # id de tarea → nº de notas internas, solo para las filas de tarea de la

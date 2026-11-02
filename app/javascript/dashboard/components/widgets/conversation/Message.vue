@@ -3,6 +3,9 @@ import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import BubbleActions from './bubble/Actions.vue';
 import BubbleContact from './bubble/Contact.vue';
 import BubbleFile from './bubble/File.vue';
+import BubbleTemplateHeader from './bubble/TemplateHeader.vue';
+import BubbleTemplateButtons from './bubble/TemplateButtons.vue';
+import { describeTemplate } from './WhatsappTemplates/templateForm';
 import BubbleImageAudioVideo from './bubble/ImageAudioVideo.vue';
 import BubbleIntegration from './bubble/Integration.vue';
 import BubbleLocation from './bubble/Location.vue';
@@ -36,6 +39,8 @@ export default {
     BubbleActions,
     BubbleContact,
     BubbleFile,
+    BubbleTemplateHeader,
+    BubbleTemplateButtons,
     BubbleImageAudioVideo,
     BubbleIntegration,
     BubbleLocation,
@@ -111,6 +116,41 @@ export default {
         created_at: this.data.created_at || '',
       }));
     },
+    // feat/plantillas_whatsapp_mejoras F3: el archivo del encabezado de una plantilla (lo
+    // recibe el cliente; el mensaje solo guarda el texto del cuerpo).
+    // feat/plantillas_whatsapp_mejoras: los botones de la plantilla enviada (los recibe el
+    // cliente; el mensaje solo guarda el texto). Salen de la plantilla de la bandeja.
+    templateParams() {
+      const attrs = (this.data && this.data.additional_attributes) || {};
+      return attrs.template_params || null;
+    },
+    templateButtons() {
+      const params = this.templateParams;
+      if (!params || !params.name) return [];
+      const plantillas =
+        this.$store.getters['inboxes/getWhatsAppTemplates'](
+          this.data.inbox_id
+        ) || [];
+      const mismas = plantillas.filter(t => t.name === params.name);
+      const plantilla =
+        mismas.find(t => t.language === params.language) || mismas[0];
+      return plantilla ? describeTemplate(plantilla).buttons : [];
+    },
+    templateButtonValues() {
+      const processed = (this.templateParams || {}).processed_params || {};
+      return Array.isArray(processed.buttons) ? processed.buttons : [];
+    },
+    templateHeaderMedia() {
+      const attrs = (this.data && this.data.additional_attributes) || {};
+      const params = (attrs.template_params || {}).processed_params || {};
+      const header = params.header || {};
+      const tipos = ['image', 'video', 'document'];
+      // preview_url: el archivo guardado de la plantilla (no se guarda la liga de Meta).
+      return (header.preview_url || header.media_url) &&
+        tipos.includes(header.media_type)
+        ? header
+        : null;
+    },
     hasOneDayPassed() {
       // Disable retry button if the message is failed and the message is older than 24 hours
       return getDayDifferenceFromNow(new Date(), this.data?.created_at) >= 1;
@@ -118,6 +158,7 @@ export default {
     shouldRenderMessage() {
       return (
         this.hasAttachments ||
+        Boolean(this.templateHeaderMedia) ||
         this.data.content ||
         this.isEmailContentType ||
         this.isUnsupported ||
@@ -565,6 +606,10 @@ export default {
           :message-type="messageType"
           :parent-has-attachments="hasAttachments"
         />
+        <BubbleTemplateHeader
+          v-if="templateHeaderMedia"
+          :header="templateHeaderMedia"
+        />
         <div v-if="isUnsupported">
           <template v-if="isAMetaInbox && isInstagram">
             {{ $t('CONVERSATION.UNSUPPORTED_MESSAGE_INSTAGRAM') }}
@@ -586,6 +631,11 @@ export default {
           :message="message"
           :is-email="isEmailContentType"
           :display-quoted-button="displayQuotedButton"
+        />
+        <BubbleTemplateButtons
+          v-if="templateButtons.length"
+          :buttons="templateButtons"
+          :values="templateButtonValues"
         />
         <BubbleIntegration
           :message-id="data.id"

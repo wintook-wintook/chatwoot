@@ -28,7 +28,7 @@ class Cases::Meetings::GoogleMirrorService
     event = service.create_event(
       calendar_id: calendar_id,
       summary: @meeting.title,
-      description: @meeting.description,
+      description: google_description,
       location: @meeting.location,
       start_time: @meeting.starts_at,
       end_time: @meeting.ends_at,
@@ -56,7 +56,7 @@ class Cases::Meetings::GoogleMirrorService
       @meeting.google_event_id,
       calendar_id: calendar_id,
       summary: @meeting.title,
-      description: @meeting.description,
+      description: google_description,
       location: @meeting.location.to_s,
       start_time: @meeting.starts_at,
       end_time: @meeting.ends_at,
@@ -106,7 +106,7 @@ class Cases::Meetings::GoogleMirrorService
 
   # ¿Se puede espejar? Cuenta con el flag Y organizador con Calendar conectado.
   def mirrorable?
-    integration.present? && @ticket.account.feature_enabled?('google_calendar')
+    integration.present? && @meeting.account.feature_enabled?('google_calendar')
   end
 
   # Integración de Calendar del ORGANIZADOR (el evento vive en su calendario;
@@ -126,13 +126,18 @@ class Cases::Meetings::GoogleMirrorService
     emails = [
       integration&.google_email,
       @meeting.organizer&.email,
-      @ticket.assignee&.email
+      @ticket&.assignee&.email
     ]
     emails += Array(@meeting.attendee_emails)
     emails.compact_blank.map { |e| e.to_s.downcase }.uniq
   end
 
   private
+
+  # Plan-Agenda A2 — con la línea que lleva a la tarea en Kontrolya.
+  def google_description
+    AgendaItems::EventLine.description_for(@meeting)
+  end
 
   def service
     @service ||= GoogleCalendarService.new(integration)

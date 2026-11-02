@@ -30,7 +30,7 @@ export default {
     EVENTS: {
       TITLE: 'My Calendar',
       EMPTY: 'No events for this period',
-      NEW_EVENT: 'New Event',
+      NEW_EVENT: 'New scheduled task',
       ALL_DAY: 'All day',
     },
     CALENDAR: {
@@ -105,6 +105,25 @@ export default {
       SUCCESS: 'Event created successfully',
       SUCCESS_TASK: 'Task created successfully',
       ERROR: 'Could not create. Please try again.',
+    },
+    AGENDA_LINK: {
+      IS_VISIT: 'This is a customer visit',
+      ADDRESS: 'Visit address',
+      ADDRESS_PLACEHOLDER:
+        'If empty, the case or organization address is used',
+      CONTACT: 'Contact',
+      ORGANIZATION: 'Organization',
+      CASE: 'Case (optional)',
+      NO_CASE: 'No case',
+      OPEN_CASE: 'Open case',
+      INTERNAL: 'Internal, no client (Google only)',
+      NO_TASK:
+        'This event has no task yet. Pick the contact to create it, or mark it as internal.',
+      TITLE_REQUIRED: 'Enter the title.',
+      CLIENT_REQUIRED: 'Pick the contact or a case, or mark it as internal.',
+      NOT_CONNECTED:
+        'Google is not connected: what you schedule stays in Kontrolya only.',
+      LEGEND_NO_TASK: 'Dashed border: event without a task',
     },
     EDIT_EVENT: {
       TITLE: 'Edit Event',

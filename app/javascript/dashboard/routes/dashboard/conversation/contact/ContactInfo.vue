@@ -678,6 +678,7 @@ export default {
       v-if="showCalendarButton"
       :show="showCreateEventModal"
       :prefill-email="calendarPrefillEmail"
+      :prefill-contact="contact"
       @close="showCreateEventModal = false"
       @created="showCreateEventModal = false"
     />
@@ -688,6 +689,6 @@ export default {
       :confirm-text="$t('DELETE_CONTACT.CONFIRM.YES')" :reject-text="$t('DELETE_CONTACT.CONFIRM.NO')" />
 
     <schedule-message-modal :show="showScheduleModal" :conversation-id="conversationId" :current-user="currentUser"
-      :inbox-id="currentChat.inbox_id" @close="showScheduleModal = false" />
+      :current-chat="currentChat" :inbox-id="currentChat.inbox_id" @close="showScheduleModal = false" />
   </div>
 </template>

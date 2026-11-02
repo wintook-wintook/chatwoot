@@ -1,21 +1,25 @@
 <script>
 import { mapGetters } from 'vuex';
-import Logo from './Logo.vue';
 import PrimaryNavItem from './PrimaryNavItem.vue';
 import OptionsMenu from './OptionsMenu.vue';
 import AgentDetails from './AgentDetails.vue';
+import QuickActions from './QuickActions.vue';
 import NotificationBell from './NotificationBell.vue';
 import wootConstants from 'dashboard/constants/globals';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import { ACCOUNT_EVENTS } from '../../../helper/AnalyticsHelper/events';
 import WebphoneMinimized from './WebphoneMinimized.vue';
+import {
+  assistantState,
+  toggleAssistant,
+} from 'dashboard/helper/assistantState';
 
 export default {
   components: {
-    Logo,
     PrimaryNavItem,
     OptionsMenu,
     AgentDetails,
+    QuickActions,
     NotificationBell,
     WebphoneMinimized,
   },
@@ -28,10 +32,6 @@ export default {
       type: String,
       default: '',
     },
-    accountId: {
-      type: Number,
-      default: 0,
-    },
     menuItems: {
       type: Array,
       default: () => [],
@@ -43,6 +43,7 @@ export default {
   },
   data() {
     return {
+      assistant: assistantState, // Asistente (Dali)
       helpDocsURL: window.chatwootConfig?.helpDocsURL || wootConstants.DOCS_URL,
       showOptionsMenu: false,
     };
@@ -61,6 +62,9 @@ export default {
     },
   },
   methods: {
+    toggleAssistant() {
+      toggleAssistant();
+    },
     frontendURL,
     toggleOptions() {
       this.showOptionsMenu = !this.showOptionsMenu;
@@ -84,11 +88,10 @@ export default {
     class="flex flex-col justify-between w-16 h-full bg-white border-r dark:bg-slate-900 border-slate-50 dark:border-slate-800/50 rtl:border-l rtl:border-r-0"
   >
     <div class="flex flex-col items-center">
-      <Logo
-        :source="logoSource"
+      <QuickActions
+        :logo-source="logoSource"
         :name="installationName"
-        :account-id="accountId"
-        class="m-4 mb-2"
+        :show-task="hasHomeArea"
       />
       <NotificationBell
         v-if="!hasHomeArea"
@@ -108,6 +111,17 @@ export default {
     </div>
     <div class="flex flex-col items-center justify-end pb-6">
       <WebphoneMinimized />
+      <!-- Asistente (Dali) — en todas las pantallas; también Ctrl + J -->
+      <button
+        v-tooltip.right="$t('ASSISTANT.BUTTON', { name: assistant.name })"
+        type="button"
+        class="flex items-center justify-center w-10 h-10 mb-2 rounded-lg text-woot-600 hover:bg-woot-50 dark:text-woot-300 dark:hover:bg-woot-900/40"
+        :class="{ 'bg-woot-50 dark:bg-woot-900/40': assistant.open }"
+        :aria-label="$t('ASSISTANT.BUTTON', { name: assistant.name })"
+        @click="toggleAssistant()"
+      >
+        <fluent-icon icon="wand" size="20" />
+      </button>
       <!-- El foro de Kontrolya (antes el manual de Chatwoot, solo sin marca propia). -->
       <PrimaryNavItem
         icon="chat-help"
