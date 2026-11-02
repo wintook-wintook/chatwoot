@@ -7,6 +7,7 @@
   2B: clasificación ITIL (tipo, servicio, categoría, impacto/urgencia → prioridad por matriz).
 -->
 <script>
+import CaseTasksOnCloseModal from 'dashboard/views/gestorTickets/tasks/CaseTasksOnCloseModal.vue';
 import { mapGetters } from 'vuex';
 import { forType, idAvailable } from 'dashboard/helper/caseClassification';
 import { isCommercialType } from 'dashboard/helper/caseCommercial';
@@ -29,7 +30,7 @@ const PRIORITY_MATRIX = {
 
 export default {
   name: 'CaseTicketModal',
-  components: { CaseTimeline, CommitmentFields },
+  components: { CaseTimeline, CommitmentFields, CaseTasksOnCloseModal },
   props: {
     show: { type: Boolean, default: false },
     contactId: { type: [Number, String], required: true },
@@ -301,11 +302,18 @@ export default {
     },
     async transitionTo(ticket, status) {
       this.transitionMenuFor = null;
+      // Cancelar cierra directo: primero, qué pasa con lo pendiente.
+      const decision =
+        status === 'cancelled'
+          ? await this.$refs.tasksOnClose.ask(ticket.id, status)
+          : {};
+      if (decision === null) return;
       try {
         await this.$store.dispatch('caseTickets/transitionTicket', {
           ticketId: ticket.id,
           contactId: this.contactId,
           status,
+          ...decision,
         });
         this.fetchTickets();
         this.$emit('created'); // refresca el conteo del panel
@@ -1146,5 +1154,6 @@ export default {
       :ticket-id="timelineTicketId"
       @close="showTimeline = false"
     />
+    <CaseTasksOnCloseModal ref="tasksOnClose" />
   </woot-modal>
 </template>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_04_140000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_04_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -178,6 +178,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_04_140000) do
     t.index ["associated_article_id"], name: "index_articles_on_associated_article_id"
     t.index ["author_id"], name: "index_articles_on_author_id"
     t.index ["slug"], name: "index_articles_on_slug", unique: true
+  end
+
+  create_table "assistant_threads", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.jsonb "messages", default: [], null: false
+    t.boolean "archived", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id", "archived"], name: "index_assistant_threads_on_account_id_and_user_id_and_archived"
+    t.index ["account_id"], name: "index_assistant_threads_on_account_id"
+    t.index ["user_id"], name: "index_assistant_threads_on_user_id"
   end
 
   create_table "attachments", id: :serial, force: :cascade do |t|
@@ -547,6 +559,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_04_140000) do
     t.bigint "documentation_for_column_id"
     t.bigint "contact_id"
     t.bigint "organization_id"
+    t.datetime "cancelled_at"
+    t.string "cancel_reason"
     t.index ["account_id", "priority"], name: "index_case_tasks_on_account_id_and_priority"
     t.index ["account_id"], name: "index_case_tasks_on_account_id"
     t.index ["assignee_id", "planned_on"], name: "index_case_tasks_on_assignee_id_and_planned_on"
@@ -559,6 +573,20 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_04_140000) do
     t.index ["contact_id"], name: "index_case_tasks_on_contact_id"
     t.index ["organization_id"], name: "index_case_tasks_on_organization_id"
     t.index ["requester_id"], name: "index_case_tasks_on_requester_id"
+  end
+
+  create_table "case_ticket_conversations", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_ticket_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "linked_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_ticket_conversations_on_account_id"
+    t.index ["case_ticket_id", "conversation_id"], name: "idx_case_ticket_conversations_unique", unique: true
+    t.index ["case_ticket_id"], name: "index_case_ticket_conversations_on_case_ticket_id"
+    t.index ["conversation_id"], name: "index_case_ticket_conversations_on_conversation_id"
+    t.index ["linked_by_id"], name: "index_case_ticket_conversations_on_linked_by_id"
   end
 
   create_table "case_ticket_relations", force: :cascade do |t|
@@ -2475,6 +2503,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_04_140000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "ai_agent_attachments", "accounts"
   add_foreign_key "ai_agent_attachments", "tracking_templates"
+  add_foreign_key "assistant_threads", "accounts", on_delete: :cascade
+  add_foreign_key "assistant_threads", "users", on_delete: :cascade
   add_foreign_key "case_ai_configs", "accounts"
   add_foreign_key "case_categories", "case_types"
   add_foreign_key "case_events", "case_tasks", on_delete: :nullify
@@ -2507,6 +2537,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_04_140000) do
   add_foreign_key "case_tasks", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "case_tasks", "users", column: "completed_by_id", on_delete: :nullify
   add_foreign_key "case_tasks", "users", column: "requester_id", on_delete: :nullify
+  add_foreign_key "case_ticket_conversations", "accounts", on_delete: :cascade
+  add_foreign_key "case_ticket_conversations", "case_tickets", on_delete: :cascade
+  add_foreign_key "case_ticket_conversations", "conversations", on_delete: :cascade
+  add_foreign_key "case_ticket_conversations", "users", column: "linked_by_id", on_delete: :nullify
   add_foreign_key "case_tickets", "case_outcome_reasons", column: "outcome_reason_id", on_delete: :nullify
   add_foreign_key "case_tickets", "case_outcome_reasons", column: "postpone_reason_id", on_delete: :nullify
   add_foreign_key "case_tickets", "case_type_columns", on_delete: :nullify

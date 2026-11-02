@@ -1,7 +1,7 @@
 <!--
   Reporte de cierre — al concluir una tarea o tarea agendada: qué se hizo (obligatorio),
   resultado del catálogo y evidencia opcional.
-  item = { type: 'task' | 'meeting', id, title }
+  item = { type: 'task' | 'meeting', id, title }. Con `ids`, un mismo reporte para varias.
 -->
 <script>
 import { useAlert } from 'dashboard/composables';
@@ -62,11 +62,17 @@ export default {
       }
       this.saving = true;
       try {
-        await TaskReportsAPI.send(this.item, {
+        const { type, id, ids } = this.item;
+        const report = {
           content,
           outcomeId: this.outcomeId,
           files: this.files,
-        });
+        };
+        await Promise.all(
+          (ids || [id]).map(itemId =>
+            TaskReportsAPI.send({ type, id: itemId }, report)
+          )
+        );
         this.$emit('reported');
       } catch (error) {
         const reason = error?.response?.data?.error;

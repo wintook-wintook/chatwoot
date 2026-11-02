@@ -5,6 +5,7 @@
   can_transition_to (backend) y se pide una nota opcional (reason del evento).
 -->
 <script>
+import CaseTasksOnCloseModal from 'dashboard/views/gestorTickets/tasks/CaseTasksOnCloseModal.vue';
 import { mapGetters } from 'vuex';
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
 import MessageApi from 'dashboard/api/inbox/message'; // @tickets_cases — notificar al mover
@@ -106,6 +107,7 @@ const SLA_BADGE = {
 export default {
   name: 'TicketKanban',
   components: {
+    CaseTasksOnCloseModal,
     CaseTicketInternalModal, // @tickets_cases Fase C
     OutcomeModal,
     PostponeModal,
@@ -400,6 +402,19 @@ export default {
     // `requires_outcome` y en la espera `requires_postpone` → se abre el modal y
     // se reintenta el mismo movimiento con los datos.
     async commercialMove(ticket, column, extra = {}) {
+      // Soltar en Ganada, Perdida o Cancelada cierra el caso: primero, qué pasa con lo
+      // pendiente. Al reintentar con el resultado ya viene decidido.
+      const closes = ['closed', 'cancelled'].some(s =>
+        (column.statuses || []).includes(s)
+      );
+      if (closes && !extra.decided) {
+        const decision = await this.$refs.tasksOnClose.ask(
+          ticket.id,
+          column.statuses.includes('closed') ? 'closed' : 'cancelled'
+        );
+        if (decision === null) return;
+        Object.assign(extra, decision, { decided: true });
+      }
       try {
         await this.$store.dispatch('caseTickets/moveTicketColumn', {
           ticketId: ticket.id,
@@ -410,7 +425,12 @@ export default {
       } catch (e) {
         const data = e.response?.data || {};
         if (data.requires_outcome) {
-          this.outcomeMove = { ticket, column, outcome: data.outcome || null };
+          this.outcomeMove = {
+            ticket,
+            column,
+            outcome: data.outcome || null,
+            decision: extra,
+          };
         } else if (data.requires_postpone) {
           this.postponeMove = { ticket, column };
         } else {
@@ -422,9 +442,9 @@ export default {
       }
     },
     confirmOutcomeMove(closure) {
-      const { ticket, column } = this.outcomeMove;
+      const { ticket, column, decision } = this.outcomeMove;
       this.outcomeMove = null;
-      this.commercialMove(ticket, column, { closure });
+      this.commercialMove(ticket, column, { ...decision, closure });
     },
     confirmPostponeMove({
       postponed_until: postponedUntil,
@@ -707,12 +727,19 @@ export default {
       const conversationId = ticket?.conversation_display_id;
       const targetColumn = this.moveTargetColumn;
       this.showMoveModal = false;
+      // Cancelar cierra directo. Cerrar exige documentarlo en la ficha, que pregunta ahí.
+      const statuses = targetColumn ? targetColumn.statuses : [status];
+      const decision = (statuses || []).includes('cancelled')
+        ? await this.$refs.tasksOnClose.ask(ticket.id, 'cancelled')
+        : {};
+      if (decision === null) return;
       try {
         if (targetColumn) {
           // Tablero por tipo (A+): el backend transiciona y fija el puntero.
           await this.$store.dispatch('caseTickets/moveTicketColumn', {
             ticketId: ticket.id,
             caseTypeColumnId: targetColumn.id,
+            ...decision,
           });
         } else {
           await this.$store.dispatch('caseTickets/transitionTicket', {
@@ -720,6 +747,7 @@ export default {
             contactId: ticket.contact_id,
             status,
             reason,
+            ...decision,
           });
         }
         if (notify && notifyMessage && conversationId) {
@@ -1263,5 +1291,6 @@ export default {
       @created="onInternalCreated"
       @close="showInternalModal = false"
     />
+    <CaseTasksOnCloseModal ref="tasksOnClose" />
   </div>
 </template>

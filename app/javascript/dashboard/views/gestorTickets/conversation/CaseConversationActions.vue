@@ -1,6 +1,6 @@
 <!--
-  @tickets_cases — botones de la pestaña «Conversación» del caso: ligar
-  conversación, programar mensaje y «Delegar a agente IA» (seguimiento).
+  @tickets_cases — botones de la pestaña «Conversación» del caso: ligar (o
+  agregar otra) conversación, programar mensaje y «Delegar a agente IA» (seguimiento).
   Siempre visibles. Programar y delegar necesitan la conversación (su bandeja y
   su canal): si el caso no tiene, primero se liga o se crea y después se abre lo
   que se pidió. Reusa las ventanitas de la ficha del contacto tal cual.
@@ -142,14 +142,9 @@ export default {
 
 <template>
   <div class="flex flex-wrap items-center gap-2">
-    <woot-button
-      v-if="!displayId"
-      size="small"
-      variant="smooth"
-      icon="link"
-      @click="openLink()"
-    >
-      {{ t('LINK') }}
+    <!-- Plan Actividad del caso — con principal, se agregan adicionales (el correo…) -->
+    <woot-button size="small" variant="smooth" icon="link" @click="openLink()">
+      {{ t(displayId ? 'ADD' : 'LINK') }}
     </woot-button>
     <woot-button
       v-tooltip="t('SCHEDULE_HINT')"

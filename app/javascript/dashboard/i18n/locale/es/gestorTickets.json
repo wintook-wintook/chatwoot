@@ -1,4 +1,19 @@
 {
+  "CASE_TASKS_ON_CLOSE": {
+    "HEADER": "Antes de cerrar el caso",
+    "TITLE": "Este caso tiene {count} tarea(s) pendiente(s)",
+    "DESC": "Un caso cerrado no se puede editar. Elige qué pasa con ellas.",
+    "CANCEL_LABEL": "Cancelarlas",
+    "CANCEL_DESC": "Ya no hacen falta. No cuentan como hechas y regresan si se reabre el caso.",
+    "KEEP_LABEL": "Conservarlas sin caso",
+    "KEEP_DESC": "Siguen vivas en el contacto y en Mi día de su responsable.",
+    "CONCLUDE_LABEL": "Concluirlas ahora",
+    "CONCLUDE_DESC": "Sí se hicieron: escribes un reporte de cierre para todas.",
+    "BACK": "Volver",
+    "CONFIRM": "Continuar",
+    "REPORT_TITLE": "Tareas del caso ({count})",
+    "ERROR": "No se pudieron concluir las tareas."
+  },
   "VISIT_ARRIVALS": {
     "EXPORT": "Exportar CSV",
     "EMPTY": "Sin llegadas en ese periodo.",
@@ -48,6 +63,15 @@
   "QUICK_ACTIONS": {
     "TITLE": "Accesos rápidos",
     "NEW_TASK": "Tarea",
+    "SEARCH_CLIENT": "Buscar contacto u organización",
+    "SEARCH": {
+      "TITLE": "Buscar contacto u organización",
+      "PLACEHOLDER": "Nombre, teléfono o correo",
+      "SEARCHING": "Buscando…",
+      "EMPTY": "Sin resultados.",
+      "CONTACTS": "Contactos",
+      "ORGANIZATIONS": "Organizaciones"
+    },
     "NEW_CONTACT": "Nuevo contacto",
     "TASK": {
       "TITLE": "Nueva tarea",
@@ -290,6 +314,9 @@
       "OPEN": "Ver ficha del contacto"
     },
     "DETAIL_TABS": {
+      "PENDING": "Pendientes",
+      "MORE": "Más",
+      "ACTIVITY": "Actividad",
       "SUMMARY": "Resumen",
       "CONVERSATION": "Conversación",
       "NOTES": "Notas",
@@ -444,7 +471,8 @@
       },
       "STATUS": {
         "PENDING": "Pendiente",
-        "DONE": "Concluida"
+        "DONE": "Concluida",
+        "CANCELLED": "Cancelada"
       },
       "MODAL": {
         "NEW_TITLE": "Nueva tarea",
@@ -1125,7 +1153,7 @@
       "REOPEN": {
         "SECTION": "Reapertura de casos cerrados",
         "WINDOW_TITLE": "Ventana de reapertura",
-        "WINDOW_DESC": "Días desde el cierre en los que el responsable puede reabrir. Pasado ese plazo, solo un administrador. Usa 0 para no poner límite.",
+        "WINDOW_DESC": "Días desde el cierre en los que una respuesta del cliente reabre el caso. Pasado ese plazo se crea un caso nuevo ligado al anterior. Usa 0 para no poner límite.",
         "DAYS": "días",
         "SAVE": "Guardar",
         "ON_REPLY_TITLE": "Reabrir si el cliente responde",
@@ -1478,7 +1506,15 @@
       "commitment_changed": "Compromiso del cliente",
       "conversation_link": "Conversación ligada",
       "stage_tasks_added": "Tareas de la etapa",
-      "stage_advanced": "Avance de etapa"
+      "stage_advanced": "Avance de etapa",
+      "task_created": "Tarea creada",
+      "task_completed": "Tarea completada",
+      "task_cancelled": "Tarea cancelada",
+      "task_reopened": "Tarea reabierta",
+      "task_deleted": "Tarea borrada",
+      "quote_created": "Cotización creada",
+      "quote_status_changed": "Cotización actualizada",
+      "conversation_unlinked": "Conversación quitada"
     },
     "DETAIL": {
       "BACK": "Volver",
@@ -1487,6 +1523,10 @@
       "LEVEL_LABEL": "Nivel:",
       "VIEW_FULL": "Ver todo",
       "NO_TRANSITIONS": "Sin transiciones disponibles",
+      "COPY_FOLIO": "Copiar folio",
+      "FOLIO_COPIED": "Folio copiado",
+      "INTERNAL_CASE": "Caso interno",
+      "MORE_ACTIONS": "Más acciones",
       "LOADING": "Cargando caso…",
       "PARENT_PROJECT": "Proyecto",
       "BACK_TO_PROJECT": "Volver al proyecto",
@@ -1495,6 +1535,8 @@
     },
     "MEETINGS": {
       "TITLE": "Tareas agendadas",
+      "FILTERED": "Solo las de {folio}",
+      "CLEAR_FILTER": "Ver todas",
       "ADD_NEW": "Agendar tarea",
       "REFRESH": "Actualizar",
       "LOADING": "Cargando tareas agendadas...",
@@ -1634,6 +1676,11 @@
       },
       "COLUMN_TOTAL": "Total de la columna",
       "PANEL": {
+        "SHORT_TITLE": "Oportunidad",
+        "WEIGHTED_LINE": "{pct}% → {weighted} ponderado",
+        "CLOSE_LINE": "Cierre {date}",
+        "OVERDUE": "vencido",
+        "EDIT": "Editar datos de la oportunidad",
         "TITLE": "Datos de la oportunidad",
         "SAVE": "Guardar",
         "CANCEL": "Descartar",
@@ -2045,6 +2092,7 @@
       },
       "SUPPORT": {
         "NAME": "Soporte",
+        "NEW": "Caso",
         "LIST": "Tickets",
         "BOARD": "Tablero de tickets",
         "METRICS": "Métricas de soporte",
@@ -2062,6 +2110,7 @@
       },
       "WORK_ORDER": {
         "NAME": "Órdenes",
+        "NEW": "Orden de trabajo",
         "LIST": "Órdenes de trabajo",
         "BOARD": "Tablero de órdenes",
         "METRICS": "Métricas de órdenes",
@@ -2079,6 +2128,7 @@
       },
       "PROJECT": {
         "NAME": "Proyectos",
+        "NEW": "Proyecto",
         "LIST": "Proyectos",
         "BOARD": "Tablero de proyectos",
         "METRICS": "Métricas de proyectos",
@@ -2208,7 +2258,18 @@
       "CONTACT_INTERNAL_HINT": "Sin contacto se crea como caso interno.",
       "CHANGE_CONTACT": "Cambiar contacto",
       "NO_CONTACTS": "Sin resultados",
-      "SUCCESS": "Caso {folio} creado"
+      "SUCCESS": {
+        "COMMERCIAL": "Oportunidad {folio} creada",
+        "SUPPORT": "Caso {folio} creado",
+        "WORK_ORDER": "Orden de trabajo {folio} creada",
+        "PROJECT": "Proyecto {folio} creado"
+      },
+      "SUBMIT": {
+        "COMMERCIAL": "Crear oportunidad",
+        "SUPPORT": "Crear caso",
+        "WORK_ORDER": "Crear orden de trabajo",
+        "PROJECT": "Crear proyecto"
+      }
     },
     "PROJECT": {
       "PANEL": {
@@ -2497,7 +2558,50 @@
         "ERROR": "No se pudo analizar."
       }
     },
+    "ACTIVITY": {
+      "NEXT": "Sigue",
+      "REGISTER": "Registrar",
+      "REGISTER_ACTIONS": {
+        "note": "Nota",
+        "task": "Tarea",
+        "meeting": "Agendar",
+        "message": "Mensaje"
+      },
+      "OVERDUE": "{n} atrasada(s)",
+      "DUE": "vence {when}",
+      "NOTHING_PENDING": "No hay pendientes",
+      "LAST_CONTACT": "Último contacto",
+      "CUSTOMER_WROTE": "El cliente escribió {when} · {where}",
+      "WE_WROTE": "Le escribimos {when} · {where}",
+      "NO_MESSAGES": "Todavía no hay mensajes",
+      "NO_CONVERSATION": "Sin conversación ligada",
+      "CONVERSATIONS": "Conversaciones",
+      "PRIMARY": "principal",
+      "UNLINK": "Quitar del caso",
+      "UNLINK_CONFIRM": "¿Quitar la conversación #{id} del caso? La conversación no se borra.",
+      "ADD_CONVERSATION": "Agregar",
+      "UNLINKED": "El contacto tiene {n} conversación(es) sin ligar",
+      "FILTERS": {
+        "all": "Todo",
+        "client": "Cliente",
+        "notes": "Notas",
+        "tasks": "Tareas",
+        "changes": "Cambios"
+      },
+      "RECEIVED": "{n} recibido(s)",
+      "SENT": "{n} enviado(s)",
+      "CUSTOMER": "Cliente",
+      "WE": "Nosotros",
+      "TASK_REPORT": "Reporte de cierre",
+      "TODAY": "Hoy",
+      "YESTERDAY": "Ayer",
+      "LOADING": "Cargando actividad…",
+      "ERROR": "No se pudo cargar la actividad",
+      "EMPTY": "No hay actividad",
+      "MORE": "Ver {n} más"
+    },
     "CONVERSATION_ACTIONS": {
+      "ADD": "Agregar conversación",
       "LINK": "Ligar conversación",
       "SCHEDULE": "Programar mensaje",
       "SCHEDULE_HINT": "Programa un mensaje al cliente en la conversación del caso",
@@ -2507,7 +2611,10 @@
       "NEED_CONTACT": "Asigna un contacto al caso para ligar una conversación",
       "EVENT": "Conversación #{id} · {inbox}",
       "EVENT_CREATED": "Conversación nueva #{id} · {inbox}",
+      "EVENT_EXTRA": "Conversación adicional #{id} · {inbox}",
       "LINK_MODAL": {
+        "TITLE_EXTRA": "Agregar conversación · {folio}",
+        "SUBTITLE_EXTRA": "Se suma a las del caso (por ejemplo, el correo). La principal no cambia.",
         "TITLE": "Ligar conversación · {folio}",
         "SUBTITLE": "El caso queda con esta conversación; después no se cambia.",
         "EXISTING": "Conversaciones del contacto",

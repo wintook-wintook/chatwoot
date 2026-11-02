@@ -1,8 +1,9 @@
 <!--
-  @tickets_cases — ligar la conversación de un caso que no tiene.
+  @tickets_cases — ligar una conversación al caso.
   Dos caminos: una conversación que ya existe del contacto, o una bandeja (usa la
-  abierta del contacto ahí o crea una nueva). El caso no cambia de conversación:
-  esto solo se ofrece cuando no tiene.
+  abierta del contacto ahí o crea una nueva). La primera queda como principal y no
+  cambia; Plan Actividad del caso — las siguientes (p. ej. el correo) se agregan
+  como adicionales. No se ofrecen las que ya están ligadas.
 -->
 <script>
 import { mapGetters } from 'vuex';
@@ -22,6 +23,7 @@ export default {
   data() {
     return {
       conversations: [],
+      linkedIds: [], // display_id de las que ya están ligadas al caso
       isLoading: false,
       inboxId: '',
       savingKey: null, // display_id de la que se liga, o 'inbox'
@@ -31,6 +33,13 @@ export default {
     ...mapGetters({ inboxes: 'inboxes/getInboxes' }),
     contactId() {
       return this.ticket.contact_id;
+    },
+    // Ya tiene principal: lo que se liga ahora es adicional.
+    isExtra() {
+      return !!this.ticket.conversation_display_id;
+    },
+    available() {
+      return this.conversations.filter(c => !this.linkedIds.includes(c.id));
     },
   },
   watch: {
@@ -51,8 +60,12 @@ export default {
       if (!this.contactId) return;
       this.isLoading = true;
       try {
-        const { data } = await ContactAPI.getConversations(this.contactId);
+        const [{ data }, linked] = await Promise.all([
+          ContactAPI.getConversations(this.contactId),
+          CaseTicketsAPI.getConversations(this.ticket.id),
+        ]);
         this.conversations = data.payload || [];
+        this.linkedIds = linked.data.conversations.map(c => c.display_id);
       } catch (_e) {
         this.conversations = [];
       } finally {
@@ -107,8 +120,10 @@ export default {
   <woot-modal :show="show" :on-close="() => $emit('close')" size="medium">
     <div class="flex flex-col h-auto overflow-auto">
       <woot-modal-header
-        :header-title="t('TITLE', { folio: ticket.folio })"
-        :header-content="t('SUBTITLE')"
+        :header-title="
+          t(isExtra ? 'TITLE_EXTRA' : 'TITLE', { folio: ticket.folio })
+        "
+        :header-content="t(isExtra ? 'SUBTITLE_EXTRA' : 'SUBTITLE')"
       />
       <div class="flex flex-col gap-6 px-8 pb-8">
         <!-- 1. Una conversación que ya existe del contacto -->
@@ -122,14 +137,14 @@ export default {
             {{ t('LOADING') }}
           </p>
           <p
-            v-else-if="!conversations.length"
+            v-else-if="!available.length"
             class="m-0 text-sm text-slate-500 dark:text-slate-400"
           >
             {{ t('EMPTY') }}
           </p>
           <ul v-else class="flex flex-col gap-2 p-0 m-0 list-none">
             <li
-              v-for="c in conversations"
+              v-for="c in available"
               :key="c.id"
               class="flex items-center gap-3 p-3 border rounded-lg border-slate-200 dark:border-slate-700"
             >

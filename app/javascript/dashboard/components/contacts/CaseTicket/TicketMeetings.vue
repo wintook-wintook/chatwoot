@@ -643,60 +643,22 @@ export default {
   <div
     class="flex flex-col min-h-0 p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
   >
-    <div class="flex items-center justify-between flex-shrink-0 mb-3">
-      <h3
-        class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
+    <!-- Plan Actividad del caso — sin renglón de título ni buscador: el botón
+         «Agendar tarea» está junto a las sub-pestañas de Pendientes. Solo queda
+         el aviso del filtro por tarea («ver tareas agendadas» de una tarea). -->
+    <div v-if="filterText" class="flex items-center flex-shrink-0 gap-2 mb-3">
+      <span
+        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200"
       >
-        {{ $t('CASE_TICKETS.MEETINGS.TITLE') }}
-        <span
-          v-if="meetings.length"
-          class="ml-1 text-sm font-normal text-slate-400 dark:text-slate-500"
-          >{{ meetings.length }}</span
-        >
-      </h3>
-      <div class="flex items-center gap-2">
-        <woot-button
-          v-tooltip.top="$t('CASE_TICKETS.MEETINGS.REFRESH')"
-          size="small"
-          variant="clear"
-          color-scheme="secondary"
-          icon="arrow-clockwise"
-          :is-loading="isLoading"
-          @click="refresh"
-        />
-        <woot-button
-          v-if="!isFrozen"
-          size="small"
-          icon="add"
-          @click="openCreate()"
-        >
-          {{ $t('CASE_TICKETS.MEETINGS.ADD_NEW') }}
-        </woot-button>
-      </div>
-    </div>
-
-    <!-- Filtro rápido de la tabla -->
-    <div v-if="meetings.length" class="flex-shrink-0 mb-3">
-      <div class="relative w-full max-w-xs">
-        <fluent-icon
-          icon="search"
-          size="16"
-          class="absolute pointer-events-none text-slate-400 dark:text-slate-500 left-2.5 top-1/2 -translate-y-1/2"
-        />
-        <input
-          v-model="filterText"
-          type="text"
-          :placeholder="$t('CASE_TICKETS.MEETINGS.FILTER_PLACEHOLDER')"
-          class="filter-search"
-        />
+        {{ $t('CASE_TICKETS.MEETINGS.FILTERED', { folio: filterText }) }}
         <button
-          v-if="filterText"
-          class="absolute -translate-y-1/2 right-2 top-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+          class="p-0 bg-transparent border-0 cursor-pointer text-woot-500 hover:text-woot-700"
+          :title="$t('CASE_TICKETS.MEETINGS.CLEAR_FILTER')"
           @click="filterText = ''"
         >
-          <fluent-icon icon="dismiss" size="14" />
+          <fluent-icon icon="dismiss" size="12" />
         </button>
-      </div>
+      </span>
     </div>
 
     <div
