@@ -1023,6 +1023,11 @@ export default {
     },
     // @tickets_cases — clic afuera (v-on-clickaway): cada bloque cierra solo lo suyo. Si
     // uno cerrara todos, el clic en el botón del otro apagaría su menú al abrirlo.
+    // Un solo clickaway para las dos barras de la cabecera (fix de develop, #133).
+    closeActionMenus() {
+      this.closeTransitionMenu();
+      this.closeDueMenu();
+    },
     closeDueMenu() {
       this.showDueMenu = false;
     },
@@ -2386,13 +2391,16 @@ export default {
           </div>
         </div>
 
-        <!-- @tickets_cases — columna derecha: acciones arriba + fechas debajo -->
-        <div class="flex flex-col items-end flex-shrink-0 gap-3">
+        <!-- @tickets_cases — columna derecha: acciones arriba + fechas debajo.
+             UN solo clickaway para las dos barras: con uno en cada barra, el clic
+             que abre un menú de una caía "fuera" de la otra y lo cerraba al
+             instante (el menú «Cambiar estado» nunca se veía). -->
+        <div
+          v-on-clickaway="closeActionMenus"
+          class="flex flex-col items-end flex-shrink-0 gap-3"
+        >
           <!-- Acciones (barra accionable inline — estilo osTicket) -->
-          <div
-            v-on-clickaway="closeTransitionMenu"
-            class="relative flex flex-wrap items-center justify-end gap-2"
-          >
+          <div class="relative flex flex-wrap items-center justify-end gap-2">
             <!-- Plan-Clase-Comercial F4 — cerrar con resultado / posponer -->
             <template v-if="isCommercial && !isFrozen">
               <woot-button
@@ -2541,10 +2549,7 @@ export default {
                el botón de vencimiento. -->
           <div class="flex flex-col items-end gap-3">
             <!-- Vence, a la altura de Equipo y Responsable (Vincular caso está en su pestaña) -->
-            <div
-              v-on-clickaway="closeDueMenu"
-              class="flex flex-wrap items-end justify-end gap-2"
-            >
+            <div class="flex flex-wrap items-end justify-end gap-2">
               <div class="flex items-center gap-2 pb-0.5">
                 <!-- @tickets_cases P4 — Vencimiento inline (osTicket "Due Date") -->
                 <div class="relative">
