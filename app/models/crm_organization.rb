@@ -97,6 +97,10 @@ class CrmOrganization < ApplicationRecord
                                                                   foreign_key: :organization_id, inverse_of: :organization,
                                                                   dependent: nil # las borra :addresses
   accepts_nested_attributes_for :home_address, update_only: true
+  # Contactos de Wintook ligados a la organización; borrarla solo los desliga.
+  has_many :contact_links, class_name: 'CrmOrganizationContact', foreign_key: :organization_id,
+                           inverse_of: :organization, dependent: :destroy
+  has_many :contacts, through: :contact_links
 
   # Mismos valores que TIPO_ORGANIZACION_ID de CRMZeus.
   enum organization_type: { customer: 1, prospect: 2 }

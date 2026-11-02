@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_01_100500) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1434,6 +1434,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100500) do
     t.index ["organization_id"], name: "index_crm_organization_addresses_one_primary", unique: true, where: "is_primary"
   end
 
+  create_table "crm_organization_contacts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "organization_id", null: false
+    t.integer "contact_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_organization_contacts_on_account_id"
+    t.index ["contact_id"], name: "index_crm_organization_contacts_on_contact_id", unique: true
+    t.index ["organization_id"], name: "index_crm_organization_contacts_on_organization_id"
+  end
+
   create_table "crm_organizations", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.integer "organization_type", default: 2, null: false
@@ -2720,6 +2731,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100500) do
   add_foreign_key "crm_organization_addresses", "accounts"
   add_foreign_key "crm_organization_addresses", "crm_cities", column: "city_id", on_delete: :nullify
   add_foreign_key "crm_organization_addresses", "crm_organizations", column: "organization_id", on_delete: :cascade
+  add_foreign_key "crm_organization_contacts", "accounts"
+  add_foreign_key "crm_organization_contacts", "contacts", on_delete: :cascade
+  add_foreign_key "crm_organization_contacts", "crm_organizations", column: "organization_id", on_delete: :cascade
   add_foreign_key "crm_organizations", "accounts"
   add_foreign_key "crm_organizations", "crm_currencies", column: "currency_id", on_delete: :nullify
   add_foreign_key "crm_organizations", "crm_lookups", column: "collector_id", on_delete: :nullify
