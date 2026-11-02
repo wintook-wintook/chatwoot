@@ -117,6 +117,10 @@ Rails.application.routes.draw do
             resources :organizations, only: [:index, :show, :create, :update, :destroy] do
               post :convert, on: :member
               resources :consignees, only: [:index, :create, :update, :destroy]
+              # CrmZeus C1 — contactos de Wintook ligados (:id = contact_id)
+              resources :contacts, only: [:index, :create, :destroy], controller: 'organization_contacts' do
+                get :search, on: :collection
+              end
             end
             resource :catalogs, only: [:show]
             resources :lookups, only: [:index, :create, :update, :destroy]
