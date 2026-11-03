@@ -28,7 +28,8 @@ export default {
   },
   emits: ['update'],
   data() {
-    return { modal: null };
+    // focus: null | índice | 'new' (ver VariablesModal); confirming: «variables-2».
+    return { modal: null, focus: null, confirming: null };
   },
   computed: {
     fields() {
@@ -55,6 +56,28 @@ export default {
     },
   },
   methods: {
+    open(modal, focus = null) {
+      this.focus = focus;
+      this.modal = modal;
+    },
+    removeVariable(index) {
+      this.confirming = null;
+      this.$emit('update', {
+        variables: variablesBody({
+          ...this.variables,
+          variables: this.variables.variables.filter((_, i) => i !== index),
+        }),
+      });
+    },
+    removeConstant(index) {
+      this.confirming = null;
+      this.$emit('update', {
+        datos_fijos: constantsBody({
+          ...this.constants,
+          constants: this.constants.constants.filter((_, i) => i !== index),
+        }),
+      });
+    },
     valuesText(variable) {
       const valores = [...variable.options];
       if (variable.free)
@@ -102,7 +125,7 @@ export default {
           size="small"
           variant="clear"
           icon="edit"
-          @click="modal = 'definition'"
+          @click="open('definition')"
         >
           {{ $t('TRACKING_ASSISTANT_VIEW.FIELDS_EDIT') }}
         </woot-button>
@@ -132,11 +155,12 @@ export default {
         </h4>
         <woot-button
           size="small"
-          variant="clear"
-          icon="edit"
-          @click="modal = 'variables'"
+          variant="smooth"
+          color-scheme="success"
+          icon="add"
+          @click="open('variables', 'new')"
         >
-          {{ $t('TRACKING_ASSISTANT_VIEW.FIELDS_EDIT') }}
+          {{ $t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_ADD') }}
         </woot-button>
       </div>
       <p
@@ -146,9 +170,10 @@ export default {
         {{ $t('TRACKING_ASSISTANT_VIEW.FIELDS_NO_VARIABLES') }}
       </p>
       <div
-        v-for="variable in variables.variables"
+        v-for="(variable, index) in variables.variables"
         :key="variable.name"
-        class="flex items-baseline gap-2"
+        class="flex items-center gap-2 px-1 rounded hover:bg-slate-50 dark:hover:bg-slate-700"
+        @mouseleave="confirming = null"
       >
         <span class="font-mono text-xs text-slate-800 dark:text-slate-100">
           {{ variable.name }}
@@ -166,6 +191,32 @@ export default {
             })
           }}
         </span>
+        <woot-button
+          v-tooltip="$t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_EDIT')"
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          icon="edit"
+          @click="open('variables', index)"
+        />
+        <woot-button
+          v-if="confirming !== `variables-${index}`"
+          v-tooltip="$t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_DELETE')"
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          icon="delete"
+          @click="confirming = `variables-${index}`"
+        />
+        <woot-button
+          v-else
+          size="tiny"
+          variant="smooth"
+          color-scheme="alert"
+          @click="removeVariable(index)"
+        >
+          {{ $t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_DELETE_CONFIRM') }}
+        </woot-button>
       </div>
     </section>
 
@@ -178,11 +229,12 @@ export default {
         </h4>
         <woot-button
           size="small"
-          variant="clear"
-          icon="edit"
-          @click="modal = 'constants'"
+          variant="smooth"
+          color-scheme="success"
+          icon="add"
+          @click="open('constants', 'new')"
         >
-          {{ $t('TRACKING_ASSISTANT_VIEW.FIELDS_EDIT') }}
+          {{ $t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_ADD') }}
         </woot-button>
       </div>
       <p
@@ -192,9 +244,10 @@ export default {
         {{ $t('TRACKING_ASSISTANT_VIEW.FIELDS_NO_CONSTANTS') }}
       </p>
       <div
-        v-for="constante in constants.constants"
+        v-for="(constante, index) in constants.constants"
         :key="constante.name"
-        class="flex items-baseline gap-2"
+        class="flex items-center gap-2 px-1 rounded hover:bg-slate-50 dark:hover:bg-slate-700"
+        @mouseleave="confirming = null"
       >
         <span class="font-mono text-xs text-slate-800 dark:text-slate-100">
           {{ constante.name }}
@@ -210,6 +263,32 @@ export default {
         >
           {{ `→ ${constante.savesTo}` }}
         </span>
+        <woot-button
+          v-tooltip="$t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_EDIT')"
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          icon="edit"
+          @click="open('constants', index)"
+        />
+        <woot-button
+          v-if="confirming !== `constants-${index}`"
+          v-tooltip="$t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_DELETE')"
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          icon="delete"
+          @click="confirming = `constants-${index}`"
+        />
+        <woot-button
+          v-else
+          size="tiny"
+          variant="smooth"
+          color-scheme="alert"
+          @click="removeConstant(index)"
+        >
+          {{ $t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_DELETE_CONFIRM') }}
+        </woot-button>
       </div>
     </section>
 
@@ -224,12 +303,14 @@ export default {
     <VariablesModal
       :show="modal === 'variables'"
       :value="variables"
+      :focus="focus"
       @close="modal = null"
       @save="saveVariables"
     />
     <ConstantsModal
       :show="modal === 'constants'"
       :value="constants"
+      :focus="focus"
       :variables="variableNames"
       @close="modal = null"
       @save="saveConstants"
