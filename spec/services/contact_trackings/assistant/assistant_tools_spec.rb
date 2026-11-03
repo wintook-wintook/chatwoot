@@ -42,6 +42,7 @@ RSpec.describe ContactTrackings::Assistant::AssistantTools do
     allow(clasificador).to receive(:classify).and_return(Struct.new(:name).new('cotizar'))
     resultado = run('probar_ruta', frases: ['precio de la grúa'])
     expect(resultado).to eq([{ 'frase' => 'precio de la grúa', 'cae_en' => 'cotizar', 'veces' => '2/2', 'estable' => true }])
+    expect(tools.tested).to eq([{ frase: 'precio de la grúa', cae_en: 'cotizar', veces: '2/2', estable: true }])
   end
 
   it 'probar_ruta sin rutas lo dice' do

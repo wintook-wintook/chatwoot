@@ -19,7 +19,9 @@
 // Los ids de nodo (`route:soporte`, `source:soporte`…) son los que F2 va a
 // iluminar con la traza de una prueba, por eso son estables y por nombre.
 // ============================================================================
-import { routeLines, defaultRouteName } from './trainingBlocks';
+import { routeLines, defaultRouteName, scopeTextFor } from './trainingBlocks';
+import { readVariables } from './agentVariables';
+import { readConstants } from './agentConstants';
 
 export const NODE_W = 168;
 export const NODE_H = 46;
@@ -46,6 +48,8 @@ const SOURCE_PATTERNS = [
   [/^@discourse/i, 'FORUM'],
   [/^\{\{\s*doc:\s*([^}]*)\}\}/i, 'DOC'],
   [/^\{\{\s*hoja:\s*([^}]*)\}\}/i, 'SHEET'],
+  // crear_agente_conversando FR: el chat propone búsquedas exactas en una hoja.
+  [/^\{\{\s*hoja_buscar:\s*([^|}]*)/i, 'SHEET'],
   [/^\{\{\s*consulta:\s*([^}]*)\}\}/i, 'ERP'],
   [/^@contpaq/i, 'ERP'],
 ];
@@ -106,7 +110,23 @@ const node = (id, column, row, props) => ({
   ...props,
 });
 
-const routeRow = (line, row, { isDefault, issues }) => {
+// proyecto@crear_agente_conversando FD: lo que hace la ruta, en una línea chica bajo su
+// nodo: las preguntas (datos fijos tipo pregunta, con a qué variable guardan) y las
+// variables que lee o cambia. Sale de la línea de la ruta y de su línea de alcance.
+export const routeChips = (text, { constants = [], variables = [] } = {}) => {
+  const texto = text || '';
+  const preguntas = constants
+    .filter(c => c.type === 'pregunta' && texto.includes(`%${c.name}%`))
+    .map(c => (c.savesTo ? `? ${c.name} → ${c.savesTo}` : `? ${c.name}`));
+  const usadas = variables
+    .map(v => v.name)
+    .filter(nombre =>
+      new RegExp(`(^|[^\\p{L}\\d_])${nombre}([^\\p{L}\\d_]|$)`, 'u').test(texto)
+    );
+  return [...preguntas, ...usadas].join(' · ');
+};
+
+const routeRow = (line, row, { isDefault, issues, refs }) => {
   const nombre = line.name;
   const fuente = describeSource(line.source);
   const accion = describeAction(line);
@@ -117,6 +137,12 @@ const routeRow = (line, row, { isDefault, issues }) => {
       sub: truncate(line.description, 26),
       title: [nombre, line.description].filter(Boolean).join(' — '),
       isDefault,
+      chips: refs
+        ? routeChips(
+            `${line.raw || ''} ${scopeTextFor(refs.blocks, nombre)}`,
+            refs
+          )
+        : '',
       broken: line.kind === 'broken',
       target: { type: 'route', name: nombre },
       issue: issueFor(issues, `route:${nombre}`, 'route:'),
@@ -167,6 +193,11 @@ export function buildDiagram(blocks = [], issues = {}) {
     .map((block, index) => ({ ...block, index }))
     .filter(b => b.type === 'section');
   const bienvenida = secciones.find(b => WELCOME_RE.test(b.title || ''));
+  const refs = {
+    blocks,
+    constants: readConstants(blocks).constants,
+    variables: readVariables(blocks).variables,
+  };
 
   const nodes = [];
   const edges = [];
@@ -178,6 +209,7 @@ export function buildDiagram(blocks = [], issues = {}) {
         kind: 'welcome',
         label: truncate(bienvenida.title),
         title: bienvenida.title,
+        chips: routeChips(bienvenida.body, refs),
         target: { type: 'section', index: bienvenida.index },
         issue: issueFor(issues, `section:${bienvenida.index}`),
       })
@@ -190,6 +222,7 @@ export function buildDiagram(blocks = [], issues = {}) {
       const { nodos, aristas } = routeRow(linea, fila, {
         isDefault: linea.name === porDefecto,
         issues,
+        refs,
       });
       nodes.push(...nodos);
       edges.push(...aristas);

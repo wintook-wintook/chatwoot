@@ -73,4 +73,28 @@ RSpec.describe 'Asistente de Agentes IA — conversar desde cero' do
                        .with { |req| JSON.parse(req.body)['tools'].nil? }
     expect(sin_herramientas).to have_been_made
   end
+
+  # proyecto@crear_agente_conversando FD
+  describe 'las pruebas de la conversación' do
+    before { account.update!(custom_attributes: { 'assistant_tools' => true }) }
+
+    def turno(sesion_id: nil, pruebas: [])
+      tools = instance_double(ContactTrackings::Assistant::DraftingChat)
+      allow(ContactTrackings::Assistant::DraftingChat).to receive(:new).and_return(tools)
+      allow(tools).to receive(:call).and_return(
+        reply: 'Probé la ruta', instructions: 'x', changed: false, routes: '@ruta(cotizar: precio): -', tools_used: [],
+        tests: pruebas
+      )
+      post url, params: { messages: mensajes, session_id: sesion_id }, headers: admin.create_new_auth_token, as: :json
+      response.parsed_body
+    end
+
+    it 'se juntan entre turnos, cada frase con su último resultado' do
+      primero = turno(pruebas: [{ frase: 'precio', cae_en: 'cotizar', estable: true }])
+      segundo = turno(sesion_id: primero['session_id'],
+                      pruebas: [{ frase: 'PRECIO', cae_en: 'otra', estable: false }, { frase: 'hola', cae_en: 'cotizar', estable: true }])
+      expect(segundo['tests'].pluck('frase', 'cae_en')).to eq([%w[PRECIO otra], %w[hola cotizar]])
+      expect(TrackingAssistantSession.find(segundo['session_id']).proposal['boceto']).to eq('@ruta(cotizar: precio): -')
+    end
+  end
 end

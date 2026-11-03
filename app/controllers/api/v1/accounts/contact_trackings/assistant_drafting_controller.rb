@@ -22,6 +22,7 @@
 
 class Api::V1::Accounts::ContactTrackings::AssistantDraftingController < Api::V1::Accounts::BaseController
   ALLOWED_ROLES = %w[user assistant].freeze
+  MAX_TESTS = 30
 
   before_action :check_authorization
 
@@ -33,7 +34,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantDraftingController < Api::V1
 
     sesion = record(result)
     render json: result.slice(:reply, :instructions, :changed, :routes, :tools_used)
-                       .merge(session_id: sesion&.id, session: session_meta(sesion))
+                       .merge(tests: sesion&.proposal.to_h.fetch('pruebas', result[:tests]),
+                              session_id: sesion&.id, session: session_meta(sesion))
   end
 
   private
@@ -48,12 +50,22 @@ class Api::V1::Accounts::ContactTrackings::AssistantDraftingController < Api::V1
     sesion = TrackingAssistantSession.find_by(id: params[:session_id], account: Current.account) if params[:session_id].present?
     sesion ||= TrackingAssistantSession.new(account: Current.account, user: Current.user)
     turnos = messages + [{ 'role' => 'assistant', 'content' => result[:reply] }]
-    propuesta = result[:routes].present? ? sesion.proposal.to_h.merge('boceto' => result[:routes]) : nil
-    sesion.record_turn(messages: turnos, instructions: result[:instructions], proposal: propuesta)
+    sesion.record_turn(messages: turnos, instructions: result[:instructions], proposal: proposal_for(sesion, result))
     sesion
   rescue StandardError => e
     Rails.logger.error("[Asistente] no se pudo guardar la conversación: #{e.message}")
     nil
+  end
+
+  # El boceto (D10) y las pruebas de la conversación (FD), sin pisar lo demás de proposal.
+  # Una frase probada otra vez se queda con su último resultado.
+  def proposal_for(sesion, result)
+    return nil if result[:routes].blank? && result[:tests].blank?
+
+    previas = sesion.proposal.to_h.fetch('pruebas', [])
+    pruebas = (previas + result[:tests].map(&:stringify_keys)).reverse.uniq { |p| p['frase'].to_s.downcase }
+                                                              .reverse.last(MAX_TESTS)
+    sesion.proposal.to_h.merge({ 'boceto' => result[:routes], 'pruebas' => pruebas }.compact_blank)
   end
 
   def tools?

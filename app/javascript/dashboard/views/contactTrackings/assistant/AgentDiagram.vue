@@ -110,6 +110,10 @@ export default {
     },
   },
   methods: {
+    chipsText(n) {
+      const texto = n.chips || '';
+      return texto.length > 34 ? `${texto.slice(0, 33)}…` : texto;
+    },
     t(key, args) {
       return this.$t(`TRACKING_ASSISTANT_VIEW.DIAGRAM.${key}`, args);
     },
@@ -346,6 +350,16 @@ export default {
               class="text-xs fill-amber-600"
             >
               {{ warnMark }}
+            </text>
+            <!-- crear_agente_conversando FD: preguntas y variables de la ruta, en el
+                 espacio entre filas. -->
+            <text
+              v-if="n.chips"
+              x="4"
+              :y="n.h + 10"
+              class="text-[9px] fill-woot-700 dark:fill-woot-300"
+            >
+              {{ chipsText(n) }}
             </text>
             <circle
               v-if="n.issue"

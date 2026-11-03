@@ -168,8 +168,12 @@ class ContactTrackings::Assistant::DraftingChat
   def result_from(raw)
     nuevas = clean(raw['instrucciones'])
     { reply: raw['mensaje'].to_s.strip, instructions: nuevas || @instructions, changed: nuevas.present?,
-      routes: clean_routes(raw['boceto']) || clean_routes(@tool_loop&.last_routes) || @routes.presence,
-      tools_used: @tool_loop&.log || [] }
+      routes: routes_from(raw), tools_used: @tool_loop&.log || [], tests: @assistant_tools&.tested || [] }
+  end
+
+  # El boceto que entregó; si se le olvidó, lo último que probó; si no, el que ya había.
+  def routes_from(raw)
+    clean_routes(raw['boceto']) || clean_routes(@tool_loop&.last_routes) || @routes.presence
   end
 
   def history
@@ -178,7 +182,7 @@ class ContactTrackings::Assistant::DraftingChat
 
   def tool_loop
     @tool_loop ||= ContactTrackings::Assistant::DraftingToolLoop.new(
-      @chat, ContactTrackings::Assistant::AssistantTools.new(@account, draft: @routes, api_key: @chat.api_key),
+      @chat, (@assistant_tools = ContactTrackings::Assistant::AssistantTools.new(@account, draft: @routes, api_key: @chat.api_key)),
       model: MODEL, max_tokens: MAX_OUTPUT_TOKENS
     )
   end
