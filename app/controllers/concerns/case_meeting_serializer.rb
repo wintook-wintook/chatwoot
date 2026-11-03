@@ -19,6 +19,7 @@ module CaseMeetingSerializer
       ends_at: meeting.ends_at,
       time_zone: meeting.time_zone,
       location: meeting.location,
+      is_visit: meeting.is_visit,
       status: meeting.status,
       created_at: meeting.created_at,
       # @tickets_cases F6 (§11.4) — señales de fuera de plazo. Son comparaciones

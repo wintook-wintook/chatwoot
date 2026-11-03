@@ -87,10 +87,22 @@ class CaseEvent < ApplicationRecord
     conversation_link:  42, # se ligó (o creó) la conversación del caso (payload.display_id, created)
     # Plan-Plantilla-Tareas-Etapa. Al FINAL, sin reordenar nada de arriba.
     stage_tasks_added:  43, # nacieron las tareas de la plantilla al entrar a una etapa
-    stage_advanced:     44  # pasó sola a la siguiente etapa al terminar las obligatorias (payload.from/to)
+    stage_advanced:     44, # pasó sola a la siguiente etapa al terminar las obligatorias (payload.from/to)
+    # Plan Actividad del caso — lo que el usuario hace en el caso. Al FINAL, sin reordenar.
+    task_created:          45, # tarea creada a mano (las de plantilla ya van en stage_tasks_added)
+    task_completed:        46, # payload: sequence, title
+    task_cancelled:        47, # una por una; el cierre del caso cancela en bloque con su propia nota
+    task_reopened:         48, # volvió a pendiente
+    task_deleted:          49,
+    quote_created:         50, # payload: folio, total, currency
+    quote_status_changed:  51, # payload: folio, from, to
+    conversation_unlinked: 52  # se quitó una conversación adicional (payload.display_id)
   }
 
   enum origin: { bot: 0, agent: 1, system: 2 }
+
+  # Asistente (Dali) — lo hecho al confirmar una propuesta del asistente.
+  before_create -> { self.payload = (payload || {}).merge('via' => 'assistant') }, if: -> { Current.via_assistant }
 
   validates :event_type, presence: true
   validates :origin,     presence: true

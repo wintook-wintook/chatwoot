@@ -14,6 +14,7 @@ import esLocale from '@fullcalendar/core/locales/es';
 
 const COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 const AGENT_COLORS = ['#f43f5e', '#fb923c', '#a3e635', '#22d3ee', '#818cf8', '#e879f9'];
+const LOCAL_COLOR = '#475569';
 
 // Color de respaldo cuando no conocemos el calendario del evento (hash del id).
 function fallbackColor(eventId) {
@@ -29,12 +30,14 @@ export default {
   components: { FullCalendar },
   props: {
     events: { type: Array, default: () => [] },
+    agendaItems: { type: Array, default: () => [] },
     availability: { type: Array, default: () => [] },
     calendars: { type: Array, default: () => [] },
   },
   emits: ['rangeChanged', 'eventDropped', 'eventClicked', 'dateSelected'],
   watch: {
     events() { this.syncEvents(); },
+    agendaItems() { this.syncEvents(); },
     availability() { this.syncEvents(); },
     calendars() { this.syncEvents(); },
   },
@@ -50,17 +53,55 @@ export default {
       });
       return map[calendarId];
     },
+    itemTitle(title, item) {
+      const client = item && (item.contact || item.organization);
+      return client ? `${title} · ${client.name}` : title;
+    },
+    // Lo que no vino en la lista de Google: sin Google conectado, o sin evento allá.
+    addLocalItems(api) {
+      const shown = new Set(this.events.map(e => e.id));
+      this.agendaItems
+        .filter(item => !shown.has(item.google_event_id))
+        .forEach(item => {
+          api.addEvent({
+            id: `agenda-${item.id}`,
+            title: this.itemTitle(item.title, item),
+            start: new Date(item.start),
+            end: new Date(item.end),
+            backgroundColor: LOCAL_COLOR,
+            borderColor: LOCAL_COLOR,
+            extendedProps: {
+              calendarId: item.google_calendar_id || 'primary',
+              description: item.description || '',
+              location: item.location || '',
+              attendees: [],
+              agendaItem: item,
+            },
+          });
+        });
+    },
     syncEvents() {
       const api = this.$refs.fullCalendar?.getApi();
       if (!api) return;
       api.removeAllEvents();
 
+      // Plan-Agenda — cada evento de Google con su tarea; sin ella, va punteado.
+      const byGoogleId = {};
+      this.agendaItems.forEach(item => {
+        if (item.google_event_id) byGoogleId[item.google_event_id] = item;
+      });
+
       this.events.forEach(e => {
         const calId = e.calendarId || 'primary';
         const color = this.calendarColor(calId) || fallbackColor(e.id);
+        const agendaItem = byGoogleId[e.id] || null;
         api.addEvent({
           id: e.id,
-          title: e.summary || this.$t('GOOGLE_CALENDAR.EVENTS.ALL_DAY'),
+          title: this.itemTitle(
+            e.summary || this.$t('GOOGLE_CALENDAR.EVENTS.ALL_DAY'),
+            agendaItem
+          ),
+          classNames: agendaItem || !e.start?.dateTime ? [] : ['fc-no-task'],
           start: e.start?.dateTime || e.start?.date,
           end: e.end?.dateTime || e.end?.date,
           allDay: !e.start?.dateTime,
@@ -71,9 +112,12 @@ export default {
             description: e.description || '',
             location: e.location || '',
             attendees: e.attendees || [],
+            agendaItem,
           },
         });
       });
+
+      this.addLocalItems(api);
 
       this.availability.forEach(agent => {
         const color = agentColor(agent.agent_id);
@@ -148,6 +192,7 @@ export default {
             start_time: info.event.startStr,
             end_time: info.event.endStr,
             calendar_id: info.event.extendedProps?.calendarId || 'primary',
+            agendaItem: info.event.extendedProps?.agendaItem,
             revert: info.revert,
           });
         },
@@ -157,6 +202,7 @@ export default {
             start_time: info.event.startStr,
             end_time: info.event.endStr,
             calendar_id: info.event.extendedProps?.calendarId || 'primary',
+            agendaItem: info.event.extendedProps?.agendaItem,
             revert: info.revert,
           });
         },
@@ -219,6 +265,12 @@ export default {
 
 .fc-wrapper .fc-event:active {
   cursor: grabbing;
+}
+
+/* Plan-Agenda — evento de Google que aún no tiene tarea. */
+.fc-wrapper .fc-event.fc-no-task {
+  border: 1px dashed theme('colors.slate.500');
+  opacity: 0.75;
 }
 
 .fc-wrapper .fc-list-table {

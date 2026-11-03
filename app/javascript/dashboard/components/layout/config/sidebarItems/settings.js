@@ -31,6 +31,9 @@ const settings = accountId => ({
     'settings_inboxes_page_channel',
     'whatsapp_templates_index', // @waba_templates
     'whatsapp_templates_wrapper', // @waba_templates
+    'whatsapp_templates_new', // feat/plantillas_whatsapp_mejoras F10
+    'whatsapp_templates_edit', // feat/plantillas_whatsapp_mejoras F10
+    'whatsapp_templates_show', // feat/plantillas_whatsapp_mejoras F10.4
     'settings_integrations_dashboard_apps',
     'settings_integrations_integration',
     'settings_integrations_slack',

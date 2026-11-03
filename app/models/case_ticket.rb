@@ -133,6 +133,7 @@
 #
 
 class CaseTicket < ApplicationRecord
+  include CasePendingTasks
   include ServiceReportable # Plan-Trabajo-Campo R1 — reporte de servicio de la orden
   include FieldPortal # Plan-Trabajo-Campo R5 — portal del cliente y técnico externo
   # @tickets_cases 2A: state machine ITIL ampliado a 13 estados.
@@ -149,9 +150,9 @@ class CaseTicket < ApplicationRecord
     'escalated'              => %w[in_progress in_diagnosis cancelled],
     'resolved'               => %w[validating closed in_progress],
     'validating'             => %w[closed in_progress cancelled],
-    # @tickets_cases — cerrado solo puede REABRIRSE (a in_progress). No se salta
-    # a resolved ni a ningún otro estado: reabrir es volver a trabajarlo.
-    'closed'                 => %w[in_progress],
+    # @tickets_cases — cerrado y cancelado no salen por transición: solo con `reopen!`
+    # (el botón Reabrir, con su motivo, o la respuesta del cliente).
+    'closed'                 => [],
     'cancelled'              => []
   }.freeze
 
@@ -227,6 +228,11 @@ class CaseTicket < ApplicationRecord
                            inverse_of: :origin_ticket
   belongs_to :requester,         class_name: 'User', optional: true # @tickets_cases Fase C — agente solicitante (interno)
   belongs_to :conversation,      optional: true
+  # Plan Actividad del caso — conversaciones adicionales (p. ej. el correo); la
+  # principal sigue en conversation_id. Si cambia el contacto ya no le pertenecen.
+  has_many :extra_conversation_links, class_name: 'CaseTicketConversation', dependent: :destroy
+  has_many :extra_conversations, through: :extra_conversation_links, source: :conversation
+  after_update_commit -> { extra_conversation_links.destroy_all }, if: :saved_change_to_contact_id?
   belongs_to :contact_tracking,  optional: true
   belongs_to :assignee,          class_name: 'User', optional: true
   belongs_to :locked_by,         class_name: 'User', optional: true # @tickets_cases — bloqueo de ticket
@@ -444,7 +450,7 @@ class CaseTicket < ApplicationRecord
   # El SLA arranca de cero: reanudar el reloj viejo haría nacer el ticket
   # vencido y ensuciaría el cumplimiento del período.
   def reopen!(actor: nil, reason: nil)
-    raise 'Solo se puede reabrir un ticket cerrado' unless closed?
+    raise 'Solo se puede reabrir un ticket cerrado o cancelado' unless frozen_for_edit?
     raise 'El motivo de reapertura es obligatorio' if reason.blank?
 
     update!(
@@ -467,25 +473,33 @@ class CaseTicket < ApplicationRecord
     )
 
     # Deja el evento `reopened` (el enum ya lo reservaba desde el diseño).
-    transition!('in_progress', actor: actor, reason: reason)
+    transition!('in_progress', actor: actor, reason: reason, force: true)
   end
 
   # @tickets_cases — Un ticket cerrado o cancelado se congela: no se le cambian
   # prioridad, vencimiento, tipo ni asignación. Las notas internas SÍ se
   # permiten siempre (son bitácora, no edición) y por eso no pasan por aquí.
+  # Plan Actividad del caso — la principal primero, luego las adicionales.
+  def linked_conversations
+    [conversation, *extra_conversations.order(:created_at)].compact
+  end
+
   def frozen_for_edit?
     closed? || cancelled?
   end
 
-  # Puede reabrir el admin siempre; el asignado solo dentro de la ventana.
+  # Reabrir, cerrado o cancelado, es solo de administradores y supervisores.
   def reopenable_by?(user)
-    return false unless closed?
-    return false if user.blank?
-    return true if user.administrator?
+    return false unless frozen_for_edit?
 
-    assignee_id == user.id && within_reopen_window?
+    account_user = user && account.account_users.find_by(user_id: user.id)
+    return false if account_user.nil?
+
+    grant = Access::Grant.for(account_user)
+    grant.admin? || grant.role_key == 'supervisor'
   end
 
+  # Ventana de la reapertura automática: cuando el cliente responde (CaseTicketListener).
   def within_reopen_window?
     # Plan-Clase-Comercial F3 (hallazgo #2): una oportunidad SIEMPRE se reabre, sin
     # ventana; abrir un caso de seguimiento partiría su historial comercial en dos.
@@ -529,7 +543,7 @@ class CaseTicket < ApplicationRecord
   # (los cancelados no cuentan). Sin hijos ni hitos manda el avance a mano.
   def project_progress_summary
     children = project_children.where.not(status: :cancelled).pluck(:status, :case_type_id)
-    milestones = case_tasks.where(milestone: true).pluck(:status)
+    milestones = case_tasks.where(milestone: true).where.not(status: :cancelled).pluck(:status)
     done = children.count { |status, _| PROGRESS_DONE_STATUSES.include?(status) } + milestones.count('done')
     total = children.size + milestones.size
     {

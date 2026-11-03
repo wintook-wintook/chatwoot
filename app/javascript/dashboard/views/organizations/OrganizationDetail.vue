@@ -11,6 +11,7 @@ import Spinner from 'shared/components/Spinner.vue';
 import ContactPicker from 'dashboard/views/gestorTickets/ContactPicker.vue';
 import OrganizationForm from './OrganizationForm.vue';
 import OrganizationActivity from './OrganizationActivity.vue';
+import ContactTasksTab from 'dashboard/routes/dashboard/contacts/components/ContactTasksTab.vue';
 import {
   formatDate,
   organizationAccess,
@@ -24,6 +25,7 @@ export default {
     ContactPicker,
     OrganizationForm,
     OrganizationActivity,
+    ContactTasksTab,
   },
   data() {
     return {
@@ -350,6 +352,16 @@ export default {
 
           <!-- Plan-Organizaciones O2 — lo de todos sus contactos -->
           <OrganizationActivity :organization-id="organizationId" />
+
+          <!-- Plan-Agenda — sus tareas, con caso o sin él -->
+          <section>
+            <h3
+              class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400"
+            >
+              {{ $t('ORGANIZATIONS.TASKS_TITLE') }}
+            </h3>
+            <ContactTasksTab :organization-id="organizationId" />
+          </section>
 
           <!-- Bitácora -->
           <section v-if="organization.events.length">

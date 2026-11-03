@@ -1,4 +1,5 @@
 <script>
+import { chatVariableContext } from 'dashboard/helper/whatsappTemplateVariables';
 import TemplatesPicker from 'dashboard/components/widgets/conversation/WhatsappTemplates/TemplatesPicker.vue';
 import TemplateParser from 'dashboard/components/widgets/conversation/WhatsappTemplates/TemplateParser.vue';
 export default {
@@ -11,11 +12,29 @@ export default {
       type: Number,
       default: undefined,
     },
+    contact: {
+      type: Object,
+      default: null,
+    },
   },
   data() {
     return {
       selectedWaTemplate: null,
     };
+  },
+  computed: {
+    // feat/plantillas_whatsapp_mejoras F2: en WhatsApp Cloud la plantilla sale completa.
+    isCloud() {
+      const inbox = this.$store.getters['inboxes/getInbox'](this.inboxId);
+      return Boolean(inbox && inbox.provider === 'whatsapp_cloud');
+    },
+    variableContext() {
+      return chatVariableContext({
+        contact: this.contact,
+        inbox: this.$store.getters['inboxes/getInbox'](this.inboxId),
+        currentUser: this.$store.getters.getCurrentUser,
+      });
+    },
   },
   methods: {
     pickTemplate(template) {
@@ -46,6 +65,9 @@ export default {
     <TemplateParser
       v-else
       :template="selectedWaTemplate"
+      :full-template="isCloud"
+      :inbox-id="inboxId"
+      :variable-context="variableContext"
       @resetTemplate="onResetTemplate"
       @sendMessage="onSendMessage"
     />

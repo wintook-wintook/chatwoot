@@ -188,6 +188,20 @@ export const routes = [
     component: () =>
       import('../../../views/gestorTickets/OutcomeReasonsConfig.vue'),
   },
+  // Reporte de cierre — Agenda › Reportes y Catálogos › Resultados de tareas.
+  {
+    path: frontendURL('accounts/:accountId/tickets/task-reports'),
+    name: 'gestorTickets_task_reports',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () => import('../../../views/gestorTickets/TaskReports.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/tickets/task-outcomes'),
+    name: 'gestorTickets_task_outcomes',
+    meta: { permissions: ['administrator'] },
+    component: () =>
+      import('../../../views/gestorTickets/TaskOutcomesConfig.vue'),
+  },
   // Plan-Bandeja-Prioridad F3 — pesos del puntaje de «Mi día».
   {
     path: frontendURL('accounts/:accountId/tickets/task-settings'),

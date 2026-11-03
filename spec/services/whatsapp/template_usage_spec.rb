@@ -1,0 +1,69 @@
+# frozen_string_literal: true
+
+require 'rails_helper'
+
+# feat/plantillas_whatsapp_mejoras — dónde se usa una plantilla, antes de borrarla.
+RSpec.describe Whatsapp::TemplateUsage do
+  let!(:account) { create(:account) }
+  let(:plantillas) { [{ 'name' => 'pago', 'language' => 'es_MX', 'status' => 'approved', 'components' => [] }] }
+  let!(:channel) do
+    create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false,
+                              message_templates: plantillas)
+  end
+  let(:inbox) { channel.inbox }
+  let(:template) { create(:whatsapp_template, channel_whatsapp: channel, account: account, name: 'pago', language: 'es_MX') }
+  let(:contact) { create(:contact, account: account) }
+
+  def uso
+    described_class.call(template)
+  end
+
+  def agente(nombres)
+    create(:tracking_template, account: account, inbox_id: inbox.id, whatsapp_templates: nombres)
+  end
+
+  it 'sin uso devuelve todo vacío' do
+    expect(uso).to eq(agents: [], trackings_count: 0, campaigns: [], scheduled_count: 0, portals: [])
+  end
+
+  it 'cuenta agentes y seguimientos vivos de esa bandeja, no los terminados ni otra plantilla' do
+    uno = agente(%w[pago otra])
+    agente(%w[otra])
+    create(:contact_tracking, account: account, contact: contact, inbox: inbox, status: 'active', whatsapp_templates: %w[pago pago pago])
+    create(:contact_tracking, account: account, contact: create(:contact, account: account), inbox: inbox, status: 'completed',
+                              whatsapp_templates: %w[pago pago pago])
+
+    expect(uso).to include(agents: [{ id: uno.id, name: uno.name }], trackings_count: 1)
+  end
+
+  it 'si queda el mismo nombre en otro idioma, agentes y seguimientos no se rompen' do
+    channel.update!(message_templates: plantillas + [plantillas.first.merge('language' => 'en_US')])
+    agente(%w[pago])
+
+    expect(uso).to include(agents: [], trackings_count: 0)
+  end
+
+  it 'cuenta campañas sin terminar y el acuse del portal' do
+    uno = agente(%w[pago])
+    viva = create(:tracking_campaign, account: account, inbox: inbox, tracking_template: uno, status: 'running')
+    create(:tracking_campaign, account: account, inbox: inbox, tracking_template: uno, status: 'finished')
+    portal = CasePortal.create!(account: account, inbox: inbox, name: 'Soporte', slug: 'soporte', acuse_template_name: 'pago',
+                                acuse_template_language: 'es_MX')
+
+    expect(uso).to include(campaigns: [{ id: viva.id, name: viva.name }], portals: [{ id: portal.id, name: portal.name }])
+  end
+
+  it 'cuenta los programados sin enviar de esa bandeja, por nombre e idioma' do
+    conversation = create(:conversation, account: account, inbox: inbox, contact: contact)
+    datos = { account: account, conversation: conversation, user: create(:user, account: account), content: 'x',
+              scheduled_at: 1.day.from_now, is_template: true, template_name: 'pago', template_language: 'es_MX',
+              template_category: 'UTILITY' }
+    ScheduledMessage.create!(datos)
+    ScheduledMessage.create!(datos.merge(sent: true))
+    ScheduledMessage.create!(datos.merge(template_language: 'en_US'))
+    otra = create(:conversation, account: account, inbox: create(:inbox, account: account), contact: contact)
+    ScheduledMessage.create!(datos.merge(conversation: otra))
+
+    expect(uso[:scheduled_count]).to eq(1)
+  end
+end

@@ -5,12 +5,14 @@
 <script>
 import { mapGetters } from 'vuex';
 import JourneyView from './JourneyView.vue';
+import CaseActivity from './activity/CaseActivity.vue'; // Plan Actividad del caso
+import CaseConversationsMenu from './activity/CaseConversationsMenu.vue';
+import { toggleAssistant } from 'dashboard/helper/assistantState';
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue';
 import TicketConversation from '../../components/contacts/CaseTicket/TicketConversation.vue';
 import TicketTasks from '../../components/contacts/CaseTicket/TicketTasks.vue';
 import TicketNotes from '../../components/contacts/CaseTicket/TicketNotes.vue';
 // @tickets_cases — CRUD nativo de notas del contacto, se reusa tal cual.
-import NotesOnContactPage from '../../modules/notes/NotesOnContactPage.vue';
 // @tickets_cases — ficha del contacto, la misma que usa la pagina de Contactos.
 import ContactInfoPanel from 'dashboard/routes/dashboard/contacts/components/ContactInfoPanel.vue';
 import TicketMeetings from '../../components/contacts/CaseTicket/TicketMeetings.vue';
@@ -33,6 +35,7 @@ import {
 // Plan-Clase-Comercial F4 — oportunidades: datos comerciales, resultado, posponer.
 import CommercialPanel from './commercial/CommercialPanel.vue';
 import OutcomeModal from './commercial/OutcomeModal.vue';
+import CaseTasksOnCloseModal from './tasks/CaseTasksOnCloseModal.vue';
 import PostponeModal from './commercial/PostponeModal.vue';
 import WorkOrderPanel from './workOrder/WorkOrderPanel.vue'; // Plan-Clase-Orden-de-Trabajo F2a
 import ServiceReportPanel from './workOrder/ServiceReportPanel.vue'; // Plan-Trabajo-Campo R1
@@ -48,23 +51,34 @@ import { WORK_ORDER_CLASS } from 'dashboard/helper/caseWorkOrder';
 import CaseConversationActions from './conversation/CaseConversationActions.vue';
 import StageAdvanceBanner from './stage/StageAdvanceBanner.vue';
 
+// Plan Actividad del caso (P3) — pestañas siempre a la vista; las demás, en «Más».
+const MAIN_TABS = ['activity', 'pending', 'detail'];
+// Pestañas que ya no existen y a dónde llevan ahora.
+const TAB_ALIASES = {
+  tasks: 'pending',
+  meetings: 'pending',
+  contact_notes: 'activity',
+};
+
 export default {
   name: 'TicketDetail',
   components: {
     CaseConversationActions,
     StageAdvanceBanner,
     JourneyView,
+    CaseActivity,
+    CaseConversationsMenu,
     CaseTicketInternalModal,
     TicketConversation,
     TicketTasks,
     TicketNotes,
-    NotesOnContactPage,
     ContactInfoPanel,
     TicketMeetings,
     MultiselectDropdown,
     CaseRelations,
     CommercialPanel,
     OutcomeModal,
+    CaseTasksOnCloseModal,
     PostponeModal,
     WorkOrderPanel,
     ServiceReportPanel,
@@ -82,13 +96,15 @@ export default {
       // @tickets_cases — al abrir un ticket SIEMPRE se arranca en Avance.
       // Antes se recordaba la última pestaña en localStorage y podías caer en
       // Tareas o Notas de otro ticket sin haber visto el estado del actual.
-      activeDetailTab: 'journey',
+      // Plan Actividad del caso — se arranca en Actividad (qué sigue y qué pasó).
+      activeDetailTab: 'activity',
       // Descripción en la cabecera: un renglón; «Ver todo» la despliega ahí mismo.
       descExpanded: false,
       descOverflows: false,
       // Plan-Clase-Comercial F4 — cierre con resultado y posponer. Si vienen de
       // un salto de columna (moveToColumn), se completa ese mismo movimiento.
       showOutcomeModal: false,
+      askingPendingTasks: false,
       quoteCount: 0, // Plan-Catalogo-Cotizaciones — contador de la pestaña
       outcomeQuotes: [], // cotizaciones vivas de la oportunidad (¿cuál aceptó?)
       outcomePreset: null,
@@ -103,6 +119,9 @@ export default {
       entryMeeting: null,
       lockedAcquired: false, // @tickets_cases — este agente tomó el bloqueo
       showTransitionMenu: false,
+      showMoreTabs: false, // Plan Actividad del caso (P3) — menú «Más ▾»
+      pendingView: 'tasks', // P3 — sub-pestaña de Pendientes: 'tasks' | 'meetings'
+      activityTick: 0, // P4 — sube al guardar una tarea: la Actividad se recarga
       showPriorityMenu: false, // @tickets_cases P1 — prioridad inline
       showDueMenu: false, // @tickets_cases P4 — vencimiento inline
       dueDraft: '', // valor del input datetime-local
@@ -421,7 +440,12 @@ export default {
       // @tickets_cases P2 — la conversación ahora vive en el propio Resumen
       // (columna izquierda), ya no como pestaña aparte.
       // @tickets_cases — Avance (Recorrido) es la pestaña principal y va primero.
+      // Plan Actividad del caso — Actividad va primero: todo lo que pasó.
       const tabs = [
+        {
+          key: 'activity',
+          label: this.$t('CASE_TICKETS.DETAIL_TABS.ACTIVITY'),
+        },
         { key: 'journey', label: this.$t('CASE_TICKETS.DETAIL_TABS.JOURNEY') },
       ];
       // @tickets_cases — Notas internas como pestaña propia, entre Avance y Tareas.
@@ -430,26 +454,13 @@ export default {
         label: this.$t('CASE_TICKETS.DETAIL_TABS.NOTES'),
         count: this.noteCount,
       });
-      // @tickets_cases — Notas del contacto (CRUD nativo), entre Notas y Tareas.
-      // Solo si el caso tiene contacto: sin él no hay notas que administrar.
-      if (this.ticket?.contact_id) {
-        tabs.push({
-          key: 'contact_notes',
-          label: this.$t('CASE_TICKETS.DETAIL_TABS.CONTACT_NOTES'),
-          count: this.contactNoteCount,
-        });
-      }
-      // @tickets_cases P4 — Tareas como pestaña propia, con contador.
+      // Plan Actividad del caso (P3) — Tareas y Tareas agendadas van juntas en
+      // «Pendientes». «Notas del contacto» ya no va en el caso: vive en la
+      // ficha del contacto.
       tabs.push({
-        key: 'tasks',
-        label: this.$t('CASE_TICKETS.DETAIL_TABS.TASKS'),
-        count: this.taskCount,
-      });
-      // @tickets_cases F2 — Reuniones, después de Tareas (plan §6.1).
-      tabs.push({
-        key: 'meetings',
-        label: this.$t('CASE_TICKETS.DETAIL_TABS.MEETINGS'),
-        count: this.meetingCount,
+        key: 'pending',
+        label: this.$t('CASE_TICKETS.DETAIL_TABS.PENDING'),
+        count: this.taskCount + this.meetingCount,
       });
       // Casos vinculados (duplicado, padre/hijo, la orden o el proyecto que nació de
       // aquí…), como «Casos del proyecto» en los proyectos, que ya tienen la suya.
@@ -503,14 +514,58 @@ export default {
       return tabs;
     },
     activeDetailTabIndex() {
-      const idx = this.detailTabs.findIndex(
-        t => t.key === this.activeDetailTab
-      );
+      // Las pestañas viejas (tasks, meetings…) caen en su lugar nuevo.
+      const key = TAB_ALIASES[this.activeDetailTab] || this.activeDetailTab;
+      const idx = this.detailTabs.findIndex(t => t.key === key);
       return idx === -1 ? 0 : idx;
     },
     // Clave de la pestaña realmente visible (autocorrige si la guardada ya no existe).
     currentTabKey() {
       return this.detailTabs[this.activeDetailTabIndex]?.key || 'detail';
+    },
+    // Plan Actividad del caso (P3) — a la vista solo Actividad, Pendientes y
+    // Conversación; el resto en «Más ▾». Si la abierta es de «Más», se ve
+    // también en la barra para saber dónde estás.
+    moreTabs() {
+      return this.detailTabs.filter(t => !MAIN_TABS.includes(t.key));
+    },
+    barTabs() {
+      const main = this.detailTabs.filter(t => MAIN_TABS.includes(t.key));
+      const open = this.moreTabs.find(t => t.key === this.currentTabKey);
+      return open ? [...main, open] : main;
+    },
+    // Registrar desde la barra: cerrado solo se deja nota o mensaje (las tareas
+    // y la agenda se congelan).
+    registerActions() {
+      const all = [
+        { kind: 'note', icon: 'document' },
+        { kind: 'task', icon: 'checkmark-circle', frozen: false },
+        { kind: 'meeting', icon: 'calendar-clock', frozen: false },
+        { kind: 'message', icon: 'chat' },
+      ];
+      return this.isFrozen ? all.filter(a => a.frozen !== false) : all;
+    },
+    pendingViews() {
+      return [
+        {
+          key: 'tasks',
+          icon: 'checkmark-circle',
+          label: this.$t('CASE_TICKETS.DETAIL_TABS.TASKS'),
+          count: this.taskCount,
+        },
+        {
+          key: 'meetings',
+          icon: 'calendar-clock',
+          label: this.$t('CASE_TICKETS.DETAIL_TABS.MEETINGS'),
+          count: this.meetingCount,
+        },
+      ];
+    },
+    barTabIndex() {
+      return Math.max(
+        0,
+        this.barTabs.findIndex(t => t.key === this.currentTabKey)
+      );
     },
     // @tickets_cases — el contacto completo para la ficha lateral. Lo sirve el
     // store de contactos; se carga al abrir el panel, no antes.
@@ -530,17 +585,14 @@ export default {
       if (c && c.id) return c.name || '';
       return this.ticket?.contact_name || '';
     },
+    // Organización del caso (Plan-Organizaciones); si no tiene, la empresa del contacto.
+    headerOrganization() {
+      return this.ticket?.organization_name || this.contactDisplayCompany;
+    },
     contactDisplayCompany() {
       const c = this.contactRecord;
       if (c && c.id) return c.additional_attributes?.company_name || '';
       return this.ticket?.contact_company || '';
-    },
-    // @tickets_cases — total de notas del contacto para el badge de la pestaña.
-    contactNoteCount() {
-      const contactId = this.ticket?.contact_id;
-      if (!contactId) return 0;
-      return this.$store.getters['contactNotes/getAllNotesByContact'](contactId)
-        .length;
     },
     // @tickets_cases 2G
     isClosed() {
@@ -616,9 +668,7 @@ export default {
     //       el estado es alcanzable en un salto: el orden de columnas del tipo ES
     //       el flujo real, el backend decide el estado destino (moveToColumn, mismo
     //       endpoint `move` que ya usa el Kanban). Un ticket CANCELADO es la única
-    //       excepción: nunca cambia de status, así que no ofrece este salto salvo
-    //       que la columna destino YA cubra `cancelled` (movimiento de puntero,
-    //       inofensivo — el backend lo permite igual).
+    //       y cerrado no llegan aquí: el menú se oculta y se reabren con su botón.
     //   Si el tipo no tiene columnas (ticket sin tipo), cae al filtro viejo.
     validTransitions() {
       const all = this.ticket?.can_transition_to || [];
@@ -667,7 +717,6 @@ export default {
         .filter(c => !currentColumn || c.id !== currentColumn.id)
         .forEach(c => {
           const freeMove = (c.statuses || []).includes(currentStatus);
-          if (!freeMove && currentStatus === 'cancelled') return; // terminal: sin salida real
           options.push({
             status: freeMove ? currentStatus : null,
             columnId: c.id,
@@ -787,14 +836,23 @@ export default {
     },
   },
   watch: {
+    // Plan Actividad del caso (P3) — «tasks» y «meetings» son sub-pestañas de
+    // Pendientes: se elige la sub-pestaña y se queda en 'pending' (así un
+    // segundo «ir a tareas agendadas» vuelve a disparar).
+    activeDetailTab(key) {
+      if (key !== 'tasks' && key !== 'meetings') return;
+      this.pendingView = key;
+      this.activeDetailTab = 'pending';
+    },
     // Plan-Plantilla-Tareas-Etapa — al cambiar de etapa nacen tareas nuevas.
     stageColumnId(now, before) {
       if (before !== undefined && now !== before)
         this.$refs.ticketTasks?.load();
     },
     ticketId() {
-      // Cambiar de ticket es abrir un ticket: vuelve a Avance.
-      this.activeDetailTab = 'journey';
+      // Cambiar de ticket es abrir un ticket: vuelve a Actividad.
+      this.activeDetailTab = 'activity';
+      this.pendingView = 'tasks';
       this.descExpanded = false;
       this.loadTicket();
     },
@@ -821,6 +879,10 @@ export default {
       }
     },
   },
+  // Asistente (Dali) — al confirmar algo del asistente, el caso se refresca.
+  created() {
+    this.$emitter.on('assistant:done', this.onAssistantDone);
+  },
   mounted() {
     this.loadTicket();
     this.$store.dispatch('teams/get');
@@ -839,6 +901,7 @@ export default {
   beforeDestroy() {
     this.releaseLock();
     window.removeEventListener('resize', this.measureDescription);
+    this.$emitter.off('assistant:done', this.onAssistantDone);
   },
   methods: {
     // ¿La descripción no cabe en su renglón? (más ancha o con varios párrafos)
@@ -879,9 +942,61 @@ export default {
       CaseTicketsAPI.unlock(this.ticketId).catch(() => {});
     },
     onDetailTabChange(index) {
-      const tab = this.detailTabs[index];
+      const tab = this.barTabs[index];
       if (!tab) return;
       this.activeDetailTab = tab.key;
+    },
+    // Plan Actividad del caso (P4) — la barra «Registrar» de la Actividad abre la
+    // MISMA ventana de cada pestaña sin salir de la Actividad (las pestañas
+    // ocultas siguen montadas; ver .case-tab-hidden). Mensaje: a Conversación.
+    askAssistant(text) {
+      toggleAssistant(true);
+      this.$nextTick(() => this.$emitter.emit('assistant:ask', text));
+    },
+    onAssistantDone(proposal) {
+      if (Number(proposal.payload?.case_id) !== Number(this.ticketId)) return;
+      this.reloadEvents();
+      this.activityTick += 1;
+      this.$refs.ticketTasks?.load?.();
+      this.$refs.ticketMeetings?.load?.();
+      this.$refs.ticketNotes?.load?.();
+    },
+    registerFromActivity(kind) {
+      if (kind === 'message') {
+        this.activeDetailTab = 'detail';
+        // Listo para escribir: el cursor en la caja de respuesta del hilo.
+        this.$nextTick(() =>
+          this.$refs.ticketConversation?.$el?.querySelector('textarea')?.focus()
+        );
+        return;
+      }
+      const ref = {
+        note: 'ticketNotes',
+        task: 'ticketTasks',
+        meeting: 'ticketMeetings',
+      }[kind];
+      this.$refs[ref]?.openCreate();
+    },
+    async copyFolio() {
+      try {
+        await navigator.clipboard.writeText(this.ticket.folio);
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.DETAIL.FOLIO_COPIED'),
+        });
+      } catch (_e) {
+        // Sin portapapeles (http): no pasa nada, el folio se ve igual.
+      }
+    },
+    selectMoreTab(key) {
+      this.activeDetailTab = key;
+      this.showMoreTabs = false;
+    },
+    // Plan Actividad del caso — un clic en la Actividad lleva a su pestaña.
+    openDetailTab(key) {
+      const target = TAB_ALIASES[key] || key;
+      if (this.detailTabs.some(t => t.key === target)) {
+        this.activeDetailTab = key;
+      }
     },
     // Se ligó (o creó) la conversación: se vuelve a pedir el caso para pintar el
     // hilo, y los eventos para la línea de tiempo.
@@ -892,9 +1007,8 @@ export default {
       });
     },
     loadTicket() {
-      if (!this.ticket) {
-        this.$store.dispatch('caseTickets/fetchTicket', this.ticketId);
-      }
+      // Siempre: el renglón de la lista no trae todo (p. ej. si se puede reabrir).
+      this.$store.dispatch('caseTickets/fetchTicket', this.ticketId);
       this.$store.dispatch('caseTickets/fetchEvents', {
         ticketId: this.ticketId,
       });
@@ -907,11 +1021,17 @@ export default {
         ticketId: this.ticketId,
       });
     },
-    // @tickets_cases — cierra los menús inline (Prioridad/Vence/Estado) al hacer
-    // clic fuera de la barra de acciones (v-on-clickaway).
+    // @tickets_cases — clic afuera (v-on-clickaway): cada bloque cierra solo lo suyo. Si
+    // uno cerrara todos, el clic en el botón del otro apagaría su menú al abrirlo.
+    // Un solo clickaway para las dos barras de la cabecera (fix de develop, #133).
     closeActionMenus() {
-      this.showPriorityMenu = false;
+      this.closeTransitionMenu();
+      this.closeDueMenu();
+    },
+    closeDueMenu() {
       this.showDueMenu = false;
+    },
+    closeTransitionMenu() {
       this.showTransitionMenu = false;
     },
     // @tickets_cases — entrada del dropdown de estado. Un salto de columna
@@ -932,10 +1052,18 @@ export default {
     // confirmClose.
     async moveToColumn(columnId) {
       this.showTransitionMenu = false;
+      // Cancelar por columna cierra directo. Cerrada y las de oportunidad pasan antes por
+      // su modal (requires_closure / requires_outcome) y preguntan ahí.
+      const column = this.typeColumns.find(c => c.id === columnId);
+      const cancels =
+        !this.isCommercial && (column?.statuses || []).includes('cancelled');
+      const decision = cancels ? await this.askPendingTasks('cancelled') : {};
+      if (decision === null) return;
       try {
         await this.$store.dispatch('caseTickets/moveTicketColumn', {
           ticketId: this.ticketId,
           caseTypeColumnId: columnId,
+          ...decision,
         });
         this.refetch();
       } catch (e) {
@@ -1008,6 +1136,8 @@ export default {
     async loadOrphanMeetings(status) {
       this.orphanMeetings = [];
       this.cancelOrphanMeetings = false;
+      // Al cerrar o cancelar las pregunta la ventana de lo pendiente, junto con las tareas.
+      if (['closed', 'cancelled'].includes(status)) return;
       try {
         const { data } = await CaseMeetingsAPI.upcoming(this.ticketId, {
           target_status: status,
@@ -1066,6 +1196,8 @@ export default {
       // no por el dropdown de 13 estados: completa el movimiento por columna con
       // los datos de cierre en vez de transicionar directo a 'closed'.
       if (this.closeViaColumnMoveId) {
+        const decision = await this.askPendingTasks('closed');
+        if (decision === null) return;
         const columnId = this.closeViaColumnMoveId;
         this.closeViaColumnMoveId = null;
         this.showCloseModal = false;
@@ -1074,6 +1206,7 @@ export default {
             ticketId: this.ticketId,
             caseTypeColumnId: columnId,
             closure,
+            ...decision,
           });
           this.refetch();
         } catch (e) {
@@ -1083,7 +1216,8 @@ export default {
         }
         return;
       }
-      await this.runTransition('closed', { closure });
+      // Con «Volver» sigue abierta la ventana de cierre, con lo que ya escribió.
+      if ((await this.runTransition('closed', { closure })) === false) return;
       this.showCloseModal = false;
     },
     closureTypeLabel(t) {
@@ -1322,7 +1456,26 @@ export default {
     articleStatusLabel(status) {
       return this.$t(`CASE_TICKETS.KB.STATUS.${status}`) || status;
     },
+    // ¿Qué pasa con lo pendiente? Solo al cerrar o cancelar, que bloquean el caso.
+    // Devuelve { pending_tasks, cancel_meetings }; null = se regresó y no se cierra.
+    async askPendingTasks(status) {
+      // Una ventana a la vez: la de motivo o cierre se esconde sin perder lo escrito.
+      this.askingPendingTasks = true;
+      try {
+        return await this.$refs.tasksOnClose.ask(this.ticketId, status);
+      } finally {
+        this.askingPendingTasks = false;
+      }
+    },
     async runTransition(status, extra = {}) {
+      if (['closed', 'cancelled'].includes(status)) {
+        const decision = await this.askPendingTasks(status);
+        if (decision === null) {
+          this.pendingColumnId = null;
+          return false;
+        }
+        extra = { ...extra, ...decision };
+      }
       const columnId = this.pendingColumnId;
       this.pendingColumnId = null;
       try {
@@ -1356,6 +1509,7 @@ export default {
           message: e.response?.data?.error || 'No se pudo cambiar el estado',
         });
       }
+      return true;
     },
     // ── Plan-Clase-Comercial F4 — oportunidades ──
     async openOutcome(outcome = null, columnId = null) {
@@ -1377,17 +1531,21 @@ export default {
     },
     async confirmOutcome(payload) {
       const columnId = this.outcomeColumnId;
+      const decision = await this.askPendingTasks('closed');
+      if (decision === null) return;
       try {
         if (columnId) {
           await this.$store.dispatch('caseTickets/moveTicketColumn', {
             ticketId: this.ticketId,
             caseTypeColumnId: columnId,
             closure: payload,
+            ...decision,
           });
         } else {
           await this.$store.dispatch('caseTickets/closeWithOutcome', {
             ticketId: this.ticketId,
             ...payload,
+            ...decision,
           });
         }
         this.showOutcomeModal = false;
@@ -2074,96 +2232,134 @@ export default {
             {{ `· ${parentProject.title}` }}
           </span>
         </button>
+        <!-- Plan Actividad del caso — folio, tipo, estado, SLA y nivel en el
+             renglón de «Volver»: se consultan, pero no es lo primero que se lee. -->
+        <template v-if="ticket">
+          <button
+            v-if="ticket.folio"
+            type="button"
+            class="p-0 font-mono text-xs font-semibold tracking-wider bg-transparent border-0 cursor-pointer text-slate-500 dark:text-slate-400 hover:text-woot-600"
+            :title="$t('CASE_TICKETS.DETAIL.COPY_FOLIO')"
+            @click="copyFolio"
+          >
+            {{ ticket.folio }}
+          </button>
+          <span
+            v-if="ticket.case_type"
+            class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded text-white"
+            :style="{ backgroundColor: ticket.case_type.color }"
+            ><span class="font-normal opacity-75">{{
+              $t('CASE_TICKETS.DETAIL.TYPE_LABEL')
+            }}</span>
+            {{ ticket.case_type.name }}</span
+          >
+          <span
+            class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300"
+            ><span class="font-normal opacity-75">{{
+              $t('CASE_TICKETS.DETAIL.STATUS_LABEL')
+            }}</span>
+            {{ statusLabel(displayStatus(ticket.status)) }}</span
+          >
+          <!-- Prioridad no va aquí: ya se ve (con color) en el botón "Prioridad". -->
+          <span
+            v-if="hasSla"
+            class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
+            :class="slaBadge(ticket.sla_status)"
+            >{{
+              ticket.sla_status === 'overdue' ? slaText : 'SLA: ' + slaText
+            }}</span
+          >
+          <span
+            v-if="hasSla"
+            class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
+            :title="$t('CASE_TICKETS.ESCALATION.LEVEL_TITLE')"
+            ><span class="font-normal opacity-75">{{
+              $t('CASE_TICKETS.DETAIL.LEVEL_LABEL')
+            }}</span>
+            {{ escalationLabel }}</span
+          >
+          <!-- Asistente (Dali) D3 — delegado a un agente IA; un clic pregunta cómo va -->
+          <button
+            v-if="ticket.delegation"
+            type="button"
+            class="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium rounded bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200 hover:bg-violet-200"
+            :title="ticket.delegation.objective"
+            @click="askAssistant($t('ASSISTANT.ASK_TRACKING'))"
+          >
+            <fluent-icon icon="bot" size="12" />
+            {{
+              $t('ASSISTANT.DELEGATED', {
+                agent: ticket.delegation.agent || '—',
+                status: $t(
+                  `ASSISTANT.TRACKING_STATUS.${ticket.delegation.status}`
+                ),
+              })
+            }}
+          </button>
+        </template>
       </div>
 
       <div v-if="ticket" class="flex items-start justify-between gap-4">
         <div class="flex flex-col gap-1 min-w-0">
-          <!-- @tickets_cases — folio primero y prominente + contacto a su derecha -->
-          <div class="flex items-baseline gap-2 min-w-0">
+          <!-- Plan Actividad del caso — primero QUIÉN: la organización (si hay) y el
+               contacto; un clic abre su ficha. Interno sin contacto: el solicitante. -->
+          <button
+            v-if="headerOrganization || contactDisplayName"
+            type="button"
+            class="flex items-baseline min-w-0 gap-1.5 p-0 text-left bg-transparent border-0 cursor-pointer hover:underline"
+            :title="$t('CASE_TICKETS.CONTACT_PANEL.OPEN')"
+            @click="openContactPanel"
+          >
             <span
-              v-if="ticket.folio"
-              class="font-mono text-lg font-bold leading-none tracking-wider text-woot-600 dark:text-woot-300 flex-shrink-0"
-              >#{{ ticket.folio }}</span
+              v-if="headerOrganization"
+              class="text-lg font-semibold truncate text-slate-800 dark:text-slate-100"
             >
-            <!-- @tickets_cases — manda la organización; el contacto va después
-                 y en tono más tenue. Sin organización, solo el contacto. -->
-            <button
-              v-if="contactDisplayCompany || contactDisplayName"
-              type="button"
-              class="flex items-center min-w-0 gap-1 text-base font-medium cursor-pointer text-slate-600 dark:text-slate-300 hover:text-woot-600 dark:hover:text-woot-400 hover:underline"
-              :title="$t('CASE_TICKETS.CONTACT_PANEL.OPEN')"
-              @click="openContactPanel"
-            >
-              <span v-if="contactDisplayCompany" class="truncate">
-                · {{ contactDisplayCompany }}
-              </span>
-              <span
-                v-if="contactDisplayName"
-                class="font-normal truncate text-slate-500 dark:text-slate-400"
-              >
-                · {{ contactDisplayName }}
-              </span>
-            </button>
-          </div>
-          <!-- @tickets_cases — cada badge lleva su etiqueta (Tipo/Estado/Prioridad/
-               SLA/Nivel) para que se entienda qué representa cada valor. -->
-          <div class="flex flex-wrap items-center gap-1 mt-1">
-            <!-- @tickets_cases — Editar ticket: a la izquierda de la pill Tipo.
-                 Oculto en cerrado (cerrado = solo lectura). -->
-            <woot-button
-              v-if="!isFrozen"
-              size="tiny"
-              variant="smooth"
-              color-scheme="secondary"
-              icon="edit"
-              class="!mr-0.5"
-              :title="$t('CASE_TICKETS.EDIT.BUTTON')"
-              @click="showEditModal = true"
-            />
+              {{ headerOrganization }}
+            </span>
             <span
-              v-if="ticket.case_type"
-              class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded text-white"
-              :style="{ backgroundColor: ticket.case_type.color }"
-              ><span class="font-normal opacity-75">{{
-                $t('CASE_TICKETS.DETAIL.TYPE_LABEL')
-              }}</span>
-              {{ ticket.case_type.name }}</span
+              v-if="contactDisplayName"
+              class="truncate"
+              :class="
+                headerOrganization
+                  ? 'text-base text-slate-500 dark:text-slate-400'
+                  : 'text-lg font-semibold text-slate-800 dark:text-slate-100'
+              "
             >
-            <span
-              class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300"
-              ><span class="font-normal opacity-75">{{
-                $t('CASE_TICKETS.DETAIL.STATUS_LABEL')
-              }}</span>
-              {{ statusLabel(displayStatus(ticket.status)) }}</span
+              <template v-if="headerOrganization">· </template
+              >{{ contactDisplayName }}
+            </span>
+          </button>
+          <span
+            v-else-if="ticket.is_internal"
+            class="text-lg font-semibold text-slate-800 dark:text-slate-100"
+          >
+            {{ $t('CASE_TICKETS.DETAIL.INTERNAL_CASE')
+            }}<template v-if="ticket.requester">
+              · {{ ticket.requester.name }}</template
             >
-            <!-- Prioridad no va aquí: ya se ve (con color) en el botón "Prioridad". -->
-            <span
-              v-if="hasSla"
-              class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
-              :class="slaBadge(ticket.sla_status)"
-              >{{
-                ticket.sla_status === 'overdue' ? slaText : 'SLA: ' + slaText
-              }}</span
-            >
-            <span
-              v-if="hasSla"
-              class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
-              :title="$t('CASE_TICKETS.ESCALATION.LEVEL_TITLE')"
-              ><span class="font-normal opacity-75">{{
-                $t('CASE_TICKETS.DETAIL.LEVEL_LABEL')
-              }}</span>
-              {{ escalationLabel }}</span
-            >
-          </div>
+          </span>
           <!-- @tickets_cases — título a UNA sola línea con "…": envolver a dos
                líneas empujaba las pestañas y descuadraba la cabecera. Completo
                en el tooltip y al abrir "Editar ticket". -->
-          <h2
-            class="m-0 mt-0.5 text-xl font-bold truncate text-slate-800 dark:text-slate-100"
-            :title="ticket.title"
-          >
-            {{ ticket.title }}
-          </h2>
+          <div class="flex items-center min-w-0 gap-1">
+            <h2
+              class="m-0 text-xl font-bold truncate text-slate-800 dark:text-slate-100"
+              :title="ticket.title"
+            >
+              {{ ticket.title }}
+            </h2>
+            <!-- Editar caso: junto a lo que edita (título y descripción). Cerrado = solo lectura. -->
+            <woot-button
+              v-if="!isFrozen"
+              size="tiny"
+              variant="clear"
+              color-scheme="secondary"
+              icon="edit"
+              class="flex-shrink-0"
+              :title="$t('CASE_TICKETS.EDIT.BUTTON')"
+              @click="showEditModal = true"
+            />
+          </div>
           <!-- @tickets_cases — descripción a UNA sola línea con "…" para no
                empujar las pestañas. Si no cabe, «Ver todo» la despliega a todo
                lo ancho debajo de la cabecera (con sus saltos de línea y un alto
@@ -2195,13 +2391,16 @@ export default {
           </div>
         </div>
 
-        <!-- @tickets_cases — columna derecha: acciones arriba + fechas debajo -->
-        <div class="flex flex-col items-end flex-shrink-0 gap-3">
+        <!-- @tickets_cases — columna derecha: acciones arriba + fechas debajo.
+             UN solo clickaway para las dos barras: con uno en cada barra, el clic
+             que abre un menú de una caía "fuera" de la otra y lo cerraba al
+             instante (el menú «Cambiar estado» nunca se veía). -->
+        <div
+          v-on-clickaway="closeActionMenus"
+          class="flex flex-col items-end flex-shrink-0 gap-3"
+        >
           <!-- Acciones (barra accionable inline — estilo osTicket) -->
-          <div
-            v-on-clickaway="closeActionMenus"
-            class="relative flex flex-wrap items-center justify-end gap-2"
-          >
+          <div class="relative flex flex-wrap items-center justify-end gap-2">
             <!-- Plan-Clase-Comercial F4 — cerrar con resultado / posponer -->
             <template v-if="isCommercial && !isFrozen">
               <woot-button
@@ -2221,36 +2420,6 @@ export default {
                 @click="openOutcome('lost')"
               >
                 {{ $t('CASE_TICKETS.COMMERCIAL.ACTIONS.LOST') }}
-              </woot-button>
-              <woot-button
-                size="small"
-                variant="smooth"
-                color-scheme="secondary"
-                icon="dismiss"
-                @click="openOutcome('cancelled')"
-              >
-                {{ $t('CASE_TICKETS.COMMERCIAL.ACTIONS.CANCEL') }}
-              </woot-button>
-              <woot-button
-                v-if="ticket.is_postponed"
-                size="small"
-                variant="smooth"
-                color-scheme="warning"
-                icon="arrow-rotate-counter-clockwise"
-                :is-loading="isTransitioning"
-                @click="resumeOpportunity"
-              >
-                {{ $t('CASE_TICKETS.COMMERCIAL.ACTIONS.RESUME') }}
-              </woot-button>
-              <woot-button
-                v-else
-                size="small"
-                variant="smooth"
-                color-scheme="warning"
-                icon="calendar-clock"
-                @click="openPostpone()"
-              >
-                {{ $t('CASE_TICKETS.COMMERCIAL.ACTIONS.POSTPONE') }}
               </woot-button>
             </template>
 
@@ -2299,22 +2468,66 @@ export default {
             >
               {{ $t('CASE_TICKETS.ESCALATION.BUTTON') }}
             </woot-button>
+            <!-- Cerrado o cancelado no cambia de estado: se reabre con su botón.
+                 Plan Actividad del caso (P3) — en una oportunidad el botón es «⋯»
+                 y su menú suma Cancelar y Posponer/Retomar. -->
             <woot-button
+              v-if="!isFrozen"
               size="small"
-              color-scheme="primary"
+              :color-scheme="isCommercial ? 'secondary' : 'primary'"
+              :variant="isCommercial ? 'smooth' : ''"
               :is-loading="isTransitioning"
+              :title="
+                isCommercial ? $t('CASE_TICKETS.DETAIL.MORE_ACTIONS') : ''
+              "
               @click="
                 showTransitionMenu = !showTransitionMenu;
                 showPriorityMenu = false;
               "
             >
-              {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }}
-              <fluent-icon icon="chevron-down" size="12" class="ml-1" />
+              <fluent-icon
+                v-if="isCommercial"
+                icon="more-horizontal"
+                size="14"
+              />
+              <template v-else>
+                {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }}
+                <fluent-icon icon="chevron-down" size="12" class="ml-1" />
+              </template>
             </woot-button>
             <ul
               v-if="showTransitionMenu"
-              class="absolute right-0 z-50 py-1 mt-1 list-none bg-white border rounded-md shadow-md dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[180px]"
+              class="absolute right-0 z-50 py-1 mt-1 overflow-y-auto list-none bg-white border rounded-md shadow-md top-full max-h-[60vh] dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[180px]"
             >
+              <template v-if="isCommercial">
+                <li
+                  class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  @click="
+                    showTransitionMenu = false;
+                    openOutcome('cancelled');
+                  "
+                >
+                  {{ $t('CASE_TICKETS.COMMERCIAL.ACTIONS.CANCEL') }}
+                </li>
+                <li
+                  class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  @click="
+                    showTransitionMenu = false;
+                    ticket.is_postponed ? resumeOpportunity() : openPostpone();
+                  "
+                >
+                  {{
+                    ticket.is_postponed
+                      ? $t('CASE_TICKETS.COMMERCIAL.ACTIONS.RESUME')
+                      : $t('CASE_TICKETS.COMMERCIAL.ACTIONS.POSTPONE')
+                  }}
+                </li>
+                <li
+                  class="px-4 pt-2 pb-1 mt-1 text-xs font-medium uppercase border-t text-slate-400 border-slate-100 dark:border-slate-700"
+                >
+                  {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }}
+                </li>
+              </template>
               <li
                 v-for="opt in validTransitions"
                 :key="`${opt.columnId || 'x'}-${opt.status || 'x'}`"
@@ -2336,10 +2549,7 @@ export default {
                el botón de vencimiento. -->
           <div class="flex flex-col items-end gap-3">
             <!-- Vence, a la altura de Equipo y Responsable (Vincular caso está en su pestaña) -->
-            <div
-              v-on-clickaway="closeActionMenus"
-              class="flex flex-wrap items-end justify-end gap-2"
-            >
+            <div class="flex flex-wrap items-end justify-end gap-2">
               <div class="flex items-center gap-2 pb-0.5">
                 <!-- @tickets_cases P4 — Vencimiento inline (osTicket "Due Date") -->
                 <div class="relative">
@@ -2435,20 +2645,7 @@ export default {
                 </div>
               </div>
             </div>
-            <!-- Solicitante (tickets internos) -->
-            <div
-              v-if="ticket.is_internal && ticket.requester"
-              class="flex flex-col gap-0.5 text-right"
-            >
-              <span
-                class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-                >{{ $t('CASE_TICKETS.INTERNAL.REQUESTER_LABEL') }}</span
-              >
-              <span
-                class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                >{{ ticket.requester.name }}</span
-              >
-            </div>
+            <!-- El solicitante de un caso interno ya va arriba, en «Caso interno · nombre». -->
           </div>
         </div>
       </div>
@@ -2483,16 +2680,82 @@ export default {
       v-if="ticket"
       class="flex-shrink-0 px-6 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
-      <woot-tabs :index="activeDetailTabIndex" @change="onDetailTabChange">
-        <woot-tabs-item
-          v-for="(t, i) in detailTabs"
-          :key="t.key"
-          :index="i"
-          :name="t.label"
-          :count="t.count || 0"
-          :show-badge="!!t.count"
-        />
-      </woot-tabs>
+      <div class="flex flex-wrap items-center gap-2">
+        <woot-tabs :index="barTabIndex" @change="onDetailTabChange">
+          <woot-tabs-item
+            v-for="(t, i) in barTabs"
+            :key="t.key"
+            :index="i"
+            :name="t.label"
+            :count="t.count || 0"
+            :show-badge="!!t.count"
+          />
+        </woot-tabs>
+        <!-- Plan Actividad del caso (P3) — el resto de las pestañas -->
+        <div
+          v-if="moreTabs.length"
+          v-on-clickaway="() => (showMoreTabs = false)"
+          class="relative"
+        >
+          <woot-button
+            size="small"
+            variant="clear"
+            color-scheme="secondary"
+            @click="showMoreTabs = !showMoreTabs"
+          >
+            {{ $t('CASE_TICKETS.DETAIL_TABS.MORE') }}
+            <fluent-icon icon="chevron-down" size="12" class="ml-1" />
+          </woot-button>
+          <ul
+            v-if="showMoreTabs"
+            class="absolute left-0 z-50 py-1 mt-1 list-none bg-white border rounded-md shadow-md top-full dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[200px]"
+          >
+            <li
+              v-for="t in moreTabs"
+              :key="t.key"
+              class="flex items-center justify-between gap-3 px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+              :class="
+                t.key === currentTabKey
+                  ? 'font-medium text-woot-600 dark:text-woot-300'
+                  : ''
+              "
+              @click="selectMoreTab(t.key)"
+            >
+              <span>{{ t.label }}</span>
+              <span v-if="t.count" class="text-xs text-slate-400">
+                {{ t.count }}
+              </span>
+            </li>
+          </ul>
+        </div>
+        <!-- Plan Actividad del caso — conversaciones del caso y «registrar», a la
+             altura de las pestañas (siempre visibles): la historia gana espacio.
+             Abren la ventana de su pestaña sin salir de la que estás. -->
+        <div class="flex flex-wrap items-center gap-2 py-1 ml-auto">
+          <CaseConversationsMenu
+            v-if="ticket.contact_id"
+            :ticket="ticket"
+            :refresh-key="`${ticket.updated_at}-${events.length}`"
+            @openTab="openDetailTab"
+            @linked="onConversationLinked"
+          />
+          <span
+            v-if="ticket.contact_id"
+            class="w-px h-5 bg-slate-200 dark:bg-slate-700"
+          />
+          <woot-button
+            v-for="action in registerActions"
+            :key="action.kind"
+            size="small"
+            variant="smooth"
+            color-scheme="secondary"
+            :icon="action.icon"
+            @click="registerFromActivity(action.kind)"
+          >
+            {{ $t(`CASE_TICKETS.ACTIVITY.REGISTER_ACTIONS.${action.kind}`) }}
+          </woot-button>
+        </div>
+      </div>
     </div>
 
     <!-- Loading -->
@@ -3235,9 +3498,9 @@ export default {
 
       <!-- ════ Pestaña Notas internas — tabla + modal, como Tareas ════ -->
       <TicketNotes
-        v-show="currentTabKey === 'notes'"
         ref="ticketNotes"
         :key="`notes-${ticket.id}`"
+        :class="{ 'case-tab-hidden': currentTabKey !== 'notes' }"
         :ticket-id="ticket.id"
         :is-frozen="isFrozen"
         class="flex-1 min-h-0"
@@ -3245,28 +3508,70 @@ export default {
         @changed="reloadEvents"
       />
 
-      <!-- ════ Pestaña Notas del Contacto — CRUD nativo de contactos ════ -->
+      <!-- ════ Pestaña Pendientes (Plan Actividad del caso P3) ════
+           Dos sub-pestañas: Tareas (la lista de verificación, puede ser larga) y
+           Tareas agendadas. flex-none: cada tabla toma su alto y la pestaña hace
+           scroll. -->
       <div
-        v-show="currentTabKey === 'contact_notes'"
-        class="flex-1 min-h-0 overflow-y-auto"
+        v-if="currentTabKey === 'pending'"
+        class="flex items-center justify-between gap-3"
       >
-        <NotesOnContactPage
-          v-if="ticket.contact_id"
-          :key="`contact-notes-${ticket.contact_id}`"
-          :contact-id="ticket.contact_id"
-        />
+        <div
+          class="flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-700/50 gap-0.5"
+        >
+          <button
+            v-for="view in pendingViews"
+            :key="view.key"
+            type="button"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
+            :class="
+              pendingView === view.key
+                ? 'bg-white dark:bg-slate-800 text-woot-600 dark:text-woot-300 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            "
+            @click="pendingView = view.key"
+          >
+            <fluent-icon :icon="view.icon" size="14" />
+            {{ view.label }}
+            <span v-if="view.count" class="text-xs text-slate-400">
+              {{ view.count }}
+            </span>
+          </button>
+        </div>
+        <!-- El «nuevo» de la sub-pestaña abierta (antes en el renglón de título de cada tabla) -->
+        <woot-button
+          v-if="!isFrozen"
+          size="small"
+          icon="add"
+          @click="
+            pendingView === 'tasks'
+              ? $refs.ticketTasks.openCreate()
+              : $refs.ticketMeetings.openCreate()
+          "
+        >
+          {{
+            pendingView === 'tasks'
+              ? $t('CASE_TICKETS.TASKS.ADD')
+              : $t('CASE_TICKETS.MEETINGS.ADD_NEW')
+          }}
+        </woot-button>
       </div>
-
-      <!-- ════ Pestaña Tareas (P4) — checklist a ancho completo ════ -->
       <TicketTasks
-        v-show="currentTabKey === 'tasks'"
         ref="ticketTasks"
         :key="`tasks-${ticket.id}`"
+        :class="{
+          'case-tab-hidden':
+            currentTabKey !== 'pending' || pendingView !== 'tasks',
+        }"
         :ticket-id="ticket.id"
         :is-frozen="isFrozen"
         :allow-milestones="isProject"
-        class="flex-1 min-h-0"
-        @saved="refetch()"
+        urgent-first
+        class="flex-none"
+        @saved="
+          refetch();
+          activityTick += 1;
+        "
         @count="taskCount = $event"
         @addNote="openNoteForTask"
         @viewNotes="openNotesForTask"
@@ -3274,16 +3579,19 @@ export default {
         @viewMeetings="openMeetingsForTask"
       />
 
-      <!-- ════ Pestaña Reuniones (F2) — tabla + modal, como Notas ════ -->
+      <!-- ════ …y debajo Tareas agendadas (F2) — tabla + modal, como Notas ════ -->
       <TicketMeetings
-        v-show="currentTabKey === 'meetings'"
         ref="ticketMeetings"
         :key="`meetings-${ticket.id}`"
+        :class="{
+          'case-tab-hidden':
+            currentTabKey !== 'pending' || pendingView !== 'meetings',
+        }"
         :ticket-id="ticket.id"
         :is-frozen="isFrozen"
         :contact-email="ticket.contact_email || ''"
         :create-defaults="visitDefaults"
-        class="flex-1 min-h-0"
+        class="flex-none"
         @count="meetingCount = $event"
         @changed="reloadEvents"
       />
@@ -3339,6 +3647,13 @@ export default {
         <QuotesPanel :ticket="ticket" @count="quoteCount = $event" />
       </div>
 
+      <!-- ════ Plan Actividad del caso — pestaña principal ════ -->
+      <CaseActivity
+        v-if="currentTabKey === 'activity'"
+        :ticket="ticket"
+        :refresh-key="`${ticket.updated_at}-${events.length}-${activityTick}`"
+        @openTab="openDetailTab"
+      />
       <!-- ════ Pestaña Avance del ticket (2L) — 3 vistas conmutables ════ -->
       <JourneyView
         v-show="currentTabKey === 'journey'"
@@ -3958,7 +4273,7 @@ export default {
     <!-- Modal de cierre documentado (2G) -->
     <woot-modal
       v-if="showCloseModal"
-      :show="showCloseModal"
+      :show="!askingPendingTasks"
       :on-close="cancelCloseModal"
       size="small"
     >
@@ -4285,10 +4600,12 @@ export default {
       </div>
     </transition>
 
+    <CaseTasksOnCloseModal ref="tasksOnClose" />
+
     <!-- Plan-Clase-Comercial F4 — modales de oportunidad -->
     <OutcomeModal
       v-if="showOutcomeModal && ticket"
-      show
+      :show="!askingPendingTasks"
       :folio="ticket.folio || `#${ticket.id}`"
       :outcome="outcomePreset"
       :quotes="outcomeQuotes"
@@ -4309,6 +4626,18 @@ export default {
 </template>
 
 <style scoped>
+/* Plan Actividad del caso (P4) — pestaña oculta pero montada: su ventana
+   (modal fijo) sí se ve, para registrar desde la Actividad sin cambiar de pestaña. */
+.case-tab-hidden {
+  position: absolute;
+  width: 100%;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+.case-tab-hidden ::v-deep .modal-mask {
+  visibility: visible;
+}
 /* La ficha entra deslizándose desde la derecha; el fondo no se atenúa. */
 .contact-panel-enter-active,
 .contact-panel-leave-active {

@@ -125,6 +125,7 @@ Rails.application.routes.draw do
           end
           # Plan-Trabajo-Campo R3 — despacho
           resource :field_dispatch, only: [:show], controller: 'field_dispatch' do
+            post :move_visit
             post :assign
           end
           # Plan-Trabajo-Campo R2 — portal del técnico
@@ -333,6 +334,14 @@ Rails.application.routes.draw do
           # =========================================================================
           # @tickets_cases — Gestor de Tickets
           # =========================================================================
+          # Asistente (Dali) — asistente conversacional de toda la plataforma
+          resource :assistant, only: [:show], controller: 'assistant' do
+            post :messages
+            post :reset
+            patch :settings
+            post 'proposals/:id/confirm', action: :confirm
+            post 'proposals/:id/cancel', action: :cancel
+          end
           resources :case_tickets, only: [:index, :show, :create, :update] do
             # Plan-Trabajo-Campo R1 — reporte de servicio de la orden de trabajo
             resource :service_report, only: [:show, :update], controller: 'case_service_reports' do
@@ -375,6 +384,9 @@ Rails.application.routes.draw do
             resources :case_events, only: [:index]
             # @tickets_cases — ligar (o crear) la conversación de un caso que no tiene
             resource :case_conversation, only: [:create], path: 'conversation'
+            # Plan Actividad del caso — conversaciones ligadas (principal y adicionales) y la actividad
+            resources :case_conversations, only: [:index, :destroy], path: 'conversations'
+            resource :case_activity, only: [:show], path: 'activity'
             # @tickets_cases 2E — relaciones entre tickets
             resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
             # @tickets_cases — tareas/subtareas del ticket
@@ -407,6 +419,19 @@ Rails.application.routes.draw do
           # @tickets_cases — «Mi resumen» de la página Inicio
           resource :my_summary, only: [:show], controller: 'my_summary'
           # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
+          resources :task_reports, only: [:index, :create] # Reporte de cierre
+          resources :agenda_visits, only: [:show] do # Visitas sin orden de trabajo
+            get :arrivals, on: :collection
+            post :on_my_way, on: :member
+            post :arrive, on: :member
+          end
+          resources :task_outcomes, only: [:index, :create, :update, :destroy]
+          # Plan-Agenda — tareas sin caso de la captura rápida (solo en Kontrolya).
+          resources :quick_tasks, only: [:create, :update, :destroy]
+          # Plan-Agenda — lo agendado desde el calendario: con caso o solo con su contacto.
+          resources :agenda_items, only: [:index, :create, :update, :destroy] do
+            get :cases, on: :collection
+          end
           resources :case_tasks, only: [:index], controller: 'case_tasks_index' do
             put :my_day_plan, on: :collection # Plan-Bandeja-Prioridad F2 — orden propio de «Mi día»
             post :my_day_ai, on: :collection  # Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA
@@ -446,7 +471,11 @@ Rails.application.routes.draw do
               collection do
                 post :sync
                 post :import
+                # feat/plantillas_whatsapp_mejoras F6: subir el archivo de muestra del encabezado
+                post :header_samples
               end
+              # feat/plantillas_whatsapp_mejoras: dónde se usa, antes de borrarla
+              get :usage, on: :member
             end
           end
 
@@ -691,6 +720,8 @@ Rails.application.routes.draw do
             delete :avatar, on: :member
             # diag/llamadas_whatsapp (F6): la pestaña «Llamadas»
             resource :whatsapp_call_settings, only: [:show, :update], module: :inboxes
+            # feat/plantillas_whatsapp_mejoras: el archivo de una plantilla en la conversación (guardado o subido)
+            resource :whatsapp_template_header, only: [:show, :create], module: :inboxes
           end
           resources :inbox_members, only: [:create, :show], param: :inbox_id do
             collection do

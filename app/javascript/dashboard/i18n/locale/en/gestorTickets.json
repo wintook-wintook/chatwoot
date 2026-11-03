@@ -1,4 +1,102 @@
 {
+  "CASE_TASKS_ON_CLOSE": {
+    "HEADER": "Before closing the case",
+    "TITLE": "This case has {count} pending task(s)",
+    "DESC": "A closed case can't be edited. Choose what happens to them.",
+    "CANCEL_LABEL": "Cancel them",
+    "CANCEL_DESC": "No longer needed. They don't count as done and return if the case reopens.",
+    "KEEP_LABEL": "Keep them without a case",
+    "KEEP_DESC": "They stay alive on the contact and in their assignee's My day.",
+    "CONCLUDE_LABEL": "Conclude them now",
+    "CONCLUDE_DESC": "They were done: write one closing report for all of them.",
+    "BACK": "Back",
+    "CONFIRM": "Continue",
+    "REPORT_TITLE": "Case tasks ({count})",
+    "ERROR": "Could not conclude the tasks."
+  },
+  "VISIT_ARRIVALS": {
+    "EXPORT": "Export CSV",
+    "EMPTY": "No arrivals in that period.",
+    "ERROR": "Could not load arrivals.",
+    "WHEN": "When",
+    "WHO": "Who",
+    "CLIENT": "Customer",
+    "VISIT": "Visit",
+    "LOCATION": "Location",
+    "NO_LOCATION": "No location"
+  },
+  "TASK_REPORT": {
+    "TITLE": "Closing report",
+    "CONTENT": "What was done",
+    "CONTENT_PLACEHOLDER": "Write what you did and how it ended",
+    "OUTCOME": "Result",
+    "NO_OUTCOME": "No result",
+    "EVIDENCE": "Evidence (optional)",
+    "TOO_MANY": "Up to {max} files.",
+    "REQUIRED": "Write what was done.",
+    "ERROR": "Could not save the report. Try again.",
+    "CANCEL": "Cancel",
+    "SUBMIT": "Conclude",
+    "VIEW": "View report",
+    "EMPTY": "No reports.",
+    "MORE": "See more",
+    "HISTORY": "Concluded tasks",
+    "PAGE_TITLE": "Reports",
+    "ALL_PEOPLE": "Everyone",
+    "FROM": "From",
+    "TO": "To",
+    "TABS": {
+      "REPORTS": "Reports",
+      "ARRIVALS": "Arrivals"
+    },
+    "SERVICE_REPORT": "View service report",
+    "ARRIVAL": "Arrived",
+    "CATALOG": {
+      "TITLE": "Task results",
+      "ACTIVE": "Active",
+      "DELETE": "Delete",
+      "ADD": "Add",
+      "PLACEHOLDER": "New result",
+      "ERROR": "Could not save."
+    }
+  },
+  "QUICK_ACTIONS": {
+    "TITLE": "Quick actions",
+    "NEW_TASK": "Task",
+    "SEARCH_CLIENT": "Search contact or organization",
+    "SEARCH": {
+      "TITLE": "Search contact or organization",
+      "PLACEHOLDER": "Name, phone or email",
+      "SEARCHING": "Searching…",
+      "EMPTY": "No results.",
+      "CONTACTS": "Contacts",
+      "ORGANIZATIONS": "Organizations"
+    },
+    "NEW_CONTACT": "New contact",
+    "TASK": {
+      "TITLE": "New task",
+      "NAME": "What needs to be done",
+      "NAME_PLACEHOLDER": "Write the task",
+      "VISIT_TIME_REQUIRED": "A visit needs a date and time.",
+      "IS_VISIT": "This is a customer visit",
+      "ADDRESS": "Visit address",
+      "ADDRESS_PLACEHOLDER": "If empty, the case or organization address is used",
+      "ASSIGNEE": "Assignee",
+      "PLANNED": "Planned date",
+      "TIME": "Time (optional)",
+      "DUE": "Due date",
+      "CASE": "Case (optional)",
+      "NO_CASE": "No case",
+      "SCHEDULED_HINT": "With a time it becomes a scheduled task and goes to Google, if connected.",
+      "ONLY_MY_DAY": "Without contact or organization it only shows in My day.",
+      "CANCEL": "Cancel",
+      "SUBMIT": "Create task",
+      "SUCCESS": "Task created",
+      "ERROR": "Could not create it. Try again.",
+      "TITLE_REQUIRED": "Write what needs to be done.",
+      "DATE_REQUIRED": "With a time, pick the planned date."
+    }
+  },
   "CASE_TICKETS": {
     "SECTION_TITLE": "Case",
     "SIDEBAR": {
@@ -213,6 +311,9 @@
       "OPEN": "View contact details"
     },
     "DETAIL_TABS": {
+      "PENDING": "Pending",
+      "MORE": "More",
+      "ACTIVITY": "Activity",
       "SUMMARY": "Summary",
       "CONVERSATION": "Conversation",
       "NOTES": "Notes",
@@ -316,7 +417,8 @@
       },
       "STATUS": {
         "PENDING": "Pending",
-        "DONE": "Completed"
+        "DONE": "Completed",
+        "CANCELLED": "Cancelled"
       },
       "MODAL": {
         "NEW_TITLE": "New task",
@@ -1048,7 +1150,7 @@
       "REOPEN": {
         "SECTION": "Reopening closed cases",
         "WINDOW_TITLE": "Reopen window",
-        "WINDOW_DESC": "Days after closing during which the assigned agent can reopen. After that, only an administrator. Use 0 for no limit.",
+        "WINDOW_DESC": "Days after closing in which a customer reply reopens the case. After that, a new case linked to the old one is created. Use 0 for no limit.",
         "DAYS": "days",
         "SAVE": "Save",
         "ON_REPLY_TITLE": "Reopen on customer reply",
@@ -1306,7 +1408,15 @@
       "commitment_changed": "Customer commitment",
       "conversation_link": "Conversation linked",
       "stage_tasks_added": "Stage tasks",
-      "stage_advanced": "Stage advance"
+      "stage_advanced": "Stage advance",
+      "task_created": "Task created",
+      "task_completed": "Task completed",
+      "task_cancelled": "Task cancelled",
+      "task_reopened": "Task reopened",
+      "task_deleted": "Task deleted",
+      "quote_created": "Quote created",
+      "quote_status_changed": "Quote updated",
+      "conversation_unlinked": "Conversation removed"
     },
     "COLUMNS_CFG": {
       "ADD_BUTTON": "Add column",
@@ -1402,6 +1512,10 @@
       "LEVEL_LABEL": "Level:",
       "VIEW_FULL": "See all",
       "NO_TRANSITIONS": "No transitions available",
+      "COPY_FOLIO": "Copy folio",
+      "FOLIO_COPIED": "Folio copied",
+      "INTERNAL_CASE": "Internal case",
+      "MORE_ACTIONS": "More actions",
       "LOADING": "Loading case…",
       "PARENT_PROJECT": "Project",
       "BACK_TO_PROJECT": "Back to project",
@@ -1410,6 +1524,8 @@
     },
     "MEETINGS": {
       "TITLE": "Scheduled tasks",
+      "FILTERED": "Only {folio}",
+      "CLEAR_FILTER": "Show all",
       "ADD_NEW": "Schedule task",
       "REFRESH": "Refresh",
       "LOADING": "Loading scheduled tasks...",
@@ -1549,6 +1665,11 @@
       },
       "COLUMN_TOTAL": "Column total",
       "PANEL": {
+        "SHORT_TITLE": "Opportunity",
+        "WEIGHTED_LINE": "{pct}% → {weighted} weighted",
+        "CLOSE_LINE": "Close {date}",
+        "OVERDUE": "overdue",
+        "EDIT": "Edit opportunity data",
         "TITLE": "Opportunity data",
         "SAVE": "Save",
         "CANCEL": "Discard",
@@ -1960,6 +2081,7 @@
       },
       "SUPPORT": {
         "NAME": "Support",
+        "NEW": "Case",
         "LIST": "Tickets",
         "BOARD": "Ticket board",
         "METRICS": "Support metrics",
@@ -1977,6 +2099,7 @@
       },
       "WORK_ORDER": {
         "NAME": "Work orders",
+        "NEW": "Work order",
         "LIST": "Work orders",
         "BOARD": "Work order board",
         "METRICS": "Work order metrics",
@@ -1994,6 +2117,7 @@
       },
       "PROJECT": {
         "NAME": "Projects",
+        "NEW": "Project",
         "LIST": "Projects",
         "BOARD": "Project board",
         "METRICS": "Project metrics",
@@ -2123,7 +2247,18 @@
       "CONTACT_INTERNAL_HINT": "Without a contact it is created as an internal case.",
       "CHANGE_CONTACT": "Change contact",
       "NO_CONTACTS": "No results",
-      "SUCCESS": "Case {folio} created"
+      "SUCCESS": {
+        "COMMERCIAL": "Opportunity {folio} created",
+        "SUPPORT": "Case {folio} created",
+        "WORK_ORDER": "Work order {folio} created",
+        "PROJECT": "Project {folio} created"
+      },
+      "SUBMIT": {
+        "COMMERCIAL": "Create opportunity",
+        "SUPPORT": "Create case",
+        "WORK_ORDER": "Create work order",
+        "PROJECT": "Create project"
+      }
     },
     "PROJECT": {
       "PANEL": {
@@ -2412,7 +2547,50 @@
         "ERROR": "Could not analyze."
       }
     },
+    "ACTIVITY": {
+      "NEXT": "Next",
+      "REGISTER": "Log",
+      "REGISTER_ACTIONS": {
+        "note": "Note",
+        "task": "Task",
+        "meeting": "Schedule",
+        "message": "Message"
+      },
+      "OVERDUE": "{n} overdue",
+      "DUE": "due {when}",
+      "NOTHING_PENDING": "Nothing pending",
+      "LAST_CONTACT": "Last contact",
+      "CUSTOMER_WROTE": "Customer wrote {when} · {where}",
+      "WE_WROTE": "We wrote {when} · {where}",
+      "NO_MESSAGES": "No messages yet",
+      "NO_CONVERSATION": "No linked conversation",
+      "CONVERSATIONS": "Conversations",
+      "PRIMARY": "main",
+      "UNLINK": "Remove from case",
+      "UNLINK_CONFIRM": "Remove conversation #{id} from the case? The conversation is not deleted.",
+      "ADD_CONVERSATION": "Add",
+      "UNLINKED": "The contact has {n} unlinked conversation(s)",
+      "FILTERS": {
+        "all": "All",
+        "client": "Customer",
+        "notes": "Notes",
+        "tasks": "Tasks",
+        "changes": "Changes"
+      },
+      "RECEIVED": "{n} received",
+      "SENT": "{n} sent",
+      "CUSTOMER": "Customer",
+      "WE": "Us",
+      "TASK_REPORT": "Closing report",
+      "TODAY": "Today",
+      "YESTERDAY": "Yesterday",
+      "LOADING": "Loading activity…",
+      "ERROR": "Couldn't load the activity",
+      "EMPTY": "No activity",
+      "MORE": "Show {n} more"
+    },
     "CONVERSATION_ACTIONS": {
+      "ADD": "Add conversation",
       "LINK": "Link conversation",
       "SCHEDULE": "Schedule message",
       "SCHEDULE_HINT": "Schedule a message to the customer in the case conversation",
@@ -2422,7 +2600,10 @@
       "NEED_CONTACT": "Assign a contact to the case to link a conversation",
       "EVENT": "Conversation #{id} · {inbox}",
       "EVENT_CREATED": "New conversation #{id} · {inbox}",
+      "EVENT_EXTRA": "Additional conversation #{id} · {inbox}",
       "LINK_MODAL": {
+        "TITLE_EXTRA": "Add conversation · {folio}",
+        "SUBTITLE_EXTRA": "It is added to the case conversations (e.g. the email). The main one doesn't change.",
         "TITLE": "Link conversation · {folio}",
         "SUBTITLE": "The case keeps this conversation; it can't be changed later.",
         "EXISTING": "Contact conversations",
@@ -2772,6 +2953,9 @@
     "FROM_PLAN": "From maintenance “{title}”"
   },
   "FIELD": {
+    "ERROR": "Could not save. Try again.",
+    "ETA_OPTION": "{n} min",
+    "NO_LOCATION": "No location: check the browser permission",
     "TITLE": "My route",
     "TODAY": "Today",
     "BACK_TO_APP": "Go to Wintook",
@@ -2880,6 +3064,9 @@
     }
   },
   "DISPATCH": {
+    "AREA_ALL": "Everyone",
+    "AREA_SERVICE": "Support",
+    "AREA_SALES": "Sales",
     "TITLE": "Dispatch",
     "HELP": "Drag an order to a technician's column. Orders without a visit will ask for the time.",
     "UNSCHEDULED": "To schedule",

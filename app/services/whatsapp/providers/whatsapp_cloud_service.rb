@@ -251,11 +251,21 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
         policy: 'deterministic',
         code: template_info[:lang_code]
       },
-      components: [{
-        type: 'body',
-        parameters: template_info[:parameters]
-      }]
+      components: template_components(template_info[:parameters])
     }
+  end
+
+  # feat/plantillas_whatsapp_mejoras F1: los parámetros pueden venir ya como components
+  # (Whatsapp::TemplateProcessorService: header / body / footer / button) y se mandan tal cual;
+  # si es la lista de siempre (los del cuerpo: seguimientos, campañas, el empate por texto),
+  # van dentro de un solo body, como antes.
+  TEMPLATE_COMPONENT_TYPES = %w[header body footer button].freeze
+
+  def template_components(parameters)
+    lista = Array(parameters)
+    return lista if lista.any? && lista.all? { |p| TEMPLATE_COMPONENT_TYPES.include?((p[:type] || p['type']).to_s) }
+
+    [{ type: 'body', parameters: parameters }]
   end
 
   def whatsapp_reply_context(message)

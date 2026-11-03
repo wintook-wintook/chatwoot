@@ -1,8 +1,9 @@
 # Plan-Organizaciones — lo del contacto que pertenece a una organización: oportunidades y
 # casos, cotizaciones, contratos, equipos y planes de mantenimiento. «Vivo» es lo que todavía
 # corre (lo que pasa al sustituto cuando el contacto se va sin llevárselo); lo demás es historial.
+# Tareas y tareas agendadas: solo las que no tienen caso; las de un caso van con su caso.
 class Organizations::ContactRecords
-  KINDS = %i[case_tickets quotes contracts customer_assets maintenance_plans].freeze
+  KINDS = %i[case_tickets quotes contracts customer_assets maintenance_plans case_tasks case_meetings].freeze
 
   def initialize(contact)
     @contact = contact
@@ -21,7 +22,9 @@ class Organizations::ContactRecords
       quotes: scopes[:quotes].where(status: Quote::LIVE_STATUSES),
       contracts: scopes[:contracts].where.not(status: :cancelled),
       customer_assets: scopes[:customer_assets].active,
-      maintenance_plans: scopes[:maintenance_plans].active
+      maintenance_plans: scopes[:maintenance_plans].active,
+      case_tasks: scopes[:case_tasks].pending,
+      case_meetings: scopes[:case_meetings].active
     }
   end
 

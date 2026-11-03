@@ -74,6 +74,7 @@ class Quote < ApplicationRecord
   belongs_to :account
   belongs_to :contact
   include OrganizationLinked # Plan-Organizaciones O2
+  include QuoteActivity # Plan Actividad del caso
   belongs_to :assignee, class_name: 'User', optional: true
   belongs_to :opportunity, class_name: 'CaseTicket', optional: true
   belongs_to :origin_ticket, class_name: 'CaseTicket', optional: true

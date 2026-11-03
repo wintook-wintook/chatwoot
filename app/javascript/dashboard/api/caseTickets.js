@@ -6,6 +6,7 @@
 // ================================================================================
 
 import ApiClient from './ApiClient';
+import { browserZone } from './fieldVisits';
 
 /* global axios */
 
@@ -88,6 +89,23 @@ class CaseTicketsAPI extends ApiClient {
   // o `{ inbox_id }` (reusa la abierta del contacto en esa bandeja o crea una).
   linkConversation(ticketId, params) {
     return axios.post(`${this.url}/${ticketId}/conversation`, params);
+  }
+
+  // Plan Actividad del caso — todo lo que pasó en el caso (bitácora + mensajes
+  // resumidos por día, en la zona del usuario) y el resumen «¿cómo va?».
+  getActivity(ticketId) {
+    return axios.get(`${this.url}/${ticketId}/activity`, {
+      params: { tz: browserZone() },
+    });
+  }
+
+  // Conversaciones ligadas (la principal primero) y las del contacto sin ligar.
+  getConversations(ticketId) {
+    return axios.get(`${this.url}/${ticketId}/conversations`);
+  }
+
+  unlinkConversation(ticketId, displayId) {
+    return axios.delete(`${this.url}/${ticketId}/conversations/${displayId}`);
   }
 
   getProjectChildren(projectId) {

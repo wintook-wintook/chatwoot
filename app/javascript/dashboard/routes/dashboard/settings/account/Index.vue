@@ -8,10 +8,11 @@ import { useConfig } from 'dashboard/composables/useConfig';
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import semver from 'semver';
 import AccountBrandSettings from './AccountBrandSettings.vue'; // feat/apariencia B1
+import AccountAssistantSettings from './AccountAssistantSettings.vue'; // Asistente (Dali)
 import { getLanguageDirection } from 'dashboard/components/widgets/conversation/advancedFilterItems/languages';
 
 export default {
-  components: { AccountBrandSettings },
+  components: { AccountBrandSettings, AccountAssistantSettings },
   setup() {
     const { updateUISettings } = useUISettings();
     const { enabledLanguages } = useConfig();
@@ -287,6 +288,7 @@ export default {
       />
     </form>
     <AccountBrandSettings v-if="!uiFlags.isFetchingItem" />
+    <AccountAssistantSettings v-if="!uiFlags.isFetchingItem" />
 
     <woot-loading-state v-if="uiFlags.isFetchingItem" />
   </div>

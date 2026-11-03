@@ -35,6 +35,7 @@ export default {
         starts_at: '',
         ends_at: '',
         location: '',
+        is_visit: false,
         case_task_id: '',
         organizer_id: '',
         notify_client: true,
@@ -181,6 +182,7 @@ export default {
         starts_at: this.toLocalInput(m?.starts_at) || this.defaultStart(),
         ends_at: this.toLocalInput(m?.ends_at) || this.defaultEnd(),
         location: m?.location || d.location || '',
+        is_visit: !!(m?.is_visit || d.is_visit),
         case_task_id: m?.case_task?.id || this.contextTask?.id || '',
         organizer_id: m?.organizer?.id || (organizerOk ? d.organizer_id : ''),
         // Sin correo del contacto la casilla va deshabilitada: dejarla marcada
@@ -250,6 +252,7 @@ export default {
         starts_at: new Date(this.form.starts_at).toISOString(),
         ends_at: new Date(this.form.ends_at).toISOString(),
         location: this.form.location,
+        is_visit: this.form.is_visit,
         case_task_id: this.form.case_task_id || null,
         organizer_id: this.form.organizer_id || null,
         notify_client: this.form.notify_client,
@@ -489,6 +492,13 @@ export default {
             </p>
           </div>
         </div>
+
+        <label class="flex items-center gap-2 cursor-pointer w-fit">
+          <input v-model="form.is_visit" type="checkbox" class="!mb-0" />
+          <span class="text-sm text-slate-700 dark:text-slate-200">
+            {{ $t('QUICK_ACTIONS.TASK.IS_VISIT') }}
+          </span>
+        </label>
 
         <label class="block">
           <span class="text-sm text-slate-700 dark:text-slate-200">{{

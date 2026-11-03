@@ -181,4 +181,32 @@ describe Messages::MessageBuilder do
       end
     end
   end
+
+  # feat/plantillas_whatsapp_mejoras F2: el formulario manda processed_params por componente.
+  describe 'plantilla con encabezado y botones' do
+    let(:params) do
+      ActionController::Parameters.new({
+                                         content: 'Tu factura A1',
+                                         template_params: {
+                                           name: 'factura', language: 'es_MX',
+                                           processed_params: {
+                                             body: { '1' => 'A1' },
+                                             header: { media_url: 'https://cdn.mx/f.pdf', media_type: 'document',
+                                                       media_name: 'Factura A1.pdf' },
+                                             buttons: [nil, { type: 'copy_code', parameter: 'PROMO10' }]
+                                           }
+                                         }
+                                       })
+    end
+
+    it 'guarda processed_params completo, con el encabezado y los botones' do
+      guardado = message_builder.additional_attributes.dig('template_params', 'processed_params')
+
+      expect(guardado).to eq(
+        'body' => { '1' => 'A1' },
+        'header' => { 'media_url' => 'https://cdn.mx/f.pdf', 'media_type' => 'document', 'media_name' => 'Factura A1.pdf' },
+        'buttons' => [nil, { 'type' => 'copy_code', 'parameter' => 'PROMO10' }]
+      )
+    end
+  end
 end

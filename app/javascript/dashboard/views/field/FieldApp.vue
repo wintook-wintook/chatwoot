@@ -10,12 +10,13 @@ import { mapGetters } from 'vuex';
 import FieldHistory from './FieldHistory.vue';
 import FieldRoute from './FieldRoute.vue';
 import FieldVisit from './FieldVisit.vue';
+import FieldAgendaVisit from './FieldAgendaVisit.vue';
 
 // «Ir a Wintook» regresa a la pantalla desde la que se abrió el portal (p. ej.
 // Agenda › Calendario). Se guarda al entrar desde Wintook, no al moverse entre
 // Mi ruta / Mis trabajos / la visita; sin origen (enlace de WhatsApp) va a Inicio.
 const ORIGIN_KEY = 'wintook_field_origin';
-const FIELD_ROUTES = ['field_route', 'field_visit'];
+const FIELD_ROUTES = ['field_route', 'field_visit', 'field_agenda_visit'];
 
 const readOrigin = () => {
   try {
@@ -36,7 +37,7 @@ const saveOrigin = path => {
 
 export default {
   name: 'FieldApp',
-  components: { FieldHistory, FieldRoute, FieldVisit },
+  components: { FieldHistory, FieldRoute, FieldVisit, FieldAgendaVisit },
   beforeRouteEnter(to, from, next) {
     if (!FIELD_ROUTES.includes(from.name)) {
       saveOrigin(from.name ? from.fullPath : null);
@@ -48,6 +49,12 @@ export default {
     ticketId() {
       return Number(this.$route.params.ticketId) || null;
     },
+    meetingId() {
+      return Number(this.$route.params.meetingId) || null;
+    },
+    inVisit() {
+      return !!(this.ticketId || this.meetingId);
+    },
     // En la visita: a qué pestaña regresa.
     fromHistory() {
       return this.$route.query.from === 'history';
@@ -56,7 +63,7 @@ export default {
       return this.$route.query.tab === 'history' ? 'history' : 'route';
     },
     backLabel() {
-      if (!this.ticketId) return this.$t('FIELD.BACK_TO_APP');
+      if (!this.inVisit) return this.$t('FIELD.BACK_TO_APP');
       return this.fromHistory
         ? this.$t('FIELD.TABS.HISTORY')
         : this.$t('FIELD.TITLE');
@@ -64,7 +71,7 @@ export default {
   },
   methods: {
     back() {
-      if (this.ticketId) {
+      if (this.inVisit) {
         this.$router.push({
           name: 'field_route',
           params: { accountId: this.$route.params.accountId },
@@ -113,6 +120,11 @@ export default {
     </header>
     <main class="max-w-xl px-3 py-4 mx-auto">
       <FieldVisit v-if="ticketId" :key="ticketId" :ticket-id="ticketId" />
+      <FieldAgendaVisit
+        v-else-if="meetingId"
+        :key="`m-${meetingId}`"
+        :meeting-id="meetingId"
+      />
       <template v-else>
         <div class="flex mb-4 border-b border-slate-200">
           <button

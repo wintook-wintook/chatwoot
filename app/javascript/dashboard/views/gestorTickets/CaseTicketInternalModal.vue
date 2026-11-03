@@ -143,6 +143,19 @@ export default {
     contactRequired() {
       return this.isCommercial;
     },
+    formClass() {
+      return (
+        this.selectedType?.case_class || this.caseClass || DEFAULT_CASE_CLASS
+      );
+    },
+    // El botón dice lo que se va a crear: sin contacto, un caso de Soporte es interno.
+    submitLabel() {
+      const name = this.formClass.toUpperCase();
+      if (name === 'SUPPORT' && !this.contact) {
+        return this.$t('CASE_TICKETS.INTERNAL.SUBMIT');
+      }
+      return this.$t(`CASE_TICKETS.CREATE.SUBMIT.${name}`);
+    },
     headerTitle() {
       if (this.isEdit) return this.$t('CASE_TICKETS.EDIT.TITLE');
       if (!this.caseClass) return this.$t('CASE_TICKETS.INTERNAL.TITLE');
@@ -396,9 +409,10 @@ export default {
         });
         this.$emitter.emit('newToastMessage', {
           message: this.contact
-            ? this.$t('CASE_TICKETS.CREATE.SUCCESS', {
-                folio: ticket.folio || `#${ticket.id}`,
-              })
+            ? this.$t(
+                `CASE_TICKETS.CREATE.SUCCESS.${this.formClass.toUpperCase()}`,
+                { folio: ticket.folio || `#${ticket.id}` }
+              )
             : this.$t('CASE_TICKETS.INTERNAL.SUCCESS'),
         });
         this.$emit('created', ticket);
@@ -1149,11 +1163,7 @@ export default {
             :is-loading="isEdit ? uiFlags.isSaving : uiFlags.isCreating"
             :disabled="!isValid"
           >
-            {{
-              isEdit
-                ? $t('CASE_TICKETS.EDIT.SUBMIT')
-                : $t('CASE_TICKETS.INTERNAL.SUBMIT')
-            }}
+            {{ isEdit ? $t('CASE_TICKETS.EDIT.SUBMIT') : submitLabel }}
           </woot-button>
         </div>
       </form>

@@ -5,10 +5,16 @@
 #  id                    :bigint           not null, primary key
 #  additional_attributes :json
 #  content               :text             not null
+#  is_template           :boolean          default(FALSE)
 #  message_type          :string           default("outgoing")
 #  scheduled_at          :datetime         not null
 #  sent                  :boolean          default(FALSE)
 #  sent_at               :datetime
+#  template_category     :string
+#  template_language     :string
+#  template_name         :string
+#  template_namespace    :string
+#  template_params       :json
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #  account_id            :bigint           not null

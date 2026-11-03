@@ -9,6 +9,25 @@ describe('#getters', () => {
     expect(getters.getInboxes(state)).toEqual(inboxList);
   });
 
+  // feat/plantillas_whatsapp_mejoras: ya no se quitan las de imagen o video.
+  it('getWhatsAppTemplates devuelve todas, también las de imagen o video', () => {
+    const plantillas = [
+      { name: 'texto', components: [{ type: 'BODY', text: 'Hola' }] },
+      {
+        name: 'video',
+        components: [{ type: 'HEADER', format: 'VIDEO' }, { type: 'BODY' }],
+      },
+      {
+        name: 'imagen',
+        components: [{ type: 'HEADER', format: 'IMAGE' }, { type: 'BODY' }],
+      },
+    ];
+    const state = { records: [{ id: 9, message_templates: plantillas }] };
+
+    expect(getters.getWhatsAppTemplates(state)(9)).toEqual(plantillas);
+    expect(getters.getWhatsAppTemplates(state)(1)).toEqual([]);
+  });
+
   it('getWebsiteInboxes', () => {
     const state = { records: inboxList };
     expect(getters.getWebsiteInboxes(state).length).toEqual(3);

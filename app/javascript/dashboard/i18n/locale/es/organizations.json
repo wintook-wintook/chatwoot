@@ -106,6 +106,7 @@
       "PLACEHOLDER": "Buscar organización por nombre o RFC",
       "CLEAR": "Quitar organización"
     },
+    "TASKS_TITLE": "Tareas",
     "ACTIVITY": {
       "TABS": {
         "opportunities": "Oportunidades",
@@ -214,7 +215,9 @@
         "quotes": "cotizaciones: {count}",
         "contracts": "contratos: {count}",
         "customer_assets": "equipos: {count}",
-        "maintenance_plans": "mantenimientos: {count}"
+        "maintenance_plans": "mantenimientos: {count}",
+        "case_tasks": "tareas: {count}",
+        "case_meetings": "tareas agendadas: {count}"
       }
     }
   }
