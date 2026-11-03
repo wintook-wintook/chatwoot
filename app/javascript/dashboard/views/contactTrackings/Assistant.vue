@@ -82,6 +82,8 @@ import AgentDiagram from './assistant/AgentDiagram.vue';
 import TestsPanel from './assistant/TestsPanel.vue';
 // proyecto@crear_agente_conversando F2: escribir «%» ofrece los datos fijos.
 import ConstantPicker from './assistant/ConstantPicker.vue';
+// FD: el boceto de rutas probadas, dibujado, mientras se conversa.
+import DraftingSketch from './assistant/DraftingSketch.vue';
 import { insertConstant, percentTriggerAt } from './assistant/constantPicker';
 import { readConstants } from './assistant/agentConstants';
 import { heatFromCases } from './assistant/testPath';
@@ -147,6 +149,7 @@ export default {
     AgentDiagram,
     TestsPanel,
     ConstantPicker,
+    DraftingSketch,
     SaveModal,
   },
   mixins: [trainingSectionsMixin],
@@ -278,6 +281,8 @@ export default {
       instructions: '',
       // FR/D10: el boceto de rutas que el chat de creación ya probó (proposal.boceto).
       draftingRoutes: '',
+      // FD: las frases que el chat probó ([{ frase, cae_en, estable }]): proposal.pruebas.
+      draftingTests: [],
       // Unas instrucciones mandadas a leer desde el chat: el modal las toma de acá.
       chatBrief: null,
       isSendingInstructions: false,
@@ -611,6 +616,7 @@ export default {
       this.messages = data.messages || [];
       this.instructions = data.instructions || '';
       this.draftingRoutes = data.proposal?.boceto || '';
+      this.draftingTests = data.proposal?.pruebas || [];
       this.draft = data.draft || '';
       this.validation = data.validation || null;
       this.proposal = data.proposal || null;
@@ -671,6 +677,7 @@ export default {
     startFresh() {
       this.instructions = '';
       this.draftingRoutes = '';
+      this.draftingTests = [];
       this.chatBrief = null;
       this.sessionId = null;
       this.sessionMeta = null;
@@ -1052,7 +1059,11 @@ export default {
         if (data.session) this.sessionMeta = data.session;
         this.messages.push({ role: 'assistant', content: data.reply });
         if (data.instructions) this.instructions = data.instructions;
+        // La primera vez que llegan rutas y no hay Entrenamiento, se muestran (FD).
+        if (data.routes && !this.draftingRoutes && !this.draft.trim())
+          this.draftTab = 'sketch';
         if (data.routes) this.draftingRoutes = data.routes;
+        if (data.tests) this.draftingTests = data.tests;
       } catch (error) {
         const reason =
           error?.response?.data?.error === 'no_api_key'
@@ -1739,6 +1750,24 @@ export default {
                     >
                       {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_EDITOR') }}
                     </button>
+                    <!-- crear_agente_conversando FD: las rutas que el chat de creación
+                         ya probó, dibujadas, junto al chat. -->
+                    <button
+                      v-if="draftingRoutes"
+                      class="mr-3 pb-0.5 border-b-2"
+                      :class="
+                        draftTab === 'sketch'
+                          ? 'border-woot-500'
+                          : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                      "
+                      @click="draftTab = 'sketch'"
+                    >
+                      {{
+                        $t('TRACKING_ASSISTANT_VIEW.PANEL_SKETCH', {
+                          count: draftingTests.length,
+                        })
+                      }}
+                    </button>
                     <!-- proyecto@adaptar_prompts_publicados: lo que usa de la cuenta.
                          Siempre a la vista: aunque no falte nada, ahí se cambia una
                          fuente por otra y la IA busca datos de otro negocio. -->
@@ -1843,8 +1872,13 @@ export default {
                     {{ $t('TRACKING_ASSISTANT_VIEW.COPY_DRAFT') }}
                   </woot-button>
                 </div>
+                <DraftingSketch
+                  v-if="draftTab === 'sketch'"
+                  :routes="draftingRoutes"
+                  :tests="draftingTests"
+                />
                 <ChangeLog
-                  v-if="draftTab === 'log'"
+                  v-else-if="draftTab === 'log'"
                   :versions="versions"
                   :title="(sessionMeta && sessionMeta.title) || ''"
                 />

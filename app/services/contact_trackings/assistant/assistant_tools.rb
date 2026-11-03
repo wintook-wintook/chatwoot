@@ -77,12 +77,18 @@ class ContactTrackings::Assistant::AssistantTools
 
   def self.definitions = DEFINITIONS.map { |d| { type: 'function', function: d } }
 
+  # FD: lo que se probó con probar_ruta en este turno ([{ frase, cae_en, estable, veces }]).
+  # Son las pruebas de la conversación: el diagrama las ilumina y al guardar el agente
+  # pasan a su pila.
+  attr_reader :tested
+
   # draft: el boceto de rutas que se lleva (puede estar vacío al empezar).
   def initialize(account, draft: '', inbox: nil, api_key: nil)
     @account = account
     @draft = draft.to_s
     @inbox = inbox
     @api_key = api_key
+    @tested = []
   end
 
   # El resultado, en JSON, para el mensaje `tool` del modelo. Nunca levanta: un error
@@ -210,7 +216,7 @@ class ContactTrackings::Assistant::AssistantTools
     return { error: 'el boceto no tiene ninguna línea @ruta(…)' } if ContactTrackings::RouteMap.parse(texto).routes.empty?
 
     clasificador = ContactTrackings::Assistant::DraftClassifier.new(@account, draft: texto, inbox: @inbox)
-    frases.map { |f| verdict(clasificador, f) }
+    frases.map { |f| verdict(clasificador, f) }.tap { |veredictos| @tested.concat(veredictos) }
   end
 
   # El clasificador no siempre da la misma ruta para la misma frase (medido el 13/10/2026,

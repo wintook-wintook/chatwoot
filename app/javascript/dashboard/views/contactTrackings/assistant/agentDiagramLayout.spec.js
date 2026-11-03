@@ -5,6 +5,7 @@ import {
   truncate,
   NODE_W,
   COL_GAP,
+  routeChips,
 } from './agentDiagramLayout';
 
 // proyecto@diagrama_agente_ia F1 — docs/diagrama_agente_ia_plan.md §4.2
@@ -227,5 +228,38 @@ describe('truncate', () => {
     expect(truncate('abcdefghij', 5)).toBe('abcd…');
     expect(truncate('abc', 5)).toBe('abc');
     expect(truncate(null)).toBe('');
+  });
+});
+
+// proyecto@crear_agente_conversando FD
+describe('preguntas y variables de una ruta', () => {
+  const refs = {
+    constants: [
+      { name: 'Q1', type: 'pregunta', savesTo: 'SISTEMA' },
+      { name: 'EMPRESA', type: 'texto' },
+    ],
+    variables: [{ name: 'SISTEMA' }, { name: 'TIPO' }],
+  };
+
+  it('junta las preguntas que hace y las variables que usa', () => {
+    expect(
+      routeChips(
+        'Haz %Q1% y presenta a %EMPRESA%. Si SISTEMA=VACÍO pregunta.',
+        refs
+      )
+    ).toBe('? Q1 → SISTEMA · SISTEMA');
+  });
+
+  it('no confunde una variable con parte de otra palabra', () => {
+    expect(routeChips('TIPOGRAFIA bonita', refs)).toBe('');
+  });
+
+  it('las búsquedas en una hoja se dibujan como hoja', () => {
+    expect(
+      describeSource('{{hoja_buscar: Precios | Producto=? | Precio}}')
+    ).toMatchObject({
+      kind: 'SHEET',
+      name: 'Precios',
+    });
   });
 });

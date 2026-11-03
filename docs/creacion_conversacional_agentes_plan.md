@@ -715,7 +715,55 @@ de `jsonb` (Postgres no guarda el de la hoja).
 **Cómo pedírselo al Asistente.** Con la bandera encendida, en «Crear desde cero»: «tengo una hoja de
 precios y quiero que cotice» → revisa la hoja, la prueba y propone la ruta ya probada.
 
-**Sigue:** FD — el diagrama y las pruebas en la conversación (dibujar el boceto).
+### FD — El diagrama y las pruebas en la conversación ✅ (03/11/2026)
+
+**Qué se hizo.**
+
+```
+ ┌ Chat ───────────────────────┐  ┌ [Entrenamiento] [Rutas probadas (5)] ─────────────────┐
+ │ Tú: se llama Precio Bot…    │  │ Así funcionaría tu agente                              │
+ │ Asistente: Probé la ruta    │  │  Cliente ─► consultar_precios ─► Hoja Precios de Art.  │
+ │ con 5 frases y las 5 cayeron│  │             ? Q1 → SISTEMA · SISTEMA   ← preguntas/vars │
+ │ bien…                       │  │ Frases probadas: 5 de 5 caen siempre en la misma ruta  │
+ └─────────────────────────────┘  │  ● «¿Cuánto cuesta la camisa?»   @consultar_precios    │
+                                  │  ● «precio de tornillo»          @consultar_precios    │
+                                  │ Al guardar el agente, estas frases pasan a su pila.    │
+                                  └────────────────────────────────────────────────────────┘
+```
+
+1. **Cada ruta propuesta llega con sus pruebas.** Las frases que el chat mandó a `probar_ruta`
+   (`AssistantTools#tested`) se devuelven en cada turno y se juntan en la conversación
+   (`proposal['pruebas']`, máx. 30; una frase probada otra vez se queda con su último resultado).
+2. **El boceto se dibuja junto al chat** (D10): pestaña «Rutas probadas» en la columna derecha
+   (`DraftingSketch.vue`), que se abre sola la primera vez que llegan rutas y todavía no hay
+   Entrenamiento. Usa el mismo `AgentDiagram` y la misma estructura que arma Ruby
+   (`training_preview` con el texto del boceto); elegir una frase ilumina la ruta a la que cayó
+   (`pathFromDryRun` con un informe que solo dice la ruta).
+3. **El diagrama muestra preguntas y variables** de cada ruta (también en el agente ya guardado):
+   una línea chica bajo el nodo, sacada de la línea de la ruta y de su línea de alcance
+   (`routeChips`: `? Q1 → SISTEMA · SISTEMA`). Las búsquedas `{{hoja_buscar: …}}` se dibujan como
+   «Hoja» (antes, «otra»).
+4. **Si una prueba falla**, el chat ya lo dice y corrige (regla 5 de las herramientas; FR).
+5. **El agente nace probado:** al guardar, las frases pasan a la pila (`DraftingTestCarrier`, desde
+   `mark_saved!`). Con su ruta esperada si esa ruta existe en el Entrenamiento guardado; si el
+   redactor la nombró distinto, como prueba propia. Sin repetidas y sin pasar el tope (40).
+
+**Probado de verdad** (cuenta 2, un turno): 5 frases probadas, las 5 estables en
+`consultar_precios_de_articulos`; el boceto se convierte en una ruta con fuente «Hoja».
+
+**Pila de pruebas.** Servidor: `tracking_assistant_session_drafting_tests_spec` 2, `assistant_tools`
++1 (`tested`), `assistant_drafting_spec` +1 (se juntan entre turnos); con sesión y guardado, 73 en
+verde. Navegador: `DraftingSketch.spec` 3, `agentDiagramLayout.spec` +3; carpeta de Agentes IA 285
+en verde (falla solo `AgentWorkspace.spec.js`, de develop).
+
+**Pendiente de D10.** Que el redactor, al «Crear el Entrenamiento», parta de las líneas del boceto
+(hoy redacta las rutas desde las instrucciones). Mientras tanto, si nombra distinto una ruta, la
+prueba pasa a la pila sin ruta esperada.
+
+**Cómo pedírselo al Asistente.** Con la bandera encendida, conversando: al proponer y probar una
+ruta aparece la pestaña «Rutas probadas».
+
+**Sigue:** F3 — la conversación llena Definición, Variables y Datos fijos.
 
 ---
 

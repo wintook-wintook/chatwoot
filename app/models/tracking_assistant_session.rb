@@ -244,6 +244,13 @@ class TrackingAssistantSession < ApplicationRecord
     end
     carry_adaptation_answers(template)
     update!(status: 'saved', tracking_template: template)
+    carry_drafting_tests(template)
+  end
+
+  # proyecto@crear_agente_conversando FD: las frases que probó el chat de creación pasan
+  # a la pila del agente (ver DraftingTestCarrier).
+  def carry_drafting_tests(template)
+    ContactTrackings::Assistant::DraftingTestCarrier.new(self, template).call
   end
 
   # feat/reemplazo_directo_variables — lo reemplazado en «Configurar» antes de que hubiera
