@@ -1,6 +1,6 @@
 # Crear un Agente IA conversando — Plan v1.0
 
-> Solo plan (03/11/2026). Nada implementado. Rama `feat/crear_agente_conversando` (sale de develop). Parte de la especificación «Facilitar la creación de
+> Solo plan (03/11/2026). Nada implementado. Rama `feat/crear_agente_conversando`: sale de develop **e incluye `feat/diagrama_agente_ia`** (el diagrama y las pruebas no tienen PR propio: llegan a develop con esta rama). Parte de la especificación «Facilitar la creación de
 > agentes de IA mediante una experiencia conversacional» y de lo que el Asistente de Agentes IA ya
 > hace hoy. Regla del plan: **no inventar mecanismos que el motor ya tiene**; poner pantalla y
 > conversación encima de ellos.
@@ -16,7 +16,7 @@
 | 3 | Capturar las variables del motor | ⚠ El motor ya las usa (`[VARIABLES]`, guardadas por conversación, PR #69), pero **solo se escriben a mano en el texto**; el Asistente no las conoce | Formulario + comprobador |
 | 4 | Constantes reutilizables (EMPRESA, Q1…) | ❌ No existen | Sección, formulario, expansión en el motor, comprobador |
 | 5 | Banco de preguntas por contexto | ❌ Hoy son renglones sueltos dentro de las rutas | Las preguntas como constantes de tipo «pregunta» (§5) |
-| 6 | Ver cómo se procesa una consulta | ✅ Pestaña «Pruebas y diagrama» (feat/diagrama_agente_ia) | Opcional: marcar en el diagrama dónde se usa cada variable o pregunta |
+| 6 | Ver cómo se procesa una consulta | ✅ Pestaña «Pruebas y diagrama» (de feat/diagrama_agente_ia, incluida en esta rama) | **Que sea parte de la conversación**: cada ruta propuesta llega con sus pruebas y se ve iluminada (§7) |
 | 7 | Exportar instrucciones para ChatGPT / Claude | ⚠ Se descargan las *Instrucciones iniciales* y existe «Copiar todo» del Entrenamiento | Un **«Exportar instrucciones»** del agente terminado, que se entienda fuera del motor |
 | 8 | Instrucciones y recursos separados | ✅ «Recursos del motor» ya se descarga aparte (`recursos_motor_agentes_ia.md`) | Ponerlas juntas en un solo menú «Exportar», como dos archivos |
 
@@ -242,16 +242,54 @@ antes de darlo por bueno.
 
 ---
 
-## 7. Diagrama (lo que ya existe, con un agregado opcional)
+## 7. Diagrama y pruebas: la otra mitad de la ayuda
 
-La pestaña «Pruebas y diagrama» ya dibuja rutas y secciones e ilumina el camino de una prueba.
-Agregado opcional (F5): en cada ruta, chips de las **preguntas** que hace y de las **variables**
-que lee o cambia; en una prueba, el valor de cada variable antes y después.
+> Decidido 03/11/2026: **no es opcional**. Para quien no sabe de prompts, el chat *propone* y el
+> diagrama *muestra* cómo funcionaría. Las dos cosas van juntas.
+
+**Lo que ya existe** (feat/diagrama_agente_ia, dentro de esta rama): pestaña «Pruebas y diagrama»
+del agente; dibuja rutas y secciones; una prueba se corre en seco o en vivo e ilumina su camino;
+la pila de pruebas se guarda por agente (`tracking_test_cases`), se corre en seco al publicar, mapa
+de calor, antes/ahora, «llevar al chat», comparar versiones y exportar SVG/PNG.
+
+**Lo que se agrega:**
 
 ```
-  [BIENVENIDA] ──► @DEMO ─────────────► @AGENDAR
-   Q2 → ORIGEN      Q1 → SISTEMA          lee SISTEMA
-                    INTERES = ALTO
+ Tú: quiero que cotice con mi hoja de precios
+          │
+          ▼
+ Chat propone la ruta «Cotizar» ──► se crean sus pruebas solas
+          │                          («cuánto cuesta la grúa», «precio en Monterrey»…)
+          ▼
+ Diagrama: se ilumina el camino     [BIENVENIDA] ──► @COTIZAR ──► hoja Precios
+ de cada prueba, en seco              Q1 → SERVICIO   lee ZONA     → $1,800 ✓
+          │
+          ▼
+ Chat explica: «Así contestaría tu agente: 5 de 5 pruebas llegan a Cotizar
+ y encuentran el precio. Mira el camino en el diagrama.»
+```
+
+1. **Cada ruta propuesta llega con sus pruebas.** Las frases que el chat usó en `probar_ruta`
+   (§12) se guardan como pruebas de esa ruta; no hay que escribirlas.
+2. **El diagrama se ve junto al chat** mientras se arma (el espacio del agente ya alterna paneles:
+   `leftPanel`), y se ilumina el camino de la última prueba.
+3. **El diagrama muestra lo nuevo**: en cada ruta, chips de las **preguntas** que hace (`%Q1%`),
+   las **variables** que lee o cambia y la **fuente** que consulta; en una prueba, el valor de cada
+   variable antes y después.
+4. **Si una prueba falla, el chat lo dice y propone el arreglo**, usando lo que ya existe
+   («llevar al chat» con la evidencia y antes/ahora al corregir).
+5. **Al crear el Entrenamiento**, las pruebas de la conversación pasan a ser la **pila del agente**
+   (la misma que se corre en seco al publicar). El agente nace probado.
+
+**El boceto (D10).** Mientras se conversa todavía no hay Entrenamiento, y el diagrama dibuja un
+Entrenamiento. Propuesta: el chat guarda en la conversación las líneas `@ruta(…)` que ya probó (un
+*boceto*, que el usuario no tiene que leer) y el diagrama dibuja ese boceto. Al crear el
+Entrenamiento, el redactor parte de esas mismas líneas, así que el diagrama no cambia de golpe.
+
+```
+ Conversación ──► boceto (rutas probadas) ──► diagrama + pruebas en seco
+       │                                            │
+       └──── «Crear el Entrenamiento» ──► Entrenamiento ──► misma pila, mismo diagrama
 ```
 
 ---
@@ -274,10 +312,10 @@ una persona»). Lo segundo sirve mejor fuera, pero el archivo ya no se puede vol
 ## 9. Fases
 
 ```
- F0 medir ─► F1 Variables ─► F2 Datos fijos ─► FR Fuentes ─► F3 Conversación ─► F4 Exportar ─► F5 Diagrama
-   ½ día       formulario +     sección + %X% +   fichas +      llena las 4        2 archivos     (opcional)
-               comprobador      motor + compr.    herramientas  pestañas y
-                                                  (§12)         propone rutas
+ F0 medir ─► F1 Variables ─► F2 Datos fijos ─► FR Fuentes ─► FD Diagrama ─► F3 Conversación ─► F4 Exportar
+   ½ día       formulario +     sección + %X% +   fichas +      en la          llena las 4        2 archivos
+               comprobador      motor + compr.    herramientas  conversación   pestañas y
+                                                  (§12)         (§7)           propone rutas
 ```
 
 | Fase | Qué | Entregable que se puede probar |
@@ -286,9 +324,9 @@ una persona»). Lo segundo sirve mejor fuera, pero el archivo ya no se puede vol
 | **F1** | Variables: modal, nodo en el árbol, lectura/escritura de `[VARIABLES]`, V1–V4 | Abrir un agente con variables y editarlas sin tocar el texto |
 | **F2** | Datos fijos: sección, modal, `%` en el editor, `PromptConstants.expand` en los dos motores y en seco, C1–C4 | Un agente con `%EMPRESA%` contesta «Kontrolya» en vivo y en la prueba en seco |
 | **FR** | Fichas de fuente + herramientas en el chat de creación (§12) | Decir «tengo una hoja de precios y quiero que cotice» y recibir la ruta propuesta, ya probada |
+| **FD** | Diagrama y pruebas en la conversación (§7): boceto, pruebas de cada ruta propuesta, chips de preguntas/variables/fuente, pila al crear | Proponer «Cotizar» y verla iluminada con sus 5 pruebas; al crear el Entrenamiento, la pila ya está |
 | **F3** | La conversación devuelve definición, variables y datos fijos; pestañas en vivo; el redactor los respeta | Armar un agente desde cero y ver las cuatro pestañas llenarse |
 | **F4** | Menú «Exportar» con los dos archivos | Pegar el .md en ChatGPT y que se entienda solo |
-| **F5** | Preguntas y variables en el diagrama | Ver Q1 dentro de @DEMO |
 
 Cada fase se registra en este .md al cerrarla: qué se hizo, cómo funciona, pila de pruebas y cómo
 pedírselo al Asistente ([[feedback_md_por_fase]]).
@@ -307,6 +345,7 @@ pedírselo al Asistente ([[feedback_md_por_fase]]).
 | **D6** | ¿Pueden los datos fijos usarse en Objetivo y Contexto? | No en v1: esas dos son columnas aparte y se leen en otros lugares |
 | **D7** ✅ | ¿Traer la rama `diag/asistente_agentes_ia` entera o solo sus herramientas? | **DECIDIDA 03/11/2026: opción 2, solo las herramientas**, copiadas a esta rama desde develop (§12.4) |
 | **D8** | Modelo del chat de creación con herramientas | Medir en FR gpt-5.4-mini (el de hoy) contra gpt-5.5 con 3 encargos; quedarse con mini si propone bien |
+| **D10** | ¿El diagrama durante la conversación? | Sí, dibujando el **boceto** de rutas ya probadas (§7) |
 | **D9** | ¿Las fichas se guardan o se arman cada vez? | Se arman cada vez lo que es sin IA; solo el resumen con IA de un documento se guarda, y se rehace si el documento cambió |
 
 ---
