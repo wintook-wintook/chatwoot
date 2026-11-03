@@ -722,6 +722,7 @@
       "PLACE_ONE": "(1 place)",
       "KIND": {
         "VARIABLE": "Detail",
+        "CONSTANT": "Fixed data",
         "GOOGLE_DOC": "Google Doc",
         "GOOGLE_SHEET": "Google Sheet",
         "KNOWLEDGE_SOURCE": "Forum",

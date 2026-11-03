@@ -346,6 +346,7 @@ export default {
       :is-default="editingRouteIsDefault"
       :can-proofread="canExplain"
       :inbox-id="inboxId"
+      :constant-names="constantNames"
       @close="closeRouteModal"
       @save="saveRoute"
       @delete="deleteRoute"

@@ -643,7 +643,7 @@ sustituir, regla de «guarda en», porcentajes, circular, atributo del modelo), 
 (modelo, servicio de respuesta, analizador) 132 en verde. Navegador: `agentConstants.spec` 6,
 `constantPicker.spec` 3, `ConstantsModal.spec` 4, árbol +1, punto +1; carpeta del Asistente 262 en verde.
 
-**Pendiente de F2.** Un prompt publicado con datos fijos que se baja a otra cuenta trae los de la
+**Pendiente de F2** (hecho el 03/11, ver «Pendientes chicos de F2»). Un prompt publicado con datos fijos que se baja a otra cuenta trae los de la
 cuenta original: la pestaña «Configurar» todavía no ofrece cambiarlos (riesgo anotado en §11).
 
 **Cómo pedírselo al Asistente.** Todavía no: el chat aprende a proponer datos fijos en F3. Por ahora,
@@ -859,6 +859,21 @@ no). Navegador: `ExportMenu.spec` 2; carpeta 293 en verde (falla solo `AgentWork
 
 **Sigue:** la prueba real (F3 + §14.2, con OK) y los pendientes chicos (Datos fijos en «Configurar»,
 `%` en RouteModal, D8).
+
+### Pendientes chicos de F2 ✅ (03/11/2026)
+
+1. **Datos fijos en «Configurar»** (`ConstantAdaptation`): un prompt bajado de la Galería trae los
+   datos fijos de su autor. Ahora salen en «Datos del negocio» como **Dato fijo**, con su valor
+   actual y en cuántos lugares se cita (`%EMPRESA%`), y se cambian ahí mismo
+   (`const:empresa` → `AdaptationApplier`). Solo se reescribe la declaración (con su continuación
+   con sangría); el tipo y el «→ guarda en VARIABLE» se conservan.
+2. **«%» en el modal de ruta**: en la línea de alcance, «%» abre la lista de datos fijos («haz
+   %Q1%»), igual que en el modal de sección (mismo `ConstantPicker`).
+
+**Pila de pruebas.** `constant_adaptation_spec` 5 (incluye inventario + aplicador + motor);
+adaptación y requests 180 en verde. `RouteModal.spec` 2; carpeta 295 en verde.
+
+**Queda:** D8 (gasta OpenAI, pedir OK) y la prueba real F3 + §14.2.
 
 ---
 
