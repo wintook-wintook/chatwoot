@@ -333,20 +333,22 @@ pedírselo al Asistente ([[feedback_md_por_fase]]).
 
 ---
 
-## 10. Decisiones abiertas
+## 10. Decisiones
 
-| # | Decisión | Propuesta |
+> **Todas cerradas el 03/11/2026** («van todas»): se toma la propuesta de cada una.
+
+| # | Decisión | Decidido |
 |---|---|---|
-| **D1** | ¿Quién sustituye los datos fijos? | **B: el motor**, antes de mandar al modelo (§4.2) |
-| **D2** | Sintaxis de la referencia | `%NOMBRE%`, confirmada con la medición de F0 |
-| **D3** | Nombres en pantalla | «Variables» (las del motor), «Datos fijos» (las constantes) y renombrar los `<PENDIENTE:>` de «Configurar» a «Datos por llenar» |
-| **D4** | ¿Tipos de dato fijo? | texto · pregunta · liga · número; sin más hasta que haga falta |
-| **D5** | Directivas en el archivo exportado | Tal cual + aviso al inicio (se puede volver a importar) |
-| **D6** | ¿Pueden los datos fijos usarse en Objetivo y Contexto? | No en v1: esas dos son columnas aparte y se leen en otros lugares |
+| **D1** ✅ | ¿Quién sustituye los datos fijos? | **B: el motor**, antes de mandar al modelo (§4.2) |
+| **D2** ✅ | Sintaxis de la referencia | `%NOMBRE%`, confirmada con la medición de F0 |
+| **D3** ✅ | Nombres en pantalla | «Variables» (las del motor), «Datos fijos» (las constantes) y renombrar los `<PENDIENTE:>` de «Configurar» a «Datos por llenar» |
+| **D4** ✅ | ¿Tipos de dato fijo? | texto · pregunta · liga · número; sin más hasta que haga falta |
+| **D5** ✅ | Directivas en el archivo exportado | Tal cual + aviso al inicio (se puede volver a importar) |
+| **D6** ✅ | ¿Pueden los datos fijos usarse en Objetivo y Contexto? | No en v1: esas dos son columnas aparte y se leen en otros lugares |
 | **D7** ✅ | ¿Traer la rama `diag/asistente_agentes_ia` entera o solo sus herramientas? | **DECIDIDA 03/11/2026: opción 2, solo las herramientas**, copiadas a esta rama desde develop (§12.4) |
-| **D8** | Modelo del chat de creación con herramientas | Medir en FR gpt-5.4-mini (el de hoy) contra gpt-5.5 con 3 encargos; quedarse con mini si propone bien |
-| **D10** | ¿El diagrama durante la conversación? | Sí, dibujando el **boceto** de rutas ya probadas (§7) |
-| **D9** | ¿Las fichas se guardan o se arman cada vez? | Se arman cada vez lo que es sin IA; solo el resumen con IA de un documento se guarda, y se rehace si el documento cambió |
+| **D8** ✅ | Modelo del chat de creación con herramientas | Medir en FR gpt-5.4-mini (el de hoy) contra gpt-5.5 con 3 encargos; quedarse con mini si propone bien |
+| **D10** ✅ | ¿El diagrama durante la conversación? | Sí, dibujando el **boceto** de rutas ya probadas (§7) |
+| **D9** ✅ | ¿Las fichas se guardan o se arman cada vez? | Se arman cada vez lo que es sin IA; solo el resumen con IA de un documento se guarda, y se rehace si el documento cambió |
 
 ---
 
