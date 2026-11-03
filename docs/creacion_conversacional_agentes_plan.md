@@ -756,14 +756,72 @@ precios y quiero que cotice» → revisa la hoja, la prueba y propone la ruta ya
 verde. Navegador: `DraftingSketch.spec` 3, `agentDiagramLayout.spec` +3; carpeta de Agentes IA 285
 en verde (falla solo `AgentWorkspace.spec.js`, de develop).
 
-**Pendiente de D10.** Que el redactor, al «Crear el Entrenamiento», parta de las líneas del boceto
-(hoy redacta las rutas desde las instrucciones). Mientras tanto, si nombra distinto una ruta, la
-prueba pasa a la pila sin ruta esperada.
+**Pendiente de D10.** ~~Que el redactor, al «Crear el Entrenamiento», parta de las líneas del boceto~~
+— hecho en F3 (`BriefFromChat`).
 
 **Cómo pedírselo al Asistente.** Con la bandera encendida, conversando: al proponer y probar una
 ruta aparece la pestaña «Rutas probadas».
 
 **Sigue:** F3 — la conversación llena Definición, Variables y Datos fijos.
+
+### F3 — La conversación llena Definición, Variables y Datos fijos ✅ código (03/11/2026)
+
+**Qué se hizo.**
+
+```
+ ┌ Chat ───────────────────────────┐  ┌ [Entrenamiento] [Definición y datos (3/3)] [Rutas probadas] ┐
+ │ Tú: vendo software de factura-  │  │ Definición                                        Editar   │
+ │ ción y quiero agendar demos     │  │  Objetivo: Calificar prospectos y agendar la demo          │
+ │                                 │  │  Contexto: Kontrolya vende software…                       │
+ │ Asistente: Te propongo pregun-  │  │ Variables (lo que recuerda de cada cliente)       Editar   │
+ │ tar qué sistema usan hoy y      │  │  SISTEMA  CONTPAQi · Aspel · Otro                          │
+ │ guardarlo, así el asesor llega  │  │ Datos fijos y preguntas                           Editar   │
+ │ a la demo sabiendo…             │  │  EMPRESA  Kontrolya                                        │
+ └─────────────────────────────────┘  │  Q1       «¿Qué sistemas utilizas hoy?»       → SISTEMA    │
+                                      └────────────────────────────────────────────────────────────┘
+```
+
+1. **El contrato del chat creció** (`DraftingFieldsPrompt`): además de `mensaje`, `instrucciones` y
+   `boceto`, el modelo devuelve `definicion {objetivo, contexto}`, `variables [{nombre, valores,
+   libre, inicial}]` y `datos_fijos [{nombre, tipo, contenido, guarda_en}]`, cada uno completo
+   cuando cambia y `null` si no. Las preguntas de un cuestionario se llaman Q1, Q2…
+2. **Se guardan en el formato del motor** (`DraftingFields`): la Definición en `proposal.objective`
+   y `proposal.ai_context` (las mismas columnas que llena el modal de Definición y que «Guardar»
+   lleva al agente); Variables y Datos fijos como el TEXTO de su sección
+   (`proposal.variables`, `proposal.datos_fijos`). Lo que se edita, lo que ve el modelo y lo que
+   llega al Entrenamiento son exactamente lo mismo. Se limpian nombres (`Sistema actual` →
+   `SISTEMA_ACTUAL`), repetidos, iniciales que no son uno de los valores (V3) y tipos raros.
+3. **Pestaña «Definición y datos (N/3)»** a la derecha (`DraftingFields.vue`), visible mientras no
+   hay Entrenamiento; se abre sola la primera vez que la conversación llena algo. Cada parte se
+   corrige con su modal de siempre (Definición, `VariablesModal`, `ConstantsModal`); lo corregido
+   se guarda sin gastar un turno (`PATCH …/drafting_chat/fields`) y viaja en el siguiente, así el
+   chat sigue desde ahí.
+4. **El redactor los respeta** (`BriefFromChat`): el encargo está ligado a la conversación, y
+   `BriefComposer` le pasa al redactor las secciones para copiar tal cual, la orden de citar
+   `%Q1%` en vez de copiar la pregunta y **el boceto de rutas probadas como base** (cierra el
+   pendiente de D10: los nombres coinciden con las pruebas que van a la pila). La Definición de la
+   conversación manda sobre la deducida de la ficha. Después `BriefCoverage` deja `[VARIABLES]` y
+   `[DATOS FIJOS]` **exactas** (las reemplaza si el redactor las reescribió, o las agrega antes de
+   la primera sección).
+
+**Diferencias con lo planeado en §6.** La plantilla de instrucciones no ganó las secciones «Lo que
+el agente recuerda» y «Datos fijos y preguntas»: van en las listas, y escribirlas dos veces
+duplicaba la salida del modelo (riesgo de tiempo por turno). F4 las pondrá en el .md exportado.
+La franja `ProgressStrip` no cuenta las pestañas: el contador va en la pestaña misma.
+
+**Pila de pruebas.** Servidor: `drafting_fields_spec` 6, `brief_from_chat_spec` 6 (incluye composer
+y cobertura), `drafting_chat_spec` +1, `assistant_drafting_spec` +3 (turno, PATCH, otra cuenta);
+carpeta del Asistente + requests 821 en verde. Navegador: `draftingFields.spec` 3,
+`DraftingFields.spec` 3; carpeta 291 en verde (falla solo `AgentWorkspace.spec.js`, de develop).
+
+**Falta.** La prueba real (gasta OpenAI: pedir OK) — medir el tiempo por turno con las tres listas
+y correr la prueba de aceptación §14.2 con los dos ejemplos.
+
+**Cómo pedírselo al Asistente.** Conversando desde cero: «vendo software y quiero calificar
+prospectos antes de mandarles la liga de la demo; pregúntales qué sistema usan». La pestaña
+«Definición y datos» se va llenando.
+
+**Sigue:** prueba real de F3 + §14.2 (con OK), luego F4 — Exportar.
 
 ---
 
