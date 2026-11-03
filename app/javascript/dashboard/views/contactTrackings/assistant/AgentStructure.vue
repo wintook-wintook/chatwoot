@@ -13,6 +13,7 @@ import TrainingTree from './TrainingTree.vue';
 import RouteModal from './RouteModal.vue';
 import SectionModal from './SectionModal.vue';
 import DefinitionModal from './DefinitionModal.vue';
+import VariablesModal from './VariablesModal.vue';
 import RouteCatalogModal from './RouteCatalogModal.vue';
 import SectionCatalogModal from './SectionCatalogModal.vue';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
@@ -35,6 +36,12 @@ import {
   withGaps,
   withUids,
 } from './trainingBlocks';
+import {
+  moveStrayVariables,
+  readVariables,
+  strayVariables,
+  writeVariables,
+} from './agentVariables';
 
 export default {
   components: {
@@ -42,6 +49,7 @@ export default {
     RouteModal,
     SectionModal,
     DefinitionModal,
+    VariablesModal,
     RouteCatalogModal,
     SectionCatalogModal,
   },
@@ -66,6 +74,7 @@ export default {
       routeModal: { show: false, position: null },
       sectionModal: { show: false, index: null },
       definitionModal: { show: false, field: 'objective' },
+      variablesModal: { show: false },
       // El catálogo de ramas de la cuenta se pide una vez, al abrir el buscador.
       catalogModal: { show: false, loading: false },
       catalog: null,
@@ -109,6 +118,13 @@ export default {
     editingSection() {
       const { index } = this.sectionModal;
       return index === null ? null : this.blocks[index] || null;
+    },
+    // F1: la sección [VARIABLES] leída como lista, y las que están escritas fuera (V5).
+    currentVariables() {
+      return readVariables(this.blocks);
+    },
+    strayVariablesCount() {
+      return strayVariables(this.blocks).length;
     },
     takenTitles() {
       return this.blocks.filter(b => b.type === 'section').map(b => b.title);
@@ -250,6 +266,18 @@ export default {
       const blocks = addSection(this.blocks, title);
       this.emitBlocks(updateBlock(blocks, blocks.length - 1, { body }));
     },
+    // ── variables (F1) ───────────────────────────────────────────────────────
+    openVariables() {
+      this.variablesModal = { show: true };
+    },
+    saveVariables(data) {
+      this.variablesModal = { show: false };
+      this.emitBlocks(writeVariables(this.blocks, data));
+    },
+    // Con el modal abierto: la lista se recarga sola cuando vuelven los bloques.
+    moveStray() {
+      this.emitBlocks(moveStrayVariables(this.blocks));
+    },
     // ── definición ───────────────────────────────────────────────────────────
     openDefinition(field) {
       this.definitionModal = { show: true, field };
@@ -270,6 +298,7 @@ export default {
         :definition="definition"
         :issues="issues"
         @editDefinition="openDefinition"
+        @editVariables="openVariables"
         @addRoute="openAddRoute"
         @findRoute="openRouteCatalog"
         @editRoute="openEditRoute"
@@ -321,6 +350,14 @@ export default {
       @save="saveSection"
       @delete="deleteSection"
       @explain="$emit('explain', $event)"
+    />
+    <VariablesModal
+      :show="variablesModal.show"
+      :value="currentVariables"
+      :stray-count="strayVariablesCount"
+      @close="variablesModal = { show: false }"
+      @save="saveVariables"
+      @moveStray="moveStray"
     />
     <DefinitionModal
       :show="definitionModal.show"

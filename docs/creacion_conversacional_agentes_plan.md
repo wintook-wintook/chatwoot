@@ -521,7 +521,63 @@ que el Asistente debe saber detectar o proponer, no un juicio sobre esos prompts
 - **FD:** detectar una lista de pruebas escrita dentro del Entrenamiento y ofrecer pasarla a la pila.
 - **FR:** detectar un ROUTER en prosa y ofrecer convertirlo en `@ruta`.
 
-**Siguiente:** F1 Variables (con V5).
+
+### F1 — Variables ✅ (03/11/2026)
+
+**Qué se hizo.** Un nodo **Variables** en Definición (debajo de Objetivo y Contexto) con su
+modal, y el comprobador avisa lo que el motor no va a guardar.
+
+```
+ Definición del agente
+ ├─ Objetivo
+ ├─ Contexto
+ └─ Variables ●  6 · OBJETIVO_COMERCIAL, DIMENSION, SISTEMA…     ← punto = avisos V1–V5
+                 │ clic
+                 ▼
+ ┌ Variables ────────────────────────────────────────────────────────┐
+ │ ⚠ Hay 6 variables escritas fuera de esta sección…  [Pasarlas a Variables] │
+ │ Nombre             Valores posibles, separados por |              │
+ │ [CIERRE_ENVIADO ]  [NO | SI                         ]  🗑         │
+ │ ☐ También lo que diga el cliente     Empieza en [El primero ▾]    │
+ │ [+ Agregar variable]                     [Cancelar] [Guardar]     │
+ └───────────────────────────────────────────────────────────────────┘
+```
+
+**Cómo funciona.** No hay mecanismo nuevo: el modal lee y escribe la sección `[VARIABLES]` del
+Entrenamiento (`agentVariables.js`, mismas reglas que `ConversationVariables::Definition`). Si no
+existe la crea antes de las demás secciones; si queda vacía la quita; las notas de la sección se
+conservan. Guardar sin cambiar nada no cambia el texto. «Pasarlas a Variables» saca de su sección
+los renglones `NOMBRE = A | B` sueltos y los escribe uno por renglón (un renglón con varias
+separadas por «;» se parte); si ya existía una con ese nombre en `[VARIABLES]`, gana esa.
+
+Comprobador (`VariableChecks` + `StrayVariables`, ámbar, cada uno con su línea; encienden el
+punto del nodo Variables):
+
+| | Avisa |
+|---|---|
+| V1 | se usa `NOMBRE=…` y no está declarada |
+| V2 | está declarada y ninguna regla la lee ni la cambia |
+| V3 | un valor que no está en su lista (el motor lo descarta) |
+| V4 | «Inicial:» con un valor fuera de la lista, o de una variable que no existe |
+| V5 | declarada fuera de `[VARIABLES]` (el motor no la guarda) |
+
+**Probado contra los agentes reales.** Los 24 de dev y los 15 de staging_v2: sin avisos falsos
+(los de becas, bien escritos, salen limpios; porcentajes y ligas con `?a=b` no cuentan). Dos avisos
+reales: el agente DCI (6 sueltas en `[3. NÚCLEO DCI]`) y el #10148 de dev (6 en un solo renglón
+separadas por «;»). De punta a punta con el DCI: Ruby lo separa en bloques → «Pasarlas a
+Variables» → Ruby lo vuelve a armar → el motor ya guarda las 6, y queda un aviso real (V2:
+`AGENDA_CONFIRMADA` se declara y no se usa).
+
+**Pila de pruebas.** Servidor: `variable_checks_spec` 13 (V1–V5, casos limpios, ámbar en el
+comprobador) + 65 del comprobador y 13 de estructura sin cambios. Navegador: `agentVariables.spec`
+12, `VariablesModal.spec` 6, `TrainingTree.spec` +2, `trainingSectionsMixin.spec` +1; carpeta del
+Asistente 247 en verde. La prueba de calendario del comprobador (`validator_service_spec:682`) falla a
+ratos desde el 15/09, sin relación.
+
+**Cómo pedírselo al Asistente.** Todavía no: el chat aprende a proponer variables en F3. Por ahora,
+desde la Estructura: «Definición › Variables».
+
+**Sigue:** F2 Datos fijos.
 
 ---
 

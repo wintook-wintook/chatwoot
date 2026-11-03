@@ -19,6 +19,7 @@
 // ============================================================================
 import Draggable from 'vuedraggable';
 import { routeLines, defaultRouteName } from './trainingBlocks';
+import { readVariables, strayVariables } from './agentVariables';
 
 export default {
   components: { Draggable },
@@ -33,6 +34,8 @@ export default {
   },
   emits: [
     'editDefinition',
+    // F1 (crear_agente_conversando): la sección [VARIABLES], con su propio modal.
+    'editVariables',
     'editRoute',
     'addRoute',
     'findRoute',
@@ -75,6 +78,21 @@ export default {
     },
     movableSections() {
       return this.sections.filter(b => b.type === 'section');
+    },
+    // Lo que dice el nodo Variables sin abrir el modal: cuántas y cuáles.
+    variablesList() {
+      return readVariables(this.blocks).variables;
+    },
+    variablesPreview() {
+      const lista = this.variablesList;
+      if (!lista.length) return '';
+      return this.$t('TRACKING_ASSISTANT_VIEW.TREE_VARIABLES_COUNT', {
+        count: lista.length,
+        names: this.preview(lista.map(v => v.name).join(', '), 48),
+      });
+    },
+    hasStrayVariables() {
+      return strayVariables(this.blocks).length > 0;
     },
   },
   methods: {
@@ -186,6 +204,38 @@ export default {
           {{
             preview(definitionValue(campo)) ||
             $t('TRACKING_ASSISTANT_VIEW.TREE_EMPTY')
+          }}
+        </span>
+      </button>
+      <!-- Variables: a diferencia de los dos de arriba, SÍ son texto del
+           Entrenamiento (la sección [VARIABLES]). El punto junta los avisos V1–V5. -->
+      <button
+        type="button"
+        class="flex items-center gap-2 py-1 pl-6 pr-1 text-left rounded hover:bg-slate-50 dark:hover:bg-slate-700"
+        @click="$emit('editVariables')"
+      >
+        <span class="shrink-0 text-slate-700 dark:text-slate-200">
+          {{ $t('TRACKING_ASSISTANT_VIEW.TREE_VARIABLES') }}
+        </span>
+        <span
+          v-if="issue('variables')"
+          v-tooltip.right="tip(issueText('variables'))"
+          class="w-1.5 h-1.5 rounded-full shrink-0"
+          :class="
+            issue('variables') === 'blocking' ? 'bg-red-500' : 'bg-amber-500'
+          "
+        />
+        <span
+          class="flex-1 min-w-0 text-xs truncate"
+          :class="
+            hasStrayVariables
+              ? 'text-amber-800 dark:text-amber-800'
+              : 'text-slate-500 dark:text-slate-400'
+          "
+        >
+          {{
+            variablesPreview ||
+            $t('TRACKING_ASSISTANT_VIEW.TREE_VARIABLES_NONE')
           }}
         </span>
       </button>
