@@ -4,14 +4,20 @@
 # proyecto@asistente_agentes_ia — CONVERSAR PARA ARMAR UN AGENTE DESDE CERO
 # ================================================================================
 # POST /api/v1/accounts/:account_id/contact_trackings/assistant/drafting_chat
-#   { messages: [...], instructions: "el .md hasta ahora", session_id }
-#   → { reply, instructions, changed, session_id, session }
+#   { messages: [...], instructions: "el .md hasta ahora", routes: "el boceto", session_id }
+#   → { reply, instructions, changed, routes, tools_used, session_id, session }
 #   Un turno de la conversación que llena las instrucciones iniciales (DraftingChat).
 #   Se usa mientras no hay Entrenamiento; con uno en pantalla, el chat edita
 #   (…/assistant/interview). Guarda el hilo y las instrucciones en la conversación
 #   (TrackingAssistantSession), para retomarla desde «En construcción».
 #
 # Aparte de AssistantController, que ya está en su tope de largo. Mismo permiso.
+#
+# proyecto@crear_agente_conversando FR: con `custom_attributes['assistant_tools']` en la
+# cuenta, el modelo consulta y prueba las fuentes antes de proponer (AssistantTools), y
+# lleva el boceto de rutas probadas (D10), que se guarda en la conversación
+# (proposal['boceto']). No es una bandera de funciones: features.yml ya usa 63 de los
+# 63 bits de feature_flags.
 # ================================================================================
 
 class Api::V1::Accounts::ContactTrackings::AssistantDraftingController < Api::V1::Accounts::BaseController
@@ -21,11 +27,13 @@ class Api::V1::Accounts::ContactTrackings::AssistantDraftingController < Api::V1
 
   def create
     result = ContactTrackings::Assistant::DraftingChat
-             .new(Current.account, messages: messages, instructions: params[:instructions]).call
+             .new(Current.account, messages: messages, instructions: params[:instructions],
+                                   routes: params[:routes], tools: tools?).call
     return render json: { error: result[:error] }, status: :unprocessable_entity if result[:error]
 
     sesion = record(result)
-    render json: result.slice(:reply, :instructions, :changed).merge(session_id: sesion&.id, session: session_meta(sesion))
+    render json: result.slice(:reply, :instructions, :changed, :routes, :tools_used)
+                       .merge(session_id: sesion&.id, session: session_meta(sesion))
   end
 
   private
@@ -40,11 +48,16 @@ class Api::V1::Accounts::ContactTrackings::AssistantDraftingController < Api::V1
     sesion = TrackingAssistantSession.find_by(id: params[:session_id], account: Current.account) if params[:session_id].present?
     sesion ||= TrackingAssistantSession.new(account: Current.account, user: Current.user)
     turnos = messages + [{ 'role' => 'assistant', 'content' => result[:reply] }]
-    sesion.record_turn(messages: turnos, instructions: result[:instructions])
+    propuesta = result[:routes].present? ? sesion.proposal.to_h.merge('boceto' => result[:routes]) : nil
+    sesion.record_turn(messages: turnos, instructions: result[:instructions], proposal: propuesta)
     sesion
   rescue StandardError => e
     Rails.logger.error("[Asistente] no se pudo guardar la conversación: #{e.message}")
     nil
+  end
+
+  def tools?
+    ActiveModel::Type::Boolean.new.cast(Current.account.custom_attributes.to_h['assistant_tools']) || false
   end
 
   def session_meta(sesion)

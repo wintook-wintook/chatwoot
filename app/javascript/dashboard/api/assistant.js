@@ -248,10 +248,12 @@ class AssistantAPI extends ApiClient {
 
   // Un turno de la conversación que arma un agente desde cero: devuelve la
   // respuesta y las instrucciones iniciales actualizadas (DraftingChat).
-  draftingChat(messages, instructions, { sessionId = null } = {}) {
+  // routes (proyecto@crear_agente_conversando FR): el boceto de rutas ya probadas.
+  draftingChat(messages, instructions, { sessionId = null, routes = '' } = {}) {
     return axios.post(`${this.url}/drafting_chat`, {
       messages,
       instructions,
+      routes,
       session_id: sessionId,
     });
   }

@@ -41,4 +41,36 @@ RSpec.describe 'Asistente de Agentes IA — conversar desde cero' do
 
     expect(response.parsed_body['session_id']).to eq(id)
   end
+
+  # proyecto@crear_agente_conversando FR
+  describe 'con herramientas (custom_attributes assistant_tools)' do
+    before do
+      account.update!(custom_attributes: { 'assistant_tools' => true })
+      stub_request(:post, ContactTrackings::Assistant::OpenaiChat::API_URL).to_return(
+        status: 200, headers: { 'Content-Type' => 'application/json' },
+        body: { choices: [{ message: { role: 'assistant',
+                                       content: { mensaje: 'Te propongo la ruta Cotizar', instrucciones: nil,
+                                                  boceto: "@ruta(cotizar: cuánto cuesta): -\nprosa que no va" }.to_json } }] }.to_json
+      )
+    end
+
+    it 'pregunta con herramientas, devuelve el boceto y lo guarda en la conversación' do
+      post url, params: { messages: mensajes }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body).to include('routes' => '@ruta(cotizar: cuánto cuesta): -', 'tools_used' => [])
+      con_herramientas = a_request(:post, ContactTrackings::Assistant::OpenaiChat::API_URL)
+                         .with { |req| JSON.parse(req.body)['tools'].present? }
+      expect(con_herramientas).to have_been_made
+      sesion = TrackingAssistantSession.find(response.parsed_body['session_id'])
+      expect(sesion.proposal['boceto']).to eq('@ruta(cotizar: cuánto cuesta): -')
+    end
+  end
+
+  it 'sin la bandera no manda herramientas' do
+    post url, params: { messages: mensajes }, headers: admin.create_new_auth_token, as: :json
+
+    sin_herramientas = a_request(:post, ContactTrackings::Assistant::OpenaiChat::API_URL)
+                       .with { |req| JSON.parse(req.body)['tools'].nil? }
+    expect(sin_herramientas).to have_been_made
+  end
 end

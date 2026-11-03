@@ -647,7 +647,50 @@ cuenta original: la pestaña «Configurar» todavía no ofrece cambiarlos (riesg
 **Cómo pedírselo al Asistente.** Todavía no: el chat aprende a proponer datos fijos en F3. Por ahora,
 desde la Estructura, «Definición › Datos fijos», o con `%` en el editor.
 
-**Sigue:** FR Fuentes (fichas + herramientas en el chat de creación).
+### FR — Fuentes: fichas y herramientas en el chat de creación ✅ código (03/11/2026)
+
+**Qué se hizo.** Tres piezas:
+
+1. **Ficha de cada fuente** (`SourceProfiles`, sin IA, se arma cada vez — D9): qué tiene dentro,
+   qué se le puede preguntar, cómo se escribe y una ruta de ejemplo. Hojas (columnas, filas de
+   ejemplo y por qué columna buscar: la de texto con más valores distintos; regresa las numéricas),
+   documentos (sus partes), Centro de Ayuda (artículos publicados y categorías), predefinidas (grupos
+   y códigos), foro y CONTPAQi (se consultan en vivo), tipos de caso (los campos que piden). Dice
+   también qué NO tiene la cuenta.
+   - Se ve en **Agentes IA › Recursos**, arriba del catálogo («Lo que tiene cada fuente»), con la
+     directiva y la ruta sugerida para copiar.
+   - Le llega al chat de creación **siempre**, una línea por fuente, con o sin herramientas.
+2. **Herramientas** (`AssistantTools`, D7: traídas de la rama diag sin su reporte de consumo ni
+   `revisar_encargo`): `ver_recursos`, `ver_fuente`, `probar_fuente` (nuevas: la ficha completa y la
+   **búsqueda real** por significado en la fuente, con el umbral de la cuenta; el foro y CONTPAQi
+   dicen que se consultan en vivo), `ver_directiva`, `probar_ruta` (clasificador real, 2–3 veces por
+   frase) y `comprobar`. `DraftingToolLoop` las corre: hasta 8 por turno y 120 s; la misma consulta
+   no se repite; si la API rechaza el razonamiento con herramientas, repite con `none`.
+   `OpenaiChat#call_with_tools` traído de diag.
+3. **El chat propone la ruta completa y la prueba** (reglas en `DraftingToolLoop::PROMPT`): mira la
+   fuente, la prueba con frases de cliente, propone en palabras simples (frases, qué pregunta antes,
+   de dónde contesta, qué hace, etiqueta), y lleva en **«boceto»** las líneas `@ruta(…)` (D10), que se
+   prueban con `probar_ruta` antes de decir que funcionan. El boceto se guarda en la conversación
+   (`proposal['boceto']`) y el navegador lo reenvía en cada turno; FD lo dibuja.
+
+**Cómo se enciende.** Por cuenta, con `custom_attributes['assistant_tools'] = true`. No es una bandera
+de `features.yml`: ya hay 63 y `feature_flags` es un entero de 64 bits con signo (la 64.ª se
+desbordaría). Sin la bandera, el chat funciona como antes, más las fichas en sus recursos.
+
+**Pila de pruebas.** Servidor: `source_profiles_spec` 6, `assistant_tools_spec` 8 (incluye la
+búsqueda real con embedding simulado), `drafting_tool_loop_spec` 4 (corre y sigue, no repite, tope →
+`none`, reintento sin razonamiento), `assistant_drafting_spec` +2 (con y sin herramientas, boceto
+guardado); con Asistente y conocimiento, 127 en verde. Navegador: `SourceProfiles.spec` 2; carpeta
+de Agentes IA 279 en verde (falla solo `AgentWorkspace.spec.js`, que ya falla en develop).
+
+**Falta (antes de darlo por bueno).** Probarlo con OpenAI de verdad en la cuenta 2 (cuesta), y la
+medición D8 (gpt-5.4-mini contra gpt-5.5 con 3 encargos). Las columnas de una hoja salen en el orden
+de `jsonb` (Postgres no guarda el de la hoja).
+
+**Cómo pedírselo al Asistente.** Con la bandera encendida, en «Crear desde cero»: «tengo una hoja de
+precios y quiero que cotice» → revisa la hoja, la prueba y propone la ruta ya probada.
+
+**Sigue:** FD — el diagrama y las pruebas en la conversación (dibujar el boceto).
 
 ---
 
