@@ -504,14 +504,16 @@ midió.
 correr en producción en solo lectura (el script está escrito para eso).
 
 **Agentes reales de ejemplo (03/11/2026).** El usuario pasó dos agentes de producción (en
-`tmp/agentes_ejemplo/`, fuera del repo; banco de prueba de todas las fases):
+`tmp/agentes_ejemplo/`, fuera del repo). **No son modelos de cómo debe quedar un agente**: son
+la medida de la complejidad que el Asistente tiene que volver fácil (ver §14). Lo de abajo es lo
+que el Asistente debe saber detectar o proponer, no un juicio sobre esos prompts:
 
 | | «1826 Primer contacto · demostración aceptada» (DCI V8.12, 9 473 car.) | «231026 Invitación Arranque rápido distribuidores» (V1.3, 11 204 car.) |
 |---|---|---|
 | Variables | Declara 6 con la gramática exacta (`CIERRE_ENVIADO = NO \| SI`…) pero dentro de `[3. NÚCLEO DCI…]`, **no en `[VARIABLES]`**: el motor **no guarda ninguna**; el modelo las adivina del historial, y de `CIERRE_ENVIADO` depende todo el bloque post-cierre | Ninguna; usa etiquetas como estado. Candidatas: `PAQUETE_ENVIADO = NO \| SÍ` («si ya fue entregado, no lo repitas») y `PERMISO_FUTURO = PENDIENTE \| SÍ \| NO` |
 | Preguntas | 4 «preguntas DCI literales», cada una llena un slot → banco ideal: `Q_OBJETIVO → guarda en OBJETIVO_COMERCIAL`… | 2 preguntas fijas (permiso futuro, motivo opcional) |
 | Datos fijos | «Kontrolya» ×8, liga de agenda ×2, liga de precios | «Arranque rápido», fecha y horario del evento escritos **4 veces y distintos** («9:15 a. m.», «9:15am a 10:15:00 am»…), liga de Zoom ×3 |
-| Lo que salta | Sin `@ruta`: el ROUTER (SOPORTE_REAL / COMERCIAL) está en prosa, así que el diagrama no tiene qué dibujar. `[9. BASE DE CONOCIMIENTO]` es justo lo que va en Definición › Contexto o en predefinidas. Usa `{Nombre}`, `{N}`, `{RESPUESTA_CORTA_INTENCION}` (llaves sencillas): confirma que `{X}` no servía para los datos fijos | El «enlace directo» y el «de registro» son **la misma URL**, aunque el texto dice que «nunca son intercambiables». El evento ya pasó (23/10) y hay que cambiar la fecha en 4 lugares. `[VALIDACIÓN ANTES DE PUBLICAR]` es una lista de pruebas **dentro del prompt** (el modelo la lee en cada mensaje): son 4 pruebas para la pestaña Pruebas. La línea de la ruta dice `evento #interesado` pero `[ETIQUETAS Y RUTAS]` dice que lleva `#evento` |
+| Lo que el Asistente debe detectar | Sin `@ruta`: el ROUTER (SOPORTE_REAL / COMERCIAL) está en prosa, así que el diagrama no tiene qué dibujar. `[9. BASE DE CONOCIMIENTO]` es justo lo que va en Definición › Contexto o en predefinidas. Usa `{Nombre}`, `{N}`, `{RESPUESTA_CORTA_INTENCION}` (llaves sencillas): confirma que `{X}` no servía para los datos fijos | El «enlace directo» y el «de registro» son **la misma URL**, aunque el texto dice que «nunca son intercambiables». El evento ya pasó (23/10) y hay que cambiar la fecha en 4 lugares. `[VALIDACIÓN ANTES DE PUBLICAR]` es una lista de pruebas **dentro del prompt** (el modelo la lee en cada mensaje): son 4 pruebas para la pestaña Pruebas. La línea de la ruta dice `evento #interesado` pero `[ETIQUETAS Y RUTAS]` dice que lleva `#evento` |
 
 **Lo que agregan al plan:**
 - **V5 (F1):** «Declaraste variables fuera de `[VARIABLES]`: el motor no las guarda» + botón «Pasarlas a Variables». Sin esto, el agente DCI no gana nada con F1.
@@ -520,3 +522,52 @@ correr en producción en solo lectura (el script está escrito para eso).
 - **FR:** detectar un ROUTER en prosa y ofrecer convertirlo en `@ruta`.
 
 **Siguiente:** F1 Variables (con V5).
+
+---
+
+## 14. La meta: que estos agentes se armen fácil
+
+Los dos ejemplos marcan el techo. Quien no sabe de prompts tiene que poder llegar a un agente así
+**conversando** o con el **modal de cada sección**, y también a uno sencillo si eso necesita. El
+Asistente propone; la persona contesta y acepta. Siempre con los recursos que ya tiene el sistema.
+
+### 14.1 Lo que cada ejemplo exige y cómo se vuelve fácil
+
+| Lo que tiene el ejemplo | Cómo se lo pregunta el Asistente | Dónde queda (modal) | Recurso del sistema |
+|---|---|---|---|
+| **Etapas** (calificando → cierre enviado → agendado) | «¿Tu agente pasa por etapas? Por ejemplo: primero pregunta, luego manda la liga, después solo confirma» | Variables (`CIERRE_ENVIADO`) + rutas que dependen de ellas | `[VARIABLES]` guardadas por conversación |
+| **Cuestionario en orden** (4 slots DCI, siempre la siguiente vacía) | «¿Qué necesitas saber del cliente antes de agendar? Te propongo 4 preguntas» | Datos fijos tipo pregunta, **en orden**, cada una «→ guarda en» su variable. El Asistente escribe solo la regla «pregunta la primera cuya variable esté vacía» | Datos fijos + Variables |
+| **Mensajes exactos** (nodos de cierre y agendado, con y sin nombre) | «¿Hay mensajes que siempre deben salir igual?» | Datos fijos tipo texto; el Asistente arma la versión con nombre si lo sabe | Datos fijos |
+| **Interrupciones** (pide humano o precio a media calificación) | «Si a medio cuestionario te piden hablar con alguien, ¿qué hacemos?» | Una ruta con «responde y retoma la pregunta pendiente» | Rutas + Variables |
+| **Base de conocimiento** dentro del prompt | «Esta información ¿cambia seguido?» → si no, Contexto; si sí, una fuente | Definición › Contexto, o una fuente | Predefinidas, artículos, documentos y hojas (§12) |
+| **Mensaje inicial de campaña** (plantilla de WhatsApp) | «¿El agente empieza la conversación o espera a que le escriban?» | Se elige la plantilla; el agente solo atiende las respuestas | Plantillas de WhatsApp y campañas |
+| **Archivo adjunto** (flyer) | «¿Mandas algún archivo? Súbelo aquí» | Archivos del agente → `{{nombre}}` | Adjuntos del agente |
+| **Ligas y datos del evento** repetidos | Se piden una vez | Datos fijos (`%LIGA_REGISTRO%`, `%EVENTO_FECHA%`) | Datos fijos |
+| **Etiquetas de resultado** que se ponen solo en ciertos casos | «¿Qué resultados quieres poder contar o filtrar después?» | Rutas con su etiqueta; el Asistente propone las que ya existen en la cuenta | Etiquetas |
+| **Excluir a quien pidió no recibir más** | «Cuando alguien diga "no me manden nada", ¿lo sacamos de las campañas?» | Se avisa qué automatización hace falta | Automatizaciones y campañas |
+| **Consultas ajenas** (precios del CRM, integraciones) | «Si preguntan otra cosa, ¿de dónde contestamos?» | Ruta por defecto con su fuente, ya probada | Predefinidas, artículos (§12, `probar_fuente`) |
+| **Lista de validación** escrita en el prompt | No se pide: el Asistente crea las pruebas solo | Pestaña Pruebas: pila del agente | Pruebas y diagrama (§7) |
+
+**Lo mismo por los dos caminos.** Cada fila se puede llenar conversando *o* abriendo su modal en la
+Estructura (Definición · Variables · Datos fijos · Rutas · Secciones · Archivos). El chat y los
+modales escriben en el mismo lugar: lo que se cambia en uno, el otro lo ve.
+
+**Del tamaño que haga falta.** El Asistente no empuja a la persona a un agente grande: empieza por lo
+mínimo que pidió y solo pregunta por etapas, cuestionarios o interrupciones si el caso lo pide (una
+invitación a un evento no necesita cuestionario; una calificación de ventas sí).
+
+### 14.2 Prueba de aceptación
+
+Para cada ejemplo, una **conversación guionada** como si fuera una persona sin conocimientos
+técnicos («quiero calificar prospectos antes de mandarles la liga de la demo»; «quiero invitar a
+mis distribuidores a una sesión por Zoom»). Al terminar:
+
+1. El agente que sale tiene lo de la tabla: las etapas, el cuestionario, los mensajes, las ligas y
+   las etiquetas que el ejemplo necesita.
+2. Pasa las pruebas propias del ejemplo (las 4 de la validación de Invitaciones y otras 4
+   equivalentes para DCI: dato a dato, interrupción por humano, todo en un mensaje, post-cierre
+   sin preguntas).
+3. La persona no escribió ni una línea de sintaxis del motor.
+4. Se cuenta cuántos turnos y cuánto costó.
+
+Esta prueba se corre al cerrar F3 y FD, y cada vez que cambie el chat.
