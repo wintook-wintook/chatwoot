@@ -17,6 +17,16 @@ import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 
 const PREVIEW_DEBOUNCE_MS = 500;
 
+// F1 (crear_agente_conversando): los avisos de variables (VariableChecks) también
+// encienden el punto del nodo Variables, además de su línea.
+export const VARIABLE_CODES = [
+  'variable_undeclared',
+  'variable_unused',
+  'variable_value_unknown',
+  'variable_initial_invalid',
+  'variables_outside_section',
+];
+
 export default {
   data() {
     return {
@@ -84,6 +94,8 @@ export default {
         bloques.findIndex(b => linea >= b.first_line && linea <= b.last_line);
       ['blocking', 'degrading'].forEach(nivel => {
         (v[nivel] || []).forEach(hallazgo => {
+          if (VARIABLE_CODES.includes(hallazgo.code))
+            poner('variables', nivel, hallazgo.message);
           const ramas =
             hallazgo.routes || (hallazgo.route ? [hallazgo.route] : []);
           ramas.forEach(nombre =>

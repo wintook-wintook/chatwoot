@@ -150,4 +150,35 @@ describe('TrainingTree', () => {
     expect(wrapper.vm.preview('  hola   mundo  ')).toBe('hola mundo');
     expect(wrapper.vm.preview('x'.repeat(80)).endsWith('…')).toBe(true);
   });
+
+  // F1 (crear_agente_conversando): la sección [VARIABLES] tiene su nodo en Definición.
+  it('resume las variables en su nodo y avisa si hay sueltas', () => {
+    const value = estructura();
+    value.blocks.push(
+      {
+        type: 'section',
+        title: 'VARIABLES',
+        body: 'CARRERA = valor\nLIGA = NO | SÍ',
+        gap: 1,
+      },
+      { type: 'section', title: 'ESTADOS', body: '* CIERRE = NO | SI', gap: 0 }
+    );
+    const wrapper = montar({
+      value,
+      issues: { variables: { level: 'degrading', messages: ['m'] } },
+    });
+    expect(wrapper.vm.variablesList.map(v => v.name)).toEqual([
+      'CARRERA',
+      'LIGA',
+    ]);
+    expect(wrapper.vm.variablesPreview).toContain('CARRERA, LIGA');
+    expect(wrapper.vm.hasStrayVariables).toBe(true);
+    expect(wrapper.vm.issue('variables')).toBe('degrading');
+  });
+
+  it('sin variables el nodo dice que no hay, sin alarma', () => {
+    const wrapper = montar();
+    expect(wrapper.vm.variablesPreview).toBe('');
+    expect(wrapper.vm.hasStrayVariables).toBe(false);
+  });
 });
