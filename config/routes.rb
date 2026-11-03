@@ -343,7 +343,9 @@ Rails.application.routes.draw do
             delete 'assistant/test_cases/:id',      to: 'assistant_test_cases#destroy'
             # armar un agente desde cero conversando (llena las instrucciones iniciales)
             post 'assistant/drafting_chat', to: 'assistant_drafting#create'
-            put  'assistant/autosave', to: 'assistant_autosave#update'
+            # proyecto@crear_agente_conversando F3: lo corregido a mano en Definición/Variables/Datos fijos
+            patch 'assistant/drafting_chat/fields', to: 'assistant_drafting#fields'
+            put 'assistant/autosave', to: 'assistant_autosave#update'
             patch 'assistant/sessions/:id/name', to: 'assistant_autosave#rename'
             post 'assistant/conversation_review', to: 'assistant_review#create'
             # proyecto@adaptar_prompts_publicados — pestaña «Configurar»: qué falta y aplicarlo

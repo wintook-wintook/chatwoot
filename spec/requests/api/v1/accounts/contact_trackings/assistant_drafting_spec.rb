@@ -97,4 +97,46 @@ RSpec.describe 'Asistente de Agentes IA — conversar desde cero' do
       expect(TrackingAssistantSession.find(segundo['session_id']).proposal['boceto']).to eq('@ruta(cotizar: precio): -')
     end
   end
+
+  # proyecto@crear_agente_conversando F3
+  describe 'Definición, Variables y Datos fijos' do
+    before do
+      stub_request(:post, ContactTrackings::Assistant::OpenaiChat::API_URL).to_return(
+        status: 200, headers: { 'Content-Type' => 'application/json' },
+        body: { choices: [{ message: { content: { mensaje: 'Anoté qué sistema usa', instrucciones: nil,
+                                                  definicion: { objetivo: 'Agendar demos' },
+                                                  variables: [{ nombre: 'SISTEMA', valores: %w[CONTPAQi Aspel] }] }.to_json } }] }.to_json
+      )
+    end
+
+    it 'devuelve las pestañas completas y las guarda en la conversación' do
+      post url, params: { messages: mensajes, fields: { datos_fijos: 'EMPRESA = Kontrolya' } },
+                headers: admin.create_new_auth_token, as: :json
+
+      esperado = { 'objective' => 'Agendar demos', 'variables' => 'SISTEMA = CONTPAQi | Aspel', 'datos_fijos' => 'EMPRESA = Kontrolya' }
+      expect(response.parsed_body['fields']).to eq(esperado)
+      expect(TrackingAssistantSession.find(response.parsed_body['session_id']).proposal).to include(esperado)
+    end
+
+    it 'guarda lo corregido a mano sin gastar un turno (vaciar también cuenta)' do
+      sesion = TrackingAssistantSession.create!(account: account, user: admin,
+                                                proposal: { 'name' => 'Demo', 'variables' => 'X = A | B' })
+
+      patch "#{url}/fields", params: { session_id: sesion.id, fields: { variables: '', objective: 'Nuevo' } },
+                             headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(sesion.reload.proposal).to include('name' => 'Demo', 'variables' => '', 'objective' => 'Nuevo')
+      expect(a_request(:post, ContactTrackings::Assistant::OpenaiChat::API_URL)).not_to have_been_made
+    end
+
+    it 'no guarda en la conversación de otra cuenta' do
+      otra = TrackingAssistantSession.create!(account: create(:account), user: admin, proposal: {})
+
+      patch "#{url}/fields", params: { session_id: otra.id, fields: { objective: 'x' } },
+                             headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
 end

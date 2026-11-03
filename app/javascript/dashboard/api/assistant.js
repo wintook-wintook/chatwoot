@@ -249,12 +249,26 @@ class AssistantAPI extends ApiClient {
   // Un turno de la conversación que arma un agente desde cero: devuelve la
   // respuesta y las instrucciones iniciales actualizadas (DraftingChat).
   // routes (proyecto@crear_agente_conversando FR): el boceto de rutas ya probadas.
-  draftingChat(messages, instructions, { sessionId = null, routes = '' } = {}) {
+  // fields (crear_agente_conversando F3): objective, ai_context, variables, datos_fijos.
+  draftingChat(
+    messages,
+    instructions,
+    { sessionId = null, routes = '', fields = {} } = {}
+  ) {
     return axios.post(`${this.url}/drafting_chat`, {
       messages,
       instructions,
       routes,
+      fields,
       session_id: sessionId,
+    });
+  }
+
+  // F3: lo corregido a mano en Definición, Variables o Datos fijos, sin gastar un turno.
+  saveDraftingFields(sessionId, fields) {
+    return axios.patch(`${this.url}/drafting_chat/fields`, {
+      session_id: sessionId,
+      fields,
     });
   }
 

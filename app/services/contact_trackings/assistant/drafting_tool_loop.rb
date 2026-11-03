@@ -30,7 +30,7 @@ class ContactTrackings::Assistant::DraftingToolLoop
 
   # FR (crear_agente_conversando §12.3): con herramientas, conoce las fuentes antes de
   # proponer y prueba cada ruta. DraftingChat lo suma a su PROMPT; el contrato agrega "boceto".
-  PROMPT = <<~PROMPT
+  PROMPT = <<~PROMPT.freeze
     ═══ HERRAMIENTAS: CONOCE LAS FUENTES ANTES DE PROPONER ═══
     1. Cuando la persona diga para qué quiere el agente, mira con ver_recursos qué tiene la cuenta y
        con ver_fuente la fuente que serviría (una hoja de precios para cotizar, respuestas
@@ -64,7 +64,8 @@ class ContactTrackings::Assistant::DraftingToolLoop
     7. Máximo 10 herramientas por turno. No repitas una consulta que ya hiciste.
 
     Contesta SOLO este JSON (reemplaza al de arriba):
-    {"mensaje": "…", "instrucciones": "el .md completo" | null, "boceto": "las líneas @ruta" | null}
+    {"mensaje": "…", "instrucciones": "el .md completo" | null, "boceto": "las líneas @ruta" | null,
+     #{ContactTrackings::Assistant::DraftingFieldsPrompt::CONTRACT_KEYS}}
     "boceto": null si en este turno no cambió ninguna ruta.
   PROMPT
 
