@@ -9,6 +9,9 @@ en:
     errors:
       invalid_start: 'A license starts "now" or "queue".'
       only_scheduled: 'Only a scheduled license can be cancelled. To change the current one, issue another starting now.'
+      only_active: 'Agents can only be added to the current license.'
+      add_agents_count: 'Say how many agents to add (1 to 1000).'
+      no_feature_changes: 'There are no features to change.'
   # feat/licencias — etiquetas de las casillas en el super admin (en español a pedido)
   helpers:
     label:

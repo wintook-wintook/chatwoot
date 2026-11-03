@@ -9,6 +9,9 @@ es:
     errors:
       invalid_start: 'La licencia arranca «ya» (now) o «en cola» (queue).'
       only_scheduled: 'Solo se cancela una licencia programada. Para cambiar la vigente, emite otra que arranque ya.'
+      only_active: 'Solo se agregan agentes a la licencia vigente.'
+      add_agents_count: 'Indica cuántos agentes agregar (de 1 a 1000).'
+      no_feature_changes: 'No hay funciones que cambiar.'
   # feat/licencias — etiquetas de las casillas en el super admin (en español a pedido)
   helpers:
     label:

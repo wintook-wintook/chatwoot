@@ -52,6 +52,10 @@ class AccountLicense < ApplicationRecord
   enum license_type: { demo: 0, paid: 1 }
   enum status: { active: 0, scheduled: 1, expired: 2, cancelled: 3 }
 
+  # F6.2: asignar, subir el tope, cancelar y vencer quedan en el registro de la cuenta (la
+  # ficha lo lee de `audits`, igual que los cambios que ya guarda el módulo enterprise).
+  audited associated_with: :account, except: [:updated_at, :reminded_at, :metadata]
+
   belongs_to :account
   belongs_to :license_plan, optional: true
   belongs_to :created_by, class_name: 'User', optional: true

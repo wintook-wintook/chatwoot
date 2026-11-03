@@ -42,9 +42,11 @@ module AccountLicensable
     return nil unless current_license || account_licenses.exists?
 
     licencia = current_license
-    siguiente = account_licenses.scheduled.order(:starts_at, :id).first
+    # La fila completa, en el orden en que se activan (la tarjeta de Configuración › General y
+    # la de Licencia la muestran toda); `next` es la primera, como antes.
+    fila = account_licenses.scheduled.order(:starts_at, :id).map { |programada| license_period(programada) }
     { state: licencia ? licencia.license_type : 'vencida', agents_count: users.count,
-      current: licencia && license_period(licencia), next: siguiente && license_period(siguiente) }
+      current: licencia && license_period(licencia), next: fila.first, queue: fila }
   end
 
   # El tope que impone la licencia, o nil si la licencia no limita esta cuenta.

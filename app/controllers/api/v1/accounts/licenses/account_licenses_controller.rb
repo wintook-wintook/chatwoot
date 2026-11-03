@@ -6,6 +6,8 @@
 #   → Licenses::Issuer: «now» reemplaza la activa; «queue» la deja en cola tras la vigente.
 # POST …/licenses/account_licenses/:id/cancel → solo una PROGRAMADA (la vigente no se cancela
 #   desde aquí: para cambiarla se emite otra con «now»).
+# POST …/licenses/account_licenses/:id/add_agents { add, reason? } → F6.2: sube el tope de la
+#   VIGENTE (Licenses::AgentIncrease); queda en el registro con el motivo.
 # ================================================================================
 class Api::V1::Accounts::Licenses::AccountLicensesController < Api::V1::Accounts::Licenses::BaseController
   before_action :check_manage_permission
@@ -27,5 +29,12 @@ class Api::V1::Accounts::Licenses::AccountLicensesController < Api::V1::Accounts
 
     licencia.update!(status: :cancelled)
     render json: { id: licencia.id, status: licencia.status }
+  end
+
+  def add_agents
+    licencia = Licenses::AgentIncrease.new(license: AccountLicense.find(params[:id]), add: params[:add], reason: params[:reason]).perform
+    render json: { id: licencia.id, max_agents: licencia.max_agents }
+  rescue Licenses::AgentIncrease::Invalid => e
+    render json: { message: e.message }, status: :unprocessable_entity
   end
 end

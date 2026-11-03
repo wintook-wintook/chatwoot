@@ -86,6 +86,22 @@ RSpec.describe 'Licenses API', type: :request do
       expect(ids_con('por_vencer')).not_to include(en_demo.id)
     end
 
+    it 'por omisión la más reciente primero; ordena por la columna pedida' do
+      en_demo.update_columns(created_at: 1.day.from_now, updated_at: 1.day.from_now) # rubocop:disable Rails/SkipsModelValidations
+      ids = lambda do |extra = {}|
+        get "#{base}/accounts", params: { per_page: 100, q: 'SA' }.merge(extra), headers: lector.create_new_auth_token
+        response.parsed_body['accounts'].pluck('id')
+      end
+
+      expect(ids.call.first).to eq(en_demo.id)
+      expect(ids.call(sort: 'name', dir: 'asc')).to eq([en_demo.id, por_vencer.id, sin_licencia.id, vencida.id])
+      # Por vencimiento: las que no tienen licencia vigente van al final.
+      expect(ids.call(sort: 'expires_at', dir: 'asc').first).to eq(por_vencer.id)
+      expect(ids.call(sort: 'expires_at', dir: 'asc').last(2)).to contain_exactly(sin_licencia.id, vencida.id)
+      expect(ids.call(sort: 'nada; DROP TABLE accounts').first).to eq(en_demo.id)
+      expect(response.parsed_body['accounts'].first).to include('created_at', 'updated_at')
+    end
+
     it 'cada fila dice su estado; el detalle trae el historial' do
       get "#{base}/accounts", params: { q: 'Vencida SA' }, headers: lector.create_new_auth_token
       expect(response.parsed_body['accounts'].first).to include('license_state' => 'vencida', 'license' => nil)
@@ -93,6 +109,19 @@ RSpec.describe 'Licenses API', type: :request do
       get "#{base}/accounts/#{en_demo.id}", headers: lector.create_new_auth_token, as: :json
       expect(response.parsed_body).to include('license_state' => 'demo')
       expect(response.parsed_body['licenses'].size).to eq(1)
+    end
+
+    it 'la ficha trae sus agentes, cuántas bandejas tiene y sus funciones encendidas' do
+      agente = create(:user, account: en_demo, role: :agent, name: 'Luis Gómez')
+      create(:inbox, account: en_demo)
+
+      get "#{base}/accounts/#{en_demo.id}", headers: lector.create_new_auth_token, as: :json
+
+      ficha = response.parsed_body
+      expect(ficha['agents']).to contain_exactly(include('id' => agente.id, 'name' => agente.available_name, 'role' => 'agent',
+                                                         'email' => agente.email, 'joined_at' => be_present))
+      expect(ficha['inboxes_count']).to eq(1)
+      expect(ficha['enabled_features']).to eq(en_demo.enabled_features.keys.sort)
     end
   end
 
@@ -105,6 +134,68 @@ RSpec.describe 'Licenses API', type: :request do
 
       expect(response).to have_http_status(:created)
       expect(cliente.current_license).to have_attributes(max_agents: 7, created_by: gestor)
+    end
+
+    it 'agrega agentes a la vigente a nombre de quien lo hizo; «Ver» no puede' do
+      cliente = create(:account)
+      licencia = create(:account_license, account: cliente, max_agents: 5)
+      ruta = "#{base}/account_licenses/#{licencia.id}/add_agents"
+
+      post ruta, params: { add: 2, reason: 'pidió dos más' }, headers: lector.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      post ruta, params: { add: 2, reason: 'pidió dos más' }, headers: gestor.create_new_auth_token, as: :json
+      expect(response.parsed_body).to include('max_agents' => 7)
+      expect(licencia.audits.last).to have_attributes(user_id: gestor.id, comment: 'pidió dos más')
+
+      post ruta, params: { add: 0 }, headers: gestor.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it 'enciende y apaga funciones de otra cuenta, queda en su registro; «Ver» no puede' do
+      cliente = create(:account)
+      cliente.disable_features!('macros')
+      cliente.enable_features!('channel_email')
+      ruta = "#{base}/accounts/#{cliente.id}/features"
+      cambios = { features: { macros: true, channel_email: false, no_existe: true } }
+
+      patch ruta, params: cambios, headers: lector.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      patch ruta, params: cambios, headers: gestor.create_new_auth_token, as: :json
+      expect(response.parsed_body['enabled_features']).to include('macros')
+      expect(response.parsed_body['enabled_features']).not_to include('channel_email', 'no_existe')
+      expect(cliente.reload.feature_enabled?('macros')).to be(true)
+      registro = cliente.audits.last
+      expect(registro).to have_attributes(user_id: gestor.id)
+      expect(registro.audited_changes).to have_key('feature_flags')
+
+      patch ruta, params: { features: { no_existe: true } }, headers: gestor.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it 'la ficha dice qué funciones trae el plan de su licencia vigente' do
+      cliente = create(:account)
+      plan_con = create(:license_plan, features: %w[channel_whatsapp macros])
+      create(:account_license, account: cliente, license_plan: plan_con)
+
+      get "#{base}/accounts/#{cliente.id}", headers: lector.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['plan_features']).to eq(%w[channel_whatsapp macros])
+    end
+
+    it 'el registro de cambios de otra cuenta, con filtro por tipo' do
+      cliente = create(:account)
+      licencia = create(:account_license, account: cliente, max_agents: 5)
+      Licenses::AgentIncrease.new(license: licencia, add: 2, reason: 'pidió dos más').perform
+
+      get "#{base}/accounts/#{cliente.id}/changes", params: { kind: 'licenses' }, headers: lector.create_new_auth_token
+      eventos = response.parsed_body['events']
+      expect(eventos.first).to include('event' => 'license_agents', 'comment' => 'pidió dos más')
+      expect(eventos.pluck('kind').uniq).to eq(['licenses'])
+
+      get "#{base}/accounts/#{cliente.id}/changes", params: { kind: 'otro; DROP' }, headers: lector.create_new_auth_token
+      expect(response).to have_http_status(:ok)
     end
 
     it 'cancela solo una programada' do

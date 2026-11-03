@@ -20,7 +20,9 @@
         "PLAN": "Plan",
         "AGENTS": "Agents",
         "EXPIRES": "Expires",
-        "ACTIONS": "Actions"
+        "ACTIONS": "Actions",
+        "CREATED": "Created",
+        "UPDATED": "Last modified"
       },
       "QUEUED": "+{count} queued",
       "DAYS_LEFT": "in {count} days",
@@ -47,12 +49,18 @@
         "AGENTS": "Agents",
         "TYPE": "Type",
         "FEATURES": "Channels and features",
-        "ACCOUNTS": "Active accounts"
+        "ACCOUNTS": "Active accounts",
+        "ACTIONS": "Actions"
       },
       "SIGNUP": "Signup",
       "INACTIVE": "Inactive",
       "FEATURES_COUNT": "{count} included",
-      "EDIT": "Edit"
+      "EDIT": "Edit",
+      "SEARCH": "Plan name…",
+      "ALL_TYPES": "All types",
+      "ALL_STATUSES": "Active and inactive",
+      "ONLY_ACTIVE": "Active only",
+      "ONLY_INACTIVE": "Inactive only"
     },
     "TYPE": {
       "DEMO": "Demo",
@@ -74,7 +82,17 @@
       "SAVE": "Save",
       "CANCEL": "Cancel",
       "SAVED": "Plan saved.",
-      "ERROR": "Could not save the plan."
+      "ERROR": "Could not save the plan.",
+      "DATA": "Plan details",
+      "NOT_FOUND": "That plan does not exist.",
+      "NO_MANAGE": "You need the «Manage licenses» permission to create or edit plans.",
+      "LEAVE": {
+        "TITLE": "Leave without saving?",
+        "DESCRIPTION": "You have unsaved changes in this plan. If you leave now, they will be lost.",
+        "CONFIRM": "Leave without saving",
+        "CANCEL": "Keep editing"
+      },
+      "DEFAULTS_HINT": " The ones the system turns on for every new account come checked; remove or add as you like."
     },
     "ISSUE": {
       "TITLE": "Assign license to {name}",
@@ -89,19 +107,20 @@
       "DAYS": "Days",
       "NOTES": "Notes (optional)",
       "SUBMIT": "Assign",
-      "CANCEL": "Cancel",
       "DONE": "License assigned.",
-      "ERROR": "Could not assign the license."
+      "ERROR": "Could not assign the license.",
+      "SECTION_PLAN": "Plan and start",
+      "SECTION_VALUES": "Values for this account",
+      "NO_MANAGE": "You need the «Manage licenses» permission to assign licenses.",
+      "LEAVE_DESCRIPTION": "You have a license half filled in. If you leave now, it will not be assigned."
     },
     "HISTORY": {
-      "TITLE": "Licenses of {name}",
       "EMPTY": "This account has never had a license.",
       "FROM_TO": "{from} → {to}",
       "BY": "by {name}",
       "CANCEL": "Cancel",
       "CANCELLED": "Scheduled license cancelled.",
-      "CANCEL_ERROR": "Could not cancel.",
-      "CLOSE": "Close"
+      "CANCEL_ERROR": "Could not cancel."
     },
     "STATUS": {
       "ACTIVE": "Active",
@@ -149,9 +168,15 @@
       "EXPIRES": "Expires",
       "DAYS_LEFT": "{count} days left",
       "EXPIRED_HINT": "The license expired. To renew it, get in touch with us.",
-      "NEXT_TITLE": "Next period",
-      "NEXT_TEXT": "{name}: from {from} to {to}, with {agents} agents. It starts when the current one ends.",
-      "READ_ONLY": "Read only. To change plan or renew, get in touch with us."
+      "READ_ONLY": "Read only. To change plan or renew, get in touch with us.",
+      "SEE_LICENSE": "See license",
+      "GENERAL_NOTE": "Your plan, its agents and the licenses that come next. Read only: contact us to change it.",
+      "QUEUE_TITLE": "Queued licenses",
+      "QUEUE_EMPTY": "No licenses waiting to start.",
+      "QUEUE_HINT": "They start on their own, in this order, when the previous one ends.",
+      "QUEUE_POSITION": "#{position} in queue",
+      "QUEUE_PERIOD": "from {from} to {to}",
+      "QUEUE_AGENTS": "{count} agents"
     },
     "BANNER": {
       "MESSAGE": "Your license expires in {count} days. If it is not renewed, the account will be suspended.",
@@ -160,6 +185,158 @@
     "SUSPENDED": {
       "TITLE": "Your license expired",
       "MESSAGE": "Nobody can access this account until the license is renewed. Your customers' messages are still being saved and will be here when you renew. Get in touch with us to renew it."
+    },
+    "LIST": {
+      "PER_PAGE": "Per page",
+      "CLEAR": "Clear filters",
+      "EMPTY_FILTERED": "No results with these filters."
+    },
+    "DETAIL": {
+      "LOADING": "Loading account…",
+      "NOT_FOUND": "That account does not exist.",
+      "EXPIRES_ON": "expires {date}",
+      "CARD_AGENTS_OF": "{used} of {max}",
+      "NO_LIMIT": "No limit",
+      "FREE_SEATS": "{count} free",
+      "NO_QUEUE": "No queued licenses",
+      "FEATURES_HINT": "enabled",
+      "ACTIVE": "Active",
+      "YES": "Yes",
+      "NO": "No",
+      "NO_AGENTS": "This account has no agents.",
+      "CARDS": {
+        "AGENTS": "Agents",
+        "LICENSE": "License",
+        "FEATURES": "Features",
+        "INBOXES": "Inboxes"
+      },
+      "TABS": {
+        "SUMMARY": "Summary",
+        "AGENTS": "Agents",
+        "FEATURES": "Features",
+        "LICENSES": "Licenses",
+        "CHANGES": "Change log"
+      },
+      "GENERAL": {
+        "STATUS": "Account status",
+        "INTERNAL": "Wintook account",
+        "CREATED": "Created",
+        "UPDATED": "Last modified",
+        "PERIOD": "License period",
+        "EXPIRES_IN": "Expiration"
+      },
+      "AGENTS_TABLE": {
+        "NAME": "Name",
+        "EMAIL": "Email",
+        "ROLE": "Role",
+        "JOINED": "In the account since"
+      },
+      "ROLES": {
+        "ADMINISTRATOR": "Administrator",
+        "AGENT": "Agent"
+      },
+      "LICENSES_TABLE": {
+        "LICENSE": "License",
+        "ACTIONS": "Actions",
+        "STATUS": "Status",
+        "TYPE": "Type",
+        "AGENTS": "Agents",
+        "PERIOD": "Period",
+        "BY": "Assigned by"
+      },
+      "ADD_AGENTS": {
+        "BUTTON": "Add agents",
+        "INTRO": "Add agents to the «{name}» license (now: {max}).",
+        "HOW_MANY": "Agents to add",
+        "REASON": "Reason (optional)",
+        "REASON_PLACEHOLDER": "e.g. the customer asked for two more seats",
+        "RESULT": "Limit: {from} → {to}",
+        "SAVE": "Save",
+        "CANCEL": "Cancel",
+        "HINT": "Only raises the limit of the current license. To lower it, assign a new license. The change is recorded.",
+        "DONE": "Done: the limit is now {total} agents.",
+        "ERROR": "Could not add the agents."
+      },
+      "FEATURES_OUTSIDE": "{count} outside the plan",
+      "FEATURES_SEARCH": "Search feature…",
+      "FEATURE_FILTERS": {
+        "ALL": "All",
+        "ON": "On",
+        "OFF": "Off",
+        "OUTSIDE": "Different from plan"
+      },
+      "FEATURES_PENDING": "{count} unsaved changes",
+      "FEATURES_DISCARD": "Discard",
+      "FEATURES_SAVE": "Save changes",
+      "FEATURES_INTRO": "Turning features on or off here changes the customer account when you save, just like the super admin. It is recorded.",
+      "FEATURES_READ_ONLY": "You need the «Manage licenses» permission to turn features on or off.",
+      "FEATURES_NO_PLAN": "This account has no license with a plan: nothing to compare with.",
+      "FEATURE_PENDING": "Unsaved",
+      "FEATURE_OUTSIDE": "Outside the plan",
+      "FEATURE_MISSING": "Included in plan",
+      "FEATURES_SAVED": "Done: {count} changes saved.",
+      "FEATURES_ERROR": "Could not save the features.",
+      "FEATURES_LEAVE": "You have features turned on or off without saving. If you leave now, they will not be applied."
+    },
+    "CHANGES": {
+      "SYSTEM": "System",
+      "LOAD_MORE": "Load more",
+      "EMPTY": "No changes with this filter.",
+      "SINCE": "From",
+      "UNTIL": "To",
+      "ALL_KINDS": "Everything",
+      "HINT": "Starts from when the system began recording changes. Automatic template sync and availability changes are left out; sign-ins only if you choose them.",
+      "KINDS": {
+        "LICENSES": "Licenses",
+        "AGENTS": "Agents",
+        "FEATURES": "Features",
+        "ACCOUNT": "Account",
+        "INBOXES": "Inboxes",
+        "OTHER": "Other",
+        "ACCESS": "Sign-ins"
+      },
+      "FIELDS": {
+        "NAME": "name",
+        "STATUS": "status",
+        "LOCALE": "language",
+        "DOMAIN": "domain",
+        "SUPPORT_EMAIL": "support email",
+        "LIMITS": "limits",
+        "CUSTOM_ATTRIBUTES": "internal settings",
+        "AUTO_RESOLVE_DURATION": "auto resolve"
+      },
+      "TYPES": {
+        "TEAM": "the team",
+        "AUTOMATIONRULE": "the automation",
+        "MACRO": "the macro",
+        "WEBHOOK": "the webhook"
+      },
+      "EVENTS": {
+        "LICENSE_CREATED": "Assigned the «{name}» license ({days} days, {agents} agents)",
+        "LICENSE_AGENTS": "Changed the agent limit of «{name}» from {from} to {to}",
+        "LICENSE_STATUS": "The «{name}» license went from {from} to {to}",
+        "LICENSE_CHANGED": "Changed the «{name}» license ({fields})",
+        "AGENT_ADDED": "Added {name} as {role}",
+        "AGENT_ROLE": "Changed the role of {name} from {from} to {to}",
+        "AGENT_REMOVED": "Removed {name} from the account",
+        "FEATURES_ON": "Turned on: {list}",
+        "FEATURES_OFF": "Turned off: {list}",
+        "ACCOUNT_SUSPENDED": "Suspended the account",
+        "ACCOUNT_REACTIVATED": "Reactivated the account",
+        "ACCOUNT_RENAMED": "Renamed from «{from}» to «{to}»",
+        "ACCOUNT_CHANGED": "Changed the account ({fields})",
+        "INBOX_CREATED": "Created the «{name}» inbox",
+        "INBOX_CHANGED": "Changed the «{name}» inbox ({fields})",
+        "INBOX_DELETED": "Deleted the «{name}» inbox",
+        "RECORD_CREATED": "Created {type} «{name}»",
+        "RECORD_CHANGED": "Changed {type} «{name}»",
+        "RECORD_DELETED": "Deleted {type} «{name}»",
+        "SIGN_IN": "Signed in",
+        "SIGN_OUT": "Signed out",
+        "INBOX_MEMBER_ADDED": "Added {name} to the «{inbox}» inbox",
+        "INBOX_MEMBER_REMOVED": "Removed {name} from the «{inbox}» inbox"
+      },
+      "COMMENT": "Reason: «{comment}»"
     }
   }
 }

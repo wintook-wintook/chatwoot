@@ -1081,6 +1081,220 @@ La pantalla llega en F2b.
 
 ---
 
+### Ajustes tras traer develop (02/11/2026)
+
+**Migraciones renumeradas.** `20261029100000` chocaba con `create_access_roles` de develop: en una base que recibiera
+primero develop, la de planes contaría como aplicada y nunca se crearía. Ahora son `20261105100000` (planes) y
+`20261105100100` (licencias por cuenta); si la tabla ya existe no hacen nada (bases donde corrió con el número viejo).
+
+**Menú secundario: Resumen · Cuentas · Planes.** Antes eran pestañas dentro de la página; ahora son opciones del menú
+secundario, una ruta cada una (`licenses_summary`, `licenses_accounts`, `licenses_plans`) sobre la misma pantalla
+(`meta.tab`), sin pestañas. `licenses` (la del menú principal) lleva al Resumen; no es la del Resumen para que el
+menú no la marque activa en Cuentas y Planes. La tarjeta del resumen abre Cuentas con su filtro en la dirección
+(`?estado=&dias=`), así que también se puede compartir. El encabezado dice la sección.
+
+Pruebas: 30 de navegador en verde (menú + `Index` nuevo). Sin probar en navegador.
+
+**Cuentas y Planes con el molde de la lista de plantillas de WhatsApp.** Filtros en un recuadro (búsqueda con lupa,
+listas y «Limpiar filtros»), tabla con encabezado fijo y solo ella con scroll, acciones con íconos junto al nombre y
+paginado con «Por página». Cuentas: buscar, estado (y días si es «por vencer»); asignar licencia e historial como
+íconos; por página 10/25/50/100 (el servidor llega hasta 100); el orden lo pone el servidor. Planes: buscar, tipo y
+activos/desactivados; columnas Plan, Días, Agentes y Cuentas activas se ordenan con clic; editar junto al nombre;
+«Nuevo plan» pasa al encabezado de la página (como «Nueva plantilla»). Los planes no se borran: se desactivan al
+editarlos. Pruebas: 33 de navegador en verde.
+
+**Crear y editar un plan es una página, no un modal.** «Nuevo plan» y el lápiz llevan a `licenses/plans/new` y
+`licenses/plans/:id/edit` (misma pantalla, `meta.tab = plan_form`, `PlanForm.vue`): «‹ Planes» y «Guardar» en el
+encabezado como el editor de plantillas, datos en recuadros (Datos del plan · Canales · Funciones). Al guardar
+regresa a la tabla; salir con cambios sin guardar lo pregunta (guardas `beforeRouteUpdate`/`beforeRouteLeave` de
+`Index.vue`). En el menú sigue marcada «Planes». Sin «Gestionar licencias» o con un plan que no existe, lo dice.
+`PlanModal.vue` se borró. Pruebas: 36 de navegador en verde.
+
+**Cuentas se ordena por columna y muestra sus fechas.** Por omisión, la cuenta creada más reciente primero. Clic en
+Cuenta, Vence, Creada o Última modificación para ordenar (las fechas empiezan de la más reciente; el nombre, de la A);
+mismos íconos que plantillas. Lo ordena el servidor (`sort` = name · expires_at · created_at · updated_at, `dir`,
+lista cerrada: otro valor cae en created_at), porque la tabla se pagina allá; por vencimiento, las cuentas sin licencia
+vigente van al final en los dos sentidos. «Última modificación» dice «—» si la cuenta no cambió después de crearse.
+Estado, Plan y Agentes no se ordenan (se calculan). Pruebas: 16 de servidor y 38 de navegador en verde.
+
+### F5.1 — La licencia en Configuración › General y la fila completa (02/11/2026)
+
+**Qué se hizo.** El cliente ve el estado de su licencia también en **Configuración › General**: una sección «Licencia»
+con el mismo diseño de dos columnas, entre «Configuración general» y el número de cuenta, solo si la cuenta tiene
+licencia (las de fuera de licencia no ven nada, como en F5). Muestra plan, estado (verde / amarillo a 10 días o menos /
+rojo vencida), agentes usados contra el tope con su barra, inicio y vencimiento, y la **fila completa** de licencias por
+activarse, numerada («1.º en fila», «2.º en fila»…) con periodo y agentes; «Ver licencia» lleva a Configuración ›
+Licencia, que ahora también muestra la fila completa (antes solo el siguiente periodo).
+
+```
+ Licencia                     ┌──────────────────────────────────────────────────┐
+ El plan de la cuenta, sus    │ Profesional [Vigente]                Ver licencia │
+ agentes y las licencias      │ Agentes 4 / 5 ▓▓▓▓▓▓▓▓░░  Inicio 01/11  Vence 01/12 │
+ que siguen. Solo lectura.    ├──────────────────────────────────────────────────┤
+                              │ Licencias en fila                                 │
+                              │ Se activan solas, en este orden…                  │
+                              │ [1.º en fila] Semestral  del 01/12 al 30/05 · 5   │
+                              │ [2.º en fila] Anual      del 30/05 al 30/05 · 9   │
+                              └──────────────────────────────────────────────────┘
+```
+
+**Piezas.** `Account#license_summary` manda `queue` (todas las programadas, en el orden en que se activan; `next` sigue
+siendo la primera). `settings/license/LicenseStatusCard.vue` es la tarjeta de las dos pantallas (`compact` en General).
+Pruebas: servidor 23 en verde (`account_license_view_spec` + fila en orden); navegador `LicenseStatusCard.spec.js` 4.
+
+### F6 — Ficha de la cuenta (PLAN, 02/11/2026)
+
+**Qué es.** Una página completa por cuenta (`licenses/accounts/:id`), como la captura de planes: todo lo de la cuenta en
+un lugar y un registro de cada cambio con fecha, hora y quién. Se abre con clic en el nombre (o el ícono «Ver») en la
+tabla de Cuentas; «‹ Cuentas» regresa.
+
+```
+ ‹ Cuentas                                    [Asignar licencia] [Agregar agentes]
+ Grúas del Norte  #568   ● Vigente · Plan Profesional · vence 15/12/2026 (en 43 días)
+
+ ┌ Agentes ─────┐ ┌ Licencia ───────┐ ┌ Funciones ──┐ ┌ Bandejas ──┐
+ │  8 de 10     │ │ Profesional     │ │ 24 activas  │ │ 5          │
+ │  2 libres    │ │ +1 en cola      │ │ 2 fuera del │ │            │
+ │              │ │                 │ │ plan        │ │            │
+ └──────────────┘ └─────────────────┘ └─────────────┘ └────────────┘
+
+  Resumen │ Agentes │ Funciones │ Licencias │ Registro de cambios
+ ──────────────────────────────────────────────────────────────────
+  02/11/2026 14:32  Ana Ruiz    Subió el tope de agentes de 5 a 7 · «pidió 2 más»
+  01/11/2026 09:10  Ana Ruiz    Asignó la licencia «Profesional» (180 días, 5 agentes)
+  30/10/2026 18:05  Juan Pérez  Agregó al agente Luis Gómez (agente)
+  29/10/2026 11:47  Ana Ruiz    Encendió Campañas · apagó Llamadas WhatsApp
+```
+
+**Pestañas.**
+- **Resumen:** tarjetas (agentes usados/tope, licencia y cola, funciones activas y fuera del plan, bandejas) y datos
+  generales (creada, última modificación, suspendida, cuenta de Wintook).
+- **Agentes:** quién está, rol, desde cuándo y cuántos lugares quedan.
+- **Funciones:** canales y funciones de la cuenta con su interruptor, como el super admin; cada una dice si viene en
+  su plan.
+- **Licencias:** la vigente, las de la cola y las anteriores (lo que hoy muestra el modal de historial, incluida
+  «cancelar» una programada).
+- **Registro de cambios:** todo junto y en orden, con filtro por tipo y por fecha.
+
+**Decisiones (02/11/2026).**
+- **D6a Agregar agentes:** se muestra el tope con que se asignó la licencia. «Agregar agentes» **solo sube** el tope de
+  la licencia vigente (p. ej. 5 → 7) sin emitir otra, con motivo opcional, y queda registrado. Bajarlo es asignar una
+  licencia nueva: así nunca deja a alguien fuera de golpe. Solo con «Gestionar licencias».
+- **D6b Funciones:** se encienden y apagan desde la ficha como en el super admin, solo con «Gestionar licencias», y queda
+  registrado. **El plan no las aplica solo** (sigue abierta la 14.1): la pestaña marca qué funciones vienen o no en el
+  plan; más adelante, un botón «Aplicar las del plan».
+- **D6c Registro:** empieza desde que el sistema guarda cambios; lo anterior no aparece.
+
+**Cómo se arma el registro (sin tablas nuevas).** El sistema ya guarda cambios con la gema `audited` (tabla `audits`,
+del módulo enterprise): cuenta (nombre, estado, funciones en `feature_flags`, límites), agentes (`AccountUser`), bandejas,
+equipos, automatizaciones. En dev ya hay cientos. Falta: auditar `AccountLicense` (asignar, subir tope, cancelar,
+vencer) con `associated_with: :account`, y un servicio que lea los cambios de la cuenta y los traduzca a frases en
+español (las funciones salen de comparar los bits de `feature_flags` antes y después). Los que hace el sistema (vencer,
+promover la cola) dicen «Sistema».
+
+**Fases.**
+- **F6.1** Ficha con Resumen, Agentes y Licencias (servidor: `GET licenses/accounts/:id` ampliado).
+- **F6.2** Agregar agentes (D6a) y auditoría de licencias.
+- **F6.3** Funciones con interruptores (D6b).
+- **F6.4** Registro de cambios con filtros.
+
+**A cuidar.** Encender una función desde aquí cambia la cuenta del cliente al momento, igual que el super admin. Los
+cambios hechos en el super admin también salen en el registro, porque es la misma auditoría. El modal de historial se
+sustituye por la pestaña Licencias.
+
+#### F6.1 — Ficha con Resumen, Agentes y Licencias ✅ (02/11/2026)
+
+**Cómo se llega.** En Cuentas, el nombre abre `licenses/accounts/:id` (la ficha); el ícono de historial abre la misma
+ficha en su pestaña Licencias (`?tab=licenses`). En el menú sigue marcada «Cuentas». «‹ Cuentas» regresa.
+
+**Qué tiene.** Encabezado con nombre, número, estado (mismo color que la tabla), plan y vencimiento; acciones
+«‹ Cuentas» y «Asignar licencia» (el formulario de siempre). Cuatro tarjetas: Agentes («8 de 10», «2 libres» o «Sin
+tope»), Licencia (plan y «+N en cola»), Funciones (cuántas encendidas) y Bandejas. Pestañas (en la dirección):
+- **Resumen:** estado de la cuenta, cuenta de Wintook, creada, última modificación, periodo y vencimiento.
+- **Agentes:** nombre, correo, rol y desde cuándo está en la cuenta (fecha de `account_users`, no del usuario).
+- **Licencias:** todas, la más reciente primero, con estado, tipo, agentes, periodo, quién la asignó y notas;
+  cancelar una programada con el ícono. **Sustituye al modal de historial** (`HistoryModal.vue` se borró).
+
+**Servidor.** `GET licenses/accounts/:id` suma `agents`, `inboxes_count` y `enabled_features` (los nombres; los
+interruptores son F6.3). Pruebas: servidor 18 en verde (licencias API, +1 de la ficha); navegador 46 (+4 de la ficha).
+Sin probar en navegador.
+
+**Asignar licencia también es una página** (`licenses/accounts/:id/issue`, `IssueForm.vue`; `IssueModal.vue` se
+borró): «‹ <cuenta>» y «Asignar» en el encabezado, recuadros «Plan y arranque» y «Valores para esta cuenta», al asignar
+regresa a la ficha en Licencias y salir con algo capturado lo pregunta. Se abre desde la tabla y desde la ficha.
+
+#### F6.2 — Agregar agentes y registro de licencias ✅ (02/11/2026)
+
+**En pantalla.** «Agregar agentes» (encabezado de la ficha, con «Gestionar» y licencia vigente) abre un recuadro ahí
+mismo, sin modal: cuántos agregar, motivo opcional y el resultado antes de guardar («Tope: 5 → 7»). Solo sube; para
+bajar, se asigna una licencia nueva (D6a). El tope nuevo vale al momento (Enforcement lee la licencia vigente).
+
+**Servidor.** `POST licenses/account_licenses/:id/add_agents { add, reason }` → `Licenses::AgentIncrease` (solo la
+ACTIVA, de 1 a 1000; el motivo va como comentario del registro). `AccountLicense` ahora es `audited
+associated_with: :account` (sin `updated_at`, `reminded_at`, `metadata`): asignar, subir el tope, cancelar y vencer
+quedan en `audits` con quién y cuándo, listos para F6.4.
+
+**Funciones marcadas en un plan nuevo.** Un plan nuevo arranca con lo que el sistema enciende a toda cuenta nueva:
+`LicensePlan.default_feature_names` = lo encendido en el super admin (`ACCOUNT_LEVEL_FEATURE_DEFAULTS`, la misma fuente
+que `Featurable#enable_default_features`) o, sin esa configuración, lo de `config/features.yml`; llega como
+`default_features` en `GET licenses/plans`. Editar un plan guardado respeta lo suyo.
+
+Pruebas: servidor 61 + 2 (servicio, API, modelo); navegador 51. Sin probar en navegador.
+
+#### F6.3 — Funciones con interruptores ✅ (02/11/2026)
+
+**En pantalla.** Pestaña **Funciones** en la ficha (entre Agentes y Licencias): canales y funciones en dos grupos, cada
+una con el interruptor nativo (`woot-switch`). Buscar y filtrar (Todas · Encendidas · Apagadas · Diferentes al plan).
+Los cambios **se juntan** («3 cambios sin guardar», marcados «Sin guardar») y se aplican con «Guardar cambios» o se
+descartan: un clic por error no apaga un canal al momento; regresar un interruptor a como estaba deja de contar. Salir
+de la ficha con cambios lo pregunta (cambiar de pestaña no). Sin «Gestionar» se ven atenuados y no responden.
+
+**Contra el plan (D6b).** Si la licencia vigente tiene plan, cada función dice «Fuera del plan» (encendida y el plan no
+la trae) o «Viene en el plan» (apagada y el plan sí la trae); la tarjeta Funciones dice cuántas están fuera. El plan no
+las aplica solo (14.1 sigue abierta). Sin plan, no hay con qué comparar y lo dice.
+
+**Servidor.** `PATCH licenses/accounts/:id/features { features: { nombre: true|false } }` (Gestionar): solo nombres de
+`config/features.yml` (los demás se ignoran; sin cambios válidos, 422), enciende y apaga como el super admin y guarda;
+`Account` ya es `audited`, así que el cambio de `feature_flags` queda en el registro con quién y cuándo. La ficha manda
+`plan_features` (las del plan de la licencia vigente, o null).
+
+Pruebas: servidor 21 de la API de licencias (+2); navegador 54 (+4). Sin probar en navegador.
+
+#### F6.4 — Registro de cambios ✅ (02/11/2026) — F6 completa
+
+**En pantalla.** Pestaña **Registro de cambios** (la última de la ficha): fecha y hora, quién (o «Sistema»), un ícono por
+tipo y la frase; el motivo, si lo hay, debajo («Motivo: «pidió dos más»»). Filtros por tipo (Licencias · Agentes ·
+Funciones · Cuenta · Bandejas · Otros · Accesos) y por fechas desde/hasta; 50 por vez con «Cargar más».
+
+```
+ 02/11/2026 14:32  Ana Ruiz   🔒 Cambió el tope de agentes de «Profesional» de 5 a 7
+                                  Motivo: «pidió dos más»
+ 01/11/2026 09:10  Ana Ruiz   🔒 Asignó la licencia «Profesional» (180 días, 5 agentes)
+ 30/10/2026 18:05  Juan Pérez 👥 Agregó a Luis Gómez como Agente
+ 29/10/2026 11:47  Ana Ruiz   ⚙ Encendió: campaigns · Apagó: whatsapp calls
+ 15/12/2026 00:05  Sistema    🔒 La licencia «Demo» pasó de Activa a Vencida
+```
+
+**De dónde sale.** `Licenses::AccountChangeLog` lee `audits` asociados a la cuenta y devuelve eventos estructurados
+(`kind`, `event`, `params`, `comment`); la frase la arma `views/licenses/changeLog.js` con las traducciones
+(`LICENSES.CHANGES`). Eventos: licencias (asignar, tope, estado, otros campos), agentes (entra, rol, sale), agentes en
+bandejas, funciones (se descifra `feature_flags`: la función n es el bit 2^(n−1)), cuenta (suspender / reactivar,
+renombrar, otros campos), bandejas (crear, cambiar con qué campos, borrar), equipos, automatizaciones, macros, webhooks y
+accesos. `GET licenses/accounts/:id/changes?kind=&from=&to=&before=` (Ver licencias).
+
+**Lo que se deja fuera.** La sincronización automática de plantillas de una bandeja (casi todo el ruido: 891 de 1 570 en
+dev), los cambios de disponibilidad de un agente y, salvo que se elijan, los accesos (entrar y salir).
+
+**Cambio en enterprise.** `Enterprise::Audit::AccountUser` ahora también registra `destroy` (quitar a un agente de la
+cuenta), que antes no quedaba; el registro de eso empieza desde ahora. El nombre del agente en un cambio de rol sale del
+registro de cuando entró, aunque ya no esté.
+
+Pruebas: servidor 77 de licencias en verde (`account_change_log_spec` 8 con casos reales: tope con motivo, vencer por el
+sistema, entra-rol-sale, funciones, suspender/renombrar, plantillas fuera, bandeja de un agente, paginar y fechas);
+navegador 61 (`changeLog.spec.js` 6 + pestaña). Probado en dev contra la cuenta 2 (solo lectura): sale sin errores.
+Sin probar en navegador. Falla de antes, no de licencias: `spec/enterprise/models/account_user_spec.rb:23`
+(Roles-Permisos da `report_manage`).
+
 ### Bitácora de versiones
 
 | Versión | Fecha | Cambios |

@@ -1,7 +1,8 @@
 # ================================================================================
 # feat/licencias (F2) — CATÁLOGO DE PLANES
 # ================================================================================
-# GET   …/licenses/plans        → { plans, available_features }
+# GET   …/licenses/plans        → { plans, available_features, default_features }
+#   default_features: lo que el sistema enciende a toda cuenta nueva (un plan nuevo arranca así)
 # POST  …/licenses/plans        (Gestionar)
 # PATCH …/licenses/plans/:id    (Gestionar)
 # No se borran: se desactivan (active: false). Las licencias ya emitidas guardan su copia.
@@ -10,7 +11,8 @@ class Api::V1::Accounts::Licenses::PlansController < Api::V1::Accounts::Licenses
   before_action :check_manage_permission, only: [:create, :update]
 
   def index
-    render json: { plans: LicensePlan.ordered.map { |plan| plan_json(plan) }, available_features: LicensePlan.feature_names }
+    render json: { plans: LicensePlan.ordered.map { |plan| plan_json(plan) }, available_features: LicensePlan.feature_names,
+                   default_features: LicensePlan.default_feature_names }
   end
 
   def create

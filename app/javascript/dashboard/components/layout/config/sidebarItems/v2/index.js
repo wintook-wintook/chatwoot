@@ -769,14 +769,37 @@ const ajustes = accountId => {
 // feat/licencias
 const licencias = accountId => ({
   parentNav: 'licenses',
-  routes: ['licenses_index'],
+  routes: [
+    'licenses_index',
+    'licenses_summary',
+    'licenses_accounts',
+    'licenses_accounts_show',
+    'licenses_accounts_issue',
+    'licenses_plans',
+    'licenses_plans_new',
+    'licenses_plans_edit',
+  ],
   menuItems: [
     {
-      icon: 'lock-shield',
-      label: 'LICENSES',
+      icon: 'arrow-trending-lines',
+      label: 'LICENSES_SUMMARY',
       hasSubMenu: false,
-      toState: frontendURL(`accounts/${accountId}/licenses`),
-      toStateName: 'licenses_index',
+      toState: frontendURL(`accounts/${accountId}/licenses/summary`),
+      toStateName: 'licenses_summary',
+    },
+    {
+      icon: 'building-bank',
+      label: 'LICENSES_ACCOUNTS',
+      hasSubMenu: false,
+      toState: frontendURL(`accounts/${accountId}/licenses/accounts`),
+      toStateName: 'licenses_accounts',
+    },
+    {
+      icon: 'document',
+      label: 'LICENSES_PLANS',
+      hasSubMenu: false,
+      toState: frontendURL(`accounts/${accountId}/licenses/plans`),
+      toStateName: 'licenses_plans',
     },
   ],
 });

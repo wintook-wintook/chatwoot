@@ -203,9 +203,17 @@ Rails.application.routes.draw do
           namespace :licenses do
             resource :summary, only: [:show], controller: 'summary'
             resources :plans, only: [:index, :create, :update]
-            resources :accounts, only: [:index, :show]
+            resources :accounts, only: [:index, :show] do
+              member do
+                patch :features # F6.3: encender y apagar funciones
+                get :changes # F6.4: registro de cambios
+              end
+            end
             resources :account_licenses, only: [:create] do
-              member { post :cancel }
+              member do
+                post :cancel
+                post :add_agents # F6.2: subir el tope de la vigente
+              end
             end
           end
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates

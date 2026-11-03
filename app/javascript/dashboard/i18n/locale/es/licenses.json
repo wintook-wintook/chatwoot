@@ -20,7 +20,9 @@
         "PLAN": "Plan",
         "AGENTS": "Agentes",
         "EXPIRES": "Vence",
-        "ACTIONS": "Acciones"
+        "ACTIONS": "Acciones",
+        "CREATED": "Creada",
+        "UPDATED": "Última modificación"
       },
       "QUEUED": "+{count} en cola",
       "DAYS_LEFT": "en {count} días",
@@ -47,12 +49,18 @@
         "AGENTS": "Agentes",
         "TYPE": "Tipo",
         "FEATURES": "Canales y funciones",
-        "ACCOUNTS": "Cuentas activas"
+        "ACCOUNTS": "Cuentas activas",
+        "ACTIONS": "Acciones"
       },
       "SIGNUP": "De registro",
       "INACTIVE": "Desactivado",
       "FEATURES_COUNT": "{count} incluidas",
-      "EDIT": "Editar"
+      "EDIT": "Editar",
+      "SEARCH": "Nombre del plan…",
+      "ALL_TYPES": "Todos los tipos",
+      "ALL_STATUSES": "Activos y desactivados",
+      "ONLY_ACTIVE": "Solo activos",
+      "ONLY_INACTIVE": "Solo desactivados"
     },
     "TYPE": {
       "DEMO": "Demo",
@@ -74,7 +82,17 @@
       "SAVE": "Guardar",
       "CANCEL": "Cancelar",
       "SAVED": "Plan guardado.",
-      "ERROR": "No se pudo guardar el plan."
+      "ERROR": "No se pudo guardar el plan.",
+      "DATA": "Datos del plan",
+      "NOT_FOUND": "Ese plan no existe.",
+      "NO_MANAGE": "Para crear o editar planes necesitas el permiso «Gestionar licencias».",
+      "LEAVE": {
+        "TITLE": "¿Salir sin guardar?",
+        "DESCRIPTION": "Tienes cambios en el plan que no se han guardado. Si sales ahora, se pierden.",
+        "CONFIRM": "Salir sin guardar",
+        "CANCEL": "Seguir editando"
+      },
+      "DEFAULTS_HINT": " Ya vienen marcadas las que el sistema enciende a toda cuenta nueva; quita o agrega las que quieras."
     },
     "ISSUE": {
       "TITLE": "Asignar licencia a {name}",
@@ -89,19 +107,20 @@
       "DAYS": "Días",
       "NOTES": "Notas (opcional)",
       "SUBMIT": "Asignar",
-      "CANCEL": "Cancelar",
       "DONE": "Licencia asignada.",
-      "ERROR": "No se pudo asignar la licencia."
+      "ERROR": "No se pudo asignar la licencia.",
+      "SECTION_PLAN": "Plan y arranque",
+      "SECTION_VALUES": "Valores para esta cuenta",
+      "NO_MANAGE": "Para asignar licencias necesitas el permiso «Gestionar licencias».",
+      "LEAVE_DESCRIPTION": "Tienes una licencia a medio capturar. Si sales ahora, no se asigna."
     },
     "HISTORY": {
-      "TITLE": "Licencias de {name}",
       "EMPTY": "Esta cuenta nunca ha tenido licencia.",
       "FROM_TO": "{from} → {to}",
       "BY": "por {name}",
       "CANCEL": "Cancelar",
       "CANCELLED": "Licencia programada cancelada.",
-      "CANCEL_ERROR": "No se pudo cancelar.",
-      "CLOSE": "Cerrar"
+      "CANCEL_ERROR": "No se pudo cancelar."
     },
     "STATUS": {
       "ACTIVE": "Activa",
@@ -149,9 +168,15 @@
       "EXPIRES": "Vence",
       "DAYS_LEFT": "Quedan {count} días",
       "EXPIRED_HINT": "La licencia venció. Para renovarla, ponte en contacto con nosotros.",
-      "NEXT_TITLE": "Siguiente periodo",
-      "NEXT_TEXT": "{name}: del {from} al {to}, con {agents} agentes. Empieza solo cuando termine el actual.",
-      "READ_ONLY": "Solo lectura. Para cambiar de plan o renovar, ponte en contacto con nosotros."
+      "READ_ONLY": "Solo lectura. Para cambiar de plan o renovar, ponte en contacto con nosotros.",
+      "SEE_LICENSE": "Ver licencia",
+      "GENERAL_NOTE": "El plan de la cuenta, sus agentes y las licencias que siguen. Solo lectura: para cambiarla, ponte en contacto con nosotros.",
+      "QUEUE_TITLE": "Licencias en fila",
+      "QUEUE_EMPTY": "No hay licencias por activarse.",
+      "QUEUE_HINT": "Se activan solas, en este orden, cuando termina la anterior.",
+      "QUEUE_POSITION": "{position}.º en fila",
+      "QUEUE_PERIOD": "del {from} al {to}",
+      "QUEUE_AGENTS": "{count} agentes"
     },
     "BANNER": {
       "MESSAGE": "Tu licencia vence en {count} días. Si no se renueva, la cuenta se suspende.",
@@ -160,6 +185,158 @@
     "SUSPENDED": {
       "TITLE": "Tu licencia venció",
       "MESSAGE": "Nadie puede entrar a esta cuenta hasta que se renueve la licencia. Los mensajes de tus clientes se siguen guardando y estarán aquí al renovar. Ponte en contacto con nosotros para renovarla."
+    },
+    "LIST": {
+      "PER_PAGE": "Por página",
+      "CLEAR": "Limpiar filtros",
+      "EMPTY_FILTERED": "Ningún resultado con estos filtros."
+    },
+    "DETAIL": {
+      "LOADING": "Cargando la cuenta…",
+      "NOT_FOUND": "Esa cuenta no existe.",
+      "EXPIRES_ON": "vence el {date}",
+      "CARD_AGENTS_OF": "{used} de {max}",
+      "NO_LIMIT": "Sin tope",
+      "FREE_SEATS": "{count} libres",
+      "NO_QUEUE": "Sin licencias en fila",
+      "FEATURES_HINT": "encendidas",
+      "ACTIVE": "Activa",
+      "YES": "Sí",
+      "NO": "No",
+      "NO_AGENTS": "Esta cuenta no tiene agentes.",
+      "CARDS": {
+        "AGENTS": "Agentes",
+        "LICENSE": "Licencia",
+        "FEATURES": "Funciones",
+        "INBOXES": "Bandejas"
+      },
+      "TABS": {
+        "SUMMARY": "Resumen",
+        "AGENTS": "Agentes",
+        "FEATURES": "Funciones",
+        "LICENSES": "Licencias",
+        "CHANGES": "Registro de cambios"
+      },
+      "GENERAL": {
+        "STATUS": "Estado de la cuenta",
+        "INTERNAL": "Cuenta de Wintook",
+        "CREATED": "Creada",
+        "UPDATED": "Última modificación",
+        "PERIOD": "Periodo de la licencia",
+        "EXPIRES_IN": "Vencimiento"
+      },
+      "AGENTS_TABLE": {
+        "NAME": "Nombre",
+        "EMAIL": "Correo",
+        "ROLE": "Rol",
+        "JOINED": "En la cuenta desde"
+      },
+      "ROLES": {
+        "ADMINISTRATOR": "Administrador",
+        "AGENT": "Agente"
+      },
+      "LICENSES_TABLE": {
+        "LICENSE": "Licencia",
+        "ACTIONS": "Acciones",
+        "STATUS": "Estado",
+        "TYPE": "Tipo",
+        "AGENTS": "Agentes",
+        "PERIOD": "Periodo",
+        "BY": "Asignada por"
+      },
+      "ADD_AGENTS": {
+        "BUTTON": "Agregar agentes",
+        "INTRO": "Agregar agentes a la licencia «{name}» (hoy: {max}).",
+        "HOW_MANY": "Agentes a agregar",
+        "REASON": "Motivo (opcional)",
+        "REASON_PLACEHOLDER": "p. ej. el cliente pidió dos lugares más",
+        "RESULT": "Tope: {from} → {to}",
+        "SAVE": "Guardar",
+        "CANCEL": "Cancelar",
+        "HINT": "Solo sube el tope de la licencia vigente. Para bajarlo, asigna una licencia nueva. El cambio queda en el registro.",
+        "DONE": "Listo: el tope quedó en {total} agentes.",
+        "ERROR": "No se pudieron agregar los agentes."
+      },
+      "FEATURES_OUTSIDE": "{count} fuera del plan",
+      "FEATURES_SEARCH": "Buscar función…",
+      "FEATURE_FILTERS": {
+        "ALL": "Todas",
+        "ON": "Encendidas",
+        "OFF": "Apagadas",
+        "OUTSIDE": "Diferentes al plan"
+      },
+      "FEATURES_PENDING": "{count} cambios sin guardar",
+      "FEATURES_DISCARD": "Descartar",
+      "FEATURES_SAVE": "Guardar cambios",
+      "FEATURES_INTRO": "Encender o apagar aquí cambia la cuenta del cliente al guardar, igual que en el super admin. Queda en el registro.",
+      "FEATURES_READ_ONLY": "Para encender o apagar funciones necesitas el permiso «Gestionar licencias».",
+      "FEATURES_NO_PLAN": "Esta cuenta no tiene licencia con plan: no hay con qué comparar.",
+      "FEATURE_PENDING": "Sin guardar",
+      "FEATURE_OUTSIDE": "Fuera del plan",
+      "FEATURE_MISSING": "Viene en el plan",
+      "FEATURES_SAVED": "Listo: {count} cambios guardados.",
+      "FEATURES_ERROR": "No se pudieron guardar las funciones.",
+      "FEATURES_LEAVE": "Tienes funciones encendidas o apagadas sin guardar. Si sales ahora, no se aplican."
+    },
+    "CHANGES": {
+      "SYSTEM": "Sistema",
+      "LOAD_MORE": "Cargar más",
+      "EMPTY": "No hay cambios con este filtro.",
+      "SINCE": "Desde",
+      "UNTIL": "Hasta",
+      "ALL_KINDS": "Todo",
+      "HINT": "Empieza desde que el sistema guarda cambios. No salen la sincronización automática de plantillas ni los cambios de disponibilidad; los accesos, solo si los eliges.",
+      "KINDS": {
+        "LICENSES": "Licencias",
+        "AGENTS": "Agentes",
+        "FEATURES": "Funciones",
+        "ACCOUNT": "Cuenta",
+        "INBOXES": "Bandejas",
+        "OTHER": "Otros",
+        "ACCESS": "Accesos"
+      },
+      "FIELDS": {
+        "NAME": "nombre",
+        "STATUS": "estado",
+        "LOCALE": "idioma",
+        "DOMAIN": "dominio",
+        "SUPPORT_EMAIL": "correo de soporte",
+        "LIMITS": "límites",
+        "CUSTOM_ATTRIBUTES": "configuración interna",
+        "AUTO_RESOLVE_DURATION": "resolución automática"
+      },
+      "TYPES": {
+        "TEAM": "el equipo",
+        "AUTOMATIONRULE": "la automatización",
+        "MACRO": "la macro",
+        "WEBHOOK": "el webhook"
+      },
+      "EVENTS": {
+        "LICENSE_CREATED": "Asignó la licencia «{name}» ({days} días, {agents} agentes)",
+        "LICENSE_AGENTS": "Cambió el tope de agentes de «{name}» de {from} a {to}",
+        "LICENSE_STATUS": "La licencia «{name}» pasó de {from} a {to}",
+        "LICENSE_CHANGED": "Cambió la licencia «{name}» ({fields})",
+        "AGENT_ADDED": "Agregó a {name} como {role}",
+        "AGENT_ROLE": "Cambió el rol de {name} de {from} a {to}",
+        "AGENT_REMOVED": "Quitó a {name} de la cuenta",
+        "FEATURES_ON": "Encendió: {list}",
+        "FEATURES_OFF": "Apagó: {list}",
+        "ACCOUNT_SUSPENDED": "Suspendió la cuenta",
+        "ACCOUNT_REACTIVATED": "Reactivó la cuenta",
+        "ACCOUNT_RENAMED": "Cambió el nombre de «{from}» a «{to}»",
+        "ACCOUNT_CHANGED": "Cambió la cuenta ({fields})",
+        "INBOX_CREATED": "Creó la bandeja «{name}»",
+        "INBOX_CHANGED": "Cambió la bandeja «{name}» ({fields})",
+        "INBOX_DELETED": "Borró la bandeja «{name}»",
+        "RECORD_CREATED": "Creó {type} «{name}»",
+        "RECORD_CHANGED": "Cambió {type} «{name}»",
+        "RECORD_DELETED": "Borró {type} «{name}»",
+        "SIGN_IN": "Entró al sistema",
+        "SIGN_OUT": "Salió del sistema",
+        "INBOX_MEMBER_ADDED": "Agregó a {name} a la bandeja «{inbox}»",
+        "INBOX_MEMBER_REMOVED": "Quitó a {name} de la bandeja «{inbox}»"
+      },
+      "COMMENT": "Motivo: «{comment}»"
     }
   }
 }

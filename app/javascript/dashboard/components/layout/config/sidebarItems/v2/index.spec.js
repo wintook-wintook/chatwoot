@@ -359,6 +359,16 @@ describe('Menú v2', () => {
     expect(menuFor(route('licenses_index')).parentNav).toBe('licenses');
   });
 
+  it('el menú de Licencias es Resumen, Cuentas y Planes', () => {
+    const licencias = menuFor(route('licenses_plans'));
+    expect(licencias.parentNav).toBe('licenses');
+    expect(licencias.menuItems.map(i => i.toStateName)).toEqual([
+      'licenses_summary',
+      'licenses_accounts',
+      'licenses_plans',
+    ]);
+  });
+
   it('la configuración de casos queda en Ajustes', () => {
     expect(menuFor(route('gestorTickets_rules')).parentNav).toBe('settings');
     const ajustes = menuFor(route('agent_list'));

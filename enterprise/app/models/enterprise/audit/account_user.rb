@@ -8,6 +8,6 @@ module Enterprise::Audit::AccountUser
       :account_id,
       :inviter_id,
       :user_id
-    ], on: [:create, :update], associated_with: :account
+    ], on: [:create, :update, :destroy], associated_with: :account # destroy: feat/licencias F6.4 (quitar agente)
   end
 end

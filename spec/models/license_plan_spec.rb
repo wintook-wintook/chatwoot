@@ -29,4 +29,25 @@ RSpec.describe LicensePlan do
 
     expect(described_class.signup_default_plan).to be_nil
   end
+
+  # Un plan nuevo arranca con lo que el sistema enciende a toda cuenta nueva.
+  describe '.default_feature_names' do
+    it 'usa lo que el super admin dejó encendido por defecto' do
+      InstallationConfig.where(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').delete_all
+      create(:installation_config, name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS',
+                                   value: [{ 'name' => 'channel_whatsapp', 'enabled' => true },
+                                           { 'name' => 'macros', 'enabled' => false },
+                                           { 'name' => 'no_existe', 'enabled' => true }])
+
+      expect(described_class.default_feature_names).to eq(['channel_whatsapp'])
+    end
+
+    it 'sin esa configuración, lo que trae config/features.yml' do
+      InstallationConfig.where(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').delete_all
+
+      esperadas = Featurable::FEATURE_LIST.select { |f| f['enabled'] }.pluck('name')
+      expect(described_class.default_feature_names).to match_array(esperadas)
+      expect(described_class.default_feature_names).to include('channel_email')
+    end
+  end
 end

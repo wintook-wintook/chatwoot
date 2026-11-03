@@ -53,6 +53,16 @@ class LicensePlan < ApplicationRecord
     Featurable::FEATURE_LIST.pluck('name')
   end
 
+  # Lo que el sistema enciende a toda cuenta nueva (Featurable#enable_default_features): lo que el
+  # super admin dejó encendido por defecto, o, sin esa configuración, lo de config/features.yml.
+  # Un plan nuevo arranca con esto marcado.
+  def self.default_feature_names
+    config = InstallationConfig.find_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS')
+    lista = config.present? ? Array(config.value) : Featurable::FEATURE_LIST
+    lista.select { |feature| feature.with_indifferent_access[:enabled] }.map { |feature| feature.with_indifferent_access[:name] } &
+      feature_names
+  end
+
   private
 
   # Solo nombres que existen en config/features.yml (la lista se lee en vivo: §11 del plan).

@@ -25,6 +25,20 @@ RSpec.describe 'La cuenta y su licencia', type: :request do
     expect(license['next']).to include('max_agents' => 6)
   end
 
+  it 'manda toda la fila de licencias por activarse, en orden' do
+    create(:account_license, account: account, name: 'Profesional', expires_at: 8.days.from_now)
+    create(:account_license, account: account, name: 'Anual', status: :scheduled, max_agents: 9,
+                             starts_at: 200.days.from_now, expires_at: 565.days.from_now)
+    create(:account_license, account: account, name: 'Semestral', status: :scheduled, max_agents: 7,
+                             starts_at: 8.days.from_now, expires_at: 200.days.from_now)
+
+    get "/api/v1/accounts/#{account.id}", headers: admin.create_new_auth_token, as: :json
+
+    license = response.parsed_body['license']
+    expect(license['queue'].pluck('name')).to eq(%w[Semestral Anual])
+    expect(license['next']).to include('name' => 'Semestral')
+  end
+
   it 'el usuario sabe si su cuenta venció por licencia (para la pantalla de suspendida)' do
     create(:account_license, account: account, status: :expired)
 

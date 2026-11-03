@@ -9,10 +9,15 @@ import { FEATURE_FLAGS } from '../../../../featureFlags';
 import semver from 'semver';
 import AccountBrandSettings from './AccountBrandSettings.vue'; // feat/apariencia B1
 import AccountAssistantSettings from './AccountAssistantSettings.vue'; // Asistente (Dali)
+import LicenseStatusCard from '../license/LicenseStatusCard.vue'; // feat/licencias
 import { getLanguageDirection } from 'dashboard/components/widgets/conversation/advancedFilterItems/languages';
 
 export default {
-  components: { AccountBrandSettings, AccountAssistantSettings },
+  components: {
+    AccountBrandSettings,
+    AccountAssistantSettings,
+    LicenseStatusCard,
+  },
   setup() {
     const { updateUISettings } = useUISettings();
     const { enabledLanguages } = useConfig();
@@ -48,10 +53,16 @@ export default {
     ...mapGetters({
       globalConfig: 'globalConfig/get',
       getAccount: 'accounts/getAccount',
+      currentAccountHasLicense: 'accounts/currentAccountHasLicense',
       uiFlags: 'accounts/getUIFlags',
       accountId: 'getCurrentAccountId',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
     }),
+    // feat/licencias: la licencia viene con la cuenta (accounts/show).
+    accountLicense() {
+      const account = this.getAccount(this.accountId);
+      return (account && account.license) || null;
+    },
     showAutoResolutionConfig() {
       return this.isFeatureEnabledonAccount(
         this.accountId,
@@ -247,6 +258,24 @@ export default {
               {{ $t('GENERAL_SETTINGS.FORM.AUTO_RESOLVE_DURATION.ERROR') }}
             </span>
           </label>
+        </div>
+      </div>
+
+      <!-- feat/licencias: el estado de su licencia y la fila por activarse (solo lectura). -->
+      <div
+        v-if="currentAccountHasLicense && accountLicense"
+        class="flex flex-row p-4 border-b border-slate-25 dark:border-slate-800"
+      >
+        <div
+          class="flex-grow-0 flex-shrink-0 flex-[25%] min-w-0 py-4 pr-6 pl-0"
+        >
+          <h4 class="text-lg font-medium text-black-900 dark:text-slate-200">
+            {{ $t('LICENSES.ACCOUNT_VIEW.TITLE') }}
+          </h4>
+          <p>{{ $t('LICENSES.ACCOUNT_VIEW.GENERAL_NOTE') }}</p>
+        </div>
+        <div class="p-4 flex-grow-0 flex-shrink-0 flex-[50%]">
+          <LicenseStatusCard :license="accountLicense" compact />
         </div>
       </div>
 
