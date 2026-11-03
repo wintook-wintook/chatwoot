@@ -84,6 +84,8 @@ import TestsPanel from './assistant/TestsPanel.vue';
 import ConstantPicker from './assistant/ConstantPicker.vue';
 // FD: el boceto de rutas probadas, dibujado, mientras se conversa.
 import DraftingSketch from './assistant/DraftingSketch.vue';
+import DraftingFields from './assistant/DraftingFields.vue';
+import { fieldsOf, filledCount } from './assistant/draftingFields';
 import { insertConstant, percentTriggerAt } from './assistant/constantPicker';
 import { readConstants } from './assistant/agentConstants';
 import { heatFromCases } from './assistant/testPath';
@@ -150,6 +152,7 @@ export default {
     TestsPanel,
     ConstantPicker,
     DraftingSketch,
+    DraftingFields,
     SaveModal,
   },
   mixins: [trainingSectionsMixin],
@@ -291,6 +294,15 @@ export default {
     };
   },
   computed: {
+    // F3: cuántas de Definición, Variables y Datos fijos llenó la conversación.
+    draftingFieldsCount() {
+      return filledCount(this.proposal);
+    },
+    // La pestaña se ve mientras se arma conversando (sin Entrenamiento todavía) o
+    // si ya está abierta.
+    showFieldsTab() {
+      return !this.draft.trim() || this.draftTab === 'fields';
+    },
     // F2: los nombres de [DATOS FIJOS] del borrador, para la lista que abre «%».
     draftConstantNames() {
       return readConstants(this.trainingStructure?.blocks || []).constants.map(
@@ -1053,12 +1065,28 @@ export default {
         const { data } = await AssistantAPI.draftingChat(
           this.messages,
           this.instructions,
-          { sessionId: this.sessionId, routes: this.draftingRoutes }
+          {
+            sessionId: this.sessionId,
+            routes: this.draftingRoutes,
+            fields: fieldsOf(this.proposal),
+          }
         );
         this.sessionId = data.session_id || this.sessionId;
         if (data.session) this.sessionMeta = data.session;
         this.messages.push({ role: 'assistant', content: data.reply });
         if (data.instructions) this.instructions = data.instructions;
+        // F3: la primera vez que la conversación llena algo, se muestra (si no
+        // se está mostrando ya el boceto).
+        const antes = this.draftingFieldsCount;
+        if (data.fields)
+          this.proposal = { ...(this.proposal || {}), ...data.fields };
+        if (
+          !antes &&
+          this.draftingFieldsCount &&
+          this.draftTab === 'editor' &&
+          !this.draft.trim()
+        )
+          this.draftTab = 'fields';
         // La primera vez que llegan rutas y no hay Entrenamiento, se muestran (FD).
         if (data.routes && !this.draftingRoutes && !this.draft.trim())
           this.draftTab = 'sketch';
@@ -1072,6 +1100,17 @@ export default {
         this.messages.push({ role: 'assistant', content: reason });
       } finally {
         this.isThinking = false;
+      }
+    },
+    // F3: lo corregido a mano en la pestaña. Sin conversación todavía, queda en
+    // memoria y viaja con el siguiente mensaje.
+    async updateDraftingFields(valores) {
+      this.proposal = { ...(this.proposal || {}), ...valores };
+      if (!this.sessionId) return;
+      try {
+        await AssistantAPI.saveDraftingFields(this.sessionId, valores);
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.FIELDS_SAVE_ERROR'));
       }
     },
     // «Crear el Entrenamiento» desde las instrucciones de la conversación: entran
@@ -1768,6 +1807,24 @@ export default {
                         })
                       }}
                     </button>
+                    <!-- crear_agente_conversando F3: Definición, Variables y Datos
+                         fijos, que la conversación va llenando. -->
+                    <button
+                      v-if="showFieldsTab"
+                      class="mr-3 pb-0.5 border-b-2"
+                      :class="
+                        draftTab === 'fields'
+                          ? 'border-woot-500'
+                          : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                      "
+                      @click="draftTab = 'fields'"
+                    >
+                      {{
+                        $t('TRACKING_ASSISTANT_VIEW.PANEL_FIELDS', {
+                          count: draftingFieldsCount,
+                        })
+                      }}
+                    </button>
                     <!-- proyecto@adaptar_prompts_publicados: lo que usa de la cuenta.
                          Siempre a la vista: aunque no falte nada, ahí se cambia una
                          fuente por otra y la IA busca datos de otro negocio. -->
@@ -1872,8 +1929,15 @@ export default {
                     {{ $t('TRACKING_ASSISTANT_VIEW.COPY_DRAFT') }}
                   </woot-button>
                 </div>
+                <DraftingFields
+                  v-if="draftTab === 'fields'"
+                  :proposal="proposal"
+                  :can-proofread="canExplainTraining"
+                  :inbox-id="inboxId"
+                  @update="updateDraftingFields"
+                />
                 <DraftingSketch
-                  v-if="draftTab === 'sketch'"
+                  v-else-if="draftTab === 'sketch'"
                   :routes="draftingRoutes"
                   :tests="draftingTests"
                 />
