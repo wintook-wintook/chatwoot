@@ -168,7 +168,8 @@ class ContactTrackings::Assistant::DraftingChat
   def result_from(raw)
     nuevas = clean(raw['instrucciones'])
     { reply: raw['mensaje'].to_s.strip, instructions: nuevas || @instructions, changed: nuevas.present?,
-      routes: clean_routes(raw['boceto']) || @routes.presence, tools_used: @tool_loop&.log || [] }
+      routes: clean_routes(raw['boceto']) || clean_routes(@tool_loop&.last_routes) || @routes.presence,
+      tools_used: @tool_loop&.log || [] }
   end
 
   def history

@@ -27,6 +27,12 @@ class ContactTrackings::Assistant::AssistantTools
   MAX_FINDINGS = 8
   MAX_HITS = 3
   MAX_EXCERPT = 240
+  # Medido el 03/11/2026 en la cuenta 2: con el umbral de la cuenta (0.20), «¿cuánto cuesta
+  # una sesión de terapia?» trae «PATITAS PRECIO CONSULTA GENERAL» (una veterinaria) con
+  # 0.43 y «pasa». Lo que de verdad contesta la frase anda arriba de ~0.55.
+  STRONG_SIMILARITY = 0.55
+  HITS_NOTE = 'pasa_umbral = el agente lo usaría para contestar. parecido_bajo = probablemente NO es lo que pregunta. ' \
+              'Revisa el extracto: si no contesta la frase o es de otro negocio, esa fuente daría una respuesta equivocada.'
   MANUAL_PATH = Rails.root.join('docs/motor_agentes_ia_manual.md')
   EMBED_MODEL = 'text-embedding-3-small'
   # Las fuentes que se buscan aquí mismo (knowledge_items con embedding). El foro y
@@ -90,6 +96,14 @@ class ContactTrackings::Assistant::AssistantTools
     { error: e.message.truncate(200) }.to_json
   end
 
+  # Para la guardia de DraftingToolLoop: lo que impediría que el motor ejecute el boceto
+  # (vacío si está bien o si no hay boceto).
+  def route_errors(rutas)
+    return [] if rutas.blank?
+
+    findings(ContactTrackings::Assistant::ValidatorService.new(rutas.to_s, account: @account).call[:blocking])
+  end
+
   private
 
   # ── ver_recursos ────────────────────────────────────────────────────────────
@@ -129,11 +143,11 @@ class ContactTrackings::Assistant::AssistantTools
 
     umbral = KnowledgeBaseResponseService.kbase_setting(@account, 'similarity_threshold').to_f
     encontrados = scope_for(fuente).search_by_embedding(embedding, limit: MAX_HITS, threshold: 0).to_a
-    { fuente: fuente.name, frase: frase, umbral: umbral,
+    { fuente: fuente.name, frase: frase, umbral: umbral, nota: HITS_NOTE,
       encontrado: encontrados.map do |item|
         parecido = (1 - item.neighbor_distance).round(2)
         { titulo: item.title.to_s.truncate(80), extracto: item.content.to_s.squish.truncate(MAX_EXCERPT),
-          parecido: parecido, pasa_umbral: parecido >= umbral }
+          parecido: parecido, pasa_umbral: parecido >= umbral, parecido_bajo: parecido < STRONG_SIMILARITY }
       end }
   end
 
