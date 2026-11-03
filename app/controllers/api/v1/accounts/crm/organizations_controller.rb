@@ -1,6 +1,6 @@
 # CrmZeus O1 — organizaciones (clientes y prospectos).
 #
-#   GET    /crm/organizations          ?type=customer|prospect &q= &status= &seller_id= &page=
+#   GET    /crm/organizations          ?type=customer|prospect &q= &status= &seller_id= &page=  (con contacts_count)
 #   GET    /crm/organizations/:id      con domicilio y consignatarios
 #   POST   /crm/organizations          { organization: {..., home_address_attributes: {...}} }
 #   PATCH  /crm/organizations/:id
@@ -21,8 +21,7 @@ class Api::V1::Accounts::Crm::OrganizationsController < Api::V1::Accounts::Crm::
     scope = filtered
     page = [params[:page].to_i, 1].max
     render json: {
-      organizations: scope.includes(*Crm::OrganizationJson::LIST_INCLUDES).order(:trade_name, :id)
-                          .offset((page - 1) * PER_PAGE).limit(PER_PAGE).map { |org| Crm::OrganizationJson.list_item(org) },
+      organizations: list_items(scope, page),
       meta: { count: scope.count, page: page, per_page: PER_PAGE, counts: type_counts, can_edit: access_grant.writable?(:sales) }
     }
   end
@@ -60,6 +59,14 @@ class Api::V1::Accounts::Crm::OrganizationsController < Api::V1::Accounts::Crm::
 
   def organizations
     Current.account.crm_organizations
+  end
+
+  # Una página de la lista, con cuántos contactos tiene ligados cada organización.
+  def list_items(scope, page)
+    rows = scope.includes(*Crm::OrganizationJson::LIST_INCLUDES).order(:trade_name, :id)
+                .offset((page - 1) * PER_PAGE).limit(PER_PAGE).to_a
+    contacts = CrmOrganizationContact.where(organization_id: rows.map(&:id)).group(:organization_id).count
+    rows.map { |org| Crm::OrganizationJson.list_item(org).merge(contacts_count: contacts[org.id].to_i) }
   end
 
   def filtered

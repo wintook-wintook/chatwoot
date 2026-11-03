@@ -219,6 +219,9 @@ export default {
             <th class="px-3 py-2">
               {{ $t('CRM_ZEUS.ORGANIZATIONS.COLUMNS.PHONE') }}
             </th>
+            <th class="px-3 py-2 text-center">
+              {{ $t('CRM_ZEUS.ORGANIZATIONS.COLUMNS.CONTACTS') }}
+            </th>
             <th class="px-3 py-2">
               {{ $t('CRM_ZEUS.ORGANIZATIONS.COLUMNS.CITY') }}
             </th>
@@ -247,6 +250,9 @@ export default {
             <td class="px-3 py-2">{{ row.seller ? row.seller.name : '—' }}</td>
             <td class="px-3 py-2">{{ row.rating ? row.rating.name : '—' }}</td>
             <td class="px-3 py-2 whitespace-nowrap">{{ row.phone || '—' }}</td>
+            <td class="px-3 py-2 text-center">
+              {{ row.contacts_count || '—' }}
+            </td>
             <td class="px-3 py-2">{{ row.city || '—' }}</td>
             <td class="px-3 py-2">
               <span

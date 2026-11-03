@@ -42,6 +42,14 @@ RSpec.describe 'CrmZeus Organizations API' do
       expect(response.parsed_body['meta']['can_edit']).to be(true)
     end
 
+    it 'trae cuántos contactos tiene ligados cada organización' do
+      aceros = account.crm_organizations.find_by(trade_name: 'Aceros del Norte')
+      2.times { |i| aceros.contact_links.create!(contact: create(:contact, account: account, email: "c#{i}@aceros.mx")) }
+      get url, headers: admin.create_new_auth_token, as: :json
+      counts = response.parsed_body['organizations'].to_h { |org| [org['trade_name'], org['contacts_count']] }
+      expect(counts).to eq('Aceros del Norte' => 2, 'Fit' => 0, 'La Paz' => 0)
+    end
+
     it 'sin Ventas (Técnico) no entra' do
       give_role(agent, 'technician')
       get url, headers: agent.create_new_auth_token, as: :json
