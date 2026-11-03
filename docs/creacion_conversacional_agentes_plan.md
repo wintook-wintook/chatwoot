@@ -503,4 +503,20 @@ midió.
 **Límite.** Muestra chica y sin producción. Si se quiere el número real, la misma consulta se puede
 correr en producción en solo lectura (el script está escrito para eso).
 
-**Siguiente:** F1 Variables.
+**Agentes reales de ejemplo (03/11/2026).** El usuario pasó dos agentes de producción (en
+`tmp/agentes_ejemplo/`, fuera del repo; banco de prueba de todas las fases):
+
+| | «1826 Primer contacto · demostración aceptada» (DCI V8.12, 9 473 car.) | «231026 Invitación Arranque rápido distribuidores» (V1.3, 11 204 car.) |
+|---|---|---|
+| Variables | Declara 6 con la gramática exacta (`CIERRE_ENVIADO = NO \| SI`…) pero dentro de `[3. NÚCLEO DCI…]`, **no en `[VARIABLES]`**: el motor **no guarda ninguna**; el modelo las adivina del historial, y de `CIERRE_ENVIADO` depende todo el bloque post-cierre | Ninguna; usa etiquetas como estado. Candidatas: `PAQUETE_ENVIADO = NO \| SÍ` («si ya fue entregado, no lo repitas») y `PERMISO_FUTURO = PENDIENTE \| SÍ \| NO` |
+| Preguntas | 4 «preguntas DCI literales», cada una llena un slot → banco ideal: `Q_OBJETIVO → guarda en OBJETIVO_COMERCIAL`… | 2 preguntas fijas (permiso futuro, motivo opcional) |
+| Datos fijos | «Kontrolya» ×8, liga de agenda ×2, liga de precios | «Arranque rápido», fecha y horario del evento escritos **4 veces y distintos** («9:15 a. m.», «9:15am a 10:15:00 am»…), liga de Zoom ×3 |
+| Lo que salta | Sin `@ruta`: el ROUTER (SOPORTE_REAL / COMERCIAL) está en prosa, así que el diagrama no tiene qué dibujar. `[9. BASE DE CONOCIMIENTO]` es justo lo que va en Definición › Contexto o en predefinidas. Usa `{Nombre}`, `{N}`, `{RESPUESTA_CORTA_INTENCION}` (llaves sencillas): confirma que `{X}` no servía para los datos fijos | El «enlace directo» y el «de registro» son **la misma URL**, aunque el texto dice que «nunca son intercambiables». El evento ya pasó (23/10) y hay que cambiar la fecha en 4 lugares. `[VALIDACIÓN ANTES DE PUBLICAR]` es una lista de pruebas **dentro del prompt** (el modelo la lee en cada mensaje): son 4 pruebas para la pestaña Pruebas. La línea de la ruta dice `evento #interesado` pero `[ETIQUETAS Y RUTAS]` dice que lleva `#evento` |
+
+**Lo que agregan al plan:**
+- **V5 (F1):** «Declaraste variables fuera de `[VARIABLES]`: el motor no las guarda» + botón «Pasarlas a Variables». Sin esto, el agente DCI no gana nada con F1.
+- **C5 (F2):** dos datos fijos con el mismo contenido y distinto nombre (LIGA_DIRECTA = LIGA_REGISTRO), en ámbar.
+- **FD:** detectar una lista de pruebas escrita dentro del Entrenamiento y ofrecer pasarla a la pila.
+- **FR:** detectar un ROUTER en prosa y ofrecer convertirlo en `@ruta`.
+
+**Siguiente:** F1 Variables (con V5).
