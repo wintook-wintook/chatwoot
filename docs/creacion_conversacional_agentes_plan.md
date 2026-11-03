@@ -875,6 +875,17 @@ adaptación y requests 180 en verde. `RouteModal.spec` 2; carpeta 295 en verde.
 
 **Queda:** D8 (gasta OpenAI, pedir OK) y la prueba real F3 + §14.2.
 
+### Variables y Datos fijos como árbol ✅ (03/11/2026, pedido del usuario)
+
+En la Estructura, «Variables» y «Datos fijos» son grupos plegables dentro de Definición, como las
+Rutas: cada una en su renglón (nombre y valores, «→ VARIABLE» en las preguntas), con **Editar** y
+**Eliminar** a la derecha (eliminar pide un segundo clic, «¿Eliminar?») y **+ Agregar** en la fila
+del grupo. Editar o agregar abre el mismo modal de F1/F2 con un solo renglón (`focus`: índice o
+`'new'`; guarda la lista completa). Las variables escritas fuera de [VARIABLES] se avisan con un
+renglón ámbar que abre la lista completa con «Pasarlas». Igual en la pestaña «Definición y datos»
+de la conversación. Pila: `TrainingTree.spec` (3 reescritas), `VariablesModal.spec` +2,
+`ConstantsModal.spec` +1, `DraftingFields.spec` +2; carpeta 300 en verde.
+
 ---
 
 ## 14. La meta: que estos agentes se armen fácil

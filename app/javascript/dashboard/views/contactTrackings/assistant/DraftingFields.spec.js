@@ -57,4 +57,24 @@ describe('DraftingFields', () => {
       [{ objective: 'Otro', ai_context: '' }],
     ]);
   });
+
+  it('elimina una variable o un dato fijo y emite el texto que queda', () => {
+    const wrapper = montar(PROPUESTA);
+    wrapper.vm.removeConstant(0);
+    wrapper.vm.removeVariable(0);
+
+    expect(wrapper.emitted('update')).toEqual([
+      [{ datos_fijos: 'Q1 (pregunta) = ¿Qué usas? → guarda en SISTEMA' }],
+      [{ variables: '' }],
+    ]);
+  });
+
+  it('Agregar abre el modal con un renglón nuevo', async () => {
+    const wrapper = montar(PROPUESTA);
+    wrapper.vm.open('variables', 'new');
+    await wrapper.vm.$nextTick();
+    const modal = wrapper.findComponent({ name: 'VariablesModal' });
+    expect(modal.props('show')).toBe(true);
+    expect(modal.props('focus')).toBe('new');
+  });
 });

@@ -36,9 +36,12 @@ export default {
   emits: [
     'editDefinition',
     // F1 (crear_agente_conversando): la sección [VARIABLES], con su propio modal.
+    // Con null (la lista completa), un índice (una) o 'new' (agregar una).
     'editVariables',
-    // F2: la sección [DATOS FIJOS].
+    'removeVariable',
+    // F2: la sección [DATOS FIJOS]; mismo payload.
     'editConstants',
+    'removeConstant',
     'editRoute',
     'addRoute',
     'findRoute',
@@ -52,7 +55,15 @@ export default {
   ],
   data() {
     return {
-      open: { definition: true, routes: true, sections: true },
+      open: {
+        definition: true,
+        variables: true,
+        constants: true,
+        routes: true,
+        sections: true,
+      },
+      // «variables-2»: el renglón que pide confirmar antes de eliminar.
+      confirming: null,
     };
   },
   computed: {
@@ -86,27 +97,30 @@ export default {
     variablesList() {
       return readVariables(this.blocks).variables;
     },
-    variablesPreview() {
-      const lista = this.variablesList;
-      if (!lista.length) return '';
-      return this.$t('TRACKING_ASSISTANT_VIEW.TREE_VARIABLES_COUNT', {
-        count: lista.length,
-        names: this.preview(lista.map(v => v.name).join(', '), 48),
-      });
-    },
-    constantsPreview() {
-      const lista = readConstants(this.blocks).constants;
-      if (!lista.length) return '';
-      return this.$t('TRACKING_ASSISTANT_VIEW.TREE_VARIABLES_COUNT', {
-        count: lista.length,
-        names: this.preview(lista.map(c => c.name).join(', '), 48),
-      });
+    constantsList() {
+      return readConstants(this.blocks).constants;
     },
     hasStrayVariables() {
       return strayVariables(this.blocks).length > 0;
     },
   },
   methods: {
+    variableValues(variable) {
+      const valores = [...variable.options];
+      if (variable.free)
+        valores.push(this.$t('TRACKING_ASSISTANT_VIEW.FIELDS_FREE_VALUE'));
+      return this.preview(valores.join(' · '));
+    },
+    constantValue(constante) {
+      const valor = this.preview(constante.value);
+      return constante.type === 'pregunta' ? `«${valor}»` : valor;
+    },
+    // El segundo clic en «¿Eliminar?» es el que borra.
+    remove(evento, index) {
+      this.confirming = null;
+      if (evento === 'removeVariable') this.$emit('removeVariable', index);
+      else this.$emit('removeConstant', index);
+    },
     toggle(grupo) {
       this.open = { ...this.open, [grupo]: !this.open[grupo] };
     },
@@ -218,64 +232,219 @@ export default {
           }}
         </span>
       </button>
-      <!-- Variables: a diferencia de los dos de arriba, SÍ son texto del
-           Entrenamiento (la sección [VARIABLES]). El punto junta los avisos V1–V5. -->
-      <button
-        type="button"
-        class="flex items-center gap-2 py-1 pl-6 pr-1 text-left rounded hover:bg-slate-50 dark:hover:bg-slate-700"
-        @click="$emit('editVariables')"
-      >
-        <span class="shrink-0 text-slate-700 dark:text-slate-200">
-          {{ $t('TRACKING_ASSISTANT_VIEW.TREE_VARIABLES') }}
-        </span>
-        <span
-          v-if="issue('variables')"
-          v-tooltip.right="tip(issueText('variables'))"
-          class="w-1.5 h-1.5 rounded-full shrink-0"
-          :class="
-            issue('variables') === 'blocking' ? 'bg-red-500' : 'bg-amber-500'
-          "
-        />
-        <span
-          class="flex-1 min-w-0 text-xs truncate"
-          :class="
-            hasStrayVariables
-              ? 'text-amber-800 dark:text-amber-800'
-              : 'text-slate-500 dark:text-slate-400'
-          "
+      <!-- Variables y Datos fijos (crear_agente_conversando): SÍ son texto del
+           Entrenamiento ([VARIABLES], [DATOS FIJOS]). Cada una en su renglón, con
+           Editar y Eliminar; Agregar en la fila del grupo (pedido del usuario,
+           03/11/2026). El punto del grupo junta los avisos V1–V5 / C1–C5. -->
+      <div class="flex items-center gap-1 py-1 pl-6 pr-1">
+        <button
+          type="button"
+          class="flex items-center flex-1 min-w-0 gap-1 text-left"
+          @click="toggle('variables')"
         >
-          {{
-            variablesPreview ||
-            $t('TRACKING_ASSISTANT_VIEW.TREE_VARIABLES_NONE')
-          }}
-        </span>
-      </button>
-      <!-- Datos fijos (F2): la sección [DATOS FIJOS]; se citan con %NOMBRE%. -->
-      <button
-        type="button"
-        class="flex items-center gap-2 py-1 pl-6 pr-1 text-left rounded hover:bg-slate-50 dark:hover:bg-slate-700"
-        @click="$emit('editConstants')"
-      >
-        <span class="shrink-0 text-slate-700 dark:text-slate-200">
-          {{ $t('TRACKING_ASSISTANT_VIEW.TREE_CONSTANTS') }}
-        </span>
-        <span
-          v-if="issue('constants')"
-          v-tooltip.right="tip(issueText('constants'))"
-          class="w-1.5 h-1.5 rounded-full shrink-0"
-          :class="
-            issue('constants') === 'blocking' ? 'bg-red-500' : 'bg-amber-500'
-          "
-        />
-        <span
-          class="flex-1 min-w-0 text-xs truncate text-slate-500 dark:text-slate-400"
+          <fluent-icon
+            :icon="open.variables ? 'chevron-down' : 'chevron-right'"
+            size="14"
+          />
+          <span class="shrink-0 text-slate-700 dark:text-slate-200">
+            {{ $t('TRACKING_ASSISTANT_VIEW.TREE_VARIABLES') }}
+          </span>
+          <span class="text-xs text-slate-400">
+            ({{ variablesList.length }})
+          </span>
+          <span
+            v-if="issue('variables')"
+            v-tooltip.right="tip(issueText('variables'))"
+            class="w-1.5 h-1.5 rounded-full shrink-0"
+            :class="
+              issue('variables') === 'blocking' ? 'bg-red-500' : 'bg-amber-500'
+            "
+          />
+        </button>
+        <woot-button
+          type="button"
+          size="tiny"
+          variant="smooth"
+          color-scheme="success"
+          icon="add"
+          @click="$emit('editVariables', 'new')"
         >
-          {{
-            constantsPreview ||
-            $t('TRACKING_ASSISTANT_VIEW.TREE_CONSTANTS_NONE')
-          }}
-        </span>
-      </button>
+          {{ $t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_ADD') }}
+        </woot-button>
+      </div>
+      <div v-if="open.variables" class="flex flex-col">
+        <!-- V5: variables escritas fuera de [VARIABLES]: la lista completa
+             tiene el botón para pasarlas. -->
+        <button
+          v-if="hasStrayVariables"
+          type="button"
+          class="py-0.5 pl-11 pr-1 text-xs text-left rounded text-amber-800 dark:text-amber-800 hover:bg-slate-50 dark:hover:bg-slate-700"
+          @click="$emit('editVariables', null)"
+        >
+          {{ $t('TRACKING_ASSISTANT_VIEW.TREE_VARIABLES_STRAY') }}
+        </button>
+        <div
+          v-for="(item, index) in variablesList"
+          :key="`variables-${item.name}`"
+          class="flex items-center gap-1 py-0.5 pl-11 pr-1 rounded hover:bg-slate-50 dark:hover:bg-slate-700"
+          @mouseleave="confirming = null"
+        >
+          <button
+            type="button"
+            class="flex items-center flex-1 min-w-0 gap-2 text-left"
+            @click="$emit('editVariables', index)"
+          >
+            <span
+              class="font-mono text-xs shrink-0 text-slate-700 dark:text-slate-200"
+            >
+              {{ item.name }}
+            </span>
+            <span
+              class="flex-1 min-w-0 text-xs truncate text-slate-500 dark:text-slate-400"
+            >
+              {{ variableValues(item) }}
+            </span>
+          </button>
+          <woot-button
+            v-tooltip="$t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_EDIT')"
+            type="button"
+            size="tiny"
+            variant="clear"
+            color-scheme="secondary"
+            icon="edit"
+            @click="$emit('editVariables', index)"
+          />
+          <woot-button
+            v-if="confirming !== `variables-${index}`"
+            v-tooltip="$t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_DELETE')"
+            type="button"
+            size="tiny"
+            variant="clear"
+            color-scheme="secondary"
+            icon="delete"
+            @click="confirming = `variables-${index}`"
+          />
+          <woot-button
+            v-else
+            type="button"
+            size="tiny"
+            variant="smooth"
+            color-scheme="alert"
+            @click="remove('removeVariable', index)"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_DELETE_CONFIRM') }}
+          </woot-button>
+        </div>
+        <p
+          v-if="!variablesList.length"
+          class="!m-0 py-0.5 pl-11 text-xs text-slate-400 dark:text-slate-500"
+        >
+          {{ $t('TRACKING_ASSISTANT_VIEW.TREE_VARIABLES_NONE') }}
+        </p>
+      </div>
+      <!-- Datos fijos (F2): se citan con %NOMBRE%. -->
+      <div class="flex items-center gap-1 py-1 pl-6 pr-1">
+        <button
+          type="button"
+          class="flex items-center flex-1 min-w-0 gap-1 text-left"
+          @click="toggle('constants')"
+        >
+          <fluent-icon
+            :icon="open.constants ? 'chevron-down' : 'chevron-right'"
+            size="14"
+          />
+          <span class="shrink-0 text-slate-700 dark:text-slate-200">
+            {{ $t('TRACKING_ASSISTANT_VIEW.TREE_CONSTANTS') }}
+          </span>
+          <span class="text-xs text-slate-400">
+            ({{ constantsList.length }})
+          </span>
+          <span
+            v-if="issue('constants')"
+            v-tooltip.right="tip(issueText('constants'))"
+            class="w-1.5 h-1.5 rounded-full shrink-0"
+            :class="
+              issue('constants') === 'blocking' ? 'bg-red-500' : 'bg-amber-500'
+            "
+          />
+        </button>
+        <woot-button
+          type="button"
+          size="tiny"
+          variant="smooth"
+          color-scheme="success"
+          icon="add"
+          @click="$emit('editConstants', 'new')"
+        >
+          {{ $t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_ADD') }}
+        </woot-button>
+      </div>
+      <div v-if="open.constants" class="flex flex-col">
+        <div
+          v-for="(item, index) in constantsList"
+          :key="`constants-${item.name}`"
+          class="flex items-center gap-1 py-0.5 pl-11 pr-1 rounded hover:bg-slate-50 dark:hover:bg-slate-700"
+          @mouseleave="confirming = null"
+        >
+          <button
+            type="button"
+            class="flex items-center flex-1 min-w-0 gap-2 text-left"
+            @click="$emit('editConstants', index)"
+          >
+            <span
+              class="font-mono text-xs shrink-0 text-slate-700 dark:text-slate-200"
+            >
+              {{ item.name }}
+            </span>
+            <span
+              class="flex-1 min-w-0 text-xs truncate text-slate-500 dark:text-slate-400"
+            >
+              {{ constantValue(item) }}
+            </span>
+            <span
+              v-if="item.savesTo"
+              class="text-xs shrink-0 text-slate-500 dark:text-slate-400"
+            >
+              {{ `→ ${item.savesTo}` }}
+            </span>
+          </button>
+          <woot-button
+            v-tooltip="$t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_EDIT')"
+            type="button"
+            size="tiny"
+            variant="clear"
+            color-scheme="secondary"
+            icon="edit"
+            @click="$emit('editConstants', index)"
+          />
+          <woot-button
+            v-if="confirming !== `constants-${index}`"
+            v-tooltip="$t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_DELETE')"
+            type="button"
+            size="tiny"
+            variant="clear"
+            color-scheme="secondary"
+            icon="delete"
+            @click="confirming = `constants-${index}`"
+          />
+          <woot-button
+            v-else
+            type="button"
+            size="tiny"
+            variant="smooth"
+            color-scheme="alert"
+            @click="remove('removeConstant', index)"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.TREE_ITEM_DELETE_CONFIRM') }}
+          </woot-button>
+        </div>
+        <p
+          v-if="!constantsList.length"
+          class="!m-0 py-0.5 pl-11 text-xs text-slate-400 dark:text-slate-500"
+        >
+          {{ $t('TRACKING_ASSISTANT_VIEW.TREE_CONSTANTS_NONE') }}
+        </p>
+      </div>
     </div>
 
     <!-- ── Ramas ────────────────────────────────────────────────────────── -->

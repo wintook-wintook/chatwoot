@@ -84,4 +84,23 @@ describe('ConstantsModal', () => {
     expect(wrapper.vm.isUsed(wrapper.vm.rows[1])).toBe(false);
     expect(wrapper.vm.refOf(wrapper.vm.rows[1])).toBe('%Q1%');
   });
+
+  it("con focus 'new' agrega uno y con un índice edita solo ese", async () => {
+    const nuevo = await abrir({ value: VALUE, focus: 'new' });
+    expect(nuevo.vm.title).toBe('TRACKING_ASSISTANT_VIEW.CONSTANTS_TITLE_ADD');
+    Object.assign(nuevo.vm.rows[2], {
+      name: 'LIGA',
+      type: 'liga',
+      value: 'https://k.mx',
+    });
+    nuevo.vm.save();
+    expect(nuevo.emitted('save')[0][0].constants.map(c => c.name)).toEqual([
+      'EMPRESA',
+      'Q1',
+      'LIGA',
+    ]);
+
+    const uno = await abrir({ value: VALUE, focus: 0 });
+    expect([0, 1].map(i => uno.vm.isShown(i))).toEqual([true, false]);
+  });
 });

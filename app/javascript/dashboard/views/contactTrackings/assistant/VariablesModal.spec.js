@@ -104,4 +104,35 @@ describe('VariablesModal', () => {
     ]);
     expect(wrapper.text()).not.toContain('VARIABLES_STRAY_MOVE');
   });
+
+  // Desde el árbol (03/11/2026): Editar abre solo esa variable, Agregar una nueva;
+  // guardar devuelve la lista completa.
+  it('con focus edita solo una y guarda todas', async () => {
+    const wrapper = await abrir({ value: BECAS, focus: 1 });
+    expect([0, 1].map(i => wrapper.vm.isShown(i))).toEqual([false, true]);
+    expect(wrapper.vm.title).toBe(
+      'TRACKING_ASSISTANT_VIEW.VARIABLES_TITLE_EDIT'
+    );
+
+    wrapper.vm.rows[1].values = 'NO | SÍ | TAL VEZ';
+    wrapper.vm.save();
+    const [{ variables }] = wrapper.emitted('save')[0];
+    expect(variables.map(v => v.name)).toEqual(['CARRERA', 'LIGA_ENTREGADA']);
+    expect(variables[1].options).toEqual(['NO', 'SÍ', 'TAL VEZ']);
+  });
+
+  it("con focus 'new' agrega una al final", async () => {
+    const wrapper = await abrir({ value: BECAS, focus: 'new' });
+    expect(wrapper.vm.rows).toHaveLength(3);
+    expect(wrapper.vm.isShown(2)).toBe(true);
+    expect(wrapper.vm.isShown(0)).toBe(false);
+
+    Object.assign(wrapper.vm.rows[2], { name: 'etapa', values: 'A | B' });
+    wrapper.vm.save();
+    expect(wrapper.emitted('save')[0][0].variables.map(v => v.name)).toEqual([
+      'CARRERA',
+      'LIGA_ENTREGADA',
+      'ETAPA',
+    ]);
+  });
 });

@@ -285,8 +285,18 @@ export default {
       this.emitBlocks(updateBlock(blocks, blocks.length - 1, { body }));
     },
     // ── variables (F1) ───────────────────────────────────────────────────────
-    openVariables() {
-      this.variablesModal = { show: true };
+    // focus: null (la lista), un índice (una) o 'new' (agregar), desde el árbol.
+    openVariables(focus = null) {
+      this.variablesModal = { show: true, focus };
+    },
+    removeVariable(index) {
+      const actuales = this.currentVariables;
+      this.emitBlocks(
+        writeVariables(this.blocks, {
+          ...actuales,
+          variables: actuales.variables.filter((_, i) => i !== index),
+        })
+      );
     },
     saveVariables(data) {
       this.variablesModal = { show: false };
@@ -297,8 +307,18 @@ export default {
       this.emitBlocks(moveStrayVariables(this.blocks));
     },
     // ── datos fijos (F2) ─────────────────────────────────────────────────────
-    openConstants() {
-      this.constantsModal = { show: true };
+    openConstants(focus = null) {
+      this.constantsModal = { show: true, focus };
+    },
+    // Las citas %NOMBRE% que queden en el texto las marca el comprobador (C1).
+    removeConstant(index) {
+      const actuales = this.currentConstants;
+      this.emitBlocks(
+        writeConstants(this.blocks, {
+          ...actuales,
+          constants: actuales.constants.filter((_, i) => i !== index),
+        })
+      );
     },
     saveConstants(data) {
       this.constantsModal = { show: false };
@@ -325,7 +345,9 @@ export default {
         :issues="issues"
         @editDefinition="openDefinition"
         @editVariables="openVariables"
+        @removeVariable="removeVariable"
         @editConstants="openConstants"
+        @removeConstant="removeConstant"
         @addRoute="openAddRoute"
         @findRoute="openRouteCatalog"
         @editRoute="openEditRoute"
@@ -383,6 +405,7 @@ export default {
     <VariablesModal
       :show="variablesModal.show"
       :value="currentVariables"
+      :focus="variablesModal.focus"
       :stray-count="strayVariablesCount"
       @close="variablesModal = { show: false }"
       @save="saveVariables"
@@ -391,6 +414,7 @@ export default {
     <ConstantsModal
       :show="constantsModal.show"
       :value="currentConstants"
+      :focus="constantsModal.focus"
       :variables="variableNames"
       :usage="constantsUsage"
       @close="constantsModal = { show: false }"
