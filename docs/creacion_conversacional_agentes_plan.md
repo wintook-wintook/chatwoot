@@ -823,6 +823,43 @@ prospectos antes de mandarles la liga de la demo; pregúntales qué sistema usan
 
 **Sigue:** prueba real de F3 + §14.2 (con OK), luego F4 — Exportar.
 
+### F4 — Exportar: dos archivos, un solo menú ✅ (03/11/2026)
+
+**Qué se hizo.** Botón **«Exportar»** en la cabecera de la columna derecha (junto a «Copiar»),
+visible con Entrenamiento o mientras se arma conversando (`ExportMenu.vue`, con el desplegable nativo
+`WootDropdownMenu`):
+
+```
+ [Entrenamiento] …                     ✓ Sin errores  ⧉ Copiar  ⤓ Exportar ▾
+                                                     ┌──────────────────────────────────────────┐
+                                                     │ 📄 Instrucciones del agente (ChatGPT…)   │
+                                                     │ 📘 Recursos del motor                    │
+                                                     └──────────────────────────────────────────┘
+```
+
+1. **Instrucciones del agente** `instrucciones_<agente>.md` — lo arma el backend
+   (`AgentExport`, `POST …/assistant/export`, no guarda nada):
+   - aviso al inicio de qué solo funciona dentro del sistema (D5: directivas tal cual);
+   - Objetivo y Contexto;
+   - **Lo que recuerda de cada cliente**: cada variable en palabras («uno de NO o SÍ. Empieza en NO»);
+   - **Entrenamiento con los datos fijos ya sustituidos** por `PromptConstants.expand`, el mismo del
+     motor (el archivo dice exactamente lo que lee el modelo del sistema).
+   - Sin Entrenamiento todavía: los Datos fijos en lista y las instrucciones iniciales (un nivel de
+     título abajo). Así cubre lo que F3 dejó fuera de la plantilla.
+2. **Recursos del motor** `recursos_motor_agentes_ia.md` — el mismo de la pestaña Recursos
+   (`downloadEngineCatalog`, ahora compartido con `EngineCatalog.vue`).
+
+**Probado con un agente real de dev** (#12877, universidad con 3 variables): sale con las variables
+explicadas y el Entrenamiento completo, sin IA.
+
+**Pila de pruebas.** Servidor: `agent_export_spec` 3, `assistant_export_spec` 1 (admin sí, agente
+no). Navegador: `ExportMenu.spec` 2; carpeta 293 en verde (falla solo `AgentWorkspace.spec.js`).
+
+**Cómo pedírselo.** En el espacio del agente: «Exportar» → «Instrucciones del agente».
+
+**Sigue:** la prueba real (F3 + §14.2, con OK) y los pendientes chicos (Datos fijos en «Configurar»,
+`%` en RouteModal, D8).
+
 ---
 
 ## 14. La meta: que estos agentes se armen fácil

@@ -85,6 +85,7 @@ import ConstantPicker from './assistant/ConstantPicker.vue';
 // FD: el boceto de rutas probadas, dibujado, mientras se conversa.
 import DraftingSketch from './assistant/DraftingSketch.vue';
 import DraftingFields from './assistant/DraftingFields.vue';
+import ExportMenu from './assistant/ExportMenu.vue';
 import { fieldsOf, filledCount } from './assistant/draftingFields';
 import { insertConstant, percentTriggerAt } from './assistant/constantPicker';
 import { readConstants } from './assistant/agentConstants';
@@ -153,6 +154,7 @@ export default {
     ConstantPicker,
     DraftingSketch,
     DraftingFields,
+    ExportMenu,
     SaveModal,
   },
   mixins: [trainingSectionsMixin],
@@ -289,11 +291,23 @@ export default {
       // Unas instrucciones mandadas a leer desde el chat: el modal las toma de acá.
       chatBrief: null,
       isSendingInstructions: false,
+      isExporting: false,
       // Las cuentas de Google conectadas, para elegir el calendario al guardar.
       calendarIntegrations: [],
     };
   },
   computed: {
+    // F4: el catálogo del motor, para el menú «Exportar».
+    engineCatalog() {
+      return (this.inventory && this.inventory.catalog) || [];
+    },
+    hasAgentToExport() {
+      return Boolean(
+        this.draft.trim() ||
+          this.instructions.trim() ||
+          this.draftingFieldsCount
+      );
+    },
     // F3: cuántas de Definición, Variables y Datos fijos llenó la conversación.
     draftingFieldsCount() {
       return filledCount(this.proposal);
@@ -1132,6 +1146,26 @@ export default {
         this.isSendingInstructions = false;
       }
     },
+    // F4: las instrucciones del agente para otra IA (AgentExport en el backend).
+    async exportInstructions() {
+      this.isExporting = true;
+      try {
+        const { data } = await AssistantAPI.exportInstructions({
+          name:
+            (this.proposal && this.proposal.name) ||
+            (this.editingTemplate && this.editingTemplate.name) ||
+            '',
+          draft: this.draft,
+          instructions: this.instructions,
+          fields: fieldsOf(this.proposal),
+        });
+        downloadMarkdown(data.content, data.filename);
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.EXPORT_ERROR'));
+      } finally {
+        this.isExporting = false;
+      }
+    },
     downloadInstructions() {
       downloadMarkdown(
         this.instructions,
@@ -1928,6 +1962,13 @@ export default {
                   >
                     {{ $t('TRACKING_ASSISTANT_VIEW.COPY_DRAFT') }}
                   </woot-button>
+                  <ExportMenu
+                    v-if="hasAgentToExport || engineCatalog.length"
+                    :catalog="engineCatalog"
+                    :has-agent="hasAgentToExport"
+                    :busy="isExporting"
+                    @instructions="exportInstructions"
+                  />
                 </div>
                 <DraftingFields
                   v-if="draftTab === 'fields'"
