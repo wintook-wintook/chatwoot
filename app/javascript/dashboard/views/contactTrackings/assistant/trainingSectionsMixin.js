@@ -26,6 +26,15 @@ export const VARIABLE_CODES = [
   'variable_initial_invalid',
   'variables_outside_section',
 ];
+// F2: los de datos fijos (ConstantChecks) encienden el nodo «Datos fijos».
+export const CONSTANT_CODES = [
+  'constant_undeclared',
+  'constant_unused',
+  'constant_saves_unknown',
+  'constant_bad_name',
+  'constant_duplicate',
+  'constant_same_value',
+];
 
 export default {
   data() {
@@ -96,6 +105,8 @@ export default {
         (v[nivel] || []).forEach(hallazgo => {
           if (VARIABLE_CODES.includes(hallazgo.code))
             poner('variables', nivel, hallazgo.message);
+          if (CONSTANT_CODES.includes(hallazgo.code))
+            poner('constants', nivel, hallazgo.message);
           const ramas =
             hallazgo.routes || (hallazgo.route ? [hallazgo.route] : []);
           ramas.forEach(nombre =>

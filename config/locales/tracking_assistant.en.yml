@@ -151,6 +151,24 @@ en:
       variable_initial_unknown: >-
         Line %{line}: "Inicial:" gives a value to %{name}, but that variable is not declared in
         [VARIABLES]. The engine ignores it.
+      constant_undeclared: >-
+        Line %{line}: %%%{name}%% is cited but it is not in [DATOS FIJOS] (declared: %{declared}). The
+        agent will read "%%%{name}%%" literally. Add it to Fixed data or fix the name.
+      constant_bad_name: >-
+        Line %{line}: "%{name}" was meant to be fixed data, but the name has spaces, lowercase letters
+        or symbols and the system does not read it. Write it like this: %{suggestion}.
+      constant_duplicate: >-
+        Line %{line}: %{name} is already declared on line %{first}. The first one applies; remove this
+        one or rename it.
+      constant_unused: >-
+        The fixed data %{name} is not cited anywhere. Use it with %%%{name}%% where its content goes, or
+        remove it.
+      constant_saves_unknown: >-
+        Line %{line}: question %{name} saves the answer in %{variable}, but %{variable} is not in
+        Variables. Without that, the system does not remember it. Add it to Variables.
+      constant_same_value: >-
+        %{names} have the same content. If they really are the same, keep one; if they should differ
+        (for example, two links), fix the wrong one.
       duplicate_section: >-
         Section [%{title}] appears twice (lines %{first} and %{line}): the agent reads both and, if they
         differ, does not know which one applies. Merge them.

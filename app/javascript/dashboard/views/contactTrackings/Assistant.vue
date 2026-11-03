@@ -80,6 +80,10 @@ import ExplainModal from './assistant/ExplainModal.vue';
 import AgentDiagram from './assistant/AgentDiagram.vue';
 // F2: el panel «Pruebas»; la prueba elegida se ilumina en el diagrama.
 import TestsPanel from './assistant/TestsPanel.vue';
+// proyecto@crear_agente_conversando F2: escribir «%» ofrece los datos fijos.
+import ConstantPicker from './assistant/ConstantPicker.vue';
+import { insertConstant, percentTriggerAt } from './assistant/constantPicker';
+import { readConstants } from './assistant/agentConstants';
 import { heatFromCases } from './assistant/testPath';
 import SaveModal from './assistant/SaveModal.vue';
 
@@ -142,6 +146,7 @@ export default {
     ExplainModal,
     AgentDiagram,
     TestsPanel,
+    ConstantPicker,
     SaveModal,
   },
   mixins: [trainingSectionsMixin],
@@ -231,6 +236,8 @@ export default {
       // reactivos y el editor aparece y desaparece con las pestañas: se toma en
       // cada render (ver `updated`).
       draftEditorEl: null,
+      // F2: dónde está el «%» que abrió la lista de datos fijos (null = cerrada).
+      draftPickerCaret: null,
       // Lo último que se guardó solo (autosave), para no mandar lo mismo dos veces.
       lastAutosaved: '',
       isOptimizing: false,
@@ -277,6 +284,12 @@ export default {
     };
   },
   computed: {
+    // F2: los nombres de [DATOS FIJOS] del borrador, para la lista que abre «%».
+    draftConstantNames() {
+      return readConstants(this.trainingStructure?.blocks || []).constants.map(
+        c => c.name
+      );
+    },
     // proyecto@adaptar_prompts_publicados — cuántas cosas faltan configurar.
     adaptationMissing() {
       return this.adaptationItems.filter(item => item.status === 'missing')
@@ -1309,6 +1322,30 @@ export default {
         this.$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_MESSAGE')
       );
     },
+    // Lo que se teclea en el editor: lo de siempre, más «%» abre los datos fijos (F2).
+    onDraftTyped(event) {
+      this.onDraftInput();
+      const caret = event.target.selectionStart;
+      this.draftPickerCaret = percentTriggerAt(event.target.value, caret)
+        ? caret
+        : null;
+    },
+    pickDraftConstant(name) {
+      const { text, caret } = insertConstant(
+        this.draft,
+        this.draftPickerCaret,
+        name
+      );
+      this.draft = text;
+      this.draftPickerCaret = null;
+      this.onDraftInput();
+      this.$nextTick(() => {
+        const campo = this.$refs.draftEditor;
+        if (!campo) return;
+        campo.focus();
+        campo.setSelectionRange(caret, caret);
+      });
+    },
     onDraftInput() {
       // Un prompt pegado (o escrito) en un Asistente nuevo es un agente que ya existe,
       // no una entrevista a medias: se trata como uno cargado (loadTemplate) — cuenta
@@ -1893,10 +1930,19 @@ export default {
                       @select="onDraftSelect"
                       @keyup="onDraftSelect"
                       @mouseup="onDraftSelect"
-                      @input="onDraftInput"
+                      @input="onDraftTyped"
+                      @keydown.esc="draftPickerCaret = null"
                       @paste="onDraftPaste"
                     />
                   </div>
+                  <ConstantPicker
+                    v-if="
+                      draftPickerCaret !== null && draftConstantNames.length
+                    "
+                    :names="draftConstantNames"
+                    @pick="pickDraftConstant"
+                    @close="draftPickerCaret = null"
+                  />
                 </template>
               </div>
             </section>

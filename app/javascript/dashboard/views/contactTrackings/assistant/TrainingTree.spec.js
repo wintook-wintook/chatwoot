@@ -181,4 +181,16 @@ describe('TrainingTree', () => {
     expect(wrapper.vm.variablesPreview).toBe('');
     expect(wrapper.vm.hasStrayVariables).toBe(false);
   });
+
+  it('resume los datos fijos en su nodo', () => {
+    const value = estructura();
+    value.blocks.push({
+      type: 'section',
+      title: 'DATOS FIJOS',
+      body: 'EMPRESA = Kontrolya\nQ1 (pregunta) = ¿Qué?',
+      gap: 0,
+    });
+    expect(montar({ value }).vm.constantsPreview).toContain('EMPRESA, Q1');
+    expect(montar().vm.constantsPreview).toBe('');
+  });
 });

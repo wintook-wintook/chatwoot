@@ -14,6 +14,7 @@ import RouteModal from './RouteModal.vue';
 import SectionModal from './SectionModal.vue';
 import DefinitionModal from './DefinitionModal.vue';
 import VariablesModal from './VariablesModal.vue';
+import ConstantsModal from './ConstantsModal.vue';
 import RouteCatalogModal from './RouteCatalogModal.vue';
 import SectionCatalogModal from './SectionCatalogModal.vue';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
@@ -42,6 +43,7 @@ import {
   strayVariables,
   writeVariables,
 } from './agentVariables';
+import { constantUsage, readConstants, writeConstants } from './agentConstants';
 
 export default {
   components: {
@@ -50,6 +52,7 @@ export default {
     SectionModal,
     DefinitionModal,
     VariablesModal,
+    ConstantsModal,
     RouteCatalogModal,
     SectionCatalogModal,
   },
@@ -75,6 +78,7 @@ export default {
       sectionModal: { show: false, index: null },
       definitionModal: { show: false, field: 'objective' },
       variablesModal: { show: false },
+      constantsModal: { show: false },
       // El catálogo de ramas de la cuenta se pide una vez, al abrir el buscador.
       catalogModal: { show: false, loading: false },
       catalog: null,
@@ -122,6 +126,20 @@ export default {
     // F1: la sección [VARIABLES] leída como lista, y las que están escritas fuera (V5).
     currentVariables() {
       return readVariables(this.blocks);
+    },
+    // F2: [DATOS FIJOS] como lista, dónde se usa cada uno y a qué variables puede
+    // guardar una pregunta.
+    currentConstants() {
+      return readConstants(this.blocks);
+    },
+    constantsUsage() {
+      return constantUsage(this.blocks, this.currentConstants.constants);
+    },
+    constantNames() {
+      return this.currentConstants.constants.map(c => c.name);
+    },
+    variableNames() {
+      return this.currentVariables.variables.map(v => v.name);
     },
     strayVariablesCount() {
       return strayVariables(this.blocks).length;
@@ -278,6 +296,14 @@ export default {
     moveStray() {
       this.emitBlocks(moveStrayVariables(this.blocks));
     },
+    // ── datos fijos (F2) ─────────────────────────────────────────────────────
+    openConstants() {
+      this.constantsModal = { show: true };
+    },
+    saveConstants(data) {
+      this.constantsModal = { show: false };
+      this.emitBlocks(writeConstants(this.blocks, data));
+    },
     // ── definición ───────────────────────────────────────────────────────────
     openDefinition(field) {
       this.definitionModal = { show: true, field };
@@ -299,6 +325,7 @@ export default {
         :issues="issues"
         @editDefinition="openDefinition"
         @editVariables="openVariables"
+        @editConstants="openConstants"
         @addRoute="openAddRoute"
         @findRoute="openRouteCatalog"
         @editRoute="openEditRoute"
@@ -346,6 +373,7 @@ export default {
       :taken-titles="takenTitles"
       :can-explain="canExplain"
       :inbox-id="inboxId"
+      :constant-names="constantNames"
       @close="closeSectionModal"
       @save="saveSection"
       @delete="deleteSection"
@@ -358,6 +386,14 @@ export default {
       @close="variablesModal = { show: false }"
       @save="saveVariables"
       @moveStray="moveStray"
+    />
+    <ConstantsModal
+      :show="constantsModal.show"
+      :value="currentConstants"
+      :variables="variableNames"
+      :usage="constantsUsage"
+      @close="constantsModal = { show: false }"
+      @save="saveConstants"
     />
     <DefinitionModal
       :show="definitionModal.show"

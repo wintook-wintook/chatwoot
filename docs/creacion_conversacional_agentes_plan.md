@@ -577,7 +577,77 @@ ratos desde el 15/09, sin relación.
 **Cómo pedírselo al Asistente.** Todavía no: el chat aprende a proponer variables en F3. Por ahora,
 desde la Estructura: «Definición › Variables».
 
-**Sigue:** F2 Datos fijos.
+### F2 — Datos fijos ✅ (03/11/2026)
+
+**Qué se hizo.** Nodo **Datos fijos** en Definición (debajo de Variables) con su modal; escribir
+`%` en el editor ofrece la lista; el **motor sustituye** cada `%NOMBRE%` antes de mandar el texto
+al modelo; y el comprobador avisa lo que no podría sustituir.
+
+```
+ Definición del agente                 ┌ Datos fijos ─────────────────────────────────────┐
+ ├─ Objetivo                           │ Nombre [EMPRESA      ]  Tipo [Texto o mensaje ▾] 🗑│
+ ├─ Contexto                           │ Contenido [Kontrolya                           ] │
+ ├─ Variables                          │ [%EMPRESA%] Se usa en: texto inicial, @demo      │
+ └─ Datos fijos ●  3 · EMPRESA, Q1…    │──────────────────────────────────────────────────│
+                                       │ Nombre [Q1  ]  Tipo [Pregunta ▾]                  │
+ Editor:  «Presenta a %│»              │ Contenido [¿Qué sistema utilizas hoy?          ] │
+          Datos fijos: [%EMPRESA%] [%Q1%] │ La respuesta se guarda en [SISTEMA ▾]          │
+                                       └──────────────────────────────────────────────────┘
+```
+
+**Cómo se escriben** (los escribe el modal; a mano es igual):
+
+```
+[DATOS FIJOS]
+EMPRESA = Kontrolya
+LIGA_AGENDA (liga) = https://kontrolya.com/agenda-una-demostracion/
+Q1 (pregunta) = ¿Qué sistemas utilizas hoy? → guarda en SISTEMA
+CIERRE = Ahora que ya entendí lo que buscas 👌
+
+  Puedes agendar aquí 👇 %LIGA_AGENDA%        ← sangría = sigue el mismo valor
+```
+
+**Cómo funciona el motor (D1).** `ContactTrackings::PromptConstants.expand` quita la sección, cambia
+cada `%NOMBRE%` por su contenido (un dato puede citar a otro, hasta 3 vueltas; uno circular se queda
+como está), cita las preguntas entre «» y convierte cada «→ guarda en» en una regla que el motor ya
+entiende para Variables («Cuando el cliente conteste «…», marca SISTEMA=<lo que contestó>»). Se llama
+en **un solo punto**: `ContactTracking#complementary_prompt`. Por ahí leen el texto la respuesta, el
+clasificador de rutas, la prueba en seco (arma un `ContactTracking` con el borrador) y los
+seguimientos. La plantilla del agente, que es lo que edita el Asistente, guarda siempre las
+referencias. Las dos partes que escriben o muestran el texto de un seguimiento usan
+`raw_complementary_prompt`, para no perderlas: el renombre de archivos adjuntos
+(`DirectiveReferenceService`) y la API de seguimientos.
+
+**Comprobador** (`ConstantChecks`; encienden el punto del nodo):
+
+| | Avisa | Color |
+|---|---|---|
+| C1 | `%ALGO%` sin declarar (el agente lo leería literal) | rojo |
+| C2 | declarado y nunca citado | ámbar |
+| C3 | pregunta que guarda en una variable que no está en Variables | ámbar |
+| C4 | nombre que el motor no lee («Mi empresa = …», con sugerencia `MI_EMPRESA`) o repetido | rojo |
+| C5 | dos con el mismo contenido (la «liga directa» = la «de registro» del ejemplo de Invitaciones) | ámbar |
+
+**«%» en el editor.** En el editor del Entrenamiento y en el modal de una sección, un `%` al empezar
+una palabra abre la barra de datos fijos; elegir uno escribe `%NOMBRE%`. `30%` no la abre. En el
+modal de ruta todavía no.
+
+**Probado contra lo que ya existe.** 967 textos (plantillas y seguimientos de dev y staging_v2, más
+los dos ejemplos): **ninguno cambia** al leerlo con el nuevo atributo, y **cero avisos falsos**.
+
+**Pila de pruebas.** Servidor: `prompt_constants_spec` 11 (leer, sangría y párrafos, alias de tipo,
+sustituir, regla de «guarda en», porcentajes, circular, atributo del modelo), `constant_checks_spec`
+8 (C1–C5 y casos limpios); con el comprobador, adjuntos, seco y variables, 139 en verde; motor
+(modelo, servicio de respuesta, analizador) 132 en verde. Navegador: `agentConstants.spec` 6,
+`constantPicker.spec` 3, `ConstantsModal.spec` 4, árbol +1, punto +1; carpeta del Asistente 262 en verde.
+
+**Pendiente de F2.** Un prompt publicado con datos fijos que se baja a otra cuenta trae los de la
+cuenta original: la pestaña «Configurar» todavía no ofrece cambiarlos (riesgo anotado en §11).
+
+**Cómo pedírselo al Asistente.** Todavía no: el chat aprende a proponer datos fijos en F3. Por ahora,
+desde la Estructura, «Definición › Datos fijos», o con `%` en el editor.
+
+**Sigue:** FR Fuentes (fichas + herramientas en el chat de creación).
 
 ---
 
