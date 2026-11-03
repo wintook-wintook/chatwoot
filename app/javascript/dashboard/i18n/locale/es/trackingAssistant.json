@@ -722,6 +722,7 @@
       "PLACE_ONE": "(1 lugar)",
       "KIND": {
         "VARIABLE": "Dato",
+        "CONSTANT": "Dato fijo",
         "GOOGLE_DOC": "Google Doc",
         "GOOGLE_SHEET": "Hoja de Google",
         "KNOWLEDGE_SOURCE": "Foro",
