@@ -478,3 +478,29 @@ más de 250. Mezcla tres cosas: las **herramientas** (~500 líneas en 2 archivos
 
 El arreglo **P3a** del motor (errores de OpenAI que hoy se tragan sin dejar rastro) vale la pena
 por sí solo, pero es otro tema: va en su propio PR chico, aparte de este plan.
+
+---
+
+## 13. Avance por fase
+
+### F0 — Medir ✅ (03/11/2026)
+
+**Qué se hizo.** Un script de solo lectura recorrió los Agentes IA con Entrenamiento de las dos
+bases que hay en este servidor: `chatwoot_dev` (24 agentes, 1 cuenta) y `chatwoot_staging_v2`
+(15 agentes, 4 cuentas; en una transacción `READ ONLY`). Producción vive en otro servidor y no se
+midió.
+
+| Qué | dev (24) | staging_v2 (15) | Qué decide |
+|---|---|---|---|
+| Agentes con `[VARIABLES]` | 6 (25 %), todos copias del ejemplo de becas (CARRERA, SIGUIENTE_OFERTA, LIGA_ENTREGADA) | 0 | F1: casi nadie las usa porque hay que escribirlas a mano; el formulario es lo que las vuelve usables |
+| Algo con forma `%PALABRA%` | 0 | 0 | **D2 confirmada**: `%NOMBRE%` está libre |
+| Contexto de los «%» que sí hay | solo porcentajes («ofrece 10% de beca»): el signo nunca va pegado a una letra | — | La expresión `%[letra]…%` no los toca; C1 avisaría si algo raro aparece |
+| `[DATOS FIJOS]` o `[CONSTANTES]` ya escritas | 0 | 0 | Sección libre, nada que migrar |
+| Preguntas repetidas dentro de un agente | 3 agentes (12,5 %), una pregunta ×2 cada uno | 0 | El ahorro de los datos fijos no está en repetir: está en tener las preguntas **juntas y con nombre** (banco, §5) |
+| Tamaño del Entrenamiento | mediana 3 437 · p90 18 593 · máx 18 738 caracteres | mediana 657 · p90 2 856 | Los agentes reales de clientes son cortos: el chat de creación tiene margen para crecer |
+| Cuentas con agente que tienen alguna fuente | 1 de 1 (artículos, predefinidas, hoja, documento, CONTPAQi, foro) | 1 de 4 (artículos, predefinidas) | **FR**: 3 de 4 cuentas de staging arman agentes **sin ninguna fuente**; la ficha también tiene que decir «no tienes fuentes, así se agrega una» |
+
+**Límite.** Muestra chica y sin producción. Si se quiere el número real, la misma consulta se puede
+correr en producción en solo lectura (el script está escrito para eso).
+
+**Siguiente:** F1 Variables.
