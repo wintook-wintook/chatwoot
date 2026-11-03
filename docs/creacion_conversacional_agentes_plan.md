@@ -365,6 +365,8 @@ pedírselo al Asistente ([[feedback_md_por_fase]]).
 - **El chat se vuelve lento**: más estructura por turno. Se mide en F3.
 - **Herramientas = más llamadas**: cada consulta a una fuente es una vuelta más del modelo. Tope
   de vueltas por turno y consumo visible por mensaje (ya existe en la rama diag, `TokenUsage`).
+- **Umbral de similitud bajo en el motor** (0,20): una fuente de otro negocio «contesta» (ver FR,
+  prueba real). Conviene revisarlo aparte.
 
 ---
 
@@ -683,8 +685,31 @@ búsqueda real con embedding simulado), `drafting_tool_loop_spec` 4 (corre y sig
 guardado); con Asistente y conocimiento, 127 en verde. Navegador: `SourceProfiles.spec` 2; carpeta
 de Agentes IA 279 en verde (falla solo `AgentWorkspace.spec.js`, que ya falla en develop).
 
-**Falta (antes de darlo por bueno).** Probarlo con OpenAI de verdad en la cuenta 2 (cuesta), y la
-medición D8 (gpt-5.4-mini contra gpt-5.5 con 3 encargos). Las columnas de una hoja salen en el orden
+**Prueba real (03/11/2026, cuenta 2 de dev, gpt-5.4-mini, bandera encendida).** Tres casos, en
+tres rondas, con correcciones entre ellas:
+
+| Ronda | Cotizar con la hoja | Calificar prospectos (tipo DCI) | Psicología (sin fuente que sirva) |
+|---|---|---|---|
+| 1 (1 turno) | 10 s; miró la hoja y la probó; boceto bien | 18 s; probó rutas pero **no devolvió el boceto** (llegó al tope) | 10 s; **propuso las predefinidas, que son de una veterinaria** |
+| 2 (1 turno, tras ajustes) | 7 s; **boceto mal escrito** (`: Precios de Articulos -> -`) | 8 s; solo preguntas (correcto en el turno 1) | 8 s; «las predefinidas y los documentos son de otro giro» ✓ |
+| 3 (2 turnos) | 7 + 8 s; boceto **válido**, probó 6 y 5 frases, **todas bien**; «ya puedes crear el Entrenamiento» | 9 + 18 s; 2 rutas (calificar y soporte CONTPAQi) válidas, **6 de 6 frases bien** | — |
+
+Lo que se corrigió por lo que se vio:
+- `probar_fuente` marca `parecido_bajo` (< 0,55) y recuerda revisar si el contenido contesta y es de
+  ESTE negocio; la regla 2 lo exige («la cuenta tiene material de varios negocios»).
+- Si el modelo prueba rutas y no devuelve el boceto, el código guarda lo último que probó.
+- **Guardia del código:** el boceto final pasa siempre por el comprobador; si el motor no lo
+  ejecutaría, se le devuelven los avisos y corrige (hasta 2 vueltas).
+- La sintaxis de ejemplo dice que el nombre va sin espacios, que la fuente es la directiva y que la
+  ruta por defecto es una de las declaradas. Tope de herramientas: 8 → 10.
+
+⚠ **Hallazgo del motor, no del Asistente:** con el umbral de la cuenta 2 (`similarity_threshold` 0,20),
+«¿cuánto cuesta una sesión de terapia?» trae «PATITAS PRECIO CONSULTA GENERAL» (veterinaria) con 0,43
+y pasa. Un agente conectado a esas predefinidas contestaría con datos de otro negocio. Lo que de verdad
+contesta anda arriba de ~0,55. No se tocó el umbral: es otro tema.
+
+**Falta.** La medición D8 (gpt-5.4-mini contra gpt-5.5); con mini, en la ronda 3 salió bien. El costo
+exacto no se midió (no hay contador de consumo en develop). Las columnas de una hoja salen en el orden
 de `jsonb` (Postgres no guarda el de la hoja).
 
 **Cómo pedírselo al Asistente.** Con la bandera encendida, en «Crear desde cero»: «tengo una hoja de
