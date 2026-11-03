@@ -72,4 +72,12 @@ describe('trainingSectionsMixin', () => {
       messages: ['fuera'],
     });
   });
+
+  it('los avisos de datos fijos encienden el nodo Datos fijos', () => {
+    const wrapper = shallowMount(Pantalla);
+    wrapper.vm.validation = {
+      blocking: [{ code: 'constant_undeclared', line: 2, message: 'falta' }],
+    };
+    expect(wrapper.vm.nodeIssues.constants.level).toBe('blocking');
+  });
 });
