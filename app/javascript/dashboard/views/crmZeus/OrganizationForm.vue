@@ -13,6 +13,7 @@ import CrmCatalogs from 'dashboard/api/crmCatalogs';
 import Spinner from 'shared/components/Spinner.vue';
 import AddressFields from './AddressFields.vue';
 import ConsigneesPanel from './ConsigneesPanel.vue';
+import ContactsPanel from './ContactsPanel.vue';
 import {
   ADDRESS_FIELDS,
   LOOKUP_KINDS,
@@ -22,7 +23,7 @@ import {
   errorMessage,
 } from './crmHelpers';
 
-const TABS = ['general', 'address', 'admin', 'notes', 'consignees'];
+const TABS = ['general', 'address', 'admin', 'notes', 'consignees', 'contacts'];
 const FIELDS = [
   'organization_type',
   'key',
@@ -66,7 +67,7 @@ const blankOrganization = () => ({
 
 export default {
   name: 'CrmZeusOrganizationForm',
-  components: { Spinner, AddressFields, ConsigneesPanel },
+  components: { Spinner, AddressFields, ConsigneesPanel, ContactsPanel },
   props: {
     organizationId: { type: String, default: '' },
   },
@@ -587,6 +588,18 @@ export default {
             :countries="catalogs.countries"
             :can-edit="canEdit"
             @changed="refreshBilling"
+          />
+        </div>
+
+        <!-- Contactos de Wintook ligados (CrmZeus C2; también con guardado propio) -->
+        <div v-if="tab === 'contacts'" class="max-w-4xl">
+          <p v-if="isNew" class="text-sm text-slate-500">
+            {{ $t('CRM_ZEUS.CONTACTS.SAVE_FIRST') }}
+          </p>
+          <ContactsPanel
+            v-else
+            :organization-id="organizationId"
+            :can-edit="canEdit"
           />
         </div>
       </form>

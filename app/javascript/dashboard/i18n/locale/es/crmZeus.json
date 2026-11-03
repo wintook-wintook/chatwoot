@@ -84,7 +84,8 @@
         "ADDRESS": "Dirección",
         "ADMIN": "Administración",
         "NOTES": "Notas",
-        "CONSIGNEES": "Consignatarios"
+        "CONSIGNEES": "Consignatarios",
+        "CONTACTS": "Contactos"
       },
       "ADDRESS_HINT": "Domicilio de la organización (dirección principal). Las demás direcciones van en «Consignatarios».",
       "REQUIRED": "La razón social y el nombre comercial son obligatorios",
@@ -141,6 +142,24 @@
         "CONTACT": "Contacto"
       },
       "DELETE_TITLE": "Eliminar consignatario"
+    },
+    "CONTACTS": {
+      "HINT": "Contactos de Wintook que pertenecen a la organización. Desligar uno no lo borra de Wintook.",
+      "SEARCH": "Buscar contacto por nombre, correo o teléfono",
+      "NONE_FOUND": "No se encontraron contactos",
+      "ALREADY_HERE": "Ya está ligado",
+      "IN_OTHER": "En «{name}»",
+      "LINKED": "«{name}» ligado a la organización",
+      "EMPTY": "Sin contactos ligados",
+      "SAVE_FIRST": "Guarda la organización para ligar contactos.",
+      "UNLINK": "Desligar",
+      "UNLINK_TITLE": "Desligar contacto",
+      "CONFIRM_UNLINK": "«{name}» dejará de pertenecer a esta organización. El contacto y sus conversaciones siguen en Wintook.",
+      "COLUMNS": {
+        "NAME": "Nombre",
+        "EMAIL": "Correo",
+        "PHONE": "Teléfono"
+      }
     },
     "CATALOGS": {
       "TITLE": "Catálogos",

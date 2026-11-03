@@ -84,7 +84,8 @@
         "ADDRESS": "Address",
         "ADMIN": "Administration",
         "NOTES": "Notes",
-        "CONSIGNEES": "Consignees"
+        "CONSIGNEES": "Consignees",
+        "CONTACTS": "Contacts"
       },
       "ADDRESS_HINT": "Main address of the organization. Other addresses go in «Consignees».",
       "REQUIRED": "Legal name and trade name are required",
@@ -141,6 +142,24 @@
         "CONTACT": "Contact"
       },
       "DELETE_TITLE": "Delete consignee"
+    },
+    "CONTACTS": {
+      "HINT": "Wintook contacts that belong to the organization. Unlinking one does not delete it from Wintook.",
+      "SEARCH": "Search a contact by name, email or phone",
+      "NONE_FOUND": "No contacts found",
+      "ALREADY_HERE": "Already linked",
+      "IN_OTHER": "In «{name}»",
+      "LINKED": "«{name}» linked to the organization",
+      "EMPTY": "No linked contacts",
+      "SAVE_FIRST": "Save the organization to link contacts.",
+      "UNLINK": "Unlink",
+      "UNLINK_TITLE": "Unlink contact",
+      "CONFIRM_UNLINK": "«{name}» will no longer belong to this organization. The contact and its conversations stay in Wintook.",
+      "COLUMNS": {
+        "NAME": "Name",
+        "EMAIL": "Email",
+        "PHONE": "Phone"
+      }
     },
     "CATALOGS": {
       "TITLE": "Catalogs",

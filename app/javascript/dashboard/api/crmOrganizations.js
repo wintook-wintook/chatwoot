@@ -33,6 +33,23 @@ class CrmOrganizationsAPI extends ApiClient {
   deleteConsignee(id, consigneeId) {
     return axios.delete(`${this.url}/${id}/consignees/${consigneeId}`);
   }
+
+  // CrmZeus C1 — contactos de Wintook ligados a la organización.
+  contacts(id) {
+    return axios.get(`${this.url}/${id}/contacts`);
+  }
+
+  searchContacts(id, q) {
+    return axios.get(`${this.url}/${id}/contacts/search`, { params: { q } });
+  }
+
+  linkContact(id, contactId) {
+    return axios.post(`${this.url}/${id}/contacts`, { contact_id: contactId });
+  }
+
+  unlinkContact(id, contactId) {
+    return axios.delete(`${this.url}/${id}/contacts/${contactId}`);
+  }
 }
 
 export default new CrmOrganizationsAPI();
