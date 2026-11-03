@@ -264,6 +264,16 @@ class AssistantAPI extends ApiClient {
     });
   }
 
+  // F4: el .md de las instrucciones del agente, para pegarlo en otra IA.
+  exportInstructions({ name, draft, instructions, fields }) {
+    return axios.post(`${this.url}/export`, {
+      name,
+      draft,
+      instructions,
+      fields,
+    });
+  }
+
   // F3: lo corregido a mano en Definición, Variables o Datos fijos, sin gastar un turno.
   saveDraftingFields(sessionId, fields) {
     return axios.patch(`${this.url}/drafting_chat/fields`, {

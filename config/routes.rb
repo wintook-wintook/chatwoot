@@ -345,6 +345,8 @@ Rails.application.routes.draw do
             post 'assistant/drafting_chat', to: 'assistant_drafting#create'
             # proyecto@crear_agente_conversando F3: lo corregido a mano en Definición/Variables/Datos fijos
             patch 'assistant/drafting_chat/fields', to: 'assistant_drafting#fields'
+            # F4: el .md de las instrucciones del agente, para otra IA
+            post 'assistant/export', to: 'assistant_export#create'
             put 'assistant/autosave', to: 'assistant_autosave#update'
             patch 'assistant/sessions/:id/name', to: 'assistant_autosave#rename'
             post 'assistant/conversation_review', to: 'assistant_review#create'
