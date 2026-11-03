@@ -70,7 +70,9 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
 
   def inventory
     inventario = ContactTrackings::Assistant::InventoryService.new(Current.account, inbox: inbox).call
-    render json: inventario.merge(models: models_for(inbox), catalog: ContactTrackings::Assistant::EngineCatalog.new(inventario).call)
+    perfiles = ContactTrackings::Assistant::SourceProfiles.new(Current.account, inbox: inbox) # FR: qué tiene cada fuente
+    render json: inventario.merge(models: models_for(inbox), catalog: ContactTrackings::Assistant::EngineCatalog.new(inventario).call,
+                                  profiles: perfiles.call, missing_sources: perfiles.missing)
   end
 
   def validate

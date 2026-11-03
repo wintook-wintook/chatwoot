@@ -51,6 +51,7 @@ class ContactTrackings::Assistant::DraftingChat
   }.freeze
   # Lo que cabe en la conversación: más largo que esto no son instrucciones, es un manual.
   MAX_INSTRUCTIONS_CHARS = 30_000
+  MAX_ROUTE_LINES = 40
 
   PROMPT = <<~PROMPT
     Eres el Asistente de Agentes IA de la plataforma. Ayudas a una persona a armar DESDE
@@ -136,41 +137,62 @@ class ContactTrackings::Assistant::DraftingChat
     {"mensaje": "lo que le dices a la persona", "instrucciones": "el .md completo" | null}
   PROMPT
 
-  def initialize(account, messages:, instructions: nil)
+  # routes: el boceto de rutas que se lleva (FR/D10): las líneas @ruta(…) ya probadas.
+  # tools: si el modelo puede consultar y probar las fuentes (AssistantTools).
+  def initialize(account, messages:, instructions: nil, routes: nil, tools: false)
     @account = account
     @messages = Array(messages)
     @instructions = instructions.to_s
+    @routes = clean_routes(routes).to_s
+    @tools = tools
     @chat = ContactTrackings::Assistant::OpenaiChat.new(account: account)
   end
 
-  # { reply:, instructions:, changed: } o { error: }
+  # { reply:, instructions:, changed:, routes:, tools_used: } o { error: }
   def call
     return { error: :no_api_key } if @chat.api_key.blank?
     return { error: :no_messages } if @messages.empty?
 
-    raw = @chat.call(history, max_tokens: MAX_OUTPUT_TOKENS, model: MODEL)
+    raw = ask
     return { error: :unavailable } if raw.nil? || raw['mensaje'].blank?
 
-    nuevas = clean(raw['instrucciones'])
-    { reply: raw['mensaje'].to_s.strip, instructions: nuevas || @instructions, changed: nuevas.present? }
+    result_from(raw)
   end
 
   private
+
+  def ask
+    @tools ? tool_loop.call(history) : @chat.call(history, max_tokens: MAX_OUTPUT_TOKENS, model: MODEL)
+  end
+
+  def result_from(raw)
+    nuevas = clean(raw['instrucciones'])
+    { reply: raw['mensaje'].to_s.strip, instructions: nuevas || @instructions, changed: nuevas.present?,
+      routes: clean_routes(raw['boceto']) || @routes.presence, tools_used: @tool_loop&.log || [] }
+  end
 
   def history
     [{ role: 'system', content: system_prompt }] + context_messages + @messages.map { |m| m.slice('role', 'content') }
   end
 
+  def tool_loop
+    @tool_loop ||= ContactTrackings::Assistant::DraftingToolLoop.new(
+      @chat, ContactTrackings::Assistant::AssistantTools.new(@account, draft: @routes, api_key: @chat.api_key),
+      model: MODEL, max_tokens: MAX_OUTPUT_TOKENS
+    )
+  end
+
   # Las instrucciones como van hasta ahora: el modelo las edita, no las reescribe de memoria.
   def context_messages
-    return [] if @instructions.blank?
-
-    [{ role: 'system', content: "INSTRUCCIONES INICIALES HASTA AHORA:\n\n#{@instructions}" }]
+    [("INSTRUCCIONES INICIALES HASTA AHORA:\n\n#{@instructions}" if @instructions.present?),
+     ("BOCETO DE RUTAS HASTA AHORA (ya probadas; edítalo, no lo reescribas de memoria):\n\n#{@routes}" if @routes.present?)]
+      .compact.map { |texto| { role: 'system', content: texto } }
   end
 
   def system_prompt
     # sub y no format: la plantilla o un nombre de la cuenta pueden traer un «%».
-    PROMPT.sub('__PLANTILLA__') { EXAMPLE_PATH.read.strip }.sub('__RECURSOS__') { resources }
+    base = PROMPT.sub('__PLANTILLA__') { EXAMPLE_PATH.read.strip }.sub('__RECURSOS__') { resources }
+    @tools ? [base, ContactTrackings::Assistant::DraftingToolLoop::PROMPT].join("\n\n") : base
   end
 
   # Lo que la cuenta tiene y lo que no, en palabras: las fichas del catálogo del motor.
@@ -178,7 +200,8 @@ class ContactTrackings::Assistant::DraftingChat
     inventario = ContactTrackings::Assistant::InventoryService.new(@account).call
     fichas = ContactTrackings::Assistant::EngineCatalog.new(inventario).call
     ['═══ RECURSOS DE ESTA CUENTA (úsalos; no los preguntes) ═══', *ready_lines(fichas),
-     missing_line(fichas), "Etiquetas que ya existen: #{labels(inventario)}"].compact.join("\n")
+     missing_line(fichas), "Etiquetas que ya existen: #{labels(inventario)}",
+     *ContactTrackings::Assistant::SourceProfiles.new(@account).summary_lines].compact.join("\n")
   end
 
   def ready_lines(fichas)
@@ -195,6 +218,12 @@ class ContactTrackings::Assistant::DraftingChat
 
   def labels(inventario)
     Array(inventario[:labels]).join(' · ').presence || 'ninguna'
+  end
+
+  # Solo las líneas de rutas: el boceto no lleva prosa.
+  def clean_routes(texto)
+    lineas = texto.to_s.split("\n").map(&:strip).select { |l| l.start_with?('@ruta') }
+    lineas.any? ? lineas.first(MAX_ROUTE_LINES).join("\n") : nil
   end
 
   def clean(texto)

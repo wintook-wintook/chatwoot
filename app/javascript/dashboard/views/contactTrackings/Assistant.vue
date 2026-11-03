@@ -276,6 +276,8 @@ export default {
       // Las instrucciones iniciales que se llenan conversando mientras no hay
       // Entrenamiento (DraftingChat). Se guardan con la conversación.
       instructions: '',
+      // FR/D10: el boceto de rutas que el chat de creación ya probó (proposal.boceto).
+      draftingRoutes: '',
       // Unas instrucciones mandadas a leer desde el chat: el modal las toma de acá.
       chatBrief: null,
       isSendingInstructions: false,
@@ -608,6 +610,7 @@ export default {
       this.interviewOptions = null;
       this.messages = data.messages || [];
       this.instructions = data.instructions || '';
+      this.draftingRoutes = data.proposal?.boceto || '';
       this.draft = data.draft || '';
       this.validation = data.validation || null;
       this.proposal = data.proposal || null;
@@ -667,6 +670,7 @@ export default {
     },
     startFresh() {
       this.instructions = '';
+      this.draftingRoutes = '';
       this.chatBrief = null;
       this.sessionId = null;
       this.sessionMeta = null;
@@ -1042,12 +1046,13 @@ export default {
         const { data } = await AssistantAPI.draftingChat(
           this.messages,
           this.instructions,
-          { sessionId: this.sessionId }
+          { sessionId: this.sessionId, routes: this.draftingRoutes }
         );
         this.sessionId = data.session_id || this.sessionId;
         if (data.session) this.sessionMeta = data.session;
         this.messages.push({ role: 'assistant', content: data.reply });
         if (data.instructions) this.instructions = data.instructions;
+        if (data.routes) this.draftingRoutes = data.routes;
       } catch (error) {
         const reason =
           error?.response?.data?.error === 'no_api_key'
