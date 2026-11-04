@@ -72,10 +72,18 @@ RSpec.describe ContactTrackings::Assistant::SourceProbe do
     expect(probar('{{doc:Precios}}')).to include(kind: 'similarity', error: 'google_disabled')
   end
 
-  it 'las hojas exactas y el ERP van a su prueba (P2); en vivo todavía no (P3)' do
+  it 'cada tipo va a su prueba: hojas y ERP (P2), en vivo (P3)' do
     expect(probar('{{hoja_buscar: Precios | Producto=? | Precio}}')).to eq(kind: 'sheet_lookup', error: 'google_disabled')
     expect(probar('{{consulta:sae/saldo(rfc=?)}}')).to eq(kind: 'erp', error: 'query_missing')
-    expect(probar('@buscar_foro(Foro)')).to eq(kind: 'live', pending: true)
+    expect(probar('@buscar_foro(Foro)')).to eq(kind: 'live', error: 'source_missing')
+    expect(probar('@soporte_contpaq(Soporte)')).to eq(kind: 'live', error: 'source_missing')
+    expect(probar('@discourse')).to eq(kind: 'live', error: 'needs_inbox')
+  end
+
+  it 'avisa qué hace cada fuente en vivo' do
+    lista = described_class.new(account, text: "@buscar_foro(F)\n@soporte_contpaq(S)").directives
+
+    expect(lista.pluck(:notice)).to eq(%w[forum_live contpaq_thread])
   end
 
   it 'marca cuáles gastan una llamada de IA' do

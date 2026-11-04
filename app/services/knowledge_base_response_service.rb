@@ -878,29 +878,9 @@ class KnowledgeBaseResponseService
   # resultados de varias consultas se fusionan primero y el fetch —con su rate limit de
   # 1.5s entre llamadas— se paga una sola vez, sobre la lista ya deduplicada y recortada.
   def discourse_hits(query, config)
-    url      = config['url'].to_s.chomp('/')
-    api_key  = config['api_key'].to_s
-    username = config['username'].presence || 'system'
-
-    uri       = URI("#{url}/discourse-ai/embeddings/semantic-search.json")
-    uri.query = URI.encode_www_form(q: query)
-
-    http              = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl      = uri.scheme == 'https'
-    http.read_timeout = 10
-
-    request = Net::HTTP::Get.new(uri)
-    request['Api-Key']      = api_key if api_key.present?
-    request['Api-Username'] = username
-    request['Content-Type'] = 'application/json'
-
-    response = http.request(request)
+    hits = KnowledgeBase::DiscourseSemanticSearch.hits(query, config)
     # Foro sin Discourse AI activo: la búsqueda normal (ver KnowledgeBase::DiscourseKeywordSearch).
-    return keyword_search(config).hits(query) if response.code == '404'
-
-    data = JSON.parse(response.body)
-    Rails.logger.info "[KBase] 📚 #{(data['posts'] || []).size} resultado(s) en Discourse semantic-search"
-    KnowledgeBase::DiscourseKeywordSearch.to_hits(data, url)
+    hits == KnowledgeBase::DiscourseSemanticSearch::NOT_AVAILABLE ? keyword_search(config).hits(query) : hits
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error en Discourse search: #{e.message}"
     []

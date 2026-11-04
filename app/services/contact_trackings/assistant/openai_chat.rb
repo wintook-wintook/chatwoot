@@ -64,6 +64,13 @@ class ContactTrackings::Assistant::OpenaiChat
     post_message(body)
   end
 
+  # Texto plano, sin JSON (crear_agente_conversando §15 P3: los términos de búsqueda del
+  # foro, igual que los pide el motor). Modelo del propósito :router.
+  def call_text(messages, max_tokens: 60)
+    modelo = ContactTrackings::EngineConfig.model_for(@inbox, :router)
+    post({ model: modelo, messages: messages }.merge(limits(modelo, max_tokens, 0.0)))
+  end
+
   # El texto de la última llamada que falló (para reintentar ante un 400 conocido).
   attr_reader :last_error
 
