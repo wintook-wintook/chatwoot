@@ -264,6 +264,15 @@ class AssistantAPI extends ApiClient {
     });
   }
 
+  // §15 «Probar fuentes»: las directivas del borrador y una búsqueda como el agente.
+  sourceProbe(draft) {
+    return axios.post(`${this.url}/source_probe`, { draft });
+  }
+
+  sourceProbeRun(directive, phrase) {
+    return axios.post(`${this.url}/source_probe/run`, { directive, phrase });
+  }
+
   // F4: el .md de las instrucciones del agente, para pegarlo en otra IA.
   exportInstructions({ name, draft, instructions, fields }) {
     return axios.post(`${this.url}/export`, {

@@ -34,7 +34,6 @@ class ContactTrackings::Assistant::AssistantTools
   HITS_NOTE = 'pasa_umbral = el agente lo usaría para contestar. parecido_bajo = probablemente NO es lo que pregunta. ' \
               'Revisa el extracto: si no contesta la frase o es de otro negocio, esa fuente daría una respuesta equivocada.'
   MANUAL_PATH = Rails.root.join('docs/motor_agentes_ia_manual.md')
-  EMBED_MODEL = 'text-embedding-3-small'
   # Las fuentes que se buscan aquí mismo (knowledge_items con embedding). El foro y
   # CONTPAQi se consultan en vivo fuera del sistema: no se pueden probar desde aquí.
   LOCAL_TYPES = %w[google_sheet google_doc article canned_response].freeze
@@ -175,18 +174,7 @@ class ContactTrackings::Assistant::AssistantTools
       activas.find { |s| I18n.transliterate(s.name).downcase.include?(clave) }
   end
 
-  def embed(texto)
-    return nil if @api_key.blank?
-
-    uri = URI('https://api.openai.com/v1/embeddings')
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = true
-    http.read_timeout = 10
-    request = Net::HTTP::Post.new(uri, 'Authorization' => "Bearer #{@api_key}", 'Content-Type' => 'application/json')
-    request.body = { model: EMBED_MODEL, input: texto }.to_json
-    response = http.request(request)
-    response.is_a?(Net::HTTPSuccess) ? JSON.parse(response.body).dig('data', 0, 'embedding') : nil
-  end
+  def embed(texto) = ContactTrackings::Assistant::Embedding.call(texto, @api_key)
 
   # ── ver_directiva ───────────────────────────────────────────────────────────
   def tool_ver_directiva(args)

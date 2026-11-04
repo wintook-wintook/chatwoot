@@ -86,6 +86,7 @@ import ConstantPicker from './assistant/ConstantPicker.vue';
 import DraftingSketch from './assistant/DraftingSketch.vue';
 import DraftingFields from './assistant/DraftingFields.vue';
 import ExportMenu from './assistant/ExportMenu.vue';
+import SourceProbePanel from './assistant/SourceProbePanel.vue';
 import { fieldsOf, filledCount } from './assistant/draftingFields';
 import { insertConstant, percentTriggerAt } from './assistant/constantPicker';
 import { readConstants } from './assistant/agentConstants';
@@ -155,6 +156,7 @@ export default {
     DraftingSketch,
     DraftingFields,
     ExportMenu,
+    SourceProbePanel,
     SaveModal,
   },
   mixins: [trainingSectionsMixin],
@@ -1699,7 +1701,7 @@ export default {
           </div>
 
           <div
-            v-show="view !== 'tests'"
+            v-show="view === 'training'"
             class="grid flex-1 min-h-0 gap-4 md:grid-cols-2"
           >
             <!-- La columna izquierda: la Estructura del Agente o la conversación,
@@ -2092,6 +2094,13 @@ export default {
             </section>
           </div>
 
+          <!-- crear_agente_conversando §15: la pestaña «Probar fuentes», a lo ancho. -->
+          <section
+            v-if="view === 'sources'"
+            class="flex flex-col flex-1 min-h-0 p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+          >
+            <SourceProbePanel :draft="draft" :active="view === 'sources'" />
+          </section>
           <!-- proyecto@diagrama_agente_ia: la pestaña «Pruebas y diagrama». Las pruebas a
                la izquierda y el agente dibujado a la derecha, cada uno con su columna
                (antes compartían la del chat y la del editor). v-show: la pila sigue
