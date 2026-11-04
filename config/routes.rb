@@ -313,6 +313,9 @@ Rails.application.routes.draw do
             patch 'assistant/drafting_chat/fields', to: 'assistant_drafting#fields'
             # F4: el .md de las instrucciones del agente, para otra IA
             post 'assistant/export', to: 'assistant_export#create'
+            # §15: probar las fuentes del agente como las busca él
+            post 'assistant/source_probe', to: 'assistant_source_probe#index'
+            post 'assistant/source_probe/run', to: 'assistant_source_probe#run'
             put 'assistant/autosave', to: 'assistant_autosave#update'
             patch 'assistant/sessions/:id/name', to: 'assistant_autosave#rename'
             post 'assistant/conversation_review', to: 'assistant_review#create'

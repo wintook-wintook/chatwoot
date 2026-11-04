@@ -934,3 +934,76 @@ mis distribuidores a una sesión por Zoom»). Al terminar:
 4. Se cuenta cuántos turnos y cuánto costó.
 
 Esta prueba se corre al cerrar F3 y FD, y cada vez que cambie el chat.
+
+---
+
+## 15. Pestaña «Probar fuentes» (pedido del usuario, 04/11/2026)
+
+**El pedido.** Una pestaña para probar las fuentes de datos del agente y validar las consultas,
+viendo el umbral, parecida a «Prueba de búsqueda» de Base de Conocimiento.
+
+**Decidido con el usuario (04/11):** va en el **espacio del agente** (junto a «Pruebas y diagrama»),
+prueba **las fuentes que usa ese agente, como las buscaría él**, y cubre los cuatro tipos:
+parecido, hojas, ERP y fuentes en vivo.
+
+**Por qué no basta la de Base de Conocimiento.** Esa busca en TODAS las fuentes juntas con un umbral
+que se mueve a mano (0.7 por omisión). El agente no hace eso:
+
+| Directiva | Dónde busca | Umbral | Tope |
+|---|---|---|---|
+| `@buscar_predefinidas` | todas las predefinidas | el de la cuenta (0.20 por omisión) | `max_results` (3) |
+| `@buscar_predefinidas(GRUPO)` | solo las que empiezan con GRUPO | **0.45** (`GROUP_SIMILARITY_THRESHOLD`) | 3 |
+| `@buscar_predefinidas(!GRUPO)` | todas menos esas | el de la cuenta | 3 |
+| `@buscar_articulo` | artículos | el de la cuenta | 3 |
+| `{{doc:X}}`, `{{hoja:X}}` (FAQ) | esa fuente | el de la cuenta | 3 |
+| `{{hoja:X}}` (modo datos) | Ruby calcula exacto (IA traduce la pregunta) | — | — |
+| `{{hoja_buscar: …}}` | valor exacto en una columna | — | 20 filas |
+| `{{consulta:…}}` | la consulta del ERP (IA llena los «?») | — | — |
+| `@buscar_foro(X)`, `@discourse` | Discourse en vivo | — | 3 |
+| `@soporte_contpaq(X)` | servicio de CONTPAQi (responde ya escrito) | — | — |
+
+```
+ [Entrenamiento] [Pruebas y diagrama] [Probar fuentes]
+ Fuente: [ @buscar_predefinidas(PATITAS) — ruta dudas ▾ ]
+ Frase del cliente: [ ¿cuánto cuesta la consulta?      ] [Probar]
+ Umbral que usa aquí: 0.45 (grupo) · toma hasta 3
+  #1 PATITAS_CONSULTA  0.71 ███████████  ✓ la usaría
+  #2 PATITAS_VACUNAS   0.48 ███████      ✓ la usaría · parecido bajo
+  #3 PATITAS_HORARIO   0.41 ██████       ✗ bajo el umbral
+  #4 PATITAS_BAÑO      0.47 ███████      ✗ fuera del tope (solo toma 3)
+```
+
+**Fases.**
+- **P1 — parecido** (predefinidas con y sin grupo, artículos, documentos, hojas FAQ): sin IA más que
+  el embedding de la frase. Lista las directivas del Entrenamiento con la ruta que las usa; si el
+  agente no tiene ninguna, ofrece las fuentes de la cuenta.
+- **P2 — hojas y ERP**: `{{hoja_buscar:}}` (con el valor que se escribe), `{{hoja:}}` en modo
+  datos y `{{consulta:}}` (gastan una llamada de IA: se avisa).
+- **P3 — en vivo**: foro / `@discourse` (lista lo que regresa Discourse) y CONTPAQi (abre un hilo
+  de prueba en su servicio: se avisa).
+
+
+### P1 — parecido ✅ (04/11/2026)
+
+- **Pestaña «Probar fuentes»** en el espacio del agente (solo administradores), como una vista más
+  del mismo Asistente (usa el borrador abierto). `SourceProbePanel.vue`: elegir la fuente (cada
+  directiva del Entrenamiento, con las rutas que la usan), escribir la frase, ver el umbral que se
+  usa ahí (grupo o cuenta) y el tope, y cada resultado con su parecido, una barra con la marca del
+  umbral y por qué se usaría o no («✓ la usaría», «✗ bajo el umbral», «✗ fuera del tope»,
+  «parecido bajo» < 0.55). Las frases probadas quedan como atajos.
+- **Igual que el motor** (`SourceProbe`): el alcance y el umbral del grupo salen de
+  `KnowledgeBaseResponseService.grouped_items` / `.group_threshold` (sacados a métodos de clase;
+  el motor delega en ellos), el umbral y el tope de `kbase_setting`, el embedding del mismo modelo
+  (`Embedding`, ahora compartido con `probar_fuente`). Sin Google activo, o con la fuente
+  inexistente, lo dice: el agente no buscaría ahí.
+- **Fuente vacía**: medido en el agente real #12156 (cuenta 2), dos rutas buscan en grupos de
+  predefinidas que no tienen ninguna respuesta («ADAM POLITICA SOLICITUD DE CORREO», «… MANEJO DE
+  PRECIOS»). La lista los marca «vacía» y la prueba lo explica sin gastar el embedding.
+- Sin directivas en el Entrenamiento, ofrece las fuentes de la cuenta.
+
+**Pila de pruebas.** `source_probe_spec` 8 (vectores con parecido exacto: grupo, tope, umbral de
+cuenta, Google, vacía, pendientes), `assistant_source_probe_spec` 2; motor de KBase y herramientas
+114 en verde (los 4 fallos de `knowledge_base_controller_spec` ya estaban: 403). Navegador:
+`SourceProbePanel.spec` 4; carpeta 304 en verde.
+
+**Sigue:** P2 — `{{hoja_buscar:}}`, `{{hoja:}}` en modo datos y `{{consulta:}}`.

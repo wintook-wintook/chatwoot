@@ -19,7 +19,7 @@
 // Rutas: /tracking-dashboard/agents/:templateId (un número, o «new»).
 //   ?session=ID   retomar una conversación de «En construcción»
 //   ?galeria=1    abrir la Galería al entrar (agente nuevo)
-//   ?seccion=     training · tests · profile · versions
+//   ?seccion=     training · tests · sources · profile · versions
 //
 // El Entrenamiento trabaja sobre un BORRADOR (la conversación del Asistente, que se
 // guarda sola) y «Publicar cambios» lo aplica al agente dejando una versión. Al
@@ -77,6 +77,8 @@ export default {
         this.isAdmin && { id: 'training', label: 'SECTION_TRAINING' },
         // proyecto@diagrama_agente_ia: pruebas y diagrama en su propia pestaña, a lo ancho.
         this.isAdmin && { id: 'tests', label: 'SECTION_TESTS' },
+        // crear_agente_conversando §15: probar las fuentes como las busca el agente.
+        this.isAdmin && { id: 'sources', label: 'SECTION_SOURCES' },
         !this.isNew && { id: 'profile', label: 'SECTION_PROFILE' },
         !this.isNew && { id: 'versions', label: 'SECTION_VERSIONS' },
       ].filter(Boolean);
@@ -255,7 +257,7 @@ export default {
         <!-- Entrenamiento y Pruebas son el MISMO Asistente con otra vista: un solo
              elemento con la misma key, así cambiar de pestaña no lo vuelve a montar. -->
         <Assistant
-          v-if="section === 'training' || section === 'tests'"
+          v-if="['training', 'tests', 'sources'].includes(section)"
           :key="`training-${reloadKey}`"
           :view="section"
           :template-id="templateId"
