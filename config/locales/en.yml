@@ -322,6 +322,7 @@ en:
     replaced_by: 'Replaced by version %{version}'
     delivery_message: "Hi %{name}, here is quote %{folio}. You can review and accept it here: %{url}"
     errors:
+      choose_accepted: 'Choose which quote the customer accepted'
       not_found: 'Quote not found'
       not_editable: 'Only draft or sent quotes can be edited. Create a new version.'
       only_drafts: 'Only draft quotes can be deleted'
@@ -343,11 +344,72 @@ en:
   assistant:
     unavailable: "I couldn't answer: check that the OpenAI integration is active and try again."
     review_proposal: "Review the proposal and confirm it."
+    capabilities:
+      consult: 'Look things up: find contacts, organizations and cases; what happened with a client; what you have today or this week (e.g. "what do I have today?").'
+      record: 'Record (always with a card you confirm): notes, tasks, calendar appointments, scheduled messages and drafts (e.g. "book a call tomorrow at 10").'
+      cases: 'Cases and opportunities: create, move stage, win or lose, postpone or resume, and mark the customer commitment.'
+      delegate: 'Delegate a client follow-up to an AI agent, and ask how it is going or pause it.'
+      sales: 'Sales: how are we doing vs the target, seller and client rankings, which opportunities close, are overdue or stalled, and pipeline health (amounts before tax).'
+      sales_own: 'Your sales: how you are doing vs your target, your best clients, which of your opportunities close, are overdue or stalled (amounts before tax).'
+      limits: 'What it does not do: it never writes to the customer on its own (it leaves a draft or a scheduled message) and does no bulk actions.'
+    starters:
+      today: 'What do I have today?'
+      sales_month: 'How are we doing this month?'
+      closing: 'Which opportunities close this week?'
+      help: 'What can you help me with?'
+    sales:
+      suggestions:
+        sales_overview: ['Who is behind their target?', 'Which opportunities close this month?', 'How are we doing vs last year?']
+        budget_progress: ['Which opportunities cover the gap?', 'Which clients buy below their budget?', 'How is the pipeline?']
+        pipeline_health: ['Which commitments are overdue?', 'Which opportunities are stalled?', 'How are we doing this month?']
+        sales_breakdown: ['Who has the best win rate?', 'Who are my best clients this year?', 'How are we doing this month?']
+        deal_list: ['How are we doing vs the budget?', 'Which opportunities are stalled?', 'Who is behind their target?']
+      cards:
+        everyone: 'whole team'
+        no_seller: 'No seller'
+        won: 'Achieved'
+        budget: 'Target'
+        progress: 'Progress'
+        vs_previous: 'Vs previous'
+        win_rate: 'Win rate'
+        open: 'Open'
+        weighted: 'Weighted'
+        committed_overdue: 'Overdue commitments'
+        stale: 'Stalled (+%{days} days)'
+        overview_title: 'Sales %{from} to %{to} · %{who}'
+        budget_title: 'Budget %{from} to %{to}'
+        pipeline_title: 'Pipeline · %{who}'
+        breakdown_seller: 'Seller ranking %{from} to %{to}'
+        breakdown_client: 'Top clients %{from} to %{to}'
+        deals_title: 'Opportunities'
+        deals_closing_this_week: 'Closing this week'
+        deals_closing_this_month: 'Closing this month'
+        deals_overdue: 'Overdue close'
+        deals_committed_overdue: 'Overdue commitments'
+        deals_stale: 'Stalled'
+        deals_top_open: 'Largest open'
+        deals_won_recent: 'Won this month'
+        open_budget: 'View budget'
+        open_pipeline: 'View pipeline'
+        col_seller: 'Seller'
+        col_budget: 'Target'
+        col_won: 'Achieved'
+        col_progress: 'Progress'
+        col_name: 'Name'
+        col_deals: 'Deals'
+        col_win_rate: 'Win rate'
+        col_avg_ticket: 'Avg. ticket'
+        col_folio: 'Folio'
+        col_client: 'Client'
+        col_amount: 'Amount'
+        col_close: 'Close'
   task_reports:
     visit_done: 'Visit finished'
     received_by: 'Received by: %{name}'
     required: 'To conclude it, write what was done'
     note_title: 'Closing report: %{title}'
+    activity_note_title: 'Activity: %{title}'
+    minutes_required: 'Enter the time spent'
   agenda_items:
     already_linked: 'That event already has a scheduled task'
     all_day: 'An all-day event has no time: it stays in Google only'

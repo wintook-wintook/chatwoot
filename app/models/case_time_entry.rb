@@ -13,30 +13,36 @@
 #  updated_at     :datetime         not null
 #  account_id     :bigint           not null
 #  case_ticket_id :bigint           not null
+#  task_report_id :bigint
 #  user_id        :bigint
 #
 # Indexes
 #
 #  index_case_time_entries_on_account_id      (account_id)
 #  index_case_time_entries_on_case_ticket_id  (case_ticket_id)
+#  index_case_time_entries_on_task_report_id  (task_report_id)
 #  index_case_time_entries_on_user_id         (user_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (case_ticket_id => case_tickets.id) ON DELETE => cascade
+#  fk_rails_...  (task_report_id => task_reports.id) ON DELETE => nullify
 #  fk_rails_...  (user_id => users.id) ON DELETE => nullify
 #
 
 # Plan-Trabajo-Campo R1 — tiempo trabajado en una orden: con el botón Iniciar /
 # Terminar (`timer`), capturado a mano (`manual`) o por Llegué/Terminé en campo
-# (`visit`, R2). Las horas reales de la orden son la suma.
+# (`visit`, R2) o por un reporte con tiempo dedicado (`report`). Las horas reales
+# del caso son la suma.
 class CaseTimeEntry < ApplicationRecord
   belongs_to :account
   belongs_to :case_ticket
   belongs_to :user, optional: true
+  belongs_to :task_report, optional: true
 
-  enum source: { timer: 0, manual: 1, visit: 2 }
+  # report: lo dejó un reporte de tarea o actividad con su tiempo dedicado.
+  enum source: { timer: 0, manual: 1, visit: 2, report: 3 }
 
   before_validation :compute_minutes
   after_commit :refresh_actual_hours

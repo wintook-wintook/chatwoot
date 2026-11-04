@@ -40,6 +40,15 @@ class AssistantAPI extends ApiClient {
   rename(name) {
     return axios.patch(`${this.url}/settings`, { name });
   }
+
+  // Nombre y modelos (general y de análisis); vacío = el de siempre. Solo administradores.
+  saveSettings({ name, model, analysisModel }) {
+    return axios.patch(`${this.url}/settings`, {
+      name,
+      model: model || '',
+      analysis_model: analysisModel || '',
+    });
+  }
 }
 
 export default new AssistantAPI();

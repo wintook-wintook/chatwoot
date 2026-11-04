@@ -162,6 +162,8 @@ export default {
     title(item) {
       if (item.kind === 'messages') return this.messagesTitle(item);
       if (item.payload?.kind === 'task_report') return this.t('TASK_REPORT');
+      if (item.payload?.kind === 'activity_report')
+        return this.t('ACTIVITY_REPORT');
       return this.eventLabel({ event_type: item.event_type });
     },
     messagesTitle(item) {

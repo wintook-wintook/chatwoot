@@ -42,7 +42,7 @@ class Quotes::Builder
     CaseTicket.create!(account: @account, contact: quote.contact, case_type: type, origin: :manual,
                        title: I18n.t('quotes.opportunity_title', folio: quote.folio),
                        assignee: quote.assignee, assignee_type: quote.assignee ? :agent : :bot,
-                       amount: quote.total, currency: quote.currency)
+                       amount: quote.net_total, currency: quote.currency)
   end
 
   private

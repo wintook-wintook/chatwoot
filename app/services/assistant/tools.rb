@@ -14,6 +14,7 @@ class Assistant::Tools
   include Assistant::ToolRefs
   include Assistant::DelegationTools # D3
   include Assistant::CaseTools # D4
+  include Assistant::SalesTools # D5a
 
   LIST_LIMIT = 6
   ACTIVITY_LINES = 15
@@ -37,8 +38,9 @@ class Assistant::Tools
   # → { result: <hash para el modelo>, proposal: <hash>|nil, navigate: <ruta>|nil }
   def call(name, args)
     args = (args || {}).stringify_keys
-    return { result: public_send("tool_#{name}", args) } if READ_TOOLS.include?(name) && name != 'open_page'
+    return sales_tool(name, args) if SALES_TOOLS.include?(name)
     return open_page(args) if name == 'open_page'
+    return { result: public_send("tool_#{name}", args) } if READ_TOOLS.include?(name)
     return proposal(name.delete_prefix('propose_'), args) if PROPOSAL_TOOLS.include?(name)
 
     { result: { error: "función desconocida: #{name}" } }
@@ -212,7 +214,9 @@ class Assistant::Tools
     'agenda' => ->(_t, _id) { 'tickets/tasks' },
     'my_day' => ->(_t, _id) { 'tickets/tasks' },
     'tasks' => ->(_t, _id) { 'tickets/tasks' },
-    'cases' => ->(_t, _id) { 'tickets' }
+    'cases' => ->(_t, _id) { 'tickets' },
+    'budget' => ->(_t, _id) { 'tickets/budget' },
+    'pipeline' => ->(_t, _id) { 'tickets/commercial/metrics' }
   }.freeze
 
   def page_path(target, id)

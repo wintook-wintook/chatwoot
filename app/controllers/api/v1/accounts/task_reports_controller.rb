@@ -5,9 +5,16 @@
 # POST /task_reports  (multipart) { item_type: task|meeting, item_id, content,
 #                                   task_outcome_id, evidence[] }
 #   Se manda ANTES de concluir; se cierra solo cuando la tarea de verdad se concluye.
+# POST /task_reports  (multipart) { item_type: activity, title, content, done_at,
+#                                   case_ticket_id | contact_id | organization_id, ... }
+#   Actividad reportada: algo que se hizo sin tarea. Nace cerrada; con caso entra a
+#   su actividad. Sin cliente es interna (solo en Reportes).
 # GET  /task_reports  { contact_id, organization_id, user_id, case_task_id,
 #                       case_meeting_id, from, to, page }
-#   Con Agenda en «solo lo suyo», solo los propios.
+#   Con Agenda en «solo lo suyo», solo los propios. meta: total de minutos y por persona.
+# GET  /task_reports/suggestion { item_type, item_id } → tiempo propuesto y si es
+#   obligatorio. `minutes` (tiempo dedicado) va en los dos POST; con caso, al cerrar
+#   suma a las horas reales del caso (TaskReport#log_time).
 # ================================================================================
 class Api::V1::Accounts::TaskReportsController < Api::V1::Accounts::BaseController
   PER_PAGE = 25
@@ -15,12 +22,20 @@ class Api::V1::Accounts::TaskReportsController < Api::V1::Accounts::BaseControll
 
   def index
     scope = filtered(Current.account.task_reports.closed)
-    rows = scope.includes(:user, :contact, :organization, :case_ticket, :case_meeting, :case_time_entry).with_attached_evidence
+    rows = scope.includes(:user, :contact, :organization, :case_ticket, :case_task, :case_meeting, :case_time_entry).with_attached_evidence
                 .order(created_at: :desc).limit(PER_PAGE).offset((page - 1) * PER_PAGE)
-    render json: { task_reports: rows.map { |r| report_json(r) }, meta: { count: scope.count, page: page, per_page: PER_PAGE } }
+    render json: { task_reports: rows.map { |r| report_json(r) }, meta: list_meta(scope) }
+  end
+
+  def suggestion
+    minutes = params[:item_type] == 'activity' ? nil : TaskReport.suggested_minutes(find_item)
+    render json: { minutes: minutes, required: TaskReport.minutes_required?(Current.account) }
   end
 
   def create
+    return render_minutes_required if missing_minutes?
+    return create_activity if params[:item_type] == 'activity'
+
     item = find_item
     return render_access_denied unless reportable?(item)
 
@@ -36,8 +51,68 @@ class Api::V1::Accounts::TaskReportsController < Api::V1::Accounts::BaseControll
 
   private
 
+  def create_activity
+    at = done_at # las listas ordenan y filtran por created_at: va la hora en que se hizo
+    report = Current.account.task_reports.new(report_attrs.merge(activity_client)
+                                                          .merge(title: params[:title].to_s.strip, created_at: at))
+    TaskReport.transaction do
+      report.save!
+      report.close!(at)
+    end
+    render json: { task_report: report_json(report) }, status: :created
+  rescue ActiveRecord::RecordNotFound
+    render_access_denied
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
+  end
+
+  # Con caso, el cliente es el del caso; con contacto, también su organización (así
+  # sale en la ficha de la organización). Todo dentro de lo que la persona puede ver.
+  def activity_client
+    if params[:case_ticket_id].present?
+      ticket = account_case_tickets.find(params[:case_ticket_id])
+      return { case_ticket: ticket, contact: ticket.contact, organization: ticket.organization }
+    end
+
+    contact = activity_contact
+    organization = Current.account.organizations.find(params[:organization_id]) if params[:organization_id].present?
+    { contact: contact, organization: organization || contact&.organization }
+  end
+
+  def activity_contact
+    access_grant.contacts(Current.account.contacts).find(params[:contact_id]) if params[:contact_id].present?
+  end
+
+  # Cuándo se hizo: por omisión ahora; nunca en el futuro.
+  def done_at
+    at = Time.zone.parse(params[:done_at].to_s) if params[:done_at].present?
+    at && at < Time.current ? at : Time.current
+  rescue ArgumentError
+    Time.current
+  end
+
   def page
     [params[:page].to_i, 1].max
+  end
+
+  def list_meta(scope)
+    by_user = scope.where.not(minutes: nil).group(:user_id).sum(:minutes)
+    names = Current.account.users.where(id: by_user.keys).pluck(:id, :name).to_h
+    { count: scope.count, page: page, per_page: PER_PAGE, total_minutes: by_user.values.sum,
+      by_user: by_user.map { |id, minutes| { id: id, name: names[id], minutes: minutes } }.sort_by { |row| -row[:minutes] } }
+  end
+
+  def minutes_param
+    value = params[:minutes].presence
+    value && Integer(value.to_s, exception: false)
+  end
+
+  def missing_minutes?
+    TaskReport.minutes_required?(Current.account) && !minutes_param.to_i.positive?
+  end
+
+  def render_minutes_required
+    render json: { error: I18n.t('task_reports.minutes_required'), minutes_required: true }, status: :unprocessable_entity
   end
 
   def filtered(scope)
@@ -70,11 +145,12 @@ class Api::V1::Accounts::TaskReportsController < Api::V1::Accounts::BaseControll
   def report_attrs
     outcome = Current.account.task_outcomes.find_by(id: params[:task_outcome_id])
     { user: current_user, content: params[:content].to_s.strip, task_outcome: outcome, outcome_label: outcome&.label,
-      evidence: Array(params[:evidence]).compact_blank }
+      minutes: minutes_param, evidence: Array(params[:evidence]).compact_blank }
   end
 
   def report_json(report)
     { id: report.id, title: report.title, content: report.content, outcome: report.outcome_label, created_at: report.created_at,
+      minutes: report.minutes, estimated_minutes: report.case_task&.estimated_minutes,
       kind: report_kind(report), user: report_user(report), contact: report.contact&.slice(:id, :name),
       organization: report.organization&.slice(:id, :name), case_ticket: report.case_ticket&.slice(:id, :folio, :title),
       evidence: report.evidence.map { |file| evidence_json(file) } }
@@ -83,6 +159,7 @@ class Api::V1::Accounts::TaskReportsController < Api::V1::Accounts::BaseControll
 
   def report_kind(report)
     return 'order' if report.case_time_entry_id
+    return 'activity' if report.activity?
 
     report.case_meeting_id ? 'meeting' : 'task'
   end

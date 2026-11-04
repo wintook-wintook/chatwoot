@@ -12,7 +12,7 @@ module Assistant::ToolDefinitions
   def self.str(description) = { type: 'string', description: description }
   def self.int(description) = { type: 'integer', description: description }
 
-  ALL = [
+  BASE = [
     fn('search', 'Busca contactos, organizaciones y casos por nombre, correo, teléfono, folio o título.',
        { query: str('Texto a buscar') }, %w[query]),
     fn('get_case', 'Detalle de un caso: datos, qué sigue, último contacto y su actividad reciente.',
@@ -22,7 +22,7 @@ module Assistant::ToolDefinitions
     fn('my_agenda', 'Agenda del usuario: tareas agendadas y tareas pendientes entre dos fechas (incluye atrasadas).',
        { from: str('Fecha inicial YYYY-MM-DD'), to: str('Fecha final YYYY-MM-DD') }, %w[from to]),
     fn('open_page', 'Abre una pantalla para el usuario.',
-       { target: { type: 'string', enum: %w[case contact organization conversation agenda my_day cases tasks] },
+       { target: { type: 'string', enum: %w[case contact organization conversation agenda my_day cases tasks budget pipeline] },
          id: int('Id del caso/contacto/organización o número de la conversación') }, %w[target]),
     fn('propose_note', 'Propone dejar una nota interna en un caso o en un contacto. Requiere confirmación.',
        { case_id: int('Id del caso'), contact_id: int('Id del contacto (si no hay caso)'), content: str('Texto') },
@@ -90,4 +90,6 @@ module Assistant::ToolDefinitions
        { conversation_id: int('Número de la conversación, si aplica'), content: str('Texto del borrador') },
        %w[content])
   ].freeze
+
+  ALL = (BASE + Assistant::SalesToolDefinitions::ALL).freeze # D5a
 end

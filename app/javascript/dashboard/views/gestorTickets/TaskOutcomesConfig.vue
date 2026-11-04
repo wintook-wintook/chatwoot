@@ -1,4 +1,5 @@
-<!-- Catálogos › Resultados de tareas: la lista del reporte de cierre. -->
+<!-- Catálogos › Resultados de tareas: la lista del reporte de cierre y si se exige
+     el tiempo dedicado (encendido de inicio). -->
 <script>
 import { useAlert } from 'dashboard/composables';
 import TaskOutcomesAPI from 'dashboard/api/taskOutcomes';
@@ -6,7 +7,7 @@ import TaskOutcomesAPI from 'dashboard/api/taskOutcomes';
 export default {
   name: 'TaskOutcomesConfig',
   data() {
-    return { outcomes: [], newLabel: '' };
+    return { outcomes: [], newLabel: '', requireMinutes: true };
   },
   mounted() {
     this.fetch();
@@ -15,6 +16,7 @@ export default {
     async fetch() {
       const { data } = await TaskOutcomesAPI.get();
       this.outcomes = data.task_outcomes;
+      this.requireMinutes = data.require_minutes !== false;
     },
     async run(action) {
       try {
@@ -37,6 +39,9 @@ export default {
         TaskOutcomesAPI.update(outcome.id, { task_outcome: changes })
       );
     },
+    saveRequireMinutes(value) {
+      this.run(() => TaskOutcomesAPI.updateSettings({ requireMinutes: value }));
+    },
     remove(outcome) {
       this.run(() => TaskOutcomesAPI.delete(outcome.id));
     },
@@ -56,6 +61,24 @@ export default {
       </h1>
     </div>
     <div class="flex flex-col flex-1 max-w-xl gap-2 px-6 py-4 overflow-y-auto">
+      <label
+        class="flex items-start gap-2 p-3 mb-2 bg-white border rounded-lg cursor-pointer border-slate-100 dark:bg-slate-800 dark:border-slate-700"
+      >
+        <input
+          type="checkbox"
+          class="!mb-0 mt-0.5"
+          :checked="requireMinutes"
+          @change="saveRequireMinutes($event.target.checked)"
+        />
+        <span class="flex flex-col">
+          <span class="text-sm font-medium text-slate-800 dark:text-slate-100">
+            {{ $t('TASK_REPORT.MINUTES.REQUIRE_SETTING') }}
+          </span>
+          <span class="text-xs text-slate-500 dark:text-slate-400">
+            {{ $t('TASK_REPORT.MINUTES.REQUIRE_SETTING_HINT') }}
+          </span>
+        </span>
+      </label>
       <div
         v-for="outcome in outcomes"
         :key="outcome.id"

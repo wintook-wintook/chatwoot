@@ -419,13 +419,26 @@ Rails.application.routes.draw do
           # @tickets_cases — «Mi resumen» de la página Inicio
           resource :my_summary, only: [:show], controller: 'my_summary'
           # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
-          resources :task_reports, only: [:index, :create] # Reporte de cierre
+          resources :task_reports, only: [:index, :create] do # Reporte de cierre
+            get :suggestion, on: :collection
+          end
           resources :agenda_visits, only: [:show] do # Visitas sin orden de trabajo
             get :arrivals, on: :collection
             post :on_my_way, on: :member
             post :arrive, on: :member
           end
-          resources :task_outcomes, only: [:index, :create, :update, :destroy]
+          # Presupuesto de ventas — metas por vendedor y vendedor + cliente, y su avance.
+          resources :sales_budgets, only: [:index] do
+            collection do
+              put :bulk
+              post :copy
+              delete :client
+              get :report
+            end
+          end
+          resources :task_outcomes, only: [:index, :create, :update, :destroy] do
+            patch :settings, on: :collection
+          end
           # Plan-Agenda — tareas sin caso de la captura rápida (solo en Kontrolya).
           resources :quick_tasks, only: [:create, :update, :destroy]
           # Plan-Agenda — lo agendado desde el calendario: con caso o solo con su contacto.

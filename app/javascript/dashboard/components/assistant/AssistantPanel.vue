@@ -15,16 +15,18 @@ import {
   DEFAULT_ASSISTANT_NAME,
 } from 'dashboard/helper/assistantState';
 import ProposalCard from './ProposalCard.vue';
+import AssistantDataCard from './AssistantDataCard.vue';
 
 const T = 'ASSISTANT';
 
 export default {
   name: 'AssistantPanel',
-  components: { ProposalCard },
+  components: { ProposalCard, AssistantDataCard },
   data() {
     return {
       state: assistantState,
       messages: [],
+      starters: [], // preguntas de ejemplo según el rol (Assistant::Capabilities)
       available: true,
       loaded: false,
       draft: '',
@@ -35,6 +37,10 @@ export default {
   computed: {
     name() {
       return this.state.name || DEFAULT_ASSISTANT_NAME;
+    },
+    lastSuggestions() {
+      const last = this.messages[this.messages.length - 1];
+      return (last && last.role === 'assistant' && last.suggestions) || [];
     },
     // Lo que el usuario está viendo, sacado de la ruta.
     context() {
@@ -72,6 +78,7 @@ export default {
         this.state.name = data.name || DEFAULT_ASSISTANT_NAME;
         this.available = data.available;
         this.messages = data.messages || [];
+        this.starters = data.starters || [];
         this.loaded = true;
       } catch (_e) {
         this.loaded = false;
@@ -135,6 +142,7 @@ export default {
     async reset() {
       const { data } = await AssistantAPI.reset();
       this.messages = data.messages || [];
+      this.starters = data.starters || this.starters;
     },
     onProposalUpdated(message, proposal) {
       const idx = message.proposals.findIndex(p => p.id === proposal.id);
@@ -214,6 +222,17 @@ export default {
           class="p-3 text-sm rounded-lg bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
         >
           {{ t('HELLO') }}
+          <div v-if="starters.length" class="flex flex-wrap gap-1.5 mt-2">
+            <button
+              v-for="text in starters"
+              :key="text"
+              type="button"
+              class="px-2.5 py-1 text-xs bg-white border rounded-full border-woot-200 text-woot-700 hover:bg-woot-50 dark:bg-slate-900 dark:border-woot-700 dark:text-woot-200 dark:hover:bg-woot-900/40"
+              @click="ask(text)"
+            >
+              {{ text }}
+            </button>
+          </div>
         </div>
         <div
           v-for="message in messages"
@@ -231,6 +250,13 @@ export default {
             "
             v-html="html(message.content)"
           />
+          <!-- D5a — cifras de ventas que acompañan la respuesta -->
+          <AssistantDataCard
+            v-for="(card, i) in message.cards || []"
+            :key="`card-${message.id}-${i}`"
+            :card="card"
+            @navigate="go"
+          />
           <ProposalCard
             v-for="proposal in message.proposals || []"
             :key="proposal.id"
@@ -239,6 +265,21 @@ export default {
             @updated="p => onProposalUpdated(message, p)"
             @navigate="go"
           />
+        </div>
+        <!-- Preguntas para seguir: solo las de la última respuesta. -->
+        <div
+          v-if="lastSuggestions.length && !sending"
+          class="flex flex-wrap gap-1.5"
+        >
+          <button
+            v-for="text in lastSuggestions"
+            :key="text"
+            type="button"
+            class="px-2.5 py-1 text-xs border rounded-full border-woot-200 text-woot-700 hover:bg-woot-50 dark:border-woot-700 dark:text-woot-200 dark:hover:bg-woot-900/40"
+            @click="ask(text)"
+          >
+            {{ text }}
+          </button>
         </div>
         <p v-if="sending" class="m-0 text-xs text-slate-500">
           {{ t('THINKING') }}

@@ -27,6 +27,7 @@ export default {
   data() {
     return {
       title: '',
+      description: '',
       assigneeId: null,
       dueDate: '',
       plannedDate: '',
@@ -59,6 +60,7 @@ export default {
   methods: {
     reset() {
       this.title = '';
+      this.description = '';
       this.assigneeId = this.currentUserId;
       this.dueDate = '';
       this.plannedDate = today();
@@ -94,6 +96,7 @@ export default {
     taskFields() {
       return {
         title: this.title.trim(),
+        description: this.description.trim() || undefined,
         assignee_id: this.assigneeId,
         due_at: this.dueDate ? endOfDayIso(this.dueDate) : null,
         planned_on: this.plannedDate || null,
@@ -104,6 +107,7 @@ export default {
       return AgendaItemsAPI.create({
         ...this.clientFields(),
         title: this.title.trim(),
+        description: this.description.trim() || undefined,
         starts_at: starts.toISOString(),
         ends_at: new Date(starts.getTime() + HOUR).toISOString(),
         is_visit: this.isVisit,
@@ -164,6 +168,17 @@ export default {
         :label="$t('QUICK_ACTIONS.TASK.NAME')"
         :placeholder="$t('QUICK_ACTIONS.TASK.NAME_PLACEHOLDER')"
       />
+      <label class="block">
+        <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+          {{ $t('QUICK_ACTIONS.TASK.DESCRIPTION') }}
+        </span>
+        <textarea
+          v-model="description"
+          rows="3"
+          class="mb-0 resize-y"
+          :placeholder="$t('QUICK_ACTIONS.TASK.DESCRIPTION_PLACEHOLDER')"
+        />
+      </label>
       <label class="block">
         <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
           {{ $t('QUICK_ACTIONS.TASK.ASSIGNEE') }}

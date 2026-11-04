@@ -2,14 +2,16 @@
   @tickets_cases — «Tienes avisos importantes» en Mi día
   Botón tipo globo (como el de SLA vencido): rojo si hay algo de peso alto, ámbar
   si no; no se ve si no hay nada. Al presionarlo despliega los avisos sin leer
-  ordenados por peso, cada uno con su folio y «Enterado» (lo marca leído también
-  en la campanita). Se refresca solo cuando cambia el contador de la campanita.
+  ordenados por peso, uno por conversación o caso (con cuántos junta), y «Enterado»
+  (los marca leídos todos, también en la campanita). Se refresca solo cuando cambia el contador de la campanita.
 -->
 <script>
 import { mapGetters } from 'vuex';
 import CaseNoticesAPI from 'dashboard/api/caseNotices';
 
 const T = 'CASE_TICKETS.TASKS.MY_DAY.NOTICES';
+// Los que el servidor junta y read_all sabe marcar en bloque (Notification::PRIMARY_ACTORS).
+const GROUPED_ACTORS = ['Conversation', 'CaseTicket'];
 
 export default {
   name: 'MyDayNotices',
@@ -49,7 +51,14 @@ export default {
     async acknowledge(notice) {
       this.markingId = notice.id;
       try {
-        await CaseNoticesAPI.markRead(notice.id);
+        if (GROUPED_ACTORS.includes(notice.actor_type) && notice.actor_id) {
+          await CaseNoticesAPI.markActorRead(
+            notice.actor_type,
+            notice.actor_id
+          );
+        } else {
+          await CaseNoticesAPI.markRead(notice.id);
+        }
         this.notices = this.notices.filter(n => n.id !== notice.id);
         this.$store.dispatch('notifications/unReadCount');
       } finally {
@@ -117,6 +126,9 @@ export default {
         >
           <span class="text-sm font-medium text-slate-800 dark:text-slate-100">
             {{ n.title }}
+            <span v-if="n.count > 1" class="text-xs text-slate-500">
+              ({{ n.count }})
+            </span>
           </span>
           <span
             v-if="n.body"

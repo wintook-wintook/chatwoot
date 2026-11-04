@@ -99,7 +99,12 @@
       "LABEL": "Nombre del asistente",
       "HINT": "Así lo verán todos en la plataforma. Vacío = Dali.",
       "SAVE": "Guardar",
-      "SAVED": "Nombre del asistente guardado"
+      "SAVED": "Ajustes del asistente guardados",
+      "MODEL": "Modelo de OpenAI",
+      "MODEL_DEFAULT": "El de siempre ({model})",
+      "ANALYSIS_MODEL": "Modelo para análisis de ventas",
+      "ANALYSIS_MODEL_DEFAULT": "El mismo que el general",
+      "MODEL_HINT": "El de análisis solo se usa cuando el asistente explica cifras de ventas; uno más potente responde mejor pero cuesta más por consulta."
     },
     "VIA": "vía {name}",
     "MENU": "Pedirle a {name}…",

@@ -91,7 +91,11 @@ export default {
       </div>
     </div>
     <div class="flex-1 px-6 py-4 overflow-y-auto">
-      <TaskReportsList v-if="tab === 'reports'" :filters="filters" />
+      <TaskReportsList
+        v-if="tab === 'reports'"
+        :filters="filters"
+        show-people
+      />
       <VisitArrivals v-else :filters="filters" />
     </div>
   </div>

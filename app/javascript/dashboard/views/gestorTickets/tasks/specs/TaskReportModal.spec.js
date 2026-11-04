@@ -16,6 +16,8 @@ const context = data => ({
   content: 'Le llamé',
   outcomeId: 2,
   files: [],
+  minutes: 30,
+  minutesRequired: true,
   saving: false,
   $t: key => key,
   $emit: vi.fn(),
@@ -40,7 +42,7 @@ describe('TaskReportModal', () => {
 
     expect(TaskReportsAPI.send).toHaveBeenCalledWith(
       { type: 'task', id: 1 },
-      { content: 'Le llamé', outcomeId: 2, files: [] }
+      { content: 'Le llamé', outcomeId: 2, files: [], minutes: 30 }
     );
     expect(ctx.$emit).toHaveBeenCalledWith('reported');
   });
@@ -52,7 +54,22 @@ describe('TaskReportModal', () => {
     await methods.submit.call(ctx);
 
     expect(TaskReportsAPI.send.mock.calls.map(c => c[0].id)).toEqual([4, 5]);
+    // El tiempo total se reparte entre las dos.
+    expect(TaskReportsAPI.send.mock.calls.map(c => c[1].minutes)).toEqual([
+      15, 15,
+    ]);
     expect(ctx.$emit).toHaveBeenCalledWith('reported');
+  });
+
+  it('si la cuenta exige el tiempo, sin él no concluye; si no, sí', async () => {
+    await methods.submit.call(context({ minutes: null }));
+    expect(TaskReportsAPI.send).not.toHaveBeenCalled();
+    expect(useAlert).toHaveBeenCalledWith('TASK_REPORT.MINUTES.REQUIRED');
+
+    await methods.submit.call(
+      context({ minutes: null, minutesRequired: false })
+    );
+    expect(TaskReportsAPI.send.mock.calls[0][1].minutes).toBeNull();
   });
 
   it('si falla el reporte, la tarea no sigue', async () => {

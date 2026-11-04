@@ -6,11 +6,17 @@
 # esperan «Confirmar»). Guarda el turno en el AssistantThread.
 #
 # Uso: Assistant::Chat.new(thread:, grant:, zone:, context:).reply('agéndame…')
-#   → el mensaje del asistente: { 'content', 'proposals' => [...], 'navigate' => ruta }
+#   → el mensaje del asistente: { 'content', 'proposals' => [...], 'navigate' => ruta,
+#       'cards' => [...] (datos de ventas), 'suggestions' => [...] (preguntas para seguir) }
+# Modelo: el general de la cuenta; al explicar cifras de ventas, el de análisis
+# (Assistant::Settings.model_for).
 class Assistant::Chat < Cases::Ai::BaseService
   HISTORY = 12
   MAX_ROUNDS = 5
   MAX_TOKENS = 700
+  ANALYSIS_TOKENS = 1100
+  MAX_CARDS = 3
+  MAX_SUGGESTIONS = 3
 
   def initialize(thread:, grant:, zone:, context: {})
     super(account: thread.account)
@@ -19,6 +25,7 @@ class Assistant::Chat < Cases::Ai::BaseService
     @zone = zone
     @context = context.to_h.stringify_keys
     @tools = Assistant::Tools.new(account: @account, user: @user, grant: grant, zone: zone)
+    @capabilities = Assistant::Capabilities.for(grant)
   end
 
   def reply(text)
@@ -26,12 +33,17 @@ class Assistant::Chat < Cases::Ai::BaseService
     @thread.add_message(role: 'user', content: text.to_s.strip, context: @context.slice('page', 'label'))
     proposals = []
     navigate = nil
+    cards = []
+    suggestions = []
     content = run([{ role: 'system', content: system_prompt }, *history, { role: 'user', content: text.to_s }]) do |outcome|
       proposals << outcome[:proposal] if outcome[:proposal]
       navigate ||= outcome[:navigate]
+      cards << outcome[:card] if outcome[:card]
+      suggestions.concat(Array(outcome[:suggestions]))
     end
     @thread.add_message(role: 'assistant', content: content.presence || fallback(proposals),
-                        proposals: proposals, navigate: navigate)
+                        proposals: proposals, navigate: navigate, cards: cards.first(MAX_CARDS),
+                        suggestions: suggestions.uniq.first(MAX_SUGGESTIONS))
   end
 
   private
@@ -47,6 +59,7 @@ class Assistant::Chat < Cases::Ai::BaseService
       messages << message.slice('role', 'content', 'tool_calls')
       calls.each do |call|
         outcome = @tools.call(call.dig('function', 'name'), parse_args(call.dig('function', 'arguments')))
+        @analysis ||= outcome[:analysis]
         yield outcome
         messages << { role: 'tool', tool_call_id: call['id'], content: outcome[:result].to_json }
       end
@@ -59,9 +72,14 @@ class Assistant::Chat < Cases::Ai::BaseService
     return nil if key.blank?
 
     body = { model: model, messages: messages, tools: Assistant::Tools.definitions, tool_choice: 'auto',
-             temperature: 0.2, max_tokens: MAX_TOKENS }
+             temperature: 0.2, max_tokens: @analysis ? ANALYSIS_TOKENS : MAX_TOKENS }
     raw = post_raw(key, body)
     raw&.dig('choices', 0, 'message')
+  end
+
+  # Una vez que llegaron cifras de ventas, las explica el modelo de análisis.
+  def model
+    Assistant::Settings.model_for(@account, @analysis ? :analysis : :general)
   end
 
   def post_raw(key, body)
@@ -142,6 +160,23 @@ class Assistant::Chat < Cases::Ai::BaseService
       - Al buscar usa exactamente las palabras del usuario (search «Mario», no inventes apellidos).
       - Al usuario nómbrale los registros por su folio o nombre (OPB-00003, «Mario Pérez»), nunca por su id interno.
       - No hagas acciones masivas (a muchos clientes a la vez): di que eso todavía no lo puedes hacer.
+
+      Tu alcance con ESTE usuario (según sus permisos). Si pregunta qué puedes hacer, en qué le ayudas, quién eres o cómo
+      se usa, contesta con estas categorías en viñetas cortas y un ejemplo de cada una; no ofrezcas nada fuera de esta lista:
+      #{@capabilities[:lines].map { |line| "  • #{line}" }.join("\n")}
+
+      Ventas (¿cómo vamos?, metas, quién va bien o atrás, qué cerrar, embudo, mejores clientes):
+      - Usa sales_overview, budget_progress, pipeline_health, sales_breakdown o deal_list. NUNCA calcules ni inventes cifras:
+        usa solo las que devuelven. Si algo no viene (p. ej. no hay meta capturada), dilo y sugiere capturarla.
+      - Lo ganado es SIN IVA y por trato. Di siempre el periodo y la moneda; nunca sumes monedas distintas.
+      - Responde así: 1) una línea con la respuesta directa; 2) 2 a 4 viñetas con las cifras clave (comparación, quién
+        destaca o va atrás, riesgos); 3) «Qué haría:» una recomendación concreta. Breve: la tarjeta ya muestra el detalle.
+      - Ritmo: compara el % de avance contra el % del periodo que ya pasó (elapsed_percent) para decir si van adelante o atrás.
+      - Si el usuario solo ve lo suyo, háblale de SUS números (no digas que no ve a los demás salvo que lo pida).
+      - Si pide actuar sobre lo que viste (p. ej. tareas de seguimiento para oportunidades vencidas), propón una por una
+        con propose_task (máximo 3) o dile que lo haga desde la lista.
+      - «Vendedor»: pásalo por nombre en `seller`. Periodos: «este mes» this_month, «el mes pasado» last_month,
+        «este trimestre» this_quarter, «este año» this_year; fechas exactas con from/to.
     PROMPT
   end
 

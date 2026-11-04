@@ -1,11 +1,13 @@
 <!--
   Plan-Agenda — accesos rápidos: el logo de la barra de íconos abre un menú flotante,
-  en todas las pantallas. Primero «Pedirle a Dali» (el asistente), luego la tarea.
+  en todas las pantallas. Primero «Pedirle a Dali» (el asistente), luego la tarea; al final Ayuda.
 -->
 <script>
 import CreateContact from 'dashboard/routes/dashboard/conversation/contact/CreateContact.vue';
 import QuickTaskModal from 'dashboard/views/gestorTickets/tasks/QuickTaskModal.vue';
 import QuickSearchModal from 'dashboard/views/gestorTickets/tasks/QuickSearchModal.vue';
+import ActivityReportModal from 'dashboard/views/gestorTickets/tasks/ActivityReportModal.vue';
+import wootConstants from 'dashboard/constants/globals';
 import {
   assistantState,
   toggleAssistant,
@@ -13,7 +15,12 @@ import {
 
 export default {
   name: 'QuickActions',
-  components: { CreateContact, QuickTaskModal, QuickSearchModal },
+  components: {
+    CreateContact,
+    QuickTaskModal,
+    QuickSearchModal,
+    ActivityReportModal,
+  },
   props: {
     logoSource: { type: String, default: '' },
     name: { type: String, default: '' },
@@ -24,9 +31,12 @@ export default {
     return {
       open: false,
       showTaskModal: false,
+      showActivityModal: false,
       showSearchModal: false,
       showContactModal: false,
       assistant: assistantState,
+      // El foro de Kontrolya (antes un ícono propio en la barra).
+      helpDocsURL: window.chatwootConfig?.helpDocsURL || wootConstants.DOCS_URL,
     };
   },
   computed: {
@@ -48,6 +58,10 @@ export default {
     openTask() {
       this.close();
       this.showTaskModal = true;
+    },
+    openActivity() {
+      this.close();
+      this.showActivityModal = true;
     },
     openSearch() {
       this.close();
@@ -99,6 +113,15 @@ export default {
         <fluent-icon icon="checkmark-circle" size="16" />
         {{ $t('QUICK_ACTIONS.NEW_TASK') }}
       </button>
+      <!-- Algo que ya se hizo, sin tarea: con caso, con cliente o interno. -->
+      <button
+        type="button"
+        class="flex items-center w-full gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700"
+        @click="openActivity"
+      >
+        <fluent-icon icon="clipboard" size="16" />
+        {{ $t('QUICK_ACTIONS.REPORT_ACTIVITY') }}
+      </button>
       <button
         type="button"
         class="flex items-center w-full gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700"
@@ -115,8 +138,22 @@ export default {
         <fluent-icon icon="person-add" size="16" />
         {{ $t('QUICK_ACTIONS.NEW_CONTACT') }}
       </button>
+      <a
+        :href="helpDocsURL"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex items-center w-full gap-2 px-3 py-2 text-sm text-slate-700 border-t border-slate-100 dark:border-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700"
+        @click="close"
+      >
+        <fluent-icon icon="chat-help" size="16" />
+        {{ $t('SIDEBAR.DOCS') }}
+      </a>
     </div>
     <QuickTaskModal :show="showTaskModal" @close="showTaskModal = false" />
+    <ActivityReportModal
+      :show="showActivityModal"
+      @close="showActivityModal = false"
+    />
     <QuickSearchModal
       :show="showSearchModal"
       @close="showSearchModal = false"

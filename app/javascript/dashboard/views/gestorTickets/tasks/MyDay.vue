@@ -17,12 +17,21 @@ import { formatMinutes, localDay } from 'dashboard/helper/caseTaskPriority';
 import MyDayTaskRow from './MyDayTaskRow.vue';
 import MyDayAiPlan from './MyDayAiPlan.vue';
 import MyDayNotices from './MyDayNotices.vue';
+import TaskReportsList from './TaskReportsList.vue';
+import { format } from 'date-fns';
+import { mapGetters } from 'vuex';
 
 const DISMISSED_KEY = 'case_tickets::my_day_dismissed';
 
 export default {
   name: 'MyDay',
-  components: { Draggable: draggable, MyDayTaskRow, MyDayAiPlan, MyDayNotices },
+  components: {
+    Draggable: draggable,
+    MyDayTaskRow,
+    MyDayAiPlan,
+    MyDayNotices,
+    TaskReportsList,
+  },
   props: {
     rows: { type: Array, default: () => [] },
     meta: { type: Object, default: () => ({}) },
@@ -42,6 +51,8 @@ export default {
   ],
   data() {
     return {
+      // «Hecho hoy»: se recarga al concluir una tarea o reportar una actividad.
+      doneTodayKey: 0,
       // Copias locales para arrastrar (vuedraggable muta los arreglos).
       plan: [],
       nextRow: null,
@@ -50,6 +61,11 @@ export default {
     };
   },
   computed: {
+    ...mapGetters({ currentUserId: 'getCurrentUserID' }),
+    doneTodayFilters() {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      return { user_id: this.currentUserId, from: today, to: today };
+    },
     hasPlan() {
       return this.plan.length > 0;
     },
@@ -101,9 +117,11 @@ export default {
     },
   },
   watch: {
-    rows: { immediate: true, handler: 'rebuild' },
+    // Cambió la lista (p. ej. se concluyó una tarea): lo hecho hoy también.
+    rows: [{ immediate: true, handler: 'rebuild' }, 'refreshDoneToday'],
   },
   mounted() {
+    this.$emitter.on('taskReportsChanged', this.refreshDoneToday);
     try {
       const saved = LocalStorage.get(this.dismissedKey);
       this.dismissed = Array.isArray(saved) ? saved : [];
@@ -111,7 +129,13 @@ export default {
       this.dismissed = [];
     }
   },
+  beforeDestroy() {
+    this.$emitter.off('taskReportsChanged', this.refreshDoneToday);
+  },
   methods: {
+    refreshDoneToday() {
+      this.doneTodayKey += 1;
+    },
     rebuild() {
       this.plan = this.rows.filter(r => r.planned);
       const rest = this.rows.filter(r => !r.planned);
@@ -466,6 +490,14 @@ export default {
           </button>
         </li>
       </ul>
+
+      <!-- Hecho hoy: tareas concluidas y actividades reportadas por la persona. -->
+      <h2
+        class="m-0 mt-6 mb-2 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400"
+      >
+        {{ $t('CASE_TICKETS.TASKS.MY_DAY.DONE_TODAY') }}
+      </h2>
+      <TaskReportsList :key="doneTodayKey" :filters="doneTodayFilters" />
     </aside>
   </div>
 </template>

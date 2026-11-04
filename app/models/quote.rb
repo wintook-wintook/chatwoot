@@ -101,6 +101,11 @@ class Quote < ApplicationRecord
   scope :open_quotes, -> { where(status: OPEN_STATUSES) }
   scope :expired, -> { sent.where(valid_until: ...Date.current) }
 
+  # Lo vendido sin IVA: subtotal menos descuentos (lo que cuenta en ventas y presupuesto).
+  def net_total
+    (subtotal - discount_total).round(2)
+  end
+
   def folio
     base = format('COT-%04d', number)
     version > 1 ? "#{base} v#{version}" : base
@@ -135,12 +140,13 @@ class Quote < ApplicationRecord
 
   private
 
-  # Con una sola cotización, la oportunidad abierta lleva su monto (espejo).
+  # Con una sola cotización, la oportunidad abierta lleva su monto (espejo), SIN IVA:
+  # el monto de las oportunidades es siempre antes de impuestos (presupuesto e informes).
   def mirror_amount_on_opportunity
     return if opportunity.nil? || opportunity.closed? || opportunity.cancelled?
     return unless opportunity.quotes.count == 1
 
-    opportunity.update!(amount: total, currency: currency)
+    opportunity.update!(amount: net_total, currency: currency)
   end
 
   def assign_number

@@ -107,7 +107,8 @@ RSpec.describe 'Agenda Visits API' do
     it 'termina con el reporte, que muestra dónde llegó' do
       meeting = visit
       post "#{api}/agenda_visits/#{meeting.id}/arrive", params: { lat: 19.43, lng: -99.13 }, headers: headers, as: :json
-      post "#{api}/task_reports", params: { item_type: 'meeting', item_id: meeting.id, content: 'Le presenté la propuesta' }, headers: headers
+      post "#{api}/task_reports", params: { item_type: 'meeting', item_id: meeting.id, content: 'Le presenté la propuesta', minutes: 45 },
+                                  headers: headers
       patch "#{api}/agenda_items/#{meeting.id}", params: { status: 'held' }, headers: headers, as: :json
 
       expect(meeting.reload).to be_held
