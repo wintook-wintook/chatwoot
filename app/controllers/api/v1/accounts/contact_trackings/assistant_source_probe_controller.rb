@@ -8,7 +8,8 @@
 # POST …/assistant/source_probe/run    { directive, phrase, inbox_id?, rfc? }
 #   → { kind, … } o { error }: la búsqueda como la haría el agente (SourceProbe).
 #   Por parecido, solo el embedding de la frase; la hoja en modo datos y la consulta con
-#   «?» gastan además una llamada de IA (la lista lo dice con `uses_ai`).
+#   «?» gastan además una llamada de IA (la lista lo dice con `uses_ai`). En vivo (P3):
+#   el foro se consulta tal cual; CONTPAQi abre un hilo de prueba (`notice`).
 # ================================================================================
 
 class Api::V1::Accounts::ContactTrackings::AssistantSourceProbeController < Api::V1::Accounts::BaseController
@@ -30,7 +31,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantSourceProbeController < Api:
 
   def probe
     ContactTrackings::Assistant::SourceProbe.new(
-      Current.account, text: params[:draft], rfc: params[:rfc],
+      Current.account, text: params[:draft], rfc: params[:rfc], user: Current.user,
                        inbox: Current.account.inboxes.find_by(id: params[:inbox_id]),
                        api_key: ContactTrackings::Assistant::OpenaiChat.new(account: Current.account).api_key
     )

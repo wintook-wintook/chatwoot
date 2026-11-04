@@ -149,4 +149,32 @@ describe('SourceProbePanel', () => {
       true
     );
   });
+
+  it('CONTPAQi avisa que abre un hilo y muestra el resultado en vivo', async () => {
+    AssistantAPI.sourceProbe.mockResolvedValue({
+      data: {
+        directives: [
+          {
+            directive: '@soporte_contpaq(Soporte)',
+            kind: 'live',
+            routes: [],
+            ready: true,
+            notice: 'contpaq_thread',
+          },
+        ],
+      },
+    });
+    AssistantAPI.sourceProbeRun.mockResolvedValue({
+      data: { kind: 'live', service: 'contpaq', status: 'ok', answer: 'Hola' },
+    });
+    const wrapper = await montar();
+
+    expect(wrapper.text()).toContain('PROBE.NOTICE_CONTPAQ_THREAD');
+    wrapper.vm.phrase = '¿cómo timbro?';
+    await wrapper.vm.run();
+    await flushPromises();
+    expect(wrapper.findComponent({ name: 'LiveProbeResult' }).exists()).toBe(
+      true
+    );
+  });
 });

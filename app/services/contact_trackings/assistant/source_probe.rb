@@ -16,7 +16,7 @@
 # fuera y por qué: bajo el umbral o fuera del tope.
 #
 # P1: lo que se busca por parecido. P2: hojas exactas, hojas en modo datos y ERP
-# (SourceProbeExact). Las fuentes en vivo se listan con `kind` y se prueban en P3.
+# (SourceProbeExact). P3: foro, @discourse y CONTPAQi en vivo (SourceProbeLive).
 # ================================================================================
 
 class ContactTrackings::Assistant::SourceProbe
@@ -32,12 +32,14 @@ class ContactTrackings::Assistant::SourceProbe
             discourse_integration: 'live', contpaq_support: 'live' }.freeze
   NATIVE = { canned_response: 'canned_response', article: 'article' }.freeze
 
-  # inbox / rfc (P2): la bandeja del agente (conexión del ERP y modelo) y un RFC de prueba.
-  def initialize(account, text: nil, api_key: nil, inbox: nil, rfc: nil)
+  # inbox / rfc (P2): la bandeja del agente (conexión del ERP, @discourse y modelo) y un
+  # RFC de prueba. user (P3): a nombre de quién abre CONTPAQi el hilo de prueba.
+  def initialize(account, text: nil, api_key: nil, inbox: nil, rfc: nil, user: nil) # rubocop:disable Metrics/ParameterLists
     @account = account
     @text = text.to_s
     @api_key = api_key
     @exact = ContactTrackings::Assistant::SourceProbeExact.new(account, inbox: inbox, rfc: rfc)
+    @live = ContactTrackings::Assistant::SourceProbeLive.new(account, inbox: inbox, user: user)
   end
 
   # Lo que se puede probar: las directivas del Entrenamiento con las rutas que las usan;
@@ -67,7 +69,16 @@ class ContactTrackings::Assistant::SourceProbe
     when 'sheet_lookup' then @exact.sheet_lookup(detectada[:source_name], frase)
     when 'sheet_data' then @exact.sheet_data(sheet_source(detectada[:source_name]), frase)
     when 'erp' then @exact.erp(raw, frase)
+    when 'live' then live(detectada, frase)
     else { kind: kind, pending: true }
+    end
+  end
+
+  def live(detectada, frase)
+    case detectada[:mode]
+    when :knowledge_source then @live.forum(detectada[:source_name], frase)
+    when :discourse_integration then @live.discourse_integration(frase)
+    else @live.contpaq(detectada[:source_name], frase)
     end
   end
 
@@ -96,7 +107,7 @@ class ContactTrackings::Assistant::SourceProbe
 
     kind = kind_of(detectada)
     { directive: raw.strip, kind: kind, routes: [], ready: ready?(detectada), items: (items_count(detectada) if kind == 'similarity'),
-      uses_ai: uses_ai?(kind, raw) }.merge(detectada.slice(:mode, :source_name, :group)).compact
+      uses_ai: uses_ai?(kind, raw), notice: notice(detectada) }.merge(detectada.slice(:mode, :source_name, :group)).compact
   end
 
   def detect(raw)
@@ -154,6 +165,14 @@ class ContactTrackings::Assistant::SourceProbe
   # con «?». La pantalla lo avisa antes de probar.
   def uses_ai?(kind, raw)
     kind == 'sheet_data' || (kind == 'erp' && ExternalDb::ConsultaDirectiveRenderer.asks?(raw))
+  end
+
+  # P3: lo que la pantalla avisa antes de probar una fuente en vivo.
+  def notice(detectada)
+    case detectada[:mode]
+    when :contpaq_support then 'contpaq_thread'
+    when :knowledge_source, :discourse_integration then 'forum_live'
+    end
   end
 
   # Cuántas piezas hay donde busca (nil si el agente no buscaría ahí).

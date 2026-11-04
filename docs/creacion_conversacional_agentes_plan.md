@@ -1030,3 +1030,24 @@ cuenta, Google, vacía, pendientes), `assistant_source_probe_spec` 2; motor de K
 conexión real.
 
 **Sigue:** P3 — foro / `@discourse` y CONTPAQi en vivo.
+
+### P3 — en vivo ✅ (04/11/2026)
+
+- **Foro `@buscar_foro(X)` y `@discourse`** (`SourceProbeLive`): la misma búsqueda semántica del
+  motor, ahora en `KnowledgeBase::DiscourseSemanticSearch` (sacada de
+  `KnowledgeBaseResponseService#discourse_hits`, que delega y conserva su comportamiento: 404 →
+  búsqueda normal, error → nada). Sin Discourse AI, la búsqueda normal con los términos que saca la
+  IA (`OpenaiChat#call_text`, modelo :router). Muestra cada tema con su liga, el extracto y cuáles
+  tomaría el agente (los primeros `MAX_RESULTS` = 3). `@discourse` usa la integración de la bandeja
+  del agente (sin bandeja o sin integración, lo dice). Probado contra el foro real
+  Foro_Sentidos_Creativos de dev: semántica activa, 50 temas, «Desarrollo Web» primero.
+- **CONTPAQi `@soporte_contpaq(X)`**: pregunta al Agente de Servicio de verdad, en un hilo NUEVO a
+  nombre de quien prueba (`asistente-prueba-<id>@kontrolya.com`), y muestra la respuesta tal cual
+  (el agente la manda sin redactar) con la documentación que cita. La pantalla lo avisa antes.
+  No se probó contra el servicio real.
+
+**Pila de pruebas.** `source_probe_live_spec` 7, `discourse_semantic_search_spec` 2,
+`source_probe_spec` +1; motor + Asistente + requests 913 en verde. `LiveProbeResult.spec` 3,
+`SourceProbePanel.spec` +1; carpeta 313 en verde.
+
+**§15 completo (P1–P3).**

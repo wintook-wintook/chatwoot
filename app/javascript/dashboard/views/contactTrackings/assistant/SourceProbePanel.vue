@@ -8,17 +8,17 @@
 // la hace el backend igual que el motor (SourceProbe).
 //
 // P1: búsqueda por parecido. P2: hojas exactas, hojas en modo datos y ERP
-// (ExactProbeResult). Las fuentes en vivo salen en la lista y avisan que se prueban en
-// la siguiente fase.
+// (ExactProbeResult). P3: foro, @discourse y CONTPAQi en vivo (LiveProbeResult).
 // ============================================================================
 import AssistantAPI from 'dashboard/api/assistant';
 import ExactProbeResult from './ExactProbeResult.vue';
+import LiveProbeResult from './LiveProbeResult.vue';
 
 const MAX_HISTORY = 6;
-const TESTABLE = ['similarity', 'sheet_lookup', 'sheet_data', 'erp'];
+const TESTABLE = ['similarity', 'sheet_lookup', 'sheet_data', 'erp', 'live'];
 
 export default {
-  components: { ExactProbeResult },
+  components: { ExactProbeResult, LiveProbeResult },
   props: {
     // El Entrenamiento abierto (el borrador): de ahí salen sus directivas.
     draft: { type: String, default: '' },
@@ -53,8 +53,13 @@ export default {
     },
     isExact() {
       return Boolean(
-        this.result && this.result.kind && this.result.kind !== 'similarity'
+        this.result &&
+          this.result.kind &&
+          !['similarity', 'live'].includes(this.result.kind)
       );
+    },
+    isLive() {
+      return Boolean(this.result && this.result.kind === 'live');
     },
     canRun() {
       return Boolean(this.current && this.phrase.trim() && !this.isRunning);
@@ -276,6 +281,16 @@ export default {
         >
           {{ $t('TRACKING_ASSISTANT_VIEW.PROBE.USES_AI') }}
         </p>
+        <p
+          v-if="current.notice"
+          class="!m-0 text-xs text-slate-500 dark:text-slate-400"
+        >
+          {{
+            $t(
+              `TRACKING_ASSISTANT_VIEW.PROBE.NOTICE_${current.notice.toUpperCase()}`
+            )
+          }}
+        </p>
         <div v-if="history.length" class="flex flex-wrap gap-1">
           <button
             v-for="frase in history"
@@ -298,6 +313,7 @@ export default {
     </p>
 
     <ExactProbeResult v-else-if="isExact && result.status" :result="result" />
+    <LiveProbeResult v-else-if="isLive && result.status" :result="result" />
 
     <div
       v-else-if="result && result.threshold !== undefined"
