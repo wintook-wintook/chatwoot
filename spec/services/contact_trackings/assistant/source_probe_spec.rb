@@ -72,9 +72,16 @@ RSpec.describe ContactTrackings::Assistant::SourceProbe do
     expect(probar('{{doc:Precios}}')).to include(kind: 'similarity', error: 'google_disabled')
   end
 
-  it 'hojas exactas, ERP y en vivo todavía no se prueban aquí (P2/P3)' do
-    expect(probar('{{hoja_buscar: Precios | Producto=? | Precio}}')).to eq(kind: 'sheet_lookup', pending: true)
+  it 'las hojas exactas y el ERP van a su prueba (P2); en vivo todavía no (P3)' do
+    expect(probar('{{hoja_buscar: Precios | Producto=? | Precio}}')).to eq(kind: 'sheet_lookup', error: 'google_disabled')
+    expect(probar('{{consulta:sae/saldo(rfc=?)}}')).to eq(kind: 'erp', error: 'query_missing')
     expect(probar('@buscar_foro(Foro)')).to eq(kind: 'live', pending: true)
+  end
+
+  it 'marca cuáles gastan una llamada de IA' do
+    lista = described_class.new(account, text: "{{consulta:sae/saldo(rfc=?)}}\n{{consulta:sae/catalogo}}").directives
+
+    expect(lista.map { |d| [d[:kind], d[:uses_ai]] }).to eq([['erp', true], ['erp', false]])
   end
 
   it 'sin frase o con algo que no es directiva, lo dice' do

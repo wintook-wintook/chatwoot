@@ -5,9 +5,10 @@
 # ================================================================================
 # POST …/assistant/source_probe        { draft }  → { directives: [...] }
 #   Lo que se puede probar del Entrenamiento (sin directivas: las fuentes de la cuenta).
-# POST …/assistant/source_probe/run    { directive, phrase }
-#   → { kind, threshold, threshold_from, max_results, results, used } o { error }
-#   La búsqueda como la haría el agente (SourceProbe). Solo el embedding de la frase.
+# POST …/assistant/source_probe/run    { directive, phrase, inbox_id?, rfc? }
+#   → { kind, … } o { error }: la búsqueda como la haría el agente (SourceProbe).
+#   Por parecido, solo el embedding de la frase; la hoja en modo datos y la consulta con
+#   «?» gastan además una llamada de IA (la lista lo dice con `uses_ai`).
 # ================================================================================
 
 class Api::V1::Accounts::ContactTrackings::AssistantSourceProbeController < Api::V1::Accounts::BaseController
@@ -20,13 +21,17 @@ class Api::V1::Accounts::ContactTrackings::AssistantSourceProbeController < Api:
   def run
     result = probe.run(params[:directive], params[:phrase])
     render json: result, status: result[:error] && result[:kind].nil? ? :unprocessable_entity : :ok
+  rescue StandardError => e
+    Rails.logger.error "[Asistente] probar fuente: #{e.message}"
+    render json: { error: 'failed' }, status: :unprocessable_entity
   end
 
   private
 
   def probe
     ContactTrackings::Assistant::SourceProbe.new(
-      Current.account, text: params[:draft],
+      Current.account, text: params[:draft], rfc: params[:rfc],
+                       inbox: Current.account.inboxes.find_by(id: params[:inbox_id]),
                        api_key: ContactTrackings::Assistant::OpenaiChat.new(account: Current.account).api_key
     )
   end

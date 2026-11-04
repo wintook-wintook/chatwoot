@@ -1007,3 +1007,26 @@ cuenta, Google, vacía, pendientes), `assistant_source_probe_spec` 2; motor de K
 `SourceProbePanel.spec` 4; carpeta 304 en verde.
 
 **Sigue:** P2 — `{{hoja_buscar:}}`, `{{hoja:}}` en modo datos y `{{consulta:}}`.
+
+### P2 — hojas exactas y ERP ✅ (04/11/2026)
+
+- **`{{hoja_buscar:}}`** (`SourceProbeExact#sheet_lookup`): `SheetLookup` con la FRASE como texto
+  (los «?» salen de ella, igual que en el servicio de una cotización), **sin IA**. Dice qué buscó,
+  qué regresaría y las filas (hasta 20); si la frase no trae el dato, «el agente se lo
+  preguntaría»; si no hay fila, «lo diría y no inventaría»; columna o hoja inexistente, cuál.
+  Probado con la hoja real del agente de grúas #10368 (7 filas para un «tipo»; sin dato →
+  preguntaría «tipo»).
+- **`{{hoja:X}}` en modo datos**: `SheetQueryService` (la IA traduce, Ruby calcula); muestra el
+  resultado o «no pudo resolver».
+- **`{{consulta:…}}`**: con «?», `AskedParams` (la IA decide si la frase la pide y llena los
+  valores, con el modelo de la bandeja del agente) + `AskedRun`: muestra con qué valores corrió y
+  la tabla, o «la frase no la pide»; sin «?», el render de siempre. **RFC de prueba** opcional (en
+  una conversación sale de la ficha del contacto).
+- La lista marca `uses_ai` (hoja en modo datos, consulta con «?») y la pantalla lo avisa antes de
+  probar.
+
+**Pila de pruebas.** `source_probe_exact_spec` 7, `source_probe_spec` +2; `ExactProbeResult.spec` 4,
+`SourceProbePanel.spec` +1 (RFC e inbox); carpeta 309 en verde. El ERP no se probó contra una
+conexión real.
+
+**Sigue:** P3 — foro / `@discourse` y CONTPAQi en vivo.

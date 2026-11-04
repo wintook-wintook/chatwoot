@@ -2099,7 +2099,11 @@ export default {
             v-if="view === 'sources'"
             class="flex flex-col flex-1 min-h-0 p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
           >
-            <SourceProbePanel :draft="draft" :active="view === 'sources'" />
+            <SourceProbePanel
+              :draft="draft"
+              :active="view === 'sources'"
+              :inbox-id="inboxId"
+            />
           </section>
           <!-- proyecto@diagrama_agente_ia: la pestaña «Pruebas y diagrama». Las pruebas a
                la izquierda y el agente dibujado a la derecha, cada uno con su columna

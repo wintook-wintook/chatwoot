@@ -7,25 +7,33 @@
 // el de la cuenta) y su tope: qué tomaría y qué quedó fuera, y por qué. La búsqueda
 // la hace el backend igual que el motor (SourceProbe).
 //
-// P1: búsqueda por parecido. Hojas exactas, ERP y fuentes en vivo salen en la lista y
-// avisan que se prueban en la siguiente fase.
+// P1: búsqueda por parecido. P2: hojas exactas, hojas en modo datos y ERP
+// (ExactProbeResult). Las fuentes en vivo salen en la lista y avisan que se prueban en
+// la siguiente fase.
 // ============================================================================
 import AssistantAPI from 'dashboard/api/assistant';
+import ExactProbeResult from './ExactProbeResult.vue';
 
 const MAX_HISTORY = 6;
+const TESTABLE = ['similarity', 'sheet_lookup', 'sheet_data', 'erp'];
 
 export default {
+  components: { ExactProbeResult },
   props: {
     // El Entrenamiento abierto (el borrador): de ahí salen sus directivas.
     draft: { type: String, default: '' },
     // Si la pestaña está a la vista: las directivas se vuelven a leer al entrar.
     active: { type: Boolean, default: false },
+    // La bandeja del agente: el ERP toma de ahí su conexión por omisión y el modelo.
+    inboxId: { type: Number, default: null },
   },
   data() {
     return {
       directives: [],
       selected: null,
       phrase: '',
+      // Un RFC de prueba: en una conversación sale de la ficha del contacto.
+      rfc: '',
       result: null,
       history: [],
       isLoading: false,
@@ -39,6 +47,14 @@ export default {
     },
     fromAccount() {
       return this.directives.some(d => d.from_account);
+    },
+    testable() {
+      return Boolean(this.current && TESTABLE.includes(this.current.kind));
+    },
+    isExact() {
+      return Boolean(
+        this.result && this.result.kind && this.result.kind !== 'similarity'
+      );
     },
     canRun() {
       return Boolean(this.current && this.phrase.trim() && !this.isRunning);
@@ -110,7 +126,8 @@ export default {
       try {
         const { data } = await AssistantAPI.sourceProbeRun(
           this.current.directive,
-          frase
+          frase,
+          { inboxId: this.inboxId, rfc: this.rfc }
         );
         this.result = data;
         this.remember(frase);
@@ -205,7 +222,7 @@ export default {
       </div>
 
       <p
-        v-if="current && current.kind !== 'similarity'"
+        v-if="current && !testable"
         class="!m-0 px-3 py-2 text-xs rounded-md bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
       >
         {{
@@ -238,6 +255,27 @@ export default {
             {{ $t('TRACKING_ASSISTANT_VIEW.PROBE.RUN') }}
           </woot-button>
         </div>
+        <div v-if="current.kind === 'erp'" class="flex items-center gap-2">
+          <label
+            for="probe-rfc"
+            class="!mb-0 text-xs shrink-0 text-slate-500 dark:text-slate-400"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.PROBE.RFC') }}
+          </label>
+          <input
+            id="probe-rfc"
+            v-model="rfc"
+            type="text"
+            class="w-48 !mb-0 font-mono uppercase text-xs"
+            :placeholder="$t('TRACKING_ASSISTANT_VIEW.PROBE.RFC_HINT')"
+          />
+        </div>
+        <p
+          v-if="current.uses_ai"
+          class="!m-0 text-xs text-slate-500 dark:text-slate-400"
+        >
+          {{ $t('TRACKING_ASSISTANT_VIEW.PROBE.USES_AI') }}
+        </p>
         <div v-if="history.length" class="flex flex-wrap gap-1">
           <button
             v-for="frase in history"
@@ -258,6 +296,8 @@ export default {
     >
       {{ errorText(result.error) }}
     </p>
+
+    <ExactProbeResult v-else-if="isExact && result.status" :result="result" />
 
     <div
       v-else-if="result && result.threshold !== undefined"
