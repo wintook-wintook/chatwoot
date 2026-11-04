@@ -81,7 +81,8 @@ describe('SourceProbePanel', () => {
 
     expect(AssistantAPI.sourceProbeRun).toHaveBeenCalledWith(
       '@buscar_predefinidas(PATITAS)',
-      '¿cuánto cuesta?'
+      '¿cuánto cuesta?',
+      { inboxId: null, rfc: '' }
     );
     const texto = wrapper.text();
     expect(texto).toContain('"threshold":0.45');
@@ -91,13 +92,13 @@ describe('SourceProbePanel', () => {
     expect(wrapper.vm.history).toEqual(['¿cuánto cuesta?']);
   });
 
-  it('una hoja exacta avisa que su prueba llega después, sin pedir frase', async () => {
+  it('una hoja exacta también se prueba con una frase (P2)', async () => {
     const wrapper = await montar();
     wrapper.vm.selected = 0;
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.text()).toContain('PROBE.KIND_SHEET_LOOKUP');
-    expect(wrapper.find('#probe-phrase').exists()).toBe(false);
+    expect(wrapper.find('#probe-phrase').exists()).toBe(true);
+    expect(wrapper.text()).not.toContain('PROBE.KIND_SHEET_LOOKUP');
   });
 
   it('el error del servidor se dice en palabras', async () => {
@@ -110,5 +111,42 @@ describe('SourceProbePanel', () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain('PROBE.ERROR_NO_PHRASE');
+  });
+
+  it('el ERP pide un RFC de prueba, avisa que usa IA y lo manda', async () => {
+    AssistantAPI.sourceProbe.mockResolvedValue({
+      data: {
+        directives: [
+          {
+            directive: '{{consulta:sae/saldo(rfc=?)}}',
+            kind: 'erp',
+            routes: [],
+            ready: true,
+            uses_ai: true,
+          },
+        ],
+      },
+    });
+    AssistantAPI.sourceProbeRun.mockResolvedValue({
+      data: { kind: 'erp', status: 'not_asked' },
+    });
+    const wrapper = await montar();
+    await wrapper.setProps({ inboxId: 7 });
+
+    expect(wrapper.find('#probe-rfc').exists()).toBe(true);
+    expect(wrapper.text()).toContain('PROBE.USES_AI');
+    wrapper.vm.rfc = 'XAXX010101000';
+    wrapper.vm.phrase = '¿cuánto debo?';
+    await wrapper.vm.run();
+    await flushPromises();
+
+    expect(AssistantAPI.sourceProbeRun).toHaveBeenCalledWith(
+      '{{consulta:sae/saldo(rfc=?)}}',
+      '¿cuánto debo?',
+      { inboxId: 7, rfc: 'XAXX010101000' }
+    );
+    expect(wrapper.findComponent({ name: 'ExactProbeResult' }).exists()).toBe(
+      true
+    );
   });
 });

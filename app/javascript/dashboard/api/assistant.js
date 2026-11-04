@@ -269,8 +269,13 @@ class AssistantAPI extends ApiClient {
     return axios.post(`${this.url}/source_probe`, { draft });
   }
 
-  sourceProbeRun(directive, phrase) {
-    return axios.post(`${this.url}/source_probe/run`, { directive, phrase });
+  sourceProbeRun(directive, phrase, { inboxId = null, rfc = '' } = {}) {
+    return axios.post(`${this.url}/source_probe/run`, {
+      directive,
+      phrase,
+      inbox_id: inboxId,
+      rfc,
+    });
   }
 
   // F4: el .md de las instrucciones del agente, para pegarlo en otra IA.

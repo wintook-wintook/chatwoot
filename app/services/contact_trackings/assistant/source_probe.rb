@@ -15,8 +15,8 @@
 # (kbase_setting). Se trae más de lo que el agente toma para que se vea qué quedó
 # fuera y por qué: bajo el umbral o fuera del tope.
 #
-# P1 prueba lo que se busca por parecido. Hojas exactas, ERP y fuentes en vivo se
-# listan con `kind` y se prueban en P2/P3.
+# P1: lo que se busca por parecido. P2: hojas exactas, hojas en modo datos y ERP
+# (SourceProbeExact). Las fuentes en vivo se listan con `kind` y se prueban en P3.
 # ================================================================================
 
 class ContactTrackings::Assistant::SourceProbe
@@ -32,10 +32,12 @@ class ContactTrackings::Assistant::SourceProbe
             discourse_integration: 'live', contpaq_support: 'live' }.freeze
   NATIVE = { canned_response: 'canned_response', article: 'article' }.freeze
 
-  def initialize(account, text: nil, api_key: nil)
+  # inbox / rfc (P2): la bandeja del agente (conexión del ERP y modelo) y un RFC de prueba.
+  def initialize(account, text: nil, api_key: nil, inbox: nil, rfc: nil)
     @account = account
     @text = text.to_s
     @api_key = api_key
+    @exact = ContactTrackings::Assistant::SourceProbeExact.new(account, inbox: inbox, rfc: rfc)
   end
 
   # Lo que se puede probar: las directivas del Entrenamiento con las rutas que las usan;
@@ -54,13 +56,20 @@ class ContactTrackings::Assistant::SourceProbe
     detectada = detect(directive)
     return { error: 'unknown_directive' } if detectada.nil?
 
-    kind = kind_of(detectada)
-    return { kind: kind, pending: true } unless kind == 'similarity'
-
-    similarity(detectada, frase)
+    probe(kind_of(detectada), detectada, directive.to_s.strip, frase)
   end
 
   private
+
+  def probe(kind, detectada, raw, frase)
+    case kind
+    when 'similarity' then similarity(detectada, frase)
+    when 'sheet_lookup' then @exact.sheet_lookup(detectada[:source_name], frase)
+    when 'sheet_data' then @exact.sheet_data(sheet_source(detectada[:source_name]), frase)
+    when 'erp' then @exact.erp(raw, frase)
+    else { kind: kind, pending: true }
+    end
+  end
 
   # ── qué directivas tiene el Entrenamiento ────────────────────────────────────
   def scan
@@ -86,8 +95,8 @@ class ContactTrackings::Assistant::SourceProbe
     return nil if detectada.nil?
 
     kind = kind_of(detectada)
-    { directive: raw.strip, kind: kind, routes: [], ready: ready?(detectada), items: (items_count(detectada) if kind == 'similarity') }
-      .merge(detectada.slice(:mode, :source_name, :group)).compact
+    { directive: raw.strip, kind: kind, routes: [], ready: ready?(detectada), items: (items_count(detectada) if kind == 'similarity'),
+      uses_ai: uses_ai?(kind, raw) }.merge(detectada.slice(:mode, :source_name, :group)).compact
   end
 
   def detect(raw)
@@ -139,6 +148,12 @@ class ContactTrackings::Assistant::SourceProbe
       { kind: 'similarity', threshold: umbral, threshold_from: de_donde, max_results: tope,
         results: lista, used: lista.count { |r| r[:used] } }
     end
+  end
+
+  # Gastan una llamada de IA (además del embedding): la hoja en modo datos y la consulta
+  # con «?». La pantalla lo avisa antes de probar.
+  def uses_ai?(kind, raw)
+    kind == 'sheet_data' || (kind == 'erp' && ExternalDb::ConsultaDirectiveRenderer.asks?(raw))
   end
 
   # Cuántas piezas hay donde busca (nil si el agente no buscaría ahí).
