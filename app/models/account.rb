@@ -49,6 +49,7 @@ class Account < ApplicationRecord
   has_many :access_roles, dependent: :destroy # Plan-Roles-Permisos
   has_many :catalog_items, dependent: :destroy # Plan-Catalogo-Cotizaciones
   has_many :quotes, dependent: :destroy # Plan-Catalogo-Cotizaciones
+  has_many :sales_budget_lines, dependent: :delete_all # Presupuesto de ventas
   has_many :customer_assets, dependent: :destroy # Plan-Trabajo-Campo R4
   has_many :maintenance_plans, dependent: :destroy # Plan-Trabajo-Campo R4
   has_many :contracts, dependent: :destroy # Plan-Contratos R1

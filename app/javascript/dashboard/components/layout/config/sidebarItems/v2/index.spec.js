@@ -356,15 +356,24 @@ describe('Menú v2', () => {
     expect(ajustes.menuItems.map(i => i.label)).toContain('CASES_AND_STAGES');
   });
 
-  it('Inicio: Notificaciones (antes la campanita), Mi resumen y Mi negocio', () => {
+  it('Inicio: Notificaciones (antes la campanita), Mi resumen, Mi negocio y Presupuesto', () => {
     const inicio = menuFor(route('my_summary'));
     expect(inicio.menuItems.map(i => i.label)).toEqual([
       'NOTIFICATIONS',
       'MY_SUMMARY',
       'MY_BUSINESS',
+      'SALES_BUDGET',
     ]);
     expect(inicio.menuItems[0].toStateName).toBe('notifications_index');
     expect(inicio.menuItems[0].showUnreadNotifications).toBe(true);
+    // Presupuesto de ventas: vive en Inicio pero solo lo ve quien tiene Ventas.
+    expect(inicio.menuItems[3]).toMatchObject({
+      toStateName: 'gestorTickets_sales_budgets',
+      area: 'sales',
+    });
+    expect(menuFor(route('gestorTickets_sales_budgets')).parentNav).toBe(
+      'inicio'
+    );
   });
 
   it('Inicio, Agenda, Agentes IA y Vista de bandeja', () => {

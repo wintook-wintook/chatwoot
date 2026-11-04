@@ -33,13 +33,10 @@ export default {
       const { accounts = [] } = this.currentUser;
       return accounts.length > 1;
     },
-    hideProfileForAgents() {     
+    hideProfileForAgents() {
       return (
         this.currentRole !== 'administrator' &&
-        this.isFeatureEnabledonAccount(
-          this.accountId,
-          'hide_profile_for_agent'
-        )
+        this.isFeatureEnabledonAccount(this.accountId, 'hide_profile_for_agent')
       );
     },
   },
@@ -71,7 +68,7 @@ export default {
     <div
       v-if="show"
       v-on-clickaway="onClickAway"
-      class="absolute z-30 w-64 px-2 py-2 bg-white border rounded-md shadow-xl left-3 rtl:left-auto rtl:right-3 bottom-16 dark:bg-slate-800 border-slate-25 dark:border-slate-700"
+      class="absolute z-30 w-64 px-2 py-2 bg-white border rounded-md shadow-xl left-12 rtl:left-auto rtl:right-12 bottom-0 dark:bg-slate-800 border-slate-25 dark:border-slate-700"
       :class="{ 'block visible': show }"
     >
       <AvailabilityStatus />

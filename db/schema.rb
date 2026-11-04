@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_04_170000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_04_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -724,8 +724,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_04_170000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "location", default: {}, null: false
+    t.bigint "task_report_id"
     t.index ["account_id"], name: "index_case_time_entries_on_account_id"
     t.index ["case_ticket_id"], name: "index_case_time_entries_on_case_ticket_id"
+    t.index ["task_report_id"], name: "index_case_time_entries_on_task_report_id"
     t.index ["user_id"], name: "index_case_time_entries_on_user_id"
   end
 
@@ -2049,6 +2051,30 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_04_170000) do
     t.index ["user_id"], name: "index_reporting_events_on_user_id"
   end
 
+  create_table "sales_budget_lines", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.date "period", null: false
+    t.string "currency", limit: 3, default: "MXN", null: false
+    t.decimal "amount", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "quantity", precision: 12, scale: 2
+    t.bigint "user_id"
+    t.bigint "organization_id"
+    t.bigint "contact_id"
+    t.bigint "product_line_id"
+    t.bigint "catalog_item_id"
+    t.string "note"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, period, currency, COALESCE(user_id, (0)::bigint), COALESCE(organization_id, (0)::bigint), COALESCE(contact_id, (0)::bigint), COALESCE(product_line_id, (0)::bigint), COALESCE(catalog_item_id, (0)::bigint)", name: "index_sales_budget_lines_unique_dimensions", unique: true
+    t.index ["account_id", "period"], name: "index_sales_budget_lines_on_account_id_and_period"
+    t.index ["account_id", "user_id", "period"], name: "index_sales_budget_lines_on_account_id_and_user_id_and_period"
+    t.index ["catalog_item_id"], name: "index_sales_budget_lines_on_catalog_item_id"
+    t.index ["contact_id"], name: "index_sales_budget_lines_on_contact_id"
+    t.index ["organization_id"], name: "index_sales_budget_lines_on_organization_id"
+    t.index ["product_line_id"], name: "index_sales_budget_lines_on_product_line_id"
+  end
+
   create_table "scheduled_messages", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "conversation_id", null: false
@@ -2156,6 +2182,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_04_170000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "case_time_entry_id"
+    t.integer "minutes"
     t.index ["account_id", "closed_at"], name: "index_task_reports_on_account_id_and_closed_at"
     t.index ["account_id"], name: "index_task_reports_on_account_id"
     t.index ["case_meeting_id"], name: "index_task_reports_on_case_meeting_id"
@@ -2554,6 +2581,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_04_170000) do
   add_foreign_key "case_tickets", "users", column: "requester_id", on_delete: :nullify
   add_foreign_key "case_time_entries", "accounts"
   add_foreign_key "case_time_entries", "case_tickets", on_delete: :cascade
+  add_foreign_key "case_time_entries", "task_reports", on_delete: :nullify
   add_foreign_key "case_time_entries", "users", on_delete: :nullify
   add_foreign_key "case_type_column_tasks", "accounts"
   add_foreign_key "case_type_column_tasks", "case_type_columns", on_delete: :cascade
@@ -2631,6 +2659,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_04_170000) do
   add_foreign_key "quotes", "organizations", on_delete: :nullify
   add_foreign_key "quotes", "quotes", column: "parent_quote_id", on_delete: :nullify
   add_foreign_key "quotes", "users", column: "assignee_id", on_delete: :nullify
+  add_foreign_key "sales_budget_lines", "accounts", on_delete: :cascade
+  add_foreign_key "sales_budget_lines", "catalog_items", on_delete: :cascade
+  add_foreign_key "sales_budget_lines", "contacts", on_delete: :cascade
+  add_foreign_key "sales_budget_lines", "organizations", on_delete: :cascade
+  add_foreign_key "sales_budget_lines", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "sales_budget_lines", "users", on_delete: :cascade
   add_foreign_key "scheduled_messages", "accounts"
   add_foreign_key "scheduled_messages", "conversations"
   add_foreign_key "scheduled_messages", "users", on_delete: :cascade

@@ -53,8 +53,18 @@ export default {
     slaOnly: { type: Boolean, default: false },
     slaCount: { type: Number, default: 0 },
     committedOnly: { type: Boolean, default: false },
+    // Casos abiertos sin tareas pendientes ni agenda (todas las clases).
+    noNextStepOnly: { type: Boolean, default: false },
   },
-  emits: ['scope', 'status', 'outcome', 'stage', 'sla', 'committed'],
+  emits: [
+    'scope',
+    'status',
+    'outcome',
+    'stage',
+    'sla',
+    'committed',
+    'nextStep',
+  ],
   computed: {
     i18nBase() {
       return classI18nBase(this.caseClass);
@@ -193,8 +203,26 @@ export default {
       <slot />
 
       <label
-        v-if="showCommitted"
         class="flex items-center h-8 gap-2 px-3 ml-auto text-xs font-medium border rounded-full cursor-pointer"
+        :class="
+          noNextStepOnly
+            ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-800'
+            : 'text-slate-600 border-slate-200 hover:bg-slate-50 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-800'
+        "
+        :title="$t('CASE_TICKETS.FILTERS.NO_NEXT_STEP_HINT')"
+      >
+        <input
+          type="checkbox"
+          class="!mb-0"
+          :checked="noNextStepOnly"
+          @change="$emit('nextStep', $event.target.checked)"
+        />
+        {{ $t('CASE_TICKETS.FILTERS.NO_NEXT_STEP') }}
+      </label>
+
+      <label
+        v-if="showCommitted"
+        class="flex items-center h-8 gap-2 px-3 text-xs font-medium border rounded-full cursor-pointer"
         :class="
           committedOnly
             ? 'bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-900/40 dark:text-teal-200 dark:border-teal-800'
@@ -216,7 +244,6 @@ export default {
         type="button"
         class="flex items-center h-8 gap-1 px-3 text-xs font-medium border rounded-full"
         :class="[
-          showCommitted ? '' : 'ml-auto',
           slaOnly
             ? 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800'
             : 'text-red-700 border-red-200 hover:bg-red-50 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-900/20',

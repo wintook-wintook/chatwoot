@@ -99,7 +99,12 @@
       "LABEL": "Assistant name",
       "HINT": "Everyone will see this name. Empty = Dali.",
       "SAVE": "Save",
-      "SAVED": "Assistant name saved"
+      "SAVED": "Assistant settings saved",
+      "MODEL": "OpenAI model",
+      "MODEL_DEFAULT": "The usual one ({model})",
+      "ANALYSIS_MODEL": "Model for sales analysis",
+      "ANALYSIS_MODEL_DEFAULT": "Same as the general one",
+      "MODEL_HINT": "The analysis model is used only when the assistant explains sales figures; a stronger one answers better but costs more per question."
     },
     "VIA": "via {name}",
     "MENU": "Ask {name}…",

@@ -7,7 +7,7 @@
 #   POST   …/assistant/reset                 → archiva la conversación y empieza otra
 #   POST   …/assistant/proposals/:id/confirm { payload } (los datos que el usuario dejó)
 #   POST   …/assistant/proposals/:id/cancel
-#   PATCH  …/assistant/settings              { name } (solo administradores)
+#   PATCH  …/assistant/settings              { name, model, analysis_model } (solo administradores)
 class Api::V1::Accounts::AssistantController < Api::V1::Accounts::BaseController
   MAX_CONTENT = 2000
   CONTEXT_KEYS = %w[page label case_id contact_id conversation_id organization_id].freeze
@@ -55,7 +55,11 @@ class Api::V1::Accounts::AssistantController < Api::V1::Accounts::BaseController
   def settings
     return render json: { error: 'Solo un administrador cambia el nombre' }, status: :forbidden unless access_grant.admin?
 
-    render json: { name: Assistant::Settings.update_name!(Current.account, params[:name]) }
+    name = params.key?(:name) ? Assistant::Settings.update_name!(Current.account, params[:name]) : Assistant::Settings.name_for(Current.account)
+    update_models if params.key?(:model) || params.key?(:analysis_model)
+    render json: { name: name, models: Assistant::Settings.models(Current.account) }
+  rescue ArgumentError => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   private
@@ -88,8 +92,14 @@ class Api::V1::Accounts::AssistantController < Api::V1::Accounts::BaseController
     params.fetch(:context, {}).permit(*CONTEXT_KEYS).to_h
   end
 
+  def update_models
+    Assistant::Settings.update_models!(Current.account, model: params[:model], analysis_model: params[:analysis_model])
+  end
+
   def thread_json
     chat = Assistant::Chat.new(thread: @thread, grant: access_grant, zone: zone)
-    { name: Assistant::Settings.name_for(Current.account), available: chat.available?, messages: @thread.messages }
+    { name: Assistant::Settings.name_for(Current.account), available: chat.available?, messages: @thread.messages,
+      starters: Assistant::Capabilities.starters(access_grant),
+      models: (Assistant::Settings.models(Current.account) if access_grant.admin?) }.compact
   end
 end

@@ -40,7 +40,7 @@
     "VIEW": "Ver reporte",
     "EMPTY": "Sin reportes.",
     "MORE": "Ver más",
-    "HISTORY": "Tareas concluidas",
+    "HISTORY": "Tareas concluidas y actividades",
     "PAGE_TITLE": "Reportes",
     "ALL_PEOPLE": "Todas las personas",
     "FROM": "Desde",
@@ -51,6 +51,24 @@
     },
     "SERVICE_REPORT": "Ver reporte de servicio",
     "ARRIVAL": "Llegó",
+    "MINUTES": {
+      "LABEL": "Tiempo dedicado",
+      "OPTIONAL": "(opcional)",
+      "HOURS": "h",
+      "MINUTES": "min",
+      "REQUIRED": "Indica el tiempo dedicado.",
+      "SPLIT": "Se reparte por igual entre las {count} tareas.",
+      "TOTAL": "Tiempo total: {time}",
+      "ESTIMATED": "(estimado {time})",
+      "REQUIRE_SETTING": "Exigir el tiempo dedicado en los reportes",
+      "REQUIRE_SETTING_HINT": "Al concluir una tarea o reportar una actividad hay que decir cuánto tomó. Con caso, suma a sus horas reales."
+    },
+    "KINDS": {
+      "TASK": "Tarea",
+      "MEETING": "Tarea agendada",
+      "ORDER": "Orden de trabajo",
+      "ACTIVITY": "Actividad"
+    },
     "CATALOG": {
       "TITLE": "Resultados de tareas",
       "ACTIVE": "Activo",
@@ -60,9 +78,68 @@
       "ERROR": "No se pudo guardar."
     }
   },
+  "ACTIVITY_REPORT": {
+    "TITLE": "Reportar actividad",
+    "SUBTITLE": "Algo que ya hiciste, sin tarea de por medio",
+    "NAME": "Título",
+    "NAME_PLACEHOLDER": "Ej. Llamada de confirmación",
+    "DATE": "Fecha",
+    "TIME": "Hora",
+    "INTERNAL_HINT": "Sin contacto ni organización queda como actividad interna: solo se ve en Reportes y en tu Mi día.",
+    "REQUIRED": "Escribe el título y qué hiciste.",
+    "SUBMIT": "Guardar",
+    "SUCCESS": "Actividad reportada"
+  },
+  "SALES_BUDGET": {
+    "TITLE": "Presupuesto de ventas",
+    "YEAR": "Año",
+    "CURRENCY": "Moneda",
+    "TABS": {
+      "PROGRESS": "Avance",
+      "SELLERS": "Por vendedor",
+      "CLIENTS": "Por vendedor y cliente"
+    },
+    "PROGRESS": {
+      "RANGES": { "MONTH": "Este mes", "QUARTER": "Trimestre", "YEAR": "Año" },
+      "FROM": "Desde",
+      "TO": "Hasta",
+      "TILES": { "BUDGET": "Presupuesto", "ACTUAL": "Logrado", "PERCENT": "Avance", "DIFF": "Diferencia" },
+      "BY_MONTH": "Por mes",
+      "COLUMNS": { "SELLER": "Vendedor" },
+      "NO_SELLER": "Sin vendedor",
+      "OTHER_CLIENTS": "Otros clientes (sin meta)",
+      "TOTAL": "Total",
+      "EMPTY": "No hay presupuesto ni ventas ganadas en este periodo.",
+      "HOW_COUNTED": "Logrado = ventas ganadas sin IVA. Una oportunidad cuenta una vez: con su cotización aceptada si la tiene, si no con su monto. Las cotizaciones sin oportunidad cuentan solas."
+    },
+    "CAPTURE": {
+      "SELLER": "Vendedor",
+      "CLIENT": "Cliente",
+      "YEAR": "Año",
+      "TOTAL": "Total",
+      "SAVE": "Guardar",
+      "SAVED": "Presupuesto guardado",
+      "ERROR": "No se pudo guardar. Inténtalo de nuevo.",
+      "PERCENT": "Ajuste en %",
+      "COPY": "Copiar {year}",
+      "COPY_HINT": "Trae las metas del año anterior con el ajuste; no pisa lo ya capturado.",
+      "COPIED": "Se copiaron {count} metas",
+      "CHOOSE_SELLER": "Elige un vendedor",
+      "CHOOSE_SELLER_HINT": "Elige un vendedor para capturar sus metas por cliente.",
+      "ADD_CLIENT": "Agregar cliente",
+      "NO_CLIENTS": "Este vendedor no tiene clientes con meta. Agrega uno arriba.",
+      "REMOVE_CLIENT": "Quitar cliente",
+      "REMOVE_CONFIRM": "¿Quitar todas las metas de {name} en este año?",
+      "CLIENTS_SUM": "Suma de clientes",
+      "SELLER_GOAL": "Meta global del vendedor",
+      "UNASSIGNED": "Sin repartir",
+      "UNASSIGNED_HINT": "«Sin repartir» es la meta global menos lo asignado a clientes; en ámbar si los clientes suman más que la meta."
+    }
+  },
   "QUICK_ACTIONS": {
     "TITLE": "Accesos rápidos",
     "NEW_TASK": "Tarea",
+    "REPORT_ACTIVITY": "Reportar actividad",
     "SEARCH_CLIENT": "Buscar contacto u organización",
     "SEARCH": {
       "TITLE": "Buscar contacto u organización",
@@ -77,6 +154,8 @@
       "TITLE": "Nueva tarea",
       "NAME": "Qué hay que hacer",
       "NAME_PLACEHOLDER": "Escribe la tarea",
+      "DESCRIPTION": "Descripción (opcional)",
+      "DESCRIPTION_PLACEHOLDER": "Detalle de lo que hay que hacer...",
       "VISIT_TIME_REQUIRED": "Una visita lleva fecha y hora.",
       "IS_VISIT": "Es una visita al cliente",
       "ADDRESS": "Dirección de la visita",
@@ -98,6 +177,15 @@
     }
   },
   "CASE_TICKETS": {
+    "NEXT_STEP": {
+      "TASK": "Tarea · {date}",
+      "TASK_OVERDUE": "Tarea vencida · {date}",
+      "TASK_NO_DATE": "Tarea sin fecha",
+      "MEETING": "Agendada · {date}",
+      "MEETING_OVERDUE": "Agendada vencida · {date}",
+      "NONE": "Sin siguiente paso",
+      "NONE_HINT": "No tiene tareas pendientes ni nada agendado: agrega una tarea para darle continuidad."
+    },
     "SECTION_TITLE": "Caso",
     "SIDEBAR": {
       "PRIMARY_LABEL": "Casos",
@@ -378,6 +466,7 @@
       "ERROR": "No se pudo cambiar el vencimiento"
     },
     "TABLE": {
+      "NEXT_STEP": "Siguiente paso",
       "FOLIO": "Folio",
       "SUBJECT": "Asunto",
       "CONTACT_SUBJECT": "Contacto / Asunto",
@@ -539,6 +628,7 @@
         "SCORE_TITLE": "Puntaje de urgencia: entre más alto, antes",
         "AGENDA": "Agenda de hoy",
         "AGENDA_EMPTY": "Sin reuniones hoy",
+        "DONE_TODAY": "Hecho hoy",
         "EMPTY": "Sin pendientes: no tienes tareas por hacer.",
         "REASONS": {
           "overdue": "Vencida hace {days} d",
@@ -1653,7 +1743,7 @@
     "COMMERCIAL": {
       "NO_TYPES": "Aún no hay tipos de oportunidad. Crea uno de clase Ventas en Tipos de caso.",
       "FIELDS": {
-        "AMOUNT": "Monto",
+        "AMOUNT": "Monto (sin IVA)",
         "CURRENCY": "Moneda",
         "EXPECTED_CLOSE": "Cierre estimado",
         "PROBABILITY": "Probabilidad",
@@ -2223,7 +2313,9 @@
         "TO": "Hasta",
         "INVALID": "«Desde» debe ser antes de «Hasta»"
       },
-      "COMMITTED_ONLY": "Solo comprometidas",
+      "NO_NEXT_STEP": "Sin siguiente paso",
+        "NO_NEXT_STEP_HINT": "Solo los casos abiertos sin tareas pendientes ni nada agendado",
+        "COMMITTED_ONLY": "Solo comprometidas",
       "COMMITTED_ONLY_HINT": "Solo las oportunidades que el cliente ya se comprometió a pagar. Se combina con los demás filtros y con el aviso de cierre vencido.",
       "DATE_FIELD": "¿Qué fecha?",
       "DATE_WHEN": "¿Cuándo?",
@@ -2593,6 +2685,7 @@
       "CUSTOMER": "Cliente",
       "WE": "Nosotros",
       "TASK_REPORT": "Reporte de cierre",
+      "ACTIVITY_REPORT": "Actividad reportada",
       "TODAY": "Hoy",
       "YESTERDAY": "Ayer",
       "LOADING": "Cargando actividad…",
@@ -2889,6 +2982,7 @@
       "EMPTY": "Sin cotizaciones."
     },
     "WHICH_QUOTE": "¿Cuál cotización aceptó el cliente?",
+    "WHICH_QUOTE_PLACEHOLDER": "Elige la cotización",
     "SETTINGS": {
       "REQUIRE_OPPORTUNITY": "Las cotizaciones requieren oportunidad",
       "REQUIRE_OPPORTUNITY_HINT": "Si está marcada, cada cotización nueva sin oportunidad crea la suya.",
@@ -2938,7 +3032,8 @@
     "SOURCES": {
       "timer": "Cronómetro",
       "manual": "A mano",
-      "visit": "Visita"
+      "visit": "Visita",
+      "report": "Reporte de tarea"
     },
     "REPORT": "Reporte para el cliente",
     "REPORT_SENT": "Reporte enviado",

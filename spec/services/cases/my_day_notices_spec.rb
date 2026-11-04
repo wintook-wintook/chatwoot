@@ -18,7 +18,8 @@ RSpec.describe Cases::MyDayNotices do
   end
 
   it 'muestra los avisos sin leer con su peso, los pesados primero, y oculta los de peso bajo' do
-    medium = notify('case_task_assignment', 'task_title' => 'Llamar')
+    other = CaseTicket.create!(account: account, title: 'Otra', contact: contact, assignee: agent)
+    medium = notify('case_task_assignment', { 'task_title' => 'Llamar' }, other)
     high = notify('case_stage_ready', 'needs_doc' => true, 'task_title' => 'Documenta para pasar a Ganada')
     notify('case_task_completed', 'task_title' => 'Hecha')
 
@@ -39,5 +40,26 @@ RSpec.describe Cases::MyDayNotices do
     notify('case_task_assignment').update!(read_at: Time.current)
 
     expect(notices.map { |n| [n[:type], n[:weight], n[:link][:kind]] }).to eq([%w[conversation_mention high conversation]])
+  end
+
+  it 'junta los avisos de la misma conversación o caso: el más nuevo, el peso más alto y cuántos son' do
+    conversation = create(:conversation, account: account)
+    notify('assigned_conversation_new_message', {}, conversation)
+    newest = notify('assigned_conversation_new_message', {}, conversation)
+    notify('case_stage_ready', 'needs_doc' => true)
+    notify('case_task_assignment', 'task_title' => 'Llamar')
+
+    by_actor = notices.index_by { |n| n[:actor_type] }
+    expect(notices.size).to eq(2)
+    expect(by_actor['Conversation']).to include(id: newest.id, count: 2, weight: 'medium', actor_id: conversation.id)
+    expect(by_actor['CaseTicket']).to include(count: 2, weight: 'high', actor_id: ticket.id)
+  end
+
+  it 'no junta los recordatorios de calendario' do
+    integration = UserCalendarIntegration.new(user: agent, account: account)
+    integration.save!(validate: false)
+    2.times { notify('calendar_event_reminder', {}, integration) }
+
+    expect(notices.pluck(:count)).to eq([1, 1])
   end
 end

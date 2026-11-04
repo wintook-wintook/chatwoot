@@ -18,6 +18,7 @@ import {
   toggleOpenGroup,
 } from 'dashboard/helper/inboxGroups'; // feat/bandejas_por_tipo
 import { INBOX_TYPES } from 'shared/mixins/inboxMixin';
+import { canSeeArea, getUserAccess } from 'dashboard/helper/accessHelper';
 
 export default {
   components: {
@@ -171,6 +172,16 @@ export default {
         .filter(item => {
           if (item.showOnlyOnCloud) {
             return this.isOnChatwootCloud;
+          }
+          // Ítem de otra área (p. ej. Inicio › Presupuesto es de Ventas): solo si el rol la ve.
+          if (
+            item.area &&
+            !canSeeArea(
+              getUserAccess(this.currentUser, this.accountId),
+              item.area
+            )
+          ) {
+            return false;
           }
           // @tickets_cases — permiso que decide el backend (p. ej. «Resumen del negocio»).
           if (item.visibleGetter) {

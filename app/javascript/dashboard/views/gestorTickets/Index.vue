@@ -166,12 +166,14 @@
         :sla-only="slaOverdueOnly"
         :sla-count="slaOverdueCount"
         :committed-only="committedOnly"
+        :no-next-step-only="noNextStepOnly"
         @scope="applyFilter"
         @status="onStatusChange"
         @outcome="onOutcomeChange"
         @stage="onStageChange"
         @sla="onSlaChange"
         @committed="onCommittedChange"
+        @nextStep="onNextStepChange"
       >
         <template #before>
           <CaseTypeSelect
@@ -469,6 +471,7 @@ import {
   toSimpleStatus,
 } from 'dashboard/helper/caseSimpleStatus'; // modo simple/ITIL
 import { backQuery } from './backLink';
+import { nextStepView } from 'dashboard/helper/caseNextStep'; // siguiente paso del caso
 // Plan-Clase-Comercial F4 — lista de oportunidades.
 import { formatHours } from 'dashboard/helper/caseWorkOrder'; // Plan-Clase-Orden-de-Trabajo F2b
 import {
@@ -573,6 +576,7 @@ const normalizeViewQuery = (q = {}) => {
     quick,
     sla_overdue: !!q.sla_overdue || legacySla,
     committed: !!q.committed, // Plan-Metricas-Comercial — «Solo comprometidas»
+    no_next_step: !!q.no_next_step, // «Sin siguiente paso»
     case_type_id: q.case_type_id || '',
     fine,
     sort_by: q.sort_by || 'created_at',
@@ -644,6 +648,7 @@ export default {
       activeFilter: 'mine',
       slaOverdueOnly: false,
       committedOnly: false, // Plan-Metricas-Comercial — «Solo comprometidas»
+      noNextStepOnly: false, // casos abiertos sin tareas ni agenda
       fine: emptyFineFilters(),
       activeType: '', // '' = todos, o un case_type_id
       outcomeFilter: '', // Plan-Clase-Comercial F4 — won|lost|cancelled
@@ -831,6 +836,7 @@ export default {
         quick: this.activeFilter,
         sla_overdue: this.slaOverdueOnly,
         committed: this.committedOnly,
+        no_next_step: this.noNextStepOnly,
         case_type_id: this.activeType,
         fine: this.fine,
         sort_by: this.sortBy,
@@ -1002,6 +1008,33 @@ export default {
             </span>
           ),
         },
+        // Siguiente paso: la tarea o tarea agendada más próxima; sin ninguna, el caso
+        // se queda sin continuidad («Sin siguiente paso»).
+        {
+          field: 'next_step',
+          key: 'next_step',
+          title: this.$t('CASE_TICKETS.TABLE.NEXT_STEP'),
+          align: 'left',
+          width: 170,
+          renderBodyCell: ({ row }) => {
+            const view = nextStepView(row.next_step, this.$t.bind(this));
+            if (!view) return <span class="text-slate-400">—</span>;
+            return view.badge ? (
+              <span
+                class={`${PILL} ${view.cls} whitespace-nowrap`}
+                title={this.$t('CASE_TICKETS.NEXT_STEP.NONE_HINT')}
+              >
+                {view.label}
+              </span>
+            ) : (
+              <span
+                class={`text-[13px] tabular-nums whitespace-nowrap ${view.cls}`}
+              >
+                {view.label}
+              </span>
+            );
+          },
+        },
         {
           field: 'due_at',
           key: 'due_at',
@@ -1087,6 +1120,7 @@ export default {
       this.activeFilter = SCOPES.includes(st.scope) ? st.scope : 'mine';
       this.slaOverdueOnly = !!st.sla;
       this.committedOnly = !!st.committed;
+      this.noNextStepOnly = !!st.noNextStep;
       const { postponed: legacyPostponed, ...savedFine } = st.fine || {};
       this.fine = normalizeFineFilters(savedFine);
       this.activeType = st.type ?? '';
@@ -1123,6 +1157,7 @@ export default {
         scope: this.activeFilter,
         sla: this.slaOverdueOnly,
         committed: this.committedOnly,
+        noNextStep: this.noNextStepOnly,
         fine: this.fine,
         type: this.activeType,
         list: {
@@ -1200,6 +1235,7 @@ export default {
       }
       // Plan-Metricas-Comercial — se suma a todo (también al aviso de cierre vencido).
       if (this.isCommercialList && this.committedOnly) filters.committed = true;
+      if (this.noNextStepOnly) filters.next_step = 'none';
       // Aviso rojo de Órdenes / Comercial (el de Soporte va arriba, por SLA).
       if (this.slaOverdueOnly && alertApplies(this.alertContext)) {
         Object.assign(filters, classAlertParams(this.caseClass));
@@ -1270,6 +1306,10 @@ export default {
       this.committedOnly = on;
       this.onFilterChange();
     },
+    onNextStepChange(on) {
+      this.noNextStepOnly = on;
+      this.onFilterChange();
+    },
     onFineChange(fine) {
       this.fine = fine;
       this.onFilterChange();
@@ -1319,6 +1359,7 @@ export default {
       this.activeFilter = q.quick;
       this.slaOverdueOnly = q.sla_overdue;
       this.committedOnly = q.committed;
+      this.noNextStepOnly = q.no_next_step;
       this.fine = q.fine;
       this.activeType = this.resolveSavedType(q.case_type_id, view.name);
       this.sortBy = this.sortFields.includes(q.sort_by)
@@ -1386,6 +1427,7 @@ export default {
       this.activeFilter = 'mine';
       this.slaOverdueOnly = false;
       this.committedOnly = false;
+      this.noNextStepOnly = false;
       this.fine = emptyFineFilters();
       this.activeType = '';
       this.currentPage = 1;

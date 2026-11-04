@@ -19,6 +19,7 @@ const { methods } = QuickTaskModal;
 const context = data => ({
   ...methods,
   title: 'Llamar',
+  description: '',
   assigneeId: 5,
   dueDate: '',
   plannedDate: '2026-11-10',
@@ -73,6 +74,18 @@ describe('QuickTaskModal', () => {
       expect.objectContaining({ title: 'Llamar', planned_on: '2026-11-10' })
     );
     expect(QuickTasksAPI.create).not.toHaveBeenCalled();
+  });
+
+  it('manda la descripción en los tres caminos', async () => {
+    const description = '  Llevar el contrato  ';
+    await methods.submit.call(context({ description }));
+    await methods.submit.call(context({ description, time: '10:00' }));
+    await methods.submit.call(context({ description, caseId: 3 }));
+
+    const expected = 'Llevar el contrato';
+    expect(QuickTasksAPI.create.mock.calls[0][0].description).toBe(expected);
+    expect(AgendaItemsAPI.create.mock.calls[0][0].description).toBe(expected);
+    expect(CaseTasksAPI.createTask.mock.calls[0][1].description).toBe(expected);
   });
 
   it('sin título no guarda', async () => {

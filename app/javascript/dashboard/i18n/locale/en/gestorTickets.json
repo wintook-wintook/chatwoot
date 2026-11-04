@@ -40,7 +40,7 @@
     "VIEW": "View report",
     "EMPTY": "No reports.",
     "MORE": "See more",
-    "HISTORY": "Concluded tasks",
+    "HISTORY": "Concluded tasks and activities",
     "PAGE_TITLE": "Reports",
     "ALL_PEOPLE": "Everyone",
     "FROM": "From",
@@ -51,6 +51,24 @@
     },
     "SERVICE_REPORT": "View service report",
     "ARRIVAL": "Arrived",
+    "MINUTES": {
+      "LABEL": "Time spent",
+      "OPTIONAL": "(optional)",
+      "HOURS": "h",
+      "MINUTES": "min",
+      "REQUIRED": "Enter the time spent.",
+      "SPLIT": "It is split evenly among the {count} tasks.",
+      "TOTAL": "Total time: {time}",
+      "ESTIMATED": "(estimated {time})",
+      "REQUIRE_SETTING": "Require time spent in reports",
+      "REQUIRE_SETTING_HINT": "When concluding a task or reporting an activity, people must say how long it took. With a case, it adds to its actual hours."
+    },
+    "KINDS": {
+      "TASK": "Task",
+      "MEETING": "Scheduled task",
+      "ORDER": "Work order",
+      "ACTIVITY": "Activity"
+    },
     "CATALOG": {
       "TITLE": "Task results",
       "ACTIVE": "Active",
@@ -60,9 +78,68 @@
       "ERROR": "Could not save."
     }
   },
+  "ACTIVITY_REPORT": {
+    "TITLE": "Report activity",
+    "SUBTITLE": "Something you already did, with no task behind it",
+    "NAME": "Title",
+    "NAME_PLACEHOLDER": "E.g. Confirmation call",
+    "DATE": "Date",
+    "TIME": "Time",
+    "INTERNAL_HINT": "With no contact or organization it stays internal: only visible in Reports and your My day.",
+    "REQUIRED": "Write the title and what you did.",
+    "SUBMIT": "Save",
+    "SUCCESS": "Activity reported"
+  },
+  "SALES_BUDGET": {
+    "TITLE": "Sales budget",
+    "YEAR": "Year",
+    "CURRENCY": "Currency",
+    "TABS": {
+      "PROGRESS": "Progress",
+      "SELLERS": "By seller",
+      "CLIENTS": "By seller and client"
+    },
+    "PROGRESS": {
+      "RANGES": { "MONTH": "This month", "QUARTER": "Quarter", "YEAR": "Year" },
+      "FROM": "From",
+      "TO": "To",
+      "TILES": { "BUDGET": "Budget", "ACTUAL": "Achieved", "PERCENT": "Attainment", "DIFF": "Difference" },
+      "BY_MONTH": "By month",
+      "COLUMNS": { "SELLER": "Seller" },
+      "NO_SELLER": "No seller",
+      "OTHER_CLIENTS": "Other clients (no budget)",
+      "TOTAL": "Total",
+      "EMPTY": "No budget or won sales in this period.",
+      "HOW_COUNTED": "Achieved = won sales before tax. An opportunity counts once: with its accepted quote if it has one, otherwise its amount. Quotes without an opportunity count on their own."
+    },
+    "CAPTURE": {
+      "SELLER": "Seller",
+      "CLIENT": "Client",
+      "YEAR": "Year",
+      "TOTAL": "Total",
+      "SAVE": "Save",
+      "SAVED": "Budget saved",
+      "ERROR": "Could not save. Please try again.",
+      "PERCENT": "Adjustment %",
+      "COPY": "Copy {year}",
+      "COPY_HINT": "Brings last year's budget with the adjustment; never overwrites what is already set.",
+      "COPIED": "{count} budget lines copied",
+      "CHOOSE_SELLER": "Choose a seller",
+      "CHOOSE_SELLER_HINT": "Choose a seller to set their budget by client.",
+      "ADD_CLIENT": "Add client",
+      "NO_CLIENTS": "This seller has no clients with a budget. Add one above.",
+      "REMOVE_CLIENT": "Remove client",
+      "REMOVE_CONFIRM": "Remove every budget line for {name} this year?",
+      "CLIENTS_SUM": "Clients total",
+      "SELLER_GOAL": "Seller overall budget",
+      "UNASSIGNED": "Not assigned",
+      "UNASSIGNED_HINT": "“Not assigned” is the overall budget minus what is assigned to clients; amber when clients add up to more."
+    }
+  },
   "QUICK_ACTIONS": {
     "TITLE": "Quick actions",
     "NEW_TASK": "Task",
+    "REPORT_ACTIVITY": "Report activity",
     "SEARCH_CLIENT": "Search contact or organization",
     "SEARCH": {
       "TITLE": "Search contact or organization",
@@ -77,6 +154,8 @@
       "TITLE": "New task",
       "NAME": "What needs to be done",
       "NAME_PLACEHOLDER": "Write the task",
+      "DESCRIPTION": "Description (optional)",
+      "DESCRIPTION_PLACEHOLDER": "Details of what needs to be done...",
       "VISIT_TIME_REQUIRED": "A visit needs a date and time.",
       "IS_VISIT": "This is a customer visit",
       "ADDRESS": "Visit address",
@@ -98,6 +177,15 @@
     }
   },
   "CASE_TICKETS": {
+    "NEXT_STEP": {
+      "TASK": "Task · {date}",
+      "TASK_OVERDUE": "Overdue task · {date}",
+      "TASK_NO_DATE": "Task with no date",
+      "MEETING": "Scheduled · {date}",
+      "MEETING_OVERDUE": "Overdue scheduled · {date}",
+      "NONE": "No next step",
+      "NONE_HINT": "No pending tasks and nothing scheduled: add a task to keep it moving."
+    },
     "SECTION_TITLE": "Case",
     "SIDEBAR": {
       "PRIMARY_LABEL": "Cases",
@@ -375,6 +463,7 @@
       "ERROR": "Could not change due date"
     },
     "TABLE": {
+      "NEXT_STEP": "Next step",
       "FOLIO": "Ref",
       "SUBJECT": "Subject",
       "CONTACT_SUBJECT": "Contact / Subject",
@@ -536,6 +625,7 @@
         "SCORE_TITLE": "Urgency score: higher goes first",
         "AGENDA": "Today’s agenda",
         "AGENDA_EMPTY": "No meetings today",
+        "DONE_TODAY": "Done today",
         "EMPTY": "All clear: you have no pending tasks.",
         "REASONS": {
           "overdue": "Overdue {days} d",
@@ -1642,7 +1732,7 @@
     "COMMERCIAL": {
       "NO_TYPES": "There are no opportunity types yet. Create one of class Sales in Case types.",
       "FIELDS": {
-        "AMOUNT": "Amount",
+        "AMOUNT": "Amount (before tax)",
         "CURRENCY": "Currency",
         "EXPECTED_CLOSE": "Expected close",
         "PROBABILITY": "Probability",
@@ -2212,7 +2302,9 @@
         "TO": "To",
         "INVALID": "«From» must be before «To»"
       },
-      "COMMITTED_ONLY": "Committed only",
+      "NO_NEXT_STEP": "No next step",
+        "NO_NEXT_STEP_HINT": "Only open cases with no pending tasks and nothing scheduled",
+        "COMMITTED_ONLY": "Committed only",
       "COMMITTED_ONLY_HINT": "Only opportunities the customer already committed to pay. Combines with the other filters and the overdue-close alert.",
       "DATE_FIELD": "Which date?",
       "DATE_WHEN": "When?",
@@ -2582,6 +2674,7 @@
       "CUSTOMER": "Customer",
       "WE": "Us",
       "TASK_REPORT": "Closing report",
+      "ACTIVITY_REPORT": "Reported activity",
       "TODAY": "Today",
       "YESTERDAY": "Yesterday",
       "LOADING": "Loading activity…",
@@ -2878,6 +2971,7 @@
       "EMPTY": "No quotes."
     },
     "WHICH_QUOTE": "Which quote did the customer accept?",
+    "WHICH_QUOTE_PLACEHOLDER": "Choose the quote",
     "SETTINGS": {
       "REQUIRE_OPPORTUNITY": "Quotes require an opportunity",
       "REQUIRE_OPPORTUNITY_HINT": "If checked, each new quote without an opportunity creates its own.",
@@ -2927,7 +3021,8 @@
     "SOURCES": {
       "timer": "Timer",
       "manual": "Manual",
-      "visit": "Visit"
+      "visit": "Visit",
+      "report": "Task report"
     },
     "REPORT": "Report for the customer",
     "REPORT_SENT": "Report sent",

@@ -352,6 +352,7 @@ const inicio = accountId => ({
     'my_summary',
     'notifications_index',
     'gestorTickets_business_summary',
+    'gestorTickets_sales_budgets',
   ],
   menuItems: [
     {
@@ -375,6 +376,15 @@ const inicio = accountId => ({
       toState: frontendURL(`accounts/${accountId}/tickets/summary`),
       toStateName: 'gestorTickets_business_summary',
       visibleGetter: 'caseTickets/getCanViewBusinessSummary',
+    },
+    // Presupuesto de ventas: avance (todos los de Ventas) y captura (Ventas en «Todo»).
+    {
+      icon: 'arrow-trending-lines',
+      label: 'SALES_BUDGET',
+      featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+      area: 'sales',
+      toState: frontendURL(`accounts/${accountId}/tickets/budget`),
+      toStateName: 'gestorTickets_sales_budgets',
     },
   ],
 });

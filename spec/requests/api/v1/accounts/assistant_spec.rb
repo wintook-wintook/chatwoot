@@ -301,4 +301,103 @@ RSpec.describe 'Assistant API' do
       expect(propose('propose_postpone', case_id: opp.id, until: 1.month.from_now.to_date.iso8601)).to be_nil
     end
   end
+
+  describe 'ventas (D5a)' do
+    let(:venta) { CaseType.create!(account: account, name: 'Venta', color: '#8b5cf6', case_class: :commercial) }
+    let(:seller) { create(:user, account: account, role: :agent, name: 'Luis Vendedor') }
+
+    def won(user, amount)
+      deal = CaseTicket.create!(account: account, title: 'Trato', contact: contact, case_type: venta, assignee: user)
+      deal.update_columns(amount: amount, currency: 'MXN', outcome: CaseTicket.outcomes[:won], outcome_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    before do
+      won(admin, 80_000)
+      won(seller, 20_000)
+      SalesBudgetLine.create!(account: account, user: admin, period: Time.zone.today.beginning_of_month, amount: 100_000)
+    end
+
+    it '«¿cómo vamos?» trae la tarjeta de datos y preguntas para seguir; explica con el modelo de análisis' do
+      account.update!(custom_attributes: { 'assistant_analysis_model' => 'gpt-4o' })
+      models = []
+      replies = [tool_call('sales_overview', period: 'this_month'), answer('Van al 80 %.')]
+      allow_any_instance_of(Assistant::Chat).to receive(:complete) do |chat, _messages| # rubocop:disable RSpec/AnyInstance
+        models << chat.send(:model)
+        replies.shift
+      end
+
+      say('¿cómo vamos este mes?')
+
+      message = AssistantThread.last.messages.last
+      tiles = message['cards'].first['tiles'].to_h { |t| [t['label'], t['value']] }
+      expect(tiles).to include('Achieved' => 100_000.0, 'Target' => 100_000.0, 'Progress' => 100.0)
+      expect(message['suggestions'].size).to eq(3)
+      expect(models).to eq([Assistant::Settings.model_for(account), 'gpt-4o'])
+    end
+
+    it 'el vendedor con «solo lo suyo» solo obtiene lo suyo aunque pregunte por otro' do
+      role = AccessRole.for_account(account).find { |r| r.key == 'seller' }
+      account.account_users.find_by(user: seller).update!(access_role: role)
+      stub_model(tool_call('sales_breakdown', dimension: 'seller'), answer('Tu ranking.'))
+
+      say('¿quién vende más?', {}, seller)
+
+      rows = AssistantThread.last.messages.last['cards'].first['table']['rows']
+      expect(rows.map { |r| r.first['value'] }).to eq(['Luis Vendedor'])
+    end
+
+    it 'sin acceso a Ventas le dice al modelo que no puede' do
+      role = AccessRole.for_account(account).find { |r| r.key == 'technician' }
+      account.account_users.find_by(user: seller).update!(access_role: role)
+      stub_model(tool_call('sales_overview', {}), answer('No tienes acceso.'))
+
+      say('¿cómo vamos?', {}, seller)
+
+      expect(AssistantThread.last.messages.last['cards']).to eq([])
+    end
+
+    it 'el administrador elige los modelos; uno fuera de la lista se rechaza' do
+      patch "#{base}/settings", params: { model: 'gpt-4.1-mini', analysis_model: 'gpt-4o' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['models']).to include('model' => 'gpt-4.1-mini', 'analysis_model' => 'gpt-4o')
+      expect(Assistant::Settings.model_for(account.reload, :analysis)).to eq('gpt-4o')
+
+      patch "#{base}/settings", params: { model: 'gpt-x' }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
+  describe 'alcance según el rol' do
+    let(:seller) { create(:user, account: account, role: :agent) }
+
+    def prompt_for(user)
+      prompts = []
+      allow_any_instance_of(Assistant::Chat).to receive(:complete) do |_chat, messages| # rubocop:disable RSpec/AnyInstance
+        prompts << messages.first[:content]
+        answer('Te ayudo con…')
+      end
+      say('¿en qué me puedes ayudar?', {}, user)
+      prompts.first
+    end
+
+    it 'con Ventas, el alcance y los ejemplos incluyen ventas' do
+      expect(prompt_for(admin)).to include(I18n.t('assistant.capabilities.sales'), I18n.t('assistant.capabilities.limits'))
+
+      get base, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['starters']).to include(I18n.t('assistant.starters.sales_month'))
+    end
+
+    it 'sin Ventas no se le ofrece; con «solo lo suyo», sus números' do
+      role = AccessRole.for_account(account).find { |r| r.key == 'technician' }
+      account.account_users.find_by(user: seller).update!(access_role: role)
+      prompt = prompt_for(seller)
+      expect(prompt).not_to include(I18n.t('assistant.capabilities.sales'))
+      expect(prompt).not_to include(I18n.t('assistant.capabilities.sales_own'))
+      get base, headers: seller.create_new_auth_token, as: :json
+      expect(response.parsed_body['starters']).not_to include(I18n.t('assistant.starters.sales_month'))
+
+      role = AccessRole.for_account(account).find { |r| r.key == 'seller' }
+      account.account_users.find_by(user: seller).update!(access_role: role)
+      expect(prompt_for(seller)).to include(I18n.t('assistant.capabilities.sales_own'))
+    end
+  end
 end

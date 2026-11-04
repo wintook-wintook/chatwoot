@@ -307,6 +307,7 @@ es:
     replaced_by: 'Reemplazada por la versión %{version}'
     delivery_message: "Hola %{name}, te compartimos la cotización %{folio}. Puedes revisarla y aceptarla aquí: %{url}"
     errors:
+      choose_accepted: 'Elige cuál cotización aceptó el cliente'
       not_found: 'Cotización no encontrada'
       not_editable: 'Solo se edita una cotización en borrador o enviada. Haz una nueva versión.'
       only_drafts: 'Solo se borra una cotización en borrador'
@@ -328,11 +329,72 @@ es:
   assistant:
     unavailable: "No pude responder: revisa que la integración de OpenAI esté activa e intenta de nuevo."
     review_proposal: "Revisa la propuesta y confírmala."
+    capabilities:
+      consult: 'Consultar: buscar clientes, organizaciones y casos; qué ha pasado con un cliente; qué tienes hoy o esta semana (p. ej. «¿qué tengo hoy?», «¿qué pasó con Acme?»).'
+      record: 'Registrar (siempre con una tarjeta que confirmas): notas, tareas, citas en la agenda, mensajes programados y borradores (p. ej. «agéndame una llamada mañana a las 10»).'
+      cases: 'Casos y oportunidades: crear, mover de etapa, ganar o perder, posponer o retomar, y marcar el compromiso del cliente (p. ej. «la ganamos», «se comprometió a cerrar el viernes»).'
+      delegate: 'Delegar a un agente IA para que le dé seguimiento a un cliente, y preguntar cómo va o pausarlo.'
+      sales: 'Ventas: ¿cómo vamos contra la meta?, ranking de vendedores y clientes, qué oportunidades cierran o están vencidas o estancadas, y la salud del embudo (cifras sin IVA).'
+      sales_own: 'Tus ventas: ¿cómo vas contra tu meta?, tus mejores clientes, qué oportunidades tuyas cierran o están vencidas o estancadas (cifras sin IVA).'
+      limits: 'Lo que no hace: no le escribe solo al cliente (te deja un borrador o un mensaje programado) ni hace acciones masivas.'
+    starters:
+      today: '¿Qué tengo hoy?'
+      sales_month: '¿Cómo vamos este mes?'
+      closing: '¿Qué oportunidades cierran esta semana?'
+      help: '¿En qué me puedes ayudar?'
+    sales:
+      suggestions:
+        sales_overview: ['¿Quién va atrás de su meta?', '¿Qué oportunidades cierran este mes?', '¿Cómo vamos contra el año pasado?']
+        budget_progress: ['¿Qué oportunidades cubren lo que falta?', '¿Qué clientes compran menos que su meta?', '¿Cómo está el embudo?']
+        pipeline_health: ['¿Qué compromisos están vencidos?', '¿Qué oportunidades están estancadas?', '¿Cómo vamos este mes?']
+        sales_breakdown: ['¿Quién tiene mejor tasa de cierre?', '¿Quiénes son mis mejores clientes este año?', '¿Cómo vamos este mes?']
+        deal_list: ['¿Cómo vamos contra la meta?', '¿Qué oportunidades están estancadas?', '¿Quién va atrás de su meta?']
+      cards:
+        everyone: 'todo el equipo'
+        no_seller: 'Sin vendedor'
+        won: 'Logrado'
+        budget: 'Meta'
+        progress: 'Avance'
+        vs_previous: 'Contra el anterior'
+        win_rate: 'Tasa de cierre'
+        open: 'Abierto'
+        weighted: 'Ponderado'
+        committed_overdue: 'Compromisos vencidos'
+        stale: 'Estancadas (+%{days} días)'
+        overview_title: 'Ventas %{from} a %{to} · %{who}'
+        budget_title: 'Presupuesto %{from} a %{to}'
+        pipeline_title: 'Embudo · %{who}'
+        breakdown_seller: 'Ranking de vendedores %{from} a %{to}'
+        breakdown_client: 'Mejores clientes %{from} a %{to}'
+        deals_title: 'Oportunidades'
+        deals_closing_this_week: 'Cierran esta semana'
+        deals_closing_this_month: 'Cierran este mes'
+        deals_overdue: 'Cierre vencido'
+        deals_committed_overdue: 'Compromisos vencidos'
+        deals_stale: 'Estancadas'
+        deals_top_open: 'Abiertas más grandes'
+        deals_won_recent: 'Ganadas este mes'
+        open_budget: 'Ver presupuesto'
+        open_pipeline: 'Ver embudo'
+        col_seller: 'Vendedor'
+        col_budget: 'Meta'
+        col_won: 'Logrado'
+        col_progress: 'Avance'
+        col_name: 'Nombre'
+        col_deals: 'Tratos'
+        col_win_rate: 'Cierre'
+        col_avg_ticket: 'Ticket prom.'
+        col_folio: 'Folio'
+        col_client: 'Cliente'
+        col_amount: 'Monto'
+        col_close: 'Cierre'
   task_reports:
     visit_done: 'Visita terminada'
     received_by: 'Recibió: %{name}'
     required: 'Para concluirla, escribe qué se hizo'
     note_title: 'Reporte de cierre: %{title}'
+    activity_note_title: 'Actividad: %{title}'
+    minutes_required: 'Indica el tiempo dedicado'
   agenda_items:
     already_linked: 'Ese evento ya tiene una tarea agendada'
     all_day: 'Un evento de todo el día no tiene hora: se queda solo en Google'
