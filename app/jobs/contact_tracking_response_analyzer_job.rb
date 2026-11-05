@@ -525,6 +525,22 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       'America/Mexico_City'
   end
 
+  # La fecha de scheduled_for es el próximo TOQUE automático del seguimiento (tras una
+  # respuesta, ContactTrackings::ProspectReply lo mueve a 3 días hábiles), no una cita con
+  # una persona. Medido el 03 y 04/11/2026 (cuenta 1128, AGENTE ESCUELA): con la línea
+  # «PRÓXIMO CONTACTO PROGRAMADO», el modelo le dijo al prospecto que un asesor lo
+  # contactaría el 06/11 a las 20:30 y el 09/11 a las 18:19, fuera de horario. Si el
+  # seguimiento aún no envió ningún toque (un agente que atiende conversaciones que abrió
+  # el cliente), el prospecto no espera ningún contacto y la línea no va.
+  def next_contact_line(tracking, timezone)
+    return '' if tracking.scheduled_for.blank? || tracking.attempt_count.to_i.zero?
+
+    cuando = tracking.scheduled_for.in_time_zone(timezone).strftime('%d/%m/%Y a las %H:%M')
+    "PRÓXIMO MENSAJE AUTOMÁTICO DEL SEGUIMIENTO: #{cuando} (es un recordatorio automático por este chat, " \
+      'NO una cita ni una llamada con un asesor; menciónalo solo si el cliente pide que lo contacten más tarde ' \
+      'o reagendar, y nunca lo presentes como cita)'
+  end
+
   # proyecto@bot_seguimiento_calendar — lee la zona horaria de la cuenta de Google Calendar
   # vinculada (la que el usuario ve en su calendario) y la cachea 12h en Redis para no pegar
   # a la API en cada mensaje. Devuelve el IANA tz o nil si no hay calendario / falla.
@@ -666,7 +682,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
       tracking.reload
       inbox_timezone = appointment_timezone(tracking, message)
-      next_contact = tracking.scheduled_for.in_time_zone(inbox_timezone).strftime('%d/%m/%Y a las %H:%M')
+      next_contact_line = next_contact_line(tracking, inbox_timezone)
 
       # Los TOKENS de directiva kbase no deben llegar crudos al LLM conversacional: el
       # prompt está diseñado para operar con la kbase y GPT los simula literalmente,
@@ -693,7 +709,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         #{contact_profile}
         OBJETIVO DE LA CONVERSACIÓN: #{tracking.objective}
         ESTADO DE LA CITA: #{appointment_state_summary(tracking, message)} (si el cliente pregunta por su cita, respóndele con esta fecha/hora exacta; no inventes ni ofrezcas horarios nuevos)
-        PRÓXIMO CONTACTO PROGRAMADO: #{next_contact} (si el cliente pide reagendar, infórmale amablemente que su próximo contacto ya está programado para esa fecha y que si necesita cambiarlo debe comunicarse con un asesor)
+        #{next_contact_line}
         #{tracking.ai_context.present? ? "BASE DE CONOCIMIENTO:\n#{tracking.ai_context.truncate(800)}\n" : ''}
         #{clean_cp.present? ? "INSTRUCCIONES ADICIONALES:\n#{clean_cp}" : ''}
         #{ContactTrackings::ConversationVariables.rule_for(tracking, message.conversation)}
@@ -705,6 +721,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         "#{message_text_for_ai(message).truncate(300)}"
 
         #{conversational_form(clean_cp)}
+        #{CONVERSATIONAL_GUARD}
         No uses prefijos como "Asesor:" o "Bot:". No incluyas comillas al inicio ni al final.
         #{clean_cp.present? ? 'Si las INSTRUCCIONES ADICIONALES de arriba definen etiquetas de cierre, esta respuesta debe terminar con la que corresponda, sola en la última línea — no es opcional.' : ''}
       USER
@@ -736,6 +753,17 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       'Su identidad, su trato y sus reglas mandan sobre estas indicaciones generales. Si te preguntan si eres una ' \
       'persona, no lo afirmes: responde lo que digan tus instrucciones.'
   end
+
+  # El conversacional contesta cuando ninguna fuente respondió el turno: aquí el modelo no
+  # recibe la hoja ni las predefinidas. Medido el 05/11/2026 (cuenta 1128, AGENTE ESCUELA,
+  # conv 127): con el historial de una negociación, «Si, porfa…» cayó aquí y el modelo
+  # calculó una beca que no existe ($2,095 y $2,417, el 35 % y el 25 % menos que $3,221);
+  # y como el historial trae sus mensajes anteriores, repetía tal cual el del WhatsApp aunque
+  # el prompt lo prohibía.
+  CONVERSATIONAL_GUARD = 'En este turno no consultaste ninguna fuente: no des precios, montos, porcentajes, becas, ' \
+                         'ligas ni fechas que no estén escritos en tus instrucciones, en la BASE DE CONOCIMIENTO o en ' \
+                         'los mensajes anteriores, y nunca los calcules. No repitas un mensaje que ya enviaste en esta ' \
+                         'conversación: si vuelven a pedir lo mismo, dilo más breve y con otras palabras.'
 
   def conversational_form(clean_cp)
     return "Máximo 4 líneas. Tono natural y conversacional.\n#{ContactTrackings::CustomerTone::RULE}" if clean_cp.blank?

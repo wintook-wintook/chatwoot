@@ -561,6 +561,10 @@ class KnowledgeBaseResponseService
   # cliente pide tal cual (operador, placas, teléfono), la búsqueda por parecido de
   # {{hoja:}} traía la fila equivocada o ninguna.
   # ==============================================================================
+  # El estilo con Entrenamiento propio: el suyo (ver #reply_style_rule).
+  AGENT_STYLE_RULE = 'Responde solo lo que preguntó, con esa información. Respeta la longitud, el tono y la pregunta ' \
+                     'final que piden tus instrucciones. No agregues cierres genéricos ("¿Hay algo más en lo que ' \
+                     'le podamos ayudar?", "estamos aquí para ayudarle", "quedamos atentos").'
   MAX_LOOKUP_ROWS = 20
   NO_MATCH_RULE = 'Dilo con claridad y no inventes otra opción.'
 
@@ -570,7 +574,7 @@ class KnowledgeBaseResponseService
     spec = ContactTrackings::SheetLookup.parse(inner)
     return false if spec.nil?
 
-    result = ContactTrackings::SheetLookup.new(@account, spec, conversation: @conversation).call
+    result = ContactTrackings::SheetLookup.new(@account, spec, conversation: @conversation, variables: lookup_variables).call
     context = sheet_lookup_context(spec, result)
     return false if context.nil?
 
@@ -579,6 +583,16 @@ class KnowledgeBaseResponseService
 
     send_reply("#{with_branch_tag(reply_text)}\n\n_#{spec.sheet}_")
     true
+  end
+
+  # Las VARIABLES del agente en esta conversación, para que un «carrera=?» use CARRERA.
+  def lookup_variables
+    return {} if @tracking.nil? || @conversation.nil?
+
+    ContactTrackings::ConversationVariables.current(@tracking, @conversation)
+  rescue StandardError => e
+    Rails.logger.warn "[KBase] ⚠️ Variables para {{hoja_buscar:}}: #{e.message}"
+    {}
   end
 
   # nil = la hoja no respondió (no existe, columna mal escrita): sigue el conversacional.
@@ -640,7 +654,7 @@ class KnowledgeBaseResponseService
       Información relevante:
       #{context}
 
-      Responde usando esa información de forma completa y útil. Tono natural y conversacional.
+      #{reply_style_rule}
       No uses prefijos como "Asesor:" ni comillas al inicio o final.
       #{ContactTrackings::CustomerTone::RULE}
 
@@ -654,11 +668,12 @@ class KnowledgeBaseResponseService
 
       Si la fuente no cubre exactamente lo que preguntaron, dilo de frente: explica
       brevemente qué sí cubre la documentación, aclara que no tienes el procedimiento
-      exacto para su caso y ofrece pasarlo con un asesor. Una respuesta honesta que no
+      exacto para su caso y #{missing_answer_step}. Una respuesta honesta que no
       resuelve es mejor que una inventada que parece resolver.
     USER
     user_prompt = erp_user_prompt(first_name, question, erp_data) if erp_data
     user_prompt = canned_prompt_user_prompt(first_name, question, canned_prompt) if canned_prompt
+    user_prompt = "#{user_prompt}\n\n#{variables_reminder}" if variables_reminder
 
     history  = load_history
     messages = [{ role: 'system', content: system_prompt }]
@@ -736,8 +751,24 @@ class KnowledgeBaseResponseService
 
       #{canned_prompt.turn_block}
 
-      Tono natural y conversacional. No uses prefijos como "Asesor:" ni comillas al inicio o final.
+      #{agent_system_prompt ? AGENT_STYLE_RULE : 'Tono natural y conversacional.'} No uses prefijos como "Asesor:" ni comillas al inicio o final.
     USER
+  end
+
+  # Cómo cerrar la respuesta. Este texto va en el último mensaje, el que más pesa: con un
+  # Entrenamiento propio, «completa y útil» le ganaba a sus reglas. Medido el 05/11/2026
+  # (cuenta 1128, AGENTE ESCUELA v4.05 y v4.06, convs 119-121): el prompt prohibía con las
+  # frases exactas «¿Hay algo más…?» y «estamos aquí para ayudarle», y salieron en casi
+  # todas las respuestas; como el historial (kb_history) vuelve como ejemplo, se copiaban.
+  def reply_style_rule
+    return AGENT_STYLE_RULE if agent_system_prompt
+
+    'Responde usando esa información de forma completa y útil. Tono natural y conversacional.'
+  end
+
+  # Sin el dato: con Entrenamiento propio, lo que diga él (canal, asesor, nada); si no, el asesor.
+  def missing_answer_step
+    agent_system_prompt ? 'sigue lo que tus instrucciones digan para ese caso' : 'ofrece pasarlo con un asesor'
   end
 
   # ==============================================================================
@@ -982,6 +1013,19 @@ class KnowledgeBaseResponseService
       e ignora las de las otras. No vuelvas a clasificar el mensaje ni cambies de rama por tu
       cuenta.
     RULE
+  end
+
+  # La regla de [VARIABLES] va en el system prompt, lejos del final, y aquí el último mensaje
+  # trae sus propias instrucciones: el modelo no escribía la línea. Medido el 05/11/2026
+  # (cuenta 1128, AGENTE ESCUELA, convs 93-123): ninguna respuesta de KBase guardó
+  # variables; CARRERA solo se llenaba cuando contestaba el conversacional (-TB). Por eso
+  # la conv 59 de producción (cuenta 613) quedó sin variables.
+  def variables_reminder
+    return if variables_rule.blank?
+
+    'Termina tu respuesta con la línea aparte «VARIABLES: …» con TODAS las variables y su valor después de ' \
+      'este turno, como indican las VARIABLES DE ESTA CONVERSACIÓN (si el cliente nombró el dato que guarda una, ' \
+      'escríbelo). El sistema la quita; el cliente no la ve.'
   end
 
   # proyecto@contact_tracking: los valores actuales de la sección [VARIABLES] del agente
