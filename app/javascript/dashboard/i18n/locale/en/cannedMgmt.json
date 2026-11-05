@@ -97,6 +97,10 @@
       "SAVE_ERROR": "Could not save. Check the name is not repeated."
     },
     "TABLE": {
+      "ALL_STATES": "Data source: all",
+      "ALL_CATEGORIES": "All categories",
+      "ALL_PROMPTS": "With and without prompt",
+      "PER_PAGE": "Per page",
       "FILTER_CATEGORY": "Category",
       "NO_CATEGORY": "No category",
       "BULK_CATEGORY": "Change category…",

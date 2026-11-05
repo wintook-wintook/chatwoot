@@ -20,6 +20,7 @@ import { useAlert } from 'dashboard/composables';
 import EmbeddingState from './EmbeddingState.vue';
 
 const PER_PAGE = 25;
+const PER_PAGE_OPTIONS = [25, 50, 100];
 const SEARCH_DELAY = 300;
 // D4: se vectorizan hasta 20 a la vez.
 const MAX_VECTORIZE = 20;
@@ -57,6 +58,7 @@ export default {
       promptFilters: PROMPT_FILTERS,
       sorts: SORTS,
       perPage: PER_PAGE,
+      perPageOptions: PER_PAGE_OPTIONS,
       maxVectorize: MAX_VECTORIZE,
       noCategory: NO_CATEGORY,
     };
@@ -94,6 +96,9 @@ export default {
     category() {
       this.goTo(1);
     },
+    perPage() {
+      this.goTo(1);
+    },
     hasPending(pendiente) {
       if (pendiente) this.startPolling();
     },
@@ -110,7 +115,7 @@ export default {
     params() {
       return {
         page: this.page,
-        per_page: PER_PAGE,
+        per_page: this.perPage,
         q: this.query.trim() || undefined,
         state: this.state || undefined,
         prompt: this.prompt || undefined,
@@ -275,11 +280,14 @@ export default {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <!-- Como la lista de plantillas de WhatsApp (pedido del usuario, 05/11/2026): a alto de
+       pantalla; aviso, filtros y barra de lote fijos arriba, solo la tabla hace scroll (con
+       su encabezado fijo) y el paginado queda siempre abajo. -->
+  <div class="flex flex-col w-full gap-3 h-[calc(100vh-16rem)] min-h-[22rem]">
     <!-- R1: lo que el agente no encontraría, de toda la cuenta. -->
     <div
       v-if="summary.no_key || summary.missing || summary.failed"
-      class="flex flex-col gap-1 px-4 py-3 text-sm border rounded-md border-amber-200 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
+      class="flex flex-col gap-1 px-4 py-3 shrink-0 text-sm border rounded-md border-amber-200 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
     >
       <span v-if="summary.no_key">
         {{
@@ -300,59 +308,74 @@ export default {
       </span>
     </div>
 
-    <div class="flex flex-wrap items-end gap-3">
-      <div class="flex-1 min-w-[14rem]">
+    <div
+      class="flex flex-wrap items-center gap-2 p-3 border border-solid rounded-lg shrink-0 bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+    >
+      <div class="relative w-64">
         <input
           v-model="query"
-          type="search"
-          class="w-full !mb-0"
+          type="text"
+          class="reset-base box-border w-full h-9 m-0 text-sm rounded-md border border-solid border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 pl-8 pr-2 outline-none focus:border-woot-500 dark:focus:border-woot-600"
           :placeholder="$t('CANNED_MGMT.TABLE.SEARCH')"
         />
+        <fluent-icon
+          icon="search"
+          size="16"
+          class="absolute -translate-y-1/2 left-2 top-1/2 text-slate-400"
+        />
       </div>
-      <label class="flex flex-col !mb-0 text-xs text-slate-500">
-        {{ $t('CANNED_MGMT.TABLE.FILTER_STATE') }}
-        <select v-model="state" class="!mb-0 w-56">
-          <option v-for="opcion in stateFilters" :key="opcion" :value="opcion">
-            {{
-              $t(`CANNED_MGMT.TABLE.STATE_${(opcion || 'all').toUpperCase()}`)
-            }}
-          </option>
-        </select>
-      </label>
-      <label class="flex flex-col !mb-0 text-xs text-slate-500">
-        {{ $t('CANNED_MGMT.TABLE.FILTER_PROMPT') }}
-        <select v-model="prompt" class="!mb-0 w-40">
-          <option v-for="opcion in promptFilters" :key="opcion" :value="opcion">
-            {{
-              $t(`CANNED_MGMT.TABLE.PROMPT_${(opcion || 'all').toUpperCase()}`)
-            }}
-          </option>
-        </select>
-      </label>
-      <label
-        v-if="categories.length"
-        class="flex flex-col !mb-0 text-xs text-slate-500"
+      <select
+        v-model="state"
+        class="list-filter"
+        :aria-label="$t('CANNED_MGMT.TABLE.FILTER_STATE')"
       >
-        {{ $t('CANNED_MGMT.TABLE.FILTER_CATEGORY') }}
-        <select v-model="category" class="!mb-0 w-48">
-          <option value="">{{ $t('CANNED_MGMT.TABLE.STATE_ALL') }}</option>
-          <option :value="noCategory">
-            {{ $t('CANNED_MGMT.TABLE.NO_CATEGORY') }}
-          </option>
-          <option
-            v-for="categoria in categories"
-            :key="categoria.id"
-            :value="String(categoria.id)"
-          >
-            {{ categoria.name }}
-          </option>
-        </select>
-      </label>
+        <option v-for="opcion in stateFilters" :key="opcion" :value="opcion">
+          {{
+            opcion
+              ? $t(`CANNED_MGMT.TABLE.STATE_${opcion.toUpperCase()}`)
+              : $t('CANNED_MGMT.TABLE.ALL_STATES')
+          }}
+        </option>
+      </select>
+      <select
+        v-if="categories.length"
+        v-model="category"
+        class="list-filter"
+        :aria-label="$t('CANNED_MGMT.TABLE.FILTER_CATEGORY')"
+      >
+        <option value="">{{ $t('CANNED_MGMT.TABLE.ALL_CATEGORIES') }}</option>
+        <option :value="noCategory">
+          {{ $t('CANNED_MGMT.TABLE.NO_CATEGORY') }}
+        </option>
+        <option
+          v-for="categoria in categories"
+          :key="categoria.id"
+          :value="String(categoria.id)"
+        >
+          {{ categoria.name }}
+        </option>
+      </select>
+      <select
+        v-model="prompt"
+        class="list-filter"
+        :aria-label="$t('CANNED_MGMT.TABLE.FILTER_PROMPT')"
+      >
+        <option v-for="opcion in promptFilters" :key="opcion" :value="opcion">
+          {{
+            opcion
+              ? $t(`CANNED_MGMT.TABLE.PROMPT_${opcion.toUpperCase()}`)
+              : $t('CANNED_MGMT.TABLE.ALL_PROMPTS')
+          }}
+        </option>
+      </select>
+      <span class="flex-1" />
+      <!-- Siempre a la vista; solo se activa con algún filtro puesto. -->
       <woot-button
-        v-if="filtersActive"
         variant="clear"
         color-scheme="secondary"
         size="small"
+        icon="dismiss"
+        :is-disabled="!filtersActive"
         @click="clearFilters"
       >
         {{ $t('CANNED_MGMT.TABLE.CLEAR_FILTERS') }}
@@ -361,7 +384,7 @@ export default {
 
     <div
       v-if="selected.length"
-      class="flex flex-wrap items-center gap-2 px-3 py-2 rounded-md bg-slate-50 dark:bg-slate-800"
+      class="flex flex-wrap items-center gap-2 px-3 py-2 rounded-md shrink-0 bg-slate-50 dark:bg-slate-800"
     >
       <span class="text-sm text-slate-700 dark:text-slate-200">
         {{ $t('CANNED_MGMT.TABLE.SELECTED', { count: selected.length }) }}
@@ -410,199 +433,217 @@ export default {
       </span>
     </div>
 
-    <woot-loading-state
-      v-if="isLoading && !records.length"
-      :message="$t('CANNED_MGMT.LOADING')"
-    />
-    <p
-      v-else-if="!records.length"
-      class="py-8 text-base text-center text-slate-600 dark:text-slate-300"
-    >
-      {{
-        filtersActive
-          ? $t('CANNED_MGMT.TABLE.NO_MATCH')
-          : $t('CANNED_MGMT.LIST.404')
-      }}
-    </p>
-    <div v-else class="overflow-x-auto">
-      <table
-        class="min-w-full divide-y divide-slate-75 dark:divide-slate-700 text-sm"
+    <div class="flex-1 min-h-0 overflow-auto">
+      <woot-loading-state
+        v-if="isLoading && !records.length"
+        :message="$t('CANNED_MGMT.LOADING')"
+      />
+      <p
+        v-else-if="!records.length"
+        class="py-8 text-base text-center text-slate-600 dark:text-slate-300"
       >
-        <thead>
-          <tr>
-            <th class="w-8 py-3 pr-2">
-              <input
-                type="checkbox"
-                class="!m-0"
-                :checked="allSelected"
-                :aria-label="$t('CANNED_MGMT.TABLE.SELECT_ALL')"
-                @change="toggleAll"
-              />
-            </th>
-            <th
-              v-for="columna in ['short_code']"
-              :key="columna"
-              class="py-3 pr-4 text-left font-semibold text-slate-700 dark:text-slate-300"
-            >
-              <button
-                type="button"
-                class="flex items-center gap-1"
-                @click="sortBy(columna)"
-              >
-                {{ $t('CANNED_MGMT.TABLE.COL_SHORT_CODE') }}
-                <fluent-icon
-                  v-if="sortIcon(columna)"
-                  :icon="sortIcon(columna)"
-                  size="14"
-                />
-              </button>
-            </th>
-            <th
-              class="py-3 pr-4 text-left font-semibold text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CANNED_MGMT.TABLE.COL_CONTENT') }}
-            </th>
-            <th
-              class="py-3 pr-4 text-left font-semibold text-slate-700 dark:text-slate-300"
-            >
-              <button
-                type="button"
-                class="flex items-center gap-1"
-                @click="sortBy('category')"
-              >
-                {{ $t('CANNED_MGMT.TABLE.COL_CATEGORY') }}
-                <fluent-icon
-                  v-if="sortIcon('category')"
-                  :icon="sortIcon('category')"
-                  size="14"
-                />
-              </button>
-            </th>
-            <th
-              class="py-3 pr-4 text-left font-semibold text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CANNED_MGMT.TABLE.COL_DATA_SOURCE') }}
-            </th>
-            <th
-              v-for="columna in ['created_at', 'updated_at']"
-              :key="columna"
-              class="py-3 pr-4 text-left font-semibold whitespace-nowrap text-slate-700 dark:text-slate-300"
-            >
-              <button
-                type="button"
-                class="flex items-center gap-1"
-                @click="sortBy(columna)"
-              >
-                {{ $t(`CANNED_MGMT.TABLE.COL_${columna.toUpperCase()}`) }}
-                <fluent-icon
-                  v-if="sortIcon(columna)"
-                  :icon="sortIcon(columna)"
-                  size="14"
-                />
-              </button>
-            </th>
-            <th
-              class="py-3 text-right font-semibold text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CANNED_MGMT.TABLE.COL_ACTIONS') }}
-            </th>
-          </tr>
-        </thead>
-        <tbody
-          class="divide-y divide-slate-50 dark:divide-slate-800 text-slate-700 dark:text-slate-300"
+        {{
+          filtersActive
+            ? $t('CANNED_MGMT.TABLE.NO_MATCH')
+            : $t('CANNED_MGMT.LIST.404')
+        }}
+      </p>
+      <div v-else>
+        <table
+          class="min-w-full divide-y divide-slate-75 dark:divide-slate-700 text-sm"
         >
-          <tr v-for="item in records" :key="item.id">
-            <td class="py-3 pr-2 align-top">
-              <input
-                type="checkbox"
-                class="!m-0"
-                :checked="selected.includes(item.id)"
-                :aria-label="item.short_code"
-                @change="toggle(item.id)"
-              />
-            </td>
-            <td
-              class="max-w-xs py-3 pr-4 font-medium align-top truncate"
-              :title="item.short_code"
-            >
-              {{ item.short_code }}
-              <span
-                v-if="item.content_prompts"
-                class="ml-1 px-1.5 py-0.5 text-xs font-normal rounded bg-woot-50 text-woot-600 dark:bg-woot-800 dark:text-woot-100"
-              >
-                {{ $t('CANNED_MGMT.FORM_PROMPT.LIST_BADGE') }}
-              </span>
-              <span
-                v-if="item.content_is_prompt"
-                class="ml-1 px-1.5 py-0.5 text-xs font-normal rounded bg-woot-50 text-woot-600 dark:bg-woot-800 dark:text-woot-100"
-              >
-                {{ $t('CANNED_MGMT.FORM_PROMPT.LIST_BADGE_IS_PROMPT') }}
-              </span>
-            </td>
-            <td class="py-3 pr-4 align-top whitespace-normal md:break-all">
-              <div class="line-clamp-2" :title="item.content">
-                {{ item.content }}
-              </div>
-            </td>
-            <td class="py-3 pr-4 align-top whitespace-nowrap">
-              <span
-                v-if="item.category_name"
-                class="px-1.5 py-0.5 font-mono text-xs rounded bg-slate-100 dark:bg-slate-700"
-              >
-                {{ item.category_name }}
-              </span>
-              <span v-else class="text-slate-400">—</span>
-            </td>
-            <td class="py-3 pr-4 align-top">
-              <EmbeddingState
-                :item="item"
-                :busy="!!busy[item.id]"
-                @vectorize="vectorize"
-              />
-            </td>
-            <td class="py-3 pr-4 align-top whitespace-nowrap">
-              <span class="block">{{ dateText(item.created_at) }}</span>
-              <span class="block text-xs text-slate-500 dark:text-slate-400">
-                {{ timeText(item.created_at) }}
-              </span>
-            </td>
-            <td class="py-3 pr-4 align-top whitespace-nowrap">
-              <span class="block">{{ dateText(item.updated_at) }}</span>
-              <span class="block text-xs text-slate-500 dark:text-slate-400">
-                {{ timeText(item.updated_at) }}
-              </span>
-            </td>
-            <td class="py-3 align-top">
-              <div class="flex justify-end gap-1">
-                <woot-button
-                  v-tooltip.top="$t('CANNED_MGMT.EDIT.BUTTON_TEXT')"
-                  variant="smooth"
-                  size="tiny"
-                  color-scheme="secondary"
-                  icon="edit"
-                  @click="$emit('edit', item)"
+          <thead class="sticky top-0 z-10 bg-white dark:bg-slate-900">
+            <tr>
+              <th class="w-8 py-3 pr-2">
+                <input
+                  type="checkbox"
+                  class="!m-0"
+                  :checked="allSelected"
+                  :aria-label="$t('CANNED_MGMT.TABLE.SELECT_ALL')"
+                  @change="toggleAll"
                 />
-                <woot-button
-                  v-tooltip.top="$t('CANNED_MGMT.DELETE.BUTTON_TEXT')"
-                  variant="smooth"
-                  color-scheme="alert"
-                  size="tiny"
-                  icon="dismiss-circle"
-                  @click="$emit('delete', item)"
+              </th>
+              <th
+                v-for="columna in ['short_code']"
+                :key="columna"
+                class="py-3 pr-4 text-left font-semibold text-slate-700 dark:text-slate-300"
+              >
+                <button
+                  type="button"
+                  class="flex items-center gap-1"
+                  @click="sortBy(columna)"
+                >
+                  {{ $t('CANNED_MGMT.TABLE.COL_SHORT_CODE') }}
+                  <fluent-icon
+                    v-if="sortIcon(columna)"
+                    :icon="sortIcon(columna)"
+                    size="14"
+                  />
+                </button>
+              </th>
+              <th
+                class="py-3 pr-4 text-left font-semibold text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CANNED_MGMT.TABLE.COL_CONTENT') }}
+              </th>
+              <th
+                class="py-3 pr-4 text-left font-semibold text-slate-700 dark:text-slate-300"
+              >
+                <button
+                  type="button"
+                  class="flex items-center gap-1"
+                  @click="sortBy('category')"
+                >
+                  {{ $t('CANNED_MGMT.TABLE.COL_CATEGORY') }}
+                  <fluent-icon
+                    v-if="sortIcon('category')"
+                    :icon="sortIcon('category')"
+                    size="14"
+                  />
+                </button>
+              </th>
+              <th
+                class="py-3 pr-4 text-left font-semibold text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CANNED_MGMT.TABLE.COL_DATA_SOURCE') }}
+              </th>
+              <th
+                v-for="columna in ['created_at', 'updated_at']"
+                :key="columna"
+                class="py-3 pr-4 text-left font-semibold whitespace-nowrap text-slate-700 dark:text-slate-300"
+              >
+                <button
+                  type="button"
+                  class="flex items-center gap-1"
+                  @click="sortBy(columna)"
+                >
+                  {{ $t(`CANNED_MGMT.TABLE.COL_${columna.toUpperCase()}`) }}
+                  <fluent-icon
+                    v-if="sortIcon(columna)"
+                    :icon="sortIcon(columna)"
+                    size="14"
+                  />
+                </button>
+              </th>
+              <th
+                class="py-3 text-right font-semibold text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CANNED_MGMT.TABLE.COL_ACTIONS') }}
+              </th>
+            </tr>
+          </thead>
+          <tbody
+            class="divide-y divide-slate-50 dark:divide-slate-800 text-slate-700 dark:text-slate-300"
+          >
+            <tr v-for="item in records" :key="item.id">
+              <td class="py-3 pr-2 align-top">
+                <input
+                  type="checkbox"
+                  class="!m-0"
+                  :checked="selected.includes(item.id)"
+                  :aria-label="item.short_code"
+                  @change="toggle(item.id)"
                 />
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </td>
+              <td
+                class="max-w-xs py-3 pr-4 font-medium align-top truncate"
+                :title="item.short_code"
+              >
+                {{ item.short_code }}
+                <span
+                  v-if="item.content_prompts"
+                  class="ml-1 px-1.5 py-0.5 text-xs font-normal rounded bg-woot-50 text-woot-600 dark:bg-woot-800 dark:text-woot-100"
+                >
+                  {{ $t('CANNED_MGMT.FORM_PROMPT.LIST_BADGE') }}
+                </span>
+                <span
+                  v-if="item.content_is_prompt"
+                  class="ml-1 px-1.5 py-0.5 text-xs font-normal rounded bg-woot-50 text-woot-600 dark:bg-woot-800 dark:text-woot-100"
+                >
+                  {{ $t('CANNED_MGMT.FORM_PROMPT.LIST_BADGE_IS_PROMPT') }}
+                </span>
+              </td>
+              <td class="py-3 pr-4 align-top whitespace-normal md:break-all">
+                <div class="line-clamp-2" :title="item.content">
+                  {{ item.content }}
+                </div>
+              </td>
+              <td class="py-3 pr-4 align-top whitespace-nowrap">
+                <span
+                  v-if="item.category_name"
+                  class="px-1.5 py-0.5 font-mono text-xs rounded bg-slate-100 dark:bg-slate-700"
+                >
+                  {{ item.category_name }}
+                </span>
+                <span v-else class="text-slate-400">—</span>
+              </td>
+              <td class="py-3 pr-4 align-top">
+                <EmbeddingState
+                  :item="item"
+                  :busy="!!busy[item.id]"
+                  @vectorize="vectorize"
+                />
+              </td>
+              <td class="py-3 pr-4 align-top whitespace-nowrap">
+                <span class="block">{{ dateText(item.created_at) }}</span>
+                <span class="block text-xs text-slate-500 dark:text-slate-400">
+                  {{ timeText(item.created_at) }}
+                </span>
+              </td>
+              <td class="py-3 pr-4 align-top whitespace-nowrap">
+                <span class="block">{{ dateText(item.updated_at) }}</span>
+                <span class="block text-xs text-slate-500 dark:text-slate-400">
+                  {{ timeText(item.updated_at) }}
+                </span>
+              </td>
+              <td class="py-3 align-top">
+                <div class="flex justify-end gap-1">
+                  <woot-button
+                    v-tooltip.top="$t('CANNED_MGMT.EDIT.BUTTON_TEXT')"
+                    variant="smooth"
+                    size="tiny"
+                    color-scheme="secondary"
+                    icon="edit"
+                    @click="$emit('edit', item)"
+                  />
+                  <woot-button
+                    v-tooltip.top="$t('CANNED_MGMT.DELETE.BUTTON_TEXT')"
+                    variant="smooth"
+                    color-scheme="alert"
+                    size="tiny"
+                    icon="dismiss-circle"
+                    @click="$emit('delete', item)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
-    <TableFooter
-      :current-page="page"
-      :page-size="perPage"
-      :total-count="count"
-      @pageChange="goTo"
-    />
+    <div
+      v-if="count"
+      class="flex items-center gap-3 border-t shrink-0 border-slate-100 dark:border-slate-700"
+    >
+      <label
+        class="flex items-center gap-2 mb-0 text-xs whitespace-nowrap text-slate-500"
+      >
+        {{ $t('CANNED_MGMT.TABLE.PER_PAGE') }}
+        <select v-model.number="perPage" class="!w-auto h-8 !mb-0 text-xs">
+          <option v-for="n in perPageOptions" :key="n" :value="n">
+            {{ n }}
+          </option>
+        </select>
+      </label>
+      <TableFooter
+        class="flex-1"
+        :current-page="page"
+        :page-size="perPage"
+        :total-count="count"
+        @pageChange="goTo"
+      />
+    </div>
 
     <woot-delete-modal
       :show.sync="confirmBulkDelete"
@@ -617,3 +658,10 @@ export default {
     />
   </div>
 </template>
+
+<style scoped lang="scss">
+// Los mismos filtros de la lista de plantillas de WhatsApp.
+.list-filter {
+  @apply w-auto h-9 mb-0 text-sm;
+}
+</style>

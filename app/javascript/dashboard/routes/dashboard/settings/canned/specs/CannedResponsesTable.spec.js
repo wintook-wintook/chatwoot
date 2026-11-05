@@ -181,4 +181,24 @@ describe('CannedResponsesTable', () => {
     expect(wrapper.vm.dateText(null)).toBe('—');
     expect(wrapper.find('tbody tr').text()).toMatch(/\d{2}\/\d{2}\/\d{4}/);
   });
+
+  it('«Quitar filtros» siempre a la vista, activo solo con un filtro; el paginado abajo', async () => {
+    const wrapper = await montar();
+    const quitar = () =>
+      wrapper
+        .findAll('woot-button-stub')
+        .wrappers.find(b => b.text().includes('TABLE.CLEAR_FILTERS'));
+
+    expect(quitar().exists()).toBe(true);
+    expect(quitar().attributes('is-disabled')).toBe('true');
+
+    await wrapper.setData({ query: 'patitas' });
+    expect(quitar().attributes('is-disabled')).toBeUndefined();
+
+    wrapper.setData({ perPage: 50 });
+    await flushPromises();
+    expect(CannedResponseAPI.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ per_page: 50, page: 1 })
+    );
+  });
 });

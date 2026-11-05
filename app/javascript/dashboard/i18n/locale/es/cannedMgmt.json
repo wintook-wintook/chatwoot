@@ -97,6 +97,10 @@
       "SAVE_ERROR": "No se pudo guardar. Revisa que el nombre no esté repetido."
     },
     "TABLE": {
+      "ALL_STATES": "Fuente de datos: todas",
+      "ALL_CATEGORIES": "Todas las categorías",
+      "ALL_PROMPTS": "Con y sin prompt",
+      "PER_PAGE": "Por página",
       "FILTER_CATEGORY": "Categoría",
       "NO_CATEGORY": "Sin categoría",
       "BULK_CATEGORY": "Cambiar categoría…",
