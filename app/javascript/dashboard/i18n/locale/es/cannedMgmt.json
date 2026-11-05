@@ -73,6 +73,8 @@
       "OPEN": "Categorías",
       "TITLE": "Categorías de respuestas predefinidas",
       "HINT": "Agrupa tus respuestas. Un agente busca solo en una categoría con @buscar_predefinidas(CATEGORÍA).",
+      "NEW_LABEL": "Nueva categoría",
+      "YOURS": "Tus categorías ({count})",
       "NEW_PLACEHOLDER": "Nombre de la nueva categoría (ej. PATITAS)",
       "INVALID_NAME": "Sin paréntesis y sin «!» al principio: el nombre se escribe en @buscar_predefinidas(…).",
       "ADD": "Agregar",

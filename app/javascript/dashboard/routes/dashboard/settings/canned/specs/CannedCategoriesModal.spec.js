@@ -25,6 +25,8 @@ const abrir = async () => {
     mocks: { $t: (c, a) => (a ? `${c} ${JSON.stringify(a)}` : c) },
     stubs: {
       'woot-modal': { template: '<div><slot /></div>' },
+      'woot-modal-header': true,
+      'fluent-icon': true,
       'woot-button': {
         template: '<button @click="$emit(\'click\')"><slot /></button>',
       },

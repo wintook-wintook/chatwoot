@@ -41,6 +41,11 @@ export default {
     },
   },
   methods: {
+    close() {
+      this.editingId = null;
+      this.confirmingId = null;
+      this.$emit('close');
+    },
     async load() {
       try {
         const [lista, sugeridas] = await Promise.all([
@@ -104,180 +109,219 @@ export default {
 </script>
 
 <template>
-  <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
-    <div class="flex flex-col gap-5 p-8 text-sm">
-      <div>
-        <h2
-          class="!m-0 text-base font-semibold text-slate-800 dark:text-slate-50"
-        >
-          {{ $t('CANNED_MGMT.CATEGORIES.TITLE') }}
-        </h2>
-        <p class="!mt-1 !mb-0 text-slate-600 dark:text-slate-300">
-          {{ $t('CANNED_MGMT.CATEGORIES.HINT') }}
-        </p>
-      </div>
-
-      <form class="flex items-start gap-2" @submit.prevent="create">
-        <div class="flex-1">
-          <input
-            v-model="newName"
-            type="text"
-            class="w-full !mb-0"
-            :placeholder="$t('CANNED_MGMT.CATEGORIES.NEW_PLACEHOLDER')"
-          />
-          <p
-            v-if="newNameInvalid"
-            class="!m-0 mt-1 text-xs text-red-600 dark:text-red-400"
-          >
-            {{ $t('CANNED_MGMT.CATEGORIES.INVALID_NAME') }}
-          </p>
-        </div>
-        <woot-button
-          icon="add"
-          size="small"
-          :is-disabled="!newName.trim() || newNameInvalid || busy"
-        >
-          {{ $t('CANNED_MGMT.CATEGORIES.ADD') }}
-        </woot-button>
-      </form>
-
-      <div class="flex flex-col">
-        <p
-          v-if="!categories.length"
-          class="!m-0 text-slate-500 dark:text-slate-400"
-        >
-          {{ $t('CANNED_MGMT.CATEGORIES.EMPTY') }}
-        </p>
-        <div
-          v-for="categoria in categories"
-          :key="categoria.id"
-          class="flex items-center gap-2 py-2 border-b border-slate-50 dark:border-slate-800"
-          @mouseleave="confirmingId = null"
-        >
-          <template v-if="editingId === categoria.id">
-            <input
-              v-model="editingName"
-              type="text"
-              class="flex-1 !mb-0"
-              @keydown.enter.prevent="saveEdit"
-            />
-            <woot-button size="tiny" :is-disabled="busy" @click="saveEdit">
-              {{ $t('CANNED_MGMT.CATEGORIES.SAVE') }}
-            </woot-button>
-            <woot-button
-              size="tiny"
-              variant="clear"
-              color-scheme="secondary"
-              @click="editingId = null"
-            >
-              {{ $t('CANNED_MGMT.CATEGORIES.CANCEL') }}
-            </woot-button>
-          </template>
-          <template v-else>
-            <span
-              class="flex-1 font-medium font-mono text-slate-800 dark:text-slate-100"
-            >
-              {{ categoria.name }}
+  <!-- Molde nativo (settings/agents/AddAgent.vue): encabezado del modal y un form sin
+       relleno propio (Modal.vue ya se lo pone). -->
+  <woot-modal :show="show" size="medium" :on-close="close">
+    <div class="flex flex-col h-auto overflow-auto">
+      <woot-modal-header
+        :header-title="$t('CANNED_MGMT.CATEGORIES.TITLE')"
+        :header-content="$t('CANNED_MGMT.CATEGORIES.HINT')"
+      />
+      <form
+        class="flex flex-col items-start w-full gap-6"
+        @submit.prevent="create"
+      >
+        <!-- Nueva categoría -->
+        <div class="w-full">
+          <label :class="{ error: newNameInvalid }">
+            {{ $t('CANNED_MGMT.CATEGORIES.NEW_LABEL') }}
+            <div class="flex items-center gap-2">
+              <input
+                v-model="newName"
+                type="text"
+                class="flex-1 !mb-0"
+                :placeholder="$t('CANNED_MGMT.CATEGORIES.NEW_PLACEHOLDER')"
+              />
+              <woot-button
+                icon="add"
+                :is-disabled="!newName.trim() || newNameInvalid || busy"
+              >
+                {{ $t('CANNED_MGMT.CATEGORIES.ADD') }}
+              </woot-button>
+            </div>
+            <span v-if="newNameInvalid" class="message">
+              {{ $t('CANNED_MGMT.CATEGORIES.INVALID_NAME') }}
             </span>
-            <span class="text-xs text-slate-500 dark:text-slate-400">
+          </label>
+        </div>
+
+        <!-- Tus categorías -->
+        <section class="flex flex-col w-full gap-2">
+          <h3
+            class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
+          >
+            {{
+              $t('CANNED_MGMT.CATEGORIES.YOURS', { count: categories.length })
+            }}
+          </h3>
+          <div
+            v-if="!categories.length"
+            class="flex items-center gap-2 px-4 py-3 text-sm border border-dashed rounded-lg border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400"
+          >
+            <fluent-icon icon="folder" size="16" />
+            {{ $t('CANNED_MGMT.CATEGORIES.EMPTY') }}
+          </div>
+          <ul
+            v-else
+            class="!m-0 !p-0 list-none border rounded-lg divide-y border-slate-100 dark:border-slate-700 divide-slate-100 dark:divide-slate-700"
+          >
+            <li
+              v-for="categoria in categories"
+              :key="categoria.id"
+              class="flex items-center gap-3 px-4 py-2.5"
+              @mouseleave="confirmingId = null"
+            >
+              <template v-if="editingId === categoria.id">
+                <input
+                  v-model="editingName"
+                  type="text"
+                  class="flex-1 !mb-0"
+                  @keydown.enter.prevent="saveEdit"
+                  @keydown.esc.stop.prevent="editingId = null"
+                />
+                <woot-button
+                  type="button"
+                  size="small"
+                  :is-disabled="busy"
+                  @click="saveEdit"
+                >
+                  {{ $t('CANNED_MGMT.CATEGORIES.SAVE') }}
+                </woot-button>
+                <woot-button
+                  type="button"
+                  size="small"
+                  variant="clear"
+                  color-scheme="secondary"
+                  @click="editingId = null"
+                >
+                  {{ $t('CANNED_MGMT.CATEGORIES.CANCEL') }}
+                </woot-button>
+              </template>
+              <template v-else>
+                <fluent-icon
+                  icon="folder"
+                  size="16"
+                  class="shrink-0 text-slate-400"
+                />
+                <span
+                  class="flex-1 min-w-0 font-medium truncate text-slate-800 dark:text-slate-100"
+                >
+                  {{ categoria.name }}
+                </span>
+                <span
+                  class="px-2 py-0.5 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                >
+                  {{
+                    $t('CANNED_MGMT.CATEGORIES.COUNT', {
+                      count: categoria.canned_count,
+                    })
+                  }}
+                </span>
+                <span
+                  v-if="confirmingId === categoria.id"
+                  class="text-xs text-slate-500 dark:text-slate-400"
+                >
+                  {{ $t('CANNED_MGMT.CATEGORIES.DELETE_HINT') }}
+                </span>
+                <div class="flex items-center gap-1 shrink-0">
+                  <woot-button
+                    v-tooltip.top="$t('CANNED_MGMT.CATEGORIES.RENAME')"
+                    type="button"
+                    size="tiny"
+                    variant="smooth"
+                    color-scheme="secondary"
+                    icon="edit"
+                    @click="startEdit(categoria)"
+                  />
+                  <woot-button
+                    v-if="confirmingId !== categoria.id"
+                    v-tooltip.top="$t('CANNED_MGMT.CATEGORIES.DELETE')"
+                    type="button"
+                    size="tiny"
+                    variant="smooth"
+                    color-scheme="alert"
+                    icon="dismiss-circle"
+                    @click="confirmingId = categoria.id"
+                  />
+                  <woot-button
+                    v-else
+                    type="button"
+                    size="tiny"
+                    color-scheme="alert"
+                    :is-disabled="busy"
+                    @click="remove(categoria)"
+                  >
+                    {{ $t('CANNED_MGMT.CATEGORIES.DELETE_CONFIRM') }}
+                  </woot-button>
+                </div>
+              </template>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Sugeridas por los nombres (D3) -->
+        <section
+          v-if="suggestions.length"
+          class="flex flex-col w-full gap-3 p-4 border rounded-lg bg-woot-25 border-woot-100 dark:bg-woot-900/20 dark:border-woot-800"
+        >
+          <div>
+            <h3
+              class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
+            >
+              {{ $t('CANNED_MGMT.CATEGORIES.SUGGESTED') }}
+            </h3>
+            <p class="!m-0 mt-1 text-xs text-slate-600 dark:text-slate-300">
+              {{ $t('CANNED_MGMT.CATEGORIES.SUGGESTED_HINT') }}
+            </p>
+          </div>
+          <div
+            v-for="sugerida in suggestions"
+            :key="sugerida.name"
+            class="flex items-center gap-3 px-3 py-2 bg-white rounded-md dark:bg-slate-800"
+          >
+            <fluent-icon icon="wand" size="16" class="shrink-0 text-woot-500" />
+            <span class="font-medium text-slate-800 dark:text-slate-100">
+              {{ sugerida.name }}
+            </span>
+            <span
+              class="px-2 py-0.5 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+            >
               {{
-                $t('CANNED_MGMT.CATEGORIES.COUNT', {
-                  count: categoria.canned_count,
+                $t('CANNED_MGMT.CATEGORIES.SUGGESTED_COUNT', {
+                  count: sugerida.count,
                 })
               }}
             </span>
-            <woot-button
-              v-tooltip="$t('CANNED_MGMT.CATEGORIES.RENAME')"
-              size="tiny"
-              variant="clear"
-              color-scheme="secondary"
-              icon="edit"
-              @click="startEdit(categoria)"
-            />
-            <woot-button
-              v-if="confirmingId !== categoria.id"
-              v-tooltip="$t('CANNED_MGMT.CATEGORIES.DELETE')"
-              size="tiny"
-              variant="clear"
-              color-scheme="secondary"
-              icon="delete"
-              @click="confirmingId = categoria.id"
-            />
-            <woot-button
-              v-else
-              size="tiny"
-              variant="smooth"
-              color-scheme="alert"
-              :is-disabled="busy"
-              @click="remove(categoria)"
+            <span
+              v-if="sugerida.agents"
+              class="px-2 py-0.5 text-xs rounded-full bg-woot-50 text-woot-700 dark:bg-woot-800 dark:text-woot-100"
             >
-              {{ $t('CANNED_MGMT.CATEGORIES.DELETE_CONFIRM') }}
-            </woot-button>
-          </template>
-        </div>
-        <p
-          v-if="confirmingId"
-          class="!m-0 mt-1 text-xs text-slate-500 dark:text-slate-400"
-        >
-          {{ $t('CANNED_MGMT.CATEGORIES.DELETE_HINT') }}
-        </p>
-      </div>
-
-      <div v-if="suggestions.length" class="flex flex-col gap-2">
-        <h3
-          class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
-        >
-          {{ $t('CANNED_MGMT.CATEGORIES.SUGGESTED') }}
-        </h3>
-        <p class="!m-0 text-xs text-slate-500 dark:text-slate-400">
-          {{ $t('CANNED_MGMT.CATEGORIES.SUGGESTED_HINT') }}
-        </p>
-        <div
-          v-for="sugerida in suggestions"
-          :key="sugerida.name"
-          class="flex items-center gap-2 py-1"
-        >
-          <span
-            class="font-mono font-medium text-slate-800 dark:text-slate-100"
-          >
-            {{ sugerida.name }}
-          </span>
-          <span class="flex-1 text-xs text-slate-500 dark:text-slate-400">
-            {{
-              $t('CANNED_MGMT.CATEGORIES.SUGGESTED_COUNT', {
-                count: sugerida.count,
-              })
-            }}
-            <template v-if="sugerida.agents">
-              ·
               {{
                 $t('CANNED_MGMT.CATEGORIES.SUGGESTED_AGENTS', {
                   count: sugerida.agents,
                 })
               }}
-            </template>
-          </span>
-          <woot-button
-            size="tiny"
-            variant="smooth"
-            icon="add"
-            :is-disabled="busy"
-            @click="accept(sugerida)"
-          >
-            {{ $t('CANNED_MGMT.CATEGORIES.ACCEPT') }}
-          </woot-button>
-        </div>
-      </div>
+            </span>
+            <span class="flex-1" />
+            <woot-button
+              type="button"
+              size="small"
+              variant="smooth"
+              icon="add"
+              :is-disabled="busy"
+              @click="accept(sugerida)"
+            >
+              {{ $t('CANNED_MGMT.CATEGORIES.ACCEPT') }}
+            </woot-button>
+          </div>
+        </section>
 
-      <div class="flex justify-end">
-        <woot-button
-          variant="clear"
-          color-scheme="secondary"
-          @click="$emit('close')"
-        >
-          {{ $t('CANNED_MGMT.CATEGORIES.CLOSE') }}
-        </woot-button>
-      </div>
+        <div class="flex flex-row justify-end w-full gap-2 px-0 py-2">
+          <button class="button clear" @click.prevent="close">
+            {{ $t('CANNED_MGMT.CATEGORIES.CLOSE') }}
+          </button>
+        </div>
+      </form>
     </div>
   </woot-modal>
 </template>

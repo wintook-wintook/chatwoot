@@ -73,6 +73,8 @@
       "OPEN": "Categories",
       "TITLE": "Canned response categories",
       "HINT": "Group your responses. An agent searches only one category with @buscar_predefinidas(CATEGORY).",
+      "NEW_LABEL": "New category",
+      "YOURS": "Your categories ({count})",
       "NEW_PLACEHOLDER": "New category name (e.g. PATITAS)",
       "INVALID_NAME": "No parentheses and no leading «!»: the name is written in @buscar_predefinidas(…).",
       "ADD": "Add",
