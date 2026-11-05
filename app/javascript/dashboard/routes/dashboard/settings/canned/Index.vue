@@ -9,7 +9,9 @@ import SystemSettings from '../integrations/Addons/SystemSettings.vue';
 import Synonyms from '../wintook/canned/Synonyms.vue';
 import Vocabulary from '../wintook/canned/Vocabulary.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
-import { computed, onMounted, ref } from 'vue';
+// proyecto@respuestas_predefinidas R1: si cada una está en la fuente de datos del agente.
+import EmbeddingState from './EmbeddingState.vue';
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'dashboard/composables/useI18n';
 import { useStoreGetters, useStore } from 'dashboard/composables/store';
 
@@ -30,6 +32,52 @@ const records = computed(() =>
   getters.getSortedCannedResponses.value(sortOrder.value)
 );
 const uiFlags = computed(() => getters.getUIFlags.value);
+
+// ── proyecto@respuestas_predefinidas R1 ──────────────────────────────────────
+const vectorizing = ref({});
+const countState = state =>
+  records.value.filter(r => r.embedding_state === state).length;
+const noKeyCount = computed(() => countState('no_key'));
+const missingCount = computed(() => countState('missing'));
+const failedCount = computed(() => countState('failed') + countState('stale'));
+const hasPending = computed(() => countState('pending') > 0);
+
+const vectorize = async item => {
+  vectorizing.value = { ...vectorizing.value, [item.id]: true };
+  try {
+    await store.dispatch('vectorizeCannedResponse', item.id);
+  } catch (error) {
+    useAlert(t('CANNED_MGMT.EMBEDDING.VECTORIZE_ERROR'));
+  } finally {
+    vectorizing.value = { ...vectorizing.value, [item.id]: false };
+  }
+};
+
+// Mientras alguna se vectoriza, se vuelve a leer la lista cada pocos segundos
+// (con tope: un job que se reintenta puede tardar minutos).
+const POLL_MS = 4000;
+const MAX_POLLS = 15;
+let pollTimer = null;
+let polls = 0;
+const stopPolling = () => {
+  clearTimeout(pollTimer);
+  pollTimer = null;
+};
+watch(hasPending, pendiente => {
+  if (!pendiente) {
+    stopPolling();
+    polls = 0;
+    return;
+  }
+  const tick = async () => {
+    polls += 1;
+    await store.dispatch('refreshCannedResponses');
+    pollTimer =
+      hasPending.value && polls < MAX_POLLS ? setTimeout(tick, POLL_MS) : null;
+  };
+  if (!pollTimer) pollTimer = setTimeout(tick, POLL_MS);
+});
+onBeforeUnmount(stopPolling);
 const currentUser = computed(() => getters.getCurrentUser.value);
 
 const deleteConfirmText = computed(
@@ -186,6 +234,25 @@ const confirmDeletion = () => {
     />
 
     <div v-if="selectedTabIndex == 0" class="mt-6 flex-1">
+      <!-- proyecto@respuestas_predefinidas R1: lo que el agente no encontraría. -->
+      <div
+        v-if="noKeyCount || missingCount || failedCount"
+        class="flex flex-col gap-1 px-4 py-3 mb-4 text-sm border rounded-md border-amber-200 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200"
+      >
+        <span v-if="noKeyCount">
+          {{ $t('CANNED_MGMT.EMBEDDING.BANNER_NO_KEY', { count: noKeyCount }) }}
+        </span>
+        <span v-if="missingCount">
+          {{
+            $t('CANNED_MGMT.EMBEDDING.BANNER_MISSING', { count: missingCount })
+          }}
+        </span>
+        <span v-if="failedCount">
+          {{
+            $t('CANNED_MGMT.EMBEDDING.BANNER_FAILED', { count: failedCount })
+          }}
+        </span>
+      </div>
       <woot-loading-state
         v-if="uiFlags.fetchingList"
         :message="$t('CANNED_MGMT.LOADING')"
@@ -258,6 +325,13 @@ const confirmDeletion = () => {
               <div class="line-clamp-3" :title="cannedItem.content">
                 {{ cannedItem.content }}
               </div>
+            </td>
+            <td class="py-4 pr-4 align-top">
+              <EmbeddingState
+                :item="cannedItem"
+                :busy="!!vectorizing[cannedItem.id]"
+                @vectorize="vectorize"
+              />
             </td>
             <td class="py-4 flex justify-end gap-1">
               <woot-button

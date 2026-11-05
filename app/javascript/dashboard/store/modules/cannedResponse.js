@@ -47,6 +47,27 @@ const actions = {
     }
   },
 
+  // proyecto@respuestas_predefinidas R1: [Vectorizar] / [Reintentar] de una predefinida.
+  vectorizeCannedResponse: async function vectorizeCannedResponse(
+    { commit },
+    id
+  ) {
+    const response = await CannedResponseAPI.vectorize(id);
+    commit(types.default.EDIT_CANNED, response.data);
+    return response.data;
+  },
+
+  // Vuelve a leer la lista sin la pantalla de «cargando»: para ver terminar las que
+  // se están vectorizando.
+  refreshCannedResponses: async function refreshCannedResponses({ commit }) {
+    try {
+      const response = await CannedResponseAPI.get({});
+      commit(types.default.SET_CANNED, response.data);
+    } catch (error) {
+      // Queda lo que había.
+    }
+  },
+
   createCannedResponse: async function createCannedResponse(
     { commit },
     cannedObj

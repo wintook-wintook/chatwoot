@@ -10,7 +10,7 @@
       "404": "There are no canned responses available in this account.",
       "TITLE": "Manage canned responses",
       "DESC": "Canned Responses are predefined reply templates which can be used to quickly send out replies to conversations.",
-      "TABLE_HEADER": ["Short code", "Content", "Actions"]
+      "TABLE_HEADER": ["Short code", "Content", "Data source", "Actions"]
     },
     "ADD": {
       "TITLE": "Add canned response",
@@ -68,6 +68,24 @@
         "YES": "Yes, delete ",
         "NO": "No, keep "
       }
+    },
+    "EMBEDDING": {
+      "STATE_READY": "✓ In the data source",
+      "STATE_PENDING": "⏳ Vectorizing…",
+      "STATE_MISSING": "⚠ Not in the data source",
+      "STATE_NO_KEY": "⚠ Missing: enable OpenAI",
+      "STATE_FAILED": "✗ Could not vectorize",
+      "STATE_STALE": "⚠ Outdated",
+      "VECTORIZE": "Vectorize",
+      "RETRY": "Retry",
+      "VECTORIZE_ERROR": "Could not send it to vectorize. Try again.",
+      "ERROR_INVALID_KEY": "The account's OpenAI key is not valid.",
+      "ERROR_QUOTA": "The OpenAI account ran out of credit.",
+      "ERROR_NO_CONNECTION": "OpenAI did not answer after several attempts.",
+      "ERROR_OTHER": "OpenAI rejected it ({code}).",
+      "BANNER_NO_KEY": "{count} response(s) are not in the agent's data source: enable the OpenAI integration in Integrations, then vectorize them one by one.",
+      "BANNER_MISSING": "{count} response(s) are not in the agent's data source: use «Vectorize» on each so the agent can find them.",
+      "BANNER_FAILED": "{count} response(s) could not be vectorized or are outdated: check the reason and use «Retry»."
     },
     "FORM_PROMPT": {
       "TAB_MESSAGE": "Message",

@@ -10,7 +10,7 @@
       "404": "No hay respuestas predefinidas disponibles en esta cuenta.",
       "TITLE": "Gestionar respuestas predefinidas",
       "DESC": "Las Respuestas Predefinidas son plantillas de respuesta predefinidas que se pueden usar para enviar rápidamente respuestas a las conversaciones.",
-      "TABLE_HEADER": ["Código corto", "Contenido", "Acciones"]
+      "TABLE_HEADER": ["Código corto", "Contenido", "Fuente de datos", "Acciones"]
     },
     "ADD": {
       "TITLE": "Agregar respuesta predefinida",
@@ -68,6 +68,24 @@
         "YES": "Sí, eliminar ",
         "NO": "No, mantener "
       }
+    },
+    "EMBEDDING": {
+      "STATE_READY": "✓ En la fuente de datos",
+      "STATE_PENDING": "⏳ Vectorizando…",
+      "STATE_MISSING": "⚠ No está en la fuente de datos",
+      "STATE_NO_KEY": "⚠ No está: falta activar OpenAI",
+      "STATE_FAILED": "✗ No se pudo vectorizar",
+      "STATE_STALE": "⚠ Desactualizada",
+      "VECTORIZE": "Vectorizar",
+      "RETRY": "Reintentar",
+      "VECTORIZE_ERROR": "No se pudo mandar a vectorizar. Intenta de nuevo.",
+      "ERROR_INVALID_KEY": "La clave de OpenAI de la cuenta no es válida.",
+      "ERROR_QUOTA": "La cuenta de OpenAI se quedó sin saldo.",
+      "ERROR_NO_CONNECTION": "OpenAI no respondió después de varios intentos.",
+      "ERROR_OTHER": "OpenAI la rechazó ({code}).",
+      "BANNER_NO_KEY": "{count} respuesta(s) no están en la fuente de datos del agente: activa la integración de OpenAI en Integraciones y después vectorízalas una por una.",
+      "BANNER_MISSING": "{count} respuesta(s) no están en la fuente de datos del agente: usa «Vectorizar» en cada una para que el agente las pueda encontrar.",
+      "BANNER_FAILED": "{count} respuesta(s) no se pudieron vectorizar o quedaron desactualizadas: revisa el motivo y usa «Reintentar»."
     },
     "FORM_PROMPT": {
       "TAB_MESSAGE": "Mensaje",

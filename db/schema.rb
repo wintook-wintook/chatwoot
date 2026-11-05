@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_04_200000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_06_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -305,6 +305,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_04_200000) do
     t.boolean "menu", default: false, null: false
     t.bigint "opcion", default: 0, null: false
     t.boolean "content_is_prompt", default: false, null: false
+    t.string "embedding_status"
+    t.string "embedding_error"
+    t.datetime "embedded_at"
   end
 
   create_table "case_ai_configs", force: :cascade do |t|

@@ -118,7 +118,7 @@ intentar crear otra.
 ```
  KnowledgeItemSyncJob
    ├─ error PASAJERO (timeout, sin red, 429 límite, 5xx)
-   │     → reintenta solo: 5 veces con espera creciente (≈30 s, 2 min, 8 min, 30 min, 2 h)
+   │     → reintenta solo: 5 veces con espera creciente (segundos → minutos, retry_on de Rails)
    │       estado `pending` mientras tanto
    ├─ error PERMANENTE (401 clave inválida, 400 texto inválido, cuota agotada)
    │     → no reintenta: estado `failed` con el motivo en palabras
@@ -166,7 +166,7 @@ Mismos componentes que Contactos (`vue-easytable` + `TableFooter` con paginació
 | Fase | Qué | Se puede probar |
 |---|---|---|
 | **R0** ✅ | Medir en dev y staging: cuántas predefinidas sin vector, cuántos agentes usan grupos, qué prefijos | §6.1 |
-| **R1** | Estado de vectorización + reintentos (§3, §4) + arreglo P3 | una cuenta sin OpenAI ve «no está en la fuente de datos»; al activarla, [Vectorizar] |
+| **R1** ✅ | Estado de vectorización + reintentos (§3, §4) + arreglo P3 | una cuenta sin OpenAI ve «no está en la fuente de datos»; al activarla, [Vectorizar] |
 | **R2** | Tabla nueva: paginación, orden, filtros, acciones (§5) | ordenar por fecha, filtrar «sin vectorizar» |
 | **R3** | Categorías: tabla, modal, columna, filtro, acciones en lote (§2.1, §2.3) | crear «PATITAS» y mover 14 |
 | **R4** | Motor: `@buscar_predefinidas(X)` = categoría o prefijo, en las dos copias + spec (§2.2) | un agente con `(PATITAS)` encuentra igual antes y después |
@@ -201,6 +201,41 @@ Mismos componentes que Contactos (`vue-easytable` + `TableFooter` con paginació
   límite de llamadas por minuto de OpenAI con cuentas de cientos (386). D4 (una por una + hasta 20
   seleccionadas) se queda; queda abierta, si se quiere, una opción «vectorizar esta categoría» con
   pausa entre llamadas.
+
+---
+
+## 6.2 R1 — estado de vectorización y reintentos ✅ (05/11/2026)
+
+**Qué se hizo.**
+- **Migración** `20261106100000` (idempotente): `canned_responses.embedding_status`, `embedding_error`,
+  `embedded_at`.
+- **`KnowledgeItemSyncJob`**: sin OpenAI → `no_key`; con éxito → `ready` + `embedded_at`; error
+  pasajero (sin red, timeout, 429 por límite, 5xx) → `TransientError` con `retry_on` (5 intentos,
+  espera creciente) y, al agotarse, `failed`; error permanente (401/403 `invalid_key`, 429
+  `insufficient_quota` → `quota`, otro 4xx `http_NNN`) → `failed` con el motivo, sin reintentar.
+  **P3 arreglado**: la fuente se busca aunque esté desactivada (ya no intenta crear otra). Los
+  artículos usan los mismos reintentos (D5), sin guardar estado.
+- **`CannedResponse#embedding_state`**: lo que se muestra se calcula con lo guardado + si tiene vector
+  + si la cuenta tiene OpenAI (`ready · pending · missing · no_key · failed · stale`). Las que nunca
+  pasaron por el job salen `missing` o `no_key`. Al guardar una queda `pending` hasta que el job
+  termina.
+- **API**: cada predefinida trae `embedding_state` (2 consultas para toda la lista); `POST
+  …/canned_responses/:id/vectorize` y `POST …/canned_responses/vectorize { ids }` (hasta 20, D4).
+- **Pantalla** (tabla actual): columna **«Fuente de datos»** (`EmbeddingState.vue`) con el estado en
+  palabras, el motivo si falló y **[Vectorizar]** / **[Reintentar]** por fila; aviso arriba con
+  cuántas no están en la fuente de datos (sin OpenAI / sin vector / fallidas); mientras alguna se
+  vectoriza, la lista se vuelve a leer cada 4 s (tope 15).
+
+**Probado en develop**: las 24 de la cuenta 2 salen «✓ En la fuente de datos».
+
+**Pila de pruebas.** `knowledge_item_sync_job_spec` 6 (no_key, ready, permanente, pasajero hasta
+agotar, sin red, fuente desactivada), `canned_response_embedding_state_spec` 2,
+`canned_responses_vectorize_spec` 3, `canned_responses_controller_spec` (2 ajustadas: la lista trae
+`embedding_state`); 128 en verde (los 4 de `knowledge_base_controller_spec` ya fallaban: 403).
+Navegador: `EmbeddingState.spec` 4, `cannedResponses/actions.spec` 3.
+
+**Queda en la tabla** el botón «Generar/Eliminar Entrenamiento» del sistema anterior (servicio
+externo `WINTOOK_OPENAI` `setTraining`): R2 decide si se quita.
 
 ---
 

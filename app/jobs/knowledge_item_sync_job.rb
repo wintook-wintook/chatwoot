@@ -1,10 +1,33 @@
 # @knowledge_sources
 # Job para generar o actualizar el embedding de un ítem de conocimiento via OpenAI.
 # Se dispara desde callbacks en CannedResponse (create/update/destroy).
+#
+# proyecto@respuestas_predefinidas R1 (docs/respuestas_predefinidas_plan.md §3–4):
+#   · error PASAJERO de OpenAI (sin red, timeout, 429 por límite, 5xx): se reintenta solo,
+#     con espera creciente, hasta ATTEMPTS veces; al agotarse queda `failed`.
+#   · error PERMANENTE (clave inválida, cuota agotada, texto rechazado): no se reintenta,
+#     queda `failed` con el motivo.
+#   · sin integración de OpenAI: `no_key` (antes no quedaba rastro).
+#   El estado se guarda en la predefinida (embedding_status / embedding_error / embedded_at);
+#   los artículos usan los mismos reintentos (D5) pero no guardan estado.
+#   · la fuente de la cuenta se busca aunque esté desactivada: antes se intentaba crear otra,
+#     chocaba con el índice único y no se vectorizaba nada.
 class KnowledgeItemSyncJob < ApplicationJob
   queue_as :default
 
+  ATTEMPTS = 5
+  # Se puede volver a intentar: lo resuelve esperar.
+  class TransientError < StandardError; end
+  # No se arregla esperando: el motivo va a la pantalla.
+  class PermanentError < StandardError; end
+
+  retry_on TransientError, wait: :exponentially_longer, attempts: ATTEMPTS do |job, error|
+    job.mark_failed(error.message.presence || 'temporary')
+  end
+
   def perform(action:, source_type:, source_id:, account_id:)
+    @source_type = source_type
+    @source_id = source_id
     account = Account.find_by(id: account_id)
     return unless account
 
@@ -16,7 +39,22 @@ class KnowledgeItemSyncJob < ApplicationJob
     end
   end
 
+  # Público: lo llama retry_on al agotar los reintentos.
+  def mark_failed(motivo)
+    args = arguments.first.to_h.symbolize_keys
+    @source_type ||= args[:source_type]
+    @source_id ||= args[:source_id]
+    mark(embedding_status: 'failed', embedding_error: motivo.to_s.first(255))
+  end
+
   private
+
+  # Solo las predefinidas guardan su estado (los artículos no tienen esas columnas).
+  def mark(attrs)
+    return unless @source_type == 'canned_response'
+
+    CannedResponse.where(id: @source_id).update_all(attrs) # rubocop:disable Rails/SkipsModelValidations
+  end
 
   def upsert_item(account, source_type, source_id)
     source = find_knowledge_source(account, source_type)
@@ -29,27 +67,26 @@ class KnowledgeItemSyncJob < ApplicationJob
     return if content.blank?
 
     embedding = generate_embedding(account, content)
-    return unless embedding
+    return mark(embedding_status: 'no_key', embedding_error: nil) if embedding == :no_key
 
-    item = KnowledgeItem.find_or_initialize_by(
-      account_id:  account.id,
-      source_type: source_type,
-      source_id:   source_id,
-      chunk_index: 0
-    )
-
-    item.assign_attributes(
-      knowledge_source_id: source.id,
-      title: extract_title(source_type, record),
-      content: content,
-      embedding: embedding,
-      metadata: build_metadata(source_type, record)
-    )
-    item.save!
+    save_item(account, source, record, content, embedding)
+    mark(embedding_status: 'ready', embedding_error: nil, embedded_at: Time.current)
+  rescue PermanentError => e
+    mark(embedding_status: 'failed', embedding_error: e.message)
   end
 
+  def save_item(account, source, record, content, embedding)
+    item = KnowledgeItem.find_or_initialize_by(account_id: account.id, source_type: @source_type,
+                                               source_id: @source_id, chunk_index: 0)
+    item.update!(knowledge_source_id: source.id, title: extract_title(@source_type, record), content: content,
+                 embedding: embedding, metadata: build_metadata(@source_type, record))
+  end
+
+  # La activa, o la que haya aunque esté desactivada: hay una sola por cuenta
+  # (idx_unique_native_knowledge_sources) y crear otra truena.
   def find_knowledge_source(account, source_type)
     account.knowledge_sources.active.find_by(source_type: source_type) ||
+      account.knowledge_sources.find_by(source_type: source_type) ||
       account.knowledge_sources.create!(
         source_type: source_type,
         name: knowledge_source_name(source_type, account),
@@ -111,26 +148,44 @@ class KnowledgeItemSyncJob < ApplicationJob
     ActionView::Base.full_sanitizer.sanitize(text)
   end
 
+  # El vector; :no_key sin integración. Un error de OpenAI sube como TransientError
+  # (se reintenta) o PermanentError (queda el motivo).
   def generate_embedding(account, text)
     api_key = openai_api_key(account)
-    return unless api_key
+    return :no_key unless api_key
 
+    response = request_embedding(api_key, text)
+    raise_for(response) unless response.is_a?(Net::HTTPSuccess)
+
+    JSON.parse(response.body).dig('data', 0, 'embedding') || raise(PermanentError, 'empty_response')
+  rescue Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNREFUSED, Errno::ECONNRESET, OpenSSL::SSL::SSLError => e
+    Rails.logger.warn "[KnowledgeItemSyncJob] OpenAI no respondió: #{e.class}"
+    raise TransientError, 'no_connection'
+  end
+
+  def request_embedding(api_key, text)
     uri = URI('https://api.openai.com/v1/embeddings')
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true
+    http.read_timeout = 20
 
     request = Net::HTTP::Post.new(uri)
     request['Authorization'] = "Bearer #{api_key}"
     request['Content-Type'] = 'application/json'
     request.body = { model: 'text-embedding-3-small', input: text }.to_json
+    http.request(request)
+  end
 
-    response = http.request(request)
-    return unless response.is_a?(Net::HTTPSuccess)
+  # 429 por límite de llamadas o 5xx: esperar sirve. 429 por cuota, 401 o 400: no.
+  def raise_for(response)
+    codigo = response.code.to_i
+    detalle = JSON.parse(response.body.to_s).dig('error', 'code').to_s rescue '' # rubocop:disable Style/RescueModifier
+    Rails.logger.error "[KnowledgeItemSyncJob] OpenAI HTTP #{codigo} #{detalle}"
+    raise PermanentError, 'quota' if detalle == 'insufficient_quota'
+    raise TransientError, "http_#{codigo}" if codigo == 429 || codigo >= 500
+    raise PermanentError, 'invalid_key' if [401, 403].include?(codigo)
 
-    JSON.parse(response.body).dig('data', 0, 'embedding')
-  rescue StandardError => e
-    Rails.logger.error "[KnowledgeItemSyncJob] Error generating embedding: #{e.message}"
-    nil
+    raise PermanentError, "http_#{codigo}"
   end
 
   # Cada cuenta usa su propia integración OpenAI (sin fallback a ENV global, multi-tenant).

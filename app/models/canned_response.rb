@@ -7,6 +7,9 @@
 #  content_full      :boolean          default(FALSE), not null
 #  content_is_prompt :boolean          default(FALSE), not null
 #  content_prompts   :text
+#  embedded_at       :datetime
+#  embedding_error   :string
+#  embedding_status  :string
 #  menu              :boolean          default(FALSE), not null
 #  opcion            :bigint           default(0), not null
 #  short_code        :string
@@ -35,6 +38,19 @@ class CannedResponse < ApplicationRecord
   after_commit :sync_knowledge_embedding, on: %i[create update], if: :needs_embedding?
   after_commit :destroy_knowledge_embedding, on: :destroy
 
+  # proyecto@respuestas_predefinidas R1 — si está en la fuente de datos del agente. Lo que se
+  # guarda (embedding_status) lo escribe KnowledgeItemSyncJob; lo que se MUESTRA se calcula
+  # con dos datos más, porque lo guardado se queda viejo solo:
+  #   ready    tiene vector y está al día                      ✓ en la fuente de datos
+  #   pending  se mandó a vectorizar y no ha terminado          ⏳
+  #   missing  no tiene vector y la cuenta SÍ tiene OpenAI      [Vectorizar]
+  #   no_key   no tiene vector y la cuenta no tiene OpenAI       ⚠ falta activar OpenAI
+  #   failed   OpenAI falló y no hay vector                     ✗ motivo · [Reintentar]
+  #   stale    OpenAI falló pero queda el vector anterior        ⚠ desactualizada · [Reintentar]
+  # Las que llegaron por carga directa (sin callback) no tienen estado guardado: cuentan como
+  # missing / no_key hasta que se vectoricen.
+  EMBEDDING_STATES = %w[ready pending missing no_key failed stale].freeze
+
   scope :order_by_search, lambda { |search|
     short_code_starts_with = sanitize_sql_array(['WHEN short_code ILIKE ? THEN 1', "#{search}%"])
     short_code_like = sanitize_sql_array(['WHEN short_code ILIKE ? THEN 0.5', "%#{search}%"])
@@ -45,6 +61,23 @@ class CannedResponse < ApplicationRecord
     order(Arel.sql(order_clause) => :desc)
   }
 
+  def embedding_state(has_vector:, has_key:)
+    case embedding_status
+    when 'pending' then 'pending'
+    when 'failed' then has_vector ? 'stale' : 'failed'
+    else
+      return 'ready' if has_vector
+
+      has_key ? 'missing' : 'no_key'
+    end
+  end
+
+  # [Vectorizar] / [Reintentar] de la pantalla: una a la vez (D4).
+  def queue_embedding!
+    update_columns(embedding_status: 'pending', embedding_error: nil) # rubocop:disable Rails/SkipsModelValidations
+    sync_knowledge_embedding
+  end
+
   private
 
   def needs_embedding?
@@ -53,6 +86,8 @@ class CannedResponse < ApplicationRecord
 
   # @knowledge_sources
   def sync_knowledge_embedding
+    # Marca de «en camino» sin callbacks (update_columns): el job la cambia al terminar.
+    update_columns(embedding_status: 'pending', embedding_error: nil) unless embedding_status == 'pending' # rubocop:disable Rails/SkipsModelValidations
     KnowledgeItemSyncJob.perform_later(
       action: 'upsert',
       source_type: 'canned_response',
