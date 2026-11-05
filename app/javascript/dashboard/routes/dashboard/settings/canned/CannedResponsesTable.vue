@@ -15,7 +15,7 @@
 import CannedResponseAPI from 'dashboard/api/cannedResponse';
 import CategoryAPI from 'dashboard/api/cannedResponseCategory';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
-import { dynamicTime, messageStamp } from 'shared/helpers/timeHelper';
+import { messageStamp } from 'shared/helpers/timeHelper';
 import { useAlert } from 'dashboard/composables';
 import EmbeddingState from './EmbeddingState.vue';
 
@@ -258,12 +258,16 @@ export default {
       this.prompt = '';
       this.category = '';
     },
-    relative(fecha) {
-      return fecha ? dynamicTime(new Date(fecha).getTime() / 1000) : '—';
-    },
-    exact(fecha) {
+    // La fecha y la hora tal cual (pedido del usuario, 05/11/2026): «2 days ago» salía en
+    // inglés y no decía cuándo. Formato con números: no depende del idioma.
+    dateText(fecha) {
       return fecha
-        ? messageStamp(new Date(fecha).getTime() / 1000, 'LLL d yyyy, h:mm a')
+        ? messageStamp(new Date(fecha).getTime() / 1000, 'dd/MM/yyyy')
+        : '—';
+    },
+    timeText(fecha) {
+      return fecha
+        ? messageStamp(new Date(fecha).getTime() / 1000, 'HH:mm')
         : '';
     },
   },
@@ -556,17 +560,17 @@ export default {
                 @vectorize="vectorize"
               />
             </td>
-            <td
-              class="py-3 pr-4 align-top whitespace-nowrap"
-              :title="exact(item.created_at)"
-            >
-              {{ relative(item.created_at) }}
+            <td class="py-3 pr-4 align-top whitespace-nowrap">
+              <span class="block">{{ dateText(item.created_at) }}</span>
+              <span class="block text-xs text-slate-500 dark:text-slate-400">
+                {{ timeText(item.created_at) }}
+              </span>
             </td>
-            <td
-              class="py-3 pr-4 align-top whitespace-nowrap"
-              :title="exact(item.updated_at)"
-            >
-              {{ relative(item.updated_at) }}
+            <td class="py-3 pr-4 align-top whitespace-nowrap">
+              <span class="block">{{ dateText(item.updated_at) }}</span>
+              <span class="block text-xs text-slate-500 dark:text-slate-400">
+                {{ timeText(item.updated_at) }}
+              </span>
             </td>
             <td class="py-3 align-top">
               <div class="flex justify-end gap-1">

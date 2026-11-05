@@ -172,4 +172,13 @@ describe('CannedResponsesTable', () => {
       null
     );
   });
+
+  it('Creada y Cambió muestran la fecha y la hora', async () => {
+    const wrapper = await montar();
+
+    expect(wrapper.vm.dateText('2026-11-04T10:00:00')).toBe('04/11/2026');
+    expect(wrapper.vm.timeText('2026-11-04T10:05:00')).toBe('10:05');
+    expect(wrapper.vm.dateText(null)).toBe('—');
+    expect(wrapper.find('tbody tr').text()).toMatch(/\d{2}\/\d{2}\/\d{4}/);
+  });
 });
