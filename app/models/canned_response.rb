@@ -18,6 +18,7 @@
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
 #  account_id        :integer          not null
+#  category_id       :bigint
 #
 
 class CannedResponse < ApplicationRecord
@@ -27,6 +28,9 @@ class CannedResponse < ApplicationRecord
   validates :short_code, uniqueness: { scope: :account_id }
 
   belongs_to :account
+  # proyecto@respuestas_predefinidas R3: una categoría o ninguna (D1).
+  belongs_to :category, class_name: 'CannedResponseCategory', optional: true, inverse_of: :canned_responses
+  validate :category_from_account
 
   # @knowledge_sources — sincroniza embeddings al crear/actualizar/eliminar
   # proyecto@predefinidas_prompt — solo se vectoriza lo que se busca (el nombre y el
@@ -37,6 +41,9 @@ class CannedResponse < ApplicationRecord
   # que Rails se quede con el último, y las respuestas nuevas no se vectorizarían nunca.
   after_commit :sync_knowledge_embedding, on: %i[create update], if: :needs_embedding?
   after_commit :destroy_knowledge_embedding, on: :destroy
+  # R3/D2: la categoría no entra al texto vectorizado; cambiarla solo actualiza el dato que
+  # lee la búsqueda (metadata 'category' del vector), sin OpenAI.
+  after_update_commit :sync_own_category_metadata, if: :saved_change_to_category_id?
 
   # proyecto@respuestas_predefinidas R1 — si está en la fuente de datos del agente. Lo que se
   # guarda (embedding_status) lo escribe KnowledgeItemSyncJob; lo que se MUESTRA se calcula
@@ -61,6 +68,18 @@ class CannedResponse < ApplicationRecord
     order(Arel.sql(order_clause) => :desc)
   }
 
+  # El nombre de la categoría en el vector de cada predefinida (nil = sin categoría).
+  def self.sync_category_metadata(ids, nombre)
+    return if ids.blank?
+
+    items = KnowledgeItem.where(source_type: 'canned_response', source_id: ids)
+    if nombre.nil?
+      items.update_all("metadata = COALESCE(metadata, '{}'::jsonb) - 'category'") # rubocop:disable Rails/SkipsModelValidations
+    else
+      items.update_all(["metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{category}', to_jsonb(?::text))", nombre]) # rubocop:disable Rails/SkipsModelValidations
+    end
+  end
+
   def embedding_state(has_vector:, has_key:)
     case embedding_status
     when 'pending' then 'pending'
@@ -79,6 +98,14 @@ class CannedResponse < ApplicationRecord
   end
 
   private
+
+  def category_from_account
+    errors.add(:category, :invalid) if category && category.account_id != account_id
+  end
+
+  def sync_own_category_metadata
+    self.class.sync_category_metadata([id], category&.name)
+  end
 
   def needs_embedding?
     previously_new_record? || saved_change_to_short_code? || saved_change_to_content?

@@ -10,6 +10,8 @@ import Vocabulary from '../wintook/canned/Vocabulary.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 // proyecto@respuestas_predefinidas R2: la tabla paginada (incluye el estado de R1).
 import CannedResponsesTable from './CannedResponsesTable.vue';
+// R3: administrar las categorías (y aceptar las sugeridas).
+import CannedCategoriesModal from './CannedCategoriesModal.vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'dashboard/composables/useI18n';
 import { useStore } from 'dashboard/composables/store';
@@ -28,6 +30,11 @@ const cannedResponseAPI = ref({ message: '' });
 const table = ref(null);
 const reloadTable = () => {
   if (table.value) table.value.reload();
+};
+const showCategories = ref(false);
+const onCategoriesChanged = () => {
+  reloadTable();
+  if (table.value) table.value.loadCategories();
 };
 
 const deleteConfirmText = computed(
@@ -104,6 +111,16 @@ const confirmDeletion = () => {
     >
       <template #actions>
         <woot-button
+          v-if="selectedTabIndex == 0"
+          class="rounded-md"
+          variant="smooth"
+          color-scheme="secondary"
+          icon="folder"
+          @click="showCategories = true"
+        >
+          {{ $t('CANNED_MGMT.CATEGORIES.OPEN') }}
+        </woot-button>
+        <woot-button
           class="button nice rounded-md"
           icon="add-circle"
           @click="openAddPopup"
@@ -132,6 +149,12 @@ const confirmDeletion = () => {
     <Synonyms v-if="selectedTabIndex == 2" />
     <ForumBots v-if="selectedTabIndex == 3" />
     <SystemSettings v-if="selectedTabIndex == 4" />
+
+    <CannedCategoriesModal
+      :show="showCategories"
+      @close="showCategories = false"
+      @changed="onCategoriesChanged"
+    />
 
     <woot-modal :show.sync="showAddPopup" :on-close="hideAddPopup">
       <AddCanned :on-close="hideAddPopup" />

@@ -88,6 +88,7 @@ class Account < ApplicationRecord
   has_many :macros, dependent: :destroy_async
   has_many :campaigns, dependent: :destroy_async
   has_many :canned_responses, dependent: :destroy_async
+  has_many :canned_response_categories, dependent: :destroy_async
   has_many :knowledge_sources, dependent: :destroy # @knowledge_sources
   has_many :knowledge_items, dependent: :destroy   # @knowledge_sources
   has_many :categories, dependent: :destroy_async, class_name: '::Category'

@@ -132,7 +132,8 @@ class KnowledgeItemSyncJob < ApplicationJob
   def build_metadata(source_type, record)
     case source_type
     when 'canned_response'
-      { short_code: record.short_code }
+      # R3: la categoría la lee la búsqueda (R4); no entra al texto vectorizado (D2).
+      { short_code: record.short_code, category: record.category&.name }.compact
     when 'article' # @tickets_cases 2H
       { article_id: record.id, portal_id: record.portal_id, category_id: record.category_id,
         slug: record.slug, status: record.status }

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_06_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_06_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -292,6 +292,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_06_100000) do
     t.index ["scheduled_at"], name: "index_campaigns_on_scheduled_at"
   end
 
+  create_table "canned_response_categories", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.string "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_canned_categories_on_account_and_lower_name", unique: true
+    t.index ["account_id"], name: "index_canned_response_categories_on_account_id"
+  end
+
   create_table "canned_responses", id: :serial, force: :cascade do |t|
     t.integer "account_id", null: false
     t.string "short_code"
@@ -308,6 +318,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_06_100000) do
     t.string "embedding_status"
     t.string "embedding_error"
     t.datetime "embedded_at"
+    t.bigint "category_id"
+    t.index ["category_id"], name: "index_canned_responses_on_category_id"
   end
 
   create_table "case_ai_configs", force: :cascade do |t|
@@ -2535,6 +2547,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_06_100000) do
   add_foreign_key "ai_agent_attachments", "tracking_templates"
   add_foreign_key "assistant_threads", "accounts", on_delete: :cascade
   add_foreign_key "assistant_threads", "users", on_delete: :cascade
+  add_foreign_key "canned_response_categories", "accounts", on_delete: :cascade
+  add_foreign_key "canned_responses", "canned_response_categories", column: "category_id", on_delete: :nullify
   add_foreign_key "case_ai_configs", "accounts"
   add_foreign_key "case_categories", "case_types"
   add_foreign_key "case_events", "case_tasks", on_delete: :nullify

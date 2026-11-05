@@ -26,7 +26,7 @@ RSpec.describe 'Canned Responses API', type: :request do
 
         expect(response).to have_http_status(:success)
         # proyecto@respuestas_predefinidas R1: cada una trae además su embedding_state.
-        expect(response.parsed_body.map { |r| r.except('embedding_state') }).to eq(account.canned_responses.reload.as_json)
+        expect(response.parsed_body.map { |r| r.except('embedding_state', 'category_name') }).to eq(account.canned_responses.reload.as_json)
       end
 
       it 'returns all the canned responses the user searched for' do
@@ -43,7 +43,7 @@ RSpec.describe 'Canned Responses API', type: :request do
             as: :json
 
         expect(response).to have_http_status(:success)
-        expect(response.parsed_body.map { |r| r.except('embedding_state') }).to eq(
+        expect(response.parsed_body.map { |r| r.except('embedding_state', 'category_name') }).to eq(
           [cr3, cr2, cr1].map(&:reload).as_json
         )
       end

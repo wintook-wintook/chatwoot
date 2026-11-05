@@ -18,6 +18,14 @@ class CannedResponse extends ApiClient {
     return axios.get(this.url, { params });
   }
 
+  // R3: cambiar la categoría de varias (null = sin categoría).
+  assignCategory(ids, categoryId) {
+    return axios.post(`${this.url}/assign_category`, {
+      ids,
+      category_id: categoryId,
+    });
+  }
+
   destroyMany(ids) {
     return axios.post(`${this.url}/destroy_many`, { ids });
   }

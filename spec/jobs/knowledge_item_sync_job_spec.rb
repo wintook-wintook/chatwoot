@@ -34,6 +34,18 @@ RSpec.describe KnowledgeItemSyncJob do
     )
   end
 
+  it 'guarda la categoría en el vector, sin meterla al texto (D2)' do
+    con_openai
+    canned.update_columns(category_id: CannedResponseCategory.create!(account: account, name: 'PATITAS').id) # rubocop:disable Rails/SkipsModelValidations
+    stub_request(:post, url).to_return(status: 200, body: { data: [{ embedding: Array.new(1536, 0.1) }] }.to_json)
+
+    correr
+
+    item = KnowledgeItem.find_by(source_id: canned.id)
+    expect(item.metadata).to include('category' => 'PATITAS')
+    expect(item.content).to eq('PATITAS_CONSULTA: Cuesta $300')
+  end
+
   it 'una clave inválida o la cuota agotada no se reintentan: queda el motivo' do
     con_openai
     stub_request(:post, url).to_return(status: 401, body: { error: { code: 'invalid_api_key' } }.to_json)

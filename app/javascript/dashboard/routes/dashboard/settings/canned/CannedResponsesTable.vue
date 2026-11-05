@@ -10,8 +10,10 @@
 //   Seleccionadas (2): [Vectorizar] [Eliminar]                 ‹ 1 2 3 ›
 //
 // Editar y eliminar una abren los modales de siempre (los emite a Index.vue).
+// R3: columna, filtro y orden por categoría, y «Cambiar categoría» de las seleccionadas.
 // ============================================================================
 import CannedResponseAPI from 'dashboard/api/cannedResponse';
+import CategoryAPI from 'dashboard/api/cannedResponseCategory';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import { dynamicTime, messageStamp } from 'shared/helpers/timeHelper';
 import { useAlert } from 'dashboard/composables';
@@ -25,7 +27,9 @@ const POLL_MS = 4000;
 const MAX_POLLS = 15;
 const STATE_FILTERS = ['', 'not_ready', 'ready', 'pending', 'stale'];
 const PROMPT_FILTERS = ['', 'with', 'without'];
-const SORTS = ['short_code', 'created_at', 'updated_at'];
+const SORTS = ['short_code', 'category', 'created_at', 'updated_at'];
+// El valor del filtro y del «cambiar a» que significa «sin categoría».
+const NO_CATEGORY = 'none';
 
 export default {
   components: { TableFooter, EmbeddingState },
@@ -39,6 +43,9 @@ export default {
       query: '',
       state: '',
       prompt: '',
+      category: '',
+      categories: [],
+      bulkCategory: '',
       sort: 'short_code',
       order: 'asc',
       selected: [],
@@ -51,6 +58,7 @@ export default {
       sorts: SORTS,
       perPage: PER_PAGE,
       maxVectorize: MAX_VECTORIZE,
+      noCategory: NO_CATEGORY,
     };
   },
   computed: {
@@ -67,7 +75,9 @@ export default {
       return this.records.some(r => r.embedding_state === 'pending');
     },
     filtersActive() {
-      return Boolean(this.query.trim() || this.state || this.prompt);
+      return Boolean(
+        this.query.trim() || this.state || this.prompt || this.category
+      );
     },
   },
   watch: {
@@ -81,12 +91,16 @@ export default {
     prompt() {
       this.goTo(1);
     },
+    category() {
+      this.goTo(1);
+    },
     hasPending(pendiente) {
       if (pendiente) this.startPolling();
     },
   },
   mounted() {
     this.reload();
+    this.loadCategories();
   },
   beforeDestroy() {
     clearTimeout(this.searchTimer);
@@ -100,6 +114,7 @@ export default {
         q: this.query.trim() || undefined,
         state: this.state || undefined,
         prompt: this.prompt || undefined,
+        category: this.category || undefined,
         sort: this.sort,
         order: this.order,
       };
@@ -120,6 +135,34 @@ export default {
         this.isLoading = false;
       }
     },
+    async loadCategories() {
+      try {
+        const { data } = await CategoryAPI.get();
+        this.categories = data || [];
+      } catch (error) {
+        this.categories = [];
+      }
+    },
+    async assignSelected() {
+      if (!this.selected.length || !this.bulkCategory) return;
+      this.isBulkBusy = true;
+      const destino =
+        this.bulkCategory === NO_CATEGORY ? null : Number(this.bulkCategory);
+      try {
+        const { data } = await CannedResponseAPI.assignCategory(
+          this.selected,
+          destino
+        );
+        this.replace(data);
+        this.selected = [];
+        this.bulkCategory = '';
+        this.loadCategories();
+      } catch (error) {
+        useAlert(this.$t('CANNED_MGMT.CATEGORIES.SAVE_ERROR'));
+      } finally {
+        this.isBulkBusy = false;
+      }
+    },
     goTo(page) {
       this.page = page;
       this.reload();
@@ -129,7 +172,9 @@ export default {
         this.order = this.order === 'asc' ? 'desc' : 'asc';
       } else {
         this.sort = columna;
-        this.order = columna === 'short_code' ? 'asc' : 'desc';
+        this.order = ['short_code', 'category'].includes(columna)
+          ? 'asc'
+          : 'desc';
       }
       this.goTo(1);
     },
@@ -211,6 +256,7 @@ export default {
       this.query = '';
       this.state = '';
       this.prompt = '';
+      this.category = '';
     },
     relative(fecha) {
       return fecha ? dynamicTime(new Date(fecha).getTime() / 1000) : '—';
@@ -279,6 +325,25 @@ export default {
           </option>
         </select>
       </label>
+      <label
+        v-if="categories.length"
+        class="flex flex-col !mb-0 text-xs text-slate-500"
+      >
+        {{ $t('CANNED_MGMT.TABLE.FILTER_CATEGORY') }}
+        <select v-model="category" class="!mb-0 w-48">
+          <option value="">{{ $t('CANNED_MGMT.TABLE.STATE_ALL') }}</option>
+          <option :value="noCategory">
+            {{ $t('CANNED_MGMT.TABLE.NO_CATEGORY') }}
+          </option>
+          <option
+            v-for="categoria in categories"
+            :key="categoria.id"
+            :value="String(categoria.id)"
+          >
+            {{ categoria.name }}
+          </option>
+        </select>
+      </label>
       <woot-button
         v-if="filtersActive"
         variant="clear"
@@ -307,6 +372,25 @@ export default {
       >
         {{ $t('CANNED_MGMT.EMBEDDING.VECTORIZE') }}
       </woot-button>
+      <select
+        v-if="categories.length"
+        v-model="bulkCategory"
+        class="!mb-0 w-48"
+        :aria-label="$t('CANNED_MGMT.TABLE.BULK_CATEGORY')"
+        @change="assignSelected"
+      >
+        <option value="">{{ $t('CANNED_MGMT.TABLE.BULK_CATEGORY') }}</option>
+        <option :value="noCategory">
+          {{ $t('CANNED_MGMT.TABLE.NO_CATEGORY') }}
+        </option>
+        <option
+          v-for="categoria in categories"
+          :key="categoria.id"
+          :value="String(categoria.id)"
+        >
+          {{ categoria.name }}
+        </option>
+      </select>
       <woot-button
         size="small"
         variant="smooth"
@@ -377,6 +461,22 @@ export default {
             <th
               class="py-3 pr-4 text-left font-semibold text-slate-700 dark:text-slate-300"
             >
+              <button
+                type="button"
+                class="flex items-center gap-1"
+                @click="sortBy('category')"
+              >
+                {{ $t('CANNED_MGMT.TABLE.COL_CATEGORY') }}
+                <fluent-icon
+                  v-if="sortIcon('category')"
+                  :icon="sortIcon('category')"
+                  size="14"
+                />
+              </button>
+            </th>
+            <th
+              class="py-3 pr-4 text-left font-semibold text-slate-700 dark:text-slate-300"
+            >
               {{ $t('CANNED_MGMT.TABLE.COL_DATA_SOURCE') }}
             </th>
             <th
@@ -439,6 +539,15 @@ export default {
               <div class="line-clamp-2" :title="item.content">
                 {{ item.content }}
               </div>
+            </td>
+            <td class="py-3 pr-4 align-top whitespace-nowrap">
+              <span
+                v-if="item.category_name"
+                class="px-1.5 py-0.5 font-mono text-xs rounded bg-slate-100 dark:bg-slate-700"
+              >
+                {{ item.category_name }}
+              </span>
+              <span v-else class="text-slate-400">—</span>
             </td>
             <td class="py-3 pr-4 align-top">
               <EmbeddingState

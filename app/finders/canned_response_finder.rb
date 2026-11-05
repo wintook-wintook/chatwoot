@@ -10,7 +10,8 @@
 #   state    estado de vectorización (CannedResponse::EMBEDDING_STATES) o 'not_ready'
 #            (todas las que el agente no encontraría: missing, no_key, failed)
 #   prompt   'with' | 'without' (prompt propio o la respuesta es un prompt)
-#   sort     short_code | created_at | updated_at     order  asc | desc
+#   category id de la categoría, o 'none' (sin categoría)            (R3)
+#   sort     short_code | category | created_at | updated_at     order  asc | desc
 #   page / per_page (25 por omisión, hasta 100)
 #
 # El estado se filtra en SQL con las mismas reglas que CannedResponse#embedding_state:
@@ -19,7 +20,7 @@
 # ================================================================================
 
 class CannedResponseFinder
-  SORTS = %w[short_code created_at updated_at].freeze
+  SORTS = %w[short_code category created_at updated_at].freeze
   PER_PAGE = 25
   MAX_PER_PAGE = 100
   NOT_READY = %w[missing no_key failed].freeze
@@ -33,7 +34,7 @@ class CannedResponseFinder
   # summary: cuántas de TODA la cuenta no encontraría el agente, para el aviso de arriba.
   def perform
     scope = filtered
-    { records: scope.order(order_clause).offset((page - 1) * per_page).limit(per_page).to_a,
+    { records: ordered(scope).offset((page - 1) * per_page).limit(per_page).to_a,
       count: scope.count, page: page, per_page: per_page, summary: summary }
   end
 
@@ -51,6 +52,7 @@ class CannedResponseFinder
     scope = @account.canned_responses
     scope = search(scope)
     scope = by_prompt(scope)
+    scope = by_category(scope)
     by_state(scope)
   end
 
@@ -68,6 +70,14 @@ class CannedResponseFinder
     when 'with' then scope.where(con_prompt)
     when 'without' then scope.where.not(con_prompt)
     else scope
+    end
+  end
+
+  def by_category(scope)
+    case @params[:category].to_s
+    when '' then scope
+    when 'none' then scope.where(category_id: nil)
+    else scope.where(category_id: @params[:category].to_i)
     end
   end
 
@@ -99,10 +109,14 @@ class CannedResponseFinder
                  .where('knowledge_items.source_id = canned_responses.id').where.not(embedding: nil).arel.exists
   end
 
-  def order_clause
+  # Por categoría: las que no tienen van al final, y dentro de cada una por nombre.
+  def ordered(scope)
     columna = SORTS.include?(@params[:sort]) ? @params[:sort] : 'short_code'
-    direccion = @params[:order] == 'desc' ? :desc : :asc
-    { columna => direccion, :id => direccion }
+    direccion = @params[:order] == 'desc' ? 'DESC' : 'ASC'
+    return scope.order(columna => direccion.downcase.to_sym, :id => direccion.downcase.to_sym) unless columna == 'category'
+
+    scope.left_joins(:category)
+         .order(Arel.sql("canned_response_categories.name #{direccion} NULLS LAST, canned_responses.short_code ASC"))
   end
 
   def page = [@params[:page].to_i, 1].max

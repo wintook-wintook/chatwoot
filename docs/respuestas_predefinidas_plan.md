@@ -168,7 +168,7 @@ Mismos componentes que Contactos (`vue-easytable` + `TableFooter` con paginació
 | **R0** ✅ | Medir en dev y staging: cuántas predefinidas sin vector, cuántos agentes usan grupos, qué prefijos | §6.1 |
 | **R1** ✅ | Estado de vectorización + reintentos (§3, §4) + arreglo P3 | una cuenta sin OpenAI ve «no está en la fuente de datos»; al activarla, [Vectorizar] |
 | **R2** ✅ | Tabla nueva: paginación, orden, filtros, acciones (§5) | ordenar por fecha, filtrar «sin vectorizar» |
-| **R3** | Categorías: tabla, modal, columna, filtro, acciones en lote (§2.1, §2.3) | crear «PATITAS» y mover 14 |
+| **R3** ✅ | Categorías: tabla, modal, columna, filtro, acciones en lote (§2.1, §2.3) | crear «PATITAS» y mover 14 |
 | **R4** | Motor: `@buscar_predefinidas(X)` = categoría o prefijo, en las dos copias + spec (§2.2) | un agente con `(PATITAS)` encuentra igual antes y después |
 | **R5** | Protección: avisos al renombrar/borrar categoría, comprobador marca grupos vacíos | los 4 agentes de ADAM salen en rojo |
 
@@ -264,6 +264,39 @@ externo `WINTOOK_OPENAI` `setTraining`): R2 decide si se quita.
 
 **Pila de pruebas.** `canned_response_finder_spec` 4, `canned_responses_table_spec` 2;
 `CannedResponsesTable.spec` 4 (+ `EmbeddingState.spec` 4, `CannedResponseForm.spec` 9).
+
+---
+
+## 6.4 R3 — categorías ✅ (05/11/2026)
+
+**Qué se hizo.**
+- **Migración** `20261106110000` (idempotente): `canned_response_categories` (nombre único por
+  cuenta sin importar mayúsculas) y `canned_responses.category_id` (al borrar la categoría queda en
+  NULL: las respuestas no se borran).
+- **`CannedResponseCategory`**: el nombre no puede llevar paréntesis ni empezar con «!» (se escribe
+  en `@buscar_predefinidas(…)`). **D2**: asignar, cambiar, renombrar o borrar una categoría
+  actualiza `metadata.category` del vector **sin pedir embedding** (sin OpenAI); el job de
+  vectorizar la guarda ahí y no la mete al texto.
+- **Sugeridas (D3)** (`CannedResponses::CategorySuggestions`): el principio del nombre hasta el
+  primer espacio, «_» o «-» («01.VENTAS» entero), entre las que no tienen categoría, al menos 2, sin
+  palabras comunes («La», «Cómo», «Error»…), primero las que ya buscan los agentes. Cuenta 2 de
+  develop: **PATITAS** (14, la busca 1 agente), **SSUSA** (6), **DATOS** (2).
+- **API**: `canned_response_categories` (lista con cuántas tiene, crear —con `canned_ids` para
+  aceptar una sugerida—, renombrar, borrar, `suggestions`); `canned_responses/assign_category`
+  (hasta 100); `category_id` al crear/editar y `category_name` en cada una; filtro `category` (id
+  o `none`) y orden `category` (las sin categoría al final).
+- **Pantalla**: botón **«Categorías»** junto a «Agregar» (`CannedCategoriesModal.vue`: crear,
+  renombrar, eliminar con segundo clic, y «Sugeridas por los nombres» con [Crear y asignar]);
+  columna **Categoría** que ordena, filtro por categoría y **«Cambiar categoría…»** para las
+  seleccionadas; en el formulario, **Categoría** junto al nombre.
+
+**El motor todavía no cambia** (R4): `@buscar_predefinidas(PATITAS)` sigue buscando por el principio
+del nombre.
+
+**Pila de pruebas.** `canned_response_category_spec` 3, `category_suggestions_spec` 2,
+`canned_response_categories_spec` 4, `knowledge_item_sync_job_spec` +1; 39 en verde.
+`CannedCategoriesModal.spec` 4, `CannedResponsesTable.spec` +1, `CannedResponseForm.spec` +1 (1
+ajustada); 23 en verde.
 
 ---
 
