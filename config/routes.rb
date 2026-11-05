@@ -178,6 +178,7 @@ Rails.application.routes.draw do
             # proyecto@respuestas_predefinidas R1: meterlas a la fuente de datos (una o hasta 20)
             post :vectorize, on: :member
             post :vectorize, on: :collection, action: :vectorize_many
+            post :destroy_many, on: :collection
           end
           # Sinónimos nativos (esquema legacy wintook; reemplaza al servicio WINTOOK_BOT)
           resources :palabras_sinonimos, only: [:index, :create, :update, :destroy]

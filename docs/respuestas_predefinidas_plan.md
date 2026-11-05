@@ -167,7 +167,7 @@ Mismos componentes que Contactos (`vue-easytable` + `TableFooter` con paginació
 |---|---|---|
 | **R0** ✅ | Medir en dev y staging: cuántas predefinidas sin vector, cuántos agentes usan grupos, qué prefijos | §6.1 |
 | **R1** ✅ | Estado de vectorización + reintentos (§3, §4) + arreglo P3 | una cuenta sin OpenAI ve «no está en la fuente de datos»; al activarla, [Vectorizar] |
-| **R2** | Tabla nueva: paginación, orden, filtros, acciones (§5) | ordenar por fecha, filtrar «sin vectorizar» |
+| **R2** ✅ | Tabla nueva: paginación, orden, filtros, acciones (§5) | ordenar por fecha, filtrar «sin vectorizar» |
 | **R3** | Categorías: tabla, modal, columna, filtro, acciones en lote (§2.1, §2.3) | crear «PATITAS» y mover 14 |
 | **R4** | Motor: `@buscar_predefinidas(X)` = categoría o prefijo, en las dos copias + spec (§2.2) | un agente con `(PATITAS)` encuentra igual antes y después |
 | **R5** | Protección: avisos al renombrar/borrar categoría, comprobador marca grupos vacíos | los 4 agentes de ADAM salen en rojo |
@@ -236,6 +236,34 @@ Navegador: `EmbeddingState.spec` 4, `cannedResponses/actions.spec` 3.
 
 **Queda en la tabla** el botón «Generar/Eliminar Entrenamiento» del sistema anterior (servicio
 externo `WINTOOK_OPENAI` `setTraining`): R2 decide si se quita.
+
+---
+
+## 6.3 R2 — la tabla ✅ (05/11/2026)
+
+**Qué se hizo.**
+- **`CannedResponseFinder`** (servidor): `q` (nombre o contenido), `state` (estado de vectorización o
+  `not_ready` = las que el agente no encontraría), `prompt` (`with`/`without`), `sort`
+  (`short_code`, `created_at`, `updated_at`) + `order`, `page` / `per_page` (25, hasta 100). El
+  estado se filtra en SQL con las mismas reglas que `embedding_state`. `summary`: cuántas de TODA la
+  cuenta no están en la fuente de datos (para el aviso).
+- **API**: `GET canned_responses?page=…` → `{ payload, meta: { count, page, per_page, summary } }`;
+  **sin `page`, la lista completa de siempre** (el «/» del editor de mensajes no cambia).
+  `POST canned_responses/destroy_many { ids }` (hasta 100, solo de la cuenta).
+- **Pantalla** (`CannedResponsesTable.vue`): buscador, filtros «Fuente de datos» y «Prompt propio»,
+  columnas Nombre ▲▼ · Contenido · Fuente de datos · Creada ▲▼ · Cambió ▲▼ · Acciones, casillas
+  con «seleccionar las de esta página», barra de lote ([Vectorizar] hasta 20, [Eliminar] con
+  confirmación), paginación con el pie nativo `TableFooter`. Editar/eliminar una usan los modales
+  de siempre. Se usa una tabla con el estilo de la que ya había (no la de JSX de Contactos).
+- **Se quitó** el botón «Generar/Eliminar Entrenamiento» del sistema anterior (servicio externo
+  `WINTOOK_OPENAI` `setTraining`) y el código muerto de esa página (`fetchCannedResponses_v1`,
+  orden local); `Index.vue` pasó de 34 hallazgos de eslint a 0.
+
+**Probado en develop** (cuenta 2, finder): 24 en total; por «Cambió» las 4 primeras son SSUSA;
+«patitas» → 14; no listas → 0; con prompt → 1.
+
+**Pila de pruebas.** `canned_response_finder_spec` 4, `canned_responses_table_spec` 2;
+`CannedResponsesTable.spec` 4 (+ `EmbeddingState.spec` 4, `CannedResponseForm.spec` 9).
 
 ---
 

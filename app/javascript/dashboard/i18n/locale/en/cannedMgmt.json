@@ -10,7 +10,7 @@
       "404": "There are no canned responses available in this account.",
       "TITLE": "Manage canned responses",
       "DESC": "Canned Responses are predefined reply templates which can be used to quickly send out replies to conversations.",
-      "TABLE_HEADER": ["Short code", "Content", "Data source", "Actions"]
+      "TABLE_HEADER": ["Short code", "Content", "Actions"]
     },
     "ADD": {
       "TITLE": "Add canned response",
@@ -68,6 +68,36 @@
         "YES": "Yes, delete ",
         "NO": "No, keep "
       }
+    },
+    "TABLE": {
+      "LOAD_ERROR": "The canned responses could not be loaded.",
+      "SEARCH": "Search name or content…",
+      "FILTER_STATE": "Data source",
+      "FILTER_PROMPT": "Own prompt",
+      "STATE_ALL": "All",
+      "STATE_NOT_READY": "Not in the data source",
+      "STATE_READY": "In the data source",
+      "STATE_PENDING": "Vectorizing",
+      "STATE_STALE": "Outdated",
+      "PROMPT_ALL": "All",
+      "PROMPT_WITH": "With prompt",
+      "PROMPT_WITHOUT": "Without prompt",
+      "CLEAR_FILTERS": "Clear filters",
+      "SELECTED": "Selected: {count}",
+      "SELECT_ALL": "Select all on this page",
+      "DELETE_SELECTED": "Delete",
+      "TOO_MANY": "Up to {max} can be vectorized at a time.",
+      "NO_MATCH": "No response matches the filters.",
+      "COL_SHORT_CODE": "Name",
+      "COL_CONTENT": "Content",
+      "COL_DATA_SOURCE": "Data source",
+      "COL_CREATED_AT": "Created",
+      "COL_UPDATED_AT": "Changed",
+      "COL_ACTIONS": "Actions",
+      "BULK_DELETE_TITLE": "Delete canned responses",
+      "BULK_DELETE_MESSAGE": "{count} canned response(s) will be deleted. Agents will no longer find them.",
+      "BULK_DELETE_YES": "Yes, delete",
+      "BULK_DELETED": "{count} response(s) deleted."
     },
     "EMBEDDING": {
       "STATE_READY": "✓ In the data source",

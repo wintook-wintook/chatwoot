@@ -2,13 +2,21 @@
 # la fuente de datos del agente, ver CannedResponse::EMBEDDING_STATES) y `embedding_error`.
 #   POST …/canned_responses/:id/vectorize        [Vectorizar] / [Reintentar] de una
 #   POST …/canned_responses/vectorize { ids }    varias a la vez, hasta MAX_VECTORIZE (D4)
+# R2: GET …/canned_responses?page=N (+ q, state, prompt, sort, order, per_page) → la tabla,
+#   paginada: { payload: [...], meta: { count, page, per_page } } (CannedResponseFinder).
+#   Sin `page`, la lista completa como siempre: la usa el «/» del editor de mensajes.
 class Api::V1::Accounts::CannedResponsesController < Api::V1::Accounts::BaseController
   MAX_VECTORIZE = 20
 
   before_action :fetch_canned_response, only: [:update, :destroy, :vectorize]
+  MAX_DESTROY = 100
 
   def index
-    render json: with_embedding_state(canned_responses)
+    return render json: with_embedding_state(canned_responses) if params[:page].blank?
+
+    resultado = CannedResponseFinder.new(Current.account, params).perform
+    render json: { payload: with_embedding_state(resultado[:records]),
+                   meta: resultado.slice(:count, :page, :per_page, :summary) }
   end
 
   def create
@@ -25,6 +33,15 @@ class Api::V1::Accounts::CannedResponsesController < Api::V1::Accounts::BaseCont
   def vectorize
     @canned_response.queue_embedding!
     render json: with_embedding_state([@canned_response.reload]).first
+  end
+
+  # R2: eliminar varias desde la tabla.
+  def destroy_many
+    ids = Array(params[:ids]).map(&:to_i).uniq
+    return render json: { error: 'too_many', max: MAX_DESTROY }, status: :unprocessable_entity if ids.size > MAX_DESTROY
+
+    Current.account.canned_responses.where(id: ids).find_each(&:destroy!)
+    head :ok
   end
 
   def vectorize_many

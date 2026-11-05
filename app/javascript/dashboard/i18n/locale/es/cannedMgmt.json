@@ -10,7 +10,7 @@
       "404": "No hay respuestas predefinidas disponibles en esta cuenta.",
       "TITLE": "Gestionar respuestas predefinidas",
       "DESC": "Las Respuestas Predefinidas son plantillas de respuesta predefinidas que se pueden usar para enviar rápidamente respuestas a las conversaciones.",
-      "TABLE_HEADER": ["Código corto", "Contenido", "Fuente de datos", "Acciones"]
+      "TABLE_HEADER": ["Código corto", "Contenido", "Acciones"]
     },
     "ADD": {
       "TITLE": "Agregar respuesta predefinida",
@@ -68,6 +68,36 @@
         "YES": "Sí, eliminar ",
         "NO": "No, mantener "
       }
+    },
+    "TABLE": {
+      "LOAD_ERROR": "No se pudieron cargar las respuestas predefinidas.",
+      "SEARCH": "Buscar en el nombre o el contenido…",
+      "FILTER_STATE": "Fuente de datos",
+      "FILTER_PROMPT": "Prompt propio",
+      "STATE_ALL": "Todas",
+      "STATE_NOT_READY": "No están en la fuente de datos",
+      "STATE_READY": "En la fuente de datos",
+      "STATE_PENDING": "Vectorizando",
+      "STATE_STALE": "Desactualizadas",
+      "PROMPT_ALL": "Todas",
+      "PROMPT_WITH": "Con prompt",
+      "PROMPT_WITHOUT": "Sin prompt",
+      "CLEAR_FILTERS": "Quitar filtros",
+      "SELECTED": "Seleccionadas: {count}",
+      "SELECT_ALL": "Seleccionar todas las de esta página",
+      "DELETE_SELECTED": "Eliminar",
+      "TOO_MANY": "Se vectorizan hasta {max} a la vez.",
+      "NO_MATCH": "Ninguna respuesta coincide con los filtros.",
+      "COL_SHORT_CODE": "Nombre",
+      "COL_CONTENT": "Contenido",
+      "COL_DATA_SOURCE": "Fuente de datos",
+      "COL_CREATED_AT": "Creada",
+      "COL_UPDATED_AT": "Cambió",
+      "COL_ACTIONS": "Acciones",
+      "BULK_DELETE_TITLE": "Eliminar respuestas predefinidas",
+      "BULK_DELETE_MESSAGE": "Se eliminarán {count} respuesta(s) predefinida(s). Los agentes ya no las encontrarán.",
+      "BULK_DELETE_YES": "Sí, eliminar",
+      "BULK_DELETED": "Se eliminaron {count} respuesta(s)."
     },
     "EMBEDDING": {
       "STATE_READY": "✓ En la fuente de datos",
