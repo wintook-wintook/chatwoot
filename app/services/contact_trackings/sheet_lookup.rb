@@ -29,6 +29,7 @@
 
 class ContactTrackings::SheetLookup
   include ContactTrackings::SheetLookup::ServiceText
+  include ContactTrackings::SheetLookup::VariableValues
   extend ContactTrackings::SheetLookup::Describe
   DIRECTIVE_RE = /\{\{\s*hoja_buscar\s*:([^{}]*)\}\}/i
   ASK = '?'
@@ -120,11 +121,13 @@ class ContactTrackings::SheetLookup
 
   # text: (pieza 5) en vez de los mensajes, los «?» se buscan en este texto — el de UN servicio
   # («hiab 12 t»), porque en un mensaje con grúa y hiab cada uno busca su propio equipo.
-  def initialize(account, spec, conversation: nil, text: nil)
+  # variables: las del Agente IA en la conversación (ver SheetLookup::VariableValues).
+  def initialize(account, spec, conversation: nil, text: nil, variables: nil)
     @account = account
     @spec = spec
     @conversation = conversation
     @text = text
+    @variables = variables.to_h
   end
 
   def call
@@ -233,8 +236,7 @@ class ContactTrackings::SheetLookup
     return in_service_text(known) if @text
     return [] if @conversation.nil?
 
-    cliente, agente = recent_messages.partition(&:incoming?)
-    first_mention(cliente, known) || first_mention(agente, known) || []
+    conversation_values(column, known)
   end
 
   # Del más reciente al más viejo: los valores del primer mensaje que nombra alguno.

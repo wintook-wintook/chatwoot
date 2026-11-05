@@ -94,6 +94,60 @@ RSpec.describe ContactTrackings::SheetLookup do
     end
   end
 
+  describe 'con «?» y la VARIABLE del mismo nombre que la columna' do
+    def lookup_con(inner, variables)
+      described_class.new(account, described_class.parse(inner), conversation: conversation, variables: variables).call
+    end
+
+    it 'usa la variable aunque nadie la haya nombrado en los últimos mensajes' do
+      say('¿Y en la tarde?')
+
+      expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'la TP-63' }).found).to eq(['40.8'])
+    end
+
+    it 'si el cliente nombra otro, van los dos: el prompt decide' do
+      say('¿y la TP-64?')
+
+      expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'TP-63' }).found).to eq(%w[60 40.8])
+    end
+
+    it 'de los valores que nombra la variable se queda el más largo' do
+      GoogleSheetRow.create!(account: account, knowledge_source: source, row_index: 3,
+                             data: { 'remolque' => 'TP-63 Plus', 'peso_max_t' => '45', 'estatus' => 'activo', 'Calendar_ID' => 'x' })
+
+      expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'Remolque TP-63 Plus' }).found).to eq(['45'])
+    end
+
+    it 'con la variable VACÍO y nadie lo nombra, hay que preguntar' do
+      say('Quiero agendar un servicio')
+
+      expect(lookup_con('Servicio Gruas | remolque=? | Calendar_ID', { 'REMOLQUE' => 'VACÍO' }).status).to eq(:needs_value)
+    end
+
+    it 'con la variable VACÍO no toma lo que nombró el agente ni el cliente en turnos anteriores' do
+      say('Para el patio de la TP-64')
+      say('Le recomendamos la TP-64 o la TP-63', :outgoing)
+      say('¿Y cuánto aguanta?')
+
+      expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'VACÍO' }).status).to eq(:needs_value)
+    end
+
+    it 'con la variable VACÍO toma lo que el cliente nombró en su turno actual' do
+      say('¿Cuál remolque quiere?', :outgoing)
+      say('La TP-63')
+      say('¿Cuánto aguanta?')
+
+      expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'VACÍO' }).found).to eq(['40.8'])
+    end
+
+    it 'sin la variable declarada, lo de siempre (el agente sirve de respaldo)' do
+      say('Le recomendamos la TP-64', :outgoing)
+      say('¿Cuánto aguanta?')
+
+      expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'OTRA' => 'VACÍO' }).found).to eq(['60'])
+    end
+  end
+
   it 'nunca le llega al modelo que redacta: es configuración de la agenda' do
     texto = 'Agenda en su calendario. {{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}} Consulta {{hoja:Servicio Gruas}}.'
 
