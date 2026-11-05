@@ -169,7 +169,7 @@ Mismos componentes que Contactos (`vue-easytable` + `TableFooter` con paginació
 | **R1** ✅ | Estado de vectorización + reintentos (§3, §4) + arreglo P3 | una cuenta sin OpenAI ve «no está en la fuente de datos»; al activarla, [Vectorizar] |
 | **R2** ✅ | Tabla nueva: paginación, orden, filtros, acciones (§5) | ordenar por fecha, filtrar «sin vectorizar» |
 | **R3** ✅ | Categorías: tabla, modal, columna, filtro, acciones en lote (§2.1, §2.3) | crear «PATITAS» y mover 14 |
-| **R4** | Motor: `@buscar_predefinidas(X)` = categoría o prefijo, en las dos copias + spec (§2.2) | un agente con `(PATITAS)` encuentra igual antes y después |
+| **R4** ⏸ pendiente (05/11/2026, pedido del usuario) | Motor: `@buscar_predefinidas(X)` = categoría o prefijo, en las dos copias + spec (§2.2) | un agente con `(PATITAS)` encuentra igual antes y después |
 | **R5** | Protección: avisos al renombrar/borrar categoría, comprobador marca grupos vacíos | los 4 agentes de ADAM salen en rojo |
 
 ---
@@ -290,8 +290,10 @@ externo `WINTOOK_OPENAI` `setTraining`): R2 decide si se quita.
   columna **Categoría** que ordena, filtro por categoría y **«Cambiar categoría…»** para las
   seleccionadas; en el formulario, **Categoría** junto al nombre.
 
-**El motor todavía no cambia** (R4): `@buscar_predefinidas(PATITAS)` sigue buscando por el principio
-del nombre.
+**El motor todavía no cambia** (R4, **pendiente** por decisión del usuario el 05/11/2026):
+`@buscar_predefinidas(PATITAS)` sigue buscando por el principio del nombre. Al retomarlo: categoría
+o, si no existe, prefijo, en `KnowledgeBaseResponseService#grouped_items` y en
+`KnowledgeBase::CannedGroup` (amarradas por `canned_group_spec`), leyendo `metadata.category`.
 
 **Pila de pruebas.** `canned_response_category_spec` 3, `category_suggestions_spec` 2,
 `canned_response_categories_spec` 4, `knowledge_item_sync_job_spec` +1; 39 en verde.
