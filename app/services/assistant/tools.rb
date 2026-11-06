@@ -13,6 +13,7 @@
 class Assistant::Tools
   include Assistant::ToolRefs
   include Assistant::DelegationTools # D3
+  include Assistant::FollowUpTools # Seguimiento IA
   include Assistant::CaseTools # D4
   include Assistant::SalesTools # D5a
 
@@ -24,7 +25,7 @@ class Assistant::Tools
   PROPOSAL_TOOLS = %w[propose_note propose_task propose_meeting propose_scheduled_message propose_draft
                       propose_delegate propose_tracking_action propose_create_case propose_move_stage
                       propose_outcome propose_postpone propose_resume_case propose_update_opportunity
-                      propose_create_contact].freeze
+                      propose_create_contact propose_follow_up propose_follow_up_action].freeze
 
   def self.definitions = Assistant::ToolDefinitions::ALL
 

@@ -254,6 +254,16 @@ Rails.application.routes.draw do
             post :directs
             get :unread
           end
+          # Seguimiento IA — el agente nuevo con herramientas (Delegar a agente desde el caso y Dali)
+          resources :ai_follow_ups, only: [:index, :create] do
+            get :templates, on: :collection
+            get :context, on: :collection
+            member do
+              post :pause
+              post :resume
+              post :cancel
+            end
+          end
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
             post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada

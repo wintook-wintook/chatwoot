@@ -144,6 +144,39 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_06_110000) do
     t.index ["tracking_template_id"], name: "index_ai_agent_attachments_on_tracking_template_id"
   end
 
+  create_table "ai_follow_ups", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "contact_id"
+    t.bigint "case_ticket_id"
+    t.bigint "created_by_id"
+    t.text "objective", null: false
+    t.text "instructions"
+    t.string "status", default: "active", null: false
+    t.datetime "next_run_at"
+    t.integer "max_attempts", default: 3, null: false
+    t.integer "attempts", default: 0, null: false
+    t.integer "interval_value", default: 1, null: false
+    t.string "interval_unit", default: "days", null: false
+    t.string "on_finish", default: "notify", null: false
+    t.string "time_zone"
+    t.text "outcome"
+    t.text "last_error"
+    t.jsonb "log", default: [], null: false
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "template_name"
+    t.string "template_language"
+    t.index ["account_id"], name: "index_ai_follow_ups_on_account_id"
+    t.index ["case_ticket_id"], name: "index_ai_follow_ups_on_case_ticket_id"
+    t.index ["contact_id"], name: "index_ai_follow_ups_on_contact_id"
+    t.index ["conversation_id"], name: "index_ai_follow_ups_live_per_conversation", unique: true, where: "((status)::text = ANY ((ARRAY['active'::character varying, 'paused'::character varying])::text[]))"
+    t.index ["conversation_id"], name: "index_ai_follow_ups_on_conversation_id"
+    t.index ["created_by_id"], name: "index_ai_follow_ups_on_created_by_id"
+    t.index ["status", "next_run_at"], name: "index_ai_follow_ups_on_status_and_next_run_at"
+  end
+
   create_table "applied_slas", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "sla_policy_id", null: false
@@ -2545,6 +2578,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_06_110000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "ai_agent_attachments", "accounts"
   add_foreign_key "ai_agent_attachments", "tracking_templates"
+  add_foreign_key "ai_follow_ups", "accounts"
+  add_foreign_key "ai_follow_ups", "case_tickets"
+  add_foreign_key "ai_follow_ups", "contacts"
+  add_foreign_key "ai_follow_ups", "conversations"
+  add_foreign_key "ai_follow_ups", "users", column: "created_by_id"
   add_foreign_key "assistant_threads", "accounts", on_delete: :cascade
   add_foreign_key "assistant_threads", "users", on_delete: :cascade
   add_foreign_key "canned_response_categories", "accounts", on_delete: :cascade

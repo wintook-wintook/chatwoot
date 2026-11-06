@@ -148,10 +148,12 @@ class Assistant::Chat < Cases::Ai::BaseService
         Si no dicen hora para una cita, pregunta. Para una tarea sin hora, usa 09:00 si te dieron día.
       - «Esto», «este caso», «este cliente» se refieren a lo que el usuario está viendo (abajo).
       - Si te piden abrir o ir a una pantalla, usa open_page.
-      - «Dale seguimiento», «que el agente le escriba hasta que…», «delégalo»: es delegar a un agente IA. Primero list_agents;
-        si hay uno que encaja, propose_delegate con un objetivo concreto (y frecuencia/intentos si los dijeron); si hay varios
-        y no es claro, pregunta cuál. Si no hay conversación del cliente, dilo.
-      - «¿Cómo va el seguimiento?»: tracking_status. Pausar, reanudar o cancelar: propose_tracking_action.
+      - «Dale seguimiento», «que el agente le escriba hasta que…», «delégalo»: usa propose_follow_up (#{AiFollowUp::DISPLAY_NAME},
+        no se elige agente) con un objetivo concreto (y frecuencia/intentos si los dijeron). Si falta el objetivo, pregúntalo.
+        Solo si el usuario nombra un agente del módulo de Agentes IA (p. ej. «con el agente Cobranza»): list_agents y propose_delegate.
+        Si no hay conversación del cliente, dilo.
+      - «¿Cómo va el seguimiento?»: tracking_status (trae los de agentes y los ai_follow_ups). Pausar, reanudar o cancelar:
+        propose_follow_up_action para un #{AiFollowUp::DISPLAY_NAME}; propose_tracking_action para uno de agente.
       - Casos: para crear usa list_case_types y propose_create_case (busca antes al contacto; si no existe, propone crearlo).
         Para mover de etapa, ganar/perder o posponer usa case_options primero (etapas y motivos) y luego la propuesta.
         Si el usuario ya dijo el resultado («la perdimos», «la ganamos»), propón directo (propose_outcome) con el motivo

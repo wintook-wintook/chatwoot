@@ -40,6 +40,8 @@
       "FAILED": "Couldn't do it",
       "delegate": "Delegate follow-up",
       "tracking_action": "Follow-up",
+      "follow_up": "Delegate to AI follow-up",
+      "follow_up_action": "AI follow-up",
       "AGENT": "Agent",
       "OBJECTIVE": "Goal",
       "INSTRUCTION": "Extra instruction",
@@ -92,7 +94,8 @@
         "won": "Won",
         "lost": "Lost",
         "cancelled": "Cancelled"
-      }
+      },
+      "TEMPLATE": "Template"
     },
     "SETTINGS": {
       "TITLE": "Assistant",
@@ -115,6 +118,69 @@
       "scheduled": "scheduled",
       "active": "working",
       "paused": "paused"
+    },
+    "AI_FOLLOW_UP": {
+      "TITLE": "Delegate to AI follow-up",
+      "INTRO": "The agent writes to the customer in this conversation, answers questions with the company sources and lets you know when it's done.",
+      "OBJECTIVE": "What do you want to achieve?",
+      "OBJECTIVE_PLACEHOLDER": "E.g.: get the customer to confirm quote 1520, or learn why not",
+      "INSTRUCTIONS": "Instructions for the agent (optional): talk to it like a teammate",
+      "INSTRUCTIONS_PLACEHOLDER": "E.g.: Customer since 2020, be formal. Interested in the yearly plan; if they ask for a discount, say you will review it. For support questions, answer with the canned responses. Do not offer the monthly plan.",
+      "START": "When to start",
+      "START_NOW": "Now",
+      "START_AT": "On a date",
+      "ATTEMPTS": "Retry up to",
+      "ATTEMPTS_SUFFIX": "times without reply",
+      "EVERY": "Every",
+      "UNITS": {
+        "minutes": "minutes",
+        "hours": "hours",
+        "days": "days"
+      },
+      "ON_FINISH": "When finished",
+      "ON_FINISH_NOTIFY": "Notify me",
+      "ON_FINISH_ASSIGN": "Notify me and assign me the conversation",
+      "SUBMIT": "Delegate",
+      "CANCEL": "Cancel",
+      "CREATED": "Done: AI follow-up working",
+      "FAILED": "Could not delegate",
+      "NEED_OBJECTIVE": "Write what you want to achieve",
+      "STATUS_LINE": "AI follow-up · {status}",
+      "NEXT": "next contact {at}",
+      "ATTEMPTS_LINE": "attempts {n}/{max}",
+      "PAUSE": "Pause",
+      "RESUME": "Resume",
+      "STOP": "Cancel",
+      "STOP_CONFIRM": "Cancel the AI follow-up? The agent will stop writing to the customer.",
+      "LAST_ERROR": "Last problem: {error}",
+      "STATUS": {
+        "active": "working",
+        "paused": "paused",
+        "done": "achieved",
+        "failed": "closed without success",
+        "handed_off": "needs a person",
+        "no_response": "no reply",
+        "blocked": "could not write",
+        "cancelled": "cancelled"
+      },
+      "TEMPLATE": "Template to reopen WhatsApp (24 h window closed)",
+      "TEMPLATE_AUTO": "Let the agent pick the best one",
+      "TEMPLATE_HELP": "The agent picks among {n} approved templates and fills in their variables with real data.",
+      "TEMPLATE_NONE": "This inbox has no approved templates the agent can use: if the window is closed, you will be notified.",
+      "LAST_TEMPLATE": "last template: {name}",
+      "BUTTON": "Delegate follow-up",
+      "BUTTON_HINT": "The AI agent follows up with the customer for you: writes, answers from company sources and uses templates when the WhatsApp window is closed",
+      "LEGACY": "Previous view",
+      "LEGACY_HINT": "Open the classic follow-up agent (agents from the AI Agents module)",
+      "CONVERSATION": "Conversation the agent works in",
+      "IN_CONVERSATION": "conversation #{id}",
+      "NO_CONVERSATIONS": "This contact has no conversations: the agent needs one to write to them.",
+      "AI_NOTE": "What the agent knows about the customer (contact AI note)",
+      "AI_NOTE_EDIT": "Edit on the contact page",
+      "AI_NOTE_NONE": "This contact has no AI note.",
+      "AI_NOTE_ADD": "Add it on the contact page",
+      "SOURCES_NONE": "The company has no canned responses: if the customer asks something not in the AI note, it will hand it to a person.",
+      "SOURCES_CANNED": "To answer questions it checks the company canned responses and the contact AI note."
     }
   }
 }

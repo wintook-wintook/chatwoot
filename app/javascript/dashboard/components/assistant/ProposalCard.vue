@@ -15,6 +15,9 @@ const ICONS = {
   draft: 'edit',
   delegate: 'bot',
   tracking_action: 'bot',
+  // Seguimiento IA — el agente nuevo
+  follow_up: 'bot',
+  follow_up_action: 'bot',
   // D4 — casos y clientes
   create_case: 'add',
   move_stage: 'arrow-swap',
@@ -96,6 +99,15 @@ export default {
     pending() {
       return this.proposal.status === 'pending';
     },
+    // Delegar a un agente del módulo o al Seguimiento IA: la misma tarjeta.
+    isDelegate() {
+      return this.type === 'delegate' || this.type === 'follow_up';
+    },
+    isAction() {
+      return (
+        this.type === 'tracking_action' || this.type === 'follow_up_action'
+      );
+    },
   },
   methods: {
     t(key, params) {
@@ -104,6 +116,14 @@ export default {
     // Solo los campos que se ven en la tarjeta de ese tipo.
     payload() {
       const f = this.form;
+      const delegate = {
+        objective: f.objective,
+        instruction: f.instruction,
+        starts_at: toIso(f.first_at),
+        max_attempts: Number(f.max_attempts),
+        interval_value: Number(f.interval_value),
+        interval_unit: f.interval_unit,
+      };
       return {
         note: { content: f.content },
         task: { title: f.title, due_at: toIso(f.due_at) },
@@ -115,15 +135,10 @@ export default {
         },
         scheduled_message: { content: f.content, send_at: toIso(f.send_at) },
         draft: { content: f.content },
-        delegate: {
-          objective: f.objective,
-          instruction: f.instruction,
-          starts_at: toIso(f.first_at),
-          max_attempts: Number(f.max_attempts),
-          interval_value: Number(f.interval_value),
-          interval_unit: f.interval_unit,
-        },
+        delegate,
+        follow_up: delegate,
         tracking_action: {},
+        follow_up_action: {},
         create_case: { title: f.title },
         move_stage: { column_id: f.column_id },
         outcome: {
@@ -205,25 +220,26 @@ export default {
     </div>
 
     <!-- D3 — delegar: agente, cliente y conversación -->
-    <template v-if="type === 'delegate' || type === 'tracking_action'">
+    <template v-if="isDelegate || isAction">
       <p v-if="labels.agent" class="m-0 text-xs text-slate-500">
         {{ t('AGENT') }}:
         <span class="font-medium text-slate-700 dark:text-slate-200">{{
           labels.agent
         }}</span>
       </p>
-      <p
-        v-if="type === 'tracking_action'"
-        class="m-0 text-sm text-slate-700 dark:text-slate-200"
-      >
+      <p v-if="labels.template" class="m-0 text-xs text-slate-500">
+        {{ t('TEMPLATE') }}:
+        <span class="font-medium text-slate-700 dark:text-slate-200">{{
+          labels.template
+        }}</span>
+      </p>
+      <p v-if="isAction" class="m-0 text-sm text-slate-700 dark:text-slate-200">
         {{ t(`ACTIONS.${proposal.payload.action}`) }}
         <template v-if="labels.target"> · {{ labels.target }}</template>
       </p>
     </template>
     <p
-      v-if="
-        (labels.target || labels.conversation) && type !== 'tracking_action'
-      "
+      v-if="(labels.target || labels.conversation) && !isAction"
       class="m-0 text-xs text-slate-500"
     >
       {{ labels.target ? t('TARGET') : t('CONVERSATION') }}:
@@ -293,7 +309,7 @@ export default {
         {{ t('LOCATION') }}
         <input v-model="form.location" type="text" class="h-8 text-sm" />
       </label>
-      <template v-if="type === 'delegate'">
+      <template v-if="isDelegate">
         <label class="text-xs">
           {{ t('OBJECTIVE') }}
           <textarea v-model="form.objective" rows="2" class="text-sm" />

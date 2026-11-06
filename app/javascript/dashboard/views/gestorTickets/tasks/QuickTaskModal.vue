@@ -22,6 +22,8 @@ export default {
   components: { OrganizationContactFields },
   props: {
     show: { type: Boolean, default: false },
+    // Desde el panel del contacto: el contacto ya elegido.
+    presetContact: { type: Object, default: null },
   },
   emits: ['close'],
   data() {
@@ -67,7 +69,7 @@ export default {
       this.time = '';
       this.isVisit = false;
       this.address = '';
-      this.contact = null;
+      this.contact = this.presetContact || null;
       this.organization = null;
       this.$store.dispatch('agents/get');
     },
