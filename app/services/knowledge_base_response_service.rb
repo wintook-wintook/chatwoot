@@ -600,7 +600,10 @@ class KnowledgeBaseResponseService
     return if switch.from.none? { |valor| ContactTrackings::SheetNumbers.names?(actual, valor) }
 
     value = definition.coerce(variable[:name], switch.to)
-    ContactTrackings::ConversationVariables.apply!(@tracking, @conversation, variable[:name] => value) if value
+    return if value.nil?
+
+    resets = ContactTrackings::ConversationVariables::SwitchResets.for(@tracking, variable[:name])
+    ContactTrackings::ConversationVariables.apply!(@tracking, @conversation, resets.merge(variable[:name] => value))
   end
 
   # Las VARIABLES del agente en esta conversación, para que un «carrera=?» use CARRERA.

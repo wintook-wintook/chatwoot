@@ -65,7 +65,19 @@ RSpec.describe KnowledgeBaseResponseService do
   end
 
   describe 'cambio de carrera que el modelo no escribió (SheetLookup::Switch)' do
-    let(:tracking) { tracking_con(con_variables) }
+    let(:tracking) do
+      tracking_con(<<~PROMPT)
+        Agente de admisiones.
+        - Si nombra otra carrera: CARRERA=la nueva, PRECIO_DADO=NO, SIGUIENTE_OFERTA=PRIMERA_BECA.
+
+        [VARIABLES]
+        CARRERA=VACÍO|valor
+        PRECIO_DADO=NO|SÍ
+        SIGUIENTE_OFERTA=PRIMERA_BECA|SEGUNDA_BECA|AGOTADA
+        ASESOR=NO|SÍ
+        Inicial: CARRERA=VACÍO; PRECIO_DADO=NO; SIGUIENTE_OFERTA=PRIMERA_BECA; ASESOR=NO.
+      PROMPT
+    end
     let(:switch) do
       ContactTrackings::SheetLookup::Switch.new(variable: 'CARRERA', to: 'Derecho', from: ['Relaciones Internacionales'])
     end
@@ -82,10 +94,13 @@ RSpec.describe KnowledgeBaseResponseService do
       described_class.new(message, tracking: tracking, branch: nil).send(:follow_switch, switch, respuesta)
     end
 
-    it 'si la respuesta ya habla de la nueva, la guarda' do
+    it 'si la respuesta ya habla de la nueva, la guarda y reinicia lo que el prompt pide' do
+      ContactTrackings::ConversationVariables.apply!(tracking, conversation, 'PRECIO_DADO' => 'SÍ', 'SIGUIENTE_OFERTA' => 'AGOTADA',
+                                                                             'ASESOR' => 'SÍ')
       seguir("La Licenciatura en Derecho cuesta $3,221 por materia.\nVARIABLES: CARRERA=Licenciatura en Relaciones Internacionales")
 
-      expect(carrera).to eq('Derecho')
+      expect(ContactTrackings::ConversationVariables.current(tracking, conversation.reload))
+        .to include('CARRERA' => 'Derecho', 'PRECIO_DADO' => 'NO', 'SIGUIENTE_OFERTA' => 'PRIMERA_BECA', 'ASESOR' => 'SÍ')
     end
 
     it 'si la respuesta sigue en la anterior, no la cambia' do
