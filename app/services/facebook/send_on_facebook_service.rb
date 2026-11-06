@@ -67,10 +67,20 @@ class Facebook::SendOnFacebookService < Base::SendOnChannelService
   def fb_text_message_params
     {
       recipient: { id: contact.get_source_id(inbox.id) },
-      message: fb_text_message_payload,
-      messaging_type: 'MESSAGE_TAG',
-      tag: 'ACCOUNT_UPDATE'
-    }
+      message: fb_text_message_payload
+    }.merge(messaging_type_params)
+  end
+
+  # Meta retiró las etiquetas ACCOUNT_UPDATE, POST_PURCHASE_UPDATE y
+  # CONFIRMED_EVENT_UPDATE: cualquier envío con ellas vuelve con "Invalid parameter"
+  # (subcode 1893061), incluso dentro de las 24 h. Dentro de la ventana basta con una
+  # respuesta normal; fuera de ella solo queda HUMAN_AGENT, que cubre hasta 7 días y
+  # exige que la app tenga aprobado el permiso "Human Agent".
+  # @see https://developers.facebook.com/docs/messenger-platform/send-messages/message-tags
+  def messaging_type_params
+    return { messaging_type: 'RESPONSE' } if conversation.last_message_in_messaging_window?(24)
+
+    { messaging_type: 'MESSAGE_TAG', tag: 'HUMAN_AGENT' }
   end
 
   # Una pregunta con opciones (`input_select`, la que hacen los bots) viajaba a Messenger
@@ -116,10 +126,8 @@ class Facebook::SendOnFacebookService < Base::SendOnChannelService
             url: attachment.download_url
           }
         }
-      },
-      messaging_type: 'MESSAGE_TAG',
-      tag: 'ACCOUNT_UPDATE'
-    }
+      }
+    }.merge(messaging_type_params)
   end
 
   def attachment_type(attachment)
