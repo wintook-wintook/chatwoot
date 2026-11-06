@@ -139,8 +139,8 @@ class CaseTicketsAPI extends ApiClient {
   }
 
   // @tickets_cases — reapertura de un ticket cerrado (motivo obligatorio)
-  reopen(ticketId, reason) {
-    return axios.patch(`${this.url}/${ticketId}/reopen`, { reason });
+  reopen(ticketId, reason, extra = {}) {
+    return axios.patch(`${this.url}/${ticketId}/reopen`, { reason, ...extra });
   }
 
   getMetrics(params = {}) {
@@ -217,6 +217,13 @@ class CaseTicketsAPI extends ApiClient {
 
   unlock(ticketId) {
     return axios.patch(`${this.url}/${ticketId}/unlock`);
+  }
+
+  // K1 — quién más está en el caso (señal cada 30 s; `leaving` al salir).
+  presence(ticketId, leaving = false) {
+    return axios.get(`${this.url}/${ticketId}/presence`, {
+      params: leaving ? { leaving: true } : {},
+    });
   }
 }
 

@@ -24,7 +24,9 @@ module Assistant::DelegationTools
   def tool_tracking_status(args)
     contact = delegation_contact(args)
     trackings = ContactTracking.where(account_id: @account.id).where(contact_id: contact.id).order(created_at: :desc).limit(5)
-    { contact: contact.name, trackings: trackings.map { |t| tracking_ref(t) } }
+    follow_ups = AiFollowUp.where(account_id: @account.id, contact_id: contact.id).order(created_at: :desc).limit(5)
+    { contact: contact.name, trackings: trackings.map { |t| tracking_ref(t) },
+      ai_follow_ups: follow_ups.map { |f| follow_up_ref(f) } }
   rescue ArgumentError => e
     { error: e.message }
   end

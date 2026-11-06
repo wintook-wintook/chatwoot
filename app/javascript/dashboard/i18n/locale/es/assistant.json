@@ -40,6 +40,8 @@
       "FAILED": "No se pudo",
       "delegate": "Delegar seguimiento",
       "tracking_action": "Seguimiento",
+      "follow_up": "Delegar a Seguimiento IA",
+      "follow_up_action": "Seguimiento IA",
       "AGENT": "Agente",
       "OBJECTIVE": "Objetivo",
       "INSTRUCTION": "Instrucción extra",
@@ -92,7 +94,8 @@
         "won": "Ganada",
         "lost": "Perdida",
         "cancelled": "Cancelada"
-      }
+      },
+      "TEMPLATE": "Plantilla"
     },
     "SETTINGS": {
       "TITLE": "Asistente",
@@ -115,6 +118,69 @@
       "scheduled": "programado",
       "active": "trabajando",
       "paused": "en pausa"
+    },
+    "AI_FOLLOW_UP": {
+      "TITLE": "Delegar a Seguimiento IA",
+      "INTRO": "El agente le escribe al cliente por esta conversación, contesta sus dudas con las fuentes de la empresa y te avisa al terminar.",
+      "OBJECTIVE": "¿Qué quieres lograr?",
+      "OBJECTIVE_PLACEHOLDER": "Ej.: que confirme la cotización 1520 o saber por qué no",
+      "INSTRUCTIONS": "Indicaciones para el agente (opcional): háblale como a un compañero",
+      "INSTRUCTIONS_PLACEHOLDER": "Ej.: Es cliente desde 2020, háblale de usted. Le interesa el plan anual; si pide descuento, dile que lo revisas tú. Si pregunta por soporte, contesta con las respuestas predefinidas. No le ofrezcas el plan mensual.",
+      "START": "Cuándo empezar",
+      "START_NOW": "Ahora",
+      "START_AT": "En una fecha",
+      "ATTEMPTS": "Insistir hasta",
+      "ATTEMPTS_SUFFIX": "veces sin respuesta",
+      "EVERY": "Cada",
+      "UNITS": {
+        "minutes": "minutos",
+        "hours": "horas",
+        "days": "días"
+      },
+      "ON_FINISH": "Al terminar",
+      "ON_FINISH_NOTIFY": "Avisarme",
+      "ON_FINISH_ASSIGN": "Avisarme y asignarme la conversación",
+      "SUBMIT": "Delegar",
+      "CANCEL": "Cancelar",
+      "CREATED": "Listo: Seguimiento IA trabajando",
+      "FAILED": "No se pudo delegar",
+      "NEED_OBJECTIVE": "Escribe qué quieres lograr",
+      "STATUS_LINE": "Seguimiento IA · {status}",
+      "NEXT": "próximo contacto {at}",
+      "ATTEMPTS_LINE": "intentos {n}/{max}",
+      "PAUSE": "Pausar",
+      "RESUME": "Reanudar",
+      "STOP": "Cancelar",
+      "STOP_CONFIRM": "¿Cancelar el Seguimiento IA? El agente deja de escribirle al cliente.",
+      "LAST_ERROR": "Último problema: {error}",
+      "STATUS": {
+        "active": "trabajando",
+        "paused": "en pausa",
+        "done": "cumplido",
+        "failed": "cerrado sin éxito",
+        "handed_off": "pide una persona",
+        "no_response": "sin respuesta",
+        "blocked": "no pudo escribir",
+        "cancelled": "cancelado"
+      },
+      "TEMPLATE": "Plantilla para reabrir WhatsApp (ventana de 24 h cerrada)",
+      "TEMPLATE_AUTO": "Que el agente elija la más conveniente",
+      "TEMPLATE_HELP": "El agente elige entre {n} plantillas aprobadas y llena sus variables con datos reales.",
+      "TEMPLATE_NONE": "Esta bandeja no tiene plantillas aprobadas que el agente pueda usar: si la ventana está cerrada, te avisará.",
+      "LAST_TEMPLATE": "última plantilla: {name}",
+      "BUTTON": "Delegar seguimiento",
+      "BUTTON_HINT": "El agente IA le da seguimiento al cliente por ti: le escribe, contesta con las fuentes de la empresa y usa plantillas si la ventana de WhatsApp está cerrada",
+      "LEGACY": "Vista anterior",
+      "LEGACY_HINT": "Abrir el agente de seguimiento de siempre (agentes del módulo de Agentes IA)",
+      "CONVERSATION": "Conversación donde trabaja el agente",
+      "IN_CONVERSATION": "conversación #{id}",
+      "NO_CONVERSATIONS": "Este contacto no tiene conversaciones: el agente necesita una para escribirle.",
+      "AI_NOTE": "Lo que el agente sabe del cliente (nota IA del contacto)",
+      "AI_NOTE_EDIT": "Editar en la ficha",
+      "AI_NOTE_NONE": "Este contacto no tiene nota IA.",
+      "AI_NOTE_ADD": "Agregarla en la ficha",
+      "SOURCES_NONE": "La empresa no tiene respuestas predefinidas: si el cliente pregunta algo que no está en la nota IA, lo pasará a una persona.",
+      "SOURCES_CANNED": "Para contestar dudas consulta las respuestas predefinidas de la empresa y la nota IA del contacto."
     }
   }
 }

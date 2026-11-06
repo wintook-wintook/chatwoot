@@ -44,9 +44,11 @@ import ScheduleMessageModal from 'dashboard/components/widgets/conversation/Sche
 import CreateEventModal from 'dashboard/components/GoogleCalendar/CreateEventModal.vue'; // google_calendar
 import { FEATURE_FLAGS } from 'dashboard/featureFlags'; // google_calendar
 import { backQuery } from 'dashboard/views/gestorTickets/backLink'; // Plan-Catalogo-Cotizaciones
+import QuickTaskModal from 'dashboard/views/gestorTickets/tasks/QuickTaskModal.vue'; // crear tarea desde el panel
 
 export default {
   components: {
+    QuickTaskModal,
     ContactOwnerField,
     ContactOptOutField,
     ContactProspectScore,
@@ -109,6 +111,7 @@ export default {
       showEditModal: false,
       showConversationModal: false,
       showMergeModal: false,
+      showTaskModal: false,
       showDeleteModal: false,
       showNotesCrudModal: false, // proyecto@contacts_notes
       showCreateEventModal: false, // google_calendar
@@ -136,7 +139,9 @@ export default {
       return this.$store.getters['integrations/getAppIntegrations'];
     },
     crmzeusIntegration() {
-      return this.integrations.find(integration => integration.id === 'crmzeus');
+      return this.integrations.find(
+        integration => integration.id === 'crmzeus'
+      );
     },
     isIntegrationEnabled() {
       return this.crmzeusIntegration?.enabled || false;
@@ -147,42 +152,86 @@ export default {
     },
     // Acciones que no son las principales (Mensaje, Editar): van en «Más».
     moreActions() {
+      // Programar mensaje, cotizar y crear tarea van a la vista, como íconos (panelActions).
+      // 2026-11-06: se quitaron de aquí Mensaje, Nueva conversación (privada con otro contacto) y
+      // Crear evento de calendario; la nota privada quedó solo en la ficha del contacto.
       const list = [
-        { key: 'merge', icon: 'merge', label: this.$t('CONTACT_PANEL.MERGE_CONTACT'), disabled: this.uiFlags.isMerging },
-        { key: 'notes', icon: 'document', label: this.$t('NOTES.HEADER.TITLE') },
+        {
+          key: 'merge',
+          icon: 'merge',
+          label: this.$t('CONTACT_PANEL.MERGE_CONTACT'),
+          disabled: this.uiFlags.isMerging,
+        },
       ];
-      if (this.conversationId) {
-        list.push({ key: 'schedule', icon: 'clock', label: this.$t('CONTACT_PANEL.ACTIONS.SCHEDULE') });
-        list.push({ key: 'fromContacts', icon: 'chat', label: this.$t('NEW_CONVERSATION.FROM_CONTACTS.BUTTON') });
-      } else {
-        list.push({ key: 'private', icon: 'lock-closed', label: this.$t('CONTACT_PANEL.PRIVATE_CONVERSATION') });
-      }
-      // Plan-Catalogo-Cotizaciones — cotizar desde la conversación o el contacto.
-      if (this.isFeatureEnabledonAccount(this.accountId, FEATURE_FLAGS.CASE_MANAGEMENT)) {
-        list.push({ key: 'quote', icon: 'document', label: this.$t('QUOTES.PANEL.NEW') });
-      }
-      if (this.showCalendarButton) {
-        list.push({ key: 'calendar', icon: 'calendar', label: this.$t('GOOGLE_CALENDAR.CREATE_FROM_CONVERSATION') });
-      }
       if (this.isAdmin) {
-        list.push({ key: 'delete', icon: 'delete', label: this.$t('DELETE_CONTACT.BUTTON_LABEL'), danger: true, disabled: this.uiFlags.isDeleting });
+        list.push({
+          key: 'delete',
+          icon: 'delete',
+          label: this.$t('DELETE_CONTACT.BUTTON_LABEL'),
+          danger: true,
+          disabled: this.uiFlags.isDeleting,
+        });
       }
       return list;
     },
+    // Panel de la conversación: las acciones de todos los días, solo ícono (con su nombre
+    // al pasar el mouse), en la línea de la foto: editar, tarea, cotizar, programar mensaje, notas y «···».
+    // «Mensaje» (conversación nueva) solo está en la ficha del contacto.
+    panelActions() {
+      const cases = this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.CASE_MANAGEMENT
+      );
+      return [
+        {
+          key: 'edit',
+          icon: 'edit',
+          label: this.$t('CONTACT_PANEL.ACTIONS.EDIT'),
+        },
+        cases && {
+          key: 'task',
+          icon: 'checkmark-circle',
+          label: this.$t('CONTACT_PANEL.ACTIONS.TASK'),
+        },
+        cases && {
+          key: 'quote',
+          icon: 'receipt',
+          label: this.$t('QUOTES.PANEL.NEW'),
+        },
+        this.conversationId && {
+          key: 'schedule',
+          icon: 'clock',
+          label: this.$t('CONTACT_PANEL.ACTIONS.SCHEDULE'),
+        },
+        {
+          key: 'notes',
+          icon: 'document',
+          label: this.$t('NOTES.HEADER.TITLE'),
+        },
+      ].filter(Boolean);
+    },
     // Página del contacto: en el encabezado lo que se hace CON el contacto;
     // lo que se crea PARA él (caso, cotización, nota) está en su pestaña.
-    //   Mensaje ▾ → hablar con él (la flecha: conversación privada, interna)
+    //   Mensaje → hablar con él · Nueva nota privada → conversación privada, interna
     //   Editar    → sus datos
     //   ···       → lo delicado y poco frecuente (fusionar, eliminar)
-    headerMessageActions() {
-      return [{ key: 'private', icon: 'lock-closed', label: this.$t('CONTACT_PANEL.PRIVATE_CONVERSATION') }];
-    },
     headerMoreActions() {
       const list = [
-        { key: 'merge', icon: 'merge', label: this.$t('CONTACT_PANEL.MERGE_CONTACT'), disabled: this.uiFlags.isMerging },
+        {
+          key: 'merge',
+          icon: 'merge',
+          label: this.$t('CONTACT_PANEL.MERGE_CONTACT'),
+          disabled: this.uiFlags.isMerging,
+        },
       ];
       if (this.isAdmin) {
-        list.push({ key: 'delete', icon: 'delete', label: this.$t('DELETE_CONTACT.BUTTON_LABEL'), danger: true, disabled: this.uiFlags.isDeleting });
+        list.push({
+          key: 'delete',
+          icon: 'delete',
+          label: this.$t('DELETE_CONTACT.BUTTON_LABEL'),
+          danger: true,
+          disabled: this.uiFlags.isDeleting,
+        });
       }
       return list;
     },
@@ -197,6 +246,26 @@ export default {
     },
     additionalAttributes() {
       return this.contact.additional_attributes || {};
+    },
+    // Empresa · ubicación, en una línea bajo el nombre (antes eran dos renglones).
+    subtitle() {
+      return [
+        this.additionalAttributes.company_name,
+        this.location || this.additionalAttributes.location,
+      ]
+        .filter(Boolean)
+        .join(' · ');
+    },
+    crmzeusContactId() {
+      return (
+        Number((this.contact.custom_attributes || {}).idcontacto_crmzeus) || 0
+      );
+    },
+    crmzeusOrganizationId() {
+      return (
+        Number((this.contact.custom_attributes || {}).idorganizacion_crmzeus) ||
+        0
+      );
     },
     idContactoCRMzeus() {
       const { custom_attributes = {} } = this.contact || {};
@@ -247,7 +316,10 @@ export default {
     showCalendarButton() {
       return !!(
         this.conversationId &&
-        this.isFeatureEnabledonAccount(this.accountId, FEATURE_FLAGS.GOOGLE_CALENDAR)
+        this.isFeatureEnabledonAccount(
+          this.accountId,
+          FEATURE_FLAGS.GOOGLE_CALENDAR
+        )
       );
     },
     calendarPrefillEmail() {
@@ -256,14 +328,14 @@ export default {
   },
   watch: {
     async contact() {
-      this.initializeContactData(); //Sincronizador
+      this.initializeContactData(); // Sincronizador
       // const kanbanInfo = await this.$store.dispatch(
       //   'kanbanTypeProcesses/getConversationKanbanInfo',
       //   this.currentChat.id
       // );
       // this.kanbanTypeProcess = kanbanInfo.kanban_type_process_id || 0;
       // console.log(`this.kanbanTypeProcess ???? ${this.kanbanTypeProcess}`)
-    }
+    },
   },
   async mounted() {
     // Primero ejecuta la acción y espera a que termine
@@ -282,6 +354,12 @@ export default {
     console.log('CRMZeus encontrado:', this.crmzeusIntegration);
     console.log('¿Está habilitado?:', this.isIntegrationEnabled);
   },
+  // Escuchar eventos del mixin
+  created() {
+    this.$on('contact-found-in-crm', found => {
+      this.contactFoundInCRM = found;
+    });
+  },
   methods: {
     dynamicTime,
     async testGetConversation() {
@@ -296,9 +374,10 @@ export default {
         });
 
         // Verificar la conversación específica
-        const conv = this.$store.state.conversations.allConversations.find(c => c.display_id === 8);
+        const conv = this.$store.state.conversations.allConversations.find(
+          c => c.display_id === 8
+        );
         console.log('Conversación display_id 8 después de cargar:', conv);
-
       } catch (error) {
         console.error('Error en getConversation:', error);
       }
@@ -308,10 +387,9 @@ export default {
       // console.log(`Alertas ${suppress ? 'suprimidas' : 'reactivadas'}`);
     },
     async initializeContactData() {
-      console.log("suppressAlerts", this.suppressAlerts)
+      console.log('suppressAlerts', this.suppressAlerts);
       try {
-        if (this.isInitializing)
-          return;
+        if (this.isInitializing) return;
         this.isInitializing = true;
         console.log('Inicializando datos del contacto...');
         if (!this.contact) {
@@ -333,19 +411,21 @@ export default {
 
         // Caso 1: Contacto sincronizado - buscar por ID
         if (this.isSynchronized) {
-          const dataContactId = await this.searchContactCRMZeusById(this.contact)
+          const dataContactId = await this.searchContactCRMZeusById(
+            this.contact
+          );
           this.contactFoundInCRM = dataContactId.success;
-          this.crmContact = dataContactId.data
+          this.crmContact = dataContactId.data;
 
-          console.log("isSynchronized")
-          console.log("dataContactId")
-          console.log(dataContactId)
+          console.log('isSynchronized');
+          console.log('dataContactId');
+          console.log(dataContactId);
 
-          console.log("this.contactFoundInCRM")
-          console.log(this.contactFoundInCRM)
+          console.log('this.contactFoundInCRM');
+          console.log(this.contactFoundInCRM);
 
-          console.log("this.crmContact")
-          console.log(this.crmContact)
+          console.log('this.crmContact');
+          console.log(this.crmContact);
 
           if (dataContactId.success) {
             if (this.showAlert && !this.suppressAlerts) {
@@ -356,20 +436,24 @@ export default {
           }
           if (!dataContactId.success) {
             useAlert(dataContactId.message, 'success');
-            const dataContactPhone = await this.searchContactCRMZeusByPhone(this.contact)
+            const dataContactPhone = await this.searchContactCRMZeusByPhone(
+              this.contact
+            );
             if (dataContactPhone.success) {
               this.contactFoundInCRM = dataContactPhone.success;
-              this.crmContact = dataContactPhone.data
+              this.crmContact = dataContactPhone.data;
               if (this.showAlert && !this.suppressAlerts) {
                 useAlert(dataContactPhone.message, 'success');
                 useAlert(this.$t('CONTACT.SUCCESS.FOUND_IN_CRM'), 'success');
               }
               return;
             }
-            const dataContactEmail = await this.searchContactCRMZeusByEmail(this.contact)
+            const dataContactEmail = await this.searchContactCRMZeusByEmail(
+              this.contact
+            );
             if (dataContactEmail.success) {
               this.contactFoundInCRM = dataContactEmail.success;
-              this.crmContact = dataContactEmail.data
+              this.crmContact = dataContactEmail.data;
               if (this.showAlert && !this.suppressAlerts) {
                 useAlert(dataContactEmail.message, 'success');
                 useAlert(this.$t('CONTACT.SUCCESS.FOUND_IN_CRM'), 'success');
@@ -380,23 +464,21 @@ export default {
           return;
         }
 
-        const dataContactPhone_ = await this.searchContactCRMZeusByPhone(this.contact)
-        if (dataContactPhone_.success) {
-          this.contactFoundInCRM = dataContactPhone_.success;
-          this.crmContact = dataContactPhone_.data
-          console.log("dataContactPhone_")
-          console.log(dataContactPhone_)
+        const crmByPhone = await this.searchContactCRMZeusByPhone(this.contact);
+        if (crmByPhone.success) {
+          this.contactFoundInCRM = crmByPhone.success;
+          this.crmContact = crmByPhone.data;
+          console.log('crmByPhone');
+          console.log(crmByPhone);
           return;
         }
-        const dataContactEmail_ = await this.searchContactCRMZeusByEmail(this.contact)
-        if (dataContactEmail_.success) {
-          this.contactFoundInCRM = dataContactEmail_.success;
-          this.crmContact = dataContactEmail_.data
-          console.log("dataContactEmail_")
-          console.log(dataContactPhone_)
-          return;
+        const crmByEmail = await this.searchContactCRMZeusByEmail(this.contact);
+        if (crmByEmail.success) {
+          this.contactFoundInCRM = crmByEmail.success;
+          this.crmContact = crmByEmail.data;
+          console.log('crmByEmail');
+          console.log(crmByPhone);
         }
-
       } catch (error) {
         console.error('Error al inicializar datos del contacto:', error);
         this.crmContact = {};
@@ -416,19 +498,21 @@ export default {
       ); // o cualquier campo que consideres esencial
     },
 
-
-
-
-
     // Modificar para pasar el estado de contactFoundInCRM
     runMoreAction(key) {
       const handlers = {
         merge: this.openMergeModal,
-        notes: () => { this.showNotesCrudModal = true; },
+        notes: () => {
+          this.showNotesCrudModal = true;
+        },
         schedule: this.openScheduleModal,
-        fromContacts: () => { this.showNewConversationFromContacts = true; },
+        fromContacts: () => {
+          this.showNewConversationFromContacts = true;
+        },
         private: this.togglePrivateConversationModal,
-        calendar: () => { this.showCreateEventModal = true; },
+        calendar: () => {
+          this.showCreateEventModal = true;
+        },
         quote: () => {
           this.$router.push({
             name: 'gestorTickets_quote_new',
@@ -437,6 +521,11 @@ export default {
           });
         },
         delete: this.toggleDeleteModal,
+        message: this.toggleConversationModal,
+        edit: this.toggleEditModal,
+        task: () => {
+          this.showTaskModal = true;
+        },
       };
       if (handlers[key]) handlers[key]();
     },
@@ -514,12 +603,6 @@ export default {
       this.showScheduleModal = true;
     },
   },
-  // Escuchar eventos del mixin
-  created() {
-    this.$on('contact-found-in-crm', found => {
-      this.contactFoundInCRM = found;
-    });
-  }
 };
 </script>
 
@@ -528,68 +611,130 @@ export default {
     class="relative items-center w-full p-4 bg-white dark:bg-slate-900"
     :class="{ 'border-b border-slate-50 dark:border-slate-800/50': isHeader }"
   >
-    <div v-if="!isHeader" class="flex flex-col w-full gap-2 text-left rtl:text-right">
-      <div class="flex flex-row justify-between">
-        <Thumbnail v-if="showAvatar" :src="contact.thumbnail" size="56px" :username="contact.name"
-          :status="contact.availability_status" />
-        <woot-button v-if="showCloseButton" :icon="closeIconName" class="clear secondary rtl:rotate-180"
-          @click="onPanelToggle" />
-      </div>
-
-      <div class="flex flex-col items-start gap-1.5 min-w-0 w-full">
-        <div v-if="showAvatar" class="flex items-start w-full min-w-0 gap-2">
-          <h3
-            class="flex-shrink max-w-full min-w-0 my-0 text-base capitalize break-words text-slate-800 dark:text-slate-100">
-            {{ crmContact.name ||  contact.name }}
-          </h3>
-          <div class="flex flex-row items-center gap-1">
-            <fluent-icon v-if="contact.created_at" v-tooltip.left="`${$t('CONTACT_PANEL.CREATED_AT_LABEL')} ${dynamicTime(
-              contact.created_at
-            )}`
-              " icon="info" size="14" class="mt-0.5" />
-            <a :href="contactProfileLink" class="text-base" target="_blank" rel="noopener nofollow noreferrer">
-              <woot-button size="tiny" icon="open" variant="clear" color-scheme="secondary" />
+    <!-- Panel de la conversación, compacto: foto chica y al lado nombre, empresa y las acciones -->
+    <div
+      v-if="!isHeader"
+      class="flex flex-col w-full gap-2 text-left rtl:text-right"
+    >
+      <div class="flex items-start w-full gap-3">
+        <Thumbnail
+          v-if="showAvatar"
+          :src="contact.thumbnail"
+          size="40px"
+          :username="contact.name"
+          :status="contact.availability_status"
+        />
+        <div class="flex flex-col flex-1 min-w-0 gap-0.5">
+          <div class="flex items-center w-full min-w-0 gap-1">
+            <h3
+              v-if="showAvatar"
+              class="min-w-0 my-0 text-sm font-semibold capitalize truncate text-slate-800 dark:text-slate-100"
+              :title="`${$t('CONTACT_PANEL.CREATED_AT_LABEL')} ${dynamicTime(
+                contact.created_at
+              )}`"
+            >
+              {{ crmContact.name || contact.name }}
+            </h3>
+            <a
+              v-if="showAvatar"
+              :href="contactProfileLink"
+              target="_blank"
+              rel="noopener nofollow noreferrer"
+              class="flex-shrink-0"
+            >
+              <woot-button
+                size="tiny"
+                icon="open"
+                variant="clear"
+                color-scheme="secondary"
+              />
             </a>
+            <woot-button
+              v-if="showCloseButton"
+              :icon="closeIconName"
+              size="tiny"
+              class="clear secondary rtl:rotate-180 ltr:ml-auto rtl:mr-auto"
+              @click="onPanelToggle"
+            />
+          </div>
+          <p
+            v-if="subtitle"
+            class="mb-0 text-xs truncate text-slate-500 dark:text-slate-400"
+            :title="subtitle"
+          >
+            {{ subtitle }}
+          </p>
+          <!-- Acciones, solo ícono: editar · tarea · cotizar · programar · ··· -->
+          <div class="flex flex-wrap items-center gap-1 mt-1">
+            <woot-button
+              v-for="action in panelActions"
+              :key="action.key"
+              v-tooltip.top="action.label"
+              :icon="action.icon"
+              size="small"
+              variant="smooth"
+              color-scheme="secondary"
+              :aria-label="action.label"
+              @click="runMoreAction(action.key)"
+            />
+            <ContactMoreActions
+              icon-only
+              :actions="moreActions"
+              @select="runMoreAction"
+            />
           </div>
         </div>
-
-        <p v-if="additionalAttributes.description" class="break-words mb-0.5">
-          {{ additionalAttributes.description }}
-        </p>
-        <div class="flex flex-col items-start w-full gap-2">
-          <ContactInfoRow :href="contact.email ? `mailto:${contact.email}` : ''" :value="contact.email" icon="mail"
-            emoji="✉️" :title="$t('CONTACT_PANEL.EMAIL_ADDRESS')" show-copy />
-          <ContactInfoRow :href="contact.phone_number ? `tel:${contact.phone_number}` : ''"
-            :value="contact.phone_number" icon="call" emoji="📞" :title="$t('CONTACT_PANEL.PHONE_NUMBER')" show-copy />
-          <ContactInfoRow v-if="contact.identifier" :value="contact.identifier" icon="contact-identify" emoji="🪪"
-            :title="$t('CONTACT_PANEL.IDENTIFIER')" />
-          <ContactInfoRow :value="additionalAttributes.company_name" icon="building-bank" emoji="🏢"
-            :title="$t('CONTACT_PANEL.COMPANY')" />
-          <ContactInfoRow v-if="location || additionalAttributes.location"
-            :value="location || additionalAttributes.location" icon="map" emoji="🌍"
-            :title="$t('CONTACT_PANEL.LOCATION')" />
-          <SocialIcons :social-profiles="socialProfiles" />
-
-          <ContactInfoRow v-if="isIntegrationEnabled" :value="idContactoCRMzeus" icon="contact-identify"
-            :title="'ID Contacto CRMZeus'" />
-          <ContactInfoRow v-if="isIntegrationEnabled" :value="idOrganizacionCRMzeus" icon="building-bank"
-            :title="'ID Organizacion CRMZeus'" />
-
-          <!-- Responsable fijo del contacto -->
-          <ContactOwnerField v-if="contact.id" :contact-id="contact.id" />
-          <ContactOptOutField v-if="contact.id" :contact="contact" />
-          <ContactProspectScore v-if="contact.id" :contact-id="contact.id" />
-        </div>
       </div>
-      <!-- Acciones con nombre: las principales a la vista, el resto en «Más» -->
-      <div class="flex items-center w-full mt-0.5 gap-2">
-        <woot-button icon="chat" size="small" @click="toggleConversationModal">
-          {{ $t('CONTACT_PANEL.ACTIONS.MESSAGE') }}
-        </woot-button>
-        <woot-button icon="edit" variant="smooth" size="small" @click="toggleEditModal">
-          {{ $t('CONTACT_PANEL.ACTIONS.EDIT') }}
-        </woot-button>
-        <ContactMoreActions :actions="moreActions" @select="runMoreAction" />
+
+      <p
+        v-if="additionalAttributes.description"
+        class="mb-0 text-xs break-words text-slate-600 dark:text-slate-300"
+      >
+        {{ additionalAttributes.description }}
+      </p>
+      <!-- Datos: solo los que tienen valor (correo y teléfono siempre, para poder copiarlos o ver que faltan) -->
+      <div class="flex flex-col items-start w-full gap-1">
+        <ContactInfoRow
+          :href="contact.email ? `mailto:${contact.email}` : ''"
+          :value="contact.email"
+          icon="mail"
+          emoji="✉️"
+          :title="$t('CONTACT_PANEL.EMAIL_ADDRESS')"
+          show-copy
+        />
+        <ContactInfoRow
+          :href="contact.phone_number ? `tel:${contact.phone_number}` : ''"
+          :value="contact.phone_number"
+          icon="call"
+          emoji="📞"
+          :title="$t('CONTACT_PANEL.PHONE_NUMBER')"
+          show-copy
+        />
+        <ContactInfoRow
+          v-if="contact.identifier"
+          :value="contact.identifier"
+          icon="contact-identify"
+          emoji="🪪"
+          :title="$t('CONTACT_PANEL.IDENTIFIER')"
+        />
+        <SocialIcons :social-profiles="socialProfiles" />
+
+        <ContactInfoRow
+          v-if="isIntegrationEnabled && crmzeusContactId"
+          :value="idContactoCRMzeus"
+          icon="contact-identify"
+          :title="$t('CONTACT_PANEL.CRMZEUS_CONTACT_ID')"
+        />
+        <ContactInfoRow
+          v-if="isIntegrationEnabled && crmzeusOrganizationId"
+          :value="idOrganizacionCRMzeus"
+          icon="building-bank"
+          :title="$t('CONTACT_PANEL.CRMZEUS_ORG_ID')"
+        />
+
+        <!-- Avisos de no contactar y calificación. El responsable fijo solo está en la ficha del contacto. -->
+        <ContactOptOutField v-if="contact.id" :contact="contact" />
+        <ContactProspectScore v-if="contact.id" :contact-id="contact.id" />
       </div>
     </div>
     <!-- Encabezado de la página del contacto: lo esencial a lo ancho -->
@@ -602,25 +747,61 @@ export default {
       />
       <div class="flex flex-col flex-1 min-w-0 gap-2">
         <div class="flex flex-wrap items-baseline gap-x-2">
-          <h2 class="m-0 text-xl font-semibold capitalize break-words text-slate-800 dark:text-slate-100">
+          <h2
+            class="m-0 text-xl font-semibold capitalize break-words text-slate-800 dark:text-slate-100"
+          >
             {{ crmContact.name || contact.name }}
           </h2>
-          <span v-if="additionalAttributes.company_name" class="text-sm text-slate-600 dark:text-slate-300">
+          <span
+            v-if="additionalAttributes.company_name"
+            class="text-sm text-slate-600 dark:text-slate-300"
+          >
             · {{ additionalAttributes.company_name }}
           </span>
         </div>
         <div class="flex flex-wrap items-center gap-x-8 gap-y-1.5">
-          <ContactInfoRow class="!w-auto" :href="contact.email ? `mailto:${contact.email}` : ''" :value="contact.email" icon="mail"
-            emoji="✉️" :title="$t('CONTACT_PANEL.EMAIL_ADDRESS')" :empty-text="$t('CONTACT_PAGE.NO_EMAIL')" show-copy />
-          <ContactInfoRow class="!w-auto" :href="contact.phone_number ? `tel:${contact.phone_number}` : ''"
-            :value="contact.phone_number" icon="call" emoji="📞" :title="$t('CONTACT_PANEL.PHONE_NUMBER')"
-            :empty-text="$t('CONTACT_PAGE.NO_PHONE')" show-copy />
-          <ContactInfoRow class="!w-auto" v-if="contact.identifier" :value="contact.identifier" icon="contact-identify" emoji="🪪"
-            :title="$t('CONTACT_PANEL.IDENTIFIER')" />
-          <ContactInfoRow class="!w-auto" v-if="isIntegrationEnabled" :value="idContactoCRMzeus" icon="contact-identify"
-            :title="'ID Contacto CRMZeus'" />
-          <ContactInfoRow class="!w-auto" v-if="isIntegrationEnabled" :value="idOrganizacionCRMzeus" icon="building-bank"
-            :title="'ID Organizacion CRMZeus'" />
+          <ContactInfoRow
+            class="!w-auto"
+            :href="contact.email ? `mailto:${contact.email}` : ''"
+            :value="contact.email"
+            icon="mail"
+            emoji="✉️"
+            :title="$t('CONTACT_PANEL.EMAIL_ADDRESS')"
+            :empty-text="$t('CONTACT_PAGE.NO_EMAIL')"
+            show-copy
+          />
+          <ContactInfoRow
+            class="!w-auto"
+            :href="contact.phone_number ? `tel:${contact.phone_number}` : ''"
+            :value="contact.phone_number"
+            icon="call"
+            emoji="📞"
+            :title="$t('CONTACT_PANEL.PHONE_NUMBER')"
+            :empty-text="$t('CONTACT_PAGE.NO_PHONE')"
+            show-copy
+          />
+          <ContactInfoRow
+            v-if="contact.identifier"
+            class="!w-auto"
+            :value="contact.identifier"
+            icon="contact-identify"
+            emoji="🪪"
+            :title="$t('CONTACT_PANEL.IDENTIFIER')"
+          />
+          <ContactInfoRow
+            v-if="isIntegrationEnabled"
+            class="!w-auto"
+            :value="idContactoCRMzeus"
+            icon="contact-identify"
+            :title="$t('CONTACT_PANEL.CRMZEUS_CONTACT_ID')"
+          />
+          <ContactInfoRow
+            v-if="isIntegrationEnabled"
+            class="!w-auto"
+            :value="idOrganizacionCRMzeus"
+            icon="building-bank"
+            :title="$t('CONTACT_PANEL.CRMZEUS_ORG_ID')"
+          />
           <SocialIcons :social-profiles="headerSocialProfiles" />
         </div>
         <div class="flex flex-wrap items-start gap-x-8 gap-y-2">
@@ -630,41 +811,96 @@ export default {
             <ContactProspectScore v-if="contact.id" :contact-id="contact.id" />
           </div>
           <div class="flex items-start flex-1 min-w-[16rem] gap-2">
-            <span class="flex items-center flex-shrink-0 h-7 gap-2 text-sm text-slate-600 dark:text-slate-300">
-              <fluent-icon icon="tag" size="16" class="text-slate-500 dark:text-slate-400" />
+            <span
+              class="flex items-center flex-shrink-0 h-7 gap-2 text-sm text-slate-600 dark:text-slate-300"
+            >
+              <fluent-icon
+                icon="tag"
+                size="16"
+                class="text-slate-500 dark:text-slate-400"
+              />
               {{ $t('CONTACT_PAGE.LABELS') }}
             </span>
-            <ContactLabel v-if="contact.id" :contact-id="contact.id" :add-text="$t('CONTACT_PAGE.ADD_LABEL')" />
+            <ContactLabel
+              v-if="contact.id"
+              :contact-id="contact.id"
+              :add-text="$t('CONTACT_PAGE.ADD_LABEL')"
+            />
           </div>
         </div>
       </div>
-      <!-- Mensaje ▾ (hablar) · Editar · ··· (fusionar, eliminar); crear va en cada pestaña -->
+      <!-- Mensaje · Nueva nota privada · Editar · ··· (fusionar, eliminar); crear va en cada pestaña -->
       <div class="flex flex-wrap items-center flex-shrink-0 gap-2">
-        <ContactMoreActions split :label="$t('CONTACT_PANEL.ACTIONS.MESSAGE')" icon="chat" variant="solid"
-          color-scheme="primary" :actions="headerMessageActions" @main="toggleConversationModal"
-          @select="runMoreAction" />
-        <woot-button icon="edit" variant="smooth" size="small" color-scheme="secondary" @click="toggleEditModal">
+        <woot-button icon="chat" size="small" @click="toggleConversationModal">
+          {{ $t('CONTACT_PANEL.ACTIONS.MESSAGE') }}
+        </woot-button>
+        <!-- Conversación privada (interna) con este contacto: solo aquí, en la ficha -->
+        <woot-button
+          icon="lock-closed"
+          variant="smooth"
+          size="small"
+          color-scheme="secondary"
+          @click="togglePrivateConversationModal"
+        >
+          {{ $t('CONTACT_PANEL.ACTIONS.PRIVATE_NOTE') }}
+        </woot-button>
+        <woot-button
+          icon="edit"
+          variant="smooth"
+          size="small"
+          color-scheme="secondary"
+          @click="toggleEditModal"
+        >
           {{ $t('CONTACT_PANEL.ACTIONS.EDIT') }}
         </woot-button>
-        <ContactMoreActions icon-only :actions="headerMoreActions" @select="runMoreAction" />
+        <ContactMoreActions
+          icon-only
+          :actions="headerMoreActions"
+          @select="runMoreAction"
+        />
       </div>
     </div>
     <!-- Modales de las acciones (los comparten el panel y el encabezado) -->
-    <EditContact v-if="showEditModal" :show="showEditModal" :contact="contact" :crm-contact="crmContact"
-      :contact-found-in-crm="contactFoundInCRM" @cancel="toggleEditModal" @suppress-alerts="handleSuppressAlerts" 
-      :is-integration-enabled="isIntegrationEnabled" />
-    <NewConversation v-if="contact.id" :show="showConversationModal" :contact="contact"
-      @cancel="toggleConversationModal" />
+    <EditContact
+      v-if="showEditModal"
+      :show="showEditModal"
+      :contact="contact"
+      :crm-contact="crmContact"
+      :contact-found-in-crm="contactFoundInCRM"
+      :is-integration-enabled="isIntegrationEnabled"
+      @cancel="toggleEditModal"
+      @suppress-alerts="handleSuppressAlerts"
+    />
+    <NewConversation
+      v-if="contact.id"
+      :show="showConversationModal"
+      :contact="contact"
+      @cancel="toggleConversationModal"
+    />
     <!-- proyecto@conversation_private - modal conversación privada (desde contactos) -->
-    <NewPrivateConversation v-if="contact.id" :show="showPrivateConversationModal" :contact="contact"
-      @cancel="togglePrivateConversationModal" />
+    <NewPrivateConversation
+      v-if="contact.id"
+      :show="showPrivateConversationModal"
+      :contact="contact"
+      @cancel="togglePrivateConversationModal"
+    />
     <!-- proyecto@conversation_private - modal selección de contacto nuevo (desde conversaciones) -->
     <NewConversationFromContacts
       :show="showNewConversationFromContacts"
       @cancel="showNewConversationFromContacts = false"
     />
-    <ContactMergeModal v-if="showMergeModal" :primary-contact="contact" :show="showMergeModal"
-      @close="toggleMergeModal" />
+    <QuickTaskModal
+      v-if="showTaskModal"
+      :show="showTaskModal"
+      :preset-contact="contact"
+      @close="showTaskModal = false"
+    />
+    <ContactMergeModal
+      v-if="showMergeModal"
+      :primary-contact="contact"
+      :show="showMergeModal"
+      @close="toggleMergeModal"
+    />
     <!-- proyecto@contacts_notes - modal CRUD completo de notas del contacto -->
     <ContactNotesCrudModal
       v-if="showNotesCrudModal && contact.id"
@@ -683,12 +919,25 @@ export default {
       @created="showCreateEventModal = false"
     />
 
-    <woot-delete-modal v-if="showDeleteModal" :show.sync="showDeleteModal" :on-close="closeDelete"
-      :on-confirm="confirmDeletion" :title="$t('DELETE_CONTACT.CONFIRM.TITLE')"
-      :message="$t('DELETE_CONTACT.CONFIRM.MESSAGE')" :message-value="confirmDeleteMessage"
-      :confirm-text="$t('DELETE_CONTACT.CONFIRM.YES')" :reject-text="$t('DELETE_CONTACT.CONFIRM.NO')" />
+    <woot-delete-modal
+      v-if="showDeleteModal"
+      :show.sync="showDeleteModal"
+      :on-close="closeDelete"
+      :on-confirm="confirmDeletion"
+      :title="$t('DELETE_CONTACT.CONFIRM.TITLE')"
+      :message="$t('DELETE_CONTACT.CONFIRM.MESSAGE')"
+      :message-value="confirmDeleteMessage"
+      :confirm-text="$t('DELETE_CONTACT.CONFIRM.YES')"
+      :reject-text="$t('DELETE_CONTACT.CONFIRM.NO')"
+    />
 
-    <schedule-message-modal :show="showScheduleModal" :conversation-id="conversationId" :current-user="currentUser"
-      :current-chat="currentChat" :inbox-id="currentChat.inbox_id" @close="showScheduleModal = false" />
+    <ScheduleMessageModal
+      :show="showScheduleModal"
+      :conversation-id="conversationId"
+      :current-user="currentUser"
+      :current-chat="currentChat"
+      :inbox-id="currentChat.inbox_id"
+      @close="showScheduleModal = false"
+    />
   </div>
 </template>

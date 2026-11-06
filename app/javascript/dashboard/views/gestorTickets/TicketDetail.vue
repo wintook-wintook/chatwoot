@@ -50,9 +50,11 @@ import { creatableTypes, typesOfClass } from 'dashboard/helper/caseClasses';
 import { WORK_ORDER_CLASS } from 'dashboard/helper/caseWorkOrder';
 import CaseConversationActions from './conversation/CaseConversationActions.vue';
 import StageAdvanceBanner from './stage/StageAdvanceBanner.vue';
+import CaseStatusMenu from './stage/CaseStatusMenu.vue'; // «Cambiar estado ▾» (cabecera y Avance)
 
 // Plan Actividad del caso (P3) — pestañas siempre a la vista; las demás, en «Más».
-const MAIN_TABS = ['activity', 'pending', 'detail'];
+// En este orden en la barra: Actividad, Pendientes, Conversación y Avance (fija).
+const MAIN_TABS = ['activity', 'pending', 'detail', 'journey'];
 // Pestañas que ya no existen y a dónde llevan ahora.
 const TAB_ALIASES = {
   tasks: 'pending',
@@ -65,6 +67,7 @@ export default {
   components: {
     CaseConversationActions,
     StageAdvanceBanner,
+    CaseStatusMenu,
     JourneyView,
     CaseActivity,
     CaseConversationsMenu,
@@ -117,7 +120,9 @@ export default {
       entryNote: null,
       // @tickets_cases F2 — igual que entryNote, para ?tab=meetings.
       entryMeeting: null,
-      lockedAcquired: false, // @tickets_cases — este agente tomó el bloqueo
+      // K1 — quién más está en el caso (reemplaza al bloqueo): señal cada 30 s.
+      viewers: [],
+      presenceTimer: null,
       showTransitionMenu: false,
       showMoreTabs: false, // Plan Actividad del caso (P3) — menú «Más ▾»
       pendingView: 'tasks', // P3 — sub-pestaña de Pendientes: 'tasks' | 'meetings'
@@ -288,10 +293,8 @@ export default {
         organizer_id: this.ticket.assignee_id || '',
       };
     },
-    // ¿Otro agente tiene bloqueado este ticket?
-    lockedByOther() {
-      const lb = this.ticket?.locked_by;
-      return !!lb && lb.id !== this.currentUserID;
+    viewerNames() {
+      return this.viewers.map(v => v.name).join(', ');
     },
     ticket() {
       return this.getTicketById(this.ticketId);
@@ -530,7 +533,9 @@ export default {
       return this.detailTabs.filter(t => !MAIN_TABS.includes(t.key));
     },
     barTabs() {
-      const main = this.detailTabs.filter(t => MAIN_TABS.includes(t.key));
+      const main = this.detailTabs
+        .filter(t => MAIN_TABS.includes(t.key))
+        .sort((a, b) => MAIN_TABS.indexOf(a.key) - MAIN_TABS.indexOf(b.key));
       const open = this.moreTabs.find(t => t.key === this.currentTabKey);
       return open ? [...main, open] : main;
     },
@@ -650,6 +655,21 @@ export default {
     // @tickets_cases — columnas configuradas del tipo del ticket (Opción A+).
     typeColumns() {
       return this.ticket?.case_type?.columns || [];
+    },
+    // La etapa donde está el caso (su columna) o, sin etapas, su estado.
+    currentStage() {
+      const status = this.ticket?.status;
+      const columns = this.typeColumns;
+      const column =
+        columns.find(
+          c =>
+            c.id === this.ticket?.case_type_column_id &&
+            (c.statuses || []).includes(status)
+        ) || columns.find(c => (c.statuses || []).includes(status));
+      return {
+        id: column ? column.id : null,
+        label: column ? column.label : this.statusLabel(status),
+      };
     },
     // @tickets_cases — modo ITIL propio del tipo del ticket (ya no es un ajuste global).
     itilEnabled() {
@@ -889,7 +909,8 @@ export default {
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
     this.$store.dispatch('caseTickets/fetchTypes'); // F2b — tipos de orden de trabajo
-    this.acquireLock();
+    this.startPresence();
+    this.$emitter.on('caseConflictResolved', this.onConflictResolved);
     this.applyEntryQuery();
     window.addEventListener('resize', this.measureDescription);
   },
@@ -899,7 +920,8 @@ export default {
     this.measureDescription();
   },
   beforeDestroy() {
-    this.releaseLock();
+    this.stopPresence();
+    this.$emitter.off('caseConflictResolved', this.onConflictResolved);
     window.removeEventListener('resize', this.measureDescription);
     this.$emitter.off('assistant:done', this.onAssistantDone);
   },
@@ -924,22 +946,31 @@ export default {
     closeContactPanel() {
       this.showContactPanel = false;
     },
-    // @tickets_cases — toma el bloqueo del ticket al abrir; si lo tiene otro, no
-    // lo toma (el banner avisará). Refresca el ticket para reflejar el estado.
-    async acquireLock() {
+    // K1 — presencia en lugar de bloqueo: nadie impide a nadie; se ve quién más está.
+    // Si se cierra la pestaña sin salir, la señal caduca sola (90 s en el servidor).
+    startPresence() {
+      this.pingPresence();
+      this.presenceTimer = setInterval(this.pingPresence, 30000);
+    },
+    stopPresence() {
+      clearInterval(this.presenceTimer);
+      this.presenceTimer = null;
+      CaseTicketsAPI.presence(this.ticketId, true).catch(() => {});
+    },
+    async pingPresence() {
       try {
-        await CaseTicketsAPI.lock(this.ticketId);
-        this.lockedAcquired = true;
-      } catch (e) {
-        this.lockedAcquired = false; // 409: lo tiene otro agente
-      } finally {
-        this.$store.dispatch('caseTickets/fetchTicket', this.ticketId);
+        const { data } = await CaseTicketsAPI.presence(this.ticketId);
+        this.viewers = data.viewers || [];
+      } catch {
+        this.viewers = [];
       }
     },
-    releaseLock() {
-      if (!this.lockedAcquired) return;
-      this.lockedAcquired = false;
-      CaseTicketsAPI.unlock(this.ticketId).catch(() => {});
+    onConflictResolved(ticketId) {
+      if (Number(ticketId) === Number(this.ticketId)) {
+        this.$store.dispatch('caseTickets/fetchEvents', {
+          ticketId: this.ticketId,
+        });
+      }
     },
     onDetailTabChange(index) {
       const tab = this.barTabs[index];
@@ -2469,80 +2500,20 @@ export default {
               {{ $t('CASE_TICKETS.ESCALATION.BUTTON') }}
             </woot-button>
             <!-- Cerrado o cancelado no cambia de estado: se reabre con su botón.
-                 Plan Actividad del caso (P3) — en una oportunidad el botón es «⋯»
-                 y su menú suma Cancelar y Posponer/Retomar. -->
-            <woot-button
+                 En una oportunidad, Ganada y Perdida quedan a la vista y el menú
+                 suma Posponer/Retomar y Cancelar. -->
+            <CaseStatusMenu
               v-if="!isFrozen"
-              size="small"
-              :color-scheme="isCommercial ? 'secondary' : 'primary'"
-              :variant="isCommercial ? 'smooth' : ''"
+              :options="validTransitions"
+              :current-label="currentStage.label"
+              :is-commercial="isCommercial"
+              :is-postponed="!!ticket.is_postponed"
               :is-loading="isTransitioning"
-              :title="
-                isCommercial ? $t('CASE_TICKETS.DETAIL.MORE_ACTIONS') : ''
-              "
-              @click="
-                showTransitionMenu = !showTransitionMenu;
-                showPriorityMenu = false;
-              "
-            >
-              <fluent-icon
-                v-if="isCommercial"
-                icon="more-horizontal"
-                size="14"
-              />
-              <template v-else>
-                {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }}
-                <fluent-icon icon="chevron-down" size="12" class="ml-1" />
-              </template>
-            </woot-button>
-            <ul
-              v-if="showTransitionMenu"
-              class="absolute right-0 z-50 py-1 mt-1 overflow-y-auto list-none bg-white border rounded-md shadow-md top-full max-h-[60vh] dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[180px]"
-            >
-              <template v-if="isCommercial">
-                <li
-                  class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  @click="
-                    showTransitionMenu = false;
-                    openOutcome('cancelled');
-                  "
-                >
-                  {{ $t('CASE_TICKETS.COMMERCIAL.ACTIONS.CANCEL') }}
-                </li>
-                <li
-                  class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  @click="
-                    showTransitionMenu = false;
-                    ticket.is_postponed ? resumeOpportunity() : openPostpone();
-                  "
-                >
-                  {{
-                    ticket.is_postponed
-                      ? $t('CASE_TICKETS.COMMERCIAL.ACTIONS.RESUME')
-                      : $t('CASE_TICKETS.COMMERCIAL.ACTIONS.POSTPONE')
-                  }}
-                </li>
-                <li
-                  class="px-4 pt-2 pb-1 mt-1 text-xs font-medium uppercase border-t text-slate-400 border-slate-100 dark:border-slate-700"
-                >
-                  {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }}
-                </li>
-              </template>
-              <li
-                v-for="opt in validTransitions"
-                :key="`${opt.columnId || 'x'}-${opt.status || 'x'}`"
-                class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                @click="selectTransition(opt)"
-              >
-                {{ opt.label }}
-              </li>
-              <li
-                v-if="!validTransitions.length"
-                class="px-4 py-2 text-sm text-slate-400 dark:text-slate-500"
-              >
-                {{ $t('CASE_TICKETS.DETAIL.NO_TRANSITIONS') }}
-              </li>
-            </ul>
+              @select="selectTransition"
+              @cancel="openOutcome('cancelled')"
+              @postpone="openPostpone"
+              @resume="resumeOpportunity"
+            />
           </div>
           <!-- Fechas + asignación: siempre visibles, son parte de la ficha del
                ticket (no dependen de la pestaña). 'Vence' no va aquí: ya está en
@@ -2665,14 +2636,16 @@ export default {
     />
 
     <!-- Pestañas del detalle (pinneadas, no scrollean) -->
-    <!-- @tickets_cases — bloqueo: aviso si otro agente está trabajando el ticket -->
+    <!-- K1 — presencia: quién más tiene abierto este caso (no bloquea nada) -->
     <div
-      v-if="ticket && lockedByOther"
-      class="flex items-center gap-2 px-6 py-2 text-sm flex-shrink-0 bg-amber-50 text-amber-800 border-b border-amber-100 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-900/50"
+      v-if="ticket && viewers.length"
+      class="flex items-center gap-2 px-6 py-2 text-sm flex-shrink-0 bg-woot-50 text-woot-800 border-b border-woot-100 dark:bg-woot-900/30 dark:text-woot-200 dark:border-woot-900/50"
     >
-      <fluent-icon icon="lock-closed" size="16" />
+      <fluent-icon icon="people" size="16" />
       <span>{{
-        $t('CASE_TICKETS.LOCK.BANNER', { name: ticket.locked_by.name })
+        $tc('CASE_TICKETS.PRESENCE.BANNER', viewers.length, {
+          names: viewerNames,
+        })
       }}</span>
     </div>
 

@@ -78,7 +78,7 @@ export default {
       </span>
       <select
         v-if="canEdit"
-        class="h-8 py-0 mb-0 text-sm"
+        class="h-7 py-0 mb-0 text-sm"
         :value="ownerId"
         @change="change"
       >

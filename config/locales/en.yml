@@ -341,6 +341,10 @@ en:
       kept: 'Kept %{count} task(s) without a case.'
       cancelled: 'Cancelled %{count} pending task(s) when the case closed.'
       past: 'Cancelled %{count} past scheduled task(s).'
+  case_tickets:
+    conflict:
+      by: '%{name} changed this case a moment ago. Review before saving.'
+      someone: 'Someone changed this case a moment ago. Review before saving.'
   assistant:
     unavailable: "I couldn't answer: check that the OpenAI integration is active and try again."
     review_proposal: "Review the proposal and confirm it."

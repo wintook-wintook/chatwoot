@@ -1,6 +1,7 @@
 <script>
 import Sidebar from '../../components/layout/Sidebar.vue';
 import AssistantPanel from 'dashboard/components/assistant/AssistantPanel.vue'; // Asistente (Dali)
+import CaseConflictModal from 'dashboard/components/caseConflict/CaseConflictModal.vue'; // K1 — dos personas en el mismo caso
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import WootKeyShortcutModal from 'dashboard/components/widgets/modal/WootKeyShortcutModal.vue';
 import AddAccountModal from 'dashboard/components/layout/sidebarComponents/AddAccountModal.vue';
@@ -14,6 +15,7 @@ const CommandBar = () => import('./commands/commandbar.vue');
 export default {
   components: {
     AssistantPanel,
+    CaseConflictModal,
     Sidebar,
     CommandBar,
     WootKeyShortcutModal,
@@ -160,6 +162,7 @@ export default {
       <router-view />
       <CommandBar />
       <AssistantPanel />
+      <CaseConflictModal />
       <AccountSelector
         :show-account-modal="showAccountModal"
         @closeAccountModal="toggleAccountModal"

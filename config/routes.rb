@@ -254,6 +254,16 @@ Rails.application.routes.draw do
             post :directs
             get :unread
           end
+          # Seguimiento IA — el agente nuevo con herramientas (Delegar a agente desde el caso y Dali)
+          resources :ai_follow_ups, only: [:index, :create] do
+            get :templates, on: :collection
+            get :context, on: :collection
+            member do
+              post :pause
+              post :resume
+              post :cancel
+            end
+          end
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
             post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada
@@ -384,6 +394,7 @@ Rails.application.routes.draw do
               post :follow_up # @tickets_cases 3F
               patch :lock   # @tickets_cases — bloqueo de ticket
               patch :unlock # @tickets_cases — bloqueo de ticket
+              get :presence, action: :track_presence # K1 — quién más está en el caso (GET: quien solo ve también avisa)
               patch :reopen # @tickets_cases — reapertura de ticket cerrado
               patch :outcome  # Plan-Clase-Comercial F3 — cerrar oportunidad con resultado
               patch :postpone # Plan-Clase-Comercial F3

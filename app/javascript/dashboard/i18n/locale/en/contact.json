@@ -42,7 +42,9 @@
       "MESSAGE": "Message",
       "EDIT": "Edit",
       "MORE": "More",
-      "SCHEDULE": "Schedule message"
+      "SCHEDULE": "Schedule message",
+      "TASK": "Create task",
+      "PRIVATE_NOTE": "New private note"
     },
     "MERGE_CONTACT": "Merge contact",
     "CONTACT_ACTIONS": "Contact actions",
@@ -75,7 +77,9 @@
       "CANCEL": "Cancel",
       "ACCEPT": "Accept",
       "GO_TO_INTEGRATIONS": "Go to Integrations"
-    }
+    },
+    "CRMZEUS_CONTACT_ID": "CRMZeus contact ID",
+    "CRMZEUS_ORG_ID": "CRMZeus organization ID"
   },
   "EDIT_CONTACT": {
     "BUTTON_LABEL": "Edit Contact",

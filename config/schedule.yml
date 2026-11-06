@@ -266,3 +266,12 @@ tracking_campaigns_prospect_score_job:
   class: "TrackingCampaigns::ProspectScoreJob"
   queue: scheduled_jobs
   description: "Recalculate prospect scores of active prospecting campaigns"
+
+# ==============================================================================
+# Job: Seguimiento IA — escribirle al cliente cuando le toca (agente nuevo)
+# ==============================================================================
+ai_follow_ups_due:
+  cron: "*/1 * * * *"
+  class: "AiFollowUps::DueJob"
+  queue: scheduled_jobs
+  description: "Run AI follow-ups whose next contact is due"

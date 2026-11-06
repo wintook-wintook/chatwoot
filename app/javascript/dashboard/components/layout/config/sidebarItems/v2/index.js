@@ -427,7 +427,7 @@ const ventas = accountId => {
         toStateName: 'kanban_dashboard',
       },
       {
-        icon: 'document',
+        icon: 'receipt', // ícono propio de cotizaciones (antes 'document', igual que otros)
         label: 'QUOTES',
         featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
         toState: frontendURL(`accounts/${accountId}/tickets/quotes`),

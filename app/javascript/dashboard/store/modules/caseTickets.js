@@ -24,6 +24,13 @@ import casePortalsAPI from '../../api/casePortals';
 import caseSettingsAPI from '../../api/caseSettings';
 import caseTasksAPI from '../../api/caseTasks';
 import {
+  findCaseTicket,
+  changedFields,
+  expectedFields,
+  expectedState,
+  guarded,
+} from '../../helper/caseConflict'; // K1 — conflictos entre dos personas
+import {
   SET_CASE_TICKET_UI_FLAG,
   SET_ACTIVE_CASE_TICKET,
   SET_CONTACT_CASE_TICKETS,
@@ -305,6 +312,18 @@ export const getters = {
   },
 };
 
+// K1 — edición de campos con lo que el usuario vio de cada uno (conflicto si otro ya lo cambió).
+// Solo se manda lo que cambió (changedFields), para no regresar lo que otro cambió.
+const guardedUpdate = (s, ticketId, fields) => {
+  const { payload, expected } = changedFields(
+    findCaseTicket(s, ticketId),
+    fields
+  );
+  return guarded(opts =>
+    caseTicketsAPI.update(ticketId, { case_ticket: payload, expected, ...opts })
+  );
+};
+
 export const actions = {
   // ── Fase 3 ──────────────────────────────────────────────────
   async fetchActiveTicket({ commit }, { contactId }) {
@@ -358,7 +377,7 @@ export const actions = {
   },
 
   async transitionTicket(
-    { commit },
+    { commit, state: s },
     {
       ticketId,
       contactId,
@@ -377,11 +396,12 @@ export const actions = {
       if (closure) extra.closure = closure;
       if (cancelMeetings) extra.cancel_meetings = true;
       if (pendingTasks) extra.pending_tasks = pendingTasks;
-      const { data } = await caseTicketsAPI.transition(
-        ticketId,
-        status,
-        reason,
-        extra
+      Object.assign(extra, expectedState(findCaseTicket(s, ticketId)));
+      const { data } = await guarded(opts =>
+        caseTicketsAPI.transition(ticketId, status, reason, {
+          ...extra,
+          ...opts,
+        })
       );
       const ticket = data.case_ticket;
       if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
@@ -395,7 +415,7 @@ export const actions = {
 
   // @tickets_cases — mueve un ticket a otra columna del Kanban por tipo (A+).
   async moveTicketColumn(
-    { commit },
+    { commit, state: s },
     {
       ticketId,
       caseTypeColumnId,
@@ -415,11 +435,12 @@ export const actions = {
       if (postponedUntil) extra.postponed_until = postponedUntil;
       if (postponeReasonId) extra.postpone_reason_id = postponeReasonId;
       if (reason) extra.reason = reason;
-      const { data } = await caseTicketsAPI.move(
-        ticketId,
-        caseTypeColumnId,
-        closure,
-        extra
+      Object.assign(extra, expectedState(findCaseTicket(s, ticketId), true));
+      const { data } = await guarded(opts =>
+        caseTicketsAPI.move(ticketId, caseTypeColumnId, closure, {
+          ...extra,
+          ...opts,
+        })
       );
       return data;
     } finally {
@@ -429,10 +450,20 @@ export const actions = {
 
   // ── Plan-Clase-Comercial F4 — oportunidades ─────────────────
   // `params`: { outcome, outcome_reason_id, outcome_note } — cierra con resultado.
-  async closeWithOutcome({ commit }, { ticketId, contactId, ...params }) {
+  async closeWithOutcome(
+    { commit, state: s },
+    { ticketId, contactId, ...params }
+  ) {
     commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
     try {
-      const { data } = await caseTicketsAPI.closeWithOutcome(ticketId, params);
+      const seen = expectedState(findCaseTicket(s, ticketId));
+      const { data } = await guarded(opts =>
+        caseTicketsAPI.closeWithOutcome(ticketId, {
+          ...params,
+          ...seen,
+          ...opts,
+        })
+      );
       if (contactId)
         commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket: data.case_ticket });
       commit(SET_CASE_TICKETS_LIST, null); // forzar refetch de la cola
@@ -442,34 +473,40 @@ export const actions = {
     }
   },
   // `params`: { postponed_until: 'YYYY-MM-DD', postpone_reason_id, reason }
-  async postponeTicket({ commit }, { ticketId, ...params }) {
+  async postponeTicket({ commit, state: s }, { ticketId, ...params }) {
     commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
     try {
-      const { data } = await caseTicketsAPI.postpone(ticketId, params);
+      const seen = expectedState(findCaseTicket(s, ticketId));
+      const { data } = await guarded(opts =>
+        caseTicketsAPI.postpone(ticketId, { ...params, ...seen, ...opts })
+      );
       return data.case_ticket;
     } finally {
       commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });
     }
   },
-  async resumeTicket({ commit }, { ticketId, reason }) {
+  async resumeTicket({ commit, state: s }, { ticketId, reason }) {
     commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
     try {
-      const { data } = await caseTicketsAPI.resume(ticketId, { reason });
+      const seen = expectedState(findCaseTicket(s, ticketId));
+      const { data } = await guarded(opts =>
+        caseTicketsAPI.resume(ticketId, { reason, ...seen, ...opts })
+      );
       return data.case_ticket;
     } finally {
       commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });
     }
   },
   // Monto, moneda, cierre estimado y probabilidad (solo los usa Comercial).
-  async updateCommercialData(_ctx, { ticketId, data }) {
-    const res = await caseTicketsAPI.update(ticketId, { case_ticket: data });
+  async updateCommercialData({ state: s }, { ticketId, data }) {
+    const res = await guardedUpdate(s, ticketId, data);
     return res.data.case_ticket;
   },
 
   // Plan-Clase-Orden-de-Trabajo F2a — dirección, horas y facturable de la orden
   // (el backend deja `work_order_changed`); los materiales van por su API.
-  async updateWorkOrderData(_ctx, { ticketId, data }) {
-    const res = await caseTicketsAPI.update(ticketId, { case_ticket: data });
+  async updateWorkOrderData({ state: s }, { ticketId, data }) {
+    const res = await guardedUpdate(s, ticketId, data);
     return res.data.case_ticket;
   },
 
@@ -507,21 +544,30 @@ export const actions = {
   // @tickets_cases Fase A — asignación manual a agente y/o equipo (coexisten).
   // Envía solo las claves presentes en el payload; '' / null limpia ese campo.
   // @tickets_cases — reabre un ticket cerrado y refresca ficha + timeline.
-  async reopenTicket({ commit }, { ticketId, contactId, reason }) {
-    const { data } = await caseTicketsAPI.reopen(ticketId, reason);
+  async reopenTicket({ commit, state: s }, { ticketId, contactId, reason }) {
+    const seen = expectedState(findCaseTicket(s, ticketId));
+    const { data } = await guarded(opts =>
+      caseTicketsAPI.reopen(ticketId, reason, { ...seen, ...opts })
+    );
     const ticket = data.case_ticket;
     if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
     commit(SET_CASE_TICKETS_LIST, null); // forzar refetch de la cola
     return ticket;
   },
 
-  async assignTicket({ commit }, { ticketId, contactId, assigneeId, teamId }) {
+  async assignTicket(
+    { commit, state: s },
+    { ticketId, contactId, assigneeId, teamId }
+  ) {
     commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
     try {
       const params = {};
       if (assigneeId !== undefined) params.assignee_id = assigneeId ?? '';
       if (teamId !== undefined) params.team_id = teamId ?? '';
-      const { data } = await caseTicketsAPI.assign(ticketId, params);
+      const expected = expectedFields(findCaseTicket(s, ticketId), params);
+      const { data } = await guarded(opts =>
+        caseTicketsAPI.assign(ticketId, { ...params, expected, ...opts })
+      );
       const ticket = data.case_ticket;
       if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
       return ticket;
@@ -539,9 +585,9 @@ export const actions = {
     commit(SET_CASE_TICKETS_LIST, list);
   },
 
-  async updateTicketDetails({ dispatch }, { ticketId, details }) {
-    const { data } = await caseTicketsAPI.update(ticketId, {
-      case_ticket: { custom_attributes: details },
+  async updateTicketDetails({ dispatch, state: s }, { ticketId, details }) {
+    const { data } = await guardedUpdate(s, ticketId, {
+      custom_attributes: details,
     });
     dispatch('mergeTicket', data.case_ticket);
     return data.case_ticket;
@@ -549,12 +595,13 @@ export const actions = {
 
   // @tickets_cases — edición completa del ticket desde el modal (título,
   // descripción, clasificación). Manda solo los campos que envía el modal.
-  async editTicket({ commit, dispatch }, { ticketId, contactId, fields }) {
+  async editTicket(
+    { commit, dispatch, state: s },
+    { ticketId, contactId, fields }
+  ) {
     commit(SET_CASE_TICKET_UI_FLAG, { isSaving: true });
     try {
-      const { data } = await caseTicketsAPI.update(ticketId, {
-        case_ticket: fields,
-      });
+      const { data } = await guardedUpdate(s, ticketId, fields);
       const ticket = data.case_ticket;
       dispatch('mergeTicket', ticket);
       if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
@@ -566,14 +613,12 @@ export const actions = {
 
   // @tickets_cases P1 — cambio de prioridad inline (acción rápida estilo osTicket).
   async updatePriority(
-    { commit, dispatch },
+    { commit, dispatch, state: s },
     { ticketId, contactId, priority }
   ) {
     commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
     try {
-      const { data } = await caseTicketsAPI.update(ticketId, {
-        case_ticket: { priority },
-      });
+      const { data } = await guardedUpdate(s, ticketId, { priority });
       const ticket = data.case_ticket;
       dispatch('mergeTicket', ticket);
       if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
@@ -584,10 +629,11 @@ export const actions = {
   },
 
   // @tickets_cases P4 — vencimiento inline (osTicket "Due Date"). dueAt ISO o null (limpiar).
-  async updateDueAt({ commit, dispatch }, { ticketId, contactId, dueAt }) {
-    const { data } = await caseTicketsAPI.update(ticketId, {
-      case_ticket: { due_at: dueAt },
-    });
+  async updateDueAt(
+    { commit, dispatch, state: s },
+    { ticketId, contactId, dueAt }
+  ) {
+    const { data } = await guardedUpdate(s, ticketId, { due_at: dueAt });
     const ticket = data.case_ticket;
     dispatch('mergeTicket', ticket);
     if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
