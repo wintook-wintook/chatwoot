@@ -30,6 +30,7 @@
 class ContactTrackings::SheetLookup
   include ContactTrackings::SheetLookup::ServiceText
   include ContactTrackings::SheetLookup::VariableValues
+  include ContactTrackings::SheetLookup::ShortNames
   extend ContactTrackings::SheetLookup::Describe
   DIRECTIVE_RE = /\{\{\s*hoja_buscar\s*:([^{}]*)\}\}/i
   ASK = '?'
@@ -239,10 +240,11 @@ class ContactTrackings::SheetLookup
     conversation_values(column, known)
   end
 
-  # Del más reciente al más viejo: los valores del primer mensaje que nombra alguno.
+  # Del más reciente al más viejo: los valores del primer mensaje que nombra alguno, completo
+  # o por un tramo propio (ver ShortNames).
   def first_mention(messages, known)
     messages.each do |msg|
-      found = known.select { |value| mentions?(msg.content.to_s, value) }
+      found = named_values(msg.content.to_s, known)
       next if found.empty?
 
       @mentioned_in = [@mentioned_in, msg.id].compact.max

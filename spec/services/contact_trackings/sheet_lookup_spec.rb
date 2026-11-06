@@ -148,6 +148,51 @@ RSpec.describe ContactTrackings::SheetLookup do
     end
   end
 
+  describe 'con «?» y el nombre corto de un valor largo' do
+    let!(:carreras) do
+      create(:knowledge_source, account: account, source_type: 'google_sheet', name: 'Carreras', config: { 'sheet_mode' => 'faq' })
+    end
+
+    before do
+      ['Administración', 'Desarrollo y Administración Inmobiliaria en Bienes Raíces', 'Relaciones Internacionales',
+       'Trabajo Social', 'Administración de Instituciones de Salud'].each_with_index do |carrera, i|
+        GoogleSheetRow.create!(account: account, knowledge_source: carreras, row_index: i,
+                               data: { 'carrera' => carrera, 'liga' => "liga-#{i}" })
+      end
+    end
+
+    def liga(variables = { 'CARRERA' => 'Licenciatura en Relaciones Internacionales' })
+      described_class.new(account, described_class.parse('Carreras | carrera=? | liga'), conversation: conversation,
+                                                                                         variables: variables).call.found
+    end
+
+    it '«bienes raíces» nombra la carrera completa, aunque CARRERA sea otra' do
+      say('y para bienes raíces es lo mismo')
+
+      expect(liga).to eq(%w[liga-1 liga-2])
+    end
+
+    it 'el nombre completo trae solo esa, no «Administración» que va dentro' do
+      say('Desarrollo y Administración Inmobiliaria en Bienes Raíces')
+
+      expect(liga('CARRERA' => 'VACÍO')).to eq(['liga-1'])
+    end
+
+    it 'una sola palabra o un tramo de dos carreras no bastan' do
+      say('¿y el servicio social cuánto cuesta?')
+      expect(liga('CARRERA' => 'VACÍO')).to be_nil
+
+      say('información de administración')
+      expect(liga('CARRERA' => 'VACÍO')).to eq(['liga-0'])
+    end
+
+    it '«instituciones de salud» es la maestría' do
+      say('quiero la de instituciones de salud')
+
+      expect(liga('CARRERA' => 'VACÍO')).to eq(['liga-4'])
+    end
+  end
+
   it 'nunca le llega al modelo que redacta: es configuración de la agenda' do
     texto = 'Agenda en su calendario. {{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}} Consulta {{hoja:Servicio Gruas}}.'
 
