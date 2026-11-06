@@ -1343,7 +1343,7 @@ class KnowledgeBaseResponseService
     response = ContactTrackings::OpenaiRequest.perform(http, request, 'KBase')
     return nil if response.nil? || response.body.blank?
 
-    JSON.parse(response.body).dig('choices', 0, 'message', 'content')&.strip
+    ContactTrackings::OpenaiRequest.clean(JSON.parse(response.body).dig('choices', 0, 'message', 'content'))
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error OpenAI: #{e.message}"
     nil

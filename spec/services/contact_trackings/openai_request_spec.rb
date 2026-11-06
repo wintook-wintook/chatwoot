@@ -42,4 +42,9 @@ RSpec.describe ContactTrackings::OpenaiRequest do
     expect(described_class.perform(http, request, 'T')).to be_nil
     expect(a_request(:post, url)).to have_been_made.twice
   end
+
+  it '.clean quita las fichas internas del modelo' do
+    expect(described_class.clean("Hasta luego. 😊\n\n<|vq_4492|>\n\n#despedida")).to eq("Hasta luego. 😊\n\n#despedida")
+    expect(described_class.clean(nil)).to be_nil
+  end
 end

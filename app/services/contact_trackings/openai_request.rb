@@ -39,4 +39,15 @@ module ContactTrackings::OpenaiRequest
   def retry?(response)
     response.nil? || response.body.blank? || RETRY_CODES.include?(response.code)
   end
+
+  # Fichas internas del modelo que a veces se cuelan en el texto («<|vq_4492|>»). Medido el
+  # 06/11/2026 (cuenta 1128, conv 156): una despedida del conversacional llegó al cliente
+  # con «<|vq_4492|>» en una línea aparte.
+  SPECIAL_TOKEN_RE = /[ \t]*<\|[[:alnum:]_-]{1,40}\|>[ \t]*/
+
+  def clean(text)
+    return text if text.nil?
+
+    text.gsub(SPECIAL_TOKEN_RE, '').gsub(/\n{3,}/, "\n\n").strip
+  end
 end
