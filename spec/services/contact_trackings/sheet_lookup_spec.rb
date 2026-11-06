@@ -111,6 +111,23 @@ RSpec.describe ContactTrackings::SheetLookup do
       expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'TP-63' }).found).to eq(%w[60 40.8])
     end
 
+    it 'si el cliente nombra otro en su mensaje actual, avisa del cambio' do
+      say('¿y la TP-64?')
+
+      switch = lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'TP-63' }).switch
+      expect(switch.to_h).to eq(variable: 'REMOLQUE', to: 'TP-64', from: ['TP-63'])
+      expect(switch.confirmed_by?('La TP-64 aguanta 60 t.')).to be(true)
+      expect(switch.confirmed_by?('La TP-63 aguanta 40.8 t; la TP-64, 60 t.')).to be(false)
+    end
+
+    it 'sin otro valor en el mensaje actual no hay cambio' do
+      say('¿y la TP-64?')
+      say('La TP-64 aguanta 60 t', :outgoing)
+      say('¿Y cuánto mide?')
+
+      expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'TP-63' }).switch).to be_nil
+    end
+
     it 'de los valores que nombra la variable se queda el más largo' do
       GoogleSheetRow.create!(account: account, knowledge_source: source, row_index: 3,
                              data: { 'remolque' => 'TP-63 Plus', 'peso_max_t' => '45', 'estatus' => 'activo', 'Calendar_ID' => 'x' })

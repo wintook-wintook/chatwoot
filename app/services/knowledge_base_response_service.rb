@@ -582,7 +582,25 @@ class KnowledgeBaseResponseService
     return false if reply_text.blank?
 
     send_reply("#{with_branch_tag(reply_text)}\n\n_#{spec.sheet}_")
+    follow_switch(result.switch, reply_text)
     true
+  end
+
+  # El cliente cambió de valor (otra carrera) y la respuesta ya habla del nuevo, pero el
+  # modelo no lo escribió en su línea VARIABLES: se guarda aquí. Ver SheetLookup::Switch.
+  def follow_switch(switch, reply_text)
+    return if switch.nil? || @tracking.nil?
+
+    definition = ContactTrackings::ConversationVariables.definition_for(@tracking)
+    variable = definition&.variable(switch.variable)
+    return if variable.nil?
+    return unless switch.confirmed_by?(ContactTrackings::ConversationVariables.strip(@tracking, reply_text))
+
+    actual = ContactTrackings::ConversationVariables.current(@tracking, @conversation, definition)[switch.variable].to_s
+    return if switch.from.none? { |valor| ContactTrackings::SheetNumbers.names?(actual, valor) }
+
+    value = definition.coerce(variable[:name], switch.to)
+    ContactTrackings::ConversationVariables.apply!(@tracking, @conversation, variable[:name] => value) if value
   end
 
   # Las VARIABLES del agente en esta conversación, para que un «carrera=?» use CARRERA.
@@ -1319,7 +1337,9 @@ class KnowledgeBaseResponseService
       temperature: temperature
     }.to_json
 
-    response = http.request(request)
+    response = ContactTrackings::OpenaiRequest.perform(http, request, 'KBase')
+    return nil if response.nil? || response.body.blank?
+
     JSON.parse(response.body).dig('choices', 0, 'message', 'content')&.strip
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error OpenAI: #{e.message}"

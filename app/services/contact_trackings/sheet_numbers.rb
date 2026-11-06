@@ -69,4 +69,13 @@ module ContactTrackings::SheetNumbers
   def fold(text)
     I18n.transliterate(text.to_s).downcase
   end
+
+  # ¿El texto nombra el valor? «TP-64», «tp 64» y «TP64» son el mismo remolque; «TP-6» no es
+  # «TP-64». Sin acentos: «grua» es «Grúa». Lo usa {{hoja_buscar:}} con «?».
+  def names?(text, value)
+    parts = fold(value).scan(/[[:alnum:]]+/)
+    return false if parts.empty?
+
+    fold(text).match?(/(?<![[:alnum:]])#{parts.map { |p| Regexp.escape(p) }.join('[\s\-_.]*')}(?![[:alnum:]])/)
+  end
 end

@@ -64,6 +64,44 @@ RSpec.describe KnowledgeBaseResponseService do
     expect(ultimo_mensaje(tracking_con('Agente de admisiones.'))).to start_with(described_class::LATER_TURN_NOTE)
   end
 
+  describe 'cambio de carrera que el modelo no escribió (SheetLookup::Switch)' do
+    let(:tracking) { tracking_con(con_variables) }
+    let(:switch) do
+      ContactTrackings::SheetLookup::Switch.new(variable: 'CARRERA', to: 'Derecho', from: ['Relaciones Internacionales'])
+    end
+
+    def carrera
+      ContactTrackings::ConversationVariables.current(tracking, conversation.reload)['CARRERA']
+    end
+
+    before do
+      ContactTrackings::ConversationVariables.apply!(tracking, conversation, 'CARRERA' => 'Licenciatura en Relaciones Internacionales')
+    end
+
+    def seguir(respuesta)
+      described_class.new(message, tracking: tracking, branch: nil).send(:follow_switch, switch, respuesta)
+    end
+
+    it 'si la respuesta ya habla de la nueva, la guarda' do
+      seguir("La Licenciatura en Derecho cuesta $3,221 por materia.\nVARIABLES: CARRERA=Licenciatura en Relaciones Internacionales")
+
+      expect(carrera).to eq('Derecho')
+    end
+
+    it 'si la respuesta sigue en la anterior, no la cambia' do
+      seguir('En Relaciones Internacionales no hay gastos de Derecho.')
+
+      expect(carrera).to eq('Licenciatura en Relaciones Internacionales')
+    end
+
+    it 'si el modelo ya la cambió, no la toca' do
+      ContactTrackings::ConversationVariables.apply!(tracking, conversation, 'CARRERA' => 'Licenciatura en Derecho')
+      seguir('La Licenciatura en Derecho cuesta $3,221 por materia.')
+
+      expect(carrera).to eq('Licenciatura en Derecho')
+    end
+  end
+
   it 'sin Entrenamiento, lo de siempre' do
     enviado = ultimo_mensaje(nil)
 
