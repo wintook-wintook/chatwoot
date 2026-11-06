@@ -674,6 +674,7 @@ class KnowledgeBaseResponseService
     user_prompt = erp_user_prompt(first_name, question, erp_data) if erp_data
     user_prompt = canned_prompt_user_prompt(first_name, question, canned_prompt) if canned_prompt
     user_prompt = "#{user_prompt}\n\n#{variables_reminder}" if variables_reminder
+    user_prompt = "#{conversation_turn_note}\n\n#{user_prompt}" if conversation_turn_note
 
     history  = load_history
     messages = [{ role: 'system', content: system_prompt }]
@@ -1013,6 +1014,23 @@ class KnowledgeBaseResponseService
       e ignora las de las otras. No vuelvas a clasificar el mensaje ni cambies de rama por tu
       cuenta.
     RULE
+  end
+
+  # proyecto@contact_tracking: el historial de KBase (kb_history) trae solo sus propios turnos,
+  # no lo que contestó el conversacional ni otros mensajes del equipo, y en una conversación
+  # nueva viene vacío. El prompt del agente pide presentarse solo en el primer mensaje, y sin
+  # ver la conversación el modelo adivinaba. Medido el 06/11/2026 (cuenta 1128, AGENTE
+  # ESCUELA, convs 137-139): a un «Hola» que abría la conversación contestó «¿En qué más le
+  # podemos ayudar?» sin presentarse; con «Buen día» sí se presentó.
+  FIRST_TURN_NOTE = 'Contexto: es el primer mensaje de la conversación; el equipo todavía no ha escrito nada.'
+  LATER_TURN_NOTE = 'Contexto: el equipo ya escribió antes en esta conversación; no es el primer mensaje.'
+
+  def conversation_turn_note
+    return @conversation_turn_note if defined?(@conversation_turn_note)
+    return @conversation_turn_note = nil if agent_system_prompt.nil? || @conversation.nil?
+
+    escribimos = @conversation.messages.where(message_type: :outgoing, private: false).exists?(id: ...@message.id)
+    @conversation_turn_note = escribimos ? LATER_TURN_NOTE : FIRST_TURN_NOTE
   end
 
   # La regla de [VARIABLES] va en el system prompt, lejos del final, y aquí el último mensaje

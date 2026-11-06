@@ -52,10 +52,23 @@ RSpec.describe KnowledgeBaseResponseService do
     expect(enviado).not_to include('ofrece pasarlo con un asesor')
   end
 
+  it 'en una conversación nueva le dice que es el primer mensaje' do
+    expect(ultimo_mensaje(tracking_con('Agente de admisiones.'))).to start_with(described_class::FIRST_TURN_NOTE)
+  end
+
+  it 'si el equipo ya escribió, le dice que no es el primer mensaje' do
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing,
+                     content: 'Sí, buen día. Soy Danielle.', created_at: 1.minute.ago)
+    message
+
+    expect(ultimo_mensaje(tracking_con('Agente de admisiones.'))).to start_with(described_class::LATER_TURN_NOTE)
+  end
+
   it 'sin Entrenamiento, lo de siempre' do
     enviado = ultimo_mensaje(nil)
 
     expect(enviado).to include('completa y útil')
     expect(enviado).to include('ofrece pasarlo con un asesor')
+    expect(enviado).not_to include('Contexto:')
   end
 end
