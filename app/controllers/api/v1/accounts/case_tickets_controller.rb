@@ -28,6 +28,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
                 only: %i[show update transition move assign escalate change_approval generate_article
                          apply_ai_suggestion dismiss_ai_suggestion suggest_reply summarize
                          detect_duplicates follow_up lock unlock reopen outcome postpone resume work_order project]
+  include CaseConflictGuard # K1 — dos personas en el mismo caso: presencia y conflicto por campo
+  before_action :check_case_conflict, only: %i[update assign transition move outcome postpone resume reopen]
   before_action :note_pending_tasks_decision, only: %i[transition outcome move]
   after_action :cancel_upcoming_meetings_on_close, only: %i[outcome move]
 

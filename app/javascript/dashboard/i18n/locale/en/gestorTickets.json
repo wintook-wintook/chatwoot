@@ -177,6 +177,40 @@
     }
   },
   "CASE_TICKETS": {
+    "STAGE_BAR": {
+      "NOW": "Now: {stage}"
+    },
+    "CONFLICT": {
+      "TITLE": "Someone changed this case",
+      "NOW": "now: {value}",
+      "HINT": "Your change was not saved because someone else changed the same thing while you had it open.",
+      "USE_MINE": "Use mine",
+      "KEEP_THEIRS": "Keep {name}'s",
+      "KEEP_CURRENT": "Keep the current one",
+      "SAVED_MINE": "Your change was saved",
+      "ERROR": "Could not save. Please try again.",
+      "STAGE_CHANGED": "stage changed",
+      "FIELDS": {
+        "STATUS": "Status",
+        "CASE_TYPE_COLUMN_ID": "Stage",
+        "PRIORITY": "Priority",
+        "TITLE": "Title",
+        "DESCRIPTION": "Description",
+        "ASSIGNEE_ID": "Assignee",
+        "TEAM_ID": "Team",
+        "DUE_AT": "Due date",
+        "AMOUNT": "Amount",
+        "CURRENCY": "Currency",
+        "EXPECTED_CLOSE_AT": "Expected close",
+        "PROBABILITY": "Probability",
+        "WORK_ADDRESS": "Address",
+        "ESTIMATED_HOURS": "Estimated hours",
+        "CASE_TYPE_ID": "Type"
+      }
+    },
+    "PRESENCE": {
+      "BANNER": "{names} is also on this case | {names} are also on this case"
+    },
     "NEXT_STEP": {
       "TASK": "Task · {date}",
       "TASK_OVERDUE": "Overdue task · {date}",

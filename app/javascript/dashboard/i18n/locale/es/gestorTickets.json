@@ -177,6 +177,40 @@
     }
   },
   "CASE_TICKETS": {
+    "STAGE_BAR": {
+      "NOW": "Ahora: {stage}"
+    },
+    "CONFLICT": {
+      "TITLE": "Alguien cambió este caso",
+      "NOW": "ahora: {value}",
+      "HINT": "Tu cambio no se guardó porque otra persona cambió lo mismo mientras lo tenías abierto.",
+      "USE_MINE": "Usar el mío",
+      "KEEP_THEIRS": "Dejar el de {name}",
+      "KEEP_CURRENT": "Dejar el actual",
+      "SAVED_MINE": "Se guardó tu cambio",
+      "ERROR": "No se pudo guardar. Inténtalo de nuevo.",
+      "STAGE_CHANGED": "cambió de etapa",
+      "FIELDS": {
+        "STATUS": "Estado",
+        "CASE_TYPE_COLUMN_ID": "Etapa",
+        "PRIORITY": "Prioridad",
+        "TITLE": "Título",
+        "DESCRIPTION": "Descripción",
+        "ASSIGNEE_ID": "Responsable",
+        "TEAM_ID": "Equipo",
+        "DUE_AT": "Vencimiento",
+        "AMOUNT": "Monto",
+        "CURRENCY": "Moneda",
+        "EXPECTED_CLOSE_AT": "Cierre estimado",
+        "PROBABILITY": "Probabilidad",
+        "WORK_ADDRESS": "Dirección",
+        "ESTIMATED_HOURS": "Horas estimadas",
+        "CASE_TYPE_ID": "Tipo"
+      }
+    },
+    "PRESENCE": {
+      "BANNER": "{names} también está en este caso | {names} también están en este caso"
+    },
     "NEXT_STEP": {
       "TASK": "Tarea · {date}",
       "TASK_OVERDUE": "Tarea vencida · {date}",

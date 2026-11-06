@@ -1099,6 +1099,7 @@ export default {
     },
   },
   mounted() {
+    this.$emitter.on('caseConflictResolved', this.onConflictResolved); // K1
     this.restoreState();
     this.setSortConfig();
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
@@ -1108,7 +1109,14 @@ export default {
     // se acota a Soporte (ver fetch).
     this.$store.dispatch('caseTickets/fetchTypes').finally(() => this.fetch());
   },
+  beforeDestroy() {
+    this.$emitter.off('caseConflictResolved', this.onConflictResolved);
+  },
   methods: {
+    // K1 — tras resolver un conflicto, la lista o el tablero se recargan.
+    onConflictResolved() {
+      this.fetch();
+    },
     // Plan-Casos E1.2 — la Lista vuelve como la dejaste: lo compartido con el
     // Tablero (tipo, ¿de quién?, SLA, filtros finos, búsqueda) y lo suyo
     // (`list`: estado, resultado, orden, página, vista). Guardado por clase en

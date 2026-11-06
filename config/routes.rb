@@ -384,6 +384,7 @@ Rails.application.routes.draw do
               post :follow_up # @tickets_cases 3F
               patch :lock   # @tickets_cases — bloqueo de ticket
               patch :unlock # @tickets_cases — bloqueo de ticket
+              get :presence, action: :track_presence # K1 — quién más está en el caso (GET: quien solo ve también avisa)
               patch :reopen # @tickets_cases — reapertura de ticket cerrado
               patch :outcome  # Plan-Clase-Comercial F3 — cerrar oportunidad con resultado
               patch :postpone # Plan-Clase-Comercial F3

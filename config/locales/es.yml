@@ -326,6 +326,10 @@ es:
       kept: 'Se conservó %{count} tarea(s) sin caso.'
       cancelled: 'Se cancelaron %{count} tarea(s) pendientes al cerrar el caso.'
       past: 'Se cancelaron %{count} tarea(s) agendada(s) que ya habían pasado.'
+  case_tickets:
+    conflict:
+      by: '%{name} cambió este caso hace un momento. Revisa antes de guardar.'
+      someone: 'Alguien cambió este caso hace un momento. Revisa antes de guardar.'
   assistant:
     unavailable: "No pude responder: revisa que la integración de OpenAI esté activa e intenta de nuevo."
     review_proposal: "Revisa la propuesta y confírmala."

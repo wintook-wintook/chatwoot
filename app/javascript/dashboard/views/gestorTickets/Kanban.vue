@@ -283,13 +283,21 @@ export default {
     },
   },
   mounted() {
+    this.$emitter.on('caseConflictResolved', this.onConflictResolved); // K1
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
     this.restoreState();
     this.loadBoard();
   },
+  beforeDestroy() {
+    this.$emitter.off('caseConflictResolved', this.onConflictResolved);
+  },
   methods: {
+    // K1 — tras resolver un conflicto, la lista o el tablero se recargan.
+    onConflictResolved() {
+      this.fetch();
+    },
     // Plan-Casos E1.2 — el Tablero comparte con la Lista (misma clase) el tipo,
     // ¿de quién?, el aviso de SLA, los filtros finos y la búsqueda: pasar de
     // una vista a otra, o salir y volver, conserva lo elegido.
