@@ -78,7 +78,7 @@ module ContactTrackings
         response_format: { type: 'json_object' }
       }.to_json
 
-      http.request(request).body
+      ContactTrackings::OpenaiRequest.perform(http, request, 'BranchClassifier')&.body.to_s
     end
 
     def prompt
