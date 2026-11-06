@@ -27,7 +27,17 @@ module ContactTrackings::SheetLookup::VariableValues
     de_variable = variable_values(column, known)
     return if de_variable.empty?
 
+    note_switch(column, known, de_variable)
     (de_variable + del_cliente.to_a).uniq
+  end
+
+  # Un solo valor nuevo en el turno actual del cliente: candidato a cambio (ver Switch).
+  def note_switch(column, known, de_variable)
+    nuevos = current_turn_values(known) - de_variable
+    return unless nuevos.one?
+
+    variable = ContactTrackings::ConversationVariables.key(column)
+    @switch = ContactTrackings::SheetLookup::Switch.new(variable: variable, to: nuevos.first, from: de_variable)
   end
 
   # El Agente declara la variable (CARRERA=VACÍO|valor) y sigue en VACÍO: nadie eligió todavía.
