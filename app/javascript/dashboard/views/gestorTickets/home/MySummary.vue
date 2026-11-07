@@ -15,13 +15,17 @@ import { localDay, visibleReasons } from 'dashboard/helper/caseTaskPriority';
 import { formatDay } from 'dashboard/helper/caseCommercial';
 import MyDayNotices from '../tasks/MyDayNotices.vue';
 import Tasks from '../Tasks.vue';
+import NotificationsView from 'dashboard/routes/dashboard/notifications/components/NotificationsView.vue';
+
+// Pestañas de Mi resumen, en orden. Va en la dirección (?tab=…).
+const TABS = ['summary', 'my_day', 'notifications'];
 
 const T = 'CASE_TICKETS.HOME';
 const TOP_TASKS = 5;
 
 export default {
   name: 'MySummary',
-  components: { MyDayNotices, Tasks },
+  components: { MyDayNotices, Tasks, NotificationsView },
   data() {
     return {
       isLoading: true,
@@ -36,7 +40,11 @@ export default {
       canViewBusinessSummary: 'caseTickets/getCanViewBusinessSummary',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
       getAccount: 'accounts/getAccount',
+      notificationMeta: 'notifications/getMeta',
     }),
+    unreadNotifications() {
+      return Number(this.notificationMeta.unreadCount) || 0;
+    },
     accountLoaded() {
       return !!this.getAccount(this.accountId)?.features;
     },
@@ -46,15 +54,15 @@ export default {
     hasCases() {
       return this.isFeatureEnabledonAccount(this.accountId, 'case_management');
     },
-    // Pestañas Resumen | Mi día (la de Mi día es la de Agenda › Tareas, incrustada).
-    // Va en la dirección (?tab=my_day) para que recargar o regresar no la pierda.
+    // Pestañas Resumen | Mi día | Notificaciones. Mi día es la de Agenda › Tareas y
+    // Notificaciones la página de siempre, incrustadas. Van en la dirección
+    // (?tab=my_day / ?tab=notifications) para que recargar o regresar no la pierda.
     tab() {
-      return this.hasCases && this.$route.query.tab === 'my_day'
-        ? 'my_day'
-        : 'summary';
+      const { tab } = this.$route.query;
+      return this.hasCases && TABS.includes(tab) ? tab : 'summary';
     },
     tabIndex() {
-      return this.tab === 'my_day' ? 1 : 0;
+      return TABS.indexOf(this.tab);
     },
     greeting() {
       const h = new Date().getHours();
@@ -186,9 +194,11 @@ export default {
       this.setTab(1);
     },
     setTab(index) {
-      const tab = index === 1 ? 'my_day' : undefined;
+      const tab = index > 0 ? TABS[index] : undefined;
       if (tab === this.$route.query.tab) return;
-      this.$router.replace({ query: { ...this.$route.query, tab } });
+      // Sin `page`: la paginación es de cada pestaña.
+      const { page, ...query } = this.$route.query;
+      this.$router.replace({ query: { ...query, tab } });
     },
     goConversations() {
       this.$router.push({ name: 'home' });
@@ -240,11 +250,23 @@ export default {
           :name="t('TAB_MY_DAY')"
           :show-badge="false"
         />
+        <woot-tabs-item
+          :index="2"
+          :name="t('TAB_NOTIFICATIONS')"
+          :count="unreadNotifications"
+          :show-badge="unreadNotifications > 0"
+        />
       </woot-tabs>
     </div>
 
     <!-- Mi día: la misma pantalla de Agenda › Tareas › Mi día. -->
     <Tasks v-if="tab === 'my_day'" embedded class="!h-auto flex-1 min-h-0" />
+
+    <!-- Notificaciones: la misma página de siempre (/notifications). -->
+    <NotificationsView
+      v-else-if="tab === 'notifications'"
+      class="summary-notifications !h-auto flex-1 min-h-0 w-full max-w-6xl px-6 mx-auto"
+    />
 
     <div v-else class="flex-1 min-h-0 overflow-auto">
       <div class="flex flex-col w-full max-w-6xl gap-5 px-6 py-5 mx-auto">
@@ -433,6 +455,12 @@ export default {
 </template>
 
 <style lang="scss" scoped>
+/* En su página, «Marcar todo como hecho» flota en la esquina; aquí taparía
+   «Resumen del negocio»: va en su lugar, arriba de la lista. */
+.summary-notifications ::v-deep .button--fixed-top {
+  @apply static flex ml-auto mb-2;
+}
+
 .home-card {
   @apply flex flex-col gap-2 p-4 bg-white border rounded-lg border-slate-100 dark:bg-slate-800 dark:border-slate-700;
 

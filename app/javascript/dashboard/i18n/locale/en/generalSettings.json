@@ -107,6 +107,7 @@
       "missed_call": "Missed call",
       "case_task_assignment": "Task assigned",
       "case_task_completed": "Task completed",
+      "calendar_event_reminder": "Calendar reminder",
       "case_stage_tasks": "New tasks",
       "case_stage_ready": "Stage ready"
     }
