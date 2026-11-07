@@ -355,6 +355,8 @@ Rails.application.routes.draw do
           # @tickets_cases — Gestor de Tickets
           # =========================================================================
           # Asistente (Dali) — asistente conversacional de toda la plataforma
+          # Buscar en todo (la lupa): contactos, organizaciones y casos
+          get :global_search, to: 'global_search#index'
           resource :assistant, only: [:show], controller: 'assistant' do
             post :messages
             post :reset
