@@ -355,11 +355,13 @@ en:
       delegate: 'Delegate a client follow-up to an AI agent, and ask how it is going or pause it.'
       sales: 'Sales: how are we doing vs the target, seller and client rankings, which opportunities close, are overdue or stalled, and pipeline health (amounts before tax).'
       sales_own: 'Your sales: how you are doing vs your target, your best clients, which of your opportunities close, are overdue or stalled (amounts before tax).'
+      guide: 'Learn the platform: how to do something, where each thing is and what it is for (e.g. «how do I create a contract?», «what is the funnel for?»).'
       limits: 'What it does not do: it never writes to the customer on its own (it leaves a draft or a scheduled message) and does no bulk actions.'
     starters:
       today: 'What do I have today?'
       sales_month: 'How are we doing this month?'
       closing: 'Which opportunities close this week?'
+      how_to: 'How do I use the Agenda?'
       help: 'What can you help me with?'
     sales:
       suggestions:

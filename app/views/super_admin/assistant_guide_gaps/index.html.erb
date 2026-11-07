@@ -1,0 +1,102 @@
+<%# Super Admin › Preguntas sin respuesta (SuperAdmin::AssistantGuideGapsController) %>
+<%
+  status_labels = { 'pending' => 'Pendientes', 'resolved' => 'Resueltas', 'discarded' => 'Descartadas' }
+  reason_labels = { 'no_guide' => 'Sin guía', 'not_covered' => 'La guía no lo cubre', 'thumbs_down' => '👎 No le sirvió' }
+  filters = { reason: @reason, account_id: @account_id, q: @query.presence }.compact
+%>
+<% content_for(:title) do %>
+  Preguntas sin respuesta
+<% end %>
+
+<header class="main-content__header" role="banner">
+  <div>
+    <h1 class="main-content__page-title" id="page-title"><%= content_for(:title) %></h1>
+    <p class="text-sm text-slate-500 m-0">
+      Lo que el asistente no supo contestar en todas las empresas. Sirve para escribir o corregir las guías
+      (<code>config/assistant/guides</code>). También: <code>rake assistant:guide_gaps</code>.
+    </p>
+  </div>
+</header>
+
+<section class="main-content__body">
+  <div class="flex gap-2 mb-4">
+    <% status_labels.each do |key, label| %>
+      <%= link_to "#{label} (#{@counts[key].to_i})",
+                  super_admin_assistant_guide_gaps_path(filters.merge(status: key)),
+                  class: "px-3 py-1 rounded-full text-sm border #{key == @status ? 'bg-woot-500 text-white border-woot-500' : 'border-slate-200 text-slate-700'}" %>
+    <% end %>
+  </div>
+
+  <%= form_with url: super_admin_assistant_guide_gaps_path, method: :get, local: true, class: 'flex flex-wrap items-end gap-3 mb-4' do %>
+    <%= hidden_field_tag :status, @status %>
+    <label class="text-sm">Motivo
+      <%= select_tag :reason, options_for_select([['Todos', '']] + reason_labels.map { |k, v| [v, k] }, @reason) %>
+    </label>
+    <label class="text-sm">Empresa
+      <%= select_tag :account_id, options_for_select([['Todas', '']] + @accounts, @account_id) %>
+    </label>
+    <label class="text-sm">Buscar
+      <%= text_field_tag :q, @query, placeholder: 'Texto de la pregunta' %>
+    </label>
+    <%= submit_tag 'Filtrar', class: 'button' %>
+  <% end %>
+
+  <% if @gaps.empty? %>
+    <p class="text-slate-500">No hay preguntas <%= status_labels[@status].downcase %> con esos filtros.</p>
+  <% else %>
+    <table aria-labelledby="page-title">
+      <thead>
+        <tr>
+          <th>Pregunta</th>
+          <th>Veces</th>
+          <th>Motivo</th>
+          <th>Empresa</th>
+          <th>Última vez</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @gaps.each do |gap| %>
+          <tr class="align-top">
+            <td style="max-width: 32rem">
+              <div class="font-medium text-slate-900"><%= gap.question %></div>
+              <div class="text-xs text-slate-500">
+                <%= gap.user&.name || 'Usuario borrado' %>
+                <% if gap.page.present? %> · pantalla <code><%= gap.page %></code><% end %>
+                <% if gap.guide_key.present? %> · guía <code><%= gap.guide_key %></code><% end %>
+              </div>
+              <% if gap.answer.present? %>
+                <details class="text-xs text-slate-600 mt-1">
+                  <summary>Lo que contestó</summary>
+                  <div style="white-space: pre-wrap"><%= gap.answer %></div>
+                </details>
+              <% end %>
+              <% if gap.resolution_note.present? %>
+                <div class="text-xs text-green-700 mt-1">Nota: <%= gap.resolution_note %></div>
+              <% end %>
+            </td>
+            <td><%= gap.occurrences %></td>
+            <td><%= reason_labels[gap.reason] %></td>
+            <td><%= gap.account&.name %> <span class="text-xs text-slate-400">#<%= gap.account_id %></span></td>
+            <td class="text-sm"><%= l(gap.last_asked_at.in_time_zone, format: :short) %></td>
+            <td>
+              <% if gap.status == 'pending' %>
+                <%= form_with url: super_admin_assistant_guide_gap_path(gap), method: :patch, local: true, class: 'flex flex-col gap-1' do %>
+                  <%= text_field_tag :note, nil, placeholder: 'Nota (opcional)', class: 'text-xs' %>
+                  <div class="flex gap-1">
+                    <%= button_tag 'Resuelta', name: 'status', value: 'resolved', class: 'button text-xs' %>
+                    <%= button_tag 'Descartar', name: 'status', value: 'discarded', class: 'button button--alt text-xs' %>
+                  </div>
+                <% end %>
+              <% else %>
+                <%= button_to 'Regresar a pendiente', super_admin_assistant_guide_gap_path(gap), method: :patch,
+                              params: { status: 'pending' }, class: 'button button--alt text-xs' %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <%= paginate @gaps %>
+  <% end %>
+</section>

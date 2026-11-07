@@ -24,7 +24,8 @@
 #  fk_rails_...  (user_id => users.id) ON DELETE => cascade
 #
 # Asistente (Dali) — la conversación de un usuario con el asistente. Cada mensaje:
-#   { id, role: 'user'|'assistant', content, at, proposals: [...], navigate: '/app/...' }
+#   { id, role: 'user'|'assistant', content, at, proposals: [...], navigate: '/app/...',
+#     feedback: 'down' (el usuario marcó 👎; queda en AssistantGuideGap) }
 # Una propuesta es una acción que el asistente quiere hacer y espera «Confirmar»:
 #   { id, type, payload, labels, status: 'pending'|'done'|'cancelled'|'failed', result }
 class AssistantThread < ApplicationRecord
@@ -53,6 +54,18 @@ class AssistantThread < ApplicationRecord
       return proposal if proposal
     end
     nil
+  end
+
+  # 👎 del usuario a una respuesta: la marca y devuelve [respuesta, pregunta que la originó].
+  def mark_unhelpful!(id)
+    index = messages.index { |m| m['id'] == id && m['role'] == 'assistant' }
+    return nil unless index
+
+    messages[index]['feedback'] = 'down'
+    messages_will_change!
+    save!
+    question = messages[0...index].reverse.find { |m| m['role'] == 'user' }
+    [messages[index], question]
   end
 
   def update_proposal!(id, changes)

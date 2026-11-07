@@ -16,12 +16,13 @@ class Assistant::Tools
   include Assistant::FollowUpTools # Seguimiento IA
   include Assistant::CaseTools # D4
   include Assistant::SalesTools # D5a
+  include Assistant::GuideTools # guías de uso de la plataforma
 
   LIST_LIMIT = 6
   ACTIVITY_LINES = 15
 
   READ_TOOLS = %w[search get_case get_contact my_agenda open_page list_agents tracking_status
-                  list_case_types case_options].freeze
+                  list_case_types case_options search_guides read_guide report_gap].freeze
   PROPOSAL_TOOLS = %w[propose_note propose_task propose_meeting propose_scheduled_message propose_draft
                       propose_delegate propose_tracking_action propose_create_case propose_move_stage
                       propose_outcome propose_postpone propose_resume_case propose_update_opportunity
@@ -207,21 +208,8 @@ class Assistant::Tools
     UserCalendarIntegration.exists?(account_id: @account.id, user_id: @user.id)
   end
 
-  PAGES = {
-    'case' => ->(t, id) { "tickets/#{id}" if id && t.cases.exists?(id) },
-    'contact' => ->(t, id) { "contacts/#{id}" if id && t.contacts.exists?(id) },
-    'organization' => ->(t, id) { "organizations/#{id}" if id && t.organizations.exists?(id) },
-    'conversation' => ->(_t, id) { "conversations/#{id}" if id },
-    'agenda' => ->(_t, _id) { 'tickets/tasks' },
-    'my_day' => ->(_t, _id) { 'tickets/tasks' },
-    'tasks' => ->(_t, _id) { 'tickets/tasks' },
-    'cases' => ->(_t, _id) { 'tickets' },
-    'budget' => ->(_t, _id) { 'tickets/budget' },
-    'pipeline' => ->(_t, _id) { 'tickets/commercial/metrics' }
-  }.freeze
-
   def page_path(target, id)
-    path = PAGES[target.to_s]&.call(self, id)
+    path = Assistant::Pages::MAP[target.to_s]&.call(self, id)
     path && "/app/accounts/#{@account.id}/#{path}"
   end
 end

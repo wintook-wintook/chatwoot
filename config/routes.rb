@@ -361,6 +361,7 @@ Rails.application.routes.draw do
             patch :settings
             post 'proposals/:id/confirm', action: :confirm
             post 'proposals/:id/cancel', action: :cancel
+            post 'messages/:id/feedback', action: :feedback
           end
           resources :case_tickets, only: [:index, :show, :create, :update] do
             # Plan-Trabajo-Campo R1 — reporte de servicio de la orden de trabajo
@@ -1181,6 +1182,8 @@ Rails.application.routes.draw do
       end
       resources :platform_apps, only: [:index, :new, :create, :show, :edit, :update]
       resource :instance_status, only: [:show]
+      # Asistente (Dali) — preguntas que no supo contestar, de todas las empresas
+      resources :assistant_guide_gaps, only: [:index, :update]
 
       resource :settings, only: [:show] do
         get :refresh, on: :collection

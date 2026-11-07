@@ -152,6 +152,16 @@ export default {
         this.$emitter.emit('assistant:done', proposal);
       }
     },
+    // 👎 «No me sirvió»: lo revisa el equipo de Kontrolya para mejorar las guías.
+    async markUnhelpful(message) {
+      if (message.feedback || String(message.id).startsWith('tmp-')) return;
+      this.$set(message, 'feedback', 'down');
+      try {
+        await AssistantAPI.markUnhelpful(message.id);
+      } catch (_e) {
+        this.$set(message, 'feedback', null);
+      }
+    },
     go(path) {
       if (path && path !== this.$route.path) this.$router.push(path);
     },
@@ -250,6 +260,20 @@ export default {
             "
             v-html="html(message.content)"
           />
+          <button
+            v-if="message.role === 'assistant' && message.content"
+            v-tooltip="message.feedback ? '' : t('UNHELPFUL')"
+            type="button"
+            class="flex items-center gap-1 -mt-1 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 disabled:hover:text-slate-400"
+            :disabled="!!message.feedback"
+            :aria-label="t('UNHELPFUL')"
+            @click="markUnhelpful(message)"
+          >
+            <span :class="{ 'opacity-50': !message.feedback }">
+              {{ t('UNHELPFUL_MARK') }}
+            </span>
+            <span v-if="message.feedback">{{ t('UNHELPFUL_THANKS') }}</span>
+          </button>
           <!-- D5a — cifras de ventas que acompañan la respuesta -->
           <AssistantDataCard
             v-for="(card, i) in message.cards || []"
