@@ -50,8 +50,8 @@
     },
     "UPDATE_CHATWOOT": "Una actualización %{latestChatwootVersion} para Chatwoot está disponible. Por favor, actualiza tu instancia.",
     "LEARN_MORE": "Aprende más",
-    "PAYMENT_PENDING": "Tu pago está pendiente. Por favor, actualiza tu información de pago para continuar usando Chatwoot",
-    "LIMITS_UPGRADE": "Tu cuenta ha excedido los límites de uso, por favor, actualiza tu plan para continuar usando Chatwoot",
+    "PAYMENT_PENDING": "Tu pago está pendiente. Por favor, actualiza tu información de pago para continuar usando Kontrolya",
+    "LIMITS_UPGRADE": "Tu cuenta ha excedido los límites de uso, por favor, actualiza tu plan para continuar usando Kontrolya",
     "OPEN_BILLING": "Abrir facturación",
     "BRAND": {
       "TITLE": "Marca de la empresa",

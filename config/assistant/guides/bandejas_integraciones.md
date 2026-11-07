@@ -20,10 +20,9 @@ Ajustes › Bandejas de Entrada, Ajustes › Integraciones y Ajustes › Equipos
 3. Llena los datos que pide el canal. En WhatsApp eliges el proveedor: WhatsApp Cloud, Twilio o Unoapi. En Email eliges Microsoft, Google u otro proveedor.
 4. Elige qué usuarios atienden la bandeja. Solo ellos ven y contestan sus conversaciones.
 5. Al terminar, en el chat del sitio web copia el código que se muestra y pégalo en tu página.
-Estas pantallas de alta todavía salen en inglés.
 
 ### Cambiar quién atiende una bandeja
-1. En Ajustes › Bandejas de Entrada pulsa el engrane («Settings») de la bandeja.
+1. En Ajustes › Bandejas de Entrada pulsa el engrane («Ajustes») de la bandeja.
 2. En la pestaña «Collaborators» agrega o quita usuarios y decide si las conversaciones nuevas se reparten solas entre ellos (asignación automática).
 3. Guarda con «Update».
 Si un administrador también quiere ver todas las bandejas, debe agregarse a cada una.

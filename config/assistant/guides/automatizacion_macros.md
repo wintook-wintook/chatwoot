@@ -18,8 +18,8 @@ pages: [ai_agents, conversation, automation, macros]
 ### Crear una regla de automatización
 1. Entra a Agentes IA › Automatización y pulsa «Agregar Regla de Automatización».
 2. Escribe «Nombre de la Regla» y «Descripción» (los dos son obligatorios).
-3. En «Evento» elige cuándo corre. Las opciones salen en inglés: Conversation Created (conversación creada), Conversation Updated (actualizada), Message Created (mensaje nuevo) y Conversation Opened (abierta).
-4. En «Condiciones» define a qué conversaciones aplica, por ejemplo la bandeja (Inbox). Con «Agregar Condición» sumas más.
+3. En «Evento» elige cuándo corre: «Conversación creada», «Conversación actualizada», «Mensaje creado» o «Conversación abierta».
+4. En «Condiciones» define a qué conversaciones aplica, por ejemplo la «Bandeja». Con «Agregar Condición» sumas más.
 5. En «Acciones» elige qué hace. Con «Agregar Acción» sumas más.
 6. Pulsa «Crear». La regla queda en la lista y se prende o apaga con su interruptor.
 En cada regla también están Editar, Clonar y Eliminar.
@@ -28,12 +28,12 @@ En cada regla también están Editar, Clonar y Eliminar.
 - «Asignar Agente IA»: le arranca un seguimiento al contacto con el agente que elijas. La lista muestra los agentes de la bandeja que pusiste en las condiciones. Si el contacto ya tiene un seguimiento activo en esa bandeja, no crea otro.
 - «Agregar a campaña»: inscribe al contacto en una campaña de agentes IA.
 - «Pausar seguimiento activo» y «Cancelar seguimiento activo»: pausan o cancelan el seguimiento del contacto en la bandeja de las condiciones; sin bandeja en las condiciones, aplican a todos sus seguimientos activos.
-- También están «Asignar Caso» (le pone un tipo de caso a la conversación) y «Asignar tablero de conversación». Las demás acciones de siempre salen en inglés, como Assign to agent, Add a label, Send a message o Resolve conversation.
+- También están «Asignar Caso» (le pone un tipo de caso a la conversación) y «Asignar tablero de conversación». Las demás son las de siempre, como «Asignar a un agente», «Agregar una etiqueta», «Enviar un mensaje» o «Resolver la conversación».
 
 ### Crear una macro
 1. Entra a Agentes IA › Macros y pulsa «Agregar una nueva macro».
 2. Escribe el «Nombre de la macro».
-3. Agrega sus acciones con «Agregar nueva acción» (entre «Iniciar flujo» y «Finalizar flujo»). Las opciones salen en inglés, como Add a label o Send a message. Se ejecutan en el orden en que están; puedes reordenarlas arrastrándolas.
+3. Agrega sus acciones con «Agregar nueva acción» (entre «Iniciar flujo» y «Finalizar flujo»). Por ejemplo «Agregar una etiqueta» o «Enviar un mensaje». Se ejecutan en el orden en que están; puedes reordenarlas arrastrándolas.
 4. En «Visibilidad de la macro» elige «Pública» (para todos los usuarios de la empresa) o «Privada» (solo para ti).
 5. Pulsa «Guardar macro».
 

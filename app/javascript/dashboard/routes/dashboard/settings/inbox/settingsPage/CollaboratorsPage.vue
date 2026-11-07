@@ -56,7 +56,7 @@ export default {
       this.enableAutoAssignment = this.inbox.enable_auto_assignment;
       this.maxAssignmentLimit =
         this.inbox?.auto_assignment_config?.max_assignment_limit || null;
-        this.allowAgentToDeleteMessage = this.inbox.allow_agent_to_delete_message;
+      this.allowAgentToDeleteMessage = this.inbox.allow_agent_to_delete_message;
       this.fetchAttachedAgents();
     },
     async fetchAttachedAgents() {
@@ -138,7 +138,7 @@ export default {
         :close-on-select="false"
         :clear-on-select="false"
         hide-selected
-        placeholder="Pick some"
+        :placeholder="$t('INBOX_MGMT.ADD.AGENTS.PICK_AGENTS')"
         selected-label
         :select-label="$t('FORMS.MULTISELECT.ENTER_TO_SELECT')"
         :deselect-label="$t('FORMS.MULTISELECT.ENTER_TO_REMOVE')"
