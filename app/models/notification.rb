@@ -58,7 +58,9 @@ class Notification < ApplicationRecord
     # Plan-Plantilla-Tareas-Etapa — nacieron tus tareas al entrar a una etapa (una por
     # persona y etapa) y la etapa quedó lista para pasar. Solo campanita + toast.
     case_stage_tasks: 14,
-    case_stage_ready: 15
+    case_stage_ready: 15,
+    # «Notificar usuario» de una regla de casos (Cases::RuleEngineService). Solo campanita + toast.
+    case_rule_notice: 16
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
@@ -70,7 +72,7 @@ class Notification < ApplicationRecord
 
   PRIMARY_ACTORS = %w[Conversation CaseTicket].freeze # @tickets_cases Fase A
   CASE_TITLE_TYPES = %w[case_ticket_assignment case_task_assignment case_task_completed
-                        case_stage_tasks case_stage_ready].freeze
+                        case_stage_tasks case_stage_ready case_rule_notice].freeze
 
   def push_event_data
     # Secondary actor could be nil for cases like system assigning conversation
@@ -124,7 +126,8 @@ class Notification < ApplicationRecord
       'case_task_completed' => 'notifications.notification_title.case_task_completed',
       'missed_call' => 'notifications.notification_title.missed_call',
       'case_stage_tasks' => 'notifications.notification_title.case_stage_tasks',
-      'case_stage_ready' => 'notifications.notification_title.case_stage_ready'
+      'case_stage_ready' => 'notifications.notification_title.case_stage_ready',
+      'case_rule_notice' => 'notifications.notification_title.case_rule_notice'
     }
 
     i18n_key = notification_title_map[notification_type]
@@ -164,7 +167,7 @@ class Notification < ApplicationRecord
       primary_actor.title.to_s
     when 'missed_call'
       primary_actor.inbox&.name.to_s
-    when 'case_task_assignment', 'case_task_completed', 'case_stage_tasks', 'case_stage_ready'
+    when 'case_task_assignment', 'case_task_completed', 'case_stage_tasks', 'case_stage_ready', 'case_rule_notice'
       # primary_actor es el TICKET (ruteo reusado); el nombre de la tarea viaja en meta.
       meta&.dig('task_title').to_s
     else

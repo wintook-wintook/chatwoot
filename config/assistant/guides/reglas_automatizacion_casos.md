@@ -16,7 +16,7 @@ Ajustes › Casos y etapas, con estas opciones: Reglas de automatización, Intel
 1. Entra a Ajustes › Casos y etapas › Reglas de automatización y pulsa «+ Nueva regla».
 2. Escribe «Nombre», «Posición» (la menor se revisa primero) y, si quieres, «Descripción».
 3. En «Se cumplen estas condiciones» pulsa «Agregar condición»: Tipo de caso, Origen, Prioridad, Estado, Estado SLA, Contenido del mensaje o Tiempo sin respuesta (min). Deben cumplirse todas; sin condiciones, la regla aplica a todos los casos.
-4. En «Ejecutar estas acciones» pulsa «Agregar acción»: Asignar responsable o Asignar equipo (escribe el nombre), Cambiar prioridad, Cambiar estado, Escalar (si algún tipo maneja ITIL) o Cerrar ticket.
+4. En «Ejecutar estas acciones» pulsa «Agregar acción»: Asignar responsable o Asignar equipo (escribe el nombre), Cambiar prioridad, Cambiar estado, Escalar (si algún tipo maneja ITIL), Cerrar ticket, Notificar usuario (escribe su correo o nombre: le llega un aviso a la campanita con el nombre de la regla), Agregar etiqueta (el nombre de una etiqueta que ya exista: se pone a la conversación del caso) o Activar seguimiento (el nombre de una plantilla de seguimiento: arranca en la conversación del caso si el contacto no tiene ya uno en ese canal).
 5. Deja «Activa» marcada. Marca «Continuar si coincide» si después de esta quieres revisar las siguientes; si no, se detiene en la primera que coincide.
 6. Pulsa «Crear regla».
 
@@ -50,7 +50,7 @@ Ajustes › Casos y etapas, con estas opciones: Reglas de automatización, Intel
 ## Dudas frecuentes
 - ¿Cuándo corren las reglas? Al crear un caso (venga de un mensaje, del portal o hecho a mano) y cuando su SLA se vence.
 - Si al crear el caso alguien eligió responsable o equipo a mano, las reglas no lo cambian. Tampoco gana una regla sobre el responsable fijo del contacto o su organización.
-- Las acciones «Notificar usuario», «Agregar etiqueta» y «Activar seguimiento» aparecen en la lista pero todavía no hacen nada.
+- «Agregar etiqueta» y «Activar seguimiento» necesitan que el caso tenga conversación; un caso creado a mano sin conversación no recibe nada.
 - ¿Cambiar la plantilla cambia folios viejos? No, solo los de los casos nuevos.
 - ¿Las oportunidades se reabren si el cliente responde? No. Una oportunidad Ganada o Perdida se queda cerrada; en su historial queda el aviso de que el cliente escribió y, si hace falta, se reabre a mano. «Reabrir si el cliente responde» y su ventana aplican solo a los casos de servicio.
 - Un administrador o supervisor puede reabrir a mano en cualquier momento con «Reabrir».

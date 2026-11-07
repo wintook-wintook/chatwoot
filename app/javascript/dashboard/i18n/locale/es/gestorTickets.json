@@ -602,7 +602,8 @@
         "OPEN_TICKET": "Abrir caso",
         "DELETE_ERROR": "No se pudo eliminar la tarea.",
         "TOAST_STAGE_TASKS": "Tareas nuevas: {task} · caso {folio}",
-        "TOAST_STAGE_READY": "{task} · caso {folio}"
+        "TOAST_STAGE_READY": "{task} · caso {folio}",
+        "TOAST_RULE_NOTICE": "{task}"
       },
       "TABLE": {
         "NUM": "Folio",

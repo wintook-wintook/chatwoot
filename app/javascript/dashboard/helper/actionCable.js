@@ -223,6 +223,11 @@ class ActionCableConnector extends BaseActionCableConnector {
         key: 'CASE_TICKETS.TASKS.INBOX.TOAST_STAGE_READY',
         icon: 'checkmark-circle',
       },
+      // «Notificar usuario» de una regla de casos.
+      case_rule_notice: {
+        key: 'CASE_TICKETS.TASKS.INBOX.TOAST_RULE_NOTICE',
+        icon: 'alert',
+      },
     };
     const n = data && data.notification;
     const conf = n && TOAST_MAP[n.notification_type];

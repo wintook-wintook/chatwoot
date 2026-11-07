@@ -631,7 +631,8 @@
           "WEEK": "This week"
         },
         "TOAST_STAGE_TASKS": "New tasks: {task} · case {folio}",
-        "TOAST_STAGE_READY": "{task} · case {folio}"
+        "TOAST_STAGE_READY": "{task} · case {folio}",
+        "TOAST_RULE_NOTICE": "{task}"
       },
       "ADD_NOTE": "Add note",
       "REFRESH": "Refresh",
