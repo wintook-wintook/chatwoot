@@ -510,6 +510,7 @@
   "CONTACT_OWNER": {
     "LABEL": "Responsable fijo",
     "NONE": "Sin responsable fijo",
+    "INHERITED": "Aplica el de su organización {organization}: {name}.",
     "HINT": "Sus conversaciones y casos nuevos van siempre con esta persona, sin importar las reglas de asignación.",
     "MISSING_INBOXES": "No está en {inboxes}: ahí siguen las reglas normales.",
     "SAVED": "Responsable fijo actualizado",

@@ -32,11 +32,11 @@ El responsable fijo es la persona que atiende siempre a un contacto. Sus convers
 
 ## Qué pasa con los casos
 - Un caso nuevo del contacto que se crea sin responsable queda con el responsable fijo, y las reglas de asignación de casos no lo cambian.
-- Al crear un caso a mano, el campo «Responsable» sale con tu nombre: si lo dejas así, el caso queda contigo. Para que le llegue al responsable fijo elige «— Automático (reglas) —».
+- Al crear un caso a mano para el contacto, el campo «Responsable» ya sale con su responsable fijo (el suyo o el de su organización). Si lo cambias, gana lo que elijas.
 - Los casos que ya existían no cambian de responsable.
 
 ## Dudas frecuentes
-- En la ficha dice «Sin responsable fijo» pero sus conversaciones le llegan a alguien. Puede ser el «Responsable» de su organización: ese campo de la ficha solo muestra el propio del contacto.
+- En la ficha dice «Sin responsable fijo» y debajo «Aplica el de su organización …»: el contacto no tiene uno propio y usa el «Responsable» de su organización.
 - ¿Ver solo lo mío incluye a estos contactos? Sí: con «Solo lo suyo» en Clientes ves los contactos de los que eres responsable fijo y los de las organizaciones a tu cargo.
 
 ## Quién puede

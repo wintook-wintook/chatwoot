@@ -481,6 +481,7 @@
   "CONTACT_OWNER": {
     "LABEL": "Contact owner",
     "NONE": "No contact owner",
+    "INHERITED": "Their organization {organization} applies: {name}.",
     "HINT": "Their conversations and new cases always go to this person, regardless of assignment rules.",
     "MISSING_INBOXES": "Not a member of {inboxes}: the usual rules apply there.",
     "SAVED": "Contact owner updated",

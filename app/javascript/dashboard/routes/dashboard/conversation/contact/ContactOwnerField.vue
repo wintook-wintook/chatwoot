@@ -15,7 +15,13 @@ export default {
     contactId: { type: Number, required: true },
   },
   data() {
-    return { owner: null, canEdit: false, missingInboxes: [], loaded: false };
+    return {
+      owner: null,
+      inherited: null,
+      canEdit: false,
+      missingInboxes: [],
+      loaded: false,
+    };
   },
   computed: {
     ...mapGetters({ agents: 'agents/getAgents' }),
@@ -32,6 +38,7 @@ export default {
   methods: {
     apply(data) {
       this.owner = data.owner;
+      this.inherited = data.inherited || null;
       this.canEdit = data.can_edit;
       this.missingInboxes = data.missing_inboxes || [];
       this.loaded = true;
@@ -94,6 +101,14 @@ export default {
         {{ owner ? owner.name : $t('CONTACT_OWNER.NONE') }}
       </span>
     </div>
+    <p v-if="inherited" class="mb-0 text-xs text-slate-600 dark:text-slate-300">
+      {{
+        $t('CONTACT_OWNER.INHERITED', {
+          name: inherited.name,
+          organization: inherited.organization,
+        })
+      }}
+    </p>
     <p
       v-if="missingInboxes.length"
       class="mb-0 text-xs text-yellow-800 dark:text-yellow-300"
