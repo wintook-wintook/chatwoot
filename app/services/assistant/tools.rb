@@ -51,7 +51,27 @@ class Assistant::Tools
   end
 
   # --- lectura --------------------------------------------------------------------
+  # La misma búsqueda que la lupa (GlobalSearch): todos los campos de contactos,
+  # organizaciones y casos, y en qué campo apareció. Menos de 3 letras: por nombre.
   def tool_search(args)
+    return short_search(args) if GlobalSearch.normalize(args['query']).length < GlobalSearch::MIN_CHARS
+
+    found = GlobalSearch.new(account: @account, grant: @grant, query: args['query']).call
+    { contacts: with_match(found[:contacts], contacts) { |c| contact_ref(c) },
+      organizations: found[:organizations][:items].map { |o| o.slice(:id, :name, :match).compact },
+      cases: with_match(found[:cases], cases) { |t| case_ref(t) },
+      totals: found.transform_values { |group| group[:count] } }
+  end
+
+  def with_match(group, scope)
+    records = scope.where(id: group[:items].pluck(:id)).index_by(&:id)
+    group[:items].filter_map do |item|
+      record = records[item[:id]]
+      record && yield(record).merge(match: item[:match]).compact
+    end
+  end
+
+  def short_search(args)
     q = "%#{ActiveRecord::Base.sanitize_sql_like(args['query'].to_s.strip)}%"
     { contacts: contacts.where('contacts.name ILIKE :q OR contacts.email ILIKE :q OR contacts.phone_number ILIKE :q', q: q)
                         .limit(LIST_LIMIT).map { |c| contact_ref(c) },

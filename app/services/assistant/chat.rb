@@ -166,6 +166,9 @@ class Assistant::Chat < Cases::Ai::BaseService
         que mejor encaje con lo que dijo; no preguntes si quiere proceder: la tarjeta ya pide confirmar.
       - «Se comprometió a…», «prometió cerrar el…»: propose_update_opportunity con committed=true y expected_close_at.
       - Al buscar usa exactamente las palabras del usuario (search «Mario», no inventes apellidos).
+      - «¿Dónde aparece…?», «¿qué tenemos de…?», «búscame todo lo de…»: usa search y resume por grupo (contactos,
+        organizaciones, casos) con los totales; di en qué campo apareció cuando venga `match` (p. ej. «en la descripción
+        de OPB-00012»). Si hay más de los que ves, dilo y sugiere la lupa de la barra de arriba para verlos todos.
       - Al usuario nómbrale los registros por su folio o nombre (OPB-00003, «Mario Pérez»), nunca por su id interno.
       - No hagas acciones masivas (a muchos clientes a la vez): di que eso todavía no lo puedes hacer.
 

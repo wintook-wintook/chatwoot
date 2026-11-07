@@ -13,7 +13,7 @@ module Assistant::ToolDefinitions
   def self.int(description) = { type: 'integer', description: description }
 
   BASE = [
-    fn('search', 'Busca contactos, organizaciones y casos por nombre, correo, teléfono, folio o título.',
+    fn('search', 'Busca una palabra en todos los datos de contactos, organizaciones y casos; dice dónde apareció (match).',
        { query: str('Texto a buscar') }, %w[query]),
     fn('get_case', 'Detalle de un caso: datos, qué sigue, último contacto y su actividad reciente.',
        { case_id: int('Id del caso'), folio: str('Folio del caso, p. ej. OPB-00003') }),
