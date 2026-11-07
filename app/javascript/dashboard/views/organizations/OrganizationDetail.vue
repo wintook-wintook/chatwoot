@@ -258,6 +258,7 @@ export default {
             {{ $t('ORGANIZATIONS.EDIT') }}
           </woot-button>
           <woot-button
+            v-if="access.canDelete"
             size="small"
             variant="clear"
             color-scheme="alert"

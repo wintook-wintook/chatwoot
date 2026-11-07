@@ -52,7 +52,7 @@ Una organización es la empresa (o el público en general) detrás de tus contac
 
 ## Dudas frecuentes
 - ¿Pasan solas a prospecto o a cliente? Sí, si están encendidas en Ajustes › Casos y etapas › Parámetros de ventas › «Prospectos y clientes automáticos». Ya vienen encendidas: al crear una oportunidad (prospecto), al ganarla y al dar de alta un contrato (cliente). Nunca la regresan a prospecto.
-- ¿Si elimino la organización? Sus contactos se quedan, solo sin organización.
+- ¿Si elimino la organización? Sus contactos se quedan, solo sin organización. El ícono de eliminar (junto a «Editar») solo aparece a quien tiene el permiso «Borrar» (por omisión, el Administrador).
 - ¿Dos con el mismo RFC? No se puede.
 
 ## Quién puede
