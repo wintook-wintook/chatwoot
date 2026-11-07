@@ -2,7 +2,7 @@
 key: clientes
 title: Clientes, panorama general
 areas: [clients]
-keywords: [clientes, cliente, buscar, busqueda, lupa, encontrar, contacto, contactos, organizacion, organizaciones, empresa, prospecto, prospectos, publico en general, contrato, contratos, dashboard de clientes, responsable fijo, ficha del cliente]
+keywords: [clientes, cliente, buscar, busqueda, lupa, ctrl k, encontrar, contacto, contactos, organizacion, organizaciones, empresa, prospecto, prospectos, publico en general, contrato, contratos, dashboard de clientes, responsable fijo, ficha del cliente]
 pages: [organizations, contacts, contracts, organization, contact]
 ---
 ## Para qué sirve
@@ -20,9 +20,11 @@ El área Clientes junta a la gente y a las empresas con las que trabajas:
 
 ## Cómo se hace
 ### Encontrar a un cliente rápido
-1. Pulsa la lupa «Buscar» en la barra de arriba.
+1. Pulsa la lupa «Buscar» en la barra de arriba o usa Ctrl + K (Cmd + K en Mac).
 2. Escribe al menos 3 letras: nombre, folio, RFC o algo de la descripción.
 3. Busca en contactos, organizaciones y casos, en todos sus datos (correo, teléfono, empresa, notas, atributos…), y te dice dónde apareció.
+4. Usa las pestañas Contactos, Organizaciones o Casos para ver solo ese tipo; muévete con ↑ ↓ y abre con Enter. Lo último que abriste queda en «Abiertos hace poco».
+El detalle completo está en la guía de la barra de arriba.
 
 ### Dar de alta un contacto rápido
 1. Pulsa «Nuevo contacto» en la barra de arriba.
