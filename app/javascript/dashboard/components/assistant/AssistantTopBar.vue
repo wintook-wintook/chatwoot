@@ -120,7 +120,7 @@ export default {
     class="flex items-center flex-shrink-0 h-10 px-3 bg-white border-b border-slate-100 dark:bg-slate-900 dark:border-slate-800"
   >
     <form
-      class="flex items-center flex-1 max-w-lg gap-2 px-3 mx-auto rounded-lg h-7 bg-slate-50 dark:bg-slate-800 focus-within:ring-1 focus-within:ring-woot-300"
+      class="flex items-center flex-1 max-w-lg gap-2 px-3 rounded-lg h-7 bg-slate-50 dark:bg-slate-800 focus-within:ring-1 focus-within:ring-woot-300"
       @submit.prevent="submit"
     >
       <fluent-icon icon="wand" size="14" class="flex-shrink-0 text-woot-500" />
