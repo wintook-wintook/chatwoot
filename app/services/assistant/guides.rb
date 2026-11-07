@@ -12,6 +12,7 @@
 #   areas: [sales, service]         # AccessRole::AREAS; vacío = la ve todo el mundo
 #   keywords: [caso, oportunidad, etapa, ganar, perder]
 #   pages: [cases, pipeline]        # pantallas de open_page que menciona
+#   category: Primeros pasos        # opcional: categoría en el Centro de ayuda (Assistant::GuidePublisher)
 #   ---
 #   ## Para qué sirve …
 #
@@ -29,7 +30,7 @@ module Assistant::Guides
                  dali favor ayuda ayudas usar uso creo crear cambio cambiar cambia pongo poner marco marcar
                  doy hago donde].freeze
 
-  Guide = Struct.new(:key, :title, :areas, :keywords, :pages, :body, keyword_init: true) do
+  Guide = Struct.new(:key, :title, :areas, :keywords, :pages, :body, :category, keyword_init: true) do
     def visible_to?(grant)
       areas.empty? || areas.any? { |area| grant.allowed?(area) }
     end
@@ -100,6 +101,6 @@ module Assistant::Guides
     meta = YAML.safe_load(raw[FRONT_MATTER, 1].to_s) || {}
     Guide.new(key: meta['key'].to_s, title: meta['title'].to_s, areas: Array(meta['areas']).map(&:to_s),
               keywords: Array(meta['keywords']).map(&:to_s), pages: Array(meta['pages']).map(&:to_s),
-              body: raw.sub(FRONT_MATTER, '').strip)
+              category: meta['category'].to_s.presence, body: raw.sub(FRONT_MATTER, '').strip)
   end
 end

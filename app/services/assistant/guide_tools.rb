@@ -31,7 +31,8 @@ module Assistant::GuideTools
     return { error: 'Esa guía no existe o el usuario no tiene acceso a esa área.' } unless guide
 
     @last_guide_key = guide.key
-    { key: guide.key, title: guide.title, content: guide.body, pages: guide.pages }
+    { key: guide.key, title: guide.title, content: guide.body, pages: guide.pages,
+      url: Assistant::GuidePublisher.article_url(guide.key) }.compact
   end
 
   def tool_report_gap(args)

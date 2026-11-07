@@ -177,7 +177,7 @@ class Assistant::Chat < Cases::Ai::BaseService
         dice la guía: nunca inventes menús, botones, pantallas ni pasos. Si es para hacerlo tú (p. ej. «crea la tarea»),
         no hace falta guía: usa la función de propuesta.
       - Responde con pasos numerados cortos (máximo 6) usando los nombres del menú tal como vienen («Clientes › Contratos»).
-        Si la guía trae una pantalla (pages), ofrece abrirla y, si el usuario dice que sí, usa open_page.
+        Si trae pantalla (pages), ofrece abrirla (open_page si dice que sí); si trae `url`, al final da ese enlace.
       - Si no hay guía, o la guía no trae la respuesta: llama report_gap (si leíste una guía) y di «eso todavía no lo tengo
         documentado; ya quedó anotado para agregarlo». Puedes sugerir a quién preguntarle (su administrador).
       - Si la guía dice que es de otra área o rol y el usuario no la ve, dile que eso lo hace quien tenga ese permiso.

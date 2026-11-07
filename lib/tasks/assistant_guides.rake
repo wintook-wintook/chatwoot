@@ -7,6 +7,8 @@
 #   rake assistant:guide_gaps:resolve IDS=4,7 NOTE='guía agenda: cómo cambiar el responsable'
 #   rake assistant:guide_gaps:discard IDS=9 NOTE='es del negocio del cliente'
 #   rake assistant:guides:check                       # las guías completas y su búsqueda
+#   rake assistant:guides:portal ACCOUNT=1            # crea el Centro de ayuda global (una vez)
+#   rake assistant:guides:publish                     # guías → artículos del Centro de ayuda (en cada deploy)
 namespace :assistant do
   desc 'Preguntas que Dali no supo contestar (STATUS, REASON, ACCOUNT, LIMIT)'
   task guide_gaps: :environment do
@@ -68,6 +70,32 @@ namespace :assistant do
       problems << "áreas sin guía: #{missing}" if missing.any?
       abort(problems.join("\n")) if problems.any?
       puts 'Guías en orden.'
+    end
+  end
+end
+
+namespace :assistant do
+  namespace :guides do
+    desc 'Crea el Centro de ayuda global de Kontrolya en la cuenta ACCOUNT (slug PLATFORM_HELP_PORTAL_SLUG, «ayuda»)'
+    task portal: :environment do
+      abort 'Falta ACCOUNT=<id de la cuenta de Kontrolya>' if ENV['ACCOUNT'].blank?
+      portal = Assistant::GuidePublisher.create_portal!(account: Account.find(ENV.fetch('ACCOUNT', nil)),
+                                                        name: ENV.fetch('NAME', 'Ayuda Kontrolya'))
+      puts "Portal «#{portal.name}» (#{portal.slug}) en la cuenta #{portal.account_id}: /hc/#{portal.slug}/es"
+    end
+
+    desc 'Publica las guías como artículos del Centro de ayuda global (crea, actualiza y archiva)'
+    task publish: :environment do
+      unless Assistant::GuidePublisher.portal
+        puts "Sin portal «#{Assistant::GuidePublisher.portal_slug}»: nada que publicar (rake assistant:guides:portal ACCOUNT=…)"
+        next
+      end
+      result = Assistant::GuidePublisher.new.call
+      puts "Nuevas: #{result.created.size} · actualizadas: #{result.updated.size} · " \
+           "sin cambios: #{result.unchanged.size} · archivadas: #{result.archived.size}"
+      puts "  nuevas: #{result.created.join(', ')}" if result.created.any?
+      puts "  actualizadas: #{result.updated.join(', ')}" if result.updated.any?
+      puts "  archivadas: #{result.archived.join(', ')}" if result.archived.any?
     end
   end
 end
