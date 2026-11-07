@@ -24,7 +24,7 @@ Arriba de todo. A la izquierda la caja «Pregúntale a …» (con el nombre del 
 3. Escribe al menos 3 letras: nombre, folio, RFC, correo, teléfono o algo que esté en la descripción o en las notas. No importan acentos ni mayúsculas.
 4. Arriba salen las pestañas Todo, Contactos, Organizaciones y Casos con cuántos hay de cada uno. En «Todo» van hasta 5 por tipo («Ver todos (N)» abre su pestaña); en una pestaña ves la lista completa y «Ver más (N)» trae el resto.
 5. Cada resultado trae su ícono y una línea de datos: del contacto, su organización, teléfono y correo; de la organización, su etapa, RFC y responsable; del caso, su tipo, estado o resultado, el contacto y el responsable. Si la palabra no está en el nombre, se ve en qué campo apareció, resaltada.
-6. Muévete con las flechas ↑ ↓, abre con Enter o con clic, y cierra con Esc.
+6. Abre con clic o con Enter; también te mueves con las flechas ↑ ↓ y cierras con Esc.
 7. Si no aparece, pulsa «¿No lo encuentras? Pregúntale a …» abajo: el asistente busca la palabra por ti.
 La barra de comandos que antes salía con Ctrl + K ahora se abre con Ctrl + Shift + K.
 

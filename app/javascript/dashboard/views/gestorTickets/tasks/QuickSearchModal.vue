@@ -10,7 +10,7 @@
     estado, responsable, etapa) y, si la palabra no está en el nombre, el campo y el
     pedacito de texto donde apareció, resaltado.
   - Sin escribir: los últimos abiertos desde aquí (en este navegador) y una ayuda.
-  - Teclado: ↑ ↓ para moverse, Enter abre, Esc cierra.
+  - Teclado: ↑ ↓ para moverse, Enter abre, Esc cierra (sin indicaciones en pantalla).
   - Al final, «¿No lo encuentras? Pregúntale a Dali» le pasa la palabra al asistente.
 -->
 <script>
@@ -24,25 +24,16 @@ import {
 const MIN_CHARS = 3;
 const DEBOUNCE_MS = 300;
 const GROUPS = ['contacts', 'organizations', 'cases'];
+const TAB_KEYS = ['all', ...GROUPS];
 const PER_GROUP = 5;
 const MAX_RECENT = 6;
 const T = 'QUICK_ACTIONS.SEARCH';
-// Nombres de las teclas (iguales en todos los idiomas).
-const KEYS = { up: '↑', down: '↓', enter: 'Enter', esc: 'Esc' };
 
-const TYPE_STYLE = {
-  contacts: {
-    icon: 'person',
-    chip: 'bg-woot-75 text-woot-600 dark:bg-woot-800/60 dark:text-woot-200',
-  },
-  organizations: {
-    icon: 'building-bank',
-    chip: 'bg-amber-75 text-amber-700 dark:bg-amber-800/60 dark:text-amber-200',
-  },
-  cases: {
-    icon: 'clipboard',
-    chip: 'bg-teal-50 text-teal-700 dark:bg-teal-800/60 dark:text-teal-200',
-  },
+// Un ícono gris por tipo, sin colores (diseño minimalista).
+const TYPE_ICON = {
+  contacts: 'person',
+  organizations: 'building-bank',
+  cases: 'clipboard',
 };
 
 const emptyGroups = () =>
@@ -92,8 +83,8 @@ export default {
       active: 0,
       recent: [],
       GROUPS,
-      TYPE_STYLE,
-      KEYS,
+      TYPE_ICON,
+      TAB_KEYS,
     };
   },
   computed: {
@@ -142,13 +133,6 @@ export default {
       if (this.tab === 'all') return false;
       const group = this.groups[this.tab];
       return group.items.length < group.count;
-    },
-    keyHints() {
-      return [
-        { keys: [KEYS.up, KEYS.down], label: this.t('KEY_MOVE') },
-        { keys: [KEYS.enter], label: this.t('KEY_OPEN') },
-        { keys: [KEYS.esc], label: this.t('KEY_CLOSE') },
-      ];
     },
     assistantName() {
       return assistantState.name || DEFAULT_ASSISTANT_NAME;
@@ -214,6 +198,7 @@ export default {
       }
     },
     async selectTab(tab) {
+      if (!tab || (tab !== 'all' && !this.groups[tab].count)) return;
       this.tab = tab;
       this.active = 0;
       if (tab !== 'all' && this.groups[tab].page === 0) await this.loadMore();
@@ -372,14 +357,14 @@ export default {
 <template>
   <div
     v-if="show"
-    class="fixed inset-0 z-50 flex justify-center px-4 bg-slate-900/40 dark:bg-black/60"
+    class="fixed inset-0 z-50 flex justify-center px-4 bg-slate-900/10 dark:bg-black/30"
     @mousedown.self="$emit('close')"
   >
     <div
       role="dialog"
       aria-modal="true"
       :aria-label="t('TITLE')"
-      class="flex flex-col w-full max-w-2xl mt-[10vh] mb-auto overflow-hidden bg-white shadow-2xl max-h-[80vh] rounded-xl dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-700"
+      class="flex flex-col w-full max-w-2xl mt-[10vh] mb-auto overflow-hidden bg-white border shadow-lg max-h-[80vh] rounded-xl border-slate-100 dark:bg-slate-900 dark:border-slate-800"
     >
       <!-- Caja de búsqueda -->
       <div
@@ -387,13 +372,13 @@ export default {
       >
         <fluent-icon
           icon="search"
-          size="20"
+          size="18"
           class="flex-shrink-0 text-slate-400"
         />
         <input
           ref="input"
           v-model="query"
-          type="search"
+          type="text"
           class="flex-1 min-w-0 !mb-0 !h-12 !p-0 text-base !bg-transparent !border-0 !shadow-none focus:!ring-0 placeholder:text-slate-400"
           :aria-label="t('TITLE')"
           :placeholder="t('PLACEHOLDER')"
@@ -403,33 +388,24 @@ export default {
         <span v-if="searching" class="text-xs text-slate-400">
           {{ t('SEARCHING') }}
         </span>
-        <kbd class="search-kbd">{{ KEYS.esc }}</kbd>
       </div>
 
-      <!-- Pestañas por tipo -->
-      <div
+      <!-- Pestañas por tipo (las mismas de Mi resumen) -->
+      <woot-tabs
         v-if="searched && hasResults"
-        class="flex gap-1 px-3 pt-2 pb-1 overflow-x-auto"
+        class="px-4 search-tabs"
+        :index="TAB_KEYS.indexOf(tab)"
+        @change="index => selectTab(TAB_KEYS[index])"
       >
-        <button
-          v-for="tabKey in ['all', ...GROUPS]"
+        <woot-tabs-item
+          v-for="(tabKey, index) in TAB_KEYS"
           :key="tabKey"
-          type="button"
-          class="flex items-center gap-1.5 px-3 py-1 text-sm rounded-full whitespace-nowrap disabled:opacity-40 disabled:cursor-default"
+          :index="index"
+          :name="tabKey === 'all' ? t('ALL') : t(tabKey.toUpperCase())"
+          :count="tabKey === 'all' ? total : groups[tabKey].count"
           :disabled="tabKey !== 'all' && !groups[tabKey].count"
-          :class="
-            tab === tabKey
-              ? 'bg-woot-50 text-woot-700 font-medium dark:bg-woot-900/40 dark:text-woot-200'
-              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-          "
-          @click="selectTab(tabKey)"
-        >
-          {{ tabKey === 'all' ? t('ALL') : t(tabKey.toUpperCase()) }}
-          <span class="text-xs text-slate-400">
-            {{ tabKey === 'all' ? total : groups[tabKey].count }}
-          </span>
-        </button>
-      </div>
+        />
+      </woot-tabs>
 
       <div class="flex-1 px-2 py-2 overflow-y-auto">
         <!-- Antes de escribir: los últimos abiertos y la ayuda -->
@@ -456,9 +432,11 @@ export default {
             @mouseenter="active = index"
             @click="open(entry.key, entry.item)"
           >
-            <span class="search-icon" :class="TYPE_STYLE[entry.key].chip">
-              <fluent-icon :icon="TYPE_STYLE[entry.key].icon" size="16" />
-            </span>
+            <fluent-icon
+              :icon="TYPE_ICON[entry.key]"
+              size="16"
+              class="search-icon"
+            />
             <span class="flex flex-col min-w-0">
               <span class="truncate text-slate-800 dark:text-slate-100">
                 {{ title(entry.key, entry.item) }}
@@ -467,18 +445,8 @@ export default {
                 detail(entry.key, entry.item)
               }}</span>
             </span>
-            <fluent-icon
-              icon="clock"
-              size="14"
-              class="flex-shrink-0 ml-auto text-slate-300"
-            />
           </button>
-          <p
-            class="flex items-start gap-2 px-3 py-3 m-0 text-sm text-slate-500"
-          >
-            <fluent-icon icon="search" size="16" class="flex-shrink-0 mt-0.5" />
-            {{ t('HINT') }}
-          </p>
+          <p class="search-note">{{ t('HINT') }}</p>
         </template>
 
         <p v-else-if="tooShort" class="search-note">{{ t('MIN') }}</p>
@@ -493,7 +461,7 @@ export default {
             class="flex items-center justify-between px-2 pt-1 pb-1"
           >
             <h4 class="search-heading">
-              {{ t(section.key.toUpperCase()) }} ({{ section.count }})
+              {{ t(section.key.toUpperCase()) }} · {{ section.count }}
             </h4>
             <button
               v-if="section.count > section.items.length"
@@ -513,9 +481,11 @@ export default {
             @mouseenter="active = indexOf(section.key, item)"
             @click="open(section.key, item)"
           >
-            <span class="search-icon" :class="TYPE_STYLE[section.key].chip">
-              <fluent-icon :icon="TYPE_STYLE[section.key].icon" size="16" />
-            </span>
+            <fluent-icon
+              :icon="TYPE_ICON[section.key]"
+              size="16"
+              class="search-icon"
+            />
             <span class="flex flex-col min-w-0">
               <span class="truncate text-slate-800 dark:text-slate-100">
                 <span
@@ -553,24 +523,13 @@ export default {
         </button>
       </div>
 
-      <!-- Pie: teclas y Dali -->
-      <div
-        class="flex items-center justify-between gap-3 px-4 py-2 text-xs border-t text-slate-500 border-slate-100 dark:border-slate-800 bg-slate-25 dark:bg-slate-800/50"
-      >
-        <span class="items-center hidden gap-3 sm:flex">
-          <span v-for="hint in keyHints" :key="hint.label">
-            <kbd v-for="k in hint.keys" :key="k" class="mr-0.5 search-kbd">
-              {{ k }}
-            </kbd>
-            {{ hint.label }}
-          </span>
-        </span>
+      <!-- Pie: solo Dali -->
+      <div class="flex justify-end px-4 py-2">
         <button
           type="button"
-          class="flex items-center gap-1 ml-auto text-woot-600 hover:underline dark:text-woot-300"
+          class="text-xs text-slate-400 hover:text-woot-600 dark:hover:text-woot-300"
           @click="askAssistant"
         >
-          <fluent-icon icon="wand" size="14" />
           {{ t('ASK_DALI', { name: assistantName }) }}
         </button>
       </div>
@@ -579,28 +538,28 @@ export default {
 </template>
 
 <style scoped>
+.search-tabs ::v-deep .tabs {
+  @apply mb-0 border-b border-slate-100 dark:border-slate-800;
+}
 .search-hit {
-  @apply font-semibold bg-yellow-100 rounded-sm dark:bg-yellow-700/40;
+  @apply font-medium text-slate-900 bg-yellow-100/70 rounded-sm dark:text-white dark:bg-yellow-700/30;
 }
 .search-heading {
-  @apply m-0 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400;
+  @apply m-0 text-xs font-normal text-slate-400;
 }
 .search-row {
-  @apply flex items-center w-full gap-3 px-2 py-2 text-sm text-left rounded-lg;
+  @apply flex items-start w-full gap-3 px-2 py-1.5 text-sm text-left rounded-md;
 }
 .search-row[data-active='true'] {
-  @apply bg-slate-100 dark:bg-slate-800;
+  @apply bg-slate-50 dark:bg-slate-800/60;
 }
 .search-icon {
-  @apply flex items-center justify-center flex-shrink-0 rounded-lg w-8 h-8;
+  @apply flex-shrink-0 mt-0.5 text-slate-400;
 }
 .search-sub {
-  @apply w-full text-xs truncate text-slate-500 dark:text-slate-400;
+  @apply w-full text-xs truncate text-slate-400;
 }
 .search-note {
-  @apply px-3 py-3 m-0 text-sm text-slate-500 dark:text-slate-400;
-}
-.search-kbd {
-  @apply px-1.5 py-0.5 font-sans text-[11px] border rounded border-slate-200 bg-white text-slate-500 dark:bg-slate-800 dark:border-slate-600;
+  @apply px-2 py-3 m-0 text-sm text-slate-400;
 }
 </style>
