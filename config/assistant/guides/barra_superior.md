@@ -2,7 +2,7 @@
 key: barra_superior
 title: La barra de arriba (preguntar, buscar y accesos rápidos)
 areas: []
-keywords: [barra de arriba, barra superior, preguntale, buscar, lupa, busqueda, buscar cliente, buscar caso, folio, rfc, tarea rapida, nueva tarea, reportar actividad, nuevo contacto, ayuda, signo de interrogacion, ctrl j, accesos rapidos, doble clic]
+keywords: [barra de arriba, barra superior, preguntale, buscar, lupa, busqueda, buscar cliente, buscar caso, folio, rfc, tarea rapida, nueva tarea, reportar actividad, nuevo contacto, ayuda, signo de interrogacion, ctrl j, ctrl k, accesos rapidos, abiertos hace poco, doble clic]
 pages: [contacts, organizations, cases, tasks, task_reports]
 ---
 ## Para qué sirve
@@ -19,11 +19,14 @@ Arriba de todo. A la izquierda la caja «Pregúntale a …» (con el nombre del 
 4. El texto de la caja cambia según lo que ves: en un caso dice «Pregúntale a … sobre este caso…»; igual en un contacto, una organización o una conversación.
 
 ### Buscar
-1. Pulsa Buscar (la lupa).
-2. Escribe al menos 3 letras: nombre, folio, RFC, correo, teléfono o algo que esté en la descripción o en las notas. No importan acentos ni mayúsculas.
-3. Los resultados salen en tres grupos: Contactos, Organizaciones y Casos, hasta 5 de cada uno. Cuando la palabra no está en el nombre, se ve en qué campo apareció, con la palabra resaltada.
-4. «Ver más (N)» trae el resto de ese grupo.
-5. Haz clic en un resultado para abrirlo, o da Enter para abrir el primero.
+1. Pulsa Buscar (la lupa) o usa Ctrl + K (Cmd + K en Mac) desde cualquier pantalla.
+2. Antes de escribir ves «Abiertos hace poco»: lo último que abriste desde la lupa en esta computadora («Borrar» los quita).
+3. Escribe al menos 3 letras: nombre, folio, RFC, correo, teléfono o algo que esté en la descripción o en las notas. No importan acentos ni mayúsculas.
+4. Arriba salen las pestañas Todo, Contactos, Organizaciones y Casos con cuántos hay de cada uno. En «Todo» van hasta 5 por tipo («Ver todos (N)» abre su pestaña); en una pestaña ves la lista completa y «Ver más (N)» trae el resto.
+5. Cada resultado trae su ícono y una línea de datos: del contacto, su organización, teléfono y correo; de la organización, su etapa, RFC y responsable; del caso, su tipo, estado o resultado, el contacto y el responsable. Si la palabra no está en el nombre, se ve en qué campo apareció, resaltada.
+6. Muévete con las flechas ↑ ↓, abre con Enter o con clic, y cierra con Esc.
+7. Si no aparece, pulsa «¿No lo encuentras? Pregúntale a …» abajo: el asistente busca la palabra por ti.
+La barra de comandos que antes salía con Ctrl + K ahora se abre con Ctrl + Shift + K.
 
 ### Crear una tarea rápida
 1. Pulsa Tarea. Llena «Qué hay que hacer»; lo demás es opcional: descripción, responsable (eres tú si no lo cambias), fecha programada, hora y fecha de vencimiento.

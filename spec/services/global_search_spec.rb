@@ -40,6 +40,18 @@ RSpec.describe GlobalSearch do
     expect(search('serie')[:cases][:count]).to eq(0)
   end
 
+  it 'trae los datos de la segunda línea: organización, responsable y contacto' do
+    user = create(:user, account: account, name: 'Lucía Ramos')
+    contact.update!(organization: organization)
+    organization.update!(owner_id: user.id)
+    ticket.update!(assignee: user)
+
+    expect(search('mario')[:contacts][:items].first).to include(organization: 'Hielos SA')
+    expect(search('hielos')[:organizations][:items].first).to include(owner: 'Lucía Ramos')
+    expect(search('enfriamiento')[:cases][:items].first).to include(assignee: 'Lucía Ramos', contact: 'Mario Pérez',
+                                                                    type: 'Soporte')
+  end
+
   it 'pide al menos 3 letras' do
     expect(search('ma')[:contacts]).to eq(count: 0, items: [])
   end

@@ -100,7 +100,21 @@ export default {
       return this.$t(`${T}.${key}`, { name: this.name });
     },
   },
+  mounted() {
+    window.addEventListener('keydown', this.onShortcut);
+  },
+  beforeDestroy() {
+    window.removeEventListener('keydown', this.onShortcut);
+  },
   methods: {
+    // Ctrl + K (⌘ K) abre la lupa desde cualquier pantalla.
+    onShortcut(event) {
+      if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey)
+        return;
+      if (event.key.toLowerCase() !== 'k') return;
+      event.preventDefault();
+      this.openAction('search');
+    },
     async openAction(key) {
       if (key === 'contact') await this.$store.dispatch('integrations/get');
       this.modal = key;

@@ -91,9 +91,9 @@ class GlobalSearch
 
   def base(type)
     case type
-    when 'contacts' then @grant.allowed?(:clients) ? @grant.contacts(@account.contacts) : Contact.none
-    when 'organizations' then organizations
-    else @grant.case_tickets(@account.case_tickets).includes(:case_type)
+    when 'contacts' then @grant.allowed?(:clients) ? @grant.contacts(@account.contacts).includes(:organization) : Contact.none
+    when 'organizations' then organizations.includes(:owner)
+    else @grant.case_tickets(@account.case_tickets).includes(:case_type, :assignee, :contact)
     end
   end
 
@@ -135,16 +135,18 @@ class GlobalSearch
   end
 
   def contacts_item(contact)
-    { id: contact.id, name: contact.name, detail: contact.phone_number.presence || contact.email }
+    { id: contact.id, name: contact.name, detail: contact.phone_number.presence || contact.email,
+      email: contact.email, organization: contact.organization&.name }
   end
 
   def organizations_item(org)
-    { id: org.id, name: org.name, stage: org.stage, detail: org.tax_id }
+    { id: org.id, name: org.name, stage: org.stage, detail: org.tax_id, owner: org.owner&.name }
   end
 
   def cases_item(ticket)
     { id: ticket.id, folio: ticket.folio, title: ticket.title, status: ticket.status,
-      case_class: ticket.case_type&.case_class, type: ticket.case_type&.name }
+      case_class: ticket.case_type&.case_class, type: ticket.case_type&.name, outcome: ticket.outcome,
+      assignee: ticket.assignee&.name, contact: ticket.contact&.name }
   end
 
   # El primer campo (fuera del principal) donde aparece, con el pedacito de texto.
