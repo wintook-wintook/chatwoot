@@ -1304,7 +1304,7 @@
         "DAYS": "días",
         "SAVE": "Guardar",
         "ON_REPLY_TITLE": "Reabrir si el cliente responde",
-        "ON_REPLY_DESC": "Si el cliente escribe por su canal sobre un caso cerrado, se reabre solo (o se crea uno de seguimiento si venció la ventana).",
+        "ON_REPLY_DESC": "Si el cliente escribe por su canal sobre un caso cerrado, se reabre solo (o se crea uno de seguimiento si venció la ventana). Las oportunidades ganadas o perdidas no se reabren: solo queda el aviso en su historial.",
         "NOTE_WINDOW": "El administrador puede reabrir siempre, aunque haya vencido la ventana.",
         "NOTE_SLA": "Al reabrir, el SLA vuelve a contar desde cero."
       },

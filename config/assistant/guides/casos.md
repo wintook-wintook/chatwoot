@@ -52,7 +52,7 @@ Un caso es un trabajo con un cliente que empieza y termina: una oportunidad de v
 ## Dudas frecuentes
 - ¿Puedo cambiar el cliente de un caso? No. Si es otro cliente, cancela el caso y crea uno nuevo.
 - En el Tablero de Servicio, al soltar la tarjeta en otra columna puedes escribir una nota y avisar al cliente por su canal. Si ese paso cierra el caso, aparece «Ir a la ficha» para documentar el cierre ahí.
-- Si el cliente vuelve a escribir sobre un caso cerrado, puede reabrirse solo; el administrador lo define en Ajustes › Casos y etapas › Ajustes del módulo.
+- Si el cliente vuelve a escribir sobre un caso de servicio cerrado, puede reabrirse solo; el administrador lo define en Ajustes › Casos y etapas › Ajustes del módulo. Las oportunidades no se reabren solas: solo queda el aviso en su historial.
 - Al cerrar varios casos a la vez, las tareas agendadas a futuro no se cancelan: revísalas caso por caso.
 
 ## Quién puede

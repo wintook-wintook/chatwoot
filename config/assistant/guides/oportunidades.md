@@ -30,7 +30,7 @@ Una oportunidad es una venta en curso con un cliente: lleva monto, probabilidad 
 ### Editar los datos comerciales
 1. Pulsa la línea de datos o el lápiz.
 2. Cambia monto, moneda, cierre estimado, probabilidad o el compromiso del cliente (con su nota). Con compromiso, la fecha pasa a ser la «Fecha comprometida».
-3. Pulsa «Guardar». Cerrada ya no se edita: hay que reabrirla.
+3. Pulsa «Guardar». Cerrada ya no se edita: hay que reabrirla. Si el cliente escribe después en la conversación, la oportunidad no se reabre sola; en su historial queda el aviso.
 
 ### Ganarla o perderla
 1. Pulsa «Ganada» o «Perdida».

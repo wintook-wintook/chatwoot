@@ -167,7 +167,7 @@ RSpec.describe CaseTicket, 'oportunidades comerciales' do
       expect(conversation.case_tickets.where(case_type: venta).count).to eq(1)
     end
 
-    it 'la respuesta del cliente reabre el más reciente y avisa en el de otra clase (#3)' do
+    it 'la respuesta del cliente reabre el caso de servicio y avisa en la oportunidad, que sigue cerrada (#3)' do
       conversation = create(:conversation, account: account, contact: contact)
       ticket = described_class.create!(account: account, title: 'Falla', contact: contact,
                                        conversation: conversation, case_type: soporte)
@@ -178,9 +178,21 @@ RSpec.describe CaseTicket, 'oportunidades comerciales' do
       message = create(:message, account: account, conversation: conversation, message_type: :incoming)
       CaseTicketListener.instance.message_created(Events::Base.new('message.created', Time.zone.now, message: message))
 
-      expect(opp.reload.status).to eq('in_progress')
-      expect(ticket.reload.status).to eq('closed')
-      expect(ticket.case_events.last).to have_attributes(event_type: 'message_received')
+      expect(ticket.reload.status).to eq('in_progress')
+      expect(opp.reload).to have_attributes(status: 'closed', outcome: 'won')
+      expect(opp.case_events.last).to have_attributes(event_type: 'message_received')
+    end
+
+    it 'una oportunidad ganada no se reabre cuando el cliente responde' do
+      conversation = create(:conversation, account: account, contact: contact)
+      opp = opportunity(conversation: conversation, status: :in_progress)
+      opp.close_with_outcome!(:won, reason_id: reason(:won).id)
+
+      message = create(:message, account: account, conversation: conversation, message_type: :incoming)
+      CaseTicketListener.instance.message_created(Events::Base.new('message.created', Time.zone.now, message: message))
+
+      expect(opp.reload).to have_attributes(status: 'closed', outcome: 'won')
+      expect(opp.case_events.last.payload['content']).to include('sigue cerrada')
     end
   end
 end

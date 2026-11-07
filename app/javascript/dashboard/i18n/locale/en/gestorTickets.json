@@ -1301,7 +1301,7 @@
         "DAYS": "days",
         "SAVE": "Save",
         "ON_REPLY_TITLE": "Reopen on customer reply",
-        "ON_REPLY_DESC": "If the customer writes on their channel about a closed case, it reopens automatically (or a follow-up case is created if the window expired).",
+        "ON_REPLY_DESC": "If the customer writes on their channel about a closed case, it reopens automatically (or a follow-up case is created if the window expired). Won or lost opportunities do not reopen: a note is added to their history.",
         "NOTE_WINDOW": "An administrator can always reopen, even after the window expired.",
         "NOTE_SLA": "On reopening, the SLA clock restarts from zero."
       },

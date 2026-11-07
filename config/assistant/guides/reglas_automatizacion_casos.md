@@ -52,7 +52,7 @@ Ajustes › Casos y etapas, con estas opciones: Reglas de automatización, Intel
 - Si al crear el caso alguien eligió responsable o equipo a mano, las reglas no lo cambian. Tampoco gana una regla sobre el responsable fijo del contacto o su organización.
 - Las acciones «Notificar usuario», «Agregar etiqueta» y «Activar seguimiento» aparecen en la lista pero todavía no hacen nada.
 - ¿Cambiar la plantilla cambia folios viejos? No, solo los de los casos nuevos.
-- ¿Las oportunidades respetan la ventana de reapertura? No: una oportunidad cerrada se reabre siempre que el cliente responde (si está activo «Reabrir si el cliente responde»).
+- ¿Las oportunidades se reabren si el cliente responde? No. Una oportunidad Ganada o Perdida se queda cerrada; en su historial queda el aviso de que el cliente escribió y, si hace falta, se reabre a mano. «Reabrir si el cliente responde» y su ventana aplican solo a los casos de servicio.
 - Un administrador o supervisor puede reabrir a mano en cualquier momento con «Reabrir».
 - El orden de Mi día se ajusta aparte, en Ajustes › Puntaje de tareas.
 
