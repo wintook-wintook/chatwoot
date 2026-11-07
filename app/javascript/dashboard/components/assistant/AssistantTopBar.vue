@@ -1,7 +1,7 @@
 <!--
   Asistente (Dali) — barra «Pregúntale a Dali…» arriba de todas las pantallas del
   dashboard, para tenerlo siempre a la vista. Escribir + Enter abre el panel con la
-  pregunta ya enviada; Enter sin texto abre el panel vacío. El texto de la caja
+  pregunta ya enviada; Enter sin texto (o doble clic en la caja) abre el panel. El texto de la caja
   cambia según lo que se está viendo (caso, contacto, organización, conversación).
   Las pantallas de campo (Mi ruta) no usan Dashboard.vue y no la muestran.
 
@@ -131,6 +131,7 @@ export default {
         class="flex-1 min-w-0 !h-7 !mb-0 !p-0 text-sm !bg-transparent !border-0 !shadow-none focus:!ring-0 placeholder:text-slate-400"
         :placeholder="placeholder"
         :aria-label="placeholder"
+        @dblclick="submit"
       />
       <kbd
         class="flex-shrink-0 hidden px-1.5 text-[10px] font-sans border rounded sm:inline text-slate-400 border-slate-200 dark:border-slate-700"
