@@ -59,6 +59,13 @@ export default {
         FEATURE_FLAGS.CASE_MANAGEMENT
       );
       return [
+        // La lupa primero, junto a la caja de Dali; el texto corto es «Buscar».
+        {
+          key: 'search',
+          icon: 'search',
+          label: 'QUICK_ACTIONS.SEARCH_CLIENT',
+          text: 'QUICK_ACTIONS.SEARCH_SHORT',
+        },
         withCases && {
           key: 'task',
           icon: 'checkmark-circle',
@@ -71,7 +78,6 @@ export default {
           label: 'QUICK_ACTIONS.REPORT_ACTIVITY',
           text: true,
         },
-        { key: 'search', icon: 'search', label: 'QUICK_ACTIONS.SEARCH_CLIENT' },
         {
           key: 'contact',
           icon: 'person-add',
@@ -151,7 +157,7 @@ export default {
       >
         <fluent-icon :icon="action.icon" size="16" class="flex-shrink-0" />
         <span v-if="action.text" class="hidden whitespace-nowrap xl:inline">
-          {{ $t(action.label) }}
+          {{ $t(action.text === true ? action.label : action.text) }}
         </span>
       </button>
       <a
