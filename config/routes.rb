@@ -258,6 +258,7 @@ Rails.application.routes.draw do
           resources :ai_follow_ups, only: [:index, :create] do
             get :templates, on: :collection
             get :context, on: :collection
+            get :inboxes, on: :collection
             member do
               post :pause
               post :resume
