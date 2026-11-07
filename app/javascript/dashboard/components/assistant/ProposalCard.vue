@@ -26,7 +26,19 @@ const ICONS = {
   resume_case: 'arrow-clockwise',
   update_opportunity: 'edit',
   create_contact: 'person-add',
+  // Cotizaciones
+  create_quote: 'receipt',
+  send_quote: 'send',
 };
+
+// Igual que el servidor (Assistant::QuoteTools.totals): descuento por partida, IVA de la partida.
+const round2 = n => Math.round(n * 100) / 100;
+const itemNet = i =>
+  round2(
+    Number(i.quantity || 0) *
+      Number(i.unit_price || 0) *
+      (1 - Number(i.discount_percent || 0) / 100)
+  );
 
 // ISO (con zona) ↔ valor de <input type="datetime-local"> en hora local.
 const toLocalInput = iso => {
@@ -72,6 +84,8 @@ export default {
         name: p.name || '',
         email: p.email || '',
         phone: p.phone || '',
+        // Cotización: las partidas se pueden ajustar (cantidad, precio) o quitar.
+        items: (p.items || []).map(i => ({ ...i })),
       },
       units: ['minutes', 'hours', 'days'],
       busy: false,
@@ -102,6 +116,15 @@ export default {
     // Delegar a un agente del módulo o al Seguimiento IA: la misma tarjeta.
     isDelegate() {
       return this.type === 'delegate' || this.type === 'follow_up';
+    },
+    quoteTotals() {
+      const net = this.form.items.reduce((sum, i) => sum + itemNet(i), 0);
+      const tax = this.form.items.reduce(
+        (sum, i) =>
+          sum + round2((itemNet(i) * Number(i.tax_percent || 0)) / 100),
+        0
+      );
+      return { net: round2(net), tax: round2(tax), total: round2(net + tax) };
     },
     isAction() {
       return (
@@ -150,6 +173,8 @@ export default {
         resume_case: {},
         update_opportunity: {},
         create_contact: { name: f.name, email: f.email, phone: f.phone },
+        create_quote: { items: f.items },
+        send_quote: {},
       }[this.type];
     },
     // «TYPE» → «Tipo»; el valor del resultado (won…) también se traduce.
@@ -163,6 +188,20 @@ export default {
       if (value === true || value === 'true') return this.t('YES');
       if (value === false || value === 'false') return this.t('NO_WORD');
       return value;
+    },
+    money(value) {
+      const currency = this.labels.currency || 'MXN';
+      try {
+        return new Intl.NumberFormat(undefined, {
+          style: 'currency',
+          currency,
+        }).format(value || 0);
+      } catch {
+        return `${Number(value || 0).toFixed(2)} ${currency}`;
+      }
+    },
+    removeItem(index) {
+      this.form.items.splice(index, 1);
     },
     async confirm() {
       this.busy = true;
@@ -415,6 +454,71 @@ export default {
             <input v-model="form.phone" type="tel" class="h-8 text-sm" />
           </label>
         </div>
+      </template>
+      <!-- Cotización: partidas (cantidad y precio sin IVA editables) y totales -->
+      <template v-if="type === 'create_quote'">
+        <div
+          class="grid grid-cols-[1fr_4rem_6rem_1rem] gap-2 text-xs text-slate-500"
+        >
+          <span />
+          <span>{{ t('QUANTITY') }}</span>
+          <span>{{ t('UNIT_PRICE') }}</span>
+        </div>
+        <div
+          v-for="(item, index) in form.items"
+          :key="index"
+          class="grid items-center grid-cols-[1fr_4rem_6rem_1rem] gap-2"
+        >
+          <span
+            class="text-xs truncate text-slate-700 dark:text-slate-200"
+            :title="item.description"
+          >
+            {{ item.description }}
+          </span>
+          <input
+            v-model.number="item.quantity"
+            type="number"
+            min="0.01"
+            step="any"
+            :aria-label="t('QUANTITY')"
+            class="h-8 text-sm"
+          />
+          <input
+            v-model.number="item.unit_price"
+            type="number"
+            min="0"
+            step="any"
+            :aria-label="t('UNIT_PRICE')"
+            class="h-8 text-sm"
+          />
+          <button
+            v-if="pending && form.items.length > 1"
+            type="button"
+            class="p-0 bg-transparent border-0 cursor-pointer text-slate-400 hover:text-red-600"
+            :title="t('REMOVE_ITEM')"
+            @click="removeItem(index)"
+          >
+            <fluent-icon icon="dismiss" size="12" />
+          </button>
+        </div>
+        <dl class="m-0 text-xs text-right text-slate-500">
+          <div>
+            {{ t('NET') }}:
+            <span class="text-slate-700 dark:text-slate-200">{{
+              money(quoteTotals.net)
+            }}</span>
+          </div>
+          <div>
+            {{ t('TAX') }}:
+            <span class="text-slate-700 dark:text-slate-200">{{
+              money(quoteTotals.tax)
+            }}</span>
+          </div>
+          <div class="font-semibold text-slate-800 dark:text-slate-100">
+            {{ t('TOTAL') }}: {{ money(quoteTotals.total) }}
+          </div>
+        </dl>
+        <p class="m-0 text-xs text-slate-500">{{ t('QUOTE_DRAFT') }}</p>
       </template>
       <label v-if="type === 'scheduled_message'" class="text-xs">
         {{ t('SEND_AT') }}

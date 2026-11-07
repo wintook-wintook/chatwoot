@@ -2,7 +2,7 @@
 key: cotizaciones
 title: Cotizaciones
 areas: [sales]
-keywords: [cotizacion, cotizaciones, cotizar, nueva cotizacion, partida, partidas, producto, descuento, iva, impuesto, vigencia, enviar cotizacion, enlace, pdf, firma, aceptar, rechazar, nueva version, enviada, vencida, ganada, perdida, pospuesta, cancelada, trabajo adicional]
+keywords: [cotizacion, cotizaciones, cotizar, nueva cotizacion, partida, partidas, producto, descuento, iva, impuesto, vigencia, enviar cotizacion, enlace, pdf, firma, aceptar, rechazar, nueva version, enviada, vencida, ganada, perdida, pospuesta, cancelada, trabajo adicional, cotizar con dali, pedirle a dali una cotizacion]
 pages: [quotes, opportunities, case, contact]
 ---
 ## Para qué sirve
@@ -22,6 +22,14 @@ Una cotización es la propuesta con precios que le mandas al cliente. Puede ir s
 5. En cada partida ajusta Cant., Unidad, Precio, Desc. % e Imp. %. El importe y los totales (Subtotal, Descuento, Impuestos, Total) se calculan solos.
 6. Si quieres, escribe Condiciones (las ve el cliente) y Notas internas (solo tu equipo).
 7. Pulsa «Guardar». Nace como Borrador y recibe su folio (COT-0001).
+
+### Pedírsela a Dali
+1. En la caja «Pregúntale a …» escribe qué y a quién, por ejemplo «cotízale a Mario 3 mantenimientos de minisplit y una instalación de 3500».
+2. Dali busca al cliente y cada producto en el Catálogo y toma su precio sin IVA. Lo que no esté en el catálogo lo pone como partida libre; si no le dijiste el precio, te lo pregunta.
+3. Te muestra la tarjeta «Nueva cotización»: cliente, oportunidad a la que se liga (la abierta más reciente del cliente, o una nueva si la empresa exige oportunidad), cada partida con Cantidad y Precio sin IVA que puedes cambiar o quitar, y Subtotal sin IVA, IVA y Total.
+4. Pulsa «Confirmar»: se crea en Borrador con el impuesto, la vigencia y el folio de la empresa. «Ver» la abre.
+5. Después te pregunta «¿Se la mando?». Si dices que sí, sale la tarjeta «Enviar cotización»; al confirmar se manda como con «Enviar al cliente».
+También puedes preguntarle «¿qué cotizaciones tiene abiertas Mario?». Lo demás (editarla, nueva versión, marcar el resultado) se hace en la cotización.
 
 ### Enviarla al cliente
 1. Abre la cotización y pulsa «Enviar al cliente»: se manda el enlace por la conversación más reciente del cliente y pasa a Enviada.

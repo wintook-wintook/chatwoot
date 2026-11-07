@@ -17,6 +17,7 @@ El asistente (se llama Dali, o el nombre que le puso tu empresa) contesta en tus
 - Consultar: buscar clientes, organizaciones y casos (con el mismo buscador de la lupa), contarte qué ha pasado con un cliente y qué tienes hoy o esta semana.
 - Registrar: notas, tareas, tareas agendadas (llamadas, reuniones, visitas), mensajes programados al cliente y nuevos contactos.
 - Casos y oportunidades: crear un caso, pasarlo a otra etapa, marcarlo como ganado, perdido o cancelado, posponerlo o retomarlo, y cambiar monto, cierre estimado, probabilidad o el compromiso del cliente.
+- Cotizaciones (si puedes crear en Ventas): armarlas con los productos y precios del Catálogo, mandárselas al cliente y ver las que tiene abiertas.
 - Delegar el seguimiento de un cliente a un agente IA, preguntar cómo va y pausarlo, reanudarlo o cancelarlo.
 - Ventas (si tienes acceso a Ventas): cómo vas contra la meta, ranking de vendedores y clientes, oportunidades que cierran, vencidas o estancadas, y la salud del embudo. Las cifras son sin IVA; con «Solo lo suyo» son solo tus números.
 - Explicar la plataforma: cómo se hace algo, dónde está y para qué sirve.
@@ -37,7 +38,7 @@ El asistente (se llama Dali, o el nombre que le puso tu empresa) contesta en tus
 5. Un borrador no se confirma: se copia con «Copiar» y tú lo pegas donde lo vayas a mandar.
 
 ## Límites
-- No le escribe solo al cliente: te deja un borrador o un mensaje programado que tú confirmas.
+- No le escribe al cliente sin tu confirmación: te deja un borrador, un mensaje programado o la tarjeta para enviar una cotización.
 - No hace acciones masivas (a muchos clientes a la vez).
 - Solo ve y propone lo que tu rol te permite.
 - Si no sabe algo de cómo se usa la plataforma, te lo dice y anota la pregunta para que la documenten.

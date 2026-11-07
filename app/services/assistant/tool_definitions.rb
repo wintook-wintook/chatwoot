@@ -106,5 +106,5 @@ module Assistant::ToolDefinitions
        %w[content])
   ].freeze
 
-  ALL = (BASE + Assistant::SalesToolDefinitions::ALL + Assistant::GuideToolDefinitions::ALL).freeze # D5a + guías
+  ALL = (BASE + Assistant::SalesToolDefinitions::ALL + Assistant::GuideToolDefinitions::ALL + Assistant::QuoteToolDefinitions::ALL).freeze
 end

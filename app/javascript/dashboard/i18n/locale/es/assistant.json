@@ -95,14 +95,25 @@
         "EXPECTED_CLOSE_AT": "Cierre",
         "PROBABILITY": "Probabilidad %",
         "COMMITTED": "Comprometida",
-        "COMMIT_NOTE": "Nota del compromiso"
+        "COMMIT_NOTE": "Nota del compromiso",
+        "QUOTE": "Cotización",
+        "OPPORTUNITY": "Oportunidad"
       },
       "OUTCOMES": {
         "won": "Ganada",
         "lost": "Perdida",
         "cancelled": "Cancelada"
       },
-      "TEMPLATE": "Plantilla"
+      "TEMPLATE": "Plantilla",
+      "create_quote": "Nueva cotización",
+      "send_quote": "Enviar cotización",
+      "QUANTITY": "Cantidad",
+      "UNIT_PRICE": "Precio sin IVA",
+      "REMOVE_ITEM": "Quitar",
+      "NET": "Subtotal sin IVA",
+      "TAX": "IVA",
+      "TOTAL": "Total",
+      "QUOTE_DRAFT": "Se crea en borrador; la puedes revisar antes de mandarla."
     },
     "SETTINGS": {
       "TITLE": "Asistente",

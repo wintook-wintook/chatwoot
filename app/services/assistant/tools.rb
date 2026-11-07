@@ -17,16 +17,17 @@ class Assistant::Tools
   include Assistant::CaseTools # D4
   include Assistant::SalesTools # D5a
   include Assistant::GuideTools # guías de uso de la plataforma
+  include Assistant::QuoteTools # cotizaciones
 
   LIST_LIMIT = 6
   ACTIVITY_LINES = 15
 
   READ_TOOLS = %w[search get_case get_contact my_agenda open_page list_agents tracking_status
-                  list_case_types case_options search_guides read_guide report_gap].freeze
+                  list_case_types case_options search_guides read_guide report_gap].freeze + QUOTE_READ_TOOLS
   PROPOSAL_TOOLS = %w[propose_note propose_task propose_meeting propose_scheduled_message propose_draft
                       propose_delegate propose_tracking_action propose_create_case propose_move_stage
                       propose_outcome propose_postpone propose_resume_case propose_update_opportunity
-                      propose_create_contact propose_follow_up propose_follow_up_action].freeze
+                      propose_create_contact propose_follow_up propose_follow_up_action].freeze + QUOTE_PROPOSAL_TOOLS
 
   def self.definitions = Assistant::ToolDefinitions::ALL
 

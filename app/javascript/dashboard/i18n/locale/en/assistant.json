@@ -95,14 +95,25 @@
         "EXPECTED_CLOSE_AT": "Close",
         "PROBABILITY": "Probability %",
         "COMMITTED": "Committed",
-        "COMMIT_NOTE": "Commitment note"
+        "COMMIT_NOTE": "Commitment note",
+        "QUOTE": "Quote",
+        "OPPORTUNITY": "Opportunity"
       },
       "OUTCOMES": {
         "won": "Won",
         "lost": "Lost",
         "cancelled": "Cancelled"
       },
-      "TEMPLATE": "Template"
+      "TEMPLATE": "Template",
+      "create_quote": "New quote",
+      "send_quote": "Send quote",
+      "QUANTITY": "Quantity",
+      "UNIT_PRICE": "Price before tax",
+      "REMOVE_ITEM": "Remove",
+      "NET": "Subtotal before tax",
+      "TAX": "Tax",
+      "TOTAL": "Total",
+      "QUOTE_DRAFT": "It is created as a draft; you can review it before sending."
     },
     "SETTINGS": {
       "TITLE": "Assistant",
