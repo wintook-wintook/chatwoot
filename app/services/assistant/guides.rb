@@ -92,8 +92,24 @@ module Assistant::Guides
     end
   end
 
+  # Una guía con la cabecera rota se salta (y queda en el log) sin tumbar las demás;
+  # `rake assistant:guides:check` y su spec sí la marcan.
   def load_all
-    Dir[DIR.join('*.md')].map { |path| parse(path) }
+    Dir[DIR.join('*.md')].filter_map do |path|
+      parse(path)
+    rescue Psych::Exception => e
+      Rails.logger.error("[Assistant::Guides] #{File.basename(path)}: cabecera inválida (#{e.message})")
+      nil
+    end
+  end
+
+  def broken_files
+    Dir[DIR.join('*.md')].filter_map do |path|
+      parse(path)
+      nil
+    rescue Psych::Exception => e
+      "#{File.basename(path)}: #{e.message}"
+    end
   end
 
   def parse(path)

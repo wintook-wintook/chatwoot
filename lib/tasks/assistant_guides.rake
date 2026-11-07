@@ -58,7 +58,7 @@ namespace :assistant do
   namespace :guides do
     desc 'Revisa las guías de uso (cabecera, áreas, pantallas) y lista sus claves'
     task check: :environment do
-      problems = []
+      problems = Assistant::Guides.broken_files.map { |file| "cabecera inválida en #{file}" }
       Assistant::Guides.all.each do |guide|
         problems << "#{guide.key}: falta title o keywords" if guide.title.blank? || guide.keywords.empty?
         problems << "#{guide.key}: áreas desconocidas #{guide.areas - AccessRole::AREAS}" if (guide.areas - AccessRole::AREAS).any?

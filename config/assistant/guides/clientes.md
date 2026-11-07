@@ -1,34 +1,37 @@
 ---
 key: clientes
-title: Clientes, organizaciones y contratos
+title: Clientes, panorama general
 areas: [clients]
-keywords: [buscar, busqueda, lupa, encontrar, cliente, clientes, contacto, contactos, organizacion, organizaciones, empresa, prospecto, marcar como cliente, publico en general, rfc, responsable, dueno, contrato, contratos, renovar, importar, csv, cambiar de organizacion]
+keywords: [clientes, cliente, buscar, busqueda, lupa, encontrar, contacto, contactos, organizacion, organizaciones, empresa, prospecto, prospectos, publico en general, contrato, contratos, dashboard de clientes, responsable fijo, ficha del cliente]
 pages: [organizations, contacts, contracts, organization, contact]
 ---
 ## Para qué sirve
-- Contacto: una persona con quien se habla.
-- Organización: la empresa (o el público en general) detrás de los contactos. Tiene etapa: prospecto o cliente.
-- Contrato: un servicio recurrente que el cliente paga (monitoreo, iguala de soporte, licencias…).
+El área Clientes junta a la gente y a las empresas con las que trabajas:
+- Contacto: una persona con quien se habla (por WhatsApp, correo, etc.).
+- Organización: la empresa o el público en general detrás de uno o varios contactos. Tiene etapa: Prospecto o Cliente.
+- Contrato: un servicio que el cliente paga cada cierto tiempo (monitoreo, iguala, licencia, póliza…).
 
 ## Dónde está
-Clientes › Organizaciones, Clientes › Contactos y Clientes › Contratos. El tablero de prospectos y clientes está en Informes › Dashboard de clientes.
+- Clientes › Organizaciones: prospectos y clientes (guía «Organizaciones»).
+- Clientes › Contactos: las personas, con su ficha completa (guía «Contactos»).
+- Clientes › Contratos: los servicios recurrentes (guía «Contratos»).
+- Informes › Dashboard de clientes: cuántos prospectos y clientes hay y cuánto tardan en comprar (guía «Dashboard de clientes»).
+- Los tipos de contrato están en Catálogos › Tipos de contrato.
 
-## Organizaciones
-1. Clientes › Organizaciones › «Nueva organización».
-2. Tipo: Empresa (se le factura; RFC opcional) o Público en general (sin factura).
-3. Etapa: empieza como prospecto; con «Marcar como cliente» pasa a cliente (y «Regresar a prospecto» si fue un error).
-4. Desde un contacto sin organización: «Convertir en prospecto» crea su organización.
-Un contacto pertenece a una sola organización. Para moverlo usa «Cambiar de organización»: pasa todo lo suyo o deja lo vivo con un sustituto.
+## Cómo se hace
+### Encontrar a un cliente rápido
+1. Pulsa la lupa «Buscar» en la barra de arriba.
+2. Escribe al menos 3 letras: nombre, folio, RFC o algo de la descripción.
+3. Busca en contactos, organizaciones y casos, en todos sus datos (correo, teléfono, empresa, notas, atributos…), y te dice dónde apareció.
 
-## Responsable fijo
-Un contacto puede tener responsable fijo: sus conversaciones y casos nuevos le llegan siempre a esa persona. Lo cambia quien tiene el permiso «Asignar a otra persona». La organización hereda su responsable a sus contactos.
-
-## Contratos
-1. Clientes › Contratos › «Nuevo contrato» (o en la pestaña de contratos del contacto).
-2. Elige tipo, cliente, plazo y si «Se renueva solo al terminar el plazo».
-3. «Renovar» extiende el plazo. «Importar» carga varios desde un CSV (en Excel: Guardar como › CSV UTF-8; hay plantilla para descargar).
-Estados: Activo, Suspendido, Cancelado. Los tipos de contrato se dan de alta en Catálogos › Tipos de contrato.
+### Dar de alta un contacto rápido
+1. Pulsa «Nuevo contacto» en la barra de arriba.
+2. Llena al menos el «Nombre completo» y pulsa «Crear contacto».
 
 ## Dudas frecuentes
-- ¿Puedo dar de alta un contacto rápido? Sí: «Nuevo contacto» en la barra de arriba, o pídeselo al asistente. La lupa de la barra busca una palabra en contactos, organizaciones y casos, en todos sus datos (nombre, folio, RFC, descripción, notas, atributos), y muestra dónde apareció.
-- ¿Dónde veo todo lo de un cliente? En la ficha del contacto o de la organización: casos, tareas, conversaciones, reportes y contratos.
+- ¿Dónde veo todo lo de un cliente? En la ficha del contacto (pestañas Resumen, Conversaciones, Casos, Contratos…) o en la página de su organización, que junta lo de todos sus contactos.
+- ¿Qué es el responsable fijo? La persona a la que le llegan siempre las conversaciones y los casos nuevos de un contacto. Ver la guía «Responsable fijo».
+- ¿Cómo paso un contacto a otra empresa? En su ficha, bloque «Organización» › «Cambiar de organización». Ver la guía «Organizaciones».
+
+## Quién puede
+Depende del nivel de tu rol en el área Clientes: «Todo» ve y cambia todo; «Solo lo suyo» ve y cambia solo sus clientes (los contactos con una conversación o un caso suyo, o de los que es responsable); «Ve todo (sin cambiar)» solo consulta; «No entra» no ve el área.

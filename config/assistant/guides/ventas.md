@@ -1,30 +1,33 @@
 ---
 key: ventas
-title: Ventas, cotizaciones y presupuesto
+title: Panorama de Ventas
 areas: [sales]
-keywords: [ventas, vendido, cotizacion, cotizaciones, presupuesto, meta, metas, avance, vendedor, iva, dashboard de ventas, como vamos, embudo de ventas, comprometido, compromiso, probabilidad, monto]
-pages: [opportunities, quotes, budget, pipeline]
+keywords: [ventas, area de ventas, vender, oportunidades, embudo de contactos, cotizaciones, presupuesto, metas, dashboard de ventas, productos, catalogo, prospecto, vendido, sin iva, por donde empiezo]
+pages: [opportunities, contact_funnel, quotes, budget, pipeline, catalog]
 ---
 ## Para qué sirve
-Ventas junta las oportunidades, las cotizaciones y las metas para saber cuánto se ha vendido y qué falta.
+El área Ventas lleva al cliente desde la primera conversación hasta la venta ganada: el prospecto entra al Embudo de contactos, se convierte en oportunidad, se le manda una cotización y, al ganarse, cuenta para la meta.
 
 ## Dónde está
-- Ventas › Oportunidades, Ventas › Embudo de contactos y Ventas › Cotizaciones.
-- Inicio › Presupuesto: metas y avance (pestañas Avance, Por vendedor, Por vendedor y cliente).
-- Informes › Dashboard de ventas: pestañas ¿Cómo vamos?, Dinero en juego, Mes a mes, ¿Por qué perdemos? y Cotizaciones.
+- Ventas › Oportunidades: las ventas en curso, en Lista, Tablero o Dashboard.
+- Ventas › Embudo de contactos: las conversaciones con prospectos, antes de ser oportunidad.
+- Ventas › Cotizaciones: las propuestas con precios que se le mandan al cliente.
+- Inicio › Presupuesto: las metas de venta y su avance.
+- Informes › Dashboard de ventas: las cifras de la venta.
+- Catálogos › Productos y servicios: lo que vendes, con sus precios.
 
-## Cotizaciones
-1. Ventas › Cotizaciones › «Cotización» para hacer una nueva. También se crean desde la oportunidad (sus cotizaciones, en «Más ▾») o desde la ficha del contacto.
-2. Se filtran por pestañas: Abiertas, Borrador, Enviadas, Ganadas, Perdidas, Pospuestas, Canceladas, Vencidas y Todas.
-3. Los productos se toman de Catálogos › Productos y servicios.
-
-## Presupuesto (metas)
-1. Entra a Inicio › Presupuesto.
-2. En «Por vendedor» o «Por vendedor y cliente» captura la meta del periodo.
-3. «Avance» compara lo vendido contra la meta.
-Capturar metas solo lo hace quien tiene Ventas en «Todo»; los demás ven su avance.
+## Cómo se hace
+### El camino de una venta
+1. Llega una conversación y su tarjeta entra al Embudo de contactos.
+2. Cuando hay interés real, la tarjeta pasa a Convertido y nace la oportunidad (o la creas en Ventas › Oportunidades con «Oportunidad»).
+3. Desde la oportunidad haces la cotización con productos del catálogo y la envías.
+4. El cliente la acepta y la oportunidad queda Ganada; si no, Perdida con su motivo.
+5. Lo ganado suma al Presupuesto y al Dashboard de ventas.
 
 ## Dudas frecuentes
-- ¿Lo vendido lleva IVA? No. Todo lo vendido se cuenta sin IVA y por trato: si la oportunidad ganada tiene cotización ganada, cuenta el subtotal menos descuento de esa cotización; si no, el monto de la oportunidad.
-- ¿Cómo marco que el cliente se comprometió? En la oportunidad, en la línea de datos comerciales (lápiz), o dile al asistente «se comprometió a cerrar el viernes».
-- El asistente contesta «¿cómo vamos este mes?», «¿quién va atrás de su meta?» o «¿qué cierra esta semana?» con las cifras reales.
+- ¿Lo vendido lleva IVA? No. Todo lo vendido se cuenta sin IVA y una vez por trato: con la cotización aceptada (subtotal menos descuento) si la hay; si no, con el monto de la oportunidad.
+- Para el detalle, consulta estas guías: «Oportunidades de venta», «Embudo de contactos», «Cotizaciones», «Catálogo de productos y servicios», «Presupuesto de ventas» y «Dashboard de ventas».
+- Dali contesta «¿cómo vamos este mes?», «¿quién va atrás de su meta?» o «¿qué cierra esta semana?» con las cifras reales.
+
+## Quién puede
+Lo que ves depende del nivel de Ventas de tu rol: «Todo», «Solo lo suyo», «Ve todo (sin cambiar)» o «No entra». El Vendedor ve solo lo suyo; el Supervisor y el Administrador, todo.

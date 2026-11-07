@@ -51,6 +51,18 @@ RSpec.describe GlobalSearch do
     expect(result.values.pluck(:count)).to eq([0, 0, 0])
   end
 
+  it 'con Clientes en «solo lo suyo» no muestra organizaciones ajenas' do
+    grant = instance_double(Access::Grant, allowed?: true, own?: true, user_id: -1)
+    allow(grant).to receive(:contacts, &:none)
+    allow(grant).to receive(:case_tickets, &:none)
+    expect(search('hielos', grant: grant)[:organizations][:count]).to eq(0)
+    organization.update!(owner_id: create(:user, account: account).id)
+    mine = instance_double(Access::Grant, allowed?: true, own?: true, user_id: organization.owner_id)
+    allow(mine).to receive(:contacts, &:none)
+    allow(mine).to receive(:case_tickets, &:none)
+    expect(search('hielos', grant: mine)[:organizations][:count]).to eq(1)
+  end
+
   it '«ver más» trae un solo grupo, paginado' do
     result = search('compresor', type: 'cases', page: 1)
     expect(result.keys).to eq([:cases])

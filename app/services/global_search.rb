@@ -92,9 +92,18 @@ class GlobalSearch
   def base(type)
     case type
     when 'contacts' then @grant.allowed?(:clients) ? @grant.contacts(@account.contacts) : Contact.none
-    when 'organizations' then @grant.allowed?(:clients) ? @account.organizations : Organization.none
+    when 'organizations' then organizations
     else @grant.case_tickets(@account.case_tickets).includes(:case_type)
     end
+  end
+
+  # Con Clientes en «solo lo suyo»: las que tiene a su cargo y las de los contactos que ve.
+  def organizations
+    return Organization.none unless @grant.allowed?(:clients)
+    return @account.organizations unless @grant.own?(:clients)
+
+    visible = @grant.contacts(@account.contacts).where.not(organization_id: nil).select(:organization_id)
+    @account.organizations.where(owner_id: @grant.user_id).or(@account.organizations.where(id: visible))
   end
 
   def matching(type)

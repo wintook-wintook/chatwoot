@@ -15,9 +15,9 @@ RSpec.describe Assistant::GuideTools do
 
   it 'busca y lee una guía sin anotar nada' do
     found = tools.call('search_guides', { 'query' => 'cómo creo un contrato' })[:result]
-    expect(found[:guides].first[:key]).to eq('clientes')
+    expect(found[:guides].first[:key]).to eq('contratos')
 
-    read = tools.call('read_guide', { 'key' => 'clientes' })[:result]
+    read = tools.call('read_guide', { 'key' => 'contratos' })[:result]
     expect(read[:content]).to include('Nuevo contrato')
     expect(gaps.count).to eq(0)
   end

@@ -54,7 +54,7 @@ RSpec.describe Assistant::Guides do
 
   describe '.search' do
     it 'encuentra la guía por sus palabras' do
-      expect(described_class.search('¿cómo creo un contrato?', admin).first[:key]).to eq('clientes')
+      expect(described_class.search('¿cómo creo un contrato?', admin).first[:key]).to eq('contratos')
       expect(described_class.search('para qué sirve el embudo de contactos', admin).first[:key]).to eq('embudo_contactos')
       expect(described_class.search('cómo concluyo una tarea', admin).first[:key]).to eq('agenda')
     end
@@ -66,7 +66,7 @@ RSpec.describe Assistant::Guides do
 
     it 'no muestra guías de áreas que el usuario no tiene' do
       keys = described_class.search('contrato organización cliente', grant_with('agenda')).pluck(:key)
-      expect(keys).not_to include('clientes')
+      expect(keys).not_to include('clientes', 'contratos', 'organizaciones')
     end
   end
 
