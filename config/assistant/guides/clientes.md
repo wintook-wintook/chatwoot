@@ -30,5 +30,5 @@ Un contacto puede tener responsable fijo: sus conversaciones y casos nuevos le l
 Estados: Activo, Suspendido, Cancelado. Los tipos de contrato se dan de alta en Catálogos › Tipos de contrato.
 
 ## Dudas frecuentes
-- ¿Puedo dar de alta un contacto rápido? Sí: menú del logo › Nuevo contacto, o pídeselo al asistente.
+- ¿Puedo dar de alta un contacto rápido? Sí: «Nuevo contacto» en la barra de arriba (o menú del logo › Nuevo contacto), o pídeselo al asistente. La lupa de la barra busca contactos y organizaciones.
 - ¿Dónde veo todo lo de un cliente? En la ficha del contacto o de la organización: casos, tareas, conversaciones, reportes y contratos.
