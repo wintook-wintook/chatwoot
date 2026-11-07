@@ -51,5 +51,5 @@ pages: [cases, case, contact, dispatch, maintenance]
 - Las órdenes que se atienden en oficina o remoto no salen en Despacho.
 
 ## Quién puede
-- Despacho: el Administrador y quien pueda reasignar y vea todo Servicio o Ventas (por omisión, el Supervisor).
+- Despacho: el Administrador y quien pueda reasignar y vea todo Servicio o Ventas (por omisión, el Supervisor). A los demás no les aparece en el menú.
 - Mantenimientos: los ve quien tenga Servicio o Clientes; los crea y edita quien tenga Servicio en todo o en solo lo suyo.

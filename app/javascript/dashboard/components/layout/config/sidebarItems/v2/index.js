@@ -457,6 +457,7 @@ const servicio = (accountId, route) => {
         icon: 'calendar-clock',
         label: 'DISPATCH',
         featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+        accessCheck: 'dispatch',
         toState: frontendURL(`accounts/${accountId}/tickets/dispatch`),
         toStateName: 'gestorTickets_dispatch',
       },

@@ -18,7 +18,14 @@ import {
   toggleOpenGroup,
 } from 'dashboard/helper/inboxGroups'; // feat/bandejas_por_tipo
 import { INBOX_TYPES } from 'shared/mixins/inboxMixin';
-import { canSeeArea, getUserAccess } from 'dashboard/helper/accessHelper';
+import {
+  canDispatch,
+  canSeeArea,
+  getUserAccess,
+} from 'dashboard/helper/accessHelper';
+
+// Ítems con `accessCheck`: permisos que no son un área completa.
+const ACCESS_CHECKS = { dispatch: canDispatch };
 
 export default {
   components: {
@@ -179,6 +186,15 @@ export default {
             !canSeeArea(
               getUserAccess(this.currentUser, this.accountId),
               item.area
+            )
+          ) {
+            return false;
+          }
+          // Permiso que no es un área completa (p. ej. Despacho).
+          if (
+            item.accessCheck &&
+            !ACCESS_CHECKS[item.accessCheck](
+              getUserAccess(this.currentUser, this.accountId)
             )
           ) {
             return false;
