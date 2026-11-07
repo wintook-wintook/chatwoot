@@ -18,6 +18,7 @@ module AccessAreaGuard
     'conversations' => %w[conversations conversations/assignments conversations/labels conversations/messages
                           conversations/participants conversations/draft_messages conversations/direct_uploads],
     'clients' => %w[contacts contacts/conversations contacts/contact_inboxes contacts/labels contacts/notes contacts/owners contacts/summaries
+                    actions/contact_merges
                     organizations],
     'cases' => %w[case_tickets case_notes case_events case_activities case_conversations case_ticket_relations case_project_children
                   case_work_order_items case_tasks case_meetings case_meeting_series case_notices case_service_reports field_visits],

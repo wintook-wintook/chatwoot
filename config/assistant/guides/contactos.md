@@ -36,8 +36,9 @@ Un contacto es una persona con quien habla tu empresa. Su ficha junta sus datos,
 ### Fusionar un duplicado
 1. En la ficha del contacto que sobra pulsa «⋯» › «Fusionar contacto».
 2. Busca el contacto que se queda y pulsa «Fusionar contactos».
-3. El contacto donde estabas se elimina. Al otro pasan sus conversaciones, mensajes y notas, y los datos que le falten (si hay datos distintos, ganan los del que se queda).
-4. Cuidado: lo demás no pasa. Sus casos se quedan sin contacto, y sus cotizaciones, equipos, mantenimientos y contratos se borran. Si el que sobra tiene algo de eso, fusiona al revés (entra a la ficha del otro).
+3. El contacto donde estabas se elimina y todo lo suyo pasa al que se queda: conversaciones, mensajes, notas, casos, tareas, cotizaciones, contratos, equipos, mantenimientos, asistencias a eventos y seguimientos. También los datos que le falten, incluido el responsable fijo y la organización (si los dos tienen un mismo dato, gana el del que se queda).
+4. Si los dos estaban en el mismo evento o campaña, se conserva solo el registro del que se queda.
+5. Fusionar pide poder editar en Clientes; con «solo lo suyo» solo puedes fusionar contactos que te tocan.
 
 ### Marcar la nota IA
 1. Abre el panel del contacto («Ver detalles» en la lista, o el panel del contacto en una conversación) y pulsa el ícono «Notas».

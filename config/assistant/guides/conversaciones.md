@@ -35,7 +35,7 @@ Conversaciones, en el menú de la izquierda. Su menú tiene: Todas las Conversac
 2. Desde el caso, «Conversaciones N ▾» liga o agrega conversaciones del contacto.
 
 ## El panel de la derecha
-- Arriba: el contacto con sus datos (correo, teléfono, identificador, redes), el aviso si pidió no ser contactado o si su correo rebotó, y su puntuación de prospección si la tiene. Los íconos son: Editar, Crear tarea, + Cotización, Programar mensaje y Notas; en «···» está Fusionar contacto (y Eliminar contacto para el Administrador). El ícono junto al nombre abre la ficha en otra pestaña.
+- Arriba: el contacto con sus datos (correo, teléfono, identificador, redes), el aviso si pidió no ser contactado o si su correo rebotó, y su puntuación de prospección si la tiene. Los íconos son: Editar, Crear tarea, + Cotización, Programar mensaje y Notas; en «···» está Fusionar contacto (si puedes editar en Clientes) y Eliminar contacto (solo el Administrador). El ícono junto al nombre abre la ficha en otra pestaña.
 - Los botones «Delegar seguimiento» (un agente IA le da seguimiento) y el de casos.
 - Secciones que se abren y se pueden reordenar arrastrando: Acciones de la conversación (con el embudo de contactos, responsable, equipo, prioridad y etiquetas), Participantes de la conversación, Información de la conversación, Atributos del contacto, Conversaciones anteriores y Macros.
 
