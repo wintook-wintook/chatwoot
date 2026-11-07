@@ -6,14 +6,18 @@
     "SEND": "Enviar",
     "NEW": "Conversación nueva",
     "CLOSE": "Cerrar",
-    "UNHELPFUL_MARK": "👎",
-    "UNHELPFUL": "No me sirvió",
-    "UNHELPFUL_THANKS": "Gracias, lo vamos a revisar.",
     "THINKING": "{name} está pensando…",
     "UNAVAILABLE": "Activa la integración de OpenAI para usar el asistente.",
     "ERROR": "No se pudo enviar. Intenta de nuevo.",
     "HELLO": "Hola, soy {name}. Pídeme lo que necesites: «¿qué tengo hoy?», «¿qué ha pasado con este cliente?», «agéndame una llamada mañana a las 10».",
     "SEEING": "Viendo: {label}",
+    "TOP_BAR": {
+      "PLACEHOLDER": "Pregúntale a {name}…",
+      "ON_CASE": "Pregúntale a {name} sobre este caso…",
+      "ON_CONVERSATION": "Pregúntale a {name} sobre esta conversación…",
+      "ON_CONTACT": "Pregúntale a {name} sobre este contacto…",
+      "ON_ORGANIZATION": "Pregúntale a {name} sobre esta organización…"
+    },
     "SHORTCUT": "Ctrl + J",
     "PROPOSAL": {
       "note": "Nota",

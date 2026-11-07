@@ -38,13 +38,12 @@
 #
 #   reason: no_guide    → search_guides no encontró ninguna guía
 #           not_covered → había guía pero no traía la respuesta (Dali llamó report_gap)
-#           thumbs_down → el usuario marcó 👎 la respuesta
 #   status: pending | resolved | discarded
 #
 # AssistantGuideGap.record!(...) junta la misma pregunta pendiente (misma cuenta,
 # mismo texto normalizado y motivo) y le suma una vez más.
 class AssistantGuideGap < ApplicationRecord
-  REASONS = %w[no_guide not_covered thumbs_down].freeze
+  REASONS = %w[no_guide not_covered].freeze
   STATUSES = %w[pending resolved discarded].freeze
   MAX_QUESTION = 1000
   MAX_ANSWER = 2000

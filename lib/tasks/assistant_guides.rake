@@ -3,7 +3,7 @@
 # Asistente (Dali) — guías de uso (config/assistant/guides) y preguntas sin respuesta.
 #
 #   rake assistant:guide_gaps                         # pendientes, de la más repetida a la menos
-#   rake assistant:guide_gaps STATUS=resolved LIMIT=100 ACCOUNT=1 REASON=thumbs_down
+#   rake assistant:guide_gaps STATUS=resolved LIMIT=100 ACCOUNT=1 REASON=not_covered
 #   rake assistant:guide_gaps:resolve IDS=4,7 NOTE='guía agenda: cómo cambiar el responsable'
 #   rake assistant:guide_gaps:discard IDS=9 NOTE='es del negocio del cliente'
 #   rake assistant:guides:check                       # las guías completas y su búsqueda

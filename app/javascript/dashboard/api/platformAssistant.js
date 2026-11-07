@@ -37,11 +37,6 @@ class AssistantAPI extends ApiClient {
     return axios.post(`${this.url}/proposals/${proposalId}/cancel`);
   }
 
-  // 👎 a una respuesta: queda anotada para mejorar las guías de uso.
-  markUnhelpful(messageId) {
-    return axios.post(`${this.url}/messages/${messageId}/feedback`);
-  }
-
   rename(name) {
     return axios.patch(`${this.url}/settings`, { name });
   }

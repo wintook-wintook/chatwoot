@@ -6,14 +6,18 @@
     "SEND": "Send",
     "NEW": "New conversation",
     "CLOSE": "Close",
-    "UNHELPFUL_MARK": "👎",
-    "UNHELPFUL": "Not helpful",
-    "UNHELPFUL_THANKS": "Thanks, we will review it.",
     "THINKING": "{name} is thinking…",
     "UNAVAILABLE": "Enable the OpenAI integration to use the assistant.",
     "ERROR": "Couldn't send. Try again.",
     "HELLO": "Hi, I'm {name}. Ask me anything: “what do I have today?”, “what happened with this customer?”, “schedule a call tomorrow at 10”.",
     "SEEING": "Viewing: {label}",
+    "TOP_BAR": {
+      "PLACEHOLDER": "Ask {name}…",
+      "ON_CASE": "Ask {name} about this case…",
+      "ON_CONVERSATION": "Ask {name} about this conversation…",
+      "ON_CONTACT": "Ask {name} about this contact…",
+      "ON_ORGANIZATION": "Ask {name} about this organization…"
+    },
     "SHORTCUT": "Ctrl + J",
     "PROPOSAL": {
       "note": "Note",

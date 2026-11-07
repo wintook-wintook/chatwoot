@@ -361,7 +361,6 @@ Rails.application.routes.draw do
             patch :settings
             post 'proposals/:id/confirm', action: :confirm
             post 'proposals/:id/cancel', action: :cancel
-            post 'messages/:id/feedback', action: :feedback
           end
           resources :case_tickets, only: [:index, :show, :create, :update] do
             # Plan-Trabajo-Campo R1 — reporte de servicio de la orden de trabajo

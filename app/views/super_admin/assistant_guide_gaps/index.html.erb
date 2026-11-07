@@ -1,7 +1,7 @@
 <%# Super Admin › Preguntas sin respuesta (SuperAdmin::AssistantGuideGapsController) %>
 <%
   status_labels = { 'pending' => 'Pendientes', 'resolved' => 'Resueltas', 'discarded' => 'Descartadas' }
-  reason_labels = { 'no_guide' => 'Sin guía', 'not_covered' => 'La guía no lo cubre', 'thumbs_down' => '👎 No le sirvió' }
+  reason_labels = { 'no_guide' => 'Sin guía', 'not_covered' => 'La guía no lo cubre' }
   filters = { reason: @reason, account_id: @account_id, q: @query.presence }.compact
 %>
 <% content_for(:title) do %>
@@ -76,7 +76,7 @@
               <% end %>
             </td>
             <td><%= gap.occurrences %></td>
-            <td><%= reason_labels[gap.reason] %></td>
+            <td><%= reason_labels.fetch(gap.reason, gap.reason) %></td>
             <td><%= gap.account&.name %> <span class="text-xs text-slate-400">#<%= gap.account_id %></span></td>
             <td class="text-sm"><%= l(gap.last_asked_at.in_time_zone, format: :short) %></td>
             <td>

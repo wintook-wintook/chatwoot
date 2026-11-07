@@ -7,7 +7,6 @@
 #   POST   …/assistant/reset                 → archiva la conversación y empieza otra
 #   POST   …/assistant/proposals/:id/confirm { payload } (los datos que el usuario dejó)
 #   POST   …/assistant/proposals/:id/cancel
-#   POST   …/assistant/messages/:id/feedback    👎 a una respuesta (AssistantGuideGap)
 #   PATCH  …/assistant/settings              { name, model, analysis_model } (solo administradores)
 class Api::V1::Accounts::AssistantController < Api::V1::Accounts::BaseController
   MAX_CONTENT = 2000
@@ -51,17 +50,6 @@ class Api::V1::Accounts::AssistantController < Api::V1::Accounts::BaseController
 
     @thread.update_proposal!(proposal['id'], status: 'cancelled')
     render json: { proposal: @thread.find_proposal(proposal['id']) }
-  end
-
-  # 👎 «no me sirvió»: queda anotado para que el equipo de Kontrolya mejore las guías.
-  def feedback
-    answer, question = @thread.mark_unhelpful!(params[:id].to_s)
-    return render json: { error: 'Mensaje no encontrado' }, status: :not_found unless answer
-
-    AssistantGuideGap.record!(account: Current.account, user: current_user, reason: 'thumbs_down',
-                              question: question&.dig('content').presence || answer['content'], answer: answer['content'],
-                              page: question&.dig('context', 'page'))
-    render json: { message: answer }
   end
 
   def settings

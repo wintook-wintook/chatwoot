@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Super Admin › Preguntas sin respuesta — lo que el asistente (Dali) no supo contestar
-# en TODAS las empresas: sin guía, guía incompleta o 👎. Solo lo ve el equipo de
+# en TODAS las empresas: sin guía o guía incompleta. Solo lo ve el equipo de
 # Kontrolya; con esto se escriben o corrigen las guías de config/assistant/guides.
 # También se leen y se cierran con `rake assistant:guide_gaps`.
 #

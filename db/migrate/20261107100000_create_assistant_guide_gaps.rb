@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# Asistente (Dali) — preguntas de uso que Dali no supo contestar: no encontró guía, la
-# guía no lo cubría o el usuario marcó 👎. Solo las ve el equipo de Kontrolya (Super
+# Asistente (Dali) — preguntas de uso que Dali no supo contestar: no encontró guía o la
+# guía no lo cubría. Solo las ve el equipo de Kontrolya (Super
 # Admin) para escribir o corregir las guías de config/assistant/guides. La misma
 # pregunta pendiente suma `occurrences` en vez de repetirse. Idempotente.
 class CreateAssistantGuideGaps < ActiveRecord::Migration[7.0]
