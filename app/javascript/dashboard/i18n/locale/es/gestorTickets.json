@@ -137,6 +137,7 @@
     }
   },
   "QUICK_ACTIONS": {
+    "GO_HOME": "Ir a Inicio",
     "TITLE": "Accesos rápidos",
     "NEW_TASK": "Tarea",
     "REPORT_ACTIVITY": "Reportar actividad",

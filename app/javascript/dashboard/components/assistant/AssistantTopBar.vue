@@ -5,12 +5,16 @@
   cambia según lo que se está viendo (caso, contacto, organización, conversación).
   Las pantallas de campo (Mi ruta) no usan Dashboard.vue y no la muestran.
 
-  A la derecha, los accesos rápidos del menú del logo (Tarea, Reportar actividad,
-  Buscar, Nuevo contacto, Ayuda): abren las MISMAS ventanas de QuickActions
-  (evento `quick-actions:open`). En pantallas angostas solo se ve el ícono.
+  A la derecha, los accesos rápidos (Tarea, Reportar actividad, Buscar, Nuevo
+  contacto, Ayuda), que antes estaban en el menú del logo. Sus ventanas viven aquí.
+  En pantallas angostas solo se ve el ícono.
 -->
 <script>
 import { mapGetters } from 'vuex';
+import CreateContact from 'dashboard/routes/dashboard/conversation/contact/CreateContact.vue';
+import QuickTaskModal from 'dashboard/views/gestorTickets/tasks/QuickTaskModal.vue';
+import QuickSearchModal from 'dashboard/views/gestorTickets/tasks/QuickSearchModal.vue';
+import ActivityReportModal from 'dashboard/views/gestorTickets/tasks/ActivityReportModal.vue';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import wootConstants from 'dashboard/constants/globals';
 import {
@@ -23,10 +27,17 @@ const T = 'ASSISTANT.TOP_BAR';
 
 export default {
   name: 'AssistantTopBar',
+  components: {
+    CreateContact,
+    QuickTaskModal,
+    QuickSearchModal,
+    ActivityReportModal,
+  },
   data() {
     return {
       state: assistantState,
       text: '',
+      modal: null, // task | activity | search | contact
       helpDocsURL: window.chatwootConfig?.helpDocsURL || wootConstants.DOCS_URL,
     };
   },
@@ -35,7 +46,13 @@ export default {
       accountId: 'getCurrentAccountId',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
     }),
-    // Igual que el menú del logo: sin casos en la cuenta no hay tareas.
+    // Igual que CRMZeus en Contactos: el alta se sincroniza con el CRM.
+    isIntegrationEnabled() {
+      const integrations =
+        this.$store.getters['integrations/getAppIntegrations'];
+      return !!integrations.find(({ id }) => id === 'crmzeus')?.enabled;
+    },
+    // Sin casos en la cuenta no hay tareas.
     actions() {
       const withCases = this.isFeatureEnabledonAccount(
         this.accountId,
@@ -78,8 +95,12 @@ export default {
     },
   },
   methods: {
-    openAction(key) {
-      this.$emitter.emit('quick-actions:open', key);
+    async openAction(key) {
+      if (key === 'contact') await this.$store.dispatch('integrations/get');
+      this.modal = key;
+    },
+    closeModal() {
+      this.modal = null;
     },
     submit() {
       const text = this.text.trim();
@@ -143,5 +164,13 @@ export default {
         <fluent-icon icon="chat-help" size="16" />
       </a>
     </div>
+    <QuickTaskModal :show="modal === 'task'" @close="closeModal" />
+    <ActivityReportModal :show="modal === 'activity'" @close="closeModal" />
+    <QuickSearchModal :show="modal === 'search'" @close="closeModal" />
+    <CreateContact
+      :show="modal === 'contact'"
+      :is-integration-enabled="isIntegrationEnabled"
+      @cancel="closeModal"
+    />
   </div>
 </template>

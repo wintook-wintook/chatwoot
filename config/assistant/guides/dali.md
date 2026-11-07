@@ -12,7 +12,6 @@ El asistente contesta preguntas sobre tus clientes, casos, agenda y ventas, prop
 - La barra «Pregúntale a …» arriba de todas las pantallas: escribe tu pregunta y da Enter (Enter sin texto abre el panel).
 - Botón del asistente abajo en la barra lateral.
 - Atajo de teclado: Ctrl + J (Cmd + J en Mac). Esc lo cierra.
-- Menú del logo (arriba a la izquierda) › «Pedirle a …».
 El panel sigue abierto mientras navegas y entiende lo que estás viendo: si estás en un caso, «esto» es ese caso.
 
 ## Cómo se usa
@@ -21,6 +20,7 @@ El panel sigue abierto mientras navegas y entiende lo que estás viendo: si est�
 3. El botón «+» del panel empieza una conversación nueva.
 
 ## Dudas frecuentes
+- El logo de la empresa (arriba a la izquierda) lleva a Inicio; los accesos rápidos (Tarea, Reportar actividad, Buscar, Nuevo contacto, Ayuda) están en la barra de arriba.
 - ¿Le escribe solo al cliente? No. Te deja un borrador o un mensaje programado que tú confirmas. Para que un agente le dé seguimiento, se delega con su tarjeta.
 - ¿Ve todo? Solo lo que tú puedes ver según tu rol.
 - ¿Hace cambios masivos? No, todavía no hace acciones a muchos clientes a la vez.

@@ -15,7 +15,7 @@ La Agenda junta todo lo que tienes que hacer: tareas (con o sin hora) y tareas a
 - Agenda › Mi ruta en campo: la pantalla para celular de quien sale a visitas.
 
 ## Crear una tarea rápido
-1. Pulsa «Tarea» en la barra de arriba (junto a «Pregúntale a …»), o el logo (arriba a la izquierda) › Tarea.
+1. Pulsa «Tarea» en la barra de arriba (junto a «Pregúntale a …»).
 2. Escribe título, responsable, fecha y, si quieres, hora. Con hora se vuelve tarea agendada y va al calendario.
 3. Contacto, organización y caso son opcionales. Sin caso, la tarea se ve en la ficha del contacto u organización; sin cliente, solo en tu Mi día.
 También puedes decirle al asistente: «recuérdame llamar a Mario el jueves» o «agéndame una visita mañana a las 10».
@@ -23,7 +23,7 @@ También puedes decirle al asistente: «recuérdame llamar a Mario el jueves» o
 ## Concluir una tarea (reporte de cierre)
 1. Al concluir una tarea a mano se pide qué se hizo: resultado (del catálogo Resultados de tareas), comentario, evidencia opcional y tiempo dedicado.
 2. El reporte queda en Agenda › Reportes, en la ficha del cliente y como nota en el caso. El tiempo suma a las horas del caso.
-3. Para registrar algo que no tenía tarea: «Reportar actividad» en la barra de arriba (o logo › Reportar actividad).
+3. Para registrar algo que no tenía tarea: «Reportar actividad» en la barra de arriba.
 
 ## Dudas frecuentes
 - ¿La tarea sin hora va a Google? No, solo las agendadas (con hora).

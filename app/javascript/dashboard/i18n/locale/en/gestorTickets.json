@@ -137,6 +137,7 @@
     }
   },
   "QUICK_ACTIONS": {
+    "GO_HOME": "Go to Home",
     "TITLE": "Quick actions",
     "NEW_TASK": "Task",
     "REPORT_ACTIVITY": "Report activity",
