@@ -4,8 +4,15 @@
   pregunta ya enviada; Enter sin texto abre el panel vacío. El texto de la caja
   cambia según lo que se está viendo (caso, contacto, organización, conversación).
   Las pantallas de campo (Mi ruta) no usan Dashboard.vue y no la muestran.
+
+  A la derecha, los accesos rápidos del menú del logo (Tarea, Reportar actividad,
+  Buscar, Nuevo contacto, Ayuda): abren las MISMAS ventanas de QuickActions
+  (evento `quick-actions:open`). En pantallas angostas solo se ve el ícono.
 -->
 <script>
+import { mapGetters } from 'vuex';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import wootConstants from 'dashboard/constants/globals';
 import {
   assistantState,
   toggleAssistant,
@@ -17,9 +24,45 @@ const T = 'ASSISTANT.TOP_BAR';
 export default {
   name: 'AssistantTopBar',
   data() {
-    return { state: assistantState, text: '' };
+    return {
+      state: assistantState,
+      text: '',
+      helpDocsURL: window.chatwootConfig?.helpDocsURL || wootConstants.DOCS_URL,
+    };
   },
   computed: {
+    ...mapGetters({
+      accountId: 'getCurrentAccountId',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
+    }),
+    // Igual que el menú del logo: sin casos en la cuenta no hay tareas.
+    actions() {
+      const withCases = this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.CASE_MANAGEMENT
+      );
+      return [
+        withCases && {
+          key: 'task',
+          icon: 'checkmark-circle',
+          label: 'QUICK_ACTIONS.NEW_TASK',
+          text: true,
+        },
+        {
+          key: 'activity',
+          icon: 'clipboard',
+          label: 'QUICK_ACTIONS.REPORT_ACTIVITY',
+          text: true,
+        },
+        { key: 'search', icon: 'search', label: 'QUICK_ACTIONS.SEARCH_CLIENT' },
+        {
+          key: 'contact',
+          icon: 'person-add',
+          label: 'QUICK_ACTIONS.NEW_CONTACT',
+          text: true,
+        },
+      ].filter(Boolean);
+    },
     name() {
       return this.state.name || DEFAULT_ASSISTANT_NAME;
     },
@@ -35,6 +78,9 @@ export default {
     },
   },
   methods: {
+    openAction(key) {
+      this.$emitter.emit('quick-actions:open', key);
+    },
     submit() {
       const text = this.text.trim();
       toggleAssistant(true);
@@ -53,7 +99,7 @@ export default {
     class="flex items-center flex-shrink-0 h-10 px-3 bg-white border-b border-slate-100 dark:bg-slate-900 dark:border-slate-800"
   >
     <form
-      class="flex items-center flex-1 max-w-xl gap-2 px-3 mx-auto rounded-lg h-7 bg-slate-50 dark:bg-slate-800 focus-within:ring-1 focus-within:ring-woot-300"
+      class="flex items-center flex-1 max-w-lg gap-2 px-3 mx-auto rounded-lg h-7 bg-slate-50 dark:bg-slate-800 focus-within:ring-1 focus-within:ring-woot-300"
       @submit.prevent="submit"
     >
       <fluent-icon icon="wand" size="14" class="flex-shrink-0 text-woot-500" />
@@ -71,5 +117,31 @@ export default {
         {{ $t('ASSISTANT.SHORTCUT') }}
       </kbd>
     </form>
+    <div class="flex items-center flex-shrink-0 gap-1 ml-3">
+      <button
+        v-for="action in actions"
+        :key="action.key"
+        v-tooltip.bottom="$t(action.label)"
+        type="button"
+        class="flex items-center h-7 gap-1.5 px-2 text-xs rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+        :aria-label="$t(action.label)"
+        @click="openAction(action.key)"
+      >
+        <fluent-icon :icon="action.icon" size="16" class="flex-shrink-0" />
+        <span v-if="action.text" class="hidden whitespace-nowrap xl:inline">
+          {{ $t(action.label) }}
+        </span>
+      </button>
+      <a
+        v-tooltip.bottom="$t('SIDEBAR.DOCS')"
+        :href="helpDocsURL"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex items-center justify-center rounded-lg w-7 h-7 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+        :aria-label="$t('SIDEBAR.DOCS')"
+      >
+        <fluent-icon icon="chat-help" size="16" />
+      </a>
+    </div>
   </div>
 </template>

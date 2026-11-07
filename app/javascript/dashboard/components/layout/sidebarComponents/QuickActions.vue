@@ -47,7 +47,23 @@ export default {
       return !!integrations.find(({ id }) => id === 'crmzeus')?.enabled;
     },
   },
+  // La barra de arriba (AssistantTopBar) pide abrir estas mismas ventanas.
+  mounted() {
+    this.$emitter.on('quick-actions:open', this.openAction);
+  },
+  beforeDestroy() {
+    this.$emitter.off('quick-actions:open', this.openAction);
+  },
   methods: {
+    openAction(name) {
+      const actions = {
+        task: this.openTask,
+        activity: this.openActivity,
+        search: this.openSearch,
+        contact: this.openContact,
+      };
+      actions[name]?.();
+    },
     close() {
       this.open = false;
     },
