@@ -2778,6 +2778,8 @@
       "SUBTITLE": "Here's what you have for today.",
       "BUSINESS_SUMMARY": "Business summary",
       "LOADING": "Loading your summary…",
+      "TAB_SUMMARY": "Summary",
+      "TAB_MY_DAY": "My day",
       "SEE_ALL": "See all",
       "MY_DAY": "Most urgent in My day",
       "MY_DAY_EMPTY": "No pending tasks. Nice!",

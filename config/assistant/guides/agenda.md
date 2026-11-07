@@ -10,6 +10,7 @@ La Agenda junta todo lo que tienes que hacer: tareas (con o sin hora) y tareas a
 
 ## Dónde está
 - Agenda › Tareas: pestañas Mi día, Mías, No asignadas y Todas. Mi día ordena lo más urgente y muestra «Hecho hoy».
+- Inicio › Mi resumen también tiene la pestaña «Mi día» (la misma de Agenda), junto a «Resumen».
 - Agenda › Calendario (si la cuenta tiene Google Calendar).
 - Agenda › Reportes: pestañas Reportes (qué se hizo en cada tarea) y Llegadas (visitas, con descarga CSV).
 - Agenda › Mi ruta en campo: la pantalla para celular de quien sale a visitas.
