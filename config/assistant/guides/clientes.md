@@ -2,7 +2,7 @@
 key: clientes
 title: Clientes, organizaciones y contratos
 areas: [clients]
-keywords: [cliente, clientes, contacto, contactos, organizacion, organizaciones, empresa, prospecto, marcar como cliente, publico en general, rfc, responsable, dueno, contrato, contratos, renovar, importar, csv, cambiar de organizacion]
+keywords: [buscar, busqueda, lupa, encontrar, cliente, clientes, contacto, contactos, organizacion, organizaciones, empresa, prospecto, marcar como cliente, publico en general, rfc, responsable, dueno, contrato, contratos, renovar, importar, csv, cambiar de organizacion]
 pages: [organizations, contacts, contracts, organization, contact]
 ---
 ## Para qué sirve
@@ -30,5 +30,5 @@ Un contacto puede tener responsable fijo: sus conversaciones y casos nuevos le l
 Estados: Activo, Suspendido, Cancelado. Los tipos de contrato se dan de alta en Catálogos › Tipos de contrato.
 
 ## Dudas frecuentes
-- ¿Puedo dar de alta un contacto rápido? Sí: «Nuevo contacto» en la barra de arriba, o pídeselo al asistente. La lupa de la barra busca contactos y organizaciones.
+- ¿Puedo dar de alta un contacto rápido? Sí: «Nuevo contacto» en la barra de arriba, o pídeselo al asistente. La lupa de la barra busca una palabra en contactos, organizaciones y casos, en todos sus datos (nombre, folio, RFC, descripción, notas, atributos), y muestra dónde apareció.
 - ¿Dónde veo todo lo de un cliente? En la ficha del contacto o de la organización: casos, tareas, conversaciones, reportes y contratos.
