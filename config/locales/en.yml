@@ -366,6 +366,12 @@ en:
       closing: 'Which opportunities close this week?'
       how_to: 'How do I use the Agenda?'
       help: 'What can you help me with?'
+    shortcuts:
+      today: { label: 'My day', prompt: 'What do I have today?' }
+      quote: { label: 'Quote', prompt: 'I want to make a quote' }
+      meeting: { label: 'Schedule', prompt: 'I want to schedule a meeting' }
+      note: { label: 'Note', prompt: 'I want to write down something about a client' }
+      sales: { label: 'Sales', prompt: 'How are we doing this month?' }
     sales:
       suggestions:
         sales_overview: ['Who is behind their target?', 'Which opportunities close this month?', 'How are we doing vs last year?']

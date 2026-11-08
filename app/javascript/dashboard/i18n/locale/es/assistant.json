@@ -202,6 +202,35 @@
       "AI_NOTE_ADD": "Agregarla en la ficha",
       "SOURCES_NONE": "La empresa no tiene respuestas predefinidas: si el cliente pregunta algo que no está en la nota IA, lo pasará a una persona.",
       "SOURCES_CANNED": "Para contestar dudas consulta las respuestas predefinidas de la empresa y la nota IA del contacto."
+    },
+    "OPEN_IN_PLATFORM": "Abrir en Kontrolya",
+    "VOICE": {
+      "START": "Dictar",
+      "STOP": "Terminar de dictar",
+      "LISTENING": "Te escucho… {seconds} s (toca para terminar)",
+      "TRANSCRIBING": "Pasando tu voz a texto…",
+      "NO_MIC": "Permite el micrófono para dictar.",
+      "ERROR": "No se pudo pasar a texto. Intenta de nuevo."
+    },
+    "PORTAL": {
+      "NEW": "Conversación nueva",
+      "MENU": "Menú",
+      "OPEN_PLATFORM": "Ir a Kontrolya",
+      "INSTALL": "Instalar en este teléfono",
+      "ACCOUNTS": "Empresa",
+      "BACK": "Volver a {name}",
+      "PHONE": {
+        "TITLE": "Usar {name} en mi teléfono",
+        "NOTE": "{name} a pantalla completa en tu celular: escríbele o díctale. Se instala como una app.",
+        "SHOW": "Mostrar código QR",
+        "AGAIN": "Generar otro código",
+        "QR_ALT": "Código QR para entrar a Dali",
+        "SCAN": "Apunta la cámara de tu teléfono al código: entras ya firmado. Sirve una sola vez.",
+        "EXPIRES": "Vence en {time}",
+        "OR_URL": "O abre {url} en tu teléfono y entra con tu correo y contraseña.",
+        "INSTALL_HINT": "Ya adentro: en Android, menú › «Instalar app»; en iPhone, Compartir › «Agregar a inicio».",
+        "ERROR": "No se pudo generar el código. Intenta de nuevo."
+      }
     }
   }
 }

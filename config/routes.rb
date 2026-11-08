@@ -15,6 +15,8 @@ Rails.application.routes.draw do
     root to: 'dashboard#index'
 
     get '/app', to: 'dashboard#index'
+    # Portal de Dali en el teléfono (dirección corta para compartir)
+    get '/dali', to: redirect('/app/dali')
     get '/app/*params', to: 'dashboard#index'
     get '/app/accounts/:account_id/settings/inboxes/new/twitter', to: 'dashboard#index', as: 'app_new_twitter_inbox'
     get '/app/accounts/:account_id/settings/inboxes/new/microsoft', to: 'dashboard#index', as: 'app_new_microsoft_inbox'
@@ -362,6 +364,8 @@ Rails.application.routes.draw do
             post :messages
             post :reset
             patch :settings
+            post :transcribe
+            post :mobile_link
             post 'proposals/:id/confirm', action: :confirm
             post 'proposals/:id/cancel', action: :cancel
           end

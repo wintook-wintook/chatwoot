@@ -27,6 +27,8 @@ export default {
     ssoAuthToken: { type: String, default: '' },
     ssoAccountId: { type: String, default: '' },
     ssoConversationId: { type: String, default: '' },
+    // 'dali': al entrar va al portal de Dali (AuthHelper.getLoginRedirectURL)
+    redirect: { type: String, default: '' },
     email: { type: String, default: '' },
     authError: { type: String, default: '' },
   },
@@ -116,6 +118,7 @@ export default {
         sso_auth_token: this.ssoAuthToken,
         ssoAccountId: this.ssoAccountId,
         ssoConversationId: this.ssoConversationId,
+        redirect: this.redirect,
       };
 
       login(credentials)

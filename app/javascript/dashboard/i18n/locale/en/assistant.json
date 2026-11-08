@@ -202,6 +202,35 @@
       "AI_NOTE_ADD": "Add it on the contact page",
       "SOURCES_NONE": "The company has no canned responses: if the customer asks something not in the AI note, it will hand it to a person.",
       "SOURCES_CANNED": "To answer questions it checks the company canned responses and the contact AI note."
+    },
+    "OPEN_IN_PLATFORM": "Open in Kontrolya",
+    "VOICE": {
+      "START": "Dictate",
+      "STOP": "Stop dictating",
+      "LISTENING": "Listening… {seconds} s (tap to finish)",
+      "TRANSCRIBING": "Turning your voice into text…",
+      "NO_MIC": "Allow the microphone to dictate.",
+      "ERROR": "Couldn't transcribe. Try again."
+    },
+    "PORTAL": {
+      "NEW": "New conversation",
+      "MENU": "Menu",
+      "OPEN_PLATFORM": "Go to Kontrolya",
+      "INSTALL": "Install on this phone",
+      "ACCOUNTS": "Company",
+      "BACK": "Back to {name}",
+      "PHONE": {
+        "TITLE": "Use {name} on my phone",
+        "NOTE": "{name} full screen on your phone: type or dictate. It installs like an app.",
+        "SHOW": "Show QR code",
+        "AGAIN": "Generate another code",
+        "QR_ALT": "QR code to sign in to Dali",
+        "SCAN": "Point your phone camera at the code: you sign in right away. It works once.",
+        "EXPIRES": "Expires in {time}",
+        "OR_URL": "Or open {url} on your phone and sign in with your email and password.",
+        "INSTALL_HINT": "Once inside: on Android, menu › “Install app”; on iPhone, Share › “Add to Home Screen”.",
+        "ERROR": "Couldn't generate the code. Try again."
+      }
     }
   }
 }

@@ -22,12 +22,19 @@ const getSSOAccountPath = ({ ssoAccountId, user }) => {
   return accountPath;
 };
 
+// Entrar desde el portal de Dali (/dali o el QR del perfil) regresa a Dali.
+export const DALI_REDIRECT = 'dali';
+
 export const getLoginRedirectURL = ({
   ssoAccountId,
   ssoConversationId,
+  redirect,
   user,
 }) => {
   const accountPath = getSSOAccountPath({ ssoAccountId, user });
+  if (accountPath && redirect === DALI_REDIRECT) {
+    return frontendURL(`${accountPath}/dali`);
+  }
   if (accountPath) {
     if (ssoConversationId) {
       return frontendURL(`${accountPath}/conversations/${ssoConversationId}`);

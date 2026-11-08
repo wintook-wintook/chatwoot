@@ -351,6 +351,12 @@ es:
       closing: '¿Qué oportunidades cierran esta semana?'
       how_to: '¿Cómo se usa la Agenda?'
       help: '¿En qué me puedes ayudar?'
+    shortcuts:
+      today: { label: 'Mi día', prompt: '¿Qué tengo hoy?' }
+      quote: { label: 'Cotizar', prompt: 'Quiero hacer una cotización' }
+      meeting: { label: 'Agendar', prompt: 'Quiero agendar una cita' }
+      note: { label: 'Anotar', prompt: 'Quiero anotar algo de un cliente' }
+      sales: { label: 'Ventas', prompt: '¿Cómo vamos este mes?' }
     sales:
       suggestions:
         sales_overview: ['¿Quién va atrás de su meta?', '¿Qué oportunidades cierran este mes?', '¿Cómo vamos contra el año pasado?']

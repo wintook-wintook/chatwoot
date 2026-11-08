@@ -37,6 +37,19 @@ class AssistantAPI extends ApiClient {
     return axios.post(`${this.url}/proposals/${proposalId}/cancel`);
   }
 
+  // Lo que dictó (nota de voz del navegador) → { text }.
+  transcribe(blob) {
+    const form = new FormData();
+    const ext = (blob.type.match(/audio\/(\w+)/) || [])[1] || 'webm';
+    form.append('audio', blob, `dictado.${ext}`);
+    return axios.post(`${this.url}/transcribe`, form);
+  }
+
+  // Enlace de un solo uso (5 min) para entrar firmado al portal de Dali en el teléfono.
+  mobileLink() {
+    return axios.post(`${this.url}/mobile_link`);
+  }
+
   rename(name) {
     return axios.patch(`${this.url}/settings`, { name });
   }

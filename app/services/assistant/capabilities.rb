@@ -2,7 +2,8 @@
 
 # Asistente (Dali) — su alcance PARA ESTE USUARIO, según sus permisos (Access::Grant):
 #   · `lines`: lo que puede pedir, para que el modelo conteste «¿en qué me ayudas?»;
-#   · `starters`: preguntas de ejemplo para el saludo del panel.
+#   · `starters`: preguntas de ejemplo para el saludo del panel;
+#   · `shortcuts`: los botones fijos del portal de Dali en el teléfono (abren la plática ya encaminada).
 # «Aprender a usar la plataforma» (guías de uso) va para todos.
 # Ventas solo si tiene el área; con «solo lo suyo», dicho como «tus números».
 module Assistant::Capabilities
@@ -25,5 +26,13 @@ module Assistant::Capabilities
     list << I18n.t('assistant.starters.how_to') if grant.allowed?(:agenda)
     list << I18n.t('assistant.starters.help')
     list
+  end
+
+  def shortcuts(grant)
+    keys = %w[today]
+    keys << 'quote' if grant.writable?(:sales)
+    keys.push('meeting', 'note')
+    keys << 'sales' if grant.allowed?(:sales)
+    keys.map { |k| { key: k, label: I18n.t("assistant.shortcuts.#{k}.label"), prompt: I18n.t("assistant.shortcuts.#{k}.prompt") } }
   end
 end

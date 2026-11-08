@@ -5,6 +5,15 @@
       <%= @global_config['INSTALLATION_NAME'] %>
     </title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=0"/>
+    <%# Portal de Dali (/app/dali, /app/accounts/:id/dali): se instala en el teléfono como «Dali» %>
+    <% dali_portal = request.path.match?(%r{\A/app(/accounts/\d+)?/dali/?\z}) %>
+    <% if dali_portal %>
+      <link rel="manifest" href="/dali-manifest.json">
+      <meta name="apple-mobile-web-app-capable" content="yes">
+      <meta name="mobile-web-app-capable" content="yes">
+      <meta name="apple-mobile-web-app-title" content="Dali">
+      <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <% end %>
     <% if @global_config['DISPLAY_MANIFEST'] %>
       <meta name="msapplication-TileColor" content="#1f93ff">
       <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
@@ -26,7 +35,7 @@
       <link class="favicon" rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
       <link class="favicon" rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
       <link class="favicon" rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-      <link rel="manifest" href="/manifest.json">
+      <% unless dali_portal %><link rel="manifest" href="/manifest.json"><% end %>
     <% end %>
     <link rel="icon" type="image/png" sizes="512x512" href="<%= @global_config['LOGO_THUMBNAIL'] %>">
     <%= csrf_meta_tags %>

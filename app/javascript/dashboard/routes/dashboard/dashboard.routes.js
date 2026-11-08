@@ -25,6 +25,8 @@ const Suspended = () => import('./suspended/Index.vue');
 // Plan-Trabajo-Campo R2 — portal del técnico (celular, sin el menú).
 const FieldApp = () => import('../../views/field/FieldApp.vue');
 const FIELD_META = { permissions: ['administrator', 'agent', 'custom_role'] };
+// Portal de Dali — Dali a pantalla completa para el teléfono (se instala como app).
+const DaliApp = () => import('../../views/dali/DaliApp.vue');
 
 export default {
   routes: [
@@ -77,6 +79,18 @@ export default {
       name: 'field_agenda_visit',
       meta: FIELD_META,
       component: FieldApp,
+    },
+    {
+      // /app/dali → la empresa activa (routes/index.js)
+      path: frontendURL('dali'),
+      name: 'dali_entry',
+      meta: FIELD_META,
+    },
+    {
+      path: frontendURL('accounts/:accountId/dali'),
+      name: 'dali_app',
+      meta: FIELD_META,
+      component: DaliApp,
     },
     {
       path: frontendURL('accounts/:accountId/suspended'),
