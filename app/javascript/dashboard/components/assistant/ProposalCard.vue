@@ -29,6 +29,8 @@ const ICONS = {
   // Cotizaciones
   create_quote: 'receipt',
   send_quote: 'send',
+  // Contestar una conversación
+  reply: 'send',
 };
 
 // Igual que el servidor (Assistant::QuoteTools.totals): descuento por partida, IVA de la partida.
@@ -175,6 +177,8 @@ export default {
         create_contact: { name: f.name, email: f.email, phone: f.phone },
         create_quote: { items: f.items },
         send_quote: {},
+        // Con plantilla no se edita: la llenó Dali con datos reales.
+        reply: this.labels.template ? {} : { content: f.content },
       }[this.type];
     },
     // «TYPE» → «Tipo»; el valor del resultado (won…) también se traduce.
@@ -312,7 +316,10 @@ export default {
         <input v-model="form.title" type="text" class="h-8 text-sm" />
       </label>
       <label
-        v-if="['note', 'scheduled_message', 'draft'].includes(type)"
+        v-if="
+          ['note', 'scheduled_message', 'draft'].includes(type) ||
+          (type === 'reply' && !labels.template)
+        "
         class="text-xs"
       >
         {{ t('CONTENT') }}
@@ -520,6 +527,21 @@ export default {
         </dl>
         <p class="m-0 text-xs text-slate-500">{{ t('QUOTE_DRAFT') }}</p>
       </template>
+      <!-- Ventana de 24 h cerrada: sale una plantilla aprobada, ya llena -->
+      <template v-if="type === 'reply' && labels.template">
+        <p class="m-0 text-xs text-slate-500">
+          {{ t('TEMPLATE') }}:
+          <span class="font-medium text-slate-700 dark:text-slate-200">{{
+            labels.template
+          }}</span>
+        </p>
+        <p
+          class="p-2 m-0 text-sm whitespace-pre-line rounded bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+        >
+          {{ labels.template_text }}
+        </p>
+        <p class="m-0 text-xs text-slate-500">{{ t('TEMPLATE_NOTE') }}</p>
+      </template>
       <label v-if="type === 'scheduled_message'" class="text-xs">
         {{ t('SEND_AT') }}
         <input
@@ -561,7 +583,7 @@ export default {
         {{ t('COPY') }}
       </woot-button>
       <woot-button v-else size="small" :is-loading="busy" @click="confirm">
-        {{ t('CONFIRM') }}
+        {{ type === 'reply' ? t('SEND') : t('CONFIRM') }}
       </woot-button>
     </div>
     <div

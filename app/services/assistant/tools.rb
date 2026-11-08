@@ -18,16 +18,18 @@ class Assistant::Tools
   include Assistant::SalesTools # D5a
   include Assistant::GuideTools # guías de uso de la plataforma
   include Assistant::QuoteTools # cotizaciones
+  include Assistant::ConversationTools # contestar conversaciones
 
   LIST_LIMIT = 6
   ACTIVITY_LINES = 15
 
   READ_TOOLS = %w[search get_case get_contact my_agenda open_page list_agents tracking_status
-                  list_case_types case_options search_guides read_guide report_gap].freeze + QUOTE_READ_TOOLS
+                  list_case_types case_options search_guides read_guide report_gap].freeze + QUOTE_READ_TOOLS + CONVERSATION_READ_TOOLS
   PROPOSAL_TOOLS = %w[propose_note propose_task propose_meeting propose_scheduled_message propose_draft
                       propose_delegate propose_tracking_action propose_create_case propose_move_stage
                       propose_outcome propose_postpone propose_resume_case propose_update_opportunity
-                      propose_create_contact propose_follow_up propose_follow_up_action].freeze + QUOTE_PROPOSAL_TOOLS
+                      propose_create_contact propose_follow_up propose_follow_up_action].freeze +
+                   QUOTE_PROPOSAL_TOOLS + CONVERSATION_PROPOSAL_TOOLS
 
   def self.definitions = Assistant::ToolDefinitions::ALL
 
@@ -188,13 +190,6 @@ class Assistant::Tools
     return cases.find(args['case_id']) if args['case_id'].present?
 
     cases.find_by!(folio: args['folio'].to_s.strip.upcase)
-  end
-
-  def find_conversation(display_id)
-    conversation = @grant.conversations(@account.conversations).find_by(display_id: display_id)
-    raise ArgumentError, 'No encontré esa conversación o no tienes acceso.' unless conversation
-
-    conversation
   end
 
   # El «a quién»: caso, o contacto/organización. → { ids:, label: } o nil

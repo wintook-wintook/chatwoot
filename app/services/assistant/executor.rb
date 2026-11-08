@@ -10,6 +10,7 @@ class Assistant::Executor
   include Assistant::DelegationRunner # D3
   include Assistant::CaseRunner # D4
   include Assistant::QuoteRunner # cotizaciones
+  include Assistant::ConversationRunner # contestar conversaciones
 
   class Refused < StandardError; end
 

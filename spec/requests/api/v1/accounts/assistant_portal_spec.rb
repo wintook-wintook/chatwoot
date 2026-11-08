@@ -11,7 +11,7 @@ RSpec.describe 'Assistant portal API' do
   it 'manda los botones rápidos según los permisos' do
     get base, headers: admin.create_new_auth_token, as: :json
     keys = response.parsed_body['shortcuts'].pluck('key')
-    expect(keys).to eq(%w[today quote meeting note sales])
+    expect(keys).to eq(%w[today reply quote meeting note sales])
     expect(response.parsed_body['shortcuts'].first).to include('label' => I18n.t('assistant.shortcuts.today.label'))
   end
 

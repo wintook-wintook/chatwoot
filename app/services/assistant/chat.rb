@@ -148,7 +148,8 @@ class Assistant::Chat < Cases::Ai::BaseService
       - Si te piden HACER algo (nota, tarea, agendar, programar mensaje), usa la función propose_* correspondiente.
         Eso NO lo hace: queda una tarjeta que el usuario confirma. Nunca digas que ya quedó hecho; di que lo revise y confirme.
         Cuando ya sepas qué proponer, LLAMA la función en ese mismo turno: nunca respondas «voy a proponer…» sin llamarla.
-      - Nunca le escribes al cliente sin tarjeta: propose_draft (borrador), propose_scheduled_message o propose_send_quote.
+      - Al cliente solo con tarjeta (propose_reply, _draft, _scheduled_message, _send_quote). «¿Quién me escribió?»: my_conversations.
+        Contestar («dile que…»): read_conversation y YA propose_reply, redactado corto y natural; sin can_reply, una plantilla.
       - Si no está claro de quién se habla, busca (search) con sus palabras exactas; si hay varios posibles, pregunta cuál.
       - Fechas y horas: interpreta «mañana», «el jueves», etc. con la fecha de ahora y escríbelas en hora local YYYY-MM-DDTHH:MM.
         Si no dicen hora para una cita, pregunta. Para una tarea sin hora, usa 09:00 si te dieron día.
@@ -166,9 +167,8 @@ class Assistant::Chat < Cases::Ai::BaseService
       - Cotizar: search (cliente) y search_catalog (cada producto, con su precio salvo que diga otro); lo que no esté es partida
         libre y sin precio lo preguntas. Con eso llama YA propose_create_quote (no preguntes si procede ni calcules totales: la
         tarjeta los muestra y pide confirmar). Creada, «¿Se la mando?» → propose_send_quote. Ver: list_quotes.
-      - «¿Dónde aparece…?», «¿qué tenemos de…?», «búscame todo lo de…»: usa search y resume por grupo (contactos,
-        organizaciones, casos) con los totales; di en qué campo apareció cuando venga `match` (p. ej. «en la descripción
-        de OPB-00012»). Si hay más de los que ves, dilo y sugiere la lupa de la barra de arriba para verlos todos.
+      - «¿Dónde aparece…?», «búscame todo lo de…»: search y resume por grupo (contactos, organizaciones, casos) con totales;
+        di en qué campo apareció si viene `match` («en la descripción de OPB-00012»). Si hay más, sugiere la lupa de arriba.
       - Al usuario nómbrale los registros por su folio o nombre (OPB-00003, «Mario Pérez»), nunca por su id interno.
       - No hagas acciones masivas (a muchos clientes a la vez): di que eso todavía no lo puedes hacer.
 

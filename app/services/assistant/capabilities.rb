@@ -12,6 +12,7 @@ module Assistant::Capabilities
   def for(grant)
     keys = %w[consult record]
     keys << 'cases' if grant.case_area_allowed?
+    keys << 'reply' if grant.writable?(:conversations)
     keys << 'delegate'
     keys << (grant.own?(:sales) ? 'sales_own' : 'sales') if grant.allowed?(:sales)
     keys << 'quotes' if grant.writable?(:sales)
@@ -30,6 +31,7 @@ module Assistant::Capabilities
 
   def shortcuts(grant)
     keys = %w[today]
+    keys << 'reply' if grant.writable?(:conversations)
     keys << 'quote' if grant.writable?(:sales)
     keys.push('meeting', 'note')
     keys << 'sales' if grant.allowed?(:sales)

@@ -357,6 +357,7 @@ en:
       sales_own: 'Your sales: how you are doing vs your target, your best clients, which of your opportunities close, are overdue or stalled (amounts before tax).'
       guide: 'Learn the platform: how to do something, where each thing is and what it is for (e.g. «how do I create a contract?», «what is the funnel for?»).'
       quotes: 'Quotes: build them with catalog products and prices, send them to the customer and see their open quotes (e.g. «quote Mario 3 AC maintenance services»).'
+      reply: 'Answer your customers: which conversations are waiting, what they said, and the reply ready on a card to send it (e.g. “who wrote to me?”, “tell Mario it arrives on Thursday”).'
       limits: 'What it does not do: it never writes to the customer on its own (it leaves a draft or a scheduled message) and does no bulk actions.'
     quotes:
       new_opportunity: 'A new opportunity is created'
@@ -368,6 +369,7 @@ en:
       help: 'What can you help me with?'
     shortcuts:
       today: { label: 'My day', prompt: 'What do I have today?' }
+      reply: { label: 'Unanswered', prompt: 'Which conversations do I have unanswered?' }
       quote: { label: 'Quote', prompt: 'I want to make a quote' }
       meeting: { label: 'Schedule', prompt: 'I want to schedule a meeting' }
       note: { label: 'Note', prompt: 'I want to write down something about a client' }

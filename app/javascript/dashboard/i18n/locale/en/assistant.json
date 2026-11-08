@@ -113,7 +113,10 @@
       "NET": "Subtotal before tax",
       "TAX": "Tax",
       "TOTAL": "Total",
-      "QUOTE_DRAFT": "It is created as a draft; you can review it before sending."
+      "QUOTE_DRAFT": "It is created as a draft; you can review it before sending.",
+      "reply": "Reply",
+      "SEND": "Send",
+      "TEMPLATE_NOTE": "More than 24 h since their last message: WhatsApp only allows an approved template."
     },
     "SETTINGS": {
       "TITLE": "Assistant",

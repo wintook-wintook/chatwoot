@@ -113,7 +113,10 @@
       "NET": "Subtotal sin IVA",
       "TAX": "IVA",
       "TOTAL": "Total",
-      "QUOTE_DRAFT": "Se crea en borrador; la puedes revisar antes de mandarla."
+      "QUOTE_DRAFT": "Se crea en borrador; la puedes revisar antes de mandarla.",
+      "reply": "Responder",
+      "SEND": "Enviar",
+      "TEMPLATE_NOTE": "Pasaron más de 24 h desde su último mensaje: WhatsApp solo deja mandar una plantilla aprobada."
     },
     "SETTINGS": {
       "TITLE": "Asistente",

@@ -102,9 +102,9 @@ module Assistant::ToolDefinitions
        { name: str('Nombre'), email: str('Correo'), phone: str('Teléfono con lada, p. ej. +5215512345678'),
          organization_id: int('Id de la organización') }, %w[name]),
     fn('propose_draft', 'Redacta un borrador de mensaje para que el usuario lo copie. No envía nada.',
-       { conversation_id: int('Número de la conversación, si aplica'), content: str('Texto del borrador') },
-       %w[content])
+       { conversation_id: int('Número de la conversación, si aplica'), content: str('Texto del borrador') }, %w[content])
   ].freeze
 
-  ALL = (BASE + Assistant::SalesToolDefinitions::ALL + Assistant::GuideToolDefinitions::ALL + Assistant::QuoteToolDefinitions::ALL).freeze
+  ALL = (BASE + Assistant::SalesToolDefinitions::ALL + Assistant::GuideToolDefinitions::ALL + Assistant::QuoteToolDefinitions::ALL +
+         Assistant::ConversationToolDefinitions::ALL).freeze
 end
