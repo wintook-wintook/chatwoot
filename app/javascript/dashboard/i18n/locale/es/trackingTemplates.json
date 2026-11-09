@@ -552,7 +552,9 @@
       "PANEL_EMPTY": "Marca fuentes, agenda, tickets o archivos y aquí verás lo que podrá hacer.",
       "NEED_NAME": "Falta el nombre del agente.",
       "NEED_RESOURCE": "Marca al menos una fuente, agenda o ticket.",
-      "FILE_FAILED": "No se pudo subir {name}."
+      "FILE_FAILED": "No se pudo subir {name}.",
+      "NAV_RULES": "Reglas",
+      "RULES_HINT": "Palabras clave que disparan una acción: por ejemplo, si el cliente escribe «asesor», pasar la conversación a una persona."
     }
   },
   "TRACKING_IMPORT": {

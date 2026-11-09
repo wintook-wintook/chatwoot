@@ -23,21 +23,23 @@ import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 import FichaCards, { GROUPS } from './FichaCards.vue';
 import FichaNav from './FichaNav.vue';
 import FichaFiles from './FichaFiles.vue';
+import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 
-const SECTIONS = ['agent', 'sources', 'calendar', 'tickets', 'files'];
+const SECTIONS = ['agent', 'sources', 'calendar', 'tickets', 'files', 'rules'];
 const SECTION_ICONS = {
   agent: 'book-contacts',
   sources: 'library',
   calendar: 'calendar',
   tickets: 'folder',
   files: 'attach',
+  rules: 'flash-on',
 };
 const TONES = ['cercano', 'profesional'];
 const SOURCE_KINDS = GROUPS.find(group => group.id === 'sources').kinds;
 const FILE_NAME = /^[a-zA-Z0-9_-]{1,60}$/;
 
 export default {
-  components: { FichaCards, FichaNav, FichaFiles },
+  components: { FichaCards, FichaNav, FichaFiles, KeywordActionsEditor },
   emits: ['created', 'conversation'],
   data() {
     return {
@@ -51,6 +53,8 @@ export default {
       cards: [],
       items: [],
       files: [],
+      // Reglas: palabras clave → acción (las mismas de Ficha › Reglas).
+      keywordActions: [],
       skip: [],
       query: '',
       kind: '',
@@ -82,6 +86,12 @@ export default {
             ...base,
             count: this.files.length,
             total: this.files.length,
+          };
+        if (id === 'rules')
+          return {
+            ...base,
+            count: this.keywordActions.length,
+            total: this.keywordActions.length,
           };
         const grupo = GROUPS.find(group => group.id === id);
         const tarjetas = this.cards.filter(card =>
@@ -156,6 +166,7 @@ export default {
         customer_display_name: this.displayName.trim(),
         items: this.items,
         files: this.files.map(file => ({ name: file.name })),
+        keyword_actions: this.keywordActions,
         skip: this.skip,
         tone: this.tone,
         objective: this.objective.trim(),
@@ -449,11 +460,19 @@ export default {
         </div>
 
         <!-- Archivos -->
-        <div v-else class="flex flex-col gap-3">
+        <div v-else-if="section === 'files'" class="flex flex-col gap-3">
           <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ t('FILES_HINT') }}
           </p>
           <FichaFiles v-model="files" />
+        </div>
+
+        <!-- Reglas -->
+        <div v-else class="flex flex-col gap-3">
+          <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
+            {{ t('RULES_HINT') }}
+          </p>
+          <KeywordActionsEditor v-model="keywordActions" />
         </div>
       </div>
 

@@ -18,19 +18,21 @@ import FichaAPI from 'dashboard/api/fichaAgente';
 import FichaCards, { GROUPS } from './FichaCards.vue';
 import FichaNav from './FichaNav.vue';
 import FichaFiles from './FichaFiles.vue';
+import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 
-const SECTIONS = ['sources', 'calendar', 'tickets', 'files'];
+const SECTIONS = ['sources', 'calendar', 'tickets', 'files', 'rules'];
 const SECTION_ICONS = {
   sources: 'library',
   calendar: 'calendar',
   tickets: 'folder',
   files: 'attach',
+  rules: 'flash-on',
 };
 const SOURCE_KINDS = GROUPS.find(group => group.id === 'sources').kinds;
 const copy = value => JSON.parse(JSON.stringify(value || []));
 
 export default {
-  components: { FichaCards, FichaNav, FichaFiles },
+  components: { FichaCards, FichaNav, FichaFiles, KeywordActionsEditor },
   props: {
     templateId: { type: Number, required: true },
   },
@@ -41,6 +43,9 @@ export default {
       cards: [],
       items: [],
       saved: [],
+      // Reglas (palabras clave → acción): se guardan con la ficha.
+      rules: [],
+      savedRules: [],
       changes: { added: [], removed: [], not_ready: [], confirmed: true },
       query: '',
       kind: '',
@@ -50,13 +55,24 @@ export default {
   },
   computed: {
     dirty() {
-      return JSON.stringify(this.items) !== JSON.stringify(this.saved);
+      return (
+        JSON.stringify(this.items) !== JSON.stringify(this.saved) ||
+        JSON.stringify(this.rules) !== JSON.stringify(this.savedRules)
+      );
     },
     pending() {
       return this.changes.added.length + this.changes.removed.length;
     },
     navItems() {
       return SECTIONS.map(id => {
+        if (id === 'rules')
+          return {
+            id,
+            icon: SECTION_ICONS[id],
+            label: this.t('NAV_RULES'),
+            count: this.rules.length,
+            total: this.rules.length,
+          };
         const grupo = GROUPS.find(group => group.id === id);
         const tarjetas = this.cards.filter(card =>
           grupo.kinds.includes(card.kind)
@@ -101,6 +117,8 @@ export default {
       this.cards = data.cards || [];
       this.items = copy(data.items);
       this.saved = copy(data.items);
+      this.rules = copy(data.keyword_actions);
+      this.savedRules = copy(data.keyword_actions);
       this.changes = data.changes || this.changes;
       this.$emit(
         'changes',
@@ -121,7 +139,9 @@ export default {
     async save(items = this.items) {
       this.busy = true;
       try {
-        const { data } = await FichaAPI.save(this.templateId, items);
+        const { data } = await FichaAPI.save(this.templateId, items, {
+          keyword_actions: this.rules,
+        });
         this.take(data);
         useAlert(this.t('SAVED'));
       } catch (error) {
@@ -242,6 +262,12 @@ export default {
               :disabled="busy"
               :show-headers="false"
             />
+          </template>
+          <template v-else-if="section === 'rules'">
+            <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
+              {{ t('RULES_HINT') }}
+            </p>
+            <KeywordActionsEditor v-model="rules" />
           </template>
           <template v-else>
             <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">

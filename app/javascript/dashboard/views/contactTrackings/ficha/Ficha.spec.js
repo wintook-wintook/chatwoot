@@ -147,6 +147,14 @@ describe('FichaWizard', () => {
     expect(menu.sources).toMatchObject({ count: 1, total: 3 });
     expect(menu.calendar).toMatchObject({ count: 1, total: 1 });
     expect(wrapper.vm.nextSection).toBe('sources');
+    expect(wrapper.vm.navItems.map(i => i.id)).toEqual([
+      'agent',
+      'sources',
+      'calendar',
+      'tickets',
+      'files',
+      'rules',
+    ]);
   });
 
   it('nombre + un recurso → Crear agente (sube los archivos y los marca)', async () => {
@@ -161,9 +169,11 @@ describe('FichaWizard', () => {
     await wrapper.vm.loadPreview();
     expect(wrapper.vm.canCreate).toBe(true);
     wrapper.vm.toggleOffer(PREVIEW.offers[1]);
+    wrapper.setData({ keywordActions: [{ keyword: 'asesor' }] });
     expect(wrapper.vm.payload).toMatchObject({
       skip: ['calendar:3'],
       files: [{ name: 'catalogo' }],
+      keyword_actions: [{ keyword: 'asesor' }],
     });
 
     await wrapper.vm.create();
@@ -239,10 +249,32 @@ describe('AgentFicha', () => {
     const wrapper = montar();
     await esperar();
     wrapper.vm.onUploaded({ id: 9 });
-    expect(FichaAPI.save).toHaveBeenCalledWith(7, [
-      { key: 'google_sheet:1' },
-      { key: 'file:9' },
-    ]);
+    expect(FichaAPI.save).toHaveBeenCalledWith(
+      7,
+      [{ key: 'google_sheet:1' }, { key: 'file:9' }],
+      { keyword_actions: [] }
+    );
+  });
+
+  it('las Reglas se cargan, cuentan como cambio y se guardan con la ficha', async () => {
+    const regla = {
+      keyword: 'asesor',
+      action: 'handoff',
+      direction: 'incoming',
+    };
+    FichaAPI.get.mockResolvedValue({
+      data: { ...DATA, keyword_actions: [regla] },
+    });
+    const wrapper = montar();
+    await esperar();
+    expect(wrapper.vm.rules).toEqual([regla]);
+    expect(wrapper.vm.navItems.find(i => i.id === 'rules').count).toBe(1);
+    wrapper.setData({ rules: [] });
+    expect(wrapper.vm.dirty).toBe(true);
+    await wrapper.vm.save();
+    expect(FichaAPI.save).toHaveBeenLastCalledWith(7, DATA.items, {
+      keyword_actions: [],
+    });
   });
 
   it('carga la ficha, cuenta los cambios y avisa al espacio del agente', async () => {
@@ -261,10 +293,11 @@ describe('AgentFicha', () => {
     });
     expect(wrapper.vm.dirty).toBe(true);
     await wrapper.vm.save();
-    expect(FichaAPI.save).toHaveBeenCalledWith(7, [
-      { key: 'google_sheet:1' },
-      { key: 'calendar:3' },
-    ]);
+    expect(FichaAPI.save).toHaveBeenCalledWith(
+      7,
+      [{ key: 'google_sheet:1' }, { key: 'calendar:3' }],
+      { keyword_actions: [] }
+    );
   });
 
   it('«Aplicar todos» agrega y quita cada ruta una sola vez', async () => {

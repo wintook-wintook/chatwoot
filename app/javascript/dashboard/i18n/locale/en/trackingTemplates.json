@@ -552,7 +552,9 @@
       "PANEL_EMPTY": "Select sources, calendar, tickets or files and you'll see what it can do here.",
       "NEED_NAME": "The agent name is missing.",
       "NEED_RESOURCE": "Select at least one source, calendar or ticket.",
-      "FILE_FAILED": "Could not upload {name}."
+      "FILE_FAILED": "Could not upload {name}.",
+      "NAV_RULES": "Rules",
+      "RULES_HINT": "Keywords that trigger an action: for example, if the customer writes «agent», hand the conversation to a person."
     }
   }
 }

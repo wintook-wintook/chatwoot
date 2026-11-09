@@ -30,8 +30,9 @@ class FichaAgenteAPI extends ApiClient {
     return axios.get(`${this.url}/${id}/ficha`);
   }
 
-  save(id, items) {
-    return axios.patch(`${this.url}/${id}/ficha`, { items });
+  // extra: { keyword_actions } (Reglas)
+  save(id, items, extra = {}) {
+    return axios.patch(`${this.url}/${id}/ficha`, { items, ...extra });
   }
 
   apply(id, { add = [], remove = [] }) {

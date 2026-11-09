@@ -47,6 +47,19 @@ RSpec.describe 'Ficha del Agente IA API', type: :request do
     expect(creado.customer_display_name).to eq('Sofía')
   end
 
+  it 'las Reglas se guardan al crear y con la ficha' do
+    regla = { keyword: 'asesor', action: ContactTrackings::KeywordActionService::VALID_ACTIONS.first,
+              direction: ContactTrackings::KeywordActionService::VALID_DIRECTIONS.first }
+    post "#{base}/ficha_create", params: { name: 'Ventas', items: items, keyword_actions: [regla] },
+                                 headers: admin.create_new_auth_token, as: :json
+    creado = account.tracking_templates.find(response.parsed_body['id'])
+    expect(creado.keyword_actions.first['keyword']).to eq('asesor')
+
+    patch "#{base}/#{creado.id}/ficha", params: { items: items, keyword_actions: [] }, headers: admin.create_new_auth_token, as: :json
+    expect(creado.reload.keyword_actions).to eq([])
+    expect(response.parsed_body['keyword_actions']).to eq([])
+  end
+
   it 'guarda la ficha de un agente, dice los cambios y los aplica' do
     template = create(:tracking_template, account: account, complementary_prompt: "@ruta(info #info: pregunta algo): @buscar_articulo\n")
 

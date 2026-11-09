@@ -10,7 +10,8 @@
 #   POST tracking_templates/ficha_preview             ofertas + Entrenamiento generado + comprobador
 #   POST tracking_templates/ficha_create              crea el agente con todo eso (sin IA)
 #     params: name, inbox_id, items[], skip[] (ofertas apagadas), objective, business, tone,
-#             customer_display_name, files[] ({ name }: archivos que la pantalla sube al crear)
+#             customer_display_name, files[] ({ name }: archivos que la pantalla sube al crear),
+#             keyword_actions[] (Reglas)
 #
 # Agente que ya existe:
 #   GET   tracking_templates/:id/ficha        tarjetas + lo marcado + cambios contra el prompt
@@ -20,6 +21,7 @@
 
 class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts::BaseController
   INVALID = 'El Entrenamiento tiene errores que impiden guardarlo.'
+  KEYWORD_FIELDS = [:keyword, :action, :direction, :label, :assignee_id, :team_id].freeze
 
   before_action :check_authorization
   before_action :fetch_tracking_template, only: [:show, :update, :apply]
@@ -45,8 +47,8 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
   end
 
   def update
-    @tracking_template.update!(resources: resources_for(items), calendar_integration_ids: calendar_ids(items),
-                               version_note: 'Ficha actualizada')
+    @tracking_template.update!({ resources: resources_for(items), calendar_integration_ids: calendar_ids(items),
+                                 keyword_actions: keyword_actions, version_note: 'Ficha actualizada' }.compact)
     render json: ficha_json
   end
 
@@ -66,7 +68,14 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
       objective: resultado[:objective], ai_context: resultado[:ai_context].presence,
       complementary_prompt: resultado[:prompt], resources: resources_for(items),
       calendar_integration_ids: calendar_ids(items), version_note: 'Creado desde la ficha',
-      customer_display_name: params[:customer_display_name].presence }
+      customer_display_name: params[:customer_display_name].presence, keyword_actions: keyword_actions || [] }
+  end
+
+  # Reglas (palabras clave → acción), las mismas de la Ficha › Reglas. nil = no vinieron.
+  def keyword_actions
+    return nil unless params.key?(:keyword_actions)
+
+    params.permit(keyword_actions: KEYWORD_FIELDS).fetch(:keyword_actions, []).map { |r| r.to_h.stringify_keys }
   end
 
   # El prompt con lo que la persona aceptó: add[] = ofertas de la ficha, remove[] = rutas.
@@ -141,6 +150,7 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
     @tracking_template.reload
     cards = catalog_for(@tracking_template.inbox, @tracking_template).call
     cambios = ContactTrackings::Ficha::Changes.new(@tracking_template, cards: cards)
-    { cards: cards, items: cambios.items, changes: cambios.call.except(:deduced) }
+    { cards: cards, items: cambios.items, changes: cambios.call.except(:deduced),
+      keyword_actions: @tracking_template.keyword_actions || [] }
   end
 end
