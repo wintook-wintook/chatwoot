@@ -582,7 +582,28 @@ class KnowledgeBaseResponseService
     return false if reply_text.blank?
 
     send_reply("#{with_branch_tag(reply_text)}\n\n_#{spec.sheet}_")
+    follow_switch(result.switch, reply_text)
     true
+  end
+
+  # El cliente cambió de valor (otra carrera) y la respuesta ya habla del nuevo, pero el
+  # modelo no lo escribió en su línea VARIABLES: se guarda aquí. Ver SheetLookup::Switch.
+  def follow_switch(switch, reply_text)
+    return if switch.nil? || @tracking.nil?
+
+    definition = ContactTrackings::ConversationVariables.definition_for(@tracking)
+    variable = definition&.variable(switch.variable)
+    return if variable.nil?
+    return unless switch.confirmed_by?(ContactTrackings::ConversationVariables.strip(@tracking, reply_text))
+
+    actual = ContactTrackings::ConversationVariables.current(@tracking, @conversation, definition)[switch.variable].to_s
+    return if switch.from.none? { |valor| ContactTrackings::SheetNumbers.names?(actual, valor) }
+
+    value = definition.coerce(variable[:name], switch.to)
+    return if value.nil?
+
+    resets = ContactTrackings::ConversationVariables::SwitchResets.for(@tracking, variable[:name])
+    ContactTrackings::ConversationVariables.apply!(@tracking, @conversation, resets.merge(variable[:name] => value))
   end
 
   # Las VARIABLES del agente en esta conversación, para que un «carrera=?» use CARRERA.
@@ -674,6 +695,7 @@ class KnowledgeBaseResponseService
     user_prompt = erp_user_prompt(first_name, question, erp_data) if erp_data
     user_prompt = canned_prompt_user_prompt(first_name, question, canned_prompt) if canned_prompt
     user_prompt = "#{user_prompt}\n\n#{variables_reminder}" if variables_reminder
+    user_prompt = "#{conversation_turn_note}\n\n#{user_prompt}" if conversation_turn_note
 
     history  = load_history
     messages = [{ role: 'system', content: system_prompt }]
@@ -1015,6 +1037,23 @@ class KnowledgeBaseResponseService
     RULE
   end
 
+  # proyecto@contact_tracking: el historial de KBase (kb_history) trae solo sus propios turnos,
+  # no lo que contestó el conversacional ni otros mensajes del equipo, y en una conversación
+  # nueva viene vacío. El prompt del agente pide presentarse solo en el primer mensaje, y sin
+  # ver la conversación el modelo adivinaba. Medido el 06/11/2026 (cuenta 1128, AGENTE
+  # ESCUELA, convs 137-139): a un «Hola» que abría la conversación contestó «¿En qué más le
+  # podemos ayudar?» sin presentarse; con «Buen día» sí se presentó.
+  FIRST_TURN_NOTE = 'Contexto: es el primer mensaje de la conversación; el equipo todavía no ha escrito nada.'
+  LATER_TURN_NOTE = 'Contexto: el equipo ya escribió antes en esta conversación; no es el primer mensaje.'
+
+  def conversation_turn_note
+    return @conversation_turn_note if defined?(@conversation_turn_note)
+    return @conversation_turn_note = nil if agent_system_prompt.nil? || @conversation.nil?
+
+    escribimos = @conversation.messages.where(message_type: :outgoing, private: false).exists?(id: ...@message.id)
+    @conversation_turn_note = escribimos ? LATER_TURN_NOTE : FIRST_TURN_NOTE
+  end
+
   # La regla de [VARIABLES] va en el system prompt, lejos del final, y aquí el último mensaje
   # trae sus propias instrucciones: el modelo no escribía la línea. Medido el 05/11/2026
   # (cuenta 1128, AGENTE ESCUELA, convs 93-123): ninguna respuesta de KBase guardó
@@ -1301,8 +1340,10 @@ class KnowledgeBaseResponseService
       temperature: temperature
     }.to_json
 
-    response = http.request(request)
-    JSON.parse(response.body).dig('choices', 0, 'message', 'content')&.strip
+    response = ContactTrackings::OpenaiRequest.perform(http, request, 'KBase')
+    return nil if response.nil? || response.body.blank?
+
+    ContactTrackings::OpenaiRequest.clean(JSON.parse(response.body).dig('choices', 0, 'message', 'content'))
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error OpenAI: #{e.message}"
     nil

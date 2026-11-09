@@ -2180,10 +2180,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       temperature: 0.7
     }.to_json
 
-    response = http.request(request)
+    # proyecto@contact_tracking: registra y reintenta una vez lo que falla (ver OpenaiRequest).
+    response = ContactTrackings::OpenaiRequest.perform(http, request, 'TrackingBot')
+    return nil if response.nil? || response.body.blank?
+
     response_body = JSON.parse(response.body)
 
-    reply = response_body.dig('choices', 0, 'message', 'content')&.strip
+    reply = ContactTrackings::OpenaiRequest.clean(response_body.dig('choices', 0, 'message', 'content'))
     reply&.gsub(/\A[A-Za-záéíóúñÁÉÍÓÚÑ\s]{2,20}:\s*\n?/, '')&.strip
   end
 
