@@ -1146,7 +1146,7 @@ Rails.application.routes.draw do
   post 'baja/:token', to: 'public/opt_outs#create'
 
   # Plan-Trabajo-Campo R5 — portal del cliente de su orden y visita del técnico externo.
-  get  'servicio/:token', to: 'public/service_portals#show', as: :public_service_portal
+  get  'servicio/:token',            to: 'public/service_portals#show',  as: :public_service_portal
   # Portal del cliente — sus casos y proyectos y las tareas que le tocan (tareas con el cliente)
   get  'cliente/:token',                 to: 'public/client_portals#show',   as: :public_client_portal
   post 'cliente/:token/quien',           to: 'public/client_portals#person', as: :public_client_portal_person
