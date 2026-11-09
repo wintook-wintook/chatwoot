@@ -34,7 +34,7 @@ class Assistant::Tools
                       propose_create_contact propose_follow_up propose_follow_up_action].freeze +
                    QUOTE_PROPOSAL_TOOLS + CONVERSATION_PROPOSAL_TOOLS + FIELD_PROPOSAL_TOOLS + EVENT_PROPOSAL_TOOLS
 
-  def self.definitions = Assistant::ToolDefinitions::ALL
+  def self.definitions = Assistant::ToolDefinitions.all
 
   def initialize(account:, user:, grant:, zone:)
     @account = account
