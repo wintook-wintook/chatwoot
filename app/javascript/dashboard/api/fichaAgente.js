@@ -26,6 +26,11 @@ class FichaAgenteAPI extends ApiClient {
     return axios.post(`${this.url}/ficha_create`, payload);
   }
 
+  // ✨ objetivo y contexto propuestos con IA (una llamada a OpenAI)
+  suggest(payload) {
+    return axios.post(`${this.url}/ficha_suggest`, payload);
+  }
+
   get(id) {
     return axios.get(`${this.url}/${id}/ficha`);
   }

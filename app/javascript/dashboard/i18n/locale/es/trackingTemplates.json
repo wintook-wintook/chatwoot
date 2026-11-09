@@ -361,7 +361,7 @@
       "SECTION_TRAINING": "Entrenamiento",
       "SECTION_TESTS": "Pruebas y diagrama",
       "SECTION_SOURCES": "Probar fuentes",
-      "SECTION_PROFILE": "Ficha",
+      "SECTION_PROFILE": "Ficha de Agente IA",
       "SECTION_VERSIONS": "Versiones",
       "AGENT_ROLE_HINT": "El Entrenamiento con el Asistente lo editan los administradores.",
       "VERSIONS": {
@@ -537,7 +537,7 @@
       "FILES_ON_CREATE": "Se suben al crear el agente. El nombre es como lo menciona el Entrenamiento.",
       "FILES_NAME_HINT": "Letras, números, guion y guion bajo",
       "UPLOAD_ERROR": "no se pudo subir",
-      "AGENT_HINT": "Lo básico de tu agente. Solo el nombre es obligatorio.",
+      "AGENT_HINT": "Quién es tu agente. Solo el nombre es obligatorio; el objetivo y el contexto los puede proponer la IA con lo que marcaste.",
       "DISPLAY_NAME": "Nombre que ve el cliente (opcional)",
       "DISPLAY_NAME_PLACEHOLDER": "p. ej. Sofía",
       "OBJECTIVE_AUTO": "Lo armamos con lo que marques",
@@ -554,7 +554,16 @@
       "NEED_RESOURCE": "Marca al menos una fuente, agenda o ticket.",
       "FILE_FAILED": "No se pudo subir {name}.",
       "NAV_RULES": "Reglas",
-      "RULES_HINT": "Palabras clave que disparan una acción: por ejemplo, si el cliente escribe «asesor», pasar la conversación a una persona."
+      "RULES_HINT": "Palabras clave que disparan una acción: por ejemplo, si el cliente escribe «asesor», pasar la conversación a una persona.",
+      "CONTINUE": "Continuar",
+      "CONTINUE_HINT": "Sigue con la Ficha de Agente IA: nombre, objetivo y contexto.",
+      "BACK_RESOURCES": "Volver a Recursos",
+      "SUGGEST": "Proponer con IA",
+      "SUGGEST_ERROR": "No se pudo proponer con IA.",
+      "SUGGEST_COST": "«Proponer con IA» usa OpenAI una vez por clic. Revisa y corrige lo que proponga.",
+      "CONTEXT": "Contexto IA",
+      "CONTEXT_HINT": "Lo que tu agente debe saber del negocio, un dato por línea.",
+      "MISSING": "Te conviene agregar:"
     }
   },
   "TRACKING_IMPORT": {

@@ -11,6 +11,7 @@ vi.mock('dashboard/api/fichaAgente', () => ({
     catalog: vi.fn(),
     preview: vi.fn(),
     create: vi.fn(),
+    suggest: vi.fn(),
     get: vi.fn(),
     save: vi.fn(),
     apply: vi.fn(),
@@ -135,26 +136,55 @@ describe('FichaWizard', () => {
       },
     });
 
-  it('empieza en Datos del agente y cuenta lo marcado por sección', async () => {
+  it('empieza en Fuentes y cuenta lo marcado por sección', async () => {
     const wrapper = montar();
     await esperar();
-    expect(wrapper.vm.section).toBe('agent');
+    expect(wrapper.vm.section).toBe('sources');
     wrapper.setData({
       items: [{ key: 'google_sheet:1' }, { key: 'calendar:3' }],
     });
     const menu = Object.fromEntries(wrapper.vm.navItems.map(i => [i.id, i]));
-    expect(menu.agent.state).toBe('todo');
     expect(menu.sources).toMatchObject({ count: 1, total: 3 });
     expect(menu.calendar).toMatchObject({ count: 1, total: 1 });
-    expect(wrapper.vm.nextSection).toBe('sources');
     expect(wrapper.vm.navItems.map(i => i.id)).toEqual([
-      'agent',
       'sources',
       'calendar',
       'tickets',
       'files',
       'rules',
     ]);
+    expect(wrapper.vm.nextSection).toBe('calendar');
+  });
+
+  it('Continuar se habilita con al menos una ruta y avisa al espacio del agente', async () => {
+    const wrapper = montar();
+    await esperar();
+    expect(wrapper.vm.canContinue).toBe(false);
+    wrapper.setData({ items: [{ key: 'google_sheet:1' }] });
+    await wrapper.vm.loadPreview();
+    expect(wrapper.vm.canContinue).toBe(true);
+    expect(wrapper.vm.canCreate).toBe(false);
+  });
+
+  it('✨ Proponer con IA llena el objetivo o el contexto y lo que falta', async () => {
+    FichaAPI.suggest.mockResolvedValue({
+      data: {
+        objective: 'Atender a los clientes',
+        ai_context: 'Renta de grúas',
+        missing: ['horario de atención'],
+      },
+    });
+    const wrapper = montar();
+    await esperar();
+    await wrapper.vm.suggest('context');
+    expect(wrapper.vm.business).toBe('Renta de grúas');
+    expect(wrapper.vm.objective).toBe('');
+    expect(wrapper.vm.missing).toEqual(['horario de atención']);
+    wrapper.vm.addMissing('horario de atención');
+    expect(wrapper.vm.business).toBe('Renta de grúas\nhorario de atención: ');
+    expect(wrapper.vm.missing).toEqual([]);
+    await wrapper.vm.suggest('objective');
+    expect(wrapper.vm.objective).toBe('Atender a los clientes');
   });
 
   it('nombre + un recurso → Crear agente (sube los archivos y los marca)', async () => {
@@ -184,10 +214,11 @@ describe('FichaWizard', () => {
       name: 'catalogo',
       file: { name: 'Catálogo.pdf' },
     });
-    expect(FichaAPI.save).toHaveBeenCalledWith(77, [
-      { key: 'google_sheet:1' },
-      { key: 'file:5' },
-    ]);
+    expect(FichaAPI.save).toHaveBeenCalledWith(
+      77,
+      [{ key: 'google_sheet:1' }, { key: 'file:5' }],
+      { keyword_actions: [{ keyword: 'asesor' }] }
+    );
     expect(wrapper.emitted('created')[0]).toEqual([77]);
   });
 

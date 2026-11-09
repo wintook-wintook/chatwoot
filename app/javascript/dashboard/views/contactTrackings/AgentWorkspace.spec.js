@@ -91,6 +91,16 @@ describe('AgentWorkspace', () => {
     expect(wrapper.vm.section).toBe('ficha');
   });
 
+  it('Continuar en Recursos muestra la Ficha de Agente IA y entra ahí', () => {
+    const { wrapper } = montar({ templateId: 'new' });
+    wrapper.vm.unlockProfile();
+    expect(wrapper.vm.sections.map(s => s.id)).toEqual([
+      'ficha',
+      'new_profile',
+    ]);
+    expect(wrapper.vm.section).toBe('new_profile');
+  });
+
   it('si elige crearlo conversando, aparecen Entrenamiento y lo demás', () => {
     const { wrapper } = montar({
       templateId: 'new',

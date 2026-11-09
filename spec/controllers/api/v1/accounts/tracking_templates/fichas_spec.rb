@@ -47,6 +47,18 @@ RSpec.describe 'Ficha del Agente IA API', type: :request do
     expect(creado.customer_display_name).to eq('Sofía')
   end
 
+  it '✨ propone objetivo y contexto; sin OpenAI dice por qué' do
+    allow(ContactTrackings::Ficha::Suggester).to receive(:new).and_return(
+      instance_double(ContactTrackings::Ficha::Suggester, call: { objective: 'Atender', ai_context: 'Grúas', missing: [] })
+    )
+    post "#{base}/ficha_suggest", params: { name: 'Ventas', items: items }, headers: admin.create_new_auth_token, as: :json
+    expect(response.parsed_body).to eq('objective' => 'Atender', 'ai_context' => 'Grúas', 'missing' => [])
+
+    allow(ContactTrackings::Ficha::Suggester).to receive(:new).and_return(instance_double(ContactTrackings::Ficha::Suggester, call: nil))
+    post "#{base}/ficha_suggest", params: { name: 'Ventas', items: items }, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+  end
+
   it 'las Reglas se guardan al crear y con la ficha' do
     regla = { keyword: 'asesor', action: ContactTrackings::KeywordActionService::VALID_ACTIONS.first,
               direction: ContactTrackings::KeywordActionService::VALID_DIRECTIONS.first }

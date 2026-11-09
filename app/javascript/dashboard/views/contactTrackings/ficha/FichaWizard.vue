@@ -1,20 +1,21 @@
 <script>
-// feat/ficha_agente_ia — CREAR UN AGENTE DESDE SUS RECURSOS
+// feat/ficha_agente_ia — CREAR UN AGENTE: RECURSOS → FICHA DE AGENTE IA → CREAR
 // ============================================================================
-// Plan: docs/ficha_agente_ia_plan.md §4–§7 (rediseño pedido el 09/11/2026: «que inicie
-// en Recursos… organizar fuentes, agenda, tickets… más interactivo… la ficha es parte
-// de Recursos… los archivos se adjuntan ahí»).
+// Plan: docs/ficha_agente_ia_plan.md. Pedido del usuario (09/11/2026): «Recursos cuando
+// es nuevo, solo ese; enseguida Ficha de Agente IA; cuando das continuar aparece
+// Entrenamiento… es como siguiente, siguiente». Dos pasos, uno por pestaña (el espacio
+// del agente muestra la segunda al dar Continuar):
 //
-//  ┌ menú ──────────────┐┌ sección elegida ─────────────────┐┌ Tu agente podrá ─────────┐
-//  │ Datos del agente ✓ ││ (datos / tarjetas con buscador y ││ ☑ Contestar con «Precios»│
-//  │ Fuentes de datos 2/9││  filtro por tipo / archivos)     ││ ☑ Agendar citas          │
-//  │ Agenda 1/2         ││                                  ││ ✓ 3 rutas, sin errores   │
-//  │ Tickets 0/4        ││        [Siguiente: Agenda ›]     ││ [Crear agente]           │
-//  │ Archivos 1         │└──────────────────────────────────┘└──────────────────────────┘
+//  step = 'resources'                                  step = 'profile'
+//  ┌ menú ─────────┐┌ tarjetas ────────┐┌ panel ──┐    ┌ datos ─────────────────────┐┌ panel ────────┐
+//  │ Fuentes  2/9  ││ buscador · tipos ││ podrá:  │    │ Nombre · Canal · Tono      ││ podrá: …      │
+//  │ Agenda   1/2  ││ ☑ Precios ✓  ▾   ││ ☑ …     │    │ Objetivo   [✨ Proponer]   ││ ✓ sin errores │
+//  │ Tickets  0/4  ││                  ││[Continuar]   │ Contexto IA [✨ Proponer]   ││[Crear agente] │
+//  │ Archivos · Reglas                 │└─────────┘    │ Te conviene agregar: …     │└───────────────┘
 //
-// El Entrenamiento se escribe SIN IA (ContactTrackings::Ficha::Generator) y pasa por el
-// mismo comprobador del editor; la vista previa se recalcula sola. Los archivos se suben
-// al crear y quedan marcados en la ficha.
+// El Entrenamiento se escribe SIN IA (Ficha::Generator) y pasa por el comprobador; la
+// vista previa se recalcula sola. ✨ es una llamada a OpenAI (Ficha::Suggester), solo al
+// hacer clic. Los archivos se suben al crear y quedan marcados en la ficha.
 // ============================================================================
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
@@ -25,9 +26,8 @@ import FichaNav from './FichaNav.vue';
 import FichaFiles from './FichaFiles.vue';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 
-const SECTIONS = ['agent', 'sources', 'calendar', 'tickets', 'files', 'rules'];
+const SECTIONS = ['sources', 'calendar', 'tickets', 'files', 'rules'];
 const SECTION_ICONS = {
-  agent: 'book-contacts',
   sources: 'library',
   calendar: 'calendar',
   tickets: 'folder',
@@ -37,23 +37,29 @@ const SECTION_ICONS = {
 const TONES = ['cercano', 'profesional'];
 const SOURCE_KINDS = GROUPS.find(group => group.id === 'sources').kinds;
 const FILE_NAME = /^[a-zA-Z0-9_-]{1,60}$/;
+const MAX_CONTEXT = 800;
 
 export default {
   components: { FichaCards, FichaNav, FichaFiles, KeywordActionsEditor },
-  emits: ['created', 'conversation'],
+  props: {
+    // 'resources' | 'profile': la pestaña en la que está (la elige el espacio del agente).
+    step: { type: String, default: 'resources' },
+  },
+  emits: ['created', 'conversation', 'continue', 'back'],
   data() {
     return {
-      section: 'agent',
+      section: 'sources',
       name: '',
       inboxId: '',
       displayName: '',
       objective: '',
       business: '',
+      missing: [],
       tone: 'cercano',
       cards: [],
       items: [],
       files: [],
-      // Reglas: palabras clave → acción (las mismas de Ficha › Reglas).
+      // Reglas: palabras clave → acción (las mismas de la Ficha › Reglas).
       keywordActions: [],
       skip: [],
       query: '',
@@ -61,10 +67,12 @@ export default {
       preview: null,
       loadingCards: false,
       loadingPreview: false,
+      suggesting: false,
       creating: false,
       showPrompt: false,
       timer: null,
       tones: TONES,
+      maxContext: MAX_CONTEXT,
     };
   },
   computed: {
@@ -79,20 +87,11 @@ export default {
           icon: SECTION_ICONS[id],
           label: this.t(`NAV_${id.toUpperCase()}`),
         };
-        if (id === 'agent')
-          return { ...base, state: this.nameOk ? 'ok' : 'todo' };
-        if (id === 'files')
-          return {
-            ...base,
-            count: this.files.length,
-            total: this.files.length,
-          };
-        if (id === 'rules')
-          return {
-            ...base,
-            count: this.keywordActions.length,
-            total: this.keywordActions.length,
-          };
+        if (id === 'files' || id === 'rules') {
+          const cuantos =
+            id === 'files' ? this.files.length : this.keywordActions.length;
+          return { ...base, count: cuantos, total: cuantos };
+        }
         const grupo = GROUPS.find(group => group.id === id);
         const tarjetas = this.cards.filter(card =>
           grupo.kinds.includes(card.kind)
@@ -103,19 +102,16 @@ export default {
         return { ...base, count: marcadas.length, total: tarjetas.length };
       });
     },
-    sectionIndex() {
-      return SECTIONS.indexOf(this.section);
-    },
     nextSection() {
-      return SECTIONS[this.sectionIndex + 1] || null;
-    },
-    sourceKinds() {
-      return SOURCE_KINDS.filter(kind =>
-        this.cards.some(card => card.kind === kind)
-      );
+      return SECTIONS[SECTIONS.indexOf(this.section) + 1] || null;
     },
     kindChips() {
-      return ['', ...this.sourceKinds];
+      return [
+        '',
+        ...SOURCE_KINDS.filter(kind =>
+          this.cards.some(card => card.kind === kind)
+        ),
+      ];
     },
     offers() {
       return (this.preview && this.preview.offers) || [];
@@ -143,19 +139,21 @@ export default {
     filesOk() {
       return this.files.every(file => FILE_NAME.test(file.name));
     },
+    canContinue() {
+      return this.routes.length > 0 && this.filesOk && !this.loadingPreview;
+    },
     canCreate() {
       return (
         this.nameOk &&
-        this.routes.length > 0 &&
+        this.canContinue &&
         !!this.validation.valid &&
-        this.filesOk &&
-        !this.loadingPreview &&
         !this.creating
       );
     },
-    createHint() {
-      if (!this.nameOk) return this.t('NEED_NAME');
+    panelHint() {
       if (!this.routes.length) return this.t('NEED_RESOURCE');
+      if (this.step === 'resources') return this.t('CONTINUE_HINT');
+      if (!this.nameOk) return this.t('NEED_NAME');
       if (!this.validation.valid) return this.t('INVALID');
       return this.t('AFTER_CREATE');
     },
@@ -238,6 +236,34 @@ export default {
     isSkipped(offer) {
       return this.skip.includes(offer.key);
     },
+    // ✨ Una llamada a OpenAI: objetivo y contexto con lo que ya se capturó.
+    async suggest(campo) {
+      this.suggesting = campo;
+      try {
+        const { data } = await FichaAPI.suggest(this.payload);
+        if (campo !== 'context' && data.objective)
+          this.objective = data.objective;
+        if (campo !== 'objective' && data.ai_context) {
+          this.business = data.ai_context;
+          this.missing = data.missing || [];
+        }
+      } catch (error) {
+        const datos = error && error.response && error.response.data;
+        useAlert((datos && datos.error) || this.t('SUGGEST_ERROR'));
+      } finally {
+        this.suggesting = false;
+      }
+    },
+    // Agrega el dato que falta como una línea para llenarla.
+    addMissing(dato) {
+      const texto = this.business.trim();
+      this.business = `${texto}${texto ? '\n' : ''}${dato}: `;
+      this.missing = this.missing.filter(item => item !== dato);
+      this.$nextTick(() => {
+        const caja = this.$refs.context;
+        if (caja) caja.focus();
+      });
+    },
     async create() {
       if (!this.canCreate) return;
       this.creating = true;
@@ -274,7 +300,10 @@ export default {
           useAlert(this.t('FILE_FAILED', { name: item.file.name }));
         }
       }
-      if (subidos.length) await FichaAPI.save(id, [...this.items, ...subidos]);
+      if (subidos.length)
+        await FichaAPI.save(id, [...this.items, ...subidos], {
+          keyword_actions: this.keywordActions,
+        });
     },
   },
 };
@@ -282,10 +311,15 @@ export default {
 
 <template>
   <div
-    class="grid flex-1 min-h-0 gap-4 md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)_320px]"
+    class="grid flex-1 min-h-0 gap-4"
+    :class="
+      step === 'resources'
+        ? 'md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)_320px]'
+        : 'xl:grid-cols-[minmax(0,1fr)_320px]'
+    "
   >
-    <!-- Menú -->
-    <div class="flex flex-col min-h-0 gap-3">
+    <!-- ① Recursos: menú -->
+    <div v-if="step === 'resources'" class="flex flex-col min-h-0 gap-3">
       <FichaNav v-model="section" :items="navItems" />
       <woot-button
         size="small"
@@ -298,95 +332,10 @@ export default {
       </woot-button>
     </div>
 
-    <!-- Sección -->
-    <div class="flex flex-col min-h-0 gap-4">
+    <!-- ① Recursos: sección -->
+    <div v-if="step === 'resources'" class="flex flex-col min-h-0 gap-4">
       <div class="flex-1 min-h-0 pr-1 overflow-auto">
-        <!-- Datos del agente -->
-        <div v-if="section === 'agent'" class="flex flex-col gap-4">
-          <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
-            {{ t('AGENT_HINT') }}
-          </p>
-          <div class="grid gap-3 sm:grid-cols-2">
-            <label class="!m-0">
-              {{ t('NAME') }}
-              <input
-                v-model="name"
-                type="text"
-                class="!mb-0"
-                :placeholder="t('NAME_PLACEHOLDER')"
-              />
-            </label>
-            <label class="!m-0">
-              {{ t('INBOX') }}
-              <select v-model="inboxId" class="!mb-0">
-                <option value="">{{ t('INBOX_LATER') }}</option>
-                <option
-                  v-for="inbox in inboxes"
-                  :key="inbox.id"
-                  :value="inbox.id"
-                >
-                  {{ inbox.name }}
-                </option>
-              </select>
-            </label>
-            <label class="!m-0">
-              {{ t('DISPLAY_NAME') }}
-              <input
-                v-model="displayName"
-                type="text"
-                maxlength="30"
-                class="!mb-0"
-                :placeholder="t('DISPLAY_NAME_PLACEHOLDER')"
-              />
-            </label>
-            <div class="flex flex-col gap-1">
-              <span class="text-sm text-slate-800 dark:text-slate-100">
-                {{ t('TONE') }}
-              </span>
-              <div class="flex gap-2">
-                <label
-                  v-for="item in tones"
-                  :key="item"
-                  class="flex items-center gap-2 !m-0 px-3 py-2 text-sm border rounded-lg cursor-pointer"
-                  :class="
-                    tone === item
-                      ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20'
-                      : 'border-slate-200 dark:border-slate-700'
-                  "
-                >
-                  <input
-                    v-model="tone"
-                    type="radio"
-                    class="!m-0"
-                    :value="item"
-                  />
-                  {{ t(`TONE_${item.toUpperCase()}`) }}
-                </label>
-              </div>
-            </div>
-            <label class="!m-0 sm:col-span-2">
-              {{ t('OBJECTIVE') }}
-              <input
-                v-model="objective"
-                type="text"
-                class="!mb-0"
-                :placeholder="objectivePlaceholder"
-              />
-            </label>
-            <label class="!m-0 sm:col-span-2">
-              {{ t('BUSINESS') }}
-              <textarea
-                v-model="business"
-                rows="3"
-                class="!mb-0"
-                :placeholder="t('BUSINESS_PLACEHOLDER')"
-              />
-            </label>
-          </div>
-        </div>
-
-        <!-- Fuentes de datos -->
-        <div v-else-if="section === 'sources'" class="flex flex-col gap-3">
+        <div v-if="section === 'sources'" class="flex flex-col gap-3">
           <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ t('SOURCES_HINT') }}
           </p>
@@ -434,8 +383,6 @@ export default {
             :show-headers="false"
           />
         </div>
-
-        <!-- Agenda / Tickets -->
         <div v-else-if="section === 'calendar'" class="flex flex-col gap-3">
           <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ t('CALENDAR_HINT') }}
@@ -458,16 +405,12 @@ export default {
             :show-headers="false"
           />
         </div>
-
-        <!-- Archivos -->
         <div v-else-if="section === 'files'" class="flex flex-col gap-3">
           <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ t('FILES_HINT') }}
           </p>
           <FichaFiles v-model="files" />
         </div>
-
-        <!-- Reglas -->
         <div v-else class="flex flex-col gap-3">
           <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ t('RULES_HINT') }}
@@ -492,9 +435,140 @@ export default {
       </div>
     </div>
 
-    <!-- Tu agente podrá -->
+    <!-- ② Ficha de Agente IA -->
+    <div v-else class="flex flex-col min-h-0 gap-4 pr-1 overflow-auto">
+      <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
+        {{ t('AGENT_HINT') }}
+      </p>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <label class="!m-0">
+          {{ t('NAME') }}
+          <input
+            v-model="name"
+            type="text"
+            class="!mb-0"
+            :placeholder="t('NAME_PLACEHOLDER')"
+          />
+        </label>
+        <label class="!m-0">
+          {{ t('INBOX') }}
+          <select v-model="inboxId" class="!mb-0">
+            <option value="">{{ t('INBOX_LATER') }}</option>
+            <option v-for="inbox in inboxes" :key="inbox.id" :value="inbox.id">
+              {{ inbox.name }}
+            </option>
+          </select>
+        </label>
+        <label class="!m-0">
+          {{ t('DISPLAY_NAME') }}
+          <input
+            v-model="displayName"
+            type="text"
+            maxlength="30"
+            class="!mb-0"
+            :placeholder="t('DISPLAY_NAME_PLACEHOLDER')"
+          />
+        </label>
+        <div class="flex flex-col gap-1">
+          <span class="text-sm text-slate-800 dark:text-slate-100">
+            {{ t('TONE') }}
+          </span>
+          <div class="flex gap-2">
+            <label
+              v-for="item in tones"
+              :key="item"
+              class="flex items-center gap-2 !m-0 px-3 py-2 text-sm border rounded-lg cursor-pointer"
+              :class="
+                tone === item
+                  ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20'
+                  : 'border-slate-200 dark:border-slate-700'
+              "
+            >
+              <input v-model="tone" type="radio" class="!m-0" :value="item" />
+              {{ t(`TONE_${item.toUpperCase()}`) }}
+            </label>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-1 sm:col-span-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-sm text-slate-800 dark:text-slate-100">
+              {{ t('OBJECTIVE') }}
+            </span>
+            <woot-button
+              size="tiny"
+              variant="smooth"
+              icon="wand"
+              :is-loading="suggesting === 'objective'"
+              :is-disabled="!!suggesting || !routes.length"
+              @click="suggest('objective')"
+            >
+              {{ t('SUGGEST') }}
+            </woot-button>
+          </div>
+          <input
+            v-model="objective"
+            type="text"
+            maxlength="500"
+            class="!mb-0"
+            :placeholder="objectivePlaceholder"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1 sm:col-span-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-sm text-slate-800 dark:text-slate-100">
+              {{ t('CONTEXT') }}
+            </span>
+            <woot-button
+              size="tiny"
+              variant="smooth"
+              icon="wand"
+              :is-loading="suggesting === 'context'"
+              :is-disabled="!!suggesting || !routes.length"
+              @click="suggest('context')"
+            >
+              {{ t('SUGGEST') }}
+            </woot-button>
+          </div>
+          <textarea
+            ref="context"
+            v-model="business"
+            rows="6"
+            :maxlength="maxContext"
+            class="!mb-0"
+            :placeholder="t('BUSINESS_PLACEHOLDER')"
+          />
+          <div class="flex items-center justify-between gap-2 text-xs">
+            <span class="text-slate-500">{{ t('CONTEXT_HINT') }}</span>
+            <span class="text-slate-400 shrink-0">
+              {{ business.length }}/{{ maxContext }}
+            </span>
+          </div>
+          <div
+            v-if="missing.length"
+            class="flex flex-wrap items-center gap-1 text-xs"
+          >
+            <span class="text-amber-800">{{ t('MISSING') }}</span>
+            <button
+              v-for="dato in missing"
+              :key="dato"
+              type="button"
+              class="px-2 py-0.5 border rounded-full border-amber-300 text-amber-800 hover:bg-amber-50"
+              @click="addMissing(dato)"
+            >
+              + {{ dato }}
+            </button>
+          </div>
+          <p class="!m-0 text-xs text-slate-400">{{ t('SUGGEST_COST') }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Tu agente podrá -->
     <aside
-      class="flex flex-col min-h-0 gap-3 p-4 border rounded-lg md:col-span-2 xl:col-span-1 border-slate-200 dark:border-slate-700 bg-slate-25 dark:bg-slate-800/40"
+      class="flex flex-col min-h-0 gap-3 p-4 border rounded-lg border-slate-200 dark:border-slate-700 bg-slate-25 dark:bg-slate-800/40"
+      :class="{ 'md:col-span-2 xl:col-span-1': step === 'resources' }"
     >
       <h3 class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100">
         {{ t('PANEL_TITLE') }}
@@ -587,15 +661,34 @@ export default {
 
       <div class="flex flex-col gap-1 mt-auto">
         <woot-button
-          icon="checkmark"
-          :is-loading="creating"
-          :is-disabled="!canCreate"
-          @click="create"
+          v-if="step === 'resources'"
+          icon="arrow-right"
+          :is-disabled="!canContinue"
+          @click="$emit('continue')"
         >
-          {{ t('CREATE') }}
+          {{ t('CONTINUE') }}
         </woot-button>
+        <template v-else>
+          <woot-button
+            icon="checkmark"
+            :is-loading="creating"
+            :is-disabled="!canCreate"
+            @click="create"
+          >
+            {{ t('CREATE') }}
+          </woot-button>
+          <woot-button
+            size="small"
+            variant="clear"
+            color-scheme="secondary"
+            icon="chevron-left"
+            @click="$emit('back')"
+          >
+            {{ t('BACK_RESOURCES') }}
+          </woot-button>
+        </template>
         <span class="text-xs text-center text-slate-500">
-          {{ createHint }}
+          {{ panelHint }}
         </span>
       </div>
     </aside>

@@ -57,6 +57,8 @@ export default {
       reloadKey: 0,
       // feat/ficha_agente_ia: cuántos cambios de la ficha faltan en el Entrenamiento.
       fichaChanges: 0,
+      // Agente nuevo: la Ficha de Agente IA aparece al dar Continuar en Recursos.
+      fichaUnlocked: false,
     };
   },
   computed: {
@@ -86,8 +88,12 @@ export default {
       return this.$route.query.modo === 'conversar';
     },
     sections() {
+      // Siguiente, siguiente: Recursos → (Continuar) Ficha de Agente IA → (Crear) lo demás.
       if (this.isNew && this.isAdmin && !this.conversational)
-        return [{ id: 'ficha', label: 'SECTION_FICHA' }];
+        return [
+          { id: 'ficha', label: 'SECTION_FICHA' },
+          this.fichaUnlocked && { id: 'new_profile', label: 'SECTION_PROFILE' },
+        ].filter(Boolean);
       return [
         // feat/ficha_agente_ia: primero la ficha (D6). En un agente nuevo es el asistente de 3 pasos.
         this.isAdmin && { id: 'ficha', label: 'SECTION_FICHA' },
@@ -204,6 +210,10 @@ export default {
       });
       this.fetchVersionInfo();
     },
+    unlockProfile() {
+      this.fichaUnlocked = true;
+      this.goSection('new_profile');
+    },
     startConversation() {
       this.$router.replace({
         query: { ...this.$route.query, modo: 'conversar', seccion: 'training' },
@@ -303,8 +313,12 @@ export default {
       <div class="flex flex-col flex-1 min-h-0 mt-6">
         <!-- Entrenamiento y Pruebas son el MISMO Asistente con otra vista: un solo
              elemento con la misma key, así cambiar de pestaña no lo vuelve a montar. -->
+        <!-- Un solo asistente para las dos pestañas: no se pierde lo capturado. -->
         <FichaWizard
-          v-if="section === 'ficha' && isNew"
+          v-if="isNew && ['ficha', 'new_profile'].includes(section)"
+          :step="section === 'new_profile' ? 'profile' : 'resources'"
+          @continue="unlockProfile"
+          @back="goSection('ficha')"
           @created="goToFicha"
           @conversation="startConversation"
         />

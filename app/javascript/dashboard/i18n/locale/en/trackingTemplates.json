@@ -361,7 +361,7 @@
       "SECTION_TRAINING": "Training",
       "SECTION_TESTS": "Tests & diagram",
       "SECTION_SOURCES": "Test sources",
-      "SECTION_PROFILE": "Profile",
+      "SECTION_PROFILE": "AI Agent profile",
       "SECTION_VERSIONS": "Versions",
       "AGENT_ROLE_HINT": "Training with the Assistant is edited by administrators.",
       "VERSIONS": {
@@ -537,7 +537,7 @@
       "FILES_ON_CREATE": "They are uploaded when the agent is created. The name is how the Training refers to it.",
       "FILES_NAME_HINT": "Letters, numbers, hyphen and underscore",
       "UPLOAD_ERROR": "could not upload",
-      "AGENT_HINT": "Your agent's basics. Only the name is required.",
+      "AGENT_HINT": "Who your agent is. Only the name is required; AI can suggest the objective and context from what you selected.",
       "DISPLAY_NAME": "Name the customer sees (optional)",
       "DISPLAY_NAME_PLACEHOLDER": "e.g. Sofia",
       "OBJECTIVE_AUTO": "We build it from what you select",
@@ -554,7 +554,16 @@
       "NEED_RESOURCE": "Select at least one source, calendar or ticket.",
       "FILE_FAILED": "Could not upload {name}.",
       "NAV_RULES": "Rules",
-      "RULES_HINT": "Keywords that trigger an action: for example, if the customer writes «agent», hand the conversation to a person."
+      "RULES_HINT": "Keywords that trigger an action: for example, if the customer writes «agent», hand the conversation to a person.",
+      "CONTINUE": "Continue",
+      "CONTINUE_HINT": "Continue to the AI Agent profile: name, objective and context.",
+      "BACK_RESOURCES": "Back to Resources",
+      "SUGGEST": "Suggest with AI",
+      "SUGGEST_ERROR": "Could not suggest with AI.",
+      "SUGGEST_COST": "«Suggest with AI» uses OpenAI once per click. Review and fix what it suggests.",
+      "CONTEXT": "AI context",
+      "CONTEXT_HINT": "What your agent must know about the business, one fact per line.",
+      "MISSING": "You may want to add:"
     }
   }
 }

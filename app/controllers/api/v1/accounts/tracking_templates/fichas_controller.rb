@@ -9,6 +9,7 @@
 #   GET  tracking_templates/ficha_catalog?inbox_id=   las tarjetas para marcar
 #   POST tracking_templates/ficha_preview             ofertas + Entrenamiento generado + comprobador
 #   POST tracking_templates/ficha_create              crea el agente con todo eso (sin IA)
+#   POST tracking_templates/ficha_suggest             ✨ objetivo y contexto propuestos con IA (1 llamada)
 #     params: name, inbox_id, items[], skip[] (ofertas apagadas), objective, business, tone,
 #             customer_display_name, files[] ({ name }: archivos que la pantalla sube al crear),
 #             keyword_actions[] (Reglas)
@@ -21,6 +22,7 @@
 
 class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts::BaseController
   INVALID = 'El Entrenamiento tiene errores que impiden guardarlo.'
+  NO_AI = 'No se pudo proponer con IA: revisa que la cuenta tenga OpenAI activo.'
   KEYWORD_FIELDS = [:keyword, :action, :direction, :label, :assignee_id, :team_id].freeze
 
   before_action :check_authorization
@@ -36,6 +38,18 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
 
   def show
     render json: ficha_json
+  end
+
+  # ✨ Proponer objetivo y contexto con IA (una llamada a OpenAI; Ficha::Suggester).
+  def suggest
+    cards = catalog_for(inbox).call
+    propuesta = ContactTrackings::Ficha::Suggester.new(
+      account: Current.account, name: params[:name], offers: offers_for(cards), cards: cards,
+      business: params[:business], tone: params[:tone]
+    ).call
+    return render json: { error: NO_AI }, status: :unprocessable_entity if propuesta.nil?
+
+    render json: propuesta
   end
 
   def create
