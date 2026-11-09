@@ -62,7 +62,14 @@
         "DELETE": "Eliminar",
         "INVALID_NAME": "El nombre solo admite letras, números, guion y guion bajo (sin espacios).",
         "NO_FILE": "Selecciona un archivo para subir.",
-        "UPLOAD_ERROR": "No se pudo subir el archivo."
+        "UPLOAD_ERROR": "No se pudo subir el archivo.",
+        "DROP_HINT": "Arrastra aquí tus archivos o",
+        "SELECT_FILES": "Seleccionar archivos",
+        "PENDING_TITLE": "Por subir ({count})",
+        "UPLOAD_ALL": "Subir ({count})",
+        "UPLOADING": "Subiendo…",
+        "REMOVE": "Quitar de la lista",
+        "DUPLICATE_NAME": "Ese nombre ya lo tiene otro archivo."
       },
       "TAGS": {
         "LABEL": "Etiquetas",
