@@ -1,4 +1,55 @@
 {
+  "CLIENT_TASKS": {
+    "WHO": "Who does it?",
+    "AUDIENCE": {
+      "internal": "Us (internal)",
+      "visible": "Us, visible to the customer",
+      "client": "The customer"
+    },
+    "AUDIENCE_HINT": {
+      "internal": "Only the team sees it.",
+      "visible": "The customer sees its progress in their portal but can't change it.",
+      "client": "The customer works it in their portal: starts it, comments, uploads files and marks it done."
+    },
+    "REQUIRES_FILE": "Ask the customer to upload a file",
+    "CHIP_CLIENT": "Customer's",
+    "CHIP_VISIBLE": "Visible to customer",
+    "IN_PROGRESS": "In progress",
+    "DONE_BY": "Done by {name}",
+    "PORTAL_TITLE": "In the customer portal",
+    "EMPTY": "The customer hasn't done anything on this task yet.",
+    "KINDS": {
+      "started": "Started it",
+      "comment": "Commented",
+      "file": "Uploaded a file",
+      "done": "Marked it as done",
+      "returned": "We sent it back",
+      "reply": "We replied"
+    },
+    "REPLY_PLACEHOLDER": "Reply to the customer…",
+    "REPLY": "Reply",
+    "RETURN": "Send back to customer",
+    "RETURN_PLACEHOLDER": "Why do you send it back? (the customer will see it)",
+    "RETURN_CONFIRM": "Send back",
+    "ERROR": "Couldn't save."
+  },
+  "CLIENT_PORTAL_LINK": {
+    "TITLE": "Customer portal",
+    "HELP_ORG": "One link for the whole organization: they see their cases and projects and work the tasks assigned to them. It doesn't expire.",
+    "HELP_CONTACT": "One link for this contact: they see their cases and projects and work the tasks assigned to them. It doesn't expire.",
+    "CREATE": "Create link",
+    "COPY": "Copy link",
+    "COPIED": "Link copied",
+    "OPEN": "Open",
+    "RENEW": "Renew",
+    "RENEW_CONFIRM": "Renew the link? The current one stops working.",
+    "DISABLE": "Disable",
+    "DISABLE_CONFIRM": "Disable the portal? The link stops working.",
+    "LAST_USED": "Last used: {date}",
+    "NEVER_USED": "Not opened yet",
+    "NONE": "No link yet.",
+    "NO_OWNER": "The case has no organization or contact."
+  },
   "CASE_TASKS_ON_CLOSE": {
     "HEADER": "Before closing the case",
     "TITLE": "This case has {count} pending task(s)",
@@ -1578,6 +1629,7 @@
       "stage_advanced": "Stage advance",
       "task_created": "Task created",
       "task_completed": "Task completed",
+      "task_client_update": "The customer updated a task",
       "task_cancelled": "Task cancelled",
       "task_reopened": "Task reopened",
       "task_deleted": "Task deleted",

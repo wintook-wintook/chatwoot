@@ -18,6 +18,7 @@ import caseAiWriter from 'dashboard/mixins/caseAiWriter';
 import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal.vue';
 import taskReportFlow from 'dashboard/mixins/taskReportFlow';
 import TaskReportsDialog from 'dashboard/views/gestorTickets/tasks/TaskReportsDialog.vue';
+import ClientTaskEntries from 'dashboard/components/clientPortal/ClientTaskEntries.vue'; // tareas con el cliente
 import {
   ESTIMATE_OPTIONS,
   formatMinutes,
@@ -48,6 +49,7 @@ export default {
     WootDropdownItem,
     TaskReportModal,
     TaskReportsDialog,
+    ClientTaskEntries,
   },
   mixins: [caseAiWriter, taskReportFlow],
   props: {
@@ -63,6 +65,7 @@ export default {
   },
   data() {
     return {
+      audiences: ['internal', 'visible', 'client'], // tareas con el cliente
       reportsFilter: null,
       tasks: [],
       // Plan-Plantilla-Tareas-Etapa — etapa actual y las siguientes con plantilla.
@@ -93,6 +96,9 @@ export default {
         status: 'pending',
         priority: 'medium',
         milestone: false,
+        // Tareas con el cliente — quién la hace y si pide archivo.
+        audience: 'internal',
+        requires_file: false,
         required: false, // Plan-Plantilla-Tareas-Etapa — obligatoria para avanzar
         documentation: false,
         estimated_minutes: '', // Plan-Bandeja-Prioridad F1
@@ -258,6 +264,7 @@ export default {
                 }
                 title={row.title}
               >
+                {this.clientChip(row)}
                 {row.milestone ? (
                   <span class="mr-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 no-underline inline-block">
                     {this.$t('CASE_TICKETS.TASKS.MILESTONE')}
@@ -702,6 +709,42 @@ export default {
     minutesLabel(value) {
       return formatMinutes(value);
     },
+    // Tareas con el cliente — la etiqueta de la fila: del cliente (en proceso / hecha por)
+    // o visible al cliente.
+    clientChip(row) {
+      if (row.audience === 'client') {
+        let text = this.$t('CLIENT_TASKS.CHIP_CLIENT');
+        if (row.status === 'pending' && row.client_status === 'in_progress') {
+          text += ` · ${this.$t('CLIENT_TASKS.IN_PROGRESS')}`;
+        }
+        if (row.status === 'done' && row.completed_by_contact) {
+          text += ` · ${this.$t('CLIENT_TASKS.DONE_BY', {
+            name: row.completed_by_contact,
+          })}`;
+        }
+        if (row.client_entries_count)
+          text += ` · 💬 ${row.client_entries_count}`;
+        return (
+          <span class="mr-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200 no-underline inline-block">
+            {text}
+          </span>
+        );
+      }
+      if (row.audience === 'visible') {
+        return (
+          <span class="mr-1.5 px-1.5 py-0.5 text-[10px] rounded-full bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 no-underline inline-block">
+            {this.$t('CLIENT_TASKS.CHIP_VISIBLE')}
+          </span>
+        );
+      }
+      return null;
+    },
+    // Tareas con el cliente — la regresamos a pendiente desde el panel del portal.
+    async onClientReturned() {
+      this.form.status = 'pending';
+      await this.load();
+      this.$emit('saved');
+    },
     openCreate() {
       this.editingId = null;
       this.viewing = false;
@@ -713,6 +756,9 @@ export default {
         status: 'pending',
         priority: 'medium',
         milestone: false,
+        // Tareas con el cliente — quién la hace y si pide archivo.
+        audience: 'internal',
+        requires_file: false,
         required: false, // Plan-Plantilla-Tareas-Etapa — obligatoria para avanzar
         documentation: false,
         estimated_minutes: '', // Plan-Bandeja-Prioridad F1
@@ -751,6 +797,9 @@ export default {
         status: task.status || 'pending',
         priority: task.priority || 'medium',
         milestone: !!task.milestone,
+        audience: task.audience || 'internal',
+        requires_file: !!task.requires_file,
+        client_status: task.client_status || null,
         required: !!task.required,
         documentation: !!task.documentation,
         estimated_minutes: task.estimated_minutes || '',
@@ -786,7 +835,11 @@ export default {
         priority: this.form.priority || 'medium',
         estimated_minutes: this.form.estimated_minutes || null,
         planned_on: this.form.planned_on || null,
+        audience: this.form.audience || 'internal',
+        requires_file:
+          this.form.audience === 'client' && !!this.form.requires_file,
       };
+      if (payload.audience === 'client') payload.assignee_id = '';
       if (this.allowMilestones) payload.milestone = !!this.form.milestone;
       if (this.stagePlan.current && !this.form.documentation)
         payload.required = !!this.form.required;
@@ -1057,6 +1110,35 @@ export default {
             />
           </label>
 
+          <!-- Tareas con el cliente — quién la hace (la del cliente se trabaja en su portal). -->
+          <label class="block mb-3">
+            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+              $t('CLIENT_TASKS.WHO')
+            }}</span>
+            <select v-model="form.audience" :disabled="viewing">
+              <option v-for="a in audiences" :key="a" :value="a">
+                {{ $t(`CLIENT_TASKS.AUDIENCE.${a}`) }}
+              </option>
+            </select>
+            <span class="text-xs text-slate-500">{{
+              $t(`CLIENT_TASKS.AUDIENCE_HINT.${form.audience}`)
+            }}</span>
+          </label>
+          <label
+            v-if="form.audience === 'client'"
+            class="flex items-center gap-2 mb-3"
+          >
+            <input
+              v-model="form.requires_file"
+              type="checkbox"
+              class="!mb-0"
+              :disabled="viewing"
+            />
+            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+              $t('CLIENT_TASKS.REQUIRES_FILE')
+            }}</span>
+          </label>
+
           <!-- Solicitante + Responsable (editable). El solicitante es fijo si la
                tarea ya lo tiene; si no (tarea antigua), se elige de la lista. -->
           <div class="flex gap-3 mb-3">
@@ -1081,7 +1163,7 @@ export default {
               </select>
             </label>
 
-            <label class="flex-1">
+            <label v-if="form.audience !== 'client'" class="flex-1">
               <span class="text-sm text-slate-700 dark:text-slate-200">{{
                 $t('CASE_TICKETS.TASKS.MODAL.ASSIGNEE_LABEL')
               }}</span>
@@ -1291,6 +1373,17 @@ export default {
               }}
             </span>
           </label>
+
+          <!-- Tareas con el cliente — lo que hizo en su portal; responderle o regresarla. -->
+          <ClientTaskEntries
+            v-if="editingId && form.audience === 'client'"
+            :key="`entries-${editingId}`"
+            :ticket-id="ticketId"
+            :task-id="editingId"
+            :status="form.status"
+            :readonly="isFrozen"
+            @changed="onClientReturned"
+          />
 
           <div class="flex items-center justify-end gap-2 mt-4">
             <woot-button

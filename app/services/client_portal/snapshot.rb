@@ -36,13 +36,24 @@ class ClientPortal::Snapshot
     tasks_by_case[ticket.id] || []
   end
 
-  # Fases del proyecto: las columnas de su tipo, con la actual y las que ya pasó.
+  # Fases del proyecto: las columnas de trabajo de su tipo (sin las de espera ni las de
+  # cierre), con la actual —por su columna o por su estado— y las que ya pasó.
+  NOT_PHASES = %w[waiting_on_customer waiting_on_third_party waiting_on_internal closed cancelled].freeze
+
   def stages(ticket)
-    columns = ticket.case_type&.case_type_columns&.where(outcome: nil)&.order(:position).to_a
-    current = columns.index { |c| c.id == ticket.case_type_column_id }
+    columns = phase_columns(ticket)
+    current = columns.index { |c| c.id == ticket.case_type_column_id } ||
+              columns.index { |c| Array(c.statuses).include?(ticket.status) }
     columns.each_with_index.map do |column, i|
       { label: column.label, state: stage_state(i, current) }
     end
+  end
+
+  def phase_columns(ticket)
+    return [] unless ticket.case_type
+
+    ticket.case_type.case_type_columns.where(outcome: nil).order(:position).to_a
+          .reject { |c| c.statuses.present? && (c.statuses - NOT_PHASES).empty? }
   end
 
   def project_children(ticket)

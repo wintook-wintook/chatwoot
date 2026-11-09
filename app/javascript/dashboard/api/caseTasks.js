@@ -49,6 +49,24 @@ class CaseTasksAPI extends ApiClient {
   deleteTask(ticketId, id) {
     return axios.delete(`${this.url}/${ticketId}/tasks/${id}`);
   }
+
+  // Tareas con el cliente — lo que pasó en su portal; responderle o regresarla.
+  clientEntries(ticketId, id) {
+    return axios.get(`${this.url}/${ticketId}/tasks/${id}/client_entries`);
+  }
+
+  replyClient(ticketId, id, content) {
+    return axios.post(`${this.url}/${ticketId}/tasks/${id}/client_entries`, {
+      content,
+    });
+  }
+
+  returnToClient(ticketId, id, reason) {
+    return axios.post(
+      `${this.url}/${ticketId}/tasks/${id}/client_entries/return`,
+      { reason }
+    );
+  }
 }
 
 export default new CaseTasksAPI();

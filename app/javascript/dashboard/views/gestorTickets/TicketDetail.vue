@@ -51,6 +51,7 @@ import { WORK_ORDER_CLASS } from 'dashboard/helper/caseWorkOrder';
 import CaseConversationActions from './conversation/CaseConversationActions.vue';
 import StageAdvanceBanner from './stage/StageAdvanceBanner.vue';
 import CaseStatusMenu from './stage/CaseStatusMenu.vue'; // «Cambiar estado ▾» (cabecera y Avance)
+import ClientPortalLinkCard from 'dashboard/components/clientPortal/ClientPortalLinkCard.vue'; // tareas con el cliente
 
 // Plan Actividad del caso (P3) — pestañas siempre a la vista; las demás, en «Más».
 // En este orden en la barra: Actividad, Pendientes, Conversación y Avance (fija).
@@ -65,6 +66,7 @@ const TAB_ALIASES = {
 export default {
   name: 'TicketDetail',
   components: {
+    ClientPortalLinkCard,
     CaseConversationActions,
     StageAdvanceBanner,
     CaseStatusMenu,
@@ -224,6 +226,16 @@ export default {
     };
   },
   computed: {
+    // Tareas con el cliente — de quién es el portal del caso: su organización o, sin ella, su contacto.
+    portalOwner() {
+      if (!this.ticket) return null;
+      if (this.ticket.organization_id) {
+        return { organization_id: this.ticket.organization_id };
+      }
+      return this.ticket.contact_id
+        ? { contact_id: this.ticket.contact_id }
+        : null;
+    },
     ...mapGetters({
       getTicketById: 'caseTickets/getTicketById',
       getTicketEvents: 'caseTickets/getTicketEvents',
@@ -3510,6 +3522,16 @@ export default {
               {{ view.count }}
             </span>
           </button>
+        </div>
+        <!-- Tareas con el cliente — el enlace del portal de su organización (o contacto) -->
+        <div
+          v-if="pendingView === 'tasks' && portalOwner"
+          class="flex items-center gap-2 ml-auto"
+        >
+          <span class="text-xs text-slate-500">{{
+            $t('CLIENT_PORTAL_LINK.TITLE')
+          }}</span>
+          <ClientPortalLinkCard :owner="portalOwner" compact />
         </div>
         <!-- El «nuevo» de la sub-pestaña abierta (antes en el renglón de título de cada tabla) -->
         <woot-button

@@ -1,4 +1,55 @@
 {
+  "CLIENT_TASKS": {
+    "WHO": "¿Quién la hace?",
+    "AUDIENCE": {
+      "internal": "Nosotros (interna)",
+      "visible": "Nosotros, visible al cliente",
+      "client": "El cliente"
+    },
+    "AUDIENCE_HINT": {
+      "internal": "Solo la ve el equipo.",
+      "visible": "El cliente ve su avance en su portal, pero no la mueve.",
+      "client": "El cliente la trabaja en su portal: la empieza, comenta, sube archivos y la marca como hecha."
+    },
+    "REQUIRES_FILE": "Pide que el cliente suba un archivo",
+    "CHIP_CLIENT": "Del cliente",
+    "CHIP_VISIBLE": "Visible al cliente",
+    "IN_PROGRESS": "En proceso",
+    "DONE_BY": "Hecha por {name}",
+    "PORTAL_TITLE": "En el portal del cliente",
+    "EMPTY": "El cliente todavía no ha hecho nada en esta tarea.",
+    "KINDS": {
+      "started": "La empezó",
+      "comment": "Comentó",
+      "file": "Subió un archivo",
+      "done": "La marcó como hecha",
+      "returned": "La regresamos",
+      "reply": "Le respondimos"
+    },
+    "REPLY_PLACEHOLDER": "Respóndele al cliente…",
+    "REPLY": "Responder",
+    "RETURN": "Regresar al cliente",
+    "RETURN_PLACEHOLDER": "¿Por qué la regresas? (lo verá el cliente)",
+    "RETURN_CONFIRM": "Regresar",
+    "ERROR": "No se pudo guardar."
+  },
+  "CLIENT_PORTAL_LINK": {
+    "TITLE": "Portal del cliente",
+    "HELP_ORG": "Un enlace para toda la organización: ven sus casos y proyectos y trabajan las tareas que les toquen. No caduca.",
+    "HELP_CONTACT": "Un enlace para este contacto: ve sus casos y proyectos y trabaja las tareas que le toquen. No caduca.",
+    "CREATE": "Crear enlace",
+    "COPY": "Copiar enlace",
+    "COPIED": "Enlace copiado",
+    "OPEN": "Abrir",
+    "RENEW": "Renovar",
+    "RENEW_CONFIRM": "¿Renovar el enlace? El actual deja de servir.",
+    "DISABLE": "Desactivar",
+    "DISABLE_CONFIRM": "¿Desactivar el portal? El enlace deja de servir.",
+    "LAST_USED": "Último uso: {date}",
+    "NEVER_USED": "Aún no lo han abierto",
+    "NONE": "Aún no tiene enlace.",
+    "NO_OWNER": "El caso no tiene organización ni contacto."
+  },
   "CASE_TASKS_ON_CLOSE": {
     "HEADER": "Antes de cerrar el caso",
     "TITLE": "Este caso tiene {count} tarea(s) pendiente(s)",
@@ -1676,6 +1727,7 @@
       "stage_advanced": "Avance de etapa",
       "task_created": "Tarea creada",
       "task_completed": "Tarea completada",
+      "task_client_update": "El cliente avanzó una tarea",
       "task_cancelled": "Tarea cancelada",
       "task_reopened": "Tarea reabierta",
       "task_deleted": "Tarea borrada",
