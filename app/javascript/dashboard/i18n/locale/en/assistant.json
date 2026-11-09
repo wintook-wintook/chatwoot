@@ -101,7 +101,8 @@
         "VISIT": "Visit",
         "EVENT": "Event",
         "INBOX": "WhatsApp",
-        "SELLER": "Seller"
+        "SELLER": "Seller",
+        "CASE": "Case"
       },
       "OUTCOMES": {
         "won": "Won",
@@ -136,7 +137,10 @@
       "NFC_COPY": "Copy link",
       "NFC_DONE": "Done",
       "NFC_NO_WEB": "This phone can't write tags from here (only Chrome on Android). I copied the link: write it with an app like NFC Tools.",
-      "NFC_ERROR": "Couldn't write. Hold the tag again or check that NFC is on."
+      "NFC_ERROR": "Couldn't write. Hold the tag again or check that NFC is on.",
+      "client_task": "Customer task",
+      "CLIENT_TASK_FILE": "Requires uploading a file",
+      "CLIENT_TASK_NOTIFY": "Notify them with their portal link"
     },
     "SETTINGS": {
       "TITLE": "Assistant",

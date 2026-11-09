@@ -33,8 +33,12 @@ class CaseTasksAPI extends ApiClient {
     return axios.post(`${base}/my_day_ai`, { day, tz });
   }
 
-  createTask(ticketId, data) {
-    return axios.post(`${this.url}/${ticketId}/tasks`, { case_task: data });
+  // `notifyClient`: tarea del cliente — avisarle con el enlace de su portal.
+  createTask(ticketId, data, { notifyClient = false } = {}) {
+    return axios.post(`${this.url}/${ticketId}/tasks`, {
+      case_task: data,
+      notify_client: notifyClient,
+    });
   }
 
   // `flags` viaja FUERA de `case_task`: son acciones del momento (cancelar las

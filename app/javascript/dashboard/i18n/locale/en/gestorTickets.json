@@ -12,6 +12,13 @@
       "client": "The customer works it in their portal: starts it, comments, uploads files and marks it done."
     },
     "REQUIRES_FILE": "Ask the customer to upload a file",
+    "NOTIFY": "Notify the customer with their portal link",
+    "NOTICE": {
+      "SENT": "We notified the customer with their portal link.",
+      "no_conversation": "The task was saved, but the customer has no conversation to notify: send them the portal link.",
+      "window_closed": "The task was saved, but it's been more than 24 h since their last message: notify them with a template or send the link another way.",
+      "no_owner": "The task was saved, but the case has no contact or organization for the portal."
+    },
     "CHIP_CLIENT": "Customer's",
     "CHIP_VISIBLE": "Visible to customer",
     "IN_PROGRESS": "In progress",

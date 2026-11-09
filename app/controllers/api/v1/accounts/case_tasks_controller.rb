@@ -34,7 +34,7 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
     task.position ||= @ticket.case_tasks.count
     if task.save
       notify_task_assignment(task) # F3 — avisa al recién asignado (si no soy yo)
-      render json: { case_task: task_json(task) }, status: :created
+      render json: { case_task: task_json(task), client_notice: notify_client(task) }.compact, status: :created
     else
       render json: { error: task.errors.full_messages }, status: :unprocessable_entity
     end
@@ -196,6 +196,13 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
       required: task.required, stage: task.case_type_column&.label, team: task.team && { id: task.team.id, name: task.team.name },
       documentation: task.documentation_for_column_id.present?, report_required: task.report_required? }
       .merge(client_fields(task))
+  end
+
+  # Tareas con el cliente — al crearla, avisarle al cliente con el enlace de su portal (si se pidió).
+  def notify_client(task)
+    return unless task.for_client? && ActiveModel::Type::Boolean.new.cast(params[:notify_client])
+
+    ClientTasks::Notifier.new(task, current_user).call(:assigned)
   end
 
   # Tareas con el cliente — quién la hace, su avance en el portal y cuánto ha pasado ahí.

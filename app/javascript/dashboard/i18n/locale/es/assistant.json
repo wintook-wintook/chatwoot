@@ -101,7 +101,8 @@
         "VISIT": "Visita",
         "EVENT": "Evento",
         "INBOX": "WhatsApp",
-        "SELLER": "Vendedor"
+        "SELLER": "Vendedor",
+        "CASE": "Caso"
       },
       "OUTCOMES": {
         "won": "Ganada",
@@ -136,7 +137,10 @@
       "NFC_COPY": "Copiar enlace",
       "NFC_DONE": "Listo",
       "NFC_NO_WEB": "Este teléfono no graba etiquetas desde aquí (solo Chrome en Android). Copié el enlace: grábalo con una app como NFC Tools.",
-      "NFC_ERROR": "No se pudo grabar. Acerca la etiqueta otra vez o revisa que el NFC esté encendido."
+      "NFC_ERROR": "No se pudo grabar. Acerca la etiqueta otra vez o revisa que el NFC esté encendido.",
+      "client_task": "Tarea del cliente",
+      "CLIENT_TASK_FILE": "Pide subir un archivo",
+      "CLIENT_TASK_NOTIFY": "Avisarle con el enlace de su portal"
     },
     "SETTINGS": {
       "TITLE": "Asistente",

@@ -36,6 +36,8 @@ const ICONS = {
   visit_report: 'clipboard',
   // Captar en la expo (etiqueta NFC)
   nfc_link: 'flash-on',
+  // Tareas con el cliente
+  client_task: 'person',
 };
 
 // Igual que el servidor (Assistant::QuoteTools.totals): descuento por partida, IVA de la partida.
@@ -100,6 +102,9 @@ export default {
         minutes: p.minutes || '',
         // NFC: el mensaje que envía el cliente.
         message: p.message || '',
+        // Tarea del cliente: pide archivo y avisarle con el enlace.
+        requires_file: !!p.requires_file,
+        notify: p.notify !== false,
       },
       writing: false,
       units: ['minutes', 'hours', 'days'],
@@ -194,6 +199,12 @@ export default {
         reply: this.labels.template ? {} : { content: f.content },
         on_my_way: { eta_minutes: Number(f.eta_minutes) },
         nfc_link: { message: f.message },
+        client_task: {
+          title: f.title,
+          due_at: toIso(f.due_at),
+          requires_file: !!f.requires_file,
+          notify: !!f.notify,
+        },
         visit_report: {
           notes: f.notes,
           done_task_ids: f.done_task_ids,
@@ -357,7 +368,10 @@ export default {
       :disabled="!pending || busy"
       class="flex flex-col gap-2 p-0 m-0 border-0 [&_input]:!mb-0 [&_textarea]:!mb-0"
     >
-      <label v-if="type === 'task' || type === 'meeting'" class="text-xs">
+      <label
+        v-if="type === 'task' || type === 'meeting' || type === 'client_task'"
+        class="text-xs"
+      >
         {{ t('TITLE') }}
         <input v-model="form.title" type="text" class="h-8 text-sm" />
       </label>
@@ -371,7 +385,7 @@ export default {
         {{ t('CONTENT') }}
         <textarea v-model="form.content" rows="4" class="text-sm" />
       </label>
-      <label v-if="type === 'task'" class="text-xs">
+      <label v-if="type === 'task' || type === 'client_task'" class="text-xs">
         {{ t('DUE') }}
         <input
           v-model="form.due_at"
@@ -572,6 +586,17 @@ export default {
           </div>
         </dl>
         <p class="m-0 text-xs text-slate-500">{{ t('QUOTE_DRAFT') }}</p>
+      </template>
+      <!-- Tarea del cliente: pide archivo y avisarle con el enlace de su portal -->
+      <template v-if="type === 'client_task'">
+        <label class="flex items-center gap-2 text-xs">
+          <input v-model="form.requires_file" type="checkbox" class="!m-0" />
+          {{ t('CLIENT_TASK_FILE') }}
+        </label>
+        <label class="flex items-center gap-2 text-xs">
+          <input v-model="form.notify" type="checkbox" class="!m-0" />
+          {{ t('CLIENT_TASK_NOTIFY') }}
+        </label>
       </template>
       <!-- NFC: el mensaje que envía el cliente al acercar el celular -->
       <label v-if="type === 'nfc_link'" class="text-xs">

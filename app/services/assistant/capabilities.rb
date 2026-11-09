@@ -25,6 +25,7 @@ module Assistant::Capabilities
     keys << 'reply' if grant.writable?(:conversations)
     keys << 'delegate'
     keys << 'field' if grant.allowed?(:agenda)
+    keys << 'client_tasks' if grant.case_area_allowed?
     keys << 'nfc' if grant.allowed?(:campaigns)
     keys
   end

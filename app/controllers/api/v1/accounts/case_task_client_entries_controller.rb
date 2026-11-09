@@ -21,7 +21,8 @@ class Api::V1::Accounts::CaseTaskClientEntriesController < Api::V1::Accounts::Ba
 
   def return_task
     entry = ClientTasks::Recorder.new(@task, user: current_user).return!(params[:reason])
-    render json: { entry: entry_json(entry) }, status: :created
+    notice = ClientTasks::Notifier.new(@task, current_user).call(:returned) unless params[:notify] == false
+    render json: { entry: entry_json(entry), client_notice: notice }.compact, status: :created
   rescue ClientTasks::Recorder::Error => e
     render json: { error: e.message }, status: :unprocessable_entity
   end

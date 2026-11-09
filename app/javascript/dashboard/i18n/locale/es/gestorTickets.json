@@ -12,6 +12,13 @@
       "client": "El cliente la trabaja en su portal: la empieza, comenta, sube archivos y la marca como hecha."
     },
     "REQUIRES_FILE": "Pide que el cliente suba un archivo",
+    "NOTIFY": "Avisarle al cliente con el enlace de su portal",
+    "NOTICE": {
+      "SENT": "Le avisamos al cliente con el enlace de su portal.",
+      "no_conversation": "La tarea quedó, pero el cliente no tiene conversación para avisarle: mándale el enlace del portal.",
+      "window_closed": "La tarea quedó, pero pasaron más de 24 h desde su último mensaje: avísale con una plantilla o mándale el enlace por otro medio.",
+      "no_owner": "La tarea quedó, pero el caso no tiene contacto ni organización para el portal."
+    },
     "CHIP_CLIENT": "Del cliente",
     "CHIP_VISIBLE": "Visible al cliente",
     "IN_PROGRESS": "En proceso",

@@ -275,3 +275,12 @@ ai_follow_ups_due:
   class: "AiFollowUps::DueJob"
   queue: scheduled_jobs
   description: "Run AI follow-ups whose next contact is due"
+
+# ==============================================================================
+# Job: Tareas con el cliente — recordatorio diario (vence mañana / venció ayer)
+# ==============================================================================
+client_tasks_reminder:
+  cron: "0 15 * * *"  # 9:00 en México (UTC-6)
+  class: "ClientTasks::ReminderJob"
+  queue: scheduled_jobs
+  description: "Remind customers (and case owners) of client tasks due soon or overdue"

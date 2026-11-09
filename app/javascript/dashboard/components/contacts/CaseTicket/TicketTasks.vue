@@ -6,6 +6,7 @@
 -->
 <script>
 import { mapGetters } from 'vuex';
+import { useAlert } from 'dashboard/composables';
 import { VeTable } from 'vue-easytable';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import CaseMeetingsAPI from 'dashboard/api/caseMeetings';
@@ -96,9 +97,10 @@ export default {
         status: 'pending',
         priority: 'medium',
         milestone: false,
-        // Tareas con el cliente — quién la hace y si pide archivo.
+        // Tareas con el cliente — quién la hace, si pide archivo y avisarle al crearla.
         audience: 'internal',
         requires_file: false,
+        notify_client: true,
         required: false, // Plan-Plantilla-Tareas-Etapa — obligatoria para avanzar
         documentation: false,
         estimated_minutes: '', // Plan-Bandeja-Prioridad F1
@@ -739,6 +741,17 @@ export default {
       }
       return null;
     },
+    // Tareas con el cliente — si no se le pudo avisar, decir por qué.
+    alertClientNotice(notice) {
+      if (!notice) return;
+      useAlert(
+        this.$t(
+          notice.sent
+            ? 'CLIENT_TASKS.NOTICE.SENT'
+            : `CLIENT_TASKS.NOTICE.${notice.reason}`
+        )
+      );
+    },
     // Tareas con el cliente — la regresamos a pendiente desde el panel del portal.
     async onClientReturned() {
       this.form.status = 'pending';
@@ -756,9 +769,10 @@ export default {
         status: 'pending',
         priority: 'medium',
         milestone: false,
-        // Tareas con el cliente — quién la hace y si pide archivo.
+        // Tareas con el cliente — quién la hace, si pide archivo y avisarle al crearla.
         audience: 'internal',
         requires_file: false,
+        notify_client: true,
         required: false, // Plan-Plantilla-Tareas-Etapa — obligatoria para avanzar
         documentation: false,
         estimated_minutes: '', // Plan-Bandeja-Prioridad F1
@@ -859,8 +873,13 @@ export default {
         } else {
           const { data } = await CaseTasksAPI.createTask(
             this.ticketId,
-            payload
+            payload,
+            {
+              notifyClient:
+                payload.audience === 'client' && !!this.form.notify_client,
+            }
           );
+          this.alertClientNotice(data.client_notice);
           this.tasks = [...this.tasks, data.case_task];
           // Por defecto la más reciente va primero: saltamos a la página 1 para
           // ver la tarea recién creada arriba.
@@ -1136,6 +1155,15 @@ export default {
             />
             <span class="text-sm text-slate-700 dark:text-slate-200">{{
               $t('CLIENT_TASKS.REQUIRES_FILE')
+            }}</span>
+          </label>
+          <label
+            v-if="form.audience === 'client' && !editingId"
+            class="flex items-center gap-2 mb-3"
+          >
+            <input v-model="form.notify_client" type="checkbox" class="!mb-0" />
+            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+              $t('CLIENT_TASKS.NOTIFY')
             }}</span>
           </label>
 

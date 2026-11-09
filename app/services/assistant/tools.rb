@@ -21,18 +21,22 @@ class Assistant::Tools
   include Assistant::ConversationTools # contestar conversaciones
   include Assistant::FieldTools # trabajo en campo
   include Assistant::EventTools # NFC en la expo
+  include Assistant::ClientTaskTools # tareas con el cliente
+  include Assistant::AgendaTools # my_agenda
 
   LIST_LIMIT = 6
   ACTIVITY_LINES = 15
 
   READ_TOOLS = %w[search get_case get_contact my_agenda open_page list_agents tracking_status
                   list_case_types case_options search_guides read_guide report_gap].freeze +
-               QUOTE_READ_TOOLS + CONVERSATION_READ_TOOLS + FIELD_READ_TOOLS + EVENT_READ_TOOLS
+               QUOTE_READ_TOOLS + CONVERSATION_READ_TOOLS + FIELD_READ_TOOLS + EVENT_READ_TOOLS +
+               CLIENT_TASK_READ_TOOLS
   PROPOSAL_TOOLS = %w[propose_note propose_task propose_meeting propose_scheduled_message propose_draft
                       propose_delegate propose_tracking_action propose_create_case propose_move_stage
                       propose_outcome propose_postpone propose_resume_case propose_update_opportunity
                       propose_create_contact propose_follow_up propose_follow_up_action].freeze +
-                   QUOTE_PROPOSAL_TOOLS + CONVERSATION_PROPOSAL_TOOLS + FIELD_PROPOSAL_TOOLS + EVENT_PROPOSAL_TOOLS
+                   QUOTE_PROPOSAL_TOOLS + CONVERSATION_PROPOSAL_TOOLS + FIELD_PROPOSAL_TOOLS + EVENT_PROPOSAL_TOOLS +
+                   CLIENT_TASK_PROPOSAL_TOOLS
 
   def self.definitions = Assistant::ToolDefinitions::ALL
 
@@ -102,22 +106,6 @@ class Assistant::Tools
     contact = contacts.find(args['contact_id'])
     contact_ref(contact).merge(open_cases: open_cases_of(contact), pending_tasks: pending_tasks_of(contact),
                                upcoming: upcoming_of(contact), conversations: conversations_of(contact))
-  end
-
-  def tool_my_agenda(args)
-    from = @zone.parse(args['from'].to_s)&.beginning_of_day || Time.current.beginning_of_day
-    to = @zone.parse(args['to'].to_s)&.end_of_day || from.end_of_day
-    { meetings: my_meetings(from..to), tasks: my_tasks(to), overdue_note: 'tasks incluye las atrasadas (vencimiento antes de hoy).' }
-  end
-
-  def my_meetings(range)
-    @account.case_meetings.where(organizer_id: @user.id, starts_at: range).where.not(status: %i[cancelled rescheduled])
-            .order(:starts_at).limit(30).map { |m| meeting_ref(m) }
-  end
-
-  def my_tasks(until_time)
-    @account.case_tasks.pending.where(assignee_id: @user.id).where(due_at: ..until_time)
-            .order(:due_at).limit(30).map { |t| task_ref(t) }
   end
 
   def open_page(args)

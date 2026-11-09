@@ -218,6 +218,12 @@ es:
       done: 'La marcó como hecha'
       returned: 'La regresamos'
       reply: 'Te respondimos'
+    notify:
+      due: ' (para el %{date})'
+      assigned: 'Hola %{name}, tienes una tarea nueva: «%{title}»%{due}. Aquí la ves y la vas completando: %{url}'
+      returned: 'Hola %{name}, revisamos «%{title}» y te la regresamos con un comentario. Aquí la ves: %{url}'
+      due_soon: 'Hola %{name}, te recordamos que «%{title}» vence mañana. Aquí la completas: %{url}'
+      overdue: 'Hola %{name}, «%{title}» venció ayer. ¿Nos ayudas a completarla? Aquí la ves: %{url}'
     errors:
       empty_comment: 'Escribe el comentario.'
       no_file: 'Elige el archivo.'
@@ -397,6 +403,7 @@ es:
       reply: 'Contestar a tus clientes: qué conversaciones esperan respuesta, qué dijeron, y la respuesta lista en una tarjeta para mandarla (p. ej. «¿quién me escribió?», «dile a Mario que llega el jueves»).'
       field: 'Trabajo en campo: tus visitas del día, cuál sigue, qué se le hizo la última vez al cliente, avisarle «voy en camino» y dictar el reporte de la visita (p. ej. «¿qué visitas tengo hoy?», «reporta la visita: cambié el capacitor»).'
       nfc: 'Captar en la expo: el enlace NFC del evento para grabarlo en una etiqueta («acercar el celular») y cuántos se captaron (p. ej. «quiero grabar la etiqueta NFC de la expo para Ana»).'
+      client_tasks: 'Tareas con el cliente: qué le falta a un cliente, quién tiene tareas vencidas y asignarle una tarea que trabaja en su portal (p. ej. «asígnale a Acme probar la facturación para el viernes»).'
       limits: 'Lo que no hace: no le escribe al cliente sin tu confirmación (te deja una tarjeta, un borrador o un mensaje programado) ni hace acciones masivas.'
     quotes:
       new_opportunity: 'Se crea una oportunidad nueva'

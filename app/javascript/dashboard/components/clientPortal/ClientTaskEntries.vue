@@ -4,6 +4,7 @@
   Va dentro del modal de la tarea (TicketTasks) cuando la hace el cliente.
 -->
 <script>
+import { useAlert } from 'dashboard/composables';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 
 const T = 'CLIENT_TASKS';
@@ -61,11 +62,20 @@ export default {
           );
           this.reply = '';
         } else {
-          await CaseTasksAPI.returnToClient(
+          const { data } = await CaseTasksAPI.returnToClient(
             this.ticketId,
             this.taskId,
             this.reason
           );
+          if (data.client_notice) {
+            useAlert(
+              this.t(
+                data.client_notice.sent
+                  ? 'NOTICE.SENT'
+                  : `NOTICE.${data.client_notice.reason}`
+              )
+            );
+          }
           this.reason = '';
           this.returning = false;
           this.$emit('changed');
