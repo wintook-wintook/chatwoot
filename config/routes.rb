@@ -78,6 +78,8 @@ Rails.application.routes.draw do
           end
           # Plan-Eventos E1 — eventos y su lista de contactos con estado
           resources :events, only: [:index, :show, :create, :update, :destroy] do
+            # Captar en la expo «acercando el celular» (etiqueta NFC)
+            resources :capture_links, only: [:index, :create, :destroy], controller: 'event_capture_links'
             member do
               post :close
               post :reopen

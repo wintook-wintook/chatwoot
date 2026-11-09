@@ -695,6 +695,8 @@ es:
     import:
       no_file: 'Elige un archivo CSV'
       contact_not_found: 'No se encontró el contacto «%{value}»'
+    capture:
+      default_message: 'Hola, los conocí en %{event}. Me gustaría recibir información.'
   # Plan-Organizaciones O1
   organizations:
     change:

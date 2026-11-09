@@ -35,6 +35,20 @@ class EventsAPI extends ApiClient {
     return axios.post(`${this.url}/${id}/reopen`);
   }
 
+  // Captar en la expo «acercando el celular»: enlaces de WhatsApp para etiquetas NFC.
+  // → { links, inboxes, default_message }
+  captureLinks(id) {
+    return axios.get(`${this.url}/${id}/capture_links`);
+  }
+
+  createCaptureLink(id, data) {
+    return axios.post(`${this.url}/${id}/capture_links`, data);
+  }
+
+  removeCaptureLink(id, linkId) {
+    return axios.delete(`${this.url}/${id}/capture_links/${linkId}`);
+  }
+
   // { attendees, counts }
   attendees(id, params = {}) {
     return axios.get(`${this.url}/${id}/attendees`, { params });

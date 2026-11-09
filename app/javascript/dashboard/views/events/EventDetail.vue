@@ -12,6 +12,7 @@ import CustomViewsAPI from 'dashboard/api/customViews';
 import Spinner from 'shared/components/Spinner.vue';
 import ContactPicker from 'dashboard/views/gestorTickets/ContactPicker.vue';
 import EventForm from './EventForm.vue';
+import EventNfcLinks from './EventNfcLinks.vue'; // captar en la expo «acercando el celular»
 import {
   ATTENDEE_STATUSES,
   attendeeChipClass,
@@ -21,7 +22,7 @@ import {
 
 export default {
   name: 'EventDetail',
-  components: { Spinner, ContactPicker, EventForm },
+  components: { Spinner, ContactPicker, EventForm, EventNfcLinks },
   data() {
     return {
       event: null,
@@ -488,6 +489,9 @@ export default {
           </tbody>
         </table>
       </div>
+
+      <!-- Captar en la expo «acercando el celular» (etiquetas NFC) -->
+      <EventNfcLinks :event-id="eventId" :can-edit="access.canEdit" />
 
       <!-- Plan-Eventos E3 — las campañas que tienen este evento en su apartado «Evento» -->
       <section

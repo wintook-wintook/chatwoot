@@ -21,6 +21,7 @@ class AsyncDispatcher < BaseDispatcher
       CaseTicketListener.instance, # @tickets_cases — reapertura por respuesta del cliente
       CommandAgentListener.instance, # proyecto@commands_agents
       CsatSurveyListener.instance,
+      EventCaptureListener.instance, # Eventos — captar en la expo con etiqueta NFC
       HookListener.instance,
       InstallationWebhookListener.instance,
       KanbanFunnelListener.instance, # Embudo de contactos — la conversación mueve su tarjeta

@@ -708,6 +708,8 @@ en:
     import:
       no_file: 'Choose a CSV file'
       contact_not_found: 'Contact «%{value}» not found'
+    capture:
+      default_message: 'Hi, I met you at %{event}. I would like to receive information.'
   # Plan-Organizaciones O1
   organizations:
     change:

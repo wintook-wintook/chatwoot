@@ -23,7 +23,7 @@ module AccessAreaGuard
     'cases' => %w[case_tickets case_notes case_events case_activities case_conversations case_ticket_relations case_project_children
                   case_work_order_items case_tasks case_meetings case_meeting_series case_notices case_service_reports field_visits],
     'agenda' => %w[case_tasks_index agenda_items quick_tasks agenda_visits],
-    'campaigns' => %w[campaigns tracking_campaigns events],
+    'campaigns' => %w[campaigns tracking_campaigns events event_capture_links],
     'sales' => %w[sales_budgets] # Presupuesto de ventas
   }.transform_values { |names| names.map { |name| "api/v1/accounts/#{name}" } }.freeze
 
