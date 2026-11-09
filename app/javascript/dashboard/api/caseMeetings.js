@@ -65,6 +65,11 @@ class CaseMeetingsAPI extends ApiClient {
 
   // scope: 'one' (esta reunión) | 'all' (toda la serie).
   // `reason`: { reason_id, comment, minutes, notify_client } (Cancelar con motivo).
+  // Pasarla a tarea sin hora: { notify_client }.
+  toTask(ticketId, id, data = {}) {
+    return axios.post(`${this.url}/${ticketId}/meetings/${id}/to_task`, data);
+  }
+
   cancel(ticketId, id, scope = 'one', reason = {}) {
     return axios.patch(`${this.url}/${ticketId}/meetings/${id}/cancel`, {
       scope,

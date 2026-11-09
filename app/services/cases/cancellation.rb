@@ -92,25 +92,6 @@ class Cases::Cancellation
   end
 
   def notify
-    conversation = customer_conversation
-    return { sent: false, reason: 'no_conversation' } unless conversation
-    return { sent: false, reason: 'window_closed' } unless conversation.can_reply?
-
-    Messages::MessageBuilder.new(@user, conversation, { content: client_message, message_type: 'outgoing' }).perform
-    { sent: true }
-  end
-
-  def customer_conversation
-    contact = @item.client_contact
-    return if contact.nil?
-
-    @item.case_ticket&.conversation || @item.account.conversations.where(contact_id: contact.id).order(last_activity_at: :desc).first
-  end
-
-  def client_message
-    I18n.with_locale(@item.account.locale.presence || I18n.default_locale) do
-      I18n.t('cancellation.client_message', name: @item.client_contact&.name.to_s.split.first.to_s, title: @item.title,
-                                            when: @item.starts_at.in_time_zone.strftime('%d/%m %H:%M'))
-    end
+    Cases::MeetingClientNotice.call(@item, @user, 'cancellation.client_message')
   end
 end

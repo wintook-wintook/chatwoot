@@ -50,6 +50,14 @@ Cancelar es «ya no se va a hacer»; no es completarla (eso pide el reporte) ni 
 5. La tarea queda tachada como «Cancelada · motivo», deja de contar en pendientes, vencidas y siguiente paso, y queda en la actividad del caso. «Reabrir» (en el mismo menú) la regresa a pendiente.
 6. También se lo puedes pedir a Dali: «cancela la llamada con Mario de mañana, ya no hace falta».
 
+### Pasar una tarea a la agenda, o una tarea agendada a tarea
+Una tarea no tiene hora (solo fecha límite); una tarea agendada sí: día, hora, va al calendario y a Google Calendar.
+1. Tarea → agendada: en el menú de la tarea elige «Agendar tarea» (dentro del caso) o «Agendar…» (en Agenda › Tareas). Ya trae el título, la descripción y la duración estimada; elige día y hora. Al guardar, la tarea se quita de Tareas y queda como tarea agendada, con el tiempo que ya tenía reportado.
+2. Si quieres que la tarea se quede y solo agendar una sesión para trabajarla, marca «Que la tarea se quede: solo agendar una sesión de trabajo». Las tareas obligatorias, las de la plantilla de la etapa y las del cliente siempre se quedan: se agenda una sesión ligada a ellas.
+3. Agendada → tarea: en el menú de la tarea agendada (dentro del caso) o en el calendario, al abrirla, elige «Pasar a tarea (sin hora)». Se quita de la agenda y de Google Calendar y queda como tarea con fecha límite ese mismo día, el organizador como responsable y lo que duraba como tiempo estimado. Si tiene cliente, puedes avisarle que se quita la cita.
+4. Si era la sesión de una tarea, no se crea otra: queda esa tarea. Si es de una serie, solo esa vez sale de la agenda. No se puede si ya se hizo, se canceló o ya marcaron «voy en camino».
+5. Queda en la actividad del caso («Tarea ↔ agenda»). También se lo puedes pedir a Dali: «agenda la tarea de llamar a Mario el jueves a las 10» o «la visita de mañana quítala de la agenda y déjala como tarea».
+
 ### Borrar una tarea
 Solo para lo que se capturó por error: la borra quien la creó en las primeras 24 horas, o un administrador. Si ya no se puede borrar, te lo dice y te abre «Cancelar» para hacerlo con su motivo.
 

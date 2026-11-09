@@ -33,5 +33,7 @@ module Assistant::PromptRules
       ni teléfono: el cliente la ve en su portal y el aviso sale solo por su conversación. Si tiene varios casos, pregunta cuál.
     - «Cancela la llamada…», «ya no hace falta la visita»: my_agenda o get_case para el id y llama YA propose_cancel_item con
       el motivo que encaje. Si solo cambia la fecha, no la canceles: propón moverla.
+    - «Agenda la tarea de…», «ponle hora a…»: my_agenda o get_case para el id de la tarea y propose_convert_item (kind task,
+      con día y hora). «Quítala de la agenda y déjala como tarea»: propose_convert_item kind meeting.
   RULES
 end

@@ -20,6 +20,7 @@
 
 class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseController
   include CancelAndDeleteGuard # cancelar con motivo; borrar solo errores de captura
+  include ItemConversionActions # pasarla a tarea
   include CaseMeetingSerializer
   include TaskReportGuard
 
@@ -30,8 +31,8 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
             'Si el caso lo necesita, escala el ticket.'
 
   before_action :set_ticket
-  before_action :set_meeting, only: %i[update destroy hold cancel resync align_task_due]
-  before_action :block_if_frozen, only: %i[create update destroy hold cancel resync align_task_due]
+  before_action :set_meeting, only: %i[update destroy hold cancel resync align_task_due to_task] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
+  before_action :block_if_frozen, only: %i[create update destroy hold cancel resync align_task_due to_task] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
 
   def index
     # @tickets_cases F3 — reconciliación perezosa (§5): antes de responder se

@@ -1,4 +1,24 @@
 {
+  "CONVERT_ITEM": {
+    "SCHEDULE": "Agendar…",
+    "SCHEDULE_TITLE": "Agendar «{title}»",
+    "SCHEDULE_DESC": "La tarea se quita de Tareas y queda agendada con día y hora.",
+    "STARTS": "Empieza",
+    "ENDS": "Termina",
+    "LOCATION": "Lugar",
+    "SAVE": "Agendar",
+    "CANCEL": "Cancelar",
+    "SCHEDULED": "«{title}» quedó agendada",
+    "LINKED": "Se agendó una sesión de «{title}»; la tarea se queda",
+    "TO_TASK": "Pasar a tarea (sin hora)",
+    "TO_TASK_TITLE": "¿Pasar «{title}» a tarea?",
+    "TO_TASK_DESC": "Se quita de la agenda (y de Google Calendar) y queda como tarea con fecha límite el mismo día. El tiempo reportado se conserva.",
+    "TO_TASK_LINKED": "Es la sesión de la tarea «{task}»: se quita de la agenda y queda esa tarea.",
+    "NOTIFY": "Avisarle al cliente que se quita la cita",
+    "CONFIRM": "Pasar a tarea",
+    "DONE": "«{title}» quedó como tarea",
+    "DONE_LINKED": "Se quitó de la agenda; queda la tarea «{title}»"
+  },
   "CANCEL_ITEM": {
     "CATALOG": {
       "TITLE": "Motivos de cancelación",
@@ -1194,6 +1214,11 @@
       "LOADING": "Cargando avance...",
       "CURRENT": "Actual",
       "CREATED": "Creado",
+      "CONVERTED": {
+        "to_meeting": "pasó a la agenda para el {when}",
+        "to_task": "salió de la agenda (era el {when}) y quedó como tarea",
+        "linked": "se agendó una sesión de la tarea para el {when}"
+      },
       "MEETING_SCOPE_ALL": "Toda la serie",
       "CURRENTLY": "Actualmente",
       "RETURNED": "Volvió",
@@ -1767,6 +1792,7 @@
       "task_completed": "Tarea completada",
       "task_client_update": "El cliente avanzó una tarea",
       "task_cancelled": "Tarea cancelada",
+      "task_converted": "Tarea ↔ agenda",
       "task_reopened": "Tarea reabierta",
       "task_deleted": "Tarea borrada",
       "quote_created": "Cotización creada",
@@ -1827,7 +1853,8 @@
         "CANCEL_ALL": "Cancelar toda la serie",
         "DELETE": "Eliminar",
         "RESYNC": "Reintentar sincronización",
-        "ALIGN_TASK_DUE": "Mover el vencimiento de la tarea"
+        "ALIGN_TASK_DUE": "Mover el vencimiento de la tarea",
+        "TO_TASK": "Pasar a tarea (sin hora)"
       },
       "MODAL": {
         "TITLE": "Agendar tarea",
@@ -1840,6 +1867,10 @@
         "DATE_ERROR": "La hora de fin debe ser posterior a la de inicio.",
         "TASK_LABEL": "Tarea",
         "TASK_NONE": "— Del caso (sin tarea) —",
+        "CONVERT_HINT": "Al guardar, «{title}» se quita de Tareas y queda como tarea agendada, con el tiempo que ya tenía reportado.",
+        "KEEP_TASK": "Que la tarea se quede: solo agendar una sesión de trabajo",
+        "KEEP_HINT": "La tarea se queda en Tareas y esta sesión queda ligada a ella.",
+        "KEEP_LOCKED": "Es obligatoria, de la etapa o del cliente: la tarea se queda y se agenda una sesión ligada a ella.",
         "ORGANIZER_LABEL": "Responsable",
         "ORGANIZER_ME": "— Yo —",
         "LOCATION_LABEL": "Lugar",

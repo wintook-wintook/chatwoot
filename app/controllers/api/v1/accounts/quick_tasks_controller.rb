@@ -10,9 +10,10 @@
 # ================================================================================
 class Api::V1::Accounts::QuickTasksController < Api::V1::Accounts::BaseController
   include CancelAndDeleteGuard # cancelar con motivo; borrar solo errores de captura
+  include ItemConversionActions # pasarla a la agenda
   include TaskReportGuard
 
-  before_action :set_task, only: %i[update destroy cancel]
+  before_action :set_task, only: %i[update destroy cancel schedule] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
 
   def create
     task = CaseTask.new(task_attrs.merge(client).merge(account: Current.account, requester: current_user))

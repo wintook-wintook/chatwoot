@@ -189,6 +189,14 @@ en:
       no_technician: 'The order has no assignee'
       no_technician_contact: "%{name} has no WhatsApp contact in Settings › Users"
   # Cancel tasks and scheduled tasks (Cases::Cancellation)
+  # Task ↔ scheduled task (Cases::Conversion)
+  conversion:
+    reason: 'Turned into a task (no time)'
+    client_message: 'Hi %{name}, we removed «%{title}» on %{when} from the schedule. We keep working on it and will reach out for next steps.'
+    errors:
+      task_not_open: 'Only a pending task can be scheduled.'
+      meeting_not_open: 'Only a pending scheduled task with no visit started can become a task.'
+      starts_at: 'Pick the day and time.'
   cancellation:
     report: 'Cancelled: %{reason}'
     client_message: 'Hi %{name}, we cancelled «%{title}» on %{when}. We are here for anything you need.'

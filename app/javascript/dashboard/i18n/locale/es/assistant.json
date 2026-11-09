@@ -147,7 +147,12 @@
       "CANCEL_COMMENT": "Comentario (opcional; con «Otro», obligatorio)",
       "CANCEL_MINUTES": "¿Le dedicaste tiempo? (minutos, opcional)",
       "CANCEL_MINUTES_REQUIRED": "Tiempo dedicado (minutos) — ya se trabajó",
-      "CANCEL_NOTIFY": "Avisarle al cliente"
+      "CANCEL_NOTIFY": "Avisarle al cliente",
+      "convert_item": "Agenda ↔ tarea",
+      "CONVERT_TO_MEETING": "La tarea se quita de Tareas y queda agendada.",
+      "CONVERT_KEEPS": "Es obligatoria o del cliente: la tarea se queda y se agenda una sesión ligada.",
+      "CONVERT_TO_TASK": "Se quita de la agenda (y de Google) y queda como tarea sin hora.",
+      "CONVERT_LINKED": "Es la sesión de «{task}»: se quita de la agenda y queda esa tarea."
     },
     "SETTINGS": {
       "TITLE": "Asistente",

@@ -40,6 +40,8 @@ const ICONS = {
   client_task: 'person',
   // Cancelar con motivo
   cancel_item: 'dismiss-circle',
+  // Tarea ↔ tarea agendada
+  convert_item: 'calendar',
 };
 
 // Igual que el servidor (Assistant::QuoteTools.totals): descuento por partida, IVA de la partida.
@@ -204,6 +206,13 @@ export default {
         reply: this.labels.template ? {} : { content: f.content },
         on_my_way: { eta_minutes: Number(f.eta_minutes) },
         nfc_link: { message: f.message },
+        convert_item: this.labels.to_meeting
+          ? {
+              starts_at: toIso(f.starts_at),
+              ends_at: toIso(f.ends_at),
+              location: f.location,
+            }
+          : { notify_client: !!this.labels.has_client && !!f.notify_client },
         cancel_item: {
           reason_id: Number(f.reason_id) || null,
           comment: f.cancel_comment,
@@ -404,7 +413,33 @@ export default {
           class="h-8 text-sm"
         />
       </label>
-      <div v-if="type === 'meeting'" class="grid grid-cols-2 gap-2">
+      <!-- Tarea ↔ tarea agendada: qué pasa con la tarea -->
+      <p v-if="type === 'convert_item'" class="m-0 text-xs text-slate-500">
+        {{
+          labels.to_meeting
+            ? labels.keeps_task
+              ? t('CONVERT_KEEPS')
+              : t('CONVERT_TO_MEETING')
+            : labels.linked_task
+            ? t('CONVERT_LINKED', { task: labels.linked_task })
+            : t('CONVERT_TO_TASK')
+        }}
+      </p>
+      <label
+        v-if="
+          type === 'convert_item' && !labels.to_meeting && labels.has_client
+        "
+        class="flex items-center gap-2 text-xs"
+      >
+        <input v-model="form.notify_client" type="checkbox" class="!m-0" />
+        {{ t('CANCEL_NOTIFY') }}
+      </label>
+      <div
+        v-if="
+          type === 'meeting' || (type === 'convert_item' && labels.to_meeting)
+        "
+        class="grid grid-cols-2 gap-2"
+      >
         <label class="text-xs">
           {{ t('STARTS') }}
           <input
@@ -422,7 +457,12 @@ export default {
           />
         </label>
       </div>
-      <label v-if="type === 'meeting'" class="text-xs">
+      <label
+        v-if="
+          type === 'meeting' || (type === 'convert_item' && labels.to_meeting)
+        "
+        class="text-xs"
+      >
         {{ t('LOCATION') }}
         <input v-model="form.location" type="text" class="h-8 text-sm" />
       </label>

@@ -11,13 +11,14 @@
 # ================================================================================
 class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseController
   include CancelAndDeleteGuard # cancelar con motivo; borrar solo errores de captura
+  include ItemConversionActions # pasarla a tarea
   include TaskReportGuard
 
   CASES_LIMIT = 50
   FROZEN_MSG = 'Ticket cerrado: no se puede modificar. Reábrelo si necesitas cambiarlo.'
 
-  before_action :set_meeting, only: %i[update destroy]
-  before_action :block_if_frozen, only: %i[update destroy]
+  before_action :set_meeting, only: %i[update destroy to_task] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
+  before_action :block_if_frozen, only: %i[update destroy to_task] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
 
   def index
     meetings = Current.account.case_meetings.where(organizer_id: current_user.id, starts_at: range)

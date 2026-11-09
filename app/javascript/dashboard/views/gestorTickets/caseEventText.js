@@ -120,6 +120,19 @@ export default {
           .filter(Boolean)
           .join(' — ');
       }
+      // Tarea ↔ tarea agendada: a qué pasó y para cuándo.
+      if (type === 'task_converted') {
+        const folio =
+          p.folio ||
+          (p.sequence ? `T${String(p.sequence).padStart(3, '0')}` : null);
+        const when = p.starts_at ? this.formatDate(p.starts_at) : '';
+        return [
+          [folio, p.title].filter(Boolean).join(' · '),
+          this.$t(`CASE_TICKETS.JOURNEY.CONVERTED.${p.direction}`, { when }),
+        ]
+          .filter(Boolean)
+          .join(' — ');
+      }
       if (type.startsWith('task_')) {
         const folio = p.sequence
           ? `T${String(p.sequence).padStart(3, '0')}`

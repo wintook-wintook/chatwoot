@@ -43,6 +43,9 @@ export default {
       },
       // F4 — repetición. `single` = reunión suelta (lo de F2).
       mode: 'single',
+      // Agendar desde una tarea: por omisión la tarea se convierte (sale de Tareas); con
+      // esto solo se agenda una sesión ligada y la tarea se queda.
+      keepTask: false,
       series: {
         freq: 'weekly',
         interval: 1,
@@ -86,6 +89,17 @@ export default {
     },
     isSeries() {
       return this.mode === 'series';
+    },
+    // Alta desde la fila de una tarea (una sola vez, no serie).
+    fromTask() {
+      return !this.isEditing && !!this.contextTask && !this.isSeries;
+    },
+    taskReplaceable() {
+      return !!this.contextTask && this.contextTask.replaceable !== false;
+    },
+    // Al guardar, la tarea pasa a la agenda (Cases::Conversion).
+    converting() {
+      return this.fromTask && this.taskReplaceable && !this.keepTask;
     },
     weekDays() {
       // Orden de la semana laboral primero, como el mockup del plan.
@@ -176,11 +190,16 @@ export default {
       const organizerOk = this.organizers.some(o => o.id === d.organizer_id);
       // Editar siempre es de una reunión concreta: el bloque de serie no aplica.
       this.mode = 'single';
+      this.keepTask = false;
+      // Desde una tarea: hereda su título, descripción y duración estimada.
+      const task = m ? null : this.contextTask;
       this.form = {
-        title: m?.title || d.title || '',
-        description: m?.description || '',
+        title: m?.title || task?.title || d.title || '',
+        description: m?.description || task?.description || '',
         starts_at: this.toLocalInput(m?.starts_at) || this.defaultStart(),
-        ends_at: this.toLocalInput(m?.ends_at) || this.defaultEnd(),
+        ends_at:
+          this.toLocalInput(m?.ends_at) ||
+          this.defaultEnd(task?.estimated_minutes),
         location: m?.location || d.location || '',
         is_visit: !!(m?.is_visit || d.is_visit),
         case_task_id: m?.case_task?.id || this.contextTask?.id || '',
@@ -198,10 +217,10 @@ export default {
       d.setHours(10, 0, 0, 0);
       return this.toLocalInput(d);
     },
-    defaultEnd() {
+    defaultEnd(minutes) {
       const d = new Date();
       d.setDate(d.getDate() + 1);
-      d.setHours(11, 0, 0, 0);
+      d.setHours(10, minutes || 60, 0, 0);
       return this.toLocalInput(d);
     },
     // Date/ISO → valor de <input type="datetime-local"> en hora LOCAL del agente
@@ -253,7 +272,9 @@ export default {
         ends_at: new Date(this.form.ends_at).toISOString(),
         location: this.form.location,
         is_visit: this.form.is_visit,
-        case_task_id: this.form.case_task_id || null,
+        case_task_id: this.converting ? null : this.form.case_task_id || null,
+        // La tarea que se convierte (la agenda TicketMeetings con /schedule).
+        convert_task_id: this.converting ? this.contextTask.id : null,
         organizer_id: this.form.organizer_id || null,
         notify_client: this.form.notify_client,
         attendee_emails: [...new Set(attendees)],
@@ -342,8 +363,35 @@ export default {
           {{ dateError }}
         </p>
 
+        <!-- Agendar una tarea: se convierte (sale de Tareas) o solo una sesión ligada -->
+        <div
+          v-if="fromTask"
+          class="flex flex-col gap-1 p-2 text-xs border rounded-md border-woot-100 bg-woot-25 dark:bg-slate-800 dark:border-slate-600"
+        >
+          <template v-if="taskReplaceable">
+            <p class="m-0 text-slate-700 dark:text-slate-200">
+              {{
+                keepTask
+                  ? $t('CASE_TICKETS.MEETINGS.MODAL.KEEP_HINT')
+                  : $t('CASE_TICKETS.MEETINGS.MODAL.CONVERT_HINT', {
+                      title: contextTask.title,
+                    })
+              }}
+            </p>
+            <label
+              class="flex items-center gap-2 text-slate-600 dark:text-slate-300"
+            >
+              <input v-model="keepTask" type="checkbox" class="!m-0" />
+              {{ $t('CASE_TICKETS.MEETINGS.MODAL.KEEP_TASK') }}
+            </label>
+          </template>
+          <p v-else class="m-0 text-slate-700 dark:text-slate-200">
+            {{ $t('CASE_TICKETS.MEETINGS.MODAL.KEEP_LOCKED') }}
+          </p>
+        </div>
+
         <div class="flex gap-3">
-          <label class="flex-1">
+          <label v-if="!converting" class="flex-1">
             <span class="text-sm text-slate-700 dark:text-slate-200">{{
               $t('CASE_TICKETS.MEETINGS.MODAL.TASK_LABEL')
             }}</span>

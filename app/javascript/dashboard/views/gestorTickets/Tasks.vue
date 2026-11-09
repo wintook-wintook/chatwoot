@@ -16,6 +16,7 @@ import MessageFormatter from 'shared/helpers/MessageFormatter';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import QuickTasksAPI from 'dashboard/api/quickTasks';
 import CancelItemModal from 'dashboard/components/cancel/CancelItemModal.vue'; // cancelar con motivo
+import ScheduleTaskModal from 'dashboard/components/convert/ScheduleTaskModal.vue'; // pasarla a la agenda
 import { useAlert } from 'dashboard/composables';
 import QuickTaskModal from './tasks/QuickTaskModal.vue';
 import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal.vue';
@@ -109,6 +110,7 @@ export default {
     MyDay,
     QuickTaskModal,
     CancelItemModal,
+    ScheduleTaskModal,
     TaskReportModal,
     TaskReportsDialog,
   },
@@ -123,6 +125,9 @@ export default {
     return {
       // Cancelar con motivo: la tarea a cancelar, si está guardando y el error.
       cancelTarget: null,
+      scheduleTarget: null,
+      scheduleBusy: false,
+      scheduleError: '',
       cancelBusy: false,
       cancelError: '',
       // La primera vez abre en Mi día; después, en la última pestaña usada.
@@ -853,6 +858,38 @@ export default {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
       if (task) this.remove(task);
+    },
+    // Pasarla a la agenda: con día y hora sale de Tareas (o sesión ligada si no se puede).
+    menuSchedule() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (!task) return;
+      this.scheduleError = '';
+      this.scheduleTarget = task;
+    },
+    async submitSchedule(data) {
+      const task = this.scheduleTarget;
+      this.scheduleBusy = true;
+      this.scheduleError = '';
+      try {
+        const { data: res } = task.case_ticket
+          ? await CaseTasksAPI.schedule(task.case_ticket.id, task.id, data)
+          : await QuickTasksAPI.schedule(task.id, data);
+        this.scheduleTarget = null;
+        this.fetch();
+        useAlert(
+          this.$t(
+            res.mode === 'linked'
+              ? 'CONVERT_ITEM.LINKED'
+              : 'CONVERT_ITEM.SCHEDULED',
+            { title: res.meeting.title }
+          )
+        );
+      } catch (e) {
+        this.scheduleError = e.response?.data?.error || '';
+      } finally {
+        this.scheduleBusy = false;
+      }
     },
     // Cancelar (ya no se va a hacer): con motivo y tiempo si ya se trabajó.
     menuCancelTask() {
@@ -1795,6 +1832,19 @@ export default {
             variant="clear"
             color-scheme="secondary"
             size="small"
+            icon="calendar"
+            @click="menuSchedule"
+          >
+            {{ $t('CONVERT_ITEM.SCHEDULE') }}
+          </woot-button>
+        </WootDropdownItem>
+        <WootDropdownItem
+          v-if="rowMenu && rowMenu.row && rowMenu.row.status === 'pending'"
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
             icon="dismiss-circle"
             @click="menuCancelTask"
           >
@@ -1822,6 +1872,14 @@ export default {
       :error="cancelError"
       @close="cancelTarget = null"
       @submit="submitCancel"
+    />
+    <ScheduleTaskModal
+      :show="!!scheduleTarget"
+      :task="scheduleTarget"
+      :busy="scheduleBusy"
+      :error="scheduleError"
+      @close="scheduleTarget = null"
+      @submit="submitSchedule"
     />
   </div>
 </template>

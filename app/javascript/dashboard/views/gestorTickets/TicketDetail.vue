@@ -3589,6 +3589,7 @@ export default {
         class="flex-none"
         @count="meetingCount = $event"
         @changed="reloadEvents"
+        @tasksChanged="$refs.ticketTasks && $refs.ticketTasks.load()"
       />
 
       <!-- ════ Pestaña Proyecto (Plan-Clase-Proyecto P1) ════ -->

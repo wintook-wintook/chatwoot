@@ -13,12 +13,13 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   include TaskReportGuard
   include ClientTaskFields # tareas con el cliente: campos y aviso al crearla
   include CancelAndDeleteGuard # cancelar con motivo; borrar solo errores de captura
+  include ItemConversionActions # pasarla a la agenda
 
   FROZEN_MSG = 'Ticket cerrado: no se pueden modificar las tareas. Reábrelo si necesitas cambiarlas.'
   DOC_TASK_MSG = 'Esta tarea se completa sola cuando documentas el paso a la siguiente etapa'
 
   before_action :set_ticket
-  before_action :set_task, only: %i[update destroy cancel]
+  before_action :set_task, only: %i[update destroy cancel schedule] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
   before_action :reject_manual_documentation, only: :update
 
   def index

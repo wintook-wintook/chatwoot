@@ -129,7 +129,7 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
   # puntaje con sus motivos (score + reasons).
   def priority_fields(task)
     fields = { estimated_minutes: task.estimated_minutes, planned_on: task.planned_on, milestone: task.milestone,
-               report_required: task.report_required? }
+               report_required: task.report_required?, replaceable: Cases::Conversion.task_kind_replaceable?(task) }
              .merge(@scores[task.id] || {})
     @planned_ids ? fields.merge(planned: @planned_ids.include?(task.id)) : fields
   end

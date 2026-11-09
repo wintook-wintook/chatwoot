@@ -15,6 +15,7 @@ class Assistant::Executor
   include Assistant::EventRunner # NFC en la expo
   include Assistant::ClientTaskRunner # tareas con el cliente
   include Assistant::CancelRunner # cancelar con motivo
+  include Assistant::ConvertRunner # tarea ↔ tarea agendada
 
   class Refused < StandardError; end
 

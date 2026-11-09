@@ -55,6 +55,11 @@ class CaseTasksAPI extends ApiClient {
   }
 
   // Cancelar con motivo: { reason_id, comment, minutes }.
+  // Pasarla a la agenda (o una sesión ligada con keep_task): { starts_at, ends_at, … }.
+  schedule(ticketId, id, data) {
+    return axios.post(`${this.url}/${ticketId}/tasks/${id}/schedule`, data);
+  }
+
   cancelTask(ticketId, id, reason) {
     return axios.post(`${this.url}/${ticketId}/tasks/${id}/cancel`, reason);
   }
