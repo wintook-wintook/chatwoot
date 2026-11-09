@@ -193,3 +193,31 @@ Escribirlo son ~3–5 días de trabajo. Lo que marca el ritmo después:
 - Nombre y lugar exacto en el menú (dentro de Agentes IA; los viejos siguen igual).
 - Contenido fino de cada puesto y habilidad (lo redacta Claude; el usuario revisa).
 - Pagos y facturas: confirmar que basta con hojas en esta etapa.
+
+## 10. Después del motor: buscador de productos (decidido 2026-11-09)
+
+Orden acordado: **primero el motor (M1–M5); después, el buscador de productos.**
+
+Comparación hecha (en 2026-11-09):
+- **Cotizaciones de Dali (`Assistant::QuoteTools#search_catalog`):**
+  - carga hasta 2,000 productos del Catálogo de Kontrolya en memoria y compara palabras;
+  - **no sirve con bases de 50 mil productos.**
+- **Vendedor transaccional (Daiko):**
+  - proyecto aparte en Node.js: `/home/chatwoot/daikov2/backend`, repo `daiko-v1`;
+  - Kontrolya le pasa los mensajes por `BotSeller::Dispatcher` (`INTERNAL_WEBHOOK_URL`);
+  - busca en el ERP CRM Zeus por API (`apiCrm/externalAccess/.../api/Daiko/v1/...`), con precios y existencias en vivo;
+  - lógica madura: búsqueda guiada (usos, calidades, estados), normalización y relevancia, en `utils/crm.js`, `busqueda_guiada.js`, `canonicalizacion_service.js` y `relevancia.js`;
+  - su plática es clasificador + prompt por etapa (rígida).
+
+Propuesta para entonces: **un solo buscador de productos en Kontrolya**, usado por las cotizaciones de Dali y por la habilidad «Cotizar» del agente Vendedor.
+- **Catálogo propio:** índice en PostgreSQL (pg_trgm o texto completo) en lugar de cargar en memoria.
+- **Catálogo externo por API:** CRM Zeus o el ERP, con los mismos servicios de Daiko; precios y existencias en vivo.
+- **Lógica de Daiko:** traer la búsqueda guiada, la normalización y la relevancia.
+- **La IA solo ve los 8–10 mejores resultados** y pregunta para acotar.
+- **Daiko** podría quedar después como un agente más del motor nuevo.
+
+Mientras tanto, en el motor (M1–M5) la habilidad «Cotizar» usa el Catálogo de Kontrolya tal como está. Sirve para catálogos chicos.
+
+Preguntas abiertas:
+- ¿Dónde viven los 50 mil productos: CRM Zeus, el Catálogo de Kontrolya o los dos?
+- ¿Qué empresas usan hoy el vendedor transaccional?
