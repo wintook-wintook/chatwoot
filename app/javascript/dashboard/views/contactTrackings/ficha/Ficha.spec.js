@@ -12,6 +12,7 @@ vi.mock('dashboard/api/fichaAgente', () => ({
     preview: vi.fn(),
     create: vi.fn(),
     suggest: vi.fn(),
+    activate: vi.fn(),
     get: vi.fn(),
     save: vi.fn(),
     apply: vi.fn(),
@@ -222,6 +223,21 @@ describe('FichaWizard', () => {
     expect(wrapper.emitted('created')[0]).toEqual([77]);
   });
 
+  it('una frase agregada desde la prueba viaja con la ficha; activar solo con canal', async () => {
+    const wrapper = montar();
+    await esperar();
+    wrapper.vm.addPhrase({ key: 'calendar:3', phrase: '¿hay lugar?' });
+    wrapper.vm.addPhrase({ key: 'calendar:3', phrase: '¿hay lugar?' });
+    expect(wrapper.vm.payload.phrases).toEqual({
+      'calendar:3': ['¿hay lugar?'],
+    });
+    wrapper.setData({ activateOnCreate: true });
+    expect(wrapper.vm.payload.activate).toBe(false);
+    wrapper.setData({ inboxId: 5 });
+    expect(wrapper.vm.payload.activate).toBe(true);
+    expect(wrapper.vm.testPayload.activate).toBeUndefined();
+  });
+
   it('no deja crear si el comprobador encuentra errores', async () => {
     const wrapper = montar();
     await esperar();
@@ -285,6 +301,19 @@ describe('AgentFicha', () => {
       [{ key: 'google_sheet:1' }, { key: 'file:9' }],
       { keyword_actions: [] }
     );
+  });
+
+  it('activar pide confirmación y, con OK, crea la automatización', async () => {
+    FichaAPI.activate.mockResolvedValue({ data: DATA });
+    const wrapper = montar();
+    await esperar();
+    const showConfirmation = vi.fn().mockResolvedValueOnce(false);
+    wrapper.vm.$refs.activateDialog = { showConfirmation };
+    await wrapper.vm.activate();
+    expect(FichaAPI.activate).not.toHaveBeenCalled();
+    showConfirmation.mockResolvedValueOnce(true);
+    await wrapper.vm.activate();
+    expect(FichaAPI.activate).toHaveBeenCalledWith(7);
   });
 
   it('las Reglas se cargan, cuentan como cambio y se guardan con la ficha', async () => {

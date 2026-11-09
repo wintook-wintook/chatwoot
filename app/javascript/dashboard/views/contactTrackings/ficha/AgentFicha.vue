@@ -18,6 +18,7 @@ import FichaAPI from 'dashboard/api/fichaAgente';
 import FichaCards, { GROUPS } from './FichaCards.vue';
 import FichaNav from './FichaNav.vue';
 import FichaFiles from './FichaFiles.vue';
+import FichaReadiness from './FichaReadiness.vue';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 
 const SECTIONS = ['sources', 'calendar', 'tickets', 'files', 'rules'];
@@ -32,7 +33,13 @@ const SOURCE_KINDS = GROUPS.find(group => group.id === 'sources').kinds;
 const copy = value => JSON.parse(JSON.stringify(value || []));
 
 export default {
-  components: { FichaCards, FichaNav, FichaFiles, KeywordActionsEditor },
+  components: {
+    FichaCards,
+    FichaNav,
+    FichaFiles,
+    FichaReadiness,
+    KeywordActionsEditor,
+  },
   props: {
     templateId: { type: Number, required: true },
   },
@@ -49,6 +56,8 @@ export default {
       changes: { added: [], removed: [], not_ready: [], confirmed: true },
       query: '',
       kind: '',
+      readiness: [],
+      activating: false,
       loading: true,
       busy: false,
     };
@@ -120,6 +129,7 @@ export default {
       this.rules = copy(data.keyword_actions);
       this.savedRules = copy(data.keyword_actions);
       this.changes = data.changes || this.changes;
+      this.readiness = data.readiness || [];
       this.$emit(
         'changes',
         this.changes.added.length + this.changes.removed.length
@@ -170,6 +180,27 @@ export default {
         useAlert((datos && datos.error) || this.t('APPLY_ERROR'));
       } finally {
         this.busy = false;
+      }
+    },
+    hasChannel() {
+      return this.readiness.some(
+        item => item.key === 'channel' && item.status === 'ok'
+      );
+    },
+    // Desde aquí contesta a clientes reales: se pide confirmación.
+    async activate() {
+      const ok = await this.$refs.activateDialog.showConfirmation();
+      if (!ok) return;
+      this.activating = true;
+      try {
+        const { data } = await FichaAPI.activate(this.templateId);
+        this.take(data);
+        useAlert(this.t('ACTIVATED'));
+      } catch (error) {
+        const datos = error && error.response && error.response.data;
+        useAlert((datos && datos.error) || this.t('ACTIVATE_ERROR'));
+      } finally {
+        this.activating = false;
       }
     },
     applyAll() {
@@ -293,7 +324,7 @@ export default {
 
         <!-- Panel: cambios para el Entrenamiento -->
         <aside
-          class="flex flex-col min-h-0 gap-3 p-4 border rounded-lg md:col-span-2 xl:col-span-1 border-slate-200 dark:border-slate-700 bg-slate-25 dark:bg-slate-800/40"
+          class="flex flex-col min-h-0 gap-3 p-4 overflow-auto border rounded-lg md:col-span-2 xl:col-span-1 border-slate-200 dark:border-slate-700 bg-slate-25 dark:bg-slate-800/40"
         >
           <h3
             class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
@@ -386,6 +417,15 @@ export default {
             </woot-button>
           </template>
 
+          <FichaReadiness
+            v-if="readiness.length"
+            class="pt-3 border-t border-slate-200 dark:border-slate-700"
+            :items="readiness"
+            :can-activate="hasChannel()"
+            :activating="activating"
+            @activate="activate"
+          />
+
           <div class="flex flex-col gap-1 mt-auto">
             <woot-button
               icon="checkmark"
@@ -402,5 +442,12 @@ export default {
         </aside>
       </div>
     </template>
+    <woot-confirm-modal
+      ref="activateDialog"
+      :title="t('ACTIVATE_TITLE')"
+      :description="t('ACTIVATE_DESCRIPTION')"
+      :confirm-label="t('ACTIVATE_YES')"
+      :cancel-label="t('ACTIVATE_NO')"
+    />
   </div>
 </template>

@@ -21,7 +21,7 @@
 
 class ContactTrackings::Ficha::Offers
   MAX_NAME = 30
-  MAX_DESCRIPTION = 140
+  MAX_DESCRIPTION = 240
   TAG_SKIP = %w[consultar dudas ticket erp].freeze
   MIN_GROUP = ContactTrackings::Assistant::CorpusChecks::MIN_GROUP_SIZE
 
@@ -72,7 +72,10 @@ class ContactTrackings::Ficha::Offers
 
   # cards: ContactTrackings::Ficha::Catalog#call
   # items: [{ 'key' => 'google_sheet:12' }, { 'key' => 'canned_response', 'parts' => ['PATITAS'] }, …]
-  def initialize(cards, items)
+  # phrases: { 'google_sheet:12' => ['¿cuánto cuesta la plataforma?'] } — frases de cliente
+  # que la persona agregó a esa ruta desde la prueba; se suman a su descripción.
+  def initialize(cards, items, phrases: {})
+    @phrases = phrases.to_h.transform_keys(&:to_s)
     @cards = cards.index_by { |c| c[:key] }
     @items = Array(items).map { |i| i.respond_to?(:to_unsafe_h) ? i.to_unsafe_h : i.to_h }.map(&:stringify_keys)
     @names = []
@@ -137,7 +140,7 @@ class ContactTrackings::Ficha::Offers
   def route_for(oferta)
     nombre = unique(slug(route_name(oferta)), @names, '_')
     etiqueta = unique(tag(nombre), @tags, '')
-    descripcion = clean(description(oferta))
+    descripcion = clean([description(oferta), *Array(@phrases[oferta[:key].to_s])].join(', '))
     { name: nombre, tag: etiqueta, description: descripcion,
       line: "@ruta(#{nombre} ##{etiqueta}: #{descripcion}): #{target(oferta)}" }
   end

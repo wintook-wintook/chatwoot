@@ -44,7 +44,7 @@ class ContactTrackings::Ficha::Generator
     prompt = text
     validacion = ContactTrackings::Assistant::ValidatorService.new(prompt, account: @account).call
     { prompt: prompt, objective: objective, ai_context: @business.first(MAX_CONTEXT),
-      routes: routes.map { |o| o[:route].slice(:name, :tag, :description).merge(label: o[:label]) },
+      routes: routes.map { |o| o[:route].slice(:name, :tag, :description).merge(label: o[:label], key: o[:key], kind: o[:kind]) },
       validation: validacion.slice(:blocking, :degrading, :cosmetic, :valid) }
   end
 

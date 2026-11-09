@@ -230,10 +230,13 @@ Rails.application.routes.draw do
               post :ficha_preview, to: 'tracking_templates/fichas#preview'
               post :ficha_create, to: 'tracking_templates/fichas#create'
               post :ficha_suggest, to: 'tracking_templates/fichas#suggest'
+              post :ficha_test, to: 'tracking_templates/fichas#run_test'
+              get 'ficha_test/:turn_id', to: 'tracking_templates/fichas#test_result'
             end
             # feat/ficha_agente_ia: la ficha de un agente que ya existe y sus cambios contra el prompt
             resource :ficha, only: [:show, :update], module: :tracking_templates do
               post :apply
+              post :activate
             end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates

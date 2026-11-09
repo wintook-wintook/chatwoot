@@ -59,6 +59,40 @@ RSpec.describe 'Ficha del Agente IA API', type: :request do
     expect(response).to have_http_status(:unprocessable_entity)
   end
 
+  it 'probar va a segundo plano y el resultado se consulta' do
+    post "#{base}/ficha_test", params: { name: 'Ventas', items: items, turn_id: 'ficha-abc123' }, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:accepted)
+    expect(ContactTrackings::Ficha::TestJob).to have_been_enqueued.with(account.id, admin.id, 'ficha-abc123', hash_including('name' => 'Ventas'))
+
+    get "#{base}/ficha_test/ficha-abc123", headers: admin.create_new_auth_token
+    expect(response.parsed_body['done']).to be(false)
+    ContactTrackings::Assistant::TurnProgress.store_result(account, admin, 'ficha-abc123', { passed: 2, total: 2 })
+    get "#{base}/ficha_test/ficha-abc123", headers: admin.create_new_auth_token
+    expect(response.parsed_body).to eq('done' => true, 'result' => { 'passed' => 2, 'total' => 2 })
+  end
+
+  it 'la vista previa dice si está listo; crear con activate deja la automatización' do
+    bandeja = create(:inbox, account: account)
+    post "#{base}/ficha_preview", params: { name: 'Ventas', items: items, inbox_id: bandeja.id }, headers: admin.create_new_auth_token, as: :json
+    expect(response.parsed_body['readiness'].pluck('key')).to include('openai', 'channel', 'context', 'assignment')
+
+    post "#{base}/ficha_create", params: { name: 'Ventas', items: items, inbox_id: bandeja.id, activate: true },
+                                 headers: admin.create_new_auth_token, as: :json
+    creado = account.tracking_templates.find(response.parsed_body['id'])
+    expect(account.automation_rules.last.actions.first['action_params']).to eq([creado.id])
+  end
+
+  it 'activar un agente que ya existe; sin canal dice por qué' do
+    sin_canal = create(:tracking_template, account: account, inbox: nil)
+    post "#{base}/#{sin_canal.id}/ficha/activate", headers: admin.create_new_auth_token
+    expect(response).to have_http_status(:unprocessable_entity)
+
+    con_canal = create(:tracking_template, account: account, inbox: create(:inbox, account: account))
+    post "#{base}/#{con_canal.id}/ficha/activate", headers: admin.create_new_auth_token
+    expect(response.parsed_body['rule']['name']).to include(con_canal.name)
+    expect(response.parsed_body['readiness'].find { |i| i['key'] == 'assignment' }['status']).to eq('ok')
+  end
+
   it 'las Reglas se guardan al crear y con la ficha' do
     regla = { keyword: 'asesor', action: ContactTrackings::KeywordActionService::VALID_ACTIONS.first,
               direction: ContactTrackings::KeywordActionService::VALID_DIRECTIONS.first }

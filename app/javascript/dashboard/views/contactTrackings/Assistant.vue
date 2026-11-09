@@ -681,7 +681,13 @@ export default {
       this.draftingTests = data.proposal?.pruebas || [];
       this.draft = data.draft || '';
       this.validation = data.validation || null;
-      this.proposal = data.proposal || null;
+      // Una conversación sin Definición propia (p. ej. la que sigue a una publicada):
+      // la del agente al que pertenece.
+      this.proposal =
+        data.proposal ||
+        this.definitionOf(
+          (this.templates || []).find(t => t.id === data.tracking_template_id)
+        );
       this.rejected = null;
       this.manualConflict = null;
       this.lastDelivered = data.draft || '';
@@ -871,13 +877,23 @@ export default {
     // Carga un Agente IA existente para mejorarlo. Deja anotado cuál es, para que
     // el guardado ofrezca reemplazarlo —conservando el Entrenamiento anterior— en
     // vez de crear otro al lado.
+    definitionOf(template) {
+      if (!template) return null;
+      return {
+        name: template.name || '',
+        objective: template.objective || '',
+        ai_context: template.ai_context || '',
+      };
+    },
     loadTemplate(template) {
       if (!template) return;
 
       this.draft = template.complementary_prompt || '';
       this.editingTemplate = { id: template.id, name: template.name };
       if (template.inbox_id) this.setInbox(template.inbox_id);
-      this.proposal = null;
+      // feat/ficha_agente_ia: la Definición de la Estructura muestra lo que el agente YA
+      // tiene (antes quedaba vacía y el objetivo/contexto de la ficha no se veían).
+      this.proposal = this.definitionOf(template);
       this.rejected = null;
       this.manualConflict = null;
       // El agente cargado cuenta como entregado: lo editado a mano es lo que se

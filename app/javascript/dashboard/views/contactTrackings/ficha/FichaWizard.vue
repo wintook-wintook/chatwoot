@@ -24,6 +24,8 @@ import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 import FichaCards, { GROUPS } from './FichaCards.vue';
 import FichaNav from './FichaNav.vue';
 import FichaFiles from './FichaFiles.vue';
+import FichaTest from './FichaTest.vue';
+import FichaReadiness from './FichaReadiness.vue';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 
 const SECTIONS = ['sources', 'calendar', 'tickets', 'files', 'rules'];
@@ -40,7 +42,14 @@ const FILE_NAME = /^[a-zA-Z0-9_-]{1,60}$/;
 const MAX_CONTEXT = 800;
 
 export default {
-  components: { FichaCards, FichaNav, FichaFiles, KeywordActionsEditor },
+  components: {
+    FichaCards,
+    FichaNav,
+    FichaFiles,
+    FichaTest,
+    FichaReadiness,
+    KeywordActionsEditor,
+  },
   props: {
     // 'resources' | 'profile': la pestaña en la que está (la elige el espacio del agente).
     step: { type: String, default: 'resources' },
@@ -61,6 +70,10 @@ export default {
       files: [],
       // Reglas: palabras clave → acción (las mismas de la Ficha › Reglas).
       keywordActions: [],
+      // Frases de cliente agregadas a una ruta desde la prueba: { oferta: [frases] }.
+      phrases: {},
+      // Activarlo en su canal al crearlo (crea la automatización).
+      activateOnCreate: false,
       skip: [],
       query: '',
       kind: '',
@@ -122,6 +135,15 @@ export default {
     validation() {
       return (this.preview && this.preview.validation) || {};
     },
+    readiness() {
+      return (this.preview && this.preview.readiness) || [];
+    },
+    // Lo que se manda a probar: sin «activar» (no cambia el resultado).
+    testPayload() {
+      const resto = { ...this.payload };
+      delete resto.activate;
+      return resto;
+    },
     warnings() {
       return [
         ...(this.validation.blocking || []),
@@ -165,6 +187,8 @@ export default {
         items: this.items,
         files: this.files.map(file => ({ name: file.name })),
         keyword_actions: this.keywordActions,
+        phrases: this.phrases,
+        activate: this.activateOnCreate && !!this.inboxId,
         skip: this.skip,
         tone: this.tone,
         objective: this.objective.trim(),
@@ -236,6 +260,22 @@ export default {
     isSkipped(offer) {
       return this.skip.includes(offer.key);
     },
+    addPhrase({ key, phrase }) {
+      const actuales = this.phrases[key] || [];
+      if (actuales.includes(phrase)) return;
+      this.phrases = { ...this.phrases, [key]: [...actuales, phrase] };
+      useAlert(this.t('PHRASE_ADDED'));
+    },
+    onFix(item) {
+      if (item.fix === 'context') {
+        this.suggest('context');
+        return;
+      }
+      if (item.fix === 'channel') {
+        const caja = this.$refs.inbox;
+        if (caja) caja.focus();
+      }
+    },
     // ✨ Una llamada a OpenAI: objetivo y contexto con lo que ya se capturó.
     async suggest(campo) {
       this.suggesting = campo;
@@ -270,7 +310,8 @@ export default {
       try {
         const { data } = await FichaAPI.create(this.payload);
         await this.uploadFiles(data.id);
-        this.$store.dispatch('trackingTemplates/get');
+        // Esperar: el Entrenamiento que se abre enseguida busca el agente en esta lista.
+        await this.$store.dispatch('trackingTemplates/get');
         useAlert(this.t('CREATED'));
         this.$emit('created', data.id);
       } catch (error) {
@@ -470,7 +511,7 @@ export default {
         </label>
         <label class="!m-0">
           {{ t('INBOX') }}
-          <select v-model="inboxId" class="!mb-0">
+          <select ref="inbox" v-model="inboxId" class="!mb-0">
             <option value="">{{ t('INBOX_LATER') }}</option>
             <option v-for="inbox in inboxes" :key="inbox.id" :value="inbox.id">
               {{ inbox.name }}
@@ -585,7 +626,7 @@ export default {
 
     <!-- Panel: Tu agente podrá -->
     <aside
-      class="flex flex-col min-h-0 gap-3 p-4 border rounded-lg border-slate-200 dark:border-slate-700 bg-slate-25 dark:bg-slate-800/40"
+      class="flex flex-col min-h-0 gap-3 p-4 overflow-auto border rounded-lg border-slate-200 dark:border-slate-700 bg-slate-25 dark:bg-slate-800/40"
       :class="{ 'md:col-span-2 xl:col-span-1': step === 'resources' }"
     >
       <h3 class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -676,6 +717,23 @@ export default {
       >
         {{ preview.prompt }}
       </div>
+
+      <template v-if="step === 'profile' && hasSomething">
+        <FichaTest
+          class="pt-3 border-t border-slate-200 dark:border-slate-700"
+          :payload="testPayload"
+          :routes="routes"
+          @addPhrase="addPhrase"
+        />
+        <FichaReadiness
+          class="pt-3 border-t border-slate-200 dark:border-slate-700"
+          :items="readiness"
+          is-new
+          :activate-on-create.sync="activateOnCreate"
+          :can-activate="!!inboxId"
+          @fix="onFix"
+        />
+      </template>
 
       <div class="flex flex-col gap-1 mt-auto">
         <woot-button

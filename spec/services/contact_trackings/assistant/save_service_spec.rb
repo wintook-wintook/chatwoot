@@ -61,6 +61,16 @@ RSpec.describe ContactTrackings::Assistant::SaveService do
       expect(template.previous_complementary_prompt).to eq('el viejo')
     end
 
+    # feat/ficha_agente_ia: la Definición de la Estructura también se publica; vacía no borra.
+    it 'publica el objetivo y el contexto que vienen; los vacíos no borran lo que tiene' do
+      template.update!(ai_context: 'Horario: 9 a 6')
+      guardar(draft: draft_ok, mode: 'replace', params: { template_id: template.id, objective: 'Cotizar grúas', ai_context: '' })
+      expect(template.reload).to have_attributes(objective: 'Cotizar grúas', ai_context: 'Horario: 9 a 6')
+
+      guardar(draft: draft_ok, mode: 'replace', params: { template_id: template.id, objective: '', ai_context: 'Renta de grúas' })
+      expect(template.reload).to have_attributes(objective: 'Cotizar grúas', ai_context: 'Renta de grúas')
+    end
+
     # feat/agentes_ia_unificado: la versión del agente dice desde dónde se hizo.
     it 'deja una versión del agente con el origen y lo declarado en la sesión' do
       sesion = TrackingAssistantSession.create!(account: account, user: user, tracking_template: template)

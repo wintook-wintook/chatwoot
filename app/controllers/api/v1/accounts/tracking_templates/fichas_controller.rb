@@ -10,30 +10,57 @@
 #   POST tracking_templates/ficha_preview             ofertas + Entrenamiento generado + comprobador
 #   POST tracking_templates/ficha_create              crea el agente con todo eso (sin IA)
 #   POST tracking_templates/ficha_suggest             ✨ objetivo y contexto propuestos con IA (1 llamada)
+#   POST tracking_templates/ficha_test                probar antes de crear (job; turn_id) → 202
+#   GET  tracking_templates/ficha_test/:turn_id       avance o resultado de la prueba
 #     params: name, inbox_id, items[], skip[] (ofertas apagadas), objective, business, tone,
 #             customer_display_name, files[] ({ name }: archivos que la pantalla sube al crear),
-#             keyword_actions[] (Reglas)
+#             keyword_actions[] (Reglas), phrases ({ oferta => [frases] }), activate (crear y activar)
 #
 # Agente que ya existe:
 #   GET   tracking_templates/:id/ficha        tarjetas + lo marcado + cambios contra el prompt
 #   PATCH tracking_templates/:id/ficha        guarda lo marcado (items) y devuelve los cambios
 #   POST  tracking_templates/:id/ficha/apply  aplica al prompt add[] (ofertas) y remove[] (rutas)
+#   POST  tracking_templates/:id/ficha/activate  crea la automatización que se lo asigna en su canal
 # ================================================================================
 
 class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts::BaseController
   INVALID = 'El Entrenamiento tiene errores que impiden guardarlo.'
   NO_AI = 'No se pudo proponer con IA: revisa que la cuenta tenga OpenAI activo.'
+  NO_CHANNEL = 'Para activarlo, primero elige su canal en la Ficha de Agente IA.'
   KEYWORD_FIELDS = [:keyword, :action, :direction, :label, :assignee_id, :team_id].freeze
 
   before_action :check_authorization
-  before_action :fetch_tracking_template, only: [:show, :update, :apply]
+  before_action :fetch_tracking_template, only: [:show, :update, :apply, :activate]
 
   def catalog
-    render json: { cards: catalog_for(inbox).call }
+    render json: { cards: draft.cards }
   end
 
   def preview
-    render json: build(catalog_for(inbox).call)
+    render json: draft.result.merge(readiness: new_readiness.call)
+  end
+
+  # Probar antes de crear: ~20 llamadas en serie → job; la pantalla consulta test_result.
+  # (No se llama `test`: pisaría Kernel#test.)
+  def run_test
+    turn_id = params[:turn_id].to_s
+    turn_id = "ficha-#{SecureRandom.hex(8)}" unless turn_id.match?(ContactTrackings::Assistant::TurnProgress::TURN_ID_RE)
+    ContactTrackings::Ficha::TestJob.perform_later(Current.account.id, Current.user.id, turn_id, draft.params.to_h)
+    render json: { turn_id: turn_id }, status: :accepted
+  end
+
+  def test_result
+    resultado = ContactTrackings::Assistant::TurnProgress.read_result(Current.account, Current.user, params[:turn_id])
+    return render json: { done: true, result: resultado } if resultado
+
+    render json: { done: false, progress: ContactTrackings::Assistant::TurnProgress.read(Current.account, Current.user, params[:turn_id]) }
+  end
+
+  def activate
+    regla = readiness_for(@tracking_template).activate!
+    render json: ficha_json.merge(rule: regla.slice(:id, :name))
+  rescue ArgumentError
+    render json: { error: NO_CHANNEL }, status: :unprocessable_entity
   end
 
   def show
@@ -42,9 +69,8 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
 
   # ✨ Proponer objetivo y contexto con IA (una llamada a OpenAI; Ficha::Suggester).
   def suggest
-    cards = catalog_for(inbox).call
     propuesta = ContactTrackings::Ficha::Suggester.new(
-      account: Current.account, name: params[:name], offers: offers_for(cards), cards: cards,
+      account: Current.account, name: draft.name, offers: draft.offers, cards: draft.cards,
       business: params[:business], tone: params[:tone]
     ).call
     return render json: { error: NO_AI }, status: :unprocessable_entity if propuesta.nil?
@@ -53,10 +79,11 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
   end
 
   def create
-    resultado = build(catalog_for(inbox).call)
+    resultado = draft.result
     return render json: resultado.merge(error: INVALID), status: :unprocessable_entity unless resultado[:validation][:valid]
 
     template = Current.account.tracking_templates.create!(new_template_attributes(resultado))
+    readiness_for(template).activate! if ActiveModel::Type::Boolean.new.cast(params[:activate]) && template.inbox
     render json: resultado.merge(id: template.id), status: :created
   end
 
@@ -78,10 +105,10 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
   private
 
   def new_template_attributes(resultado)
-    { name: params[:name].to_s.squish, inbox_id: inbox&.id, user: Current.user,
+    { name: draft.name, inbox_id: draft.inbox&.id, user: Current.user,
       objective: resultado[:objective], ai_context: resultado[:ai_context].presence,
-      complementary_prompt: resultado[:prompt], resources: resources_for(items),
-      calendar_integration_ids: calendar_ids(items), version_note: 'Creado desde la ficha',
+      complementary_prompt: resultado[:prompt], resources: resources_for(draft.items),
+      calendar_integration_ids: calendar_ids(draft.items), version_note: 'Creado desde la ficha',
       customer_display_name: params[:customer_display_name].presence, keyword_actions: keyword_actions || [] }
   end
 
@@ -113,12 +140,6 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
     @tracking_template = Current.account.tracking_templates.find(params[:tracking_template_id])
   end
 
-  def inbox
-    return @inbox if defined?(@inbox)
-
-    @inbox = params[:inbox_id].present? ? Current.account.inboxes.find_by(id: params[:inbox_id]) : nil
-  end
-
   def catalog_for(bandeja, template = nil)
     ContactTrackings::Ficha::Catalog.new(Current.account, inbox: bandeja, template: template)
   end
@@ -146,18 +167,18 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
     lista.filter_map { |i| i['key'][/\Acalendar:(\d+)\z/, 1]&.to_i }
   end
 
-  def offers_for(cards)
-    ContactTrackings::Ficha::Offers.new(cards, items).call + ContactTrackings::Ficha::Offers.pending_files(params[:files])
+  # Lo capturado en la ficha de un agente NUEVO, armado (ver Ficha::Draft).
+  def draft = @draft ||= ContactTrackings::Ficha::Draft.new(Current.account, params)
+
+  def new_readiness
+    ContactTrackings::Ficha::Readiness.new(Current.account, offers: draft.active_offers, inbox: draft.inbox,
+                                                            ai_context: draft.result[:ai_context])
   end
 
-  def build(cards)
-    apagadas = Array(params[:skip]).map(&:to_s)
-    ofertas = offers_for(cards)
-    generado = ContactTrackings::Ficha::Generator.new(
-      account: Current.account, name: params[:name], offers: ofertas.reject { |o| apagadas.include?(o[:key]) },
-      **params.permit(:objective, :business, :tone).to_h.symbolize_keys
-    ).call
-    generado.merge(offers: ofertas.map { |o| o.except(:route).merge(on: apagadas.exclude?(o[:key])) })
+  def readiness_for(template)
+    cards = catalog_for(template.inbox, template).call
+    ofertas = ContactTrackings::Ficha::Offers.new(cards, ContactTrackings::Ficha::Changes.new(template, cards: cards).items).call
+    ContactTrackings::Ficha::Readiness.new(Current.account, offers: ofertas, template: template)
   end
 
   def ficha_json
@@ -165,6 +186,6 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
     cards = catalog_for(@tracking_template.inbox, @tracking_template).call
     cambios = ContactTrackings::Ficha::Changes.new(@tracking_template, cards: cards)
     { cards: cards, items: cambios.items, changes: cambios.call.except(:deduced),
-      keyword_actions: @tracking_template.keyword_actions || [] }
+      keyword_actions: @tracking_template.keyword_actions || [], readiness: readiness_for(@tracking_template).call }
   end
 end

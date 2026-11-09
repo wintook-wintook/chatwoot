@@ -31,6 +31,20 @@ class FichaAgenteAPI extends ApiClient {
     return axios.post(`${this.url}/ficha_suggest`, payload);
   }
 
+  // Probar antes de crear (corre en segundo plano) y su avance/resultado.
+  test(payload) {
+    return axios.post(`${this.url}/ficha_test`, payload);
+  }
+
+  testResult(turnId) {
+    return axios.get(`${this.url}/ficha_test/${turnId}`);
+  }
+
+  // Crea la automatización que se lo asigna a las conversaciones de su canal.
+  activate(id) {
+    return axios.post(`${this.url}/${id}/ficha/activate`);
+  }
+
   get(id) {
     return axios.get(`${this.url}/${id}/ficha`);
   }
