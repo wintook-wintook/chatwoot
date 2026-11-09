@@ -314,8 +314,8 @@ export default {
     class="grid flex-1 min-h-0 gap-4"
     :class="
       step === 'resources'
-        ? 'md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)_320px]'
-        : 'xl:grid-cols-[minmax(0,1fr)_320px]'
+        ? 'md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)]'
+        : 'xl:grid-cols-[minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)]'
     "
   >
     <!-- ① Recursos: menú -->
@@ -334,12 +334,16 @@ export default {
 
     <!-- ① Recursos: sección -->
     <div v-if="step === 'resources'" class="flex flex-col min-h-0 gap-4">
-      <div class="flex-1 min-h-0 pr-1 overflow-auto">
-        <div v-if="section === 'sources'" class="flex flex-col gap-3">
-          <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
+      <div class="flex flex-col flex-1 min-h-0">
+        <!-- Fuentes: el texto, el buscador y los tipos fijos; solo las tarjetas hacen scroll. -->
+        <div
+          v-if="section === 'sources'"
+          class="flex flex-col flex-1 min-h-0 gap-3"
+        >
+          <p class="!m-0 text-sm text-slate-600 dark:text-slate-300 shrink-0">
             {{ t('SOURCES_HINT') }}
           </p>
-          <div class="flex flex-wrap items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
             <div class="relative flex-1 min-w-[12rem]">
               <fluent-icon
                 icon="search"
@@ -370,20 +374,25 @@ export default {
               </button>
             </div>
           </div>
-          <p v-if="loadingCards" class="!m-0 text-sm text-slate-500">
-            {{ t('LOADING') }}
-          </p>
-          <FichaCards
-            v-else
-            v-model="items"
-            :cards="cards"
-            :only="['sources']"
-            :query="query"
-            :kind="kind"
-            :show-headers="false"
-          />
+          <div class="flex-1 min-h-0 pr-1 overflow-auto">
+            <p v-if="loadingCards" class="!m-0 text-sm text-slate-500">
+              {{ t('LOADING') }}
+            </p>
+            <FichaCards
+              v-else
+              v-model="items"
+              :cards="cards"
+              :only="['sources']"
+              :query="query"
+              :kind="kind"
+              :show-headers="false"
+            />
+          </div>
         </div>
-        <div v-else-if="section === 'calendar'" class="flex flex-col gap-3">
+        <div
+          v-else-if="section === 'calendar'"
+          class="flex flex-col flex-1 min-h-0 gap-3 pr-1 overflow-auto"
+        >
           <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ t('CALENDAR_HINT') }}
           </p>
@@ -394,7 +403,10 @@ export default {
             :show-headers="false"
           />
         </div>
-        <div v-else-if="section === 'tickets'" class="flex flex-col gap-3">
+        <div
+          v-else-if="section === 'tickets'"
+          class="flex flex-col flex-1 min-h-0 gap-3 pr-1 overflow-auto"
+        >
           <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ t('TICKETS_HINT') }}
           </p>
@@ -405,13 +417,19 @@ export default {
             :show-headers="false"
           />
         </div>
-        <div v-else-if="section === 'files'" class="flex flex-col gap-3">
+        <div
+          v-else-if="section === 'files'"
+          class="flex flex-col flex-1 min-h-0 gap-3 pr-1 overflow-auto"
+        >
           <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ t('FILES_HINT') }}
           </p>
           <FichaFiles v-model="files" />
         </div>
-        <div v-else class="flex flex-col gap-3">
+        <div
+          v-else
+          class="flex flex-col flex-1 min-h-0 gap-3 pr-1 overflow-auto"
+        >
           <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ t('RULES_HINT') }}
           </p>

@@ -197,14 +197,15 @@ export default {
       </div>
 
       <div
-        class="grid flex-1 min-h-0 gap-4 md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)_320px]"
+        class="grid flex-1 min-h-0 gap-4 md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)]"
       >
         <FichaNav v-model="section" :items="navItems" />
 
         <!-- Sección -->
-        <div class="flex flex-col min-h-0 gap-3 pr-1 overflow-auto">
+        <div class="flex flex-col min-h-0 gap-3">
+          <!-- Fuentes: buscador y tipos fijos; solo las tarjetas hacen scroll. -->
           <template v-if="section === 'sources'">
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
               <div class="relative flex-1 min-w-[12rem]">
                 <fluent-icon
                   icon="search"
@@ -235,52 +236,59 @@ export default {
                 </button>
               </div>
             </div>
-            <FichaCards
-              v-model="items"
-              :cards="cards"
-              :only="['sources']"
-              :query="query"
-              :kind="kind"
-              :disabled="busy"
-              :show-headers="false"
-            />
+            <div class="flex-1 min-h-0 pr-1 overflow-auto">
+              <FichaCards
+                v-model="items"
+                :cards="cards"
+                :only="['sources']"
+                :query="query"
+                :kind="kind"
+                :disabled="busy"
+                :show-headers="false"
+              />
+            </div>
           </template>
-          <template v-else-if="section === 'files'">
-            <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
-              {{ t('FILES_HINT_EXISTING') }}
-            </p>
-            <FichaFiles
-              :template-id="templateId"
-              :existing-names="fileNames"
-              @uploaded="onUploaded"
-            />
-            <FichaCards
-              v-if="fileNames.length"
-              v-model="items"
-              :cards="cards"
-              :only="['files']"
-              :disabled="busy"
-              :show-headers="false"
-            />
-          </template>
-          <template v-else-if="section === 'rules'">
-            <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
-              {{ t('RULES_HINT') }}
-            </p>
-            <KeywordActionsEditor v-model="rules" />
-          </template>
-          <template v-else>
-            <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
-              {{ t(`${section.toUpperCase()}_HINT`) }}
-            </p>
-            <FichaCards
-              v-model="items"
-              :cards="cards"
-              :only="[section]"
-              :disabled="busy"
-              :show-headers="false"
-            />
-          </template>
+          <div
+            v-else
+            class="flex flex-col flex-1 min-h-0 gap-3 pr-1 overflow-auto"
+          >
+            <template v-if="section === 'files'">
+              <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
+                {{ t('FILES_HINT_EXISTING') }}
+              </p>
+              <FichaFiles
+                :template-id="templateId"
+                :existing-names="fileNames"
+                @uploaded="onUploaded"
+              />
+              <FichaCards
+                v-if="fileNames.length"
+                v-model="items"
+                :cards="cards"
+                :only="['files']"
+                :disabled="busy"
+                :show-headers="false"
+              />
+            </template>
+            <template v-else-if="section === 'rules'">
+              <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
+                {{ t('RULES_HINT') }}
+              </p>
+              <KeywordActionsEditor v-model="rules" />
+            </template>
+            <template v-else>
+              <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
+                {{ t(`${section.toUpperCase()}_HINT`) }}
+              </p>
+              <FichaCards
+                v-model="items"
+                :cards="cards"
+                :only="[section]"
+                :disabled="busy"
+                :show-headers="false"
+              />
+            </template>
+          </div>
         </div>
 
         <!-- Panel: cambios para el Entrenamiento -->
