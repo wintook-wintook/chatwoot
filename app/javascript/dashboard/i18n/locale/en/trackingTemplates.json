@@ -62,7 +62,14 @@
         "DELETE": "Delete",
         "INVALID_NAME": "The name only allows letters, numbers, hyphen and underscore (no spaces).",
         "NO_FILE": "Select a file to upload.",
-        "UPLOAD_ERROR": "Could not upload the file."
+        "UPLOAD_ERROR": "Could not upload the file.",
+        "DROP_HINT": "Drop your files here or",
+        "SELECT_FILES": "Select files",
+        "PENDING_TITLE": "To upload ({count})",
+        "UPLOAD_ALL": "Upload ({count})",
+        "UPLOADING": "Uploading…",
+        "REMOVE": "Remove from list",
+        "DUPLICATE_NAME": "Another file already has that name."
       },
       "TAGS": {
         "LABEL": "Tags",

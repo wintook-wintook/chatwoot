@@ -18,6 +18,7 @@ import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 // proyecto@ai_agent_attachments
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
+import AttachmentUploader from './AttachmentUploader.vue'; // fix/archivos_varios
 // @knowledge_sources: fuentes Discourse para la directiva @buscar_foro
 import KnowledgeSourcesAPI from 'dashboard/routes/dashboard/settings/knowledgeSources/api';
 // proyecto@bot_seguimiento_calendar: lista de zonas horarias (reutiliza Horario laboral)
@@ -33,7 +34,7 @@ const DIRECTIVE_GROUPS = [
 ];
 
 export default {
-  components: { KeywordActionsEditor },
+  components: { KeywordActionsEditor, AttachmentUploader },
 
   props: {
     templateData: {
@@ -104,10 +105,6 @@ export default {
       // proyecto@ai_agent_attachments
       attachments: [],
       isLoadingAttachments: false,
-      isUploadingAttachment: false,
-      attachmentName: '',
-      attachmentFile: null,
-      attachmentError: '',
       // renombrado inline de un adjunto
       editingAttachmentId: null,
       editingAttachmentName: '',
@@ -131,6 +128,10 @@ export default {
     };
   },
   computed: {
+    // fix/archivos_varios: para que AttachmentUploader no repita nombres.
+    attachmentNames() {
+      return this.attachments.map(a => a.name);
+    },
     ...mapGetters({
       appIntegrations: 'integrations/getAppIntegrations',
       inboxes: 'inboxes/getInboxes',
@@ -952,54 +953,6 @@ export default {
       const byName = (conn.name || '').toLowerCase().replace(/\s+/g, '');
       return /^[a-z0-9_]+$/.test(byName) ? byName : null;
     },
-    onAttachmentFileChange(event) {
-      const file = event.target.files && event.target.files[0];
-      this.attachmentFile = file || null;
-      // Sugerir un name slug a partir del filename si está vacío
-      if (file && !this.attachmentName) {
-        this.attachmentName = file.name
-          .replace(/\.[^.]+$/, '')
-          .toLowerCase()
-          .replace(/[^a-z0-9_-]+/g, '-')
-          .replace(/^-+|-+$/g, '')
-          .slice(0, 60);
-      }
-    },
-    async uploadAttachment() {
-      this.attachmentError = '';
-      const name = (this.attachmentName || '').trim();
-      if (!name || !/^[a-zA-Z0-9_-]+$/.test(name)) {
-        this.attachmentError = this.$t(
-          'TRACKING_TEMPLATES.FORM.ATTACHMENTS.INVALID_NAME'
-        );
-        return;
-      }
-      if (!this.attachmentFile) {
-        this.attachmentError = this.$t(
-          'TRACKING_TEMPLATES.FORM.ATTACHMENTS.NO_FILE'
-        );
-        return;
-      }
-      this.isUploadingAttachment = true;
-      try {
-        const { data } = await AiAgentAttachmentsAPI.upload(this.form.id, {
-          name,
-          file: this.attachmentFile,
-        });
-        this.attachments.push(data);
-        this.attachmentName = '';
-        this.attachmentFile = null;
-        if (this.$refs.attachmentFileInput) {
-          this.$refs.attachmentFileInput.value = '';
-        }
-      } catch (e) {
-        this.attachmentError =
-          e?.response?.data?.errors?.join(', ') ||
-          this.$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.UPLOAD_ERROR');
-      } finally {
-        this.isUploadingAttachment = false;
-      }
-    },
     async deleteAttachment(attachment) {
       try {
         await AiAgentAttachmentsAPI.remove(this.form.id, attachment.id);
@@ -1718,52 +1671,12 @@ export default {
           </div>
 
           <template v-else>
-            <!-- Subir archivo -->
-            <div class="mb-3">
-              <span
-                class="block text-xs font-medium text-slate-600 dark:text-slate-400"
-              >
-                {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.NAME_LABEL') }}
-              </span>
-              <div class="flex items-center gap-2 mt-1">
-                <input
-                  v-model="attachmentName"
-                  type="text"
-                  :placeholder="
-                    $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.NAME_PLACEHOLDER')
-                  "
-                  class="flex-1 min-w-0 !mb-0"
-                />
-                <!-- input nativo oculto: el filename largo no se muestra -->
-                <input
-                  ref="attachmentFileInput"
-                  type="file"
-                  class="hidden"
-                  @change="onAttachmentFileChange"
-                />
-                <woot-button
-                  color-scheme="success"
-                  size="small"
-                  class="shrink-0 upload-ctl-btn"
-                  :icon="attachmentFile ? 'checkmark' : 'attach'"
-                  @click.prevent="$refs.attachmentFileInput.click()"
-                >
-                  {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.SELECT_FILE') }}
-                </woot-button>
-                <woot-button
-                  size="small"
-                  class="shrink-0 upload-ctl-btn min-w-[96px] justify-center"
-                  :is-loading="isUploadingAttachment"
-                  :is-disabled="isUploadingAttachment || !attachmentFile"
-                  @click.prevent="uploadAttachment"
-                >
-                  {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.UPLOAD') }}
-                </woot-button>
-              </div>
-            </div>
-            <p v-if="attachmentError" class="text-xs text-red-500 mb-2">
-              {{ attachmentError }}
-            </p>
+            <!-- Subir archivos: varios a la vez (fix/archivos_varios) -->
+            <AttachmentUploader
+              :template-id="form.id"
+              :existing-names="attachmentNames"
+              @uploaded="attachments.push($event)"
+            />
 
             <!-- Listado -->
             <div
@@ -2221,11 +2134,5 @@ input,
 textarea {
   height: auto !important;
   font-size: 14px !important;
-}
-
-/* proyecto@ai_agent_attachments: botones de subida a la misma altura que el input */
-.upload-ctl-btn {
-  height: 38px !important;
-  margin-bottom: 12px;
 }
 </style>
