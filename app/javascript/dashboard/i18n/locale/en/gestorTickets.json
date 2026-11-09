@@ -244,6 +244,14 @@
     "PRESENCE": {
       "BANNER": "{names} is also on this case | {names} are also on this case"
     },
+    "AGENT": {
+      "ACTIVE": "{name} · replying",
+      "PAUSED": "{name} · paused (not replying now)",
+      "ATTEMPTS": "attempt {n} of {max}",
+      "NEXT": "writes again {date}",
+      "NONE": "No agent: nothing automatic is handling this conversation",
+      "NO_CONVERSATION": "No conversation: an agent can't be assigned"
+    },
     "NEXT_STEP": {
       "TASK": "Task · {date}",
       "TASK_OVERDUE": "Overdue task · {date}",
@@ -2372,6 +2380,10 @@
       },
       "NO_NEXT_STEP": "No next step",
         "NO_NEXT_STEP_HINT": "Only open cases with no pending tasks and nothing scheduled",
+        "AGENT_WITH": "With agent",
+        "AGENT_WITH_HINT": "Only open cases whose conversation an agent is handling (AI follow-up or AI Agents)",
+        "AGENT_NONE": "No agent",
+        "AGENT_NONE_HINT": "Only open cases no automatic agent is handling",
         "COMMITTED_ONLY": "Committed only",
       "COMMITTED_ONLY_HINT": "Only opportunities the customer already committed to pay. Combines with the other filters and the overdue-close alert.",
       "DATE_FIELD": "Which date?",

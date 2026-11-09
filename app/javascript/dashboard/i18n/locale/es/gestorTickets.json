@@ -244,6 +244,14 @@
     "PRESENCE": {
       "BANNER": "{names} también está en este caso | {names} también están en este caso"
     },
+    "AGENT": {
+      "ACTIVE": "{name} · contestando",
+      "PAUSED": "{name} · en pausa (no contesta ahora)",
+      "ATTEMPTS": "intento {n} de {max}",
+      "NEXT": "vuelve a escribir {date}",
+      "NONE": "Sin agente: nadie automático atiende esta conversación",
+      "NO_CONVERSATION": "Sin conversación: no se le puede asignar un agente"
+    },
     "NEXT_STEP": {
       "TASK": "Tarea · {date}",
       "TASK_OVERDUE": "Tarea vencida · {date}",
@@ -2383,6 +2391,10 @@
       },
       "NO_NEXT_STEP": "Sin siguiente paso",
         "NO_NEXT_STEP_HINT": "Solo los casos abiertos sin tareas pendientes ni nada agendado",
+        "AGENT_WITH": "Con agente",
+        "AGENT_WITH_HINT": "Solo los casos abiertos cuya conversación atiende un agente (Seguimiento IA o Agentes IA)",
+        "AGENT_NONE": "Sin agente",
+        "AGENT_NONE_HINT": "Solo los casos abiertos que ningún agente automático está atendiendo",
         "COMMITTED_ONLY": "Solo comprometidas",
       "COMMITTED_ONLY_HINT": "Solo las oportunidades que el cliente ya se comprometió a pagar. Se combina con los demás filtros y con el aviso de cierre vencido.",
       "DATE_FIELD": "¿Qué fecha?",

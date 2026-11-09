@@ -2,7 +2,7 @@
 key: casos
 title: Casos (lo común de Ventas y Servicio)
 areas: [sales, service]
-keywords: [caso, casos, folio, crear caso, nuevo caso, caso interno, ticket, responsable, equipo, vencimiento, vence, cambiar estado, cerrar caso, cancelar caso, reabrir, tareas pendientes, conversaciones del caso, ligar conversacion, agregar conversacion, nota, agendar, lista, tablero, dashboard, varios casos, tomar]
+keywords: [caso, casos, folio, crear caso, nuevo caso, caso interno, ticket, responsable, equipo, vencimiento, vence, cambiar estado, cerrar caso, cancelar caso, reabrir, tareas pendientes, conversaciones del caso, ligar conversacion, agregar conversacion, nota, agendar, lista, tablero, dashboard, varios casos, tomar, siguiente paso, sin siguiente paso, agente, robot, sin agente, con agente, seguimiento ia, quien atiende]
 pages: [cases, opportunities, case]
 ---
 ## Para qué sirve
@@ -44,6 +44,15 @@ Un caso es un trabajo con un cliente que empieza y termina: una oportunidad de v
 ### Reabrir
 1. En el caso cerrado o cancelado pulsa «Reabrir».
 2. Escribe el motivo (obligatorio) y pulsa «Reabrir caso». Queda en el historial y el SLA vuelve a contar desde cero.
+
+### Ver de un vistazo cómo va cada caso (lista y tablero)
+1. «Siguiente paso» muestra la tarea o tarea agendada más próxima del caso; «Sin siguiente paso» (en amarillo) avisa que el caso no tiene nada pendiente.
+2. El robot junto al siguiente paso dice si un agente atiende la conversación del caso:
+   - morado: un agente está contestando (Seguimiento IA o un agente de Agentes IA);
+   - ámbar: hay agente, pero está en pausa (por ejemplo, porque la tomó una persona);
+   - gris tachado: sin agente, nadie automático atiende la conversación (más tenue si el caso no tiene conversación).
+3. Pasa el mouse sobre el robot para ver qué agente es, su objetivo, en qué intento va y cuándo vuelve a escribir.
+4. En la barra de filtros, «Sin siguiente paso», «Sin agente» y «Con agente» dejan solo esos casos (otro clic quita el filtro). Los casos cerrados o cancelados no muestran robot.
 
 ### Varios casos a la vez
 1. En la vista Lista marca las casillas de los casos.
