@@ -1,7 +1,7 @@
 # La ficha primero — reformar la creación de Agentes IA — Plan v0.1
 
 > Rama: `feat/crear_agente_conversando` (se construye encima de lo que ya tiene).
-> Estado: **solo plan**, nada implementado. Decisiones D1–D6 abiertas (§11).
+> Estado: **F0–F6 hechas** (09/11/2026), sin probar en navegador y sin PR (el usuario pidió no subir a develop todavía). D1–D6 tomadas como se recomendó (§11).
 > Fecha: 09/11/2026.
 
 ---
@@ -254,3 +254,87 @@ no la confirme, nada cambia en cómo contesta.
 | El chat ofrece algo que la fuente no sostiene | Cada oferta va probada con `probar_fuente`; sin prueba buena, no se ofrece como ✓ |
 | Costo de OpenAI al abrir la conversación | Las pruebas de parecido usan los vectores guardados; solo el primer mensaje del chat gasta |
 | Esta rama no tiene PR y crece | F0 la pone al día; considerar PR de lo hecho (F0–F4 + §15) antes de F2 |
+
+---
+
+## 13. Avance (09/11/2026)
+
+Pedido del usuario: «ejecuta todo y ya al final vemos cómo queda, pero me debe permitir generar un
+agente IA en unos cuantos clics al definir lo que usará en la ficha… aún no se debe subir a
+develop». Y: «si modifico la ficha se deben detectar esos cambios para el prompt y mencionarlo».
+
+### F0 — rama al día ✅
+`feat/crear_agente_conversando` rebasada sobre `feat/diagrama_agente_ia` (al día con develop
+de9beb39); tag local `respaldo-crear-agente-antes-rebase-0911`. AgentWorkspace.spec contaba mal
+las pestañas (faltaba «Probar fuentes»): corregido.
+
+### F1 — guardar la ficha y el mapa recurso → oferta ✅
+- `tracking_templates.resources` jsonb (migración `20261111100000`):
+  `{ items: [{ key: 'google_sheet:12' }, { key: 'canned_response', parts: ['PATITAS'] }], confirmed_at }`.
+- `ContactTrackings::Ficha::Catalog`: una tarjeta por recurso (hojas, documentos, artículos,
+  predefinidas por grupo, foro, CONTPAQi, Discourse del canal, consultas del ERP, agendas, tipos de
+  ticket, archivos del agente) con `status` ready/warn y el motivo (sin filas, sin vectorizar,
+  falta OpenAI, Google vencido). Reusa `SourceProfiles`.
+- `Ficha::CannedGroups`: categorías + prefijos de las que no tienen categoría, con `not_ready`.
+- `Ficha::Offers`: cada recurso → «lo que puede hacer» + su ruta (`RouteMap::LINE_RE`):
+  agenda y ticket como acción (`- -> …`), grupos de predefinidas con <4 respuestas juntos en una
+  ruta sin grupo (como pide `CorpusChecks`), ERP con prefijo de conexión y `param=?`.
+
+### F2/F5 — pantallas ✅
+- Agente nuevo: **asistente de 3 pasos** en la pestaña «Recursos» (primera, D6):
+  ① Recursos (nombre, canal, tarjetas) → ② Qué hará (ofertas prendidas, tono, datos del negocio)
+  → ③ Revisar y crear (rutas en palabras, comprobador, «Ver el Entrenamiento»). La vista previa
+  se recalcula sola. «Prefiero crearlo conversando» lleva al Entrenamiento de siempre.
+- Agente que ya existe: pestaña **Recursos** con las tarjetas, «Cambios para el Entrenamiento»
+  ([Agregar ruta] / [Quitar ruta] / [Aplicar todos]) y número en la pestaña si hay pendientes.
+- Componentes: `ficha/FichaCards.vue`, `ficha/FichaWizard.vue`, `ficha/AgentFicha.vue`;
+  API `dashboard/api/fichaAgente.js`.
+
+### F3/F4 — generar sin IA y respetar la ficha ✅
+- `Ficha::Generator`: escribe rutas + `@ruta_por_defecto` + [ROL] [ALCANCE POR RAMA] [FIDELIDAD]
+  [ETIQUETAS] ([ARCHIVOS]) [ESTILO] [PROHIBIDO] y corre `ValidatorService`. **No gasta OpenAI.**
+  Medido: con TODO lo de la cuenta 2 marcado (35 rutas) → 0 bloqueos, 0 avisos, 0 cosméticos;
+  las 3 cuentas de dev con recursos → 0 hallazgos.
+- `Ficha::Changes`: ficha contra prompt → `added` / `removed` / `not_ready`; `deduced` para los
+  agentes que ya existían (D2). Medido contra los 18 agentes de dev con rutas: **0 cambios falsos**.
+- `Ficha::PromptEditor`: aplica agregar/quitar ruta (con su línea de alcance y etiqueta, y la ruta
+  por defecto si hacía falta); el resultado pasa por el comprobador antes de guardar.
+- **El chat lo menciona**: `InterviewTurn` pasa `Changes#chat_lines` al Asistente («CAMBIOS EN LA
+  FICHA… menciónalos y no cambies nada sin su OK»).
+- D1: la ficha guía y el panel/chat avisan; el motor no cambia.
+
+### F6 — R4 de respuestas predefinidas ✅
+`@buscar_predefinidas(X)`: si hay una categoría X, busca por `metadata.category`; si no, por
+prefijo. En el motor (`KnowledgeBaseResponseService.grouped_items`), en la prueba en seco
+(`KnowledgeBase::CannedGroup`, amarradas por `canned_group_spec`) y en el conteo del comprobador
+(`CorpusChecks#canned_count_for`).
+
+### API
+| | |
+|---|---|
+| `GET tracking_templates/ficha_catalog?inbox_id=` | tarjetas |
+| `POST tracking_templates/ficha_preview` | ofertas + Entrenamiento + comprobador |
+| `POST tracking_templates/ficha_create` | crea el agente (422 si el comprobador bloquea) |
+| `GET/PATCH tracking_templates/:id/ficha` | ficha + cambios / guardar lo marcado |
+| `POST tracking_templates/:id/ficha/apply` | `add[]` ofertas, `remove[]` rutas |
+
+### Pila de pruebas
+- rspec: `spec/services/contact_trackings/ficha/*` (catálogo → ofertas → generador sin
+  hallazgos; cambios, deducción, predefinidas sin grupo, aplicar), `fichas_spec` (solo admin,
+  catálogo → vista previa → crear, guardar → cambios → aplicar), `canned_group_spec` (categoría,
+  negada, prefijo, paridad con el motor). Más 196 existentes de chat, comprobador y motor en verde.
+- vitest: `ficha/Ficha.spec.js` (tarjetas, grupos, 3 clics, no crear con errores, aplicar todos
+  sin repetir rutas) + `AgentWorkspace.spec.js`; 330 de Agentes IA en verde.
+
+### Cómo se usa
+1. Agentes IA → Nuevo → pestaña **Recursos**: nombre, canal, marcar tarjetas → Siguiente.
+2. Quitar lo que no quieras que haga, tono → Siguiente.
+3. Revisar → **Crear agente**. Abre el Entrenamiento para afinarlo con el Asistente o a mano.
+4. Después, en **Recursos**: marcar/desmarcar → Guardar ficha → aplicar los cambios que se listan
+   (o pedírselo al Asistente en el chat: ya los conoce).
+
+### Pendiente
+- Probar en navegador. - Subir archivos desde la ficha (hoy: Ficha › Archivos; `fix/archivos_varios`
+  PR #150 trae subir varios). - Mover Agendas/Archivos dentro de Recursos (D6 completa).
+- Avisar en el comprobador (pintado en el editor) la ruta con recurso fuera de la ficha: hoy se ve
+  en Recursos y en el chat.

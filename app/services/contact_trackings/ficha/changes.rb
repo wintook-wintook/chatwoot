@@ -77,16 +77,24 @@ class ContactTrackings::Ficha::Changes
     routes.any? { |r| uses?(r[:target], oferta) }
   end
 
-  def uses?(target, oferta)
+  # loose: una búsqueda de predefinidas SIN grupo cubre todos los grupos (para «agregaste»);
+  # para «quitaste» cuenta solo lo escrito tal cual.
+  def uses?(target, oferta, loose: true)
     directiva = oferta[:directive].to_s
     case oferta[:kind]
     when 'sheet' then sheet_match?(target, oferta[:name])
     when 'calendar' then target.match?(/@agendar_calendar\b/i)
     when 'case_type' then target.downcase.include?(directiva.downcase.delete_suffix(')'))
-    when 'canned' then canned_match?(target, directiva)
+    when 'canned' then canned_used?(target, directiva, loose)
     when 'erp' then target.downcase.include?(directiva[/consulta:[^()}]+/].to_s.downcase)
     else target.downcase.include?(directiva.downcase)
     end
+  end
+
+  def bare_canned? = routes.any? { |r| canned_match?(r[:target], '@buscar_predefinidas') }
+
+  def canned_used?(target, directiva, loose)
+    canned_match?(target, directiva) || (loose && canned_match?(target, '@buscar_predefinidas'))
   end
 
   # {{hoja:Precios}} o {{hoja_buscar: Precios | …}}: las dos usan la hoja.
@@ -113,7 +121,7 @@ class ContactTrackings::Ficha::Changes
   def removed_in(ruta)
     return [] if covered?(ruta[:target])
 
-    outside_offers.select { |o| uses?(ruta[:target], o) }
+    outside_offers.select { |o| uses?(ruta[:target], o, loose: false) }
                   .map { |o| { key: o[:key], name: o[:name], route: ruta[:name], directive: o[:directive] } }
   end
 
@@ -150,14 +158,18 @@ class ContactTrackings::Ficha::Changes
   def deduced_item(key, ofertas)
     return { 'key' => key } unless key == 'canned_response'
 
-    partes = ofertas.filter_map { |o| o[:key].to_s.split(':', 2)[1] }.reject { |p| p == '*' }
+    partes = ofertas.filter_map { |o| o[:key].to_s.split(':', 2)[1] }
+    # Una búsqueda sin grupo = todas las predefinidas (sin elegir grupos).
+    return { 'key' => key } if partes.include?('*') || partes.empty? || bare_canned?
+
     { 'key' => key, 'parts' => partes }
   end
 
-  # La agenda: las que el agente YA tiene asignadas, no la primera de la cuenta.
+  # La agenda: las que el agente YA tiene asignadas, no la primera de la cuenta. Solo si
+  # alguna ruta agenda: tener calendarios asignados sin usarlos no es «agenda» en la ficha.
   def with_assigned_calendars(lista)
     asignadas = Array(@template.calendar_integration_ids).map { |id| "calendar:#{id}" } & @cards.pluck(:key)
-    return lista if asignadas.empty?
+    return lista if asignadas.empty? || lista.none? { |i| i['key'].start_with?('calendar:') }
 
     lista.reject { |i| i['key'].start_with?('calendar:') } + asignadas.map { |k| { 'key' => k } }
   end

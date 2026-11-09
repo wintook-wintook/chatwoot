@@ -58,4 +58,18 @@ RSpec.describe ContactTrackings::Ficha::Changes do
     expect(texto).not_to include('consultar_precios', '#precios =')
     expect(ContactTrackings::Assistant::ValidatorService.new(texto, account: account).call[:blocking]).to eq([])
   end
+
+  it 'una búsqueda de predefinidas sin grupo cubre todos los grupos: no inventa cambios' do
+    ['PATITAS uno', 'PATITAS dos', 'PATITAS tres', 'PATITAS cuatro'].each do |codigo|
+      create(:canned_response, account: account, short_code: codigo, content: codigo)
+    end
+    create(:knowledge_source, account: account, source_type: 'canned_response', name: 'Respuestas')
+    sin_grupo = create(:tracking_template, account: account,
+                                           complementary_prompt: "@ruta(dudas #dudas: pregunta algo): @buscar_predefinidas\n")
+    items = described_class.new(sin_grupo).items
+    sin_grupo.update!(resources: { 'items' => items, 'confirmed_at' => Time.current.iso8601 })
+
+    expect(items).to eq([{ 'key' => 'canned_response' }])
+    expect(described_class.new(sin_grupo.reload).call).to include(added: [], removed: [])
+  end
 end
