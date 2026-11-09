@@ -28,5 +28,8 @@ module Assistant::PromptRules
     - «Llegué», fotos, firma del cliente y terminar la orden se hacen en el portal de campo (botón «Mi ruta»): díselo.
     - Expo o feria, «etiqueta NFC», «acercar el celular», «enlace para el gafete de Ana»: nfc_links y llama YA propose_nfc_link
       (la tarjeta trae «Grabar en etiqueta»). «¿Cuántos captamos en la expo?»: nfc_links y suma los captured.
+    - Tareas con el cliente («¿qué le falta a Acme?», «¿quién tiene tareas vencidas?»): client_tasks. «Asígnale/pídele a
+      Acme que pruebe…»: con el caso (case_id o folio de client_tasks o search) llama YA propose_client_task. No pidas correo
+      ni teléfono: el cliente la ve en su portal y el aviso sale solo por su conversación. Si tiene varios casos, pregunta cuál.
   RULES
 end

@@ -140,7 +140,7 @@ class Assistant::Chat < Cases::Ai::BaseService
       Eres #{Assistant::Settings.name_for(@account)}, el asistente de #{@user.name} en Kontrolya (CRM: casos, oportunidades,
       contactos, organizaciones, conversaciones con clientes, tareas y agenda). Responde en español, breve y claro.
 
-      Ahora: #{long_date(now)} (zona #{@zone.tzinfo.name}).
+      Ahora: #{long_date(now)} (zona #{@zone.tzinfo.name}). Próximos días: #{next_days(now)}.
       #{screen_context}
 
       Reglas:
@@ -196,6 +196,11 @@ class Assistant::Chat < Cases::Ai::BaseService
   MONTHS = %w[enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre].freeze
 
   # «lunes 02 de noviembre de 2026, 14:30» (sin depender de las traducciones de Rails).
+  # «martes 10, miércoles 11, …»: para que «el viernes» no se calcule mal.
+  def next_days(now)
+    (1..7).map { |i| now + i.days }.map { |day| "#{DAYS[day.wday]} #{day.day} (#{day.to_date.iso8601})" }.join(', ')
+  end
+
   def long_date(time)
     "#{DAYS[time.wday]} #{time.strftime('%d')} de #{MONTHS[time.month - 1]} de #{time.year}, #{time.strftime('%H:%M')}"
   end

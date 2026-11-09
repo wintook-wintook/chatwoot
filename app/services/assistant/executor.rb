@@ -13,6 +13,7 @@ class Assistant::Executor
   include Assistant::ConversationRunner # contestar conversaciones
   include Assistant::FieldRunner # trabajo en campo
   include Assistant::EventRunner # NFC en la expo
+  include Assistant::ClientTaskRunner # tareas con el cliente
 
   class Refused < StandardError; end
 

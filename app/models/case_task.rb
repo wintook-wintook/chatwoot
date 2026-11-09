@@ -88,6 +88,16 @@ class CaseTask < ApplicationRecord
   belongs_to :team, optional: true
   # T3 — la tarea «Documenta…» lleva a esta etapa; se completa sola, no a mano.
   belongs_to :documentation_for_column, class_name: 'CaseTypeColumn', optional: true
+  # Tareas con el cliente — quién la hace: internal (como siempre), visible (nosotros; el
+  # cliente ve el avance en su portal) o client (la trabaja el cliente en su portal).
+  enum audience: { internal: 0, visible: 1, client: 2 }, _prefix: :for
+  CLIENT_STATUSES = %w[in_progress].freeze # avance del cliente mientras sigue pendiente
+  belongs_to :completed_by_contact, class_name: 'Contact', optional: true
+  has_many :client_entries, class_name: 'CaseTaskClientEntry', dependent: :destroy
+  scope :client_facing, -> { where(audience: %i[visible client]) }
+  validates :client_status, inclusion: { in: CLIENT_STATUSES }, allow_nil: true
+  validate :client_task_needs_case
+  before_validation :client_task_rules
 
   # Valores nuevos SIEMPRE al final. `cancelled`: su caso se cerró (Cases::PendingTasksOnClose).
   enum status: { pending: 0, done: 1, cancelled: 2 }
@@ -111,8 +121,9 @@ class CaseTask < ApplicationRecord
 
   # La orden de trabajo ya cierra con su reporte de servicio y firma: su lista de
   # verificación no lleva un reporte por punto.
+  # Tampoco las del cliente: lo que hizo queda en sus entradas del portal.
   def report_required?
-    !case_ticket&.work_order?
+    !case_ticket&.work_order? && !for_client?
   end
 
   def report_ready?
@@ -155,5 +166,17 @@ class CaseTask < ApplicationRecord
       self.completed_at    = nil
       self.completed_by_id = nil
     end
+  end
+
+  # Tareas con el cliente: las del cliente no tienen responsable interno (las sigue el
+  # responsable del caso) y su avance solo vale mientras está pendiente.
+  def client_task_rules
+    self.assignee_id = nil if for_client?
+    self.client_status = nil unless pending? && for_client?
+    self.completed_by_contact_id = nil unless done?
+  end
+
+  def client_task_needs_case
+    errors.add(:audience, 'necesita un caso') if !for_internal? && case_ticket_id.nil?
   end
 end

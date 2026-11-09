@@ -77,6 +77,11 @@ Rails.application.routes.draw do
             post :generate, on: :member
           end
           # Plan-Eventos E1 — eventos y su lista de contactos con estado
+          # Portal del cliente — el enlace de una organización o contacto (tareas con el cliente)
+          resource :client_portal_link, only: [:show, :create] do
+            post :renew
+            post :disable
+          end
           resources :events, only: [:index, :show, :create, :update, :destroy] do
             # Captar en la expo «acercando el celular» (etiqueta NFC)
             resources :capture_links, only: [:index, :create, :destroy], controller: 'event_capture_links'
@@ -421,7 +426,12 @@ Rails.application.routes.draw do
             # @tickets_cases 2E — relaciones entre tickets
             resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
             # @tickets_cases — tareas/subtareas del ticket
-            resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks'
+            resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks' do
+              # Tareas con el cliente — lo que pasó en su portal; responder o regresarla
+              resources :client_entries, only: [:index, :create], controller: 'case_task_client_entries' do
+                post :return, on: :collection, action: :return_task
+              end
+            end
             # Plan-Clase-Orden-de-Trabajo F2a — materiales de la orden
             resources :case_work_order_items, only: [:create, :update, :destroy], path: 'work_order_items'
             # Plan-Clase-Proyecto P2 — casos dentro del proyecto (crear o ligar / quitar)
@@ -1099,6 +1109,10 @@ Rails.application.routes.draw do
 
   # Plan-Trabajo-Campo R5 — portal del cliente de su orden y visita del técnico externo.
   get  'servicio/:token',            to: 'public/service_portals#show',  as: :public_service_portal
+  # Portal del cliente — sus casos y proyectos y las tareas que le tocan (tareas con el cliente)
+  get  'cliente/:token',                 to: 'public/client_portals#show',   as: :public_client_portal
+  post 'cliente/:token/quien',           to: 'public/client_portals#person', as: :public_client_portal_person
+  post 'cliente/:token/tareas/:task_id', to: 'public/client_portals#task',   as: :public_client_portal_task
   post 'servicio/:token/visita',     to: 'public/service_portals#visit', as: :public_service_portal_visit
   post 'servicio/:token/calificar',  to: 'public/service_portals#rate',  as: :public_service_portal_rate
   get  'tecnico/:token',             to: 'public/external_visits#show',   as: :public_external_visit

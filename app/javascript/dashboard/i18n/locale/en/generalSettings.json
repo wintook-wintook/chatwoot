@@ -110,7 +110,8 @@
       "calendar_event_reminder": "Calendar reminder",
       "case_stage_tasks": "New tasks",
       "case_stage_ready": "Stage ready",
-      "case_rule_notice": "Rule notice"
+      "case_rule_notice": "Rule notice",
+      "client_task_update": "Customer task"
     }
   },
   "NETWORK": {

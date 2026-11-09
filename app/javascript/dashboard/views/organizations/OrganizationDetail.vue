@@ -12,6 +12,7 @@ import ContactPicker from 'dashboard/views/gestorTickets/ContactPicker.vue';
 import OrganizationForm from './OrganizationForm.vue';
 import OrganizationActivity from './OrganizationActivity.vue';
 import ContactTasksTab from 'dashboard/routes/dashboard/contacts/components/ContactTasksTab.vue';
+import ClientPortalLinkCard from 'dashboard/components/clientPortal/ClientPortalLinkCard.vue'; // portal del cliente
 import {
   formatDate,
   organizationAccess,
@@ -26,6 +27,7 @@ export default {
     OrganizationForm,
     OrganizationActivity,
     ContactTasksTab,
+    ClientPortalLinkCard,
   },
   data() {
     return {
@@ -298,6 +300,11 @@ export default {
         </aside>
 
         <main class="flex flex-col flex-1 min-w-0 gap-6 p-4">
+          <!-- Portal del cliente: su enlace para ver casos y trabajar sus tareas -->
+          <ClientPortalLinkCard
+            :owner="{ organization_id: organizationId }"
+            :can-edit="access.canEdit"
+          />
           <!-- Contactos ligados -->
           <section>
             <h3

@@ -21,6 +21,7 @@ El asistente (se llama Dali, o el nombre que le puso tu empresa) contesta en tus
 - Cotizaciones (si puedes crear en Ventas): armarlas con los productos y precios del Catálogo, mandárselas al cliente y ver las que tiene abiertas.
 - Contestar a tus clientes: te dice qué conversaciones tuyas esperan respuesta (la que más lleva esperando primero), te resume qué dijeron y te deja la respuesta lista en una tarjeta para mandarla.
 - Trabajo en campo: tus visitas del día, cuál sigue, qué se le hizo la última vez al cliente, avisarle «voy en camino» y dictar el reporte de la visita (ver la guía «Mi ruta en campo»).
+- Tareas con el cliente: qué le falta a un cliente, quién tiene tareas vencidas y asignarle una tarea que trabaja en su portal (ver la guía «Tareas con el cliente y su portal»).
 - Captar en la expo: el enlace NFC de un evento para grabarlo en una etiqueta desde el teléfono («quiero grabar la etiqueta NFC de la expo para Ana») y cuántos se captaron.
 - Delegar el seguimiento de un cliente a un agente IA, preguntar cómo va y pausarlo, reanudarlo o cancelarlo.
 - Ventas (si tienes acceso a Ventas): cómo vas contra la meta, ranking de vendedores y clientes, oportunidades que cierran, vencidas o estancadas, y la salud del embudo. Las cifras son sin IVA; con «Solo lo suyo» son solo tus números.

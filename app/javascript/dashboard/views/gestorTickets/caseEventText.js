@@ -17,6 +17,8 @@ export default {
     },
     actorName(event) {
       if (event.actor?.name) return event.actor.name;
+      // Tareas con el cliente — lo hizo un contacto en su portal.
+      if (event.payload?.contact) return event.payload.contact;
       return event.origin === 'bot'
         ? this.$t('CASE_TICKETS.TIMELINE.ACTOR_BOT')
         : this.$t('CASE_TICKETS.TIMELINE.ACTOR_SYSTEM');
@@ -105,6 +107,19 @@ export default {
       }
       // Se ligó (o se creó) la conversación del caso.
       // Plan Actividad del caso — tareas y cotizaciones dejan huella.
+      // Tareas con el cliente — qué hizo en el portal y su comentario o archivo.
+      if (type === 'task_client_update') {
+        const folio = p.sequence
+          ? `T${String(p.sequence).padStart(3, '0')}`
+          : null;
+        return [
+          [folio, p.title].filter(Boolean).join(' · '),
+          this.$t(`CLIENT_TASKS.KINDS.${p.kind}`),
+          p.content || p.file,
+        ]
+          .filter(Boolean)
+          .join(' — ');
+      }
       if (type.startsWith('task_')) {
         const folio = p.sequence
           ? `T${String(p.sequence).padStart(3, '0')}`

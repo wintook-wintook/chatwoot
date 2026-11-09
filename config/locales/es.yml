@@ -173,6 +173,64 @@ es:
       no_conversation: 'El cliente no tiene conversaciones para avisarle'
       no_technician: 'La orden no tiene responsable'
       no_technician_contact: '%{name} no tiene su contacto de WhatsApp en Ajustes › Usuarios'
+  # Portal del cliente — tareas con el cliente (/cliente/:token)
+  client_portal:
+    title: 'Tu portal'
+    hello: 'Hola, %{name}'
+    who_title: '¿Quién eres?'
+    who_help: 'Elige tu nombre para que quede registrado quién avanza cada tarea.'
+    who_change: 'Cambiar'
+    who_save: 'Continuar'
+    needs_title: 'Lo que necesitamos de ti'
+    needs_empty: 'No tienes nada pendiente. ¡Gracias!'
+    cases_title: 'Tus casos y proyectos'
+    cases_empty: 'No hay casos abiertos.'
+    progress: 'Avance %{percent} %'
+    stages: 'Fases'
+    milestones: 'Hitos'
+    children: 'Casos del proyecto'
+    our_tasks: 'Lo que estamos haciendo'
+    your_tasks: 'Lo que te toca'
+    your_done: 'Lo que ya hiciste'
+    due: 'Para el %{date}'
+    overdue: 'Vencida desde el %{date}'
+    requires_file: 'Pide subir un archivo'
+    states:
+      pending: 'Pendiente'
+      in_progress: 'En proceso'
+      done: 'Hecha'
+    our_states:
+      pending: 'Pendiente'
+      done: 'Terminada'
+    done_by: 'Completada por %{name} el %{date}'
+    start: 'Empezar'
+    finish: 'Marcar como hecha'
+    finish_note: 'Comentario (opcional)'
+    comment: 'Comentar'
+    comment_placeholder: 'Escribe un comentario o una duda…'
+    attach: 'Subir archivo'
+    send: 'Enviar'
+    history: 'Historial'
+    kinds:
+      started: 'La empezó'
+      comment: 'Comentó'
+      file: 'Subió un archivo'
+      done: 'La marcó como hecha'
+      returned: 'La regresamos'
+      reply: 'Te respondimos'
+    notify:
+      due: ' (para el %{date})'
+      assigned: 'Hola %{name}, tienes una tarea nueva: «%{title}»%{due}. Aquí la ves y la vas completando: %{url}'
+      returned: 'Hola %{name}, revisamos «%{title}» y te la regresamos con un comentario. Aquí la ves: %{url}'
+      due_soon: 'Hola %{name}, te recordamos que «%{title}» vence mañana. Aquí la completas: %{url}'
+      overdue: 'Hola %{name}, «%{title}» venció ayer. ¿Nos ayudas a completarla? Aquí la ves: %{url}'
+    errors:
+      empty_comment: 'Escribe el comentario.'
+      no_file: 'Elige el archivo.'
+      file_required: 'Esta tarea pide subir un archivo antes de marcarla como hecha.'
+      reason_required: 'Escribe por qué la regresas.'
+      closed: 'Esta tarea ya no está abierta.'
+      who: 'Primero elige quién eres.'
   field_portal:
     title: 'Tu servicio'
     report: 'Ver el reporte del servicio'
@@ -345,6 +403,7 @@ es:
       reply: 'Contestar a tus clientes: qué conversaciones esperan respuesta, qué dijeron, y la respuesta lista en una tarjeta para mandarla (p. ej. «¿quién me escribió?», «dile a Mario que llega el jueves»).'
       field: 'Trabajo en campo: tus visitas del día, cuál sigue, qué se le hizo la última vez al cliente, avisarle «voy en camino» y dictar el reporte de la visita (p. ej. «¿qué visitas tengo hoy?», «reporta la visita: cambié el capacitor»).'
       nfc: 'Captar en la expo: el enlace NFC del evento para grabarlo en una etiqueta («acercar el celular») y cuántos se captaron (p. ej. «quiero grabar la etiqueta NFC de la expo para Ana»).'
+      client_tasks: 'Tareas con el cliente: qué le falta a un cliente, quién tiene tareas vencidas y asignarle una tarea que trabaja en su portal (p. ej. «asígnale a Acme probar la facturación para el viernes»).'
       limits: 'Lo que no hace: no le escribe al cliente sin tu confirmación (te deja una tarjeta, un borrador o un mensaje programado) ni hace acciones masivas.'
     quotes:
       new_opportunity: 'Se crea una oportunidad nueva'
@@ -484,6 +543,7 @@ es:
       case_stage_tasks: "Tienes tareas nuevas en el caso %{folio}"
       case_stage_ready: "El caso %{folio} está listo para pasar de etapa"
       case_rule_notice: "Aviso de una regla en el caso %{folio}"
+      client_task_update: "El cliente avanzó una tarea en el caso %{folio}"
     calendar_event_reminder:
       body: "\"%{title}\" comienza en %{minutes} minutos"
       no_title: "Evento sin título"
