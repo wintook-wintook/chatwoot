@@ -27,6 +27,8 @@ export default {
     ssoAuthToken: { type: String, default: '' },
     ssoAccountId: { type: String, default: '' },
     ssoConversationId: { type: String, default: '' },
+    // 'dali': al entrar va al portal de Dali (AuthHelper.getLoginRedirectURL)
+    redirect: { type: String, default: '' },
     email: { type: String, default: '' },
     authError: { type: String, default: '' },
   },
@@ -116,6 +118,7 @@ export default {
         sso_auth_token: this.ssoAuthToken,
         ssoAccountId: this.ssoAccountId,
         ssoConversationId: this.ssoConversationId,
+        redirect: this.redirect,
       };
 
       login(credentials)
@@ -150,19 +153,9 @@ export default {
     class="flex flex-col w-full min-h-screen py-20 bg-woot-25 sm:px-6 lg:px-8 dark:bg-slate-900"
   >
     <section class="max-w-5xl mx-auto">
-      <img
-        :src="globalConfig.logo"
-        :alt="globalConfig.installationName"
-        class="block w-auto h-8 mx-auto dark:hidden"
-      />
-      <img
-        v-if="globalConfig.logoDark"
-        :src="globalConfig.logoDark"
-        :alt="globalConfig.installationName"
-        class="hidden w-auto h-8 mx-auto dark:block"
-      />
+      <!-- Sin logo: el de la instalación todavía es el de Chatwoot. -->
       <h2
-        class="mt-6 text-3xl font-medium text-center text-slate-900 dark:text-woot-50"
+        class="text-3xl font-medium text-center text-slate-900 dark:text-woot-50"
       >
         {{
           useInstallationName($t('LOGIN.TITLE'), globalConfig.installationName)

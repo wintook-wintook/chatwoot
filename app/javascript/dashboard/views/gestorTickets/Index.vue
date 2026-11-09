@@ -167,6 +167,8 @@
         :sla-count="slaOverdueCount"
         :committed-only="committedOnly"
         :no-next-step-only="noNextStepOnly"
+        :agent-filter="agentFilter"
+        @agent="onAgentChange"
         @scope="applyFilter"
         @status="onStatusChange"
         @outcome="onOutcomeChange"
@@ -472,6 +474,7 @@ import {
 } from 'dashboard/helper/caseSimpleStatus'; // modo simple/ITIL
 import { backQuery } from './backLink';
 import { nextStepView } from 'dashboard/helper/caseNextStep'; // siguiente paso del caso
+import CaseAgentIcon from './CaseAgentIcon.vue'; // el robot: ¿un agente atiende su conversación?
 // Plan-Clase-Comercial F4 — lista de oportunidades.
 import { formatHours } from 'dashboard/helper/caseWorkOrder'; // Plan-Clase-Orden-de-Trabajo F2b
 import {
@@ -577,6 +580,7 @@ const normalizeViewQuery = (q = {}) => {
     sla_overdue: !!q.sla_overdue || legacySla,
     committed: !!q.committed, // Plan-Metricas-Comercial — «Solo comprometidas»
     no_next_step: !!q.no_next_step, // «Sin siguiente paso»
+    agent: ['with', 'none'].includes(q.agent) ? q.agent : '', // «Con / Sin agente»
     case_type_id: q.case_type_id || '',
     fine,
     sort_by: q.sort_by || 'created_at',
@@ -649,6 +653,7 @@ export default {
       slaOverdueOnly: false,
       committedOnly: false, // Plan-Metricas-Comercial — «Solo comprometidas»
       noNextStepOnly: false, // casos abiertos sin tareas ni agenda
+      agentFilter: '', // '' | 'with' | 'none' — ¿un agente atiende su conversación?
       fine: emptyFineFilters(),
       activeType: '', // '' = todos, o un case_type_id
       outcomeFilter: '', // Plan-Clase-Comercial F4 — won|lost|cancelled
@@ -837,6 +842,7 @@ export default {
         sla_overdue: this.slaOverdueOnly,
         committed: this.committedOnly,
         no_next_step: this.noNextStepOnly,
+        agent: this.agentFilter,
         case_type_id: this.activeType,
         fine: this.fine,
         sort_by: this.sortBy,
@@ -1015,11 +1021,20 @@ export default {
           key: 'next_step',
           title: this.$t('CASE_TICKETS.TABLE.NEXT_STEP'),
           align: 'left',
-          width: 170,
+          width: 195,
           renderBodyCell: ({ row }) => {
             const view = nextStepView(row.next_step, this.$t.bind(this));
-            if (!view) return <span class="text-slate-400">—</span>;
-            return view.badge ? (
+            // El robot (¿un agente atiende su conversación?) va antes del paso.
+            const robot = <CaseAgentIcon agent={row.agent} />;
+            if (!view) {
+              return (
+                <span class="inline-flex items-center gap-2">
+                  {robot}
+                  <span class="text-slate-400">—</span>
+                </span>
+              );
+            }
+            const step = view.badge ? (
               <span
                 class={`${PILL} ${view.cls} whitespace-nowrap`}
                 title={this.$t('CASE_TICKETS.NEXT_STEP.NONE_HINT')}
@@ -1031,6 +1046,12 @@ export default {
                 class={`text-[13px] tabular-nums whitespace-nowrap ${view.cls}`}
               >
                 {view.label}
+              </span>
+            );
+            return (
+              <span class="inline-flex items-center gap-2">
+                {robot}
+                {step}
               </span>
             );
           },
@@ -1129,6 +1150,7 @@ export default {
       this.slaOverdueOnly = !!st.sla;
       this.committedOnly = !!st.committed;
       this.noNextStepOnly = !!st.noNextStep;
+      this.agentFilter = ['with', 'none'].includes(st.agent) ? st.agent : '';
       const { postponed: legacyPostponed, ...savedFine } = st.fine || {};
       this.fine = normalizeFineFilters(savedFine);
       this.activeType = st.type ?? '';
@@ -1166,6 +1188,7 @@ export default {
         sla: this.slaOverdueOnly,
         committed: this.committedOnly,
         noNextStep: this.noNextStepOnly,
+        agent: this.agentFilter,
         fine: this.fine,
         type: this.activeType,
         list: {
@@ -1244,6 +1267,7 @@ export default {
       // Plan-Metricas-Comercial — se suma a todo (también al aviso de cierre vencido).
       if (this.isCommercialList && this.committedOnly) filters.committed = true;
       if (this.noNextStepOnly) filters.next_step = 'none';
+      if (this.agentFilter) filters.agent = this.agentFilter;
       // Aviso rojo de Órdenes / Comercial (el de Soporte va arriba, por SLA).
       if (this.slaOverdueOnly && alertApplies(this.alertContext)) {
         Object.assign(filters, classAlertParams(this.caseClass));
@@ -1318,6 +1342,10 @@ export default {
       this.noNextStepOnly = on;
       this.onFilterChange();
     },
+    onAgentChange(value) {
+      this.agentFilter = value;
+      this.onFilterChange();
+    },
     onFineChange(fine) {
       this.fine = fine;
       this.onFilterChange();
@@ -1368,6 +1396,7 @@ export default {
       this.slaOverdueOnly = q.sla_overdue;
       this.committedOnly = q.committed;
       this.noNextStepOnly = q.no_next_step;
+      this.agentFilter = q.agent;
       this.fine = q.fine;
       this.activeType = this.resolveSavedType(q.case_type_id, view.name);
       this.sortBy = this.sortFields.includes(q.sort_by)
@@ -1436,6 +1465,7 @@ export default {
       this.slaOverdueOnly = false;
       this.committedOnly = false;
       this.noNextStepOnly = false;
+      this.agentFilter = '';
       this.fine = emptyFineFilters();
       this.activeType = '';
       this.currentPage = 1;

@@ -50,8 +50,8 @@
     },
     "UPDATE_CHATWOOT": "An update %{latestChatwootVersion} for Chatwoot is available. Please update your instance.",
     "LEARN_MORE": "Learn more",
-    "PAYMENT_PENDING": "Your payment is pending. Please update your payment information to continue using Chatwoot",
-    "LIMITS_UPGRADE": "Your account has exceeded the usage limits, please upgrade your plan to continue using Chatwoot",
+    "PAYMENT_PENDING": "Your payment is pending. Please update your payment information to continue using Kontrolya",
+    "LIMITS_UPGRADE": "Your account has exceeded the usage limits, please upgrade your plan to continue using Kontrolya",
     "OPEN_BILLING": "Open billing",
     "BRAND": {
       "TITLE": "Company brand",
@@ -107,8 +107,10 @@
       "missed_call": "Missed call",
       "case_task_assignment": "Task assigned",
       "case_task_completed": "Task completed",
+      "calendar_event_reminder": "Calendar reminder",
       "case_stage_tasks": "New tasks",
-      "case_stage_ready": "Stage ready"
+      "case_stage_ready": "Stage ready",
+      "case_rule_notice": "Rule notice"
     }
   },
   "NETWORK": {

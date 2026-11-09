@@ -46,7 +46,7 @@
       "continuous": "Continua"
     },
     "MODE_HINT": {
-      "batch": "Se eligió un segmento o una etiqueta: al ponerla en curso se inscriben de una vez los contactos que tenga en ese momento (máximo 100).",
+      "batch": "Se eligió un segmento o una etiqueta: al ponerla en curso se inscriben de una vez los contactos que tenga en ese momento (máximo 1,000).",
       "continuous": "No tiene lista fija: la van llenando tus automatizaciones con la acción «Agregar a campaña» mientras esté abierta."
     },
     "NO_END": "sin fin",

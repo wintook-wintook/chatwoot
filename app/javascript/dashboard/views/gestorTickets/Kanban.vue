@@ -50,6 +50,7 @@ import {
 import { formatHours } from 'dashboard/helper/caseWorkOrder';
 import { backQuery } from './backLink';
 import { NO_STEP_BADGE } from 'dashboard/helper/caseNextStep';
+import CaseAgentIcon from './CaseAgentIcon.vue'; // el robot: ¿un agente atiende su conversación?
 
 // Columnas por defecto del tablero cuando no hay un tipo de caso filtrado (así
 // que no hay columnas propias de un tipo que mostrar). ITIL dejó de ser un modo
@@ -116,6 +117,7 @@ export default {
     CaseTypeSelect,
     CaseScopeBar,
     CaseFineFilters,
+    CaseAgentIcon,
   },
   props: {
     // Plan-Casos E1 — clase de la ruta `tickets/:caseClass/board`:
@@ -130,6 +132,7 @@ export default {
       slaOverdueOnly: false,
       committedOnly: false, // Plan-Metricas-Comercial — «Solo comprometidas»
       noNextStepOnly: false, // casos abiertos sin tareas ni agenda
+      agentFilter: '', // '' | 'with' | 'none' — ¿un agente atiende su conversación?
       fine: emptyFineFilters(),
       // Plan-Casos E1.3 — cerrados en el tablero: hide | 7 | 30 | 90 | all.
       closedWindow: DEFAULT_BOARD_CLOSED,
@@ -309,6 +312,7 @@ export default {
       this.slaOverdueOnly = !!st.sla;
       this.committedOnly = !!st.committed;
       this.noNextStepOnly = !!st.noNextStep;
+      this.agentFilter = ['with', 'none'].includes(st.agent) ? st.agent : '';
       this.fine = normalizeFineFilters(st.fine);
       const closed = st.board?.closed;
       this.closedWindow = BOARD_CLOSED_OPTIONS.includes(closed)
@@ -323,6 +327,7 @@ export default {
         sla: this.slaOverdueOnly,
         committed: this.committedOnly,
         noNextStep: this.noNextStepOnly,
+        agent: this.agentFilter,
         fine: this.fine,
         board: { closed: this.closedWindow },
       });
@@ -366,6 +371,7 @@ export default {
       f.case_class = this.caseClass;
       if (this.isCommercialBoard && this.committedOnly) f.committed = true;
       if (this.noNextStepOnly) f.next_step = 'none';
+      if (this.agentFilter) f.agent = this.agentFilter;
       // Aviso rojo de Órdenes / Comercial (visitas / cierre vencido).
       if (this.slaOverdueOnly)
         Object.assign(f, classAlertParams(this.caseClass));
@@ -394,6 +400,10 @@ export default {
     },
     onCommittedChange(on) {
       this.committedOnly = on;
+      this.fetch();
+    },
+    onAgentChange(value) {
+      this.agentFilter = value;
       this.fetch();
     },
     onNextStepChange(on) {
@@ -847,6 +857,8 @@ export default {
         :sla-count="slaOverdueCount"
         :committed-only="committedOnly"
         :no-next-step-only="noNextStepOnly"
+        :agent-filter="agentFilter"
+        @agent="onAgentChange"
         @scope="onScopeChange"
         @sla="onSlaChange"
         @committed="onCommittedChange"
@@ -1172,6 +1184,8 @@ export default {
               >
                 {{ kindLabel(ticket.ticket_kind) }}
               </span>
+              <!-- ¿Un agente atiende su conversación? Solo el robot. -->
+              <CaseAgentIcon :agent="ticket.agent" :size="13" />
               <span
                 v-if="assigneeName(ticket)"
                 class="inline-flex items-center min-w-0 gap-1.5 ml-auto text-slate-600 dark:text-slate-300"

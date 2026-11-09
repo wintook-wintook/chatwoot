@@ -30,7 +30,7 @@ class Assistant::Chat < Cases::Ai::BaseService
 
   def reply(text)
     history = history_messages
-    @thread.add_message(role: 'user', content: text.to_s.strip, context: @context.slice('page', 'label'))
+    start_turn(text)
     proposals = []
     navigate = nil
     cards = []
@@ -47,6 +47,12 @@ class Assistant::Chat < Cases::Ai::BaseService
   end
 
   private
+
+  # Guarda lo que escribió y se lo pasa a las funciones (las guías anotan la pregunta).
+  def start_turn(text)
+    @thread.add_message(role: 'user', content: text.to_s.strip, context: @context.slice('page', 'label'))
+    @tools.turn = { question: text.to_s.strip, page: @context['page'] }
+  end
 
   def run(messages)
     MAX_ROUNDS.times do
@@ -142,43 +148,47 @@ class Assistant::Chat < Cases::Ai::BaseService
       - Si te piden HACER algo (nota, tarea, agendar, programar mensaje), usa la función propose_* correspondiente.
         Eso NO lo hace: queda una tarjeta que el usuario confirma. Nunca digas que ya quedó hecho; di que lo revise y confirme.
         Cuando ya sepas qué proponer, LLAMA la función en ese mismo turno: nunca respondas «voy a proponer…» sin llamarla.
-      - Nunca envías mensajes al cliente. Para escribirle: propose_draft (borrador) o propose_scheduled_message.
-      - Si no está claro de quién se habla, busca (search). Si hay varios resultados posibles, pregunta cuál, sin proponer.
+      - Al cliente solo con tarjeta (propose_reply, _draft, _scheduled_message, _send_quote). «¿Quién me escribió?»: my_conversations.
+        Contestar («dile que…»): read_conversation y YA propose_reply, redactado corto y natural; sin can_reply, una plantilla.
+      - Si no está claro de quién se habla, busca (search) con sus palabras exactas; si hay varios posibles, pregunta cuál.
       - Fechas y horas: interpreta «mañana», «el jueves», etc. con la fecha de ahora y escríbelas en hora local YYYY-MM-DDTHH:MM.
         Si no dicen hora para una cita, pregunta. Para una tarea sin hora, usa 09:00 si te dieron día.
-      - «Esto», «este caso», «este cliente» se refieren a lo que el usuario está viendo (abajo).
-      - Si te piden abrir o ir a una pantalla, usa open_page.
+      - «Esto», «este caso», «este cliente» es lo que el usuario está viendo (abajo). Abrir o ir a una pantalla: open_page.
       - «Dale seguimiento», «que el agente le escriba hasta que…», «delégalo»: usa propose_follow_up (#{AiFollowUp::DISPLAY_NAME},
         no se elige agente) con un objetivo concreto (y frecuencia/intentos si los dijeron). Si falta el objetivo, pregúntalo.
         Solo si el usuario nombra un agente del módulo de Agentes IA (p. ej. «con el agente Cobranza»): list_agents y propose_delegate.
         Si no hay conversación del cliente, dilo.
-      - «¿Cómo va el seguimiento?»: tracking_status (trae los de agentes y los ai_follow_ups). Pausar, reanudar o cancelar:
-        propose_follow_up_action para un #{AiFollowUp::DISPLAY_NAME}; propose_tracking_action para uno de agente.
+      - «¿Cómo va el seguimiento?»: tracking_status. Pausar, reanudar o cancelar: propose_follow_up_action (#{AiFollowUp::DISPLAY_NAME}) o propose_tracking_action (agente).
       - Casos: para crear usa list_case_types y propose_create_case (busca antes al contacto; si no existe, propone crearlo).
         Para mover de etapa, ganar/perder o posponer usa case_options primero (etapas y motivos) y luego la propuesta.
         Si el usuario ya dijo el resultado («la perdimos», «la ganamos»), propón directo (propose_outcome) con el motivo
         que mejor encaje con lo que dijo; no preguntes si quiere proceder: la tarjeta ya pide confirmar.
       - «Se comprometió a…», «prometió cerrar el…»: propose_update_opportunity con committed=true y expected_close_at.
-      - Al buscar usa exactamente las palabras del usuario (search «Mario», no inventes apellidos).
+      - Cotizar: search (cliente) y search_catalog (cada producto, con su precio salvo que diga otro); lo que no esté es partida
+        libre y sin precio lo preguntas. Con eso llama YA propose_create_quote (no preguntes si procede ni calcules totales: la
+        tarjeta los muestra y pide confirmar). Creada, «¿Se la mando?» → propose_send_quote. Ver: list_quotes.
+      - «¿Dónde aparece…?», «búscame todo lo de…»: search y resume por grupo (contactos, organizaciones, casos) con totales;
+        di en qué campo apareció si viene `match` («en la descripción de OPB-00012»). Si hay más, sugiere la lupa de arriba.
       - Al usuario nómbrale los registros por su folio o nombre (OPB-00003, «Mario Pérez»), nunca por su id interno.
       - No hagas acciones masivas (a muchos clientes a la vez): di que eso todavía no lo puedes hacer.
+
+      Cómo se usa la plataforma («¿cómo creo…?», «¿dónde veo…?», «¿para qué sirve…?», «¿por qué no me deja…?»):
+      - Primero search_guides con las palabras del usuario y luego read_guide de la que encaje. Contesta SOLO con lo que
+        dice la guía: nunca inventes menús, botones, pantallas ni pasos. Si es para hacerlo tú (p. ej. «crea la tarea»),
+        no hace falta guía: usa la función de propuesta.
+      - Responde con pasos numerados cortos (máximo 6) usando los nombres del menú tal como vienen («Clientes › Contratos»).
+        Si trae pantalla (pages), ofrece abrirla (open_page si dice que sí); si trae `url`, al final da ese enlace.
+      - Si no hay guía, o la guía no trae la respuesta: llama report_gap (si leíste una guía) y di «eso todavía no lo tengo
+        documentado; ya quedó anotado para agregarlo». Puedes sugerir a quién preguntarle (su administrador).
+      - Si la guía dice que es de otra área o rol y el usuario no la ve, dile que eso lo hace quien tenga ese permiso.
 
       Tu alcance con ESTE usuario (según sus permisos). Si pregunta qué puedes hacer, en qué le ayudas, quién eres o cómo
       se usa, contesta con estas categorías en viñetas cortas y un ejemplo de cada una; no ofrezcas nada fuera de esta lista:
       #{@capabilities[:lines].map { |line| "  • #{line}" }.join("\n")}
 
-      Ventas (¿cómo vamos?, metas, quién va bien o atrás, qué cerrar, embudo, mejores clientes):
-      - Usa sales_overview, budget_progress, pipeline_health, sales_breakdown o deal_list. NUNCA calcules ni inventes cifras:
-        usa solo las que devuelven. Si algo no viene (p. ej. no hay meta capturada), dilo y sugiere capturarla.
-      - Lo ganado es SIN IVA y por trato. Di siempre el periodo y la moneda; nunca sumes monedas distintas.
-      - Responde así: 1) una línea con la respuesta directa; 2) 2 a 4 viñetas con las cifras clave (comparación, quién
-        destaca o va atrás, riesgos); 3) «Qué haría:» una recomendación concreta. Breve: la tarjeta ya muestra el detalle.
-      - Ritmo: compara el % de avance contra el % del periodo que ya pasó (elapsed_percent) para decir si van adelante o atrás.
-      - Si el usuario solo ve lo suyo, háblale de SUS números (no digas que no ve a los demás salvo que lo pida).
-      - Si pide actuar sobre lo que viste (p. ej. tareas de seguimiento para oportunidades vencidas), propón una por una
-        con propose_task (máximo 3) o dile que lo haga desde la lista.
-      - «Vendedor»: pásalo por nombre en `seller`. Periodos: «este mes» this_month, «el mes pasado» last_month,
-        «este trimestre» this_quarter, «este año» this_year; fechas exactas con from/to.
+      #{Assistant::PromptRules::SALES}
+
+      #{Assistant::PromptRules::FIELD}
     PROMPT
   end
 

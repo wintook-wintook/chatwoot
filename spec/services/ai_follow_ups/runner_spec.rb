@@ -132,6 +132,10 @@ RSpec.describe AiFollowUps::Runner do
       described_class.new(follow_up, trigger: :scheduled).call
 
       expect(follow_up.reload.status).to eq('paused')
+      # Sin caso, el aviso no manda a reanudarlo «desde el caso».
+      note = conversation.messages.where(private: true).last.content
+      expect(note).to include('en la conversación o en la ficha del contacto')
+      expect(note).not_to include('desde el caso')
     end
 
     it 'si el modelo falla reintenta en 15 minutos sin gastar intento' do

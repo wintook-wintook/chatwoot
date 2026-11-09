@@ -2,10 +2,13 @@
   Ficha del contacto — «Delegar seguimiento» (Seguimiento IA) y el que está corriendo en
   cualquiera de sus conversaciones. En el formulario se elige la conversación; «Vista
   anterior» abre el agente de seguimiento de siempre sobre esa conversación.
+  Sin conversaciones: se elige la bandeja (WhatsApp, SMS o correo) y al delegar se crea la
+  conversación ahí, asignada a quien delega.
 -->
 <script>
 import { useAlert } from 'dashboard/composables';
 import ContactAPI from 'dashboard/api/contacts';
+import AiFollowUpsAPI from 'dashboard/api/aiFollowUps';
 import ContactTrackingModal from 'dashboard/components/contacts/ContactTracking/ContactTrackingModal.vue';
 import AiFollowUpModal from 'dashboard/views/gestorTickets/conversation/AiFollowUpModal.vue';
 import AiFollowUpStatus from 'dashboard/views/gestorTickets/conversation/AiFollowUpStatus.vue';
@@ -21,6 +24,7 @@ export default {
   data() {
     return {
       conversations: [],
+      inboxes: [], // sin conversaciones: dónde abrir la nueva
       showNew: false,
       live: false, // hay un Seguimiento IA corriendo → botón verde
       legacyChat: null, // conversación para la vista anterior
@@ -72,11 +76,7 @@ export default {
         this.conversations = [];
       }
     },
-    open() {
-      if (!this.conversations.length) {
-        useAlert(this.f('NO_CONVERSATIONS'));
-        return;
-      }
+    async open() {
       if (!this.openaiOk) {
         useAlert(
           this.$t('CASE_TICKETS.CONVERSATION_ACTIONS.DELEGATE_MISSING', {
@@ -85,10 +85,23 @@ export default {
         );
         return;
       }
+      if (!this.conversations.length) {
+        try {
+          const { data } = await AiFollowUpsAPI.inboxes(this.contactId);
+          this.inboxes = data.payload || [];
+        } catch {
+          this.inboxes = [];
+        }
+        if (!this.inboxes.length) {
+          useAlert(this.f('NO_REACHABLE_INBOX'));
+          return;
+        }
+      }
       this.showNew = true;
     },
     onCreated(followUp) {
       this.showNew = false;
+      if (!this.conversations.length) this.loadConversations();
       this.$refs.status?.set(followUp);
     },
     openLegacy(conversationId) {
@@ -123,6 +136,8 @@ export default {
       v-if="showNew"
       :show="showNew"
       :conversations="options"
+      :new-contact-id="conversations.length ? null : contactId"
+      :inboxes="conversations.length ? null : inboxes"
       @close="showNew = false"
       @created="onCreated"
       @legacy="openLegacy"

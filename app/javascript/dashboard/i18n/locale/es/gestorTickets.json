@@ -137,17 +137,50 @@
     }
   },
   "QUICK_ACTIONS": {
+    "GO_HOME": "Ir a Inicio",
     "TITLE": "Accesos rápidos",
     "NEW_TASK": "Tarea",
     "REPORT_ACTIVITY": "Reportar actividad",
-    "SEARCH_CLIENT": "Buscar contacto u organización",
+    "SEARCH_SHORT": "Buscar",
+    "SEARCH_CLIENT": "Buscar en contactos, organizaciones y casos (Ctrl + K)",
     "SEARCH": {
-      "TITLE": "Buscar contacto u organización",
-      "PLACEHOLDER": "Nombre, teléfono o correo",
+      "ALL": "Todo",
+      "HINT": "Busca por nombre, teléfono, correo, folio, RFC o cualquier palabra de notas y descripciones.",
+      "RECENT": "Abiertos hace poco",
+      "CLEAR_RECENT": "Borrar",
+      "SEE_ALL": "Ver todos ({count})",
+      "ASK_DALI": "¿No lo encuentras? Pregúntale a {name}",
+      "DALI_QUESTION": "¿Dónde aparece «{q}»?",
+      "OWNER": "Responsable: {name}",
+      "NO_ASSIGNEE": "Sin responsable",
+      "OUTCOMES": {"won": "Ganada", "lost": "Perdida", "cancelled": "Cancelada"},
+      "TITLE": "Buscar en contactos, organizaciones y casos",
+      "PLACEHOLDER": "Escribe una palabra: nombre, folio, RFC, algo de la descripción…",
+      "MIN": "Escribe al menos 3 letras.",
       "SEARCHING": "Buscando…",
       "EMPTY": "Sin resultados.",
       "CONTACTS": "Contactos",
-      "ORGANIZATIONS": "Organizaciones"
+      "ORGANIZATIONS": "Organizaciones",
+      "CASES": "Casos",
+      "MORE": "Ver más ({count})",
+      "FIELDS": {
+        "email": "Correo",
+        "phone": "Teléfono",
+        "company": "Empresa",
+        "city": "Ciudad",
+        "identifier": "Identificador",
+        "custom": "Atributos",
+        "tax_id": "RFC",
+        "website": "Sitio web",
+        "industry": "Giro",
+        "address": "Dirección",
+        "notes": "Notas",
+        "description": "Descripción",
+        "work_address": "Dirección de trabajo",
+        "closure": "Cierre",
+        "outcome": "Nota del resultado",
+        "commit_note": "Compromiso"
+      }
     },
     "NEW_CONTACT": "Nuevo contacto",
     "TASK": {
@@ -210,6 +243,14 @@
     },
     "PRESENCE": {
       "BANNER": "{names} también está en este caso | {names} también están en este caso"
+    },
+    "AGENT": {
+      "ACTIVE": "{name} · contestando",
+      "PAUSED": "{name} · en pausa (no contesta ahora)",
+      "ATTEMPTS": "intento {n} de {max}",
+      "NEXT": "vuelve a escribir {date}",
+      "NONE": "Sin agente: nadie automático atiende esta conversación",
+      "NO_CONVERSATION": "Sin conversación: no se le puede asignar un agente"
     },
     "NEXT_STEP": {
       "TASK": "Tarea · {date}",
@@ -579,7 +620,8 @@
         "OPEN_TICKET": "Abrir caso",
         "DELETE_ERROR": "No se pudo eliminar la tarea.",
         "TOAST_STAGE_TASKS": "Tareas nuevas: {task} · caso {folio}",
-        "TOAST_STAGE_READY": "{task} · caso {folio}"
+        "TOAST_STAGE_READY": "{task} · caso {folio}",
+        "TOAST_RULE_NOTICE": "{task}"
       },
       "TABLE": {
         "NUM": "Folio",
@@ -1281,7 +1323,7 @@
         "DAYS": "días",
         "SAVE": "Guardar",
         "ON_REPLY_TITLE": "Reabrir si el cliente responde",
-        "ON_REPLY_DESC": "Si el cliente escribe por su canal sobre un caso cerrado, se reabre solo (o se crea uno de seguimiento si venció la ventana).",
+        "ON_REPLY_DESC": "Si el cliente escribe por su canal sobre un caso cerrado, se reabre solo (o se crea uno de seguimiento si venció la ventana). Las oportunidades ganadas o perdidas no se reabren: solo queda el aviso en su historial.",
         "NOTE_WINDOW": "El administrador puede reabrir siempre, aunque haya vencido la ventana.",
         "NOTE_SLA": "Al reabrir, el SLA vuelve a contar desde cero."
       },
@@ -2349,6 +2391,10 @@
       },
       "NO_NEXT_STEP": "Sin siguiente paso",
         "NO_NEXT_STEP_HINT": "Solo los casos abiertos sin tareas pendientes ni nada agendado",
+        "AGENT_WITH": "Con agente",
+        "AGENT_WITH_HINT": "Solo los casos abiertos cuya conversación atiende un agente (Seguimiento IA o Agentes IA)",
+        "AGENT_NONE": "Sin agente",
+        "AGENT_NONE_HINT": "Solo los casos abiertos que ningún agente automático está atendiendo",
         "COMMITTED_ONLY": "Solo comprometidas",
       "COMMITTED_ONLY_HINT": "Solo las oportunidades que el cliente ya se comprometió a pagar. Se combina con los demás filtros y con el aviso de cierre vencido.",
       "DATE_FIELD": "¿Qué fecha?",
@@ -2788,6 +2834,9 @@
       "SUBTITLE": "Esto es lo que tienes para hoy.",
       "BUSINESS_SUMMARY": "Resumen del negocio",
       "LOADING": "Cargando tu resumen…",
+      "TAB_SUMMARY": "Resumen",
+      "TAB_MY_DAY": "Mi día",
+      "TAB_NOTIFICATIONS": "Notificaciones",
       "SEE_ALL": "Ver todo",
       "MY_DAY": "Lo más urgente de Mi día",
       "MY_DAY_EMPTY": "No tienes tareas pendientes. ¡Bien!",
@@ -3098,7 +3147,7 @@
     "NO_LOCATION": "Sin ubicación: revisa el permiso del navegador",
     "TITLE": "Mi ruta",
     "TODAY": "Hoy",
-    "BACK_TO_APP": "Ir a Wintook",
+    "BACK_TO_APP": "Ir a Kontrolya",
     "PREV_DAY": "Día anterior",
     "NEXT_DAY": "Día siguiente",
     "EMPTY": "No tienes visitas este día.",
@@ -3145,7 +3194,7 @@
     "EXTRA_SEND": "Enviarla por WhatsApp",
     "EXTRA_SENT": "Cotización enviada",
     "QTY": "Cant.",
-    "OPEN_IN_APP": "Abrir en Wintook",
+    "OPEN_IN_APP": "Abrir en Kontrolya",
     "ERROR": "No se pudo guardar",
     "SEND_TO_TECH": "Enviar al técnico",
     "SENT_TO_TECH": "Enlace enviado al técnico",

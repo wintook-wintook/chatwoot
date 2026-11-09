@@ -26,8 +26,11 @@ class AiFollowUps::Notifier
     assign if @follow_up.on_finish == 'assign' || @follow_up.status == 'handed_off'
   end
 
+  # Se reanuda en el renglón bajo «Delegar seguimiento»: el del caso si se delegó desde
+  # uno; si no, el del panel de la conversación o la ficha del contacto.
   def paused_for_human
-    private_note("#{AiFollowUp::DISPLAY_NAME} se pausó porque una persona le escribió al cliente. Reanúdalo desde el caso si quieres que siga.")
+    where = @follow_up.case_ticket_id ? 'desde el caso' : 'desde «Delegar seguimiento» en la conversación o en la ficha del contacto'
+    private_note("#{AiFollowUp::DISPLAY_NAME} se pausó porque una persona le escribió al cliente. Reanúdalo #{where} si quieres que siga.")
   end
 
   private

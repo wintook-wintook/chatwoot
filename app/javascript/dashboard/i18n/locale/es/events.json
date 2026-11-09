@@ -76,6 +76,32 @@
     "ADD": "Agregar",
     "SEGMENT_ADDED": "{added} contactos agregados del segmento",
     "CAMPAIGNS": "Campañas de este evento",
-    "CAMPAIGN_OF": "Evento: {event} · {status}"
+    "CAMPAIGN_OF": "Evento: {event} · {status}",
+    "NFC": {
+      "TITLE": "Acercar el celular (NFC)",
+      "HELP": "Graba este enlace en una etiqueta NFC (sticker o tarjeta). El cliente acerca su celular, se le abre WhatsApp con el mensaje listo y al enviarlo queda en el evento como «asistió», con la etiqueta {label} y, si el enlace es de un vendedor, asignado a él.",
+      "NEW": "Nuevo enlace",
+      "INBOX": "WhatsApp que recibe",
+      "SELLER": "Vendedor (opcional)",
+      "NO_SELLER": "Sin vendedor",
+      "MESSAGE": "Mensaje que el cliente envía",
+      "MESSAGE_HINT": "Se le agrega un código («Ref …») para reconocerlo.",
+      "CREATE": "Crear enlace",
+      "CANCEL": "Cancelar",
+      "EMPTY": "Aún no hay enlaces para este evento.",
+      "NO_INBOX": "Necesitas una bandeja de WhatsApp con número para crear el enlace.",
+      "CAPTURES": "{count} captados",
+      "WRITE": "Grabar en etiqueta",
+      "WRITE_HINT": "Acerca la etiqueta NFC a la parte de atrás del teléfono…",
+      "WRITTEN": "Enlace grabado en la etiqueta.",
+      "WRITE_ERROR": "No se pudo grabar. Acerca la etiqueta otra vez o revisa que el NFC esté encendido.",
+      "NO_WEB_NFC": "Para grabar desde aquí usa Chrome en Android. En iPhone, copia el enlace y grábalo con una app como NFC Tools.",
+      "COPY": "Copiar enlace",
+      "COPIED": "Enlace copiado",
+      "TRY": "Probar",
+      "DELETE": "Borrar",
+      "DELETE_CONFIRM": "¿Borrar este enlace? Las etiquetas que ya lo tengan dejarán de ligar al evento.",
+      "ERROR": "No se pudo guardar el enlace."
+    }
   }
 }

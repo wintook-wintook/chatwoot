@@ -1,6 +1,8 @@
 <script>
 import Sidebar from '../../components/layout/Sidebar.vue';
 import AssistantPanel from 'dashboard/components/assistant/AssistantPanel.vue'; // Asistente (Dali)
+import AssistantTopBar from 'dashboard/components/assistant/AssistantTopBar.vue'; // barra «Pregúntale a Dali…»
+import DaliReturnButton from 'dashboard/components/assistant/DaliReturnButton.vue'; // portal de Dali → «Volver a Dali»
 import CaseConflictModal from 'dashboard/components/caseConflict/CaseConflictModal.vue'; // K1 — dos personas en el mismo caso
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import WootKeyShortcutModal from 'dashboard/components/widgets/modal/WootKeyShortcutModal.vue';
@@ -15,6 +17,8 @@ const CommandBar = () => import('./commands/commandbar.vue');
 export default {
   components: {
     AssistantPanel,
+    AssistantTopBar,
+    DaliReturnButton,
     CaseConflictModal,
     Sidebar,
     CommandBar,
@@ -158,10 +162,17 @@ export default {
       @closeKeyShortcutModal="closeKeyShortcutModal"
       @showAddLabelPopup="showAddLabelPopup"
     />
-    <section class="flex flex-1 h-full min-h-0 px-0 overflow-hidden">
-      <router-view />
+    <section
+      class="flex flex-col flex-1 h-full min-w-0 min-h-0 px-0 overflow-hidden"
+    >
+      <!-- Dali siempre a la vista; la pantalla toma el alto que queda. -->
+      <AssistantTopBar />
+      <div class="flex flex-1 w-full min-h-0 overflow-hidden">
+        <router-view />
+      </div>
       <CommandBar />
       <AssistantPanel />
+      <DaliReturnButton />
       <CaseConflictModal />
       <AccountSelector
         :show-account-modal="showAccountModal"

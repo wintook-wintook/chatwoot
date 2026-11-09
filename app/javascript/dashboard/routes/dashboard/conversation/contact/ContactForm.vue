@@ -883,7 +883,7 @@ export default {
 
     <!-- No se utiliza para borrar solo cono notificacion  -->
     <!-- <woot-delete-modal class="contact-existence-modal" v-if="showExistContactoModal" :show.sync="showExistContactoModal" :on-close="closeExistContacto"
-      title="Existencia de contacto (Wintook)..." :message="confirmExistContactoMessage" confirm-text="Aceptar"
+      title="Existencia de contacto (Kontrolya)..." :message="confirmExistContactoMessage" confirm-text="Aceptar"
       :on-confirm="closeExistContacto" /> -->
 
     <!-- <woot-modal :show.sync="showExistContactoModal" :on-close="closeExistContacto" :size="medium">

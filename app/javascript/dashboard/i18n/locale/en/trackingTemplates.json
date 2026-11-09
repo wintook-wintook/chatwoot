@@ -189,7 +189,7 @@
       "CUSTOMER_NAME_PLACEHOLDER": "E.g. Sofia · Virtual assistant",
       "CUSTOMER_NAME_HINT": "On WhatsApp it goes at the start of every agent message. Leave it empty to send messages without a name.",
       "CUSTOMER_NAME_PREVIEW": "Hi, happy to help…",
-      "EMAIL_SIGNATURE_PLACEHOLDER": "Ana López\nSales · Wintook\n81 1234 5678",
+      "EMAIL_SIGNATURE_PLACEHOLDER": "Ana López\nSales · Kontrolya\n81 1234 5678",
       "EMAIL_SIGNATURE_HINT": "Added at the end of every email the agent writes, instead of “#IA”. Not used on WhatsApp or other channels."
     },
     "CREATE": {

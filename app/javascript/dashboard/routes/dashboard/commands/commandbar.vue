@@ -84,8 +84,10 @@ onMounted(setCommandBarData);
 
 <!-- eslint-disable vue/attribute-hyphenation -->
 <template>
+  <!-- Ctrl + K es la lupa (QuickSearchModal); la barra de comandos va con Ctrl + Shift + K. -->
   <ninja-keys
     ref="ninjakeys"
+    openHotkey="cmd+shift+k,ctrl+shift+k"
     noAutoLoadMdIcons
     hideBreadcrumbs
     :placeholder="placeholder"

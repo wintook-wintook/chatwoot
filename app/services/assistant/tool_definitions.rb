@@ -13,7 +13,7 @@ module Assistant::ToolDefinitions
   def self.int(description) = { type: 'integer', description: description }
 
   BASE = [
-    fn('search', 'Busca contactos, organizaciones y casos por nombre, correo, teléfono, folio o título.',
+    fn('search', 'Busca una palabra en todos los datos de contactos, organizaciones y casos; dice dónde apareció (match).',
        { query: str('Texto a buscar') }, %w[query]),
     fn('get_case', 'Detalle de un caso: datos, qué sigue, último contacto y su actividad reciente.',
        { case_id: int('Id del caso'), folio: str('Folio del caso, p. ej. OPB-00003') }),
@@ -22,7 +22,7 @@ module Assistant::ToolDefinitions
     fn('my_agenda', 'Agenda del usuario: tareas agendadas y tareas pendientes entre dos fechas (incluye atrasadas).',
        { from: str('Fecha inicial YYYY-MM-DD'), to: str('Fecha final YYYY-MM-DD') }, %w[from to]),
     fn('open_page', 'Abre una pantalla para el usuario.',
-       { target: { type: 'string', enum: %w[case contact organization conversation agenda my_day cases tasks budget pipeline] },
+       { target: { type: 'string', enum: Assistant::Pages::MAP.keys },
          id: int('Id del caso/contacto/organización o número de la conversación') }, %w[target]),
     fn('propose_note', 'Propone dejar una nota interna en un caso o en un contacto. Requiere confirmación.',
        { case_id: int('Id del caso'), contact_id: int('Id del contacto (si no hay caso)'), content: str('Texto') },
@@ -102,9 +102,9 @@ module Assistant::ToolDefinitions
        { name: str('Nombre'), email: str('Correo'), phone: str('Teléfono con lada, p. ej. +5215512345678'),
          organization_id: int('Id de la organización') }, %w[name]),
     fn('propose_draft', 'Redacta un borrador de mensaje para que el usuario lo copie. No envía nada.',
-       { conversation_id: int('Número de la conversación, si aplica'), content: str('Texto del borrador') },
-       %w[content])
+       { conversation_id: int('Número de la conversación, si aplica'), content: str('Texto del borrador') }, %w[content])
   ].freeze
 
-  ALL = (BASE + Assistant::SalesToolDefinitions::ALL).freeze # D5a
+  EXTRA = %w[Sales Guide Quote Conversation Field Event].freeze # Assistant::<X>ToolDefinitions::ALL
+  ALL = (BASE + EXTRA.flat_map { |x| "Assistant::#{x}ToolDefinitions".constantize::ALL }).freeze
 end

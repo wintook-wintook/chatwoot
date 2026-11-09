@@ -183,12 +183,11 @@ class CaseTicket < ApplicationRecord
   # Plan-Clase-Proyecto P1 — datos del proyecto que se editan (el monto va en `currency`).
   PROJECT_FIELDS = %w[project_start_on project_due_on budget_hours budget_amount progress].freeze
 
-  SLA_BY_PRIORITY = {
-    'low'    => { first_response_time_target: 2880, resolution_time_target: 7200 },
-    'medium' => { first_response_time_target: 480,  resolution_time_target: 2880 },
-    'high'   => { first_response_time_target: 120,  resolution_time_target: 480  },
-    'urgent' => { first_response_time_target: 30,   resolution_time_target: 120  }
-  }.freeze
+  # Respaldo cuando ninguna política SLA aplica: los mismos valores de fábrica que se
+  # siembran en Ajustes › Políticas SLA (CaseSlaPolicy::DEFAULTS), una sola tabla.
+  SLA_BY_PRIORITY = CaseSlaPolicy::DEFAULTS.to_h do |row|
+    [row[:priority], row.slice(:first_response_time_target, :resolution_time_target)]
+  end.freeze
 
   # @tickets_cases 2D — escalation_level: 0 = N1, 1 = N2, 2 = N3.
   MAX_ESCALATION_LEVEL = 2

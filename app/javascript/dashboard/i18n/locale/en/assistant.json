@@ -11,6 +11,13 @@
     "ERROR": "Couldn't send. Try again.",
     "HELLO": "Hi, I'm {name}. Ask me anything: “what do I have today?”, “what happened with this customer?”, “schedule a call tomorrow at 10”.",
     "SEEING": "Viewing: {label}",
+    "TOP_BAR": {
+      "PLACEHOLDER": "Ask {name}…",
+      "ON_CASE": "Ask {name} about this case…",
+      "ON_CONVERSATION": "Ask {name} about this conversation…",
+      "ON_CONTACT": "Ask {name} about this contact…",
+      "ON_ORGANIZATION": "Ask {name} about this organization…"
+    },
     "SHORTCUT": "Ctrl + J",
     "PROPOSAL": {
       "note": "Note",
@@ -88,14 +95,48 @@
         "EXPECTED_CLOSE_AT": "Close",
         "PROBABILITY": "Probability %",
         "COMMITTED": "Committed",
-        "COMMIT_NOTE": "Commitment note"
+        "COMMIT_NOTE": "Commitment note",
+        "QUOTE": "Quote",
+        "OPPORTUNITY": "Opportunity",
+        "VISIT": "Visit",
+        "EVENT": "Event",
+        "INBOX": "WhatsApp",
+        "SELLER": "Seller"
       },
       "OUTCOMES": {
         "won": "Won",
         "lost": "Lost",
         "cancelled": "Cancelled"
       },
-      "TEMPLATE": "Template"
+      "TEMPLATE": "Template",
+      "create_quote": "New quote",
+      "send_quote": "Send quote",
+      "QUANTITY": "Quantity",
+      "UNIT_PRICE": "Price before tax",
+      "REMOVE_ITEM": "Remove",
+      "NET": "Subtotal before tax",
+      "TAX": "Tax",
+      "TOTAL": "Total",
+      "QUOTE_DRAFT": "It is created as a draft; you can review it before sending.",
+      "reply": "Reply",
+      "SEND": "Send",
+      "TEMPLATE_NOTE": "More than 24 h since their last message: WhatsApp only allows an approved template.",
+      "on_my_way": "On my way",
+      "visit_report": "Visit report",
+      "ETA": "Arriving in (minutes)",
+      "NOTES": "What was done",
+      "CHECKLIST": "Checklist items done",
+      "MINUTES": "Time spent (minutes)",
+      "CLOSES_VISIT": "On confirm, the visit is marked as held.",
+      "FIELD_REST": "Photos, the customer signature and finishing the order are done in “My route”.",
+      "nfc_link": "NFC link",
+      "NFC_MESSAGE": "Message the customer sends",
+      "NFC_WRITE": "Write to tag",
+      "NFC_WRITING": "Hold the tag to the phone…",
+      "NFC_COPY": "Copy link",
+      "NFC_DONE": "Done",
+      "NFC_NO_WEB": "This phone can't write tags from here (only Chrome on Android). I copied the link: write it with an app like NFC Tools.",
+      "NFC_ERROR": "Couldn't write. Hold the tag again or check that NFC is on."
     },
     "SETTINGS": {
       "TITLE": "Assistant",
@@ -175,12 +216,62 @@
       "CONVERSATION": "Conversation the agent works in",
       "IN_CONVERSATION": "conversation #{id}",
       "NO_CONVERSATIONS": "This contact has no conversations: the agent needs one to write to them.",
+      "NEW_CONVERSATION_INBOX": "Inbox to write from",
+      "NEW_CONVERSATION_HINT": "No conversations yet: delegating opens one in this inbox, assigned to you.",
+      "NO_REACHABLE_INBOX": "Add their phone or email to delegate the follow-up.",
       "AI_NOTE": "What the agent knows about the customer (contact AI note)",
       "AI_NOTE_EDIT": "Edit on the contact page",
       "AI_NOTE_NONE": "This contact has no AI note.",
       "AI_NOTE_ADD": "Add it on the contact page",
       "SOURCES_NONE": "The company has no canned responses: if the customer asks something not in the AI note, it will hand it to a person.",
       "SOURCES_CANNED": "To answer questions it checks the company canned responses and the contact AI note."
+    },
+    "OPEN_IN_PLATFORM": "Open in Kontrolya",
+    "VOICE": {
+      "START": "Dictate",
+      "STOP": "Stop dictating",
+      "LISTENING": "Listening… {seconds} s (tap to finish)",
+      "TRANSCRIBING": "Turning your voice into text…",
+      "NO_MIC": "Allow the microphone to dictate.",
+      "ERROR": "Couldn't transcribe. Try again."
+    },
+    "PORTAL": {
+      "NEW": "New conversation",
+      "MENU": "Menu",
+      "OPEN_PLATFORM": "Go to Kontrolya",
+      "INSTALL": "Install on this phone",
+      "ACCOUNTS": "Company",
+      "BACK": "Back to {name}",
+      "PHONE": {
+        "TITLE": "Use {name} on my phone",
+        "NOTE": "{name} full screen on your phone: type or dictate. It installs like an app.",
+        "SHOW": "Show QR code",
+        "AGAIN": "Generate another code",
+        "QR_ALT": "QR code to sign in to Dali",
+        "SCAN": "Point your phone camera at the code: you sign in right away. It works once.",
+        "EXPIRES": "Expires in {time}",
+        "OR_URL": "Or open {url} on your phone and sign in with your email and password.",
+        "INSTALL_HINT": "Once inside: on Android, menu › “Install app”; on iPhone, Share › “Add to Home Screen”.",
+        "ERROR": "Couldn't generate the code. Try again."
+      },
+      "MY_ROUTE": "My route",
+      "NOTICES": {
+        "BELL": "Notices ({count} unread)",
+        "EMPTY": "You have no new notices.",
+        "CONVERSATION": "Conversation #{id}",
+        "SEE_PENDING": "See what I have unanswered",
+        "READ_ALL": "Mark all as read",
+        "NEW_FROM": "{name} wrote to you",
+        "OFFER": "Turn on notices to know when someone writes to you or assigns you a conversation, even with Dali closed.",
+        "ENABLE": "Turn on notices",
+        "ENABLE_MENU": "Turn on notices on this phone",
+        "NOT_NOW": "Not now",
+        "DENIED": "The phone blocked notices. Allow them in the site or app permissions.",
+        "UNSUPPORTED": "This browser doesn't allow notices. On iPhone, add Dali to the home screen and open it from the icon.",
+        "ERROR": "Couldn't turn on notices. Try again.",
+        "ASK_CONVERSATION": "What did they write in conversation #{id}?",
+        "ASK_PENDING": "Which conversations do I have unanswered?"
+      }
     }
   }
 }

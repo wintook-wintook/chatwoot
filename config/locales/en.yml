@@ -355,12 +355,28 @@ en:
       delegate: 'Delegate a client follow-up to an AI agent, and ask how it is going or pause it.'
       sales: 'Sales: how are we doing vs the target, seller and client rankings, which opportunities close, are overdue or stalled, and pipeline health (amounts before tax).'
       sales_own: 'Your sales: how you are doing vs your target, your best clients, which of your opportunities close, are overdue or stalled (amounts before tax).'
+      guide: 'Learn the platform: how to do something, where each thing is and what it is for (e.g. «how do I create a contract?», «what is the funnel for?»).'
+      quotes: 'Quotes: build them with catalog products and prices, send them to the customer and see their open quotes (e.g. «quote Mario 3 AC maintenance services»).'
+      reply: 'Answer your customers: which conversations are waiting, what they said, and the reply ready on a card to send it (e.g. “who wrote to me?”, “tell Mario it arrives on Thursday”).'
+      field: 'Field work: your visits for the day, which one is next, what was done last time, telling the customer “on my way” and dictating the visit report (e.g. “what visits do I have today?”, “report the visit: replaced the capacitor”).'
+      nfc: 'Capture at the expo: the event NFC link to write on a tag («tap a phone») and how many were captured (e.g. “I want to write the expo NFC tag for Ana”).'
       limits: 'What it does not do: it never writes to the customer on its own (it leaves a draft or a scheduled message) and does no bulk actions.'
+    quotes:
+      new_opportunity: 'A new opportunity is created'
     starters:
       today: 'What do I have today?'
       sales_month: 'How are we doing this month?'
       closing: 'Which opportunities close this week?'
+      how_to: 'How do I use the Agenda?'
       help: 'What can you help me with?'
+    shortcuts:
+      today: { label: 'My day', prompt: 'What do I have today?' }
+      reply: { label: 'Unanswered', prompt: 'Which conversations do I have unanswered?' }
+      quote: { label: 'Quote', prompt: 'I want to make a quote' }
+      route: { label: "Today's visits", prompt: 'What visits do I have today?' }
+      meeting: { label: 'Schedule', prompt: 'I want to schedule a meeting' }
+      note: { label: 'Note', prompt: 'I want to write down something about a client' }
+      sales: { label: 'Sales', prompt: 'How are we doing this month?' }
     sales:
       suggestions:
         sales_overview: ['Who is behind their target?', 'Which opportunities close this month?', 'How are we doing vs last year?']
@@ -466,6 +482,7 @@ en:
         other: "%{count} new tasks · stage %{stage}: %{titles}"
       stage_ready: "The tasks for %{stage} are done: move to %{next}?"
       stage_ready_doc: "The tasks for %{stage} are done: document to move to %{next}"
+      rule_notice: "Rule «%{rule}»: %{title}"
     notification_title:
       conversation_creation: "A conversation (#%{display_id}) has been created in %{inbox_name}"
       conversation_assignment: "A conversation (#%{display_id}) has been assigned to you"
@@ -481,6 +498,7 @@ en:
       missed_call: "Missed call from %{name} (conversation #%{display_id})"
       case_stage_tasks: "You have new tasks in case %{folio}"
       case_stage_ready: "Case %{folio} is ready to move to the next stage"
+      case_rule_notice: "Rule notice on case %{folio}"
     calendar_event_reminder:
       body: "\"%{title}\" starts in %{minutes} minutes"
       no_title: "Untitled event"
@@ -578,7 +596,7 @@ en:
   integration_apps:
     discourse:
       name: "Discourse"
-      description: "Connect your Discourse forum to use it as a knowledge base. Wintook will index your topics and use semantic search to automatically answer customer questions."
+      description: "Connect your Discourse forum to use it as a knowledge base. Kontrolya will index your topics and use semantic search to automatically answer customer questions."
     bots_inboxes:
       name: "EVA Bot Activation"
       description: "Activate the EVA assistant on your inboxes so it can automatically attend to your customers, answer their questions, and hand off the conversation to an agent when needed."
@@ -590,14 +608,14 @@ en:
       description: "Dashboard Apps allow you to create and embed applications that display user information, orders, or payment history, providing more context to your customer support agents."
     dyte:
       name: "Dyte"
-      description: "Dyte is a product that integrates audio and video functionalities into your application. With this integration, your agents can start video/voice calls with your customers directly from Wintook."
+      description: "Dyte is a product that integrates audio and video functionalities into your application. With this integration, your agents can start video/voice calls with your customers directly from Kontrolya."
       meeting_name: "%{agent_name} has started a meeting"
     slack:
       name: "Slack"
-      description: "Integrate Wintook with Slack to keep your team in sync. This integration allows you to receive notifications for new conversations and respond to them directly within Slack's interface."
+      description: "Integrate Kontrolya with Slack to keep your team in sync. This integration allows you to receive notifications for new conversations and respond to them directly within Slack's interface."
     webhooks:
       name: "Webhooks"
-      description: "Webhook events provide real-time updates about activities in your Wintook account. You can subscribe to your preferred events, and Wintook will send you HTTP callbacks with the updates."
+      description: "Webhook events provide real-time updates about activities in your Kontrolya account. You can subscribe to your preferred events, and Kontrolya will send you HTTP callbacks with the updates."
     dialogflow:
       name: "Dialogflow"
       description: "Build chatbots with Dialogflow and easily integrate them into your inbox. These bots can handle initial queries before transferring them to a customer service agent."
@@ -691,6 +709,8 @@ en:
     import:
       no_file: 'Choose a CSV file'
       contact_not_found: 'Contact «%{value}» not found'
+    capture:
+      default_message: 'Hi, I met you at %{event}. I would like to receive information.'
   # Plan-Organizaciones O1
   organizations:
     change:

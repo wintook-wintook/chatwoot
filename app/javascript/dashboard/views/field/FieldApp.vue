@@ -11,6 +11,11 @@ import FieldHistory from './FieldHistory.vue';
 import FieldRoute from './FieldRoute.vue';
 import FieldVisit from './FieldVisit.vue';
 import FieldAgendaVisit from './FieldAgendaVisit.vue';
+import { clearDaliReturn } from 'dashboard/helper/daliPortal';
+import {
+  assistantState,
+  DEFAULT_ASSISTANT_NAME,
+} from 'dashboard/helper/assistantState';
 
 // «Ir a Wintook» regresa a la pantalla desde la que se abrió el portal (p. ej.
 // Agenda › Calendario). Se guarda al entrar desde Wintook, no al moverse entre
@@ -62,7 +67,16 @@ export default {
     tab() {
       return this.$route.query.tab === 'history' ? 'history' : 'route';
     },
+    // Se llegó desde el portal de Dali (botón «Mi ruta»): el regreso es a Dali.
+    fromDali() {
+      return /\/dali\/?$/.test(readOrigin() || '');
+    },
     backLabel() {
+      if (!this.inVisit && this.fromDali) {
+        return this.$t('ASSISTANT.PORTAL.BACK', {
+          name: assistantState.name || DEFAULT_ASSISTANT_NAME,
+        });
+      }
       if (!this.inVisit) return this.$t('FIELD.BACK_TO_APP');
       return this.fromHistory
         ? this.$t('FIELD.TABS.HISTORY')
@@ -79,6 +93,7 @@ export default {
         });
       } else {
         const origin = readOrigin();
+        if (this.fromDali) clearDaliReturn();
         this.$router.push(
           origin && origin.startsWith('/app/')
             ? origin

@@ -340,12 +340,28 @@ es:
       delegate: 'Delegar a un agente IA para que le dé seguimiento a un cliente, y preguntar cómo va o pausarlo.'
       sales: 'Ventas: ¿cómo vamos contra la meta?, ranking de vendedores y clientes, qué oportunidades cierran o están vencidas o estancadas, y la salud del embudo (cifras sin IVA).'
       sales_own: 'Tus ventas: ¿cómo vas contra tu meta?, tus mejores clientes, qué oportunidades tuyas cierran o están vencidas o estancadas (cifras sin IVA).'
-      limits: 'Lo que no hace: no le escribe solo al cliente (te deja un borrador o un mensaje programado) ni hace acciones masivas.'
+      guide: 'Aprender a usar la plataforma: cómo se hace algo, dónde está cada cosa y para qué sirve (p. ej. «¿cómo creo un contrato?», «¿para qué sirve el embudo?»).'
+      quotes: 'Cotizaciones: armarlas con los productos y precios del catálogo, mandárselas al cliente y ver las que tiene abiertas (p. ej. «cotízale a Mario 3 mantenimientos de minisplit»).'
+      reply: 'Contestar a tus clientes: qué conversaciones esperan respuesta, qué dijeron, y la respuesta lista en una tarjeta para mandarla (p. ej. «¿quién me escribió?», «dile a Mario que llega el jueves»).'
+      field: 'Trabajo en campo: tus visitas del día, cuál sigue, qué se le hizo la última vez al cliente, avisarle «voy en camino» y dictar el reporte de la visita (p. ej. «¿qué visitas tengo hoy?», «reporta la visita: cambié el capacitor»).'
+      nfc: 'Captar en la expo: el enlace NFC del evento para grabarlo en una etiqueta («acercar el celular») y cuántos se captaron (p. ej. «quiero grabar la etiqueta NFC de la expo para Ana»).'
+      limits: 'Lo que no hace: no le escribe al cliente sin tu confirmación (te deja una tarjeta, un borrador o un mensaje programado) ni hace acciones masivas.'
+    quotes:
+      new_opportunity: 'Se crea una oportunidad nueva'
     starters:
       today: '¿Qué tengo hoy?'
       sales_month: '¿Cómo vamos este mes?'
       closing: '¿Qué oportunidades cierran esta semana?'
+      how_to: '¿Cómo se usa la Agenda?'
       help: '¿En qué me puedes ayudar?'
+    shortcuts:
+      today: { label: 'Mi día', prompt: '¿Qué tengo hoy?' }
+      reply: { label: 'Sin responder', prompt: '¿Qué conversaciones tengo sin responder?' }
+      quote: { label: 'Cotizar', prompt: 'Quiero hacer una cotización' }
+      route: { label: 'Visitas de hoy', prompt: '¿Qué visitas tengo hoy?' }
+      meeting: { label: 'Agendar', prompt: 'Quiero agendar una cita' }
+      note: { label: 'Anotar', prompt: 'Quiero anotar algo de un cliente' }
+      sales: { label: 'Ventas', prompt: '¿Cómo vamos este mes?' }
     sales:
       suggestions:
         sales_overview: ['¿Quién va atrás de su meta?', '¿Qué oportunidades cierran este mes?', '¿Cómo vamos contra el año pasado?']
@@ -451,6 +467,7 @@ es:
         other: "%{count} tareas nuevas · etapa %{stage}: %{titles}"
       stage_ready: "Se terminaron las tareas de %{stage}: ¿pasar a %{next}?"
       stage_ready_doc: "Se terminaron las tareas de %{stage}: documenta para pasar a %{next}"
+      rule_notice: "Regla «%{rule}»: %{title}"
     notification_title:
       conversation_creation: "Una conversación (#%{display_id}) ha sido creada en %{inbox_name}"
       conversation_assignment: "Una conversación (#%{display_id}) te ha sido asignada"
@@ -466,6 +483,7 @@ es:
       missed_call: "Llamada perdida de %{name} (conversación #%{display_id})"
       case_stage_tasks: "Tienes tareas nuevas en el caso %{folio}"
       case_stage_ready: "El caso %{folio} está listo para pasar de etapa"
+      case_rule_notice: "Aviso de una regla en el caso %{folio}"
     calendar_event_reminder:
       body: "\"%{title}\" comienza en %{minutes} minutos"
       no_title: "Evento sin título"
@@ -563,7 +581,7 @@ es:
   integration_apps:
     discourse:
       name: "Discourse"
-      description: "Conecta tu foro de Discourse para usarlo como base de conocimiento. Wintook indexará tus topics y usará búsqueda semántica para responder preguntas de clientes automáticamente."
+      description: "Conecta tu foro de Discourse para usarlo como base de conocimiento. Kontrolya indexará tus topics y usará búsqueda semántica para responder preguntas de clientes automáticamente."
     bots_inboxes:
       name: "Activación Bot EVA"
       description: "Activa el asistente EVA en tus bandejas de entrada para que atienda automáticamente a tus clientes, responda sus consultas y derive la conversación a un usuario de tu equipo cuando sea necesario."
@@ -572,14 +590,14 @@ es:
       description: "Las aplicaciones de panel te permiten crear e incrustar aplicaciones que muestran información de usuario, pedidos o historial de pagos, proporcionando más contexto a tu equipo de soporte al cliente."
     dyte:
       name: "Dyte"
-      description: "Dyte es un producto que integra funcionalidades de audio y video en tu aplicación. Con esta integración, tus usuarios pueden iniciar llamadas de video/voz con tus clientes directamente desde Wintook."
+      description: "Dyte es un producto que integra funcionalidades de audio y video en tu aplicación. Con esta integración, tus usuarios pueden iniciar llamadas de video/voz con tus clientes directamente desde Kontrolya."
       meeting_name: "%{agent_name} ha iniciado una reunión"
     slack:
       name: "Slack"
-      description: "Integra Wintook con Slack para mantener a tu equipo sincronizado. Esta integración te permite recibir notificaciones de nuevas conversaciones y responder directamente desde la interfaz de Slack."
+      description: "Integra Kontrolya con Slack para mantener a tu equipo sincronizado. Esta integración te permite recibir notificaciones de nuevas conversaciones y responder directamente desde la interfaz de Slack."
     webhooks:
       name: "Webhook"
-      description: "Los eventos de webhook proporcionan actualizaciones en tiempo real sobre las actividades en tu cuenta de Wintook. Puedes suscribirte a los eventos que prefieras y Wintook te enviará llamadas HTTP con las actualizaciones."
+      description: "Los eventos de webhook proporcionan actualizaciones en tiempo real sobre las actividades en tu cuenta de Kontrolya. Puedes suscribirte a los eventos que prefieras y Kontrolya te enviará llamadas HTTP con las actualizaciones."
     dialogflow:
       name: "Dialogflow"
       description: "Construye chatbots con Dialogflow e intégralos fácilmente en tu bandeja de entrada. Estos bots pueden manejar consultas iniciales antes de transferirlas a un usuario de servicio al cliente."
@@ -598,7 +616,7 @@ es:
       name: "Activación agente seguimiento"
       description: "Automatiza cualquier tipo de seguimiento: ventas, cobranza, recordatorios y más, mantiene activos los procesos sin depender de que el usuario recuerde hacerlo."
     linear:
-      name: "Lineal"
+      name: "Linear"
       description: "Crea problemas en Linear directamente desde tu ventana de conversación. Alternativamente, enlaza problemas existentes en Linear para un proceso de seguimiento de problemas más eficiente y ágil."
     #  proyecto@commands_agents
     command_bot:
@@ -678,6 +696,8 @@ es:
     import:
       no_file: 'Elige un archivo CSV'
       contact_not_found: 'No se encontró el contacto «%{value}»'
+    capture:
+      default_message: 'Hola, los conocí en %{event}. Me gustaría recibir información.'
   # Plan-Organizaciones O1
   organizations:
     change:

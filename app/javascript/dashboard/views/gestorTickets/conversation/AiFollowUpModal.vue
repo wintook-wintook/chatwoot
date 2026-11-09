@@ -17,6 +17,10 @@ export default {
     conversationId: { type: [Number, String], default: null },
     // Ficha del contacto: sus conversaciones [{ id (display_id), label }] para elegir en cuál.
     conversations: { type: Array, default: null },
+    // Contacto sin conversaciones: se elige la bandeja [{ id, name }] y al delegar se abre
+    // la conversación ahí (AiFollowUps::ConversationOpener).
+    newContactId: { type: Number, default: null },
+    inboxes: { type: Array, default: null },
   },
   // legacy: «Vista anterior» — el padre cierra esta y abre la del agente de seguimiento de siempre.
   emits: ['close', 'created', 'legacy'],
@@ -33,6 +37,7 @@ export default {
       units: ['minutes', 'hours', 'days'],
       // Plantilla de WhatsApp para reabrir la ventana de 24 h ('' = el agente elige).
       chosenId: this.conversationId || this.conversations?.[0]?.id || null,
+      chosenInboxId: this.inboxes?.[0]?.id || null,
       template: '',
       templates: [],
       isWhatsapp: false,
@@ -51,11 +56,25 @@ export default {
         ? `/app/accounts/${this.$route.params.accountId}/contacts/${this.contactId}`
         : '';
     },
+    // Lo que va al servidor para plantillas y contexto: la conversación o contacto + bandeja.
+    target() {
+      if (this.newContactId) {
+        return this.chosenInboxId
+          ? { contact_id: this.newContactId, inbox_id: this.chosenInboxId }
+          : null;
+      }
+      return this.chosenId;
+    },
     pickedTemplate() {
       return this.templates.find(tp => this.templateKey(tp) === this.template);
     },
   },
   watch: {
+    chosenInboxId() {
+      this.template = '';
+      this.loadTemplates();
+      this.loadContext();
+    },
     chosenId() {
       this.template = '';
       this.loadTemplates();
@@ -75,8 +94,8 @@ export default {
     },
     async loadTemplates() {
       try {
-        if (!this.chosenId) return;
-        const { data } = await AiFollowUpsAPI.templates(this.chosenId);
+        if (!this.target) return;
+        const { data } = await AiFollowUpsAPI.templates(this.target);
         this.isWhatsapp = data.whatsapp;
         this.templates = data.payload || [];
       } catch {
@@ -84,9 +103,9 @@ export default {
       }
     },
     async loadContext() {
-      if (!this.chosenId) return;
+      if (!this.target) return;
       try {
-        const { data } = await AiFollowUpsAPI.context(this.chosenId);
+        const { data } = await AiFollowUpsAPI.context(this.target);
         this.canned = data.canned;
         this.aiNote = data.ai_note;
         this.contactId = data.contact_id;
@@ -105,7 +124,9 @@ export default {
       try {
         const { data } = await AiFollowUpsAPI.create({
           case_id: this.ticket?.id || null,
-          conversation_id: this.chosenId,
+          ...(this.newContactId
+            ? { contact_id: this.newContactId, inbox_id: this.chosenInboxId }
+            : { conversation_id: this.chosenId }),
           objective: this.objective.trim(),
           instructions: this.instructions.trim(),
           starts_at:
@@ -139,6 +160,17 @@ export default {
         :header-content="t('INTRO')"
       />
       <form class="flex flex-col gap-4 px-8 pb-8" @submit.prevent="submit">
+        <label v-if="newContactId" class="text-sm">
+          {{ t('NEW_CONVERSATION_INBOX') }}
+          <select v-model="chosenInboxId" class="!mb-0">
+            <option v-for="ib in inboxes" :key="ib.id" :value="ib.id">
+              {{ ib.name }}
+            </option>
+          </select>
+          <span class="text-xs text-slate-500 dark:text-slate-400">
+            {{ t('NEW_CONVERSATION_HINT') }}
+          </span>
+        </label>
         <label v-if="conversations && conversations.length" class="text-sm">
           {{ t('CONVERSATION') }}
           <select v-model="chosenId" class="!mb-0">
@@ -273,8 +305,9 @@ export default {
           </span>
         </label>
         <p v-if="error" class="m-0 text-sm text-red-600">{{ error }}</p>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center justify-end gap-2">
           <woot-button
+            v-if="!newContactId"
             v-tooltip="t('LEGACY_HINT')"
             type="button"
             variant="link"

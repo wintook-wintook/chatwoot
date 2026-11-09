@@ -137,17 +137,50 @@
     }
   },
   "QUICK_ACTIONS": {
+    "GO_HOME": "Go to Home",
     "TITLE": "Quick actions",
     "NEW_TASK": "Task",
     "REPORT_ACTIVITY": "Report activity",
-    "SEARCH_CLIENT": "Search contact or organization",
+    "SEARCH_SHORT": "Search",
+    "SEARCH_CLIENT": "Search contacts, organizations and cases (Ctrl + K)",
     "SEARCH": {
-      "TITLE": "Search contact or organization",
-      "PLACEHOLDER": "Name, phone or email",
+      "ALL": "All",
+      "HINT": "Search by name, phone, email, folio, tax ID or any word in notes and descriptions.",
+      "RECENT": "Recently opened",
+      "CLEAR_RECENT": "Clear",
+      "SEE_ALL": "See all ({count})",
+      "ASK_DALI": "Can't find it? Ask {name}",
+      "DALI_QUESTION": "Where does «{q}» appear?",
+      "OWNER": "Owner: {name}",
+      "NO_ASSIGNEE": "Unassigned",
+      "OUTCOMES": {"won": "Won", "lost": "Lost", "cancelled": "Cancelled"},
+      "TITLE": "Search contacts, organizations and cases",
+      "PLACEHOLDER": "Type a word: name, folio, tax ID, something in the description…",
+      "MIN": "Type at least 3 letters.",
       "SEARCHING": "Searching…",
       "EMPTY": "No results.",
       "CONTACTS": "Contacts",
-      "ORGANIZATIONS": "Organizations"
+      "ORGANIZATIONS": "Organizations",
+      "CASES": "Cases",
+      "MORE": "See more ({count})",
+      "FIELDS": {
+        "email": "Email",
+        "phone": "Phone",
+        "company": "Company",
+        "city": "City",
+        "identifier": "Identifier",
+        "custom": "Attributes",
+        "tax_id": "Tax ID",
+        "website": "Website",
+        "industry": "Industry",
+        "address": "Address",
+        "notes": "Notes",
+        "description": "Description",
+        "work_address": "Work address",
+        "closure": "Closure",
+        "outcome": "Outcome note",
+        "commit_note": "Commitment"
+      }
     },
     "NEW_CONTACT": "New contact",
     "TASK": {
@@ -210,6 +243,14 @@
     },
     "PRESENCE": {
       "BANNER": "{names} is also on this case | {names} are also on this case"
+    },
+    "AGENT": {
+      "ACTIVE": "{name} · replying",
+      "PAUSED": "{name} · paused (not replying now)",
+      "ATTEMPTS": "attempt {n} of {max}",
+      "NEXT": "writes again {date}",
+      "NONE": "No agent: nothing automatic is handling this conversation",
+      "NO_CONVERSATION": "No conversation: an agent can't be assigned"
     },
     "NEXT_STEP": {
       "TASK": "Task · {date}",
@@ -608,7 +649,8 @@
           "WEEK": "This week"
         },
         "TOAST_STAGE_TASKS": "New tasks: {task} · case {folio}",
-        "TOAST_STAGE_READY": "{task} · case {folio}"
+        "TOAST_STAGE_READY": "{task} · case {folio}",
+        "TOAST_RULE_NOTICE": "{task}"
       },
       "ADD_NOTE": "Add note",
       "REFRESH": "Refresh",
@@ -1278,7 +1320,7 @@
         "DAYS": "days",
         "SAVE": "Save",
         "ON_REPLY_TITLE": "Reopen on customer reply",
-        "ON_REPLY_DESC": "If the customer writes on their channel about a closed case, it reopens automatically (or a follow-up case is created if the window expired).",
+        "ON_REPLY_DESC": "If the customer writes on their channel about a closed case, it reopens automatically (or a follow-up case is created if the window expired). Won or lost opportunities do not reopen: a note is added to their history.",
         "NOTE_WINDOW": "An administrator can always reopen, even after the window expired.",
         "NOTE_SLA": "On reopening, the SLA clock restarts from zero."
       },
@@ -2338,6 +2380,10 @@
       },
       "NO_NEXT_STEP": "No next step",
         "NO_NEXT_STEP_HINT": "Only open cases with no pending tasks and nothing scheduled",
+        "AGENT_WITH": "With agent",
+        "AGENT_WITH_HINT": "Only open cases whose conversation an agent is handling (AI follow-up or AI Agents)",
+        "AGENT_NONE": "No agent",
+        "AGENT_NONE_HINT": "Only open cases no automatic agent is handling",
         "COMMITTED_ONLY": "Committed only",
       "COMMITTED_ONLY_HINT": "Only opportunities the customer already committed to pay. Combines with the other filters and the overdue-close alert.",
       "DATE_FIELD": "Which date?",
@@ -2777,6 +2823,9 @@
       "SUBTITLE": "Here's what you have for today.",
       "BUSINESS_SUMMARY": "Business summary",
       "LOADING": "Loading your summary…",
+      "TAB_SUMMARY": "Summary",
+      "TAB_MY_DAY": "My day",
+      "TAB_NOTIFICATIONS": "Notifications",
       "SEE_ALL": "See all",
       "MY_DAY": "Most urgent in My day",
       "MY_DAY_EMPTY": "No pending tasks. Nice!",
@@ -3087,7 +3136,7 @@
     "NO_LOCATION": "No location: check the browser permission",
     "TITLE": "My route",
     "TODAY": "Today",
-    "BACK_TO_APP": "Go to Wintook",
+    "BACK_TO_APP": "Go to Kontrolya",
     "PREV_DAY": "Previous day",
     "NEXT_DAY": "Next day",
     "EMPTY": "No visits this day.",
@@ -3134,7 +3183,7 @@
     "EXTRA_SEND": "Send it via WhatsApp",
     "EXTRA_SENT": "Quote sent",
     "QTY": "Qty",
-    "OPEN_IN_APP": "Open in Wintook",
+    "OPEN_IN_APP": "Open in Kontrolya",
     "ERROR": "Could not save",
     "SEND_TO_TECH": "Send to technician",
     "SENT_TO_TECH": "Link sent to the technician",

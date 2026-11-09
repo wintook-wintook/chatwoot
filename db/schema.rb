@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_06_110000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_09_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -211,6 +211,27 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_06_110000) do
     t.index ["associated_article_id"], name: "index_articles_on_associated_article_id"
     t.index ["author_id"], name: "index_articles_on_author_id"
     t.index ["slug"], name: "index_articles_on_slug", unique: true
+  end
+
+  create_table "assistant_guide_gaps", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.text "question", null: false
+    t.string "normalized", null: false
+    t.text "answer"
+    t.string "page"
+    t.string "guide_key"
+    t.string "reason", null: false
+    t.string "status", default: "pending", null: false
+    t.integer "occurrences", default: 1, null: false
+    t.string "resolution_note"
+    t.datetime "last_asked_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "normalized", "reason", "status"], name: "index_assistant_guide_gaps_dedupe"
+    t.index ["account_id"], name: "index_assistant_guide_gaps_on_account_id"
+    t.index ["status", "last_asked_at"], name: "index_assistant_guide_gaps_on_status_and_last_asked_at"
+    t.index ["user_id"], name: "index_assistant_guide_gaps_on_user_id"
   end
 
   create_table "assistant_threads", force: :cascade do |t|
@@ -1514,6 +1535,23 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_06_110000) do
     t.index ["updated_by_id"], name: "index_event_attendees_on_updated_by_id"
   end
 
+  create_table "event_capture_links", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "event_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "user_id"
+    t.string "code", null: false
+    t.text "message", null: false
+    t.integer "captures_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_event_capture_links_on_account_id"
+    t.index ["code"], name: "index_event_capture_links_on_code", unique: true
+    t.index ["event_id"], name: "index_event_capture_links_on_event_id"
+    t.index ["inbox_id"], name: "index_event_capture_links_on_inbox_id"
+    t.index ["user_id"], name: "index_event_capture_links_on_user_id"
+  end
+
   create_table "events", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -2583,6 +2621,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_06_110000) do
   add_foreign_key "ai_follow_ups", "contacts"
   add_foreign_key "ai_follow_ups", "conversations"
   add_foreign_key "ai_follow_ups", "users", column: "created_by_id"
+  add_foreign_key "assistant_guide_gaps", "accounts", on_delete: :cascade
+  add_foreign_key "assistant_guide_gaps", "users", on_delete: :nullify
   add_foreign_key "assistant_threads", "accounts", on_delete: :cascade
   add_foreign_key "assistant_threads", "users", on_delete: :cascade
   add_foreign_key "canned_response_categories", "accounts", on_delete: :cascade
@@ -2680,6 +2720,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_06_110000) do
   add_foreign_key "event_attendees", "contacts", on_delete: :cascade
   add_foreign_key "event_attendees", "events", on_delete: :cascade
   add_foreign_key "event_attendees", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "event_capture_links", "accounts", on_delete: :cascade
+  add_foreign_key "event_capture_links", "events", on_delete: :cascade
+  add_foreign_key "event_capture_links", "inboxes", on_delete: :cascade
+  add_foreign_key "event_capture_links", "users", on_delete: :nullify
   add_foreign_key "events", "accounts"
   add_foreign_key "events", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "inboxes", "portals"

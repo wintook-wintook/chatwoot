@@ -53,6 +53,13 @@ export default {
     hasHomeArea() {
       return this.menuItems.some(item => item.key === 'inicio');
     },
+    // A dónde lleva el logo: Inicio (Mi resumen); sin casos, Conversaciones.
+    homePath() {
+      const home =
+        this.menuItems.find(item => item.key === 'inicio') ||
+        this.menuItems.find(item => item.key === 'conversations');
+      return home ? home.toState : '';
+    },
   },
   methods: {
     frontendURL,
@@ -81,7 +88,7 @@ export default {
       <QuickActions
         :logo-source="logoSource"
         :name="installationName"
-        :show-task="hasHomeArea"
+        :home-path="homePath"
       />
       <NotificationBell
         v-if="!hasHomeArea"
@@ -112,7 +119,7 @@ export default {
     </div>
     <div class="flex flex-col items-center justify-end pb-6">
       <WebphoneMinimized />
-      <!-- Dali y Ayuda viven en el menú del logo (QuickActions); Dali también con Ctrl + J. -->
+      <!-- Dali y Ayuda viven en la barra de arriba (AssistantTopBar); Dali también con Ctrl + J. -->
     </div>
   </div>
 </template>

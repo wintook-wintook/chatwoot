@@ -44,6 +44,7 @@ import ScheduleMessageModal from 'dashboard/components/widgets/conversation/Sche
 import CreateEventModal from 'dashboard/components/GoogleCalendar/CreateEventModal.vue'; // google_calendar
 import { FEATURE_FLAGS } from 'dashboard/featureFlags'; // google_calendar
 import { backQuery } from 'dashboard/views/gestorTickets/backLink'; // Plan-Catalogo-Cotizaciones
+import { areaLevel, getUserAccess } from 'dashboard/helper/accessHelper';
 import QuickTaskModal from 'dashboard/views/gestorTickets/tasks/QuickTaskModal.vue'; // crear tarea desde el panel
 
 export default {
@@ -150,12 +151,14 @@ export default {
     isHeader() {
       return this.layout === 'header';
     },
-    // Acciones que no son las principales (Mensaje, Editar): van en «Más».
-    moreActions() {
-      // Programar mensaje, cotizar y crear tarea van a la vista, como íconos (panelActions).
-      // 2026-11-06: se quitaron de aquí Mensaje, Nueva conversación (privada con otro contacto) y
-      // Crear evento de calendario; la nota privada quedó solo en la ficha del contacto.
-      const list = [
+    // Fusionar pide editar en Clientes (el servidor también lo revisa).
+    mergeActions() {
+      const level = areaLevel(
+        getUserAccess(this.currentUser, this.accountId),
+        'clients'
+      );
+      if (!['own', 'all'].includes(level)) return [];
+      return [
         {
           key: 'merge',
           icon: 'merge',
@@ -163,6 +166,13 @@ export default {
           disabled: this.uiFlags.isMerging,
         },
       ];
+    },
+    // Acciones que no son las principales (Mensaje, Editar): van en «Más».
+    moreActions() {
+      // Programar mensaje, cotizar y crear tarea van a la vista, como íconos (panelActions).
+      // 2026-11-06: se quitaron de aquí Mensaje, Nueva conversación (privada con otro contacto) y
+      // Crear evento de calendario; la nota privada quedó solo en la ficha del contacto.
+      const list = [...this.mergeActions];
       if (this.isAdmin) {
         list.push({
           key: 'delete',
@@ -216,14 +226,7 @@ export default {
     //   Editar    → sus datos
     //   ···       → lo delicado y poco frecuente (fusionar, eliminar)
     headerMoreActions() {
-      const list = [
-        {
-          key: 'merge',
-          icon: 'merge',
-          label: this.$t('CONTACT_PANEL.MERGE_CONTACT'),
-          disabled: this.uiFlags.isMerging,
-        },
-      ];
+      const list = [...this.mergeActions];
       if (this.isAdmin) {
         list.push({
           key: 'delete',
@@ -678,6 +681,7 @@ export default {
               @click="runMoreAction(action.key)"
             />
             <ContactMoreActions
+              v-if="moreActions.length"
               icon-only
               :actions="moreActions"
               @select="runMoreAction"
@@ -854,6 +858,7 @@ export default {
           {{ $t('CONTACT_PANEL.ACTIONS.EDIT') }}
         </woot-button>
         <ContactMoreActions
+          v-if="headerMoreActions.length"
           icon-only
           :actions="headerMoreActions"
           @select="runMoreAction"

@@ -113,6 +113,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     tickets = apply_date_range(tickets)
     tickets = apply_closed_range(tickets)
     tickets = Cases::NextSteps.without_next_step(tickets) if params[:next_step] == 'none' # «Sin siguiente paso»
+    tickets = apply_agent_filter(tickets) # «Con agente» / «Sin agente»
     tickets = apply_sort(tickets)
 
     per_page = [[params.fetch(:per_page, PER_PAGE_DEFAULT).to_i, 1].max, PER_PAGE_MAX].min
@@ -121,6 +122,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
     @parent_projects = parent_projects_for(tickets) # una consulta para toda la página
     @next_steps = Cases::NextSteps.for(tickets) # tareas y agendadas: dos consultas para la página
+    @agent_statuses = Cases::AgentStatus.for(tickets) # el robot: ¿un agente atiende su conversación?
     render json: {
       case_tickets: tickets.map { |t| ticket_json(t) },
       meta: pagination_meta(tickets).merge(
@@ -919,10 +921,25 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       is_internal:                ticket.internal?,                   # @tickets_cases Fase C
       can_transition_to:          valid_transitions_for(ticket)
     }.merge(commercial_json(ticket)).merge(work_order_json(ticket)).merge(project_json(ticket)).merge(next_step_json(ticket))
+      .merge(agent_json(ticket))
       .then { |json| hide_amounts(json) }
   end
 
   # Solo en la lista y el tablero (calculado por lote en #index); nil = cerrado/cancelado.
+  def agent_json(ticket)
+    return {} unless @agent_statuses
+
+    { agent: @agent_statuses[ticket.id] }
+  end
+
+  def apply_agent_filter(tickets)
+    case params[:agent]
+    when 'with' then Cases::AgentStatus.with_agent(tickets)
+    when 'none' then Cases::AgentStatus.without_agent(tickets)
+    else tickets
+    end
+  end
+
   def next_step_json(ticket)
     return {} unless @next_steps
 

@@ -124,4 +124,15 @@ RSpec.describe 'Organizations API' do
     get base, headers: agent.create_new_auth_token, as: :json
     expect(response).to have_http_status(:forbidden)
   end
+
+  it 'eliminar pide el permiso «Borrar»' do
+    give_role(agent, 'supervisor')
+    org = account.organizations.create!(name: 'Hielos SA')
+    delete "#{base}/#{org.id}", headers: agent.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:forbidden)
+    expect(Organization.exists?(org.id)).to be(true)
+
+    delete "#{base}/#{org.id}", headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:no_content)
+  end
 end

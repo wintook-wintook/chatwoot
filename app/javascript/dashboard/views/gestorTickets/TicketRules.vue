@@ -113,9 +113,9 @@ const ACTION_TYPES = [
 const ACTION_VALUE_PLACEHOLDERS = {
   assign_agent: 'Nombre del responsable',
   assign_team: 'Nombre del equipo',
-  notify_agent: 'Correo del usuario',
-  add_label: 'Nombre de la etiqueta',
-  trigger_tracking: 'Nombre del tracking',
+  notify_agent: 'Correo o nombre del usuario (le llega un aviso)',
+  add_label: 'Etiqueta que se pone a la conversación del caso',
+  trigger_tracking: 'Nombre de la plantilla de seguimiento',
 };
 
 export default {

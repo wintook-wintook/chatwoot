@@ -21,6 +21,15 @@ RSpec.describe 'Contact Owner API' do
     expect(contact.reload.owner_id).to eq(agent.id)
   end
 
+  it 'sin responsable propio muestra el que hereda de su organización' do
+    organization = Organization.create!(account: account, name: 'Hielos SA', owner_id: agent.id)
+    contact.update!(organization: organization)
+    get url, headers: admin.create_new_auth_token, as: :json
+    body = response.parsed_body
+    expect(body['owner']).to be_nil
+    expect(body['inherited']).to include('id' => agent.id, 'organization' => 'Hielos SA')
+  end
+
   it 'se quita mandándolo vacío' do
     contact.update!(owner: agent)
     patch url, params: { owner_id: '' }, headers: admin.create_new_auth_token, as: :json

@@ -3,6 +3,9 @@
 import ApiClient from './ApiClient';
 import { browserZone } from './fieldVisits';
 
+const targetParams = target =>
+  target && typeof target === 'object' ? target : { conversation_id: target };
+
 class AiFollowUpsAPI extends ApiClient {
   constructor() {
     super('ai_follow_ups', { accountScoped: true });
@@ -21,16 +24,20 @@ class AiFollowUpsAPI extends ApiClient {
   }
 
   // Plantillas de WhatsApp que el agente puede usar en esa conversación (display_id).
-  templates(conversationId) {
-    return axios.get(`${this.url}/templates`, {
-      params: { conversation_id: conversationId },
-    });
+  // `target` es el display_id o, para un contacto sin conversaciones, { contact_id, inbox_id }.
+  templates(target) {
+    return axios.get(`${this.url}/templates`, { params: targetParams(target) });
   }
 
-  // Fuentes que puede consultar y la nota IA del contacto de esa conversación (display_id).
-  context(conversationId) {
-    return axios.get(`${this.url}/context`, {
-      params: { conversation_id: conversationId },
+  // Fuentes que puede consultar y la nota IA del contacto (mismo `target`).
+  context(target) {
+    return axios.get(`${this.url}/context`, { params: targetParams(target) });
+  }
+
+  // Bandejas por las que se le puede escribir a un contacto sin conversaciones.
+  inboxes(contactId) {
+    return axios.get(`${this.url}/inboxes`, {
+      params: { contact_id: contactId },
     });
   }
 

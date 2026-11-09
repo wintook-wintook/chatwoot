@@ -26,7 +26,26 @@ const ICONS = {
   resume_case: 'arrow-clockwise',
   update_opportunity: 'edit',
   create_contact: 'person-add',
+  // Cotizaciones
+  create_quote: 'receipt',
+  send_quote: 'send',
+  // Contestar una conversación
+  reply: 'send',
+  // Trabajo en campo
+  on_my_way: 'navigation',
+  visit_report: 'clipboard',
+  // Captar en la expo (etiqueta NFC)
+  nfc_link: 'flash-on',
 };
+
+// Igual que el servidor (Assistant::QuoteTools.totals): descuento por partida, IVA de la partida.
+const round2 = n => Math.round(n * 100) / 100;
+const itemNet = i =>
+  round2(
+    Number(i.quantity || 0) *
+      Number(i.unit_price || 0) *
+      (1 - Number(i.discount_percent || 0) / 100)
+  );
 
 // ISO (con zona) ↔ valor de <input type="datetime-local"> en hora local.
 const toLocalInput = iso => {
@@ -72,7 +91,17 @@ export default {
         name: p.name || '',
         email: p.email || '',
         phone: p.phone || '',
+        // Cotización: las partidas se pueden ajustar (cantidad, precio) o quitar.
+        items: (p.items || []).map(i => ({ ...i })),
+        // Campo: hora de llegada, lo dictado, puntos de la lista y minutos.
+        eta_minutes: p.eta_minutes || 30,
+        notes: p.notes || '',
+        done_task_ids: [...(p.done_task_ids || [])],
+        minutes: p.minutes || '',
+        // NFC: el mensaje que envía el cliente.
+        message: p.message || '',
       },
+      writing: false,
       units: ['minutes', 'hours', 'days'],
       busy: false,
       error: '',
@@ -102,6 +131,15 @@ export default {
     // Delegar a un agente del módulo o al Seguimiento IA: la misma tarjeta.
     isDelegate() {
       return this.type === 'delegate' || this.type === 'follow_up';
+    },
+    quoteTotals() {
+      const net = this.form.items.reduce((sum, i) => sum + itemNet(i), 0);
+      const tax = this.form.items.reduce(
+        (sum, i) =>
+          sum + round2((itemNet(i) * Number(i.tax_percent || 0)) / 100),
+        0
+      );
+      return { net: round2(net), tax: round2(tax), total: round2(net + tax) };
     },
     isAction() {
       return (
@@ -150,6 +188,17 @@ export default {
         resume_case: {},
         update_opportunity: {},
         create_contact: { name: f.name, email: f.email, phone: f.phone },
+        create_quote: { items: f.items },
+        send_quote: {},
+        // Con plantilla no se edita: la llenó Dali con datos reales.
+        reply: this.labels.template ? {} : { content: f.content },
+        on_my_way: { eta_minutes: Number(f.eta_minutes) },
+        nfc_link: { message: f.message },
+        visit_report: {
+          notes: f.notes,
+          done_task_ids: f.done_task_ids,
+          minutes: f.minutes === '' ? null : Number(f.minutes),
+        },
       }[this.type];
     },
     // «TYPE» → «Tipo»; el valor del resultado (won…) también se traduce.
@@ -163,6 +212,20 @@ export default {
       if (value === true || value === 'true') return this.t('YES');
       if (value === false || value === 'false') return this.t('NO_WORD');
       return value;
+    },
+    money(value) {
+      const currency = this.labels.currency || 'MXN';
+      try {
+        return new Intl.NumberFormat(undefined, {
+          style: 'currency',
+          currency,
+        }).format(value || 0);
+      } catch {
+        return `${Number(value || 0).toFixed(2)} ${currency}`;
+      }
+    },
+    removeItem(index) {
+      this.form.items.splice(index, 1);
     },
     async confirm() {
       this.busy = true;
@@ -187,6 +250,32 @@ export default {
       } finally {
         this.busy = false;
       }
+    },
+    // NFC: grabar el enlace en la etiqueta (Web NFC, Chrome en Android) o copiarlo.
+    async writeNfc() {
+      const { url } = this.proposal.result;
+      if (!('NDEFReader' in window)) {
+        await navigator.clipboard?.writeText(url);
+        this.error = this.t('NFC_NO_WEB');
+        return;
+      }
+      this.writing = true;
+      this.error = '';
+      try {
+        // eslint-disable-next-line no-undef
+        await new NDEFReader().write({
+          records: [{ recordType: 'url', data: url }],
+        });
+        this.copied = true;
+      } catch (_e) {
+        this.error = this.t('NFC_ERROR');
+      } finally {
+        this.writing = false;
+      }
+    },
+    async copyNfc() {
+      await navigator.clipboard?.writeText(this.proposal.result.url);
+      this.copied = true;
     },
     async copy() {
       try {
@@ -273,7 +362,10 @@ export default {
         <input v-model="form.title" type="text" class="h-8 text-sm" />
       </label>
       <label
-        v-if="['note', 'scheduled_message', 'draft'].includes(type)"
+        v-if="
+          ['note', 'scheduled_message', 'draft'].includes(type) ||
+          (type === 'reply' && !labels.template)
+        "
         class="text-xs"
       >
         {{ t('CONTENT') }}
@@ -416,6 +508,137 @@ export default {
           </label>
         </div>
       </template>
+      <!-- Cotización: partidas (cantidad y precio sin IVA editables) y totales -->
+      <template v-if="type === 'create_quote'">
+        <div
+          class="grid grid-cols-[1fr_4rem_6rem_1rem] gap-2 text-xs text-slate-500"
+        >
+          <span />
+          <span>{{ t('QUANTITY') }}</span>
+          <span>{{ t('UNIT_PRICE') }}</span>
+        </div>
+        <div
+          v-for="(item, index) in form.items"
+          :key="index"
+          class="grid items-center grid-cols-[1fr_4rem_6rem_1rem] gap-2"
+        >
+          <span
+            class="text-xs truncate text-slate-700 dark:text-slate-200"
+            :title="item.description"
+          >
+            {{ item.description }}
+          </span>
+          <input
+            v-model.number="item.quantity"
+            type="number"
+            min="0.01"
+            step="any"
+            :aria-label="t('QUANTITY')"
+            class="h-8 text-sm"
+          />
+          <input
+            v-model.number="item.unit_price"
+            type="number"
+            min="0"
+            step="any"
+            :aria-label="t('UNIT_PRICE')"
+            class="h-8 text-sm"
+          />
+          <button
+            v-if="pending && form.items.length > 1"
+            type="button"
+            class="p-0 bg-transparent border-0 cursor-pointer text-slate-400 hover:text-red-600"
+            :title="t('REMOVE_ITEM')"
+            @click="removeItem(index)"
+          >
+            <fluent-icon icon="dismiss" size="12" />
+          </button>
+        </div>
+        <dl class="m-0 text-xs text-right text-slate-500">
+          <div>
+            {{ t('NET') }}:
+            <span class="text-slate-700 dark:text-slate-200">{{
+              money(quoteTotals.net)
+            }}</span>
+          </div>
+          <div>
+            {{ t('TAX') }}:
+            <span class="text-slate-700 dark:text-slate-200">{{
+              money(quoteTotals.tax)
+            }}</span>
+          </div>
+          <div class="font-semibold text-slate-800 dark:text-slate-100">
+            {{ t('TOTAL') }}: {{ money(quoteTotals.total) }}
+          </div>
+        </dl>
+        <p class="m-0 text-xs text-slate-500">{{ t('QUOTE_DRAFT') }}</p>
+      </template>
+      <!-- NFC: el mensaje que envía el cliente al acercar el celular -->
+      <label v-if="type === 'nfc_link'" class="text-xs">
+        {{ t('NFC_MESSAGE') }}
+        <textarea v-model="form.message" rows="2" class="text-sm" />
+      </label>
+      <!-- Campo: «Voy en camino» -->
+      <label v-if="type === 'on_my_way'" class="text-xs">
+        {{ t('ETA') }}
+        <input
+          v-model="form.eta_minutes"
+          type="number"
+          min="5"
+          max="240"
+          class="h-8 text-sm"
+        />
+      </label>
+      <!-- Campo: el reporte dictado de la visita -->
+      <template v-if="type === 'visit_report'">
+        <label class="text-xs">
+          {{ t('NOTES') }}
+          <textarea v-model="form.notes" rows="5" class="text-sm" />
+        </label>
+        <div v-if="(labels.checklist || []).length" class="text-xs">
+          <p class="m-0 mb-1 text-slate-500">{{ t('CHECKLIST') }}</p>
+          <label
+            v-for="task in labels.checklist"
+            :key="task.id"
+            class="flex items-center gap-2 py-0.5 text-sm text-slate-700 dark:text-slate-200"
+          >
+            <input
+              v-model="form.done_task_ids"
+              type="checkbox"
+              :value="task.id"
+              class="!m-0"
+            />
+            {{ task.title }}
+          </label>
+        </div>
+        <label v-if="labels.closes_visit" class="text-xs">
+          {{ t('MINUTES') }}
+          <input
+            v-model="form.minutes"
+            type="number"
+            min="0"
+            class="h-8 text-sm"
+          />
+        </label>
+        <p class="m-0 text-xs text-slate-500">
+          {{ labels.closes_visit ? t('CLOSES_VISIT') : t('FIELD_REST') }}
+        </p>
+      </template>
+      <!-- Ventana de 24 h cerrada: sale una plantilla aprobada, ya llena -->
+      <template v-if="type === 'reply' && labels.template">
+        <p class="m-0 text-xs text-slate-500">
+          {{ t('TEMPLATE') }}:
+          <span class="font-medium text-slate-700 dark:text-slate-200">{{
+            labels.template
+          }}</span>
+        </p>
+        <p
+          class="p-2 m-0 text-sm whitespace-pre-line rounded bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+        >
+          {{ labels.template_text }}
+        </p>
+        <p class="m-0 text-xs text-slate-500">{{ t('TEMPLATE_NOTE') }}</p>
+      </template>
       <label v-if="type === 'scheduled_message'" class="text-xs">
         {{ t('SEND_AT') }}
         <input
@@ -457,8 +680,40 @@ export default {
         {{ t('COPY') }}
       </woot-button>
       <woot-button v-else size="small" :is-loading="busy" @click="confirm">
-        {{ t('CONFIRM') }}
+        {{ type === 'reply' ? t('SEND') : t('CONFIRM') }}
       </woot-button>
+    </div>
+    <!-- NFC hecho: grabar en la etiqueta o copiar el enlace -->
+    <div
+      v-if="type === 'nfc_link' && proposal.result && proposal.result.url"
+      class="flex flex-wrap items-center gap-2"
+    >
+      <span
+        class="flex items-center w-full gap-1 text-xs text-green-700 dark:text-green-400"
+      >
+        <fluent-icon icon="checkmark-circle" size="12" />
+        {{ proposal.result.label }}
+      </span>
+      <woot-button
+        size="small"
+        icon="flash-on"
+        :is-loading="writing"
+        @click="writeNfc"
+      >
+        {{ writing ? t('NFC_WRITING') : t('NFC_WRITE') }}
+      </woot-button>
+      <woot-button
+        size="small"
+        variant="smooth"
+        color-scheme="secondary"
+        icon="copy"
+        @click="copyNfc"
+      >
+        {{ t('NFC_COPY') }}
+      </woot-button>
+      <span v-if="copied" class="text-xs text-green-700 dark:text-green-400">
+        {{ t('NFC_DONE') }}
+      </span>
     </div>
     <div
       v-else-if="proposal.result && proposal.result.label"

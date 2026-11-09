@@ -503,13 +503,13 @@
     "NO_BILLING_USER": "Your billing account is being set up. Please refresh the page and try again."
   },
   "CREATE_ACCOUNT": {
-    "NO_ACCOUNT_WARNING": "Oh no! We couldn't find any Chatwoot accounts. Please create a new account to continue.",
+    "NO_ACCOUNT_WARNING": "Oh no! We couldn't find any Kontrolya accounts. Please create a new account to continue.",
     "NEW_ACCOUNT": "New Account",
     "SELECTOR_SUBTITLE": "Create a new account",
     "API": {
       "SUCCESS_MESSAGE": "Account created successfully",
       "EXIST_MESSAGE": "Account already exists",
-      "ERROR_MESSAGE": "Could not connect to Woot server, please try again later"
+      "ERROR_MESSAGE": "Could not connect to Kontrolya server, please try again later"
     },
     "FORM": {
       "NAME": {

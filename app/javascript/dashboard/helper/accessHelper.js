@@ -40,6 +40,14 @@ export const seesOnlyOwn = (access, area) => areaLevel(access, area) === 'own';
 export const canDo = (access, action) =>
   access.role === 'administrator' || access.actions[action] !== false;
 
+// Servicio › Despacho: asigna a otra persona y ve todo Servicio o Ventas
+// (igual que FieldDispatchController#check_dispatcher).
+export const canDispatch = access =>
+  canDo(access, 'reassign') &&
+  ['service', 'sales'].some(area =>
+    ['all', 'view'].includes(areaLevel(access, area))
+  );
+
 // Pestañas de «de quién» (Mías / No asignadas / Todas) que el rol deja ver en un
 // área: con «solo lo suyo» no hay «Todas», y «No asignadas» solo si puede tomarlas.
 export const allowedAssigneeTabs = (access, area, tabs) => {

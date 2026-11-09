@@ -31,7 +31,7 @@
       },
       "API": {
         "SUCCESS_MESSAGE": "Respuesta predefinida agregada con éxito.",
-        "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot. Por favor, inténtalo de nuevo."
+        "ERROR_MESSAGE": "No se pudo conectar al servidor de Kontrolya. Por favor, inténtalo de nuevo."
       }
     },
     "EDIT": {
@@ -53,14 +53,14 @@
       "BUTTON_TEXT": "Editar",
       "API": {
         "SUCCESS_MESSAGE": "Respuesta predefinida actualizada con éxito.",
-        "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot. Por favor, inténtalo de nuevo."
+        "ERROR_MESSAGE": "No se pudo conectar al servidor de Kontrolya. Por favor, inténtalo de nuevo."
       }
     },
     "DELETE": {
       "BUTTON_TEXT": "Eliminar",
       "API": {
         "SUCCESS_MESSAGE": "Respuesta predefinida eliminada con éxito.",
-        "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot. Por favor, inténtalo de nuevo."
+        "ERROR_MESSAGE": "No se pudo conectar al servidor de Kontrolya. Por favor, inténtalo de nuevo."
       },
       "CONFIRM": {
         "TITLE": "Confirmar eliminación",

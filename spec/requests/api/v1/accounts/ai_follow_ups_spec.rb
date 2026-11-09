@@ -55,6 +55,45 @@ RSpec.describe 'AI follow-ups API' do
     expect(response.parsed_body.dig('payload', 'template_name')).to eq('retomar')
   end
 
+  describe 'contacto sin conversaciones' do
+    let(:lonely) { create(:contact, account: account, name: 'Ana Ruiz', phone_number: '+5215512345678') }
+    let(:channel) do
+      create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false,
+                                message_templates: [{ 'name' => 'retomar', 'status' => 'APPROVED', 'category' => 'UTILITY',
+                                                      'language' => 'es_MX',
+                                                      'components' => [{ 'type' => 'BODY', 'text' => 'Hola {{1}}' }] }])
+    end
+
+    it 'ofrece las bandejas por las que se le puede escribir, con WhatsApp primero' do
+      create(:inbox, account: account, channel: create(:channel_email, account: account))
+      channel
+      get "#{base}/inboxes", params: { contact_id: lonely.id }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['payload'].pluck('channel_type')).to eq(['Channel::Whatsapp'])
+    end
+
+    it 'abre la conversación en la bandeja elegida, asignada a quien delega, y arranca ahí' do
+      get "#{base}/templates", params: { contact_id: lonely.id, inbox_id: channel.inbox.id }, headers: admin.create_new_auth_token,
+                               as: :json
+      expect(response.parsed_body['payload'].pluck('name')).to eq(['retomar'])
+
+      post base, params: { contact_id: lonely.id, inbox_id: channel.inbox.id, objective: 'Que agende la visita',
+                           template_name: 'retomar', template_language: 'es_MX' },
+                 headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      conversation = lonely.conversations.sole
+      expect(conversation).to have_attributes(inbox_id: channel.inbox.id, assignee_id: admin.id)
+      expect(AiFollowUp.find(response.parsed_body.dig('payload', 'id'))).to have_attributes(conversation_id: conversation.id,
+                                                                                            template_name: 'retomar')
+    end
+
+    it 'si falta el objetivo no deja una conversación vacía' do
+      post base, params: { contact_id: lonely.id, inbox_id: channel.inbox.id, objective: '' },
+                 headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(lonely.conversations).to be_empty
+    end
+  end
+
   it 'dice si hay respuestas predefinidas y da la nota IA del contacto' do
     create(:canned_response, account: account, short_code: 'horario', content: 'De 9 a 18 h')
     create(:note, account: account, user: admin, contact: contact, content: 'Prefiere WhatsApp', is_for_ia: true)

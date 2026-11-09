@@ -110,6 +110,12 @@ export default {
     TaskReportsDialog,
   },
   mixins: [caseAiWriter, taskReportFlow],
+  props: {
+    // Dentro de Inicio › Mi resumen (pestaña «Mi día»): fija en Mi día, sin el
+    // título, «Nueva tarea» ni las pestañas Mías / No asignadas / Todas, y sin
+    // cambiar la pestaña que Agenda › Tareas recuerda.
+    embedded: { type: Boolean, default: false },
+  },
   data() {
     return {
       // La primera vez abre en Mi día; después, en la última pestaña usada.
@@ -590,7 +596,8 @@ export default {
     this.restoreFilters();
     // «Mi resumen» → «Ver todo» abre directo en una pestaña (?tab=my_day).
     const { tab } = this.$route.query || {};
-    if (this.quickFilters.some(f => f.key === tab)) this.quickFilter = tab;
+    if (this.embedded) this.quickFilter = 'my_day';
+    else if (this.quickFilters.some(f => f.key === tab)) this.quickFilter = tab;
     if (!this.quickFilters.some(f => f.key === this.quickFilter)) {
       this.quickFilter = 'my_day';
     }
@@ -647,8 +654,10 @@ export default {
           tabs[tab][key] = this.tabFilters[tab][key];
         });
       });
+      // Incrustada en Mi resumen no cambia la pestaña que recuerda Agenda › Tareas.
+      const saved = LocalStorage.get(this.prefsKey()) || {};
       LocalStorage.set(this.prefsKey(), {
-        quickFilter: this.quickFilter,
+        quickFilter: this.embedded ? saved.quickFilter : this.quickFilter,
         sortBy: this.sortBy,
         sortOrder: this.sortOrder,
         tabs,
@@ -1185,7 +1194,7 @@ export default {
     <div
       class="flex flex-col flex-shrink-0 gap-3 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
-      <div class="flex items-center justify-between gap-2">
+      <div v-if="!embedded" class="flex items-center justify-between gap-2">
         <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
           {{ $t('CASE_TICKETS.TASKS.INBOX.TITLE') }}
         </h1>
@@ -1204,7 +1213,11 @@ export default {
         @close="reportsFilter = null"
       />
 
-      <woot-tabs :index="activeQuickTabIndex" @change="onQuickTabChange">
+      <woot-tabs
+        v-if="!embedded"
+        :index="activeQuickTabIndex"
+        @change="onQuickTabChange"
+      >
         <woot-tabs-item
           v-for="(f, i) in quickFilters"
           :key="f.key"

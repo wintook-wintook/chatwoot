@@ -1,0 +1,61 @@
+---
+key: agenda
+title: Agenda, tareas y reportes
+areas: [agenda]
+keywords: [agenda, tarea, tareas, mi dia, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada]
+pages: [tasks, my_day, calendar, task_reports, task_outcomes, task_scoring]
+---
+## Para qué sirve
+La Agenda junta todo lo que tienes que hacer: tareas (con fecha, sin hora) y tareas agendadas (con hora: llamadas, reuniones, visitas), y lo que ya se hizo, con su reporte.
+
+## Dónde está
+- Agenda › Tareas: pestañas Mi día, Mías, No asignadas y Todas. Abre en Mi día. Mi día también está en Inicio › Mi resumen.
+- Agenda › Calendario (si tu empresa lo tiene): ver la guía del calendario.
+- Agenda › Reportes: pestañas Reportes y Llegadas.
+- Agenda › Mi ruta en campo: la pantalla para celular de quien sale a visitas.
+
+## Cómo se hace
+### Trabajar Mi día
+1. Entra a Agenda › Tareas › Mi día. Arriba ves cuántas tareas tienes para hoy y su tiempo estimado.
+2. «Sugeridas por prioridad» trae tus pendientes ordenadas por un puntaje, con el motivo de su lugar (vencida, vence hoy, SLA en riesgo…).
+3. Arma «Mi orden de hoy»: arrastra tareas ahí o pulsa la flecha ↑ («Agregar a mi orden de hoy») y reordénalas arrastrando. La primera queda como «Siguiente».
+4. En cada tarea: «Completar» para concluirla o «Pasar a mañana» para programarla al día siguiente.
+5. A la derecha están la «Agenda de hoy» (tus tareas agendadas) y «Hecho hoy» (lo que ya concluiste).
+6. Si quedaron tareas programadas sin hacer, sale un aviso con «Pasarlas a hoy» o «Ignorar». Si llega una urgente después de armar tu día, te avisa con «Subir al inicio».
+
+### Ver y filtrar tareas
+1. Usa las pestañas Mías, No asignadas o Todas.
+2. Filtra por estado (Pendientes, Completadas), por tipo (No agendadas, Agendadas), por tipo de caso, por vencimiento (Vencidas, Vencen hoy, Esta semana) y por solicitante; en Todas, también por responsable.
+3. Busca en el título o la descripción. «Actualizar» recarga la lista. Cada pestaña recuerda sus filtros.
+
+### Crear una tarea
+1. Pulsa «Nueva tarea» en Agenda › Tareas, o «Tarea» en la barra de arriba.
+2. Llena «Qué hay que hacer» y, si quieres, descripción, responsable, fecha programada, hora y fecha de vencimiento.
+3. Sin hora es una tarea. Con hora es una tarea agendada: va al calendario y, si el responsable conectó Google, a su Google Calendar.
+4. Para una visita marca «Es una visita al cliente» (pide fecha y hora; la dirección es opcional).
+5. Elige organización o contacto si es para un cliente, y su caso si aplica. Sin cliente solo se ve en tu Mi día.
+6. Pulsa «Crear tarea».
+
+### Concluir con reporte
+1. Pulsa «Completar» en la tarea. Se abre el «Reporte de cierre».
+2. Escribe «Qué se hizo», el Tiempo dedicado, el Resultado y, si quieres, evidencia (hasta 5 archivos).
+3. Pulsa «Concluir». El reporte queda en Agenda › Reportes, en la ficha del cliente y, si tiene caso, en su actividad; el tiempo suma a las horas del caso.
+
+### Reportar algo sin tarea
+Pulsa «Reportar actividad» en la barra de arriba: Título, «Qué se hizo», fecha, hora, resultado, tiempo y evidencia. Sin cliente queda como actividad interna.
+
+### Revisar lo hecho
+1. Entra a Agenda › Reportes y filtra por persona y fechas (Desde, Hasta).
+2. Reportes: las tareas concluidas y actividades, con su reporte.
+3. Llegadas: cuándo llegó cada quien a cada visita y desde dónde; «Exportar CSV» las descarga.
+
+## Dudas frecuentes
+- ¿Es obligatorio el tiempo dedicado? Por omisión sí. El administrador lo cambia en Catálogos › Resultados de tareas («Exigir el tiempo dedicado en los reportes»); ahí también da de alta los resultados.
+- Si concluyes varias tareas a la vez, el tiempo se reparte por igual entre ellas.
+- ¿Cómo se decide el orden de Mi día? Por los pesos de Ajustes › Puntaje de tareas (administrador).
+- Una visita entra a Mi ruta en campo del técnico y a Servicio › Despacho.
+
+## Quién puede
+- Con Agenda en «Todo» ves todas las pestañas y los reportes de todos.
+- Con «Solo lo suyo» no hay pestaña Todas, «No asignadas» solo si tu rol puede tomar lo que no tiene dueño, y en Reportes ves solo los tuyos.
+- Puntaje de tareas y Resultados de tareas: solo el Administrador.

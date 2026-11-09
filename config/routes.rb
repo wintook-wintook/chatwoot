@@ -15,6 +15,8 @@ Rails.application.routes.draw do
     root to: 'dashboard#index'
 
     get '/app', to: 'dashboard#index'
+    # Portal de Dali en el teléfono (dirección corta para compartir)
+    get '/dali', to: redirect('/app/dali')
     get '/app/*params', to: 'dashboard#index'
     get '/app/accounts/:account_id/settings/inboxes/new/twitter', to: 'dashboard#index', as: 'app_new_twitter_inbox'
     get '/app/accounts/:account_id/settings/inboxes/new/microsoft', to: 'dashboard#index', as: 'app_new_microsoft_inbox'
@@ -76,6 +78,8 @@ Rails.application.routes.draw do
           end
           # Plan-Eventos E1 — eventos y su lista de contactos con estado
           resources :events, only: [:index, :show, :create, :update, :destroy] do
+            # Captar en la expo «acercando el celular» (etiqueta NFC)
+            resources :capture_links, only: [:index, :create, :destroy], controller: 'event_capture_links'
             member do
               post :close
               post :reopen
@@ -258,6 +262,7 @@ Rails.application.routes.draw do
           resources :ai_follow_ups, only: [:index, :create] do
             get :templates, on: :collection
             get :context, on: :collection
+            get :inboxes, on: :collection
             member do
               post :pause
               post :resume
@@ -355,10 +360,15 @@ Rails.application.routes.draw do
           # @tickets_cases — Gestor de Tickets
           # =========================================================================
           # Asistente (Dali) — asistente conversacional de toda la plataforma
+          # Buscar en todo (la lupa): contactos, organizaciones y casos
+          get :global_search, to: 'global_search#index'
           resource :assistant, only: [:show], controller: 'assistant' do
             post :messages
             post :reset
             patch :settings
+            post :transcribe
+            post :mobile_link
+            post :push_subscription
             post 'proposals/:id/confirm', action: :confirm
             post 'proposals/:id/cancel', action: :cancel
           end
@@ -1181,6 +1191,8 @@ Rails.application.routes.draw do
       end
       resources :platform_apps, only: [:index, :new, :create, :show, :edit, :update]
       resource :instance_status, only: [:show]
+      # Asistente (Dali) — preguntas que no supo contestar, de todas las empresas
+      resources :assistant_guide_gaps, only: [:index, :update]
 
       resource :settings, only: [:show] do
         get :refresh, on: :collection
