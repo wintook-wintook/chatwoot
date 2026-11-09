@@ -60,7 +60,9 @@ class Notification < ApplicationRecord
     case_stage_tasks: 14,
     case_stage_ready: 15,
     # «Notificar usuario» de una regla de casos (Cases::RuleEngineService). Solo campanita + toast.
-    case_rule_notice: 16
+    case_rule_notice: 16,
+    # Tareas con el cliente — el cliente avanzó, comentó o completó una tarea en su portal. Solo campanita + toast.
+    client_task_update: 17
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
@@ -72,7 +74,7 @@ class Notification < ApplicationRecord
 
   PRIMARY_ACTORS = %w[Conversation CaseTicket].freeze # @tickets_cases Fase A
   CASE_TITLE_TYPES = %w[case_ticket_assignment case_task_assignment case_task_completed
-                        case_stage_tasks case_stage_ready case_rule_notice].freeze
+                        case_stage_tasks case_stage_ready case_rule_notice client_task_update].freeze
 
   def push_event_data
     # Secondary actor could be nil for cases like system assigning conversation
@@ -127,7 +129,8 @@ class Notification < ApplicationRecord
       'missed_call' => 'notifications.notification_title.missed_call',
       'case_stage_tasks' => 'notifications.notification_title.case_stage_tasks',
       'case_stage_ready' => 'notifications.notification_title.case_stage_ready',
-      'case_rule_notice' => 'notifications.notification_title.case_rule_notice'
+      'case_rule_notice' => 'notifications.notification_title.case_rule_notice',
+      'client_task_update' => 'notifications.notification_title.client_task_update'
     }
 
     i18n_key = notification_title_map[notification_type]
@@ -167,7 +170,8 @@ class Notification < ApplicationRecord
       primary_actor.title.to_s
     when 'missed_call'
       primary_actor.inbox&.name.to_s
-    when 'case_task_assignment', 'case_task_completed', 'case_stage_tasks', 'case_stage_ready', 'case_rule_notice'
+    when 'case_task_assignment', 'case_task_completed', 'case_stage_tasks', 'case_stage_ready', 'case_rule_notice',
+         'client_task_update'
       # primary_actor es el TICKET (ruteo reusado); el nombre de la tarea viaja en meta.
       meta&.dig('task_title').to_s
     else

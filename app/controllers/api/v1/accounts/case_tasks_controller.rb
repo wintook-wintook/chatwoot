@@ -101,7 +101,8 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
     permitted = params.require(:case_task).permit(:title, :description, :status, :priority, :assignee_id, :due_at, :position,
                                                   :milestone, # Plan-Clase-Proyecto P2 — hito
                                                   :estimated_minutes, :planned_on, # Plan-Bandeja-Prioridad
-                                                  :required) # Plan-Plantilla-Tareas-Etapa
+                                                  :required, # Plan-Plantilla-Tareas-Etapa
+                                                  :audience, :requires_file) # Tareas con el cliente
     # El asignado debe ser un usuario de la cuenta (si no, queda sin asignar).
     permitted[:assignee_id] = Current.account.users.where(id: permitted[:assignee_id]).pick(:id) if permitted.key?(:assignee_id)
     stage_of_required(permitted)
@@ -194,6 +195,17 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
       # Plan-Plantilla-Tareas-Etapa — nació de la plantilla de una etapa.
       required: task.required, stage: task.case_type_column&.label, team: task.team && { id: task.team.id, name: task.team.name },
       documentation: task.documentation_for_column_id.present?, report_required: task.report_required? }
+      .merge(client_fields(task))
+  end
+
+  # Tareas con el cliente — quién la hace, su avance en el portal y cuánto ha pasado ahí.
+  def client_fields(task)
+    { audience: task.audience, requires_file: task.requires_file, client_status: task.client_status,
+      completed_by_contact: task.completed_by_contact&.name, client_entries_count: client_entries_map[task.id] || 0 }
+  end
+
+  def client_entries_map
+    @client_entries_map ||= CaseTaskClientEntry.where(case_ticket_id: @ticket.id).group(:case_task_id).count
   end
 
   # id de tarea → nº de reuniones vivas que caen después del vencimiento de esa

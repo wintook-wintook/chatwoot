@@ -21,7 +21,7 @@
 class Cases::MyDayNotices
   LIMIT = 50
   HIGH_TYPES = %w[sla_missed_first_response sla_missed_next_response sla_missed_resolution conversation_mention].freeze
-  MEDIUM_TYPES = %w[case_rule_notice case_stage_ready case_stage_tasks case_task_assignment case_ticket_assignment
+  MEDIUM_TYPES = %w[client_task_update case_rule_notice case_stage_ready case_stage_tasks case_task_assignment case_ticket_assignment
                     conversation_assignment assigned_conversation_new_message calendar_event_reminder].freeze
   WEIGHT_ORDER = { 'high' => 0, 'medium' => 1 }.freeze
 

@@ -228,6 +228,11 @@ class ActionCableConnector extends BaseActionCableConnector {
         key: 'CASE_TICKETS.TASKS.INBOX.TOAST_RULE_NOTICE',
         icon: 'alert',
       },
+      // Tareas con el cliente — avanzó, comentó o completó en su portal.
+      client_task_update: {
+        key: 'CASE_TICKETS.TASKS.INBOX.TOAST_CLIENT_TASK',
+        icon: 'person',
+      },
     };
     const n = data && data.notification;
     const conf = n && TOAST_MAP[n.notification_type];

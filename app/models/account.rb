@@ -55,6 +55,7 @@ class Account < ApplicationRecord
   has_many :contracts, dependent: :destroy # Plan-Contratos R1
   has_many :organizations, dependent: :destroy # Plan-Organizaciones O1
   has_many :events, dependent: :destroy # Plan-Eventos E1
+  has_many :client_portal_links, dependent: :destroy # Portal del cliente (tareas con el cliente)
   has_many :contract_types, dependent: :destroy # Plan-Contratos R1
   has_many :external_db_connections, dependent: :destroy # @query_databases
   has_many :external_db_queries,     dependent: :destroy # @query_databases

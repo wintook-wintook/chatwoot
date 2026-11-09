@@ -621,7 +621,8 @@
         "DELETE_ERROR": "No se pudo eliminar la tarea.",
         "TOAST_STAGE_TASKS": "Tareas nuevas: {task} · caso {folio}",
         "TOAST_STAGE_READY": "{task} · caso {folio}",
-        "TOAST_RULE_NOTICE": "{task}"
+        "TOAST_RULE_NOTICE": "{task}",
+        "TOAST_CLIENT_TASK": "El cliente avanzó «{task}» ({folio})"
       },
       "TABLE": {
         "NUM": "Folio",

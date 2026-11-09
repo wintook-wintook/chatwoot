@@ -188,6 +188,58 @@ en:
       no_conversation: 'The customer has no conversations to notify'
       no_technician: 'The order has no assignee'
       no_technician_contact: "%{name} has no WhatsApp contact in Settings › Users"
+  # Customer portal — customer tasks (/cliente/:token)
+  client_portal:
+    title: 'Your portal'
+    hello: 'Hi, %{name}'
+    who_title: 'Who are you?'
+    who_help: 'Pick your name so we know who moves each task forward.'
+    who_change: 'Change'
+    who_save: 'Continue'
+    needs_title: 'What we need from you'
+    needs_empty: "You have nothing pending. Thanks!"
+    cases_title: 'Your cases and projects'
+    cases_empty: 'No open cases.'
+    progress: 'Progress %{percent} %'
+    stages: 'Phases'
+    milestones: 'Milestones'
+    children: 'Project cases'
+    our_tasks: "What we're doing"
+    your_tasks: "What's on you"
+    your_done: "What you've done"
+    due: 'Due %{date}'
+    overdue: 'Overdue since %{date}'
+    requires_file: 'Requires uploading a file'
+    states:
+      pending: 'Pending'
+      in_progress: 'In progress'
+      done: 'Done'
+    our_states:
+      pending: 'Pending'
+      done: 'Finished'
+    done_by: 'Completed by %{name} on %{date}'
+    start: 'Start'
+    finish: 'Mark as done'
+    finish_note: 'Comment (optional)'
+    comment: 'Comment'
+    comment_placeholder: 'Write a comment or a question…'
+    attach: 'Upload file'
+    send: 'Send'
+    history: 'History'
+    kinds:
+      started: 'Started it'
+      comment: 'Commented'
+      file: 'Uploaded a file'
+      done: 'Marked it as done'
+      returned: 'We sent it back'
+      reply: 'We replied'
+    errors:
+      empty_comment: 'Write the comment.'
+      no_file: 'Choose the file.'
+      file_required: 'This task requires uploading a file before marking it as done.'
+      reason_required: 'Write why you send it back.'
+      closed: 'This task is no longer open.'
+      who: 'First choose who you are.'
   field_portal:
     title: 'Your service'
     report: 'View the service report'
@@ -499,6 +551,7 @@ en:
       case_stage_tasks: "You have new tasks in case %{folio}"
       case_stage_ready: "Case %{folio} is ready to move to the next stage"
       case_rule_notice: "Rule notice on case %{folio}"
+      client_task_update: "The customer updated a task on case %{folio}"
     calendar_event_reminder:
       body: "\"%{title}\" starts in %{minutes} minutes"
       no_title: "Untitled event"

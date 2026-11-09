@@ -173,6 +173,58 @@ es:
       no_conversation: 'El cliente no tiene conversaciones para avisarle'
       no_technician: 'La orden no tiene responsable'
       no_technician_contact: '%{name} no tiene su contacto de WhatsApp en Ajustes › Usuarios'
+  # Portal del cliente — tareas con el cliente (/cliente/:token)
+  client_portal:
+    title: 'Tu portal'
+    hello: 'Hola, %{name}'
+    who_title: '¿Quién eres?'
+    who_help: 'Elige tu nombre para que quede registrado quién avanza cada tarea.'
+    who_change: 'Cambiar'
+    who_save: 'Continuar'
+    needs_title: 'Lo que necesitamos de ti'
+    needs_empty: 'No tienes nada pendiente. ¡Gracias!'
+    cases_title: 'Tus casos y proyectos'
+    cases_empty: 'No hay casos abiertos.'
+    progress: 'Avance %{percent} %'
+    stages: 'Fases'
+    milestones: 'Hitos'
+    children: 'Casos del proyecto'
+    our_tasks: 'Lo que estamos haciendo'
+    your_tasks: 'Lo que te toca'
+    your_done: 'Lo que ya hiciste'
+    due: 'Para el %{date}'
+    overdue: 'Vencida desde el %{date}'
+    requires_file: 'Pide subir un archivo'
+    states:
+      pending: 'Pendiente'
+      in_progress: 'En proceso'
+      done: 'Hecha'
+    our_states:
+      pending: 'Pendiente'
+      done: 'Terminada'
+    done_by: 'Completada por %{name} el %{date}'
+    start: 'Empezar'
+    finish: 'Marcar como hecha'
+    finish_note: 'Comentario (opcional)'
+    comment: 'Comentar'
+    comment_placeholder: 'Escribe un comentario o una duda…'
+    attach: 'Subir archivo'
+    send: 'Enviar'
+    history: 'Historial'
+    kinds:
+      started: 'La empezó'
+      comment: 'Comentó'
+      file: 'Subió un archivo'
+      done: 'La marcó como hecha'
+      returned: 'La regresamos'
+      reply: 'Te respondimos'
+    errors:
+      empty_comment: 'Escribe el comentario.'
+      no_file: 'Elige el archivo.'
+      file_required: 'Esta tarea pide subir un archivo antes de marcarla como hecha.'
+      reason_required: 'Escribe por qué la regresas.'
+      closed: 'Esta tarea ya no está abierta.'
+      who: 'Primero elige quién eres.'
   field_portal:
     title: 'Tu servicio'
     report: 'Ver el reporte del servicio'
@@ -484,6 +536,7 @@ es:
       case_stage_tasks: "Tienes tareas nuevas en el caso %{folio}"
       case_stage_ready: "El caso %{folio} está listo para pasar de etapa"
       case_rule_notice: "Aviso de una regla en el caso %{folio}"
+      client_task_update: "El cliente avanzó una tarea en el caso %{folio}"
     calendar_event_reminder:
       body: "\"%{title}\" comienza en %{minutes} minutos"
       no_title: "Evento sin título"

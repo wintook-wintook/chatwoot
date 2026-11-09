@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_09_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_10_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -600,6 +600,23 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_09_120000) do
     t.index ["account_id", "priority"], name: "index_case_sla_policies_on_account_id_and_priority"
   end
 
+  create_table "case_task_client_entries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_task_id", null: false
+    t.bigint "case_ticket_id", null: false
+    t.bigint "contact_id"
+    t.bigint "user_id"
+    t.string "kind", null: false
+    t.text "content"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_task_client_entries_on_account_id"
+    t.index ["case_task_id"], name: "index_case_task_client_entries_on_case_task_id"
+    t.index ["case_ticket_id"], name: "index_case_task_client_entries_on_case_ticket_id"
+    t.index ["contact_id"], name: "index_case_task_client_entries_on_contact_id"
+    t.index ["user_id"], name: "index_case_task_client_entries_on_user_id"
+  end
+
   create_table "case_tasks", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "case_ticket_id"
@@ -630,10 +647,15 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_09_120000) do
     t.bigint "organization_id"
     t.datetime "cancelled_at"
     t.string "cancel_reason"
+    t.integer "audience", default: 0, null: false
+    t.boolean "requires_file", default: false, null: false
+    t.string "client_status"
+    t.bigint "completed_by_contact_id"
     t.index ["account_id", "priority"], name: "index_case_tasks_on_account_id_and_priority"
     t.index ["account_id"], name: "index_case_tasks_on_account_id"
     t.index ["assignee_id", "planned_on"], name: "index_case_tasks_on_assignee_id_and_planned_on"
     t.index ["assignee_id"], name: "index_case_tasks_on_assignee_id"
+    t.index ["case_ticket_id", "audience"], name: "index_case_tasks_on_case_ticket_id_and_audience"
     t.index ["case_ticket_id", "case_type_column_task_id"], name: "index_case_tasks_on_ticket_and_template"
     t.index ["case_ticket_id", "position"], name: "index_case_tasks_on_case_ticket_id_and_position"
     t.index ["case_ticket_id", "sequence"], name: "index_case_tasks_on_case_ticket_id_and_sequence"
@@ -1109,6 +1131,22 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_09_120000) do
     t.jsonb "message_templates", default: {}
     t.datetime "message_templates_last_updated", precision: nil
     t.index ["phone_number"], name: "index_channel_whatsapp_on_phone_number", unique: true
+  end
+
+  create_table "client_portal_links", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "organization_id"
+    t.bigint "contact_id"
+    t.string "token", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "last_used_at"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_client_portal_links_on_account_id"
+    t.index ["contact_id"], name: "index_client_portal_links_on_contact_id"
+    t.index ["organization_id"], name: "index_client_portal_links_on_organization_id"
+    t.index ["token"], name: "index_client_portal_links_on_token", unique: true
   end
 
   create_table "command_sessions", force: :cascade do |t|
@@ -2649,6 +2687,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_09_120000) do
   add_foreign_key "case_portals", "inboxes"
   add_foreign_key "case_services", "case_types"
   add_foreign_key "case_settings", "accounts"
+  add_foreign_key "case_task_client_entries", "accounts", on_delete: :cascade
+  add_foreign_key "case_task_client_entries", "case_tasks", on_delete: :cascade
+  add_foreign_key "case_task_client_entries", "case_tickets", on_delete: :cascade
+  add_foreign_key "case_task_client_entries", "contacts", on_delete: :nullify
+  add_foreign_key "case_task_client_entries", "users", on_delete: :nullify
   add_foreign_key "case_tasks", "accounts"
   add_foreign_key "case_tasks", "case_tickets"
   add_foreign_key "case_tasks", "case_type_column_tasks", on_delete: :nullify
@@ -2691,6 +2734,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_09_120000) do
   add_foreign_key "case_work_order_items", "case_tickets", on_delete: :cascade
   add_foreign_key "case_work_order_items", "catalog_items", on_delete: :nullify
   add_foreign_key "catalog_items", "accounts"
+  add_foreign_key "client_portal_links", "accounts", on_delete: :cascade
+  add_foreign_key "client_portal_links", "contacts", on_delete: :cascade
+  add_foreign_key "client_portal_links", "organizations", on_delete: :cascade
   add_foreign_key "command_sessions", "accounts"
   add_foreign_key "command_sessions", "contacts"
   add_foreign_key "command_sessions", "conversations"
