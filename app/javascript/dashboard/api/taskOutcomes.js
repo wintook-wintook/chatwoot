@@ -7,6 +7,15 @@ class TaskOutcomesAPI extends ApiClient {
     super('task_outcomes', { accountScoped: true });
   }
 
+  // purpose: 'report' (resultados del reporte, por omisión) | 'cancel' (motivos de cancelación).
+  list(purpose = 'report') {
+    return axios.get(this.url, { params: { purpose } });
+  }
+
+  createFor(purpose, data) {
+    return axios.post(this.url, { ...data, purpose });
+  }
+
   // Exigir el tiempo dedicado en los reportes (Ajustes).
   updateSettings({ requireMinutes }) {
     return axios.patch(`${this.url}/settings`, {

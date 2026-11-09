@@ -15,6 +15,8 @@ import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
 import MessageFormatter from 'shared/helpers/MessageFormatter';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import QuickTasksAPI from 'dashboard/api/quickTasks';
+import CancelItemModal from 'dashboard/components/cancel/CancelItemModal.vue'; // cancelar con motivo
+import { useAlert } from 'dashboard/composables';
 import QuickTaskModal from './tasks/QuickTaskModal.vue';
 import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal.vue';
 import taskReportFlow from 'dashboard/mixins/taskReportFlow';
@@ -106,6 +108,7 @@ export default {
     WootDropdownItem,
     MyDay,
     QuickTaskModal,
+    CancelItemModal,
     TaskReportModal,
     TaskReportsDialog,
   },
@@ -118,6 +121,10 @@ export default {
   },
   data() {
     return {
+      // Cancelar con motivo: la tarea a cancelar, si está guardando y el error.
+      cancelTarget: null,
+      cancelBusy: false,
+      cancelError: '',
       // La primera vez abre en Mi día; después, en la última pestaña usada.
       quickFilter: 'my_day',
       // Un juego de filtros por pestaña (ver `filters`, que apunta al de la activa).
@@ -847,6 +854,34 @@ export default {
       this.closeRowMenu();
       if (task) this.remove(task);
     },
+    // Cancelar (ya no se va a hacer): con motivo y tiempo si ya se trabajó.
+    menuCancelTask() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) this.openCancel(task);
+    },
+    openCancel(task) {
+      this.cancelError = '';
+      this.cancelTarget = task;
+    },
+    async submitCancel(reason) {
+      const task = this.cancelTarget;
+      this.cancelBusy = true;
+      this.cancelError = '';
+      try {
+        if (task.case_ticket) {
+          await CaseTasksAPI.cancelTask(task.case_ticket.id, task.id, reason);
+        } else {
+          await QuickTasksAPI.cancel(task.id, reason);
+        }
+        this.cancelTarget = null;
+        this.fetch();
+      } catch (e) {
+        this.cancelError = e.response?.data?.error || '';
+      } finally {
+        this.cancelBusy = false;
+      }
+    },
     // @tickets_cases — abre el ticket en la pestaña Notas filtrada por la tarea.
     // Con 0 notas no navega: solo avisa (no hay nada que ver todavía).
     openTaskNotes(task) {
@@ -1098,9 +1133,15 @@ export default {
         });
         this.fetch();
       } catch (e) {
-        this.$emitter.emit('newToastMessage', {
-          message: this.$t('CASE_TICKETS.TASKS.INBOX.DELETE_ERROR'),
-        });
+        // Ya no se puede borrar (no la creó, o pasaron 24 h): se cancela con su motivo.
+        if (e.response?.data?.cancel_instead) {
+          useAlert(this.$t('CANCEL_ITEM.DELETE_RESTRICTED'));
+          if (task.status === 'pending') this.openCancel(task);
+        } else {
+          this.$emitter.emit('newToastMessage', {
+            message: this.$t('CASE_TICKETS.TASKS.INBOX.DELETE_ERROR'),
+          });
+        }
       } finally {
         this.pendingDelete = null;
       }
@@ -1747,6 +1788,19 @@ export default {
             {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
           </woot-button>
         </WootDropdownItem>
+        <WootDropdownItem
+          v-if="rowMenu && rowMenu.row && rowMenu.row.status === 'pending'"
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="dismiss-circle"
+            @click="menuCancelTask"
+          >
+            {{ $t('CANCEL_ITEM.MENU') }}
+          </woot-button>
+        </WootDropdownItem>
         <WootDropdownItem>
           <woot-button
             variant="clear"
@@ -1760,6 +1814,15 @@ export default {
         </WootDropdownItem>
       </WootDropdownMenu>
     </div>
+    <CancelItemModal
+      :show="!!cancelTarget"
+      :item="cancelTarget"
+      kind="task"
+      :busy="cancelBusy"
+      :error="cancelError"
+      @close="cancelTarget = null"
+      @submit="submitCancel"
+    />
   </div>
 </template>
 

@@ -171,9 +171,16 @@ class CaseTask < ApplicationRecord
   # Tareas con el cliente: las del cliente no tienen responsable interno (las sigue el
   # responsable del caso) y su avance solo vale mientras está pendiente.
   def client_task_rules
+    clear_cancellation unless cancelled?
     self.assignee_id = nil if for_client?
     self.client_status = nil unless pending? && for_client?
     self.completed_by_contact_id = nil unless done?
+  end
+
+  # Reabrir una tarea cancelada (o completarla) quita su motivo de cancelación.
+  def clear_cancellation
+    self.cancelled_at = nil
+    self.cancel_reason = nil
   end
 
   def client_task_needs_case

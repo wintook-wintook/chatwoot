@@ -17,6 +17,7 @@ module ClientTaskFields
   # Tareas con el cliente — quién la hace, su avance en el portal y cuánto ha pasado ahí.
   def client_fields(task)
     { audience: task.audience, requires_file: task.requires_file, client_status: task.client_status,
+      cancel_reason: task.cancel_reason, work_started: Cases::Cancellation.work_started?(task),
       completed_by_contact: task.completed_by_contact&.name, client_entries_count: client_entries_map[task.id] || 0 }
   end
 

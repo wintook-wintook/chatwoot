@@ -20,6 +20,7 @@ import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal
 import taskReportFlow from 'dashboard/mixins/taskReportFlow';
 import TaskReportsDialog from 'dashboard/views/gestorTickets/tasks/TaskReportsDialog.vue';
 import ClientTaskEntries from 'dashboard/components/clientPortal/ClientTaskEntries.vue'; // tareas con el cliente
+import CancelItemModal from 'dashboard/components/cancel/CancelItemModal.vue'; // cancelar con motivo
 import {
   ESTIMATE_OPTIONS,
   formatMinutes,
@@ -51,6 +52,7 @@ export default {
     TaskReportModal,
     TaskReportsDialog,
     ClientTaskEntries,
+    CancelItemModal,
   },
   mixins: [caseAiWriter, taskReportFlow],
   props: {
@@ -67,6 +69,10 @@ export default {
   data() {
     return {
       audiences: ['internal', 'visible', 'client'], // tareas con el cliente
+      // Cancelar con motivo: la tarea a cancelar, si está guardando y el error.
+      cancelTarget: null,
+      cancelBusy: false,
+      cancelError: '',
       reportsFilter: null,
       tasks: [],
       // Plan-Plantilla-Tareas-Etapa — etapa actual y las siguientes con plantilla.
@@ -260,7 +266,7 @@ export default {
             <div class="overflow-hidden">
               <p
                 class={
-                  row.status === 'done'
+                  ['done', 'cancelled'].includes(row.status)
                     ? 'm-0 text-sm truncate line-through text-slate-400 dark:text-slate-500'
                     : 'm-0 text-sm truncate text-slate-800 dark:text-slate-100'
                 }
@@ -392,6 +398,17 @@ export default {
           width: 180,
           sortBy: this.sortConfig.status || '',
           renderBodyCell: ({ row }) => {
+            // Cancelada (ya no se va a hacer): sin «Completar»; se reabre desde el menú.
+            if (row.status === 'cancelled') {
+              return (
+                <span
+                  class="text-sm text-slate-500 dark:text-slate-400"
+                  title={row.cancel_reason || ''}
+                >
+                  {this.statusLabel(row.status)}
+                </span>
+              );
+            }
             if (row.status !== 'done') {
               // Ticket cerrado: no hay acción posible, pero el estado se sigue
               // leyendo (antes esta celda quedaba en blanco).
@@ -526,6 +543,43 @@ export default {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
       if (task) this.remove(task);
+    },
+    // Cancelar (ya no se va a hacer) o reabrir una cancelada.
+    menuCancelTask() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (!task) return;
+      if (task.status === 'cancelled') this.reopenTask(task);
+      else this.openCancel(task);
+    },
+    openCancel(task) {
+      this.cancelError = '';
+      this.cancelTarget = task;
+    },
+    async submitCancel(reason) {
+      this.cancelBusy = true;
+      this.cancelError = '';
+      try {
+        const { data } = await CaseTasksAPI.cancelTask(
+          this.ticketId,
+          this.cancelTarget.id,
+          reason
+        );
+        this.replace(data.case_task);
+        this.cancelTarget = null;
+        this.$emit('saved');
+      } catch (e) {
+        this.cancelError = e.response?.data?.error || '';
+      } finally {
+        this.cancelBusy = false;
+      }
+    },
+    async reopenTask(task) {
+      const { data } = await CaseTasksAPI.updateTask(this.ticketId, task.id, {
+        status: 'pending',
+      });
+      this.replace(data.case_task);
+      this.$emit('saved');
     },
     // @tickets_cases F2 — reuniones de la tarea (mismo patrón que las notas).
     menuAddMeeting() {
@@ -714,6 +768,13 @@ export default {
     // Tareas con el cliente — la etiqueta de la fila: del cliente (en proceso / hecha por)
     // o visible al cliente.
     clientChip(row) {
+      if (row.status === 'cancelled' && row.cancel_reason) {
+        return (
+          <span class="mr-1.5 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 no-underline inline-block">
+            {this.$t('CANCEL_ITEM.DONE', { reason: row.cancel_reason })}
+          </span>
+        );
+      }
       if (row.audience === 'client') {
         let text = this.$t('CLIENT_TASKS.CHIP_CLIENT');
         if (row.status === 'pending' && row.client_status === 'in_progress') {
@@ -921,7 +982,17 @@ export default {
       const task = this.pendingDelete;
       if (!task) return;
       this.showDeleteConfirm = false;
-      await CaseTasksAPI.deleteTask(this.ticketId, task.id);
+      try {
+        await CaseTasksAPI.deleteTask(this.ticketId, task.id);
+      } catch (e) {
+        // Ya no se puede borrar (no la creó, o pasaron 24 h): se cancela con su motivo.
+        this.pendingDelete = null;
+        if (e.response?.data?.cancel_instead) {
+          useAlert(this.$t('CANCEL_ITEM.DELETE_RESTRICTED'));
+          if (task.status === 'pending') this.openCancel(task);
+        }
+        return;
+      }
       this.tasks = this.tasks.filter(t => t.id !== task.id);
       this.pendingDelete = null;
       this.$emit('saved');
@@ -1600,6 +1671,31 @@ export default {
             {{ $t('CASE_TICKETS.TASKS.MENU.VIEW_MEETINGS') }}
           </woot-button>
         </WootDropdownItem>
+        <WootDropdownItem
+          v-if="
+            rowMenu &&
+            rowMenu.row &&
+            ['pending', 'cancelled'].includes(rowMenu.row.status)
+          "
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            :icon="
+              rowMenu.row.status === 'cancelled'
+                ? 'arrow-clockwise'
+                : 'dismiss-circle'
+            "
+            @click="menuCancelTask"
+          >
+            {{
+              rowMenu.row.status === 'cancelled'
+                ? $t('CANCEL_ITEM.REOPEN')
+                : $t('CANCEL_ITEM.MENU')
+            }}
+          </woot-button>
+        </WootDropdownItem>
         <WootDropdownItem>
           <woot-button
             variant="clear"
@@ -1613,6 +1709,15 @@ export default {
         </WootDropdownItem>
       </WootDropdownMenu>
     </div>
+    <CancelItemModal
+      :show="!!cancelTarget"
+      :item="cancelTarget"
+      kind="task"
+      :busy="cancelBusy"
+      :error="cancelError"
+      @close="cancelTarget = null"
+      @submit="submitCancel"
+    />
     <TaskReportModal
       :item="reportItem"
       @close="cancelReport"

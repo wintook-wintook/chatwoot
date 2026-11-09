@@ -1,4 +1,35 @@
 {
+  "CANCEL_ITEM": {
+    "CATALOG": {
+      "TITLE": "Cancellation reasons",
+      "HELP": "Asked when cancelling a task or scheduled task. «Otro» asks to write the reason.",
+      "PLACEHOLDER": "New reason…"
+    },
+    "TITLE_TASK": "Cancel task",
+    "TITLE_MEETING": "Cancel scheduled task",
+    "RESCHEDULE_QUESTION": "Do you want to reschedule it? If only the date changes, rescheduling keeps its history.",
+    "RESCHEDULE": "Reschedule",
+    "REALLY_CANCEL": "No, cancel it",
+    "REASON": "Reason",
+    "REASON_PLACEHOLDER": "Choose the reason…",
+    "COMMENT": "Comment (optional)",
+    "COMMENT_REQUIRED": "Comment (write the reason)",
+    "MINUTES": "Did you spend time on it? (minutes, optional)",
+    "MINUTES_REQUIRED": "Time spent (minutes) — it was already worked on",
+    "MINUTES_PLACEHOLDER": "E.g. 30",
+    "MINUTES_HINT": "Adds to the case hours and shows in Reports.",
+    "SCOPE_ONE": "Only this one",
+    "SCOPE_ALL": "The whole series",
+    "NOTIFY_CLIENT": "Notify the customer in their conversation",
+    "BACK": "Back",
+    "CONFIRM": "Cancel",
+    "DONE": "Cancelled · {reason}",
+    "REOPEN": "Reopen",
+    "MENU": "Cancel…",
+    "DELETE_RESTRICTED": "Only mistakes can be deleted (by whoever created it, within 24 hours). Cancel it with its reason.",
+    "NOTICE_SENT": "We notified the customer.",
+    "NOTICE_FAILED": "We couldn't notify the customer in their conversation."
+  },
   "CLIENT_TASKS": {
     "WHO": "Who does it?",
     "AUDIENCE": {

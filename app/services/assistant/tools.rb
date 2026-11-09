@@ -23,6 +23,7 @@ class Assistant::Tools
   include Assistant::EventTools # NFC en la expo
   include Assistant::ClientTaskTools # tareas con el cliente
   include Assistant::AgendaTools # my_agenda
+  include Assistant::CancelTools # cancelar con motivo
 
   LIST_LIMIT = 6
   ACTIVITY_LINES = 15
@@ -36,7 +37,7 @@ class Assistant::Tools
                       propose_outcome propose_postpone propose_resume_case propose_update_opportunity
                       propose_create_contact propose_follow_up propose_follow_up_action].freeze +
                    QUOTE_PROPOSAL_TOOLS + CONVERSATION_PROPOSAL_TOOLS + FIELD_PROPOSAL_TOOLS + EVENT_PROPOSAL_TOOLS +
-                   CLIENT_TASK_PROPOSAL_TOOLS
+                   CLIENT_TASK_PROPOSAL_TOOLS + CANCEL_PROPOSAL_TOOLS
 
   def self.definitions = Assistant::ToolDefinitions.all
 

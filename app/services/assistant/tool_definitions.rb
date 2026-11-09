@@ -105,7 +105,7 @@ module Assistant::ToolDefinitions
        { conversation_id: int('Número de la conversación, si aplica'), content: str('Texto del borrador') }, %w[content])
   ].freeze
 
-  EXTRA = %w[Sales Guide Quote Conversation Field Event ClientTask].freeze # Assistant::<X>ToolDefinitions::ALL
+  EXTRA = %w[Sales Guide Quote Conversation Field Event ClientTask Cancel].freeze # Assistant::<X>ToolDefinitions::ALL
 
   # Al primer uso, no al cargar: los <X>ToolDefinitions usan D.fn de aquí (carga circular en eager load).
   def self.all = @all ||= (BASE + EXTRA.flat_map { |x| "Assistant::#{x}ToolDefinitions".constantize::ALL }).freeze

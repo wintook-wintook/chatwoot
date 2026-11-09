@@ -38,6 +38,8 @@ const ICONS = {
   nfc_link: 'flash-on',
   // Tareas con el cliente
   client_task: 'person',
+  // Cancelar con motivo
+  cancel_item: 'dismiss-circle',
 };
 
 // Igual que el servidor (Assistant::QuoteTools.totals): descuento por partida, IVA de la partida.
@@ -105,6 +107,9 @@ export default {
         // Tarea del cliente: pide archivo y avisarle con el enlace.
         requires_file: !!p.requires_file,
         notify: p.notify !== false,
+        // Cancelar: comentario y si se le avisa al cliente (motivo en reason_id, tiempo en minutes).
+        cancel_comment: p.comment || '',
+        notify_client: p.notify_client !== false,
       },
       writing: false,
       units: ['minutes', 'hours', 'days'],
@@ -199,6 +204,12 @@ export default {
         reply: this.labels.template ? {} : { content: f.content },
         on_my_way: { eta_minutes: Number(f.eta_minutes) },
         nfc_link: { message: f.message },
+        cancel_item: {
+          reason_id: Number(f.reason_id) || null,
+          comment: f.cancel_comment,
+          minutes: f.minutes === '' ? null : Number(f.minutes),
+          notify_client: !!this.labels.meeting && !!f.notify_client,
+        },
         client_task: {
           title: f.title,
           due_at: toIso(f.due_at),
@@ -586,6 +597,38 @@ export default {
           </div>
         </dl>
         <p class="m-0 text-xs text-slate-500">{{ t('QUOTE_DRAFT') }}</p>
+      </template>
+      <!-- Cancelar con motivo: motivo, comentario, tiempo y aviso al cliente -->
+      <template v-if="type === 'cancel_item'">
+        <label class="text-xs">
+          {{ t('CANCEL_REASON') }}
+          <select v-model="form.reason_id" class="h-8 text-sm">
+            <option v-for="r in labels.reasons || []" :key="r.id" :value="r.id">
+              {{ r.label }}
+            </option>
+          </select>
+        </label>
+        <label class="text-xs">
+          {{ t('CANCEL_COMMENT') }}
+          <textarea v-model="form.cancel_comment" rows="2" class="text-sm" />
+        </label>
+        <label class="text-xs">
+          {{
+            labels.work_started
+              ? t('CANCEL_MINUTES_REQUIRED')
+              : t('CANCEL_MINUTES')
+          }}
+          <input
+            v-model="form.minutes"
+            type="number"
+            min="0"
+            class="h-8 text-sm"
+          />
+        </label>
+        <label v-if="labels.meeting" class="flex items-center gap-2 text-xs">
+          <input v-model="form.notify_client" type="checkbox" class="!m-0" />
+          {{ t('CANCEL_NOTIFY') }}
+        </label>
       </template>
       <!-- Tarea del cliente: pide archivo y avisarle con el enlace de su portal -->
       <template v-if="type === 'client_task'">

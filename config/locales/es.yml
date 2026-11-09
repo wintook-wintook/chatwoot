@@ -173,6 +173,16 @@ es:
       no_conversation: 'El cliente no tiene conversaciones para avisarle'
       no_technician: 'La orden no tiene responsable'
       no_technician_contact: '%{name} no tiene su contacto de WhatsApp en Ajustes › Usuarios'
+  # Cancelar tareas y tareas agendadas (Cases::Cancellation)
+  cancellation:
+    report: 'Cancelada: %{reason}'
+    client_message: 'Hola %{name}, te avisamos que cancelamos «%{title}» del %{when}. Cualquier cosa, aquí estamos.'
+    delete_restricted: 'Solo se borra lo capturado por error, en las primeras 24 horas y por quien lo creó. Si ya no se va a hacer, cancélala con su motivo.'
+    errors:
+      reason: 'Elige el motivo de la cancelación.'
+      comment: 'Escribe el motivo.'
+      minutes: 'Ya se trabajó en ella: captura el tiempo dedicado.'
+      not_open: 'Ya no está abierta.'
   # Portal del cliente — tareas con el cliente (/cliente/:token)
   client_portal:
     title: 'Tu portal'

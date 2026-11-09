@@ -22,7 +22,7 @@ module CaseTaskActivity
   end
 
   def log_task_status
-    log_task_event(STATUS_EVENTS.fetch(status), from: status_before_last_save)
+    log_task_event(STATUS_EVENTS.fetch(status), from: status_before_last_save, reason: (cancel_reason if cancelled?))
   end
 
   # Si se borró el caso entero, no hay bitácora que anotar.

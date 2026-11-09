@@ -10,6 +10,7 @@
 # DELETE /agenda_items/:id
 # ================================================================================
 class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseController
+  include CancelAndDeleteGuard # cancelar con motivo; borrar solo errores de captura
   include TaskReportGuard
 
   CASES_LIMIT = 50
@@ -52,6 +53,7 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
   def update
     return link_to_case if params[:case_ticket_id].present?
     return if %w[held no_show].include?(params[:status].to_s) && missing_task_report?(@meeting)
+    return cancel_item if params[:status].to_s == 'cancelled'
 
     if @meeting.update(update_attrs)
       sync_meeting
@@ -62,12 +64,20 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
   end
 
   def destroy
+    return if delete_restricted?(@meeting, @meeting.organizer_id)
+
     Cases::Meetings::GoogleMirrorService.new(@meeting).cancel if @meeting.google_event_id.present?
     @meeting.destroy
     head :no_content
   end
 
   private
+
+  # Cancelar desde el calendario: con motivo, como en el caso.
+  def cancel_item
+    result = run_cancellation(@meeting)
+    render json: { agenda_item: item_json(@meeting.reload), client_notice: result[:notice] }.compact if result
+  end
 
   def range
     from = params[:start].present? ? Time.zone.parse(params[:start]) : Time.current.beginning_of_week
@@ -135,6 +145,7 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
 
   def item_json(meeting)
     { id: meeting.id, title: meeting.title, description: meeting.description, status: meeting.status,
+      cancel_reason: meeting.cancel_reason, work_started: Cases::Cancellation.work_started?(meeting),
       start: meeting.starts_at, end: meeting.ends_at, location: meeting.location,
       google_event_id: meeting.google_event_id, google_calendar_id: meeting.google_calendar_id,
       contact: ref(meeting.client_contact), organization: ref(meeting.client_organization),

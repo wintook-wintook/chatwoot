@@ -54,6 +54,11 @@ class CaseTasksAPI extends ApiClient {
     return axios.delete(`${this.url}/${ticketId}/tasks/${id}`);
   }
 
+  // Cancelar con motivo: { reason_id, comment, minutes }.
+  cancelTask(ticketId, id, reason) {
+    return axios.post(`${this.url}/${ticketId}/tasks/${id}/cancel`, reason);
+  }
+
   // Tareas con el cliente — lo que pasó en su portal; responderle o regresarla.
   clientEntries(ticketId, id) {
     return axios.get(`${this.url}/${ticketId}/tasks/${id}/client_entries`);

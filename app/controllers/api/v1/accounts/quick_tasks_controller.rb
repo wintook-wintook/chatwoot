@@ -9,9 +9,10 @@
 # DELETE /quick_tasks/:id
 # ================================================================================
 class Api::V1::Accounts::QuickTasksController < Api::V1::Accounts::BaseController
+  include CancelAndDeleteGuard # cancelar con motivo; borrar solo errores de captura
   include TaskReportGuard
 
-  before_action :set_task, only: %i[update destroy]
+  before_action :set_task, only: %i[update destroy cancel]
 
   def create
     task = CaseTask.new(task_attrs.merge(client).merge(account: Current.account, requester: current_user))
@@ -32,7 +33,15 @@ class Api::V1::Accounts::QuickTasksController < Api::V1::Accounts::BaseControlle
     end
   end
 
+  def cancel
+    return unless run_cancellation(@task)
+
+    render json: { ok: true, status: @task.reload.status }
+  end
+
   def destroy
+    return if delete_restricted?(@task, @task.requester_id)
+
     @task.destroy
     head :no_content
   end

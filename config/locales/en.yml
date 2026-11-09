@@ -188,6 +188,16 @@ en:
       no_conversation: 'The customer has no conversations to notify'
       no_technician: 'The order has no assignee'
       no_technician_contact: "%{name} has no WhatsApp contact in Settings › Users"
+  # Cancel tasks and scheduled tasks (Cases::Cancellation)
+  cancellation:
+    report: 'Cancelled: %{reason}'
+    client_message: 'Hi %{name}, we cancelled «%{title}» on %{when}. We are here for anything you need.'
+    delete_restricted: 'Only mistakes can be deleted, within 24 hours and by whoever created it. If it will not happen, cancel it with its reason.'
+    errors:
+      reason: 'Choose the cancellation reason.'
+      comment: 'Write the reason.'
+      minutes: 'It was already worked on: enter the time spent.'
+      not_open: 'It is no longer open.'
   # Customer portal — customer tasks (/cliente/:token)
   client_portal:
     title: 'Your portal'

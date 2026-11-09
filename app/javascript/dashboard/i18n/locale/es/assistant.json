@@ -102,7 +102,8 @@
         "EVENT": "Evento",
         "INBOX": "WhatsApp",
         "SELLER": "Vendedor",
-        "CASE": "Caso"
+        "CASE": "Caso",
+        "ITEM": "Qué"
       },
       "OUTCOMES": {
         "won": "Ganada",
@@ -140,7 +141,13 @@
       "NFC_ERROR": "No se pudo grabar. Acerca la etiqueta otra vez o revisa que el NFC esté encendido.",
       "client_task": "Tarea del cliente",
       "CLIENT_TASK_FILE": "Pide subir un archivo",
-      "CLIENT_TASK_NOTIFY": "Avisarle con el enlace de su portal"
+      "CLIENT_TASK_NOTIFY": "Avisarle con el enlace de su portal",
+      "cancel_item": "Cancelar",
+      "CANCEL_REASON": "Motivo",
+      "CANCEL_COMMENT": "Comentario (opcional; con «Otro», obligatorio)",
+      "CANCEL_MINUTES": "¿Le dedicaste tiempo? (minutos, opcional)",
+      "CANCEL_MINUTES_REQUIRED": "Tiempo dedicado (minutos) — ya se trabajó",
+      "CANCEL_NOTIFY": "Avisarle al cliente"
     },
     "SETTINGS": {
       "TITLE": "Asistente",

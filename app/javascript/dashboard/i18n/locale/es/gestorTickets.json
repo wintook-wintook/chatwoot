@@ -1,4 +1,35 @@
 {
+  "CANCEL_ITEM": {
+    "CATALOG": {
+      "TITLE": "Motivos de cancelación",
+      "HELP": "Se piden al cancelar una tarea o tarea agendada. «Otro» pide escribir el motivo.",
+      "PLACEHOLDER": "Nuevo motivo…"
+    },
+    "TITLE_TASK": "Cancelar tarea",
+    "TITLE_MEETING": "Cancelar tarea agendada",
+    "RESCHEDULE_QUESTION": "¿La quieres reprogramar? Si solo cambia la fecha, reprogramarla conserva su historial.",
+    "RESCHEDULE": "Reprogramar",
+    "REALLY_CANCEL": "No, cancelarla",
+    "REASON": "Motivo",
+    "REASON_PLACEHOLDER": "Elige el motivo…",
+    "COMMENT": "Comentario (opcional)",
+    "COMMENT_REQUIRED": "Comentario (escribe el motivo)",
+    "MINUTES": "¿Le dedicaste tiempo? (minutos, opcional)",
+    "MINUTES_REQUIRED": "Tiempo dedicado (minutos) — ya se trabajó en ella",
+    "MINUTES_PLACEHOLDER": "Ej. 30",
+    "MINUTES_HINT": "Suma a las horas del caso y sale en Reportes.",
+    "SCOPE_ONE": "Solo esta",
+    "SCOPE_ALL": "Toda la serie",
+    "NOTIFY_CLIENT": "Avisarle al cliente por su conversación",
+    "BACK": "Regresar",
+    "CONFIRM": "Cancelar",
+    "DONE": "Cancelada · {reason}",
+    "REOPEN": "Reabrir",
+    "MENU": "Cancelar…",
+    "DELETE_RESTRICTED": "Solo se borra lo capturado por error (quien la creó, en las primeras 24 horas). Cancélala con su motivo.",
+    "NOTICE_SENT": "Le avisamos al cliente.",
+    "NOTICE_FAILED": "No se le pudo avisar al cliente por su conversación."
+  },
   "CLIENT_TASKS": {
     "WHO": "¿Quién la hace?",
     "AUDIENCE": {

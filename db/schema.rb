@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_10_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_10_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -501,6 +501,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_10_100000) do
     t.datetime "on_my_way_at"
     t.datetime "arrived_at"
     t.jsonb "arrival_location", default: {}, null: false
+    t.string "cancel_reason"
     t.index ["account_id", "starts_at"], name: "index_case_meetings_on_account_id_and_starts_at"
     t.index ["account_id", "starts_at"], name: "index_case_meetings_on_visits", where: "is_visit"
     t.index ["case_meeting_series_id"], name: "index_case_meetings_on_series_id"
@@ -2287,6 +2288,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_10_100000) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "purpose", default: 0, null: false
     t.index ["account_id"], name: "index_task_outcomes_on_account_id"
   end
 

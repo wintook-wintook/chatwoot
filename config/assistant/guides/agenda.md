@@ -2,7 +2,7 @@
 key: agenda
 title: Agenda, tareas y reportes
 areas: [agenda]
-keywords: [agenda, tarea, tareas, mi dia, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada]
+keywords: [agenda, tarea, tareas, mi dia, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada, cancelar, cancelar tarea, cancelar cita, motivo de cancelacion, reabrir, borrar tarea, no puedo borrar, reprogramar]
 pages: [tasks, my_day, calendar, task_reports, task_outcomes, task_scoring]
 ---
 ## Para qué sirve
@@ -40,6 +40,18 @@ La Agenda junta todo lo que tienes que hacer: tareas (con fecha, sin hora) y tar
 1. Pulsa «Completar» en la tarea. Se abre el «Reporte de cierre».
 2. Escribe «Qué se hizo», el Tiempo dedicado, el Resultado y, si quieres, evidencia (hasta 5 archivos).
 3. Pulsa «Concluir». El reporte queda en Agenda › Reportes, en la ficha del cliente y, si tiene caso, en su actividad; el tiempo suma a las horas del caso.
+
+### Cancelar una tarea o tarea agendada
+Cancelar es «ya no se va a hacer»; no es completarla (eso pide el reporte) ni borrarla (eso es solo para errores de captura).
+1. En el menú de la tarea (Acciones ›) elige «Cancelar…». En una tarea agendada te pregunta primero «¿La quieres reprogramar?»: si solo cambia la fecha, reprográmala y se conserva su historial.
+2. Elige el motivo (El cliente ya no lo necesita, Se resolvió de otra forma, Duplicada, Se reprogramó u Otro; con «Otro» escribe el porqué).
+3. «¿Le dedicaste tiempo?»: opcional; es obligatorio si ya se trabajó (una visita con «voy en camino» o «llegué», o una tarea del cliente en proceso). Ese tiempo suma a las horas del caso y sale en Reportes.
+4. En una tarea agendada: si es de una serie, «Solo esta» o «Toda la serie» (también se cancela en Google Calendar); y «Avisarle al cliente por su conversación».
+5. La tarea queda tachada como «Cancelada · motivo», deja de contar en pendientes, vencidas y siguiente paso, y queda en la actividad del caso. «Reabrir» (en el mismo menú) la regresa a pendiente.
+6. También se lo puedes pedir a Dali: «cancela la llamada con Mario de mañana, ya no hace falta».
+
+### Borrar una tarea
+Solo para lo que se capturó por error: la borra quien la creó en las primeras 24 horas, o un administrador. Si ya no se puede borrar, te lo dice y te abre «Cancelar» para hacerlo con su motivo.
 
 ### Reportar algo sin tarea
 Pulsa «Reportar actividad» en la barra de arriba: Título, «Qué se hizo», fecha, hora, resultado, tiempo y evidencia. Sin cliente queda como actividad interna.

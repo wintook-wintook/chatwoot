@@ -14,6 +14,7 @@ class Assistant::Executor
   include Assistant::FieldRunner # trabajo en campo
   include Assistant::EventRunner # NFC en la expo
   include Assistant::ClientTaskRunner # tareas con el cliente
+  include Assistant::CancelRunner # cancelar con motivo
 
   class Refused < StandardError; end
 
