@@ -11,6 +11,7 @@
 
 class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   include TaskReportGuard
+  include ClientTaskFields # tareas con el cliente: campos y aviso al crearla
 
   FROZEN_MSG = 'Ticket cerrado: no se pueden modificar las tareas. Reábrelo si necesitas cambiarlas.'
   DOC_TASK_MSG = 'Esta tarea se completa sola cuando documentas el paso a la siguiente etapa'
@@ -196,23 +197,6 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
       required: task.required, stage: task.case_type_column&.label, team: task.team && { id: task.team.id, name: task.team.name },
       documentation: task.documentation_for_column_id.present?, report_required: task.report_required? }
       .merge(client_fields(task))
-  end
-
-  # Tareas con el cliente — al crearla, avisarle al cliente con el enlace de su portal (si se pidió).
-  def notify_client(task)
-    return unless task.for_client? && ActiveModel::Type::Boolean.new.cast(params[:notify_client])
-
-    ClientTasks::Notifier.new(task, current_user).call(:assigned)
-  end
-
-  # Tareas con el cliente — quién la hace, su avance en el portal y cuánto ha pasado ahí.
-  def client_fields(task)
-    { audience: task.audience, requires_file: task.requires_file, client_status: task.client_status,
-      completed_by_contact: task.completed_by_contact&.name, client_entries_count: client_entries_map[task.id] || 0 }
-  end
-
-  def client_entries_map
-    @client_entries_map ||= CaseTaskClientEntry.where(case_ticket_id: @ticket.id).group(:case_task_id).count
   end
 
   # id de tarea → nº de reuniones vivas que caen después del vencimiento de esa
