@@ -63,14 +63,14 @@ const montar = ({
 };
 
 describe('AgentWorkspace', () => {
-  it('un admin ve Recursos, Entrenamiento, Pruebas, Probar fuentes, Ficha y Versiones, y entra a Recursos', () => {
+  it('un admin ve Recursos, Ficha de Agente IA, Entrenamiento, Pruebas, Probar fuentes y Versiones, y entra a Recursos', () => {
     const { wrapper } = montar();
     expect(wrapper.vm.sections.map(s => s.id)).toEqual([
       'ficha',
+      'profile',
       'training',
       'tests',
       'sources',
-      'profile',
       'versions',
     ]);
     expect(wrapper.vm.section).toBe('ficha');

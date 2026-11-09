@@ -95,14 +95,15 @@ export default {
           this.fichaUnlocked && { id: 'new_profile', label: 'SECTION_PROFILE' },
         ].filter(Boolean);
       return [
-        // feat/ficha_agente_ia: primero la ficha (D6). En un agente nuevo es el asistente de 3 pasos.
+        // Mismo orden que al crear: Recursos → Ficha de Agente IA → Entrenamiento → Pruebas y
+        // diagrama → Probar fuentes → Versiones.
         this.isAdmin && { id: 'ficha', label: 'SECTION_FICHA' },
+        !this.isNew && { id: 'profile', label: 'SECTION_PROFILE' },
         this.isAdmin && { id: 'training', label: 'SECTION_TRAINING' },
         // proyecto@diagrama_agente_ia: pruebas y diagrama en su propia pestaña, a lo ancho.
         this.isAdmin && { id: 'tests', label: 'SECTION_TESTS' },
         // crear_agente_conversando §15: probar las fuentes como las busca el agente.
         this.isAdmin && { id: 'sources', label: 'SECTION_SOURCES' },
-        !this.isNew && { id: 'profile', label: 'SECTION_PROFILE' },
         !this.isNew && { id: 'versions', label: 'SECTION_VERSIONS' },
       ].filter(Boolean);
     },
