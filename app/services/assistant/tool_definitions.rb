@@ -106,5 +106,7 @@ module Assistant::ToolDefinitions
   ].freeze
 
   EXTRA = %w[Sales Guide Quote Conversation Field Event ClientTask].freeze # Assistant::<X>ToolDefinitions::ALL
-  ALL = (BASE + EXTRA.flat_map { |x| "Assistant::#{x}ToolDefinitions".constantize::ALL }).freeze
+
+  # Al primer uso, no al cargar: los <X>ToolDefinitions usan D.fn de aquí (carga circular en eager load).
+  def self.all = @all ||= (BASE + EXTRA.flat_map { |x| "Assistant::#{x}ToolDefinitions".constantize::ALL }).freeze
 end
