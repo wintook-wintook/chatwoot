@@ -11,6 +11,7 @@ class Assistant::Executor
   include Assistant::CaseRunner # D4
   include Assistant::QuoteRunner # cotizaciones
   include Assistant::ConversationRunner # contestar conversaciones
+  include Assistant::FieldRunner # trabajo en campo
 
   class Refused < StandardError; end
 

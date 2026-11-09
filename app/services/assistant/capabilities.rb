@@ -10,15 +10,22 @@ module Assistant::Capabilities
   module_function
 
   def for(grant)
-    keys = %w[consult record]
-    keys << 'cases' if grant.case_area_allowed?
-    keys << 'reply' if grant.writable?(:conversations)
-    keys << 'delegate'
+    keys = %w[consult record] + work_keys(grant)
     keys << (grant.own?(:sales) ? 'sales_own' : 'sales') if grant.allowed?(:sales)
     keys << 'quotes' if grant.writable?(:sales)
     keys << 'guide'
     { lines: keys.map { |k| I18n.t("assistant.capabilities.#{k}") } << I18n.t('assistant.capabilities.limits'),
       starters: starters(grant) }
+  end
+
+  # Casos, contestar, delegar y campo, según el rol.
+  def work_keys(grant)
+    keys = []
+    keys << 'cases' if grant.case_area_allowed?
+    keys << 'reply' if grant.writable?(:conversations)
+    keys << 'delegate'
+    keys << 'field' if grant.allowed?(:agenda)
+    keys
   end
 
   def starters(grant)
@@ -33,6 +40,7 @@ module Assistant::Capabilities
     keys = %w[today]
     keys << 'reply' if grant.writable?(:conversations)
     keys << 'quote' if grant.writable?(:sales)
+    keys << 'route' if grant.allowed?(:agenda)
     keys.push('meeting', 'note')
     keys << 'sales' if grant.allowed?(:sales)
     keys.map { |k| { key: k, label: I18n.t("assistant.shortcuts.#{k}.label"), prompt: I18n.t("assistant.shortcuts.#{k}.prompt") } }

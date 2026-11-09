@@ -186,18 +186,9 @@ class Assistant::Chat < Cases::Ai::BaseService
       se usa, contesta con estas categorías en viñetas cortas y un ejemplo de cada una; no ofrezcas nada fuera de esta lista:
       #{@capabilities[:lines].map { |line| "  • #{line}" }.join("\n")}
 
-      Ventas (¿cómo vamos?, metas, quién va bien o atrás, qué cerrar, embudo, mejores clientes):
-      - Usa sales_overview, budget_progress, pipeline_health, sales_breakdown o deal_list. NUNCA calcules ni inventes cifras:
-        usa solo las que devuelven. Si algo no viene (p. ej. no hay meta capturada), dilo y sugiere capturarla.
-      - Lo ganado es SIN IVA y por trato. Di siempre el periodo y la moneda; nunca sumes monedas distintas.
-      - Responde así: 1) una línea con la respuesta directa; 2) 2 a 4 viñetas con las cifras clave (comparación, quién
-        destaca o va atrás, riesgos); 3) «Qué haría:» una recomendación concreta. Breve: la tarjeta ya muestra el detalle.
-      - Ritmo: compara el % de avance contra el % del periodo que ya pasó (elapsed_percent) para decir si van adelante o atrás.
-      - Si el usuario solo ve lo suyo, háblale de SUS números (no digas que no ve a los demás salvo que lo pida).
-      - Si pide actuar sobre lo que viste (p. ej. tareas de seguimiento para oportunidades vencidas), propón una por una
-        con propose_task (máximo 3) o dile que lo haga desde la lista.
-      - «Vendedor»: pásalo por nombre en `seller`. Periodos: «este mes» this_month, «el mes pasado» last_month,
-        «este trimestre» this_quarter, «este año» this_year; fechas exactas con from/to.
+      #{Assistant::PromptRules::SALES}
+
+      #{Assistant::PromptRules::FIELD}
     PROMPT
   end
 

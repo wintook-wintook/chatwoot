@@ -42,6 +42,10 @@ export default {
     accounts() {
       return (this.currentUser && this.currentUser.accounts) || [];
     },
+    // Quien ve la Agenda tiene «Mi ruta» (Assistant::Capabilities.shortcuts 'route').
+    hasRoute() {
+      return this.shortcuts.some(s => s.key === 'route');
+    },
     accountName() {
       const account = this.accounts.find(a => a.id === this.accountId);
       return account ? account.name : '';
@@ -84,6 +88,9 @@ export default {
       // Recarga completa: la plataforma activa la empresa al abrirla (App.vue).
       window.location.assign(frontendURL(`accounts/${id}/dali`));
     },
+    openRoute() {
+      this.openPlatform(frontendURL(`accounts/${this.accountId}/campo`));
+    },
     openPlatform(path) {
       this.menuOpen = false;
       markDaliReturn(this.$route.fullPath);
@@ -111,6 +118,17 @@ export default {
         <span class="text-base font-semibold truncate">{{ name }}</span>
         <span class="text-xs truncate text-slate-500">{{ accountName }}</span>
       </div>
+      <!-- Portal de campo (Mi ruta): llegar, fotos, firma; regresa con «Volver a Dali» -->
+      <woot-button
+        v-if="hasRoute"
+        size="small"
+        variant="smooth"
+        color-scheme="secondary"
+        icon="map"
+        @click="openRoute"
+      >
+        {{ t('MY_ROUTE') }}
+      </woot-button>
       <woot-button
         :aria-label="t('NEW')"
         size="small"

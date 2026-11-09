@@ -2,7 +2,7 @@
 key: campo_mi_ruta
 title: Mi ruta en campo (celular)
 areas: [agenda, service]
-keywords: [mi ruta, mi ruta en campo, campo, celular, tecnico, visitas de hoy, voy en camino, llegue, ubicacion, termine, terminar visita, firma, concluir, mis trabajos, como llegar, google maps, llamar, whatsapp, sin senal, visita sin orden, vendedor en campo]
+keywords: [mi ruta, mi ruta en campo, campo, celular, tecnico, visitas de hoy, voy en camino, llegue, ubicacion, termine, terminar visita, firma, concluir, mis trabajos, como llegar, google maps, llamar, whatsapp, sin senal, visita sin orden, vendedor en campo, dali, dictar reporte, volver a dali]
 pages: [agenda, my_day, case, field_route]
 ---
 ## Para qué sirve
@@ -12,6 +12,7 @@ Mi ruta en campo es la pantalla para el celular de quien sale a visitar clientes
 - Agenda › Mi ruta en campo. Ábrela en el navegador del celular; puedes agregarla a la pantalla de inicio como si fuera una app.
 - Tiene dos pestañas: «Mi ruta» (las visitas del día) y «Mis trabajos» (lo que ya terminaste).
 - El botón de arriba a la izquierda te regresa a la pantalla de la que llegaste.
+- Desde Dali en el teléfono: el botón «Mi ruta» de arriba abre esta pantalla, y «Volver a Dali» te regresa.
 
 ## Cómo se hace
 ### Ver tus visitas del día
@@ -34,6 +35,13 @@ Son las tareas agendadas marcadas con «Es una visita al cliente» (por ejemplo,
 1. Abre la visita y elige los minutos; pulsa «Voy en camino». Si el cliente tiene conversación, le llega el aviso.
 2. Pulsa «Llegué» al llegar (guarda hora y ubicación).
 3. Pulsa «Concluir» y llena el reporte de cierre (resultado, comentario, evidencia y tiempo dedicado).
+
+### Hacerlo platicando con Dali
+1. En Dali pregunta «¿qué visitas tengo hoy?» (botón «Visitas de hoy»), «¿cuál sigue?» o «¿qué le hicimos la última vez a Mario?».
+2. «Avísale a Mario que llego en 20»: sale la tarjeta «Voy en camino»; al confirmar le llega el aviso con tu hora.
+3. «Reporta la visita: limpié los filtros y cambié el capacitor»: sale la tarjeta «Reporte de la visita» con el texto y, en una orden, los puntos de la lista ya marcados. Corrige y confirma.
+4. En una orden, el reporte queda en la «Bitácora» y los puntos marcados en el «Checklist»; «Llegué», fotos, firma y «Terminar visita» siguen aquí, en Mi ruta.
+5. En una visita sin orden, el reporte de cierre queda hecho (con el tiempo dedicado) y la visita queda como realizada.
 
 ### Revisar lo que terminaste
 1. Entra a «Mis trabajos».

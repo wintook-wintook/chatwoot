@@ -97,7 +97,8 @@
         "COMMITTED": "Comprometida",
         "COMMIT_NOTE": "Nota del compromiso",
         "QUOTE": "Cotización",
-        "OPPORTUNITY": "Oportunidad"
+        "OPPORTUNITY": "Oportunidad",
+        "VISIT": "Visita"
       },
       "OUTCOMES": {
         "won": "Ganada",
@@ -116,7 +117,15 @@
       "QUOTE_DRAFT": "Se crea en borrador; la puedes revisar antes de mandarla.",
       "reply": "Responder",
       "SEND": "Enviar",
-      "TEMPLATE_NOTE": "Pasaron más de 24 h desde su último mensaje: WhatsApp solo deja mandar una plantilla aprobada."
+      "TEMPLATE_NOTE": "Pasaron más de 24 h desde su último mensaje: WhatsApp solo deja mandar una plantilla aprobada.",
+      "on_my_way": "Voy en camino",
+      "visit_report": "Reporte de la visita",
+      "ETA": "Llego en (minutos)",
+      "NOTES": "Lo que se hizo",
+      "CHECKLIST": "Puntos de la lista que quedan hechos",
+      "MINUTES": "Tiempo dedicado (minutos)",
+      "CLOSES_VISIT": "Al confirmar, la visita queda como realizada.",
+      "FIELD_REST": "Las fotos, la firma del cliente y terminar la orden se hacen en «Mi ruta»."
     },
     "SETTINGS": {
       "TITLE": "Asistente",
@@ -233,7 +242,8 @@
         "OR_URL": "O abre {url} en tu teléfono y entra con tu correo y contraseña.",
         "INSTALL_HINT": "Ya adentro: en Android, menú › «Instalar app»; en iPhone, Compartir › «Agregar a inicio».",
         "ERROR": "No se pudo generar el código. Intenta de nuevo."
-      }
+      },
+      "MY_ROUTE": "Mi ruta"
     }
   }
 }

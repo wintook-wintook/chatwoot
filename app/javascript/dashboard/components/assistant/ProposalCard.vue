@@ -31,6 +31,9 @@ const ICONS = {
   send_quote: 'send',
   // Contestar una conversación
   reply: 'send',
+  // Trabajo en campo
+  on_my_way: 'navigation',
+  visit_report: 'clipboard',
 };
 
 // Igual que el servidor (Assistant::QuoteTools.totals): descuento por partida, IVA de la partida.
@@ -88,6 +91,11 @@ export default {
         phone: p.phone || '',
         // Cotización: las partidas se pueden ajustar (cantidad, precio) o quitar.
         items: (p.items || []).map(i => ({ ...i })),
+        // Campo: hora de llegada, lo dictado, puntos de la lista y minutos.
+        eta_minutes: p.eta_minutes || 30,
+        notes: p.notes || '',
+        done_task_ids: [...(p.done_task_ids || [])],
+        minutes: p.minutes || '',
       },
       units: ['minutes', 'hours', 'days'],
       busy: false,
@@ -179,6 +187,12 @@ export default {
         send_quote: {},
         // Con plantilla no se edita: la llenó Dali con datos reales.
         reply: this.labels.template ? {} : { content: f.content },
+        on_my_way: { eta_minutes: Number(f.eta_minutes) },
+        visit_report: {
+          notes: f.notes,
+          done_task_ids: f.done_task_ids,
+          minutes: f.minutes === '' ? null : Number(f.minutes),
+        },
       }[this.type];
     },
     // «TYPE» → «Tipo»; el valor del resultado (won…) también se traduce.
@@ -526,6 +540,52 @@ export default {
           </div>
         </dl>
         <p class="m-0 text-xs text-slate-500">{{ t('QUOTE_DRAFT') }}</p>
+      </template>
+      <!-- Campo: «Voy en camino» -->
+      <label v-if="type === 'on_my_way'" class="text-xs">
+        {{ t('ETA') }}
+        <input
+          v-model="form.eta_minutes"
+          type="number"
+          min="5"
+          max="240"
+          class="h-8 text-sm"
+        />
+      </label>
+      <!-- Campo: el reporte dictado de la visita -->
+      <template v-if="type === 'visit_report'">
+        <label class="text-xs">
+          {{ t('NOTES') }}
+          <textarea v-model="form.notes" rows="5" class="text-sm" />
+        </label>
+        <div v-if="(labels.checklist || []).length" class="text-xs">
+          <p class="m-0 mb-1 text-slate-500">{{ t('CHECKLIST') }}</p>
+          <label
+            v-for="task in labels.checklist"
+            :key="task.id"
+            class="flex items-center gap-2 py-0.5 text-sm text-slate-700 dark:text-slate-200"
+          >
+            <input
+              v-model="form.done_task_ids"
+              type="checkbox"
+              :value="task.id"
+              class="!m-0"
+            />
+            {{ task.title }}
+          </label>
+        </div>
+        <label v-if="labels.closes_visit" class="text-xs">
+          {{ t('MINUTES') }}
+          <input
+            v-model="form.minutes"
+            type="number"
+            min="0"
+            class="h-8 text-sm"
+          />
+        </label>
+        <p class="m-0 text-xs text-slate-500">
+          {{ labels.closes_visit ? t('CLOSES_VISIT') : t('FIELD_REST') }}
+        </p>
       </template>
       <!-- Ventana de 24 h cerrada: sale una plantilla aprobada, ya llena -->
       <template v-if="type === 'reply' && labels.template">

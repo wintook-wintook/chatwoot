@@ -2,7 +2,7 @@
 key: dali
 title: El asistente (Dali)
 areas: []
-keywords: [asistente, dali, ctrl j, preguntale, pedirle, tarjeta, confirmar, propuesta, nombre del asistente, que puedes hacer, en que me ayudas, borrador, mensaje programado, delegar seguimiento, ventas, meta, conversacion nueva, openai, via dali, telefono, celular, app, instalar, qr, dictar, voz, microfono, portal, contestar, responder, sin responder, quien me escribio, plantilla, 24 horas]
+keywords: [asistente, dali, ctrl j, preguntale, pedirle, tarjeta, confirmar, propuesta, nombre del asistente, que puedes hacer, en que me ayudas, borrador, mensaje programado, delegar seguimiento, ventas, meta, conversacion nueva, openai, via dali, telefono, celular, app, instalar, qr, dictar, voz, microfono, portal, contestar, responder, sin responder, quien me escribio, plantilla, 24 horas, visitas, ruta, campo, voy en camino, reporte de la visita]
 pages: []
 ---
 ## Para qué sirve
@@ -20,6 +20,7 @@ El asistente (se llama Dali, o el nombre que le puso tu empresa) contesta en tus
 - Casos y oportunidades: crear un caso, pasarlo a otra etapa, marcarlo como ganado, perdido o cancelado, posponerlo o retomarlo, y cambiar monto, cierre estimado, probabilidad o el compromiso del cliente.
 - Cotizaciones (si puedes crear en Ventas): armarlas con los productos y precios del Catálogo, mandárselas al cliente y ver las que tiene abiertas.
 - Contestar a tus clientes: te dice qué conversaciones tuyas esperan respuesta (la que más lleva esperando primero), te resume qué dijeron y te deja la respuesta lista en una tarjeta para mandarla.
+- Trabajo en campo: tus visitas del día, cuál sigue, qué se le hizo la última vez al cliente, avisarle «voy en camino» y dictar el reporte de la visita (ver la guía «Mi ruta en campo»).
 - Delegar el seguimiento de un cliente a un agente IA, preguntar cómo va y pausarlo, reanudarlo o cancelarlo.
 - Ventas (si tienes acceso a Ventas): cómo vas contra la meta, ranking de vendedores y clientes, oportunidades que cierran, vencidas o estancadas, y la salud del embudo. Las cifras son sin IVA; con «Solo lo suyo» son solo tus números.
 - Explicar la plataforma: cómo se hace algo, dónde está y para qué sirve.
@@ -46,8 +47,8 @@ El asistente (se llama Dali, o el nombre que le puso tu empresa) contesta en tus
 3. Sin QR: en el teléfono abre la dirección de la plataforma terminada en /dali y entra con tu correo y contraseña; te lleva directo a Dali.
 4. Instálalo como app para tener su ícono: en Android, menú ⋮ › «Instalar en este teléfono»; en iPhone, desde Safari, Compartir › «Agregar a inicio». Los pasos completos están en la guía «Dali en el teléfono».
 5. Para dictar, toca el micrófono, habla y vuelve a tocarlo: el texto queda en el cuadro para que lo revises y lo mandes. Cada nota puede durar hasta 2 minutos.
-6. Los botones de abajo (Mi día, Sin responder, Cotizar, Agendar, Anotar y, si tienes Ventas, Ventas) empiezan la plática ya encaminada.
-7. Lo que Dali abre (una cotización, un caso) se abre en la plataforma; el botón «Volver a Dali» te regresa. En el menú ⋮ están «Ir a Kontrolya» y, si estás en varias empresas, el cambio de empresa.
+6. Los botones de abajo (Mi día, Sin responder, Cotizar, Visitas de hoy, Agendar, Anotar y, si tienes Ventas, Ventas) empiezan la plática ya encaminada.
+7. Lo que Dali abre (una cotización, un caso) se abre en la plataforma; el botón «Volver a Dali» te regresa. Arriba, «Mi ruta» abre el portal de campo (llegar, fotos, firma). En el menú ⋮ están «Ir a Kontrolya» y, si estás en varias empresas, el cambio de empresa.
 
 ### Contestar una conversación
 1. Pregunta «¿qué tengo sin responder?» o «¿quién me escribió?» (en el teléfono, el botón «Sin responder»). Solo ve las conversaciones abiertas asignadas a ti.

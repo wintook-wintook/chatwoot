@@ -106,5 +106,5 @@ module Assistant::ToolDefinitions
   ].freeze
 
   ALL = (BASE + Assistant::SalesToolDefinitions::ALL + Assistant::GuideToolDefinitions::ALL + Assistant::QuoteToolDefinitions::ALL +
-         Assistant::ConversationToolDefinitions::ALL).freeze
+         Assistant::ConversationToolDefinitions::ALL + Assistant::FieldToolDefinitions::ALL).freeze
 end

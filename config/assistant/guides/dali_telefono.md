@@ -32,8 +32,9 @@ Usar a Dali desde el celular a pantalla completa, como una app con su propio íc
 ### Usarlo
 1. Ábrelo con el ícono: se ve a pantalla completa y no te vuelve a pedir la contraseña durante 2 meses.
 2. Escribe o toca el micrófono para dictar; vuelve a tocarlo al terminar. El texto queda en el cuadro para que lo revises y lo mandes.
-3. Los botones de abajo (Mi día, Sin responder, Cotizar, Agendar, Anotar y Ventas si la tienes) empiezan la plática.
-4. Lo que Dali abre (un caso, una cotización, una conversación) se abre en la plataforma; el botón «Volver a Dali» te regresa.
+3. Los botones de abajo (Mi día, Sin responder, Cotizar, Visitas de hoy, Agendar, Anotar y Ventas si la tienes) empiezan la plática.
+4. Si sales a campo, el botón «Mi ruta» de arriba abre tus visitas para marcar «Llegué», tomar fotos y la firma; «Volver a Dali» te regresa.
+5. Lo que Dali abre (un caso, una cotización, una conversación) se abre en la plataforma; el botón «Volver a Dali» te regresa.
 
 ## Límites
 - Necesita internet; sin conexión no responde.

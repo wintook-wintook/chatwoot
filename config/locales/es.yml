@@ -343,6 +343,7 @@ es:
       guide: 'Aprender a usar la plataforma: cómo se hace algo, dónde está cada cosa y para qué sirve (p. ej. «¿cómo creo un contrato?», «¿para qué sirve el embudo?»).'
       quotes: 'Cotizaciones: armarlas con los productos y precios del catálogo, mandárselas al cliente y ver las que tiene abiertas (p. ej. «cotízale a Mario 3 mantenimientos de minisplit»).'
       reply: 'Contestar a tus clientes: qué conversaciones esperan respuesta, qué dijeron, y la respuesta lista en una tarjeta para mandarla (p. ej. «¿quién me escribió?», «dile a Mario que llega el jueves»).'
+      field: 'Trabajo en campo: tus visitas del día, cuál sigue, qué se le hizo la última vez al cliente, avisarle «voy en camino» y dictar el reporte de la visita (p. ej. «¿qué visitas tengo hoy?», «reporta la visita: cambié el capacitor»).'
       limits: 'Lo que no hace: no le escribe al cliente sin tu confirmación (te deja una tarjeta, un borrador o un mensaje programado) ni hace acciones masivas.'
     quotes:
       new_opportunity: 'Se crea una oportunidad nueva'
@@ -356,6 +357,7 @@ es:
       today: { label: 'Mi día', prompt: '¿Qué tengo hoy?' }
       reply: { label: 'Sin responder', prompt: '¿Qué conversaciones tengo sin responder?' }
       quote: { label: 'Cotizar', prompt: 'Quiero hacer una cotización' }
+      route: { label: 'Visitas de hoy', prompt: '¿Qué visitas tengo hoy?' }
       meeting: { label: 'Agendar', prompt: 'Quiero agendar una cita' }
       note: { label: 'Anotar', prompt: 'Quiero anotar algo de un cliente' }
       sales: { label: 'Ventas', prompt: '¿Cómo vamos este mes?' }

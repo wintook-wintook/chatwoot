@@ -97,7 +97,8 @@
         "COMMITTED": "Committed",
         "COMMIT_NOTE": "Commitment note",
         "QUOTE": "Quote",
-        "OPPORTUNITY": "Opportunity"
+        "OPPORTUNITY": "Opportunity",
+        "VISIT": "Visit"
       },
       "OUTCOMES": {
         "won": "Won",
@@ -116,7 +117,15 @@
       "QUOTE_DRAFT": "It is created as a draft; you can review it before sending.",
       "reply": "Reply",
       "SEND": "Send",
-      "TEMPLATE_NOTE": "More than 24 h since their last message: WhatsApp only allows an approved template."
+      "TEMPLATE_NOTE": "More than 24 h since their last message: WhatsApp only allows an approved template.",
+      "on_my_way": "On my way",
+      "visit_report": "Visit report",
+      "ETA": "Arriving in (minutes)",
+      "NOTES": "What was done",
+      "CHECKLIST": "Checklist items done",
+      "MINUTES": "Time spent (minutes)",
+      "CLOSES_VISIT": "On confirm, the visit is marked as held.",
+      "FIELD_REST": "Photos, the customer signature and finishing the order are done in “My route”."
     },
     "SETTINGS": {
       "TITLE": "Assistant",
@@ -233,7 +242,8 @@
         "OR_URL": "Or open {url} on your phone and sign in with your email and password.",
         "INSTALL_HINT": "Once inside: on Android, menu › “Install app”; on iPhone, Share › “Add to Home Screen”.",
         "ERROR": "Couldn't generate the code. Try again."
-      }
+      },
+      "MY_ROUTE": "My route"
     }
   }
 }
