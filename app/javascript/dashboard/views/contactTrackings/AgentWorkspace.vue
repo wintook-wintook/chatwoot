@@ -33,6 +33,10 @@ import AgentVersions from './agents/AgentVersions.vue';
 import TemplateForm from 'dashboard/routes/dashboard/settings/trackingTemplates/EditTemplate.vue';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import BaseSettingsHeader from 'dashboard/routes/dashboard/settings/components/BaseSettingsHeader.vue';
+// feat/ficha_agente_ia: la ficha de recursos (agente nuevo en 3 pasos, o la de uno que ya existe)
+import FichaWizard from './ficha/FichaWizard.vue';
+import AgentFicha from './ficha/AgentFicha.vue';
+import FichaAPI from 'dashboard/api/fichaAgente';
 
 export default {
   components: {
@@ -40,6 +44,8 @@ export default {
     AgentVersions,
     TemplateForm,
     BaseSettingsHeader,
+    FichaWizard,
+    AgentFicha,
   },
   data() {
     return {
@@ -49,6 +55,8 @@ export default {
       // Cambia al restaurar: el Asistente y la ficha se vuelven a montar con lo
       // que quedó publicado.
       reloadKey: 0,
+      // feat/ficha_agente_ia: cuántos cambios de la ficha faltan en el Entrenamiento.
+      fichaChanges: 0,
     };
   },
   computed: {
@@ -74,6 +82,8 @@ export default {
     },
     sections() {
       return [
+        // feat/ficha_agente_ia: primero la ficha (D6). En un agente nuevo es el asistente de 3 pasos.
+        this.isAdmin && { id: 'ficha', label: 'SECTION_FICHA' },
         this.isAdmin && { id: 'training', label: 'SECTION_TRAINING' },
         // proyecto@diagrama_agente_ia: pruebas y diagrama en su propia pestaña, a lo ancho.
         this.isAdmin && { id: 'tests', label: 'SECTION_TESTS' },
@@ -116,6 +126,7 @@ export default {
       handler() {
         this.pickSection();
         this.fetchVersionInfo();
+        this.fetchFichaChanges();
       },
     },
   },
@@ -136,6 +147,22 @@ export default {
     goSection(id) {
       this.section = id;
       if (id === 'versions') this.fetchVersionInfo();
+    },
+    async fetchFichaChanges() {
+      this.fichaChanges = 0;
+      if (!this.templateId || !this.isAdmin) return;
+      try {
+        const { data } = await FichaAPI.get(this.templateId);
+        const cambios = data.changes || {};
+        this.fichaChanges =
+          (cambios.added || []).length + (cambios.removed || []).length;
+      } catch (error) {
+        this.fichaChanges = 0;
+      }
+    },
+    onFichaApplied() {
+      this.reloadKey += 1;
+      this.fetchVersionInfo();
     },
     goBack() {
       this.$router.push({ name: 'contact_trackings_agents' });
@@ -166,6 +193,10 @@ export default {
         query: { seccion: 'training' },
       });
       this.fetchVersionInfo();
+    },
+    // Recién creado desde la ficha: al Entrenamiento, para verlo y afinarlo.
+    goToFicha(id) {
+      this.goToAgent(id);
     },
     onAssistantSession(id) {
       if (this.sessionId && this.sessionId !== id) {
@@ -242,7 +273,8 @@ export default {
             :key="item.id"
             :index="position"
             :name="t(item.label)"
-            :show-badge="false"
+            :count="item.id === 'ficha' ? fichaChanges : 0"
+            :show-badge="item.id === 'ficha' && fichaChanges > 0"
           />
         </woot-tabs>
         <p
@@ -256,8 +288,20 @@ export default {
       <div class="flex flex-col flex-1 min-h-0 mt-6">
         <!-- Entrenamiento y Pruebas son el MISMO Asistente con otra vista: un solo
              elemento con la misma key, así cambiar de pestaña no lo vuelve a montar. -->
+        <FichaWizard
+          v-if="section === 'ficha' && isNew"
+          @created="goToFicha"
+          @conversation="goSection('training')"
+        />
+        <AgentFicha
+          v-else-if="section === 'ficha' && templateId"
+          :key="`ficha-${templateId}-${reloadKey}`"
+          :template-id="templateId"
+          @applied="onFichaApplied"
+          @changes="fichaChanges = $event"
+        />
         <Assistant
-          v-if="['training', 'tests', 'sources'].includes(section)"
+          v-else-if="['training', 'tests', 'sources'].includes(section)"
           :key="`training-${reloadKey}`"
           :view="section"
           :template-id="templateId"

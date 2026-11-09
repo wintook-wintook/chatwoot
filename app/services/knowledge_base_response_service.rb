@@ -57,6 +57,14 @@ class KnowledgeBaseResponseService
     name    = group.delete_prefix('!').strip
     return scope if name.blank?
 
+    # respuestas_predefinidas R4: si hay una CATEGORÍA con ese nombre, el grupo es la
+    # categoría (metadata.category del vector); si no, el prefijo del nombre, como siempre.
+    # Misma regla en KnowledgeBase::CannedGroup (amarradas por canned_group_spec).
+    if source_type == 'canned_response' && KnowledgeBase::CannedGroup.category?(account, name)
+      Rails.logger.info "[KBase] \u{1F5C2}\uFE0F Categoría #{negated ? 'excluida' : 'exigida'}: #{name}"
+      return KnowledgeBase::CannedGroup.by_category(scope, name, negated)
+    end
+
     pattern = "#{ActiveRecord::Base.sanitize_sql_like(name)}%"
     Rails.logger.info "[KBase] \u{1F5C2}\uFE0F Grupo #{negated ? 'excluido' : 'exigido'}: #{name}"
 

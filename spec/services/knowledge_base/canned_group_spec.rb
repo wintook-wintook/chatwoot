@@ -48,6 +48,40 @@ RSpec.describe KnowledgeBase::CannedGroup do
     end
   end
 
+  # respuestas_predefinidas R4: si hay una categoría con ese nombre, el grupo es la categoría.
+  describe '.scope por categoría' do
+    before do
+      CannedResponseCategory.create!(account: account, name: 'Ventas Norte')
+      create(:knowledge_item, account: account, knowledge_source: source, source_type: 'canned_response',
+                              title: 'PRECIO grúa', metadata: { 'category' => 'Ventas Norte' })
+      create(:knowledge_item, account: account, knowledge_source: source, source_type: 'canned_response',
+                              title: 'VENTAS sin categoría')
+      item('HORARIO DE OFICINA')
+    end
+
+    it 'busca por la categoría, sin importar mayúsculas, y no por el prefijo' do
+      expect(described_class.scope(account, 'canned_response', 'ventas norte').pluck(:title)).to eq(['PRECIO grúa'])
+    end
+
+    it 'negada deja fuera la categoría y conserva las que no tienen' do
+      titulos = described_class.scope(account, 'canned_response', '!Ventas Norte').pluck(:title)
+
+      expect(titulos).to contain_exactly('VENTAS sin categoría', 'HORARIO DE OFICINA')
+    end
+
+    it 'sin categoría con ese nombre sigue por el prefijo' do
+      expect(described_class.scope(account, 'canned_response', 'VENTAS').pluck(:title)).to eq(['VENTAS sin categoría'])
+    end
+
+    it 'el motor hace exactamente lo mismo' do
+      service = KnowledgeBaseResponseService.new(Message.new(account: account, content: 'hola'))
+      ['Ventas Norte', '!Ventas Norte', 'VENTAS'].each do |group|
+        expect(described_class.scope(account, 'canned_response', group).pluck(:id).sort)
+          .to eq(service.send(:grouped_items, 'canned_response', group).pluck(:id).sort)
+      end
+    end
+  end
+
   describe '.threshold' do
     it 'sube el listón solo para el grupo positivo' do
       expect(described_class.threshold('GESTION')).to eq(KnowledgeBaseResponseService::GROUP_SIMILARITY_THRESHOLD)

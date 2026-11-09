@@ -225,6 +225,14 @@ Rails.application.routes.draw do
               get :route_catalog # proyecto@asistente_agentes_ia — las ramas que la cuenta ya escribió
               get :section_catalog # proyecto@asistente_agentes_ia — las secciones enteras que ya escribió
               post :training_preview # proyecto@asistente_agentes_ia — texto ↔ bloques + comprobador
+              # feat/ficha_agente_ia: crear un agente desde la ficha en unos cuantos clics
+              get :ficha_catalog, to: 'tracking_templates/fichas#catalog'
+              post :ficha_preview, to: 'tracking_templates/fichas#preview'
+              post :ficha_create, to: 'tracking_templates/fichas#create'
+            end
+            # feat/ficha_agente_ia: la ficha de un agente que ya existe y sus cambios contra el prompt
+            resource :ficha, only: [:show, :update], module: :tracking_templates do
+              post :apply
             end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates

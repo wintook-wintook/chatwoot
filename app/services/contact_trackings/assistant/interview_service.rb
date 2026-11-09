@@ -92,6 +92,7 @@ class ContactTrackings::Assistant::InterviewService
   #              `building` (ver TurnOutcome#building?).
   def initialize(account, messages:, inbox: nil, one_shot: false, drafts: {})
     @account = account
+    @ficha = Array(drafts[:ficha]) # feat/ficha_agente_ia: cambios de la ficha que el chat debe mencionar
     @inbox = inbox
     @messages = Array(messages)
     @one_shot = one_shot
@@ -351,6 +352,7 @@ class ContactTrackings::Assistant::InterviewService
     @system_prompt ||= [
       ContactTrackings::Assistant::Contract.call,
       inventory_section,
+      (@ficha.join("\n") if @ficha.any?),
       ContactTrackings::Assistant::Instructions.call(one_shot: one_shot, max_turns: MAX_INTERVIEW_TURNS),
       (ContactTrackings::Assistant::CheckerSection.call(current_draft, account: account, result: analysis.result) if editing?),
       (ContactTrackings::Assistant::EditingInstructions.call(current_draft, manual: @manual.labels, building: building?) if editing?)

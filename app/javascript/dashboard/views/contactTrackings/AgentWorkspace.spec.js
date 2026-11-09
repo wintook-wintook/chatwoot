@@ -9,6 +9,13 @@ vi.mock('dashboard/api/trackingTemplates', () => ({
   },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('dashboard/api/fichaAgente', () => ({
+  default: {
+    get: vi
+      .fn()
+      .mockResolvedValue({ data: { changes: { added: [1], removed: [] } } }),
+  },
+}));
 vi.mock('./Assistant.vue', () => ({
   default: { name: 'Assistant', render: () => null },
 }));
@@ -44,22 +51,29 @@ const montar = ({
         },
       },
     },
-    stubs: ['woot-button', 'woot-sidemenu-icon', 'AgentVersions'],
+    stubs: [
+      'woot-button',
+      'woot-sidemenu-icon',
+      'AgentVersions',
+      'FichaWizard',
+      'AgentFicha',
+    ],
   });
   return { wrapper, router };
 };
 
 describe('AgentWorkspace', () => {
-  it('un admin ve Entrenamiento, Pruebas, Probar fuentes, Ficha y Versiones, y entra al Entrenamiento', () => {
+  it('un admin ve Recursos, Entrenamiento, Pruebas, Probar fuentes, Ficha y Versiones, y entra a Recursos', () => {
     const { wrapper } = montar();
     expect(wrapper.vm.sections.map(s => s.id)).toEqual([
+      'ficha',
       'training',
       'tests',
       'sources',
       'profile',
       'versions',
     ]);
-    expect(wrapper.vm.section).toBe('training');
+    expect(wrapper.vm.section).toBe('ficha');
     expect(wrapper.vm.title).toBe('Cobranza');
     expect(wrapper.vm.inboxName).toBe('Ventas WA');
   });
@@ -70,10 +84,11 @@ describe('AgentWorkspace', () => {
     expect(wrapper.vm.section).toBe('profile');
   });
 
-  it('un agente nuevo solo tiene Entrenamiento, Pruebas y Probar fuentes', () => {
+  it('un agente nuevo empieza por los Recursos (3 pasos)', () => {
     const { wrapper } = montar({ templateId: 'new' });
     expect(wrapper.vm.templateId).toBeNull();
     expect(wrapper.vm.sections.map(s => s.id)).toEqual([
+      'ficha',
       'training',
       'tests',
       'sources',
@@ -82,7 +97,7 @@ describe('AgentWorkspace', () => {
 
   // proyecto@diagrama_agente_ia: Pruebas es el mismo Asistente con otra vista.
   it('Entrenamiento y Pruebas comparten el Asistente sin volver a montarlo', async () => {
-    const { wrapper } = montar();
+    const { wrapper } = montar({ query: { seccion: 'training' } });
     await wrapper.vm.$nextTick();
     const antes = wrapper.findComponent({ name: 'Assistant' });
     expect(antes.attributes('view')).toBe('training');
