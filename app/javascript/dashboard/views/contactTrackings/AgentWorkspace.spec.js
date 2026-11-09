@@ -50,11 +50,12 @@ const montar = ({
 };
 
 describe('AgentWorkspace', () => {
-  it('un admin ve Entrenamiento, Pruebas, Ficha y Versiones, y entra al Entrenamiento', () => {
+  it('un admin ve Entrenamiento, Pruebas, Probar fuentes, Ficha y Versiones, y entra al Entrenamiento', () => {
     const { wrapper } = montar();
     expect(wrapper.vm.sections.map(s => s.id)).toEqual([
       'training',
       'tests',
+      'sources',
       'profile',
       'versions',
     ]);
@@ -69,10 +70,14 @@ describe('AgentWorkspace', () => {
     expect(wrapper.vm.section).toBe('profile');
   });
 
-  it('un agente nuevo solo tiene Entrenamiento y Pruebas', () => {
+  it('un agente nuevo solo tiene Entrenamiento, Pruebas y Probar fuentes', () => {
     const { wrapper } = montar({ templateId: 'new' });
     expect(wrapper.vm.templateId).toBeNull();
-    expect(wrapper.vm.sections.map(s => s.id)).toEqual(['training', 'tests']);
+    expect(wrapper.vm.sections.map(s => s.id)).toEqual([
+      'training',
+      'tests',
+      'sources',
+    ]);
   });
 
   // proyecto@diagrama_agente_ia: Pruebas es el mismo Asistente con otra vista.
