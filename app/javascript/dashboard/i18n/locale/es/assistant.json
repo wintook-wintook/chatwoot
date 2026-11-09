@@ -243,7 +243,24 @@
         "INSTALL_HINT": "Ya adentro: en Android, menú › «Instalar app»; en iPhone, Compartir › «Agregar a inicio».",
         "ERROR": "No se pudo generar el código. Intenta de nuevo."
       },
-      "MY_ROUTE": "Mi ruta"
+      "MY_ROUTE": "Mi ruta",
+      "NOTICES": {
+        "BELL": "Avisos ({count} sin leer)",
+        "EMPTY": "No tienes avisos nuevos.",
+        "CONVERSATION": "Conversación #{id}",
+        "SEE_PENDING": "Ver lo que tengo sin responder",
+        "READ_ALL": "Marcar todo como leído",
+        "NEW_FROM": "{name} te escribió",
+        "OFFER": "Activa los avisos para saber cuándo te escriben o te asignan una conversación, aunque Dali esté cerrado.",
+        "ENABLE": "Activar avisos",
+        "ENABLE_MENU": "Activar avisos en este teléfono",
+        "NOT_NOW": "Ahora no",
+        "DENIED": "El teléfono bloqueó los avisos. Actívalos en los permisos del sitio o de la app.",
+        "UNSUPPORTED": "Este navegador no permite avisos. En iPhone, instala Dali en la pantalla de inicio y ábrelo desde el ícono.",
+        "ERROR": "No se pudieron activar los avisos. Intenta de nuevo.",
+        "ASK_CONVERSATION": "¿Qué me escribieron en la conversación #{id}?",
+        "ASK_PENDING": "¿Qué conversaciones tengo sin responder?"
+      }
     }
   }
 }

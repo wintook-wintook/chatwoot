@@ -243,7 +243,24 @@
         "INSTALL_HINT": "Once inside: on Android, menu › “Install app”; on iPhone, Share › “Add to Home Screen”.",
         "ERROR": "Couldn't generate the code. Try again."
       },
-      "MY_ROUTE": "My route"
+      "MY_ROUTE": "My route",
+      "NOTICES": {
+        "BELL": "Notices ({count} unread)",
+        "EMPTY": "You have no new notices.",
+        "CONVERSATION": "Conversation #{id}",
+        "SEE_PENDING": "See what I have unanswered",
+        "READ_ALL": "Mark all as read",
+        "NEW_FROM": "{name} wrote to you",
+        "OFFER": "Turn on notices to know when someone writes to you or assigns you a conversation, even with Dali closed.",
+        "ENABLE": "Turn on notices",
+        "ENABLE_MENU": "Turn on notices on this phone",
+        "NOT_NOW": "Not now",
+        "DENIED": "The phone blocked notices. Allow them in the site or app permissions.",
+        "UNSUPPORTED": "This browser doesn't allow notices. On iPhone, add Dali to the home screen and open it from the icon.",
+        "ERROR": "Couldn't turn on notices. Try again.",
+        "ASK_CONVERSATION": "What did they write in conversation #{id}?",
+        "ASK_PENDING": "Which conversations do I have unanswered?"
+      }
     }
   }
 }

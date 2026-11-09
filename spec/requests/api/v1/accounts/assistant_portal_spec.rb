@@ -51,6 +51,17 @@ RSpec.describe 'Assistant portal API' do
     expect(admin.valid_sso_auth_token?(query['sso_auth_token'])).to be(false)
   end
 
+  it 'activa los avisos en este teléfono: suscripción para Dali y avisos de asignación y mensaje nuevo' do
+    post "#{base}/push_subscription", params: { endpoint: 'https://push.example/abc', p256dh: 'k', auth: 'a' },
+                                      headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:ok)
+    subscription = admin.notification_subscriptions.find_by(identifier: 'https://push.example/abc')
+    expect(subscription.subscription_attributes).to include('dali' => true, 'p256dh' => 'k')
+    setting = admin.notification_settings.find_by(account_id: account.id)
+    expect(setting.push_conversation_assignment?).to be(true)
+    expect(setting.push_assigned_conversation_new_message?).to be(true)
+  end
+
   it 'sin sesión no hay enlace' do
     post "#{base}/mobile_link", as: :json
     expect(response).to have_http_status(:unauthorized)

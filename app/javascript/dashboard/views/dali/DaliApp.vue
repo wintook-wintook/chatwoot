@@ -15,6 +15,8 @@ import {
   DEFAULT_ASSISTANT_NAME,
 } from 'dashboard/helper/assistantState';
 import AssistantChat from 'dashboard/components/assistant/AssistantChat.vue';
+import DaliNotifications from './DaliNotifications.vue'; // campanita, franja y avisos push
+import { daliPushState } from 'dashboard/helper/daliPush';
 import { markDaliReturn } from 'dashboard/helper/daliPortal';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 
@@ -22,7 +24,7 @@ const T = 'ASSISTANT.PORTAL';
 
 export default {
   name: 'DaliApp',
-  components: { AssistantChat },
+  components: { AssistantChat, DaliNotifications },
   data() {
     return {
       state: assistantState,
@@ -51,6 +53,12 @@ export default {
       return account ? account.name : '';
     },
   },
+  watch: {
+    // Desde un aviso push con Dali ya abierto (el service worker navega la ventana).
+    '$route.query.conversation'(id) {
+      if (id && this.chatLoaded) this.openFromNotice(id);
+    },
+  },
   mounted() {
     document.title = this.name;
     window.addEventListener('beforeinstallprompt', this.onInstallPrompt);
@@ -65,6 +73,27 @@ export default {
     onLoaded(data) {
       this.shortcuts = data.shortcuts || [];
       document.title = data.name || this.name;
+      this.chatLoaded = true;
+      const { conversation } = this.$route.query;
+      if (conversation) this.openFromNotice(conversation);
+    },
+    // Tocó un aviso push: Dali le lee esa conversación y el aviso queda leído.
+    openFromNotice(displayId) {
+      this.$router.replace({ query: {} });
+      this.$refs.notices?.openConversation(displayId);
+      this.ask(
+        this.$t('ASSISTANT.PORTAL.NOTICES.ASK_CONVERSATION', { id: displayId })
+      );
+    },
+    ask(text) {
+      this.$refs.chat.ask(text);
+    },
+    pushOff() {
+      return ['off'].includes(daliPushState());
+    },
+    enablePush() {
+      this.menuOpen = false;
+      this.$refs.notices.enablePush();
     },
     // Chrome/Android ofrece instalar; en iPhone es «Compartir › Agregar a inicio».
     onInstallPrompt(event) {
@@ -129,6 +158,7 @@ export default {
       >
         {{ t('MY_ROUTE') }}
       </woot-button>
+      <DaliNotifications ref="notices" @ask="ask" />
       <woot-button
         :aria-label="t('NEW')"
         size="small"
@@ -151,6 +181,14 @@ export default {
       >
         <button type="button" class="dali-menu-item" @click="openPlatform()">
           {{ t('OPEN_PLATFORM') }}
+        </button>
+        <button
+          v-if="menuOpen && pushOff()"
+          type="button"
+          class="dali-menu-item"
+          @click="enablePush"
+        >
+          {{ t('NOTICES.ENABLE_MENU') }}
         </button>
         <button
           v-if="installPrompt"

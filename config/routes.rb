@@ -366,6 +366,7 @@ Rails.application.routes.draw do
             patch :settings
             post :transcribe
             post :mobile_link
+            post :push_subscription
             post 'proposals/:id/confirm', action: :confirm
             post 'proposals/:id/cancel', action: :cancel
           end

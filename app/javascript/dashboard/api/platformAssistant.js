@@ -50,6 +50,12 @@ class AssistantAPI extends ApiClient {
     return axios.post(`${this.url}/mobile_link`);
   }
 
+  // Avisos en este teléfono: la suscripción push ({ endpoint, p256dh, auth }); el servidor
+  // la marca para abrir Dali y prende «te asignaron» y «mensaje nuevo».
+  pushSubscription(keys) {
+    return axios.post(`${this.url}/push_subscription`, keys);
+  }
+
   rename(name) {
     return axios.patch(`${this.url}/settings`, { name });
   }
