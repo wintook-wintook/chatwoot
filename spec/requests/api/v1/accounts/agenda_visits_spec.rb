@@ -125,6 +125,15 @@ RSpec.describe 'Agenda Visits API' do
 
       expect(response.parsed_body['visit']['state']).to eq('on_the_way')
     end
+
+    it 'el aviso al cliente lleva la hora en la zona del vendedor' do
+      conversation = create(:conversation, account: account, inbox: create(:inbox, account: account), contact: contact)
+      travel_to(Time.utc(2026, 11, 9, 12, 0)) do
+        post "#{api}/agenda_visits/#{visit.id}/on_my_way", params: { eta_minutes: 20, tz: 'America/Mexico_City' },
+                                                           headers: headers, as: :json
+        expect(conversation.messages.last.content).to include('06:20')
+      end
+    end
   end
 
   describe 'reporte de llegadas' do
