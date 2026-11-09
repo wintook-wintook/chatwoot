@@ -338,3 +338,31 @@ prefijo. En el motor (`KnowledgeBaseResponseService.grouped_items`), en la prueb
   PR #150 trae subir varios). - Mover Agendas/Archivos dentro de Recursos (D6 completa).
 - Avisar en el comprobador (pintado en el editor) la ruta con recurso fuera de la ficha: hoy se ve
   en Recursos y en el chat.
+
+---
+
+## 14. Avance (09/11/2026, segunda tanda)
+
+Pedidos del usuario: siguiente-siguiente (Recursos → Ficha de Agente IA → Entrenamiento…),
+Reglas, ✨ objetivo y contexto, continuar la conversación anterior, y las ideas 1 y 2 de
+«más facilidad».
+
+| Pieza | Qué hace | Commit |
+|---|---|---|
+| Recursos + menú + panel en vivo | Fuentes (buscador fijo, tipos, detalle) · Agenda · Tickets · Archivos · Reglas | 0721c535, b72d39d1, c316f486 |
+| Siguiente-siguiente | Nuevo: solo Recursos → [Continuar] Ficha de Agente IA → [Crear] lo demás; orden de pestañas igual en existentes | 2d1dd3f9, b6b212bf |
+| ✨ Proponer con IA | Ficha::Suggester (gpt-4o, 1 llamada): objetivo + contexto del negocio; faltantes como chips, nunca `<PENDIENTE:>` | 2d1dd3f9 |
+| Continuar conversación | TrackingAssistantSession.previous_for / #continue_as: nueva con historial + Entrenamiento de hoy | f90d8090 |
+| **Probar antes de crear** | Ficha::TestPhrases (frases del contenido de cada recurso + reales de clientes) → Tester (clasificador real) → TestJob (Redis/TurnProgress). Falla o ruta por defecto → [Agregar la frase a la ruta] (se suma a la descripción, sin IA) | a86128b6 |
+| **Listo para atender** | Ficha::Readiness: OpenAI · canal · recursos con aviso · datos del negocio · quién se lo asigna; [Activar en su canal] = automatización conversation_created → assign_tracking_template (con confirmación; al crear, casilla) | a86128b6 |
+| Arreglo Definición | La Estructura mostraba vacía la Definición de un agente existente (proposal = null); publicar en reemplazo ahora guarda objetivo/contexto (vacío no borra) | a86128b6 |
+
+Medido en la cuenta 2 (con OK del usuario): prueba de 4 rutas = 14 llamadas en 12 s, 8/8
+frases de recursos en su ruta; de 6 frases reales, 4 caían en la ruta por defecto; tras
+agregar «¿a qué hora atienden?» a la agenda, esa frase ya cae ahí.
+
+API nueva: `POST ficha_test` (202, turn_id) · `GET ficha_test/:turn_id` · `POST :id/ficha/activate`
+· `ficha_create` con `activate` y `phrases` · `GET/POST assistant/sessions/previous|:id/continue`.
+
+Pendiente: probar en navegador; juntar Agenda/Archivos solo en Recursos; «empezar desde un tipo
+de negocio» (idea 3); PR (el usuario pidió no subir a develop todavía).
