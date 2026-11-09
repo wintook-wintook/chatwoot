@@ -9,7 +9,8 @@
 #   GET  tracking_templates/ficha_catalog?inbox_id=   las tarjetas para marcar
 #   POST tracking_templates/ficha_preview             ofertas + Entrenamiento generado + comprobador
 #   POST tracking_templates/ficha_create              crea el agente con todo eso (sin IA)
-#     params: name, inbox_id, items[], skip[] (ofertas apagadas), objective, business, tone
+#     params: name, inbox_id, items[], skip[] (ofertas apagadas), objective, business, tone,
+#             customer_display_name, files[] ({ name }: archivos que la pantalla sube al crear)
 #
 # Agente que ya existe:
 #   GET   tracking_templates/:id/ficha        tarjetas + lo marcado + cambios contra el prompt
@@ -64,7 +65,8 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
     { name: params[:name].to_s.squish, inbox_id: inbox&.id, user: Current.user,
       objective: resultado[:objective], ai_context: resultado[:ai_context].presence,
       complementary_prompt: resultado[:prompt], resources: resources_for(items),
-      calendar_integration_ids: calendar_ids(items), version_note: 'Creado desde la ficha' }
+      calendar_integration_ids: calendar_ids(items), version_note: 'Creado desde la ficha',
+      customer_display_name: params[:customer_display_name].presence }
   end
 
   # El prompt con lo que la persona aceptó: add[] = ofertas de la ficha, remove[] = rutas.
@@ -121,9 +123,13 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
     lista.filter_map { |i| i['key'][/\Acalendar:(\d+)\z/, 1]&.to_i }
   end
 
+  def offers_for(cards)
+    ContactTrackings::Ficha::Offers.new(cards, items).call + ContactTrackings::Ficha::Offers.pending_files(params[:files])
+  end
+
   def build(cards)
     apagadas = Array(params[:skip]).map(&:to_s)
-    ofertas = ContactTrackings::Ficha::Offers.new(cards, items).call
+    ofertas = offers_for(cards)
     generado = ContactTrackings::Ficha::Generator.new(
       account: Current.account, name: params[:name], offers: ofertas.reject { |o| apagadas.include?(o[:key]) },
       **params.permit(:objective, :business, :tone).to_h.symbolize_keys

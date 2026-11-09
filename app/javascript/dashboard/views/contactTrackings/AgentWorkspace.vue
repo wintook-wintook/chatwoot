@@ -80,7 +80,14 @@ export default {
       const id = Number(this.$route.query.session);
       return id || null;
     },
+    // feat/ficha_agente_ia: un agente nuevo empieza SOLO en Recursos; el Entrenamiento y lo
+    // demás aparecen al crearlo (o si se elige crearlo conversando: ?modo=conversar).
+    conversational() {
+      return this.$route.query.modo === 'conversar';
+    },
     sections() {
+      if (this.isNew && this.isAdmin && !this.conversational)
+        return [{ id: 'ficha', label: 'SECTION_FICHA' }];
       return [
         // feat/ficha_agente_ia: primero la ficha (D6). En un agente nuevo es el asistente de 3 pasos.
         this.isAdmin && { id: 'ficha', label: 'SECTION_FICHA' },
@@ -121,6 +128,9 @@ export default {
     },
   },
   watch: {
+    '$route.query.modo'() {
+      this.pickSection();
+    },
     '$route.params.templateId': {
       immediate: true,
       handler() {
@@ -193,6 +203,11 @@ export default {
         query: { seccion: 'training' },
       });
       this.fetchVersionInfo();
+    },
+    startConversation() {
+      this.$router.replace({
+        query: { ...this.$route.query, modo: 'conversar', seccion: 'training' },
+      });
     },
     // Recién creado desde la ficha: al Entrenamiento, para verlo y afinarlo.
     goToFicha(id) {
@@ -291,7 +306,7 @@ export default {
         <FichaWizard
           v-if="section === 'ficha' && isNew"
           @created="goToFicha"
-          @conversation="goSection('training')"
+          @conversation="startConversation"
         />
         <AgentFicha
           v-else-if="section === 'ficha' && templateId"

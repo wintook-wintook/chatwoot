@@ -36,6 +36,17 @@ RSpec.describe 'Ficha del Agente IA API', type: :request do
     expect(creado.resources['items']).to eq([{ 'key' => "google_sheet:#{hoja.id}" }])
   end
 
+  it 'al crear acepta archivos por subir (ya mencionados en el Entrenamiento) y el nombre que ve el cliente' do
+    post "#{base}/ficha_create", params: { name: 'Ventas', items: items, files: [{ name: 'catalogo-2026' }, { name: 'mal nombre' }],
+                                           customer_display_name: 'Sofía' },
+                                 headers: admin.create_new_auth_token, as: :json
+
+    creado = account.tracking_templates.find(response.parsed_body['id'])
+    expect(creado.complementary_prompt).to include('{{catalogo-2026}}').and include('[ARCHIVOS]')
+    expect(creado.complementary_prompt).not_to include('mal nombre')
+    expect(creado.customer_display_name).to eq('Sofía')
+  end
+
   it 'guarda la ficha de un agente, dice los cambios y los aplica' do
     template = create(:tracking_template, account: account, complementary_prompt: "@ruta(info #info: pregunta algo): @buscar_articulo\n")
 

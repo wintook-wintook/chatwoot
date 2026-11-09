@@ -2,12 +2,15 @@
 // feat/ficha_agente_ia — LAS TARJETAS DE LA FICHA
 // ============================================================================
 // Plan: docs/ficha_agente_ia_plan.md §4.1. Una tarjeta con casilla por recurso: marcar =
-// el agente lo usa. Cada una dice qué tiene y si está lista; nada de directivas a la
-// vista. En las predefinidas se eligen los grupos (todos si no se elige ninguno).
+// el agente lo usa. Cada una dice qué tiene, si está lista y, al abrirla, el detalle
+// (columnas y filas de ejemplo, temas). Nada de directivas a la vista. En las
+// predefinidas se eligen los grupos (todos si no se elige ninguno).
 //
 // v-model: [{ key: 'google_sheet:12' }, { key: 'canned_response', parts: ['PATITAS'] }]
+// only:    los grupos a mostrar (el menú de Recursos muestra uno a la vez)
+// query / kind: buscador y filtro por tipo
 // ============================================================================
-const GROUPS = [
+export const GROUPS = [
   {
     id: 'sources',
     kinds: [
@@ -25,7 +28,7 @@ const GROUPS = [
   { id: 'tickets', kinds: ['case_type'] },
   { id: 'files', kinds: ['file'] },
 ];
-const ICONS = {
+export const ICONS = {
   sheet: 'library',
   doc: 'document',
   articles: 'book',
@@ -39,22 +42,45 @@ const ICONS = {
   file: 'attach',
 };
 
+const normalize = text =>
+  (text || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
 export default {
   model: { prop: 'value', event: 'input' },
   props: {
     cards: { type: Array, default: () => [] },
     value: { type: Array, default: () => [] },
     disabled: { type: Boolean, default: false },
-    // Agente nuevo: los archivos se suben cuando ya existe.
-    showFilesHint: { type: Boolean, default: false },
+    only: { type: Array, default: null },
+    query: { type: String, default: '' },
+    kind: { type: String, default: '' },
+    showHeaders: { type: Boolean, default: true },
   },
   emits: ['input'],
+  data() {
+    return { open: [] };
+  },
   computed: {
+    visibleCards() {
+      const texto = normalize(this.query.trim());
+      return this.cards.filter(card => {
+        if (this.kind && card.kind !== this.kind) return false;
+        if (!texto) return true;
+        const partes = (card.parts || []).map(part => part.label).join(' ');
+        return normalize(`${card.name} ${card.summary} ${partes}`).includes(
+          texto
+        );
+      });
+    },
     groups() {
-      return GROUPS.map(group => ({
-        ...group,
-        cards: this.cards.filter(card => group.kinds.includes(card.kind)),
-      })).filter(group => group.cards.length || group.id === 'files');
+      return GROUPS.filter(group => !this.only || this.only.includes(group.id))
+        .map(group => ({
+          ...group,
+          cards: this.visibleCards.filter(card =>
+            group.kinds.includes(card.kind)
+          ),
+        }))
+        .filter(group => group.cards.length);
     },
     selectedKeys() {
       return this.value.map(item => item.key);
@@ -81,6 +107,30 @@ export default {
         .map(card => ({ key: card.key }));
       this.$emit('input', [...this.value, ...listas]);
     },
+    clearGroup(group) {
+      const llaves = group.cards.map(card => card.key);
+      this.$emit(
+        'input',
+        this.value.filter(item => !llaves.includes(item.key))
+      );
+    },
+    countOn(group) {
+      return group.cards.filter(card => this.isOn(card)).length;
+    },
+    isOpen(card) {
+      return this.open.includes(card.key);
+    },
+    toggleOpen(card) {
+      this.open = this.isOpen(card)
+        ? this.open.filter(key => key !== card.key)
+        : [...this.open, card.key];
+    },
+    hasDetail(card) {
+      return (
+        (card.examples && card.examples.length) ||
+        (card.parts && card.parts.length)
+      );
+    },
     partsOf(card) {
       const item = this.value.find(entry => entry.key === card.key);
       return (item && item.parts) || [];
@@ -91,6 +141,13 @@ export default {
       return !elegidos.length || elegidos.includes(part.key);
     },
     togglePart(card, part) {
+      if (!this.isOn(card)) {
+        this.$emit('input', [
+          ...this.value,
+          { key: card.key, parts: [part.key] },
+        ]);
+        return;
+      }
       const todas = (card.parts || []).map(p => p.key);
       let elegidos = this.partsOf(card);
       if (!elegidos.length) elegidos = todas;
@@ -117,12 +174,25 @@ export default {
         ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300'
         : 'bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
     },
+    examplesOf(card) {
+      return (card.examples || []).slice(0, 4);
+    },
   },
 };
 </script>
 
 <template>
   <div class="flex flex-col gap-6">
+    <p
+      v-if="!groups.length"
+      class="!m-0 px-3 py-4 text-sm text-center border border-dashed rounded-lg text-slate-500 border-slate-200 dark:border-slate-700"
+    >
+      {{
+        query || kind
+          ? $t('TRACKING_TEMPLATES.FICHA.NO_MATCH')
+          : $t('TRACKING_TEMPLATES.FICHA.NOTHING_HERE')
+      }}
+    </p>
     <section
       v-for="group in groups"
       :key="group.id"
@@ -130,6 +200,7 @@ export default {
     >
       <div class="flex items-center justify-between gap-2">
         <h3
+          v-if="showHeaders"
           class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
         >
           {{ $t(`TRACKING_TEMPLATES.FICHA.GROUP_${group.id.toUpperCase()}`) }}
@@ -137,69 +208,89 @@ export default {
             {{ $t(`TRACKING_TEMPLATES.FICHA.HINT_${group.id.toUpperCase()}`) }}
           </span>
         </h3>
-        <woot-button
-          v-if="group.cards.length > 1 && !disabled"
-          size="tiny"
-          variant="clear"
-          icon="checkmark"
-          @click="selectReady(group)"
-        >
-          {{ $t('TRACKING_TEMPLATES.FICHA.SELECT_READY') }}
-        </woot-button>
+        <span v-else class="text-xs text-slate-500">
+          {{
+            $t('TRACKING_TEMPLATES.FICHA.COUNT_ON', {
+              on: countOn(group),
+              total: group.cards.length,
+            })
+          }}
+        </span>
+        <div v-if="!disabled" class="flex items-center gap-1">
+          <woot-button
+            v-if="group.cards.length > 1"
+            size="tiny"
+            variant="clear"
+            icon="checkmark"
+            @click="selectReady(group)"
+          >
+            {{ $t('TRACKING_TEMPLATES.FICHA.SELECT_READY') }}
+          </woot-button>
+          <woot-button
+            v-if="countOn(group)"
+            size="tiny"
+            variant="clear"
+            color-scheme="secondary"
+            icon="dismiss"
+            @click="clearGroup(group)"
+          >
+            {{ $t('TRACKING_TEMPLATES.FICHA.CLEAR') }}
+          </woot-button>
+        </div>
       </div>
 
-      <p
-        v-if="!group.cards.length"
-        class="!m-0 px-3 py-2 text-xs border border-dashed rounded-lg text-slate-500 border-slate-200 dark:border-slate-700"
-      >
-        {{
-          showFilesHint
-            ? $t('TRACKING_TEMPLATES.FICHA.FILES_AFTER')
-            : $t('TRACKING_TEMPLATES.FICHA.FILES_EMPTY')
-        }}
-      </p>
-
-      <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      <div class="grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
         <div
           v-for="card in group.cards"
           :key="card.key"
           class="flex flex-col gap-2 p-3 transition-colors border rounded-lg"
           :class="
             isOn(card)
-              ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20'
-              : 'border-slate-200 dark:border-slate-700'
+              ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20 shadow-sm'
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
           "
         >
-          <label
-            class="flex items-start gap-2 !m-0 cursor-pointer"
-            :data-key="card.key"
-          >
-            <input
-              type="checkbox"
-              class="!m-0 mt-0.5 shrink-0"
-              :checked="isOn(card)"
-              :disabled="disabled"
-              @change="toggle(card)"
-            />
-            <fluent-icon
-              :icon="icon(card)"
-              size="16"
-              class="mt-0.5 shrink-0 text-slate-500"
-            />
-            <span class="flex flex-col min-w-0 gap-0.5">
-              <span
-                class="text-sm font-medium truncate text-slate-800 dark:text-slate-100"
-                :title="card.name"
-              >
-                {{ card.name }}
+          <div class="flex items-start gap-2">
+            <label
+              class="flex items-start flex-1 min-w-0 gap-2 !m-0 cursor-pointer"
+              :data-key="card.key"
+            >
+              <input
+                type="checkbox"
+                class="!m-0 mt-0.5 shrink-0"
+                :checked="isOn(card)"
+                :disabled="disabled"
+                @change="toggle(card)"
+              />
+              <fluent-icon
+                :icon="icon(card)"
+                size="16"
+                class="mt-0.5 shrink-0 text-slate-500"
+              />
+              <span class="flex flex-col min-w-0 gap-0.5">
+                <span
+                  class="text-sm font-medium truncate text-slate-800 dark:text-slate-100"
+                  :title="card.name"
+                >
+                  {{ card.name }}
+                </span>
+                <span
+                  class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2"
+                >
+                  {{ card.summary }}
+                </span>
               </span>
-              <span
-                class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2"
-              >
-                {{ card.summary }}
-              </span>
-            </span>
-          </label>
+            </label>
+            <woot-button
+              v-if="hasDetail(card)"
+              v-tooltip.top="$t('TRACKING_TEMPLATES.FICHA.DETAIL')"
+              size="tiny"
+              variant="clear"
+              color-scheme="secondary"
+              :icon="isOpen(card) ? 'chevron-up' : 'chevron-down'"
+              @click="toggleOpen(card)"
+            />
+          </div>
 
           <div class="flex flex-wrap items-center gap-1 pl-6">
             <span
@@ -214,38 +305,61 @@ export default {
             </span>
           </div>
 
+          <!-- Detalle: filas de ejemplo / títulos -->
+          <ul
+            v-if="isOpen(card) && examplesOf(card).length"
+            class="!m-0 !p-2 pl-6 list-none text-xs rounded bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+          >
+            <li
+              v-for="(ejemplo, index) in examplesOf(card)"
+              :key="index"
+              class="truncate"
+              :title="String(ejemplo)"
+            >
+              {{ ejemplo }}
+            </li>
+          </ul>
+
           <!-- Grupos de predefinidas -->
           <div
-            v-if="isOn(card) && card.parts && card.parts.length"
-            class="flex flex-wrap gap-1 pl-6"
+            v-if="
+              card.parts && card.parts.length && (isOn(card) || isOpen(card))
+            "
+            class="flex flex-col gap-1 pl-6"
           >
-            <label
-              v-for="part in card.parts"
-              :key="part.key"
-              class="flex items-center gap-1 !m-0 px-2 py-0.5 text-xs border rounded-full cursor-pointer"
-              :class="
-                isPartOn(card, part)
-                  ? 'border-woot-500 text-woot-700 dark:text-woot-200'
-                  : 'border-slate-200 text-slate-500 dark:border-slate-700'
-              "
-            >
-              <input
-                type="checkbox"
-                class="!m-0"
-                :checked="isPartOn(card, part)"
-                :disabled="disabled"
-                @change="togglePart(card, part)"
-              />
-              {{ part.label }} ({{ part.count }})
-              <span
-                v-if="part.not_ready"
-                class="flex items-center gap-0.5 text-amber-700"
-                :title="$t('TRACKING_TEMPLATES.FICHA.NOT_VECTORIZED')"
+            <span class="text-xs text-slate-500">
+              {{ $t('TRACKING_TEMPLATES.FICHA.PARTS_HINT') }}
+            </span>
+            <div class="flex flex-wrap gap-1">
+              <label
+                v-for="part in card.parts"
+                :key="part.key"
+                v-tooltip.top="(part.topics || []).join(', ')"
+                class="flex items-center gap-1 !m-0 px-2 py-0.5 text-xs border rounded-full cursor-pointer"
+                :class="
+                  isOn(card) && isPartOn(card, part)
+                    ? 'border-woot-500 text-woot-700 dark:text-woot-200'
+                    : 'border-slate-200 text-slate-500 dark:border-slate-700'
+                "
               >
-                <fluent-icon icon="warning" size="12" />
-                {{ part.not_ready }}
-              </span>
-            </label>
+                <input
+                  type="checkbox"
+                  class="!m-0"
+                  :checked="isOn(card) && isPartOn(card, part)"
+                  :disabled="disabled"
+                  @change="togglePart(card, part)"
+                />
+                {{ part.label }} ({{ part.count }})
+                <span
+                  v-if="part.not_ready"
+                  class="flex items-center gap-0.5 text-amber-700"
+                  :title="$t('TRACKING_TEMPLATES.FICHA.NOT_VECTORIZED')"
+                >
+                  <fluent-icon icon="warning" size="12" />
+                  {{ part.not_ready }}
+                </span>
+              </label>
+            </div>
           </div>
         </div>
       </div>

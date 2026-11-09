@@ -81,7 +81,7 @@ class ContactTrackings::Ficha::Catalog
     of_type('google_doc').map do |doc|
       perfil = profile('documento', doc.name) || {}
       titulos = doc.knowledge_items.order(:id).limit(MAX_TOPICS).pluck(:title).compact_blank.uniq
-      base = { key: "google_doc:#{doc.id}", kind: 'doc', id: doc.id, name: doc.name, summary: perfil[:que_tiene],
+      base = { key: "google_doc:#{doc.id}", kind: 'doc', id: doc.id, name: doc.name, summary: perfil[:que_tiene], examples: titulos,
                offer: { label: "Contestar con lo que dice «#{doc.name}»", directive: "{{doc:#{doc.name}}}",
                         topic: titulos.join(', ').presence || doc.name } }
       next card(base.merge(status: 'warn', warning: 'el documento no tiene contenido sincronizado', fix: 'knowledge_sources')) if titulos.empty?

@@ -2,6 +2,8 @@ import { shallowMount } from '@vue/test-utils';
 import FichaCards from './FichaCards.vue';
 import FichaWizard from './FichaWizard.vue';
 import AgentFicha from './AgentFicha.vue';
+import FichaFiles, { nameFromFile, uniqueName } from './FichaFiles.vue';
+import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 import FichaAPI from 'dashboard/api/fichaAgente';
 
 vi.mock('dashboard/api/fichaAgente', () => ({
@@ -15,6 +17,9 @@ vi.mock('dashboard/api/fichaAgente', () => ({
   },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('dashboard/api/aiAgentAttachments', () => ({
+  default: { upload: vi.fn() },
+}));
 
 const CARDS = [
   { key: 'google_sheet:1', kind: 'sheet', name: 'Precios', status: 'ready' },
@@ -40,8 +45,12 @@ const esperar = () =>
 const mocks = { $t: (clave, args) => (args ? `${clave}` : clave) };
 
 describe('FichaCards', () => {
-  const montar = value =>
-    shallowMount(FichaCards, { propsData: { cards: CARDS, value }, mocks });
+  const montar = (value, extra = {}) =>
+    shallowMount(FichaCards, {
+      propsData: { cards: CARDS, value, ...extra },
+      mocks,
+      directives: { tooltip: {} },
+    });
 
   it('marca y desmarca un recurso', () => {
     const wrapper = montar([]);
@@ -52,7 +61,7 @@ describe('FichaCards', () => {
     expect(marcado.emitted('input')[0][0]).toEqual([]);
   });
 
-  it('«Marcar las listas» solo agrega las que están listas', () => {
+  it('«Marcar las listas» solo agrega las que están listas; «Quitar todas» las quita', () => {
     const wrapper = montar([]);
     const fuentes = wrapper.vm.groups.find(g => g.id === 'sources');
     wrapper.vm.selectReady(fuentes);
@@ -60,6 +69,9 @@ describe('FichaCards', () => {
       'google_sheet:1',
       'canned_response',
     ]);
+    const marcadas = montar([{ key: 'google_sheet:1' }, { key: 'calendar:3' }]);
+    marcadas.vm.clearGroup(marcadas.vm.groups.find(g => g.id === 'sources'));
+    expect(marcadas.emitted('input')[0][0]).toEqual([{ key: 'calendar:3' }]);
   });
 
   it('elige grupos de predefinidas; sin grupos = todos; sin ninguno se desmarca', () => {
@@ -72,15 +84,23 @@ describe('FichaCards', () => {
     const uno = montar([{ key: 'canned_response', parts: ['PATITAS'] }]);
     uno.vm.togglePart(CARDS[2], CARDS[2].parts[0]);
     expect(uno.emitted('input')[0][0]).toEqual([]);
+    const nada = montar([]);
+    nada.vm.togglePart(CARDS[2], CARDS[2].parts[1]);
+    expect(nada.emitted('input')[0][0]).toEqual([
+      { key: 'canned_response', parts: ['SSUSA'] },
+    ]);
   });
 
-  it('agrupa por tipo y siempre muestra Archivos', () => {
-    const wrapper = montar([]);
-    expect(wrapper.vm.groups.map(g => g.id)).toEqual([
-      'sources',
-      'calendar',
-      'files',
+  it('muestra solo el grupo pedido y filtra por texto y por tipo', () => {
+    expect(montar([], { only: ['calendar'] }).vm.groups.map(g => g.id)).toEqual(
+      ['calendar']
+    );
+    const buscar = montar([], { only: ['sources'], query: 'ssusa' });
+    expect(buscar.vm.groups[0].cards.map(c => c.key)).toEqual([
+      'canned_response',
     ]);
+    const tipo = montar([], { only: ['sources'], kind: 'doc' });
+    expect(tipo.vm.groups[0].cards.map(c => c.key)).toEqual(['google_doc:2']);
   });
 });
 
@@ -100,6 +120,8 @@ describe('FichaWizard', () => {
     FichaAPI.catalog.mockResolvedValue({ data: { cards: CARDS } });
     FichaAPI.preview.mockResolvedValue({ data: PREVIEW });
     FichaAPI.create.mockResolvedValue({ data: { ...PREVIEW, id: 77 } });
+    FichaAPI.save.mockResolvedValue({ data: {} });
+    AiAgentAttachmentsAPI.upload.mockResolvedValue({ data: { id: 5 } });
   });
 
   const montar = () =>
@@ -113,34 +135,49 @@ describe('FichaWizard', () => {
       },
     });
 
-  it('pide nombre y al menos un recurso antes de seguir', async () => {
+  it('empieza en Datos del agente y cuenta lo marcado por sección', async () => {
     const wrapper = montar();
     await esperar();
-    expect(wrapper.vm.cards).toHaveLength(4);
-    expect(wrapper.vm.canContinue).toBe(false);
-    wrapper.setData({ name: 'Ventas', items: [{ key: 'google_sheet:1' }] });
-    expect(wrapper.vm.canContinue).toBe(true);
+    expect(wrapper.vm.section).toBe('agent');
+    wrapper.setData({
+      items: [{ key: 'google_sheet:1' }, { key: 'calendar:3' }],
+    });
+    const menu = Object.fromEntries(wrapper.vm.navItems.map(i => [i.id, i]));
+    expect(menu.agent.state).toBe('todo');
+    expect(menu.sources).toMatchObject({ count: 1, total: 3 });
+    expect(menu.calendar).toMatchObject({ count: 1, total: 1 });
+    expect(wrapper.vm.nextSection).toBe('sources');
   });
 
-  it('en tres clics: recursos → qué hará → crear', async () => {
+  it('nombre + un recurso → Crear agente (sube los archivos y los marca)', async () => {
     const wrapper = montar();
     await esperar();
-    wrapper.setData({ name: 'Ventas', items: [{ key: 'google_sheet:1' }] });
-    await wrapper.vm.next();
-    expect(FichaAPI.preview).toHaveBeenCalled();
-    expect(wrapper.vm.step).toBe('offers');
-    expect(wrapper.vm.activeOffers).toHaveLength(2);
-
+    expect(wrapper.vm.canCreate).toBe(false);
+    wrapper.setData({
+      name: 'Ventas',
+      items: [{ key: 'google_sheet:1' }],
+      files: [{ key: 1, name: 'catalogo', file: { name: 'Catálogo.pdf' } }],
+    });
+    await wrapper.vm.loadPreview();
+    expect(wrapper.vm.canCreate).toBe(true);
     wrapper.vm.toggleOffer(PREVIEW.offers[1]);
-    expect(wrapper.vm.payload.skip).toEqual(['calendar:3']);
+    expect(wrapper.vm.payload).toMatchObject({
+      skip: ['calendar:3'],
+      files: [{ name: 'catalogo' }],
+    });
 
-    await wrapper.vm.next();
-    expect(wrapper.vm.step).toBe('review');
-    await wrapper.vm.next();
-    await esperar();
+    await wrapper.vm.create();
     expect(FichaAPI.create).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'Ventas', skip: ['calendar:3'] })
+      expect.objectContaining({ name: 'Ventas' })
     );
+    expect(AiAgentAttachmentsAPI.upload).toHaveBeenCalledWith(77, {
+      name: 'catalogo',
+      file: { name: 'Catálogo.pdf' },
+    });
+    expect(FichaAPI.save).toHaveBeenCalledWith(77, [
+      { key: 'google_sheet:1' },
+      { key: 'file:5' },
+    ]);
     expect(wrapper.emitted('created')[0]).toEqual([77]);
   });
 
@@ -148,10 +185,29 @@ describe('FichaWizard', () => {
     const wrapper = montar();
     await esperar();
     wrapper.setData({
-      step: 'review',
+      name: 'Ventas',
       preview: { ...PREVIEW, validation: { valid: false, blocking: [{}] } },
     });
-    expect(wrapper.vm.canContinue).toBe(false);
+    expect(wrapper.vm.canCreate).toBe(false);
+  });
+});
+
+describe('FichaFiles', () => {
+  it('nombra cada archivo desde su nombre y no repite', () => {
+    expect(nameFromFile('Catálogo 2026.pdf')).toBe('catalogo-2026');
+    expect(uniqueName('catalogo', ['Catalogo'])).toBe('catalogo-2');
+    const wrapper = shallowMount(FichaFiles, {
+      propsData: { value: [], existingNames: ['garantia'] },
+      mocks,
+    });
+    wrapper.vm.add([
+      { name: 'Garantía.pdf', size: 10 },
+      { name: 'garantia.doc', size: 10 },
+    ]);
+    expect(wrapper.emitted('input')[0][0].map(i => i.name)).toEqual([
+      'garantia-2',
+      'garantia-3',
+    ]);
   });
 });
 
@@ -178,6 +234,16 @@ describe('AgentFicha', () => {
 
   const montar = () =>
     shallowMount(AgentFicha, { propsData: { templateId: 7 }, mocks });
+
+  it('un archivo subido se marca y se guarda solo', async () => {
+    const wrapper = montar();
+    await esperar();
+    wrapper.vm.onUploaded({ id: 9 });
+    expect(FichaAPI.save).toHaveBeenCalledWith(7, [
+      { key: 'google_sheet:1' },
+      { key: 'file:9' },
+    ]);
+  });
 
   it('carga la ficha, cuenta los cambios y avisa al espacio del agente', async () => {
     const wrapper = montar();

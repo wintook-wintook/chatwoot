@@ -84,15 +84,25 @@ describe('AgentWorkspace', () => {
     expect(wrapper.vm.section).toBe('profile');
   });
 
-  it('un agente nuevo empieza por los Recursos (3 pasos)', () => {
+  it('un agente nuevo solo tiene Recursos: lo demás aparece al crearlo', () => {
     const { wrapper } = montar({ templateId: 'new' });
     expect(wrapper.vm.templateId).toBeNull();
+    expect(wrapper.vm.sections.map(s => s.id)).toEqual(['ficha']);
+    expect(wrapper.vm.section).toBe('ficha');
+  });
+
+  it('si elige crearlo conversando, aparecen Entrenamiento y lo demás', () => {
+    const { wrapper } = montar({
+      templateId: 'new',
+      query: { modo: 'conversar', seccion: 'training' },
+    });
     expect(wrapper.vm.sections.map(s => s.id)).toEqual([
       'ficha',
       'training',
       'tests',
       'sources',
     ]);
+    expect(wrapper.vm.section).toBe('training');
   });
 
   // proyecto@diagrama_agente_ia: Pruebas es el mismo Asistente con otra vista.

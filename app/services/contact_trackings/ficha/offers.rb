@@ -49,6 +49,18 @@ class ContactTrackings::Ficha::Offers
     por_nombre.match?(/\A[a-z0-9_]+\z/) ? por_nombre : nil
   end
 
+  # Archivos que todavía no existen (agente nuevo): la pantalla los sube al crear con
+  # estos nombres, así el Entrenamiento ya nace con {{nombre}}.
+  def self.pending_files(lista)
+    Array(lista).filter_map do |archivo|
+      nombre = (archivo.respond_to?(:permit) ? archivo.permit(:name)[:name] : archivo.to_h.stringify_keys['name']).to_s
+      next unless nombre.match?(/\A[a-zA-Z0-9_-]{1,60}\z/)
+
+      { key: "file_new:#{nombre}", kind: 'file', name: nombre, label: "Mandar «#{nombre}» cuando lo pidan",
+        topic: nombre.tr('_-', '  ').squish, route: nil, status: 'ready' }
+    end
+  end
+
   STOPWORDS = %w[de del la el los las y o a en para por con].freeze
 
   # «de equipo de computo» → «equipo de computo»
