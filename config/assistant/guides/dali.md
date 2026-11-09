@@ -44,7 +44,7 @@ El asistente (se llama Dali, o el nombre que le puso tu empresa) contesta en tus
 1. En tu perfil (Configuración de Perfil), en la sección «Usar Dali en mi teléfono», pulsa «Mostrar código QR».
 2. Apunta la cámara del teléfono al código: entras ya firmado al portal de Dali de tu empresa. El código sirve una sola vez y vence en 5 minutos; si vence, pulsa «Generar otro código».
 3. Sin QR: en el teléfono abre la dirección de la plataforma terminada en /dali y entra con tu correo y contraseña; te lleva directo a Dali.
-4. Instálalo como app: en Android, menú del navegador › «Instalar app» (o «Instalar en este teléfono» en el menú ⋮ de Dali); en iPhone, Compartir › «Agregar a inicio». Desde ahí lo abres con el ícono, sin volver a firmarte (la sesión dura 2 meses).
+4. Instálalo como app para tener su ícono: en Android, menú ⋮ › «Instalar en este teléfono»; en iPhone, desde Safari, Compartir › «Agregar a inicio». Los pasos completos están en la guía «Dali en el teléfono».
 5. Para dictar, toca el micrófono, habla y vuelve a tocarlo: el texto queda en el cuadro para que lo revises y lo mandes. Cada nota puede durar hasta 2 minutos.
 6. Los botones de abajo (Mi día, Sin responder, Cotizar, Agendar, Anotar y, si tienes Ventas, Ventas) empiezan la plática ya encaminada.
 7. Lo que Dali abre (una cotización, un caso) se abre en la plataforma; el botón «Volver a Dali» te regresa. En el menú ⋮ están «Ir a Kontrolya» y, si estás en varias empresas, el cambio de empresa.
