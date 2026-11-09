@@ -34,6 +34,8 @@ const ICONS = {
   // Trabajo en campo
   on_my_way: 'navigation',
   visit_report: 'clipboard',
+  // Captar en la expo (etiqueta NFC)
+  nfc_link: 'flash-on',
 };
 
 // Igual que el servidor (Assistant::QuoteTools.totals): descuento por partida, IVA de la partida.
@@ -96,7 +98,10 @@ export default {
         notes: p.notes || '',
         done_task_ids: [...(p.done_task_ids || [])],
         minutes: p.minutes || '',
+        // NFC: el mensaje que envía el cliente.
+        message: p.message || '',
       },
+      writing: false,
       units: ['minutes', 'hours', 'days'],
       busy: false,
       error: '',
@@ -188,6 +193,7 @@ export default {
         // Con plantilla no se edita: la llenó Dali con datos reales.
         reply: this.labels.template ? {} : { content: f.content },
         on_my_way: { eta_minutes: Number(f.eta_minutes) },
+        nfc_link: { message: f.message },
         visit_report: {
           notes: f.notes,
           done_task_ids: f.done_task_ids,
@@ -244,6 +250,32 @@ export default {
       } finally {
         this.busy = false;
       }
+    },
+    // NFC: grabar el enlace en la etiqueta (Web NFC, Chrome en Android) o copiarlo.
+    async writeNfc() {
+      const { url } = this.proposal.result;
+      if (!('NDEFReader' in window)) {
+        await navigator.clipboard?.writeText(url);
+        this.error = this.t('NFC_NO_WEB');
+        return;
+      }
+      this.writing = true;
+      this.error = '';
+      try {
+        // eslint-disable-next-line no-undef
+        await new NDEFReader().write({
+          records: [{ recordType: 'url', data: url }],
+        });
+        this.copied = true;
+      } catch (_e) {
+        this.error = this.t('NFC_ERROR');
+      } finally {
+        this.writing = false;
+      }
+    },
+    async copyNfc() {
+      await navigator.clipboard?.writeText(this.proposal.result.url);
+      this.copied = true;
     },
     async copy() {
       try {
@@ -541,6 +573,11 @@ export default {
         </dl>
         <p class="m-0 text-xs text-slate-500">{{ t('QUOTE_DRAFT') }}</p>
       </template>
+      <!-- NFC: el mensaje que envía el cliente al acercar el celular -->
+      <label v-if="type === 'nfc_link'" class="text-xs">
+        {{ t('NFC_MESSAGE') }}
+        <textarea v-model="form.message" rows="2" class="text-sm" />
+      </label>
       <!-- Campo: «Voy en camino» -->
       <label v-if="type === 'on_my_way'" class="text-xs">
         {{ t('ETA') }}
@@ -645,6 +682,38 @@ export default {
       <woot-button v-else size="small" :is-loading="busy" @click="confirm">
         {{ type === 'reply' ? t('SEND') : t('CONFIRM') }}
       </woot-button>
+    </div>
+    <!-- NFC hecho: grabar en la etiqueta o copiar el enlace -->
+    <div
+      v-if="type === 'nfc_link' && proposal.result && proposal.result.url"
+      class="flex flex-wrap items-center gap-2"
+    >
+      <span
+        class="flex items-center w-full gap-1 text-xs text-green-700 dark:text-green-400"
+      >
+        <fluent-icon icon="checkmark-circle" size="12" />
+        {{ proposal.result.label }}
+      </span>
+      <woot-button
+        size="small"
+        icon="flash-on"
+        :is-loading="writing"
+        @click="writeNfc"
+      >
+        {{ writing ? t('NFC_WRITING') : t('NFC_WRITE') }}
+      </woot-button>
+      <woot-button
+        size="small"
+        variant="smooth"
+        color-scheme="secondary"
+        icon="copy"
+        @click="copyNfc"
+      >
+        {{ t('NFC_COPY') }}
+      </woot-button>
+      <span v-if="copied" class="text-xs text-green-700 dark:text-green-400">
+        {{ t('NFC_DONE') }}
+      </span>
     </div>
     <div
       v-else-if="proposal.result && proposal.result.label"

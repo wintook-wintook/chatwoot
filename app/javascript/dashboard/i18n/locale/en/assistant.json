@@ -98,7 +98,10 @@
         "COMMIT_NOTE": "Commitment note",
         "QUOTE": "Quote",
         "OPPORTUNITY": "Opportunity",
-        "VISIT": "Visit"
+        "VISIT": "Visit",
+        "EVENT": "Event",
+        "INBOX": "WhatsApp",
+        "SELLER": "Seller"
       },
       "OUTCOMES": {
         "won": "Won",
@@ -125,7 +128,15 @@
       "CHECKLIST": "Checklist items done",
       "MINUTES": "Time spent (minutes)",
       "CLOSES_VISIT": "On confirm, the visit is marked as held.",
-      "FIELD_REST": "Photos, the customer signature and finishing the order are done in “My route”."
+      "FIELD_REST": "Photos, the customer signature and finishing the order are done in “My route”.",
+      "nfc_link": "NFC link",
+      "NFC_MESSAGE": "Message the customer sends",
+      "NFC_WRITE": "Write to tag",
+      "NFC_WRITING": "Hold the tag to the phone…",
+      "NFC_COPY": "Copy link",
+      "NFC_DONE": "Done",
+      "NFC_NO_WEB": "This phone can't write tags from here (only Chrome on Android). I copied the link: write it with an app like NFC Tools.",
+      "NFC_ERROR": "Couldn't write. Hold the tag again or check that NFC is on."
     },
     "SETTINGS": {
       "TITLE": "Assistant",

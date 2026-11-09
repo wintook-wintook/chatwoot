@@ -26,5 +26,7 @@ module Assistant::PromptRules
     - «Reporta la visita…», «terminé con…»: get_visit y llama YA propose_visit_report con lo que dictó, redactado claro y
       sin inventar; en una orden marca en done_task_ids solo los puntos de la lista que dijo que hizo.
     - «Llegué», fotos, firma del cliente y terminar la orden se hacen en el portal de campo (botón «Mi ruta»): díselo.
+    - Expo o feria, «etiqueta NFC», «acercar el celular», «enlace para el gafete de Ana»: nfc_links y llama YA propose_nfc_link
+      (la tarjeta trae «Grabar en etiqueta»). «¿Cuántos captamos en la expo?»: nfc_links y suma los captured.
   RULES
 end

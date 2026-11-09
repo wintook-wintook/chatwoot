@@ -47,7 +47,8 @@ pages: [campaigns, events, contacts, trackings]
 3. Graba el enlace en una etiqueta NFC (sticker o tarjeta NTAG213/215): en Chrome de Android pulsa «Grabar en etiqueta» y acerca la etiqueta a la parte de atrás del teléfono; en iPhone usa «Copiar enlace» y grábalo con una app como NFC Tools.
 4. Pégala en el mostrador («Acerca tu celular») o en el gafete de cada vendedor (un enlace por vendedor).
 5. El cliente acerca su celular, se le abre WhatsApp con el mensaje listo y lo envía. Queda en el evento como «Asistió», su conversación con la etiqueta del evento (evento-…) y, si el enlace es de un vendedor y nadie la atiende, asignada a él. Como él escribió primero, le puedes contestar libremente.
-6. En cada enlace ves cuántos se captaron. «Probar» abre el enlace para revisarlo; «Borrar» lo quita (las etiquetas que ya lo tengan dejan de ligar al evento).
+6. Desde el teléfono también se lo puedes pedir a Dali: «quiero grabar la etiqueta NFC de la Expo Industrial para Ana». Dali arma la tarjeta (evento, WhatsApp, vendedor y mensaje); al confirmar, toca «Grabar en etiqueta» y acerca la etiqueta (en iPhone, «Copiar enlace»). «¿Cuántos captamos en la expo?» también lo contesta.
+7. En cada enlace ves cuántos se captaron. «Probar» abre el enlace para revisarlo; «Borrar» lo quita (las etiquetas que ya lo tengan dejan de ligar al evento).
 
 ## Dudas frecuentes
 - ¿Cuándo empieza a enviar? Al pulsar «Guardar y poner en curso» o, si solo la guardaste, «Poner en curso» en la lista. Una campaña «Guardada» se puede cambiar con «Modificar»; ya en curso, no.

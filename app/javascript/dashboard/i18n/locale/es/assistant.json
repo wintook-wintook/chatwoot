@@ -98,7 +98,10 @@
         "COMMIT_NOTE": "Nota del compromiso",
         "QUOTE": "Cotización",
         "OPPORTUNITY": "Oportunidad",
-        "VISIT": "Visita"
+        "VISIT": "Visita",
+        "EVENT": "Evento",
+        "INBOX": "WhatsApp",
+        "SELLER": "Vendedor"
       },
       "OUTCOMES": {
         "won": "Ganada",
@@ -125,7 +128,15 @@
       "CHECKLIST": "Puntos de la lista que quedan hechos",
       "MINUTES": "Tiempo dedicado (minutos)",
       "CLOSES_VISIT": "Al confirmar, la visita queda como realizada.",
-      "FIELD_REST": "Las fotos, la firma del cliente y terminar la orden se hacen en «Mi ruta»."
+      "FIELD_REST": "Las fotos, la firma del cliente y terminar la orden se hacen en «Mi ruta».",
+      "nfc_link": "Enlace NFC",
+      "NFC_MESSAGE": "Mensaje que envía el cliente",
+      "NFC_WRITE": "Grabar en etiqueta",
+      "NFC_WRITING": "Acerca la etiqueta al teléfono…",
+      "NFC_COPY": "Copiar enlace",
+      "NFC_DONE": "Listo",
+      "NFC_NO_WEB": "Este teléfono no graba etiquetas desde aquí (solo Chrome en Android). Copié el enlace: grábalo con una app como NFC Tools.",
+      "NFC_ERROR": "No se pudo grabar. Acerca la etiqueta otra vez o revisa que el NFC esté encendido."
     },
     "SETTINGS": {
       "TITLE": "Asistente",

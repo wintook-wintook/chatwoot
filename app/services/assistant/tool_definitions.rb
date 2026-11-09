@@ -105,6 +105,6 @@ module Assistant::ToolDefinitions
        { conversation_id: int('Número de la conversación, si aplica'), content: str('Texto del borrador') }, %w[content])
   ].freeze
 
-  ALL = (BASE + Assistant::SalesToolDefinitions::ALL + Assistant::GuideToolDefinitions::ALL + Assistant::QuoteToolDefinitions::ALL +
-         Assistant::ConversationToolDefinitions::ALL + Assistant::FieldToolDefinitions::ALL).freeze
+  EXTRA = %w[Sales Guide Quote Conversation Field Event].freeze # Assistant::<X>ToolDefinitions::ALL
+  ALL = (BASE + EXTRA.flat_map { |x| "Assistant::#{x}ToolDefinitions".constantize::ALL }).freeze
 end

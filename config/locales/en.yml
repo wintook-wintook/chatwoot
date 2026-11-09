@@ -359,6 +359,7 @@ en:
       quotes: 'Quotes: build them with catalog products and prices, send them to the customer and see their open quotes (e.g. «quote Mario 3 AC maintenance services»).'
       reply: 'Answer your customers: which conversations are waiting, what they said, and the reply ready on a card to send it (e.g. “who wrote to me?”, “tell Mario it arrives on Thursday”).'
       field: 'Field work: your visits for the day, which one is next, what was done last time, telling the customer “on my way” and dictating the visit report (e.g. “what visits do I have today?”, “report the visit: replaced the capacitor”).'
+      nfc: 'Capture at the expo: the event NFC link to write on a tag («tap a phone») and how many were captured (e.g. “I want to write the expo NFC tag for Ana”).'
       limits: 'What it does not do: it never writes to the customer on its own (it leaves a draft or a scheduled message) and does no bulk actions.'
     quotes:
       new_opportunity: 'A new opportunity is created'
