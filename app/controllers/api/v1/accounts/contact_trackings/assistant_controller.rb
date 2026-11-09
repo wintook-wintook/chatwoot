@@ -111,6 +111,23 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
                                          .map { |s| session_row(s) }
   end
 
+  # feat/ficha_agente_ia — la última conversación ya publicada de un agente (o null).
+  def previous_session
+    template = Current.account.tracking_templates.find(params[:template_id])
+    sesion = TrackingAssistantSession.previous_for(template, Current.user)
+    return render json: nil if sesion.nil?
+
+    render json: session_row(sesion).merge(messages_count: Array(sesion.messages).size)
+  end
+
+  # La sigue como una conversación nueva (ver TrackingAssistantSession#continue_as).
+  def continue_session
+    sesion = find_session
+    return head :not_found if sesion.nil? || sesion.tracking_template.nil?
+
+    render json: session_json(sesion.continue_as(Current.user)), status: :created
+  end
+
   def show_session
     sesion = find_session
     return head :not_found if sesion.nil?

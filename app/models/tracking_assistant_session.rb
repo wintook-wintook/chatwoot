@@ -83,6 +83,28 @@ class TrackingAssistantSession < ApplicationRecord
 
   def open? = status == 'open'
 
+  # feat/ficha_agente_ia — «Continuar la conversación anterior». La última que terminó
+  # publicada en este agente: la propia primero; si no, la de quien la haya tenido.
+  def self.previous_for(template, user)
+    cerradas = where(account_id: template.account_id, tracking_template_id: template.id, status: 'saved').recent_first
+    cerradas.find_by(user: user) || cerradas.first
+  end
+
+  # Una conversación NUEVA con el historial de esta (que queda como estaba): el borrador
+  # es el Entrenamiento publicado HOY —pudo cambiar a mano o desde Recursos— y un aviso
+  # final le dice al Asistente (y a la persona) desde dónde se sigue.
+  RESUME_NOTE = 'Seguimos la conversación anterior. El Entrenamiento de ahora es el publicado (v%<version>s): ' \
+                'si cambió desde entonces, lo tomo como está. ¿Qué quieres ajustar?'
+
+  def continue_as(user)
+    template = tracking_template
+    version = template.versions.maximum(:version)
+    aviso = { 'role' => 'assistant', 'content' => format(RESUME_NOTE, version: version || 1) }
+    self.class.create!(account: account, user: user, tracking_template: template, status: 'open',
+                       base_version: version, messages: Array(messages) + [aviso], draft: template.complementary_prompt,
+                       proposal: proposal || {}, adaptation_answers: adaptation_answers || {})
+  end
+
   # Las que se muestran en el listado. Las descartadas quedan en la tabla pero
   # fuera de la vista: descartar no debería ser irreversible.
   # De TODA la cuenta, no solo de quien pregunta: el Entrenamiento de un Agente IA

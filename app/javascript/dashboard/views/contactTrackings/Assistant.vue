@@ -175,6 +175,9 @@ export default {
   emits: ['saved', 'installed', 'session', 'openTests', 'openTraining'],
   data() {
     return {
+      // feat/ficha_agente_ia: la última conversación publicada, para seguirla.
+      previousSession: null,
+      continuingSession: false,
       // Las secciones tienen columna propia y no se apagan: el mixin siempre
       // sincroniza en los dos sentidos (ver trainingSectionsMixin).
       trainingView: 'sections',
@@ -615,6 +618,37 @@ export default {
       const abierta = await this.openSessionFor(this.templateId);
       if (abierta) return;
       this.loadTemplate(this.templates.find(t => t.id === this.templateId));
+      this.fetchPreviousSession(this.templateId);
+    },
+    // feat/ficha_agente_ia — sin conversación abierta: ¿hay una anterior ya publicada para
+    // seguirla? Se ofrece en el chat; no se abre sola.
+    async fetchPreviousSession(templateId) {
+      this.previousSession = null;
+      try {
+        const { data } = await AssistantAPI.previousSession(templateId);
+        this.previousSession = data || null;
+      } catch (error) {
+        this.previousSession = null;
+      }
+    },
+    async continuePreviousSession() {
+      if (!this.previousSession) return;
+      this.continuingSession = true;
+      try {
+        const { data } = await AssistantAPI.continueSession(
+          this.previousSession.id
+        );
+        this.previousSession = null;
+        await this.openSession(data.id);
+        this.leftPanel = 'chat';
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.PREVIOUS_ERROR'));
+      } finally {
+        this.continuingSession = false;
+      }
+    },
+    previousDate(fecha) {
+      return fecha ? new Date(fecha).toLocaleDateString() : '';
     },
     async openSessionFor(templateId) {
       try {
@@ -1735,6 +1769,29 @@ export default {
                 v-show="showChat && leftPanel === 'chat'"
                 class="flex-1 p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex flex-col min-h-0"
               >
+                <div
+                  v-if="previousSession && !messages.length"
+                  class="flex flex-col gap-2 p-3 mb-3 text-sm border rounded-lg shrink-0 border-woot-100 bg-woot-25 dark:border-woot-800 dark:bg-woot-900/20"
+                >
+                  <span class="text-slate-700 dark:text-slate-200">
+                    {{
+                      $t('TRACKING_ASSISTANT_VIEW.PREVIOUS_HINT', {
+                        date: previousDate(previousSession.updated_at),
+                        count: previousSession.messages_count,
+                        who: previousSession.creator,
+                      })
+                    }}
+                  </span>
+                  <woot-button
+                    size="small"
+                    icon="chat-multiple"
+                    class="self-start"
+                    :is-loading="continuingSession"
+                    @click="continuePreviousSession"
+                  >
+                    {{ $t('TRACKING_ASSISTANT_VIEW.PREVIOUS_CONTINUE') }}
+                  </woot-button>
+                </div>
                 <InterviewPanel
                   :messages="messages"
                   :is-thinking="isThinking"

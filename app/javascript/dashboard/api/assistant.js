@@ -406,6 +406,18 @@ class AssistantAPI extends ApiClient {
     return axios.get(`${this.url}/sessions/${id}`);
   }
 
+  // feat/ficha_agente_ia — la última conversación ya publicada de un agente (o null) y
+  // seguirla como una nueva con su historial.
+  previousSession(templateId) {
+    return axios.get(`${this.url}/sessions/previous`, {
+      params: { template_id: templateId },
+    });
+  }
+
+  continueSession(id) {
+    return axios.post(`${this.url}/sessions/${id}/continue`);
+  }
+
   discardSession(id) {
     return axios.delete(`${this.url}/sessions/${id}`);
   }

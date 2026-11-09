@@ -911,6 +911,9 @@
     "STALE_DESCRIPTION": "You started from v{base}, but it is now at v{version} ({author}, {at}). Publishing replaces that change with your draft; the previous one stays in Versions in case it needs restoring.",
     "STALE_SOMEONE": "someone else",
     "STALE_YES": "Publish anyway",
-    "STALE_NO": "Review first"
+    "STALE_NO": "Review first",
+    "PREVIOUS_HINT": "This agent has a previous conversation ({date} · {count} messages · {who}). Continue it so the Assistant remembers what was decided.",
+    "PREVIOUS_CONTINUE": "Continue the previous conversation",
+    "PREVIOUS_ERROR": "Could not open the previous conversation."
   }
 }

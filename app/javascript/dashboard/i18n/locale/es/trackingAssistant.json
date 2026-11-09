@@ -911,6 +911,9 @@
     "STALE_DESCRIPTION": "Partiste de la v{base}, pero ya va en la v{version} ({author}, {at}). Si publicas, tu borrador reemplaza ese cambio; lo anterior queda en Versiones por si hay que restaurarlo.",
     "STALE_SOMEONE": "otra persona",
     "STALE_YES": "Publicar de todos modos",
-    "STALE_NO": "Revisar primero"
+    "STALE_NO": "Revisar primero",
+    "PREVIOUS_HINT": "Este agente tiene una conversación anterior ({date} · {count} mensajes · {who}). Síguela para que el Asistente recuerde lo que ya decidieron.",
+    "PREVIOUS_CONTINUE": "Continuar la conversación anterior",
+    "PREVIOUS_ERROR": "No se pudo abrir la conversación anterior."
   }
 }

@@ -308,6 +308,8 @@ Rails.application.routes.draw do
             post 'assistant/save',      to: 'assistant#save'
             get  'assistant/session',   to: 'assistant#resume'
             get  'assistant/sessions',      to: 'assistant#sessions'
+            get  'assistant/sessions/previous', to: 'assistant#previous_session' # feat/ficha_agente_ia
+            post 'assistant/sessions/:id/continue', to: 'assistant#continue_session' # feat/ficha_agente_ia
             get  'assistant/sessions/:id',  to: 'assistant#show_session'
             delete 'assistant/sessions/:id', to: 'assistant#discard_session'
             get  'assistant/sessions/:id/versions/:number', to: 'assistant#show_version'
