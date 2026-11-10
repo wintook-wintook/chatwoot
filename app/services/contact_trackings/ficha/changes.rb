@@ -96,7 +96,7 @@ class ContactTrackings::Ficha::Changes
     case oferta[:kind]
     when 'sheet' then sheet_match?(target, oferta[:name])
     when 'calendar' then target.match?(/@agendar_calendar\b/i)
-    when 'case_type' then target.downcase.include?(directiva.downcase.delete_suffix(')'))
+    when 'case_type' then ticket_match?(target, oferta[:name])
     when 'canned' then canned_used?(target, directiva, loose)
     when 'erp' then target.downcase.include?(directiva[/consulta:[^()}]+/].to_s.downcase)
     else target.downcase.include?(directiva.downcase)
@@ -107,6 +107,11 @@ class ContactTrackings::Ficha::Changes
 
   def canned_used?(target, directiva, loose)
     canned_match?(target, directiva) || (loose && canned_match?(target, '@buscar_predefinidas'))
+  end
+
+  # @crear_ticket(tipo=Soporte) o con prioridad: lo que cuenta es el tipo.
+  def ticket_match?(target, nombre)
+    target.match?(/@crear_ticket\([^)]*tipo\s*=\s*#{Regexp.escape(nombre.to_s)}\s*[,)]/i)
   end
 
   # {{hoja:Precios}} o {{hoja_buscar: Precios | …}}: las dos usan la hoja.

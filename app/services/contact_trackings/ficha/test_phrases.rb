@@ -61,6 +61,7 @@ class ContactTrackings::Ficha::TestPhrases
   def phrases_for(oferta)
     return sheet_phrases(oferta) if oferta[:kind] == 'sheet'
     return topic_phrases(oferta) if BY_TOPIC.include?(oferta[:kind])
+    return oferta[:reasons].first(PER_ROUTE) if oferta[:kind] == 'case_type' && oferta[:reasons].present?
 
     Array(FIXED[oferta[:kind]]).map do |plantilla|
       format(plantilla, nombre: oferta[:name].to_s.downcase, tema: oferta[:topic].to_s.downcase)

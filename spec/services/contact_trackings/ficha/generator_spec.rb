@@ -81,4 +81,16 @@ RSpec.describe ContactTrackings::Ficha::Generator do
     expect(resultado[:validation][:blocking]).to eq([])
     expect(ContactTrackings::Ficha::SheetUse.clean({ 'search_by' => 'Inventada' }, %w[Zona Precio])).to be_nil
   end
+
+  it 'un ticket con motivos y prioridad: la ruta se describe con los motivos' do
+    tipo = CaseType.last
+    item = { 'key' => "case_type:#{tipo.id}",
+             'ticket' => { 'reasons' => ['quiere hablar con una persona', 'reporta (una) falla'], 'priority' => 'alta' } }
+    resultado = generar([{ 'key' => "google_sheet:#{hoja.id}" }, item])
+
+    expect(resultado[:prompt]).to include('quiere hablar con una persona, reporta una falla): - -> @crear_ticket(tipo=Cotización, prioridad=alta)')
+    expect(resultado[:prompt]).to include('Abro un ticket «Cotización» cuando el cliente quiere hablar con una persona; reporta una falla.')
+    expect(resultado[:validation][:degrading]).to eq([])
+    expect(ContactTrackings::Ficha::TicketUse.clean({ 'priority' => 'altísima' })).to be_nil
+  end
 end

@@ -124,6 +124,37 @@ describe('FichaCards', () => {
     ]);
   });
 
+  it('un tipo de ticket marcado se abre para sus motivos', () => {
+    const tipo = {
+      key: 'case_type:7',
+      kind: 'case_type',
+      name: 'Soporte',
+      status: 'ready',
+    };
+    const wrapper = shallowMount(FichaCards, {
+      propsData: { cards: [tipo], value: [] },
+      mocks,
+      directives: { tooltip: {} },
+    });
+    wrapper.vm.toggle(tipo);
+    expect(wrapper.vm.isOpen(tipo)).toBe(true);
+    const marcado = shallowMount(FichaCards, {
+      propsData: { cards: [tipo], value: [{ key: 'case_type:7' }] },
+      mocks,
+      directives: { tooltip: {} },
+    });
+    marcado.vm.setTicket(tipo, {
+      reasons: ['tiene una urgencia'],
+      priority: 'alta',
+    });
+    expect(marcado.emitted('input')[0][0]).toEqual([
+      {
+        key: 'case_type:7',
+        ticket: { reasons: ['tiene una urgencia'], priority: 'alta' },
+      },
+    ]);
+  });
+
   it('muestra solo el grupo pedido y filtra por texto y por tipo', () => {
     expect(montar([], { only: ['calendar'] }).vm.groups.map(g => g.id)).toEqual(
       ['calendar']

@@ -124,6 +124,7 @@ class ContactTrackings::Ficha::Generator
 
   def scope_for(oferta)
     return sheet_scope(oferta) if oferta[:kind] == 'sheet' && oferta[:purpose].present?
+    return ticket_scope(oferta) if oferta[:kind] == 'case_type' && oferta[:reasons].present?
 
     format(SCOPES.fetch(oferta[:kind], 'Contesto con lo que encuentro.'), nombre: oferta[:name])
   end
@@ -132,6 +133,12 @@ class ContactTrackings::Ficha::Generator
   def sheet_scope(oferta)
     columnas = Array(oferta[:answer_with]).join(', ').presence || 'lo que dice la hoja'
     "#{oferta[:purpose].upcase_first}: busco en la hoja «#{oferta[:name]}» y contesto con #{columnas}, exacto como viene en la hoja."
+  end
+
+  # «Abro un ticket «Soporte» cuando el cliente: reporta una falla; quiere hablar con…»
+  def ticket_scope(oferta)
+    "Abro un ticket «#{oferta[:name]}» cuando el cliente #{oferta[:reasons].join('; ')}. Pido los datos que necesita " \
+      'y le digo al cliente que una persona lo atenderá.'
   end
 
   def fidelidad

@@ -32,6 +32,7 @@
 class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts::BaseController
   INVALID = 'El Entrenamiento tiene errores que impiden guardarlo.'
   NO_AI = 'No se pudo proponer con IA: revisa que la cuenta tenga OpenAI activo.'
+  ITEM_FIELDS = [:key, { parts: [], sheet: [:purpose, :search_by, { answer_with: [] }], ticket: [:priority, { reasons: [] }] }].freeze
   NO_CHANNEL = 'Para activarlo, primero elige su canal en la Ficha de Agente IA.'
 
   before_action :check_authorization
@@ -191,8 +192,9 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
   end
 
   def item_from(item)
-    h = item.respond_to?(:permit) ? item.permit(:key, parts: [], sheet: [:purpose, :search_by, { answer_with: [] }]).to_h : item.to_h
-    { 'key' => h['key'].to_s, 'parts' => Array(h['parts']).map(&:to_s).presence, 'sheet' => h['sheet'].presence }.compact
+    h = item.respond_to?(:permit) ? item.permit(*ITEM_FIELDS).to_h : item.to_h
+    { 'key' => h['key'].to_s, 'parts' => Array(h['parts']).map(&:to_s).presence, 'sheet' => h['sheet'].presence,
+      'ticket' => h['ticket'].presence }.compact
   end
 
   def current_items

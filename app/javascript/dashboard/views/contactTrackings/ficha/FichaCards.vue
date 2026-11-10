@@ -43,12 +43,16 @@ export const ICONS = {
 };
 
 import FichaSheet from './FichaSheet.vue';
+import FichaTicket from './FichaTicket.vue';
+
+// Tarjetas que se abren para decir qué hace el agente con ellas.
+const CONFIGURABLE = ['sheet', 'case_type'];
 
 const normalize = text =>
   (text || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 export default {
-  components: { FichaSheet },
+  components: { FichaSheet, FichaTicket },
   model: { prop: 'value', event: 'input' },
   props: {
     cards: { type: Array, default: () => [] },
@@ -102,8 +106,8 @@ export default {
       const lista = marcar
         ? [...this.value, { key: card.key }]
         : this.value.filter(item => item.key !== card.key);
-      // Una hoja recién marcada se abre: qué contiene y qué hace el agente con ella.
-      if (marcar && card.kind === 'sheet' && !this.isOpen(card))
+      // Una hoja o un ticket recién marcados se abren: qué hacer con ellos.
+      if (marcar && CONFIGURABLE.includes(card.kind) && !this.isOpen(card))
         this.open = [...this.open, card.key];
       this.$emit('input', lista);
     },
@@ -121,6 +125,21 @@ export default {
     },
     sheetOpen(card) {
       return card.kind === 'sheet' && this.isOn(card) && this.isOpen(card);
+    },
+    ticketOpen(card) {
+      return card.kind === 'case_type' && this.isOn(card) && this.isOpen(card);
+    },
+    ticketOf(card) {
+      const item = this.value.find(entry => entry.key === card.key);
+      return (item && item.ticket) || null;
+    },
+    setTicket(card, config) {
+      this.$emit(
+        'input',
+        this.value.map(item =>
+          item.key === card.key ? { ...item, ticket: config } : item
+        )
+      );
     },
     // Marcar de un jalón las que están listas de un grupo.
     selectReady(group) {
@@ -148,7 +167,7 @@ export default {
         : [...this.open, card.key];
     },
     hasDetail(card) {
-      if (card.kind === 'sheet') return true;
+      if (CONFIGURABLE.includes(card.kind)) return true;
       return (
         (card.examples && card.examples.length) ||
         (card.parts && card.parts.length)
@@ -271,7 +290,7 @@ export default {
             isOn(card)
               ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20 shadow-sm'
               : 'border-slate-200 dark:border-slate-700 hover:border-slate-300',
-            { 'col-span-full': sheetOpen(card) },
+            { 'col-span-full': sheetOpen(card) || ticketOpen(card) },
           ]"
         >
           <div class="flex items-start gap-2">
@@ -330,8 +349,15 @@ export default {
           </div>
 
           <!-- Detalle: filas de ejemplo / títulos -->
+          <FichaTicket
+            v-if="ticketOpen(card)"
+            :card="card"
+            :value="ticketOf(card)"
+            :disabled="disabled"
+            @input="setTicket(card, $event)"
+          />
           <FichaSheet
-            v-if="sheetOpen(card)"
+            v-else-if="sheetOpen(card)"
             :card="card"
             :value="sheetOf(card)"
             :disabled="disabled"

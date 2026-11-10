@@ -10,7 +10,7 @@
 
 class ContactTrackings::Ficha::Settings
   KEYWORD_FIELDS = [:keyword, :action, :direction, :label, :assignee_id, :team_id].freeze
-  PRESENTATIONS = %w[detailed by_agent by_calendar simple].freeze
+  PRESENTATIONS = %w[detailed by_agent by_calendar by_day simple].freeze
   UNITS = %w[minutes hours days].freeze
 
   def initialize(params)

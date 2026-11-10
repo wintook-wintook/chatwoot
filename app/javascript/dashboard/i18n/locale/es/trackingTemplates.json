@@ -631,7 +631,26 @@
       "SHEET_PURPOSE": "¿Para qué la usa el agente?",
       "SHEET_PURPOSE_PLACEHOLDER": "p. ej. Lista de precios: contestar el precio exacto de cada servicio",
       "SHEET_SEARCH_BY": "Busca por",
-      "SHEET_ANSWER_WITH": "Contesta con:"
+      "SHEET_ANSWER_WITH": "Contesta con:",
+      "TICKET_WHEN": "¿Cuándo se levanta un ticket «{name}»? (en palabras del cliente)",
+      "TICKET_REMOVE": "Quitar motivo",
+      "TICKET_ADD_PLACEHOLDER": "Escribe un motivo y Enter",
+      "TICKET_NO_REASONS": "Sin motivos, el agente solo lo levantará si el cliente lo pide con esas palabras.",
+      "TICKET_SUGGESTED": "Sugeridos:",
+      "TICKET_ADD_ONE": "+ {text}",
+      "TICKET_PRIORITY": "Prioridad",
+      "PRIORITY_DEFAULT": "La del tipo de ticket",
+      "PRIORITY_BAJA": "Baja",
+      "PRIORITY_MEDIA": "Media",
+      "PRIORITY_ALTA": "Alta",
+      "PRIORITY_URGENTE": "Urgente",
+      "SUG_PERSON": "quiere hablar con una persona",
+      "SUG_FAILURE": "reporta una falla o un problema",
+      "SUG_COMPLAINT": "presenta una queja",
+      "SUG_URGENT": "tiene una urgencia",
+      "SUG_QUOTE": "pide una cotización formal",
+      "SUG_INVOICE": "necesita su factura",
+      "SUG_UNSOLVED": "su duda no se pudo resolver"
     }
   },
   "TRACKING_IMPORT": {

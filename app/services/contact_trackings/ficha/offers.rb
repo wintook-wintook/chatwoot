@@ -103,9 +103,17 @@ class ContactTrackings::Ficha::Offers
     return [] if card.nil? || card[:status] == 'off'
     return [] if card[:kind] == 'file' && card.dig(:rule, 'ask') == false
     return canned_offers(card, item) if card[:kind] == 'canned'
-    return [sheet_offer(card, item)] if card[:kind] == 'sheet'
 
-    [base(card).merge(directive: card[:offer][:directive], topic: card[:offer][:topic])]
+    [configured_offer(card, item)]
+  end
+
+  # Hojas y tickets pueden traer lo que la persona dijo de ellos (SheetUse / TicketUse).
+  def configured_offer(card, item)
+    case card[:kind]
+    when 'sheet' then sheet_offer(card, item)
+    when 'case_type' then ticket_offer(card, item)
+    else base(card).merge(directive: card[:offer][:directive], topic: card[:offer][:topic])
+    end
   end
 
   # La hoja con lo que la persona dijo de ella (SheetUse): su búsqueda y para qué sirve.
@@ -117,6 +125,16 @@ class ContactTrackings::Ficha::Offers
     oferta.merge(directive: ContactTrackings::Ficha::SheetUse.directive(card[:name], config) || oferta[:directive],
                  topic: config['purpose'] || oferta[:topic], purpose: config['purpose'],
                  answer_with: config['answer_with']).compact
+  end
+
+  # El tipo de ticket con sus motivos (en palabras del cliente) y su prioridad (TicketUse).
+  def ticket_offer(card, item)
+    oferta = base(card).merge(directive: card[:offer][:directive], topic: card[:offer][:topic])
+    config = ContactTrackings::Ficha::TicketUse.clean(item['ticket']) if item['ticket']
+    return oferta if config.nil?
+
+    oferta.merge(directive: ContactTrackings::Ficha::TicketUse.directive(card[:name], config),
+                 reasons: config['reasons'], priority: config['priority']).compact
   end
 
   def base(card)
@@ -183,6 +201,7 @@ class ContactTrackings::Ficha::Offers
   DESCRIPTIONS = {
     'calendar' => 'quiere agendar, cambiar o confirmar una cita',
     'case_type' => 'necesita %<nombre>s y hay que levantar su solicitud',
+    'case_type_reasons' => '%<motivos>s',
     'forum' => 'tiene un problema o duda técnica que se responde en el foro %<nombre_original>s',
     'contpaq' => 'tiene un problema o duda técnica: %<tema>s',
     'discourse' => 'tiene un problema o duda técnica: %<tema>s',
@@ -193,9 +212,10 @@ class ContactTrackings::Ficha::Offers
 
   def description(oferta)
     tema = self.class.clean_topic(oferta[:topic].to_s.downcase).presence || oferta[:name].to_s.downcase
-    plantilla = DESCRIPTIONS.fetch(oferta[:kind], 'pregunta por %<tema>s')
+    clave = oferta[:kind] == 'case_type' && oferta[:reasons].present? ? 'case_type_reasons' : oferta[:kind]
+    plantilla = DESCRIPTIONS.fetch(clave, 'pregunta por %<tema>s')
     format(plantilla, tema: tema, nombre: oferta[:name].to_s.downcase, nombre_original: oferta[:name],
-                      conexion: oferta[:connection]).squish.delete_suffix(' en')
+                      conexion: oferta[:connection], motivos: Array(oferta[:reasons]).join(', ')).squish.delete_suffix(' en')
   end
 
   def clean(texto)

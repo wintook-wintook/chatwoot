@@ -36,9 +36,13 @@ class ContactTrackings::Ficha::Draft
       next if h['key'].blank?
 
       { 'key' => h['key'].to_s, 'parts' => Array(h['parts']).map(&:to_s).presence,
-        'sheet' => h['sheet'].presence && h['sheet'].to_h.stringify_keys.slice('purpose', 'search_by', 'answer_with') }.compact
+        'sheet' => only(h['sheet'], %w[purpose search_by answer_with]),
+        'ticket' => only(h['ticket'], %w[reasons priority]) }.compact
     end
   end
+
+  # La configuración de una tarjeta (hoja, ticket) con solo esas llaves, o nil.
+  def only(config, llaves) = config.presence && config.to_h.stringify_keys.slice(*llaves)
 
   def skipped = Array(@params[:skip]).map(&:to_s)
 

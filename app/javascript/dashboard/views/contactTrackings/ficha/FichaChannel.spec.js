@@ -126,3 +126,27 @@ describe('FichaSheet', () => {
     });
   });
 });
+
+describe('FichaTicket', () => {
+  it('agrega motivos (sin repetir ni paréntesis), quita y cambia prioridad', async () => {
+    const { default: FichaTicket } = await import('./FichaTicket.vue');
+    const wrapper = shallowMount(FichaTicket, {
+      propsData: {
+        card: { name: 'Soporte' },
+        value: { reasons: ['a'], priority: '' },
+      },
+      mocks: { $t: clave => clave },
+    });
+    wrapper.vm.add('reporta (una) falla');
+    expect(wrapper.emitted('input')[0][0]).toEqual({
+      reasons: ['a', 'reporta  una  falla'.replace(/\s+/g, ' ')],
+      priority: '',
+    });
+    wrapper.vm.add('a');
+    expect(wrapper.emitted('input')).toHaveLength(1);
+    wrapper.vm.remove('a');
+    expect(wrapper.emitted('input')[1][0].reasons).toEqual([]);
+    wrapper.vm.emit({ priority: 'alta' });
+    expect(wrapper.emitted('input')[2][0].priority).toBe('alta');
+  });
+});

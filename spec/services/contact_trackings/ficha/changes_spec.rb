@@ -90,4 +90,12 @@ RSpec.describe ContactTrackings::Ficha::Changes do
     expect(texto.scan('¿cuánto aprox cuesta?').size).to eq(1)
     expect(ContactTrackings::Assistant::ValidatorService.new(texto, account: account).call[:blocking]).to eq([])
   end
+
+  it 'un ticket con prioridad cuenta como el mismo tipo (no inventa cambios)' do
+    CaseType.create!(account: account, name: 'Soporte')
+    linea = '@ruta(soporte #soporte: falla): - -> @crear_ticket(tipo=Soporte, prioridad=alta)'
+    con_ticket = create(:tracking_template, account: account, complementary_prompt: "#{prompt}\n#{linea}\n")
+    items = described_class.new(con_ticket).items
+    expect(items).to include({ 'key' => "case_type:#{CaseType.find_by(name: 'Soporte').id}" })
+  end
 end

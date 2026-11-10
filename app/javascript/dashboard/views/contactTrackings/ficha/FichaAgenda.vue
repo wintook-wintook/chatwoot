@@ -12,7 +12,25 @@ import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import { timeZoneOptions } from 'dashboard/routes/dashboard/settings/inbox/helpers/businessHour';
 
 const DURATIONS = [30, 60, 120];
-const PRESENTATIONS = ['detailed', 'by_agent', 'by_calendar', 'simple'];
+const PRESENTATIONS = [
+  'detailed',
+  'by_agent',
+  'by_calendar',
+  'by_day',
+  'simple',
+];
+// Cómo le llega el mensaje al cliente con cada opción (las mismas que la Ficha › Agendas).
+const PREVIEWS = {
+  detailed:
+    '1️⃣ jue 25 jun · 09:00 – 10:00 (hora de Monterrey) — Ana\n2️⃣ jue 25 jun · 11:00 – 12:00 (hora de Monterrey) — Luis\n3️⃣ vie 26 jun · 10:00 – 11:00 (hora de Monterrey) — Ana',
+  by_agent:
+    '👤 Ana (hora de Monterrey)\n   1️⃣ jue 25 jun · 09:00 – 10:00\n   2️⃣ vie 26 jun · 10:00 – 11:00\n👤 Luis\n   3️⃣ jue 25 jun · 11:00 – 12:00',
+  by_calendar:
+    '📅 Citas Norte (hora de Monterrey)\n   1️⃣ jue 25 jun · 09:00 – 10:00\n   2️⃣ jue 25 jun · 11:00 – 12:00\n📅 Citas Sur\n   3️⃣ vie 26 jun · 10:00 – 11:00',
+  by_day: '📅 jue 25 jun\n   1️⃣ 09:00   2️⃣ 11:00\n📅 vie 26 jun\n   3️⃣ 10:00',
+  simple:
+    '1️⃣ jue 25 jun · 09:00 – 10:00\n2️⃣ jue 25 jun · 11:00 – 12:00\n3️⃣ vie 26 jun · 10:00 – 11:00',
+};
 
 export default {
   model: { prop: 'value', event: 'input' },
@@ -29,6 +47,7 @@ export default {
       loading: false,
       durations: DURATIONS,
       presentations: PRESENTATIONS,
+      previews: PREVIEWS,
       timeZones: timeZoneOptions(),
     };
   },
@@ -134,29 +153,37 @@ export default {
       </label>
     </div>
 
-    <div class="flex flex-col gap-1">
+    <!-- Cada opción con la vista previa del mensaje que recibe el cliente. -->
+    <div class="flex flex-col gap-2">
       <span class="text-sm text-slate-800 dark:text-slate-100">
         {{ cal('PRESENTATION_LABEL') }}
       </span>
-      <div class="flex flex-wrap gap-2">
+      <div class="grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
         <label
           v-for="opcion in presentations"
           :key="opcion"
-          class="flex items-center gap-2 !m-0 px-3 py-1.5 text-sm border rounded-lg cursor-pointer"
+          class="flex flex-col gap-2 !m-0 p-3 border rounded-lg cursor-pointer"
           :class="
             presentation === opcion
               ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20'
-              : 'border-slate-200 dark:border-slate-700'
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
           "
         >
-          <input
-            type="radio"
-            class="!m-0"
-            :checked="presentation === opcion"
-            :disabled="disabled"
-            @change="set('slots_presentation', opcion)"
-          />
-          {{ cal(`PRESENTATION.${opcion.toUpperCase()}`) }}
+          <span class="flex items-center gap-2 text-sm font-medium">
+            <input
+              type="radio"
+              class="!m-0"
+              :checked="presentation === opcion"
+              :disabled="disabled"
+              @change="set('slots_presentation', opcion)"
+            />
+            {{ cal(`PRESENTATION.${opcion.toUpperCase()}`) }}
+          </span>
+          <span
+            class="self-start max-w-full px-3 py-2 font-sans text-xs leading-relaxed whitespace-pre-wrap rounded-lg rounded-tl-none bg-white shadow-sm dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+          >
+            {{ previews[opcion] }}
+          </span>
         </label>
       </div>
     </div>

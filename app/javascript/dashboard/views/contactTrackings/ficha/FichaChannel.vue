@@ -120,8 +120,8 @@ export default {
     >
       {{ t('CHANNEL_NONE') }}
     </p>
-    <div class="grid gap-3 sm:grid-cols-4">
-      <label class="!m-0 sm:col-span-4">
+    <div class="grid gap-3 sm:grid-cols-3">
+      <label class="!m-0 sm:col-span-3">
         {{ t('INBOX') }}
         <span class="text-red-500">{{ t('REQUIRED_MARK') }}</span>
         <select

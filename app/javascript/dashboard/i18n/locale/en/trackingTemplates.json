@@ -631,7 +631,26 @@
       "SHEET_PURPOSE": "What does the agent use it for?",
       "SHEET_PURPOSE_PLACEHOLDER": "e.g. Price list: answer the exact price of each service",
       "SHEET_SEARCH_BY": "Search by",
-      "SHEET_ANSWER_WITH": "Answer with:"
+      "SHEET_ANSWER_WITH": "Answer with:",
+      "TICKET_WHEN": "When is a «{name}» ticket opened? (in the customer's words)",
+      "TICKET_REMOVE": "Remove reason",
+      "TICKET_ADD_PLACEHOLDER": "Type a reason and Enter",
+      "TICKET_NO_REASONS": "Without reasons, the agent only opens it if the customer asks with those words.",
+      "TICKET_SUGGESTED": "Suggested:",
+      "TICKET_ADD_ONE": "+ {text}",
+      "TICKET_PRIORITY": "Priority",
+      "PRIORITY_DEFAULT": "The ticket type's",
+      "PRIORITY_BAJA": "Low",
+      "PRIORITY_MEDIA": "Medium",
+      "PRIORITY_ALTA": "High",
+      "PRIORITY_URGENTE": "Urgent",
+      "SUG_PERSON": "wants to talk to a person",
+      "SUG_FAILURE": "reports a failure or problem",
+      "SUG_COMPLAINT": "files a complaint",
+      "SUG_URGENT": "has an emergency",
+      "SUG_QUOTE": "asks for a formal quote",
+      "SUG_INVOICE": "needs an invoice",
+      "SUG_UNSOLVED": "their question couldn't be solved"
     }
   }
 }
