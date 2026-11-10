@@ -22,7 +22,8 @@ export default {
     ...mapGetters({
       globalConfig: 'globalConfig/get',
     }),
-    isEmbeddedSignupEnabled() { // proyecto@waba_chatwoot — fix: boolean vs string
+    isEmbeddedSignupEnabled() {
+      // proyecto@waba_chatwoot — fix: boolean vs string
       const val = this.globalConfig.wabaEmbeddedSignup;
       return val === true || val === 'true';
     },
@@ -51,7 +52,7 @@ export default {
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.WHATSAPP_CLOUD') }}
           </option>
           <option v-if="isEmbeddedSignupEnabled" value="embeded_signup">
-            Embedded Signup
+            {{ $t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.EMBEDDED_SIGNUP') }}
           </option>
           <option value="twilio">
             {{ $t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.TWILIO') }}

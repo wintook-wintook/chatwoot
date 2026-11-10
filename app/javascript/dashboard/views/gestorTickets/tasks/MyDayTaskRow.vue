@@ -130,6 +130,20 @@ export default {
             {{ row.case_ticket.title }}
           </span>
         </button>
+        <button
+          v-else-if="row.contact"
+          type="button"
+          class="text-xs truncate hover:underline text-slate-500 dark:text-slate-400"
+          @click="$emit('openTicket', row)"
+        >
+          {{ row.contact.name }}
+        </button>
+        <span
+          v-else-if="row.organization"
+          class="text-xs truncate text-slate-500 dark:text-slate-400"
+        >
+          {{ row.organization.name }}
+        </span>
         <span
           v-for="r in reasons"
           :key="r.key"
@@ -160,6 +174,7 @@ export default {
           {{ $t('CASE_TICKETS.TASKS.COMPLETE') }}
         </woot-button>
         <woot-button
+          v-if="row.case_ticket"
           size="small"
           variant="smooth"
           color-scheme="secondary"

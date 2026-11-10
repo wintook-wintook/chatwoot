@@ -38,7 +38,7 @@
 #  fk_rails_...  (tracking_campaign_id => tracking_campaigns.id) ON DELETE => cascade
 #
 class TrackingCampaignEntry < ApplicationRecord
-  SOURCES = %w[batch automation missed_call].freeze # missed_call: diag/llamadas_whatsapp (F8)
+  SOURCES = %w[batch automation missed_call event].freeze # missed_call: diag/llamadas_whatsapp (F8); event: Plan-Eventos E3
   STATUSES = %w[enrolled skipped].freeze
   # invalid_email: prospeccion V7a
   REASONS = %w[campaign_closed already_enrolled active_tracking not_contactable outside_window daily_cap opted_out

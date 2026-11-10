@@ -1,0 +1,81 @@
+---
+key: agenda
+title: Agenda, tareas y reportes
+areas: [agenda]
+keywords: [agenda, tarea, tareas, mi dia, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada, cancelar, cancelar tarea, cancelar cita, motivo de cancelacion, reabrir, borrar tarea, no puedo borrar, reprogramar]
+pages: [tasks, my_day, calendar, task_reports, task_outcomes, task_scoring]
+---
+## Para qué sirve
+La Agenda junta todo lo que tienes que hacer: tareas (con fecha, sin hora) y tareas agendadas (con hora: llamadas, reuniones, visitas), y lo que ya se hizo, con su reporte.
+
+## Dónde está
+- Agenda › Tareas: pestañas Mi día, Mías, No asignadas y Todas. Abre en Mi día. Mi día también está en Inicio › Mi resumen.
+- Agenda › Calendario (si tu empresa lo tiene): ver la guía del calendario.
+- Agenda › Reportes: pestañas Reportes y Llegadas.
+- Agenda › Mi ruta en campo: la pantalla para celular de quien sale a visitas.
+
+## Cómo se hace
+### Trabajar Mi día
+1. Entra a Agenda › Tareas › Mi día. Arriba ves cuántas tareas tienes para hoy y su tiempo estimado.
+2. «Sugeridas por prioridad» trae tus pendientes ordenadas por un puntaje, con el motivo de su lugar (vencida, vence hoy, SLA en riesgo…).
+3. Arma «Mi orden de hoy»: arrastra tareas ahí o pulsa la flecha ↑ («Agregar a mi orden de hoy») y reordénalas arrastrando. La primera queda como «Siguiente».
+4. En cada tarea: «Completar» para concluirla o «Pasar a mañana» para programarla al día siguiente.
+5. A la derecha están la «Agenda de hoy» (tus tareas agendadas) y «Hecho hoy» (lo que ya concluiste).
+6. Si quedaron tareas programadas sin hacer, sale un aviso con «Pasarlas a hoy» o «Ignorar». Si llega una urgente después de armar tu día, te avisa con «Subir al inicio».
+
+### Ver y filtrar tareas
+1. Usa las pestañas Mías, No asignadas o Todas.
+2. Filtra por estado (Pendientes, Completadas), por tipo (No agendadas, Agendadas), por tipo de caso, por vencimiento (Vencidas, Vencen hoy, Esta semana) y por solicitante; en Todas, también por responsable.
+3. Busca en el título o la descripción. «Actualizar» recarga la lista. Cada pestaña recuerda sus filtros.
+
+### Crear una tarea
+1. Pulsa «Nueva tarea» en Agenda › Tareas, o «Tarea» en la barra de arriba.
+2. Llena «Qué hay que hacer» y, si quieres, descripción, responsable, fecha programada, hora y fecha de vencimiento.
+3. Sin hora es una tarea. Con hora es una tarea agendada: va al calendario y, si el responsable conectó Google, a su Google Calendar.
+4. Para una visita marca «Es una visita al cliente» (pide fecha y hora; la dirección es opcional).
+5. Elige organización o contacto si es para un cliente, y su caso si aplica. Sin cliente solo se ve en tu Mi día.
+6. Pulsa «Crear tarea».
+
+### Concluir con reporte
+1. Pulsa «Completar» en la tarea. Se abre el «Reporte de cierre».
+2. Escribe «Qué se hizo», el Tiempo dedicado, el Resultado y, si quieres, evidencia (hasta 5 archivos).
+3. Pulsa «Concluir». El reporte queda en Agenda › Reportes, en la ficha del cliente y, si tiene caso, en su actividad; el tiempo suma a las horas del caso.
+
+### Cancelar una tarea o tarea agendada
+Cancelar es «ya no se va a hacer»; no es completarla (eso pide el reporte) ni borrarla (eso es solo para errores de captura).
+1. En el menú de la tarea (Acciones ›) elige «Cancelar…». En una tarea agendada te pregunta primero «¿La quieres reprogramar?»: si solo cambia la fecha, reprográmala y se conserva su historial.
+2. Elige el motivo (El cliente ya no lo necesita, Se resolvió de otra forma, Duplicada, Se reprogramó u Otro; con «Otro» escribe el porqué).
+3. «¿Le dedicaste tiempo?»: opcional; es obligatorio si ya se trabajó (una visita con «voy en camino» o «llegué», o una tarea del cliente en proceso). Ese tiempo suma a las horas del caso y sale en Reportes.
+4. En una tarea agendada: si es de una serie, «Solo esta» o «Toda la serie» (también se cancela en Google Calendar); y «Avisarle al cliente por su conversación».
+5. La tarea queda tachada como «Cancelada · motivo», deja de contar en pendientes, vencidas y siguiente paso, y queda en la actividad del caso. «Reabrir» (en el mismo menú) la regresa a pendiente.
+6. También se lo puedes pedir a Dali: «cancela la llamada con Mario de mañana, ya no hace falta».
+
+### Pasar una tarea a la agenda, o una tarea agendada a tarea
+Una tarea no tiene hora (solo fecha límite); una tarea agendada sí: día, hora, va al calendario y a Google Calendar.
+1. Tarea → agendada: en el menú de la tarea elige «Agendar tarea» (dentro del caso) o «Agendar…» (en Agenda › Tareas). Ya trae el título, la descripción y la duración estimada; elige día y hora. Al guardar, la tarea se quita de Tareas y queda como tarea agendada, con el tiempo que ya tenía reportado.
+2. Si quieres que la tarea se quede y solo agendar una sesión para trabajarla, marca «Que la tarea se quede: solo agendar una sesión de trabajo». Las tareas obligatorias, las de la plantilla de la etapa y las del cliente siempre se quedan: se agenda una sesión ligada a ellas.
+3. Agendada → tarea: en el menú de la tarea agendada (dentro del caso) o en el calendario, al abrirla, elige «Pasar a tarea (sin hora)». Se quita de la agenda y de Google Calendar y queda como tarea con fecha límite ese mismo día, el organizador como responsable y lo que duraba como tiempo estimado. Si tiene cliente, puedes avisarle que se quita la cita.
+4. Si era la sesión de una tarea, no se crea otra: queda esa tarea. Si es de una serie, solo esa vez sale de la agenda. No se puede si ya se hizo, se canceló o ya marcaron «voy en camino».
+5. Queda en la actividad del caso («Tarea ↔ agenda»). También se lo puedes pedir a Dali: «agenda la tarea de llamar a Mario el jueves a las 10» o «la visita de mañana quítala de la agenda y déjala como tarea».
+
+### Borrar una tarea
+Solo para lo que se capturó por error: la borra quien la creó en las primeras 24 horas, o un administrador. Si ya no se puede borrar, te lo dice y te abre «Cancelar» para hacerlo con su motivo.
+
+### Reportar algo sin tarea
+Pulsa «Reportar actividad» en la barra de arriba: Título, «Qué se hizo», fecha, hora, resultado, tiempo y evidencia. Sin cliente queda como actividad interna.
+
+### Revisar lo hecho
+1. Entra a Agenda › Reportes y filtra por persona y fechas (Desde, Hasta).
+2. Reportes: las tareas concluidas y actividades, con su reporte.
+3. Llegadas: cuándo llegó cada quien a cada visita y desde dónde; «Exportar CSV» las descarga.
+
+## Dudas frecuentes
+- ¿Es obligatorio el tiempo dedicado? Por omisión sí. El administrador lo cambia en Catálogos › Resultados de tareas («Exigir el tiempo dedicado en los reportes»); ahí también da de alta los resultados.
+- Si concluyes varias tareas a la vez, el tiempo se reparte por igual entre ellas.
+- ¿Cómo se decide el orden de Mi día? Por los pesos de Ajustes › Puntaje de tareas (administrador).
+- Una visita entra a Mi ruta en campo del técnico y a Servicio › Despacho.
+
+## Quién puede
+- Con Agenda en «Todo» ves todas las pestañas y los reportes de todos.
+- Con «Solo lo suyo» no hay pestaña Todas, «No asignadas» solo si tu rol puede tomar lo que no tiene dueño, y en Reportes ves solo los tuyos.
+- Puntaje de tareas y Resultados de tareas: solo el Administrador.

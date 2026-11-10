@@ -18,6 +18,7 @@ class Messages::MessageBuilder
 
   def perform
     @message = @conversation.messages.build(message_params)
+    mark_ai_agent
     process_attachments
     process_emails
     @message.save!
@@ -25,6 +26,15 @@ class Messages::MessageBuilder
   end
 
   private
+
+  # Agentes IA — `ai_agent: { name: }` solo desde el servidor (ContactTrackings::AgentIdentity),
+  # nunca desde la API: el mensaje queda como del agente y WhatsApp usa su nombre.
+  def mark_ai_agent
+    return if @params.instance_of?(ActionController::Parameters) || !@params[:ai_agent].is_a?(Hash)
+
+    @message.content_attributes[:ai_agent] = true
+    @message.content_attributes[:ai_agent_name] = @params[:ai_agent][:name]
+  end
 
   # Extracts content attributes from the given params.
   # - Converts ActionController::Parameters to a regular hash if needed.

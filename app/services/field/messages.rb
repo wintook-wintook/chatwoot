@@ -10,11 +10,12 @@ class Field::Messages
     @user = user
   end
 
-  def on_my_way!(eta_minutes)
+  # `zone`: la del usuario, para que la hora del aviso sea la suya (Dali la manda).
+  def on_my_way!(eta_minutes, zone: Time.zone)
     conversation = customer_conversation
     raise Error, I18n.t('field.errors.no_conversation') unless conversation
 
-    eta = (Time.current + eta_minutes.clamp(5, 240).minutes).in_time_zone.strftime('%H:%M')
+    eta = (Time.current + eta_minutes.clamp(5, 240).minutes).in_time_zone(zone).strftime('%H:%M')
     send_message(conversation, I18n.t('field.on_my_way', name: first_name(@order.contact&.name), technician: @user.name,
                                                          eta: eta, url: self.class.portal_url(@order)))
     @order.case_events.create!(account: @order.account, event_type: :internal_note, origin: :agent, actor: @user,

@@ -10,6 +10,9 @@ module Liquidable
   def message_drops
     {
       'contact' => ContactDrop.new(conversation.contact),
+      # Plan-Organizaciones O5 — {{organizacion.nombre}} / {{organization.name}}
+      'organizacion' => OrganizationDrop.new(conversation.contact&.organization),
+      'organization' => OrganizationDrop.new(conversation.contact&.organization),
       'agent' => UserDrop.new(sender),
       'conversation' => ConversationDrop.new(conversation),
       'inbox' => InboxDrop.new(inbox),

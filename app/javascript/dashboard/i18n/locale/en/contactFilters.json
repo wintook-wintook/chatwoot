@@ -48,12 +48,15 @@
       "CREATED_AT": "Created At",
       "LAST_ACTIVITY": "Last Activity",
       "REFERER_LINK": "Referrer link",
-      "BLOCKED": "Blocked"
+      "BLOCKED": "Blocked",
+      "EVENT": "Event"
     },
     "GROUPS": {
       "STANDARD_FILTERS": "Standard Filters",
       "ADDITIONAL_FILTERS": "Additional Filters",
       "CUSTOM_ATTRIBUTES": "Custom Attributes"
-    }
+    },
+    "EVENT_ANY": "Any event",
+    "EVENT_ANY_STATUS": "any status"
   }
 }

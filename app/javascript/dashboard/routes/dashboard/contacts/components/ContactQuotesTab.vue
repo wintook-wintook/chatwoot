@@ -5,6 +5,7 @@
 -->
 <script>
 import QuotesAPI from 'dashboard/api/quotes';
+import OrganizationTag from './OrganizationTag.vue'; // Plan-Organizaciones
 import Spinner from 'shared/components/Spinner.vue';
 import QuoteStatusChip from 'dashboard/views/gestorTickets/quotes/QuoteStatusChip.vue';
 import { formatMoney } from 'dashboard/helper/caseCommercial';
@@ -12,7 +13,7 @@ import { backQuery } from 'dashboard/views/gestorTickets/backLink';
 
 export default {
   name: 'ContactQuotesTab',
-  components: { Spinner, QuoteStatusChip },
+  components: { Spinner, QuoteStatusChip, OrganizationTag },
   props: {
     contactId: { type: Number, required: true },
   },
@@ -93,6 +94,10 @@ export default {
       >
         <span class="font-mono text-sm">{{ quote.folio }}</span>
         <QuoteStatusChip :quote="quote" />
+        <OrganizationTag
+          :organization-id="quote.organization && quote.organization.id"
+          :contact-id="contactId"
+        />
         <span class="text-xs text-slate-500 dark:text-slate-400">{{
           link(quote)
         }}</span>

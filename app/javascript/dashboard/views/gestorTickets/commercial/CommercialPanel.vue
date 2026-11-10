@@ -3,8 +3,10 @@
   Franja «Datos comerciales» del detalle de una oportunidad: monto, moneda,
   cierre estimado, probabilidad y la casilla «Comprometida por el cliente»
   (Plan-Metricas-Comercial: marcada, el cierre es la fecha que prometió el
-  cliente), editables en línea (se guardan juntos con PATCH /case_tickets/:id;
-  el backend deja `amount_changed` / `commitment_changed` en el historial).
+  cliente). Se guardan juntos con PATCH /case_tickets/:id; el backend deja
+  `amount_changed` / `commitment_changed` en el historial.
+  Plan Actividad del caso (P3) — en UNA línea para no quitarle espacio a las
+  pestañas; el lápiz (o un clic en la línea) abre la ventanita para editarlos.
   Cerrada, se congela y muestra el resultado con su motivo y nota.
 -->
 <script>
@@ -38,7 +40,7 @@ export default {
   },
   emits: ['updated'],
   data() {
-    return { draft: this.fromTicket(), isSaving: false };
+    return { draft: this.fromTicket(), isSaving: false, editing: false };
   },
   computed: {
     isFrozen() {
@@ -56,6 +58,15 @@ export default {
         (Number(amount) * Number(probability)) / 100,
         this.ticket.currency
       );
+    },
+    probabilityText() {
+      const pct = this.ticket.probability;
+      return pct === null || pct === undefined ? '—' : pct;
+    },
+    // Cierre estimado ya pasado y la oportunidad sigue abierta.
+    closeOverdue() {
+      const day = this.ticket.expected_close_at;
+      return !this.isFrozen && !!day && day < isoDayFromToday(0);
     },
     outcomeBadge() {
       return OUTCOME_BADGE[this.ticket.outcome] || '';
@@ -97,8 +108,14 @@ export default {
     day(value) {
       return formatDay(value);
     },
+    openEditor() {
+      if (this.isFrozen) return;
+      this.draft = this.fromTicket();
+      this.editing = true;
+    },
     discard() {
       this.draft = this.fromTicket();
+      this.editing = false;
     },
     async save() {
       this.isSaving = true;
@@ -119,6 +136,7 @@ export default {
         this.$emitter.emit('newToastMessage', {
           message: this.$t('CASE_TICKETS.COMMERCIAL.PANEL.SAVED'),
         });
+        this.editing = false;
         this.$emit('updated');
       } catch (e) {
         const error = e.response?.data?.error;
@@ -138,180 +156,193 @@ export default {
 
 <template>
   <div
-    class="flex flex-col flex-shrink-0 gap-2 px-6 py-3 border-b bg-violet-50 dark:bg-slate-800/50 border-slate-50 dark:border-slate-800/50"
+    class="flex flex-wrap items-center flex-shrink-0 px-6 py-2 border-b gap-x-3 gap-y-1 bg-violet-50 dark:bg-slate-800/50 border-slate-50 dark:border-slate-800/50"
   >
-    <div class="flex flex-wrap items-center gap-2">
-      <span
-        class="text-xs font-semibold tracking-wide uppercase text-violet-700 dark:text-violet-300"
-      >
-        {{ $t('CASE_TICKETS.COMMERCIAL.PANEL.TITLE') }}
-      </span>
-      <span
-        v-if="ticket.outcome"
-        class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
-        :class="outcomeBadge"
-      >
-        {{ $t(`CASE_TICKETS.COMMERCIAL.OUTCOMES.${ticket.outcome}`) }}
-      </span>
-      <span
-        v-if="ticket.is_postponed"
-        class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
-        :class="postponedBadge"
-      >
-        {{
-          $t('CASE_TICKETS.COMMERCIAL.POSTPONED_UNTIL', {
-            date: day(ticket.postponed_until),
-          })
-        }}<template v-if="ticket.postpone_reason">
-          · {{ ticket.postpone_reason.label }}</template
-        >
-      </span>
-      <span
-        v-if="commitment"
-        class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
-        :class="commitment.cls"
-        :title="ticket.commit_note || ''"
-      >
-        {{
-          $t(`CASE_TICKETS.COMMERCIAL.COMMITMENT.${commitment.key}`, {
-            date: day(ticket.expected_close_at),
-          })
-        }}
-      </span>
-    </div>
-
-    <!-- Cerrada: solo lectura + resultado -->
-    <div v-if="isFrozen" class="flex flex-wrap items-start gap-x-8 gap-y-2">
-      <div class="flex flex-col">
-        <span class="text-xs uppercase text-slate-400 dark:text-slate-500">
-          {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.AMOUNT') }}
-        </span>
-        <span class="text-sm font-semibold text-slate-800 dark:text-slate-100">
-          {{ money(ticket.amount, ticket.currency) }}
-        </span>
-      </div>
-      <div class="flex flex-col">
-        <span class="text-xs uppercase text-slate-400 dark:text-slate-500">
-          {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.OUTCOME_AT') }}
-        </span>
-        <span class="text-sm text-slate-700 dark:text-slate-200">
-          {{ day(ticket.outcome_at) }}
-        </span>
-      </div>
-      <div v-if="ticket.outcome_reason" class="flex flex-col">
-        <span class="text-xs uppercase text-slate-400 dark:text-slate-500">
-          {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.REASON') }}
-        </span>
-        <span class="text-sm text-slate-700 dark:text-slate-200">
-          {{ ticket.outcome_reason.label }}
-        </span>
-      </div>
-      <div
-        v-if="ticket.outcome_note"
-        class="flex flex-col flex-1 min-w-[12rem]"
-      >
-        <span class="text-xs uppercase text-slate-400 dark:text-slate-500">
-          {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.NOTE') }}
-        </span>
-        <span class="text-sm text-slate-700 dark:text-slate-200">
-          {{ ticket.outcome_note }}
-        </span>
-      </div>
-      <p class="w-full m-0 text-xs text-slate-400 dark:text-slate-500">
-        {{ $t('CASE_TICKETS.COMMERCIAL.PANEL.FROZEN') }}
-      </p>
-    </div>
-
-    <!-- Abierta: edición en línea -->
-    <form
-      v-else
-      class="flex flex-wrap items-end gap-3 [&_input]:!mb-0"
-      @submit.prevent="save"
+    <span
+      class="text-xs font-semibold tracking-wide uppercase text-violet-700 dark:text-violet-300"
     >
-      <label class="flex flex-col gap-1 w-36">
-        <span class="text-xs uppercase text-slate-400 dark:text-slate-500">
-          {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.AMOUNT') }}
-        </span>
-        <input
-          v-model="draft.amount"
-          type="number"
-          min="0"
-          step="0.01"
-          class="h-8 text-sm"
-        />
-      </label>
-      <label class="flex flex-col w-20 gap-1">
-        <span class="text-xs uppercase text-slate-400 dark:text-slate-500">
-          {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.CURRENCY') }}
-        </span>
-        <input
-          v-model="draft.currency"
-          type="text"
-          maxlength="3"
-          class="h-8 text-sm uppercase"
-        />
-      </label>
-      <label class="flex flex-col gap-1 w-40">
-        <span class="text-xs uppercase text-slate-400 dark:text-slate-500">
+      {{ $t('CASE_TICKETS.COMMERCIAL.PANEL.SHORT_TITLE') }}
+    </span>
+
+    <!-- Una línea: monto · probabilidad → ponderado · cierre (y el resultado si cerró) -->
+    <button
+      type="button"
+      class="flex flex-wrap items-baseline min-w-0 p-0 text-sm text-left bg-transparent border-0 gap-x-1.5 text-slate-700 dark:text-slate-200"
+      :class="isFrozen ? 'cursor-default' : 'cursor-pointer hover:underline'"
+      :title="isFrozen ? $t('CASE_TICKETS.COMMERCIAL.PANEL.FROZEN') : ''"
+      @click="openEditor"
+    >
+      <span class="font-semibold text-slate-800 dark:text-slate-100">
+        {{ money(ticket.amount, ticket.currency) }}
+      </span>
+      <template v-if="!isFrozen">
+        <span class="text-slate-400">·</span>
+        <span>
           {{
-            draft.committed
-              ? $t('CASE_TICKETS.COMMERCIAL.COMMITMENT.DATE')
-              : $t('CASE_TICKETS.COMMERCIAL.FIELDS.EXPECTED_CLOSE')
+            $t('CASE_TICKETS.COMMERCIAL.PANEL.WEIGHTED_LINE', {
+              pct: probabilityText,
+              weighted,
+            })
           }}
         </span>
-        <input
-          v-model="draft.expected_close_at"
-          type="date"
-          class="h-8 text-sm"
-          :required="draft.committed"
-        />
-      </label>
-      <label
-        class="flex flex-col w-24 gap-1"
-        :title="$t('CASE_TICKETS.COMMERCIAL.PANEL.PROBABILITY_HINT')"
+        <span class="text-slate-400">·</span>
+        <span :class="closeOverdue ? 'text-red-600 dark:text-red-400' : ''">
+          {{
+            $t('CASE_TICKETS.COMMERCIAL.PANEL.CLOSE_LINE', {
+              date: day(ticket.expected_close_at),
+            })
+          }}<template v-if="closeOverdue">
+            ({{ $t('CASE_TICKETS.COMMERCIAL.PANEL.OVERDUE') }})</template
+          >
+        </span>
+      </template>
+      <template v-else>
+        <span class="text-slate-400">·</span>
+        <span>{{ day(ticket.outcome_at) }}</span>
+        <template v-if="ticket.outcome_reason">
+          <span class="text-slate-400">·</span>
+          <span>{{ ticket.outcome_reason.label }}</span>
+        </template>
+        <template v-if="ticket.outcome_note">
+          <span class="text-slate-400">·</span>
+          <span class="max-w-md truncate">{{ ticket.outcome_note }}</span>
+        </template>
+      </template>
+    </button>
+
+    <span
+      v-if="ticket.outcome"
+      class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
+      :class="outcomeBadge"
+    >
+      {{ $t(`CASE_TICKETS.COMMERCIAL.OUTCOMES.${ticket.outcome}`) }}
+    </span>
+    <span
+      v-if="ticket.is_postponed"
+      class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
+      :class="postponedBadge"
+    >
+      {{
+        $t('CASE_TICKETS.COMMERCIAL.POSTPONED_UNTIL', {
+          date: day(ticket.postponed_until),
+        })
+      }}<template v-if="ticket.postpone_reason">
+        · {{ ticket.postpone_reason.label }}</template
       >
-        <span class="text-xs uppercase text-slate-400 dark:text-slate-500">
-          {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.PROBABILITY') }} %
-        </span>
-        <input
-          v-model="draft.probability"
-          type="number"
-          min="0"
-          max="100"
-          step="1"
-          class="h-8 text-sm"
+    </span>
+    <span
+      v-if="commitment"
+      class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
+      :class="commitment.cls"
+      :title="ticket.commit_note || ''"
+    >
+      {{
+        $t(`CASE_TICKETS.COMMERCIAL.COMMITMENT.${commitment.key}`, {
+          date: day(ticket.expected_close_at),
+        })
+      }}
+    </span>
+    <woot-button
+      v-if="!isFrozen"
+      size="tiny"
+      variant="clear"
+      color-scheme="secondary"
+      icon="edit"
+      :title="$t('CASE_TICKETS.COMMERCIAL.PANEL.EDIT')"
+      @click="openEditor"
+    />
+
+    <!-- Editar: los mismos campos de siempre en una ventanita -->
+    <woot-modal :show="editing" :on-close="discard" size="medium">
+      <div class="flex flex-col h-auto overflow-auto">
+        <woot-modal-header
+          :header-title="$t('CASE_TICKETS.COMMERCIAL.PANEL.TITLE')"
         />
-      </label>
-      <div class="flex flex-col gap-1">
-        <span class="text-xs uppercase text-slate-400 dark:text-slate-500">
-          {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.WEIGHTED') }}
-        </span>
-        <span
-          class="flex items-center h-8 text-sm font-semibold text-slate-700 dark:text-slate-200"
+        <form
+          class="flex flex-wrap items-end gap-3 px-8 pb-8 [&_input]:!mb-0"
+          @submit.prevent="save"
         >
-          {{ weighted }}
-        </span>
+          <label class="flex flex-col gap-1 w-36">
+            <span class="text-xs uppercase text-slate-400 dark:text-slate-500">
+              {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.AMOUNT') }}
+            </span>
+            <input
+              v-model="draft.amount"
+              type="number"
+              min="0"
+              step="0.01"
+              class="h-8 text-sm"
+            />
+          </label>
+          <label class="flex flex-col w-20 gap-1">
+            <span class="text-xs uppercase text-slate-400 dark:text-slate-500">
+              {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.CURRENCY') }}
+            </span>
+            <input
+              v-model="draft.currency"
+              type="text"
+              maxlength="3"
+              class="h-8 text-sm uppercase"
+            />
+          </label>
+          <label class="flex flex-col gap-1 w-40">
+            <span class="text-xs uppercase text-slate-400 dark:text-slate-500">
+              {{
+                draft.committed
+                  ? $t('CASE_TICKETS.COMMERCIAL.COMMITMENT.DATE')
+                  : $t('CASE_TICKETS.COMMERCIAL.FIELDS.EXPECTED_CLOSE')
+              }}
+            </span>
+            <input
+              v-model="draft.expected_close_at"
+              type="date"
+              class="h-8 text-sm"
+              :required="draft.committed"
+            />
+          </label>
+          <label
+            class="flex flex-col w-24 gap-1"
+            :title="$t('CASE_TICKETS.COMMERCIAL.PANEL.PROBABILITY_HINT')"
+          >
+            <span class="text-xs uppercase text-slate-400 dark:text-slate-500">
+              {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.PROBABILITY') }} %
+            </span>
+            <input
+              v-model="draft.probability"
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              class="h-8 text-sm"
+            />
+          </label>
+          <CommitmentFields
+            :committed.sync="draft.committed"
+            :note.sync="draft.commit_note"
+            compact
+            class="w-full"
+          />
+          <div class="flex justify-end w-full gap-2">
+            <woot-button
+              size="small"
+              variant="clear"
+              color-scheme="secondary"
+              type="button"
+              @click="discard"
+            >
+              {{ $t('CASE_TICKETS.COMMERCIAL.PANEL.CANCEL') }}
+            </woot-button>
+            <woot-button
+              size="small"
+              type="submit"
+              :is-loading="isSaving"
+              :is-disabled="!isDirty"
+            >
+              {{ $t('CASE_TICKETS.COMMERCIAL.PANEL.SAVE') }}
+            </woot-button>
+          </div>
+        </form>
       </div>
-      <CommitmentFields
-        :committed.sync="draft.committed"
-        :note.sync="draft.commit_note"
-        compact
-        class="w-full"
-      />
-      <div v-if="isDirty" class="flex gap-2 ml-auto">
-        <woot-button
-          size="small"
-          variant="clear"
-          color-scheme="secondary"
-          type="button"
-          @click="discard"
-        >
-          {{ $t('CASE_TICKETS.COMMERCIAL.PANEL.CANCEL') }}
-        </woot-button>
-        <woot-button size="small" type="submit" :is-loading="isSaving">
-          {{ $t('CASE_TICKETS.COMMERCIAL.PANEL.SAVE') }}
-        </woot-button>
-      </div>
-    </form>
+    </woot-modal>
   </div>
 </template>

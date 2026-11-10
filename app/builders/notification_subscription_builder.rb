@@ -28,7 +28,13 @@ class NotificationSubscriptionBuilder
     @identifier_subscription = user.notification_subscriptions.create!(params.merge(identifier: identifier))
   end
 
+  # Portal de Dali: el teléfono que activó los avisos desde Dali los abre en Dali
+  # (subscription_attributes['dali']). La plataforma vuelve a registrar la misma
+  # suscripción al abrirse sin esa marca: se conserva salvo que llegue explícita.
   def update_identifier_subscription
-    identifier_subscription.update(params.merge(identifier: identifier))
+    attrs = params[:subscription_attributes].to_h.stringify_keys
+    previous = identifier_subscription.subscription_attributes.to_h
+    attrs['dali'] = previous['dali'] if !attrs.key?('dali') && previous.key?('dali')
+    identifier_subscription.update(params.to_h.merge('subscription_attributes' => attrs, 'identifier' => identifier))
   end
 end

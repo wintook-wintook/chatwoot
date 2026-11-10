@@ -71,7 +71,13 @@
       "NOW": "from now",
       "NO_END": "no end",
       "SAVE_AND_LAUNCH": "Save and start",
-      "WORKING_HOURS_LABEL": "Hours"
+      "WORKING_HOURS_LABEL": "Hours",
+      "SECTION_EVENT": "Is it for an event? (optional)",
+      "EVENT_LABEL": "Event",
+      "EVENT_NONE": "No, no event",
+      "EVENT_STATUS_LABEL": "Contacts who",
+      "EVENT_HINT_BATCH": "Only contacts of this event with that status enter (and of the segment or label, if you chose one).",
+      "EVENT_HINT_CONTINUOUS": "Whoever reaches that status in the event enters on their own (e.g. when marked «Attended»)."
     },
     "REVIEW": {
       "TITLE": "Review selected contacts",

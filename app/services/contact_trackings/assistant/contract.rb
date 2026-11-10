@@ -34,7 +34,7 @@ class ContactTrackings::Assistant::Contract
 
   def call
     <<~CONTRATO.strip
-      Eres un especialista en configurar Agentes IA del motor de Seguimientos de Wintook.
+      Eres un especialista en configurar Agentes IA del motor de Seguimientos de Kontrolya.
       Escribes el campo "Entrenamiento" de un agente.
 
       NO es un prompt libre: parte del texto lo parsea el sistema con patrones exactos y solo se

@@ -19,6 +19,7 @@
 #  case_type_id      :bigint           not null
 #  contact_id        :bigint           not null
 #  customer_asset_id :bigint
+#  organization_id   :bigint
 #
 # Indexes
 #
@@ -28,6 +29,7 @@
 #  index_maintenance_plans_on_case_type_id            (case_type_id)
 #  index_maintenance_plans_on_contact_id              (contact_id)
 #  index_maintenance_plans_on_customer_asset_id       (customer_asset_id)
+#  index_maintenance_plans_on_organization_id         (organization_id)
 #
 # Foreign Keys
 #
@@ -36,6 +38,7 @@
 #  fk_rails_...  (case_type_id => case_types.id)
 #  fk_rails_...  (contact_id => contacts.id) ON DELETE => cascade
 #  fk_rails_...  (customer_asset_id => customer_assets.id) ON DELETE => nullify
+#  fk_rails_...  (organization_id => organizations.id) ON DELETE => nullify
 #
 
 # Plan-Trabajo-Campo R4 — mantenimiento recurrente de un cliente (un contrato):
@@ -44,6 +47,7 @@
 class MaintenancePlan < ApplicationRecord
   belongs_to :account
   belongs_to :contact
+  include OrganizationLinked # Plan-Organizaciones O2
   belongs_to :customer_asset, optional: true
   belongs_to :case_type
   belongs_to :assignee, class_name: 'User', optional: true

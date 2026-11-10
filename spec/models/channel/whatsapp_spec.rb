@@ -32,12 +32,12 @@ RSpec.describe Channel::Whatsapp do
     let(:channel) { build(:channel_whatsapp, provider: 'whatsapp_cloud', account: create(:account)) }
 
     it 'validates false when provider config is wrong' do
-      stub_request(:get, 'https://graph.facebook.com/v20.0//message_templates?access_token=test_key').to_return(status: 401)
+      stub_request(:get, 'https://graph.facebook.com/v14.0//message_templates?access_token=test_key').to_return(status: 401)
       expect(channel.save).to be(false)
     end
 
     it 'validates true when provider config is right' do
-      stub_request(:get, 'https://graph.facebook.com/v20.0//message_templates?access_token=test_key')
+      stub_request(:get, 'https://graph.facebook.com/v14.0//message_templates?access_token=test_key')
         .to_return(status: 200,
                    body: { data: [{
                      id: '123456789', name: 'test_template'
@@ -59,6 +59,27 @@ RSpec.describe Channel::Whatsapp do
                                           validate_provider_config: false, sync_templates: false)
 
       expect(channel.provider_config['webhook_verify_token']).to eq '123'
+    end
+  end
+
+  # feat/plantillas_whatsapp_mejoras: la ventana de 24 h.
+  describe '#messaging_window_enabled?' do
+    def channel_with(provider, url = nil)
+      described_class.new(provider: provider, provider_config: url ? { 'url' => url } : {})
+    end
+
+    it 'WhatsApp Cloud con la liga vacía o la de Meta respeta la ventana' do
+      expect(channel_with('whatsapp_cloud')).to be_messaging_window_enabled
+      expect(channel_with('whatsapp_cloud', 'https://graph.facebook.com')).to be_messaging_window_enabled
+    end
+
+    it '360dialog respeta la ventana' do
+      expect(channel_with('default')).to be_messaging_window_enabled
+    end
+
+    it 'UnoAPI y una WhatsApp Cloud con liga propia no tienen ventana' do
+      expect(channel_with('unoapi', 'https://uno.example.com')).not_to be_messaging_window_enabled
+      expect(channel_with('whatsapp_cloud', 'https://proxy.example.com')).not_to be_messaging_window_enabled
     end
   end
 end

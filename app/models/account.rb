@@ -42,12 +42,20 @@ class Account < ApplicationRecord
   has_many :tracking_campaigns, dependent: :destroy # @campanas_vendedor
   has_one :internal_channel, class_name: 'Channel::Internal', dependent: :destroy_async # feat/chat_interno (plan v2)
   has_many :case_tickets, dependent: :destroy # @tickets_cases
+  has_many :case_tasks, dependent: :destroy # Plan-Agenda — incluye las que no tienen caso
+  has_many :case_meetings, dependent: :destroy
+  has_many :task_outcomes, dependent: :destroy # Reporte de cierre
+  has_many :task_reports, dependent: :destroy
   has_many :access_roles, dependent: :destroy # Plan-Roles-Permisos
   has_many :catalog_items, dependent: :destroy # Plan-Catalogo-Cotizaciones
   has_many :quotes, dependent: :destroy # Plan-Catalogo-Cotizaciones
+  has_many :sales_budget_lines, dependent: :delete_all # Presupuesto de ventas
   has_many :customer_assets, dependent: :destroy # Plan-Trabajo-Campo R4
   has_many :maintenance_plans, dependent: :destroy # Plan-Trabajo-Campo R4
   has_many :contracts, dependent: :destroy # Plan-Contratos R1
+  has_many :organizations, dependent: :destroy # Plan-Organizaciones O1
+  has_many :events, dependent: :destroy # Plan-Eventos E1
+  has_many :client_portal_links, dependent: :destroy # Portal del cliente (tareas con el cliente)
   has_many :contract_types, dependent: :destroy # Plan-Contratos R1
   has_many :crm_organizations, dependent: :destroy # CrmZeus O0
   has_many :crm_lookups, dependent: :destroy # CrmZeus O0
@@ -93,6 +101,7 @@ class Account < ApplicationRecord
   has_many :macros, dependent: :destroy_async
   has_many :campaigns, dependent: :destroy_async
   has_many :canned_responses, dependent: :destroy_async
+  has_many :canned_response_categories, dependent: :destroy_async
   has_many :knowledge_sources, dependent: :destroy # @knowledge_sources
   has_many :knowledge_items, dependent: :destroy   # @knowledge_sources
   has_many :categories, dependent: :destroy_async, class_name: '::Category'

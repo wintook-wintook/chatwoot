@@ -29,7 +29,10 @@ module EmailHelper
 
   def message_drops(conversation)
     {
-      'contact' => ContactDrop.new(conversation.contact)
+      'contact' => ContactDrop.new(conversation.contact),
+      # Plan-Organizaciones O5
+      'organizacion' => OrganizationDrop.new(conversation.contact&.organization),
+      'organization' => OrganizationDrop.new(conversation.contact&.organization)
     }
   end
 end

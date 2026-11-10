@@ -152,6 +152,7 @@ export default {
       this.locating = true;
       const location = await currentLocation();
       this.locating = false;
+      if (location.lat === undefined) useAlert(this.$t('FIELD.NO_LOCATION'));
       await this.act(
         () => FieldVisitsAPI.arrive(this.ticketId, location),
         null,

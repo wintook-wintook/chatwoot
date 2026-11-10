@@ -42,9 +42,16 @@ export const validateAuthenticateRoutePermission = (
 ) => {
   const { isLoggedIn, getCurrentUser: user } = getters;
 
+  // Portal de Dali: sin sesión, al entrar regresa a Dali; /app/dali abre el de su empresa activa.
+  const toDali = to.name === 'dali_entry' || to.name === 'dali_app';
   if (!isLoggedIn) {
-    window.location = '/app/login';
-    return '/app/login';
+    const login = toDali ? '/app/login?redirect=dali' : '/app/login';
+    window.location = login;
+    return login;
+  }
+
+  if (to.name === 'dali_entry') {
+    return next(frontendURL(`accounts/${user.account_id}/dali`));
   }
 
   if (!to.name) {

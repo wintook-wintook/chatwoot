@@ -1,6 +1,6 @@
 {
   "LOGIN": {
-    "TITLE": "Iniciar sesión en Chatwoot",
+    "TITLE": "Iniciar sesión en Kontrolya",
     "EMAIL": {
       "LABEL": "Correo electrónico",
       "PLACEHOLDER": "example@companyname.com",
@@ -12,7 +12,7 @@
     },
     "API": {
       "SUCCESS_MESSAGE": "Inicio de sesión exitoso",
-      "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot. Por favor, inténtalo de nuevo.",
+      "ERROR_MESSAGE": "No se pudo conectar al servidor de Kontrolya. Por favor, inténtalo de nuevo.",
       "UNAUTH": "Nombre de usuario o contraseña incorrectos. Por favor, inténtalo de nuevo."
     },
     "OAUTH": {

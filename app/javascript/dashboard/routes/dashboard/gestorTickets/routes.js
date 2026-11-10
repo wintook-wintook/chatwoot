@@ -85,6 +85,14 @@ export const routes = [
     component: () =>
       import('../../../views/gestorTickets/maintenance/MaintenancePlans.vue'),
   },
+  // Presupuesto de ventas — Inicio › Presupuesto: avance y captura.
+  {
+    path: frontendURL('accounts/:accountId/tickets/budget'),
+    name: 'gestorTickets_sales_budgets',
+    meta: AGENT,
+    component: () =>
+      import('../../../views/gestorTickets/salesBudgets/SalesBudgets.vue'),
+  },
   // Plan-Catalogo-Cotizaciones — Ventas › Cotizaciones (lista, nueva y editor).
   {
     path: frontendURL('accounts/:accountId/tickets/quotes'),
@@ -179,6 +187,28 @@ export const routes = [
     meta: { permissions: ['administrator'] },
     component: () =>
       import('../../../views/gestorTickets/CommercialConfig.vue'),
+  },
+  // Catálogos › Motivos de cierre (salió de la página de arriba).
+  {
+    path: frontendURL('accounts/:accountId/tickets/close-reasons'),
+    name: 'gestorTickets_close_reasons',
+    meta: { permissions: ['administrator'] },
+    component: () =>
+      import('../../../views/gestorTickets/OutcomeReasonsConfig.vue'),
+  },
+  // Reporte de cierre — Agenda › Reportes y Catálogos › Resultados de tareas.
+  {
+    path: frontendURL('accounts/:accountId/tickets/task-reports'),
+    name: 'gestorTickets_task_reports',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () => import('../../../views/gestorTickets/TaskReports.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/tickets/task-outcomes'),
+    name: 'gestorTickets_task_outcomes',
+    meta: { permissions: ['administrator'] },
+    component: () =>
+      import('../../../views/gestorTickets/TaskOutcomesConfig.vue'),
   },
   // Plan-Bandeja-Prioridad F3 — pesos del puntaje de «Mi día».
   {

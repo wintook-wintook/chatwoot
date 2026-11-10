@@ -1,0 +1,108 @@
+<%# Portal del cliente — sus casos y proyectos y las tareas que le tocan (Public::ClientPortalsController). %>
+<% content_for(:title, t('client_portal.title')) %>
+<% content_for(:hide_print, true) %>
+<% day = ->(time) { time&.in_time_zone&.strftime('%d/%m/%Y') } %>
+<% owner_name = @link.owner&.name %>
+
+<article class="p-6 bg-white shadow-sm rounded-xl">
+  <p class="m-0 text-xs font-semibold tracking-wide uppercase text-slate-500"><%= t('client_portal.title') %></p>
+  <h1 class="m-0 text-2xl font-bold"><%= owner_name %></h1>
+  <% if @person %>
+    <p class="m-0 mt-1 text-sm text-slate-600">
+      <%= t('client_portal.hello', name: @person.name) %>
+      <% if @link.organization_id %>
+        · <a href="#quien" onclick="document.getElementById('quien').classList.remove('hidden')" class="text-indigo-700 underline"><%= t('client_portal.who_change') %></a>
+      <% end %>
+    </p>
+  <% end %>
+</article>
+
+<% if flash[:client_portal_error] %>
+  <p class="p-3 mt-4 text-sm text-red-800 rounded-md bg-red-50"><%= flash[:client_portal_error] %></p>
+<% end %>
+
+<% if @link.organization_id && @people.any? %>
+  <section id="quien" class="p-4 mt-4 bg-white shadow-sm rounded-xl <%= 'hidden' if @person %>">
+    <h2 class="m-0 text-base font-semibold"><%= t('client_portal.who_title') %></h2>
+    <p class="m-0 mt-1 text-sm text-slate-600"><%= t('client_portal.who_help') %></p>
+    <form action="<%= public_client_portal_person_path(params[:token]) %>" method="post" class="flex flex-wrap gap-2 mt-3">
+      <select name="contact_id" class="flex-1 min-w-[12rem] px-3 py-2 border rounded-md border-slate-300">
+        <% @people.each do |person| %>
+          <option value="<%= person.id %>" <%= 'selected' if @person&.id == person.id %>><%= person.name %></option>
+        <% end %>
+      </select>
+      <button class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-md"><%= t('client_portal.who_save') %></button>
+    </form>
+  </section>
+<% end %>
+
+<section class="mt-6">
+  <h2 class="m-0 text-lg font-semibold"><%= t('client_portal.needs_title') %></h2>
+  <% needs = @snapshot.needs %>
+  <% if needs.empty? %>
+    <p class="p-4 mt-3 text-sm bg-white rounded-xl text-slate-600"><%= t('client_portal.needs_empty') %></p>
+  <% else %>
+    <% needs.each do |task| %>
+      <p class="m-0 mt-4 text-xs text-slate-500"><%= task.case_ticket.folio %> · <%= task.case_ticket.title %></p>
+      <%= render 'task', task: task %>
+    <% end %>
+  <% end %>
+</section>
+
+<section class="mt-8">
+  <h2 class="m-0 text-lg font-semibold"><%= t('client_portal.cases_title') %></h2>
+  <% if @snapshot.cases.empty? %>
+    <p class="p-4 mt-3 text-sm bg-white rounded-xl text-slate-600"><%= t('client_portal.cases_empty') %></p>
+  <% end %>
+  <% @snapshot.cases.each do |ticket| %>
+    <% tasks = @snapshot.tasks_for(ticket) %>
+    <article class="p-5 mt-4 bg-white shadow-sm rounded-xl">
+      <p class="m-0 text-xs text-slate-500"><%= ticket.folio %> · <%= ticket.case_type&.name %></p>
+      <h3 class="m-0 text-lg font-semibold"><%= ticket.title %></h3>
+      <p class="inline-block px-2 py-0.5 mt-1 text-xs rounded-full bg-indigo-50 text-indigo-700"><%= Public::CasePortalController::STATUS_LABELS[ticket.status] || ticket.status.humanize %></p>
+
+      <% if ticket.project? %>
+        <% summary = ticket.project_progress_summary %>
+        <div class="mt-3">
+          <p class="m-0 text-sm font-medium"><%= t('client_portal.progress', percent: summary[:progress].to_i) %></p>
+          <div class="h-2 mt-1 overflow-hidden rounded-full bg-slate-100"><div class="h-2 bg-indigo-500" style="width: <%= summary[:progress].to_i.clamp(0, 100) %>%"></div></div>
+        </div>
+        <% stages = @snapshot.stages(ticket) %>
+        <% if stages.any? %>
+          <p class="m-0 mt-3 text-xs font-semibold text-slate-500"><%= t('client_portal.stages') %></p>
+          <ol class="flex flex-wrap gap-1 p-0 m-0 mt-1 list-none">
+            <% stages.each do |stage| %>
+              <li class="px-2 py-0.5 text-xs rounded-full <%= { 'done' => 'bg-green-100 text-green-800', 'current' => 'bg-indigo-600 text-white', 'pending' => 'bg-slate-100 text-slate-500' }[stage[:state]] %>"><%= stage[:label] %></li>
+            <% end %>
+          </ol>
+        <% end %>
+        <% milestones = tasks.select(&:milestone) %>
+        <% if milestones.any? %>
+          <p class="m-0 mt-3 text-xs font-semibold text-slate-500"><%= t('client_portal.milestones') %></p>
+          <ul class="p-0 m-0 mt-1 text-sm list-none">
+            <% milestones.each do |m| %><li><%= m.done? ? '✓' : '○' %> <%= m.title %><% if m.due_at %> · <%= day.call(m.due_at) %><% end %></li><% end %>
+          </ul>
+        <% end %>
+        <% children = @snapshot.project_children(ticket) %>
+        <% if children.any? %>
+          <p class="m-0 mt-3 text-xs font-semibold text-slate-500"><%= t('client_portal.children') %></p>
+          <ul class="p-0 m-0 mt-1 text-sm list-none">
+            <% children.each do |child| %><li><%= child.folio %> · <%= child.title %> — <%= Public::CasePortalController::STATUS_LABELS[child.status] || child.status.humanize %></li><% end %>
+          </ul>
+        <% end %>
+      <% end %>
+
+      <%# Las suyas pendientes ya van arriba («Lo que necesitamos de ti»): aquí, las que ya hizo. %>
+      <% theirs = tasks.select { |task| task.for_client? && !task.pending? } %>
+      <% ours = tasks.select(&:for_visible?) %>
+      <% if theirs.any? %>
+        <p class="m-0 mt-4 text-sm font-semibold"><%= t('client_portal.your_done') %></p>
+        <% theirs.each do |task| %><%= render 'task', task: task %><% end %>
+      <% end %>
+      <% if ours.any? %>
+        <p class="m-0 mt-4 text-sm font-semibold"><%= t('client_portal.our_tasks') %></p>
+        <% ours.each do |task| %><%= render 'task', task: task %><% end %>
+      <% end %>
+    </article>
+  <% end %>
+</section>

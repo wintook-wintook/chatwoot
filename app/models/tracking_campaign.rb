@@ -4,33 +4,46 @@
 #
 # Table name: tracking_campaigns
 #
-#  id                    :bigint           not null, primary key
-#  audience              :jsonb            not null
-#  daily_cap             :integer
-#  email_subject         :string
-#  ends_at               :datetime
-#  entry_delay_minutes   :integer          default(0), not null
-#  mode                  :string           default("batch"), not null
-#  name                  :string           not null
-#  objective             :string
-#  paused_at             :datetime
-#  paused_reason         :string
-#  purpose               :string           default("follow_up"), not null
-#  respect_working_hours :boolean          default(TRUE), not null
-#  scheduled_for         :datetime
-#  status                :string           default("running"), not null
-#  created_at            :datetime         not null
-#  updated_at            :datetime         not null
-#  account_id            :bigint           not null
-#  inbox_id              :bigint
-#  tracking_template_id  :bigint
-#  user_id               :bigint
+#  id                       :bigint           not null, primary key
+#  audience                 :jsonb            not null
+#  daily_cap                :integer
+#  email_subject            :string
+#  email_subject_b          :string
+#  ends_at                  :datetime
+#  entry_delay_minutes      :integer          default(0), not null
+#  event_status             :string
+#  handoff_due_hours        :integer
+#  handoff_escalate_hours   :integer
+#  mode                     :string           default("batch"), not null
+#  name                     :string           not null
+#  objective                :string
+#  paused_at                :datetime
+#  paused_reason            :string
+#  purpose                  :string           default("follow_up"), not null
+#  respect_working_hours    :boolean          default(TRUE), not null
+#  retry_not_now            :boolean          default(TRUE), not null
+#  scheduled_for            :datetime
+#  scoring                  :jsonb            not null
+#  status                   :string           default("running"), not null
+#  stop_when_not_interested :boolean          default(TRUE), not null
+#  stop_when_wrong_person   :boolean          default(TRUE), not null
+#  subject_ab_winner        :string
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  account_id               :bigint           not null
+#  event_id                 :bigint
+#  handoff_board_id         :bigint
+#  handoff_column_id        :bigint
+#  inbox_id                 :bigint
+#  tracking_template_id     :bigint
+#  user_id                  :bigint
 #
 # Indexes
 #
 #  index_tracking_campaigns_on_account_id              (account_id)
 #  index_tracking_campaigns_on_account_id_and_purpose  (account_id,purpose)
 #  index_tracking_campaigns_on_account_id_and_status   (account_id,status)
+#  index_tracking_campaigns_on_event_id                (event_id)
 #  index_tracking_campaigns_on_inbox_id                (inbox_id)
 #  index_tracking_campaigns_on_tracking_template_id    (tracking_template_id)
 #  index_tracking_campaigns_on_user_id                 (user_id)
@@ -38,6 +51,7 @@
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (event_id => events.id) ON DELETE => nullify
 #  fk_rails_...  (inbox_id => inboxes.id)
 #  fk_rails_...  (tracking_template_id => tracking_templates.id)
 #  fk_rails_...  (user_id => users.id) ON DELETE => nullify
@@ -78,11 +92,13 @@ class TrackingCampaign < ApplicationRecord
   belongs_to :handoff_board, class_name: 'KanbanTypeProcess', optional: true
   belongs_to :handoff_column, class_name: 'KanbanProcess', optional: true
 
+  belongs_to :event, optional: true # Plan-Eventos E3 — la campaña de un evento
   has_many :contact_trackings, dependent: :nullify
   has_many :entries, class_name: 'TrackingCampaignEntry', dependent: :delete_all
 
   validates :name, presence: true, length: { minimum: 2, maximum: 120 }
   validates :status, inclusion: { in: STATUSES }
+  validates :event_status, inclusion: { in: ->(_) { EventAttendee.statuses.keys } }, allow_nil: true
   # El objective se copia de la plantilla (que permite hasta 500). Sin esta
   # validación explícita, la de ApplicationRecord lo limitaría a 255 y el
   # create! reventaría con RecordInvalid en plantillas de objective largo.

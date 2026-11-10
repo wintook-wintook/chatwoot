@@ -18,6 +18,14 @@ import {
   toggleOpenGroup,
 } from 'dashboard/helper/inboxGroups'; // feat/bandejas_por_tipo
 import { INBOX_TYPES } from 'shared/mixins/inboxMixin';
+import {
+  canDispatch,
+  canSeeArea,
+  getUserAccess,
+} from 'dashboard/helper/accessHelper';
+
+// Ítems con `accessCheck`: permisos que no son un área completa.
+const ACCESS_CHECKS = { dispatch: canDispatch };
 
 export default {
   components: {
@@ -119,6 +127,7 @@ export default {
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
       currentRole: 'getCurrentRole',
       internalChatUnread: 'internalChat/getUnread',
+      notificationMetadata: 'notifications/getMeta',
     }),
     // feat/chat_interno_pulido: «Interno» no es una bandeja de clientes; va como
     // «Chat interno» arriba del menú (con lo que el agente tiene sin leer) y no
@@ -166,16 +175,42 @@ export default {
           );
         }
       );
-      return menuItemsFilteredByPermissions.filter(item => {
-        if (item.showOnlyOnCloud) {
-          return this.isOnChatwootCloud;
-        }
-        // @tickets_cases — permiso que decide el backend (p. ej. «Resumen del negocio»).
-        if (item.visibleGetter) {
-          return this.$store.getters[item.visibleGetter];
-        }
-        return true;
-      });
+      return menuItemsFilteredByPermissions
+        .filter(item => {
+          if (item.showOnlyOnCloud) {
+            return this.isOnChatwootCloud;
+          }
+          // Ítem de otra área (p. ej. Inicio › Presupuesto es de Ventas): solo si el rol la ve.
+          if (
+            item.area &&
+            !canSeeArea(
+              getUserAccess(this.currentUser, this.accountId),
+              item.area
+            )
+          ) {
+            return false;
+          }
+          // Permiso que no es un área completa (p. ej. Despacho).
+          if (
+            item.accessCheck &&
+            !ACCESS_CHECKS[item.accessCheck](
+              getUserAccess(this.currentUser, this.accountId)
+            )
+          ) {
+            return false;
+          }
+          // @tickets_cases — permiso que decide el backend (p. ej. «Resumen del negocio»).
+          if (item.visibleGetter) {
+            return this.$store.getters[item.visibleGetter];
+          }
+          return true;
+        })
+        .map(item =>
+          // Inicio › Notificaciones: los avisos sin leer (solo si hay).
+          item.showUnreadNotifications && this.notificationMetadata.unreadCount
+            ? { ...item, count: this.notificationMetadata.unreadCount }
+            : item
+        );
     },
 
     hideAllInboxForAgents() {
@@ -526,8 +561,6 @@ export default {
     },
     // Nuevo método para tipos de proceso kanban
     showAddKanbanTypePopup() {
-      console.log('🔄 Secondary: showAddKanbanTypePopup llamado');
-      console.log('🔄 Secondary: Emitiendo evento addKanbanType');
       this.$emit('addKanbanType');
     },
 

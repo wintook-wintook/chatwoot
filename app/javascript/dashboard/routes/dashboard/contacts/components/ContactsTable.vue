@@ -68,6 +68,7 @@ export default {
           ...item,
           phone_number: item.phone_number || '---',
           company: additional.company_name || '---',
+          organization: item.organization || null, // Plan-Organizaciones
           profiles: additional.social_profiles || {},
           city: additional.city || '---',
           country: additional.country,
@@ -118,6 +119,37 @@ export default {
               </div>
             </woot-button>
           ),
+        },
+        // Plan-Organizaciones — su organización y si es prospecto o cliente.
+        {
+          field: 'organization',
+          key: 'organization',
+          title: this.$t('CONTACTS_PAGE.LIST.TABLE_HEADER.ORGANIZATION'),
+          align: this.isRTL ? 'right' : 'left',
+          width: 220,
+          renderBodyCell: ({ row }) => {
+            const org = row.organization;
+            if (!org) return '---';
+            const chip =
+              org.stage === 'customer'
+                ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                : 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+            return (
+              <div class="flex items-center gap-2 min-w-0">
+                <router-link
+                  to={`/app/accounts/${this.$route.params.accountId}/organizations/${org.id}`}
+                  class="overflow-hidden whitespace-nowrap text-ellipsis text-woot-500 dark:text-woot-500"
+                >
+                  {org.name}
+                </router-link>
+                <span
+                  class={`flex-shrink-0 px-2 py-0.5 text-xs font-medium rounded-full ${chip}`}
+                >
+                  {this.$t(`ORGANIZATIONS.STAGES.${org.stage}`)}
+                </span>
+              </div>
+            );
+          },
         },
         {
           field: 'email',

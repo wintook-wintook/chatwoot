@@ -1,7 +1,7 @@
 <!--
-  @tickets_cases — Configuración → Comercial: moneda por defecto y catálogo de
-  motivos (ganada, perdida, pospuesta, cancelada). Antes era una sección al
-  final de Ajustes del módulo; ahora tiene su propia entrada en el menú.
+  @tickets_cases — Configuración → Comercial: cotizaciones y moneda por defecto.
+  Antes era una sección al final de Ajustes del módulo; ahora tiene su propia
+  entrada en el menú. Los motivos de cierre están en OutcomeReasonsConfig.vue.
 -->
 <script>
 import { mapGetters } from 'vuex';

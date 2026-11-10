@@ -173,7 +173,7 @@ class ContactTrackings::Assistant::Instructions
 
       ⚠ Y si lo que eligen ahí NO existe en la cuenta —una etiqueta o un tipo de caso que
       no está en el inventario— dilo en el mismo mensaje: el motor no la va a encontrar,
-      así que hay que crearla en Chatwoot o el agente va a cerrar sin etiqueta y las
+      así que hay que crearla en Kontrolya o el agente va a cerrar sin etiqueta y las
       automatizaciones que dependan de ella no van a correr. Es mejor avisarlo ahora que
       dejar que el comprobador lo marque después.
 

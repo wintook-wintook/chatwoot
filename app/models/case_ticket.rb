@@ -82,6 +82,7 @@
 #  kb_article_id              :bigint
 #  locked_by_id               :bigint
 #  maintenance_plan_id        :bigint
+#  organization_id            :bigint
 #  outcome_reason_id          :bigint
 #  postpone_reason_id         :bigint
 #  requester_id               :bigint
@@ -110,6 +111,7 @@
 #  index_case_tickets_on_locked_by_id                 (locked_by_id)
 #  index_case_tickets_on_maintenance_plan_id          (maintenance_plan_id)
 #  index_case_tickets_on_metadata                     (metadata) USING gin
+#  index_case_tickets_on_organization_id              (organization_id)
 #  index_case_tickets_on_postponed_until              (postponed_until) WHERE (postponed_until IS NOT NULL)
 #  index_case_tickets_on_project_due_on               (project_due_on) WHERE (project_due_on IS NOT NULL)
 #  index_case_tickets_on_report_token                 (report_token) UNIQUE
@@ -124,12 +126,14 @@
 #  fk_rails_...  (customer_asset_id => customer_assets.id) ON DELETE => nullify
 #  fk_rails_...  (locked_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (maintenance_plan_id => maintenance_plans.id) ON DELETE => nullify
+#  fk_rails_...  (organization_id => organizations.id) ON DELETE => nullify
 #  fk_rails_...  (outcome_reason_id => case_outcome_reasons.id) ON DELETE => nullify
 #  fk_rails_...  (postpone_reason_id => case_outcome_reasons.id) ON DELETE => nullify
 #  fk_rails_...  (requester_id => users.id) ON DELETE => nullify
 #
 
 class CaseTicket < ApplicationRecord
+  include CasePendingTasks
   include ServiceReportable # Plan-Trabajo-Campo R1 — reporte de servicio de la orden
   include FieldPortal # Plan-Trabajo-Campo R5 — portal del cliente y técnico externo
   # @tickets_cases 2A: state machine ITIL ampliado a 13 estados.
@@ -146,9 +150,9 @@ class CaseTicket < ApplicationRecord
     'escalated'              => %w[in_progress in_diagnosis cancelled],
     'resolved'               => %w[validating closed in_progress],
     'validating'             => %w[closed in_progress cancelled],
-    # @tickets_cases — cerrado solo puede REABRIRSE (a in_progress). No se salta
-    # a resolved ni a ningún otro estado: reabrir es volver a trabajarlo.
-    'closed'                 => %w[in_progress],
+    # @tickets_cases — cerrado y cancelado no salen por transición: solo con `reopen!`
+    # (el botón Reabrir, con su motivo, o la respuesta del cliente).
+    'closed'                 => [],
     'cancelled'              => []
   }.freeze
 
@@ -179,12 +183,11 @@ class CaseTicket < ApplicationRecord
   # Plan-Clase-Proyecto P1 — datos del proyecto que se editan (el monto va en `currency`).
   PROJECT_FIELDS = %w[project_start_on project_due_on budget_hours budget_amount progress].freeze
 
-  SLA_BY_PRIORITY = {
-    'low'    => { first_response_time_target: 2880, resolution_time_target: 7200 },
-    'medium' => { first_response_time_target: 480,  resolution_time_target: 2880 },
-    'high'   => { first_response_time_target: 120,  resolution_time_target: 480  },
-    'urgent' => { first_response_time_target: 30,   resolution_time_target: 120  }
-  }.freeze
+  # Respaldo cuando ninguna política SLA aplica: los mismos valores de fábrica que se
+  # siembran en Ajustes › Políticas SLA (CaseSlaPolicy::DEFAULTS), una sola tabla.
+  SLA_BY_PRIORITY = CaseSlaPolicy::DEFAULTS.to_h do |row|
+    [row[:priority], row.slice(:first_response_time_target, :resolution_time_target)]
+  end.freeze
 
   # @tickets_cases 2D — escalation_level: 0 = N1, 1 = N2, 2 = N3.
   MAX_ESCALATION_LEVEL = 2
@@ -213,12 +216,22 @@ class CaseTicket < ApplicationRecord
 
   belongs_to :account
   belongs_to :contact,           optional: true # @tickets_cases Fase C — nil en tickets internos
+  include OrganizationLinked # Plan-Organizaciones O2
+  # Plan-Organizaciones O3 — oportunidad nueva → prospecto; ganada → cliente (si la regla está encendida).
+  after_create_commit -> { Organizations::StageRules.call(:prospect_on_opportunity, self) }, if: :commercial?
+  after_update_commit -> { Organizations::StageRules.call(:customer_on_won, self) },
+                      if: -> { saved_change_to_outcome? && outcome_won? }
   # Plan-Catalogo-Cotizaciones — cotizaciones de la oportunidad y las que salieron del caso.
   has_many :quotes, foreign_key: :opportunity_id, dependent: :nullify, inverse_of: :opportunity
   has_many :origin_quotes, class_name: 'Quote', foreign_key: :origin_ticket_id, dependent: :nullify,
                            inverse_of: :origin_ticket
   belongs_to :requester,         class_name: 'User', optional: true # @tickets_cases Fase C — agente solicitante (interno)
   belongs_to :conversation,      optional: true
+  # Plan Actividad del caso — conversaciones adicionales (p. ej. el correo); la
+  # principal sigue en conversation_id. Si cambia el contacto ya no le pertenecen.
+  has_many :extra_conversation_links, class_name: 'CaseTicketConversation', dependent: :destroy
+  has_many :extra_conversations, through: :extra_conversation_links, source: :conversation
+  after_update_commit -> { extra_conversation_links.destroy_all }, if: :saved_change_to_contact_id?
   belongs_to :contact_tracking,  optional: true
   belongs_to :assignee,          class_name: 'User', optional: true
   belongs_to :locked_by,         class_name: 'User', optional: true # @tickets_cases — bloqueo de ticket
@@ -436,7 +449,7 @@ class CaseTicket < ApplicationRecord
   # El SLA arranca de cero: reanudar el reloj viejo haría nacer el ticket
   # vencido y ensuciaría el cumplimiento del período.
   def reopen!(actor: nil, reason: nil)
-    raise 'Solo se puede reabrir un ticket cerrado' unless closed?
+    raise 'Solo se puede reabrir un ticket cerrado o cancelado' unless frozen_for_edit?
     raise 'El motivo de reapertura es obligatorio' if reason.blank?
 
     update!(
@@ -459,25 +472,33 @@ class CaseTicket < ApplicationRecord
     )
 
     # Deja el evento `reopened` (el enum ya lo reservaba desde el diseño).
-    transition!('in_progress', actor: actor, reason: reason)
+    transition!('in_progress', actor: actor, reason: reason, force: true)
   end
 
   # @tickets_cases — Un ticket cerrado o cancelado se congela: no se le cambian
   # prioridad, vencimiento, tipo ni asignación. Las notas internas SÍ se
   # permiten siempre (son bitácora, no edición) y por eso no pasan por aquí.
+  # Plan Actividad del caso — la principal primero, luego las adicionales.
+  def linked_conversations
+    [conversation, *extra_conversations.order(:created_at)].compact
+  end
+
   def frozen_for_edit?
     closed? || cancelled?
   end
 
-  # Puede reabrir el admin siempre; el asignado solo dentro de la ventana.
+  # Reabrir, cerrado o cancelado, es solo de administradores y supervisores.
   def reopenable_by?(user)
-    return false unless closed?
-    return false if user.blank?
-    return true if user.administrator?
+    return false unless frozen_for_edit?
 
-    assignee_id == user.id && within_reopen_window?
+    account_user = user && account.account_users.find_by(user_id: user.id)
+    return false if account_user.nil?
+
+    grant = Access::Grant.for(account_user)
+    grant.admin? || grant.role_key == 'supervisor'
   end
 
+  # Ventana de la reapertura automática: cuando el cliente responde (CaseTicketListener).
   def within_reopen_window?
     # Plan-Clase-Comercial F3 (hallazgo #2): una oportunidad SIEMPRE se reabre, sin
     # ventana; abrir un caso de seguimiento partiría su historial comercial en dos.
@@ -521,7 +542,7 @@ class CaseTicket < ApplicationRecord
   # (los cancelados no cuentan). Sin hijos ni hitos manda el avance a mano.
   def project_progress_summary
     children = project_children.where.not(status: :cancelled).pluck(:status, :case_type_id)
-    milestones = case_tasks.where(milestone: true).pluck(:status)
+    milestones = case_tasks.where(milestone: true).where.not(status: :cancelled).pluck(:status)
     done = children.count { |status, _| PROGRESS_DONE_STATUSES.include?(status) } + milestones.count('done')
     total = children.size + milestones.size
     {
@@ -1026,9 +1047,9 @@ class CaseTicket < ApplicationRecord
   # Moneda en mayúsculas; al crear una oportunidad, moneda de la cuenta y la
   # probabilidad de la columna donde nace.
   def assign_contact_owner
-    return if assignee_id.present? || contact&.owner_id.nil?
+    return if assignee_id.present? || contact&.effective_owner_id.nil?
 
-    self.assignee_id = contact.owner_id
+    self.assignee_id = contact.effective_owner_id
     self.assignee_type = :agent
   end
 

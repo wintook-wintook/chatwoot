@@ -28,7 +28,8 @@ export default {
       reasonId: '',
       note: '',
       reasons: [],
-      acceptedQuoteId: this.quotes.length ? this.quotes[0].id : '',
+      // Con varias, el agente elige cuál aceptó el cliente (cuenta para el presupuesto).
+      acceptedQuoteId: this.quotes.length === 1 ? this.quotes[0].id : '',
     };
   },
   computed: {
@@ -44,7 +45,11 @@ export default {
     needsNote() {
       return this.result !== 'won' && !this.reasonsForResult.length;
     },
+    needsQuote() {
+      return this.result === 'won' && this.quotes.length > 1;
+    },
     canConfirm() {
+      if (this.needsQuote && !this.acceptedQuoteId) return false;
       if (this.needsReason) return !!this.reasonId;
       if (this.needsNote) return !!this.note.trim();
       return true;
@@ -53,6 +58,10 @@ export default {
   watch: {
     result() {
       this.reasonId = '';
+    },
+    // Desde el tablero las cotizaciones llegan después (las manda el servidor).
+    quotes(list) {
+      if (list.length === 1) this.acceptedQuoteId = list[0].id;
     },
   },
   async mounted() {
@@ -129,6 +138,9 @@ export default {
         <label v-if="result === 'won' && quotes.length > 1">
           {{ $t('QUOTES.WHICH_QUOTE') }}
           <select v-model="acceptedQuoteId">
+            <option value="" disabled>
+              {{ $t('QUOTES.WHICH_QUOTE_PLACEHOLDER') }}
+            </option>
             <option v-for="q in quotes" :key="q.id" :value="q.id">
               {{ q.folio }}
             </option>

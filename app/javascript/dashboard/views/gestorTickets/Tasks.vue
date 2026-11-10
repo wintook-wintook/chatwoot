@@ -14,6 +14,14 @@ import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
 import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
 import MessageFormatter from 'shared/helpers/MessageFormatter';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
+import QuickTasksAPI from 'dashboard/api/quickTasks';
+import CancelItemModal from 'dashboard/components/cancel/CancelItemModal.vue'; // cancelar con motivo
+import ScheduleTaskModal from 'dashboard/components/convert/ScheduleTaskModal.vue'; // pasarla a la agenda
+import { useAlert } from 'dashboard/composables';
+import QuickTaskModal from './tasks/QuickTaskModal.vue';
+import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal.vue';
+import taskReportFlow from 'dashboard/mixins/taskReportFlow';
+import TaskReportsDialog from 'dashboard/views/gestorTickets/tasks/TaskReportsDialog.vue';
 import caseAiWriter from 'dashboard/mixins/caseAiWriter';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import MyDay from './tasks/MyDay.vue';
@@ -100,10 +108,28 @@ export default {
     WootDropdownMenu,
     WootDropdownItem,
     MyDay,
+    QuickTaskModal,
+    CancelItemModal,
+    ScheduleTaskModal,
+    TaskReportModal,
+    TaskReportsDialog,
   },
-  mixins: [caseAiWriter],
+  mixins: [caseAiWriter, taskReportFlow],
+  props: {
+    // Dentro de Inicio › Mi resumen (pestaña «Mi día»): fija en Mi día, sin el
+    // título, «Nueva tarea» ni las pestañas Mías / No asignadas / Todas, y sin
+    // cambiar la pestaña que Agenda › Tareas recuerda.
+    embedded: { type: Boolean, default: false },
+  },
   data() {
     return {
+      // Cancelar con motivo: la tarea a cancelar, si está guardando y el error.
+      cancelTarget: null,
+      scheduleTarget: null,
+      scheduleBusy: false,
+      scheduleError: '',
+      cancelBusy: false,
+      cancelError: '',
       // La primera vez abre en Mi día; después, en la última pestaña usada.
       quickFilter: 'my_day',
       // Un juego de filtros por pestaña (ver `filters`, que apunta al de la activa).
@@ -125,6 +151,8 @@ export default {
       },
       // Modal de edición / lectura (no hay alta: una tarea nace dentro de un ticket).
       showModal: false,
+      showQuickTask: false,
+      reportsFilter: null,
       editingTask: null,
       viewing: false,
       isSaving: false,
@@ -305,7 +333,18 @@ export default {
           renderBodyCell: ({ row }) => {
             const t = row.case_ticket;
             if (!t) {
-              return <span class="text-slate-300 dark:text-slate-600">—</span>;
+              // Plan-Agenda — tarea agendada sin caso: la fila dice de quién es.
+              return row.contact ? (
+                <button
+                  type="button"
+                  class="text-sm text-left truncate hover:underline text-slate-700 dark:text-slate-200"
+                  onClick={() => this.openContact(row)}
+                >
+                  {row.contact.name}
+                </button>
+              ) : (
+                <span class="text-slate-300 dark:text-slate-600">—</span>
+              );
             }
             return (
               <div class="min-w-0">
@@ -569,12 +608,17 @@ export default {
     this.restoreFilters();
     // «Mi resumen» → «Ver todo» abre directo en una pestaña (?tab=my_day).
     const { tab } = this.$route.query || {};
-    if (this.quickFilters.some(f => f.key === tab)) this.quickFilter = tab;
+    if (this.embedded) this.quickFilter = 'my_day';
+    else if (this.quickFilters.some(f => f.key === tab)) this.quickFilter = tab;
     if (!this.quickFilters.some(f => f.key === this.quickFilter)) {
       this.quickFilter = 'my_day';
     }
   },
+  beforeDestroy() {
+    this.$emitter.off('agendaChanged', this.fetch);
+  },
   mounted() {
+    this.$emitter.on('agendaChanged', this.fetch);
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchTypes');
     this.$store.dispatch('caseTickets/fetchAiConfig'); // F4 — ¿IA «Plan de mi día»?
@@ -622,8 +666,10 @@ export default {
           tabs[tab][key] = this.tabFilters[tab][key];
         });
       });
+      // Incrustada en Mi resumen no cambia la pestaña que recuerda Agenda › Tareas.
+      const saved = LocalStorage.get(this.prefsKey()) || {};
       LocalStorage.set(this.prefsKey(), {
-        quickFilter: this.quickFilter,
+        quickFilter: this.embedded ? saved.quickFilter : this.quickFilter,
         sortBy: this.sortBy,
         sortOrder: this.sortOrder,
         tabs,
@@ -728,16 +774,40 @@ export default {
       return st === 'closed' || st === 'cancelled';
     },
     openTicket(task) {
-      if (!task.case_ticket) return;
+      if (!task.case_ticket) {
+        this.openContact(task);
+        return;
+      }
       this.$router.push({
         name: 'gestorTickets_detail',
         params: { id: task.case_ticket.id },
       });
     },
+    // Plan-Agenda — la tarea sin caso se guarda por la captura rápida.
+    saveTask(task, data) {
+      return task.case_ticket
+        ? CaseTasksAPI.updateTask(task.case_ticket.id, task.id, data)
+        : QuickTasksAPI.update(task.id, data);
+    },
     // @tickets_cases — clic en una fila de reunión ("tarea agendada"): abre la
     // ficha del ticket directo en la pestaña Reuniones.
+    menuViewReports() {
+      const row = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (row) this.reportsFilter = { case_task_id: row.id };
+    },
+    openContact(row) {
+      if (!row.contact) return;
+      this.$router.push({
+        name: 'contact_profile_dashboard',
+        params: { contactId: row.contact.id },
+      });
+    },
     openMeetingTicket(meeting) {
-      if (!meeting.case_ticket) return;
+      if (!meeting.case_ticket) {
+        this.openContact(meeting);
+        return;
+      }
       this.$router.push({
         name: 'gestorTickets_detail',
         params: { id: meeting.case_ticket.id },
@@ -788,6 +858,66 @@ export default {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
       if (task) this.remove(task);
+    },
+    // Pasarla a la agenda: con día y hora sale de Tareas (o sesión ligada si no se puede).
+    menuSchedule() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (!task) return;
+      this.scheduleError = '';
+      this.scheduleTarget = task;
+    },
+    async submitSchedule(data) {
+      const task = this.scheduleTarget;
+      this.scheduleBusy = true;
+      this.scheduleError = '';
+      try {
+        const { data: res } = task.case_ticket
+          ? await CaseTasksAPI.schedule(task.case_ticket.id, task.id, data)
+          : await QuickTasksAPI.schedule(task.id, data);
+        this.scheduleTarget = null;
+        this.fetch();
+        useAlert(
+          this.$t(
+            res.mode === 'linked'
+              ? 'CONVERT_ITEM.LINKED'
+              : 'CONVERT_ITEM.SCHEDULED',
+            { title: res.meeting.title }
+          )
+        );
+      } catch (e) {
+        this.scheduleError = e.response?.data?.error || '';
+      } finally {
+        this.scheduleBusy = false;
+      }
+    },
+    // Cancelar (ya no se va a hacer): con motivo y tiempo si ya se trabajó.
+    menuCancelTask() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) this.openCancel(task);
+    },
+    openCancel(task) {
+      this.cancelError = '';
+      this.cancelTarget = task;
+    },
+    async submitCancel(reason) {
+      const task = this.cancelTarget;
+      this.cancelBusy = true;
+      this.cancelError = '';
+      try {
+        if (task.case_ticket) {
+          await CaseTasksAPI.cancelTask(task.case_ticket.id, task.id, reason);
+        } else {
+          await QuickTasksAPI.cancel(task.id, reason);
+        }
+        this.cancelTarget = null;
+        this.fetch();
+      } catch (e) {
+        this.cancelError = e.response?.data?.error || '';
+      } finally {
+        this.cancelBusy = false;
+      }
     },
     // @tickets_cases — abre el ticket en la pestaña Notas filtrada por la tarea.
     // Con 0 notas no navega: solo avisa (no hay nada que ver todavía).
@@ -843,6 +973,9 @@ export default {
       return task.requester ? task.requester.name : '';
     },
     statusLabel(status) {
+      if (status === 'cancelled') {
+        return this.$t('CASE_TICKETS.TASKS.STATUS.CANCELLED');
+      }
       return status === 'done'
         ? this.$t('CASE_TICKETS.TASKS.STATUS.DONE')
         : this.$t('CASE_TICKETS.TASKS.STATUS.PENDING');
@@ -871,7 +1004,7 @@ export default {
 
       return row.item_type === 'meeting'
         ? row.status === 'scheduled'
-        : row.status !== 'done';
+        : row.status === 'pending';
     },
     // Color del folio del ticket por SLA (verde a tiempo, ámbar en riesgo, rojo vencido).
     slaTextColor(sla) {
@@ -940,13 +1073,21 @@ export default {
     },
     // Completa la tarea desde la fila, sin abrir el modal. La firma (fecha +
     // quién) la deriva el backend del cambio de estado.
-    async complete(task) {
-      if (this.completingId || !task.case_ticket) return;
+    complete(task) {
+      if (this.completingId) return;
+      // La lista de verificación de una orden cierra con su reporte de servicio.
+      if (task.report_required === false) {
+        this.finishComplete(task);
+        return;
+      }
+      this.askReport({ type: 'task', id: task.id, title: task.title }, () =>
+        this.finishComplete(task)
+      );
+    },
+    async finishComplete(task) {
       this.completingId = task.id;
       try {
-        await CaseTasksAPI.updateTask(task.case_ticket.id, task.id, {
-          status: 'done',
-        });
+        await this.saveTask(task, { status: 'done' });
         this.$emitter.emit('caseToastMessage', {
           message: this.$t('CASE_TICKETS.TASKS.TOAST_COMPLETED', {
             task: task.title,
@@ -962,9 +1103,18 @@ export default {
         this.completingId = null;
       }
     },
-    async submitForm() {
+    async submitForm(reported = false) {
       const title = this.form.title.trim();
       if (!title || this.isSaving || !this.editingTask) return;
+      // Concluirla desde el formulario también pide el reporte.
+      const { status, id, report_required: required } = this.editingTask;
+      const concludes = this.form.status === 'done' && status !== 'done';
+      if (concludes && required !== false && !reported) {
+        this.askReport({ type: 'task', id, title }, () =>
+          this.submitForm(true)
+        );
+        return;
+      }
       const payload = {
         title,
         description: this.form.description.trim(),
@@ -981,11 +1131,7 @@ export default {
       }
       this.isSaving = true;
       try {
-        await CaseTasksAPI.updateTask(
-          this.editingTask.case_ticket.id,
-          this.editingTask.id,
-          payload
-        );
+        await this.saveTask(this.editingTask, payload);
         this.showModal = false;
         this.fetch();
       } catch (e) {
@@ -1007,10 +1153,14 @@ export default {
     },
     async confirmRemove() {
       const task = this.pendingDelete;
-      if (!task || !task.case_ticket) return;
+      if (!task) return;
       this.showDeleteConfirm = false;
       try {
-        await CaseTasksAPI.deleteTask(task.case_ticket.id, task.id);
+        if (task.case_ticket) {
+          await CaseTasksAPI.deleteTask(task.case_ticket.id, task.id);
+        } else {
+          await QuickTasksAPI.delete(task.id);
+        }
         this.$emitter.emit('caseToastMessage', {
           message: this.$t('CASE_TICKETS.TASKS.TOAST_DELETED', {
             task: task.title,
@@ -1020,9 +1170,15 @@ export default {
         });
         this.fetch();
       } catch (e) {
-        this.$emitter.emit('newToastMessage', {
-          message: this.$t('CASE_TICKETS.TASKS.INBOX.DELETE_ERROR'),
-        });
+        // Ya no se puede borrar (no la creó, o pasaron 24 h): se cancela con su motivo.
+        if (e.response?.data?.cancel_instead) {
+          useAlert(this.$t('CANCEL_ITEM.DELETE_RESTRICTED'));
+          if (task.status === 'pending') this.openCancel(task);
+        } else {
+          this.$emitter.emit('newToastMessage', {
+            message: this.$t('CASE_TICKETS.TASKS.INBOX.DELETE_ERROR'),
+          });
+        }
       } finally {
         this.pendingDelete = null;
       }
@@ -1081,11 +1237,8 @@ export default {
     // «Posponer a mañana»: la programa para mañana (sale sola del orden de hoy).
     // El vencimiento NO se toca: es el compromiso, no la planeación.
     async postpone(task) {
-      if (!task.case_ticket) return;
       try {
-        await CaseTasksAPI.updateTask(task.case_ticket.id, task.id, {
-          planned_on: addDays(localDay(), 1),
-        });
+        await this.saveTask(task, { planned_on: addDays(localDay(), 1) });
         this.$emitter.emit('caseToastMessage', {
           message: this.$t('CASE_TICKETS.TASKS.MY_DAY.POSTPONED', {
             task: task.title,
@@ -1119,11 +1272,30 @@ export default {
     <div
       class="flex flex-col flex-shrink-0 gap-3 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
-      <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
-        {{ $t('CASE_TICKETS.TASKS.INBOX.TITLE') }}
-      </h1>
+      <div v-if="!embedded" class="flex items-center justify-between gap-2">
+        <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
+          {{ $t('CASE_TICKETS.TASKS.INBOX.TITLE') }}
+        </h1>
+        <woot-button size="small" icon="add" @click="showQuickTask = true">
+          {{ $t('QUICK_ACTIONS.TASK.TITLE') }}
+        </woot-button>
+      </div>
+      <QuickTaskModal :show="showQuickTask" @close="showQuickTask = false" />
+      <TaskReportModal
+        :item="reportItem"
+        @close="cancelReport"
+        @reported="onReported"
+      />
+      <TaskReportsDialog
+        :filters="reportsFilter"
+        @close="reportsFilter = null"
+      />
 
-      <woot-tabs :index="activeQuickTabIndex" @change="onQuickTabChange">
+      <woot-tabs
+        v-if="!embedded"
+        :index="activeQuickTabIndex"
+        @change="onQuickTabChange"
+      >
         <woot-tabs-item
           v-for="(f, i) in quickFilters"
           :key="f.key"
@@ -1360,7 +1532,7 @@ export default {
 
         <form
           class="flex flex-col self-stretch w-full gap-3 pb-8"
-          @submit.prevent="submitForm"
+          @submit.prevent="submitForm()"
         >
           <label class="block mb-3">
             <span class="text-sm text-slate-700 dark:text-slate-200">{{
@@ -1563,6 +1735,9 @@ export default {
                 <option value="done">
                   {{ $t('CASE_TICKETS.TASKS.STATUS.DONE') }}
                 </option>
+                <option v-if="form.status === 'cancelled'" value="cancelled">
+                  {{ $t('CASE_TICKETS.TASKS.STATUS.CANCELLED') }}
+                </option>
               </select>
             </label>
           </div>
@@ -1628,6 +1803,17 @@ export default {
             }}
           </woot-button>
         </WootDropdownItem>
+        <WootDropdownItem v-if="rowMenu.row.status === 'done'">
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="clipboard"
+            @click="menuViewReports"
+          >
+            {{ $t('TASK_REPORT.VIEW') }}
+          </woot-button>
+        </WootDropdownItem>
         <WootDropdownItem>
           <woot-button
             variant="clear"
@@ -1637,6 +1823,32 @@ export default {
             @click="menuAddNote"
           >
             {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
+          </woot-button>
+        </WootDropdownItem>
+        <WootDropdownItem
+          v-if="rowMenu && rowMenu.row && rowMenu.row.status === 'pending'"
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="calendar"
+            @click="menuSchedule"
+          >
+            {{ $t('CONVERT_ITEM.SCHEDULE') }}
+          </woot-button>
+        </WootDropdownItem>
+        <WootDropdownItem
+          v-if="rowMenu && rowMenu.row && rowMenu.row.status === 'pending'"
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="dismiss-circle"
+            @click="menuCancelTask"
+          >
+            {{ $t('CANCEL_ITEM.MENU') }}
           </woot-button>
         </WootDropdownItem>
         <WootDropdownItem>
@@ -1652,6 +1864,23 @@ export default {
         </WootDropdownItem>
       </WootDropdownMenu>
     </div>
+    <CancelItemModal
+      :show="!!cancelTarget"
+      :item="cancelTarget"
+      kind="task"
+      :busy="cancelBusy"
+      :error="cancelError"
+      @close="cancelTarget = null"
+      @submit="submitCancel"
+    />
+    <ScheduleTaskModal
+      :show="!!scheduleTarget"
+      :task="scheduleTarget"
+      :busy="scheduleBusy"
+      :error="scheduleError"
+      @close="scheduleTarget = null"
+      @submit="submitSchedule"
+    />
   </div>
 </template>
 

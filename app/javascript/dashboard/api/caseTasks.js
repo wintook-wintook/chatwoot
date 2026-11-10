@@ -1,6 +1,7 @@
 /* global axios */
 // @tickets_cases — Tareas/subtareas de un ticket
 import ApiClient from './ApiClient';
+import { browserZone } from './fieldVisits';
 
 class CaseTasksAPI extends ApiClient {
   constructor() {
@@ -16,7 +17,7 @@ class CaseTasksAPI extends ApiClient {
   // item_type: '' (fusiona tareas + reuniones agendadas) | 'task' | 'meeting'
   getMine(filters = {}) {
     const base = this.url.replace(/case_tickets$/, 'case_tasks');
-    return axios.get(base, { params: filters });
+    return axios.get(base, { params: { tz: browserZone(), ...filters } });
   }
 
   // Plan-Bandeja-Prioridad F2 — orden propio de «Mi día» (reemplaza el plan del
@@ -32,8 +33,12 @@ class CaseTasksAPI extends ApiClient {
     return axios.post(`${base}/my_day_ai`, { day, tz });
   }
 
-  createTask(ticketId, data) {
-    return axios.post(`${this.url}/${ticketId}/tasks`, { case_task: data });
+  // `notifyClient`: tarea del cliente — avisarle con el enlace de su portal.
+  createTask(ticketId, data, { notifyClient = false } = {}) {
+    return axios.post(`${this.url}/${ticketId}/tasks`, {
+      case_task: data,
+      notify_client: notifyClient,
+    });
   }
 
   // `flags` viaja FUERA de `case_task`: son acciones del momento (cancelar las
@@ -47,6 +52,34 @@ class CaseTasksAPI extends ApiClient {
 
   deleteTask(ticketId, id) {
     return axios.delete(`${this.url}/${ticketId}/tasks/${id}`);
+  }
+
+  // Cancelar con motivo: { reason_id, comment, minutes }.
+  // Pasarla a la agenda (o una sesión ligada con keep_task): { starts_at, ends_at, … }.
+  schedule(ticketId, id, data) {
+    return axios.post(`${this.url}/${ticketId}/tasks/${id}/schedule`, data);
+  }
+
+  cancelTask(ticketId, id, reason) {
+    return axios.post(`${this.url}/${ticketId}/tasks/${id}/cancel`, reason);
+  }
+
+  // Tareas con el cliente — lo que pasó en su portal; responderle o regresarla.
+  clientEntries(ticketId, id) {
+    return axios.get(`${this.url}/${ticketId}/tasks/${id}/client_entries`);
+  }
+
+  replyClient(ticketId, id, content) {
+    return axios.post(`${this.url}/${ticketId}/tasks/${id}/client_entries`, {
+      content,
+    });
+  }
+
+  returnToClient(ticketId, id, reason) {
+    return axios.post(
+      `${this.url}/${ticketId}/tasks/${id}/client_entries/return`,
+      { reason }
+    );
   }
 }
 

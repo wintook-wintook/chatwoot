@@ -1,6 +1,10 @@
 <script>
-// TODO: Remove this when we support all formats
-const formatsToRemove = ['DOCUMENT', 'IMAGE', 'VIDEO'];
+// feat/plantillas_whatsapp_mejoras F2: las plantillas con imagen, video o documento se
+// pueden mandar en WhatsApp Cloud (F1). En 360dialog y UnoAPI el envío sigue siendo solo
+// el cuerpo, así que ahí se ocultan las que piden algo más (archivo, variable en el
+// encabezado, liga con {{1}} o copiar código): Meta las rechazaría. Misma regla que los
+// programados.
+import { describeTemplate } from './templateForm';
 
 export default {
   props: {
@@ -15,15 +19,17 @@ export default {
     };
   },
   computed: {
+    isCloud() {
+      const inbox = this.$store.getters['inboxes/getInbox'](this.inboxId);
+      return Boolean(inbox && inbox.provider === 'whatsapp_cloud');
+    },
     whatsAppTemplateMessages() {
-      // TODO: Remove the last filter when we support all formats
       return this.$store.getters['inboxes/getWhatsAppTemplates'](this.inboxId)
         .filter(template => template.status.toLowerCase() === 'approved')
-        .filter(template => {
-          return template.components.every(component => {
-            return !formatsToRemove.includes(component.format);
-          });
-        });
+        .filter(
+          template =>
+            this.isCloud || !describeTemplate(template).needsComponents
+        );
     },
     filteredTemplateMessages() {
       return this.whatsAppTemplateMessages.filter(template =>
@@ -35,6 +41,20 @@ export default {
     getTemplatebody(template) {
       return template.components.find(component => component.type === 'BODY')
         .text;
+    },
+    // Qué lleva además del cuerpo: el encabezado (texto o tipo de archivo) y los botones.
+    headerOf(template) {
+      const info = describeTemplate(template);
+      if (info.media)
+        return this.$t(
+          `WHATSAPP_TEMPLATES.PARSER.MEDIA_${info.media.toUpperCase()}`
+        );
+      return info.headerText;
+    },
+    buttonsOf(template) {
+      return describeTemplate(template)
+        .buttons.map(b => b.text)
+        .filter(Boolean);
     },
   },
 };
@@ -69,11 +89,23 @@ export default {
                 {{ template.language }}
               </span>
             </div>
+            <div v-if="headerOf(template)" class="mb-2">
+              <p class="strong">
+                {{ $t('WHATSAPP_TEMPLATES.PICKER.LABELS.HEADER') }}
+              </p>
+              <p class="label-body">{{ headerOf(template) }}</p>
+            </div>
             <div>
               <p class="strong">
                 {{ $t('WHATSAPP_TEMPLATES.PICKER.LABELS.TEMPLATE_BODY') }}
               </p>
               <p class="label-body">{{ getTemplatebody(template) }}</p>
+            </div>
+            <div v-if="buttonsOf(template).length" class="mt-2">
+              <p class="strong">
+                {{ $t('WHATSAPP_TEMPLATES.PICKER.LABELS.BUTTONS') }}
+              </p>
+              <p class="label-body">{{ buttonsOf(template).join(' · ') }}</p>
             </div>
             <div class="label-category">
               <p class="strong">

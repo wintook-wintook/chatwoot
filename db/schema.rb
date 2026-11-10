@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_10_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -144,6 +144,39 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.index ["tracking_template_id"], name: "index_ai_agent_attachments_on_tracking_template_id"
   end
 
+  create_table "ai_follow_ups", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "contact_id"
+    t.bigint "case_ticket_id"
+    t.bigint "created_by_id"
+    t.text "objective", null: false
+    t.text "instructions"
+    t.string "status", default: "active", null: false
+    t.datetime "next_run_at"
+    t.integer "max_attempts", default: 3, null: false
+    t.integer "attempts", default: 0, null: false
+    t.integer "interval_value", default: 1, null: false
+    t.string "interval_unit", default: "days", null: false
+    t.string "on_finish", default: "notify", null: false
+    t.string "time_zone"
+    t.text "outcome"
+    t.text "last_error"
+    t.jsonb "log", default: [], null: false
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "template_name"
+    t.string "template_language"
+    t.index ["account_id"], name: "index_ai_follow_ups_on_account_id"
+    t.index ["case_ticket_id"], name: "index_ai_follow_ups_on_case_ticket_id"
+    t.index ["contact_id"], name: "index_ai_follow_ups_on_contact_id"
+    t.index ["conversation_id"], name: "index_ai_follow_ups_live_per_conversation", unique: true, where: "((status)::text = ANY ((ARRAY['active'::character varying, 'paused'::character varying])::text[]))"
+    t.index ["conversation_id"], name: "index_ai_follow_ups_on_conversation_id"
+    t.index ["created_by_id"], name: "index_ai_follow_ups_on_created_by_id"
+    t.index ["status", "next_run_at"], name: "index_ai_follow_ups_on_status_and_next_run_at"
+  end
+
   create_table "applied_slas", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "sla_policy_id", null: false
@@ -178,6 +211,39 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.index ["associated_article_id"], name: "index_articles_on_associated_article_id"
     t.index ["author_id"], name: "index_articles_on_author_id"
     t.index ["slug"], name: "index_articles_on_slug", unique: true
+  end
+
+  create_table "assistant_guide_gaps", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.text "question", null: false
+    t.string "normalized", null: false
+    t.text "answer"
+    t.string "page"
+    t.string "guide_key"
+    t.string "reason", null: false
+    t.string "status", default: "pending", null: false
+    t.integer "occurrences", default: 1, null: false
+    t.string "resolution_note"
+    t.datetime "last_asked_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "normalized", "reason", "status"], name: "index_assistant_guide_gaps_dedupe"
+    t.index ["account_id"], name: "index_assistant_guide_gaps_on_account_id"
+    t.index ["status", "last_asked_at"], name: "index_assistant_guide_gaps_on_status_and_last_asked_at"
+    t.index ["user_id"], name: "index_assistant_guide_gaps_on_user_id"
+  end
+
+  create_table "assistant_threads", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.jsonb "messages", default: [], null: false
+    t.boolean "archived", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id", "archived"], name: "index_assistant_threads_on_account_id_and_user_id_and_archived"
+    t.index ["account_id"], name: "index_assistant_threads_on_account_id"
+    t.index ["user_id"], name: "index_assistant_threads_on_user_id"
   end
 
   create_table "attachments", id: :serial, force: :cascade do |t|
@@ -280,6 +346,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.index ["scheduled_at"], name: "index_campaigns_on_scheduled_at"
   end
 
+  create_table "canned_response_categories", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.string "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_canned_categories_on_account_and_lower_name", unique: true
+    t.index ["account_id"], name: "index_canned_response_categories_on_account_id"
+  end
+
   create_table "canned_responses", id: :serial, force: :cascade do |t|
     t.integer "account_id", null: false
     t.string "short_code"
@@ -293,6 +369,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.boolean "menu", default: false, null: false
     t.bigint "opcion", default: 0, null: false
     t.boolean "content_is_prompt", default: false, null: false
+    t.string "embedding_status"
+    t.string "embedding_error"
+    t.datetime "embedded_at"
+    t.bigint "category_id"
+    t.index ["category_id"], name: "index_canned_responses_on_category_id"
   end
 
   create_table "case_ai_configs", force: :cascade do |t|
@@ -387,7 +468,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
 
   create_table "case_meetings", force: :cascade do |t|
     t.bigint "account_id", null: false
-    t.bigint "case_ticket_id", null: false
+    t.bigint "case_ticket_id"
     t.bigint "case_task_id"
     t.bigint "case_meeting_series_id"
     t.bigint "organizer_id"
@@ -411,15 +492,25 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.datetime "reconciled_at"
     t.datetime "cancelled_at"
     t.datetime "held_at"
-    t.boolean "tentative", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "tentative", default: false, null: false
+    t.bigint "contact_id"
+    t.bigint "organization_id"
+    t.boolean "is_visit", default: false, null: false
+    t.datetime "on_my_way_at"
+    t.datetime "arrived_at"
+    t.jsonb "arrival_location", default: {}, null: false
+    t.string "cancel_reason"
     t.index ["account_id", "starts_at"], name: "index_case_meetings_on_account_id_and_starts_at"
+    t.index ["account_id", "starts_at"], name: "index_case_meetings_on_visits", where: "is_visit"
     t.index ["case_meeting_series_id"], name: "index_case_meetings_on_series_id"
     t.index ["case_task_id"], name: "index_case_meetings_on_case_task_id"
     t.index ["case_ticket_id", "sequence"], name: "index_case_meetings_on_case_ticket_id_and_sequence"
     t.index ["case_ticket_id", "starts_at"], name: "index_case_meetings_on_case_ticket_id_and_starts_at"
+    t.index ["contact_id"], name: "index_case_meetings_on_contact_id"
     t.index ["google_event_id"], name: "index_case_meetings_on_google_event_id"
+    t.index ["organization_id"], name: "index_case_meetings_on_organization_id"
   end
 
   create_table "case_outcome_reasons", force: :cascade do |t|
@@ -491,6 +582,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.bigint "business_summary_user_ids", default: [], null: false, array: true
     t.boolean "quotes_require_opportunity", default: false, null: false
     t.decimal "default_tax_percent", precision: 5, scale: 2, default: "0.0", null: false
+    t.jsonb "organization_rules", default: {"customer_on_won"=>true, "customer_on_contract"=>true, "prospect_on_quote_sent"=>false, "prospect_on_opportunity"=>true, "customer_on_quote_accepted"=>false}, null: false
     t.index ["account_id"], name: "index_case_settings_on_account_id", unique: true
   end
 
@@ -509,9 +601,26 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.index ["account_id", "priority"], name: "index_case_sla_policies_on_account_id_and_priority"
   end
 
+  create_table "case_task_client_entries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_task_id", null: false
+    t.bigint "case_ticket_id", null: false
+    t.bigint "contact_id"
+    t.bigint "user_id"
+    t.string "kind", null: false
+    t.text "content"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_task_client_entries_on_account_id"
+    t.index ["case_task_id"], name: "index_case_task_client_entries_on_case_task_id"
+    t.index ["case_ticket_id"], name: "index_case_task_client_entries_on_case_ticket_id"
+    t.index ["contact_id"], name: "index_case_task_client_entries_on_contact_id"
+    t.index ["user_id"], name: "index_case_task_client_entries_on_user_id"
+  end
+
   create_table "case_tasks", force: :cascade do |t|
     t.bigint "account_id", null: false
-    t.bigint "case_ticket_id", null: false
+    t.bigint "case_ticket_id"
     t.bigint "assignee_id"
     t.string "title", null: false
     t.integer "status", default: 0, null: false
@@ -535,16 +644,41 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.boolean "required", default: false, null: false
     t.bigint "team_id"
     t.bigint "documentation_for_column_id"
+    t.bigint "contact_id"
+    t.bigint "organization_id"
+    t.datetime "cancelled_at"
+    t.string "cancel_reason"
+    t.integer "audience", default: 0, null: false
+    t.boolean "requires_file", default: false, null: false
+    t.string "client_status"
+    t.bigint "completed_by_contact_id"
     t.index ["account_id", "priority"], name: "index_case_tasks_on_account_id_and_priority"
     t.index ["account_id"], name: "index_case_tasks_on_account_id"
     t.index ["assignee_id", "planned_on"], name: "index_case_tasks_on_assignee_id_and_planned_on"
     t.index ["assignee_id"], name: "index_case_tasks_on_assignee_id"
+    t.index ["case_ticket_id", "audience"], name: "index_case_tasks_on_case_ticket_id_and_audience"
     t.index ["case_ticket_id", "case_type_column_task_id"], name: "index_case_tasks_on_ticket_and_template"
     t.index ["case_ticket_id", "position"], name: "index_case_tasks_on_case_ticket_id_and_position"
     t.index ["case_ticket_id", "sequence"], name: "index_case_tasks_on_case_ticket_id_and_sequence"
     t.index ["case_ticket_id"], name: "index_case_tasks_on_case_ticket_id"
     t.index ["completed_by_id"], name: "index_case_tasks_on_completed_by_id"
+    t.index ["contact_id"], name: "index_case_tasks_on_contact_id"
+    t.index ["organization_id"], name: "index_case_tasks_on_organization_id"
     t.index ["requester_id"], name: "index_case_tasks_on_requester_id"
+  end
+
+  create_table "case_ticket_conversations", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_ticket_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "linked_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_ticket_conversations_on_account_id"
+    t.index ["case_ticket_id", "conversation_id"], name: "idx_case_ticket_conversations_unique", unique: true
+    t.index ["case_ticket_id"], name: "index_case_ticket_conversations_on_case_ticket_id"
+    t.index ["conversation_id"], name: "index_case_ticket_conversations_on_conversation_id"
+    t.index ["linked_by_id"], name: "index_case_ticket_conversations_on_linked_by_id"
   end
 
   create_table "case_ticket_relations", force: :cascade do |t|
@@ -641,6 +775,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.jsonb "external_technician", default: {}, null: false
     t.string "external_token"
     t.datetime "external_token_expires_at"
+    t.bigint "organization_id"
     t.index ["account_id", "case_type_id"], name: "index_case_tickets_on_account_id_and_case_type_id"
     t.index ["account_id", "committed_at"], name: "index_case_tickets_on_account_committed", where: "(committed_at IS NOT NULL)"
     t.index ["account_id", "contact_id"], name: "index_case_tickets_on_account_id_and_contact_id"
@@ -656,16 +791,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.index ["contact_id"], name: "index_case_tickets_on_contact_id"
     t.index ["contact_tracking_id"], name: "index_case_tickets_on_contact_tracking_id"
     t.index ["conversation_id"], name: "index_case_tickets_on_conversation_id"
+    t.index ["customer_asset_id"], name: "index_case_tickets_on_customer_asset_id"
+    t.index ["external_token"], name: "index_case_tickets_on_external_token", unique: true
     t.index ["kb_article_id"], name: "index_case_tickets_on_kb_article_id"
     t.index ["locked_by_id"], name: "index_case_tickets_on_locked_by_id"
+    t.index ["maintenance_plan_id"], name: "index_case_tickets_on_maintenance_plan_id"
     t.index ["metadata"], name: "index_case_tickets_on_metadata", using: :gin
+    t.index ["organization_id"], name: "index_case_tickets_on_organization_id"
     t.index ["postponed_until"], name: "index_case_tickets_on_postponed_until", where: "(postponed_until IS NOT NULL)"
     t.index ["project_due_on"], name: "index_case_tickets_on_project_due_on", where: "(project_due_on IS NOT NULL)"
-    t.index ["requester_id"], name: "index_case_tickets_on_requester_id"
     t.index ["report_token"], name: "index_case_tickets_on_report_token", unique: true
-    t.index ["customer_asset_id"], name: "index_case_tickets_on_customer_asset_id"
-    t.index ["maintenance_plan_id"], name: "index_case_tickets_on_maintenance_plan_id"
-    t.index ["external_token"], name: "index_case_tickets_on_external_token", unique: true
+    t.index ["requester_id"], name: "index_case_tickets_on_requester_id"
   end
 
   create_table "case_time_entries", force: :cascade do |t|
@@ -680,8 +816,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "location", default: {}, null: false
+    t.bigint "task_report_id"
     t.index ["account_id"], name: "index_case_time_entries_on_account_id"
     t.index ["case_ticket_id"], name: "index_case_time_entries_on_case_ticket_id"
+    t.index ["task_report_id"], name: "index_case_time_entries_on_task_report_id"
     t.index ["user_id"], name: "index_case_time_entries_on_user_id"
   end
 
@@ -996,6 +1134,22 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.index ["phone_number"], name: "index_channel_whatsapp_on_phone_number", unique: true
   end
 
+  create_table "client_portal_links", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "organization_id"
+    t.bigint "contact_id"
+    t.string "token", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "last_used_at"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_client_portal_links_on_account_id"
+    t.index ["contact_id"], name: "index_client_portal_links_on_contact_id"
+    t.index ["organization_id"], name: "index_client_portal_links_on_organization_id"
+    t.index ["token"], name: "index_client_portal_links_on_token", unique: true
+  end
+
   create_table "command_sessions", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "user_id", null: false
@@ -1041,9 +1195,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.bigint "inbox_id", null: false
     t.bigint "account_id", null: false
     t.string "objective", null: false
-    t.datetime "prospect_classified_at"
-    t.string "prospect_exit"
-    t.string "prospect_stage"
     t.datetime "scheduled_for", null: false
     t.integer "max_attempts", default: 3, null: false
     t.integer "attempt_count", default: 0, null: false
@@ -1065,8 +1216,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.datetime "updated_at", null: false
     t.jsonb "keyword_actions", default: [], null: false
     t.jsonb "calendar_integration_ids", default: [], null: false
-    t.integer "calendar_event_duration", default: 30
     t.integer "tracking_template_id"
+    t.integer "calendar_event_duration", default: 30
     t.datetime "appointment_at"
     t.string "last_intent"
     t.string "outcome"
@@ -1080,6 +1231,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.datetime "booked_at"
     t.boolean "paused_by_campaign", default: false, null: false
     t.datetime "dispatched_at"
+    t.string "prospect_stage"
+    t.string "prospect_exit"
+    t.datetime "prospect_classified_at"
     t.datetime "handed_off_at"
     t.datetime "handoff_due_at"
     t.datetime "handoff_escalate_at"
@@ -1093,13 +1247,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.jsonb "prospect_signals", default: [], null: false
     t.string "prospect_decision_maker"
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
-    t.index ["dispatched_at"], name: "index_contact_trackings_dispatched", where: "((status)::text = 'active'::text)"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
     t.index ["appointment_at"], name: "index_contact_trackings_on_appointment_at"
     t.index ["contact_id", "inbox_id", "status"], name: "index_unique_active_tracking_per_contact_inbox", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))"
     t.index ["contact_id"], name: "index_contact_trackings_on_contact_id"
     t.index ["conversation_id", "inbox_id"], name: "index_contact_trackings_on_conversation_id_and_inbox_id"
     t.index ["conversation_id"], name: "index_contact_trackings_on_conversation_id"
+    t.index ["dispatched_at"], name: "index_contact_trackings_dispatched", where: "((status)::text = 'active'::text)"
     t.index ["handed_off_at"], name: "index_contact_trackings_on_pending_handoff", where: "((handed_off_at IS NOT NULL) AND (handoff_attended_at IS NULL))"
     t.index ["inbox_id"], name: "index_contact_trackings_on_inbox_id"
     t.index ["last_intent"], name: "index_contact_trackings_on_last_intent"
@@ -1115,10 +1269,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
   create_table "contacts", id: :serial, force: :cascade do |t|
     t.string "name", default: ""
     t.string "email"
-    t.datetime "opted_out_at"
-    t.string "opted_out_source"
-    t.datetime "email_bounced_at"
-    t.string "email_bounce_reason"
     t.string "phone_number"
     t.integer "account_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -1134,6 +1284,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.string "country_code", default: ""
     t.boolean "blocked", default: false, null: false
     t.bigint "owner_id"
+    t.datetime "opted_out_at"
+    t.string "opted_out_source"
+    t.datetime "email_bounced_at"
+    t.string "email_bounce_reason"
+    t.bigint "organization_id"
     t.index "lower((email)::text), account_id", name: "index_contacts_on_lower_email_account_id"
     t.index ["account_id", "email", "phone_number", "identifier"], name: "index_contacts_on_nonempty_fields", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
     t.index ["account_id", "last_activity_at"], name: "index_contacts_on_account_id_and_last_activity_at", order: { last_activity_at: "DESC NULLS LAST" }
@@ -1143,6 +1298,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.index ["email", "account_id"], name: "uniq_email_per_account_contact", unique: true
     t.index ["identifier", "account_id"], name: "uniq_identifier_per_account_contact", unique: true
     t.index ["name", "email", "phone_number", "identifier"], name: "index_contacts_on_name_email_phone_number_identifier", opclass: :gin_trgm_ops, using: :gin
+    t.index ["organization_id"], name: "index_contacts_on_organization_id"
     t.index ["owner_id"], name: "index_contacts_on_owner_id"
     t.index ["phone_number", "account_id"], name: "index_contacts_on_phone_number_and_account_id"
   end
@@ -1190,6 +1346,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "price_from_catalog", default: false, null: false
+    t.bigint "organization_id"
     t.index ["account_id", "ends_on"], name: "index_contracts_on_account_id_and_ends_on"
     t.index ["account_id", "status", "next_charge_on"], name: "index_contracts_on_account_id_and_status_and_next_charge_on"
     t.index ["account_id"], name: "index_contracts_on_account_id"
@@ -1198,6 +1356,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.index ["contact_id"], name: "index_contracts_on_contact_id"
     t.index ["contract_type_id"], name: "index_contracts_on_contract_type_id"
     t.index ["customer_asset_id"], name: "index_contracts_on_customer_asset_id"
+    t.index ["organization_id"], name: "index_contracts_on_organization_id"
   end
 
   create_table "conversation_participants", force: :cascade do |t|
@@ -1646,8 +1805,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "organization_id"
     t.index ["account_id"], name: "index_customer_assets_on_account_id"
     t.index ["contact_id"], name: "index_customer_assets_on_contact_id"
+    t.index ["organization_id"], name: "index_customer_assets_on_organization_id"
   end
 
   create_table "dashboard_apps", force: :cascade do |t|
@@ -1699,6 +1860,64 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_erp_collection_bots_on_account_id"
+  end
+
+  create_table "event_attendees", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "event_id", null: false
+    t.bigint "contact_id", null: false
+    t.integer "status", default: 0, null: false
+    t.string "source", default: "manual", null: false
+    t.datetime "invited_at"
+    t.datetime "confirmed_at"
+    t.datetime "attended_at"
+    t.datetime "cancelled_at"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "index_event_attendees_on_account_id_and_status"
+    t.index ["account_id"], name: "index_event_attendees_on_account_id"
+    t.index ["contact_id"], name: "index_event_attendees_on_contact_id"
+    t.index ["event_id", "contact_id"], name: "index_event_attendees_on_event_id_and_contact_id", unique: true
+    t.index ["event_id"], name: "index_event_attendees_on_event_id"
+    t.index ["updated_by_id"], name: "index_event_attendees_on_updated_by_id"
+  end
+
+  create_table "event_capture_links", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "event_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "user_id"
+    t.string "code", null: false
+    t.text "message", null: false
+    t.integer "captures_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_event_capture_links_on_account_id"
+    t.index ["code"], name: "index_event_capture_links_on_code", unique: true
+    t.index ["event_id"], name: "index_event_capture_links_on_event_id"
+    t.index ["inbox_id"], name: "index_event_capture_links_on_inbox_id"
+    t.index ["user_id"], name: "index_event_capture_links_on_user_id"
+  end
+
+  create_table "events", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.integer "kind", default: 0, null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "starts_at", null: false
+    t.datetime "ends_at"
+    t.string "location"
+    t.string "meeting_url"
+    t.integer "capacity"
+    t.text "description"
+    t.bigint "owner_id"
+    t.datetime "closed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "starts_at"], name: "index_events_on_account_id_and_starts_at"
+    t.index ["account_id"], name: "index_events_on_account_id"
+    t.index ["owner_id"], name: "index_events_on_owner_id"
   end
 
   create_table "external_db_connections", force: :cascade do |t|
@@ -1940,12 +2159,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "organization_id"
     t.index ["account_id"], name: "index_maintenance_plans_on_account_id"
     t.index ["active", "next_due_on"], name: "index_maintenance_plans_on_active_and_next_due_on"
     t.index ["assignee_id"], name: "index_maintenance_plans_on_assignee_id"
     t.index ["case_type_id"], name: "index_maintenance_plans_on_case_type_id"
     t.index ["contact_id"], name: "index_maintenance_plans_on_contact_id"
     t.index ["customer_asset_id"], name: "index_maintenance_plans_on_customer_asset_id"
+    t.index ["organization_id"], name: "index_maintenance_plans_on_organization_id"
   end
 
   create_table "mentions", force: :cascade do |t|
@@ -2047,6 +2268,40 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.index ["primary_actor_type", "primary_actor_id"], name: "uniq_primary_actor_per_account_notifications"
     t.index ["secondary_actor_type", "secondary_actor_id"], name: "uniq_secondary_actor_per_account_notifications"
     t.index ["user_id"], name: "index_notifications_on_user_id"
+  end
+
+  create_table "organization_events", force: :cascade do |t|
+    t.bigint "organization_id", null: false
+    t.bigint "user_id"
+    t.string "action", null: false
+    t.jsonb "data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["organization_id"], name: "index_organization_events_on_organization_id"
+    t.index ["user_id"], name: "index_organization_events_on_user_id"
+  end
+
+  create_table "organizations", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.integer "stage", default: 0, null: false
+    t.integer "kind", default: 0, null: false
+    t.string "tax_id"
+    t.string "website"
+    t.string "email_domain"
+    t.string "industry"
+    t.string "phone_number"
+    t.text "address"
+    t.bigint "owner_id"
+    t.jsonb "custom_attributes", default: {}, null: false
+    t.text "notes"
+    t.datetime "became_prospect_at"
+    t.datetime "became_customer_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "stage"], name: "index_organizations_on_account_id_and_stage"
+    t.index ["account_id", "tax_id"], name: "index_organizations_on_account_id_and_tax_id", unique: true, where: "(tax_id IS NOT NULL)"
+    t.index ["account_id"], name: "index_organizations_on_account_id"
+    t.index ["owner_id"], name: "index_organizations_on_owner_id"
   end
 
   create_table "platform_app_permissibles", force: :cascade do |t|
@@ -2186,12 +2441,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.string "public_token", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "organization_id"
     t.index ["account_id", "number", "version"], name: "index_quotes_on_account_id_and_number_and_version", unique: true
     t.index ["account_id", "status"], name: "index_quotes_on_account_id_and_status"
     t.index ["account_id"], name: "index_quotes_on_account_id"
     t.index ["assignee_id"], name: "index_quotes_on_assignee_id"
     t.index ["contact_id"], name: "index_quotes_on_contact_id"
     t.index ["opportunity_id"], name: "index_quotes_on_opportunity_id"
+    t.index ["organization_id"], name: "index_quotes_on_organization_id"
     t.index ["origin_ticket_id"], name: "index_quotes_on_origin_ticket_id"
     t.index ["outcome_reason_id"], name: "index_quotes_on_outcome_reason_id"
     t.index ["parent_quote_id"], name: "index_quotes_on_parent_quote_id"
@@ -2228,6 +2485,30 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.index ["user_id"], name: "index_reporting_events_on_user_id"
   end
 
+  create_table "sales_budget_lines", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.date "period", null: false
+    t.string "currency", limit: 3, default: "MXN", null: false
+    t.decimal "amount", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "quantity", precision: 12, scale: 2
+    t.bigint "user_id"
+    t.bigint "organization_id"
+    t.bigint "contact_id"
+    t.bigint "product_line_id"
+    t.bigint "catalog_item_id"
+    t.string "note"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, period, currency, COALESCE(user_id, (0)::bigint), COALESCE(organization_id, (0)::bigint), COALESCE(contact_id, (0)::bigint), COALESCE(product_line_id, (0)::bigint), COALESCE(catalog_item_id, (0)::bigint)", name: "index_sales_budget_lines_unique_dimensions", unique: true
+    t.index ["account_id", "period"], name: "index_sales_budget_lines_on_account_id_and_period"
+    t.index ["account_id", "user_id", "period"], name: "index_sales_budget_lines_on_account_id_and_user_id_and_period"
+    t.index ["catalog_item_id"], name: "index_sales_budget_lines_on_catalog_item_id"
+    t.index ["contact_id"], name: "index_sales_budget_lines_on_contact_id"
+    t.index ["organization_id"], name: "index_sales_budget_lines_on_organization_id"
+    t.index ["product_line_id"], name: "index_sales_budget_lines_on_product_line_id"
+  end
+
   create_table "scheduled_messages", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "conversation_id", null: false
@@ -2240,6 +2521,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.json "additional_attributes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "template_name"
+    t.string "template_language"
+    t.string "template_category"
+    t.string "template_namespace"
+    t.json "template_params"
+    t.boolean "is_template", default: false
     t.index ["account_id"], name: "index_scheduled_messages_on_account_id"
     t.index ["conversation_id"], name: "index_scheduled_messages_on_conversation_id"
     t.index ["scheduled_at"], name: "index_scheduled_messages_on_scheduled_at"
@@ -2301,6 +2588,46 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.integer "taggings_count", default: 0
     t.index "lower((name)::text) gin_trgm_ops", name: "tags_name_trgm_idx", using: :gin
     t.index ["name"], name: "index_tags_on_name", unique: true
+  end
+
+  create_table "task_outcomes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "label", null: false
+    t.integer "position", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "purpose", default: 0, null: false
+    t.index ["account_id"], name: "index_task_outcomes_on_account_id"
+  end
+
+  create_table "task_reports", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_task_id"
+    t.bigint "case_meeting_id"
+    t.bigint "case_ticket_id"
+    t.bigint "contact_id"
+    t.bigint "organization_id"
+    t.bigint "user_id"
+    t.bigint "task_outcome_id"
+    t.string "outcome_label"
+    t.string "title", null: false
+    t.text "content", null: false
+    t.datetime "closed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "case_time_entry_id"
+    t.integer "minutes"
+    t.index ["account_id", "closed_at"], name: "index_task_reports_on_account_id_and_closed_at"
+    t.index ["account_id"], name: "index_task_reports_on_account_id"
+    t.index ["case_meeting_id"], name: "index_task_reports_on_case_meeting_id"
+    t.index ["case_task_id"], name: "index_task_reports_on_case_task_id"
+    t.index ["case_ticket_id"], name: "index_task_reports_on_case_ticket_id"
+    t.index ["case_time_entry_id"], name: "index_task_reports_on_case_time_entry_id"
+    t.index ["contact_id"], name: "index_task_reports_on_contact_id"
+    t.index ["organization_id"], name: "index_task_reports_on_organization_id"
+    t.index ["task_outcome_id"], name: "index_task_reports_on_task_outcome_id"
+    t.index ["user_id"], name: "index_task_reports_on_user_id"
   end
 
   create_table "team_members", force: :cascade do |t|
@@ -2412,11 +2739,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.integer "entry_delay_minutes", default: 0, null: false
     t.boolean "respect_working_hours", default: true, null: false
     t.integer "daily_cap"
-    t.string "email_subject"
     t.jsonb "audience", default: {}, null: false
     t.string "paused_reason"
-    t.string "purpose", default: "follow_up", null: false
     t.datetime "paused_at"
+    t.string "purpose", default: "follow_up", null: false
+    t.string "email_subject"
     t.bigint "handoff_board_id"
     t.bigint "handoff_column_id"
     t.integer "handoff_due_hours"
@@ -2427,9 +2754,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.boolean "stop_when_not_interested", default: true, null: false
     t.boolean "stop_when_wrong_person", default: true, null: false
     t.boolean "retry_not_now", default: true, null: false
+    t.bigint "event_id"
+    t.string "event_status"
     t.index ["account_id", "purpose"], name: "index_tracking_campaigns_on_account_id_and_purpose"
     t.index ["account_id", "status"], name: "index_tracking_campaigns_on_account_id_and_status"
     t.index ["account_id"], name: "index_tracking_campaigns_on_account_id"
+    t.index ["event_id"], name: "index_tracking_campaigns_on_event_id"
     t.index ["inbox_id"], name: "index_tracking_campaigns_on_inbox_id"
     t.index ["tracking_template_id"], name: "index_tracking_campaigns_on_tracking_template_id"
     t.index ["user_id"], name: "index_tracking_campaigns_on_user_id"
@@ -2447,8 +2777,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.string "status", default: "sent", null: false
     t.string "source_id"
     t.string "error_code"
-    t.text "error_title"
     t.string "error_kind"
+    t.text "error_title"
     t.datetime "next_retry_at"
     t.datetime "sent_at"
     t.datetime "delivered_at"
@@ -2480,7 +2810,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
 
   create_table "tracking_templates", force: :cascade do |t|
     t.bigint "account_id", null: false
-    t.text "email_signature"
     t.string "name", null: false
     t.string "objective", null: false
     t.text "ai_context"
@@ -2491,9 +2820,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.datetime "updated_at", null: false
     t.bigint "inbox_id"
     t.bigint "user_id"
-    t.jsonb "keyword_actions", default: [], null: false
     t.integer "retry_interval_value", default: 1
     t.string "retry_interval_unit", default: "days"
+    t.jsonb "keyword_actions", default: [], null: false
     t.integer "kbase_hook_id"
     t.jsonb "calendar_integration_ids", default: [], null: false
     t.integer "calendar_event_duration", default: 30
@@ -2506,6 +2835,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.integer "published_prompt_version"
     t.jsonb "adaptation_answers", default: {}, null: false
     t.datetime "archived_at"
+    t.text "email_signature"
+    t.string "customer_display_name"
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["archived_at"], name: "index_tracking_templates_on_archived_at"
@@ -2604,8 +2935,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
     t.datetime "last_submitted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "created_by_id"
     t.index ["account_id"], name: "index_whatsapp_templates_on_account_id"
     t.index ["channel_whatsapp_id", "name", "language"], name: "index_whatsapp_templates_on_channel_name_language", unique: true
+    t.index ["created_by_id"], name: "index_whatsapp_templates_on_created_by_id"
     t.index ["meta_template_id"], name: "index_whatsapp_templates_on_meta_template_id"
   end
 
@@ -2632,6 +2965,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "ai_agent_attachments", "accounts"
   add_foreign_key "ai_agent_attachments", "tracking_templates"
+  add_foreign_key "ai_follow_ups", "accounts"
+  add_foreign_key "ai_follow_ups", "case_tickets"
+  add_foreign_key "ai_follow_ups", "contacts"
+  add_foreign_key "ai_follow_ups", "conversations"
+  add_foreign_key "ai_follow_ups", "users", column: "created_by_id"
+  add_foreign_key "assistant_guide_gaps", "accounts", on_delete: :cascade
+  add_foreign_key "assistant_guide_gaps", "users", on_delete: :nullify
+  add_foreign_key "assistant_threads", "accounts", on_delete: :cascade
+  add_foreign_key "assistant_threads", "users", on_delete: :cascade
+  add_foreign_key "canned_response_categories", "accounts", on_delete: :cascade
+  add_foreign_key "canned_responses", "canned_response_categories", column: "category_id", on_delete: :nullify
   add_foreign_key "case_ai_configs", "accounts"
   add_foreign_key "case_categories", "case_types"
   add_foreign_key "case_events", "case_tasks", on_delete: :nullify
@@ -2644,6 +2988,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
   add_foreign_key "case_meetings", "case_meeting_series", on_delete: :cascade
   add_foreign_key "case_meetings", "case_tasks", on_delete: :nullify
   add_foreign_key "case_meetings", "case_tickets"
+  add_foreign_key "case_meetings", "contacts", on_delete: :cascade
+  add_foreign_key "case_meetings", "organizations", on_delete: :nullify
   add_foreign_key "case_meetings", "users", column: "cancelled_by_id", on_delete: :nullify
   add_foreign_key "case_meetings", "users", column: "held_by_id", on_delete: :nullify
   add_foreign_key "case_meetings", "users", column: "organizer_id", on_delete: :nullify
@@ -2652,14 +2998,25 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
   add_foreign_key "case_portals", "inboxes"
   add_foreign_key "case_services", "case_types"
   add_foreign_key "case_settings", "accounts"
+  add_foreign_key "case_task_client_entries", "accounts", on_delete: :cascade
+  add_foreign_key "case_task_client_entries", "case_tasks", on_delete: :cascade
+  add_foreign_key "case_task_client_entries", "case_tickets", on_delete: :cascade
+  add_foreign_key "case_task_client_entries", "contacts", on_delete: :nullify
+  add_foreign_key "case_task_client_entries", "users", on_delete: :nullify
   add_foreign_key "case_tasks", "accounts"
   add_foreign_key "case_tasks", "case_tickets"
+  add_foreign_key "case_tasks", "case_type_column_tasks", on_delete: :nullify
+  add_foreign_key "case_tasks", "case_type_columns", column: "documentation_for_column_id", on_delete: :nullify
+  add_foreign_key "case_tasks", "case_type_columns", on_delete: :nullify
+  add_foreign_key "case_tasks", "contacts", on_delete: :cascade
+  add_foreign_key "case_tasks", "organizations", on_delete: :nullify
   add_foreign_key "case_tasks", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "case_tasks", "users", column: "completed_by_id", on_delete: :nullify
   add_foreign_key "case_tasks", "users", column: "requester_id", on_delete: :nullify
-  add_foreign_key "case_tasks", "case_type_column_tasks", on_delete: :nullify
-  add_foreign_key "case_tasks", "case_type_columns", on_delete: :nullify
-  add_foreign_key "case_tasks", "case_type_columns", column: "documentation_for_column_id", on_delete: :nullify
+  add_foreign_key "case_ticket_conversations", "accounts", on_delete: :cascade
+  add_foreign_key "case_ticket_conversations", "case_tickets", on_delete: :cascade
+  add_foreign_key "case_ticket_conversations", "conversations", on_delete: :cascade
+  add_foreign_key "case_ticket_conversations", "users", column: "linked_by_id", on_delete: :nullify
   add_foreign_key "case_tickets", "case_outcome_reasons", column: "outcome_reason_id", on_delete: :nullify
   add_foreign_key "case_tickets", "case_outcome_reasons", column: "postpone_reason_id", on_delete: :nullify
   add_foreign_key "case_tickets", "case_type_columns", on_delete: :nullify
@@ -2668,10 +3025,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
   add_foreign_key "case_tickets", "conversations", on_delete: :nullify
   add_foreign_key "case_tickets", "customer_assets", on_delete: :nullify
   add_foreign_key "case_tickets", "maintenance_plans", on_delete: :nullify
+  add_foreign_key "case_tickets", "organizations", on_delete: :nullify
   add_foreign_key "case_tickets", "users", column: "locked_by_id", on_delete: :nullify
   add_foreign_key "case_tickets", "users", column: "requester_id", on_delete: :nullify
   add_foreign_key "case_time_entries", "accounts"
   add_foreign_key "case_time_entries", "case_tickets", on_delete: :cascade
+  add_foreign_key "case_time_entries", "task_reports", on_delete: :nullify
   add_foreign_key "case_time_entries", "users", on_delete: :nullify
   add_foreign_key "case_type_column_tasks", "accounts"
   add_foreign_key "case_type_column_tasks", "case_type_columns", on_delete: :cascade
@@ -2686,6 +3045,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
   add_foreign_key "case_work_order_items", "case_tickets", on_delete: :cascade
   add_foreign_key "case_work_order_items", "catalog_items", on_delete: :nullify
   add_foreign_key "catalog_items", "accounts"
+  add_foreign_key "client_portal_links", "accounts", on_delete: :cascade
+  add_foreign_key "client_portal_links", "contacts", on_delete: :cascade
+  add_foreign_key "client_portal_links", "organizations", on_delete: :cascade
   add_foreign_key "command_sessions", "accounts"
   add_foreign_key "command_sessions", "contacts"
   add_foreign_key "command_sessions", "conversations"
@@ -2696,6 +3058,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
   add_foreign_key "contact_trackings", "conversations"
   add_foreign_key "contact_trackings", "inboxes"
   add_foreign_key "contact_trackings", "tracking_campaigns"
+  add_foreign_key "contacts", "organizations", on_delete: :nullify
   add_foreign_key "contacts", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "contract_types", "accounts"
   add_foreign_key "contracts", "accounts"
@@ -2703,6 +3066,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
   add_foreign_key "contracts", "contacts", on_delete: :cascade
   add_foreign_key "contracts", "contract_types"
   add_foreign_key "contracts", "customer_assets", on_delete: :nullify
+  add_foreign_key "contracts", "organizations", on_delete: :nullify
   add_foreign_key "contracts", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "conversations", "kanban_processes"
   add_foreign_key "conversations", "kanban_type_processes"
@@ -2757,6 +3121,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
   add_foreign_key "crm_units", "accounts"
   add_foreign_key "customer_assets", "accounts"
   add_foreign_key "customer_assets", "contacts", on_delete: :cascade
+  add_foreign_key "customer_assets", "organizations", on_delete: :nullify
+  add_foreign_key "event_attendees", "accounts"
+  add_foreign_key "event_attendees", "contacts", on_delete: :cascade
+  add_foreign_key "event_attendees", "events", on_delete: :cascade
+  add_foreign_key "event_attendees", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "event_capture_links", "accounts", on_delete: :cascade
+  add_foreign_key "event_capture_links", "events", on_delete: :cascade
+  add_foreign_key "event_capture_links", "inboxes", on_delete: :cascade
+  add_foreign_key "event_capture_links", "users", on_delete: :nullify
+  add_foreign_key "events", "accounts"
+  add_foreign_key "events", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "inboxes", "portals"
   add_foreign_key "kanban_processes", "accounts"
   add_foreign_key "kanban_processes", "kanban_type_processes"
@@ -2768,7 +3143,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
   add_foreign_key "maintenance_plans", "case_types"
   add_foreign_key "maintenance_plans", "contacts", on_delete: :cascade
   add_foreign_key "maintenance_plans", "customer_assets", on_delete: :nullify
+  add_foreign_key "maintenance_plans", "organizations", on_delete: :nullify
   add_foreign_key "maintenance_plans", "users", column: "assignee_id", on_delete: :nullify
+  add_foreign_key "organization_events", "organizations", on_delete: :cascade
+  add_foreign_key "organization_events", "users", on_delete: :nullify
+  add_foreign_key "organizations", "accounts"
+  add_foreign_key "organizations", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "published_prompt_files", "published_prompts", on_delete: :cascade
   add_foreign_key "published_prompts", "accounts"
   add_foreign_key "published_prompts", "tracking_templates", on_delete: :nullify
@@ -2781,11 +3161,28 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
   add_foreign_key "quotes", "case_tickets", column: "opportunity_id", on_delete: :nullify
   add_foreign_key "quotes", "case_tickets", column: "origin_ticket_id", on_delete: :nullify
   add_foreign_key "quotes", "contacts"
+  add_foreign_key "quotes", "organizations", on_delete: :nullify
   add_foreign_key "quotes", "quotes", column: "parent_quote_id", on_delete: :nullify
   add_foreign_key "quotes", "users", column: "assignee_id", on_delete: :nullify
+  add_foreign_key "sales_budget_lines", "accounts", on_delete: :cascade
+  add_foreign_key "sales_budget_lines", "catalog_items", on_delete: :cascade
+  add_foreign_key "sales_budget_lines", "contacts", on_delete: :cascade
+  add_foreign_key "sales_budget_lines", "organizations", on_delete: :cascade
+  add_foreign_key "sales_budget_lines", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "sales_budget_lines", "users", on_delete: :cascade
   add_foreign_key "scheduled_messages", "accounts"
   add_foreign_key "scheduled_messages", "conversations"
   add_foreign_key "scheduled_messages", "users", on_delete: :cascade
+  add_foreign_key "task_outcomes", "accounts"
+  add_foreign_key "task_reports", "accounts"
+  add_foreign_key "task_reports", "case_meetings", on_delete: :nullify
+  add_foreign_key "task_reports", "case_tasks", on_delete: :nullify
+  add_foreign_key "task_reports", "case_tickets", on_delete: :nullify
+  add_foreign_key "task_reports", "case_time_entries", on_delete: :nullify
+  add_foreign_key "task_reports", "contacts", on_delete: :nullify
+  add_foreign_key "task_reports", "organizations", on_delete: :nullify
+  add_foreign_key "task_reports", "task_outcomes", on_delete: :nullify
+  add_foreign_key "task_reports", "users", on_delete: :nullify
   add_foreign_key "tracking_agent_briefs", "accounts"
   add_foreign_key "tracking_agent_briefs", "tracking_assistant_sessions", on_delete: :nullify
   add_foreign_key "tracking_agent_briefs", "tracking_templates", on_delete: :nullify
@@ -2800,6 +3197,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_01_100600) do
   add_foreign_key "tracking_campaign_entries", "conversations", on_delete: :nullify
   add_foreign_key "tracking_campaign_entries", "tracking_campaigns", on_delete: :cascade
   add_foreign_key "tracking_campaigns", "accounts"
+  add_foreign_key "tracking_campaigns", "events", on_delete: :nullify
   add_foreign_key "tracking_campaigns", "inboxes"
   add_foreign_key "tracking_campaigns", "tracking_templates"
   add_foreign_key "tracking_campaigns", "users", on_delete: :nullify

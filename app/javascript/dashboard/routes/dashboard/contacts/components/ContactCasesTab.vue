@@ -7,12 +7,13 @@
 import { mapGetters } from 'vuex';
 import CaseTicketsAPI from 'dashboard/api/caseTickets';
 import Spinner from 'shared/components/Spinner.vue';
+import OrganizationTag from './OrganizationTag.vue'; // Plan-Organizaciones
 import CaseTicketModal from 'dashboard/components/contacts/CaseTicket/CaseTicketModal.vue';
 import { formatMoney } from 'dashboard/helper/caseCommercial';
 
 export default {
   name: 'ContactCasesTab',
-  components: { Spinner, CaseTicketModal },
+  components: { Spinner, CaseTicketModal, OrganizationTag },
   props: {
     contactId: { type: Number, required: true },
   },
@@ -153,6 +154,10 @@ export default {
             <td class="px-3 py-2">
               <span class="block text-slate-800 dark:text-slate-100">
                 {{ ticket.title }}
+                <OrganizationTag
+                  :organization-id="ticket.organization_id"
+                  :contact-id="contactId"
+                />
               </span>
               <span
                 v-if="ticket.case_type"

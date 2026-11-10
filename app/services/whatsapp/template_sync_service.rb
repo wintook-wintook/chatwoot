@@ -104,6 +104,11 @@ class Whatsapp::TemplateSyncService
     samples['body'] = Array(body_example).first if body_example.present? # 2D → primera fila
     header_example = header&.dig(:example, :header_text)
     samples['header'] = Array(header_example) if header_example.present?
+    # Variables con nombre: Meta los manda como [{ param_name, example }].
+    body_named = body&.dig(:example, :body_text_named_params)
+    samples['body'] = body_named.pluck(:example) if body_named.present?
+    header_named = header&.dig(:example, :header_text_named_params)
+    samples['header'] = header_named.pluck(:example) if header_named.present?
     samples
   end
 

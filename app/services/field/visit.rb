@@ -27,10 +27,11 @@ class Field::Visit
 
   def finish!(location, conformity)
     CaseTicket.transaction do
-      close_entry(location)
+      entry = close_entry(location)
       @order.update!(received_by: conformity[:received_by].presence, conformity_note: conformity[:conformity_note].presence,
                      conformity_signature: conformity[:signature], received_at: @at)
       @order.transition!(DONE, actor: @user, force: true) unless ServiceReportable::COMPLETION_STATUSES.include?(@order.status)
+      Field::VisitReport.new(@order, entry, @user).record!
     end
   end
 
@@ -47,5 +48,6 @@ class Field::Visit
     return unless entry
 
     entry.update!(ended_at: [@at, entry.started_at].max, location: entry.location.merge('leave' => location.presence).compact)
+    entry
   end
 end

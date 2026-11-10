@@ -136,6 +136,9 @@
     "UPLOADING_ATTACHMENTS": "Subiendo archivos adjuntos...",
     "REPLIED_TO_STORY": "Respondió a tu historia",
     "UNSUPPORTED_MESSAGE": "Este mensaje no es compatible.",
+    "TEMPLATE_BUTTONS": {
+      "COPY_CODE": "Copiar código"
+    },
     "UNSUPPORTED_MESSAGE_FACEBOOK": "Este mensaje no es compatible. Puedes ver este mensaje en la aplicación de Facebook Messenger.",
     "UNSUPPORTED_MESSAGE_INSTAGRAM": "Este mensaje no es compatible. Puedes ver este mensaje en la aplicación de Instagram.",
     "SUCCESS_DELETE_MESSAGE": "Mensaje eliminado con éxito",
@@ -319,6 +322,7 @@
     "MESSAGE_ERROR": "No se pudo enviar este mensaje, por favor intenta de nuevo más tarde",
     "SENT_BY": "Enviado por:",
     "BOT": "Bot",
+    "AI_AGENT": "Agente IA",
     "SENT_FROM_WHATSAPP_MOBILE": "WhatsApp Business App",
     "SEND_FAILED": "No se pudo enviar el mensaje. ¡Inténtalo de nuevo!",
     "TRY_AGAIN": "intentar de nuevo",

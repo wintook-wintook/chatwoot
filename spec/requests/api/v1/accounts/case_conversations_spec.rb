@@ -34,13 +34,69 @@ RSpec.describe 'Case Conversations API' do
     expect(ticket.reload.conversation).to be_nil
   end
 
-  it 'no cambia la conversación de un caso que ya tiene una' do
+  # Plan Actividad del caso — la principal no cambia; las siguientes quedan como adicionales.
+  it 'con principal, liga la siguiente como adicional sin cambiar la principal' do
     first = create(:conversation, account: account, contact: contact)
     ticket.update!(conversation: first)
-    link(conversation_id: create(:conversation, account: account, contact: contact).display_id)
+    second = create(:conversation, account: account, contact: contact)
+    link(conversation_id: second.display_id)
+
+    expect(response).to have_http_status(:created)
+    expect(response.parsed_body['primary']).to be(false)
+    expect(ticket.reload.conversation).to eq(first)
+    expect(ticket.extra_conversations).to eq([second])
+    expect(ticket.case_events.conversation_link.last.payload).to include('extra' => true)
+  end
+
+  it 'no liga dos veces la misma conversación' do
+    first = create(:conversation, account: account, contact: contact)
+    ticket.update!(conversation: first)
+    link(conversation_id: first.display_id)
 
     expect(response).to have_http_status(:unprocessable_entity)
-    expect(ticket.reload.conversation).to eq(first)
+    expect(ticket.extra_conversation_links.count).to eq(0)
+  end
+
+  describe 'lista y quita' do
+    let(:primary) { create(:conversation, account: account, contact: contact) }
+    let(:extra)   { create(:conversation, account: account, contact: contact) }
+    let!(:loose)  { create(:conversation, account: account, contact: contact) }
+    let(:base)    { "/api/v1/accounts/#{account.id}/case_tickets/#{ticket.id}/conversations" }
+
+    before do
+      ticket.update!(conversation: primary)
+      ticket.extra_conversation_links.create!(account: account, conversation: extra)
+    end
+
+    it 'lista las ligadas (la principal primero) y las del contacto sin ligar' do
+      get base, headers: admin.create_new_auth_token, as: :json
+
+      body = response.parsed_body
+      expect(body['conversations'].pluck('display_id')).to eq([primary.display_id, extra.display_id])
+      expect(body['conversations'].pluck('primary')).to eq([true, false])
+      expect(body['unlinked'].pluck('display_id')).to eq([loose.display_id])
+    end
+
+    it 'quita una adicional y lo anota' do
+      delete "#{base}/#{extra.display_id}", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(ticket.extra_conversations.reload).to be_empty
+      expect(ticket.case_events.conversation_unlinked.last.payload).to include('display_id' => extra.display_id)
+    end
+
+    it 'no quita la principal' do
+      delete "#{base}/#{primary.display_id}", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(ticket.reload.conversation).to eq(primary)
+    end
+
+    it 'si cambia el contacto del caso, suelta las adicionales' do
+      ticket.update!(contact: create(:contact, account: account))
+
+      expect(ticket.extra_conversation_links.reload).to be_empty
+    end
   end
 
   it 'no deja dos casos abiertos de la misma clase en una conversación' do

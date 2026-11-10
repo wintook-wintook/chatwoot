@@ -54,11 +54,18 @@ module Whatsapp
       order: /orden|order|pedido|cotizaci[oó]n|quote/i
     }.freeze
 
-    def initialize(tracking, template_name)
+    # feat/plantillas_variables_resolver F9.3: código propio (no de Meta) para «este contacto no
+    # tiene el dato». ErrorClassifier lo cuenta como permanente: es de ese contacto, no de la
+    # plantilla, así que la campaña sigue con los demás.
+    MISSING_DATA_CODE = 'template_data_missing'
+    AiAgent = Struct.new(:available_name)
+
+    # `conversation`: la del envío. En el primer intento el seguimiento todavía no la tiene.
+    def initialize(tracking, template_name, conversation: nil)
       @tracking = tracking
       @template_name = template_name
       @contact = tracking.contact
-      @conversation = tracking.conversation
+      @conversation = conversation || tracking.conversation
       @errors = []
       @template = find_template(template_name)
     end
@@ -74,6 +81,7 @@ module Whatsapp
       return error_result('Plantilla sin componente BODY') unless body_component
 
       body_text = body_component['text']
+      return process_named_params(body_text) if Whatsapp::TemplateVariables.named_template?(@template)
       return success_result([]) unless body_text.include?('{{')
 
       # ⭐ DETECTAR TIPO DE PARÁMETROS
@@ -233,6 +241,60 @@ module Whatsapp
       else
         @tracking.try(property)
       end
+    end
+
+    # ============================================================================
+    # feat/plantillas_variables_resolver F9.3 — VARIABLES CON NOMBRE: {{nombre}}, {{edad}}
+    # ============================================================================
+    # Aquí no se adivina: el dato sale de TemplateVariableResolver, igual que en la conversación.
+    # Si falta uno no se manda nada (D9c): sin `parameters` y con `rejection` para el job.
+    # `components` solo viene con variables en un encabezado de texto.
+    def process_named_params(body_text)
+      header_text = text_header
+      claves = Whatsapp::TemplateVariables.names(header_text) | Whatsapp::TemplateVariables.names(body_text)
+      resuelto = variable_resolver.resolve(claves)
+      return data_missing_result(resuelto[:missing]) if resuelto[:missing].any?
+
+      body = named_parameters(body_text, resuelto[:values])
+      header = named_parameters(header_text, resuelto[:values])
+      resultado = success_result(body)
+      resultado[:components] = named_components(header, body) if header.any?
+      resultado
+    end
+
+    def text_header
+      header = @template['components']&.find { |c| c['type'] == 'HEADER' }
+      header['text'] if header && header['format'].to_s.casecmp?('TEXT')
+    end
+
+    def variable_resolver
+      Whatsapp::TemplateVariableResolver.new(contact: @contact, conversation: @conversation, inbox: @tracking.inbox,
+                                             agent: agent_without_assignee)
+    end
+
+    # Sin nadie asignado, el agente es el Agente IA que escribe: es el nombre que ve el cliente.
+    def agent_without_assignee
+      return if @conversation&.assignee
+
+      nombre = @tracking.tracking_template&.customer_display_name.to_s.squish.presence
+      AiAgent.new(nombre) if nombre
+    end
+
+    def named_parameters(text, values)
+      builder = Whatsapp::PopulateTemplateParametersService.new
+      Whatsapp::TemplateVariables.names(text).map { |clave| builder.build_named_parameter(clave, values[clave]) }
+    end
+
+    def named_components(header, body)
+      componentes = [{ type: 'header', parameters: header }]
+      componentes << { type: 'body', parameters: body } if body.any?
+      componentes
+    end
+
+    def data_missing_result(missing)
+      lista = missing.map { |clave| "{{#{clave}}}" }.to_sentence(words_connector: ', ', two_words_connector: ' y ', last_word_connector: ' y ')
+      mensaje = "La plantilla «#{@template_name}» pide #{lista} y este contacto no tiene ese dato: no se mandó."
+      error_result(mensaje).merge(rejection: { code: MISSING_DATA_CODE, message: mensaje })
     end
 
     # ============================================================================

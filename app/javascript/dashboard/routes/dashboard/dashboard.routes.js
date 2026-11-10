@@ -14,6 +14,8 @@ import { routes as kanbanRoutes } from './kanban/routes'; // Añade esta línea
 import { routes as gestorTicketsRoutes } from './gestorTickets/routes';
 import { routes as contractsRoutes } from './contracts/routes'; // Plan-Contratos R1
 import { routes as crmZeusRoutes } from './crmZeus/routes'; // CrmZeus
+import { routes as organizationsRoutes } from './organizations/routes'; // Plan-Organizaciones O1
+import { routes as eventsRoutes } from './events/routes'; // Plan-Eventos E1
 // proyecto@contact_tracking — Dashboard de Seguimientos
 import { routes as contactTrackingsRoutes } from './contactTrackings/routes';
 import { routes as whatsappCallsRoutes } from './whatsappCalls/routes'; // diag/llamadas_whatsapp
@@ -24,6 +26,8 @@ const Suspended = () => import('./suspended/Index.vue');
 // Plan-Trabajo-Campo R2 — portal del técnico (celular, sin el menú).
 const FieldApp = () => import('../../views/field/FieldApp.vue');
 const FIELD_META = { permissions: ['administrator', 'agent', 'custom_role'] };
+// Portal de Dali — Dali a pantalla completa para el teléfono (se instala como app).
+const DaliApp = () => import('../../views/dali/DaliApp.vue');
 
 export default {
   routes: [
@@ -53,6 +57,8 @@ export default {
         ...gestorTicketsRoutes,
         ...contractsRoutes,
         ...crmZeusRoutes, // CrmZeus
+        ...organizationsRoutes,
+        ...eventsRoutes,
         // proyecto@contact_tracking — Dashboard de Seguimientos
         ...contactTrackingsRoutes,
         ...whatsappCallsRoutes,
@@ -69,6 +75,24 @@ export default {
       name: 'field_visit',
       meta: FIELD_META,
       component: FieldApp,
+    },
+    {
+      path: frontendURL('accounts/:accountId/campo/cita/:meetingId'),
+      name: 'field_agenda_visit',
+      meta: FIELD_META,
+      component: FieldApp,
+    },
+    {
+      // /app/dali → la empresa activa (routes/index.js)
+      path: frontendURL('dali'),
+      name: 'dali_entry',
+      meta: FIELD_META,
+    },
+    {
+      path: frontendURL('accounts/:accountId/dali'),
+      name: 'dali_app',
+      meta: FIELD_META,
+      component: DaliApp,
     },
     {
       path: frontendURL('accounts/:accountId/suspended'),

@@ -49,7 +49,7 @@
       },
       "CANCEL_BUTTON_TEXT": "Cancelar",
       "API": {
-        "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot. Por favor, inténtalo de nuevo."
+        "ERROR_MESSAGE": "No se pudo conectar al servidor de Kontrolya. Por favor, inténtalo de nuevo."
       }
     },
     "ADD": {
@@ -73,7 +73,7 @@
       "BUTTON_TEXT": "Eliminar",
       "API": {
         "SUCCESS_MESSAGE": "Rol personalizado eliminado con éxito.",
-        "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot. Por favor, inténtalo de nuevo."
+        "ERROR_MESSAGE": "No se pudo conectar al servidor de Kontrolya. Por favor, inténtalo de nuevo."
       },
       "CONFIRM": {
         "TITLE": "Confirmar eliminación",

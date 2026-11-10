@@ -56,7 +56,7 @@ RSpec.describe 'Quotes API' do
     expect(opp.reload).not_to be_postponed
     move(quote, 'won')
     expect(opp.reload.outcome).to eq('won')
-    expect(opp.amount.to_f).to eq(2288.0)
+    expect(opp.amount.to_f).to eq(2000.0) # sin IVA: subtotal − descuento
   end
 
   it 'con varias: ganar una cancela las demás; si se pierden todas, pregunta' do
@@ -104,7 +104,7 @@ RSpec.describe 'Quotes API' do
     CaseSetting.for_account(account).update!(quotes_require_opportunity: true)
     quote = create_quote
     expect(quote['opportunity']['title']).to eq(I18n.t('quotes.opportunity_title', folio: 'COT-0001'))
-    expect(CaseTicket.find(quote['opportunity']['id']).amount.to_f).to eq(2288.0)
+    expect(CaseTicket.find(quote['opportunity']['id']).amount.to_f).to eq(2000.0) # sin IVA
   end
 
   it 'aceptada desde una orden de trabajo: sus partidas pasan a la orden' do

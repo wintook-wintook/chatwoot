@@ -16,6 +16,14 @@
 # quepa. Los campos cortos (precios, becas, nombres de archivo) llegan siempre enteros.
 # Una celda con saltos de línea (un perfil en viñetas) cuenta como UN campo: si no, sus
 # viñetas parecen columnas cortas y el recorte se reparte sobre los campos de verdad.
+#
+# Un valor de UNA sola pieza (un nombre de archivo, un código) no se acorta nunca, y una
+# URL tampoco se parte: el corte cae después de la última URL del campo, aunque la celda
+# siga con más texto. Cortadas no sirven. 02/11/2026 (cuenta 1128, conv 60): la fila de
+# Administración mide 4163 caracteres, el tope por campo quedaba en 98 y
+# «plan_estudios_url» llegaba como «…/Plan-de-estudios-de-la-carrera…»; el modelo soltaba
+# el «…» y mandaba la liga rota. En Bienes Raíces la celda sigue tras la URL
+# («…INNeo.pdf , nota: dentro de la liga…»), por eso no basta con proteger valores sueltos.
 # ================================================================================
 
 module KnowledgeBase::SheetRowFit
@@ -24,6 +32,8 @@ module KnowledgeBase::SheetRowFit
   ELLIPSIS = '…'
   # «columna: valor». Una viñeta o una línea de texto suelta es continuación de la anterior.
   FIELD_START = /\A[^\s•\-*][^:\n]{0,80}:\s/
+  # Sin la puntuación final, que suele ser de la frase y no de la liga.
+  URL = %r{https?://\S*[^\s.,;:!?)\]»"']}
 
   module_function
 
@@ -35,7 +45,25 @@ module KnowledgeBase::SheetRowFit
     cap = field_cap(fields, max)
     return text.truncate(max) if cap.nil?
 
-    fields.map { |field| field.size > cap ? "#{field[0, cap - 1].rstrip}#{ELLIPSIS}" : field }.join("\n")
+    fields.map { |field| fit(field, cap) }.join("\n")
+  end
+
+  # El campo acortado a `cap`, salvo lo que no se puede partir (ver `keep`).
+  def fit(field, cap)
+    keep = keep(field)
+    return field if field.size <= [cap, keep].max
+    return "#{field[0, keep]}#{ELLIPSIS}" if keep >= cap
+
+    "#{field[0, cap - 1].rstrip}#{ELLIPSIS}"
+  end
+
+  # Cuántos caracteres del inicio deben llegar sí o sí: el campo entero si su valor es de
+  # una sola pieza (archivo, código); si no, hasta el final de su última URL.
+  def keep(field)
+    return field.size if field.match?(/\A[^:\n]+:\s+\S+\s*\z/)
+
+    ends = field.to_enum(:scan, URL).map { Regexp.last_match.end(0) }
+    ends.max || 0
   end
 
   def fields_of(text)
@@ -56,6 +84,6 @@ module KnowledgeBase::SheetRowFit
   end
 
   def fitted_size(fields, cap)
-    fields.sum { |field| [field.size, cap].min } + fields.size - 1
+    fields.sum { |field| fit(field, cap).size } + fields.size - 1
   end
 end

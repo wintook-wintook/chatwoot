@@ -48,6 +48,14 @@ RSpec.describe 'Field visits API' do
     expect(Message.where(conversation: contact.conversations).last.content).to include('Luis Técnico')
   end
 
+  it 'Voy en camino da la hora en la zona del técnico, no la del servidor' do
+    travel_to(Time.utc(2026, 11, 9, 12, 0)) do
+      post "#{base}/#{order.id}/on_my_way", params: { eta_minutes: 20, tz: 'America/Mexico_City' },
+                                            headers: technician.create_new_auth_token, as: :json
+      expect(Message.where(conversation: contact.conversations).last.content).to include('06:20')
+    end
+  end
+
   it 'Llegué y Terminé: horas, ubicación, conformidad con firma y la orden terminada' do
     travel_to(Time.zone.parse('2026-10-30 10:00')) do
       post "#{base}/#{order.id}/arrive", params: { lat: 19.43, lng: -99.13 }, headers: technician.create_new_auth_token, as: :json

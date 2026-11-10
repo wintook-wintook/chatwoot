@@ -25,6 +25,31 @@ describe('#URL Helpers', () => {
       ).toBe('/app/accounts/7500/conversations/752');
     });
 
+    // Portal de Dali: entrar desde /dali o con el QR del perfil regresa a Dali.
+    it('should return the Dali portal URL when redirect is dali', () => {
+      expect(
+        getLoginRedirectURL({
+          ssoAccountId: '7500',
+          redirect: 'dali',
+          user: {
+            accounts: [{ id: 7500, name: 'Test Account 7500' }],
+          },
+        })
+      ).toBe('/app/accounts/7500/dali');
+    });
+
+    it('should ignore unknown redirect values', () => {
+      expect(
+        getLoginRedirectURL({
+          ssoAccountId: '7500',
+          redirect: 'https://evil.example',
+          user: {
+            accounts: [{ id: 7500, name: 'Test Account 7500' }],
+          },
+        })
+      ).toBe('/app/accounts/7500/dashboard');
+    });
+
     it('should return default URL if account id is not present', () => {
       expect(getLoginRedirectURL({ ssoAccountId: '7500', user: {} })).toBe(
         '/app/'

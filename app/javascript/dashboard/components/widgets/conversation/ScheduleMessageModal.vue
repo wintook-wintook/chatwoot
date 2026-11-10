@@ -169,21 +169,28 @@
                       <textarea v-model="processedTemplateString" rows="6" readonly class="template-input w-full"
                         :placeholder="$t('CONVERSATION.SCHEDULE_MESSAGE.TEMPLATE_PROCESSING')" />
 
-                      <!-- Template variables -->
+                      <!-- F4: archivo, encabezado y botones; las variables van en el slot -->
+                      <TemplateExtraFields
+                        :key="`${selectedTemplate.name}-${selectedTemplate.language}-${editingMessageId}`"
+                        :template="selectedTemplate" :enabled="isCloud" :inbox-id="inboxId"
+                        :initial="extraInitial" :variable-context="variableContext" class="mt-4"
+                        @change="extraValues = $event">
                       <div v-if="templateVariables && templateVariables.length > 0"
                         class="template__variables-container mt-4">
                         <p class="variables-label text-sm font-medium text-slate-600 mb-3">
                           {{ $t('CONVERSATION.SCHEDULE_MESSAGE.TEMPLATE_VARIABLES') }}
                         </p>
-                        <div v-for="(variable, key) in templateParams" :key="key" class="template__variable-item mb-3">
+                        <div v-for="(variable, key) in templateParams" :key="key" class="template__variable-item flex-wrap mb-3">
                           <span class="variable-label">
                             {{ key }}
                           </span>
                           <woot-input v-model="templateParams[key]" type="text" class="variable-input"
                             :styles="{ marginBottom: 0 }"
                             :placeholder="`${$t('CONVERSATION.SCHEDULE_MESSAGE.ENTER_VALUE_FOR')} ${key}`" />
+                          <TemplateVariableHint :variable="key" :value="templateParams[key]" :context="variableContext" />
                         </div>
                       </div>
+                      </TemplateExtraFields>
                     </div>
                   </div>
 
@@ -337,9 +344,15 @@ import { mapActions, mapGetters } from 'vuex';
 import messageAPI from 'dashboard/api/inbox/message';
 import scheduledMessagesAPI from 'dashboard/api/scheduledMessages';
 import timeZoneData from './timezones.json';
-
-// TODO: Remove this when we support all formats
-const formatsToRemove = ['DOCUMENT', 'IMAGE', 'VIDEO'];
+import TemplateExtraFields from './WhatsappTemplates/TemplateExtraFields.vue';
+import TemplateVariableHint from './WhatsappTemplates/TemplateVariableHint.vue';
+import { chatVariableContext, resolveVariables } from 'dashboard/helper/whatsappTemplateVariables';
+import {
+  buildProcessedParams,
+  describeTemplate,
+  validateValues,
+  valuesFromProcessedParams,
+} from './WhatsappTemplates/templateForm';
 
 export default {
   components: {
@@ -348,6 +361,8 @@ export default {
     Multiselect,
     VeTable,
     EmptyState,
+    TemplateExtraFields,
+    TemplateVariableHint,
   },
   props: {
     show: {
@@ -392,6 +407,9 @@ export default {
       // Template data
       selectedTemplate: null,
       templateParams: {},
+      // F4: archivo, encabezado y botones (TemplateExtraFields); initial, al editar.
+      extraValues: {},
+      extraInitial: {},
       templateQuery: '',
 
       // Edit mode
@@ -481,17 +499,36 @@ export default {
       return !!this.selectedTemplate; // Deshabilitar si hay plantilla seleccionada
     },
 
-    // Plantillas disponibles (similar a TemplatesPicker.vue)
+    // Plantillas disponibles: misma regla que el selector de la conversación
+    // (TemplatesPicker.vue): fuera de WhatsApp Cloud, solo las que piden únicamente el cuerpo.
+    // feat/plantillas_variables_nombre F4: en WhatsApp Cloud la plantilla sale completa,
+    // igual que en la conversación; en 360dialog y UnoAPI solo el cuerpo.
+    isCloud() {
+      const inbox = this.$store.getters['inboxes/getInbox'](this.inboxId);
+      return Boolean(inbox && inbox.provider === 'whatsapp_cloud');
+    },
+
+    // F9.3: con qué llenar las variables con nombre al programar. Se guarda el valor de hoy.
+    variableContext() {
+      return chatVariableContext({
+        conversation: this.currentChat.id ? this.currentChat : null,
+        inbox: this.$store.getters['inboxes/getInbox'](this.inboxId),
+        currentUser: this.currentUser,
+      });
+    },
+
+    templateValues() {
+      return { ...this.extraValues, body: this.templateParams };
+    },
+
     availableTemplates() {
       if (!this.inboxId) return [];
 
       return this.$store.getters['inboxes/getWhatsAppTemplates'](this.inboxId)
         .filter(template => template.status.toLowerCase() === 'approved')
-        .filter(template => {
-          return template.components.every(component => {
-            return !formatsToRemove.includes(component.format);
-          });
-        });
+        .filter(
+          template => this.isCloud || !describeTemplate(template).needsComponents
+        );
     },
 
     // Plantillas filtradas por búsqueda
@@ -558,14 +595,11 @@ export default {
       const baseValidation = !this.scheduledAt || !this.recipientType || this.isCreating;
 
       if (this.selectedTemplate) {
-        // Para plantillas, verificar que todas las variables estén llenas
-        if (this.templateVariables && this.templateVariables.length > 0) {
-          const allVariablesFilled = Object.keys(this.templateParams).every(key =>
-            this.templateParams[key] && this.templateParams[key].trim() !== ''
-          );
-          return baseValidation || !allVariablesFilled;
-        }
-        return baseValidation;
+        // Para plantillas: lo mismo que pide la conversación (variables, archivo, botones)
+        const errores = validateValues(this.selectedTemplate, this.templateValues, {
+          components: this.isCloud,
+        });
+        return baseValidation || errores.length > 0;
       }
 
       // Para mensajes normales
@@ -841,6 +875,8 @@ export default {
         this.generateTemplateVariables();
       } else {
         this.templateParams = {};
+        this.extraValues = {};
+        this.extraInitial = {};
       }
     }
   },
@@ -893,6 +929,8 @@ export default {
     clearTemplate() {
       this.selectedTemplate = null;
       this.templateParams = {};
+      this.extraValues = {};
+      this.extraInitial = {};
     },
 
     processVariable(str) {
@@ -916,8 +954,9 @@ export default {
       }
 
       const finalVars = matchedVariables.map(i => this.processVariable(i));
+      const { values: resueltos } = resolveVariables(finalVars, this.variableContext);
       this.templateParams = finalVars.reduce((acc, variable) => {
-        acc[variable] = '';
+        acc[variable] = resueltos[variable] || '';
         return acc;
       }, {});
     },
@@ -1138,8 +1177,13 @@ export default {
           // Es un mensaje de plantilla
           const template = this.availableTemplates?.find(t => t.name === message.template_name);
           if (template) {
+            const { body, initial } = valuesFromProcessedParams(message.template_params);
+            this.extraInitial = initial;
             this.selectedTemplate = template;
-            this.templateParams = message.template_params || {};
+            // Después del watch de selectedTemplate, que deja las variables en blanco.
+            this.$nextTick(() => {
+              this.templateParams = { ...this.templateParams, ...body };
+            });
           } else {
             this.selectedTemplate = null;
             this.message = message.content;
@@ -1387,7 +1431,11 @@ export default {
               category: this.selectedTemplate.category,
               language: this.selectedTemplate.language,
               namespace: this.selectedTemplate.namespace,
-              processed_params: this.templateParams, // Los parámetros procesados del usuario
+              processed_params: buildProcessedParams(
+                this.selectedTemplate,
+                this.templateValues,
+                { components: this.isCloud }
+              ),
             },
             is_template: true,
             message_type: 'template', // Importante: especificar el tipo
@@ -1532,6 +1580,8 @@ export default {
       this.recipientType = 'contact';
       this.selectedTemplate = null;
       this.templateParams = {};
+      this.extraValues = {};
+      this.extraInitial = {};
       this.templateQuery = '';
       this.isEditMode = false;
       this.editingMessageId = null;

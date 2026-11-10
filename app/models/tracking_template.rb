@@ -18,11 +18,13 @@
 #  calendar_event_duration       :integer          default(30)
 #  calendar_integration_ids      :jsonb            not null
 #  complementary_prompt          :text
+#  customer_display_name         :string
 #  email_signature               :text
 #  keyword_actions               :jsonb            not null
 #  name                          :string           not null
 #  objective                     :string           not null
 #  previous_complementary_prompt :text
+#  published_prompt_version      :integer
 #  retry_interval_unit           :string           default("days")
 #  retry_interval_value          :integer          default(1)
 #  slots_presentation            :string           default("detailed"), not null
@@ -36,13 +38,13 @@
 #  inbox_id                      :bigint
 #  kbase_hook_id                 :integer
 #  published_prompt_id           :bigint
-#  published_prompt_version      :integer
 #  user_id                       :bigint
 #
 # Indexes
 #
 #  index_tracking_templates_on_account_id           (account_id)
 #  index_tracking_templates_on_account_id_and_name  (account_id,name) UNIQUE
+#  index_tracking_templates_on_archived_at          (archived_at)
 #  index_tracking_templates_on_inbox_id             (inbox_id)
 #  index_tracking_templates_on_kbase_hook_id        (kbase_hook_id)
 #  index_tracking_templates_on_published_prompt_id  (published_prompt_id)
@@ -89,6 +91,9 @@ class TrackingTemplate < ApplicationRecord
   validates :name, presence: true, length: { minimum: 2, maximum: 100 },
                    uniqueness: { scope: :account_id, case_sensitive: false }
   validates :objective, presence: true, length: { minimum: 5, maximum: 500 }
+  # Nombre que ve el cliente (ContactTrackings::AgentIdentity); vacío = sin nombre.
+  before_validation { self.customer_display_name = customer_display_name.to_s.squish.presence }
+  validates :customer_display_name, length: { maximum: 30 }, allow_nil: true
   # proyecto@automatizacion_tracking: intervalo entre intentos (opcional, mismo comportamiento que ContactTracking)
   validates :retry_interval_value, numericality: { greater_than: 0 }, allow_nil: true
   validates :retry_interval_unit, inclusion: { in: %w[minutes hours days] }, allow_nil: true

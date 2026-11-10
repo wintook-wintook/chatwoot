@@ -10,12 +10,16 @@
 import { VeTable } from 'vue-easytable';
 import { mixin as clickaway } from 'vue-clickaway';
 import CaseMeetingsAPI from 'dashboard/api/caseMeetings';
-import CaseNotesAPI from 'dashboard/api/caseNotes';
+import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal.vue';
+import taskReportFlow from 'dashboard/mixins/taskReportFlow';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
 import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
 import MeetingFormModal from './MeetingFormModal.vue';
+import CancelItemModal from 'dashboard/components/cancel/CancelItemModal.vue'; // cancelar con motivo
+import ConvertToTaskModal from 'dashboard/components/convert/ConvertToTaskModal.vue'; // pasarla a tarea
+import { useAlert } from 'dashboard/composables';
 
 const PER_PAGE = 10;
 
@@ -27,8 +31,11 @@ export default {
     WootDropdownMenu,
     WootDropdownItem,
     MeetingFormModal,
+    TaskReportModal,
+    CancelItemModal,
+    ConvertToTaskModal,
   },
-  mixins: [clickaway],
+  mixins: [clickaway, taskReportFlow],
   props: {
     ticketId: { type: [Number, String], required: true },
     // Ticket cerrado/cancelado = solo lectura: se ocultan las acciones para no
@@ -41,6 +48,13 @@ export default {
   },
   data() {
     return {
+      // Cancelar con motivo: la cita a cancelar, si está guardando y el error.
+      cancelTarget: null,
+      convertTarget: null,
+      convertBusy: false,
+      convertError: '',
+      cancelBusy: false,
+      cancelError: '',
       meetings: [],
       organizers: [],
       tasks: [],
@@ -60,10 +74,6 @@ export default {
       contextTask: null,
       // Menú de acciones de la fila (posición fija anclada al botón "…").
       rowMenu: null,
-      // Minuta: al marcar realizada se OFRECE capturarla, no se impone (§6.3).
-      minutesFor: null,
-      minutesText: '',
-      isSavingMinutes: false,
       showDeleteConfirm: false,
       pendingDelete: null,
     };
@@ -317,6 +327,10 @@ export default {
     },
     async submitForm(payload) {
       if (this.isSaving) return;
+      if (payload.convert_task_id) {
+        await this.scheduleTask(payload);
+        return;
+      }
       this.isSaving = true;
       try {
         if (this.editing) {
@@ -342,6 +356,80 @@ export default {
         this.toastError(e);
       } finally {
         this.isSaving = false;
+      }
+    },
+    // Agendar una tarea: sale de Tareas y queda agendada (o sesión ligada si no se puede).
+    async scheduleTask(payload) {
+      this.isSaving = true;
+      try {
+        const { convert_task_id: taskId, ...data } = payload;
+        const { data: res } = await CaseTasksAPI.schedule(
+          this.ticketId,
+          taskId,
+          data
+        );
+        this.showModal = false;
+        await this.load();
+        this.$emit('changed');
+        this.$emit('tasksChanged');
+        this.$emitter.emit('caseToastMessage', {
+          message: this.$t(
+            res.mode === 'linked'
+              ? 'CONVERT_ITEM.LINKED'
+              : 'CONVERT_ITEM.SCHEDULED',
+            { title: res.meeting.title }
+          ),
+          icon: 'calendar',
+        });
+      } catch (e) {
+        this.toastError(e);
+      } finally {
+        this.isSaving = false;
+      }
+    },
+    // Tarea agendada → tarea sin hora.
+    menuToTask() {
+      const row = this.rowMenu?.row;
+      this.closeRowMenu();
+      if (!row) return;
+      this.convertError = '';
+      this.convertTarget = { ...row, has_client: true };
+    },
+    async submitToTask(data) {
+      this.convertBusy = true;
+      this.convertError = '';
+      try {
+        const { data: res } = await CaseMeetingsAPI.toTask(
+          this.ticketId,
+          this.convertTarget.id,
+          data
+        );
+        this.convertTarget = null;
+        await this.load();
+        this.$emit('changed');
+        this.$emit('tasksChanged');
+        this.$emitter.emit('caseToastMessage', {
+          message: this.$t(
+            res.mode === 'linked'
+              ? 'CONVERT_ITEM.DONE_LINKED'
+              : 'CONVERT_ITEM.DONE',
+            { title: res.task.title }
+          ),
+          icon: 'checkmark',
+        });
+        if (res.client_notice) {
+          useAlert(
+            this.$t(
+              res.client_notice.sent
+                ? 'CANCEL_ITEM.NOTICE_SENT'
+                : 'CANCEL_ITEM.NOTICE_FAILED'
+            )
+          );
+        }
+      } catch (e) {
+        this.convertError = e.response?.data?.error || '';
+      } finally {
+        this.convertBusy = false;
       }
     },
     // F4 — alta de una SERIE: el backend arma el RRULE, espeja el maestro en
@@ -398,10 +486,49 @@ export default {
       this.closeRowMenu();
       if (row) this.hold(row, status);
     },
-    menuCancel(scope) {
+    // Cancelar: primero «¿reprogramar?», luego motivo, tiempo, serie y aviso al cliente.
+    menuCancel() {
       const row = this.rowMenu?.row;
       this.closeRowMenu();
-      if (row) this.cancel(row, scope);
+      if (row) this.openCancel(row);
+    },
+    openCancel(row) {
+      this.cancelError = '';
+      this.cancelTarget = { ...row, has_client: true };
+    },
+    rescheduleInstead() {
+      const row = this.meetings.find(m => m.id === this.cancelTarget?.id);
+      this.cancelTarget = null;
+      if (row) this.openEdit(row);
+    },
+    async submitCancel(reason) {
+      this.cancelBusy = true;
+      this.cancelError = '';
+      try {
+        const { data } = await CaseMeetingsAPI.cancel(
+          this.ticketId,
+          this.cancelTarget.id,
+          reason.scope,
+          reason
+        );
+        if (reason.scope === 'all') await this.load();
+        else this.replace(data.case_meeting);
+        if (data.client_notice) {
+          useAlert(
+            this.$t(
+              data.client_notice.sent
+                ? 'CANCEL_ITEM.NOTICE_SENT'
+                : 'CANCEL_ITEM.NOTICE_FAILED'
+            )
+          );
+        }
+        this.cancelTarget = null;
+        this.$emit('changed');
+      } catch (e) {
+        this.cancelError = e.response?.data?.error || '';
+      } finally {
+        this.cancelBusy = false;
+      }
     },
     // F6 — mover el vencimiento de la tarea para que cubra esta reunión.
     menuAlignTaskDue() {
@@ -459,7 +586,14 @@ export default {
       }
     },
     // ── Acciones ──────────────────────────────────────────────────────────
-    async hold(meeting, status) {
+    // El reporte de cierre sustituye a la minuta, y se pide también si no asistió.
+    hold(meeting, status) {
+      const { id, title } = meeting;
+      this.askReport({ type: 'meeting', id, title }, () =>
+        this.finishHold(meeting, status)
+      );
+    },
+    async finishHold(meeting, status) {
       try {
         const { data } = await CaseMeetingsAPI.hold(
           this.ticketId,
@@ -467,24 +601,6 @@ export default {
           status
         );
         this.replace(data.case_meeting);
-        this.$emit('changed');
-        // Cierre del círculo con las notas: se OFRECE la minuta (§6.3).
-        this.minutesFor = data.case_meeting;
-        this.minutesText = '';
-      } catch (e) {
-        this.toastError(e);
-      }
-    },
-    async cancel(meeting, scope) {
-      try {
-        const { data } = await CaseMeetingsAPI.cancel(
-          this.ticketId,
-          meeting.id,
-          scope
-        );
-        // Cancelar la serie toca varias filas: se recarga todo.
-        if (scope === 'all') await this.load();
-        else this.replace(data.case_meeting);
         this.$emit('changed');
       } catch (e) {
         this.toastError(e);
@@ -498,7 +614,17 @@ export default {
       const meeting = this.pendingDelete;
       if (!meeting) return;
       this.showDeleteConfirm = false;
-      await CaseMeetingsAPI.deleteMeeting(this.ticketId, meeting.id);
+      try {
+        await CaseMeetingsAPI.deleteMeeting(this.ticketId, meeting.id);
+      } catch (e) {
+        // Ya no se puede borrar: se cancela con su motivo.
+        this.pendingDelete = null;
+        if (e.response?.data?.cancel_instead) {
+          useAlert(this.$t('CANCEL_ITEM.DELETE_RESTRICTED'));
+          if (meeting.status === 'scheduled') this.openCancel(meeting);
+        }
+        return;
+      }
       this.meetings = this.meetings.filter(m => m.id !== meeting.id);
       this.pendingDelete = null;
       this.$emit('changed');
@@ -507,34 +633,6 @@ export default {
         icon: 'delete',
         variant: 'danger',
       });
-    },
-    // ── Minuta (§6.3): nota interna ligada a la MISMA tarea de la reunión ──
-    closeMinutes() {
-      this.minutesFor = null;
-      this.minutesText = '';
-    },
-    async saveMinutes() {
-      const content = this.minutesText.trim();
-      if (!content || this.isSavingMinutes) return;
-      this.isSavingMinutes = true;
-      try {
-        await CaseNotesAPI.createNote(this.ticketId, {
-          content,
-          case_task_id: this.minutesFor?.case_task?.id || null,
-        });
-        this.closeMinutes();
-        // La nota vive en case_events: refresca Notas y Avance.
-        this.$emit('changed');
-        this.$emit('minutesSaved');
-        this.$emitter.emit('caseToastMessage', {
-          message: this.$t('CASE_TICKETS.MEETINGS.MINUTES.SAVED'),
-          icon: 'clipboard',
-        });
-      } catch (e) {
-        this.toastError(e);
-      } finally {
-        this.isSavingMinutes = false;
-      }
     },
     // ── Auxiliares ────────────────────────────────────────────────────────
     replace(meeting) {
@@ -669,60 +767,22 @@ export default {
   <div
     class="flex flex-col min-h-0 p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
   >
-    <div class="flex items-center justify-between flex-shrink-0 mb-3">
-      <h3
-        class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
+    <!-- Plan Actividad del caso — sin renglón de título ni buscador: el botón
+         «Agendar tarea» está junto a las sub-pestañas de Pendientes. Solo queda
+         el aviso del filtro por tarea («ver tareas agendadas» de una tarea). -->
+    <div v-if="filterText" class="flex items-center flex-shrink-0 gap-2 mb-3">
+      <span
+        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200"
       >
-        {{ $t('CASE_TICKETS.MEETINGS.TITLE') }}
-        <span
-          v-if="meetings.length"
-          class="ml-1 text-sm font-normal text-slate-400 dark:text-slate-500"
-          >{{ meetings.length }}</span
-        >
-      </h3>
-      <div class="flex items-center gap-2">
-        <woot-button
-          v-tooltip.top="$t('CASE_TICKETS.MEETINGS.REFRESH')"
-          size="small"
-          variant="clear"
-          color-scheme="secondary"
-          icon="arrow-clockwise"
-          :is-loading="isLoading"
-          @click="refresh"
-        />
-        <woot-button
-          v-if="!isFrozen"
-          size="small"
-          icon="add"
-          @click="openCreate()"
-        >
-          {{ $t('CASE_TICKETS.MEETINGS.ADD_NEW') }}
-        </woot-button>
-      </div>
-    </div>
-
-    <!-- Filtro rápido de la tabla -->
-    <div v-if="meetings.length" class="flex-shrink-0 mb-3">
-      <div class="relative w-full max-w-xs">
-        <fluent-icon
-          icon="search"
-          size="16"
-          class="absolute pointer-events-none text-slate-400 dark:text-slate-500 left-2.5 top-1/2 -translate-y-1/2"
-        />
-        <input
-          v-model="filterText"
-          type="text"
-          :placeholder="$t('CASE_TICKETS.MEETINGS.FILTER_PLACEHOLDER')"
-          class="filter-search"
-        />
+        {{ $t('CASE_TICKETS.MEETINGS.FILTERED', { folio: filterText }) }}
         <button
-          v-if="filterText"
-          class="absolute -translate-y-1/2 right-2 top-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+          class="p-0 bg-transparent border-0 cursor-pointer text-woot-500 hover:text-woot-700"
+          :title="$t('CASE_TICKETS.MEETINGS.CLEAR_FILTER')"
           @click="filterText = ''"
         >
-          <fluent-icon icon="dismiss" size="14" />
+          <fluent-icon icon="dismiss" size="12" />
         </button>
-      </div>
+      </span>
     </div>
 
     <div
@@ -781,48 +841,29 @@ export default {
       @close="showModal = false"
     />
 
-    <!-- Minuta: se ofrece al marcar la reunión como realizada (§6.3). La nota
-         queda ligada a la MISMA tarea de la reunión. -->
-    <woot-modal
-      v-if="minutesFor"
-      :show="!!minutesFor"
-      :on-close="closeMinutes"
-      size="medium"
-    >
-      <div class="flex flex-col h-auto overflow-auto">
-        <woot-modal-header
-          :header-title="$t('CASE_TICKETS.MEETINGS.MINUTES.TITLE')"
-          :header-content="$t('CASE_TICKETS.MEETINGS.MINUTES.DESC')"
-        />
-        <form
-          class="flex flex-col self-stretch w-full gap-3 pb-8"
-          @submit.prevent="saveMinutes"
-        >
-          <label class="block">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CASE_TICKETS.MEETINGS.MINUTES.LABEL')
-            }}</span>
-            <textarea
-              v-model="minutesText"
-              rows="6"
-              :placeholder="$t('CASE_TICKETS.MEETINGS.MINUTES.PLACEHOLDER')"
-            />
-          </label>
-          <div class="flex items-center justify-end gap-2">
-            <woot-button variant="clear" type="button" @click="closeMinutes">
-              {{ $t('CASE_TICKETS.MEETINGS.MINUTES.SKIP') }}
-            </woot-button>
-            <woot-button
-              :is-loading="isSavingMinutes"
-              :disabled="!minutesText.trim()"
-              type="submit"
-            >
-              {{ $t('CASE_TICKETS.MEETINGS.MINUTES.SAVE') }}
-            </woot-button>
-          </div>
-        </form>
-      </div>
-    </woot-modal>
+    <CancelItemModal
+      :show="!!cancelTarget"
+      :item="cancelTarget"
+      kind="meeting"
+      :busy="cancelBusy"
+      :error="cancelError"
+      @close="cancelTarget = null"
+      @reschedule="rescheduleInstead"
+      @submit="submitCancel"
+    />
+    <ConvertToTaskModal
+      :show="!!convertTarget"
+      :item="convertTarget"
+      :busy="convertBusy"
+      :error="convertError"
+      @close="convertTarget = null"
+      @submit="submitToTask"
+    />
+    <TaskReportModal
+      :item="reportItem"
+      @close="cancelReport"
+      @reported="onReported"
+    />
 
     <woot-delete-modal
       :show="showDeleteConfirm"
@@ -903,26 +944,26 @@ export default {
             {{ $t('CASE_TICKETS.MEETINGS.MENU.NO_SHOW') }}
           </woot-button>
         </WootDropdownItem>
+        <WootDropdownItem v-if="rowMenu.row.status === 'scheduled'">
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="checkmark"
+            @click="menuToTask"
+          >
+            {{ $t('CASE_TICKETS.MEETINGS.MENU.TO_TASK') }}
+          </woot-button>
+        </WootDropdownItem>
         <WootDropdownItem>
           <woot-button
             variant="clear"
             color-scheme="secondary"
             size="small"
             icon="dismiss-circle"
-            @click="menuCancel('one')"
+            @click="menuCancel"
           >
-            {{ $t('CASE_TICKETS.MEETINGS.MENU.CANCEL_ONE') }}
-          </woot-button>
-        </WootDropdownItem>
-        <WootDropdownItem v-if="rowMenu.row.series">
-          <woot-button
-            variant="clear"
-            color-scheme="secondary"
-            size="small"
-            icon="calendar-clock"
-            @click="menuCancel('all')"
-          >
-            {{ $t('CASE_TICKETS.MEETINGS.MENU.CANCEL_ALL') }}
+            {{ $t('CANCEL_ITEM.MENU') }}
           </woot-button>
         </WootDropdownItem>
         <WootDropdownItem>

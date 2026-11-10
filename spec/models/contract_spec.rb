@@ -69,6 +69,25 @@ RSpec.describe Contract do
     expect(record.custom_attributes).to eq('numero_de_cuenta' => 'A-77')
   end
 
+  describe 'precio del producto' do
+    let(:servicio) { account.catalog_items.create!(name: 'Monitoreo', kind: :service, price: 500, currency: 'MXN') }
+
+    it 'con la casilla toma el precio del producto y lo sigue cuando cambia' do
+      sigue = contract(catalog_item: servicio, price: 1, price_from_catalog: true)
+      especial = contract(catalog_item: servicio, price: 420)
+      expect(sigue.price).to eq(500)
+
+      servicio.update!(price: 550, currency: 'USD')
+      expect(sigue.reload).to have_attributes(price: 550, currency: 'USD')
+      expect(especial.reload).to have_attributes(price: 420, currency: 'MXN')
+    end
+
+    it 'sin producto no hay casilla y queda el precio capturado' do
+      record = contract(price: 300, price_from_catalog: true)
+      expect(record).to have_attributes(price: 300, price_from_catalog: false)
+    end
+  end
+
   it 'no acepta un equipo de otro cliente' do
     otro = create(:contact, account: account)
     equipo = account.customer_assets.create!(contact: otro, name: 'Panel')

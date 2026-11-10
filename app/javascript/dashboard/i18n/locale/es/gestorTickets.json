@@ -1,5 +1,375 @@
 {
+  "CONVERT_ITEM": {
+    "SCHEDULE": "Agendar…",
+    "SCHEDULE_TITLE": "Agendar «{title}»",
+    "SCHEDULE_DESC": "La tarea se quita de Tareas y queda agendada con día y hora.",
+    "STARTS": "Empieza",
+    "ENDS": "Termina",
+    "LOCATION": "Lugar",
+    "SAVE": "Agendar",
+    "CANCEL": "Cancelar",
+    "SCHEDULED": "«{title}» quedó agendada",
+    "LINKED": "Se agendó una sesión de «{title}»; la tarea se queda",
+    "TO_TASK": "Pasar a tarea (sin hora)",
+    "TO_TASK_TITLE": "¿Pasar «{title}» a tarea?",
+    "TO_TASK_DESC": "Se quita de la agenda (y de Google Calendar) y queda como tarea con fecha límite el mismo día. El tiempo reportado se conserva.",
+    "TO_TASK_LINKED": "Es la sesión de la tarea «{task}»: se quita de la agenda y queda esa tarea.",
+    "NOTIFY": "Avisarle al cliente que se quita la cita",
+    "CONFIRM": "Pasar a tarea",
+    "DONE": "«{title}» quedó como tarea",
+    "DONE_LINKED": "Se quitó de la agenda; queda la tarea «{title}»"
+  },
+  "CANCEL_ITEM": {
+    "CATALOG": {
+      "TITLE": "Motivos de cancelación",
+      "HELP": "Se piden al cancelar una tarea o tarea agendada. «Otro» pide escribir el motivo.",
+      "PLACEHOLDER": "Nuevo motivo…"
+    },
+    "TITLE_TASK": "Cancelar tarea",
+    "TITLE_MEETING": "Cancelar tarea agendada",
+    "RESCHEDULE_QUESTION": "¿La quieres reprogramar? Si solo cambia la fecha, reprogramarla conserva su historial.",
+    "RESCHEDULE": "Reprogramar",
+    "REALLY_CANCEL": "No, cancelarla",
+    "REASON": "Motivo",
+    "REASON_PLACEHOLDER": "Elige el motivo…",
+    "COMMENT": "Comentario (opcional)",
+    "COMMENT_REQUIRED": "Comentario (escribe el motivo)",
+    "MINUTES": "¿Le dedicaste tiempo? (minutos, opcional)",
+    "MINUTES_REQUIRED": "Tiempo dedicado (minutos) — ya se trabajó en ella",
+    "MINUTES_PLACEHOLDER": "Ej. 30",
+    "MINUTES_HINT": "Suma a las horas del caso y sale en Reportes.",
+    "SCOPE_ONE": "Solo esta",
+    "SCOPE_ALL": "Toda la serie",
+    "NOTIFY_CLIENT": "Avisarle al cliente por su conversación",
+    "BACK": "Regresar",
+    "CONFIRM": "Cancelar",
+    "DONE": "Cancelada · {reason}",
+    "REOPEN": "Reabrir",
+    "MENU": "Cancelar…",
+    "DELETE_RESTRICTED": "Solo se borra lo capturado por error (quien la creó, en las primeras 24 horas). Cancélala con su motivo.",
+    "NOTICE_SENT": "Le avisamos al cliente.",
+    "NOTICE_FAILED": "No se le pudo avisar al cliente por su conversación."
+  },
+  "CLIENT_TASKS": {
+    "WHO": "¿Quién la hace?",
+    "AUDIENCE": {
+      "internal": "Nosotros (interna)",
+      "visible": "Nosotros, visible al cliente",
+      "client": "El cliente"
+    },
+    "AUDIENCE_HINT": {
+      "internal": "Solo la ve el equipo.",
+      "visible": "El cliente ve su avance en su portal, pero no la mueve.",
+      "client": "El cliente la trabaja en su portal: la empieza, comenta, sube archivos y la marca como hecha."
+    },
+    "REQUIRES_FILE": "Pide que el cliente suba un archivo",
+    "NOTIFY": "Avisarle al cliente con el enlace de su portal",
+    "NOTICE": {
+      "SENT": "Le avisamos al cliente con el enlace de su portal.",
+      "no_conversation": "La tarea quedó, pero el cliente no tiene conversación para avisarle: mándale el enlace del portal.",
+      "window_closed": "La tarea quedó, pero pasaron más de 24 h desde su último mensaje: avísale con una plantilla o mándale el enlace por otro medio.",
+      "no_owner": "La tarea quedó, pero el caso no tiene contacto ni organización para el portal."
+    },
+    "CHIP_CLIENT": "Del cliente",
+    "CHIP_VISIBLE": "Visible al cliente",
+    "IN_PROGRESS": "En proceso",
+    "DONE_BY": "Hecha por {name}",
+    "PORTAL_TITLE": "En el portal del cliente",
+    "EMPTY": "El cliente todavía no ha hecho nada en esta tarea.",
+    "KINDS": {
+      "started": "La empezó",
+      "comment": "Comentó",
+      "file": "Subió un archivo",
+      "done": "La marcó como hecha",
+      "returned": "La regresamos",
+      "reply": "Le respondimos"
+    },
+    "REPLY_PLACEHOLDER": "Respóndele al cliente…",
+    "REPLY": "Responder",
+    "RETURN": "Regresar al cliente",
+    "RETURN_PLACEHOLDER": "¿Por qué la regresas? (lo verá el cliente)",
+    "RETURN_CONFIRM": "Regresar",
+    "ERROR": "No se pudo guardar."
+  },
+  "CLIENT_PORTAL_LINK": {
+    "TITLE": "Portal del cliente",
+    "HELP_ORG": "Un enlace para toda la organización: ven sus casos y proyectos y trabajan las tareas que les toquen. No caduca.",
+    "HELP_CONTACT": "Un enlace para este contacto: ve sus casos y proyectos y trabaja las tareas que le toquen. No caduca.",
+    "CREATE": "Crear enlace",
+    "COPY": "Copiar enlace",
+    "COPIED": "Enlace copiado",
+    "OPEN": "Abrir",
+    "RENEW": "Renovar",
+    "RENEW_CONFIRM": "¿Renovar el enlace? El actual deja de servir.",
+    "DISABLE": "Desactivar",
+    "DISABLE_CONFIRM": "¿Desactivar el portal? El enlace deja de servir.",
+    "LAST_USED": "Último uso: {date}",
+    "NEVER_USED": "Aún no lo han abierto",
+    "NONE": "Aún no tiene enlace.",
+    "NO_OWNER": "El caso no tiene organización ni contacto."
+  },
+  "CASE_TASKS_ON_CLOSE": {
+    "HEADER": "Antes de cerrar el caso",
+    "TITLE": "Este caso tiene {count} tarea(s) pendiente(s)",
+    "DESC": "Un caso cerrado no se puede editar. Elige qué pasa con ellas.",
+    "CANCEL_LABEL": "Cancelarlas",
+    "CANCEL_DESC": "Ya no hacen falta. No cuentan como hechas y regresan si se reabre el caso.",
+    "KEEP_LABEL": "Conservarlas sin caso",
+    "KEEP_DESC": "Siguen vivas en el contacto y en Mi día de su responsable.",
+    "CONCLUDE_LABEL": "Concluirlas ahora",
+    "CONCLUDE_DESC": "Sí se hicieron: escribes un reporte de cierre para todas.",
+    "BACK": "Volver",
+    "CONFIRM": "Continuar",
+    "REPORT_TITLE": "Tareas del caso ({count})",
+    "ERROR": "No se pudieron concluir las tareas."
+  },
+  "VISIT_ARRIVALS": {
+    "EXPORT": "Exportar CSV",
+    "EMPTY": "Sin llegadas en ese periodo.",
+    "ERROR": "No se pudieron cargar las llegadas.",
+    "WHEN": "Cuándo",
+    "WHO": "Quién",
+    "CLIENT": "Cliente",
+    "VISIT": "Visita",
+    "LOCATION": "Ubicación",
+    "NO_LOCATION": "Sin ubicación"
+  },
+  "TASK_REPORT": {
+    "TITLE": "Reporte de cierre",
+    "CONTENT": "Qué se hizo",
+    "CONTENT_PLACEHOLDER": "Escribe qué hiciste y cómo quedó",
+    "OUTCOME": "Resultado",
+    "NO_OUTCOME": "Sin resultado",
+    "EVIDENCE": "Evidencia (opcional)",
+    "TOO_MANY": "Máximo {max} archivos.",
+    "REQUIRED": "Escribe qué se hizo.",
+    "ERROR": "No se pudo guardar el reporte. Inténtalo de nuevo.",
+    "CANCEL": "Cancelar",
+    "SUBMIT": "Concluir",
+    "VIEW": "Ver reporte",
+    "EMPTY": "Sin reportes.",
+    "MORE": "Ver más",
+    "HISTORY": "Tareas concluidas y actividades",
+    "PAGE_TITLE": "Reportes",
+    "ALL_PEOPLE": "Todas las personas",
+    "FROM": "Desde",
+    "TO": "Hasta",
+    "TABS": {
+      "REPORTS": "Reportes",
+      "ARRIVALS": "Llegadas"
+    },
+    "SERVICE_REPORT": "Ver reporte de servicio",
+    "ARRIVAL": "Llegó",
+    "MINUTES": {
+      "LABEL": "Tiempo dedicado",
+      "OPTIONAL": "(opcional)",
+      "HOURS": "h",
+      "MINUTES": "min",
+      "REQUIRED": "Indica el tiempo dedicado.",
+      "SPLIT": "Se reparte por igual entre las {count} tareas.",
+      "TOTAL": "Tiempo total: {time}",
+      "ESTIMATED": "(estimado {time})",
+      "REQUIRE_SETTING": "Exigir el tiempo dedicado en los reportes",
+      "REQUIRE_SETTING_HINT": "Al concluir una tarea o reportar una actividad hay que decir cuánto tomó. Con caso, suma a sus horas reales."
+    },
+    "KINDS": {
+      "TASK": "Tarea",
+      "MEETING": "Tarea agendada",
+      "ORDER": "Orden de trabajo",
+      "ACTIVITY": "Actividad"
+    },
+    "CATALOG": {
+      "TITLE": "Resultados de tareas",
+      "ACTIVE": "Activo",
+      "DELETE": "Eliminar",
+      "ADD": "Agregar",
+      "PLACEHOLDER": "Nuevo resultado",
+      "ERROR": "No se pudo guardar."
+    }
+  },
+  "ACTIVITY_REPORT": {
+    "TITLE": "Reportar actividad",
+    "SUBTITLE": "Algo que ya hiciste, sin tarea de por medio",
+    "NAME": "Título",
+    "NAME_PLACEHOLDER": "Ej. Llamada de confirmación",
+    "DATE": "Fecha",
+    "TIME": "Hora",
+    "INTERNAL_HINT": "Sin contacto ni organización queda como actividad interna: solo se ve en Reportes y en tu Mi día.",
+    "REQUIRED": "Escribe el título y qué hiciste.",
+    "SUBMIT": "Guardar",
+    "SUCCESS": "Actividad reportada"
+  },
+  "SALES_BUDGET": {
+    "TITLE": "Presupuesto de ventas",
+    "YEAR": "Año",
+    "CURRENCY": "Moneda",
+    "TABS": {
+      "PROGRESS": "Avance",
+      "SELLERS": "Por vendedor",
+      "CLIENTS": "Por vendedor y cliente"
+    },
+    "PROGRESS": {
+      "RANGES": { "MONTH": "Este mes", "QUARTER": "Trimestre", "YEAR": "Año" },
+      "FROM": "Desde",
+      "TO": "Hasta",
+      "TILES": { "BUDGET": "Presupuesto", "ACTUAL": "Logrado", "PERCENT": "Avance", "DIFF": "Diferencia" },
+      "BY_MONTH": "Por mes",
+      "COLUMNS": { "SELLER": "Vendedor" },
+      "NO_SELLER": "Sin vendedor",
+      "OTHER_CLIENTS": "Otros clientes (sin meta)",
+      "TOTAL": "Total",
+      "EMPTY": "No hay presupuesto ni ventas ganadas en este periodo.",
+      "HOW_COUNTED": "Logrado = ventas ganadas sin IVA. Una oportunidad cuenta una vez: con su cotización aceptada si la tiene, si no con su monto. Las cotizaciones sin oportunidad cuentan solas."
+    },
+    "CAPTURE": {
+      "SELLER": "Vendedor",
+      "CLIENT": "Cliente",
+      "YEAR": "Año",
+      "TOTAL": "Total",
+      "SAVE": "Guardar",
+      "SAVED": "Presupuesto guardado",
+      "ERROR": "No se pudo guardar. Inténtalo de nuevo.",
+      "PERCENT": "Ajuste en %",
+      "COPY": "Copiar {year}",
+      "COPY_HINT": "Trae las metas del año anterior con el ajuste; no pisa lo ya capturado.",
+      "COPIED": "Se copiaron {count} metas",
+      "CHOOSE_SELLER": "Elige un vendedor",
+      "CHOOSE_SELLER_HINT": "Elige un vendedor para capturar sus metas por cliente.",
+      "ADD_CLIENT": "Agregar cliente",
+      "NO_CLIENTS": "Este vendedor no tiene clientes con meta. Agrega uno arriba.",
+      "REMOVE_CLIENT": "Quitar cliente",
+      "REMOVE_CONFIRM": "¿Quitar todas las metas de {name} en este año?",
+      "CLIENTS_SUM": "Suma de clientes",
+      "SELLER_GOAL": "Meta global del vendedor",
+      "UNASSIGNED": "Sin repartir",
+      "UNASSIGNED_HINT": "«Sin repartir» es la meta global menos lo asignado a clientes; en ámbar si los clientes suman más que la meta."
+    }
+  },
+  "QUICK_ACTIONS": {
+    "GO_HOME": "Ir a Inicio",
+    "TITLE": "Accesos rápidos",
+    "NEW_TASK": "Tarea",
+    "REPORT_ACTIVITY": "Reportar actividad",
+    "SEARCH_SHORT": "Buscar",
+    "SEARCH_CLIENT": "Buscar en contactos, organizaciones y casos (Ctrl + K)",
+    "SEARCH": {
+      "ALL": "Todo",
+      "HINT": "Busca por nombre, teléfono, correo, folio, RFC o cualquier palabra de notas y descripciones.",
+      "RECENT": "Abiertos hace poco",
+      "CLEAR_RECENT": "Borrar",
+      "SEE_ALL": "Ver todos ({count})",
+      "ASK_DALI": "¿No lo encuentras? Pregúntale a {name}",
+      "DALI_QUESTION": "¿Dónde aparece «{q}»?",
+      "OWNER": "Responsable: {name}",
+      "NO_ASSIGNEE": "Sin responsable",
+      "OUTCOMES": {"won": "Ganada", "lost": "Perdida", "cancelled": "Cancelada"},
+      "TITLE": "Buscar en contactos, organizaciones y casos",
+      "PLACEHOLDER": "Escribe una palabra: nombre, folio, RFC, algo de la descripción…",
+      "MIN": "Escribe al menos 3 letras.",
+      "SEARCHING": "Buscando…",
+      "EMPTY": "Sin resultados.",
+      "CONTACTS": "Contactos",
+      "ORGANIZATIONS": "Organizaciones",
+      "CASES": "Casos",
+      "MORE": "Ver más ({count})",
+      "FIELDS": {
+        "email": "Correo",
+        "phone": "Teléfono",
+        "company": "Empresa",
+        "city": "Ciudad",
+        "identifier": "Identificador",
+        "custom": "Atributos",
+        "tax_id": "RFC",
+        "website": "Sitio web",
+        "industry": "Giro",
+        "address": "Dirección",
+        "notes": "Notas",
+        "description": "Descripción",
+        "work_address": "Dirección de trabajo",
+        "closure": "Cierre",
+        "outcome": "Nota del resultado",
+        "commit_note": "Compromiso"
+      }
+    },
+    "NEW_CONTACT": "Nuevo contacto",
+    "TASK": {
+      "TITLE": "Nueva tarea",
+      "NAME": "Qué hay que hacer",
+      "NAME_PLACEHOLDER": "Escribe la tarea",
+      "DESCRIPTION": "Descripción (opcional)",
+      "DESCRIPTION_PLACEHOLDER": "Detalle de lo que hay que hacer...",
+      "VISIT_TIME_REQUIRED": "Una visita lleva fecha y hora.",
+      "IS_VISIT": "Es una visita al cliente",
+      "ADDRESS": "Dirección de la visita",
+      "ADDRESS_PLACEHOLDER": "Si la dejas vacía, se usa la del caso o la organización",
+      "ASSIGNEE": "Responsable",
+      "PLANNED": "Fecha programada",
+      "TIME": "Hora (opcional)",
+      "DUE": "Fecha de vencimiento",
+      "CASE": "Caso (opcional)",
+      "NO_CASE": "Sin caso",
+      "SCHEDULED_HINT": "Con hora queda como tarea agendada y va a Google, si está conectado.",
+      "ONLY_MY_DAY": "Sin contacto ni organización se ve solo en Mi día.",
+      "CANCEL": "Cancelar",
+      "SUBMIT": "Crear tarea",
+      "SUCCESS": "Tarea creada",
+      "ERROR": "No se pudo crear. Inténtalo de nuevo.",
+      "TITLE_REQUIRED": "Escribe qué hay que hacer.",
+      "DATE_REQUIRED": "Con hora, elige la fecha programada."
+    }
+  },
   "CASE_TICKETS": {
+    "STAGE_BAR": {
+      "NOW": "Ahora: {stage}"
+    },
+    "CONFLICT": {
+      "TITLE": "Alguien cambió este caso",
+      "NOW": "ahora: {value}",
+      "HINT": "Tu cambio no se guardó porque otra persona cambió lo mismo mientras lo tenías abierto.",
+      "USE_MINE": "Usar el mío",
+      "KEEP_THEIRS": "Dejar el de {name}",
+      "KEEP_CURRENT": "Dejar el actual",
+      "SAVED_MINE": "Se guardó tu cambio",
+      "ERROR": "No se pudo guardar. Inténtalo de nuevo.",
+      "STAGE_CHANGED": "cambió de etapa",
+      "FIELDS": {
+        "STATUS": "Estado",
+        "CASE_TYPE_COLUMN_ID": "Etapa",
+        "PRIORITY": "Prioridad",
+        "TITLE": "Título",
+        "DESCRIPTION": "Descripción",
+        "ASSIGNEE_ID": "Responsable",
+        "TEAM_ID": "Equipo",
+        "DUE_AT": "Vencimiento",
+        "AMOUNT": "Monto",
+        "CURRENCY": "Moneda",
+        "EXPECTED_CLOSE_AT": "Cierre estimado",
+        "PROBABILITY": "Probabilidad",
+        "WORK_ADDRESS": "Dirección",
+        "ESTIMATED_HOURS": "Horas estimadas",
+        "CASE_TYPE_ID": "Tipo"
+      }
+    },
+    "PRESENCE": {
+      "BANNER": "{names} también está en este caso | {names} también están en este caso"
+    },
+    "AGENT": {
+      "ACTIVE": "{name} · contestando",
+      "PAUSED": "{name} · en pausa (no contesta ahora)",
+      "ATTEMPTS": "intento {n} de {max}",
+      "NEXT": "vuelve a escribir {date}",
+      "NONE": "Sin agente: nadie automático atiende esta conversación",
+      "NO_CONVERSATION": "Sin conversación: no se le puede asignar un agente"
+    },
+    "NEXT_STEP": {
+      "TASK": "Tarea · {date}",
+      "TASK_OVERDUE": "Tarea vencida · {date}",
+      "TASK_NO_DATE": "Tarea sin fecha",
+      "MEETING": "Agendada · {date}",
+      "MEETING_OVERDUE": "Agendada vencida · {date}",
+      "NONE": "Sin siguiente paso",
+      "NONE_HINT": "No tiene tareas pendientes ni nada agendado: agrega una tarea para darle continuidad."
+    },
     "SECTION_TITLE": "Caso",
     "SIDEBAR": {
       "PRIMARY_LABEL": "Casos",
@@ -216,6 +586,9 @@
       "OPEN": "Ver ficha del contacto"
     },
     "DETAIL_TABS": {
+      "PENDING": "Pendientes",
+      "MORE": "Más",
+      "ACTIVITY": "Actividad",
       "SUMMARY": "Resumen",
       "CONVERSATION": "Conversación",
       "NOTES": "Notas",
@@ -226,7 +599,8 @@
       "MEETINGS": "Tareas agendadas",
       "CONCEPTS": "Reporte de servicio",
       "PROJECT": "Proyecto",
-      "PROJECT_CASES": "Casos del proyecto"
+      "PROJECT_CASES": "Casos del proyecto",
+      "RELATIONS": "Casos relacionados"
     },
     "CONVERSATION": {
       "SUBTITLE": "Hilo con el cliente",
@@ -276,6 +650,7 @@
       "ERROR": "No se pudo cambiar el vencimiento"
     },
     "TABLE": {
+      "NEXT_STEP": "Siguiente paso",
       "FOLIO": "Folio",
       "SUBJECT": "Asunto",
       "CONTACT_SUBJECT": "Contacto / Asunto",
@@ -354,7 +729,9 @@
         "OPEN_TICKET": "Abrir caso",
         "DELETE_ERROR": "No se pudo eliminar la tarea.",
         "TOAST_STAGE_TASKS": "Tareas nuevas: {task} · caso {folio}",
-        "TOAST_STAGE_READY": "{task} · caso {folio}"
+        "TOAST_STAGE_READY": "{task} · caso {folio}",
+        "TOAST_RULE_NOTICE": "{task}",
+        "TOAST_CLIENT_TASK": "El cliente avanzó «{task}» ({folio})"
       },
       "TABLE": {
         "NUM": "Folio",
@@ -369,7 +746,8 @@
       },
       "STATUS": {
         "PENDING": "Pendiente",
-        "DONE": "Concluida"
+        "DONE": "Concluida",
+        "CANCELLED": "Cancelada"
       },
       "MODAL": {
         "NEW_TITLE": "Nueva tarea",
@@ -436,6 +814,7 @@
         "SCORE_TITLE": "Puntaje de urgencia: entre más alto, antes",
         "AGENDA": "Agenda de hoy",
         "AGENDA_EMPTY": "Sin reuniones hoy",
+        "DONE_TODAY": "Hecho hoy",
         "EMPTY": "Sin pendientes: no tienes tareas por hacer.",
         "REASONS": {
           "overdue": "Vencida hace {days} d",
@@ -780,7 +1159,10 @@
         "MESSAGE": "Se desvincularán los casos. Eliminar relación",
         "YES": "Eliminar",
         "NO": "Cancelar"
-      }
+      },
+      "HELP": "Los casos ligados a este: los que nacieron de aquí y los que se vincularon.",
+      "CREATE_CONFIRM": "Crear y ligar",
+      "REMOVE": "Quitar el vínculo (el caso no se borra)"
     },
     "RELATION_TYPES": {
       "duplicate": {
@@ -814,6 +1196,10 @@
       "project_origin": {
         "outgoing": "Proyecto de",
         "incoming": "Proyecto creado"
+      },
+      "related": {
+        "outgoing": "Relacionado",
+        "incoming": "Relacionado"
       }
     },
     "TIMELINE": {
@@ -828,6 +1214,11 @@
       "LOADING": "Cargando avance...",
       "CURRENT": "Actual",
       "CREATED": "Creado",
+      "CONVERTED": {
+        "to_meeting": "pasó a la agenda para el {when}",
+        "to_task": "salió de la agenda (era el {when}) y quedó como tarea",
+        "linked": "se agendó una sesión de la tarea para el {when}"
+      },
       "MEETING_SCOPE_ALL": "Toda la serie",
       "CURRENTLY": "Actualmente",
       "RETURNED": "Volvió",
@@ -1043,11 +1434,11 @@
       "REOPEN": {
         "SECTION": "Reapertura de casos cerrados",
         "WINDOW_TITLE": "Ventana de reapertura",
-        "WINDOW_DESC": "Días desde el cierre en los que el responsable puede reabrir. Pasado ese plazo, solo un administrador. Usa 0 para no poner límite.",
+        "WINDOW_DESC": "Días desde el cierre en los que una respuesta del cliente reabre el caso. Pasado ese plazo se crea un caso nuevo ligado al anterior. Usa 0 para no poner límite.",
         "DAYS": "días",
         "SAVE": "Guardar",
         "ON_REPLY_TITLE": "Reabrir si el cliente responde",
-        "ON_REPLY_DESC": "Si el cliente escribe por su canal sobre un caso cerrado, se reabre solo (o se crea uno de seguimiento si venció la ventana).",
+        "ON_REPLY_DESC": "Si el cliente escribe por su canal sobre un caso cerrado, se reabre solo (o se crea uno de seguimiento si venció la ventana). Las oportunidades ganadas o perdidas no se reabren: solo queda el aviso en su historial.",
         "NOTE_WINDOW": "El administrador puede reabrir siempre, aunque haya vencido la ventana.",
         "NOTE_SLA": "Al reabrir, el SLA vuelve a contar desde cero."
       },
@@ -1396,7 +1787,17 @@
       "commitment_changed": "Compromiso del cliente",
       "conversation_link": "Conversación ligada",
       "stage_tasks_added": "Tareas de la etapa",
-      "stage_advanced": "Avance de etapa"
+      "stage_advanced": "Avance de etapa",
+      "task_created": "Tarea creada",
+      "task_completed": "Tarea completada",
+      "task_client_update": "El cliente avanzó una tarea",
+      "task_cancelled": "Tarea cancelada",
+      "task_converted": "Tarea ↔ agenda",
+      "task_reopened": "Tarea reabierta",
+      "task_deleted": "Tarea borrada",
+      "quote_created": "Cotización creada",
+      "quote_status_changed": "Cotización actualizada",
+      "conversation_unlinked": "Conversación quitada"
     },
     "DETAIL": {
       "BACK": "Volver",
@@ -1405,6 +1806,10 @@
       "LEVEL_LABEL": "Nivel:",
       "VIEW_FULL": "Ver todo",
       "NO_TRANSITIONS": "Sin transiciones disponibles",
+      "COPY_FOLIO": "Copiar folio",
+      "FOLIO_COPIED": "Folio copiado",
+      "INTERNAL_CASE": "Caso interno",
+      "MORE_ACTIONS": "Más acciones",
       "LOADING": "Cargando caso…",
       "PARENT_PROJECT": "Proyecto",
       "BACK_TO_PROJECT": "Volver al proyecto",
@@ -1413,6 +1818,8 @@
     },
     "MEETINGS": {
       "TITLE": "Tareas agendadas",
+      "FILTERED": "Solo las de {folio}",
+      "CLEAR_FILTER": "Ver todas",
       "ADD_NEW": "Agendar tarea",
       "REFRESH": "Actualizar",
       "LOADING": "Cargando tareas agendadas...",
@@ -1446,7 +1853,8 @@
         "CANCEL_ALL": "Cancelar toda la serie",
         "DELETE": "Eliminar",
         "RESYNC": "Reintentar sincronización",
-        "ALIGN_TASK_DUE": "Mover el vencimiento de la tarea"
+        "ALIGN_TASK_DUE": "Mover el vencimiento de la tarea",
+        "TO_TASK": "Pasar a tarea (sin hora)"
       },
       "MODAL": {
         "TITLE": "Agendar tarea",
@@ -1459,6 +1867,10 @@
         "DATE_ERROR": "La hora de fin debe ser posterior a la de inicio.",
         "TASK_LABEL": "Tarea",
         "TASK_NONE": "— Del caso (sin tarea) —",
+        "CONVERT_HINT": "Al guardar, «{title}» se quita de Tareas y queda como tarea agendada, con el tiempo que ya tenía reportado.",
+        "KEEP_TASK": "Que la tarea se quede: solo agendar una sesión de trabajo",
+        "KEEP_HINT": "La tarea se queda en Tareas y esta sesión queda ligada a ella.",
+        "KEEP_LOCKED": "Es obligatoria, de la etapa o del cliente: la tarea se queda y se agenda una sesión ligada a ella.",
         "ORGANIZER_LABEL": "Responsable",
         "ORGANIZER_ME": "— Yo —",
         "LOCATION_LABEL": "Lugar",
@@ -1529,7 +1941,7 @@
     "COMMERCIAL": {
       "NO_TYPES": "Aún no hay tipos de oportunidad. Crea uno de clase Ventas en Tipos de caso.",
       "FIELDS": {
-        "AMOUNT": "Monto",
+        "AMOUNT": "Monto (sin IVA)",
         "CURRENCY": "Moneda",
         "EXPECTED_CLOSE": "Cierre estimado",
         "PROBABILITY": "Probabilidad",
@@ -1552,6 +1964,11 @@
       },
       "COLUMN_TOTAL": "Total de la columna",
       "PANEL": {
+        "SHORT_TITLE": "Oportunidad",
+        "WEIGHTED_LINE": "{pct}% → {weighted} ponderado",
+        "CLOSE_LINE": "Cierre {date}",
+        "OVERDUE": "vencido",
+        "EDIT": "Editar datos de la oportunidad",
         "TITLE": "Datos de la oportunidad",
         "SAVE": "Guardar",
         "CANCEL": "Descartar",
@@ -1603,7 +2020,7 @@
         "CURRENCY_INVALID": "Usa un código de 3 letras, p. ej. MXN",
         "REASONS_TITLE": "Motivos de cierre",
         "REASONS_DESC": "Lo que se elige al marcar una oportunidad como ganada, perdida, pospuesta o cancelada. Si un resultado tiene motivos activos, elegir uno es obligatorio. Desactiva un motivo en lugar de borrarlo para conservar la historia.",
-        "PAGE_TITLE": "Ventas",
+        "PAGE_TITLE": "Parámetros de ventas",
         "DISABLED": "La clase Ventas no está activa en esta cuenta.",
         "GROUPS": {
           "won": "Ganada",
@@ -1963,6 +2380,7 @@
       },
       "SUPPORT": {
         "NAME": "Soporte",
+        "NEW": "Caso",
         "LIST": "Tickets",
         "BOARD": "Tablero de tickets",
         "METRICS": "Métricas de soporte",
@@ -1980,6 +2398,7 @@
       },
       "WORK_ORDER": {
         "NAME": "Órdenes",
+        "NEW": "Orden de trabajo",
         "LIST": "Órdenes de trabajo",
         "BOARD": "Tablero de órdenes",
         "METRICS": "Métricas de órdenes",
@@ -1997,6 +2416,7 @@
       },
       "PROJECT": {
         "NAME": "Proyectos",
+        "NEW": "Proyecto",
         "LIST": "Proyectos",
         "BOARD": "Tablero de proyectos",
         "METRICS": "Métricas de proyectos",
@@ -2091,7 +2511,13 @@
         "TO": "Hasta",
         "INVALID": "«Desde» debe ser antes de «Hasta»"
       },
-      "COMMITTED_ONLY": "Solo comprometidas",
+      "NO_NEXT_STEP": "Sin siguiente paso",
+        "NO_NEXT_STEP_HINT": "Solo los casos abiertos sin tareas pendientes ni nada agendado",
+        "AGENT_WITH": "Con agente",
+        "AGENT_WITH_HINT": "Solo los casos abiertos cuya conversación atiende un agente (Seguimiento IA o Agentes IA)",
+        "AGENT_NONE": "Sin agente",
+        "AGENT_NONE_HINT": "Solo los casos abiertos que ningún agente automático está atendiendo",
+        "COMMITTED_ONLY": "Solo comprometidas",
       "COMMITTED_ONLY_HINT": "Solo las oportunidades que el cliente ya se comprometió a pagar. Se combina con los demás filtros y con el aviso de cierre vencido.",
       "DATE_FIELD": "¿Qué fecha?",
       "DATE_WHEN": "¿Cuándo?",
@@ -2119,14 +2545,25 @@
     },
     "CREATE": {
       "TITLE": "Nuevo: {name}",
-      "CONTACT": "Cliente",
-      "CONTACT_OPTIONAL": "Cliente (opcional)",
+      "CONTACT": "Contacto",
+      "CONTACT_OPTIONAL": "Contacto (opcional)",
       "CONTACT_PLACEHOLDER": "Busca por nombre, correo o teléfono",
-      "CONTACT_REQUIRED": "Una oportunidad necesita un cliente.",
-      "CONTACT_INTERNAL_HINT": "Sin cliente se crea como caso interno.",
-      "CHANGE_CONTACT": "Cambiar cliente",
+      "CONTACT_REQUIRED": "Una oportunidad necesita un contacto.",
+      "CONTACT_INTERNAL_HINT": "Sin contacto se crea como caso interno.",
+      "CHANGE_CONTACT": "Cambiar contacto",
       "NO_CONTACTS": "Sin resultados",
-      "SUCCESS": "Caso {folio} creado"
+      "SUCCESS": {
+        "COMMERCIAL": "Oportunidad {folio} creada",
+        "SUPPORT": "Caso {folio} creado",
+        "WORK_ORDER": "Orden de trabajo {folio} creada",
+        "PROJECT": "Proyecto {folio} creado"
+      },
+      "SUBMIT": {
+        "COMMERCIAL": "Crear oportunidad",
+        "SUPPORT": "Crear caso",
+        "WORK_ORDER": "Crear orden de trabajo",
+        "PROJECT": "Crear proyecto"
+      }
     },
     "PROJECT": {
       "PANEL": {
@@ -2238,7 +2675,7 @@
       }
     },
     "TASK_PRIORITY": {
-      "PAGE_TITLE": "Tareas: prioridad de «Mi día»",
+      "PAGE_TITLE": "Puntaje de tareas: cómo se ordena «Mi día»",
       "INTRO": "«Mi día» ordena las tareas pendientes de cada consultor por un puntaje: cada situación suma los puntos de abajo. Más puntos = más arriba. Un peso negativo resta; en 0 no cuenta.",
       "GROUPS": {
         "DUE": "Vencimiento de la tarea",
@@ -2415,7 +2852,51 @@
         "ERROR": "No se pudo analizar."
       }
     },
+    "ACTIVITY": {
+      "NEXT": "Sigue",
+      "REGISTER": "Registrar",
+      "REGISTER_ACTIONS": {
+        "note": "Nota",
+        "task": "Tarea",
+        "meeting": "Agendar",
+        "message": "Mensaje"
+      },
+      "OVERDUE": "{n} atrasada(s)",
+      "DUE": "vence {when}",
+      "NOTHING_PENDING": "No hay pendientes",
+      "LAST_CONTACT": "Último contacto",
+      "CUSTOMER_WROTE": "El cliente escribió {when} · {where}",
+      "WE_WROTE": "Le escribimos {when} · {where}",
+      "NO_MESSAGES": "Todavía no hay mensajes",
+      "NO_CONVERSATION": "Sin conversación ligada",
+      "CONVERSATIONS": "Conversaciones",
+      "PRIMARY": "principal",
+      "UNLINK": "Quitar del caso",
+      "UNLINK_CONFIRM": "¿Quitar la conversación #{id} del caso? La conversación no se borra.",
+      "ADD_CONVERSATION": "Agregar",
+      "UNLINKED": "El contacto tiene {n} conversación(es) sin ligar",
+      "FILTERS": {
+        "all": "Todo",
+        "client": "Cliente",
+        "notes": "Notas",
+        "tasks": "Tareas",
+        "changes": "Cambios"
+      },
+      "RECEIVED": "{n} recibido(s)",
+      "SENT": "{n} enviado(s)",
+      "CUSTOMER": "Cliente",
+      "WE": "Nosotros",
+      "TASK_REPORT": "Reporte de cierre",
+      "ACTIVITY_REPORT": "Actividad reportada",
+      "TODAY": "Hoy",
+      "YESTERDAY": "Ayer",
+      "LOADING": "Cargando actividad…",
+      "ERROR": "No se pudo cargar la actividad",
+      "EMPTY": "No hay actividad",
+      "MORE": "Ver {n} más"
+    },
     "CONVERSATION_ACTIONS": {
+      "ADD": "Agregar conversación",
       "LINK": "Ligar conversación",
       "SCHEDULE": "Programar mensaje",
       "SCHEDULE_HINT": "Programa un mensaje al cliente en la conversación del caso",
@@ -2425,7 +2906,10 @@
       "NEED_CONTACT": "Asigna un contacto al caso para ligar una conversación",
       "EVENT": "Conversación #{id} · {inbox}",
       "EVENT_CREATED": "Conversación nueva #{id} · {inbox}",
+      "EVENT_EXTRA": "Conversación adicional #{id} · {inbox}",
       "LINK_MODAL": {
+        "TITLE_EXTRA": "Agregar conversación · {folio}",
+        "SUBTITLE_EXTRA": "Se suma a las del caso (por ejemplo, el correo). La principal no cambia.",
         "TITLE": "Ligar conversación · {folio}",
         "SUBTITLE": "El caso queda con esta conversación; después no se cambia.",
         "EXISTING": "Conversaciones del contacto",
@@ -2472,6 +2956,9 @@
       "SUBTITLE": "Esto es lo que tienes para hoy.",
       "BUSINESS_SUMMARY": "Resumen del negocio",
       "LOADING": "Cargando tu resumen…",
+      "TAB_SUMMARY": "Resumen",
+      "TAB_MY_DAY": "Mi día",
+      "TAB_NOTIFICATIONS": "Notificaciones",
       "SEE_ALL": "Ver todo",
       "MY_DAY": "Lo más urgente de Mi día",
       "MY_DAY_EMPTY": "No tienes tareas pendientes. ¡Bien!",
@@ -2700,6 +3187,7 @@
       "EMPTY": "Sin cotizaciones."
     },
     "WHICH_QUOTE": "¿Cuál cotización aceptó el cliente?",
+    "WHICH_QUOTE_PLACEHOLDER": "Elige la cotización",
     "SETTINGS": {
       "REQUIRE_OPPORTUNITY": "Las cotizaciones requieren oportunidad",
       "REQUIRE_OPPORTUNITY_HINT": "Si está marcada, cada cotización nueva sin oportunidad crea la suya.",
@@ -2749,7 +3237,8 @@
     "SOURCES": {
       "timer": "Cronómetro",
       "manual": "A mano",
-      "visit": "Visita"
+      "visit": "Visita",
+      "report": "Reporte de tarea"
     },
     "REPORT": "Reporte para el cliente",
     "REPORT_SENT": "Reporte enviado",
@@ -2775,9 +3264,12 @@
     "FROM_PLAN": "Del mantenimiento «{title}»"
   },
   "FIELD": {
+    "ERROR": "No se pudo guardar. Inténtalo de nuevo.",
+    "ETA_OPTION": "{n} min",
+    "NO_LOCATION": "Sin ubicación: revisa el permiso del navegador",
     "TITLE": "Mi ruta",
     "TODAY": "Hoy",
-    "BACK_TO_APP": "Ir a Wintook",
+    "BACK_TO_APP": "Ir a Kontrolya",
     "PREV_DAY": "Día anterior",
     "NEXT_DAY": "Día siguiente",
     "EMPTY": "No tienes visitas este día.",
@@ -2824,7 +3316,7 @@
     "EXTRA_SEND": "Enviarla por WhatsApp",
     "EXTRA_SENT": "Cotización enviada",
     "QTY": "Cant.",
-    "OPEN_IN_APP": "Abrir en Wintook",
+    "OPEN_IN_APP": "Abrir en Kontrolya",
     "ERROR": "No se pudo guardar",
     "SEND_TO_TECH": "Enviar al técnico",
     "SENT_TO_TECH": "Enlace enviado al técnico",
@@ -2883,6 +3375,9 @@
     }
   },
   "DISPATCH": {
+    "AREA_ALL": "Todos",
+    "AREA_SERVICE": "Soporte",
+    "AREA_SALES": "Ventas",
     "TITLE": "Despacho",
     "HELP": "Arrastra una orden a la columna del técnico. Las que no tienen visita te piden la hora.",
     "UNSCHEDULED": "Por programar",

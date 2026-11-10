@@ -84,6 +84,15 @@ const filterTypes = [
     filterOperators: OPERATOR_TYPES_1,
     attributeModel: 'standard',
   },
+  // Plan-Eventos E2 — está (o no) en un evento con ese estado («Feria · Asistió»).
+  {
+    attributeKey: 'event',
+    attributeI18nKey: 'EVENT',
+    inputType: 'search_select',
+    dataType: 'text',
+    filterOperators: OPERATOR_TYPES_1,
+    attributeModel: 'standard',
+  },
 ];
 
 export const filterAttributeGroups = [
@@ -126,6 +135,10 @@ export const filterAttributeGroups = [
       {
         key: 'blocked',
         i18nKey: 'BLOCKED',
+      },
+      {
+        key: 'event',
+        i18nKey: 'EVENT',
       },
     ],
   },

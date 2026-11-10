@@ -41,6 +41,7 @@ class CatalogItem < ApplicationRecord
   enum kind: { product: 0, service: 1, part: 2 }
 
   before_validation :normalize
+  after_update :update_contract_prices, if: -> { saved_change_to_price? || saved_change_to_currency? }
 
   validates :name, presence: true, length: { maximum: 200 }
   validates :sku, uniqueness: { scope: :account_id }, allow_nil: true
@@ -71,6 +72,12 @@ class CatalogItem < ApplicationRecord
     self.name = name.to_s.strip
     %i[sku category unit].each { |field| self[field] = self[field].to_s.strip.presence }
     self.currency = currency.to_s.strip.upcase.presence || account_currency
+  end
+
+  # Los contratos que siguen el precio de este producto (Contract#fill_catalog_price).
+  def update_contract_prices
+    Contract.where(catalog_item_id: id, price_from_catalog: true)
+            .update_all(price: price, currency: currency, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def account_currency

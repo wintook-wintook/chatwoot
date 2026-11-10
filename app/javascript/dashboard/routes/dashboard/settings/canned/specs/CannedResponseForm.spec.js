@@ -1,5 +1,10 @@
 import { shallowMount } from '@vue/test-utils';
+import CategoryAPI from 'dashboard/api/cannedResponseCategory';
 import CannedResponseForm from '../CannedResponseForm.vue';
+
+vi.mock('dashboard/api/cannedResponseCategory', () => ({
+  default: { get: vi.fn() },
+}));
 
 // proyecto@predefinidas_prompt — docs/predefinidas_prompt_plan.md §3.4
 const montar = (
@@ -26,6 +31,10 @@ const montar = (
   });
 
 describe('CannedResponseForm', () => {
+  beforeEach(() => {
+    CategoryAPI.get.mockResolvedValue({ data: [{ id: 4, name: 'PATITAS' }] });
+  });
+
   it('entrega el nombre, el mensaje y el prompt al guardar', () => {
     const wrapper = montar({ contentPrompts: '1. Pedí la cantidad.' });
 
@@ -36,7 +45,27 @@ describe('CannedResponseForm', () => {
       content: 'Cotización de equipo.',
       content_prompts: '1. Pedí la cantidad.',
       content_is_prompt: false,
+      category_id: null,
     });
+  });
+
+  // proyecto@respuestas_predefinidas R3: la categoría, junto al nombre.
+  it('ofrece las categorías y entrega la elegida (o null)', async () => {
+    const wrapper = montar({ categoryId: 4 });
+    await new Promise(resolve => {
+      setTimeout(resolve);
+    });
+
+    expect(CategoryAPI.get).toHaveBeenCalled();
+    expect(wrapper.findAll('option').wrappers.map(o => o.text())).toContain(
+      'PATITAS'
+    );
+    wrapper.vm.submit();
+    expect(wrapper.emitted('submit')[0][0].category_id).toBe(4);
+
+    wrapper.setData({ form: { ...wrapper.vm.form, categoryId: '' } });
+    wrapper.vm.submit();
+    expect(wrapper.emitted('submit')[1][0].category_id).toBeNull();
   });
 
   // La casilla "El mensaje es el prompt" viaja aparte del Prompt de Contenido.

@@ -131,6 +131,19 @@ export const MESSAGE_VARIABLES = [
     label: 'Contact phone',
     key: 'contact.phone',
   },
+  // Plan-Organizaciones O5
+  {
+    label: 'Organización',
+    key: 'organizacion.nombre',
+  },
+  {
+    label: 'Organización: RFC',
+    key: 'organizacion.rfc',
+  },
+  {
+    label: 'Organización: etapa',
+    key: 'organizacion.etapa',
+  },
   {
     label: 'Agent name',
     key: 'agent.name',

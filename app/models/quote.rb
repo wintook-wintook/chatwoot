@@ -28,6 +28,7 @@
 #  assignee_id        :bigint
 #  contact_id         :bigint           not null
 #  opportunity_id     :bigint
+#  organization_id    :bigint
 #  origin_ticket_id   :bigint
 #  outcome_reason_id  :bigint
 #  parent_quote_id    :bigint
@@ -40,6 +41,7 @@
 #  index_quotes_on_assignee_id                        (assignee_id)
 #  index_quotes_on_contact_id                         (contact_id)
 #  index_quotes_on_opportunity_id                     (opportunity_id)
+#  index_quotes_on_organization_id                    (organization_id)
 #  index_quotes_on_origin_ticket_id                   (origin_ticket_id)
 #  index_quotes_on_outcome_reason_id                  (outcome_reason_id)
 #  index_quotes_on_parent_quote_id                    (parent_quote_id)
@@ -51,6 +53,7 @@
 #  fk_rails_...  (assignee_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (contact_id => contacts.id)
 #  fk_rails_...  (opportunity_id => case_tickets.id) ON DELETE => nullify
+#  fk_rails_...  (organization_id => organizations.id) ON DELETE => nullify
 #  fk_rails_...  (origin_ticket_id => case_tickets.id) ON DELETE => nullify
 #  fk_rails_...  (outcome_reason_id => case_outcome_reasons.id) ON DELETE => nullify
 #  fk_rails_...  (parent_quote_id => quotes.id) ON DELETE => nullify
@@ -70,6 +73,8 @@ class Quote < ApplicationRecord
 
   belongs_to :account
   belongs_to :contact
+  include OrganizationLinked # Plan-Organizaciones O2
+  include QuoteActivity # Plan Actividad del caso
   belongs_to :assignee, class_name: 'User', optional: true
   belongs_to :opportunity, class_name: 'CaseTicket', optional: true
   belongs_to :origin_ticket, class_name: 'CaseTicket', optional: true
@@ -83,6 +88,11 @@ class Quote < ApplicationRecord
 
   before_validation :assign_number, on: :create
   before_validation -> { self.currency = currency.to_s.upcase.presence || 'MXN' }
+  # Plan-Organizaciones O3 — enviada → prospecto; aceptada → cliente (si la regla está encendida).
+  after_commit -> { Organizations::StageRules.call(:prospect_on_quote_sent, self) },
+               on: %i[create update], if: -> { saved_change_to_status? && sent? }
+  after_commit -> { Organizations::StageRules.call(:customer_on_quote_accepted, self) },
+               on: %i[create update], if: -> { saved_change_to_status? && won? }
 
   validates :currency, format: { with: /\A[A-Z]{3}\z/ }
   validate :links_belong_to_account
@@ -90,6 +100,11 @@ class Quote < ApplicationRecord
   scope :live, -> { where(status: LIVE_STATUSES) }
   scope :open_quotes, -> { where(status: OPEN_STATUSES) }
   scope :expired, -> { sent.where(valid_until: ...Date.current) }
+
+  # Lo vendido sin IVA: subtotal menos descuentos (lo que cuenta en ventas y presupuesto).
+  def net_total
+    (subtotal - discount_total).round(2)
+  end
 
   def folio
     base = format('COT-%04d', number)
@@ -125,12 +140,13 @@ class Quote < ApplicationRecord
 
   private
 
-  # Con una sola cotización, la oportunidad abierta lleva su monto (espejo).
+  # Con una sola cotización, la oportunidad abierta lleva su monto (espejo), SIN IVA:
+  # el monto de las oportunidades es siempre antes de impuestos (presupuesto e informes).
   def mirror_amount_on_opportunity
     return if opportunity.nil? || opportunity.closed? || opportunity.cancelled?
     return unless opportunity.quotes.count == 1
 
-    opportunity.update!(amount: total, currency: currency)
+    opportunity.update!(amount: net_total, currency: currency)
   end
 
   def assign_number

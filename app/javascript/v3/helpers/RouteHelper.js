@@ -29,7 +29,8 @@ export const validateRouteAccess = (to, next, chatwootConfig = {}) => {
   // Redirect to dashboard if a cookie is present, the cookie
   // cleanup and token validation happens in the application pack.
   if (hasAuthCookie()) {
-    replaceRouteWithReload(DEFAULT_REDIRECT_URL);
+    const toDali = to.name === 'login' && to.query?.redirect === 'dali';
+    replaceRouteWithReload(toDali ? frontendURL('dali') : DEFAULT_REDIRECT_URL);
     return;
   }
 

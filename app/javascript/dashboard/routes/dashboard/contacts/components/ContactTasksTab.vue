@@ -1,22 +1,34 @@
 <!--
-  Página del contacto › Tareas: tareas y reuniones de sus casos (bandeja de
-  tareas filtrada por `contact_id`; el rol ya acota en el servidor).
+  Tareas y reuniones de un contacto o de una organización: las de sus casos y las
+  que no tienen caso (bandeja filtrada por `contact_id` u `organization_id`; el rol
+  ya acota en el servidor).
 -->
 <script>
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import Spinner from 'shared/components/Spinner.vue';
+import TaskReportsList from 'dashboard/views/gestorTickets/tasks/TaskReportsList.vue';
 
 export default {
   name: 'ContactTasksTab',
-  components: { Spinner },
+  components: { Spinner, TaskReportsList },
   props: {
-    contactId: { type: Number, required: true },
+    contactId: { type: Number, default: null },
+    organizationId: { type: Number, default: null },
   },
   data() {
     return { rows: [], loading: true, showAll: false };
   },
+  computed: {
+    reportFilters() {
+      return {
+        contact_id: this.contactId || undefined,
+        organization_id: this.organizationId || undefined,
+      };
+    },
+  },
   watch: {
     contactId: 'fetch',
+    organizationId: 'fetch',
     showAll: 'fetch',
   },
   mounted() {
@@ -27,7 +39,8 @@ export default {
       this.loading = true;
       try {
         const { data } = await CaseTasksAPI.getMine({
-          contact_id: this.contactId,
+          contact_id: this.contactId || undefined,
+          organization_id: this.organizationId || undefined,
           assignee_id: 'all',
           status: this.showAll ? 'all' : '',
           page: 1,
@@ -146,5 +159,13 @@ export default {
         </span>
       </li>
     </ul>
+    <section>
+      <h4
+        class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400"
+      >
+        {{ $t('TASK_REPORT.HISTORY') }}
+      </h4>
+      <TaskReportsList :filters="reportFilters" />
+    </section>
   </div>
 </template>

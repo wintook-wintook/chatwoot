@@ -1,6 +1,7 @@
 import {
   allowedAssigneeTabs,
   areaForRoute,
+  canDispatch,
   canDo,
   canSeeArea,
   getUserAccess,
@@ -23,6 +24,19 @@ describe('accessHelper (Plan-Roles-Permisos)', () => {
     const access = getUserAccess({ accounts: [{ id: 1 }] }, 1);
     expect(canSeeArea(access, 'settings')).toBe(true);
     expect(canDo(access, 'reassign')).toBe(true);
+  });
+
+  it('Despacho solo para quien asigna y ve todo Servicio o Ventas', () => {
+    expect(canDispatch(seller)).toBe(false);
+    const supervisor = {
+      role: 'supervisor',
+      areas: { service: 'all', sales: 'all' },
+      actions: { reassign: true },
+    };
+    expect(canDispatch(supervisor)).toBe(true);
+    expect(canDispatch({ ...supervisor, actions: { reassign: false } })).toBe(
+      false
+    );
   });
 
   it('lee el rol de la cuenta del perfil', () => {

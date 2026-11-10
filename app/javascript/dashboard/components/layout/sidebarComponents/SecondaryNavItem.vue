@@ -183,14 +183,17 @@ export default {
       );
     },
     isCurrentRoute() {
+      const name = this.$store.state.route.name || '';
       // Menú v2: una opción que abre varias vistas (Tablero | Lista | Embudo) se
-      // marca activa en cualquiera de ellas.
-      if (this.menuItem.activeRoutes) {
-        return this.menuItem.activeRoutes.includes(
-          this.$store.state.route.name
-        );
+      // marca activa en cualquiera de ellas, y también en la suya (p. ej. la lista de
+      // Organizaciones además de la página de cada una).
+      if (
+        this.menuItem.activeRoutes &&
+        this.menuItem.activeRoutes.includes(name)
+      ) {
+        return true;
       }
-      return this.$store.state.route.name.includes(this.menuItem.toStateName);
+      return name.includes(this.menuItem.toStateName);
     },
 
     computedClass() {

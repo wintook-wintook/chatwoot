@@ -206,7 +206,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
 
       it 'borra el evento del calendario' do
         job.send(:handle_cancel_appointment, tracking, message)
-        expect(calendar_service).to have_received(:delete_event).with('evt_1')
+        expect(calendar_service).to have_received(:delete_event).with('evt_1', calendar_id: 'primary')
       end
 
       it 'limpia los campos de cita y marca el outcome cancelled' do
@@ -260,6 +260,30 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       tracking_template.update!(timezone: 'America/Mexico_City')
       allow(job).to receive(:google_calendar_timezone).with(tracking).and_return('America/Argentina/Buenos_Aires')
       expect(job.send(:appointment_timezone, tracking, message)).to eq('America/Argentina/Buenos_Aires')
+    end
+  end
+
+  describe '#next_contact_line (04/11/2026)' do
+    let(:tracking) do
+      ContactTracking.new(account: account, tracking_template: tracking_template, scheduled_for: Time.zone.parse('2026-11-09 18:19 UTC'))
+    end
+
+    it 'sin ningún toque enviado (el cliente abrió la conversación) no va' do
+      tracking.attempt_count = 0
+      expect(job.send(:next_contact_line, tracking, 'UTC')).to eq('')
+    end
+
+    it 'con toques enviados va, aclarando que es un mensaje automático y no una cita' do
+      tracking.attempt_count = 1
+      linea = job.send(:next_contact_line, tracking, 'UTC')
+
+      expect(linea).to include('09/11/2026 a las 18:19')
+      expect(linea).to include('NO una cita')
+    end
+
+    it 'sin fecha programada no va' do
+      tracking.assign_attributes(attempt_count: 2, scheduled_for: nil)
+      expect(job.send(:next_contact_line, tracking, 'UTC')).to eq('')
     end
   end
 
@@ -321,6 +345,29 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     it 'sin Entrenamiento queda como antes' do
       expect(job.send(:conversational_identity, tracking, '')).to include('NUNCA menciones que eres un bot')
       expect(job.send(:conversational_form, '')).to start_with('Máximo 4 líneas.')
+    end
+  end
+
+  describe 'conversacional sin fuente (05/11/2026)' do
+    let(:account) { create(:account) }
+    let(:inbox) { create(:inbox, account: account) }
+    let(:contact) { create(:contact, account: account, name: 'Ana Pérez') }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) { create(:message, account: account, inbox: inbox, conversation: conversation, sender: contact, content: 'Si, porfa...') }
+    let(:tracking) do
+      create(:contact_tracking, account: account, contact: contact, inbox: inbox, conversation: conversation,
+                                complementary_prompt: 'Agente de admisiones.')
+    end
+
+    it 'le prohíbe dar o calcular montos que no tiene y repetir un mensaje ya enviado' do
+      enviado = nil
+      allow(job).to receive_messages(get_api_key: { key: 'sk-test' }, get_tracking_message_history: '',
+                                     appointment_timezone: 'UTC', appointment_state_summary: 'sin cita')
+      allow(job).to receive(:call_openai_for_reply) { |_key, messages, _tracking| enviado = messages.last[:content] }
+
+      job.send(:generate_conversational_reply, tracking, message)
+
+      expect(enviado).to include(described_class::CONVERSATIONAL_GUARD)
     end
   end
 
@@ -451,12 +498,12 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       end
 
       it ':query degrada a ofrecer agendar una nueva' do
-        expect(job).to receive(:handle_book_appointment).with(tracking, message)
+        expect(job).to receive(:handle_book_appointment).with(tracking, message, { appointment_action: :query })
         job.send(:dispatch_appointment_action, tracking, message, { appointment_action: :query })
       end
 
       it ':book_new ofrece agendar' do
-        expect(job).to receive(:handle_book_appointment).with(tracking, message)
+        expect(job).to receive(:handle_book_appointment).with(tracking, message, { appointment_action: :book_new })
         job.send(:dispatch_appointment_action, tracking, message, { appointment_action: :book_new })
       end
     end
@@ -725,7 +772,9 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
         ai_context: "📅 [PENDING_SLOT] Esperando.\nSlots ofrecidos: [{}]"
       )
     end
-    let(:current_slots) { [{ 'slot' => 'x', 'cal_id' => 1 }] }
+    let(:current_slots) do
+      [{ 'slot' => 2.days.from_now.change(hour: 9).iso8601, 'end_time' => 2.days.from_now.change(hour: 10).iso8601, 'cal_id' => 1 }]
+    end
     let(:slot_service) { instance_double(ContactTrackings::AvailabilitySlotService) }
 
     def slot_hash(hour)
@@ -743,7 +792,9 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     end
 
     context 'cuando propone una hora exacta disponible' do
+      # Con número de día: «el jueves» solo es ambiguo y se ofrece en vez de confirmar (AmbiguousDate).
       before do
+        message.update!(content: 'mejor el jueves 30 a las 5')
         allow(job).to receive(:parse_requested_datetime).and_return({ at: 1.day.from_now.change(hour: 17), exact: true })
         allow(slot_service).to receive(:slot_for).and_return(slot_hash(17))
         allow(job).to receive(:confirm_and_create_appointment)
@@ -940,7 +991,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       expect(ContactTrackings::AvailabilitySlotService).not_to receive(:new)
 
       job.send(:handle_book_appointment, tracking, message)
-      expect(job).to have_received(:send_auto_reply).with(tracking, message, /¿Para cuál remolque quieres agendar\?/)
+      expect(job).to have_received(:send_auto_reply).with(tracking, message, /¿Qué remolque necesitas\?/)
     end
 
     it 'busca horarios solo en el calendario del remolque' do

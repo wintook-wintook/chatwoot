@@ -470,6 +470,7 @@ export default {
           <WhatsappTemplates
             v-else-if="hasWhatsappTemplates"
             :inbox-id="selectedInbox.inbox.id"
+            :contact="contact"
             @on-select-template="toggleWaTemplate"
             @onSend="onSendWhatsAppReply"
           />

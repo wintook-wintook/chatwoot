@@ -25,8 +25,10 @@ body {
 .app-wrapper {
   @apply h-full flex-grow-0 min-h-0 w-full;
 
+  // top-12 = 8px abajo de la barra «Pregúntale a Dali…» (h-10, AssistantTopBar),
+  // que está arriba de todas las pantallas del dashboard.
   .button--fixed-top {
-    @apply fixed ltr:right-2 rtl:left-2 top-2 flex flex-row;
+    @apply fixed ltr:right-2 rtl:left-2 top-12 flex flex-row;
   }
 }
 
@@ -36,7 +38,7 @@ body {
   @apply h-[calc(100%-48px)];
 
   .button--fixed-top {
-    @apply top-14;
+    @apply top-24; // banner (48px) + barra de Dali (40px) + 8px
   }
 
   .off-canvas-content {

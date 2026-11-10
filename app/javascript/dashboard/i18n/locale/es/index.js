@@ -37,12 +37,15 @@ import datePicker from './datePicker.json';
 import kanban from './kanban.json';
 import contracts from './contracts.json'; // Plan-Contratos R1
 import crmZeus from './crmZeus.json'; // CrmZeus
+import organizations from './organizations.json'; // Plan-Organizaciones O1
+import events from './events.json'; // Plan-Eventos E1
 import contactTracking from './contactTracking.js';
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
 import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
 import googleCalendar from './googleCalendar.js'; // proyecto@google_calendar
 import gestorTickets from './gestorTickets.json'; // @tickets_cases
+import assistant from './assistant.json'; // Asistente (Dali)
 import erp from './erp.json'; // @query_databases
 import bulkTrackingAssign from './bulkTrackingAssign.json'; // proyecto@bulk_tracking_assign
 import trackingCampaigns from './trackingCampaigns.json'; // @campanas_vendedor
@@ -88,11 +91,14 @@ export default {
   ...datePicker,
   ...kanban,
   ...contracts,
+  ...organizations,
+  ...events,
   ...contactTracking,
   ...trackingTemplates, // proyecto@tracking_templates
   ...knowledgeSources, // @knowledge_sources
   ...googleCalendar, // proyecto@google_calendar
   ...gestorTickets, // @tickets_cases
+  ...assistant, // Asistente (Dali)
   ...erp, // @query_databases
   ...bulkTrackingAssign, // proyecto@bulk_tracking_assign
   ...trackingCampaigns, // @campanas_vendedor

@@ -29,6 +29,8 @@
 
 class ContactTrackings::SheetLookup
   include ContactTrackings::SheetLookup::ServiceText
+  include ContactTrackings::SheetLookup::VariableValues
+  include ContactTrackings::SheetLookup::ShortNames
   extend ContactTrackings::SheetLookup::Describe
   DIRECTIVE_RE = /\{\{\s*hoja_buscar\s*:([^{}]*)\}\}/i
   ASK = '?'
@@ -55,7 +57,8 @@ class ContactTrackings::SheetLookup
   # status: :ok · :sheet_missing · :column_missing · :needs_value (nadie nombró un valor) · :no_match
   # source_message_id: el mensaje de donde salió el «?» (para saber si se nombró AHORA).
   # criteria: lo que se buscó, legible («capacidad_t >= 26», «tipo = Grúa»).
-  Result = Struct.new(:status, :rows, :found, :asked, :missing, :source_message_id, :criteria, keyword_init: true) do
+  # switch: el cliente nombró otro valor que el de la VARIABLE (ver SheetLookup::Switch).
+  Result = Struct.new(:status, :rows, :found, :asked, :missing, :source_message_id, :criteria, :switch, keyword_init: true) do
     def ok?
       status == :ok
     end
@@ -120,11 +123,13 @@ class ContactTrackings::SheetLookup
 
   # text: (pieza 5) en vez de los mensajes, los «?» se buscan en este texto — el de UN servicio
   # («hiab 12 t»), porque en un mensaje con grúa y hiab cada uno busca su propio equipo.
-  def initialize(account, spec, conversation: nil, text: nil)
+  # variables: las del Agente IA en la conversación (ver SheetLookup::VariableValues).
+  def initialize(account, spec, conversation: nil, text: nil, variables: nil)
     @account = account
     @spec = spec
     @conversation = conversation
     @text = text
+    @variables = variables.to_h
   end
 
   def call
@@ -139,7 +144,7 @@ class ContactTrackings::SheetLookup
     return Result.new(status: :needs_value, asked: @unanswered) if asked == :none
     return Result.new(status: :no_match, asked: asked, criteria: @criteria) if filtered.empty?
 
-    Result.new(status: :ok, rows: filtered, asked: asked, source_message_id: @mentioned_in, criteria: @criteria,
+    Result.new(status: :ok, rows: filtered, asked: asked, source_message_id: @mentioned_in, criteria: @criteria, switch: @switch,
                found: filtered.flat_map { |row| @spec.returns.map { |col| cell(row, col) } }.compact_blank.uniq)
   end
 
@@ -233,14 +238,14 @@ class ContactTrackings::SheetLookup
     return in_service_text(known) if @text
     return [] if @conversation.nil?
 
-    cliente, agente = recent_messages.partition(&:incoming?)
-    first_mention(cliente, known) || first_mention(agente, known) || []
+    conversation_values(column, known)
   end
 
-  # Del más reciente al más viejo: los valores del primer mensaje que nombra alguno.
+  # Del más reciente al más viejo: los valores del primer mensaje que nombra alguno, completo
+  # o por un tramo propio (ver ShortNames).
   def first_mention(messages, known)
     messages.each do |msg|
-      found = known.select { |value| mentions?(msg.content.to_s, value) }
+      found = named_values(msg.content.to_s, known)
       next if found.empty?
 
       @mentioned_in = [@mentioned_in, msg.id].compact.max
@@ -257,11 +262,7 @@ class ContactTrackings::SheetLookup
   # «TP-64», «tp 64» y «TP64» son el mismo remolque; «TP-6» no es «TP-64». Sin acentos:
   # el cliente escribe «grua» y la hoja dice «Grúa».
   def mentions?(text, value)
-    parts = ContactTrackings::SheetNumbers.fold(value).scan(/[[:alnum:]]+/)
-    return false if parts.empty?
-
-    ContactTrackings::SheetNumbers.fold(text)
-                                  .match?(/(?<![[:alnum:]])#{parts.map { |p| Regexp.escape(p) }.join('[\s\-_.]*')}(?![[:alnum:]])/)
+    ContactTrackings::SheetNumbers.names?(text, value)
   end
 
   def cell(row, column)

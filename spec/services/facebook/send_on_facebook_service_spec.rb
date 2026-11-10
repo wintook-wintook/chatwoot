@@ -72,8 +72,7 @@ describe Facebook::SendOnFacebookService do
         expect(bot).to have_received(:deliver).with({
                                                       recipient: { id: contact_inbox.source_id },
                                                       message: { text: message.content },
-                                                      messaging_type: 'MESSAGE_TAG',
-                                                      tag: 'ACCOUNT_UPDATE'
+                                                      messaging_type: 'RESPONSE'
                                                     }, { page_id: facebook_channel.page_id })
         expect(bot).to have_received(:deliver).with({
                                                       recipient: { id: contact_inbox.source_id },
@@ -85,8 +84,20 @@ describe Facebook::SendOnFacebookService do
                                                           }
                                                         }
                                                       },
+                                                      messaging_type: 'RESPONSE'
+                                                    }, { page_id: facebook_channel.page_id })
+      end
+
+      it 'tags the message as HUMAN_AGENT once the 24 hour window has closed' do
+        message = create(:message, message_type: 'outgoing', inbox: facebook_inbox, account: account, conversation: conversation)
+        travel_to 2.days.from_now do
+          described_class.new(message: message).perform
+        end
+        expect(bot).to have_received(:deliver).with({
+                                                      recipient: { id: contact_inbox.source_id },
+                                                      message: { text: message.content },
                                                       messaging_type: 'MESSAGE_TAG',
-                                                      tag: 'ACCOUNT_UPDATE'
+                                                      tag: 'HUMAN_AGENT'
                                                     }, { page_id: facebook_channel.page_id })
       end
 

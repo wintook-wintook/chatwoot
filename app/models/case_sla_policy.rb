@@ -23,7 +23,7 @@
 #
 
 # @tickets_cases 2I — política SLA configurable. La resolución elige la más específica
-# (coincide case_type y ticket_kind) y cae al hash CaseTicket::SLA_BY_PRIORITY si no hay ninguna.
+# (coincide case_type y ticket_kind) y cae a CaseTicket::SLA_BY_PRIORITY (= DEFAULTS) si no hay ninguna.
 class CaseSlaPolicy < ApplicationRecord
   belongs_to :account
   belongs_to :case_type, optional: true

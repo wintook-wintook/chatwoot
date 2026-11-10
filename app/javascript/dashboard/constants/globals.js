@@ -31,7 +31,8 @@ export default {
     CONDENSED: 'condensed',
     EXPANDED: 'expanded',
   },
-  DOCS_URL: '//www.chatwoot.com/docs/product/',
+  // Botón «Leer documentos» del menú principal: el foro de Kontrolya.
+  DOCS_URL: 'https://foro.kontrolya.com/',
   HELP_CENTER_DOCS_URL: '//www.chatwoot.com/docs/product/others/help-center',
   TESTIMONIAL_URL: 'https://testimonials.cdn.chatwoot.com/content.json',
   SMALL_SCREEN_BREAKPOINT: 1024,

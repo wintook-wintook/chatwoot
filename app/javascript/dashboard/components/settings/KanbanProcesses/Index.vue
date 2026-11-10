@@ -40,6 +40,7 @@ import { computed, onBeforeMount, ref, watch } from 'vue';
 import { useI18n } from 'dashboard/composables/useI18n';
 import { useStoreGetters, useStore } from 'dashboard/composables/store';
 import ColumnFunnelFields from 'dashboard/components/kanban/funnel/ColumnFunnelFields.vue';
+import CaseTypesAPI from 'dashboard/api/caseTypes';
 
 const getters = useStoreGetters();
 const store = useStore();
@@ -276,7 +277,29 @@ watch(nextPosition, newVal => {
   }
 });
 
+// Nombre del tipo de oportunidad que crea la columna «Convertido» (resumen de la fila).
+const caseTypeNames = ref({});
+const loadCaseTypeNames = async () => {
+  try {
+    const { data } = await CaseTypesAPI.getAll();
+    caseTypeNames.value = Object.fromEntries(
+      (data.case_types || []).map(type => [type.id, type.name])
+    );
+  } catch (e) {
+    caseTypeNames.value = {};
+  }
+};
+
+const convertsLabel = record => {
+  const id = record.convert_case_type_id;
+  if (record.stage_kind !== 'converted' || !id) return '';
+  return t('KANBAN.FUNNEL.COLUMN.SUMMARY_CONVERTS', {
+    type: caseTypeNames.value[id] || `#${id}`,
+  });
+};
+
 onBeforeMount(async () => {
+  loadCaseTypeNames();
   await store.dispatch('kanbanTypeProcesses/get');
   if (kanbanTypeProcesses.value.length > 0) {
     selectedKanbanTypeProcessId.value = kanbanTypeProcesses.value[0].id;
@@ -397,6 +420,9 @@ onBeforeMount(async () => {
                 >
                   <span v-if="record.stage_kind && record.stage_kind !== 'open'" class="mr-2 font-medium">
                     {{ $t(`KANBAN.FUNNEL.COLUMN.KINDS.${record.stage_kind}`) }}
+                  </span>
+                  <span v-if="convertsLabel(record)" class="mr-2">
+                    {{ convertsLabel(record) }}
                   </span>
                   <span v-if="(record.entry_triggers || []).length" class="mr-2">
                     {{ $t('KANBAN.FUNNEL.COLUMN.SUMMARY_RULES') }}:

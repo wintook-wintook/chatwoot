@@ -29,11 +29,18 @@ class ContactTrackings::ServiceRequests::PaidService
   end
 
   def say(texto, privado:)
-    mensaje = Messages::MessageBuilder.new(bot_user, @conversation, { content: texto, private: privado, message_type: 'outgoing' }).perform
+    mensaje = Messages::MessageBuilder.new(bot_user, @conversation, { content: texto, private: privado, message_type: 'outgoing',
+                                                                      ai_agent: agent_identity }).perform
     return if privado || mensaje.blank?
 
     mensaje.content_attributes[:sentiment_auto_reply] = true
     mensaje.save!
+  end
+
+  # El agente IA que lleva la conversación (su nombre para el cliente).
+  def agent_identity
+    tracking = ContactTracking.where(conversation_id: @conversation.id).order(:id).last
+    ContactTrackings::AgentIdentity.for(tracking&.tracking_template)
   end
 
   def bot_user

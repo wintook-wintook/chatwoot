@@ -65,6 +65,16 @@ export default {
       return STATE_COLORS[state] || STATE_COLORS.pending;
     },
     open(visit) {
+      if (visit.kind === 'visit') {
+        this.$router.push({
+          name: 'field_agenda_visit',
+          params: {
+            accountId: this.$route.params.accountId,
+            meetingId: visit.meeting.id,
+          },
+        });
+        return;
+      }
       this.$router.push({
         name: 'field_visit',
         params: { accountId: this.$route.params.accountId, ticketId: visit.id },
@@ -115,10 +125,11 @@ export default {
             {{ hour(visit.meeting.starts_at) }}
           </p>
           <p class="m-0 text-base font-semibold truncate text-slate-800">
-            {{ visit.contact && visit.contact.name }}
+            {{ visit.contact ? visit.contact.name : visit.organization }}
           </p>
           <p class="m-0 text-sm truncate text-slate-600">
-            {{ visit.folio }} · {{ visit.title }}
+            <template v-if="visit.folio">{{ visit.folio }} · </template>
+            {{ visit.title }}
           </p>
           <p v-if="visit.work_address" class="m-0 mt-1 text-sm text-slate-500">
             {{ visit.work_address }}

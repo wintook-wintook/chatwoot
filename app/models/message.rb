@@ -207,7 +207,10 @@ class Message < ApplicationRecord
     data
   end
 
+  # Agentes IA: su nombre para el cliente (o ninguno), no el del usuario con que se guardan.
   def sender_name
+    return content_attributes[:ai_agent_name].presence if content_attributes[:ai_agent]
+
     sender&.try(:available_name) || sender&.try(:name)
   end
 
@@ -488,6 +491,10 @@ class Message < ApplicationRecord
     # donde Job#1 ve "sin tracking" y despacha a BotSeller, y luego el tracking
     # recién creado provoca una segunda respuesta. Si no aplica ninguna
     # automatización, procesamos el mensaje sin demora.
+    # Seguimiento IA: con uno vivo en la conversación, contesta SOLO él (ni el agente de
+    # seguimiento de siempre ni BotSeller). Pausado no contesta nadie: lo atiende una persona.
+    return AiFollowUps::ReplyJob.set(wait: 15.seconds).perform_later(id) if AiFollowUp.live_for?(conversation_id)
+
     wait = will_trigger_tracking_automation? ? 5.seconds : 0.seconds
     ContactTrackingResponseAnalyzerJob.set(wait: wait).perform_later(id)
   rescue StandardError => e
@@ -498,6 +505,7 @@ class Message < ApplicationRecord
   # cobrador con mode_b_enabled (chequeo barato para no encolar de más).
   def respond_via_erp_bot
     return if content.blank? || conversation&.inbox_id.blank?
+    return if AiFollowUp.live_for?(conversation_id) # Seguimiento IA: no contestan dos a la vez
 
     has_bot = ErpCollectionBot.active.where(account_id: conversation.account_id, mode_b_enabled: true)
                               .exists?(inbox_id: [conversation.inbox_id, nil])

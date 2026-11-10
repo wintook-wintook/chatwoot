@@ -4,6 +4,8 @@
 #   GET   /contacts/:contact_id/owner
 #   PATCH /contacts/:contact_id/owner  { owner_id }  (vacío = sin responsable fijo)
 #
+# `inherited`: si el contacto no tiene responsable propio pero su organización sí,
+# ese es el que aplica (Contact#effective_owner_id) y aquí se muestra.
 # `missing_inboxes`: bandejas por las que ya escribe el contacto y en las que el
 # responsable no está; ahí siguen las reglas normales.
 class Api::V1::Accounts::Contacts::OwnersController < Api::V1::Accounts::Contacts::BaseController
@@ -24,10 +26,12 @@ class Api::V1::Accounts::Contacts::OwnersController < Api::V1::Accounts::Contact
 
   def owner_json
     owner = @contact.owner
+    inherited = owner ? nil : @contact.organization&.owner
     {
       owner: owner && { id: owner.id, name: owner.name, thumbnail: owner.avatar_url },
+      inherited: inherited && { id: inherited.id, name: inherited.name, organization: @contact.organization.name },
       can_edit: access_grant.can?(:reassign),
-      missing_inboxes: missing_inboxes(owner)
+      missing_inboxes: missing_inboxes(owner || inherited)
     }
   end
 

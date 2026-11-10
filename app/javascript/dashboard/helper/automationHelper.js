@@ -99,7 +99,7 @@ export const generateConditionOptions = (options, key = 'id') => {
 export const addNoneToList = agents => [
   {
     id: 'nil',
-    name: 'None',
+    name: 'Ninguno',
   },
   ...(agents || []),
 ];

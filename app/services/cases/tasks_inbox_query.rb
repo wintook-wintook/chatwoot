@@ -21,6 +21,26 @@
 # meeting_json) queda del lado del controller, que es quien tiene los helpers
 # de referencia (ref_user, ticket_context, el concern de reuniones).
 class Cases::TasksInboxQuery
+  # «Hoy» es el del usuario (`tz`, la zona de su navegador), no el del servidor (UTC).
+  module LocalDay
+    private
+
+    def zone
+      ActiveSupport::TimeZone[params[:tz].to_s] || Time.zone
+    end
+
+    def today_hours
+      zone.today.in_time_zone(zone).all_day
+    end
+
+    def week_hours
+      today = zone.today
+      today.in_time_zone(zone).beginning_of_day..(today + 6).in_time_zone(zone).end_of_day
+    end
+  end
+
+  include LocalDay
+
   PER_PAGE = 25
 
   MERGE_SORTABLE_FIELDS = %w[sequence title priority requester assignee due_at planned_on status ticket].freeze
@@ -56,7 +76,7 @@ class Cases::TasksInboxQuery
   # (`missed`). `new_urgent`: urgentes que llegaron después de armar el plan.
   def my_day
     tasks = @task_scope.filtered.pending.includes(*@task_scope.includes, case_ticket: :case_type).to_a
-    scores = Cases::TaskPriorityScore.new(tasks, account: account, day: day).call
+    scores = Cases::TaskPriorityScore.new(tasks, account: account, day: day, zone: zone).call
     planned, later, rest = split_plan(tasks)
     ranked = planned + rank(rest, scores)
 
@@ -105,13 +125,14 @@ class Cases::TasksInboxQuery
   end
 
   def today_meetings
-    @meeting_scope.filtered_without_due.where(starts_at: Time.zone.today.all_day)
+    @meeting_scope.filtered_without_due.where(starts_at: day.in_time_zone(zone).all_day)
                   .includes(*@meeting_scope.includes, case_ticket: :case_type).order(:starts_at).to_a
   end
 
   # Lo que hay que sacar hoy: vencidas + las que vencen hoy.
   def day_load(tasks)
-    due = tasks.select { |t| t.due_at && t.due_at <= Time.zone.today.end_of_day }
+    limit = day.in_time_zone(zone).end_of_day
+    due = tasks.select { |t| t.due_at && t.due_at <= limit }
     { count: due.size, minutes: due.sum { |t| t.estimated_minutes.to_i },
       unestimated: due.count { |t| t.estimated_minutes.nil? } }
   end
@@ -160,6 +181,8 @@ end
 
 # --- tareas -----------------------------------------------------------------
 class Cases::TasksInboxQuery::TaskScope
+  include Cases::TasksInboxQuery::LocalDay
+
   SORTABLE_COLUMNS = {
     'sequence' => 'case_tasks.sequence',
     'title' => 'case_tasks.title',
@@ -191,7 +214,7 @@ class Cases::TasksInboxQuery::TaskScope
   end
 
   def includes
-    %i[assignee requester]
+    %i[assignee requester contact organization]
   end
 
   # Aplica los filtros de la bandeja (todos opcionales salvo el default de asignado).
@@ -201,7 +224,8 @@ class Cases::TasksInboxQuery::TaskScope
     scope = filter_status(scope)
     scope = filter_due(scope)
     scope = filter_case_type(scope)
-    scope = filter_contact(scope)
+    scope = filter_client(scope, :contact_id)
+    scope = filter_client(scope, :organization_id)
     filter_search(scope)
   end
 
@@ -263,9 +287,9 @@ class Cases::TasksInboxQuery::TaskScope
     when 'overdue'
       scope.pending.where('case_tasks.due_at < ?', Time.current)
     when 'today'
-      scope.where(due_at: Time.zone.today.all_day)
+      scope.where(due_at: today_hours)
     when 'week'
-      scope.where(due_at: Time.zone.today.beginning_of_day..6.days.from_now.end_of_day)
+      scope.where(due_at: week_hours)
     else
       scope
     end
@@ -277,11 +301,12 @@ class Cases::TasksInboxQuery::TaskScope
     scope.joins(:case_ticket).where(case_tickets: { case_type_id: params[:case_type_id] })
   end
 
-  # Pestaña «Tareas» de la página del contacto: las de sus casos.
-  def filter_contact(scope)
-    return scope if params[:contact_id].blank?
+  # Pestañas «Tareas» del contacto y de la organización: sus casos y lo suyo sin caso.
+  def filter_client(scope, field)
+    return scope if params[field].blank?
 
-    scope.where(case_ticket_id: CaseTicket.where(account_id: account.id, contact_id: params[:contact_id]).select(:id))
+    tickets = CaseTicket.where(account_id: account.id).where(field => params[field]).select(:id)
+    scope.where(case_ticket_id: tickets).or(scope.where(field => params[field]))
   end
 
   def filter_search(scope)
@@ -295,7 +320,7 @@ class Cases::TasksInboxQuery::TaskScope
   # no chocar con el join de `filter_case_type`).
   def sort_joins(scope, key)
     case key
-    when 'ticket' then scope.joins(:case_ticket)
+    when 'ticket' then scope.left_joins(:case_ticket)
     when 'assignee' then scope.joins('LEFT JOIN users AS assignee_users ON assignee_users.id = case_tasks.assignee_id')
     when 'requester' then scope.joins('LEFT JOIN users AS requester_users ON requester_users.id = case_tasks.requester_id')
     else scope
@@ -305,6 +330,8 @@ end
 
 # --- reuniones ("tareas agendadas") ------------------------------------------
 class Cases::TasksInboxQuery::MeetingScope
+  include Cases::TasksInboxQuery::LocalDay
+
   SORTABLE_COLUMNS = {
     'sequence' => 'case_meetings.sequence',
     'title' => 'case_meetings.title',
@@ -338,7 +365,7 @@ class Cases::TasksInboxQuery::MeetingScope
   end
 
   def includes
-    [:organizer]
+    %i[organizer contact organization]
   end
 
   def filtered
@@ -351,7 +378,8 @@ class Cases::TasksInboxQuery::MeetingScope
     scope = filter_requester(scope)
     scope = filter_status(scope)
     scope = filter_case_type(scope)
-    scope = filter_contact(scope)
+    scope = filter_client(scope, :contact_id)
+    scope = filter_client(scope, :organization_id)
     filter_search(scope)
   end
 
@@ -407,9 +435,9 @@ class Cases::TasksInboxQuery::MeetingScope
     when 'overdue'
       scope.where(status: PENDING_STATUSES).where('case_meetings.starts_at < ?', Time.current)
     when 'today'
-      scope.where(starts_at: Time.zone.today.all_day)
+      scope.where(starts_at: today_hours)
     when 'week'
-      scope.where(starts_at: Time.zone.today.beginning_of_day..6.days.from_now.end_of_day)
+      scope.where(starts_at: week_hours)
     else
       scope
     end
@@ -421,11 +449,12 @@ class Cases::TasksInboxQuery::MeetingScope
     scope.joins(:case_ticket).where(case_tickets: { case_type_id: params[:case_type_id] })
   end
 
-  # Pestaña «Tareas» de la página del contacto: las de sus casos.
-  def filter_contact(scope)
-    return scope if params[:contact_id].blank?
+  # Pestañas «Tareas» del contacto y de la organización: sus casos y lo suyo sin caso.
+  def filter_client(scope, field)
+    return scope if params[field].blank?
 
-    scope.where(case_ticket_id: CaseTicket.where(account_id: account.id, contact_id: params[:contact_id]).select(:id))
+    tickets = CaseTicket.where(account_id: account.id).where(field => params[field]).select(:id)
+    scope.where(case_ticket_id: tickets).or(scope.where(field => params[field]))
   end
 
   def filter_search(scope)
@@ -437,7 +466,7 @@ class Cases::TasksInboxQuery::MeetingScope
 
   def sort_joins(scope, key)
     case key
-    when 'ticket' then scope.joins(:case_ticket)
+    when 'ticket' then scope.left_joins(:case_ticket)
     when 'assignee' then scope.joins('LEFT JOIN users AS organizer_users ON organizer_users.id = case_meetings.organizer_id')
     else scope
     end

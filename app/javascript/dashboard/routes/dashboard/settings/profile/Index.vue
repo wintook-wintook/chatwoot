@@ -16,6 +16,11 @@ import FormSection from 'dashboard/components/FormSection.vue';
 import AppearanceSettings from './AppearanceSettings.vue';
 import LandingPageSetting from './LandingPageSetting.vue';
 import AccessToken from './AccessToken.vue';
+import DaliOnPhone from './DaliOnPhone.vue'; // portal de Dali en el teléfono
+import {
+  assistantState,
+  DEFAULT_ASSISTANT_NAME,
+} from 'dashboard/helper/assistantState';
 import Policy from 'dashboard/components/policy.vue';
 import {
   ROLES,
@@ -24,6 +29,7 @@ import {
 
 export default {
   components: {
+    DaliOnPhone,
     AppearanceSettings,
     MessageSignature,
     FormSection,
@@ -87,6 +93,9 @@ export default {
     };
   },
   computed: {
+    assistantName() {
+      return assistantState.name || DEFAULT_ASSISTANT_NAME;
+    },
     ...mapGetters({
       currentUser: 'getCurrentUser',
       currentUserId: 'getCurrentUserID',
@@ -215,6 +224,12 @@ export default {
       />
     </div>
 
+    <FormSection
+      :title="$t('ASSISTANT.PORTAL.PHONE.TITLE', { name: assistantName })"
+      :description="$t('ASSISTANT.PORTAL.PHONE.NOTE', { name: assistantName })"
+    >
+      <DaliOnPhone />
+    </FormSection>
     <FormSection
       :title="$t('PROFILE_SETTINGS.FORM.MESSAGE_SIGNATURE_SECTION.TITLE')"
       :description="$t('PROFILE_SETTINGS.FORM.MESSAGE_SIGNATURE_SECTION.NOTE')"

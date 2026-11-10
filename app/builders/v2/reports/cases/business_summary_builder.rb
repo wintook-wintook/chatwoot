@@ -59,13 +59,24 @@ class V2::Reports::Cases::BusinessSummaryBuilder < V2::Reports::Cases::BaseBuild
     s = pipeline[:summary]
     commitments = s[:commitments]
     {
-      won_value: s[:won_value], won_count: s[:won_count], win_rate: s[:win_rate],
+      won_value: won_value(s), won_count: s[:won_count], win_rate: s[:win_rate],
       previous: pipeline[:previous]&.slice(:won_value, :won_count, :win_rate),
       open_value: s[:open_value], open_count: s[:open_count],
       committed_week: commitments[:this_week], committed_month: commitments[:this_month],
       committed_overdue: commitments[:overdue],
       top_sellers: top_sellers
     }
+  end
+
+  # Lo ganado = el mismo cálculo del presupuesto y de Dali (Sales::Actuals): por trato,
+  # sin IVA, con las cotizaciones ganadas sin oportunidad. Sin rango, el del embudo.
+  def won_value(summary)
+    return summary[:won_value] unless range
+
+    rows = Sales::Actuals.new(account: account, range: range,
+                              user_ids: params[:assignee_id].presence && [params[:assignee_id].to_i]).rows
+    rows.group_by { |row| row[:currency] }
+        .map { |currency, list| { currency: currency, amount: list.sum { |r| r[:amount] }.to_f.round(2), count: list.size } }
   end
 
   def top_sellers

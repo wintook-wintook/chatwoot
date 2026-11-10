@@ -561,6 +561,10 @@ class KnowledgeBaseResponseService
   # cliente pide tal cual (operador, placas, teléfono), la búsqueda por parecido de
   # {{hoja:}} traía la fila equivocada o ninguna.
   # ==============================================================================
+  # El estilo con Entrenamiento propio: el suyo (ver #reply_style_rule).
+  AGENT_STYLE_RULE = 'Responde solo lo que preguntó, con esa información. Respeta la longitud, el tono y la pregunta ' \
+                     'final que piden tus instrucciones. No agregues cierres genéricos ("¿Hay algo más en lo que ' \
+                     'le podamos ayudar?", "estamos aquí para ayudarle", "quedamos atentos").'
   MAX_LOOKUP_ROWS = 20
   NO_MATCH_RULE = 'Dilo con claridad y no inventes otra opción.'
 
@@ -570,7 +574,7 @@ class KnowledgeBaseResponseService
     spec = ContactTrackings::SheetLookup.parse(inner)
     return false if spec.nil?
 
-    result = ContactTrackings::SheetLookup.new(@account, spec, conversation: @conversation).call
+    result = ContactTrackings::SheetLookup.new(@account, spec, conversation: @conversation, variables: lookup_variables).call
     context = sheet_lookup_context(spec, result)
     return false if context.nil?
 
@@ -578,7 +582,38 @@ class KnowledgeBaseResponseService
     return false if reply_text.blank?
 
     send_reply("#{with_branch_tag(reply_text)}\n\n_#{spec.sheet}_")
+    follow_switch(result.switch, reply_text)
     true
+  end
+
+  # El cliente cambió de valor (otra carrera) y la respuesta ya habla del nuevo, pero el
+  # modelo no lo escribió en su línea VARIABLES: se guarda aquí. Ver SheetLookup::Switch.
+  def follow_switch(switch, reply_text)
+    return if switch.nil? || @tracking.nil?
+
+    definition = ContactTrackings::ConversationVariables.definition_for(@tracking)
+    variable = definition&.variable(switch.variable)
+    return if variable.nil?
+    return unless switch.confirmed_by?(ContactTrackings::ConversationVariables.strip(@tracking, reply_text))
+
+    actual = ContactTrackings::ConversationVariables.current(@tracking, @conversation, definition)[switch.variable].to_s
+    return if switch.from.none? { |valor| ContactTrackings::SheetNumbers.names?(actual, valor) }
+
+    value = definition.coerce(variable[:name], switch.to)
+    return if value.nil?
+
+    resets = ContactTrackings::ConversationVariables::SwitchResets.for(@tracking, variable[:name])
+    ContactTrackings::ConversationVariables.apply!(@tracking, @conversation, resets.merge(variable[:name] => value))
+  end
+
+  # Las VARIABLES del agente en esta conversación, para que un «carrera=?» use CARRERA.
+  def lookup_variables
+    return {} if @tracking.nil? || @conversation.nil?
+
+    ContactTrackings::ConversationVariables.current(@tracking, @conversation)
+  rescue StandardError => e
+    Rails.logger.warn "[KBase] ⚠️ Variables para {{hoja_buscar:}}: #{e.message}"
+    {}
   end
 
   # nil = la hoja no respondió (no existe, columna mal escrita): sigue el conversacional.
@@ -640,7 +675,7 @@ class KnowledgeBaseResponseService
       Información relevante:
       #{context}
 
-      Responde usando esa información de forma completa y útil. Tono natural y conversacional.
+      #{reply_style_rule}
       No uses prefijos como "Asesor:" ni comillas al inicio o final.
       #{ContactTrackings::CustomerTone::RULE}
 
@@ -654,11 +689,13 @@ class KnowledgeBaseResponseService
 
       Si la fuente no cubre exactamente lo que preguntaron, dilo de frente: explica
       brevemente qué sí cubre la documentación, aclara que no tienes el procedimiento
-      exacto para su caso y ofrece pasarlo con un asesor. Una respuesta honesta que no
+      exacto para su caso y #{missing_answer_step}. Una respuesta honesta que no
       resuelve es mejor que una inventada que parece resolver.
     USER
     user_prompt = erp_user_prompt(first_name, question, erp_data) if erp_data
     user_prompt = canned_prompt_user_prompt(first_name, question, canned_prompt) if canned_prompt
+    user_prompt = "#{user_prompt}\n\n#{variables_reminder}" if variables_reminder
+    user_prompt = "#{conversation_turn_note}\n\n#{user_prompt}" if conversation_turn_note
 
     history  = load_history
     messages = [{ role: 'system', content: system_prompt }]
@@ -736,8 +773,24 @@ class KnowledgeBaseResponseService
 
       #{canned_prompt.turn_block}
 
-      Tono natural y conversacional. No uses prefijos como "Asesor:" ni comillas al inicio o final.
+      #{agent_system_prompt ? AGENT_STYLE_RULE : 'Tono natural y conversacional.'} No uses prefijos como "Asesor:" ni comillas al inicio o final.
     USER
+  end
+
+  # Cómo cerrar la respuesta. Este texto va en el último mensaje, el que más pesa: con un
+  # Entrenamiento propio, «completa y útil» le ganaba a sus reglas. Medido el 05/11/2026
+  # (cuenta 1128, AGENTE ESCUELA v4.05 y v4.06, convs 119-121): el prompt prohibía con las
+  # frases exactas «¿Hay algo más…?» y «estamos aquí para ayudarle», y salieron en casi
+  # todas las respuestas; como el historial (kb_history) vuelve como ejemplo, se copiaban.
+  def reply_style_rule
+    return AGENT_STYLE_RULE if agent_system_prompt
+
+    'Responde usando esa información de forma completa y útil. Tono natural y conversacional.'
+  end
+
+  # Sin el dato: con Entrenamiento propio, lo que diga él (canal, asesor, nada); si no, el asesor.
+  def missing_answer_step
+    agent_system_prompt ? 'sigue lo que tus instrucciones digan para ese caso' : 'ofrece pasarlo con un asesor'
   end
 
   # ==============================================================================
@@ -984,6 +1037,36 @@ class KnowledgeBaseResponseService
     RULE
   end
 
+  # proyecto@contact_tracking: el historial de KBase (kb_history) trae solo sus propios turnos,
+  # no lo que contestó el conversacional ni otros mensajes del equipo, y en una conversación
+  # nueva viene vacío. El prompt del agente pide presentarse solo en el primer mensaje, y sin
+  # ver la conversación el modelo adivinaba. Medido el 06/11/2026 (cuenta 1128, AGENTE
+  # ESCUELA, convs 137-139): a un «Hola» que abría la conversación contestó «¿En qué más le
+  # podemos ayudar?» sin presentarse; con «Buen día» sí se presentó.
+  FIRST_TURN_NOTE = 'Contexto: es el primer mensaje de la conversación; el equipo todavía no ha escrito nada.'
+  LATER_TURN_NOTE = 'Contexto: el equipo ya escribió antes en esta conversación; no es el primer mensaje.'
+
+  def conversation_turn_note
+    return @conversation_turn_note if defined?(@conversation_turn_note)
+    return @conversation_turn_note = nil if agent_system_prompt.nil? || @conversation.nil?
+
+    escribimos = @conversation.messages.where(message_type: :outgoing, private: false).exists?(id: ...@message.id)
+    @conversation_turn_note = escribimos ? LATER_TURN_NOTE : FIRST_TURN_NOTE
+  end
+
+  # La regla de [VARIABLES] va en el system prompt, lejos del final, y aquí el último mensaje
+  # trae sus propias instrucciones: el modelo no escribía la línea. Medido el 05/11/2026
+  # (cuenta 1128, AGENTE ESCUELA, convs 93-123): ninguna respuesta de KBase guardó
+  # variables; CARRERA solo se llenaba cuando contestaba el conversacional (-TB). Por eso
+  # la conv 59 de producción (cuenta 613) quedó sin variables.
+  def variables_reminder
+    return if variables_rule.blank?
+
+    'Termina tu respuesta con la línea aparte «VARIABLES: …» con TODAS las variables y su valor después de ' \
+      'este turno, como indican las VARIABLES DE ESTA CONVERSACIÓN (si el cliente nombró el dato que guarda una, ' \
+      'escríbelo). El sistema la quita; el cliente no la ve.'
+  end
+
   # proyecto@contact_tracking: los valores actuales de la sección [VARIABLES] del agente
   # (ver ContactTrackings::ConversationVariables). nil si no declara variables.
   def variables_rule
@@ -1030,6 +1113,8 @@ class KnowledgeBaseResponseService
     system_content += "\n\n#{attachments_hint}" if attachments_hint
     system_content += "\n\nContenido relevante del foro:\n#{context}#{SOURCE_FIDELITY_RULE}" if context.present?
     system_content += "\n\n#{variables_rule}" if variables_rule.present?
+    organization_line = Organizations::PromptContext.for(@conversation&.contact) # Plan-Organizaciones O5
+    system_content += "\n\n#{organization_line}" if organization_line
     system_content += "\n\n#{branch_scope_rule}" if branch_scope_rule.present?
 
     messages = [{ role: 'system', content: system_content }]
@@ -1202,7 +1287,7 @@ class KnowledgeBaseResponseService
   def send_reply(text)
     text = ContactTrackings::ConversationVariables.settle(@tracking, @conversation, text) if @tracking
     content, attachments = ContactTrackings::AgentAttachments.resolve(@tracking&.tracking_template, text)
-    params = { content: content, private: false }
+    params = { content: content, private: false, ai_agent: ContactTrackings::AgentIdentity.for(@tracking&.tracking_template) }
     params[:attachments] = attachments if attachments.any?
     reply_message = Messages::MessageBuilder.new(bot_user, @conversation, params).perform
 
@@ -1255,8 +1340,10 @@ class KnowledgeBaseResponseService
       temperature: temperature
     }.to_json
 
-    response = http.request(request)
-    JSON.parse(response.body).dig('choices', 0, 'message', 'content')&.strip
+    response = ContactTrackings::OpenaiRequest.perform(http, request, 'KBase')
+    return nil if response.nil? || response.body.blank?
+
+    ContactTrackings::OpenaiRequest.clean(JSON.parse(response.body).dig('choices', 0, 'message', 'content'))
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error OpenAI: #{e.message}"
     nil

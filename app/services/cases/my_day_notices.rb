@@ -12,13 +12,16 @@
 #            recordatorio de calendario.
 #   low    — no se muestra aquí (solo en la campanita): tarea completada, mensaje en
 #            una conversación donde solo participas, conversación nueva.
-# «Enterado» es marcar el aviso como leído (la misma API de la campanita).
+# Un aviso por conversación o caso (cada mensaje o tarea crea uno nuevo y, si no, al
+# darle «Enterado» salía el siguiente, idéntico): el más reciente, con el peso más alto
+# del grupo y cuántos junta. «Enterado» los marca leídos todos, como la campanita
+# (read_all por primary_actor). Los demás actores (calendario) van uno por uno.
 # ================================================================================
 
 class Cases::MyDayNotices
   LIMIT = 50
   HIGH_TYPES = %w[sla_missed_first_response sla_missed_next_response sla_missed_resolution conversation_mention].freeze
-  MEDIUM_TYPES = %w[case_stage_ready case_stage_tasks case_task_assignment case_ticket_assignment
+  MEDIUM_TYPES = %w[client_task_update case_rule_notice case_stage_ready case_stage_tasks case_task_assignment case_ticket_assignment
                     conversation_assignment assigned_conversation_new_message calendar_event_reminder].freeze
   WEIGHT_ORDER = { 'high' => 0, 'medium' => 1 }.freeze
 
@@ -29,7 +32,8 @@ class Cases::MyDayNotices
 
   def call
     notices = unread.filter_map { |n| notice(n) }
-    notices.sort_by { |n| [WEIGHT_ORDER[n[:weight]], -n[:created_at]] }
+    grouped = notices.group_by { |n| group_key(n) }.values.map { |group| merge(group) }
+    grouped.sort_by { |n| [WEIGHT_ORDER[n[:weight]], -n[:created_at]] }
   end
 
   private
@@ -47,9 +51,22 @@ class Cases::MyDayNotices
 
     { id: notification.id, type: notification.notification_type, weight: weight(notification, actor),
       title: notification.push_message_title, body: notification.push_message_body,
-      created_at: notification.created_at.to_i, link: link(actor) }
+      created_at: notification.created_at.to_i, link: link(actor),
+      actor_type: notification.primary_actor_type, actor_id: notification.primary_actor_id }
   rescue StandardError
     nil # un aviso con datos raros no tumba la lista
+  end
+
+  # Solo los actores que la campanita sabe marcar en bloque se juntan.
+  def group_key(notice)
+    return [:single, notice[:id]] unless Notification::PRIMARY_ACTORS.include?(notice[:actor_type])
+
+    [notice[:actor_type], notice[:actor_id]]
+  end
+
+  # `unread` viene del más nuevo al más viejo: el primero es el que se muestra.
+  def merge(group)
+    group.first.merge(weight: group.min_by { |n| WEIGHT_ORDER[n[:weight]] }[:weight], count: group.size)
   end
 
   def weight(notification, actor)

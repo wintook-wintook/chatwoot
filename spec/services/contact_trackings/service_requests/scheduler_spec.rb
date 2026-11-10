@@ -30,19 +30,29 @@ RSpec.describe ContactTrackings::ServiceRequests::Scheduler do
     agenda.plan(caso(datos), 1)
   end
 
-  it 'con hora pedida libre, solo esa y marcada exacta (Turn la aparta directo)' do
-    allow(buscador).to receive_messages(slot_for: slot(9), call: [slot(9), slot(10)])
+  it 'con hora pedida libre, esa como A y las 2 siguientes horas libres (D3, SSUSA 22/10)' do
+    # la misma hora en otra unidad (9:00 TP-2) no cuenta como otra opción
+    allow(buscador).to receive_messages(slot_for: slot(9), call: [slot(9), slot(9, 'TP-2'), slot(10, 'TP-2'), slot(11), slot(12)])
 
     plan = planear('date' => '2027-10-05', 'time' => '09:00')
-    expect(plan.offers.pluck('code')).to eq(%w[1A])
+    expect(plan.offers.map { |o| [o['code'], Time.zone.parse(o['slot']).in_time_zone(tz).hour, o['calendar_name']] })
+      .to eq([['1A', 9, 'TP-1'], ['1B', 10, 'TP-2'], ['1C', 11, 'TP-1']])
     expect([plan.exact, plan.note]).to eq([true, 'sí hay a las 09:00'])
+  end
+
+  it 'sin nada el día pedido, lo dice y ofrece lo más cercano' do
+    otro_dia = slot(9).transform_values { |v| v.is_a?(Time) ? v + 1.day : v }
+    allow(buscador).to receive_messages(slot_for: nil, call: [otro_dia])
+
+    plan = planear('date' => '2027-10-05', 'time' => '09:00')
+    expect(plan.note).to eq('no hay horario el martes 5; lo más cercano es')
   end
 
   it 'con hora ocupada, lo dice y ofrece las siguientes' do
     allow(buscador).to receive_messages(slot_for: nil, call: [slot(10), slot(11), slot(12), slot(13)])
 
     plan = planear('date' => '2027-10-05', 'time' => '09:00')
-    expect([plan.note, plan.offers.size, plan.exact]).to eq(['a las 09:00 no hay; lo que sí hay', 3, false])
+    expect([plan.note, plan.offers.size, plan.exact]).to eq(['a las 09:00 no hay; estas son las más cercanas', 3, false])
   end
 
   it 'sin hora no lista la agenda: pide la hora' do
@@ -77,5 +87,17 @@ RSpec.describe ContactTrackings::ServiceRequests::Scheduler do
     plan = planear('date' => '2027-11-01', 'duration_text' => '6 meses')
     expect(buscador).to have_received(:free_for_period).with(Time.find_zone(tz).local(2027, 11, 1), Time.find_zone(tz).local(2028, 5, 1))
     expect(plan.offers.first).to include('code' => '1A', 'all_day' => true)
+  end
+
+  it 'describe la unidad con etiquetas legibles y nunca placas, serie ni tracto (SSUSA 22/10)' do
+    con_columnas = ContactTrackings::RouteMap::Route.new(
+      name: 's', escalation: '@solicitudes -> {{hoja_buscar: Equipos | tipo=? | ' \
+                             'Calendar_ID, tipo, peso_max_t, largo_m, placas, serie, tracto, marca}}'
+    )
+    fila = { 'Calendar_ID' => 'c1', 'tipo' => 'Cama baja (piso bajo, para carga alta)', 'peso_max_t' => '40', 'largo_m' => '16.15',
+             'placas' => '94UF4L', 'serie' => 'X1', 'tracto' => 'TR-9', 'marca' => 'Fruehauf' }
+
+    descripcion = described_class.new(tracking: tracking, route: con_columnas, timezone: tz).send(:describe_unit, fila)
+    expect(descripcion).to eq('Cama baja · 40 t · 16.15 m · Marca: Fruehauf')
   end
 end

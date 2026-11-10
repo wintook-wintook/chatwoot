@@ -2,32 +2,34 @@
 #
 # Table name: contracts
 #
-#  id                :bigint           not null, primary key
-#  auto_renew        :boolean          default(TRUE), not null
-#  cancel_reason     :string
-#  cancelled_on      :date
-#  currency          :string(3)        default("MXN"), not null
-#  custom_attributes :jsonb            not null
-#  ends_on           :date
-#  every             :integer          default(1), not null
-#  last_paid_on      :date
-#  next_charge_on    :date
-#  notes             :text
-#  price             :decimal(14, 2)   default(0.0), not null
-#  quantity          :decimal(12, 2)   default(1.0), not null
-#  starts_on         :date             not null
-#  status            :integer          default("active"), not null
-#  term_months       :integer
-#  title             :string           not null
-#  unit              :integer          default("month"), not null
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  account_id        :bigint           not null
-#  assignee_id       :bigint
-#  catalog_item_id   :bigint
-#  contact_id        :bigint           not null
-#  contract_type_id  :bigint           not null
-#  customer_asset_id :bigint
+#  id                 :bigint           not null, primary key
+#  auto_renew         :boolean          default(TRUE), not null
+#  cancel_reason      :string
+#  cancelled_on       :date
+#  currency           :string(3)        default("MXN"), not null
+#  custom_attributes  :jsonb            not null
+#  ends_on            :date
+#  every              :integer          default(1), not null
+#  last_paid_on       :date
+#  next_charge_on     :date
+#  notes              :text
+#  price              :decimal(14, 2)   default(0.0), not null
+#  price_from_catalog :boolean          default(FALSE), not null
+#  quantity           :decimal(12, 2)   default(1.0), not null
+#  starts_on          :date             not null
+#  status             :integer          default("active"), not null
+#  term_months        :integer
+#  title              :string           not null
+#  unit               :integer          default("month"), not null
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  account_id         :bigint           not null
+#  assignee_id        :bigint
+#  catalog_item_id    :bigint
+#  contact_id         :bigint           not null
+#  contract_type_id   :bigint           not null
+#  customer_asset_id  :bigint
+#  organization_id    :bigint
 #
 # Indexes
 #
@@ -39,6 +41,7 @@
 #  index_contracts_on_contact_id                                (contact_id)
 #  index_contracts_on_contract_type_id                          (contract_type_id)
 #  index_contracts_on_customer_asset_id                         (customer_asset_id)
+#  index_contracts_on_organization_id                           (organization_id)
 #
 # Foreign Keys
 #
@@ -48,20 +51,17 @@
 #  fk_rails_...  (contact_id => contacts.id) ON DELETE => cascade
 #  fk_rails_...  (contract_type_id => contract_types.id)
 #  fk_rails_...  (customer_asset_id => customer_assets.id) ON DELETE => nullify
+#  fk_rails_...  (organization_id => organizations.id) ON DELETE => nullify
 #
-# Plan-Contratos R1 — un servicio recurrente del contacto. Se guarda si está activo,
-# suspendido o cancelado; el resto del estado sale de las fechas (#state):
-#   ended        terminó su plazo y no se renueva solo
-#   overdue      pasó la fecha de cobro y no se registró el pago
-#   renewal_due  su plazo termina en los próximos RENEWAL_NOTICE_DAYS días (o ya terminó
-#                y se renueva solo: falta confirmarlo con «Renovar»)
-#   active       al corriente
 class Contract < ApplicationRecord
   RENEWAL_NOTICE_DAYS = 30
   STATES = %w[active renewal_due overdue ended suspended cancelled].freeze
 
   belongs_to :account
   belongs_to :contact
+  include OrganizationLinked # Plan-Organizaciones O2
+  # Plan-Organizaciones O3 — contrato nuevo → cliente (si la regla está encendida).
+  after_create_commit -> { Organizations::StageRules.call(:customer_on_contract, self) }
   belongs_to :contract_type
   belongs_to :catalog_item, optional: true
   belongs_to :customer_asset, optional: true
@@ -155,11 +155,20 @@ class Contract < ApplicationRecord
   end
 
   def fill_defaults
+    fill_catalog_price
     self.currency = currency.to_s.upcase.presence || 'MXN'
     self.title = catalog_item&.name if title.blank?
     self.next_charge_on ||= starts_on
     fill_ends_on
     self.custom_attributes = (custom_attributes || {}).to_h.slice(*Array(contract_type&.custom_fields).pluck('key'))
+  end
+
+  def fill_catalog_price
+    self.price_from_catalog = false unless catalog_item
+    return unless price_from_catalog
+
+    self.price = catalog_item.price
+    self.currency = catalog_item.currency
   end
 
   # El fin del plazo sale del inicio + los meses; «Renovar» lo recorre sin tocar el plazo.

@@ -1,7 +1,9 @@
 import GoogleCalendarAPI from '../../api/googleCalendar';
+import AgendaItemsAPI from '../../api/agendaItems';
 
 const state = {
   events: [],
+  agendaItems: [],
   calendars: [],
   enabledCalendarIds: [],
   availability: [],
@@ -17,6 +19,7 @@ const state = {
 
 const getters = {
   getCalendarEvents: s => s.events,
+  getAgendaItems: s => s.agendaItems,
   getCalendars: s => s.calendars,
   getEnabledCalendarIds: s => s.enabledCalendarIds,
   getCalendarAvailability: s => s.availability,
@@ -28,6 +31,9 @@ const getters = {
 const mutations = {
   SET_CALENDAR_EVENTS(s, events) {
     s.events = events;
+  },
+  SET_AGENDA_ITEMS(s, items) {
+    s.agendaItems = items;
   },
   SET_CALENDARS(s, { calendars, enabledIds }) {
     s.enabledCalendarIds = enabledIds;
@@ -71,6 +77,25 @@ const actions = {
       }
     } finally {
       commit('SET_CALENDAR_UI_FLAG', { isFetching: false });
+    }
+  },
+
+  // Plan-Agenda — mis tareas y tareas agendadas: no dependen de tener Google.
+  fetchAgendaItems: async ({ commit }, params = {}) => {
+    try {
+      const { data } = await AgendaItemsAPI.list(params);
+      commit('SET_AGENDA_ITEMS', data.agenda_items || []);
+    } catch {
+      // silently ignore — el calendario sigue mostrando lo de Google
+    }
+  },
+
+  createAgendaItem: async ({ commit }, payload) => {
+    commit('SET_CALENDAR_UI_FLAG', { isCreating: true });
+    try {
+      await AgendaItemsAPI.create(payload);
+    } finally {
+      commit('SET_CALENDAR_UI_FLAG', { isCreating: false });
     }
   },
 

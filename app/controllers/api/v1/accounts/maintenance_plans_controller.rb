@@ -4,7 +4,7 @@
 #   POST   /maintenance_plans      PATCH /maintenance_plans/:id      DELETE /maintenance_plans/:id
 #   POST   /maintenance_plans/:id/generate   genera ya la orden de la siguiente fecha
 class Api::V1::Accounts::MaintenancePlansController < Api::V1::Accounts::BaseController
-  FIELDS = %i[contact_id customer_asset_id case_type_id assignee_id title every unit next_due_on lead_days
+  FIELDS = %i[contact_id organization_id customer_asset_id case_type_id assignee_id title every unit next_due_on lead_days
               notify_customer active notes].freeze
 
   before_action :check_access
@@ -14,6 +14,7 @@ class Api::V1::Accounts::MaintenancePlansController < Api::V1::Accounts::BaseCon
   def index
     plans = Current.account.maintenance_plans.includes(:contact, :customer_asset, :case_type, :assignee).order(:next_due_on)
     plans = plans.where(contact_id: params[:contact_id]) if params[:contact_id].present?
+    plans = plans.where(organization_id: params[:organization_id]) if params[:organization_id].present?
     plans = plans.active unless params[:active].to_s == 'all'
     render json: { maintenance_plans: plans.map { |plan| plan_json(plan) } }
   end
@@ -64,7 +65,7 @@ class Api::V1::Accounts::MaintenancePlansController < Api::V1::Accounts::BaseCon
   end
 
   def plan_json(plan)
-    { id: plan.id, title: plan.title, every: plan.every, unit: plan.unit, next_due_on: plan.next_due_on,
+    { id: plan.id, organization_id: plan.organization_id, title: plan.title, every: plan.every, unit: plan.unit, next_due_on: plan.next_due_on,
       lead_days: plan.lead_days, notify_customer: plan.notify_customer, active: plan.active, notes: plan.notes,
       last_generated_at: plan.last_generated_at,
       contact: ref(plan.contact), customer_asset: ref(plan.customer_asset), case_type: ref(plan.case_type),

@@ -142,11 +142,14 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   # proyecto@automatizacion_campanas — para el desplegable "Agregar a campaña".
   def lite_list
     Current.account.tracking_campaigns.order(created_at: :desc)
-           .map { |c| c.slice(:id, :name, :status, :mode, :scheduled_for, :ends_at, :inbox_id, :purpose) } # purpose: prospeccion P4
+           .map { |c| c.slice(*LITE_FIELDS) }
   end
 
+  # purpose: prospeccion P4; event: Plan-Eventos E3
+  LITE_FIELDS = %i[id name status mode scheduled_for ends_at inbox_id purpose event_id event_status].freeze
+
   def campaign_json(campaign, status_counts, delivery_counts, funnel_counts)
-    {
+    campaign_event_json(campaign).merge(
       id: campaign.id,
       name: campaign.name,
       status: campaign.status,
@@ -165,7 +168,12 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
       stats: aggregate_stats(status_counts || {}),
       delivery: aggregate_delivery(delivery_counts || {}),
       funnel: funnel_counts || TrackingCampaigns::CampaignFunnel::EMPTY
-    }.merge(editable_json(campaign), extras_json(campaign))
+    ).merge(editable_json(campaign), extras_json(campaign))
+  end
+
+  # Plan-Eventos E3 — la campaña de un evento (y con qué estado de sus asistentes).
+  def campaign_event_json(campaign)
+    { event_id: campaign.event_id, event_status: campaign.event_status, event_name: campaign.event&.name }
   end
 
   # §10.12: el canal (filtro de la lista, U4) y, en todas las campañas, entrega (P2), prueba de

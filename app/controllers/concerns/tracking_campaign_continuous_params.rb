@@ -25,7 +25,7 @@ module TrackingCampaignContinuousParams
       objective: template.objective, mode: 'continuous', scheduled_for: starts,
       # launch=false → Guardada: no acepta inscripciones hasta que la pongan en curso.
       status: ActiveModel::Type::Boolean.new.cast(params.fetch(:launch, true)) ? TrackingCampaign.status_for(starts) : 'saved'
-    }.merge(window_attributes, subject_test_attributes)
+    }.merge(window_attributes, subject_test_attributes, Events::CampaignEvent.attributes(Current.account, params))
   end
 
   def window_attributes

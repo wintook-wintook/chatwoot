@@ -5,6 +5,7 @@
   can_transition_to (backend) y se pide una nota opcional (reason del evento).
 -->
 <script>
+import CaseTasksOnCloseModal from 'dashboard/views/gestorTickets/tasks/CaseTasksOnCloseModal.vue';
 import { mapGetters } from 'vuex';
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
 import MessageApi from 'dashboard/api/inbox/message'; // @tickets_cases — notificar al mover
@@ -48,6 +49,8 @@ import {
 } from 'dashboard/helper/caseCommercial';
 import { formatHours } from 'dashboard/helper/caseWorkOrder';
 import { backQuery } from './backLink';
+import { NO_STEP_BADGE } from 'dashboard/helper/caseNextStep';
+import CaseAgentIcon from './CaseAgentIcon.vue'; // el robot: ¿un agente atiende su conversación?
 
 // Columnas por defecto del tablero cuando no hay un tipo de caso filtrado (así
 // que no hay columnas propias de un tipo que mostrar). ITIL dejó de ser un modo
@@ -106,6 +109,7 @@ const SLA_BADGE = {
 export default {
   name: 'TicketKanban',
   components: {
+    CaseTasksOnCloseModal,
     CaseTicketInternalModal, // @tickets_cases Fase C
     OutcomeModal,
     PostponeModal,
@@ -113,6 +117,7 @@ export default {
     CaseTypeSelect,
     CaseScopeBar,
     CaseFineFilters,
+    CaseAgentIcon,
   },
   props: {
     // Plan-Casos E1 — clase de la ruta `tickets/:caseClass/board`:
@@ -126,6 +131,8 @@ export default {
       quickFilter: 'mine',
       slaOverdueOnly: false,
       committedOnly: false, // Plan-Metricas-Comercial — «Solo comprometidas»
+      noNextStepOnly: false, // casos abiertos sin tareas ni agenda
+      agentFilter: '', // '' | 'with' | 'none' — ¿un agente atiende su conversación?
       fine: emptyFineFilters(),
       // Plan-Casos E1.3 — cerrados en el tablero: hide | 7 | 30 | 90 | all.
       closedWindow: DEFAULT_BOARD_CLOSED,
@@ -154,6 +161,9 @@ export default {
     };
   },
   computed: {
+    noStepBadge() {
+      return NO_STEP_BADGE;
+    },
     ...mapGetters({
       boardTickets: 'caseTickets/getBoardTickets',
       boardUiFlags: 'caseTickets/getBoardUIFlags',
@@ -276,13 +286,21 @@ export default {
     },
   },
   mounted() {
+    this.$emitter.on('caseConflictResolved', this.onConflictResolved); // K1
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
     this.restoreState();
     this.loadBoard();
   },
+  beforeDestroy() {
+    this.$emitter.off('caseConflictResolved', this.onConflictResolved);
+  },
   methods: {
+    // K1 — tras resolver un conflicto, la lista o el tablero se recargan.
+    onConflictResolved() {
+      this.fetch();
+    },
     // Plan-Casos E1.2 — el Tablero comparte con la Lista (misma clase) el tipo,
     // ¿de quién?, el aviso de SLA, los filtros finos y la búsqueda: pasar de
     // una vista a otra, o salir y volver, conserva lo elegido.
@@ -293,6 +311,8 @@ export default {
       this.quickFilter = SCOPES.includes(st.scope) ? st.scope : 'mine';
       this.slaOverdueOnly = !!st.sla;
       this.committedOnly = !!st.committed;
+      this.noNextStepOnly = !!st.noNextStep;
+      this.agentFilter = ['with', 'none'].includes(st.agent) ? st.agent : '';
       this.fine = normalizeFineFilters(st.fine);
       const closed = st.board?.closed;
       this.closedWindow = BOARD_CLOSED_OPTIONS.includes(closed)
@@ -306,6 +326,8 @@ export default {
         scope: this.quickFilter,
         sla: this.slaOverdueOnly,
         committed: this.committedOnly,
+        noNextStep: this.noNextStepOnly,
+        agent: this.agentFilter,
         fine: this.fine,
         board: { closed: this.closedWindow },
       });
@@ -348,6 +370,8 @@ export default {
       // casos sin tipo; ver CaseTicket.of_class).
       f.case_class = this.caseClass;
       if (this.isCommercialBoard && this.committedOnly) f.committed = true;
+      if (this.noNextStepOnly) f.next_step = 'none';
+      if (this.agentFilter) f.agent = this.agentFilter;
       // Aviso rojo de Órdenes / Comercial (visitas / cierre vencido).
       if (this.slaOverdueOnly)
         Object.assign(f, classAlertParams(this.caseClass));
@@ -378,6 +402,14 @@ export default {
       this.committedOnly = on;
       this.fetch();
     },
+    onAgentChange(value) {
+      this.agentFilter = value;
+      this.fetch();
+    },
+    onNextStepChange(on) {
+      this.noNextStepOnly = on;
+      this.fetch();
+    },
     onFineChange(fine) {
       this.fine = fine;
       this.fetch();
@@ -400,6 +432,19 @@ export default {
     // `requires_outcome` y en la espera `requires_postpone` → se abre el modal y
     // se reintenta el mismo movimiento con los datos.
     async commercialMove(ticket, column, extra = {}) {
+      // Soltar en Ganada, Perdida o Cancelada cierra el caso: primero, qué pasa con lo
+      // pendiente. Al reintentar con el resultado ya viene decidido.
+      const closes = ['closed', 'cancelled'].some(s =>
+        (column.statuses || []).includes(s)
+      );
+      if (closes && !extra.decided) {
+        const decision = await this.$refs.tasksOnClose.ask(
+          ticket.id,
+          column.statuses.includes('closed') ? 'closed' : 'cancelled'
+        );
+        if (decision === null) return;
+        Object.assign(extra, decision, { decided: true });
+      }
       try {
         await this.$store.dispatch('caseTickets/moveTicketColumn', {
           ticketId: ticket.id,
@@ -410,7 +455,14 @@ export default {
       } catch (e) {
         const data = e.response?.data || {};
         if (data.requires_outcome) {
-          this.outcomeMove = { ticket, column, outcome: data.outcome || null };
+          this.outcomeMove = {
+            ticket,
+            column,
+            outcome: data.outcome || null,
+            decision: extra,
+            // Varias cotizaciones abiertas: el servidor pide elegir la aceptada.
+            quotes: data.quotes || [],
+          };
         } else if (data.requires_postpone) {
           this.postponeMove = { ticket, column };
         } else {
@@ -422,9 +474,9 @@ export default {
       }
     },
     confirmOutcomeMove(closure) {
-      const { ticket, column } = this.outcomeMove;
+      const { ticket, column, decision } = this.outcomeMove;
       this.outcomeMove = null;
-      this.commercialMove(ticket, column, { closure });
+      this.commercialMove(ticket, column, { ...decision, closure });
     },
     confirmPostponeMove({
       postponed_until: postponedUntil,
@@ -477,6 +529,9 @@ export default {
         !['closed', 'cancelled'].includes(ticket.status) &&
         this.isPastDay(ticket.expected_close_at)
       );
+    },
+    noNextStep(ticket) {
+      return !!ticket.next_step && ticket.next_step.kind === 'none';
     },
     // Excepción que se muestra arriba a la derecha (lo normal no se marca).
     cardAlert(ticket) {
@@ -707,12 +762,19 @@ export default {
       const conversationId = ticket?.conversation_display_id;
       const targetColumn = this.moveTargetColumn;
       this.showMoveModal = false;
+      // Cancelar cierra directo. Cerrar exige documentarlo en la ficha, que pregunta ahí.
+      const statuses = targetColumn ? targetColumn.statuses : [status];
+      const decision = (statuses || []).includes('cancelled')
+        ? await this.$refs.tasksOnClose.ask(ticket.id, 'cancelled')
+        : {};
+      if (decision === null) return;
       try {
         if (targetColumn) {
           // Tablero por tipo (A+): el backend transiciona y fija el puntero.
           await this.$store.dispatch('caseTickets/moveTicketColumn', {
             ticketId: ticket.id,
             caseTypeColumnId: targetColumn.id,
+            ...decision,
           });
         } else {
           await this.$store.dispatch('caseTickets/transitionTicket', {
@@ -720,6 +782,7 @@ export default {
             contactId: ticket.contact_id,
             status,
             reason,
+            ...decision,
           });
         }
         if (notify && notifyMessage && conversationId) {
@@ -793,9 +856,13 @@ export default {
         :sla-only="slaOverdueOnly"
         :sla-count="slaOverdueCount"
         :committed-only="committedOnly"
+        :no-next-step-only="noNextStepOnly"
+        :agent-filter="agentFilter"
+        @agent="onAgentChange"
         @scope="onScopeChange"
         @sla="onSlaChange"
         @committed="onCommittedChange"
+        @nextStep="onNextStepChange"
       >
         <template #before>
           <!-- E1.1 — el tipo decide las columnas; el embudo exige uno -->
@@ -1085,6 +1152,17 @@ export default {
               {{ day(ticket.due_at) }}
             </div>
 
+            <!-- Sin tareas pendientes ni agenda: el caso se queda sin continuidad. -->
+            <div v-if="noNextStep(ticket)" class="mt-2">
+              <span
+                class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full"
+                :class="noStepBadge"
+                :title="$t('CASE_TICKETS.NEXT_STEP.NONE_HINT')"
+              >
+                <fluent-icon icon="alert" size="10" />
+                {{ $t('CASE_TICKETS.NEXT_STEP.NONE') }}
+              </span>
+            </div>
             <!-- Pie: prioridad (solo Alta / Urgente), naturaleza ITIL, responsable -->
             <div class="flex items-center gap-2 mt-2 text-xs">
               <span
@@ -1106,6 +1184,8 @@ export default {
               >
                 {{ kindLabel(ticket.ticket_kind) }}
               </span>
+              <!-- ¿Un agente atiende su conversación? Solo el robot. -->
+              <CaseAgentIcon :agent="ticket.agent" :size="13" />
               <span
                 v-if="assigneeName(ticket)"
                 class="inline-flex items-center min-w-0 gap-1.5 ml-auto text-slate-600 dark:text-slate-300"
@@ -1243,6 +1323,7 @@ export default {
       show
       :folio="outcomeMove.ticket.folio || `#${outcomeMove.ticket.id}`"
       :outcome="outcomeMove.outcome"
+      :quotes="outcomeMove.quotes"
       @close="outcomeMove = null"
       @confirm="confirmOutcomeMove"
     />
@@ -1263,5 +1344,6 @@ export default {
       @created="onInternalCreated"
       @close="showInternalModal = false"
     />
+    <CaseTasksOnCloseModal ref="tasksOnClose" />
   </div>
 </template>

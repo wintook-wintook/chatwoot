@@ -26,10 +26,10 @@ export const actions = {
     }
   },
 
-  async create({ commit }, { inboxId, template }) {
+  async create({ commit }, { inboxId, template, draft = false }) {
     commit('SET_UI_FLAG', { saving: true });
     try {
-      const { data } = await templatesAPI.create(inboxId, template);
+      const { data } = await templatesAPI.create(inboxId, template, { draft });
       commit('UPSERT_RECORD', data);
       return data;
     } finally {
@@ -37,10 +37,10 @@ export const actions = {
     }
   },
 
-  async update({ commit }, { id, template }) {
+  async update({ commit }, { id, template, draft = false }) {
     commit('SET_UI_FLAG', { saving: true });
     try {
-      const { data } = await templatesAPI.update(id, template);
+      const { data } = await templatesAPI.update(id, template, { draft });
       commit('UPSERT_RECORD', data);
       return data;
     } finally {

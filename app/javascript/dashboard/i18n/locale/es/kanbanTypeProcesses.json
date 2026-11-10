@@ -42,7 +42,7 @@
       "OPTIONS": {
         "LABEL": "Options",
         "SET_AS_DEFAULT": "Set as default process",
-        "IS_SYSTEM": "System process (managed by Chatwoot)"
+        "IS_SYSTEM": "System process (managed by Kontrolya)"
       },
       "METADATA": {
         "LABEL": "Metadata",

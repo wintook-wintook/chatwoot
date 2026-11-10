@@ -10,6 +10,7 @@
   una oportunidad (Comercial) lo exige y lleva sus datos comerciales.
 -->
 <script>
+import { fetchEffectiveOwnerId } from 'dashboard/helper/contactOwnerDefault';
 import { mapGetters } from 'vuex';
 import { forType, idAvailable } from 'dashboard/helper/caseClassification';
 import {
@@ -24,6 +25,8 @@ import {
 } from 'dashboard/helper/caseWorkOrder';
 import { isProjectType, projectPayload } from 'dashboard/helper/caseProject';
 import ContactPicker from './ContactPicker.vue';
+import OrganizationsAPI from 'dashboard/api/organizations';
+import OrganizationPicker from 'dashboard/views/organizations/OrganizationPicker.vue';
 import CommitmentFields from './commercial/CommitmentFields.vue'; // Plan-Metricas-Comercial
 
 // Espejo de Cases::PriorityMatrix (backend). impacto × urgencia → prioridad.
@@ -35,7 +38,7 @@ const PRIORITY_MATRIX = {
 
 export default {
   name: 'CaseTicketInternalModal',
-  components: { ContactPicker, CommitmentFields },
+  components: { ContactPicker, OrganizationPicker, CommitmentFields },
   props: {
     show: { type: Boolean, default: false },
     // @tickets_cases — si viene un ticket, el modal es de EDICIÓN.
@@ -80,6 +83,8 @@ export default {
         progress: '',
       },
       contact: null, // Plan-Casos E2 — cliente elegido (null = caso interno)
+      ownerAssigneeId: null, // responsable fijo del contacto elegido
+      organization: null, // Plan-Organizaciones O2 — opcional; filtra los contactos
       // 2K — valores de los campos personalizados del tipo seleccionado
       customValues: {},
     };
@@ -140,6 +145,19 @@ export default {
     contactRequired() {
       return this.isCommercial;
     },
+    formClass() {
+      return (
+        this.selectedType?.case_class || this.caseClass || DEFAULT_CASE_CLASS
+      );
+    },
+    // El botón dice lo que se va a crear: sin contacto, un caso de Soporte es interno.
+    submitLabel() {
+      const name = this.formClass.toUpperCase();
+      if (name === 'SUPPORT' && !this.contact) {
+        return this.$t('CASE_TICKETS.INTERNAL.SUBMIT');
+      }
+      return this.$t(`CASE_TICKETS.CREATE.SUBMIT.${name}`);
+    },
     headerTitle() {
       if (this.isEdit) return this.$t('CASE_TICKETS.EDIT.TITLE');
       if (!this.caseClass) return this.$t('CASE_TICKETS.INTERNAL.TITLE');
@@ -159,7 +177,10 @@ export default {
     // @tickets_cases — al crear, el responsable arranca en el agente firmado.
     // Solo si ese usuario figura entre los agentes de la cuenta (un superadmin
     // que no es agente no aparece en el select y dejarlo daría un valor muerto).
+    // Si el contacto tiene responsable fijo (suyo o de su organización), va ese.
     defaultAssigneeId() {
+      const owner = this.ownerAssigneeId;
+      if (owner && this.agents.some(ag => ag.id === owner)) return owner;
       const id = this.currentUser?.id;
       if (!id) return '';
       return this.agents.some(ag => ag.id === id) ? id : '';
@@ -297,6 +318,38 @@ export default {
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
   },
   methods: {
+    // Toma el responsable fijo del contacto; solo cambia el select si nadie lo movió.
+    async applyContactOwner(contactId) {
+      const previous = this.defaultAssigneeId;
+      this.ownerAssigneeId = await fetchEffectiveOwnerId(contactId);
+      if (this.isEdit) return;
+      if (!this.form.assignee_id || this.form.assignee_id === previous) {
+        this.form.assignee_id = this.defaultAssigneeId;
+      }
+    },
+    // Plan-Organizaciones O2 — si el contacto no es de la organización elegida, se quita.
+    chooseOrganization(organization) {
+      this.organization = organization;
+      if (
+        organization &&
+        this.contact &&
+        this.contact.organization_id !== organization.id
+      )
+        this.contact = null;
+    },
+    // Elegir primero el contacto llena su organización.
+    async chooseContact(contact) {
+      this.contact = contact;
+      this.applyContactOwner(contact && contact.id);
+      if (!contact || this.organization || !contact.organization_id) return;
+      try {
+        const { data } = await OrganizationsAPI.find(contact.organization_id);
+        const { id, name, stage } = data.organization;
+        this.organization = { id, name, stage };
+      } catch {
+        // Sin acceso a la organización: el servidor la toma del contacto igual.
+      }
+    },
     onTabChange(index) {
       const tab = this.tabs[index];
       if (tab) this.activeTab = tab.key;
@@ -345,7 +398,11 @@ export default {
         const ticket = await this.$store.dispatch('caseTickets/createTicket', {
           // Plan-Casos E2 — con cliente es un caso suyo; sin cliente, interno.
           ...(this.contact
-            ? { contact_id: this.contact.id, ...this.commercialPayload() }
+            ? {
+                contact_id: this.contact.id,
+                organization_id: this.organization && this.organization.id,
+                ...this.commercialPayload(),
+              }
             : { internal: true }),
           assignee_id: this.form.assignee_id || undefined,
           team_id: this.form.team_id || undefined,
@@ -367,9 +424,10 @@ export default {
         });
         this.$emitter.emit('newToastMessage', {
           message: this.contact
-            ? this.$t('CASE_TICKETS.CREATE.SUCCESS', {
-                folio: ticket.folio || `#${ticket.id}`,
-              })
+            ? this.$t(
+                `CASE_TICKETS.CREATE.SUCCESS.${this.formClass.toUpperCase()}`,
+                { folio: ticket.folio || `#${ticket.id}` }
+              )
             : this.$t('CASE_TICKETS.INTERNAL.SUCCESS'),
         });
         this.$emit('created', ticket);
@@ -568,6 +626,22 @@ export default {
               </span>
             </div>
 
+            <!-- Plan-Organizaciones O2 — organización (opcional; filtra los contactos) -->
+            <div
+              v-if="!isEdit && caseClass"
+              class="flex flex-col col-span-2 gap-1"
+            >
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('ORGANIZATIONS.PICKER.LABEL') }}
+              </span>
+              <OrganizationPicker
+                :value="organization"
+                @input="chooseOrganization"
+              />
+            </div>
+
             <!-- Plan-Casos E2 — cliente (solo en el alta por clase) -->
             <div
               v-if="!isEdit && caseClass"
@@ -582,7 +656,11 @@ export default {
                     : $t('CASE_TICKETS.CREATE.CONTACT_OPTIONAL')
                 }}
               </span>
-              <ContactPicker v-model="contact" />
+              <ContactPicker
+                :value="contact"
+                :organization-id="organization && organization.id"
+                @input="chooseContact"
+              />
               <span
                 v-if="!contact"
                 class="text-xs"
@@ -1100,11 +1178,7 @@ export default {
             :is-loading="isEdit ? uiFlags.isSaving : uiFlags.isCreating"
             :disabled="!isValid"
           >
-            {{
-              isEdit
-                ? $t('CASE_TICKETS.EDIT.SUBMIT')
-                : $t('CASE_TICKETS.INTERNAL.SUBMIT')
-            }}
+            {{ isEdit ? $t('CASE_TICKETS.EDIT.SUBMIT') : submitLabel }}
           </woot-button>
         </div>
       </form>

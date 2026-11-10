@@ -8,6 +8,8 @@ import { useFilter } from 'shared/composables/useFilter';
 import * as OPERATORS from 'dashboard/components/widgets/FilterInput/FilterOperatorTypes.js';
 import { CONTACTS_EVENTS } from '../../../../helper/AnalyticsHelper/events';
 import { validateConversationOrContactFilters } from 'dashboard/helper/validations.js';
+import EventsAPI from 'dashboard/api/events';
+import { ATTENDEE_STATUSES } from 'dashboard/views/events/eventHelpers';
 
 export default {
   components: {
@@ -56,6 +58,7 @@ export default {
       attributeModel: 'contact_attribute',
       filtersFori18n: 'CONTACTS_FILTER',
       validationErrors: {},
+      events: [], // Plan-Eventos E2 — para la condición «Evento»
     };
   },
   computed: {
@@ -77,6 +80,7 @@ export default {
     },
   },
   mounted() {
+    this.loadEvents();
     const { filterGroups, filterTypes } = this.setFilterAttributes();
     this.filterTypes = [...this.filterTypes, ...filterTypes];
     this.filterGroups = filterGroups;
@@ -140,7 +144,29 @@ export default {
       const type = this.filterTypes.find(filter => filter.attributeKey === key);
       return type?.filterOperators;
     },
+    async loadEvents() {
+      try {
+        const { data } = await EventsAPI.list();
+        this.events = data.events || [];
+      } catch {
+        this.events = [];
+      }
+    },
+    // «Cualquier evento · Asistió», «Feria octubre · Confirmó»… (valor «id:estado»).
+    eventOptions() {
+      const status = key => this.$t(`EVENTS.ATTENDEE_STATUSES.${key}`);
+      const any = { id: 'any', name: this.$t('CONTACTS_FILTER.EVENT_ANY') };
+      const anyStatus = this.$t('CONTACTS_FILTER.EVENT_ANY_STATUS');
+      return [any, ...this.events].flatMap(event => [
+        { id: `${event.id}:any`, name: `${event.name} · ${anyStatus}` },
+        ...ATTENDEE_STATUSES.map(key => ({
+          id: `${event.id}:${key}`,
+          name: `${event.name} · ${status(key)}`,
+        })),
+      ]);
+    },
     getDropdownValues(type) {
+      if (type === 'event') return this.eventOptions();
       const allCustomAttributes = this.$store.getters[
         'attributes/getAttributesByModel'
       ](this.attributeModel);

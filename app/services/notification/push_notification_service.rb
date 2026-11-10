@@ -30,16 +30,27 @@ class Notification::PushNotificationService
     @conversation ||= notification.conversation
   end
 
-  def push_message
+  # body: el texto del mensaje (sw.js lo muestra bajo el título). url: la conversación en la
+  # plataforma o, en el teléfono que activó los avisos desde Dali, Dali con esa conversación.
+  def push_message(subscription = nil)
     {
       title: notification.push_message_title,
+      body: notification.push_message_body.to_s.truncate(140),
       tag: "#{notification.notification_type}_#{conversation.display_id}_#{notification.id}",
-      url: push_url
+      url: subscription && dali_subscription?(subscription) ? dali_url : push_url
     }
   end
 
   def push_url
     app_account_conversation_url(account_id: conversation.account_id, id: conversation.display_id)
+  end
+
+  def dali_subscription?(subscription)
+    subscription.subscription_attributes.to_h['dali'].present? && conversation.is_a?(Conversation)
+  end
+
+  def dali_url
+    "#{ENV.fetch('FRONTEND_URL', '')}/app/accounts/#{conversation.account_id}/dali?conversation=#{conversation.display_id}"
   end
 
   def can_send_browser_push?(subscription)
@@ -48,7 +59,7 @@ class Notification::PushNotificationService
 
   def browser_push_payload(subscription)
     {
-      message: JSON.generate(push_message),
+      message: JSON.generate(push_message(subscription)),
       endpoint: subscription.subscription_attributes['endpoint'],
       p256dh: subscription.subscription_attributes['p256dh'],
       auth: subscription.subscription_attributes['auth'],

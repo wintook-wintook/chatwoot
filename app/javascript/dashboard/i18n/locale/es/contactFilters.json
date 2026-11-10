@@ -48,12 +48,15 @@
       "CREATED_AT": "Creado en",
       "LAST_ACTIVITY": "Última Actividad",
       "REFERER_LINK": "Enlace de referencia",
-      "BLOCKED": "Bloqueado"
+      "BLOCKED": "Bloqueado",
+      "EVENT": "Evento"
     },
     "GROUPS": {
       "STANDARD_FILTERS": "Filtros Estándar",
       "ADDITIONAL_FILTERS": "Filtros Adicionales",
       "CUSTOM_ATTRIBUTES": "Atributos Personalizados"
-    }
+    },
+    "EVENT_ANY": "Cualquier evento",
+    "EVENT_ANY_STATUS": "cualquier estado"
   }
 }

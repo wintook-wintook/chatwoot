@@ -298,7 +298,11 @@
     "CAMPAIGNS_SMS": "SMS",
     "CAMPAIGNS_DASHBOARD": "Dashboard",
     "SITE_ANALYSIS": "Site analysis",
-    "MY_DAY_PRIORITY": "My day priority",
+    "TASK_SCORING": "Task scoring",
+    "CATALOGS": "Catalogs",
+    "CATALOG_PRODUCTS": "Products and services",
+    "CATALOG_CLASSIFICATIONS": "Classifications",
+    "CATALOG_SLA_POLICIES": "SLA policies",
     "SALES_DASHBOARD": "Sales dashboard",
     "SERVICE_DASHBOARD": "Service dashboard",
     "SALES": "Sales",
@@ -314,6 +318,7 @@
     "MY_SUMMARY": "My summary",
     "MY_NOTICES": "My notices",
     "MY_BUSINESS": "My business",
+    "SALES_BUDGET": "Budget",
     "INBOX_VIEW_V2": "Inbox view",
     "CONTACT_FUNNEL": "Contact funnel",
     "OPPORTUNITIES": "Opportunities",
@@ -362,7 +367,10 @@
     "TICKET_SLA": "SLA",
     "TICKET_AI": "Artificial Intelligence",
     "TICKET_PORTALS": "Customer portals",
-    "TICKET_COMMERCIAL_SETTINGS": "Sales",
+    "TICKET_COMMERCIAL_SETTINGS": "Sales settings",
+    "TICKET_CLOSE_REASONS": "Close reasons",
+    "TICKET_TASK_OUTCOMES": "Task results",
+    "TASK_REPORTS": "Reports",
     "TICKET_TASK_SETTINGS": "Tasks",
     "TICKET_SETTINGS": "Module settings",
     "TICKET_CONFIG": "Folio settings",
@@ -378,6 +386,9 @@
     "ACCESS_ROLES": "Roles",
     "CONTRACTS": "Contracts",
     "CONTRACT_TYPES": "Contract types",
+    "ORGANIZATIONS": "Organizations",
+    "EVENTS": "Events",
+    "CLIENTS_DASHBOARD": "Customers dashboard",
     "CATALOG": "Catalog",
     "FIELD_ROUTE": "My field route",
     "DISPATCH": "Dispatch",
@@ -441,7 +452,7 @@
       "TEXT": "Set as offline automatically",
       "INFO_TEXT": "Let the system automatically mark you as offline when you are not using the app or dashboard."
     },
-    "DOCS": "Read docs",
+    "DOCS": "Help",
     "CASES_LIST": "List",
     "CASES_BOARD": "Board",
     "CASES_METRICS": "Metrics",
@@ -496,13 +507,13 @@
     "NO_BILLING_USER": "Your billing account is being set up. Please refresh the page and try again."
   },
   "CREATE_ACCOUNT": {
-    "NO_ACCOUNT_WARNING": "Oh no! We couldn't find any Chatwoot accounts. Please create a new account to continue.",
+    "NO_ACCOUNT_WARNING": "Oh no! We couldn't find any Kontrolya accounts. Please create a new account to continue.",
     "NEW_ACCOUNT": "New Account",
     "SELECTOR_SUBTITLE": "Create a new account",
     "API": {
       "SUCCESS_MESSAGE": "Account created successfully",
       "EXIST_MESSAGE": "Account already exists",
-      "ERROR_MESSAGE": "Could not connect to Woot server, please try again later"
+      "ERROR_MESSAGE": "Could not connect to Kontrolya server, please try again later"
     },
     "FORM": {
       "NAME": {

@@ -6,16 +6,16 @@
     "DESCRIPTION": "Los Registros de Auditoría mantienen un registro de actividades en su cuenta, permitiéndole rastrear y auditar su cuenta, equipo o servicios.",
     "LEARN_MORE": "Aprenda más sobre los registros de auditoría",
     "SEARCH_404": "No hay elementos que coincidan con esta consulta",
-    "SIDEBAR_TXT": "<p><b>Registros de Auditoría</b> </p><p> Los Registros de Auditoría son rastros de eventos y acciones en un Sistema Chatwoot. </p>",
+    "SIDEBAR_TXT": "<p><b>Registros de Auditoría</b> </p><p> Los Registros de Auditoría son rastros de eventos y acciones en un Sistema Kontrolya. </p>",
     "LIST": {
       "404": "No hay Registros de Auditoría disponibles en esta cuenta.",
       "TITLE": "Gestionar Registros de Auditoría",
-      "DESC": "Los Registros de Auditoría son rastros de eventos y acciones en un Sistema Chatwoot.",
+      "DESC": "Los Registros de Auditoría son rastros de eventos y acciones en un Sistema Kontrolya.",
       "TABLE_HEADER": ["Actividad", "Hora", "Dirección IP"]
     },
     "API": {
       "SUCCESS_MESSAGE": "Registros de Auditoría obtenidos con éxito",
-      "ERROR_MESSAGE": "No se pudo conectar al Servidor Woot, por favor intente nuevamente más tarde"
+      "ERROR_MESSAGE": "No se pudo conectar al Servidor Kontrolya, por favor intente nuevamente más tarde"
     },
     "DEFAULT_USER": "Sistema",
     "AUTOMATION_RULE": {

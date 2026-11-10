@@ -120,6 +120,7 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
       :timezone, :slots_presentation, # proyecto@bot_seguimiento_calendar
       :version_note, # feat/agentes_ia_unificado: nota del guardado, viaja a la versión
       :email_signature, # prospeccion V1: firma en correo
+      :customer_display_name, # el nombre con que el cliente ve al agente
       whatsapp_templates: [],
       tags: [],
       keyword_actions: [:keyword, :action, :direction, :label, :assignee_id, :team_id], # proyecto@contact_tracking

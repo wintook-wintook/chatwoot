@@ -132,7 +132,7 @@ describe('useMacros', () => {
   it('returns agents with "Self" option for assign_agent type', () => {
     const { getMacroDropdownValues } = useMacros();
     const result = getMacroDropdownValues('assign_agent');
-    expect(result[0]).toEqual({ id: 'self', name: 'Self' });
+    expect(result[0]).toEqual({ id: 'self', name: 'Yo mismo' });
     expect(result.slice(1)).toEqual(mockAgents);
   });
 
@@ -169,7 +169,7 @@ describe('useMacros', () => {
     expect(getMacroDropdownValues('add_label')).toEqual([]);
     expect(getMacroDropdownValues('assign_team')).toEqual([]);
     expect(getMacroDropdownValues('assign_agent')).toEqual([
-      { id: 'self', name: 'Self' },
+      { id: 'self', name: 'Yo mismo' },
     ]);
   });
 });

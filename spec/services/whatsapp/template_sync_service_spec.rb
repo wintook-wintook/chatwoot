@@ -50,6 +50,21 @@ RSpec.describe Whatsapp::TemplateSyncService do
     )
   end
 
+  # feat/plantillas_variables_chatwoot F9.1
+  it 'lee los ejemplos de una plantilla con variables con nombre' do
+    remote.first['components'] = [
+      { 'type' => 'HEADER', 'format' => 'TEXT', 'text' => 'Pedido {{pedido}}',
+        'example' => { 'header_text_named_params' => [{ 'param_name' => 'pedido', 'example' => 'A1' }] } },
+      { 'type' => 'BODY', 'text' => 'Hola {{nombre}}, tienes {{edad}} años.',
+        'example' => { 'body_text_named_params' => [{ 'param_name' => 'nombre', 'example' => 'Juan' },
+                                                    { 'param_name' => 'edad', 'example' => '34' }] } }
+    ]
+
+    described_class.new(channel).perform
+
+    expect(channel.whatsapp_templates.find_by(name: 'cobro_vencido').sample_values).to eq('body' => %w[Juan 34], 'header' => ['A1'])
+  end
+
   it 'es idempotente: la segunda corrida actualiza, no duplica' do
     described_class.new(channel).perform
     result = described_class.new(channel).perform

@@ -31,6 +31,8 @@ import { useVuelidate } from '@vuelidate/core';
 import { required, minLength } from '@vuelidate/validators';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
 import WootSubmitButton from 'dashboard/components/buttons/FormSubmitButton.vue';
+// proyecto@respuestas_predefinidas R3: la categoría, junto al nombre.
+import CategoryAPI from 'dashboard/api/cannedResponseCategory';
 
 // Lo que alguien escribió después de un "#", hasta un espacio o una puntuación.
 const WRITTEN_TAG_RE = /#[^\s#.,;:!?¿¡()"'«»]+/g;
@@ -47,6 +49,7 @@ export default {
     content: { type: String, default: '' },
     contentPrompts: { type: String, default: '' },
     contentIsPrompt: { type: Boolean, default: false },
+    categoryId: { type: Number, default: null },
     submitText: { type: String, default: '' },
     cancelText: { type: String, default: '' },
     loading: { type: Boolean, default: false },
@@ -62,7 +65,9 @@ export default {
         content: this.content || '',
         contentPrompts: this.contentPrompts || '',
         contentIsPrompt: this.contentIsPrompt,
+        categoryId: this.categoryId ? String(this.categoryId) : '',
       },
+      categories: [],
       activeTab: MESSAGE_TAB,
     };
   },
@@ -112,8 +117,17 @@ export default {
   },
   mounted() {
     if (!this.labels || !this.labels.length) this.$store.dispatch('labels/get');
+    this.loadCategories();
   },
   methods: {
+    async loadCategories() {
+      try {
+        const { data } = await CategoryAPI.get();
+        this.categories = data || [];
+      } catch (error) {
+        this.categories = [];
+      }
+    },
     submit() {
       this.v$.$touch();
       if (this.v$.form.content.$invalid) {
@@ -126,6 +140,7 @@ export default {
         content: this.form.content,
         content_prompts: this.form.contentPrompts,
         content_is_prompt: this.form.contentIsPrompt,
+        category_id: this.form.categoryId ? Number(this.form.categoryId) : null,
       });
     },
     showTab(index) {
@@ -142,16 +157,36 @@ export default {
     <!-- El nombre queda afuera de las pestañas: es de las dos, y es lo que se ve en la
          lista. !mb-0: el input trae 1rem abajo, que sumado al gap del form dejaba las
          pestañas muy lejos. -->
-    <label :class="{ error: v$.form.shortCode.$error }">
-      {{ $t('CANNED_MGMT.ADD.FORM.SHORT_CODE.LABEL') }}
-      <input
-        v-model.trim="form.shortCode"
-        type="text"
-        class="!mb-0"
-        :placeholder="$t('CANNED_MGMT.ADD.FORM.SHORT_CODE.PLACEHOLDER')"
-        @input="v$.form.shortCode.$touch"
-      />
-    </label>
+    <div class="flex flex-wrap gap-3">
+      <label
+        class="flex-1 min-w-[14rem] !mb-0"
+        :class="{ error: v$.form.shortCode.$error }"
+      >
+        {{ $t('CANNED_MGMT.ADD.FORM.SHORT_CODE.LABEL') }}
+        <input
+          v-model.trim="form.shortCode"
+          type="text"
+          class="!mb-0"
+          :placeholder="$t('CANNED_MGMT.ADD.FORM.SHORT_CODE.PLACEHOLDER')"
+          @input="v$.form.shortCode.$touch"
+        />
+      </label>
+      <!-- R3: una categoría o ninguna (D1). Es la que buscan los agentes con
+           @buscar_predefinidas(CATEGORÍA). -->
+      <label class="w-56 !mb-0">
+        {{ $t('CANNED_MGMT.CATEGORIES.FORM_LABEL') }}
+        <select v-model="form.categoryId" class="!mb-0">
+          <option value="">{{ $t('CANNED_MGMT.TABLE.NO_CATEGORY') }}</option>
+          <option
+            v-for="categoria in categories"
+            :key="categoria.id"
+            :value="String(categoria.id)"
+          >
+            {{ categoria.name }}
+          </option>
+        </select>
+      </label>
+    </div>
 
     <woot-tabs :index="activeTab" @change="showTab">
       <woot-tabs-item

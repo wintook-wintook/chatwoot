@@ -14,8 +14,8 @@ class Api::V1::Accounts::ContractsController < Api::V1::Accounts::BaseController
   require 'csv'
 
   PER_PAGE = 50
-  FIELDS = %i[contact_id contract_type_id catalog_item_id customer_asset_id assignee_id title quantity price currency
-              every unit starts_on next_charge_on term_months auto_renew status notes].freeze
+  FIELDS = %i[contact_id organization_id contract_type_id catalog_item_id customer_asset_id assignee_id title quantity price currency
+              price_from_catalog every unit starts_on next_charge_on term_months auto_renew status notes].freeze
 
   before_action :check_read_access
   before_action :check_write_access, except: %i[index template]
@@ -108,6 +108,7 @@ class Api::V1::Accounts::ContractsController < Api::V1::Accounts::BaseController
   def filtered_without_state
     contracts = scope
     contracts = contracts.where(contact_id: params[:contact_id]) if params[:contact_id].present?
+    contracts = contracts.where(organization_id: params[:organization_id]) if params[:organization_id].present?
     contracts = contracts.where(contract_type_id: params[:contract_type_id]) if params[:contract_type_id].present?
     params[:q].present? ? search(contracts, params[:q]) : contracts
   end
@@ -122,10 +123,10 @@ class Api::V1::Accounts::ContractsController < Api::V1::Accounts::BaseController
     permitted = params.require(:contract).permit(*FIELDS)
     attributes = params[:contract][:custom_attributes]
     permitted[:custom_attributes] = attributes.permit!.to_h if attributes.respond_to?(:permit!)
-    amounts_visible? ? permitted : permitted.except(:price)
+    amounts_visible? ? permitted : permitted.except(:price, :price_from_catalog)
   end
 
-  # Sin «Ver montos» el contrato se ve y se cambia, pero sin el precio.
+  # Sin «Ver montos» el contrato se ve y se cambia, pero sin el precio (ni de dónde sale).
   def amounts_visible?
     access_grant.can?(:see_amounts)
   end
@@ -151,9 +152,10 @@ class Api::V1::Accounts::ContractsController < Api::V1::Accounts::BaseController
   end
 
   def contract_json(contract)
-    contract.slice(:id, :contact_id, :contract_type_id, :catalog_item_id, :customer_asset_id, :assignee_id, :title,
+    contract.slice(:id, :contact_id, :organization_id, :contract_type_id, :catalog_item_id, :customer_asset_id, :assignee_id, :title,
                    :currency, :every, :unit, :starts_on, :next_charge_on, :last_paid_on, :term_months, :ends_on,
-                   :auto_renew, :status, :cancelled_on, :cancel_reason, :custom_attributes, :notes)
+                   :auto_renew, :status, :cancelled_on, :cancel_reason, :custom_attributes, :notes,
+                   :price_from_catalog)
             .merge(quantity: contract.quantity.to_f, price: (contract.price.to_f if amounts_visible?),
                    amount: (contract.amount.to_f if amounts_visible?), state: contract.state, links: links_json(contract))
   end

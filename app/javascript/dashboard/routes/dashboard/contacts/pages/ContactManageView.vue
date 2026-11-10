@@ -16,12 +16,15 @@ import ContactNotes from 'dashboard/modules/notes/NotesOnContactPage.vue';
 import SettingsHeader from '../../settings/SettingsHeader.vue';
 import Spinner from 'shared/components/Spinner.vue';
 import ContactDataColumn from '../components/ContactDataColumn.vue';
+import ContactFollowUpAction from '../components/ContactFollowUpAction.vue'; // Seguimiento IA
+import ClientPortalLinkCard from 'dashboard/components/clientPortal/ClientPortalLinkCard.vue'; // portal del cliente
 import ContactSummaryTab from '../components/ContactSummaryTab.vue';
 import ContactCasesTab from '../components/ContactCasesTab.vue';
 import ContactTasksTab from '../components/ContactTasksTab.vue';
 import ContactAssetsTab from '../components/ContactAssetsTab.vue';
 import ContactQuotesTab from '../components/ContactQuotesTab.vue';
 import ContactContractsTab from '../components/ContactContractsTab.vue'; // Plan-Contratos R1
+import ContactEventsTab from '../components/ContactEventsTab.vue'; // Plan-Eventos E1
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 const CASE_TABS = ['cases', 'quotes', 'tasks', 'assets'];
@@ -34,12 +37,15 @@ export default {
     SettingsHeader,
     Spinner,
     ContactDataColumn,
+    ContactFollowUpAction,
+    ClientPortalLinkCard,
     ContactSummaryTab,
     ContactCasesTab,
     ContactTasksTab,
     ContactAssetsTab,
     ContactQuotesTab,
     ContactContractsTab,
+    ContactEventsTab,
   },
   // Si se llegó desde otra pantalla de la app, «Regresar» vuelve ahí (con sus
   // filtros); abierto directo (enlace, pestaña nueva) va a la lista de contactos.
@@ -78,6 +84,7 @@ export default {
         'tasks',
         'assets',
         'contracts',
+        'events',
         'notes',
       ]
         .filter(key => this.hasCases || !CASE_TABS.includes(key))
@@ -92,6 +99,12 @@ export default {
     },
     activeTabIndex() {
       return this.tabs.findIndex(t => t.key === this.activeTab);
+    },
+    portalOwner() {
+      const orgId = this.contact?.organization_id;
+      return orgId
+        ? { organization_id: orgId }
+        : { contact_id: this.numericContactId };
     },
     contact() {
       return this.$store.getters['contacts/getContact'](this.contactId);
@@ -160,6 +173,11 @@ export default {
         <aside
           class="flex-shrink-0 border-b md:w-80 md:overflow-y-auto md:border-b-0 ltr:md:border-r rtl:md:border-l border-slate-50 dark:border-slate-800/50"
         >
+          <ContactFollowUpAction :contact-id="numericContactId" />
+          <!-- Portal del cliente: con organización, el enlace es el de su organización -->
+          <div class="px-4 pb-4">
+            <ClientPortalLinkCard :owner="portalOwner" />
+          </div>
           <ContactDataColumn :contact="contact" />
         </aside>
         <main class="flex flex-col flex-1 min-w-0 min-h-0">
@@ -206,6 +224,10 @@ export default {
             />
             <ContactContractsTab
               v-else-if="activeTab === 'contracts'"
+              :contact-id="numericContactId"
+            />
+            <ContactEventsTab
+              v-else-if="activeTab === 'events'"
               :contact-id="numericContactId"
             />
             <ContactNotes v-else :contact-id="numericContactId" />

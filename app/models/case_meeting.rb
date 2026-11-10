@@ -5,14 +5,18 @@
 # Table name: case_meetings
 #
 #  id                     :bigint           not null, primary key
+#  arrival_location       :jsonb            not null
+#  arrived_at             :datetime
 #  attendee_emails        :jsonb            not null
 #  cancelled_at           :datetime
 #  description            :text
 #  ends_at                :datetime         not null
 #  held_at                :datetime
+#  is_visit               :boolean          default(FALSE), not null
 #  location               :string
 #  meeting_url            :string
 #  notify_client          :boolean          default(TRUE), not null
+#  on_my_way_at           :datetime
 #  reconciled_at          :datetime
 #  sequence               :integer
 #  starts_at              :datetime         not null
@@ -28,10 +32,12 @@
 #  cancelled_by_id        :bigint
 #  case_meeting_series_id :bigint
 #  case_task_id           :bigint
-#  case_ticket_id         :bigint           not null
+#  case_ticket_id         :bigint
+#  contact_id             :bigint
 #  google_calendar_id     :string
 #  google_event_id        :string
 #  held_by_id             :bigint
+#  organization_id        :bigint
 #  organizer_id           :bigint
 #
 # Indexes
@@ -40,8 +46,11 @@
 #  index_case_meetings_on_case_task_id                  (case_task_id)
 #  index_case_meetings_on_case_ticket_id_and_sequence   (case_ticket_id,sequence)
 #  index_case_meetings_on_case_ticket_id_and_starts_at  (case_ticket_id,starts_at)
+#  index_case_meetings_on_contact_id                    (contact_id)
 #  index_case_meetings_on_google_event_id               (google_event_id)
+#  index_case_meetings_on_organization_id               (organization_id)
 #  index_case_meetings_on_series_id                     (case_meeting_series_id)
+#  index_case_meetings_on_visits                        (account_id,starts_at) WHERE is_visit
 #
 # Foreign Keys
 #
@@ -50,7 +59,9 @@
 #  fk_rails_...  (case_meeting_series_id => case_meeting_series.id) ON DELETE => cascade
 #  fk_rails_...  (case_task_id => case_tasks.id) ON DELETE => nullify
 #  fk_rails_...  (case_ticket_id => case_tickets.id)
+#  fk_rails_...  (contact_id => contacts.id) ON DELETE => cascade
 #  fk_rails_...  (held_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (organization_id => organizations.id) ON DELETE => nullify
 #  fk_rails_...  (organizer_id => users.id) ON DELETE => nullify
 #
 
@@ -64,7 +75,10 @@
 # es un estado válido y no un error.
 class CaseMeeting < ApplicationRecord
   belongs_to :account
-  belongs_to :case_ticket
+  # Plan-Agenda A1 — sin caso, nació en el calendario y lleva su contacto.
+  belongs_to :case_ticket, optional: true
+  include AgendaLink
+  include TaskReportable
   belongs_to :case_task, optional: true
   belongs_to :case_meeting_series, optional: true
   # Dueño del calendario donde vive el evento: reasignar el ticket NO lo mueve
@@ -86,6 +100,10 @@ class CaseMeeting < ApplicationRecord
   scope :ordered, -> { order(:starts_at, :id) }
   scope :active,  -> { where(status: %i[scheduled rescheduled]) }
 
+  # La tarea agendada de una orden de trabajo siempre es visita.
+  before_validation -> { self.is_visit = true }, if: -> { case_ticket&.work_order? }
+  before_validation :fill_visit_address, if: :is_visit?
+
   # Plan-Clase-Orden-de-Trabajo F2b — agendar una visita en una orden «Por
   # programar» la pasa a «Programada» (cubre la reunión suelta y la serie).
   after_create_commit -> { case_ticket.mark_visit_scheduled! }, if: -> { case_ticket&.work_order? }
@@ -93,6 +111,15 @@ class CaseMeeting < ApplicationRecord
   after_create_commit lambda {
     Kanban::FunnelTriggerJob.perform_later(case_ticket.conversation_id, 'appointment_scheduled') if case_ticket&.conversation_id
   }
+
+  def concluded?
+    held? || no_show?
+  end
+
+  # Visita sin dirección: la del caso o la de la organización.
+  def fill_visit_address
+    self.location = case_ticket&.work_address.presence || client_organization&.address if location.blank?
+  end
 
   # Folio de la reunión dentro del ticket: R001, R002…
   def folio
@@ -128,7 +155,8 @@ class CaseMeeting < ApplicationRecord
   private
 
   def assign_sequence
-    self.sequence = (case_ticket.case_meetings.maximum(:sequence) || 0) + 1
+    siblings = case_ticket ? case_ticket.case_meetings : self.class.without_case.where(account_id: account_id)
+    self.sequence = (siblings.maximum(:sequence) || 0) + 1
   end
 
   def track_signatures

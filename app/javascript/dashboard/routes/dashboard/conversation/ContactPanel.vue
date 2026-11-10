@@ -10,6 +10,7 @@
 
 <script>
 import { mapGetters } from 'vuex';
+import { useAlert } from 'dashboard/composables';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
 import ContactConversations from './ContactConversations.vue';
@@ -29,6 +30,9 @@ import Modal from 'dashboard/components/Modal.vue';
 import ContactTrackingModal from 'dashboard/components/contacts/ContactTracking/ContactTrackingModal.vue';
 // @tickets_cases
 import CaseTicketPanel from 'dashboard/components/contacts/CaseTicket/CaseTicketPanel.vue';
+// Seguimiento IA — el agente nuevo, botón aparte del de siempre (para probarlo sin tocarlo).
+import AiFollowUpModal from 'dashboard/views/gestorTickets/conversation/AiFollowUpModal.vue';
+import AiFollowUpStatus from 'dashboard/views/gestorTickets/conversation/AiFollowUpStatus.vue';
 
 export default {
   components: {
@@ -45,6 +49,8 @@ export default {
     // proyecto@CONTACT_PANEL - NUEVO: Registrar componente
     // ============================================================
     ContactTrackingModal,
+    AiFollowUpModal,
+    AiFollowUpStatus,
     Modal,
     CaseTicketPanel, // @tickets_cases
   },
@@ -86,6 +92,8 @@ export default {
       // proyecto@CONTACT_PANEL - NUEVO: Estado del modal
       // ============================================================
       showTrackingModal: false,
+      showAiFollowUp: false,
+      aiFollowUpLive: false, // hay un Seguimiento IA corriendo → botón verde
       showIntegrationWarning: false,
     };
   },
@@ -306,6 +314,35 @@ export default {
     /**
      * Abrir modal de seguimientos
      */
+    // Seguimiento IA: solo necesita OpenAI activo.
+    openAiFollowUp() {
+      const openai = (
+        this.$store.getters['integrations/getAppIntegrations'] || []
+      ).find(a => a.id === 'openai');
+      const ok =
+        openai &&
+        openai.enabled &&
+        (openai.hooks || []).some(h => h.status === true);
+      if (!ok) {
+        useAlert(
+          this.$t('CASE_TICKETS.CONVERSATION_ACTIONS.DELEGATE_MISSING', {
+            missing: this.$t('CONTACT_PANEL.INTEGRATION_WARNING.OPENAI'),
+          })
+        );
+        return;
+      }
+      this.showAiFollowUp = true;
+    },
+    // «Vista anterior»: cierra el Seguimiento IA y abre el agente de seguimiento de siempre.
+    openLegacyTracking() {
+      this.showAiFollowUp = false;
+      this.handleTrackingClick();
+    },
+    onAiFollowUpCreated(followUp) {
+      this.showAiFollowUp = false;
+      this.$refs.aiFollowUpStatus?.set(followUp);
+    },
+
     openTrackingModal() {
       this.showTrackingModal = true;
     },
@@ -386,19 +423,24 @@ export default {
         <woot-button
           variant="smooth"
           size="small"
-          :color-scheme="activeTrackingsCount > 0 ? 'success' : 'secondary'"
-          icon="calendar-clock"
+          :color-scheme="
+            aiFollowUpLive || activeTrackingsCount > 0 ? 'success' : 'secondary'
+          "
+          icon="bot"
           class="tracking-button"
-          @click="handleTrackingClick"
+          @click="openAiFollowUp"
         >
-          {{ $t('CONTACT_PANEL.SCHEDULE_TRACKING') }}
+          {{ $t('ASSISTANT.AI_FOLLOW_UP.BUTTON') }}
           <span v-if="activeTrackingsCount > 0" class="tracking-badge">
             {{ activeTrackingsCount }}
           </span>
         </woot-button>
 
         <!-- @tickets_cases: botón de ticket, en línea junto al de seguimientos -->
-        <woot-feature-toggle feature-key="case_management" class="ticket-inline">
+        <woot-feature-toggle
+          feature-key="case_management"
+          class="ticket-inline"
+        >
           <CaseTicketPanel
             bare
             :contact-id="contact.id"
@@ -407,6 +449,13 @@ export default {
         </woot-feature-toggle>
         <!-- FIN @tickets_cases -->
       </div>
+      <!-- Seguimiento IA: en qué va. El de siempre se abre con «Vista anterior» dentro del formulario. -->
+      <AiFollowUpStatus
+        ref="aiFollowUpStatus"
+        class="mt-1.5"
+        :conversation-id="conversationId"
+        @change="aiFollowUpLive = $event"
+      />
     </div>
     <!-- ============================================================ -->
     <!-- FIN: Botón Programar Seguimiento + Ticket                    -->
@@ -552,6 +601,15 @@ export default {
       :conversation-id="conversationId"
       :current-chat="currentChat"
       @close="closeTrackingModal"
+    />
+
+    <AiFollowUpModal
+      v-if="showAiFollowUp"
+      :show="showAiFollowUp"
+      :conversation-id="conversationId"
+      @close="showAiFollowUp = false"
+      @created="onAiFollowUpCreated"
+      @legacy="openLegacyTracking"
     />
 
     <!-- Modal de Advertencia de Integraciones -->
@@ -736,7 +794,7 @@ export default {
 // ============================================================
 
 .tracking-action-section {
-  padding: var(--space-normal);
+  padding: 0 var(--space-normal) var(--space-small);
   border-bottom: 1px solid var(--color-border);
 }
 

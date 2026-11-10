@@ -28,6 +28,10 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
                 only: %i[show update transition move assign escalate change_approval generate_article
                          apply_ai_suggestion dismiss_ai_suggestion suggest_reply summarize
                          detect_duplicates follow_up lock unlock reopen outcome postpone resume work_order project]
+  include CaseConflictGuard # K1 — dos personas en el mismo caso: presencia y conflicto por campo
+  before_action :check_case_conflict, only: %i[update assign transition move outcome postpone resume reopen]
+  before_action :note_pending_tasks_decision, only: %i[transition outcome move]
+  after_action :cancel_upcoming_meetings_on_close, only: %i[outcome move]
 
   # GET /api/v1/accounts/:account_id/case_tickets/metrics
   def metrics
@@ -105,14 +109,20 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     tickets = tickets.where(sla_status:  CaseTicket.sla_statuses[params[:sla_status]]) if params[:sla_status].present?
     tickets = apply_assignee(tickets)
     tickets = tickets.where(contact_id:  params[:contact_id])                        if params[:contact_id].present?
+    tickets = tickets.where(organization_id: params[:organization_id])               if params[:organization_id].present?
     tickets = apply_date_range(tickets)
     tickets = apply_closed_range(tickets)
+    tickets = Cases::NextSteps.without_next_step(tickets) if params[:next_step] == 'none' # «Sin siguiente paso»
+    tickets = apply_agent_filter(tickets) # «Con agente» / «Sin agente»
     tickets = apply_sort(tickets)
 
     per_page = [[params.fetch(:per_page, PER_PAGE_DEFAULT).to_i, 1].max, PER_PAGE_MAX].min
     tickets  = tickets.page(params[:page]).per(per_page)
+    tickets  = tickets.includes(:organization)
 
     @parent_projects = parent_projects_for(tickets) # una consulta para toda la página
+    @next_steps = Cases::NextSteps.for(tickets) # tareas y agendadas: dos consultas para la página
+    @agent_statuses = Cases::AgentStatus.for(tickets) # el robot: ¿un agente atiende su conversación?
     render json: {
       case_tickets: tickets.map { |t| ticket_json(t) },
       meta: pagination_meta(tickets).merge(
@@ -128,7 +138,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # GET /api/v1/accounts/:account_id/case_tickets/:id
   def show
     # Plan-Plantilla-Tareas-Etapa T3 — avance de la etapa (solo en el detalle).
-    render json: { case_ticket: ticket_json(@ticket).merge(stage_advance: Cases::StageAdvance.new(@ticket).summary) }
+    render json: { case_ticket: ticket_json(@ticket).merge(stage_advance: Cases::StageAdvance.new(@ticket).summary,
+                                                           delegation: delegation_json(@ticket)) }
   end
 
   # POST /api/v1/accounts/:account_id/case_tickets
@@ -167,6 +178,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       project:             project_params.to_h # Plan-Clase-Proyecto P1 (solo lo usa el proyecto)
     )
     notify_assignee(ticket) # @tickets_cases Fase A — avisa al agente si se asignó a mano
+    apply_chosen_organization(ticket)
 
     render json: { case_ticket: ticket_json(ticket) }, status: :created
   rescue ActiveRecord::RecordNotFound => e
@@ -403,6 +415,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # PATCH /api/v1/accounts/:account_id/case_tickets/:id/outcome
   # Cierra la oportunidad: outcome (won|lost|cancelled), outcome_reason_id, outcome_note.
   def outcome
+    return render_quote_choice if quote_choice_missing?(params[:outcome], params[:accepted_quote_id])
+
     @ticket.close_with_outcome!(params[:outcome], actor: current_user,
                                                   reason_id: params[:outcome_reason_id], note: params[:outcome_note],
                                                   accepted_quote_id: params[:accepted_quote_id]) # Plan-Catalogo-Cotizaciones
@@ -649,7 +663,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       :contact_id, :conversation_id, :case_type_id, :title,
       :priority, :description,
       :ticket_kind, :impact, :urgency, :affected_service_id, :category_id,
-      :internal, :assignee_id, :team_id # @tickets_cases — interno + asignación manual al crear
+      :internal, :assignee_id, :team_id, # @tickets_cases — interno + asignación manual al crear
+      :organization_id # Plan-Organizaciones O2 — sin ella, la del contacto
     )
   end
 
@@ -811,18 +826,31 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   end
 
   def reopen_denied_message
-    return 'Solo se puede reabrir un ticket cerrado' unless @ticket.closed?
+    return 'Solo se puede reabrir un ticket cerrado o cancelado' unless @ticket.frozen_for_edit?
 
-    if @ticket.within_reopen_window?
-      'No tienes permiso para reabrir este ticket'
-    else
-      'Venció el plazo para reabrir este ticket; pídeselo a un administrador'
-    end
+    'Solo un administrador o supervisor puede reabrir un caso'
+  end
+
+  # Plan-Organizaciones O2 — la organización elegida en el alta (si no, quedó la del contacto).
+  def apply_chosen_organization(ticket)
+    chosen = ticket_params[:organization_id].presence
+    ticket.update!(organization: Current.account.organizations.find(chosen)) if chosen && chosen.to_i != ticket.organization_id
+  end
+
+  # Asistente (Dali) D3 — el seguimiento con agente IA ligado al caso, mientras siga vivo.
+  def delegation_json(ticket)
+    tracking = ticket.contact_tracking
+    return nil unless tracking && %w[pending scheduled active paused].include?(tracking.status)
+
+    { id: tracking.id, agent: tracking.tracking_template&.name, status: tracking.status, objective: tracking.objective,
+      attempts: tracking.attempt_count, max_attempts: tracking.max_attempts, next_at: tracking.scheduled_for }
   end
 
   def ticket_json(ticket)
     {
       id:                         ticket.id,
+      organization_id:            ticket.organization_id, # Plan-Organizaciones O2
+      organization_name:          ticket.organization&.name, # Plan Actividad del caso — encabeza la cabecera
       folio:                      ticket.folio,
       title:                      ticket.title,
       description:                ticket.description,
@@ -892,7 +920,30 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       locked_at:                  (ticket.locked_at if ticket.lock_active?),
       is_internal:                ticket.internal?,                   # @tickets_cases Fase C
       can_transition_to:          valid_transitions_for(ticket)
-    }.merge(commercial_json(ticket)).merge(work_order_json(ticket)).merge(project_json(ticket)).then { |json| hide_amounts(json) }
+    }.merge(commercial_json(ticket)).merge(work_order_json(ticket)).merge(project_json(ticket)).merge(next_step_json(ticket))
+      .merge(agent_json(ticket))
+      .then { |json| hide_amounts(json) }
+  end
+
+  # Solo en la lista y el tablero (calculado por lote en #index); nil = cerrado/cancelado.
+  def agent_json(ticket)
+    return {} unless @agent_statuses
+
+    { agent: @agent_statuses[ticket.id] }
+  end
+
+  def apply_agent_filter(tickets)
+    case params[:agent]
+    when 'with' then Cases::AgentStatus.with_agent(tickets)
+    when 'none' then Cases::AgentStatus.without_agent(tickets)
+    else tickets
+    end
+  end
+
+  def next_step_json(ticket)
+    return {} unless @next_steps
+
+    { next_step: @next_steps[ticket.id] }
   end
 
   # Plan-Clase-Proyecto P1 — datos del proyecto (el monto en `currency`, que ya
@@ -1014,7 +1065,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # el status resuelto es `closed` sin datos de cierre, renderiza el rechazo con
   # `requires_closure: true` para que el front pida el modal de cierre.
   def move_across_state(column)
-    raise 'Un caso cancelado no puede moverse a otra etapa' if @ticket.cancelled?
+    raise 'Un caso cerrado o cancelado se reabre con el botón Reabrir' if @ticket.frozen_for_edit?
+
     return move_commercial_across(column) if @ticket.commercial?
 
     target = column.statuses.find { |s| @ticket.can_transition_to?(s) } || column.statuses.first
@@ -1053,6 +1105,9 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   def move_to_outcome(column)
     closure = closure_params || {}
     result = column.outcome || closure['outcome']
+    accepted_quote_id = accepted_quote_param
+    return render_quote_choice(result) if quote_choice_missing?(result, accepted_quote_id)
+
     if result.blank? || (closure.blank? && outcome_needs_modal?(result))
       return render json: { error: 'Indica el resultado de la oportunidad', requires_outcome: true, outcome: result },
                     status: :unprocessable_entity
@@ -1061,9 +1116,26 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     ActiveRecord::Base.transaction do
       @ticket.close_with_outcome!(result, actor: current_user,
                                           reason_id: closure['outcome_reason_id'], note: closure['outcome_note'],
-                                          accepted_quote_id: params[:accepted_quote_id]) # Plan-Catalogo-Cotizaciones
+                                          accepted_quote_id: accepted_quote_id) # Plan-Catalogo-Cotizaciones
       @ticket.update!(case_type_column_id: column.id)
     end
+  end
+
+  # Presupuesto de ventas — con varias cotizaciones abiertas, ganar exige decir cuál
+  # aceptó el cliente: es la que cuenta como lo logrado (Sales::Actuals).
+  def quote_choice_missing?(result, accepted_quote_id)
+    result.to_s == 'won' && accepted_quote_id.blank? && @ticket.quotes.open_quotes.count > 1
+  end
+
+  # Desde el tablero la cotización elegida llega dentro de `closure`.
+  def accepted_quote_param
+    params[:accepted_quote_id].presence || params.dig(:closure, :accepted_quote_id).presence
+  end
+
+  def render_quote_choice(result = 'won')
+    quotes = @ticket.quotes.open_quotes.order(:id).map { |q| { id: q.id, folio: q.folio, total: q.total.to_f, currency: q.currency } }
+    render json: { error: I18n.t('quotes.errors.choose_accepted'), requires_outcome: true, outcome: result, quotes: quotes },
+           status: :unprocessable_entity
   end
 
   def outcome_needs_modal?(result)
@@ -1194,6 +1266,16 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # Acepta el centinela 'me' (= agente actual) y limpia con ''/none.
   # @tickets_cases F5 — cancela las reuniones futuras del ticket si el agente
   # marcó la casilla del diálogo de transición. Devuelve cuántas se cancelaron.
+  # Quien cierra a mano puede pedir conservar sus tareas pendientes sin caso.
+  def note_pending_tasks_decision
+    @ticket.pending_tasks_decision = params[:pending_tasks] if @ticket
+  end
+
+  # Cerrar por columna o con resultado: las futuras, si quien cierra lo aceptó.
+  def cancel_upcoming_meetings_on_close
+    cancel_orphan_meetings if response.successful? && @ticket&.frozen_for_edit?
+  end
+
   def cancel_orphan_meetings
     return 0 unless ActiveModel::Type::Boolean.new.cast(params[:cancel_meetings])
 

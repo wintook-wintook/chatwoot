@@ -15,6 +15,8 @@ Rails.application.routes.draw do
     root to: 'dashboard#index'
 
     get '/app', to: 'dashboard#index'
+    # Portal de Dali en el teléfono (dirección corta para compartir)
+    get '/dali', to: redirect('/app/dali')
     get '/app/*params', to: 'dashboard#index'
     get '/app/accounts/:account_id/settings/inboxes/new/twitter', to: 'dashboard#index', as: 'app_new_twitter_inbox'
     get '/app/accounts/:account_id/settings/inboxes/new/microsoft', to: 'dashboard#index', as: 'app_new_microsoft_inbox'
@@ -74,6 +76,48 @@ Rails.application.routes.draw do
           resources :maintenance_plans, only: [:index, :create, :update, :destroy] do
             post :generate, on: :member
           end
+          # Plan-Eventos E1 — eventos y su lista de contactos con estado
+          # Portal del cliente — el enlace de una organización o contacto (tareas con el cliente)
+          resource :client_portal_link, only: [:show, :create] do
+            post :renew
+            post :disable
+          end
+          resources :events, only: [:index, :show, :create, :update, :destroy] do
+            # Captar en la expo «acercando el celular» (etiqueta NFC)
+            resources :capture_links, only: [:index, :create, :destroy], controller: 'event_capture_links'
+            member do
+              post :close
+              post :reopen
+              get :attendees
+              post :add_attendees
+              post :add_segment
+              post :update_attendee
+              post :remove_attendee
+              post :import
+            end
+            collection do
+              get :template
+              get :for_contact
+            end
+          end
+          # Plan-Organizaciones O1 — prospectos y clientes con sus contactos
+          resources :organizations, only: [:index, :show, :create, :update, :destroy] do
+            member do
+              get :summary
+              post :change_stage
+              post :add_contact
+              post :remove_contact
+            end
+            collection do
+              get :suggestions
+              post :apply_suggestions
+              get :metrics
+              get :change_preview
+              post :change_contact
+              get :template
+              post :import
+            end
+          end
           # Plan-Contratos R1 — servicios recurrentes del cliente
           resources :contract_types, only: [:index, :create, :update]
           resources :contracts, only: [:index, :create, :update] do
@@ -90,6 +134,7 @@ Rails.application.routes.draw do
           end
           # Plan-Trabajo-Campo R3 — despacho
           resource :field_dispatch, only: [:show], controller: 'field_dispatch' do
+            post :move_visit
             post :assign
           end
           # Plan-Trabajo-Campo R2 — portal del técnico
@@ -168,7 +213,17 @@ Rails.application.routes.draw do
               post :reauthorize_page
             end
           end
-          resources :canned_responses, only: [:index, :create, :update, :destroy]
+          # proyecto@respuestas_predefinidas R3
+          resources :canned_response_categories, only: [:index, :create, :update, :destroy] do
+            get :suggestions, on: :collection
+          end
+          resources :canned_responses, only: [:index, :create, :update, :destroy] do
+            # proyecto@respuestas_predefinidas R1: meterlas a la fuente de datos (una o hasta 20)
+            post :vectorize, on: :member
+            post :vectorize, on: :collection, action: :vectorize_many
+            post :destroy_many, on: :collection
+            post :assign_category, on: :collection
+          end
           # Sinónimos nativos (esquema legacy wintook; reemplaza al servicio WINTOOK_BOT)
           resources :palabras_sinonimos, only: [:index, :create, :update, :destroy]
           resources :sinonimos_semanticos, only: [:index]
@@ -237,6 +292,17 @@ Rails.application.routes.draw do
           resource :internal_channel, only: [:show] do
             post :directs
             get :unread
+          end
+          # Seguimiento IA — el agente nuevo con herramientas (Delegar a agente desde el caso y Dali)
+          resources :ai_follow_ups, only: [:index, :create] do
+            get :templates, on: :collection
+            get :context, on: :collection
+            get :inboxes, on: :collection
+            member do
+              post :pause
+              post :resume
+              post :cancel
+            end
           end
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
@@ -328,6 +394,19 @@ Rails.application.routes.draw do
           # =========================================================================
           # @tickets_cases — Gestor de Tickets
           # =========================================================================
+          # Asistente (Dali) — asistente conversacional de toda la plataforma
+          # Buscar en todo (la lupa): contactos, organizaciones y casos
+          get :global_search, to: 'global_search#index'
+          resource :assistant, only: [:show], controller: 'assistant' do
+            post :messages
+            post :reset
+            patch :settings
+            post :transcribe
+            post :mobile_link
+            post :push_subscription
+            post 'proposals/:id/confirm', action: :confirm
+            post 'proposals/:id/cancel', action: :cancel
+          end
           resources :case_tickets, only: [:index, :show, :create, :update] do
             # Plan-Trabajo-Campo R1 — reporte de servicio de la orden de trabajo
             resource :service_report, only: [:show, :update], controller: 'case_service_reports' do
@@ -360,6 +439,7 @@ Rails.application.routes.draw do
               post :follow_up # @tickets_cases 3F
               patch :lock   # @tickets_cases — bloqueo de ticket
               patch :unlock # @tickets_cases — bloqueo de ticket
+              get :presence, action: :track_presence # K1 — quién más está en el caso (GET: quien solo ve también avisa)
               patch :reopen # @tickets_cases — reapertura de ticket cerrado
               patch :outcome  # Plan-Clase-Comercial F3 — cerrar oportunidad con resultado
               patch :postpone # Plan-Clase-Comercial F3
@@ -370,10 +450,20 @@ Rails.application.routes.draw do
             resources :case_events, only: [:index]
             # @tickets_cases — ligar (o crear) la conversación de un caso que no tiene
             resource :case_conversation, only: [:create], path: 'conversation'
+            # Plan Actividad del caso — conversaciones ligadas (principal y adicionales) y la actividad
+            resources :case_conversations, only: [:index, :destroy], path: 'conversations'
+            resource :case_activity, only: [:show], path: 'activity'
             # @tickets_cases 2E — relaciones entre tickets
             resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
             # @tickets_cases — tareas/subtareas del ticket
-            resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks'
+            resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks' do
+              post :cancel, on: :member # con motivo
+              post :schedule, on: :member # pasarla a la agenda (Cases::Conversion)
+              # Tareas con el cliente — lo que pasó en su portal; responder o regresarla
+              resources :client_entries, only: [:index, :create], controller: 'case_task_client_entries' do
+                post :return, on: :collection, action: :return_task
+              end
+            end
             # Plan-Clase-Orden-de-Trabajo F2a — materiales de la orden
             resources :case_work_order_items, only: [:create, :update, :destroy], path: 'work_order_items'
             # Plan-Clase-Proyecto P2 — casos dentro del proyecto (crear o ligar / quitar)
@@ -392,6 +482,7 @@ Rails.application.routes.draw do
                 patch :cancel # scope: 'one' | 'all'
                 post  :resync # reintentar el espejo con Google (F3)
                 patch :align_task_due # @tickets_cases F6 — mover el vencimiento de la tarea
+                post  :to_task # pasarla a tarea sin hora (Cases::Conversion)
               end
             end
             resources :case_meeting_series, only: [:create, :update, :destroy], path: 'meeting-series'
@@ -402,6 +493,36 @@ Rails.application.routes.draw do
           # @tickets_cases — «Mi resumen» de la página Inicio
           resource :my_summary, only: [:show], controller: 'my_summary'
           # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
+          resources :task_reports, only: [:index, :create] do # Reporte de cierre
+            get :suggestion, on: :collection
+          end
+          resources :agenda_visits, only: [:show] do # Visitas sin orden de trabajo
+            get :arrivals, on: :collection
+            post :on_my_way, on: :member
+            post :arrive, on: :member
+          end
+          # Presupuesto de ventas — metas por vendedor y vendedor + cliente, y su avance.
+          resources :sales_budgets, only: [:index] do
+            collection do
+              put :bulk
+              post :copy
+              delete :client
+              get :report
+            end
+          end
+          resources :task_outcomes, only: [:index, :create, :update, :destroy] do
+            patch :settings, on: :collection
+          end
+          # Plan-Agenda — tareas sin caso de la captura rápida (solo en Kontrolya).
+          resources :quick_tasks, only: [:create, :update, :destroy] do
+            post :cancel, on: :member # con motivo
+            post :schedule, on: :member # pasarla a la agenda
+          end
+          # Plan-Agenda — lo agendado desde el calendario: con caso o solo con su contacto.
+          resources :agenda_items, only: [:index, :create, :update, :destroy] do
+            get :cases, on: :collection
+            post :to_task, on: :member # pasarla a tarea sin hora
+          end
           resources :case_tasks, only: [:index], controller: 'case_tasks_index' do
             put :my_day_plan, on: :collection # Plan-Bandeja-Prioridad F2 — orden propio de «Mi día»
             post :my_day_ai, on: :collection  # Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA
@@ -441,7 +562,11 @@ Rails.application.routes.draw do
               collection do
                 post :sync
                 post :import
+                # feat/plantillas_whatsapp_mejoras F6: subir el archivo de muestra del encabezado
+                post :header_samples
               end
+              # feat/plantillas_whatsapp_mejoras: dónde se usa, antes de borrarla
+              get :usage, on: :member
             end
           end
 
@@ -686,6 +811,8 @@ Rails.application.routes.draw do
             delete :avatar, on: :member
             # diag/llamadas_whatsapp (F6): la pestaña «Llamadas»
             resource :whatsapp_call_settings, only: [:show, :update], module: :inboxes
+            # feat/plantillas_whatsapp_mejoras: el archivo de una plantilla en la conversación (guardado o subido)
+            resource :whatsapp_template_header, only: [:show, :create], module: :inboxes
           end
           resources :inbox_members, only: [:create, :show], param: :inbox_id do
             collection do
@@ -1019,6 +1146,10 @@ Rails.application.routes.draw do
 
   # Plan-Trabajo-Campo R5 — portal del cliente de su orden y visita del técnico externo.
   get  'servicio/:token',            to: 'public/service_portals#show',  as: :public_service_portal
+  # Portal del cliente — sus casos y proyectos y las tareas que le tocan (tareas con el cliente)
+  get  'cliente/:token',                 to: 'public/client_portals#show',   as: :public_client_portal
+  post 'cliente/:token/quien',           to: 'public/client_portals#person', as: :public_client_portal_person
+  post 'cliente/:token/tareas/:task_id', to: 'public/client_portals#task',   as: :public_client_portal_task
   post 'servicio/:token/visita',     to: 'public/service_portals#visit', as: :public_service_portal_visit
   post 'servicio/:token/calificar',  to: 'public/service_portals#rate',  as: :public_service_portal_rate
   get  'tecnico/:token',             to: 'public/external_visits#show',   as: :public_external_visit
@@ -1111,6 +1242,8 @@ Rails.application.routes.draw do
       end
       resources :platform_apps, only: [:index, :new, :create, :show, :edit, :update]
       resource :instance_status, only: [:show]
+      # Asistente (Dali) — preguntas que no supo contestar, de todas las empresas
+      resources :assistant_guide_gaps, only: [:index, :update]
 
       resource :settings, only: [:show] do
         get :refresh, on: :collection

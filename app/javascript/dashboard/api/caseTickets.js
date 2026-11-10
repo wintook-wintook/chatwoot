@@ -6,6 +6,7 @@
 // ================================================================================
 
 import ApiClient from './ApiClient';
+import { browserZone } from './fieldVisits';
 
 /* global axios */
 
@@ -90,6 +91,23 @@ class CaseTicketsAPI extends ApiClient {
     return axios.post(`${this.url}/${ticketId}/conversation`, params);
   }
 
+  // Plan Actividad del caso — todo lo que pasó en el caso (bitácora + mensajes
+  // resumidos por día, en la zona del usuario) y el resumen «¿cómo va?».
+  getActivity(ticketId) {
+    return axios.get(`${this.url}/${ticketId}/activity`, {
+      params: { tz: browserZone() },
+    });
+  }
+
+  // Conversaciones ligadas (la principal primero) y las del contacto sin ligar.
+  getConversations(ticketId) {
+    return axios.get(`${this.url}/${ticketId}/conversations`);
+  }
+
+  unlinkConversation(ticketId, displayId) {
+    return axios.delete(`${this.url}/${ticketId}/conversations/${displayId}`);
+  }
+
   getProjectChildren(projectId) {
     return axios.get(`${this.url}/${projectId}/project_children`);
   }
@@ -121,8 +139,8 @@ class CaseTicketsAPI extends ApiClient {
   }
 
   // @tickets_cases — reapertura de un ticket cerrado (motivo obligatorio)
-  reopen(ticketId, reason) {
-    return axios.patch(`${this.url}/${ticketId}/reopen`, { reason });
+  reopen(ticketId, reason, extra = {}) {
+    return axios.patch(`${this.url}/${ticketId}/reopen`, { reason, ...extra });
   }
 
   getMetrics(params = {}) {
@@ -199,6 +217,13 @@ class CaseTicketsAPI extends ApiClient {
 
   unlock(ticketId) {
     return axios.patch(`${this.url}/${ticketId}/unlock`);
+  }
+
+  // K1 — quién más está en el caso (señal cada 30 s; `leaving` al salir).
+  presence(ticketId, leaving = false) {
+    return axios.get(`${this.url}/${ticketId}/presence`, {
+      params: leaving ? { leaving: true } : {},
+    });
   }
 }
 
