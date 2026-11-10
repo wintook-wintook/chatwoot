@@ -22,7 +22,7 @@ pages: [settings, catalog, account_settings, users, roles, teams, inboxes, integ
 - Respuestas Predefinidas y Plantillas de WhatsApp: textos listos para contestar y las plantillas aprobadas para escribir por WhatsApp. Detalle en la guía respuestas_plantillas.
 - Productos y servicios: lo que vendes, con precio. Detalle en la guía catalogo_productos.
 - Motivos de cierre: por qué se gana, se pierde o se pospone un caso.
-- Resultados de tareas: las opciones del reporte de cierre de una tarea y si el tiempo dedicado es obligatorio.
+- Resultados de tareas: las opciones del reporte de cierre de una tarea, si el tiempo dedicado es obligatorio y los «Motivos de cancelación» que se piden al cancelar una tarea o tarea agendada («Otro» pide escribir el motivo).
 - Embudos de contactos: los embudos y sus columnas. Detalle en la guía embudo_contactos.
 - Tipos de caso, Clasificaciones y Políticas SLA: cómo se arman los casos de Servicio y Ventas, sus etapas y los tiempos de atención.
 - Tipos de contrato: los servicios recurrentes que se contratan. Detalle en la guía contratos.

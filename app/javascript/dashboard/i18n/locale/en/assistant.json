@@ -102,7 +102,8 @@
         "EVENT": "Event",
         "INBOX": "WhatsApp",
         "SELLER": "Seller",
-        "CASE": "Case"
+        "CASE": "Case",
+        "ITEM": "What"
       },
       "OUTCOMES": {
         "won": "Won",
@@ -140,7 +141,18 @@
       "NFC_ERROR": "Couldn't write. Hold the tag again or check that NFC is on.",
       "client_task": "Customer task",
       "CLIENT_TASK_FILE": "Requires uploading a file",
-      "CLIENT_TASK_NOTIFY": "Notify them with their portal link"
+      "CLIENT_TASK_NOTIFY": "Notify them with their portal link",
+      "cancel_item": "Cancel",
+      "CANCEL_REASON": "Reason",
+      "CANCEL_COMMENT": "Comment (optional; required with «Otro»)",
+      "CANCEL_MINUTES": "Did you spend time? (minutes, optional)",
+      "CANCEL_MINUTES_REQUIRED": "Time spent (minutes) — already worked on",
+      "CANCEL_NOTIFY": "Notify the customer",
+      "convert_item": "Schedule ↔ task",
+      "CONVERT_TO_MEETING": "The task leaves Tasks and is scheduled.",
+      "CONVERT_KEEPS": "It is required or the customer's: the task stays and a linked session is scheduled.",
+      "CONVERT_TO_TASK": "It leaves the schedule (and Google) and becomes a task with no time.",
+      "CONVERT_LINKED": "It is a session of «{task}»: it leaves the schedule and that task stays."
     },
     "SETTINGS": {
       "TITLE": "Assistant",

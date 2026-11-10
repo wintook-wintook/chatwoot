@@ -12,12 +12,14 @@
 class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   include TaskReportGuard
   include ClientTaskFields # tareas con el cliente: campos y aviso al crearla
+  include CancelAndDeleteGuard # cancelar con motivo; borrar solo errores de captura
+  include ItemConversionActions # pasarla a la agenda
 
   FROZEN_MSG = 'Ticket cerrado: no se pueden modificar las tareas. Reábrelo si necesitas cambiarlas.'
   DOC_TASK_MSG = 'Esta tarea se completa sola cuando documentas el paso a la siguiente etapa'
 
   before_action :set_ticket
-  before_action :set_task, only: %i[update destroy]
+  before_action :set_task, only: %i[update destroy cancel schedule] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
   before_action :reject_manual_documentation, only: :update
 
   def index
@@ -70,8 +72,17 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
     end
   end
 
+  # Ya no se va a hacer: con motivo (y tiempo, si ya se trabajó).
+  def cancel
+    return render json: { error: FROZEN_MSG }, status: :unprocessable_entity if @ticket.frozen_for_edit?
+    return unless run_cancellation(@task)
+
+    render json: { case_task: task_json(@task.reload) }
+  end
+
   def destroy
     return render json: { error: FROZEN_MSG }, status: :unprocessable_entity if @ticket.frozen_for_edit?
+    return if delete_restricted?(@task, @task.requester_id)
 
     @task.destroy
     head :no_content

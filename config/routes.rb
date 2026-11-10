@@ -427,6 +427,8 @@ Rails.application.routes.draw do
             resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
             # @tickets_cases — tareas/subtareas del ticket
             resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks' do
+              post :cancel, on: :member # con motivo
+              post :schedule, on: :member # pasarla a la agenda (Cases::Conversion)
               # Tareas con el cliente — lo que pasó en su portal; responder o regresarla
               resources :client_entries, only: [:index, :create], controller: 'case_task_client_entries' do
                 post :return, on: :collection, action: :return_task
@@ -450,6 +452,7 @@ Rails.application.routes.draw do
                 patch :cancel # scope: 'one' | 'all'
                 post  :resync # reintentar el espejo con Google (F3)
                 patch :align_task_due # @tickets_cases F6 — mover el vencimiento de la tarea
+                post  :to_task # pasarla a tarea sin hora (Cases::Conversion)
               end
             end
             resources :case_meeting_series, only: [:create, :update, :destroy], path: 'meeting-series'
@@ -481,10 +484,14 @@ Rails.application.routes.draw do
             patch :settings, on: :collection
           end
           # Plan-Agenda — tareas sin caso de la captura rápida (solo en Kontrolya).
-          resources :quick_tasks, only: [:create, :update, :destroy]
+          resources :quick_tasks, only: [:create, :update, :destroy] do
+            post :cancel, on: :member # con motivo
+            post :schedule, on: :member # pasarla a la agenda
+          end
           # Plan-Agenda — lo agendado desde el calendario: con caso o solo con su contacto.
           resources :agenda_items, only: [:index, :create, :update, :destroy] do
             get :cases, on: :collection
+            post :to_task, on: :member # pasarla a tarea sin hora
           end
           resources :case_tasks, only: [:index], controller: 'case_tasks_index' do
             put :my_day_plan, on: :collection # Plan-Bandeja-Prioridad F2 — orden propio de «Mi día»

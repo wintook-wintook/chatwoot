@@ -1,4 +1,55 @@
 {
+  "CONVERT_ITEM": {
+    "SCHEDULE": "Schedule…",
+    "SCHEDULE_TITLE": "Schedule «{title}»",
+    "SCHEDULE_DESC": "The task leaves Tasks and is scheduled with a day and time.",
+    "STARTS": "Starts",
+    "ENDS": "Ends",
+    "LOCATION": "Location",
+    "SAVE": "Schedule",
+    "CANCEL": "Cancel",
+    "SCHEDULED": "«{title}» is now scheduled",
+    "LINKED": "A session of «{title}» was scheduled; the task stays",
+    "TO_TASK": "Turn into a task (no time)",
+    "TO_TASK_TITLE": "Turn «{title}» into a task?",
+    "TO_TASK_DESC": "It leaves the schedule (and Google Calendar) and becomes a task due that same day. Reported time is kept.",
+    "TO_TASK_LINKED": "It is a session of the task «{task}»: it leaves the schedule and that task stays.",
+    "NOTIFY": "Tell the customer the appointment is removed",
+    "CONFIRM": "Turn into task",
+    "DONE": "«{title}» is now a task",
+    "DONE_LINKED": "Removed from the schedule; the task «{title}» stays"
+  },
+  "CANCEL_ITEM": {
+    "CATALOG": {
+      "TITLE": "Cancellation reasons",
+      "HELP": "Asked when cancelling a task or scheduled task. «Otro» asks to write the reason.",
+      "PLACEHOLDER": "New reason…"
+    },
+    "TITLE_TASK": "Cancel task",
+    "TITLE_MEETING": "Cancel scheduled task",
+    "RESCHEDULE_QUESTION": "Do you want to reschedule it? If only the date changes, rescheduling keeps its history.",
+    "RESCHEDULE": "Reschedule",
+    "REALLY_CANCEL": "No, cancel it",
+    "REASON": "Reason",
+    "REASON_PLACEHOLDER": "Choose the reason…",
+    "COMMENT": "Comment (optional)",
+    "COMMENT_REQUIRED": "Comment (write the reason)",
+    "MINUTES": "Did you spend time on it? (minutes, optional)",
+    "MINUTES_REQUIRED": "Time spent (minutes) — it was already worked on",
+    "MINUTES_PLACEHOLDER": "E.g. 30",
+    "MINUTES_HINT": "Adds to the case hours and shows in Reports.",
+    "SCOPE_ONE": "Only this one",
+    "SCOPE_ALL": "The whole series",
+    "NOTIFY_CLIENT": "Notify the customer in their conversation",
+    "BACK": "Back",
+    "CONFIRM": "Cancel",
+    "DONE": "Cancelled · {reason}",
+    "REOPEN": "Reopen",
+    "MENU": "Cancel…",
+    "DELETE_RESTRICTED": "Only mistakes can be deleted (by whoever created it, within 24 hours). Cancel it with its reason.",
+    "NOTICE_SENT": "We notified the customer.",
+    "NOTICE_FAILED": "We couldn't notify the customer in their conversation."
+  },
   "CLIENT_TASKS": {
     "WHO": "Who does it?",
     "AUDIENCE": {
@@ -1160,6 +1211,11 @@
       "LOADING": "Loading progress...",
       "CURRENT": "Current",
       "CREATED": "Created",
+      "CONVERTED": {
+        "to_meeting": "moved to the schedule for {when}",
+        "to_task": "left the schedule (was {when}) and became a task",
+        "linked": "a session of the task was scheduled for {when}"
+      },
       "MEETING_SCOPE_ALL": "Whole series",
       "CURRENTLY": "Currently",
       "RETURNED": "Returned",
@@ -1638,6 +1694,7 @@
       "task_completed": "Task completed",
       "task_client_update": "The customer updated a task",
       "task_cancelled": "Task cancelled",
+      "task_converted": "Task ↔ schedule",
       "task_reopened": "Task reopened",
       "task_deleted": "Task deleted",
       "quote_created": "Quote created",
@@ -1785,7 +1842,8 @@
         "CANCEL_ALL": "Cancel the whole series",
         "DELETE": "Delete",
         "RESYNC": "Retry sync",
-        "ALIGN_TASK_DUE": "Move the task due date"
+        "ALIGN_TASK_DUE": "Move the task due date",
+        "TO_TASK": "Turn into a task (no time)"
       },
       "MODAL": {
         "TITLE": "Schedule task",
@@ -1798,6 +1856,10 @@
         "DATE_ERROR": "The end time must be after the start time.",
         "TASK_LABEL": "Task",
         "TASK_NONE": "— Case (no task) —",
+        "CONVERT_HINT": "On save, «{title}» leaves Tasks and becomes a scheduled task, keeping its reported time.",
+        "KEEP_TASK": "Keep the task: only schedule a work session",
+        "KEEP_HINT": "The task stays in Tasks and this session is linked to it.",
+        "KEEP_LOCKED": "It is required, from the stage or the customer's: the task stays and a linked session is scheduled.",
         "ORGANIZER_LABEL": "Assignee",
         "ORGANIZER_ME": "— Me —",
         "LOCATION_LABEL": "Location",

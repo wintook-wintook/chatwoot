@@ -19,6 +19,8 @@
 # ================================================================================
 
 class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseController
+  include CancelAndDeleteGuard # cancelar con motivo; borrar solo errores de captura
+  include ItemConversionActions # pasarla a tarea
   include CaseMeetingSerializer
   include TaskReportGuard
 
@@ -29,8 +31,8 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
             'Si el caso lo necesita, escala el ticket.'
 
   before_action :set_ticket
-  before_action :set_meeting, only: %i[update destroy hold cancel resync align_task_due]
-  before_action :block_if_frozen, only: %i[create update destroy hold cancel resync align_task_due]
+  before_action :set_meeting, only: %i[update destroy hold cancel resync align_task_due to_task] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
+  before_action :block_if_frozen, only: %i[create update destroy hold cancel resync align_task_due to_task] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
 
   def index
     # @tickets_cases F3 — reconciliación perezosa (§5): antes de responder se
@@ -96,6 +98,8 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
   def destroy
     # Borrar la fila también retira la cita del calendario del organizador: si no,
     # el cliente se queda citado a una reunión que en MGCI ya no existe.
+    return if delete_restricted?(@meeting, @meeting.organizer_id)
+
     Cases::Meetings::GoogleMirrorService.new(@meeting).cancel if @meeting.google_event_id.present?
     @meeting.destroy
     head :no_content
@@ -125,14 +129,11 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
       return render json: { error: 'No pertenece a una serie' }, status: :unprocessable_entity
     end
 
-    if scope == 'all'
-      cancel_series
-    else
-      @meeting.update!(status: :cancelled)
-      Cases::MeetingSyncJob.perform_later(@meeting.id, 'cancel')
-    end
-    log_event(:meeting_cancelled, @meeting, scope: scope)
-    render json: { case_meeting: meeting_json(@meeting.reload) }
+    result = run_cancellation(@meeting)
+    return if result.nil?
+
+    log_event(:meeting_cancelled, @meeting.reload, scope: scope)
+    render json: { case_meeting: meeting_json(@meeting), client_notice: result[:notice] }.compact
   end
 
   # Reintentar el espejo tras un fallo (o tras conectar Calendar). Si no hay a
@@ -222,13 +223,6 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
   # ⚠️ En Google se opera SOBRE EL MAESTRO (§10.2c): un bucle de cancelaciones por
   # ocurrencia le mandaría N correos al cliente. Aquí solo se marcan las filas; el
   # aviso único sale del maestro, que gestiona la serie (F4).
-  def cancel_series
-    series = @meeting.case_meeting_series
-    series.case_meetings.active.find_each { |m| m.update!(status: :cancelled) }
-    Cases::Meetings::GoogleMirrorService.new(@meeting).cancel_series(series)
-    series.cancel!(actor: current_user)
-  end
-
   def log_event(event_type, meeting, scope: 'one')
     @ticket.case_events.create!(
       account: Current.account,

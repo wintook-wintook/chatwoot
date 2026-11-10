@@ -16,6 +16,11 @@ class AgendaItemsAPI extends ApiClient {
     return axios.get(`${this.url}/cases`, { params });
   }
 
+  // Pasarla a tarea sin hora: { notify_client }.
+  toTask(id, data = {}) {
+    return axios.post(`${this.url}/${id}/to_task`, data);
+  }
+
   updateItem(id, data) {
     return axios.patch(`${this.url}/${id}`, data);
   }

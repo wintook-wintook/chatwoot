@@ -27,7 +27,7 @@ module CaseMeetingSerializer
       beyond_task_due: meeting.beyond_task_due?,
       beyond_ticket_due: meeting.beyond_ticket_due?,
       suggested_task_due_at: meeting.suggested_task_due_at
-    }.merge(meeting_sync_json(meeting)).merge(meeting_links_json(meeting))
+    }.merge(meeting_sync_json(meeting)).merge(meeting_links_json(meeting)).merge(meeting_cancel_json(meeting))
   end
 
   # Estado del espejo con Google (en F1 siempre `local_only`) + firmas derivadas.
@@ -72,5 +72,11 @@ module CaseMeetingSerializer
     return nil unless series
 
     { id: series.id, sequence: series.sequence, folio: series.folio, title: series.title }
+  end
+
+  # Cancelar con motivo: por qué, si ya se trabajó (entonces pide el tiempo) y si es de una serie.
+  def meeting_cancel_json(meeting)
+    { cancel_reason: meeting.cancel_reason, work_started: Cases::Cancellation.work_started?(meeting),
+      series: meeting.case_meeting_series_id.present? }
   end
 end
