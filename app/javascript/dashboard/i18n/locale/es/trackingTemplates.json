@@ -751,8 +751,8 @@
       "BUSINESS_WEBSITE": "Sitio web",
       "BUSINESS_BOOKING_LINK": "Liga para agendar",
       "BUSINESS_OTHER": "Otro dato",
-      "BUSINESS_LABEL_PLACEHOLDER": "Nombre del dato",
-      "BUSINESS_VALUE_PLACEHOLDER": "Valor",
+      "BUSINESS_LABEL_PLACEHOLDER": "Ej.: Teléfono de ventas",
+      "BUSINESS_VALUE_PLACEHOLDER": "Ej.: 81 1234 5678",
       "BUSINESS_FOOT": "Las preguntas también son datos fijos: se configuran en Preguntas.",
       "OBJECTIVE_AUTO_HINT": "Puedes dejarlo vacío: se arma solo con lo que vayas marcando (lo ves en gris). ✨ lo redacta mejor.",
       "CONTEXT_MISSING": "Tu agente aún no conoce tu negocio (contexto IA vacío). La IA lo puede proponer con lo que capturaste.",
@@ -773,7 +773,9 @@
       "ROUTES_TOO_MANY": "Tu agente tiene {count} temas (rutas); lo recomendable es {max} o menos.",
       "ROUTES_TOO_MANY_HINT": "Con tantos, al agente le cuesta elegir el tema correcto y puede contestar con la fuente equivocada. No se unen solos porque cada tema busca en su propia fuente: desmarca lo que este agente no necesite.",
       "KIND_CALENDAR": "Agenda",
-      "KIND_CASE_TYPE": "Tickets"
+      "KIND_CASE_TYPE": "Tickets",
+      "BUSINESS_COL_LABEL": "Nombre del dato",
+      "BUSINESS_COL_VALUE": "Valor"
     }
   },
   "TRACKING_IMPORT": {

@@ -78,9 +78,42 @@ export default {
 
 <template>
   <div class="flex flex-col flex-1 min-h-0 gap-3">
-    <p class="!m-0 text-sm text-slate-600 dark:text-slate-300 shrink-0">
-      {{ t('BUSINESS_HINT') }}
-    </p>
+    <!-- Fijo arriba: qué es, los botones para agregar y la nota de las preguntas. -->
+    <div class="flex flex-col gap-2 shrink-0">
+      <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
+        {{ t('BUSINESS_HINT') }}
+      </p>
+      <div v-if="!full" class="flex flex-wrap items-center gap-1.5">
+        <button
+          v-for="preset in presets"
+          :key="preset.key"
+          type="button"
+          class="px-2.5 py-1 text-xs border rounded-full border-slate-200 text-slate-600 hover:border-woot-500 dark:border-slate-700 dark:text-slate-300"
+          :disabled="disabled"
+          @click="add(preset)"
+        >
+          + {{ preset.label }}
+        </button>
+        <button
+          type="button"
+          class="px-2.5 py-1 text-xs border border-dashed rounded-full border-slate-300 text-slate-600 hover:border-woot-500 dark:border-slate-600 dark:text-slate-300"
+          :disabled="disabled"
+          @click="add(null)"
+        >
+          + {{ t('BUSINESS_OTHER') }}
+        </button>
+      </div>
+      <p class="!m-0 text-xs text-slate-500">{{ t('BUSINESS_FOOT') }}</p>
+      <div
+        v-if="value.length"
+        class="grid gap-2 pr-1 text-xs font-medium text-slate-500 sm:grid-cols-[12rem_minmax(0,1fr)_1.5rem]"
+      >
+        <span>{{ t('BUSINESS_COL_LABEL') }}</span>
+        <span>{{ t('BUSINESS_COL_VALUE') }}</span>
+      </div>
+    </div>
+
+    <!-- Solo los datos hacen scroll. -->
     <div class="flex flex-col flex-1 min-h-0 gap-2 pr-1 overflow-auto">
       <p
         v-if="!value.length"
@@ -91,7 +124,7 @@ export default {
       <div
         v-for="(dato, indice) in value"
         :key="indice"
-        class="grid items-center gap-2 sm:grid-cols-[12rem_minmax(0,1fr)_auto]"
+        class="grid items-center gap-2 sm:grid-cols-[12rem_minmax(0,1fr)_1.5rem]"
       >
         <input
           type="text"
@@ -99,6 +132,7 @@ export default {
           class="!mb-0 !h-9 text-sm font-medium"
           :value="dato.label"
           :placeholder="t('BUSINESS_LABEL_PLACEHOLDER')"
+          :aria-label="t('BUSINESS_COL_LABEL')"
           :disabled="disabled"
           @input="set(indice, 'label', $event.target.value)"
         />
@@ -109,6 +143,7 @@ export default {
           class="!mb-0 !h-9 text-sm"
           :value="dato.value"
           :placeholder="t('BUSINESS_VALUE_PLACEHOLDER')"
+          :aria-label="t('BUSINESS_COL_VALUE')"
           :disabled="disabled"
           @input="set(indice, 'value', $event.target.value)"
         />
@@ -122,28 +157,5 @@ export default {
         />
       </div>
     </div>
-    <div v-if="!full" class="flex flex-wrap items-center gap-1.5 shrink-0">
-      <button
-        v-for="preset in presets"
-        :key="preset.key"
-        type="button"
-        class="px-2.5 py-1 text-xs border rounded-full border-slate-200 text-slate-600 hover:border-woot-500 dark:border-slate-700 dark:text-slate-300"
-        :disabled="disabled"
-        @click="add(preset)"
-      >
-        + {{ preset.label }}
-      </button>
-      <button
-        type="button"
-        class="px-2.5 py-1 text-xs border border-dashed rounded-full border-slate-300 text-slate-600 hover:border-woot-500 dark:border-slate-600 dark:text-slate-300"
-        :disabled="disabled"
-        @click="add(null)"
-      >
-        + {{ t('BUSINESS_OTHER') }}
-      </button>
-    </div>
-    <p class="!m-0 text-xs text-slate-500 shrink-0">
-      {{ t('BUSINESS_FOOT') }}
-    </p>
   </div>
 </template>

@@ -751,8 +751,8 @@
       "BUSINESS_WEBSITE": "Website",
       "BUSINESS_BOOKING_LINK": "Booking link",
       "BUSINESS_OTHER": "Other",
-      "BUSINESS_LABEL_PLACEHOLDER": "Data name",
-      "BUSINESS_VALUE_PLACEHOLDER": "Value",
+      "BUSINESS_LABEL_PLACEHOLDER": "E.g.: Sales phone",
+      "BUSINESS_VALUE_PLACEHOLDER": "E.g.: 81 1234 5678",
       "BUSINESS_FOOT": "Questions are fixed data too: set them up in Questions.",
       "OBJECTIVE_AUTO_HINT": "You can leave it empty: it is built from what you select (shown in gray). ✨ writes it better.",
       "CONTEXT_MISSING": "Your agent doesn't know your business yet (empty AI context). AI can propose it from what you entered.",
@@ -773,7 +773,9 @@
       "ROUTES_TOO_MANY": "Your agent has {count} topics (routes); {max} or fewer is recommended.",
       "ROUTES_TOO_MANY_HINT": "With so many, the agent struggles to pick the right topic and may answer from the wrong source. They are not merged automatically because each topic searches its own source: unselect what this agent doesn't need.",
       "KIND_CALENDAR": "Agenda",
-      "KIND_CASE_TYPE": "Tickets"
+      "KIND_CASE_TYPE": "Tickets",
+      "BUSINESS_COL_LABEL": "Data name",
+      "BUSINESS_COL_VALUE": "Value"
     }
   }
 }
