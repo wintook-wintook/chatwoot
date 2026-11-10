@@ -99,6 +99,8 @@ export default {
   data() {
     return {
       section: 'channel',
+      // Agente y canal: 0 = Datos del agente, 1 = Canal y seguimiento (pestañas).
+      channelTab: 0,
       name: '',
       // Recursos › Canal y seguimiento (antes de las fuentes: WhatsApp pide plantillas).
       follow: {
@@ -497,7 +499,10 @@ export default {
         this.suggest('context');
         return;
       }
-      if (item.fix === 'channel') this.section = 'channel';
+      if (item.fix === 'channel') {
+        this.section = 'channel';
+        this.channelTab = 1;
+      }
     },
     // ✨ Una llamada a OpenAI: objetivo y contexto, o la bienvenida, con lo capturado.
     async suggest(campo) {
@@ -587,12 +592,25 @@ export default {
           v-if="section === 'channel'"
           class="flex flex-col flex-1 min-h-0 pr-1 overflow-auto"
         >
-          <h3
-            class="!m-0 !mb-2 text-sm font-semibold text-slate-800 dark:text-slate-100"
+          <woot-tabs
+            class="[&_.tabs]:p-0 mb-3"
+            :index="channelTab"
+            :border="false"
+            @change="channelTab = $event"
           >
-            {{ t('IDENTITY_TITLE') }}
-          </h3>
+            <woot-tabs-item
+              :index="0"
+              :name="t('IDENTITY_TITLE')"
+              :show-badge="false"
+            />
+            <woot-tabs-item
+              :index="1"
+              :name="t('FOLLOW_TITLE')"
+              :show-badge="false"
+            />
+          </woot-tabs>
           <FichaIdentity
+            v-if="channelTab === 0"
             v-model="identity"
             show-tone
             :suggesting="suggesting"
@@ -602,12 +620,7 @@ export default {
             :objective-placeholder="objectivePlaceholder"
             @suggest="suggest"
           />
-          <h3
-            class="!m-0 !mt-6 !mb-2 pt-4 border-t border-slate-100 dark:border-slate-700 text-sm font-semibold text-slate-800 dark:text-slate-100"
-          >
-            {{ t('FOLLOW_TITLE') }}
-          </h3>
-          <FichaChannel v-model="follow" />
+          <FichaChannel v-else v-model="follow" />
         </div>
         <div
           v-else-if="section === 'sources'"

@@ -94,6 +94,8 @@ export default {
   data() {
     return {
       section: 'sources',
+      // Agente y canal: 0 = Datos del agente, 1 = Canal y seguimiento (pestañas).
+      channelTab: 0,
       cards: [],
       items: [],
       saved: [],
@@ -701,12 +703,25 @@ export default {
             class="flex flex-col flex-1 min-h-0 gap-3 pr-1 overflow-auto"
           >
             <template v-if="section === 'channel'">
-              <h3
-                class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
+              <woot-tabs
+                class="[&_.tabs]:p-0 mb-3"
+                :index="channelTab"
+                :border="false"
+                @change="channelTab = $event"
               >
-                {{ t('IDENTITY_TITLE') }}
-              </h3>
+                <woot-tabs-item
+                  :index="0"
+                  :name="t('IDENTITY_TITLE')"
+                  :show-badge="false"
+                />
+                <woot-tabs-item
+                  :index="1"
+                  :name="t('FOLLOW_TITLE')"
+                  :show-badge="false"
+                />
+              </woot-tabs>
               <FichaIdentity
+                v-if="channelTab === 0"
                 v-model="profile"
                 :suggesting="profileSuggesting"
                 :can-suggest="items.length > 0"
@@ -716,12 +731,7 @@ export default {
                 :disabled="busy"
                 @suggest="suggestProfile"
               />
-              <h3
-                class="!m-0 !mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 text-sm font-semibold text-slate-800 dark:text-slate-100"
-              >
-                {{ t('FOLLOW_TITLE') }}
-              </h3>
-              <FichaChannel v-model="follow" />
+              <FichaChannel v-else v-model="follow" />
             </template>
             <template v-else-if="section === 'welcome'">
               <FichaWelcome
