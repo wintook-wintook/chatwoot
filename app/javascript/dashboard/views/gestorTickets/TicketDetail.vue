@@ -2650,6 +2650,7 @@ export default {
       v-if="ticket && isCommercial"
       :ticket="ticket"
       @updated="refetch"
+      @editPostpone="openPostpone()"
     />
 
     <!-- Pestañas del detalle (pinneadas, no scrollean) -->
@@ -4622,7 +4623,13 @@ export default {
       v-if="showPostponeModal && ticket"
       show
       :folio="ticket.folio || `#${ticket.id}`"
-      :current="ticket.postponed_until || ''"
+      :current="ticket.is_postponed ? ticket.postponed_until || '' : ''"
+      :current-reason-id="
+        ticket.is_postponed && ticket.postpone_reason
+          ? ticket.postpone_reason.id
+          : ''
+      "
+      :current-note="ticket.is_postponed ? ticket.postpone_note || '' : ''"
       :is-saving="isTransitioning"
       @close="showPostponeModal = false"
       @confirm="confirmPostpone"

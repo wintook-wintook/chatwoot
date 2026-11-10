@@ -82,10 +82,15 @@ export default {
           .join(' · ');
       }
       if (type === 'postponed') {
+        // changed: se cambió una pospuesta que ya estaba (fecha, motivo o comentario).
         return [
+          p.changed
+            ? this.$t('CASE_TICKETS.COMMERCIAL.POSTPONE_CHANGED')
+            : null,
           this.$t('CASE_TICKETS.COMMERCIAL.POSTPONED_UNTIL', {
             date: formatDay(p.until),
           }),
+          p.reason_label,
           p.reason,
         ]
           .filter(Boolean)

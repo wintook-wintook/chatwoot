@@ -1991,6 +1991,8 @@
         "FROZEN": "La oportunidad está cerrada: reábrela para cambiar sus datos."
       },
       "ACTIONS": {
+        "CHANGE_POSTPONE": "Cambiar fecha o motivo",
+        "RESUME_NOW": "Retomar ahora",
         "WON": "Ganada",
         "LOST": "Perdida",
         "CANCEL": "Cancelar",
@@ -2012,7 +2014,10 @@
         "SUCCESS": "Oportunidad cerrada como {outcome}",
         "ERROR": "No se pudo cerrar la oportunidad"
       },
+      "POSTPONE_CHANGED": "Cambió la pospuesta",
       "POSTPONE_MODAL": {
+        "CHANGE_TITLE": "Cambiar la pospuesta de {folio}",
+        "SAVE_CHANGE": "Guardar cambios",
         "TITLE": "Posponer {folio}",
         "UNTIL": "Retomar el",
         "REASON_CATALOG": "Motivo",

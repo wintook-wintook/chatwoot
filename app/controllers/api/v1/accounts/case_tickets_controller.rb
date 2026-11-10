@@ -139,7 +139,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   def show
     # Plan-Plantilla-Tareas-Etapa T3 — avance de la etapa (solo en el detalle).
     render json: { case_ticket: ticket_json(@ticket).merge(stage_advance: Cases::StageAdvance.new(@ticket).summary,
-                                                           delegation: delegation_json(@ticket)) }
+                                                           delegation: delegation_json(@ticket),
+                                                           postpone_note: @ticket.current_postpone_note) }
   end
 
   # POST /api/v1/accounts/:account_id/case_tickets

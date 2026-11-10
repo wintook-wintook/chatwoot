@@ -30,6 +30,10 @@ export default {
       this.open = false;
       this.$emit('cancel');
     },
+    changePostpone() {
+      this.open = false;
+      this.$emit('postpone');
+    },
     togglePostpone() {
       this.open = false;
       if (this.isPostponed) this.$emit('resume');
@@ -51,13 +55,21 @@ export default {
       :class="align === 'right' ? 'right-0' : 'left-0'"
     >
       <template v-if="isCommercial">
+        <!-- Pospuesta: cambiar su fecha o motivo, o retomarla ya. -->
+        <li
+          v-if="isPostponed"
+          class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+          @click="changePostpone"
+        >
+          {{ $t('CASE_TICKETS.COMMERCIAL.ACTIONS.CHANGE_POSTPONE') }}
+        </li>
         <li
           class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
           @click="togglePostpone"
         >
           {{
             isPostponed
-              ? $t('CASE_TICKETS.COMMERCIAL.ACTIONS.RESUME')
+              ? $t('CASE_TICKETS.COMMERCIAL.ACTIONS.RESUME_NOW')
               : $t('CASE_TICKETS.COMMERCIAL.ACTIONS.POSTPONE')
           }}
         </li>

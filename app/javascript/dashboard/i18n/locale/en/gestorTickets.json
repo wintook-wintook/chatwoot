@@ -1980,6 +1980,8 @@
         "FROZEN": "The opportunity is closed: reopen it to change its data."
       },
       "ACTIONS": {
+        "CHANGE_POSTPONE": "Change date or reason",
+        "RESUME_NOW": "Resume now",
         "WON": "Won",
         "LOST": "Lost",
         "CANCEL": "Cancel",
@@ -2001,7 +2003,10 @@
         "SUCCESS": "Opportunity closed as {outcome}",
         "ERROR": "Could not close the opportunity"
       },
+      "POSTPONE_CHANGED": "Changed the postponement",
       "POSTPONE_MODAL": {
+        "CHANGE_TITLE": "Change the postponement of {folio}",
+        "SAVE_CHANGE": "Save changes",
         "TITLE": "Postpone {folio}",
         "UNTIL": "Resume on",
         "REASON_CATALOG": "Reason",
