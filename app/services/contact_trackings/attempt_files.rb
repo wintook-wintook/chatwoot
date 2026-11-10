@@ -26,12 +26,9 @@ module ContactTrackings::AttemptFiles
     return nil if nombres.empty?
 
     conversation = tracking.conversation || Conversation.find_by(id: tracking.conversation_id)
-    signed = ContactTrackings::AgentAttachments.signed_ids(template, nombres)
-    return nil if conversation.nil? || signed.empty?
+    return nil if conversation.nil?
 
-    Messages::MessageBuilder.new(sender, conversation,
-                                 { content: '', private: false, attachments: signed,
-                                   ai_agent: ContactTrackings::AgentIdentity.for(template) }).perform
+    ContactTrackings::EventFiles.deliver(template, conversation, nombres, sender)
   rescue StandardError => e
     Rails.logger.error "[ContactTracking] 📎 no se mandaron los archivos del intento #{numero}: #{e.message}"
     nil

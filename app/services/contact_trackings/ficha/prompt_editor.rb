@@ -56,14 +56,45 @@ class ContactTrackings::Ficha::PromptEditor
   #   remove  nombres de ruta    phrases { ruta => [frases] }    offers { llave => oferta }
   WELCOME_FILE = 'welcome_file:'
 
-  def apply(add: [], remove: [], phrases: {}, offers: {})
-    add.each do |key|
-      next add_welcome_file(key.delete_prefix(WELCOME_FILE)) if key.start_with?(WELCOME_FILE)
+  ROUTE_FILE = 'route_file:'
 
-      add(offers[key]) if offers[key]
-    end
+  def apply(add: [], remove: [], phrases: {}, offers: {})
+    add.each { |key| add_key(key, offers) }
     remove.each { |ruta| remove(ruta) }
     phrases.each { |ruta, frases| Array(frases).each { |f| add_phrase(ruta.to_s, f) } }
+    self
+  end
+
+  def add_key(key, offers)
+    return add_welcome_file(key.delete_prefix(WELCOME_FILE)) if key.start_with?(WELCOME_FILE)
+    return add_route_file(*key.delete_prefix(ROUTE_FILE).split(':', 2)) if key.start_with?(ROUTE_FILE)
+
+    add(offers[key]) if offers[key]
+  end
+
+  # { 'ruta' => 'lo que dice su línea en [ALCANCE POR RAMA]' }
+  def scope_lines
+    rango = section_range('ALCANCE POR RAMA')
+    return {} if rango.nil?
+
+    @lines[(rango[0] + 1)...rango[1]].each_with_object({}) do |linea, acc|
+      nombre, texto = linea.split(':', 2)
+      acc[nombre.to_s.strip] = texto.to_s.strip if texto
+    end
+  end
+
+  # «Con la ruta X»: suma la nota del archivo a la línea de esa ruta en el alcance.
+  def add_route_file(ruta, nombre)
+    return self if scope_lines[ruta].to_s.include?("{{#{nombre}}}")
+
+    nota = ContactTrackings::Ficha::Generator.files_note([nombre]).strip
+    rango = section_range('ALCANCE POR RAMA')
+    indice = rango && ((rango[0] + 1)...rango[1]).find { |i| @lines[i].split(':', 2).first.to_s.strip.casecmp?(ruta) }
+    if indice
+      @lines[indice] = "#{@lines[indice].rstrip} #{nota}"
+    else
+      append_to_section('ALCANCE POR RAMA', "#{ruta}: #{nota}")
+    end
     self
   end
 

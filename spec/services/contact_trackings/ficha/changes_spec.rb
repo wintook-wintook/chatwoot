@@ -98,4 +98,15 @@ RSpec.describe ContactTrackings::Ficha::Changes do
     items = described_class.new(con_ticket).items
     expect(items).to include({ 'key' => "case_type:#{CaseType.find_by(name: 'Soporte').id}" })
   end
+
+  it '«con la ruta X» en un agente existente: se detecta y se aplica en su alcance' do
+    template.update!(resources: { 'files' => { 'lista' => { 'ask' => false, 'routes' => ['consultar_precios'] } } })
+    cambios = described_class.new(template.reload)
+    expect(cambios.call[:added].pluck(:key)).to include('route_file:consultar_precios:lista')
+
+    texto = ContactTrackings::Ficha::PromptEditor.new(prompt).apply(add: ['route_file:consultar_precios:lista']).text
+    expect(texto).to include('consultar_precios: Busco en la hoja «Precios» el dato que pide. Al contestar, escribo {{lista}}')
+    template.update!(complementary_prompt: texto)
+    expect(described_class.new(template.reload).call[:added].pluck(:key)).not_to include('route_file:consultar_precios:lista')
+  end
 end

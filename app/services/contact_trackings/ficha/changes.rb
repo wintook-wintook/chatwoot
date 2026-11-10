@@ -128,7 +128,21 @@ class ContactTrackings::Ficha::Changes
 
   def added
     @added ||= chosen_offers.reject { |o| used?(o) }.map { |o| o.slice(:key, :kind, :name, :label, :route, :directive) } +
-               welcome_files_missing
+               welcome_files_missing + route_files_missing
+  end
+
+  # Archivos marcados «con la ruta X» que el alcance de esa ruta no menciona.
+  def route_files_missing
+    alcance = ContactTrackings::Ficha::PromptEditor.new(prompt).scope_lines
+    nombres_ruta = routes.pluck(:name)
+    @template.file_rules.flat_map do |nombre, regla|
+      Array(regla['routes']).select { |r| nombres_ruta.include?(r) && alcance[r].to_s.exclude?("{{#{nombre}}}") }
+                            .map { |r| route_file_change(r, nombre) }
+    end
+  end
+
+  def route_file_change(ruta, nombre)
+    { key: "route_file:#{ruta}:#{nombre}", kind: 'route_file', name: nombre, label: "mandar «#{nombre}» en la ruta #{ruta}" }
   end
 
   # Archivos marcados «con la bienvenida» que la sección [MENSAJE DE BIENVENIDA] no trae.

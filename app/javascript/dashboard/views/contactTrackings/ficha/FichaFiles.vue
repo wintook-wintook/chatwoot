@@ -43,6 +43,9 @@ export default {
     existingNames: { type: Array, default: () => [] },
     // Intentos del seguimiento (para la regla «en el intento N»).
     attempts: { type: Number, default: 3 },
+    routeOptions: { type: Array, default: () => [] },
+    ticketOptions: { type: Array, default: () => [] },
+    showBooking: { type: Boolean, default: false },
   },
   emits: ['input', 'uploaded'],
   data() {
@@ -87,7 +90,11 @@ export default {
       );
     },
     ruleOf(item) {
-      return { ask: item.ask, welcome: item.welcome, attempts: item.attempts };
+      const regla = defaultRule();
+      Object.keys(regla).forEach(campo => {
+        if (item[campo] !== undefined) regla[campo] = item[campo];
+      });
+      return regla;
     },
     setRule(item, regla) {
       this.$emit(
@@ -221,6 +228,9 @@ export default {
           class="pl-6"
           :value="ruleOf(item)"
           :attempts="attempts"
+          :route-options="routeOptions"
+          :ticket-options="ticketOptions"
+          :show-booking="showBooking"
           @input="setRule(item, $event)"
         />
       </li>

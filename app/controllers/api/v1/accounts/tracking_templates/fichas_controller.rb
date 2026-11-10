@@ -230,6 +230,7 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
     { cards: cards, items: cambios.items, changes: cambios.call.except(:deduced),
       keyword_actions: @tracking_template.keyword_actions || [], readiness: readiness_for(@tracking_template).call,
       agenda: @tracking_template.slice(:calendar_event_duration, :timezone, :slots_presentation, :booking_calendar_ids),
-      file_rules: @tracking_template.file_rules, attempts: @tracking_template.follow_up_attempts }
+      file_rules: @tracking_template.file_rules, attempts: @tracking_template.follow_up_attempts,
+      routes: cambios.test_routes.map { |r| r.slice(:name, :label) } }
   end
 end

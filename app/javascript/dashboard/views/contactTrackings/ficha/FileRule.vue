@@ -7,7 +7,14 @@
 //   ☑ Cuando lo pidan   ☐ Con la bienvenida   Intentos: [1] [2] [3]
 // v-model: { ask: true, welcome: false, attempts: [2] }
 // ============================================================================
-export const defaultRule = () => ({ ask: true, welcome: false, attempts: [] });
+export const defaultRule = () => ({
+  ask: true,
+  welcome: false,
+  attempts: [],
+  routes: [],
+  booking: false,
+  tickets: [],
+});
 
 export default {
   model: { prop: 'value', event: 'input' },
@@ -16,6 +23,12 @@ export default {
     // Cuántos intentos tiene el seguimiento (para los botones).
     attempts: { type: Number, default: 3 },
     disabled: { type: Boolean, default: false },
+    // «Con la ruta»: [{ value, label }] (al crear, la llave del recurso; ya creado, el nombre).
+    routeOptions: { type: Array, default: () => [] },
+    // «Al levantar un ticket»: [{ value, label }] ('*' = cualquiera).
+    ticketOptions: { type: Array, default: () => [] },
+    // «Al agendar»: solo si el agente tiene agenda.
+    showBooking: { type: Boolean, default: false },
   },
   emits: ['input'],
   computed: {
@@ -26,13 +39,27 @@ export default {
       return Array.from({ length: this.attempts || 0 }, (_, i) => i + 1);
     },
     nothing() {
-      return !this.rule.ask && !this.rule.welcome && !this.rule.attempts.length;
+      const r = this.rule;
+      return (
+        !r.ask &&
+        !r.welcome &&
+        !r.booking &&
+        !r.attempts.length &&
+        !r.routes.length &&
+        !r.tickets.length
+      );
     },
   },
   methods: {
     set(campo, valor) {
       if (this.disabled) return;
       this.$emit('input', { ...this.rule, [campo]: valor });
+    },
+    toggleIn(campo, valor) {
+      const lista = this.rule[campo].includes(valor)
+        ? this.rule[campo].filter(item => item !== valor)
+        : [...this.rule[campo], valor];
+      this.set(campo, lista);
     },
     toggleAttempt(n) {
       const lista = this.rule.attempts.includes(n)
@@ -82,6 +109,55 @@ export default {
         @click="toggleAttempt(n)"
       >
         {{ n }}
+      </button>
+    </span>
+    <label
+      v-if="showBooking"
+      class="flex items-center gap-1 !m-0 cursor-pointer"
+    >
+      <input
+        type="checkbox"
+        class="!m-0"
+        :checked="rule.booking"
+        :disabled="disabled"
+        @change="set('booking', $event.target.checked)"
+      />
+      {{ $t('TRACKING_TEMPLATES.FICHA.RULE_BOOKING') }}
+    </label>
+    <span v-if="ticketOptions.length" class="flex flex-wrap items-center gap-1">
+      {{ $t('TRACKING_TEMPLATES.FICHA.RULE_TICKETS') }}
+      <button
+        v-for="opcion in ticketOptions"
+        :key="opcion.value"
+        type="button"
+        class="px-2 py-0.5 border rounded-full"
+        :class="
+          rule.tickets.includes(opcion.value)
+            ? 'border-woot-500 bg-woot-500 text-white'
+            : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'
+        "
+        :disabled="disabled"
+        @click="toggleIn('tickets', opcion.value)"
+      >
+        {{ opcion.label }}
+      </button>
+    </span>
+    <span v-if="routeOptions.length" class="flex flex-wrap items-center gap-1">
+      {{ $t('TRACKING_TEMPLATES.FICHA.RULE_ROUTES') }}
+      <button
+        v-for="opcion in routeOptions"
+        :key="opcion.value"
+        type="button"
+        class="px-2 py-0.5 border rounded-full"
+        :class="
+          rule.routes.includes(opcion.value)
+            ? 'border-woot-500 bg-woot-500 text-white'
+            : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'
+        "
+        :disabled="disabled"
+        @click="toggleIn('routes', opcion.value)"
+      >
+        {{ opcion.label }}
       </button>
     </span>
     <span v-if="nothing" class="text-amber-700">

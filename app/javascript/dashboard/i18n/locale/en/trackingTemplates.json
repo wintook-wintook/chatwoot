@@ -650,7 +650,11 @@
       "SUG_URGENT": "has an emergency",
       "SUG_QUOTE": "asks for a formal quote",
       "SUG_INVOICE": "needs an invoice",
-      "SUG_UNSOLVED": "their question couldn't be solved"
+      "SUG_UNSOLVED": "their question couldn't be solved",
+      "RULE_BOOKING": "When booking",
+      "RULE_TICKETS": "When opening a ticket:",
+      "RULE_ROUTES": "With route:",
+      "RULE_ANY_TICKET": "Any"
     }
   }
 }

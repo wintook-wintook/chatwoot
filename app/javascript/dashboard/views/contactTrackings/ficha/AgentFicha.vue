@@ -70,6 +70,7 @@ export default {
       fileRules: {},
       savedFileRules: {},
       attempts: 3,
+      routes: [],
       activating: false,
       loading: true,
       busy: false,
@@ -113,6 +114,17 @@ export default {
         };
       });
     },
+    fileRouteOptions() {
+      return this.routes.map(ruta => ({ value: ruta.name, label: ruta.label }));
+    },
+    fileTicketOptions() {
+      const tipos = this.cards.filter(card => card.kind === 'case_type');
+      if (!tipos.length) return [];
+      return [
+        { value: '*', label: this.t('RULE_ANY_TICKET') },
+        ...tipos.map(card => ({ value: card.name, label: card.name })),
+      ];
+    },
     kindChips() {
       return [
         '',
@@ -150,6 +162,7 @@ export default {
       this.fileRules = copy(data.file_rules || {});
       this.savedFileRules = copy(data.file_rules || {});
       this.attempts = data.attempts || 3;
+      this.routes = data.routes || [];
       this.$emit(
         'changes',
         this.changes.added.length + this.changes.removed.length
@@ -365,6 +378,9 @@ export default {
                     class="pl-6"
                     :value="ruleFor(nombre)"
                     :attempts="attempts"
+                    :route-options="fileRouteOptions"
+                    :ticket-options="fileTicketOptions"
+                    :show-booking="calendarIds().length > 0"
                     :disabled="busy"
                     @input="setRule(nombre, $event)"
                   />

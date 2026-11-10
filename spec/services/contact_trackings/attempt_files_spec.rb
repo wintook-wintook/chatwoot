@@ -37,4 +37,21 @@ RSpec.describe ContactTrackings::AttemptFiles do
     expect(mensaje.attachments.size).to eq(1)
     expect(mensaje.attachments.first.file.filename.to_s).to eq('catalogo.pdf')
   end
+
+  it 'al agendar y al levantar un ticket de ese tipo (o cualquiera) manda sus archivos' do
+    adjuntar('mapa')
+    adjuntar('formato')
+    template.update!(resources: { 'files' => { 'mapa' => { 'booking' => true },
+                                               'formato' => { 'tickets' => ['Soporte'] } } })
+    tracking = instance_double(ContactTracking, tracking_template: template)
+
+    cita = ContactTrackings::EventFiles.send_for(tracking, :booking, conversation: conversation, sender: bot)
+    expect(cita.attachments.first.file.filename.to_s).to eq('mapa.pdf')
+    expect(ContactTrackings::EventFiles.send_for(tracking, :ticket, conversation: conversation, sender: bot, case_type: 'Ventas')).to be_nil
+    ticket = ContactTrackings::EventFiles.send_for(tracking, :ticket, conversation: conversation, sender: bot, case_type: 'soporte')
+    expect(ticket.attachments.first.file.filename.to_s).to eq('formato.pdf')
+
+    template.update!(resources: { 'files' => { 'formato' => { 'tickets' => ['*'] } } })
+    expect(template.files_for_ticket('Ventas')).to eq(['formato'])
+  end
 end

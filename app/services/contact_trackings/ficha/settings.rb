@@ -41,11 +41,14 @@ class ContactTrackings::Ficha::Settings
     crudo.to_h.transform_values { |regla| self.class.rule(regla) }
   end
 
+  def self.strings(lista) = Array(lista).map { |v| v.to_s.strip }.compact_blank.uniq
+
   def self.rule(regla)
     r = regla.to_h.stringify_keys
     cast = ActiveModel::Type::Boolean.new
     { 'ask' => cast.cast(r.fetch('ask', true)), 'welcome' => cast.cast(r['welcome']) || false,
-      'attempts' => Array(r['attempts']).map(&:to_i).select(&:positive?).uniq.sort }
+      'attempts' => Array(r['attempts']).map(&:to_i).select(&:positive?).uniq.sort,
+      'routes' => strings(r['routes']), 'booking' => cast.cast(r['booking']) || false, 'tickets' => strings(r['tickets']) }
   end
 
   # Agenda: duración, zona, presentación y calendarios (solo de las agendas marcadas).

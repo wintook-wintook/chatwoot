@@ -650,7 +650,11 @@
       "SUG_URGENT": "tiene una urgencia",
       "SUG_QUOTE": "pide una cotización formal",
       "SUG_INVOICE": "necesita su factura",
-      "SUG_UNSOLVED": "su duda no se pudo resolver"
+      "SUG_UNSOLVED": "su duda no se pudo resolver",
+      "RULE_BOOKING": "Al agendar",
+      "RULE_TICKETS": "Al levantar ticket:",
+      "RULE_ROUTES": "Con la ruta:",
+      "RULE_ANY_TICKET": "Cualquiera"
     }
   },
   "TRACKING_IMPORT": {

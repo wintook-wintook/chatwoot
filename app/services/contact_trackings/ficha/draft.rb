@@ -53,14 +53,23 @@ class ContactTrackings::Ficha::Draft
       h = archivo.to_h.stringify_keys
       next unless h['name'].to_s.match?(/\A[a-zA-Z0-9_-]{1,60}\z/)
 
-      { 'name' => h['name'].to_s, 'ask' => h.key?('ask') ? ActiveModel::Type::Boolean.new.cast(h['ask']) : true,
-        'welcome' => ActiveModel::Type::Boolean.new.cast(h['welcome']) || false,
-        'attempts' => Array(h['attempts']).map(&:to_i).select(&:positive?).uniq.sort }
+      { 'name' => h['name'].to_s }.merge(ContactTrackings::Ficha::Settings.rule(h))
     end
   end
 
-  # { 'catalogo' => { 'ask' => true, 'welcome' => false, 'attempts' => [2] } } (TrackingTemplate#file_rules)
-  def file_rules = files.to_h { |f| [f['name'], f.except('name')] }
+  # { 'catalogo' => { 'ask' => true, … 'routes' => ['consultar_precios'] } } (TrackingTemplate#file_rules).
+  # En la pantalla la ruta se elige por su recurso (la llave de la oferta); aquí ya tiene nombre.
+  def file_rules
+    nombres = result[:routes].to_h { |r| [r[:key].to_s, r[:name]] }
+    files.to_h { |f| [f['name'], f.except('name').merge('routes' => f['routes'].filter_map { |k| nombres[k] || k })] }
+  end
+
+  # { 'google_sheet:12' => ['lista-precios'] } — archivos que van al contestar esa ruta.
+  def route_files
+    files.each_with_object(Hash.new { |h, k| h[k] = [] }) do |f, acc|
+      f['routes'].each { |key| acc[key] << f['name'] }
+    end
+  end
 
   def welcome_files = files.select { |f| f['welcome'] }.pluck('name')
 
@@ -82,7 +91,7 @@ class ContactTrackings::Ficha::Draft
       generado = ContactTrackings::Ficha::Generator.new(
         account: @account, name: name, offers: active_offers,
         objective: @params[:objective], business: @params[:business], tone: @params[:tone],
-        welcome: @params[:welcome], welcome_files: welcome_files
+        welcome: @params[:welcome], welcome_files: welcome_files, route_files: route_files
       ).call
       generado.merge(offers: offers.map { |o| o.except(:route).merge(on: skipped.exclude?(o[:key])) })
     end

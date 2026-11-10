@@ -199,6 +199,19 @@ class TrackingTemplate < ApplicationRecord
     file_rules.select { |_nombre, regla| Array(regla['attempts']).map(&:to_i).include?(numero.to_i) }.keys
   end
 
+  # Al confirmar una cita (ContactTrackings::EventFiles).
+  def files_for_booking
+    file_rules.select { |_nombre, regla| regla['booking'] }.keys
+  end
+
+  # Al levantar un ticket de ese tipo ('*' = cualquiera).
+  def files_for_ticket(tipo)
+    file_rules.select do |_nombre, regla|
+      tipos = Array(regla['tickets']).map { |t| t.to_s.downcase }
+      tipos.include?('*') || (tipo.present? && tipos.include?(tipo.to_s.downcase))
+    end.keys
+  end
+
   private
 
   # ── Un snapshot por guardado que cambie el comportamiento del agente ──────────

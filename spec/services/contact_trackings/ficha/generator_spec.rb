@@ -93,4 +93,14 @@ RSpec.describe ContactTrackings::Ficha::Generator do
     expect(resultado[:validation][:degrading]).to eq([])
     expect(ContactTrackings::Ficha::TicketUse.clean({ 'priority' => 'altísima' })).to be_nil
   end
+
+  it '«con la ruta X»: el alcance de esa ruta dice que mande el archivo; la regla guarda el nombre de la ruta' do
+    borrador = ContactTrackings::Ficha::Draft.new(account, { name: 'Grúas', items: [{ key: "google_sheet:#{hoja.id}" }],
+                                                             files: [{ name: 'lista', ask: false, routes: ["google_sheet:#{hoja.id}"] }] })
+
+    expect(borrador.result[:prompt]).to include('consultar_precios: Busco en la hoja')
+    expect(borrador.result[:prompt]).to include('Al contestar, escribo {{lista}} en mi respuesta para mandarle el archivo.')
+    expect(borrador.file_rules['lista']['routes']).to eq(['consultar_precios'])
+    expect(borrador.result[:validation][:blocking]).to eq([])
+  end
 end

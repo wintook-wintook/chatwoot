@@ -40,6 +40,7 @@ class ContactTrackings::Ficha::Generator
     @tone = TONES.key?(options[:tone].to_s) ? options[:tone].to_s : 'cercano'
     @welcome = options[:welcome].to_s.strip
     @welcome_files = Array(options[:welcome_files]).map(&:to_s).compact_blank
+    @route_files = options[:route_files].to_h
   end
 
   def call
@@ -66,6 +67,14 @@ class ContactTrackings::Ficha::Generator
     tareas = ['contestar sus dudas'] if tareas.empty?
     lista = tareas.size > 1 ? "#{tareas[0..-2].join(', ')} y #{tareas.last}" : tareas.first
     "Atender a los clientes de #{@name}: #{lista}."
+  end
+
+  # «Con la ruta X»: el modelo escribe {{archivo}} al contestar y el motor lo manda.
+  def self.files_note(nombres)
+    lista = Array(nombres)
+    return '' if lista.empty?
+
+    " Al contestar, escribo #{lista.map { |n| "{{#{n}}}" }.join(' ')} en mi respuesta para mandarle el archivo."
   end
 
   private
@@ -103,7 +112,7 @@ class ContactTrackings::Ficha::Generator
   end
 
   def alcance
-    lineas = routes.map { |o| "#{o[:route][:name]}: #{scope_for(o)}" }
+    lineas = routes.map { |o| "#{o[:route][:name]}: #{scope_for(o)}#{files_note(@route_files[o[:key].to_s])}" }
     "[ALCANCE POR RAMA]\n#{lineas.join("\n")}"
   end
 
@@ -140,6 +149,8 @@ class ContactTrackings::Ficha::Generator
     "Abro un ticket «#{oferta[:name]}» cuando el cliente #{oferta[:reasons].join('; ')}. Pido los datos que necesita " \
       'y le digo al cliente que una persona lo atenderá.'
   end
+
+  def files_note(nombres) = self.class.files_note(nombres)
 
   def fidelidad
     "[FIDELIDAD]\nContesto solo con lo que encuentro en mis fuentes. Si no encuentro el dato, lo digo con " \

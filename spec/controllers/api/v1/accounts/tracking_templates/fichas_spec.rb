@@ -130,8 +130,8 @@ RSpec.describe 'Ficha del Agente IA API', type: :request do
     creado = account.tracking_templates.find(response.parsed_body['id'])
 
     expect(creado).to have_attributes(retry_interval_value: 2, retry_interval_unit: 'hours', follow_up_attempts: 4)
-    expect(creado.file_rules).to eq('catalogo' => { 'ask' => false, 'welcome' => true, 'attempts' => [2] },
-                                    'garantia' => { 'ask' => true, 'welcome' => false, 'attempts' => [] })
+    expect(creado.file_rules['catalogo']).to include('ask' => false, 'welcome' => true, 'attempts' => [2])
+    expect(creado.file_rules['garantia']).to include('ask' => true, 'welcome' => false, 'attempts' => [])
     expect(ContactTrackings::WelcomeMessage.text(creado.complementary_prompt)).to eq("¡Hola!\n{{catalogo}}")
     expect(creado.complementary_prompt).to include('{{garantia}} en mi respuesta')
     expect(creado.complementary_prompt).not_to include('{{catalogo}} en mi respuesta')
@@ -150,7 +150,7 @@ RSpec.describe 'Ficha del Agente IA API', type: :request do
     template = create(:tracking_template, account: account, complementary_prompt: prompt)
     patch "#{base}/#{template.id}/ficha", params: { items: items, file_rules: { catalogo: { ask: false, welcome: true, attempts: [1] } } },
                                           headers: admin.create_new_auth_token, as: :json
-    expect(template.reload.file_rules['catalogo']).to eq('ask' => false, 'welcome' => true, 'attempts' => [1])
+    expect(template.reload.file_rules['catalogo']).to include('ask' => false, 'welcome' => true, 'attempts' => [1])
     expect(response.parsed_body['changes']['added'].pluck('key')).to include('welcome_file:catalogo')
 
     post "#{base}/#{template.id}/ficha/apply", params: { add: ['welcome_file:catalogo'] }, headers: admin.create_new_auth_token, as: :json

@@ -88,7 +88,7 @@ describe('FileRule', () => {
       mocks: { $t: clave => clave },
     });
     wrapper.vm.toggleAttempt(2);
-    expect(wrapper.emitted('input')[0][0]).toEqual({
+    expect(wrapper.emitted('input')[0][0]).toMatchObject({
       ask: true,
       welcome: false,
       attempts: [2],
@@ -148,5 +148,27 @@ describe('FichaTicket', () => {
     expect(wrapper.emitted('input')[1][0].reasons).toEqual([]);
     wrapper.vm.emit({ priority: 'alta' });
     expect(wrapper.emitted('input')[2][0].priority).toBe('alta');
+  });
+});
+
+describe('FileRule: agendar, ticket y ruta', () => {
+  it('marca rutas y tickets y cuenta «nunca» solo si no hay nada', async () => {
+    const wrapper = shallowMount(FileRule, {
+      propsData: {
+        value: { ask: false, welcome: false, attempts: [] },
+        routeOptions: [{ value: 'precios', label: 'Precios' }],
+        ticketOptions: [{ value: '*', label: 'Cualquiera' }],
+        showBooking: true,
+      },
+      mocks: { $t: clave => clave },
+    });
+    expect(wrapper.vm.nothing).toBe(true);
+    wrapper.vm.toggleIn('routes', 'precios');
+    expect(wrapper.emitted('input')[0][0]).toMatchObject({
+      routes: ['precios'],
+      booking: false,
+    });
+    await wrapper.setProps({ value: { ask: false, tickets: ['*'] } });
+    expect(wrapper.vm.nothing).toBe(false);
   });
 });

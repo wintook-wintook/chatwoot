@@ -388,6 +388,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return false unless creator.create_if_needed
 
     Rails.logger.info "[TrackingBot] 🎫 Ticket via @crear_ticket (outcome: #{creator.outcome})"
+    # feat/ficha_agente_ia: los archivos que la ficha manda al levantar un ticket de ese tipo
+    if creator.outcome == :created
+      ContactTrackings::EventFiles.send_for(tracking, :ticket, conversation: message.conversation, sender: bot_user(tracking.account),
+                                                               case_type: creator.ticket&.case_type&.name)
+    end
     # proyecto@bot_seguimiento_calendar — si el ticket quedó completo (recién creado o ya
     # existía) y hay calendario configurado, seguimos directo a ofrecer disponibilidad en
     # el mismo turno (ETAPA 3), en vez de esperar a que el cliente lo pida en otro mensaje.
@@ -1647,6 +1652,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                 'Te esperamos. Si necesitas cambiarla, avísanos con anticipación. 😊'
             end
     send_auto_reply(tracking, message, reply)
+    # feat/ficha_agente_ia: los archivos que la ficha manda al agendar (mapa, indicaciones…)
+    ContactTrackings::EventFiles.send_for(tracking, :booking, conversation: message.conversation, sender: bot_user(tracking.account))
 
     clear_pending_slot(tracking)
     tracking.disable_auto_retry_mode!

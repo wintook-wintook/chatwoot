@@ -222,6 +222,25 @@ export default {
         (_, i) => !!(this.follow.whatsappTemplates || [])[i]
       );
     },
+    // «Con la ruta»: las que contestan (no la de agendar ni la de ticket).
+    fileRouteOptions() {
+      return this.routes
+        .filter(ruta => !['calendar', 'case_type'].includes(ruta.kind))
+        .map(ruta => ({ value: ruta.key, label: ruta.label }));
+    },
+    // «Al levantar un ticket»: los tipos marcados, o cualquiera.
+    fileTicketOptions() {
+      const tipos = this.cards.filter(
+        card =>
+          card.kind === 'case_type' &&
+          this.items.some(item => item.key === card.key)
+      );
+      if (!tipos.length) return [];
+      return [
+        { value: '*', label: this.t('RULE_ANY_TICKET') },
+        ...tipos.map(card => ({ value: card.name, label: card.name })),
+      ];
+    },
     welcomeFiles() {
       return this.files.filter(file => file.welcome);
     },
@@ -259,6 +278,9 @@ export default {
           ask: file.ask,
           welcome: file.welcome,
           attempts: file.attempts,
+          routes: file.routes || [],
+          booking: !!file.booking,
+          tickets: file.tickets || [],
         })),
         welcome: this.welcome.trim(),
         retry_interval_value: this.follow.retryValue,
@@ -569,7 +591,13 @@ export default {
           <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ t('FILES_HINT') }}
           </p>
-          <FichaFiles v-model="files" :attempts="follow.attempts" />
+          <FichaFiles
+            v-model="files"
+            :attempts="follow.attempts"
+            :route-options="fileRouteOptions"
+            :ticket-options="fileTicketOptions"
+            :show-booking="calendarIds.length > 0"
+          />
         </div>
         <div
           v-else
