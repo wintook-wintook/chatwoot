@@ -12,6 +12,7 @@ import { mixin as clickaway } from 'vue-clickaway';
 import CaseMeetingsAPI from 'dashboard/api/caseMeetings';
 import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal.vue';
 import taskReportFlow from 'dashboard/mixins/taskReportFlow';
+import rowMenuMixin from 'dashboard/helper/rowMenu'; // menú de la fila (⋮ a la derecha)
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
@@ -35,7 +36,7 @@ export default {
     CancelItemModal,
     ConvertToTaskModal,
   },
-  mixins: [clickaway, taskReportFlow],
+  mixins: [clickaway, taskReportFlow, rowMenuMixin],
   props: {
     ticketId: { type: [Number, String], required: true },
     // Ticket cerrado/cancelado = solo lectura: se ocultan las acciones para no
@@ -119,6 +120,11 @@ export default {
           },
         }),
       };
+    },
+    // Ancho total de las columnas: la tabla se mueve de lado dentro de su caja y
+    // la columna de acciones queda fija a la derecha.
+    tableWidth() {
+      return this.columns.reduce((sum, c) => sum + (c.width || 0), 0);
     },
     columns() {
       return [
@@ -253,8 +259,9 @@ export default {
           field: 'id',
           key: 'actions',
           title: '',
-          width: 60,
-          align: 'left',
+          width: 56,
+          fixed: 'right',
+          align: 'center',
           renderBodyCell: ({ row }) =>
             this.isFrozen ? null : (
               <div class="button-wrapper">
@@ -460,22 +467,7 @@ export default {
       }
     },
     // ── Menú de acciones de la fila ───────────────────────────────────────
-    openRowMenu(event, row) {
-      const rect = event.currentTarget.getBoundingClientRect();
-      this.rowMenu = { row, top: rect.bottom + 4, left: rect.left - 180 };
-      this.$nextTick(() => {
-        window.addEventListener('scroll', this.closeRowMenu, {
-          capture: true,
-          once: true,
-        });
-      });
-    },
-    closeRowMenu() {
-      this.rowMenu = null;
-      window.removeEventListener('scroll', this.closeRowMenu, {
-        capture: true,
-      });
-    },
+    // openRowMenu/closeRowMenu: rowMenuMixin (abre hacia arriba si no cabe).
     menuEdit() {
       const row = this.rowMenu?.row;
       this.closeRowMenu();
@@ -809,6 +801,7 @@ export default {
         fixed-header
         max-height="100%"
         row-key-field-name="id"
+        :scroll-width="tableWidth"
         :columns="columns"
         :table-data="paginatedMeetings"
         :event-custom-option="eventCustomOption"
@@ -881,8 +874,8 @@ export default {
     <div
       v-if="rowMenu"
       v-on-clickaway="closeRowMenu"
-      class="fixed z-[9999] w-56 p-1 bg-white border rounded-md shadow-xl dark:bg-slate-800 border-slate-50 dark:border-slate-700"
-      :style="{ top: `${rowMenu.top}px`, left: `${rowMenu.left}px` }"
+      class="js-row-menu fixed z-[9999] w-56 p-1 bg-white border rounded-md shadow-xl dark:bg-slate-800 border-slate-50 dark:border-slate-700"
+      :style="rowMenuStyle()"
     >
       <WootDropdownMenu>
         <WootDropdownItem>

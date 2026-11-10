@@ -22,11 +22,13 @@
 # ================================================================================
 class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseController
   include CaseMeetingSerializer
+  include TaskMenuFields # meetings_count y deletable para el menú de la tarea
 
   def index
     limit_to_own_tasks
     result = Cases::TasksInboxQuery.new(account: Current.account, current_user: current_user, params: params).call
     @notes_count_map = notes_count_map_for(result[:rows])
+    @menu_task_ids = result[:rows].filter_map { |record, kind| record.id if kind == :task } # TaskMenuFields
 
     @scores = result[:scores] || {}
     @planned_ids = result[:planned_ids]
@@ -130,7 +132,7 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
   def priority_fields(task)
     fields = { estimated_minutes: task.estimated_minutes, planned_on: task.planned_on, milestone: task.milestone,
                report_required: task.report_required?, replaceable: Cases::Conversion.task_kind_replaceable?(task) }
-             .merge(@scores[task.id] || {})
+             .merge(@scores[task.id] || {}).merge(task_menu_fields(task))
     @planned_ids ? fields.merge(planned: @planned_ids.include?(task.id)) : fields
   end
 

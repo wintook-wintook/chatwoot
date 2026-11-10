@@ -785,7 +785,8 @@
         "NOTES": "Task notes ({count})",
         "ADD_MEETING": "Schedule task",
         "ADD_MEETING_DONE_HINT": "The task is already completed",
-        "VIEW_MEETINGS": "View scheduled tasks"
+        "VIEW_MEETINGS": "View scheduled tasks",
+        "VIEW_MEETINGS_COUNT": "View scheduled tasks ({count})"
       },
       "ORPHAN_MEETINGS": {
         "TITLE": "Upcoming scheduled tasks remain",

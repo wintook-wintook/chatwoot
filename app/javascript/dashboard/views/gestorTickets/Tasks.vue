@@ -21,6 +21,8 @@ import { useAlert } from 'dashboard/composables';
 import QuickTaskModal from './tasks/QuickTaskModal.vue';
 import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal.vue';
 import taskReportFlow from 'dashboard/mixins/taskReportFlow';
+import rowMenuMixin from 'dashboard/helper/rowMenu'; // menú de la fila (⋮ a la derecha)
+import WootDropdownDivider from 'shared/components/ui/dropdown/DropdownDivider.vue';
 import TaskReportsDialog from 'dashboard/views/gestorTickets/tasks/TaskReportsDialog.vue';
 import caseAiWriter from 'dashboard/mixins/caseAiWriter';
 import { LocalStorage } from 'shared/helpers/localStorage';
@@ -107,6 +109,7 @@ export default {
     WootMessageEditor,
     WootDropdownMenu,
     WootDropdownItem,
+    WootDropdownDivider,
     MyDay,
     QuickTaskModal,
     CancelItemModal,
@@ -114,7 +117,7 @@ export default {
     TaskReportModal,
     TaskReportsDialog,
   },
-  mixins: [caseAiWriter, taskReportFlow],
+  mixins: [caseAiWriter, taskReportFlow, rowMenuMixin],
   props: {
     // Dentro de Inicio › Mi resumen (pestaña «Mi día»): fija en Mi día, sin el
     // título, «Nueva tarea» ni las pestañas Mías / No asignadas / Todas, y sin
@@ -297,22 +300,10 @@ export default {
           key: 'sequence',
           title: this.$t('CASE_TICKETS.TASKS.TABLE.NUM'),
           align: 'left',
-          width: 112,
+          width: 80,
           sortBy: this.sortConfig.sequence || '',
           renderBodyCell: ({ row }) => (
             <div class="flex items-center gap-2">
-              {/* @tickets_cases — una reunión no tiene menú de acciones aquí:
-                  sus acciones viven en la ficha del ticket. */}
-              {this.ticketFrozen(row) || row.item_type === 'meeting' ? null : (
-                <woot-button
-                  size="small"
-                  variant="smooth"
-                  color-scheme="secondary"
-                  icon="navigation"
-                  title={this.$t('CASE_TICKETS.TASKS.ACTIONS')}
-                  onClick={e => this.openRowMenu(e, row)}
-                />
-              )}
               <span
                 class={`font-mono text-sm font-semibold whitespace-nowrap ${this.seqClass(
                   row
@@ -578,7 +569,32 @@ export default {
             );
           },
         },
+        // Acciones: los tres puntos al final, en una columna FIJA a la derecha. Una
+        // tarea agendada no tiene menú aquí: sus acciones viven en la ficha del caso.
+        {
+          field: 'id',
+          key: 'actions',
+          title: '',
+          width: 48,
+          fixed: 'right',
+          align: 'center',
+          renderBodyCell: ({ row }) =>
+            this.ticketFrozen(row) || row.item_type === 'meeting' ? null : (
+              <woot-button
+                size="small"
+                variant="clear"
+                color-scheme="secondary"
+                icon="more-vertical"
+                title={this.$t('CASE_TICKETS.TASKS.ACTIONS')}
+                onClick={e => this.openRowMenu(e, row)}
+              />
+            ),
+        },
       ];
+    },
+    // Ancho total: la tabla se mueve de lado y la columna de acciones queda fija.
+    tableWidth() {
+      return this.columns.reduce((sum, c) => sum + (c.width || 0), 0);
     },
   },
   watch: {
@@ -814,36 +830,7 @@ export default {
         query: { tab: 'meetings' },
       });
     },
-    // ── Menú de acciones por fila ──────────────────────────────────
-    // Menú anclado al botón "…" con posición FIJA (fuera de la tabla, que
-    // recorta con overflow). Decide arriba/abajo según el espacio libre.
-    openRowMenu(event, row) {
-      const btn = (event.target && event.target.closest('button')) || null;
-      if (!btn) return;
-      const rect = btn.getBoundingClientRect();
-      const MENU_W = 224;
-      const MENU_H = 150;
-      const up = rect.bottom + MENU_H > window.innerHeight;
-      // Se abre hacia la DERECHA (borde izquierdo alineado al botón); si no cabe,
-      // se recorta para no salirse por el lado derecho de la ventana.
-      this.rowMenu = {
-        row,
-        left: Math.min(rect.left, window.innerWidth - MENU_W - 8),
-        top: up ? rect.top - MENU_H : rect.bottom + 4,
-      };
-      this.$nextTick(() => {
-        window.addEventListener('scroll', this.closeRowMenu, {
-          capture: true,
-          once: true,
-        });
-      });
-    },
-    closeRowMenu() {
-      this.rowMenu = null;
-      window.removeEventListener('scroll', this.closeRowMenu, {
-        capture: true,
-      });
-    },
+    // ── Menú de acciones por fila: openRowMenu/closeRowMenu en rowMenuMixin ──
     menuViewNotes() {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
@@ -1487,6 +1474,7 @@ export default {
           fixed-header
           max-height="100%"
           row-key-field-name="_row_key"
+          :scroll-width="tableWidth"
           :columns="columns"
           :table-data="tableRows"
           :border-around="false"
@@ -1779,30 +1767,62 @@ export default {
       :reject-text="$t('CASE_TICKETS.TASKS.DELETE_CONFIRM.CANCEL')"
     />
 
-    <!-- Menú de acciones de la fila. Posición FIJA anclada al botón "…": así no
-         lo recorta el overflow de la tabla. Se cierra al hacer click fuera. -->
+    <!-- Menú de acciones de la fila (⋮ a la derecha). Arriba lo que se HACE con la
+         tarea; abajo de la línea, lo que se consulta. Posición FIJA calculada con su
+         tamaño real (rowMenuMixin): abre hacia arriba si no cabe. -->
     <div
       v-if="rowMenu"
       v-on-clickaway="closeRowMenu"
-      class="fixed z-[9999] w-56 p-1 bg-white border rounded-md shadow-xl dark:bg-slate-800 border-slate-50 dark:border-slate-700"
-      :style="{ top: `${rowMenu.top}px`, left: `${rowMenu.left}px` }"
+      class="js-row-menu fixed z-[9999] w-56 p-1 bg-white border rounded-md shadow-xl dark:bg-slate-800 border-slate-50 dark:border-slate-700"
+      :style="rowMenuStyle()"
     >
       <WootDropdownMenu>
+        <WootDropdownItem v-if="rowMenu.row.status === 'pending'">
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="calendar"
+            @click="menuSchedule"
+          >
+            {{ $t('CONVERT_ITEM.SCHEDULE') }}
+          </woot-button>
+        </WootDropdownItem>
         <WootDropdownItem>
           <woot-button
             variant="clear"
             color-scheme="secondary"
             size="small"
-            icon="clipboard"
-            @click="menuViewNotes"
+            icon="comment-add"
+            @click="menuAddNote"
           >
-            {{
-              $t('CASE_TICKETS.TASKS.MENU.NOTES', {
-                count: rowMenu.row.notes_count || 0,
-              })
-            }}
+            {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
           </woot-button>
         </WootDropdownItem>
+        <WootDropdownItem v-if="rowMenu.row.status === 'pending'">
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="dismiss-circle"
+            @click="menuCancelTask"
+          >
+            {{ $t('CANCEL_ITEM.MENU') }}
+          </woot-button>
+        </WootDropdownItem>
+        <!-- Borrar es solo para errores de captura: quien la creó en 24 h o un admin. -->
+        <WootDropdownItem v-if="rowMenu.row.deletable !== false">
+          <woot-button
+            variant="clear"
+            color-scheme="alert"
+            size="small"
+            icon="delete"
+            @click="menuDelete"
+          >
+            {{ $t('CASE_TICKETS.TASKS.DELETE') }}
+          </woot-button>
+        </WootDropdownItem>
+        <WootDropdownDivider />
         <WootDropdownItem v-if="rowMenu.row.status === 'done'">
           <woot-button
             variant="clear"
@@ -1819,47 +1839,14 @@ export default {
             variant="clear"
             color-scheme="secondary"
             size="small"
-            icon="comment-add"
-            @click="menuAddNote"
+            icon="clipboard"
+            @click="menuViewNotes"
           >
-            {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
-          </woot-button>
-        </WootDropdownItem>
-        <WootDropdownItem
-          v-if="rowMenu && rowMenu.row && rowMenu.row.status === 'pending'"
-        >
-          <woot-button
-            variant="clear"
-            color-scheme="secondary"
-            size="small"
-            icon="calendar"
-            @click="menuSchedule"
-          >
-            {{ $t('CONVERT_ITEM.SCHEDULE') }}
-          </woot-button>
-        </WootDropdownItem>
-        <WootDropdownItem
-          v-if="rowMenu && rowMenu.row && rowMenu.row.status === 'pending'"
-        >
-          <woot-button
-            variant="clear"
-            color-scheme="secondary"
-            size="small"
-            icon="dismiss-circle"
-            @click="menuCancelTask"
-          >
-            {{ $t('CANCEL_ITEM.MENU') }}
-          </woot-button>
-        </WootDropdownItem>
-        <WootDropdownItem>
-          <woot-button
-            variant="clear"
-            color-scheme="alert"
-            size="small"
-            icon="delete"
-            @click="menuDelete"
-          >
-            {{ $t('CASE_TICKETS.TASKS.DELETE') }}
+            {{
+              $t('CASE_TICKETS.TASKS.MENU.NOTES', {
+                count: rowMenu.row.notes_count || 0,
+              })
+            }}
           </woot-button>
         </WootDropdownItem>
       </WootDropdownMenu>

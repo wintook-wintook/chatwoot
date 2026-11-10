@@ -788,7 +788,8 @@
         "NOTES": "Notas de la tarea ({count})",
         "ADD_MEETING": "Agendar tarea",
         "ADD_MEETING_DONE_HINT": "La tarea ya está concluida",
-        "VIEW_MEETINGS": "Ver tareas agendadas"
+        "VIEW_MEETINGS": "Ver tareas agendadas",
+        "VIEW_MEETINGS_COUNT": "Ver tareas agendadas ({count})"
       },
       "ORPHAN_MEETINGS": {
         "TITLE": "Quedan tareas agendadas a futuro",

@@ -41,9 +41,12 @@ La Agenda junta todo lo que tienes que hacer: tareas (con fecha, sin hora) y tar
 2. Escribe «Qué se hizo», el Tiempo dedicado, el Resultado y, si quieres, evidencia (hasta 5 archivos).
 3. Pulsa «Concluir». El reporte queda en Agenda › Reportes, en la ficha del cliente y, si tiene caso, en su actividad; el tiempo suma a las horas del caso.
 
+### El menú de cada tarea
+Son los tres puntos ⋮ al final de la fila; siempre se ven, aunque la tabla se mueva de lado. Arriba van las acciones y solo las que se pueden hacer según el estado: en una pendiente «Agendar tarea», «Agregar nota», «Cancelar…» y «Eliminar»; en una cancelada «Reabrir». «Eliminar» solo sale si la creaste tú en las últimas 24 horas o eres administrador. Abajo de la línea va lo de consultar: «Ver reporte» (concluidas), «Notas de la tarea (N)» y «Ver tareas agendadas (N)». Si no cabe hacia abajo, el menú se abre hacia arriba.
+
 ### Cancelar una tarea o tarea agendada
 Cancelar es «ya no se va a hacer»; no es completarla (eso pide el reporte) ni borrarla (eso es solo para errores de captura).
-1. En el menú de la tarea (Acciones ›) elige «Cancelar…». En una tarea agendada te pregunta primero «¿La quieres reprogramar?»: si solo cambia la fecha, reprográmala y se conserva su historial.
+1. En el menú de la tarea (los tres puntos ⋮ al final de la fila) elige «Cancelar…». En una tarea agendada te pregunta primero «¿La quieres reprogramar?»: si solo cambia la fecha, reprográmala y se conserva su historial.
 2. Elige el motivo (El cliente ya no lo necesita, Se resolvió de otra forma, Duplicada, Se reprogramó u Otro; con «Otro» escribe el porqué).
 3. «¿Le dedicaste tiempo?»: opcional; es obligatorio si ya se trabajó (una visita con «voy en camino» o «llegué», o una tarea del cliente en proceso). Ese tiempo suma a las horas del caso y sale en Reportes.
 4. En una tarea agendada: si es de una serie, «Solo esta» o «Toda la serie» (también se cancela en Google Calendar); y «Avisarle al cliente por su conversación».

@@ -4,6 +4,7 @@
 # (quién la hace, su avance en el portal) y el aviso al cliente al crearla.
 module ClientTaskFields
   extend ActiveSupport::Concern
+  include TaskMenuFields # lo que muestra el menú de la tarea
 
   private
 
@@ -20,7 +21,7 @@ module ClientTaskFields
       cancel_reason: task.cancel_reason, work_started: Cases::Cancellation.work_started?(task),
       completed_by_contact: task.completed_by_contact&.name, client_entries_count: client_entries_map[task.id] || 0,
       # Agendarla la quita (se vuelve tarea agendada) o, si no se puede, deja una sesión ligada.
-      replaceable: Cases::Conversion.task_kind_replaceable?(task) }
+      replaceable: Cases::Conversion.task_kind_replaceable?(task) }.merge(task_menu_fields(task))
   end
 
   def client_entries_map
