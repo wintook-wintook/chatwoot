@@ -44,6 +44,7 @@ export const ICONS = {
 
 import FichaSheet from './FichaSheet.vue';
 import FichaTicket from './FichaTicket.vue';
+import FichaModal from './FichaModal.vue';
 
 // Tarjetas que se abren para decir qué hace el agente con ellas.
 const CONFIGURABLE = ['sheet', 'case_type'];
@@ -52,7 +53,7 @@ const normalize = text =>
   (text || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 export default {
-  components: { FichaSheet, FichaTicket },
+  components: { FichaSheet, FichaTicket, FichaModal },
   model: { prop: 'value', event: 'input' },
   props: {
     cards: { type: Array, default: () => [] },
@@ -62,10 +63,15 @@ export default {
     query: { type: String, default: '' },
     kind: { type: String, default: '' },
     showHeaders: { type: Boolean, default: true },
+    // Tickets: rutas de fuente que pueden escalar a ese ticket ([{ value, label }]).
+    escalationOptions: { type: Array, default: () => [] },
+    // Lo capturado (para ✨ en hojas y tickets): { name, items }.
+    suggestContext: { type: Object, default: () => ({}) },
   },
   emits: ['input'],
   data() {
-    return { open: [] };
+    // modalKey: la hoja o el ticket que se está configurando (modal amplio).
+    return { open: [], modalKey: null };
   },
   computed: {
     visibleCards() {
@@ -89,6 +95,16 @@ export default {
         }))
         .filter(group => group.cards.length);
     },
+    modalCard() {
+      return this.cards.find(card => card.key === this.modalKey) || null;
+    },
+    modalTitle() {
+      if (!this.modalCard) return '';
+      return this.$t(
+        `TRACKING_TEMPLATES.FICHA.MODAL_${this.modalCard.kind.toUpperCase()}`,
+        { name: this.modalCard.name }
+      );
+    },
     selectedKeys() {
       return this.value.map(item => item.key);
     },
@@ -106,10 +122,9 @@ export default {
       const lista = marcar
         ? [...this.value, { key: card.key }]
         : this.value.filter(item => item.key !== card.key);
-      // Una hoja o un ticket recién marcados se abren: qué hacer con ellos.
-      if (marcar && CONFIGURABLE.includes(card.kind) && !this.isOpen(card))
-        this.open = [...this.open, card.key];
       this.$emit('input', lista);
+      // Una hoja o un ticket recién marcados abren su configuración (modal amplio).
+      if (marcar && CONFIGURABLE.includes(card.kind)) this.modalKey = card.key;
     },
     sheetOf(card) {
       const item = this.value.find(entry => entry.key === card.key);
@@ -123,11 +138,17 @@ export default {
         )
       );
     },
-    sheetOpen(card) {
-      return card.kind === 'sheet' && this.isOn(card) && this.isOpen(card);
+    configurable(card) {
+      return CONFIGURABLE.includes(card.kind) && this.isOn(card);
     },
-    ticketOpen(card) {
-      return card.kind === 'case_type' && this.isOn(card) && this.isOpen(card);
+    // Lo que ya se dijo de la hoja o del ticket, en una línea (en la tarjeta).
+    configSummary(card) {
+      if (card.kind === 'sheet') {
+        const hoja = this.sheetOf(card);
+        return (hoja && hoja.purpose) || '';
+      }
+      const ticket = this.ticketOf(card);
+      return ticket && ticket.reasons ? ticket.reasons.join(' · ') : '';
     },
     ticketOf(card) {
       const item = this.value.find(entry => entry.key === card.key);
@@ -167,7 +188,6 @@ export default {
         : [...this.open, card.key];
     },
     hasDetail(card) {
-      if (CONFIGURABLE.includes(card.kind)) return true;
       return (
         (card.examples && card.examples.length) ||
         (card.parts && card.parts.length)
@@ -290,7 +310,6 @@ export default {
             isOn(card)
               ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20 shadow-sm'
               : 'border-slate-200 dark:border-slate-700 hover:border-slate-300',
-            { 'col-span-full': sheetOpen(card) || ticketOpen(card) },
           ]"
         >
           <div class="flex items-start gap-2">
@@ -349,22 +368,34 @@ export default {
           </div>
 
           <!-- Detalle: filas de ejemplo / títulos -->
-          <FichaTicket
-            v-if="ticketOpen(card)"
-            :card="card"
-            :value="ticketOf(card)"
-            :disabled="disabled"
-            @input="setTicket(card, $event)"
-          />
-          <FichaSheet
-            v-else-if="sheetOpen(card)"
-            :card="card"
-            :value="sheetOf(card)"
-            :disabled="disabled"
-            @input="setSheet(card, $event)"
-          />
+          <!-- Hoja o ticket marcados: qué hace el agente con ellos (modal amplio). -->
+          <div v-if="configurable(card)" class="flex flex-col gap-1 pl-6">
+            <span
+              v-if="configSummary(card)"
+              class="text-xs line-clamp-2 text-slate-600 dark:text-slate-300"
+            >
+              {{ configSummary(card) }}
+            </span>
+            <span v-else class="text-xs text-amber-700">
+              {{
+                $t(
+                  `TRACKING_TEMPLATES.FICHA.CONFIG_MISSING_${card.kind.toUpperCase()}`
+                )
+              }}
+            </span>
+            <woot-button
+              size="tiny"
+              variant="smooth"
+              icon="settings"
+              class="self-start"
+              :is-disabled="disabled"
+              @click="modalKey = card.key"
+            >
+              {{ $t('TRACKING_TEMPLATES.FICHA.CONFIGURE') }}
+            </woot-button>
+          </div>
           <ul
-            v-else-if="isOpen(card) && examplesOf(card).length"
+            v-if="isOpen(card) && examplesOf(card).length"
             class="!m-0 !p-2 pl-6 list-none text-xs rounded bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
           >
             <li
@@ -421,5 +452,31 @@ export default {
         </div>
       </div>
     </section>
+    <FichaModal
+      :show="!!modalCard"
+      :title="modalTitle"
+      :subtitle="modalCard ? modalCard.summary : ''"
+      @close="modalKey = null"
+    >
+      <template v-if="modalCard">
+        <FichaSheet
+          v-if="modalCard.kind === 'sheet'"
+          :card="modalCard"
+          :value="sheetOf(modalCard)"
+          :disabled="disabled"
+          :suggest-context="suggestContext"
+          @input="setSheet(modalCard, $event)"
+        />
+        <FichaTicket
+          v-else
+          :card="modalCard"
+          :value="ticketOf(modalCard)"
+          :disabled="disabled"
+          :escalation-options="escalationOptions"
+          :suggest-context="suggestContext"
+          @input="setTicket(modalCard, $event)"
+        />
+      </template>
+    </FichaModal>
   </div>
 </template>

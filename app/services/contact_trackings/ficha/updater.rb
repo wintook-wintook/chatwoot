@@ -39,13 +39,17 @@ class ContactTrackings::Ficha::Updater
 
   def resources
     { 'items' => @items, 'confirmed_at' => Time.current.iso8601,
-      'files' => @settings.file_rules || @template.file_rules, 'attempts' => @template.resources['attempts'] }.compact
+      'files' => @settings.file_rules || @template.file_rules, 'attempts' => attempts }.compact
+  end
+
+  def attempts
+    pedido = @params[:attempts].to_i
+    pedido.positive? ? pedido.clamp(1, 10) : @template.resources['attempts']
   end
 
   def channel
     cambios = {}
     cambios[:inbox_id] = @template.account.inboxes.find_by(id: @params[:inbox_id])&.id if @params.key?(:inbox_id)
-    cambios[:follow_up_attempts] = @params[:attempts] if @params[:attempts].present?
     cambios
   end
 

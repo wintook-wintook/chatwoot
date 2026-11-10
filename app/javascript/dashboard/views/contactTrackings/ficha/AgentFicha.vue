@@ -22,11 +22,27 @@ import FichaReadiness from './FichaReadiness.vue';
 import FichaAgenda from './FichaAgenda.vue';
 import FichaTest from './FichaTest.vue';
 import FichaLoading from './FichaLoading.vue';
-import FileRule, { defaultRule } from './FileRule.vue';
+import FichaChannel from './FichaChannel.vue';
+import FichaWelcome from './FichaWelcome.vue';
+import FichaQuestions from './FichaQuestions.vue';
+import FileRule, { defaultRule, ruleSummary } from './FileRule.vue';
+import FichaModal from './FichaModal.vue';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 
-const SECTIONS = ['sources', 'calendar', 'tickets', 'files', 'rules'];
+const SECTIONS = [
+  'channel',
+  'sources',
+  'calendar',
+  'tickets',
+  'files',
+  'welcome',
+  'questions',
+  'rules',
+];
 const SECTION_ICONS = {
+  channel: 'settings',
+  welcome: 'chat-multiple',
+  questions: 'list',
   sources: 'library',
   calendar: 'calendar',
   tickets: 'folder',
@@ -45,11 +61,17 @@ export default {
     FichaAgenda,
     FichaTest,
     FichaLoading,
+    FichaChannel,
+    FichaWelcome,
+    FichaQuestions,
     FileRule,
+    FichaModal,
     KeywordActionsEditor,
   },
   props: {
     templateId: { type: Number, required: true },
+    // Para ✨ (lo que la IA sabe del agente).
+    templateName: { type: String, default: '' },
   },
   emits: ['applied', 'changes'],
   data() {
@@ -65,6 +87,18 @@ export default {
       query: '',
       kind: '',
       readiness: [],
+      follow: {
+        inboxId: '',
+        retryValue: 1,
+        retryUnit: 'days',
+        attempts: 3,
+        whatsappTemplates: [],
+        emailSignature: '',
+      },
+      welcome: '',
+      questionsData: { questions: [], when: 'start' },
+      savedExtras: '',
+      welcomeSuggesting: false,
       // Recursos › Agenda (se guarda con la ficha).
       agenda: {},
       savedAgenda: {},
@@ -73,6 +107,7 @@ export default {
       savedFileRules: {},
       attempts: 3,
       routes: [],
+      ruleName: null,
       activating: false,
       loading: true,
       busy: false,
@@ -84,7 +119,9 @@ export default {
         JSON.stringify(this.items) !== JSON.stringify(this.saved) ||
         JSON.stringify(this.rules) !== JSON.stringify(this.savedRules) ||
         JSON.stringify(this.agenda) !== JSON.stringify(this.savedAgenda) ||
-        JSON.stringify(this.fileRules) !== JSON.stringify(this.savedFileRules)
+        JSON.stringify(this.fileRules) !==
+          JSON.stringify(this.savedFileRules) ||
+        JSON.stringify(this.extras()) !== this.savedExtras
       );
     },
     pending() {
@@ -92,6 +129,19 @@ export default {
     },
     navItems() {
       return SECTIONS.map(id => {
+        const base = {
+          id,
+          icon: SECTION_ICONS[id],
+          label: this.t(`NAV_${id.toUpperCase()}`),
+        };
+        if (id === 'channel')
+          return { ...base, state: this.follow.inboxId ? 'ok' : 'todo' };
+        if (id === 'welcome')
+          return { ...base, state: this.welcome.trim() ? 'ok' : null };
+        if (id === 'questions') {
+          const n = this.questionsData.questions.length;
+          return { ...base, count: n, total: n };
+        }
         if (id === 'rules')
           return {
             id,
@@ -165,6 +215,27 @@ export default {
       this.savedFileRules = copy(data.file_rules || {});
       this.attempts = data.attempts || 3;
       this.routes = data.routes || [];
+      // Canal y seguimiento, bienvenida y preguntas (se guardan con la ficha).
+      const seguimiento = data.follow || {};
+      this.follow = {
+        inboxId: seguimiento.inbox_id || '',
+        retryValue: seguimiento.retry_interval_value || 1,
+        retryUnit: seguimiento.retry_interval_unit || 'days',
+        attempts: seguimiento.attempts || 3,
+        whatsappTemplates: seguimiento.whatsapp_templates || [],
+        emailSignature: seguimiento.email_signature || '',
+      };
+      this.welcome = data.welcome || '';
+      const preguntas = data.questions || {};
+      this.questionsData = {
+        questions: (preguntas.questions || []).map(q => ({
+          text: q.text,
+          var: q.var,
+          options: q.options || [],
+        })),
+        when: preguntas.when || 'start',
+      };
+      this.savedExtras = JSON.stringify(this.extras());
       this.$emit(
         'changes',
         this.changes.added.length + this.changes.removed.length
@@ -202,6 +273,7 @@ export default {
           keyword_actions: this.rules,
           agenda: this.agenda,
           file_rules: this.fileRules,
+          ...this.extras(),
         });
         this.take(data);
         useAlert(this.t('SAVED'));
@@ -251,8 +323,57 @@ export default {
     ruleFor(nombre) {
       return { ...defaultRule(), ...(this.fileRules[nombre] || {}) };
     },
+    summaryFor(nombre) {
+      return ruleSummary(this.ruleFor(nombre), key => this.t(key));
+    },
     setRule(nombre, regla) {
       this.fileRules = { ...this.fileRules, [nombre]: regla };
+    },
+    // Lo de Canal y seguimiento, Bienvenida y Preguntas, como lo guarda el servidor.
+    extras() {
+      return {
+        inbox_id: this.follow.inboxId || null,
+        retry_interval_value: this.follow.retryValue,
+        retry_interval_unit: this.follow.retryUnit,
+        attempts: this.follow.attempts,
+        whatsapp_templates: this.follow.whatsappTemplates,
+        email_signature: this.follow.emailSignature,
+        welcome: this.welcome.trim(),
+        questions: this.questionsData.questions.filter(q =>
+          (q.text || '').trim()
+        ),
+        questions_when: this.questionsData.when,
+      };
+    },
+    welcomeFiles() {
+      return this.fileNames.map(nombre => ({
+        key: nombre,
+        name: nombre,
+        welcome: !!this.ruleFor(nombre).welcome,
+      }));
+    },
+    toggleWelcomeFile(file) {
+      const regla = this.ruleFor(file.name);
+      this.setRule(file.name, { ...regla, welcome: !regla.welcome });
+    },
+    async suggestWelcome() {
+      this.welcomeSuggesting = true;
+      try {
+        const { data } = await FichaAPI.suggest({
+          ...this.suggestContext(),
+          field: 'welcome',
+          welcome: this.welcome,
+        });
+        if (data.welcome) this.welcome = data.welcome;
+      } catch (error) {
+        const datos = error && error.response && error.response.data;
+        useAlert((datos && datos.error) || this.t('SUGGEST_ERROR'));
+      } finally {
+        this.welcomeSuggesting = false;
+      }
+    },
+    suggestContext() {
+      return { name: this.templateName, items: this.items };
     },
     hasChannel() {
       return this.readiness.some(
@@ -298,7 +419,7 @@ export default {
       </div>
 
       <div
-        class="grid flex-1 min-h-0 gap-4 md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)]"
+        class="grid flex-1 min-h-0 gap-4 md:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)]"
       >
         <FichaNav v-model="section" :items="navItems" />
 
@@ -346,6 +467,7 @@ export default {
                 :kind="kind"
                 :disabled="busy"
                 :show-headers="false"
+                :suggest-context="suggestContext()"
               />
             </div>
           </template>
@@ -374,18 +496,43 @@ export default {
                     <fluent-icon icon="attach" size="14" />
                     {{ nombre }}
                   </span>
-                  <FileRule
-                    class="pl-6"
-                    :value="ruleFor(nombre)"
-                    :attempts="attempts"
-                    :route-options="fileRouteOptions"
-                    :ticket-options="fileTicketOptions"
-                    :show-booking="calendarIds().length > 0"
-                    :disabled="busy"
-                    @input="setRule(nombre, $event)"
-                  />
+                  <div class="flex items-center gap-2 pl-6 text-xs">
+                    <span class="flex-1 text-slate-600 dark:text-slate-300">
+                      {{ summaryFor(nombre) }}
+                    </span>
+                    <woot-button
+                      size="tiny"
+                      variant="smooth"
+                      icon="settings"
+                      :is-disabled="busy"
+                      @click="ruleName = nombre"
+                    >
+                      {{ t('CONFIGURE') }}
+                    </woot-button>
+                  </div>
                 </li>
               </ul>
+            </template>
+            <template v-else-if="section === 'channel'">
+              <FichaChannel v-model="follow" />
+            </template>
+            <template v-else-if="section === 'welcome'">
+              <FichaWelcome
+                :text.sync="welcome"
+                :files="welcomeFiles()"
+                :suggesting="welcomeSuggesting"
+                :disabled="busy"
+                @toggle="toggleWelcomeFile"
+                @suggest="suggestWelcome"
+              />
+            </template>
+            <template v-else-if="section === 'questions'">
+              <FichaQuestions
+                v-model="questionsData"
+                :route-options="fileRouteOptions"
+                :suggest-context="suggestContext()"
+                :disabled="busy"
+              />
             </template>
             <template v-else-if="section === 'rules'">
               <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
@@ -403,6 +550,8 @@ export default {
                 :only="[section]"
                 :disabled="busy"
                 :show-headers="false"
+                :escalation-options="fileRouteOptions"
+                :suggest-context="suggestContext()"
               />
               <FichaAgenda
                 v-if="section === 'calendar' && calendarIds().length"
@@ -541,6 +690,22 @@ export default {
         </aside>
       </div>
     </template>
+    <FichaModal
+      :show="!!ruleName"
+      :title="ruleName ? t('FILE_RULE_TITLE', { name: ruleName }) : ''"
+      @close="ruleName = null"
+    >
+      <FileRule
+        v-if="ruleName"
+        class="!text-sm !gap-y-3"
+        :value="ruleFor(ruleName)"
+        :attempts="attempts"
+        :route-options="fileRouteOptions"
+        :ticket-options="fileTicketOptions"
+        :show-booking="calendarIds().length > 0"
+        @input="setRule(ruleName, $event)"
+      />
+    </FichaModal>
     <woot-confirm-modal
       ref="activateDialog"
       :title="t('ACTIVATE_TITLE')"

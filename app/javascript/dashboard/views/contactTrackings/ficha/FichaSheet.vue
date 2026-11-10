@@ -8,6 +8,7 @@
 //   Busca por: [Producto ▾]    Contesta con: [Precio ✓] [Categoría]
 // v-model: { purpose, search_by, answer_with: [] }  (Ficha::SheetUse en el servidor)
 // ============================================================================
+import { useAlert } from 'dashboard/composables';
 import FichaAPI from 'dashboard/api/fichaAgente';
 
 export default {
@@ -17,10 +18,12 @@ export default {
     card: { type: Object, required: true },
     value: { type: Object, default: null },
     disabled: { type: Boolean, default: false },
+    // Lo capturado (nombre del agente, lo marcado) para ✨.
+    suggestContext: { type: Object, default: () => ({}) },
   },
   emits: ['input'],
   data() {
-    return { preview: null, loading: false, error: false };
+    return { preview: null, loading: false, error: false, suggesting: false };
   },
   computed: {
     columns() {
@@ -63,6 +66,28 @@ export default {
         siguiente.answer_with = siguiente.answer_with.filter(c => c !== valor);
       this.$emit('input', siguiente);
     },
+    // ✨ La IA lee la hoja y propone para qué sirve y cómo buscar en ella.
+    async analyze() {
+      this.suggesting = true;
+      try {
+        const { data } = await FichaAPI.sheetSuggest(
+          this.card.id,
+          this.suggestContext
+        );
+        this.$emit('input', {
+          purpose: data.purpose || this.config.purpose,
+          search_by: data.search_by || this.config.search_by,
+          answer_with: (data.answer_with || []).length
+            ? data.answer_with
+            : this.config.answer_with,
+        });
+      } catch (error) {
+        const datos = error && error.response && error.response.data;
+        useAlert((datos && datos.error) || this.t('SUGGEST_ERROR'));
+      } finally {
+        this.suggesting = false;
+      }
+    },
     toggleAnswer(columna) {
       const lista = this.config.answer_with.includes(columna)
         ? this.config.answer_with.filter(c => c !== columna)
@@ -74,7 +99,7 @@ export default {
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 pl-6">
+  <div class="flex flex-col gap-3">
     <p v-if="loading" class="!m-0 text-xs text-slate-500">
       {{ t('LOADING') }}
     </p>
@@ -127,10 +152,22 @@ export default {
       </div>
     </div>
 
-    <label class="!m-0 text-sm">
-      {{ t('SHEET_PURPOSE') }}
-      <input
-        type="text"
+    <div class="flex flex-col gap-1 text-sm">
+      <div class="flex items-center justify-between gap-2">
+        <span>{{ t('SHEET_PURPOSE') }}</span>
+        <woot-button
+          size="tiny"
+          variant="smooth"
+          icon="wand"
+          :is-loading="suggesting"
+          :is-disabled="disabled || suggesting"
+          @click="analyze"
+        >
+          {{ t('SHEET_ANALYZE') }}
+        </woot-button>
+      </div>
+      <textarea
+        rows="4"
         maxlength="200"
         class="!mb-0"
         :value="config.purpose"
@@ -138,7 +175,7 @@ export default {
         :placeholder="t('SHEET_PURPOSE_PLACEHOLDER')"
         @change="set('purpose', $event.target.value)"
       />
-    </label>
+    </div>
     <div class="flex flex-wrap items-center gap-3 text-sm">
       <label class="flex items-center gap-2 !m-0">
         {{ t('SHEET_SEARCH_BY') }}

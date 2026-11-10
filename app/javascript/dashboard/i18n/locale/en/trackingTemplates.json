@@ -655,7 +655,30 @@
       "RULE_TICKETS": "When opening a ticket:",
       "RULE_ROUTES": "With route:",
       "RULE_ANY_TICKET": "Any",
-      "LOADING_BOT": "Getting your resources ready…"
+      "LOADING_BOT": "Getting your resources ready…",
+      "MODAL_DONE": "Done",
+      "CONFIGURE": "Configure",
+      "MODAL_SHEET": "Sheet «{name}»",
+      "MODAL_CASE_TYPE": "Ticket «{name}»",
+      "CONFIG_MISSING_SHEET": "Say what the agent uses it for.",
+      "CONFIG_MISSING_CASE_TYPE": "Reasons to open it are missing.",
+      "SHEET_ANALYZE": "Analyze with AI",
+      "TICKET_ESCALATE": "Also open it when the agent can't find the answer in:",
+      "QUESTIONS_HINT": "What the agent asks, one at a time and in this order; each answer is saved so it isn't asked again.",
+      "QUESTION_PLACEHOLDER": "e.g. Which system do you use today?",
+      "QUESTION_VAR": "Save the answer in",
+      "QUESTION_OPTIONS": "Possible answers (comma separated)",
+      "QUESTION_OPTIONS_PLACEHOLDER": "empty = free answer",
+      "QUESTION_ADD": "Add question",
+      "QUESTIONS_WHEN": "When does it ask?",
+      "QUESTIONS_AT_START": "At the start, before answering anything else",
+      "QUESTIONS_IN_ROUTE": "Only in route «{route}»",
+      "NAV_QUESTIONS": "Questions",
+      "NAV_WELCOME": "Welcome",
+      "WELCOME_FILES_PICK": "Files sent with the welcome:",
+      "WELCOME_NO_FILES": "Upload files in Files to send them with the welcome.",
+      "FILE_RULE_TITLE": "When is «{name}» sent?",
+      "FILE_RULE_SUMMARY_NONE": "Never"
     }
   }
 }

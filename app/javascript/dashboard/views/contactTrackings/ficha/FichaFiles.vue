@@ -10,7 +10,8 @@
 // El nombre: letras, números, guion y guion bajo; único en el agente (AiAgentAttachment).
 // ============================================================================
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
-import FileRule, { defaultRule } from './FileRule.vue';
+import FileRule, { defaultRule, ruleSummary } from './FileRule.vue';
+import FichaModal from './FichaModal.vue';
 
 const NAME_FORMAT = /^[a-zA-Z0-9_-]{1,60}$/;
 let siguiente = 0;
@@ -34,7 +35,7 @@ export const uniqueName = (base, taken) => {
 };
 
 export default {
-  components: { FileRule },
+  components: { FileRule, FichaModal },
   model: { prop: 'value', event: 'input' },
   props: {
     value: { type: Array, default: () => [] },
@@ -49,7 +50,7 @@ export default {
   },
   emits: ['input', 'uploaded'],
   data() {
-    return { dragging: false, uploading: false, errors: [] };
+    return { dragging: false, uploading: false, errors: [], ruleKey: null };
   },
   computed: {
     taken() {
@@ -88,6 +89,14 @@ export default {
           entry.key === item.key ? { ...entry, name: name.trim() } : entry
         )
       );
+    },
+    summary(item) {
+      return ruleSummary(this.ruleOf(item), key =>
+        this.$t(`TRACKING_TEMPLATES.FICHA.${key}`)
+      );
+    },
+    ruleItem() {
+      return this.value.find(item => item.key === this.ruleKey) || null;
     },
     ruleOf(item) {
       const regla = defaultRule();
@@ -224,16 +233,42 @@ export default {
             @click.prevent="remove(item)"
           />
         </div>
-        <FileRule
-          class="pl-6"
-          :value="ruleOf(item)"
-          :attempts="attempts"
-          :route-options="routeOptions"
-          :ticket-options="ticketOptions"
-          :show-booking="showBooking"
-          @input="setRule(item, $event)"
-        />
+        <div class="flex items-center gap-2 pl-6 text-xs">
+          <span class="flex-1 text-slate-600 dark:text-slate-300">
+            {{ summary(item) }}
+          </span>
+          <woot-button
+            size="tiny"
+            variant="smooth"
+            icon="settings"
+            @click.prevent="ruleKey = item.key"
+          >
+            {{ $t('TRACKING_TEMPLATES.FICHA.CONFIGURE') }}
+          </woot-button>
+        </div>
       </li>
     </ul>
+    <FichaModal
+      :show="!!ruleItem()"
+      :title="
+        ruleItem()
+          ? $t('TRACKING_TEMPLATES.FICHA.FILE_RULE_TITLE', {
+              name: ruleItem().name,
+            })
+          : ''
+      "
+      @close="ruleKey = null"
+    >
+      <FileRule
+        v-if="ruleItem()"
+        class="!text-sm !gap-y-3"
+        :value="ruleOf(ruleItem())"
+        :attempts="attempts"
+        :route-options="routeOptions"
+        :ticket-options="ticketOptions"
+        :show-booking="showBooking"
+        @input="setRule(ruleItem(), $event)"
+      />
+    </FichaModal>
   </div>
 </template>

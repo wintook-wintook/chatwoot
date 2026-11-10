@@ -103,10 +103,9 @@ describe('FichaCards', () => {
   it('al marcar una hoja se abre para decir qué hacer con ella', () => {
     const wrapper = montar([]);
     wrapper.vm.toggle(CARDS[0]);
-    expect(wrapper.vm.isOpen(CARDS[0])).toBe(true);
+    expect(wrapper.vm.modalKey).toBe('google_sheet:1');
     const marcada = montar([{ key: 'google_sheet:1' }]);
-    marcada.setData({ open: ['google_sheet:1'] });
-    expect(marcada.vm.sheetOpen(CARDS[0])).toBe(true);
+    expect(marcada.vm.configurable(CARDS[0])).toBe(true);
     marcada.vm.setSheet(CARDS[0], {
       purpose: 'precios',
       search_by: 'Servicio',
@@ -137,7 +136,7 @@ describe('FichaCards', () => {
       directives: { tooltip: {} },
     });
     wrapper.vm.toggle(tipo);
-    expect(wrapper.vm.isOpen(tipo)).toBe(true);
+    expect(wrapper.vm.modalKey).toBe('case_type:7');
     const marcado = shallowMount(FichaCards, {
       propsData: { cards: [tipo], value: [{ key: 'case_type:7' }] },
       mocks,
@@ -226,6 +225,8 @@ describe('FichaWizard', () => {
       'calendar',
       'tickets',
       'files',
+      'welcome',
+      'questions',
       'rules',
     ]);
     expect(menu.channel.state).toBe('todo');
@@ -416,7 +417,11 @@ describe('AgentFicha', () => {
     expect(FichaAPI.save).toHaveBeenCalledWith(
       7,
       [{ key: 'google_sheet:1' }, { key: 'file:9' }],
-      { keyword_actions: [], agenda: {}, file_rules: {} }
+      expect.objectContaining({
+        keyword_actions: [],
+        agenda: {},
+        file_rules: {},
+      })
     );
   });
 
@@ -460,11 +465,15 @@ describe('AgentFicha', () => {
     wrapper.setData({ rules: [] });
     expect(wrapper.vm.dirty).toBe(true);
     await wrapper.vm.save();
-    expect(FichaAPI.save).toHaveBeenLastCalledWith(7, DATA.items, {
-      keyword_actions: [],
-      agenda: {},
-      file_rules: {},
-    });
+    expect(FichaAPI.save).toHaveBeenLastCalledWith(
+      7,
+      DATA.items,
+      expect.objectContaining({
+        keyword_actions: [],
+        agenda: {},
+        file_rules: {},
+      })
+    );
   });
 
   it('carga la ficha, cuenta los cambios y avisa al espacio del agente', async () => {
@@ -486,7 +495,11 @@ describe('AgentFicha', () => {
     expect(FichaAPI.save).toHaveBeenCalledWith(
       7,
       [{ key: 'google_sheet:1' }, { key: 'calendar:3' }],
-      { keyword_actions: [], agenda: {}, file_rules: {} }
+      expect.objectContaining({
+        keyword_actions: [],
+        agenda: {},
+        file_rules: {},
+      })
     );
   });
 

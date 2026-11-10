@@ -9,6 +9,9 @@
 //   Prioridad: [media ▾]
 // v-model: { reasons: [], priority: '' }  (Ficha::TicketUse en el servidor)
 // ============================================================================
+import { useAlert } from 'dashboard/composables';
+import FichaAPI from 'dashboard/api/fichaAgente';
+
 const PRIORITIES = ['', 'baja', 'media', 'alta', 'urgente'];
 const SUGGESTED = [
   'SUG_PERSON',
@@ -28,14 +31,20 @@ export default {
     card: { type: Object, required: true },
     value: { type: Object, default: null },
     disabled: { type: Boolean, default: false },
+    // Rutas de fuente que pueden escalar a este ticket si no encuentran la respuesta.
+    escalationOptions: { type: Array, default: () => [] },
+    suggestContext: { type: Object, default: () => ({}) },
   },
   emits: ['input'],
   data() {
-    return { draft: '', priorities: PRIORITIES };
+    return { draft: '', priorities: PRIORITIES, suggesting: false };
   },
   computed: {
     reasons() {
       return (this.value && this.value.reasons) || [];
+    },
+    escalateFrom() {
+      return (this.value && this.value.escalate_from) || [];
     },
     priority() {
       return (this.value && this.value.priority) || '';
@@ -58,6 +67,7 @@ export default {
       this.$emit('input', {
         reasons: this.reasons,
         priority: this.priority,
+        escalate_from: this.escalateFrom,
         ...cambios,
       });
     },
@@ -70,6 +80,33 @@ export default {
       this.emit({ reasons: [...this.reasons, motivo] });
       this.draft = '';
     },
+    toggleEscalation(valor) {
+      const lista = this.escalateFrom.includes(valor)
+        ? this.escalateFrom.filter(item => item !== valor)
+        : [...this.escalateFrom, valor];
+      this.emit({ escalate_from: lista });
+    },
+    // ✨ La IA propone motivos con el nombre del tipo, lo que pide y lo que hace el agente.
+    async suggest() {
+      this.suggesting = true;
+      try {
+        const { data } = await FichaAPI.ticketSuggest(
+          this.card.id,
+          this.suggestContext
+        );
+        const nuevos = (data.reasons || []).filter(
+          m => !this.reasons.includes(m)
+        );
+        this.emit({
+          reasons: [...this.reasons, ...nuevos].slice(0, MAX_REASONS),
+        });
+      } catch (error) {
+        const datos = error && error.response && error.response.data;
+        useAlert((datos && datos.error) || this.t('SUGGEST_ERROR'));
+      } finally {
+        this.suggesting = false;
+      }
+    },
     remove(motivo) {
       this.emit({ reasons: this.reasons.filter(item => item !== motivo) });
     },
@@ -78,10 +115,22 @@ export default {
 </script>
 
 <template>
-  <div class="flex flex-col gap-2 pl-6 text-sm">
-    <span class="text-slate-800 dark:text-slate-100">
-      {{ t('TICKET_WHEN', { name: card.name }) }}
-    </span>
+  <div class="flex flex-col gap-3 text-sm">
+    <div class="flex items-center justify-between gap-2">
+      <span class="text-slate-800 dark:text-slate-100">
+        {{ t('TICKET_WHEN', { name: card.name }) }}
+      </span>
+      <woot-button
+        size="tiny"
+        variant="smooth"
+        icon="wand"
+        :is-loading="suggesting"
+        :is-disabled="disabled || suggesting || full"
+        @click="suggest"
+      >
+        {{ t('SUGGEST') }}
+      </woot-button>
+    </div>
     <div class="flex flex-wrap items-center gap-1">
       <span
         v-for="motivo in reasons"
@@ -126,6 +175,27 @@ export default {
       >
         {{ t('TICKET_ADD_ONE', { text: texto }) }}
       </button>
+    </div>
+    <div v-if="escalationOptions.length" class="flex flex-col gap-1">
+      <span class="text-slate-800 dark:text-slate-100">
+        {{ t('TICKET_ESCALATE') }}
+      </span>
+      <div class="flex flex-wrap gap-x-4 gap-y-1">
+        <label
+          v-for="opcion in escalationOptions"
+          :key="opcion.value"
+          class="flex items-center gap-1 !m-0 text-xs cursor-pointer"
+        >
+          <input
+            type="checkbox"
+            class="!m-0"
+            :checked="escalateFrom.includes(opcion.value)"
+            :disabled="disabled"
+            @change="toggleEscalation(opcion.value)"
+          />
+          {{ opcion.label }}
+        </label>
+      </div>
     </div>
     <label class="flex items-center gap-2 !m-0 text-sm">
       {{ t('TICKET_PRIORITY') }}

@@ -28,6 +28,8 @@ import FichaTest from './FichaTest.vue';
 import FichaReadiness from './FichaReadiness.vue';
 import FichaAgenda from './FichaAgenda.vue';
 import FichaLoading from './FichaLoading.vue';
+import FichaWelcome from './FichaWelcome.vue';
+import FichaQuestions from './FichaQuestions.vue';
 import FichaChannel, {
   channelKind,
   trackingChannels,
@@ -40,6 +42,8 @@ const SECTIONS = [
   'calendar',
   'tickets',
   'files',
+  'welcome',
+  'questions',
   'rules',
 ];
 const SECTION_ICONS = {
@@ -48,6 +52,8 @@ const SECTION_ICONS = {
   calendar: 'calendar',
   tickets: 'folder',
   files: 'attach',
+  welcome: 'chat-multiple',
+  questions: 'list',
   rules: 'flash-on',
 };
 const TONES = ['cercano', 'profesional'];
@@ -65,6 +71,8 @@ export default {
     FichaAgenda,
     FichaChannel,
     FichaLoading,
+    FichaWelcome,
+    FichaQuestions,
     KeywordActionsEditor,
   },
   props: {
@@ -87,6 +95,8 @@ export default {
       },
       // La bienvenida: se manda tal cual en el primer mensaje del cliente.
       welcome: '',
+      // Preguntas en orden (Ficha::Questions): { questions: [], when: 'start' | llave de ruta }.
+      questionsData: { questions: [], when: 'start' },
       displayName: '',
       objective: '',
       business: '',
@@ -139,9 +149,14 @@ export default {
         };
         if (id === 'channel')
           return { ...base, state: this.channelOk ? 'ok' : 'todo' };
-        if (id === 'files' || id === 'rules') {
-          const cuantos =
-            id === 'files' ? this.files.length : this.keywordActions.length;
+        if (id === 'welcome')
+          return { ...base, state: this.welcome.trim() ? 'ok' : null };
+        if (['files', 'rules', 'questions'].includes(id)) {
+          const cuantos = {
+            files: this.files.length,
+            rules: this.keywordActions.length,
+            questions: this.questionsData.questions.length,
+          }[id];
           return { ...base, count: cuantos, total: cuantos };
         }
         const grupo = GROUPS.find(group => group.id === id);
@@ -243,6 +258,14 @@ export default {
         ...tipos.map(card => ({ value: card.name, label: card.name })),
       ];
     },
+    // Lo capturado, para ✨ (hojas, tickets, preguntas).
+    suggestContext() {
+      return {
+        name: this.name.trim(),
+        items: this.items,
+        objective: this.objective.trim(),
+      };
+    },
     welcomeFiles() {
       return this.files.filter(file => file.welcome);
     },
@@ -285,6 +308,10 @@ export default {
           tickets: file.tickets || [],
         })),
         welcome: this.welcome.trim(),
+        questions: this.questionsData.questions.filter(q =>
+          (q.text || '').trim()
+        ),
+        questions_when: this.questionsData.when,
         retry_interval_value: this.follow.retryValue,
         retry_interval_unit: this.follow.retryUnit,
         attempts: this.follow.attempts,
@@ -368,6 +395,11 @@ export default {
     },
     isSkipped(offer) {
       return this.skip.includes(offer.key);
+    },
+    toggleWelcomeFile(file) {
+      this.files = this.files.map(item =>
+        item.key === file.key ? { ...item, welcome: !item.welcome } : item
+      );
     },
     addPhrase({ key, phrase }) {
       const actuales = this.phrases[key] || [];
@@ -471,7 +503,7 @@ export default {
     class="grid flex-1 min-h-0 gap-4"
     :class="
       step === 'resources'
-        ? 'md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)]'
+        ? 'md:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)]'
         : 'xl:grid-cols-[minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)]'
     "
   >
@@ -547,6 +579,7 @@ export default {
               :query="query"
               :kind="kind"
               :show-headers="false"
+              :suggest-context="suggestContext"
             />
           </div>
         </div>
@@ -582,6 +615,8 @@ export default {
             :cards="cards"
             :only="['tickets']"
             :show-headers="false"
+            :escalation-options="fileRouteOptions"
+            :suggest-context="suggestContext"
           />
         </div>
         <div
@@ -597,6 +632,28 @@ export default {
             :route-options="fileRouteOptions"
             :ticket-options="fileTicketOptions"
             :show-booking="calendarIds.length > 0"
+          />
+        </div>
+        <div
+          v-else-if="section === 'welcome'"
+          class="flex flex-col flex-1 min-h-0 gap-3 pr-1 overflow-auto"
+        >
+          <FichaWelcome
+            :text.sync="welcome"
+            :files="files"
+            :suggesting="suggesting === 'welcome'"
+            @toggle="toggleWelcomeFile"
+            @suggest="suggest('welcome')"
+          />
+        </div>
+        <div
+          v-else-if="section === 'questions'"
+          class="flex flex-col flex-1 min-h-0 gap-3 pr-1 overflow-auto"
+        >
+          <FichaQuestions
+            v-model="questionsData"
+            :route-options="fileRouteOptions"
+            :suggest-context="suggestContext"
           />
         </div>
         <div
@@ -743,49 +800,6 @@ export default {
             </button>
           </div>
           <p class="!m-0 text-xs text-slate-400">{{ t('SUGGEST_COST') }}</p>
-        </div>
-
-        <!-- Mensaje de bienvenida: el motor lo manda TAL CUAL en el primer mensaje. -->
-        <div class="flex flex-col gap-1 sm:col-span-2">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-sm text-slate-800 dark:text-slate-100">
-              {{ t('WELCOME') }}
-            </span>
-            <woot-button
-              size="tiny"
-              variant="smooth"
-              icon="wand"
-              :is-loading="suggesting === 'welcome'"
-              :is-disabled="!!suggesting"
-              @click="suggest('welcome')"
-            >
-              {{ welcome.trim() ? t('WELCOME_IMPROVE') : t('SUGGEST') }}
-            </woot-button>
-          </div>
-          <textarea
-            v-model="welcome"
-            rows="3"
-            maxlength="600"
-            class="!mb-0"
-            :placeholder="t('WELCOME_PLACEHOLDER')"
-          />
-          <span class="text-xs text-slate-500">{{ t('WELCOME_HINT') }}</span>
-          <div class="flex flex-wrap items-center gap-1 text-xs">
-            <span class="text-slate-600 dark:text-slate-300">
-              {{ t('WELCOME_FILES') }}
-            </span>
-            <span
-              v-for="file in welcomeFiles"
-              :key="file.key"
-              class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700"
-            >
-              <fluent-icon icon="attach" size="12" />
-              {{ file.name }}
-            </span>
-            <span v-if="!welcomeFiles.length" class="text-slate-400">
-              {{ t('WELCOME_FILES_NONE') }}
-            </span>
-          </div>
         </div>
       </div>
     </div>

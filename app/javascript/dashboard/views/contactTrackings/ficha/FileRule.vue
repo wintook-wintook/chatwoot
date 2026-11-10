@@ -16,6 +16,21 @@ export const defaultRule = () => ({
   tickets: [],
 });
 
+// «Cuando lo pidan · Con la bienvenida · Intento 2 · Al agendar · Ticket: Soporte · Ruta: precios»
+export const ruleSummary = (regla, t) => {
+  const r = { ...defaultRule(), ...(regla || {}) };
+  const partes = [];
+  if (r.ask) partes.push(t('RULE_ASK'));
+  if (r.welcome) partes.push(t('RULE_WELCOME'));
+  if (r.booking) partes.push(t('RULE_BOOKING'));
+  r.attempts.forEach(n => partes.push(`${t('RULE_ATTEMPTS')} ${n}`));
+  if (r.tickets.length)
+    partes.push(`${t('RULE_TICKETS')} ${r.tickets.join(', ')}`);
+  if (r.routes.length)
+    partes.push(`${t('RULE_ROUTES')} ${r.routes.join(', ')}`);
+  return partes.length ? partes.join(' · ') : t('FILE_RULE_SUMMARY_NONE');
+};
+
 export default {
   model: { prop: 'value', event: 'input' },
   props: {

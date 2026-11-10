@@ -109,4 +109,19 @@ RSpec.describe ContactTrackings::Ficha::Changes do
     template.update!(complementary_prompt: texto)
     expect(described_class.new(template.reload).call[:added].pluck(:key)).not_to include('route_file:consultar_precios:lista')
   end
+
+  it 'escalada a ticket en un agente existente: se detecta y se aplica a la ruta' do
+    tipo = CaseType.create!(account: account, name: 'Soporte')
+    template.update!(resources: { 'items' => [{ 'key' => "google_sheet:#{hoja.id}" },
+                                              { 'key' => "case_type:#{tipo.id}", 'ticket' => { 'escalate_from' => ['consultar_precios'] } }],
+                                  'confirmed_at' => Time.current.iso8601 })
+    cambios = described_class.new(template.reload)
+    clave = "route_escalation:consultar_precios:case_type:#{tipo.id}"
+    expect(cambios.call[:added].pluck(:key)).to include(clave)
+
+    ofertas = ContactTrackings::Ficha::Offers.new(ContactTrackings::Ficha::Catalog.new(account, template: template).call, cambios.items)
+                                             .call.index_by { |o| o[:key] }
+    texto = ContactTrackings::Ficha::PromptEditor.new(prompt).apply(add: [clave], offers: ofertas).text
+    expect(texto).to include('{{hoja:Precios} -> @crear_ticket(tipo=Soporte)'.sub('}', '}}'))
+  end
 end

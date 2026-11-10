@@ -103,4 +103,14 @@ RSpec.describe ContactTrackings::Ficha::Generator do
     expect(borrador.file_rules['lista']['routes']).to eq(['consultar_precios'])
     expect(borrador.result[:validation][:blocking]).to eq([])
   end
+
+  it 'un ticket puede levantarse cuando una fuente no encuentra la respuesta' do
+    tipo = CaseType.last
+    items = [{ 'key' => "google_sheet:#{hoja.id}" },
+             { 'key' => "case_type:#{tipo.id}", 'ticket' => { 'reasons' => ['pide cotización'], 'escalate_from' => ["google_sheet:#{hoja.id}"] } }]
+    resultado = generar(items)
+
+    expect(resultado[:prompt]).to match(/@ruta\(consultar_precios .*\): \{\{hoja_buscar: Precios [^}]*\}\} -> @crear_ticket\(tipo=Cotización\)/)
+    expect(resultado[:validation][:blocking]).to eq([])
+  end
 end

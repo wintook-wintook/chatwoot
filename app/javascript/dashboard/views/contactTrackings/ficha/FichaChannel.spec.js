@@ -138,8 +138,8 @@ describe('FichaTicket', () => {
       mocks: { $t: clave => clave },
     });
     wrapper.vm.add('reporta (una) falla');
-    expect(wrapper.emitted('input')[0][0]).toEqual({
-      reasons: ['a', 'reporta  una  falla'.replace(/\s+/g, ' ')],
+    expect(wrapper.emitted('input')[0][0]).toMatchObject({
+      reasons: ['a', 'reporta una falla'],
       priority: '',
     });
     wrapper.vm.add('a');
@@ -170,5 +170,45 @@ describe('FileRule: agendar, ticket y ruta', () => {
     });
     await wrapper.setProps({ value: { ask: false, tickets: ['*'] } });
     expect(wrapper.vm.nothing).toBe(false);
+  });
+});
+
+describe('FichaQuestions', () => {
+  it('agrega, nombra la variable, mueve y quita preguntas', async () => {
+    const { default: FichaQuestions } = await import('./FichaQuestions.vue');
+    const wrapper = shallowMount(FichaQuestions, {
+      propsData: {
+        value: {
+          questions: [{ text: '¿En qué ciudad estás?', var: '', options: [] }],
+          when: 'start',
+        },
+      },
+      mocks: { $t: clave => clave },
+    });
+    wrapper.vm.autoVar(0);
+    expect(wrapper.emitted('input')[0][0].questions[0].var).toBe('CIUDAD');
+    wrapper.vm.setOptions(0, 'Monterrey, CDMX , ');
+    expect(wrapper.emitted('input')[1][0].questions[0].options).toEqual([
+      'Monterrey',
+      'CDMX',
+    ]);
+    wrapper.vm.add();
+    expect(wrapper.emitted('input')[2][0].questions).toHaveLength(2);
+    await wrapper.setProps({
+      value: {
+        questions: [
+          { text: 'a', var: 'A', options: [] },
+          { text: 'b', var: 'B', options: [] },
+        ],
+        when: 'start',
+      },
+    });
+    wrapper.vm.move(1, -1);
+    expect(wrapper.emitted('input')[3][0].questions.map(q => q.text)).toEqual([
+      'b',
+      'a',
+    ]);
+    wrapper.vm.remove(0);
+    expect(wrapper.emitted('input')[4][0].questions).toHaveLength(1);
   });
 });

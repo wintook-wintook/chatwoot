@@ -165,6 +165,23 @@ RSpec.describe 'Ficha del Agente IA API', type: :request do
     expect(cuerpo['columns'].zip(cuerpo['rows'].first).to_h).to eq('Producto' => 'Grúa', 'Precio' => '1800')
   end
 
+  it 'en un agente existente guarda canal, intentos, bienvenida y preguntas (pasando por el comprobador)' do
+    bandeja = create(:inbox, account: account)
+    template = create(:tracking_template, account: account, complementary_prompt: "@ruta(info #info: pregunta algo): @buscar_articulo\n")
+    patch "#{base}/#{template.id}/ficha",
+          params: { items: items, inbox_id: bandeja.id, retry_interval_value: 4, retry_interval_unit: 'hours', attempts: 2,
+                    welcome: '¡Hola!', questions: [{ text: '¿Ciudad?', var: 'ciudad' }], questions_when: 'start' },
+          headers: admin.create_new_auth_token, as: :json
+
+    expect(template.reload).to have_attributes(inbox_id: bandeja.id, retry_interval_value: 4, follow_up_attempts: 2)
+    expect(ContactTrackings::WelcomeMessage.text(template.complementary_prompt)).to eq('¡Hola!')
+    expect(template.complementary_prompt).to include('Q1 (pregunta) = ¿Ciudad? → guarda en CIUDAD')
+    cuerpo = response.parsed_body
+    expect(cuerpo['welcome']).to eq('¡Hola!')
+    expect(cuerpo['questions']['questions'].first).to include('text' => '¿Ciudad?', 'var' => 'CIUDAD')
+    expect(cuerpo['follow']).to include('inbox_id' => bandeja.id, 'attempts' => 2)
+  end
+
   it 'las Reglas se guardan al crear y con la ficha' do
     regla = { keyword: 'asesor', action: ContactTrackings::KeywordActionService::VALID_ACTIONS.first,
               direction: ContactTrackings::KeywordActionService::VALID_DIRECTIONS.first }

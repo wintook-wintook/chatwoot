@@ -327,6 +327,7 @@ export default {
           v-else-if="section === 'ficha' && templateId"
           :key="`ficha-${templateId}-${reloadKey}`"
           :template-id="templateId"
+          :template-name="title"
           @applied="onFichaApplied"
           @changes="fichaChanges = $event"
         />

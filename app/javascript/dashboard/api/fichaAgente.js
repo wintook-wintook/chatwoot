@@ -50,6 +50,22 @@ class FichaAgenteAPI extends ApiClient {
     return axios.get(`${this.url}/ficha_sheet/${sourceId}`);
   }
 
+  // ✨ para qué sirve una hoja / motivos de un ticket / preguntas (una llamada a OpenAI).
+  sheetSuggest(sourceId, payload) {
+    return axios.post(`${this.url}/ficha_sheet/${sourceId}/suggest`, payload);
+  }
+
+  ticketSuggest(caseTypeId, payload) {
+    return axios.post(
+      `${this.url}/ficha_ticket/${caseTypeId}/suggest`,
+      payload
+    );
+  }
+
+  questionsSuggest(payload) {
+    return axios.post(`${this.url}/ficha_questions/suggest`, payload);
+  }
+
   get(id) {
     return axios.get(`${this.url}/${id}/ficha`);
   }

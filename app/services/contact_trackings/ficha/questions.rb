@@ -32,7 +32,7 @@ class ContactTrackings::Ficha::Questions
   # [{ 'text' =>, 'var' =>, 'options' => [] }] limpias.
   def self.clean(lista)
     Array(lista).first(MAX).each_with_index.filter_map do |pregunta, indice|
-      h = pregunta.to_h.stringify_keys
+      h = (pregunta.respond_to?(:to_unsafe_h) ? pregunta.to_unsafe_h : pregunta.to_h).stringify_keys
       texto = h['text'].to_s.squish.first(MAX_TEXT)
       next if texto.blank?
 
