@@ -39,13 +39,12 @@ export default {
       const seq = this.row.sequence;
       return seq ? `T${String(seq).padStart(3, '0')}` : '';
     },
+    // Vence: solo el día (la hora es de las tareas agendadas).
     dueLabel() {
       if (!this.row.due_at) return '';
-      return new Date(this.row.due_at).toLocaleString(undefined, {
+      return new Date(this.row.due_at).toLocaleDateString(undefined, {
         day: '2-digit',
         month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
       });
     },
     estimate() {

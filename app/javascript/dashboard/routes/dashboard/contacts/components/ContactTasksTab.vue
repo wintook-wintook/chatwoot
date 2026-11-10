@@ -52,9 +52,17 @@ export default {
         this.loading = false;
       }
     },
+    // Tarea agendada: día y hora; tarea: solo el día en que vence.
     when(row) {
-      const at = row.item_type === 'meeting' ? row.starts_at : row.due_at;
+      const meeting = row.item_type === 'meeting';
+      const at = meeting ? row.starts_at : row.due_at;
       if (!at) return this.$t('CONTACT_PAGE.TASKS.NO_DUE');
+      if (!meeting) {
+        return new Date(at).toLocaleDateString(undefined, {
+          day: '2-digit',
+          month: 'short',
+        });
+      }
       return new Date(at).toLocaleString(undefined, {
         day: '2-digit',
         month: 'short',

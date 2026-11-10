@@ -6,6 +6,7 @@
 -->
 <script>
 import { mapGetters } from 'vuex';
+import { dueDateInput, dueToIso, formatDueDay } from 'dashboard/helper/taskDue'; // vence: solo fecha
 import { useAlert } from 'dashboard/composables';
 import { VeTable } from 'vue-easytable';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
@@ -167,10 +168,7 @@ export default {
     },
     // «Programada para» después del vencimiento: se avisa, no se bloquea.
     plannedLate() {
-      return plannedAfterDue(
-        this.form.planned_on,
-        this.toIsoUtc(this.form.due_at)
-      );
+      return plannedAfterDue(this.form.planned_on, dueToIso(this.form.due_at));
     },
     // Filtro de texto: título, descripción y responsable.
     filteredTasks() {
@@ -367,7 +365,7 @@ export default {
                     : 'text-xs text-slate-600 dark:text-slate-300'
                 }
               >
-                {this.formatDate(row.due_at) || '—'}
+                {formatDueDay(row.due_at) || '—'}
               </span>
               {/* @tickets_cases F6 (§11.4) — la tarea tiene reuniones agendadas
                   DESPUÉS de su vencimiento. Es el marcador hermano del de tarea
@@ -928,7 +926,7 @@ export default {
         title: task.title || '',
         description: task.description || '',
         assignee_id: task.assignee_id || '',
-        due_at: this.toInputDate(task.due_at),
+        due_at: dueDateInput(task.due_at),
         status: task.status || 'pending',
         cancel_reason: task.cancel_reason || '',
         priority: task.priority || 'medium',
@@ -966,7 +964,7 @@ export default {
         title,
         description: this.form.description.trim(),
         assignee_id: this.form.assignee_id || '',
-        due_at: this.toIsoUtc(this.form.due_at),
+        due_at: dueToIso(this.form.due_at),
         status: this.form.status || 'pending',
         priority: this.form.priority || 'medium',
         estimated_minutes: this.form.estimated_minutes || null,
@@ -1420,7 +1418,7 @@ export default {
               }}</span>
               <input
                 v-model="form.due_at"
-                type="datetime-local"
+                type="date"
                 :readonly="viewing"
                 class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
               />

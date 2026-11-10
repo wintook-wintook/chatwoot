@@ -20,7 +20,7 @@ module Assistant::ClientTaskTools
   def prepare_client_task(args)
     ticket = client_task_case(args)
     [{ 'case_id' => ticket.id, 'title' => args['title'].to_s.first(255), 'description' => args['description'].to_s,
-       'due_at' => parse_local(args['due_at'])&.iso8601, 'requires_file' => args['requires_file'] == true,
+       'due_at' => due_day(args['due_at']), 'requires_file' => args['requires_file'] == true,
        'notify' => args['notify'] != false },
      { 'rows' => [['CASE', "#{ticket.folio} · #{ticket.title}"], ['CLIENT', ticket.organization&.name || ticket.contact&.name]].select(&:last) }]
   end

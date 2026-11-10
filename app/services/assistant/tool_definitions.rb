@@ -28,7 +28,7 @@ module Assistant::ToolDefinitions
        { case_id: int('Id del caso'), contact_id: int('Id del contacto (si no hay caso)'), content: str('Texto') },
        %w[content]),
     fn('propose_task', 'Propone crear una tarea (con caso, o con contacto/organización). Requiere confirmación.',
-       { title: str('Título corto'), description: str('Detalle'), due_at: str('Vence, hora local YYYY-MM-DDTHH:MM'),
+       { title: str('Título corto'), description: str('Detalle'), due_at: str('Día en que vence, YYYY-MM-DD (sin hora: vence al final del día)'),
          case_id: int('Id del caso'), contact_id: int('Id del contacto'), organization_id: int('Id de la organización'),
          assignee_id: int('Id del usuario responsable (omitir = el usuario)') }, %w[title]),
     fn('propose_meeting', 'Propone agendar una tarea con hora (llamada, reunión, visita) en el calendario. Requiere confirmación.',
