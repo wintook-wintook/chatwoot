@@ -45,6 +45,11 @@ class FichaAgenteAPI extends ApiClient {
     return axios.post(`${this.url}/${id}/ficha/activate`);
   }
 
+  // Columnas y primeras filas de una hoja (para decir qué hacer con ella).
+  sheet(sourceId) {
+    return axios.get(`${this.url}/ficha_sheet/${sourceId}`);
+  }
+
   get(id) {
     return axios.get(`${this.url}/${id}/ficha`);
   }

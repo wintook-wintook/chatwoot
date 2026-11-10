@@ -625,7 +625,13 @@
       "WELCOME_PLACEHOLDER": "Hi! I'm Sofia from North Tow 👋 I can quote, book or open your request. What do you need?",
       "WELCOME_HINT": "Sent as is on the customer's first message, only once. Leave it empty for no welcome.",
       "WELCOME_FILES": "Files sent with the welcome:",
-      "WELCOME_FILES_NONE": "none (mark them in Resources › Files)"
+      "WELCOME_FILES_NONE": "none (mark them in Resources › Files)",
+      "SHEET_ERROR": "Could not read the sheet.",
+      "SHEET_ROWS": "{total} rows · showing the first {shown}",
+      "SHEET_PURPOSE": "What does the agent use it for?",
+      "SHEET_PURPOSE_PLACEHOLDER": "e.g. Price list: answer the exact price of each service",
+      "SHEET_SEARCH_BY": "Search by",
+      "SHEET_ANSWER_WITH": "Answer with:"
     }
   }
 }

@@ -103,8 +103,20 @@ class ContactTrackings::Ficha::Offers
     return [] if card.nil? || card[:status] == 'off'
     return [] if card[:kind] == 'file' && card.dig(:rule, 'ask') == false
     return canned_offers(card, item) if card[:kind] == 'canned'
+    return [sheet_offer(card, item)] if card[:kind] == 'sheet'
 
     [base(card).merge(directive: card[:offer][:directive], topic: card[:offer][:topic])]
+  end
+
+  # La hoja con lo que la persona dijo de ella (SheetUse): su búsqueda y para qué sirve.
+  def sheet_offer(card, item)
+    oferta = base(card).merge(directive: card[:offer][:directive], topic: card[:offer][:topic])
+    config = ContactTrackings::Ficha::SheetUse.clean(item['sheet'], Array(card[:columns])) if item['sheet']
+    return oferta if config.nil?
+
+    oferta.merge(directive: ContactTrackings::Ficha::SheetUse.directive(card[:name], config) || oferta[:directive],
+                 topic: config['purpose'] || oferta[:topic], purpose: config['purpose'],
+                 answer_with: config['answer_with']).compact
   end
 
   def base(card)

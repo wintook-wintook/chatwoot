@@ -230,6 +230,7 @@ Rails.application.routes.draw do
               post :ficha_preview, to: 'tracking_templates/fichas#preview'
               post :ficha_create, to: 'tracking_templates/fichas#create'
               post :ficha_suggest, to: 'tracking_templates/fichas#suggest'
+              get 'ficha_sheet/:source_id', to: 'tracking_templates/fichas#sheet_preview'
               post :ficha_test, to: 'tracking_templates/fichas#run_test'
               get 'ficha_test/:turn_id', to: 'tracking_templates/fichas#test_result'
             end

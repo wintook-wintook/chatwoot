@@ -69,8 +69,11 @@ class ContactTrackings::Ficha::Catalog
   def sheet_card(hoja)
     perfil = profile('hoja', hoja.name) || {}
     columnas = hoja.google_sheet_rows.order(:row_index).first&.data&.keys || []
+    sugerida = ContactTrackings::Ficha::SheetUse.parse(perfil[:como_se_usa])
     { key: "google_sheet:#{hoja.id}", kind: 'sheet', id: hoja.id, name: hoja.name,
       summary: perfil[:que_tiene], examples: Array(perfil[:ejemplo]),
+      # Para «¿para qué la usa?»: las columnas y la búsqueda sugerida (se puede cambiar).
+      columns: columnas, search_by: sugerida[:search_by], answer_with: sugerida[:answer_with],
       offer: { label: "Contestar datos exactos de la hoja «#{hoja.name}»",
                directive: perfil[:como_se_usa] || "{{hoja:#{hoja.name}}}",
                topic: columnas.first(MAX_TOPICS).join(', ') } }

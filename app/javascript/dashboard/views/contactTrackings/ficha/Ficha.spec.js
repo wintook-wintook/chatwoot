@@ -14,6 +14,13 @@ vi.mock('dashboard/api/fichaAgente', () => ({
     suggest: vi.fn(),
     activate: vi.fn(),
     get: vi.fn(),
+    sheet: vi.fn().mockResolvedValue({
+      data: {
+        columns: ['Servicio', 'Precio'],
+        rows: [['Grúa', '1800']],
+        total: 1,
+      },
+    }),
     save: vi.fn(),
     apply: vi.fn(),
   },
@@ -90,6 +97,30 @@ describe('FichaCards', () => {
     nada.vm.togglePart(CARDS[2], CARDS[2].parts[1]);
     expect(nada.emitted('input')[0][0]).toEqual([
       { key: 'canned_response', parts: ['SSUSA'] },
+    ]);
+  });
+
+  it('al marcar una hoja se abre para decir qué hacer con ella', () => {
+    const wrapper = montar([]);
+    wrapper.vm.toggle(CARDS[0]);
+    expect(wrapper.vm.isOpen(CARDS[0])).toBe(true);
+    const marcada = montar([{ key: 'google_sheet:1' }]);
+    marcada.setData({ open: ['google_sheet:1'] });
+    expect(marcada.vm.sheetOpen(CARDS[0])).toBe(true);
+    marcada.vm.setSheet(CARDS[0], {
+      purpose: 'precios',
+      search_by: 'Servicio',
+      answer_with: ['Precio'],
+    });
+    expect(marcada.emitted('input')[0][0]).toEqual([
+      {
+        key: 'google_sheet:1',
+        sheet: {
+          purpose: 'precios',
+          search_by: 'Servicio',
+          answer_with: ['Precio'],
+        },
+      },
     ]);
   });
 

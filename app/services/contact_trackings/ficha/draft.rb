@@ -35,7 +35,8 @@ class ContactTrackings::Ficha::Draft
       h = item.to_h.stringify_keys
       next if h['key'].blank?
 
-      { 'key' => h['key'].to_s, 'parts' => Array(h['parts']).map(&:to_s).presence }.compact
+      { 'key' => h['key'].to_s, 'parts' => Array(h['parts']).map(&:to_s).presence,
+        'sheet' => h['sheet'].presence && h['sheet'].to_h.stringify_keys.slice('purpose', 'search_by', 'answer_with') }.compact
     end
   end
 

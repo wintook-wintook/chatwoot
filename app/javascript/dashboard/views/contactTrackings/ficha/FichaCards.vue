@@ -42,10 +42,13 @@ export const ICONS = {
   file: 'attach',
 };
 
+import FichaSheet from './FichaSheet.vue';
+
 const normalize = text =>
   (text || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 export default {
+  components: { FichaSheet },
   model: { prop: 'value', event: 'input' },
   props: {
     cards: { type: Array, default: () => [] },
@@ -95,10 +98,29 @@ export default {
     },
     toggle(card) {
       if (this.disabled) return;
-      const lista = this.isOn(card)
-        ? this.value.filter(item => item.key !== card.key)
-        : [...this.value, { key: card.key }];
+      const marcar = !this.isOn(card);
+      const lista = marcar
+        ? [...this.value, { key: card.key }]
+        : this.value.filter(item => item.key !== card.key);
+      // Una hoja recién marcada se abre: qué contiene y qué hace el agente con ella.
+      if (marcar && card.kind === 'sheet' && !this.isOpen(card))
+        this.open = [...this.open, card.key];
       this.$emit('input', lista);
+    },
+    sheetOf(card) {
+      const item = this.value.find(entry => entry.key === card.key);
+      return (item && item.sheet) || null;
+    },
+    setSheet(card, config) {
+      this.$emit(
+        'input',
+        this.value.map(item =>
+          item.key === card.key ? { ...item, sheet: config } : item
+        )
+      );
+    },
+    sheetOpen(card) {
+      return card.kind === 'sheet' && this.isOn(card) && this.isOpen(card);
     },
     // Marcar de un jalón las que están listas de un grupo.
     selectReady(group) {
@@ -126,6 +148,7 @@ export default {
         : [...this.open, card.key];
     },
     hasDetail(card) {
+      if (card.kind === 'sheet') return true;
       return (
         (card.examples && card.examples.length) ||
         (card.parts && card.parts.length)
@@ -244,11 +267,12 @@ export default {
           v-for="card in group.cards"
           :key="card.key"
           class="flex flex-col gap-2 p-3 transition-colors border rounded-lg"
-          :class="
+          :class="[
             isOn(card)
               ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20 shadow-sm'
-              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-          "
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300',
+            { 'col-span-full': sheetOpen(card) },
+          ]"
         >
           <div class="flex items-start gap-2">
             <label
@@ -306,8 +330,15 @@ export default {
           </div>
 
           <!-- Detalle: filas de ejemplo / títulos -->
+          <FichaSheet
+            v-if="sheetOpen(card)"
+            :card="card"
+            :value="sheetOf(card)"
+            :disabled="disabled"
+            @input="setSheet(card, $event)"
+          />
           <ul
-            v-if="isOpen(card) && examplesOf(card).length"
+            v-else-if="isOpen(card) && examplesOf(card).length"
             class="!m-0 !p-2 pl-6 list-none text-xs rounded bg-white/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
           >
             <li

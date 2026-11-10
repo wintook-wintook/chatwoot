@@ -99,3 +99,30 @@ describe('FileRule', () => {
     expect(wrapper.vm.nothing).toBe(true);
   });
 });
+
+describe('FichaSheet', () => {
+  it('carga la hoja y cambia «busca por» sin dejarla en «contesta con»', async () => {
+    const { default: FichaSheet } = await import('./FichaSheet.vue');
+    const { default: FichaAPI } = await import('dashboard/api/fichaAgente');
+    FichaAPI.sheet = vi.fn().mockResolvedValue({
+      data: { columns: ['Servicio', 'Zona', 'Precio'], rows: [], total: 3 },
+    });
+    const wrapper = shallowMount(FichaSheet, {
+      propsData: {
+        card: { id: 1, search_by: 'Servicio', answer_with: ['Precio', 'Zona'] },
+      },
+      mocks: { $t: clave => clave },
+    });
+    await new Promise(resolve => {
+      setTimeout(resolve);
+    });
+    expect(FichaAPI.sheet).toHaveBeenCalledWith(1);
+    expect(wrapper.vm.answerOptions).toEqual(['Zona', 'Precio']);
+    wrapper.vm.set('search_by', 'Zona');
+    expect(wrapper.emitted('input')[0][0]).toEqual({
+      purpose: '',
+      search_by: 'Zona',
+      answer_with: ['Precio'],
+    });
+  });
+});

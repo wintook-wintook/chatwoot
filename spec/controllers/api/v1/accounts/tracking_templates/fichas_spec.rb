@@ -158,6 +158,13 @@ RSpec.describe 'Ficha del Agente IA API', type: :request do
     expect(response.parsed_body['changes']['added'].pluck('key')).not_to include('welcome_file:catalogo')
   end
 
+  it 'muestra lo que contiene una hoja' do
+    get "#{base}/ficha_sheet/#{hoja.id}", headers: admin.create_new_auth_token
+    cuerpo = response.parsed_body
+    expect(cuerpo['columns']).to contain_exactly('Producto', 'Precio')
+    expect(cuerpo['columns'].zip(cuerpo['rows'].first).to_h).to eq('Producto' => 'Grúa', 'Precio' => '1800')
+  end
+
   it 'las Reglas se guardan al crear y con la ficha' do
     regla = { keyword: 'asesor', action: ContactTrackings::KeywordActionService::VALID_ACTIONS.first,
               direction: ContactTrackings::KeywordActionService::VALID_DIRECTIONS.first }

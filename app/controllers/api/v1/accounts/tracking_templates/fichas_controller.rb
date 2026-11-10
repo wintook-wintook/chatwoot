@@ -10,6 +10,7 @@
 #   POST tracking_templates/ficha_preview             ofertas + Entrenamiento generado + comprobador
 #   POST tracking_templates/ficha_create              crea el agente con todo eso (sin IA)
 #   POST tracking_templates/ficha_suggest             ✨ objetivo y contexto propuestos con IA (1 llamada)
+#   GET  tracking_templates/ficha_sheet/:source_id    columnas y primeras filas de una hoja
 #   POST tracking_templates/ficha_test                probar antes de crear (job; turn_id) → 202
 #   GET  tracking_templates/ficha_test/:turn_id       avance o resultado de la prueba
 #     params: name, inbox_id, items[], skip[] (ofertas apagadas), objective, business, tone,
@@ -38,6 +39,12 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
 
   def catalog
     render json: { cards: draft.cards }
+  end
+
+  # Lo que contiene una hoja (columnas y primeras filas), para decir qué hacer con ella.
+  def sheet_preview
+    hoja = Current.account.knowledge_sources.find_by!(id: params[:source_id], source_type: 'google_sheet')
+    render json: ContactTrackings::Ficha::SheetUse.preview(hoja)
   end
 
   def preview
@@ -184,8 +191,8 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
   end
 
   def item_from(item)
-    h = item.respond_to?(:permit) ? item.permit(:key, parts: []).to_h : item.to_h
-    { 'key' => h['key'].to_s, 'parts' => Array(h['parts']).map(&:to_s).presence }.compact
+    h = item.respond_to?(:permit) ? item.permit(:key, parts: [], sheet: [:purpose, :search_by, { answer_with: [] }]).to_h : item.to_h
+    { 'key' => h['key'].to_s, 'parts' => Array(h['parts']).map(&:to_s).presence, 'sheet' => h['sheet'].presence }.compact
   end
 
   def current_items

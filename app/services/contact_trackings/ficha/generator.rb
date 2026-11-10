@@ -123,7 +123,15 @@ class ContactTrackings::Ficha::Generator
   }.freeze
 
   def scope_for(oferta)
+    return sheet_scope(oferta) if oferta[:kind] == 'sheet' && oferta[:purpose].present?
+
     format(SCOPES.fetch(oferta[:kind], 'Contesto con lo que encuentro.'), nombre: oferta[:name])
+  end
+
+  # «Lista de precios: busco en la hoja «Precios» y contesto con Precio, exacto.»
+  def sheet_scope(oferta)
+    columnas = Array(oferta[:answer_with]).join(', ').presence || 'lo que dice la hoja'
+    "#{oferta[:purpose].upcase_first}: busco en la hoja «#{oferta[:name]}» y contesto con #{columnas}, exacto como viene en la hoja."
   end
 
   def fidelidad

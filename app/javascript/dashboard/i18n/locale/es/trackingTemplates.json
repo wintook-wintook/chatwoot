@@ -625,7 +625,13 @@
       "WELCOME_PLACEHOLDER": "¡Hola! Soy Sofía de Grúas Norte 👋 Puedo cotizarte, agendar o levantar tu solicitud. ¿Qué necesitas?",
       "WELCOME_HINT": "Se manda tal cual en el primer mensaje del cliente, una sola vez. Déjalo vacío si no quieres bienvenida.",
       "WELCOME_FILES": "Archivos que van con la bienvenida:",
-      "WELCOME_FILES_NONE": "ninguno (márcalos en Recursos › Archivos)"
+      "WELCOME_FILES_NONE": "ninguno (márcalos en Recursos › Archivos)",
+      "SHEET_ERROR": "No se pudo leer la hoja.",
+      "SHEET_ROWS": "{total} filas · se ven las primeras {shown}",
+      "SHEET_PURPOSE": "¿Para qué la usa el agente?",
+      "SHEET_PURPOSE_PLACEHOLDER": "p. ej. Lista de precios: contestar el precio exacto de cada servicio",
+      "SHEET_SEARCH_BY": "Busca por",
+      "SHEET_ANSWER_WITH": "Contesta con:"
     }
   },
   "TRACKING_IMPORT": {

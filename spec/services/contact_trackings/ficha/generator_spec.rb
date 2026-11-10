@@ -69,4 +69,16 @@ RSpec.describe ContactTrackings::Ficha::Generator do
     expect(ContactTrackings::WelcomeMessage.text(resultado[:prompt])).to eq("¡Hola! Soy Sofía 👋\n{{catalogo}}")
     expect(resultado[:validation][:blocking]).to eq([])
   end
+
+  it 'una hoja con «para qué» y columnas elegidas escribe su ruta con eso' do
+    item = { 'key' => "google_sheet:#{hoja.id}",
+             'sheet' => { 'purpose' => 'tarifas por zona', 'search_by' => 'Zona', 'answer_with' => %w[Precio Inventada] } }
+    resultado = generar([item])
+
+    ruta = '@ruta(consultar_precios #precios: pregunta por tarifas por zona): {{hoja_buscar: Precios | Zona=? | Precio}}'
+    expect(resultado[:prompt]).to include(ruta)
+    expect(resultado[:prompt]).to include('consultar_precios: Tarifas por zona: busco en la hoja «Precios» y contesto con Precio')
+    expect(resultado[:validation][:blocking]).to eq([])
+    expect(ContactTrackings::Ficha::SheetUse.clean({ 'search_by' => 'Inventada' }, %w[Zona Precio])).to be_nil
+  end
 end
