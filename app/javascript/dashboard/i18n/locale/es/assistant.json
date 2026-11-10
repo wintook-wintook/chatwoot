@@ -103,7 +103,9 @@
         "INBOX": "WhatsApp",
         "SELLER": "Vendedor",
         "CASE": "Caso",
-        "ITEM": "Qué"
+        "ITEM": "Qué",
+        "NAME": "Nombre",
+        "OBJECTIVE": "Objetivo"
       },
       "OUTCOMES": {
         "won": "Ganada",
@@ -152,7 +154,17 @@
       "CONVERT_TO_MEETING": "La tarea se quita de Tareas y queda agendada.",
       "CONVERT_KEEPS": "Es obligatoria o del cliente: la tarea se queda y se agenda una sesión ligada.",
       "CONVERT_TO_TASK": "Se quita de la agenda (y de Google) y queda como tarea sin hora.",
-      "CONVERT_LINKED": "Es la sesión de «{task}»: se quita de la agenda y queda esa tarea."
+      "CONVERT_LINKED": "Es la sesión de «{task}»: se quita de la agenda y queda esa tarea.",
+      "NO_SHOW": "El cliente no asistió",
+      "REPLACES": "Ya corre un Seguimiento IA (intento {attempts} de {max}, próximo {at}). Al confirmar se cancela y arranca este.",
+      "USED_PRESET": "Usé tu plantilla «{name}».",
+      "PRESET": "Plantilla de seguimiento",
+      "PRESET_NONE": "— Ninguna —",
+      "PRESETS_EMPTY": "Aún no tienes plantillas de seguimiento",
+      "WA_TEMPLATE": "Plantilla de WhatsApp",
+      "WA_TEMPLATE_AUTO": "Que el agente elija",
+      "PRESET_NAME": "Nombre de la plantilla",
+      "save_follow_up_preset": "Guardar plantilla"
     },
     "SETTINGS": {
       "TITLE": "Asistente",
@@ -240,7 +252,45 @@
       "AI_NOTE_NONE": "Este contacto no tiene nota IA.",
       "AI_NOTE_ADD": "Agregarla en la ficha",
       "SOURCES_NONE": "La empresa no tiene respuestas predefinidas: si el cliente pregunta algo que no está en la nota IA, lo pasará a una persona.",
-      "SOURCES_CANNED": "Para contestar dudas consulta las respuestas predefinidas de la empresa y la nota IA del contacto."
+      "SOURCES_CANNED": "Para contestar dudas consulta las respuestas predefinidas de la empresa y la nota IA del contacto.",
+      "PRESET_LABEL": "Usar plantilla",
+      "PRESET_NONE": "— Sin plantilla —",
+      "PRESET_EMPTY": "Aún no tienes plantillas de seguimiento: puedes empezar con un ejemplo y guardarlo.",
+      "STARTER_SUFFIX": "(ejemplo)",
+      "SAVE_PRESET": "Guardar como plantilla",
+      "PRESET_NAME_PLACEHOLDER": "Nombre, p. ej. Cobranza amable 3 intentos",
+      "SAVE": "Guardar",
+      "UPDATE_PRESET": "Actualizar «{name}»",
+      "DELETE_PRESET": "Borrar plantilla",
+      "DELETE_CONFIRM": "¿Borrar la plantilla «{name}»?",
+      "PRESET_SAVED": "Plantilla «{name}» guardada",
+      "PRESET_UPDATED": "Plantilla «{name}» actualizada",
+      "REPLACE_NOTICE": "Ya hay un seguimiento activo (intento {attempts} de {max}{next}). Si guardas, se cancela y arranca este con tus cambios.",
+      "REPLACE_SUBMIT": "Reemplazar seguimiento",
+      "REPLACED": "Seguimiento cambiado: se canceló el anterior",
+      "STARTERS": {
+        "COLLECTION": {
+          "NAME": "Cobranza amable",
+          "OBJECTIVE": "Que el cliente pague su saldo pendiente o diga cuándo lo hará.",
+          "INSTRUCTIONS": "Tono cordial y respetuoso. Recuérdale el saldo y ofrece ayuda con la forma de pago. Si dice que ya pagó, pídele el comprobante. No amenaces ni presiones."
+        },
+        "QUOTE": {
+          "NAME": "Seguimiento de cotización",
+          "OBJECTIVE": "Que el cliente confirme la cotización o saber por qué no.",
+          "INSTRUCTIONS": "Pregunta si la revisó y si tiene dudas; ofrece ajustarla. Si no le interesa, pregunta el motivo con amabilidad."
+        },
+        "APPOINTMENT": {
+          "NAME": "Confirmar cita",
+          "OBJECTIVE": "Que el cliente confirme su cita o la reagende.",
+          "INSTRUCTIONS": "Recuérdale el día y la hora. Si no puede, pregúntale qué otro día le queda y avisa a una persona."
+        },
+        "REACTIVATE": {
+          "NAME": "Reactivar cliente",
+          "OBJECTIVE": "Que el cliente vuelva a comprar o agende una llamada.",
+          "INSTRUCTIONS": "Salúdalo, pregúntale cómo le ha ido con lo que compró y cuéntale las novedades, sin presionar."
+        }
+      },
+      "REPLACE_NEXT": " · próximo {at}"
     },
     "OPEN_IN_PLATFORM": "Abrir en Kontrolya",
     "VOICE": {

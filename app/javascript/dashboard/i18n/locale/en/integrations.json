@@ -126,8 +126,8 @@
       "CREATE_ERROR": "There was an error creating a meeting link, please try again"
     },
     "OPEN_AI": {
-      "AI_ASSIST": "AI Assist",
-      "WITH_AI": " %{option} with AI ",
+      "AI_ASSIST": "Dali help",
+      "WITH_AI": " %{option} with Dali ",
       "OPTIONS": {
         "REPLY_SUGGESTION": "Reply Suggestion",
         "SUMMARIZE": "Summarize",
@@ -142,7 +142,7 @@
       "ASSISTANCE_MODAL": {
         "DRAFT_TITLE": "Draft content",
         "GENERATED_TITLE": "Generated content",
-        "AI_WRITING": "AI is writing",
+        "AI_WRITING": "Dali is writing",
         "BUTTONS": {
           "APPLY": "Use this suggestion",
           "CANCEL": "Cancel"
@@ -160,10 +160,10 @@
         "DISMISS_MESSAGE": "You can setup OpenAI integration later Whenever you want.",
         "SUCCESS_MESSAGE": "OpenAI integration setup successfully"
       },
-      "TITLE": "Improve With AI",
-      "SUMMARY_TITLE": "Summary with AI",
-      "REPLY_TITLE": "Reply suggestion with AI",
-      "SUBTITLE": "An improved reply will be generated using AI, based on your current draft.",
+      "TITLE": "Improve with Dali",
+      "SUMMARY_TITLE": "Summary by Dali",
+      "REPLY_TITLE": "Reply suggested by Dali",
+      "SUBTITLE": "Dali will improve your current draft.",
       "TONE": {
         "TITLE": "Tone",
         "OPTIONS": {

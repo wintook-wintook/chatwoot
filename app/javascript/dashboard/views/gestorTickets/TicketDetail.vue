@@ -1953,6 +1953,11 @@ export default {
     },
     // @tickets_cases F2 — "agregar reunión" desde una fila de la tabla de tareas:
     // salta a la pestaña Reuniones y abre el modal ya atado a esa tarea.
+    // Tareas agendadas › «Ver la tarea»: va a Tareas y la abre.
+    openTaskFromMeeting(task) {
+      this.activeDetailTab = 'tasks';
+      this.$nextTick(() => this.$refs.ticketTasks?.openTaskById(task.id));
+    },
     openMeetingForTask(task) {
       this.activeDetailTab = 'meetings';
       this.$nextTick(() => this.$refs.ticketMeetings?.openCreate(task));
@@ -2645,6 +2650,7 @@ export default {
       v-if="ticket && isCommercial"
       :ticket="ticket"
       @updated="refetch"
+      @editPostpone="openPostpone()"
     />
 
     <!-- Pestañas del detalle (pinneadas, no scrollean) -->
@@ -3572,6 +3578,9 @@ export default {
         @viewNotes="openNotesForTask"
         @addMeeting="openMeetingForTask"
         @viewMeetings="openMeetingsForTask"
+        @meetingsChanged="
+          $refs.ticketMeetings && $refs.ticketMeetings.refresh()
+        "
       />
 
       <!-- ════ …y debajo Tareas agendadas (F2) — tabla + modal, como Notas ════ -->
@@ -3590,6 +3599,7 @@ export default {
         @count="meetingCount = $event"
         @changed="reloadEvents"
         @tasksChanged="$refs.ticketTasks && $refs.ticketTasks.load()"
+        @viewTask="openTaskFromMeeting"
       />
 
       <!-- ════ Pestaña Proyecto (Plan-Clase-Proyecto P1) ════ -->
@@ -4613,7 +4623,13 @@ export default {
       v-if="showPostponeModal && ticket"
       show
       :folio="ticket.folio || `#${ticket.id}`"
-      :current="ticket.postponed_until || ''"
+      :current="ticket.is_postponed ? ticket.postponed_until || '' : ''"
+      :current-reason-id="
+        ticket.is_postponed && ticket.postpone_reason
+          ? ticket.postpone_reason.id
+          : ''
+      "
+      :current-note="ticket.is_postponed ? ticket.postpone_note || '' : ''"
       :is-saving="isTransitioning"
       @close="showPostponeModal = false"
       @confirm="confirmPostpone"

@@ -590,7 +590,7 @@ class CaseTicket < ApplicationRecord
     date = postpone_date!(until_date)
     motive = postpone_reason!(reason_id)
     payload = { from: status, to: 'waiting_on_customer', until: date.iso8601, reason: reason.presence,
-                reason_id: motive&.id, reason_label: motive&.label }
+                reason_id: motive&.id, reason_label: motive&.label, changed: (true if postponed?) }
     payload[:column_id] = case_type_column_id unless postponed?
     update!(status: :waiting_on_customer, postponed_until: date, postpone_reason_id: motive&.id,
             case_type_column_id: postponed_column_id || case_type_column_id)
@@ -598,6 +598,13 @@ class CaseTicket < ApplicationRecord
                         actor: actor, payload: payload.compact)
     Quotes::OpportunitySync.from_opportunity(self, :postponed, actor: actor) # Plan-Catalogo-Cotizaciones
     self
+  end
+
+  # El comentario de la pospuesta vigente (vive en su evento): para cambiarla sin perderlo.
+  def current_postpone_note
+    return unless postponed?
+
+    case_events.where(event_type: :postponed).order(:created_at).last&.payload&.dig('reason')
   end
 
   # Regresa una oportunidad pospuesta a trabajo activo, a la etapa donde estaba.

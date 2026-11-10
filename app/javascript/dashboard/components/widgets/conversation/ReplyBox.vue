@@ -41,7 +41,6 @@ import {
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { LocalStorage } from 'shared/helpers/localStorage';
 //
-import AssistanceBotElyzaModal from './AssistanceBotElyzaModal.vue';
 import { internalDisplay, isInternalChat } from 'dashboard/helper/internalChat'; // feat/chat_interno_pulido
 import OrganizationsAPI from 'dashboard/api/organizations'; // Plan-Organizaciones O5
 
@@ -63,7 +62,6 @@ export default {
     WhatsappTemplates,
     MessageSignatureMissingAlert,
     ArticleSearchPopover,
-    AssistanceBotElyzaModal, //
   },
   mixins: [inboxMixin, fileUploadMixin, keyboardEventListenerMixins],
   props: {
@@ -116,7 +114,6 @@ export default {
       showVariablesMenu: false,
       newConversationModalActive: false,
       showArticleSearchPopover: false,
-      showAssistanceBotElyzaModal: false,
     };
   },
   computed: {
@@ -1160,70 +1157,6 @@ export default {
     toggleInsertArticle() {
       this.showArticleSearchPopover = !this.showArticleSearchPopover;
     },
-
-    async eventSuggestionResponseBotEva() {
-
-
-      if (this.inReplyTo === undefined || typeof this.inReplyTo === "undefined") {
-        useAlert("botEva : Seleccione el mensaje a replicar para sugerencia de respuesta...");
-        return false;
-      }
-      useAlert("botEva : Buscando información para dar una respuesta, espere un momento!");
-      try {
-        const { content } = this.inReplyTo
-        const { access_token } = this.currentUser;
-        const urlBaseApi = process.env.WINTOOK_OPENAI;
-        const urlApi = `${urlBaseApi}/v1/responses/semanticSearch`;
-        const response = await fetch(urlApi, {
-          method: "POST",
-          headers: {
-            "access-token": access_token,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ "query": content }),
-        }
-        );
-
-        // Verificar si la solicitud fue exitosa
-        if (!response.ok) {
-          console.error(`Error HTTP! status: ${response.status}`);
-          return false;
-        }
-
-        // Procesar la respuesta
-        const result = await response.json();
-
-        if (!result) {
-          useAlert("botEva : No encontró información para dar una respuesta...");
-          this.resetReplyToMessage();
-          return false;
-        }
-
-        // Si todo está bien
-        this.message = result.textResponse; // Almacenar el resultado
-        return true; // Retornar éxito
-      } catch (error) {
-        console.error("Error en la solicitud:", error);
-        return false; // Retornar error
-      }
-    },
-
-    async eventSuggestionResponseBotElyza() {
-      if (this.inReplyTo === undefined || typeof this.inReplyTo === "undefined") {
-        useAlert("botEva : Seleccione el mensaje a replicar para sugerencia de respuesta...");
-        return false;
-      }
-      this.showAssistanceBotElyzaModal = true;
-    },
-
-    hideAssistanceBotElyzaModal() {
-      console.log("showAssistanceBotElyzaModal")
-      this.showAssistanceBotElyzaModal = false;
-    },
-    messageProcessed(textResponse) {
-      this.message = textResponse;
-      this.showAssistanceBotElyzaModal = false;
-    }
   },
 };
 </script>
@@ -1274,9 +1207,7 @@ export default {
       :toggle-audio-recorder-play-pause="toggleAudioRecorderPlayPause" :toggle-audio-recorder="toggleAudioRecorder"
       :toggle-emoji-picker="toggleEmojiPicker" :message="message" :portal-slug="connectedPortalSlug"
       :new-conversation-modal-active="newConversationModalActive" @selectWhatsappTemplate="openWhatsappTemplateModal"
-      @toggleEditor="toggleRichContentEditor" @replaceText="replaceText" @toggleInsertArticle="toggleInsertArticle"
-      :event-suggestion-response-bot-eva="eventSuggestionResponseBotEva"
-      :event-suggestion-response-bot-elyza="eventSuggestionResponseBotElyza" />
+      @toggleEditor="toggleRichContentEditor" @replaceText="replaceText" @toggleInsertArticle="toggleInsertArticle" />
     <WhatsappTemplates :inbox-id="inbox.id" :show="showWhatsAppTemplatesModal" :conversation="currentChat"
       :contact="currentContact" @close="hideWhatsappTemplatesModal"
       @onSend="onSendWhatsAppReply" @cancel="hideWhatsappTemplatesModal" />
@@ -1284,9 +1215,6 @@ export default {
     <woot-confirm-modal ref="confirmDialog" :title="$t('CONVERSATION.REPLYBOX.UNDEFINED_VARIABLES.TITLE')"
       :description="undefinedVariableMessage" />
 
-    <AssistanceBotElyzaModal :show="showAssistanceBotElyzaModal" :on-close="hideAssistanceBotElyzaModal"
-      @cancel="hideAssistanceBotElyzaModal" @messageProcessed="messageProcessed" :currentChat="currentChat"
-      :inReplyTo="inReplyTo" />
   </div>
 </template>
 

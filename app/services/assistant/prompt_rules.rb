@@ -33,7 +33,36 @@ module Assistant::PromptRules
       ni teléfono: el cliente la ve en su portal y el aviso sale solo por su conversación. Si tiene varios casos, pregunta cuál.
     - «Cancela la llamada…», «ya no hace falta la visita»: my_agenda o get_case para el id y llama YA propose_cancel_item con
       el motivo que encaje. Si solo cambia la fecha, no la canceles: propón moverla.
-    - «Agenda la tarea de…», «ponle hora a…»: my_agenda o get_case para el id de la tarea y propose_convert_item (kind task,
-      con día y hora). «Quítala de la agenda y déjala como tarea»: propose_convert_item kind meeting.
+    - «Pasa a la agenda la tarea de…», «conviértela en cita»: my_agenda o get_case para el id y propose_convert_item (kind
+      task, con día y hora; la tarea deja de existir). «Quítala de la agenda y déjala como tarea»: propose_convert_item kind
+      meeting. Si solo quiere agendar tiempo para trabajarla (la tarea se queda), usa propose_meeting.
   RULES
+
+  FOLLOW_UP = <<~RULES.chomp
+    - «Dale seguimiento», «que el agente le escriba hasta que…», «delégalo»: usa propose_follow_up (Seguimiento IA, no se
+      elige agente) con un objetivo concreto (y frecuencia/intentos si los dijeron). Si falta el objetivo, pregúntalo.
+      Solo si el usuario nombra un agente del módulo de Agentes IA (p. ej. «con el agente Cobranza»): list_agents y propose_delegate.
+      Si no hay conversación del cliente, dilo.
+    - Plantillas de seguimiento: si el usuario nombra una, pásala en `preset`. Si lo que pide se parece claramente a una
+      (mismo propósito), úsala y dilo («usé tu plantilla «X»»); si encajan varias, pregunta cuál; si ninguna encaja, arma el
+      seguimiento con lo que dijo, sin forzar plantilla, y después de confirmarlo ofrece una vez «¿lo guardo como plantilla?»
+      (propose_save_follow_up_preset con los mismos datos y el nombre que te diga). Nunca inventes plantillas.
+    - Si ya corre un Seguimiento IA en esa conversación y piden cambiarlo («ponle 5 intentos», «que sea más formal»):
+      propose_follow_up solo con lo que cambia; la tarjeta trae lo demás del que corre y lo reemplaza.
+  RULES
+
+  PRESETS_IN_PROMPT = 20
+
+  # Las reglas del seguimiento y las plantillas de seguimiento de la cuenta (hasta 20; si hay más, follow_up_presets).
+  def self.follow_up(account)
+    presets = account.ai_follow_up_presets.ordered.limit(PRESETS_IN_PROMPT + 1).to_a
+    list = if presets.empty?
+             '  Plantillas de seguimiento de la cuenta: ninguna todavía.'
+           else
+             more = presets.size > PRESETS_IN_PROMPT ? ' (hay más: follow_up_presets)' : ''
+             "  Plantillas de seguimiento de la cuenta#{more}:\n" +
+               presets.first(PRESETS_IN_PROMPT).map { |p| "    • «#{p.name}»: #{p.summary}" }.join("\n")
+           end
+    "#{FOLLOW_UP}\n#{list}"
+  end
 end

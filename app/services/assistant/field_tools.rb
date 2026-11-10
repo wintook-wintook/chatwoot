@@ -42,8 +42,14 @@ module Assistant::FieldTools
     labels = { 'rows' => [['VISIT', target[:label]], ['CLIENT', target[:client]]].select(&:last) }
     return order_report(target[:record], args, payload, labels) if target[:kind] == 'order'
 
-    minutes = args['minutes'].to_i.positive? ? args['minutes'].to_i : TaskReport.suggested_minutes(target[:record])
-    [payload.merge('minutes' => minutes), labels.merge('minutes' => minutes, 'closes_visit' => true)]
+    agenda_visit_report_card(target[:record], args, payload, labels)
+  end
+
+  # Visita agendada: el reporte de cierre la deja realizada o «no asistió» (no_show).
+  def agenda_visit_report_card(meeting, args, payload, labels)
+    minutes = args['minutes'].to_i.positive? ? args['minutes'].to_i : TaskReport.suggested_minutes(meeting)
+    extra = { 'minutes' => minutes, 'no_show' => args['no_show'] == true }
+    [payload.merge(extra), labels.merge(extra).merge('closes_visit' => true)]
   end
 
   # La orden o la tarea agendada, con permiso de escribir (lo mismo que pide el portal).

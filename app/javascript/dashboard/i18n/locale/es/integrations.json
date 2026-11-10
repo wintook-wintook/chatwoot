@@ -126,8 +126,8 @@
       "CREATE_ERROR": "Hubo un error al crear un enlace de reunión, por favor inténtalo de nuevo"
     },
     "OPEN_AI": {
-      "AI_ASSIST": "Asistencia de IA",
-      "WITH_AI": " %{option} con IA ",
+      "AI_ASSIST": "Ayuda de Dali",
+      "WITH_AI": " %{option} con Dali ",
       "OPTIONS": {
         "REPLY_SUGGESTION": "Sugerencia de Respuesta",
         "SUMMARIZE": "Resumir",
@@ -142,7 +142,7 @@
       "ASSISTANCE_MODAL": {
         "DRAFT_TITLE": "Borrador de contenido",
         "GENERATED_TITLE": "Contenido generado",
-        "AI_WRITING": "La IA está escribiendo",
+        "AI_WRITING": "Dali está escribiendo",
         "BUTTONS": {
           "APPLY": "Usar esta sugerencia",
           "CANCEL": "Cancelar"
@@ -160,10 +160,10 @@
         "DISMISS_MESSAGE": "Puedes configurar la integración de OpenAI más tarde cuando quieras.",
         "SUCCESS_MESSAGE": "Integración de OpenAI configurada con éxito"
       },
-      "TITLE": "Mejorar con IA",
-      "SUMMARY_TITLE": "Resumen con IA",
-      "REPLY_TITLE": "Sugerencia de respuesta con IA",
-      "SUBTITLE": "Se generará una respuesta mejorada usando IA, basada en tu borrador actual.",
+      "TITLE": "Mejorar con Dali",
+      "SUMMARY_TITLE": "Resumen de Dali",
+      "REPLY_TITLE": "Respuesta sugerida por Dali",
+      "SUBTITLE": "Dali mejorará tu borrador actual.",
       "TONE": {
         "TITLE": "Tono",
         "OPTIONS": {

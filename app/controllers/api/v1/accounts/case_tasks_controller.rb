@@ -20,7 +20,7 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
 
   before_action :set_ticket
   before_action :set_task, only: %i[update destroy cancel schedule] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
-  before_action :reject_manual_documentation, only: :update
+  before_action :reject_manual_documentation, :lock_closed_task, only: :update
 
   def index
     render json: { case_tasks: @ticket.case_tasks.ordered.includes(:case_type_column, :team).map { |t| task_json(t) },

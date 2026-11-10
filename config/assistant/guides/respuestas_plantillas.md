@@ -38,6 +38,13 @@ La columna «Fuente de datos» dice si cada respuesta ya está lista para los ag
 3. Escribe el Mensaje; agrega Encabezado, Pie y Botones si los necesitas. Para los datos que cambian usa variables y pon un ejemplo de cada una.
 4. Revisa la vista previa y pulsa «Enviar a revisión», o «Guardar borrador» para terminarla después.
 
+### Crear una plantilla con Dali
+1. En «Nueva plantilla», arriba está «Crear con Dali». Escribe qué quieres lograr, por ejemplo «avisar que el pedido ya salió y cuándo llega»; si quieres, elige el tono (cercano, formal o directo).
+2. Pulsa «Proponer»: llena el Nombre (estructurado: área_propósito_detalle, por ejemplo ventas_recordatorio_cotizacion), la Categoría con su porqué, el Encabezado, el Mensaje, el Pie, los Botones de respuesta rápida y los ejemplos de las variables.
+3. Las variables del contacto (nombre, empresa, agente…) se llenan solas al enviar; las demás (por ejemplo {{fecha_entrega}}) se avisan abajo: se llenan al enviar.
+4. Si no te gusta, «Otra propuesta»; para cambios, escríbelos en «Ajustar» (más corta, sin emojis…).
+5. La Bandeja (el canal) la eliges tú. Revisa todo y pulsa «Guardar borrador» o «Enviar a revisión»: Dali no guarda ni manda nada solo.
+
 ### Usar una plantilla en la conversación
 1. Abre la conversación de WhatsApp y pulsa el botón de plantillas de WhatsApp, abajo de la caja de respuesta.
 2. Busca y elige la plantilla.

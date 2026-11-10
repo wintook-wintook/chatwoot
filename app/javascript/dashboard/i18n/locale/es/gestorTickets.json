@@ -1,12 +1,12 @@
 {
   "CONVERT_ITEM": {
-    "SCHEDULE": "Agendar…",
-    "SCHEDULE_TITLE": "Agendar «{title}»",
+    "SCHEDULE": "Pasar a la agenda",
+    "SCHEDULE_TITLE": "Pasar «{title}» a la agenda",
     "SCHEDULE_DESC": "La tarea se quita de Tareas y queda agendada con día y hora.",
     "STARTS": "Empieza",
     "ENDS": "Termina",
     "LOCATION": "Lugar",
-    "SAVE": "Agendar",
+    "SAVE": "Pasar a la agenda",
     "CANCEL": "Cancelar",
     "SCHEDULED": "«{title}» quedó agendada",
     "LINKED": "Se agendó una sesión de «{title}»; la tarea se queda",
@@ -20,6 +20,7 @@
     "DONE_LINKED": "Se quitó de la agenda; queda la tarea «{title}»"
   },
   "CANCEL_ITEM": {
+    "CANCELLED_AS": "Cancelada: {reason}",
     "CATALOG": {
       "TITLE": "Motivos de cancelación",
       "HELP": "Se piden al cancelar una tarea o tarea agendada. «Otro» pide escribir el motivo.",
@@ -135,6 +136,11 @@
     "NO_LOCATION": "Sin ubicación"
   },
   "TASK_REPORT": {
+    "ATTENDANCE": {
+      "TITLE": "¿Cómo terminó?",
+      "HELD": "Se realizó",
+      "NO_SHOW": "El cliente no asistió"
+    },
     "TITLE": "Reporte de cierre",
     "CONTENT": "Qué se hizo",
     "CONTENT_PLACEHOLDER": "Escribe qué hiciste y cómo quedó",
@@ -595,7 +601,7 @@
       "CONTACT_NOTES": "Notas del Contacto",
       "TASKS": "Tareas",
       "JOURNEY": "Avance",
-      "AI": "Asistente IA",
+      "AI": "Dali",
       "MEETINGS": "Tareas agendadas",
       "CONCEPTS": "Reporte de servicio",
       "PROJECT": "Proyecto",
@@ -788,7 +794,10 @@
         "NOTES": "Notas de la tarea ({count})",
         "ADD_MEETING": "Agendar tarea",
         "ADD_MEETING_DONE_HINT": "La tarea ya está concluida",
-        "VIEW_MEETINGS": "Ver tareas agendadas"
+        "VIEW_MEETINGS": "Ver tareas agendadas",
+        "EDIT": "Editar",
+        "VIEW": "Ver",
+        "VIEW_MEETINGS_COUNT": "Ver tareas agendadas ({count})"
       },
       "ORPHAN_MEETINGS": {
         "TITLE": "Quedan tareas agendadas a futuro",
@@ -857,14 +866,14 @@
         "PLAN_TIME": "≈ {time}",
         "PLAN_OVERLOAD": "≈ {time} · más de 8 h",
         "AI": {
-          "BUTTON": "Plan de mi día (IA)",
+          "BUTTON": "Plan de mi día con Dali",
           "TITLE": "Plan de mi día",
           "LOADING": "Armando tu plan…",
           "REGENERATE": "Volver a generar",
           "CLOSE": "Cerrar",
           "LATER": "Puede esperar a mañana",
           "ERROR": "No se pudo generar el plan.",
-          "DISCLAIMER": "Sugerencia de IA: no cambia tu orden. Revísala antes de seguirla."
+          "DISCLAIMER": "Sugerencia de Dali: no cambia tu orden. Revísala antes de seguirla."
         },
         "NOTICES": {
           "BUTTON": "Tienes {count} avisos importantes",
@@ -1234,7 +1243,7 @@
       "FIX": "Corregir ortografía",
       "IMPROVE": "Mejorar escritura",
       "REVERT": "Volver al original",
-      "ERROR": "No se pudo procesar el texto con IA. Inténtalo de nuevo.",
+      "ERROR": "Dali no pudo procesar el texto. Inténtalo de nuevo.",
       "TITLE": "Inteligencia Artificial",
       "BACK": "Volver",
       "SAVE": "Guardar",
@@ -1315,7 +1324,7 @@
         "SUMMARY_LABEL": "Resumen",
         "ROOT_CAUSE_LABEL": "Causa raíz",
         "SOLUTION_LABEL": "Solución sugerida",
-        "SUGGEST_CLOSE": "Sugerir con IA",
+        "SUGGEST_CLOSE": "Sugerir con Dali",
         "ERROR": "No se pudo generar el resumen"
       },
       "DUPLICATE": {
@@ -1758,7 +1767,7 @@
       "article_generated": "Artículo KB generado",
       "ai_classified": "Clasificado por IA",
       "ai_suggested": "Clasificación sugerida por IA",
-      "ai_followup": "Seguimiento redactado por IA",
+      "ai_followup": "Seguimiento redactado por Dali",
       "reassigned": "Reasignado",
       "escalated": "Escalado",
       "message_received": "Mensaje recibido",
@@ -1845,7 +1854,13 @@
         "CANCELLED": "Cancelada",
         "RESCHEDULED": "Reprogramada"
       },
+      "COMPLETE": "Completar",
+      "COMPLETE_TITLE": "Cerrar la tarea agendada con su reporte (realizada o no asistió)",
       "MENU": {
+        "VIEW": "Ver",
+        "REOPEN": "Reabrir",
+        "VIEW_REPORT": "Ver reporte",
+        "VIEW_TASK": "Ver la tarea {folio}",
         "EDIT": "Editar",
         "HELD": "Marcar realizada",
         "NO_SHOW": "Marcar no asistió",
@@ -1857,6 +1872,7 @@
         "TO_TASK": "Pasar a tarea (sin hora)"
       },
       "MODAL": {
+        "VIEW_TITLE": "Ver tarea agendada",
         "TITLE": "Agendar tarea",
         "EDIT_TITLE": "Editar tarea agendada",
         "DESC": "Queda registrada en el avance del caso.",
@@ -1867,9 +1883,6 @@
         "DATE_ERROR": "La hora de fin debe ser posterior a la de inicio.",
         "TASK_LABEL": "Tarea",
         "TASK_NONE": "— Del caso (sin tarea) —",
-        "CONVERT_HINT": "Al guardar, «{title}» se quita de Tareas y queda como tarea agendada, con el tiempo que ya tenía reportado.",
-        "KEEP_TASK": "Que la tarea se quede: solo agendar una sesión de trabajo",
-        "KEEP_HINT": "La tarea se queda en Tareas y esta sesión queda ligada a ella.",
         "KEEP_LOCKED": "Es obligatoria, de la etapa o del cliente: la tarea se queda y se agenda una sesión ligada a ella.",
         "ORGANIZER_LABEL": "Responsable",
         "ORGANIZER_ME": "— Yo —",
@@ -1978,6 +1991,8 @@
         "FROZEN": "La oportunidad está cerrada: reábrela para cambiar sus datos."
       },
       "ACTIONS": {
+        "CHANGE_POSTPONE": "Cambiar fecha o motivo",
+        "RESUME_NOW": "Retomar ahora",
         "WON": "Ganada",
         "LOST": "Perdida",
         "CANCEL": "Cancelar",
@@ -1999,7 +2014,10 @@
         "SUCCESS": "Oportunidad cerrada como {outcome}",
         "ERROR": "No se pudo cerrar la oportunidad"
       },
+      "POSTPONE_CHANGED": "Cambió la pospuesta",
       "POSTPONE_MODAL": {
+        "CHANGE_TITLE": "Cambiar la pospuesta de {folio}",
+        "SAVE_CHANGE": "Guardar cambios",
         "TITLE": "Posponer {folio}",
         "UNTIL": "Retomar el",
         "REASON_CATALOG": "Motivo",
@@ -2750,11 +2768,11 @@
         "TITLE": "Explícame la semana",
         "EXPLAIN": "Explícame la semana",
         "AGAIN": "Volver a explicar",
-        "HINT": "La IA te cuenta en 30 segundos cómo va el negocio, qué preocupa y qué harías hoy, con las cifras de esta pantalla.",
+        "HINT": "Dali te cuenta en 30 segundos cómo va el negocio, qué preocupa y qué harías hoy, con las cifras de esta pantalla.",
         "good": "Va bien",
         "watch": "Preocupa",
         "today": "Hoy haría",
-        "DISCLAIMER": "Generado con IA a partir de estas cifras; revísalo antes de decidir.",
+        "DISCLAIMER": "Lo escribió Dali con estas cifras; revísalo antes de decidir.",
         "ERROR": "No se pudo generar la explicación."
       },
       "SALES": {
@@ -2839,7 +2857,7 @@
         "line": "LINE"
       },
       "ANALYSIS": {
-        "TITLE": "Análisis de conversaciones con IA",
+        "TITLE": "Análisis de conversaciones con Dali",
         "DESCRIPTION": "Lee una muestra de hasta 150 conversaciones del período y encuentra de qué hablan, clientes molestos, ventas que se escapan y quejas que se repiten. Cuesta tokens: se hace a pedido.",
         "SAMPLE": "Muestra analizada: {count} conversaciones",
         "EMPTY": "No hay conversaciones en el período para analizar.",
@@ -2848,7 +2866,7 @@
         "complaints": "Quejas que se repiten",
         "lost_sales": "Ventas que se escapan (sin oportunidad)",
         "upset": "Clientes molestos",
-        "DISCLAIMER": "Generado con IA sobre una muestra; revisa las conversaciones antes de actuar.",
+        "DISCLAIMER": "Lo escribió Dali sobre una muestra; revisa las conversaciones antes de actuar.",
         "ERROR": "No se pudo analizar."
       }
     },
@@ -2948,6 +2966,59 @@
       }
     },
     "HOME": {
+      "ONBOARDING": {
+        "BUTTON": "Primeros pasos {done}/{total}",
+        "TITLE": "Primeros pasos",
+        "PROGRESS": "Llevas {done} de {total}. Cada paso se marca solo cuando lo haces.",
+        "CLOSE": "Cerrar",
+        "DO_IT": "Hazlo",
+        "AGAIN": "Ir",
+        "HOW": "¿Cómo?",
+        "ALL_DONE": "¡Listo! Ya conoces lo básico. Si algo no sabes, pregúntale a Dali.",
+        "STEPS": {
+          "whatsapp": {
+            "TITLE": "Conecta tu WhatsApp",
+            "DESC": "Para recibir y contestar a tus clientes desde aquí.",
+            "HOW": "¿Cómo conecto mi WhatsApp?"
+          },
+          "team": {
+            "TITLE": "Invita a tu equipo",
+            "DESC": "Da de alta a tus compañeros y elige qué puede ver cada uno.",
+            "HOW": "¿Cómo invito a mi equipo y les doy permisos?"
+          },
+          "organization": {
+            "TITLE": "Da de alta tu primera organización",
+            "DESC": "La empresa cliente: ahí se juntan sus contactos, casos y tareas.",
+            "HOW": "¿Cómo doy de alta una organización?"
+          },
+          "contact": {
+            "TITLE": "Da de alta tu primer contacto",
+            "DESC": "La persona con la que hablas, ligada a su organización.",
+            "HOW": "¿Cómo doy de alta un contacto y lo ligo a su organización?"
+          },
+          "case": {
+            "TITLE": "Crea tu primer caso u oportunidad",
+            "DESC": "Una venta, un soporte o un servicio, con sus etapas.",
+            "HOW": "¿Cómo creo un caso?"
+          },
+          "meeting": {
+            "TITLE": "Agenda una tarea",
+            "DESC": "Una cita, llamada o visita con día y hora.",
+            "HOW": "¿Cómo agendo una tarea?"
+          },
+          "follow_up": {
+            "TITLE": "Delega un seguimiento a la IA",
+            "DESC": "Que el agente le escriba al cliente hasta lograr lo que quieres.",
+            "HOW": "¿Cómo delego un seguimiento?"
+          },
+          "dali": {
+            "TITLE": "Pregúntale algo a Dali",
+            "DESC": "Tu asistente: busca, propone y te explica cómo usar todo.",
+            "HOW": "¿Qué puedes hacer por mí?",
+            "QUESTION": "¿Qué puedes hacer por mí?"
+          }
+        }
+      },
       "GREETING": {
         "MORNING": "Buenos días, {name}",
         "AFTERNOON": "Buenas tardes, {name}",

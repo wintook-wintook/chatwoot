@@ -22,6 +22,7 @@ import {
 import SettingsLayout from '../SettingsLayout.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import { PRESET_KEYS, applyPreset } from './templatePresets';
+import AiTemplateDraft from './AiTemplateDraft.vue'; // «Crear con IA»
 import {
   RESERVED_FIELDS,
   attributeVariables,
@@ -55,6 +56,7 @@ const LIST_ROUTE = 'whatsapp_templates_index';
 
 export default {
   components: {
+    AiTemplateDraft,
     BaseSettingsHeader,
     ResizableTextArea,
     SettingsLayout,
@@ -191,6 +193,10 @@ export default {
       });
     },
     // Los ejemplos: solo al empezar una nueva, mientras no se haya escrito nada.
+    // «Crear con IA»: en una plantilla nueva; sigue a la vista para pedir otra o ajustar.
+    showAi() {
+      return !this.isEditing && !this.$route.query.from;
+    },
     showPresets() {
       return (
         !this.isEditing && !this.$route.query.from && !this.hasUnsavedChanges
@@ -349,6 +355,18 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+    // La propuesta de la IA llena el formulario; el canal (bandeja) e idioma se quedan.
+    applyAiDraft(draft) {
+      if (!draft) return;
+      this.presetKey = null;
+      this.form = {
+        ...emptyForm(),
+        ...draft,
+        inbox_id: this.form.inbox_id,
+        language: this.form.language || draft.language,
+      };
+      this.formTabIndex = 0;
     },
     // El ejemplo se puede cambiar por otro mientras no se escriba nada (no cuenta como cambio).
     usePreset(clave) {
@@ -622,6 +640,12 @@ export default {
         class="grid w-full grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_16rem] lg:h-[calc(100vh-13rem)] lg:min-h-[20rem]"
       >
         <div class="flex flex-col min-w-0 lg:min-h-0">
+          <AiTemplateDraft
+            v-if="showAi"
+            :language="form.language"
+            :current="form"
+            @apply="applyAiDraft"
+          />
           <div
             v-if="showPresets"
             class="flex flex-wrap items-center gap-2 mb-3 text-sm"

@@ -14,6 +14,7 @@ class Api::V1::Accounts::QuickTasksController < Api::V1::Accounts::BaseControlle
   include TaskReportGuard
 
   before_action :set_task, only: %i[update destroy cancel schedule] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
+  before_action :lock_closed_task, only: :update # concluida o cancelada: solo reabrirla
 
   def create
     task = CaseTask.new(task_attrs.merge(client).merge(account: Current.account, requester: current_user))

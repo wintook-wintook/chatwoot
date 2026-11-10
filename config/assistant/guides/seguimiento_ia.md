@@ -18,14 +18,25 @@ El botón se pone verde cuando hay un seguimiento trabajando. Para usarlo, la em
 ## Cómo se hace
 ### Delegar un seguimiento
 1. Pulsa «Delegar seguimiento».
-2. En «¿Qué quieres lograr?» escribe el objetivo (es obligatorio).
-3. En «Indicaciones para el agente» (opcional) dile el tono, qué ofrecer y qué no decir, como a un compañero.
-4. En «Cuándo empezar» elige «Ahora» o «En una fecha».
-5. En «Insistir hasta … veces sin respuesta · Cada …» pon cuántas veces (de 1 a 10) y cada cuántos minutos, horas o días.
-6. En «Al terminar» elige «Avisarme» o «Avisarme y asignarme la conversación».
-7. Si es WhatsApp, elige la plantilla para reabrir la ventana de 24 horas o deja «Que el agente elija la más conveniente».
-8. Pulsa «Delegar».
+2. Si quieres, en «Usar plantilla» elige una plantilla de seguimiento: llena los campos y los puedes ajustar. Si la cuenta aún no tiene, salen ejemplos para empezar (Cobranza amable, Seguimiento de cotización, Confirmar cita, Reactivar cliente).
+3. En «¿Qué quieres lograr?» escribe el objetivo (es obligatorio).
+4. En «Indicaciones para el agente» (opcional) dile el tono, qué ofrecer y qué no decir, como a un compañero.
+5. En «Cuándo empezar» elige «Ahora» o «En una fecha».
+6. En «Insistir hasta … veces sin respuesta · Cada …» pon cuántas veces (de 1 a 10) y cada cuántos minutos, horas o días.
+7. En «Al terminar» elige «Avisarme» o «Avisarme y asignarme la conversación».
+8. Si es WhatsApp, elige la plantilla para reabrir la ventana de 24 horas o deja «Que el agente elija la más conveniente».
+9. Pulsa «Delegar».
 También puedes pedírselo a Dali, por ejemplo «dale seguimiento a Mario para que mande la orden de compra»; te muestra una tarjeta y lo crea cuando confirmas.
+
+### Plantillas de seguimiento
+1. En la ventana, después de llenar los campos, pulsa «Guardar como plantilla», ponle un nombre (por ejemplo «Cobranza amable 3 intentos») y «Guardar». Se guarda lo que quieres lograr, las indicaciones, los intentos, cada cuánto, qué hacer al terminar y la plantilla de WhatsApp; no la conversación ni la fecha.
+2. Las plantillas son de toda la cuenta: cualquiera que delegue las usa. Quien la creó o un administrador puede actualizarla («Actualizar «nombre»» sale si la cargaste y le cambiaste algo) o borrarla (icono de basura junto a «Usar plantilla»).
+3. Dali también las usa: «delega a Mario con Cobranza amable», o si lo que pides se parece a una, la usa y te lo dice en la tarjeta. Si ninguna encaja, arma el seguimiento con lo que dijiste y te ofrece guardarlo como plantilla.
+
+### Cambiar un seguimiento que ya corre
+1. Pulsa «Delegar seguimiento» otra vez: la ventana abre con lo del seguimiento que corre y un aviso de en qué intento va.
+2. Cambia lo que necesites y pulsa «Reemplazar seguimiento»: se cancela el anterior y arranca este. Por omisión arranca cuando tocaba el siguiente intento, para no escribirle dos veces seguidas; puedes elegir «Ahora».
+3. Con Dali: «al seguimiento de Mario ponle 5 intentos»; la tarjeta avisa que lo reemplaza.
 
 ### Ver cómo va, pausar, reanudar o cancelar
 1. Debajo del botón aparece un renglón con el estado, los intentos (por ejemplo 1/3), el próximo contacto y la última plantilla usada. Pasa el mouse para ver el objetivo y el resultado.

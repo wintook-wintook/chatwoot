@@ -8,8 +8,10 @@
 #         max_attempts (1..10), interval_value, interval_unit (minutes/hours/days),
 #         on_finish (notify/assign), time_zone, template_name + template_language (plantilla de
 #         WhatsApp para reabrir la ventana de 24 h; nada = el agente elige).
-# Rechaza (ArgumentError) si la conversación ya tiene un seguimiento vivo, nuevo o de siempre:
-# nunca contestan dos a la vez.
+#         replace: true → si ya hay un Seguimiento IA vivo en la conversación, se cancela y arranca
+#         este en la misma transacción (si algo falla, el anterior sigue).
+# Rechaza (ArgumentError) si la conversación ya tiene un seguimiento vivo (sin replace) o uno
+# de siempre: nunca contestan dos a la vez.
 class AiFollowUps::Creator
   CLASSIC_LIVE = %w[pending scheduled active paused].freeze
 
@@ -25,8 +27,13 @@ class AiFollowUps::Creator
     validate!
     follow_up = AiFollowUp.new(attributes.merge(template_attributes))
     follow_up.add_log(:created, @user&.name)
-    follow_up.save!
-    AiFollowUps::Notifier.new(follow_up).started
+    replaced = nil
+    ActiveRecord::Base.transaction do
+      replaced = cancel_live
+      follow_up.add_log(:replaced, "##{replaced.id}") if replaced
+      follow_up.save!
+    end
+    AiFollowUps::Notifier.new(follow_up).started(replaced: replaced)
     # Si empieza ya, el primer mensaje sale enseguida; si no, lo toma AiFollowUps::DueJob a su hora.
     AiFollowUps::RunJob.perform_later(follow_up.id, 'scheduled') unless follow_up.next_run_at.future?
     follow_up
@@ -37,7 +44,7 @@ class AiFollowUps::Creator
   def validate!
     raise ArgumentError, 'Falta la conversación del cliente.' unless @conversation
     raise ArgumentError, 'Escribe qué quieres lograr.' if @params['objective'].blank?
-    raise ArgumentError, "Esta conversación ya tiene un #{AiFollowUp::DISPLAY_NAME} activo." if AiFollowUp.live_for?(@conversation.id)
+    raise ArgumentError, "Esta conversación ya tiene un #{AiFollowUp::DISPLAY_NAME} activo." if AiFollowUp.live_for?(@conversation.id) && !replace?
 
     validate_template!
     classic = ContactTracking.where(conversation_id: @conversation.id, status: CLASSIC_LIVE).first
@@ -45,6 +52,19 @@ class AiFollowUps::Creator
 
     raise ArgumentError, "Este cliente ya tiene un seguimiento activo con el agente «#{classic.tracking_template&.name}». " \
                          'Páusalo o cancélalo primero.'
+  end
+
+  def replace?
+    ActiveModel::Type::Boolean.new.cast(@params['replace'])
+  end
+
+  # El vivo de la conversación, cancelado (solo con replace).
+  def cancel_live
+    return unless replace?
+
+    live = AiFollowUp.live.where(conversation_id: @conversation.id).lock.first
+    live&.cancel!(by: @user)
+    live
   end
 
   def validate_template!

@@ -102,9 +102,12 @@ export default {
   },
   mounted() {
     window.addEventListener('keydown', this.onShortcut);
+    // «Primeros pasos» abre aquí la ventana de alta (p. ej. «Nuevo contacto»).
+    this.$emitter.on('topbar:open', this.openAction);
   },
   beforeDestroy() {
     window.removeEventListener('keydown', this.onShortcut);
+    this.$emitter.off('topbar:open', this.openAction);
   },
   methods: {
     // Ctrl + K (⌘ K) abre la lupa desde cualquier pantalla.

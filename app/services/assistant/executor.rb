@@ -16,6 +16,7 @@ class Assistant::Executor
   include Assistant::ClientTaskRunner # tareas con el cliente
   include Assistant::CancelRunner # cancelar con motivo
   include Assistant::ConvertRunner # tarea ↔ tarea agendada
+  include Assistant::FollowUpPresetRunner # guardar plantilla de seguimiento
 
   class Refused < StandardError; end
 

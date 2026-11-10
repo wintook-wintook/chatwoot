@@ -28,6 +28,8 @@ export default {
       minutes: null,
       minutesRequired: true,
       saving: false,
+      // Cita (item.askAttendance): ¿se realizó o el cliente no asistió?
+      attendance: 'held',
     };
   },
   watch: {
@@ -41,6 +43,7 @@ export default {
       this.outcomeId = '';
       this.files = [];
       this.minutes = null;
+      this.attendance = 'held';
       this.loadSuggestion();
       try {
         const { data } = await TaskOutcomesAPI.get();
@@ -104,7 +107,7 @@ export default {
             TaskReportsAPI.send({ type, id: itemId }, report)
           )
         );
-        this.$emit('reported');
+        this.$emit('reported', { status: this.attendance });
       } catch (error) {
         const reason = error?.response?.data?.error;
         useAlert(
@@ -125,6 +128,34 @@ export default {
       :header-content="item ? item.title : ''"
     />
     <form class="px-6 pb-6 space-y-4" @submit.prevent="submit">
+      <!-- Cita: cómo terminó. «No asistió» también lleva reporte (qué pasó y el tiempo). -->
+      <fieldset v-if="item && item.askAttendance" class="p-0 m-0 border-0">
+        <legend
+          class="mb-1 text-sm font-medium text-slate-700 dark:text-slate-200"
+        >
+          {{ $t('TASK_REPORT.ATTENDANCE.TITLE') }}
+        </legend>
+        <div class="flex gap-4 text-sm">
+          <label class="flex items-center gap-2">
+            <input
+              v-model="attendance"
+              type="radio"
+              value="held"
+              class="!m-0"
+            />
+            {{ $t('TASK_REPORT.ATTENDANCE.HELD') }}
+          </label>
+          <label class="flex items-center gap-2">
+            <input
+              v-model="attendance"
+              type="radio"
+              value="no_show"
+              class="!m-0"
+            />
+            {{ $t('TASK_REPORT.ATTENDANCE.NO_SHOW') }}
+          </label>
+        </div>
+      </fieldset>
       <label class="block">
         <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
           {{ $t('TASK_REPORT.CONTENT') }}

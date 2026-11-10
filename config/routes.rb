@@ -274,6 +274,10 @@ Rails.application.routes.draw do
               post :cancel
             end
           end
+          # «Primeros pasos» (Inicio): qué ya hizo el usuario, revisado en vivo
+          resources :onboarding_steps, only: [:index]
+          # Plantillas de seguimiento: la receta de un Seguimiento IA para volver a usarla
+          resources :ai_follow_up_presets, only: [:index, :create, :update, :destroy]
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
             post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada
@@ -534,6 +538,7 @@ Rails.application.routes.draw do
                 post :import
                 # feat/plantillas_whatsapp_mejoras F6: subir el archivo de muestra del encabezado
                 post :header_samples
+                post :ai_draft # «Crear con IA»: borrador con lo que quiere lograr
               end
               # feat/plantillas_whatsapp_mejoras: dónde se usa, antes de borrarla
               get :usage, on: :member
