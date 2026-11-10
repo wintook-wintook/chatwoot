@@ -39,6 +39,7 @@ import FichaQuestions from './FichaQuestions.vue';
 import FichaIdentity from './FichaIdentity.vue';
 import FichaVariables from './FichaVariables.vue';
 import FichaBusiness from './FichaBusiness.vue';
+import FichaRouteLimit from './FichaRouteLimit.vue';
 import { sheetVar } from './FichaSheet.vue';
 import FichaChannel, {
   channelKind,
@@ -91,6 +92,7 @@ export default {
     FichaIdentity,
     FichaVariables,
     FichaBusiness,
+    FichaRouteLimit,
     KeywordActionsEditor,
   },
   emits: ['created'],
@@ -900,6 +902,7 @@ export default {
         </span>
         <span v-else>{{ t('INVALID') }}</span>
       </div>
+      <FichaRouteLimit :routes="routes" />
       <ul v-if="warnings.length" class="!m-0 pl-4 text-xs text-amber-800">
         <li v-for="(item, index) in warnings" :key="index">
           {{ item.message }}

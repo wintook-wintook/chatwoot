@@ -375,3 +375,25 @@ describe('Tono', () => {
     });
   });
 });
+
+describe('Tope de rutas', () => {
+  it('avisa con más de 20 y dice qué tipo pesa más', async () => {
+    const { default: FichaRouteLimit } = await import('./FichaRouteLimit.vue');
+    const rutas = n =>
+      Array.from({ length: n }, (_, i) => ({ kind: i < 12 ? 'erp' : 'sheet' }));
+    const veinte = shallowMount(FichaRouteLimit, {
+      propsData: { routes: rutas(20) },
+      mocks: { $t: clave => clave },
+    });
+    expect(veinte.vm.over).toBe(false);
+    const muchas = shallowMount(FichaRouteLimit, {
+      propsData: { routes: rutas(25) },
+      mocks: { $t: clave => clave },
+    });
+    expect(muchas.vm.over).toBe(true);
+    expect(muchas.vm.byKind).toEqual([
+      { kind: 'sheet', n: 13 },
+      { kind: 'erp', n: 12 },
+    ]);
+  });
+});

@@ -21,7 +21,7 @@ class ContactTrackings::Ficha::Presenter
     ofertas = ContactTrackings::Ficha::Offers.new(cards, cambios.items).call
     { cards: cards, items: cambios.items, changes: cambios.call.except(:deduced),
       readiness: ContactTrackings::Ficha::Readiness.new(@template.account, offers: ofertas, template: @template).call,
-      routes: cambios.test_routes.map { |r| r.slice(:name, :label) } }.merge(settings)
+      routes: cambios.test_routes.map { |r| r.slice(:name, :label, :kind) } }.merge(settings)
   end
 
   private

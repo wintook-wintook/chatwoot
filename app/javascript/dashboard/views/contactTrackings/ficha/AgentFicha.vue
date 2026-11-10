@@ -30,6 +30,7 @@ import FichaQuestions from './FichaQuestions.vue';
 import FichaIdentity from './FichaIdentity.vue';
 import FichaVariables from './FichaVariables.vue';
 import FichaBusiness from './FichaBusiness.vue';
+import FichaRouteLimit from './FichaRouteLimit.vue';
 import { sheetVar } from './FichaSheet.vue';
 import FileRule, { defaultRule, ruleSummary } from './FileRule.vue';
 import FichaModal from './FichaModal.vue';
@@ -79,6 +80,7 @@ export default {
     FichaIdentity,
     FichaVariables,
     FichaBusiness,
+    FichaRouteLimit,
     FileRule,
     FichaModal,
     KeywordActionsEditor,
@@ -764,6 +766,7 @@ export default {
           >
             {{ t('CHANGES_TITLE') }}
           </h3>
+          <FichaRouteLimit :routes="routes" />
           <p v-if="dirty" class="!m-0 text-xs text-amber-800">
             {{ t('SAVE_FIRST') }}
           </p>

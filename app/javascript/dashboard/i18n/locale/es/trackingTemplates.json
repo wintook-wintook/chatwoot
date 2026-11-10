@@ -769,7 +769,11 @@
       "TONE_ADJUST_EMOJIS": "Usa emojis",
       "TONE_ADJUST_SHORT": "Respuestas muy cortas",
       "TONE_ADJUST_QUESTION": "Cierra con una pregunta",
-      "TONE_EXAMPLE": "Así contestaría"
+      "TONE_EXAMPLE": "Así contestaría",
+      "ROUTES_TOO_MANY": "Tu agente tiene {count} temas (rutas); lo recomendable es {max} o menos.",
+      "ROUTES_TOO_MANY_HINT": "Con tantos, al agente le cuesta elegir el tema correcto y puede contestar con la fuente equivocada. No se unen solos porque cada tema busca en su propia fuente: desmarca lo que este agente no necesite.",
+      "KIND_CALENDAR": "Agenda",
+      "KIND_CASE_TYPE": "Tickets"
     }
   },
   "TRACKING_IMPORT": {
