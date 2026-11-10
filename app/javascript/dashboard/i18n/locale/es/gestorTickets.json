@@ -2858,7 +2858,8 @@
       },
       "ANALYSIS": {
         "TITLE": "Análisis de conversaciones con Dali",
-        "DESCRIPTION": "Lee una muestra de hasta 150 conversaciones del período y encuentra de qué hablan, clientes molestos, ventas que se escapan y quejas que se repiten. Cuesta tokens: se hace a pedido.",
+        "SAMPLE_LABEL": "Conversaciones:",
+        "DESCRIPTION": "Lee una muestra de las conversaciones más recientes del período (100 por omisión; puedes elegir hasta 150) y encuentra de qué hablan, clientes molestos, ventas que se escapan y quejas que se repiten. Cuesta tokens: se hace a pedido.",
         "SAMPLE": "Muestra analizada: {count} conversaciones",
         "EMPTY": "No hay conversaciones en el período para analizar.",
         "COUNT": "{count} conv.",
