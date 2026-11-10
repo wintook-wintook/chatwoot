@@ -41,6 +41,24 @@ class ContactTrackings::Ficha::Draft
 
   def skipped = Array(@params[:skip]).map(&:to_s)
 
+  # Los archivos que la persona eligió subir, con su regla de envío:
+  #   [{ name:, ask: true, welcome: false, attempts: [2] }]
+  def files
+    Array(@params[:files]).filter_map do |archivo|
+      h = archivo.to_h.stringify_keys
+      next unless h['name'].to_s.match?(/\A[a-zA-Z0-9_-]{1,60}\z/)
+
+      { 'name' => h['name'].to_s, 'ask' => h.key?('ask') ? ActiveModel::Type::Boolean.new.cast(h['ask']) : true,
+        'welcome' => ActiveModel::Type::Boolean.new.cast(h['welcome']) || false,
+        'attempts' => Array(h['attempts']).map(&:to_i).select(&:positive?).uniq.sort }
+    end
+  end
+
+  # { 'catalogo' => { 'ask' => true, 'welcome' => false, 'attempts' => [2] } } (TrackingTemplate#file_rules)
+  def file_rules = files.to_h { |f| [f['name'], f.except('name')] }
+
+  def welcome_files = files.select { |f| f['welcome'] }.pluck('name')
+
   # Frases que la persona agregó a una ruta desde la prueba: { 'google_sheet:12' => ['¿cuánto…?'] }
   def phrases
     (@params[:phrases] || {}).to_h.transform_keys(&:to_s).transform_values { |v| Array(v).map(&:to_s).compact_blank }
@@ -58,7 +76,8 @@ class ContactTrackings::Ficha::Draft
     @result ||= begin
       generado = ContactTrackings::Ficha::Generator.new(
         account: @account, name: name, offers: active_offers,
-        objective: @params[:objective], business: @params[:business], tone: @params[:tone]
+        objective: @params[:objective], business: @params[:business], tone: @params[:tone],
+        welcome: @params[:welcome], welcome_files: welcome_files
       ).call
       generado.merge(offers: offers.map { |o| o.except(:route).merge(on: skipped.exclude?(o[:key])) })
     end

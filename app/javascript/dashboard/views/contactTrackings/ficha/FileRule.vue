@@ -1,0 +1,91 @@
+<script>
+// feat/ficha_agente_ia — CUÁNDO SE MANDA UN ARCHIVO
+// ============================================================================
+// Pedido del usuario (10/11/2026): «archivo x se envía si lo piden (dependiendo de cómo
+// se le puso el nombre), en ocasiones en x intento del seguimiento, en el mensaje de
+// bienvenida». Una o varias a la vez:
+//   ☑ Cuando lo pidan   ☐ Con la bienvenida   Intentos: [1] [2] [3]
+// v-model: { ask: true, welcome: false, attempts: [2] }
+// ============================================================================
+export const defaultRule = () => ({ ask: true, welcome: false, attempts: [] });
+
+export default {
+  model: { prop: 'value', event: 'input' },
+  props: {
+    value: { type: Object, default: defaultRule },
+    // Cuántos intentos tiene el seguimiento (para los botones).
+    attempts: { type: Number, default: 3 },
+    disabled: { type: Boolean, default: false },
+  },
+  emits: ['input'],
+  computed: {
+    rule() {
+      return { ...defaultRule(), ...(this.value || {}) };
+    },
+    attemptList() {
+      return Array.from({ length: this.attempts || 0 }, (_, i) => i + 1);
+    },
+    nothing() {
+      return !this.rule.ask && !this.rule.welcome && !this.rule.attempts.length;
+    },
+  },
+  methods: {
+    set(campo, valor) {
+      if (this.disabled) return;
+      this.$emit('input', { ...this.rule, [campo]: valor });
+    },
+    toggleAttempt(n) {
+      const lista = this.rule.attempts.includes(n)
+        ? this.rule.attempts.filter(item => item !== n)
+        : [...this.rule.attempts, n].sort((a, b) => a - b);
+      this.set('attempts', lista);
+    },
+  },
+};
+</script>
+
+<template>
+  <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+    <label class="flex items-center gap-1 !m-0 cursor-pointer">
+      <input
+        type="checkbox"
+        class="!m-0"
+        :checked="rule.ask"
+        :disabled="disabled"
+        @change="set('ask', $event.target.checked)"
+      />
+      {{ $t('TRACKING_TEMPLATES.FICHA.RULE_ASK') }}
+    </label>
+    <label class="flex items-center gap-1 !m-0 cursor-pointer">
+      <input
+        type="checkbox"
+        class="!m-0"
+        :checked="rule.welcome"
+        :disabled="disabled"
+        @change="set('welcome', $event.target.checked)"
+      />
+      {{ $t('TRACKING_TEMPLATES.FICHA.RULE_WELCOME') }}
+    </label>
+    <span v-if="attemptList.length" class="flex items-center gap-1">
+      {{ $t('TRACKING_TEMPLATES.FICHA.RULE_ATTEMPTS') }}
+      <button
+        v-for="n in attemptList"
+        :key="n"
+        type="button"
+        class="w-6 h-6 border rounded"
+        :class="
+          rule.attempts.includes(n)
+            ? 'border-woot-500 bg-woot-500 text-white'
+            : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'
+        "
+        :disabled="disabled"
+        @click="toggleAttempt(n)"
+      >
+        {{ n }}
+      </button>
+    </span>
+    <span v-if="nothing" class="text-amber-700">
+      {{ $t('TRACKING_TEMPLATES.FICHA.RULE_NOTHING') }}
+    </span>
+  </div>
+</template>

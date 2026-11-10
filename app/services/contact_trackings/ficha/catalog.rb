@@ -190,6 +190,7 @@ class ContactTrackings::Ficha::Catalog
 
     @template.ai_agent_attachments.order(:name).map do |archivo|
       card(key: "file:#{archivo.id}", kind: 'file', id: archivo.id, name: archivo.name,
+           rule: @template.file_rules[archivo.name],
            summary: archivo.file.attached? ? archivo.file.filename.to_s : 'sin archivo',
            offer: { label: "Mandar «#{archivo.name}» cuando lo pidan", directive: "{{#{archivo.name}}}",
                     topic: archivo.name.tr('_-', '  ') })

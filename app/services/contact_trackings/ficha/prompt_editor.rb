@@ -51,6 +51,30 @@ class ContactTrackings::Ficha::PromptEditor
     self
   end
 
+  # Lo que la persona aceptó en Recursos, de una vez:
+  #   add     llaves de oferta (rutas nuevas) o 'welcome_file:nombre' (archivo con la bienvenida)
+  #   remove  nombres de ruta    phrases { ruta => [frases] }    offers { llave => oferta }
+  WELCOME_FILE = 'welcome_file:'
+
+  def apply(add: [], remove: [], phrases: {}, offers: {})
+    add.each do |key|
+      next add_welcome_file(key.delete_prefix(WELCOME_FILE)) if key.start_with?(WELCOME_FILE)
+
+      add(offers[key]) if offers[key]
+    end
+    remove.each { |ruta| remove(ruta) }
+    phrases.each { |ruta, frases| Array(frases).each { |f| add_phrase(ruta.to_s, f) } }
+    self
+  end
+
+  # Agrega {{archivo}} a la sección [MENSAJE DE BIENVENIDA] (la crea si no existe).
+  def add_welcome_file(nombre)
+    return self if ContactTrackings::WelcomeMessage.text(text).to_s.include?("{{#{nombre}}}")
+
+    append_to_section('MENSAJE DE BIENVENIDA', "{{#{nombre}}}")
+    self
+  end
+
   def remove(nombre)
     etiqueta = nil
     @lines.reject! do |linea|

@@ -38,6 +38,8 @@ class ContactTrackings::Ficha::Generator
     @objective = options[:objective].to_s.squish
     @business = options[:business].to_s.strip
     @tone = TONES.key?(options[:tone].to_s) ? options[:tone].to_s : 'cercano'
+    @welcome = options[:welcome].to_s.strip
+    @welcome_files = Array(options[:welcome_files]).map(&:to_s).compact_blank
   end
 
   def call
@@ -73,7 +75,7 @@ class ContactTrackings::Ficha::Generator
   def files = @offers.select { |o| o[:kind] == 'file' }
 
   def text
-    [route_block, rol, alcance, fidelidad, etiquetas, archivos, estilo, prohibido].compact.join("\n\n")
+    [route_block, bienvenida, rol, alcance, fidelidad, etiquetas, archivos, estilo, prohibido].compact.join("\n\n")
   end
 
   def route_block
@@ -85,6 +87,15 @@ class ContactTrackings::Ficha::Generator
   # Por defecto, la primera que CONTESTA (no la de agendar ni la de ticket).
   def default_route
     routes.find { |o| %w[calendar case_type].exclude?(o[:kind]) } || routes.first
+  end
+
+  # El motor la manda TAL CUAL en el primer mensaje del cliente (ContactTrackings::
+  # WelcomeMessage) y resuelve {{archivo}}: así van los archivos de la bienvenida.
+  def bienvenida
+    lineas = [@welcome.presence, *@welcome_files.map { |n| "{{#{n}}}" }].compact
+    return nil if lineas.empty?
+
+    "[MENSAJE DE BIENVENIDA]\n#{lineas.join("\n")}"
   end
 
   def rol

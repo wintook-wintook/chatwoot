@@ -61,4 +61,12 @@ RSpec.describe ContactTrackings::Ficha::Generator do
     expect(resultado[:prompt]).to include('sin emojis')
     expect(resultado[:ai_context]).to eq("Horario: 9 a 6\nTel 555")
   end
+
+  it 'la bienvenida va como [MENSAJE DE BIENVENIDA] con sus archivos, y el comprobador la acepta' do
+    resultado = generar([{ 'key' => "google_sheet:#{hoja.id}" }], welcome: '¡Hola! Soy Sofía 👋', welcome_files: %w[catalogo])
+
+    expect(resultado[:prompt]).to include("[MENSAJE DE BIENVENIDA]\n¡Hola! Soy Sofía 👋\n{{catalogo}}")
+    expect(ContactTrackings::WelcomeMessage.text(resultado[:prompt])).to eq("¡Hola! Soy Sofía 👋\n{{catalogo}}")
+    expect(resultado[:validation][:blocking]).to eq([])
+  end
 end

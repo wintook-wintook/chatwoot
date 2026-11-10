@@ -35,4 +35,14 @@ RSpec.describe ContactTrackings::Ficha::Suggester do
     allow(chat).to receive(:api_key).and_return(nil)
     expect(proponer).to be_nil
   end
+
+  it 'en modo bienvenida propone o mejora el texto, sin llaves de archivo' do
+    allow(chat).to receive(:call).and_return('welcome' => "¡Hola! Te comparto el catálogo {{catalogo}}\n¿Qué necesitas?")
+    propuesta = described_class.new(account: account, name: 'Grúas', offers: offers, welcome: 'hola', welcome_files: %w[catalogo],
+                                    display_name: 'Sofía').call(:welcome)
+
+    expect(propuesta).to eq(welcome: "¡Hola! Te comparto el catálogo\n¿Qué necesitas?")
+    expect(chat).to have_received(:call).with(array_including(hash_including(role: 'user', content: include('Sofía', 'catalogo', 'hola'))),
+                                              hash_including(model: 'gpt-4o'))
+  end
 end

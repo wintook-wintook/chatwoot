@@ -1,0 +1,101 @@
+import { shallowMount } from '@vue/test-utils';
+import FichaChannel, {
+  channelKind,
+  trackingChannels,
+} from './FichaChannel.vue';
+import FileRule from './FileRule.vue';
+
+const INTEGRATIONS = [
+  {
+    id: 'tracking_bot',
+    enabled: true,
+    hooks: [
+      { status: true, inbox: { id: 1 } },
+      { status: true, inbox: { id: 2 } },
+      { status: false, inbox: { id: 3 } },
+    ],
+  },
+];
+const INBOXES = [
+  { id: 1, name: 'WA Ventas', channel_type: 'Channel::Whatsapp' },
+  { id: 2, name: 'Correo', channel_type: 'Channel::Email' },
+  { id: 3, name: 'Apagada', channel_type: 'Channel::Api' },
+];
+
+describe('FichaChannel', () => {
+  const montar = value =>
+    shallowMount(FichaChannel, {
+      propsData: { value },
+      mocks: {
+        $t: clave => clave,
+        $store: {
+          dispatch: vi.fn(),
+          getters: {
+            'integrations/getAppIntegrations': INTEGRATIONS,
+            'inboxes/getInboxes': INBOXES,
+            'inboxes/getWhatsAppTemplates': () => [
+              { name: 'seguimiento_1', language: 'es_MX' },
+            ],
+          },
+        },
+      },
+    });
+
+  it('solo ofrece canales con el bot de seguimiento activo', () => {
+    expect(trackingChannels(INTEGRATIONS, INBOXES).map(c => c.id)).toEqual([
+      1, 2,
+    ]);
+    expect(channelKind({ channelType: 'Channel::Whatsapp' })).toBe('whatsapp');
+    expect(channelKind({ channelType: 'Channel::Email' })).toBe('email');
+  });
+
+  it('con WhatsApp pide una plantilla por intento', () => {
+    const wrapper = montar({
+      inboxId: 1,
+      attempts: 2,
+      whatsappTemplates: ['seguimiento_1'],
+    });
+    expect(wrapper.vm.kind).toBe('whatsapp');
+    expect(wrapper.vm.missingTemplates).toBe(true);
+    wrapper.vm.setTemplate(1, 'seguimiento_1');
+    expect(wrapper.emitted('input')[0][0].whatsappTemplates).toEqual([
+      'seguimiento_1',
+      'seguimiento_1',
+    ]);
+  });
+
+  it('bajar los intentos recorta las plantillas', () => {
+    const wrapper = montar({
+      inboxId: 1,
+      attempts: 3,
+      whatsappTemplates: ['a', 'b', 'c'],
+    });
+    wrapper.vm.setAttempts(2);
+    expect(wrapper.emitted('input')[0][0]).toMatchObject({
+      attempts: 2,
+      whatsappTemplates: ['a', 'b'],
+    });
+  });
+});
+
+describe('FileRule', () => {
+  it('marca cuándo se manda un archivo y avisa si nunca', async () => {
+    const wrapper = shallowMount(FileRule, {
+      propsData: {
+        value: { ask: true, welcome: false, attempts: [] },
+        attempts: 3,
+      },
+      mocks: { $t: clave => clave },
+    });
+    wrapper.vm.toggleAttempt(2);
+    expect(wrapper.emitted('input')[0][0]).toEqual({
+      ask: true,
+      welcome: false,
+      attempts: [2],
+    });
+    await wrapper.setProps({
+      value: { ask: false, welcome: false, attempts: [] },
+    });
+    expect(wrapper.vm.nothing).toBe(true);
+  });
+});

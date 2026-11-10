@@ -10,6 +10,7 @@
 // El nombre: letras, números, guion y guion bajo; único en el agente (AiAgentAttachment).
 // ============================================================================
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
+import FileRule, { defaultRule } from './FileRule.vue';
 
 const NAME_FORMAT = /^[a-zA-Z0-9_-]{1,60}$/;
 let siguiente = 0;
@@ -33,12 +34,15 @@ export const uniqueName = (base, taken) => {
 };
 
 export default {
+  components: { FileRule },
   model: { prop: 'value', event: 'input' },
   props: {
     value: { type: Array, default: () => [] },
     templateId: { type: Number, default: null },
     // Los nombres que ya usa el agente.
     existingNames: { type: Array, default: () => [] },
+    // Intentos del seguimiento (para la regla «en el intento N»).
+    attempts: { type: Number, default: 3 },
   },
   emits: ['input', 'uploaded'],
   data() {
@@ -58,7 +62,7 @@ export default {
           ...nuevos.map(item => item.name),
         ]);
         siguiente += 1;
-        nuevos.push({ key: siguiente, file, name });
+        nuevos.push({ key: siguiente, file, name, ...defaultRule() });
       });
       if (this.templateId) {
         this.upload(nuevos);
@@ -79,6 +83,17 @@ export default {
         'input',
         this.value.map(entry =>
           entry.key === item.key ? { ...entry, name: name.trim() } : entry
+        )
+      );
+    },
+    ruleOf(item) {
+      return { ask: item.ask, welcome: item.welcome, attempts: item.attempts };
+    },
+    setRule(item, regla) {
+      this.$emit(
+        'input',
+        this.value.map(entry =>
+          entry.key === item.key ? { ...entry, ...regla } : entry
         )
       );
     },
@@ -169,36 +184,44 @@ export default {
       <li
         v-for="item in value"
         :key="item.key"
-        class="flex items-center gap-2 p-2 border rounded-lg border-slate-200 dark:border-slate-700"
+        class="flex flex-col gap-1.5 p-2 border rounded-lg border-slate-200 dark:border-slate-700"
       >
-        <fluent-icon
-          icon="document"
-          size="16"
-          class="text-slate-400 shrink-0"
-        />
-        <span
-          class="w-1/3 min-w-0 text-sm truncate text-slate-700 dark:text-slate-200"
-          :title="item.file.name"
-        >
-          {{ item.file.name }}
-        </span>
-        <input
-          :value="item.name"
-          type="text"
-          class="flex-1 min-w-0 !mb-0 !h-8 text-sm"
-          :class="{ '!border-red-400': invalid(item) }"
-          :title="$t('TRACKING_TEMPLATES.FICHA.FILES_NAME_HINT')"
-          @change="rename(item, $event.target.value)"
-        />
-        <span class="w-16 text-xs text-right text-slate-400 shrink-0">
-          {{ size(item.file.size) }}
-        </span>
-        <woot-button
-          size="tiny"
-          variant="clear"
-          color-scheme="secondary"
-          icon="dismiss"
-          @click.prevent="remove(item)"
+        <div class="flex items-center gap-2">
+          <fluent-icon
+            icon="document"
+            size="16"
+            class="text-slate-400 shrink-0"
+          />
+          <span
+            class="w-1/3 min-w-0 text-sm truncate text-slate-700 dark:text-slate-200"
+            :title="item.file.name"
+          >
+            {{ item.file.name }}
+          </span>
+          <input
+            :value="item.name"
+            type="text"
+            class="flex-1 min-w-0 !mb-0 !h-8 text-sm"
+            :class="{ '!border-red-400': invalid(item) }"
+            :title="$t('TRACKING_TEMPLATES.FICHA.FILES_NAME_HINT')"
+            @change="rename(item, $event.target.value)"
+          />
+          <span class="w-16 text-xs text-right text-slate-400 shrink-0">
+            {{ size(item.file.size) }}
+          </span>
+          <woot-button
+            size="tiny"
+            variant="clear"
+            color-scheme="secondary"
+            icon="dismiss"
+            @click.prevent="remove(item)"
+          />
+        </div>
+        <FileRule
+          class="pl-6"
+          :value="ruleOf(item)"
+          :attempts="attempts"
+          @input="setRule(item, $event)"
         />
       </li>
     </ul>

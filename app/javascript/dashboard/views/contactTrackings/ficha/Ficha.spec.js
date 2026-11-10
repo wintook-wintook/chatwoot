@@ -131,16 +131,27 @@ describe('FichaWizard', () => {
       mocks: {
         ...mocks,
         $store: {
-          getters: { 'inboxes/getInboxes': [{ id: 5, name: 'WA' }] },
+          getters: {
+            'inboxes/getInboxes': [
+              { id: 5, name: 'Web', channel_type: 'Channel::WebWidget' },
+            ],
+            'integrations/getAppIntegrations': [
+              {
+                id: 'tracking_bot',
+                enabled: true,
+                hooks: [{ status: true, inbox: { id: 5, name: 'Web' } }],
+              },
+            ],
+          },
           dispatch: vi.fn(),
         },
       },
     });
 
-  it('empieza en Fuentes y cuenta lo marcado por sección', async () => {
+  it('empieza en Canal y seguimiento y cuenta lo marcado por sección', async () => {
     const wrapper = montar();
     await esperar();
-    expect(wrapper.vm.section).toBe('sources');
+    expect(wrapper.vm.section).toBe('channel');
     wrapper.setData({
       items: [{ key: 'google_sheet:1' }, { key: 'calendar:3' }],
     });
@@ -148,23 +159,41 @@ describe('FichaWizard', () => {
     expect(menu.sources).toMatchObject({ count: 1, total: 3 });
     expect(menu.calendar).toMatchObject({ count: 1, total: 1 });
     expect(wrapper.vm.navItems.map(i => i.id)).toEqual([
+      'channel',
       'sources',
       'calendar',
       'tickets',
       'files',
       'rules',
     ]);
-    expect(wrapper.vm.nextSection).toBe('calendar');
+    expect(menu.channel.state).toBe('todo');
+    expect(wrapper.vm.nextSection).toBe('sources');
   });
 
-  it('Continuar se habilita con al menos una ruta y avisa al espacio del agente', async () => {
+  it('Continuar pide canal y al menos una ruta', async () => {
     const wrapper = montar();
     await esperar();
     expect(wrapper.vm.canContinue).toBe(false);
     wrapper.setData({ items: [{ key: 'google_sheet:1' }] });
     await wrapper.vm.loadPreview();
+    expect(wrapper.vm.canContinue).toBe(false);
+    wrapper.setData({ follow: { ...wrapper.vm.follow, inboxId: 5 } });
+    expect(wrapper.vm.channelOk).toBe(true);
     expect(wrapper.vm.canContinue).toBe(true);
     expect(wrapper.vm.canCreate).toBe(false);
+  });
+
+  it('✨ bienvenida: propone o mejora el texto', async () => {
+    FichaAPI.suggest.mockResolvedValue({
+      data: { welcome: '¡Hola! Soy Sofía' },
+    });
+    const wrapper = montar();
+    await esperar();
+    await wrapper.vm.suggest('welcome');
+    expect(FichaAPI.suggest).toHaveBeenLastCalledWith(
+      expect.objectContaining({ field: 'welcome' })
+    );
+    expect(wrapper.vm.welcome).toBe('¡Hola! Soy Sofía');
   });
 
   it('✨ Proponer con IA llena el objetivo o el contexto y lo que falta', async () => {
@@ -195,17 +224,37 @@ describe('FichaWizard', () => {
     wrapper.setData({
       name: 'Ventas',
       items: [{ key: 'google_sheet:1' }],
-      files: [{ key: 1, name: 'catalogo', file: { name: 'Catálogo.pdf' } }],
+      follow: { ...wrapper.vm.follow, inboxId: 5 },
+      files: [
+        {
+          key: 1,
+          name: 'catalogo',
+          file: { name: 'Catálogo.pdf' },
+          ask: false,
+          welcome: true,
+          attempts: [2],
+        },
+      ],
     });
     await wrapper.vm.loadPreview();
     expect(wrapper.vm.canCreate).toBe(true);
     wrapper.vm.toggleOffer(PREVIEW.offers[1]);
-    wrapper.setData({ keywordActions: [{ keyword: 'asesor' }] });
+    wrapper.setData({
+      keywordActions: [{ keyword: 'asesor' }],
+      welcome: 'Hola ',
+    });
     expect(wrapper.vm.payload).toMatchObject({
       skip: ['calendar:3'],
-      files: [{ name: 'catalogo' }],
+      files: [{ name: 'catalogo', ask: false, welcome: true, attempts: [2] }],
       keyword_actions: [{ keyword: 'asesor' }],
+      inbox_id: 5,
+      retry_interval_value: 1,
+      retry_interval_unit: 'days',
+      attempts: 3,
+      whatsapp_templates: [],
+      welcome: 'Hola',
     });
+    expect(wrapper.vm.welcomeFiles.map(f => f.name)).toEqual(['catalogo']);
 
     await wrapper.vm.create();
     expect(FichaAPI.create).toHaveBeenCalledWith(
@@ -233,7 +282,7 @@ describe('FichaWizard', () => {
     });
     wrapper.setData({ activateOnCreate: true });
     expect(wrapper.vm.payload.activate).toBe(false);
-    wrapper.setData({ inboxId: 5 });
+    wrapper.setData({ follow: { ...wrapper.vm.follow, inboxId: 5 } });
     expect(wrapper.vm.payload.activate).toBe(true);
     expect(wrapper.vm.testPayload.activate).toBeUndefined();
     expect(wrapper.vm.payload.agenda).toBeNull();
@@ -305,7 +354,7 @@ describe('AgentFicha', () => {
     expect(FichaAPI.save).toHaveBeenCalledWith(
       7,
       [{ key: 'google_sheet:1' }, { key: 'file:9' }],
-      { keyword_actions: [], agenda: {} }
+      { keyword_actions: [], agenda: {}, file_rules: {} }
     );
   });
 
@@ -352,6 +401,7 @@ describe('AgentFicha', () => {
     expect(FichaAPI.save).toHaveBeenLastCalledWith(7, DATA.items, {
       keyword_actions: [],
       agenda: {},
+      file_rules: {},
     });
   });
 
@@ -374,7 +424,7 @@ describe('AgentFicha', () => {
     expect(FichaAPI.save).toHaveBeenCalledWith(
       7,
       [{ key: 'google_sheet:1' }, { key: 'calendar:3' }],
-      { keyword_actions: [], agenda: {} }
+      { keyword_actions: [], agenda: {}, file_rules: {} }
     );
   });
 

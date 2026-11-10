@@ -121,6 +121,43 @@ RSpec.describe 'Ficha del Agente IA API', type: :request do
     expect(response.parsed_body['agenda']['calendar_event_duration']).to eq(30)
   end
 
+  it 'al crear guarda el seguimiento, la bienvenida y la regla de cada archivo' do
+    post "#{base}/ficha_create", params: { name: 'Ventas', items: items, retry_interval_value: 2, retry_interval_unit: 'hours', attempts: 4,
+                                           whatsapp_templates: [], email_signature: '', welcome: '¡Hola!',
+                                           files: [{ name: 'catalogo', ask: false, welcome: true, attempts: [2] },
+                                                   { name: 'garantia', ask: true, welcome: false, attempts: [] }] },
+                                 headers: admin.create_new_auth_token, as: :json
+    creado = account.tracking_templates.find(response.parsed_body['id'])
+
+    expect(creado).to have_attributes(retry_interval_value: 2, retry_interval_unit: 'hours', follow_up_attempts: 4)
+    expect(creado.file_rules).to eq('catalogo' => { 'ask' => false, 'welcome' => true, 'attempts' => [2] },
+                                    'garantia' => { 'ask' => true, 'welcome' => false, 'attempts' => [] })
+    expect(ContactTrackings::WelcomeMessage.text(creado.complementary_prompt)).to eq("¡Hola!\n{{catalogo}}")
+    expect(creado.complementary_prompt).to include('{{garantia}} en mi respuesta')
+    expect(creado.complementary_prompt).not_to include('{{catalogo}} en mi respuesta')
+  end
+
+  it '✨ bienvenida: manda el modo y regresa el texto' do
+    sugeridor = instance_double(ContactTrackings::Ficha::Suggester)
+    allow(ContactTrackings::Ficha::Suggester).to receive(:new).and_return(sugeridor)
+    allow(sugeridor).to receive(:call).with(:welcome).and_return(welcome: '¡Hola!')
+    post "#{base}/ficha_suggest", params: { name: 'Ventas', items: items, field: 'welcome' }, headers: admin.create_new_auth_token, as: :json
+    expect(response.parsed_body).to eq('welcome' => '¡Hola!')
+  end
+
+  it 'en un agente existente: la regla «con la bienvenida» se detecta y se aplica' do
+    prompt = "@ruta(info #info: pregunta algo): @buscar_articulo\n\n[MENSAJE DE BIENVENIDA]\n¡Hola!"
+    template = create(:tracking_template, account: account, complementary_prompt: prompt)
+    patch "#{base}/#{template.id}/ficha", params: { items: items, file_rules: { catalogo: { ask: false, welcome: true, attempts: [1] } } },
+                                          headers: admin.create_new_auth_token, as: :json
+    expect(template.reload.file_rules['catalogo']).to eq('ask' => false, 'welcome' => true, 'attempts' => [1])
+    expect(response.parsed_body['changes']['added'].pluck('key')).to include('welcome_file:catalogo')
+
+    post "#{base}/#{template.id}/ficha/apply", params: { add: ['welcome_file:catalogo'] }, headers: admin.create_new_auth_token, as: :json
+    expect(ContactTrackings::WelcomeMessage.text(template.reload.complementary_prompt)).to eq("¡Hola!\n{{catalogo}}")
+    expect(response.parsed_body['changes']['added'].pluck('key')).not_to include('welcome_file:catalogo')
+  end
+
   it 'las Reglas se guardan al crear y con la ficha' do
     regla = { keyword: 'asesor', action: ContactTrackings::KeywordActionService::VALID_ACTIONS.first,
               direction: ContactTrackings::KeywordActionService::VALID_DIRECTIONS.first }

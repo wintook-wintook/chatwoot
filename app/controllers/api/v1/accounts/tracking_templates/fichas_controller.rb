@@ -15,7 +15,9 @@
 #     params: name, inbox_id, items[], skip[] (ofertas apagadas), objective, business, tone,
 #             customer_display_name, files[] ({ name }: archivos que la pantalla sube al crear),
 #             keyword_actions[] (Reglas), phrases ({ oferta => [frases] }), activate (crear y activar),
-#             agenda ({ calendar_event_duration, timezone, slots_presentation, booking_calendar_ids })
+#             agenda ({ calendar_event_duration, timezone, slots_presentation, booking_calendar_ids }),
+#             welcome (bienvenida), files[] ({ name, ask, welcome, attempts[] }),
+#             retry_interval_value, retry_interval_unit, attempts, whatsapp_templates[], email_signature
 #
 # Agente que ya existe:
 #   GET   tracking_templates/:id/ficha        tarjetas + lo marcado + cambios contra el prompt
@@ -30,8 +32,6 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
   INVALID = 'El Entrenamiento tiene errores que impiden guardarlo.'
   NO_AI = 'No se pudo proponer con IA: revisa que la cuenta tenga OpenAI activo.'
   NO_CHANNEL = 'Para activarlo, primero elige su canal en la Ficha de Agente IA.'
-  KEYWORD_FIELDS = [:keyword, :action, :direction, :label, :assignee_id, :team_id].freeze
-  PRESENTATIONS = %w[detailed by_agent by_calendar simple].freeze
 
   before_action :check_authorization
   before_action :fetch_tracking_template, only: [:show, :update, :apply, :activate, :test_existing]
@@ -80,8 +80,9 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
   def suggest
     propuesta = ContactTrackings::Ficha::Suggester.new(
       account: Current.account, name: draft.name, offers: draft.offers, cards: draft.cards,
-      business: params[:business], tone: params[:tone]
-    ).call
+      business: params[:business], tone: params[:tone], display_name: params[:customer_display_name],
+      welcome: params[:welcome], welcome_files: draft.welcome_files
+    ).call(params[:field].to_s == 'welcome' ? :welcome : :fields)
     return render json: { error: NO_AI }, status: :unprocessable_entity if propuesta.nil?
 
     render json: propuesta
@@ -97,9 +98,12 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
   end
 
   def update
-    @tracking_template.update!({ resources: resources_for(items), calendar_integration_ids: calendar_ids(items),
-                                 keyword_actions: keyword_actions, version_note: 'Ficha actualizada' }
-                                 .compact.merge(agenda_attributes(calendar_ids(items))))
+    recursos = resources_for(items)
+    recursos = recursos.merge('files' => settings.file_rules || @tracking_template.file_rules)
+    recursos = recursos.merge('attempts' => @tracking_template.resources['attempts']).compact
+    @tracking_template.update!({ resources: recursos, calendar_integration_ids: calendar_ids(items),
+                                 keyword_actions: settings.keyword_actions, version_note: 'Ficha actualizada' }
+                                 .compact.merge(settings.agenda(calendar_ids(items))))
     render json: ficha_json
   end
 
@@ -115,52 +119,28 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
   private
 
   def new_template_attributes(resultado)
-    { name: draft.name, inbox_id: draft.inbox&.id, user: Current.user,
-      objective: resultado[:objective], ai_context: resultado[:ai_context].presence,
-      complementary_prompt: resultado[:prompt], resources: resources_for(draft.items),
-      calendar_integration_ids: calendar_ids(draft.items), version_note: 'Creado desde la ficha',
-      customer_display_name: params[:customer_display_name].presence, keyword_actions: keyword_actions || [] }
-      .merge(agenda_attributes(calendar_ids(draft.items)))
+    { name: draft.name, inbox_id: draft.inbox&.id, user: Current.user, objective: resultado[:objective],
+      ai_context: resultado[:ai_context].presence, complementary_prompt: resultado[:prompt],
+      version_note: 'Creado desde la ficha', customer_display_name: params[:customer_display_name].presence }
+      .merge(new_resources_attributes)
   end
 
-  # Recursos › Agenda (antes solo en la Ficha › Agendas): duración, zona, cómo se
-  # presentan los horarios y en qué calendario de cada agenda se aparta. Solo lo que vino.
-  def agenda_attributes(integraciones)
-    agenda = params[:agenda]
-    return {} if agenda.blank?
-
-    agenda = agenda.permit(:calendar_event_duration, :timezone, :slots_presentation, booking_calendar_ids: {}).to_h
-    { calendar_event_duration: agenda['calendar_event_duration'].to_i.positive? ? agenda['calendar_event_duration'].to_i : nil,
-      timezone: agenda['timezone'],
-      slots_presentation: PRESENTATIONS.include?(agenda['slots_presentation']) ? agenda['slots_presentation'] : nil,
-      booking_calendar_ids: booking_ids(agenda['booking_calendar_ids'], integraciones) }.compact
+  # Lo de Recursos: tarjetas, archivos, intentos, agenda, reglas y seguimiento.
+  def new_resources_attributes
+    integraciones = calendar_ids(draft.items)
+    { resources: resources_for(draft.items).merge('files' => draft.file_rules).merge(settings.attempts),
+      calendar_integration_ids: integraciones, keyword_actions: settings.keyword_actions || [] }
+      .merge(settings.agenda(integraciones)).merge(settings.follow_up)
   end
 
-  # { '12' => ['cal@group…'] } solo de las agendas marcadas.
-  def booking_ids(raw, integraciones)
-    return nil if raw.nil?
-
-    permitidas = integraciones.map(&:to_s)
-    raw.to_h.each_with_object({}) do |(id, cals), acc|
-      lista = Array(cals).map(&:to_s).compact_blank.uniq
-      acc[id.to_s] = lista if lista.any? && permitidas.include?(id.to_s)
-    end
-  end
-
-  # Reglas (palabras clave → acción), las mismas de la Ficha › Reglas. nil = no vinieron.
-  def keyword_actions
-    return nil unless params.key?(:keyword_actions)
-
-    params.permit(keyword_actions: KEYWORD_FIELDS).fetch(:keyword_actions, []).map { |r| r.to_h.stringify_keys }
-  end
+  def settings = @settings ||= ContactTrackings::Ficha::Settings.new(params)
 
   # El prompt con lo que la persona aceptó: add[] = ofertas de la ficha, remove[] = rutas.
   def edited_prompt
-    editor = ContactTrackings::Ficha::PromptEditor.new(@tracking_template.complementary_prompt, name: @tracking_template.name)
-    Array(params[:add]).filter_map { |key| template_offers[key.to_s] }.each { |oferta| editor.add(oferta) }
-    Array(params[:remove]).each { |ruta| editor.remove(ruta.to_s) }
-    route_phrases.each { |ruta, frases| frases.each { |f| editor.add_phrase(ruta, f) } }
-    editor.text
+    ContactTrackings::Ficha::PromptEditor.new(@tracking_template.complementary_prompt, name: @tracking_template.name)
+                                         .apply(add: Array(params[:add]).map(&:to_s), remove: Array(params[:remove]).map(&:to_s),
+                                                phrases: route_phrases, offers: template_offers)
+                                         .text
   end
 
   # { 'agendar_cita' => ['¿a qué hora atienden?'] }
@@ -240,6 +220,7 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
     cambios = ContactTrackings::Ficha::Changes.new(@tracking_template, cards: cards)
     { cards: cards, items: cambios.items, changes: cambios.call.except(:deduced),
       keyword_actions: @tracking_template.keyword_actions || [], readiness: readiness_for(@tracking_template).call,
-      agenda: @tracking_template.slice(:calendar_event_duration, :timezone, :slots_presentation, :booking_calendar_ids) }
+      agenda: @tracking_template.slice(:calendar_event_duration, :timezone, :slots_presentation, :booking_calendar_ids),
+      file_rules: @tracking_template.file_rules, attempts: @tracking_template.follow_up_attempts }
   end
 end

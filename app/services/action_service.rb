@@ -157,8 +157,7 @@ class ActionService
     return if ContactTracking.exists?(contact_id: @conversation.contact_id, inbox_id: inbox_id, status: active_statuses)
 
     templates = template.whatsapp_templates.is_a?(Array) ? template.whatsapp_templates : []
-    max_att = templates.count(&:present?).clamp(1, 10)
-    max_att = 3 if max_att.zero?
+    max_att = template.follow_up_attempts # feat/ficha_agente_ia (antes: 1 sin plantillas)
 
     # proyecto@automatizacion_tracking: calcular scheduled_for usando el intervalo de la plantilla
     # para que el primer intento ocurra al mismo tiempo que los siguientes

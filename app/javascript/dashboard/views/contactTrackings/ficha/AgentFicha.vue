@@ -21,6 +21,7 @@ import FichaFiles from './FichaFiles.vue';
 import FichaReadiness from './FichaReadiness.vue';
 import FichaAgenda from './FichaAgenda.vue';
 import FichaTest from './FichaTest.vue';
+import FileRule, { defaultRule } from './FileRule.vue';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 
 const SECTIONS = ['sources', 'calendar', 'tickets', 'files', 'rules'];
@@ -42,6 +43,7 @@ export default {
     FichaReadiness,
     FichaAgenda,
     FichaTest,
+    FileRule,
     KeywordActionsEditor,
   },
   props: {
@@ -64,6 +66,10 @@ export default {
       // Recursos › Agenda (se guarda con la ficha).
       agenda: {},
       savedAgenda: {},
+      // Cuándo se manda cada archivo: { nombre: { ask, welcome, attempts } }.
+      fileRules: {},
+      savedFileRules: {},
+      attempts: 3,
       activating: false,
       loading: true,
       busy: false,
@@ -74,7 +80,8 @@ export default {
       return (
         JSON.stringify(this.items) !== JSON.stringify(this.saved) ||
         JSON.stringify(this.rules) !== JSON.stringify(this.savedRules) ||
-        JSON.stringify(this.agenda) !== JSON.stringify(this.savedAgenda)
+        JSON.stringify(this.agenda) !== JSON.stringify(this.savedAgenda) ||
+        JSON.stringify(this.fileRules) !== JSON.stringify(this.savedFileRules)
       );
     },
     pending() {
@@ -140,6 +147,9 @@ export default {
       this.readiness = data.readiness || [];
       this.agenda = { ...(data.agenda || {}) };
       this.savedAgenda = { ...(data.agenda || {}) };
+      this.fileRules = copy(data.file_rules || {});
+      this.savedFileRules = copy(data.file_rules || {});
+      this.attempts = data.attempts || 3;
       this.$emit(
         'changes',
         this.changes.added.length + this.changes.removed.length
@@ -159,9 +169,24 @@ export default {
     async save(items = this.items) {
       this.busy = true;
       try {
-        const { data } = await FichaAPI.save(this.templateId, items, {
+        // Los archivos los decide su regla: todos van en la ficha.
+        // (más los recién subidos, que todavía no tienen tarjeta).
+        const llaves = [
+          ...this.cards
+            .filter(card => card.kind === 'file')
+            .map(card => card.key),
+          ...items
+            .filter(item => item.key.startsWith('file:'))
+            .map(item => item.key),
+        ];
+        const conArchivos = [
+          ...items.filter(item => !item.key.startsWith('file:')),
+          ...[...new Set(llaves)].map(key => ({ key })),
+        ];
+        const { data } = await FichaAPI.save(this.templateId, conArchivos, {
           keyword_actions: this.rules,
           agenda: this.agenda,
+          file_rules: this.fileRules,
         });
         this.take(data);
         useAlert(this.t('SAVED'));
@@ -207,6 +232,12 @@ export default {
     addPhrase({ route, phrase }) {
       if (!route) return;
       this.apply({ phrases: { [route]: [phrase] } });
+    },
+    ruleFor(nombre) {
+      return { ...defaultRule(), ...(this.fileRules[nombre] || {}) };
+    },
+    setRule(nombre, regla) {
+      this.fileRules = { ...this.fileRules, [nombre]: regla };
     },
     hasChannel() {
       return this.readiness.some(
@@ -318,14 +349,27 @@ export default {
                 :existing-names="fileNames"
                 @uploaded="onUploaded"
               />
-              <FichaCards
-                v-if="fileNames.length"
-                v-model="items"
-                :cards="cards"
-                :only="['files']"
-                :disabled="busy"
-                :show-headers="false"
-              />
+              <ul class="!m-0 !p-0 list-none flex flex-col gap-1.5">
+                <li
+                  v-for="nombre in fileNames"
+                  :key="nombre"
+                  class="flex flex-col gap-1.5 p-2 border rounded-lg border-slate-200 dark:border-slate-700"
+                >
+                  <span
+                    class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
+                  >
+                    <fluent-icon icon="attach" size="14" />
+                    {{ nombre }}
+                  </span>
+                  <FileRule
+                    class="pl-6"
+                    :value="ruleFor(nombre)"
+                    :attempts="attempts"
+                    :disabled="busy"
+                    @input="setRule(nombre, $event)"
+                  />
+                </li>
+              </ul>
             </template>
             <template v-else-if="section === 'rules'">
               <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">

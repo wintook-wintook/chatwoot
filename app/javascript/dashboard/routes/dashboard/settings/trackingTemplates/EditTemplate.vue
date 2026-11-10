@@ -549,6 +549,9 @@ export default {
             this.form.whatsapp_templates.some(t => t)
           ) {
             this.maxAttempts = this.form.whatsapp_templates.length;
+          } else if (val.follow_up_attempts) {
+            // feat/ficha_agente_ia: sin plantillas, el núm. de intentos guardado
+            this.maxAttempts = val.follow_up_attempts;
           }
           // Pre-seleccionar inbox guardado
           if (val.inbox_id) {
@@ -625,6 +628,7 @@ export default {
           email_signature: this.form.email_signature, // prospeccion V1
           customer_display_name: this.form.customer_display_name,
           keyword_actions: this.form.keyword_actions || [], // proyecto@contact_tracking
+          follow_up_attempts: this.maxAttempts, // feat/ficha_agente_ia
           calendar_integration_ids: this.form.calendar_integration_ids || [],
           booking_calendar_ids: this.bookingCalendarIdsPayload(),
           slots_presentation: this.form.slots_presentation || 'detailed',

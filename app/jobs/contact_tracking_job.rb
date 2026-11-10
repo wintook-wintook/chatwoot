@@ -136,6 +136,8 @@ class ContactTrackingJob < ApplicationJob
 
       message_body = generate_message(tracking)
       success = send_message_via_chatwoot(tracking, message_body)
+      # feat/ficha_agente_ia: los archivos que la ficha manda en este intento
+      ContactTrackings::AttemptFiles.send_for(tracking, tracking.attempt_count + 1, sender: bot_user(tracking.account)) if success
 
       if success
         Rails.logger.info "[ContactTracking] ✅ Mensaje personalizado enviado con IA"
@@ -159,6 +161,8 @@ class ContactTrackingJob < ApplicationJob
       Rails.logger.info "[ContactTracking] 💬 USANDO MENSAJE NORMAL (canal: #{tracking.inbox.channel_type})"
       message_body = generate_message(tracking)
       success = send_message_via_chatwoot(tracking, message_body)
+      # feat/ficha_agente_ia: los archivos que la ficha manda en este intento
+      ContactTrackings::AttemptFiles.send_for(tracking, tracking.attempt_count + 1, sender: bot_user(tracking.account)) if success
     end
     success
   end

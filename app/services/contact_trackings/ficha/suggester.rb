@@ -51,16 +51,40 @@ class ContactTrackings::Ficha::Suggester
     @cards = Array(options[:cards])
     @business = options[:business].to_s.strip
     @tone = options[:tone].to_s
+    @display_name = options[:display_name].to_s.squish
+    @welcome = options[:welcome].to_s.strip
+    @welcome_files = Array(options[:welcome_files]).map(&:to_s).compact_blank
   end
 
-  def call
+  # mode: :fields (objetivo + contexto) | :welcome (mensaje de bienvenida)
+  def call(mode = :fields)
     chat = ContactTrackings::Assistant::OpenaiChat.new(account: @account)
     return nil if chat.api_key.blank?
 
-    respuesta = chat.call([{ role: 'system', content: PROMPT }, { role: 'user', content: datos }],
+    sistema, usuario = mode == :welcome ? [WELCOME_PROMPT, welcome_datos] : [PROMPT, datos]
+    respuesta = chat.call([{ role: 'system', content: sistema }, { role: 'user', content: usuario }],
                           model: MODEL, max_tokens: 700, temperature: 0.3)
-    respuesta && clean(respuesta)
+    return nil if respuesta.nil?
+
+    mode == :welcome ? { welcome: welcome_text(respuesta['welcome']) } : clean(respuesta)
   end
+
+  # La bienvenida la manda el motor TAL CUAL en el primer mensaje (WelcomeMessage).
+  WELCOME_PROMPT = <<~TXT
+    Escribe el MENSAJE DE BIENVENIDA de un Agente IA que atiende por chat (WhatsApp, web) en
+    español de México, de tú. Es lo primero que lee el cliente y se manda tal cual.
+
+    - Máximo 3 líneas cortas. Saluda, di quién eres (con el nombre que ve el cliente, si hay)
+      y de qué negocio, menciona en pocas palabras lo que puedes hacer y termina con una
+      pregunta abierta para que el cliente diga qué necesita.
+    - Si te dan un TEXTO ACTUAL, mejóralo: respeta su intención y sus datos, hazlo más claro y
+      cálido; no inventes datos nuevos (precios, horarios, promociones, teléfonos).
+    - Si van ARCHIVOS con la bienvenida, menciónalos con naturalidad («te comparto nuestro
+      catálogo»), sin escribir llaves ni nombres técnicos.
+    - Un emoji como máximo. Sin «Chatwoot», sin firmas.
+    Responde SOLO con JSON: {"welcome": "..."}
+  TXT
+  MAX_WELCOME = 600
 
   private
 
@@ -68,7 +92,7 @@ class ContactTrackings::Ficha::Suggester
     [
       "NOMBRE DEL AGENTE: #{@name}",
       "TONO: #{@tone.presence || 'cercano'}",
-      "LO QUE PODRÁ HACER:\n#{@offers.map { |o| "- #{o[:label]}" }.join("\n").presence || '- (nada marcado)'}",
+      "LO QUE PODRÁ HACER:\n#{offer_lines}",
       "QUÉ TIENEN SUS RECURSOS:\n#{resource_lines.presence || '- (sin detalle)'}",
       "NOTAS DEL NEGOCIO (escritas por la persona):\n#{@business.presence || '(ninguna)'}"
     ].join("\n\n")
@@ -80,6 +104,30 @@ class ContactTrackings::Ficha::Suggester
     @cards.select { |c| usadas.any? { |k| k.start_with?(c[:key].to_s) || c[:key].to_s.start_with?(k) } }
           .first(15).map { |c| "- #{c[:name]}: #{[c[:summary], *Array(c[:examples]).first(2)].compact.join(' | ').truncate(220)}" }
           .join("\n")
+  end
+
+  def welcome_datos
+    archivos = @welcome_files.map { |f| f.tr('_-', '  ') }.join(', ')
+    [
+      "NEGOCIO / AGENTE: #{@name}",
+      "NOMBRE QUE VE EL CLIENTE: #{or_none(@display_name)}",
+      "TONO: #{@tone.presence || 'cercano'}",
+      "LO QUE PUEDE HACER:\n#{offer_lines}",
+      "ARCHIVOS QUE VAN CON LA BIENVENIDA: #{or_none(archivos)}",
+      "TEXTO ACTUAL:\n#{@welcome.presence || '(vacío: propón uno)'}"
+    ].join("\n\n")
+  end
+
+  def or_none(texto) = texto.presence || '(ninguno)'
+
+  def offer_lines = @offers.map { |o| "- #{public_label(o)}" }.join("\n").presence || '- (nada marcado)'
+
+  # Sin nombres de personas: «Agenda de José Luis» no es algo que el cliente deba leer.
+  def public_label(oferta) = oferta[:kind] == 'calendar' ? 'Agendar citas' : oferta[:label]
+
+  # Sin llaves (el sistema agrega {{archivo}}) ni marcas de pendiente.
+  def welcome_text(texto)
+    texto.to_s.gsub(/\{\{[^}]*\}\}/, '').lines.map(&:rstrip).grep_v(/<\s*PENDIENTE/i).join("\n").strip.first(MAX_WELCOME)
   end
 
   def clean(respuesta)

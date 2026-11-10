@@ -27,10 +27,22 @@ import FichaFiles from './FichaFiles.vue';
 import FichaTest from './FichaTest.vue';
 import FichaReadiness from './FichaReadiness.vue';
 import FichaAgenda from './FichaAgenda.vue';
+import FichaChannel, {
+  channelKind,
+  trackingChannels,
+} from './FichaChannel.vue';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 
-const SECTIONS = ['sources', 'calendar', 'tickets', 'files', 'rules'];
+const SECTIONS = [
+  'channel',
+  'sources',
+  'calendar',
+  'tickets',
+  'files',
+  'rules',
+];
 const SECTION_ICONS = {
+  channel: 'settings',
   sources: 'library',
   calendar: 'calendar',
   tickets: 'folder',
@@ -50,6 +62,7 @@ export default {
     FichaTest,
     FichaReadiness,
     FichaAgenda,
+    FichaChannel,
     KeywordActionsEditor,
   },
   props: {
@@ -59,9 +72,19 @@ export default {
   emits: ['created', 'conversation', 'continue', 'back'],
   data() {
     return {
-      section: 'sources',
+      section: 'channel',
       name: '',
-      inboxId: '',
+      // Recursos › Canal y seguimiento (antes de las fuentes: WhatsApp pide plantillas).
+      follow: {
+        inboxId: '',
+        retryValue: 1,
+        retryUnit: 'days',
+        attempts: 3,
+        whatsappTemplates: [],
+        emailSignature: '',
+      },
+      // La bienvenida: se manda tal cual en el primer mensaje del cliente.
+      welcome: '',
       displayName: '',
       objective: '',
       business: '',
@@ -98,7 +121,10 @@ export default {
     };
   },
   computed: {
-    ...mapGetters({ inboxes: 'inboxes/getInboxes' }),
+    ...mapGetters({
+      inboxes: 'inboxes/getInboxes',
+      appIntegrations: 'integrations/getAppIntegrations',
+    }),
     nameOk() {
       return this.name.trim().length >= 2;
     },
@@ -109,6 +135,8 @@ export default {
           icon: SECTION_ICONS[id],
           label: this.t(`NAV_${id.toUpperCase()}`),
         };
+        if (id === 'channel')
+          return { ...base, state: this.channelOk ? 'ok' : 'todo' };
         if (id === 'files' || id === 'rules') {
           const cuantos =
             id === 'files' ? this.files.length : this.keywordActions.length;
@@ -177,8 +205,33 @@ export default {
     filesOk() {
       return this.files.every(file => FILE_NAME.test(file.name));
     },
+    inboxId() {
+      return this.follow.inboxId;
+    },
+    channelKind() {
+      return channelKind(
+        trackingChannels(this.appIntegrations, this.inboxes).find(
+          item => item.id === Number(this.inboxId)
+        )
+      );
+    },
+    channelOk() {
+      if (!this.inboxId) return false;
+      if (this.channelKind !== 'whatsapp') return true;
+      return Array.from({ length: this.follow.attempts || 1 }).every(
+        (_, i) => !!(this.follow.whatsappTemplates || [])[i]
+      );
+    },
+    welcomeFiles() {
+      return this.files.filter(file => file.welcome);
+    },
     canContinue() {
-      return this.routes.length > 0 && this.filesOk && !this.loadingPreview;
+      return (
+        this.routes.length > 0 &&
+        this.filesOk &&
+        this.channelOk &&
+        !this.loadingPreview
+      );
     },
     canCreate() {
       return (
@@ -201,7 +254,22 @@ export default {
         inbox_id: this.inboxId || null,
         customer_display_name: this.displayName.trim(),
         items: this.items,
-        files: this.files.map(file => ({ name: file.name })),
+        files: this.files.map(file => ({
+          name: file.name,
+          ask: file.ask,
+          welcome: file.welcome,
+          attempts: file.attempts,
+        })),
+        welcome: this.welcome.trim(),
+        retry_interval_value: this.follow.retryValue,
+        retry_interval_unit: this.follow.retryUnit,
+        attempts: this.follow.attempts,
+        whatsapp_templates:
+          this.channelKind === 'whatsapp'
+            ? this.follow.whatsappTemplates.slice(0, this.follow.attempts)
+            : [],
+        email_signature:
+          this.channelKind === 'email' ? this.follow.emailSignature : '',
         keyword_actions: this.keywordActions,
         phrases: this.phrases,
         agenda: this.calendarIds.length ? this.agenda : null,
@@ -289,15 +357,22 @@ export default {
         return;
       }
       if (item.fix === 'channel') {
-        const caja = this.$refs.inbox;
-        if (caja) caja.focus();
+        this.section = 'channel';
+        this.$emit('back');
       }
     },
-    // ✨ Una llamada a OpenAI: objetivo y contexto con lo que ya se capturó.
+    // ✨ Una llamada a OpenAI: objetivo y contexto, o la bienvenida, con lo capturado.
     async suggest(campo) {
       this.suggesting = campo;
       try {
-        const { data } = await FichaAPI.suggest(this.payload);
+        const { data } = await FichaAPI.suggest({
+          ...this.payload,
+          field: campo === 'welcome' ? 'welcome' : 'fields',
+        });
+        if (campo === 'welcome') {
+          if (data.welcome) this.welcome = data.welcome;
+          return;
+        }
         if (campo !== 'context' && data.objective)
           this.objective = data.objective;
         if (campo !== 'objective' && data.ai_context) {
@@ -395,7 +470,13 @@ export default {
       <div class="flex flex-col flex-1 min-h-0">
         <!-- Fuentes: el texto, el buscador y los tipos fijos; solo las tarjetas hacen scroll. -->
         <div
-          v-if="section === 'sources'"
+          v-if="section === 'channel'"
+          class="flex flex-col flex-1 min-h-0 pr-1 overflow-auto"
+        >
+          <FichaChannel v-model="follow" />
+        </div>
+        <div
+          v-else-if="section === 'sources'"
           class="flex flex-col flex-1 min-h-0 gap-3"
         >
           <p class="!m-0 text-sm text-slate-600 dark:text-slate-300 shrink-0">
@@ -488,7 +569,7 @@ export default {
           <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ t('FILES_HINT') }}
           </p>
-          <FichaFiles v-model="files" />
+          <FichaFiles v-model="files" :attempts="follow.attempts" />
         </div>
         <div
           v-else
@@ -531,15 +612,6 @@ export default {
             class="!mb-0"
             :placeholder="t('NAME_PLACEHOLDER')"
           />
-        </label>
-        <label class="!m-0">
-          {{ t('INBOX') }}
-          <select ref="inbox" v-model="inboxId" class="!mb-0">
-            <option value="">{{ t('INBOX_LATER') }}</option>
-            <option v-for="inbox in inboxes" :key="inbox.id" :value="inbox.id">
-              {{ inbox.name }}
-            </option>
-          </select>
         </label>
         <label class="!m-0">
           {{ t('DISPLAY_NAME') }}
@@ -643,6 +715,49 @@ export default {
             </button>
           </div>
           <p class="!m-0 text-xs text-slate-400">{{ t('SUGGEST_COST') }}</p>
+        </div>
+
+        <!-- Mensaje de bienvenida: el motor lo manda TAL CUAL en el primer mensaje. -->
+        <div class="flex flex-col gap-1 sm:col-span-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-sm text-slate-800 dark:text-slate-100">
+              {{ t('WELCOME') }}
+            </span>
+            <woot-button
+              size="tiny"
+              variant="smooth"
+              icon="wand"
+              :is-loading="suggesting === 'welcome'"
+              :is-disabled="!!suggesting"
+              @click="suggest('welcome')"
+            >
+              {{ welcome.trim() ? t('WELCOME_IMPROVE') : t('SUGGEST') }}
+            </woot-button>
+          </div>
+          <textarea
+            v-model="welcome"
+            rows="3"
+            maxlength="600"
+            class="!mb-0"
+            :placeholder="t('WELCOME_PLACEHOLDER')"
+          />
+          <span class="text-xs text-slate-500">{{ t('WELCOME_HINT') }}</span>
+          <div class="flex flex-wrap items-center gap-1 text-xs">
+            <span class="text-slate-600 dark:text-slate-300">
+              {{ t('WELCOME_FILES') }}
+            </span>
+            <span
+              v-for="file in welcomeFiles"
+              :key="file.key"
+              class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700"
+            >
+              <fluent-icon icon="attach" size="12" />
+              {{ file.name }}
+            </span>
+            <span v-if="!welcomeFiles.length" class="text-slate-400">
+              {{ t('WELCOME_FILES_NONE') }}
+            </span>
+          </div>
         </div>
       </div>
     </div>

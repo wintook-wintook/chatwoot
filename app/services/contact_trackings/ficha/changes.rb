@@ -122,7 +122,16 @@ class ContactTrackings::Ficha::Changes
   end
 
   def added
-    @added ||= chosen_offers.reject { |o| used?(o) }.map { |o| o.slice(:key, :kind, :name, :label, :route, :directive) }
+    @added ||= chosen_offers.reject { |o| used?(o) }.map { |o| o.slice(:key, :kind, :name, :label, :route, :directive) } +
+               welcome_files_missing
+  end
+
+  # Archivos marcados «con la bienvenida» que la sección [MENSAJE DE BIENVENIDA] no trae.
+  def welcome_files_missing
+    bienvenida = ContactTrackings::WelcomeMessage.text(prompt).to_s
+    @template.file_rules.select { |_n, regla| regla['welcome'] }.keys
+             .reject { |nombre| bienvenida.include?("{{#{nombre}}}") }
+             .map { |nombre| { key: "welcome_file:#{nombre}", kind: 'welcome_file', name: nombre, label: "mandar «#{nombre}» con la bienvenida" } }
   end
 
   # Rutas que usan un recurso conocido de la cuenta que NO está en la ficha.

@@ -167,6 +167,38 @@ class TrackingTemplate < ApplicationRecord
     self.complementary_prompt = ContactTrackings::TrainingStructure.compose(estructura)
   end
 
+  # feat/ficha_agente_ia — cuántos intentos hace el seguimiento. Con plantillas de WhatsApp,
+  # una por intento; sin plantillas, los de la ficha (Recursos › Canal y seguimiento) y si
+  # no, 3. Antes, sin plantillas, ActionService daba 1 por un clamp(1, 10) sobre 0.
+  DEFAULT_FOLLOW_UP_ATTEMPTS = 3
+
+  def follow_up_attempts
+    plantillas = Array(whatsapp_templates).count(&:present?)
+    return plantillas.clamp(1, 10) if plantillas.positive?
+
+    guardados = (resources || {})['attempts'].to_i
+    guardados.positive? ? guardados.clamp(1, 10) : DEFAULT_FOLLOW_UP_ATTEMPTS
+  end
+
+  # feat/ficha_agente_ia — cuándo se manda cada archivo del agente:
+  #   { 'catalogo' => { 'ask' => true, 'welcome' => false, 'attempts' => [2] } }
+  # ask: cuando el cliente lo pide (el modelo escribe {{catalogo}}); welcome: con la
+  # bienvenida; attempts: en esos intentos del seguimiento (ContactTrackings::AttemptFiles).
+  # Lo escribe la Ficha (Agente seguimiento) y Recursos › Canal y seguimiento.
+  def follow_up_attempts=(valor)
+    return if valor.blank?
+
+    self.resources = (resources || {}).merge('attempts' => valor.to_i.clamp(1, 10))
+  end
+
+  def file_rules
+    (resources || {})['files'].to_h
+  end
+
+  def files_for_attempt(numero)
+    file_rules.select { |_nombre, regla| Array(regla['attempts']).map(&:to_i).include?(numero.to_i) }.keys
+  end
+
   private
 
   # ── Un snapshot por guardado que cambie el comportamiento del agente ──────────

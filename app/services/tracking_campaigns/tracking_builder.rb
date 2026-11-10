@@ -102,10 +102,8 @@ class TrackingCampaigns::TrackingBuilder
   # (ActionService#assign_tracking_template): uno por plantilla WhatsApp; sin plantillas,
   # DEFAULT_MAX_ATTEMPTS mensajes con IA. Con un número fijo, un agente con menos
   # plantillas que intentos dejaba seguimientos que no pasan la validación y nunca salían.
-  def max_attempts
-    count = Array(template.whatsapp_templates).count(&:present?)
-    count.zero? ? DEFAULT_MAX_ATTEMPTS : count.clamp(1, 10)
-  end
+  # feat/ficha_agente_ia: la misma regla que el agente (plantillas, o los de su ficha, o 3).
+  def max_attempts = template.follow_up_attempts
 
   def tracking_attributes(conversation_id)
     {

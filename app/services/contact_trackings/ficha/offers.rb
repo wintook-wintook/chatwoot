@@ -51,10 +51,15 @@ class ContactTrackings::Ficha::Offers
 
   # Archivos que todavía no existen (agente nuevo): la pantalla los sube al crear con
   # estos nombres, así el Entrenamiento ya nace con {{nombre}}.
+  # Solo los que se mandan «cuando lo pidan» (ask, por omisión sí): los de la bienvenida y
+  # los de los intentos no son una oferta, van en su lugar (Generator / AttemptFiles).
   def self.pending_files(lista)
     Array(lista).filter_map do |archivo|
-      nombre = (archivo.respond_to?(:permit) ? archivo.permit(:name)[:name] : archivo.to_h.stringify_keys['name']).to_s
+      h = archivo.respond_to?(:to_unsafe_h) ? archivo.to_unsafe_h : archivo.to_h
+      h = h.stringify_keys
+      nombre = h['name'].to_s
       next unless nombre.match?(/\A[a-zA-Z0-9_-]{1,60}\z/)
+      next if h.key?('ask') && !ActiveModel::Type::Boolean.new.cast(h['ask'])
 
       { key: "file_new:#{nombre}", kind: 'file', name: nombre, label: "Mandar «#{nombre}» cuando lo pidan",
         topic: nombre.tr('_-', '  ').squish, route: nil, status: 'ready' }
@@ -96,6 +101,7 @@ class ContactTrackings::Ficha::Offers
   def offers_for(item)
     card = @cards[item['key']]
     return [] if card.nil? || card[:status] == 'off'
+    return [] if card[:kind] == 'file' && card.dig(:rule, 'ask') == false
     return canned_offers(card, item) if card[:kind] == 'canned'
 
     [base(card).merge(directive: card[:offer][:directive], topic: card[:offer][:topic])]
