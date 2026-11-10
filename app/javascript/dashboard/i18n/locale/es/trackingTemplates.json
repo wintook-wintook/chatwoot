@@ -704,7 +704,12 @@
       "TICKET_COUNT": "{on} de {max} motivos marcados",
       "PRESENTATION_PREVIEW": "Así lo verá el cliente",
       "MODAL_CANCEL": "Cancelar",
-      "MODAL_ACCEPT": "Aceptar"
+      "MODAL_ACCEPT": "Aceptar",
+      "QUESTIONS_EMPTY_TITLE": "¿Quieres que tu agente haga preguntas?",
+      "QUESTIONS_EMPTY_HINT": "Sirven para conocer al cliente antes de ayudarlo: su nombre, su ciudad, qué sistema usa… El agente las hace una a la vez y guarda cada respuesta. Si quieres, la IA te propone unas de ejemplo con lo que ya capturaste; luego las cambias o quitas.",
+      "QUESTIONS_EMPTY_SUGGEST": "Proponer preguntas de ejemplo con IA",
+      "QUESTIONS_EMPTY_WRITE": "Escribirlas yo",
+      "QUESTIONS_EMPTY_OPTIONAL": "Es opcional: sin preguntas, el agente contesta directo."
     }
   },
   "TRACKING_IMPORT": {

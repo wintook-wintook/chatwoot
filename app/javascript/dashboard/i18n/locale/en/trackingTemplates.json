@@ -704,7 +704,12 @@
       "TICKET_COUNT": "{on} of {max} reasons selected",
       "PRESENTATION_PREVIEW": "This is how the customer will see it",
       "MODAL_CANCEL": "Cancel",
-      "MODAL_ACCEPT": "Accept"
+      "MODAL_ACCEPT": "Accept",
+      "QUESTIONS_EMPTY_TITLE": "Do you want your agent to ask questions?",
+      "QUESTIONS_EMPTY_HINT": "They help to know the customer before helping: their name, city, which system they use… The agent asks them one at a time and saves each answer. If you want, AI proposes some examples from what you already entered; then you change or remove them.",
+      "QUESTIONS_EMPTY_SUGGEST": "Propose example questions with AI",
+      "QUESTIONS_EMPTY_WRITE": "Write them myself",
+      "QUESTIONS_EMPTY_OPTIONAL": "Optional: without questions, the agent answers directly."
     }
   }
 }

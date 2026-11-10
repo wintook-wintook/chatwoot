@@ -127,6 +127,7 @@ export default {
         {{ t('QUESTIONS_HINT') }}
       </p>
       <woot-button
+        v-if="questions.length"
         size="small"
         variant="smooth"
         icon="wand"
@@ -136,6 +137,42 @@ export default {
       >
         {{ t('SUGGEST') }}
       </woot-button>
+    </div>
+
+    <!-- Sin preguntas: invitación a que la IA proponga unas de ejemplo (o escribirlas). -->
+    <div
+      v-if="!questions.length"
+      class="flex flex-col items-center gap-3 px-6 py-8 text-center border border-dashed rounded-lg shrink-0 border-woot-200 bg-woot-25/50 dark:border-woot-800 dark:bg-woot-900/10"
+    >
+      <fluent-icon icon="wand" size="28" class="text-woot-500" />
+      <p class="!m-0 text-sm font-medium text-slate-800 dark:text-slate-100">
+        {{ t('QUESTIONS_EMPTY_TITLE') }}
+      </p>
+      <p class="!m-0 max-w-lg text-sm text-slate-600 dark:text-slate-300">
+        {{ t('QUESTIONS_EMPTY_HINT') }}
+      </p>
+      <div class="flex flex-wrap justify-center gap-2">
+        <woot-button
+          icon="wand"
+          :is-loading="suggesting"
+          :is-disabled="disabled || suggesting"
+          @click="suggest"
+        >
+          {{ t('QUESTIONS_EMPTY_SUGGEST') }}
+        </woot-button>
+        <woot-button
+          variant="smooth"
+          color-scheme="secondary"
+          icon="add"
+          :is-disabled="disabled || suggesting"
+          @click="add"
+        >
+          {{ t('QUESTIONS_EMPTY_WRITE') }}
+        </woot-button>
+      </div>
+      <p class="!m-0 text-xs text-slate-500">
+        {{ t('QUESTIONS_EMPTY_OPTIONAL') }}
+      </p>
     </div>
 
     <div
