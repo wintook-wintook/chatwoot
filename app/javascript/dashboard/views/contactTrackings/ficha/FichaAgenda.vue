@@ -10,6 +10,17 @@
 // 10/11/2026 (pedido del usuario, para ahorrar espacio): duración, zona horaria y
 // presentación en un renglón; la presentación es una lista como la zona horaria y debajo
 // va solo la vista previa de la elegida. Así queda lugar para los calendarios.
+// 10/11/2026 (2): «no me convence, el usuario se confunde». Tres pasos numerados, en el
+// orden en que se piensan:
+//   ┌ 1. ¿En qué calendario se apartan? ─────┐┌ 3. ¿Cómo le muestra los horarios? ┐
+//   │ Agenda de Admin · correo               ││ [Detallado ▾]                     │
+//   │ ☑ correo (principal) · por omisión     ││ ┌ Así lo verá el cliente ───────┐ │
+//   │ ☐ Consultorio Centro                   ││ │ 1️⃣ jue 25 jun · 09:00 …       │ │
+//   │ 2. ¿Cuánto dura cada cita? [30][1h][2h]││ └───────────────────────────────┘ │
+//   │ Zona horaria [Usar la del canal ▾]     │└───────────────────────────────────┘
+//   └────────────────────────────────────────┘
+// Sin calendarios marcados se ve el principal palomeado «por omisión» (es el que usa el
+// motor), en vez de un aviso aparte que se leía como error.
 // ============================================================================
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import { timeZoneOptions } from 'dashboard/routes/dashboard/settings/inbox/helpers/businessHour';
@@ -101,6 +112,13 @@ export default {
     isCalendarOn(integration, calendar) {
       return this.calendarsOf(integration).includes(calendar.id);
     },
+    // Ninguno marcado: el motor aparta en el principal (se muestra «por omisión»).
+    usesDefault(integration) {
+      return !this.calendarsOf(integration).length;
+    },
+    isDefault(integration, calendar) {
+      return !!calendar.primary && this.usesDefault(integration);
+    },
     toggleCalendar(integration, calendar) {
       const actuales = this.calendarsOf(integration);
       const lista = actuales.includes(calendar.id)
@@ -116,12 +134,85 @@ export default {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
-    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      <div class="flex flex-col gap-1">
-        <span class="text-sm text-slate-800 dark:text-slate-100">
-          {{ cal('EVENT_DURATION') }}
-        </span>
+  <div class="grid gap-6 lg:grid-cols-2">
+    <!-- Izquierda: dónde y cuánto -->
+    <div class="flex flex-col gap-5">
+      <section class="flex flex-col gap-2">
+        <h4
+          class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
+        >
+          {{ $t('TRACKING_TEMPLATES.FICHA.AGENDA_STEP_CALENDAR') }}
+        </h4>
+        <p class="!m-0 text-xs text-slate-500">
+          {{ $t('TRACKING_TEMPLATES.FICHA.AGENDA_STEP_CALENDAR_HINT') }}
+        </p>
+        <p v-if="loading" class="!m-0 text-xs text-slate-500">
+          {{ cal('LOADING') }}
+        </p>
+        <div
+          v-for="integration in selected"
+          :key="integration.id"
+          class="flex flex-col gap-1 p-3 border rounded-lg border-slate-200 dark:border-slate-700"
+        >
+          <span class="flex items-center gap-1.5 mb-1 text-xs text-slate-500">
+            <fluent-icon icon="calendar" size="14" />
+            {{
+              $t('TRACKING_TEMPLATES.FICHA.AGENDA_OF', {
+                name: integration.user_name,
+              })
+            }}
+            <span class="truncate">· {{ integration.google_email }}</span>
+          </span>
+          <p
+            v-if="!(integration.calendars || []).length"
+            class="!m-0 text-sm text-slate-600 dark:text-slate-300"
+          >
+            {{ $t('TRACKING_TEMPLATES.FICHA.AGENDA_ONLY_PRIMARY') }}
+          </p>
+          <label
+            v-for="calendar in integration.calendars || []"
+            :key="calendar.id"
+            class="flex items-center gap-2 !m-0 px-2 py-1.5 text-sm rounded-md cursor-pointer"
+            :class="
+              isCalendarOn(integration, calendar) ||
+              isDefault(integration, calendar)
+                ? 'bg-woot-25 dark:bg-woot-900/20'
+                : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+            "
+          >
+            <input
+              type="checkbox"
+              class="!m-0"
+              :checked="
+                isCalendarOn(integration, calendar) ||
+                isDefault(integration, calendar)
+              "
+              :disabled="disabled"
+              @change="toggleCalendar(integration, calendar)"
+            />
+            <span class="flex-1 min-w-0 truncate">{{ calendar.summary }}</span>
+            <span
+              v-if="calendar.primary"
+              class="px-1.5 py-0.5 text-[11px] rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+            >
+              {{ cal('BOOKING_TARGET_PRIMARY') }}
+            </span>
+            <span
+              v-if="isDefault(integration, calendar)"
+              class="text-[11px] text-woot-600"
+            >
+              {{ $t('TRACKING_TEMPLATES.FICHA.AGENDA_DEFAULT') }}
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <section class="flex flex-col gap-2">
+        <h4
+          class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
+        >
+          {{ $t('TRACKING_TEMPLATES.FICHA.AGENDA_STEP_DURATION') }}
+        </h4>
         <div class="flex gap-2">
           <button
             v-for="minutos in durations"
@@ -139,101 +230,50 @@ export default {
             {{ durationLabel(minutos) }}
           </button>
         </div>
-      </div>
-      <label class="!m-0">
-        {{ cal('TIMEZONE') }}
-        <select
-          class="!mb-0"
-          :value="value.timezone || ''"
-          :disabled="disabled"
-          @change="set('timezone', $event.target.value)"
-        >
-          <option value="">{{ cal('TIMEZONE_INHERIT') }}</option>
-          <option v-for="tz in timeZones" :key="tz.label" :value="tz.value">
-            {{ tz.label }}
-          </option>
-        </select>
-      </label>
-      <label class="!m-0">
-        {{ cal('PRESENTATION_LABEL') }}
-        <select
-          class="!mb-0"
-          :value="presentation"
-          :disabled="disabled"
-          @change="set('slots_presentation', $event.target.value)"
-        >
-          <option v-for="opcion in presentations" :key="opcion" :value="opcion">
-            {{ cal(`PRESENTATION.${opcion.toUpperCase()}`) }}
-          </option>
-        </select>
-      </label>
+        <label class="!m-0 text-sm">
+          {{ cal('TIMEZONE') }}
+          <select
+            class="!mb-0"
+            :value="value.timezone || ''"
+            :disabled="disabled"
+            @change="set('timezone', $event.target.value)"
+          >
+            <option value="">{{ cal('TIMEZONE_INHERIT') }}</option>
+            <option v-for="tz in timeZones" :key="tz.label" :value="tz.value">
+              {{ tz.label }}
+            </option>
+          </select>
+        </label>
+      </section>
     </div>
 
-    <!-- Vista previa de la presentación elegida: como le llega al cliente. -->
-    <div class="flex flex-col gap-1">
-      <span class="text-xs text-slate-500">
-        {{ $t('TRACKING_TEMPLATES.FICHA.PRESENTATION_PREVIEW') }}
-      </span>
-      <span
-        class="self-start max-w-full px-3 py-2 font-sans text-xs leading-relaxed whitespace-pre-wrap bg-white rounded-lg rounded-tl-none shadow-sm dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+    <!-- Derecha: cómo lo ve el cliente -->
+    <section class="flex flex-col gap-2">
+      <h4 class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100">
+        {{ $t('TRACKING_TEMPLATES.FICHA.AGENDA_STEP_PRESENTATION') }}
+      </h4>
+      <select
+        class="!mb-0"
+        :value="presentation"
+        :disabled="disabled"
+        @change="set('slots_presentation', $event.target.value)"
       >
-        {{ previews[presentation] }}
-      </span>
-    </div>
-
-    <div class="flex flex-col gap-2">
-      <span class="text-sm font-medium text-slate-800 dark:text-slate-100">
-        {{ cal('BOOKING_TARGET_LABEL') }}
-      </span>
-      <p class="!m-0 text-xs text-slate-500">
-        {{ cal('BOOKING_TARGET_HINT') }}
-      </p>
-      <p v-if="loading" class="!m-0 text-xs text-slate-500">
-        {{ cal('LOADING') }}
-      </p>
-      <div class="grid gap-2 lg:grid-cols-2">
-        <div
-          v-for="integration in selected"
-          :key="integration.id"
-          class="flex flex-col gap-1 p-2 border rounded-lg border-slate-200 dark:border-slate-700"
+        <option v-for="opcion in presentations" :key="opcion" :value="opcion">
+          {{ cal(`PRESENTATION.${opcion.toUpperCase()}`) }}
+        </option>
+      </select>
+      <div
+        class="flex flex-col gap-1 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60"
+      >
+        <span class="text-xs text-slate-500">
+          {{ $t('TRACKING_TEMPLATES.FICHA.PRESENTATION_PREVIEW') }}
+        </span>
+        <span
+          class="self-start max-w-full px-3 py-2 font-sans text-xs leading-relaxed whitespace-pre-wrap bg-white rounded-lg rounded-tl-none shadow-sm dark:bg-slate-800 text-slate-700 dark:text-slate-200"
         >
-          <span class="text-xs font-medium text-slate-700 dark:text-slate-200">
-            {{ integration.user_name }} · {{ integration.google_email }}
-          </span>
-          <p
-            v-if="!(integration.calendars || []).length"
-            class="!m-0 text-xs text-slate-500"
-          >
-            {{ cal('BOOKING_TARGET_PRIMARY_FALLBACK') }}
-          </p>
-          <label
-            v-for="calendar in integration.calendars || []"
-            :key="calendar.id"
-            class="flex items-center gap-2 !m-0 text-sm"
-          >
-            <input
-              type="checkbox"
-              class="!m-0"
-              :checked="isCalendarOn(integration, calendar)"
-              :disabled="disabled"
-              @change="toggleCalendar(integration, calendar)"
-            />
-            {{ calendar.summary }}
-            <span v-if="calendar.primary" class="text-xs text-slate-400">
-              {{ cal('BOOKING_TARGET_PRIMARY') }}
-            </span>
-          </label>
-          <p
-            v-if="
-              (integration.calendars || []).length &&
-              !calendarsOf(integration).length
-            "
-            class="!m-0 text-xs text-slate-500"
-          >
-            {{ cal('BOOKING_TARGET_PRIMARY_FALLBACK') }}
-          </p>
-        </div>
+          {{ previews[presentation] }}
+        </span>
       </div>
-    </div>
+    </section>
   </div>
 </template>

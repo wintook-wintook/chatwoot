@@ -709,7 +709,14 @@
       "QUESTIONS_EMPTY_HINT": "They help to know the customer before helping: their name, city, which system they use… The agent asks them one at a time and saves each answer. If you want, AI proposes some examples from what you already entered; then you change or remove them.",
       "QUESTIONS_EMPTY_SUGGEST": "Propose example questions with AI",
       "QUESTIONS_EMPTY_WRITE": "Write them myself",
-      "QUESTIONS_EMPTY_OPTIONAL": "Optional: without questions, the agent answers directly."
+      "QUESTIONS_EMPTY_OPTIONAL": "Optional: without questions, the agent answers directly.",
+      "AGENDA_STEP_CALENDAR": "1. Which calendar are appointments booked in?",
+      "AGENDA_STEP_CALENDAR_HINT": "The agent looks for free slots in the selected calendars and books in one that has room.",
+      "AGENDA_OF": "{name}'s agenda",
+      "AGENDA_ONLY_PRIMARY": "Their primary calendar is used.",
+      "AGENDA_DEFAULT": "by default",
+      "AGENDA_STEP_DURATION": "2. How long is each appointment?",
+      "AGENDA_STEP_PRESENTATION": "3. How are the slots shown to the customer?"
     }
   }
 }

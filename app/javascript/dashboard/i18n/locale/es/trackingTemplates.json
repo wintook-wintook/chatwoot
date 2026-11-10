@@ -709,7 +709,14 @@
       "QUESTIONS_EMPTY_HINT": "Sirven para conocer al cliente antes de ayudarlo: su nombre, su ciudad, qué sistema usa… El agente las hace una a la vez y guarda cada respuesta. Si quieres, la IA te propone unas de ejemplo con lo que ya capturaste; luego las cambias o quitas.",
       "QUESTIONS_EMPTY_SUGGEST": "Proponer preguntas de ejemplo con IA",
       "QUESTIONS_EMPTY_WRITE": "Escribirlas yo",
-      "QUESTIONS_EMPTY_OPTIONAL": "Es opcional: sin preguntas, el agente contesta directo."
+      "QUESTIONS_EMPTY_OPTIONAL": "Es opcional: sin preguntas, el agente contesta directo.",
+      "AGENDA_STEP_CALENDAR": "1. ¿En qué calendario se apartan las citas?",
+      "AGENDA_STEP_CALENDAR_HINT": "El agente busca horarios libres en los calendarios marcados y aparta la cita en uno que tenga espacio.",
+      "AGENDA_OF": "Agenda de {name}",
+      "AGENDA_ONLY_PRIMARY": "Se usa su calendario principal.",
+      "AGENDA_DEFAULT": "por omisión",
+      "AGENDA_STEP_DURATION": "2. ¿Cuánto dura cada cita?",
+      "AGENDA_STEP_PRESENTATION": "3. ¿Cómo le muestra los horarios al cliente?"
     }
   },
   "TRACKING_IMPORT": {
