@@ -214,11 +214,6 @@ export default {
       });
       this.fetchVersionInfo();
     },
-    startConversation() {
-      this.$router.replace({
-        query: { ...this.$route.query, modo: 'conversar', seccion: 'training' },
-      });
-    },
     // Recién creado desde la ficha: al Entrenamiento, para verlo y afinarlo.
     goToFicha(id) {
       this.goToAgent(id);
@@ -314,11 +309,7 @@ export default {
         <!-- Entrenamiento y Pruebas son el MISMO Asistente con otra vista: un solo
              elemento con la misma key, así cambiar de pestaña no lo vuelve a montar. -->
         <!-- Un solo asistente para las dos pestañas: no se pierde lo capturado. -->
-        <FichaWizard
-          v-if="isNew && section === 'ficha'"
-          @created="goToFicha"
-          @conversation="startConversation"
-        />
+        <FichaWizard v-if="isNew && section === 'ficha'" @created="goToFicha" />
         <AgentFicha
           v-else-if="section === 'ficha' && templateId"
           :key="`ficha-${templateId}-${reloadKey}`"

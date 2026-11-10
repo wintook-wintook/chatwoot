@@ -84,7 +84,7 @@ export default {
     FichaIdentity,
     KeywordActionsEditor,
   },
-  emits: ['created', 'conversation'],
+  emits: ['created'],
   data() {
     return {
       section: 'channel',
@@ -533,15 +533,6 @@ export default {
     <!-- ① Recursos: menú -->
     <div class="flex flex-col min-h-0 gap-3">
       <FichaNav v-model="section" :items="navItems" />
-      <woot-button
-        size="small"
-        variant="clear"
-        color-scheme="secondary"
-        icon="chat-multiple"
-        @click="$emit('conversation')"
-      >
-        {{ t('USE_CONVERSATION') }}
-      </woot-button>
     </div>
 
     <!-- ① Recursos: sección -->
