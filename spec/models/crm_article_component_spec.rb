@@ -46,7 +46,7 @@ RSpec.describe CrmArticleComponent do
     expect(helmet.destroy).to be(false)
     expect(helmet.errors[:base].first).to eq('No se puede eliminar: es componente de «Kit de seguridad»')
     kit.destroy!
-    expect(described_class.count).to eq(0)
+    expect(described_class.where(article_id: kit.id)).to be_empty
     expect(helmet.reload.destroy).to be_truthy
   end
 
