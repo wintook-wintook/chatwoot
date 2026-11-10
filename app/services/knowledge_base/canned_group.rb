@@ -41,12 +41,27 @@ module KnowledgeBase::CannedGroup
     negated = group.start_with?('!')
     name    = group.delete_prefix('!').strip
     return scope if name.blank?
+    return by_category(scope, name, negated) if source_type == 'canned_response' && category?(account, name)
 
     pattern = "#{ActiveRecord::Base.sanitize_sql_like(name)}%"
 
     # title IS NULL en la rama negada: un NOT ILIKE contra NULL da NULL y descartaría
     # el item en silencio.
     negated ? scope.where('title IS NULL OR title NOT ILIKE ?', pattern) : scope.where('title ILIKE ?', pattern)
+  end
+
+  # respuestas_predefinidas R4: ¿el grupo es el nombre de una categoría de la cuenta?
+  def category?(account, name)
+    CannedResponseCategory.where(account_id: account.id).exists?(['lower(name) = lower(?)', name.to_s.strip])
+  end
+
+  # Por la categoría guardada en el vector (metadata.category, sin re-vectorizar: D2).
+  # Negada: también las que no tienen categoría.
+  def by_category(scope, name, negated)
+    igual = "lower(knowledge_items.metadata->>'category') = lower(?)"
+    return scope.where(igual, name) unless negated
+
+    scope.where("knowledge_items.metadata->>'category' IS NULL OR NOT (#{igual})", name)
   end
 
   # Solo el grupo positivo sube el listón. El negado (!GESTION) sigue siendo el corpus

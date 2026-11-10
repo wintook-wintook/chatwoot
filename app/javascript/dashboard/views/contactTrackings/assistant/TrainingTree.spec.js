@@ -136,6 +136,8 @@ describe('TrainingTree', () => {
     const wrapper = montar({ value: muchas() });
     expect(wrapper.vm.open).toEqual({
       definition: true,
+      variables: true,
+      constants: true,
       routes: true,
       sections: true,
     });
@@ -149,5 +151,72 @@ describe('TrainingTree', () => {
 
     expect(wrapper.vm.preview('  hola   mundo  ')).toBe('hola mundo');
     expect(wrapper.vm.preview('x'.repeat(80)).endsWith('…')).toBe(true);
+  });
+
+  // F1 (crear_agente_conversando): la sección [VARIABLES] es un grupo en Definición,
+  // una por renglón (pedido del usuario, 03/11/2026: árbol con Editar/Eliminar).
+  const conVariables = () => {
+    const value = estructura();
+    value.blocks.push(
+      {
+        type: 'section',
+        title: 'VARIABLES',
+        body: 'CARRERA = valor\nLIGA = NO | SÍ',
+        gap: 1,
+      },
+      { type: 'section', title: 'ESTADOS', body: '* CIERRE = NO | SI', gap: 0 },
+      {
+        type: 'section',
+        title: 'DATOS FIJOS',
+        body: 'EMPRESA = Kontrolya\nQ1 (pregunta) = ¿Qué? → guarda en LIGA',
+        gap: 0,
+      }
+    );
+    return value;
+  };
+
+  it('pone cada variable y cada dato fijo en su renglón, y avisa si hay sueltas', () => {
+    const wrapper = montar({
+      value: conVariables(),
+      issues: { variables: { level: 'degrading', messages: ['m'] } },
+    });
+    const texto = wrapper.text();
+
+    expect(wrapper.vm.variablesList.map(v => v.name)).toEqual([
+      'CARRERA',
+      'LIGA',
+    ]);
+    expect(wrapper.vm.constantsList.map(c => c.name)).toEqual([
+      'EMPRESA',
+      'Q1',
+    ]);
+    expect(texto).toContain('NO · SÍ');
+    expect(texto).toContain('«¿Qué?»');
+    expect(texto).toContain('→ LIGA');
+    expect(texto).toContain('TREE_VARIABLES_STRAY');
+    expect(wrapper.vm.issue('variables')).toBe('degrading');
+  });
+
+  it('sin variables ni datos fijos lo dice, sin alarma', () => {
+    const texto = montar().text();
+    expect(texto).toContain('TREE_VARIABLES_NONE');
+    expect(texto).toContain('TREE_CONSTANTS_NONE');
+    expect(texto).not.toContain('TREE_VARIABLES_STRAY');
+  });
+
+  it('el renglón edita esa variable; eliminar pide confirmar', async () => {
+    const wrapper = montar({ value: conVariables() });
+    const renglon = wrapper
+      .findAll('button')
+      .wrappers.find(b => b.text().startsWith('LIGA'));
+    await renglon.trigger('click');
+    expect(wrapper.emitted('editVariables')).toEqual([[1]]);
+
+    wrapper.vm.confirming = 'constants-1';
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).toContain('TREE_ITEM_DELETE_CONFIRM');
+    wrapper.vm.remove('removeConstant', 1);
+    expect(wrapper.emitted('removeConstant')).toEqual([[1]]);
+    expect(wrapper.vm.confirming).toBe(null);
   });
 });

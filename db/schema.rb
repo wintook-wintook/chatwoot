@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_11_090000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_11_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2547,6 +2547,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_11_090000) do
     t.datetime "archived_at"
     t.text "email_signature"
     t.string "customer_display_name"
+    t.jsonb "resources", default: {}, null: false
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["archived_at"], name: "index_tracking_templates_on_archived_at"
@@ -2554,6 +2555,29 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_11_090000) do
     t.index ["kbase_hook_id"], name: "index_tracking_templates_on_kbase_hook_id"
     t.index ["published_prompt_id"], name: "index_tracking_templates_on_published_prompt_id"
     t.index ["user_id"], name: "index_tracking_templates_on_user_id"
+  end
+
+  create_table "tracking_test_cases", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "tracking_template_id", null: false
+    t.text "message", null: false
+    t.string "kind", default: "propia", null: false
+    t.string "source_key"
+    t.string "expected_route"
+    t.text "rule"
+    t.text "check_text"
+    t.boolean "pinned", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.jsonb "last_dry", default: {}, null: false
+    t.jsonb "previous_dry", default: {}, null: false
+    t.jsonb "last_live", default: {}, null: false
+    t.jsonb "previous_live", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "turns", default: [], null: false
+    t.index ["account_id"], name: "index_tracking_test_cases_on_account_id"
+    t.index ["tracking_template_id", "source_key"], name: "index_tracking_test_cases_on_template_and_source_key", unique: true, where: "(source_key IS NOT NULL)"
+    t.index ["tracking_template_id"], name: "index_tracking_test_cases_on_tracking_template_id"
   end
 
   create_table "user_calendar_integrations", force: :cascade do |t|
@@ -2875,6 +2899,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_11_090000) do
   add_foreign_key "tracking_templates", "inboxes"
   add_foreign_key "tracking_templates", "published_prompts", on_delete: :nullify
   add_foreign_key "tracking_templates", "users", on_delete: :nullify
+  add_foreign_key "tracking_test_cases", "accounts"
+  add_foreign_key "tracking_test_cases", "tracking_templates"
   add_foreign_key "user_calendar_integrations", "accounts"
   add_foreign_key "user_calendar_integrations", "users", on_delete: :cascade
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).

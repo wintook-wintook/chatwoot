@@ -47,6 +47,40 @@ class KnowledgeBaseResponseService
     value.present? ? value.to_f : DEFAULTS[key.to_s]
   end
 
+  # El corpus de @buscar_predefinidas(GRUPO) y su umbral (ver #grouped_items): de clase
+  # para que «Probar fuentes» busque igual que el motor (crear_agente_conversando §15).
+  def self.grouped_items(account, source_type, group)
+    scope = account.knowledge_items.where(source_type: source_type)
+    return scope if group.blank?
+
+    negated = group.start_with?('!')
+    name    = group.delete_prefix('!').strip
+    return scope if name.blank?
+
+    # respuestas_predefinidas R4: si hay una CATEGORÍA con ese nombre, el grupo es la
+    # categoría (metadata.category del vector); si no, el prefijo del nombre, como siempre.
+    # Misma regla en KnowledgeBase::CannedGroup (amarradas por canned_group_spec).
+    if source_type == 'canned_response' && KnowledgeBase::CannedGroup.category?(account, name)
+      Rails.logger.info "[KBase] \u{1F5C2}\uFE0F Categoría #{negated ? 'excluida' : 'exigida'}: #{name}"
+      return KnowledgeBase::CannedGroup.by_category(scope, name, negated)
+    end
+
+    pattern = "#{ActiveRecord::Base.sanitize_sql_like(name)}%"
+    Rails.logger.info "[KBase] \u{1F5C2}\uFE0F Grupo #{negated ? 'excluido' : 'exigido'}: #{name}"
+
+    # title IS NULL en la rama negada: un NOT ILIKE contra NULL da NULL y descartaria el
+    # item en silencio.
+    negated ? scope.where('title IS NULL OR title NOT ILIKE ?', pattern) : scope.where('title ILIKE ?', pattern)
+  end
+
+  # Solo el grupo positivo sube el liston. El negado (!GESTION) sigue siendo el corpus
+  # general con un recorte, no un corpus estrecho, asi que conserva el umbral de siempre.
+  def self.group_threshold(group)
+    return nil if group.blank? || group.start_with?('!')
+
+    GROUP_SIMILARITY_THRESHOLD
+  end
+
   # `branch:` — rama ya decidida por el job (@ruta). Se recibe para no clasificar dos
   # veces y pagar dos llamadas al LLM en el mismo turno. `:auto` = clasificar aquí.
   def initialize(message, tracking: nil, branch: :auto)
@@ -70,6 +104,7 @@ class KnowledgeBaseResponseService
     question      = @message.content.strip
     @search_texts = search_queries(question)
     Rails.logger.info "[KBase] 🔍 Modo: #{directive[:mode]}#{" (#{directive[:source_name]})" if directive[:source_name]}"
+    ContactTrackings::EngineTrace.source(directive) # proyecto@diagrama_agente_ia F0
 
     case directive[:mode]
     when :erp_query
@@ -168,7 +203,9 @@ class KnowledgeBaseResponseService
     end
     return nil if lists.empty?
 
-    interleave(lists).uniq(&:id).first(kbase_setting('max_results'))
+    items = interleave(lists).uniq(&:id).first(kbase_setting('max_results'))
+    ContactTrackings::EngineTrace.fragments(items) # proyecto@diagrama_agente_ia F0
+    items
   end
 
   # ==============================================================================
@@ -369,28 +406,15 @@ class KnowledgeBaseResponseService
   # El grupo es un PREFIJO del nombre de la respuesta predefinida (su short_code, que es
   # lo que se vectoriza como titulo). Se eligio una convencion de nombre y no una columna
   # nueva para no pedir migracion ni cambios de pantalla: renombrar la respuesta basta.
+  #
+  # De clase (crear_agente_conversando §15): la pestaña «Probar fuentes» busca con el
+  # mismo alcance y el mismo umbral que el motor, sin copiarlos.
   def grouped_items(source_type, group)
-    scope = @account.knowledge_items.where(source_type: source_type)
-    return scope if group.blank?
-
-    negated = group.start_with?('!')
-    name    = group.delete_prefix('!').strip
-    return scope if name.blank?
-
-    pattern = "#{ActiveRecord::Base.sanitize_sql_like(name)}%"
-    Rails.logger.info "[KBase] \u{1F5C2}\uFE0F Grupo #{negated ? 'excluido' : 'exigido'}: #{name}"
-
-    # title IS NULL en la rama negada: un NOT ILIKE contra NULL da NULL y descartaria el
-    # item en silencio.
-    negated ? scope.where('title IS NULL OR title NOT ILIKE ?', pattern) : scope.where('title ILIKE ?', pattern)
+    self.class.grouped_items(@account, source_type, group)
   end
 
-  # Solo el grupo positivo sube el liston. El negado (!GESTION) sigue siendo el corpus
-  # general con un recorte, no un corpus estrecho, asi que conserva el umbral de siempre.
   def group_threshold(group)
-    return nil if group.blank? || group.start_with?('!')
-
-    GROUP_SIMILARITY_THRESHOLD
+    self.class.group_threshold(group)
   end
 
   def perform_pgvector(question, source_type, group = nil)
@@ -862,29 +886,9 @@ class KnowledgeBaseResponseService
   # resultados de varias consultas se fusionan primero y el fetch —con su rate limit de
   # 1.5s entre llamadas— se paga una sola vez, sobre la lista ya deduplicada y recortada.
   def discourse_hits(query, config)
-    url      = config['url'].to_s.chomp('/')
-    api_key  = config['api_key'].to_s
-    username = config['username'].presence || 'system'
-
-    uri       = URI("#{url}/discourse-ai/embeddings/semantic-search.json")
-    uri.query = URI.encode_www_form(q: query)
-
-    http              = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl      = uri.scheme == 'https'
-    http.read_timeout = 10
-
-    request = Net::HTTP::Get.new(uri)
-    request['Api-Key']      = api_key if api_key.present?
-    request['Api-Username'] = username
-    request['Content-Type'] = 'application/json'
-
-    response = http.request(request)
+    hits = KnowledgeBase::DiscourseSemanticSearch.hits(query, config)
     # Foro sin Discourse AI activo: la búsqueda normal (ver KnowledgeBase::DiscourseKeywordSearch).
-    return keyword_search(config).hits(query) if response.code == '404'
-
-    data = JSON.parse(response.body)
-    Rails.logger.info "[KBase] 📚 #{(data['posts'] || []).size} resultado(s) en Discourse semantic-search"
-    KnowledgeBase::DiscourseKeywordSearch.to_hits(data, url)
+    hits == KnowledgeBase::DiscourseSemanticSearch::NOT_AVAILABLE ? keyword_search(config).hits(query) : hits
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error en Discourse search: #{e.message}"
     []
@@ -1278,6 +1282,7 @@ class KnowledgeBaseResponseService
     end
 
     Rails.logger.info "[KBase] 🏷️ Sin etiqueta → se repone la de la rama '#{@route.name}': #{tag}"
+    ContactTrackings::EngineTrace.tag_restored(tag)
     "#{text.rstrip}\n\n#{tag}"
   end
 
@@ -1343,7 +1348,9 @@ class KnowledgeBaseResponseService
     response = ContactTrackings::OpenaiRequest.perform(http, request, 'KBase')
     return nil if response.nil? || response.body.blank?
 
-    ContactTrackings::OpenaiRequest.clean(JSON.parse(response.body).dig('choices', 0, 'message', 'content'))
+    body = JSON.parse(response.body)
+    ContactTrackings::EngineTrace.usage(resolved_model, body) # proyecto@diagrama_agente_ia F0
+    ContactTrackings::OpenaiRequest.clean(body.dig('choices', 0, 'message', 'content'))
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error OpenAI: #{e.message}"
     nil

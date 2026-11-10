@@ -83,6 +83,8 @@ class TrackingTemplate < ApplicationRecord
   # Se itera sobre el MISMO agente en vez de duplicarlo; cada guardado que cambia su
   # comportamiento deja un snapshot con autor, nota y desde dónde se hizo.
   has_many :versions, class_name: 'TrackingTemplateVersion', dependent: :delete_all
+  # proyecto@diagrama_agente_ia F3: la pila de pruebas del agente.
+  has_many :test_cases, class_name: 'TrackingTestCase', dependent: :delete_all
 
   # Nota y origen del guardado en curso. Los ponen el controlador y los servicios que
   # guardan (Asistente, Galería); no se persisten en la plantilla, viajan al snapshot.
@@ -163,6 +165,51 @@ class TrackingTemplate < ApplicationRecord
   # separar la estructura desde ese texto — la guardada es siempre la canónica.
   def training_structure_from_form=(estructura)
     self.complementary_prompt = ContactTrackings::TrainingStructure.compose(estructura)
+  end
+
+  # feat/ficha_agente_ia — cuántos intentos hace el seguimiento. Con plantillas de WhatsApp,
+  # una por intento; sin plantillas, los de la ficha (Recursos › Canal y seguimiento) y si
+  # no, 3. Antes, sin plantillas, ActionService daba 1 por un clamp(1, 10) sobre 0.
+  DEFAULT_FOLLOW_UP_ATTEMPTS = 3
+
+  def follow_up_attempts
+    plantillas = Array(whatsapp_templates).count(&:present?)
+    return plantillas.clamp(1, 10) if plantillas.positive?
+
+    guardados = (resources || {})['attempts'].to_i
+    guardados.positive? ? guardados.clamp(1, 10) : DEFAULT_FOLLOW_UP_ATTEMPTS
+  end
+
+  # feat/ficha_agente_ia — cuándo se manda cada archivo del agente:
+  #   { 'catalogo' => { 'ask' => true, 'welcome' => false, 'attempts' => [2] } }
+  # ask: cuando el cliente lo pide (el modelo escribe {{catalogo}}); welcome: con la
+  # bienvenida; attempts: en esos intentos del seguimiento (ContactTrackings::AttemptFiles).
+  # Lo escribe la Ficha (Agente seguimiento) y Recursos › Canal y seguimiento.
+  def follow_up_attempts=(valor)
+    return if valor.blank?
+
+    self.resources = (resources || {}).merge('attempts' => valor.to_i.clamp(1, 10))
+  end
+
+  def file_rules
+    (resources || {})['files'].to_h
+  end
+
+  def files_for_attempt(numero)
+    file_rules.select { |_nombre, regla| Array(regla['attempts']).map(&:to_i).include?(numero.to_i) }.keys
+  end
+
+  # Al confirmar una cita (ContactTrackings::EventFiles).
+  def files_for_booking
+    file_rules.select { |_nombre, regla| regla['booking'] }.keys
+  end
+
+  # Al levantar un ticket de ese tipo ('*' = cualquiera).
+  def files_for_ticket(tipo)
+    file_rules.select do |_nombre, regla|
+      tipos = Array(regla['tickets']).map { |t| t.to_s.downcase }
+      tipos.include?('*') || (tipo.present? && tipos.include?(tipo.to_s.downcase))
+    end.keys
   end
 
   private

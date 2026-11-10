@@ -225,6 +225,24 @@ Rails.application.routes.draw do
               get :route_catalog # proyecto@asistente_agentes_ia — las ramas que la cuenta ya escribió
               get :section_catalog # proyecto@asistente_agentes_ia — las secciones enteras que ya escribió
               post :training_preview # proyecto@asistente_agentes_ia — texto ↔ bloques + comprobador
+              # feat/ficha_agente_ia: crear un agente desde la ficha en unos cuantos clics
+              get :ficha_catalog, to: 'tracking_templates/fichas#catalog'
+              post :ficha_preview, to: 'tracking_templates/fichas#preview'
+              post :ficha_create, to: 'tracking_templates/fichas#create'
+              post :ficha_suggest, to: 'tracking_templates/fichas#suggest'
+              get 'ficha_sheet/:source_id', to: 'tracking_templates/fichas#sheet_preview'
+              post 'ficha_sheet/:source_id/suggest', to: 'tracking_templates/fichas#sheet_suggest'
+              post 'ficha_ticket/:case_type_id/suggest', to: 'tracking_templates/fichas#ticket_suggest'
+              post 'ficha_questions/suggest', to: 'tracking_templates/fichas#questions_suggest'
+              post 'ficha_variables/suggest', to: 'tracking_templates/fichas#variables_suggest'
+              post :ficha_test, to: 'tracking_templates/fichas#run_test'
+              get 'ficha_test/:turn_id', to: 'tracking_templates/fichas#test_result'
+            end
+            # feat/ficha_agente_ia: la ficha de un agente que ya existe y sus cambios contra el prompt
+            resource :ficha, only: [:show, :update], module: :tracking_templates do
+              post :apply
+              post :activate
+              post :test, action: :test_existing
             end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
@@ -299,6 +317,8 @@ Rails.application.routes.draw do
             post 'assistant/save',      to: 'assistant#save'
             get  'assistant/session',   to: 'assistant#resume'
             get  'assistant/sessions',      to: 'assistant#sessions'
+            get  'assistant/sessions/previous', to: 'assistant#previous_session' # feat/ficha_agente_ia
+            post 'assistant/sessions/:id/continue', to: 'assistant#continue_session' # feat/ficha_agente_ia
             get  'assistant/sessions/:id',  to: 'assistant#show_session'
             delete 'assistant/sessions/:id', to: 'assistant#discard_session'
             get  'assistant/sessions/:id/versions/:number', to: 'assistant#show_version'
@@ -331,9 +351,26 @@ Rails.application.routes.draw do
             post 'assistant/test_battery', to: 'assistant_test_battery#create'
             get  'assistant/test_battery/:id', to: 'assistant_test_battery#show'
             get  'assistant/test_battery/:id/report', to: 'assistant_test_battery#report'
+            # proyecto@diagrama_agente_ia F3: la pila guardada de cada agente
+            get    'assistant/test_cases',          to: 'assistant_test_cases#index'
+            post   'assistant/test_cases',          to: 'assistant_test_cases#create'
+            post   'assistant/test_cases/generate', to: 'assistant_test_cases#generate'
+            post   'assistant/test_cases/run_dry',  to: 'assistant_test_cases#run_dry'
+            post   'assistant/test_cases/run_live', to: 'assistant_test_cases#run_live'
+            post   'assistant/test_cases/compare',  to: 'assistant_test_cases#compare'
+            post   'assistant/test_cases/:id/dry',  to: 'assistant_test_cases#dry_one'
+            patch  'assistant/test_cases/:id',      to: 'assistant_test_cases#update'
+            delete 'assistant/test_cases/:id',      to: 'assistant_test_cases#destroy'
             # armar un agente desde cero conversando (llena las instrucciones iniciales)
             post 'assistant/drafting_chat', to: 'assistant_drafting#create'
-            put  'assistant/autosave', to: 'assistant_autosave#update'
+            # proyecto@crear_agente_conversando F3: lo corregido a mano en Definición/Variables/Datos fijos
+            patch 'assistant/drafting_chat/fields', to: 'assistant_drafting#fields'
+            # F4: el .md de las instrucciones del agente, para otra IA
+            post 'assistant/export', to: 'assistant_export#create'
+            # §15: probar las fuentes del agente como las busca él
+            post 'assistant/source_probe', to: 'assistant_source_probe#index'
+            post 'assistant/source_probe/run', to: 'assistant_source_probe#run'
+            put 'assistant/autosave', to: 'assistant_autosave#update'
             patch 'assistant/sessions/:id/name', to: 'assistant_autosave#rename'
             post 'assistant/conversation_review', to: 'assistant_review#create'
             # proyecto@adaptar_prompts_publicados — pestaña «Configurar»: qué falta y aplicarlo

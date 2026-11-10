@@ -59,4 +59,25 @@ describe('trainingSectionsMixin', () => {
     await esperar();
     expect(wrapper.vm.nodeIssues).toEqual({});
   });
+
+  it('los avisos de variables encienden el nodo Variables', () => {
+    const wrapper = shallowMount(Pantalla);
+    wrapper.vm.validation = {
+      degrading: [
+        { code: 'variables_outside_section', line: 3, message: 'fuera' },
+      ],
+    };
+    expect(wrapper.vm.nodeIssues.variables).toEqual({
+      level: 'degrading',
+      messages: ['fuera'],
+    });
+  });
+
+  it('los avisos de datos fijos encienden el nodo Datos fijos', () => {
+    const wrapper = shallowMount(Pantalla);
+    wrapper.vm.validation = {
+      blocking: [{ code: 'constant_undeclared', line: 2, message: 'falta' }],
+    };
+    expect(wrapper.vm.nodeIssues.constants.level).toBe('blocking');
+  });
 });

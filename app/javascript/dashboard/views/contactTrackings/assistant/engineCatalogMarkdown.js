@@ -79,3 +79,11 @@ export const downloadMarkdown = (content, filename) => {
   link.click();
   URL.revokeObjectURL(url);
 };
+
+// El .md de los recursos, descargado (pestaña Recursos y menú «Exportar», F4 de
+// docs/creacion_conversacional_agentes_plan.md).
+export const downloadEngineCatalog = (catalog, t, options = {}) =>
+  downloadMarkdown(
+    engineCatalogMarkdown(catalog, t, options),
+    'recursos_motor_agentes_ia.md'
+  );
