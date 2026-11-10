@@ -3,7 +3,7 @@
 # ================================================================================
 # feat/ficha_agente_ia — GUARDAR LA FICHA DE UN AGENTE QUE YA EXISTE
 # ================================================================================
-# «Guardar ficha» en Recursos: lo marcado, canal y seguimiento, agenda, archivos, reglas,
+# «Guardar ficha» en Recursos: datos del agente, lo marcado, canal y seguimiento, agenda, archivos, reglas,
 # y —en el Entrenamiento— bienvenida y preguntas. Si el Entrenamiento cambia, pasa antes
 # por el comprobador: con un bloqueo no se guarda nada (regresa los hallazgos).
 # ================================================================================
@@ -34,7 +34,22 @@ class ContactTrackings::Ficha::Updater
 
   def attributes
     { resources: resources, calendar_integration_ids: calendar_ids, keyword_actions: @settings.keyword_actions,
-      version_note: 'Ficha actualizada' }.compact.merge(@settings.agenda(calendar_ids)).merge(@settings.follow_up).merge(channel)
+      version_note: 'Ficha actualizada' }.compact.merge(@settings.agenda(calendar_ids)).merge(@settings.follow_up).merge(channel).merge(profile)
+  end
+
+  # Datos del agente (Recursos › Agente y canal). El nombre y el objetivo no se borran.
+  PROFILE_FIELDS = { name: 100, customer_display_name: 30, objective: 500, ai_context: 5000 }.freeze
+  REQUIRED_FIELDS = %i[name objective].freeze
+
+  def profile
+    PROFILE_FIELDS.each_with_object({}) do |(campo, tope), cambios|
+      next unless @params.key?(campo)
+
+      valor = @params[campo].to_s.strip.first(tope)
+      next if valor.blank? && REQUIRED_FIELDS.include?(campo)
+
+      cambios[campo] = valor.presence
+    end
   end
 
   def resources

@@ -10,6 +10,8 @@ export default {
   props: {
     text: { type: String, default: '' },
     files: { type: Array, default: () => [] },
+    // Preguntas «enseguida de la bienvenida»: la primera va al final del mensaje.
+    firstQuestion: { type: String, default: '' },
     suggesting: { type: Boolean, default: false },
     disabled: { type: Boolean, default: false },
   },
@@ -58,10 +60,11 @@ export default {
     />
     <!-- Vista previa: como la verá el cliente -->
     <div
-      v-if="text.trim() || withWelcome.length"
+      v-if="text.trim() || withWelcome.length || firstQuestion"
       class="flex flex-col self-start max-w-full gap-1 px-3 py-2 text-sm whitespace-pre-wrap bg-white rounded-lg rounded-tl-none shadow-sm dark:bg-slate-800 text-slate-700 dark:text-slate-200"
     >
-      <span>{{ text }}</span>
+      <span v-if="text.trim()">{{ text }}</span>
+      <span v-if="firstQuestion" class="font-medium">{{ firstQuestion }}</span>
       <span
         v-for="file in withWelcome"
         :key="file.key"
@@ -71,6 +74,9 @@ export default {
         {{ file.name }}
       </span>
     </div>
+    <p v-if="firstQuestion" class="!m-0 text-xs text-slate-500">
+      {{ t('WELCOME_WITH_QUESTION') }}
+    </p>
     <div class="flex flex-col gap-1">
       <span class="text-sm text-slate-800 dark:text-slate-100">
         {{ t('WELCOME_FILES_PICK') }}

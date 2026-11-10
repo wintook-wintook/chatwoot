@@ -12,6 +12,8 @@
 // Si la ficha nunca se guardó, se muestra la que se lee del Entrenamiento (D2) para
 // confirmarla. En Archivos se suben al momento y quedan marcados (y guardados) para que
 // el panel proponga mandarlos. El chat del Asistente también recibe estos cambios.
+// 10/11/2026: «Agente y canal» trae también los datos del agente (nombre, nombre para el
+// cliente, objetivo y contexto con ✨): el administrador ya no usa «Ficha de Agente IA».
 // ============================================================================
 import { useAlert } from 'dashboard/composables';
 import FichaAPI from 'dashboard/api/fichaAgente';
@@ -25,6 +27,7 @@ import FichaLoading from './FichaLoading.vue';
 import FichaChannel from './FichaChannel.vue';
 import FichaWelcome from './FichaWelcome.vue';
 import FichaQuestions from './FichaQuestions.vue';
+import FichaIdentity from './FichaIdentity.vue';
 import FileRule, { defaultRule, ruleSummary } from './FileRule.vue';
 import FichaModal from './FichaModal.vue';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
@@ -51,6 +54,8 @@ const SECTION_ICONS = {
 };
 const SOURCE_KINDS = GROUPS.find(group => group.id === 'sources').kinds;
 const copy = value => JSON.parse(JSON.stringify(value || []));
+// El contexto de un agente que ya existe puede ser largo (lo escribieron a mano).
+const MAX_CONTEXT_EXISTING = 5000;
 
 export default {
   components: {
@@ -64,6 +69,7 @@ export default {
     FichaChannel,
     FichaWelcome,
     FichaQuestions,
+    FichaIdentity,
     FileRule,
     FichaModal,
     KeywordActionsEditor,
@@ -73,7 +79,7 @@ export default {
     // Para ✨ (lo que la IA sabe del agente).
     templateName: { type: String, default: '' },
   },
-  emits: ['applied', 'changes'],
+  emits: ['applied', 'changes', 'saved'],
   data() {
     return {
       section: 'sources',
@@ -97,6 +103,11 @@ export default {
       },
       welcome: '',
       questionsData: { questions: [], when: 'start' },
+      // Datos del agente (Agente y canal): { name, displayName, objective, business }.
+      profile: { name: '', displayName: '', objective: '', business: '' },
+      missing: [],
+      profileSuggesting: false,
+      maxContext: MAX_CONTEXT_EXISTING,
       savedExtras: '',
       welcomeSuggesting: false,
       // Recursos › Agenda (se guarda con la ficha).
@@ -135,7 +146,15 @@ export default {
           label: this.t(`NAV_${id.toUpperCase()}`),
         };
         if (id === 'channel')
-          return { ...base, state: this.follow.inboxId ? 'ok' : 'todo' };
+          return {
+            ...base,
+            state:
+              this.follow.inboxId &&
+              this.profile.name.trim().length >= 2 &&
+              this.profile.objective.trim().length >= 5
+                ? 'ok'
+                : 'todo',
+          };
         if (id === 'welcome')
           return { ...base, state: this.welcome.trim() ? 'ok' : null };
         if (id === 'questions') {
@@ -226,6 +245,13 @@ export default {
         emailSignature: seguimiento.email_signature || '',
       };
       this.welcome = data.welcome || '';
+      const datos = data.profile || {};
+      this.profile = {
+        name: datos.name || '',
+        displayName: datos.customer_display_name || '',
+        objective: datos.objective || '',
+        business: datos.ai_context || '',
+      };
       const preguntas = data.questions || {};
       this.questionsData = {
         questions: (preguntas.questions || []).map(q => ({
@@ -277,8 +303,10 @@ export default {
         });
         this.take(data);
         useAlert(this.t('SAVED'));
+        this.$emit('saved');
       } catch (error) {
-        useAlert(this.t('SAVE_ERROR'));
+        const datos = error && error.response && error.response.data;
+        useAlert((datos && datos.error) || this.t('SAVE_ERROR'));
       } finally {
         this.busy = false;
       }
@@ -332,6 +360,10 @@ export default {
     // Lo de Canal y seguimiento, Bienvenida y Preguntas, como lo guarda el servidor.
     extras() {
       return {
+        name: this.profile.name.trim(),
+        customer_display_name: this.profile.displayName.trim(),
+        objective: this.profile.objective.trim(),
+        ai_context: this.profile.business.trim(),
         inbox_id: this.follow.inboxId || null,
         retry_interval_value: this.follow.retryValue,
         retry_interval_unit: this.follow.retryUnit,
@@ -373,7 +405,42 @@ export default {
       }
     },
     suggestContext() {
-      return { name: this.templateName, items: this.items };
+      return {
+        name: this.profile.name.trim() || this.templateName,
+        items: this.items,
+        objective: this.profile.objective.trim(),
+      };
+    },
+    // ✨ objetivo o contexto con lo marcado (una llamada a OpenAI).
+    async suggestProfile(campo) {
+      this.profileSuggesting = campo;
+      try {
+        const { data } = await FichaAPI.suggest({
+          ...this.suggestContext(),
+          field: 'fields',
+          business: this.profile.business,
+          customer_display_name: this.profile.displayName,
+        });
+        const nuevo = { ...this.profile };
+        if (campo === 'objective' && data.objective)
+          nuevo.objective = data.objective;
+        if (campo === 'context' && data.ai_context) {
+          nuevo.business = data.ai_context;
+          this.missing = data.missing || [];
+        }
+        this.profile = nuevo;
+      } catch (error) {
+        const datos = error && error.response && error.response.data;
+        useAlert((datos && datos.error) || this.t('SUGGEST_ERROR'));
+      } finally {
+        this.profileSuggesting = false;
+      }
+    },
+    welcomeQuestion() {
+      const primera = this.questionsData.questions[0];
+      return this.questionsData.when === 'welcome' && primera
+        ? (primera.text || '').trim()
+        : '';
     },
     hasChannel() {
       return this.readiness.some(
@@ -472,54 +539,80 @@ export default {
             </div>
           </template>
           <div
+            v-else-if="section === 'files'"
+            class="flex flex-col flex-1 min-h-0 gap-3"
+          >
+            <p class="!m-0 text-sm text-slate-600 dark:text-slate-300 shrink-0">
+              {{ t('FILES_HINT_EXISTING') }}
+            </p>
+            <FichaFiles
+              :template-id="templateId"
+              :existing-names="fileNames"
+              @uploaded="onUploaded"
+            >
+              <template #list>
+                <ul class="!m-0 !p-0 list-none flex flex-col gap-1.5">
+                  <li
+                    v-for="nombre in fileNames"
+                    :key="nombre"
+                    class="flex flex-col gap-1.5 p-2 border rounded-lg border-slate-200 dark:border-slate-700"
+                  >
+                    <span
+                      class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
+                    >
+                      <fluent-icon icon="attach" size="14" />
+                      {{ nombre }}
+                    </span>
+                    <div class="flex items-center gap-2 pl-6 text-xs">
+                      <span class="flex-1 text-slate-600 dark:text-slate-300">
+                        {{ summaryFor(nombre) }}
+                      </span>
+                      <woot-button
+                        size="tiny"
+                        variant="smooth"
+                        icon="settings"
+                        :is-disabled="busy"
+                        @click="ruleName = nombre"
+                      >
+                        {{ t('CONFIGURE') }}
+                      </woot-button>
+                    </div>
+                  </li>
+                </ul>
+              </template>
+            </FichaFiles>
+          </div>
+          <div
             v-else
             class="flex flex-col flex-1 min-h-0 gap-3 pr-1 overflow-auto"
           >
-            <template v-if="section === 'files'">
-              <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
-                {{ t('FILES_HINT_EXISTING') }}
-              </p>
-              <FichaFiles
-                :template-id="templateId"
-                :existing-names="fileNames"
-                @uploaded="onUploaded"
+            <template v-if="section === 'channel'">
+              <h3
+                class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
+              >
+                {{ t('IDENTITY_TITLE') }}
+              </h3>
+              <FichaIdentity
+                v-model="profile"
+                :suggesting="profileSuggesting"
+                :can-suggest="items.length > 0"
+                :missing.sync="missing"
+                :max-context="maxContext"
+                :disabled="busy"
+                @suggest="suggestProfile"
               />
-              <ul class="!m-0 !p-0 list-none flex flex-col gap-1.5">
-                <li
-                  v-for="nombre in fileNames"
-                  :key="nombre"
-                  class="flex flex-col gap-1.5 p-2 border rounded-lg border-slate-200 dark:border-slate-700"
-                >
-                  <span
-                    class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
-                  >
-                    <fluent-icon icon="attach" size="14" />
-                    {{ nombre }}
-                  </span>
-                  <div class="flex items-center gap-2 pl-6 text-xs">
-                    <span class="flex-1 text-slate-600 dark:text-slate-300">
-                      {{ summaryFor(nombre) }}
-                    </span>
-                    <woot-button
-                      size="tiny"
-                      variant="smooth"
-                      icon="settings"
-                      :is-disabled="busy"
-                      @click="ruleName = nombre"
-                    >
-                      {{ t('CONFIGURE') }}
-                    </woot-button>
-                  </div>
-                </li>
-              </ul>
-            </template>
-            <template v-else-if="section === 'channel'">
+              <h3
+                class="!m-0 !mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 text-sm font-semibold text-slate-800 dark:text-slate-100"
+              >
+                {{ t('FOLLOW_TITLE') }}
+              </h3>
               <FichaChannel v-model="follow" />
             </template>
             <template v-else-if="section === 'welcome'">
               <FichaWelcome
                 :text.sync="welcome"
                 :files="welcomeFiles()"
+                :first-question="welcomeQuestion()"
                 :suggesting="welcomeSuggesting"
                 :disabled="busy"
                 @toggle="toggleWelcomeFile"
@@ -531,6 +624,7 @@ export default {
                 v-model="questionsData"
                 :route-options="fileRouteOptions"
                 :suggest-context="suggestContext()"
+                :has-welcome="!!welcome.trim()"
                 :disabled="busy"
               />
             </template>
@@ -693,6 +787,7 @@ export default {
     <FichaModal
       :show="!!ruleName"
       :title="ruleName ? t('FILE_RULE_TITLE', { name: ruleName }) : ''"
+      :subtitle="t('FILE_RULE_SUBTITLE')"
       @close="ruleName = null"
     >
       <FileRule

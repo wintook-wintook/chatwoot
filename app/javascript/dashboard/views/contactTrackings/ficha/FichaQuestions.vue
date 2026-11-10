@@ -7,7 +7,9 @@
 //   2. ¿Cuántos usuarios son?    guarda en [USUARIOS]  (libre)
 //   ¿Cuándo pregunta?  (•) Al inicio   ( ) En la ruta [Cotizar ▾]
 // El servidor (Ficha::Questions) escribe [VARIABLES], [DATOS FIJOS] y la regla de uso.
-// v-model: { questions: [{ text, var, options: [] }], when: 'start' | ruta }
+// v-model: { questions: [{ text, var, options: [] }], when: 'welcome' | 'start' | ruta }
+//   welcome: la primera pregunta va al final de la bienvenida (o ES la bienvenida si no
+//   hay), así la conversación arranca preguntando (pedido del usuario, 10/11/2026).
 // ============================================================================
 import { useAlert } from 'dashboard/composables';
 import FichaAPI from 'dashboard/api/fichaAgente';
@@ -35,6 +37,9 @@ export default {
     routeOptions: { type: Array, default: () => [] },
     // Lo capturado (para ✨): { name, items, objective }.
     suggestContext: { type: Object, default: () => ({}) },
+    // Con bienvenida: la primera pregunta va al final de ella; sin bienvenida, la
+    // conversación arranca con la primera pregunta.
+    hasWelcome: { type: Boolean, default: false },
     disabled: { type: Boolean, default: false },
   },
   emits: ['input'],
@@ -228,6 +233,13 @@ export default {
         :disabled="disabled"
         @change="emit({ when: $event.target.value })"
       >
+        <option value="welcome">
+          {{
+            hasWelcome
+              ? t('QUESTIONS_WITH_WELCOME')
+              : t('QUESTIONS_FIRST_MESSAGE')
+          }}
+        </option>
         <option value="start">{{ t('QUESTIONS_AT_START') }}</option>
         <option
           v-for="ruta in routeOptions"

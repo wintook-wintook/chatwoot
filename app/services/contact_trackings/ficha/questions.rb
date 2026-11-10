@@ -13,6 +13,10 @@
 #   y cuándo se preguntan:
 #     al inicio  → [PREGUNTAS] Antes de contestar lo demás, pregunto una a la vez…: %Q1%, %Q2%…
 #     en una ruta → se agrega al alcance de esa ruta
+#     con la bienvenida → como al inicio, y además la PRIMERA pregunta va al final de
+#       [MENSAJE DE BIENVENIDA] (sin bienvenida, la sección se crea solo con ella): el motor
+#       manda esa sección tal cual en el primer mensaje, así la conversación arranca
+#       preguntando (pedido del usuario, 10/11/2026).
 #
 # read: lo que ya tiene un Entrenamiento. write: reemplaza SOLO las preguntas (los demás
 # datos fijos y variables se quedan). Mismos patrones que PromptConstants y Variables.
@@ -20,6 +24,9 @@
 
 class ContactTrackings::Ficha::Questions
   START = 'start'
+  WELCOME = 'welcome'
+  WELCOME_SECTION = 'MENSAJE DE BIENVENIDA'
+  FILE_LINE_RE = /\A\s*\{\{[^}]+\}\}\s*\z/
   SECTION = 'PREGUNTAS'
   MAX = 10
   MAX_TEXT = 200
@@ -60,31 +67,74 @@ class ContactTrackings::Ficha::Questions
 
   # { questions: [...], when: 'start' | 'nombre_de_ruta' | nil }
   def read
-    constantes = ContactTrackings::PromptConstants.parse(text).values.select { |c| c[:type] == 'pregunta' }
-    variables = ContactTrackings::ConversationVariables.parse(text).variables
-    preguntas = constantes.map do |c|
-      var = variables.values.find { |v| v[:name].casecmp?(c[:saves_to].to_s) }
-      { 'name' => c[:name], 'text' => c[:value], 'var' => c[:saves_to].to_s, 'options' => Array(var && var[:options]) }
-    end
-    { questions: preguntas, when: where_asked(preguntas.first&.dig('name')) }
+    preguntas = stored_questions
+    cuando = where_asked(preguntas.first&.dig('name'))
+    cuando = WELCOME if cuando == START && in_welcome?(preguntas.first['text'])
+    { questions: preguntas, when: cuando }
   end
 
-  # cuando: START o el nombre de una ruta.
+  # La bienvenida que se edita (sin la primera pregunta, si va pegada a ella).
+  def self.welcome_without(texto, lectura)
+    return texto unless lectura[:when] == WELCOME
+
+    primera = lectura[:questions].first['text']
+    texto.to_s.lines.reject { |l| l.strip == primera }.join.strip
+  end
+
+  # cuando: START, WELCOME o el nombre de una ruta.
   def write(preguntas, cuando)
-    viejas = read[:questions]
-    quitar_constantes(viejas.pluck('name'))
-    quitar_variables((viejas.pluck('var') + preguntas.pluck('var')).compact_blank)
-    quitar_uso
+    quitar_viejas(preguntas)
     return self if preguntas.empty?
 
     nombres = names_for(preguntas.size)
     agregar('VARIABLES', preguntas.map { |p| variable_line(p) })
     agregar('DATOS FIJOS', preguntas.each_with_index.map { |p, i| "#{nombres[i]} (pregunta) = #{p['text']} → guarda en #{p['var']}" })
-    usar(nombres, cuando)
+    usar(nombres, cuando == WELCOME ? START : cuando)
+    poner_en_bienvenida(preguntas.first['text']) if cuando == WELCOME
     self
   end
 
   private
+
+  def stored_questions
+    constantes = ContactTrackings::PromptConstants.parse(text).values.select { |c| c[:type] == 'pregunta' }
+    variables = ContactTrackings::ConversationVariables.parse(text).variables
+    constantes.map do |c|
+      var = variables.values.find { |v| v[:name].casecmp?(c[:saves_to].to_s) }
+      { 'name' => c[:name], 'text' => c[:value], 'var' => c[:saves_to].to_s, 'options' => Array(var && var[:options]) }
+    end
+  end
+
+  # Quita las preguntas que había (y sus variables, su uso y su lugar en la bienvenida).
+  def quitar_viejas(nuevas)
+    lectura = read
+    viejas = lectura[:questions]
+    quitar_constantes(viejas.pluck('name'))
+    quitar_variables((viejas.pluck('var') + nuevas.pluck('var')).compact_blank)
+    quitar_uso
+    quitar_de_bienvenida(viejas.first['text']) if lectura[:when] == WELCOME
+  end
+
+  def in_welcome?(texto)
+    rango = section_range(WELCOME_SECTION)
+    rango.present? && @lines[(rango[0] + 1)...rango[1]].any? { |l| l.strip == texto.to_s.strip }
+  end
+
+  # Al final del texto de la bienvenida, antes de sus {{archivos}}.
+  def poner_en_bienvenida(texto)
+    rango = section_range(WELCOME_SECTION)
+    return @lines.push('', "[#{WELCOME_SECTION}]", texto) if rango.nil?
+
+    ultima = ((rango[0] + 1)...rango[1]).reverse_each.find { |i| @lines[i].present? && !@lines[i].match?(FILE_LINE_RE) }
+    @lines.insert((ultima || rango[0]) + 1, texto)
+  end
+
+  # Quita la pregunta de la bienvenida; si no queda nada, también la sección.
+  def quitar_de_bienvenida(texto)
+    quitar_en(WELCOME_SECTION) { |l| l.strip == texto.to_s.strip }
+    rango = section_range(WELCOME_SECTION)
+    @lines.slice!(rango[0]...rango[1]) if rango && @lines[(rango[0] + 1)...rango[1]].all?(&:blank?)
+  end
 
   def variable_line(pregunta)
     valores = pregunta['options'].presence || ['valor']

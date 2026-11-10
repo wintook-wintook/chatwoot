@@ -1,5 +1,11 @@
 <script>
-// feat/ficha_agente_ia — CREAR UN AGENTE: RECURSOS → FICHA DE AGENTE IA → CREAR
+// feat/ficha_agente_ia — CREAR UN AGENTE: TODO EN RECURSOS → CREAR
+// ============================================================================
+// 10/11/2026: el usuario pidió los datos del agente (nombre, nombre para el cliente,
+// objetivo y contexto) dentro de «Canal y seguimiento»; con eso el paso «Ficha de Agente
+// IA» se quedó vacío y se quitó: ahora todo vive en Recursos (Agente y canal primero) y
+// la última sección, «Probar y crear», tiene la prueba, «¿listo para atender?» y Crear.
+// Lo de abajo es la historia del diseño anterior (dos pasos).
 // ============================================================================
 // Plan: docs/ficha_agente_ia_plan.md. Pedido del usuario (09/11/2026): «Recursos cuando
 // es nuevo, solo ese; enseguida Ficha de Agente IA; cuando das continuar aparece
@@ -30,6 +36,7 @@ import FichaAgenda from './FichaAgenda.vue';
 import FichaLoading from './FichaLoading.vue';
 import FichaWelcome from './FichaWelcome.vue';
 import FichaQuestions from './FichaQuestions.vue';
+import FichaIdentity from './FichaIdentity.vue';
 import FichaChannel, {
   channelKind,
   trackingChannels,
@@ -45,6 +52,7 @@ const SECTIONS = [
   'welcome',
   'questions',
   'rules',
+  'finish',
 ];
 const SECTION_ICONS = {
   channel: 'settings',
@@ -55,8 +63,8 @@ const SECTION_ICONS = {
   welcome: 'chat-multiple',
   questions: 'list',
   rules: 'flash-on',
+  finish: 'checkmark-circle',
 };
-const TONES = ['cercano', 'profesional'];
 const SOURCE_KINDS = GROUPS.find(group => group.id === 'sources').kinds;
 const FILE_NAME = /^[a-zA-Z0-9_-]{1,60}$/;
 const MAX_CONTEXT = 800;
@@ -73,13 +81,10 @@ export default {
     FichaLoading,
     FichaWelcome,
     FichaQuestions,
+    FichaIdentity,
     KeywordActionsEditor,
   },
-  props: {
-    // 'resources' | 'profile': la pestaña en la que está (la elige el espacio del agente).
-    step: { type: String, default: 'resources' },
-  },
-  emits: ['created', 'conversation', 'continue', 'back'],
+  emits: ['created', 'conversation'],
   data() {
     return {
       section: 'channel',
@@ -128,7 +133,6 @@ export default {
       creating: false,
       showPrompt: false,
       timer: null,
-      tones: TONES,
       maxContext: MAX_CONTEXT,
     };
   },
@@ -140,6 +144,28 @@ export default {
     nameOk() {
       return this.name.trim().length >= 2;
     },
+    objectiveOk() {
+      return this.objective.trim().length >= 5;
+    },
+    // Recursos › Agente y canal: los datos del agente (FichaIdentity).
+    identity: {
+      get() {
+        return {
+          name: this.name,
+          displayName: this.displayName,
+          tone: this.tone,
+          objective: this.objective,
+          business: this.business,
+        };
+      },
+      set(datos) {
+        this.name = datos.name;
+        this.displayName = datos.displayName;
+        this.tone = datos.tone;
+        this.objective = datos.objective;
+        this.business = datos.business;
+      },
+    },
     navItems() {
       return SECTIONS.map(id => {
         const base = {
@@ -148,7 +174,13 @@ export default {
           label: this.t(`NAV_${id.toUpperCase()}`),
         };
         if (id === 'channel')
-          return { ...base, state: this.channelOk ? 'ok' : 'todo' };
+          return {
+            ...base,
+            state:
+              this.channelOk && this.nameOk && this.objectiveOk ? 'ok' : 'todo',
+          };
+        if (id === 'finish')
+          return { ...base, state: this.canCreate ? 'ok' : null };
         if (id === 'welcome')
           return { ...base, state: this.welcome.trim() ? 'ok' : null };
         if (['files', 'rules', 'questions'].includes(id)) {
@@ -269,6 +301,13 @@ export default {
     welcomeFiles() {
       return this.files.filter(file => file.welcome);
     },
+    // La primera pregunta, si va pegada a la bienvenida (vista previa del globo).
+    welcomeQuestion() {
+      const primera = this.questionsData.questions[0];
+      return this.questionsData.when === 'welcome' && primera
+        ? (primera.text || '').trim()
+        : '';
+    },
     canContinue() {
       return (
         this.routes.length > 0 &&
@@ -280,6 +319,7 @@ export default {
     canCreate() {
       return (
         this.nameOk &&
+        this.objectiveOk &&
         this.canContinue &&
         !!this.validation.valid &&
         !this.creating
@@ -287,9 +327,10 @@ export default {
     },
     panelHint() {
       if (!this.routes.length) return this.t('NEED_RESOURCE');
-      if (this.step === 'resources') return this.t('CONTINUE_HINT');
       if (!this.nameOk) return this.t('NEED_NAME');
+      if (!this.objectiveOk) return this.t('NEED_OBJECTIVE');
       if (!this.validation.valid) return this.t('INVALID');
+      if (this.section !== 'finish') return this.t('CREATE_HINT');
       return this.t('AFTER_CREATE');
     },
     payload() {
@@ -412,10 +453,7 @@ export default {
         this.suggest('context');
         return;
       }
-      if (item.fix === 'channel') {
-        this.section = 'channel';
-        this.$emit('back');
-      }
+      if (item.fix === 'channel') this.section = 'channel';
     },
     // ✨ Una llamada a OpenAI: objetivo y contexto, o la bienvenida, con lo capturado.
     async suggest(campo) {
@@ -441,16 +479,6 @@ export default {
       } finally {
         this.suggesting = false;
       }
-    },
-    // Agrega el dato que falta como una línea para llenarla.
-    addMissing(dato) {
-      const texto = this.business.trim();
-      this.business = `${texto}${texto ? '\n' : ''}${dato}: `;
-      this.missing = this.missing.filter(item => item !== dato);
-      this.$nextTick(() => {
-        const caja = this.$refs.context;
-        if (caja) caja.focus();
-      });
     },
     async create() {
       if (!this.canCreate) return;
@@ -500,15 +528,10 @@ export default {
 
 <template>
   <div
-    class="grid flex-1 min-h-0 gap-4"
-    :class="
-      step === 'resources'
-        ? 'md:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)]'
-        : 'xl:grid-cols-[minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)]'
-    "
+    class="grid flex-1 min-h-0 gap-4 md:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_320px] xl:grid-rows-[minmax(0,1fr)]"
   >
     <!-- ① Recursos: menú -->
-    <div v-if="step === 'resources'" class="flex flex-col min-h-0 gap-3">
+    <div class="flex flex-col min-h-0 gap-3">
       <FichaNav v-model="section" :items="navItems" />
       <woot-button
         size="small"
@@ -522,13 +545,32 @@ export default {
     </div>
 
     <!-- ① Recursos: sección -->
-    <div v-if="step === 'resources'" class="flex flex-col min-h-0 gap-4">
+    <div class="flex flex-col min-h-0 gap-4">
       <div class="flex flex-col flex-1 min-h-0">
         <!-- Fuentes: el texto, el buscador y los tipos fijos; solo las tarjetas hacen scroll. -->
         <div
           v-if="section === 'channel'"
           class="flex flex-col flex-1 min-h-0 pr-1 overflow-auto"
         >
+          <h3
+            class="!m-0 !mb-2 text-sm font-semibold text-slate-800 dark:text-slate-100"
+          >
+            {{ t('IDENTITY_TITLE') }}
+          </h3>
+          <FichaIdentity
+            v-model="identity"
+            show-tone
+            :suggesting="suggesting"
+            :can-suggest="routes.length > 0"
+            :missing.sync="missing"
+            :max-context="maxContext"
+            @suggest="suggest"
+          />
+          <h3
+            class="!m-0 !mt-6 !mb-2 pt-4 border-t border-slate-100 dark:border-slate-700 text-sm font-semibold text-slate-800 dark:text-slate-100"
+          >
+            {{ t('FOLLOW_TITLE') }}
+          </h3>
           <FichaChannel v-model="follow" />
         </div>
         <div
@@ -621,9 +663,9 @@ export default {
         </div>
         <div
           v-else-if="section === 'files'"
-          class="flex flex-col flex-1 min-h-0 gap-3 pr-1 overflow-auto"
+          class="flex flex-col flex-1 min-h-0 gap-3"
         >
-          <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
+          <p class="!m-0 text-sm text-slate-600 dark:text-slate-300 shrink-0">
             {{ t('FILES_HINT') }}
           </p>
           <FichaFiles
@@ -641,6 +683,7 @@ export default {
           <FichaWelcome
             :text.sync="welcome"
             :files="files"
+            :first-question="welcomeQuestion"
             :suggesting="suggesting === 'welcome'"
             @toggle="toggleWelcomeFile"
             @suggest="suggest('welcome')"
@@ -654,7 +697,34 @@ export default {
             v-model="questionsData"
             :route-options="fileRouteOptions"
             :suggest-context="suggestContext"
+            :has-welcome="!!welcome.trim()"
           />
+        </div>
+        <div
+          v-else-if="section === 'finish'"
+          class="flex flex-col flex-1 min-h-0 gap-4 pr-1 overflow-auto"
+        >
+          <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
+            {{ t('FINISH_HINT') }}
+          </p>
+          <p v-if="!hasSomething" class="!m-0 text-sm text-slate-500">
+            {{ t('PANEL_EMPTY') }}
+          </p>
+          <template v-else>
+            <FichaTest
+              :payload="testPayload"
+              :routes="routes"
+              @addPhrase="addPhrase"
+            />
+            <FichaReadiness
+              class="pt-3 border-t border-slate-200 dark:border-slate-700"
+              :items="readiness"
+              is-new
+              :activate-on-create.sync="activateOnCreate"
+              :can-activate="!!inboxId"
+              @fix="onFix"
+            />
+          </template>
         </div>
         <div
           v-else
@@ -683,131 +753,9 @@ export default {
       </div>
     </div>
 
-    <!-- ② Ficha de Agente IA -->
-    <div v-else class="flex flex-col min-h-0 gap-4 pr-1 overflow-auto">
-      <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
-        {{ t('AGENT_HINT') }}
-      </p>
-      <div class="grid gap-3 sm:grid-cols-2">
-        <label class="!m-0">
-          {{ t('NAME') }}
-          <input
-            v-model="name"
-            type="text"
-            class="!mb-0"
-            :placeholder="t('NAME_PLACEHOLDER')"
-          />
-        </label>
-        <label class="!m-0">
-          {{ t('DISPLAY_NAME') }}
-          <input
-            v-model="displayName"
-            type="text"
-            maxlength="30"
-            class="!mb-0"
-            :placeholder="t('DISPLAY_NAME_PLACEHOLDER')"
-          />
-        </label>
-        <div class="flex flex-col gap-1">
-          <span class="text-sm text-slate-800 dark:text-slate-100">
-            {{ t('TONE') }}
-          </span>
-          <div class="flex gap-2">
-            <label
-              v-for="item in tones"
-              :key="item"
-              class="flex items-center gap-2 !m-0 px-3 py-2 text-sm border rounded-lg cursor-pointer"
-              :class="
-                tone === item
-                  ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20'
-                  : 'border-slate-200 dark:border-slate-700'
-              "
-            >
-              <input v-model="tone" type="radio" class="!m-0" :value="item" />
-              {{ t(`TONE_${item.toUpperCase()}`) }}
-            </label>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-1 sm:col-span-2">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-sm text-slate-800 dark:text-slate-100">
-              {{ t('OBJECTIVE') }}
-            </span>
-            <woot-button
-              size="tiny"
-              variant="smooth"
-              icon="wand"
-              :is-loading="suggesting === 'objective'"
-              :is-disabled="!!suggesting || !routes.length"
-              @click="suggest('objective')"
-            >
-              {{ t('SUGGEST') }}
-            </woot-button>
-          </div>
-          <input
-            v-model="objective"
-            type="text"
-            maxlength="500"
-            class="!mb-0"
-            :placeholder="objectivePlaceholder"
-          />
-        </div>
-
-        <div class="flex flex-col gap-1 sm:col-span-2">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-sm text-slate-800 dark:text-slate-100">
-              {{ t('CONTEXT') }}
-            </span>
-            <woot-button
-              size="tiny"
-              variant="smooth"
-              icon="wand"
-              :is-loading="suggesting === 'context'"
-              :is-disabled="!!suggesting || !routes.length"
-              @click="suggest('context')"
-            >
-              {{ t('SUGGEST') }}
-            </woot-button>
-          </div>
-          <textarea
-            ref="context"
-            v-model="business"
-            rows="6"
-            :maxlength="maxContext"
-            class="!mb-0"
-            :placeholder="t('BUSINESS_PLACEHOLDER')"
-          />
-          <div class="flex items-center justify-between gap-2 text-xs">
-            <span class="text-slate-500">{{ t('CONTEXT_HINT') }}</span>
-            <span class="text-slate-400 shrink-0">
-              {{ business.length }}/{{ maxContext }}
-            </span>
-          </div>
-          <div
-            v-if="missing.length"
-            class="flex flex-wrap items-center gap-1 text-xs"
-          >
-            <span class="text-amber-800">{{ t('MISSING') }}</span>
-            <button
-              v-for="dato in missing"
-              :key="dato"
-              type="button"
-              class="px-2 py-0.5 border rounded-full border-amber-300 text-amber-800 hover:bg-amber-50"
-              @click="addMissing(dato)"
-            >
-              + {{ dato }}
-            </button>
-          </div>
-          <p class="!m-0 text-xs text-slate-400">{{ t('SUGGEST_COST') }}</p>
-        </div>
-      </div>
-    </div>
-
     <!-- Panel: Tu agente podrá -->
     <aside
-      class="flex flex-col min-h-0 gap-3 p-4 overflow-auto border rounded-lg border-slate-200 dark:border-slate-700 bg-slate-25 dark:bg-slate-800/40"
-      :class="{ 'md:col-span-2 xl:col-span-1': step === 'resources' }"
+      class="flex flex-col min-h-0 gap-3 p-4 overflow-auto border rounded-lg md:col-span-2 xl:col-span-1 border-slate-200 dark:border-slate-700 bg-slate-25 dark:bg-slate-800/40"
     >
       <h3 class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100">
         {{ t('PANEL_TITLE') }}
@@ -898,51 +846,15 @@ export default {
         {{ preview.prompt }}
       </div>
 
-      <template v-if="step === 'profile' && hasSomething">
-        <FichaTest
-          class="pt-3 border-t border-slate-200 dark:border-slate-700"
-          :payload="testPayload"
-          :routes="routes"
-          @addPhrase="addPhrase"
-        />
-        <FichaReadiness
-          class="pt-3 border-t border-slate-200 dark:border-slate-700"
-          :items="readiness"
-          is-new
-          :activate-on-create.sync="activateOnCreate"
-          :can-activate="!!inboxId"
-          @fix="onFix"
-        />
-      </template>
-
       <div class="flex flex-col gap-1 mt-auto">
         <woot-button
-          v-if="step === 'resources'"
-          icon="arrow-right"
-          :is-disabled="!canContinue"
-          @click="$emit('continue')"
+          icon="checkmark"
+          :is-loading="creating"
+          :is-disabled="!canCreate"
+          @click="create"
         >
-          {{ t('CONTINUE') }}
+          {{ t('CREATE') }}
         </woot-button>
-        <template v-else>
-          <woot-button
-            icon="checkmark"
-            :is-loading="creating"
-            :is-disabled="!canCreate"
-            @click="create"
-          >
-            {{ t('CREATE') }}
-          </woot-button>
-          <woot-button
-            size="small"
-            variant="clear"
-            color-scheme="secondary"
-            icon="chevron-left"
-            @click="$emit('back')"
-          >
-            {{ t('BACK_RESOURCES') }}
-          </woot-button>
-        </template>
         <span class="text-xs text-center text-slate-500">
           {{ panelHint }}
         </span>

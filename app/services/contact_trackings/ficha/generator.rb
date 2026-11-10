@@ -97,6 +97,7 @@ class ContactTrackings::Ficha::Generator
   # «Al inicio» o el nombre de la ruta de esa oferta (la pantalla manda la llave).
   def questions_route
     return ContactTrackings::Ficha::Questions::START if @options[:questions_when].to_s.blank? || @options[:questions_when].to_s == 'start'
+    return ContactTrackings::Ficha::Questions::WELCOME if @options[:questions_when].to_s == ContactTrackings::Ficha::Questions::WELCOME
 
     routes.find { |o| o[:key].to_s == @options[:questions_when].to_s }&.dig(:route, :name) || ContactTrackings::Ficha::Questions::START
   end

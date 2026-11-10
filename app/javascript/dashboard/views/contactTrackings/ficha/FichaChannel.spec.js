@@ -212,3 +212,51 @@ describe('FichaQuestions', () => {
     expect(wrapper.emitted('input')[4][0].questions).toHaveLength(1);
   });
 });
+
+describe('FichaIdentity', () => {
+  it('«Te conviene agregar» suma la línea al contexto y quita el chip', async () => {
+    const { default: FichaIdentity } = await import('./FichaIdentity.vue');
+    const wrapper = shallowMount(FichaIdentity, {
+      propsData: {
+        value: {
+          name: 'Ventas',
+          displayName: '',
+          tone: 'cercano',
+          objective: '',
+          business: 'Renta de grúas',
+        },
+        missing: ['horario de atención', 'dirección'],
+        canSuggest: true,
+      },
+      mocks: { $t: clave => clave },
+    });
+    wrapper.vm.addMissing('horario de atención');
+    expect(wrapper.emitted('input')[0][0].business).toBe(
+      'Renta de grúas\nhorario de atención: '
+    );
+    expect(wrapper.emitted('update:missing')[0][0]).toEqual(['dirección']);
+  });
+});
+
+describe('FichaQuestions › ¿Cuándo pregunta?', () => {
+  it('ofrece «con la bienvenida» o «al iniciar» según haya bienvenida', async () => {
+    const { default: FichaQuestions } = await import('./FichaQuestions.vue');
+    const montar = hasWelcome =>
+      shallowMount(FichaQuestions, {
+        propsData: {
+          value: {
+            questions: [{ text: '¿Ciudad?', var: 'CIUDAD' }],
+            when: 'welcome',
+          },
+          hasWelcome,
+        },
+        mocks: { $t: clave => clave },
+      });
+    expect(montar(true).find('option[value="welcome"]').text()).toBe(
+      'TRACKING_TEMPLATES.FICHA.QUESTIONS_WITH_WELCOME'
+    );
+    expect(montar(false).find('option[value="welcome"]').text()).toBe(
+      'TRACKING_TEMPLATES.FICHA.QUESTIONS_FIRST_MESSAGE'
+    );
+  });
+});

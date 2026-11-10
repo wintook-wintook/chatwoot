@@ -57,8 +57,6 @@ export default {
       reloadKey: 0,
       // feat/ficha_agente_ia: cuántos cambios de la ficha faltan en el Entrenamiento.
       fichaChanges: 0,
-      // Agente nuevo: la Ficha de Agente IA aparece al dar Continuar en Recursos.
-      fichaUnlocked: false,
     };
   },
   computed: {
@@ -88,17 +86,17 @@ export default {
       return this.$route.query.modo === 'conversar';
     },
     sections() {
-      // Siguiente, siguiente: Recursos → (Continuar) Ficha de Agente IA → (Crear) lo demás.
+      // Agente nuevo: todo en Recursos (Agente y canal … Probar y crear); al crearlo
+      // aparece lo demás. 10/11/2026: «Ficha de Agente IA» se quitó para el administrador:
+      // sus datos (nombre, objetivo, contexto, canal y seguimiento) ya viven en Recursos.
       if (this.isNew && this.isAdmin && !this.conversational)
-        return [
-          { id: 'ficha', label: 'SECTION_FICHA' },
-          this.fichaUnlocked && { id: 'new_profile', label: 'SECTION_PROFILE' },
-        ].filter(Boolean);
+        return [{ id: 'ficha', label: 'SECTION_FICHA' }];
       return [
-        // Mismo orden que al crear: Recursos → Ficha de Agente IA → Entrenamiento → Pruebas y
-        // diagrama → Probar fuentes → Versiones.
+        // Recursos → Entrenamiento → Pruebas y diagrama → Probar fuentes → Versiones.
         this.isAdmin && { id: 'ficha', label: 'SECTION_FICHA' },
-        !this.isNew && { id: 'profile', label: 'SECTION_PROFILE' },
+        // Quien no es administrador no ve Recursos: sigue con su Ficha de Agente IA.
+        !this.isNew &&
+          !this.isAdmin && { id: 'profile', label: 'SECTION_PROFILE' },
         this.isAdmin && { id: 'training', label: 'SECTION_TRAINING' },
         // proyecto@diagrama_agente_ia: pruebas y diagrama en su propia pestaña, a lo ancho.
         this.isAdmin && { id: 'tests', label: 'SECTION_TESTS' },
@@ -181,6 +179,11 @@ export default {
       this.reloadKey += 1;
       this.fetchVersionInfo();
     },
+    // Nombre u objetivo pudieron cambiar: el encabezado los lee de la lista.
+    onFichaSaved() {
+      this.$store.dispatch('trackingTemplates/get');
+      this.fetchVersionInfo();
+    },
     goBack() {
       this.$router.push({ name: 'contact_trackings_agents' });
     },
@@ -210,10 +213,6 @@ export default {
         query: { seccion: 'training' },
       });
       this.fetchVersionInfo();
-    },
-    unlockProfile() {
-      this.fichaUnlocked = true;
-      this.goSection('new_profile');
     },
     startConversation() {
       this.$router.replace({
@@ -316,10 +315,7 @@ export default {
              elemento con la misma key, así cambiar de pestaña no lo vuelve a montar. -->
         <!-- Un solo asistente para las dos pestañas: no se pierde lo capturado. -->
         <FichaWizard
-          v-if="isNew && ['ficha', 'new_profile'].includes(section)"
-          :step="section === 'new_profile' ? 'profile' : 'resources'"
-          @continue="unlockProfile"
-          @back="goSection('ficha')"
+          v-if="isNew && section === 'ficha'"
           @created="goToFicha"
           @conversation="startConversation"
         />
@@ -329,6 +325,7 @@ export default {
           :template-id="templateId"
           :template-name="title"
           @applied="onFichaApplied"
+          @saved="onFichaSaved"
           @changes="fichaChanges = $event"
         />
         <Assistant

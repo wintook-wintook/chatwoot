@@ -63,11 +63,10 @@ const montar = ({
 };
 
 describe('AgentWorkspace', () => {
-  it('un admin ve Recursos, Ficha de Agente IA, Entrenamiento, Pruebas, Probar fuentes y Versiones, y entra a Recursos', () => {
+  it('un admin ve Recursos, Entrenamiento, Pruebas, Probar fuentes y Versiones (sin Ficha de Agente IA), y entra a Recursos', () => {
     const { wrapper } = montar();
     expect(wrapper.vm.sections.map(s => s.id)).toEqual([
       'ficha',
-      'profile',
       'training',
       'tests',
       'sources',
@@ -91,14 +90,9 @@ describe('AgentWorkspace', () => {
     expect(wrapper.vm.section).toBe('ficha');
   });
 
-  it('Continuar en Recursos muestra la Ficha de Agente IA y entra ahí', () => {
-    const { wrapper } = montar({ templateId: 'new' });
-    wrapper.vm.unlockProfile();
-    expect(wrapper.vm.sections.map(s => s.id)).toEqual([
-      'ficha',
-      'new_profile',
-    ]);
-    expect(wrapper.vm.section).toBe('new_profile');
+  it('un admin que pide ?seccion=profile entra a Recursos (ahí están sus datos)', () => {
+    const { wrapper } = montar({ query: { seccion: 'profile' } });
+    expect(wrapper.vm.section).toBe('ficha');
   });
 
   it('si elige crearlo conversando, aparecen Entrenamiento y lo demás', () => {
@@ -152,10 +146,14 @@ describe('AgentWorkspace', () => {
     });
   });
 
-  it('en la Ficha, el admin no ve ni manda el Entrenamiento', async () => {
-    const { wrapper } = montar({ query: { seccion: 'profile' } });
+  it('quien no es admin sigue con su Ficha de Agente IA completa', async () => {
+    const { wrapper } = montar({
+      role: 'agent',
+      query: { seccion: 'profile' },
+    });
     await wrapper.vm.$nextTick();
     const ficha = wrapper.findComponent({ name: 'TemplateForm' });
-    expect(ficha.props('hideTraining')).toBe(true);
+    expect(ficha.exists()).toBe(true);
+    expect(ficha.props('hideTraining')).toBe(false);
   });
 });

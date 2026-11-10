@@ -46,4 +46,36 @@ RSpec.describe ContactTrackings::Ficha::Questions do
     expect(described_class.new(otra).read[:when]).to eq('info')
     expect(ContactTrackings::Assistant::ValidatorService.new(otra, account: create(:account)).call[:blocking]).to eq([])
   end
+
+  context 'with la bienvenida' do
+    it 'la primera pregunta va al final del texto de la bienvenida, antes de sus archivos' do
+      con = "#{base}\n\n[MENSAJE DE BIENVENIDA]\n¡Hola! Soy Ana.\n{{catalogo}}"
+      texto = described_class.new(con).write(preguntas, 'welcome').text
+
+      expect(ContactTrackings::WelcomeMessage.text(texto)).to eq("¡Hola! Soy Ana.\n¿Qué sistema usas?\n{{catalogo}}")
+      expect(texto).to include('[PREGUNTAS]')
+      expect(described_class.new(texto).read[:when]).to eq('welcome')
+    end
+
+    it 'sin bienvenida, la conversación arranca con la primera pregunta' do
+      texto = described_class.new(base).write(preguntas, 'welcome').text
+      expect(ContactTrackings::WelcomeMessage.text(texto)).to eq('¿Qué sistema usas?')
+      expect(ContactTrackings::Assistant::ValidatorService.new(texto, account: create(:account)).call[:blocking]).to eq([])
+    end
+
+    it 'al cambiar de opción la pregunta sale de la bienvenida y la sección vacía se quita' do
+      texto = described_class.new(base).write(preguntas, 'welcome').text
+      otra = described_class.new(texto).write(preguntas, 'start').text
+
+      expect(ContactTrackings::WelcomeMessage.text(otra)).to be_nil
+      expect(described_class.new(otra).read[:when]).to eq('start')
+    end
+
+    it 'la bienvenida que se edita no trae la pregunta' do
+      con = "#{base}\n\n[MENSAJE DE BIENVENIDA]\n¡Hola!"
+      texto = described_class.new(con).write(preguntas, 'welcome').text
+      lectura = described_class.new(texto).read
+      expect(described_class.welcome_without("¡Hola!\n¿Qué sistema usas?", lectura)).to eq('¡Hola!')
+    end
+  end
 end

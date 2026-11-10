@@ -32,7 +32,13 @@ class ContactTrackings::Ficha::Presenter
       agenda: t.slice(:calendar_event_duration, :timezone, :slots_presentation, :booking_calendar_ids),
       follow: { inbox_id: t.inbox_id, retry_interval_value: t.retry_interval_value, retry_interval_unit: t.retry_interval_unit,
                 attempts: t.follow_up_attempts, whatsapp_templates: Array(t.whatsapp_templates), email_signature: t.email_signature },
-      welcome: ContactTrackings::WelcomeMessage.text(t.complementary_prompt).to_s.lines.grep_v(FILE_LINE_RE).join.strip,
-      questions: ContactTrackings::Ficha::Questions.new(t.complementary_prompt).read }
+      profile: t.slice(:name, :customer_display_name, :objective, :ai_context) }.merge(prompt_settings)
+  end
+
+  # Bienvenida (sin sus {{archivos}} ni la primera pregunta si va pegada) y preguntas.
+  def prompt_settings
+    preguntas = ContactTrackings::Ficha::Questions.new(@template.complementary_prompt).read
+    bienvenida = ContactTrackings::WelcomeMessage.text(@template.complementary_prompt).to_s.lines.grep_v(FILE_LINE_RE).join.strip
+    { welcome: ContactTrackings::Ficha::Questions.welcome_without(bienvenida, preguntas), questions: preguntas }
   end
 end

@@ -127,6 +127,8 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
     return render json: { error: INVALID, validation: { blocking: bloqueos } }, status: :unprocessable_entity if bloqueos
 
     render json: ficha_json
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
   end
 
   def apply

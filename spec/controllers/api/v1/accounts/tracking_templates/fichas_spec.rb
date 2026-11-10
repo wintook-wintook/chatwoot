@@ -182,6 +182,22 @@ RSpec.describe 'Ficha del Agente IA API', type: :request do
     expect(cuerpo['follow']).to include('inbox_id' => bandeja.id, 'attempts' => 2)
   end
 
+  it 'en un agente existente guarda nombre, nombre para el cliente, objetivo y contexto' do
+    template = create(:tracking_template, account: account, complementary_prompt: "@ruta(info #info: pregunta algo): @buscar_articulo\n")
+    patch "#{base}/#{template.id}/ficha",
+          params: { items: items, name: 'Ventas Norte', customer_display_name: 'Ana', objective: 'Vender grúas a clientes',
+                    ai_context: 'Somos Grúas del Norte.' },
+          headers: admin.create_new_auth_token, as: :json
+
+    expect(template.reload).to have_attributes(name: 'Ventas Norte', customer_display_name: 'Ana',
+                                               objective: 'Vender grúas a clientes', ai_context: 'Somos Grúas del Norte.')
+    expect(response.parsed_body['profile']).to include('name' => 'Ventas Norte', 'ai_context' => 'Somos Grúas del Norte.')
+
+    patch "#{base}/#{template.id}/ficha", params: { items: items, name: 'X' }, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(template.reload.name).to eq('Ventas Norte')
+  end
+
   it 'las Reglas se guardan al crear y con la ficha' do
     regla = { keyword: 'asesor', action: ContactTrackings::KeywordActionService::VALID_ACTIONS.first,
               direction: ContactTrackings::KeywordActionService::VALID_DIRECTIONS.first }

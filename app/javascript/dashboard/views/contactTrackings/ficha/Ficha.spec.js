@@ -228,6 +228,7 @@ describe('FichaWizard', () => {
       'welcome',
       'questions',
       'rules',
+      'finish',
     ]);
     expect(menu.channel.state).toBe('todo');
     expect(wrapper.vm.nextSection).toBe('sources');
@@ -273,9 +274,6 @@ describe('FichaWizard', () => {
     expect(wrapper.vm.business).toBe('Renta de grúas');
     expect(wrapper.vm.objective).toBe('');
     expect(wrapper.vm.missing).toEqual(['horario de atención']);
-    wrapper.vm.addMissing('horario de atención');
-    expect(wrapper.vm.business).toBe('Renta de grúas\nhorario de atención: ');
-    expect(wrapper.vm.missing).toEqual([]);
     await wrapper.vm.suggest('objective');
     expect(wrapper.vm.objective).toBe('Atender a los clientes');
   });
@@ -300,6 +298,15 @@ describe('FichaWizard', () => {
       ],
     });
     await wrapper.vm.loadPreview();
+    // El objetivo es obligatorio (Agente y canal).
+    expect(wrapper.vm.canCreate).toBe(false);
+    expect(wrapper.vm.panelHint).toBe(
+      'TRACKING_TEMPLATES.FICHA.NEED_OBJECTIVE'
+    );
+    wrapper.vm.identity = {
+      ...wrapper.vm.identity,
+      objective: 'Vender grúas',
+    };
     expect(wrapper.vm.canCreate).toBe(true);
     wrapper.vm.toggleOffer(PREVIEW.offers[1]);
     wrapper.setData({

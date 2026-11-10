@@ -8,6 +8,8 @@
 //  · Agente que ya existe (templateId): se suben al momento, uno por uno, y avisa
 //    con 'uploaded' (la ficha los marca para que el Entrenamiento los pueda mandar).
 // El nombre: letras, números, guion y guion bajo; único en el agente (AiAgentAttachment).
+// 10/11/2026: la zona «arrastra aquí» y las explicaciones quedan fijas; solo la lista de
+// archivos hace scroll (slot #list: la del agente existente, que vive en AgentFicha).
 // ============================================================================
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 import FileRule, { defaultRule, ruleSummary } from './FileRule.vue';
@@ -53,6 +55,9 @@ export default {
     return { dragging: false, uploading: false, errors: [], ruleKey: null };
   },
   computed: {
+    nameTag() {
+      return '{{nombre}}';
+    },
     taken() {
       return [...this.existingNames, ...this.value.map(item => item.name)];
     },
@@ -160,9 +165,9 @@ export default {
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
+  <div class="flex flex-col flex-1 min-h-0 gap-2">
     <div
-      class="flex flex-wrap items-center justify-center gap-2 px-3 py-5 text-sm border border-dashed rounded-lg text-slate-500 dark:text-slate-400"
+      class="shrink-0 flex flex-wrap items-center justify-center gap-2 px-3 py-5 text-sm border border-dashed rounded-lg text-slate-500 dark:text-slate-400"
       :class="
         dragging
           ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20'
@@ -190,64 +195,90 @@ export default {
         {{ $t('TRACKING_TEMPLATES.FICHA.FILES_SELECT') }}
       </woot-button>
     </div>
-    <p v-if="!templateId" class="!m-0 text-xs text-slate-500">
-      {{ $t('TRACKING_TEMPLATES.FICHA.FILES_ON_CREATE') }}
-    </p>
-    <ul v-if="errors.length" class="!m-0 pl-5 text-xs text-red-600">
+    <div class="flex flex-col gap-1 text-xs shrink-0 text-slate-500">
+      <p v-if="!templateId" class="!m-0">
+        {{ $t('TRACKING_TEMPLATES.FICHA.FILES_ON_CREATE') }}
+      </p>
+      <p class="!m-0">
+        {{
+          $t('TRACKING_TEMPLATES.FICHA.FILES_NAME_EXPLAIN', { tag: nameTag })
+        }}
+      </p>
+      <p class="!m-0">
+        {{ $t('TRACKING_TEMPLATES.FICHA.FILES_CONFIGURE_EXPLAIN') }}
+      </p>
+    </div>
+    <ul v-if="errors.length" class="!m-0 pl-5 text-xs text-red-600 shrink-0">
       <li v-for="(error, index) in errors" :key="index">{{ error }}</li>
     </ul>
-    <ul v-if="value.length" class="!m-0 !p-0 list-none flex flex-col gap-1.5">
-      <li
-        v-for="item in value"
-        :key="item.key"
-        class="flex flex-col gap-1.5 p-2 border rounded-lg border-slate-200 dark:border-slate-700"
-      >
-        <div class="flex items-center gap-2">
-          <fluent-icon
-            icon="document"
-            size="16"
-            class="text-slate-400 shrink-0"
-          />
-          <span
-            class="w-1/3 min-w-0 text-sm truncate text-slate-700 dark:text-slate-200"
-            :title="item.file.name"
-          >
-            {{ item.file.name }}
-          </span>
-          <input
-            :value="item.name"
-            type="text"
-            class="flex-1 min-w-0 !mb-0 !h-8 text-sm"
-            :class="{ '!border-red-400': invalid(item) }"
-            :title="$t('TRACKING_TEMPLATES.FICHA.FILES_NAME_HINT')"
-            @change="rename(item, $event.target.value)"
-          />
-          <span class="w-16 text-xs text-right text-slate-400 shrink-0">
-            {{ size(item.file.size) }}
-          </span>
-          <woot-button
-            size="tiny"
-            variant="clear"
-            color-scheme="secondary"
-            icon="dismiss"
-            @click.prevent="remove(item)"
-          />
-        </div>
-        <div class="flex items-center gap-2 pl-6 text-xs">
-          <span class="flex-1 text-slate-600 dark:text-slate-300">
-            {{ summary(item) }}
-          </span>
-          <woot-button
-            size="tiny"
-            variant="smooth"
-            icon="settings"
-            @click.prevent="ruleKey = item.key"
-          >
-            {{ $t('TRACKING_TEMPLATES.FICHA.CONFIGURE') }}
-          </woot-button>
-        </div>
-      </li>
-    </ul>
+    <div
+      v-if="value.length"
+      class="flex items-center gap-2 px-2 text-xs font-medium shrink-0 text-slate-500"
+    >
+      <span class="w-4 shrink-0" />
+      <span class="w-1/3 min-w-0">
+        {{ $t('TRACKING_TEMPLATES.FICHA.FILES_COL_FILE') }}
+      </span>
+      <span class="flex-1 min-w-0">
+        {{ $t('TRACKING_TEMPLATES.FICHA.FILES_COL_NAME') }}
+      </span>
+    </div>
+    <div class="flex flex-col flex-1 min-h-0 gap-1.5 pr-1 overflow-auto">
+      <ul v-if="value.length" class="!m-0 !p-0 list-none flex flex-col gap-1.5">
+        <li
+          v-for="item in value"
+          :key="item.key"
+          class="flex flex-col gap-1.5 p-2 border rounded-lg border-slate-200 dark:border-slate-700"
+        >
+          <div class="flex items-center gap-2">
+            <fluent-icon
+              icon="document"
+              size="16"
+              class="text-slate-400 shrink-0"
+            />
+            <span
+              class="w-1/3 min-w-0 text-sm truncate text-slate-700 dark:text-slate-200"
+              :title="item.file.name"
+            >
+              {{ item.file.name }}
+            </span>
+            <input
+              :value="item.name"
+              type="text"
+              class="flex-1 min-w-0 !mb-0 !h-8 text-sm"
+              :class="{ '!border-red-400': invalid(item) }"
+              :title="$t('TRACKING_TEMPLATES.FICHA.FILES_NAME_HINT')"
+              :placeholder="$t('TRACKING_TEMPLATES.FICHA.FILES_COL_NAME')"
+              @change="rename(item, $event.target.value)"
+            />
+            <span class="w-16 text-xs text-right text-slate-400 shrink-0">
+              {{ size(item.file.size) }}
+            </span>
+            <woot-button
+              size="tiny"
+              variant="clear"
+              color-scheme="secondary"
+              icon="dismiss"
+              @click.prevent="remove(item)"
+            />
+          </div>
+          <div class="flex items-center gap-2 pl-6 text-xs">
+            <span class="flex-1 text-slate-600 dark:text-slate-300">
+              {{ summary(item) }}
+            </span>
+            <woot-button
+              size="tiny"
+              variant="smooth"
+              icon="settings"
+              @click.prevent="ruleKey = item.key"
+            >
+              {{ $t('TRACKING_TEMPLATES.FICHA.CONFIGURE') }}
+            </woot-button>
+          </div>
+        </li>
+      </ul>
+      <slot name="list" />
+    </div>
     <FichaModal
       :show="!!ruleItem()"
       :title="
@@ -257,6 +288,7 @@ export default {
             })
           : ''
       "
+      :subtitle="$t('TRACKING_TEMPLATES.FICHA.FILE_RULE_SUBTITLE')"
       @close="ruleKey = null"
     >
       <FileRule
