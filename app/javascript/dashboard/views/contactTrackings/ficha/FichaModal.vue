@@ -7,8 +7,10 @@ export default {
     show: { type: Boolean, default: false },
     title: { type: String, default: '' },
     subtitle: { type: String, default: '' },
+    // Con confirm: [Cancelar] [Aceptar]; lo capturado solo cuenta con Aceptar.
+    confirm: { type: Boolean, default: false },
   },
-  emits: ['close'],
+  emits: ['close', 'confirm'],
 };
 </script>
 
@@ -24,7 +26,15 @@ export default {
         <slot />
       </div>
       <div class="flex justify-end gap-2 px-8 py-4">
-        <woot-button @click="$emit('close')">
+        <template v-if="confirm">
+          <woot-button variant="clear" @click="$emit('close')">
+            {{ $t('TRACKING_TEMPLATES.FICHA.MODAL_CANCEL') }}
+          </woot-button>
+          <woot-button icon="checkmark" @click="$emit('confirm')">
+            {{ $t('TRACKING_TEMPLATES.FICHA.MODAL_ACCEPT') }}
+          </woot-button>
+        </template>
+        <woot-button v-else @click="$emit('close')">
           {{ $t('TRACKING_TEMPLATES.FICHA.MODAL_DONE') }}
         </woot-button>
       </div>

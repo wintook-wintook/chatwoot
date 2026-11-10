@@ -702,7 +702,9 @@
       "TICKET_REASONS_HINT": "Tap a reason to use it: only the colored ones count. Type your own below (one per line or comma separated).",
       "TICKET_ADD": "Add",
       "TICKET_COUNT": "{on} of {max} reasons selected",
-      "PRESENTATION_PREVIEW": "This is how the customer will see it"
+      "PRESENTATION_PREVIEW": "This is how the customer will see it",
+      "MODAL_CANCEL": "Cancel",
+      "MODAL_ACCEPT": "Accept"
     }
   }
 }

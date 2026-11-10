@@ -61,12 +61,12 @@ describe('FichaCards', () => {
       directives: { tooltip: {} },
     });
 
-  it('marca y desmarca un recurso', () => {
+  it('marca y desmarca un recurso sin modal con un clic', () => {
     const wrapper = montar([]);
-    wrapper.vm.toggle(CARDS[0]);
-    expect(wrapper.emitted('input')[0][0]).toEqual([{ key: 'google_sheet:1' }]);
-    const marcado = montar([{ key: 'google_sheet:1' }]);
-    marcado.vm.toggle(CARDS[0]);
+    wrapper.vm.toggle(CARDS[1]);
+    expect(wrapper.emitted('input')[0][0]).toEqual([{ key: 'google_doc:2' }]);
+    const marcado = montar([{ key: 'google_doc:2' }]);
+    marcado.vm.toggle(CARDS[1]);
     expect(marcado.emitted('input')[0][0]).toEqual([]);
   });
 
@@ -100,18 +100,24 @@ describe('FichaCards', () => {
     ]);
   });
 
-  it('al marcar una hoja se abre para decir qué hacer con ella', () => {
+  it('el clic en una hoja abre su modal: queda marcada solo con Aceptar', () => {
     const wrapper = montar([]);
     wrapper.vm.toggle(CARDS[0]);
     expect(wrapper.vm.modalKey).toBe('google_sheet:1');
-    const marcada = montar([{ key: 'google_sheet:1' }]);
-    expect(marcada.vm.configurable(CARDS[0])).toBe(true);
-    marcada.vm.setSheet(CARDS[0], {
+    expect(wrapper.emitted('input')).toBeUndefined();
+    // Cancelar: no se marca nada.
+    wrapper.vm.closeModal();
+    expect(wrapper.vm.modalKey).toBeNull();
+    expect(wrapper.emitted('input')).toBeUndefined();
+    // Aceptar: se marca con lo capturado.
+    wrapper.vm.toggle(CARDS[0]);
+    wrapper.vm.modalDraft = {
       purpose: 'precios',
       search_by: 'Servicio',
       answer_with: ['Precio'],
-    });
-    expect(marcada.emitted('input')[0][0]).toEqual([
+    };
+    wrapper.vm.confirmModal();
+    expect(wrapper.emitted('input')[0][0]).toEqual([
       {
         key: 'google_sheet:1',
         sheet: {
@@ -121,31 +127,41 @@ describe('FichaCards', () => {
         },
       },
     ]);
+    // Ya marcada: Configurar y Cancelar no cambian lo guardado; desmarcar es directo.
+    const marcada = montar([
+      { key: 'google_sheet:1', sheet: { purpose: 'a' } },
+    ]);
+    expect(marcada.vm.configurable(CARDS[0])).toBe(true);
+    marcada.vm.openModal(CARDS[0]);
+    marcada.vm.modalDraft = { purpose: 'b' };
+    marcada.vm.closeModal();
+    expect(marcada.emitted('input')).toBeUndefined();
+    marcada.vm.toggle(CARDS[0]);
+    expect(marcada.emitted('input')[0][0]).toEqual([]);
   });
 
-  it('un tipo de ticket marcado se abre para sus motivos', () => {
+  it('un tipo de ticket se abre para sus motivos y se marca con Aceptar', () => {
     const tipo = {
       key: 'case_type:7',
       kind: 'case_type',
       name: 'Soporte',
       status: 'ready',
     };
-    const wrapper = shallowMount(FichaCards, {
-      propsData: { cards: [tipo], value: [] },
-      mocks,
-      directives: { tooltip: {} },
-    });
-    wrapper.vm.toggle(tipo);
-    expect(wrapper.vm.modalKey).toBe('case_type:7');
     const marcado = shallowMount(FichaCards, {
-      propsData: { cards: [tipo], value: [{ key: 'case_type:7' }] },
+      propsData: {
+        cards: [tipo],
+        value: [{ key: 'case_type:7', ticket: { reasons: ['x'] } }],
+      },
       mocks,
       directives: { tooltip: {} },
     });
-    marcado.vm.setTicket(tipo, {
+    marcado.vm.openModal(tipo);
+    expect(marcado.vm.modalDraft).toEqual({ reasons: ['x'] });
+    marcado.vm.modalDraft = {
       reasons: ['tiene una urgencia'],
       priority: 'alta',
-    });
+    };
+    marcado.vm.confirmModal();
     expect(marcado.emitted('input')[0][0]).toEqual([
       {
         key: 'case_type:7',

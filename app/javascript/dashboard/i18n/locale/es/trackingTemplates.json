@@ -702,7 +702,9 @@
       "TICKET_REASONS_HINT": "Toca un motivo para usarlo: solo los marcados en color cuentan. Escribe los tuyos abajo (uno por renglón o separados por coma).",
       "TICKET_ADD": "Agregar",
       "TICKET_COUNT": "{on} de {max} motivos marcados",
-      "PRESENTATION_PREVIEW": "Así lo verá el cliente"
+      "PRESENTATION_PREVIEW": "Así lo verá el cliente",
+      "MODAL_CANCEL": "Cancelar",
+      "MODAL_ACCEPT": "Aceptar"
     }
   },
   "TRACKING_IMPORT": {

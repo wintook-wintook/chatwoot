@@ -73,7 +73,8 @@ export default {
   emits: ['input'],
   data() {
     // modalKey: la hoja o el ticket que se está configurando (modal amplio).
-    return { open: [], modalKey: null };
+    // modalDraft: lo capturado en el modal; solo se guarda (y se marca) con Aceptar.
+    return { open: [], modalKey: null, modalDraft: null };
   },
   computed: {
     visibleCards() {
@@ -118,27 +119,59 @@ export default {
     isOn(card) {
       return this.selectedKeys.includes(card.key);
     },
+    // Pedido del usuario (10/11/2026): una hoja o un ticket NO se marcan con el clic; el
+    // clic abre su modal y quedan marcados solo si se da Aceptar. Desmarcar sí es directo.
     toggle(card) {
       if (this.disabled) return;
       const marcar = !this.isOn(card);
+      if (marcar && CONFIGURABLE.includes(card.kind)) {
+        this.openModal(card);
+        return;
+      }
       const lista = marcar
         ? [...this.value, { key: card.key }]
         : this.value.filter(item => item.key !== card.key);
       this.$emit('input', lista);
-      // Una hoja o un ticket recién marcados abren su configuración (modal amplio).
-      if (marcar && CONFIGURABLE.includes(card.kind)) this.modalKey = card.key;
+    },
+    // La casilla del navegador se palomea sola con el clic: si se abrió el modal (aún no
+    // está marcada), se regresa a vacía hasta que se dé Aceptar.
+    onCheck(card, event) {
+      this.toggle(card);
+      if (this.modalKey === card.key && !this.isOn(card))
+        event.target.checked = false;
+    },
+    configField(card) {
+      return card.kind === 'sheet' ? 'sheet' : 'ticket';
+    },
+    openModal(card) {
+      const item = this.value.find(entry => entry.key === card.key);
+      const actual = item && item[this.configField(card)];
+      this.modalDraft = actual ? JSON.parse(JSON.stringify(actual)) : null;
+      this.modalKey = card.key;
+    },
+    closeModal() {
+      this.modalKey = null;
+      this.modalDraft = null;
+    },
+    // Aceptar: guarda lo capturado y marca la tarjeta (si no lo estaba).
+    confirmModal() {
+      const card = this.modalCard;
+      if (!card) return;
+      const campo = this.configField(card);
+      const config = this.modalDraft;
+      const conConfig = entry =>
+        config ? { ...entry, [campo]: config } : entry;
+      const lista = this.isOn(card)
+        ? this.value.map(item =>
+            item.key === card.key ? conConfig(item) : item
+          )
+        : [...this.value, conConfig({ key: card.key })];
+      this.$emit('input', lista);
+      this.closeModal();
     },
     sheetOf(card) {
       const item = this.value.find(entry => entry.key === card.key);
       return (item && item.sheet) || null;
-    },
-    setSheet(card, config) {
-      this.$emit(
-        'input',
-        this.value.map(item =>
-          item.key === card.key ? { ...item, sheet: config } : item
-        )
-      );
     },
     configurable(card) {
       return CONFIGURABLE.includes(card.kind) && this.isOn(card);
@@ -155,14 +188,6 @@ export default {
     ticketOf(card) {
       const item = this.value.find(entry => entry.key === card.key);
       return (item && item.ticket) || null;
-    },
-    setTicket(card, config) {
-      this.$emit(
-        'input',
-        this.value.map(item =>
-          item.key === card.key ? { ...item, ticket: config } : item
-        )
-      );
     },
     // Marcar de un jalón las que están listas de un grupo.
     selectReady(group) {
@@ -331,7 +356,7 @@ export default {
                 class="!m-0 mt-0.5 shrink-0"
                 :checked="isOn(card)"
                 :disabled="disabled"
-                @change="toggle(card)"
+                @change="onCheck(card, $event)"
               />
               <fluent-icon
                 :icon="icon(card)"
@@ -398,7 +423,7 @@ export default {
               icon="settings"
               class="self-start"
               :is-disabled="disabled"
-              @click="modalKey = card.key"
+              @click="openModal(card)"
             >
               {{ $t('TRACKING_TEMPLATES.FICHA.CONFIGURE') }}
             </woot-button>
@@ -465,25 +490,27 @@ export default {
       :show="!!modalCard"
       :title="modalTitle"
       :subtitle="modalCard ? modalCard.summary : ''"
-      @close="modalKey = null"
+      confirm
+      @close="closeModal"
+      @confirm="confirmModal"
     >
       <template v-if="modalCard">
         <FichaSheet
           v-if="modalCard.kind === 'sheet'"
           :card="modalCard"
-          :value="sheetOf(modalCard)"
+          :value="modalDraft"
           :disabled="disabled"
           :suggest-context="suggestContext"
-          @input="setSheet(modalCard, $event)"
+          @input="modalDraft = $event"
         />
         <FichaTicket
           v-else
           :card="modalCard"
-          :value="ticketOf(modalCard)"
+          :value="modalDraft"
           :disabled="disabled"
           :escalation-options="escalationOptions"
           :suggest-context="suggestContext"
-          @input="setTicket(modalCard, $event)"
+          @input="modalDraft = $event"
         />
       </template>
     </FichaModal>
