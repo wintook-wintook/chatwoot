@@ -39,6 +39,8 @@ class ContactTrackings::Ficha::Presenter
   def prompt_settings
     preguntas = ContactTrackings::Ficha::Questions.new(@template.complementary_prompt).read
     bienvenida = ContactTrackings::WelcomeMessage.text(@template.complementary_prompt).to_s.lines.grep_v(FILE_LINE_RE).join.strip
-    { welcome: ContactTrackings::Ficha::Questions.welcome_without(bienvenida, preguntas), questions: preguntas }
+    { welcome: ContactTrackings::Ficha::Questions.welcome_without(bienvenida, preguntas), questions: preguntas,
+      variables: ContactTrackings::Ficha::Memory.new(@template.complementary_prompt).read,
+      business_data: ContactTrackings::Ficha::BusinessData.new(@template.complementary_prompt).read }
   end
 end

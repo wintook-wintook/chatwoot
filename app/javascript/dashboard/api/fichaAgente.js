@@ -66,6 +66,10 @@ class FichaAgenteAPI extends ApiClient {
     return axios.post(`${this.url}/ficha_questions/suggest`, payload);
   }
 
+  variablesSuggest(payload) {
+    return axios.post(`${this.url}/ficha_variables/suggest`, payload);
+  }
+
   get(id) {
     return axios.get(`${this.url}/${id}/ficha`);
   }

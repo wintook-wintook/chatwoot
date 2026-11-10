@@ -48,6 +48,19 @@ class ContactTrackings::Ficha::Analyzer
     {"questions": [{"text": "...", "var": "...", "options": []}]}
   TXT
 
+  VARIABLES_PROMPT = <<~TXT
+    Un Agente IA (chat con clientes, español de México) puede RECORDAR datos que cambian
+    durante la conversación (variables). Propón de 1 a 4 variables útiles para este agente
+    que cambien por una CONDICIÓN de la plática (no lo que el cliente contesta a una
+    pregunta, ni lo que busca en una hoja). Ejemplos: LIGA_ENTREGADA (NO|SÍ, pasa a SÍ cuando
+    le mande la liga para agendar), INTERES (BAJO|MEDIO|ALTO). Para cada una:
+    - "name": en MAYÚSCULAS con guion bajo.
+    - "values": de 2 a 5 valores cortos; el primero es con el que empieza.
+    - "rules": [{"to": "valor", "when": "cuándo pasa a ese valor, en palabras sencillas"}]
+      (una regla por cada valor distinto del primero).
+    Responde SOLO JSON: {"variables": [{"name": "...", "values": ["..."], "rules": [{"to": "...", "when": "..."}]}]}
+  TXT
+
   def initialize(account, agent_name: nil, offers: [])
     @account = account
     @agent_name = agent_name.to_s.squish
@@ -78,6 +91,13 @@ class ContactTrackings::Ficha::Analyzer
             "LO QUE HACE EL AGENTE:\n#{@offers.map { |o| "- #{o[:label]}" }.join("\n").presence || '- (nada marcado)'}"
     respuesta = ask(QUESTIONS_PROMPT, datos)
     respuesta && { 'questions' => ContactTrackings::Ficha::Questions.clean(respuesta['questions']) }
+  end
+
+  def variables(objective: nil)
+    datos = "AGENTE: #{agent}\nOBJETIVO: #{objective.presence || '(sin objetivo)'}\n" \
+            "LO QUE HACE EL AGENTE:\n#{@offers.map { |o| "- #{o[:label]}" }.join("\n").presence || '- (nada marcado)'}"
+    respuesta = ask(VARIABLES_PROMPT, datos)
+    respuesta && { 'variables' => ContactTrackings::Ficha::Memory.clean(respuesta['variables']) }
   end
 
   private

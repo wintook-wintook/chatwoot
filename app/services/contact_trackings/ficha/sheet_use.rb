@@ -36,7 +36,15 @@ module ContactTrackings::Ficha::SheetUse
     return nil if proposito.blank? && columnas.exclude?(clave)
 
     { 'purpose' => proposito.presence, 'search_by' => (clave if columnas.include?(clave)),
-      'answer_with' => (regresa - [clave]).presence }.compact
+      'answer_with' => (regresa - [clave]).presence, 'remember' => remember?(h, clave, columnas) }.compact
+  end
+
+  # «Recordar lo que eligió el cliente»: solo con una columna de búsqueda que dé nombre de
+  # variable (ver Ficha::Memory.sheet_var).
+  def remember?(config, clave, columnas)
+    return nil unless ActiveModel::Type::Boolean.new.cast(config['remember']) && columnas.include?(clave)
+
+    ContactTrackings::Ficha::Memory.sheet_var(clave) ? true : nil
   end
 
   def directive(nombre, config)

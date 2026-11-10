@@ -68,13 +68,47 @@ class ContactTrackings::Ficha::Updater
     cambios
   end
 
-  # Bienvenida y preguntas se escriben en el Entrenamiento.
+  # Bienvenida, preguntas, datos del negocio y variables se escriben en el Entrenamiento.
   def prompt
     texto = @template.complementary_prompt.to_s
     texto = ContactTrackings::Ficha::PromptEditor.new(texto).replace_welcome(@params[:welcome]).text if @params.key?(:welcome)
-    return texto unless @params.key?(:questions)
 
-    preguntas = ContactTrackings::Ficha::Questions.clean(@params[:questions])
-    ContactTrackings::Ficha::Questions.new(texto).write(preguntas, @params[:questions_when].to_s).text
+    if @params.key?(:questions)
+      preguntas = ContactTrackings::Ficha::Questions.clean(@params[:questions])
+      texto = ContactTrackings::Ficha::Questions.new(texto).write(preguntas, @params[:questions_when].to_s).text
+    end
+    texto = business(texto)
+    memory(texto)
+  end
+
+  # Solo si cambió: así un Entrenamiento escrito a mano no se reacomoda al guardar.
+  def business(texto)
+    return texto unless @params.key?(:business_data)
+
+    datos = ContactTrackings::Ficha::BusinessData.clean(@params[:business_data])
+    editor = ContactTrackings::Ficha::BusinessData.new(texto)
+    return texto if datos == editor.read.map { |d| d.slice('label', 'value') }
+
+    editor.write(datos).text
+  end
+
+  # Variables por condición y las que recuerdan una columna de hoja (casilla en la hoja).
+  def memory(texto)
+    return texto unless @params.key?(:variables)
+
+    variables = ContactTrackings::Ficha::Memory.clean(@params[:variables])
+    hojas = sheet_memory
+    editor = ContactTrackings::Ficha::Memory.new(texto)
+    actual = editor.read
+    return texto if variables == ContactTrackings::Ficha::Memory.clean(actual[:variables]) && hojas == actual[:sheets]
+
+    editor.write(variables, hojas).text
+  end
+
+  def sheet_memory
+    return [] if @items.none? { |i| i.dig('sheet', 'remember') }
+
+    cards = ContactTrackings::Ficha::Catalog.new(@template.account, inbox: @template.inbox, template: @template).call
+    ContactTrackings::Ficha::Offers.new(cards, @items).call.filter_map { |o| o[:memory] }
   end
 end

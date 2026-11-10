@@ -27,6 +27,10 @@ RSpec.describe ContactTrackings::Assistant::VariableChecks do
     expect(findings_for(becas)).to eq([])
   end
 
+  it 'los datos fijos («EMPRESA = Kontrolya») no son usos de variables' do
+    expect(codes("#{becas}\n[DATOS FIJOS]\nEMPRESA = Kontrolya\n\n[DATOS DEL NEGOCIO]\n- Empresa: %EMPRESA%")).to eq([])
+  end
+
   it 'no avisa nada si no hay variables' do
     expect(findings_for("[ROL]\nEres el agente de ventas.")).to eq([])
   end

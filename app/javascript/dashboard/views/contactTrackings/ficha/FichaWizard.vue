@@ -37,6 +37,9 @@ import FichaLoading from './FichaLoading.vue';
 import FichaWelcome from './FichaWelcome.vue';
 import FichaQuestions from './FichaQuestions.vue';
 import FichaIdentity from './FichaIdentity.vue';
+import FichaVariables from './FichaVariables.vue';
+import FichaBusiness from './FichaBusiness.vue';
+import { sheetVar } from './FichaSheet.vue';
 import FichaChannel, {
   channelKind,
   trackingChannels,
@@ -51,6 +54,8 @@ const SECTIONS = [
   'files',
   'welcome',
   'questions',
+  'business',
+  'variables',
   'rules',
   'finish',
 ];
@@ -63,6 +68,8 @@ const SECTION_ICONS = {
   welcome: 'chat-multiple',
   questions: 'list',
   rules: 'flash-on',
+  business: 'briefcase',
+  variables: 'tag',
   finish: 'checkmark-circle',
 };
 const SOURCE_KINDS = GROUPS.find(group => group.id === 'sources').kinds;
@@ -82,6 +89,8 @@ export default {
     FichaWelcome,
     FichaQuestions,
     FichaIdentity,
+    FichaVariables,
+    FichaBusiness,
     KeywordActionsEditor,
   },
   emits: ['created'],
@@ -102,6 +111,9 @@ export default {
       welcome: '',
       // Preguntas en orden (Ficha::Questions): { questions: [], when: 'start' | llave de ruta }.
       questionsData: { questions: [], when: 'start' },
+      // Variables por condición (Ficha::Memory) y datos del negocio (Ficha::BusinessData).
+      variables: [],
+      businessData: [],
       displayName: '',
       objective: '',
       business: '',
@@ -183,11 +195,15 @@ export default {
           return { ...base, state: this.canCreate ? 'ok' : null };
         if (id === 'welcome')
           return { ...base, state: this.welcome.trim() ? 'ok' : null };
-        if (['files', 'rules', 'questions'].includes(id)) {
+        if (
+          ['files', 'rules', 'questions', 'business', 'variables'].includes(id)
+        ) {
           const cuantos = {
             files: this.files.length,
             rules: this.keywordActions.length,
             questions: this.questionsData.questions.length,
+            business: this.businessRows.length,
+            variables: this.variables.length + this.sheetVars.length,
           }[id];
           return { ...base, count: cuantos, total: cuantos };
         }
@@ -301,6 +317,31 @@ export default {
     welcomeFiles() {
       return this.files.filter(file => file.welcome);
     },
+    // Datos del negocio completos (nombre y valor).
+    businessRows() {
+      return this.businessData.filter(
+        d => (d.label || '').trim() && (d.value || '').trim()
+      );
+    },
+    // Las hojas marcadas con «Recordar lo que eligió el cliente».
+    sheetVars() {
+      return this.items
+        .filter(item => item.sheet && item.sheet.remember)
+        .map(item => {
+          const card = this.cards.find(c => c.key === item.key) || {};
+          return {
+            name: sheetVar(item.sheet.search_by),
+            column: item.sheet.search_by,
+            sheet: card.name,
+          };
+        })
+        .filter(v => v.name);
+    },
+    questionVars() {
+      return this.questionsData.questions
+        .map((q, i) => ({ name: (q.var || '').trim(), n: i + 1 }))
+        .filter(v => v.name);
+    },
     // La primera pregunta, si va pegada a la bienvenida (vista previa del globo).
     welcomeQuestion() {
       const primera = this.questionsData.questions[0];
@@ -353,6 +394,8 @@ export default {
           (q.text || '').trim()
         ),
         questions_when: this.questionsData.when,
+        variables: this.variables.filter(v => (v.name || '').trim()),
+        business_data: this.businessRows,
         retry_interval_value: this.follow.retryValue,
         retry_interval_unit: this.follow.retryUnit,
         attempts: this.follow.attempts,
@@ -692,6 +735,23 @@ export default {
             :route-options="fileRouteOptions"
             :suggest-context="suggestContext"
             :has-welcome="!!welcome.trim()"
+          />
+        </div>
+        <div
+          v-else-if="section === 'business'"
+          class="flex flex-col flex-1 min-h-0 gap-3"
+        >
+          <FichaBusiness v-model="businessData" :agent-name="displayName" />
+        </div>
+        <div
+          v-else-if="section === 'variables'"
+          class="flex flex-col flex-1 min-h-0 gap-3"
+        >
+          <FichaVariables
+            v-model="variables"
+            :sheet-vars="sheetVars"
+            :question-vars="questionVars"
+            :suggest-context="suggestContext"
           />
         </div>
         <div

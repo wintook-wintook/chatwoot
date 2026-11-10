@@ -123,6 +123,7 @@ describe('FichaSheet', () => {
       purpose: '',
       search_by: 'Zona',
       answer_with: ['Precio'],
+      remember: false,
     });
   });
 });
@@ -267,5 +268,63 @@ describe('FichaQuestions › ¿Cuándo pregunta?', () => {
     expect(montar(false).find('option[value="welcome"]').text()).toBe(
       'TRACKING_TEMPLATES.FICHA.QUESTIONS_FIRST_MESSAGE'
     );
+  });
+});
+
+describe('Variables y datos del negocio', () => {
+  it('la variable de una columna sale de su nombre (o ninguna si no da uno válido)', async () => {
+    const { sheetVar } = await import('./FichaSheet.vue');
+    expect(sheetVar('Carrera')).toBe('CARRERA');
+    expect(sheetVar('Nombre carrera')).toBe('NOMBRE_CARRERA');
+    expect(sheetVar('Precio $')).toBe('');
+  });
+
+  it('valores, inicial y «pasa a … cuando» por cada valor; libre = «se guarda cuando»', async () => {
+    const { default: FichaVariables } = await import('./FichaVariables.vue');
+    const variable = {
+      name: 'LIGA',
+      values: ['NO', 'SÍ'],
+      free: false,
+      initial: 'NO',
+      rules: [],
+    };
+    const wrapper = shallowMount(FichaVariables, {
+      propsData: {
+        value: [variable],
+        sheetVars: [{ name: 'CARRERA', column: 'Carrera', sheet: 'Precios' }],
+      },
+      mocks: { $t: clave => clave },
+    });
+    expect(wrapper.vm.targets(variable)).toEqual(['SÍ']);
+    expect(wrapper.vm.derived.map(d => d.name)).toEqual(['CARRERA']);
+    wrapper.vm.setRule(0, 'SÍ', ' le mande la liga ');
+    expect(wrapper.emitted('input')[0][0][0].rules).toEqual([
+      { to: 'SÍ', when: 'le mande la liga' },
+    ]);
+    wrapper.vm.setValues(0, 'PENDIENTE, ENVIADA');
+    expect(wrapper.emitted('input')[1][0][0]).toMatchObject({
+      values: ['PENDIENTE', 'ENVIADA'],
+      initial: 'PENDIENTE',
+      rules: [],
+    });
+    wrapper.vm.setFree(0, true);
+    expect(wrapper.emitted('input')[2][0][0]).toMatchObject({
+      free: true,
+      values: ['VACÍO'],
+    });
+    expect(wrapper.vm.targets({ free: true })).toEqual(['*']);
+  });
+
+  it('datos del negocio: «Nombre del agente» se llena con el nombre que ve el cliente', async () => {
+    const { default: FichaBusiness } = await import('./FichaBusiness.vue');
+    const wrapper = shallowMount(FichaBusiness, {
+      propsData: { value: [], agentName: 'Ana' },
+      mocks: { $t: clave => clave },
+    });
+    const preset = wrapper.vm.presets.find(p => p.key === 'AGENT_NAME');
+    wrapper.vm.add(preset);
+    expect(wrapper.emitted('input')[0][0]).toEqual([
+      { label: 'TRACKING_TEMPLATES.FICHA.BUSINESS_AGENT_NAME', value: 'Ana' },
+    ]);
   });
 });

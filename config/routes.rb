@@ -234,6 +234,7 @@ Rails.application.routes.draw do
               post 'ficha_sheet/:source_id/suggest', to: 'tracking_templates/fichas#sheet_suggest'
               post 'ficha_ticket/:case_type_id/suggest', to: 'tracking_templates/fichas#ticket_suggest'
               post 'ficha_questions/suggest', to: 'tracking_templates/fichas#questions_suggest'
+              post 'ficha_variables/suggest', to: 'tracking_templates/fichas#variables_suggest'
               post :ficha_test, to: 'tracking_templates/fichas#run_test'
               get 'ficha_test/:turn_id', to: 'tracking_templates/fichas#test_result'
             end

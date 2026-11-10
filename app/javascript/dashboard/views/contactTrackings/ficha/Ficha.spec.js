@@ -243,6 +243,8 @@ describe('FichaWizard', () => {
       'files',
       'welcome',
       'questions',
+      'business',
+      'variables',
       'rules',
       'finish',
     ]);

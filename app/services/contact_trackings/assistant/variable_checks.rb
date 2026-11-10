@@ -42,7 +42,8 @@ module ContactTrackings::Assistant::VariableChecks
     outside_section(text, findings)
     return if definicion.blank?
 
-    usos = uses(lineas, dentro)
+    # [DATOS FIJOS] («EMPRESA = Kontrolya») no son usos de variables (feat/ficha_agente_ia).
+    usos = uses(lineas, dentro + ContactTrackings::PromptConstants.section_lines(text).map(&:first))
     undeclared(usos, definicion, findings)
     unused(lineas, dentro, definicion, findings)
     unknown_values(usos, definicion, findings)

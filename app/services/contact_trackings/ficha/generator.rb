@@ -46,6 +46,9 @@ class ContactTrackings::Ficha::Generator
   def welcome_files = Array(@options[:welcome_files]).map(&:to_s).compact_blank
   def route_files = @options[:route_files].to_h
   def questions = Array(@options[:questions])
+  def variables = Array(@options[:variables])
+  def business_data = Array(@options[:business_data])
+  def sheet_memory = routes.filter_map { |o| o[:memory] }
 
   def call
     prompt = text
@@ -89,9 +92,16 @@ class ContactTrackings::Ficha::Generator
 
   def text
     base = [route_block, bienvenida, rol, alcance, fidelidad, etiquetas, archivos, estilo, prohibido].compact.join("\n\n")
-    return base if questions.empty?
+    base = ContactTrackings::Ficha::Questions.new(base).write(questions, questions_route).text if questions.any?
+    with_data(base)
+  end
 
-    ContactTrackings::Ficha::Questions.new(base).write(questions, questions_route).text
+  # Datos del negocio y variables (por condición y las que recuerdan una columna de hoja).
+  def with_data(base)
+    base = ContactTrackings::Ficha::BusinessData.new(base).write(business_data).text if business_data.any?
+    return base if variables.empty? && sheet_memory.empty?
+
+    ContactTrackings::Ficha::Memory.new(base).write(variables, sheet_memory).text
   end
 
   # «Al inicio» o el nombre de la ruta de esa oferta (la pantalla manda la llave).

@@ -32,7 +32,7 @@
 class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts::BaseController
   INVALID = 'El Entrenamiento tiene errores que impiden guardarlo.'
   NO_AI = 'No se pudo proponer con IA: revisa que la cuenta tenga OpenAI activo.'
-  ITEM_FIELDS = [:key, { parts: [], sheet: [:purpose, :search_by, { answer_with: [] }],
+  ITEM_FIELDS = [:key, { parts: [], sheet: [:purpose, :search_by, :remember, { answer_with: [] }],
                          ticket: [:priority, { reasons: [], escalate_from: [] }] }].freeze
   NO_CHANNEL = 'Para activarlo, primero elige su canal en la Ficha de Agente IA.'
 
@@ -52,6 +52,11 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
   # ✨ Preguntas para hacerle al cliente, una a la vez (una llamada a OpenAI).
   def questions_suggest
     render_suggestion(analyzer.questions(objective: params[:objective]))
+  end
+
+  # ✨ Variables «por condición» con lo marcado (una llamada a OpenAI).
+  def variables_suggest
+    render_suggestion(analyzer.variables(objective: params[:objective]))
   end
 
   # ✨ Motivos para levantar un tipo de ticket (una llamada a OpenAI).

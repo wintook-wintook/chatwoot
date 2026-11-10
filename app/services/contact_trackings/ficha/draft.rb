@@ -36,7 +36,7 @@ class ContactTrackings::Ficha::Draft
       next if h['key'].blank?
 
       { 'key' => h['key'].to_s, 'parts' => Array(h['parts']).map(&:to_s).presence,
-        'sheet' => only(h['sheet'], %w[purpose search_by answer_with]),
+        'sheet' => only(h['sheet'], %w[purpose search_by answer_with remember]),
         'ticket' => only(h['ticket'], %w[reasons priority escalate_from]) }.compact
     end
   end
@@ -92,7 +92,9 @@ class ContactTrackings::Ficha::Draft
         account: @account, name: name, offers: active_offers,
         objective: @params[:objective], business: @params[:business], tone: @params[:tone],
         welcome: @params[:welcome], welcome_files: welcome_files, route_files: route_files,
-        questions: ContactTrackings::Ficha::Questions.clean(@params[:questions]), questions_when: @params[:questions_when]
+        questions: ContactTrackings::Ficha::Questions.clean(@params[:questions]), questions_when: @params[:questions_when],
+        variables: ContactTrackings::Ficha::Memory.clean(@params[:variables]),
+        business_data: ContactTrackings::Ficha::BusinessData.clean(@params[:business_data])
       ).call
       generado.merge(offers: offers.map { |o| o.except(:route).merge(on: skipped.exclude?(o[:key])) })
     end

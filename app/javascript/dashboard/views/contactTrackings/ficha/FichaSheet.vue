@@ -6,10 +6,23 @@
 //   tabla con las primeras filas
 //   ¿Para qué la usa el agente?  [Lista de precios: contestar el precio exacto…]
 //   Busca por: [Producto ▾]    Contesta con: [Precio ✓] [Categoría]
-// v-model: { purpose, search_by, answer_with: [] }  (Ficha::SheetUse en el servidor)
+// v-model: { purpose, search_by, answer_with: [], remember }  (Ficha::SheetUse en el servidor)
+// remember (10/11/2026): «Recordar lo que eligió el cliente» = una variable con el nombre de
+// la columna de búsqueda (el motor las une por nombre; Ficha::Memory en el servidor).
 // ============================================================================
 import { useAlert } from 'dashboard/composables';
 import FichaAPI from 'dashboard/api/fichaAgente';
+
+// El nombre de la variable de una columna, como lo arma el motor; '' si no da uno válido.
+export const sheetVar = columna => {
+  const nombre = (columna || '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/\s+/g, '_');
+  return /^[A-Z_][A-Z0-9_]*$/.test(nombre) ? nombre : '';
+};
 
 export default {
   model: { prop: 'value', event: 'input' },
@@ -35,7 +48,11 @@ export default {
         purpose: actual.purpose || '',
         search_by: actual.search_by || this.card.search_by || '',
         answer_with: actual.answer_with || this.card.answer_with || [],
+        remember: !!actual.remember,
       };
+    },
+    memoryVar() {
+      return sheetVar(this.config.search_by);
     },
     answerOptions() {
       return this.columns.filter(col => col !== this.config.search_by);
@@ -80,6 +97,7 @@ export default {
           answer_with: (data.answer_with || []).length
             ? data.answer_with
             : this.config.answer_with,
+          remember: this.config.remember,
         });
       } catch (error) {
         const datos = error && error.response && error.response.data;
@@ -209,5 +227,40 @@ export default {
         </button>
       </div>
     </div>
+    <!-- Recordar lo elegido: la variable que se usa en las siguientes preguntas. -->
+    <label
+      class="flex items-start gap-2 !m-0 p-3 text-sm border rounded-lg cursor-pointer"
+      :class="
+        config.remember && memoryVar
+          ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20'
+          : 'border-slate-200 dark:border-slate-700'
+      "
+    >
+      <input
+        type="checkbox"
+        class="!m-0 mt-0.5"
+        :checked="config.remember && !!memoryVar"
+        :disabled="disabled || !memoryVar"
+        @change="set('remember', $event.target.checked)"
+      />
+      <span class="flex flex-col gap-0.5">
+        <span class="font-medium text-slate-800 dark:text-slate-100">
+          {{ t('SHEET_REMEMBER') }}
+          <span
+            v-if="memoryVar"
+            class="ml-1 px-1.5 py-0.5 text-xs font-mono rounded bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+          >
+            {{ memoryVar }}
+          </span>
+        </span>
+        <span class="text-xs text-slate-500">
+          {{
+            memoryVar
+              ? t('SHEET_REMEMBER_HINT', { column: config.search_by })
+              : t('SHEET_REMEMBER_INVALID')
+          }}
+        </span>
+      </span>
+    </label>
   </div>
 </template>

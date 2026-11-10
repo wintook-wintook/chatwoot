@@ -125,7 +125,15 @@ class ContactTrackings::Ficha::Offers
 
     oferta.merge(directive: ContactTrackings::Ficha::SheetUse.directive(card[:name], config) || oferta[:directive],
                  topic: config['purpose'] || oferta[:topic], purpose: config['purpose'],
-                 answer_with: config['answer_with']).compact
+                 answer_with: config['answer_with'], memory: sheet_memory(card, config)).compact
+  end
+
+  # La variable que recuerda lo que el cliente eligió de la columna de búsqueda (Ficha::Memory).
+  def sheet_memory(card, config)
+    return nil unless config['remember']
+
+    { 'name' => ContactTrackings::Ficha::Memory.sheet_var(config['search_by']), 'column' => config['search_by'],
+      'sheet' => card[:name] }
   end
 
   # El tipo de ticket con sus motivos (en palabras del cliente) y su prioridad (TicketUse).
