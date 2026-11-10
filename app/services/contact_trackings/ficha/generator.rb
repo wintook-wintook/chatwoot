@@ -35,13 +35,17 @@ class ContactTrackings::Ficha::Generator
     @account = account
     @name = name.to_s.squish.presence || 'tu negocio'
     @offers = offers
+    @options = options
     @objective = options[:objective].to_s.squish
     @business = options[:business].to_s.strip
     @tone = TONES.key?(options[:tone].to_s) ? options[:tone].to_s : 'cercano'
-    @welcome = options[:welcome].to_s.strip
-    @welcome_files = Array(options[:welcome_files]).map(&:to_s).compact_blank
-    @route_files = options[:route_files].to_h
   end
+
+  # Bienvenida, archivos por ruta y preguntas (opcionales).
+  def welcome = @options[:welcome].to_s.strip
+  def welcome_files = Array(@options[:welcome_files]).map(&:to_s).compact_blank
+  def route_files = @options[:route_files].to_h
+  def questions = Array(@options[:questions])
 
   def call
     prompt = text
@@ -84,7 +88,17 @@ class ContactTrackings::Ficha::Generator
   def files = @offers.select { |o| o[:kind] == 'file' }
 
   def text
-    [route_block, bienvenida, rol, alcance, fidelidad, etiquetas, archivos, estilo, prohibido].compact.join("\n\n")
+    base = [route_block, bienvenida, rol, alcance, fidelidad, etiquetas, archivos, estilo, prohibido].compact.join("\n\n")
+    return base if questions.empty?
+
+    ContactTrackings::Ficha::Questions.new(base).write(questions, questions_route).text
+  end
+
+  # «Al inicio» o el nombre de la ruta de esa oferta (la pantalla manda la llave).
+  def questions_route
+    return ContactTrackings::Ficha::Questions::START if @options[:questions_when].to_s.blank? || @options[:questions_when].to_s == 'start'
+
+    routes.find { |o| o[:key].to_s == @options[:questions_when].to_s }&.dig(:route, :name) || ContactTrackings::Ficha::Questions::START
   end
 
   def route_block
@@ -101,7 +115,7 @@ class ContactTrackings::Ficha::Generator
   # El motor la manda TAL CUAL en el primer mensaje del cliente (ContactTrackings::
   # WelcomeMessage) y resuelve {{archivo}}: así van los archivos de la bienvenida.
   def bienvenida
-    lineas = [@welcome.presence, *@welcome_files.map { |n| "{{#{n}}}" }].compact
+    lineas = [welcome.presence, *welcome_files.map { |n| "{{#{n}}}" }].compact
     return nil if lineas.empty?
 
     "[MENSAJE DE BIENVENIDA]\n#{lineas.join("\n")}"
@@ -112,7 +126,7 @@ class ContactTrackings::Ficha::Generator
   end
 
   def alcance
-    lineas = routes.map { |o| "#{o[:route][:name]}: #{scope_for(o)}#{files_note(@route_files[o[:key].to_s])}" }
+    lineas = routes.map { |o| "#{o[:route][:name]}: #{scope_for(o)}#{files_note(route_files[o[:key].to_s])}" }
     "[ALCANCE POR RAMA]\n#{lineas.join("\n")}"
   end
 

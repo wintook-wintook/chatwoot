@@ -32,7 +32,8 @@
 class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts::BaseController
   INVALID = 'El Entrenamiento tiene errores que impiden guardarlo.'
   NO_AI = 'No se pudo proponer con IA: revisa que la cuenta tenga OpenAI activo.'
-  ITEM_FIELDS = [:key, { parts: [], sheet: [:purpose, :search_by, { answer_with: [] }], ticket: [:priority, { reasons: [] }] }].freeze
+  ITEM_FIELDS = [:key, { parts: [], sheet: [:purpose, :search_by, { answer_with: [] }],
+                         ticket: [:priority, { reasons: [], escalate_from: [] }] }].freeze
   NO_CHANNEL = 'Para activarlo, primero elige su canal en la Ficha de Agente IA.'
 
   before_action :check_authorization
@@ -40,6 +41,22 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
 
   def catalog
     render json: { cards: draft.cards }
+  end
+
+  # ✨ Para qué sirve una hoja y cómo buscar en ella (una llamada a OpenAI).
+  def sheet_suggest
+    hoja = Current.account.knowledge_sources.find_by!(id: params[:source_id], source_type: 'google_sheet')
+    render_suggestion(analyzer.sheet(hoja))
+  end
+
+  # ✨ Preguntas para hacerle al cliente, una a la vez (una llamada a OpenAI).
+  def questions_suggest
+    render_suggestion(analyzer.questions(objective: params[:objective]))
+  end
+
+  # ✨ Motivos para levantar un tipo de ticket (una llamada a OpenAI).
+  def ticket_suggest
+    render_suggestion(analyzer.ticket(CaseType.where(account_id: Current.account.id).find(params[:case_type_id])))
   end
 
   # Lo que contiene una hoja (columnas y primeras filas), para decir qué hacer con ella.
@@ -106,12 +123,9 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
   end
 
   def update
-    recursos = resources_for(items)
-    recursos = recursos.merge('files' => settings.file_rules || @tracking_template.file_rules)
-    recursos = recursos.merge('attempts' => @tracking_template.resources['attempts']).compact
-    @tracking_template.update!({ resources: recursos, calendar_integration_ids: calendar_ids(items),
-                                 keyword_actions: settings.keyword_actions, version_note: 'Ficha actualizada' }
-                                 .compact.merge(settings.agenda(calendar_ids(items))))
+    bloqueos = ContactTrackings::Ficha::Updater.new(@tracking_template, params, items: items).call
+    return render json: { error: INVALID, validation: { blocking: bloqueos } }, status: :unprocessable_entity if bloqueos
+
     render json: ficha_json
   end
 
@@ -142,6 +156,16 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
   end
 
   def settings = @settings ||= ContactTrackings::Ficha::Settings.new(params)
+
+  def analyzer
+    ContactTrackings::Ficha::Analyzer.new(Current.account, agent_name: params[:name], offers: draft.offers)
+  end
+
+  def render_suggestion(resultado)
+    return render json: { error: NO_AI }, status: :unprocessable_entity if resultado.nil?
+
+    render json: resultado
+  end
 
   # El prompt con lo que la persona aceptó: add[] = ofertas de la ficha, remove[] = rutas.
   def edited_prompt
@@ -224,13 +248,6 @@ class Api::V1::Accounts::TrackingTemplates::FichasController < Api::V1::Accounts
   end
 
   def ficha_json
-    @tracking_template.reload
-    cards = catalog_for(@tracking_template.inbox, @tracking_template).call
-    cambios = ContactTrackings::Ficha::Changes.new(@tracking_template, cards: cards)
-    { cards: cards, items: cambios.items, changes: cambios.call.except(:deduced),
-      keyword_actions: @tracking_template.keyword_actions || [], readiness: readiness_for(@tracking_template).call,
-      agenda: @tracking_template.slice(:calendar_event_duration, :timezone, :slots_presentation, :booking_calendar_ids),
-      file_rules: @tracking_template.file_rules, attempts: @tracking_template.follow_up_attempts,
-      routes: cambios.test_routes.map { |r| r.slice(:name, :label) } }
+    ContactTrackings::Ficha::Presenter.new(@tracking_template.reload).call
   end
 end

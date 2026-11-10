@@ -92,6 +92,7 @@ class ContactTrackings::Ficha::Offers
     # Una sola ruta de agenda aunque se marquen varias (las agendas van en calendar_integration_ids).
     agenda = ofertas.select { |o| o[:kind] == 'calendar' }
     ofertas -= agenda.drop(1)
+    ContactTrackings::Ficha::TicketUse.escalate!(ofertas)
     ofertas.each { |o| o[:route] = route_for(o) if o[:route] == :pending }
     ofertas
   end
@@ -134,7 +135,7 @@ class ContactTrackings::Ficha::Offers
     return oferta if config.nil?
 
     oferta.merge(directive: ContactTrackings::Ficha::TicketUse.directive(card[:name], config),
-                 reasons: config['reasons'], priority: config['priority']).compact
+                 reasons: config['reasons'], priority: config['priority'], escalate_from: config['escalate_from']).compact
   end
 
   def base(card)
@@ -191,9 +192,12 @@ class ContactTrackings::Ficha::Offers
     end
   end
 
-  # Fuente antes de la flecha; agendar y abrir ticket son ACCIONES (después).
+  # Fuente antes de la flecha; agendar y abrir ticket son ACCIONES (después). Una fuente
+  # puede escalar a un ticket si no encuentra (escalation).
   def target(oferta)
-    %w[calendar case_type].include?(oferta[:kind]) ? "- -> #{oferta[:directive]}" : oferta[:directive]
+    return "- -> #{oferta[:directive]}" if %w[calendar case_type].include?(oferta[:kind])
+
+    oferta[:escalation] ? "#{oferta[:directive]} -> #{oferta[:escalation]}" : oferta[:directive]
   end
 
   # En palabras del cliente: es lo único que mira el clasificador para elegir la ruta.

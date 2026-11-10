@@ -128,7 +128,20 @@ class ContactTrackings::Ficha::Changes
 
   def added
     @added ||= chosen_offers.reject { |o| used?(o) }.map { |o| o.slice(:key, :kind, :name, :label, :route, :directive) } +
-               welcome_files_missing + route_files_missing
+               welcome_files_missing + route_files_missing + escalations_missing
+  end
+
+  # Tickets que deben levantarse cuando una ruta no encuentra, y esa ruta aún no escala.
+  def escalations_missing
+    chosen_offers.select { |o| o[:kind] == 'case_type' }.flat_map do |ticket|
+      Array(ticket[:escalate_from]).filter_map do |ruta|
+        linea = routes.find { |r| r[:name] == ruta }
+        next if linea.nil? || ticket_match?(linea[:target], ticket[:name])
+
+        { key: "route_escalation:#{ruta}:#{ticket[:key]}", kind: 'route_escalation', name: ticket[:name],
+          label: "levantar «#{ticket[:name]}» cuando la ruta #{ruta} no encuentre la respuesta" }
+      end
+    end
   end
 
   # Archivos marcados «con la ruta X» que el alcance de esa ruta no menciona.

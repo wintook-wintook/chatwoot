@@ -57,6 +57,7 @@ class ContactTrackings::Ficha::PromptEditor
   WELCOME_FILE = 'welcome_file:'
 
   ROUTE_FILE = 'route_file:'
+  ROUTE_ESCALATION = 'route_escalation:'
 
   def apply(add: [], remove: [], phrases: {}, offers: {})
     add.each { |key| add_key(key, offers) }
@@ -68,8 +69,27 @@ class ContactTrackings::Ficha::PromptEditor
   def add_key(key, offers)
     return add_welcome_file(key.delete_prefix(WELCOME_FILE)) if key.start_with?(WELCOME_FILE)
     return add_route_file(*key.delete_prefix(ROUTE_FILE).split(':', 2)) if key.start_with?(ROUTE_FILE)
+    return add_escalation_key(key, offers) if key.start_with?(ROUTE_ESCALATION)
 
     add(offers[key]) if offers[key]
+  end
+
+  # route_escalation:RUTA:LLAVE_DEL_TICKET
+  def add_escalation_key(key, offers)
+    ruta, ticket = key.delete_prefix(ROUTE_ESCALATION).split(':', 2)
+    directiva = offers[ticket]&.dig(:directive)
+    directiva ? add_escalation(ruta, directiva) : self
+  end
+
+  # «Si no encuentra, levanta el ticket»: la ruta termina en «-> @crear_ticket(…)».
+  def add_escalation(nombre, directiva)
+    @lines.map! do |linea|
+      m = linea.match(LINE_RE)
+      next linea unless m && m[1].casecmp?(nombre) && m[4].to_s.exclude?('@crear_ticket')
+
+      "#{linea.rstrip} -> #{directiva}"
+    end
+    self
   end
 
   # { 'ruta' => 'lo que dice su línea en [ALCANCE POR RAMA]' }
@@ -95,6 +115,17 @@ class ContactTrackings::Ficha::PromptEditor
     else
       append_to_section('ALCANCE POR RAMA', "#{ruta}: #{nota}")
     end
+    self
+  end
+
+  # Reemplaza el TEXTO de la bienvenida (sus {{archivos}} se quedan). Vacía y sin archivos:
+  # se quita la sección.
+  def replace_welcome(texto)
+    rango = section_range('MENSAJE DE BIENVENIDA')
+    archivos = rango ? @lines[(rango[0] + 1)...rango[1]].grep(/\A\s*\{\{[^}]+\}\}\s*\z/).map(&:strip) : []
+    cuerpo = [*texto.to_s.strip.split("\n"), *archivos]
+    @lines.slice!(rango[0]...rango[1]) if rango
+    @lines.push('', '[MENSAJE DE BIENVENIDA]', *cuerpo) if cuerpo.any?
     self
   end
 
