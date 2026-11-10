@@ -4,6 +4,7 @@
 #   GET  …/ai_follow_ups?case_id= | ?conversation_id=(display_id) | ?contact_id=   → los últimos (el vivo primero)
 #   POST …/ai_follow_ups { conversation_id (display_id), case_id, objective, instructions, starts_at,
 #                          max_attempts, interval_value, interval_unit, on_finish, tz }
+#   replace: true → si ya hay uno vivo, se cancela y arranca el nuevo (cambiar el que corre)
 #   POST …/ai_follow_ups/:id/pause | resume | cancel
 #   GET  …/ai_follow_ups/templates?conversation_id=   → plantillas de WhatsApp que el agente puede usar
 #   GET  …/ai_follow_ups/context?conversation_id=     → si hay respuestas predefinidas y la nota IA del contacto
@@ -128,7 +129,7 @@ class Api::V1::Accounts::AiFollowUpsController < Api::V1::Accounts::BaseControll
 
   def create_params
     params.permit(:objective, :instructions, :starts_at, :max_attempts, :interval_value, :interval_unit, :on_finish,
-                  :template_name, :template_language)
+                  :template_name, :template_language, :replace)
           .to_h.merge('time_zone' => (params[:tz] if ActiveSupport::TimeZone[params[:tz].to_s]))
   end
 

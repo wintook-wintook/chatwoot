@@ -188,6 +188,9 @@ es:
       no_key: 'Conecta la integración de OpenAI de la cuenta para crear plantillas con IA.'
       goal_required: 'Escribe qué quieres lograr con la plantilla.'
       failed: 'No se pudo armar la propuesta. Inténtalo otra vez.'
+  # Plantillas de seguimiento (AiFollowUpPreset)
+  ai_follow_up_presets:
+    not_editable: 'Solo quien la creó o un administrador puede cambiarla o borrarla.'
   cancellation:
     meeting_locked: 'La tarea agendada ya está cerrada o cancelada: no se puede cambiar.'
     meeting_not_closed: 'Solo se reabre una tarea agendada realizada o en la que el cliente no asistió.'

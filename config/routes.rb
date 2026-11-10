@@ -274,6 +274,8 @@ Rails.application.routes.draw do
               post :cancel
             end
           end
+          # Plantillas de seguimiento: la receta de un Seguimiento IA para volver a usarla
+          resources :ai_follow_up_presets, only: [:index, :create, :update, :destroy]
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
             post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada

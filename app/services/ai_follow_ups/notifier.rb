@@ -14,7 +14,12 @@ class AiFollowUps::Notifier
     @user = follow_up.created_by
   end
 
-  def started
+  # replaced: el seguimiento que se canceló para arrancar este (se cambió el que corría).
+  def started(replaced: nil)
+    if replaced
+      case_note("Se cambió el #{AiFollowUp::DISPLAY_NAME}: se canceló el anterior (iba en el intento " \
+                "#{replaced.attempts.to_i} de #{replaced.max_attempts}) y arrancó el nuevo.")
+    end
     case_note("#{AiFollowUp::DISPLAY_NAME} empezó. Objetivo: #{@follow_up.objective}", event: :tracking_triggered)
   end
 

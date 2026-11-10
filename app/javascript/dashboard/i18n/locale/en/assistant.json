@@ -103,7 +103,9 @@
         "INBOX": "WhatsApp",
         "SELLER": "Seller",
         "CASE": "Case",
-        "ITEM": "What"
+        "ITEM": "What",
+        "NAME": "Name",
+        "OBJECTIVE": "Objective"
       },
       "OUTCOMES": {
         "won": "Won",
@@ -153,7 +155,16 @@
       "CONVERT_KEEPS": "It is required or the customer's: the task stays and a linked session is scheduled.",
       "CONVERT_TO_TASK": "It leaves the schedule (and Google) and becomes a task with no time.",
       "CONVERT_LINKED": "It is a session of «{task}»: it leaves the schedule and that task stays.",
-      "NO_SHOW": "The customer did not show up"
+      "NO_SHOW": "The customer did not show up",
+      "REPLACES": "An AI follow-up is running (attempt {attempts} of {max}, next {at}). Confirming cancels it and starts this one.",
+      "USED_PRESET": "I used your template «{name}».",
+      "PRESET": "Follow-up template",
+      "PRESET_NONE": "— None —",
+      "PRESETS_EMPTY": "You have no follow-up templates yet",
+      "WA_TEMPLATE": "WhatsApp template",
+      "WA_TEMPLATE_AUTO": "Let the agent choose",
+      "PRESET_NAME": "Template name",
+      "save_follow_up_preset": "Save template"
     },
     "SETTINGS": {
       "TITLE": "Assistant",
@@ -241,7 +252,45 @@
       "AI_NOTE_NONE": "This contact has no AI note.",
       "AI_NOTE_ADD": "Add it on the contact page",
       "SOURCES_NONE": "The company has no canned responses: if the customer asks something not in the AI note, it will hand it to a person.",
-      "SOURCES_CANNED": "To answer questions it checks the company canned responses and the contact AI note."
+      "SOURCES_CANNED": "To answer questions it checks the company canned responses and the contact AI note.",
+      "PRESET_LABEL": "Use template",
+      "PRESET_NONE": "— No template —",
+      "PRESET_EMPTY": "You have no follow-up templates yet: start from an example and save it.",
+      "STARTER_SUFFIX": "(example)",
+      "SAVE_PRESET": "Save as template",
+      "PRESET_NAME_PLACEHOLDER": "Name, e.g. Friendly collection 3 attempts",
+      "SAVE": "Save",
+      "UPDATE_PRESET": "Update «{name}»",
+      "DELETE_PRESET": "Delete template",
+      "DELETE_CONFIRM": "Delete the template «{name}»?",
+      "PRESET_SAVED": "Template «{name}» saved",
+      "PRESET_UPDATED": "Template «{name}» updated",
+      "REPLACE_NOTICE": "A follow-up is already running (attempt {attempts} of {max}{next}). If you save, it is cancelled and this one starts with your changes.",
+      "REPLACE_SUBMIT": "Replace follow-up",
+      "REPLACED": "Follow-up changed: the previous one was cancelled",
+      "STARTERS": {
+        "COLLECTION": {
+          "NAME": "Friendly collection",
+          "OBJECTIVE": "Get the customer to pay the pending balance or say when they will.",
+          "INSTRUCTIONS": "Warm, respectful tone. Remind them of the balance and offer help with payment. If they say they paid, ask for the receipt. Never threaten or pressure."
+        },
+        "QUOTE": {
+          "NAME": "Quote follow-up",
+          "OBJECTIVE": "Get the customer to confirm the quote or learn why not.",
+          "INSTRUCTIONS": "Ask if they reviewed it and have questions; offer to adjust it. If not interested, kindly ask why."
+        },
+        "APPOINTMENT": {
+          "NAME": "Confirm appointment",
+          "OBJECTIVE": "Get the customer to confirm or reschedule the appointment.",
+          "INSTRUCTIONS": "Remind them of the day and time. If they can't make it, ask for another day and notify a person."
+        },
+        "REACTIVATE": {
+          "NAME": "Reactivate customer",
+          "OBJECTIVE": "Get the customer to buy again or book a call.",
+          "INSTRUCTIONS": "Greet them, ask how their purchase is working out and share news, without pressure."
+        }
+      },
+      "REPLACE_NEXT": " · next {at}"
     },
     "OPEN_IN_PLATFORM": "Open in Kontrolya",
     "VOICE": {

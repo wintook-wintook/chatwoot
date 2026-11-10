@@ -5,18 +5,20 @@
 #   • propose_follow_up_action: pausarlo, reanudarlo o cancelarlo.
 # tracking_status (DelegationTools) también los lista. Se incluye en Assistant::Tools.
 module Assistant::FollowUpTools
-  # Seguimiento IA — delegar al agente nuevo (no se elige agente).
+  # Seguimiento IA — delegar al agente nuevo (no se elige agente). Base: el que ya corre en la
+  # conversación (se reemplaza), luego la plantilla de seguimiento nombrada (preset) y encima lo
+  # que dijo el usuario. Si ya hay uno vivo, arranca por omisión cuando tocaba su siguiente intento.
   def prepare_follow_up(args)
     conversation = delegation_conversation(args)
     raise ArgumentError, 'Necesito una conversación del cliente para delegar el seguimiento.' unless conversation
+
+    live = AiFollowUp.live.find_by(conversation_id: conversation.id)
+    preset = follow_up_preset(args['preset'])
+    args = follow_up_base(live, preset).merge(args.compact_blank)
     raise ArgumentError, 'Dime qué debe lograr el seguimiento.' if args['objective'].blank?
 
-    payload = { 'conversation_id' => conversation.display_id, 'case_id' => args['case_id'],
-                'objective' => args['objective'].to_s.first(1000), 'instruction' => args['instruction'].to_s,
-                'starts_at' => parse_local(args['starts_at'])&.iso8601 }
-              .merge(follow_up_rhythm(args), follow_up_template(conversation, args['template_name']))
-    [payload, { 'agent' => AiFollowUp::DISPLAY_NAME, 'conversation' => conversation_label(conversation),
-                'target' => delegate_target(args), 'template' => payload['template_name'] }.compact]
+    payload = follow_up_payload(conversation, args, live)
+    [payload, follow_up_labels(conversation, args, payload, live, preset)]
   end
 
   def prepare_follow_up_action(args)
@@ -35,6 +37,42 @@ module Assistant::FollowUpTools
   end
 
   private
+
+  def follow_up_payload(conversation, args, live)
+    starts = parse_local(args['starts_at']) || (live&.next_run_at if live&.next_run_at&.future?)
+    { 'conversation_id' => conversation.display_id, 'case_id' => args['case_id'],
+      'objective' => args['objective'].to_s.first(1000), 'instruction' => args['instruction'].to_s,
+      'starts_at' => starts&.iso8601, 'on_finish' => args['on_finish'].presence_in(AiFollowUp::ON_FINISH),
+      'replace' => live.present? }.compact
+      .merge(follow_up_rhythm(args), follow_up_template(conversation, args['template_name']))
+  end
+
+  def follow_up_labels(conversation, args, payload, live, preset)
+    { 'agent' => AiFollowUp::DISPLAY_NAME, 'conversation' => conversation_label(conversation),
+      'target' => delegate_target(args), 'template' => payload['template_name'], 'preset' => preset&.name,
+      'presets' => @account.ai_follow_up_presets.ordered.limit(50).map { |p| { 'id' => p.id, 'name' => p.name, 'fields' => p.fields } },
+      'whatsapp_templates' => AiFollowUps::Templates.new(conversation).available.map { |t| t.slice(:name, :language) },
+      'replaces' => live && { 'attempts' => live.attempts, 'max_attempts' => live.max_attempts,
+                              'next_at' => local(live.next_run_at), 'objective' => live.objective } }.compact
+  end
+
+  # Lo del seguimiento que corre y de la plantilla, con los nombres de los argumentos de la tarjeta.
+  def follow_up_base(live, preset)
+    [live, preset].compact.each_with_object({}) do |source, base|
+      base.merge!({ 'objective' => source.objective, 'instruction' => source.instructions,
+                    'max_attempts' => source.max_attempts, 'interval_value' => source.interval_value,
+                    'interval_unit' => source.interval_unit, 'on_finish' => source.on_finish,
+                    'template_name' => source.template_name }.compact_blank)
+    end
+  end
+
+  # La plantilla de seguimiento por su nombre (sin importar mayúsculas); nombrada y no existe → error.
+  def follow_up_preset(name)
+    return if name.blank?
+
+    @account.ai_follow_up_presets.find_by('lower(name) = ?', name.to_s.strip.downcase) ||
+      raise(ArgumentError, "No hay una plantilla de seguimiento llamada «#{name}».")
+  end
 
   def follow_up_rhythm(args)
     { 'max_attempts' => (args['max_attempts'].presence || 3).to_i.clamp(1, 10),

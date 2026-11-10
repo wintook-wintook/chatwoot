@@ -40,6 +40,8 @@ const ICONS = {
   client_task: 'person',
   // Cancelar con motivo
   cancel_item: 'dismiss-circle',
+  // Guardar plantilla de seguimiento
+  save_follow_up_preset: 'save',
   // Tarea ↔ tarea agendada
   convert_item: 'calendar',
 };
@@ -88,6 +90,9 @@ export default {
         max_attempts: p.max_attempts || 3,
         interval_value: p.interval_value || 1,
         interval_unit: p.interval_unit || 'days',
+        // Seguimiento IA: plantilla de seguimiento elegida y plantilla de WhatsApp fijada.
+        preset_id: '',
+        wa_template: p.template_name || '',
         // D4
         column_id: p.column_id || '',
         reason_id: p.reason_id || '',
@@ -165,6 +170,20 @@ export default {
     t(key, params) {
       return this.$t(`${T}.${key}`, params);
     },
+    // Seguimiento IA: elegir una plantilla de seguimiento llena los campos de la tarjeta.
+    usePreset() {
+      const preset = (this.labels.presets || []).find(
+        p => String(p.id) === String(this.form.preset_id)
+      );
+      if (!preset) return;
+      const f = preset.fields || {};
+      this.form.objective = f.objective || this.form.objective;
+      this.form.instruction = f.instructions || '';
+      this.form.max_attempts = f.max_attempts || this.form.max_attempts;
+      this.form.interval_value = f.interval_value || this.form.interval_value;
+      this.form.interval_unit = f.interval_unit || this.form.interval_unit;
+      if (f.template_name) this.form.wa_template = f.template_name;
+    },
     // Solo los campos que se ven en la tarjeta de ese tipo.
     payload() {
       const f = this.form;
@@ -176,7 +195,16 @@ export default {
         interval_value: Number(f.interval_value),
         interval_unit: f.interval_unit,
       };
+      const waTemplate = (this.labels.whatsapp_templates || []).find(
+        tp => tp.name === f.wa_template
+      );
       return {
+        follow_up: {
+          ...delegate,
+          template_name: waTemplate ? waTemplate.name : null,
+          template_language: waTemplate ? waTemplate.language : null,
+        },
+        save_follow_up_preset: { name: f.name },
         note: { content: f.content },
         task: { title: f.title, due_at: toIso(f.due_at) },
         meeting: {
@@ -188,7 +216,6 @@ export default {
         scheduled_message: { content: f.content, send_at: toIso(f.send_at) },
         draft: { content: f.content },
         delegate,
-        follow_up: delegate,
         tracking_action: {},
         follow_up_action: {},
         create_case: { title: f.title },
@@ -470,6 +497,49 @@ export default {
         <input v-model="form.location" type="text" class="h-8 text-sm" />
       </label>
       <template v-if="isDelegate">
+        <!-- Seguimiento IA: ya corre uno (se reemplaza) y plantillas de seguimiento -->
+        <p
+          v-if="type === 'follow_up' && labels.replaces"
+          class="p-1.5 m-0 text-xs rounded bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+        >
+          {{
+            t('REPLACES', {
+              attempts: labels.replaces.attempts,
+              max: labels.replaces.max_attempts,
+              at: labels.replaces.next_at || '—',
+            })
+          }}
+        </p>
+        <p
+          v-if="type === 'follow_up' && labels.preset"
+          class="m-0 text-xs text-slate-500"
+        >
+          {{ t('USED_PRESET', { name: labels.preset }) }}
+        </p>
+        <label v-if="type === 'follow_up'" class="text-xs">
+          {{ t('PRESET') }}
+          <select
+            v-model="form.preset_id"
+            class="!h-9 !py-1 text-sm"
+            :disabled="!(labels.presets || []).length"
+            @change="usePreset"
+          >
+            <option value="">
+              {{
+                (labels.presets || []).length
+                  ? t('PRESET_NONE')
+                  : t('PRESETS_EMPTY')
+              }}
+            </option>
+            <option
+              v-for="pr in labels.presets || []"
+              :key="pr.id"
+              :value="pr.id"
+            >
+              {{ pr.name }}
+            </option>
+          </select>
+        </label>
         <label class="text-xs">
           {{ t('OBJECTIVE') }}
           <textarea v-model="form.objective" rows="2" class="text-sm" />
@@ -515,7 +585,30 @@ export default {
             </select>
           </label>
         </div>
+        <label
+          v-if="
+            type === 'follow_up' && (labels.whatsapp_templates || []).length
+          "
+          class="text-xs"
+        >
+          {{ t('WA_TEMPLATE') }}
+          <select v-model="form.wa_template" class="!h-9 !py-1 text-sm">
+            <option value="">{{ t('WA_TEMPLATE_AUTO') }}</option>
+            <option
+              v-for="tp in labels.whatsapp_templates"
+              :key="`${tp.name}-${tp.language}`"
+              :value="tp.name"
+            >
+              {{ tp.name }} ({{ tp.language }})
+            </option>
+          </select>
+        </label>
       </template>
+      <!-- Guardar plantilla de seguimiento: el nombre se puede cambiar -->
+      <label v-if="type === 'save_follow_up_preset'" class="text-xs">
+        {{ t('PRESET_NAME') }}
+        <input v-model="form.name" type="text" class="h-8 text-sm" />
+      </label>
       <label v-if="type === 'create_case'" class="text-xs">
         {{ t('TITLE') }}
         <input v-model="form.title" type="text" class="h-8 text-sm" />

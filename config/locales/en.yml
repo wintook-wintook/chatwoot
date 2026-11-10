@@ -203,6 +203,9 @@ en:
       no_key: 'Connect the account OpenAI integration to create templates with AI.'
       goal_required: 'Write what you want to achieve with the template.'
       failed: 'The proposal could not be built. Try again.'
+  # Follow-up presets (AiFollowUpPreset)
+  ai_follow_up_presets:
+    not_editable: 'Only its creator or an administrator can change or delete it.'
   cancellation:
     meeting_locked: 'The scheduled task is already closed or cancelled: it cannot be changed.'
     meeting_not_closed: 'Only a held or no-show scheduled task can be reopened.'

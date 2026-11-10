@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_10_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_11_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -142,6 +142,25 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_10_120000) do
     t.index ["account_id"], name: "index_ai_agent_attachments_on_account_id"
     t.index ["tracking_template_id", "name"], name: "index_ai_agent_attachments_on_template_and_name", unique: true
     t.index ["tracking_template_id"], name: "index_ai_agent_attachments_on_tracking_template_id"
+  end
+
+  create_table "ai_follow_up_presets", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "created_by_id"
+    t.string "name", null: false
+    t.text "objective", null: false
+    t.text "instructions"
+    t.integer "max_attempts", default: 3, null: false
+    t.integer "interval_value", default: 1, null: false
+    t.string "interval_unit", default: "days", null: false
+    t.string "on_finish", default: "notify", null: false
+    t.string "template_name"
+    t.string "template_language"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_ai_follow_up_presets_on_account_and_name", unique: true
+    t.index ["account_id"], name: "index_ai_follow_up_presets_on_account_id"
+    t.index ["created_by_id"], name: "index_ai_follow_up_presets_on_created_by_id"
   end
 
   create_table "ai_follow_ups", force: :cascade do |t|
@@ -2656,6 +2675,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_10_120000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "ai_agent_attachments", "accounts"
   add_foreign_key "ai_agent_attachments", "tracking_templates"
+  add_foreign_key "ai_follow_up_presets", "accounts"
+  add_foreign_key "ai_follow_up_presets", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "ai_follow_ups", "accounts"
   add_foreign_key "ai_follow_ups", "case_tickets"
   add_foreign_key "ai_follow_ups", "contacts"

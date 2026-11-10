@@ -53,18 +53,6 @@ module Assistant::ToolDefinitions
          starts_at: str('Primer intento, hora local YYYY-MM-DDTHH:MM (omitir = en unos minutos)'),
          max_attempts: int('Intentos (1 a 10)'), interval_value: int('Cada cuánto (número)'),
          interval_unit: { type: 'string', enum: %w[minutes hours days] } }, %w[agent_id]),
-    # Seguimiento IA — el agente nuevo con herramientas (por omisión al «dale seguimiento»)
-    fn('propose_follow_up', "Propone delegar el seguimiento del cliente al #{AiFollowUp::DISPLAY_NAME} (el agente nuevo, sin " \
-                            'elegir agente). Requiere confirmación.',
-       { case_id: int('Id del caso'), contact_id: int('Id del contacto'),
-         conversation_id: int('Número de la conversación (omitir = la del caso o la más reciente)'),
-         objective: str('Qué debe lograr, concreto: «que confirme la cotización 1520 o saber por qué no»'),
-         instruction: str('Indicaciones para este cliente (tono, qué ofrecer, qué no decir)'),
-         starts_at: str('Primer mensaje, hora local YYYY-MM-DDTHH:MM (omitir = ahora)'),
-         max_attempts: int('Cuántas veces insistir sin respuesta (1 a 10, default 3)'), interval_value: int('Cada cuánto (número)'),
-         interval_unit: { type: 'string', enum: %w[minutes hours days] },
-         template_name: str('Solo si el usuario nombra una plantilla de WhatsApp para reabrir la ventana de 24 h ' \
-                            '(omitir = el agente elige la más conveniente)') }, %w[objective]),
     fn('propose_follow_up_action', "Propone pausar, reanudar o cancelar un #{AiFollowUp::DISPLAY_NAME}. Requiere confirmación.",
        { follow_up_id: int('Id del Seguimiento IA (de tracking_status, ai_follow_ups)'),
          action: { type: 'string', enum: %w[pause resume cancel] } }, %w[follow_up_id action]),
@@ -105,7 +93,7 @@ module Assistant::ToolDefinitions
        { conversation_id: int('Número de la conversación, si aplica'), content: str('Texto del borrador') }, %w[content])
   ].freeze
 
-  EXTRA = %w[Sales Guide Quote Conversation Field Event ClientTask Cancel Convert].freeze # Assistant::<X>ToolDefinitions::ALL
+  EXTRA = %w[Sales Guide Quote Conversation Field Event ClientTask Cancel Convert FollowUp].freeze # Assistant::<X>ToolDefinitions::ALL
 
   # Al primer uso, no al cargar: los <X>ToolDefinitions usan D.fn de aquí (carga circular en eager load).
   def self.all = @all ||= (BASE + EXTRA.flat_map { |x| "Assistant::#{x}ToolDefinitions".constantize::ALL }).freeze
