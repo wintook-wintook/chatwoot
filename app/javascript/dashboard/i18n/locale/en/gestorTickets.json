@@ -2955,6 +2955,59 @@
       }
     },
     "HOME": {
+      "ONBOARDING": {
+        "BUTTON": "First steps {done}/{total}",
+        "TITLE": "First steps",
+        "PROGRESS": "{done} of {total} done. Each step checks itself when you do it.",
+        "CLOSE": "Close",
+        "DO_IT": "Do it",
+        "AGAIN": "Go",
+        "HOW": "How?",
+        "ALL_DONE": "Done! You know the basics. If you need anything, ask Dali.",
+        "STEPS": {
+          "whatsapp": {
+            "TITLE": "Connect your WhatsApp",
+            "DESC": "To receive and reply to your customers from here.",
+            "HOW": "How do I connect my WhatsApp?"
+          },
+          "team": {
+            "TITLE": "Invite your team",
+            "DESC": "Add your coworkers and choose what each one can see.",
+            "HOW": "How do I invite my team and set permissions?"
+          },
+          "organization": {
+            "TITLE": "Add your first organization",
+            "DESC": "The customer company: its contacts, cases and tasks come together there.",
+            "HOW": "How do I add an organization?"
+          },
+          "contact": {
+            "TITLE": "Add your first contact",
+            "DESC": "The person you talk to, linked to their organization.",
+            "HOW": "How do I add a contact and link it to its organization?"
+          },
+          "case": {
+            "TITLE": "Create your first case or opportunity",
+            "DESC": "A sale, a support request or a service, with its stages.",
+            "HOW": "How do I create a case?"
+          },
+          "meeting": {
+            "TITLE": "Schedule a task",
+            "DESC": "An appointment, call or visit with a day and time.",
+            "HOW": "How do I schedule a task?"
+          },
+          "follow_up": {
+            "TITLE": "Delegate a follow-up to AI",
+            "DESC": "Let the agent write to the customer until it gets what you want.",
+            "HOW": "How do I delegate a follow-up?"
+          },
+          "dali": {
+            "TITLE": "Ask Dali something",
+            "DESC": "Your assistant: it searches, proposes and explains how to use everything.",
+            "HOW": "What can you do for me?",
+            "QUESTION": "What can you do for me?"
+          }
+        }
+      },
       "GREETING": {
         "MORNING": "Good morning, {name}",
         "AFTERNOON": "Good afternoon, {name}",

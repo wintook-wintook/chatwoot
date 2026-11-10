@@ -2966,6 +2966,59 @@
       }
     },
     "HOME": {
+      "ONBOARDING": {
+        "BUTTON": "Primeros pasos {done}/{total}",
+        "TITLE": "Primeros pasos",
+        "PROGRESS": "Llevas {done} de {total}. Cada paso se marca solo cuando lo haces.",
+        "CLOSE": "Cerrar",
+        "DO_IT": "Hazlo",
+        "AGAIN": "Ir",
+        "HOW": "¿Cómo?",
+        "ALL_DONE": "¡Listo! Ya conoces lo básico. Si algo no sabes, pregúntale a Dali.",
+        "STEPS": {
+          "whatsapp": {
+            "TITLE": "Conecta tu WhatsApp",
+            "DESC": "Para recibir y contestar a tus clientes desde aquí.",
+            "HOW": "¿Cómo conecto mi WhatsApp?"
+          },
+          "team": {
+            "TITLE": "Invita a tu equipo",
+            "DESC": "Da de alta a tus compañeros y elige qué puede ver cada uno.",
+            "HOW": "¿Cómo invito a mi equipo y les doy permisos?"
+          },
+          "organization": {
+            "TITLE": "Da de alta tu primera organización",
+            "DESC": "La empresa cliente: ahí se juntan sus contactos, casos y tareas.",
+            "HOW": "¿Cómo doy de alta una organización?"
+          },
+          "contact": {
+            "TITLE": "Da de alta tu primer contacto",
+            "DESC": "La persona con la que hablas, ligada a su organización.",
+            "HOW": "¿Cómo doy de alta un contacto y lo ligo a su organización?"
+          },
+          "case": {
+            "TITLE": "Crea tu primer caso u oportunidad",
+            "DESC": "Una venta, un soporte o un servicio, con sus etapas.",
+            "HOW": "¿Cómo creo un caso?"
+          },
+          "meeting": {
+            "TITLE": "Agenda una tarea",
+            "DESC": "Una cita, llamada o visita con día y hora.",
+            "HOW": "¿Cómo agendo una tarea?"
+          },
+          "follow_up": {
+            "TITLE": "Delega un seguimiento a la IA",
+            "DESC": "Que el agente le escriba al cliente hasta lograr lo que quieres.",
+            "HOW": "¿Cómo delego un seguimiento?"
+          },
+          "dali": {
+            "TITLE": "Pregúntale algo a Dali",
+            "DESC": "Tu asistente: busca, propone y te explica cómo usar todo.",
+            "HOW": "¿Qué puedes hacer por mí?",
+            "QUESTION": "¿Qué puedes hacer por mí?"
+          }
+        }
+      },
       "GREETING": {
         "MORNING": "Buenos días, {name}",
         "AFTERNOON": "Buenas tardes, {name}",

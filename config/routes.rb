@@ -274,6 +274,8 @@ Rails.application.routes.draw do
               post :cancel
             end
           end
+          # «Primeros pasos» (Inicio): qué ya hizo el usuario, revisado en vivo
+          resources :onboarding_steps, only: [:index]
           # Plantillas de seguimiento: la receta de un Seguimiento IA para volver a usarla
           resources :ai_follow_up_presets, only: [:index, :create, :update, :destroy]
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do

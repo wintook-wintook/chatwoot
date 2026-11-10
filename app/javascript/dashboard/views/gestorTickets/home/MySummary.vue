@@ -16,6 +16,8 @@ import { formatDay } from 'dashboard/helper/caseCommercial';
 import MyDayNotices from '../tasks/MyDayNotices.vue';
 import Tasks from '../Tasks.vue';
 import NotificationsView from 'dashboard/routes/dashboard/notifications/components/NotificationsView.vue';
+import OnboardingStepsAPI from 'dashboard/api/onboardingSteps';
+import OnboardingPanel from './OnboardingPanel.vue'; // «Primeros pasos» (solo si lo pulsa)
 
 // Pestañas de Mi resumen, en orden. Va en la dirección (?tab=…).
 const TABS = ['summary', 'my_day', 'notifications'];
@@ -25,9 +27,11 @@ const TOP_TASKS = 5;
 
 export default {
   name: 'MySummary',
-  components: { MyDayNotices, Tasks, NotificationsView },
+  components: { MyDayNotices, Tasks, NotificationsView, OnboardingPanel },
   data() {
     return {
+      showOnboarding: false,
+      onboardingSteps: [],
       isLoading: true,
       tasks: [],
       agenda: [],
@@ -35,6 +39,12 @@ export default {
     };
   },
   computed: {
+    onboardingDone() {
+      return this.onboardingSteps.filter(s => s.done).length;
+    },
+    onboardingPending() {
+      return this.onboardingDone < this.onboardingSteps.length;
+    },
     ...mapGetters({
       currentUser: 'getCurrentUser',
       canViewBusinessSummary: 'caseTickets/getCanViewBusinessSummary',
@@ -111,6 +121,7 @@ export default {
   },
   mounted() {
     this.$store.dispatch('caseTickets/fetchSettings');
+    this.loadOnboarding();
   },
   methods: {
     t(key, params) {
@@ -206,6 +217,19 @@ export default {
     goBusinessSummary() {
       this.$router.push({ name: 'gestorTickets_business_summary' });
     },
+    // «Primeros pasos»: el avance se revisa al cargar Inicio y cada vez que se abre.
+    async loadOnboarding() {
+      try {
+        const { data } = await OnboardingStepsAPI.list();
+        this.onboardingSteps = data.steps || [];
+      } catch {
+        this.onboardingSteps = [];
+      }
+    },
+    openOnboarding() {
+      this.showOnboarding = true;
+      this.loadOnboarding();
+    },
   },
 };
 </script>
@@ -224,16 +248,39 @@ export default {
             {{ t('SUBTITLE') }}
           </p>
         </div>
-        <woot-button
-          v-if="canViewBusinessSummary"
-          size="small"
-          variant="smooth"
-          icon="arrow-trending-lines"
-          @click="goBusinessSummary"
-        >
-          {{ t('BUSINESS_SUMMARY') }}
-        </woot-button>
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Primeros pasos: resaltado mientras falten pasos; solo se abre si lo pulsa -->
+          <woot-button
+            v-if="onboardingSteps.length"
+            size="small"
+            :variant="onboardingPending ? 'smooth' : 'clear'"
+            :color-scheme="onboardingPending ? 'primary' : 'secondary'"
+            icon="star-emphasis"
+            @click="openOnboarding"
+          >
+            {{
+              t('ONBOARDING.BUTTON', {
+                done: onboardingDone,
+                total: onboardingSteps.length,
+              })
+            }}
+          </woot-button>
+          <woot-button
+            v-if="canViewBusinessSummary"
+            size="small"
+            variant="smooth"
+            icon="arrow-trending-lines"
+            @click="goBusinessSummary"
+          >
+            {{ t('BUSINESS_SUMMARY') }}
+          </woot-button>
+        </div>
       </header>
+      <OnboardingPanel
+        :show="showOnboarding"
+        :steps="onboardingSteps"
+        @close="showOnboarding = false"
+      />
       <woot-tabs
         v-if="hasCases"
         class="mt-3"
