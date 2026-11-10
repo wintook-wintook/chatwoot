@@ -2,6 +2,7 @@
   CrmZeus A3 — buscador de artículos para los componentes de un kit: se teclea nombre o
   clave y se elige. No ofrece kits (un kit no va dentro de otro) ni los ids de `excludeIds`
   (el propio kit y los que ya están). Emite `pick` con el artículo de la lista.
+  Q2: también lo usa la partida de una cotización (con su propio `placeholder`).
 -->
 <script>
 import CrmArticles from 'dashboard/api/crmArticles';
@@ -10,6 +11,7 @@ export default {
   name: 'CrmArticlePicker',
   props: {
     excludeIds: { type: Array, default: () => [] },
+    placeholder: { type: String, default: '' },
   },
   data() {
     return {
@@ -71,7 +73,7 @@ export default {
       v-model="query"
       type="search"
       class="!mb-0"
-      :placeholder="$t('CRM_ZEUS.ARTICLE_FORM.COMPONENT_SEARCH')"
+      :placeholder="placeholder || $t('CRM_ZEUS.ARTICLE_FORM.COMPONENT_SEARCH')"
       @input="onInput"
       @focus="open = true"
       @blur="close"

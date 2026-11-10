@@ -86,7 +86,8 @@
         "ADMIN": "Administración",
         "NOTES": "Notas",
         "CONSIGNEES": "Consignatarios",
-        "CONTACTS": "Contactos"
+        "CONTACTS": "Contactos",
+        "QUOTES": "Cotizaciones"
       },
       "ADDRESS_HINT": "Domicilio de la organización (dirección principal). Las demás direcciones van en «Consignatarios».",
       "REQUIRED": "La razón social y el nombre comercial son obligatorios",
@@ -187,7 +188,8 @@
         "LINE_GROUP": "Grupos de líneas",
         "ARTICLE_LINES": "Líneas",
         "UNITS": "Unidades",
-        "TAXES": "Impuestos"
+        "TAXES": "Impuestos",
+        "QUOTE_SERIES": "Series de folio"
       },
       "COLUMNS": {
         "NAME": "Nombre",
@@ -233,7 +235,8 @@
         "LINE_GROUP": "grupo de líneas",
         "ARTICLE_LINES": "línea",
         "UNITS": "unidad",
-        "TAXES": "impuesto"
+        "TAXES": "impuesto",
+        "QUOTE_SERIES": "serie de folio"
       },
       "ISO_PLACEHOLDER": "USD",
       "COUNTRY": "País",
@@ -248,7 +251,8 @@
       "GROUPS": {
         "ORGANIZATIONS": "Organizaciones",
         "ARTICLES": "Artículos",
-        "LOCATIONS": "Ubicación"
+        "LOCATIONS": "Ubicación",
+        "QUOTES": "Cotizaciones"
       },
       "LINE_KEY": "Clave",
       "LINE_GROUP": "Grupo de líneas",
@@ -361,6 +365,139 @@
       "INACTIVE_REASON": "Motivo de la baja",
       "SUSPENDED_ON": "Fecha de suspensión",
       "SUSPENDED_REASON": "Causa de suspensión"
+    },
+    "QUOTES": {
+      "TITLE": "Cotizaciones",
+      "SUBTITLE": "Cotizaciones a clientes y prospectos",
+      "NEW": "Nueva cotización",
+      "ONLY_MINE": "Solo las mías",
+      "SEARCH": "Buscar por folio u organización",
+      "EMPTY": "No hay cotizaciones con estos filtros",
+      "NO_SERIES": "No tienes serie de folios para cotizar. Pídele al Administrador que te asigne una en Catálogos › Series de folio.",
+      "SAVE_FIRST": "Guarda la organización para poder cotizarle.",
+      "VIEWS": {
+        "PENDING": "Pendientes",
+        "WON_THIS_MONTH": "Ganadas este mes",
+        "RECENT": "Últimos 2 meses",
+        "ALL": "Todas"
+      },
+      "COLUMNS": {
+        "DATE": "Fecha",
+        "FOLIO": "Folio",
+        "ORGANIZATION": "Organización",
+        "CONTACT": "Contacto",
+        "TOTAL": "Total",
+        "STATUS": "Estatus",
+        "CREATED_BY": "Creó",
+        "PO": "OC"
+      }
+    },
+    "QUOTE_FORM": {
+      "BACK": "← Cotizaciones",
+      "NEW_TITLE": "Nueva cotización",
+      "NEXT_FOLIO": "Folio que tomará: {folio}",
+      "CREATED_BY": "Creó: {name}",
+      "CREATED": "Cotización {folio} guardada",
+      "DUPLICATE": "Duplicar",
+      "NOT_OWNER": "Solo quien creó la cotización o un Administrador la puede modificar.",
+      "LOCKED": "La cotización está {status}: solo se edita en Pendiente.",
+      "TABS": {
+        "GENERAL": "General",
+        "OTHER": "Otros datos"
+      },
+      "ORGANIZATION": "Organización",
+      "ORGANIZATION_SEARCH": "Buscar cliente o prospecto por clave o nombre",
+      "ORGANIZATION_NONE": "Sin resultados",
+      "CHANGE_ORGANIZATION": "Cambiar",
+      "ORGANIZATION_REQUIRED": "Elige la organización",
+      "ITEMS_REQUIRED": "Agrega al menos una partida",
+      "CONTACT": "Contacto",
+      "SHIP_TO": "Enviar mercancía a",
+      "PAYMENT_TERM": "Condición de pago",
+      "CURRENCY": "Moneda",
+      "CURRENCY_LOCKED": "La moneda no cambia cuando ya hay partidas",
+      "QUOTE_DATE": "Fecha",
+      "VALID_UNTIL": "Vigencia",
+      "DELIVERY_DATE": "Fecha de entrega",
+      "DELIVERY_DAYS": "Días",
+      "CFDI_USE": "Uso CFDI",
+      "SAT_PAYMENT_METHOD": "Método de pago SAT (sale de la condición de pago)",
+      "PURCHASE_ORDER": "Orden de compra",
+      "PURCHASE_ORDER_DATE": "Fecha de la OC",
+      "EXCHANGE_RATE": "Tipo de cambio",
+      "HEADER_NOTES": "Observaciones de encabezado",
+      "FOOTER_NOTES": "Observaciones de pie",
+      "ITEMS": "Partidas",
+      "ADD_ITEM": "Agregar partida",
+      "NO_ITEMS": "Sin partidas",
+      "CALCULATING": "Calculando…",
+      "COLUMNS": {
+        "KEY": "Clave",
+        "DESCRIPTION": "Descripción",
+        "QUANTITY": "Cantidad",
+        "PRICE": "Precio",
+        "DISCOUNT": "Desc.",
+        "AMOUNT": "Importe",
+        "TAXES": "Impuestos"
+      },
+      "TOTALS": {
+        "SUBTOTAL": "Subtotal",
+        "DISCOUNTS": "Descuentos",
+        "EXTRA_DISCOUNT": "Descuento extra",
+        "NET": "Importe neto",
+        "FREIGHT": "Fletes",
+        "OTHER_CHARGES": "Otros cargos",
+        "TOTAL": "Total",
+        "BY_PERCENT": "%",
+        "BY_AMOUNT": "$"
+      },
+      "ITEM_NEW": "Agregar partida",
+      "ITEM_EDIT": "Editar partida",
+      "ITEM_ACCEPT": "Aceptar",
+      "ARTICLE": "Artículo",
+      "ARTICLE_SEARCH": "Buscar artículo por clave o nombre",
+      "CHANGE_ARTICLE": "Cambiar",
+      "FREE_TEXT_HINT": "También puedes cotizar sin artículo: escribe solo la descripción.",
+      "DESCRIPTION": "Descripción",
+      "QUANTITY": "Cantidad",
+      "UNIT": "Unidad",
+      "PRICE_LIST": "Lista de precios",
+      "UNIT_PRICE": "Precio unitario",
+      "DISCOUNT_PERCENT": "% de descuento",
+      "PRICE_WITH_TAXES": "Precio con impuestos",
+      "TAXES": "Impuestos",
+      "NOTES": "Notas",
+      "EXTRA_NOTES": "Notas extras",
+      "ITEM_DESCRIPTION_REQUIRED": "Falta la descripción",
+      "ITEM_QUANTITY_REQUIRED": "La cantidad debe ser mayor que cero",
+      "STATUS_ACTIONS": {
+        "WON": "Marcar ganada",
+        "LOST": "Marcar perdida",
+        "CANCELLED": "Cancelar cotización",
+        "PENDING": "Marcar pendiente"
+      },
+      "STATUS_TITLE": "Cambiar estatus",
+      "STATUS_ACCEPT": "Sí, cambiar",
+      "STATUS_CHANGED": "Estatus actualizado",
+      "STATUS_CONFIRM": {
+        "WON": "¿Marcar la cotización {folio} como ganada?",
+        "LOST": "¿Marcar la cotización {folio} como perdida?",
+        "CANCELLED": "¿Cancelar la cotización {folio}? Ya no se podrá editar.",
+        "PENDING": "¿Regresar la cotización {folio} a Pendiente? Se podrá editar otra vez."
+      }
+    },
+    "QUOTE_SERIES": {
+      "DESCRIPTION": "Cada agente cotiza con su serie: el folio es la serie más el consecutivo, a 9 caracteres (LAU000125). Sin serie el agente no puede cotizar.",
+      "ADD": "Agregar serie",
+      "EDIT": "Editar serie",
+      "EMPTY": "Ningún agente tiene serie todavía",
+      "AGENT": "Agente",
+      "SERIES": "Serie",
+      "LAST_NUMBER": "Último consecutivo",
+      "NEXT_FOLIO": "Siguiente folio",
+      "LAST_NUMBER_HINT": "La siguiente cotización toma este número más uno (los folios que ya existen se brincan).",
+      "DELETE_TITLE": "Eliminar serie",
+      "CONFIRM_DELETE": "Se eliminará la serie {series}. Las cotizaciones ya hechas no cambian, pero el agente no podrá cotizar hasta tener otra."
     }
   }
 }

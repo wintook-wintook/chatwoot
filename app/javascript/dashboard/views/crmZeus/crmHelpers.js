@@ -56,3 +56,24 @@ export const blankAddress = () => ({
   contact_name: '',
   for_billing: false,
 });
+
+// CrmZeus Q2 — color del estatus de una cotización (N/E/P/C de CRMZeus).
+export const QUOTE_STATUS_BADGES = {
+  pending:
+    'bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  won: 'bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  lost: 'bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  cancelled:
+    'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+};
+
+// 'YYYY-MM-DD' + días, sin brincos por zona horaria.
+export const addDays = (isoDate, days) => {
+  if (!isoDate) return '';
+  const date = new Date(`${isoDate}T00:00:00`);
+  date.setDate(date.getDate() + Number(days || 0));
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}`;
+};

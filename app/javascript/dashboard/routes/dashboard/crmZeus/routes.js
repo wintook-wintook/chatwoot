@@ -1,4 +1,4 @@
-// CrmZeus — módulo traído de CRMZeus: organizaciones, artículos (lista, alta y edición) y catálogos.
+// CrmZeus — módulo traído de CRMZeus: organizaciones, artículos, cotizaciones (lista, alta y edición) y catálogos.
 import { frontendURL } from '../../../helper/URLHelper';
 
 const AGENT = { permissions: ['administrator', 'agent'] };
@@ -50,6 +50,25 @@ export const routes = [
     meta: AGENT,
     component: () => import('../../../views/crmZeus/ArticleForm.vue'),
     props: route => ({ articleId: String(route.params.articleId) }),
+  },
+  {
+    path: frontendURL('accounts/:accountId/crm-zeus/quotes'),
+    name: 'crmzeus_quotes',
+    meta: AGENT,
+    component: () => import('../../../views/crmZeus/Quotes.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/crm-zeus/quotes/new'),
+    name: 'crmzeus_quote_new',
+    meta: AGENT,
+    component: () => import('../../../views/crmZeus/QuoteForm.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/crm-zeus/quotes/:quoteId'),
+    name: 'crmzeus_quote_edit',
+    meta: AGENT,
+    component: () => import('../../../views/crmZeus/QuoteForm.vue'),
+    props: route => ({ quoteId: String(route.params.quoteId) }),
   },
   {
     path: frontendURL('accounts/:accountId/crm-zeus/catalogs'),

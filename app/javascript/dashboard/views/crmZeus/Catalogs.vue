@@ -11,6 +11,7 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import CrmCatalogs from 'dashboard/api/crmCatalogs';
 import Spinner from 'shared/components/Spinner.vue';
+import QuoteSeriesPanel from './QuoteSeriesPanel.vue';
 import {
   ARTICLE_LOOKUP_KINDS,
   LOOKUP_KINDS,
@@ -68,8 +69,10 @@ const CATALOGS = [
     hasDefault: false,
     group: 'locations',
   },
+  // CrmZeus Q2 — series de folio: pantalla propia (QuoteSeriesPanel), no el ABC genérico.
+  { id: 'quote_series', panel: true, group: 'quotes' },
 ];
-const GROUPS = ['organizations', 'articles', 'locations'];
+const GROUPS = ['organizations', 'articles', 'quotes', 'locations'];
 // Largo máximo del nombre por catálogo (el de la base); el resto, 100.
 const NAME_MAX = {
   countries: 50,
@@ -135,7 +138,7 @@ const BLANKS = {
 
 export default {
   name: 'CrmZeusCatalogs',
-  components: { Spinner },
+  components: { Spinner, QuoteSeriesPanel },
   data() {
     return {
       catalogs: CATALOGS,
@@ -231,6 +234,7 @@ export default {
       this.lineGroups = data.items;
     },
     async fetch() {
+      if (this.current.panel) return;
       this.loading = true;
       try {
         const params = this.current.kind ? { kind: this.current.kind } : {};
@@ -406,7 +410,12 @@ export default {
           }}
         </p>
       </div>
-      <woot-button v-if="isAdmin" size="small" icon="add" @click="openNew">
+      <woot-button
+        v-if="isAdmin && !current.panel"
+        size="small"
+        icon="add"
+        @click="openNew"
+      >
         {{ $t('CRM_ZEUS.CATALOGS.ADD', { item: singular(current) }) }}
       </woot-button>
     </header>
@@ -436,7 +445,10 @@ export default {
         </div>
       </nav>
 
-      <div class="flex-1 overflow-auto">
+      <div v-if="current.panel" class="flex-1 overflow-auto">
+        <QuoteSeriesPanel :is-admin="isAdmin" />
+      </div>
+      <div v-else class="flex-1 overflow-auto">
         <label
           v-if="resource === 'states'"
           class="flex items-center max-w-sm gap-2 mb-3 text-sm"

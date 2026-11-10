@@ -1,7 +1,8 @@
 <!--
   CrmZeus O2 — alta y edición de una organización (cliente o prospecto), en página
   aparte con las pestañas de CRMZeus: General · Dirección (el domicilio) ·
-  Administración · Notas · Consignatarios (las demás direcciones, ya guardada).
+  Administración · Notas · Consignatarios (las demás direcciones, ya guardada) ·
+  Contactos · Cotizaciones (Q2, las de la organización).
   Obligatorios: razón social y nombre comercial. Los valores «predeterminados» de los
   catálogos se proponen al dar de alta.
 -->
@@ -14,6 +15,7 @@ import Spinner from 'shared/components/Spinner.vue';
 import AddressFields from './AddressFields.vue';
 import ConsigneesPanel from './ConsigneesPanel.vue';
 import ContactsPanel from './ContactsPanel.vue';
+import Quotes from './Quotes.vue';
 import {
   ADDRESS_FIELDS,
   LOOKUP_KINDS,
@@ -23,7 +25,15 @@ import {
   errorMessage,
 } from './crmHelpers';
 
-const TABS = ['general', 'address', 'admin', 'notes', 'consignees', 'contacts'];
+const TABS = [
+  'general',
+  'address',
+  'admin',
+  'notes',
+  'consignees',
+  'contacts',
+  'quotes',
+];
 const FIELDS = [
   'organization_type',
   'key',
@@ -67,7 +77,13 @@ const blankOrganization = () => ({
 
 export default {
   name: 'CrmZeusOrganizationForm',
-  components: { Spinner, AddressFields, ConsigneesPanel, ContactsPanel },
+  components: {
+    Spinner,
+    AddressFields,
+    ConsigneesPanel,
+    ContactsPanel,
+    Quotes,
+  },
   props: {
     organizationId: { type: String, default: '' },
   },
@@ -601,6 +617,14 @@ export default {
             :organization-id="organizationId"
             :can-edit="canEdit"
           />
+        </div>
+
+        <!-- Cotizaciones de la organización (CrmZeus Q2) -->
+        <div v-if="tab === 'quotes'" class="max-w-5xl">
+          <p v-if="isNew" class="text-sm text-slate-500">
+            {{ $t('CRM_ZEUS.QUOTES.SAVE_FIRST') }}
+          </p>
+          <Quotes v-else :organization-id="organizationId" />
         </div>
       </form>
     </template>

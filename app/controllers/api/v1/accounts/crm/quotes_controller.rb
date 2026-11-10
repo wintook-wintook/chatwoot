@@ -28,7 +28,8 @@ class Api::V1::Accounts::Crm::QuotesController < Api::V1::Accounts::Crm::BaseCon
                 .offset((page - 1) * PER_PAGE).limit(PER_PAGE)
     render json: {
       quotes: rows.map { |quote| Crm::QuoteJson.list_item(quote).merge(can_edit: can_edit?(quote)) },
-      meta: { count: scope.count, page: page, per_page: PER_PAGE, view: view, can_create: series.present? }
+      meta: { count: scope.count, page: page, per_page: PER_PAGE, view: view, can_edit: access_grant.writable?(:sales),
+              has_series: series.present? }
     }
   end
 
