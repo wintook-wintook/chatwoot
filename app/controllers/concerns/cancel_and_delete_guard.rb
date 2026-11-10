@@ -25,6 +25,24 @@ module CancelAndDeleteGuard
     attrs['status'].to_s.in?(['', 'pending']) && (attrs.keys - CLOSED_TASK_KEYS).empty?
   end
 
+  # Tarea agendada: solo la agendada (scheduled) se edita. Realizada, no asistió o cancelada:
+  # solo lectura (las dos primeras se reabren con hold status scheduled). En agenda_items el
+  # ligar a un caso sigue abierto.
+  def lock_closed_meeting
+    return if @meeting.nil? || @meeting.scheduled?
+    return if controller_name == 'agenda_items' && params[:case_ticket_id].present?
+
+    render json: { error: I18n.t('cancellation.meeting_locked') }, status: :unprocessable_entity
+  end
+
+  # Cerrarla (held / no_show) solo si está agendada; reabrirla (scheduled) solo si se cerró.
+  def meeting_hold_error(meeting, status)
+    return if %w[held no_show].include?(status) && meeting.scheduled?
+    return if status == 'scheduled' && meeting.concluded?
+
+    I18n.t(status == 'scheduled' ? 'cancellation.meeting_not_closed' : 'cancellation.meeting_locked')
+  end
+
   # Lo que se quiere cambiar: el hash case_task (tareas del caso) o los campos sueltos
   # (tareas rápidas, sin caso).
   def task_edit_attrs

@@ -152,7 +152,8 @@
       "CONVERT_TO_MEETING": "La tarea se quita de Tareas y queda agendada.",
       "CONVERT_KEEPS": "Es obligatoria o del cliente: la tarea se queda y se agenda una sesión ligada.",
       "CONVERT_TO_TASK": "Se quita de la agenda (y de Google) y queda como tarea sin hora.",
-      "CONVERT_LINKED": "Es la sesión de «{task}»: se quita de la agenda y queda esa tarea."
+      "CONVERT_LINKED": "Es la sesión de «{task}»: se quita de la agenda y queda esa tarea.",
+      "NO_SHOW": "El cliente no asistió"
     },
     "SETTINGS": {
       "TITLE": "Asistente",

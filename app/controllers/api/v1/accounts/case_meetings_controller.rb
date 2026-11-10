@@ -33,6 +33,7 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
   before_action :set_ticket
   before_action :set_meeting, only: %i[update destroy hold cancel resync align_task_due to_task] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
   before_action :block_if_frozen, only: %i[create update destroy hold cancel resync align_task_due to_task] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
+  before_action :lock_closed_meeting, only: :update # realizada, no asistió o cancelada: solo lectura
 
   def index
     # @tickets_cases F3 — reconciliación perezosa (§5): antes de responder se
@@ -105,14 +106,16 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
     head :no_content
   end
 
-  # Marcar realizada / no asistió. El quién/cuándo lo deriva el modelo.
+  # Completar (realizada o no asistió, con su reporte de cierre) o reabrir (status
+  # scheduled, desde realizada o no asistió). El quién/cuándo lo deriva el modelo.
   def hold
     status = params[:status].presence || 'held'
-    return render json: { error: 'Estado inválido' }, status: :unprocessable_entity unless %w[held no_show].include?(status)
-    return if missing_task_report?(@meeting)
+    error = meeting_hold_error(@meeting, status)
+    return render json: { error: error }, status: :unprocessable_entity if error
+    return if status != 'scheduled' && missing_task_report?(@meeting)
 
     if @meeting.update(status: status)
-      log_event(:meeting_held, @meeting)
+      log_event(status == 'scheduled' ? :meeting_updated : :meeting_held, @meeting)
       render json: { case_meeting: meeting_json(@meeting) }
     else
       render json: { error: @meeting.errors.full_messages }, status: :unprocessable_entity

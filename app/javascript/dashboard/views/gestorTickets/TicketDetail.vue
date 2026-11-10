@@ -1953,6 +1953,11 @@ export default {
     },
     // @tickets_cases F2 — "agregar reunión" desde una fila de la tabla de tareas:
     // salta a la pestaña Reuniones y abre el modal ya atado a esa tarea.
+    // Tareas agendadas › «Ver la tarea»: va a Tareas y la abre.
+    openTaskFromMeeting(task) {
+      this.activeDetailTab = 'tasks';
+      this.$nextTick(() => this.$refs.ticketTasks?.openTaskById(task.id));
+    },
     openMeetingForTask(task) {
       this.activeDetailTab = 'meetings';
       this.$nextTick(() => this.$refs.ticketMeetings?.openCreate(task));
@@ -3593,6 +3598,7 @@ export default {
         @count="meetingCount = $event"
         @changed="reloadEvents"
         @tasksChanged="$refs.ticketTasks && $refs.ticketTasks.load()"
+        @viewTask="openTaskFromMeeting"
       />
 
       <!-- ════ Pestaña Proyecto (Plan-Clase-Proyecto P1) ════ -->

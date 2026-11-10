@@ -19,6 +19,7 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
 
   before_action :set_meeting, only: %i[update destroy to_task] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
   before_action :block_if_frozen, only: %i[update destroy to_task] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
+  before_action :lock_closed_meeting, only: :update # realizada, no asistió o cancelada: solo lectura
 
   def index
     meetings = Current.account.case_meetings.where(organizer_id: current_user.id, starts_at: range)

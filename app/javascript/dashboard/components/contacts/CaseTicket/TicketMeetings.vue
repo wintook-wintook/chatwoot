@@ -13,6 +13,8 @@ import CaseMeetingsAPI from 'dashboard/api/caseMeetings';
 import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal.vue';
 import taskReportFlow from 'dashboard/mixins/taskReportFlow';
 import rowMenuMixin from 'dashboard/helper/rowMenu'; // menú de la fila (⋮ a la derecha)
+import WootDropdownDivider from 'shared/components/ui/dropdown/DropdownDivider.vue';
+import TaskReportsDialog from 'dashboard/views/gestorTickets/tasks/TaskReportsDialog.vue';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
@@ -31,6 +33,8 @@ export default {
     TableFooter,
     WootDropdownMenu,
     WootDropdownItem,
+    WootDropdownDivider,
+    TaskReportsDialog,
     MeetingFormModal,
     TaskReportModal,
     CancelItemModal,
@@ -51,6 +55,8 @@ export default {
     return {
       // Cancelar con motivo: la cita a cancelar, si está guardando y el error.
       cancelTarget: null,
+      viewing: false, // realizada, no asistió o cancelada: solo lectura
+      reportsFilter: null, // «Ver reporte»
       convertTarget: null,
       convertBusy: false,
       convertError: '',
@@ -116,7 +122,9 @@ export default {
         bodyRowEvents: ({ row }) => ({
           click: event => {
             if (event.target.closest('button, input, a')) return;
-            if (!this.isFrozen) this.openEdit(row);
+            // Solo la agendada se edita; lo demás (o caso cerrado) se ve.
+            if (this.isFrozen || row.status !== 'scheduled') this.openView(row);
+            else this.openEdit(row);
           },
         }),
       };
@@ -228,9 +236,7 @@ export default {
           sortBy: this.sortConfig.status || '',
           renderBodyCell: ({ row }) => (
             <div class="flex flex-col gap-0.5">
-              <span class={`meeting-badge ${this.statusClass(row.status)}`}>
-                {this.statusLabel(row.status)}
-              </span>
+              {this.statusCell(row)}
               {/* F3 — estado del espejo con Google, debajo del estado real. */}
               {row.sync_status !== 'synced' ? (
                 <span
@@ -322,12 +328,20 @@ export default {
     },
     openCreate(task = null) {
       this.editing = null;
+      this.viewing = false;
       this.contextTask = task || null;
       this.loadTasks();
       this.showModal = true;
     },
+    openView(meeting) {
+      this.editing = meeting;
+      this.viewing = true;
+      this.contextTask = null;
+      this.showModal = true;
+    },
     openEdit(meeting) {
       this.editing = meeting;
+      this.viewing = false;
       this.contextTask = null;
       this.loadTasks();
       this.showModal = true;
@@ -435,17 +449,46 @@ export default {
     },
     // ── Menú de acciones de la fila ───────────────────────────────────────
     // openRowMenu/closeRowMenu: rowMenuMixin (abre hacia arriba si no cabe).
+    // Agendada se edita; realizada, no asistió o cancelada solo se ve.
+    menuView() {
+      const row = this.rowMenu?.row;
+      this.closeRowMenu();
+      if (!row) return;
+      if (row.status === 'scheduled') this.openEdit(row);
+      else this.openView(row);
+    },
+    // Realizada o no asistió por error: regresa a agendada (su reporte se queda).
+    async menuReopen() {
+      const row = this.rowMenu?.row;
+      this.closeRowMenu();
+      if (!row) return;
+      try {
+        const { data } = await CaseMeetingsAPI.hold(
+          this.ticketId,
+          row.id,
+          'scheduled'
+        );
+        this.replace(data.case_meeting);
+        this.$emit('changed');
+      } catch (e) {
+        this.toastError(e);
+      }
+    },
+    menuViewReport() {
+      const row = this.rowMenu?.row;
+      this.closeRowMenu();
+      if (row) this.reportsFilter = { case_meeting_id: row.id };
+    },
+    menuViewTask() {
+      const row = this.rowMenu?.row;
+      this.closeRowMenu();
+      if (row?.case_task) this.$emit('viewTask', row.case_task);
+    },
     menuEdit() {
       const row = this.rowMenu?.row;
       this.closeRowMenu();
       if (row) this.openEdit(row);
     },
-    menuHold(status) {
-      const row = this.rowMenu?.row;
-      this.closeRowMenu();
-      if (row) this.hold(row, status);
-    },
-    // Cancelar: primero «¿reprogramar?», luego motivo, tiempo, serie y aviso al cliente.
     menuCancel() {
       const row = this.rowMenu?.row;
       this.closeRowMenu();
@@ -545,11 +588,12 @@ export default {
       }
     },
     // ── Acciones ──────────────────────────────────────────────────────────
-    // El reporte de cierre sustituye a la minuta, y se pide también si no asistió.
-    hold(meeting, status) {
+    // Completar (columna Estado): el reporte de cierre pregunta si se realizó o el
+    // cliente no asistió; según eso queda «Realizada» o «No asistió».
+    complete(meeting) {
       const { id, title } = meeting;
-      this.askReport({ type: 'meeting', id, title }, () =>
-        this.finishHold(meeting, status)
+      this.askReport({ type: 'meeting', id, title, askAttendance: true }, r =>
+        this.finishHold(meeting, r.status || 'held')
       );
     },
     async finishHold(meeting, status) {
@@ -635,6 +679,50 @@ export default {
     taskFolio(n) {
       if (!n) return '';
       return `T${String(n).padStart(3, '0')}`;
+    },
+    // Columna Estado, como en Tareas: agendada → «Completar»; cerrada → fecha y quién.
+    statusCell(row) {
+      if (row.status === 'scheduled' && !this.isFrozen) {
+        return (
+          <woot-button
+            size="small"
+            class-names="!px-3.5"
+            variant="smooth"
+            color-scheme="alert"
+            icon="checkmark"
+            title={this.$t('CASE_TICKETS.MEETINGS.COMPLETE_TITLE')}
+            onClick={() => this.complete(row)}
+          >
+            {this.$t('CASE_TICKETS.MEETINGS.COMPLETE')}
+          </woot-button>
+        );
+      }
+      if (['held', 'no_show'].includes(row.status) && row.held_at) {
+        const color =
+          row.status === 'held'
+            ? 'text-green-600 dark:text-green-400'
+            : 'text-amber-700 dark:text-amber-300';
+        return (
+          <div>
+            <span class={`text-xs ${color}`}>
+              {this.statusLabel(row.status)} · {this.formatDate(row.held_at)}
+            </span>
+            {row.held_by ? (
+              <span class="block text-xs text-slate-400 dark:text-slate-500">
+                {row.held_by.name}
+              </span>
+            ) : null}
+          </div>
+        );
+      }
+      return (
+        <span
+          class={`meeting-badge ${this.statusClass(row.status)}`}
+          title={row.cancel_reason || ''}
+        >
+          {this.statusLabel(row.status)}
+        </span>
+      );
     },
     statusLabel(status) {
       return this.$t(`CASE_TICKETS.MEETINGS.STATUS.${status.toUpperCase()}`);
@@ -790,6 +878,7 @@ export default {
       v-if="showModal"
       :show="showModal"
       :meeting="editing"
+      :readonly="viewing"
       :tasks="tasks"
       :organizers="organizers"
       :contact-email="contactEmail"
@@ -824,6 +913,7 @@ export default {
       @close="cancelReport"
       @reported="onReported"
     />
+    <TaskReportsDialog :filters="reportsFilter" @close="reportsFilter = null" />
 
     <woot-delete-modal
       :show="showDeleteConfirm"
@@ -844,22 +934,58 @@ export default {
       class="js-row-menu fixed z-[9999] w-56 p-1 bg-white border rounded-md shadow-xl dark:bg-slate-800 border-slate-50 dark:border-slate-700"
       :style="rowMenuStyle()"
     >
+      <!-- Arriba lo que se HACE (solo en agendadas, salvo Reabrir y Eliminar); abajo de
+           la línea, lo que se consulta. Completar va en la columna Estado. -->
       <WootDropdownMenu>
         <WootDropdownItem>
           <woot-button
             variant="clear"
             color-scheme="secondary"
             size="small"
-            icon="edit"
-            @click="menuEdit"
+            :icon="rowMenu.row.status === 'scheduled' ? 'edit' : 'eye-show'"
+            @click="menuView"
           >
-            {{ $t('CASE_TICKETS.MEETINGS.MENU.EDIT') }}
+            {{
+              rowMenu.row.status === 'scheduled'
+                ? $t('CASE_TICKETS.MEETINGS.MENU.EDIT')
+                : $t('CASE_TICKETS.MEETINGS.MENU.VIEW')
+            }}
+          </woot-button>
+        </WootDropdownItem>
+        <WootDropdownItem
+          v-if="['held', 'no_show'].includes(rowMenu.row.status)"
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="arrow-clockwise"
+            @click="menuReopen"
+          >
+            {{ $t('CASE_TICKETS.MEETINGS.MENU.REOPEN') }}
+          </woot-button>
+        </WootDropdownItem>
+        <WootDropdownItem
+          v-if="rowMenu.row.status === 'scheduled' && !rowMenu.row.work_started"
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="checkmark"
+            @click="menuToTask"
+          >
+            {{ $t('CASE_TICKETS.MEETINGS.MENU.TO_TASK') }}
           </woot-button>
         </WootDropdownItem>
         <!-- F6 — solo cuando se pasó del vencimiento de la TAREA y NO del
              compromiso con el cliente. -->
         <WootDropdownItem
-          v-if="rowMenu.row.beyond_task_due && !rowMenu.row.beyond_ticket_due"
+          v-if="
+            rowMenu.row.status === 'scheduled' &&
+            rowMenu.row.beyond_task_due &&
+            !rowMenu.row.beyond_ticket_due
+          "
         >
           <woot-button
             variant="clear"
@@ -871,7 +997,12 @@ export default {
             {{ $t('CASE_TICKETS.MEETINGS.MENU.ALIGN_TASK_DUE') }}
           </woot-button>
         </WootDropdownItem>
-        <WootDropdownItem v-if="rowMenu.row.sync_status === 'failed'">
+        <WootDropdownItem
+          v-if="
+            rowMenu.row.status === 'scheduled' &&
+            rowMenu.row.sync_status === 'failed'
+          "
+        >
           <woot-button
             variant="clear"
             color-scheme="secondary"
@@ -882,40 +1013,7 @@ export default {
             {{ $t('CASE_TICKETS.MEETINGS.MENU.RESYNC') }}
           </woot-button>
         </WootDropdownItem>
-        <WootDropdownItem>
-          <woot-button
-            variant="clear"
-            color-scheme="secondary"
-            size="small"
-            icon="checkmark-circle"
-            @click="menuHold('held')"
-          >
-            {{ $t('CASE_TICKETS.MEETINGS.MENU.HELD') }}
-          </woot-button>
-        </WootDropdownItem>
-        <WootDropdownItem>
-          <woot-button
-            variant="clear"
-            color-scheme="secondary"
-            size="small"
-            icon="person"
-            @click="menuHold('no_show')"
-          >
-            {{ $t('CASE_TICKETS.MEETINGS.MENU.NO_SHOW') }}
-          </woot-button>
-        </WootDropdownItem>
         <WootDropdownItem v-if="rowMenu.row.status === 'scheduled'">
-          <woot-button
-            variant="clear"
-            color-scheme="secondary"
-            size="small"
-            icon="checkmark"
-            @click="menuToTask"
-          >
-            {{ $t('CASE_TICKETS.MEETINGS.MENU.TO_TASK') }}
-          </woot-button>
-        </WootDropdownItem>
-        <WootDropdownItem>
           <woot-button
             variant="clear"
             color-scheme="secondary"
@@ -926,7 +1024,8 @@ export default {
             {{ $t('CANCEL_ITEM.MENU') }}
           </woot-button>
         </WootDropdownItem>
-        <WootDropdownItem>
+        <!-- Borrar es solo para errores de captura: el organizador en 24 h o un admin. -->
+        <WootDropdownItem v-if="rowMenu.row.deletable !== false">
           <woot-button
             variant="clear"
             color-scheme="alert"
@@ -935,6 +1034,40 @@ export default {
             @click="menuDelete"
           >
             {{ $t('CASE_TICKETS.MEETINGS.MENU.DELETE') }}
+          </woot-button>
+        </WootDropdownItem>
+        <WootDropdownDivider
+          v-if="
+            ['held', 'no_show'].includes(rowMenu.row.status) ||
+            rowMenu.row.case_task
+          "
+        />
+        <WootDropdownItem
+          v-if="['held', 'no_show'].includes(rowMenu.row.status)"
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="clipboard"
+            @click="menuViewReport"
+          >
+            {{ $t('CASE_TICKETS.MEETINGS.MENU.VIEW_REPORT') }}
+          </woot-button>
+        </WootDropdownItem>
+        <WootDropdownItem v-if="rowMenu.row.case_task">
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="checkmark-circle"
+            @click="menuViewTask"
+          >
+            {{
+              $t('CASE_TICKETS.MEETINGS.MENU.VIEW_TASK', {
+                folio: taskFolio(rowMenu.row.case_task.sequence),
+              })
+            }}
           </woot-button>
         </WootDropdownItem>
       </WootDropdownMenu>

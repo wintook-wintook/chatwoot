@@ -20,6 +20,7 @@
     "DONE_LINKED": "Removed from the schedule; the task «{title}» stays"
   },
   "CANCEL_ITEM": {
+    "CANCELLED_AS": "Cancelled: {reason}",
     "CATALOG": {
       "TITLE": "Cancellation reasons",
       "HELP": "Asked when cancelling a task or scheduled task. «Otro» asks to write the reason.",
@@ -135,6 +136,11 @@
     "NO_LOCATION": "No location"
   },
   "TASK_REPORT": {
+    "ATTENDANCE": {
+      "TITLE": "How did it end?",
+      "HELD": "It took place",
+      "NO_SHOW": "The customer did not show up"
+    },
     "TITLE": "Closing report",
     "CONTENT": "What was done",
     "CONTENT_PLACEHOLDER": "Write what you did and how it ended",
@@ -1837,7 +1843,13 @@
         "CANCELLED": "Cancelled",
         "RESCHEDULED": "Rescheduled"
       },
+      "COMPLETE": "Complete",
+      "COMPLETE_TITLE": "Close the scheduled task with its report (held or no show)",
       "MENU": {
+        "VIEW": "View",
+        "REOPEN": "Reopen",
+        "VIEW_REPORT": "View report",
+        "VIEW_TASK": "View task {folio}",
         "EDIT": "Edit",
         "HELD": "Mark as held",
         "NO_SHOW": "Mark as no show",
@@ -1849,6 +1861,7 @@
         "TO_TASK": "Turn into a task (no time)"
       },
       "MODAL": {
+        "VIEW_TITLE": "View scheduled task",
         "TITLE": "Schedule task",
         "EDIT_TITLE": "Edit scheduled task",
         "DESC": "It is recorded in the case's progress.",

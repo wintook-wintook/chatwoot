@@ -111,6 +111,8 @@ export default {
         notify: p.notify !== false,
         // Cancelar: comentario y si se le avisa al cliente (motivo en reason_id, tiempo en minutes).
         cancel_comment: p.comment || '',
+        // Reporte de visita: el cliente no asistió (la cita queda «No asistió»).
+        no_show: !!p.no_show,
         notify_client: p.notify_client !== false,
       },
       writing: false,
@@ -229,6 +231,7 @@ export default {
           notes: f.notes,
           done_task_ids: f.done_task_ids,
           minutes: f.minutes === '' ? null : Number(f.minutes),
+          no_show: !!this.labels.closes_visit && !!f.no_show,
         },
       }[this.type];
     },
@@ -719,6 +722,13 @@ export default {
             {{ task.title }}
           </label>
         </div>
+        <label
+          v-if="labels.closes_visit"
+          class="flex items-center gap-2 text-xs"
+        >
+          <input v-model="form.no_show" type="checkbox" class="!m-0" />
+          {{ t('NO_SHOW') }}
+        </label>
         <label v-if="labels.closes_visit" class="text-xs">
           {{ t('MINUTES') }}
           <input

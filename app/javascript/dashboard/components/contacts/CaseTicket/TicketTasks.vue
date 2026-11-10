@@ -540,6 +540,13 @@ export default {
       if (task) this.remove(task);
     },
     // Cancelar (ya no se va a hacer) o reabrir una cancelada.
+    // Desde Tareas agendadas («Ver la tarea»): la abre como la abriría el clic en su fila.
+    openTaskById(id) {
+      const task = this.tasks.find(t => t.id === id);
+      if (!task) return;
+      if (this.isFrozen || task.status !== 'pending') this.openView(task);
+      else this.openEdit(task);
+    },
     // Pendiente se edita; concluida o cancelada solo se ve (para cambiarla, Reabrir).
     menuEdit() {
       const task = this.rowMenu && this.rowMenu.row;

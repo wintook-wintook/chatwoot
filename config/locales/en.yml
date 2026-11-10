@@ -198,6 +198,8 @@ en:
       meeting_not_open: 'Only a pending scheduled task with no visit started can become a task.'
       starts_at: 'Pick the day and time.'
   cancellation:
+    meeting_locked: 'The scheduled task is already closed or cancelled: it cannot be changed.'
+    meeting_not_closed: 'Only a held or no-show scheduled task can be reopened.'
     closed_locked: 'The task is already done or cancelled: reopen it to change it.'
     report: 'Cancelled: %{reason}'
     client_message: 'Hi %{name}, we cancelled «%{title}» on %{when}. We are here for anything you need.'

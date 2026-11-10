@@ -50,12 +50,17 @@ module Assistant::FieldRunner
     minutes = payload['minutes'].presence&.to_i
     raise Assistant::Executor::Refused, I18n.t('task_reports.minutes_required') if TaskReport.minutes_required?(@account) && !minutes.to_i.positive?
 
+    no_show = payload['no_show'] == true
     TaskReport.transaction do
       meeting.task_reports.pending_close.destroy_all
       TaskReport.build_for(meeting, user: @user, content: notes.first(5000), minutes: minutes).save!
-      meeting.update!(status: :held)
+      meeting.update!(status: no_show ? :no_show : :held)
     end
-    done("Visita «#{meeting.title}» reportada y realizada", field_path(target))
+    done(visit_closed_label(meeting, no_show), field_path(target))
+  end
+
+  def visit_closed_label(meeting, no_show)
+    "Visita «#{meeting.title}» reportada · #{no_show ? 'el cliente no asistió' : 'realizada'}"
   end
 
   def field_path(target)

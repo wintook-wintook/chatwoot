@@ -62,15 +62,17 @@ export default {
       }
       this.run(() => AgendaVisitsAPI.arrive(this.meetingId, location));
     },
+    // Concluir: el reporte pregunta si se realizó o el cliente no asistió.
     conclude() {
       const { title } = this.visit;
-      this.askReport({ type: 'meeting', id: this.meetingId, title }, () =>
-        this.finish()
+      this.askReport(
+        { type: 'meeting', id: this.meetingId, title, askAttendance: true },
+        result => this.finish(result.status)
       );
     },
-    async finish() {
+    async finish(status = 'held') {
       await this.run(() =>
-        AgendaItemsAPI.updateItem(this.meetingId, { status: 'held' })
+        AgendaItemsAPI.updateItem(this.meetingId, { status })
       );
       this.fetch();
     },

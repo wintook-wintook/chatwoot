@@ -13,10 +13,11 @@ export default {
       this.reportItem = null;
       this.afterReport = null;
     },
-    onReported() {
+    // result: lo que eligió en el reporte (en una cita, { status: 'held' | 'no_show' }).
+    onReported(result) {
       const then = this.afterReport;
       this.cancelReport();
-      if (then) then();
+      if (then) then(result || {});
     },
   },
 };

@@ -47,6 +47,12 @@ Son los tres puntos ⋮ al final de la fila; siempre se ven, aunque la tabla se 
 - Concluida o cancelada: «Ver», «Agregar nota», «Reabrir» y «Eliminar». Una tarea concluida o cancelada no se edita: se ve en modo lectura (la cancelada, con su motivo). Para cambiarle algo, primero «Reabrir»: regresa a pendiente y conserva su reporte.
 «Eliminar» solo sale si la creaste tú en las últimas 24 horas o eres administrador. Abajo de la línea va lo de consultar: «Ver reporte» (concluidas), «Notas de la tarea (N)» y «Ver tareas agendadas (N)». Si no cabe hacia abajo, el menú se abre hacia arriba.
 
+### Tareas agendadas del caso: completar y su menú
+1. En la columna Estado de una tarea agendada pulsa «Completar». El reporte de cierre pregunta «¿Cómo terminó?»: «Se realizó» o «El cliente no asistió» (también lleva qué pasó y el tiempo). Queda «Realizada» o «No asistió», con la fecha y quién la cerró.
+2. El menú (⋮) de una agendada: «Editar», «Pasar a tarea (sin hora)» (si no han salido a la visita), «Mover el vencimiento de la tarea» o «Reintentar sincronización» cuando aplican, «Cancelar…» y «Eliminar» (el organizador en las primeras 24 horas o un administrador). Abajo de la línea, «Ver la tarea T00X» si es sesión de una tarea.
+3. Realizada o «No asistió»: solo lectura («Ver»); «Reabrir» la regresa a agendada (su reporte se queda) y «Ver reporte» muestra el reporte de cierre.
+4. Cancelada: solo lectura con su motivo; no se reabre (su evento ya se canceló en Google): si hace falta, se agenda otra.
+
 ### Cancelar una tarea o tarea agendada
 Cancelar es «ya no se va a hacer»; no es completarla (eso pide el reporte) ni borrarla (eso es solo para errores de captura).
 1. En el menú de la tarea (los tres puntos ⋮ al final de la fila) elige «Cancelar…». En una tarea agendada te pregunta primero «¿La quieres reprogramar?»: si solo cambia la fecha, reprográmala y se conserva su historial.

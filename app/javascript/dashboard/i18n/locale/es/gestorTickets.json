@@ -20,6 +20,7 @@
     "DONE_LINKED": "Se quitó de la agenda; queda la tarea «{title}»"
   },
   "CANCEL_ITEM": {
+    "CANCELLED_AS": "Cancelada: {reason}",
     "CATALOG": {
       "TITLE": "Motivos de cancelación",
       "HELP": "Se piden al cancelar una tarea o tarea agendada. «Otro» pide escribir el motivo.",
@@ -135,6 +136,11 @@
     "NO_LOCATION": "Sin ubicación"
   },
   "TASK_REPORT": {
+    "ATTENDANCE": {
+      "TITLE": "¿Cómo terminó?",
+      "HELD": "Se realizó",
+      "NO_SHOW": "El cliente no asistió"
+    },
     "TITLE": "Reporte de cierre",
     "CONTENT": "Qué se hizo",
     "CONTENT_PLACEHOLDER": "Escribe qué hiciste y cómo quedó",
@@ -1848,7 +1854,13 @@
         "CANCELLED": "Cancelada",
         "RESCHEDULED": "Reprogramada"
       },
+      "COMPLETE": "Completar",
+      "COMPLETE_TITLE": "Cerrar la tarea agendada con su reporte (realizada o no asistió)",
       "MENU": {
+        "VIEW": "Ver",
+        "REOPEN": "Reabrir",
+        "VIEW_REPORT": "Ver reporte",
+        "VIEW_TASK": "Ver la tarea {folio}",
         "EDIT": "Editar",
         "HELD": "Marcar realizada",
         "NO_SHOW": "Marcar no asistió",
@@ -1860,6 +1872,7 @@
         "TO_TASK": "Pasar a tarea (sin hora)"
       },
       "MODAL": {
+        "VIEW_TITLE": "Ver tarea agendada",
         "TITLE": "Agendar tarea",
         "EDIT_TITLE": "Editar tarea agendada",
         "DESC": "Queda registrada en el avance del caso.",

@@ -152,7 +152,8 @@
       "CONVERT_TO_MEETING": "The task leaves Tasks and is scheduled.",
       "CONVERT_KEEPS": "It is required or the customer's: the task stays and a linked session is scheduled.",
       "CONVERT_TO_TASK": "It leaves the schedule (and Google) and becomes a task with no time.",
-      "CONVERT_LINKED": "It is a session of «{task}»: it leaves the schedule and that task stays."
+      "CONVERT_LINKED": "It is a session of «{task}»: it leaves the schedule and that task stays.",
+      "NO_SHOW": "The customer did not show up"
     },
     "SETTINGS": {
       "TITLE": "Assistant",
