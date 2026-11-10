@@ -52,6 +52,25 @@
         }
     },
     "WHATSAPP_TEMPLATE_EDITOR": {
+      "AI": {
+        "TITLE": "Crear con IA",
+        "GOAL": "¿Qué quieres lograr con esta plantilla?",
+        "GOAL_PLACEHOLDER": "Ej.: recordarle al cliente que su cotización vence en 3 días y que me conteste si tiene dudas",
+        "TONES": {
+          "ANY": "Tono: el que convenga",
+          "cercano": "Cercano",
+          "formal": "Formal",
+          "directo": "Directo"
+        },
+        "PROPOSE": "Proponer",
+        "OTHER": "Otra propuesta",
+        "CHANNEL_HINT": "El canal lo eliges tú abajo.",
+        "REASON": "Categoría: {reason}",
+        "MANUAL": "Se llenan al enviar (no son datos del contacto): {list}",
+        "ADJUST": "Ajustar",
+        "ADJUST_PLACEHOLDER": "Pide cambios: más corta, sin emojis, menos de venta…",
+        "ERROR": "No se pudo armar la propuesta."
+      },
         "HEADER": "Plantillas de WhatsApp",
         "NEW_TITLE": "Nueva plantilla",
         "EDIT_TITLE": "Editar «%{name}»",

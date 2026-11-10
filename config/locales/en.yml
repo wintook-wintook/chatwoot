@@ -197,6 +197,12 @@ en:
       task_not_open: 'Only a pending task can be scheduled.'
       meeting_not_open: 'Only a pending scheduled task with no visit started can become a task.'
       starts_at: 'Pick the day and time.'
+  # WhatsApp templates — «Create with AI» (Whatsapp::TemplateDrafter)
+  whatsapp_templates:
+    ai:
+      no_key: 'Connect the account OpenAI integration to create templates with AI.'
+      goal_required: 'Write what you want to achieve with the template.'
+      failed: 'The proposal could not be built. Try again.'
   cancellation:
     meeting_locked: 'The scheduled task is already closed or cancelled: it cannot be changed.'
     meeting_not_closed: 'Only a held or no-show scheduled task can be reopened.'

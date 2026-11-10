@@ -182,6 +182,12 @@ es:
       task_not_open: 'Solo se agenda una tarea pendiente.'
       meeting_not_open: 'Solo se pasa a tarea una tarea agendada pendiente y sin salida a la visita.'
       starts_at: 'Elige el día y la hora.'
+  # Plantillas de WhatsApp — «Crear con IA» (Whatsapp::TemplateDrafter)
+  whatsapp_templates:
+    ai:
+      no_key: 'Conecta la integración de OpenAI de la cuenta para crear plantillas con IA.'
+      goal_required: 'Escribe qué quieres lograr con la plantilla.'
+      failed: 'No se pudo armar la propuesta. Inténtalo otra vez.'
   cancellation:
     meeting_locked: 'La tarea agendada ya está cerrada o cancelada: no se puede cambiar.'
     meeting_not_closed: 'Solo se reabre una tarea agendada realizada o en la que el cliente no asistió.'

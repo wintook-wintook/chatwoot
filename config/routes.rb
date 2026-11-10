@@ -534,6 +534,7 @@ Rails.application.routes.draw do
                 post :import
                 # feat/plantillas_whatsapp_mejoras F6: subir el archivo de muestra del encabezado
                 post :header_samples
+                post :ai_draft # «Crear con IA»: borrador con lo que quiere lograr
               end
               # feat/plantillas_whatsapp_mejoras: dónde se usa, antes de borrarla
               get :usage, on: :member
