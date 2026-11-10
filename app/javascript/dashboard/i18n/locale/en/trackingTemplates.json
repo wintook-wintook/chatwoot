@@ -654,7 +654,8 @@
       "RULE_BOOKING": "When booking",
       "RULE_TICKETS": "When opening a ticket:",
       "RULE_ROUTES": "With route:",
-      "RULE_ANY_TICKET": "Any"
+      "RULE_ANY_TICKET": "Any",
+      "LOADING_BOT": "Getting your resources ready…"
     }
   }
 }

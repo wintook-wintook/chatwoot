@@ -21,6 +21,7 @@ import FichaFiles from './FichaFiles.vue';
 import FichaReadiness from './FichaReadiness.vue';
 import FichaAgenda from './FichaAgenda.vue';
 import FichaTest from './FichaTest.vue';
+import FichaLoading from './FichaLoading.vue';
 import FileRule, { defaultRule } from './FileRule.vue';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 
@@ -43,6 +44,7 @@ export default {
     FichaReadiness,
     FichaAgenda,
     FichaTest,
+    FichaLoading,
     FileRule,
     KeywordActionsEditor,
   },
@@ -285,9 +287,7 @@ export default {
 
 <template>
   <div class="flex flex-col flex-1 min-h-0 gap-3">
-    <p v-if="loading" class="!m-0 text-sm text-slate-500">
-      {{ t('LOADING') }}
-    </p>
+    <FichaLoading v-if="loading" />
     <template v-else>
       <div
         v-if="!changes.confirmed"

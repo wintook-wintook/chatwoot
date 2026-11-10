@@ -27,6 +27,7 @@ import FichaFiles from './FichaFiles.vue';
 import FichaTest from './FichaTest.vue';
 import FichaReadiness from './FichaReadiness.vue';
 import FichaAgenda from './FichaAgenda.vue';
+import FichaLoading from './FichaLoading.vue';
 import FichaChannel, {
   channelKind,
   trackingChannels,
@@ -63,6 +64,7 @@ export default {
     FichaReadiness,
     FichaAgenda,
     FichaChannel,
+    FichaLoading,
     KeywordActionsEditor,
   },
   props: {
@@ -536,9 +538,7 @@ export default {
             </div>
           </div>
           <div class="flex-1 min-h-0 pr-1 overflow-auto">
-            <p v-if="loadingCards" class="!m-0 text-sm text-slate-500">
-              {{ t('LOADING') }}
-            </p>
+            <FichaLoading v-if="loadingCards" />
             <FichaCards
               v-else
               v-model="items"

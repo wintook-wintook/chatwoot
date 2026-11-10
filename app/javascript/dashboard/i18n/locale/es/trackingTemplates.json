@@ -654,7 +654,8 @@
       "RULE_BOOKING": "Al agendar",
       "RULE_TICKETS": "Al levantar ticket:",
       "RULE_ROUTES": "Con la ruta:",
-      "RULE_ANY_TICKET": "Cualquiera"
+      "RULE_ANY_TICKET": "Cualquiera",
+      "LOADING_BOT": "Preparando tus recursos…"
     }
   },
   "TRACKING_IMPORT": {
