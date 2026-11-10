@@ -146,6 +146,22 @@ class CrmQuote < ApplicationRecord
     self
   end
 
+  # El tipo de cambio no se captura (CRMZeus no lo muestra): local 1, si no el fijo de la moneda.
+  def default_exchange_rate
+    return exchange_rate || 1 unless currency
+    return 1 if currency.is_local?
+
+    currency.fixed_exchange_rate || exchange_rate || 1
+  end
+
+  # Borrador sin guardar (alta y «Duplicar»): corre lo que calcula el guardado (fecha, método SAT,
+  # importes) sin dejar errores; el formulario los verá al guardar.
+  def preview
+    validate
+    errors.clear
+    self
+  end
+
   def can_change_status_to?(new_status)
     TRANSITIONS.fetch(status, []).include?(new_status.to_s)
   end
@@ -197,13 +213,6 @@ class CrmQuote < ApplicationRecord
     self.exchange_rate = 1 if currency&.is_local?
     self.sat_payment_method = payment_term && (payment_term.credit_days.zero? ? 'PUE' : 'PPD')
     self.shipping_address = nil if organization&.prospect?
-  end
-
-  def default_exchange_rate
-    return exchange_rate || 1 unless currency
-    return 1 if currency.is_local?
-
-    currency.fixed_exchange_rate || exchange_rate || 1
   end
 
   def recalculate

@@ -186,6 +186,15 @@ Rails.application.routes.draw do
             resources :units, only: [:index, :create, :update, :destroy]
             resources :taxes, only: [:index, :create, :update, :destroy]
             resources :cities, only: [:index, :create]
+            # CrmZeus Q1 — cotizaciones y series de folio por agente
+            resources :quotes, only: [:index, :new, :show, :create, :update] do
+              post :calculate, on: :collection
+              member do
+                post :status
+                post :duplicate
+              end
+            end
+            resources :quote_series, only: [:index, :create, :update, :destroy]
           end
           # Plan-Catalogo-Cotizaciones C1 — Ventas › Catálogo
           resources :catalog_items, only: [:index, :create, :update] do
@@ -1145,7 +1154,7 @@ Rails.application.routes.draw do
   post 'baja/:token', to: 'public/opt_outs#create'
 
   # Plan-Trabajo-Campo R5 — portal del cliente de su orden y visita del técnico externo.
-  get  'servicio/:token',            to: 'public/service_portals#show',  as: :public_service_portal
+  get  'servicio/:token', to: 'public/service_portals#show', as: :public_service_portal
   # Portal del cliente — sus casos y proyectos y las tareas que le tocan (tareas con el cliente)
   get  'cliente/:token',                 to: 'public/client_portals#show',   as: :public_client_portal
   post 'cliente/:token/quien',           to: 'public/client_portals#person', as: :public_client_portal_person

@@ -44,6 +44,8 @@ class CrmQuoteSeries < ApplicationRecord
   validates :last_number, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :user_belongs_to_account
 
+  scope :ordered, -> { order(:series) }
+
   def self.folio(series, number)
     series + number.to_s.rjust([FOLIO_LENGTH - series.length, 1].max, '0')
   end
