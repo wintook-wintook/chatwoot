@@ -88,16 +88,17 @@ class ContactTrackings::Ficha::Draft
   # { prompt:, objective:, ai_context:, routes:, validation:, offers: [... on:] }
   def result
     @result ||= begin
-      generado = ContactTrackings::Ficha::Generator.new(
-        account: @account, name: name, offers: active_offers,
-        objective: @params[:objective], business: @params[:business], tone: @params[:tone],
-        welcome: @params[:welcome], welcome_files: welcome_files, route_files: route_files,
-        questions: ContactTrackings::Ficha::Questions.clean(@params[:questions]), questions_when: @params[:questions_when],
-        variables: ContactTrackings::Ficha::Memory.clean(@params[:variables]),
-        business_data: ContactTrackings::Ficha::BusinessData.clean(@params[:business_data])
-      ).call
+      generado = ContactTrackings::Ficha::Generator.new(account: @account, name: name, offers: active_offers, **generator_options).call
       generado.merge(offers: offers.map { |o| o.except(:route).merge(on: skipped.exclude?(o[:key])) })
     end
+  end
+
+  def generator_options
+    { objective: @params[:objective], business: @params[:business], tone: @params[:tone], tone_adjust: @params[:tone_adjust],
+      welcome: @params[:welcome], welcome_files: welcome_files, route_files: route_files,
+      questions: ContactTrackings::Ficha::Questions.clean(@params[:questions]), questions_when: @params[:questions_when],
+      variables: ContactTrackings::Ficha::Memory.clean(@params[:variables]),
+      business_data: ContactTrackings::Ficha::BusinessData.clean(@params[:business_data]) }
   end
 
   attr_reader :params

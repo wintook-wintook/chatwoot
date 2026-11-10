@@ -58,8 +58,23 @@ RSpec.describe ContactTrackings::Ficha::Generator do
                                                                   business: "Horario: 9 a 6\nTel 555")
 
     expect(resultado[:objective]).to eq('Cotizar grúas')
-    expect(resultado[:prompt]).to include('sin emojis')
+    expect(resultado[:prompt]).to include('profesional, amable y serio', 'Sin emojis.')
     expect(resultado[:ai_context]).to eq("Horario: 9 a 6\nTel 555")
+  end
+
+  it 'un tono base y sus ajustes (emojis, muy cortas, cerrar con pregunta); sin ajustes, los del tono' do
+    entusiasta = generar([{ 'key' => "google_sheet:#{hoja.id}" }], tone: 'entusiasta')[:prompt]
+    expect(entusiasta).to include('con energía', 'Uso uno o dos emojis', 'Cierro con una pregunta')
+
+    ajustado = generar([{ 'key' => "google_sheet:#{hoja.id}" }], tone: 'empatico',
+                                                                 tone_adjust: { 'short' => true, 'emojis' => false })[:prompt]
+    expect(ajustado).to include('primero lo reconozco', 'máximo 2 líneas', 'Sin emojis.')
+    expect(ajustado).not_to include('Cierro con una pregunta')
+  end
+
+  it 'sin objetivo, lo arma con lo marcado (sin IA)' do
+    resultado = generar([{ 'key' => "google_sheet:#{hoja.id}" }], objective: '')
+    expect(resultado[:objective]).to start_with('Atender a los clientes de')
   end
 
   it 'la bienvenida va como [MENSAJE DE BIENVENIDA] con sus archivos, y el comprobador la acepta' do

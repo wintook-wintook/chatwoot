@@ -710,6 +710,7 @@ export default {
                 :can-suggest="items.length > 0"
                 :missing.sync="missing"
                 :max-context="maxContext"
+                objective-required
                 :disabled="busy"
                 @suggest="suggestProfile"
               />

@@ -328,3 +328,50 @@ describe('Variables y datos del negocio', () => {
     ]);
   });
 });
+
+describe('Tono', () => {
+  it('cada tono arranca con sus ajustes y el ejemplo cambia con ellos', async () => {
+    const { toneDefaults, toneExample, TONES } = await import(
+      './FichaIdentity.vue'
+    );
+    expect(TONES).toEqual([
+      'cercano',
+      'profesional',
+      'entusiasta',
+      'empatico',
+      'directo',
+    ]);
+    expect(toneDefaults('entusiasta')).toEqual({
+      emojis: true,
+      short: false,
+      question: true,
+    });
+    expect(toneDefaults('profesional')).toEqual({
+      emojis: false,
+      short: false,
+      question: false,
+    });
+    expect(
+      toneExample('empatico', { emojis: false, short: true, question: false })
+    ).toBe('Entiendo que necesitas resolverlo pronto.');
+    expect(
+      toneExample('directo', { emojis: true, short: false, question: true })
+    ).toBe('Grúa de 30 t: $1,800 por día. ¿Para qué fecha la necesitas? 🚚');
+  });
+
+  it('al cambiar de tono, los ajustes vuelven a los de ese tono', async () => {
+    const { default: FichaIdentity } = await import('./FichaIdentity.vue');
+    const wrapper = shallowMount(FichaIdentity, {
+      propsData: {
+        value: { name: '', tone: 'cercano', objective: '', business: '' },
+        showTone: true,
+      },
+      mocks: { $t: clave => clave },
+    });
+    wrapper.vm.setTone('directo');
+    expect(wrapper.emitted('input')[0][0]).toMatchObject({
+      tone: 'directo',
+      toneAdjust: { emojis: false, short: true, question: false },
+    });
+  });
+});

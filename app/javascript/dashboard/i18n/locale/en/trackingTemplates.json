@@ -753,7 +753,23 @@
       "BUSINESS_OTHER": "Other",
       "BUSINESS_LABEL_PLACEHOLDER": "Data name",
       "BUSINESS_VALUE_PLACEHOLDER": "Value",
-      "BUSINESS_FOOT": "Questions are fixed data too: set them up in Questions."
+      "BUSINESS_FOOT": "Questions are fixed data too: set them up in Questions.",
+      "OBJECTIVE_AUTO_HINT": "You can leave it empty: it is built from what you select (shown in gray). ✨ writes it better.",
+      "CONTEXT_MISSING": "Your agent doesn't know your business yet (empty AI context). AI can propose it from what you entered.",
+      "CONTEXT_MISSING_SUGGEST": "Propose the context",
+      "TONE_ENTUSIASTA": "Enthusiastic",
+      "TONE_EMPATICO": "Empathetic",
+      "TONE_DIRECTO": "Direct",
+      "TONE_CERCANO_HINT": "Warm, like talking to someone from the business.",
+      "TONE_PROFESIONAL_HINT": "Kind and serious. Good for professional services.",
+      "TONE_ENTUSIASTA_HINT": "For sales: energetic and invites the next step.",
+      "TONE_EMPATICO_HINT": "For support, complaints or collections: acknowledges the issue first, then solves.",
+      "TONE_DIRECTO_HINT": "The minimum, no detours.",
+      "TONE_ADJUST": "Adjustments:",
+      "TONE_ADJUST_EMOJIS": "Uses emojis",
+      "TONE_ADJUST_SHORT": "Very short replies",
+      "TONE_ADJUST_QUESTION": "Ends with a question",
+      "TONE_EXAMPLE": "How it would answer"
     }
   }
 }

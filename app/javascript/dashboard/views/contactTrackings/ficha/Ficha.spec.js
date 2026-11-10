@@ -316,15 +316,7 @@ describe('FichaWizard', () => {
       ],
     });
     await wrapper.vm.loadPreview();
-    // El objetivo es obligatorio (Agente y canal).
-    expect(wrapper.vm.canCreate).toBe(false);
-    expect(wrapper.vm.panelHint).toBe(
-      'TRACKING_TEMPLATES.FICHA.NEED_OBJECTIVE'
-    );
-    wrapper.vm.identity = {
-      ...wrapper.vm.identity,
-      objective: 'Vender grúas',
-    };
+    // El objetivo puede quedar vacío: se arma solo con lo marcado.
     expect(wrapper.vm.canCreate).toBe(true);
     wrapper.vm.toggleOffer(PREVIEW.offers[1]);
     wrapper.setData({

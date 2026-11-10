@@ -753,7 +753,23 @@
       "BUSINESS_OTHER": "Otro dato",
       "BUSINESS_LABEL_PLACEHOLDER": "Nombre del dato",
       "BUSINESS_VALUE_PLACEHOLDER": "Valor",
-      "BUSINESS_FOOT": "Las preguntas también son datos fijos: se configuran en Preguntas."
+      "BUSINESS_FOOT": "Las preguntas también son datos fijos: se configuran en Preguntas.",
+      "OBJECTIVE_AUTO_HINT": "Puedes dejarlo vacío: se arma solo con lo que vayas marcando (lo ves en gris). ✨ lo redacta mejor.",
+      "CONTEXT_MISSING": "Tu agente aún no conoce tu negocio (contexto IA vacío). La IA lo puede proponer con lo que capturaste.",
+      "CONTEXT_MISSING_SUGGEST": "Proponer el contexto",
+      "TONE_ENTUSIASTA": "Entusiasta",
+      "TONE_EMPATICO": "Empático",
+      "TONE_DIRECTO": "Directo",
+      "TONE_CERCANO_HINT": "Cálido, como platicar con alguien del negocio.",
+      "TONE_PROFESIONAL_HINT": "Amable y serio. Bueno para servicios profesionales.",
+      "TONE_ENTUSIASTA_HINT": "Para vender: con energía e invita a dar el siguiente paso.",
+      "TONE_EMPATICO_HINT": "Para soporte, quejas o cobranza: primero reconoce la molestia y luego resuelve.",
+      "TONE_DIRECTO_HINT": "Lo mínimo, sin rodeos.",
+      "TONE_ADJUST": "Ajustes:",
+      "TONE_ADJUST_EMOJIS": "Usa emojis",
+      "TONE_ADJUST_SHORT": "Respuestas muy cortas",
+      "TONE_ADJUST_QUESTION": "Cierra con una pregunta",
+      "TONE_EXAMPLE": "Así contestaría"
     }
   },
   "TRACKING_IMPORT": {

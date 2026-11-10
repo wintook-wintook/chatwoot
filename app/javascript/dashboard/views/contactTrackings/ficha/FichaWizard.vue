@@ -119,6 +119,8 @@ export default {
       business: '',
       missing: [],
       tone: 'cercano',
+      // Ajustes del tono (emojis, muy cortas, cerrar con pregunta); null = los del tono.
+      toneAdjust: null,
       cards: [],
       items: [],
       files: [],
@@ -156,9 +158,6 @@ export default {
     nameOk() {
       return this.name.trim().length >= 2;
     },
-    objectiveOk() {
-      return this.objective.trim().length >= 5;
-    },
     // Recursos › Agente y canal: los datos del agente (FichaIdentity).
     identity: {
       get() {
@@ -166,6 +165,7 @@ export default {
           name: this.name,
           displayName: this.displayName,
           tone: this.tone,
+          toneAdjust: this.toneAdjust,
           objective: this.objective,
           business: this.business,
         };
@@ -174,6 +174,7 @@ export default {
         this.name = datos.name;
         this.displayName = datos.displayName;
         this.tone = datos.tone;
+        this.toneAdjust = datos.toneAdjust || null;
         this.objective = datos.objective;
         this.business = datos.business;
       },
@@ -188,8 +189,7 @@ export default {
         if (id === 'channel')
           return {
             ...base,
-            state:
-              this.channelOk && this.nameOk && this.objectiveOk ? 'ok' : 'todo',
+            state: this.channelOk && this.nameOk ? 'ok' : 'todo',
           };
         if (id === 'finish')
           return { ...base, state: this.canCreate ? 'ok' : null };
@@ -360,7 +360,6 @@ export default {
     canCreate() {
       return (
         this.nameOk &&
-        this.objectiveOk &&
         this.canContinue &&
         !!this.validation.valid &&
         !this.creating
@@ -369,7 +368,6 @@ export default {
     panelHint() {
       if (!this.routes.length) return this.t('NEED_RESOURCE');
       if (!this.nameOk) return this.t('NEED_NAME');
-      if (!this.objectiveOk) return this.t('NEED_OBJECTIVE');
       if (!this.validation.valid) return this.t('INVALID');
       if (this.section !== 'finish') return this.t('CREATE_HINT');
       return this.t('AFTER_CREATE');
@@ -411,6 +409,7 @@ export default {
         activate: this.activateOnCreate && !!this.inboxId,
         skip: this.skip,
         tone: this.tone,
+        tone_adjust: this.toneAdjust,
         objective: this.objective.trim(),
         business: this.business.trim(),
       };
@@ -598,6 +597,7 @@ export default {
             :can-suggest="routes.length > 0"
             :missing.sync="missing"
             :max-context="maxContext"
+            :objective-placeholder="objectivePlaceholder"
             @suggest="suggest"
           />
           <h3
@@ -761,6 +761,30 @@ export default {
           <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ t('FINISH_HINT') }}
           </p>
+          <!-- Sin contexto: la IA lo puede proponer con lo capturado (solo al dar clic). -->
+          <div
+            v-if="hasSomething && !business.trim()"
+            class="flex flex-wrap items-center gap-3 px-3 py-2 text-sm rounded-lg bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
+          >
+            <fluent-icon icon="info" size="16" />
+            <span class="flex-1 min-w-[12rem]">{{ t('CONTEXT_MISSING') }}</span>
+            <woot-button
+              size="small"
+              icon="wand"
+              :is-loading="suggesting === 'context'"
+              :is-disabled="!!suggesting"
+              @click="suggest('context')"
+            >
+              {{ t('CONTEXT_MISSING_SUGGEST') }}
+            </woot-button>
+          </div>
+          <div
+            v-else-if="hasSomething && business.trim()"
+            class="flex flex-col gap-1 px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-800/60"
+          >
+            <span class="text-xs text-slate-500">{{ t('CONTEXT') }}</span>
+            <span class="whitespace-pre-wrap line-clamp-3">{{ business }}</span>
+          </div>
           <p v-if="!hasSomething" class="!m-0 text-sm text-slate-500">
             {{ t('PANEL_EMPTY') }}
           </p>
