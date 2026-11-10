@@ -353,10 +353,10 @@ describe('Tono', () => {
     });
     expect(
       toneExample('empatico', { emojis: false, short: true, question: false })
-    ).toBe('Entiendo que necesitas resolverlo pronto.');
+    ).toBe('Entiendo que lo necesitas pronto.');
     expect(
       toneExample('directo', { emojis: true, short: false, question: true })
-    ).toBe('Grúa de 30 t: $1,800 por día. ¿Para qué fecha la necesitas? 🚚');
+    ).toBe('Servicio: $450. Disponible esta semana. ¿Qué día te acomoda? 😊');
   });
 
   it('al cambiar de tono, los ajustes vuelven a los de ese tono', async () => {

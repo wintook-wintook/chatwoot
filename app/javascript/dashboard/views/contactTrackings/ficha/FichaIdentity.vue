@@ -31,23 +31,23 @@ export const toneDefaults = tono => ({
 });
 // Cómo contestaría con cada tono (ejemplo fijo, sin IA).
 const EXAMPLES = {
-  cercano: '¡Claro! La renta de la grúa de 30 t cuesta $1,800 por día.',
+  cercano:
+    '¡Claro! El servicio cuesta $450 y lo tenemos disponible esta semana.',
   profesional:
-    'Con gusto. La renta de la grúa de 30 toneladas tiene un costo de $1,800 por día.',
+    'Con gusto. El servicio tiene un costo de $450 y contamos con disponibilidad esta semana.',
   entusiasta:
-    '¡Excelente elección! La grúa de 30 t sale en $1,800 por día y la tenemos lista para ti.',
+    '¡Qué buena elección! El servicio cuesta solo $450 y lo tenemos listo para ti esta misma semana.',
   empatico:
-    'Entiendo que necesitas resolverlo pronto. La grúa de 30 t cuesta $1,800 por día y te ayudo a apartarla.',
-  directo: 'Grúa de 30 t: $1,800 por día.',
+    'Entiendo que lo necesitas pronto. El servicio cuesta $450 y te ayudo a apartarlo esta semana.',
+  directo: 'Servicio: $450. Disponible esta semana.',
 };
 export const toneExample = (tono, ajustes) => {
   const base = EXAMPLES[tono] || EXAMPLES.cercano;
   let texto = ajustes.short ? base.split('. ')[0].replace(/\.?$/, '.') : base;
-  if (ajustes.question) texto += ' ¿Para qué fecha la necesitas?';
-  if (ajustes.emojis) texto += ' 🚚';
+  if (ajustes.question) texto += ' ¿Qué día te acomoda?';
+  if (ajustes.emojis) texto += ' 😊';
   return texto;
 };
-
 export default {
   model: { prop: 'value', event: 'input' },
   props: {
