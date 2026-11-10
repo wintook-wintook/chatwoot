@@ -20,6 +20,7 @@ import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal
 import taskReportFlow from 'dashboard/mixins/taskReportFlow';
 import rowMenuMixin from 'dashboard/helper/rowMenu'; // menú de la fila (⋮ a la derecha)
 import WootDropdownDivider from 'shared/components/ui/dropdown/DropdownDivider.vue';
+import ScheduleTaskModal from 'dashboard/components/convert/ScheduleTaskModal.vue'; // pasarla a la agenda
 import TaskReportsDialog from 'dashboard/views/gestorTickets/tasks/TaskReportsDialog.vue';
 import ClientTaskEntries from 'dashboard/components/clientPortal/ClientTaskEntries.vue'; // tareas con el cliente
 import CancelItemModal from 'dashboard/components/cancel/CancelItemModal.vue'; // cancelar con motivo
@@ -52,6 +53,7 @@ export default {
     WootDropdownMenu,
     WootDropdownItem,
     WootDropdownDivider,
+    ScheduleTaskModal,
     TaskReportModal,
     TaskReportsDialog,
     ClientTaskEntries,
@@ -74,6 +76,9 @@ export default {
       audiences: ['internal', 'visible', 'client'], // tareas con el cliente
       // Cancelar con motivo: la tarea a cancelar, si está guardando y el error.
       cancelTarget: null,
+      scheduleTarget: null,
+      scheduleBusy: false,
+      scheduleError: '',
       cancelBusy: false,
       cancelError: '',
       reportsFilter: null,
@@ -534,6 +539,56 @@ export default {
       if (task) this.remove(task);
     },
     // Cancelar (ya no se va a hacer) o reabrir una cancelada.
+    menuEdit() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) this.openEdit(task);
+    },
+    // ¿Se puede pasar a la agenda? Pendiente, sin sesiones agendadas, y que no sea
+    // obligatoria, de la etapa ni del cliente (esas solo se agendan por sesión).
+    canMoveToAgenda(task) {
+      return (
+        task.status === 'pending' &&
+        task.replaceable !== false &&
+        !task.meetings_count
+      );
+    },
+    // Pasar a la agenda: la tarea sale de Tareas y queda como UNA tarea agendada.
+    menuMoveToAgenda() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (!task) return;
+      this.scheduleError = '';
+      this.scheduleTarget = task;
+    },
+    async submitMoveToAgenda(data) {
+      this.scheduleBusy = true;
+      this.scheduleError = '';
+      try {
+        const { data: res } = await CaseTasksAPI.schedule(
+          this.ticketId,
+          this.scheduleTarget.id,
+          data
+        );
+        this.scheduleTarget = null;
+        await this.load();
+        this.$emit('saved');
+        this.$emit('meetingsChanged');
+        this.$emitter.emit('caseToastMessage', {
+          message: this.$t(
+            res.mode === 'linked'
+              ? 'CONVERT_ITEM.LINKED'
+              : 'CONVERT_ITEM.SCHEDULED',
+            { title: res.meeting.title }
+          ),
+          icon: 'calendar',
+        });
+      } catch (e) {
+        this.scheduleError = e.response?.data?.error || '';
+      } finally {
+        this.scheduleBusy = false;
+      }
+    },
     menuCancelTask() {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
@@ -1593,6 +1648,18 @@ export default {
       :style="rowMenuStyle()"
     >
       <WootDropdownMenu>
+        <WootDropdownItem>
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="edit"
+            @click="menuEdit"
+          >
+            {{ $t('CASE_TICKETS.TASKS.MENU.EDIT') }}
+          </woot-button>
+        </WootDropdownItem>
+        <!-- Agendar: una sesión de trabajo ligada (la tarea se queda; puede tener varias). -->
         <WootDropdownItem v-if="rowMenu.row.status === 'pending'">
           <woot-button
             variant="clear"
@@ -1624,6 +1691,18 @@ export default {
             @click="menuAddNote"
           >
             {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
+          </woot-button>
+        </WootDropdownItem>
+        <!-- Pasar a la agenda: la tarea se convierte en UNA tarea agendada. -->
+        <WootDropdownItem v-if="canMoveToAgenda(rowMenu.row)">
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="calendar-clock"
+            @click="menuMoveToAgenda"
+          >
+            {{ $t('CONVERT_ITEM.SCHEDULE') }}
           </woot-button>
         </WootDropdownItem>
         <WootDropdownItem v-if="rowMenu.row.status === 'pending'">
@@ -1694,6 +1773,14 @@ export default {
         </WootDropdownItem>
       </WootDropdownMenu>
     </div>
+    <ScheduleTaskModal
+      :show="!!scheduleTarget"
+      :task="scheduleTarget"
+      :busy="scheduleBusy"
+      :error="scheduleError"
+      @close="scheduleTarget = null"
+      @submit="submitMoveToAgenda"
+    />
     <CancelItemModal
       :show="!!cancelTarget"
       :item="cancelTarget"

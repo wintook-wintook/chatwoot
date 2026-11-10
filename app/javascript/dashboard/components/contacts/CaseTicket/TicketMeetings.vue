@@ -334,10 +334,6 @@ export default {
     },
     async submitForm(payload) {
       if (this.isSaving) return;
-      if (payload.convert_task_id) {
-        await this.scheduleTask(payload);
-        return;
-      }
       this.isSaving = true;
       try {
         if (this.editing) {
@@ -359,35 +355,6 @@ export default {
         }
         this.showModal = false;
         this.$emit('changed');
-      } catch (e) {
-        this.toastError(e);
-      } finally {
-        this.isSaving = false;
-      }
-    },
-    // Agendar una tarea: sale de Tareas y queda agendada (o sesión ligada si no se puede).
-    async scheduleTask(payload) {
-      this.isSaving = true;
-      try {
-        const { convert_task_id: taskId, ...data } = payload;
-        const { data: res } = await CaseTasksAPI.schedule(
-          this.ticketId,
-          taskId,
-          data
-        );
-        this.showModal = false;
-        await this.load();
-        this.$emit('changed');
-        this.$emit('tasksChanged');
-        this.$emitter.emit('caseToastMessage', {
-          message: this.$t(
-            res.mode === 'linked'
-              ? 'CONVERT_ITEM.LINKED'
-              : 'CONVERT_ITEM.SCHEDULED',
-            { title: res.meeting.title }
-          ),
-          icon: 'calendar',
-        });
       } catch (e) {
         this.toastError(e);
       } finally {

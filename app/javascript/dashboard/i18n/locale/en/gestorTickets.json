@@ -1,12 +1,12 @@
 {
   "CONVERT_ITEM": {
-    "SCHEDULE": "Schedule…",
-    "SCHEDULE_TITLE": "Schedule «{title}»",
+    "SCHEDULE": "Move to schedule",
+    "SCHEDULE_TITLE": "Move «{title}» to the schedule",
     "SCHEDULE_DESC": "The task leaves Tasks and is scheduled with a day and time.",
     "STARTS": "Starts",
     "ENDS": "Ends",
     "LOCATION": "Location",
-    "SAVE": "Schedule",
+    "SAVE": "Move to schedule",
     "CANCEL": "Cancel",
     "SCHEDULED": "«{title}» is now scheduled",
     "LINKED": "A session of «{title}» was scheduled; the task stays",
@@ -786,6 +786,7 @@
         "ADD_MEETING": "Schedule task",
         "ADD_MEETING_DONE_HINT": "The task is already completed",
         "VIEW_MEETINGS": "View scheduled tasks",
+        "EDIT": "Edit",
         "VIEW_MEETINGS_COUNT": "View scheduled tasks ({count})"
       },
       "ORPHAN_MEETINGS": {
@@ -1857,9 +1858,6 @@
         "DATE_ERROR": "The end time must be after the start time.",
         "TASK_LABEL": "Task",
         "TASK_NONE": "— Case (no task) —",
-        "CONVERT_HINT": "On save, «{title}» leaves Tasks and becomes a scheduled task, keeping its reported time.",
-        "KEEP_TASK": "Keep the task: only schedule a work session",
-        "KEEP_HINT": "The task stays in Tasks and this session is linked to it.",
         "KEEP_LOCKED": "It is required, from the stage or the customer's: the task stays and a linked session is scheduled.",
         "ORGANIZER_LABEL": "Assignee",
         "ORGANIZER_ME": "— Me —",

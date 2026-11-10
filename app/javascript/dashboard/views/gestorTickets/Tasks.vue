@@ -846,6 +846,11 @@ export default {
       this.closeRowMenu();
       if (task) this.remove(task);
     },
+    menuEdit() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) this.openEdit(task);
+    },
     // Pasarla a la agenda: con día y hora sale de Tareas (o sesión ligada si no se puede).
     menuSchedule() {
       const task = this.rowMenu && this.rowMenu.row;
@@ -1777,15 +1782,15 @@ export default {
       :style="rowMenuStyle()"
     >
       <WootDropdownMenu>
-        <WootDropdownItem v-if="rowMenu.row.status === 'pending'">
+        <WootDropdownItem>
           <woot-button
             variant="clear"
             color-scheme="secondary"
             size="small"
-            icon="calendar"
-            @click="menuSchedule"
+            icon="edit"
+            @click="menuEdit"
           >
-            {{ $t('CONVERT_ITEM.SCHEDULE') }}
+            {{ $t('CASE_TICKETS.TASKS.MENU.EDIT') }}
           </woot-button>
         </WootDropdownItem>
         <WootDropdownItem>
@@ -1797,6 +1802,24 @@ export default {
             @click="menuAddNote"
           >
             {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
+          </woot-button>
+        </WootDropdownItem>
+        <!-- Pasar a la agenda: la tarea se convierte en UNA tarea agendada. -->
+        <WootDropdownItem
+          v-if="
+            rowMenu.row.status === 'pending' &&
+            rowMenu.row.replaceable !== false &&
+            !rowMenu.row.meetings_count
+          "
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="calendar-clock"
+            @click="menuSchedule"
+          >
+            {{ $t('CONVERT_ITEM.SCHEDULE') }}
           </woot-button>
         </WootDropdownItem>
         <WootDropdownItem v-if="rowMenu.row.status === 'pending'">

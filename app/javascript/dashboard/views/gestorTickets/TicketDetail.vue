@@ -3572,6 +3572,9 @@ export default {
         @viewNotes="openNotesForTask"
         @addMeeting="openMeetingForTask"
         @viewMeetings="openMeetingsForTask"
+        @meetingsChanged="
+          $refs.ticketMeetings && $refs.ticketMeetings.refresh()
+        "
       />
 
       <!-- ════ …y debajo Tareas agendadas (F2) — tabla + modal, como Notas ════ -->

@@ -42,7 +42,7 @@ La Agenda junta todo lo que tienes que hacer: tareas (con fecha, sin hora) y tar
 3. Pulsa «Concluir». El reporte queda en Agenda › Reportes, en la ficha del cliente y, si tiene caso, en su actividad; el tiempo suma a las horas del caso.
 
 ### El menú de cada tarea
-Son los tres puntos ⋮ al final de la fila; siempre se ven, aunque la tabla se mueva de lado. Arriba van las acciones y solo las que se pueden hacer según el estado: en una pendiente «Agendar tarea», «Agregar nota», «Cancelar…» y «Eliminar»; en una cancelada «Reabrir». «Eliminar» solo sale si la creaste tú en las últimas 24 horas o eres administrador. Abajo de la línea va lo de consultar: «Ver reporte» (concluidas), «Notas de la tarea (N)» y «Ver tareas agendadas (N)». Si no cabe hacia abajo, el menú se abre hacia arriba.
+Son los tres puntos ⋮ al final de la fila; siempre se ven, aunque la tabla se mueva de lado. Arriba van las acciones, solo las que se pueden hacer según el estado: «Editar», «Agendar tarea», «Agregar nota», «Pasar a la agenda», «Cancelar…» (o «Reabrir» si está cancelada) y «Eliminar» (solo si la creaste tú en las últimas 24 horas o eres administrador). Abajo de la línea va lo de consultar: «Ver reporte» (concluidas), «Notas de la tarea (N)» y «Ver tareas agendadas (N)». Si no cabe hacia abajo, el menú se abre hacia arriba.
 
 ### Cancelar una tarea o tarea agendada
 Cancelar es «ya no se va a hacer»; no es completarla (eso pide el reporte) ni borrarla (eso es solo para errores de captura).
@@ -53,13 +53,12 @@ Cancelar es «ya no se va a hacer»; no es completarla (eso pide el reporte) ni 
 5. La tarea queda tachada como «Cancelada · motivo», deja de contar en pendientes, vencidas y siguiente paso, y queda en la actividad del caso. «Reabrir» (en el mismo menú) la regresa a pendiente.
 6. También se lo puedes pedir a Dali: «cancela la llamada con Mario de mañana, ya no hace falta».
 
-### Pasar una tarea a la agenda, o una tarea agendada a tarea
-Una tarea no tiene hora (solo fecha límite); una tarea agendada sí: día, hora, va al calendario y a Google Calendar.
-1. Tarea → agendada: en el menú de la tarea elige «Agendar tarea» (dentro del caso) o «Agendar…» (en Agenda › Tareas). Ya trae el título, la descripción y la duración estimada; elige día y hora. Al guardar, la tarea se quita de Tareas y queda como tarea agendada, con el tiempo que ya tenía reportado.
-2. Si quieres que la tarea se quede y solo agendar una sesión para trabajarla, marca «Que la tarea se quede: solo agendar una sesión de trabajo». Las tareas obligatorias, las de la plantilla de la etapa y las del cliente siempre se quedan: se agenda una sesión ligada a ellas.
-3. Agendada → tarea: en el menú de la tarea agendada (dentro del caso) o en el calendario, al abrirla, elige «Pasar a tarea (sin hora)». Se quita de la agenda y de Google Calendar y queda como tarea con fecha límite ese mismo día, el organizador como responsable y lo que duraba como tiempo estimado. Si tiene cliente, puedes avisarle que se quita la cita.
-4. Si era la sesión de una tarea, no se crea otra: queda esa tarea. Si es de una serie, solo esa vez sale de la agenda. No se puede si ya se hizo, se canceló o ya marcaron «voy en camino».
-5. Queda en la actividad del caso («Tarea ↔ agenda»). También se lo puedes pedir a Dali: «agenda la tarea de llamar a Mario el jueves a las 10» o «la visita de mañana quítala de la agenda y déjala como tarea».
+### Agendar una tarea o pasarla a la agenda
+Son dos cosas distintas:
+1. «Agendar tarea» (dentro del caso): le pones día y hora para trabajarla y la tarea se queda. Puedes agendarla varias veces, o de golpe con «Serie» (por ejemplo, todos los martes 4 semanas). Cada una queda ligada a la tarea; «Ver tareas agendadas (N)» las muestra.
+2. «Pasar a la agenda»: la tarea deja de ser tarea y se vuelve una sola tarea agendada, con el tiempo que ya tenía reportado. Ya trae el título, la descripción y la duración estimada; eliges día, hora y lugar. Solo sale en tareas pendientes que no tienen tareas agendadas y que no son obligatorias, de la etapa ni del cliente (esas solo se agendan).
+3. Al revés, una tarea agendada pasa a tarea sin hora con «Pasar a tarea (sin hora)», en su menú dentro del caso o en el calendario al abrirla. Se quita de la agenda y de Google Calendar y queda como tarea con fecha límite ese mismo día, el organizador como responsable y lo que duraba como tiempo estimado. Si tiene cliente, puedes avisarle que se quita la cita. Si era la sesión de una tarea, no se crea otra: queda esa tarea. Si es de una serie, solo esa vez sale de la agenda. No se puede si ya se hizo, se canceló o ya marcaron «voy en camino».
+4. Queda en la actividad del caso («Tarea ↔ agenda»). También se lo puedes pedir a Dali: «pasa a la agenda la tarea de llamar a Mario, el jueves a las 10» o «la visita de mañana quítala de la agenda y déjala como tarea».
 
 ### Borrar una tarea
 Solo para lo que se capturó por error: la borra quien la creó en las primeras 24 horas, o un administrador. Si ya no se puede borrar, te lo dice y te abre «Cancelar» para hacerlo con su motivo.
