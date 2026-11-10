@@ -281,7 +281,8 @@ export default {
             // ya vive todo su flujo (editar/reprogramar/cancelar).
             if (row.item_type === 'meeting') {
               this.openMeetingTicket(row);
-            } else if (this.ticketFrozen(row)) {
+            } else if (this.ticketFrozen(row) || row.status !== 'pending') {
+              // Caso cerrado, o concluida/cancelada: solo lectura (se reabre primero).
               this.openView(row);
             } else {
               this.openEdit(row);
@@ -846,10 +847,20 @@ export default {
       this.closeRowMenu();
       if (task) this.remove(task);
     },
+    // Pendiente se edita; concluida o cancelada solo se ve (para cambiarla, Reabrir).
     menuEdit() {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
-      if (task) this.openEdit(task);
+      if (!task) return;
+      if (task.status === 'pending') this.openEdit(task);
+      else this.openView(task);
+    },
+    async menuReopen() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (!task) return;
+      await this.saveTask(task, { status: 'pending' });
+      this.fetch();
     },
     // Pasarla a la agenda: con día y hora sale de Tareas (o sesión ligada si no se puede).
     menuSchedule() {
@@ -1787,10 +1798,14 @@ export default {
             variant="clear"
             color-scheme="secondary"
             size="small"
-            icon="edit"
+            :icon="rowMenu.row.status === 'pending' ? 'edit' : 'eye-show'"
             @click="menuEdit"
           >
-            {{ $t('CASE_TICKETS.TASKS.MENU.EDIT') }}
+            {{
+              rowMenu.row.status === 'pending'
+                ? $t('CASE_TICKETS.TASKS.MENU.EDIT')
+                : $t('CASE_TICKETS.TASKS.MENU.VIEW')
+            }}
           </woot-button>
         </WootDropdownItem>
         <WootDropdownItem>
@@ -1802,6 +1817,20 @@ export default {
             @click="menuAddNote"
           >
             {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
+          </woot-button>
+        </WootDropdownItem>
+        <!-- Concluida o cancelada: regresa a pendiente para poder cambiarla. -->
+        <WootDropdownItem
+          v-if="['done', 'cancelled'].includes(rowMenu.row.status)"
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="arrow-clockwise"
+            @click="menuReopen"
+          >
+            {{ $t('CANCEL_ITEM.REOPEN') }}
           </woot-button>
         </WootDropdownItem>
         <!-- Pasar a la agenda: la tarea se convierte en UNA tarea agendada. -->

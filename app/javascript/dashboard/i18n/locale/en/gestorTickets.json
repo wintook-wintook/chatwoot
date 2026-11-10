@@ -787,6 +787,7 @@
         "ADD_MEETING_DONE_HINT": "The task is already completed",
         "VIEW_MEETINGS": "View scheduled tasks",
         "EDIT": "Edit",
+        "VIEW": "View",
         "VIEW_MEETINGS_COUNT": "View scheduled tasks ({count})"
       },
       "ORPHAN_MEETINGS": {

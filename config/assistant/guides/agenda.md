@@ -42,7 +42,10 @@ La Agenda junta todo lo que tienes que hacer: tareas (con fecha, sin hora) y tar
 3. Pulsa «Concluir». El reporte queda en Agenda › Reportes, en la ficha del cliente y, si tiene caso, en su actividad; el tiempo suma a las horas del caso.
 
 ### El menú de cada tarea
-Son los tres puntos ⋮ al final de la fila; siempre se ven, aunque la tabla se mueva de lado. Arriba van las acciones, solo las que se pueden hacer según el estado: «Editar», «Agendar tarea», «Agregar nota», «Pasar a la agenda», «Cancelar…» (o «Reabrir» si está cancelada) y «Eliminar» (solo si la creaste tú en las últimas 24 horas o eres administrador). Abajo de la línea va lo de consultar: «Ver reporte» (concluidas), «Notas de la tarea (N)» y «Ver tareas agendadas (N)». Si no cabe hacia abajo, el menú se abre hacia arriba.
+Son los tres puntos ⋮ al final de la fila; siempre se ven, aunque la tabla se mueva de lado. Arriba van las acciones, solo las que se pueden hacer según el estado:
+- Pendiente: «Editar», «Agendar tarea», «Agregar nota», «Pasar a la agenda», «Cancelar…» y «Eliminar».
+- Concluida o cancelada: «Ver», «Agregar nota», «Reabrir» y «Eliminar». Una tarea concluida o cancelada no se edita: se ve en modo lectura (la cancelada, con su motivo). Para cambiarle algo, primero «Reabrir»: regresa a pendiente y conserva su reporte.
+«Eliminar» solo sale si la creaste tú en las últimas 24 horas o eres administrador. Abajo de la línea va lo de consultar: «Ver reporte» (concluidas), «Notas de la tarea (N)» y «Ver tareas agendadas (N)». Si no cabe hacia abajo, el menú se abre hacia arriba.
 
 ### Cancelar una tarea o tarea agendada
 Cancelar es «ya no se va a hacer»; no es completarla (eso pide el reporte) ni borrarla (eso es solo para errores de captura).

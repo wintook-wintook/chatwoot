@@ -218,7 +218,8 @@ export default {
         bodyRowEvents: ({ row }) => ({
           click: event => {
             if (event.target.closest('button, input, a')) return;
-            if (this.isFrozen) this.openView(row);
+            // Caso cerrado, o tarea concluida/cancelada: solo lectura (se reabre primero).
+            if (this.isFrozen || row.status !== 'pending') this.openView(row);
             else this.openEdit(row);
           },
         }),
@@ -539,10 +540,18 @@ export default {
       if (task) this.remove(task);
     },
     // Cancelar (ya no se va a hacer) o reabrir una cancelada.
+    // Pendiente se edita; concluida o cancelada solo se ve (para cambiarla, Reabrir).
     menuEdit() {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
-      if (task) this.openEdit(task);
+      if (!task) return;
+      if (task.status === 'pending') this.openEdit(task);
+      else this.openView(task);
+    },
+    async menuReopen() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) await this.reopenTask(task);
     },
     // ¿Se puede pasar a la agenda? Pendiente, sin sesiones agendadas, y que no sea
     // obligatoria, de la etapa ni del cliente (esas solo se agendan por sesión).
@@ -914,6 +923,7 @@ export default {
         assignee_id: task.assignee_id || '',
         due_at: this.toInputDate(task.due_at),
         status: task.status || 'pending',
+        cancel_reason: task.cancel_reason || '',
         priority: task.priority || 'medium',
         milestone: !!task.milestone,
         audience: task.audience || 'internal',
@@ -1476,6 +1486,12 @@ export default {
                   {{ $t('CASE_TICKETS.TASKS.STATUS.CANCELLED') }}
                 </option>
               </select>
+              <span
+                v-if="form.status === 'cancelled' && form.cancel_reason"
+                class="block mt-1 text-xs text-slate-500 dark:text-slate-400"
+              >
+                {{ form.cancel_reason }}
+              </span>
             </label>
           </div>
 
@@ -1653,10 +1669,14 @@ export default {
             variant="clear"
             color-scheme="secondary"
             size="small"
-            icon="edit"
+            :icon="rowMenu.row.status === 'pending' ? 'edit' : 'eye-show'"
             @click="menuEdit"
           >
-            {{ $t('CASE_TICKETS.TASKS.MENU.EDIT') }}
+            {{
+              rowMenu.row.status === 'pending'
+                ? $t('CASE_TICKETS.TASKS.MENU.EDIT')
+                : $t('CASE_TICKETS.TASKS.MENU.VIEW')
+            }}
           </woot-button>
         </WootDropdownItem>
         <!-- Agendar: una sesión de trabajo ligada (la tarea se queda; puede tener varias). -->
@@ -1671,17 +1691,6 @@ export default {
             {{ $t('CASE_TICKETS.TASKS.MENU.ADD_MEETING') }}
           </woot-button>
         </WootDropdownItem>
-        <WootDropdownItem v-if="rowMenu.row.status === 'cancelled'">
-          <woot-button
-            variant="clear"
-            color-scheme="secondary"
-            size="small"
-            icon="arrow-clockwise"
-            @click="menuCancelTask"
-          >
-            {{ $t('CANCEL_ITEM.REOPEN') }}
-          </woot-button>
-        </WootDropdownItem>
         <WootDropdownItem>
           <woot-button
             variant="clear"
@@ -1691,6 +1700,20 @@ export default {
             @click="menuAddNote"
           >
             {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
+          </woot-button>
+        </WootDropdownItem>
+        <!-- Concluida o cancelada: regresa a pendiente para poder cambiarla. -->
+        <WootDropdownItem
+          v-if="['done', 'cancelled'].includes(rowMenu.row.status)"
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="arrow-clockwise"
+            @click="menuReopen"
+          >
+            {{ $t('CANCEL_ITEM.REOPEN') }}
           </woot-button>
         </WootDropdownItem>
         <!-- Pasar a la agenda: la tarea se convierte en UNA tarea agendada. -->

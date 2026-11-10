@@ -7,8 +7,31 @@ module CancelAndDeleteGuard
   extend ActiveSupport::Concern
 
   DELETE_WINDOW = 24.hours
+  # Una tarea concluida o cancelada es de solo lectura: solo se reabre (status pending)
+  # o se le mueve el orden en la lista.
+  CLOSED_TASK_KEYS = %w[status position].freeze
 
   private
+
+  # before_action del update de tareas (@task y sus parámetros en task_edit_attrs).
+  def lock_closed_task
+    return unless @task && (@task.done? || @task.cancelled?)
+    return if reopen_only?(task_edit_attrs.stringify_keys)
+
+    render json: { error: I18n.t('cancellation.closed_locked') }, status: :unprocessable_entity
+  end
+
+  def reopen_only?(attrs)
+    attrs['status'].to_s.in?(['', 'pending']) && (attrs.keys - CLOSED_TASK_KEYS).empty?
+  end
+
+  # Lo que se quiere cambiar: el hash case_task (tareas del caso) o los campos sueltos
+  # (tareas rápidas, sin caso).
+  def task_edit_attrs
+    raw = params[:case_task]
+    raw = params.except(:controller, :action, :id, :account_id, :format, :quick_task) unless raw.is_a?(ActionController::Parameters)
+    raw.to_unsafe_h
+  end
 
   # true si ya respondió (no se puede borrar).
   def delete_restricted?(record, creator_id)

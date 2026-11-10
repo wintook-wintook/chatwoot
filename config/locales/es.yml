@@ -183,6 +183,7 @@ es:
       meeting_not_open: 'Solo se pasa a tarea una tarea agendada pendiente y sin salida a la visita.'
       starts_at: 'Elige el día y la hora.'
   cancellation:
+    closed_locked: 'La tarea ya está concluida o cancelada: reábrela para cambiarla.'
     report: 'Cancelada: %{reason}'
     client_message: 'Hola %{name}, te avisamos que cancelamos «%{title}» del %{when}. Cualquier cosa, aquí estamos.'
     delete_restricted: 'Solo se borra lo capturado por error, en las primeras 24 horas y por quien lo creó. Si ya no se va a hacer, cancélala con su motivo.'

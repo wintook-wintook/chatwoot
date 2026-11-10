@@ -198,6 +198,7 @@ en:
       meeting_not_open: 'Only a pending scheduled task with no visit started can become a task.'
       starts_at: 'Pick the day and time.'
   cancellation:
+    closed_locked: 'The task is already done or cancelled: reopen it to change it.'
     report: 'Cancelled: %{reason}'
     client_message: 'Hi %{name}, we cancelled «%{title}» on %{when}. We are here for anything you need.'
     delete_restricted: 'Only mistakes can be deleted, within 24 hours and by whoever created it. If it will not happen, cancel it with its reason.'

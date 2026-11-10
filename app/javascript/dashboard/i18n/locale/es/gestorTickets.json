@@ -790,6 +790,7 @@
         "ADD_MEETING_DONE_HINT": "La tarea ya está concluida",
         "VIEW_MEETINGS": "Ver tareas agendadas",
         "EDIT": "Editar",
+        "VIEW": "Ver",
         "VIEW_MEETINGS_COUNT": "Ver tareas agendadas ({count})"
       },
       "ORPHAN_MEETINGS": {
