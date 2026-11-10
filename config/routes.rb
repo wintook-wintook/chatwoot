@@ -237,6 +237,7 @@ Rails.application.routes.draw do
             resource :ficha, only: [:show, :update], module: :tracking_templates do
               post :apply
               post :activate
+              post :test, action: :test_existing
             end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates

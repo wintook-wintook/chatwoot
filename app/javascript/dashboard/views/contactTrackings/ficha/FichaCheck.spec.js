@@ -4,7 +4,7 @@ import FichaReadiness from './FichaReadiness.vue';
 import FichaAPI from 'dashboard/api/fichaAgente';
 
 vi.mock('dashboard/api/fichaAgente', () => ({
-  default: { test: vi.fn(), testResult: vi.fn() },
+  default: { test: vi.fn(), testExisting: vi.fn(), testResult: vi.fn() },
 }));
 
 const mocks = { $t: clave => clave, $route: { params: { accountId: 2 } } };
@@ -83,15 +83,44 @@ describe('FichaTest', () => {
   it('agregar una frase a una ruta avisa a la pantalla; cambiar algo la deja por repetir', async () => {
     const wrapper = montar();
     wrapper.setData({ result: RESULT, testedPayload: '{"name":"Ventas"}' });
-    wrapper.vm.add(RESULT.real[0], 'calendar:3');
+    wrapper.vm.add(RESULT.real[0], 'agendar');
     expect(wrapper.emitted('addPhrase')[0][0]).toEqual({
       key: 'calendar:3',
+      route: 'agendar',
       phrase: '¿a qué hora abren?',
     });
+    expect(wrapper.vm.failures[0].route).toBe('agendar');
     await wrapper.setProps({
       payload: { name: 'Ventas', phrases: { a: ['b'] } },
     });
     expect(wrapper.vm.stale).toBe(true);
+  });
+});
+
+describe('FichaTest en un agente que ya existe', () => {
+  it('prueba su Entrenamiento y toma las rutas del resultado', async () => {
+    FichaAPI.testExisting.mockResolvedValue({ data: { turn_id: 'x' } });
+    const wrapper = shallowMount(FichaTest, {
+      propsData: { templateId: 7 },
+      mocks,
+    });
+    await wrapper.vm.run();
+    expect(FichaAPI.testExisting).toHaveBeenCalledWith(7, expect.any(String));
+    expect(FichaAPI.test).not.toHaveBeenCalledWith(
+      expect.objectContaining({ template_id: 7 })
+    );
+    wrapper.setData({
+      running: false,
+      result: {
+        ...RESULT,
+        routes: [{ name: 'agendar', key: null, label: 'Agendar' }],
+      },
+    });
+    expect(wrapper.vm.routeList.map(r => r.name)).toEqual(['agendar']);
+    wrapper.vm.add(RESULT.real[0], 'agendar');
+    expect(wrapper.emitted('addPhrase')[0][0]).toMatchObject({
+      route: 'agendar',
+    });
   });
 });
 

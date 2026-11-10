@@ -352,6 +352,7 @@ export default {
             mode="edit"
             :template-data="template"
             :hide-training="isAdmin"
+            :hide-resources="isAdmin"
             @save="onProfileSave"
             @cancel="goBack"
           />

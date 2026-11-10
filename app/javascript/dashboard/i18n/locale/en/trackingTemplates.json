@@ -596,7 +596,9 @@
       "ACTIVATE_NO": "Not yet",
       "ACTIVATED": "Agent activated on its channel.",
       "ACTIVATE_ERROR": "Could not activate.",
-      "TEST_QUOTE": "«{phrase}»"
+      "TEST_QUOTE": "«{phrase}»",
+      "MINUTES": "{count} min",
+      "HOURS": "{count} h"
     }
   }
 }

@@ -14,12 +14,13 @@
 # ================================================================================
 
 class ContactTrackings::Ficha::Tester
-  def initialize(account, draft:, routes:, offers:, inbox: nil)
+  def initialize(account, draft:, routes:, offers:, inbox: nil, from_description: false) # rubocop:disable Metrics/ParameterLists
     @account = account
     @draft = draft
     @routes = routes
     @inbox = inbox
-    @phrases = ContactTrackings::Ficha::TestPhrases.new(account, routes: routes, offers: offers, inbox: inbox).call
+    @phrases = ContactTrackings::Ficha::TestPhrases.new(account, routes: routes, offers: offers, inbox: inbox,
+                                                                 from_description: from_description).call
   end
 
   def call(progress: nil)
@@ -29,7 +30,7 @@ class ContactTrackings::Ficha::Tester
     reales = @phrases[:real].map { |frase| real_result(frase) }
     pruebas = por_ruta.flat_map { |r| r[:results] }
     { total: pruebas.size, passed: pruebas.count { |r| r[:ok] }, per_route: por_ruta, real: reales,
-      default_route: default_route }
+      default_route: default_route, routes: @routes.map { |r| r.slice(:name, :key, :label) } }
   end
 
   private

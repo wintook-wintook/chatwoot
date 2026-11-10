@@ -54,8 +54,18 @@ class FichaAgenteAPI extends ApiClient {
     return axios.patch(`${this.url}/${id}/ficha`, { items, ...extra });
   }
 
-  apply(id, { add = [], remove = [] }) {
-    return axios.post(`${this.url}/${id}/ficha/apply`, { add, remove });
+  // phrases: { ruta: [frases] } — se suman a la descripción de esa ruta.
+  apply(id, { add = [], remove = [], phrases = {} }) {
+    return axios.post(`${this.url}/${id}/ficha/apply`, {
+      add,
+      remove,
+      phrases,
+    });
+  }
+
+  // Probar un agente que ya existe (su Entrenamiento guardado).
+  testExisting(id, turnId) {
+    return axios.post(`${this.url}/${id}/ficha/test`, { turn_id: turnId });
   }
 }
 

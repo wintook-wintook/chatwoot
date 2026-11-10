@@ -21,7 +21,11 @@ class ContactTrackings::Ficha::TestPhrases
   REAL_LIMIT = 6
   KEY_RE = /\{\{\s*hoja_buscar:\s*[^|]+\|\s*([^=|]+?)\s*=\s*\?\s*\|\s*([^}]+)\}\}/
 
-  def initialize(account, routes:, offers:, inbox: nil)
+  # from_description: un agente escrito a mano: sus descripciones ya están en palabras del
+  # cliente (y dos rutas pueden usar el mismo recurso para cosas distintas, p. ej. agendar
+  # consulta y vacunación): se prueba con ellas; el recurso solo si la ruta no describe nada.
+  def initialize(account, routes:, offers:, inbox: nil, from_description: false)
+    @from_description = from_description
     @account = account
     @routes = routes
     @offers = offers.index_by { |o| o[:key].to_s }
@@ -37,9 +41,9 @@ class ContactTrackings::Ficha::TestPhrases
 
   def route_entry(ruta)
     oferta = @offers[ruta[:key].to_s]
-    return nil if oferta.nil?
-
-    frases = phrases_for(oferta).map { |f| f.to_s.squish }.compact_blank.uniq.first(PER_ROUTE)
+    frases = described_phrases(ruta) if @from_description || oferta.nil?
+    frases = phrases_for(oferta) if frases.blank? && oferta
+    frases = frases.map { |f| f.to_s.squish }.compact_blank.uniq.first(PER_ROUTE)
     frases.any? ? { route: ruta[:name], key: ruta[:key], label: ruta[:label], phrases: frases } : nil
   end
 
@@ -61,6 +65,14 @@ class ContactTrackings::Ficha::TestPhrases
     Array(FIXED[oferta[:kind]]).map do |plantilla|
       format(plantilla, nombre: oferta[:name].to_s.downcase, tema: oferta[:topic].to_s.downcase)
     end
+  end
+
+  # Una ruta escrita a mano que no usa ningún recurso: sus propias situaciones
+  # (ProbePhrases, lo mismo que la comprobación del Asistente).
+  def described_phrases(ruta)
+    return [] if ruta[:description].blank?
+
+    ContactTrackings::Assistant::ProbePhrases.for(Struct.new(:description).new(ruta[:description]), limit: PER_ROUTE)
   end
 
   def topic_phrases(oferta)

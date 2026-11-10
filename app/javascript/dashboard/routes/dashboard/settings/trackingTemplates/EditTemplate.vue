@@ -48,6 +48,12 @@ export default {
     // feat/agentes_ia_unificado: en el espacio del agente, el Entrenamiento de un
     // admin se edita en su sección (borrador + versiones). Aquí no se muestra ni se
     // manda: guardar la ficha nunca pisa con texto viejo lo publicado allá.
+    // feat/ficha_agente_ia: dentro del espacio del agente, Reglas, Agendas y Archivos
+    // viven en Recursos; aquí se esconden.
+    hideResources: {
+      type: Boolean,
+      default: false,
+    },
     hideTraining: {
       type: Boolean,
       default: false,
@@ -345,7 +351,11 @@ export default {
     // woot-tabs numera por POSICIÓN: sin la pestaña Entrenamiento, la posición 1 es
     // Reglas. Esto traduce posición ↔ panel (activeContextTab sigue siendo el panel).
     contextPanels() {
-      return this.hideTraining ? [0, 2, 3, 4] : [0, 1, 2, 3, 4];
+      return [0, 1, 2, 3, 4].filter(
+        panel =>
+          !(this.hideTraining && panel === 1) &&
+          !(this.hideResources && panel >= 2)
+      );
     },
     activeContextPosition() {
       return Math.max(0, this.contextPanels.indexOf(this.activeContextTab));
@@ -1373,9 +1383,11 @@ export default {
               name="Entrenamiento *"
               :show-badge="false"
             />
-            <woot-tabs-item name="Reglas" :show-badge="false" />
-            <woot-tabs-item name="Agendas" :show-badge="false" />
-            <woot-tabs-item name="Archivos" :show-badge="false" />
+            <template v-if="!hideResources">
+              <woot-tabs-item name="Reglas" :show-badge="false" />
+              <woot-tabs-item name="Agendas" :show-badge="false" />
+              <woot-tabs-item name="Archivos" :show-badge="false" />
+            </template>
           </woot-tabs>
           <div class="flex items-center gap-2 pb-2 pl-2 shrink-0">
             <!-- proyecto@contact_tracking: insertar directiva (@buscar_..., @discourse, etc.) -->

@@ -596,7 +596,9 @@
       "ACTIVATE_NO": "Todavía no",
       "ACTIVATED": "Agente activado en su canal.",
       "ACTIVATE_ERROR": "No se pudo activar.",
-      "TEST_QUOTE": "«{phrase}»"
+      "TEST_QUOTE": "«{phrase}»",
+      "MINUTES": "{count} min",
+      "HOURS": "{count} h"
     }
   },
   "TRACKING_IMPORT": {

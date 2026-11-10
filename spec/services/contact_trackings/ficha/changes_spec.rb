@@ -72,4 +72,22 @@ RSpec.describe ContactTrackings::Ficha::Changes do
     expect(items).to eq([{ 'key' => 'canned_response' }])
     expect(described_class.new(sin_grupo.reload).call).to include(added: [], removed: [])
   end
+
+  it 'para probar: cada ruta con el recurso que usa (o sin recurso)' do
+    otra = create(:tracking_template, account: account,
+                                      complementary_prompt: "#{prompt}\n@ruta(urgencias #urgencia: se cayó, no respira): - -> @crear_ticket\n")
+    rutas = described_class.new(otra).test_routes.index_by { |r| r[:name] }
+
+    expect(rutas['consultar_precios']).to include(key: "google_sheet:#{hoja.id}", kind: 'sheet')
+    expect(rutas['urgencias']).to include(key: nil, description: 'se cayó, no respira', label: 'Urgencias')
+  end
+
+  it 'el editor suma una frase de cliente a la descripción de una ruta, una sola vez' do
+    texto = ContactTrackings::Ficha::PromptEditor.new(prompt).add_phrase('consultar_precios', '¿cuánto (aprox) cuesta?')
+                                                 .add_phrase('consultar_precios', '¿cuánto aprox cuesta?').text
+
+    expect(texto).to include('@ruta(consultar_precios #precios: pregunta por servicio, zona, precio, ¿cuánto aprox cuesta?): {{hoja:Precios}}')
+    expect(texto.scan('¿cuánto aprox cuesta?').size).to eq(1)
+    expect(ContactTrackings::Assistant::ValidatorService.new(texto, account: account).call[:blocking]).to eq([])
+  end
 end

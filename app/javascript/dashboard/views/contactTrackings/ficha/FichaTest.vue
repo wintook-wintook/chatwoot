@@ -18,7 +18,9 @@ const MAX_POLLS = 120;
 
 export default {
   props: {
-    payload: { type: Object, required: true },
+    payload: { type: Object, default: () => ({}) },
+    // Un agente que ya existe: se prueba su Entrenamiento guardado.
+    templateId: { type: Number, default: null },
     // Las rutas del Entrenamiento generado: [{ name, key, label }]
     routes: { type: Array, default: () => [] },
     disabled: { type: Boolean, default: false },
@@ -43,7 +45,12 @@ export default {
       return (this.result.per_route || []).flatMap(ruta =>
         (ruta.results || [])
           .filter(item => !item.ok)
-          .map(item => ({ ...item, key: ruta.key, label: ruta.label }))
+          .map(item => ({
+            ...item,
+            key: ruta.key,
+            route: ruta.route,
+            label: ruta.label,
+          }))
       );
     },
     fallbacks() {
@@ -55,6 +62,12 @@ export default {
       return ((this.result && this.result.real) || []).filter(
         item => !item.fallback
       );
+    },
+    // Las rutas para elegir: las que pasa la pantalla o, en un agente que ya existe, las
+    // que regresa la prueba.
+    routeList() {
+      if (this.routes.length) return this.routes;
+      return (this.result && this.result.routes) || [];
     },
     allPassed() {
       return this.result && this.result.passed === this.result.total;
@@ -89,7 +102,9 @@ export default {
       this.testedPayload = JSON.stringify(this.payload);
       try {
         const turnId = `ficha-${Date.now()}`;
-        await FichaAPI.test({ ...this.payload, turn_id: turnId });
+        if (this.templateId)
+          await FichaAPI.testExisting(this.templateId, turnId);
+        else await FichaAPI.test({ ...this.payload, turn_id: turnId });
         this.poll(turnId);
       } catch (error) {
         this.running = false;
@@ -124,11 +139,17 @@ export default {
       this.$emit('result', resultado);
     },
     routeOf(name) {
-      return this.routes.find(ruta => ruta.name === name);
+      return this.routeList.find(ruta => ruta.name === name);
     },
-    add(item, key) {
-      if (!key) return;
-      this.$emit('addPhrase', { key, phrase: item.phrase });
+    // Emite la ruta (agente existente) y la llave del recurso (agente nuevo).
+    add(item, routeName) {
+      const ruta = this.routeOf(routeName);
+      if (!ruta) return;
+      this.$emit('addPhrase', {
+        key: ruta.key,
+        route: ruta.name,
+        phrase: item.phrase,
+      });
     },
   },
 };
@@ -145,7 +166,7 @@ export default {
         variant="smooth"
         icon="arrow-clockwise"
         :is-loading="running"
-        :is-disabled="disabled || running || !routes.length"
+        :is-disabled="disabled || running || (!templateId && !routes.length)"
         @click="run"
       >
         {{
@@ -206,7 +227,7 @@ export default {
             variant="clear"
             icon="add"
             class="self-start"
-            @click="add(item, item.key)"
+            @click="add(item, item.route)"
           >
             {{
               $t('TRACKING_TEMPLATES.FICHA.TEST_ADD_TO', { route: item.label })
@@ -234,7 +255,11 @@ export default {
               <option :value="undefined">
                 {{ $t('TRACKING_TEMPLATES.FICHA.TEST_SEND_TO') }}
               </option>
-              <option v-for="ruta in routes" :key="ruta.name" :value="ruta.key">
+              <option
+                v-for="ruta in routeList"
+                :key="ruta.name"
+                :value="ruta.name"
+              >
                 {{ ruta.label }}
               </option>
             </select>

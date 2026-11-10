@@ -37,6 +37,18 @@ class ContactTrackings::Ficha::Changes
 
   def confirmed? = resources['confirmed_at'].present?
 
+  # Para probar un agente que ya existe (Ficha::Tester): cada @ruta con el recurso que usa
+  # (o sin recurso: entonces se prueba con frases de su descripción).
+  def test_routes
+    routes.map do |ruta|
+      oferta = all_offers.find { |o| o[:kind] != 'file' && uses?(ruta[:target], o, loose: false) }
+      { name: ruta[:name], key: oferta&.dig(:key), kind: oferta&.dig(:kind), description: ruta[:description],
+        label: ruta[:name].tr('_-', '  ').squish.capitalize }
+    end
+  end
+
+  def test_offers = all_offers
+
   # Una línea por cambio, para el chat del Asistente (que lo mencione).
   def chat_lines
     return [] unless confirmed? && any?
@@ -59,7 +71,7 @@ class ContactTrackings::Ficha::Changes
   def routes
     @routes ||= prompt.lines.filter_map do |linea|
       m = linea.match(LINE_RE)
-      { name: m[1], target: m[4].to_s } if m
+      { name: m[1], description: m[3].to_s.strip, target: m[4].to_s } if m
     end
   end
 

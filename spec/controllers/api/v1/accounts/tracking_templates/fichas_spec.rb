@@ -93,6 +93,34 @@ RSpec.describe 'Ficha del Agente IA API', type: :request do
     expect(response.parsed_body['readiness'].find { |i| i['key'] == 'assignment' }['status']).to eq('ok')
   end
 
+  it 'probar un agente que ya existe y sumar una frase a una de sus rutas' do
+    template = create(:tracking_template, account: account, complementary_prompt: "@ruta(info #info: pregunta algo): @buscar_articulo\n")
+    post "#{base}/#{template.id}/ficha/test", params: { turn_id: 'ficha-existe1' }, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:accepted)
+    expect(ContactTrackings::Ficha::TestJob).to have_been_enqueued.with(account.id, admin.id, 'ficha-existe1', { 'template_id' => template.id })
+
+    post "#{base}/#{template.id}/ficha/apply", params: { phrases: { info: ['¿abren hoy?'] } }, headers: admin.create_new_auth_token, as: :json
+    expect(template.reload.complementary_prompt).to include('@ruta(info #info: pregunta algo, ¿abren hoy?): @buscar_articulo')
+  end
+
+  it 'la Agenda se guarda al crear y con la ficha (solo calendarios de agendas marcadas)' do
+    integracion = UserCalendarIntegration.create!(account: account, user: admin, google_email: 'a@x.com',
+                                                  tokens: { 'access_token' => 't', 'refresh_token' => 'r' })
+    agenda = { calendar_event_duration: 60, timezone: 'America/Mexico_City', slots_presentation: 'simple',
+               booking_calendar_ids: { integracion.id.to_s => ['citas@group'], '999' => ['ajeno'] } }
+    post "#{base}/ficha_create", params: { name: 'Citas', items: items + [{ key: "calendar:#{integracion.id}" }], agenda: agenda },
+                                 headers: admin.create_new_auth_token, as: :json
+    creado = account.tracking_templates.find(response.parsed_body['id'])
+    expect(creado).to have_attributes(calendar_event_duration: 60, timezone: 'America/Mexico_City', slots_presentation: 'simple',
+                                      calendar_integration_ids: [integracion.id])
+    expect(creado.booking_calendar_ids).to eq(integracion.id.to_s => ['citas@group'])
+
+    patch "#{base}/#{creado.id}/ficha", params: { items: items, agenda: { calendar_event_duration: 30 } },
+                                        headers: admin.create_new_auth_token, as: :json
+    expect(creado.reload.calendar_event_duration).to eq(30)
+    expect(response.parsed_body['agenda']['calendar_event_duration']).to eq(30)
+  end
+
   it 'las Reglas se guardan al crear y con la ficha' do
     regla = { keyword: 'asesor', action: ContactTrackings::KeywordActionService::VALID_ACTIONS.first,
               direction: ContactTrackings::KeywordActionService::VALID_DIRECTIONS.first }

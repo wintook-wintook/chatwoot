@@ -236,6 +236,12 @@ describe('FichaWizard', () => {
     wrapper.setData({ inboxId: 5 });
     expect(wrapper.vm.payload.activate).toBe(true);
     expect(wrapper.vm.testPayload.activate).toBeUndefined();
+    expect(wrapper.vm.payload.agenda).toBeNull();
+    wrapper.setData({ items: [{ key: 'calendar:3' }] });
+    expect(wrapper.vm.calendarIds).toEqual([3]);
+    expect(wrapper.vm.payload.agenda).toMatchObject({
+      calendar_event_duration: 30,
+    });
   });
 
   it('no deja crear si el comprobador encuentra errores', async () => {
@@ -299,8 +305,19 @@ describe('AgentFicha', () => {
     expect(FichaAPI.save).toHaveBeenCalledWith(
       7,
       [{ key: 'google_sheet:1' }, { key: 'file:9' }],
-      { keyword_actions: [] }
+      { keyword_actions: [], agenda: {} }
     );
+  });
+
+  it('una frase de la prueba se suma a esa ruta del Entrenamiento', async () => {
+    const wrapper = montar();
+    await esperar();
+    wrapper.vm.addPhrase({ route: 'agendar', phrase: '¿hay lugar?' });
+    expect(FichaAPI.apply).toHaveBeenLastCalledWith(7, {
+      add: [],
+      remove: [],
+      phrases: { agendar: ['¿hay lugar?'] },
+    });
   });
 
   it('activar pide confirmación y, con OK, crea la automatización', async () => {
@@ -334,6 +351,7 @@ describe('AgentFicha', () => {
     await wrapper.vm.save();
     expect(FichaAPI.save).toHaveBeenLastCalledWith(7, DATA.items, {
       keyword_actions: [],
+      agenda: {},
     });
   });
 
@@ -356,7 +374,7 @@ describe('AgentFicha', () => {
     expect(FichaAPI.save).toHaveBeenCalledWith(
       7,
       [{ key: 'google_sheet:1' }, { key: 'calendar:3' }],
-      { keyword_actions: [] }
+      { keyword_actions: [], agenda: {} }
     );
   });
 
@@ -368,6 +386,7 @@ describe('AgentFicha', () => {
     expect(FichaAPI.apply).toHaveBeenCalledWith(7, {
       add: ['google_sheet:1'],
       remove: ['agendar'],
+      phrases: {},
     });
     expect(wrapper.emitted('applied')).toBeTruthy();
   });

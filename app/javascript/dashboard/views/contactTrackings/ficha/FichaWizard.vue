@@ -26,6 +26,7 @@ import FichaNav from './FichaNav.vue';
 import FichaFiles from './FichaFiles.vue';
 import FichaTest from './FichaTest.vue';
 import FichaReadiness from './FichaReadiness.vue';
+import FichaAgenda from './FichaAgenda.vue';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 
 const SECTIONS = ['sources', 'calendar', 'tickets', 'files', 'rules'];
@@ -48,6 +49,7 @@ export default {
     FichaFiles,
     FichaTest,
     FichaReadiness,
+    FichaAgenda,
     KeywordActionsEditor,
   },
   props: {
@@ -72,6 +74,13 @@ export default {
       keywordActions: [],
       // Frases de cliente agregadas a una ruta desde la prueba: { oferta: [frases] }.
       phrases: {},
+      // Recursos › Agenda: duración, zona, presentación y calendarios donde aparta.
+      agenda: {
+        calendar_event_duration: 30,
+        timezone: '',
+        slots_presentation: 'detailed',
+        booking_calendar_ids: {},
+      },
       // Activarlo en su canal al crearlo (crea la automatización).
       activateOnCreate: false,
       skip: [],
@@ -135,6 +144,13 @@ export default {
     validation() {
       return (this.preview && this.preview.validation) || {};
     },
+    // Las agendas marcadas (calendar:N → N).
+    calendarIds() {
+      return this.items
+        .map(item => (item.key.match(/^calendar:(\d+)$/) || [])[1])
+        .filter(Boolean)
+        .map(Number);
+    },
     readiness() {
       return (this.preview && this.preview.readiness) || [];
     },
@@ -188,6 +204,7 @@ export default {
         files: this.files.map(file => ({ name: file.name })),
         keyword_actions: this.keywordActions,
         phrases: this.phrases,
+        agenda: this.calendarIds.length ? this.agenda : null,
         activate: this.activateOnCreate && !!this.inboxId,
         skip: this.skip,
         tone: this.tone,
@@ -442,6 +459,12 @@ export default {
             :cards="cards"
             :only="['calendar']"
             :show-headers="false"
+          />
+          <FichaAgenda
+            v-if="calendarIds.length"
+            v-model="agenda"
+            class="pt-3 border-t border-slate-100 dark:border-slate-700"
+            :integration-ids="calendarIds"
           />
         </div>
         <div

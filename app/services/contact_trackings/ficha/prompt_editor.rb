@@ -33,6 +33,24 @@ class ContactTrackings::Ficha::PromptEditor
     self
   end
 
+  # Suma una frase de cliente a la descripción de una ruta (lo que mira el clasificador).
+  def add_phrase(nombre, frase)
+    texto = frase.to_s.tr('()', '  ').squish
+    return self if texto.blank?
+
+    @lines.map! do |linea|
+      m = linea.match(LINE_RE)
+      next linea unless m && m[1].casecmp?(nombre)
+      next linea if m[3].to_s.downcase.include?(texto.downcase)
+
+      sangria = linea[/\A[ \t]*/]
+      etiqueta = m[2] ? " ##{m[2]}" : ''
+      descripcion = [m[3].to_s.strip.presence, texto].compact.join(', ')
+      "#{sangria}@ruta(#{m[1]}#{etiqueta}: #{descripcion}): #{m[4]}"
+    end
+    self
+  end
+
   def remove(nombre)
     etiqueta = nil
     @lines.reject! do |linea|

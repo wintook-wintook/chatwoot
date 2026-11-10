@@ -19,6 +19,8 @@ import FichaCards, { GROUPS } from './FichaCards.vue';
 import FichaNav from './FichaNav.vue';
 import FichaFiles from './FichaFiles.vue';
 import FichaReadiness from './FichaReadiness.vue';
+import FichaAgenda from './FichaAgenda.vue';
+import FichaTest from './FichaTest.vue';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 
 const SECTIONS = ['sources', 'calendar', 'tickets', 'files', 'rules'];
@@ -38,6 +40,8 @@ export default {
     FichaNav,
     FichaFiles,
     FichaReadiness,
+    FichaAgenda,
+    FichaTest,
     KeywordActionsEditor,
   },
   props: {
@@ -57,6 +61,9 @@ export default {
       query: '',
       kind: '',
       readiness: [],
+      // Recursos › Agenda (se guarda con la ficha).
+      agenda: {},
+      savedAgenda: {},
       activating: false,
       loading: true,
       busy: false,
@@ -66,7 +73,8 @@ export default {
     dirty() {
       return (
         JSON.stringify(this.items) !== JSON.stringify(this.saved) ||
-        JSON.stringify(this.rules) !== JSON.stringify(this.savedRules)
+        JSON.stringify(this.rules) !== JSON.stringify(this.savedRules) ||
+        JSON.stringify(this.agenda) !== JSON.stringify(this.savedAgenda)
       );
     },
     pending() {
@@ -130,6 +138,8 @@ export default {
       this.savedRules = copy(data.keyword_actions);
       this.changes = data.changes || this.changes;
       this.readiness = data.readiness || [];
+      this.agenda = { ...(data.agenda || {}) };
+      this.savedAgenda = { ...(data.agenda || {}) };
       this.$emit(
         'changes',
         this.changes.added.length + this.changes.removed.length
@@ -151,6 +161,7 @@ export default {
       try {
         const { data } = await FichaAPI.save(this.templateId, items, {
           keyword_actions: this.rules,
+          agenda: this.agenda,
         });
         this.take(data);
         useAlert(this.t('SAVED'));
@@ -168,10 +179,14 @@ export default {
         : [...this.saved, { key: llave }];
       this.save(marcadas);
     },
-    async apply({ add = [], remove = [] }) {
+    async apply({ add = [], remove = [], phrases = {} }) {
       this.busy = true;
       try {
-        const { data } = await FichaAPI.apply(this.templateId, { add, remove });
+        const { data } = await FichaAPI.apply(this.templateId, {
+          add,
+          remove,
+          phrases,
+        });
         this.take(data);
         useAlert(this.t('APPLIED'));
         this.$emit('applied');
@@ -181,6 +196,17 @@ export default {
       } finally {
         this.busy = false;
       }
+    },
+    calendarIds() {
+      return this.items
+        .map(item => (item.key.match(/^calendar:(\d+)$/) || [])[1])
+        .filter(Boolean)
+        .map(Number);
+    },
+    // Desde la prueba: la frase se suma a la descripción de esa ruta del Entrenamiento.
+    addPhrase({ route, phrase }) {
+      if (!route) return;
+      this.apply({ phrases: { [route]: [phrase] } });
     },
     hasChannel() {
       return this.readiness.some(
@@ -318,6 +344,13 @@ export default {
                 :disabled="busy"
                 :show-headers="false"
               />
+              <FichaAgenda
+                v-if="section === 'calendar' && calendarIds().length"
+                v-model="agenda"
+                class="pt-3 border-t border-slate-100 dark:border-slate-700"
+                :integration-ids="calendarIds()"
+                :disabled="busy"
+              />
             </template>
           </div>
         </div>
@@ -417,6 +450,12 @@ export default {
             </woot-button>
           </template>
 
+          <FichaTest
+            class="pt-3 border-t border-slate-200 dark:border-slate-700"
+            :template-id="templateId"
+            :disabled="busy"
+            @addPhrase="addPhrase"
+          />
           <FichaReadiness
             v-if="readiness.length"
             class="pt-3 border-t border-slate-200 dark:border-slate-700"
