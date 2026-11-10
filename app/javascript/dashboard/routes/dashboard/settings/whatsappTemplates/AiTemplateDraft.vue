@@ -1,5 +1,5 @@
 <!--
-  «Crear con IA» — el usuario dice qué quiere lograr y el asistente llena el formulario:
+  «Crear con Dali» — el usuario dice qué quiere lograr y el asistente llena el formulario:
   nombre estructurado, categoría (con su porqué), encabezado, cuerpo, pie, botones de
   respuesta rápida y ejemplos (Whatsapp::TemplateDrafter). No guarda ni llama a Meta, y el
   canal lo sigue eligiendo el usuario. «Otra propuesta» y «Ajustar» parten de lo que ya
@@ -20,14 +20,6 @@ export default {
     current: { type: Object, default: null },
   },
   emits: ['apply'],
-  computed: {
-    // Las variables que se llenan al enviar, escritas como en el mensaje.
-    manualList() {
-      const open = String.fromCharCode(123, 123);
-      const close = String.fromCharCode(125, 125);
-      return this.manual.map(v => `${open}${v}${close}`).join(', ');
-    },
-  },
   data() {
     return {
       open: true,
@@ -42,6 +34,14 @@ export default {
       proposed: false,
       tones: TONES,
     };
+  },
+  computed: {
+    // Las variables que se llenan al enviar, escritas como en el mensaje.
+    manualList() {
+      const open = String.fromCharCode(123, 123);
+      const close = String.fromCharCode(125, 125);
+      return this.manual.map(v => `${open}${v}${close}`).join(', ');
+    },
   },
   methods: {
     t(key, params) {

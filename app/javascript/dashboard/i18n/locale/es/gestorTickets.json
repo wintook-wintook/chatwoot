@@ -601,7 +601,7 @@
       "CONTACT_NOTES": "Notas del Contacto",
       "TASKS": "Tareas",
       "JOURNEY": "Avance",
-      "AI": "Asistente IA",
+      "AI": "Dali",
       "MEETINGS": "Tareas agendadas",
       "CONCEPTS": "Reporte de servicio",
       "PROJECT": "Proyecto",
@@ -866,14 +866,14 @@
         "PLAN_TIME": "≈ {time}",
         "PLAN_OVERLOAD": "≈ {time} · más de 8 h",
         "AI": {
-          "BUTTON": "Plan de mi día (IA)",
+          "BUTTON": "Plan de mi día con Dali",
           "TITLE": "Plan de mi día",
           "LOADING": "Armando tu plan…",
           "REGENERATE": "Volver a generar",
           "CLOSE": "Cerrar",
           "LATER": "Puede esperar a mañana",
           "ERROR": "No se pudo generar el plan.",
-          "DISCLAIMER": "Sugerencia de IA: no cambia tu orden. Revísala antes de seguirla."
+          "DISCLAIMER": "Sugerencia de Dali: no cambia tu orden. Revísala antes de seguirla."
         },
         "NOTICES": {
           "BUTTON": "Tienes {count} avisos importantes",
@@ -1243,7 +1243,7 @@
       "FIX": "Corregir ortografía",
       "IMPROVE": "Mejorar escritura",
       "REVERT": "Volver al original",
-      "ERROR": "No se pudo procesar el texto con IA. Inténtalo de nuevo.",
+      "ERROR": "Dali no pudo procesar el texto. Inténtalo de nuevo.",
       "TITLE": "Inteligencia Artificial",
       "BACK": "Volver",
       "SAVE": "Guardar",
@@ -1324,7 +1324,7 @@
         "SUMMARY_LABEL": "Resumen",
         "ROOT_CAUSE_LABEL": "Causa raíz",
         "SOLUTION_LABEL": "Solución sugerida",
-        "SUGGEST_CLOSE": "Sugerir con IA",
+        "SUGGEST_CLOSE": "Sugerir con Dali",
         "ERROR": "No se pudo generar el resumen"
       },
       "DUPLICATE": {
@@ -1767,7 +1767,7 @@
       "article_generated": "Artículo KB generado",
       "ai_classified": "Clasificado por IA",
       "ai_suggested": "Clasificación sugerida por IA",
-      "ai_followup": "Seguimiento redactado por IA",
+      "ai_followup": "Seguimiento redactado por Dali",
       "reassigned": "Reasignado",
       "escalated": "Escalado",
       "message_received": "Mensaje recibido",
@@ -2768,11 +2768,11 @@
         "TITLE": "Explícame la semana",
         "EXPLAIN": "Explícame la semana",
         "AGAIN": "Volver a explicar",
-        "HINT": "La IA te cuenta en 30 segundos cómo va el negocio, qué preocupa y qué harías hoy, con las cifras de esta pantalla.",
+        "HINT": "Dali te cuenta en 30 segundos cómo va el negocio, qué preocupa y qué harías hoy, con las cifras de esta pantalla.",
         "good": "Va bien",
         "watch": "Preocupa",
         "today": "Hoy haría",
-        "DISCLAIMER": "Generado con IA a partir de estas cifras; revísalo antes de decidir.",
+        "DISCLAIMER": "Lo escribió Dali con estas cifras; revísalo antes de decidir.",
         "ERROR": "No se pudo generar la explicación."
       },
       "SALES": {
@@ -2857,7 +2857,7 @@
         "line": "LINE"
       },
       "ANALYSIS": {
-        "TITLE": "Análisis de conversaciones con IA",
+        "TITLE": "Análisis de conversaciones con Dali",
         "DESCRIPTION": "Lee una muestra de hasta 150 conversaciones del período y encuentra de qué hablan, clientes molestos, ventas que se escapan y quejas que se repiten. Cuesta tokens: se hace a pedido.",
         "SAMPLE": "Muestra analizada: {count} conversaciones",
         "EMPTY": "No hay conversaciones en el período para analizar.",
@@ -2866,7 +2866,7 @@
         "complaints": "Quejas que se repiten",
         "lost_sales": "Ventas que se escapan (sin oportunidad)",
         "upset": "Clientes molestos",
-        "DISCLAIMER": "Generado con IA sobre una muestra; revisa las conversaciones antes de actuar.",
+        "DISCLAIMER": "Lo escribió Dali sobre una muestra; revisa las conversaciones antes de actuar.",
         "ERROR": "No se pudo analizar."
       }
     },

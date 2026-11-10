@@ -53,7 +53,7 @@
     },
     "WHATSAPP_TEMPLATE_EDITOR": {
       "AI": {
-        "TITLE": "Create with AI",
+        "TITLE": "Create with Dali",
         "GOAL": "What do you want to achieve with this template?",
         "GOAL_PLACEHOLDER": "E.g.: remind the customer their quote expires in 3 days and to reply if they have questions",
         "TONES": {

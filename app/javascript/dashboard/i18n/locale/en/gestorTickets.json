@@ -598,7 +598,7 @@
       "CONTACT_NOTES": "Contact Notes",
       "TASKS": "Tasks",
       "JOURNEY": "Progress",
-      "AI": "AI assistant",
+      "AI": "Dali",
       "MEETINGS": "Scheduled tasks",
       "CONCEPTS": "Service report",
       "PROJECT": "Project",
@@ -863,14 +863,14 @@
         "PLAN_TIME": "≈ {time}",
         "PLAN_OVERLOAD": "≈ {time} · over 8 h",
         "AI": {
-          "BUTTON": "Plan my day (AI)",
+          "BUTTON": "My day plan with Dali",
           "TITLE": "My day plan",
           "LOADING": "Building your plan…",
           "REGENERATE": "Regenerate",
           "CLOSE": "Close",
           "LATER": "Can wait until tomorrow",
           "ERROR": "Could not build the plan.",
-          "DISCLAIMER": "AI suggestion: it does not change your order. Review it before following it."
+          "DISCLAIMER": "Dali suggestion: it does not change your order. Review it before following it."
         },
         "NOTICES": {
           "BUTTON": "You have {count} important notices",
@@ -1240,7 +1240,7 @@
       "FIX": "Fix spelling",
       "IMPROVE": "Improve writing",
       "REVERT": "Back to original",
-      "ERROR": "Could not process the text with AI. Please try again.",
+      "ERROR": "Could not process the text with Dali. Please try again.",
       "TITLE": "Artificial Intelligence",
       "BACK": "Back",
       "SAVE": "Save",
@@ -1321,7 +1321,7 @@
         "SUMMARY_LABEL": "Summary",
         "ROOT_CAUSE_LABEL": "Root cause",
         "SOLUTION_LABEL": "Suggested solution",
-        "SUGGEST_CLOSE": "Suggest with AI",
+        "SUGGEST_CLOSE": "Suggest with Dali",
         "ERROR": "Could not generate the summary"
       },
       "DUPLICATE": {
@@ -1669,7 +1669,7 @@
       "article_generated": "KB article generated",
       "ai_classified": "Classified by AI",
       "ai_suggested": "Classification suggested by AI",
-      "ai_followup": "Follow-up drafted by AI",
+      "ai_followup": "Follow-up drafted by Dali",
       "reassigned": "Reassigned",
       "escalated": "Escalated",
       "message_received": "Message received",
@@ -2757,11 +2757,11 @@
         "TITLE": "Explain my week",
         "EXPLAIN": "Explain my week",
         "AGAIN": "Explain again",
-        "HINT": "AI tells you in 30 seconds how the business is doing, what's worrying and what to do today, using this screen's figures.",
+        "HINT": "Dali tells you in 30 seconds how the business is doing, what's worrying and what to do today, using this screen's figures.",
         "good": "Going well",
         "watch": "Worrying",
         "today": "Today I'd do",
-        "DISCLAIMER": "AI-generated from these figures; review before deciding.",
+        "DISCLAIMER": "Dali-generated from these figures; review before deciding.",
         "ERROR": "Could not generate the explanation."
       },
       "SALES": {
@@ -2846,7 +2846,7 @@
         "line": "LINE"
       },
       "ANALYSIS": {
-        "TITLE": "AI conversation analysis",
+        "TITLE": "Conversation analysis with Dali",
         "DESCRIPTION": "Reads a sample of up to 150 conversations from the period and finds topics, upset customers, missed sales and repeated complaints. Costs tokens: on demand.",
         "SAMPLE": "Sample analyzed: {count} conversations",
         "EMPTY": "No conversations in the period to analyze.",
@@ -2855,7 +2855,7 @@
         "complaints": "Repeated complaints",
         "lost_sales": "Missed sales (no opportunity)",
         "upset": "Upset customers",
-        "DISCLAIMER": "AI-generated from a sample; review the conversations before acting.",
+        "DISCLAIMER": "Dali-generated from a sample; review the conversations before acting.",
         "ERROR": "Could not analyze."
       }
     },

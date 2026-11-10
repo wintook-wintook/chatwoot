@@ -53,7 +53,7 @@
     },
     "WHATSAPP_TEMPLATE_EDITOR": {
       "AI": {
-        "TITLE": "Crear con IA",
+        "TITLE": "Crear con Dali",
         "GOAL": "¿Qué quieres lograr con esta plantilla?",
         "GOAL_PLACEHOLDER": "Ej.: recordarle al cliente que su cotización vence en 3 días y que me conteste si tiene dudas",
         "TONES": {
