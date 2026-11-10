@@ -1535,11 +1535,11 @@ export default {
         />
 
         <form
-          class="flex flex-col self-stretch w-full gap-3 pb-8"
+          class="task-form flex flex-col self-stretch w-full gap-2.5 pb-6"
           @submit.prevent="submitForm()"
         >
-          <label class="block mb-3">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <label class="block">
+            <span class="field-label">{{
               $t('CASE_TICKETS.TASKS.MODAL.TITLE_LABEL')
             }}</span>
             <input
@@ -1555,9 +1555,9 @@ export default {
 
           <!-- Solicitante + Responsable (editable). El solicitante es fijo si la
                tarea ya lo tiene; si no (tarea antigua), se elige de la lista. -->
-          <div class="flex gap-3 mb-3">
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.REQUESTER_LABEL')
               }}</span>
               <input
@@ -1577,8 +1577,8 @@ export default {
               </select>
             </label>
 
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.ASSIGNEE_LABEL')
               }}</span>
               <select v-model="form.assignee_id" :disabled="viewing">
@@ -1594,8 +1594,8 @@ export default {
 
           <!-- Contenedor <div>, NO <label>: el editor lleva un <input type=file>
                oculto y un <label> reenviaría el click a "adjuntar archivo". -->
-          <div class="block mb-3">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <div class="block">
+            <span class="field-label">{{
               $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_LABEL')
             }}</span>
             <div v-if="!viewing" class="editor-wrap">
@@ -1619,7 +1619,7 @@ export default {
             <!-- Escritura asistida por IA (mixin caseAiWriter). -->
             <div
               v-if="!viewing && aiEnabled"
-              class="flex flex-wrap items-center gap-2 mt-2"
+              class="flex flex-wrap items-center gap-2 mt-1"
             >
               <woot-button
                 type="button"
@@ -1663,30 +1663,24 @@ export default {
           <!-- Debajo de la descripción: vencimiento, prioridad y estado. El
                estado también se cambia desde la fila con "Completar"; aquí
                además se puede reabrir la tarea. Prioridad propia (no heredada). -->
-          <div class="flex gap-3">
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <div class="grid grid-cols-5 gap-3">
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.DUE_LABEL')
               }}</span>
-              <input
-                v-model="form.due_at"
-                type="date"
-                :readonly="viewing"
-                class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-              />
+              <input v-model="form.due_at" type="date" :readonly="viewing" />
             </label>
 
             <!-- Plan-Bandeja-Prioridad — cuándo PIENSA hacerla quien la hace
                  (distinto del vencimiento). Hoy = entra a su «Mi día». -->
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.PLANNED_LABEL')
               }}</span>
               <input
                 v-model="form.planned_on"
                 type="date"
                 :readonly="viewing"
-                class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
               />
               <span
                 v-if="plannedLate"
@@ -1695,11 +1689,9 @@ export default {
                 {{ $t('CASE_TICKETS.TASKS.MODAL.PLANNED_AFTER_DUE') }}
               </span>
             </label>
-          </div>
 
-          <div class="flex gap-3">
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.PRIORITY_LABEL')
               }}</span>
               <select v-model="form.priority" :disabled="viewing">
@@ -1714,8 +1706,8 @@ export default {
             </label>
 
             <!-- Plan-Bandeja-Prioridad F1 — suma a la carga de «Mi día». -->
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.ESTIMATE_LABEL')
               }}</span>
               <select v-model="form.estimated_minutes" :disabled="viewing">
@@ -1728,8 +1720,8 @@ export default {
               </select>
             </label>
 
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.STATUS_LABEL')
               }}</span>
               <select v-model="form.status" :disabled="viewing">
@@ -1746,7 +1738,7 @@ export default {
             </label>
           </div>
 
-          <div class="flex items-center justify-end gap-2 mt-4">
+          <div class="flex items-center justify-end gap-2 mt-1">
             <woot-button
               variant="clear"
               type="button"
@@ -1970,7 +1962,24 @@ export default {
   // modal completo nunca necesita scroll.
   .ProseMirror-woot-style {
     @apply px-3 py-2 overflow-y-auto;
-    height: 8rem;
+    height: 5.5rem;
+  }
+}
+
+// Formulario compacto de la tarea (igual que dentro del caso).
+.task-form {
+  .field-label {
+    @apply block mb-1 text-xs font-medium text-slate-600 dark:text-slate-300;
+  }
+
+  input[type='text'],
+  input[type='date'] {
+    @apply h-9 py-1 px-2 mb-0 text-sm;
+  }
+
+  // La flecha del select es su fondo: se deja espacio a la derecha para verla.
+  select {
+    @apply h-9 py-1 pl-2 pr-8 mb-0 text-sm;
   }
 }
 

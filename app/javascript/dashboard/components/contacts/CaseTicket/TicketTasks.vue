@@ -1241,12 +1241,13 @@ export default {
           :header-content="modalDescription"
         />
 
+        <!-- Compacto: campos cortos lado a lado, editor bajo; cabe sin scroll. -->
         <form
-          class="flex flex-col self-stretch w-full gap-3 pb-8"
+          class="task-form flex flex-col self-stretch w-full gap-2.5 pb-6"
           @submit.prevent="submitForm()"
         >
-          <label class="block mb-3">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <label class="block">
+            <span class="field-label">{{
               $t('CASE_TICKETS.TASKS.MODAL.TITLE_LABEL')
             }}</span>
             <input
@@ -1260,49 +1261,22 @@ export default {
             />
           </label>
 
-          <!-- Tareas con el cliente — quién la hace (la del cliente se trabaja en su portal). -->
-          <label class="block mb-3">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CLIENT_TASKS.WHO')
-            }}</span>
-            <select v-model="form.audience" :disabled="viewing">
-              <option v-for="a in audiences" :key="a" :value="a">
-                {{ $t(`CLIENT_TASKS.AUDIENCE.${a}`) }}
-              </option>
-            </select>
-            <span class="text-xs text-slate-500">{{
-              $t(`CLIENT_TASKS.AUDIENCE_HINT.${form.audience}`)
-            }}</span>
-          </label>
-          <label
-            v-if="form.audience === 'client'"
-            class="flex items-center gap-2 mb-3"
-          >
-            <input
-              v-model="form.requires_file"
-              type="checkbox"
-              class="!mb-0"
-              :disabled="viewing"
-            />
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CLIENT_TASKS.REQUIRES_FILE')
-            }}</span>
-          </label>
-          <label
-            v-if="form.audience === 'client' && !editingId"
-            class="flex items-center gap-2 mb-3"
-          >
-            <input v-model="form.notify_client" type="checkbox" class="!mb-0" />
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CLIENT_TASKS.NOTIFY')
-            }}</span>
-          </label>
-
-          <!-- Solicitante + Responsable (editable). El solicitante es fijo si la
-               tarea ya lo tiene; si no (tarea antigua), se elige de la lista. -->
-          <div class="flex gap-3 mb-3">
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <!-- Quién la hace · Solicitante · Responsable (la del cliente no lleva responsable).
+               El solicitante es fijo si la tarea ya lo tiene; si no (antigua), se elige. -->
+          <div class="grid grid-cols-3 gap-3">
+            <label class="block">
+              <span class="field-label">{{ $t('CLIENT_TASKS.WHO') }}</span>
+              <select v-model="form.audience" :disabled="viewing">
+                <option v-for="a in audiences" :key="a" :value="a">
+                  {{ $t(`CLIENT_TASKS.AUDIENCE.${a}`) }}
+                </option>
+              </select>
+              <span class="field-hint">{{
+                $t(`CLIENT_TASKS.AUDIENCE_HINT.${form.audience}`)
+              }}</span>
+            </label>
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.REQUESTER_LABEL')
               }}</span>
               <input
@@ -1321,9 +1295,8 @@ export default {
                 </option>
               </select>
             </label>
-
-            <label v-if="form.audience !== 'client'" class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label v-if="form.audience !== 'client'" class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.ASSIGNEE_LABEL')
               }}</span>
               <select v-model="form.assignee_id" :disabled="viewing">
@@ -1336,14 +1309,82 @@ export default {
               </select>
             </label>
           </div>
+          <div
+            v-if="form.audience === 'client'"
+            class="flex flex-wrap items-center gap-x-4 gap-y-1 -mt-1"
+          >
+            <label class="flex items-center gap-2">
+              <input
+                v-model="form.requires_file"
+                type="checkbox"
+                class="!h-auto"
+                :disabled="viewing"
+              />
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CLIENT_TASKS.REQUIRES_FILE')
+              }}</span>
+            </label>
+            <label v-if="!editingId" class="flex items-center gap-2">
+              <input
+                v-model="form.notify_client"
+                type="checkbox"
+                class="!h-auto"
+              />
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CLIENT_TASKS.NOTIFY')
+              }}</span>
+            </label>
+          </div>
 
           <!-- OJO: contenedor <div>, NO <label>. El editor incluye un
                <input type=file> oculto; si estuviera dentro de un <label>,
                cualquier click reenviaría al input y abriría "adjuntar archivo". -->
-          <div class="block mb-3">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_LABEL')
-            }}</span>
+          <div class="block">
+            <div class="flex flex-wrap items-center gap-2 mb-1">
+              <span class="field-label !mb-0">{{
+                $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_LABEL')
+              }}</span>
+              <!-- Escritura asistida por Dali (mixin caseAiWriter), en la misma línea. -->
+              <template v-if="!viewing && aiEnabled">
+                <woot-button
+                  type="button"
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="wand"
+                  class="ml-auto"
+                  :is-loading="aiLoading === 'fix_spelling_grammar'"
+                  :disabled="!form.description.trim() || !!aiLoading"
+                  @click="aiImprove('fix_spelling_grammar')"
+                >
+                  {{ $t('CASE_TICKETS.AI.FIX') }}
+                </woot-button>
+                <woot-button
+                  type="button"
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="wand"
+                  :is-loading="aiLoading === 'rephrase'"
+                  :disabled="!form.description.trim() || !!aiLoading"
+                  @click="aiImprove('rephrase')"
+                >
+                  {{ $t('CASE_TICKETS.AI.IMPROVE') }}
+                </woot-button>
+                <woot-button
+                  v-if="canRevertAi"
+                  type="button"
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="arrow-undo"
+                  :disabled="!!aiLoading"
+                  @click="aiRevert"
+                >
+                  {{ $t('CASE_TICKETS.AI.REVERT') }}
+                </woot-button>
+              </template>
+            </div>
             <!-- Editor enriquecido, montado igual que en Respuestas predefinidas. -->
             <div v-if="!viewing" class="editor-wrap">
               <WootMessageEditor
@@ -1357,97 +1398,37 @@ export default {
                 "
               />
             </div>
-            <!-- Ticket cerrado: solo lectura, se muestra el formato ya renderizado. -->
+            <!-- Solo lectura: se muestra el formato ya renderizado. -->
             <div
               v-else
               class="prose-note p-2 text-sm border rounded-md border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-100"
               v-html="formatMarkdown(form.description) || '—'"
             />
-
-            <!-- Escritura asistida por IA (mixin caseAiWriter). -->
-            <div
-              v-if="!viewing && aiEnabled"
-              class="flex flex-wrap items-center gap-2 mt-2"
-            >
-              <woot-button
-                type="button"
-                size="tiny"
-                variant="smooth"
-                color-scheme="secondary"
-                icon="wand"
-                :is-loading="aiLoading === 'fix_spelling_grammar'"
-                :disabled="!form.description.trim() || !!aiLoading"
-                @click="aiImprove('fix_spelling_grammar')"
-              >
-                {{ $t('CASE_TICKETS.AI.FIX') }}
-              </woot-button>
-              <woot-button
-                type="button"
-                size="tiny"
-                variant="smooth"
-                color-scheme="secondary"
-                icon="wand"
-                :is-loading="aiLoading === 'rephrase'"
-                :disabled="!form.description.trim() || !!aiLoading"
-                @click="aiImprove('rephrase')"
-              >
-                {{ $t('CASE_TICKETS.AI.IMPROVE') }}
-              </woot-button>
-              <woot-button
-                v-if="canRevertAi"
-                type="button"
-                size="tiny"
-                variant="clear"
-                color-scheme="secondary"
-                icon="arrow-undo"
-                :disabled="!!aiLoading"
-                @click="aiRevert"
-              >
-                {{ $t('CASE_TICKETS.AI.REVERT') }}
-              </woot-button>
-            </div>
           </div>
 
-          <!-- Debajo de la descripción: vencimiento, prioridad y estado. El
-               estado también se cambia desde la fila con "Completar"; aquí
-               además se puede reabrir la tarea. Prioridad propia (no heredada). -->
-          <div class="flex gap-3">
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <!-- Vence · Programada para · Prioridad · Duración · Estado, en una línea. El estado
+               también se cambia desde la fila con «Completar»; aquí además se reabre. -->
+          <div class="grid grid-cols-5 gap-3">
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.DUE_LABEL')
               }}</span>
-              <input
-                v-model="form.due_at"
-                type="date"
-                :readonly="viewing"
-                class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-              />
+              <input v-model="form.due_at" type="date" :readonly="viewing" />
             </label>
-
             <!-- Plan-Bandeja-Prioridad — cuándo PIENSA hacerla quien la hace
                  (distinto del vencimiento). Hoy = entra a su «Mi día». -->
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.PLANNED_LABEL')
               }}</span>
               <input
                 v-model="form.planned_on"
                 type="date"
                 :readonly="viewing"
-                class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
               />
-              <span
-                v-if="plannedLate"
-                class="block mt-1 text-xs text-amber-700 dark:text-amber-300"
-              >
-                {{ $t('CASE_TICKETS.TASKS.MODAL.PLANNED_AFTER_DUE') }}
-              </span>
             </label>
-          </div>
-
-          <div class="flex gap-3">
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.PRIORITY_LABEL')
               }}</span>
               <select v-model="form.priority" :disabled="viewing">
@@ -1460,10 +1441,9 @@ export default {
                 </option>
               </select>
             </label>
-
             <!-- Plan-Bandeja-Prioridad F1 — suma a la carga de «Mi día». -->
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.ESTIMATE_LABEL')
               }}</span>
               <select v-model="form.estimated_minutes" :disabled="viewing">
@@ -1475,9 +1455,8 @@ export default {
                 </option>
               </select>
             </label>
-
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.STATUS_LABEL')
               }}</span>
               <select v-model="form.status" :disabled="viewing">
@@ -1491,53 +1470,62 @@ export default {
                   {{ $t('CASE_TICKETS.TASKS.STATUS.CANCELLED') }}
                 </option>
               </select>
-              <span
-                v-if="form.status === 'cancelled' && form.cancel_reason"
-                class="block mt-1 text-xs text-slate-500 dark:text-slate-400"
-              >
-                {{ form.cancel_reason }}
+            </label>
+          </div>
+          <p
+            v-if="plannedLate"
+            class="m-0 -mt-1 text-xs text-amber-700 dark:text-amber-300"
+          >
+            {{ $t('CASE_TICKETS.TASKS.MODAL.PLANNED_AFTER_DUE') }}
+          </p>
+          <p
+            v-if="form.status === 'cancelled' && form.cancel_reason"
+            class="m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400"
+          >
+            {{ form.cancel_reason }}
+          </p>
+
+          <!-- Hito del proyecto (P2) y obligatoria para la etapa, en una sola línea. -->
+          <div
+            v-if="allowMilestones || (stagePlan.current && !form.documentation)"
+            class="flex flex-wrap items-center gap-x-5 gap-y-1"
+          >
+            <label v-if="allowMilestones" class="flex items-center gap-2">
+              <input
+                v-model="form.milestone"
+                type="checkbox"
+                class="!h-auto"
+                :disabled="viewing"
+              />
+              <span class="text-sm text-slate-700 dark:text-slate-200">
+                {{ $t('CASE_TICKETS.TASKS.MILESTONE_LABEL') }}
+              </span>
+              <span class="text-xs text-slate-400 dark:text-slate-500">
+                {{ $t('CASE_TICKETS.TASKS.MILESTONE_HINT') }}
+              </span>
+            </label>
+            <label
+              v-if="stagePlan.current && !form.documentation"
+              class="flex items-center gap-2"
+            >
+              <input
+                v-model="form.required"
+                type="checkbox"
+                class="!h-auto"
+                :disabled="viewing"
+              />
+              <span class="text-sm text-slate-700 dark:text-slate-200">
+                {{ $t('CASE_TICKETS.TASKS.STAGE.REQUIRED_LABEL') }}
+              </span>
+              <span class="text-xs text-slate-400 dark:text-slate-500">
+                {{
+                  $t('CASE_TICKETS.TASKS.STAGE.REQUIRED_FORM_HINT', {
+                    stage: stagePlan.current.label,
+                  })
+                }}
               </span>
             </label>
           </div>
-
-          <!-- Plan-Clase-Proyecto P2 — hito del proyecto -->
-          <label v-if="allowMilestones" class="flex items-center gap-2 mt-3">
-            <input
-              v-model="form.milestone"
-              type="checkbox"
-              class="!mb-0"
-              :disabled="viewing"
-            />
-            <span class="text-sm text-slate-700 dark:text-slate-200">
-              {{ $t('CASE_TICKETS.TASKS.MILESTONE_LABEL') }}
-            </span>
-            <span class="text-xs text-slate-400 dark:text-slate-500">
-              {{ $t('CASE_TICKETS.TASKS.MILESTONE_HINT') }}
-            </span>
-          </label>
-
-          <!-- Plan-Plantilla-Tareas-Etapa — cuenta para pasar a la siguiente etapa -->
-          <label
-            v-if="stagePlan.current && !form.documentation"
-            class="flex items-center gap-2 mt-3"
-          >
-            <input
-              v-model="form.required"
-              type="checkbox"
-              class="!mb-0"
-              :disabled="viewing"
-            />
-            <span class="text-sm text-slate-700 dark:text-slate-200">
-              {{ $t('CASE_TICKETS.TASKS.STAGE.REQUIRED_LABEL') }}
-            </span>
-            <span class="text-xs text-slate-400 dark:text-slate-500">
-              {{
-                $t('CASE_TICKETS.TASKS.STAGE.REQUIRED_FORM_HINT', {
-                  stage: stagePlan.current.label,
-                })
-              }}
-            </span>
-          </label>
 
           <!-- Tareas con el cliente — lo que hizo en su portal; responderle o regresarla. -->
           <ClientTaskEntries
@@ -1550,7 +1538,7 @@ export default {
             @changed="onClientReturned"
           />
 
-          <div class="flex items-center justify-end gap-2 mt-4">
+          <div class="flex items-center justify-end gap-2 mt-1">
             <woot-button
               variant="clear"
               type="button"
@@ -1896,7 +1884,32 @@ export default {
   // modal completo nunca necesita scroll.
   .ProseMirror-woot-style {
     @apply px-3 py-2 overflow-y-auto;
-    height: 8rem;
+    height: 5.5rem;
+  }
+}
+
+// Formulario compacto de la tarea: etiquetas chicas, campos de 36 px y sin margen abajo.
+.task-form {
+  .field-label {
+    @apply block mb-1 text-xs font-medium text-slate-600 dark:text-slate-300;
+  }
+
+  .field-hint {
+    @apply block mt-0.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400;
+  }
+
+  input[type='text'],
+  input[type='date'] {
+    @apply h-9 py-1 px-2 mb-0 text-sm;
+  }
+
+  // La flecha del select es su fondo: se deja espacio a la derecha para verla.
+  select {
+    @apply h-9 py-1 pl-2 pr-8 mb-0 text-sm;
+  }
+
+  input[type='checkbox'] {
+    @apply mb-0;
   }
 }
 
