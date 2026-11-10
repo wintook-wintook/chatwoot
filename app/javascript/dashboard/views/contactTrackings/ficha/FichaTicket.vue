@@ -8,6 +8,9 @@
 //   Sugeridos: + presenta una queja  + es una urgencia  …
 //   Prioridad: [media ▾]
 // v-model: { reasons: [], priority: '' }  (Ficha::TicketUse en el servidor)
+// 10/11/2026: los motivos se escriben en una caja de 2 renglones (uno por renglón o con
+// coma) y TODOS (sugeridos, los de ✨ y los escritos) se ven como chips: marcado = en
+// color y cuenta; sin marcar = gris y NO se toma en cuenta.
 // ============================================================================
 import { useAlert } from 'dashboard/composables';
 import FichaAPI from 'dashboard/api/fichaAgente';
@@ -37,7 +40,15 @@ export default {
   },
   emits: ['input'],
   data() {
-    return { draft: '', priorities: PRIORITIES, suggesting: false };
+    // offered: motivos que se muestran sin ser fijos (los de ✨ y los escritos), para que
+    // al desmarcarlos no desaparezcan.
+    return {
+      draft: '',
+      priorities: PRIORITIES,
+      suggesting: false,
+      offered: [],
+      max: MAX_REASONS,
+    };
   },
   computed: {
     reasons() {
@@ -49,10 +60,15 @@ export default {
     priority() {
       return (this.value && this.value.priority) || '';
     },
-    suggestions() {
-      return SUGGESTED.map(key => this.t(key)).filter(
-        texto => !this.reasons.includes(texto)
-      );
+    // Todos los chips: los sugeridos fijos, los de ✨/escritos y los ya guardados.
+    chips() {
+      return [
+        ...new Set([
+          ...SUGGESTED.map(key => this.t(key)),
+          ...this.offered,
+          ...this.reasons,
+        ]),
+      ];
     },
     full() {
       return this.reasons.length >= MAX_REASONS;
@@ -71,14 +87,39 @@ export default {
         ...cambios,
       });
     },
-    add(texto) {
-      const motivo = (texto || '')
-        .replace(/[(),]/g, ' ')
+    clean(texto) {
+      return (texto || '')
+        .replace(/[()]/g, ' ')
         .replace(/\s+/g, ' ')
-        .trim();
-      if (!motivo || this.full || this.reasons.includes(motivo)) return;
-      this.emit({ reasons: [...this.reasons, motivo] });
+        .trim()
+        .slice(0, 80);
+    },
+    // Lo escrito: uno por renglón o separados por coma; quedan marcados.
+    addDraft() {
+      const nuevos = (this.draft || '')
+        .split(/[\n,]/)
+        .map(texto => this.clean(texto))
+        .filter(texto => texto && !this.reasons.includes(texto));
       this.draft = '';
+      if (!nuevos.length) return;
+      this.offered = [...new Set([...this.offered, ...nuevos])];
+      this.emit({
+        reasons: [...new Set([...this.reasons, ...nuevos])].slice(
+          0,
+          MAX_REASONS
+        ),
+      });
+    },
+    isOn(motivo) {
+      return this.reasons.includes(motivo);
+    },
+    toggle(motivo) {
+      if (this.isOn(motivo)) {
+        this.emit({ reasons: this.reasons.filter(item => item !== motivo) });
+        return;
+      }
+      if (this.full) return;
+      this.emit({ reasons: [...this.reasons, motivo] });
     },
     toggleEscalation(valor) {
       const lista = this.escalateFrom.includes(valor)
@@ -94,21 +135,17 @@ export default {
           this.card.id,
           this.suggestContext
         );
-        const nuevos = (data.reasons || []).filter(
-          m => !this.reasons.includes(m)
-        );
-        this.emit({
-          reasons: [...this.reasons, ...nuevos].slice(0, MAX_REASONS),
-        });
+        // Los de ✨ se muestran SIN marcar: la persona elige cuáles usar.
+        const nuevos = (data.reasons || [])
+          .map(m => this.clean(m))
+          .filter(m => m && !this.chips.includes(m));
+        this.offered = [...this.offered, ...nuevos];
       } catch (error) {
         const datos = error && error.response && error.response.data;
         useAlert((datos && datos.error) || this.t('SUGGEST_ERROR'));
       } finally {
         this.suggesting = false;
       }
-    },
-    remove(motivo) {
-      this.emit({ reasons: this.reasons.filter(item => item !== motivo) });
     },
   },
 };
@@ -131,50 +168,51 @@ export default {
         {{ t('SUGGEST') }}
       </woot-button>
     </div>
-    <div class="flex flex-wrap items-center gap-1">
-      <span
-        v-for="motivo in reasons"
+    <p class="!m-0 text-xs text-slate-500">{{ t('TICKET_REASONS_HINT') }}</p>
+    <div class="flex flex-wrap gap-1.5">
+      <button
+        v-for="motivo in chips"
         :key="motivo"
-        class="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-woot-500 text-white"
+        type="button"
+        class="flex items-center gap-1 px-2.5 py-1 text-xs border rounded-full transition-colors"
+        :class="
+          isOn(motivo)
+            ? 'border-woot-500 bg-woot-500 text-white'
+            : 'border-slate-200 text-slate-500 hover:border-woot-400 dark:border-slate-700 dark:text-slate-400'
+        "
+        :disabled="disabled || (!isOn(motivo) && full)"
+        :aria-pressed="isOn(motivo) ? 'true' : 'false'"
+        @click="toggle(motivo)"
       >
+        <fluent-icon :icon="isOn(motivo) ? 'checkmark' : 'add'" size="10" />
         {{ motivo }}
-        <button
-          type="button"
-          class="leading-none"
-          :disabled="disabled"
-          :aria-label="t('TICKET_REMOVE')"
-          @click="remove(motivo)"
-        >
-          <fluent-icon icon="dismiss" size="10" />
-        </button>
-      </span>
-      <input
-        v-if="!full"
-        v-model="draft"
-        type="text"
-        maxlength="80"
-        class="!mb-0 !h-7 !w-56 text-xs"
-        :placeholder="t('TICKET_ADD_PLACEHOLDER')"
-        :disabled="disabled"
-        @keydown.enter.prevent="add(draft)"
-        @blur="add(draft)"
-      />
+      </button>
     </div>
+    <span class="text-xs text-slate-500">
+      {{ t('TICKET_COUNT', { on: reasons.length, max }) }}
+    </span>
     <p v-if="!reasons.length" class="!m-0 text-xs text-amber-700">
       {{ t('TICKET_NO_REASONS') }}
     </p>
-    <div v-if="suggestions.length && !full" class="flex flex-wrap gap-1">
-      <span class="text-xs text-slate-500">{{ t('TICKET_SUGGESTED') }}</span>
-      <button
-        v-for="texto in suggestions"
-        :key="texto"
-        type="button"
-        class="px-2 py-0.5 text-xs border rounded-full border-slate-200 text-slate-600 hover:border-woot-500 dark:border-slate-700 dark:text-slate-300"
+    <div v-if="!full" class="flex items-start gap-2">
+      <textarea
+        v-model="draft"
+        rows="2"
+        maxlength="400"
+        class="flex-1 !mb-0 text-sm"
+        :placeholder="t('TICKET_ADD_PLACEHOLDER')"
         :disabled="disabled"
-        @click="add(texto)"
+        @keydown.enter.exact.prevent="addDraft"
+      />
+      <woot-button
+        size="small"
+        variant="smooth"
+        icon="add"
+        :is-disabled="disabled || !draft.trim()"
+        @click="addDraft"
       >
-        {{ t('TICKET_ADD_ONE', { text: texto }) }}
-      </button>
+        {{ t('TICKET_ADD') }}
+      </woot-button>
     </div>
     <div v-if="escalationOptions.length" class="flex flex-col gap-1">
       <span class="text-slate-800 dark:text-slate-100">

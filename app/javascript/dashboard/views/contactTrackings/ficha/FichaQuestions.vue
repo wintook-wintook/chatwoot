@@ -121,8 +121,8 @@ export default {
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
-    <div class="flex items-center justify-between gap-2">
+  <div class="flex flex-col flex-1 min-h-0 gap-3">
+    <div class="flex items-center justify-between gap-2 shrink-0">
       <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
         {{ t('QUESTIONS_HINT') }}
       </p>
@@ -138,95 +138,11 @@ export default {
       </woot-button>
     </div>
 
-    <ol class="!m-0 !p-0 list-none flex flex-col gap-2">
-      <li
-        v-for="(q, indice) in questions"
-        :key="indice"
-        class="flex flex-col gap-2 p-3 border rounded-lg border-slate-200 dark:border-slate-700"
-      >
-        <div class="flex items-center gap-2">
-          <span
-            class="flex items-center justify-center w-6 h-6 text-xs font-semibold text-white rounded-full shrink-0 bg-woot-500"
-          >
-            {{ indice + 1 }}
-          </span>
-          <input
-            type="text"
-            maxlength="200"
-            class="flex-1 !mb-0"
-            :value="q.text"
-            :placeholder="t('QUESTION_PLACEHOLDER')"
-            :disabled="disabled"
-            @input="setQuestion(indice, 'text', $event.target.value)"
-            @blur="autoVar(indice)"
-          />
-          <woot-button
-            size="tiny"
-            variant="clear"
-            color-scheme="secondary"
-            icon="chevron-up"
-            :is-disabled="disabled || indice === 0"
-            @click="move(indice, -1)"
-          />
-          <woot-button
-            size="tiny"
-            variant="clear"
-            color-scheme="secondary"
-            icon="chevron-down"
-            :is-disabled="disabled || indice === questions.length - 1"
-            @click="move(indice, 1)"
-          />
-          <woot-button
-            size="tiny"
-            variant="clear"
-            color-scheme="alert"
-            icon="dismiss"
-            :is-disabled="disabled"
-            @click="remove(indice)"
-          />
-        </div>
-        <div class="grid gap-2 pl-8 sm:grid-cols-[12rem_minmax(0,1fr)]">
-          <label class="!m-0 text-xs">
-            {{ t('QUESTION_VAR') }}
-            <input
-              type="text"
-              class="!mb-0 !h-8 text-sm uppercase"
-              :value="q.var"
-              :disabled="disabled"
-              @input="setQuestion(indice, 'var', $event.target.value)"
-            />
-          </label>
-          <label class="!m-0 text-xs">
-            {{ t('QUESTION_OPTIONS') }}
-            <input
-              type="text"
-              class="!mb-0 !h-8 text-sm"
-              :value="(q.options || []).join(', ')"
-              :placeholder="t('QUESTION_OPTIONS_PLACEHOLDER')"
-              :disabled="disabled"
-              @change="setOptions(indice, $event.target.value)"
-            />
-          </label>
-        </div>
-      </li>
-    </ol>
-    <woot-button
-      v-if="questions.length < 10"
-      size="small"
-      variant="clear"
-      icon="add"
-      class="self-start"
-      :is-disabled="disabled"
-      @click="add"
-    >
-      {{ t('QUESTION_ADD') }}
-    </woot-button>
-
     <div
       v-if="questions.length"
-      class="flex flex-wrap items-center gap-2 text-sm"
+      class="flex flex-wrap items-center gap-2 px-3 py-2 text-sm rounded-lg shrink-0 bg-slate-50 dark:bg-slate-800/60"
     >
-      <span>{{ t('QUESTIONS_WHEN') }}</span>
+      <span class="font-medium">{{ t('QUESTIONS_WHEN') }}</span>
       <select
         class="!mb-0 !h-8 !py-0 !w-auto text-sm"
         :value="when"
@@ -249,6 +165,109 @@ export default {
           {{ t('QUESTIONS_IN_ROUTE', { route: ruta.label }) }}
         </option>
       </select>
+    </div>
+    <!-- Solo las preguntas hacen scroll; lo de arriba se queda fijo. -->
+    <div class="flex flex-col flex-1 min-h-0 gap-2 pr-1 overflow-auto">
+      <ol class="!m-0 !p-0 list-none flex flex-col gap-2">
+        <li
+          v-for="(q, indice) in questions"
+          :key="indice"
+          class="flex flex-col gap-2 p-3 border rounded-lg border-slate-200 dark:border-slate-700"
+        >
+          <div class="flex items-center gap-2">
+            <span
+              class="flex items-center justify-center w-6 h-6 text-xs font-semibold text-white rounded-full shrink-0 bg-woot-500"
+            >
+              {{ indice + 1 }}
+            </span>
+            <input
+              type="text"
+              maxlength="200"
+              class="flex-1 !mb-0"
+              :value="q.text"
+              :placeholder="t('QUESTION_PLACEHOLDER')"
+              :disabled="disabled"
+              @input="setQuestion(indice, 'text', $event.target.value)"
+              @blur="autoVar(indice)"
+            />
+            <woot-button
+              size="tiny"
+              variant="clear"
+              color-scheme="secondary"
+              icon="chevron-up"
+              :is-disabled="disabled || indice === 0"
+              @click="move(indice, -1)"
+            />
+            <woot-button
+              size="tiny"
+              variant="clear"
+              color-scheme="secondary"
+              icon="chevron-down"
+              :is-disabled="disabled || indice === questions.length - 1"
+              @click="move(indice, 1)"
+            />
+            <woot-button
+              size="tiny"
+              variant="clear"
+              color-scheme="alert"
+              icon="dismiss"
+              :is-disabled="disabled"
+              @click="remove(indice)"
+            />
+          </div>
+          <div class="grid gap-2 pl-8 sm:grid-cols-[12rem_minmax(0,1fr)]">
+            <label class="!m-0 text-xs">
+              {{ t('QUESTION_VAR') }}
+              <input
+                type="text"
+                class="!mb-0 !h-8 text-sm uppercase"
+                :value="q.var"
+                :disabled="disabled"
+                @input="setQuestion(indice, 'var', $event.target.value)"
+              />
+            </label>
+            <label class="!m-0 text-xs">
+              {{ t('QUESTION_OPTIONS') }}
+              <input
+                type="text"
+                class="!mb-0 !h-8 text-sm"
+                :value="(q.options || []).join(', ')"
+                :placeholder="t('QUESTION_OPTIONS_PLACEHOLDER')"
+                :disabled="disabled"
+                @change="setOptions(indice, $event.target.value)"
+              />
+              <!-- Ayuda: qué pasa con y sin opciones, con la vista de lo que entendió. -->
+              <span
+                v-if="(q.options || []).length"
+                class="flex flex-wrap items-center gap-1 mt-1 text-slate-500"
+              >
+                {{ t('QUESTION_OPTIONS_CHOICE') }}
+                <span
+                  v-for="opcion in q.options"
+                  :key="opcion"
+                  class="px-1.5 py-0.5 rounded bg-woot-25 text-woot-700 dark:bg-woot-900/30 dark:text-woot-100"
+                >
+                  {{ opcion }}
+                </span>
+              </span>
+              <span v-else class="block mt-1 text-slate-500">
+                {{ t('QUESTION_OPTIONS_FREE') }}
+              </span>
+            </label>
+          </div>
+        </li>
+      </ol>
+      <woot-button
+        v-if="questions.length < 10"
+        size="small"
+        variant="clear"
+        icon="add"
+        class="self-start"
+        :is-disabled="disabled"
+        @click="add"
+      >
+        {{ t('QUESTION_ADD') }}
+      </woot-button>
     </div>
   </div>
 </template>

@@ -128,7 +128,7 @@ describe('FichaSheet', () => {
 });
 
 describe('FichaTicket', () => {
-  it('agrega motivos (sin repetir ni paréntesis), quita y cambia prioridad', async () => {
+  it('escribe motivos (por renglón o coma, sin paréntesis), los sugeridos se marcan y solo cuentan los marcados', async () => {
     const { default: FichaTicket } = await import('./FichaTicket.vue');
     const wrapper = shallowMount(FichaTicket, {
       propsData: {
@@ -137,17 +137,26 @@ describe('FichaTicket', () => {
       },
       mocks: { $t: clave => clave },
     });
-    wrapper.vm.add('reporta (una) falla');
+    wrapper.setData({ draft: 'reporta (una) falla\nquiere un asesor, a' });
+    wrapper.vm.addDraft();
     expect(wrapper.emitted('input')[0][0]).toMatchObject({
-      reasons: ['a', 'reporta una falla'],
+      reasons: ['a', 'reporta una falla', 'quiere un asesor'],
       priority: '',
     });
-    wrapper.vm.add('a');
-    expect(wrapper.emitted('input')).toHaveLength(1);
-    wrapper.vm.remove('a');
-    expect(wrapper.emitted('input')[1][0].reasons).toEqual([]);
+    expect(wrapper.vm.draft).toBe('');
+    // Un sugerido sin marcar se ve pero no cuenta; al tocarlo se marca.
+    expect(wrapper.vm.chips).toContain('TRACKING_TEMPLATES.FICHA.SUG_PERSON');
+    expect(wrapper.vm.isOn('TRACKING_TEMPLATES.FICHA.SUG_PERSON')).toBe(false);
+    wrapper.vm.toggle('TRACKING_TEMPLATES.FICHA.SUG_PERSON');
+    expect(wrapper.emitted('input')[1][0].reasons).toEqual([
+      'a',
+      'TRACKING_TEMPLATES.FICHA.SUG_PERSON',
+    ]);
+    // Desmarcar quita el motivo, pero el chip sigue a la vista.
+    wrapper.vm.toggle('a');
+    expect(wrapper.emitted('input')[2][0].reasons).toEqual([]);
     wrapper.vm.emit({ priority: 'alta' });
-    expect(wrapper.emitted('input')[2][0].priority).toBe('alta');
+    expect(wrapper.emitted('input')[3][0].priority).toBe('alta');
   });
 });
 

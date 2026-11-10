@@ -627,23 +627,26 @@ export default {
         </div>
         <div
           v-else-if="section === 'calendar'"
-          class="flex flex-col flex-1 min-h-0 gap-3 pr-1 overflow-auto"
+          class="flex flex-col flex-1 min-h-0 gap-3"
         >
-          <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
+          <!-- Las agendas, en carrusel fijo; lo de abajo hace scroll si hace falta. -->
+          <p class="!m-0 text-sm text-slate-600 dark:text-slate-300 shrink-0">
             {{ t('CALENDAR_HINT') }}
           </p>
           <FichaCards
             v-model="items"
+            class="shrink-0"
             :cards="cards"
             :only="['calendar']"
             :show-headers="false"
+            carousel
           />
-          <FichaAgenda
+          <div
             v-if="calendarIds.length"
-            v-model="agenda"
-            class="pt-3 border-t border-slate-100 dark:border-slate-700"
-            :integration-ids="calendarIds"
-          />
+            class="flex-1 min-h-0 pt-3 pr-1 overflow-auto border-t border-slate-100 dark:border-slate-700"
+          >
+            <FichaAgenda v-model="agenda" :integration-ids="calendarIds" />
+          </div>
         </div>
         <div
           v-else-if="section === 'tickets'"
@@ -691,7 +694,7 @@ export default {
         </div>
         <div
           v-else-if="section === 'questions'"
-          class="flex flex-col flex-1 min-h-0 gap-3 pr-1 overflow-auto"
+          class="flex flex-col flex-1 min-h-0 gap-3"
         >
           <FichaQuestions
             v-model="questionsData"

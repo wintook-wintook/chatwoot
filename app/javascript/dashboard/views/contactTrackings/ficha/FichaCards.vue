@@ -63,6 +63,8 @@ export default {
     query: { type: String, default: '' },
     kind: { type: String, default: '' },
     showHeaders: { type: Boolean, default: true },
+    // Una sola fila que se desliza de lado (Agenda: se queda fija arriba).
+    carousel: { type: Boolean, default: false },
     // Tickets: rutas de fuente que pueden escalar a ese ticket ([{ value, label }]).
     escalationOptions: { type: Array, default: () => [] },
     // Lo capturado (para ✨ en hojas y tickets): { name, items }.
@@ -301,12 +303,19 @@ export default {
         </div>
       </div>
 
-      <div class="grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
+      <div
+        :class="
+          carousel
+            ? 'flex gap-2 pb-2 overflow-x-auto snap-x snap-mandatory'
+            : 'grid gap-2 sm:grid-cols-2 2xl:grid-cols-3'
+        "
+      >
         <div
           v-for="card in group.cards"
           :key="card.key"
           class="flex flex-col gap-2 p-3 transition-colors border rounded-lg"
           :class="[
+            carousel && 'w-72 shrink-0 snap-start',
             isOn(card)
               ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20 shadow-sm'
               : 'border-slate-200 dark:border-slate-700 hover:border-slate-300',

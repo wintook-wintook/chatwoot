@@ -634,7 +634,7 @@
       "SHEET_ANSWER_WITH": "Contesta con:",
       "TICKET_WHEN": "¿Cuándo se levanta un ticket «{name}»? (en palabras del cliente)",
       "TICKET_REMOVE": "Quitar motivo",
-      "TICKET_ADD_PLACEHOLDER": "Escribe un motivo y Enter",
+      "TICKET_ADD_PLACEHOLDER": "Ej.: dice que el sistema no abre\nquiere hablar con un asesor",
       "TICKET_NO_REASONS": "Sin motivos, el agente solo lo levantará si el cliente lo pide con esas palabras.",
       "TICKET_SUGGESTED": "Sugeridos:",
       "TICKET_ADD_ONE": "+ {text}",
@@ -667,8 +667,8 @@
       "QUESTIONS_HINT": "Lo que el agente pregunta, una a la vez y en este orden; cada respuesta se guarda para no volver a preguntarla.",
       "QUESTION_PLACEHOLDER": "p. ej. ¿Qué sistema usas hoy?",
       "QUESTION_VAR": "Guarda la respuesta en",
-      "QUESTION_OPTIONS": "Respuestas posibles (separadas por coma)",
-      "QUESTION_OPTIONS_PLACEHOLDER": "vacío = respuesta libre",
+      "QUESTION_OPTIONS": "Opciones para que el cliente elija (opcional)",
+      "QUESTION_OPTIONS_PLACEHOLDER": "Ej.: CONTPAQi, Aspel, Otro",
       "QUESTION_ADD": "Agregar pregunta",
       "QUESTIONS_WHEN": "¿Cuándo pregunta?",
       "QUESTIONS_AT_START": "Al inicio, antes de contestar lo demás",
@@ -696,7 +696,13 @@
       "FILES_NAME_EXPLAIN": "El nombre es como el agente reconoce cada archivo para mandarlo; en el Entrenamiento aparece como {tag}. Solo letras, números, guion y guion bajo, sin espacios.",
       "FILES_CONFIGURE_EXPLAIN": "Con «Configurar» eliges cuándo se manda cada archivo: cuando el cliente lo pida, con la bienvenida, en un intento del seguimiento, en una ruta, al agendar o al levantar un ticket.",
       "FILE_RULE_SUBTITLE": "Marca en qué momentos el agente manda este archivo. Puedes marcar varios; si no marcas ninguno, el archivo no se manda nunca.",
-      "PROFILE_SAVED_HINT": "El nombre, el objetivo y el contexto se guardan con «Guardar ficha»."
+      "PROFILE_SAVED_HINT": "El nombre, el objetivo y el contexto se guardan con «Guardar ficha».",
+      "QUESTION_OPTIONS_CHOICE": "El agente le ofrece al cliente estas opciones y guarda la que elija:",
+      "QUESTION_OPTIONS_FREE": "Vacío = el cliente contesta con sus palabras (nombre, ciudad…). Si quieres que elija de una lista, escribe las opciones separadas por coma.",
+      "TICKET_REASONS_HINT": "Toca un motivo para usarlo: solo los marcados en color cuentan. Escribe los tuyos abajo (uno por renglón o separados por coma).",
+      "TICKET_ADD": "Agregar",
+      "TICKET_COUNT": "{on} de {max} motivos marcados",
+      "PRESENTATION_PREVIEW": "Así lo verá el cliente"
     }
   },
   "TRACKING_IMPORT": {

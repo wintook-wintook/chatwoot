@@ -634,7 +634,7 @@
       "SHEET_ANSWER_WITH": "Answer with:",
       "TICKET_WHEN": "When is a «{name}» ticket opened? (in the customer's words)",
       "TICKET_REMOVE": "Remove reason",
-      "TICKET_ADD_PLACEHOLDER": "Type a reason and Enter",
+      "TICKET_ADD_PLACEHOLDER": "E.g.: says the system won't open\nwants to talk to an advisor",
       "TICKET_NO_REASONS": "Without reasons, the agent only opens it if the customer asks with those words.",
       "TICKET_SUGGESTED": "Suggested:",
       "TICKET_ADD_ONE": "+ {text}",
@@ -667,8 +667,8 @@
       "QUESTIONS_HINT": "What the agent asks, one at a time and in this order; each answer is saved so it isn't asked again.",
       "QUESTION_PLACEHOLDER": "e.g. Which system do you use today?",
       "QUESTION_VAR": "Save the answer in",
-      "QUESTION_OPTIONS": "Possible answers (comma separated)",
-      "QUESTION_OPTIONS_PLACEHOLDER": "empty = free answer",
+      "QUESTION_OPTIONS": "Options for the customer to choose (optional)",
+      "QUESTION_OPTIONS_PLACEHOLDER": "E.g.: CONTPAQi, Aspel, Other",
       "QUESTION_ADD": "Add question",
       "QUESTIONS_WHEN": "When does it ask?",
       "QUESTIONS_AT_START": "At the start, before answering anything else",
@@ -696,7 +696,13 @@
       "FILES_NAME_EXPLAIN": "The name is how the agent recognizes each file to send it; in the Training it shows as {tag}. Only letters, numbers, dash and underscore, no spaces.",
       "FILES_CONFIGURE_EXPLAIN": "With «Configure» you choose when each file is sent: when the customer asks, with the welcome, in a follow-up attempt, in a route, when booking or when opening a ticket.",
       "FILE_RULE_SUBTITLE": "Choose when the agent sends this file. You can choose several; if you choose none, the file is never sent.",
-      "PROFILE_SAVED_HINT": "Name, objective and context are saved with «Save ficha»."
+      "PROFILE_SAVED_HINT": "Name, objective and context are saved with «Save ficha».",
+      "QUESTION_OPTIONS_CHOICE": "The agent offers these options and saves the one chosen:",
+      "QUESTION_OPTIONS_FREE": "Empty = the customer answers in their own words (name, city…). To make them choose from a list, type the options separated by commas.",
+      "TICKET_REASONS_HINT": "Tap a reason to use it: only the colored ones count. Type your own below (one per line or comma separated).",
+      "TICKET_ADD": "Add",
+      "TICKET_COUNT": "{on} of {max} reasons selected",
+      "PRESENTATION_PREVIEW": "This is how the customer will see it"
     }
   }
 }
