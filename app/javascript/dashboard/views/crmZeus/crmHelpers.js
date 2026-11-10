@@ -77,3 +77,41 @@ export const addDays = (isoDate, days) => {
     date.getDate()
   )}`;
 };
+
+// CrmZeus Q3 — kits en la cotización. Como CRMZeus: solo un kit NO almacenable se desglosa
+// (rol kit); un kit almacenable se cotiza como artículo normal. Cada componente guarda sus
+// unidades totales (unidades por kit × cantidad del kit); `units_per_kit` vive solo en el
+// navegador para recalcularlas cuando cambia la cantidad del kit.
+export const isQuotableKit = article =>
+  Boolean(article && article.is_kit && !article.is_stockable);
+
+const round5 = value => Math.round(Number(value) * 100000) / 100000;
+
+export const kitComponentRows = (article, kitQuantity) =>
+  (article.components || []).map(row => ({
+    role: 'component',
+    article_id: row.component_id,
+    key: row.key || '',
+    description: row.name,
+    unit: row.unit || '',
+    units_per_kit: Number(row.quantity),
+    quantity: round5(Number(row.quantity) * Number(kitQuantity || 0)),
+    replaceable: Boolean(row.replaceable),
+    units_editable: Boolean(row.units_editable),
+    tax_ids: [],
+  }));
+
+// Componentes que vienen de la API (sin `units_per_kit`): se deduce de la cantidad del kit.
+export const withUnitsPerKit = (components, kitQuantity) =>
+  (components || []).map(row => ({
+    ...row,
+    units_per_kit:
+      row.units_per_kit ??
+      (Number(kitQuantity) ? round5(row.quantity / Number(kitQuantity)) : 0),
+  }));
+
+export const scaleComponents = (components, kitQuantity) =>
+  (components || []).map(row => ({
+    ...row,
+    quantity: round5(Number(row.units_per_kit) * Number(kitQuantity || 0)),
+  }));

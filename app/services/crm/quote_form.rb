@@ -3,6 +3,9 @@
 # partidas con `id` se editan, las que no traen `id` se agregan y las que faltan se borran. El
 # orden de la lista es el `position`. Los importes no se aceptan: los calcula Crm::QuoteTotals.
 #
+# Q3: un kit sin `components` en la petición toma los del catálogo (unidades por kit × cantidad); un
+# renglón sin artículo no puede ser kit.
+#
 #   Crm::QuoteForm.new(quote, params).apply            # alta y edición
 #   Crm::QuoteForm.new(quote, params, ids: false).apply  # `calculate`: todo como partida nueva
 class Crm::QuoteForm
@@ -36,10 +39,39 @@ class Crm::QuoteForm
   def sync_items
     @kept = []
     Array(@attributes[:items]).each_with_index do |row, position|
-      item = assign(row, position, role: TOP_ROLES.include?(row[:role].to_s) ? row[:role].to_s : 'normal')
-      sync_components(item, Array(row[:components]))
+      item = assign(row, position, role: top_role(row))
+      if row.key?(:components) || item.new_record?
+        sync_components(item, row.key?(:components) ? Array(row[:components]) : catalog_components(item))
+      elsif item.role_kit?
+        keep_components(item)
+      end
     end
     (@quote.items.to_a - @kept).each(&:mark_for_destruction)
+  end
+
+  def top_role(row)
+    role = row[:role].to_s
+    return 'normal' unless TOP_ROLES.include?(role)
+    return 'normal' if role == 'kit' && row[:article_id].blank?
+
+    role
+  end
+
+  # Kit ya guardado que se edita sin mandar `components`: se quedan los que tenía.
+  def keep_components(kit)
+    @kept.concat(@quote.items.select { |item| item.parent_item_id == kit.id })
+  end
+
+  # Kit nuevo sin componentes en la petición: los del artículo en el catálogo, sin impuestos (van sin importe).
+  def catalog_components(kit)
+    return [] unless kit.role_kit?
+
+    article = CrmArticle.find_by(account_id: @quote.account_id, id: kit.article_id)
+    return [] unless article
+
+    article.components.includes(:component).map do |row|
+      { article_id: row.component_id, quantity: row.quantity * kit.quantity, tax_ids: [] }.with_indifferent_access
+    end
   end
 
   # Un renglón que deja de ser kit pierde sus componentes (se borran por no venir en la lista).

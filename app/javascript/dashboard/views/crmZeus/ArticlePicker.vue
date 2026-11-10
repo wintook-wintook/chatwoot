@@ -3,6 +3,7 @@
   clave y se elige. No ofrece kits (un kit no va dentro de otro) ni los ids de `excludeIds`
   (el propio kit y los que ya están). Emite `pick` con el artículo de la lista.
   Q2: también lo usa la partida de una cotización (con su propio `placeholder`).
+  Q3: con `allowKits` también ofrece kits (la partida de una cotización sí puede ser un kit).
 -->
 <script>
 import CrmArticles from 'dashboard/api/crmArticles';
@@ -12,6 +13,7 @@ export default {
   props: {
     excludeIds: { type: Array, default: () => [] },
     placeholder: { type: String, default: '' },
+    allowKits: { type: Boolean, default: false },
   },
   data() {
     return {
@@ -25,7 +27,9 @@ export default {
   computed: {
     options() {
       return this.results.filter(
-        article => !article.is_kit && !this.excludeIds.includes(article.id)
+        article =>
+          (this.allowKits || !article.is_kit) &&
+          !this.excludeIds.includes(article.id)
       );
     },
   },
@@ -91,6 +95,12 @@ export default {
         <span v-if="article.key" class="text-slate-500">{{ article.key }}</span>
         <span class="flex-1 text-slate-800 dark:text-slate-100">
           {{ article.name }}
+        </span>
+        <span
+          v-if="article.is_kit"
+          class="px-1.5 py-0.5 text-xs rounded bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+        >
+          {{ $t('CRM_ZEUS.ARTICLES.KIT') }}
         </span>
         <span class="text-xs text-slate-500">
           {{

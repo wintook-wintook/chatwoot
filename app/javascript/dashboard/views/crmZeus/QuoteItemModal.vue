@@ -4,11 +4,21 @@
   artículo en esa lista), precio, % de descuento, impuestos y notas. Sin artículo también
   se puede (descripción libre). Los importes los calcula el servidor al cerrar.
   Emite `save` con la partida y `close`.
+  Q3: si el artículo es un kit no almacenable, la partida es un kit y trae sus componentes
+  (unidades por kit × cantidad); se pueden cambiar las unidades o reemplazar el componente
+  cuando el kit lo permite. Los componentes no llevan precio.
 -->
 <script>
 import CrmArticles from 'dashboard/api/crmArticles';
 import ArticlePicker from './ArticlePicker.vue';
-import { defaultId, errorMessage } from './crmHelpers';
+import {
+  defaultId,
+  errorMessage,
+  isQuotableKit,
+  kitComponentRows,
+  scaleComponents,
+  withUnitsPerKit,
+} from './crmHelpers';
 
 export default {
   name: 'CrmQuoteItemModal',
@@ -20,13 +30,24 @@ export default {
   },
   data() {
     return {
-      form: { ...this.item, tax_ids: [...(this.item.tax_ids || [])] },
+      form: {
+        ...this.item,
+        tax_ids: [...(this.item.tax_ids || [])],
+        components:
+          this.item.role === 'kit'
+            ? withUnitsPerKit(this.item.components, this.item.quantity)
+            : [],
+      },
       prices: [],
+      replacing: null,
       loadingArticle: false,
       error: '',
     };
   },
   computed: {
+    isKit() {
+      return this.form.role === 'kit';
+    },
     isNew() {
       return this.item.uid === undefined;
     },
@@ -44,8 +65,16 @@ export default {
       );
     },
   },
-  mounted() {
-    if (this.form.article_id) this.loadPrices(this.form.article_id);
+  watch: {
+    'form.quantity': function scale(quantity) {
+      if (this.isKit)
+        this.form.components = scaleComponents(this.form.components, quantity);
+    },
+  },
+  async mounted() {
+    if (!this.form.article_id) return;
+    const article = await this.loadPrices(this.form.article_id);
+    if (article && this.isKit) this.applyComponentRules(article);
   },
   methods: {
     async loadPrices(articleId) {
@@ -68,14 +97,21 @@ export default {
           [defaultId(this.priceLists), ...this.prices.map(p => p.price_list_id)]
             .filter(id => this.prices.some(p => p.price_list_id === id))
             .shift() || null;
+        const kit = isQuotableKit(article);
+        if (kit && !(article.components || []).length)
+          throw new Error(
+            this.$t('CRM_ZEUS.QUOTE_FORM.KIT_WITHOUT_COMPONENTS')
+          );
         this.form = {
           ...this.form,
+          role: kit ? 'kit' : 'normal',
           article_id: article.id,
           key: article.key,
           description: article.name,
           unit: article.unit ? article.unit.name : '',
           tax_ids: [...article.tax_ids],
           price_list_id: listId,
+          components: kit ? kitComponentRows(article, this.form.quantity) : [],
         };
         this.applyPrice();
       } catch (e) {
@@ -87,11 +123,54 @@ export default {
     clearArticle() {
       this.form = {
         ...this.form,
+        role: 'normal',
         article_id: null,
         key: '',
         price_list_id: null,
+        components: [],
       };
       this.prices = [];
+      this.replacing = null;
+    },
+    // Una partida ya guardada no trae «reemplazable» ni «permite cambiar unidades»: se toman
+    // del kit en el catálogo, por artículo.
+    applyComponentRules(article) {
+      const rules = Object.fromEntries(
+        (article.components || []).map(row => [row.component_id, row])
+      );
+      this.form.components = this.form.components.map(row => {
+        const rule = rules[row.article_id];
+        return {
+          ...row,
+          replaceable: Boolean(rule && rule.replaceable),
+          units_editable: Boolean(rule && rule.units_editable),
+        };
+      });
+    },
+    setUnitsPerKit(index, value) {
+      const rows = [...this.form.components];
+      rows[index] = { ...rows[index], units_per_kit: value };
+      this.form.components = scaleComponents(rows, this.form.quantity);
+    },
+    replaceComponent(index, article) {
+      const rows = [...this.form.components];
+      rows[index] = {
+        ...rows[index],
+        article_id: article.id,
+        key: article.key || '',
+        description: article.name,
+        unit: article.unit ? article.unit.name : '',
+      };
+      this.form.components = rows;
+      this.replacing = null;
+    },
+    componentExcludeIds(index) {
+      return [
+        this.form.article_id,
+        ...this.form.components
+          .filter((_, i) => i !== index)
+          .map(row => row.article_id),
+      ];
     },
     applyPrice() {
       const price = this.prices.find(
@@ -112,6 +191,17 @@ export default {
       }
       if (!(Number(this.form.quantity) > 0)) {
         this.error = this.$t('CRM_ZEUS.QUOTE_FORM.ITEM_QUANTITY_REQUIRED');
+        return;
+      }
+      if (this.isKit && !this.form.components.length) {
+        this.error = this.$t('CRM_ZEUS.QUOTE_FORM.KIT_WITHOUT_COMPONENTS');
+        return;
+      }
+      if (
+        this.isKit &&
+        this.form.components.some(row => !(Number(row.units_per_kit) > 0))
+      ) {
+        this.error = this.$t('CRM_ZEUS.QUOTE_FORM.COMPONENT_UNITS_REQUIRED');
         return;
       }
       this.$emit('save', { ...this.form });
@@ -152,6 +242,12 @@ export default {
           >
             <span v-if="form.key" class="text-slate-500">{{ form.key }}</span>
             <span class="flex-1">{{ form.description }}</span>
+            <span
+              v-if="isKit"
+              class="px-1.5 py-0.5 text-xs rounded bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+            >
+              {{ $t('CRM_ZEUS.ARTICLES.KIT') }}
+            </span>
             <button
               type="button"
               class="p-0 text-woot-600 hover:underline"
@@ -163,6 +259,7 @@ export default {
           <ArticlePicker
             v-else
             :placeholder="$t('CRM_ZEUS.QUOTE_FORM.ARTICLE_SEARCH')"
+            allow-kits
             @pick="pickArticle"
           />
           <p v-if="!form.article_id" class="m-0 mt-1 text-xs text-slate-500">
@@ -221,6 +318,80 @@ export default {
             <input :value="priceWithTaxes" type="text" disabled />
           </label>
         </div>
+        <fieldset v-if="isKit" class="mb-3">
+          <legend class="mb-1 text-sm">
+            {{ $t('CRM_ZEUS.QUOTE_FORM.KIT_COMPONENTS') }}
+          </legend>
+          <p class="m-0 mb-2 text-xs text-slate-500">
+            {{ $t('CRM_ZEUS.QUOTE_FORM.KIT_COMPONENTS_HINT') }}
+          </p>
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs text-slate-500">
+                <th class="py-1 pr-2">
+                  {{ $t('CRM_ZEUS.QUOTE_FORM.COLUMNS.KEY') }}
+                </th>
+                <th class="py-1 pr-2">
+                  {{ $t('CRM_ZEUS.QUOTE_FORM.COLUMNS.DESCRIPTION') }}
+                </th>
+                <th class="w-28 py-1 pr-2 text-right">
+                  {{ $t('CRM_ZEUS.QUOTE_FORM.UNITS_PER_KIT') }}
+                </th>
+                <th class="py-1 pr-2 text-right">
+                  {{ $t('CRM_ZEUS.QUOTE_FORM.COLUMNS.QUANTITY') }}
+                </th>
+                <th class="w-24 py-1" />
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(row, index) in form.components"
+                :key="index"
+                class="align-top border-t border-slate-50 dark:border-slate-700"
+              >
+                <td class="py-1 pr-2 text-slate-500">{{ row.key || '—' }}</td>
+                <td class="py-1 pr-2">
+                  <ArticlePicker
+                    v-if="replacing === index"
+                    :exclude-ids="componentExcludeIds(index)"
+                    :placeholder="$t('CRM_ZEUS.QUOTE_FORM.REPLACE_SEARCH')"
+                    @pick="article => replaceComponent(index, article)"
+                  />
+                  <span v-else>{{ row.description }}</span>
+                </td>
+                <td class="py-1 pr-2 text-right">
+                  <input
+                    v-if="row.units_editable"
+                    :value="row.units_per_kit"
+                    type="number"
+                    min="0"
+                    step="any"
+                    class="!mb-0 text-right"
+                    @input="setUnitsPerKit(index, $event.target.value)"
+                  />
+                  <span v-else>{{ Number(row.units_per_kit) }}</span>
+                </td>
+                <td class="py-1 pr-2 text-right whitespace-nowrap">
+                  {{ Number(row.quantity) }} {{ row.unit }}
+                </td>
+                <td class="py-1 text-right">
+                  <button
+                    v-if="row.replaceable"
+                    type="button"
+                    class="p-0 text-xs text-woot-600 hover:underline"
+                    @click="replacing = replacing === index ? null : index"
+                  >
+                    {{
+                      replacing === index
+                        ? $t('CRM_ZEUS.CANCEL')
+                        : $t('CRM_ZEUS.QUOTE_FORM.REPLACE')
+                    }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </fieldset>
         <fieldset class="mb-3">
           <legend class="mb-1 text-sm">
             {{ $t('CRM_ZEUS.QUOTE_FORM.TAXES') }}

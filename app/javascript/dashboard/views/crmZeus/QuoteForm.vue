@@ -775,82 +775,107 @@ export default {
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="(item, index) in quote.items"
-                :key="item.uid"
-                class="align-top border-t border-slate-50 dark:border-slate-700"
-              >
-                <td class="px-3 py-2 text-slate-500">{{ item.key || '—' }}</td>
-                <td class="px-3 py-2">
-                  <span class="text-slate-800 dark:text-slate-100">
-                    {{ item.description }}
-                  </span>
-                  <span
-                    v-if="item.role === 'kit'"
-                    class="ml-1 px-1.5 py-0.5 text-xs rounded bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+              <template v-for="(item, index) in quote.items">
+                <tr
+                  :key="item.uid"
+                  class="align-top border-t border-slate-50 dark:border-slate-700"
+                >
+                  <td class="px-3 py-2 text-slate-500">
+                    {{ item.key || '—' }}
+                  </td>
+                  <td class="px-3 py-2">
+                    <span class="text-slate-800 dark:text-slate-100">
+                      {{ item.description }}
+                    </span>
+                    <span
+                      v-if="item.role === 'kit'"
+                      class="ml-1 px-1.5 py-0.5 text-xs rounded bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                    >
+                      {{ $t('CRM_ZEUS.ARTICLES.KIT') }}
+                    </span>
+                    <p v-if="item.notes" class="m-0 text-xs text-slate-500">
+                      {{ item.notes }}
+                    </p>
+                  </td>
+                  <td class="px-3 py-2 text-right whitespace-nowrap">
+                    {{ Number(item.quantity) }} {{ item.unit }}
+                  </td>
+                  <td class="px-3 py-2 text-right whitespace-nowrap">
+                    {{ money(item.unit_price) }}
+                  </td>
+                  <td class="px-3 py-2 text-right">
+                    {{
+                      Number(item.discount_percent)
+                        ? `${Number(item.discount_percent)} %`
+                        : '—'
+                    }}
+                  </td>
+                  <td class="px-3 py-2 text-right whitespace-nowrap">
+                    {{
+                      item.net_amount === undefined
+                        ? '…'
+                        : money(item.net_amount)
+                    }}
+                  </td>
+                  <td class="px-3 py-2 text-xs text-slate-500">
+                    {{
+                      item.tax_ids.map(id => taxNames[id] || id).join(', ') ||
+                      '—'
+                    }}
+                  </td>
+                  <td v-if="editable" class="px-2 py-1 whitespace-nowrap">
+                    <woot-button
+                      variant="clear"
+                      size="tiny"
+                      color-scheme="secondary"
+                      icon="chevron-up"
+                      :disabled="index === 0"
+                      @click="moveItem(index, -1)"
+                    />
+                    <woot-button
+                      variant="clear"
+                      size="tiny"
+                      color-scheme="secondary"
+                      icon="chevron-down"
+                      :disabled="index === quote.items.length - 1"
+                      @click="moveItem(index, 1)"
+                    />
+                    <woot-button
+                      variant="clear"
+                      size="tiny"
+                      color-scheme="secondary"
+                      icon="edit"
+                      @click="editItem(item)"
+                    />
+                    <woot-button
+                      variant="clear"
+                      size="tiny"
+                      color-scheme="alert"
+                      icon="delete"
+                      @click="removeItem(item)"
+                    />
+                  </td>
+                </tr>
+                <tr
+                  v-for="(component, cIndex) in item.role === 'kit'
+                    ? item.components || []
+                    : []"
+                  :key="`${item.uid}-${cIndex}`"
+                  class="text-xs text-slate-500"
+                >
+                  <td class="py-1 pl-6 pr-3">{{ component.key || '—' }}</td>
+                  <td
+                    class="py-1 pl-6 pr-3"
+                    :title="$t('CRM_ZEUS.QUOTE_FORM.COMPONENT_OF_KIT')"
                   >
-                    {{ $t('CRM_ZEUS.ARTICLES.KIT') }}
-                  </span>
-                  <p v-if="item.notes" class="m-0 text-xs text-slate-500">
-                    {{ item.notes }}
-                  </p>
-                </td>
-                <td class="px-3 py-2 text-right whitespace-nowrap">
-                  {{ Number(item.quantity) }} {{ item.unit }}
-                </td>
-                <td class="px-3 py-2 text-right whitespace-nowrap">
-                  {{ money(item.unit_price) }}
-                </td>
-                <td class="px-3 py-2 text-right">
-                  {{
-                    Number(item.discount_percent)
-                      ? `${Number(item.discount_percent)} %`
-                      : '—'
-                  }}
-                </td>
-                <td class="px-3 py-2 text-right whitespace-nowrap">
-                  {{
-                    item.net_amount === undefined ? '…' : money(item.net_amount)
-                  }}
-                </td>
-                <td class="px-3 py-2 text-xs text-slate-500">
-                  {{
-                    item.tax_ids.map(id => taxNames[id] || id).join(', ') || '—'
-                  }}
-                </td>
-                <td v-if="editable" class="px-2 py-1 whitespace-nowrap">
-                  <woot-button
-                    variant="clear"
-                    size="tiny"
-                    color-scheme="secondary"
-                    icon="chevron-up"
-                    :disabled="index === 0"
-                    @click="moveItem(index, -1)"
-                  />
-                  <woot-button
-                    variant="clear"
-                    size="tiny"
-                    color-scheme="secondary"
-                    icon="chevron-down"
-                    :disabled="index === quote.items.length - 1"
-                    @click="moveItem(index, 1)"
-                  />
-                  <woot-button
-                    variant="clear"
-                    size="tiny"
-                    color-scheme="secondary"
-                    icon="edit"
-                    @click="editItem(item)"
-                  />
-                  <woot-button
-                    variant="clear"
-                    size="tiny"
-                    color-scheme="alert"
-                    icon="delete"
-                    @click="removeItem(item)"
-                  />
-                </td>
-              </tr>
+                    {{ component.description }}
+                  </td>
+                  <td class="px-3 py-1 text-right whitespace-nowrap">
+                    {{ Number(component.quantity) }} {{ component.unit }}
+                  </td>
+                  <td :colspan="editable ? 5 : 4" />
+                </tr>
+              </template>
             </tbody>
           </table>
           <p v-else class="py-6 text-sm text-center text-slate-500">
