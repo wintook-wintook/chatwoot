@@ -44,7 +44,8 @@ class Api::V1::Accounts::Crm::OrganizationsController < Api::V1::Accounts::Crm::
   end
 
   def destroy
-    @organization.destroy!
+    return render_errors(@organization) unless @organization.destroy # con cotizaciones no se borra
+
     head :ok
   end
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_10_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_11_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1681,6 +1681,120 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_10_120000) do
     t.index ["account_id"], name: "index_crm_payment_terms_on_account_id"
   end
 
+  create_table "crm_quote_item_taxes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "item_id", null: false
+    t.bigint "tax_id"
+    t.string "name", limit: 30, null: false
+    t.integer "tax_type", null: false
+    t.decimal "percent", precision: 9, scale: 6, default: "0.0", null: false
+    t.decimal "base_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "amount", precision: 18, scale: 6, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_quote_item_taxes_on_account_id"
+    t.index ["item_id", "tax_id"], name: "index_crm_quote_item_taxes_on_item_id_and_tax_id", unique: true
+    t.index ["item_id"], name: "index_crm_quote_item_taxes_on_item_id"
+    t.index ["tax_id"], name: "index_crm_quote_item_taxes_on_tax_id"
+  end
+
+  create_table "crm_quote_items", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "quote_id", null: false
+    t.bigint "parent_item_id"
+    t.integer "position", default: 0, null: false
+    t.string "role", limit: 1, default: "N", null: false
+    t.bigint "article_id"
+    t.string "key", limit: 20
+    t.string "description", limit: 200, null: false
+    t.string "unit", limit: 20
+    t.bigint "price_list_id"
+    t.decimal "quantity", precision: 18, scale: 5, default: "1.0", null: false
+    t.decimal "unit_price", precision: 18, scale: 6, default: "0.0", null: false
+    t.decimal "discount_percent", precision: 9, scale: 6, default: "0.0", null: false
+    t.decimal "gross_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "discount_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "net_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "tax_amount", precision: 18, scale: 6, default: "0.0", null: false
+    t.decimal "withholding_amount", precision: 18, scale: 6, default: "0.0", null: false
+    t.text "notes"
+    t.text "extra_notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_quote_items_on_account_id"
+    t.index ["article_id"], name: "index_crm_quote_items_on_article_id"
+    t.index ["parent_item_id"], name: "index_crm_quote_items_on_parent_item_id"
+    t.index ["price_list_id"], name: "index_crm_quote_items_on_price_list_id"
+    t.index ["quote_id"], name: "index_crm_quote_items_on_quote_id"
+  end
+
+  create_table "crm_quote_series", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.string "series", limit: 8, null: false
+    t.integer "last_number", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, upper((series)::text)", name: "index_crm_quote_series_unique_series", unique: true
+    t.index ["account_id", "user_id"], name: "index_crm_quote_series_on_account_id_and_user_id", unique: true
+    t.index ["account_id"], name: "index_crm_quote_series_on_account_id"
+    t.index ["user_id"], name: "index_crm_quote_series_on_user_id"
+  end
+
+  create_table "crm_quotes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "series", limit: 8, null: false
+    t.integer "number", null: false
+    t.string "folio", limit: 20, null: false
+    t.string "status", limit: 1, default: "N", null: false
+    t.bigint "organization_id", null: false
+    t.integer "contact_id"
+    t.bigint "shipping_address_id"
+    t.bigint "seller_id"
+    t.bigint "currency_id"
+    t.bigint "payment_term_id"
+    t.decimal "exchange_rate", precision: 18, scale: 6, default: "1.0", null: false
+    t.date "quote_date", null: false
+    t.date "valid_until"
+    t.date "delivery_date"
+    t.string "cfdi_use", limit: 4
+    t.string "sat_payment_method", limit: 3
+    t.string "purchase_order", limit: 35
+    t.date "purchase_order_date"
+    t.text "header_notes"
+    t.text "footer_notes"
+    t.string "extra_discount_type", limit: 1, default: "P", null: false
+    t.decimal "extra_discount_value", precision: 15, scale: 6, default: "0.0", null: false
+    t.decimal "extra_discount_percent", precision: 9, scale: 6, default: "0.0", null: false
+    t.decimal "extra_discount_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "freight", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "other_charges", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "subtotal", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "discount_total", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "net_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "tax_total", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "withholding_total", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "total", precision: 15, scale: 2, default: "0.0", null: false
+    t.datetime "status_changed_at"
+    t.bigint "status_changed_by_id"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "folio"], name: "index_crm_quotes_on_account_id_and_folio", unique: true
+    t.index ["account_id", "status", "quote_date"], name: "index_crm_quotes_on_account_id_and_status_and_quote_date"
+    t.index ["account_id"], name: "index_crm_quotes_on_account_id"
+    t.index ["contact_id"], name: "index_crm_quotes_on_contact_id"
+    t.index ["created_by_id"], name: "index_crm_quotes_on_created_by_id"
+    t.index ["currency_id"], name: "index_crm_quotes_on_currency_id"
+    t.index ["organization_id"], name: "index_crm_quotes_on_organization_id"
+    t.index ["payment_term_id"], name: "index_crm_quotes_on_payment_term_id"
+    t.index ["seller_id"], name: "index_crm_quotes_on_seller_id"
+    t.index ["shipping_address_id"], name: "index_crm_quotes_on_shipping_address_id"
+    t.index ["status_changed_by_id"], name: "index_crm_quotes_on_status_changed_by_id"
+    t.index ["updated_by_id"], name: "index_crm_quotes_on_updated_by_id"
+  end
+
   create_table "crm_sellers", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", limit: 100, null: false
@@ -3113,6 +3227,26 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_10_120000) do
   add_foreign_key "crm_payment_term_installments", "accounts"
   add_foreign_key "crm_payment_term_installments", "crm_payment_terms", column: "payment_term_id", on_delete: :cascade
   add_foreign_key "crm_payment_terms", "accounts"
+  add_foreign_key "crm_quote_item_taxes", "accounts"
+  add_foreign_key "crm_quote_item_taxes", "crm_quote_items", column: "item_id", on_delete: :cascade
+  add_foreign_key "crm_quote_item_taxes", "crm_taxes", column: "tax_id", on_delete: :nullify
+  add_foreign_key "crm_quote_items", "accounts"
+  add_foreign_key "crm_quote_items", "crm_articles", column: "article_id", on_delete: :nullify
+  add_foreign_key "crm_quote_items", "crm_lookups", column: "price_list_id", on_delete: :nullify
+  add_foreign_key "crm_quote_items", "crm_quote_items", column: "parent_item_id", on_delete: :cascade
+  add_foreign_key "crm_quote_items", "crm_quotes", column: "quote_id", on_delete: :cascade
+  add_foreign_key "crm_quote_series", "accounts"
+  add_foreign_key "crm_quote_series", "users", on_delete: :cascade
+  add_foreign_key "crm_quotes", "accounts"
+  add_foreign_key "crm_quotes", "contacts", on_delete: :nullify
+  add_foreign_key "crm_quotes", "crm_currencies", column: "currency_id", on_delete: :nullify
+  add_foreign_key "crm_quotes", "crm_organization_addresses", column: "shipping_address_id", on_delete: :nullify
+  add_foreign_key "crm_quotes", "crm_organizations", column: "organization_id"
+  add_foreign_key "crm_quotes", "crm_payment_terms", column: "payment_term_id", on_delete: :nullify
+  add_foreign_key "crm_quotes", "crm_sellers", column: "seller_id", on_delete: :nullify
+  add_foreign_key "crm_quotes", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "crm_quotes", "users", column: "status_changed_by_id", on_delete: :nullify
+  add_foreign_key "crm_quotes", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "crm_sellers", "accounts"
   add_foreign_key "crm_sellers", "users", on_delete: :nullify
   add_foreign_key "crm_states", "accounts"

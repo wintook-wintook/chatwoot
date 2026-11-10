@@ -57,6 +57,8 @@ class Account < ApplicationRecord
   has_many :events, dependent: :destroy # Plan-Eventos E1
   has_many :client_portal_links, dependent: :destroy # Portal del cliente (tareas con el cliente)
   has_many :contract_types, dependent: :destroy # Plan-Contratos R1
+  has_many :crm_quotes, dependent: :destroy # CrmZeus Q0 (antes que las organizaciones: su FK es restrictiva)
+  has_many :crm_quote_series, dependent: :delete_all # CrmZeus Q0
   has_many :crm_organizations, dependent: :destroy # CrmZeus O0
   has_many :crm_lookups, dependent: :destroy # CrmZeus O0
   has_many :crm_sellers, dependent: :destroy # CrmZeus O0

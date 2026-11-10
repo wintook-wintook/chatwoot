@@ -101,6 +101,9 @@ class CrmOrganization < ApplicationRecord
   has_many :contact_links, class_name: 'CrmOrganizationContact', foreign_key: :organization_id,
                            inverse_of: :organization, dependent: :destroy
   has_many :contacts, through: :contact_links
+  # Con cotizaciones no se borra (se da de baja).
+  has_many :quotes, class_name: 'CrmQuote', foreign_key: :organization_id, inverse_of: :organization,
+                    dependent: :restrict_with_error
 
   # Mismos valores que TIPO_ORGANIZACION_ID de CRMZeus.
   enum organization_type: { customer: 1, prospect: 2 }
