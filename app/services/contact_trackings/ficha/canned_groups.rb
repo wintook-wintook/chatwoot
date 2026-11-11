@@ -64,9 +64,10 @@ class ContactTrackings::Ficha::CannedGroups
       topics: grupo.first(MAX_TOPICS).map { |r| topic(r[1], label) } }
   end
 
-  # «PATITAS PRECIO CONSULTA» → «precio consulta»
+  # «PATITAS PRECIO CONSULTA» → «precio consulta». Solo la palabra completa: con
+  # «Licenciaturas: servicio social» en el grupo Licenciatura quedaba «s: servicio social».
   def topic(code, label)
-    texto = code.to_s.sub(/\A#{Regexp.escape(label)}[\s_-]*/i, '')
+    texto = code.to_s.sub(/\A#{Regexp.escape(label)}(?![[:alnum:]])[\s_-]*/i, '')
     (texto.presence || code.to_s).tr('_-', '  ').squish.downcase
   end
 

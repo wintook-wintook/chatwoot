@@ -170,13 +170,13 @@ class ContactTrackings::Ficha::Offers
   def small_groups_offer(card, chicas)
     return nil if chicas.empty?
 
-    base(card).merge(key: 'canned_response:*', name: 'generales',
+    base(card).merge(key: 'canned_response:*', name: 'generales', groups: chicas.pluck(:key),
                      label: "Contestar dudas generales con tus respuestas predefinidas (#{chicas.pluck(:label).join(', ')})",
                      directive: '@buscar_predefinidas', topic: chicas.flat_map { |p| p[:topics] }.first(4).join(', '))
   end
 
   def canned_part_offer(card, parte)
-    base(card).merge(key: "canned_response:#{parte[:key]}", name: parte[:label],
+    base(card).merge(key: "canned_response:#{parte[:key]}", name: parte[:label], groups: [parte[:key]],
                      label: "Contestar dudas de #{parte[:label]} con tus respuestas predefinidas",
                      directive: "@buscar_predefinidas(#{parte[:label]})", topic: parte[:topics].join(', '),
                      warning: parte[:not_ready].positive? ? "#{parte[:not_ready]} sin vectorizar" : nil)
