@@ -1064,6 +1064,23 @@ export default {
         ticketId: this.ticketId,
       });
     },
+    // Tareas, Tareas agendadas y Notas son listas aparte: lo que cambia en una se
+    // cuenta en las otras (notas de la tarea, sus agendadas, el reporte que entra
+    // como nota). Se recargan como al confirmar algo de Dali.
+    onNotesChanged() {
+      this.reloadEvents();
+      this.$refs.ticketTasks?.load?.();
+    },
+    onTasksSaved() {
+      this.refetch();
+      this.activityTick += 1;
+      this.$refs.ticketNotes?.load?.();
+    },
+    onMeetingsChanged() {
+      this.reloadEvents();
+      this.$refs.ticketTasks?.load?.();
+      this.$refs.ticketNotes?.load?.();
+    },
     // @tickets_cases — clic afuera (v-on-clickaway): cada bloque cierra solo lo suyo. Si
     // uno cerrara todos, el clic en el botón del otro apagaría su menú al abrirlo.
     // Un solo clickaway para las dos barras de la cabecera (fix de develop, #133).
@@ -3496,7 +3513,7 @@ export default {
         :is-frozen="isFrozen"
         class="flex-1 min-h-0"
         @count="noteCount = $event"
-        @changed="reloadEvents"
+        @changed="onNotesChanged"
       />
 
       <!-- ════ Pestaña Pendientes (Plan Actividad del caso P3) ════
@@ -3569,10 +3586,7 @@ export default {
         :allow-milestones="isProject"
         urgent-first
         class="flex-none"
-        @saved="
-          refetch();
-          activityTick += 1;
-        "
+        @saved="onTasksSaved"
         @count="taskCount = $event"
         @addNote="openNoteForTask"
         @viewNotes="openNotesForTask"
@@ -3597,7 +3611,7 @@ export default {
         :create-defaults="visitDefaults"
         class="flex-none"
         @count="meetingCount = $event"
-        @changed="reloadEvents"
+        @changed="onMeetingsChanged"
         @tasksChanged="$refs.ticketTasks && $refs.ticketTasks.load()"
         @viewTask="openTaskFromMeeting"
       />
