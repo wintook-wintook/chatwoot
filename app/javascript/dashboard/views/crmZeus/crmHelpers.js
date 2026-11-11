@@ -115,3 +115,18 @@ export const scaleComponents = (components, kitQuantity) =>
     ...row,
     quantity: round5(Number(row.units_per_kit) * Number(kitQuantity || 0)),
   }));
+
+// Q3.1 — de los impuestos de un artículo, los que aplican a la organización: los
+// trasladados solo si cobra impuestos y las retenciones solo si retiene.
+export const isWithholding = tax => tax.tax_type.endsWith('withholding');
+
+export const applicableTaxIds = (taxIds, taxes, organization) => {
+  if (!organization) return [...taxIds];
+  return taxIds.filter(id => {
+    const tax = taxes.find(item => item.id === id);
+    if (!tax) return false;
+    return isWithholding(tax)
+      ? !!organization.withholds_taxes
+      : organization.charge_taxes !== false;
+  });
+};

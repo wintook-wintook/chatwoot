@@ -5,7 +5,7 @@
 #   GET   /crm/quotes/:id             con partidas (cada kit con sus componentes) y resumen de impuestos
 #   POST  /crm/quotes                 { quote: {..., items: [{..., tax_ids: [], components: [...]}]} }
 #   PATCH /crm/quotes/:id             la lista de partidas reemplaza a la guardada; solo en Pendiente
-#   POST  /crm/quotes/calculate       mismos datos que el alta: regresa los importes sin guardar
+#   POST  /crm/quotes/calculate       mismos datos que el alta (+ quote_id si ya existe): regresa los importes sin guardar
 #   POST  /crm/quotes/:id/status      { status: won|lost|cancelled|pending }
 #   POST  /crm/quotes/:id/duplicate   borrador sin guardar con los mismos datos (como CRMZeus, en el navegador)
 #
@@ -59,7 +59,8 @@ class Api::V1::Accounts::Crm::QuotesController < Api::V1::Accounts::Crm::BaseCon
   end
 
   def calculate
-    quote = Crm::QuoteForm.new(quotes.new(created_by: Current.user), quote_params, ids: false).apply
+    stored = quotes.includes(items: :item_taxes).find_by(id: params[:quote_id]) if params[:quote_id].present?
+    quote = Crm::QuoteForm.new(quotes.new(created_by: Current.user), quote_params, ids: false, stored: stored).apply
     quote.validate # corre el cálculo (before_validation); los errores van aparte, no detienen el cálculo
     render json: { quote: Crm::QuoteJson.totals(quote), errors: quote.errors.to_hash(true) }
   end

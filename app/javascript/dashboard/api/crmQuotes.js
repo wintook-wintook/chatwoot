@@ -19,8 +19,12 @@ class CrmQuotesAPI extends ApiClient {
     });
   }
 
-  calculate(quote) {
-    return axios.post(`${this.url}/calculate`, { quote });
+  // `quoteId` de una cotización ya guardada: el servidor respeta los impuestos guardados.
+  calculate(quote, quoteId) {
+    return axios.post(`${this.url}/calculate`, {
+      quote,
+      ...(quoteId ? { quote_id: quoteId } : {}),
+    });
   }
 
   changeStatus(id, status) {

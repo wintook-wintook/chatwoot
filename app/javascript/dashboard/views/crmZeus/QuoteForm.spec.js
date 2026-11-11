@@ -166,6 +166,37 @@ describe('CrmZeusQuoteForm', () => {
     ]);
   });
 
+  it('sin organización no deja agregar partidas (openModalArticle de CRMZeus)', async () => {
+    CrmQuotes.draft.mockResolvedValue({
+      data: {
+        quote: { ...DRAFT, organization_id: null, organization: null },
+        series: { series: 'LAU', next_folio: 'LAU000125' },
+      },
+    });
+    const wrapper = montar({ query: {} });
+    await flushPromises();
+
+    expect(wrapper.vm.organization).toBeFalsy();
+    wrapper.vm.newItem();
+    expect(wrapper.vm.itemForm).toBeFalsy();
+
+    await wrapper.setData({ organization: ACEROS });
+    wrapper.vm.newItem();
+    expect(wrapper.vm.itemForm).toBeTruthy();
+  });
+
+  it('toma de la respuesta del cálculo los impuestos de cada partida', async () => {
+    const wrapper = montar();
+    await flushPromises();
+    wrapper.vm.quote.items = [
+      { uid: 1, description: 'Tornillo', tax_ids: [16] },
+    ];
+
+    wrapper.vm.applyTotals({ items: [{ net_amount: 100, tax_ids: [] }] });
+
+    expect(wrapper.vm.quote.items[0].tax_ids).toEqual([]);
+  });
+
   it('los días de entrega ponen la fecha', () => {
     expect(addDays('2026-11-28', 7)).toBe('2026-12-05');
   });

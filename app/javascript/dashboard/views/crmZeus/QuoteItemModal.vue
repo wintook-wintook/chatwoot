@@ -13,6 +13,7 @@
 import CrmArticles from 'dashboard/api/crmArticles';
 import ArticlePicker from './ArticlePicker.vue';
 import {
+  applicableTaxIds,
   defaultId,
   errorMessage,
   isQuotableKit,
@@ -27,6 +28,8 @@ export default {
   props: {
     item: { type: Object, required: true },
     taxes: { type: Array, default: () => [] },
+    // La organización de la cotización: decide qué impuestos del artículo aplican.
+    organization: { type: Object, default: null },
     priceLists: { type: Array, default: () => [] },
   },
   data() {
@@ -110,7 +113,11 @@ export default {
           key: article.key,
           description: article.name,
           unit: article.unit ? article.unit.name : '',
-          tax_ids: [...article.tax_ids],
+          tax_ids: applicableTaxIds(
+            article.tax_ids,
+            this.taxes,
+            this.organization
+          ),
           price_list_id: listId,
           components: kit ? kitComponentRows(article, this.form.quantity) : [],
         };
@@ -204,6 +211,14 @@ export default {
         p => p.price_list_id === this.form.price_list_id
       );
       if (price) this.form.unit_price = price.price;
+    },
+    // Como CRMZeus, los impuestos de un artículo salen de su catálogo (no se eligen). En una
+    // partida libre se eligen, pero solo los que aplican al cliente (cobra / retiene).
+    taxSelectable(tax) {
+      if (this.form.article_id) return false;
+      return (
+        applicableTaxIds([tax.id], this.taxes, this.organization).length > 0
+      );
     },
     toggleTax(id) {
       const ids = this.form.tax_ids;
@@ -447,6 +462,7 @@ export default {
                 type="checkbox"
                 class="!m-0"
                 :checked="form.tax_ids.includes(tax.id)"
+                :disabled="!taxSelectable(tax)"
                 @change="toggleTax(tax.id)"
               />
               {{ tax.name }}

@@ -189,3 +189,61 @@ describe('CrmQuoteItemModal (kits)', () => {
     expect(wrapper.emitted('save')[0][0].components).toHaveLength(3);
   });
 });
+
+describe('CrmQuoteItemModal (impuestos según el cliente)', () => {
+  const TAXES = [
+    { id: 1, name: 'IVA 16%', tax_type: 'vat', percent: 16 },
+    { id: 2, name: 'Ret. IVA', tax_type: 'vat_withholding', percent: 10.67 },
+    { id: 3, name: 'Ret. ISR', tax_type: 'isr_withholding', percent: 10 },
+  ];
+  const SERVICE = {
+    id: 5,
+    key: 'SRV-1',
+    name: 'Servicio',
+    unit: null,
+    tax_ids: [1, 2, 3],
+    prices: [],
+    components: [],
+  };
+  const elegir = async organization => {
+    const wrapper = shallowMount(QuoteItemModal, {
+      propsData: { item: blankItem(), taxes: TAXES, organization },
+      mocks: { $t: clave => clave },
+      stubs: ['woot-modal', 'woot-modal-header', 'woot-submit-button'],
+    });
+    await wrapper.vm.pickArticle({ id: 5 });
+    return wrapper.vm.form.tax_ids;
+  };
+
+  beforeEach(() => {
+    CrmArticles.show.mockResolvedValue({ data: { article: SERVICE } });
+  });
+
+  it('cobra y no retiene: solo los trasladados', async () => {
+    expect(
+      await elegir({ id: 7, charge_taxes: true, withholds_taxes: false })
+    ).toEqual([1]);
+  });
+
+  it('con artículo no se eligen; en la partida libre solo los que aplican', () => {
+    const wrapper = shallowMount(QuoteItemModal, {
+      propsData: {
+        item: blankItem(),
+        taxes: TAXES,
+        organization: { id: 7, charge_taxes: true, withholds_taxes: false },
+      },
+      mocks: { $t: clave => clave },
+      stubs: ['woot-modal', 'woot-modal-header', 'woot-submit-button'],
+    });
+    expect(TAXES.map(wrapper.vm.taxSelectable)).toEqual([true, false, false]);
+
+    wrapper.vm.form.article_id = 5;
+    expect(TAXES.map(wrapper.vm.taxSelectable)).toEqual([false, false, false]);
+  });
+
+  it('retiene y no cobra: solo las retenciones', async () => {
+    expect(
+      await elegir({ id: 7, charge_taxes: false, withholds_taxes: true })
+    ).toEqual([2, 3]);
+  });
+});

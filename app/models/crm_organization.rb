@@ -138,6 +138,12 @@ class CrmOrganization < ApplicationRecord
     update!(organization_type: :customer, converted_at: Time.current, updated_by: user || updated_by)
   end
 
+  # Q3.1 — de los impuestos de un artículo, los que aplican a esta organización: los trasladados
+  # solo si `charge_taxes` (COBRAR_IMPUESTOS) y las retenciones solo si `withholds_taxes`.
+  def applicable_taxes(taxes)
+    taxes.select { |tax| tax.withholding? ? withholds_taxes? : charge_taxes? }
+  end
+
   private
 
   def normalize

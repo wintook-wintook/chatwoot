@@ -6,6 +6,8 @@
 # Q3: un kit sin `components` en la petición toma los del catálogo (unidades por kit × cantidad); un
 # renglón sin artículo no puede ser kit.
 #
+# Q3.1: los impuestos de una partida con artículo los decide el servidor (ver `assign_taxes`).
+#
 #   Crm::QuoteForm.new(quote, params).apply            # alta y edición
 #   Crm::QuoteForm.new(quote, params, ids: false).apply  # `calculate`: todo como partida nueva
 class Crm::QuoteForm
@@ -20,14 +22,18 @@ class Crm::QuoteForm
     params.require(:quote).permit(*HEADER_FIELDS, items: [*item, { components: item }])
   end
 
-  def initialize(quote, attributes, ids: true)
+  # `stored`: en `calculate` de una cotización ya guardada, la guardada (para que la vista previa
+  # respete sus impuestos igual que el guardado).
+  def initialize(quote, attributes, ids: true, stored: nil)
     @quote = quote
     @attributes = attributes.to_h.with_indifferent_access
     @ids = ids
+    @stored = stored
   end
 
   def apply
     @quote.assign_attributes(@attributes.slice(*HEADER_FIELDS))
+    @organization_changed = organization_changed?
     @quote.fill_from_organization if @quote.new_record?
     @quote.exchange_rate = @quote.default_exchange_rate
     sync_items if @attributes.key?(:items)
@@ -90,14 +96,62 @@ class Crm::QuoteForm
   def assign(row, position, role:, parent_item: nil)
     item = find_or_build(row[:id])
     item.assign_attributes(row.slice(*ITEM_FIELDS - [:id]).merge(position: position, role: role, parent_item: parent_item))
-    item.tax_ids = row.key?(:tax_ids) ? row[:tax_ids] : article_tax_ids(item) if row.key?(:tax_ids) || item.new_record?
+    assign_taxes(item, row)
     @kept << item
     item
   end
 
-  # Partida nueva sin `tax_ids`: los impuestos del artículo.
-  def article_tax_ids(item)
-    CrmArticle.find_by(account_id: @quote.account_id, id: item.article_id)&.tax_ids || []
+  # Q3.1 — impuestos de la partida como CRMZeus. Se toman del artículo, filtrados por el cliente
+  # (trasladados si cobra impuestos, retenciones si retiene; getPrice, `utils.js:4800-4835`), solo
+  # cuando la partida es nueva, cambia de artículo o la cotización cambia de organización (setOrg →
+  # resetPrices). Si no, se quedan los guardados en crm_quote_item_taxes (IMPUESTOS_DCDOCTOS_PDV_DET),
+  # como hace CRMZeus al abrir una cotización. Lo que mande el navegador para una partida con
+  # artículo se ignora. Una partida libre lleva los que mande, también filtrados por el cliente.
+  # Los componentes de un kit van sin importe: llevan lo que se mande (vacío desde el catálogo).
+  def assign_taxes(item, row)
+    return assign_sent_taxes(item, row) if item.role_component? || item.article_id.blank?
+
+    stored = stored_item(item, row)
+    if retax?(item, stored)
+      item.tax_ids = applicable_ids(CrmArticle.find_by(account_id: @quote.account_id, id: item.article_id)&.taxes.to_a)
+    elsif !stored.equal?(item)
+      item.tax_ids = stored.tax_ids
+    end
+  end
+
+  def retax?(item, stored)
+    stored.nil? || @organization_changed || article_changed?(item, stored)
+  end
+
+  def assign_sent_taxes(item, row)
+    return unless row.key?(:tax_ids) || item.new_record?
+
+    ids = Array(row[:tax_ids]).compact_blank
+    item.tax_ids = item.role_component? ? ids : applicable_ids(CrmTax.where(id: ids).to_a)
+  end
+
+  # La partida tal como está guardada: la misma (alta/edición) o la de la cotización guardada (`calculate`).
+  def stored_item(item, row)
+    return (item.persisted? ? item : nil) if @ids
+    return if @stored.nil? || row[:id].blank?
+
+    @stored.items.find { |stored| stored.id == row[:id].to_i }
+  end
+
+  def article_changed?(item, stored)
+    stored.equal?(item) ? item.article_id_changed? : stored.article_id != item.article_id
+  end
+
+  def organization_changed?
+    return @quote.organization_id_changed? if @quote.persisted?
+
+    @stored.present? && @stored.organization_id != @quote.organization_id
+  end
+
+  # Sin organización no se filtra: la validación de la cotización avisa que falta.
+  def applicable_ids(taxes)
+    taxes = @quote.organization.applicable_taxes(taxes) if @quote.organization
+    taxes.map(&:id)
   end
 
   # Un id que no es de esta cotización es un 404 (no se crea una partida nueva en silencio).

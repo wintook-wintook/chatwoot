@@ -75,6 +75,70 @@ RSpec.describe 'CrmZeus Quotes API' do
       .to eq([['TOR-12', 'Tornillo 1/2', [iva.id]], [nil, 'Rondana', [iva.id]]])
   end
 
+  it 'de los impuestos del artículo toma solo los que aplican al cliente' do
+    ret_isr = account.crm_taxes.create!(name: 'Ret. ISR 10%', tax_type: :isr_withholding, percent: 10)
+    service = account.crm_articles.create!(name: 'Servicio', key: 'SRV-1', taxes: [iva, ret_isr])
+    item = { article_id: service.id, quantity: 1, unit_price: 100 }
+
+    expect(create_quote(agent, items: [item])['items'].sole['tax_ids']).to eq([iva.id])
+
+    organization.update!(charge_taxes: false, withholds_taxes: true)
+    expect(create_quote(agent, items: [item])['items'].sole['tax_ids']).to eq([ret_isr.id])
+  end
+
+  it 'los impuestos de una partida con artículo no se eligen; la libre pasa por el filtro del cliente' do
+    ret_isr = account.crm_taxes.create!(name: 'Ret. ISR 10%', tax_type: :isr_withholding, percent: 10)
+    items = [{ article_id: screws.id, quantity: 1, unit_price: 100, tax_ids: [ret_isr.id] },
+             { description: 'Flete', quantity: 1, unit_price: 50, tax_ids: [iva.id, ret_isr.id] }]
+
+    expect(create_quote(agent, items: items)['items'].pluck('tax_ids')).to eq([[iva.id], [iva.id]])
+  end
+
+  it 'al editar conserva los impuestos guardados aunque cambien los del artículo (IMPUESTOS_DCDOCTOS_PDV_DET)' do
+    created = create_quote
+    ret_isr = account.crm_taxes.create!(name: 'Ret. ISR 10%', tax_type: :isr_withholding, percent: 10)
+    organization.update!(withholds_taxes: true)
+    screws.update!(taxes: [iva, ret_isr])
+    rows = created['items'].map { |i| i.slice('id', 'article_id', 'description', 'quantity', 'unit_price').merge('tax_ids' => []) }
+
+    post "#{url}/calculate", params: { quote_id: created['id'], quote: payload(items: rows) },
+                             headers: agent.create_new_auth_token, as: :json
+    expect(response.parsed_body['quote']['items'].first['tax_ids']).to eq([iva.id])
+
+    patch "#{url}/#{created['id']}", params: { quote: { items: rows } }, headers: agent.create_new_auth_token, as: :json
+    expect(response.parsed_body['quote']['items'].first['tax_ids']).to eq([iva.id])
+
+    rows.first['article_id'] = gloves.id # sin impuestos: al cambiar de artículo se toman los del nuevo
+    patch "#{url}/#{created['id']}", params: { quote: { items: rows } }, headers: agent.create_new_auth_token, as: :json
+    expect(response.parsed_body['quote']['items'].first['tax_ids']).to eq([])
+  end
+
+  it 'la vista previa de una cotización guardada recalcula si cambia la organización' do
+    created = create_quote
+    exempt = account.crm_organizations.create!(legal_name: 'Exenta SA', trade_name: 'Exenta', organization_type: :customer,
+                                               seller: seller, payment_term: credit, cfdi_use: 'G03', charge_taxes: false)
+    rows = created['items'].map { |i| i.slice('id', 'article_id', 'description', 'quantity', 'unit_price', 'tax_ids') }
+
+    post "#{url}/calculate", params: { quote_id: created['id'], quote: payload(organization_id: exempt.id, items: rows) },
+                             headers: agent.create_new_auth_token, as: :json
+
+    expect(response.parsed_body['quote']['items'].pluck('tax_ids')).to eq([[], []])
+  end
+
+  it 'al cambiar de organización recalcula los impuestos de las partidas (resetPrices de CRMZeus)' do
+    created = create_quote
+    other = account.crm_organizations.create!(legal_name: 'Exenta SA', trade_name: 'Exenta', organization_type: :customer,
+                                              seller: seller, payment_term: credit, cfdi_use: 'G03', charge_taxes: false)
+    rows = created['items'].map { |i| i.slice('id', 'article_id', 'description', 'quantity', 'unit_price', 'tax_ids') }
+
+    patch "#{url}/#{created['id']}", params: { quote: { organization_id: other.id, items: rows } },
+                                     headers: agent.create_new_auth_token, as: :json
+
+    body = response.parsed_body['quote']
+    expect(body['items'].pluck('tax_ids')).to eq([[], []])
+    expect(body['tax_total']).to eq(0)
+  end
+
   it 'avisa lo que falta, en español' do
     post url, params: { quote: { organization_id: organization.id, items: [] } }, headers: agent.create_new_auth_token, as: :json
 

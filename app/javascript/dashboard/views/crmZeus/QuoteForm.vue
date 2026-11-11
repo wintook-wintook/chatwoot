@@ -274,6 +274,13 @@ export default {
         ['gross_amount', 'discount_amount', 'net_amount', 'tax_amount'].forEach(
           key => this.$set(item, key, row[key])
         );
+        // Q3.1 — los impuestos los decide el servidor (los del artículo que aplican al
+        // cliente); así se recalculan al cambiar de organización, como resetPrices de CRMZeus.
+        if (
+          row.tax_ids &&
+          JSON.stringify(row.tax_ids) !== JSON.stringify(item.tax_ids)
+        )
+          this.$set(item, 'tax_ids', [...row.tax_ids]);
       });
     },
     async loadOrganizationLists() {
@@ -347,7 +354,10 @@ export default {
     async recalculate() {
       this.calculating = true;
       try {
-        const { data } = await CrmQuotes.calculate(this.payload());
+        const { data } = await CrmQuotes.calculate(
+          this.payload(),
+          this.isNew ? null : this.quoteId
+        );
         this.applyTotals(data.quote);
       } catch (error) {
         // El cálculo es una vista previa; el guardado avisa de los errores.
@@ -356,6 +366,11 @@ export default {
       }
     },
     newItem() {
+      // openModalArticle de CRMZeus: sin organización no hay partidas (de ella salen los impuestos).
+      if (!this.organization) {
+        useAlert(this.$t('CRM_ZEUS.QUOTE_FORM.ORGANIZATION_FIRST'));
+        return;
+      }
       this.itemForm = {
         role: 'normal',
         article_id: null,
@@ -763,6 +778,10 @@ export default {
             size="small"
             variant="smooth"
             icon="add"
+            :is-disabled="!organization"
+            :title="
+              organization ? '' : $t('CRM_ZEUS.QUOTE_FORM.ORGANIZATION_FIRST')
+            "
             @click="newItem"
           >
             {{ $t('CRM_ZEUS.QUOTE_FORM.ADD_ITEM') }}
@@ -1023,6 +1042,7 @@ export default {
       v-if="itemForm"
       :item="itemForm"
       :taxes="catalogs.taxes"
+      :organization="organization"
       :price-lists="priceLists"
       @save="saveItem"
       @close="itemForm = null"
