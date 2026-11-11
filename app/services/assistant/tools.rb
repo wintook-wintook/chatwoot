@@ -27,6 +27,7 @@ class Assistant::Tools
   include Assistant::ConvertTools # tarea ↔ tarea agendada
   include Assistant::FollowUpPresetTools # plantillas de seguimiento
   include Assistant::ProgressTools # reportar avance de una tarea
+  include Assistant::PendingTools # menciones, chat interno y sin asignar
 
   LIST_LIMIT = 6
   ACTIVITY_LINES = 15
@@ -41,7 +42,7 @@ class Assistant::Tools
                       propose_create_contact propose_follow_up propose_follow_up_action].freeze +
                    QUOTE_PROPOSAL_TOOLS + CONVERSATION_PROPOSAL_TOOLS + FIELD_PROPOSAL_TOOLS + EVENT_PROPOSAL_TOOLS +
                    CLIENT_TASK_PROPOSAL_TOOLS + CANCEL_PROPOSAL_TOOLS + CONVERT_PROPOSAL_TOOLS + FOLLOW_UP_PRESET_PROPOSAL_TOOLS +
-                   PROGRESS_PROPOSAL_TOOLS
+                   PROGRESS_PROPOSAL_TOOLS + PENDING_PROPOSAL_TOOLS
 
   def self.definitions = Assistant::ToolDefinitions.all
 
@@ -220,9 +221,6 @@ class Assistant::Tools
   end
 
   def local(time) = time&.in_time_zone(@zone)&.strftime('%Y-%m-%d %H:%M')
-
-  # El día en que vence una tarea (sin hora: vence al final de ese día).
-  def due_on(time) = time&.in_time_zone(@zone)&.strftime('%Y-%m-%d')
 
   def google_connected?
     UserCalendarIntegration.exists?(account_id: @account.id, user_id: @user.id)

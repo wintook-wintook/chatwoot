@@ -47,6 +47,8 @@ const ICONS = {
   convert_item: 'calendar',
   // Reportar avance de una tarea (es un reporte, no una nota)
   task_progress: 'clipboard',
+  // Nota interna en una conversación (para el equipo; el cliente no la ve)
+  internal_note: 'document',
 };
 
 // Igual que el servidor (Assistant::QuoteTools.totals): descuento por partida, IVA de la partida.
@@ -209,6 +211,7 @@ export default {
         },
         save_follow_up_preset: { name: f.name },
         note: { content: f.content },
+        internal_note: { content: f.content },
         task: { title: f.title, due_at: dueToIso(f.due_at) },
         meeting: {
           title: f.title,
@@ -434,7 +437,9 @@ export default {
       </label>
       <label
         v-if="
-          ['note', 'scheduled_message', 'draft'].includes(type) ||
+          ['note', 'internal_note', 'scheduled_message', 'draft'].includes(
+            type
+          ) ||
           (type === 'reply' && !labels.template)
         "
         class="text-xs"

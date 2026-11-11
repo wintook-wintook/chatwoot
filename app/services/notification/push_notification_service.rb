@@ -4,9 +4,7 @@ class Notification::PushNotificationService
   pattr_initialize [:notification!]
 
   def perform
-    return unless user_subscribed_to_notification?
-
-    notification_subscriptions.each do |subscription|
+    target_subscriptions.each do |subscription|
       send_browser_push(subscription)
       send_fcm_push(subscription)
       send_push_via_chatwoot_hub(subscription)
@@ -18,6 +16,20 @@ class Notification::PushNotificationService
   delegate :user, to: :notification
   delegate :notification_subscriptions, to: :user
   delegate :notification_settings, to: :user
+
+  # Las que pidió en su perfil van a todos sus dispositivos. El teléfono con Dali avisa además
+  # de los mensajes directos del chat interno (los de los grupos solo si lo mencionan).
+  def target_subscriptions
+    return notification_subscriptions if user_subscribed_to_notification?
+    return notification_subscriptions.select { |subscription| dali_subscription?(subscription) } if internal_direct_message?
+
+    []
+  end
+
+  def internal_direct_message?
+    notification.notification_type == 'participating_conversation_new_message' && conversation.is_a?(Conversation) &&
+      conversation.internal? && conversation.additional_attributes.to_h.dig('internal', 'kind') == 'direct'
+  end
 
   def user_subscribed_to_notification?
     notification_setting = notification_settings.find_by(account_id: notification.account.id)

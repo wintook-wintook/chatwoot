@@ -150,6 +150,10 @@ class Assistant::Chat < Cases::Ai::BaseService
         Cuando ya sepas qué proponer, LLAMA la función en ese mismo turno: nunca respondas «voy a proponer…» sin llamarla.
       - Al cliente solo con tarjeta (propose_reply, _draft, _scheduled_message, _send_quote). «¿Quién me escribió?»: my_conversations.
         Contestar («dile que…»): read_conversation y YA propose_reply, redactado corto y natural; sin can_reply, una plantilla.
+        «¿Qué tengo pendiente / sin responder?»: my_conversations y contesta por bloques, solo los que traigan algo:
+        sin responder (las suyas), te mencionaron (quién y qué dijo), chat interno (sin leer, y si lo mencionan) y, si
+        viene unassigned, sin asignar esperando por bandeja. Contestarle al equipo en una conversación: propose_internal_note
+        (nota interna); en el chat interno: read_conversation y propose_reply (le llega a la sala, no a un cliente).
       - Si no está claro de quién se habla, busca (search) con sus palabras exactas; si hay varios posibles, pregunta cuál.
       - Fechas y horas: interpreta «mañana», «el jueves», etc. con la fecha de ahora y escríbelas en hora local YYYY-MM-DDTHH:MM.
         Si no dicen hora para una cita, pregunta. Una tarea solo lleva día (YYYY-MM-DD): vence al final de ese día.

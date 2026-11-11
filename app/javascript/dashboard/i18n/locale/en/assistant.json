@@ -152,6 +152,7 @@
       "CANCEL_NOTIFY": "Notify the customer",
       "convert_item": "Schedule ↔ task",
       "task_progress": "Task progress",
+      "internal_note": "Internal note (the customer does not see it)",
       "PROGRESS_HINT": "The task stays pending. It shows in the task history and in the case activity.",
       "CONVERT_TO_MEETING": "The task leaves Tasks and is scheduled.",
       "CONVERT_KEEPS": "It is required or the customer's: the task stays and a linked session is scheduled.",

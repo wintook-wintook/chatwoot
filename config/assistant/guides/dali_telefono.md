@@ -38,7 +38,7 @@ Usar a Dali desde el celular a pantalla completa, como una app con su propio íc
 
 ### Avisos en el teléfono
 1. La primera vez que abres Dali sale «Activa los avisos…»: toca «Activar avisos» y acepta el permiso del teléfono. También está en el menú ⋮ › «Activar avisos en este teléfono».
-2. Desde ahí te llega un aviso cuando te asignan una conversación o cuando un cliente te escribe en una conversación tuya, aunque Dali esté cerrado: «Mario: ¿ya llegó mi equipo?».
+2. Desde ahí te llega un aviso cuando te asignan una conversación, cuando un cliente te escribe en una conversación tuya, cuando alguien te menciona con @ (en una conversación o en el chat interno) y cuando un compañero te escribe en directo por el chat interno, aunque Dali esté cerrado: «Mario: ¿ya llegó mi equipo?». Los mensajes de los grupos del chat interno no avisan, salvo que te mencionen.
 3. Al tocar el aviso se abre Dali y te lee esa conversación; le contestas ahí mismo («dile que llega el jueves»).
 4. Con Dali abierto: la campanita de arriba muestra cuántos avisos tienes sin leer y su lista (tócalos para que Dali te lea la conversación, o «Ver lo que tengo sin responder»), y cuando llega algo sale una franja «Mario te escribió».
 5. Con Dali instalado, el ícono muestra un globito con el número de avisos sin leer.
