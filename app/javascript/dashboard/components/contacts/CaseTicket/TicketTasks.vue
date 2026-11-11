@@ -509,6 +509,11 @@ export default {
     // @tickets_cases P4 — reporta el total al padre (badge del tab "Tareas").
     tasks() {
       this.$emit('count', this.tasks.length);
+      // Las que faltan: la pestaña dice «pendientes/total».
+      this.$emit(
+        'pending',
+        this.tasks.filter(t => t.status === 'pending').length
+      );
       // Si borrar dejó la última página vacía, retroceder para no ver un hueco.
       if (this.currentPage > this.totalPages)
         this.currentPage = this.totalPages;

@@ -135,9 +135,11 @@ export default {
       showDueMenu: false, // @tickets_cases P4 — vencimiento inline
       dueDraft: '', // valor del input datetime-local
       taskCount: 0, // @tickets_cases P4 — total de tareas (badge del tab)
+      taskPending: 0, // las que faltan: «Tareas 1/3»
       noteCount: 0, // @tickets_cases — total de notas internas (badge del tab)
       showContactPanel: false, // @tickets_cases — ficha del contacto abierta
       meetingCount: 0, // @tickets_cases F2 — total de reuniones (badge del tab)
+      meetingPending: 0, // las agendadas que faltan: «Tareas agendadas 1/2»
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
       // @tickets_cases — bitácora de notas internas
@@ -478,7 +480,8 @@ export default {
       tabs.push({
         key: 'pending',
         label: this.$t('CASE_TICKETS.DETAIL_TABS.PENDING'),
-        count: this.taskCount + this.meetingCount,
+        // «Pendientes» cuenta solo lo que falta (tareas y tareas agendadas por hacer).
+        count: this.taskPending + this.meetingPending,
       });
       // Casos vinculados (duplicado, padre/hijo, la orden o el proyecto que nació de
       // aquí…), como «Casos del proyecto» en los proyectos, que ya tienen la suya.
@@ -572,12 +575,14 @@ export default {
           icon: 'checkmark-circle',
           label: this.$t('CASE_TICKETS.DETAIL_TABS.TASKS'),
           count: this.taskCount,
+          pending: this.taskPending,
         },
         {
           key: 'meetings',
           icon: 'calendar-clock',
           label: this.$t('CASE_TICKETS.DETAIL_TABS.MEETINGS'),
           count: this.meetingCount,
+          pending: this.meetingPending,
         },
       ];
     },
@@ -3572,8 +3577,18 @@ export default {
           >
             <fluent-icon :icon="view.icon" size="14" />
             {{ view.label }}
-            <span v-if="view.count" class="text-xs text-slate-400">
-              {{ view.count }}
+            <!-- pendientes/total: «1/3» = falta 1 de 3 -->
+            <span
+              v-if="view.count"
+              class="text-xs text-slate-400"
+              :title="
+                $t('CASE_TICKETS.DETAIL_TABS.PENDING_OF', {
+                  pending: view.pending,
+                  total: view.count,
+                })
+              "
+            >
+              {{ view.pending }}/{{ view.count }}
             </span>
           </button>
         </div>
@@ -3619,6 +3634,7 @@ export default {
         class="flex-none"
         @saved="onTasksSaved"
         @count="taskCount = $event"
+        @pending="taskPending = $event"
         @addNote="openNoteForTask"
         @viewNotes="openNotesForTask"
         @addMeeting="openMeetingForTask"
@@ -3642,6 +3658,7 @@ export default {
         :create-defaults="visitDefaults"
         class="flex-none"
         @count="meetingCount = $event"
+        @pending="meetingPending = $event"
         @changed="onMeetingsChanged"
         @tasksChanged="$refs.ticketTasks && $refs.ticketTasks.load()"
         @viewTask="openTaskFromMeeting"

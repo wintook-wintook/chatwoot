@@ -179,7 +179,11 @@ export default {
           renderBodyCell: ({ row }) => (
             <div class="overflow-hidden">
               <p
-                class="m-0 text-sm truncate text-slate-800 dark:text-slate-100"
+                class={
+                  this.isClosed(row)
+                    ? 'm-0 text-sm truncate line-through text-slate-400 dark:text-slate-500'
+                    : 'm-0 text-sm truncate text-slate-800 dark:text-slate-100'
+                }
                 title={row.title}
               >
                 {row.title}
@@ -293,6 +297,11 @@ export default {
     },
     meetings() {
       this.$emit('count', this.meetings.length);
+      // Las que faltan (agendadas): la pestaña dice «pendientes/total».
+      this.$emit(
+        'pending',
+        this.meetings.filter(m => m.status === 'scheduled').length
+      );
       if (this.currentPage > this.totalPages)
         this.currentPage = this.totalPages;
     },
@@ -792,6 +801,12 @@ export default {
         hour: '2-digit',
         minute: '2-digit',
       });
+    },
+    // Realizada, no asistió, cancelada o reprogramada: ya no está pendiente (se tacha).
+    isClosed(meeting) {
+      return ['held', 'no_show', 'cancelled', 'rescheduled'].includes(
+        meeting.status
+      );
     },
     formatTime(d) {
       if (!d) return '';

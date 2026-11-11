@@ -643,6 +643,7 @@
     },
     "DETAIL_TABS": {
       "PENDING": "Pendientes",
+      "PENDING_OF": "{pending} pendiente(s) de {total}",
       "MORE": "Más",
       "ACTIVITY": "Actividad",
       "SUMMARY": "Resumen",
