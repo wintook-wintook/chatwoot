@@ -1672,6 +1672,18 @@ export default {
       :style="rowMenuStyle()"
     >
       <WootDropdownMenu>
+        <!-- Avance: lo hecho sin completarla (es un reporte, no una nota). Primera opción. -->
+        <WootDropdownItem v-if="canReportProgress(rowMenu.row)">
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="clipboard"
+            @click="menuReportProgress"
+          >
+            {{ $t('TASK_REPORT.PROGRESS') }}
+          </woot-button>
+        </WootDropdownItem>
         <WootDropdownItem>
           <woot-button
             variant="clear"
@@ -1708,18 +1720,6 @@ export default {
             @click="menuAddNote"
           >
             {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
-          </woot-button>
-        </WootDropdownItem>
-        <!-- Avance: lo hecho sin completarla (es un reporte, no una nota). -->
-        <WootDropdownItem v-if="canReportProgress(rowMenu.row)">
-          <woot-button
-            variant="clear"
-            color-scheme="secondary"
-            size="small"
-            icon="clipboard"
-            @click="menuReportProgress"
-          >
-            {{ $t('TASK_REPORT.PROGRESS') }}
           </woot-button>
         </WootDropdownItem>
         <!-- Concluida o cancelada: regresa a pendiente para poder cambiarla. -->
