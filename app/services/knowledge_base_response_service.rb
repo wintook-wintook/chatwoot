@@ -1297,7 +1297,8 @@ class KnowledgeBaseResponseService
   # sin fuente, y acá llegaba literal al cliente.
   def send_reply(text)
     text = ContactTrackings::ConversationVariables.settle(@tracking, @conversation, text) if @tracking
-    content, attachments = ContactTrackings::AgentAttachments.resolve(@tracking&.tracking_template, text)
+    content, attachments = ContactTrackings::AgentAttachments.resolve(@tracking&.tracking_template, text,
+                                                                      conversation: @conversation)
     params = { content: content, private: false, ai_agent: ContactTrackings::AgentIdentity.for(@tracking&.tracking_template) }
     params[:attachments] = attachments if attachments.any?
     reply_message = Messages::MessageBuilder.new(bot_user, @conversation, params).perform
