@@ -135,6 +135,7 @@ export default {
         return this.isEmail(item.conversation) ? 'mail' : 'chat';
       }
       const type = item.event_type;
+      if (type === 'task_reported') return 'clipboard'; // reporte: no es nota
       if (type.startsWith('meeting_')) return 'calendar-clock';
       if (type.startsWith('quote_')) return 'document-text-link';
       return {
@@ -164,6 +165,7 @@ export default {
       if (item.payload?.kind === 'task_report') return this.t('TASK_REPORT');
       if (item.payload?.kind === 'activity_report')
         return this.t('ACTIVITY_REPORT');
+      if (item.payload?.kind === 'progress') return this.t('PROGRESS_REPORT');
       return this.eventLabel({ event_type: item.event_type });
     },
     messagesTitle(item) {
@@ -183,7 +185,7 @@ export default {
       if (item.kind === 'messages')
         return this.conversationName(item.conversation);
       // Notas: el texto completo (sin el título del reporte, que ya es el título).
-      if (item.event_type === 'internal_note')
+      if (['internal_note', 'task_reported'].includes(item.event_type))
         return item.payload?.content || '';
       return this.payloadSummary({
         event_type: item.event_type,

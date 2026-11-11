@@ -26,6 +26,7 @@ class Assistant::Tools
   include Assistant::CancelTools # cancelar con motivo
   include Assistant::ConvertTools # tarea ↔ tarea agendada
   include Assistant::FollowUpPresetTools # plantillas de seguimiento
+  include Assistant::ProgressTools # reportar avance de una tarea
 
   LIST_LIMIT = 6
   ACTIVITY_LINES = 15
@@ -39,7 +40,8 @@ class Assistant::Tools
                       propose_outcome propose_postpone propose_resume_case propose_update_opportunity
                       propose_create_contact propose_follow_up propose_follow_up_action].freeze +
                    QUOTE_PROPOSAL_TOOLS + CONVERSATION_PROPOSAL_TOOLS + FIELD_PROPOSAL_TOOLS + EVENT_PROPOSAL_TOOLS +
-                   CLIENT_TASK_PROPOSAL_TOOLS + CANCEL_PROPOSAL_TOOLS + CONVERT_PROPOSAL_TOOLS + FOLLOW_UP_PRESET_PROPOSAL_TOOLS
+                   CLIENT_TASK_PROPOSAL_TOOLS + CANCEL_PROPOSAL_TOOLS + CONVERT_PROPOSAL_TOOLS + FOLLOW_UP_PRESET_PROPOSAL_TOOLS +
+                   PROGRESS_PROPOSAL_TOOLS
 
   def self.definitions = Assistant::ToolDefinitions.all
 

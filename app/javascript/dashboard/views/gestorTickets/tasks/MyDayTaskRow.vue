@@ -51,8 +51,25 @@ export default {
     estimate() {
       return formatMinutes(this.row.estimated_minutes);
     },
+    // Avance: lo hecho sin completarla (la del cliente la avanza él en su portal).
+    canReportProgress() {
+      return (
+        !this.frozen &&
+        this.row.status === 'pending' &&
+        this.row.audience !== 'client'
+      );
+    },
   },
   methods: {
+    reportProgress() {
+      this.$emitter.emit('topbar:reportProgress', {
+        id: this.row.id,
+        title: this.row.title,
+        sequence: this.row.sequence,
+        case_ticket_id: this.row.case_ticket?.id || null,
+        case_folio: this.row.case_ticket?.folio || null,
+      });
+    },
     reasonClass(key) {
       return REASON_TONE[reasonTone(key)];
     },
@@ -174,6 +191,16 @@ export default {
           {{ $t('CASE_TICKETS.TASKS.COMPLETE') }}
         </woot-button>
         <woot-button
+          v-if="canReportProgress"
+          size="small"
+          variant="smooth"
+          color-scheme="secondary"
+          icon="clipboard"
+          @click="reportProgress"
+        >
+          {{ $t('TASK_REPORT.PROGRESS') }}
+        </woot-button>
+        <woot-button
           v-if="row.case_ticket"
           size="small"
           variant="smooth"
@@ -241,6 +268,15 @@ export default {
         @click="$emit('pin', row)"
       />
       <template v-if="!highlight && !frozen">
+        <woot-button
+          v-if="canReportProgress"
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          icon="clipboard"
+          :title="$t('TASK_REPORT.PROGRESS')"
+          @click="reportProgress"
+        />
         <woot-button
           size="tiny"
           variant="clear"

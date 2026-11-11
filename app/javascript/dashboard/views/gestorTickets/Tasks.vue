@@ -633,9 +633,11 @@ export default {
   },
   beforeDestroy() {
     this.$emitter.off('agendaChanged', this.fetch);
+    this.$emitter.off('taskReportsChanged', this.fetch);
   },
   mounted() {
     this.$emitter.on('agendaChanged', this.fetch);
+    this.$emitter.on('taskReportsChanged', this.fetch); // avance: su «Ver reportes (N)»
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchTypes');
     this.$store.dispatch('caseTickets/fetchAiConfig'); // F4 — ¿IA «Plan de mi día»?
@@ -812,6 +814,22 @@ export default {
       const row = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
       if (row) this.reportsFilter = { case_task_id: row.id };
+    },
+    // Avance: solo de una pendiente y no del cliente (esa la avanza él en su portal).
+    canReportProgress(task) {
+      return task.status === 'pending' && task.audience !== 'client';
+    },
+    menuReportProgress() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (!task) return;
+      this.$emitter.emit('topbar:reportProgress', {
+        id: task.id,
+        title: task.title,
+        sequence: task.sequence,
+        case_ticket_id: task.case_ticket?.id || null,
+        case_folio: task.case_ticket?.folio || null,
+      });
     },
     openContact(row) {
       if (!row.contact) return;
@@ -1819,6 +1837,18 @@ export default {
             {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
           </woot-button>
         </WootDropdownItem>
+        <!-- Avance: lo hecho sin completarla (es un reporte, no una nota). -->
+        <WootDropdownItem v-if="canReportProgress(rowMenu.row)">
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="clipboard"
+            @click="menuReportProgress"
+          >
+            {{ $t('TASK_REPORT.PROGRESS') }}
+          </woot-button>
+        </WootDropdownItem>
         <!-- Concluida o cancelada: regresa a pendiente para poder cambiarla. -->
         <WootDropdownItem
           v-if="['done', 'cancelled'].includes(rowMenu.row.status)"
@@ -1875,7 +1905,7 @@ export default {
           </woot-button>
         </WootDropdownItem>
         <WootDropdownDivider />
-        <WootDropdownItem v-if="rowMenu.row.status === 'done'">
+        <WootDropdownItem v-if="rowMenu.row.reports_count > 0">
           <woot-button
             variant="clear"
             color-scheme="secondary"
@@ -1883,7 +1913,11 @@ export default {
             icon="clipboard"
             @click="menuViewReports"
           >
-            {{ $t('TASK_REPORT.VIEW') }}
+            {{
+              $t('TASK_REPORT.VIEW_COUNT', {
+                count: rowMenu.row.reports_count,
+              })
+            }}
           </woot-button>
         </WootDropdownItem>
         <WootDropdownItem>

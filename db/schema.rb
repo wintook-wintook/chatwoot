@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_11_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_11_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2328,6 +2328,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_11_100000) do
     t.datetime "updated_at", null: false
     t.bigint "case_time_entry_id"
     t.integer "minutes"
+    t.boolean "progress", default: false, null: false
     t.index ["account_id", "closed_at"], name: "index_task_reports_on_account_id_and_closed_at"
     t.index ["account_id"], name: "index_task_reports_on_account_id"
     t.index ["case_meeting_id"], name: "index_task_reports_on_case_meeting_id"

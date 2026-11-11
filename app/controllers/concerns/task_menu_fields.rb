@@ -10,7 +10,8 @@ module TaskMenuFields
   private
 
   def task_menu_fields(task)
-    { meetings_count: task_meetings_map[task.id] || 0, deletable: task_deletable?(task) }
+    { meetings_count: task_meetings_map[task.id] || 0, reports_count: task_reports_map[task.id] || 0,
+      deletable: task_deletable?(task) }
   end
 
   def task_deletable?(task)
@@ -22,6 +23,14 @@ module TaskMenuFields
   def task_meetings_map
     @task_meetings_map ||= begin
       scope = Current.account.case_meetings.active.where.not(case_task_id: nil)
+      scope = @ticket ? scope.where(case_ticket_id: @ticket.id) : scope.where(case_task_id: Array(@menu_task_ids))
+      scope.group(:case_task_id).count
+    end
+  end
+
+  def task_reports_map
+    @task_reports_map ||= begin
+      scope = Current.account.task_reports.closed.where.not(case_task_id: nil)
       scope = @ticket ? scope.where(case_ticket_id: @ticket.id) : scope.where(case_task_id: Array(@menu_task_ids))
       scope.group(:case_task_id).count
     end

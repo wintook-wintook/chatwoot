@@ -153,6 +153,8 @@
     "CANCEL": "Cancel",
     "SUBMIT": "Conclude",
     "VIEW": "View report",
+    "VIEW_COUNT": "View reports ({count})",
+    "PROGRESS": "Report progress",
     "EMPTY": "No reports.",
     "MORE": "See more",
     "HISTORY": "Concluded tasks and activities",
@@ -182,7 +184,8 @@
       "TASK": "Task",
       "MEETING": "Scheduled task",
       "ORDER": "Work order",
-      "ACTIVITY": "Activity"
+      "ACTIVITY": "Activity",
+      "PROGRESS": "Progress"
     },
     "CATALOG": {
       "TITLE": "Task results",
@@ -195,7 +198,7 @@
   },
   "ACTIVITY_REPORT": {
     "TITLE": "Report activity",
-    "SUBTITLE": "Something you already did, with no task behind it",
+    "SUBTITLE": "Something you already did. If it belongs to a pending task, pick it and it becomes its progress",
     "NAME": "Title",
     "NAME_PLACEHOLDER": "E.g. Confirmation call",
     "DATE": "Date",
@@ -203,7 +206,15 @@
     "INTERNAL_HINT": "With no contact or organization it stays internal: only visible in Reports and your My day.",
     "REQUIRED": "Write the title and what you did.",
     "SUBMIT": "Save",
-    "SUCCESS": "Activity reported"
+    "SUCCESS": "Activity reported",
+    "TASK": "Task (optional)",
+    "NO_TASK": "— No task: it is an activity —",
+    "PROGRESS_TITLE": "Report progress",
+    "PROGRESS_SUBTITLE": "What you did on the task, without completing it",
+    "PROGRESS_OF": "Progress of",
+    "PROGRESS_HINT": "The task stays pending. The progress shows in the task «View reports» and in the case activity.",
+    "PROGRESS_SUBMIT": "Save progress",
+    "PROGRESS_SUCCESS": "Progress reported"
   },
   "SALES_BUDGET": {
     "TITLE": "Sales budget",
@@ -1715,6 +1726,7 @@
       "task_cancelled": "Task cancelled",
       "task_converted": "Task ↔ schedule",
       "client_assigned": "Linked to a client",
+      "task_reported": "Report",
       "task_reopened": "Task reopened",
       "task_deleted": "Task deleted",
       "quote_created": "Quote created",
@@ -2906,6 +2918,7 @@
       "WE": "Us",
       "TASK_REPORT": "Closing report",
       "ACTIVITY_REPORT": "Reported activity",
+      "PROGRESS_REPORT": "Task progress",
       "TODAY": "Today",
       "YESTERDAY": "Yesterday",
       "LOADING": "Loading activity…",

@@ -533,6 +533,7 @@ Rails.application.routes.draw do
           # Plan-Agenda — lo agendado desde el calendario: con caso o solo con su contacto.
           resources :agenda_items, only: [:index, :create, :update, :destroy] do
             get :cases, on: :collection
+            get :tasks, on: :collection # tareas pendientes para «Reportar avance»
             post :to_task, on: :member # pasarla a tarea sin hora
           end
           resources :case_tasks, only: [:index], controller: 'case_tasks_index' do

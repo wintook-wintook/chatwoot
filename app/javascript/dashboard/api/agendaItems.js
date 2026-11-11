@@ -16,6 +16,11 @@ class AgendaItemsAPI extends ApiClient {
     return axios.get(`${this.url}/cases`, { params });
   }
 
+  // Tareas pendientes para «Reportar avance»: { case_ticket_id } o { contact_id, organization_id }.
+  tasks(params = {}) {
+    return axios.get(`${this.url}/tasks`, { params });
+  }
+
   // Pasarla a tarea sin hora: { notify_client }.
   toTask(id, data = {}) {
     return axios.post(`${this.url}/${id}/to_task`, data);

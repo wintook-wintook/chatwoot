@@ -917,6 +917,7 @@ export default {
   // Asistente (Dali) — al confirmar algo del asistente, el caso se refresca.
   created() {
     this.$emitter.on('assistant:done', this.onAssistantDone);
+    this.$emitter.on('taskReportsChanged', this.onReportsChanged);
   },
   mounted() {
     this.loadTicket();
@@ -939,6 +940,7 @@ export default {
     this.$emitter.off('caseConflictResolved', this.onConflictResolved);
     window.removeEventListener('resize', this.measureDescription);
     this.$emitter.off('assistant:done', this.onAssistantDone);
+    this.$emitter.off('taskReportsChanged', this.onReportsChanged);
   },
   methods: {
     // ¿La descripción no cabe en su renglón? (más ancha o con varios párrafos)
@@ -1078,6 +1080,14 @@ export default {
       this.refetch();
       this.activityTick += 1;
       this.$refs.ticketNotes?.load?.();
+    },
+    // «Reportar avance» (ventana de arriba): si fue de este caso, su contador de
+    // reportes y la Actividad.
+    onReportsChanged(info) {
+      if (!info || Number(info.caseId) !== Number(this.ticketId)) return;
+      this.reloadEvents();
+      this.activityTick += 1;
+      this.$refs.ticketTasks?.load?.();
     },
     onMeetingsChanged() {
       this.reloadEvents();

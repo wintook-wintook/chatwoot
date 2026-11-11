@@ -510,6 +510,8 @@ es:
     required: 'Para concluirla, escribe qué se hizo'
     note_title: 'Reporte de cierre: %{title}'
     activity_note_title: 'Actividad: %{title}'
+    progress_note_title: 'Avance: %{title}'
+    progress_not_open: 'Solo se reporta avance de una tarea pendiente'
     minutes_required: 'Indica el tiempo dedicado'
   agenda_items:
     already_linked: 'Ese evento ya tiene una tarea agendada'

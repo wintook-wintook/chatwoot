@@ -44,6 +44,8 @@ const ICONS = {
   save_follow_up_preset: 'save',
   // Tarea ↔ tarea agendada
   convert_item: 'calendar',
+  // Reportar avance de una tarea (es un reporte, no una nota)
+  task_progress: 'clipboard',
 };
 
 // Igual que el servidor (Assistant::QuoteTools.totals): descuento por partida, IVA de la partida.
@@ -253,6 +255,10 @@ export default {
           due_at: toIso(f.due_at),
           requires_file: !!f.requires_file,
           notify: !!f.notify,
+        },
+        task_progress: {
+          notes: f.notes,
+          minutes: f.minutes === '' ? null : Number(f.minutes),
         },
         visit_report: {
           notes: f.notes,
@@ -834,6 +840,23 @@ export default {
         <p class="m-0 text-xs text-slate-500">
           {{ labels.closes_visit ? t('CLOSES_VISIT') : t('FIELD_REST') }}
         </p>
+      </template>
+      <!-- Avance de una tarea: lo hecho y el tiempo; la tarea sigue pendiente -->
+      <template v-if="type === 'task_progress'">
+        <label class="text-xs">
+          {{ t('NOTES') }}
+          <textarea v-model="form.notes" rows="4" class="text-sm" />
+        </label>
+        <label class="text-xs">
+          {{ t('MINUTES') }}
+          <input
+            v-model="form.minutes"
+            type="number"
+            min="0"
+            class="h-8 text-sm"
+          />
+        </label>
+        <p class="m-0 text-xs text-slate-500">{{ t('PROGRESS_HINT') }}</p>
       </template>
       <!-- Ventana de 24 h cerrada: sale una plantilla aprobada, ya llena -->
       <template v-if="type === 'reply' && labels.template">

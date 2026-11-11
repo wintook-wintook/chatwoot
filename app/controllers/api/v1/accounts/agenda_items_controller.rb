@@ -5,6 +5,8 @@
 # (CaseMeeting, siempre con hora); aquí pueden ir solo con su contacto.
 # GET    /agenda_items?start=&end=        mis tareas agendadas del rango
 # GET    /agenda_items/cases?contact_id=&organization_id=   casos abiertos para ligar
+# GET    /agenda_items/tasks?case_ticket_id= | contact_id=&organization_id=
+#        tareas pendientes para «Reportar avance»: las del caso o, sin caso, las rápidas del cliente
 # POST   /agenda_items                    alta (con google_event_id: desde ese evento)
 # PATCH  /agenda_items/:id                editar o ligar a un caso
 # DELETE /agenda_items/:id
@@ -35,6 +37,10 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
     open_cases = account_case_tickets.where.not(status: CaseTicket::CLOSED_STATUSES)
     scope = filters.map { |field, value| open_cases.where(field => value) }.reduce(:or)
     render json: { cases: scope.order(created_at: :desc).limit(CASES_LIMIT).map { |t| ref_case(t) } }
+  end
+
+  def tasks
+    render json: { tasks: progress_tasks.order(:sequence, :id).limit(CASES_LIMIT).map { |t| ref_task(t) } }
   end
 
   def create
@@ -156,6 +162,28 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
 
   def ref(record)
     record&.slice(:id, :name)
+  end
+
+  # Las del cliente las hace el cliente en su portal: no se les reporta avance aquí.
+  def progress_tasks
+    pending = Current.account.case_tasks.pending.where.not(audience: :client)
+    return pending.where(case_ticket_id: account_case_tickets.where(id: params[:case_ticket_id]).select(:id)) if params[:case_ticket_id].present?
+
+    quick_progress_tasks(pending.where(case_ticket_id: nil))
+  end
+
+  # Sin caso: las rápidas del contacto u organización (con Agenda en «solo lo suyo», las suyas).
+  def quick_progress_tasks(quick)
+    filters = { contact_id: params[:contact_id], organization_id: params[:organization_id] }.compact_blank
+    return quick.none if filters.empty?
+
+    quick = quick.where('case_tasks.assignee_id = :me OR case_tasks.requester_id = :me', me: current_user.id) if access_grant.own?(:agenda)
+    filters.map { |field, value| quick.where(field => value) }.reduce(:or)
+  end
+
+  def ref_task(task)
+    { id: task.id, sequence: task.sequence, title: task.title, case_ticket_id: task.case_ticket_id,
+      estimated_minutes: task.estimated_minutes }
   end
 
   def ref_case(ticket)

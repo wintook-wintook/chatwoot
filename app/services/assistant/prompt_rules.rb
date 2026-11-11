@@ -36,6 +36,9 @@ module Assistant::PromptRules
     - «Pasa a la agenda la tarea de…», «conviértela en cita»: my_agenda o get_case para el id y propose_convert_item (kind
       task, con día y hora; la tarea deja de existir). «Quítala de la agenda y déjala como tarea»: propose_convert_item kind
       meeting. Si solo quiere agendar tiempo para trabajarla (la tarea se queda), usa propose_meeting.
+    - «Reporta avance de…», «en la tarea de X ya hice…» (sin terminarla): my_agenda o get_case para el id y llama YA
+      propose_task_progress con lo que dictó y los minutos si los dijo. Es un reporte, no una nota (no uses propose_note).
+      Si dice que ya la terminó, no es avance: que la complete (pide el reporte de cierre).
   RULES
 
   FOLLOW_UP = <<~RULES.chomp

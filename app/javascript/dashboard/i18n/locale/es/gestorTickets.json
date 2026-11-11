@@ -153,6 +153,8 @@
     "CANCEL": "Cancelar",
     "SUBMIT": "Concluir",
     "VIEW": "Ver reporte",
+    "VIEW_COUNT": "Ver reportes ({count})",
+    "PROGRESS": "Reportar avance",
     "EMPTY": "Sin reportes.",
     "MORE": "Ver más",
     "HISTORY": "Tareas concluidas y actividades",
@@ -182,7 +184,8 @@
       "TASK": "Tarea",
       "MEETING": "Tarea agendada",
       "ORDER": "Orden de trabajo",
-      "ACTIVITY": "Actividad"
+      "ACTIVITY": "Actividad",
+      "PROGRESS": "Avance"
     },
     "CATALOG": {
       "TITLE": "Resultados de tareas",
@@ -195,7 +198,7 @@
   },
   "ACTIVITY_REPORT": {
     "TITLE": "Reportar actividad",
-    "SUBTITLE": "Algo que ya hiciste, sin tarea de por medio",
+    "SUBTITLE": "Algo que ya hiciste. Si es de una tarea pendiente, elígela y queda como su avance",
     "NAME": "Título",
     "NAME_PLACEHOLDER": "Ej. Llamada de confirmación",
     "DATE": "Fecha",
@@ -203,7 +206,15 @@
     "INTERNAL_HINT": "Sin contacto ni organización queda como actividad interna: solo se ve en Reportes y en tu Mi día.",
     "REQUIRED": "Escribe el título y qué hiciste.",
     "SUBMIT": "Guardar",
-    "SUCCESS": "Actividad reportada"
+    "SUCCESS": "Actividad reportada",
+    "TASK": "Tarea (opcional)",
+    "NO_TASK": "— Sin tarea: es una actividad —",
+    "PROGRESS_TITLE": "Reportar avance",
+    "PROGRESS_SUBTITLE": "Lo que hiciste en la tarea, sin completarla",
+    "PROGRESS_OF": "Avance de",
+    "PROGRESS_HINT": "La tarea sigue pendiente. El avance sale en «Ver reportes» de la tarea y en la actividad del caso.",
+    "PROGRESS_SUBMIT": "Guardar avance",
+    "PROGRESS_SUCCESS": "Avance reportado"
   },
   "SALES_BUDGET": {
     "TITLE": "Presupuesto de ventas",
@@ -1813,6 +1824,7 @@
       "task_cancelled": "Tarea cancelada",
       "task_converted": "Tarea ↔ agenda",
       "client_assigned": "Se ligó a un cliente",
+      "task_reported": "Reporte",
       "task_reopened": "Tarea reabierta",
       "task_deleted": "Tarea borrada",
       "quote_created": "Cotización creada",
@@ -2917,6 +2929,7 @@
       "WE": "Nosotros",
       "TASK_REPORT": "Reporte de cierre",
       "ACTIVITY_REPORT": "Actividad reportada",
+      "PROGRESS_REPORT": "Avance de tarea",
       "TODAY": "Hoy",
       "YESTERDAY": "Ayer",
       "LOADING": "Cargando actividad…",

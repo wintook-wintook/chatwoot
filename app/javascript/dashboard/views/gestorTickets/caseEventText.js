@@ -144,6 +144,8 @@ export default {
           .filter(Boolean)
           .join(' — ');
       }
+      // Reporte (cierre, avance o actividad): lo que se hizo.
+      if (type === 'task_reported') return p.content || p.title || null;
       if (type.startsWith('task_')) {
         const folio = p.sequence
           ? `T${String(p.sequence).padStart(3, '0')}`

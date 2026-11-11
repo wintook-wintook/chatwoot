@@ -110,6 +110,7 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
       title: task.title,
       description: task.description,
       status: task.status,
+      audience: task.audience, # la del cliente no lleva «Reportar avance»
       # @tickets_cases — prioridad de la TAREA. Ojo al leer el JSON: la del
       # ticket viaja aparte, dentro de `case_ticket`.
       priority: task.priority,

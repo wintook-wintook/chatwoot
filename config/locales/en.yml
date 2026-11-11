@@ -525,6 +525,8 @@ en:
     required: 'To conclude it, write what was done'
     note_title: 'Closing report: %{title}'
     activity_note_title: 'Activity: %{title}'
+    progress_note_title: 'Progress: %{title}'
+    progress_not_open: 'Progress can only be reported on a pending task'
     minutes_required: 'Enter the time spent'
   agenda_items:
     already_linked: 'That event already has a scheduled task'

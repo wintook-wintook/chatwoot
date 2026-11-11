@@ -151,6 +151,8 @@
       "CANCEL_MINUTES_REQUIRED": "Time spent (minutes) — already worked on",
       "CANCEL_NOTIFY": "Notify the customer",
       "convert_item": "Schedule ↔ task",
+      "task_progress": "Task progress",
+      "PROGRESS_HINT": "The task stays pending. It shows in the task «View reports» and in the case activity.",
       "CONVERT_TO_MEETING": "The task leaves Tasks and is scheduled.",
       "CONVERT_KEEPS": "It is required or the customer's: the task stays and a linked session is scheduled.",
       "CONVERT_TO_TASK": "It leaves the schedule (and Google) and becomes a task with no time.",
