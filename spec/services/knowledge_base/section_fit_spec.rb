@@ -57,4 +57,11 @@ RSpec.describe KnowledgeBase::SectionFit do
   it 'corta al final como antes si ninguna sección coincide' do
     expect(described_class.call(ficha, 'hola', max, title: title)).to eq(ficha.truncate(max))
   end
+
+  it 'entiende «ofertas» como beca y «enlace» como liga' do
+    ficha_liga = "#{ficha}\nINSCRIPCIÓN\n- Liga para inscribirse: https://ejemplo.com/ri101/\n"
+
+    expect(described_class.call(ficha, 'no hay otras ofertas más bajas', max, title: title)).to include('Primera beca')
+    expect(described_class.call(ficha_liga, '¿En qué enlace me inscribo?', max, title: title)).to include('https://ejemplo.com/ri101/')
+  end
 end

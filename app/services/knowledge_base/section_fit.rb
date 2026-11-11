@@ -37,9 +37,14 @@ module KnowledgeBase::SectionFit
     buenos dias tardes noches quisiera saber informacion info mucho poco algun alguna
     ustedes usted ella ellos eres seria podria hacer hace dime decir
   ].freeze
-  # Cómo pregunta el cliente vs. cómo está escrito: «¿cuánto cuesta?» → «costo», «precio».
+  # Cómo pregunta el cliente vs. cómo está escrito: «¿cuánto cuesta?» → «costo», «precio»;
+  # «¿hay otras ofertas?» → «beca» (11/11/2026, Santos 10: sin esto «ofertas» no tocaba
+  # ninguna sección); «¿en qué enlace me inscribo?» → «liga», «inscripción».
   SYNONYMS = {
-    %w[cuesta cuestan cobran pagar pago pagos precio precios costo costos sale] => %w[precio costo pago]
+    %w[cuesta cuestan cobran pagar pago pagos precio precios costo costos sale] => %w[precio costo pago],
+    %w[oferta ofertas descuento descuentos rebaja rebajas barato barata baratos promocion promociones cupon cupones
+       beca becas] => %w[beca descuento cupon],
+    %w[enlace enlaces link links liga ligas vinculo vinculos inscribo inscribirme inscribir inscripcion] => %w[liga inscripcion]
   }.freeze
 
   module_function
