@@ -37,4 +37,13 @@ RSpec.describe Assistant::ProgressTools do
     task.update_columns(status: CaseTask.statuses[:done]) # rubocop:disable Rails/SkipsModelValidations
     expect(tools.call('propose_task_progress', { 'id' => task.id, 'notes' => 'x' })[:result][:error]).to be_present
   end
+
+  it 'lee el historial de la tarea: tiempo y lo que pasó' do
+    executor.call('task_progress', { 'id' => task.id, 'notes' => 'Llamé al proveedor', 'minutes' => 20 })
+    result = tools.call('task_history', { 'id' => task.id })[:result]
+
+    expect(result).to include(title: 'Llamar al proveedor', status: 'pending', reported_minutes: 20, estimated_minutes: 45)
+    expect(result[:history].first).to include(what: 'progress', minutes: 20)
+    expect(result[:history].first[:text]).to include('Llamé al proveedor')
+  end
 end

@@ -34,7 +34,7 @@ class Assistant::Tools
   READ_TOOLS = %w[search get_case get_contact my_agenda open_page list_agents tracking_status
                   list_case_types case_options search_guides read_guide report_gap].freeze +
                QUOTE_READ_TOOLS + CONVERSATION_READ_TOOLS + FIELD_READ_TOOLS + EVENT_READ_TOOLS +
-               CLIENT_TASK_READ_TOOLS + FOLLOW_UP_PRESET_READ_TOOLS
+               CLIENT_TASK_READ_TOOLS + FOLLOW_UP_PRESET_READ_TOOLS + PROGRESS_READ_TOOLS
   PROPOSAL_TOOLS = %w[propose_note propose_task propose_meeting propose_scheduled_message propose_draft
                       propose_delegate propose_tracking_action propose_create_case propose_move_stage
                       propose_outcome propose_postpone propose_resume_case propose_update_opportunity

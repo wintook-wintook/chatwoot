@@ -22,7 +22,7 @@ import taskReportFlow from 'dashboard/mixins/taskReportFlow';
 import rowMenuMixin from 'dashboard/helper/rowMenu'; // menú de la fila (⋮ a la derecha)
 import WootDropdownDivider from 'shared/components/ui/dropdown/DropdownDivider.vue';
 import ScheduleTaskModal from 'dashboard/components/convert/ScheduleTaskModal.vue'; // pasarla a la agenda
-import TaskReportsDialog from 'dashboard/views/gestorTickets/tasks/TaskReportsDialog.vue';
+import TaskHistoryModal from 'dashboard/views/gestorTickets/tasks/TaskHistoryModal.vue';
 import ClientTaskEntries from 'dashboard/components/clientPortal/ClientTaskEntries.vue'; // tareas con el cliente
 import CancelItemModal from 'dashboard/components/cancel/CancelItemModal.vue'; // cancelar con motivo
 import {
@@ -56,7 +56,7 @@ export default {
     WootDropdownDivider,
     ScheduleTaskModal,
     TaskReportModal,
-    TaskReportsDialog,
+    TaskHistoryModal,
     ClientTaskEntries,
     CancelItemModal,
   },
@@ -82,7 +82,7 @@ export default {
       scheduleError: '',
       cancelBusy: false,
       cancelError: '',
-      reportsFilter: null,
+      historyTaskId: null, // «Ver historial» de la tarea
       tasks: [],
       // Plan-Plantilla-Tareas-Etapa — etapa actual y las siguientes con plantilla.
       stagePlan: { current: null, upcoming: [] },
@@ -240,13 +240,19 @@ export default {
           // en tiempo. Tonos claros (shade 300/400) para que no pesen.
           renderBodyCell: ({ row }) => (
             <div class="flex items-center gap-2">
-              <span
-                class={`font-mono text-sm font-semibold whitespace-nowrap ${this.seqClass(
+              <button
+                type="button"
+                title={this.$t('TASK_HISTORY.MENU')}
+                class={`p-0 font-mono text-sm font-semibold whitespace-nowrap hover:underline ${this.seqClass(
                   row
                 )}`}
+                onClick={e => {
+                  e.stopPropagation();
+                  this.historyTaskId = row.id;
+                }}
               >
                 {this.seqLabel(row.sequence)}
-              </span>
+              </button>
             </div>
           ),
         },
@@ -522,11 +528,6 @@ export default {
       this.load();
     },
     // ── Menú de acciones por fila: openRowMenu/closeRowMenu en rowMenuMixin ──
-    menuViewNotes() {
-      const task = this.rowMenu && this.rowMenu.row;
-      this.closeRowMenu();
-      if (task) this.onNotesClick(task);
-    },
     menuAddNote() {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
@@ -644,25 +645,6 @@ export default {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
       if (task) this.$emit('addMeeting', task);
-    },
-    menuViewMeetings() {
-      const task = this.rowMenu && this.rowMenu.row;
-      this.closeRowMenu();
-      if (task) this.$emit('viewMeetings', task);
-    },
-    // Click en el contador de notas: si hay notas las muestra; si no, solo avisa
-    // (no tiene sentido ir a Notas para no encontrar nada).
-    onNotesClick(task) {
-      if (task.notes_count > 0) {
-        this.$emit('viewNotes', task);
-      } else {
-        this.$emitter.emit('caseToastMessage', {
-          message: this.$t('CASE_TICKETS.TASKS.NOTES_NONE_TOAST', {
-            folio: this.seqLabel(task.sequence),
-          }),
-          icon: 'clipboard',
-        });
-      }
     },
     // VeTable emite { field: 'asc'|'desc'|'' }. Solo una columna activa a la vez.
     onSortChange(params) {
@@ -809,19 +791,29 @@ export default {
         this.completingId = null;
       }
     },
-    menuViewReports() {
-      const row = this.rowMenu && this.rowMenu.row;
-      this.closeRowMenu();
-      if (row) this.reportsFilter = { case_task_id: row.id };
-    },
     // Avance: solo de una pendiente y no del cliente (esa la avanza él en su portal).
     canReportProgress(task) {
       return task.status === 'pending' && task.audience !== 'client';
     },
+    menuHistory() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) this.historyTaskId = task.id;
+    },
+    // Los botones del historial hacen lo mismo que el menú de la fila.
+    onHistoryAction({ kind, task }) {
+      const row = this.tasks.find(t => t.id === task.id) || task;
+      if (kind === 'progress') this.reportProgress(row);
+      if (kind === 'note') this.$emit('addNote', row);
+      if (kind === 'schedule') this.$emit('addMeeting', row);
+      if (kind === 'complete') this.complete(row);
+    },
     menuReportProgress() {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
-      if (!task) return;
+      if (task) this.reportProgress(task);
+    },
+    reportProgress(task) {
       this.$emitter.emit('topbar:reportProgress', {
         id: task.id,
         title: task.title,
@@ -1772,50 +1764,16 @@ export default {
           </woot-button>
         </WootDropdownItem>
         <WootDropdownDivider />
-        <WootDropdownItem v-if="rowMenu.row.reports_count > 0">
-          <woot-button
-            variant="clear"
-            color-scheme="secondary"
-            size="small"
-            icon="clipboard"
-            @click="menuViewReports"
-          >
-            {{
-              $t('TASK_REPORT.VIEW_COUNT', {
-                count: rowMenu.row.reports_count,
-              })
-            }}
-          </woot-button>
-        </WootDropdownItem>
+        <!-- Todo lo de la tarea (notas, reportes, agendadas y cambios) en un solo lugar. -->
         <WootDropdownItem>
           <woot-button
             variant="clear"
             color-scheme="secondary"
             size="small"
-            icon="clipboard"
-            @click="menuViewNotes"
+            icon="document-list-clock"
+            @click="menuHistory"
           >
-            {{
-              $t('CASE_TICKETS.TASKS.MENU.NOTES', {
-                count: rowMenu.row.notes_count || 0,
-              })
-            }}
-          </woot-button>
-        </WootDropdownItem>
-        <WootDropdownItem :disabled="!rowMenu.row.meetings_count">
-          <woot-button
-            variant="clear"
-            color-scheme="secondary"
-            size="small"
-            icon="calendar-clock"
-            :is-disabled="!rowMenu.row.meetings_count"
-            @click="menuViewMeetings"
-          >
-            {{
-              $t('CASE_TICKETS.TASKS.MENU.VIEW_MEETINGS_COUNT', {
-                count: rowMenu.row.meetings_count || 0,
-              })
-            }}
+            {{ $t('TASK_HISTORY.MENU') }}
           </woot-button>
         </WootDropdownItem>
       </WootDropdownMenu>
@@ -1842,7 +1800,14 @@ export default {
       @close="cancelReport"
       @reported="onReported"
     />
-    <TaskReportsDialog :filters="reportsFilter" @close="reportsFilter = null" />
+    <TaskHistoryModal
+      v-if="historyTaskId"
+      show
+      :task-id="historyTaskId"
+      :actions="isFrozen ? [] : ['progress', 'note', 'schedule', 'complete']"
+      @close="historyTaskId = null"
+      @action="onHistoryAction"
+    />
   </div>
 </template>
 

@@ -39,6 +39,7 @@ module Assistant::PromptRules
     - «Reporta avance de…», «en la tarea de X ya hice…» (sin terminarla): my_agenda o get_case para el id y llama YA
       propose_task_progress con lo que dictó y los minutos si los dijo. Es un reporte, no una nota (no uses propose_note).
       Si dice que ya la terminó, no es avance: que la complete (pide el reporte de cierre).
+    - «¿Cómo va la T004?», «¿qué se ha hecho en la tarea de…?»: my_agenda o get_case para el id y task_history.
   RULES
 
   FOLLOW_UP = <<~RULES.chomp

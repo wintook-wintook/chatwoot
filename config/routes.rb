@@ -540,6 +540,7 @@ Rails.application.routes.draw do
             put :my_day_plan, on: :collection # Plan-Bandeja-Prioridad F2 — orden propio de «Mi día»
             post :my_day_ai, on: :collection  # Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA
           end
+          get 'case_tasks/:id/history', to: 'task_histories#show', as: :case_task_history # historial de la tarea
           resources :case_types, only: [:index, :create, :update, :destroy] do
             post :change_class, on: :member # cambiar de clase: tipo nuevo + retirar el de antes
             resources :case_type_fields, only: [:index, :create, :update, :destroy], path: 'fields' # @tickets_cases 2K

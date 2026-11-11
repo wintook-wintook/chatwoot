@@ -196,6 +196,36 @@
       "ERROR": "Could not save."
     }
   },
+  "TASK_HISTORY": {
+    "TITLE": "Task history",
+    "SUBTITLE": "Everything that happened with the task: notes, reports, scheduled tasks and changes",
+    "LOADING": "Loading history…",
+    "ERROR": "The history could not be loaded.",
+    "STATUS": "Status",
+    "ASSIGNEE": "Assignee",
+    "DUE": "Due",
+    "PLANNED": "planned {day}",
+    "TIME": "Reported time",
+    "TIME_OF": "{done} of {est} estimated",
+    "NO_SHOW": "The customer did not show up",
+    "FROM_MEETING": "from the scheduled task «{title}»",
+    "EMPTY": "Nothing with this filter.",
+    "MENU": "View history",
+    "ACTIONS": {
+      "PROGRESS": "Report progress",
+      "NOTE": "Add note",
+      "SCHEDULE": "Schedule",
+      "COMPLETE": "Complete"
+    },
+    "FILTERS": {
+      "ALL": "All",
+      "NOTES": "Notes",
+      "REPORTS": "Reports",
+      "MEETINGS": "Scheduled",
+      "CLIENT": "Customer",
+      "CHANGES": "Changes"
+    }
+  },
   "ACTIVITY_REPORT": {
     "TITLE": "Report activity",
     "SUBTITLE": "Something you already did. If it belongs to a pending task, pick it and it becomes its progress",

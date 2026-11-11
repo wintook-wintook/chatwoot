@@ -6,6 +6,9 @@ module Assistant::ProgressToolDefinitions
   D = Assistant::ToolDefinitions
 
   ALL = [
+    D.fn('task_history', 'Historial de una tarea: estado, vencimiento, tiempo reportado contra lo estimado y lo que pasó ' \
+                         '(notas, reportes de avance y de cierre, sus tareas agendadas, lo del cliente y cambios).',
+         { id: D.int('Id de la tarea (de my_agenda o get_case)') }, %w[id]),
     D.fn('propose_task_progress', 'Propone reportar AVANCE de una tarea pendiente: lo que se hizo sin completarla. Es un ' \
                                   'reporte (sale en «Ver reportes» de la tarea y en la actividad del caso), no una nota. ' \
                                   'Requiere confirmación.',

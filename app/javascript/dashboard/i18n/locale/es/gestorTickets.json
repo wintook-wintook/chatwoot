@@ -196,6 +196,36 @@
       "ERROR": "No se pudo guardar."
     }
   },
+  "TASK_HISTORY": {
+    "TITLE": "Historial de la tarea",
+    "SUBTITLE": "Todo lo que pasó con la tarea: notas, reportes, tareas agendadas y cambios",
+    "LOADING": "Cargando historial…",
+    "ERROR": "No se pudo cargar el historial.",
+    "STATUS": "Estado",
+    "ASSIGNEE": "Responsable",
+    "DUE": "Vence",
+    "PLANNED": "programada {day}",
+    "TIME": "Tiempo reportado",
+    "TIME_OF": "{done} de {est} estimado",
+    "NO_SHOW": "El cliente no asistió",
+    "FROM_MEETING": "de la tarea agendada «{title}»",
+    "EMPTY": "Nada con este filtro.",
+    "MENU": "Ver historial",
+    "ACTIONS": {
+      "PROGRESS": "Reportar avance",
+      "NOTE": "Agregar nota",
+      "SCHEDULE": "Agendar",
+      "COMPLETE": "Completar"
+    },
+    "FILTERS": {
+      "ALL": "Todo",
+      "NOTES": "Notas",
+      "REPORTS": "Reportes",
+      "MEETINGS": "Agendadas",
+      "CLIENT": "Cliente",
+      "CHANGES": "Cambios"
+    }
+  },
   "ACTIVITY_REPORT": {
     "TITLE": "Reportar actividad",
     "SUBTITLE": "Algo que ya hiciste. Si es de una tarea pendiente, elígela y queda como su avance",

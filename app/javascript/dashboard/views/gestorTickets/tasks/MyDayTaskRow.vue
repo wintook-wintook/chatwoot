@@ -23,7 +23,15 @@ export default {
     draggable: { type: Boolean, default: false },
     completingId: { type: [Number, String], default: null },
   },
-  emits: ['openTask', 'openTicket', 'complete', 'pin', 'unpin', 'postpone'],
+  emits: [
+    'openTask',
+    'openTicket',
+    'complete',
+    'pin',
+    'unpin',
+    'postpone',
+    'history',
+  ],
   computed: {
     reasons() {
       return visibleReasons(this.row.reasons);
@@ -200,6 +208,15 @@ export default {
           {{ $t('TASK_REPORT.PROGRESS') }}
         </woot-button>
         <woot-button
+          size="small"
+          variant="smooth"
+          color-scheme="secondary"
+          icon="document-list-clock"
+          @click="$emit('history', row)"
+        >
+          {{ $t('TASK_HISTORY.MENU') }}
+        </woot-button>
+        <woot-button
           v-if="row.case_ticket"
           size="small"
           variant="smooth"
@@ -265,6 +282,15 @@ export default {
         icon="arrow-up"
         :title="$t('CASE_TICKETS.TASKS.MY_DAY.PIN')"
         @click="$emit('pin', row)"
+      />
+      <woot-button
+        v-if="!highlight"
+        size="tiny"
+        variant="clear"
+        color-scheme="secondary"
+        icon="document-list-clock"
+        :title="$t('TASK_HISTORY.MENU')"
+        @click="$emit('history', row)"
       />
       <template v-if="!highlight && !frozen">
         <woot-button

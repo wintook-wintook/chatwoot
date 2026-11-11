@@ -24,7 +24,7 @@ import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal
 import taskReportFlow from 'dashboard/mixins/taskReportFlow';
 import rowMenuMixin from 'dashboard/helper/rowMenu'; // menú de la fila (⋮ a la derecha)
 import WootDropdownDivider from 'shared/components/ui/dropdown/DropdownDivider.vue';
-import TaskReportsDialog from 'dashboard/views/gestorTickets/tasks/TaskReportsDialog.vue';
+import TaskHistoryModal from 'dashboard/views/gestorTickets/tasks/TaskHistoryModal.vue';
 import caseAiWriter from 'dashboard/mixins/caseAiWriter';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import MyDay from './tasks/MyDay.vue';
@@ -116,7 +116,7 @@ export default {
     CancelItemModal,
     ScheduleTaskModal,
     TaskReportModal,
-    TaskReportsDialog,
+    TaskHistoryModal,
   },
   mixins: [caseAiWriter, taskReportFlow, rowMenuMixin],
   props: {
@@ -156,7 +156,7 @@ export default {
       // Modal de edición / lectura (no hay alta: una tarea nace dentro de un ticket).
       showModal: false,
       showQuickTask: false,
-      reportsFilter: null,
+      historyTaskId: null, // «Ver historial» de la tarea
       editingTask: null,
       viewing: false,
       isSaving: false,
@@ -808,21 +808,49 @@ export default {
         ? CaseTasksAPI.updateTask(task.case_ticket.id, task.id, data)
         : QuickTasksAPI.update(task.id, data);
     },
-    // @tickets_cases — clic en una fila de reunión ("tarea agendada"): abre la
-    // ficha del ticket directo en la pestaña Reuniones.
-    menuViewReports() {
-      const row = this.rowMenu && this.rowMenu.row;
-      this.closeRowMenu();
-      if (row) this.reportsFilter = { case_task_id: row.id };
-    },
     // Avance: solo de una pendiente y no del cliente (esa la avanza él en su portal).
     canReportProgress(task) {
       return task.status === 'pending' && task.audience !== 'client';
     },
+    menuHistory() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) this.historyTaskId = task.id;
+    },
+    // Los botones del historial hacen lo mismo que el menú de la fila. Agendar: con caso,
+    // una sesión ligada (en el caso); sin caso, pasarla a la agenda.
+    onHistoryAction({ kind, task }) {
+      const row =
+        this.tasks.find(t => t.id === task.id && t.item_type !== 'meeting') ||
+        task;
+      if (kind === 'progress') this.reportProgress(row);
+      if (kind === 'note') this.addNoteForTask(row);
+      if (kind === 'complete') this.complete(row);
+      if (kind === 'schedule') this.scheduleFromHistory(row);
+    },
+    scheduleFromHistory(task) {
+      if (!task.case_ticket) {
+        this.scheduleError = '';
+        this.scheduleTarget = task;
+        return;
+      }
+      this.$router.push({
+        name: 'gestorTickets_detail',
+        params: { id: task.case_ticket.id },
+        query: {
+          tab: 'meetings',
+          task: task.sequence,
+          taskId: task.id,
+          compose: '1',
+        },
+      });
+    },
     menuReportProgress() {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
-      if (!task) return;
+      if (task) this.reportProgress(task);
+    },
+    reportProgress(task) {
       this.$emitter.emit('topbar:reportProgress', {
         id: task.id,
         title: task.title,
@@ -838,6 +866,8 @@ export default {
         params: { contactId: row.contact.id },
       });
     },
+    // @tickets_cases — clic en una fila de reunión ("tarea agendada"): abre la
+    // ficha del ticket directo en la pestaña Reuniones.
     openMeetingTicket(meeting) {
       if (!meeting.case_ticket) {
         this.openContact(meeting);
@@ -850,11 +880,6 @@ export default {
       });
     },
     // ── Menú de acciones por fila: openRowMenu/closeRowMenu en rowMenuMixin ──
-    menuViewNotes() {
-      const task = this.rowMenu && this.rowMenu.row;
-      this.closeRowMenu();
-      if (task) this.openTaskNotes(task);
-    },
     menuAddNote() {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
@@ -939,25 +964,6 @@ export default {
       } finally {
         this.cancelBusy = false;
       }
-    },
-    // @tickets_cases — abre el ticket en la pestaña Notas filtrada por la tarea.
-    // Con 0 notas no navega: solo avisa (no hay nada que ver todavía).
-    openTaskNotes(task) {
-      if (!(task.notes_count > 0)) {
-        this.$emitter.emit('caseToastMessage', {
-          message: this.$t('CASE_TICKETS.TASKS.NOTES_NONE_TOAST', {
-            folio: this.seqLabel(task),
-          }),
-          icon: 'clipboard',
-        });
-        return;
-      }
-      if (!task.case_ticket) return;
-      this.$router.push({
-        name: 'gestorTickets_detail',
-        params: { id: task.case_ticket.id },
-        query: { tab: 'notes', task: task.sequence },
-      });
     },
     // @tickets_cases — abre el ticket y el modal de alta de nota atado a la tarea.
     addNoteForTask(task) {
@@ -1307,9 +1313,13 @@ export default {
         @close="cancelReport"
         @reported="onReported"
       />
-      <TaskReportsDialog
-        :filters="reportsFilter"
-        @close="reportsFilter = null"
+      <TaskHistoryModal
+        v-if="historyTaskId"
+        show
+        :task-id="historyTaskId"
+        :actions="['progress', 'note', 'schedule', 'complete']"
+        @close="historyTaskId = null"
+        @action="onHistoryAction"
       />
 
       <woot-tabs
@@ -1477,6 +1487,7 @@ export default {
         @openTicket="openTicket"
         @openMeeting="openMeetingTicket"
         @complete="complete"
+        @history="r => (historyTaskId = r.id)"
         @plan="savePlan"
         @postpone="postpone"
       />
@@ -1897,34 +1908,16 @@ export default {
           </woot-button>
         </WootDropdownItem>
         <WootDropdownDivider />
-        <WootDropdownItem v-if="rowMenu.row.reports_count > 0">
-          <woot-button
-            variant="clear"
-            color-scheme="secondary"
-            size="small"
-            icon="clipboard"
-            @click="menuViewReports"
-          >
-            {{
-              $t('TASK_REPORT.VIEW_COUNT', {
-                count: rowMenu.row.reports_count,
-              })
-            }}
-          </woot-button>
-        </WootDropdownItem>
+        <!-- Todo lo de la tarea (notas, reportes, agendadas y cambios) en un solo lugar. -->
         <WootDropdownItem>
           <woot-button
             variant="clear"
             color-scheme="secondary"
             size="small"
-            icon="clipboard"
-            @click="menuViewNotes"
+            icon="document-list-clock"
+            @click="menuHistory"
           >
-            {{
-              $t('CASE_TICKETS.TASKS.MENU.NOTES', {
-                count: rowMenu.row.notes_count || 0,
-              })
-            }}
+            {{ $t('TASK_HISTORY.MENU') }}
           </woot-button>
         </WootDropdownItem>
       </WootDropdownMenu>
