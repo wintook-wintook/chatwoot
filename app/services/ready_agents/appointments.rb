@@ -49,7 +49,7 @@ class ReadyAgents::Appointments
     start = parse(from)
     exact = start && from.to_s.include?('T') ? service.slot_for(start) : nil
     list = exact ? [exact] : service.call(from: start)
-    return { horarios: [], nota: 'No hay horarios libres en los próximos días: ofrécele pasarlo con el equipo.' } if list.empty?
+    return none_free if list.empty?
 
     { horarios: list.first(OFFER).map { |s| slot_row(s) }, duracion_minutos: minutes,
       nota: exact ? 'Ese horario está libre.' : nil }.compact
@@ -129,7 +129,37 @@ class ReadyAgents::Appointments
     return { error: 'Fecha no válida; usa YYYY-MM-DDTHH:MM.' } unless start && from.to_s.include?('T')
 
     slot = service.slot_for(start)
-    slot || { error: 'Ese horario ya no está libre: consulta ver_horarios y ofrécele otros.' }
+    return slot if slot
+    return no_calendar if service.calendars_unreadable?
+
+    taken(start)
+  end
+
+  def none_free
+    return no_calendar if service.calendars_unreadable?
+
+    { horarios: [], nota: 'No hay horarios libres en los próximos días: ofrécele pasarlo con el equipo.' }
+  end
+
+  # Se ocupó entre que se ofreció y que lo eligió: de una vez otros horarios de ese día en
+  # adelante, para que el cliente no se quede solo con «ya no está».
+  def taken(start)
+    others = service.call(from: start.beginning_of_day).reject { |s| s[:slot] == start }.first(OFFER)
+    return no_calendar if others.empty? && service.calendars_unreadable?
+
+    { error: 'Ese horario se acaba de ocupar.', horarios: others.map { |s| slot_row(s) },
+      nota: 'Dile que ese horario se acaba de ocupar y ofrécele estos.' }
+  end
+
+  # No se pudo leer ninguna agenda (Google desconectado, sin permiso, API caída): no es que
+  # esté ocupado. El runner lo pasa a una persona con este motivo (queda en la nota interna).
+  def no_calendar
+    who = service.unreadable_users.to_sentence.presence || 'quien agenda'
+    { error: 'No pude revisar la agenda.', sin_agenda: true,
+      motivo: "No se pudo leer el calendario de #{who} (Google desconectado o sin permiso): reconéctalo en Agenda › Calendario " \
+              'y agenda la cita a mano.',
+      nota: 'No le digas que el horario está ocupado ni ofrezcas horarios: dile que en un momento alguien del equipo ' \
+            'le confirma el horario. Ya quedó pasado a una persona.' }
   end
 
   def slot_row(slot)

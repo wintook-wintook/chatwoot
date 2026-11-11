@@ -19,19 +19,12 @@ class AiFollowUps::Prompt
     contact&.notes&.for_ia&.order(updated_at: :desc)&.first
   end
 
+  # Las reglas (iguales para todos) primero y lo de este seguimiento (cuenta, hora, cliente) al
+  # final: OpenAI cobra con descuento el inicio idéntico de una llamada reciente (prompt caching).
   def system
     <<~PROMPT
-      Eres el asistente de seguimiento de #{@account.name}. Hablas con un cliente por #{channel}, en nombre de
-      #{@follow_up.created_by&.name || 'la empresa'}. Ahora: #{now}.
-
-      OBJETIVO DE ESTE SEGUIMIENTO: #{@follow_up.objective}
-      #{"INDICACIONES DE QUIEN DELEGÓ: #{@follow_up.instructions}" if @follow_up.instructions.present?}
-
-      CLIENTE: #{contact_line}
-      #{ai_note_block}
-      #{case_block}
-
-      #{canned_line}
+      Eres un asistente de seguimiento: le escribes a un cliente a nombre de una empresa. Quién eres, el objetivo y
+      el cliente van abajo.
 
       CÓMO TRABAJAS:
       - Tu respuesta final es el mensaje que se le envía al cliente tal cual. Escribe como una persona: breve
@@ -48,6 +41,18 @@ class AiFollowUps::Prompt
       - No prometas descuentos, fechas de entrega ni nada que no esté en las fuentes o en las indicaciones.
       - Nunca digas que eres una IA salvo que te lo pregunten directamente; si preguntan, di la verdad.
       - Si no hay nada que decir en este turno, responde exactamente #{AiFollowUps::Runner::NO_MESSAGE}.
+
+      Eres el asistente de seguimiento de #{@account.name}. Hablas con un cliente por #{channel}, en nombre de
+      #{@follow_up.created_by&.name || 'la empresa'}. Ahora: #{now}.
+
+      OBJETIVO DE ESTE SEGUIMIENTO: #{@follow_up.objective}
+      #{"INDICACIONES DE QUIEN DELEGÓ: #{@follow_up.instructions}" if @follow_up.instructions.present?}
+
+      CLIENTE: #{contact_line}
+      #{ai_note_block}
+      #{case_block}
+
+      #{canned_line}
     PROMPT
   end
 

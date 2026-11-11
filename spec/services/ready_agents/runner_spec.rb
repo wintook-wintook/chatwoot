@@ -67,6 +67,48 @@ RSpec.describe ReadyAgents::Runner do
     expect(session.status).to eq('qualified')
   end
 
+  it 'con temperatura: etiqueta «prospecto-caliente» y la temperatura en la nota (reemplaza a la anterior)' do
+    conversation.update_labels(['prospecto-frio'])
+    stub_model(tool_call('prospecto_calificado', { resumen: 'Lo quiere este mes', temperatura: 'caliente' }),
+               answer('¡Listo! Ana te escribe.'))
+    reply_to(incoming('Lo necesito ya y tengo el presupuesto'))
+
+    expect(conversation.reload.label_list).to include('interesado', 'prospecto-caliente')
+    expect(conversation.label_list).not_to include('prospecto-frio')
+    expect(conversation.messages.where(private: true).last.content).to include('Temperatura: 🔥 caliente')
+  end
+
+  it 'con datos obligatorios: no lo califica hasta tener su correo' do
+    agent.update!(settings: agent.settings.merge('required_contact' => %w[email]))
+    stub_model(tool_call('prospecto_calificado', { resumen: 'Listo', temperatura: 'tibio' }),
+               answer('¿Me compartes tu correo para enviarte la propuesta?'))
+    reply_to(incoming('Sí, me interesa'))
+
+    expect(session.status).to eq('active')
+    expect(conversation.reload.label_list).not_to include('interesado')
+  end
+
+  it 'con datos obligatorios: si los da en el mismo turno, sí lo califica y los guarda' do
+    agent.update!(settings: agent.settings.merge('required_contact' => %w[email company]))
+    stub_model(tool_call('actualizar_contacto', { correo: 'Mario@Acme.com', empresa: 'Acme' }),
+               tool_call('prospecto_calificado', { resumen: 'Listo', temperatura: 'tibio' }), answer('¡Gracias! Ana te escribe.'))
+    reply_to(incoming('mario@acme.com, de Acme'))
+
+    expect(session.status).to eq('qualified')
+    expect(contact.reload).to have_attributes(email: 'mario@acme.com')
+    expect(contact.additional_attributes).to include('company_name' => 'Acme')
+  end
+
+  it 'el Catálogo de productos solo si la empresa lo marcó; si no, solo respuestas predefinidas' do
+    names = ->(runner) { runner.send(:tools).map { |t| t.dig(:function, :name) } }
+    expect(names.call(described_class.new(agent))).not_to include('buscar_en_catalogo')
+    expect(names.call(described_class.new(agent))).to include('buscar_respuesta_predefinida')
+    expect(described_class.new(agent).send(:tool, 'buscar_en_catalogo', { 'consulta' => 'precio' })).to include(:error)
+
+    agent.update!(settings: agent.settings.merge('business_use_catalog' => true))
+    expect(names.call(described_class.new(agent))).to include('buscar_en_catalogo')
+  end
+
   context 'with objetivo «crear la oportunidad»' do
     let(:objective) { 'opportunity' }
 
@@ -99,6 +141,22 @@ RSpec.describe ReadyAgents::Runner do
       expect(session.case_meeting).to have_attributes(organizer_id: seller.id, starts_at: start)
       expect(session).to have_attributes(status: 'active', outcome: include('Cita'))
       expect(conversation.reload.assignee_id).to eq(seller.id)
+    end
+
+    it 'sin acceso al calendario: lo pasa a una persona con nota de a quién reconectar' do
+      UserCalendarIntegration.create!(account: account, user: seller, google_email: 'ana@x.com', tokens: {})
+      agent.update!(settings: agent.settings.merge('appointment_user_ids' => [seller.id.to_s]))
+      allow_any_instance_of(ContactTrackings::AvailabilitySlotService).to receive_messages( # rubocop:disable RSpec/AnyInstance
+        call: [], calendars_unreadable?: true, unreadable_users: ['Ana López']
+      )
+      stub_model(tool_call('ver_horarios', {}), tool_call('prospecto_calificado', { resumen: 'Quiere cita' }),
+                 answer('En un momento alguien del equipo te confirma el horario.'))
+
+      reply_to(incoming('¿Qué horarios tienes?'))
+
+      expect(session.status).to eq('handed_off')
+      note = conversation.messages.where(private: true).last.content
+      expect(note).to include('Pasa a una persona', 'Ana López', 'reconéctalo')
     end
   end
 

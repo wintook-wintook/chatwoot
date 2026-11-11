@@ -371,8 +371,8 @@
       "INBOXES": "Inboxes it attends",
       "INBOX_TAKEN": "This inbox already has another ready agent on",
       "OBJECTIVE": "When the prospect qualifies…",
-      "QUESTIONS": "What does it ask to qualify them?",
-      "QUESTIONS_PLACEHOLDER": "E.g. what they need, when, city, budget",
+      "QUESTIONS": "Your own questions (optional)",
+      "QUESTIONS_PLACEHOLDER": "E.g. is your roof metal or concrete?",
       "QUALIFIED_WHEN": "Qualified when…",
       "QUALIFIED_PLACEHOLDER": "E.g. said what they need and want it this month",
       "DISCARD_WHEN": "Discarded when…",
@@ -394,7 +394,8 @@
       "APPOINTMENT_KIND": "Kind",
       "APPOINTMENT_LOCATION": "Place or link (optional)",
       "APPOINTMENT_LOCATION_PLACEHOLDER": "E.g. Google Meet",
-      "APPOINTMENT_HINT": "Offers free times from their Google within the inbox working hours (or Mon–Fri 9–18). The appointment goes to the Agenda and their Google, and the conversation is assigned to them."
+      "APPOINTMENT_HINT": "Offers free times from their Google within the inbox working hours (or Mon–Fri 9–18). The appointment goes to the Agenda and their Google, and the conversation is assigned to them.",
+      "REQUIRED_CONTACT": "Details to collect before handing off"
     },
     "TONES": {
       "cercano": "Friendly",
@@ -455,6 +456,76 @@
       "videollamada": "Video call",
       "visita": "Visit",
       "oficina": "At our office"
+    },
+    "SECTIONS": {
+      "BUSINESS": "Your business",
+      "BUSINESS_HINT": "What the agent needs to know to explain and to rule out people outside your area or offer.",
+      "QUALIFY": "Qualifying questions",
+      "QUALIFY_HINT": "Turn on the ones you want and edit their wording. It asks them one at a time, conversationally; each answer is saved in the note and the opportunity.",
+      "TEMPERATURE_HINT": "When qualifying, it marks the lead as hot (needs it soon and has budget or decides), warm or cold, with a label, so your team can handle hot leads first.",
+      "OBJECTIONS": "Common objections",
+      "OBJECTIONS_HINT": "What people often say to hold off and how to answer. The agent uses the idea in its own words and never makes up discounts.",
+      "HANDOFF": "Handoff"
+    },
+    "BUSINESS": {
+      "WHAT": "What you sell",
+      "WHAT_PLACEHOLDER": "E.g. solar panels and installation for homes and businesses",
+      "USE_CATALOG": "What I sell and its prices are in my Catalog",
+      "WHO": "Who you sell to (ideal customer)",
+      "WHO_PLACEHOLDER": "E.g. homes with high power bills and mid-size businesses",
+      "COVERAGE": "Where you serve",
+      "COVERAGE_PLACEHOLDER": "E.g. Monterrey metro area",
+      "WHY": "Why choose you",
+      "WHY_PLACEHOLDER": "E.g. 10-year warranty, 5-day install, financing",
+      "PRACTICAL": "Starting prices, payment and lead times",
+      "PRACTICAL_PLACEHOLDER": "E.g. from $45,000; 12-month card plans; 2-week delivery"
+    },
+    "QUALIFY": {
+      "need": {
+        "LABEL": "What they need and why",
+        "ASK": "What do you need and what for?"
+      },
+      "when": {
+        "LABEL": "When",
+        "ASK": "When do you need it?"
+      },
+      "budget": {
+        "LABEL": "Budget",
+        "ASK": "Do you have a rough budget?"
+      },
+      "decides": {
+        "LABEL": "Decision maker",
+        "ASK": "Do you make the decision or someone else?"
+      },
+      "location": {
+        "LABEL": "Location",
+        "ASK": "What city or area are you in?"
+      },
+      "quantity": {
+        "LABEL": "Quantity or size",
+        "ASK": "What quantity or size do you need?"
+      },
+      "source": {
+        "LABEL": "How they found us",
+        "ASK": "How did you hear about us?"
+      }
+    },
+    "OBJECTIONS": {
+      "OBJECTION_PLACEHOLDER": "E.g. \"too expensive\"",
+      "ANSWER_PLACEHOLDER": "E.g. pays for itself in 4 years and financing is available",
+      "ADD": "+ Add objection",
+      "REMOVE": "Remove"
+    },
+    "CONTACT_FIELDS": {
+      "name": "Name",
+      "email": "Email",
+      "company": "Company",
+      "city": "City"
+    },
+    "TEMPERATURES": {
+      "caliente": "🔥 hot",
+      "tibio": "🌤 warm",
+      "frio": "❄️ cold"
     }
   }
 }

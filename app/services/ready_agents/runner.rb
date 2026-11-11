@@ -39,7 +39,7 @@ class ReadyAgents::Runner < Cases::Ai::BaseService
 
     prompt = ReadyAgents::Prompt.new(@agent, test_conversation, answers: @answers)
     content = run([{ role: 'system', content: prompt.system }, *@test_history, { role: 'system', content: TURN }])
-    { reply: clean(content), tools: @used_tools, decision: @decision, answers: @answers }
+    { reply: clean(content), tools: @used_tools, decision: @decision, answers: @answers, temperature: @temperature }
   end
 
   TURN = 'El cliente acaba de escribir (último mensaje). Contesta y sigue tu trabajo.'
@@ -130,11 +130,7 @@ class ReadyAgents::Runner < Cases::Ai::BaseService
     end
   end
 
-  def tools
-    return ReadyAgents::ToolDefinitions::ALL unless ReadyAgents::Appointments.available?(@agent)
-
-    ReadyAgents::ToolDefinitions::ALL + ReadyAgents::ToolDefinitions::APPOINTMENTS
-  end
+  def tools = ReadyAgents::ToolDefinitions.for(@agent)
 
   def parse_args(json)
     JSON.parse(json.to_s)
@@ -145,11 +141,11 @@ class ReadyAgents::Runner < Cases::Ai::BaseService
   # --- herramientas -------------------------------------------------------------------
   def tool(name, args)
     @used_tools << { name: name, args: args }
-    return decide(name, args[ReadyAgents::ToolDefinitions::DECISIONS[name]]) if ReadyAgents::ToolDefinitions::DECISIONS.key?(name)
+    return decide(name, args) if ReadyAgents::ToolDefinitions::DECISIONS.key?(name)
 
     case name
     when 'buscar_respuesta_predefinida' then @search.canned(args['pregunta'])
-    when 'buscar_en_catalogo' then ReadyAgents::CatalogSearch.new(@account).call(args['consulta'])
+    when 'buscar_en_catalogo' then ReadyAgents::ToolDefinitions.catalog_search(@agent, args['consulta'])
     when 'guardar_respuesta' then save_answer(args)
     when 'actualizar_contacto' then update_contact(args)
     when 'ver_horarios', 'agendar_cita', 'mover_cita', 'cancelar_cita' then appointment(name, args)
@@ -163,14 +159,29 @@ class ReadyAgents::Runner < Cases::Ai::BaseService
 
     result = ReadyAgents::Appointments.new(@agent, session: @session).tool(name, args)
     @booked = true if name == 'agendar_cita' && result[:ok] && @session
-    result
+    # Sin acceso al calendario: pasa a una persona (la nota interna dice de quién reconectar).
+    if result[:sin_agenda]
+      @decision = ['pasar_a_humano', result[:motivo]]
+      @calendar_handoff = true
+    end
+    result.except(:motivo)
   rescue StandardError => e
     Rails.logger.error("[ReadyAgents::Runner] cita: #{e.class}: #{e.message}")
     { error: 'No se pudo con el calendario en este momento: dile que alguien del equipo le confirma.' }
   end
 
-  def decide(name, text)
-    @decision = [name, text.to_s]
+  # Si ya se pasó a una persona por no poder leer el calendario, eso se queda (con su motivo).
+  # Calificarlo pide antes los datos obligatorios del contacto (los que marcó la empresa).
+  def decide(name, args)
+    missing = ReadyAgents::Qualification.missing_contact(@agent, @conversation&.contact, @noted_contact.to_h)
+    if name == 'prospecto_calificado' && missing.any?
+      return { error: "Antes de calificarlo pídele su #{missing.join(' y ')} (con naturalidad) y guárdalo con actualizar_contacto." }
+    end
+
+    text = args[ReadyAgents::ToolDefinitions::DECISIONS[name]].to_s
+    temperature = args['temperatura'].to_s if ReadyAgents::Qualification::TEMPERATURES.include?(args['temperatura'].to_s)
+    @decision = [name, text, temperature].compact unless @calendar_handoff
+    @temperature = temperature
     { ok: true, nota: 'Listo. Ahora escribe solo el mensaje final para el cliente.' }
   end
 
@@ -183,18 +194,14 @@ class ReadyAgents::Runner < Cases::Ai::BaseService
 
   # Nombre, correo, empresa y ciudad; en el chat de prueba solo se anota.
   def update_contact(args)
-    data = args.slice('nombre', 'correo', 'empresa', 'ciudad').compact_blank
+    data = ReadyAgents::Qualification.contact_data(args)
+    (@noted_contact ||= {}).merge!(data)
     return { ok: true } if data.empty? || @session.nil?
 
     contact = @conversation.contact
     attrs = contact.additional_attributes.to_h.merge({ 'company_name' => data['empresa'], 'city' => data['ciudad'] }.compact)
-    contact.update(name: data['nombre'].presence || contact.name, email: valid_email(data['correo']) || contact.email,
-                   additional_attributes: attrs)
+    contact.update(name: data['nombre'] || contact.name, email: data['correo'] || contact.email, additional_attributes: attrs)
     { ok: true }
-  end
-
-  def valid_email(value)
-    value.to_s.strip.downcase.presence if value.to_s.match?(URI::MailTo::EMAIL_REGEXP)
   end
 
   # --- después ------------------------------------------------------------------------

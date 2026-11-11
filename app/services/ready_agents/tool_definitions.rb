@@ -8,9 +8,13 @@ module ReadyAgents::ToolDefinitions
   end
 
   STR = { type: 'string' }.freeze
+  TEMPERATURE = { type: 'string', enum: %w[caliente tibio frio], description: 'Qué tan listo está para comprar' }.freeze
 
   ALL = [
-    fn('buscar_respuesta_predefinida', 'Busca en las respuestas predefinidas de la empresa lo que el cliente pregunta.',
+    fn('buscar_respuesta_predefinida', 'Busca en las respuestas predefinidas de la empresa (precios, horario y días que ' \
+                                       'trabajan, ubicación, formas de pago, envíos, cómo funciona…). Úsala ANTES de ' \
+                                       'contestar cualquier pregunta sobre la empresa; busca por el tema («horario de ' \
+                                       'atención» para «¿abren el domingo?») y, si no sale, con otras palabras.',
        { pregunta: STR }, %w[pregunta]),
     fn('buscar_en_catalogo', 'Busca productos o servicios del catálogo de la empresa, con su precio.',
        { consulta: STR }, %w[consulta]),
@@ -19,11 +23,11 @@ module ReadyAgents::ToolDefinitions
     fn('actualizar_contacto', 'Guarda el nombre, correo, empresa o ciudad que el prospecto dijo.',
        { nombre: STR, correo: STR, empresa: STR, ciudad: STR }),
     fn('prospecto_calificado', 'El prospecto cumple lo de «calificado»: se pasa al siguiente paso. Después escribe solo ' \
-                               'la despedida con el siguiente paso.', { resumen: STR }, %w[resumen]),
+                               'la despedida con el siguiente paso.', { resumen: STR, temperatura: TEMPERATURE }, %w[resumen temperatura]),
     fn('descartar', 'No es prospecto (cumple lo de «descartar» o no le interesa). Después escribe solo la despedida.',
        { motivo: STR }, %w[motivo]),
     fn('pasar_a_humano', 'Pide una persona, se molesta, ya es cliente o pide algo que no puedes resolver.',
-       { motivo: STR }, %w[motivo])
+       { motivo: STR, temperatura: TEMPERATURE }, %w[motivo])
   ].freeze
 
   # Solo con el objetivo «agendarle una cita» (ReadyAgents::Appointments).
@@ -37,6 +41,19 @@ module ReadyAgents::ToolDefinitions
        { inicio: { type: 'string', description: 'YYYY-MM-DDTHH:MM' } }, %w[inicio]),
     fn('cancelar_cita', 'Cancela la cita que agendaste en esta conversación.', { motivo: STR }, %w[motivo])
   ].freeze
+
+  # Las que tiene este agente. El Catálogo de productos solo si la empresa marcó «Lo que vendo y
+  # sus precios están en mi Catálogo»; si no, precios y dudas salen de las respuestas predefinidas.
+  def self.for(agent)
+    list = agent.setting(:business_use_catalog) ? ALL : ALL.reject { |t| t.dig(:function, :name) == 'buscar_en_catalogo' }
+    ReadyAgents::Appointments.available?(agent) ? list + APPOINTMENTS : list
+  end
+
+  def self.catalog_search(agent, query)
+    return { error: 'No uses el catálogo: busca con buscar_respuesta_predefinida.' } unless agent.setting(:business_use_catalog)
+
+    ReadyAgents::CatalogSearch.new(agent.account).call(query)
+  end
 
   DECISIONS = { 'prospecto_calificado' => 'resumen', 'descartar' => 'motivo', 'pasar_a_humano' => 'motivo' }.freeze
 end
