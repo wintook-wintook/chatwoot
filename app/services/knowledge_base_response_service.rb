@@ -1098,6 +1098,9 @@ class KnowledgeBaseResponseService
     return @conversation_turn_note = nil if agent_system_prompt.nil? || @conversation.nil?
 
     escribimos = @conversation.messages.where(message_type: :outgoing, private: false).exists?(id: ...@message.id)
+    # La bienvenida de este mismo turno sale DESPUÉS del mensaje del cliente: sin esto el
+    # modelo creía que nadie había saludado y volvía a presentarse.
+    escribimos ||= ContactTrackings::WelcomeMessage.sent?(@tracking, @conversation)
     @conversation_turn_note = escribimos ? LATER_TURN_NOTE : FIRST_TURN_NOTE
   end
 

@@ -132,8 +132,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     end
 
     # [0] proyecto@contact_tracking — el primer mensaje del cliente se contesta con la
-    # sección [MENSAJE DE BIENVENIDA] tal cual, diga lo que diga (ver WelcomeMessage).
-    return answered(:bienvenida) if send_welcome_message(tracking, message)
+    # sección [MENSAJE DE BIENVENIDA] tal cual (ver WelcomeMessage). Si además trae una
+    # pregunta, se sigue y se contesta también.
+    if send_welcome_message(tracking, message)
+      return answered(:bienvenida) if ContactTrackings::WelcomeMessage.only_greeting?(message.content)
+
+      Rails.logger.info '[TrackingBot] 👋 La bienvenida va con pregunta → se contesta también'
+    end
 
     # [1] Keywords — prioridad máxima, sin IA (solo si hay texto)
     if message.content.present? && defined?(ContactTrackings::KeywordActionService)
