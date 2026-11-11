@@ -79,6 +79,7 @@
 class CrmQuote < ApplicationRecord
   # Lo que se puede cambiar cuando ya no está Pendiente (el cambio de estatus).
   PURCHASE_ORDER_DATE_MESSAGE = 'es obligatoria si hay orden de compra'.freeze
+  SELLER_RESPECTED_MESSAGE = 'debe ser el de la organización (respeta vendedor)'.freeze
   STATUS_COLUMNS = %w[status status_changed_at status_changed_by_id updated_by_id updated_at].freeze
   # setQStatus / menú de estatus de CRMZeus: a dónde se puede pasar desde cada estatus.
   TRANSITIONS = {
@@ -120,6 +121,7 @@ class CrmQuote < ApplicationRecord
   validates :purchase_order, length: { maximum: 35 }
   validates :purchase_order_date, presence: { message: PURCHASE_ORDER_DATE_MESSAGE }, if: :purchase_order?
   validate :valid_until_after_quote_date
+  validate :seller_respected, if: -> { will_save_change_to_seller_id? || will_save_change_to_organization_id? }
   validate :items_present
   validate :kits_follow_catalog
   validate :references_belong_to_account
@@ -140,7 +142,7 @@ class CrmQuote < ApplicationRecord
   def fill_from_organization
     return self unless organization
 
-    self.seller ||= organization.seller
+    self.seller ||= default_seller
     self.payment_term ||= organization.payment_term
     self.currency ||= organization.currency || account.crm_currencies.active.find_by(is_default: true)
     self.cfdi_use ||= organization.cfdi_use
@@ -200,6 +202,26 @@ class CrmQuote < ApplicationRecord
   end
 
   private
+
+  # setOrg de master2: si la organización respeta vendedor, el suyo; si no, el ligado al agente que
+  # cotiza, el de la organización o el predeterminado.
+  def default_seller
+    return organization.seller if seller_respected?
+
+    sellers = account.crm_sellers.active
+    (created_by_id && sellers.find_by(user_id: created_by_id)) || organization.seller || sellers.find_by(is_default: true)
+  end
+
+  def seller_respected?
+    organization&.respect_seller? && organization.seller_id.present?
+  end
+
+  # RESPETAR_VENDEDOR: con la organización bloqueada a su vendedor no se acepta otro.
+  def seller_respected
+    return unless seller_respected? && seller_id != organization.seller_id
+
+    errors.add(:seller, SELLER_RESPECTED_MESSAGE)
+  end
 
   # VALIDAR_FECHA_ENTREGA de master2: la entrega solo es obligatoria si la cuenta lo pide.
   def delivery_date_required?

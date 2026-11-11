@@ -496,7 +496,8 @@
         "LOST": "¿Marcar la cotización {folio} como perdida?",
         "CANCELLED": "¿Cancelar la cotización {folio}? Ya no se podrá editar.",
         "PENDING": "¿Regresar la cotización {folio} a Pendiente? Se podrá editar otra vez."
-      }
+      },
+      "SELLER_LOCKED": "La organización respeta su vendedor: no se puede cambiar."
     },
     "QUOTE_SERIES": {
       "DESCRIPTION": "Cada agente cotiza con su serie: el folio es la serie más el consecutivo, a 9 caracteres (LAU000125). Sin serie el agente no puede cotizar.",

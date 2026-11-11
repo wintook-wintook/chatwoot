@@ -150,6 +150,18 @@ export default {
         this.organization && this.organization.organization_type === 'prospect'
       );
     },
+    // VALIDAR_FECHA_ENTREGA (parámetro de la cuenta, Q3.1).
+    deliveryDateRequired() {
+      return !!(this.catalogs.settings || {}).require_delivery_date;
+    },
+    // RESPETAR_VENDEDOR: la organización fija su vendedor y no se cambia.
+    sellerLocked() {
+      return !!(
+        this.organization &&
+        this.organization.respect_seller &&
+        this.organization.seller_id
+      );
+    },
     statusActions() {
       if (this.isNew || !this.info.can_edit) return [];
       return (this.info.transitions || []).map(status => ({
@@ -606,7 +618,13 @@ export default {
               </label>
               <label>
                 {{ $t('CRM_ZEUS.FIELDS.SELLER') }} *
-                <select v-model="quote.seller_id">
+                <select
+                  v-model="quote.seller_id"
+                  :disabled="sellerLocked"
+                  :title="
+                    sellerLocked ? $t('CRM_ZEUS.QUOTE_FORM.SELLER_LOCKED') : ''
+                  "
+                >
                   <option value="">—</option>
                   <option
                     v-for="seller in catalogs.sellers"
@@ -662,9 +680,7 @@ export default {
               <div class="grid grid-cols-[2fr_1fr] gap-x-2">
                 <label>
                   {{ $t('CRM_ZEUS.QUOTE_FORM.DELIVERY_DATE') }}
-                  <template v-if="catalogs.settings.require_delivery_date">
-                    *
-                  </template>
+                  <template v-if="deliveryDateRequired"> * </template>
                   <input v-model="quote.delivery_date" type="date" />
                 </label>
                 <label>

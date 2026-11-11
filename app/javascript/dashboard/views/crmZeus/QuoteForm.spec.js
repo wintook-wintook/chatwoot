@@ -66,6 +66,7 @@ describe('CrmZeusQuoteForm', () => {
         currencies: [{ id: 1, iso_code: 'MXN', name: 'Peso' }],
         taxes: [{ id: 16, name: 'IVA 16%', tax_type: 'vat', percent: 16 }],
         lookups: { price_list: [] },
+        settings: { require_delivery_date: false },
       },
     });
     CrmQuotes.draft.mockResolvedValue({
@@ -87,6 +88,22 @@ describe('CrmZeusQuoteForm', () => {
     expect(wrapper.vm.editable).toBe(true);
     expect(wrapper.text()).toContain('CRM_ZEUS.QUOTE_FORM.NEW_TITLE');
     expect(wrapper.text()).not.toContain('LAU000125');
+  });
+
+  it('bloquea el vendedor si la organización lo respeta (RESPETAR_VENDEDOR)', async () => {
+    const wrapper = montar();
+    await flushPromises();
+    const sellerSelect = () =>
+      wrapper.find('select[title="CRM_ZEUS.QUOTE_FORM.SELLER_LOCKED"]');
+    expect(wrapper.vm.sellerLocked).toBe(false);
+    expect(sellerSelect().exists()).toBe(false);
+
+    await wrapper.setData({
+      organization: { ...ACEROS, seller_id: 3, respect_seller: true },
+    });
+
+    expect(wrapper.vm.sellerLocked).toBe(true);
+    expect(sellerSelect().attributes('disabled')).toBeDefined();
   });
 
   it('manda las partidas sin importes y pinta los que calcula el servidor', async () => {

@@ -125,9 +125,40 @@ RSpec.describe CrmQuote do
     end
   end
 
+  describe 'vendedor por omisión (setOrg de master2)' do
+    let(:pedro) { account.crm_sellers.create!(name: 'Pedro') }
+    let(:house) { account.crm_sellers.create!(name: 'Mostrador', is_default: true) }
+
+    it 'primero el ligado al agente que cotiza, aunque la organización tenga otro' do
+      organization.update!(seller: pedro)
+
+      expect(build_quote.seller).to eq(seller)
+    end
+
+    it 'si el agente no es vendedor, el de la organización y luego el predeterminado' do
+      organization.update!(seller: pedro)
+      seller.update!(user: nil)
+      expect(build_quote.seller).to eq(pedro)
+
+      house
+      organization.update!(seller: nil)
+      expect(build_quote.seller).to eq(house)
+    end
+
+    it 'si la organización respeta vendedor, el suyo y no acepta otro' do
+      organization.update!(seller: pedro, respect_seller: true)
+      expect(build_quote.seller).to eq(pedro)
+
+      quote = add_item(build_quote(seller: seller)).quote
+      expect(quote).not_to be_valid
+      expect(quote.errors[:seller]).to include(CrmQuote::SELLER_RESPECTED_MESSAGE)
+    end
+  end
+
   describe 'validaciones' do
     it 'pide vigencia, uso CFDI, vendedor, condición de pago y al menos una partida' do
       organization.update!(seller: nil, payment_term: nil, cfdi_use: nil)
+      seller.update!(user: nil)
       quote = build_quote(valid_until: nil, delivery_date: nil)
 
       expect(quote).not_to be_valid

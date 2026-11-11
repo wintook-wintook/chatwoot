@@ -77,7 +77,8 @@ module Crm::QuoteJson
   end
 
   def organization(org)
-    org && { id: org.id, name: org.trade_name, organization_type: org.organization_type }
+    org && { id: org.id, name: org.trade_name, organization_type: org.organization_type, seller_id: org.seller_id,
+             respect_seller: org.respect_seller, charge_taxes: org.charge_taxes, withholds_taxes: org.withholds_taxes }
   end
 
   def named(record)

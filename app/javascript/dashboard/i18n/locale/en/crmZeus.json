@@ -496,7 +496,8 @@
         "LOST": "Mark quote {folio} as lost?",
         "CANCELLED": "Cancel quote {folio}? It can no longer be edited.",
         "PENDING": "Return quote {folio} to Pending? It can be edited again."
-      }
+      },
+      "SELLER_LOCKED": "The organization keeps its own sales rep: it can't be changed."
     },
     "QUOTE_SERIES": {
       "DESCRIPTION": "Each agent quotes with their own series: the folio is the series plus the sequence, 9 characters long (LAU000125). An agent without a series can't quote.",

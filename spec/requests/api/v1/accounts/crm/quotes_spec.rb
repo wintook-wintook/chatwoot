@@ -50,6 +50,8 @@ RSpec.describe 'CrmZeus Quotes API' do
     expect(body['quote']).to include('seller_id' => seller.id, 'payment_term_id' => credit.id, 'cfdi_use' => 'G03',
                                      'sat_payment_method' => 'PPD', 'exchange_rate' => 1.0)
     expect(body['series']).to eq('series' => 'LAU', 'next_folio' => 'LAU000125')
+    expect(body['quote']['organization']).to include('seller_id' => seller.id, 'respect_seller' => false,
+                                                     'charge_taxes' => true, 'withholds_taxes' => false)
   end
 
   it 'calcula sin guardar, ignorando los totales que manda el navegador' do
