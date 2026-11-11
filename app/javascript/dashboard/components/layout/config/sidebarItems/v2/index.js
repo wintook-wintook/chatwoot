@@ -695,6 +695,7 @@ const agentesIa = accountId => ({
       icon: 'bot',
       label: 'READY_AGENTS',
       hasSubMenu: false,
+      beta: true,
       featureFlag: FEATURE_FLAGS.CAMPAIGNS,
       toState: frontendURL(
         `accounts/${accountId}/tracking-dashboard/ready-agents`
