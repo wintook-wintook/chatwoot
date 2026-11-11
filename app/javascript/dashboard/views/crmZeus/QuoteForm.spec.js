@@ -78,14 +78,15 @@ describe('CrmZeusQuoteForm', () => {
     CrmOrganizations.consignees.mockResolvedValue({ data: { consignees: [] } });
   });
 
-  it('arranca con los defaults del cliente y el folio que tomará', async () => {
+  it('arranca como «Cotización NUEVA» con los defaults del cliente, sin anunciar folio', async () => {
     const wrapper = montar();
     await flushPromises();
 
     expect(CrmQuotes.draft).toHaveBeenCalledWith('7');
     expect(wrapper.vm.quote).toMatchObject({ seller_id: 3, cfdi_use: 'G03' });
     expect(wrapper.vm.editable).toBe(true);
-    expect(wrapper.text()).toContain('LAU000125');
+    expect(wrapper.text()).toContain('CRM_ZEUS.QUOTE_FORM.NEW_TITLE');
+    expect(wrapper.text()).not.toContain('LAU000125');
   });
 
   it('manda las partidas sin importes y pinta los que calcula el servidor', async () => {
@@ -138,6 +139,9 @@ describe('CrmZeusQuoteForm', () => {
     const wrapper = montar({ quoteId: '9', query: {} });
     await flushPromises();
 
+    expect(wrapper.vm.title).toBe(
+      'CRM_ZEUS.QUOTE_FORM.EDIT_TITLE {"folio":"LAU000125"}'
+    );
     expect(wrapper.vm.editable).toBe(false);
     expect(wrapper.vm.statusActions.map(a => a.status)).toEqual([
       'lost',

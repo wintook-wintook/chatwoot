@@ -124,8 +124,13 @@ export default {
       if (this.isNew) return !!this.series;
       return !!this.info.can_edit && this.info.status === 'pending';
     },
+    // Como CRMZeus: «Cotización NUEVA» y, ya guardada, «Cotización <folio>». El folio no se
+    // anuncia antes de guardar: se asigna al guardar (Crm::QuoteFolio) y puede ser otro.
     title() {
-      if (!this.isNew) return this.info.folio;
+      if (!this.isNew)
+        return this.$t('CRM_ZEUS.QUOTE_FORM.EDIT_TITLE', {
+          folio: this.info.folio || '',
+        });
       return this.$t('CRM_ZEUS.QUOTE_FORM.NEW_TITLE');
     },
     currencyCode() {
@@ -449,12 +454,7 @@ export default {
             {{ info.status_label }}
           </span>
         </h1>
-        <p v-if="isNew && series" class="m-0 text-sm text-slate-500">
-          {{
-            $t('CRM_ZEUS.QUOTE_FORM.NEXT_FOLIO', { folio: series.next_folio })
-          }}
-        </p>
-        <p v-else-if="!isNew && !loading" class="m-0 text-sm text-slate-500">
+        <p v-if="!isNew && !loading" class="m-0 text-sm text-slate-500">
           {{
             $t('CRM_ZEUS.QUOTE_FORM.CREATED_BY', {
               name: info.created_by ? info.created_by.name : '—',

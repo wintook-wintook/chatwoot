@@ -394,8 +394,8 @@
     },
     "QUOTE_FORM": {
       "BACK": "← Quotes",
-      "NEW_TITLE": "New quote",
-      "NEXT_FOLIO": "Folio it will take: {folio}",
+      "NEW_TITLE": "NEW quote",
+      "EDIT_TITLE": "Quote {folio}",
       "CREATED_BY": "Created by: {name}",
       "CREATED": "Quote {folio} saved",
       "DUPLICATE": "Duplicate",

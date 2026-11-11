@@ -394,8 +394,8 @@
     },
     "QUOTE_FORM": {
       "BACK": "← Cotizaciones",
-      "NEW_TITLE": "Nueva cotización",
-      "NEXT_FOLIO": "Folio que tomará: {folio}",
+      "NEW_TITLE": "Cotización NUEVA",
+      "EDIT_TITLE": "Cotización {folio}",
       "CREATED_BY": "Creó: {name}",
       "CREATED": "Cotización {folio} guardada",
       "DUPLICATE": "Duplicar",
