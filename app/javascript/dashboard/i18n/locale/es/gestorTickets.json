@@ -325,6 +325,16 @@
     }
   },
   "CASE_TICKETS": {
+    "ASSIGN_CLIENT": {
+      "BUTTON": "Ligar a un cliente",
+      "TITLE": "Ligar a un cliente · {folio}",
+      "HINT": "El caso deja de ser interno: queda en la ficha de la organización y del contacto, en su portal y en sus reportes. Quien lo pidió sigue como solicitante.",
+      "CONFIRM": "Ligar",
+      "CANCEL": "Cancelar",
+      "DONE": "El caso ya es del cliente",
+      "ERROR": "No se pudo ligar el caso",
+      "EVENT": "Se ligó a {client} (antes era caso interno)"
+    },
     "STAGE_BAR": {
       "NOW": "Ahora: {stage}"
     },
@@ -1802,6 +1812,7 @@
       "task_client_update": "El cliente avanzó una tarea",
       "task_cancelled": "Tarea cancelada",
       "task_converted": "Tarea ↔ agenda",
+      "client_assigned": "Se ligó a un cliente",
       "task_reopened": "Tarea reabierta",
       "task_deleted": "Tarea borrada",
       "quote_created": "Cotización creada",

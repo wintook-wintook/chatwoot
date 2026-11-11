@@ -27,7 +27,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   before_action :set_ticket,
                 only: %i[show update transition move assign escalate change_approval generate_article
                          apply_ai_suggestion dismiss_ai_suggestion suggest_reply summarize
-                         detect_duplicates follow_up lock unlock reopen outcome postpone resume work_order project]
+                         detect_duplicates follow_up lock unlock reopen outcome postpone resume work_order project
+                         assign_client]
   include CaseConflictGuard # K1 — dos personas en el mismo caso: presencia y conflicto por campo
   before_action :check_case_conflict, only: %i[update assign transition move outcome postpone resume reopen]
   before_action :note_pending_tasks_decision, only: %i[transition outcome move]
@@ -486,6 +487,18 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     render json: { case_ticket: ticket_json(@ticket.reload) }
   rescue StandardError => e
     render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # PATCH /api/v1/accounts/:account_id/case_tickets/:id/assign_client
+  # «Ligar a un cliente»: el caso interno pasa a ser de un contacto (y su organización).
+  def assign_client
+    Cases::AssignClient.new(@ticket, user: current_user)
+                       .call(contact_id: params[:contact_id], organization_id: params[:organization_id])
+    render json: { case_ticket: ticket_json(@ticket.reload) }
+  rescue Cases::AssignClient::Error => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
   end
 
   # PATCH /api/v1/accounts/:account_id/case_tickets/:id/escalate

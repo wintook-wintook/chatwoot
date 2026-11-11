@@ -197,6 +197,13 @@ en:
       task_not_open: 'Only a pending task can be scheduled.'
       meeting_not_open: 'Only a pending scheduled task with no visit started can become a task.'
       starts_at: 'Pick the day and time.'
+  # «Link to a client» — an internal case becomes a client's case (Cases::AssignClient)
+  assign_client:
+    errors:
+      not_internal: 'This case already has a client.'
+      contact_required: 'Pick the client contact.'
+      organization_missing: 'Organization not found.'
+      contact_other_organization: 'That contact belongs to another organization.'
   # WhatsApp templates — «Create with AI» (Whatsapp::TemplateDrafter)
   whatsapp_templates:
     ai:

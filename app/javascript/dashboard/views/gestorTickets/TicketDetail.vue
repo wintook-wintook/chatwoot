@@ -9,6 +9,7 @@ import CaseActivity from './activity/CaseActivity.vue'; // Plan Actividad del ca
 import CaseConversationsMenu from './activity/CaseConversationsMenu.vue';
 import { toggleAssistant } from 'dashboard/helper/assistantState';
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue';
+import AssignClientModal from './AssignClientModal.vue';
 import TicketConversation from '../../components/contacts/CaseTicket/TicketConversation.vue';
 import TicketTasks from '../../components/contacts/CaseTicket/TicketTasks.vue';
 import TicketNotes from '../../components/contacts/CaseTicket/TicketNotes.vue';
@@ -74,6 +75,7 @@ export default {
     CaseActivity,
     CaseConversationsMenu,
     CaseTicketInternalModal,
+    AssignClientModal,
     TicketConversation,
     TicketTasks,
     TicketNotes,
@@ -148,6 +150,7 @@ export default {
       fromCaseTarget: 'work_order',
       isCreatingWorkOrder: false,
       showEditModal: false, // @tickets_cases — modal de edición del ticket
+      showAssignClient: false, // «Ligar a un cliente» (caso interno)
       reopenReason: '',
       isReopening: false,
       // @tickets_cases — motivo opcional al cambiar de estado (osTicket)
@@ -1901,6 +1904,13 @@ export default {
       this.showEditModal = false;
       this.refetch();
     },
+    onClientAssigned() {
+      this.showAssignClient = false;
+      this.$emitter.emit('newToastMessage', {
+        message: this.$t('CASE_TICKETS.ASSIGN_CLIENT.DONE'),
+      });
+      this.refetch();
+    },
     openReopenModal() {
       this.reopenReason = '';
       this.showReopenModal = true;
@@ -2385,6 +2395,17 @@ export default {
             }}<template v-if="ticket.requester">
               · {{ ticket.requester.name }}</template
             >
+            <!-- «Ligar a un cliente»: deja de ser interno (también cerrado: es corregir de quién es). -->
+            <woot-button
+              size="tiny"
+              variant="smooth"
+              color-scheme="primary"
+              icon="person-add"
+              class="ml-1 align-middle"
+              @click="showAssignClient = true"
+            >
+              {{ $t('CASE_TICKETS.ASSIGN_CLIENT.BUTTON') }}
+            </woot-button>
           </span>
           <!-- @tickets_cases — título a UNA sola línea con "…": envolver a dos
                líneas empujaba las pestañas y descuadraba la cabecera. Completo
@@ -3735,6 +3756,14 @@ export default {
         </form>
       </div>
     </woot-modal>
+
+    <AssignClientModal
+      v-if="showAssignClient && ticket"
+      :show="showAssignClient"
+      :ticket="ticket"
+      @assigned="onClientAssigned"
+      @close="showAssignClient = false"
+    />
 
     <!-- @tickets_cases — Edición del ticket (mismo modal que el alta) -->
     <CaseTicketInternalModal

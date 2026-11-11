@@ -98,7 +98,8 @@ class CaseEvent < ApplicationRecord
     quote_status_changed:  51, # payload: folio, from, to
     conversation_unlinked: 52, # se quitó una conversación adicional (payload.display_id)
     task_client_update:    53, # el cliente avanzó una tarea en su portal (o le respondimos); payload: kind, contact, content
-    task_converted:        54  # tarea ↔ tarea agendada; payload: direction (to_meeting|to_task), title, starts_at, folio
+    task_converted:        54, # tarea ↔ tarea agendada; payload: direction (to_meeting|to_task), title, starts_at, folio
+    client_assigned:       55  # el caso interno se ligó a un cliente; payload: organization, contact
   }
 
   enum origin: { bot: 0, agent: 1, system: 2 }

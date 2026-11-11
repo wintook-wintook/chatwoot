@@ -325,6 +325,16 @@
     }
   },
   "CASE_TICKETS": {
+    "ASSIGN_CLIENT": {
+      "BUTTON": "Link to a client",
+      "TITLE": "Link to a client · {folio}",
+      "HINT": "The case stops being internal: it shows in the organization and contact records, their portal and their reports. Whoever asked for it stays as requester.",
+      "CONFIRM": "Link",
+      "CANCEL": "Cancel",
+      "DONE": "The case now belongs to the client",
+      "ERROR": "The case could not be linked",
+      "EVENT": "Linked to {client} (was an internal case)"
+    },
     "STAGE_BAR": {
       "NOW": "Now: {stage}"
     },
@@ -1704,6 +1714,7 @@
       "task_client_update": "The customer updated a task",
       "task_cancelled": "Task cancelled",
       "task_converted": "Task ↔ schedule",
+      "client_assigned": "Linked to a client",
       "task_reopened": "Task reopened",
       "task_deleted": "Task deleted",
       "quote_created": "Quote created",

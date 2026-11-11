@@ -182,6 +182,13 @@ es:
       task_not_open: 'Solo se agenda una tarea pendiente.'
       meeting_not_open: 'Solo se pasa a tarea una tarea agendada pendiente y sin salida a la visita.'
       starts_at: 'Elige el día y la hora.'
+  # «Ligar a un cliente» — caso interno que pasa a ser de un cliente (Cases::AssignClient)
+  assign_client:
+    errors:
+      not_internal: 'Este caso ya tiene cliente.'
+      contact_required: 'Elige el contacto del cliente.'
+      organization_missing: 'No se encontró la organización.'
+      contact_other_organization: 'Ese contacto es de otra organización.'
   # Plantillas de WhatsApp — «Crear con IA» (Whatsapp::TemplateDrafter)
   whatsapp_templates:
     ai:

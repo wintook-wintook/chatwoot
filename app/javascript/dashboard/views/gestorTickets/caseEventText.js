@@ -125,6 +125,12 @@ export default {
           .filter(Boolean)
           .join(' — ');
       }
+      // El caso interno se ligó a un cliente.
+      if (type === 'client_assigned') {
+        return this.$t('CASE_TICKETS.ASSIGN_CLIENT.EVENT', {
+          client: [p.organization, p.contact].filter(Boolean).join(' · '),
+        });
+      }
       // Tarea ↔ tarea agendada: a qué pasó y para cuándo.
       if (type === 'task_converted') {
         const folio =

@@ -457,6 +457,7 @@ Rails.application.routes.draw do
               patch :resume   # Plan-Clase-Comercial F3
               post :work_order # Plan-Clase-Orden-de-Trabajo F2b — crear orden desde este caso
               post :project # Plan-Clase-Proyecto P2 — crear proyecto desde una oportunidad ganada
+              patch :assign_client # el caso interno pasa a ser de un cliente (organización y contacto)
             end
             resources :case_events, only: [:index]
             # @tickets_cases — ligar (o crear) la conversación de un caso que no tiene
