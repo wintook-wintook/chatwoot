@@ -263,6 +263,30 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     end
   end
 
+  describe '#next_contact_line (04/11/2026)' do
+    let(:tracking) do
+      ContactTracking.new(account: account, tracking_template: tracking_template, scheduled_for: Time.zone.parse('2026-11-09 18:19 UTC'))
+    end
+
+    it 'sin ningún toque enviado (el cliente abrió la conversación) no va' do
+      tracking.attempt_count = 0
+      expect(job.send(:next_contact_line, tracking, 'UTC')).to eq('')
+    end
+
+    it 'con toques enviados va, aclarando que es un mensaje automático y no una cita' do
+      tracking.attempt_count = 1
+      linea = job.send(:next_contact_line, tracking, 'UTC')
+
+      expect(linea).to include('09/11/2026 a las 18:19')
+      expect(linea).to include('NO una cita')
+    end
+
+    it 'sin fecha programada no va' do
+      tracking.assign_attributes(attempt_count: 2, scheduled_for: nil)
+      expect(job.send(:next_contact_line, tracking, 'UTC')).to eq('')
+    end
+  end
+
   describe '#google_calendar_timezone' do
     let(:tracking) { ContactTracking.new(account: account, tracking_template: tracking_template) }
 
@@ -321,6 +345,29 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     it 'sin Entrenamiento queda como antes' do
       expect(job.send(:conversational_identity, tracking, '')).to include('NUNCA menciones que eres un bot')
       expect(job.send(:conversational_form, '')).to start_with('Máximo 4 líneas.')
+    end
+  end
+
+  describe 'conversacional sin fuente (05/11/2026)' do
+    let(:account) { create(:account) }
+    let(:inbox) { create(:inbox, account: account) }
+    let(:contact) { create(:contact, account: account, name: 'Ana Pérez') }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) { create(:message, account: account, inbox: inbox, conversation: conversation, sender: contact, content: 'Si, porfa...') }
+    let(:tracking) do
+      create(:contact_tracking, account: account, contact: contact, inbox: inbox, conversation: conversation,
+                                complementary_prompt: 'Agente de admisiones.')
+    end
+
+    it 'le prohíbe dar o calcular montos que no tiene y repetir un mensaje ya enviado' do
+      enviado = nil
+      allow(job).to receive_messages(get_api_key: { key: 'sk-test' }, get_tracking_message_history: '',
+                                     appointment_timezone: 'UTC', appointment_state_summary: 'sin cita')
+      allow(job).to receive(:call_openai_for_reply) { |_key, messages, _tracking| enviado = messages.last[:content] }
+
+      job.send(:generate_conversational_reply, tracking, message)
+
+      expect(enviado).to include(described_class::CONVERSATIONAL_GUARD)
     end
   end
 
@@ -1232,6 +1279,30 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       allow(job).to receive(:branch_for).and_return(ContactTrackings::RouteMap::Route.new(name: 'otra', escalation: '@agendar_calendar'))
 
       expect(job.send(:handle_service_confirmation, tracking, mensaje)).to be(false)
+    end
+  end
+
+  describe '#get_tracking_message_history' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:tracking) do
+      ContactTracking.create!(account: account, contact: contact, inbox: inbox, conversation: conversation,
+                              objective: 'Vender', scheduled_for: 1.hour.from_now, status: 'active',
+                              tracking_template_id: tracking_template.id, created_at: 2.hours.ago)
+    end
+
+    it 'manda los ÚLTIMOS mensajes (de viejo a nuevo), no los primeros' do
+      total = described_class::HISTORY_LIMIT + 5
+      total.times do |i|
+        create(:message, account: account, inbox: inbox, conversation: conversation, sender: contact,
+                         message_type: :incoming, content: "mensaje #{i + 1}", created_at: (total - i).minutes.ago)
+      end
+
+      lines = job.send(:get_tracking_message_history, tracking).lines.drop(1)
+      expect(lines.size).to eq(described_class::HISTORY_LIMIT)
+      expect(lines.first).to include('mensaje 6')
+      expect(lines.last).to include("mensaje #{total}")
     end
   end
 end

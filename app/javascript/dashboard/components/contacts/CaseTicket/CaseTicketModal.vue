@@ -7,6 +7,7 @@
   2B: clasificación ITIL (tipo, servicio, categoría, impacto/urgencia → prioridad por matriz).
 -->
 <script>
+import { fetchEffectiveOwnerId } from 'dashboard/helper/contactOwnerDefault';
 import CaseTasksOnCloseModal from 'dashboard/views/gestorTickets/tasks/CaseTasksOnCloseModal.vue';
 import { mapGetters } from 'vuex';
 import { forType, idAvailable } from 'dashboard/helper/caseClassification';
@@ -40,6 +41,7 @@ export default {
   data() {
     return {
       view: 'list', // 'list' | 'create'
+      ownerAssigneeId: null, // responsable fijo del contacto
       activeTab: 'ticket', // 'ticket' | 'custom'
       transitionMenuFor: null, // id del ticket con el menú de estado abierto
       showTimeline: false,
@@ -123,7 +125,10 @@ export default {
     // @tickets_cases — al crear, el responsable arranca en el agente firmado.
     // Solo si ese usuario figura entre los agentes de la cuenta (un superadmin
     // que no es agente no aparece en el select y dejarlo daría un valor muerto).
+    // Si el contacto tiene responsable fijo (suyo o de su organización), va ese.
     defaultAssigneeId() {
+      const owner = this.ownerAssigneeId;
+      if (owner && this.agents.some(ag => ag.id === owner)) return owner;
       const id = this.currentUser?.id;
       if (!id) return '';
       return this.agents.some(ag => ag.id === id) ? id : '';
@@ -232,6 +237,7 @@ export default {
     },
     contactId(newId) {
       if (newId) this.fetchTickets();
+      this.applyContactOwner(newId);
     },
     // Al cambiar de tipo, inicializa los valores de sus campos (checkbox→false).
     selectedTypeFields: {
@@ -265,10 +271,19 @@ export default {
     this.$store.dispatch('agents/get').then(() => {
       if (!this.form.assignee_id)
         this.form.assignee_id = this.defaultAssigneeId;
+      this.applyContactOwner(this.contactId);
     });
     this.$store.dispatch('teams/get');
   },
   methods: {
+    // Toma el responsable fijo del contacto; solo cambia el select si nadie lo movió.
+    async applyContactOwner(contactId) {
+      const previous = this.defaultAssigneeId;
+      this.ownerAssigneeId = await fetchEffectiveOwnerId(contactId);
+      if (!this.form.assignee_id || this.form.assignee_id === previous) {
+        this.form.assignee_id = this.defaultAssigneeId;
+      }
+    },
     fetchTickets() {
       if (!this.contactId) return Promise.resolve();
       return this.$store.dispatch('caseTickets/fetchContactTickets', {

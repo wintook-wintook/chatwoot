@@ -1,3 +1,5 @@
+# Fusionar contactos (ver ContactMergeAction). Área Clientes con permiso de editar
+# (AccessAreaGuard); con «solo lo suyo», solo entre contactos que le tocan.
 class Api::V1::Accounts::Actions::ContactMergesController < Api::V1::Accounts::BaseController
   before_action :set_base_contact, only: [:create]
   before_action :set_mergee_contact, only: [:create]
@@ -22,6 +24,6 @@ class Api::V1::Accounts::Actions::ContactMergesController < Api::V1::Accounts::B
   end
 
   def contacts
-    @contacts ||= Current.account.contacts
+    @contacts ||= access_grant.contacts(Current.account.contacts)
   end
 end

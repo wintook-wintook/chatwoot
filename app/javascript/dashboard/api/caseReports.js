@@ -111,12 +111,12 @@ class CaseReportsAPI extends ApiClient {
     });
   }
 
-  // Análisis de conversaciones con IA (a pedido): muestra del período.
-  analyzeConversations(filters = {}) {
-    return axios.post(
-      `${this.url}/business_summary_conversations_ai`,
-      filterParams(filters)
-    );
+  // Análisis de conversaciones (a pedido): muestra del período; sampleSize de 10 a 150.
+  analyzeConversations(filters = {}, sampleSize = 100) {
+    return axios.post(`${this.url}/business_summary_conversations_ai`, {
+      ...filterParams(filters),
+      sample_size: sampleSize,
+    });
   }
 
   getStalled({ thresholdDays, ...filters } = {}) {

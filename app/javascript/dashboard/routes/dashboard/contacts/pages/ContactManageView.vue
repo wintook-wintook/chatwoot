@@ -16,6 +16,8 @@ import ContactNotes from 'dashboard/modules/notes/NotesOnContactPage.vue';
 import SettingsHeader from '../../settings/SettingsHeader.vue';
 import Spinner from 'shared/components/Spinner.vue';
 import ContactDataColumn from '../components/ContactDataColumn.vue';
+import ContactFollowUpAction from '../components/ContactFollowUpAction.vue'; // Seguimiento IA
+import ClientPortalLinkCard from 'dashboard/components/clientPortal/ClientPortalLinkCard.vue'; // portal del cliente
 import ContactSummaryTab from '../components/ContactSummaryTab.vue';
 import ContactCasesTab from '../components/ContactCasesTab.vue';
 import ContactTasksTab from '../components/ContactTasksTab.vue';
@@ -35,6 +37,8 @@ export default {
     SettingsHeader,
     Spinner,
     ContactDataColumn,
+    ContactFollowUpAction,
+    ClientPortalLinkCard,
     ContactSummaryTab,
     ContactCasesTab,
     ContactTasksTab,
@@ -95,6 +99,12 @@ export default {
     },
     activeTabIndex() {
       return this.tabs.findIndex(t => t.key === this.activeTab);
+    },
+    portalOwner() {
+      const orgId = this.contact?.organization_id;
+      return orgId
+        ? { organization_id: orgId }
+        : { contact_id: this.numericContactId };
     },
     contact() {
       return this.$store.getters['contacts/getContact'](this.contactId);
@@ -163,6 +173,11 @@ export default {
         <aside
           class="flex-shrink-0 border-b md:w-80 md:overflow-y-auto md:border-b-0 ltr:md:border-r rtl:md:border-l border-slate-50 dark:border-slate-800/50"
         >
+          <ContactFollowUpAction :contact-id="numericContactId" />
+          <!-- Portal del cliente: con organización, el enlace es el de su organización -->
+          <div class="px-4 pb-4">
+            <ClientPortalLinkCard :owner="portalOwner" />
+          </div>
           <ContactDataColumn :contact="contact" />
         </aside>
         <main class="flex flex-col flex-1 min-w-0 min-h-0">

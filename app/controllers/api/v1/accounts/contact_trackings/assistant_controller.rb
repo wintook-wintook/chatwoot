@@ -70,7 +70,9 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
 
   def inventory
     inventario = ContactTrackings::Assistant::InventoryService.new(Current.account, inbox: inbox).call
-    render json: inventario.merge(models: models_for(inbox), catalog: ContactTrackings::Assistant::EngineCatalog.new(inventario).call)
+    perfiles = ContactTrackings::Assistant::SourceProfiles.new(Current.account, inbox: inbox) # FR: qué tiene cada fuente
+    render json: inventario.merge(models: models_for(inbox), catalog: ContactTrackings::Assistant::EngineCatalog.new(inventario).call,
+                                  profiles: perfiles.call, missing_sources: perfiles.missing)
   end
 
   def validate
@@ -84,8 +86,10 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   # Prueba en seco: qué haría el motor con UNA pregunta. No envía nada ni escribe
   # nada; lo único que gasta es la clasificación de rama y el embedding.
   def dry_run
+    # recent_context (proyecto@diagrama_agente_ia F5): los mensajes anteriores de un diálogo.
     result = ContactTrackings::Assistant::DryRunService
-             .new(Current.account, draft: params[:draft], question: params[:question], inbox: inbox).call
+             .new(Current.account, draft: params[:draft], question: params[:question], inbox: inbox,
+                                   recent_context: params[:recent_context].presence).call
 
     return render json: { error: result.error }, status: :unprocessable_entity unless result.success?
 
@@ -105,6 +109,23 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   def sessions
     render json: TrackingAssistantSession.listable_for(Current.account)
                                          .map { |s| session_row(s) }
+  end
+
+  # feat/ficha_agente_ia — la última conversación ya publicada de un agente (o null).
+  def previous_session
+    template = Current.account.tracking_templates.find(params[:template_id])
+    sesion = TrackingAssistantSession.previous_for(template, Current.user)
+    return render json: nil if sesion.nil?
+
+    render json: session_row(sesion).merge(messages_count: Array(sesion.messages).size)
+  end
+
+  # La sigue como una conversación nueva (ver TrackingAssistantSession#continue_as).
+  def continue_session
+    sesion = find_session
+    return head :not_found if sesion.nil? || sesion.tracking_template.nil?
+
+    render json: session_json(sesion.continue_as(Current.user)), status: :created
   end
 
   def show_session
@@ -167,6 +188,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
     return render json: { error: result.error, details: result.details }, status: :unprocessable_entity unless result.success?
 
     close_session(result.template)
+    # proyecto@diagrama_agente_ia F3 (D5): al publicar, toda la pila en seco contra lo publicado.
+    ContactTrackings::Assistant::TestCases.after_publish(Current.account, result.template)
 
     # `warnings` no es un error: el agente se guardó. Son las directivas que
     # dependen de la configuración del AGENTE y que el comprobador no podía

@@ -1,6 +1,7 @@
 /* global axios */
 // Visitas sin orden de trabajo: Voy en camino, Llegué y el reporte de llegadas.
 import ApiClient from './ApiClient';
+import { browserZone } from './fieldVisits';
 
 class AgendaVisitsAPI extends ApiClient {
   constructor() {
@@ -8,8 +9,10 @@ class AgendaVisitsAPI extends ApiClient {
   }
 
   onMyWay(id, etaMinutes) {
+    // tz: la hora del aviso al cliente va en la hora del usuario, no la del servidor.
     return axios.post(`${this.url}/${id}/on_my_way`, {
       eta_minutes: etaMinutes,
+      tz: browserZone(),
     });
   }
 

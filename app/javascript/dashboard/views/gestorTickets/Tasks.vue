@@ -7,6 +7,7 @@
 -->
 <script>
 import { mapGetters } from 'vuex';
+import { dueDateInput, dueToIso, formatDueDay } from 'dashboard/helper/taskDue'; // vence: solo fecha
 import { VeTable } from 'vue-easytable';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
@@ -15,10 +16,15 @@ import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
 import MessageFormatter from 'shared/helpers/MessageFormatter';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import QuickTasksAPI from 'dashboard/api/quickTasks';
+import CancelItemModal from 'dashboard/components/cancel/CancelItemModal.vue'; // cancelar con motivo
+import ScheduleTaskModal from 'dashboard/components/convert/ScheduleTaskModal.vue'; // pasarla a la agenda
+import { useAlert } from 'dashboard/composables';
 import QuickTaskModal from './tasks/QuickTaskModal.vue';
 import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal.vue';
 import taskReportFlow from 'dashboard/mixins/taskReportFlow';
-import TaskReportsDialog from 'dashboard/views/gestorTickets/tasks/TaskReportsDialog.vue';
+import rowMenuMixin from 'dashboard/helper/rowMenu'; // menú de la fila (⋮ a la derecha)
+import WootDropdownDivider from 'shared/components/ui/dropdown/DropdownDivider.vue';
+import TaskHistoryModal from 'dashboard/views/gestorTickets/tasks/TaskHistoryModal.vue';
 import caseAiWriter from 'dashboard/mixins/caseAiWriter';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import MyDay from './tasks/MyDay.vue';
@@ -104,14 +110,30 @@ export default {
     WootMessageEditor,
     WootDropdownMenu,
     WootDropdownItem,
+    WootDropdownDivider,
     MyDay,
     QuickTaskModal,
+    CancelItemModal,
+    ScheduleTaskModal,
     TaskReportModal,
-    TaskReportsDialog,
+    TaskHistoryModal,
   },
-  mixins: [caseAiWriter, taskReportFlow],
+  mixins: [caseAiWriter, taskReportFlow, rowMenuMixin],
+  props: {
+    // Dentro de Inicio › Mi resumen (pestaña «Mi día»): fija en Mi día, sin el
+    // título, «Nueva tarea» ni las pestañas Mías / No asignadas / Todas, y sin
+    // cambiar la pestaña que Agenda › Tareas recuerda.
+    embedded: { type: Boolean, default: false },
+  },
   data() {
     return {
+      // Cancelar con motivo: la tarea a cancelar, si está guardando y el error.
+      cancelTarget: null,
+      scheduleTarget: null,
+      scheduleBusy: false,
+      scheduleError: '',
+      cancelBusy: false,
+      cancelError: '',
       // La primera vez abre en Mi día; después, en la última pestaña usada.
       quickFilter: 'my_day',
       // Un juego de filtros por pestaña (ver `filters`, que apunta al de la activa).
@@ -134,7 +156,9 @@ export default {
       // Modal de edición / lectura (no hay alta: una tarea nace dentro de un ticket).
       showModal: false,
       showQuickTask: false,
-      reportsFilter: null,
+      historyTaskId: null, // «Ver historial» de la tarea
+      askUnassigned: false, // ¿guardar sin responsable?
+      unassignedOk: false,
       editingTask: null,
       viewing: false,
       isSaving: false,
@@ -237,10 +261,7 @@ export default {
     },
     // «Programada para» después del vencimiento: se avisa, no se bloquea.
     plannedLate() {
-      return plannedAfterDue(
-        this.form.planned_on,
-        this.toIsoUtc(this.form.due_at)
-      );
+      return plannedAfterDue(this.form.planned_on, dueToIso(this.form.due_at));
     },
     priorityOptions() {
       return this.$t('CASE_TICKETS.PRIORITIES');
@@ -260,7 +281,8 @@ export default {
             // ya vive todo su flujo (editar/reprogramar/cancelar).
             if (row.item_type === 'meeting') {
               this.openMeetingTicket(row);
-            } else if (this.ticketFrozen(row)) {
+            } else if (this.ticketFrozen(row) || row.status !== 'pending') {
+              // Caso cerrado, o concluida/cancelada: solo lectura (se reabre primero).
               this.openView(row);
             } else {
               this.openEdit(row);
@@ -279,22 +301,10 @@ export default {
           key: 'sequence',
           title: this.$t('CASE_TICKETS.TASKS.TABLE.NUM'),
           align: 'left',
-          width: 112,
+          width: 80,
           sortBy: this.sortConfig.sequence || '',
           renderBodyCell: ({ row }) => (
             <div class="flex items-center gap-2">
-              {/* @tickets_cases — una reunión no tiene menú de acciones aquí:
-                  sus acciones viven en la ficha del ticket. */}
-              {this.ticketFrozen(row) || row.item_type === 'meeting' ? null : (
-                <woot-button
-                  size="small"
-                  variant="smooth"
-                  color-scheme="secondary"
-                  icon="navigation"
-                  title={this.$t('CASE_TICKETS.TASKS.ACTIONS')}
-                  onClick={e => this.openRowMenu(e, row)}
-                />
-              )}
               <span
                 class={`font-mono text-sm font-semibold whitespace-nowrap ${this.seqClass(
                   row
@@ -461,7 +471,9 @@ export default {
                   : 'text-xs text-slate-600 dark:text-slate-300'
               }
             >
-              {this.formatDate(this.dueDate(row)) || '—'}
+              {(row.item_type === 'meeting'
+                ? this.formatDate(row.starts_at)
+                : formatDueDay(row.due_at)) || '—'}
             </span>
           ),
         },
@@ -560,10 +572,39 @@ export default {
             );
           },
         },
+        // Acciones: los tres puntos al final, en una columna FIJA a la derecha. Una
+        // tarea agendada no tiene menú aquí: sus acciones viven en la ficha del caso.
+        {
+          field: 'id',
+          key: 'actions',
+          title: '',
+          width: 48,
+          fixed: 'right',
+          align: 'center',
+          renderBodyCell: ({ row }) =>
+            this.ticketFrozen(row) || row.item_type === 'meeting' ? null : (
+              <woot-button
+                size="small"
+                variant="clear"
+                color-scheme="secondary"
+                icon="more-vertical"
+                title={this.$t('CASE_TICKETS.TASKS.ACTIONS')}
+                onClick={e => this.openRowMenu(e, row)}
+              />
+            ),
+        },
       ];
+    },
+    // Ancho total: la tabla se mueve de lado y la columna de acciones queda fija.
+    tableWidth() {
+      return this.columns.reduce((sum, c) => sum + (c.width || 0), 0);
     },
   },
   watch: {
+    // Si elige a alguien con el aviso abierto, el aviso sobra.
+    'form.assignee_id'(value) {
+      if (value) this.askUnassigned = false;
+    },
     // Si un agente guardado en las preferencias ya no existe (lo dieron de baja),
     // el select quedaría en blanco filtrando por un id fantasma: se limpia en
     // todas las pestañas.
@@ -590,16 +631,19 @@ export default {
     this.restoreFilters();
     // «Mi resumen» → «Ver todo» abre directo en una pestaña (?tab=my_day).
     const { tab } = this.$route.query || {};
-    if (this.quickFilters.some(f => f.key === tab)) this.quickFilter = tab;
+    if (this.embedded) this.quickFilter = 'my_day';
+    else if (this.quickFilters.some(f => f.key === tab)) this.quickFilter = tab;
     if (!this.quickFilters.some(f => f.key === this.quickFilter)) {
       this.quickFilter = 'my_day';
     }
   },
   beforeDestroy() {
     this.$emitter.off('agendaChanged', this.fetch);
+    this.$emitter.off('taskReportsChanged', this.fetch);
   },
   mounted() {
     this.$emitter.on('agendaChanged', this.fetch);
+    this.$emitter.on('taskReportsChanged', this.fetch); // avance: su «Ver reportes (N)»
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchTypes');
     this.$store.dispatch('caseTickets/fetchAiConfig'); // F4 — ¿IA «Plan de mi día»?
@@ -647,8 +691,10 @@ export default {
           tabs[tab][key] = this.tabFilters[tab][key];
         });
       });
+      // Incrustada en Mi resumen no cambia la pestaña que recuerda Agenda › Tareas.
+      const saved = LocalStorage.get(this.prefsKey()) || {};
       LocalStorage.set(this.prefsKey(), {
-        quickFilter: this.quickFilter,
+        quickFilter: this.embedded ? saved.quickFilter : this.quickFilter,
         sortBy: this.sortBy,
         sortOrder: this.sortOrder,
         tabs,
@@ -768,12 +814,56 @@ export default {
         ? CaseTasksAPI.updateTask(task.case_ticket.id, task.id, data)
         : QuickTasksAPI.update(task.id, data);
     },
-    // @tickets_cases — clic en una fila de reunión ("tarea agendada"): abre la
-    // ficha del ticket directo en la pestaña Reuniones.
-    menuViewReports() {
-      const row = this.rowMenu && this.rowMenu.row;
+    // Avance: solo de una pendiente y no del cliente (esa la avanza él en su portal).
+    canReportProgress(task) {
+      return task.status === 'pending' && task.audience !== 'client';
+    },
+    menuHistory() {
+      const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
-      if (row) this.reportsFilter = { case_task_id: row.id };
+      if (task) this.historyTaskId = task.id;
+    },
+    // Los botones del historial hacen lo mismo que el menú de la fila. Agendar: con caso,
+    // una sesión ligada (en el caso); sin caso, pasarla a la agenda.
+    onHistoryAction({ kind, task }) {
+      const row =
+        this.tasks.find(t => t.id === task.id && t.item_type !== 'meeting') ||
+        task;
+      if (kind === 'progress') this.reportProgress(row);
+      if (kind === 'note') this.addNoteForTask(row);
+      if (kind === 'complete') this.complete(row);
+      if (kind === 'schedule') this.scheduleFromHistory(row);
+    },
+    scheduleFromHistory(task) {
+      if (!task.case_ticket) {
+        this.scheduleError = '';
+        this.scheduleTarget = task;
+        return;
+      }
+      this.$router.push({
+        name: 'gestorTickets_detail',
+        params: { id: task.case_ticket.id },
+        query: {
+          tab: 'meetings',
+          task: task.sequence,
+          taskId: task.id,
+          compose: '1',
+        },
+      });
+    },
+    menuReportProgress() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) this.reportProgress(task);
+    },
+    reportProgress(task) {
+      this.$emitter.emit('topbar:reportProgress', {
+        id: task.id,
+        title: task.title,
+        sequence: task.sequence,
+        case_ticket_id: task.case_ticket?.id || null,
+        case_folio: task.case_ticket?.folio || null,
+      });
     },
     openContact(row) {
       if (!row.contact) return;
@@ -782,6 +872,8 @@ export default {
         params: { contactId: row.contact.id },
       });
     },
+    // @tickets_cases — clic en una fila de reunión ("tarea agendada"): abre la
+    // ficha del ticket directo en la pestaña Reuniones.
     openMeetingTicket(meeting) {
       if (!meeting.case_ticket) {
         this.openContact(meeting);
@@ -793,41 +885,7 @@ export default {
         query: { tab: 'meetings' },
       });
     },
-    // ── Menú de acciones por fila ──────────────────────────────────
-    // Menú anclado al botón "…" con posición FIJA (fuera de la tabla, que
-    // recorta con overflow). Decide arriba/abajo según el espacio libre.
-    openRowMenu(event, row) {
-      const btn = (event.target && event.target.closest('button')) || null;
-      if (!btn) return;
-      const rect = btn.getBoundingClientRect();
-      const MENU_W = 224;
-      const MENU_H = 150;
-      const up = rect.bottom + MENU_H > window.innerHeight;
-      // Se abre hacia la DERECHA (borde izquierdo alineado al botón); si no cabe,
-      // se recorta para no salirse por el lado derecho de la ventana.
-      this.rowMenu = {
-        row,
-        left: Math.min(rect.left, window.innerWidth - MENU_W - 8),
-        top: up ? rect.top - MENU_H : rect.bottom + 4,
-      };
-      this.$nextTick(() => {
-        window.addEventListener('scroll', this.closeRowMenu, {
-          capture: true,
-          once: true,
-        });
-      });
-    },
-    closeRowMenu() {
-      this.rowMenu = null;
-      window.removeEventListener('scroll', this.closeRowMenu, {
-        capture: true,
-      });
-    },
-    menuViewNotes() {
-      const task = this.rowMenu && this.rowMenu.row;
-      this.closeRowMenu();
-      if (task) this.openTaskNotes(task);
-    },
+    // ── Menú de acciones por fila: openRowMenu/closeRowMenu en rowMenuMixin ──
     menuAddNote() {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
@@ -838,24 +896,80 @@ export default {
       this.closeRowMenu();
       if (task) this.remove(task);
     },
-    // @tickets_cases — abre el ticket en la pestaña Notas filtrada por la tarea.
-    // Con 0 notas no navega: solo avisa (no hay nada que ver todavía).
-    openTaskNotes(task) {
-      if (!(task.notes_count > 0)) {
-        this.$emitter.emit('caseToastMessage', {
-          message: this.$t('CASE_TICKETS.TASKS.NOTES_NONE_TOAST', {
-            folio: this.seqLabel(task),
-          }),
-          icon: 'clipboard',
-        });
-        return;
+    // Pendiente se edita; concluida o cancelada solo se ve (para cambiarla, Reabrir).
+    menuEdit() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (!task) return;
+      if (task.status === 'pending') this.openEdit(task);
+      else this.openView(task);
+    },
+    async menuReopen() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (!task) return;
+      await this.saveTask(task, { status: 'pending' });
+      this.fetch();
+    },
+    // Pasarla a la agenda: con día y hora sale de Tareas (o sesión ligada si no se puede).
+    menuSchedule() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (!task) return;
+      this.scheduleError = '';
+      this.scheduleTarget = task;
+    },
+    async submitSchedule(data) {
+      const task = this.scheduleTarget;
+      this.scheduleBusy = true;
+      this.scheduleError = '';
+      try {
+        const { data: res } = task.case_ticket
+          ? await CaseTasksAPI.schedule(task.case_ticket.id, task.id, data)
+          : await QuickTasksAPI.schedule(task.id, data);
+        this.scheduleTarget = null;
+        this.fetch();
+        useAlert(
+          this.$t(
+            res.mode === 'linked'
+              ? 'CONVERT_ITEM.LINKED'
+              : 'CONVERT_ITEM.SCHEDULED',
+            { title: res.meeting.title }
+          )
+        );
+      } catch (e) {
+        this.scheduleError = e.response?.data?.error || '';
+      } finally {
+        this.scheduleBusy = false;
       }
-      if (!task.case_ticket) return;
-      this.$router.push({
-        name: 'gestorTickets_detail',
-        params: { id: task.case_ticket.id },
-        query: { tab: 'notes', task: task.sequence },
-      });
+    },
+    // Cancelar (ya no se va a hacer): con motivo y tiempo si ya se trabajó.
+    menuCancelTask() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) this.openCancel(task);
+    },
+    openCancel(task) {
+      this.cancelError = '';
+      this.cancelTarget = task;
+    },
+    async submitCancel(reason) {
+      const task = this.cancelTarget;
+      this.cancelBusy = true;
+      this.cancelError = '';
+      try {
+        if (task.case_ticket) {
+          await CaseTasksAPI.cancelTask(task.case_ticket.id, task.id, reason);
+        } else {
+          await QuickTasksAPI.cancel(task.id, reason);
+        }
+        this.cancelTarget = null;
+        this.fetch();
+      } catch (e) {
+        this.cancelError = e.response?.data?.error || '';
+      } finally {
+        this.cancelBusy = false;
+      }
     },
     // @tickets_cases — abre el ticket y el modal de alta de nota atado a la tarea.
     addNoteForTask(task) {
@@ -961,6 +1075,8 @@ export default {
     openEdit(task) {
       this.editingTask = task;
       this.viewing = false;
+      this.askUnassigned = false;
+      this.unassignedOk = false;
       this.loadForm(task);
       this.resetAi();
       this.showModal = true;
@@ -978,7 +1094,7 @@ export default {
         title: task.title || '',
         description: task.description || '',
         assignee_id: task.assignee_id || '',
-        due_at: this.toInputDate(task.due_at),
+        due_at: dueDateInput(task.due_at),
         status: task.status || 'pending',
         priority: task.priority || 'medium',
         estimated_minutes: task.estimated_minutes || '',
@@ -1022,6 +1138,22 @@ export default {
         this.completingId = null;
       }
     },
+    // Sin responsable: confirmar antes de guardar. Solo al quedarse sin nadie (si ya no
+    // tenía, no vuelve a preguntar) y nunca en las del cliente (esas las hace el cliente).
+    needsAssigneeConfirm(previousAssigneeId, wasExisting) {
+      if (this.unassignedOk || this.form.assignee_id) return false;
+      if (this.form.audience === 'client') return false;
+      return !wasExisting || !!previousAssigneeId;
+    },
+    chooseAssignee() {
+      this.askUnassigned = false;
+      this.$nextTick(() => this.$refs.assigneeSelect?.focus());
+    },
+    saveUnassigned() {
+      this.askUnassigned = false;
+      this.unassignedOk = true;
+      this.submitForm();
+    },
     async submitForm(reported = false) {
       const title = this.form.title.trim();
       if (!title || this.isSaving || !this.editingTask) return;
@@ -1034,11 +1166,15 @@ export default {
         );
         return;
       }
+      if (this.needsAssigneeConfirm(this.editingTask.assignee_id, true)) {
+        this.askUnassigned = true;
+        return;
+      }
       const payload = {
         title,
         description: this.form.description.trim(),
         assignee_id: this.form.assignee_id || '',
-        due_at: this.toIsoUtc(this.form.due_at),
+        due_at: dueToIso(this.form.due_at),
         status: this.form.status || 'pending',
         priority: this.form.priority || 'medium',
         estimated_minutes: this.form.estimated_minutes || null,
@@ -1089,9 +1225,15 @@ export default {
         });
         this.fetch();
       } catch (e) {
-        this.$emitter.emit('newToastMessage', {
-          message: this.$t('CASE_TICKETS.TASKS.INBOX.DELETE_ERROR'),
-        });
+        // Ya no se puede borrar (no la creó, o pasaron 24 h): se cancela con su motivo.
+        if (e.response?.data?.cancel_instead) {
+          useAlert(this.$t('CANCEL_ITEM.DELETE_RESTRICTED'));
+          if (task.status === 'pending') this.openCancel(task);
+        } else {
+          this.$emitter.emit('newToastMessage', {
+            message: this.$t('CASE_TICKETS.TASKS.INBOX.DELETE_ERROR'),
+          });
+        }
       } finally {
         this.pendingDelete = null;
       }
@@ -1185,7 +1327,7 @@ export default {
     <div
       class="flex flex-col flex-shrink-0 gap-3 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
-      <div class="flex items-center justify-between gap-2">
+      <div v-if="!embedded" class="flex items-center justify-between gap-2">
         <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
           {{ $t('CASE_TICKETS.TASKS.INBOX.TITLE') }}
         </h1>
@@ -1199,12 +1341,20 @@ export default {
         @close="cancelReport"
         @reported="onReported"
       />
-      <TaskReportsDialog
-        :filters="reportsFilter"
-        @close="reportsFilter = null"
+      <TaskHistoryModal
+        v-if="historyTaskId"
+        show
+        :task-id="historyTaskId"
+        :actions="['progress', 'note', 'schedule', 'complete']"
+        @close="historyTaskId = null"
+        @action="onHistoryAction"
       />
 
-      <woot-tabs :index="activeQuickTabIndex" @change="onQuickTabChange">
+      <woot-tabs
+        v-if="!embedded"
+        :index="activeQuickTabIndex"
+        @change="onQuickTabChange"
+      >
         <woot-tabs-item
           v-for="(f, i) in quickFilters"
           :key="f.key"
@@ -1365,6 +1515,7 @@ export default {
         @openTicket="openTicket"
         @openMeeting="openMeetingTicket"
         @complete="complete"
+        @history="r => (historyTaskId = r.id)"
         @plan="savePlan"
         @postpone="postpone"
       />
@@ -1396,6 +1547,7 @@ export default {
           fixed-header
           max-height="100%"
           row-key-field-name="_row_key"
+          :scroll-width="tableWidth"
           :columns="columns"
           :table-data="tableRows"
           :border-around="false"
@@ -1440,11 +1592,11 @@ export default {
         />
 
         <form
-          class="flex flex-col self-stretch w-full gap-3 pb-8"
+          class="task-form flex flex-col self-stretch w-full gap-2.5 pb-6"
           @submit.prevent="submitForm()"
         >
-          <label class="block mb-3">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <label class="block">
+            <span class="field-label">{{
               $t('CASE_TICKETS.TASKS.MODAL.TITLE_LABEL')
             }}</span>
             <input
@@ -1460,9 +1612,9 @@ export default {
 
           <!-- Solicitante + Responsable (editable). El solicitante es fijo si la
                tarea ya lo tiene; si no (tarea antigua), se elige de la lista. -->
-          <div class="flex gap-3 mb-3">
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.REQUESTER_LABEL')
               }}</span>
               <input
@@ -1482,11 +1634,15 @@ export default {
               </select>
             </label>
 
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.ASSIGNEE_LABEL')
               }}</span>
-              <select v-model="form.assignee_id" :disabled="viewing">
+              <select
+                ref="assigneeSelect"
+                v-model="form.assignee_id"
+                :disabled="viewing"
+              >
                 <option value="">
                   {{ $t('CASE_TICKETS.TASKS.UNASSIGNED') }}
                 </option>
@@ -1499,8 +1655,8 @@ export default {
 
           <!-- Contenedor <div>, NO <label>: el editor lleva un <input type=file>
                oculto y un <label> reenviaría el click a "adjuntar archivo". -->
-          <div class="block mb-3">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <div class="block">
+            <span class="field-label">{{
               $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_LABEL')
             }}</span>
             <div v-if="!viewing" class="editor-wrap">
@@ -1524,7 +1680,7 @@ export default {
             <!-- Escritura asistida por IA (mixin caseAiWriter). -->
             <div
               v-if="!viewing && aiEnabled"
-              class="flex flex-wrap items-center gap-2 mt-2"
+              class="flex flex-wrap items-center gap-2 mt-1"
             >
               <woot-button
                 type="button"
@@ -1568,30 +1724,24 @@ export default {
           <!-- Debajo de la descripción: vencimiento, prioridad y estado. El
                estado también se cambia desde la fila con "Completar"; aquí
                además se puede reabrir la tarea. Prioridad propia (no heredada). -->
-          <div class="flex gap-3">
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <div class="grid grid-cols-5 gap-3">
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.DUE_LABEL')
               }}</span>
-              <input
-                v-model="form.due_at"
-                type="datetime-local"
-                :readonly="viewing"
-                class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-              />
+              <input v-model="form.due_at" type="date" :readonly="viewing" />
             </label>
 
             <!-- Plan-Bandeja-Prioridad — cuándo PIENSA hacerla quien la hace
                  (distinto del vencimiento). Hoy = entra a su «Mi día». -->
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.PLANNED_LABEL')
               }}</span>
               <input
                 v-model="form.planned_on"
                 type="date"
                 :readonly="viewing"
-                class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
               />
               <span
                 v-if="plannedLate"
@@ -1600,11 +1750,9 @@ export default {
                 {{ $t('CASE_TICKETS.TASKS.MODAL.PLANNED_AFTER_DUE') }}
               </span>
             </label>
-          </div>
 
-          <div class="flex gap-3">
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.PRIORITY_LABEL')
               }}</span>
               <select v-model="form.priority" :disabled="viewing">
@@ -1619,8 +1767,8 @@ export default {
             </label>
 
             <!-- Plan-Bandeja-Prioridad F1 — suma a la carga de «Mi día». -->
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.ESTIMATE_LABEL')
               }}</span>
               <select v-model="form.estimated_minutes" :disabled="viewing">
@@ -1633,8 +1781,8 @@ export default {
               </select>
             </label>
 
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.STATUS_LABEL')
               }}</span>
               <select v-model="form.status" :disabled="viewing">
@@ -1651,7 +1799,32 @@ export default {
             </label>
           </div>
 
-          <div class="flex items-center justify-end gap-2 mt-4">
+          <!-- Sin responsable: se pregunta antes de guardar (nadie la vería en su Mi día). -->
+          <div
+            v-if="askUnassigned"
+            class="flex flex-wrap items-center gap-2 px-3 py-2 mt-1 text-sm border rounded-md bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-200"
+          >
+            <span class="flex-1 min-w-[12rem]">
+              {{ $t('CASE_TICKETS.TASKS.UNASSIGNED_CONFIRM.TEXT') }}
+            </span>
+            <woot-button
+              size="small"
+              variant="clear"
+              type="button"
+              @click="chooseAssignee"
+            >
+              {{ $t('CASE_TICKETS.TASKS.UNASSIGNED_CONFIRM.CHOOSE') }}
+            </woot-button>
+            <woot-button
+              size="small"
+              color-scheme="warning"
+              type="button"
+              @click="saveUnassigned"
+            >
+              {{ $t('CASE_TICKETS.TASKS.UNASSIGNED_CONFIRM.SAVE') }}
+            </woot-button>
+          </div>
+          <div class="flex items-center justify-end gap-2 mt-1">
             <woot-button
               variant="clear"
               type="button"
@@ -1688,39 +1861,41 @@ export default {
       :reject-text="$t('CASE_TICKETS.TASKS.DELETE_CONFIRM.CANCEL')"
     />
 
-    <!-- Menú de acciones de la fila. Posición FIJA anclada al botón "…": así no
-         lo recorta el overflow de la tabla. Se cierra al hacer click fuera. -->
+    <!-- Menú de acciones de la fila (⋮ a la derecha). Arriba lo que se HACE con la
+         tarea; abajo de la línea, lo que se consulta. Posición FIJA calculada con su
+         tamaño real (rowMenuMixin): abre hacia arriba si no cabe. -->
     <div
       v-if="rowMenu"
       v-on-clickaway="closeRowMenu"
-      class="fixed z-[9999] w-56 p-1 bg-white border rounded-md shadow-xl dark:bg-slate-800 border-slate-50 dark:border-slate-700"
-      :style="{ top: `${rowMenu.top}px`, left: `${rowMenu.left}px` }"
+      class="js-row-menu fixed z-[9999] w-56 p-1 bg-white border rounded-md shadow-xl dark:bg-slate-800 border-slate-50 dark:border-slate-700"
+      :style="rowMenuStyle()"
     >
       <WootDropdownMenu>
+        <!-- Avance: lo hecho sin completarla (es un reporte, no una nota). Primera opción. -->
+        <WootDropdownItem v-if="canReportProgress(rowMenu.row)">
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="clipboard"
+            @click="menuReportProgress"
+          >
+            {{ $t('TASK_REPORT.PROGRESS') }}
+          </woot-button>
+        </WootDropdownItem>
         <WootDropdownItem>
           <woot-button
             variant="clear"
             color-scheme="secondary"
             size="small"
-            icon="clipboard"
-            @click="menuViewNotes"
+            :icon="rowMenu.row.status === 'pending' ? 'edit' : 'eye-show'"
+            @click="menuEdit"
           >
             {{
-              $t('CASE_TICKETS.TASKS.MENU.NOTES', {
-                count: rowMenu.row.notes_count || 0,
-              })
+              rowMenu.row.status === 'pending'
+                ? $t('CASE_TICKETS.TASKS.MENU.EDIT')
+                : $t('CASE_TICKETS.TASKS.MENU.VIEW')
             }}
-          </woot-button>
-        </WootDropdownItem>
-        <WootDropdownItem v-if="rowMenu.row.status === 'done'">
-          <woot-button
-            variant="clear"
-            color-scheme="secondary"
-            size="small"
-            icon="clipboard"
-            @click="menuViewReports"
-          >
-            {{ $t('TASK_REPORT.VIEW') }}
           </woot-button>
         </WootDropdownItem>
         <WootDropdownItem>
@@ -1734,7 +1909,51 @@ export default {
             {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
           </woot-button>
         </WootDropdownItem>
-        <WootDropdownItem>
+        <!-- Concluida o cancelada: regresa a pendiente para poder cambiarla. -->
+        <WootDropdownItem
+          v-if="['done', 'cancelled'].includes(rowMenu.row.status)"
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="arrow-clockwise"
+            @click="menuReopen"
+          >
+            {{ $t('CANCEL_ITEM.REOPEN') }}
+          </woot-button>
+        </WootDropdownItem>
+        <!-- Pasar a la agenda: la tarea se convierte en UNA tarea agendada. -->
+        <WootDropdownItem
+          v-if="
+            rowMenu.row.status === 'pending' &&
+            rowMenu.row.replaceable !== false &&
+            !rowMenu.row.meetings_count
+          "
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="calendar-clock"
+            @click="menuSchedule"
+          >
+            {{ $t('CONVERT_ITEM.SCHEDULE') }}
+          </woot-button>
+        </WootDropdownItem>
+        <WootDropdownItem v-if="rowMenu.row.status === 'pending'">
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="dismiss-circle"
+            @click="menuCancelTask"
+          >
+            {{ $t('CANCEL_ITEM.MENU') }}
+          </woot-button>
+        </WootDropdownItem>
+        <!-- Borrar es solo para errores de captura: quien la creó en 24 h o un admin. -->
+        <WootDropdownItem v-if="rowMenu.row.deletable !== false">
           <woot-button
             variant="clear"
             color-scheme="alert"
@@ -1745,8 +1964,38 @@ export default {
             {{ $t('CASE_TICKETS.TASKS.DELETE') }}
           </woot-button>
         </WootDropdownItem>
+        <WootDropdownDivider />
+        <!-- Todo lo de la tarea (notas, reportes, agendadas y cambios) en un solo lugar. -->
+        <WootDropdownItem>
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="document-list-clock"
+            @click="menuHistory"
+          >
+            {{ $t('TASK_HISTORY.MENU') }}
+          </woot-button>
+        </WootDropdownItem>
       </WootDropdownMenu>
     </div>
+    <CancelItemModal
+      :show="!!cancelTarget"
+      :item="cancelTarget"
+      kind="task"
+      :busy="cancelBusy"
+      :error="cancelError"
+      @close="cancelTarget = null"
+      @submit="submitCancel"
+    />
+    <ScheduleTaskModal
+      :show="!!scheduleTarget"
+      :task="scheduleTarget"
+      :busy="scheduleBusy"
+      :error="scheduleError"
+      @close="scheduleTarget = null"
+      @submit="submitSchedule"
+    />
   </div>
 </template>
 
@@ -1797,7 +2046,24 @@ export default {
   // modal completo nunca necesita scroll.
   .ProseMirror-woot-style {
     @apply px-3 py-2 overflow-y-auto;
-    height: 8rem;
+    height: 5.5rem;
+  }
+}
+
+// Formulario compacto de la tarea (igual que dentro del caso).
+.task-form {
+  .field-label {
+    @apply block mb-1 text-xs font-medium text-slate-600 dark:text-slate-300;
+  }
+
+  input[type='text'],
+  input[type='date'] {
+    @apply h-9 py-1 px-2 mb-0 text-sm;
+  }
+
+  // La flecha del select es su fondo: se deja espacio a la derecha para verla.
+  select {
+    @apply h-9 py-1 pl-2 pr-8 mb-0 text-sm;
   }
 }
 

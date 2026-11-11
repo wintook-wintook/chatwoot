@@ -38,7 +38,7 @@ export default {
   props: {
     ticket: { type: Object, required: true },
   },
-  emits: ['updated'],
+  emits: ['updated', 'editPostpone'],
   data() {
     return { draft: this.fromTicket(), isSaving: false, editing: false };
   },
@@ -107,6 +107,11 @@ export default {
     },
     day(value) {
       return formatDay(value);
+    },
+    editPostpone() {
+      if (this.isFrozen) return;
+      this.editing = false;
+      this.$emit('editPostpone');
     },
     openEditor() {
       if (this.isFrozen) return;
@@ -217,10 +222,16 @@ export default {
     >
       {{ $t(`CASE_TICKETS.COMMERCIAL.OUTCOMES.${ticket.outcome}`) }}
     </span>
-    <span
+    <!-- Pospuesta: clic (o su lapicito) para cambiar la fecha, el motivo o el comentario -->
+    <button
       v-if="ticket.is_postponed"
-      class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
-      :class="postponedBadge"
+      type="button"
+      class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded border-0"
+      :class="[postponedBadge, isFrozen ? 'cursor-default' : 'cursor-pointer']"
+      :title="
+        isFrozen ? '' : $t('CASE_TICKETS.COMMERCIAL.ACTIONS.CHANGE_POSTPONE')
+      "
+      @click="editPostpone"
     >
       {{
         $t('CASE_TICKETS.COMMERCIAL.POSTPONED_UNTIL', {
@@ -229,7 +240,8 @@ export default {
       }}<template v-if="ticket.postpone_reason">
         · {{ ticket.postpone_reason.label }}</template
       >
-    </span>
+      <fluent-icon v-if="!isFrozen" icon="edit" size="11" />
+    </button>
     <span
       v-if="commitment"
       class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
@@ -258,6 +270,22 @@ export default {
         <woot-modal-header
           :header-title="$t('CASE_TICKETS.COMMERCIAL.PANEL.TITLE')"
         />
+        <!-- Pospuesta: se cambia en su propia ventana (fecha, motivo y comentario). -->
+        <p
+          v-if="ticket.is_postponed"
+          class="flex flex-wrap items-center gap-2 px-8 m-0 mb-3 text-sm text-slate-600 dark:text-slate-300"
+        >
+          {{
+            $t('CASE_TICKETS.COMMERCIAL.POSTPONED_UNTIL', {
+              date: day(ticket.postponed_until),
+            })
+          }}<template v-if="ticket.postpone_reason">
+            · {{ ticket.postpone_reason.label }}</template
+          >
+          <woot-button size="tiny" variant="link" @click="editPostpone">
+            {{ $t('CASE_TICKETS.COMMERCIAL.ACTIONS.CHANGE_POSTPONE') }}
+          </woot-button>
+        </p>
         <form
           class="flex flex-wrap items-end gap-3 px-8 pb-8 [&_input]:!mb-0"
           @submit.prevent="save"

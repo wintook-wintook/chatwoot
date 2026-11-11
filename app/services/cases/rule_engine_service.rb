@@ -21,17 +21,22 @@
 # Acciones soportadas:
 #   assign_agent, assign_team, change_priority, change_status,
 #   escalate, notify_agent, trigger_tracking, add_label, close_ticket
+#   (Cases::RuleSideActions: notify_agent → aviso en la campanita del usuario;
+#    add_label → etiqueta a la conversación del caso; trigger_tracking → arranca
+#    la plantilla de seguimiento en la conversación del caso)
 # ================================================================================
 
 class Cases::RuleEngineService
+  include Cases::RuleSideActions
+
   OPERATORS = {
-    'eq'       => ->(v, ref) { v.to_s == ref.to_s },
-    'neq'      => ->(v, ref) { v.to_s != ref.to_s },
+    'eq' => ->(v, ref) { v.to_s == ref.to_s },
+    'neq' => ->(v, ref) { v.to_s != ref.to_s },
     'contains' => ->(v, ref) { v.to_s.downcase.include?(ref.to_s.downcase) },
-    'gte'      => ->(v, ref) { v.to_f >= ref.to_f },
-    'lte'      => ->(v, ref) { v.to_f <= ref.to_f },
-    'in'       => ->(v, ref) { Array(ref).map(&:to_s).include?(v.to_s) },
-    'not_in'   => ->(v, ref) { !Array(ref).map(&:to_s).include?(v.to_s) }
+    'gte' => ->(v, ref) { v.to_f >= ref.to_f },
+    'lte' => ->(v, ref) { v.to_f <= ref.to_f },
+    'in' => ->(v, ref) { Array(ref).map(&:to_s).include?(v.to_s) },
+    'not_in' => ->(v, ref) { !Array(ref).map(&:to_s).include?(v.to_s) }
   }.freeze
 
   # @tickets_cases — skip_assignment: cuando el agente asignó a mano al crear,
@@ -47,6 +52,7 @@ class Cases::RuleEngineService
       next unless conditions_match?(rule.conditions)
 
       Rails.logger.info "[RuleEngine] Regla '#{rule.name}' coincide con ticket ##{@ticket.id}"
+      @rule = rule
       execute_actions!(rule.actions)
       break unless rule.continue_on_match
     end
@@ -143,13 +149,8 @@ class Cases::RuleEngineService
       @ticket.transition!(:closed)
       log_action(type, 'closed')
 
-    when 'notify_agent'
-      # Fase 3: se implementa con notificación en el panel
-      log_action(type, value)
-
-    when 'add_label', 'trigger_tracking'
-      # Fases posteriores
-      log_action(type, value)
+    when 'notify_agent', 'add_label', 'trigger_tracking'
+      log_action(type, value) if run_side_action(type, value)
     end
   end
 

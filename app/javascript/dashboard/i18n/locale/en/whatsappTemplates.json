@@ -52,6 +52,25 @@
         }
     },
     "WHATSAPP_TEMPLATE_EDITOR": {
+      "AI": {
+        "TITLE": "Create with Dali",
+        "GOAL": "What do you want to achieve with this template?",
+        "GOAL_PLACEHOLDER": "E.g.: remind the customer their quote expires in 3 days and to reply if they have questions",
+        "TONES": {
+          "ANY": "Tone: whatever fits",
+          "cercano": "Friendly",
+          "formal": "Formal",
+          "directo": "Direct"
+        },
+        "PROPOSE": "Propose",
+        "OTHER": "Another proposal",
+        "CHANNEL_HINT": "You pick the channel below.",
+        "REASON": "Category: {reason}",
+        "MANUAL": "Filled in when sending (not contact data): {list}",
+        "ADJUST": "Adjust",
+        "ADJUST_PLACEHOLDER": "Ask for changes: shorter, no emojis, less salesy…",
+        "ERROR": "The proposal could not be built."
+      },
         "HEADER": "WhatsApp templates",
         "NEW_TITLE": "New template",
         "EDIT_TITLE": "Edit “%{name}”",

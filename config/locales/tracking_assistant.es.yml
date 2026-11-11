@@ -131,6 +131,43 @@ es:
       default_route_line_broken: >-
         Línea %{line}: el motor no lee esta ruta por defecto. Va así: @ruta_por_defecto: nombre_de_la_rama
         (con los dos puntos). Como está, los mensajes que no caen en ninguna ruta no van a ninguna.
+      variables_outside_section: >-
+        Línea %{line}: aquí se declaran variables con la forma «NOMBRE = A | B» (%{name}), pero fuera
+        de la sección [VARIABLES], y el motor no las guarda: el agente tiene que adivinar sus valores
+        leyendo el historial, y el historial se recorta. Pásalas a Variables.
+      variable_undeclared: >-
+        Línea %{line}: se usa %{name}, pero no está en [VARIABLES] (ahí están: %{declared}). El motor no
+        la guarda; agrégala a Variables o usa una de las que ya existen.
+      variable_unused: >-
+        La variable %{name} está en [VARIABLES] pero ninguna parte del Entrenamiento la lee ni la cambia.
+        Úsala en alguna regla («Si %{name}=…», «Marca %{name}=…») o quítala.
+      variable_value_unknown: >-
+        Línea %{line}: %{name}=%{value}, pero %{name} solo puede valer %{options}. El motor descarta
+        ese valor al guardar. Cambia el valor o agrégalo a la lista de la variable.
+      variable_initial_invalid: >-
+        Línea %{line}: el valor inicial %{name}=%{value} no está en la lista de %{name}. El agente va a
+        arrancar en «%{first}».
+      variable_initial_unknown: >-
+        Línea %{line}: «Inicial:» da un valor a %{name}, pero esa variable no está declarada en
+        [VARIABLES]. El motor lo ignora.
+      constant_undeclared: >-
+        Línea %{line}: se cita %%%{name}%%, pero no está en [DATOS FIJOS] (ahí están: %{declared}). El
+        agente va a leer «%%%{name}%%» tal cual. Agrégalo a Datos fijos o corrige el nombre.
+      constant_bad_name: >-
+        Línea %{line}: «%{name}» quiso ser un dato fijo, pero el nombre tiene espacios, minúsculas o signos
+        y el sistema no lo lee. Escríbelo así: %{suggestion}.
+      constant_duplicate: >-
+        Línea %{line}: %{name} ya está declarado en la línea %{first}. Vale el primero; quita este o
+        cámbiale el nombre.
+      constant_unused: >-
+        El dato fijo %{name} no se cita en ninguna parte. Úsalo con %%%{name}%% donde va su contenido, o
+        quítalo.
+      constant_saves_unknown: >-
+        Línea %{line}: la pregunta %{name} guarda la respuesta en %{variable}, pero %{variable} no está en
+        Variables. Sin eso, el sistema no la recuerda. Agrégala a Variables.
+      constant_same_value: >-
+        %{names} tienen el mismo contenido. Si de verdad son lo mismo, deja uno; si debían ser distintos
+        (por ejemplo, dos ligas), corrige el que está mal.
       duplicate_section: >-
         La sección [%{title}] está dos veces (líneas %{first} y %{line}): el agente lee las dos y, si
         dicen cosas distintas, no sabe cuál vale. Júntalas en una.

@@ -42,6 +42,12 @@ class WhatsappTemplatesAPI extends ApiClient {
     return axios.post(`${this.url}/import`);
   }
 
+  // «Crear con IA»: { goal, tone, language, previous, adjust } → { draft, reason, warnings }.
+  // No guarda nada ni llama a Meta.
+  aiDraft(payload) {
+    return axios.post(`${this.url}/ai_draft`, payload);
+  }
+
   // feat/plantillas_whatsapp_mejoras F6: sube el archivo de muestra del encabezado. Devuelve
   // { signed_id, filename, url }; el signed_id va como header_sample al crear o editar.
   uploadHeaderSample(headerType, file) {

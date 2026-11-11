@@ -13,19 +13,38 @@
 class Assistant::Tools
   include Assistant::ToolRefs
   include Assistant::DelegationTools # D3
+  include Assistant::FollowUpTools # Seguimiento IA
   include Assistant::CaseTools # D4
+  include Assistant::SalesTools # D5a
+  include Assistant::GuideTools # guías de uso de la plataforma
+  include Assistant::QuoteTools # cotizaciones
+  include Assistant::ConversationTools # contestar conversaciones
+  include Assistant::FieldTools # trabajo en campo
+  include Assistant::EventTools # NFC en la expo
+  include Assistant::ClientTaskTools # tareas con el cliente
+  include Assistant::AgendaTools # my_agenda
+  include Assistant::CancelTools # cancelar con motivo
+  include Assistant::ConvertTools # tarea ↔ tarea agendada
+  include Assistant::FollowUpPresetTools # plantillas de seguimiento
+  include Assistant::ProgressTools # reportar avance de una tarea
+  include Assistant::PendingTools # menciones, chat interno y sin asignar
 
   LIST_LIMIT = 6
   ACTIVITY_LINES = 15
 
   READ_TOOLS = %w[search get_case get_contact my_agenda open_page list_agents tracking_status
-                  list_case_types case_options].freeze
+                  list_case_types case_options search_guides read_guide report_gap].freeze +
+               QUOTE_READ_TOOLS + CONVERSATION_READ_TOOLS + FIELD_READ_TOOLS + EVENT_READ_TOOLS +
+               CLIENT_TASK_READ_TOOLS + FOLLOW_UP_PRESET_READ_TOOLS + PROGRESS_READ_TOOLS
   PROPOSAL_TOOLS = %w[propose_note propose_task propose_meeting propose_scheduled_message propose_draft
                       propose_delegate propose_tracking_action propose_create_case propose_move_stage
                       propose_outcome propose_postpone propose_resume_case propose_update_opportunity
-                      propose_create_contact].freeze
+                      propose_create_contact propose_follow_up propose_follow_up_action].freeze +
+                   QUOTE_PROPOSAL_TOOLS + CONVERSATION_PROPOSAL_TOOLS + FIELD_PROPOSAL_TOOLS + EVENT_PROPOSAL_TOOLS +
+                   CLIENT_TASK_PROPOSAL_TOOLS + CANCEL_PROPOSAL_TOOLS + CONVERT_PROPOSAL_TOOLS + FOLLOW_UP_PRESET_PROPOSAL_TOOLS +
+                   PROGRESS_PROPOSAL_TOOLS + PENDING_PROPOSAL_TOOLS
 
-  def self.definitions = Assistant::ToolDefinitions::ALL
+  def self.definitions = Assistant::ToolDefinitions.all
 
   def initialize(account:, user:, grant:, zone:)
     @account = account
@@ -37,8 +56,9 @@ class Assistant::Tools
   # → { result: <hash para el modelo>, proposal: <hash>|nil, navigate: <ruta>|nil }
   def call(name, args)
     args = (args || {}).stringify_keys
-    return { result: public_send("tool_#{name}", args) } if READ_TOOLS.include?(name) && name != 'open_page'
+    return sales_tool(name, args) if SALES_TOOLS.include?(name)
     return open_page(args) if name == 'open_page'
+    return { result: public_send("tool_#{name}", args) } if READ_TOOLS.include?(name)
     return proposal(name.delete_prefix('propose_'), args) if PROPOSAL_TOOLS.include?(name)
 
     { result: { error: "función desconocida: #{name}" } }
@@ -47,7 +67,27 @@ class Assistant::Tools
   end
 
   # --- lectura --------------------------------------------------------------------
+  # La misma búsqueda que la lupa (GlobalSearch): todos los campos de contactos,
+  # organizaciones y casos, y en qué campo apareció. Menos de 3 letras: por nombre.
   def tool_search(args)
+    return short_search(args) if GlobalSearch.normalize(args['query']).length < GlobalSearch::MIN_CHARS
+
+    found = GlobalSearch.new(account: @account, grant: @grant, query: args['query']).call
+    { contacts: with_match(found[:contacts], contacts) { |c| contact_ref(c) },
+      organizations: found[:organizations][:items].map { |o| o.slice(:id, :name, :match).compact },
+      cases: with_match(found[:cases], cases) { |t| case_ref(t) },
+      totals: found.transform_values { |group| group[:count] } }
+  end
+
+  def with_match(group, scope)
+    records = scope.where(id: group[:items].pluck(:id)).index_by(&:id)
+    group[:items].filter_map do |item|
+      record = records[item[:id]]
+      record && yield(record).merge(match: item[:match]).compact
+    end
+  end
+
+  def short_search(args)
     q = "%#{ActiveRecord::Base.sanitize_sql_like(args['query'].to_s.strip)}%"
     { contacts: contacts.where('contacts.name ILIKE :q OR contacts.email ILIKE :q OR contacts.phone_number ILIKE :q', q: q)
                         .limit(LIST_LIMIT).map { |c| contact_ref(c) },
@@ -72,22 +112,6 @@ class Assistant::Tools
     contact = contacts.find(args['contact_id'])
     contact_ref(contact).merge(open_cases: open_cases_of(contact), pending_tasks: pending_tasks_of(contact),
                                upcoming: upcoming_of(contact), conversations: conversations_of(contact))
-  end
-
-  def tool_my_agenda(args)
-    from = @zone.parse(args['from'].to_s)&.beginning_of_day || Time.current.beginning_of_day
-    to = @zone.parse(args['to'].to_s)&.end_of_day || from.end_of_day
-    { meetings: my_meetings(from..to), tasks: my_tasks(to), overdue_note: 'tasks incluye las atrasadas (vencimiento antes de hoy).' }
-  end
-
-  def my_meetings(range)
-    @account.case_meetings.where(organizer_id: @user.id, starts_at: range).where.not(status: %i[cancelled rescheduled])
-            .order(:starts_at).limit(30).map { |m| meeting_ref(m) }
-  end
-
-  def my_tasks(until_time)
-    @account.case_tasks.pending.where(assignee_id: @user.id).where(due_at: ..until_time)
-            .order(:due_at).limit(30).map { |t| task_ref(t) }
   end
 
   def open_page(args)
@@ -121,7 +145,7 @@ class Assistant::Tools
 
     assignee = @account.users.find_by(id: args['assignee_id']) || @user
     payload = (target ? target[:ids] : {}).merge('title' => args['title'].to_s.first(255), 'description' => args['description'].to_s,
-                                                 'due_at' => parse_local(args['due_at'])&.iso8601, 'assignee_id' => assignee.id)
+                                                 'due_at' => due_day(args['due_at']), 'assignee_id' => assignee.id)
     [payload, { 'target' => target&.dig(:label), 'assignee' => assignee.name }]
   end
 
@@ -165,13 +189,6 @@ class Assistant::Tools
     cases.find_by!(folio: args['folio'].to_s.strip.upcase)
   end
 
-  def find_conversation(display_id)
-    conversation = @grant.conversations(@account.conversations).find_by(display_id: display_id)
-    raise ArgumentError, 'No encontré esa conversación o no tienes acceso.' unless conversation
-
-    conversation
-  end
-
   # El «a quién»: caso, o contacto/organización. → { ids:, label: } o nil
   def target_for(args, allow_org: true)
     if args['case_id'].present?
@@ -190,6 +207,11 @@ class Assistant::Tools
 
   private
 
+  # Vence de una tarea: solo el día; vence al final de ese día (la hora es de las agendadas).
+  def due_day(value)
+    parse_local(value)&.end_of_day&.iso8601
+  end
+
   def parse_local(value)
     return nil if value.blank?
 
@@ -204,19 +226,8 @@ class Assistant::Tools
     UserCalendarIntegration.exists?(account_id: @account.id, user_id: @user.id)
   end
 
-  PAGES = {
-    'case' => ->(t, id) { "tickets/#{id}" if id && t.cases.exists?(id) },
-    'contact' => ->(t, id) { "contacts/#{id}" if id && t.contacts.exists?(id) },
-    'organization' => ->(t, id) { "organizations/#{id}" if id && t.organizations.exists?(id) },
-    'conversation' => ->(_t, id) { "conversations/#{id}" if id },
-    'agenda' => ->(_t, _id) { 'tickets/tasks' },
-    'my_day' => ->(_t, _id) { 'tickets/tasks' },
-    'tasks' => ->(_t, _id) { 'tickets/tasks' },
-    'cases' => ->(_t, _id) { 'tickets' }
-  }.freeze
-
   def page_path(target, id)
-    path = PAGES[target.to_s]&.call(self, id)
+    path = Assistant::Pages::MAP[target.to_s]&.call(self, id)
     path && "/app/accounts/#{@account.id}/#{path}"
   end
 end

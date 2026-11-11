@@ -33,7 +33,7 @@ export default {
       <form @submit.prevent="requestAuthorization">
         <woot-submit-button
           icon="brand-twitter"
-          button-text="Sign in with Twitter"
+          :button-text="$t('INBOX_MGMT.ADD.TWITTER.SIGN_IN')"
           type="submit"
           :loading="isRequestingAuthorization"
         />

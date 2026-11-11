@@ -135,6 +135,7 @@ export default {
         return this.isEmail(item.conversation) ? 'mail' : 'chat';
       }
       const type = item.event_type;
+      if (type === 'task_reported') return 'clipboard'; // reporte: no es nota
       if (type.startsWith('meeting_')) return 'calendar-clock';
       if (type.startsWith('quote_')) return 'document-text-link';
       return {
@@ -162,6 +163,9 @@ export default {
     title(item) {
       if (item.kind === 'messages') return this.messagesTitle(item);
       if (item.payload?.kind === 'task_report') return this.t('TASK_REPORT');
+      if (item.payload?.kind === 'activity_report')
+        return this.t('ACTIVITY_REPORT');
+      if (item.payload?.kind === 'progress') return this.t('PROGRESS_REPORT');
       return this.eventLabel({ event_type: item.event_type });
     },
     messagesTitle(item) {
@@ -181,7 +185,7 @@ export default {
       if (item.kind === 'messages')
         return this.conversationName(item.conversation);
       // Notas: el texto completo (sin el título del reporte, que ya es el título).
-      if (item.event_type === 'internal_note')
+      if (['internal_note', 'task_reported'].includes(item.event_type))
         return item.payload?.content || '';
       return this.payloadSummary({
         event_type: item.event_type,
@@ -237,6 +241,18 @@ export default {
       });
     },
     // «hace 2 días», «en 3 horas».
+    // Vencimiento de una tarea: solo el día («hoy», «mañana», «en 3 días»), sin hora.
+    dueDay(iso) {
+      if (!iso) return '';
+      const day = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const diff = Math.round(
+        (day(new Date(iso)) - day(new Date())) / 86400000
+      );
+      const rtf = new Intl.RelativeTimeFormat(this.$i18n.locale, {
+        numeric: 'auto',
+      });
+      return rtf.format(diff, 'day');
+    },
     relative(iso) {
       if (!iso) return '';
       const diff = (new Date(iso) - new Date()) / 1000;
@@ -322,7 +338,7 @@ export default {
                   : 'text-slate-500'
               "
             >
-              · {{ t('DUE', { when: relative(summary.next_task.due_at) }) }}
+              · {{ t('DUE', { when: dueDay(summary.next_task.due_at) }) }}
             </span>
             <span v-if="summary.next_task.assignee" class="text-slate-500">
               · {{ summary.next_task.assignee.name }}

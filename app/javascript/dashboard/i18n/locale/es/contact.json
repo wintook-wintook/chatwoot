@@ -42,7 +42,9 @@
       "MESSAGE": "Mensaje",
       "EDIT": "Editar",
       "MORE": "Más",
-      "SCHEDULE": "Programar mensaje"
+      "SCHEDULE": "Programar mensaje",
+      "TASK": "Crear tarea",
+      "PRIVATE_NOTE": "Nueva nota privada"
     },
     "MERGE_CONTACT": "Fusionar contacto",
     "CONTACT_ACTIONS": "Acciones de contacto",
@@ -77,7 +79,9 @@
       "CANCEL": "Cancelar",
       "ACCEPT": "Aceptar",
       "GO_TO_INTEGRATIONS": "Ir a Integraciones"
-    }
+    },
+    "CRMZEUS_CONTACT_ID": "ID Contacto CRMZeus",
+    "CRMZEUS_ORG_ID": "ID Organización CRMZeus"
   },
   "EDIT_CONTACT": {
     "BUTTON_LABEL": "Editar contacto",
@@ -448,15 +452,15 @@
   },
   "MERGE_CONTACTS": {
     "TITLE": "Fusionar contactos",
-    "DESCRIPTION": "Fusionar contactos para combinar dos perfiles en uno, incluyendo todos los atributos y conversaciones. En caso de conflicto, los atributos del contacto principal tendrán prioridad.",
+    "DESCRIPTION": "Une dos perfiles en uno. Todo lo del contacto que se elimina (conversaciones, notas, casos, cotizaciones, contratos, equipos, mantenimientos y asistencias a eventos) pasa al que se mantiene. Si los dos tienen el mismo dato, se queda el del contacto que se mantiene.",
     "PRIMARY": {
-      "TITLE": "Contacto principal",
-      "HELP_LABEL": "Para ser eliminado"
+      "TITLE": "Este contacto",
+      "HELP_LABEL": "Se elimina"
     },
     "PARENT": {
-      "TITLE": "Contacto a fusionar",
+      "TITLE": "Contacto que se queda",
       "PLACEHOLDER": "Buscar un contacto",
-      "HELP_LABEL": "Para ser mantenido"
+      "HELP_LABEL": "Se mantiene"
     },
     "SUMMARY": {
       "TITLE": "Resumen",
@@ -506,6 +510,7 @@
   "CONTACT_OWNER": {
     "LABEL": "Responsable fijo",
     "NONE": "Sin responsable fijo",
+    "INHERITED": "Aplica el de su organización {organization}: {name}.",
     "HINT": "Sus conversaciones y casos nuevos van siempre con esta persona, sin importar las reglas de asignación.",
     "MISSING_INBOXES": "No está en {inboxes}: ahí siguen las reglas normales.",
     "SAVED": "Responsable fijo actualizado",

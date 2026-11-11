@@ -7,7 +7,7 @@ RSpec.describe ContactTrackings::Assistant::BriefComposer do
     { 'temas' => [{ 'nombre' => 'desarrollo_web', 'que_hace' => 'Diagnostica', 'junta' => ['sitio web', 'tienda en línea'] },
                   { 'nombre' => 'concluir_intervencion', 'que_hace' => 'Cierra el ciclo' }] }
   end
-  let(:brief) { instance_double(TrackingAgentBrief, digest: { 'ficha' => ficha }, filename: 'adam.md') }
+  let(:brief) { instance_double(TrackingAgentBrief, digest: { 'ficha' => ficha }, filename: 'adam.md', tracking_assistant_session: nil) }
 
   def mensaje(answers = {})
     described_class.new(brief, answers: answers, inventory: {}).call[:message]
@@ -19,7 +19,7 @@ RSpec.describe ContactTrackings::Assistant::BriefComposer do
 
   context 'with a source that covers the brief (M4)' do
     let(:brief) do
-      instance_double(TrackingAgentBrief, filename: 'adam.md',
+      instance_double(TrackingAgentBrief, filename: 'adam.md', tracking_assistant_session: nil,
                                           digest: { 'ficha' => ficha.merge('conocimiento' => [{ 'tema' => 'R.A.D.A.R.', 'resumen' => 'x' * 900 }]),
                                                     'fuentes_sugeridas' => [{ 'directiva' => '@buscar_foro(Foro_SC)',
                                                                               'cubiertos' => 57, 'total' => 80 }] })

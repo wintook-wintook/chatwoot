@@ -5,6 +5,7 @@
 -->
 <script>
 import AssistantAPI from 'dashboard/api/platformAssistant';
+import { dueDateInput, dueToIso } from 'dashboard/helper/taskDue'; // tarea: vence solo fecha
 
 const T = 'ASSISTANT.PROPOSAL';
 const ICONS = {
@@ -15,6 +16,9 @@ const ICONS = {
   draft: 'edit',
   delegate: 'bot',
   tracking_action: 'bot',
+  // Seguimiento IA — el agente nuevo
+  follow_up: 'bot',
+  follow_up_action: 'bot',
   // D4 — casos y clientes
   create_case: 'add',
   move_stage: 'arrow-swap',
@@ -23,7 +27,38 @@ const ICONS = {
   resume_case: 'arrow-clockwise',
   update_opportunity: 'edit',
   create_contact: 'person-add',
+  // Cotizaciones
+  create_quote: 'receipt',
+  send_quote: 'send',
+  // Contestar una conversación
+  reply: 'send',
+  // Trabajo en campo
+  on_my_way: 'navigation',
+  visit_report: 'clipboard',
+  // Captar en la expo (etiqueta NFC)
+  nfc_link: 'flash-on',
+  // Tareas con el cliente
+  client_task: 'person',
+  // Cancelar con motivo
+  cancel_item: 'dismiss-circle',
+  // Guardar plantilla de seguimiento
+  save_follow_up_preset: 'save',
+  // Tarea ↔ tarea agendada
+  convert_item: 'calendar',
+  // Reportar avance de una tarea (es un reporte, no una nota)
+  task_progress: 'clipboard',
+  // Nota interna en una conversación (para el equipo; el cliente no la ve)
+  internal_note: 'document',
 };
+
+// Igual que el servidor (Assistant::QuoteTools.totals): descuento por partida, IVA de la partida.
+const round2 = n => Math.round(n * 100) / 100;
+const itemNet = i =>
+  round2(
+    Number(i.quantity || 0) *
+      Number(i.unit_price || 0) *
+      (1 - Number(i.discount_percent || 0) / 100)
+  );
 
 // ISO (con zona) ↔ valor de <input type="datetime-local"> en hora local.
 const toLocalInput = iso => {
@@ -48,7 +83,7 @@ export default {
       form: {
         title: p.title || '',
         content: p.content || '',
-        due_at: toLocalInput(p.due_at),
+        due_at: dueDateInput(p.due_at),
         starts_at: toLocalInput(p.starts_at),
         ends_at: toLocalInput(p.ends_at),
         send_at: toLocalInput(p.send_at),
@@ -60,6 +95,9 @@ export default {
         max_attempts: p.max_attempts || 3,
         interval_value: p.interval_value || 1,
         interval_unit: p.interval_unit || 'days',
+        // Seguimiento IA: plantilla de seguimiento elegida y plantilla de WhatsApp fijada.
+        preset_id: '',
+        wa_template: p.template_name || '',
         // D4
         column_id: p.column_id || '',
         reason_id: p.reason_id || '',
@@ -69,7 +107,25 @@ export default {
         name: p.name || '',
         email: p.email || '',
         phone: p.phone || '',
+        // Cotización: las partidas se pueden ajustar (cantidad, precio) o quitar.
+        items: (p.items || []).map(i => ({ ...i })),
+        // Campo: hora de llegada, lo dictado, puntos de la lista y minutos.
+        eta_minutes: p.eta_minutes || 30,
+        notes: p.notes || '',
+        done_task_ids: [...(p.done_task_ids || [])],
+        minutes: p.minutes || '',
+        // NFC: el mensaje que envía el cliente.
+        message: p.message || '',
+        // Tarea del cliente: pide archivo y avisarle con el enlace.
+        requires_file: !!p.requires_file,
+        notify: p.notify !== false,
+        // Cancelar: comentario y si se le avisa al cliente (motivo en reason_id, tiempo en minutes).
+        cancel_comment: p.comment || '',
+        // Reporte de visita: el cliente no asistió (la cita queda «No asistió»).
+        no_show: !!p.no_show,
+        notify_client: p.notify_client !== false,
       },
+      writing: false,
       units: ['minutes', 'hours', 'days'],
       busy: false,
       error: '',
@@ -96,17 +152,67 @@ export default {
     pending() {
       return this.proposal.status === 'pending';
     },
+    // Delegar a un agente del módulo o al Seguimiento IA: la misma tarjeta.
+    isDelegate() {
+      return this.type === 'delegate' || this.type === 'follow_up';
+    },
+    quoteTotals() {
+      const net = this.form.items.reduce((sum, i) => sum + itemNet(i), 0);
+      const tax = this.form.items.reduce(
+        (sum, i) =>
+          sum + round2((itemNet(i) * Number(i.tax_percent || 0)) / 100),
+        0
+      );
+      return { net: round2(net), tax: round2(tax), total: round2(net + tax) };
+    },
+    isAction() {
+      return (
+        this.type === 'tracking_action' || this.type === 'follow_up_action'
+      );
+    },
   },
   methods: {
     t(key, params) {
       return this.$t(`${T}.${key}`, params);
     },
+    // Seguimiento IA: elegir una plantilla de seguimiento llena los campos de la tarjeta.
+    usePreset() {
+      const preset = (this.labels.presets || []).find(
+        p => String(p.id) === String(this.form.preset_id)
+      );
+      if (!preset) return;
+      const f = preset.fields || {};
+      this.form.objective = f.objective || this.form.objective;
+      this.form.instruction = f.instructions || '';
+      this.form.max_attempts = f.max_attempts || this.form.max_attempts;
+      this.form.interval_value = f.interval_value || this.form.interval_value;
+      this.form.interval_unit = f.interval_unit || this.form.interval_unit;
+      if (f.template_name) this.form.wa_template = f.template_name;
+    },
     // Solo los campos que se ven en la tarjeta de ese tipo.
     payload() {
       const f = this.form;
+      const delegate = {
+        objective: f.objective,
+        instruction: f.instruction,
+        starts_at: toIso(f.first_at),
+        max_attempts: Number(f.max_attempts),
+        interval_value: Number(f.interval_value),
+        interval_unit: f.interval_unit,
+      };
+      const waTemplate = (this.labels.whatsapp_templates || []).find(
+        tp => tp.name === f.wa_template
+      );
       return {
+        follow_up: {
+          ...delegate,
+          template_name: waTemplate ? waTemplate.name : null,
+          template_language: waTemplate ? waTemplate.language : null,
+        },
+        save_follow_up_preset: { name: f.name },
         note: { content: f.content },
-        task: { title: f.title, due_at: toIso(f.due_at) },
+        internal_note: { content: f.content },
+        task: { title: f.title, due_at: dueToIso(f.due_at) },
         meeting: {
           title: f.title,
           starts_at: toIso(f.starts_at),
@@ -115,15 +221,9 @@ export default {
         },
         scheduled_message: { content: f.content, send_at: toIso(f.send_at) },
         draft: { content: f.content },
-        delegate: {
-          objective: f.objective,
-          instruction: f.instruction,
-          starts_at: toIso(f.first_at),
-          max_attempts: Number(f.max_attempts),
-          interval_value: Number(f.interval_value),
-          interval_unit: f.interval_unit,
-        },
+        delegate,
         tracking_action: {},
+        follow_up_action: {},
         create_case: { title: f.title },
         move_stage: { column_id: f.column_id },
         outcome: {
@@ -135,6 +235,41 @@ export default {
         resume_case: {},
         update_opportunity: {},
         create_contact: { name: f.name, email: f.email, phone: f.phone },
+        create_quote: { items: f.items },
+        send_quote: {},
+        // Con plantilla no se edita: la llenó Dali con datos reales.
+        reply: this.labels.template ? {} : { content: f.content },
+        on_my_way: { eta_minutes: Number(f.eta_minutes) },
+        nfc_link: { message: f.message },
+        convert_item: this.labels.to_meeting
+          ? {
+              starts_at: toIso(f.starts_at),
+              ends_at: toIso(f.ends_at),
+              location: f.location,
+            }
+          : { notify_client: !!this.labels.has_client && !!f.notify_client },
+        cancel_item: {
+          reason_id: Number(f.reason_id) || null,
+          comment: f.cancel_comment,
+          minutes: f.minutes === '' ? null : Number(f.minutes),
+          notify_client: !!this.labels.meeting && !!f.notify_client,
+        },
+        client_task: {
+          title: f.title,
+          due_at: dueToIso(f.due_at),
+          requires_file: !!f.requires_file,
+          notify: !!f.notify,
+        },
+        task_progress: {
+          notes: f.notes,
+          minutes: f.minutes === '' ? null : Number(f.minutes),
+        },
+        visit_report: {
+          notes: f.notes,
+          done_task_ids: f.done_task_ids,
+          minutes: f.minutes === '' ? null : Number(f.minutes),
+          no_show: !!this.labels.closes_visit && !!f.no_show,
+        },
       }[this.type];
     },
     // «TYPE» → «Tipo»; el valor del resultado (won…) también se traduce.
@@ -148,6 +283,20 @@ export default {
       if (value === true || value === 'true') return this.t('YES');
       if (value === false || value === 'false') return this.t('NO_WORD');
       return value;
+    },
+    money(value) {
+      const currency = this.labels.currency || 'MXN';
+      try {
+        return new Intl.NumberFormat(undefined, {
+          style: 'currency',
+          currency,
+        }).format(value || 0);
+      } catch {
+        return `${Number(value || 0).toFixed(2)} ${currency}`;
+      }
+    },
+    removeItem(index) {
+      this.form.items.splice(index, 1);
     },
     async confirm() {
       this.busy = true;
@@ -172,6 +321,32 @@ export default {
       } finally {
         this.busy = false;
       }
+    },
+    // NFC: grabar el enlace en la etiqueta (Web NFC, Chrome en Android) o copiarlo.
+    async writeNfc() {
+      const { url } = this.proposal.result;
+      if (!('NDEFReader' in window)) {
+        await navigator.clipboard?.writeText(url);
+        this.error = this.t('NFC_NO_WEB');
+        return;
+      }
+      this.writing = true;
+      this.error = '';
+      try {
+        // eslint-disable-next-line no-undef
+        await new NDEFReader().write({
+          records: [{ recordType: 'url', data: url }],
+        });
+        this.copied = true;
+      } catch (_e) {
+        this.error = this.t('NFC_ERROR');
+      } finally {
+        this.writing = false;
+      }
+    },
+    async copyNfc() {
+      await navigator.clipboard?.writeText(this.proposal.result.url);
+      this.copied = true;
     },
     async copy() {
       try {
@@ -205,25 +380,26 @@ export default {
     </div>
 
     <!-- D3 — delegar: agente, cliente y conversación -->
-    <template v-if="type === 'delegate' || type === 'tracking_action'">
+    <template v-if="isDelegate || isAction">
       <p v-if="labels.agent" class="m-0 text-xs text-slate-500">
         {{ t('AGENT') }}:
         <span class="font-medium text-slate-700 dark:text-slate-200">{{
           labels.agent
         }}</span>
       </p>
-      <p
-        v-if="type === 'tracking_action'"
-        class="m-0 text-sm text-slate-700 dark:text-slate-200"
-      >
+      <p v-if="labels.template" class="m-0 text-xs text-slate-500">
+        {{ t('TEMPLATE') }}:
+        <span class="font-medium text-slate-700 dark:text-slate-200">{{
+          labels.template
+        }}</span>
+      </p>
+      <p v-if="isAction" class="m-0 text-sm text-slate-700 dark:text-slate-200">
         {{ t(`ACTIONS.${proposal.payload.action}`) }}
         <template v-if="labels.target"> · {{ labels.target }}</template>
       </p>
     </template>
     <p
-      v-if="
-        (labels.target || labels.conversation) && type !== 'tracking_action'
-      "
+      v-if="(labels.target || labels.conversation) && !isAction"
       class="m-0 text-xs text-slate-500"
     >
       {{ labels.target ? t('TARGET') : t('CONVERSATION') }}:
@@ -252,26 +428,56 @@ export default {
       :disabled="!pending || busy"
       class="flex flex-col gap-2 p-0 m-0 border-0 [&_input]:!mb-0 [&_textarea]:!mb-0"
     >
-      <label v-if="type === 'task' || type === 'meeting'" class="text-xs">
+      <label
+        v-if="type === 'task' || type === 'meeting' || type === 'client_task'"
+        class="text-xs"
+      >
         {{ t('TITLE') }}
         <input v-model="form.title" type="text" class="h-8 text-sm" />
       </label>
       <label
-        v-if="['note', 'scheduled_message', 'draft'].includes(type)"
+        v-if="
+          ['note', 'internal_note', 'scheduled_message', 'draft'].includes(
+            type
+          ) ||
+          (type === 'reply' && !labels.template)
+        "
         class="text-xs"
       >
         {{ t('CONTENT') }}
         <textarea v-model="form.content" rows="4" class="text-sm" />
       </label>
-      <label v-if="type === 'task'" class="text-xs">
+      <label v-if="type === 'task' || type === 'client_task'" class="text-xs">
         {{ t('DUE') }}
-        <input
-          v-model="form.due_at"
-          type="datetime-local"
-          class="h-8 text-sm"
-        />
+        <input v-model="form.due_at" type="date" class="h-8 text-sm" />
       </label>
-      <div v-if="type === 'meeting'" class="grid grid-cols-2 gap-2">
+      <!-- Tarea ↔ tarea agendada: qué pasa con la tarea -->
+      <p v-if="type === 'convert_item'" class="m-0 text-xs text-slate-500">
+        {{
+          labels.to_meeting
+            ? labels.keeps_task
+              ? t('CONVERT_KEEPS')
+              : t('CONVERT_TO_MEETING')
+            : labels.linked_task
+            ? t('CONVERT_LINKED', { task: labels.linked_task })
+            : t('CONVERT_TO_TASK')
+        }}
+      </p>
+      <label
+        v-if="
+          type === 'convert_item' && !labels.to_meeting && labels.has_client
+        "
+        class="flex items-center gap-2 text-xs"
+      >
+        <input v-model="form.notify_client" type="checkbox" class="!m-0" />
+        {{ t('CANCEL_NOTIFY') }}
+      </label>
+      <div
+        v-if="
+          type === 'meeting' || (type === 'convert_item' && labels.to_meeting)
+        "
+        class="grid grid-cols-2 gap-2"
+      >
         <label class="text-xs">
           {{ t('STARTS') }}
           <input
@@ -289,11 +495,59 @@ export default {
           />
         </label>
       </div>
-      <label v-if="type === 'meeting'" class="text-xs">
+      <label
+        v-if="
+          type === 'meeting' || (type === 'convert_item' && labels.to_meeting)
+        "
+        class="text-xs"
+      >
         {{ t('LOCATION') }}
         <input v-model="form.location" type="text" class="h-8 text-sm" />
       </label>
-      <template v-if="type === 'delegate'">
+      <template v-if="isDelegate">
+        <!-- Seguimiento IA: ya corre uno (se reemplaza) y plantillas de seguimiento -->
+        <p
+          v-if="type === 'follow_up' && labels.replaces"
+          class="p-1.5 m-0 text-xs rounded bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+        >
+          {{
+            t('REPLACES', {
+              attempts: labels.replaces.attempts,
+              max: labels.replaces.max_attempts,
+              at: labels.replaces.next_at || '—',
+            })
+          }}
+        </p>
+        <p
+          v-if="type === 'follow_up' && labels.preset"
+          class="m-0 text-xs text-slate-500"
+        >
+          {{ t('USED_PRESET', { name: labels.preset }) }}
+        </p>
+        <label v-if="type === 'follow_up'" class="text-xs">
+          {{ t('PRESET') }}
+          <select
+            v-model="form.preset_id"
+            class="!h-9 !py-1 text-sm"
+            :disabled="!(labels.presets || []).length"
+            @change="usePreset"
+          >
+            <option value="">
+              {{
+                (labels.presets || []).length
+                  ? t('PRESET_NONE')
+                  : t('PRESETS_EMPTY')
+              }}
+            </option>
+            <option
+              v-for="pr in labels.presets || []"
+              :key="pr.id"
+              :value="pr.id"
+            >
+              {{ pr.name }}
+            </option>
+          </select>
+        </label>
         <label class="text-xs">
           {{ t('OBJECTIVE') }}
           <textarea v-model="form.objective" rows="2" class="text-sm" />
@@ -339,7 +593,30 @@ export default {
             </select>
           </label>
         </div>
+        <label
+          v-if="
+            type === 'follow_up' && (labels.whatsapp_templates || []).length
+          "
+          class="text-xs"
+        >
+          {{ t('WA_TEMPLATE') }}
+          <select v-model="form.wa_template" class="!h-9 !py-1 text-sm">
+            <option value="">{{ t('WA_TEMPLATE_AUTO') }}</option>
+            <option
+              v-for="tp in labels.whatsapp_templates"
+              :key="`${tp.name}-${tp.language}`"
+              :value="tp.name"
+            >
+              {{ tp.name }} ({{ tp.language }})
+            </option>
+          </select>
+        </label>
       </template>
+      <!-- Guardar plantilla de seguimiento: el nombre se puede cambiar -->
+      <label v-if="type === 'save_follow_up_preset'" class="text-xs">
+        {{ t('PRESET_NAME') }}
+        <input v-model="form.name" type="text" class="h-8 text-sm" />
+      </label>
       <label v-if="type === 'create_case'" class="text-xs">
         {{ t('TITLE') }}
         <input v-model="form.title" type="text" class="h-8 text-sm" />
@@ -400,6 +677,204 @@ export default {
           </label>
         </div>
       </template>
+      <!-- Cotización: partidas (cantidad y precio sin IVA editables) y totales -->
+      <template v-if="type === 'create_quote'">
+        <div
+          class="grid grid-cols-[1fr_4rem_6rem_1rem] gap-2 text-xs text-slate-500"
+        >
+          <span />
+          <span>{{ t('QUANTITY') }}</span>
+          <span>{{ t('UNIT_PRICE') }}</span>
+        </div>
+        <div
+          v-for="(item, index) in form.items"
+          :key="index"
+          class="grid items-center grid-cols-[1fr_4rem_6rem_1rem] gap-2"
+        >
+          <span
+            class="text-xs truncate text-slate-700 dark:text-slate-200"
+            :title="item.description"
+          >
+            {{ item.description }}
+          </span>
+          <input
+            v-model.number="item.quantity"
+            type="number"
+            min="0.01"
+            step="any"
+            :aria-label="t('QUANTITY')"
+            class="h-8 text-sm"
+          />
+          <input
+            v-model.number="item.unit_price"
+            type="number"
+            min="0"
+            step="any"
+            :aria-label="t('UNIT_PRICE')"
+            class="h-8 text-sm"
+          />
+          <button
+            v-if="pending && form.items.length > 1"
+            type="button"
+            class="p-0 bg-transparent border-0 cursor-pointer text-slate-400 hover:text-red-600"
+            :title="t('REMOVE_ITEM')"
+            @click="removeItem(index)"
+          >
+            <fluent-icon icon="dismiss" size="12" />
+          </button>
+        </div>
+        <dl class="m-0 text-xs text-right text-slate-500">
+          <div>
+            {{ t('NET') }}:
+            <span class="text-slate-700 dark:text-slate-200">{{
+              money(quoteTotals.net)
+            }}</span>
+          </div>
+          <div>
+            {{ t('TAX') }}:
+            <span class="text-slate-700 dark:text-slate-200">{{
+              money(quoteTotals.tax)
+            }}</span>
+          </div>
+          <div class="font-semibold text-slate-800 dark:text-slate-100">
+            {{ t('TOTAL') }}: {{ money(quoteTotals.total) }}
+          </div>
+        </dl>
+        <p class="m-0 text-xs text-slate-500">{{ t('QUOTE_DRAFT') }}</p>
+      </template>
+      <!-- Cancelar con motivo: motivo, comentario, tiempo y aviso al cliente -->
+      <template v-if="type === 'cancel_item'">
+        <label class="text-xs">
+          {{ t('CANCEL_REASON') }}
+          <select v-model="form.reason_id" class="h-8 text-sm">
+            <option v-for="r in labels.reasons || []" :key="r.id" :value="r.id">
+              {{ r.label }}
+            </option>
+          </select>
+        </label>
+        <label class="text-xs">
+          {{ t('CANCEL_COMMENT') }}
+          <textarea v-model="form.cancel_comment" rows="2" class="text-sm" />
+        </label>
+        <label class="text-xs">
+          {{
+            labels.work_started
+              ? t('CANCEL_MINUTES_REQUIRED')
+              : t('CANCEL_MINUTES')
+          }}
+          <input
+            v-model="form.minutes"
+            type="number"
+            min="0"
+            class="h-8 text-sm"
+          />
+        </label>
+        <label v-if="labels.meeting" class="flex items-center gap-2 text-xs">
+          <input v-model="form.notify_client" type="checkbox" class="!m-0" />
+          {{ t('CANCEL_NOTIFY') }}
+        </label>
+      </template>
+      <!-- Tarea del cliente: pide archivo y avisarle con el enlace de su portal -->
+      <template v-if="type === 'client_task'">
+        <label class="flex items-center gap-2 text-xs">
+          <input v-model="form.requires_file" type="checkbox" class="!m-0" />
+          {{ t('CLIENT_TASK_FILE') }}
+        </label>
+        <label class="flex items-center gap-2 text-xs">
+          <input v-model="form.notify" type="checkbox" class="!m-0" />
+          {{ t('CLIENT_TASK_NOTIFY') }}
+        </label>
+      </template>
+      <!-- NFC: el mensaje que envía el cliente al acercar el celular -->
+      <label v-if="type === 'nfc_link'" class="text-xs">
+        {{ t('NFC_MESSAGE') }}
+        <textarea v-model="form.message" rows="2" class="text-sm" />
+      </label>
+      <!-- Campo: «Voy en camino» -->
+      <label v-if="type === 'on_my_way'" class="text-xs">
+        {{ t('ETA') }}
+        <input
+          v-model="form.eta_minutes"
+          type="number"
+          min="5"
+          max="240"
+          class="h-8 text-sm"
+        />
+      </label>
+      <!-- Campo: el reporte dictado de la visita -->
+      <template v-if="type === 'visit_report'">
+        <label class="text-xs">
+          {{ t('NOTES') }}
+          <textarea v-model="form.notes" rows="5" class="text-sm" />
+        </label>
+        <div v-if="(labels.checklist || []).length" class="text-xs">
+          <p class="m-0 mb-1 text-slate-500">{{ t('CHECKLIST') }}</p>
+          <label
+            v-for="task in labels.checklist"
+            :key="task.id"
+            class="flex items-center gap-2 py-0.5 text-sm text-slate-700 dark:text-slate-200"
+          >
+            <input
+              v-model="form.done_task_ids"
+              type="checkbox"
+              :value="task.id"
+              class="!m-0"
+            />
+            {{ task.title }}
+          </label>
+        </div>
+        <label
+          v-if="labels.closes_visit"
+          class="flex items-center gap-2 text-xs"
+        >
+          <input v-model="form.no_show" type="checkbox" class="!m-0" />
+          {{ t('NO_SHOW') }}
+        </label>
+        <label v-if="labels.closes_visit" class="text-xs">
+          {{ t('MINUTES') }}
+          <input
+            v-model="form.minutes"
+            type="number"
+            min="0"
+            class="h-8 text-sm"
+          />
+        </label>
+        <p class="m-0 text-xs text-slate-500">
+          {{ labels.closes_visit ? t('CLOSES_VISIT') : t('FIELD_REST') }}
+        </p>
+      </template>
+      <!-- Avance de una tarea: lo hecho y el tiempo; la tarea sigue pendiente -->
+      <template v-if="type === 'task_progress'">
+        <label class="text-xs">
+          {{ t('NOTES') }}
+          <textarea v-model="form.notes" rows="4" class="text-sm" />
+        </label>
+        <label class="text-xs">
+          {{ t('MINUTES') }}
+          <input
+            v-model="form.minutes"
+            type="number"
+            min="0"
+            class="h-8 text-sm"
+          />
+        </label>
+        <p class="m-0 text-xs text-slate-500">{{ t('PROGRESS_HINT') }}</p>
+      </template>
+      <!-- Ventana de 24 h cerrada: sale una plantilla aprobada, ya llena -->
+      <template v-if="type === 'reply' && labels.template">
+        <p class="m-0 text-xs text-slate-500">
+          {{ t('TEMPLATE') }}:
+          <span class="font-medium text-slate-700 dark:text-slate-200">{{
+            labels.template
+          }}</span>
+        </p>
+        <p
+          class="p-2 m-0 text-sm whitespace-pre-line rounded bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+        >
+          {{ labels.template_text }}
+        </p>
+        <p class="m-0 text-xs text-slate-500">{{ t('TEMPLATE_NOTE') }}</p>
+      </template>
       <label v-if="type === 'scheduled_message'" class="text-xs">
         {{ t('SEND_AT') }}
         <input
@@ -441,8 +916,40 @@ export default {
         {{ t('COPY') }}
       </woot-button>
       <woot-button v-else size="small" :is-loading="busy" @click="confirm">
-        {{ t('CONFIRM') }}
+        {{ type === 'reply' ? t('SEND') : t('CONFIRM') }}
       </woot-button>
+    </div>
+    <!-- NFC hecho: grabar en la etiqueta o copiar el enlace -->
+    <div
+      v-if="type === 'nfc_link' && proposal.result && proposal.result.url"
+      class="flex flex-wrap items-center gap-2"
+    >
+      <span
+        class="flex items-center w-full gap-1 text-xs text-green-700 dark:text-green-400"
+      >
+        <fluent-icon icon="checkmark-circle" size="12" />
+        {{ proposal.result.label }}
+      </span>
+      <woot-button
+        size="small"
+        icon="flash-on"
+        :is-loading="writing"
+        @click="writeNfc"
+      >
+        {{ writing ? t('NFC_WRITING') : t('NFC_WRITE') }}
+      </woot-button>
+      <woot-button
+        size="small"
+        variant="smooth"
+        color-scheme="secondary"
+        icon="copy"
+        @click="copyNfc"
+      >
+        {{ t('NFC_COPY') }}
+      </woot-button>
+      <span v-if="copied" class="text-xs text-green-700 dark:text-green-400">
+        {{ t('NFC_DONE') }}
+      </span>
     </div>
     <div
       v-else-if="proposal.result && proposal.result.label"

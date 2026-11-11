@@ -10,6 +10,7 @@
   una oportunidad (Comercial) lo exige y lleva sus datos comerciales.
 -->
 <script>
+import { fetchEffectiveOwnerId } from 'dashboard/helper/contactOwnerDefault';
 import { mapGetters } from 'vuex';
 import { forType, idAvailable } from 'dashboard/helper/caseClassification';
 import {
@@ -82,6 +83,7 @@ export default {
         progress: '',
       },
       contact: null, // Plan-Casos E2 — cliente elegido (null = caso interno)
+      ownerAssigneeId: null, // responsable fijo del contacto elegido
       organization: null, // Plan-Organizaciones O2 — opcional; filtra los contactos
       // 2K — valores de los campos personalizados del tipo seleccionado
       customValues: {},
@@ -175,7 +177,10 @@ export default {
     // @tickets_cases — al crear, el responsable arranca en el agente firmado.
     // Solo si ese usuario figura entre los agentes de la cuenta (un superadmin
     // que no es agente no aparece en el select y dejarlo daría un valor muerto).
+    // Si el contacto tiene responsable fijo (suyo o de su organización), va ese.
     defaultAssigneeId() {
+      const owner = this.ownerAssigneeId;
+      if (owner && this.agents.some(ag => ag.id === owner)) return owner;
       const id = this.currentUser?.id;
       if (!id) return '';
       return this.agents.some(ag => ag.id === id) ? id : '';
@@ -313,6 +318,15 @@ export default {
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
   },
   methods: {
+    // Toma el responsable fijo del contacto; solo cambia el select si nadie lo movió.
+    async applyContactOwner(contactId) {
+      const previous = this.defaultAssigneeId;
+      this.ownerAssigneeId = await fetchEffectiveOwnerId(contactId);
+      if (this.isEdit) return;
+      if (!this.form.assignee_id || this.form.assignee_id === previous) {
+        this.form.assignee_id = this.defaultAssigneeId;
+      }
+    },
     // Plan-Organizaciones O2 — si el contacto no es de la organización elegida, se quita.
     chooseOrganization(organization) {
       this.organization = organization;
@@ -326,6 +340,7 @@ export default {
     // Elegir primero el contacto llena su organización.
     async chooseContact(contact) {
       this.contact = contact;
+      this.applyContactOwner(contact && contact.id);
       if (!contact || this.organization || !contact.organization_id) return;
       try {
         const { data } = await OrganizationsAPI.find(contact.organization_id);

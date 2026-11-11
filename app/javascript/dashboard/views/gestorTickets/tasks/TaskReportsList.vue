@@ -5,15 +5,25 @@
 <script>
 import TaskReportsAPI from 'dashboard/api/taskReports';
 import Spinner from 'shared/components/Spinner.vue';
+import { formatMinutes } from 'dashboard/helper/caseTaskPriority';
 
 export default {
   name: 'TaskReportsList',
   components: { Spinner },
   props: {
     filters: { type: Object, default: () => ({}) },
+    // Pantalla de Reportes: el total de tiempo, desglosado por persona.
+    showPeople: { type: Boolean, default: false },
   },
   data() {
-    return { reports: [], count: 0, page: 1, loading: true };
+    return {
+      reports: [],
+      count: 0,
+      page: 1,
+      loading: true,
+      totalMinutes: 0,
+      byUser: [],
+    };
   },
   computed: {
     hasMore() {
@@ -45,13 +55,18 @@ export default {
             ? data.task_reports
             : [...this.reports, ...data.task_reports];
         this.count = data.meta.count;
+        this.totalMinutes = data.meta.total_minutes || 0;
+        this.byUser = data.meta.by_user || [];
       } catch {
         this.reports = [];
         this.count = 0;
+        this.totalMinutes = 0;
+        this.byUser = [];
       } finally {
         this.loading = false;
       }
     },
+    formatMinutes,
     more() {
       this.page += 1;
       this.fetch();
@@ -75,6 +90,28 @@ export default {
 
 <template>
   <div class="flex flex-col gap-2">
+    <!-- Tiempo dedicado: el total de lo filtrado (no solo de la página). -->
+    <div
+      v-if="totalMinutes"
+      class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600 dark:text-slate-300"
+    >
+      <span class="font-semibold text-slate-800 dark:text-slate-100">
+        {{
+          $t('TASK_REPORT.MINUTES.TOTAL', {
+            time: formatMinutes(totalMinutes),
+          })
+        }}
+      </span>
+      <template v-if="showPeople && byUser.length > 1">
+        <span
+          v-for="person in byUser"
+          :key="person.id || 'none'"
+          class="text-xs text-slate-500 dark:text-slate-400"
+        >
+          {{ person.name || '—' }}: {{ formatMinutes(person.minutes) }}
+        </span>
+      </template>
+    </div>
     <p
       v-if="!loading && !reports.length"
       class="m-0 text-sm text-slate-500 dark:text-slate-400"
@@ -90,11 +127,45 @@ export default {
         <span class="text-sm font-medium text-slate-800 dark:text-slate-100">
           {{ report.title }}
         </span>
+        <!-- De dónde viene: tarea, tarea agendada, orden o actividad suelta. -->
+        <span
+          v-if="report.kind"
+          class="px-2 py-0.5 text-xs rounded-full"
+          :class="
+            report.kind === 'activity'
+              ? 'bg-woot-50 text-woot-700 dark:bg-woot-900/40 dark:text-woot-200'
+              : 'bg-slate-50 text-slate-500 dark:bg-slate-700/60 dark:text-slate-300'
+          "
+        >
+          {{ $t(`TASK_REPORT.KINDS.${report.kind.toUpperCase()}`) }}
+        </span>
         <span
           v-if="report.outcome"
           class="px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200"
         >
           {{ report.outcome }}
+        </span>
+        <!-- Tiempo dedicado; en la tarea, contra lo estimado. -->
+        <span
+          v-if="report.minutes"
+          class="flex items-center gap-1 ml-auto text-xs text-slate-600 dark:text-slate-300"
+        >
+          <fluent-icon icon="clock" size="12" />
+          {{ formatMinutes(report.minutes) }}
+          <span
+            v-if="report.estimated_minutes"
+            :class="
+              report.minutes > report.estimated_minutes
+                ? 'text-amber-700 dark:text-amber-300'
+                : 'text-slate-400 dark:text-slate-500'
+            "
+          >
+            {{
+              $t('TASK_REPORT.MINUTES.ESTIMATED', {
+                time: formatMinutes(report.estimated_minutes),
+              })
+            }}
+          </span>
         </span>
       </div>
       <p

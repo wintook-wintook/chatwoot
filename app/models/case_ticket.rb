@@ -183,12 +183,11 @@ class CaseTicket < ApplicationRecord
   # Plan-Clase-Proyecto P1 — datos del proyecto que se editan (el monto va en `currency`).
   PROJECT_FIELDS = %w[project_start_on project_due_on budget_hours budget_amount progress].freeze
 
-  SLA_BY_PRIORITY = {
-    'low'    => { first_response_time_target: 2880, resolution_time_target: 7200 },
-    'medium' => { first_response_time_target: 480,  resolution_time_target: 2880 },
-    'high'   => { first_response_time_target: 120,  resolution_time_target: 480  },
-    'urgent' => { first_response_time_target: 30,   resolution_time_target: 120  }
-  }.freeze
+  # Respaldo cuando ninguna política SLA aplica: los mismos valores de fábrica que se
+  # siembran en Ajustes › Políticas SLA (CaseSlaPolicy::DEFAULTS), una sola tabla.
+  SLA_BY_PRIORITY = CaseSlaPolicy::DEFAULTS.to_h do |row|
+    [row[:priority], row.slice(:first_response_time_target, :resolution_time_target)]
+  end.freeze
 
   # @tickets_cases 2D — escalation_level: 0 = N1, 1 = N2, 2 = N3.
   MAX_ESCALATION_LEVEL = 2
@@ -591,7 +590,7 @@ class CaseTicket < ApplicationRecord
     date = postpone_date!(until_date)
     motive = postpone_reason!(reason_id)
     payload = { from: status, to: 'waiting_on_customer', until: date.iso8601, reason: reason.presence,
-                reason_id: motive&.id, reason_label: motive&.label }
+                reason_id: motive&.id, reason_label: motive&.label, changed: (true if postponed?) }
     payload[:column_id] = case_type_column_id unless postponed?
     update!(status: :waiting_on_customer, postponed_until: date, postpone_reason_id: motive&.id,
             case_type_column_id: postponed_column_id || case_type_column_id)
@@ -599,6 +598,13 @@ class CaseTicket < ApplicationRecord
                         actor: actor, payload: payload.compact)
     Quotes::OpportunitySync.from_opportunity(self, :postponed, actor: actor) # Plan-Catalogo-Cotizaciones
     self
+  end
+
+  # El comentario de la pospuesta vigente (vive en su evento): para cambiarla sin perderlo.
+  def current_postpone_note
+    return unless postponed?
+
+    case_events.where(event_type: :postponed).order(:created_at).last&.payload&.dig('reason')
   end
 
   # Regresa una oportunidad pospuesta a trabajo activo, a la etapa donde estaba.

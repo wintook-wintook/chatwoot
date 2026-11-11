@@ -25,6 +25,8 @@ describe Whatsapp::SendOnWhatsappService do
                                                               { 'type' => 'COPY_CODE' }] }] },
       { 'name' => 'saludo_nombre', 'status' => 'approved', 'language' => 'es_MX', 'parameter_format' => 'NAMED',
         'components' => [{ 'type' => 'BODY', 'text' => 'Hola {{nombre}}' }] },
+      { 'name' => 'sin_variables', 'status' => 'approved', 'language' => 'es_MX',
+        'components' => [{ 'type' => 'BODY', 'text' => 'Hola, ¿seguimos en contacto?' }] },
       { 'name' => 'saludo_sin_formato', 'status' => 'approved', 'language' => 'es_MX',
         'components' => [{ 'type' => 'BODY', 'text' => 'Hola {{nombre}}, tienes {{edad}}.' }] }
     ]
@@ -206,6 +208,24 @@ describe Whatsapp::SendOnWhatsappService do
 
       expect(message.reload).to have_attributes(status: 'failed', external_error: include('no tiene archivo guardado'))
       expect(WebMock).not_to have_requested(:post, messages_url)
+    end
+  end
+
+  # Error de Meta «template.components.0.parameters.0.text expected [string, null]»: el
+  # seguimiento IA manda {"body" => {}} con una plantilla sin variables; el respaldo metía el
+  # hash entero como texto.
+  describe 'el formato nuevo cuando el procesador no arma nada' do
+    it 'plantilla sin variables: ningún parámetro con un hash como texto' do
+      send_template('sin_variables', 'es_MX', { 'body' => {} })
+
+      expect(sent_components).to eq([{ 'type' => 'body', 'parameters' => nil }])
+    end
+
+    it 'si no encuentra la plantilla, usa los valores del cuerpo como texto' do
+      send_template('no_existe', 'es_MX', { 'body' => { '1' => 'Ana', '2' => 34 } })
+
+      expect(sent_components).to eq([{ 'type' => 'body', 'parameters' => [{ 'type' => 'text', 'text' => 'Ana' },
+                                                                          { 'type' => 'text', 'text' => '34' }] }])
     end
   end
 

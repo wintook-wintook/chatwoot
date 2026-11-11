@@ -36,7 +36,7 @@
     },
     "API": {
       "SUCCESS_MESSAGE": "Registro exitoso",
-      "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot. Por favor, inténtalo de nuevo."
+      "ERROR_MESSAGE": "No se pudo conectar al servidor de Kontrolya. Por favor, inténtalo de nuevo."
     },
     "SUBMIT": "Create account",
     "HAVE_AN_ACCOUNT": "¿Ya tienes una cuenta?"

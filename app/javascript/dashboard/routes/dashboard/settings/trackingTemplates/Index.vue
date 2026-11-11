@@ -535,7 +535,10 @@ export default {
                     {{ $t('TRACKING_TEMPLATES.NEW_AGENT.GALLERY') }}
                   </woot-button>
                 </woot-dropdown-item>
-                <woot-dropdown-item>
+                <!-- feat/ficha_agente_ia (10/11/2026): el administrador crea desde Recursos
+                     («Con el Asistente»); el formulario en blanco queda solo para quien no
+                     es administrador (es su única forma de crear). -->
+                <woot-dropdown-item v-if="!isAdmin">
                   <woot-button
                     variant="clear"
                     color-scheme="secondary"

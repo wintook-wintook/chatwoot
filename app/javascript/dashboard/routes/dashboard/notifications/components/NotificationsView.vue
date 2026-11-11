@@ -23,7 +23,10 @@ export default {
   },
   methods: {
     onPageChange(page) {
-      window.history.pushState({}, null, `${this.$route.path}?page=${page}`);
+      // Conserva lo demás de la dirección (p. ej. ?tab=notifications en Mi resumen).
+      const query = new URLSearchParams(window.location.search);
+      query.set('page', page);
+      window.history.pushState({}, null, `${this.$route.path}?${query}`);
       this.$store.dispatch('notifications/get', { page });
     },
     openConversation(notification) {

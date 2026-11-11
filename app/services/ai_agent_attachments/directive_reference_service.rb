@@ -60,7 +60,8 @@ module AiAgentAttachments
           .where(tracking_template_id: template.id, status: LIVE_STATUSES)
           .where('complementary_prompt LIKE ?', "%{{#{name}}}%")
           .find_each do |tracking|
-            current = tracking.complementary_prompt.to_s
+            # El texto guardado, con sus %DATOS_FIJOS% (el atributo los trae sustituidos).
+            current = tracking.raw_complementary_prompt.to_s
             updated = yield(current)
             tracking.update_columns(complementary_prompt: updated) if updated != current
           end

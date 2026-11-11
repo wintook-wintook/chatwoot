@@ -94,6 +94,122 @@ RSpec.describe ContactTrackings::SheetLookup do
     end
   end
 
+  describe 'con «?» y la VARIABLE del mismo nombre que la columna' do
+    def lookup_con(inner, variables)
+      described_class.new(account, described_class.parse(inner), conversation: conversation, variables: variables).call
+    end
+
+    it 'usa la variable aunque nadie la haya nombrado en los últimos mensajes' do
+      say('¿Y en la tarde?')
+
+      expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'la TP-63' }).found).to eq(['40.8'])
+    end
+
+    it 'si el cliente nombra otro, van los dos: el prompt decide' do
+      say('¿y la TP-64?')
+
+      expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'TP-63' }).found).to eq(%w[60 40.8])
+    end
+
+    it 'si el cliente nombra otro en su mensaje actual, avisa del cambio' do
+      say('¿y la TP-64?')
+
+      switch = lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'TP-63' }).switch
+      expect(switch.to_h).to eq(variable: 'REMOLQUE', to: 'TP-64', from: ['TP-63'])
+      expect(switch.confirmed_by?('La TP-64 aguanta 60 t.')).to be(true)
+      expect(switch.confirmed_by?('La TP-63 aguanta 40.8 t; la TP-64, 60 t.')).to be(false)
+    end
+
+    it 'sin otro valor en el mensaje actual no hay cambio' do
+      say('¿y la TP-64?')
+      say('La TP-64 aguanta 60 t', :outgoing)
+      say('¿Y cuánto mide?')
+
+      expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'TP-63' }).switch).to be_nil
+    end
+
+    it 'de los valores que nombra la variable se queda el más largo' do
+      GoogleSheetRow.create!(account: account, knowledge_source: source, row_index: 3,
+                             data: { 'remolque' => 'TP-63 Plus', 'peso_max_t' => '45', 'estatus' => 'activo', 'Calendar_ID' => 'x' })
+
+      expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'Remolque TP-63 Plus' }).found).to eq(['45'])
+    end
+
+    it 'con la variable VACÍO y nadie lo nombra, hay que preguntar' do
+      say('Quiero agendar un servicio')
+
+      expect(lookup_con('Servicio Gruas | remolque=? | Calendar_ID', { 'REMOLQUE' => 'VACÍO' }).status).to eq(:needs_value)
+    end
+
+    it 'con la variable VACÍO no toma lo que nombró el agente ni el cliente en turnos anteriores' do
+      say('Para el patio de la TP-64')
+      say('Le recomendamos la TP-64 o la TP-63', :outgoing)
+      say('¿Y cuánto aguanta?')
+
+      expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'VACÍO' }).status).to eq(:needs_value)
+    end
+
+    it 'con la variable VACÍO toma lo que el cliente nombró en su turno actual' do
+      say('¿Cuál remolque quiere?', :outgoing)
+      say('La TP-63')
+      say('¿Cuánto aguanta?')
+
+      expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'REMOLQUE' => 'VACÍO' }).found).to eq(['40.8'])
+    end
+
+    it 'sin la variable declarada, lo de siempre (el agente sirve de respaldo)' do
+      say('Le recomendamos la TP-64', :outgoing)
+      say('¿Cuánto aguanta?')
+
+      expect(lookup_con('Servicio Gruas | remolque=? | peso_max_t', { 'OTRA' => 'VACÍO' }).found).to eq(['60'])
+    end
+  end
+
+  describe 'con «?» y el nombre corto de un valor largo' do
+    let!(:carreras) do
+      create(:knowledge_source, account: account, source_type: 'google_sheet', name: 'Carreras', config: { 'sheet_mode' => 'faq' })
+    end
+
+    before do
+      ['Administración', 'Desarrollo y Administración Inmobiliaria en Bienes Raíces', 'Relaciones Internacionales',
+       'Trabajo Social', 'Administración de Instituciones de Salud'].each_with_index do |carrera, i|
+        GoogleSheetRow.create!(account: account, knowledge_source: carreras, row_index: i,
+                               data: { 'carrera' => carrera, 'liga' => "liga-#{i}" })
+      end
+    end
+
+    def liga(variables = { 'CARRERA' => 'Licenciatura en Relaciones Internacionales' })
+      described_class.new(account, described_class.parse('Carreras | carrera=? | liga'), conversation: conversation,
+                                                                                         variables: variables).call.found
+    end
+
+    it '«bienes raíces» nombra la carrera completa, aunque CARRERA sea otra' do
+      say('y para bienes raíces es lo mismo')
+
+      expect(liga).to eq(%w[liga-1 liga-2])
+    end
+
+    it 'el nombre completo trae solo esa, no «Administración» que va dentro' do
+      say('Desarrollo y Administración Inmobiliaria en Bienes Raíces')
+
+      expect(liga('CARRERA' => 'VACÍO')).to eq(['liga-1'])
+    end
+
+    it 'una sola palabra o un tramo de dos carreras no bastan' do
+      say('¿y el servicio social cuánto cuesta?')
+      expect(liga('CARRERA' => 'VACÍO')).to be_nil
+
+      say('información de administración')
+      expect(liga('CARRERA' => 'VACÍO')).to eq(['liga-0'])
+    end
+
+    it '«instituciones de salud» es la maestría' do
+      say('quiero la de instituciones de salud')
+
+      expect(liga('CARRERA' => 'VACÍO')).to eq(['liga-4'])
+    end
+  end
+
   it 'nunca le llega al modelo que redacta: es configuración de la agenda' do
     texto = 'Agenda en su calendario. {{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}} Consulta {{hoja:Servicio Gruas}}.'
 

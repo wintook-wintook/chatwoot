@@ -7,8 +7,9 @@ class Field::AgendaVisit
   end
 
   # El aviso al cliente sale si tiene conversación; si no, solo queda la hora.
-  def on_my_way!(eta_minutes)
-    eta = (Time.current + eta_minutes.clamp(5, 240).minutes).in_time_zone.strftime('%H:%M')
+  # `zone`: la del usuario, para que la hora del aviso sea la suya (Dali la manda).
+  def on_my_way!(eta_minutes, zone: Time.zone)
+    eta = (Time.current + eta_minutes.clamp(5, 240).minutes).in_time_zone(zone).strftime('%H:%M')
     @meeting.update!(on_my_way_at: Time.current)
     conversation = customer_conversation
     return unless conversation

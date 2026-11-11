@@ -23,6 +23,12 @@
 # o la regla de reapertura crea otro seguimiento del mismo agente, no se repite.
 #
 # La sección se quita del prompt que ve el modelo: si la viera, la volvería a mandar.
+#
+# Si el primer mensaje trae algo más que un saludo, también se contesta (11/11/2026,
+# cuenta 1128, pila Fer261109): «Buen día, ¿me puede dar informes sobre su licenciatura
+# de Derecho?» recibía solo la bienvenida, la carrera nunca se guardaba y el resto de la
+# plática se contestó con otra carrera. Ahora va la bienvenida y, detrás, la respuesta
+# normal del motor. «Hola, buenos días» sigue recibiendo solo la bienvenida.
 # ================================================================================
 
 module ContactTrackings::WelcomeMessage
@@ -34,7 +40,30 @@ module ContactTrackings::WelcomeMessage
   # línea («[ESTILO] Dos párrafos…»), además del rótulo markdown.
   NEXT_HEADER_RE = /\A[ \t]*\[[^\]\n]+\]/
 
+  # Palabras de saludo o de pedido genérico: si el mensaje no trae nada más, basta la
+  # bienvenida («¿En qué puedo ayudarte?»). Sin acentos y en minúsculas.
+  GREETING_WORDS = %w[
+    hola holi holis ola buen buena buenas buenos dia dias tarde tardes noche noches que tal saludos saludo
+    muy como esta estas estan estamos hey hi hello oye disculpe disculpa gracias amigo amiga senor senora senorita
+    joven quiero quisiera queria necesito busco me nos puede puedes podria podrias dar das da informacion informes
+    info mas por favor una un de la el a y o
+  ].freeze
+
   module_function
+
+  # ¿El mensaje es solo un saludo (o un «quiero información» sin decir de qué)? Un mensaje
+  # vacío (solo un adjunto) cuenta como saludo.
+  def only_greeting?(content)
+    palabras = I18n.transliterate(content.to_s.downcase).scan(/[a-z]+/)
+    (palabras - GREETING_WORDS).empty?
+  end
+
+  # ¿Este agente ya mandó su bienvenida en la conversación?
+  def sent?(tracking, conversation)
+    return false if tracking.nil? || conversation.nil?
+
+    conversation.additional_attributes.to_h.dig(STORE_KEY, ContactTrackings::ConversationVariables.store_key(tracking)).present?
+  end
 
   # El texto de la sección, o nil si el Entrenamiento no la trae (o la trae vacía).
   def text(prompt)

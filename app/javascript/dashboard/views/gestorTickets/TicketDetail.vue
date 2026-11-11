@@ -9,6 +9,7 @@ import CaseActivity from './activity/CaseActivity.vue'; // Plan Actividad del ca
 import CaseConversationsMenu from './activity/CaseConversationsMenu.vue';
 import { toggleAssistant } from 'dashboard/helper/assistantState';
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue';
+import AssignClientModal from './AssignClientModal.vue';
 import TicketConversation from '../../components/contacts/CaseTicket/TicketConversation.vue';
 import TicketTasks from '../../components/contacts/CaseTicket/TicketTasks.vue';
 import TicketNotes from '../../components/contacts/CaseTicket/TicketNotes.vue';
@@ -50,9 +51,12 @@ import { creatableTypes, typesOfClass } from 'dashboard/helper/caseClasses';
 import { WORK_ORDER_CLASS } from 'dashboard/helper/caseWorkOrder';
 import CaseConversationActions from './conversation/CaseConversationActions.vue';
 import StageAdvanceBanner from './stage/StageAdvanceBanner.vue';
+import CaseStatusMenu from './stage/CaseStatusMenu.vue'; // «Cambiar estado ▾» (cabecera y Avance)
+import ClientPortalLinkCard from 'dashboard/components/clientPortal/ClientPortalLinkCard.vue'; // tareas con el cliente
 
 // Plan Actividad del caso (P3) — pestañas siempre a la vista; las demás, en «Más».
-const MAIN_TABS = ['activity', 'pending', 'detail'];
+// En este orden en la barra: Actividad, Pendientes, Conversación y Avance (fija).
+const MAIN_TABS = ['activity', 'pending', 'detail', 'journey'];
 // Pestañas que ya no existen y a dónde llevan ahora.
 const TAB_ALIASES = {
   tasks: 'pending',
@@ -63,12 +67,15 @@ const TAB_ALIASES = {
 export default {
   name: 'TicketDetail',
   components: {
+    ClientPortalLinkCard,
     CaseConversationActions,
     StageAdvanceBanner,
+    CaseStatusMenu,
     JourneyView,
     CaseActivity,
     CaseConversationsMenu,
     CaseTicketInternalModal,
+    AssignClientModal,
     TicketConversation,
     TicketTasks,
     TicketNotes,
@@ -117,7 +124,9 @@ export default {
       entryNote: null,
       // @tickets_cases F2 — igual que entryNote, para ?tab=meetings.
       entryMeeting: null,
-      lockedAcquired: false, // @tickets_cases — este agente tomó el bloqueo
+      // K1 — quién más está en el caso (reemplaza al bloqueo): señal cada 30 s.
+      viewers: [],
+      presenceTimer: null,
       showTransitionMenu: false,
       showMoreTabs: false, // Plan Actividad del caso (P3) — menú «Más ▾»
       pendingView: 'tasks', // P3 — sub-pestaña de Pendientes: 'tasks' | 'meetings'
@@ -126,9 +135,11 @@ export default {
       showDueMenu: false, // @tickets_cases P4 — vencimiento inline
       dueDraft: '', // valor del input datetime-local
       taskCount: 0, // @tickets_cases P4 — total de tareas (badge del tab)
+      taskPending: 0, // las que faltan: «Tareas 1/3»
       noteCount: 0, // @tickets_cases — total de notas internas (badge del tab)
       showContactPanel: false, // @tickets_cases — ficha del contacto abierta
       meetingCount: 0, // @tickets_cases F2 — total de reuniones (badge del tab)
+      meetingPending: 0, // las agendadas que faltan: «Tareas agendadas 1/2»
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
       // @tickets_cases — bitácora de notas internas
@@ -141,6 +152,7 @@ export default {
       fromCaseTarget: 'work_order',
       isCreatingWorkOrder: false,
       showEditModal: false, // @tickets_cases — modal de edición del ticket
+      showAssignClient: false, // «Ligar a un cliente» (caso interno)
       reopenReason: '',
       isReopening: false,
       // @tickets_cases — motivo opcional al cambiar de estado (osTicket)
@@ -219,6 +231,16 @@ export default {
     };
   },
   computed: {
+    // Tareas con el cliente — de quién es el portal del caso: su organización o, sin ella, su contacto.
+    portalOwner() {
+      if (!this.ticket) return null;
+      if (this.ticket.organization_id) {
+        return { organization_id: this.ticket.organization_id };
+      }
+      return this.ticket.contact_id
+        ? { contact_id: this.ticket.contact_id }
+        : null;
+    },
     ...mapGetters({
       getTicketById: 'caseTickets/getTicketById',
       getTicketEvents: 'caseTickets/getTicketEvents',
@@ -288,10 +310,8 @@ export default {
         organizer_id: this.ticket.assignee_id || '',
       };
     },
-    // ¿Otro agente tiene bloqueado este ticket?
-    lockedByOther() {
-      const lb = this.ticket?.locked_by;
-      return !!lb && lb.id !== this.currentUserID;
+    viewerNames() {
+      return this.viewers.map(v => v.name).join(', ');
     },
     ticket() {
       return this.getTicketById(this.ticketId);
@@ -460,7 +480,8 @@ export default {
       tabs.push({
         key: 'pending',
         label: this.$t('CASE_TICKETS.DETAIL_TABS.PENDING'),
-        count: this.taskCount + this.meetingCount,
+        // «Pendientes» cuenta solo lo que falta (tareas y tareas agendadas por hacer).
+        count: this.taskPending + this.meetingPending,
       });
       // Casos vinculados (duplicado, padre/hijo, la orden o el proyecto que nació de
       // aquí…), como «Casos del proyecto» en los proyectos, que ya tienen la suya.
@@ -530,7 +551,9 @@ export default {
       return this.detailTabs.filter(t => !MAIN_TABS.includes(t.key));
     },
     barTabs() {
-      const main = this.detailTabs.filter(t => MAIN_TABS.includes(t.key));
+      const main = this.detailTabs
+        .filter(t => MAIN_TABS.includes(t.key))
+        .sort((a, b) => MAIN_TABS.indexOf(a.key) - MAIN_TABS.indexOf(b.key));
       const open = this.moreTabs.find(t => t.key === this.currentTabKey);
       return open ? [...main, open] : main;
     },
@@ -552,12 +575,14 @@ export default {
           icon: 'checkmark-circle',
           label: this.$t('CASE_TICKETS.DETAIL_TABS.TASKS'),
           count: this.taskCount,
+          pending: this.taskPending,
         },
         {
           key: 'meetings',
           icon: 'calendar-clock',
           label: this.$t('CASE_TICKETS.DETAIL_TABS.MEETINGS'),
           count: this.meetingCount,
+          pending: this.meetingPending,
         },
       ];
     },
@@ -650,6 +675,21 @@ export default {
     // @tickets_cases — columnas configuradas del tipo del ticket (Opción A+).
     typeColumns() {
       return this.ticket?.case_type?.columns || [];
+    },
+    // La etapa donde está el caso (su columna) o, sin etapas, su estado.
+    currentStage() {
+      const status = this.ticket?.status;
+      const columns = this.typeColumns;
+      const column =
+        columns.find(
+          c =>
+            c.id === this.ticket?.case_type_column_id &&
+            (c.statuses || []).includes(status)
+        ) || columns.find(c => (c.statuses || []).includes(status));
+      return {
+        id: column ? column.id : null,
+        label: column ? column.label : this.statusLabel(status),
+      };
     },
     // @tickets_cases — modo ITIL propio del tipo del ticket (ya no es un ajuste global).
     itilEnabled() {
@@ -882,6 +922,7 @@ export default {
   // Asistente (Dali) — al confirmar algo del asistente, el caso se refresca.
   created() {
     this.$emitter.on('assistant:done', this.onAssistantDone);
+    this.$emitter.on('taskReportsChanged', this.onReportsChanged);
   },
   mounted() {
     this.loadTicket();
@@ -889,7 +930,8 @@ export default {
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
     this.$store.dispatch('caseTickets/fetchTypes'); // F2b — tipos de orden de trabajo
-    this.acquireLock();
+    this.startPresence();
+    this.$emitter.on('caseConflictResolved', this.onConflictResolved);
     this.applyEntryQuery();
     window.addEventListener('resize', this.measureDescription);
   },
@@ -899,9 +941,11 @@ export default {
     this.measureDescription();
   },
   beforeDestroy() {
-    this.releaseLock();
+    this.stopPresence();
+    this.$emitter.off('caseConflictResolved', this.onConflictResolved);
     window.removeEventListener('resize', this.measureDescription);
     this.$emitter.off('assistant:done', this.onAssistantDone);
+    this.$emitter.off('taskReportsChanged', this.onReportsChanged);
   },
   methods: {
     // ¿La descripción no cabe en su renglón? (más ancha o con varios párrafos)
@@ -924,22 +968,31 @@ export default {
     closeContactPanel() {
       this.showContactPanel = false;
     },
-    // @tickets_cases — toma el bloqueo del ticket al abrir; si lo tiene otro, no
-    // lo toma (el banner avisará). Refresca el ticket para reflejar el estado.
-    async acquireLock() {
+    // K1 — presencia en lugar de bloqueo: nadie impide a nadie; se ve quién más está.
+    // Si se cierra la pestaña sin salir, la señal caduca sola (90 s en el servidor).
+    startPresence() {
+      this.pingPresence();
+      this.presenceTimer = setInterval(this.pingPresence, 30000);
+    },
+    stopPresence() {
+      clearInterval(this.presenceTimer);
+      this.presenceTimer = null;
+      CaseTicketsAPI.presence(this.ticketId, true).catch(() => {});
+    },
+    async pingPresence() {
       try {
-        await CaseTicketsAPI.lock(this.ticketId);
-        this.lockedAcquired = true;
-      } catch (e) {
-        this.lockedAcquired = false; // 409: lo tiene otro agente
-      } finally {
-        this.$store.dispatch('caseTickets/fetchTicket', this.ticketId);
+        const { data } = await CaseTicketsAPI.presence(this.ticketId);
+        this.viewers = data.viewers || [];
+      } catch {
+        this.viewers = [];
       }
     },
-    releaseLock() {
-      if (!this.lockedAcquired) return;
-      this.lockedAcquired = false;
-      CaseTicketsAPI.unlock(this.ticketId).catch(() => {});
+    onConflictResolved(ticketId) {
+      if (Number(ticketId) === Number(this.ticketId)) {
+        this.$store.dispatch('caseTickets/fetchEvents', {
+          ticketId: this.ticketId,
+        });
+      }
     },
     onDetailTabChange(index) {
       const tab = this.barTabs[index];
@@ -1020,6 +1073,31 @@ export default {
       this.$store.dispatch('caseTickets/fetchEvents', {
         ticketId: this.ticketId,
       });
+    },
+    // Tareas, Tareas agendadas y Notas son listas aparte: lo que cambia en una se
+    // cuenta en las otras (notas de la tarea, sus agendadas, el reporte que entra
+    // como nota). Se recargan como al confirmar algo de Dali.
+    onNotesChanged() {
+      this.reloadEvents();
+      this.$refs.ticketTasks?.load?.();
+    },
+    onTasksSaved() {
+      this.refetch();
+      this.activityTick += 1;
+      this.$refs.ticketNotes?.load?.();
+    },
+    // «Reportar avance» (ventana de arriba): si fue de este caso, su contador de
+    // reportes y la Actividad.
+    onReportsChanged(info) {
+      if (!info || Number(info.caseId) !== Number(this.ticketId)) return;
+      this.reloadEvents();
+      this.activityTick += 1;
+      this.$refs.ticketTasks?.load?.();
+    },
+    onMeetingsChanged() {
+      this.reloadEvents();
+      this.$refs.ticketTasks?.load?.();
+      this.$refs.ticketNotes?.load?.();
     },
     // @tickets_cases — clic afuera (v-on-clickaway): cada bloque cierra solo lo suyo. Si
     // uno cerrara todos, el clic en el botón del otro apagaría su menú al abrirlo.
@@ -1858,6 +1936,13 @@ export default {
       this.showEditModal = false;
       this.refetch();
     },
+    onClientAssigned() {
+      this.showAssignClient = false;
+      this.$emitter.emit('newToastMessage', {
+        message: this.$t('CASE_TICKETS.ASSIGN_CLIENT.DONE'),
+      });
+      this.refetch();
+    },
     openReopenModal() {
       this.reopenReason = '';
       this.showReopenModal = true;
@@ -1910,6 +1995,11 @@ export default {
     },
     // @tickets_cases F2 — "agregar reunión" desde una fila de la tabla de tareas:
     // salta a la pestaña Reuniones y abre el modal ya atado a esa tarea.
+    // Tareas agendadas › «Ver la tarea»: va a Tareas y la abre.
+    openTaskFromMeeting(task) {
+      this.activeDetailTab = 'tasks';
+      this.$nextTick(() => this.$refs.ticketTasks?.openTaskById(task.id));
+    },
     openMeetingForTask(task) {
       this.activeDetailTab = 'meetings';
       this.$nextTick(() => this.$refs.ticketMeetings?.openCreate(task));
@@ -2337,6 +2427,17 @@ export default {
             }}<template v-if="ticket.requester">
               · {{ ticket.requester.name }}</template
             >
+            <!-- «Ligar a un cliente»: deja de ser interno (también cerrado: es corregir de quién es). -->
+            <woot-button
+              size="tiny"
+              variant="smooth"
+              color-scheme="primary"
+              icon="person-add"
+              class="ml-1 align-middle"
+              @click="showAssignClient = true"
+            >
+              {{ $t('CASE_TICKETS.ASSIGN_CLIENT.BUTTON') }}
+            </woot-button>
           </span>
           <!-- @tickets_cases — título a UNA sola línea con "…": envolver a dos
                líneas empujaba las pestañas y descuadraba la cabecera. Completo
@@ -2469,80 +2570,20 @@ export default {
               {{ $t('CASE_TICKETS.ESCALATION.BUTTON') }}
             </woot-button>
             <!-- Cerrado o cancelado no cambia de estado: se reabre con su botón.
-                 Plan Actividad del caso (P3) — en una oportunidad el botón es «⋯»
-                 y su menú suma Cancelar y Posponer/Retomar. -->
-            <woot-button
+                 En una oportunidad, Ganada y Perdida quedan a la vista y el menú
+                 suma Posponer/Retomar y Cancelar. -->
+            <CaseStatusMenu
               v-if="!isFrozen"
-              size="small"
-              :color-scheme="isCommercial ? 'secondary' : 'primary'"
-              :variant="isCommercial ? 'smooth' : ''"
+              :options="validTransitions"
+              :current-label="currentStage.label"
+              :is-commercial="isCommercial"
+              :is-postponed="!!ticket.is_postponed"
               :is-loading="isTransitioning"
-              :title="
-                isCommercial ? $t('CASE_TICKETS.DETAIL.MORE_ACTIONS') : ''
-              "
-              @click="
-                showTransitionMenu = !showTransitionMenu;
-                showPriorityMenu = false;
-              "
-            >
-              <fluent-icon
-                v-if="isCommercial"
-                icon="more-horizontal"
-                size="14"
-              />
-              <template v-else>
-                {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }}
-                <fluent-icon icon="chevron-down" size="12" class="ml-1" />
-              </template>
-            </woot-button>
-            <ul
-              v-if="showTransitionMenu"
-              class="absolute right-0 z-50 py-1 mt-1 overflow-y-auto list-none bg-white border rounded-md shadow-md top-full max-h-[60vh] dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[180px]"
-            >
-              <template v-if="isCommercial">
-                <li
-                  class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  @click="
-                    showTransitionMenu = false;
-                    openOutcome('cancelled');
-                  "
-                >
-                  {{ $t('CASE_TICKETS.COMMERCIAL.ACTIONS.CANCEL') }}
-                </li>
-                <li
-                  class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                  @click="
-                    showTransitionMenu = false;
-                    ticket.is_postponed ? resumeOpportunity() : openPostpone();
-                  "
-                >
-                  {{
-                    ticket.is_postponed
-                      ? $t('CASE_TICKETS.COMMERCIAL.ACTIONS.RESUME')
-                      : $t('CASE_TICKETS.COMMERCIAL.ACTIONS.POSTPONE')
-                  }}
-                </li>
-                <li
-                  class="px-4 pt-2 pb-1 mt-1 text-xs font-medium uppercase border-t text-slate-400 border-slate-100 dark:border-slate-700"
-                >
-                  {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }}
-                </li>
-              </template>
-              <li
-                v-for="opt in validTransitions"
-                :key="`${opt.columnId || 'x'}-${opt.status || 'x'}`"
-                class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                @click="selectTransition(opt)"
-              >
-                {{ opt.label }}
-              </li>
-              <li
-                v-if="!validTransitions.length"
-                class="px-4 py-2 text-sm text-slate-400 dark:text-slate-500"
-              >
-                {{ $t('CASE_TICKETS.DETAIL.NO_TRANSITIONS') }}
-              </li>
-            </ul>
+              @select="selectTransition"
+              @cancel="openOutcome('cancelled')"
+              @postpone="openPostpone"
+              @resume="resumeOpportunity"
+            />
           </div>
           <!-- Fechas + asignación: siempre visibles, son parte de la ficha del
                ticket (no dependen de la pestaña). 'Vence' no va aquí: ya está en
@@ -2662,17 +2703,20 @@ export default {
       v-if="ticket && isCommercial"
       :ticket="ticket"
       @updated="refetch"
+      @editPostpone="openPostpone()"
     />
 
     <!-- Pestañas del detalle (pinneadas, no scrollean) -->
-    <!-- @tickets_cases — bloqueo: aviso si otro agente está trabajando el ticket -->
+    <!-- K1 — presencia: quién más tiene abierto este caso (no bloquea nada) -->
     <div
-      v-if="ticket && lockedByOther"
-      class="flex items-center gap-2 px-6 py-2 text-sm flex-shrink-0 bg-amber-50 text-amber-800 border-b border-amber-100 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-900/50"
+      v-if="ticket && viewers.length"
+      class="flex items-center gap-2 px-6 py-2 text-sm flex-shrink-0 bg-woot-50 text-woot-800 border-b border-woot-100 dark:bg-woot-900/30 dark:text-woot-200 dark:border-woot-900/50"
     >
-      <fluent-icon icon="lock-closed" size="16" />
+      <fluent-icon icon="people" size="16" />
       <span>{{
-        $t('CASE_TICKETS.LOCK.BANNER', { name: ticket.locked_by.name })
+        $tc('CASE_TICKETS.PRESENCE.BANNER', viewers.length, {
+          names: viewerNames,
+        })
       }}</span>
     </div>
 
@@ -3505,7 +3549,7 @@ export default {
         :is-frozen="isFrozen"
         class="flex-1 min-h-0"
         @count="noteCount = $event"
-        @changed="reloadEvents"
+        @changed="onNotesChanged"
       />
 
       <!-- ════ Pestaña Pendientes (Plan Actividad del caso P3) ════
@@ -3533,10 +3577,30 @@ export default {
           >
             <fluent-icon :icon="view.icon" size="14" />
             {{ view.label }}
-            <span v-if="view.count" class="text-xs text-slate-400">
-              {{ view.count }}
+            <!-- pendientes/total: «1/3» = falta 1 de 3 -->
+            <span
+              v-if="view.count"
+              class="text-xs text-slate-400"
+              :title="
+                $t('CASE_TICKETS.DETAIL_TABS.PENDING_OF', {
+                  pending: view.pending,
+                  total: view.count,
+                })
+              "
+            >
+              {{ view.pending }}/{{ view.count }}
             </span>
           </button>
+        </div>
+        <!-- Tareas con el cliente — el enlace del portal de su organización (o contacto) -->
+        <div
+          v-if="pendingView === 'tasks' && portalOwner"
+          class="flex items-center gap-2 ml-auto"
+        >
+          <span class="text-xs text-slate-500">{{
+            $t('CLIENT_PORTAL_LINK.TITLE')
+          }}</span>
+          <ClientPortalLinkCard :owner="portalOwner" compact />
         </div>
         <!-- El «nuevo» de la sub-pestaña abierta (antes en el renglón de título de cada tabla) -->
         <woot-button
@@ -3568,15 +3632,16 @@ export default {
         :allow-milestones="isProject"
         urgent-first
         class="flex-none"
-        @saved="
-          refetch();
-          activityTick += 1;
-        "
+        @saved="onTasksSaved"
         @count="taskCount = $event"
+        @pending="taskPending = $event"
         @addNote="openNoteForTask"
         @viewNotes="openNotesForTask"
         @addMeeting="openMeetingForTask"
         @viewMeetings="openMeetingsForTask"
+        @meetingsChanged="
+          $refs.ticketMeetings && $refs.ticketMeetings.refresh()
+        "
       />
 
       <!-- ════ …y debajo Tareas agendadas (F2) — tabla + modal, como Notas ════ -->
@@ -3593,7 +3658,10 @@ export default {
         :create-defaults="visitDefaults"
         class="flex-none"
         @count="meetingCount = $event"
-        @changed="reloadEvents"
+        @pending="meetingPending = $event"
+        @changed="onMeetingsChanged"
+        @tasksChanged="$refs.ticketTasks && $refs.ticketTasks.load()"
+        @viewTask="openTaskFromMeeting"
       />
 
       <!-- ════ Pestaña Proyecto (Plan-Clase-Proyecto P1) ════ -->
@@ -3729,6 +3797,14 @@ export default {
         </form>
       </div>
     </woot-modal>
+
+    <AssignClientModal
+      v-if="showAssignClient && ticket"
+      :show="showAssignClient"
+      :ticket="ticket"
+      @assigned="onClientAssigned"
+      @close="showAssignClient = false"
+    />
 
     <!-- @tickets_cases — Edición del ticket (mismo modal que el alta) -->
     <CaseTicketInternalModal
@@ -4617,7 +4693,13 @@ export default {
       v-if="showPostponeModal && ticket"
       show
       :folio="ticket.folio || `#${ticket.id}`"
-      :current="ticket.postponed_until || ''"
+      :current="ticket.is_postponed ? ticket.postponed_until || '' : ''"
+      :current-reason-id="
+        ticket.is_postponed && ticket.postpone_reason
+          ? ticket.postpone_reason.id
+          : ''
+      "
+      :current-note="ticket.is_postponed ? ticket.postpone_note || '' : ''"
       :is-saving="isTransitioning"
       @close="showPostponeModal = false"
       @confirm="confirmPostpone"

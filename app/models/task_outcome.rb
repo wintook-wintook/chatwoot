@@ -20,19 +20,31 @@
 #
 class TaskOutcome < ApplicationRecord
   DEFAULTS = ['Logrado', 'No contestó', 'Reprogramar', 'No se pudo'].freeze
+  # Motivos para cancelar una tarea o tarea agendada (purpose: cancel). «Otro» pide comentario.
+  CANCEL_DEFAULTS = ['El cliente ya no lo necesita', 'Se resolvió de otra forma', 'Duplicada', 'Se reprogramó', 'Otro'].freeze
+  OTHER = 'Otro'.freeze
 
   belongs_to :account
 
   validates :label, presence: true, length: { maximum: 100 }
 
+  # report: resultado del reporte de cierre (como siempre) · cancel: motivo de cancelación.
+  enum purpose: { report: 0, cancel: 1 }, _prefix: :for
+
   scope :ordered, -> { order(:position, :id) }
 
-  def self.ensure_defaults_for(account)
-    seed_defaults(account) if account.task_outcomes.none?
-    account.task_outcomes.ordered
+  def self.ensure_defaults_for(account, purpose: 'report')
+    scope = account.task_outcomes.where(purpose: purpose)
+    seed_defaults(account, purpose) if scope.none?
+    scope.ordered
   end
 
-  def self.seed_defaults(account)
-    DEFAULTS.each_with_index { |label, position| account.task_outcomes.create!(label: label, position: position) }
+  def self.seed_defaults(account, purpose = 'report')
+    labels = purpose.to_s == 'cancel' ? CANCEL_DEFAULTS : DEFAULTS
+    labels.each_with_index { |label, position| account.task_outcomes.create!(label: label, position: position, purpose: purpose) }
+  end
+
+  def other?
+    label.to_s.strip.casecmp?(OTHER)
   end
 end

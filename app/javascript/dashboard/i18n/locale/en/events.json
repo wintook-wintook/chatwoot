@@ -76,6 +76,32 @@
     "ADD": "Add",
     "SEGMENT_ADDED": "{added} contacts added from the segment",
     "CAMPAIGNS": "Campaigns for this event",
-    "CAMPAIGN_OF": "Event: {event} · {status}"
+    "CAMPAIGN_OF": "Event: {event} · {status}",
+    "NFC": {
+      "TITLE": "Tap a phone (NFC)",
+      "HELP": "Write this link on an NFC tag (sticker or card). The customer taps their phone, WhatsApp opens with the message ready, and when they send it they join the event as «attended», with the {label} label and, if the link belongs to a seller, assigned to them.",
+      "NEW": "New link",
+      "INBOX": "WhatsApp that receives",
+      "SELLER": "Seller (optional)",
+      "NO_SELLER": "No seller",
+      "MESSAGE": "Message the customer sends",
+      "MESSAGE_HINT": "A code («Ref …») is added to recognize it.",
+      "CREATE": "Create link",
+      "CANCEL": "Cancel",
+      "EMPTY": "No links for this event yet.",
+      "NO_INBOX": "You need a WhatsApp inbox with a number to create the link.",
+      "CAPTURES": "{count} captured",
+      "WRITE": "Write to tag",
+      "WRITE_HINT": "Hold the NFC tag to the back of the phone…",
+      "WRITTEN": "Link written to the tag.",
+      "WRITE_ERROR": "Couldn't write. Hold the tag again or check that NFC is on.",
+      "NO_WEB_NFC": "To write from here use Chrome on Android. On iPhone, copy the link and write it with an app like NFC Tools.",
+      "COPY": "Copy link",
+      "COPIED": "Link copied",
+      "TRY": "Try",
+      "DELETE": "Delete",
+      "DELETE_CONFIRM": "Delete this link? Tags that already have it will stop linking to the event.",
+      "ERROR": "Couldn't save the link."
+    }
   }
 }

@@ -10,9 +10,14 @@ module CaseTaskActivity
   STATUS_EVENTS = { 'done' => :task_completed, 'cancelled' => :task_cancelled, 'pending' => :task_reopened }.freeze
 
   included do
-    after_create_commit :log_task_created, if: -> { case_ticket_id && case_type_column_task_id.nil? && documentation_for_column_id.nil? }
+    # Cases::Conversion la crea o la quita al convertir: deja su propio task_converted.
+    attr_accessor :skip_activity
+
+    after_create_commit :log_task_created, if: lambda {
+      case_ticket_id && case_type_column_task_id.nil? && documentation_for_column_id.nil? && !skip_activity
+    }
     after_update_commit :log_task_status, if: -> { case_ticket_id && saved_change_to_status? }
-    after_destroy_commit :log_task_deleted, if: :case_ticket_id
+    after_destroy_commit :log_task_deleted, if: -> { case_ticket_id && !skip_activity }
   end
 
   private
@@ -22,7 +27,7 @@ module CaseTaskActivity
   end
 
   def log_task_status
-    log_task_event(STATUS_EVENTS.fetch(status), from: status_before_last_save)
+    log_task_event(STATUS_EVENTS.fetch(status), from: status_before_last_save, reason: (cancel_reason if cancelled?))
   end
 
   # Si se borró el caso entero, no hay bitácora que anotar.

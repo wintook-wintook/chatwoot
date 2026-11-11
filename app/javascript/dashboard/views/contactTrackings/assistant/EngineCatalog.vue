@@ -8,10 +8,7 @@
 // cada ficha: TRACKING_ASSISTANT_VIEW.CATALOG_<KEY>_WHAT / _NEEDS.
 // ============================================================================
 import CopyChip from './CopyChip.vue';
-import {
-  engineCatalogMarkdown,
-  downloadMarkdown,
-} from './engineCatalogMarkdown';
+import { downloadEngineCatalog } from './engineCatalogMarkdown';
 
 const GROUPS = ['sources', 'actions', 'structure'];
 const STATUS_CLASSES = {
@@ -45,15 +42,10 @@ export default {
       const cuenta = this.$store.getters['accounts/getAccount'](
         this.$store.getters.getCurrentAccountId
       );
-      const contenido = engineCatalogMarkdown(
-        this.catalog,
-        this.$t.bind(this),
-        {
-          accountName: cuenta?.name || '',
-          locale: this.$i18n.locale,
-        }
-      );
-      downloadMarkdown(contenido, 'recursos_motor_agentes_ia.md');
+      downloadEngineCatalog(this.catalog, this.$t.bind(this), {
+        accountName: cuenta?.name || '',
+        locale: this.$i18n.locale,
+      });
     },
     statusClass(status) {
       return STATUS_CLASSES[status] || STATUS_CLASSES.depends;

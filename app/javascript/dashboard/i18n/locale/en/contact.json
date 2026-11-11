@@ -42,7 +42,9 @@
       "MESSAGE": "Message",
       "EDIT": "Edit",
       "MORE": "More",
-      "SCHEDULE": "Schedule message"
+      "SCHEDULE": "Schedule message",
+      "TASK": "Create task",
+      "PRIVATE_NOTE": "New private note"
     },
     "MERGE_CONTACT": "Merge contact",
     "CONTACT_ACTIONS": "Contact actions",
@@ -75,7 +77,9 @@
       "CANCEL": "Cancel",
       "ACCEPT": "Accept",
       "GO_TO_INTEGRATIONS": "Go to Integrations"
-    }
+    },
+    "CRMZEUS_CONTACT_ID": "CRMZeus contact ID",
+    "CRMZEUS_ORG_ID": "CRMZeus organization ID"
   },
   "EDIT_CONTACT": {
     "BUTTON_LABEL": "Edit Contact",
@@ -443,13 +447,13 @@
   },
   "MERGE_CONTACTS": {
     "TITLE": "Merge contacts",
-    "DESCRIPTION": "Merge contacts to combine two profiles into one, including all attributes and conversations. In case of conflict, the Primary contact’s attributes will take precedence.",
+    "DESCRIPTION": "Combine two profiles into one. Everything from the contact being deleted (conversations, notes, cases, quotes, contracts, equipment, maintenance plans and event attendance) moves to the contact that is kept. If both have the same field, the kept contact's value wins.",
     "PRIMARY": {
-      "TITLE": "Primary contact",
-      "HELP_LABEL": "To be deleted"
+      "TITLE": "This contact",
+      "HELP_LABEL": "Will be deleted"
     },
     "PARENT": {
-      "TITLE": "Contact to merge",
+      "TITLE": "Contact to keep",
       "PLACEHOLDER": "Search for a contact",
       "HELP_LABEL": "To be kept"
     },
@@ -477,6 +481,7 @@
   "CONTACT_OWNER": {
     "LABEL": "Contact owner",
     "NONE": "No contact owner",
+    "INHERITED": "Their organization {organization} applies: {name}.",
     "HINT": "Their conversations and new cases always go to this person, regardless of assignment rules.",
     "MISSING_INBOXES": "Not a member of {inboxes}: the usual rules apply there.",
     "SAVED": "Contact owner updated",

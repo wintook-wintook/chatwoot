@@ -1,7 +1,7 @@
 {
   "INTEGRATION_SETTINGS": {
     "HEADER": "Integraciones",
-    "DESCRIPTION": "Wintook se integra con múltiples herramientas y servicios para mejorar la eficiencia de tu equipo. Explora la lista a continuación para configurar tus aplicaciones favoritas.",
+    "DESCRIPTION": "Kontrolya se integra con múltiples herramientas y servicios para mejorar la eficiencia de tu equipo. Explora la lista a continuación para configurar tus aplicaciones favoritas.",
     "LEARN_MORE": "Aprende más sobre integraciones",
     "LOADING": "Obteniendo integraciones",
     "CAPTAIN": {
@@ -27,7 +27,7 @@
       "LEARN_MORE": "Aprende más sobre webhooks",
       "FORM": {
         "CANCEL": "Cancelar",
-        "DESC": "Los eventos de webhook te proporcionan información en tiempo real sobre lo que está sucediendo en tu cuenta de Chatwoot. Por favor, ingresa una URL válida para configurar un callback.",
+        "DESC": "Los eventos de webhook te proporcionan información en tiempo real sobre lo que está sucediendo en tu cuenta de Kontrolya. Por favor, ingresa una URL válida para configurar un callback.",
         "SUBSCRIPTIONS": {
           "LABEL": "Eventos",
           "EVENTS": {
@@ -56,7 +56,7 @@
       "HEADER_BTN_TXT": "Agregar nuevo webhook",
       "LOADING": "Obteniendo webhooks adjuntos",
       "SEARCH_404": "No hay elementos que coincidan con esta consulta",
-      "SIDEBAR_TXT": "<p><b>Webhooks</b> </p> <p>Los webhooks son callbacks HTTP que pueden definirse para cada cuenta. Se activan por eventos como la creación de mensajes en Chatwoot. Puedes crear más de un webhook para esta cuenta. <br /><br /> Para crear un <b>webhook</b>, haz clic en el botón <b>Agregar nuevo webhook</b>. También puedes eliminar cualquier webhook existente haciendo clic en el botón Eliminar.</p>",
+      "SIDEBAR_TXT": "<p><b>Webhooks</b> </p> <p>Los webhooks son callbacks HTTP que pueden definirse para cada cuenta. Se activan por eventos como la creación de mensajes en Kontrolya. Puedes crear más de un webhook para esta cuenta. <br /><br /> Para crear un <b>webhook</b>, haz clic en el botón <b>Agregar nuevo webhook</b>. También puedes eliminar cualquier webhook existente haciendo clic en el botón Eliminar.</p>",
       "LIST": {
         "404": "No hay webhooks configurados para esta cuenta.",
         "TITLE": "Gestionar webhooks",
@@ -70,7 +70,7 @@
         "TITLE": "Editar webhook",
         "API": {
           "SUCCESS_MESSAGE": "Configuración del webhook actualizada con éxito",
-          "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot, por favor inténtalo de nuevo más tarde"
+          "ERROR_MESSAGE": "No se pudo conectar al servidor de Kontrolya, por favor inténtalo de nuevo más tarde"
         }
       },
       "ADD": {
@@ -78,14 +78,14 @@
         "TITLE": "Agregar nuevo webhook",
         "API": {
           "SUCCESS_MESSAGE": "Configuración del webhook agregada con éxito",
-          "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot, por favor inténtalo de nuevo más tarde"
+          "ERROR_MESSAGE": "No se pudo conectar al servidor de Kontrolya, por favor inténtalo de nuevo más tarde"
         }
       },
       "DELETE": {
         "BUTTON_TEXT": "Eliminar",
         "API": {
           "SUCCESS_MESSAGE": "Webhook eliminado con éxito",
-          "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot, por favor inténtalo de nuevo más tarde"
+          "ERROR_MESSAGE": "No se pudo conectar al servidor de Kontrolya, por favor inténtalo de nuevo más tarde"
         },
         "CONFIRM": {
           "TITLE": "Confirmar eliminación",
@@ -103,14 +103,14 @@
       },
       "HELP_TEXT": {
         "TITLE": "¿Cómo usar la integración de Slack?",
-        "BODY": "Con esta integración, todas tus conversaciones entrantes se sincronizarán con el canal ***%{selectedChannelName}*** en tu espacio de trabajo de Slack. Puedes gestionar todas tus conversaciones con clientes directamente dentro del canal y nunca perder un mensaje.\n\nAquí están las principales características de la integración:\n\n**Responder a conversaciones desde Slack:** Para responder a una conversación en el canal de Slack ***%{selectedChannelName}***, simplemente escribe tu mensaje y envíalo como un hilo. Esto creará una respuesta de vuelta al cliente a través de Chatwoot. ¡Es así de simple!\n\n **Crear notas privadas:** Si deseas crear notas privadas en lugar de respuestas, comienza tu mensaje con ***`nota:`***. Esto asegura que tu mensaje se mantenga privado y no sea visible para el cliente.\n\n**Asociar un perfil de usuario:** Si la persona que respondió en Slack tiene un perfil de usuario en Chatwoot con el mismo correo electrónico, las respuestas se asociarán automáticamente con ese perfil de usuario. Esto significa que puedes rastrear fácilmente quién dijo qué y cuándo. Por otro lado, cuando el respondedor no tiene un perfil de usuario asociado, las respuestas aparecerán desde el perfil del bot al cliente.",
+        "BODY": "Con esta integración, todas tus conversaciones entrantes se sincronizarán con el canal ***%{selectedChannelName}*** en tu espacio de trabajo de Slack. Puedes gestionar todas tus conversaciones con clientes directamente dentro del canal y nunca perder un mensaje.\n\nAquí están las principales características de la integración:\n\n**Responder a conversaciones desde Slack:** Para responder a una conversación en el canal de Slack ***%{selectedChannelName}***, simplemente escribe tu mensaje y envíalo como un hilo. Esto creará una respuesta de vuelta al cliente a través de Kontrolya. ¡Es así de simple!\n\n **Crear notas privadas:** Si deseas crear notas privadas en lugar de respuestas, comienza tu mensaje con ***`nota:`***. Esto asegura que tu mensaje se mantenga privado y no sea visible para el cliente.\n\n**Asociar un perfil de usuario:** Si la persona que respondió en Slack tiene un perfil de usuario en Kontrolya con el mismo correo electrónico, las respuestas se asociarán automáticamente con ese perfil de usuario. Esto significa que puedes rastrear fácilmente quién dijo qué y cuándo. Por otro lado, cuando el respondedor no tiene un perfil de usuario asociado, las respuestas aparecerán desde el perfil del bot al cliente.",
         "SELECTED": "seleccionado"
       },
       "SELECT_CHANNEL": {
         "OPTION_LABEL": "Seleccionar un canal",
         "UPDATE": "Actualizar",
         "BUTTON_TEXT": "Conectar canal",
-        "DESCRIPTION": "Tu espacio de trabajo de Slack ahora está vinculado con Chatwoot. Sin embargo, la integración está actualmente inactiva. Para activar la integración y conectar un canal a Chatwoot, por favor haz clic en el botón a continuación.\n\n**Nota:** Si estás intentando conectar un canal privado, agrega la aplicación de Chatwoot al canal de Slack antes de proceder con este paso.",
+        "DESCRIPTION": "Tu espacio de trabajo de Slack ahora está vinculado con Kontrolya. Sin embargo, la integración está actualmente inactiva. Para activar la integración y conectar un canal a Kontrolya, por favor haz clic en el botón a continuación.\n\n**Nota:** Si estás intentando conectar un canal privado, agrega la aplicación de Kontrolya al canal de Slack antes de proceder con este paso.",
         "ATTENTION_REQUIRED": "Atención requerida",
         "EXPIRED": "Tu integración de Slack ha expirado. Para continuar recibiendo mensajes en Slack, por favor elimina la integración y conecta tu espacio de trabajo nuevamente."
       },
@@ -126,8 +126,8 @@
       "CREATE_ERROR": "Hubo un error al crear un enlace de reunión, por favor inténtalo de nuevo"
     },
     "OPEN_AI": {
-      "AI_ASSIST": "Asistencia de IA",
-      "WITH_AI": " %{option} con IA ",
+      "AI_ASSIST": "Ayuda de Dali",
+      "WITH_AI": " %{option} con Dali ",
       "OPTIONS": {
         "REPLY_SUGGESTION": "Sugerencia de Respuesta",
         "SUMMARIZE": "Resumir",
@@ -142,7 +142,7 @@
       "ASSISTANCE_MODAL": {
         "DRAFT_TITLE": "Borrador de contenido",
         "GENERATED_TITLE": "Contenido generado",
-        "AI_WRITING": "La IA está escribiendo",
+        "AI_WRITING": "Dali está escribiendo",
         "BUTTONS": {
           "APPLY": "Usar esta sugerencia",
           "CANCEL": "Cancelar"
@@ -160,10 +160,10 @@
         "DISMISS_MESSAGE": "Puedes configurar la integración de OpenAI más tarde cuando quieras.",
         "SUCCESS_MESSAGE": "Integración de OpenAI configurada con éxito"
       },
-      "TITLE": "Mejorar con IA",
-      "SUMMARY_TITLE": "Resumen con IA",
-      "REPLY_TITLE": "Sugerencia de respuesta con IA",
-      "SUBTITLE": "Se generará una respuesta mejorada usando IA, basada en tu borrador actual.",
+      "TITLE": "Mejorar con Dali",
+      "SUMMARY_TITLE": "Resumen de Dali",
+      "REPLY_TITLE": "Respuesta sugerida por Dali",
+      "SUBTITLE": "Dali mejorará tu borrador actual.",
       "TONE": {
         "TITLE": "Tono",
         "OPTIONS": {
@@ -190,7 +190,7 @@
     "DASHBOARD_APPS": {
       "TITLE": "Aplicaciones del Panel",
       "HEADER_BTN_TXT": "Agregar una nueva aplicación del panel",
-      "SIDEBAR_TXT": "<p><b>Aplicaciones del Panel</b></p><p>Las aplicaciones del panel permiten a las organizaciones incrustar una aplicación dentro del panel de Chatwoot para proporcionar contexto a tu equipo de soporte al cliente. Esta función te permite crear una aplicación de manera independiente e incrustarla dentro del panel para proporcionar información del usuario, sus pedidos o su historial de pagos anterior.</p><p>Cuando incrustas tu aplicación usando el panel en Chatwoot, tu aplicación obtendrá el contexto de la conversación y el contacto como un evento de ventana. Implementa un listener para el evento de mensaje en tu página para recibir el contexto.</p><p>Para agregar una nueva aplicación del panel, haz clic en el botón 'Agregar una nueva aplicación del panel'.</p>",
+      "SIDEBAR_TXT": "<p><b>Aplicaciones del Panel</b></p><p>Las aplicaciones del panel permiten a las organizaciones incrustar una aplicación dentro del panel de Kontrolya para proporcionar contexto a tu equipo de soporte al cliente. Esta función te permite crear una aplicación de manera independiente e incrustarla dentro del panel para proporcionar información del usuario, sus pedidos o su historial de pagos anterior.</p><p>Cuando incrustas tu aplicación usando el panel en Kontrolya, tu aplicación obtendrá el contexto de la conversación y el contacto como un evento de ventana. Implementa un listener para el evento de mensaje en tu página para recibir el contexto.</p><p>Para agregar una nueva aplicación del panel, haz clic en el botón 'Agregar una nueva aplicación del panel'.</p>",
       "DESCRIPTION": "Las aplicaciones del panel permiten a las organizaciones incrustar una aplicación dentro del panel para proporcionar contexto a tu equipo de soporte al cliente. Esta función te permite crear una aplicación de manera independiente e incrustarla para proporcionar información del usuario, sus pedidos o su historial de pagos anterior.",
       "LEARN_MORE": "Aprende más sobre las aplicaciones del panel",
       "LIST": {
@@ -237,7 +237,7 @@
     "BOTS_INBOXES": {
       "TITLE": "Activación de Bot",
       "HEADER_BTN_TXT": "Añadir una nueva aplicación",
-      "SIDEBAR_TXT": "<p><b>Aplicaciones de panel</b></p><p>Aplicaciones de panel de control permiten a las organizaciones incrustar una aplicación dentro del panel de control de Chatwoot para proporcionar el contexto para los usuarios de atención al cliente. Esta característica le permite crear una aplicación de forma independiente e incrustarla dentro del panel de control para proporcionar información de usuario, sus pedidos, o su historial de pagos anterior.</p><p>Cuando incrustas tu aplicación usando el panel de control en Chatwoot, tu aplicación obtendrá el contexto de la conversación y el contacto como un evento de ventana. Implementa un oyente para el evento del mensaje en tu página para recibir el contexto.</p><p>Para añadir una nueva aplicación de panel, haga clic en el botón 'Añadir una nueva aplicación de panel'.</p>",
+      "SIDEBAR_TXT": "<p><b>Aplicaciones de panel</b></p><p>Aplicaciones de panel de control permiten a las organizaciones incrustar una aplicación dentro del panel de control de Kontrolya para proporcionar el contexto para los usuarios de atención al cliente. Esta característica le permite crear una aplicación de forma independiente e incrustarla dentro del panel de control para proporcionar información de usuario, sus pedidos, o su historial de pagos anterior.</p><p>Cuando incrustas tu aplicación usando el panel de control en Kontrolya, tu aplicación obtendrá el contexto de la conversación y el contacto como un evento de ventana. Implementa un oyente para el evento del mensaje en tu página para recibir el contexto.</p><p>Para añadir una nueva aplicación de panel, haga clic en el botón 'Añadir una nueva aplicación de panel'.</p>",
       "DESCRIPTION": "Las aplicaciones de panel permiten a las organizaciones incrustar una aplicación dentro del panel de control para proporcionar el contexto para tu equipo de soporte al cliente. Esta función le permite crear una aplicación de forma independiente e incrustada para proporcionar información de usuario, sus pedidos o su historial de pagos anterior.",
       "LEARN_MORE": "Learn more about Dashboard Apps",
       "LIST": {

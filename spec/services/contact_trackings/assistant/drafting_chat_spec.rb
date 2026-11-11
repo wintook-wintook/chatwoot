@@ -53,6 +53,22 @@ RSpec.describe ContactTrackings::Assistant::DraftingChat do
     end).to have_been_made
   end
 
+  # proyecto@crear_agente_conversando F3
+  it 'lleva lo que ya hay en las pestañas y devuelve solo lo que cambió' do
+    modelo_contesta('mensaje' => 'Anoté la pregunta 1', 'instrucciones' => nil, 'definicion' => nil,
+                    'datos_fijos' => [{ 'nombre' => 'Q1', 'tipo' => 'pregunta', 'contenido' => '¿Qué usas?', 'guarda_en' => 'SISTEMA' }])
+
+    resultado = described_class.new(account, messages: pedido,
+                                             so_far: { fields: { 'variables' => 'SISTEMA = A | B', 'objective' => 'Demos' } }).call
+
+    expect(resultado[:fields]).to eq('datos_fijos' => 'Q1 (pregunta) = ¿Qué usas? → guarda en SISTEMA')
+    expect(a_request(:post, api).with do |req|
+      mensajes = JSON.parse(req.body)['messages']
+      mensajes.first['content'].include?('"datos_fijos"') &&
+        mensajes.any? { |m| m['content'].include?("Objetivo: Demos\n\nVariables:\nSISTEMA = A | B") }
+    end).to have_been_made
+  end
+
   it 'sin respuesta del modelo, avisa que no pudo' do
     stub_request(:post, api).to_return(status: 500, body: 'x')
 

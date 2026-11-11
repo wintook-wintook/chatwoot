@@ -57,7 +57,7 @@
               />
               <woot-checkbox
                 v-model="formData.is_system"
-                label="System process (managed by Chatwoot)"
+                label="System process (managed by Kontrolya)"
                 :disabled="!canSetSystemFlag"
               />
             </div>

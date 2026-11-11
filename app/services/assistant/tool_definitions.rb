@@ -12,8 +12,8 @@ module Assistant::ToolDefinitions
   def self.str(description) = { type: 'string', description: description }
   def self.int(description) = { type: 'integer', description: description }
 
-  ALL = [
-    fn('search', 'Busca contactos, organizaciones y casos por nombre, correo, teléfono, folio o título.',
+  BASE = [
+    fn('search', 'Busca una palabra en todos los datos de contactos, organizaciones y casos; dice dónde apareció (match).',
        { query: str('Texto a buscar') }, %w[query]),
     fn('get_case', 'Detalle de un caso: datos, qué sigue, último contacto y su actividad reciente.',
        { case_id: int('Id del caso'), folio: str('Folio del caso, p. ej. OPB-00003') }),
@@ -22,13 +22,13 @@ module Assistant::ToolDefinitions
     fn('my_agenda', 'Agenda del usuario: tareas agendadas y tareas pendientes entre dos fechas (incluye atrasadas).',
        { from: str('Fecha inicial YYYY-MM-DD'), to: str('Fecha final YYYY-MM-DD') }, %w[from to]),
     fn('open_page', 'Abre una pantalla para el usuario.',
-       { target: { type: 'string', enum: %w[case contact organization conversation agenda my_day cases tasks] },
+       { target: { type: 'string', enum: Assistant::Pages::MAP.keys },
          id: int('Id del caso/contacto/organización o número de la conversación') }, %w[target]),
     fn('propose_note', 'Propone dejar una nota interna en un caso o en un contacto. Requiere confirmación.',
        { case_id: int('Id del caso'), contact_id: int('Id del contacto (si no hay caso)'), content: str('Texto') },
        %w[content]),
     fn('propose_task', 'Propone crear una tarea (con caso, o con contacto/organización). Requiere confirmación.',
-       { title: str('Título corto'), description: str('Detalle'), due_at: str('Vence, hora local YYYY-MM-DDTHH:MM'),
+       { title: str('Título corto'), description: str('Detalle'), due_at: str('Día en que vence, YYYY-MM-DD (sin hora: vence al final del día)'),
          case_id: int('Id del caso'), contact_id: int('Id del contacto'), organization_id: int('Id de la organización'),
          assignee_id: int('Id del usuario responsable (omitir = el usuario)') }, %w[title]),
     fn('propose_meeting', 'Propone agendar una tarea con hora (llamada, reunión, visita) en el calendario. Requiere confirmación.',
@@ -53,6 +53,9 @@ module Assistant::ToolDefinitions
          starts_at: str('Primer intento, hora local YYYY-MM-DDTHH:MM (omitir = en unos minutos)'),
          max_attempts: int('Intentos (1 a 10)'), interval_value: int('Cada cuánto (número)'),
          interval_unit: { type: 'string', enum: %w[minutes hours days] } }, %w[agent_id]),
+    fn('propose_follow_up_action', "Propone pausar, reanudar o cancelar un #{AiFollowUp::DISPLAY_NAME}. Requiere confirmación.",
+       { follow_up_id: int('Id del Seguimiento IA (de tracking_status, ai_follow_ups)'),
+         action: { type: 'string', enum: %w[pause resume cancel] } }, %w[follow_up_id action]),
     fn('propose_tracking_action', 'Propone pausar, reanudar o cancelar un seguimiento con agente IA. Requiere confirmación.',
        { tracking_id: int('Id del seguimiento (de tracking_status)'),
          action: { type: 'string', enum: %w[pause resume cancel] } }, %w[tracking_id action]),
@@ -87,7 +90,11 @@ module Assistant::ToolDefinitions
        { name: str('Nombre'), email: str('Correo'), phone: str('Teléfono con lada, p. ej. +5215512345678'),
          organization_id: int('Id de la organización') }, %w[name]),
     fn('propose_draft', 'Redacta un borrador de mensaje para que el usuario lo copie. No envía nada.',
-       { conversation_id: int('Número de la conversación, si aplica'), content: str('Texto del borrador') },
-       %w[content])
+       { conversation_id: int('Número de la conversación, si aplica'), content: str('Texto del borrador') }, %w[content])
   ].freeze
+
+  EXTRA = %w[Sales Guide Quote Conversation Field Event ClientTask Cancel Convert FollowUp Progress].freeze # Assistant::<X>ToolDefinitions::ALL
+
+  # Al primer uso, no al cargar: los <X>ToolDefinitions usan D.fn de aquí (carga circular en eager load).
+  def self.all = @all ||= (BASE + EXTRA.flat_map { |x| "Assistant::#{x}ToolDefinitions".constantize::ALL }).freeze
 end

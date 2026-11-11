@@ -14,10 +14,19 @@ RSpec.describe 'Task Reports API' do
   let(:headers) { agent.create_new_auth_token }
   let(:task) { CaseTask.create!(account: account, case_ticket: ticket, title: 'Llamar', assignee: agent) }
   let(:loose) { CaseTask.create!(account: account, contact: contact, title: 'Sin caso', assignee: agent, requester: agent) }
-  let(:meeting) { CaseMeeting.create!(account: account, case_ticket: ticket, title: 'Visita', organizer: agent, starts_at: 1.hour.from_now, ends_at: 2.hours.from_now) }
+  let(:meeting) do
+    CaseMeeting.create!(account: account, case_ticket: ticket, title: 'Visita', organizer: agent, starts_at: 1.hour.from_now,
+                        ends_at: 2.hours.from_now)
+  end
 
   def report(item, type = 'task', extra = {})
-    post "#{api}/task_reports", params: { item_type: type, item_id: item.id, content: 'Le llamé y aceptó' }.merge(extra), headers: headers
+    post "#{api}/task_reports", params: { item_type: type, item_id: item.id, content: 'Le llamé y aceptó', minutes: 30 }.merge(extra),
+                                headers: headers
+  end
+
+  def activity(extra = {})
+    post "#{api}/task_reports", params: { item_type: 'activity', title: 'Llamada', content: 'Confirmó la entrega', minutes: 20 }.merge(extra),
+                                headers: headers
   end
 
   def conclude(item_task)
@@ -48,9 +57,19 @@ RSpec.describe 'Task Reports API' do
       conclude(task)
 
       expect(task.reload).to be_done
-      expect(TaskReport.last).to have_attributes(outcome_label: 'Logrado', contact_id: contact.id, organization_id: organization.id, case_ticket_id: ticket.id)
+      expect(TaskReport.last).to have_attributes(outcome_label: 'Logrado', contact_id: contact.id, organization_id: organization.id,
+                                                 case_ticket_id: ticket.id)
       expect(TaskReport.last.closed_at).to be_present
-      expect(ticket.case_events.where(event_type: :internal_note, case_task_id: task.id).first.payload['content']).to include('Le llamé y aceptó')
+    end
+
+    it 'en la bitácora del caso entra como reporte, no como nota' do
+      report(task)
+      conclude(task)
+
+      logged = ticket.case_events.find_by(event_type: :task_reported, case_task_id: task.id)
+      expect(logged.payload).to include('kind' => 'task_report')
+      expect(logged.payload['content']).to include('Le llamé y aceptó')
+      expect(ticket.case_events.where(event_type: :internal_note)).to be_empty
     end
 
     it 'la tarea agendada también, y «no asistió» igual' do
@@ -76,7 +95,7 @@ RSpec.describe 'Task Reports API' do
     end
 
     it 'exige qué se hizo' do
-      post "#{api}/task_reports", params: { item_type: 'task', item_id: task.id, content: '  ' }, headers: headers
+      post "#{api}/task_reports", params: { item_type: 'task', item_id: task.id, content: '  ', minutes: 30 }, headers: headers
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
@@ -153,6 +172,183 @@ RSpec.describe 'Task Reports API' do
       get "#{api}/task_reports", headers: otro.create_new_auth_token
 
       expect(response.parsed_body['task_reports']).to eq([])
+    end
+  end
+
+  describe 'avance de una tarea (sin completarla)' do
+    let(:tasks_url) { "#{api}/case_tickets/#{ticket.id}/tasks" }
+
+    it 'nace cerrado, la tarea sigue pendiente y entra a la actividad como reporte, no como nota' do
+      task.update!(estimated_minutes: 60)
+      report(task, 'task', progress: true)
+
+      expect(response.parsed_body['task_report']['kind']).to eq('progress')
+      expect(task.reload).to be_pending
+      expect(TaskReport.last).to have_attributes(progress: true, case_task_id: task.id, minutes: 30, closed_at: be_present)
+      logged = ticket.case_events.find_by(event_type: :task_reported, case_task_id: task.id)
+      expect(logged.payload).to include('kind' => 'progress', 'minutes' => 30, 'sequence' => task.sequence)
+      expect(logged.payload['content']).to include(I18n.t('task_reports.progress_note_title', title: 'Llamar'))
+      expect(ticket.time_entries.sum(:minutes)).to eq(30)
+    end
+
+    it 'la tarea cuenta sus reportes (no sus notas) y propone lo que falta de lo estimado' do
+      task.update!(estimated_minutes: 60)
+      report(task, 'task', progress: true)
+
+      get tasks_url, headers: headers
+      row = response.parsed_body['case_tasks'].find { |t| t['id'] == task.id }
+      expect(row).to include('notes_count' => 0, 'reports_count' => 1)
+
+      get "#{api}/task_reports/suggestion", params: { item_type: 'task', item_id: task.id }, headers: headers
+      expect(response.parsed_body['minutes']).to eq(30) # 60 estimados − 30 de avance
+    end
+
+    it 'no cuenta como el reporte de cierre: al concluir se sigue pidiendo' do
+      report(task, 'task', progress: true)
+      conclude(task)
+      expect(response.parsed_body['report_required']).to be(true)
+
+      report(task)
+      conclude(task)
+      expect(task.reload).to be_done
+      expect(task.task_reports.closed.pluck(:progress)).to contain_exactly(true, false)
+    end
+
+    it 'solo de una tarea pendiente y que no sea del cliente' do
+      task.update!(status: :cancelled)
+      report(task, 'task', progress: true)
+      expect(response).to have_http_status(:unprocessable_entity)
+
+      client = CaseTask.create!(account: account, case_ticket: ticket, title: 'Firmar', audience: :client)
+      report(client, 'task', progress: true)
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it 'la lista de tareas para la ventana: las del caso, o sin caso las rápidas del cliente' do
+      task
+      loose
+      CaseTask.create!(account: account, case_ticket: ticket, title: 'Firmar', audience: :client)
+      get "#{api}/agenda_items/tasks", params: { case_ticket_id: ticket.id }, headers: headers
+      expect(response.parsed_body['tasks'].pluck('title')).to eq(['Llamar'])
+
+      get "#{api}/agenda_items/tasks", params: { contact_id: contact.id }, headers: headers
+      expect(response.parsed_body['tasks'].pluck('title')).to eq(['Sin caso'])
+    end
+  end
+
+  describe 'actividad reportada (sin tarea)' do
+    it 'con caso nace cerrada, toma el cliente del caso y entra a su actividad' do
+      activity(case_ticket_id: ticket.id)
+
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body['task_report']['kind']).to eq('activity')
+      expect(TaskReport.last).to have_attributes(title: 'Llamada', case_task_id: nil, case_ticket_id: ticket.id,
+                                                 contact_id: contact.id, organization_id: organization.id)
+      expect(TaskReport.last.closed_at).to be_present
+      note = ticket.case_events.where(event_type: :task_reported).last
+      expect(note.payload).to include('kind' => 'activity_report')
+      expect(note.payload['content']).to include(I18n.t('task_reports.activity_note_title', title: 'Llamada'), 'Confirmó la entrega')
+    end
+
+    it 'con contacto sale también en su organización; con la hora en que se hizo' do
+      done = 2.hours.ago.change(usec: 0)
+      activity(contact_id: contact.id, done_at: done.iso8601)
+
+      get "#{api}/task_reports", params: { organization_id: organization.id }, headers: headers
+      row = response.parsed_body['task_reports'].first
+      expect(row).to include('title' => 'Llamada', 'kind' => 'activity')
+      expect(Time.zone.parse(row['created_at'])).to eq(done)
+    end
+
+    it 'sin cliente es interna y no admite fecha futura' do
+      activity(done_at: 2.days.from_now.iso8601)
+
+      expect(TaskReport.last).to have_attributes(case_ticket_id: nil, contact_id: nil, organization_id: nil, user_id: agent.id)
+      expect(TaskReport.last.created_at).to be <= Time.current
+    end
+
+    it 'exige título y qué se hizo' do
+      expect do
+        activity(title: ' ')
+        expect(response).to have_http_status(:unprocessable_entity)
+
+        activity(content: ' ')
+        expect(response).to have_http_status(:unprocessable_entity)
+      end.not_to change(TaskReport, :count)
+    end
+
+    it 'no se liga a un caso que la persona no puede ver' do
+      role = AccessRole.for_account(account).find { |r| r.key == 'technician' }
+      role.update!(areas: role.areas.merge('sales' => 'own', 'service' => 'own'))
+      account.account_users.find_by(user: agent).update!(access_role: role)
+      ticket.update!(assignee: admin) # de otro: no lo ve
+
+      expect { activity(case_ticket_id: ticket.id) }.not_to change(TaskReport, :count)
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
+
+  describe 'tiempo dedicado' do
+    it 'por omisión es obligatorio; con el ajuste apagado, no' do
+      report(task, 'task', minutes: '')
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['minutes_required']).to be(true)
+
+      patch "#{api}/task_outcomes/settings", params: { require_minutes: false }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['require_minutes']).to be(false)
+
+      report(task, 'task', minutes: '')
+      expect(response).to have_http_status(:created)
+    end
+
+    it 'solo quien tiene Ajustes cambia el ajuste' do
+      role = AccessRole.for_account(account).find { |r| r.key == 'technician' }
+      account.account_users.find_by(user: agent).update!(access_role: role)
+
+      patch "#{api}/task_outcomes/settings", params: { require_minutes: false }, headers: headers, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+      expect(TaskReport.minutes_required?(account.reload)).to be(true)
+    end
+
+    it 'al concluir, el tiempo del reporte suma a las horas reales del caso, una sola vez' do
+      report(task, 'task', minutes: 90)
+      conclude(task)
+
+      entry = ticket.time_entries.report.sole
+      expect(entry).to have_attributes(minutes: 90, user_id: agent.id, task_report_id: TaskReport.last.id)
+      expect(ticket.reload.actual_hours.to_f).to eq(1.5)
+
+      TaskReport.last.send(:log_time)
+      expect(ticket.time_entries.count).to eq(1)
+    end
+
+    it 'la actividad con caso también suma; sin caso, no deja entrada' do
+      activity(case_ticket_id: ticket.id, minutes: 30)
+      activity(contact_id: contact.id, minutes: 45)
+
+      expect(ticket.reload.actual_hours.to_f).to eq(0.5)
+      expect(CaseTimeEntry.where(task_report_id: TaskReport.last.id)).to be_empty
+    end
+
+    it 'propone lo estimado de la tarea y lo planeado de la tarea agendada' do
+      task.update!(estimated_minutes: 40)
+      get "#{api}/task_reports/suggestion", params: { item_type: 'task', item_id: task.id }, headers: headers
+      expect(response.parsed_body).to eq('minutes' => 40, 'required' => true)
+
+      get "#{api}/task_reports/suggestion", params: { item_type: 'meeting', item_id: meeting.id }, headers: headers
+      expect(response.parsed_body['minutes']).to eq(60)
+    end
+
+    it 'la lista trae el total y los minutos por persona' do
+      activity(minutes: 20)
+      activity(minutes: 40)
+
+      get "#{api}/task_reports", params: { user_id: agent.id }, headers: headers
+      meta = response.parsed_body['meta']
+      expect(meta['total_minutes']).to eq(60)
+      expect(meta['by_user']).to eq([{ 'id' => agent.id, 'name' => agent.name, 'minutes' => 60 }])
+      expect(response.parsed_body['task_reports'].pluck('minutes')).to eq([40, 20])
     end
   end
 

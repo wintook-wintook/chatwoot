@@ -66,7 +66,8 @@ RSpec.describe 'Quick Tasks API' do
 
   it 'se completa y se borra' do
     task = create_task(title: 'Hacer')
-    post "/api/v1/accounts/#{account.id}/task_reports", params: { item_type: 'task', item_id: task.id, content: 'Listo' }, headers: headers
+    post "/api/v1/accounts/#{account.id}/task_reports", params: { item_type: 'task', item_id: task.id, content: 'Listo', minutes: 15 },
+                                                        headers: headers
 
     patch "#{base}/#{task.id}", params: { status: 'done' }, headers: headers, as: :json
     expect(task.reload).to be_done

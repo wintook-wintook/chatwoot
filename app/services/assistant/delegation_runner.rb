@@ -32,6 +32,32 @@ module Assistant::DelegationRunner
     raise Assistant::Executor::Refused, e.message
   end
 
+  # Seguimiento IA — lo crea con las mismas reglas que el botón del caso (AiFollowUps::Creator).
+  def run_follow_up(payload)
+    conversation = @tools.find_conversation(payload['conversation_id'])
+    ticket = payload['case_id'].present? ? @tools.cases.find(payload['case_id']) : nil
+    params = payload.slice('objective', 'starts_at', 'max_attempts', 'interval_value', 'interval_unit',
+                           'template_name', 'template_language', 'on_finish', 'replace')
+                    .merge('instructions' => payload['instruction'], 'time_zone' => @zone.tzinfo.name)
+    AiFollowUps::Creator.new(account: @account, user: @user, conversation: conversation, case_ticket: ticket,
+                             params: params).call
+    done(payload['replace'] ? "#{AiFollowUp::DISPLAY_NAME} cambiado (se canceló el anterior)" : "Seguimiento delegado a #{AiFollowUp::DISPLAY_NAME}",
+         ticket ? "#{base}/tickets/#{ticket.id}" : "#{base}/contacts/#{conversation.contact_id}")
+  rescue ArgumentError => e
+    raise Assistant::Executor::Refused, e.message
+  end
+
+  def run_follow_up_action(payload)
+    follow_up = @tools.visible_follow_up(payload['follow_up_id'])
+    action = payload['action'].to_s
+    raise Assistant::Executor::Refused, 'Acción no válida.' unless ACTION_LABELS.key?(action)
+    raise Assistant::Executor::Refused, "Está #{follow_up.status}: no se puede." unless follow_up.public_send("#{action}!", by: @user)
+
+    done("#{AiFollowUp::DISPLAY_NAME} #{ACTION_LABELS[action]}", "#{base}/contacts/#{follow_up.contact_id}")
+  rescue ArgumentError => e
+    raise Assistant::Executor::Refused, e.message
+  end
+
   private
 
   def tracking_attrs(payload, conversation, agent)

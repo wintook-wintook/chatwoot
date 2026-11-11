@@ -49,6 +49,8 @@ import {
 } from 'dashboard/helper/caseCommercial';
 import { formatHours } from 'dashboard/helper/caseWorkOrder';
 import { backQuery } from './backLink';
+import { NO_STEP_BADGE } from 'dashboard/helper/caseNextStep';
+import CaseAgentIcon from './CaseAgentIcon.vue'; // el robot: ¿un agente atiende su conversación?
 
 // Columnas por defecto del tablero cuando no hay un tipo de caso filtrado (así
 // que no hay columnas propias de un tipo que mostrar). ITIL dejó de ser un modo
@@ -115,6 +117,7 @@ export default {
     CaseTypeSelect,
     CaseScopeBar,
     CaseFineFilters,
+    CaseAgentIcon,
   },
   props: {
     // Plan-Casos E1 — clase de la ruta `tickets/:caseClass/board`:
@@ -128,6 +131,8 @@ export default {
       quickFilter: 'mine',
       slaOverdueOnly: false,
       committedOnly: false, // Plan-Metricas-Comercial — «Solo comprometidas»
+      noNextStepOnly: false, // casos abiertos sin tareas ni agenda
+      agentFilter: '', // '' | 'with' | 'none' — ¿un agente atiende su conversación?
       fine: emptyFineFilters(),
       // Plan-Casos E1.3 — cerrados en el tablero: hide | 7 | 30 | 90 | all.
       closedWindow: DEFAULT_BOARD_CLOSED,
@@ -156,6 +161,9 @@ export default {
     };
   },
   computed: {
+    noStepBadge() {
+      return NO_STEP_BADGE;
+    },
     ...mapGetters({
       boardTickets: 'caseTickets/getBoardTickets',
       boardUiFlags: 'caseTickets/getBoardUIFlags',
@@ -278,13 +286,21 @@ export default {
     },
   },
   mounted() {
+    this.$emitter.on('caseConflictResolved', this.onConflictResolved); // K1
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
     this.restoreState();
     this.loadBoard();
   },
+  beforeDestroy() {
+    this.$emitter.off('caseConflictResolved', this.onConflictResolved);
+  },
   methods: {
+    // K1 — tras resolver un conflicto, la lista o el tablero se recargan.
+    onConflictResolved() {
+      this.fetch();
+    },
     // Plan-Casos E1.2 — el Tablero comparte con la Lista (misma clase) el tipo,
     // ¿de quién?, el aviso de SLA, los filtros finos y la búsqueda: pasar de
     // una vista a otra, o salir y volver, conserva lo elegido.
@@ -295,6 +311,8 @@ export default {
       this.quickFilter = SCOPES.includes(st.scope) ? st.scope : 'mine';
       this.slaOverdueOnly = !!st.sla;
       this.committedOnly = !!st.committed;
+      this.noNextStepOnly = !!st.noNextStep;
+      this.agentFilter = ['with', 'none'].includes(st.agent) ? st.agent : '';
       this.fine = normalizeFineFilters(st.fine);
       const closed = st.board?.closed;
       this.closedWindow = BOARD_CLOSED_OPTIONS.includes(closed)
@@ -308,6 +326,8 @@ export default {
         scope: this.quickFilter,
         sla: this.slaOverdueOnly,
         committed: this.committedOnly,
+        noNextStep: this.noNextStepOnly,
+        agent: this.agentFilter,
         fine: this.fine,
         board: { closed: this.closedWindow },
       });
@@ -350,6 +370,8 @@ export default {
       // casos sin tipo; ver CaseTicket.of_class).
       f.case_class = this.caseClass;
       if (this.isCommercialBoard && this.committedOnly) f.committed = true;
+      if (this.noNextStepOnly) f.next_step = 'none';
+      if (this.agentFilter) f.agent = this.agentFilter;
       // Aviso rojo de Órdenes / Comercial (visitas / cierre vencido).
       if (this.slaOverdueOnly)
         Object.assign(f, classAlertParams(this.caseClass));
@@ -378,6 +400,14 @@ export default {
     },
     onCommittedChange(on) {
       this.committedOnly = on;
+      this.fetch();
+    },
+    onAgentChange(value) {
+      this.agentFilter = value;
+      this.fetch();
+    },
+    onNextStepChange(on) {
+      this.noNextStepOnly = on;
       this.fetch();
     },
     onFineChange(fine) {
@@ -430,6 +460,8 @@ export default {
             column,
             outcome: data.outcome || null,
             decision: extra,
+            // Varias cotizaciones abiertas: el servidor pide elegir la aceptada.
+            quotes: data.quotes || [],
           };
         } else if (data.requires_postpone) {
           this.postponeMove = { ticket, column };
@@ -497,6 +529,9 @@ export default {
         !['closed', 'cancelled'].includes(ticket.status) &&
         this.isPastDay(ticket.expected_close_at)
       );
+    },
+    noNextStep(ticket) {
+      return !!ticket.next_step && ticket.next_step.kind === 'none';
     },
     // Excepción que se muestra arriba a la derecha (lo normal no se marca).
     cardAlert(ticket) {
@@ -821,9 +856,13 @@ export default {
         :sla-only="slaOverdueOnly"
         :sla-count="slaOverdueCount"
         :committed-only="committedOnly"
+        :no-next-step-only="noNextStepOnly"
+        :agent-filter="agentFilter"
+        @agent="onAgentChange"
         @scope="onScopeChange"
         @sla="onSlaChange"
         @committed="onCommittedChange"
+        @nextStep="onNextStepChange"
       >
         <template #before>
           <!-- E1.1 — el tipo decide las columnas; el embudo exige uno -->
@@ -1113,6 +1152,17 @@ export default {
               {{ day(ticket.due_at) }}
             </div>
 
+            <!-- Sin tareas pendientes ni agenda: el caso se queda sin continuidad. -->
+            <div v-if="noNextStep(ticket)" class="mt-2">
+              <span
+                class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full"
+                :class="noStepBadge"
+                :title="$t('CASE_TICKETS.NEXT_STEP.NONE_HINT')"
+              >
+                <fluent-icon icon="alert" size="10" />
+                {{ $t('CASE_TICKETS.NEXT_STEP.NONE') }}
+              </span>
+            </div>
             <!-- Pie: prioridad (solo Alta / Urgente), naturaleza ITIL, responsable -->
             <div class="flex items-center gap-2 mt-2 text-xs">
               <span
@@ -1134,6 +1184,8 @@ export default {
               >
                 {{ kindLabel(ticket.ticket_kind) }}
               </span>
+              <!-- ¿Un agente atiende su conversación? Solo el robot. -->
+              <CaseAgentIcon :agent="ticket.agent" :size="13" />
               <span
                 v-if="assigneeName(ticket)"
                 class="inline-flex items-center min-w-0 gap-1.5 ml-auto text-slate-600 dark:text-slate-300"
@@ -1271,6 +1323,7 @@ export default {
       show
       :folio="outcomeMove.ticket.folio || `#${outcomeMove.ticket.id}`"
       :outcome="outcomeMove.outcome"
+      :quotes="outcomeMove.quotes"
       @close="outcomeMove = null"
       @confirm="confirmOutcomeMove"
     />

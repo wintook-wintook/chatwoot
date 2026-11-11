@@ -182,6 +182,24 @@ class ContactTracking < ApplicationRecord
   # ==============================================================================
   # Callbacks
   # ==============================================================================
+  # proyecto@crear_agente_conversando (F2, D1): el motor lee el Entrenamiento con los
+  # Datos fijos ya sustituidos (%EMPRESA% → Kontrolya) y sin la sección [DATOS FIJOS].
+  # Todo lo que le habla al modelo —respuesta, clasificador, seco, seguimientos— lee
+  # este atributo, así que es el único punto. Para escribirlo de vuelta sin perder las
+  # referencias, usar raw_complementary_prompt.
+  def complementary_prompt
+    raw = super
+    return raw if raw.blank?
+    return @expanded_prompt if @expanded_prompt_source.equal?(raw)
+
+    @expanded_prompt_source = raw
+    @expanded_prompt = ContactTrackings::PromptConstants.expand(raw)
+  end
+
+  def raw_complementary_prompt
+    self[:complementary_prompt]
+  end
+
   before_save :ensure_account_id
   before_save :ensure_whatsapp_templates_array  # ⭐ NUEVO
   after_create :schedule_job, if: :pending?
