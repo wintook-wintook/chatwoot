@@ -33,6 +33,7 @@ import CaseTicketPanel from 'dashboard/components/contacts/CaseTicket/CaseTicket
 // Seguimiento IA — el agente nuevo, botón aparte del de siempre (para probarlo sin tocarlo).
 import AiFollowUpModal from 'dashboard/views/gestorTickets/conversation/AiFollowUpModal.vue';
 import AiFollowUpStatus from 'dashboard/views/gestorTickets/conversation/AiFollowUpStatus.vue';
+import ReadyAgentStatus from 'dashboard/views/readyAgents/ReadyAgentStatus.vue'; // agente listo de la bandeja
 
 export default {
   components: {
@@ -51,6 +52,7 @@ export default {
     ContactTrackingModal,
     AiFollowUpModal,
     AiFollowUpStatus,
+    ReadyAgentStatus,
     Modal,
     CaseTicketPanel, // @tickets_cases
   },
@@ -456,6 +458,7 @@ export default {
         :conversation-id="conversationId"
         @change="aiFollowUpLive = $event"
       />
+      <ReadyAgentStatus class="mt-1.5" :conversation-id="conversationId" />
     </div>
     <!-- ============================================================ -->
     <!-- FIN: Botón Programar Seguimiento + Ticket                    -->

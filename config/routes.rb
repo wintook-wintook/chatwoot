@@ -541,6 +541,16 @@ Rails.application.routes.draw do
             post :my_day_ai, on: :collection  # Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA
           end
           get 'case_tasks/:id/history', to: 'task_histories#show', as: :case_task_history # historial de la tarea
+          # Agentes listos: puestos empaquetados que la empresa activa en sus bandejas
+          resources :ready_agents, only: [:index, :create, :update, :destroy] do
+            post :test, on: :collection # chat de prueba (no guarda ni manda nada)
+          end
+          resources :ready_agent_sessions, only: [:index] do
+            member do
+              patch :pause
+              patch :resume
+            end
+          end
           resources :case_types, only: [:index, :create, :update, :destroy] do
             post :change_class, on: :member # cambiar de clase: tipo nuevo + retirar el de antes
             resources :case_type_fields, only: [:index, :create, :update, :destroy], path: 'fields' # @tickets_cases 2K

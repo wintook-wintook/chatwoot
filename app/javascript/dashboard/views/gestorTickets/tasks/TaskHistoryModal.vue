@@ -217,7 +217,7 @@ export default {
 </script>
 
 <template>
-  <woot-modal :show="show" size="large" :on-close="() => $emit('close')">
+  <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
     <div class="flex flex-col h-[80vh] min-h-0">
       <woot-modal-header
         :header-title="task ? `${folio} · ${task.title}` : t('TITLE')"

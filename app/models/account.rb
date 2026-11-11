@@ -62,6 +62,8 @@ class Account < ApplicationRecord
   has_many :erp_collection_bots,     dependent: :destroy # @query_databases
   has_many :whatsapp_templates,      dependent: :destroy # @waba_templates
   has_many :ai_follow_up_presets,    dependent: :destroy # plantillas de seguimiento
+  has_many :ready_agents,            dependent: :destroy # agentes listos (puestos empaquetados)
+  has_many :ready_agent_sessions,    dependent: :destroy
   has_many :case_rules,         dependent: :destroy # @tickets_cases
   has_many :case_types,         dependent: :destroy # @tickets_cases
   has_many :case_services,      dependent: :destroy # @tickets_cases 2B

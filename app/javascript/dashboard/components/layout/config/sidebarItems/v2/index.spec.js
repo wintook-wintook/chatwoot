@@ -298,6 +298,7 @@ describe('Menú v2', () => {
     const agentes = menuFor(route('contact_trackings_agents'));
     expect(agentes.parentNav).toBe('agentes');
     expect(agentes.menuItems.map(i => i.label)).toEqual([
+      'READY_AGENTS',
       'AI_AGENT_LIST',
       'TRACKINGS',
       'KNOWLEDGE_SOURCES',

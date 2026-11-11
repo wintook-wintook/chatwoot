@@ -27,6 +27,7 @@ module Assistant::Pages
     'task_reports' => ->(_t, _id) { 'tickets/task-reports' },
     'my_summary' => ->(_t, _id) { 'start' },
     'reports' => ->(_t, _id) { 'reports' },
+    'ready_agents' => ->(_t, _id) { 'tracking-dashboard/ready-agents' },
     'ai_agents' => ->(_t, _id) { 'tracking-dashboard/agents' },
     'trackings' => ->(_t, _id) { 'tracking-dashboard' },
     'campaigns' => ->(_t, _id) { 'tracking-dashboard/campaigns' },

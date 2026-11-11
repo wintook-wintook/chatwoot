@@ -342,5 +342,100 @@
         "ASK_PENDING": "Which conversations do I have unanswered?"
       }
     }
+  },
+  "READY_AGENTS": {
+    "TITLE": "Ready agents",
+    "SUBTITLE": "Agents that come built: turn them on, name them, pick their inbox and answer a few questions. They start attending on their own, no automations.",
+    "LOADING": "Loading…",
+    "LOAD_ERROR": "The agents could not be loaded.",
+    "SOON": "Coming soon",
+    "ON": "On",
+    "OFF": "Off",
+    "NO_INBOXES": "No inbox",
+    "LIVE": "attending {n}",
+    "TURN_OFF": "Turn off",
+    "TURN_ON": "Turn on",
+    "ACTIVATE": "Activate",
+    "SAVED": "Agent saved",
+    "SAVE_ERROR": "The agent could not be saved.",
+    "DELETE_CONFIRM": "Delete the agent «{name}»? It stops attending its inboxes.",
+    "NEW_TITLE": "Activate · {title}",
+    "EDIT_TITLE": "Agent «{name}»",
+    "MODAL_SUBTITLE": "Answer the left side and test it on the right: you are the customer.",
+    "CANCEL": "Cancel",
+    "SAVE": "Save",
+    "FIELDS": {
+      "NAME": "Agent name",
+      "NAME_PLACEHOLDER": "E.g. Sofi",
+      "TONE": "Tone",
+      "INBOXES": "Inboxes it attends",
+      "INBOX_TAKEN": "This inbox already has another ready agent on",
+      "OBJECTIVE": "When the prospect qualifies…",
+      "QUESTIONS": "What does it ask to qualify them?",
+      "QUESTIONS_PLACEHOLDER": "E.g. what they need, when, city, budget",
+      "QUALIFIED_WHEN": "Qualified when…",
+      "QUALIFIED_PLACEHOLDER": "E.g. said what they need and want it this month",
+      "DISCARD_WHEN": "Discarded when…",
+      "DISCARD_PLACEHOLDER": "E.g. looking for a job or not interested",
+      "HANDOFF_USER": "Hand off to (person)",
+      "HANDOFF_TEAM": "or team",
+      "NOBODY": "— Nobody: stays unassigned —",
+      "NO_TEAM": "— No team —",
+      "ONLY_PROSPECTS": "Only prospects: customers are handed to their owner",
+      "CLIENT_USER": "Customer without owner: hand off to",
+      "CLIENT_TEAM": "or team",
+      "INSTRUCTIONS": "Extra instructions (optional)",
+      "INSTRUCTIONS_PLACEHOLDER": "E.g. do not give installation prices",
+      "ENABLED": "On: starts attending these inboxes when saved"
+    },
+    "TONES": {
+      "cercano": "Friendly",
+      "formal": "Formal",
+      "directo": "Direct"
+    },
+    "OBJECTIVES": {
+      "handoff": "Hand them to a team member",
+      "opportunity": "Create the opportunity for the team",
+      "collect": "Only collect their data and answers"
+    },
+    "TEST": {
+      "TITLE": "Test chat",
+      "RESET": "Start over",
+      "HINT": "Write as a prospect would. Nothing is saved or sent.",
+      "NO_MESSAGE": "(no reply)",
+      "ERROR": "Could not test.",
+      "TYPING": "Typing…",
+      "PLACEHOLDER": "Write as the customer…",
+      "SEND": "Send",
+      "TOOL": "⚙ {tool}",
+      "DECISION": "→ {decision}"
+    },
+    "TOOLS": {
+      "buscar_respuesta_predefinida": "Searched canned responses",
+      "buscar_en_catalogo": "Searched the catalog",
+      "guardar_respuesta": "Saved",
+      "actualizar_contacto": "Updated the contact",
+      "prospecto_calificado": "Qualified",
+      "descartar": "Discarded",
+      "pasar_a_humano": "Hand off to a person"
+    },
+    "DECISIONS": {
+      "prospecto_calificado": "Qualified prospect: handed to the team",
+      "descartar": "Discarded: the conversation is resolved",
+      "pasar_a_humano": "Hand off to a person"
+    },
+    "SESSION": {
+      "FAILED": "Could not change it.",
+      "PAUSE": "Pause",
+      "RESUME": "Resume",
+      "STATUS": {
+        "active": "attending",
+        "paused": "paused",
+        "qualified": "qualified",
+        "handed_off": "handed to a person",
+        "discarded": "discarded",
+        "client": "was a customer: handed to their owner"
+      }
+    }
   }
 }
