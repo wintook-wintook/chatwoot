@@ -29,6 +29,34 @@ RSpec.describe 'Ready Agents API' do
     expect(ReadyAgent.last.settings).to include('objective' => 'handoff', 'only_prospects' => false)
   end
 
+  it 'guarda el negocio, las preguntas armadas, las objeciones y los datos a juntar' do
+    settings = params[:ready_agent][:settings].merge(
+      business_what: 'Paneles', business_use_catalog: 'true',
+      qualify: [{ key: 'need', on: 'true', text: '' }, { key: 'budget', on: 'false', text: '¿Cuánto pagas?' }],
+      objections: [{ objection: 'Está caro', answer: 'Se paga solo' }], required_contact: %w[email]
+    )
+    post "#{api}/ready_agents", params: { ready_agent: params[:ready_agent].merge(settings: settings) },
+                                headers: admin.create_new_auth_token, as: :json
+
+    saved = ReadyAgent.last.settings
+    expect(saved).to include('business_what' => 'Paneles', 'business_use_catalog' => true, 'required_contact' => ['email'],
+                             'objections' => [{ 'objection' => 'Está caro', 'answer' => 'Se paga solo' }])
+    expect(saved['qualify']).to eq([{ 'key' => 'need', 'on' => true, 'text' => '' },
+                                    { 'key' => 'budget', 'on' => false, 'text' => '¿Cuánto pagas?' }])
+  end
+
+  it 'prenderlo o apagarlo desde la lista no borra su configuración' do
+    post "#{api}/ready_agents", params: params, headers: admin.create_new_auth_token, as: :json
+    agent = ReadyAgent.last
+
+    patch "#{api}/ready_agents/#{agent.id}", params: { ready_agent: { enabled: false } },
+                                             headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(agent.reload.enabled).to be(false)
+    expect(agent.settings).to include('objective' => 'handoff', 'questions' => 'qué busca', 'only_prospects' => false)
+  end
+
   it 'solo administradores' do
     get "#{api}/ready_agents", headers: agent_user.create_new_auth_token
     expect(response).to have_http_status(:forbidden)

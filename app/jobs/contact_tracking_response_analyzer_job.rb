@@ -37,6 +37,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   DEBUG_TAG            = ENV.fetch('TRACKING_DEBUG_TAG', 'false') == 'true'
   # proyecto@ai_agent_attachments: máximo de archivos adjuntados por respuesta ({{nombre}})
   MAX_DIRECTIVE_ATTACHMENTS = ENV.fetch('AI_AGENT_MAX_ATTACHMENTS', '5').to_i
+  # Mensajes del historial que ve la respuesta conversacional (los últimos).
+  HISTORY_LIMIT = 20
   # Directiva de adjunto: {{nombre}} (admite espacios internos: {{ catalogo }}). El nombre
   # referencia un archivo del Agente IA (ai_agent_attachments) por su `name`.
   ATTACHMENT_DIRECTIVE = /\{\{\s*([a-zA-Z0-9_-]+)\s*\}\}/
@@ -721,20 +723,25 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       cp_raw = ContactTrackings::WelcomeMessage.strip(ContactTrackings::RouteMap.strip(tracking.complementary_prompt.to_s))
       # proyecto@bot_seguimiento_calendar — @agendar_calendar no debe filtrarse al LLM conversacional
       clean_cp = KnowledgeBase::Directives.strip_tokens(cp_raw).gsub(/@agendar_calendar\b(?:\s*\([^)]*\))?/i, '').strip
-      scope_rule = branch_scope_rule(tracking, message)
-      clean_cp = "#{clean_cp}\n\n#{scope_rule}" if clean_cp.present? && scope_rule.present?
+      scope_rule = clean_cp.present? ? branch_scope_rule(tracking, message) : nil
 
+      # Lo fijo del agente (identidad e instrucciones) primero y lo de este contacto y este
+      # turno al final: OpenAI cobra con descuento el inicio idéntico de una llamada reciente
+      # (prompt caching, desde 1024 tokens). Antes el perfil, el objetivo y la cita iban antes
+      # de las instrucciones y el inicio cambiaba en cada mensaje.
       system_prompt = <<~SYSTEM.strip
         #{conversational_identity(tracking, clean_cp)}
 
+        #{clean_cp.present? ? "INSTRUCCIONES ADICIONALES:\n#{clean_cp}" : ''}
+        #{clean_cp.match?(ATTACHMENT_DIRECTIVE) ? 'ENVÍO DE ARCHIVOS: Para enviar un archivo al cliente, escribe la directiva EXACTA (por ejemplo {{nombre}}) dentro de tu respuesta, tal cual y sin comillas; el sistema la sustituirá por el archivo adjunto. No la describas ni la traduzcas.' : ''}
+
+        #{scope_rule}
         #{contact_profile}
         OBJETIVO DE LA CONVERSACIÓN: #{tracking.objective}
         ESTADO DE LA CITA: #{appointment_state_summary(tracking, message)} (si el cliente pregunta por su cita, respóndele con esta fecha/hora exacta; no inventes ni ofrezcas horarios nuevos)
         #{next_contact_line}
         #{tracking.ai_context.present? ? "BASE DE CONOCIMIENTO:\n#{tracking.ai_context.truncate(800)}\n" : ''}
-        #{clean_cp.present? ? "INSTRUCCIONES ADICIONALES:\n#{clean_cp}" : ''}
         #{ContactTrackings::ConversationVariables.rule_for(tracking, message.conversation)}
-        #{clean_cp.match?(ATTACHMENT_DIRECTIVE) ? 'ENVÍO DE ARCHIVOS: Para enviar un archivo al cliente, escribe la directiva EXACTA (por ejemplo {{nombre}}) dentro de tu respuesta, tal cual y sin comillas; el sistema la sustituirá por el archivo adjunto. No la describas ni la traduzcas.' : ''}
       SYSTEM
 
       user_prompt = <<~USER.strip
@@ -2390,7 +2397,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     messages.map do |msg|
       sender = msg.incoming? ? 'Cliente' : 'Bot'
-      "#{sender}: #{message_text_for_ai(msg).truncate(120)}"
+      "#{sender}: #{message_text_for_ai(msg, with_file_text: false).truncate(120)}"
     end.join("\n")
   rescue StandardError
     ''
@@ -2402,14 +2409,19 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     messages = Message.where(conversation_id: tracking.conversation_id)
                       .where('created_at > ?', tracking.created_at)
                       .where(message_type: [0, 1])
-                      .order(created_at: :asc)
-                      .limit(20)
+                      .reorder(created_at: :desc)
+                      .limit(HISTORY_LIMIT)
+                      .reverse
 
     return '' if messages.empty?
 
+    # Los ÚLTIMOS HISTORY_LIMIT, de viejo a nuevo. Antes eran los primeros 20 desde que empezó
+    # el seguimiento: en una conversación larga el modelo leía lo viejo y no lo reciente.
+    # El adjunto va solo con su nombre (with_file_text: false): el texto se cortaba a 200
+    # caracteres y aun así se extraía (o se reintentaba con OpenAI) en cada mensaje.
     lines = messages.map do |msg|
       sender = msg.incoming? ? 'Cliente' : 'Bot'
-      "[#{msg.created_at.strftime('%d/%m %H:%M')}] #{sender}: #{message_text_for_ai(msg).truncate(200)}"
+      "[#{msg.created_at.strftime('%d/%m %H:%M')}] #{sender}: #{message_text_for_ai(msg, with_file_text: false).truncate(200)}"
     end
 
     "HISTORIAL DE CONVERSACIÓN:\n#{lines.join("\n")}"
@@ -2422,7 +2434,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     message.content.present? || message.attachments.present?
   end
 
-  def message_text_for_ai(message)
+  def message_text_for_ai(message, with_file_text: true)
     parts = []
     parts << message.content.strip if message.content.present?
 
@@ -2434,7 +2446,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       when 'file'
         fname = att.file&.blob&.filename.to_s.presence || 'documento'
         # proyecto@solicitudes, pieza 7: el texto del PDF/Excel/Word, no solo su nombre.
-        texto = ContactTrackings::AttachmentText.for(att)
+        texto = ContactTrackings::AttachmentText.for(att) if with_file_text
         parts << "[archivo adjunto: #{fname}]#{"\n#{texto}" if texto.present?}"
       when 'location'
         parts << "[ubicación compartida: #{att.coordinates_lat}, #{att.coordinates_long}]"

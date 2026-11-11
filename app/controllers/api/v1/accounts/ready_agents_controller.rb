@@ -11,7 +11,10 @@
 class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseController
   SETTINGS = %w[objective questions qualified_when discard_when tone instructions handoff_user_id handoff_team_id
                 client_user_id client_team_id only_prospects case_type_id appointment_minutes appointment_kind
-                appointment_location].freeze
+                appointment_location business_what business_who business_coverage business_why business_practical
+                business_use_catalog].freeze
+  LISTS = { appointment_user_ids: [], required_contact: [], qualify: %i[key on text], objections: %i[objection answer] }.freeze
+  BOOLEANS = %w[only_prospects business_use_catalog].freeze
   MAX_TEST_MESSAGES = 30
 
   before_action :require_admin
@@ -59,12 +62,21 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
     @agent = Current.account.ready_agents.find(params[:id])
   end
 
+  # Sin `settings` en el pedido (p. ej. el interruptor de prender/apagar de la lista) no se
+  # tocan: antes se guardaban vacías y el agente perdía toda su configuración.
   def agent_params
     raw = params.require(:ready_agent)
-    permitted = raw.permit(:kind, :name, :enabled, inbox_ids: [])
-    settings = raw[:settings].respond_to?(:permit) ? raw[:settings].permit(*SETTINGS, appointment_user_ids: []).to_h : {}
-    settings['only_prospects'] = ActiveModel::Type::Boolean.new.cast(settings['only_prospects']) if settings.key?('only_prospects')
-    permitted.to_h.merge(settings: settings)
+    permitted = raw.permit(:kind, :name, :enabled, inbox_ids: []).to_h
+    return permitted unless raw[:settings].respond_to?(:permit)
+
+    settings = raw[:settings].permit(*SETTINGS, **LISTS).to_h
+    BOOLEANS.each { |key| settings[key] = boolean(settings[key]) if settings.key?(key) }
+    settings['qualify']&.each { |q| q['on'] = boolean(q['on']) }
+    permitted.merge(settings: settings)
+  end
+
+  def boolean(value)
+    ActiveModel::Type::Boolean.new.cast(value) || false
   end
 
   def test_history

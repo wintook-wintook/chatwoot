@@ -371,8 +371,8 @@
       "INBOXES": "Bandejas donde atiende",
       "INBOX_TAKEN": "Esta bandeja ya tiene otro agente listo prendido",
       "OBJECTIVE": "Cuando el prospecto califica…",
-      "QUESTIONS": "¿Qué le pregunta para calificarlo?",
-      "QUESTIONS_PLACEHOLDER": "Ej. qué busca, para cuándo, en qué ciudad, presupuesto",
+      "QUESTIONS": "Tus preguntas propias (opcional)",
+      "QUESTIONS_PLACEHOLDER": "Ej. ¿tienes techo de lámina o de concreto?",
       "QUALIFIED_WHEN": "Está calificado cuando…",
       "QUALIFIED_PLACEHOLDER": "Ej. dijo qué busca, es de Monterrey y lo quiere este mes",
       "DISCARD_WHEN": "Se descarta cuando…",
@@ -394,7 +394,8 @@
       "APPOINTMENT_KIND": "Tipo de cita",
       "APPOINTMENT_LOCATION": "Lugar o liga (opcional)",
       "APPOINTMENT_LOCATION_PLACEHOLDER": "Ej. Google Meet, sucursal Centro",
-      "APPOINTMENT_HINT": "Ofrece los horarios libres de su Google dentro del horario de atención de la bandeja (o lun–vie 9 a 18). La cita queda en la Agenda y en su Google, y la conversación se le asigna."
+      "APPOINTMENT_HINT": "Ofrece los horarios libres de su Google dentro del horario de atención de la bandeja (o lun–vie 9 a 18). La cita queda en la Agenda y en su Google, y la conversación se le asigna.",
+      "REQUIRED_CONTACT": "Datos que debe juntar antes de pasarlo"
     },
     "TONES": {
       "cercano": "Cercano (de tú)",
@@ -455,6 +456,76 @@
       "videollamada": "Videollamada",
       "visita": "Visita al cliente",
       "oficina": "En nuestra oficina"
+    },
+    "SECTIONS": {
+      "BUSINESS": "Tu negocio",
+      "BUSINESS_HINT": "Lo que el agente debe saber para explicar y para descartar a quien está fuera de zona o de lo que vendes.",
+      "QUALIFY": "Preguntas para calificar",
+      "QUALIFY_HINT": "Prende las que quieras y cambia su texto si quieres. Las hace una por una, en plática; cada respuesta queda guardada en la nota y en la oportunidad.",
+      "TEMPERATURE_HINT": "Al calificarlo lo marca como caliente (lo necesita pronto y tiene presupuesto o decide), tibio o frío, con su etiqueta. Así tu equipo atiende primero a los calientes.",
+      "OBJECTIONS": "Objeciones frecuentes",
+      "OBJECTIONS_HINT": "Lo que suelen decir para frenar la compra y cómo contestarlo. El agente usa la idea con sus palabras y no inventa descuentos.",
+      "HANDOFF": "Al pasarlo"
+    },
+    "BUSINESS": {
+      "WHAT": "Qué vendes",
+      "WHAT_PLACEHOLDER": "Ej. paneles solares e instalación para casas y negocios",
+      "USE_CATALOG": "Lo que vendo y sus precios están en mi Catálogo",
+      "WHO": "A quién le vendes (cliente ideal)",
+      "WHO_PLACEHOLDER": "Ej. casas con recibo de luz alto y negocios medianos",
+      "COVERAGE": "Dónde das servicio",
+      "COVERAGE_PLACEHOLDER": "Ej. Monterrey y área metropolitana",
+      "WHY": "Por qué elegirte",
+      "WHY_PLACEHOLDER": "Ej. 10 años de garantía, instalación en 5 días, financiamiento",
+      "PRACTICAL": "Precios desde, formas de pago y tiempos",
+      "PRACTICAL_PLACEHOLDER": "Ej. desde $45,000; tarjeta a 12 meses; entrega en 2 semanas"
+    },
+    "QUALIFY": {
+      "need": {
+        "LABEL": "Qué necesita y para qué",
+        "ASK": "¿Qué necesitas y para qué lo quieres?"
+      },
+      "when": {
+        "LABEL": "Para cuándo",
+        "ASK": "¿Para cuándo lo necesitas?"
+      },
+      "budget": {
+        "LABEL": "Presupuesto",
+        "ASK": "¿Tienes un presupuesto aproximado?"
+      },
+      "decides": {
+        "LABEL": "Quién decide",
+        "ASK": "¿Tú decides la compra o alguien más?"
+      },
+      "location": {
+        "LABEL": "Ubicación",
+        "ASK": "¿En qué ciudad o zona estás?"
+      },
+      "quantity": {
+        "LABEL": "Cantidad o tamaño",
+        "ASK": "¿Qué cantidad o tamaño necesitas?"
+      },
+      "source": {
+        "LABEL": "Cómo nos conoció",
+        "ASK": "¿Cómo nos conociste?"
+      }
+    },
+    "OBJECTIONS": {
+      "OBJECTION_PLACEHOLDER": "Ej. «está caro»",
+      "ANSWER_PLACEHOLDER": "Ej. se paga solo en 4 años con el ahorro y hay financiamiento",
+      "ADD": "+ Agregar objeción",
+      "REMOVE": "Quitar"
+    },
+    "CONTACT_FIELDS": {
+      "name": "Nombre",
+      "email": "Correo",
+      "company": "Empresa",
+      "city": "Ciudad"
+    },
+    "TEMPERATURES": {
+      "caliente": "🔥 caliente",
+      "tibio": "🌤 tibio",
+      "frio": "❄️ frío"
     }
   }
 }

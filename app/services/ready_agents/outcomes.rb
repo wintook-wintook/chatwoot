@@ -8,8 +8,12 @@
 #                          pasarlo a la persona o equipo, o crear la oportunidad
 #   descartar            → nota con el motivo y la conversación se resuelve
 #   pasar_a_humano       → nota con el motivo y se pasa a la persona o equipo
+# Con temperatura (caliente, tibio, frío) queda la etiqueta «prospecto-caliente»… y va en la nota.
 class ReadyAgents::Outcomes
   QUALIFIED_LABEL = 'interesado'
+  TEMPERATURE_LABELS = { 'caliente' => ['prospecto-caliente', '#dc2626'], 'tibio' => ['prospecto-tibio', '#f59e0b'],
+                         'frio' => ['prospecto-frio', '#3b82f6'] }.freeze
+  TEMPERATURE_TEXT = { 'caliente' => '🔥 caliente', 'tibio' => '🌤 tibio', 'frio' => '❄️ frío' }.freeze
 
   def initialize(session, sender:)
     @session = session
@@ -18,7 +22,9 @@ class ReadyAgents::Outcomes
     @sender = sender
   end
 
-  def apply(decision, text)
+  def apply(decision, text, temperature = nil)
+    @temperature = temperature if TEMPERATURE_LABELS.key?(temperature.to_s)
+    add_temperature_label if @temperature
     case decision
     when 'prospecto_calificado' then qualified(text)
     when 'descartar' then discarded(text)
@@ -81,7 +87,7 @@ class ReadyAgents::Outcomes
   end
 
   def handed_off(reason)
-    note("Pasa a una persona: #{reason}")
+    note(["Pasa a una persona: #{reason}", answers_text].compact_blank.join("\n"))
     assign(handoff_target)
     finish('handed_off', reason)
   end
@@ -111,7 +117,17 @@ class ReadyAgents::Outcomes
   end
 
   def answers_text
-    @session.answers.to_h.map { |q, a| "• #{q}: #{a}" }.join("\n")
+    lines = @session.answers.to_h.map { |q, a| "• #{q}: #{a}" }
+    lines.unshift("Temperatura: #{TEMPERATURE_TEXT[@temperature]}") if @temperature
+    lines.join("\n")
+  end
+
+  # Solo una temperatura a la vez: la nueva reemplaza a la anterior.
+  def add_temperature_label
+    title, color = TEMPERATURE_LABELS[@temperature]
+    @conversation.account.labels.find_or_create_by!(title: title) { |label| label.color = color }
+    others = TEMPERATURE_LABELS.values.map(&:first) - [title]
+    @conversation.update_labels((@conversation.label_list - others) | [title])
   end
 
   # El caso comercial (el embudo la pasa sola a Convertido) con el responsable a quien se pasa.

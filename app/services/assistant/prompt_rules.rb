@@ -59,14 +59,16 @@ module Assistant::PromptRules
 
   # Las reglas del seguimiento y las plantillas de seguimiento de la cuenta (hasta 20; si hay más, follow_up_presets).
   def self.follow_up(account)
+    "#{FOLLOW_UP}\n#{follow_up_presets(account)}"
+  end
+
+  # Solo la lista de la cuenta: el asistente la pone al final del prompt (lo fijo va primero).
+  def self.follow_up_presets(account)
     presets = account.ai_follow_up_presets.ordered.limit(PRESETS_IN_PROMPT + 1).to_a
-    list = if presets.empty?
-             '  Plantillas de seguimiento de la cuenta: ninguna todavía.'
-           else
-             more = presets.size > PRESETS_IN_PROMPT ? ' (hay más: follow_up_presets)' : ''
-             "  Plantillas de seguimiento de la cuenta#{more}:\n" +
-               presets.first(PRESETS_IN_PROMPT).map { |p| "    • «#{p.name}»: #{p.summary}" }.join("\n")
-           end
-    "#{FOLLOW_UP}\n#{list}"
+    return '  Plantillas de seguimiento de la cuenta: ninguna todavía.' if presets.empty?
+
+    more = presets.size > PRESETS_IN_PROMPT ? ' (hay más: follow_up_presets)' : ''
+    "  Plantillas de seguimiento de la cuenta#{more}:\n" +
+      presets.first(PRESETS_IN_PROMPT).map { |p| "    • «#{p.name}»: #{p.summary}" }.join("\n")
   end
 end

@@ -10,6 +10,27 @@ import { useAlert } from 'dashboard/composables';
 import ReadyAgentsAPI from 'dashboard/api/readyAgents';
 
 const T = 'READY_AGENTS';
+// Preguntas armadas para calificar (el texto vacío = la pregunta de siempre, la del placeholder).
+const QUALIFY_KEYS = [
+  'need',
+  'when',
+  'budget',
+  'decides',
+  'location',
+  'quantity',
+  'source',
+];
+const CONTACT_FIELDS = ['name', 'email', 'company', 'city'];
+const defaultQualify = () =>
+  QUALIFY_KEYS.map(key => ({ key, on: key === 'need', text: '' }));
+// Lo guardado + las que falten (agentes de antes o preguntas nuevas), en el orden del catálogo.
+const mergeQualify = saved => {
+  if (!Array.isArray(saved) || !saved.length) return defaultQualify();
+  return defaultQualify().map(base => {
+    const row = saved.find(q => q.key === base.key);
+    return row ? { ...base, on: !!row.on, text: row.text || '' } : base;
+  });
+};
 const blank = kind => ({
   kind,
   name: '',
@@ -32,6 +53,17 @@ const blank = kind => ({
     appointment_minutes: '30',
     appointment_kind: 'llamada',
     appointment_location: '',
+    // Tu negocio
+    business_what: '',
+    business_use_catalog: false,
+    business_who: '',
+    business_coverage: '',
+    business_why: '',
+    business_practical: '',
+    // Calificar, objeciones y datos antes de pasarlo
+    qualify: defaultQualify(),
+    objections: [],
+    required_contact: [],
   },
 });
 
@@ -69,6 +101,9 @@ export default {
     tones() {
       return ['cercano', 'formal', 'directo'];
     },
+    contactFields() {
+      return CONTACT_FIELDS;
+    },
     canSave() {
       if (this.appointment && !this.form.settings.appointment_user_ids.length)
         return false;
@@ -93,7 +128,13 @@ export default {
         ? {
             ...base,
             ...JSON.parse(JSON.stringify(this.agent)),
-            settings: { ...base.settings, ...(this.agent.settings || {}) },
+            settings: {
+              ...base.settings,
+              ...JSON.parse(JSON.stringify(this.agent.settings || {})),
+              qualify: mergeQualify(this.agent.settings?.qualify),
+              objections: this.agent.settings?.objections || [],
+              required_contact: this.agent.settings?.required_contact || [],
+            },
           }
         : base;
       this.chat = [];
@@ -113,6 +154,18 @@ export default {
         .map(String)
         .includes(String(id));
     },
+    toggleContact(field) {
+      const list = this.form.settings.required_contact;
+      this.form.settings.required_contact = list.includes(field)
+        ? list.filter(f => f !== field)
+        : [...list, field];
+    },
+    addObjection() {
+      this.form.settings.objections.push({ objection: '', answer: '' });
+    },
+    removeObjection(index) {
+      this.form.settings.objections.splice(index, 1);
+    },
     toggleInbox(id) {
       const ids = this.form.inbox_ids;
       this.form.inbox_ids = ids.includes(id)
@@ -120,7 +173,17 @@ export default {
         : [...ids, id];
     },
     payload() {
-      return { ...this.form, name: this.form.name.trim() };
+      const { settings } = this.form;
+      return {
+        ...this.form,
+        name: this.form.name.trim(),
+        settings: {
+          ...settings,
+          objections: settings.objections.filter(
+            o => o.objection.trim() && o.answer.trim()
+          ),
+        },
+      };
     },
     async save() {
       if (!this.canSave || this.saving) return;
@@ -328,85 +391,239 @@ export default {
               {{ t('FIELDS.APPOINTMENT_HINT') }}
             </p>
           </div>
-          <label class="block">
-            <span class="field-label">{{ t('FIELDS.QUESTIONS') }}</span>
-            <textarea
-              v-model="form.settings.questions"
-              rows="2"
-              :placeholder="t('FIELDS.QUESTIONS_PLACEHOLDER')"
-            />
-          </label>
-          <div class="grid grid-cols-2 gap-3">
+          <!-- Tu negocio -->
+          <details class="ready-section" open>
+            <summary>{{ t('SECTIONS.BUSINESS') }}</summary>
+            <p class="section-hint">{{ t('SECTIONS.BUSINESS_HINT') }}</p>
             <label class="block">
-              <span class="field-label">{{ t('FIELDS.QUALIFIED_WHEN') }}</span>
+              <span class="field-label">{{ t('BUSINESS.WHAT') }}</span>
               <textarea
-                v-model="form.settings.qualified_when"
+                v-model="form.settings.business_what"
                 rows="2"
-                :placeholder="t('FIELDS.QUALIFIED_PLACEHOLDER')"
+                :placeholder="t('BUSINESS.WHAT_PLACEHOLDER')"
               />
             </label>
-            <label class="block">
-              <span class="field-label">{{ t('FIELDS.DISCARD_WHEN') }}</span>
+            <label
+              class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
+            >
+              <input
+                v-model="form.settings.business_use_catalog"
+                type="checkbox"
+                class="!m-0"
+              />
+              {{ t('BUSINESS.USE_CATALOG') }}
+            </label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="block">
+                <span class="field-label">{{ t('BUSINESS.WHO') }}</span>
+                <textarea
+                  v-model="form.settings.business_who"
+                  rows="2"
+                  :placeholder="t('BUSINESS.WHO_PLACEHOLDER')"
+                />
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('BUSINESS.COVERAGE') }}</span>
+                <textarea
+                  v-model="form.settings.business_coverage"
+                  rows="2"
+                  :placeholder="t('BUSINESS.COVERAGE_PLACEHOLDER')"
+                />
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('BUSINESS.WHY') }}</span>
+                <textarea
+                  v-model="form.settings.business_why"
+                  rows="2"
+                  :placeholder="t('BUSINESS.WHY_PLACEHOLDER')"
+                />
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('BUSINESS.PRACTICAL') }}</span>
+                <textarea
+                  v-model="form.settings.business_practical"
+                  rows="2"
+                  :placeholder="t('BUSINESS.PRACTICAL_PLACEHOLDER')"
+                />
+              </label>
+            </div>
+          </details>
+
+          <!-- Preguntas para calificar -->
+          <details class="ready-section" open>
+            <summary>{{ t('SECTIONS.QUALIFY') }}</summary>
+            <p class="section-hint">{{ t('SECTIONS.QUALIFY_HINT') }}</p>
+            <div
+              v-for="q in form.settings.qualify"
+              :key="q.key"
+              class="flex items-center gap-2"
+            >
+              <input v-model="q.on" type="checkbox" class="!m-0 shrink-0" />
+              <span
+                class="w-36 text-sm shrink-0"
+                :class="
+                  q.on ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400'
+                "
+              >
+                {{ t(`QUALIFY.${q.key}.LABEL`) }}
+              </span>
+              <input
+                v-model="q.text"
+                type="text"
+                class="flex-1 !mb-0 h-8 text-sm"
+                :disabled="!q.on"
+                :placeholder="t(`QUALIFY.${q.key}.ASK`)"
+              />
+            </div>
+            <label class="block mt-1">
+              <span class="field-label">{{ t('FIELDS.QUESTIONS') }}</span>
               <textarea
-                v-model="form.settings.discard_when"
+                v-model="form.settings.questions"
                 rows="2"
-                :placeholder="t('FIELDS.DISCARD_PLACEHOLDER')"
+                :placeholder="t('FIELDS.QUESTIONS_PLACEHOLDER')"
               />
             </label>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <label class="block">
-              <span class="field-label">{{ t('FIELDS.HANDOFF_USER') }}</span>
-              <select v-model="form.settings.handoff_user_id">
-                <option value="">{{ t('FIELDS.NOBODY') }}</option>
-                <option v-for="a in agents" :key="a.id" :value="a.id">
-                  {{ a.name }}
-                </option>
-              </select>
-            </label>
-            <label class="block">
-              <span class="field-label">{{ t('FIELDS.HANDOFF_TEAM') }}</span>
-              <select v-model="form.settings.handoff_team_id">
-                <option value="">{{ t('FIELDS.NO_TEAM') }}</option>
-                <option v-for="team in teams" :key="team.id" :value="team.id">
-                  {{ team.name }}
-                </option>
-              </select>
-            </label>
-          </div>
-          <label
-            class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
+            <div class="grid grid-cols-2 gap-3">
+              <label class="block">
+                <span class="field-label">{{
+                  t('FIELDS.QUALIFIED_WHEN')
+                }}</span>
+                <textarea
+                  v-model="form.settings.qualified_when"
+                  rows="2"
+                  :placeholder="t('FIELDS.QUALIFIED_PLACEHOLDER')"
+                />
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('FIELDS.DISCARD_WHEN') }}</span>
+                <textarea
+                  v-model="form.settings.discard_when"
+                  rows="2"
+                  :placeholder="t('FIELDS.DISCARD_PLACEHOLDER')"
+                />
+              </label>
+            </div>
+            <p class="section-hint">{{ t('SECTIONS.TEMPERATURE_HINT') }}</p>
+          </details>
+
+          <!-- Objeciones -->
+          <details
+            class="ready-section"
+            :open="form.settings.objections.length > 0"
           >
-            <input
-              v-model="form.settings.only_prospects"
-              type="checkbox"
-              class="!m-0"
-            />
-            {{ t('FIELDS.ONLY_PROSPECTS') }}
-          </label>
-          <div
-            v-if="form.settings.only_prospects"
-            class="grid grid-cols-2 gap-3"
-          >
-            <label class="block">
-              <span class="field-label">{{ t('FIELDS.CLIENT_USER') }}</span>
-              <select v-model="form.settings.client_user_id">
-                <option value="">{{ t('FIELDS.NOBODY') }}</option>
-                <option v-for="a in agents" :key="a.id" :value="a.id">
-                  {{ a.name }}
-                </option>
-              </select>
+            <summary>{{ t('SECTIONS.OBJECTIONS') }}</summary>
+            <p class="section-hint">{{ t('SECTIONS.OBJECTIONS_HINT') }}</p>
+            <div
+              v-for="(o, i) in form.settings.objections"
+              :key="i"
+              class="flex flex-col gap-1 p-2 rounded-md bg-slate-25 dark:bg-slate-800"
+            >
+              <div class="flex items-center gap-2">
+                <input
+                  v-model="o.objection"
+                  type="text"
+                  class="flex-1 !mb-0 h-8 text-sm"
+                  :placeholder="t('OBJECTIONS.OBJECTION_PLACEHOLDER')"
+                />
+                <button
+                  type="button"
+                  class="px-1 text-slate-400 hover:text-red-600"
+                  :title="t('OBJECTIONS.REMOVE')"
+                  @click="removeObjection(i)"
+                >
+                  <fluent-icon icon="dismiss" size="14" />
+                </button>
+              </div>
+              <textarea
+                v-model="o.answer"
+                rows="2"
+                class="!mb-0 text-sm"
+                :placeholder="t('OBJECTIONS.ANSWER_PLACEHOLDER')"
+              />
+            </div>
+            <button
+              type="button"
+              class="self-start text-xs text-woot-600 hover:underline"
+              @click="addObjection"
+            >
+              {{ t('OBJECTIONS.ADD') }}
+            </button>
+          </details>
+
+          <!-- Al pasarlo -->
+          <details class="ready-section" open>
+            <summary>{{ t('SECTIONS.HANDOFF') }}</summary>
+            <span class="field-label">{{ t('FIELDS.REQUIRED_CONTACT') }}</span>
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                v-for="field in contactFields"
+                :key="field"
+                type="button"
+                class="px-2.5 py-1 text-xs border rounded-full"
+                :class="
+                  form.settings.required_contact.includes(field)
+                    ? 'border-woot-500 bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200'
+                    : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'
+                "
+                @click="toggleContact(field)"
+              >
+                {{ t(`CONTACT_FIELDS.${field}`) }}
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="block">
+                <span class="field-label">{{ t('FIELDS.HANDOFF_USER') }}</span>
+                <select v-model="form.settings.handoff_user_id">
+                  <option value="">{{ t('FIELDS.NOBODY') }}</option>
+                  <option v-for="a in agents" :key="a.id" :value="a.id">
+                    {{ a.name }}
+                  </option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('FIELDS.HANDOFF_TEAM') }}</span>
+                <select v-model="form.settings.handoff_team_id">
+                  <option value="">{{ t('FIELDS.NO_TEAM') }}</option>
+                  <option v-for="team in teams" :key="team.id" :value="team.id">
+                    {{ team.name }}
+                  </option>
+                </select>
+              </label>
+            </div>
+            <label
+              class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
+            >
+              <input
+                v-model="form.settings.only_prospects"
+                type="checkbox"
+                class="!m-0"
+              />
+              {{ t('FIELDS.ONLY_PROSPECTS') }}
             </label>
-            <label class="block">
-              <span class="field-label">{{ t('FIELDS.CLIENT_TEAM') }}</span>
-              <select v-model="form.settings.client_team_id">
-                <option value="">{{ t('FIELDS.NO_TEAM') }}</option>
-                <option v-for="team in teams" :key="team.id" :value="team.id">
-                  {{ team.name }}
-                </option>
-              </select>
-            </label>
-          </div>
+            <div
+              v-if="form.settings.only_prospects"
+              class="grid grid-cols-2 gap-3"
+            >
+              <label class="block">
+                <span class="field-label">{{ t('FIELDS.CLIENT_USER') }}</span>
+                <select v-model="form.settings.client_user_id">
+                  <option value="">{{ t('FIELDS.NOBODY') }}</option>
+                  <option v-for="a in agents" :key="a.id" :value="a.id">
+                    {{ a.name }}
+                  </option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('FIELDS.CLIENT_TEAM') }}</span>
+                <select v-model="form.settings.client_team_id">
+                  <option value="">{{ t('FIELDS.NO_TEAM') }}</option>
+                  <option v-for="team in teams" :key="team.id" :value="team.id">
+                    {{ team.name }}
+                  </option>
+                </select>
+              </label>
+            </div>
+          </details>
           <label class="block">
             <span class="field-label">{{ t('FIELDS.INSTRUCTIONS') }}</span>
             <textarea
@@ -482,6 +699,11 @@ export default {
                       decision: t(`DECISIONS.${m.decision[0]}`),
                     })
                   }}
+                  {{
+                    m.decision[2]
+                      ? ` · ${t(`TEMPERATURES.${m.decision[2]}`)}`
+                      : ''
+                  }}
                 </span>
               </div>
             </div>
@@ -538,6 +760,24 @@ export default {
 
   textarea {
     @apply mb-0 text-sm;
+  }
+
+  // Secciones plegables: Tu negocio, Preguntas, Objeciones, Al pasarlo.
+  .ready-section {
+    @apply flex flex-col gap-2 p-3 border rounded-lg border-slate-100 dark:border-slate-700;
+
+    summary {
+      @apply text-sm font-medium cursor-pointer text-slate-800 dark:text-slate-100;
+    }
+
+    // <details> no aplica `gap` en todos los navegadores: el aire va entre hijos.
+    > :not(summary) + * {
+      @apply mt-2;
+    }
+
+    .section-hint {
+      @apply m-0 text-xs text-slate-500;
+    }
   }
 }
 </style>

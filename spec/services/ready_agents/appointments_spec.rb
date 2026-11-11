@@ -83,4 +83,29 @@ RSpec.describe ReadyAgents::Appointments do
     agent.update!(settings: agent.settings.merge('objective' => 'handoff'))
     expect(described_class.available?(agent)).to be(false)
   end
+
+  it 'si el horario se ocupó, de una vez ofrece otros' do
+    other = start + 1.hour
+    allow_any_instance_of(ContactTrackings::AvailabilitySlotService).to receive(:slot_for).and_return(nil) # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(ContactTrackings::AvailabilitySlotService) # rubocop:disable RSpec/AnyInstance
+      .to receive(:call).and_return([slot, slot.merge(slot: other, end_time: other + 30.minutes)])
+
+    result = described_class.new(agent, session: session).book(start.strftime('%Y-%m-%dT%H:%M'), nil)
+    expect(result[:error]).to include('ocupar')
+    expect(result[:horarios].pluck(:inicio)).to eq([other.strftime('%Y-%m-%dT%H:%M')])
+    expect(session.reload.case_meeting).to be_nil
+  end
+
+  it 'si no puede leer el calendario, no dice «ocupado»: lo pasa a una persona y dice de quién reconectar' do
+    allow_any_instance_of(ContactTrackings::AvailabilitySlotService).to receive(:slot_for).and_return(nil) # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(ContactTrackings::AvailabilitySlotService).to receive(:call).and_return([]) # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(ContactTrackings::AvailabilitySlotService).to receive_messages( # rubocop:disable RSpec/AnyInstance
+      calendars_unreadable?: true, unreadable_users: ['Ana López']
+    )
+
+    result = described_class.new(agent, session: session).book(start.strftime('%Y-%m-%dT%H:%M'), nil)
+    expect(result).to include(sin_agenda: true)
+    expect(result[:motivo]).to include('Ana López', 'reconéctalo')
+    expect(described_class.new(agent, session: session).slots).to include(sin_agenda: true)
+  end
 end
