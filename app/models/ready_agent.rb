@@ -25,23 +25,9 @@
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (created_by_id => users.id)
 #
-# Agente listo: un puesto empaquetado (el de «Atención a prospectos» por ahora) que la empresa
-# activa con su nombre, sus bandejas y lo que contesta en el activador. Atiende solo: no usa
-# automatizaciones. Un agente listo por bandeja.
-#
-# settings (lo que se contesta al activarlo):
-#   objective        handoff (pasarlo a una persona) | opportunity (crear la oportunidad) | collect (solo datos)
-#   questions        qué le pregunta para calificarlo
-#   qualified_when   cuándo está calificado
-#   discard_when     cuándo se descarta
-#   tone             cercano | formal | directo
-#   instructions     indicaciones adicionales
-#   handoff_user_id / handoff_team_id   a quién pasa al prospecto calificado (o cuando pide una persona)
-#   client_user_id / client_team_id     a quién pasa a quien ya es cliente si no tiene responsable fijo
-#   only_prospects   true: a quien ya es cliente no lo atiende, lo pasa a una persona
 class ReadyAgent < ApplicationRecord
   KINDS = %w[prospects].freeze
-  OBJECTIVES = %w[handoff opportunity collect].freeze
+  OBJECTIVES = %w[handoff opportunity collect appointment].freeze
   TONES = %w[cercano formal directo].freeze
 
   belongs_to :account

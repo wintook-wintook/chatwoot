@@ -15,7 +15,14 @@ export default {
   name: 'ReadyAgentsIndex',
   components: { ReadyAgentModal },
   data() {
-    return { catalog: [], agents: [], inboxes: [], loading: true, modal: null };
+    return {
+      catalog: [],
+      agents: [],
+      inboxes: [],
+      calendarUsers: [],
+      loading: true,
+      modal: null,
+    };
   },
   mounted() {
     this.load();
@@ -30,6 +37,7 @@ export default {
         this.catalog = data.catalog;
         this.agents = data.agents;
         this.inboxes = data.inboxes;
+        this.calendarUsers = data.calendar_users || [];
       } catch (e) {
         useAlert(e.response?.data?.error || this.t('LOAD_ERROR'));
       } finally {
@@ -191,6 +199,7 @@ export default {
       :agent="modal.agent"
       :inboxes="inboxes"
       :taken-inbox-ids="takenFor(modal.agent)"
+      :calendar-users="calendarUsers"
       @close="modal = null"
       @saved="onSaved"
     />

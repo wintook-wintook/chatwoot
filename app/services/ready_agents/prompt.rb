@@ -9,7 +9,8 @@ class ReadyAgents::Prompt
   OBJECTIVES = {
     'handoff' => 'pasárselo a una persona del equipo para que lo atienda',
     'opportunity' => 'crearle la oportunidad de venta y pasársela al equipo',
-    'collect' => 'juntar sus datos y sus respuestas para que el equipo le dé seguimiento'
+    'collect' => 'juntar sus datos y sus respuestas para que el equipo le dé seguimiento',
+    'appointment' => 'agendarle una cita'
   }.freeze
   TONES = { 'cercano' => 'cercano y amable, de tú', 'formal' => 'formal y respetuoso, de usted',
             'directo' => 'directo y práctico, de tú' }.freeze
@@ -36,6 +37,7 @@ class ReadyAgents::Prompt
       - Se descarta cuando: #{@agent.setting(:discard_when).presence || 'no le interesa o no es lo que vendemos'}
       #{"- Indicaciones adicionales: #{@agent.setting(:instructions)}" if @agent.setting(:instructions).present?}
 
+      #{appointment_block}
       CLIENTE: #{contact_line}
       #{answers_block}
       Si no hay nada que decir en este turno, responde exactamente #{ReadyAgents::Runner::NO_MESSAGE}.
@@ -79,6 +81,22 @@ class ReadyAgents::Prompt
     return 'sin datos' unless contact
 
     [contact.name, contact.email, contact.phone_number, contact.additional_attributes.to_h['company_name']].compact_blank.join(' · ')
+  end
+
+  # Con el objetivo «agendarle una cita» y calendarios conectados.
+  def appointment_block
+    return '' unless ReadyAgents::Appointments.available?(@agent)
+
+    kind = @agent.setting(:appointment_kind).presence || 'llamada'
+    place = @agent.setting(:appointment_location).presence
+    <<~TEXT.strip
+      CITAS (#{kind}, #{@agent.setting(:appointment_minutes).presence || 30} min#{", #{place}" if place}):
+      - Cuando califique, ofrécele 2 o 3 horarios de ver_horarios (di día y hora como vienen en «texto»). Si pide
+        otro día u hora, ver_horarios con «desde». No ofrezcas horarios que no salieron de ver_horarios.
+      - Cuando elija uno, agendar_cita con ese «inicio» y confirma el día, la hora y con quién. No hace falta
+        llamar prospecto_calificado: agendar la cita ya lo califica.
+      - Si después quiere moverla o cancelarla: mover_cita o cancelar_cita.
+    TEXT
   end
 
   def answers_block

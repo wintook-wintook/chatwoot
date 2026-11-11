@@ -2,7 +2,7 @@
 key: agentes_listos
 title: Agentes listos
 areas: [ai_agents]
-keywords: [agentes listos, agente listo, atencion a prospectos, prospectos, anuncios, redes sociales, campañas de redes, activar agente, chat de prueba, sofi, calificar, descartar, pasar a una persona, atendida por, pausar agente, reanudar agente, agentes a medida, ya es cliente]
+keywords: [agentes listos, agente listo, atencion a prospectos, prospectos, anuncios, redes sociales, campañas de redes, activar agente, chat de prueba, sofi, calificar, descartar, pasar a una persona, atendida por, pausar agente, reanudar agente, agendar cita, cita, horarios, mover cita, cancelar cita, agentes a medida, ya es cliente]
 pages: [ready_agents, ai_agents]
 ---
 ## Para qué sirve
@@ -19,9 +19,18 @@ En el menú «Agentes IA» › «Agentes listos» (la primera opción). «Agente
 ### Activar un agente
 1. Entra a Agentes IA › Agentes listos y en la tarjeta del agente pulsa «Activar».
 2. Ponle nombre (por ejemplo «Sofi») y tono, y elige las bandejas donde atiende. Una bandeja solo puede tener un agente listo prendido.
-3. Contesta: qué hace cuando el prospecto califica (pasarlo a una persona, crearle la oportunidad o solo juntar sus datos), qué le pregunta para calificarlo, cuándo está calificado, cuándo se descarta y a quién se lo pasa (persona o equipo).
+3. Contesta: qué hace cuando el prospecto califica (pasarlo a una persona, agendarle una cita, crearle la oportunidad o solo juntar sus datos), qué le pregunta para calificarlo, cuándo está calificado, cuándo se descarta y a quién se lo pasa (persona o equipo).
 4. Prueba en el «Chat de prueba» de la derecha: tú eres el cliente. Ves qué contesta y qué hizo (buscó en el catálogo, guardó un dato, calificado…). No se guarda ni se manda nada.
 5. Deja marcado «Prendido» y pulsa «Guardar». Empieza a atender en esas bandejas.
+
+### Agendarle una cita
+1. En «Cuando el prospecto califica…» elige «Agendarle una cita».
+2. Marca con quién agenda: solo salen las personas con Google Calendar conectado. Si eliges varias, reparte las citas entre ellas.
+3. Elige la duración, el tipo (llamada, videollamada, visita al cliente o en nuestra oficina) y, si quieres, el lugar o la liga.
+4. Cuando el prospecto califica, le ofrece 2 o 3 horarios libres de su Google, dentro del horario de atención de la bandeja (o lunes a viernes de 9 a 18). Si pide otro día u hora, busca ese.
+5. Cuando elige uno, agenda la cita: queda en la Agenda con su contacto y en el Google de quien la atiende (si el contacto tiene correo, le llega la invitación). La conversación se le asigna a esa persona, se le pone la etiqueta «interesado», deja una nota y el embudo pasa a «Cita».
+6. Si después el cliente quiere moverla o cancelarla, el agente lo hace (solo la cita que él agendó en esa conversación). Si una persona del equipo le escribe al cliente, el agente se hace a un lado.
+7. En el chat de prueba ves los horarios reales, pero no agenda nada.
 
 ### Qué hace con cada prospecto
 - Contesta en cuanto el cliente deja de escribir (unos segundos), una pregunta a la vez, y guarda lo que le contesta.
@@ -41,7 +50,7 @@ En su tarjeta: «Apagar» o «Prender», el lápiz para cambiar lo que contestas
 
 ## Límites
 - Solo contesta cuando el cliente escribe; no le escribe primero.
-- No agenda citas todavía (viene en la siguiente entrega).
+- Para agendar necesita al menos una persona con Google Calendar conectado.
 - No inventa precios ni promociones: usa las respuestas predefinidas y el catálogo; si no lo encuentra, lo pasa al equipo.
 - Necesita la integración de OpenAI de la cuenta.
 - Si en la conversación corre un Seguimiento IA, contesta ese; el agente listo espera.

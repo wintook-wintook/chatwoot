@@ -82,6 +82,26 @@ RSpec.describe ReadyAgents::Runner do
     end
   end
 
+  context 'with objetivo «agendarle una cita»' do
+    let(:objective) { 'appointment' }
+
+    it 'ofrece horarios, agenda la cita y queda atendiendo por si la quiere mover' do
+      integration = UserCalendarIntegration.create!(account: account, user: seller, google_email: 'ana@x.com', tokens: {})
+      agent.update!(settings: agent.settings.merge('appointment_user_ids' => [seller.id.to_s]))
+      start = 2.days.from_now.change(hour: 11, min: 0, sec: 0)
+      slot = { slot: start, end_time: start + 30.minutes, agent_name: 'Ana López', calendar_integration_id: integration.id }
+      allow_any_instance_of(ContactTrackings::AvailabilitySlotService).to receive(:slot_for).and_return(slot) # rubocop:disable RSpec/AnyInstance
+      allow(Cases::MeetingSyncJob).to receive(:perform_later)
+      stub_model(tool_call('agendar_cita', { inicio: start.strftime('%Y-%m-%dT%H:%M') }), answer('¡Listo! Te esperamos.'))
+
+      reply_to(incoming('El jueves a las 11 me queda'))
+
+      expect(session.case_meeting).to have_attributes(organizer_id: seller.id, starts_at: start)
+      expect(session).to have_attributes(status: 'active', outcome: include('Cita'))
+      expect(conversation.reload.assignee_id).to eq(seller.id)
+    end
+  end
+
   it 'descartar: nota con el motivo y la conversación se resuelve' do
     stub_model(tool_call('descartar', { motivo: 'Busca empleo, no producto' }), answer('Gracias por escribir, ¡suerte!'))
     reply_to(incoming('¿Tienen vacantes?'))

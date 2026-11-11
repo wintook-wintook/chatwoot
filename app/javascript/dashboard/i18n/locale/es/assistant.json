@@ -386,7 +386,15 @@
       "CLIENT_TEAM": "o al equipo",
       "INSTRUCTIONS": "Indicaciones adicionales (opcional)",
       "INSTRUCTIONS_PLACEHOLDER": "Ej. no des precios de instalación; ofrece la visita gratis",
-      "ENABLED": "Prendido: empieza a atender en estas bandejas al guardar"
+      "ENABLED": "Prendido: empieza a atender en estas bandejas al guardar",
+      "APPOINTMENT_USERS": "¿Con quién agenda? (personas con Google Calendar conectado)",
+      "NO_CALENDARS": "Nadie tiene Google Calendar conectado: conéctalo en Agenda › Calendario para que el agente pueda agendar.",
+      "APPOINTMENT_MINUTES": "Duración",
+      "MINUTES": "{n} min",
+      "APPOINTMENT_KIND": "Tipo de cita",
+      "APPOINTMENT_LOCATION": "Lugar o liga (opcional)",
+      "APPOINTMENT_LOCATION_PLACEHOLDER": "Ej. Google Meet, sucursal Centro",
+      "APPOINTMENT_HINT": "Ofrece los horarios libres de su Google dentro del horario de atención de la bandeja (o lun–vie 9 a 18). La cita queda en la Agenda y en su Google, y la conversación se le asigna."
     },
     "TONES": {
       "cercano": "Cercano (de tú)",
@@ -396,7 +404,8 @@
     "OBJECTIVES": {
       "handoff": "Pasarlo a una persona del equipo",
       "opportunity": "Crearle la oportunidad y pasarla al equipo",
-      "collect": "Solo juntar sus datos y respuestas"
+      "collect": "Solo juntar sus datos y respuestas",
+      "appointment": "Agendarle una cita"
     },
     "TEST": {
       "TITLE": "Chat de prueba",
@@ -417,10 +426,14 @@
       "actualizar_contacto": "Actualizó el contacto",
       "prospecto_calificado": "Calificado",
       "descartar": "Descartado",
-      "pasar_a_humano": "Pasa a una persona"
+      "pasar_a_humano": "Pasa a una persona",
+      "ver_horarios": "Vio horarios libres",
+      "agendar_cita": "Agendó la cita",
+      "mover_cita": "Movió la cita",
+      "cancelar_cita": "Canceló la cita"
     },
     "DECISIONS": {
-      "prospecto_calificado": "Prospecto calificado: se pasa al equipo",
+      "prospecto_calificado": "Prospecto calificado",
       "descartar": "Descartado: la conversación se resuelve",
       "pasar_a_humano": "Pasa a una persona"
     },
@@ -436,6 +449,12 @@
         "discarded": "descartado",
         "client": "era cliente: pasado a su responsable"
       }
+    },
+    "APPOINTMENT_KINDS": {
+      "llamada": "Llamada",
+      "videollamada": "Videollamada",
+      "visita": "Visita al cliente",
+      "oficina": "En nuestra oficina"
     }
   }
 }

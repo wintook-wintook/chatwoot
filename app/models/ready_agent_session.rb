@@ -14,6 +14,7 @@
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  account_id      :bigint           not null
+#  case_meeting_id :bigint
 #  contact_id      :bigint
 #  conversation_id :bigint           not null
 #  ready_agent_id  :bigint           not null
@@ -22,6 +23,7 @@
 #
 #  index_ready_agent_sessions_live_per_conversation  (conversation_id) UNIQUE WHERE ((status)::text = ANY ((ARRAY['active'::character varying, 'paused'::character varying])::text[]))
 #  index_ready_agent_sessions_on_account_id          (account_id)
+#  index_ready_agent_sessions_on_case_meeting_id     (case_meeting_id)
 #  index_ready_agent_sessions_on_contact_id          (contact_id)
 #  index_ready_agent_sessions_on_conversation_id     (conversation_id)
 #  index_ready_agent_sessions_on_ready_agent_id      (ready_agent_id)
@@ -29,6 +31,7 @@
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (case_meeting_id => case_meetings.id) ON DELETE => nullify
 #  fk_rails_...  (contact_id => contacts.id)
 #  fk_rails_...  (conversation_id => conversations.id)
 #  fk_rails_...  (ready_agent_id => ready_agents.id)
@@ -48,6 +51,7 @@ class ReadyAgentSession < ApplicationRecord
   belongs_to :ready_agent
   belongs_to :conversation
   belongs_to :contact, optional: true
+  belongs_to :case_meeting, optional: true # la cita que agendó el agente
 
   validates :status, inclusion: { in: STATUSES }
 

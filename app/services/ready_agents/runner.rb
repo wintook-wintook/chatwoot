@@ -13,8 +13,6 @@ class ReadyAgents::Runner < Cases::Ai::BaseService
   MAX_ROUNDS = 6
   MAX_TOKENS = 600
   NO_MESSAGE = '[SIN_MENSAJE]'
-  CATALOG_LIMIT = 5
-  CATALOG_SCAN = 2000
 
   attr_reader :used_tools
 
@@ -61,7 +59,9 @@ class ReadyAgents::Runner < Cases::Ai::BaseService
     @session.answers = @answers
     @session.last_error = nil
     @session.save!
-    ReadyAgents::Outcomes.new(@session, sender: sender).apply(*@decision) if @decision
+    outcomes = ReadyAgents::Outcomes.new(@session, sender: sender)
+    outcomes.appointment_booked if @booked
+    outcomes.apply(*@decision) if @decision
   end
 
   # Una persona le escribió al cliente después del último mensaje del agente.
@@ -102,7 +102,7 @@ class ReadyAgents::Runner < Cases::Ai::BaseService
 
   def complete(messages)
     body = { model: Assistant::Settings.model_for(@account), messages: messages, temperature: 0.4,
-             max_tokens: MAX_TOKENS, tools: ReadyAgents::ToolDefinitions::ALL, tool_choice: 'auto' }
+             max_tokens: MAX_TOKENS, tools: tools, tool_choice: 'auto' }
     response = http.request(request(body))
     return JSON.parse(response.body).dig('choices', 0, 'message') if response.is_a?(Net::HTTPSuccess)
 
@@ -130,6 +130,12 @@ class ReadyAgents::Runner < Cases::Ai::BaseService
     end
   end
 
+  def tools
+    return ReadyAgents::ToolDefinitions::ALL unless ReadyAgents::Appointments.available?(@agent)
+
+    ReadyAgents::ToolDefinitions::ALL + ReadyAgents::ToolDefinitions::APPOINTMENTS
+  end
+
   def parse_args(json)
     JSON.parse(json.to_s)
   rescue JSON::ParserError
@@ -143,11 +149,24 @@ class ReadyAgents::Runner < Cases::Ai::BaseService
 
     case name
     when 'buscar_respuesta_predefinida' then @search.canned(args['pregunta'])
-    when 'buscar_en_catalogo' then catalog(args['consulta'])
+    when 'buscar_en_catalogo' then ReadyAgents::CatalogSearch.new(@account).call(args['consulta'])
     when 'guardar_respuesta' then save_answer(args)
     when 'actualizar_contacto' then update_contact(args)
+    when 'ver_horarios', 'agendar_cita', 'mover_cita', 'cancelar_cita' then appointment(name, args)
     else { error: "herramienta desconocida: #{name}" }
     end
+  end
+
+  # Citas: en la conversación real se agendan; en el chat de prueba solo se leen los horarios.
+  def appointment(name, args)
+    return { error: 'Este agente no agenda citas.' } unless ReadyAgents::Appointments.available?(@agent)
+
+    result = ReadyAgents::Appointments.new(@agent, session: @session).tool(name, args)
+    @booked = true if name == 'agendar_cita' && result[:ok] && @session
+    result
+  rescue StandardError => e
+    Rails.logger.error("[ReadyAgents::Runner] cita: #{e.class}: #{e.message}")
+    { error: 'No se pudo con el calendario en este momento: dile que alguien del equipo le confirma.' }
   end
 
   def decide(name, text)
@@ -176,27 +195,6 @@ class ReadyAgents::Runner < Cases::Ai::BaseService
 
   def valid_email(value)
     value.to_s.strip.downcase.presence if value.to_s.match?(URI::MailTo::EMAIL_REGEXP)
-  end
-
-  # Como search_catalog de Dali: por palabras sobre el Catálogo (sirve para catálogos chicos).
-  def catalog(query)
-    stems = catalog_stems(query)
-    return { results: [] } if stems.empty?
-
-    found = @account.catalog_items.where(active: true).limit(CATALOG_SCAN).filter_map do |item|
-      hits = stems.count { |s| GlobalSearch.normalize([item.name, item.sku, item.description].join(' ')).include?(s) }
-      [item, hits] if hits.positive?
-    end
-    { results: found.sort_by { |(item, hits)| [-hits, item.name] }.first(CATALOG_LIMIT).map { |(i, _)| catalog_row(i) } }
-  end
-
-  def catalog_stems(query)
-    words = GlobalSearch.normalize(query).split.select { |w| w.length > 2 }
-    words.map { |w| w.length > 4 ? w.sub(/(es|s)\z/, '') : w }
-  end
-
-  def catalog_row(item)
-    { nombre: item.name, precio: item.price&.to_f, unidad: item.unit, descripcion: item.description.to_s.truncate(200) }.compact
   end
 
   # --- después ------------------------------------------------------------------------

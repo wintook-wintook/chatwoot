@@ -27,6 +27,11 @@ const blank = kind => ({
     client_user_id: '',
     client_team_id: '',
     only_prospects: true,
+    // Citas: con quién (Google conectado), duración, tipo y lugar o liga.
+    appointment_user_ids: [],
+    appointment_minutes: '30',
+    appointment_kind: 'llamada',
+    appointment_location: '',
   },
 });
 
@@ -40,6 +45,8 @@ export default {
     inboxes: { type: Array, default: () => [] },
     // Bandejas que ya tienen otro agente listo prendido (no se pueden elegir).
     takenInboxIds: { type: Array, default: () => [] },
+    // Personas con Google Calendar conectado (con quién se agenda la cita).
+    calendarUsers: { type: Array, default: () => [] },
   },
   emits: ['close', 'saved'],
   data() {
@@ -54,12 +61,17 @@ export default {
   computed: {
     ...mapGetters({ agents: 'agents/getAgents', teams: 'teams/getTeams' }),
     objectives() {
-      return ['handoff', 'opportunity', 'collect'];
+      return ['handoff', 'appointment', 'opportunity', 'collect'];
+    },
+    appointment() {
+      return this.form.settings.objective === 'appointment';
     },
     tones() {
       return ['cercano', 'formal', 'directo'];
     },
     canSave() {
+      if (this.appointment && !this.form.settings.appointment_user_ids.length)
+        return false;
       return this.form.name.trim() && this.form.inbox_ids.length;
     },
   },
@@ -88,6 +100,18 @@ export default {
       this.draft = '';
       this.$store.dispatch('agents/get');
       this.$store.dispatch('teams/get');
+    },
+    toggleCalendarUser(id) {
+      const ids = this.form.settings.appointment_user_ids.map(String);
+      const key = String(id);
+      this.form.settings.appointment_user_ids = ids.includes(key)
+        ? ids.filter(i => i !== key)
+        : [...ids, key];
+    },
+    calendarUserOn(id) {
+      return this.form.settings.appointment_user_ids
+        .map(String)
+        .includes(String(id));
     },
     toggleInbox(id) {
       const ids = this.form.inbox_ids;
@@ -228,6 +252,82 @@ export default {
               </option>
             </select>
           </label>
+          <!-- Citas: con quién, duración, tipo y lugar -->
+          <div
+            v-if="appointment"
+            class="flex flex-col gap-2 p-3 rounded-lg bg-slate-25 dark:bg-slate-800"
+          >
+            <span class="field-label !mb-0">{{
+              t('FIELDS.APPOINTMENT_USERS')
+            }}</span>
+            <p v-if="!calendarUsers.length" class="m-0 text-xs text-amber-700">
+              {{ t('FIELDS.NO_CALENDARS') }}
+            </p>
+            <div v-else class="flex flex-wrap gap-1.5">
+              <button
+                v-for="u in calendarUsers"
+                :key="u.id"
+                type="button"
+                class="px-2.5 py-1 text-xs border rounded-full"
+                :class="
+                  calendarUserOn(u.id)
+                    ? 'border-woot-500 bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200'
+                    : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'
+                "
+                @click="toggleCalendarUser(u.id)"
+              >
+                {{ u.name }}
+              </button>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <label class="block">
+                <span class="field-label">{{
+                  t('FIELDS.APPOINTMENT_MINUTES')
+                }}</span>
+                <select v-model="form.settings.appointment_minutes">
+                  <option
+                    v-for="m in ['15', '30', '45', '60', '90']"
+                    :key="m"
+                    :value="m"
+                  >
+                    {{ t('FIELDS.MINUTES', { n: m }) }}
+                  </option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="field-label">{{
+                  t('FIELDS.APPOINTMENT_KIND')
+                }}</span>
+                <select v-model="form.settings.appointment_kind">
+                  <option
+                    v-for="k in [
+                      'llamada',
+                      'videollamada',
+                      'visita',
+                      'oficina',
+                    ]"
+                    :key="k"
+                    :value="k"
+                  >
+                    {{ t(`APPOINTMENT_KINDS.${k}`) }}
+                  </option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="field-label">{{
+                  t('FIELDS.APPOINTMENT_LOCATION')
+                }}</span>
+                <input
+                  v-model="form.settings.appointment_location"
+                  type="text"
+                  :placeholder="t('FIELDS.APPOINTMENT_LOCATION_PLACEHOLDER')"
+                />
+              </label>
+            </div>
+            <p class="m-0 text-xs text-slate-500">
+              {{ t('FIELDS.APPOINTMENT_HINT') }}
+            </p>
+          </div>
           <label class="block">
             <span class="field-label">{{ t('FIELDS.QUESTIONS') }}</span>
             <textarea

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_11_140000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_11_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2177,7 +2177,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_11_140000) do
     t.text "last_error"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "case_meeting_id"
     t.index ["account_id"], name: "index_ready_agent_sessions_on_account_id"
+    t.index ["case_meeting_id"], name: "index_ready_agent_sessions_on_case_meeting_id"
     t.index ["contact_id"], name: "index_ready_agent_sessions_on_contact_id"
     t.index ["conversation_id"], name: "index_ready_agent_sessions_live_per_conversation", unique: true, where: "((status)::text = ANY ((ARRAY['active'::character varying, 'paused'::character varying])::text[]))"
     t.index ["conversation_id"], name: "index_ready_agent_sessions_on_conversation_id"
@@ -2886,6 +2888,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_11_140000) do
   add_foreign_key "quotes", "quotes", column: "parent_quote_id", on_delete: :nullify
   add_foreign_key "quotes", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "ready_agent_sessions", "accounts"
+  add_foreign_key "ready_agent_sessions", "case_meetings", on_delete: :nullify
   add_foreign_key "ready_agent_sessions", "contacts"
   add_foreign_key "ready_agent_sessions", "conversations"
   add_foreign_key "ready_agent_sessions", "ready_agents"

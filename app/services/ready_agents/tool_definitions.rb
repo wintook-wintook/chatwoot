@@ -26,5 +26,17 @@ module ReadyAgents::ToolDefinitions
        { motivo: STR }, %w[motivo])
   ].freeze
 
+  # Solo con el objetivo «agendarle una cita» (ReadyAgents::Appointments).
+  APPOINTMENTS = [
+    fn('ver_horarios', 'Horarios libres para la cita (3). Sin «desde», los más próximos; con un día (YYYY-MM-DD) ' \
+                       'desde ese día; con día y hora (YYYY-MM-DDTHH:MM) dice si ese horario exacto está libre.',
+       { desde: STR }),
+    fn('agendar_cita', 'Agenda la cita en el horario que el cliente eligió (uno que salió en ver_horarios).',
+       { inicio: { type: 'string', description: 'YYYY-MM-DDTHH:MM' }, notas: STR }, %w[inicio]),
+    fn('mover_cita', 'Cambia la cita que agendaste en esta conversación a otro horario libre.',
+       { inicio: { type: 'string', description: 'YYYY-MM-DDTHH:MM' } }, %w[inicio]),
+    fn('cancelar_cita', 'Cancela la cita que agendaste en esta conversación.', { motivo: STR }, %w[motivo])
+  ].freeze
+
   DECISIONS = { 'prospecto_calificado' => 'resumen', 'descartar' => 'motivo', 'pasar_a_humano' => 'motivo' }.freeze
 end

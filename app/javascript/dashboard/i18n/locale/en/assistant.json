@@ -386,7 +386,15 @@
       "CLIENT_TEAM": "or team",
       "INSTRUCTIONS": "Extra instructions (optional)",
       "INSTRUCTIONS_PLACEHOLDER": "E.g. do not give installation prices",
-      "ENABLED": "On: starts attending these inboxes when saved"
+      "ENABLED": "On: starts attending these inboxes when saved",
+      "APPOINTMENT_USERS": "Book with (people with Google Calendar connected)",
+      "NO_CALENDARS": "Nobody has Google Calendar connected: connect it in Agenda › Calendar so the agent can book.",
+      "APPOINTMENT_MINUTES": "Duration",
+      "MINUTES": "{n} min",
+      "APPOINTMENT_KIND": "Kind",
+      "APPOINTMENT_LOCATION": "Place or link (optional)",
+      "APPOINTMENT_LOCATION_PLACEHOLDER": "E.g. Google Meet",
+      "APPOINTMENT_HINT": "Offers free times from their Google within the inbox working hours (or Mon–Fri 9–18). The appointment goes to the Agenda and their Google, and the conversation is assigned to them."
     },
     "TONES": {
       "cercano": "Friendly",
@@ -396,7 +404,8 @@
     "OBJECTIVES": {
       "handoff": "Hand them to a team member",
       "opportunity": "Create the opportunity for the team",
-      "collect": "Only collect their data and answers"
+      "collect": "Only collect their data and answers",
+      "appointment": "Book an appointment"
     },
     "TEST": {
       "TITLE": "Test chat",
@@ -417,10 +426,14 @@
       "actualizar_contacto": "Updated the contact",
       "prospecto_calificado": "Qualified",
       "descartar": "Discarded",
-      "pasar_a_humano": "Hand off to a person"
+      "pasar_a_humano": "Hand off to a person",
+      "ver_horarios": "Checked free times",
+      "agendar_cita": "Booked",
+      "mover_cita": "Moved the appointment",
+      "cancelar_cita": "Cancelled the appointment"
     },
     "DECISIONS": {
-      "prospecto_calificado": "Qualified prospect: handed to the team",
+      "prospecto_calificado": "Qualified prospect",
       "descartar": "Discarded: the conversation is resolved",
       "pasar_a_humano": "Hand off to a person"
     },
@@ -436,6 +449,12 @@
         "discarded": "discarded",
         "client": "was a customer: handed to their owner"
       }
+    },
+    "APPOINTMENT_KINDS": {
+      "llamada": "Call",
+      "videollamada": "Video call",
+      "visita": "Visit",
+      "oficina": "At our office"
     }
   }
 }

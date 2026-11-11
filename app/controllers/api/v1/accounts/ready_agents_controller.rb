@@ -10,7 +10,8 @@
 # Solo administradores.
 class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseController
   SETTINGS = %w[objective questions qualified_when discard_when tone instructions handoff_user_id handoff_team_id
-                client_user_id client_team_id only_prospects case_type_id].freeze
+                client_user_id client_team_id only_prospects case_type_id appointment_minutes appointment_kind
+                appointment_location].freeze
   MAX_TEST_MESSAGES = 30
 
   before_action :require_admin
@@ -18,7 +19,7 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
 
   def index
     render json: { catalog: ReadyAgents::Catalog.all, agents: Current.account.ready_agents.order(:id).map { |a| agent_json(a) },
-                   inboxes: inboxes }
+                   inboxes: inboxes, calendar_users: calendar_users }
   end
 
   def create
@@ -61,7 +62,7 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
   def agent_params
     raw = params.require(:ready_agent)
     permitted = raw.permit(:kind, :name, :enabled, inbox_ids: [])
-    settings = raw[:settings].respond_to?(:permit) ? raw[:settings].permit(*SETTINGS).to_h : {}
+    settings = raw[:settings].respond_to?(:permit) ? raw[:settings].permit(*SETTINGS, appointment_user_ids: []).to_h : {}
     settings['only_prospects'] = ActiveModel::Type::Boolean.new.cast(settings['only_prospects']) if settings.key?('only_prospects')
     permitted.to_h.merge(settings: settings)
   end
@@ -77,6 +78,12 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
   def inboxes
     Current.account.inboxes.where.not(channel_type: 'Channel::Internal').order(:name)
            .map { |i| { id: i.id, name: i.name, channel_type: i.channel_type } }
+  end
+
+  # Con quién se puede agendar: quien tiene Google Calendar conectado.
+  def calendar_users
+    UserCalendarIntegration.where(account_id: Current.account.id).includes(:user)
+                           .filter_map { |i| i.user && { id: i.user.id, name: i.user.name } }
   end
 
   def agent_json(agent)

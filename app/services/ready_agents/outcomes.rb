@@ -29,6 +29,20 @@ class ReadyAgents::Outcomes
     @session.update!(last_error: "#{decision}: #{e.message}".first(500))
   end
 
+  # Se agendó la cita: etiqueta «interesado», nota y la conversación a quien la atiende (si no
+  # tenía a nadie). El embudo pasa a «Cita». La sesión sigue activa: el cliente puede moverla.
+  def appointment_booked
+    meeting = @session.reload.case_meeting
+    return unless meeting
+
+    add_label
+    when_text = ReadyAgents::Appointments.label(meeting.starts_at.in_time_zone(zone))
+    note("Cita agendada: #{when_text} con #{meeting.organizer&.name}.\n#{answers_text}".strip)
+    @conversation.update!(assignee_id: meeting.organizer_id) if @conversation.assignee_id.blank? && meeting.organizer_id
+    @session.update!(outcome: "Cita #{when_text}")
+    Kanban::FunnelTriggerJob.perform_later(@conversation.id, 'appointment_scheduled')
+  end
+
   # Quien ya es cliente: su responsable fijo o, si no tiene, a quien se eligió al activar.
   def assign_client
     owner = @conversation.contact&.effective_owner_id
@@ -44,6 +58,9 @@ class ReadyAgents::Outcomes
 
   def qualified(summary)
     add_label
+    # Con citas, calificar no termina: falta que elija horario (la sesión sigue).
+    return note("Prospecto calificado.\n#{[summary, answers_text].compact_blank.join("\n")}") if @agent.objective == 'appointment'
+
     detail = [summary, answers_text].compact_blank.join("\n")
     case @agent.objective
     when 'opportunity'
@@ -71,6 +88,10 @@ class ReadyAgents::Outcomes
 
   def finish(status, text)
     @session.finish!(status, text)
+  end
+
+  def zone
+    ActiveSupport::TimeZone[@conversation.inbox&.timezone.to_s] || Time.zone
   end
 
   def handoff_target
