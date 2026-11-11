@@ -161,12 +161,48 @@ class KnowledgeBaseResponseService
     question.match?(CONTINUATION_RE) || question.match?(ANAPHORA_RE)
   end
 
-  # La pregunta tal cual y, cuando aplica, la misma precedida del tema de los mensajes
-  # anteriores del cliente. La pregunta original nunca se toca: esto solo alimenta la
-  # búsqueda.
+  # La pregunta tal cual y, cuando aplica, la misma con el tema de la conversación (las
+  # variables de texto libre, ver topic_query) y con el de los mensajes anteriores del
+  # cliente. La pregunta original nunca se toca: esto solo alimenta la búsqueda.
   def search_queries(question)
-    return [question] unless worth_inheriting_topic?(question)
-    return [question] if @conversation.blank?
+    [question, topic_query(question), inherited_query(question)].compact.uniq
+  end
+
+  # 11/11/2026 (cuenta 1128, pilas 261109): «¿En qué enlace me inscribo?» no nombra la
+  # carrera, así que la ficha de la carrera no entraba entre los 3 resultados y el modelo
+  # inventó la liga; «formas y precio de titulación» trajo una maestría y puso su precio.
+  # La carrera ya estaba guardada en CARRERA. Una variable declarada como texto libre
+  # («CARRERA = VACÍO | valor») es el tema de la conversación: con valor, se busca también
+  # «valor + pregunta». Se salta si la pregunta ya lo nombra o el valor es uno declarado
+  # (VACÍO). Genérico: no sabe que se llama CARRERA.
+  def topic_query(question)
+    return nil if @tracking.nil? || @conversation.nil?
+
+    definition = ContactTrackings::ConversationVariables.definition_for(@tracking)
+    return nil if definition.blank?
+
+    temas = topic_values(definition, question)
+    return nil if temas.empty?
+
+    Rails.logger.info "[KBase] 🎯 Búsqueda con el tema guardado: #{temas.join(', ').truncate(80)}"
+    "#{temas.join(' ')} #{question}".truncate(500)
+  end
+
+  def topic_values(definition, question)
+    pregunta = ContactTrackings::ConversationVariables.key(question)
+    ContactTrackings::ConversationVariables.current(@tracking, @conversation, definition).filter_map do |nombre, valor|
+      var = definition.variable(nombre)
+      next unless var&.dig(:free) && valor.present?
+      next if var[:options].any? { |o| ContactTrackings::ConversationVariables.key(o) == ContactTrackings::ConversationVariables.key(valor) }
+      next if pregunta.include?(ContactTrackings::ConversationVariables.key(valor))
+
+      valor
+    end
+  end
+
+  def inherited_query(question)
+    return nil unless worth_inheriting_topic?(question)
+    return nil if @conversation.blank?
 
     # reorder, no order: la asociación messages ya trae su propio ORDER BY y un
     # order() encadenado se suma detrás en vez de reemplazarlo — devolvía siempre
@@ -175,11 +211,11 @@ class KnowledgeBaseResponseService
                             .where('id < ?', @message.id)
                             .reorder(id: :desc).limit(2)
                             .pluck(:content).compact_blank
-    return [question] if previous.empty?
+    return nil if previous.empty?
 
     enriched = "#{previous.reverse.join(' ')} #{question}".truncate(500)
     Rails.logger.info "[KBase] 🧵 Turno corto → segunda búsqueda con contexto: #{enriched.truncate(120)}"
-    [question, enriched]
+    enriched
   end
 
   # Entrelaza en vez de concatenar: concatenadas, las MAX_RESULTS primeras salen todas de
@@ -447,11 +483,12 @@ class KnowledgeBaseResponseService
 
   # SectionFit y no truncate: un item largo conserva las secciones que tienen que ver con
   # la pregunta en vez de solo sus primeros MAX_ITEM_CHARS (ver KnowledgeBase::SectionFit).
-  # La consulta incluye la búsqueda heredada de un turno corto («¿y cuánto?»).
+  # Solo la pregunta del turno, NO las búsquedas heredadas: 11/11/2026 (Santos 10) «no hay
+  # otras ofertas más bajas» heredó «relaciones internacionales» de un mensaje anterior, el
+  # perfil de egreso le ganó a «Costos y becas» y el modelo inventó una segunda beca.
   def items_context(items, question)
-    query = [*@search_texts, question].compact_blank.uniq.join(' ')
     items.map.with_index(1) do |i, n|
-      "#{n}. #{i.title}\n#{KnowledgeBase::SectionFit.call(i.content, query, MAX_ITEM_CHARS, title: i.title)}"
+      "#{n}. #{i.title}\n#{KnowledgeBase::SectionFit.call(i.content, question, MAX_ITEM_CHARS, title: i.title)}"
     end.join("\n\n")
   end
 
