@@ -432,7 +432,7 @@ class KnowledgeBaseResponseService
     Rails.logger.info "[KBase] ✅ #{items.size} resultado(s) en #{source_type}"
 
     reply_text = (canned_prompt_reply(question, prompt) if prompt)
-    reply_text ||= generate_contextual_reply(question, pgvector_context(items)) if items.any?
+    reply_text ||= generate_contextual_reply(question, pgvector_context(items, question)) if items.any?
     return false if reply_text.blank?
 
     source_tag = @account.knowledge_sources.find_by(source_type: source_type)&.name ||
@@ -441,10 +441,18 @@ class KnowledgeBaseResponseService
     true
   end
 
-  def pgvector_context(items)
-    items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
-         .join("\n\n")
-         .truncate(kbase_setting('max_context_chars'))
+  def pgvector_context(items, question)
+    items_context(items, question).truncate(kbase_setting('max_context_chars'))
+  end
+
+  # SectionFit y no truncate: un item largo conserva las secciones que tienen que ver con
+  # la pregunta en vez de solo sus primeros MAX_ITEM_CHARS (ver KnowledgeBase::SectionFit).
+  # La consulta incluye la búsqueda heredada de un turno corto («¿y cuánto?»).
+  def items_context(items, question)
+    query = [*@search_texts, question].compact_blank.uniq.join(' ')
+    items.map.with_index(1) do |i, n|
+      "#{n}. #{i.title}\n#{KnowledgeBase::SectionFit.call(i.content, query, MAX_ITEM_CHARS, title: i.title)}"
+    end.join("\n\n")
   end
 
   # proyecto@predefinidas_prompt — la respuesta predefinida con prompt que manda en este
@@ -508,9 +516,7 @@ class KnowledgeBaseResponseService
       return false
     end
 
-    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
-                   .join("\n\n")
-                   .truncate(kbase_setting('max_context_chars'))
+    context = pgvector_context(items, question)
 
     reply_text = generate_contextual_reply(question, context)
     return false if reply_text.blank?
