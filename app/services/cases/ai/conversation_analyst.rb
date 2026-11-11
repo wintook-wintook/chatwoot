@@ -19,15 +19,17 @@
 # ================================================================================
 
 class Cases::Ai::ConversationAnalyst < Cases::Ai::BaseService
-  SAMPLE_SIZE = 150
-  MESSAGES_PER_CONVERSATION = 8
-  CHARS_PER_MESSAGE = 220
+  # Cuántas conversaciones lee: 100 por omisión; el usuario elige entre 10 y 150.
+  SAMPLE_SIZE = 100
+  SAMPLE_RANGE = (10..150)
+  MESSAGES_PER_CONVERSATION = 6
+  CHARS_PER_MESSAGE = 180
   MAX_ITEMS = 5
   MAX_EXAMPLES = 3
 
-  # range: período a analizar (Range de tiempos) o nil.
-  def analyze(range: nil)
-    sample = sample_conversations(range)
+  # range: período a analizar (Range de tiempos) o nil; limit: tamaño de la muestra.
+  def analyze(range: nil, limit: nil)
+    sample = sample_conversations(range, (limit.presence || SAMPLE_SIZE).to_i.clamp(SAMPLE_RANGE.min, SAMPLE_RANGE.max))
     return { 'sample_size' => 0 } if sample.empty?
 
     raw = chat(system: system_prompt, user: user_prompt(sample), json: true, temperature: 0.2, max_tokens: 1500)
@@ -38,10 +40,20 @@ class Cases::Ai::ConversationAnalyst < Cases::Ai::BaseService
 
   private
 
-  def sample_conversations(range)
+  # Leer muchas conversaciones tarda más de lo normal.
+  def read_timeout
+    90
+  end
+
+  def sample_conversations(range, limit)
     scope = @account.conversations
     scope = scope.where(last_activity_at: range) if range
-    scope.order(last_activity_at: :desc).limit(SAMPLE_SIZE).includes(:inbox).to_a
+    scope.order(last_activity_at: :desc).limit(limit).includes(:inbox).to_a
+  end
+
+  # El número de conversación como venga: 101, "101", "#101", "conversación 101".
+  def conversation_number(value)
+    value.to_s[/\d+/].to_i
   end
 
   def system_prompt
@@ -108,7 +120,7 @@ class Cases::Ai::ConversationAnalyst < Cases::Ai::BaseService
     Array(list).filter_map do |item|
       next unless item.is_a?(Hash) && item['label'].present?
 
-      examples = Array(item['examples']).map(&:to_i).select { |id| ids.include?(id) }.uniq.first(MAX_EXAMPLES)
+      examples = Array(item['examples']).map { |v| conversation_number(v) }.select { |id| ids.include?(id) }.uniq.first(MAX_EXAMPLES)
       { 'label' => item['label'].to_s.strip, 'count' => item['count'].to_i, 'examples' => examples }
     end.first(MAX_ITEMS)
   end
@@ -117,7 +129,7 @@ class Cases::Ai::ConversationAnalyst < Cases::Ai::BaseService
     items = Array(list).filter_map do |item|
       next unless item.is_a?(Hash)
 
-      id = item['conversation'].to_i
+      id = conversation_number(item['conversation'] || item['conversation_id'] || item['id'])
       { 'conversation' => id, 'why' => item['why'].to_s.strip } if ids.include?(id)
     end
     items.uniq { |i| i['conversation'] }.first(MAX_ITEMS)

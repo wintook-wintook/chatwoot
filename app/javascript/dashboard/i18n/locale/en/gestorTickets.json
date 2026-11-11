@@ -2901,7 +2901,8 @@
       },
       "ANALYSIS": {
         "TITLE": "Conversation analysis with Dali",
-        "DESCRIPTION": "Reads a sample of up to 150 conversations from the period and finds topics, upset customers, missed sales and repeated complaints. Costs tokens: on demand.",
+        "SAMPLE_LABEL": "Conversations:",
+        "DESCRIPTION": "Reads a sample of the most recent conversations in the period (100 by default; you can choose up to 150) and finds topics, upset customers, missed sales and repeated complaints. Costs tokens: on demand.",
         "SAMPLE": "Sample analyzed: {count} conversations",
         "EMPTY": "No conversations in the period to analyze.",
         "COUNT": "{count} conv.",
