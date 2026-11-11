@@ -76,7 +76,7 @@ export default {
     <input
       v-model="query"
       type="search"
-      class="!mb-0"
+      class="block w-full h-10 p-2 !mb-0 text-base box-border rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-solid border-slate-200 dark:border-slate-600 focus:border-woot-500 dark:focus:border-woot-600"
       :placeholder="placeholder || $t('CRM_ZEUS.ARTICLE_FORM.COMPONENT_SEARCH')"
       @input="onInput"
       @focus="open = true"
