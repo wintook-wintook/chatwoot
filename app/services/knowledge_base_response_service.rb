@@ -239,9 +239,26 @@ class KnowledgeBaseResponseService
     end
     return nil if lists.empty?
 
-    items = interleave(lists).uniq(&:id).first(kbase_setting('max_results'))
+    items = by_similarity(interleave(lists).uniq(&:id).first(kbase_setting('max_results')), lists)
     ContactTrackings::EngineTrace.fragments(items) # proyecto@diagrama_agente_ia F0
     items
+  end
+
+  # El entrelazado decide QUÉ entra (cada consulta queda representada); el orden en que se
+  # le entregan al modelo es otro asunto: de la más parecida a la menos, con la mejor
+  # similitud que tuvo cada item en cualquiera de las consultas. 11/11/2026 (cuenta 1128,
+  # conv 205): CARRERA=Trabajo Social y «No me alcanza… ¿tiene un precio mejor?». La
+  # pregunta sola trajo Derecho (0.48) y la de «CARRERA + pregunta», Trabajo Social (0.67);
+  # entrelazadas, Derecho quedó como [FUENTE 1], el modelo dio la beca de Derecho y cambió
+  # la carrera de la conversación.
+  def by_similarity(items, lists)
+    best = {}
+    lists.flatten.each do |item|
+      next unless item.respond_to?(:neighbor_distance) && item.neighbor_distance
+
+      best[item.id] = item if best[item.id].nil? || item.neighbor_distance < best[item.id].neighbor_distance
+    end
+    items.each_with_index.sort_by { |item, i| [best[item.id]&.neighbor_distance || 1.0, i] }.map { |item, _| best[item.id] || item }
   end
 
   # ==============================================================================
@@ -731,6 +748,7 @@ class KnowledgeBaseResponseService
     system_prompt = [
       header,
       ("Objetivo de la conversación: #{objective}" if objective.present?),
+      agent_context_block,
       ContactTrackings::AgentAttachments.hint(@tracking&.tracking_template),
       variables_rule,
       branch_scope_rule.presence
@@ -754,7 +772,7 @@ class KnowledgeBaseResponseService
       los pasos del vendedor). Los nombres de permisos, parámetros, campos y menús se
       citan textualmente como aparecen en la fuente.
 
-      Si la fuente no cubre exactamente lo que preguntaron, dilo de frente: explica
+      #{agent_data_rule}Si la fuente no cubre exactamente lo que preguntaron, dilo de frente: explica
       brevemente qué sí cubre la documentación, aclara que no tienes el procedimiento
       exacto para su caso y #{missing_answer_step}. Una respuesta honesta que no
       resuelve es mejor que una inventada que parece resolver.
@@ -853,6 +871,33 @@ class KnowledgeBaseResponseService
     return AGENT_STYLE_RULE if agent_system_prompt
 
     'Responde usando esa información de forma completa y útil. Tono natural y conversacional.'
+  end
+
+  # 11/11/2026 (cuenta 1128, conv 206-207, Agente Escuela v2): la regla de abajo («si la
+  # fuente no cubre…, aclara que no tienes el procedimiento exacto») hace que «la fuente»
+  # sea solo lo recuperado. Cuando la búsqueda no traía la predefinida, el modelo decía
+  # «no tengo la información» de la dirección o del inicio de clases aunque su propio
+  # Entrenamiento los tuviera («No tengo el procedimiento exacto para saber desde cuándo
+  # puedes empezar»). Con Entrenamiento propio, lo que él y el Contexto dan por cierto
+  # también es fuente.
+  AGENT_DATA_RULE = 'Los datos que tus instrucciones y el contexto del negocio dan por ciertos también son fuente: ' \
+                    'si contestan la pregunta, úsalos aunque la información de arriba no los traiga. '
+
+  def agent_data_rule
+    agent_system_prompt ? "#{AGENT_DATA_RULE}\n" : ''
+  end
+
+  # El Contexto del agente (tracking_template.ai_context: qué es el negocio, sus datos
+  # generales) solo llegaba al conversacional; las respuestas de la base de conocimiento no
+  # lo veían. Del template y no del tracking: el ai_context del tracking acumula notas de
+  # estado (PAUSADO, ESPERANDO FECHA) que no son para el cliente.
+  MAX_AGENT_CONTEXT_CHARS = 1500
+
+  def agent_context_block
+    context = @tracking&.tracking_template&.ai_context.to_s.strip
+    return nil if context.blank?
+
+    "Contexto del negocio:\n#{context.truncate(MAX_AGENT_CONTEXT_CHARS)}"
   end
 
   # Sin el dato: con Entrenamiento propio, lo que diga él (canal, asesor, nada); si no, el asesor.
