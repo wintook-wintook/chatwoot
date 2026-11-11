@@ -823,6 +823,7 @@
       "REFRESH": "Refresh",
       "FILTER_PLACEHOLDER": "Search tasks (title, assignee)…",
       "NO_MATCHES": "No matches for the filter.",
+      "UNASSIGNED_CONFIRM": { "TEXT": "The task has no assignee: it will not show in anyone's My day. Save it unassigned?", "CHOOSE": "Choose assignee", "SAVE": "Save unassigned" },
       "NOTES_NONE": "No notes",
       "NOTES_COUNT_TITLE": "{count} note(s) — view",
       "NOTES_NONE_TOAST": "Task {folio} has no notes yet.",

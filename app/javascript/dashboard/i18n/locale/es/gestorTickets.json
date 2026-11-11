@@ -833,6 +833,7 @@
       "REFRESH": "Actualizar",
       "FILTER_PLACEHOLDER": "Buscar en tareas (título, responsable)…",
       "NO_MATCHES": "Sin coincidencias con el filtro.",
+      "UNASSIGNED_CONFIRM": { "TEXT": "La tarea no tiene responsable: no le aparecerá a nadie en su Mi día. ¿Guardarla sin asignar?", "CHOOSE": "Elegir responsable", "SAVE": "Guardar sin asignar" },
       "NOTES_NONE": "Sin notas",
       "NOTES_COUNT_TITLE": "{count} nota(s) — ver",
       "NOTES_NONE_TOAST": "La tarea {folio} aún no tiene notas.",

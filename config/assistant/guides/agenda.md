@@ -2,7 +2,7 @@
 key: agenda
 title: Agenda, tareas y reportes
 areas: [agenda]
-keywords: [agenda, tarea, tareas, mi dia, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, reportar avance, avance, ver reportes, historial, historial de la tarea, ver historial, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada, cancelar, cancelar tarea, cancelar cita, motivo de cancelacion, reabrir, borrar tarea, no puedo borrar, reprogramar]
+keywords: [agenda, tarea, tareas, mi dia, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, reportar avance, avance, ver reportes, historial, historial de la tarea, ver historial, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada, cancelar, cancelar tarea, cancelar cita, motivo de cancelacion, reabrir, sin responsable, sin asignar, borrar tarea, no puedo borrar, reprogramar]
 pages: [tasks, my_day, calendar, task_reports, task_outcomes, task_scoring]
 ---
 ## Para qué sirve
@@ -48,6 +48,9 @@ Para lo que hiciste en una tarea que sigue pendiente (una llamada, una parte del
 2. Escribe «Qué se hizo», ajusta fecha y hora, el tiempo dedicado y, si quieres, resultado y evidencia. Pulsa «Guardar avance».
 3. La tarea sigue pendiente. El avance es un reporte, no una nota: sale en el historial de la tarea (filtro Reportes, con el tiempo reportado contra lo estimado), en Agenda › Reportes como «Avance», en la ficha del cliente y en la actividad del caso; su tiempo suma ya a las horas del caso. No sale en la pestaña Notas.
 4. También se lo puedes pedir a Dali: «reporta avance de la T003: llamé al proveedor, 20 minutos».
+
+### Guardar una tarea sin responsable
+Al guardar una tarea (dentro del caso o al editarla en Agenda › Tareas) con «— Sin asignar —», te pregunta antes: «La tarea no tiene responsable: no le aparecerá a nadie en su Mi día. ¿Guardarla sin asignar?». «Elegir responsable» te regresa a la lista de responsables; «Guardar sin asignar» la guarda así. Si la tarea ya estaba sin responsable, o es una tarea del cliente, no pregunta.
 
 ### El menú de cada tarea
 Son los tres puntos ⋮ al final de la fila; siempre se ven, aunque la tabla se mueva de lado. Arriba van las acciones, solo las que se pueden hacer según el estado:

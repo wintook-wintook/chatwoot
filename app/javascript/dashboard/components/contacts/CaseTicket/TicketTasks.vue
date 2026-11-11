@@ -83,6 +83,8 @@ export default {
       cancelBusy: false,
       cancelError: '',
       historyTaskId: null, // «Ver historial» de la tarea
+      askUnassigned: false, // ¿guardar sin responsable?
+      unassignedOk: false,
       tasks: [],
       // Plan-Plantilla-Tareas-Etapa — etapa actual y las siguientes con plantilla.
       stagePlan: { current: null, upcoming: [] },
@@ -502,6 +504,10 @@ export default {
     },
   },
   watch: {
+    // Si elige a alguien con el aviso abierto, el aviso sobra.
+    'form.assignee_id'(value) {
+      if (value) this.askUnassigned = false;
+    },
     ticketId() {
       this.currentPage = 1;
       this.load();
@@ -892,6 +898,8 @@ export default {
     openCreate() {
       this.editingId = null;
       this.viewing = false;
+      this.askUnassigned = false;
+      this.unassignedOk = false;
       this.form = {
         title: '',
         description: '',
@@ -920,6 +928,8 @@ export default {
     openEdit(task) {
       this.editingId = task.id;
       this.viewing = false;
+      this.askUnassigned = false;
+      this.unassignedOk = false;
       this.loadForm(task);
       this.resetAi();
       this.showModal = true;
@@ -957,6 +967,22 @@ export default {
         requester_locked: !!task.requester,
       };
     },
+    // Sin responsable: confirmar antes de guardar. Solo al quedarse sin nadie (si ya no
+    // tenía, no vuelve a preguntar) y nunca en las del cliente (esas las hace el cliente).
+    needsAssigneeConfirm(previousAssigneeId, wasExisting) {
+      if (this.unassignedOk || this.form.assignee_id) return false;
+      if (this.form.audience === 'client') return false;
+      return !wasExisting || !!previousAssigneeId;
+    },
+    chooseAssignee() {
+      this.askUnassigned = false;
+      this.$nextTick(() => this.$refs.assigneeSelect?.focus());
+    },
+    saveUnassigned() {
+      this.askUnassigned = false;
+      this.unassignedOk = true;
+      this.submitForm();
+    },
     async submitForm(reported = false) {
       const title = this.form.title.trim();
       if (!title || this.isSaving) return;
@@ -970,6 +996,10 @@ export default {
         this.askReport({ type: 'task', id: editing.id, title }, () =>
           this.submitForm(true)
         );
+        return;
+      }
+      if (this.needsAssigneeConfirm(editing?.assignee_id, !!editing)) {
+        this.askUnassigned = true;
         return;
       }
       const payload = {
@@ -1311,7 +1341,11 @@ export default {
               <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.ASSIGNEE_LABEL')
               }}</span>
-              <select v-model="form.assignee_id" :disabled="viewing">
+              <select
+                ref="assigneeSelect"
+                v-model="form.assignee_id"
+                :disabled="viewing"
+              >
                 <option value="">
                   {{ $t('CASE_TICKETS.TASKS.UNASSIGNED') }}
                 </option>
@@ -1550,6 +1584,31 @@ export default {
             @changed="onClientReturned"
           />
 
+          <!-- Sin responsable: se pregunta antes de guardar (nadie la vería en su Mi día). -->
+          <div
+            v-if="askUnassigned"
+            class="flex flex-wrap items-center gap-2 px-3 py-2 mt-1 text-sm border rounded-md bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-200"
+          >
+            <span class="flex-1 min-w-[12rem]">
+              {{ $t('CASE_TICKETS.TASKS.UNASSIGNED_CONFIRM.TEXT') }}
+            </span>
+            <woot-button
+              size="small"
+              variant="clear"
+              type="button"
+              @click="chooseAssignee"
+            >
+              {{ $t('CASE_TICKETS.TASKS.UNASSIGNED_CONFIRM.CHOOSE') }}
+            </woot-button>
+            <woot-button
+              size="small"
+              color-scheme="warning"
+              type="button"
+              @click="saveUnassigned"
+            >
+              {{ $t('CASE_TICKETS.TASKS.UNASSIGNED_CONFIRM.SAVE') }}
+            </woot-button>
+          </div>
           <div class="flex items-center justify-end gap-2 mt-1">
             <woot-button
               variant="clear"
