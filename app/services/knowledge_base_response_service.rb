@@ -101,7 +101,8 @@ class KnowledgeBaseResponseService
     end
     return false if @message.content.blank?
 
-    question      = @message.content.strip
+    question = @message.content.strip
+    follow_named_topic(question)
     @search_texts = search_queries(question)
     Rails.logger.info "[KBase] 🔍 Modo: #{directive[:mode]}#{" (#{directive[:source_name]})" if directive[:source_name]}"
     ContactTrackings::EngineTrace.source(directive) # proyecto@diagrama_agente_ia F0
@@ -796,6 +797,9 @@ class KnowledgeBaseResponseService
     return nil if reply.blank?
 
     reply = strip_echoed_sources(reply)
+    reply = guard_links(reply, messages)
+    return nil if reply.blank?
+
     # Se revisa ANTES de guardar el historial: una respuesta que copió las instrucciones
     # no puede quedar ahí, porque el modelo la vería en el turno siguiente.
     if canned_prompt&.leaks?(reply)
@@ -1099,6 +1103,33 @@ class KnowledgeBaseResponseService
     # (ContactTrackings::WelcomeMessage): si el modelo la viera, la repetiría.
     prompt = ContactTrackings::WelcomeMessage.strip(ContactTrackings::RouteMap.strip(@tracking.complementary_prompt))
     KnowledgeBase::Directives.strip_tokens(prompt).presence
+  end
+
+  # Ver ContactTrackings::ConversationVariables::TopicSwitch: si el cliente nombra otro
+  # valor de una variable de texto libre (otra carrera), se cambia ANTES de buscar, para que
+  # la búsqueda con el tema guardado (topic_query) y el modelo ya vean el nuevo.
+  def follow_named_topic(question)
+    return if @tracking.nil? || @conversation.nil?
+
+    changes = ContactTrackings::ConversationVariables::TopicSwitch.changes_for(@tracking, @conversation, question, @account.id)
+    return if changes.empty?
+
+    resets = changes.keys.reduce({}) { |acc, nombre| acc.merge(ContactTrackings::ConversationVariables::SwitchResets.for(@tracking, nombre)) }
+    Rails.logger.info "[KBase] 🔀 El cliente nombró otro valor: #{changes.map { |n, v| "#{n}=#{v}" }.join('; ')}"
+    ContactTrackings::EngineTrace.record('variable_por_mensaje', changes)
+    ContactTrackings::ConversationVariables.apply!(@tracking, @conversation, resets.merge(changes))
+  rescue StandardError => e
+    Rails.logger.warn "[KBase] ⚠️ No se pudo revisar el cambio de tema: #{e.message}"
+  end
+
+  # Ver KnowledgeBase::LinkGuard: se compara contra todo lo que el modelo vio en el turno.
+  def guard_links(reply, messages)
+    clean, removed = KnowledgeBase::LinkGuard.call(reply, messages.pluck(:content).join("\n"))
+    return reply if removed.empty?
+
+    Rails.logger.warn "[KBase] 🔗 Liga que no está en las fuentes → se quita: #{removed.join(', ')}"
+    ContactTrackings::EngineTrace.record('ligas_quitadas', removed.first(5))
+    clean
   end
 
   # El clasificador (@ruta) ya decidió de qué trata el turno, y con esa decisión se eligió
