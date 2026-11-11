@@ -111,7 +111,8 @@ class CrmQuote < ApplicationRecord
   before_validation :recalculate
   before_create :assign_folio
 
-  validates :quote_date, :currency, :seller, :payment_term, :valid_until, :delivery_date, :cfdi_use, presence: true
+  validates :quote_date, :currency, :seller, :payment_term, :valid_until, :cfdi_use, presence: true
+  validates :delivery_date, presence: true, if: :delivery_date_required?
   validates :exchange_rate, numericality: { greater_than: 0 }
   validates :extra_discount_value, :freight, :other_charges, numericality: { greater_than_or_equal_to: 0 }
   validates :extra_discount_value, numericality: { less_than_or_equal_to: 100 }, if: :extra_discount_percent?
@@ -199,6 +200,11 @@ class CrmQuote < ApplicationRecord
   end
 
   private
+
+  # VALIDAR_FECHA_ENTREGA de master2: la entrega solo es obligatoria si la cuenta lo pide.
+  def delivery_date_required?
+    account.present? && CrmSetting.for_account(account).require_delivery_date
+  end
 
   def normalize
     self.quote_date ||= Time.zone.today

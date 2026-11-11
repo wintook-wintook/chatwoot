@@ -195,6 +195,8 @@ Rails.application.routes.draw do
               end
             end
             resources :quote_series, only: [:index, :create, :update, :destroy]
+            # CrmZeus Q3.1 — parámetros de la cuenta
+            resource :settings, only: [:show, :update]
           end
           # Plan-Catalogo-Cotizaciones C1 — Ventas › Catálogo
           resources :catalog_items, only: [:index, :create, :update] do

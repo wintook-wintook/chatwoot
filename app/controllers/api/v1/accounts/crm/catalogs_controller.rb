@@ -1,7 +1,7 @@
 # CrmZeus O1/A1 — todos los catálogos de los formularios (organizaciones y artículos) en una sola llamada.
 # La primera vez que la cuenta lo pide se precargan los catálogos base (México, peso, contado).
 #
-#   GET /crm/catalogs   ?all=true incluye los inactivos (pantalla de catálogos)
+#   GET /crm/catalogs   ?all=true incluye los inactivos (pantalla de catálogos); trae también los parámetros
 class Api::V1::Accounts::Crm::CatalogsController < Api::V1::Accounts::Crm::BaseController
   def show
     ::Crm::DefaultCatalogs.ensure!(Current.account)
@@ -10,7 +10,9 @@ class Api::V1::Accounts::Crm::CatalogsController < Api::V1::Accounts::Crm::BaseC
       statuses: CrmOrganization.statuses.keys, can_admin: access_grant.admin?,
       # Artículos (A1)
       article_lines: article_lines, units: units, taxes: taxes, tax_types: CrmTax.tax_types.keys,
-      article_statuses: CrmArticle.statuses.keys
+      article_statuses: CrmArticle.statuses.keys,
+      # Parámetros de la cuenta (Q3.1)
+      settings: CrmSetting.for_account(account).as_crm_json
     }
   end
 

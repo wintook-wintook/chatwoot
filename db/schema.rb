@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_11_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_12_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1810,6 +1810,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_11_100000) do
     t.index ["user_id"], name: "index_crm_sellers_on_user_id"
   end
 
+  create_table "crm_settings", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.boolean "require_delivery_date", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_settings_on_account_id", unique: true
+  end
+
   create_table "crm_states", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "country_id", null: false
@@ -3249,6 +3257,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_11_100000) do
   add_foreign_key "crm_quotes", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "crm_sellers", "accounts"
   add_foreign_key "crm_sellers", "users", on_delete: :nullify
+  add_foreign_key "crm_settings", "accounts"
   add_foreign_key "crm_states", "accounts"
   add_foreign_key "crm_states", "crm_countries", column: "country_id", on_delete: :cascade
   add_foreign_key "crm_taxes", "accounts"

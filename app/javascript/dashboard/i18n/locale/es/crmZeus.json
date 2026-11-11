@@ -189,7 +189,8 @@
         "ARTICLE_LINES": "Líneas",
         "UNITS": "Unidades",
         "TAXES": "Impuestos",
-        "QUOTE_SERIES": "Series de folio"
+        "QUOTE_SERIES": "Series de folio",
+        "QUOTE_SETTINGS": "Parámetros"
       },
       "COLUMNS": {
         "NAME": "Nombre",
@@ -236,7 +237,8 @@
         "ARTICLE_LINES": "línea",
         "UNITS": "unidad",
         "TAXES": "impuesto",
-        "QUOTE_SERIES": "serie de folio"
+        "QUOTE_SERIES": "serie de folio",
+        "QUOTE_SETTINGS": "parámetro"
       },
       "ISO_PLACEHOLDER": "USD",
       "COUNTRY": "País",
@@ -508,6 +510,11 @@
       "LAST_NUMBER_HINT": "La siguiente cotización toma este número más uno (los folios que ya existen se brincan).",
       "DELETE_TITLE": "Eliminar serie",
       "CONFIRM_DELETE": "Se eliminará la serie {series}. Las cotizaciones ya hechas no cambian, pero el agente no podrá cotizar hasta tener otra."
+    },
+    "QUOTE_SETTINGS": {
+      "DESCRIPTION": "Reglas de las cotizaciones de toda la cuenta. Solo el Administrador las cambia.",
+      "REQUIRE_DELIVERY_DATE": "La fecha de entrega es obligatoria",
+      "REQUIRE_DELIVERY_DATE_HINT": "Si está apagado, la cotización se puede guardar sin fecha de entrega."
     }
   }
 }

@@ -12,6 +12,7 @@ import { useAlert } from 'dashboard/composables';
 import CrmCatalogs from 'dashboard/api/crmCatalogs';
 import Spinner from 'shared/components/Spinner.vue';
 import QuoteSeriesPanel from './QuoteSeriesPanel.vue';
+import QuoteSettingsPanel from './QuoteSettingsPanel.vue';
 import {
   ARTICLE_LOOKUP_KINDS,
   LOOKUP_KINDS,
@@ -69,8 +70,9 @@ const CATALOGS = [
     hasDefault: false,
     group: 'locations',
   },
-  // CrmZeus Q2 — series de folio: pantalla propia (QuoteSeriesPanel), no el ABC genérico.
-  { id: 'quote_series', panel: true, group: 'quotes' },
+  // CrmZeus Q2/Q3.1 — pantallas propias (`panel` = componente), no el ABC genérico.
+  { id: 'quote_series', panel: 'QuoteSeriesPanel', group: 'quotes' },
+  { id: 'quote_settings', panel: 'QuoteSettingsPanel', group: 'quotes' },
 ];
 const GROUPS = ['organizations', 'articles', 'quotes', 'locations'];
 // Largo máximo del nombre por catálogo (el de la base); el resto, 100.
@@ -138,7 +140,7 @@ const BLANKS = {
 
 export default {
   name: 'CrmZeusCatalogs',
-  components: { Spinner, QuoteSeriesPanel },
+  components: { Spinner, QuoteSeriesPanel, QuoteSettingsPanel },
   data() {
     return {
       catalogs: CATALOGS,
@@ -446,7 +448,7 @@ export default {
       </nav>
 
       <div v-if="current.panel" class="flex-1 overflow-auto">
-        <QuoteSeriesPanel :is-admin="isAdmin" />
+        <component :is="current.panel" :is-admin="isAdmin" />
       </div>
       <div v-else class="flex-1 overflow-auto">
         <label

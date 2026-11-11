@@ -126,12 +126,21 @@ RSpec.describe CrmQuote do
   end
 
   describe 'validaciones' do
-    it 'pide vigencia, fecha de entrega, uso CFDI, vendedor, condición de pago y al menos una partida' do
+    it 'pide vigencia, uso CFDI, vendedor, condición de pago y al menos una partida' do
       organization.update!(seller: nil, payment_term: nil, cfdi_use: nil)
       quote = build_quote(valid_until: nil, delivery_date: nil)
 
       expect(quote).not_to be_valid
-      expect(quote.errors.attribute_names).to include(:valid_until, :delivery_date, :cfdi_use, :seller, :payment_term, :items)
+      expect(quote.errors.attribute_names).to include(:valid_until, :cfdi_use, :seller, :payment_term, :items)
+      expect(quote.errors.attribute_names).not_to include(:delivery_date)
+    end
+
+    it 'pide la fecha de entrega solo si la cuenta lo tiene activado (VALIDAR_FECHA_ENTREGA)' do
+      account.create_crm_setting!(require_delivery_date: true)
+      quote = add_item(build_quote(delivery_date: nil)).quote
+
+      expect(quote).not_to be_valid
+      expect(quote.errors.attribute_names).to eq([:delivery_date])
     end
 
     it 'rechaza un contacto no ligado, un consignatario de otra organización e impuestos ajenos' do

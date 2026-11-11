@@ -38,6 +38,15 @@ class CrmCatalogsAPI extends ApiClient {
   createCity(city) {
     return axios.post(`${this.url}/cities`, { city });
   }
+
+  // CrmZeus Q3.1 — parámetros de la cuenta ({ require_delivery_date }).
+  settings() {
+    return axios.get(`${this.url}/settings`);
+  }
+
+  updateSettings(settings) {
+    return axios.patch(`${this.url}/settings`, { settings });
+  }
 }
 
 export default new CrmCatalogsAPI();

@@ -103,7 +103,13 @@ export default {
       taxSummary: [],
       info: {}, // folio, estatus, transiciones, creador… (solo de una guardada)
       series: null,
-      catalogs: { sellers: [], payment_terms: [], currencies: [], taxes: [] },
+      catalogs: {
+        sellers: [],
+        payment_terms: [],
+        currencies: [],
+        taxes: [],
+        settings: {},
+      },
       priceLists: [],
       contacts: [],
       consignees: [],
@@ -655,7 +661,10 @@ export default {
               </label>
               <div class="grid grid-cols-[2fr_1fr] gap-x-2">
                 <label>
-                  {{ $t('CRM_ZEUS.QUOTE_FORM.DELIVERY_DATE') }} *
+                  {{ $t('CRM_ZEUS.QUOTE_FORM.DELIVERY_DATE') }}
+                  <template v-if="catalogs.settings.require_delivery_date">
+                    *
+                  </template>
                   <input v-model="quote.delivery_date" type="date" />
                 </label>
                 <label>

@@ -59,6 +59,7 @@ class Account < ApplicationRecord
   has_many :contract_types, dependent: :destroy # Plan-Contratos R1
   has_many :crm_quotes, dependent: :destroy # CrmZeus Q0 (antes que las organizaciones: su FK es restrictiva)
   has_many :crm_quote_series, dependent: :delete_all # CrmZeus Q0
+  has_one :crm_setting, dependent: :delete # CrmZeus Q3.1
   has_many :crm_organizations, dependent: :destroy # CrmZeus O0
   has_many :crm_lookups, dependent: :destroy # CrmZeus O0
   has_many :crm_sellers, dependent: :destroy # CrmZeus O0

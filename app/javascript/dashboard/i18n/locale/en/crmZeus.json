@@ -189,7 +189,8 @@
         "ARTICLE_LINES": "Lines",
         "UNITS": "Units",
         "TAXES": "Taxes",
-        "QUOTE_SERIES": "Folio series"
+        "QUOTE_SERIES": "Folio series",
+        "QUOTE_SETTINGS": "Settings"
       },
       "COLUMNS": {
         "NAME": "Name",
@@ -236,7 +237,8 @@
         "ARTICLE_LINES": "line",
         "UNITS": "unit",
         "TAXES": "tax",
-        "QUOTE_SERIES": "folio series"
+        "QUOTE_SERIES": "folio series",
+        "QUOTE_SETTINGS": "setting"
       },
       "ISO_PLACEHOLDER": "USD",
       "COUNTRY": "Country",
@@ -508,6 +510,11 @@
       "LAST_NUMBER_HINT": "The next quote takes this number plus one (folios that already exist are skipped).",
       "DELETE_TITLE": "Delete series",
       "CONFIRM_DELETE": "Series {series} will be deleted. Existing quotes don't change, but the agent can't quote until they get another one."
+    },
+    "QUOTE_SETTINGS": {
+      "DESCRIPTION": "Quote rules for the whole account. Only the Administrator can change them.",
+      "REQUIRE_DELIVERY_DATE": "Delivery date is required",
+      "REQUIRE_DELIVERY_DATE_HINT": "When off, a quote can be saved without a delivery date."
     }
   }
 }

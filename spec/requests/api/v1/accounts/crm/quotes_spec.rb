@@ -77,7 +77,8 @@ RSpec.describe 'CrmZeus Quotes API' do
     post url, params: { quote: { organization_id: organization.id, items: [] } }, headers: agent.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:unprocessable_entity)
-    expect(response.parsed_body['attributes']).to include('valid_until', 'delivery_date', 'items')
+    expect(response.parsed_body['attributes']).to include('valid_until', 'items')
+    expect(response.parsed_body['attributes']).not_to include('delivery_date')
   end
 
   it 'edita: cambia una partida, quita otra y agrega un kit con componentes; recalcula' do
