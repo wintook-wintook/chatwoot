@@ -44,7 +44,7 @@ module Assistant::ToolRefs
   end
 
   def task_ref(task)
-    { id: task.id, title: task.title, due_at: local(task.due_at),
+    { id: task.id, title: task.title, due_on: due_on(task.due_at), # una tarea vence en un día, sin hora
       case: task.case_ticket&.folio, contact: task.contact&.name }
   end
 
@@ -62,7 +62,7 @@ module Assistant::ToolRefs
   end
 
   def summary_text(summary)
-    { next_task: summary[:next_task]&.slice(:title, :due_at)&.transform_values { |v| v.is_a?(Time) ? local(v) : v },
+    { next_task: summary[:next_task] && { title: summary[:next_task][:title], due_on: due_on(summary[:next_task][:due_at]) },
       next_meeting: summary[:next_meeting] && { title: summary[:next_meeting][:title], starts_at: local(summary[:next_meeting][:starts_at]) },
       pending_tasks_total: summary[:pending_tasks], of_which_overdue: summary[:overdue_tasks],
       last_customer_message: local(summary.dig(:last_incoming, :at)), last_our_message: local(summary.dig(:last_outgoing, :at)) }

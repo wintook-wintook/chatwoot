@@ -219,6 +219,9 @@ class Assistant::Tools
 
   def local(time) = time&.in_time_zone(@zone)&.strftime('%Y-%m-%d %H:%M')
 
+  # El día en que vence una tarea (sin hora: vence al final de ese día).
+  def due_on(time) = time&.in_time_zone(@zone)&.strftime('%Y-%m-%d')
+
   def google_connected?
     UserCalendarIntegration.exists?(account_id: @account.id, user_id: @user.id)
   end

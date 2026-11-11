@@ -45,7 +45,7 @@ module Assistant::ClientTaskTools
 
   def client_task_ref(task)
     { id: task.id, title: task.title, who: task.for_client? ? 'cliente' : 'nosotros (visible)', status: task.status,
-      in_progress: (true if task.client_status == 'in_progress'), due_at: local(task.due_at),
+      in_progress: (true if task.client_status == 'in_progress'), due_on: due_on(task.due_at),
       completed_by: task.completed_by_contact&.name, case_id: task.case_ticket_id, case: task.case_ticket.folio,
       client: task.case_ticket.organization&.name || task.case_ticket.contact&.name }.compact
   end
