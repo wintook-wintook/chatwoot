@@ -59,6 +59,49 @@ RSpec.describe ContactTrackings::Ficha::Changes do
     expect(ContactTrackings::Assistant::ValidatorService.new(texto, account: account).call[:blocking]).to eq([])
   end
 
+  # 11/11/2026, agente 1583 (cuenta 1128): la ruta usa (!Información) y la ficha avisaba
+  # «Agregaste Licenciatura / generales (Maestría)», que esa ruta ya cubre.
+  describe 'con un grupo negado @buscar_predefinidas(!Grupo)' do
+    def categoria(nombre, codigos)
+      cat = CannedResponseCategory.create!(account: account, name: nombre)
+      codigos.each { |c| create(:canned_response, account: account, short_code: c, content: c, category_id: cat.id) }
+    end
+
+    let(:negada) do
+      create(:tracking_template, account: account,
+                                 complementary_prompt: "@ruta(carreras #carreras: pregunta por una carrera): @buscar_predefinidas(!Información)\n")
+    end
+
+    before do
+      create(:knowledge_source, account: account, source_type: 'canned_response', name: 'Respuestas')
+      categoria('Licenciatura', ['Licenciatura en Derecho', 'Licenciatura en Psicología', 'Licenciaturas: servicio social',
+                                 'Licenciaturas: prácticas'])
+      categoria('Maestría', ['Maestría en Educación'])
+      categoria('Información', %w[Horario Dirección Tarea Contacto])
+    end
+
+    def con_ficha(partes)
+      negada.update!(resources: { 'items' => [{ 'key' => 'canned_response', 'parts' => partes }],
+                                  'confirmed_at' => Time.current.iso8601 })
+      described_class.new(negada.reload).call
+    end
+
+    it 'cubre los demás grupos: no pide agregar Licenciatura ni generales (Maestría)' do
+      expect(con_ficha(%w[Licenciatura Maestría])[:added]).to eq([])
+    end
+
+    it 'el grupo excluido sí se avisa' do
+      expect(con_ficha(%w[Licenciatura Información])[:added].pluck(:name)).to eq(['Información'])
+    end
+
+    it 'la descripción quita el grupo solo como palabra completa' do
+      cards = ContactTrackings::Ficha::Catalog.new(account, template: negada).call
+      partes = cards.find { |c| c[:kind] == 'canned' }[:parts].index_by { |p| p[:label] }
+
+      expect(partes['Licenciatura'][:topics]).to include('en derecho', 'licenciaturas: servicio social')
+    end
+  end
+
   it 'una búsqueda de predefinidas sin grupo cubre todos los grupos: no inventa cambios' do
     ['PATITAS uno', 'PATITAS dos', 'PATITAS tres', 'PATITAS cuatro'].each do |codigo|
       create(:canned_response, account: account, short_code: codigo, content: codigo)

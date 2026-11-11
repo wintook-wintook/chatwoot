@@ -97,7 +97,7 @@ class ContactTrackings::Ficha::Changes
     when 'sheet' then sheet_match?(target, oferta[:name])
     when 'calendar' then target.match?(/@agendar_calendar\b/i)
     when 'case_type' then ticket_match?(target, oferta[:name])
-    when 'canned' then canned_used?(target, directiva, loose)
+    when 'canned' then canned_used?(target, oferta, loose)
     when 'erp' then target.downcase.include?(directiva[/consulta:[^()}]+/].to_s.downcase)
     else target.downcase.include?(directiva.downcase)
     end
@@ -105,8 +105,32 @@ class ContactTrackings::Ficha::Changes
 
   def bare_canned? = routes.any? { |r| canned_match?(r[:target], '@buscar_predefinidas') }
 
-  def canned_used?(target, directiva, loose)
-    canned_match?(target, directiva) || (loose && canned_match?(target, '@buscar_predefinidas'))
+  def canned_used?(target, oferta, loose)
+    return true if canned_match?(target, oferta[:directive].to_s)
+    return false unless loose
+
+    canned_match?(target, '@buscar_predefinidas') || negated_covers?(target, oferta)
+  end
+
+  # @buscar_predefinidas(!Información) busca en TODOS los grupos menos Información
+  # (KnowledgeBase::CannedGroup). 11/11/2026, agente 1583 (cuenta 1128): la ruta carreras
+  # usa (!Información) y la ficha avisaba «Agregaste Licenciatura / generales (Maestría)»
+  # como si ninguna ruta los usara; aplicarlo duplicaba la ruta. Cuenta solo para «agregaste»:
+  # «quitaste» sigue mirando lo escrito tal cual.
+  def negated_covers?(target, oferta)
+    grupos = Array(oferta[:groups]).map { |g| g.to_s.strip.downcase }
+    excluidos = excluded_groups(target)
+    return false if grupos.empty? || excluidos.empty?
+
+    grupos.all? { |g| excluidos.any? { |x| x != g } }
+  end
+
+  def excluded_groups(target)
+    written_groups(target).select { |g| g.start_with?('!') }.map { |g| g.delete_prefix('!').strip }
+  end
+
+  def written_groups(target)
+    target.scan(/@buscar_predefinidas\b(?:\s*\(([^)]*)\))?/i).map { |g| g.first.to_s.strip.downcase }
   end
 
   # @crear_ticket(tipo=Soporte) o con prioridad: lo que cuenta es el tipo.
@@ -122,8 +146,7 @@ class ContactTrackings::Ficha::Changes
   # @buscar_predefinidas(PATITAS) contra lo escrito, sin importar mayúsculas ni espacios.
   def canned_match?(target, directiva)
     grupo = directiva[/\(([^)]*)\)/, 1].to_s.strip.downcase
-    escrito = target.scan(/@buscar_predefinidas\b(?:\s*\(([^)]*)\))?/i).map { |g| g.first.to_s.strip.downcase }
-    escrito.include?(grupo)
+    written_groups(target).include?(grupo)
   end
 
   def added
