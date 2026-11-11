@@ -21,8 +21,9 @@ RSpec.describe 'CrmZeus Quotes API' do
   let(:gloves) { account.crm_articles.create!(name: 'Guantes', key: 'GUA-1') }
   let(:safety_kit) do
     account.crm_articles.create!(name: 'Kit de seguridad', key: 'KIT-1', is_kit: true, is_stockable: false, taxes: [iva],
-                                 components_attributes: [{ component_id: helmet.id, quantity: 1, position: 1 },
-                                                         { component_id: gloves.id, quantity: 2, position: 2 }])
+                                 components_attributes: [{ component_id: helmet.id, quantity: 1, position: 1, replaceable: true },
+                                                         { component_id: gloves.id, quantity: 2, position: 2,
+                                                           units_editable: true }])
   end
 
   before do
@@ -84,7 +85,7 @@ RSpec.describe 'CrmZeus Quotes API' do
     first = created['items'].first
     items = [{ id: first['id'], quantity: 1, unit_price: 100, discount_percent: 0, tax_ids: [iva.id] },
              { article_id: safety_kit.id, role: 'kit', quantity: 2, unit_price: 500, tax_ids: [iva.id],
-               components: [{ description: 'Casco', quantity: 2 }, { description: 'Guantes', quantity: 4 }] }]
+               components: [{ article_id: helmet.id, quantity: 2 }, { article_id: gloves.id, quantity: 4 }] }]
     patch "#{url}/#{created['id']}", params: { quote: { items: items } }, headers: agent.create_new_auth_token, as: :json
 
     updated = response.parsed_body['quote']
@@ -137,7 +138,42 @@ RSpec.describe 'CrmZeus Quotes API' do
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body['quote']['items'].sole['components'].pluck('description', 'quantity'))
-        .to eq([['Guantes', 9.0]])
+        .to eq([['Guantes', 3.0]])
+    end
+
+    describe 'reglas del kit del catálogo' do
+      before { safety_kit.components.find_by!(component: gloves).update!(replaceable: false, units_editable: false) }
+
+      def rejected(components)
+        post url, params: { quote: payload(items: [kit_row(components: components)]) },
+                  headers: agent.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:unprocessable_entity)
+        response.parsed_body['message']
+      end
+
+      it 'no quita ni cambia un componente no reemplazable' do
+        expect(rejected([{ article_id: helmet.id, quantity: 3 }])).to include('«Guantes» del kit «Kit de seguridad» no es reemplazable')
+      end
+
+      it 'no cambia las unidades de un componente que no lo permite' do
+        expect(rejected([{ article_id: gloves.id, quantity: 7 }])).to include('«Guantes» del kit «Kit de seguridad» no permite cambiar unidades')
+      end
+
+      it 'un kit no puede ser componente ni quedar vacío' do
+        other_kit = account.crm_articles.create!(name: 'Otro kit', is_kit: true)
+        expect(rejected([{ article_id: gloves.id, quantity: 6 }, { article_id: other_kit.id, quantity: 1 }]))
+          .to include('«Otro kit» es un kit y no puede ser componente')
+        expect(rejected([])).to include('debe tener al menos un componente')
+      end
+
+      it 'acepta quitar el reemplazable y agregar uno que no está en el catálogo' do
+        screwdriver = account.crm_articles.create!(name: 'Desarmador')
+        created = create_quote(agent, items: [kit_row(components: [{ article_id: gloves.id, quantity: 6 },
+                                                                   { article_id: screwdriver.id, quantity: 5 }])])
+
+        expect(response).to have_http_status(:created)
+        expect(created['items'].sole['components'].pluck('description')).to eq(%w[Guantes Desarmador])
+      end
     end
   end
 

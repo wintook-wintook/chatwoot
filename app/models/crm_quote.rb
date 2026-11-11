@@ -120,6 +120,7 @@ class CrmQuote < ApplicationRecord
   validates :purchase_order_date, presence: { message: PURCHASE_ORDER_DATE_MESSAGE }, if: :purchase_order?
   validate :valid_until_after_quote_date
   validate :items_present
+  validate :kits_follow_catalog
   validate :references_belong_to_account
   validate :contact_belongs_to_organization
   validate :shipping_address_belongs_to_organization
@@ -231,6 +232,10 @@ class CrmQuote < ApplicationRecord
 
   def items_present
     errors.add(:items, 'debe tener al menos una partida') if priced_items.empty?
+  end
+
+  def kits_follow_catalog
+    Crm::QuoteKitRules.new(self).errors.each { |message| errors.add(:items, message) }
   end
 
   def references_belong_to_account

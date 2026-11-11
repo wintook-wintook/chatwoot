@@ -5,8 +5,9 @@
   se puede (descripción libre). Los importes los calcula el servidor al cerrar.
   Emite `save` con la partida y `close`.
   Q3: si el artículo es un kit no almacenable, la partida es un kit y trae sus componentes
-  (unidades por kit × cantidad); se pueden cambiar las unidades o reemplazar el componente
-  cuando el kit lo permite. Los componentes no llevan precio.
+  (unidades por kit × cantidad); se pueden cambiar las unidades, y reemplazar o quitar el
+  componente si es reemplazable (como CRMZeus). También se agregan componentes: entran con 1
+  unidad por kit, unidades editables y se pueden quitar. Los componentes no llevan precio.
 -->
 <script>
 import CrmArticles from 'dashboard/api/crmArticles';
@@ -133,17 +134,19 @@ export default {
       this.replacing = null;
     },
     // Una partida ya guardada no trae «reemplazable» ni «permite cambiar unidades»: se toman
-    // del kit en el catálogo, por artículo.
+    // del kit en el catálogo, por artículo; lo que no está en el catálogo se agregó aquí.
     applyComponentRules(article) {
       const rules = Object.fromEntries(
         (article.components || []).map(row => [row.component_id, row])
       );
       this.form.components = this.form.components.map(row => {
         const rule = rules[row.article_id];
+        // No está en el kit del catálogo: se agregó en la cotización.
+        if (!rule) return { ...row, replaceable: true, units_editable: true };
         return {
           ...row,
-          replaceable: Boolean(rule && rule.replaceable),
-          units_editable: Boolean(rule && rule.units_editable),
+          replaceable: Boolean(rule.replaceable),
+          units_editable: Boolean(rule.units_editable),
         };
       });
     },
@@ -162,6 +165,30 @@ export default {
         unit: article.unit ? article.unit.name : '',
       };
       this.form.components = rows;
+      this.replacing = null;
+    },
+    addComponent(article) {
+      const quantity = Number(this.form.quantity || 0);
+      this.form.components = [
+        ...this.form.components,
+        {
+          role: 'component',
+          article_id: article.id,
+          key: article.key || '',
+          description: article.name,
+          unit: article.unit ? article.unit.name : '',
+          units_per_kit: 1,
+          quantity,
+          replaceable: true,
+          units_editable: true,
+          tax_ids: [],
+        },
+      ];
+    },
+    // Solo los reemplazables; el kit se queda con al menos uno (se valida al aceptar).
+    removeComponent(index) {
+      if (!this.form.components[index]?.replaceable) return;
+      this.form.components = this.form.components.filter((_, i) => i !== index);
       this.replacing = null;
     },
     componentExcludeIds(index) {
@@ -374,7 +401,7 @@ export default {
                 <td class="py-1 pr-2 text-right whitespace-nowrap">
                   {{ Number(row.quantity) }} {{ row.unit }}
                 </td>
-                <td class="py-1 text-right">
+                <td class="py-1 text-right whitespace-nowrap">
                   <button
                     v-if="row.replaceable"
                     type="button"
@@ -387,10 +414,24 @@ export default {
                         : $t('CRM_ZEUS.QUOTE_FORM.REPLACE')
                     }}
                   </button>
+                  <button
+                    v-if="row.replaceable && replacing !== index"
+                    type="button"
+                    class="p-0 ml-2 text-xs text-red-600 hover:underline"
+                    @click="removeComponent(index)"
+                  >
+                    {{ $t('CRM_ZEUS.QUOTE_FORM.REMOVE_COMPONENT') }}
+                  </button>
                 </td>
               </tr>
             </tbody>
           </table>
+          <ArticlePicker
+            class="mt-2"
+            :exclude-ids="componentExcludeIds(-1)"
+            :placeholder="$t('CRM_ZEUS.QUOTE_FORM.ADD_COMPONENT_SEARCH')"
+            @pick="addComponent"
+          />
         </fieldset>
         <fieldset class="mb-3">
           <legend class="mb-1 text-sm">

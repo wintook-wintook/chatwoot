@@ -477,6 +477,8 @@
       "UNITS_PER_KIT": "Units per kit",
       "REPLACE": "Replace",
       "REPLACE_SEARCH": "Search for the replacement article",
+      "REMOVE_COMPONENT": "Remove",
+      "ADD_COMPONENT_SEARCH": "Add component: search by key or name",
       "COMPONENT_OF_KIT": "Kit component",
       "STATUS_ACTIONS": {
         "WON": "Mark won",

@@ -477,6 +477,8 @@
       "UNITS_PER_KIT": "Unidades por kit",
       "REPLACE": "Reemplazar",
       "REPLACE_SEARCH": "Busca el artículo que lo reemplaza",
+      "REMOVE_COMPONENT": "Quitar",
+      "ADD_COMPONENT_SEARCH": "Agregar componente: busca por clave o nombre",
       "COMPONENT_OF_KIT": "Componente del kit",
       "STATUS_ACTIONS": {
         "WON": "Marcar ganada",

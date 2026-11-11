@@ -115,6 +115,37 @@ describe('CrmQuoteItemModal (kits)', () => {
     expect(wrapper.vm.componentExcludeIds(0)).toEqual([9, 21]);
   });
 
+  it('quita solo componentes reemplazables y no acepta el kit vacío', async () => {
+    const wrapper = montar(blankItem());
+    await wrapper.vm.pickArticle({ id: 9 });
+    wrapper.vm.removeComponent(1);
+    expect(wrapper.vm.form.components).toHaveLength(2);
+
+    wrapper.vm.removeComponent(0);
+    expect(wrapper.vm.form.components.map(c => c.key)).toEqual(['GUA-1']);
+
+    wrapper.vm.form.components = [];
+    wrapper.vm.save();
+    expect(wrapper.emitted('save')).toBeUndefined();
+    expect(wrapper.vm.error).toBe('CRM_ZEUS.QUOTE_FORM.KIT_WITHOUT_COMPONENTS');
+  });
+
+  it('agrega un componente con 1 unidad por kit, editable y que se puede quitar', async () => {
+    const wrapper = montar(blankItem());
+    await wrapper.vm.pickArticle({ id: 9 });
+    wrapper.vm.addComponent({ id: 40, key: 'LEN-1', name: 'Lentes' });
+
+    expect(wrapper.vm.form.components[2]).toMatchObject({
+      article_id: 40,
+      description: 'Lentes',
+      units_per_kit: 1,
+      quantity: 3,
+      replaceable: true,
+      units_editable: true,
+    });
+    expect(wrapper.vm.componentExcludeIds(-1)).toEqual([9, 20, 21, 40]);
+  });
+
   it('un kit sin componentes no se puede elegir', async () => {
     CrmArticles.show.mockResolvedValue({
       data: { article: { ...KIT, components: [] } },
@@ -138,6 +169,7 @@ describe('CrmQuoteItemModal (kits)', () => {
       components: [
         { id: 6, article_id: 20, description: 'Casco', quantity: 2 },
         { id: 7, article_id: 21, description: 'Guantes', quantity: 8 },
+        { id: 8, article_id: 40, description: 'Lentes', quantity: 2 },
       ],
     });
     await flushPromises();
@@ -151,8 +183,9 @@ describe('CrmQuoteItemModal (kits)', () => {
     ).toEqual([
       [1, true, false],
       [4, false, true],
+      [1, true, true],
     ]);
     wrapper.vm.save();
-    expect(wrapper.emitted('save')[0][0].components).toHaveLength(2);
+    expect(wrapper.emitted('save')[0][0].components).toHaveLength(3);
   });
 });

@@ -57,9 +57,15 @@ class Crm::QuoteForm
     role
   end
 
-  # Kit ya guardado que se edita sin mandar `components`: se quedan los que tenía.
+  # Kit ya guardado que se edita sin mandar `components`: se quedan los que tenía, y si cambió la
+  # cantidad del kit sus unidades cambian en la misma proporción.
   def keep_components(kit)
-    @kept.concat(@quote.items.select { |item| item.parent_item_id == kit.id })
+    components = @quote.items.select { |item| item.parent_item_id == kit.id }
+    old_quantity = kit.quantity_was
+    if kit.quantity_changed? && old_quantity.to_d.positive?
+      components.each { |item| item.quantity = (item.quantity * kit.quantity / old_quantity).round(5) }
+    end
+    @kept.concat(components)
   end
 
   # Kit nuevo sin componentes en la petición: los del artículo en el catálogo, sin impuestos (van sin importe).
