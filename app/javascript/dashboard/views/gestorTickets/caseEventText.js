@@ -2,6 +2,7 @@
 // (etiqueta, resumen del payload, quién lo hizo). Lo comparten el Historial
 // (JourneyView) y la Actividad del caso. Salió tal cual de JourneyView.
 import { formatDay } from 'dashboard/helper/caseCommercial';
+import { formatDueDay } from 'dashboard/helper/taskDue';
 
 export default {
   methods: {
@@ -52,10 +53,10 @@ export default {
       const commercial = this.commercialSummary(event.event_type, p);
       if (commercial) return commercial;
       // Vencimiento: from/to son fechas.
+      // El de una tarea (source: meeting) es solo el día; el del caso lleva hora.
       if (event.event_type === 'due_date_changed') {
-        return `${p.from ? this.formatDate(p.from) : '—'} → ${
-          p.to ? this.formatDate(p.to) : '—'
-        }`;
+        const fmt = p.source === 'meeting' ? formatDueDay : this.formatDate;
+        return `${p.from ? fmt(p.from) : '—'} → ${p.to ? fmt(p.to) : '—'}`;
       }
       if (p.from && p.to) {
         // Prioridad usa etiquetas de prioridad; el resto, de estado.

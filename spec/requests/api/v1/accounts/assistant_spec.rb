@@ -87,14 +87,14 @@ RSpec.describe 'Assistant API' do
       expect(response.parsed_body.dig('proposal', 'status')).to eq('done')
     end
 
-    it 'la tarea toma la hora local y lo que el usuario cambió en la tarjeta' do
-      proposal = propose('propose_task', case_id: ticket.id, title: 'Llamar', due_at: '2030-01-10T09:00')
-      expect(proposal.dig('payload', 'due_at')).to eq('2030-01-10T09:00:00-06:00')
+    it 'la tarea vence al final del día (sin hora) y toma lo que el usuario cambió en la tarjeta' do
+      proposal = propose('propose_task', case_id: ticket.id, title: 'Llamar', due_at: '2030-01-10')
+      expect(proposal.dig('payload', 'due_at')).to eq('2030-01-10T23:59:59-06:00')
 
       confirm(proposal, title: 'Llamar a Mario')
       task = ticket.case_tasks.last
       expect(task.title).to eq('Llamar a Mario')
-      expect(task.due_at).to eq(Time.utc(2030, 1, 10, 15, 0))
+      expect(task.due_at).to be_within(1.second).of(Time.utc(2030, 1, 11, 5, 59, 59))
       expect(task.assignee).to eq(admin)
     end
 

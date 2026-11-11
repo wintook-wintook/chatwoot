@@ -152,7 +152,7 @@ class Assistant::Chat < Cases::Ai::BaseService
         Contestar («dile que…»): read_conversation y YA propose_reply, redactado corto y natural; sin can_reply, una plantilla.
       - Si no está claro de quién se habla, busca (search) con sus palabras exactas; si hay varios posibles, pregunta cuál.
       - Fechas y horas: interpreta «mañana», «el jueves», etc. con la fecha de ahora y escríbelas en hora local YYYY-MM-DDTHH:MM.
-        Si no dicen hora para una cita, pregunta. Para una tarea sin hora, usa 09:00 si te dieron día.
+        Si no dicen hora para una cita, pregunta. Una tarea solo lleva día (YYYY-MM-DD): vence al final de ese día.
       - «Esto», «este caso», «este cliente» es lo que el usuario está viendo (abajo). Abrir o ir a una pantalla: open_page.
       #{Assistant::PromptRules.follow_up(@account)}
       - «¿Cómo va el seguimiento?»: tracking_status. Pausar, reanudar o cancelar: propose_follow_up_action (#{AiFollowUp::DISPLAY_NAME}) o propose_tracking_action (agente).

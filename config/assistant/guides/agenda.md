@@ -90,6 +90,7 @@ Los reportes (cierre, avance y actividad) salen en la actividad del caso como re
 3. Llegadas: cuándo llegó cada quien a cada visita y desde dónde; «Exportar CSV» las descarga.
 
 ## Dudas frecuentes
+- ¿Por qué el vencimiento de una tarea no tiene hora? Una tarea sin agendar no entra al calendario: su vencimiento es solo el día y vence al final de ese día. Si necesitas una hora exacta (cita, llamada, visita), es una tarea agendada: usa «Agendar tarea» o «Pasar a la agenda».
 - ¿Es obligatorio el tiempo dedicado? Por omisión sí. El administrador lo cambia en Catálogos › Resultados de tareas («Exigir el tiempo dedicado en los reportes»); ahí también da de alta los resultados.
 - Si concluyes varias tareas a la vez, el tiempo se reparte por igual entre ellas.
 - ¿Cómo se decide el orden de Mi día? Por los pesos de Ajustes › Puntaje de tareas (administrador).

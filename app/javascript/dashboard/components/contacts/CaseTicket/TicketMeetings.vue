@@ -16,6 +16,7 @@ import rowMenuMixin from 'dashboard/helper/rowMenu'; // menú de la fila (⋮ a 
 import WootDropdownDivider from 'shared/components/ui/dropdown/DropdownDivider.vue';
 import TaskReportsDialog from 'dashboard/views/gestorTickets/tasks/TaskReportsDialog.vue';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
+import { formatDueDay } from 'dashboard/helper/taskDue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
 import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
@@ -548,7 +549,7 @@ export default {
         this.$emit('changed');
         this.$emitter.emit('caseToastMessage', {
           message: this.$t('CASE_TICKETS.MEETINGS.TOAST_DUE_ALIGNED', {
-            date: this.formatDate(data.case_task.due_at),
+            date: formatDueDay(data.case_task.due_at), // la tarea vence en un día, sin hora
           }),
           icon: 'calendar-clock',
         });

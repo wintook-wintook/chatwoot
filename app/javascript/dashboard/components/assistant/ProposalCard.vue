@@ -5,6 +5,7 @@
 -->
 <script>
 import AssistantAPI from 'dashboard/api/platformAssistant';
+import { dueDateInput, dueToIso } from 'dashboard/helper/taskDue'; // tarea: vence solo fecha
 
 const T = 'ASSISTANT.PROPOSAL';
 const ICONS = {
@@ -80,7 +81,7 @@ export default {
       form: {
         title: p.title || '',
         content: p.content || '',
-        due_at: toLocalInput(p.due_at),
+        due_at: dueDateInput(p.due_at),
         starts_at: toLocalInput(p.starts_at),
         ends_at: toLocalInput(p.ends_at),
         send_at: toLocalInput(p.send_at),
@@ -208,7 +209,7 @@ export default {
         },
         save_follow_up_preset: { name: f.name },
         note: { content: f.content },
-        task: { title: f.title, due_at: toIso(f.due_at) },
+        task: { title: f.title, due_at: dueToIso(f.due_at) },
         meeting: {
           title: f.title,
           starts_at: toIso(f.starts_at),
@@ -252,7 +253,7 @@ export default {
         },
         client_task: {
           title: f.title,
-          due_at: toIso(f.due_at),
+          due_at: dueToIso(f.due_at),
           requires_file: !!f.requires_file,
           notify: !!f.notify,
         },
@@ -443,11 +444,7 @@ export default {
       </label>
       <label v-if="type === 'task' || type === 'client_task'" class="text-xs">
         {{ t('DUE') }}
-        <input
-          v-model="form.due_at"
-          type="datetime-local"
-          class="h-8 text-sm"
-        />
+        <input v-model="form.due_at" type="date" class="h-8 text-sm" />
       </label>
       <!-- Tarea ↔ tarea agendada: qué pasa con la tarea -->
       <p v-if="type === 'convert_item'" class="m-0 text-xs text-slate-500">

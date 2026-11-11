@@ -241,6 +241,18 @@ export default {
       });
     },
     // «hace 2 días», «en 3 horas».
+    // Vencimiento de una tarea: solo el día («hoy», «mañana», «en 3 días»), sin hora.
+    dueDay(iso) {
+      if (!iso) return '';
+      const day = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const diff = Math.round(
+        (day(new Date(iso)) - day(new Date())) / 86400000
+      );
+      const rtf = new Intl.RelativeTimeFormat(this.$i18n.locale, {
+        numeric: 'auto',
+      });
+      return rtf.format(diff, 'day');
+    },
     relative(iso) {
       if (!iso) return '';
       const diff = (new Date(iso) - new Date()) / 1000;
@@ -326,7 +338,7 @@ export default {
                   : 'text-slate-500'
               "
             >
-              · {{ t('DUE', { when: relative(summary.next_task.due_at) }) }}
+              · {{ t('DUE', { when: dueDay(summary.next_task.due_at) }) }}
             </span>
             <span v-if="summary.next_task.assignee" class="text-slate-500">
               · {{ summary.next_task.assignee.name }}

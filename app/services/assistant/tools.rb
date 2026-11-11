@@ -144,7 +144,7 @@ class Assistant::Tools
 
     assignee = @account.users.find_by(id: args['assignee_id']) || @user
     payload = (target ? target[:ids] : {}).merge('title' => args['title'].to_s.first(255), 'description' => args['description'].to_s,
-                                                 'due_at' => parse_local(args['due_at'])&.iso8601, 'assignee_id' => assignee.id)
+                                                 'due_at' => due_day(args['due_at']), 'assignee_id' => assignee.id)
     [payload, { 'target' => target&.dig(:label), 'assignee' => assignee.name }]
   end
 
@@ -206,6 +206,11 @@ class Assistant::Tools
 
   private
 
+  # Vence de una tarea: solo el día; vence al final de ese día (la hora es de las agendadas).
+  def due_day(value)
+    parse_local(value)&.end_of_day&.iso8601
+  end
+
   def parse_local(value)
     return nil if value.blank?
 
@@ -215,6 +220,9 @@ class Assistant::Tools
   end
 
   def local(time) = time&.in_time_zone(@zone)&.strftime('%Y-%m-%d %H:%M')
+
+  # El día en que vence una tarea (sin hora: vence al final de ese día).
+  def due_on(time) = time&.in_time_zone(@zone)&.strftime('%Y-%m-%d')
 
   def google_connected?
     UserCalendarIntegration.exists?(account_id: @account.id, user_id: @user.id)
