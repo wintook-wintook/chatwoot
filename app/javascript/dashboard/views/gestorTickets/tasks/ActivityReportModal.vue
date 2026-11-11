@@ -233,47 +233,56 @@ export default {
 </script>
 
 <template>
-  <woot-modal :show="show" :on-close="() => $emit('close')">
+  <woot-modal :show="show" :on-close="() => $emit('close')" size="medium">
     <woot-modal-header
       :header-title="task ? t('PROGRESS_TITLE') : t('TITLE')"
       :header-content="task ? t('PROGRESS_SUBTITLE') : t('SUBTITLE')"
     />
-    <form class="px-6 pb-6 space-y-4" @submit.prevent="submit">
+    <!-- Compacto (como la captura de tareas): campos cortos lado a lado; cabe sin scroll. -->
+    <form
+      class="activity-report-form flex flex-col gap-2.5 px-6 pb-6"
+      @submit.prevent="submit"
+    >
       <p
         v-if="progressTask"
         class="px-3 py-2 m-0 text-sm rounded-md bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
       >
-        <span class="font-medium">{{ t('PROGRESS_OF') }}</span>
+        <span class="font-semibold">{{ t('PROGRESS_OF') }}</span>
         {{ progressLabel }}
         <span class="block text-xs text-slate-500 dark:text-slate-400">
           {{ t('PROGRESS_HINT') }}
         </span>
       </p>
-      <woot-input
-        v-else
-        v-model="title"
-        :label="t('NAME')"
-        :placeholder="t('NAME_PLACEHOLDER')"
-      />
+      <label v-else class="block">
+        <span class="field-label">{{ t('NAME') }}</span>
+        <input
+          v-model="title"
+          type="text"
+          :placeholder="t('NAME_PLACEHOLDER')"
+        />
+      </label>
       <label class="block">
-        <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-          {{ $t('TASK_REPORT.CONTENT') }}
-        </span>
+        <span class="field-label">{{ $t('TASK_REPORT.CONTENT') }}</span>
         <textarea
           v-model="content"
-          rows="4"
+          rows="3"
           class="mb-0 resize-y"
           :placeholder="$t('TASK_REPORT.CONTENT_PLACEHOLDER')"
         />
       </label>
+      <!-- Fecha · Hora · Resultado -->
       <div class="grid grid-cols-3 gap-3">
-        <woot-input v-model="date" type="date" :label="t('DATE')" />
-        <woot-input v-model="time" type="time" :label="t('TIME')" />
         <label class="block">
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-            {{ $t('TASK_REPORT.OUTCOME') }}
-          </span>
-          <select v-model="outcomeId" class="mb-0">
+          <span class="field-label">{{ t('DATE') }}</span>
+          <input v-model="date" type="date" />
+        </label>
+        <label class="block">
+          <span class="field-label">{{ t('TIME') }}</span>
+          <input v-model="time" type="time" />
+        </label>
+        <label class="block">
+          <span class="field-label">{{ $t('TASK_REPORT.OUTCOME') }}</span>
+          <select v-model="outcomeId">
             <option value="">{{ $t('TASK_REPORT.NO_OUTCOME') }}</option>
             <option v-for="o in outcomes" :key="o.id" :value="o.id">
               {{ o.label }}
@@ -286,59 +295,49 @@ export default {
         <OrganizationContactFields
           v-model="contact"
           :organization.sync="organization"
+          horizontal
         />
-        <label v-if="hasClient" class="block">
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-            {{ $t('QUICK_ACTIONS.TASK.CASE') }}
-          </span>
-          <select v-model="caseId" class="mb-0">
-            <option value="">{{ $t('QUICK_ACTIONS.TASK.NO_CASE') }}</option>
-            <option v-for="item in cases" :key="item.id" :value="item.id">
-              {{ item.folio }} · {{ item.title }}
-            </option>
-          </select>
-        </label>
-        <p v-else class="m-0 text-xs text-slate-500 dark:text-slate-400">
+        <!-- Caso · Tarea (al elegir la tarea queda como su avance) -->
+        <div v-if="hasClient" class="grid grid-cols-2 gap-3">
+          <label class="block">
+            <span class="field-label">{{ $t('QUICK_ACTIONS.TASK.CASE') }}</span>
+            <select v-model="caseId">
+              <option value="">{{ $t('QUICK_ACTIONS.TASK.NO_CASE') }}</option>
+              <option v-for="item in cases" :key="item.id" :value="item.id">
+                {{ item.folio }} · {{ item.title }}
+              </option>
+            </select>
+          </label>
+          <label v-if="tasks.length" class="block">
+            <span class="field-label">{{ t('TASK') }}</span>
+            <select v-model="taskId">
+              <option value="">{{ t('NO_TASK') }}</option>
+              <option v-for="item in tasks" :key="item.id" :value="item.id">
+                {{ taskFolio(item) }}{{ item.title }}
+              </option>
+            </select>
+          </label>
+        </div>
+        <p v-else class="m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400">
           {{ t('INTERNAL_HINT') }}
         </p>
-        <label v-if="tasks.length" class="block">
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-            {{ t('TASK') }}
-          </span>
-          <select v-model="taskId" class="mb-0">
-            <option value="">{{ t('NO_TASK') }}</option>
-            <option v-for="item in tasks" :key="item.id" :value="item.id">
-              {{ taskFolio(item) }}{{ item.title }}
-            </option>
-          </select>
-        </label>
       </template>
-      <div class="space-y-1">
-        <label
-          class="block text-sm font-medium text-slate-700 dark:text-slate-200"
+      <!-- Evidencia en una línea -->
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="field-label !mb-0">{{ $t('TASK_REPORT.EVIDENCE') }}</span>
+        <input type="file" multiple class="text-xs" @change="onFiles" />
+        <span
+          v-for="(file, index) in files"
+          :key="file.name + index"
+          class="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
         >
-          {{ $t('TASK_REPORT.EVIDENCE') }}
-          <input
-            type="file"
-            multiple
-            class="block mt-1 text-sm"
-            @change="onFiles"
-          />
-        </label>
-        <ul v-if="files.length" class="m-0 list-none">
-          <li
-            v-for="(file, index) in files"
-            :key="file.name + index"
-            class="flex items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300"
-          >
-            <span class="truncate">{{ file.name }}</span>
-            <button type="button" class="p-0" @click="removeFile(index)">
-              <fluent-icon icon="dismiss" size="12" />
-            </button>
-          </li>
-        </ul>
+          <span class="truncate max-w-[10rem]">{{ file.name }}</span>
+          <button type="button" class="p-0" @click="removeFile(index)">
+            <fluent-icon icon="dismiss" size="12" />
+          </button>
+        </span>
       </div>
-      <div class="flex justify-end gap-2 pt-2">
+      <div class="flex justify-end gap-2 pt-1">
         <woot-button type="button" variant="clear" @click="$emit('close')">
           {{ $t('TASK_REPORT.CANCEL') }}
         </woot-button>
@@ -349,3 +348,47 @@ export default {
     </form>
   </woot-modal>
 </template>
+
+<style lang="scss" scoped>
+// Formulario compacto (igual que la captura de tareas): etiquetas chicas y campos de 36 px.
+.activity-report-form {
+  .field-label {
+    @apply block mb-1 text-xs font-medium text-slate-600 dark:text-slate-300;
+  }
+
+  input[type='text'],
+  input[type='date'],
+  input[type='time'] {
+    @apply h-9 py-1 px-2 mb-0 text-sm;
+  }
+
+  // La flecha del select es su fondo: se deja espacio a la derecha para verla.
+  select {
+    @apply h-9 py-1 pl-2 pr-8 mb-0 text-sm;
+  }
+
+  textarea {
+    @apply text-sm;
+  }
+
+  // El de hora no trae estilo base: se le da el borde de los demás.
+  input[type='time'] {
+    @apply w-full bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100;
+  }
+
+  // Tiempo dedicado, organización y contacto (componentes compartidos): mismo tamaño.
+  ::v-deep span[class~='font-medium'] {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  ::v-deep input[type='text'],
+  ::v-deep input:not([type]) {
+    @apply h-9 py-1 px-2 mb-0 text-sm;
+  }
+
+  ::v-deep input[type='number'] {
+    @apply h-8 py-1 px-2 text-sm;
+  }
+}
+</style>

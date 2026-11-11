@@ -153,7 +153,6 @@
     "CANCEL": "Cancelar",
     "SUBMIT": "Concluir",
     "VIEW": "Ver reporte",
-    "VIEW_COUNT": "Ver reportes ({count})",
     "PROGRESS": "Reportar avance",
     "EMPTY": "Sin reportes.",
     "MORE": "Ver más",
@@ -242,7 +241,7 @@
     "PROGRESS_TITLE": "Reportar avance",
     "PROGRESS_SUBTITLE": "Lo que hiciste en la tarea, sin completarla",
     "PROGRESS_OF": "Avance de",
-    "PROGRESS_HINT": "La tarea sigue pendiente. El avance sale en «Ver reportes» de la tarea y en la actividad del caso.",
+    "PROGRESS_HINT": "La tarea sigue pendiente. El avance sale en el historial de la tarea y en la actividad del caso.",
     "PROGRESS_SUBMIT": "Guardar avance",
     "PROGRESS_SUCCESS": "Avance reportado"
   },

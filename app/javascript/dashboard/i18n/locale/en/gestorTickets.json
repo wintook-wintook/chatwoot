@@ -153,7 +153,6 @@
     "CANCEL": "Cancel",
     "SUBMIT": "Conclude",
     "VIEW": "View report",
-    "VIEW_COUNT": "View reports ({count})",
     "PROGRESS": "Report progress",
     "EMPTY": "No reports.",
     "MORE": "See more",
@@ -242,7 +241,7 @@
     "PROGRESS_TITLE": "Report progress",
     "PROGRESS_SUBTITLE": "What you did on the task, without completing it",
     "PROGRESS_OF": "Progress of",
-    "PROGRESS_HINT": "The task stays pending. The progress shows in the task «View reports» and in the case activity.",
+    "PROGRESS_HINT": "The task stays pending. The progress shows in the task history and in the case activity.",
     "PROGRESS_SUBMIT": "Save progress",
     "PROGRESS_SUCCESS": "Progress reported"
   },
