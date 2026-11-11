@@ -153,6 +153,7 @@
     "CANCEL": "Cancelar",
     "SUBMIT": "Concluir",
     "VIEW": "Ver reporte",
+    "PROGRESS": "Reportar avance",
     "EMPTY": "Sin reportes.",
     "MORE": "Ver más",
     "HISTORY": "Tareas concluidas y actividades",
@@ -182,7 +183,8 @@
       "TASK": "Tarea",
       "MEETING": "Tarea agendada",
       "ORDER": "Orden de trabajo",
-      "ACTIVITY": "Actividad"
+      "ACTIVITY": "Actividad",
+      "PROGRESS": "Avance"
     },
     "CATALOG": {
       "TITLE": "Resultados de tareas",
@@ -193,9 +195,39 @@
       "ERROR": "No se pudo guardar."
     }
   },
+  "TASK_HISTORY": {
+    "TITLE": "Historial de la tarea",
+    "SUBTITLE": "Todo lo que pasó con la tarea: notas, reportes, tareas agendadas y cambios",
+    "LOADING": "Cargando historial…",
+    "ERROR": "No se pudo cargar el historial.",
+    "STATUS": "Estado",
+    "ASSIGNEE": "Responsable",
+    "DUE": "Vence",
+    "PLANNED": "programada {day}",
+    "TIME": "Tiempo reportado",
+    "TIME_OF": "{done} de {est} estimado",
+    "NO_SHOW": "El cliente no asistió",
+    "FROM_MEETING": "de la tarea agendada «{title}»",
+    "EMPTY": "Nada con este filtro.",
+    "MENU": "Ver historial",
+    "ACTIONS": {
+      "PROGRESS": "Reportar avance",
+      "NOTE": "Agregar nota",
+      "SCHEDULE": "Agendar",
+      "COMPLETE": "Completar"
+    },
+    "FILTERS": {
+      "ALL": "Todo",
+      "NOTES": "Notas",
+      "REPORTS": "Reportes",
+      "MEETINGS": "Agendadas",
+      "CLIENT": "Cliente",
+      "CHANGES": "Cambios"
+    }
+  },
   "ACTIVITY_REPORT": {
     "TITLE": "Reportar actividad",
-    "SUBTITLE": "Algo que ya hiciste, sin tarea de por medio",
+    "SUBTITLE": "Algo que ya hiciste. Si es de una tarea pendiente, elígela y queda como su avance",
     "NAME": "Título",
     "NAME_PLACEHOLDER": "Ej. Llamada de confirmación",
     "DATE": "Fecha",
@@ -203,7 +235,15 @@
     "INTERNAL_HINT": "Sin contacto ni organización queda como actividad interna: solo se ve en Reportes y en tu Mi día.",
     "REQUIRED": "Escribe el título y qué hiciste.",
     "SUBMIT": "Guardar",
-    "SUCCESS": "Actividad reportada"
+    "SUCCESS": "Actividad reportada",
+    "TASK": "Tarea (opcional)",
+    "NO_TASK": "— Sin tarea: es una actividad —",
+    "PROGRESS_TITLE": "Reportar avance",
+    "PROGRESS_SUBTITLE": "Lo que hiciste en la tarea, sin completarla",
+    "PROGRESS_OF": "Avance de",
+    "PROGRESS_HINT": "La tarea sigue pendiente. El avance sale en el historial de la tarea y en la actividad del caso.",
+    "PROGRESS_SUBMIT": "Guardar avance",
+    "PROGRESS_SUCCESS": "Avance reportado"
   },
   "SALES_BUDGET": {
     "TITLE": "Presupuesto de ventas",
@@ -325,6 +365,16 @@
     }
   },
   "CASE_TICKETS": {
+    "ASSIGN_CLIENT": {
+      "BUTTON": "Ligar a un cliente",
+      "TITLE": "Ligar a un cliente · {folio}",
+      "HINT": "El caso deja de ser interno: queda en la ficha de la organización y del contacto, en su portal y en sus reportes. Quien lo pidió sigue como solicitante.",
+      "CONFIRM": "Ligar",
+      "CANCEL": "Cancelar",
+      "DONE": "El caso ya es del cliente",
+      "ERROR": "No se pudo ligar el caso",
+      "EVENT": "Se ligó a {client} (antes era caso interno)"
+    },
     "STAGE_BAR": {
       "NOW": "Ahora: {stage}"
     },
@@ -593,6 +643,7 @@
     },
     "DETAIL_TABS": {
       "PENDING": "Pendientes",
+      "PENDING_OF": "{pending} pendiente(s) de {total}",
       "MORE": "Más",
       "ACTIVITY": "Actividad",
       "SUMMARY": "Resumen",
@@ -782,6 +833,7 @@
       "REFRESH": "Actualizar",
       "FILTER_PLACEHOLDER": "Buscar en tareas (título, responsable)…",
       "NO_MATCHES": "Sin coincidencias con el filtro.",
+      "UNASSIGNED_CONFIRM": { "TEXT": "La tarea no tiene responsable: no le aparecerá a nadie en su Mi día. ¿Guardarla sin asignar?", "CHOOSE": "Elegir responsable", "SAVE": "Guardar sin asignar" },
       "NOTES_NONE": "Sin notas",
       "NOTES_COUNT_TITLE": "{count} nota(s) — ver",
       "NOTES_NONE_TOAST": "La tarea {folio} aún no tiene notas.",
@@ -1802,6 +1854,8 @@
       "task_client_update": "El cliente avanzó una tarea",
       "task_cancelled": "Tarea cancelada",
       "task_converted": "Tarea ↔ agenda",
+      "client_assigned": "Se ligó a un cliente",
+      "task_reported": "Reporte",
       "task_reopened": "Tarea reabierta",
       "task_deleted": "Tarea borrada",
       "quote_created": "Cotización creada",
@@ -2906,6 +2960,7 @@
       "WE": "Nosotros",
       "TASK_REPORT": "Reporte de cierre",
       "ACTIVITY_REPORT": "Actividad reportada",
+      "PROGRESS_REPORT": "Avance de tarea",
       "TODAY": "Hoy",
       "YESTERDAY": "Ayer",
       "LOADING": "Cargando actividad…",

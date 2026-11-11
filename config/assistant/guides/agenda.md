@@ -2,7 +2,7 @@
 key: agenda
 title: Agenda, tareas y reportes
 areas: [agenda]
-keywords: [agenda, tarea, tareas, mi dia, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada, cancelar, cancelar tarea, cancelar cita, motivo de cancelacion, reabrir, borrar tarea, no puedo borrar, reprogramar]
+keywords: [agenda, tarea, tareas, mi dia, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, reportar avance, avance, ver reportes, historial, historial de la tarea, ver historial, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada, cancelar, cancelar tarea, cancelar cita, motivo de cancelacion, reabrir, sin responsable, sin asignar, borrar tarea, no puedo borrar, reprogramar]
 pages: [tasks, my_day, calendar, task_reports, task_outcomes, task_scoring]
 ---
 ## Para qué sirve
@@ -40,12 +40,31 @@ La Agenda junta todo lo que tienes que hacer: tareas (con fecha, sin hora) y tar
 1. Pulsa «Completar» en la tarea. Se abre el «Reporte de cierre».
 2. Escribe «Qué se hizo», el Tiempo dedicado, el Resultado y, si quieres, evidencia (hasta 5 archivos).
 3. Pulsa «Concluir». El reporte queda en Agenda › Reportes, en la ficha del cliente y, si tiene caso, en su actividad; el tiempo suma a las horas del caso.
+4. El tiempo que te propone es lo estimado de la tarea menos lo que ya reportaste en sus avances.
+
+### Reportar avance de una tarea (sin completarla)
+Para lo que hiciste en una tarea que sigue pendiente (una llamada, una parte del trabajo).
+1. En el menú ⋮ de la tarea pulsa «Reportar avance» (dentro del caso o en Agenda › Tareas); en Mi día es el botón «Reportar avance» de la tarea. También desde «Reportar actividad» de la barra de arriba: elige el cliente y su caso, y en «Tarea (opcional)» la tarea.
+2. Escribe «Qué se hizo», ajusta fecha y hora, el tiempo dedicado y, si quieres, resultado y evidencia. Pulsa «Guardar avance».
+3. La tarea sigue pendiente. El avance es un reporte, no una nota: sale en el historial de la tarea (filtro Reportes, con el tiempo reportado contra lo estimado), en Agenda › Reportes como «Avance», en la ficha del cliente y en la actividad del caso; su tiempo suma ya a las horas del caso. No sale en la pestaña Notas.
+4. También se lo puedes pedir a Dali: «reporta avance de la T003: llamé al proveedor, 20 minutos».
+
+### Guardar una tarea sin responsable
+Al guardar una tarea (dentro del caso o al editarla en Agenda › Tareas) con «— Sin asignar —», te pregunta antes: «La tarea no tiene responsable: no le aparecerá a nadie en su Mi día. ¿Guardarla sin asignar?». «Elegir responsable» te regresa a la lista de responsables; «Guardar sin asignar» la guarda así. Si la tarea ya estaba sin responsable, o es una tarea del cliente, no pregunta.
 
 ### El menú de cada tarea
 Son los tres puntos ⋮ al final de la fila; siempre se ven, aunque la tabla se mueva de lado. Arriba van las acciones, solo las que se pueden hacer según el estado:
-- Pendiente: «Editar», «Agendar tarea», «Agregar nota», «Pasar a la agenda», «Cancelar…» y «Eliminar».
+- Pendiente: «Reportar avance» (la primera), «Editar», «Agendar tarea», «Agregar nota», «Pasar a la agenda», «Cancelar…» y «Eliminar».
 - Concluida o cancelada: «Ver», «Agregar nota», «Reabrir» y «Eliminar». Una tarea concluida o cancelada no se edita: se ve en modo lectura (la cancelada, con su motivo). Para cambiarle algo, primero «Reabrir»: regresa a pendiente y conserva su reporte.
-«Eliminar» solo sale si la creaste tú en las últimas 24 horas o eres administrador. Abajo de la línea va lo de consultar: «Ver reporte» (concluidas), «Notas de la tarea (N)» y «Ver tareas agendadas (N)». Si no cabe hacia abajo, el menú se abre hacia arriba.
+«Eliminar» solo sale si la creaste tú en las últimas 24 horas o eres administrador. Abajo de la línea va «Ver historial»: todo lo de la tarea en un solo lugar. Si no cabe hacia abajo, el menú se abre hacia arriba.
+
+### Historial de la tarea
+1. Ábrelo con «Ver historial» en el menú ⋮ de la tarea, con un clic en su folio (T004) dentro del caso, con el botón «Ver historial» en Mi día, o con un clic en la tarea en la ficha del contacto (también las tareas sin caso).
+2. Arriba: estado, responsable, vence, programada y el tiempo reportado contra lo estimado («1 h 30 min de 2 h estimado»), y el caso o el cliente.
+3. Botones (con la tarea pendiente): «Reportar avance», «Agregar nota», «Agendar» y «Completar». En la ficha del contacto solo «Reportar avance».
+4. Abajo, por día, todo lo que pasó: se creó, cambios de vencimiento, notas, reportes de avance y de cierre (con tiempo, resultado y evidencia), sus tareas agendadas (agendada, movida, realizada, no asistió o cancelada, con su reporte), lo que hizo el cliente en su portal y si se completó, canceló o reabrió.
+5. Filtros: Todo, Notas, Reportes, Agendadas, Cliente y Cambios, con cuántos hay de cada uno.
+6. También se lo puedes pedir a Dali: «¿cómo va la T004?».
 
 ### Tareas agendadas del caso: completar y su menú
 1. En la columna Estado de una tarea agendada pulsa «Completar». El reporte de cierre pregunta «¿Cómo terminó?»: «Se realizó» o «El cliente no asistió» (también lleva qué pasó y el tiempo). Queda «Realizada» o «No asistió», con la fecha y quién la cerró.
@@ -64,7 +83,7 @@ Cancelar es «ya no se va a hacer»; no es completarla (eso pide el reporte) ni 
 
 ### Agendar una tarea o pasarla a la agenda
 Son dos cosas distintas:
-1. «Agendar tarea» (dentro del caso): le pones día y hora para trabajarla y la tarea se queda. Puedes agendarla varias veces, o de golpe con «Serie» (por ejemplo, todos los martes 4 semanas). Cada una queda ligada a la tarea; «Ver tareas agendadas (N)» las muestra.
+1. «Agendar tarea» (dentro del caso): le pones día y hora para trabajarla y la tarea se queda. Puedes agendarla varias veces, o de golpe con «Serie» (por ejemplo, todos los martes 4 semanas). Cada una queda ligada a la tarea; «Ver historial» (filtro Agendadas) las muestra.
 2. «Pasar a la agenda»: la tarea deja de ser tarea y se vuelve una sola tarea agendada, con el tiempo que ya tenía reportado. Ya trae el título, la descripción y la duración estimada; eliges día, hora y lugar. Solo sale en tareas pendientes que no tienen tareas agendadas y que no son obligatorias, de la etapa ni del cliente (esas solo se agendan).
 3. Al revés, una tarea agendada pasa a tarea sin hora con «Pasar a tarea (sin hora)», en su menú dentro del caso o en el calendario al abrirla. Se quita de la agenda y de Google Calendar y queda como tarea con fecha límite ese mismo día, el organizador como responsable y lo que duraba como tiempo estimado. Si tiene cliente, puedes avisarle que se quita la cita. Si era la sesión de una tarea, no se crea otra: queda esa tarea. Si es de una serie, solo esa vez sale de la agenda. No se puede si ya se hizo, se canceló o ya marcaron «voy en camino».
 4. Queda en la actividad del caso («Tarea ↔ agenda»). También se lo puedes pedir a Dali: «pasa a la agenda la tarea de llamar a Mario, el jueves a las 10» o «la visita de mañana quítala de la agenda y déjala como tarea».
@@ -73,7 +92,8 @@ Son dos cosas distintas:
 Solo para lo que se capturó por error: la borra quien la creó en las primeras 24 horas, o un administrador. Si ya no se puede borrar, te lo dice y te abre «Cancelar» para hacerlo con su motivo.
 
 ### Reportar algo sin tarea
-Pulsa «Reportar actividad» en la barra de arriba: Título, «Qué se hizo», fecha, hora, resultado, tiempo y evidencia. Sin cliente queda como actividad interna.
+Pulsa «Reportar actividad» en la barra de arriba: Título, «Qué se hizo», fecha, hora, resultado, tiempo y evidencia. Sin cliente queda como actividad interna. Si es de una tarea pendiente, elígela en «Tarea (opcional)» y queda como su avance.
+Los reportes (cierre, avance y actividad) salen en la actividad del caso como reporte, con su ícono; la pestaña Notas es solo para las notas escritas.
 
 ### Revisar lo hecho
 1. Entra a Agenda › Reportes y filtra por persona y fechas (Desde, Hasta).
@@ -81,6 +101,7 @@ Pulsa «Reportar actividad» en la barra de arriba: Título, «Qué se hizo», f
 3. Llegadas: cuándo llegó cada quien a cada visita y desde dónde; «Exportar CSV» las descarga.
 
 ## Dudas frecuentes
+- ¿Por qué el vencimiento de una tarea no tiene hora? Una tarea sin agendar no entra al calendario: su vencimiento es solo el día y vence al final de ese día. Si necesitas una hora exacta (cita, llamada, visita), es una tarea agendada: usa «Agendar tarea» o «Pasar a la agenda».
 - ¿Es obligatorio el tiempo dedicado? Por omisión sí. El administrador lo cambia en Catálogos › Resultados de tareas («Exigir el tiempo dedicado en los reportes»); ahí también da de alta los resultados.
 - Si concluyes varias tareas a la vez, el tiempo se reparte por igual entre ellas.
 - ¿Cómo se decide el orden de Mi día? Por los pesos de Ajustes › Puntaje de tareas (administrador).

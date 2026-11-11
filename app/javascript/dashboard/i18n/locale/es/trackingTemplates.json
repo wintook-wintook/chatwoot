@@ -1,6 +1,6 @@
 {
   "TRACKING_TEMPLATES": {
-    "HEADER": "Agentes IA",
+    "HEADER": "Agentes a medida",
     "HEADER_BTN_TXT": "Nuevo Agente IA",
     "DESCRIPTION": "Los agentes IA permiten guardar configuraciones frecuentes para reutilizarlas al crear nuevos seguimientos.",
     "LOADING": "Cargando agentes IA...",

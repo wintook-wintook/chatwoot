@@ -306,8 +306,9 @@ export const primaryMenuV2 = (accountId, route) => {
       key: 'agentes',
       label: 'AI_AGENTS',
       featureFlag: FEATURE_FLAGS.CAMPAIGNS,
-      toState: url('tracking-dashboard/agents'),
-      toStateName: 'contact_trackings_agents',
+      // Abre en «Agentes listos» (la primera del submenú).
+      toState: url('tracking-dashboard/ready-agents'),
+      toStateName: 'ready_agents',
     },
     {
       icon: 'arrow-trending-lines',
@@ -680,6 +681,7 @@ const campaignItem = (accountId, name, label) => ({
 const agentesIa = accountId => ({
   parentNav: 'agentes',
   routes: [
+    'ready_agents',
     'contact_trackings_agents',
     'contact_trackings_agent',
     'contact_trackings_assistant',
@@ -688,6 +690,17 @@ const agentesIa = accountId => ({
     ...DUPLICATED_SETTINGS,
   ],
   menuItems: [
+    // Agentes listos (puestos empaquetados) primero; los de siempre son «Agentes a medida».
+    {
+      icon: 'bot',
+      label: 'READY_AGENTS',
+      hasSubMenu: false,
+      featureFlag: FEATURE_FLAGS.CAMPAIGNS,
+      toState: frontendURL(
+        `accounts/${accountId}/tracking-dashboard/ready-agents`
+      ),
+      toStateName: 'ready_agents',
+    },
     campaignItem(accountId, 'contact_trackings_agents', 'AI_AGENT_LIST'),
     campaignItem(accountId, 'contact_trackings_dashboard', 'TRACKINGS'),
     ...settingsItems(accountId, AI_TOOLS),

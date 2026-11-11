@@ -79,7 +79,9 @@ class Api::V1::Accounts::AssistantController < Api::V1::Accounts::BaseController
     render json: { error: 'La nota es muy larga: dicta en partes más cortas.' }, status: :unprocessable_entity
   end
 
-  PUSH_TYPES = %i[push_conversation_assignment push_assigned_conversation_new_message].freeze
+  # Te asignaron, te escribieron en una tuya y te mencionaron (también en el chat interno; los
+  # directos del chat interno avisan solos al teléfono: Notification::PushNotificationService).
+  PUSH_TYPES = %i[push_conversation_assignment push_assigned_conversation_new_message push_conversation_mention].freeze
 
   def push_subscription
     keys = params.permit(:endpoint, :p256dh, :auth).to_h

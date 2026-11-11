@@ -28,7 +28,7 @@ module Assistant::ToolDefinitions
        { case_id: int('Id del caso'), contact_id: int('Id del contacto (si no hay caso)'), content: str('Texto') },
        %w[content]),
     fn('propose_task', 'Propone crear una tarea (con caso, o con contacto/organización). Requiere confirmación.',
-       { title: str('Título corto'), description: str('Detalle'), due_at: str('Vence, hora local YYYY-MM-DDTHH:MM'),
+       { title: str('Título corto'), description: str('Detalle'), due_at: str('Día en que vence, YYYY-MM-DD (sin hora: vence al final del día)'),
          case_id: int('Id del caso'), contact_id: int('Id del contacto'), organization_id: int('Id de la organización'),
          assignee_id: int('Id del usuario responsable (omitir = el usuario)') }, %w[title]),
     fn('propose_meeting', 'Propone agendar una tarea con hora (llamada, reunión, visita) en el calendario. Requiere confirmación.',
@@ -93,7 +93,7 @@ module Assistant::ToolDefinitions
        { conversation_id: int('Número de la conversación, si aplica'), content: str('Texto del borrador') }, %w[content])
   ].freeze
 
-  EXTRA = %w[Sales Guide Quote Conversation Field Event ClientTask Cancel Convert FollowUp].freeze # Assistant::<X>ToolDefinitions::ALL
+  EXTRA = %w[Sales Guide Quote Conversation Field Event ClientTask Cancel Convert FollowUp Progress].freeze # Assistant::<X>ToolDefinitions::ALL
 
   # Al primer uso, no al cargar: los <X>ToolDefinitions usan D.fn de aquí (carga circular en eager load).
   def self.all = @all ||= (BASE + EXTRA.flat_map { |x| "Assistant::#{x}ToolDefinitions".constantize::ALL }).freeze

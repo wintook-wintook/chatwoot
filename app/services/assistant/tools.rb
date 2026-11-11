@@ -26,6 +26,8 @@ class Assistant::Tools
   include Assistant::CancelTools # cancelar con motivo
   include Assistant::ConvertTools # tarea ↔ tarea agendada
   include Assistant::FollowUpPresetTools # plantillas de seguimiento
+  include Assistant::ProgressTools # reportar avance de una tarea
+  include Assistant::PendingTools # menciones, chat interno y sin asignar
 
   LIST_LIMIT = 6
   ACTIVITY_LINES = 15
@@ -33,13 +35,14 @@ class Assistant::Tools
   READ_TOOLS = %w[search get_case get_contact my_agenda open_page list_agents tracking_status
                   list_case_types case_options search_guides read_guide report_gap].freeze +
                QUOTE_READ_TOOLS + CONVERSATION_READ_TOOLS + FIELD_READ_TOOLS + EVENT_READ_TOOLS +
-               CLIENT_TASK_READ_TOOLS + FOLLOW_UP_PRESET_READ_TOOLS
+               CLIENT_TASK_READ_TOOLS + FOLLOW_UP_PRESET_READ_TOOLS + PROGRESS_READ_TOOLS
   PROPOSAL_TOOLS = %w[propose_note propose_task propose_meeting propose_scheduled_message propose_draft
                       propose_delegate propose_tracking_action propose_create_case propose_move_stage
                       propose_outcome propose_postpone propose_resume_case propose_update_opportunity
                       propose_create_contact propose_follow_up propose_follow_up_action].freeze +
                    QUOTE_PROPOSAL_TOOLS + CONVERSATION_PROPOSAL_TOOLS + FIELD_PROPOSAL_TOOLS + EVENT_PROPOSAL_TOOLS +
-                   CLIENT_TASK_PROPOSAL_TOOLS + CANCEL_PROPOSAL_TOOLS + CONVERT_PROPOSAL_TOOLS + FOLLOW_UP_PRESET_PROPOSAL_TOOLS
+                   CLIENT_TASK_PROPOSAL_TOOLS + CANCEL_PROPOSAL_TOOLS + CONVERT_PROPOSAL_TOOLS + FOLLOW_UP_PRESET_PROPOSAL_TOOLS +
+                   PROGRESS_PROPOSAL_TOOLS + PENDING_PROPOSAL_TOOLS
 
   def self.definitions = Assistant::ToolDefinitions.all
 
@@ -142,7 +145,7 @@ class Assistant::Tools
 
     assignee = @account.users.find_by(id: args['assignee_id']) || @user
     payload = (target ? target[:ids] : {}).merge('title' => args['title'].to_s.first(255), 'description' => args['description'].to_s,
-                                                 'due_at' => parse_local(args['due_at'])&.iso8601, 'assignee_id' => assignee.id)
+                                                 'due_at' => due_day(args['due_at']), 'assignee_id' => assignee.id)
     [payload, { 'target' => target&.dig(:label), 'assignee' => assignee.name }]
   end
 
@@ -203,6 +206,11 @@ class Assistant::Tools
   end
 
   private
+
+  # Vence de una tarea: solo el día; vence al final de ese día (la hora es de las agendadas).
+  def due_day(value)
+    parse_local(value)&.end_of_day&.iso8601
+  end
 
   def parse_local(value)
     return nil if value.blank?

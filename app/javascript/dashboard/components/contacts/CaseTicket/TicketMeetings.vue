@@ -16,6 +16,7 @@ import rowMenuMixin from 'dashboard/helper/rowMenu'; // menú de la fila (⋮ a 
 import WootDropdownDivider from 'shared/components/ui/dropdown/DropdownDivider.vue';
 import TaskReportsDialog from 'dashboard/views/gestorTickets/tasks/TaskReportsDialog.vue';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
+import { formatDueDay } from 'dashboard/helper/taskDue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
 import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
@@ -178,7 +179,11 @@ export default {
           renderBodyCell: ({ row }) => (
             <div class="overflow-hidden">
               <p
-                class="m-0 text-sm truncate text-slate-800 dark:text-slate-100"
+                class={
+                  this.isClosed(row)
+                    ? 'm-0 text-sm truncate line-through text-slate-400 dark:text-slate-500'
+                    : 'm-0 text-sm truncate text-slate-800 dark:text-slate-100'
+                }
                 title={row.title}
               >
                 {row.title}
@@ -292,6 +297,11 @@ export default {
     },
     meetings() {
       this.$emit('count', this.meetings.length);
+      // Las que faltan (agendadas): la pestaña dice «pendientes/total».
+      this.$emit(
+        'pending',
+        this.meetings.filter(m => m.status === 'scheduled').length
+      );
       if (this.currentPage > this.totalPages)
         this.currentPage = this.totalPages;
     },
@@ -548,7 +558,7 @@ export default {
         this.$emit('changed');
         this.$emitter.emit('caseToastMessage', {
           message: this.$t('CASE_TICKETS.MEETINGS.TOAST_DUE_ALIGNED', {
-            date: this.formatDate(data.case_task.due_at),
+            date: formatDueDay(data.case_task.due_at), // la tarea vence en un día, sin hora
           }),
           icon: 'calendar-clock',
         });
@@ -791,6 +801,12 @@ export default {
         hour: '2-digit',
         minute: '2-digit',
       });
+    },
+    // Realizada, no asistió, cancelada o reprogramada: ya no está pendiente (se tacha).
+    isClosed(meeting) {
+      return ['held', 'no_show', 'cancelled', 'rescheduled'].includes(
+        meeting.status
+      );
     },
     formatTime(d) {
       if (!d) return '';

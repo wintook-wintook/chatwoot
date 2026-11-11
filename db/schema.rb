@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_11_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_11_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2165,6 +2165,41 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_11_100000) do
     t.index ["public_token"], name: "index_quotes_on_public_token", unique: true
   end
 
+  create_table "ready_agent_sessions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "ready_agent_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "contact_id"
+    t.string "status", default: "active", null: false
+    t.text "outcome"
+    t.jsonb "answers", default: {}, null: false
+    t.jsonb "log", default: [], null: false
+    t.text "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "case_meeting_id"
+    t.index ["account_id"], name: "index_ready_agent_sessions_on_account_id"
+    t.index ["case_meeting_id"], name: "index_ready_agent_sessions_on_case_meeting_id"
+    t.index ["contact_id"], name: "index_ready_agent_sessions_on_contact_id"
+    t.index ["conversation_id"], name: "index_ready_agent_sessions_live_per_conversation", unique: true, where: "((status)::text = ANY ((ARRAY['active'::character varying, 'paused'::character varying])::text[]))"
+    t.index ["conversation_id"], name: "index_ready_agent_sessions_on_conversation_id"
+    t.index ["ready_agent_id"], name: "index_ready_agent_sessions_on_ready_agent_id"
+  end
+
+  create_table "ready_agents", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "kind", null: false
+    t.string "name", null: false
+    t.boolean "enabled", default: false, null: false
+    t.bigint "inbox_ids", default: [], null: false, array: true
+    t.jsonb "settings", default: {}, null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_ready_agents_on_account_id"
+    t.index ["created_by_id"], name: "index_ready_agents_on_created_by_id"
+  end
+
   create_table "related_categories", force: :cascade do |t|
     t.bigint "category_id"
     t.bigint "related_category_id"
@@ -2328,6 +2363,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_11_100000) do
     t.datetime "updated_at", null: false
     t.bigint "case_time_entry_id"
     t.integer "minutes"
+    t.boolean "progress", default: false, null: false
     t.index ["account_id", "closed_at"], name: "index_task_reports_on_account_id_and_closed_at"
     t.index ["account_id"], name: "index_task_reports_on_account_id"
     t.index ["case_meeting_id"], name: "index_task_reports_on_case_meeting_id"
@@ -2851,6 +2887,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_11_100000) do
   add_foreign_key "quotes", "organizations", on_delete: :nullify
   add_foreign_key "quotes", "quotes", column: "parent_quote_id", on_delete: :nullify
   add_foreign_key "quotes", "users", column: "assignee_id", on_delete: :nullify
+  add_foreign_key "ready_agent_sessions", "accounts"
+  add_foreign_key "ready_agent_sessions", "case_meetings", on_delete: :nullify
+  add_foreign_key "ready_agent_sessions", "contacts"
+  add_foreign_key "ready_agent_sessions", "conversations"
+  add_foreign_key "ready_agent_sessions", "ready_agents"
+  add_foreign_key "ready_agents", "accounts"
+  add_foreign_key "ready_agents", "users", column: "created_by_id"
   add_foreign_key "sales_budget_lines", "accounts", on_delete: :cascade
   add_foreign_key "sales_budget_lines", "catalog_items", on_delete: :cascade
   add_foreign_key "sales_budget_lines", "contacts", on_delete: :cascade

@@ -107,7 +107,12 @@ export default {
             TaskReportsAPI.send({ type, id: itemId }, report)
           )
         );
-        this.$emit('reported', { status: this.attendance });
+        // En una cita va cómo terminó (realizada / no asistió); en lo demás, solo el aviso.
+        if (this.item.askAttendance) {
+          this.$emit('reported', { status: this.attendance });
+        } else {
+          this.$emit('reported');
+        }
       } catch (error) {
         const reason = error?.response?.data?.error;
         useAlert(

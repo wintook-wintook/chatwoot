@@ -38,6 +38,7 @@ export default {
       state: assistantState,
       text: '',
       modal: null, // task | activity | search | contact
+      reportTask: null, // «Reportar avance» desde el menú de una tarea
       helpDocsURL: window.chatwootConfig?.helpDocsURL || wootConstants.DOCS_URL,
     };
   },
@@ -104,10 +105,13 @@ export default {
     window.addEventListener('keydown', this.onShortcut);
     // «Primeros pasos» abre aquí la ventana de alta (p. ej. «Nuevo contacto»).
     this.$emitter.on('topbar:open', this.openAction);
+    // «Reportar avance» (menú de una tarea): la misma ventana, con la tarea ya puesta.
+    this.$emitter.on('topbar:reportProgress', this.openProgress);
   },
   beforeDestroy() {
     window.removeEventListener('keydown', this.onShortcut);
     this.$emitter.off('topbar:open', this.openAction);
+    this.$emitter.off('topbar:reportProgress', this.openProgress);
   },
   methods: {
     // Ctrl + K (⌘ K) abre la lupa desde cualquier pantalla.
@@ -122,8 +126,13 @@ export default {
       if (key === 'contact') await this.$store.dispatch('integrations/get');
       this.modal = key;
     },
+    openProgress(task) {
+      this.reportTask = task;
+      this.modal = 'activity';
+    },
     closeModal() {
       this.modal = null;
+      this.reportTask = null;
     },
     submit() {
       const text = this.text.trim();
@@ -189,7 +198,11 @@ export default {
       </a>
     </div>
     <QuickTaskModal :show="modal === 'task'" @close="closeModal" />
-    <ActivityReportModal :show="modal === 'activity'" @close="closeModal" />
+    <ActivityReportModal
+      :show="modal === 'activity'"
+      :task="reportTask"
+      @close="closeModal"
+    />
     <QuickSearchModal :show="modal === 'search'" @close="closeModal" />
     <CreateContact
       :show="modal === 'contact'"

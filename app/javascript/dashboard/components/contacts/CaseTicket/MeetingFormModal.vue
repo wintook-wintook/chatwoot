@@ -309,8 +309,9 @@ export default {
         :header-content="$t('CASE_TICKETS.MEETINGS.MODAL.DESC')"
       />
 
+      <!-- Compacto: campos cortos lado a lado; cabe sin scroll. -->
       <form
-        class="flex flex-col self-stretch w-full gap-3 pb-8"
+        class="meeting-form flex flex-col self-stretch w-full gap-2.5 pb-6"
         @submit.prevent="submit"
       >
         <p
@@ -323,10 +324,10 @@ export default {
         </p>
         <fieldset
           :disabled="readonly"
-          class="flex flex-col min-w-0 gap-3 p-0 m-0 border-0"
+          class="flex flex-col min-w-0 gap-2.5 p-0 m-0 border-0"
         >
           <label class="block">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <span class="field-label">{{
               $t('CASE_TICKETS.MEETINGS.MODAL.TITLE_LABEL')
             }}</span>
             <input
@@ -336,52 +337,22 @@ export default {
             />
           </label>
 
-          <div class="flex gap-3">
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <!-- Inicia · Termina · Responsable -->
+          <div class="grid grid-cols-3 gap-3">
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.MEETINGS.MODAL.STARTS_LABEL')
               }}</span>
-              <input
-                v-model="form.starts_at"
-                type="datetime-local"
-                class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-              />
+              <input v-model="form.starts_at" type="datetime-local" />
             </label>
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.MEETINGS.MODAL.ENDS_LABEL')
               }}</span>
-              <input
-                v-model="form.ends_at"
-                type="datetime-local"
-                class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-              />
+              <input v-model="form.ends_at" type="datetime-local" />
             </label>
-          </div>
-          <p
-            v-if="dateError"
-            class="m-0 text-xs text-red-600 dark:text-red-400"
-          >
-            {{ dateError }}
-          </p>
-
-          <div class="flex gap-3">
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
-                $t('CASE_TICKETS.MEETINGS.MODAL.TASK_LABEL')
-              }}</span>
-              <select v-model="form.case_task_id">
-                <option value="">
-                  {{ $t('CASE_TICKETS.MEETINGS.MODAL.TASK_NONE') }}
-                </option>
-                <option v-for="t in tasks" :key="t.id" :value="t.id">
-                  {{ taskLabel(t) }}
-                </option>
-              </select>
-            </label>
-
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.MEETINGS.MODAL.ORGANIZER_LABEL')
               }}</span>
               <select v-model="form.organizer_id">
@@ -394,11 +365,47 @@ export default {
               </select>
             </label>
           </div>
+          <p
+            v-if="dateError"
+            class="m-0 text-xs text-red-600 dark:text-red-400"
+          >
+            {{ dateError }}
+          </p>
+
+          <!-- Tarea · Lugar -->
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">
+              <span class="field-label">{{
+                $t('CASE_TICKETS.MEETINGS.MODAL.TASK_LABEL')
+              }}</span>
+              <select v-model="form.case_task_id">
+                <option value="">
+                  {{ $t('CASE_TICKETS.MEETINGS.MODAL.TASK_NONE') }}
+                </option>
+                <option v-for="t in tasks" :key="t.id" :value="t.id">
+                  {{ taskLabel(t) }}
+                </option>
+              </select>
+            </label>
+            <label class="block">
+              <span class="field-label">{{
+                $t('CASE_TICKETS.MEETINGS.MODAL.LOCATION_LABEL')
+              }}</span>
+              <input
+                v-model="form.location"
+                type="text"
+                :placeholder="
+                  $t('CASE_TICKETS.MEETINGS.MODAL.LOCATION_PLACEHOLDER')
+                "
+              />
+            </label>
+          </div>
 
           <!-- F4 — reunión única o serie. Editar una reunión concreta no muestra
              esto: la repetición se toca en la serie, no en una ocurrencia. -->
           <div v-if="!isEditing" class="flex flex-col gap-2">
-            <div class="flex items-center gap-4">
+            <!-- Una sola vez / Serie · Es una visita, en una línea -->
+            <div class="flex flex-wrap items-center gap-4">
               <label class="flex items-center gap-2 m-0">
                 <input v-model="mode" type="radio" value="single" class="m-0" />
                 <span class="text-sm text-slate-700 dark:text-slate-200">{{
@@ -410,6 +417,12 @@ export default {
                 <span class="text-sm text-slate-700 dark:text-slate-200">{{
                   $t('CASE_TICKETS.MEETINGS.MODAL.MODE_SERIES')
                 }}</span>
+              </label>
+              <label class="flex items-center gap-2 m-0 ml-4 cursor-pointer">
+                <input v-model="form.is_visit" type="checkbox" class="!mb-0" />
+                <span class="text-sm text-slate-700 dark:text-slate-200">
+                  {{ $t('QUICK_ACTIONS.TASK.IS_VISIT') }}
+                </span>
               </label>
             </div>
 
@@ -516,7 +529,10 @@ export default {
             </div>
           </div>
 
-          <label class="flex items-center gap-2 cursor-pointer w-fit">
+          <label
+            v-if="isEditing"
+            class="flex items-center gap-2 cursor-pointer w-fit"
+          >
             <input v-model="form.is_visit" type="checkbox" class="!mb-0" />
             <span class="text-sm text-slate-700 dark:text-slate-200">
               {{ $t('QUICK_ACTIONS.TASK.IS_VISIT') }}
@@ -524,25 +540,12 @@ export default {
           </label>
 
           <label class="block">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CASE_TICKETS.MEETINGS.MODAL.LOCATION_LABEL')
-            }}</span>
-            <input
-              v-model="form.location"
-              type="text"
-              :placeholder="
-                $t('CASE_TICKETS.MEETINGS.MODAL.LOCATION_PLACEHOLDER')
-              "
-            />
-          </label>
-
-          <label class="block">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <span class="field-label">{{
               $t('CASE_TICKETS.MEETINGS.MODAL.DESCRIPTION_LABEL')
             }}</span>
             <textarea
               v-model="form.description"
-              rows="3"
+              rows="2"
               :placeholder="
                 $t('CASE_TICKETS.MEETINGS.MODAL.DESCRIPTION_PLACEHOLDER')
               "
@@ -552,8 +555,8 @@ export default {
           <!-- Invitados: el cliente (si el ticket tiene contacto con correo) y
              quien se agregue a mano. Hoy es un registro de a quién se invitó;
              el correo lo manda Google cuando F3 espeje el evento. -->
-          <div class="flex flex-col gap-2">
-            <label class="flex items-center gap-2 m-0">
+          <div class="grid items-end grid-cols-2 gap-3">
+            <label class="flex items-center gap-2 m-0 pb-2">
               <input
                 v-model="form.notify_client"
                 type="checkbox"
@@ -574,7 +577,7 @@ export default {
             </label>
 
             <label class="block">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+              <span class="field-label">{{
                 $t('CASE_TICKETS.MEETINGS.MODAL.GUESTS_LABEL')
               }}</span>
               <input
@@ -617,3 +620,34 @@ export default {
     </div>
   </woot-modal>
 </template>
+
+<style lang="scss" scoped>
+// Formulario compacto (igual que el de la tarea): etiquetas chicas y campos de 36 px.
+.meeting-form {
+  .field-label {
+    @apply block mb-1 text-xs font-medium text-slate-600 dark:text-slate-300;
+  }
+
+  input[type='text'],
+  input[type='date'],
+  input[type='number'],
+  input[type='datetime-local'] {
+    @apply h-9 py-1 px-2 mb-0 text-sm;
+  }
+
+  // La flecha del select es su fondo: se deja espacio a la derecha para verla.
+  select {
+    @apply h-9 py-1 pl-2 pr-8 mb-0 text-sm;
+  }
+
+  textarea {
+    @apply mb-0 text-sm;
+  }
+
+  // Los de fecha y hora no traen estilo base: se les da el borde de los demás.
+  input[type='datetime-local'],
+  input[type='time'] {
+    @apply w-full bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100;
+  }
+}
+</style>

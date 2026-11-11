@@ -1,6 +1,6 @@
 {
   "TRACKING_TEMPLATES": {
-    "HEADER": "AI Agents",
+    "HEADER": "Custom agents",
     "HEADER_BTN_TXT": "New AI Agent",
     "DESCRIPTION": "AI Agents allow you to save frequent configurations to reuse when creating new trackings.",
     "LOADING": "Loading AI agents...",

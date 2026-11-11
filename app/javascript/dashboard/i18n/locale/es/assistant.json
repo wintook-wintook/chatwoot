@@ -151,6 +151,9 @@
       "CANCEL_MINUTES_REQUIRED": "Tiempo dedicado (minutos) — ya se trabajó",
       "CANCEL_NOTIFY": "Avisarle al cliente",
       "convert_item": "Agenda ↔ tarea",
+      "task_progress": "Avance de tarea",
+      "internal_note": "Nota interna (el cliente no la ve)",
+      "PROGRESS_HINT": "La tarea sigue pendiente. Queda en el historial de la tarea y en la actividad del caso.",
       "CONVERT_TO_MEETING": "La tarea se quita de Tareas y queda agendada.",
       "CONVERT_KEEPS": "Es obligatoria o del cliente: la tarea se queda y se agenda una sesión ligada.",
       "CONVERT_TO_TASK": "Se quita de la agenda (y de Google) y queda como tarea sin hora.",
@@ -338,6 +341,120 @@
         "ASK_CONVERSATION": "¿Qué me escribieron en la conversación #{id}?",
         "ASK_PENDING": "¿Qué conversaciones tengo sin responder?"
       }
+    }
+  },
+  "READY_AGENTS": {
+    "TITLE": "Agentes listos",
+    "SUBTITLE": "Agentes que ya vienen armados: actívalos, ponles nombre, elige su bandeja y contesta unas preguntas. Empiezan a atender solos, sin automatizaciones.",
+    "LOADING": "Cargando…",
+    "LOAD_ERROR": "No se pudieron cargar los agentes.",
+    "SOON": "Próximamente",
+    "ON": "Prendido",
+    "OFF": "Apagado",
+    "NO_INBOXES": "Sin bandeja",
+    "LIVE": "atendiendo {n}",
+    "TURN_OFF": "Apagar",
+    "TURN_ON": "Prender",
+    "ACTIVATE": "Activar",
+    "SAVED": "Agente guardado",
+    "SAVE_ERROR": "No se pudo guardar el agente.",
+    "DELETE_CONFIRM": "¿Borrar el agente «{name}»? Deja de atender en sus bandejas.",
+    "NEW_TITLE": "Activar · {title}",
+    "EDIT_TITLE": "Agente «{name}»",
+    "MODAL_SUBTITLE": "Contesta lo de la izquierda y pruébalo a la derecha: tú eres el cliente.",
+    "CANCEL": "Cancelar",
+    "SAVE": "Guardar",
+    "FIELDS": {
+      "NAME": "Nombre del agente",
+      "NAME_PLACEHOLDER": "Ej. Sofi",
+      "TONE": "Tono",
+      "INBOXES": "Bandejas donde atiende",
+      "INBOX_TAKEN": "Esta bandeja ya tiene otro agente listo prendido",
+      "OBJECTIVE": "Cuando el prospecto califica…",
+      "QUESTIONS": "¿Qué le pregunta para calificarlo?",
+      "QUESTIONS_PLACEHOLDER": "Ej. qué busca, para cuándo, en qué ciudad, presupuesto",
+      "QUALIFIED_WHEN": "Está calificado cuando…",
+      "QUALIFIED_PLACEHOLDER": "Ej. dijo qué busca, es de Monterrey y lo quiere este mes",
+      "DISCARD_WHEN": "Se descarta cuando…",
+      "DISCARD_PLACEHOLDER": "Ej. busca empleo, es de otro país o no le interesa",
+      "HANDOFF_USER": "Pasarlo a (persona)",
+      "HANDOFF_TEAM": "o al equipo",
+      "NOBODY": "— Nadie: queda sin asignar —",
+      "NO_TEAM": "— Sin equipo —",
+      "ONLY_PROSPECTS": "Solo atiende prospectos: a quien ya es cliente se lo pasa a su responsable",
+      "CLIENT_USER": "Cliente sin responsable: pasarlo a",
+      "CLIENT_TEAM": "o al equipo",
+      "INSTRUCTIONS": "Indicaciones adicionales (opcional)",
+      "INSTRUCTIONS_PLACEHOLDER": "Ej. no des precios de instalación; ofrece la visita gratis",
+      "ENABLED": "Prendido: empieza a atender en estas bandejas al guardar",
+      "APPOINTMENT_USERS": "¿Con quién agenda? (personas con Google Calendar conectado)",
+      "NO_CALENDARS": "Nadie tiene Google Calendar conectado: conéctalo en Agenda › Calendario para que el agente pueda agendar.",
+      "APPOINTMENT_MINUTES": "Duración",
+      "MINUTES": "{n} min",
+      "APPOINTMENT_KIND": "Tipo de cita",
+      "APPOINTMENT_LOCATION": "Lugar o liga (opcional)",
+      "APPOINTMENT_LOCATION_PLACEHOLDER": "Ej. Google Meet, sucursal Centro",
+      "APPOINTMENT_HINT": "Ofrece los horarios libres de su Google dentro del horario de atención de la bandeja (o lun–vie 9 a 18). La cita queda en la Agenda y en su Google, y la conversación se le asigna."
+    },
+    "TONES": {
+      "cercano": "Cercano (de tú)",
+      "formal": "Formal (de usted)",
+      "directo": "Directo (de tú)"
+    },
+    "OBJECTIVES": {
+      "handoff": "Pasarlo a una persona del equipo",
+      "opportunity": "Crearle la oportunidad y pasarla al equipo",
+      "collect": "Solo juntar sus datos y respuestas",
+      "appointment": "Agendarle una cita"
+    },
+    "TEST": {
+      "TITLE": "Chat de prueba",
+      "RESET": "Empezar de nuevo",
+      "HINT": "Escribe como si fueras un prospecto (ej. «Hola, vi su anuncio, ¿qué precio tiene?»). No se guarda ni se manda nada.",
+      "NO_MESSAGE": "(no contestó nada)",
+      "ERROR": "No se pudo probar.",
+      "TYPING": "Escribiendo…",
+      "PLACEHOLDER": "Escribe como cliente…",
+      "SEND": "Enviar",
+      "TOOL": "⚙ {tool}",
+      "DECISION": "→ {decision}"
+    },
+    "TOOLS": {
+      "buscar_respuesta_predefinida": "Buscó en respuestas predefinidas",
+      "buscar_en_catalogo": "Buscó en el catálogo",
+      "guardar_respuesta": "Guardó",
+      "actualizar_contacto": "Actualizó el contacto",
+      "prospecto_calificado": "Calificado",
+      "descartar": "Descartado",
+      "pasar_a_humano": "Pasa a una persona",
+      "ver_horarios": "Vio horarios libres",
+      "agendar_cita": "Agendó la cita",
+      "mover_cita": "Movió la cita",
+      "cancelar_cita": "Canceló la cita"
+    },
+    "DECISIONS": {
+      "prospecto_calificado": "Prospecto calificado",
+      "descartar": "Descartado: la conversación se resuelve",
+      "pasar_a_humano": "Pasa a una persona"
+    },
+    "SESSION": {
+      "FAILED": "No se pudo cambiar.",
+      "PAUSE": "Pausar",
+      "RESUME": "Reanudar",
+      "STATUS": {
+        "active": "atendiendo",
+        "paused": "en pausa",
+        "qualified": "calificado",
+        "handed_off": "pasado a una persona",
+        "discarded": "descartado",
+        "client": "era cliente: pasado a su responsable"
+      }
+    },
+    "APPOINTMENT_KINDS": {
+      "llamada": "Llamada",
+      "videollamada": "Videollamada",
+      "visita": "Visita al cliente",
+      "oficina": "En nuestra oficina"
     }
   }
 }

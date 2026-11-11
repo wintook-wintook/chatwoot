@@ -153,6 +153,7 @@
     "CANCEL": "Cancel",
     "SUBMIT": "Conclude",
     "VIEW": "View report",
+    "PROGRESS": "Report progress",
     "EMPTY": "No reports.",
     "MORE": "See more",
     "HISTORY": "Concluded tasks and activities",
@@ -182,7 +183,8 @@
       "TASK": "Task",
       "MEETING": "Scheduled task",
       "ORDER": "Work order",
-      "ACTIVITY": "Activity"
+      "ACTIVITY": "Activity",
+      "PROGRESS": "Progress"
     },
     "CATALOG": {
       "TITLE": "Task results",
@@ -193,9 +195,39 @@
       "ERROR": "Could not save."
     }
   },
+  "TASK_HISTORY": {
+    "TITLE": "Task history",
+    "SUBTITLE": "Everything that happened with the task: notes, reports, scheduled tasks and changes",
+    "LOADING": "Loading history…",
+    "ERROR": "The history could not be loaded.",
+    "STATUS": "Status",
+    "ASSIGNEE": "Assignee",
+    "DUE": "Due",
+    "PLANNED": "planned {day}",
+    "TIME": "Reported time",
+    "TIME_OF": "{done} of {est} estimated",
+    "NO_SHOW": "The customer did not show up",
+    "FROM_MEETING": "from the scheduled task «{title}»",
+    "EMPTY": "Nothing with this filter.",
+    "MENU": "View history",
+    "ACTIONS": {
+      "PROGRESS": "Report progress",
+      "NOTE": "Add note",
+      "SCHEDULE": "Schedule",
+      "COMPLETE": "Complete"
+    },
+    "FILTERS": {
+      "ALL": "All",
+      "NOTES": "Notes",
+      "REPORTS": "Reports",
+      "MEETINGS": "Scheduled",
+      "CLIENT": "Customer",
+      "CHANGES": "Changes"
+    }
+  },
   "ACTIVITY_REPORT": {
     "TITLE": "Report activity",
-    "SUBTITLE": "Something you already did, with no task behind it",
+    "SUBTITLE": "Something you already did. If it belongs to a pending task, pick it and it becomes its progress",
     "NAME": "Title",
     "NAME_PLACEHOLDER": "E.g. Confirmation call",
     "DATE": "Date",
@@ -203,7 +235,15 @@
     "INTERNAL_HINT": "With no contact or organization it stays internal: only visible in Reports and your My day.",
     "REQUIRED": "Write the title and what you did.",
     "SUBMIT": "Save",
-    "SUCCESS": "Activity reported"
+    "SUCCESS": "Activity reported",
+    "TASK": "Task (optional)",
+    "NO_TASK": "— No task: it is an activity —",
+    "PROGRESS_TITLE": "Report progress",
+    "PROGRESS_SUBTITLE": "What you did on the task, without completing it",
+    "PROGRESS_OF": "Progress of",
+    "PROGRESS_HINT": "The task stays pending. The progress shows in the task history and in the case activity.",
+    "PROGRESS_SUBMIT": "Save progress",
+    "PROGRESS_SUCCESS": "Progress reported"
   },
   "SALES_BUDGET": {
     "TITLE": "Sales budget",
@@ -325,6 +365,16 @@
     }
   },
   "CASE_TICKETS": {
+    "ASSIGN_CLIENT": {
+      "BUTTON": "Link to a client",
+      "TITLE": "Link to a client · {folio}",
+      "HINT": "The case stops being internal: it shows in the organization and contact records, their portal and their reports. Whoever asked for it stays as requester.",
+      "CONFIRM": "Link",
+      "CANCEL": "Cancel",
+      "DONE": "The case now belongs to the client",
+      "ERROR": "The case could not be linked",
+      "EVENT": "Linked to {client} (was an internal case)"
+    },
     "STAGE_BAR": {
       "NOW": "Now: {stage}"
     },
@@ -590,6 +640,7 @@
     },
     "DETAIL_TABS": {
       "PENDING": "Pending",
+      "PENDING_OF": "{pending} pending of {total}",
       "MORE": "More",
       "ACTIVITY": "Activity",
       "SUMMARY": "Summary",
@@ -772,6 +823,7 @@
       "REFRESH": "Refresh",
       "FILTER_PLACEHOLDER": "Search tasks (title, assignee)…",
       "NO_MATCHES": "No matches for the filter.",
+      "UNASSIGNED_CONFIRM": { "TEXT": "The task has no assignee: it will not show in anyone's My day. Save it unassigned?", "CHOOSE": "Choose assignee", "SAVE": "Save unassigned" },
       "NOTES_NONE": "No notes",
       "NOTES_COUNT_TITLE": "{count} note(s) — view",
       "NOTES_NONE_TOAST": "Task {folio} has no notes yet.",
@@ -1704,6 +1756,8 @@
       "task_client_update": "The customer updated a task",
       "task_cancelled": "Task cancelled",
       "task_converted": "Task ↔ schedule",
+      "client_assigned": "Linked to a client",
+      "task_reported": "Report",
       "task_reopened": "Task reopened",
       "task_deleted": "Task deleted",
       "quote_created": "Quote created",
@@ -2895,6 +2949,7 @@
       "WE": "Us",
       "TASK_REPORT": "Closing report",
       "ACTIVITY_REPORT": "Reported activity",
+      "PROGRESS_REPORT": "Task progress",
       "TODAY": "Today",
       "YESTERDAY": "Yesterday",
       "LOADING": "Loading activity…",

@@ -5,6 +5,7 @@
 -->
 <script>
 import AssistantAPI from 'dashboard/api/platformAssistant';
+import { dueDateInput, dueToIso } from 'dashboard/helper/taskDue'; // tarea: vence solo fecha
 
 const T = 'ASSISTANT.PROPOSAL';
 const ICONS = {
@@ -44,6 +45,10 @@ const ICONS = {
   save_follow_up_preset: 'save',
   // Tarea ↔ tarea agendada
   convert_item: 'calendar',
+  // Reportar avance de una tarea (es un reporte, no una nota)
+  task_progress: 'clipboard',
+  // Nota interna en una conversación (para el equipo; el cliente no la ve)
+  internal_note: 'document',
 };
 
 // Igual que el servidor (Assistant::QuoteTools.totals): descuento por partida, IVA de la partida.
@@ -78,7 +83,7 @@ export default {
       form: {
         title: p.title || '',
         content: p.content || '',
-        due_at: toLocalInput(p.due_at),
+        due_at: dueDateInput(p.due_at),
         starts_at: toLocalInput(p.starts_at),
         ends_at: toLocalInput(p.ends_at),
         send_at: toLocalInput(p.send_at),
@@ -206,7 +211,8 @@ export default {
         },
         save_follow_up_preset: { name: f.name },
         note: { content: f.content },
-        task: { title: f.title, due_at: toIso(f.due_at) },
+        internal_note: { content: f.content },
+        task: { title: f.title, due_at: dueToIso(f.due_at) },
         meeting: {
           title: f.title,
           starts_at: toIso(f.starts_at),
@@ -250,9 +256,13 @@ export default {
         },
         client_task: {
           title: f.title,
-          due_at: toIso(f.due_at),
+          due_at: dueToIso(f.due_at),
           requires_file: !!f.requires_file,
           notify: !!f.notify,
+        },
+        task_progress: {
+          notes: f.notes,
+          minutes: f.minutes === '' ? null : Number(f.minutes),
         },
         visit_report: {
           notes: f.notes,
@@ -427,7 +437,9 @@ export default {
       </label>
       <label
         v-if="
-          ['note', 'scheduled_message', 'draft'].includes(type) ||
+          ['note', 'internal_note', 'scheduled_message', 'draft'].includes(
+            type
+          ) ||
           (type === 'reply' && !labels.template)
         "
         class="text-xs"
@@ -437,11 +449,7 @@ export default {
       </label>
       <label v-if="type === 'task' || type === 'client_task'" class="text-xs">
         {{ t('DUE') }}
-        <input
-          v-model="form.due_at"
-          type="datetime-local"
-          class="h-8 text-sm"
-        />
+        <input v-model="form.due_at" type="date" class="h-8 text-sm" />
       </label>
       <!-- Tarea ↔ tarea agendada: qué pasa con la tarea -->
       <p v-if="type === 'convert_item'" class="m-0 text-xs text-slate-500">
@@ -834,6 +842,23 @@ export default {
         <p class="m-0 text-xs text-slate-500">
           {{ labels.closes_visit ? t('CLOSES_VISIT') : t('FIELD_REST') }}
         </p>
+      </template>
+      <!-- Avance de una tarea: lo hecho y el tiempo; la tarea sigue pendiente -->
+      <template v-if="type === 'task_progress'">
+        <label class="text-xs">
+          {{ t('NOTES') }}
+          <textarea v-model="form.notes" rows="4" class="text-sm" />
+        </label>
+        <label class="text-xs">
+          {{ t('MINUTES') }}
+          <input
+            v-model="form.minutes"
+            type="number"
+            min="0"
+            class="h-8 text-sm"
+          />
+        </label>
+        <p class="m-0 text-xs text-slate-500">{{ t('PROGRESS_HINT') }}</p>
       </template>
       <!-- Ventana de 24 h cerrada: sale una plantilla aprobada, ya llena -->
       <template v-if="type === 'reply' && labels.template">

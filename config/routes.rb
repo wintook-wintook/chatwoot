@@ -457,6 +457,7 @@ Rails.application.routes.draw do
               patch :resume   # Plan-Clase-Comercial F3
               post :work_order # Plan-Clase-Orden-de-Trabajo F2b — crear orden desde este caso
               post :project # Plan-Clase-Proyecto P2 — crear proyecto desde una oportunidad ganada
+              patch :assign_client # el caso interno pasa a ser de un cliente (organización y contacto)
             end
             resources :case_events, only: [:index]
             # @tickets_cases — ligar (o crear) la conversación de un caso que no tiene
@@ -532,11 +533,23 @@ Rails.application.routes.draw do
           # Plan-Agenda — lo agendado desde el calendario: con caso o solo con su contacto.
           resources :agenda_items, only: [:index, :create, :update, :destroy] do
             get :cases, on: :collection
+            get :tasks, on: :collection # tareas pendientes para «Reportar avance»
             post :to_task, on: :member # pasarla a tarea sin hora
           end
           resources :case_tasks, only: [:index], controller: 'case_tasks_index' do
             put :my_day_plan, on: :collection # Plan-Bandeja-Prioridad F2 — orden propio de «Mi día»
             post :my_day_ai, on: :collection  # Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA
+          end
+          get 'case_tasks/:id/history', to: 'task_histories#show', as: :case_task_history # historial de la tarea
+          # Agentes listos: puestos empaquetados que la empresa activa en sus bandejas
+          resources :ready_agents, only: [:index, :create, :update, :destroy] do
+            post :test, on: :collection # chat de prueba (no guarda ni manda nada)
+          end
+          resources :ready_agent_sessions, only: [:index] do
+            member do
+              patch :pause
+              patch :resume
+            end
           end
           resources :case_types, only: [:index, :create, :update, :destroy] do
             post :change_class, on: :member # cambiar de clase: tipo nuevo + retirar el de antes

@@ -48,6 +48,7 @@ export default {
     'openMeeting',
     'plan',
     'postpone',
+    'history',
   ],
   data() {
     return {
@@ -339,6 +340,7 @@ export default {
           @openTicket="r => $emit('openTicket', r)"
           @complete="r => $emit('complete', r)"
           @postpone="r => $emit('postpone', r)"
+          @history="r => $emit('history', r)"
           @pin="pin"
         />
 
@@ -405,6 +407,7 @@ export default {
                 @openTicket="r => $emit('openTicket', r)"
                 @complete="r => $emit('complete', r)"
                 @postpone="r => $emit('postpone', r)"
+                @history="r => $emit('history', r)"
                 @unpin="unpin"
               />
             </Draggable>
@@ -436,6 +439,7 @@ export default {
               @openTicket="r => $emit('openTicket', r)"
               @complete="r => $emit('complete', r)"
               @postpone="r => $emit('postpone', r)"
+              @history="r => $emit('history', r)"
               @pin="pin"
             />
           </Draggable>

@@ -36,9 +36,9 @@ La barra de comandos que antes salía con Ctrl + K ahora se abre con Ctrl + Shif
 5. Pulsa «Crear tarea».
 
 ### Reportar algo que ya hiciste
-1. Pulsa Reportar actividad (es para algo hecho sin tarea de por medio).
+1. Pulsa Reportar actividad (es para algo que ya hiciste; si es de una tarea pendiente, queda como su avance).
 2. Escribe el Título y «Qué se hizo»; ajusta Fecha y Hora (vienen con la de ahora), Resultado, Tiempo dedicado y, si quieres, evidencia (hasta 5 archivos).
-3. Elige el cliente y, si aplica, su caso. Pulsa «Guardar».
+3. Elige el cliente y, si aplica, su caso. Si fue trabajo de una tarea pendiente, elígela en «Tarea (opcional)»: queda como avance de esa tarea (no la completa). Pulsa «Guardar».
 
 ### Dar de alta un contacto
 Pulsa Nuevo contacto, llena sus datos y guarda.

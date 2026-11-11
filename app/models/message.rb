@@ -498,6 +498,8 @@ class Message < ApplicationRecord
     # Seguimiento IA: con uno vivo en la conversación, contesta SOLO él (ni el agente de
     # seguimiento de siempre ni BotSeller). Pausado no contesta nadie: lo atiende una persona.
     return AiFollowUps::ReplyJob.set(wait: 15.seconds).perform_later(id) if AiFollowUp.live_for?(conversation_id)
+    # Agente listo de la bandeja: contesta él (ni el agente a medida ni BotSeller).
+    return ReadyAgents::ReplyJob.set(wait: 15.seconds).perform_later(id) if ReadyAgents::Router.takes?(self)
 
     wait = will_trigger_tracking_automation? ? 5.seconds : 0.seconds
     ContactTrackingResponseAnalyzerJob.set(wait: wait).perform_later(id)
@@ -508,14 +510,18 @@ class Message < ApplicationRecord
   # @query_databases — encola la respuesta IA (Modo B) solo si el inbox tiene un bot
   # cobrador con mode_b_enabled (chequeo barato para no encolar de más).
   def respond_via_erp_bot
-    return if content.blank? || conversation&.inbox_id.blank?
-    return if AiFollowUp.live_for?(conversation_id) # Seguimiento IA: no contestan dos a la vez
+    return if content.blank? || conversation&.inbox_id.blank? || answered_by_ai_agent?
 
     has_bot = ErpCollectionBot.active.where(account_id: conversation.account_id, mode_b_enabled: true)
                               .exists?(inbox_id: [conversation.inbox_id, nil])
     ErpCollection::ChatResponseJob.perform_later(id) if has_bot
   rescue StandardError => e
     Rails.logger.error "[Message] Error encolando respuesta ERP Modo B: #{e.message}"
+  end
+
+  # Seguimiento IA o agente listo de la bandeja: no contestan dos a la vez.
+  def answered_by_ai_agent?
+    AiFollowUp.live_for?(conversation_id) || ReadyAgents::Router.takes?(self)
   end
 
   # proyecto@contact_tracking: ¿alguna AutomationRule (conversation_created,

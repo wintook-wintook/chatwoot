@@ -2,7 +2,10 @@ import ActivityReportModal from '../ActivityReportModal.vue';
 import TaskReportsAPI from 'dashboard/api/taskReports';
 
 vi.mock('dashboard/api/taskReports', () => ({
-  default: { sendActivity: vi.fn().mockResolvedValue({}) },
+  default: {
+    sendActivity: vi.fn().mockResolvedValue({}),
+    sendProgress: vi.fn().mockResolvedValue({}),
+  },
 }));
 vi.mock('dashboard/api/taskOutcomes', () => ({ default: { get: vi.fn() } }));
 vi.mock('dashboard/api/agendaItems', () => ({ default: { cases: vi.fn() } }));
@@ -23,6 +26,10 @@ const context = data => ({
   contact: null,
   organization: null,
   caseId: '',
+  task: null,
+  tasks: [],
+  taskId: '',
+  progressTask: null,
   saving: false,
   $t: key => key,
   $emit: vi.fn(),
@@ -61,6 +68,24 @@ describe('ActivityReportModal', () => {
       organizationId: 9,
       caseId: 3,
     });
+  });
+
+  it('con tarea es su avance: va a la tarea y avisa a su caso', async () => {
+    const task = { id: 5, title: 'Llamar', case_ticket_id: 3 };
+    const ctx = context({ title: '', task, progressTask: task });
+    await methods.submit.call(ctx);
+
+    expect(TaskReportsAPI.sendActivity).not.toHaveBeenCalled();
+    expect(TaskReportsAPI.sendProgress.mock.calls[0][0]).toBe(5);
+    expect(TaskReportsAPI.sendProgress.mock.calls[0][1]).toMatchObject({
+      content: 'Confirmó la entrega',
+      minutes: 45,
+    });
+    expect(ctx.$emitter.emit).toHaveBeenCalledWith('taskReportsChanged', {
+      taskId: 5,
+      caseId: 3,
+    });
+    expect(ctx.$emit).toHaveBeenCalledWith('close');
   });
 
   it('sin título, sin qué se hizo o sin el tiempo exigido no guarda', async () => {

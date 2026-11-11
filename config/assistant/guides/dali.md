@@ -2,7 +2,7 @@
 key: dali
 title: El asistente (Dali)
 areas: []
-keywords: [asistente, dali, ctrl j, preguntale, pedirle, tarjeta, confirmar, propuesta, nombre del asistente, que puedes hacer, en que me ayudas, borrador, mensaje programado, delegar seguimiento, ventas, meta, conversacion nueva, openai, via dali, telefono, celular, app, instalar, qr, dictar, voz, microfono, portal, contestar, responder, sin responder, quien me escribio, plantilla, 24 horas, visitas, ruta, campo, voy en camino, reporte de la visita, nfc, etiqueta nfc, expo]
+keywords: [asistente, dali, ctrl j, preguntale, pedirle, tarjeta, confirmar, propuesta, nombre del asistente, que puedes hacer, en que me ayudas, borrador, mensaje programado, delegar seguimiento, ventas, meta, conversacion nueva, openai, via dali, telefono, celular, app, instalar, qr, dictar, voz, microfono, portal, contestar, responder, sin responder, quien me escribio, que tengo pendiente, mencion, me mencionaron, chat interno, sin asignar, nota interna, plantilla, 24 horas, visitas, ruta, campo, voy en camino, reporte de la visita, nfc, etiqueta nfc, expo]
 pages: []
 ---
 ## Para qué sirve
@@ -53,10 +53,16 @@ El asistente (se llama Dali, o el nombre que le puso tu empresa) contesta en tus
 7. Lo que Dali abre (una cotización, un caso) se abre en la plataforma; el botón «Volver a Dali» te regresa. Arriba, «Mi ruta» abre el portal de campo (llegar, fotos, firma). En el menú ⋮ están «Ir a Kontrolya» y, si estás en varias empresas, el cambio de empresa.
 
 ### Contestar una conversación
-1. Pregunta «¿qué tengo sin responder?» o «¿quién me escribió?» (en el teléfono, el botón «Sin responder»). Solo ve las conversaciones abiertas asignadas a ti.
+1. Pregunta «¿qué tengo pendiente?», «¿qué tengo sin responder?» o «¿quién me escribió?» (en el teléfono, el botón «Sin responder»). Dali te contesta por partes, solo las que traigan algo:
+   - Sin responder: tus conversaciones abiertas asignadas a ti donde el último mensaje es del cliente y nadie le ha contestado (la que más lleva esperando primero). Una respuesta de un bot no cuenta como contestada.
+   - Te mencionaron: donde alguien te mencionó con @ en una nota interna y no has escrito nada desde entonces; dice quién y qué te dijo. Sale de la lista en cuanto escribes algo en esa conversación (respuesta o nota) o se resuelve.
+   - Chat interno: las salas con mensajes sin leer, de quién y si alguno te menciona. Al pedirle que te lo lea, queda leído.
+   - Sin asignar esperando: solo para quien reparte (administradores y supervisores), cuántas hay por bandeja y desde cuándo la más vieja.
 2. Dile qué contestar con tus palabras: «dile a Mario que su equipo llega el jueves». Dali lee la conversación y redacta la respuesta.
 3. Revisa el texto en la tarjeta «Responder», corrígelo si hace falta y pulsa «Enviar».
 4. Si pasaron más de 24 horas desde el último mensaje del cliente en WhatsApp, solo se puede mandar una plantilla aprobada: Dali te propone la que encaje, ya llena, y la tarjeta la muestra tal como le llegará.
+5. Para contestarle a quien te mencionó sin que lo vea el cliente: «contéstale a Ana que ya le mandé el precio». Dali te deja la tarjeta «Nota interna (el cliente no la ve)».
+6. En el chat interno: «léeme lo que me escribió Ana» y «dile que sí»: el mensaje sale en esa sala, no a un cliente.
 
 ## Límites
 - No le escribe al cliente sin tu confirmación: te deja una tarjeta (respuesta, envío de cotización), un borrador o un mensaje programado.

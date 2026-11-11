@@ -60,7 +60,16 @@ RSpec.describe 'Task Reports API' do
       expect(TaskReport.last).to have_attributes(outcome_label: 'Logrado', contact_id: contact.id, organization_id: organization.id,
                                                  case_ticket_id: ticket.id)
       expect(TaskReport.last.closed_at).to be_present
-      expect(ticket.case_events.where(event_type: :internal_note, case_task_id: task.id).first.payload['content']).to include('Le llamé y aceptó')
+    end
+
+    it 'en la bitácora del caso entra como reporte, no como nota' do
+      report(task)
+      conclude(task)
+
+      logged = ticket.case_events.find_by(event_type: :task_reported, case_task_id: task.id)
+      expect(logged.payload).to include('kind' => 'task_report')
+      expect(logged.payload['content']).to include('Le llamé y aceptó')
+      expect(ticket.case_events.where(event_type: :internal_note)).to be_empty
     end
 
     it 'la tarea agendada también, y «no asistió» igual' do
@@ -166,6 +175,67 @@ RSpec.describe 'Task Reports API' do
     end
   end
 
+  describe 'avance de una tarea (sin completarla)' do
+    let(:tasks_url) { "#{api}/case_tickets/#{ticket.id}/tasks" }
+
+    it 'nace cerrado, la tarea sigue pendiente y entra a la actividad como reporte, no como nota' do
+      task.update!(estimated_minutes: 60)
+      report(task, 'task', progress: true)
+
+      expect(response.parsed_body['task_report']['kind']).to eq('progress')
+      expect(task.reload).to be_pending
+      expect(TaskReport.last).to have_attributes(progress: true, case_task_id: task.id, minutes: 30, closed_at: be_present)
+      logged = ticket.case_events.find_by(event_type: :task_reported, case_task_id: task.id)
+      expect(logged.payload).to include('kind' => 'progress', 'minutes' => 30, 'sequence' => task.sequence)
+      expect(logged.payload['content']).to include(I18n.t('task_reports.progress_note_title', title: 'Llamar'))
+      expect(ticket.time_entries.sum(:minutes)).to eq(30)
+    end
+
+    it 'la tarea cuenta sus reportes (no sus notas) y propone lo que falta de lo estimado' do
+      task.update!(estimated_minutes: 60)
+      report(task, 'task', progress: true)
+
+      get tasks_url, headers: headers
+      row = response.parsed_body['case_tasks'].find { |t| t['id'] == task.id }
+      expect(row).to include('notes_count' => 0, 'reports_count' => 1)
+
+      get "#{api}/task_reports/suggestion", params: { item_type: 'task', item_id: task.id }, headers: headers
+      expect(response.parsed_body['minutes']).to eq(30) # 60 estimados − 30 de avance
+    end
+
+    it 'no cuenta como el reporte de cierre: al concluir se sigue pidiendo' do
+      report(task, 'task', progress: true)
+      conclude(task)
+      expect(response.parsed_body['report_required']).to be(true)
+
+      report(task)
+      conclude(task)
+      expect(task.reload).to be_done
+      expect(task.task_reports.closed.pluck(:progress)).to contain_exactly(true, false)
+    end
+
+    it 'solo de una tarea pendiente y que no sea del cliente' do
+      task.update!(status: :cancelled)
+      report(task, 'task', progress: true)
+      expect(response).to have_http_status(:unprocessable_entity)
+
+      client = CaseTask.create!(account: account, case_ticket: ticket, title: 'Firmar', audience: :client)
+      report(client, 'task', progress: true)
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it 'la lista de tareas para la ventana: las del caso, o sin caso las rápidas del cliente' do
+      task
+      loose
+      CaseTask.create!(account: account, case_ticket: ticket, title: 'Firmar', audience: :client)
+      get "#{api}/agenda_items/tasks", params: { case_ticket_id: ticket.id }, headers: headers
+      expect(response.parsed_body['tasks'].pluck('title')).to eq(['Llamar'])
+
+      get "#{api}/agenda_items/tasks", params: { contact_id: contact.id }, headers: headers
+      expect(response.parsed_body['tasks'].pluck('title')).to eq(['Sin caso'])
+    end
+  end
+
   describe 'actividad reportada (sin tarea)' do
     it 'con caso nace cerrada, toma el cliente del caso y entra a su actividad' do
       activity(case_ticket_id: ticket.id)
@@ -175,7 +245,7 @@ RSpec.describe 'Task Reports API' do
       expect(TaskReport.last).to have_attributes(title: 'Llamada', case_task_id: nil, case_ticket_id: ticket.id,
                                                  contact_id: contact.id, organization_id: organization.id)
       expect(TaskReport.last.closed_at).to be_present
-      note = ticket.case_events.where(event_type: :internal_note).last
+      note = ticket.case_events.where(event_type: :task_reported).last
       expect(note.payload).to include('kind' => 'activity_report')
       expect(note.payload['content']).to include(I18n.t('task_reports.activity_note_title', title: 'Llamada'), 'Confirmó la entrega')
     end

@@ -2,7 +2,7 @@
 key: casos
 title: Casos (lo común de Ventas y Servicio)
 areas: [sales, service]
-keywords: [caso, casos, folio, crear caso, nuevo caso, caso interno, ticket, responsable, equipo, vencimiento, vence, cambiar estado, cerrar caso, cancelar caso, reabrir, tareas pendientes, conversaciones del caso, ligar conversacion, agregar conversacion, nota, agendar, lista, tablero, dashboard, varios casos, tomar, siguiente paso, sin siguiente paso, agente, robot, sin agente, con agente, seguimiento ia, quien atiende]
+keywords: [caso, casos, folio, crear caso, nuevo caso, caso interno, ligar a un cliente, quitar de interno, ticket, responsable, equipo, vencimiento, vence, cambiar estado, cerrar caso, cancelar caso, reabrir, tareas pendientes, conversaciones del caso, ligar conversacion, agregar conversacion, nota, agendar, lista, tablero, dashboard, varios casos, tomar, siguiente paso, sin siguiente paso, agente, robot, sin agente, con agente, seguimiento ia, quien atiende]
 pages: [cases, opportunities, case]
 ---
 ## Para qué sirve
@@ -22,6 +22,12 @@ Un caso es un trabajo con un cliente que empieza y termina: una oportunidad de v
 4. Escribe el título y, si quieres, la descripción y la prioridad.
 5. En «Asignación manual» eliges equipo y responsable (empieza en ti). Si lo dejas «— Sin asignar —», deciden las reglas de automatización.
 6. Llena «Campos personalizados» si el tipo los tiene y pulsa el botón de crear.
+
+### Ligar un caso interno a un cliente
+1. Abre el caso interno: arriba dice «Caso interno · quien lo pidió».
+2. Pulsa «Ligar a un cliente» junto a ese texto.
+3. Elige la organización (opcional) y el contacto, y pulsa «Ligar». Si eliges primero la organización, el contacto se busca entre los suyos; sin organización se toma la del contacto.
+4. El caso deja de ser interno: aparece en la ficha de la organización y del contacto, en su portal y en sus reportes, y queda en la actividad. Quien lo pidió sigue como solicitante. Se puede también con el caso cerrado.
 
 ### Trabajar dentro del caso
 1. Arriba están el título (lápiz para editarlo), «Cambiar estado ▾», «Vence: …», Equipo y Responsable.

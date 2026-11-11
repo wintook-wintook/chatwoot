@@ -9,6 +9,7 @@ import CaseActivity from './activity/CaseActivity.vue'; // Plan Actividad del ca
 import CaseConversationsMenu from './activity/CaseConversationsMenu.vue';
 import { toggleAssistant } from 'dashboard/helper/assistantState';
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue';
+import AssignClientModal from './AssignClientModal.vue';
 import TicketConversation from '../../components/contacts/CaseTicket/TicketConversation.vue';
 import TicketTasks from '../../components/contacts/CaseTicket/TicketTasks.vue';
 import TicketNotes from '../../components/contacts/CaseTicket/TicketNotes.vue';
@@ -74,6 +75,7 @@ export default {
     CaseActivity,
     CaseConversationsMenu,
     CaseTicketInternalModal,
+    AssignClientModal,
     TicketConversation,
     TicketTasks,
     TicketNotes,
@@ -133,9 +135,11 @@ export default {
       showDueMenu: false, // @tickets_cases P4 — vencimiento inline
       dueDraft: '', // valor del input datetime-local
       taskCount: 0, // @tickets_cases P4 — total de tareas (badge del tab)
+      taskPending: 0, // las que faltan: «Tareas 1/3»
       noteCount: 0, // @tickets_cases — total de notas internas (badge del tab)
       showContactPanel: false, // @tickets_cases — ficha del contacto abierta
       meetingCount: 0, // @tickets_cases F2 — total de reuniones (badge del tab)
+      meetingPending: 0, // las agendadas que faltan: «Tareas agendadas 1/2»
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
       // @tickets_cases — bitácora de notas internas
@@ -148,6 +152,7 @@ export default {
       fromCaseTarget: 'work_order',
       isCreatingWorkOrder: false,
       showEditModal: false, // @tickets_cases — modal de edición del ticket
+      showAssignClient: false, // «Ligar a un cliente» (caso interno)
       reopenReason: '',
       isReopening: false,
       // @tickets_cases — motivo opcional al cambiar de estado (osTicket)
@@ -475,7 +480,8 @@ export default {
       tabs.push({
         key: 'pending',
         label: this.$t('CASE_TICKETS.DETAIL_TABS.PENDING'),
-        count: this.taskCount + this.meetingCount,
+        // «Pendientes» cuenta solo lo que falta (tareas y tareas agendadas por hacer).
+        count: this.taskPending + this.meetingPending,
       });
       // Casos vinculados (duplicado, padre/hijo, la orden o el proyecto que nació de
       // aquí…), como «Casos del proyecto» en los proyectos, que ya tienen la suya.
@@ -569,12 +575,14 @@ export default {
           icon: 'checkmark-circle',
           label: this.$t('CASE_TICKETS.DETAIL_TABS.TASKS'),
           count: this.taskCount,
+          pending: this.taskPending,
         },
         {
           key: 'meetings',
           icon: 'calendar-clock',
           label: this.$t('CASE_TICKETS.DETAIL_TABS.MEETINGS'),
           count: this.meetingCount,
+          pending: this.meetingPending,
         },
       ];
     },
@@ -914,6 +922,7 @@ export default {
   // Asistente (Dali) — al confirmar algo del asistente, el caso se refresca.
   created() {
     this.$emitter.on('assistant:done', this.onAssistantDone);
+    this.$emitter.on('taskReportsChanged', this.onReportsChanged);
   },
   mounted() {
     this.loadTicket();
@@ -936,6 +945,7 @@ export default {
     this.$emitter.off('caseConflictResolved', this.onConflictResolved);
     window.removeEventListener('resize', this.measureDescription);
     this.$emitter.off('assistant:done', this.onAssistantDone);
+    this.$emitter.off('taskReportsChanged', this.onReportsChanged);
   },
   methods: {
     // ¿La descripción no cabe en su renglón? (más ancha o con varios párrafos)
@@ -1063,6 +1073,31 @@ export default {
       this.$store.dispatch('caseTickets/fetchEvents', {
         ticketId: this.ticketId,
       });
+    },
+    // Tareas, Tareas agendadas y Notas son listas aparte: lo que cambia en una se
+    // cuenta en las otras (notas de la tarea, sus agendadas, el reporte que entra
+    // como nota). Se recargan como al confirmar algo de Dali.
+    onNotesChanged() {
+      this.reloadEvents();
+      this.$refs.ticketTasks?.load?.();
+    },
+    onTasksSaved() {
+      this.refetch();
+      this.activityTick += 1;
+      this.$refs.ticketNotes?.load?.();
+    },
+    // «Reportar avance» (ventana de arriba): si fue de este caso, su contador de
+    // reportes y la Actividad.
+    onReportsChanged(info) {
+      if (!info || Number(info.caseId) !== Number(this.ticketId)) return;
+      this.reloadEvents();
+      this.activityTick += 1;
+      this.$refs.ticketTasks?.load?.();
+    },
+    onMeetingsChanged() {
+      this.reloadEvents();
+      this.$refs.ticketTasks?.load?.();
+      this.$refs.ticketNotes?.load?.();
     },
     // @tickets_cases — clic afuera (v-on-clickaway): cada bloque cierra solo lo suyo. Si
     // uno cerrara todos, el clic en el botón del otro apagaría su menú al abrirlo.
@@ -1901,6 +1936,13 @@ export default {
       this.showEditModal = false;
       this.refetch();
     },
+    onClientAssigned() {
+      this.showAssignClient = false;
+      this.$emitter.emit('newToastMessage', {
+        message: this.$t('CASE_TICKETS.ASSIGN_CLIENT.DONE'),
+      });
+      this.refetch();
+    },
     openReopenModal() {
       this.reopenReason = '';
       this.showReopenModal = true;
@@ -2385,6 +2427,17 @@ export default {
             }}<template v-if="ticket.requester">
               · {{ ticket.requester.name }}</template
             >
+            <!-- «Ligar a un cliente»: deja de ser interno (también cerrado: es corregir de quién es). -->
+            <woot-button
+              size="tiny"
+              variant="smooth"
+              color-scheme="primary"
+              icon="person-add"
+              class="ml-1 align-middle"
+              @click="showAssignClient = true"
+            >
+              {{ $t('CASE_TICKETS.ASSIGN_CLIENT.BUTTON') }}
+            </woot-button>
           </span>
           <!-- @tickets_cases — título a UNA sola línea con "…": envolver a dos
                líneas empujaba las pestañas y descuadraba la cabecera. Completo
@@ -3496,7 +3549,7 @@ export default {
         :is-frozen="isFrozen"
         class="flex-1 min-h-0"
         @count="noteCount = $event"
-        @changed="reloadEvents"
+        @changed="onNotesChanged"
       />
 
       <!-- ════ Pestaña Pendientes (Plan Actividad del caso P3) ════
@@ -3524,8 +3577,18 @@ export default {
           >
             <fluent-icon :icon="view.icon" size="14" />
             {{ view.label }}
-            <span v-if="view.count" class="text-xs text-slate-400">
-              {{ view.count }}
+            <!-- pendientes/total: «1/3» = falta 1 de 3 -->
+            <span
+              v-if="view.count"
+              class="text-xs text-slate-400"
+              :title="
+                $t('CASE_TICKETS.DETAIL_TABS.PENDING_OF', {
+                  pending: view.pending,
+                  total: view.count,
+                })
+              "
+            >
+              {{ view.pending }}/{{ view.count }}
             </span>
           </button>
         </div>
@@ -3569,11 +3632,9 @@ export default {
         :allow-milestones="isProject"
         urgent-first
         class="flex-none"
-        @saved="
-          refetch();
-          activityTick += 1;
-        "
+        @saved="onTasksSaved"
         @count="taskCount = $event"
+        @pending="taskPending = $event"
         @addNote="openNoteForTask"
         @viewNotes="openNotesForTask"
         @addMeeting="openMeetingForTask"
@@ -3597,7 +3658,8 @@ export default {
         :create-defaults="visitDefaults"
         class="flex-none"
         @count="meetingCount = $event"
-        @changed="reloadEvents"
+        @pending="meetingPending = $event"
+        @changed="onMeetingsChanged"
         @tasksChanged="$refs.ticketTasks && $refs.ticketTasks.load()"
         @viewTask="openTaskFromMeeting"
       />
@@ -3735,6 +3797,14 @@ export default {
         </form>
       </div>
     </woot-modal>
+
+    <AssignClientModal
+      v-if="showAssignClient && ticket"
+      :show="showAssignClient"
+      :ticket="ticket"
+      @assigned="onClientAssigned"
+      @close="showAssignClient = false"
+    />
 
     <!-- @tickets_cases — Edición del ticket (mismo modal que el alta) -->
     <CaseTicketInternalModal
