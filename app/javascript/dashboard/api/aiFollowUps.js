@@ -34,6 +34,11 @@ class AiFollowUpsAPI extends ApiClient {
     return axios.get(`${this.url}/context`, { params: targetParams(target) });
   }
 
+  // Quién le da seguimiento: { ai, custom, custom_agents } (mismo `target`).
+  running(target) {
+    return axios.get(`${this.url}/running`, { params: targetParams(target) });
+  }
+
   // Bandejas por las que se le puede escribir a un contacto sin conversaciones.
   inboxes(contactId) {
     return axios.get(`${this.url}/inboxes`, {

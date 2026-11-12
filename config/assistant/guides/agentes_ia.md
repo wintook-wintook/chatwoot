@@ -40,7 +40,7 @@ Solo aparecen las bandejas que tienen activo el Bot de Seguimientos en Ajustes �
 2. Revisa uno y pulsa «Bajar a mi cuenta». Queda como un agente nuevo tuyo; adáptalo a tu negocio con el Asistente.
 
 ## Dudas frecuentes
-- ¿Cómo llega un agente a mis clientes? Con un seguimiento («Delegar seguimiento» › «Vista anterior»), con una campaña de Campañas › De agentes IA o con la acción «Asignar Agente IA» de una regla en Agentes IA › Automatización.
+- ¿Cómo llega un agente a mis clientes? Con un seguimiento («Delegar seguimiento» › «¿Quién le da seguimiento?» › «Un agente a medida»), con una campaña de Campañas › De agentes IA o con la acción «Asignar Agente IA» de una regla en Agentes IA › Automatización.
 - ¿Cómo contesta? En la conversación del seguimiento: le escribe al cliente en cada intento y, cuando el cliente responde, contesta según su Entrenamiento y las fuentes de la Base de Conocimiento que usan sus temas.
 - ¿Por qué no puedo borrar un agente? Si tiene seguimientos activos, campañas o automatizaciones que lo usan, primero hay que quitarlo de ahí.
 - El Asistente necesita la integración de OpenAI de la empresa.

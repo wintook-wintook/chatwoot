@@ -286,6 +286,7 @@ Rails.application.routes.draw do
             get :templates, on: :collection
             get :context, on: :collection
             get :inboxes, on: :collection
+            get :running, on: :collection # quién le da seguimiento (IA o agente a medida)
             member do
               post :pause
               post :resume

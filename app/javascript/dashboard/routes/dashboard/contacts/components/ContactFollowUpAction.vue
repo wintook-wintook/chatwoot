@@ -12,6 +12,7 @@ import AiFollowUpsAPI from 'dashboard/api/aiFollowUps';
 import ContactTrackingModal from 'dashboard/components/contacts/ContactTracking/ContactTrackingModal.vue';
 import AiFollowUpModal from 'dashboard/views/gestorTickets/conversation/AiFollowUpModal.vue';
 import AiFollowUpStatus from 'dashboard/views/gestorTickets/conversation/AiFollowUpStatus.vue';
+import { whoFollows } from 'dashboard/helper/followUpEntry';
 
 const F = 'ASSISTANT.AI_FOLLOW_UP';
 
@@ -27,7 +28,8 @@ export default {
       inboxes: [], // sin conversaciones: dónde abrir la nueva
       showNew: false,
       live: false, // hay un Seguimiento IA corriendo → botón verde
-      legacyChat: null, // conversación para la vista anterior
+      legacyChat: null, // conversación para el agente a medida
+      customAgents: false, // la empresa tiene agentes a medida → se elige quién da el seguimiento
     };
   },
   computed: {
@@ -85,6 +87,13 @@ export default {
         );
         return;
       }
+      // Ya corre un agente a medida: se abre ese, en su conversación.
+      const who = await whoFollows({ contact_id: this.contactId });
+      if (who.custom && this.conversations.length) {
+        this.openLegacy(who.custom.conversation_id || this.conversations[0].id);
+        return;
+      }
+      this.customAgents = !!who.custom_agents;
       if (!this.conversations.length) {
         try {
           const { data } = await AiFollowUpsAPI.inboxes(this.contactId);
@@ -106,7 +115,9 @@ export default {
     },
     openLegacy(conversationId) {
       this.showNew = false;
-      const chat = this.conversations.find(c => c.id === conversationId);
+      const chat =
+        this.conversations.find(c => c.id === conversationId) ||
+        this.conversations[0];
       this.legacyChat = chat ? { ...chat, display_id: chat.id } : null;
     },
   },
@@ -138,6 +149,7 @@ export default {
       :conversations="options"
       :new-contact-id="conversations.length ? null : contactId"
       :inboxes="conversations.length ? null : inboxes"
+      :custom-agents="customAgents"
       @close="showNew = false"
       @created="onCreated"
       @legacy="openLegacy"
