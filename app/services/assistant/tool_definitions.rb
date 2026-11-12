@@ -20,8 +20,9 @@ module Assistant::ToolDefinitions
        { case_id: int('Id del caso'), folio: str('Folio del caso, p. ej. OPB-00003') }),
     fn('get_contact', 'Detalle de un contacto: datos, organización, casos abiertos, tareas, agenda y conversaciones.',
        { contact_id: int('Id del contacto') }, %w[contact_id]),
-    fn('my_agenda', 'Agenda (su día): tareas agendadas y tareas pendientes entre dos fechas (incluye atrasadas). Del usuario ' \
-                    'o, con user_id, de una persona del equipo (búscala con team_members).',
+    fn('my_agenda', 'Agenda (su día): tareas agendadas y tareas pendientes entre dos fechas (incluye atrasadas). Un solo ' \
+                    'día = lo mismo que la página Mi día. Del usuario o, con user_id, de una persona del equipo ' \
+                    '(búscala con team_members).',
        { from: str('Fecha inicial YYYY-MM-DD'), to: str('Fecha final YYYY-MM-DD'),
          user_id: int('Id de la persona del equipo (de team_members); omitir = el usuario') }, %w[from to]),
     fn('team_members', 'Personas del equipo (usuarios de la empresa, no clientes) por nombre o correo: compañeros, vendedores, ' \
