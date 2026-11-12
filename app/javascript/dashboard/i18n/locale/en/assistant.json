@@ -243,14 +243,9 @@
       "BUTTON": "Delegate follow-up",
       "BUTTON_HINT": "The AI agent follows up with the customer for you: writes, answers from company sources and uses templates when the WhatsApp window is closed",
       "ENGINE": {
-        "LABEL": "Who follows up?",
-        "AI": "AI Follow-up",
-        "AI_HINT": "Say what you want to achieve and who you're writing to",
-        "CUSTOM": "A custom agent",
-        "CUSTOM_HINT": "One of your trained agents in Custom agents"
+        "CUSTOM": "Select trained agent",
+        "CUSTOM_HINT": "Use one of your custom agents instead of this quick follow-up"
       },
-      "LEGACY": "Previous view",
-      "LEGACY_HINT": "Open the classic follow-up agent (agents from the AI Agents module)",
       "CONVERSATION": "Conversation the agent works in",
       "IN_CONVERSATION": "conversation #{id}",
       "NO_CONVERSATIONS": "This contact has no conversations: the agent needs one to write to them.",

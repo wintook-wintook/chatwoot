@@ -243,14 +243,9 @@
       "BUTTON": "Delegar seguimiento",
       "BUTTON_HINT": "El agente IA le da seguimiento al cliente por ti: le escribe, contesta con las fuentes de la empresa y usa plantillas si la ventana de WhatsApp está cerrada",
       "ENGINE": {
-        "LABEL": "¿Quién le da seguimiento?",
-        "AI": "Seguimiento IA",
-        "AI_HINT": "Dile qué quieres lograr y a quién le escribes",
-        "CUSTOM": "Un agente a medida",
-        "CUSTOM_HINT": "Uno de tus agentes entrenados en Agentes a medida"
+        "CUSTOM": "Seleccionar agente entrenado",
+        "CUSTOM_HINT": "Usar uno de tus Agentes a medida en vez de este seguimiento rápido"
       },
-      "LEGACY": "Vista anterior",
-      "LEGACY_HINT": "Abrir el agente de seguimiento de siempre (agentes del módulo de Agentes IA)",
       "CONVERSATION": "Conversación donde trabaja el agente",
       "IN_CONVERSATION": "conversación #{id}",
       "NO_CONVERSATIONS": "Este contacto no tiene conversaciones: el agente necesita una para escribirle.",

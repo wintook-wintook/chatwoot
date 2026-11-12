@@ -344,43 +344,6 @@ export default {
         :header-content="t('INTRO')"
       />
       <form class="flex flex-col gap-4 px-8 pb-8" @submit.prevent="submit">
-        <!-- ¿Quién le da seguimiento? El Seguimiento IA (este formulario) o un agente a medida. -->
-        <div
-          v-if="customAgents && !newContactId"
-          class="flex flex-col gap-1 text-sm"
-          data-test="follow-up-engine"
-        >
-          <span>{{ t('ENGINE.LABEL') }}</span>
-          <div class="grid grid-cols-2 gap-2">
-            <div
-              class="p-2 border-2 rounded-lg border-woot-500 bg-woot-25 dark:bg-woot-900/30"
-            >
-              <span
-                class="block font-medium text-slate-800 dark:text-slate-100"
-              >
-                {{ t('ENGINE.AI') }}
-              </span>
-              <span class="block text-xs text-slate-500 dark:text-slate-400">
-                {{ t('ENGINE.AI_HINT') }}
-              </span>
-            </div>
-            <button
-              type="button"
-              class="p-2 text-left border rounded-lg border-slate-200 dark:border-slate-700 hover:border-woot-400"
-              data-test="follow-up-engine-custom"
-              @click="$emit('legacy', chosenId)"
-            >
-              <span
-                class="block font-medium text-slate-800 dark:text-slate-100"
-              >
-                {{ t('ENGINE.CUSTOM') }}
-              </span>
-              <span class="block text-xs text-slate-500 dark:text-slate-400">
-                {{ t('ENGINE.CUSTOM_HINT') }}
-              </span>
-            </button>
-          </div>
-        </div>
         <!-- Ya corre uno: se cambia (se cancela y arranca este) -->
         <p
           v-if="live"
@@ -624,6 +587,22 @@ export default {
         </div>
         <p v-if="error" class="m-0 text-sm text-red-600">{{ error }}</p>
         <div class="flex items-center justify-end gap-2">
+          <!-- Por omisión es el Seguimiento IA (este formulario); si la empresa tiene agentes a
+               medida, este botón abre la ventana de esos (otro motor). -->
+          <woot-button
+            v-if="customAgents && !newContactId"
+            v-tooltip="t('ENGINE.CUSTOM_HINT')"
+            type="button"
+            variant="link"
+            color-scheme="secondary"
+            size="small"
+            icon="bot-outline"
+            class="mr-auto"
+            data-test="follow-up-engine-custom"
+            @click="$emit('legacy', chosenId)"
+          >
+            {{ t('ENGINE.CUSTOM') }}
+          </woot-button>
           <woot-button
             type="button"
             variant="clear"

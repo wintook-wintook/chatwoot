@@ -22,14 +22,15 @@ const mount = props =>
     stubs: { WootModal: { template: '<div><slot /></div>' } },
   });
 
-describe('AiFollowUpModal — quién da el seguimiento', () => {
-  it('sin agentes a medida no pregunta', () => {
-    expect(mount().find('[data-test="follow-up-engine"]').exists()).toBe(false);
+describe('AiFollowUpModal — seleccionar agente entrenado', () => {
+  it('sin agentes a medida no muestra el botón', () => {
+    expect(mount().find('[data-test="follow-up-engine-custom"]').exists()).toBe(
+      false
+    );
   });
 
-  it('con agentes a medida pregunta y «Un agente a medida» abre esos', async () => {
+  it('con agentes a medida el botón abre esos', async () => {
     const wrapper = mount({ customAgents: true });
-    expect(wrapper.find('[data-test="follow-up-engine"]').exists()).toBe(true);
     await wrapper
       .find('[data-test="follow-up-engine-custom"]')
       .trigger('click');
