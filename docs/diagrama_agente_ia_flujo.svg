@@ -1,0 +1,326 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 1907" width="1240" height="1907" role="img" aria-label="Diagrama del motor de Agentes IA: lectura del Entrenamiento, cascada de un turno, fuentes de datos y calendario">
+<title>Agente IA — cómo procesa un mensaje</title>
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#64748b"/></marker></defs>
+<rect x="0" y="0" width="1240" height="1907" fill="#ffffff"/>
+<text x="40" y="46" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="24" fill="#0f172a" font-weight="700">Agente IA — cómo procesa un mensaje</text>
+<text x="40" y="70" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" fill="#475569">Motor: ContactTrackingResponseAnalyzerJob. Ruby decide el orden de todo; el modelo (OpenAI) solo CLASIFICA (JSON corto) y REDACTA (texto).</text>
+<text x="40" y="88" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#64748b">Base: develop 0111004a · 12/11/2026 · detalle en docs/motor_agentes_ia_manual.md</text>
+<circle cx="54" cy="125" r="14" fill="#0f172a"/>
+<text x="54" y="129" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" fill="#fff" font-weight="700" text-anchor="middle">1</text>
+<text x="78" y="130" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="17" fill="#0f172a" font-weight="700">El Entrenamiento: un solo texto, dos lectores</text>
+<text x="78" y="148" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" fill="#64748b">El prompt generado mezcla configuración (la lee Ruby) y prosa (la lee el modelo). Cada parte va a un lugar distinto.</text>
+<rect x="40" y="160" width="530" height="270" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+<rect x="40" y="160" width="530" height="30" rx="10" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1.2"/>
+<rect x="40" y="178" width="530" height="12" fill="#e2e8f0"/>
+<text x="54" y="180" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Entrenamiento del Agente IA  (tracking_template → complementary_prompt)</text>
+<text x="64" y="214" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#4f46e5">@ruta(ventas #ventas: precios y planes): {{hoja:Precios}}</text>
+<text x="64" y="231" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#4f46e5">@ruta(soporte #soporte: fallas): @buscar_foro(Foro) -&gt; @crear_ticket</text>
+<text x="64" y="248" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#4f46e5">@ruta(citas #cita: agendar visita): @agendar_calendar(duracion=60)</text>
+<text x="64" y="265" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#4f46e5">@ruta_por_defecto: ventas</text>
+<text x="64" y="299" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#b45309">[MENSAJE DE BIENVENIDA]</text>
+<text x="64" y="316" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#b45309">¡Hola! Soy Ana. ¿En qué le puedo ayudar?</text>
+<text x="64" y="350" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#0f172a">[ROL] Eres Ana, asesora de la empresa…</text>
+<text x="64" y="367" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#0f172a">[ALCANCE POR RAMA] VENTAS: da el precio directo…</text>
+<text x="64" y="384" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#0f172a">[ETIQUETAS] termina con #ventas, #soporte o #cita</text>
+<text x="64" y="401" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#0f172a">[ESTILO] Trate de usted. Si pide el catálogo,</text>
+<text x="64" y="418" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" fill="#0f172a">escriba {{catalogo}} y el sistema lo adjunta.</text>
+<rect x="50" y="203" width="4" height="66" rx="2" fill="#4f46e5"/>
+<rect x="50" y="288" width="4" height="32" rx="2" fill="#b45309"/>
+<rect x="50" y="339" width="4" height="83" rx="2" fill="#6d28d9"/>
+<rect x="620" y="160" width="580" height="112" rx="10" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
+<text x="636" y="182" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" fill="#0f172a" font-weight="700">Ruby lo lee como CONFIGURACIÓN — nunca llega al modelo ni al cliente</text>
+<text x="636" y="203" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#4f46e5">@ruta</text>
+<text x="816" y="203" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">→ RouteMap: rama, descripción, fuente, #etiqueta, escalamiento</text>
+<text x="636" y="220" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#4f46e5">@agendar_calendar(…)</text>
+<text x="816" y="220" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">→ CalendarOptions: duración, horario 24 h, modo tentativo</text>
+<text x="636" y="237" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#4f46e5">{{hoja:}} {{doc:}} @buscar_*</text>
+<text x="816" y="237" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">→ KnowledgeBase::Directives: UNA fuente por turno</text>
+<text x="636" y="254" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#4f46e5">@crear_ticket / &lt;PENDIENTE:&gt;</text>
+<text x="816" y="254" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">→ Cases (abre caso) / PendingSetup (no contesta)</text>
+<rect x="620" y="282" width="580" height="48" rx="10" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.2"/>
+<text x="636" y="302" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" fill="#0f172a" font-weight="700">[MENSAJE DE BIENVENIDA] → WelcomeMessage</text>
+<text x="636" y="319" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">Se envía tal cual en el primer mensaje y se quita del prompt para que el modelo no lo repita.</text>
+<rect x="620" y="340" width="580" height="90" rx="10" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.2"/>
+<text x="636" y="360" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" fill="#0f172a" font-weight="700">El MODELO lee solo la PROSA limpia + datos que pone el motor</text>
+<text x="636" y="378" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">Prosa (sin @ruta ni directivas): identidad, tono, alcance por rama, etiquetas, prohibiciones.</text>
+<text x="636" y="395" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">+ Objetivo · perfil (nota IA) · Contexto IA (800 car.) · estado de la cita · variables.</text>
+<text x="636" y="412" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">Solo «ejecuta» lo que escribe: {{archivo}} → adjunto · #etiqueta → automatizaciones.</text>
+<path d="M574,235 C596,235 594,216 616,216" fill="none" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#arr)"/>
+<path d="M574,303 C596,303 594,306 616,306" fill="none" stroke="#b45309" stroke-width="1.5" marker-end="url(#arr)"/>
+<path d="M574,380 C596,380 594,385 616,385" fill="none" stroke="#6d28d9" stroke-width="1.5" marker-end="url(#arr)"/>
+<circle cx="54" cy="473" r="14" fill="#0f172a"/>
+<text x="54" y="477" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" fill="#fff" font-weight="700" text-anchor="middle">2</text>
+<text x="78" y="478" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="17" fill="#0f172a" font-weight="700">Un turno: cascada de guardias — el primer paso que contesta, corta</text>
+<text x="78" y="496" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" fill="#64748b">Orden real de process_message_for_tracking y try_kbase_then_conversational. Cada fila puede responder y terminar el turno.</text>
+<rect x="78" y="508" width="14" height="14" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="98" y="519" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">Ruby, sin IA</text>
+<rect x="191.3" y="508" width="14" height="14" rx="3" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="211.3" y="519" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">LLM clasifica → JSON</text>
+<rect x="350.8" y="508" width="14" height="14" rx="3" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+<text x="370.8" y="519" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">Agenda</text>
+<rect x="429.45000000000005" y="508" width="14" height="14" rx="3" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5"/>
+<text x="449.45000000000005" y="519" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">Tickets / casos</text>
+<rect x="560.075" y="508" width="14" height="14" rx="3" fill="#ecfdf5" stroke="#22c55e" stroke-width="1.5"/>
+<text x="580.075" y="519" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">Fuentes (KBase)</text>
+<rect x="690.7" y="508" width="14" height="14" rx="3" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.5"/>
+<text x="710.7" y="519" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">LLM redacta</text>
+<rect x="32" y="645" width="666" height="589" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="46" y="662" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#64748b" font-weight="700">Por cada seguimiento activo de la conversación (también pausados)</text>
+<rect x="40" y="540" width="650" height="30" rx="7" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
+<circle cx="57" cy="555.0" r="10" fill="#6366f1"/>
+<text x="57" y="559.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">E</text>
+<text x="76" y="559" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Mensaje entrante → job en Sidekiq</text>
+<text x="290" y="559" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">¿entrante? ¿con contenido? ¿el bot no contestó ya?</text>
+<rect x="40" y="575" width="650" height="30" rx="7" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+<circle cx="57" cy="590.0" r="10" fill="#94a3b8"/>
+<text x="57" y="594.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">1</text>
+<text x="76" y="594" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Pidió no ser contactado (OptOut)</text>
+<text x="290" y="594" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">baja + cancela sus seguimientos; no contesta</text>
+<rect x="40" y="610" width="650" height="30" rx="7" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+<circle cx="57" cy="625.0" r="10" fill="#94a3b8"/>
+<text x="57" y="629.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">2</text>
+<text x="76" y="629" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Un vendedor ya atiende</text>
+<text x="290" y="629" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">la IA no contesta (handoff)</text>
+<rect x="40" y="671" width="650" height="30" rx="7" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+<circle cx="57" cy="686.0" r="10" fill="#94a3b8"/>
+<text x="57" y="690.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">3</text>
+<text x="76" y="690" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">&lt;PENDIENTE:&gt; en el Entrenamiento</text>
+<text x="290" y="690" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">el agente no contesta hasta completarlo</text>
+<rect x="40" y="706" width="650" height="30" rx="7" fill="#fef2f2" stroke="#ef4444" stroke-width="1.2"/>
+<circle cx="57" cy="721.0" r="10" fill="#ef4444"/>
+<text x="57" y="725.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">4</text>
+<text x="76" y="725" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Hook Gestor de Tickets</text>
+<text x="290" y="725" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">anota el mensaje en el caso abierto y evalúa reglas (no responde)</text>
+<rect x="40" y="741" width="650" height="30" rx="7" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+<circle cx="57" cy="756.0" r="10" fill="#94a3b8"/>
+<text x="57" y="760.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">5</text>
+<text x="76" y="760" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">[MENSAJE DE BIENVENIDA]</text>
+<text x="290" y="760" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">primer mensaje: texto fijo; si además pregunta, sigue</text>
+<rect x="40" y="776" width="650" height="30" rx="7" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+<circle cx="57" cy="791.0" r="10" fill="#94a3b8"/>
+<text x="57" y="795.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">6</text>
+<text x="76" y="795" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Palabras clave</text>
+<text x="290" y="795" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">cancel · pause · objective_met — coincidencia exacta</text>
+<rect x="40" y="811" width="650" height="30" rx="7" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.2"/>
+<circle cx="57" cy="826.0" r="10" fill="#3b82f6"/>
+<text x="57" y="830.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">7</text>
+<text x="76" y="830" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">[PENDING_SLOT]</text>
+<text x="290" y="830" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">el cliente está eligiendo uno de los horarios ofrecidos</text>
+<rect x="40" y="846" width="650" height="30" rx="7" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.2"/>
+<circle cx="57" cy="861.0" r="10" fill="#3b82f6"/>
+<text x="57" y="865.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">8</text>
+<text x="76" y="865" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">[PENDING_EMAIL]</text>
+<text x="290" y="865" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">falta el correo para la invitación de la cita</text>
+<rect x="40" y="881" width="650" height="30" rx="7" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.2"/>
+<circle cx="57" cy="896.0" r="10" fill="#3b82f6"/>
+<text x="57" y="900.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">9</text>
+<text x="76" y="900" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Servicio apartado / @solicitudes</text>
+<text x="290" y="900" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">confirma o pide pago; cada servicio pedido = un caso</text>
+<rect x="40" y="916" width="650" height="30" rx="7" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.2"/>
+<circle cx="57" cy="931.0" r="10" fill="#f59e0b"/>
+<text x="57" y="935.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">10</text>
+<text x="76" y="935" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">RouterService</text>
+<text x="290" y="935" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">hoy apagado (TRACKING_DETECT_INTENT=false) → ruta :tracking</text>
+<rect x="40" y="951" width="650" height="30" rx="7" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.2"/>
+<circle cx="57" cy="966.0" r="10" fill="#3b82f6"/>
+<text x="57" y="970.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">11</text>
+<text x="76" y="970" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Acción de cita ya clasificada</text>
+<text x="290" y="970" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">el calendario gana sobre la búsqueda</text>
+<rect x="40" y="986" width="650" height="30" rx="7" fill="#fef2f2" stroke="#ef4444" stroke-width="1.2"/>
+<circle cx="57" cy="1001.0" r="10" fill="#ef4444"/>
+<text x="57" y="1005.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">12</text>
+<text x="76" y="1005" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">@estado_ticket</text>
+<text x="290" y="1005" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">«¿cómo va mi caso?» — consultar nunca abre uno nuevo</text>
+<rect x="40" y="1021" width="650" height="30" rx="7" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.2"/>
+<circle cx="57" cy="1036.0" r="10" fill="#f59e0b"/>
+<text x="57" y="1040.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">13</text>
+<text x="76" y="1040" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Rama del turno — BranchClassifier</text>
+<text x="290" y="1040" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">1 llamada → {"rama"}; fija fuente y escalamiento</text>
+<rect x="40" y="1056" width="650" height="30" rx="7" fill="#fef2f2" stroke="#ef4444" stroke-width="1.2"/>
+<circle cx="57" cy="1071.0" r="10" fill="#ef4444"/>
+<text x="57" y="1075.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">14</text>
+<text x="76" y="1075" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">@crear_ticket</text>
+<text x="290" y="1075" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">si la rama no tiene fuente / no es fallback: pide datos y abre caso</text>
+<rect x="40" y="1091" width="650" height="30" rx="7" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.2"/>
+<circle cx="57" cy="1106.0" r="10" fill="#3b82f6"/>
+<text x="57" y="1110.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">15</text>
+<text x="76" y="1110" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">@agendar_calendar</text>
+<text x="290" y="1110" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">el LLM ve la cita actual → consultar / agendar / mover / cancelar</text>
+<rect x="40" y="1126" width="650" height="30" rx="7" fill="#ecfdf5" stroke="#22c55e" stroke-width="1.2"/>
+<circle cx="57" cy="1141.0" r="10" fill="#22c55e"/>
+<text x="57" y="1145.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">16</text>
+<text x="76" y="1145" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">KBase — la fuente de la rama</text>
+<text x="290" y="1145" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">Ruby busca; si hay resultados, el LLM redacta (ver sección 3)</text>
+<rect x="40" y="1161" width="650" height="30" rx="7" fill="#fef2f2" stroke="#ef4444" stroke-width="1.2"/>
+<circle cx="57" cy="1176.0" r="10" fill="#ef4444"/>
+<text x="57" y="1180.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">17</text>
+<text x="76" y="1180" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Ticket como último recurso</text>
+<text x="290" y="1180" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">@crear_ticket(fallback=true) o el escalamiento de la rama</text>
+<rect x="40" y="1196" width="650" height="30" rx="7" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.2"/>
+<circle cx="57" cy="1211.0" r="10" fill="#8b5cf6"/>
+<text x="57" y="1215.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">18</text>
+<text x="76" y="1215" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Conversacional</text>
+<text x="290" y="1215" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">SIEMPRE responde: prosa + objetivo + historial (20 mensajes)</text>
+<rect x="40" y="1249" width="650" height="30" rx="7" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+<circle cx="57" cy="1264.0" r="10" fill="#94a3b8"/>
+<text x="57" y="1268.0" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">19</text>
+<text x="76" y="1268" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Ningún seguimiento contestó</text>
+<text x="290" y="1268" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">→ BotSeller, si la cuenta lo tiene configurado</text>
+<line x1="18" y1="546" x2="18" y2="1269" stroke="#cbd5e1" stroke-width="2" marker-end="url(#arr)"/>
+<rect x="720" y="540" width="480" height="178" rx="10" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.2"/>
+<text x="736" y="562" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" fill="#0f172a" font-weight="700">Dónde entra el modelo (OpenAI, gpt-4o-mini por omisión)</text>
+<text x="736" y="584" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569" font-weight="700">Clasifica — llamadas cortas con response_format json_object:</text>
+<text x="736" y="602" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">· BranchClassifier → {"rama": "soporte"}</text>
+<text x="736" y="620" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">· cita → {"appointment_action", fecha/hora pedida}</text>
+<text x="736" y="638" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">· hoja → {op, columna, filtros}: Ruby calcula el resultado exacto</text>
+<text x="736" y="656" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569" font-weight="700">Redacta — texto para el cliente:</text>
+<text x="736" y="674" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">· KBase con el contexto recuperado · conversacional · avisos de agenda</text>
+<text x="736" y="692" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#b45309">Sin tool calling: el modelo no decide buscar; cuando habla, Ruby ya buscó.</text>
+<rect x="720" y="734" width="480" height="196" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="1.2"/>
+<text x="736" y="756" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" fill="#0f172a" font-weight="700">Estado entre turnos (no hay «memoria» de agente)</text>
+<text x="736" y="778" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#4f46e5">kb_history</text>
+<text x="860" y="778" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#64748b">conversación</text>
+<text x="982" y="778" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">últimos 6 turnos de la KBase</text>
+<text x="736" y="798" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#4f46e5">[PENDING_SLOT]</text>
+<text x="860" y="798" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#64748b">tracking.ai_context</text>
+<text x="982" y="798" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">horarios ofrecidos</text>
+<text x="736" y="818" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#4f46e5">[PENDING_EMAIL]</text>
+<text x="860" y="818" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#64748b">tracking.ai_context</text>
+<text x="982" y="818" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">slot elegido, falta correo</text>
+<text x="736" y="838" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#4f46e5">intake de caso</text>
+<text x="860" y="838" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#64748b">Redis, TTL 1 h</text>
+<text x="982" y="838" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">campos que faltan para el ticket</text>
+<text x="736" y="858" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#4f46e5">cita</text>
+<text x="860" y="858" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#64748b">tracking</text>
+<text x="982" y="858" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">appointment_at · appointment_event_id</text>
+<text x="736" y="878" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#4f46e5">variables</text>
+<text x="860" y="878" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#64748b">conversación</text>
+<text x="982" y="878" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">p. ej. CARRERA, las guarda el motor</text>
+<text x="736" y="898" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#4f46e5">historial</text>
+<text x="860" y="898" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#64748b">mensajes</text>
+<text x="982" y="898" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">conversacional ve los últimos 20</text>
+<rect x="720" y="946" width="480" height="196" rx="10" fill="#ecfdf5" stroke="#22c55e" stroke-width="1.2"/>
+<text x="736" y="968" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" fill="#0f172a" font-weight="700">Salida — Ruby retoca la respuesta antes de enviarla</text>
+<text x="736" y="990" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">1  repone la #etiqueta de la rama si el modelo no puso ninguna</text>
+<text x="736" y="1010" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">2  {{nombre}} → se borra y se adjunta ese archivo del agente (máx. 5)</text>
+<text x="736" y="1030" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">3  KBase: firma de la fuente al pie · borra links inventados</text>
+<text x="736" y="1050" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">4  correo: firma del agente</text>
+<text x="736" y="1070" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">5  MessageBuilder → sentiment_auto_reply = true</text>
+<text x="736" y="1090" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">    (así el mismo mensaje nunca se contesta dos veces)</text>
+<text x="736" y="1110" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">6  EngineTrace guarda qué paso contestó el turno</text>
+<rect x="720" y="1158" width="480" height="121" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+<text x="736" y="1180" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" fill="#0f172a" font-weight="700">Cómo leer la cascada</text>
+<text x="736" y="1202" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">Agenda y tickets siempre le ganan a la KBase.</text>
+<text x="736" y="1220" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">La KBase es el último recurso antes de conversar.</text>
+<text x="736" y="1238" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">Si nada resolvió, el conversacional responde igual:</text>
+<text x="736" y="1256" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">improvisa con la prosa, por eso la prosa importa.</text>
+<text x="736" y="1274" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">Una directiva mal escrita no da error: no existe.</text>
+<circle cx="54" cy="1332" r="14" fill="#0f172a"/>
+<text x="54" y="1336" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" fill="#fff" font-weight="700" text-anchor="middle">3</text>
+<text x="78" y="1337" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="17" fill="#0f172a" font-weight="700">Recursos: fuentes de datos y calendario</text>
+<text x="78" y="1355" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" fill="#64748b">Cómo se usan las herramientas que el Entrenamiento declara. En ambos casos Ruby ejecuta y el modelo solo interpreta o redacta.</text>
+<rect x="40" y="1369" width="590" height="482" rx="12" fill="#ffffff" stroke="#22c55e" stroke-width="1.5"/>
+<text x="56" y="1395" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" fill="#0f172a" font-weight="700">Fuentes de datos (KBase) — KnowledgeBaseResponseService</text>
+<rect x="56" y="1411" width="170" height="40" rx="7" fill="#ecfdf5" stroke="#bbf7d0" stroke-width="1.2"/>
+<text x="68" y="1428" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Rama del turno</text>
+<text x="68" y="1443" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#64748b">BranchClassifier</text>
+<path d="M228,1431 L246,1431" fill="none" stroke="#22c55e" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="248" y="1411" width="170" height="40" rx="7" fill="#ecfdf5" stroke="#bbf7d0" stroke-width="1.2"/>
+<text x="260" y="1428" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Directives.detect</text>
+<text x="260" y="1443" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#64748b">UNA fuente</text>
+<path d="M420,1431 L438,1431" fill="none" stroke="#22c55e" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="440" y="1411" width="170" height="40" rx="7" fill="#ecfdf5" stroke="#bbf7d0" stroke-width="1.2"/>
+<text x="452" y="1428" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Búsqueda</text>
+<text x="452" y="1443" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#64748b">Ruby, antes del LLM</text>
+<text x="56" y="1473" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#64748b" font-weight="700">directiva</text>
+<text x="276" y="1473" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#64748b" font-weight="700">origen</text>
+<text x="380" y="1473" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#64748b" font-weight="700">cómo busca</text>
+<rect x="48" y="1481" width="574" height="26" rx="4" fill="#f8fafc" stroke="#f8fafc" stroke-width="0"/>
+<text x="56" y="1498" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#15803d">{{hoja:nombre}}</text>
+<text x="276" y="1498" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#0f172a" font-weight="700">Google Sheet</text>
+<text x="380" y="1498" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">filas parecidas o cálculo exacto (suma)</text>
+<text x="56" y="1524" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#15803d">{{hoja_buscar: h | col=? | …}}</text>
+<text x="276" y="1524" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#0f172a" font-weight="700">Google Sheet</text>
+<text x="380" y="1524" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">la fila del valor que nombró el cliente</text>
+<rect x="48" y="1533" width="574" height="26" rx="4" fill="#f8fafc" stroke="#f8fafc" stroke-width="0"/>
+<text x="56" y="1550" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#15803d">{{doc:nombre}}</text>
+<text x="276" y="1550" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#0f172a" font-weight="700">Google Doc</text>
+<text x="380" y="1550" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">secciones indexadas en pgvector</text>
+<text x="56" y="1576" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#15803d">@buscar_predefinidas(G)</text>
+<text x="276" y="1576" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#0f172a" font-weight="700">Predefinidas</text>
+<text x="380" y="1576" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">pgvector, filtrado por grupo</text>
+<rect x="48" y="1585" width="574" height="26" rx="4" fill="#f8fafc" stroke="#f8fafc" stroke-width="0"/>
+<text x="56" y="1602" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#15803d">@buscar_articulo</text>
+<text x="276" y="1602" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#0f172a" font-weight="700">Centro de Ayuda</text>
+<text x="380" y="1602" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">artículos en pgvector</text>
+<text x="56" y="1628" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#15803d">@buscar_foro(n) · @discourse</text>
+<text x="276" y="1628" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#0f172a" font-weight="700">Foro Discourse</text>
+<text x="380" y="1628" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">búsqueda semántica (plugin discourse-ai)</text>
+<rect x="48" y="1637" width="574" height="26" rx="4" fill="#f8fafc" stroke="#f8fafc" stroke-width="0"/>
+<text x="56" y="1654" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#15803d">{{consulta:nombre}}</text>
+<text x="276" y="1654" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#0f172a" font-weight="700">ERP externo</text>
+<text x="380" y="1654" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">SQL determinista (saldo, pedidos…)</text>
+<text x="56" y="1680" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#15803d">@soporte_contpaq(n)</text>
+<text x="276" y="1680" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#0f172a" font-weight="700">API CONTPAQi</text>
+<text x="380" y="1680" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">devuelve la respuesta ya escrita</text>
+<rect x="56" y="1703" width="558" height="58" rx="8" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.2"/>
+<text x="70" y="1723" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Con resultados → el LLM redacta</text>
+<text x="70" y="1740" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">fragmentos encontrados + kb_history (6 turnos) + prosa limpia + «rama ya</text>
+<text x="70" y="1755" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">decidida, no reclasifiques» → respuesta + firma de la fuente al pie</text>
+<rect x="56" y="1771" width="558" height="42" rx="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1.2"/>
+<text x="70" y="1789" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#b91c1c" font-weight="700">Sin resultados → la KBase no contesta y sigue la cascada:</text>
+<text x="70" y="1805" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#475569">ticket como último recurso (paso 17) o conversacional (paso 18)</text>
+<rect x="650" y="1369" width="550" height="482" rx="12" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5"/>
+<text x="666" y="1395" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" fill="#0f172a" font-weight="700">Calendario — @agendar_calendar</text>
+<rect x="666" y="1413" width="518" height="38" rx="7" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.2"/>
+<circle cx="684" cy="1432" r="10" fill="#f59e0b"/>
+<text x="684" y="1436" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">1</text>
+<text x="702" y="1429" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">¿Habla de una cita?</text>
+<text x="702" y="1444" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">el LLM ve el ESTADO real de la cita → consultar · agendar · mover · cancelar · null</text>
+<path d="M684,1452 L684,1460" fill="none" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="666" y="1461" width="518" height="38" rx="7" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.2"/>
+<circle cx="684" cy="1480" r="10" fill="#3b82f6"/>
+<text x="684" y="1484" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">2</text>
+<text x="702" y="1477" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">¿Ya tiene cita?</text>
+<text x="702" y="1492" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">se la recuerda con fecha y hora; ofrece moverla o cancelarla</text>
+<path d="M684,1500 L684,1508" fill="none" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="666" y="1509" width="518" height="38" rx="7" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.2"/>
+<circle cx="684" cy="1528" r="10" fill="#3b82f6"/>
+<text x="684" y="1532" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">3</text>
+<text x="702" y="1525" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">En qué calendarios</text>
+<text x="702" y="1540" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">los Google Calendar del agente; {{hoja_buscar}} elige cuál (SheetCalendars)</text>
+<path d="M684,1548 L684,1556" fill="none" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="666" y="1557" width="518" height="38" rx="7" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.2"/>
+<circle cx="684" cy="1576" r="10" fill="#3b82f6"/>
+<text x="684" y="1580" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">4</text>
+<text x="702" y="1573" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Horarios libres — AvailabilitySlotService</text>
+<text x="702" y="1588" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">ocupado en Google (freebusy) + horario del canal (9–18 L-V) + duración</text>
+<path d="M684,1596 L684,1604" fill="none" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="666" y="1605" width="518" height="38" rx="7" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.2"/>
+<circle cx="684" cy="1624" r="10" fill="#3b82f6"/>
+<text x="684" y="1628" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">5</text>
+<text x="702" y="1621" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">¿Pidió día u hora?</text>
+<text x="702" y="1636" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">sí: ese horario si está libre, o los más cercanos · no: los primeros libres</text>
+<path d="M684,1644 L684,1652" fill="none" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="666" y="1653" width="518" height="38" rx="7" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.2"/>
+<circle cx="684" cy="1672" r="10" fill="#3b82f6"/>
+<text x="684" y="1676" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">6</text>
+<text x="702" y="1669" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">Oferta numerada</text>
+<text x="702" y="1684" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">formato según slots_presentation → guarda [PENDING_SLOT]</text>
+<path d="M684,1692 L684,1700" fill="none" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="666" y="1701" width="518" height="38" rx="7" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.2"/>
+<circle cx="684" cy="1720" r="10" fill="#3b82f6"/>
+<text x="684" y="1724" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">7</text>
+<text x="702" y="1717" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">El cliente elige o negocia</text>
+<text x="702" y="1732" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">número, u otra hora que se vuelve a buscar → [PENDING_EMAIL] (opcional)</text>
+<path d="M684,1740 L684,1748" fill="none" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="666" y="1749" width="518" height="38" rx="7" fill="#ecfdf5" stroke="#22c55e" stroke-width="1.2"/>
+<circle cx="684" cy="1768" r="10" fill="#22c55e"/>
+<text x="684" y="1772" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">8</text>
+<text x="702" y="1765" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#0f172a" font-weight="700">GoogleCalendarService</text>
+<text x="702" y="1780" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">crea o mueve el evento → appointment_at; si falla, escala a un humano</text>
+<rect x="666" y="1799" width="518" height="36" rx="7" fill="#fef2f2" stroke="#fecaca" stroke-width="1.2"/>
+<text x="680" y="1815" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#b91c1c" font-weight="700">Sin horarios libres o sin calendario configurado:</text>
+<text x="680" y="1829" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#475569">pausa el seguimiento + nota privada + aviso al administrador</text>
+<text x="40" y="1883" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" fill="#64748b">Código: app/jobs/contact_tracking_response_analyzer_job.rb (process_message_for_tracking, try_kbase_then_conversational) · app/services/knowledge_base_response_service.rb · app/services/contact_trackings/</text>
+</svg>
