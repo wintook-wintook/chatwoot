@@ -43,7 +43,7 @@ class Assistant::Chat < Cases::Ai::BaseService
     end
     @thread.add_message(role: 'assistant', content: content.presence || fallback(proposals),
                         proposals: proposals, navigate: navigate, cards: cards.first(MAX_CARDS),
-                        suggestions: suggestions.uniq.first(MAX_SUGGESTIONS))
+                        suggestions: suggestions.uniq.first(MAX_SUGGESTIONS), listed: @tools.listed_now.presence)
   end
 
   private
@@ -51,7 +51,7 @@ class Assistant::Chat < Cases::Ai::BaseService
   # Guarda lo que escribió y se lo pasa a las funciones (las guías anotan la pregunta).
   def start_turn(text)
     @thread.add_message(role: 'user', content: text.to_s.strip, context: @context.slice('page', 'label'))
-    @tools.turn = { question: text.to_s.strip, page: @context['page'] }
+    @tools.turn = { question: text.to_s.strip, page: @context['page'], listed: Assistant::ReplyTarget.last_listed(@thread) }
   end
 
   def run(messages)
@@ -169,6 +169,7 @@ class Assistant::Chat < Cases::Ai::BaseService
       Cuando ya sepas qué proponer, LLAMA la función en ese mismo turno: nunca respondas «voy a proponer…» sin llamarla.
     - Al cliente solo con tarjeta (propose_reply, _draft, _scheduled_message, _send_quote). «¿Quién me escribió?»: my_conversations.
       Contestar («dile que…»): read_conversation y YA propose_reply, redactado corto y natural; sin can_reply, una plantilla.
+    #{Assistant::PromptRules::REPLY_TARGET}
       «¿Qué tengo pendiente / sin responder?»: my_conversations y contesta por bloques, solo los que traigan algo:
       sin responder (las suyas), te mencionaron (quién y qué dijo), chat interno (sin leer, y si lo mencionan) y, si
       viene unassigned, sin asignar esperando por bandeja. Contestarle al equipo en una conversación: propose_internal_note

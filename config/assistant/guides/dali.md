@@ -73,6 +73,7 @@ El asistente (se llama Dali, o el nombre que le puso tu empresa) contesta en tus
 - Necesita la integración de OpenAI activa; sin ella el panel avisa «Activa la integración de OpenAI para usar el asistente».
 
 ## Dudas frecuentes
+- Le pedí «contéstale» y me preguntó «¿A cuál?»: pasa cuando su mensaje anterior listó varias conversaciones (por ejemplo «¿Qué tengo pendiente?») y no dijiste a quién. Dile el nombre o el número («contéstale a Andrés», «la #3»). La tarjeta «Responder» dice arriba, en grande, a quién va: revísalo antes de «Enviar».
 - ¿Cómo sabe si hablo de alguien de mi equipo o de un cliente? Por tus palabras: «usuario», «compañero», «del equipo», «vendedor», «técnico», a quien le asignas la tarea o de quien pides el día es del equipo; «cliente», «contacto», «prospecto» o «la empresa…» es un cliente. Si solo dices el nombre («agrégale una tarea a Ana»), la tarea es para esa persona: si está en tu equipo, queda como responsable (la tarjeta lo muestra antes de confirmar); si no, la busca entre tus clientes.
 - ¿Puedo ver el día de otra persona? Sí, si tu rol ve la Agenda de todos: pregúntale «¿qué tiene hoy Ana?» o, en Agenda › Tareas › Mi día, elige a la persona en «Día de:». Con «solo lo suyo» solo ves tu día.
 - ¿Dónde queda lo que hizo? En la actividad del caso, marcado como «vía» el asistente.

@@ -17,6 +17,13 @@ module Assistant::PromptRules
         como cliente. Si hay varias con ese nombre en el equipo, pregunta cuál.
   RULES
 
+  # «Contéstale» sin decir a quién, después de una lista con varias conversaciones: preguntar.
+  REPLY_TARGET = <<~RULES.chomp
+    - «¿Qué me escribieron en la conversación #N?»: read_conversation(N), solo esa.
+    - ¿A quién se contesta? A la conversación de la que se habla; en propose_reply pon en `para` el nombre de su contacto.
+      Si tu último mensaje listó varias y no dice a cuál, pregunta «¿A cuál: Jane (#1) o Andrés (#3)?».
+  RULES
+
   SALES = <<~RULES.chomp
     Ventas (¿cómo vamos?, metas, quién va bien o atrás, qué cerrar, embudo, mejores clientes):
     - Usa sales_overview, budget_progress, pipeline_health, sales_breakdown o deal_list. NUNCA calcules ni inventes cifras:
