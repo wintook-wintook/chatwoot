@@ -49,6 +49,7 @@ export default {
     'openTask',
     'complete',
     'openMeeting',
+    'completeMeeting',
     'plan',
     'postpone',
     'history',
@@ -206,6 +207,16 @@ export default {
     },
     minutes(value) {
       return formatMinutes(value);
+    },
+    // Cita de hoy que se puede completar aquí (agendada, caso abierto, día propio).
+    canCompleteMeeting(m) {
+      const st = m.case_ticket && m.case_ticket.status;
+      return (
+        !this.readonly &&
+        m.status === 'scheduled' &&
+        st !== 'closed' &&
+        st !== 'cancelled'
+      );
     },
     timeLabel(iso) {
       return new Date(iso).toLocaleTimeString(undefined, {
@@ -510,10 +521,11 @@ export default {
         {{ $t('CASE_TICKETS.TASKS.MY_DAY.AGENDA_EMPTY') }}
       </p>
       <ul v-else class="flex flex-col gap-2 p-0 m-0 list-none">
-        <li v-for="m in agenda" :key="m.id">
+        <li v-for="m in agenda" :key="m.id" class="relative">
           <button
             type="button"
             class="flex items-start w-full gap-3 px-3 py-2 text-left bg-white border rounded-lg border-slate-100 dark:bg-slate-800 dark:border-slate-700 hover:border-woot-300 dark:hover:border-woot-600"
+            :class="{ 'pr-12': canCompleteMeeting(m) }"
             @click="$emit('openMeeting', m)"
           >
             <span
@@ -541,6 +553,19 @@ export default {
               </span>
             </span>
           </button>
+          <!-- Completar la cita: pide el reporte de cierre (¿se realizó o no asistió?). -->
+          <woot-button
+            v-if="canCompleteMeeting(m)"
+            size="tiny"
+            variant="smooth"
+            color-scheme="secondary"
+            icon="checkmark"
+            class="!absolute top-2 right-2"
+            :title="$t('CASE_TICKETS.TASKS.COMPLETE_TITLE')"
+            :aria-label="$t('CASE_TICKETS.TASKS.COMPLETE_TITLE')"
+            data-test="my-day-complete-meeting"
+            @click="$emit('completeMeeting', m)"
+          />
         </li>
       </ul>
 

@@ -20,7 +20,7 @@ La Agenda junta todo lo que tienes que hacer: tareas (con fecha, sin hora) y tar
 2. «Sugeridas por prioridad» trae tus pendientes ordenadas por un puntaje, con el motivo de su lugar (vencida, vence hoy, SLA en riesgo…).
 3. Arma «Mi orden de hoy»: arrastra tareas ahí o pulsa la flecha ↑ («Agregar a mi orden de hoy») y reordénalas arrastrando. La primera queda como «Siguiente».
 4. En cada tarea: «Completar» para concluirla o «Pasar a mañana» para programarla al día siguiente.
-5. A la derecha están la «Agenda de hoy» (tus tareas agendadas) y «Hecho hoy» (lo que ya concluiste).
+5. A la derecha están la «Agenda de hoy» (tus tareas agendadas) y «Hecho hoy» (lo que ya concluiste). La palomita de una tarea agendada la completa: llenas el reporte de cierre y eliges si se realizó o el cliente no asistió. Un clic en la cita abre su caso (o su contacto).
 6. Si quedaron tareas programadas sin hacer, sale un aviso con «Pasarlas a hoy» o «Ignorar». Si llega una urgente después de armar tu día, te avisa con «Subir al inicio».
 
 ### Ver el Mi día de otra persona

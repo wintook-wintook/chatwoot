@@ -16,6 +16,8 @@ import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
 import MessageFormatter from 'shared/helpers/MessageFormatter';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import QuickTasksAPI from 'dashboard/api/quickTasks';
+import CaseMeetingsAPI from 'dashboard/api/caseMeetings';
+import AgendaItemsAPI from 'dashboard/api/agendaItems';
 import CancelItemModal from 'dashboard/components/cancel/CancelItemModal.vue'; // cancelar con motivo
 import ScheduleTaskModal from 'dashboard/components/convert/ScheduleTaskModal.vue'; // pasarla a la agenda
 import { useAlert } from 'dashboard/composables';
@@ -900,6 +902,33 @@ export default {
     },
     // @tickets_cases — clic en una fila de reunión ("tarea agendada"): abre la
     // ficha del ticket directo en la pestaña Reuniones.
+    // «Mi día» › Agenda de hoy: completar una cita con su reporte de cierre. Con caso va por
+    // el caso (queda en su actividad); sin caso, por la Agenda.
+    completeMeeting(meeting) {
+      const { id, title } = meeting;
+      this.askReport({ type: 'meeting', id, title, askAttendance: true }, r =>
+        this.holdMeeting(meeting, r.status || 'held')
+      );
+    },
+    async holdMeeting(meeting, status) {
+      try {
+        if (meeting.case_ticket) {
+          await CaseMeetingsAPI.hold(
+            meeting.case_ticket.id,
+            meeting.id,
+            status
+          );
+        } else {
+          await AgendaItemsAPI.updateItem(meeting.id, { status });
+        }
+      } catch (e) {
+        useAlert(
+          e?.response?.data?.error ||
+            this.$t('CASE_TICKETS.TASKS.COMPLETE_ERROR')
+        );
+      }
+      this.fetch();
+    },
     openMeetingTicket(meeting) {
       if (!meeting.case_ticket) {
         this.openContact(meeting);
@@ -1567,6 +1596,7 @@ export default {
         @openTask="openFromMyDay"
         @openTicket="openTicket"
         @openMeeting="openMeetingTicket"
+        @completeMeeting="completeMeeting"
         @complete="complete"
         @history="r => (historyTaskId = r.id)"
         @plan="savePlan"
