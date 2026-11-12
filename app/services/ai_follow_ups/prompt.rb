@@ -6,7 +6,6 @@
 class AiFollowUps::Prompt
   HISTORY = 30
   MESSAGE_CHARS = 1500
-  NOTE_CHARS = 2000
 
   def initialize(follow_up, canned: false)
     @follow_up = follow_up
@@ -14,10 +13,8 @@ class AiFollowUps::Prompt
     @canned = canned
   end
 
-  # La nota del contacto marcada «para IA» (hay una sola por contacto).
-  def self.ai_note(contact)
-    contact&.notes&.for_ia&.order(updated_at: :desc)&.first
-  end
+  # La nota del contacto marcada «para IA» (base común: AgentBase::ContactNote).
+  def self.ai_note(contact) = AgentBase::ContactNote.for(contact)
 
   # Las reglas (iguales para todos) primero y lo de este seguimiento (cuenta, hora, cliente) al
   # final: OpenAI cobra con descuento el inicio idéntico de una llamada reciente (prompt caching).
@@ -48,6 +45,8 @@ class AiFollowUps::Prompt
       - No prometas descuentos, fechas de entrega ni nada que no esté en las fuentes o en las indicaciones.
       - Nunca digas que eres una IA salvo que te lo pregunten directamente; si preguntan, di la verdad.
       - Si no hay nada que decir en este turno, responde exactamente #{AiFollowUps::Runner::NO_MESSAGE}.
+
+      #{AgentBase::CompanyVoice.block(@account)}
 
       Eres el asistente de seguimiento de #{@account.name}. Hablas con una persona por #{channel}, en nombre de
       #{@follow_up.created_by&.name || 'la empresa'}. Ahora: #{now}.
@@ -119,10 +118,7 @@ class AiFollowUps::Prompt
   end
 
   def ai_note_block
-    note = self.class.ai_note(@follow_up.contact || @follow_up.conversation&.contact)
-    return '' if note.blank?
-
-    "LO QUE SABEMOS DEL CLIENTE (nota del equipo):\n#{note.content.to_s.strip.truncate(NOTE_CHARS)}"
+    AgentBase::ContactNote.block(@follow_up.contact || @follow_up.conversation&.contact)
   end
 
   def canned_line

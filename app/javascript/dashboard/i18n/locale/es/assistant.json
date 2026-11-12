@@ -343,6 +343,54 @@
       }
     }
   },
+  "AI_VOICE": {
+    "TITLE": "Cómo habla tu empresa",
+    "SUBTITLE": "Lo general que toman el Seguimiento IA y todos los Agentes listos. Lo particular de cada agente o seguimiento manda sobre esto. Lo que dejes vacío no se usa.",
+    "LOADING": "Cargando…",
+    "SAVE": "Guardar",
+    "SAVED": "Guardado: los agentes lo toman desde su siguiente mensaje.",
+    "SAVE_ERROR": "No se pudo guardar.",
+    "LOAD_ERROR": "No se pudo cargar.",
+    "TEST_ERROR": "No se pudo armar el ejemplo.",
+    "USED_BY": "Lo usan: Seguimiento IA y Agentes listos. Los Agentes a medida tienen su propio entrenamiento.",
+    "TEST": {
+      "TITLE": "Probar",
+      "HINT": "Arma un mensaje de ejemplo con lo que escribiste, sin guardar ni enviar nada.",
+      "FOLLOW_UP": "Seguimiento IA: preguntar por una cotización",
+      "PROSPECTS": "Atención a prospectos: alguien pide informes",
+      "BUTTON": "Probar"
+    },
+    "FIELDS": {
+      "WHO": {
+        "LABEL": "Quiénes somos",
+        "PLACEHOLDER": "Kontrolya, software de control para empresas de servicio"
+      },
+      "TONE": {
+        "LABEL": "Tono",
+        "PLACEHOLDER": "De tú, cercano, sin emojis"
+      },
+      "SIGNATURE": {
+        "LABEL": "Cómo firmar o despedirse",
+        "PLACEHOLDER": "— Equipo Kontrolya"
+      },
+      "ROLES": {
+        "LABEL": "Quién es quién (contactos que no son clientes)",
+        "PLACEHOLDER": "Distribuidores: son socios, se les pregunta por sus prospectos. Proveedores: no venderles."
+      },
+      "AFTER_HOURS": {
+        "LABEL": "Fuera de horario, qué decir",
+        "PLACEHOLDER": "Te contestamos mañana a primera hora"
+      },
+      "NEVER": {
+        "LABEL": "Nunca",
+        "PLACEHOLDER": "No ofrecer descuentos. No dar fechas de entrega. No hablar de la competencia."
+      },
+      "WORDS": {
+        "LABEL": "Palabras propias o a evitar",
+        "PLACEHOLDER": "Decir «licencias», no «suscripciones»"
+      }
+    }
+  },
   "READY_AGENTS": {
     "TITLE": "Agentes listos",
     "SUBTITLE": "Agentes que ya vienen armados: actívalos, ponles nombre, elige su bandeja y contesta unas preguntas. Empiezan a atender solos, sin automatizaciones.",

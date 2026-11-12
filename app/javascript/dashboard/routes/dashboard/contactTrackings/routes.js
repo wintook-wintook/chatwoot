@@ -24,6 +24,13 @@ export const routes = [
     component: () => import('../../../views/readyAgents/Index.vue'),
   },
   {
+    // «Cómo habla tu empresa»: base común de Seguimiento IA y Agentes listos.
+    path: frontendURL('accounts/:accountId/tracking-dashboard/company-voice'),
+    name: 'ai_voice',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/readyAgents/CompanyVoice.vue'),
+  },
+  {
     // proyecto@contact_tracking — Agentes IA dentro del dashboard (reutiliza la vista de Settings)
     path: frontendURL('accounts/:accountId/tracking-dashboard/agents'),
     name: 'contact_trackings_agents',

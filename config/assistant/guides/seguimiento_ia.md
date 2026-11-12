@@ -2,7 +2,7 @@
 key: seguimiento_ia
 title: Delegar seguimiento (Seguimiento IA)
 areas: [conversations, sales, service, clients]
-keywords: [seguimiento, contacto sin conversacion, crear conversacion, bandeja, seguimiento ia, delegar, delegar seguimiento, insistir, intentos, pausar seguimiento, reanudar seguimiento, cancelar seguimiento, objetivo, que el agente le escriba, ventana 24 horas, plantilla whatsapp, nota ia, respuestas predefinidas, vista anterior, pide una persona, sin respuesta, dale seguimiento]
+keywords: [como habla tu empresa, indicaciones mandan, distribuidora, prospecto de la distribuidora, seguimiento, contacto sin conversacion, crear conversacion, bandeja, seguimiento ia, delegar, delegar seguimiento, insistir, intentos, pausar seguimiento, reanudar seguimiento, cancelar seguimiento, objetivo, que el agente le escriba, ventana 24 horas, plantilla whatsapp, nota ia, respuestas predefinidas, vista anterior, pide una persona, sin respuesta, dale seguimiento]
 pages: [conversation, case, contact, trackings, canned_responses]
 ---
 ## Para qué sirve
@@ -44,6 +44,8 @@ También puedes pedírselo a Dali, por ejemplo «dale seguimiento a Mario para q
 Estados posibles: trabajando, en pausa, cumplido, cerrado sin éxito, pide una persona, sin respuesta, no pudo escribir y cancelado.
 
 ## Dudas frecuentes
+- ¿Por qué le habló a mi distribuidora como si fuera la clienta? Escribe en las indicaciones quién es la persona y de quién es lo que se sigue («es nuestra distribuidora; pregúntale cómo va SU prospecto»): las indicaciones mandan sobre el caso y la nota. Si te pasa con varios, ponlo una vez en Agentes IA › «Cómo habla tu empresa», en «Quién es quién».
+- Además de tus indicaciones, el agente toma lo general de «Cómo habla tu empresa», la nota «para IA» del contacto y las respuestas predefinidas.
 - ¿Qué sabe el agente? Solo dos cosas: las respuestas predefinidas de la empresa (Catálogos › Respuestas Predefinidas) y la nota IA del contacto. El formulario te muestra esa nota y un enlace para editarla en la ficha. La nota IA es la nota del contacto marcada con «Marcar como nota para IA»; cada contacto tiene solo una. Si la empresa no tiene respuestas predefinidas, lo que no esté en la nota IA se lo pasa a una persona.
 - ¿Y si la ventana de WhatsApp de 24 horas está cerrada? El agente manda una plantilla aprobada de esa bandeja y llena sus datos; cuenta como un intento. Solo sirven plantillas aprobadas sin archivo en el encabezado ni datos en los botones. Si no hay ninguna, se detiene con el estado «no pudo escribir».
 - ¿Y si el contacto no tiene conversaciones? Desde su ficha elige «Bandeja por la que le escribe»: salen WhatsApp y SMS si tiene teléfono y correo si tiene correo. La conversación se crea solo al delegar (si cancelas, no se crea nada). En WhatsApp el primer mensaje siempre es una plantilla aprobada. Si no tiene teléfono ni correo, primero agrégalos.

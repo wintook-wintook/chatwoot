@@ -343,6 +343,54 @@
       }
     }
   },
+  "AI_VOICE": {
+    "TITLE": "How your company talks",
+    "SUBTITLE": "General guidance used by AI Follow-up and all Ready agents. Each agent's or follow-up's own settings win over this. Empty fields are not used.",
+    "LOADING": "Loading…",
+    "SAVE": "Save",
+    "SAVED": "Saved: agents use it from their next message.",
+    "SAVE_ERROR": "Could not save.",
+    "LOAD_ERROR": "Could not load.",
+    "TEST_ERROR": "Could not build the sample.",
+    "USED_BY": "Used by: AI Follow-up and Ready agents. Custom agents have their own training.",
+    "TEST": {
+      "TITLE": "Try it",
+      "HINT": "Builds a sample message with what you typed, without saving or sending anything.",
+      "FOLLOW_UP": "AI Follow-up: ask about a quote",
+      "PROSPECTS": "Prospects: someone asks for info",
+      "BUTTON": "Try it"
+    },
+    "FIELDS": {
+      "WHO": {
+        "LABEL": "Who we are",
+        "PLACEHOLDER": "Kontrolya, management software for service companies"
+      },
+      "TONE": {
+        "LABEL": "Tone",
+        "PLACEHOLDER": "Informal, friendly, no emojis"
+      },
+      "SIGNATURE": {
+        "LABEL": "How to sign off",
+        "PLACEHOLDER": "— The Kontrolya team"
+      },
+      "ROLES": {
+        "LABEL": "Who is who (contacts that are not customers)",
+        "PLACEHOLDER": "Distributors are partners: ask about their prospects. Suppliers: don't sell to them."
+      },
+      "AFTER_HOURS": {
+        "LABEL": "After hours, what to say",
+        "PLACEHOLDER": "We'll reply first thing tomorrow"
+      },
+      "NEVER": {
+        "LABEL": "Never",
+        "PLACEHOLDER": "No discounts. No delivery dates. Don't mention competitors."
+      },
+      "WORDS": {
+        "LABEL": "Own words or words to avoid",
+        "PLACEHOLDER": "Say \"licenses\", not \"subscriptions\""
+      }
+    }
+  },
   "READY_AGENTS": {
     "TITLE": "Ready agents",
     "SUBTITLE": "Agents that come built: turn them on, name them, pick their inbox and answer a few questions. They start attending on their own, no automations.",

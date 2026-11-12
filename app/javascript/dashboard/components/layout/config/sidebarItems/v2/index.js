@@ -682,6 +682,7 @@ const agentesIa = accountId => ({
   parentNav: 'agentes',
   routes: [
     'ready_agents',
+    'ai_voice',
     'contact_trackings_agents',
     'contact_trackings_agent',
     'contact_trackings_assistant',
@@ -701,6 +702,17 @@ const agentesIa = accountId => ({
         `accounts/${accountId}/tracking-dashboard/ready-agents`
       ),
       toStateName: 'ready_agents',
+    },
+    // «Cómo habla tu empresa»: lo general de Seguimiento IA y Agentes listos.
+    {
+      icon: 'chat-multiple',
+      label: 'AI_VOICE',
+      hasSubMenu: false,
+      featureFlag: FEATURE_FLAGS.CAMPAIGNS,
+      toState: frontendURL(
+        `accounts/${accountId}/tracking-dashboard/company-voice`
+      ),
+      toStateName: 'ai_voice',
     },
     campaignItem(accountId, 'contact_trackings_agents', 'AI_AGENT_LIST'),
     campaignItem(accountId, 'contact_trackings_dashboard', 'TRACKINGS'),

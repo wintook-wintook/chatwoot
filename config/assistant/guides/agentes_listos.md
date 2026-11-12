@@ -2,7 +2,7 @@
 key: agentes_listos
 title: Agentes listos
 areas: [ai_agents]
-keywords: [agentes listos, tu negocio, preguntas para calificar, temperatura, caliente, tibio, frio, objeciones, esta caro, datos obligatorios, agente listo, atencion a prospectos, prospectos, anuncios, redes sociales, campañas de redes, activar agente, chat de prueba, sofi, calificar, descartar, pasar a una persona, atendida por, pausar agente, reanudar agente, agendar cita, cita, horarios, horario ocupado, no disponible, reconectar google, mover cita, cancelar cita, agentes a medida, ya es cliente]
+keywords: [agentes listos, como habla tu empresa, tono general, firma, quien es quien, distribuidores, nota para ia, tu negocio, preguntas para calificar, temperatura, caliente, tibio, frio, objeciones, esta caro, datos obligatorios, agente listo, atencion a prospectos, prospectos, anuncios, redes sociales, campañas de redes, activar agente, chat de prueba, sofi, calificar, descartar, pasar a una persona, atendida por, pausar agente, reanudar agente, agendar cita, cita, horarios, horario ocupado, no disponible, reconectar google, mover cita, cancelar cita, agentes a medida, ya es cliente]
 pages: [ready_agents, ai_agents]
 ---
 ## Para qué sirve
@@ -30,6 +30,9 @@ En el menú «Agentes IA» › «Agentes listos» (la primera opción). «Agente
 - Temperatura: al calificarlo (o pasarlo a una persona) lo marca caliente (lo necesita pronto y tiene presupuesto o decide), tibio o frío, con la etiqueta «prospecto-caliente», «prospecto-tibio» o «prospecto-frio» y en la nota. Así tu equipo atiende primero a los calientes.
 - Objeciones frecuentes: lo que suelen decir para frenar la compra («está caro», «lo voy a pensar») y cómo contestarlo. Usa la idea con sus palabras y no inventa descuentos.
 - Al pasarlo: los datos que debe juntar antes de calificarlo (nombre, correo, empresa, ciudad) y a quién se lo pasa (persona o equipo). Si falta uno, se lo pide antes de pasarlo.
+
+### Cómo habla tu empresa (lo general de todos los agentes)
+En Agentes IA › «Cómo habla tu empresa» (solo el Administrador) llenas lo que aplica a todos: quiénes somos, tono, cómo firmar, quién es quién (por ejemplo «los distribuidores son socios: se les pregunta por sus prospectos»), qué decir fuera de horario, lo que nunca deben hacer y palabras propias. Lo toman el Seguimiento IA y todos los Agentes listos; lo particular de cada uno manda (por ejemplo, el tono que elegiste en el agente). «Probar» arma un mensaje de ejemplo sin guardar ni enviar. Los Agentes a medida no lo usan: tienen su propio entrenamiento.
 
 ### Agendarle una cita
 1. En «Cuando el prospecto califica…» elige «Agendarle una cita».
@@ -62,5 +65,6 @@ En su tarjeta: «Apagar» o «Prender» (no cambia su configuración), el lápiz
 - Solo contesta cuando el cliente escribe; no le escribe primero.
 - Para agendar necesita al menos una persona con Google Calendar conectado.
 - No inventa precios ni promociones: usa las respuestas predefinidas y el catálogo; si no lo encuentra, lo pasa al equipo.
+- Lee la nota «para IA» del contacto (si tiene) para personalizar, sin recitársela.
 - Necesita la integración de OpenAI de la cuenta.
 - Si en la conversación corre un Seguimiento IA, contesta ese; el agente listo espera.
