@@ -40,6 +40,14 @@ RSpec.describe Kanban::FunnelMover do
       expect(conversation.messages.activity.last.content).to include('Nuevo')
     end
 
+    it 'solo entra un contacto nuevo: la conversación nueva de quien ya escribió no entra' do
+      create(:conversation, account: account, inbox: other_inbox, contact: conversation.contact)
+
+      described_class.new(conversation).enter!
+
+      expect(conversation.reload.kanban_type_process_id).to be_nil
+    end
+
     it 'no toca conversaciones de otras bandejas ni las que ya están en un tablero' do
       foreign = create(:conversation, account: account, inbox: other_inbox)
       described_class.new(foreign).enter!
