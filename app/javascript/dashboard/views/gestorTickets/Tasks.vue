@@ -16,6 +16,8 @@ import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
 import MessageFormatter from 'shared/helpers/MessageFormatter';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import QuickTasksAPI from 'dashboard/api/quickTasks';
+import CaseMeetingsAPI from 'dashboard/api/caseMeetings';
+import AgendaItemsAPI from 'dashboard/api/agendaItems';
 import CancelItemModal from 'dashboard/components/cancel/CancelItemModal.vue'; // cancelar con motivo
 import ScheduleTaskModal from 'dashboard/components/convert/ScheduleTaskModal.vue'; // pasarla a la agenda
 import { useAlert } from 'dashboard/composables';
@@ -32,6 +34,7 @@ import { formatDay } from 'dashboard/helper/caseCommercial';
 import {
   allowedAssigneeTabs,
   getUserAccess,
+  seesOnlyOwn,
 } from 'dashboard/helper/accessHelper';
 import {
   ESTIMATE_OPTIONS,
@@ -181,6 +184,9 @@ export default {
       rowMenu: null,
       // Tarea que se está completando desde la fila (para el spinner del botón).
       completingId: null,
+      // «Mi día» de otra persona (solo quien ve la agenda de todos); '' = el mío.
+      // No se guarda: al recargar vuelves a tu día.
+      myDayUserId: '',
       // Confirmación de borrado
       showDeleteConfirm: false,
       pendingDelete: null,
@@ -249,6 +255,26 @@ export default {
     // Plan-Bandeja-Prioridad F1 — «Mi día»: mis pendientes en orden sugerido.
     isMyDay() {
       return this.quickFilter === 'my_day';
+    },
+    // Administrador / Supervisor (Agenda en «todo»): puede ver el día de otro.
+    canSeeOthersDay() {
+      const access = getUserAccess(
+        this.currentUser,
+        this.$route.params.accountId
+      );
+      return !seesOnlyOwn(access, 'agenda');
+    },
+    // El día que se está viendo es de otra persona: solo se ve, no se planea.
+    viewingOthersDay() {
+      return (
+        this.canSeeOthersDay &&
+        !!this.myDayUserId &&
+        Number(this.myDayUserId) !== Number(this.currentUserID)
+      );
+    },
+    myDayUser() {
+      if (!this.viewingOthersDay) return null;
+      return this.agents.find(a => Number(a.id) === Number(this.myDayUserId));
     },
     estimateOptions() {
       return ESTIMATE_OPTIONS;
@@ -713,7 +739,9 @@ export default {
       if (this.isMyDay) {
         const p = {
           mode: 'my_day',
-          assignee_id: this.currentUserID,
+          assignee_id: this.viewingOthersDay
+            ? this.myDayUserId
+            : this.currentUserID,
           page: this.currentPage,
           day: localDay(), // F2 — el plan es del día LOCAL del agente
         };
@@ -874,6 +902,33 @@ export default {
     },
     // @tickets_cases — clic en una fila de reunión ("tarea agendada"): abre la
     // ficha del ticket directo en la pestaña Reuniones.
+    // «Mi día» › Agenda de hoy: completar una cita con su reporte de cierre. Con caso va por
+    // el caso (queda en su actividad); sin caso, por la Agenda.
+    completeMeeting(meeting) {
+      const { id, title } = meeting;
+      this.askReport({ type: 'meeting', id, title, askAttendance: true }, r =>
+        this.holdMeeting(meeting, r.status || 'held')
+      );
+    },
+    async holdMeeting(meeting, status) {
+      try {
+        if (meeting.case_ticket) {
+          await CaseMeetingsAPI.hold(
+            meeting.case_ticket.id,
+            meeting.id,
+            status
+          );
+        } else {
+          await AgendaItemsAPI.updateItem(meeting.id, { status });
+        }
+      } catch (e) {
+        useAlert(
+          e?.response?.data?.error ||
+            this.$t('CASE_TICKETS.TASKS.COMPLETE_ERROR')
+        );
+      }
+      this.fetch();
+    },
     openMeetingTicket(meeting) {
       if (!meeting.case_ticket) {
         this.openContact(meeting);
@@ -1280,6 +1335,7 @@ export default {
     // Plan-Bandeja-Prioridad F2 — guarda el orden propio del día (la vista ya
     // lo muestra; si falla, se recarga lo que quedó en el servidor).
     async savePlan(taskIds) {
+      if (this.viewingOthersDay) return; // el plan es de esa persona
       try {
         await CaseTasksAPI.saveMyDayPlan(localDay(), taskIds);
       } catch (e) {
@@ -1367,18 +1423,30 @@ export default {
       <!-- Dos columnas 70/30: izquierda "Actualizar" + desplegables, derecha búsqueda. -->
       <div class="grid items-start grid-cols-1 gap-2 lg:grid-cols-[7fr_3fr]">
         <div class="flex flex-wrap items-center gap-2">
-          <!-- Recarga la página actual sin tocar los filtros (tareas que otro
-             agente creó o completó mientras tenías la bandeja abierta). -->
-          <woot-button
-            size="small"
-            color-scheme="primary"
-            icon="arrow-clockwise"
-            :is-loading="isFetching"
-            :title="$t('CASE_TICKETS.TASKS.INBOX.REFRESH')"
-            @click="refresh"
+          <!-- «Día de»: Administrador/Supervisor ven el «Mi día» de otra persona. -->
+          <label
+            v-if="isMyDay && canSeeOthersDay"
+            class="flex items-center gap-2 !mb-0 text-sm text-slate-600 dark:text-slate-300"
           >
-            {{ $t('CASE_TICKETS.TASKS.INBOX.REFRESH') }}
-          </woot-button>
+            {{ $t('CASE_TICKETS.TASKS.MY_DAY.DAY_OF') }}
+            <select
+              v-model="myDayUserId"
+              class="!mb-0 text-sm w-44"
+              data-test="my-day-user"
+              @change="onFilterChange"
+            >
+              <option value="">
+                {{ $t('CASE_TICKETS.TASKS.MY_DAY.DAY_OF_ME') }}
+              </option>
+              <option
+                v-for="a in agents.filter(x => x.id !== currentUserID)"
+                :key="a.id"
+                :value="a.id"
+              >
+                {{ a.name }}
+              </option>
+            </select>
+          </label>
           <select
             v-if="!isMyDay"
             v-model="filters.status"
@@ -1468,6 +1536,19 @@ export default {
               {{ a.name }}
             </option>
           </select>
+          <!-- Recarga la página actual sin tocar los filtros (tareas que otro
+             agente creó o completó mientras tenías la bandeja abierta). Solo el ícono. -->
+          <woot-button
+            size="small"
+            variant="smooth"
+            color-scheme="secondary"
+            icon="arrow-clockwise"
+            :is-loading="isFetching"
+            :title="$t('CASE_TICKETS.TASKS.INBOX.REFRESH')"
+            :aria-label="$t('CASE_TICKETS.TASKS.INBOX.REFRESH')"
+            data-test="tasks-refresh"
+            @click="refresh"
+          />
         </div>
 
         <div class="relative">
@@ -1510,10 +1591,12 @@ export default {
         :page="currentPage"
         :per-page="perPage"
         :completing-id="completingId"
-        :ai-enabled="dayPlanAi"
+        :ai-enabled="dayPlanAi && !viewingOthersDay"
+        :viewing-user="myDayUser"
         @openTask="openFromMyDay"
         @openTicket="openTicket"
         @openMeeting="openMeetingTicket"
+        @completeMeeting="completeMeeting"
         @complete="complete"
         @history="r => (historyTaskId = r.id)"
         @plan="savePlan"

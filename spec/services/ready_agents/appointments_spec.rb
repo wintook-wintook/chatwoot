@@ -33,7 +33,7 @@ RSpec.describe ReadyAgents::Appointments do
   it 'ofrece horarios con el texto para el cliente' do
     result = described_class.new(agent, session: session).slots
     expect(result[:horarios].first).to include(inicio: start.strftime('%Y-%m-%dT%H:%M'), con: 'Ana López')
-    expect(result[:horarios].first[:texto]).to match(/\A\w+ \d+ de \w+, 10:00\z/)
+    expect(result[:horarios].first[:texto]).to match(/\A[[:alpha:]]+ \d+ de [[:alpha:]]+, 10:00\z/)
   end
 
   it 'agenda la cita en la Agenda con su contacto y a nombre de quien la atiende' do

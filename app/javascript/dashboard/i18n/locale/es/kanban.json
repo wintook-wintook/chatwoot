@@ -33,7 +33,7 @@
         "AUTO_MOVE": "Movimiento automático",
         "AUTO_MOVE_HELP": "La propia conversación mueve su tarjeta: al llegar, al contestarle, al etiquetarla, al agendar una cita o al crear su caso. Solo avanza; mover a mano siempre gana.",
         "ENTRY_INBOXES": "Bandejas que entran solas",
-        "ENTRY_INBOXES_HELP": "Las conversaciones nuevas de estas bandejas entran al embudo por su columna de entrada.",
+        "ENTRY_INBOXES_HELP": "Los contactos nuevos (su primera conversación) que llegan por estas bandejas entran al embudo por su columna de entrada. Quien ya había escrito antes no entra solo.",
         "NO_INBOXES_WARNING": "Elige al menos una bandeja para que las conversaciones nuevas entren solas.",
         "AI_MOVE": "La IA mueve tarjetas",
         "AI_MOVE_HELP": "Cuando el cliente deja de escribir, la IA lee la conversación, la avanza a la columna cuyo criterio se cumple y deja una nota privada con el porqué.",

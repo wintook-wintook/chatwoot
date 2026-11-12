@@ -13,6 +13,8 @@
 # Solo conversaciones que el usuario ve (Access::Grant#conversations); contestar pide
 # permiso de escribir en Conversaciones. Se incluye en Assistant::Tools.
 module Assistant::ConversationTools
+  include Assistant::ReplyTarget # no contestarle a la conversación equivocada
+
   CONVERSATION_READ_TOOLS = %w[my_conversations read_conversation].freeze
   CONVERSATION_PROPOSAL_TOOLS = %w[propose_reply].freeze
   INBOX_LIMIT = 10
@@ -27,13 +29,16 @@ module Assistant::ConversationTools
     rows = scope.includes(:contact, :inbox).order(Arel.sql('waiting_since ASC NULLS LAST'), last_activity_at: :desc)
                 .limit(INBOX_LIMIT)
     result = { total: scope.count, conversations: rows.map { |c| inbox_row(c) } }
-    args['filter'] == 'open' ? result : result.merge(pending_blocks)
+    result = result.merge(pending_blocks) unless args['filter'] == 'open'
+    remember_listed(result[:conversations] + Array(result[:mentions]))
+    result
   end
 
   def tool_read_conversation(args)
     conversation = find_conversation(args['conversation_id'])
     return internal_room(conversation) if conversation.internal?
 
+    focus_on(conversation)
     can_reply = conversation.can_reply?
     { id: conversation.display_id, contact: conversation.contact && contact_ref(conversation.contact),
       inbox: conversation.inbox&.name, status: conversation.status, assignee: conversation.assignee&.name,
@@ -45,12 +50,19 @@ module Assistant::ConversationTools
     conversation = find_conversation(args['conversation_id'])
     raise ArgumentError, 'No tienes permiso para contestar conversaciones.' unless conversation.internal? || @grant.writable?(:conversations)
 
+    check_reply_target!(conversation, args)
+
     return template_reply(conversation, args) if args['template_name'].present?
     raise ArgumentError, closed_window_message(conversation) unless conversation.can_reply?
     raise ArgumentError, 'Falta el texto de la respuesta.' if args['content'].blank?
 
-    [{ 'conversation_id' => conversation.display_id, 'content' => args['content'].to_s.strip },
-     { 'conversation' => conversation_label(conversation) }]
+    [{ 'conversation_id' => conversation.display_id, 'content' => args['content'].to_s.strip }, reply_labels(conversation)]
+  end
+
+  # La tarjeta dice en grande a quién va (el contacto, o la sala del chat interno).
+  def reply_labels(conversation)
+    to = conversation.internal? ? room_name(conversation) : conversation.contact&.name
+    { 'conversation' => conversation_label(conversation), 'to' => to.presence }.compact
   end
 
   # Una conversación que el usuario ve, por su número (también la usan el mensaje programado y el borrador).
@@ -86,7 +98,7 @@ module Assistant::ConversationTools
     template = filled[:template]
     [{ 'conversation_id' => conversation.display_id, 'template_name' => template[:name],
        'template_language' => template[:language], 'template_values' => args['template_values'].to_h },
-     { 'conversation' => conversation_label(conversation), 'template' => template[:name], 'template_text' => filled[:content] }]
+     reply_labels(conversation).merge('template' => template[:name], 'template_text' => filled[:content])]
   end
 
   def closed_window_message(conversation)
