@@ -44,6 +44,6 @@ Inicio › Presupuesto muestra el avance de las ventas contra la meta. Cómo se 
 - Si tu empresa no usa casos, Inicio no aparece y el logo lleva a Conversaciones.
 
 ## Quién puede
-- Mi resumen, Mi día y Notificaciones: todos; cada quien ve lo suyo.
+- Mi resumen, Mi día y Notificaciones: todos; cada quien ve lo suyo. Quien ve la Agenda de todos (Administrador, Supervisor) puede ver el Mi día de otra persona en Agenda › Tareas › Mi día, con «Día de:».
 - Mi negocio: el Administrador, los roles que ven todos los Informes (como Supervisor y Consulta) y las personas que el administrador autorice en Ajustes › Casos y etapas › Resumen del negocio: acceso.
 - Presupuesto: quien tiene acceso a Ventas.

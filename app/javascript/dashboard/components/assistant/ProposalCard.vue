@@ -398,8 +398,19 @@ export default {
         <template v-if="labels.target"> · {{ labels.target }}</template>
       </p>
     </template>
+    <!-- Responder: a quién va, en grande (para notar si no es la conversación correcta). -->
+    <div
+      v-if="type === 'reply' && labels.to"
+      class="flex flex-col gap-0.5"
+      data-test="reply-to"
+    >
+      <p class="m-0 text-sm font-semibold text-slate-800 dark:text-slate-100">
+        {{ t('TARGET') }}: {{ labels.to }}
+      </p>
+      <p class="m-0 text-xs text-slate-500">{{ labels.conversation }}</p>
+    </div>
     <p
-      v-if="(labels.target || labels.conversation) && !isAction"
+      v-else-if="(labels.target || labels.conversation) && !isAction"
       class="m-0 text-xs text-slate-500"
     >
       {{ labels.target ? t('TARGET') : t('CONVERSATION') }}:

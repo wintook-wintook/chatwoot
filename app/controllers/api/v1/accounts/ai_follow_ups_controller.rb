@@ -52,11 +52,36 @@ class Api::V1::Accounts::AiFollowUpsController < Api::V1::Accounts::BaseControll
     render json: { payload: entries.map { |entry| { id: entry[:inbox].id, name: entry[:inbox].name, channel_type: entry[:inbox].channel_type } } }
   end
 
+  # GET /ai_follow_ups/running?conversation_id= | contact_id= | case_id= — quién le da seguimiento:
+  # { ai: {...}|null, custom: { conversation_id, agent, status }|null, custom_agents: bool }.
+  def running
+    found = AiFollowUps::WhoFollows.new(Current.account, **running_scope).call
+    custom = found[:custom]
+    render json: { ai: found[:ai] && follow_up_json(found[:ai]), custom_agents: found[:custom_agents],
+                   custom: custom && { conversation_id: custom.conversation&.display_id, agent: custom.tracking_template&.name,
+                                       status: custom.status } }
+  end
+
   def pause = change(:pause!)
   def resume = change(:resume!)
   def cancel = change(:cancel!)
 
   private
+
+  def running_scope
+    return case_running_scope(visible_case(params[:case_id])) if params[:case_id].present?
+
+    if params[:contact_id].present?
+      { conversations: visible_conversations.where(contact_id: params[:contact_id]), contact_ids: [params[:contact_id].to_i] }
+    else
+      conversation = visible_conversation(params[:conversation_id])
+      { conversations: visible_conversations.where(id: conversation.id), contact_ids: [conversation.contact_id] }
+    end
+  end
+
+  def case_running_scope(ticket)
+    { case_ticket: ticket, conversations: visible_conversations.where(id: ticket.conversation_id), contact_ids: [ticket.contact_id] }
+  end
 
   def index_scope
     scope = AiFollowUp.where(account_id: Current.account.id)

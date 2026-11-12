@@ -16,6 +16,11 @@
 #
 # Solo toca seguimientos que esperan su siguiente toque (pending / scheduled): uno en
 # ejecución (active), pausado o terminado se queda como está.
+#
+# Solo en CAMPAÑAS (tracking_campaign_id). Un Agente IA asignado fuera de campaña (cobranza,
+# cotizaciones, vencimientos…) sigue con todos sus intentos y su intervalo: ahí que el
+# cliente conteste («el pago sale la próxima semana») es justo cuando hay que seguir.
+# Antes aplicaba a todos y les recortaba los intentos a «los enviados + 1» (2026-11-12).
 # ================================================================================
 module ContactTrackings::ProspectReply
   RECOVERY_BUSINESS_DAYS = 3
@@ -24,6 +29,7 @@ module ContactTrackings::ProspectReply
   module_function
 
   def call(tracking, at: Time.current)
+    return false if tracking.tracking_campaign_id.nil?
     return false unless WAITING_STATUSES.include?(tracking.status)
 
     remaining = [tracking.max_attempts, tracking.attempt_count + 1].min

@@ -2,7 +2,7 @@
 key: seguimiento_ia
 title: Delegar seguimiento (Seguimiento IA)
 areas: [conversations, sales, service, clients]
-keywords: [seguimiento, contacto sin conversacion, crear conversacion, bandeja, seguimiento ia, delegar, delegar seguimiento, insistir, intentos, pausar seguimiento, reanudar seguimiento, cancelar seguimiento, objetivo, que el agente le escriba, ventana 24 horas, plantilla whatsapp, nota ia, respuestas predefinidas, vista anterior, pide una persona, sin respuesta, dale seguimiento]
+keywords: [catalogo de plantillas, plantillas de seguimiento, editar plantilla de seguimiento, como habla tu empresa, indicaciones mandan, distribuidora, prospecto de la distribuidora, seguimiento, contacto sin conversacion, crear conversacion, bandeja, seguimiento ia, delegar, delegar seguimiento, insistir, intentos, pausar seguimiento, reanudar seguimiento, cancelar seguimiento, objetivo, que el agente le escriba, ventana 24 horas, plantilla whatsapp, nota ia, respuestas predefinidas, seleccionar agente entrenado, agente entrenado, pide una persona, sin respuesta, dale seguimiento]
 pages: [conversation, case, contact, trackings, canned_responses]
 ---
 ## Para qué sirve
@@ -44,13 +44,17 @@ También puedes pedírselo a Dali, por ejemplo «dale seguimiento a Mario para q
 Estados posibles: trabajando, en pausa, cumplido, cerrado sin éxito, pide una persona, sin respuesta, no pudo escribir y cancelado.
 
 ## Dudas frecuentes
+- ¿Por qué le habló a mi distribuidora como si fuera la clienta? Escribe en las indicaciones quién es la persona y de quién es lo que se sigue («es nuestra distribuidora; pregúntale cómo va SU prospecto»): las indicaciones mandan sobre el caso y la nota. Si te pasa con varios, ponlo una vez en Agentes IA › «Cómo habla tu empresa», en «Quién es quién».
+- Además de tus indicaciones, el agente toma lo general de «Cómo habla tu empresa», la nota «para IA» del contacto y las respuestas predefinidas.
 - ¿Qué sabe el agente? Solo dos cosas: las respuestas predefinidas de la empresa (Catálogos › Respuestas Predefinidas) y la nota IA del contacto. El formulario te muestra esa nota y un enlace para editarla en la ficha. La nota IA es la nota del contacto marcada con «Marcar como nota para IA»; cada contacto tiene solo una. Si la empresa no tiene respuestas predefinidas, lo que no esté en la nota IA se lo pasa a una persona.
 - ¿Y si la ventana de WhatsApp de 24 horas está cerrada? El agente manda una plantilla aprobada de esa bandeja y llena sus datos; cuenta como un intento. Solo sirven plantillas aprobadas sin archivo en el encabezado ni datos en los botones. Si no hay ninguna, se detiene con el estado «no pudo escribir».
 - ¿Y si el contacto no tiene conversaciones? Desde su ficha elige «Bandeja por la que le escribe»: salen WhatsApp y SMS si tiene teléfono y correo si tiene correo. La conversación se crea solo al delegar (si cancelas, no se crea nada). En WhatsApp el primer mensaje siempre es una plantilla aprobada. Si no tiene teléfono ni correo, primero agrégalos.
 - ¿Cómo me entero del resultado? Al terminar te deja una nota privada en la conversación con tu mención y, si hay caso, una nota en su actividad. Si el cliente pide una persona, te asigna la conversación.
 - Si yo le escribo al cliente, el agente se pausa solo. Puedes reanudarlo después.
 - Una conversación solo puede tener un seguimiento vivo a la vez, sea de Seguimiento IA o de un agente de siempre. Pausa o cancela el otro primero.
-- «Vista anterior»: en el formulario, este enlace abre la ventana de siempre, «Gestión de Seguimientos», para usar uno de los agentes de Agentes IA › Agentes. Esa ventana necesita además el Bot de Seguimientos activo en la bandeja.
+- ¿Dónde veo y edito las plantillas de seguimiento? En Agentes IA › Cómo habla tu empresa › pestaña «Plantillas de seguimiento» (Administrador): ahí las creas, editas o borras, y en «Ejemplos» pulsas «Agregar a mis plantillas» para copiar uno y ajustarlo. Lo que guardas con «Guardar como plantilla» en la ventana de delegar aparece ahí mismo.
+- ¿Seguimiento IA o un agente a medida? Por omisión «Delegar seguimiento» abre el Seguimiento IA (el rápido: le dices qué quieres lograr). Si tu empresa tiene Agentes a medida, abajo aparece «Seleccionar agente entrenado», que abre la ventana «Gestión de Seguimientos» para usar uno de tus agentes entrenados (necesita además el Bot de Seguimientos activo en la bandeja). Los dos se quedan: el agente a medida es para cuando quieres control total de su entrenamiento.
+- Si ya corre un seguimiento, el botón «Delegar seguimiento» abre ese: el de un agente a medida abre su ventana; el Seguimiento IA te lo muestra arriba del formulario (puedes cambiarlo por uno nuevo).
 - Agentes IA › Seguimientos lista los seguimientos de los agentes de siempre. Los de Seguimiento IA se ven en la conversación, el caso y la ficha del contacto.
 
 ## Quién puede

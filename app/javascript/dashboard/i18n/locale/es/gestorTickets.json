@@ -865,6 +865,12 @@
       "MILESTONE_LABEL": "Es un hito del proyecto",
       "MILESTONE_HINT": "Cuenta para el avance del proyecto.",
       "MY_DAY": {
+        "DAY_OF": "Día de:",
+        "DAY_OF_ME": "Mío",
+        "VIEWING": "Estás viendo el día de {name}: solo para ver, su orden lo arma esa persona.",
+        "THEIR_ORDER": "Su orden de hoy",
+        "THEIR_ORDER_EMPTY": "No ha armado su orden de hoy.",
+        "THEIR_EMPTY": "Sin pendientes: no tiene tareas por hacer.",
         "NEXT": "Siguiente",
         "LOAD": "Para hoy: {count} tareas",
         "LOAD_NONE": "Nada vence hoy",

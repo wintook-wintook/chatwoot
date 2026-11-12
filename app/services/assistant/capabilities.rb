@@ -24,10 +24,17 @@ module Assistant::Capabilities
     keys << 'cases' if grant.case_area_allowed?
     keys << 'reply' if grant.writable?(:conversations)
     keys << 'delegate'
-    keys << 'field' if grant.allowed?(:agenda)
+    keys.concat(agenda_keys(grant))
     keys << 'client_tasks' if grant.case_area_allowed?
     keys << 'nfc' if grant.allowed?(:campaigns)
     keys
+  end
+
+  # Campo y, si ve la Agenda de todos, el día de las personas del equipo.
+  def agenda_keys(grant)
+    return [] unless grant.allowed?(:agenda)
+
+    grant.own?(:agenda) ? %w[field] : %w[field team_day]
   end
 
   def starters(grant)

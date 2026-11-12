@@ -28,6 +28,8 @@ class ReadyAgents::Prompt
     <<~PROMPT
       #{ReadyAgents::Catalog.instructions(@agent.kind)}
 
+      #{AgentBase::CompanyVoice.block(@account)}
+
       #{business_block}
       #{hours_block}
       #{company_block}
@@ -39,6 +41,7 @@ class ReadyAgents::Prompt
       Te llamas #{@agent.name} y atiendes por #{channel} a nombre de #{@account.name}. Ahora: #{now}.
       #{off_hours}
       CLIENTE: #{contact_line}
+      #{AgentBase::ContactNote.block(@conversation.contact)}
       #{answers_block}
       Si no hay nada que decir en este turno, responde exactamente #{ReadyAgents::Runner::NO_MESSAGE}.
     PROMPT
