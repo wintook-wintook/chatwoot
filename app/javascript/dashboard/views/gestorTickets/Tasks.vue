@@ -1394,18 +1394,6 @@ export default {
       <!-- Dos columnas 70/30: izquierda "Actualizar" + desplegables, derecha búsqueda. -->
       <div class="grid items-start grid-cols-1 gap-2 lg:grid-cols-[7fr_3fr]">
         <div class="flex flex-wrap items-center gap-2">
-          <!-- Recarga la página actual sin tocar los filtros (tareas que otro
-             agente creó o completó mientras tenías la bandeja abierta). -->
-          <woot-button
-            size="small"
-            color-scheme="primary"
-            icon="arrow-clockwise"
-            :is-loading="isFetching"
-            :title="$t('CASE_TICKETS.TASKS.INBOX.REFRESH')"
-            @click="refresh"
-          >
-            {{ $t('CASE_TICKETS.TASKS.INBOX.REFRESH') }}
-          </woot-button>
           <!-- «Día de»: Administrador/Supervisor ven el «Mi día» de otra persona. -->
           <label
             v-if="isMyDay && canSeeOthersDay"
@@ -1519,6 +1507,19 @@ export default {
               {{ a.name }}
             </option>
           </select>
+          <!-- Recarga la página actual sin tocar los filtros (tareas que otro
+             agente creó o completó mientras tenías la bandeja abierta). Solo el ícono. -->
+          <woot-button
+            size="small"
+            variant="smooth"
+            color-scheme="secondary"
+            icon="arrow-clockwise"
+            :is-loading="isFetching"
+            :title="$t('CASE_TICKETS.TASKS.INBOX.REFRESH')"
+            :aria-label="$t('CASE_TICKETS.TASKS.INBOX.REFRESH')"
+            data-test="tasks-refresh"
+            @click="refresh"
+          />
         </div>
 
         <div class="relative">
