@@ -2,10 +2,12 @@
   «Cómo habla tu empresa»: lo general que toman el Seguimiento IA y todos los Agentes listos
   (no los Agentes a medida, que son otro motor). Lo particular de cada agente o seguimiento
   manda sobre esto. «Probar» arma un mensaje de ejemplo con lo del formulario, sin guardar.
+  Pestaña «Plantillas de seguimiento» (?tab=plantillas): el catálogo del Seguimiento IA.
 -->
 <script>
 import { useAlert } from 'dashboard/composables';
 import AiVoiceAPI from 'dashboard/api/aiVoice';
+import FollowUpPresets from './FollowUpPresets.vue';
 
 const T = 'AI_VOICE';
 export const VOICE_FIELDS = [
@@ -21,8 +23,10 @@ const LONG = ['roles', 'never', 'words'];
 
 export default {
   name: 'CompanyVoice',
+  components: { FollowUpPresets },
   data() {
     return {
+      tab: this.$route?.query?.tab === 'plantillas' ? 'presets' : 'voice',
       voice: Object.fromEntries(VOICE_FIELDS.map(k => [k, ''])),
       loading: true,
       saving: false,
@@ -33,6 +37,12 @@ export default {
     };
   },
   computed: {
+    tabs() {
+      return [
+        { key: 'voice', label: this.t('TABS.VOICE') },
+        { key: 'presets', label: this.t('TABS.PRESETS') },
+      ];
+    },
     fields() {
       return VOICE_FIELDS.map(key => ({ key, long: LONG.includes(key) }));
     },
@@ -43,6 +53,11 @@ export default {
   methods: {
     t(key, params) {
       return this.$t(`${T}.${key}`, params);
+    },
+    setTab(tab) {
+      this.tab = tab;
+      const query = tab === 'presets' ? { tab: 'plantillas' } : {};
+      this.$router.replace({ query }).catch(() => {});
     },
     async load() {
       try {
@@ -93,7 +108,29 @@ export default {
         {{ t('SUBTITLE') }}
       </p>
     </header>
-    <p v-if="loading" class="text-sm text-slate-500">{{ t('LOADING') }}</p>
+    <nav
+      class="flex gap-1 mb-5 border-b border-slate-100 dark:border-slate-700 max-w-5xl"
+    >
+      <button
+        v-for="item in tabs"
+        :key="item.key"
+        type="button"
+        class="px-3 py-2 -mb-px text-sm bg-transparent rounded-none !border-x-0 !border-t-0 border-b-2"
+        :class="
+          tab === item.key
+            ? 'border-woot-500 text-woot-600 font-medium'
+            : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'
+        "
+        :data-test="`voice-tab-${item.key}`"
+        @click="setTab(item.key)"
+      >
+        {{ item.label }}
+      </button>
+    </nav>
+    <FollowUpPresets v-if="tab === 'presets'" />
+    <p v-else-if="loading" class="text-sm text-slate-500">
+      {{ t('LOADING') }}
+    </p>
     <div v-else class="grid gap-6 lg:grid-cols-[3fr_2fr] max-w-5xl">
       <form class="flex flex-col gap-4" @submit.prevent="save">
         <label v-for="f in fields" :key="f.key" class="flex flex-col gap-1">

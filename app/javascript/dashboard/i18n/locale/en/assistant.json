@@ -346,6 +346,31 @@
     }
   },
   "AI_VOICE": {
+    "TABS": {
+      "VOICE": "How your company talks",
+      "PRESETS": "Follow-up templates"
+    },
+    "PRESETS": {
+      "HINT": "AI Follow-up recipes: pick them in «Use template» when delegating; Dali uses them too. Whatever you save from the delegate window shows up here.",
+      "NEW": "New",
+      "NEW_TITLE": "New template",
+      "EDIT_TITLE": "Edit template",
+      "NAME": "Name",
+      "LOADING": "Loading…",
+      "EMPTY": "No templates yet. Create one or add an example below.",
+      "EXAMPLES": "Examples",
+      "ADD_STARTER": "Add to my templates",
+      "RHYTHM": "{n} attempt(s) every {every} {unit}",
+      "BY": "by {name}",
+      "WA_TEMPLATE": "WhatsApp template: {name}",
+      "WA_TEMPLATE_CLEAR": "remove",
+      "WA_TEMPLATE_AUTO": "WhatsApp template: chosen by the agent (you can pin one from the delegate window).",
+      "SAVE": "Save",
+      "SAVED": "Template «{name}» saved",
+      "SAVE_ERROR": "Could not save.",
+      "LOAD_ERROR": "Could not load templates.",
+      "NEED_FIELDS": "Enter the name and what you want to achieve."
+    },
     "TITLE": "How your company talks",
     "SUBTITLE": "General guidance used by AI Follow-up and all Ready agents. Each agent's or follow-up's own settings win over this. Empty fields are not used.",
     "LOADING": "Loading…",

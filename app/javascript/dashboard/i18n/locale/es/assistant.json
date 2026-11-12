@@ -346,6 +346,31 @@
     }
   },
   "AI_VOICE": {
+    "TABS": {
+      "VOICE": "Cómo habla tu empresa",
+      "PRESETS": "Plantillas de seguimiento"
+    },
+    "PRESETS": {
+      "HINT": "Las recetas del Seguimiento IA: se eligen en «Usar plantilla» al delegar y Dali también las usa. Lo que guardes desde la ventana de delegar aparece aquí.",
+      "NEW": "Nueva",
+      "NEW_TITLE": "Nueva plantilla",
+      "EDIT_TITLE": "Editar plantilla",
+      "NAME": "Nombre",
+      "LOADING": "Cargando…",
+      "EMPTY": "Aún no hay plantillas. Crea una o agrega un ejemplo de abajo.",
+      "EXAMPLES": "Ejemplos",
+      "ADD_STARTER": "Agregar a mis plantillas",
+      "RHYTHM": "{n} intento(s) cada {every} {unit}",
+      "BY": "creó {name}",
+      "WA_TEMPLATE": "Plantilla de WhatsApp: {name}",
+      "WA_TEMPLATE_CLEAR": "quitar",
+      "WA_TEMPLATE_AUTO": "Plantilla de WhatsApp: la elige el agente (se puede fijar una desde la ventana de delegar).",
+      "SAVE": "Guardar",
+      "SAVED": "Plantilla «{name}» guardada",
+      "SAVE_ERROR": "No se pudo guardar.",
+      "LOAD_ERROR": "No se pudieron cargar las plantillas.",
+      "NEED_FIELDS": "Escribe el nombre y qué quieres lograr."
+    },
     "TITLE": "Cómo habla tu empresa",
     "SUBTITLE": "Lo general que toman el Seguimiento IA y todos los Agentes listos. Lo particular de cada agente o seguimiento manda sobre esto. Lo que dejes vacío no se usa.",
     "LOADING": "Cargando…",
