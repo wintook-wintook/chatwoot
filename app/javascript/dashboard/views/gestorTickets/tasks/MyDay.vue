@@ -9,6 +9,8 @@
   puntaje. Si después de armarlo llega una urgente, se avisa arriba en vez de
   desacomodarle la lista. Los cambios salen por eventos (`plan`, `postpone`…) y
   los guarda la bandeja (Tasks.vue).
+  `viewingUser`: Administrador/Supervisor viendo el día de otra persona. Solo se
+  ve (su orden, sus citas, lo que hizo hoy): no se planea, pospone ni concluye.
 -->
 <script>
 import draggable from 'vuedraggable';
@@ -40,6 +42,7 @@ export default {
     completingId: { type: [Number, String], default: null },
     // F4 — la cuenta tiene activa la IA «Plan de mi día».
     aiEnabled: { type: Boolean, default: false },
+    viewingUser: { type: Object, default: null },
   },
   emits: [
     'openTicket',
@@ -63,9 +66,13 @@ export default {
   },
   computed: {
     ...mapGetters({ currentUserId: 'getCurrentUserID' }),
+    readonly() {
+      return !!this.viewingUser;
+    },
     doneTodayFilters() {
       const today = format(new Date(), 'yyyy-MM-dd');
-      return { user_id: this.currentUserId, from: today, to: today };
+      const userId = this.readonly ? this.viewingUser.id : this.currentUserId;
+      return { user_id: userId, from: today, to: today };
     },
     hasPlan() {
       return this.plan.length > 0;
@@ -91,7 +98,7 @@ export default {
     },
     // Programadas para un día que ya pasó y sin hacer (vuelven a competir).
     missedRows() {
-      if (this.dismissed.includes('missed')) return [];
+      if (this.readonly || this.dismissed.includes('missed')) return [];
       const ids = this.meta.missed || [];
       return this.pool.filter(r => ids.includes(r.id));
     },
@@ -106,6 +113,7 @@ export default {
       return (this.load.plan_minutes || 0) > 480;
     },
     urgentRow() {
+      if (this.readonly) return null;
       const ids = this.meta.new_urgent || [];
       const pool = this.pool;
       return (
@@ -120,6 +128,7 @@ export default {
   watch: {
     // Cambió la lista (p. ej. se concluyó una tarea): lo hecho hoy también.
     rows: [{ immediate: true, handler: 'rebuild' }, 'refreshDoneToday'],
+    viewingUser: 'refreshDoneToday',
   },
   mounted() {
     this.$emitter.on('taskReportsChanged', this.refreshDoneToday);
@@ -213,8 +222,23 @@ export default {
     class="flex flex-col flex-1 min-h-0 gap-4 px-6 py-4 overflow-auto lg:flex-row"
   >
     <section class="flex flex-col flex-1 min-w-0 gap-3">
+      <!-- Viendo el día de otra persona: solo ver. -->
+      <div
+        v-if="readonly"
+        class="flex items-center gap-2 px-3 py-2 text-sm border rounded-lg bg-woot-50 border-woot-200 text-woot-800 dark:bg-woot-900/30 dark:border-woot-800 dark:text-woot-200"
+        data-test="my-day-viewing"
+      >
+        <fluent-icon icon="eye-show" size="16" />
+        <span>
+          {{
+            $t('CASE_TICKETS.TASKS.MY_DAY.VIEWING', {
+              name: viewingUser.name,
+            })
+          }}
+        </span>
+      </div>
       <!-- «Tienes avisos importantes»: avisos sin leer de la campanita, por peso. -->
-      <MyDayNotices />
+      <MyDayNotices v-if="!readonly" />
       <!-- Carga del día: lo vencido + lo que vence hoy. -->
       <div
         class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600 dark:text-slate-300"
@@ -325,7 +349,15 @@ export default {
         class="flex flex-col items-center justify-center gap-3 py-16 text-slate-400 dark:text-slate-500"
       >
         <fluent-icon icon="checkmark-circle" size="36" />
-        <p class="m-0">{{ $t('CASE_TICKETS.TASKS.MY_DAY.EMPTY') }}</p>
+        <p class="m-0">
+          {{
+            $t(
+              readonly
+                ? 'CASE_TICKETS.TASKS.MY_DAY.THEIR_EMPTY'
+                : 'CASE_TICKETS.TASKS.MY_DAY.EMPTY'
+            )
+          }}
+        </p>
       </div>
 
       <template v-else>
@@ -335,6 +367,7 @@ export default {
           :row="nextRow"
           :rank="base + 1"
           highlight
+          :readonly="readonly"
           :completing-id="completingId"
           @openTask="r => $emit('openTask', r)"
           @openTicket="r => $emit('openTicket', r)"
@@ -349,9 +382,15 @@ export default {
           <h2
             class="flex items-baseline gap-2 m-0 mb-2 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400"
           >
-            {{ $t('CASE_TICKETS.TASKS.MY_DAY.MY_ORDER') }}
+            {{
+              $t(
+                readonly
+                  ? 'CASE_TICKETS.TASKS.MY_DAY.THEIR_ORDER'
+                  : 'CASE_TICKETS.TASKS.MY_DAY.MY_ORDER'
+              )
+            }}
             <span
-              v-if="hasPlan"
+              v-if="hasPlan && !readonly"
               class="font-normal normal-case tracking-normal text-slate-400 dark:text-slate-500"
             >
               {{ $t('CASE_TICKETS.TASKS.MY_DAY.MY_ORDER_HINT') }}
@@ -380,11 +419,18 @@ export default {
               v-if="!hasPlan"
               class="absolute inset-0 flex items-center justify-center px-4 m-0 text-sm text-center pointer-events-none text-slate-400 dark:text-slate-500"
             >
-              {{ $t('CASE_TICKETS.TASKS.MY_DAY.MY_ORDER_EMPTY') }}
+              {{
+                $t(
+                  readonly
+                    ? 'CASE_TICKETS.TASKS.MY_DAY.THEIR_ORDER_EMPTY'
+                    : 'CASE_TICKETS.TASKS.MY_DAY.MY_ORDER_EMPTY'
+                )
+              }}
             </p>
             <Draggable
               v-model="plan"
               group="my-day"
+              :disabled="readonly"
               handle=".my-day-handle"
               class="flex flex-col gap-2"
               :class="
@@ -401,7 +447,8 @@ export default {
                 :rank="base + i + 1"
                 :highlight="i === 0 && page === 1"
                 planned
-                draggable
+                :draggable="!readonly"
+                :readonly="readonly"
                 :completing-id="completingId"
                 @openTask="r => $emit('openTask', r)"
                 @openTicket="r => $emit('openTicket', r)"
@@ -425,6 +472,7 @@ export default {
             v-model="suggested"
             :group="{ name: 'my-day', pull: true, put: true }"
             :sort="false"
+            :disabled="readonly"
             handle=".my-day-handle"
             class="flex flex-col gap-2"
           >
@@ -433,7 +481,8 @@ export default {
               :key="row.id"
               :row="row"
               :rank="suggestedOffset + i + 1"
-              draggable
+              :draggable="!readonly"
+              :readonly="readonly"
               :completing-id="completingId"
               @openTask="r => $emit('openTask', r)"
               @openTicket="r => $emit('openTicket', r)"
