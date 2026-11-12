@@ -26,8 +26,10 @@ export default {
     // la conversación ahí (AiFollowUps::ConversationOpener).
     newContactId: { type: Number, default: null },
     inboxes: { type: Array, default: null },
+    // La empresa tiene Agentes a medida: arriba se elige quién da el seguimiento.
+    customAgents: { type: Boolean, default: false },
   },
-  // legacy: «Vista anterior» — el padre cierra esta y abre la del agente de seguimiento de siempre.
+  // legacy: eligió «Un agente a medida» — el padre cierra esta y abre la de esos agentes (otro motor).
   emits: ['close', 'created', 'legacy'],
   data() {
     return {
@@ -585,17 +587,21 @@ export default {
         </div>
         <p v-if="error" class="m-0 text-sm text-red-600">{{ error }}</p>
         <div class="flex items-center justify-end gap-2">
+          <!-- Por omisión es el Seguimiento IA (este formulario); si la empresa tiene agentes a
+               medida, este botón abre la ventana de esos (otro motor). -->
           <woot-button
-            v-if="!newContactId"
-            v-tooltip="t('LEGACY_HINT')"
+            v-if="customAgents && !newContactId"
+            v-tooltip="t('ENGINE.CUSTOM_HINT')"
             type="button"
             variant="link"
             color-scheme="secondary"
             size="small"
+            icon="bot-outline"
             class="mr-auto"
+            data-test="follow-up-engine-custom"
             @click="$emit('legacy', chosenId)"
           >
-            {{ t('LEGACY') }}
+            {{ t('ENGINE.CUSTOM') }}
           </woot-button>
           <woot-button
             type="button"

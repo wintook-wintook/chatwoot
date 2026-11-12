@@ -25,6 +25,8 @@ module Assistant::PendingTools
     raise ArgumentError, 'En el chat interno se contesta con un mensaje (propose_reply).' if conversation.internal?
     raise ArgumentError, 'Falta el texto de la nota.' if args['content'].blank?
 
+    check_reply_target!(conversation, args)
+
     [{ 'conversation_id' => conversation.display_id, 'content' => args['content'].to_s.strip },
      { 'conversation' => conversation_label(conversation) }]
   end

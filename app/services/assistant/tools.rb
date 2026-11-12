@@ -22,7 +22,7 @@ class Assistant::Tools
   include Assistant::FieldTools # trabajo en campo
   include Assistant::EventTools # NFC en la expo
   include Assistant::ClientTaskTools # tareas con el cliente
-  include Assistant::AgendaTools # my_agenda
+  include Assistant::AgendaTools # my_agenda y team_members
   include Assistant::CancelTools # cancelar con motivo
   include Assistant::ConvertTools # tarea ↔ tarea agendada
   include Assistant::FollowUpPresetTools # plantillas de seguimiento
@@ -32,7 +32,7 @@ class Assistant::Tools
   LIST_LIMIT = 6
   ACTIVITY_LINES = 15
 
-  READ_TOOLS = %w[search get_case get_contact my_agenda open_page list_agents tracking_status
+  READ_TOOLS = %w[search get_case get_contact my_agenda team_members open_page list_agents tracking_status
                   list_case_types case_options search_guides read_guide report_gap].freeze +
                QUOTE_READ_TOOLS + CONVERSATION_READ_TOOLS + FIELD_READ_TOOLS + EVENT_READ_TOOLS +
                CLIENT_TASK_READ_TOOLS + FOLLOW_UP_PRESET_READ_TOOLS + PROGRESS_READ_TOOLS

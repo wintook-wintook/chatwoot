@@ -286,6 +286,7 @@ Rails.application.routes.draw do
             get :templates, on: :collection
             get :context, on: :collection
             get :inboxes, on: :collection
+            get :running, on: :collection # quién le da seguimiento (IA o agente a medida)
             member do
               post :pause
               post :resume
@@ -541,6 +542,10 @@ Rails.application.routes.draw do
             post :my_day_ai, on: :collection  # Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA
           end
           get 'case_tasks/:id/history', to: 'task_histories#show', as: :case_task_history # historial de la tarea
+          # «Cómo habla tu empresa»: base común de Seguimiento IA y Agentes listos
+          resource :ai_voice, only: [:show, :update], controller: 'ai_voice' do
+            post :preview
+          end
           # Agentes listos: puestos empaquetados que la empresa activa en sus bandejas
           resources :ready_agents, only: [:index, :create, :update, :destroy] do
             post :test, on: :collection # chat de prueba (no guarda ni manda nada)
@@ -1170,7 +1175,7 @@ Rails.application.routes.draw do
   post 'baja/:token', to: 'public/opt_outs#create'
 
   # Plan-Trabajo-Campo R5 — portal del cliente de su orden y visita del técnico externo.
-  get  'servicio/:token',            to: 'public/service_portals#show',  as: :public_service_portal
+  get  'servicio/:token', to: 'public/service_portals#show', as: :public_service_portal
   # Portal del cliente — sus casos y proyectos y las tareas que le tocan (tareas con el cliente)
   get  'cliente/:token',                 to: 'public/client_portals#show',   as: :public_client_portal
   post 'cliente/:token/quien',           to: 'public/client_portals#person', as: :public_client_portal_person

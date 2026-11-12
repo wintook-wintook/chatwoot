@@ -862,6 +862,12 @@
       "MILESTONE_LABEL": "This is a project milestone",
       "MILESTONE_HINT": "It counts toward the project progress.",
       "MY_DAY": {
+        "DAY_OF": "Day of:",
+        "DAY_OF_ME": "Me",
+        "VIEWING": "You're viewing {name}'s day: view only, they set their own order.",
+        "THEIR_ORDER": "Their order for today",
+        "THEIR_ORDER_EMPTY": "They haven't set their order for today.",
+        "THEIR_EMPTY": "Nothing pending: no tasks to do.",
         "NEXT": "Next",
         "LOAD": "For today: {count} tasks",
         "LOAD_NONE": "Nothing due today",

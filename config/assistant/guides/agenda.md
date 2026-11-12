@@ -2,7 +2,7 @@
 key: agenda
 title: Agenda, tareas y reportes
 areas: [agenda]
-keywords: [agenda, tarea, tareas, mi dia, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, reportar avance, avance, ver reportes, historial, historial de la tarea, ver historial, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada, cancelar, cancelar tarea, cancelar cita, motivo de cancelacion, reabrir, sin responsable, sin asignar, borrar tarea, no puedo borrar, reprogramar]
+keywords: [agenda, tarea, tareas, mi dia, dia de, dia de otro, ver el dia de, mi dia de otro usuario, supervisar, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, reportar avance, avance, ver reportes, historial, historial de la tarea, ver historial, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada, cancelar, cancelar tarea, cancelar cita, motivo de cancelacion, reabrir, sin responsable, sin asignar, borrar tarea, no puedo borrar, reprogramar]
 pages: [tasks, my_day, calendar, task_reports, task_outcomes, task_scoring]
 ---
 ## Para qué sirve
@@ -20,8 +20,14 @@ La Agenda junta todo lo que tienes que hacer: tareas (con fecha, sin hora) y tar
 2. «Sugeridas por prioridad» trae tus pendientes ordenadas por un puntaje, con el motivo de su lugar (vencida, vence hoy, SLA en riesgo…).
 3. Arma «Mi orden de hoy»: arrastra tareas ahí o pulsa la flecha ↑ («Agregar a mi orden de hoy») y reordénalas arrastrando. La primera queda como «Siguiente».
 4. En cada tarea: «Completar» para concluirla o «Pasar a mañana» para programarla al día siguiente.
-5. A la derecha están la «Agenda de hoy» (tus tareas agendadas) y «Hecho hoy» (lo que ya concluiste).
+5. A la derecha están la «Agenda de hoy» (tus tareas agendadas) y «Hecho hoy» (lo que ya concluiste). La palomita de una tarea agendada la completa: llenas el reporte de cierre y eliges si se realizó o el cliente no asistió. Un clic en la cita abre su caso (o su contacto).
 6. Si quedaron tareas programadas sin hacer, sale un aviso con «Pasarlas a hoy» o «Ignorar». Si llega una urgente después de armar tu día, te avisa con «Subir al inicio».
+
+### Ver el Mi día de otra persona
+1. En Agenda › Tareas › Mi día, junto a «Actualizar», elige a la persona en «Día de:» («Mío» es el tuyo). Solo sale si tu rol ve la Agenda de todos (Administrador, Supervisor).
+2. Ves su día tal como lo ve ella: sus pendientes en el orden sugerido, «Su orden de hoy», su agenda de hoy y lo que hizo hoy. Arriba dice «Estás viendo el día de …».
+3. Es solo para ver: no puedes armarle ni cambiarle su orden, pasar sus tareas a mañana, completarlas ni reportar su avance. Puedes abrir cada tarea, su caso y su historial.
+4. Para regresar a tu día elige «Mío»; al recargar la página vuelves al tuyo.
 
 ### Ver y filtrar tareas
 1. Usa las pestañas Mías, No asignadas o Todas.
@@ -109,5 +115,6 @@ Los reportes (cierre, avance y actividad) salen en la actividad del caso como re
 
 ## Quién puede
 - Con Agenda en «Todo» ves todas las pestañas y los reportes de todos.
-- Con «Solo lo suyo» no hay pestaña Todas, «No asignadas» solo si tu rol puede tomar lo que no tiene dueño, y en Reportes ves solo los tuyos.
+- Con Agenda en «Todo» puedes ver el Mi día de otra persona («Día de:»).
+- Con «Solo lo suyo» no hay pestaña Todas ni «Día de:», «No asignadas» solo si tu rol puede tomar lo que no tiene dueño, y en Reportes ves solo los tuyos.
 - Puntaje de tareas y Resultados de tareas: solo el Administrador.

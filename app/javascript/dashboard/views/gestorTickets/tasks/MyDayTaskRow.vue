@@ -22,6 +22,9 @@ export default {
     highlight: { type: Boolean, default: false },
     draggable: { type: Boolean, default: false },
     completingId: { type: [Number, String], default: null },
+    // Día de otra persona: solo abrir e historial (sin planear, posponer,
+    // reportar avance ni concluir).
+    readonly: { type: Boolean, default: false },
   },
   emits: [
     'openTask',
@@ -61,6 +64,7 @@ export default {
     // Avance: lo hecho sin completarla (la del cliente la avanza él en su portal).
     canReportProgress() {
       return (
+        !this.readonly &&
         !this.frozen &&
         this.row.status === 'pending' &&
         this.row.audience !== 'client'
@@ -187,7 +191,7 @@ export default {
 
       <div v-if="highlight" class="flex flex-wrap items-center gap-2 mt-4">
         <woot-button
-          v-if="!frozen"
+          v-if="!frozen && !readonly"
           size="small"
           color-scheme="primary"
           icon="checkmark"
@@ -226,7 +230,7 @@ export default {
           {{ $t('CASE_TICKETS.TASKS.INBOX.OPEN_TICKET') }}
         </woot-button>
         <woot-button
-          v-if="!frozen"
+          v-if="!frozen && !readonly"
           size="small"
           variant="smooth"
           color-scheme="secondary"
@@ -266,7 +270,7 @@ export default {
 
     <div class="flex items-center flex-shrink-0 gap-1">
       <woot-button
-        v-if="planned"
+        v-if="planned && !readonly"
         size="tiny"
         variant="clear"
         color-scheme="secondary"
@@ -275,7 +279,7 @@ export default {
         @click="$emit('unpin', row)"
       />
       <woot-button
-        v-else
+        v-else-if="!readonly"
         size="tiny"
         variant="smooth"
         color-scheme="primary"
@@ -292,7 +296,7 @@ export default {
         :title="$t('TASK_HISTORY.MENU')"
         @click="$emit('history', row)"
       />
-      <template v-if="!highlight && !frozen">
+      <template v-if="!highlight && !frozen && !readonly">
         <woot-button
           v-if="canReportProgress"
           size="tiny"

@@ -13,14 +13,20 @@ module Assistant::ToolDefinitions
   def self.int(description) = { type: 'integer', description: description }
 
   BASE = [
-    fn('search', 'Busca una palabra en todos los datos de contactos, organizaciones y casos; dice dónde apareció (match).',
+    fn('search', 'Busca una palabra en todos los datos de contactos, organizaciones y casos (clientes, NO personas del ' \
+                 'equipo); dice dónde apareció (match).',
        { query: str('Texto a buscar') }, %w[query]),
     fn('get_case', 'Detalle de un caso: datos, qué sigue, último contacto y su actividad reciente.',
        { case_id: int('Id del caso'), folio: str('Folio del caso, p. ej. OPB-00003') }),
     fn('get_contact', 'Detalle de un contacto: datos, organización, casos abiertos, tareas, agenda y conversaciones.',
        { contact_id: int('Id del contacto') }, %w[contact_id]),
-    fn('my_agenda', 'Agenda del usuario: tareas agendadas y tareas pendientes entre dos fechas (incluye atrasadas).',
-       { from: str('Fecha inicial YYYY-MM-DD'), to: str('Fecha final YYYY-MM-DD') }, %w[from to]),
+    fn('my_agenda', 'Agenda (su día): tareas agendadas y tareas pendientes entre dos fechas (incluye atrasadas). Del usuario ' \
+                    'o, con user_id, de una persona del equipo (búscala con team_members).',
+       { from: str('Fecha inicial YYYY-MM-DD'), to: str('Fecha final YYYY-MM-DD'),
+         user_id: int('Id de la persona del equipo (de team_members); omitir = el usuario') }, %w[from to]),
+    fn('team_members', 'Personas del equipo (usuarios de la empresa, no clientes) por nombre o correo: compañeros, vendedores, ' \
+                       'técnicos, supervisores. Para asignarles una tarea o ver su día.',
+       { query: str('Nombre o correo (vacío = todo el equipo)') }),
     fn('open_page', 'Abre una pantalla para el usuario.',
        { target: { type: 'string', enum: Assistant::Pages::MAP.keys },
          id: int('Id del caso/contacto/organización o número de la conversación') }, %w[target]),
@@ -30,7 +36,7 @@ module Assistant::ToolDefinitions
     fn('propose_task', 'Propone crear una tarea (con caso, o con contacto/organización). Requiere confirmación.',
        { title: str('Título corto'), description: str('Detalle'), due_at: str('Día en que vence, YYYY-MM-DD (sin hora: vence al final del día)'),
          case_id: int('Id del caso'), contact_id: int('Id del contacto'), organization_id: int('Id de la organización'),
-         assignee_id: int('Id del usuario responsable (omitir = el usuario)') }, %w[title]),
+         assignee_id: int('Id de la persona del equipo responsable (de team_members; omitir = el usuario)') }, %w[title]),
     fn('propose_meeting', 'Propone agendar una tarea con hora (llamada, reunión, visita) en el calendario. Requiere confirmación.',
        { title: str('Título'), starts_at: str('Inicio, hora local YYYY-MM-DDTHH:MM'),
          duration_minutes: int('Duración en minutos (default 30)'), description: str('Detalle'),

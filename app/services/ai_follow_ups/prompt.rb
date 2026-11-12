@@ -6,7 +6,6 @@
 class AiFollowUps::Prompt
   HISTORY = 30
   MESSAGE_CHARS = 1500
-  NOTE_CHARS = 2000
 
   def initialize(follow_up, canned: false)
     @follow_up = follow_up
@@ -14,17 +13,22 @@ class AiFollowUps::Prompt
     @canned = canned
   end
 
-  # La nota del contacto marcada «para IA» (hay una sola por contacto).
-  def self.ai_note(contact)
-    contact&.notes&.for_ia&.order(updated_at: :desc)&.first
-  end
+  # La nota del contacto marcada «para IA» (base común: AgentBase::ContactNote).
+  def self.ai_note(contact) = AgentBase::ContactNote.for(contact)
 
   # Las reglas (iguales para todos) primero y lo de este seguimiento (cuenta, hora, cliente) al
   # final: OpenAI cobra con descuento el inicio idéntico de una llamada reciente (prompt caching).
   def system
     <<~PROMPT
-      Eres un asistente de seguimiento: le escribes a un cliente a nombre de una empresa. Quién eres, el objetivo y
-      el cliente van abajo.
+      Eres un asistente de seguimiento: le escribes a una persona (casi siempre un cliente) a nombre de una empresa.
+      Quién eres, con quién hablas y el objetivo van abajo.
+
+      LO PRIMERO: el OBJETIVO y las INDICACIONES DE QUIEN DELEGÓ mandan sobre todo lo demás. Dicen quién es la persona
+      (cliente, distribuidor, proveedor, socio, alguien del equipo…) y qué quieres saber o lograr. Escribe desde ese
+      papel y pregunta justo eso. El CASO y la nota del contacto son contexto: no supongas que una cotización, un
+      pedido o el caso son para esa persona si las indicaciones dicen que son de alguien más (p. ej. el prospecto de
+      una distribuidora: le preguntas a ella cómo va SU prospecto, no si ella revisó la cotización).
+      Abajo «el cliente» = la persona con quien hablas.
 
       CÓMO TRABAJAS:
       - Tu respuesta final es el mensaje que se le envía al cliente tal cual. Escribe como una persona: breve
@@ -42,17 +46,19 @@ class AiFollowUps::Prompt
       - Nunca digas que eres una IA salvo que te lo pregunten directamente; si preguntan, di la verdad.
       - Si no hay nada que decir en este turno, responde exactamente #{AiFollowUps::Runner::NO_MESSAGE}.
 
-      Eres el asistente de seguimiento de #{@account.name}. Hablas con un cliente por #{channel}, en nombre de
+      #{AgentBase::CompanyVoice.block(@account)}
+
+      Eres el asistente de seguimiento de #{@account.name}. Hablas con una persona por #{channel}, en nombre de
       #{@follow_up.created_by&.name || 'la empresa'}. Ahora: #{now}.
 
-      OBJETIVO DE ESTE SEGUIMIENTO: #{@follow_up.objective}
-      #{"INDICACIONES DE QUIEN DELEGÓ: #{@follow_up.instructions}" if @follow_up.instructions.present?}
-
-      CLIENTE: #{contact_line}
+      CON QUIÉN HABLAS: #{contact_line}
       #{ai_note_block}
       #{case_block}
 
       #{canned_line}
+
+      OBJETIVO DE ESTE SEGUIMIENTO (manda): #{@follow_up.objective}
+      #{instructions_line}
     PROMPT
   end
 
@@ -62,7 +68,8 @@ class AiFollowUps::Prompt
     when :reply
       'El cliente acaba de escribir (último mensaje). Contesta y sigue hacia el objetivo.'
     when :start
-      'Empieza el seguimiento: escribe el primer mensaje al cliente. Si ya hubo conversación, retómala con naturalidad.'
+      'Empieza el seguimiento: escribe el primer mensaje. Pregunta justo lo del OBJETIVO, desde el papel que dicen las ' \
+      'INDICACIONES (con quién hablas y de quién es lo que se sigue). Si ya hubo conversación, retómala con naturalidad.'
     else
       "Toca volver a escribirle al cliente (intento #{@follow_up.attempts + 1} de #{@follow_up.max_attempts}); " \
       'no ha contestado. Escribe un mensaje breve y distinto a los anteriores para retomar el objetivo.'
@@ -81,6 +88,12 @@ class AiFollowUps::Prompt
   end
 
   private
+
+  def instructions_line
+    return '' if @follow_up.instructions.blank?
+
+    "INDICACIONES DE QUIEN DELEGÓ (mandan; dicen quién es la persona y qué preguntarle): #{@follow_up.instructions}"
+  end
 
   def attachment_hint(message)
     kinds = message.attachments.map { |a| a.file_type.to_s }
@@ -105,10 +118,7 @@ class AiFollowUps::Prompt
   end
 
   def ai_note_block
-    note = self.class.ai_note(@follow_up.contact || @follow_up.conversation&.contact)
-    return '' if note.blank?
-
-    "LO QUE SABEMOS DEL CLIENTE (nota del equipo):\n#{note.content.to_s.strip.truncate(NOTE_CHARS)}"
+    AgentBase::ContactNote.block(@follow_up.contact || @follow_up.conversation&.contact)
   end
 
   def canned_line
