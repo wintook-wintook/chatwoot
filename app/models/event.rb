@@ -37,6 +37,7 @@ class Event < ApplicationRecord
   belongs_to :owner, class_name: 'User', optional: true
   has_many :attendees, class_name: 'EventAttendee', dependent: :destroy
   has_many :contacts, through: :attendees
+  has_many :capture_links, class_name: 'EventCaptureLink', dependent: :destroy # «acercar el celular» (NFC)
 
   enum kind: { fair: 0, course: 1, demo: 2, webinar: 3, other: 4 }
   enum status: { draft: 0, open: 1, closed: 2 }

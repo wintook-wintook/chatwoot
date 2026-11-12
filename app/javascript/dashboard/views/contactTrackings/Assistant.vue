@@ -76,8 +76,21 @@ import AgentStructure from './assistant/AgentStructure.vue';
 import trainingSectionsMixin from './assistant/trainingSectionsMixin';
 import OptimizeModal from './assistant/OptimizeModal.vue';
 import ExplainModal from './assistant/ExplainModal.vue';
-import DryRunModal from './assistant/DryRunModal.vue';
-import TestBatteryModal from './assistant/TestBatteryModal.vue';
+// proyecto@diagrama_agente_ia F1: la pestaña «Diagrama» (docs/diagrama_agente_ia_plan.md).
+import AgentDiagram from './assistant/AgentDiagram.vue';
+// F2: el panel «Pruebas»; la prueba elegida se ilumina en el diagrama.
+import TestsPanel from './assistant/TestsPanel.vue';
+// proyecto@crear_agente_conversando F2: escribir «%» ofrece los datos fijos.
+import ConstantPicker from './assistant/ConstantPicker.vue';
+// FD: el boceto de rutas probadas, dibujado, mientras se conversa.
+import DraftingSketch from './assistant/DraftingSketch.vue';
+import DraftingFields from './assistant/DraftingFields.vue';
+import ExportMenu from './assistant/ExportMenu.vue';
+import SourceProbePanel from './assistant/SourceProbePanel.vue';
+import { fieldsOf, filledCount } from './assistant/draftingFields';
+import { insertConstant, percentTriggerAt } from './assistant/constantPicker';
+import { readConstants } from './assistant/agentConstants';
+import { heatFromCases } from './assistant/testPath';
 import SaveModal from './assistant/SaveModal.vue';
 
 // El teclado va más rápido que un request: se espera a que la persona pare.
@@ -137,8 +150,13 @@ export default {
     AgentStructure,
     OptimizeModal,
     ExplainModal,
-    DryRunModal,
-    TestBatteryModal,
+    AgentDiagram,
+    TestsPanel,
+    ConstantPicker,
+    DraftingSketch,
+    DraftingFields,
+    ExportMenu,
+    SourceProbePanel,
     SaveModal,
   },
   mixins: [trainingSectionsMixin],
@@ -149,10 +167,17 @@ export default {
     initialSessionId: { type: Number, default: null },
     // Abrir la Galería al entrar («Nuevo agente › Bajar de la Galería»).
     openGallery: { type: Boolean, default: false },
+    // proyecto@diagrama_agente_ia: 'training' (Entrenamiento) o 'tests' (la pestaña
+    // «Pruebas y diagrama» del espacio del agente). Es la MISMA instancia en las dos
+    // pestañas: cambiar de una a otra no pierde el borrador ni el chat.
+    view: { type: String, default: 'training' },
   },
-  emits: ['saved', 'installed', 'session'],
+  emits: ['saved', 'installed', 'session', 'openTests', 'openTraining'],
   data() {
     return {
+      // feat/ficha_agente_ia: la última conversación publicada, para seguirla.
+      previousSession: null,
+      continuingSession: false,
       // Las secciones tienen columna propia y no se apagan: el mixin siempre
       // sincroniza en los dos sentidos (ver trainingSectionsMixin).
       trainingView: 'sections',
@@ -217,8 +242,6 @@ export default {
       // se marcan como de otra versión. Borrarlas perdería justo la comparación
       // que se vino a hacer.
       dryRunHistory: [],
-      // Fase E: tests sugeridos ({ cases, generated_by, version }) y su avance.
-      suggestedTests: null,
       // Fase E: optimizar ({ …, version }) y explicar lo seleccionado en el editor.
       showOptimizeModal: false,
       optimizeResult: null,
@@ -226,6 +249,8 @@ export default {
       // reactivos y el editor aparece y desaparece con las pestañas: se toma en
       // cada render (ver `updated`).
       draftEditorEl: null,
+      // F2: dónde está el «%» que abrió la lista de datos fijos (null = cerrada).
+      draftPickerCaret: null,
       // Lo último que se guardó solo (autosave), para no mandar lo mismo dos veces.
       lastAutosaved: '',
       isOptimizing: false,
@@ -236,15 +261,13 @@ export default {
       explainResult: null,
       isExplaining: false,
       explainError: '',
-      isSuggesting: false,
-      suggestStage: null,
-      showDryRunModal: false,
-      // «Probar el agente» (pila en vivo, M5) y el encargo del que salió el agente.
-      showTestBattery: false,
+      // El encargo del que salió el agente: de ahí salen las reglas de la pila.
       batteryBriefId: null,
+      // proyecto@diagrama_agente_ia F2: la prueba elegida en el panel Pruebas.
+      diagramTest: null,
+      // F3: la pila guardada del agente, para el mapa de calor del diagrama.
+      testCases: [],
       draftVersion: 0,
-      isDryRunning: false,
-      dryRunError: '',
       // Las preguntas del último turno, para mostrarlas como botones.
       interviewOptions: null,
       // El comprobador arranca ABIERTO y la prueba CERRADA. El comprobador es el
@@ -266,14 +289,45 @@ export default {
       // Las instrucciones iniciales que se llenan conversando mientras no hay
       // Entrenamiento (DraftingChat). Se guardan con la conversación.
       instructions: '',
+      // FR/D10: el boceto de rutas que el chat de creación ya probó (proposal.boceto).
+      draftingRoutes: '',
+      // FD: las frases que el chat probó ([{ frase, cae_en, estable }]): proposal.pruebas.
+      draftingTests: [],
       // Unas instrucciones mandadas a leer desde el chat: el modal las toma de acá.
       chatBrief: null,
       isSendingInstructions: false,
+      isExporting: false,
       // Las cuentas de Google conectadas, para elegir el calendario al guardar.
       calendarIntegrations: [],
     };
   },
   computed: {
+    // F4: el catálogo del motor, para el menú «Exportar».
+    engineCatalog() {
+      return (this.inventory && this.inventory.catalog) || [];
+    },
+    hasAgentToExport() {
+      return Boolean(
+        this.draft.trim() ||
+          this.instructions.trim() ||
+          this.draftingFieldsCount
+      );
+    },
+    // F3: cuántas de Definición, Variables y Datos fijos llenó la conversación.
+    draftingFieldsCount() {
+      return filledCount(this.proposal);
+    },
+    // La pestaña se ve mientras se arma conversando (sin Entrenamiento todavía) o
+    // si ya está abierta.
+    showFieldsTab() {
+      return !this.draft.trim() || this.draftTab === 'fields';
+    },
+    // F2: los nombres de [DATOS FIJOS] del borrador, para la lista que abre «%».
+    draftConstantNames() {
+      return readConstants(this.trainingStructure?.blocks || []).constants.map(
+        c => c.name
+      );
+    },
     // proyecto@adaptar_prompts_publicados — cuántas cosas faltan configurar.
     adaptationMissing() {
       return this.adaptationItems.filter(item => item.status === 'missing')
@@ -416,6 +470,20 @@ export default {
     },
     // El último resultado, para la tira de hitos: "Probado" se apaga cuando el
     // borrador cambió después de la prueba.
+    // F5: el archivo del diagrama lleva el nombre del agente.
+    diagramExportName() {
+      const nombre = (this.editingTemplate && this.editingTemplate.name) || '';
+      const limpio = nombre
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+      return limpio ? `diagrama-${limpio}` : 'diagrama-agente';
+    },
+    diagramHeat() {
+      return heatFromCases(this.testCases);
+    },
     lastDryRun() {
       const ultima = this.dryRunHistory[this.dryRunHistory.length - 1];
       return ultima && ultima.version === this.draftVersion
@@ -550,6 +618,37 @@ export default {
       const abierta = await this.openSessionFor(this.templateId);
       if (abierta) return;
       this.loadTemplate(this.templates.find(t => t.id === this.templateId));
+      this.fetchPreviousSession(this.templateId);
+    },
+    // feat/ficha_agente_ia — sin conversación abierta: ¿hay una anterior ya publicada para
+    // seguirla? Se ofrece en el chat; no se abre sola.
+    async fetchPreviousSession(templateId) {
+      this.previousSession = null;
+      try {
+        const { data } = await AssistantAPI.previousSession(templateId);
+        this.previousSession = data || null;
+      } catch (error) {
+        this.previousSession = null;
+      }
+    },
+    async continuePreviousSession() {
+      if (!this.previousSession) return;
+      this.continuingSession = true;
+      try {
+        const { data } = await AssistantAPI.continueSession(
+          this.previousSession.id
+        );
+        this.previousSession = null;
+        await this.openSession(data.id);
+        this.leftPanel = 'chat';
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.PREVIOUS_ERROR'));
+      } finally {
+        this.continuingSession = false;
+      }
+    },
+    previousDate(fecha) {
+      return fecha ? new Date(fecha).toLocaleDateString() : '';
     },
     async openSessionFor(templateId) {
       try {
@@ -578,9 +677,17 @@ export default {
       this.interviewOptions = null;
       this.messages = data.messages || [];
       this.instructions = data.instructions || '';
+      this.draftingRoutes = data.proposal?.boceto || '';
+      this.draftingTests = data.proposal?.pruebas || [];
       this.draft = data.draft || '';
       this.validation = data.validation || null;
-      this.proposal = data.proposal || null;
+      // Una conversación sin Definición propia (p. ej. la que sigue a una publicada):
+      // la del agente al que pertenece.
+      this.proposal =
+        data.proposal ||
+        this.definitionOf(
+          (this.templates || []).find(t => t.id === data.tracking_template_id)
+        );
       this.rejected = null;
       this.manualConflict = null;
       this.lastDelivered = data.draft || '';
@@ -591,7 +698,6 @@ export default {
       this.adaptationItems = [];
       this.reloadTrainingSections();
       this.dryRunHistory = [];
-      this.suggestedTests = null;
       this.optimizeResult = null;
       this.sessionMeta = {
         id: data.id,
@@ -638,12 +744,13 @@ export default {
     },
     startFresh() {
       this.instructions = '';
+      this.draftingRoutes = '';
+      this.draftingTests = [];
       this.chatBrief = null;
       this.sessionId = null;
       this.sessionMeta = null;
       this.interviewOptions = null;
       this.dryRunHistory = [];
-      this.suggestedTests = null;
       this.optimizeResult = null;
       this.messages = [];
       this.draft = '';
@@ -685,32 +792,42 @@ export default {
       this.goToLine(findRouteLine(this.draft, name));
     },
 
-    // F6 — probar sin enviar nada. A diferencia de validateDraft, esto NO corre
-    // solo: clasifica la rama con el modelo y vectoriza la pregunta.
-    async runDryRun(question) {
-      this.isDryRunning = true;
-      this.dryRunError = '';
-      try {
-        const { data } = await AssistantAPI.dryRun(
-          this.draft,
-          question,
-          this.inboxId
-        );
-        // Con la versión del borrador contra la que se corrió: es lo que después
-        // permite decir "esto ya no describe el texto actual".
-        this.dryRunHistory.push({
-          question,
-          result: data,
-          version: this.draftVersion,
-        });
-      } catch (error) {
-        this.dryRunError =
-          error?.response?.data?.error ||
-          this.$t('TRACKING_ASSISTANT_VIEW.DRY_RUN_FAILED');
-      } finally {
-        this.isDryRunning = false;
-      }
+    // proyecto@diagrama_agente_ia F1: del nodo del diagrama a su línea. El editor
+    // no existe mientras se ve el diagrama: se cambia de pestaña y se espera a que
+    // aparezca.
+    goToRouteFromDiagram(name) {
+      this.$emit('openTraining');
+      this.draftTab = 'editor';
+      this.$nextTick(() => this.goToRoute(name));
     },
+    // F2: la prueba elegida en el panel Pruebas se ve iluminada en el diagrama.
+    // El diagrama está al lado del panel: solo se ilumina.
+    onTestSelect(prueba) {
+      this.diagramTest = prueba;
+    },
+    // D4: «Probar el agente» y «Probar sin enviar nada» ya no abren modales: las
+    // pruebas viven en el panel (F3, F4).
+    openTestsPanel() {
+      this.$emit('openTests');
+    },
+    // F4: la prueba (o las rojas) al chat de creación, con su camino y su veredicto.
+    sendEvidence(texto) {
+      this.$emit('openTraining');
+      this.leftPanel = 'chat';
+      this.sendMessage(texto, { evidence: true });
+    },
+    // Una prueba en seco del panel también cuenta como «Probado» en la tira.
+    onPanelDryRun({ question, result }) {
+      this.dryRunHistory.push({ question, result, version: this.draftVersion });
+    },
+    goToSectionFromDiagram(index) {
+      const bloque = (this.trainingStructure.blocks || [])[index];
+      if (!bloque) return;
+      this.$emit('openTraining');
+      this.draftTab = 'editor';
+      this.$nextTick(() => this.goToLine(bloque.first_line));
+    },
+
     // proyecto@publicar_prompts (F5) — se bajó UN prompt publicado: la copia ya es un
     // Agente IA de la cuenta. Se abre aquí como cualquier agente cargado (guardar la
     // reemplaza a ella, nunca al original del autor) y el chat arranca diciendo qué se
@@ -760,13 +877,23 @@ export default {
     // Carga un Agente IA existente para mejorarlo. Deja anotado cuál es, para que
     // el guardado ofrezca reemplazarlo —conservando el Entrenamiento anterior— en
     // vez de crear otro al lado.
+    definitionOf(template) {
+      if (!template) return null;
+      return {
+        name: template.name || '',
+        objective: template.objective || '',
+        ai_context: template.ai_context || '',
+      };
+    },
     loadTemplate(template) {
       if (!template) return;
 
       this.draft = template.complementary_prompt || '';
       this.editingTemplate = { id: template.id, name: template.name };
       if (template.inbox_id) this.setInbox(template.inbox_id);
-      this.proposal = null;
+      // feat/ficha_agente_ia: la Definición de la Estructura muestra lo que el agente YA
+      // tiene (antes quedaba vacía y el objetivo/contexto de la ficha no se veían).
+      this.proposal = this.definitionOf(template);
       this.rejected = null;
       this.manualConflict = null;
       // El agente cargado cuenta como entregado: lo editado a mano es lo que se
@@ -782,7 +909,6 @@ export default {
       this.sessionMeta = null;
       this.interviewOptions = null;
       this.dryRunHistory = [];
-      this.suggestedTests = null;
       this.optimizeResult = null;
       this.validateDraft();
     },
@@ -792,8 +918,10 @@ export default {
     //
     // Un link a una conversación (…/conversations/173) no es un turno: es pedir que
     // se revise esa conversación real (reviewConversation).
-    async sendMessage(content, { oneShot = false } = {}) {
-      if (!oneShot && mentionsConversation(content)) {
+    // evidence (proyecto@diagrama_agente_ia F4): la evidencia de una prueba es un turno
+    // normal aunque el mensaje del cliente diga «conversación 5».
+    async sendMessage(content, { oneShot = false, evidence = false } = {}) {
+      if (!oneShot && !evidence && mentionsConversation(content)) {
         await this.reviewConversation(content);
         return;
       }
@@ -1003,12 +1131,33 @@ export default {
         const { data } = await AssistantAPI.draftingChat(
           this.messages,
           this.instructions,
-          { sessionId: this.sessionId }
+          {
+            sessionId: this.sessionId,
+            routes: this.draftingRoutes,
+            fields: fieldsOf(this.proposal),
+          }
         );
         this.sessionId = data.session_id || this.sessionId;
         if (data.session) this.sessionMeta = data.session;
         this.messages.push({ role: 'assistant', content: data.reply });
         if (data.instructions) this.instructions = data.instructions;
+        // F3: la primera vez que la conversación llena algo, se muestra (si no
+        // se está mostrando ya el boceto).
+        const antes = this.draftingFieldsCount;
+        if (data.fields)
+          this.proposal = { ...(this.proposal || {}), ...data.fields };
+        if (
+          !antes &&
+          this.draftingFieldsCount &&
+          this.draftTab === 'editor' &&
+          !this.draft.trim()
+        )
+          this.draftTab = 'fields';
+        // La primera vez que llegan rutas y no hay Entrenamiento, se muestran (FD).
+        if (data.routes && !this.draftingRoutes && !this.draft.trim())
+          this.draftTab = 'sketch';
+        if (data.routes) this.draftingRoutes = data.routes;
+        if (data.tests) this.draftingTests = data.tests;
       } catch (error) {
         const reason =
           error?.response?.data?.error === 'no_api_key'
@@ -1017,6 +1166,17 @@ export default {
         this.messages.push({ role: 'assistant', content: reason });
       } finally {
         this.isThinking = false;
+      }
+    },
+    // F3: lo corregido a mano en la pestaña. Sin conversación todavía, queda en
+    // memoria y viaja con el siguiente mensaje.
+    async updateDraftingFields(valores) {
+      this.proposal = { ...(this.proposal || {}), ...valores };
+      if (!this.sessionId) return;
+      try {
+        await AssistantAPI.saveDraftingFields(this.sessionId, valores);
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.FIELDS_SAVE_ERROR'));
       }
     },
     // «Crear el Entrenamiento» desde las instrucciones de la conversación: entran
@@ -1036,6 +1196,26 @@ export default {
         useAlert(this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_ERROR'));
       } finally {
         this.isSendingInstructions = false;
+      }
+    },
+    // F4: las instrucciones del agente para otra IA (AgentExport en el backend).
+    async exportInstructions() {
+      this.isExporting = true;
+      try {
+        const { data } = await AssistantAPI.exportInstructions({
+          name:
+            (this.proposal && this.proposal.name) ||
+            (this.editingTemplate && this.editingTemplate.name) ||
+            '',
+          draft: this.draft,
+          instructions: this.instructions,
+          fields: fieldsOf(this.proposal),
+        });
+        downloadMarkdown(data.content, data.filename);
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.EXPORT_ERROR'));
+      } finally {
+        this.isExporting = false;
       }
     },
     downloadInstructions() {
@@ -1156,7 +1336,6 @@ export default {
       const nuevo = id ? Number(id) : null;
       if (nuevo === this.inboxId) return;
       this.inboxId = nuevo;
-      this.suggestedTests = null;
       this.optimizeResult = null;
       try {
         if (nuevo)
@@ -1223,33 +1402,6 @@ export default {
         this.isExplaining = false;
       }
     },
-    // Fase E: la batería de tests sugeridos. Se anota contra qué versión del
-    // borrador corrió, para avisar si después se editó.
-    async runSuggestedTests() {
-      if (this.isSuggesting || !this.draft.trim()) return;
-      this.isSuggesting = true;
-      this.suggestStage = null;
-      const version = this.draftVersion;
-      const turnId = this.startProgress(data => {
-        this.suggestStage = data;
-      });
-      try {
-        const { data } = await AssistantAPI.suggestedTests(
-          this.draft,
-          turnId,
-          this.inboxId
-        );
-        this.suggestedTests = { ...data, version };
-      } catch (error) {
-        this.dryRunError =
-          error?.response?.data?.error ||
-          this.$t('TRACKING_ASSISTANT_VIEW.TESTS_ERROR');
-      } finally {
-        this.stopProgress();
-        this.isSuggesting = false;
-        this.suggestStage = null;
-      }
-    },
     // Volver a una versión anterior. Pasa a ser la base: lo que se cambie desde acá
     // es "a mano", y el próximo mensaje guarda como versión lo que había.
     restoreVersion({ number, draft }) {
@@ -1310,6 +1462,30 @@ export default {
       await this.sendMessage(
         this.$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_MESSAGE')
       );
+    },
+    // Lo que se teclea en el editor: lo de siempre, más «%» abre los datos fijos (F2).
+    onDraftTyped(event) {
+      this.onDraftInput();
+      const caret = event.target.selectionStart;
+      this.draftPickerCaret = percentTriggerAt(event.target.value, caret)
+        ? caret
+        : null;
+    },
+    pickDraftConstant(name) {
+      const { text, caret } = insertConstant(
+        this.draft,
+        this.draftPickerCaret,
+        name
+      );
+      this.draft = text;
+      this.draftPickerCaret = null;
+      this.onDraftInput();
+      this.$nextTick(() => {
+        const campo = this.$refs.draftEditor;
+        if (!campo) return;
+        campo.focus();
+        campo.setSelectionRange(caret, caret);
+      });
     },
     onDraftInput() {
       // Un prompt pegado (o escrito) en un Asistente nuevo es un agente que ya existe,
@@ -1574,7 +1750,10 @@ export default {
             </woot-button>
           </div>
 
-          <div class="grid flex-1 min-h-0 gap-4 md:grid-cols-2">
+          <div
+            v-show="view === 'training'"
+            class="grid flex-1 min-h-0 gap-4 md:grid-cols-2"
+          >
             <!-- La columna izquierda: la Estructura del Agente o la conversación,
                  una a la vez, con el selector arriba. -->
             <div class="flex flex-col min-h-0 gap-2">
@@ -1606,6 +1785,29 @@ export default {
                 v-show="showChat && leftPanel === 'chat'"
                 class="flex-1 p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex flex-col min-h-0"
               >
+                <div
+                  v-if="previousSession && !messages.length"
+                  class="flex flex-col gap-2 p-3 mb-3 text-sm border rounded-lg shrink-0 border-woot-100 bg-woot-25 dark:border-woot-800 dark:bg-woot-900/20"
+                >
+                  <span class="text-slate-700 dark:text-slate-200">
+                    {{
+                      $t('TRACKING_ASSISTANT_VIEW.PREVIOUS_HINT', {
+                        date: previousDate(previousSession.updated_at),
+                        count: previousSession.messages_count,
+                        who: previousSession.creator,
+                      })
+                    }}
+                  </span>
+                  <woot-button
+                    size="small"
+                    icon="chat-multiple"
+                    class="self-start"
+                    :is-loading="continuingSession"
+                    @click="continuePreviousSession"
+                  >
+                    {{ $t('TRACKING_ASSISTANT_VIEW.PREVIOUS_CONTINUE') }}
+                  </woot-button>
+                </div>
                 <InterviewPanel
                   :messages="messages"
                   :is-thinking="isThinking"
@@ -1695,6 +1897,42 @@ export default {
                       @click="draftTab = 'editor'"
                     >
                       {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_EDITOR') }}
+                    </button>
+                    <!-- crear_agente_conversando FD: las rutas que el chat de creación
+                         ya probó, dibujadas, junto al chat. -->
+                    <button
+                      v-if="draftingRoutes"
+                      class="mr-3 pb-0.5 border-b-2"
+                      :class="
+                        draftTab === 'sketch'
+                          ? 'border-woot-500'
+                          : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                      "
+                      @click="draftTab = 'sketch'"
+                    >
+                      {{
+                        $t('TRACKING_ASSISTANT_VIEW.PANEL_SKETCH', {
+                          count: draftingTests.length,
+                        })
+                      }}
+                    </button>
+                    <!-- crear_agente_conversando F3: Definición, Variables y Datos
+                         fijos, que la conversación va llenando. -->
+                    <button
+                      v-if="showFieldsTab"
+                      class="mr-3 pb-0.5 border-b-2"
+                      :class="
+                        draftTab === 'fields'
+                          ? 'border-woot-500'
+                          : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                      "
+                      @click="draftTab = 'fields'"
+                    >
+                      {{
+                        $t('TRACKING_ASSISTANT_VIEW.PANEL_FIELDS', {
+                          count: draftingFieldsCount,
+                        })
+                      }}
                     </button>
                     <!-- proyecto@adaptar_prompts_publicados: lo que usa de la cuenta.
                          Siempre a la vista: aunque no falte nada, ahí se cambia una
@@ -1799,9 +2037,28 @@ export default {
                   >
                     {{ $t('TRACKING_ASSISTANT_VIEW.COPY_DRAFT') }}
                   </woot-button>
+                  <ExportMenu
+                    v-if="hasAgentToExport || engineCatalog.length"
+                    :catalog="engineCatalog"
+                    :has-agent="hasAgentToExport"
+                    :busy="isExporting"
+                    @instructions="exportInstructions"
+                  />
                 </div>
+                <DraftingFields
+                  v-if="draftTab === 'fields'"
+                  :proposal="proposal"
+                  :can-proofread="canExplainTraining"
+                  :inbox-id="inboxId"
+                  @update="updateDraftingFields"
+                />
+                <DraftingSketch
+                  v-else-if="draftTab === 'sketch'"
+                  :routes="draftingRoutes"
+                  :tests="draftingTests"
+                />
                 <ChangeLog
-                  v-if="draftTab === 'log'"
+                  v-else-if="draftTab === 'log'"
                   :versions="versions"
                   :title="(sessionMeta && sessionMeta.title) || ''"
                 />
@@ -1892,12 +2149,71 @@ export default {
                       @select="onDraftSelect"
                       @keyup="onDraftSelect"
                       @mouseup="onDraftSelect"
-                      @input="onDraftInput"
+                      @input="onDraftTyped"
+                      @keydown.esc="draftPickerCaret = null"
                       @paste="onDraftPaste"
                     />
                   </div>
+                  <ConstantPicker
+                    v-if="
+                      draftPickerCaret !== null && draftConstantNames.length
+                    "
+                    :names="draftConstantNames"
+                    @pick="pickDraftConstant"
+                    @close="draftPickerCaret = null"
+                  />
                 </template>
               </div>
+            </section>
+          </div>
+
+          <!-- crear_agente_conversando §15: la pestaña «Probar fuentes», a lo ancho. -->
+          <section
+            v-if="view === 'sources'"
+            class="flex flex-col flex-1 min-h-0 p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+          >
+            <SourceProbePanel
+              :draft="draft"
+              :active="view === 'sources'"
+              :inbox-id="inboxId"
+            />
+          </section>
+          <!-- proyecto@diagrama_agente_ia: la pestaña «Pruebas y diagrama». Las pruebas a
+               la izquierda y el agente dibujado a la derecha, cada uno con su columna
+               (antes compartían la del chat y la del editor). v-show: la pila sigue
+               corriendo y el camino elegido sigue iluminado al ir y volver. -->
+          <div
+            v-show="view === 'tests'"
+            class="grid flex-1 min-h-0 gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
+          >
+            <section
+              class="flex flex-col min-h-0 p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+            >
+              <TestsPanel
+                :template-id="editingTemplateId"
+                :draft="draft"
+                :inbox-id="inboxId"
+                :brief-id="batteryBriefId"
+                :can-send-to-chat="Boolean(draft.trim())"
+                @select="onTestSelect"
+                @cases="testCases = $event"
+                @dryRun="onPanelDryRun"
+                @evidence="sendEvidence"
+              />
+            </section>
+            <section
+              class="flex flex-col min-h-0 p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+            >
+              <AgentDiagram
+                :structure="trainingStructure"
+                :issues="nodeIssues"
+                :test="diagramTest"
+                :heat="diagramHeat"
+                :export-name="diagramExportName"
+                @clearHighlight="diagramTest = null"
+                @goToRoute="goToRouteFromDiagram"
+                @goToSection="goToSectionFromDiagram"
+              />
             </section>
           </div>
         </div>
@@ -1925,7 +2241,7 @@ export default {
             variant="clear"
             color-scheme="secondary"
             :is-disabled="!draft.trim()"
-            @click="showDryRunModal = true"
+            @click="openTestsPanel"
           >
             {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_TITLE') }}
           </woot-button>
@@ -1933,7 +2249,7 @@ export default {
             v-if="editingTemplate"
             variant="clear"
             color-scheme="secondary"
-            @click="showTestBattery = true"
+            @click="openTestsPanel"
           >
             {{ $t('TRACKING_ASSISTANT_VIEW.BATTERY_CTA') }}
           </woot-button>
@@ -2012,28 +2328,6 @@ export default {
       :is-running="isExplaining"
       :error="explainError"
       @close="showExplainModal = false"
-    />
-    <TestBatteryModal
-      v-if="editingTemplate"
-      :show="showTestBattery"
-      :template-id="editingTemplate.id"
-      :template-name="editingTemplate.name"
-      :brief-id="batteryBriefId"
-      @close="showTestBattery = false"
-    />
-    <DryRunModal
-      :show="showDryRunModal"
-      :draft="draft"
-      :history="dryRunHistory"
-      :draft-version="draftVersion"
-      :is-running="isDryRunning"
-      :error="dryRunError"
-      :suggested="suggestedTests"
-      :is-suggesting="isSuggesting"
-      :suggest-stage="suggestStage"
-      @close="showDryRunModal = false"
-      @run="runDryRun"
-      @suggest="runSuggestedTests"
     />
 
     <woot-confirm-modal

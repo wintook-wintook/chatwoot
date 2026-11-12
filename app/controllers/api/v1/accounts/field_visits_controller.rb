@@ -3,7 +3,7 @@
 #   GET  /field_visits?day=YYYY-MM-DD   sus visitas del día (órdenes en campo, suyas, con visita)
 #   GET  /field_visits/history?from=&to=   «Mis trabajos»: sus órdenes terminadas en el periodo
 #   GET  /field_visits/:id              una orden para la pantalla de visita
-#   POST /field_visits/:id/on_my_way    { eta_minutes }  «Voy en camino» al cliente por WhatsApp
+#   POST /field_visits/:id/on_my_way    { eta_minutes, tz }  «Voy en camino» al cliente por WhatsApp (hora en tz)
 #   POST /field_visits/:id/arrive       { lat, lng, accuracy }  empieza la visita (horas + ubicación)
 #   POST /field_visits/:id/finish       { lat, lng, received_by, conformity_note, signature }
 #                                       termina la visita y la orden (si cumple los requisitos)
@@ -33,7 +33,7 @@ class Api::V1::Accounts::FieldVisitsController < Api::V1::Accounts::BaseControll
   end
 
   def on_my_way
-    Field::Messages.new(@order, current_user).on_my_way!(params[:eta_minutes].to_i)
+    Field::Messages.new(@order, current_user).on_my_way!(params[:eta_minutes].to_i, zone: user_zone)
     render json: { visit: Field::VisitSerializer.new(@order.reload, current_user).as_json }
   rescue Field::Messages::Error => e
     render_error(e.message)

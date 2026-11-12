@@ -14,15 +14,24 @@ import MySummaryAPI from 'dashboard/api/mySummary';
 import { localDay, visibleReasons } from 'dashboard/helper/caseTaskPriority';
 import { formatDay } from 'dashboard/helper/caseCommercial';
 import MyDayNotices from '../tasks/MyDayNotices.vue';
+import Tasks from '../Tasks.vue';
+import NotificationsView from 'dashboard/routes/dashboard/notifications/components/NotificationsView.vue';
+import OnboardingStepsAPI from 'dashboard/api/onboardingSteps';
+import OnboardingPanel from './OnboardingPanel.vue'; // «Primeros pasos» (solo si lo pulsa)
+
+// Pestañas de Mi resumen, en orden. Va en la dirección (?tab=…).
+const TABS = ['summary', 'my_day', 'notifications'];
 
 const T = 'CASE_TICKETS.HOME';
 const TOP_TASKS = 5;
 
 export default {
   name: 'MySummary',
-  components: { MyDayNotices },
+  components: { MyDayNotices, Tasks, NotificationsView, OnboardingPanel },
   data() {
     return {
+      showOnboarding: false,
+      onboardingSteps: [],
       isLoading: true,
       tasks: [],
       agenda: [],
@@ -30,12 +39,22 @@ export default {
     };
   },
   computed: {
+    onboardingDone() {
+      return this.onboardingSteps.filter(s => s.done).length;
+    },
+    onboardingPending() {
+      return this.onboardingDone < this.onboardingSteps.length;
+    },
     ...mapGetters({
       currentUser: 'getCurrentUser',
       canViewBusinessSummary: 'caseTickets/getCanViewBusinessSummary',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
       getAccount: 'accounts/getAccount',
+      notificationMeta: 'notifications/getMeta',
     }),
+    unreadNotifications() {
+      return Number(this.notificationMeta.unreadCount) || 0;
+    },
     accountLoaded() {
       return !!this.getAccount(this.accountId)?.features;
     },
@@ -44,6 +63,16 @@ export default {
     },
     hasCases() {
       return this.isFeatureEnabledonAccount(this.accountId, 'case_management');
+    },
+    // Pestañas Resumen | Mi día | Notificaciones. Mi día es la de Agenda › Tareas y
+    // Notificaciones la página de siempre, incrustadas. Van en la dirección
+    // (?tab=my_day / ?tab=notifications) para que recargar o regresar no la pierda.
+    tab() {
+      const { tab } = this.$route.query;
+      return this.hasCases && TABS.includes(tab) ? tab : 'summary';
+    },
+    tabIndex() {
+      return TABS.indexOf(this.tab);
     },
     greeting() {
       const h = new Date().getHours();
@@ -92,6 +121,7 @@ export default {
   },
   mounted() {
     this.$store.dispatch('caseTickets/fetchSettings');
+    this.loadOnboarding();
   },
   methods: {
     t(key, params) {
@@ -170,11 +200,16 @@ export default {
         query: { tab: 'tasks' },
       });
     },
+    // «Ver todo» de la tarjeta: a la pestaña Mi día, sin salir de Mi resumen.
     goMyDay() {
-      this.$router.push({
-        name: 'gestorTickets_tasks',
-        query: { tab: 'my_day' },
-      });
+      this.setTab(1);
+    },
+    setTab(index) {
+      const tab = index > 0 ? TABS[index] : undefined;
+      if (tab === this.$route.query.tab) return;
+      // Sin `page`: la paginación es de cada pestaña.
+      const { page, ...query } = this.$route.query;
+      this.$router.replace({ query: { ...query, tab } });
     },
     goConversations() {
       this.$router.push({ name: 'home' });
@@ -182,13 +217,26 @@ export default {
     goBusinessSummary() {
       this.$router.push({ name: 'gestorTickets_business_summary' });
     },
+    // «Primeros pasos»: el avance se revisa al cargar Inicio y cada vez que se abre.
+    async loadOnboarding() {
+      try {
+        const { data } = await OnboardingStepsAPI.list();
+        this.onboardingSteps = data.steps || [];
+      } catch {
+        this.onboardingSteps = [];
+      }
+    },
+    openOnboarding() {
+      this.showOnboarding = true;
+      this.loadOnboarding();
+    },
   },
 };
 </script>
 
 <template>
-  <div class="flex flex-col flex-1 min-h-0 overflow-auto">
-    <div class="flex flex-col w-full max-w-6xl gap-5 px-6 py-5 mx-auto">
+  <div class="flex flex-col flex-1 min-h-0">
+    <div class="flex-shrink-0 w-full max-w-6xl px-6 pt-5 mx-auto">
       <header class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1
@@ -200,201 +248,266 @@ export default {
             {{ t('SUBTITLE') }}
           </p>
         </div>
-        <woot-button
-          v-if="canViewBusinessSummary"
-          size="small"
-          variant="smooth"
-          icon="arrow-trending-lines"
-          @click="goBusinessSummary"
-        >
-          {{ t('BUSINESS_SUMMARY') }}
-        </woot-button>
-      </header>
-
-      <MyDayNotices />
-
-      <p v-if="isLoading && !summary" class="m-0 text-sm text-slate-400">
-        {{ t('LOADING') }}
-      </p>
-
-      <div v-else class="grid gap-4 md:grid-cols-2">
-        <!-- Mi día: lo más urgente -->
-        <section v-if="hasCases" class="home-card">
-          <div class="home-card__head">
-            <h2>{{ t('MY_DAY') }}</h2>
-            <button type="button" class="home-card__link" @click="goMyDay">
-              {{ t('SEE_ALL') }}
-            </button>
-          </div>
-          <p v-if="!tasks.length" class="home-card__empty">
-            {{ t('MY_DAY_EMPTY') }}
-          </p>
-          <ul v-else class="home-list">
-            <li v-for="row in tasks" :key="row.id" @click="openTask(row)">
-              <span class="home-list__title">{{ row.title }}</span>
-              <span class="home-list__meta">
-                {{ row.case_ticket && row.case_ticket.folio }}
-                <span
-                  v-for="r in reasons(row)"
-                  :key="r.key"
-                  class="home-chip"
-                  >{{ reasonLabel(r) }}</span
-                >
-              </span>
-            </li>
-          </ul>
-        </section>
-
-        <!-- Agenda de hoy -->
-        <section v-if="agenda.length" class="home-card">
-          <div class="home-card__head">
-            <h2>{{ t('AGENDA') }}</h2>
-          </div>
-          <ul class="home-list">
-            <li
-              v-for="m in agenda"
-              :key="`m-${m.id}`"
-              @click="m.case_ticket && openCase(m.case_ticket.id)"
-            >
-              <span class="home-list__title">
-                {{ hour(m.starts_at) }} · {{ m.title }}
-              </span>
-              <span class="home-list__meta">
-                {{ m.case_ticket && m.case_ticket.folio }}
-              </span>
-            </li>
-          </ul>
-        </section>
-
-        <!-- Mis conversaciones -->
-        <section class="home-card">
-          <div class="home-card__head">
-            <h2>{{ t('CONVERSATIONS') }}</h2>
-            <button
-              type="button"
-              class="home-card__link"
-              @click="goConversations"
-            >
-              {{ t('SEE_ALL') }}
-            </button>
-          </div>
-          <p class="m-0 text-sm text-slate-600 dark:text-slate-300">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Primeros pasos: resaltado mientras falten pasos; solo se abre si lo pulsa -->
+          <woot-button
+            v-if="onboardingSteps.length"
+            size="small"
+            :variant="onboardingPending ? 'smooth' : 'clear'"
+            :color-scheme="onboardingPending ? 'primary' : 'secondary'"
+            icon="star-emphasis"
+            @click="openOnboarding"
+          >
             {{
-              t('CONVERSATIONS_COUNT', {
-                open: conversations.open_count || 0,
-                waiting: conversations.waiting_count || 0,
+              t('ONBOARDING.BUTTON', {
+                done: onboardingDone,
+                total: onboardingSteps.length,
               })
             }}
-          </p>
-          <ul v-if="(conversations.waiting || []).length" class="home-list">
-            <li
-              v-for="c in conversations.waiting"
-              :key="`c-${c.id}`"
-              @click="openConversation(c.id)"
-            >
-              <span class="home-list__title">
-                {{ c.contact || `#${c.id}` }}
-              </span>
-              <span class="home-list__meta">
-                #{{ c.id }} · {{ c.inbox }}
-                <span class="home-chip home-chip--warn">{{
-                  waitingFor(c.waiting_since)
-                }}</span>
-              </span>
-            </li>
-          </ul>
-        </section>
+          </woot-button>
+          <woot-button
+            v-if="canViewBusinessSummary"
+            size="small"
+            variant="smooth"
+            icon="arrow-trending-lines"
+            @click="goBusinessSummary"
+          >
+            {{ t('BUSINESS_SUMMARY') }}
+          </woot-button>
+        </div>
+      </header>
+      <OnboardingPanel
+        :show="showOnboarding"
+        :steps="onboardingSteps"
+        @close="showOnboarding = false"
+      />
+      <woot-tabs
+        v-if="hasCases"
+        class="mt-3"
+        :index="tabIndex"
+        @change="setTab"
+      >
+        <woot-tabs-item
+          :index="0"
+          :name="t('TAB_SUMMARY')"
+          :show-badge="false"
+        />
+        <woot-tabs-item
+          :index="1"
+          :name="t('TAB_MY_DAY')"
+          :show-badge="false"
+        />
+        <woot-tabs-item
+          :index="2"
+          :name="t('TAB_NOTIFICATIONS')"
+          :count="unreadNotifications"
+          :show-badge="unreadNotifications > 0"
+        />
+      </woot-tabs>
+    </div>
 
-        <!-- Mis casos -->
-        <section v-if="hasCases && hasCaseBlock" class="home-card">
-          <div class="home-card__head">
-            <h2>{{ t('CASES') }}</h2>
-          </div>
-          <template v-if="(cases.sla || []).length">
-            <h3 class="home-card__sub">
-              {{ t('CASES_SLA', { count: cases.sla_count }) }}
-            </h3>
+    <!-- Mi día: la misma pantalla de Agenda › Tareas › Mi día. -->
+    <Tasks v-if="tab === 'my_day'" embedded class="!h-auto flex-1 min-h-0" />
+
+    <!-- Notificaciones: la misma página de siempre (/notifications). -->
+    <NotificationsView
+      v-else-if="tab === 'notifications'"
+      class="summary-notifications !h-auto flex-1 min-h-0 w-full max-w-6xl px-6 mx-auto"
+    />
+
+    <div v-else class="flex-1 min-h-0 overflow-auto">
+      <div class="flex flex-col w-full max-w-6xl gap-5 px-6 py-5 mx-auto">
+        <MyDayNotices />
+
+        <p v-if="isLoading && !summary" class="m-0 text-sm text-slate-400">
+          {{ t('LOADING') }}
+        </p>
+
+        <div v-else class="grid gap-4 md:grid-cols-2">
+          <!-- Mi día: lo más urgente -->
+          <section v-if="hasCases" class="home-card">
+            <div class="home-card__head">
+              <h2>{{ t('MY_DAY') }}</h2>
+              <button type="button" class="home-card__link" @click="goMyDay">
+                {{ t('SEE_ALL') }}
+              </button>
+            </div>
+            <p v-if="!tasks.length" class="home-card__empty">
+              {{ t('MY_DAY_EMPTY') }}
+            </p>
+            <ul v-else class="home-list">
+              <li v-for="row in tasks" :key="row.id" @click="openTask(row)">
+                <span class="home-list__title">{{ row.title }}</span>
+                <span class="home-list__meta">
+                  {{ row.case_ticket && row.case_ticket.folio }}
+                  <span
+                    v-for="r in reasons(row)"
+                    :key="r.key"
+                    class="home-chip"
+                    >{{ reasonLabel(r) }}</span
+                  >
+                </span>
+              </li>
+            </ul>
+          </section>
+
+          <!-- Agenda de hoy -->
+          <section v-if="agenda.length" class="home-card">
+            <div class="home-card__head">
+              <h2>{{ t('AGENDA') }}</h2>
+            </div>
             <ul class="home-list">
               <li
-                v-for="c in cases.sla"
-                :key="`s-${c.id}`"
-                @click="openCase(c.id)"
+                v-for="m in agenda"
+                :key="`m-${m.id}`"
+                @click="m.case_ticket && openCase(m.case_ticket.id)"
               >
-                <span class="home-list__title">{{ c.title }}</span>
+                <span class="home-list__title">
+                  {{ hour(m.starts_at) }} · {{ m.title }}
+                </span>
                 <span class="home-list__meta">
-                  {{ c.folio }}
-                  <span class="home-chip home-chip--alert">{{
-                    t(`SLA.${c.sla_status}`)
+                  {{ m.case_ticket && m.case_ticket.folio }}
+                </span>
+              </li>
+            </ul>
+          </section>
+
+          <!-- Mis conversaciones -->
+          <section class="home-card">
+            <div class="home-card__head">
+              <h2>{{ t('CONVERSATIONS') }}</h2>
+              <button
+                type="button"
+                class="home-card__link"
+                @click="goConversations"
+              >
+                {{ t('SEE_ALL') }}
+              </button>
+            </div>
+            <p class="m-0 text-sm text-slate-600 dark:text-slate-300">
+              {{
+                t('CONVERSATIONS_COUNT', {
+                  open: conversations.open_count || 0,
+                  waiting: conversations.waiting_count || 0,
+                })
+              }}
+            </p>
+            <ul v-if="(conversations.waiting || []).length" class="home-list">
+              <li
+                v-for="c in conversations.waiting"
+                :key="`c-${c.id}`"
+                @click="openConversation(c.id)"
+              >
+                <span class="home-list__title">
+                  {{ c.contact || `#${c.id}` }}
+                </span>
+                <span class="home-list__meta">
+                  #{{ c.id }} · {{ c.inbox }}
+                  <span class="home-chip home-chip--warn">{{
+                    waitingFor(c.waiting_since)
                   }}</span>
                 </span>
               </li>
             </ul>
-          </template>
-          <template v-if="(cases.ready || []).length">
-            <h3 class="home-card__sub">{{ t('CASES_READY') }}</h3>
-            <ul class="home-list">
-              <li
-                v-for="c in cases.ready"
-                :key="`r-${c.id}`"
-                @click="openCase(c.id)"
-              >
-                <span class="home-list__title">{{ c.title }}</span>
-                <span class="home-list__meta">
-                  {{ c.folio }} ·
-                  {{
-                    t(c.needs_doc ? 'READY_DOC' : 'READY_NEXT', {
-                      stage: c.stage,
-                      next: c.next,
-                    })
-                  }}
-                </span>
-              </li>
-            </ul>
-          </template>
-          <template v-if="(cases.promises || []).length">
-            <h3 class="home-card__sub">{{ t('CASES_PROMISES') }}</h3>
-            <ul class="home-list">
-              <li
-                v-for="c in cases.promises"
-                :key="`p-${c.id}`"
-                @click="openCase(c.id)"
-              >
-                <span class="home-list__title">{{ c.title }}</span>
-                <span class="home-list__meta">
-                  {{ c.folio }} · {{ money(c) }} · {{ formatDayLabel(c.on) }}
-                </span>
-              </li>
-            </ul>
-          </template>
-        </section>
+          </section>
 
-        <!-- Mis números de la semana -->
-        <section v-if="hasCases && weekRows.length" class="home-card">
-          <div class="home-card__head">
-            <h2>{{ t('WEEK') }}</h2>
-          </div>
-          <div class="grid grid-cols-3 gap-3">
-            <div v-for="r in weekRows" :key="r.key" class="flex flex-col">
-              <span
-                class="text-2xl font-semibold text-slate-800 dark:text-slate-100"
-                >{{ r.now }}</span
-              >
-              <span class="text-xs text-slate-500 dark:text-slate-400">
-                {{ t(`WEEK_ROWS.${r.key}`) }}
-              </span>
-              <span class="text-[11px] text-slate-400 dark:text-slate-500">
-                {{ t('WEEK_BEFORE', { count: r.before }) }}
-                <strong v-if="delta(r)">{{ delta(r) }}</strong>
-              </span>
+          <!-- Mis casos -->
+          <section v-if="hasCases && hasCaseBlock" class="home-card">
+            <div class="home-card__head">
+              <h2>{{ t('CASES') }}</h2>
             </div>
-          </div>
-        </section>
+            <template v-if="(cases.sla || []).length">
+              <h3 class="home-card__sub">
+                {{ t('CASES_SLA', { count: cases.sla_count }) }}
+              </h3>
+              <ul class="home-list">
+                <li
+                  v-for="c in cases.sla"
+                  :key="`s-${c.id}`"
+                  @click="openCase(c.id)"
+                >
+                  <span class="home-list__title">{{ c.title }}</span>
+                  <span class="home-list__meta">
+                    {{ c.folio }}
+                    <span class="home-chip home-chip--alert">{{
+                      t(`SLA.${c.sla_status}`)
+                    }}</span>
+                  </span>
+                </li>
+              </ul>
+            </template>
+            <template v-if="(cases.ready || []).length">
+              <h3 class="home-card__sub">{{ t('CASES_READY') }}</h3>
+              <ul class="home-list">
+                <li
+                  v-for="c in cases.ready"
+                  :key="`r-${c.id}`"
+                  @click="openCase(c.id)"
+                >
+                  <span class="home-list__title">{{ c.title }}</span>
+                  <span class="home-list__meta">
+                    {{ c.folio }} ·
+                    {{
+                      t(c.needs_doc ? 'READY_DOC' : 'READY_NEXT', {
+                        stage: c.stage,
+                        next: c.next,
+                      })
+                    }}
+                  </span>
+                </li>
+              </ul>
+            </template>
+            <template v-if="(cases.promises || []).length">
+              <h3 class="home-card__sub">{{ t('CASES_PROMISES') }}</h3>
+              <ul class="home-list">
+                <li
+                  v-for="c in cases.promises"
+                  :key="`p-${c.id}`"
+                  @click="openCase(c.id)"
+                >
+                  <span class="home-list__title">{{ c.title }}</span>
+                  <span class="home-list__meta">
+                    {{ c.folio }} · {{ money(c) }} · {{ formatDayLabel(c.on) }}
+                  </span>
+                </li>
+              </ul>
+            </template>
+          </section>
+
+          <!-- Mis números de la semana -->
+          <section v-if="hasCases && weekRows.length" class="home-card">
+            <div class="home-card__head">
+              <h2>{{ t('WEEK') }}</h2>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <div v-for="r in weekRows" :key="r.key" class="flex flex-col">
+                <span
+                  class="text-2xl font-semibold text-slate-800 dark:text-slate-100"
+                  >{{ r.now }}</span
+                >
+                <span class="text-xs text-slate-500 dark:text-slate-400">
+                  {{ t(`WEEK_ROWS.${r.key}`) }}
+                </span>
+                <span class="text-[11px] text-slate-400 dark:text-slate-500">
+                  {{ t('WEEK_BEFORE', { count: r.before }) }}
+                  <strong v-if="delta(r)">{{ delta(r) }}</strong>
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
+/* En su página, «Marcar todo como hecho» flota en la esquina; aquí taparía
+   «Resumen del negocio»: va en su lugar, arriba de la lista. */
+.summary-notifications ::v-deep .button--fixed-top {
+  @apply static flex ml-auto mb-2;
+}
+
 .home-card {
   @apply flex flex-col gap-2 p-4 bg-white border rounded-lg border-slate-100 dark:bg-slate-800 dark:border-slate-700;
 

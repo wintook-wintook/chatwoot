@@ -21,8 +21,10 @@ class FieldVisitsAPI extends ApiClient {
   }
 
   onMyWay(id, etaMinutes) {
+    // tz: la hora del aviso al cliente va en la hora del usuario, no la del servidor.
     return axios.post(`${this.url}/${id}/on_my_way`, {
       eta_minutes: etaMinutes,
+      tz: browserZone(),
     });
   }
 

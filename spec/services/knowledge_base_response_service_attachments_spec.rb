@@ -78,4 +78,45 @@ RSpec.describe KnowledgeBaseResponseService do
     expect(enviado.content).not_to include('{{')
     expect(enviado.attachments).to be_empty
   end
+
+  # 11/11/2026 (cuenta 1128, conv 168): el modelo copió la marca del historial para mandar
+  # una imagen nueva y al cliente le llegó «(archivo enviado: inbeca1mat)» sin la imagen.
+  describe 'cuando el modelo escribe «(archivo enviado: nombre)»' do
+    def responde(texto)
+      stub_request(:post, chat_url).to_return(
+        status: 200, body: { choices: [{ message: { content: texto } }] }.to_json
+      )
+    end
+
+    it 'manda el archivo si aún no salió en la conversación y no deja la marca' do
+      responde("Derecho tiene 28% de beca.\n\n(archivo enviado: imagen_promo2)\n\n¿Te interesa?")
+
+      enviado = contestar
+
+      expect(enviado.content).not_to include('archivo enviado')
+      expect(enviado.content).to include('Derecho tiene 28% de beca.', '¿Te interesa?')
+      expect(enviado.attachments.first.file.blob).to eq(adjunto.file.blob)
+    end
+
+    it 'no lo reenvía si ya salió en la conversación, y tampoco deja la marca' do
+      contestar # primer envío con {{imagen_promo2}}
+      responde('Como te comenté, 28%. (archivo enviado: imagen_promo2)')
+
+      enviado = contestar
+
+      expect(enviado.content).to start_with("Como te comenté, 28%.\n")
+      expect(enviado.content).not_to include('archivo enviado')
+      expect(enviado.attachments).to be_empty
+    end
+
+    it 'borra la marca de un nombre que el agente no tiene' do
+      responde('Derecho tiene 28%. (archivo enviado: otra_cosa)')
+
+      enviado = contestar
+
+      expect(enviado.content).to start_with("Derecho tiene 28%.\n")
+      expect(enviado.content).not_to include('archivo enviado')
+      expect(enviado.attachments).to be_empty
+    end
+  end
 end

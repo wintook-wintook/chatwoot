@@ -2,6 +2,7 @@
 // (etiqueta, resumen del payload, quién lo hizo). Lo comparten el Historial
 // (JourneyView) y la Actividad del caso. Salió tal cual de JourneyView.
 import { formatDay } from 'dashboard/helper/caseCommercial';
+import { formatDueDay } from 'dashboard/helper/taskDue';
 
 export default {
   methods: {
@@ -17,6 +18,8 @@ export default {
     },
     actorName(event) {
       if (event.actor?.name) return event.actor.name;
+      // Tareas con el cliente — lo hizo un contacto en su portal.
+      if (event.payload?.contact) return event.payload.contact;
       return event.origin === 'bot'
         ? this.$t('CASE_TICKETS.TIMELINE.ACTOR_BOT')
         : this.$t('CASE_TICKETS.TIMELINE.ACTOR_SYSTEM');
@@ -50,10 +53,10 @@ export default {
       const commercial = this.commercialSummary(event.event_type, p);
       if (commercial) return commercial;
       // Vencimiento: from/to son fechas.
+      // El de una tarea (source: meeting) es solo el día; el del caso lleva hora.
       if (event.event_type === 'due_date_changed') {
-        return `${p.from ? this.formatDate(p.from) : '—'} → ${
-          p.to ? this.formatDate(p.to) : '—'
-        }`;
+        const fmt = p.source === 'meeting' ? formatDueDay : this.formatDate;
+        return `${p.from ? fmt(p.from) : '—'} → ${p.to ? fmt(p.to) : '—'}`;
       }
       if (p.from && p.to) {
         // Prioridad usa etiquetas de prioridad; el resto, de estado.
@@ -80,10 +83,15 @@ export default {
           .join(' · ');
       }
       if (type === 'postponed') {
+        // changed: se cambió una pospuesta que ya estaba (fecha, motivo o comentario).
         return [
+          p.changed
+            ? this.$t('CASE_TICKETS.COMMERCIAL.POSTPONE_CHANGED')
+            : null,
           this.$t('CASE_TICKETS.COMMERCIAL.POSTPONED_UNTIL', {
             date: formatDay(p.until),
           }),
+          p.reason_label,
           p.reason,
         ]
           .filter(Boolean)
@@ -105,6 +113,40 @@ export default {
       }
       // Se ligó (o se creó) la conversación del caso.
       // Plan Actividad del caso — tareas y cotizaciones dejan huella.
+      // Tareas con el cliente — qué hizo en el portal y su comentario o archivo.
+      if (type === 'task_client_update') {
+        const folio = p.sequence
+          ? `T${String(p.sequence).padStart(3, '0')}`
+          : null;
+        return [
+          [folio, p.title].filter(Boolean).join(' · '),
+          this.$t(`CLIENT_TASKS.KINDS.${p.kind}`),
+          p.content || p.file,
+        ]
+          .filter(Boolean)
+          .join(' — ');
+      }
+      // El caso interno se ligó a un cliente.
+      if (type === 'client_assigned') {
+        return this.$t('CASE_TICKETS.ASSIGN_CLIENT.EVENT', {
+          client: [p.organization, p.contact].filter(Boolean).join(' · '),
+        });
+      }
+      // Tarea ↔ tarea agendada: a qué pasó y para cuándo.
+      if (type === 'task_converted') {
+        const folio =
+          p.folio ||
+          (p.sequence ? `T${String(p.sequence).padStart(3, '0')}` : null);
+        const when = p.starts_at ? this.formatDate(p.starts_at) : '';
+        return [
+          [folio, p.title].filter(Boolean).join(' · '),
+          this.$t(`CASE_TICKETS.JOURNEY.CONVERTED.${p.direction}`, { when }),
+        ]
+          .filter(Boolean)
+          .join(' — ');
+      }
+      // Reporte (cierre, avance o actividad): lo que se hizo.
+      if (type === 'task_reported') return p.content || p.title || null;
       if (type.startsWith('task_')) {
         const folio = p.sequence
           ? `T${String(p.sequence).padStart(3, '0')}`

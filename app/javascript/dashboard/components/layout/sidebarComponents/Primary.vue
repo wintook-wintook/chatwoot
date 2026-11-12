@@ -5,14 +5,9 @@ import OptionsMenu from './OptionsMenu.vue';
 import AgentDetails from './AgentDetails.vue';
 import QuickActions from './QuickActions.vue';
 import NotificationBell from './NotificationBell.vue';
-import wootConstants from 'dashboard/constants/globals';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import { ACCOUNT_EVENTS } from '../../../helper/AnalyticsHelper/events';
 import WebphoneMinimized from './WebphoneMinimized.vue';
-import {
-  assistantState,
-  toggleAssistant,
-} from 'dashboard/helper/assistantState';
 
 export default {
   components: {
@@ -43,8 +38,6 @@ export default {
   },
   data() {
     return {
-      assistant: assistantState, // Asistente (Dali)
-      helpDocsURL: window.chatwootConfig?.helpDocsURL || wootConstants.DOCS_URL,
       showOptionsMenu: false,
     };
   },
@@ -60,11 +53,15 @@ export default {
     hasHomeArea() {
       return this.menuItems.some(item => item.key === 'inicio');
     },
+    // A dónde lleva el logo: Inicio (Mi resumen); sin casos, Conversaciones.
+    homePath() {
+      const home =
+        this.menuItems.find(item => item.key === 'inicio') ||
+        this.menuItems.find(item => item.key === 'conversations');
+      return home ? home.toState : '';
+    },
   },
   methods: {
-    toggleAssistant() {
-      toggleAssistant();
-    },
     frontendURL,
     toggleOptions() {
       this.showOptionsMenu = !this.showOptionsMenu;
@@ -91,7 +88,7 @@ export default {
       <QuickActions
         :logo-source="logoSource"
         :name="installationName"
-        :show-task="hasHomeArea"
+        :home-path="homePath"
       />
       <NotificationBell
         v-if="!hasHomeArea"
@@ -108,35 +105,21 @@ export default {
         :count="menuItem.key === 'inicio' ? unreadNotifications : ''"
         :is-child-menu-active="menuItem.key === activeMenuItem"
       />
+      <!-- El perfil va justo debajo de Ajustes; su menú se abre a la derecha de la foto. -->
+      <div class="relative flex justify-center w-10 mt-1">
+        <AgentDetails @toggleMenu="toggleOptions" />
+        <OptionsMenu
+          :show="showOptionsMenu"
+          @toggleAccounts="toggleAccountModal"
+          @showSupportChatWindow="toggleSupportChatWindow"
+          @openKeyShortcutModal="$emit('openKeyShortcutModal')"
+          @close="toggleOptions"
+        />
+      </div>
     </div>
     <div class="flex flex-col items-center justify-end pb-6">
       <WebphoneMinimized />
-      <!-- Asistente (Dali) — en todas las pantallas; también Ctrl + J -->
-      <button
-        v-tooltip.right="$t('ASSISTANT.BUTTON', { name: assistant.name })"
-        type="button"
-        class="flex items-center justify-center w-10 h-10 mb-2 rounded-lg text-woot-600 hover:bg-woot-50 dark:text-woot-300 dark:hover:bg-woot-900/40"
-        :class="{ 'bg-woot-50 dark:bg-woot-900/40': assistant.open }"
-        :aria-label="$t('ASSISTANT.BUTTON', { name: assistant.name })"
-        @click="toggleAssistant()"
-      >
-        <fluent-icon icon="wand" size="20" />
-      </button>
-      <!-- El foro de Kontrolya (antes el manual de Chatwoot, solo sin marca propia). -->
-      <PrimaryNavItem
-        icon="chat-help"
-        name="DOCS"
-        open-in-new-page
-        :to="helpDocsURL"
-      />
-      <AgentDetails @toggleMenu="toggleOptions" />
-      <OptionsMenu
-        :show="showOptionsMenu"
-        @toggleAccounts="toggleAccountModal"
-        @showSupportChatWindow="toggleSupportChatWindow"
-        @openKeyShortcutModal="$emit('openKeyShortcutModal')"
-        @close="toggleOptions"
-      />
+      <!-- Dali y Ayuda viven en la barra de arriba (AssistantTopBar); Dali también con Ctrl + J. -->
     </div>
   </div>
 </template>

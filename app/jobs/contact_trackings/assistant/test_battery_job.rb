@@ -23,20 +23,27 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
   WAIT_SECONDS = 120
   QUIET_SECONDS = 8
 
-  def perform(battery_id, account_id, template_id, brief_id = nil)
+  def perform(battery_id, account_id, template_id, brief_id = nil, messages = nil, case_ids = nil) # rubocop:disable Metrics/ParameterLists
     @id = battery_id
     @account = Account.find(account_id)
     @template = TrackingTemplate.find(template_id)
     @inbox = ContactTrackings::Assistant::TestBattery.sandbox_inbox(@account)
     return save!(status: 'failed', error: 'no_sandbox') if @inbox.nil?
 
-    run(scenarios_for(brief_id))
+    run(scenarios(brief_id, messages, case_ids))
   rescue StandardError => e
     Rails.logger.error "[TestBattery] #{e.class}: #{e.message}"
     save!(status: 'failed', error: 'unavailable')
   end
 
   private
+
+  def scenarios(brief_id, messages, case_ids)
+    return ContactTrackings::Assistant::TestBatteryScenarios.from_cases(@template, case_ids) if case_ids.present?
+    return ContactTrackings::Assistant::TestBatteryScenarios.own(messages) if messages.present?
+
+    scenarios_for(brief_id)
+  end
 
   def scenarios_for(brief_id)
     brief = brief_id && TrackingAgentBrief.find_by(id: brief_id, account: @account)
@@ -62,15 +69,70 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
     ActiveSupport::Dependencies.interlock.permit_concurrent_loads { hilos.map(&:value) }
   end
 
-  # Una prueba: una conversación nueva, un mensaje del cliente, la respuesta y su calificación.
+  # Una prueba: una conversación nueva, el mensaje (o los del diálogo, F5) del cliente, la
+  # respuesta y su calificación. En un diálogo cada mensaje espera su respuesta, la traza
+  # es la del último turno y el juez califica el diálogo entero.
   def one(escenario, juez)
     conversacion = new_conversation(escenario)
-    ultimo = conversacion.messages.maximum(:id).to_i
-    conversacion.messages.create!(account: @account, inbox: @inbox, sender: conversacion.contact,
-                                  message_type: :incoming, content: escenario.message)
-    respuesta = wait_reply(conversacion, ultimo)
-    escenario.to_h.merge(conversation: conversacion.display_id, reply: respuesta, cases: cases(conversacion),
-                         **juez.call(escenario, respuesta))
+    return without_tracking(escenario, conversacion) unless ContactTracking.exists?(conversation_id: conversacion.id)
+
+    dialogo, ultimo = converse(conversacion, Array(escenario.turns).presence || [escenario.message])
+    respuesta = dialogo.last[:reply]
+    traza = trace(conversacion, ultimo)
+    fila = escenario.to_h.merge(conversation: conversacion.display_id, reply: respuesta, cases: cases(conversacion),
+                                traza: traza, dialog: (dialogo if dialogo.size > 1),
+                                **juez.call(graded(escenario, dialogo), respuesta, traza: traza))
+    remember(escenario, fila)
+    fila
+  end
+
+  # F3: una prueba de la pila guardada se queda con su resultado.
+  def remember(escenario, fila)
+    return unless escenario.id.to_s.start_with?('caso:')
+
+    ContactTrackings::Assistant::TestCases.store_live(@account, escenario.id.delete_prefix('caso:'), fila)
+  end
+
+  # Sin seguimiento el agente no contesta: la prueba sale en rojo con el motivo en vez de
+  # esperar WAIT_SECONDS una respuesta que no va a llegar.
+  def without_tracking(escenario, conversacion)
+    fila = escenario.to_h.merge(conversation: conversacion.display_id, reply: '', cases: [], traza: nil, cumple: false,
+                                fallas: [], ruta_ok: nil, motivo: 'No se pudo asignar el agente a la conversación de prueba.')
+    remember(escenario, fila)
+    fila
+  end
+
+  # En un diálogo el juez ve como «cliente» todo lo anterior y califica la última respuesta.
+  def graded(escenario, dialogo)
+    return escenario if dialogo.size < 2
+
+    escenario.dup.tap { |e| e.message = transcript(dialogo) }
+  end
+
+  # [[{ customer:, reply: }, …], id del último mensaje antes del último turno]
+  def converse(conversacion, mensajes)
+    ultimo = nil
+    dialogo = mensajes.map do |texto|
+      ultimo = conversacion.messages.maximum(:id).to_i
+      conversacion.messages.create!(account: @account, inbox: @inbox, sender: conversacion.contact,
+                                    message_type: :incoming, content: texto)
+      { customer: texto, reply: wait_reply(conversacion, ultimo) }
+    end
+    [dialogo, ultimo]
+  end
+
+  # El diálogo para el juez, sin la última respuesta (es la que se califica).
+  def transcript(dialogo)
+    lineas = dialogo.each_with_index.flat_map do |turno, i|
+      ["Cliente: #{turno[:customer]}", i < dialogo.size - 1 ? "Agente: #{turno[:reply]}" : nil]
+    end
+    lineas.compact.join("\n")
+  end
+
+  # proyecto@diagrama_agente_ia F2: por dónde pasó (F0). La de la primera respuesta del turno.
+  def trace(conversacion, desde)
+    conversacion.messages.where('id > ?', desde).where(message_type: :outgoing, private: false).order(:id)
+                .filter_map { |m| m.content_attributes['traza'] }.first
   end
 
   def new_conversation(escenario)
@@ -78,7 +140,8 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
     contacto_canal = ContactInbox.create!(contact: contacto, inbox: @inbox, source_id: SecureRandom.uuid)
     conversacion = Conversation.create!(account: @account, inbox: @inbox, contact: contacto,
                                         contact_inbox: contacto_canal, status: :open)
-    ActionService.new(conversacion).assign_tracking_template([@template.id])
+    # En el canal de pruebas, no en la bandeja del agente: ver ActionService#assign_tracking_template.
+    ActionService.new(conversacion).assign_tracking_template([@template.id], inbox_id: @inbox.id)
     conversacion
   end
 

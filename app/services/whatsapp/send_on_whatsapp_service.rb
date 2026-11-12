@@ -129,14 +129,29 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
     message.update!(additional_attributes: atributos)
   end
 
+  # El respaldo cuando TemplateProcessorService no arma nada (plantilla sin variables o que no
+  # encontró). Acepta el formato viejo ({"1" => "Juan"}) y el nuevo ({"body" => {...}}): antes
+  # metía el hash del cuerpo entero como texto y Meta lo rechazaba ('parameters.0.text' debe ser
+  # string). Cada valor va como texto y los vacíos no se mandan.
   def build_processed_parameters(template_name, processed_params)
-    return if processed_params.blank?
+    valores = body_values(processed_params)
+    return if valores.blank?
 
-    if named_parameter_template?(template_name)
-      processed_params.map { |key, value| { type: 'text', parameter_name: key, text: value } }
-    else
-      processed_params.map { |_, value| { type: 'text', text: value } }
-    end
+    named = named_parameter_template?(template_name)
+    valores.filter_map do |key, value|
+      texto = value.to_s
+      next if texto.blank?
+
+      named ? { type: 'text', parameter_name: key.to_s, text: texto } : { type: 'text', text: texto }
+    end.presence
+  end
+
+  def body_values(processed_params)
+    params = processed_params.is_a?(Array) ? processed_params.each_with_index.to_h { |v, i| [(i + 1).to_s, v] } : processed_params
+    return params unless params.is_a?(Hash)
+    return params['body'] || params[:body] if params.keys.map(&:to_s).intersect?(%w[body header footer buttons])
+
+    params
   end
 
   def named_parameter_template?(template_name)

@@ -47,6 +47,40 @@ class KnowledgeBaseResponseService
     value.present? ? value.to_f : DEFAULTS[key.to_s]
   end
 
+  # El corpus de @buscar_predefinidas(GRUPO) y su umbral (ver #grouped_items): de clase
+  # para que «Probar fuentes» busque igual que el motor (crear_agente_conversando §15).
+  def self.grouped_items(account, source_type, group)
+    scope = account.knowledge_items.where(source_type: source_type)
+    return scope if group.blank?
+
+    negated = group.start_with?('!')
+    name    = group.delete_prefix('!').strip
+    return scope if name.blank?
+
+    # respuestas_predefinidas R4: si hay una CATEGORÍA con ese nombre, el grupo es la
+    # categoría (metadata.category del vector); si no, el prefijo del nombre, como siempre.
+    # Misma regla en KnowledgeBase::CannedGroup (amarradas por canned_group_spec).
+    if source_type == 'canned_response' && KnowledgeBase::CannedGroup.category?(account, name)
+      Rails.logger.info "[KBase] \u{1F5C2}\uFE0F Categoría #{negated ? 'excluida' : 'exigida'}: #{name}"
+      return KnowledgeBase::CannedGroup.by_category(scope, name, negated)
+    end
+
+    pattern = "#{ActiveRecord::Base.sanitize_sql_like(name)}%"
+    Rails.logger.info "[KBase] \u{1F5C2}\uFE0F Grupo #{negated ? 'excluido' : 'exigido'}: #{name}"
+
+    # title IS NULL en la rama negada: un NOT ILIKE contra NULL da NULL y descartaria el
+    # item en silencio.
+    negated ? scope.where('title IS NULL OR title NOT ILIKE ?', pattern) : scope.where('title ILIKE ?', pattern)
+  end
+
+  # Solo el grupo positivo sube el liston. El negado (!GESTION) sigue siendo el corpus
+  # general con un recorte, no un corpus estrecho, asi que conserva el umbral de siempre.
+  def self.group_threshold(group)
+    return nil if group.blank? || group.start_with?('!')
+
+    GROUP_SIMILARITY_THRESHOLD
+  end
+
   # `branch:` — rama ya decidida por el job (@ruta). Se recibe para no clasificar dos
   # veces y pagar dos llamadas al LLM en el mismo turno. `:auto` = clasificar aquí.
   def initialize(message, tracking: nil, branch: :auto)
@@ -67,9 +101,11 @@ class KnowledgeBaseResponseService
     end
     return false if @message.content.blank?
 
-    question      = @message.content.strip
+    question = @message.content.strip
+    follow_named_topic(question)
     @search_texts = search_queries(question)
     Rails.logger.info "[KBase] 🔍 Modo: #{directive[:mode]}#{" (#{directive[:source_name]})" if directive[:source_name]}"
+    ContactTrackings::EngineTrace.source(directive) # proyecto@diagrama_agente_ia F0
 
     case directive[:mode]
     when :erp_query
@@ -126,12 +162,48 @@ class KnowledgeBaseResponseService
     question.match?(CONTINUATION_RE) || question.match?(ANAPHORA_RE)
   end
 
-  # La pregunta tal cual y, cuando aplica, la misma precedida del tema de los mensajes
-  # anteriores del cliente. La pregunta original nunca se toca: esto solo alimenta la
-  # búsqueda.
+  # La pregunta tal cual y, cuando aplica, la misma con el tema de la conversación (las
+  # variables de texto libre, ver topic_query) y con el de los mensajes anteriores del
+  # cliente. La pregunta original nunca se toca: esto solo alimenta la búsqueda.
   def search_queries(question)
-    return [question] unless worth_inheriting_topic?(question)
-    return [question] if @conversation.blank?
+    [question, topic_query(question), inherited_query(question)].compact.uniq
+  end
+
+  # 11/11/2026 (cuenta 1128, pilas 261109): «¿En qué enlace me inscribo?» no nombra la
+  # carrera, así que la ficha de la carrera no entraba entre los 3 resultados y el modelo
+  # inventó la liga; «formas y precio de titulación» trajo una maestría y puso su precio.
+  # La carrera ya estaba guardada en CARRERA. Una variable declarada como texto libre
+  # («CARRERA = VACÍO | valor») es el tema de la conversación: con valor, se busca también
+  # «valor + pregunta». Se salta si la pregunta ya lo nombra o el valor es uno declarado
+  # (VACÍO). Genérico: no sabe que se llama CARRERA.
+  def topic_query(question)
+    return nil if @tracking.nil? || @conversation.nil?
+
+    definition = ContactTrackings::ConversationVariables.definition_for(@tracking)
+    return nil if definition.blank?
+
+    temas = topic_values(definition, question)
+    return nil if temas.empty?
+
+    Rails.logger.info "[KBase] 🎯 Búsqueda con el tema guardado: #{temas.join(', ').truncate(80)}"
+    "#{temas.join(' ')} #{question}".truncate(500)
+  end
+
+  def topic_values(definition, question)
+    pregunta = ContactTrackings::ConversationVariables.key(question)
+    ContactTrackings::ConversationVariables.current(@tracking, @conversation, definition).filter_map do |nombre, valor|
+      var = definition.variable(nombre)
+      next unless var&.dig(:free) && valor.present?
+      next if var[:options].any? { |o| ContactTrackings::ConversationVariables.key(o) == ContactTrackings::ConversationVariables.key(valor) }
+      next if pregunta.include?(ContactTrackings::ConversationVariables.key(valor))
+
+      valor
+    end
+  end
+
+  def inherited_query(question)
+    return nil unless worth_inheriting_topic?(question)
+    return nil if @conversation.blank?
 
     # reorder, no order: la asociación messages ya trae su propio ORDER BY y un
     # order() encadenado se suma detrás en vez de reemplazarlo — devolvía siempre
@@ -140,11 +212,11 @@ class KnowledgeBaseResponseService
                             .where('id < ?', @message.id)
                             .reorder(id: :desc).limit(2)
                             .pluck(:content).compact_blank
-    return [question] if previous.empty?
+    return nil if previous.empty?
 
     enriched = "#{previous.reverse.join(' ')} #{question}".truncate(500)
     Rails.logger.info "[KBase] 🧵 Turno corto → segunda búsqueda con contexto: #{enriched.truncate(120)}"
-    [question, enriched]
+    enriched
   end
 
   # Entrelaza en vez de concatenar: concatenadas, las MAX_RESULTS primeras salen todas de
@@ -168,7 +240,26 @@ class KnowledgeBaseResponseService
     end
     return nil if lists.empty?
 
-    interleave(lists).uniq(&:id).first(kbase_setting('max_results'))
+    items = by_similarity(interleave(lists).uniq(&:id).first(kbase_setting('max_results')), lists)
+    ContactTrackings::EngineTrace.fragments(items) # proyecto@diagrama_agente_ia F0
+    items
+  end
+
+  # El entrelazado decide QUÉ entra (cada consulta queda representada); el orden en que se
+  # le entregan al modelo es otro asunto: de la más parecida a la menos, con la mejor
+  # similitud que tuvo cada item en cualquiera de las consultas. 11/11/2026 (cuenta 1128,
+  # conv 205): CARRERA=Trabajo Social y «No me alcanza… ¿tiene un precio mejor?». La
+  # pregunta sola trajo Derecho (0.48) y la de «CARRERA + pregunta», Trabajo Social (0.67);
+  # entrelazadas, Derecho quedó como [FUENTE 1], el modelo dio la beca de Derecho y cambió
+  # la carrera de la conversación.
+  def by_similarity(items, lists)
+    best = {}
+    lists.flatten.each do |item|
+      next unless item.respond_to?(:neighbor_distance) && item.neighbor_distance
+
+      best[item.id] = item if best[item.id].nil? || item.neighbor_distance < best[item.id].neighbor_distance
+    end
+    items.each_with_index.sort_by { |item, i| [best[item.id]&.neighbor_distance || 1.0, i] }.map { |item, _| best[item.id] || item }
   end
 
   # ==============================================================================
@@ -369,28 +460,15 @@ class KnowledgeBaseResponseService
   # El grupo es un PREFIJO del nombre de la respuesta predefinida (su short_code, que es
   # lo que se vectoriza como titulo). Se eligio una convencion de nombre y no una columna
   # nueva para no pedir migracion ni cambios de pantalla: renombrar la respuesta basta.
+  #
+  # De clase (crear_agente_conversando §15): la pestaña «Probar fuentes» busca con el
+  # mismo alcance y el mismo umbral que el motor, sin copiarlos.
   def grouped_items(source_type, group)
-    scope = @account.knowledge_items.where(source_type: source_type)
-    return scope if group.blank?
-
-    negated = group.start_with?('!')
-    name    = group.delete_prefix('!').strip
-    return scope if name.blank?
-
-    pattern = "#{ActiveRecord::Base.sanitize_sql_like(name)}%"
-    Rails.logger.info "[KBase] \u{1F5C2}\uFE0F Grupo #{negated ? 'excluido' : 'exigido'}: #{name}"
-
-    # title IS NULL en la rama negada: un NOT ILIKE contra NULL da NULL y descartaria el
-    # item en silencio.
-    negated ? scope.where('title IS NULL OR title NOT ILIKE ?', pattern) : scope.where('title ILIKE ?', pattern)
+    self.class.grouped_items(@account, source_type, group)
   end
 
-  # Solo el grupo positivo sube el liston. El negado (!GESTION) sigue siendo el corpus
-  # general con un recorte, no un corpus estrecho, asi que conserva el umbral de siempre.
   def group_threshold(group)
-    return nil if group.blank? || group.start_with?('!')
-
-    GROUP_SIMILARITY_THRESHOLD
+    self.class.group_threshold(group)
   end
 
   def perform_pgvector(question, source_type, group = nil)
@@ -408,7 +486,7 @@ class KnowledgeBaseResponseService
     Rails.logger.info "[KBase] ✅ #{items.size} resultado(s) en #{source_type}"
 
     reply_text = (canned_prompt_reply(question, prompt) if prompt)
-    reply_text ||= generate_contextual_reply(question, pgvector_context(items)) if items.any?
+    reply_text ||= generate_contextual_reply(question, pgvector_context(items, question)) if items.any?
     return false if reply_text.blank?
 
     source_tag = @account.knowledge_sources.find_by(source_type: source_type)&.name ||
@@ -417,10 +495,19 @@ class KnowledgeBaseResponseService
     true
   end
 
-  def pgvector_context(items)
-    items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
-         .join("\n\n")
-         .truncate(kbase_setting('max_context_chars'))
+  def pgvector_context(items, question)
+    items_context(items, question).truncate(kbase_setting('max_context_chars'))
+  end
+
+  # SectionFit y no truncate: un item largo conserva las secciones que tienen que ver con
+  # la pregunta en vez de solo sus primeros MAX_ITEM_CHARS (ver KnowledgeBase::SectionFit).
+  # Solo la pregunta del turno, NO las búsquedas heredadas: 11/11/2026 (Santos 10) «no hay
+  # otras ofertas más bajas» heredó «relaciones internacionales» de un mensaje anterior, el
+  # perfil de egreso le ganó a «Costos y becas» y el modelo inventó una segunda beca.
+  def items_context(items, question)
+    items.map.with_index(1) do |i, n|
+      "#{n}. #{i.title}\n#{KnowledgeBase::SectionFit.call(i.content, question, MAX_ITEM_CHARS, title: i.title)}"
+    end.join("\n\n")
   end
 
   # proyecto@predefinidas_prompt — la respuesta predefinida con prompt que manda en este
@@ -484,9 +571,7 @@ class KnowledgeBaseResponseService
       return false
     end
 
-    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
-                   .join("\n\n")
-                   .truncate(kbase_setting('max_context_chars'))
+    context = pgvector_context(items, question)
 
     reply_text = generate_contextual_reply(question, context)
     return false if reply_text.blank?
@@ -664,6 +749,7 @@ class KnowledgeBaseResponseService
     system_prompt = [
       header,
       ("Objetivo de la conversación: #{objective}" if objective.present?),
+      agent_context_block,
       ContactTrackings::AgentAttachments.hint(@tracking&.tracking_template),
       variables_rule,
       branch_scope_rule.presence
@@ -687,7 +773,7 @@ class KnowledgeBaseResponseService
       los pasos del vendedor). Los nombres de permisos, parámetros, campos y menús se
       citan textualmente como aparecen en la fuente.
 
-      Si la fuente no cubre exactamente lo que preguntaron, dilo de frente: explica
+      #{agent_data_rule}Si la fuente no cubre exactamente lo que preguntaron, dilo de frente: explica
       brevemente qué sí cubre la documentación, aclara que no tienes el procedimiento
       exacto para su caso y #{missing_answer_step}. Una respuesta honesta que no
       resuelve es mejor que una inventada que parece resolver.
@@ -711,6 +797,9 @@ class KnowledgeBaseResponseService
     return nil if reply.blank?
 
     reply = strip_echoed_sources(reply)
+    reply = guard_links(reply, messages)
+    return nil if reply.blank?
+
     # Se revisa ANTES de guardar el historial: una respuesta que copió las instrucciones
     # no puede quedar ahí, porque el modelo la vería en el turno siguiente.
     if canned_prompt&.leaks?(reply)
@@ -788,6 +877,33 @@ class KnowledgeBaseResponseService
     'Responde usando esa información de forma completa y útil. Tono natural y conversacional.'
   end
 
+  # 11/11/2026 (cuenta 1128, conv 206-207, Agente Escuela v2): la regla de abajo («si la
+  # fuente no cubre…, aclara que no tienes el procedimiento exacto») hace que «la fuente»
+  # sea solo lo recuperado. Cuando la búsqueda no traía la predefinida, el modelo decía
+  # «no tengo la información» de la dirección o del inicio de clases aunque su propio
+  # Entrenamiento los tuviera («No tengo el procedimiento exacto para saber desde cuándo
+  # puedes empezar»). Con Entrenamiento propio, lo que él y el Contexto dan por cierto
+  # también es fuente.
+  AGENT_DATA_RULE = 'Los datos que tus instrucciones y el contexto del negocio dan por ciertos también son fuente: ' \
+                    'si contestan la pregunta, úsalos aunque la información de arriba no los traiga. '
+
+  def agent_data_rule
+    agent_system_prompt ? "#{AGENT_DATA_RULE}\n" : ''
+  end
+
+  # El Contexto del agente (tracking_template.ai_context: qué es el negocio, sus datos
+  # generales) solo llegaba al conversacional; las respuestas de la base de conocimiento no
+  # lo veían. Del template y no del tracking: el ai_context del tracking acumula notas de
+  # estado (PAUSADO, ESPERANDO FECHA) que no son para el cliente.
+  MAX_AGENT_CONTEXT_CHARS = 1500
+
+  def agent_context_block
+    context = @tracking&.tracking_template&.ai_context.to_s.strip
+    return nil if context.blank?
+
+    "Contexto del negocio:\n#{context.truncate(MAX_AGENT_CONTEXT_CHARS)}"
+  end
+
   # Sin el dato: con Entrenamiento propio, lo que diga él (canal, asesor, nada); si no, el asesor.
   def missing_answer_step
     agent_system_prompt ? 'sigue lo que tus instrucciones digan para ese caso' : 'ofrece pasarlo con un asesor'
@@ -862,29 +978,9 @@ class KnowledgeBaseResponseService
   # resultados de varias consultas se fusionan primero y el fetch —con su rate limit de
   # 1.5s entre llamadas— se paga una sola vez, sobre la lista ya deduplicada y recortada.
   def discourse_hits(query, config)
-    url      = config['url'].to_s.chomp('/')
-    api_key  = config['api_key'].to_s
-    username = config['username'].presence || 'system'
-
-    uri       = URI("#{url}/discourse-ai/embeddings/semantic-search.json")
-    uri.query = URI.encode_www_form(q: query)
-
-    http              = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl      = uri.scheme == 'https'
-    http.read_timeout = 10
-
-    request = Net::HTTP::Get.new(uri)
-    request['Api-Key']      = api_key if api_key.present?
-    request['Api-Username'] = username
-    request['Content-Type'] = 'application/json'
-
-    response = http.request(request)
+    hits = KnowledgeBase::DiscourseSemanticSearch.hits(query, config)
     # Foro sin Discourse AI activo: la búsqueda normal (ver KnowledgeBase::DiscourseKeywordSearch).
-    return keyword_search(config).hits(query) if response.code == '404'
-
-    data = JSON.parse(response.body)
-    Rails.logger.info "[KBase] 📚 #{(data['posts'] || []).size} resultado(s) en Discourse semantic-search"
-    KnowledgeBase::DiscourseKeywordSearch.to_hits(data, url)
+    hits == KnowledgeBase::DiscourseSemanticSearch::NOT_AVAILABLE ? keyword_search(config).hits(query) : hits
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error en Discourse search: #{e.message}"
     []
@@ -1009,6 +1105,33 @@ class KnowledgeBaseResponseService
     KnowledgeBase::Directives.strip_tokens(prompt).presence
   end
 
+  # Ver ContactTrackings::ConversationVariables::TopicSwitch: si el cliente nombra otro
+  # valor de una variable de texto libre (otra carrera), se cambia ANTES de buscar, para que
+  # la búsqueda con el tema guardado (topic_query) y el modelo ya vean el nuevo.
+  def follow_named_topic(question)
+    return if @tracking.nil? || @conversation.nil?
+
+    changes = ContactTrackings::ConversationVariables::TopicSwitch.changes_for(@tracking, @conversation, question, @account.id)
+    return if changes.empty?
+
+    resets = changes.keys.reduce({}) { |acc, nombre| acc.merge(ContactTrackings::ConversationVariables::SwitchResets.for(@tracking, nombre)) }
+    Rails.logger.info "[KBase] 🔀 El cliente nombró otro valor: #{changes.map { |n, v| "#{n}=#{v}" }.join('; ')}"
+    ContactTrackings::EngineTrace.record('variable_por_mensaje', changes)
+    ContactTrackings::ConversationVariables.apply!(@tracking, @conversation, resets.merge(changes))
+  rescue StandardError => e
+    Rails.logger.warn "[KBase] ⚠️ No se pudo revisar el cambio de tema: #{e.message}"
+  end
+
+  # Ver KnowledgeBase::LinkGuard: se compara contra todo lo que el modelo vio en el turno.
+  def guard_links(reply, messages)
+    clean, removed = KnowledgeBase::LinkGuard.call(reply, messages.pluck(:content).join("\n"))
+    return reply if removed.empty?
+
+    Rails.logger.warn "[KBase] 🔗 Liga que no está en las fuentes → se quita: #{removed.join(', ')}"
+    ContactTrackings::EngineTrace.record('ligas_quitadas', removed.first(5))
+    clean
+  end
+
   # El clasificador (@ruta) ya decidió de qué trata el turno, y con esa decisión se eligió
   # la fuente. Pero el prompt del agente lleva las instrucciones de TODAS sus ramas, así que
   # el modelo las ve todas y vuelve a decidir por su cuenta — a veces contradiciendo al
@@ -1051,6 +1174,9 @@ class KnowledgeBaseResponseService
     return @conversation_turn_note = nil if agent_system_prompt.nil? || @conversation.nil?
 
     escribimos = @conversation.messages.where(message_type: :outgoing, private: false).exists?(id: ...@message.id)
+    # La bienvenida de este mismo turno sale DESPUÉS del mensaje del cliente: sin esto el
+    # modelo creía que nadie había saludado y volvía a presentarse.
+    escribimos ||= ContactTrackings::WelcomeMessage.sent?(@tracking, @conversation)
     @conversation_turn_note = escribimos ? LATER_TURN_NOTE : FIRST_TURN_NOTE
   end
 
@@ -1278,6 +1404,7 @@ class KnowledgeBaseResponseService
     end
 
     Rails.logger.info "[KBase] 🏷️ Sin etiqueta → se repone la de la rama '#{@route.name}': #{tag}"
+    ContactTrackings::EngineTrace.tag_restored(tag)
     "#{text.rstrip}\n\n#{tag}"
   end
 
@@ -1286,7 +1413,8 @@ class KnowledgeBaseResponseService
   # sin fuente, y acá llegaba literal al cliente.
   def send_reply(text)
     text = ContactTrackings::ConversationVariables.settle(@tracking, @conversation, text) if @tracking
-    content, attachments = ContactTrackings::AgentAttachments.resolve(@tracking&.tracking_template, text)
+    content, attachments = ContactTrackings::AgentAttachments.resolve(@tracking&.tracking_template, text,
+                                                                      conversation: @conversation)
     params = { content: content, private: false, ai_agent: ContactTrackings::AgentIdentity.for(@tracking&.tracking_template) }
     params[:attachments] = attachments if attachments.any?
     reply_message = Messages::MessageBuilder.new(bot_user, @conversation, params).perform
@@ -1343,7 +1471,9 @@ class KnowledgeBaseResponseService
     response = ContactTrackings::OpenaiRequest.perform(http, request, 'KBase')
     return nil if response.nil? || response.body.blank?
 
-    ContactTrackings::OpenaiRequest.clean(JSON.parse(response.body).dig('choices', 0, 'message', 'content'))
+    body = JSON.parse(response.body)
+    ContactTrackings::EngineTrace.usage(resolved_model, body) # proyecto@diagrama_agente_ia F0
+    ContactTrackings::OpenaiRequest.clean(body.dig('choices', 0, 'message', 'content'))
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error OpenAI: #{e.message}"
     nil

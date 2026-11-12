@@ -74,7 +74,7 @@ class Quotes::OpportunitySync
     return unless opportunity_open?
 
     @opportunity.resume!(actor: @actor) if @opportunity.postponed?
-    @opportunity.update!(amount: quote.total, currency: quote.currency)
+    @opportunity.update!(amount: quote.net_total, currency: quote.currency) # sin IVA
     @opportunity.close_with_outcome!(:won, actor: @actor, reason_id: quote.outcome_reason_id, note: quote.outcome_note)
     nil
   end

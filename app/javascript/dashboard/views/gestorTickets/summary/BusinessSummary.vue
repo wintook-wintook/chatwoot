@@ -71,6 +71,8 @@ export default {
       storyLoading: false,
       analysisEntry: null,
       analysisLoading: false,
+      // Cuántas conversaciones lee el análisis: 100 por omisión, de 10 a 150.
+      sampleSize: 100,
     };
   },
   computed: {
@@ -165,7 +167,7 @@ export default {
     // Análisis con IA: vale para el período con que se hizo (misma llave, mismo día).
     analysisKey() {
       const r = this.filters();
-      return filtersKey({ from: r.from, to: r.to });
+      return filtersKey({ from: r.from, to: r.to, sample: this.sampleSize });
     },
     analysis() {
       return this.analysisEntry ? this.analysisEntry.data : null;
@@ -250,8 +252,13 @@ export default {
     async analyze() {
       this.analysisLoading = true;
       try {
+        this.sampleSize = Math.min(
+          150,
+          Math.max(10, Number(this.sampleSize) || 100)
+        );
         const { data } = await CaseReportsAPI.analyzeConversations(
-          this.filters()
+          this.filters(),
+          this.sampleSize
         );
         this.analysisEntry = saveCalc(
           this.accountId,
@@ -829,6 +836,21 @@ export default {
               :filters-changed="analysisChanged"
               @calculate="analyze"
             >
+              <template #controls>
+                <label
+                  class="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400"
+                >
+                  {{ t('ANALYSIS.SAMPLE_LABEL') }}
+                  <input
+                    v-model.number="sampleSize"
+                    type="number"
+                    min="10"
+                    max="150"
+                    step="10"
+                    class="!mb-0 !w-16 !h-7 !py-0 text-xs"
+                  />
+                </label>
+              </template>
               <p
                 v-if="analysis && !analysis.sample_size"
                 class="m-0 text-sm text-slate-500 dark:text-slate-400"

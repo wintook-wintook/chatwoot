@@ -107,7 +107,8 @@ RSpec.describe 'Agenda Visits API' do
     it 'termina con el reporte, que muestra dónde llegó' do
       meeting = visit
       post "#{api}/agenda_visits/#{meeting.id}/arrive", params: { lat: 19.43, lng: -99.13 }, headers: headers, as: :json
-      post "#{api}/task_reports", params: { item_type: 'meeting', item_id: meeting.id, content: 'Le presenté la propuesta' }, headers: headers
+      post "#{api}/task_reports", params: { item_type: 'meeting', item_id: meeting.id, content: 'Le presenté la propuesta', minutes: 45 },
+                                  headers: headers
       patch "#{api}/agenda_items/#{meeting.id}", params: { status: 'held' }, headers: headers, as: :json
 
       expect(meeting.reload).to be_held
@@ -123,6 +124,15 @@ RSpec.describe 'Agenda Visits API' do
       post "#{api}/agenda_visits/#{meeting.id}/on_my_way", params: { eta_minutes: 20 }, headers: headers, as: :json
 
       expect(response.parsed_body['visit']['state']).to eq('on_the_way')
+    end
+
+    it 'el aviso al cliente lleva la hora en la zona del vendedor' do
+      conversation = create(:conversation, account: account, inbox: create(:inbox, account: account), contact: contact)
+      travel_to(Time.utc(2026, 11, 9, 12, 0)) do
+        post "#{api}/agenda_visits/#{visit.id}/on_my_way", params: { eta_minutes: 20, tz: 'America/Mexico_City' },
+                                                           headers: headers, as: :json
+        expect(conversation.messages.last.content).to include('06:20')
+      end
     end
   end
 

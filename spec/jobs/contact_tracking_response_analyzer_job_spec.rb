@@ -1281,4 +1281,28 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       expect(job.send(:handle_service_confirmation, tracking, mensaje)).to be(false)
     end
   end
+
+  describe '#get_tracking_message_history' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:tracking) do
+      ContactTracking.create!(account: account, contact: contact, inbox: inbox, conversation: conversation,
+                              objective: 'Vender', scheduled_for: 1.hour.from_now, status: 'active',
+                              tracking_template_id: tracking_template.id, created_at: 2.hours.ago)
+    end
+
+    it 'manda los ÚLTIMOS mensajes (de viejo a nuevo), no los primeros' do
+      total = described_class::HISTORY_LIMIT + 5
+      total.times do |i|
+        create(:message, account: account, inbox: inbox, conversation: conversation, sender: contact,
+                         message_type: :incoming, content: "mensaje #{i + 1}", created_at: (total - i).minutes.ago)
+      end
+
+      lines = job.send(:get_tracking_message_history, tracking).lines.drop(1)
+      expect(lines.size).to eq(described_class::HISTORY_LIMIT)
+      expect(lines.first).to include('mensaje 6')
+      expect(lines.last).to include("mensaje #{total}")
+    end
+  end
 end

@@ -23,7 +23,15 @@ export default {
     draggable: { type: Boolean, default: false },
     completingId: { type: [Number, String], default: null },
   },
-  emits: ['openTask', 'openTicket', 'complete', 'pin', 'unpin', 'postpone'],
+  emits: [
+    'openTask',
+    'openTicket',
+    'complete',
+    'pin',
+    'unpin',
+    'postpone',
+    'history',
+  ],
   computed: {
     reasons() {
       return visibleReasons(this.row.reasons);
@@ -39,20 +47,36 @@ export default {
       const seq = this.row.sequence;
       return seq ? `T${String(seq).padStart(3, '0')}` : '';
     },
+    // Vence: solo el día (la hora es de las tareas agendadas).
     dueLabel() {
       if (!this.row.due_at) return '';
-      return new Date(this.row.due_at).toLocaleString(undefined, {
+      return new Date(this.row.due_at).toLocaleDateString(undefined, {
         day: '2-digit',
         month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
       });
     },
     estimate() {
       return formatMinutes(this.row.estimated_minutes);
     },
+    // Avance: lo hecho sin completarla (la del cliente la avanza él en su portal).
+    canReportProgress() {
+      return (
+        !this.frozen &&
+        this.row.status === 'pending' &&
+        this.row.audience !== 'client'
+      );
+    },
   },
   methods: {
+    reportProgress() {
+      this.$emitter.emit('topbar:reportProgress', {
+        id: this.row.id,
+        title: this.row.title,
+        sequence: this.row.sequence,
+        case_ticket_id: this.row.case_ticket?.id || null,
+        case_folio: this.row.case_ticket?.folio || null,
+      });
+    },
     reasonClass(key) {
       return REASON_TONE[reasonTone(key)];
     },
@@ -174,6 +198,25 @@ export default {
           {{ $t('CASE_TICKETS.TASKS.COMPLETE') }}
         </woot-button>
         <woot-button
+          v-if="canReportProgress"
+          size="small"
+          variant="smooth"
+          color-scheme="secondary"
+          icon="clipboard"
+          @click="reportProgress"
+        >
+          {{ $t('TASK_REPORT.PROGRESS') }}
+        </woot-button>
+        <woot-button
+          size="small"
+          variant="smooth"
+          color-scheme="secondary"
+          icon="document-list-clock"
+          @click="$emit('history', row)"
+        >
+          {{ $t('TASK_HISTORY.MENU') }}
+        </woot-button>
+        <woot-button
           v-if="row.case_ticket"
           size="small"
           variant="smooth"
@@ -240,7 +283,25 @@ export default {
         :title="$t('CASE_TICKETS.TASKS.MY_DAY.PIN')"
         @click="$emit('pin', row)"
       />
+      <woot-button
+        v-if="!highlight"
+        size="tiny"
+        variant="clear"
+        color-scheme="secondary"
+        icon="document-list-clock"
+        :title="$t('TASK_HISTORY.MENU')"
+        @click="$emit('history', row)"
+      />
       <template v-if="!highlight && !frozen">
+        <woot-button
+          v-if="canReportProgress"
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          icon="clipboard"
+          :title="$t('TASK_REPORT.PROGRESS')"
+          @click="reportProgress"
+        />
         <woot-button
           size="tiny"
           variant="clear"

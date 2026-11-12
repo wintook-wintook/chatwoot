@@ -31,7 +31,7 @@
       },
       "API": {
         "SUCCESS_MESSAGE": "Canned response added successfully.",
-        "ERROR_MESSAGE": "Could not connect to Woot server. Please try again."
+        "ERROR_MESSAGE": "Could not connect to Kontrolya server. Please try again."
       }
     },
     "EDIT": {
@@ -53,14 +53,14 @@
       "BUTTON_TEXT": "Edit",
       "API": {
         "SUCCESS_MESSAGE": "Canned response is updated successfully.",
-        "ERROR_MESSAGE": "Could not connect to Woot server. Please try again."
+        "ERROR_MESSAGE": "Could not connect to Kontrolya server. Please try again."
       }
     },
     "DELETE": {
       "BUTTON_TEXT": "Delete",
       "API": {
         "SUCCESS_MESSAGE": "Canned response deleted successfully.",
-        "ERROR_MESSAGE": "Could not connect to Woot server. Please try again."
+        "ERROR_MESSAGE": "Could not connect to Kontrolya server. Please try again."
       },
       "CONFIRM": {
         "TITLE": "Confirm deletion",
@@ -68,6 +68,89 @@
         "YES": "Yes, delete ",
         "NO": "No, keep "
       }
+    },
+    "CATEGORIES": {
+      "OPEN": "Categories",
+      "TITLE": "Canned response categories",
+      "HINT": "Group your responses. An agent searches only one category with @buscar_predefinidas(CATEGORY).",
+      "NEW_LABEL": "New category",
+      "YOURS": "Your categories ({count})",
+      "NEW_PLACEHOLDER": "New category name (e.g. PATITAS)",
+      "INVALID_NAME": "No parentheses and no leading «!»: the name is written in @buscar_predefinidas(…).",
+      "ADD": "Add",
+      "EMPTY": "No categories yet.",
+      "COUNT": "{count} response(s)",
+      "RENAME": "Rename",
+      "DELETE": "Delete",
+      "DELETE_CONFIRM": "Delete?",
+      "DELETE_HINT": "Its responses are not deleted: they are left without a category.",
+      "SAVE": "Save",
+      "CANCEL": "Cancel",
+      "SUGGESTED": "Suggested from names",
+      "SUGGESTED_HINT": "Responses that already start the same way. Create it and they get assigned; nothing else changes.",
+      "SUGGESTED_COUNT": "{count} response(s)",
+      "SUGGESTED_AGENTS": "searched by {count} agent(s)",
+      "ACCEPT": "Create and assign",
+      "CLOSE": "Close",
+      "FORM_LABEL": "Category",
+      "LOAD_ERROR": "Categories could not be loaded.",
+      "SAVE_ERROR": "Could not save. Check the name is not repeated."
+    },
+    "TABLE": {
+      "ALL_STATES": "Data source: all",
+      "ALL_CATEGORIES": "All categories",
+      "ALL_PROMPTS": "With and without prompt",
+      "PER_PAGE": "Per page",
+      "FILTER_CATEGORY": "Category",
+      "NO_CATEGORY": "No category",
+      "BULK_CATEGORY": "Change category…",
+      "COL_CATEGORY": "Category",
+      "LOAD_ERROR": "The canned responses could not be loaded.",
+      "SEARCH": "Search name or content…",
+      "FILTER_STATE": "Data source",
+      "FILTER_PROMPT": "Own prompt",
+      "STATE_ALL": "All",
+      "STATE_NOT_READY": "Not in the data source",
+      "STATE_READY": "In the data source",
+      "STATE_PENDING": "Vectorizing",
+      "STATE_STALE": "Outdated",
+      "PROMPT_ALL": "All",
+      "PROMPT_WITH": "With prompt",
+      "PROMPT_WITHOUT": "Without prompt",
+      "CLEAR_FILTERS": "Clear filters",
+      "SELECTED": "Selected: {count}",
+      "SELECT_ALL": "Select all on this page",
+      "DELETE_SELECTED": "Delete",
+      "TOO_MANY": "Up to {max} can be vectorized at a time.",
+      "NO_MATCH": "No response matches the filters.",
+      "COL_SHORT_CODE": "Name",
+      "COL_CONTENT": "Content",
+      "COL_DATA_SOURCE": "Data source",
+      "COL_CREATED_AT": "Created",
+      "COL_UPDATED_AT": "Changed",
+      "COL_ACTIONS": "Actions",
+      "BULK_DELETE_TITLE": "Delete canned responses",
+      "BULK_DELETE_MESSAGE": "{count} canned response(s) will be deleted. Agents will no longer find them.",
+      "BULK_DELETE_YES": "Yes, delete",
+      "BULK_DELETED": "{count} response(s) deleted."
+    },
+    "EMBEDDING": {
+      "STATE_READY": "✓ In the data source",
+      "STATE_PENDING": "⏳ Vectorizing…",
+      "STATE_MISSING": "⚠ Not in the data source",
+      "STATE_NO_KEY": "⚠ Missing: enable OpenAI",
+      "STATE_FAILED": "✗ Could not vectorize",
+      "STATE_STALE": "⚠ Outdated",
+      "VECTORIZE": "Vectorize",
+      "RETRY": "Retry",
+      "VECTORIZE_ERROR": "Could not send it to vectorize. Try again.",
+      "ERROR_INVALID_KEY": "The account's OpenAI key is not valid.",
+      "ERROR_QUOTA": "The OpenAI account ran out of credit.",
+      "ERROR_NO_CONNECTION": "OpenAI did not answer after several attempts.",
+      "ERROR_OTHER": "OpenAI rejected it ({code}).",
+      "BANNER_NO_KEY": "{count} response(s) are not in the agent's data source: enable the OpenAI integration in Integrations, then vectorize them one by one.",
+      "BANNER_MISSING": "{count} response(s) are not in the agent's data source: use «Vectorize» on each so the agent can find them.",
+      "BANNER_FAILED": "{count} response(s) could not be vectorized or are outdated: check the reason and use «Retry»."
     },
     "FORM_PROMPT": {
       "TAB_MESSAGE": "Message",

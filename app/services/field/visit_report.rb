@@ -19,7 +19,7 @@ class Field::VisitReport
   def create_report
     finished_at = @entry&.ended_at || Time.current
     TaskReport.create!(account_id: @order.account_id, case_ticket: @order, contact: @order.contact, organization: @order.organization,
-                       user: @user, case_time_entry: @entry, title: @order.title, content: content,
+                       user: @user, case_time_entry: @entry, minutes: @entry&.minutes, title: @order.title, content: content,
                        outcome_label: I18n.t('task_reports.visit_done'), closed_at: finished_at, created_at: finished_at)
   end
 

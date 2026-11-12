@@ -7,16 +7,17 @@
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import Spinner from 'shared/components/Spinner.vue';
 import TaskReportsList from 'dashboard/views/gestorTickets/tasks/TaskReportsList.vue';
+import TaskHistoryModal from 'dashboard/views/gestorTickets/tasks/TaskHistoryModal.vue';
 
 export default {
   name: 'ContactTasksTab',
-  components: { Spinner, TaskReportsList },
+  components: { Spinner, TaskReportsList, TaskHistoryModal },
   props: {
     contactId: { type: Number, default: null },
     organizationId: { type: Number, default: null },
   },
   data() {
-    return { rows: [], loading: true, showAll: false };
+    return { rows: [], loading: true, showAll: false, historyTaskId: null };
   },
   computed: {
     reportFilters() {
@@ -52,9 +53,17 @@ export default {
         this.loading = false;
       }
     },
+    // Tarea agendada: día y hora; tarea: solo el día en que vence.
     when(row) {
-      const at = row.item_type === 'meeting' ? row.starts_at : row.due_at;
+      const meeting = row.item_type === 'meeting';
+      const at = meeting ? row.starts_at : row.due_at;
       if (!at) return this.$t('CONTACT_PAGE.TASKS.NO_DUE');
+      if (!meeting) {
+        return new Date(at).toLocaleDateString(undefined, {
+          day: '2-digit',
+          month: 'short',
+        });
+      }
       return new Date(at).toLocaleString(undefined, {
         day: '2-digit',
         month: 'short',
@@ -69,7 +78,12 @@ export default {
     isDone(row) {
       return row.item_type === 'task' && row.status === 'done';
     },
+    // Tarea: su historial (con o sin caso). Tarea agendada: su caso.
     open(row) {
+      if (row.item_type !== 'meeting') {
+        this.historyTaskId = row.id;
+        return;
+      }
       if (!row.case_ticket) return;
       this.$router.push({
         name: 'gestorTickets_detail',
@@ -77,6 +91,17 @@ export default {
           accountId: this.$route.params.accountId,
           id: row.case_ticket.id,
         },
+      });
+    },
+    // Desde la ficha solo se reporta avance; lo demás se hace en el caso o en la Agenda.
+    onHistoryAction({ kind, task }) {
+      if (kind !== 'progress') return;
+      this.$emitter.emit('topbar:reportProgress', {
+        id: task.id,
+        title: task.title,
+        sequence: task.sequence,
+        case_ticket_id: task.case?.id || null,
+        case_folio: task.case?.folio || null,
       });
     },
   },
@@ -167,5 +192,13 @@ export default {
       </h4>
       <TaskReportsList :filters="reportFilters" />
     </section>
+    <TaskHistoryModal
+      v-if="historyTaskId"
+      show
+      :task-id="historyTaskId"
+      :actions="['progress']"
+      @close="historyTaskId = null"
+      @action="onHistoryAction"
+    />
   </div>
 </template>

@@ -1,0 +1,783 @@
+<!--
+  Activar o cambiar un agente listo: a la izquierda lo que la empresa contesta (nombre, bandejas,
+  objetivo, preguntas, cuándo califica o se descarta, a quién lo pasa, tono, qué hacer con quien
+  ya es cliente) y a la derecha el chat de prueba: tú eres el cliente y ves qué contesta y qué
+  hizo, sin guardar ni mandar nada. Emite `saved` con el agente.
+-->
+<script>
+import { mapGetters } from 'vuex';
+import { useAlert } from 'dashboard/composables';
+import ReadyAgentsAPI from 'dashboard/api/readyAgents';
+
+const T = 'READY_AGENTS';
+// Preguntas armadas para calificar (el texto vacío = la pregunta de siempre, la del placeholder).
+const QUALIFY_KEYS = [
+  'need',
+  'when',
+  'budget',
+  'decides',
+  'location',
+  'quantity',
+  'source',
+];
+const CONTACT_FIELDS = ['name', 'email', 'company', 'city'];
+const defaultQualify = () =>
+  QUALIFY_KEYS.map(key => ({ key, on: key === 'need', text: '' }));
+// Lo guardado + las que falten (agentes de antes o preguntas nuevas), en el orden del catálogo.
+const mergeQualify = saved => {
+  if (!Array.isArray(saved) || !saved.length) return defaultQualify();
+  return defaultQualify().map(base => {
+    const row = saved.find(q => q.key === base.key);
+    return row ? { ...base, on: !!row.on, text: row.text || '' } : base;
+  });
+};
+const blank = kind => ({
+  kind,
+  name: '',
+  enabled: true,
+  inbox_ids: [],
+  settings: {
+    objective: 'handoff',
+    questions: '',
+    qualified_when: '',
+    discard_when: '',
+    tone: 'cercano',
+    instructions: '',
+    handoff_user_id: '',
+    handoff_team_id: '',
+    client_user_id: '',
+    client_team_id: '',
+    only_prospects: true,
+    // Citas: con quién (Google conectado), duración, tipo y lugar o liga.
+    appointment_user_ids: [],
+    appointment_minutes: '30',
+    appointment_kind: 'llamada',
+    appointment_location: '',
+    // Tu negocio
+    business_what: '',
+    business_use_catalog: false,
+    business_who: '',
+    business_coverage: '',
+    business_why: '',
+    business_practical: '',
+    // Calificar, objeciones y datos antes de pasarlo
+    qualify: defaultQualify(),
+    objections: [],
+    required_contact: [],
+  },
+});
+
+export default {
+  name: 'ReadyAgentModal',
+  props: {
+    show: { type: Boolean, default: false },
+    kind: { type: String, default: 'prospects' },
+    title: { type: String, default: '' },
+    agent: { type: Object, default: null },
+    inboxes: { type: Array, default: () => [] },
+    // Bandejas que ya tienen otro agente listo prendido (no se pueden elegir).
+    takenInboxIds: { type: Array, default: () => [] },
+    // Personas con Google Calendar conectado (con quién se agenda la cita).
+    calendarUsers: { type: Array, default: () => [] },
+  },
+  emits: ['close', 'saved'],
+  data() {
+    return {
+      form: blank(this.kind),
+      saving: false,
+      chat: [],
+      draft: '',
+      testing: false,
+    };
+  },
+  computed: {
+    ...mapGetters({ agents: 'agents/getAgents', teams: 'teams/getTeams' }),
+    objectives() {
+      return ['handoff', 'appointment', 'opportunity', 'collect'];
+    },
+    appointment() {
+      return this.form.settings.objective === 'appointment';
+    },
+    tones() {
+      return ['cercano', 'formal', 'directo'];
+    },
+    contactFields() {
+      return CONTACT_FIELDS;
+    },
+    canSave() {
+      if (this.appointment && !this.form.settings.appointment_user_ids.length)
+        return false;
+      return this.form.name.trim() && this.form.inbox_ids.length;
+    },
+  },
+  watch: {
+    show: {
+      immediate: true,
+      handler(open) {
+        if (open) this.reset();
+      },
+    },
+  },
+  methods: {
+    t(key, params) {
+      return this.$t(`${T}.${key}`, params);
+    },
+    reset() {
+      const base = blank(this.kind);
+      this.form = this.agent
+        ? {
+            ...base,
+            ...JSON.parse(JSON.stringify(this.agent)),
+            settings: {
+              ...base.settings,
+              ...JSON.parse(JSON.stringify(this.agent.settings || {})),
+              qualify: mergeQualify(this.agent.settings?.qualify),
+              objections: this.agent.settings?.objections || [],
+              required_contact: this.agent.settings?.required_contact || [],
+            },
+          }
+        : base;
+      this.chat = [];
+      this.draft = '';
+      this.$store.dispatch('agents/get');
+      this.$store.dispatch('teams/get');
+    },
+    toggleCalendarUser(id) {
+      const ids = this.form.settings.appointment_user_ids.map(String);
+      const key = String(id);
+      this.form.settings.appointment_user_ids = ids.includes(key)
+        ? ids.filter(i => i !== key)
+        : [...ids, key];
+    },
+    calendarUserOn(id) {
+      return this.form.settings.appointment_user_ids
+        .map(String)
+        .includes(String(id));
+    },
+    toggleContact(field) {
+      const list = this.form.settings.required_contact;
+      this.form.settings.required_contact = list.includes(field)
+        ? list.filter(f => f !== field)
+        : [...list, field];
+    },
+    addObjection() {
+      this.form.settings.objections.push({ objection: '', answer: '' });
+    },
+    removeObjection(index) {
+      this.form.settings.objections.splice(index, 1);
+    },
+    toggleInbox(id) {
+      const ids = this.form.inbox_ids;
+      this.form.inbox_ids = ids.includes(id)
+        ? ids.filter(i => i !== id)
+        : [...ids, id];
+    },
+    payload() {
+      const { settings } = this.form;
+      return {
+        ...this.form,
+        name: this.form.name.trim(),
+        settings: {
+          ...settings,
+          objections: settings.objections.filter(
+            o => o.objection.trim() && o.answer.trim()
+          ),
+        },
+      };
+    },
+    async save() {
+      if (!this.canSave || this.saving) return;
+      this.saving = true;
+      try {
+        const { data } = this.agent
+          ? await ReadyAgentsAPI.update(this.agent.id, {
+              ready_agent: this.payload(),
+            })
+          : await ReadyAgentsAPI.create({ ready_agent: this.payload() });
+        this.$emit('saved', data.agent);
+      } catch (e) {
+        useAlert(e.response?.data?.error || this.t('SAVE_ERROR'));
+      } finally {
+        this.saving = false;
+      }
+    },
+    // Chat de prueba: tú eres el cliente.
+    async send() {
+      const text = this.draft.trim();
+      if (!text || this.testing) return;
+      this.chat.push({ role: 'user', content: text });
+      this.draft = '';
+      this.testing = true;
+      try {
+        const { data } = await ReadyAgentsAPI.test(
+          { ...this.payload(), name: this.form.name.trim() || 'Agente' },
+          this.chat.map(({ role, content }) => ({ role, content }))
+        );
+        this.chat.push({
+          role: 'assistant',
+          content: data.reply || this.t('TEST.NO_MESSAGE'),
+          tools: data.tools || [],
+          decision: data.decision,
+        });
+      } catch (e) {
+        this.chat.push({
+          role: 'error',
+          content: e.response?.data?.error || this.t('TEST.ERROR'),
+        });
+      } finally {
+        this.testing = false;
+        this.$nextTick(() => {
+          const box = this.$refs.chatBox;
+          if (box) box.scrollTop = box.scrollHeight;
+        });
+      }
+    },
+    toolLine(tool) {
+      const label = this.$te(`${T}.TOOLS.${tool.name}`)
+        ? this.t(`TOOLS.${tool.name}`)
+        : tool.name;
+      const detail = Object.values(tool.args || {})
+        .filter(Boolean)
+        .join(' · ');
+      return detail ? `${label}: ${detail}` : label;
+    },
+  },
+};
+</script>
+
+<template>
+  <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
+    <div class="flex flex-col h-[85vh] min-h-0">
+      <woot-modal-header
+        :header-title="
+          agent
+            ? t('EDIT_TITLE', { name: agent.name })
+            : t('NEW_TITLE', { title })
+        "
+        :header-content="t('MODAL_SUBTITLE')"
+      />
+      <div
+        class="grid flex-1 min-h-0 grid-cols-1 gap-5 px-8 pb-4 overflow-hidden md:grid-cols-2 md:grid-rows-1"
+      >
+        <!-- Lo que contesta la empresa -->
+        <form
+          class="ready-form flex flex-col gap-2.5 overflow-y-auto !p-0 !pr-1 !self-stretch"
+          @submit.prevent="save"
+        >
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">
+              <span class="field-label">{{ t('FIELDS.NAME') }}</span>
+              <input
+                v-model="form.name"
+                type="text"
+                :placeholder="t('FIELDS.NAME_PLACEHOLDER')"
+              />
+            </label>
+            <label class="block">
+              <span class="field-label">{{ t('FIELDS.TONE') }}</span>
+              <select v-model="form.settings.tone">
+                <option v-for="tone in tones" :key="tone" :value="tone">
+                  {{ t(`TONES.${tone}`) }}
+                </option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <span class="field-label">{{ t('FIELDS.INBOXES') }}</span>
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                v-for="inbox in inboxes"
+                :key="inbox.id"
+                type="button"
+                class="px-2.5 py-1 text-xs border rounded-full"
+                :disabled="takenInboxIds.includes(inbox.id)"
+                :title="
+                  takenInboxIds.includes(inbox.id)
+                    ? t('FIELDS.INBOX_TAKEN')
+                    : ''
+                "
+                :class="
+                  form.inbox_ids.includes(inbox.id)
+                    ? 'border-woot-500 bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200'
+                    : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300 disabled:opacity-40'
+                "
+                @click="toggleInbox(inbox.id)"
+              >
+                {{ inbox.name }}
+              </button>
+            </div>
+          </div>
+          <label class="block">
+            <span class="field-label">{{ t('FIELDS.OBJECTIVE') }}</span>
+            <select v-model="form.settings.objective">
+              <option v-for="o in objectives" :key="o" :value="o">
+                {{ t(`OBJECTIVES.${o}`) }}
+              </option>
+            </select>
+          </label>
+          <!-- Citas: con quién, duración, tipo y lugar -->
+          <div
+            v-if="appointment"
+            class="flex flex-col gap-2 p-3 rounded-lg bg-slate-25 dark:bg-slate-800"
+          >
+            <span class="field-label !mb-0">{{
+              t('FIELDS.APPOINTMENT_USERS')
+            }}</span>
+            <p v-if="!calendarUsers.length" class="m-0 text-xs text-amber-700">
+              {{ t('FIELDS.NO_CALENDARS') }}
+            </p>
+            <div v-else class="flex flex-wrap gap-1.5">
+              <button
+                v-for="u in calendarUsers"
+                :key="u.id"
+                type="button"
+                class="px-2.5 py-1 text-xs border rounded-full"
+                :class="
+                  calendarUserOn(u.id)
+                    ? 'border-woot-500 bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200'
+                    : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'
+                "
+                @click="toggleCalendarUser(u.id)"
+              >
+                {{ u.name }}
+              </button>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <label class="block">
+                <span class="field-label">{{
+                  t('FIELDS.APPOINTMENT_MINUTES')
+                }}</span>
+                <select v-model="form.settings.appointment_minutes">
+                  <option
+                    v-for="m in ['15', '30', '45', '60', '90']"
+                    :key="m"
+                    :value="m"
+                  >
+                    {{ t('FIELDS.MINUTES', { n: m }) }}
+                  </option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="field-label">{{
+                  t('FIELDS.APPOINTMENT_KIND')
+                }}</span>
+                <select v-model="form.settings.appointment_kind">
+                  <option
+                    v-for="k in [
+                      'llamada',
+                      'videollamada',
+                      'visita',
+                      'oficina',
+                    ]"
+                    :key="k"
+                    :value="k"
+                  >
+                    {{ t(`APPOINTMENT_KINDS.${k}`) }}
+                  </option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="field-label">{{
+                  t('FIELDS.APPOINTMENT_LOCATION')
+                }}</span>
+                <input
+                  v-model="form.settings.appointment_location"
+                  type="text"
+                  :placeholder="t('FIELDS.APPOINTMENT_LOCATION_PLACEHOLDER')"
+                />
+              </label>
+            </div>
+            <p class="m-0 text-xs text-slate-500">
+              {{ t('FIELDS.APPOINTMENT_HINT') }}
+            </p>
+          </div>
+          <!-- Tu negocio -->
+          <details class="ready-section" open>
+            <summary>{{ t('SECTIONS.BUSINESS') }}</summary>
+            <p class="section-hint">{{ t('SECTIONS.BUSINESS_HINT') }}</p>
+            <label class="block">
+              <span class="field-label">{{ t('BUSINESS.WHAT') }}</span>
+              <textarea
+                v-model="form.settings.business_what"
+                rows="2"
+                :placeholder="t('BUSINESS.WHAT_PLACEHOLDER')"
+              />
+            </label>
+            <label
+              class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
+            >
+              <input
+                v-model="form.settings.business_use_catalog"
+                type="checkbox"
+                class="!m-0"
+              />
+              {{ t('BUSINESS.USE_CATALOG') }}
+            </label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="block">
+                <span class="field-label">{{ t('BUSINESS.WHO') }}</span>
+                <textarea
+                  v-model="form.settings.business_who"
+                  rows="2"
+                  :placeholder="t('BUSINESS.WHO_PLACEHOLDER')"
+                />
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('BUSINESS.COVERAGE') }}</span>
+                <textarea
+                  v-model="form.settings.business_coverage"
+                  rows="2"
+                  :placeholder="t('BUSINESS.COVERAGE_PLACEHOLDER')"
+                />
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('BUSINESS.WHY') }}</span>
+                <textarea
+                  v-model="form.settings.business_why"
+                  rows="2"
+                  :placeholder="t('BUSINESS.WHY_PLACEHOLDER')"
+                />
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('BUSINESS.PRACTICAL') }}</span>
+                <textarea
+                  v-model="form.settings.business_practical"
+                  rows="2"
+                  :placeholder="t('BUSINESS.PRACTICAL_PLACEHOLDER')"
+                />
+              </label>
+            </div>
+          </details>
+
+          <!-- Preguntas para calificar -->
+          <details class="ready-section" open>
+            <summary>{{ t('SECTIONS.QUALIFY') }}</summary>
+            <p class="section-hint">{{ t('SECTIONS.QUALIFY_HINT') }}</p>
+            <div
+              v-for="q in form.settings.qualify"
+              :key="q.key"
+              class="flex items-center gap-2"
+            >
+              <input v-model="q.on" type="checkbox" class="!m-0 shrink-0" />
+              <span
+                class="w-36 text-sm shrink-0"
+                :class="
+                  q.on ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400'
+                "
+              >
+                {{ t(`QUALIFY.${q.key}.LABEL`) }}
+              </span>
+              <input
+                v-model="q.text"
+                type="text"
+                class="flex-1 !mb-0 h-8 text-sm"
+                :disabled="!q.on"
+                :placeholder="t(`QUALIFY.${q.key}.ASK`)"
+              />
+            </div>
+            <label class="block mt-1">
+              <span class="field-label">{{ t('FIELDS.QUESTIONS') }}</span>
+              <textarea
+                v-model="form.settings.questions"
+                rows="2"
+                :placeholder="t('FIELDS.QUESTIONS_PLACEHOLDER')"
+              />
+            </label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="block">
+                <span class="field-label">{{
+                  t('FIELDS.QUALIFIED_WHEN')
+                }}</span>
+                <textarea
+                  v-model="form.settings.qualified_when"
+                  rows="2"
+                  :placeholder="t('FIELDS.QUALIFIED_PLACEHOLDER')"
+                />
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('FIELDS.DISCARD_WHEN') }}</span>
+                <textarea
+                  v-model="form.settings.discard_when"
+                  rows="2"
+                  :placeholder="t('FIELDS.DISCARD_PLACEHOLDER')"
+                />
+              </label>
+            </div>
+            <p class="section-hint">{{ t('SECTIONS.TEMPERATURE_HINT') }}</p>
+          </details>
+
+          <!-- Objeciones -->
+          <details
+            class="ready-section"
+            :open="form.settings.objections.length > 0"
+          >
+            <summary>{{ t('SECTIONS.OBJECTIONS') }}</summary>
+            <p class="section-hint">{{ t('SECTIONS.OBJECTIONS_HINT') }}</p>
+            <div
+              v-for="(o, i) in form.settings.objections"
+              :key="i"
+              class="flex flex-col gap-1 p-2 rounded-md bg-slate-25 dark:bg-slate-800"
+            >
+              <div class="flex items-center gap-2">
+                <input
+                  v-model="o.objection"
+                  type="text"
+                  class="flex-1 !mb-0 h-8 text-sm"
+                  :placeholder="t('OBJECTIONS.OBJECTION_PLACEHOLDER')"
+                />
+                <button
+                  type="button"
+                  class="px-1 text-slate-400 hover:text-red-600"
+                  :title="t('OBJECTIONS.REMOVE')"
+                  @click="removeObjection(i)"
+                >
+                  <fluent-icon icon="dismiss" size="14" />
+                </button>
+              </div>
+              <textarea
+                v-model="o.answer"
+                rows="2"
+                class="!mb-0 text-sm"
+                :placeholder="t('OBJECTIONS.ANSWER_PLACEHOLDER')"
+              />
+            </div>
+            <button
+              type="button"
+              class="self-start text-xs text-woot-600 hover:underline"
+              @click="addObjection"
+            >
+              {{ t('OBJECTIONS.ADD') }}
+            </button>
+          </details>
+
+          <!-- Al pasarlo -->
+          <details class="ready-section" open>
+            <summary>{{ t('SECTIONS.HANDOFF') }}</summary>
+            <span class="field-label">{{ t('FIELDS.REQUIRED_CONTACT') }}</span>
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                v-for="field in contactFields"
+                :key="field"
+                type="button"
+                class="px-2.5 py-1 text-xs border rounded-full"
+                :class="
+                  form.settings.required_contact.includes(field)
+                    ? 'border-woot-500 bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200'
+                    : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'
+                "
+                @click="toggleContact(field)"
+              >
+                {{ t(`CONTACT_FIELDS.${field}`) }}
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="block">
+                <span class="field-label">{{ t('FIELDS.HANDOFF_USER') }}</span>
+                <select v-model="form.settings.handoff_user_id">
+                  <option value="">{{ t('FIELDS.NOBODY') }}</option>
+                  <option v-for="a in agents" :key="a.id" :value="a.id">
+                    {{ a.name }}
+                  </option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('FIELDS.HANDOFF_TEAM') }}</span>
+                <select v-model="form.settings.handoff_team_id">
+                  <option value="">{{ t('FIELDS.NO_TEAM') }}</option>
+                  <option v-for="team in teams" :key="team.id" :value="team.id">
+                    {{ team.name }}
+                  </option>
+                </select>
+              </label>
+            </div>
+            <label
+              class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
+            >
+              <input
+                v-model="form.settings.only_prospects"
+                type="checkbox"
+                class="!m-0"
+              />
+              {{ t('FIELDS.ONLY_PROSPECTS') }}
+            </label>
+            <div
+              v-if="form.settings.only_prospects"
+              class="grid grid-cols-2 gap-3"
+            >
+              <label class="block">
+                <span class="field-label">{{ t('FIELDS.CLIENT_USER') }}</span>
+                <select v-model="form.settings.client_user_id">
+                  <option value="">{{ t('FIELDS.NOBODY') }}</option>
+                  <option v-for="a in agents" :key="a.id" :value="a.id">
+                    {{ a.name }}
+                  </option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('FIELDS.CLIENT_TEAM') }}</span>
+                <select v-model="form.settings.client_team_id">
+                  <option value="">{{ t('FIELDS.NO_TEAM') }}</option>
+                  <option v-for="team in teams" :key="team.id" :value="team.id">
+                    {{ team.name }}
+                  </option>
+                </select>
+              </label>
+            </div>
+          </details>
+          <label class="block">
+            <span class="field-label">{{ t('FIELDS.INSTRUCTIONS') }}</span>
+            <textarea
+              v-model="form.settings.instructions"
+              rows="2"
+              :placeholder="t('FIELDS.INSTRUCTIONS_PLACEHOLDER')"
+            />
+          </label>
+          <label
+            class="flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-100"
+          >
+            <input v-model="form.enabled" type="checkbox" class="!m-0" />
+            {{ t('FIELDS.ENABLED') }}
+          </label>
+        </form>
+
+        <!-- Chat de prueba: tú eres el cliente -->
+        <div
+          class="flex flex-col min-h-0 border rounded-lg border-slate-100 dark:border-slate-700"
+        >
+          <div
+            class="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-slate-700"
+          >
+            <span
+              class="text-sm font-medium text-slate-800 dark:text-slate-100"
+              >{{ t('TEST.TITLE') }}</span
+            >
+            <button
+              type="button"
+              class="text-xs text-woot-600 hover:underline"
+              @click="chat = []"
+            >
+              {{ t('TEST.RESET') }}
+            </button>
+          </div>
+          <div
+            ref="chatBox"
+            class="flex-1 min-h-0 p-3 space-y-2 overflow-y-auto"
+          >
+            <p v-if="!chat.length" class="m-0 text-xs text-slate-500">
+              {{ t('TEST.HINT') }}
+            </p>
+            <div
+              v-for="(m, i) in chat"
+              :key="i"
+              class="flex"
+              :class="m.role === 'user' ? 'justify-start' : 'justify-end'"
+            >
+              <div
+                class="max-w-[85%] px-3 py-2 text-sm rounded-lg whitespace-pre-line"
+                :class="{
+                  'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100':
+                    m.role === 'user',
+                  'bg-woot-50 text-slate-800 dark:bg-woot-900/30 dark:text-slate-100':
+                    m.role === 'assistant',
+                  'bg-red-50 text-red-700': m.role === 'error',
+                }"
+              >
+                <span>{{ m.content }}</span>
+                <span
+                  v-for="(tool, j) in m.tools || []"
+                  :key="j"
+                  class="block mt-1 text-[11px] text-slate-500"
+                >
+                  {{ t('TEST.TOOL', { tool: toolLine(tool) }) }}
+                </span>
+                <span
+                  v-if="m.decision"
+                  class="block mt-1 text-[11px] font-medium text-woot-700"
+                >
+                  {{
+                    t('TEST.DECISION', {
+                      decision: t(`DECISIONS.${m.decision[0]}`),
+                    })
+                  }}
+                  {{
+                    m.decision[2]
+                      ? ` · ${t(`TEMPERATURES.${m.decision[2]}`)}`
+                      : ''
+                  }}
+                </span>
+              </div>
+            </div>
+            <p v-if="testing" class="m-0 text-xs text-right text-slate-400">
+              {{ t('TEST.TYPING') }}
+            </p>
+          </div>
+          <form
+            class="flex gap-2 !p-2 !self-stretch border-t border-slate-100 dark:border-slate-700"
+            @submit.prevent="send"
+          >
+            <input
+              v-model="draft"
+              type="text"
+              class="flex-1 !mb-0 h-9 text-sm"
+              :placeholder="t('TEST.PLACEHOLDER')"
+            />
+            <woot-button
+              size="small"
+              :is-loading="testing"
+              :disabled="!draft.trim()"
+            >
+              {{ t('TEST.SEND') }}
+            </woot-button>
+          </form>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 px-8 pb-6">
+        <woot-button variant="clear" type="button" @click="$emit('close')">
+          {{ t('CANCEL') }}
+        </woot-button>
+        <woot-button :is-loading="saving" :disabled="!canSave" @click="save">
+          {{ t('SAVE') }}
+        </woot-button>
+      </div>
+    </div>
+  </woot-modal>
+</template>
+
+<style lang="scss" scoped>
+// Formulario compacto (como el de tareas): etiquetas chicas y campos de 36 px.
+.ready-form {
+  .field-label {
+    @apply block mb-1 text-xs font-medium text-slate-600 dark:text-slate-300;
+  }
+
+  input[type='text'] {
+    @apply h-9 py-1 px-2 mb-0 text-sm;
+  }
+
+  select {
+    @apply h-9 py-1 pl-2 pr-8 mb-0 text-sm;
+  }
+
+  textarea {
+    @apply mb-0 text-sm;
+  }
+
+  // Secciones plegables: Tu negocio, Preguntas, Objeciones, Al pasarlo.
+  .ready-section {
+    @apply flex flex-col gap-2 p-3 border rounded-lg border-slate-100 dark:border-slate-700;
+
+    summary {
+      @apply text-sm font-medium cursor-pointer text-slate-800 dark:text-slate-100;
+    }
+
+    // <details> no aplica `gap` en todos los navegadores: el aire va entre hijos.
+    > :not(summary) + * {
+      @apply mt-2;
+    }
+
+    .section-hint {
+      @apply m-0 text-xs text-slate-500;
+    }
+  }
+}
+</style>

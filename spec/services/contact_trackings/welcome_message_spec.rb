@@ -48,4 +48,32 @@ RSpec.describe ContactTrackings::WelcomeMessage do
       expect(described_class.claim(tracking, conversation)).to be_nil
     end
   end
+
+  # 11/11/2026 (cuenta 1128, pila Fer261109): «informes sobre Derecho» recibía solo la
+  # bienvenida y la carrera nunca se guardaba.
+  describe '.only_greeting?' do
+    it 'un saludo o un «quiero información» sin decir de qué es solo saludo' do
+      ['HOLA MUY BUENOS DIAS', 'Hola, buenos días.', 'Buenas tardes, quisiera información', '¿Cómo está?', ''].each do |texto|
+        expect(described_class.only_greeting?(texto)).to be(true), texto
+      end
+    end
+
+    it 'con una pregunta o un tema no es solo saludo' do
+      ['Buen día, ¿me puede dar informes sobre su licenciatura de Derecho, por favor?', 'Hola tienen bachillerato?',
+       'Hola, ¿dónde están ubicados?'].each do |texto|
+        expect(described_class.only_greeting?(texto)).to be(false), texto
+      end
+    end
+  end
+
+  describe '.sent?' do
+    let(:conversation) { create(:conversation) }
+    let(:tracking) { instance_double(ContactTracking, complementary_prompt: prompt, tracking_template_id: 297, id: 1) }
+
+    it 'dice si este agente ya mandó su bienvenida' do
+      expect(described_class.sent?(tracking, conversation)).to be(false)
+      described_class.claim(tracking, conversation)
+      expect(described_class.sent?(tracking, conversation.reload)).to be(true)
+    end
+  end
 end

@@ -9,6 +9,13 @@ vi.mock('dashboard/api/trackingTemplates', () => ({
   },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('dashboard/api/fichaAgente', () => ({
+  default: {
+    get: vi
+      .fn()
+      .mockResolvedValue({ data: { changes: { added: [1], removed: [] } } }),
+  },
+}));
 vi.mock('./Assistant.vue', () => ({
   default: { name: 'Assistant', render: () => null },
 }));
@@ -44,20 +51,28 @@ const montar = ({
         },
       },
     },
-    stubs: ['woot-button', 'woot-sidemenu-icon', 'AgentVersions'],
+    stubs: [
+      'woot-button',
+      'woot-sidemenu-icon',
+      'AgentVersions',
+      'FichaWizard',
+      'AgentFicha',
+    ],
   });
   return { wrapper, router };
 };
 
 describe('AgentWorkspace', () => {
-  it('un admin ve Entrenamiento, Ficha y Versiones, y entra al Entrenamiento', () => {
+  it('un admin ve Recursos, Entrenamiento, Pruebas, Probar fuentes y Versiones (sin Ficha de Agente IA), y entra a Recursos', () => {
     const { wrapper } = montar();
     expect(wrapper.vm.sections.map(s => s.id)).toEqual([
+      'ficha',
       'training',
-      'profile',
+      'tests',
+      'sources',
       'versions',
     ]);
-    expect(wrapper.vm.section).toBe('training');
+    expect(wrapper.vm.section).toBe('ficha');
     expect(wrapper.vm.title).toBe('Cobranza');
     expect(wrapper.vm.inboxName).toBe('Ventas WA');
   });
@@ -68,10 +83,49 @@ describe('AgentWorkspace', () => {
     expect(wrapper.vm.section).toBe('profile');
   });
 
-  it('un agente nuevo solo tiene Entrenamiento', () => {
+  it('un agente nuevo solo tiene Recursos: lo demás aparece al crearlo', () => {
     const { wrapper } = montar({ templateId: 'new' });
     expect(wrapper.vm.templateId).toBeNull();
-    expect(wrapper.vm.sections.map(s => s.id)).toEqual(['training']);
+    expect(wrapper.vm.sections.map(s => s.id)).toEqual(['ficha']);
+    expect(wrapper.vm.section).toBe('ficha');
+  });
+
+  it('un admin que pide ?seccion=profile entra a Recursos (ahí están sus datos)', () => {
+    const { wrapper } = montar({ query: { seccion: 'profile' } });
+    expect(wrapper.vm.section).toBe('ficha');
+  });
+
+  it('si elige crearlo conversando, aparecen Entrenamiento y lo demás', () => {
+    const { wrapper } = montar({
+      templateId: 'new',
+      query: { modo: 'conversar', seccion: 'training' },
+    });
+    expect(wrapper.vm.sections.map(s => s.id)).toEqual([
+      'ficha',
+      'training',
+      'tests',
+      'sources',
+    ]);
+    expect(wrapper.vm.section).toBe('training');
+  });
+
+  // proyecto@diagrama_agente_ia: Pruebas es el mismo Asistente con otra vista.
+  it('Entrenamiento y Pruebas comparten el Asistente sin volver a montarlo', async () => {
+    const { wrapper } = montar({ query: { seccion: 'training' } });
+    await wrapper.vm.$nextTick();
+    const antes = wrapper.findComponent({ name: 'Assistant' });
+    expect(antes.attributes('view')).toBe('training');
+
+    antes.vm.$emit('openTests');
+    await wrapper.vm.$nextTick();
+    const despues = wrapper.findComponent({ name: 'Assistant' });
+    expect(wrapper.vm.section).toBe('tests');
+    expect(despues.attributes('view')).toBe('tests');
+    expect(despues.vm).toBe(antes.vm);
+
+    despues.vm.$emit('openTraining');
+    await wrapper.vm.$nextTick();
+    expect(wrapper.vm.section).toBe('training');
   });
 
   it('respeta ?seccion= y ?session=', () => {
@@ -92,10 +146,14 @@ describe('AgentWorkspace', () => {
     });
   });
 
-  it('en la Ficha, el admin no ve ni manda el Entrenamiento', async () => {
-    const { wrapper } = montar({ query: { seccion: 'profile' } });
+  it('quien no es admin sigue con su Ficha de Agente IA completa', async () => {
+    const { wrapper } = montar({
+      role: 'agent',
+      query: { seccion: 'profile' },
+    });
     await wrapper.vm.$nextTick();
     const ficha = wrapper.findComponent({ name: 'TemplateForm' });
-    expect(ficha.props('hideTraining')).toBe(true);
+    expect(ficha.exists()).toBe(true);
+    expect(ficha.props('hideTraining')).toBe(false);
   });
 });

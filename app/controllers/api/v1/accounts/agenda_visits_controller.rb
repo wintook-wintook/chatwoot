@@ -3,7 +3,7 @@
 # Visitas — la visita de una tarea agendada, sin orden de trabajo (el vendedor).
 #   GET  /agenda_visits/arrivals?user_id=&from=&to=   llegadas de técnicos y vendedores
 #   GET  /agenda_visits/:id
-#   POST /agenda_visits/:id/on_my_way  { eta_minutes }
+#   POST /agenda_visits/:id/on_my_way  { eta_minutes, tz }  (la hora del aviso, en la zona del usuario)
 #   POST /agenda_visits/:id/arrive     { lat, lng, accuracy, occurred_at }
 class Api::V1::Accounts::AgendaVisitsController < Api::V1::Accounts::BaseController
   before_action :set_meeting, except: :arrivals
@@ -13,7 +13,8 @@ class Api::V1::Accounts::AgendaVisitsController < Api::V1::Accounts::BaseControl
   end
 
   def on_my_way
-    Field::AgendaVisit.new(@meeting, current_user).on_my_way!(params[:eta_minutes].to_i)
+    zone = ActiveSupport::TimeZone[params[:tz].to_s] || Time.zone
+    Field::AgendaVisit.new(@meeting, current_user).on_my_way!(params[:eta_minutes].to_i, zone: zone)
     render_visit
   end
 

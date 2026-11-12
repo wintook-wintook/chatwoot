@@ -17,6 +17,13 @@ export const routes = [
     component: () => import('../../../views/contactTrackings/Dashboard.vue'),
   },
   {
+    // Agentes listos: puestos empaquetados que la empresa activa en sus bandejas.
+    path: frontendURL('accounts/:accountId/tracking-dashboard/ready-agents'),
+    name: 'ready_agents',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/readyAgents/Index.vue'),
+  },
+  {
     // proyecto@contact_tracking — Agentes IA dentro del dashboard (reutiliza la vista de Settings)
     path: frontendURL('accounts/:accountId/tracking-dashboard/agents'),
     name: 'contact_trackings_agents',

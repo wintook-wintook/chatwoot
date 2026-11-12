@@ -121,6 +121,7 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
       :version_note, # feat/agentes_ia_unificado: nota del guardado, viaja a la versión
       :email_signature, # prospeccion V1: firma en correo
       :customer_display_name, # el nombre con que el cliente ve al agente
+      :follow_up_attempts, # feat/ficha_agente_ia: núm. de intentos sin plantillas (antes no se guardaba)
       whatsapp_templates: [],
       tags: [],
       keyword_actions: [:keyword, :action, :direction, :label, :assignee_id, :team_id], # proyecto@contact_tracking
@@ -184,6 +185,7 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
     json['creator'] = ({ id: template.user.id, name: template.user.available_name || template.user.name } if template.user)
     json['inbox_name']      = template.inbox&.name
     json['keyword_actions'] = template.keyword_actions || [] # proyecto@contact_tracking
+    json['follow_up_attempts'] = template.follow_up_attempts # feat/ficha_agente_ia
     json['training_structure'] = template.training_blocks # proyecto@asistente_agentes_ia
     json['publication'] = template.publication&.slice(:status, :version) # proyecto@publicar_prompts
     json['published_prompt_update'] = template.published_prompt_update # proyecto@publicar_prompts (F7)

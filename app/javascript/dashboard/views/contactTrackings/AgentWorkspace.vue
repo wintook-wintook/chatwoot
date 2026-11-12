@@ -8,7 +8,10 @@
 //   Nombre                    ← Agentes IA · Bandeja · v12
 //   ┌──────────────┬───────────────────────────────────────────┐
 //   │ Entrenamiento│  el Asistente (Estructura/Chat + Editor,   │  solo admin
-//   │ Ficha        │  Configurar…) · «Publicar cambios»         │
+//   │ Pruebas y    │  Configurar…) · «Publicar cambios»         │
+//   │  diagrama    │  la pila y el agente dibujado (mismo       │  solo admin
+//   │              │  Asistente, otra vista: no se recarga)     │
+//   │ Ficha        │                                           │
 //   │ Versiones    │  la ficha (sin Entrenamiento para admin)   │
 //   │              │  el historial con su origen y restaurar    │
 //   └──────────────┴───────────────────────────────────────────┘
@@ -16,7 +19,7 @@
 // Rutas: /tracking-dashboard/agents/:templateId (un número, o «new»).
 //   ?session=ID   retomar una conversación de «En construcción»
 //   ?galeria=1    abrir la Galería al entrar (agente nuevo)
-//   ?seccion=     training · profile · versions
+//   ?seccion=     training · tests · sources · profile · versions
 //
 // El Entrenamiento trabaja sobre un BORRADOR (la conversación del Asistente, que se
 // guarda sola) y «Publicar cambios» lo aplica al agente dejando una versión. Al
@@ -30,6 +33,10 @@ import AgentVersions from './agents/AgentVersions.vue';
 import TemplateForm from 'dashboard/routes/dashboard/settings/trackingTemplates/EditTemplate.vue';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import BaseSettingsHeader from 'dashboard/routes/dashboard/settings/components/BaseSettingsHeader.vue';
+// feat/ficha_agente_ia: la ficha de recursos (agente nuevo en 3 pasos, o la de uno que ya existe)
+import FichaWizard from './ficha/FichaWizard.vue';
+import AgentFicha from './ficha/AgentFicha.vue';
+import FichaAPI from 'dashboard/api/fichaAgente';
 
 export default {
   components: {
@@ -37,6 +44,8 @@ export default {
     AgentVersions,
     TemplateForm,
     BaseSettingsHeader,
+    FichaWizard,
+    AgentFicha,
   },
   data() {
     return {
@@ -46,6 +55,8 @@ export default {
       // Cambia al restaurar: el Asistente y la ficha se vuelven a montar con lo
       // que quedó publicado.
       reloadKey: 0,
+      // feat/ficha_agente_ia: cuántos cambios de la ficha faltan en el Entrenamiento.
+      fichaChanges: 0,
     };
   },
   computed: {
@@ -69,10 +80,28 @@ export default {
       const id = Number(this.$route.query.session);
       return id || null;
     },
+    // feat/ficha_agente_ia: un agente nuevo empieza SOLO en Recursos; el Entrenamiento y lo
+    // demás aparecen al crearlo (o si se elige crearlo conversando: ?modo=conversar).
+    conversational() {
+      return this.$route.query.modo === 'conversar';
+    },
     sections() {
+      // Agente nuevo: todo en Recursos (Agente y canal … Probar y crear); al crearlo
+      // aparece lo demás. 10/11/2026: «Ficha de Agente IA» se quitó para el administrador:
+      // sus datos (nombre, objetivo, contexto, canal y seguimiento) ya viven en Recursos.
+      if (this.isNew && this.isAdmin && !this.conversational)
+        return [{ id: 'ficha', label: 'SECTION_FICHA' }];
       return [
+        // Recursos → Entrenamiento → Pruebas y diagrama → Probar fuentes → Versiones.
+        this.isAdmin && { id: 'ficha', label: 'SECTION_FICHA' },
+        // Quien no es administrador no ve Recursos: sigue con su Ficha de Agente IA.
+        !this.isNew &&
+          !this.isAdmin && { id: 'profile', label: 'SECTION_PROFILE' },
         this.isAdmin && { id: 'training', label: 'SECTION_TRAINING' },
-        !this.isNew && { id: 'profile', label: 'SECTION_PROFILE' },
+        // proyecto@diagrama_agente_ia: pruebas y diagrama en su propia pestaña, a lo ancho.
+        this.isAdmin && { id: 'tests', label: 'SECTION_TESTS' },
+        // crear_agente_conversando §15: probar las fuentes como las busca el agente.
+        this.isAdmin && { id: 'sources', label: 'SECTION_SOURCES' },
         !this.isNew && { id: 'versions', label: 'SECTION_VERSIONS' },
       ].filter(Boolean);
     },
@@ -104,11 +133,15 @@ export default {
     },
   },
   watch: {
+    '$route.query.modo'() {
+      this.pickSection();
+    },
     '$route.params.templateId': {
       immediate: true,
       handler() {
         this.pickSection();
         this.fetchVersionInfo();
+        this.fetchFichaChanges();
       },
     },
   },
@@ -129,6 +162,27 @@ export default {
     goSection(id) {
       this.section = id;
       if (id === 'versions') this.fetchVersionInfo();
+    },
+    async fetchFichaChanges() {
+      this.fichaChanges = 0;
+      if (!this.templateId || !this.isAdmin) return;
+      try {
+        const { data } = await FichaAPI.get(this.templateId);
+        const cambios = data.changes || {};
+        this.fichaChanges =
+          (cambios.added || []).length + (cambios.removed || []).length;
+      } catch (error) {
+        this.fichaChanges = 0;
+      }
+    },
+    onFichaApplied() {
+      this.reloadKey += 1;
+      this.fetchVersionInfo();
+    },
+    // Nombre u objetivo pudieron cambiar: el encabezado los lee de la lista.
+    onFichaSaved() {
+      this.$store.dispatch('trackingTemplates/get');
+      this.fetchVersionInfo();
     },
     goBack() {
       this.$router.push({ name: 'contact_trackings_agents' });
@@ -159,6 +213,10 @@ export default {
         query: { seccion: 'training' },
       });
       this.fetchVersionInfo();
+    },
+    // Recién creado desde la ficha: al Entrenamiento, para verlo y afinarlo.
+    goToFicha(id) {
+      this.goToAgent(id);
     },
     onAssistantSession(id) {
       if (this.sessionId && this.sessionId !== id) {
@@ -235,7 +293,8 @@ export default {
             :key="item.id"
             :index="position"
             :name="t(item.label)"
-            :show-badge="false"
+            :count="item.id === 'ficha' ? fichaChanges : 0"
+            :show-badge="item.id === 'ficha' && fichaChanges > 0"
           />
         </woot-tabs>
         <p
@@ -247,15 +306,31 @@ export default {
       </div>
 
       <div class="flex flex-col flex-1 min-h-0 mt-6">
+        <!-- Entrenamiento y Pruebas son el MISMO Asistente con otra vista: un solo
+             elemento con la misma key, así cambiar de pestaña no lo vuelve a montar. -->
+        <!-- Un solo asistente para las dos pestañas: no se pierde lo capturado. -->
+        <FichaWizard v-if="isNew && section === 'ficha'" @created="goToFicha" />
+        <AgentFicha
+          v-else-if="section === 'ficha' && templateId"
+          :key="`ficha-${templateId}-${reloadKey}`"
+          :template-id="templateId"
+          :template-name="title"
+          @applied="onFichaApplied"
+          @saved="onFichaSaved"
+          @changes="fichaChanges = $event"
+        />
         <Assistant
-          v-if="section === 'training'"
+          v-else-if="['training', 'tests', 'sources'].includes(section)"
           :key="`training-${reloadKey}`"
+          :view="section"
           :template-id="templateId"
           :initial-session-id="sessionId"
           :open-gallery="!!$route.query.galeria"
           @saved="goToAgent"
           @installed="goToAgent"
           @session="onAssistantSession"
+          @openTests="goSection('tests')"
+          @openTraining="goSection('training')"
         />
         <div
           v-else-if="section === 'profile' && template"
@@ -266,6 +341,7 @@ export default {
             mode="edit"
             :template-data="template"
             :hide-training="isAdmin"
+            :hide-resources="isAdmin"
             @save="onProfileSave"
             @cancel="goBack"
           />

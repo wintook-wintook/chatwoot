@@ -11,13 +11,16 @@
 
 class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   include TaskReportGuard
+  include ClientTaskFields # tareas con el cliente: campos y aviso al crearla
+  include CancelAndDeleteGuard # cancelar con motivo; borrar solo errores de captura
+  include ItemConversionActions # pasarla a la agenda
 
   FROZEN_MSG = 'Ticket cerrado: no se pueden modificar las tareas. Reábrelo si necesitas cambiarlas.'
   DOC_TASK_MSG = 'Esta tarea se completa sola cuando documentas el paso a la siguiente etapa'
 
   before_action :set_ticket
-  before_action :set_task, only: %i[update destroy]
-  before_action :reject_manual_documentation, only: :update
+  before_action :set_task, only: %i[update destroy cancel schedule] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
+  before_action :reject_manual_documentation, :lock_closed_task, only: :update
 
   def index
     render json: { case_tasks: @ticket.case_tasks.ordered.includes(:case_type_column, :team).map { |t| task_json(t) },
@@ -34,7 +37,7 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
     task.position ||= @ticket.case_tasks.count
     if task.save
       notify_task_assignment(task) # F3 — avisa al recién asignado (si no soy yo)
-      render json: { case_task: task_json(task) }, status: :created
+      render json: { case_task: task_json(task), client_notice: notify_client(task) }.compact, status: :created
     else
       render json: { error: task.errors.full_messages }, status: :unprocessable_entity
     end
@@ -69,8 +72,17 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
     end
   end
 
+  # Ya no se va a hacer: con motivo (y tiempo, si ya se trabajó).
+  def cancel
+    return render json: { error: FROZEN_MSG }, status: :unprocessable_entity if @ticket.frozen_for_edit?
+    return unless run_cancellation(@task)
+
+    render json: { case_task: task_json(@task.reload) }
+  end
+
   def destroy
     return render json: { error: FROZEN_MSG }, status: :unprocessable_entity if @ticket.frozen_for_edit?
+    return if delete_restricted?(@task, @task.requester_id)
 
     @task.destroy
     head :no_content
@@ -101,7 +113,8 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
     permitted = params.require(:case_task).permit(:title, :description, :status, :priority, :assignee_id, :due_at, :position,
                                                   :milestone, # Plan-Clase-Proyecto P2 — hito
                                                   :estimated_minutes, :planned_on, # Plan-Bandeja-Prioridad
-                                                  :required) # Plan-Plantilla-Tareas-Etapa
+                                                  :required, # Plan-Plantilla-Tareas-Etapa
+                                                  :audience, :requires_file) # Tareas con el cliente
     # El asignado debe ser un usuario de la cuenta (si no, queda sin asignar).
     permitted[:assignee_id] = Current.account.users.where(id: permitted[:assignee_id]).pick(:id) if permitted.key?(:assignee_id)
     stage_of_required(permitted)
@@ -194,6 +207,7 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
       # Plan-Plantilla-Tareas-Etapa — nació de la plantilla de una etapa.
       required: task.required, stage: task.case_type_column&.label, team: task.team && { id: task.team.id, name: task.team.name },
       documentation: task.documentation_for_column_id.present?, report_required: task.report_required? }
+      .merge(client_fields(task))
   end
 
   # id de tarea → nº de reuniones vivas que caen después del vencimiento de esa

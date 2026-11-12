@@ -1,6 +1,8 @@
 <!--
   @tickets_cases — botones de la pestaña «Conversación» del caso: ligar (o
-  agregar otra) conversación, programar mensaje y «Delegar a agente IA» (seguimiento).
+  agregar otra) conversación, programar mensaje y «Delegar seguimiento», que abre el
+  Seguimiento IA (el agente nuevo con herramientas); dentro, «Vista anterior» abre el
+  agente de seguimiento de siempre.
   Siempre visibles. Programar y delegar necesitan la conversación (su bandeja y
   su canal): si el caso no tiene, primero se liga o se crea y después se abre lo
   que se pidió. Reusa las ventanitas de la ficha del contacto tal cual.
@@ -12,8 +14,11 @@ import ConversationAPI from 'dashboard/api/inbox/conversation';
 import ScheduleMessageModal from 'dashboard/components/widgets/conversation/ScheduleMessageModal';
 import ContactTrackingModal from 'dashboard/components/contacts/ContactTracking/ContactTrackingModal.vue';
 import LinkConversationModal from './LinkConversationModal.vue';
+import AiFollowUpModal from './AiFollowUpModal.vue';
+import AiFollowUpStatus from './AiFollowUpStatus.vue';
 
 const T = 'CASE_TICKETS.CONVERSATION_ACTIONS';
+const F = 'ASSISTANT.AI_FOLLOW_UP';
 
 export default {
   name: 'CaseConversationActions',
@@ -21,6 +26,8 @@ export default {
     LinkConversationModal,
     ScheduleMessageModal,
     ContactTrackingModal,
+    AiFollowUpModal,
+    AiFollowUpStatus,
   },
   props: {
     ticket: { type: Object, required: true },
@@ -32,6 +39,8 @@ export default {
       showLink: false,
       showSchedule: false,
       showTracking: false,
+      showFollowUp: false,
+      followUpLive: false, // hay un Seguimiento IA corriendo → botón verde
       pendingAction: null, // 'schedule' | 'delegate': se abre al quedar ligada
     };
   },
@@ -52,7 +61,6 @@ export default {
       const apps = this.apps || [];
       const inboxId = this.conversation && this.conversation.inbox_id;
       const bot = apps.find(a => a.id === 'tracking_bot');
-      const openai = apps.find(a => a.id === 'openai');
       const missing = [];
       const botOk =
         bot &&
@@ -62,13 +70,16 @@ export default {
         );
       if (!botOk)
         missing.push(this.$t('CONTACT_PANEL.INTEGRATION_WARNING.TRACKING_BOT'));
+      return missing.concat(this.missingOpenai);
+    },
+    // Seguimiento IA solo necesita OpenAI activo (no el bot de seguimientos de la bandeja).
+    missingOpenai() {
+      const openai = (this.apps || []).find(a => a.id === 'openai');
       const aiOk =
         openai &&
         openai.enabled &&
         (openai.hooks || []).some(h => h.status === true);
-      if (!aiOk)
-        missing.push(this.$t('CONTACT_PANEL.INTEGRATION_WARNING.OPENAI'));
-      return missing;
+      return aiOk ? [] : [this.$t('CONTACT_PANEL.INTEGRATION_WARNING.OPENAI')];
     },
   },
   watch: {
@@ -83,6 +94,17 @@ export default {
   methods: {
     t(key, params) {
       return this.$t(`${T}.${key}`, params);
+    },
+    f(key, params) {
+      return this.$t(`${F}.${key}`, params);
+    },
+    openLegacy() {
+      this.showFollowUp = false;
+      this.run('legacy');
+    },
+    onFollowUpCreated(followUp) {
+      this.showFollowUp = false;
+      this.$refs.followUpStatus?.set(followUp);
     },
     async loadConversation() {
       this.conversation = null;
@@ -126,15 +148,15 @@ export default {
         this.showSchedule = true;
         return;
       }
-      if (this.missingIntegrations.length) {
-        useAlert(
-          this.t('DELEGATE_MISSING', {
-            missing: this.missingIntegrations.join(', '),
-          })
-        );
+      // «Delegar» abre el Seguimiento IA (solo OpenAI); 'legacy' = «Vista anterior», el de siempre.
+      const missing =
+        action === 'legacy' ? this.missingIntegrations : this.missingOpenai;
+      if (missing.length) {
+        useAlert(this.t('DELEGATE_MISSING', { missing: missing.join(', ') }));
         return;
       }
-      this.showTracking = true;
+      if (action === 'legacy') this.showTracking = true;
+      else this.showFollowUp = true;
     },
   },
 };
@@ -157,14 +179,14 @@ export default {
       {{ t('SCHEDULE') }}
     </woot-button>
     <woot-button
-      v-tooltip="t('DELEGATE_HINT')"
+      v-tooltip="f('BUTTON_HINT')"
       size="small"
       variant="smooth"
-      color-scheme="secondary"
-      icon="calendar-clock"
+      :color-scheme="followUpLive ? 'success' : 'secondary'"
+      icon="bot"
       @click="run('delegate')"
     >
-      {{ t('DELEGATE') }}
+      {{ f('BUTTON') }}
     </woot-button>
 
     <LinkConversationModal
@@ -190,6 +212,21 @@ export default {
       :conversation-id="displayId"
       :current-chat="conversation"
       @close="showTracking = false"
+    />
+    <AiFollowUpModal
+      v-if="showFollowUp && conversation"
+      :show="showFollowUp"
+      :ticket="ticket"
+      :conversation-id="displayId"
+      @close="showFollowUp = false"
+      @created="onFollowUpCreated"
+      @legacy="openLegacy"
+    />
+    <!-- Seguimiento IA: en qué va y pausar / reanudar / cancelar -->
+    <AiFollowUpStatus
+      ref="followUpStatus"
+      :case-id="ticket.id"
+      @change="followUpLive = $event"
     />
   </div>
 </template>

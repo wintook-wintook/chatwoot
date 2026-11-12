@@ -153,6 +153,9 @@ class Message < ApplicationRecord
   # prospeccion P2b: el vendedor le escribió a un interesado entregado → la IA se calla
   after_create_commit :check_prospect_handoff, if: -> { outgoing? && !private? && sender_type == 'User' }
 
+  # proyecto@diagrama_agente_ia F0: la respuesta del bot queda anotada para recibir su traza
+  after_create :register_in_engine_trace, if: :outgoing?
+
   after_update_commit :dispatch_update_event
 
   # proyecto@automatizacion_campanas: el estado de entrega de WhatsApp llega al envío del seguimiento
@@ -218,7 +221,8 @@ class Message < ApplicationRecord
     data = {
       account: account.webhook_data,
       additional_attributes: additional_attributes,
-      content_attributes: content_attributes,
+      # La traza del motor (proyecto@diagrama_agente_ia) es interna: no sale del sistema.
+      content_attributes: content_attributes.except('traza'),
       content_type: content_type,
       content: content,
       conversation: conversation.webhook_data,
@@ -491,6 +495,12 @@ class Message < ApplicationRecord
     # donde Job#1 ve "sin tracking" y despacha a BotSeller, y luego el tracking
     # recién creado provoca una segunda respuesta. Si no aplica ninguna
     # automatización, procesamos el mensaje sin demora.
+    # Seguimiento IA: con uno vivo en la conversación, contesta SOLO él (ni el agente de
+    # seguimiento de siempre ni BotSeller). Pausado no contesta nadie: lo atiende una persona.
+    return AiFollowUps::ReplyJob.set(wait: 15.seconds).perform_later(id) if AiFollowUp.live_for?(conversation_id)
+    # Agente listo de la bandeja: contesta él (ni el agente a medida ni BotSeller).
+    return ReadyAgents::ReplyJob.set(wait: 15.seconds).perform_later(id) if ReadyAgents::Router.takes?(self)
+
     wait = will_trigger_tracking_automation? ? 5.seconds : 0.seconds
     ContactTrackingResponseAnalyzerJob.set(wait: wait).perform_later(id)
   rescue StandardError => e
@@ -500,13 +510,18 @@ class Message < ApplicationRecord
   # @query_databases — encola la respuesta IA (Modo B) solo si el inbox tiene un bot
   # cobrador con mode_b_enabled (chequeo barato para no encolar de más).
   def respond_via_erp_bot
-    return if content.blank? || conversation&.inbox_id.blank?
+    return if content.blank? || conversation&.inbox_id.blank? || answered_by_ai_agent?
 
     has_bot = ErpCollectionBot.active.where(account_id: conversation.account_id, mode_b_enabled: true)
                               .exists?(inbox_id: [conversation.inbox_id, nil])
     ErpCollection::ChatResponseJob.perform_later(id) if has_bot
   rescue StandardError => e
     Rails.logger.error "[Message] Error encolando respuesta ERP Modo B: #{e.message}"
+  end
+
+  # Seguimiento IA o agente listo de la bandeja: no contestan dos a la vez.
+  def answered_by_ai_agent?
+    AiFollowUp.live_for?(conversation_id) || ReadyAgents::Router.takes?(self)
   end
 
   # proyecto@contact_tracking: ¿alguna AutomationRule (conversation_created,
@@ -547,6 +562,10 @@ class Message < ApplicationRecord
   end
 
   # Unos segundos después: la marca de bot (sentiment_auto_reply) se guarda tras crear el mensaje.
+  def register_in_engine_trace
+    ContactTrackings::EngineTrace.register(self) if ContactTrackings::EngineTrace.active?
+  end
+
   def check_prospect_handoff
     return unless TrackingCampaigns::HandoffAttention.pending?(conversation_id)
 

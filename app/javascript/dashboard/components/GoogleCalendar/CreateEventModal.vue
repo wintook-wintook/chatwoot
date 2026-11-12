@@ -74,6 +74,10 @@ export default {
       organization: null,
       caseId: '',
       cases: [],
+      // Pasarla a tarea sin hora: confirmación en línea.
+      toTaskAsk: false,
+      toTaskNotify: true,
+      toTaskBusy: false,
     };
   },
   computed: {
@@ -390,7 +394,43 @@ export default {
       }
     },
     onClose() {
+      this.toTaskAsk = false;
       this.$emit('close');
+    },
+    // Tarea agendada → tarea sin hora (Cases::Conversion): sale del calendario y de Google.
+    canConvertToTask() {
+      const item = this.agendaItem;
+      return !!item && item.status === 'scheduled' && !item.work_started;
+    },
+    async convertToTask() {
+      this.toTaskBusy = true;
+      try {
+        const hasClient = !!(
+          this.agendaItem.contact ||
+          this.agendaItem.organization ||
+          this.agendaItem.case_ticket
+        );
+        const { data } = await AgendaItemsAPI.toTask(this.agendaItem.id, {
+          notify_client: hasClient && this.toTaskNotify,
+        });
+        this.showAlert(
+          this.$t(
+            data.mode === 'linked'
+              ? 'CONVERT_ITEM.DONE_LINKED'
+              : 'CONVERT_ITEM.DONE',
+            { title: data.task.title }
+          )
+        );
+        this.$emit('created');
+        this.onClose();
+      } catch (error) {
+        this.showAlert(
+          error?.response?.data?.error ||
+            this.$t('GOOGLE_CALENDAR.EDIT_EVENT.ERROR')
+        );
+      } finally {
+        this.toTaskBusy = false;
+      }
     },
   },
 };
@@ -649,7 +689,54 @@ export default {
           </div>
         </div>
 
+        <!-- Tarea agendada → tarea sin hora -->
+        <div
+          v-if="toTaskAsk"
+          class="flex flex-col gap-2 p-2 text-sm border rounded-md border-slate-200 dark:border-slate-600"
+        >
+          <p class="m-0 text-slate-700 dark:text-slate-200">
+            {{ $t('CONVERT_ITEM.TO_TASK_DESC') }}
+          </p>
+          <label
+            v-if="
+              agendaItem.contact ||
+              agendaItem.organization ||
+              agendaItem.case_ticket
+            "
+            class="flex items-center gap-2"
+          >
+            <input v-model="toTaskNotify" type="checkbox" class="!m-0" />
+            {{ $t('CONVERT_ITEM.NOTIFY') }}
+          </label>
+          <div class="flex justify-end gap-2">
+            <woot-button
+              type="button"
+              variant="clear"
+              @click="toTaskAsk = false"
+            >
+              {{ $t('CONVERT_ITEM.CANCEL') }}
+            </woot-button>
+            <woot-button
+              type="button"
+              :is-loading="toTaskBusy"
+              @click="convertToTask"
+            >
+              {{ $t('CONVERT_ITEM.CONFIRM') }}
+            </woot-button>
+          </div>
+        </div>
+
         <div class="flex justify-end gap-2 pt-2">
+          <woot-button
+            v-if="canConvertToTask() && !toTaskAsk"
+            type="button"
+            variant="smooth"
+            color-scheme="secondary"
+            class="mr-auto"
+            @click="toTaskAsk = true"
+          >
+            {{ $t('CONVERT_ITEM.TO_TASK') }}
+          </woot-button>
           <woot-button type="button" variant="clear" @click="onClose">
             {{ $t('GOOGLE_CALENDAR.CREATE_EVENT.CANCEL') }}
           </woot-button>

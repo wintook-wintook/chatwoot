@@ -42,6 +42,11 @@ export default {
     },
   },
   methods: {
+    // Algunos avisos (p. ej. recordatorio de calendario) no traen `meta` del
+    // responsable; sin esta guarda la tabla entera se quedaba en «Cargando…».
+    assigneeOf(notification) {
+      return notification.primary_actor?.meta?.assignee || null;
+    },
     dynamicTime,
   },
 };
@@ -100,10 +105,10 @@ export default {
           </td>
           <td class="thumbnail--column">
             <Thumbnail
-              v-if="notificationItem.primary_actor.meta.assignee"
-              :src="notificationItem.primary_actor.meta.assignee.thumbnail"
+              v-if="assigneeOf(notificationItem)"
+              :src="assigneeOf(notificationItem).thumbnail"
               size="36px"
-              :username="notificationItem.primary_actor.meta.assignee.name"
+              :username="assigneeOf(notificationItem).name"
             />
           </td>
           <td>

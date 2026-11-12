@@ -9,6 +9,15 @@
 class Assistant::Executor
   include Assistant::DelegationRunner # D3
   include Assistant::CaseRunner # D4
+  include Assistant::QuoteRunner # cotizaciones
+  include Assistant::ConversationRunner # contestar conversaciones
+  include Assistant::FieldRunner # trabajo en campo
+  include Assistant::EventRunner # NFC en la expo
+  include Assistant::ClientTaskRunner # tareas con el cliente
+  include Assistant::CancelRunner # cancelar con motivo
+  include Assistant::ConvertRunner # tarea ↔ tarea agendada
+  include Assistant::FollowUpPresetRunner # guardar plantilla de seguimiento
+  include Assistant::ProgressRunner # reportar avance de una tarea
 
   class Refused < StandardError; end
 

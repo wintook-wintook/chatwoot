@@ -5,18 +5,23 @@
 # (CaseMeeting, siempre con hora); aquí pueden ir solo con su contacto.
 # GET    /agenda_items?start=&end=        mis tareas agendadas del rango
 # GET    /agenda_items/cases?contact_id=&organization_id=   casos abiertos para ligar
+# GET    /agenda_items/tasks?case_ticket_id= | contact_id=&organization_id=
+#        tareas pendientes para «Reportar avance»: las del caso o, sin caso, las rápidas del cliente
 # POST   /agenda_items                    alta (con google_event_id: desde ese evento)
 # PATCH  /agenda_items/:id                editar o ligar a un caso
 # DELETE /agenda_items/:id
 # ================================================================================
 class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseController
+  include CancelAndDeleteGuard # cancelar con motivo; borrar solo errores de captura
+  include ItemConversionActions # pasarla a tarea
   include TaskReportGuard
 
   CASES_LIMIT = 50
   FROZEN_MSG = 'Ticket cerrado: no se puede modificar. Reábrelo si necesitas cambiarlo.'
 
-  before_action :set_meeting, only: %i[update destroy]
-  before_action :block_if_frozen, only: %i[update destroy]
+  before_action :set_meeting, only: %i[update destroy to_task] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
+  before_action :block_if_frozen, only: %i[update destroy to_task] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
+  before_action :lock_closed_meeting, only: :update # realizada, no asistió o cancelada: solo lectura
 
   def index
     meetings = Current.account.case_meetings.where(organizer_id: current_user.id, starts_at: range)
@@ -32,6 +37,10 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
     open_cases = account_case_tickets.where.not(status: CaseTicket::CLOSED_STATUSES)
     scope = filters.map { |field, value| open_cases.where(field => value) }.reduce(:or)
     render json: { cases: scope.order(created_at: :desc).limit(CASES_LIMIT).map { |t| ref_case(t) } }
+  end
+
+  def tasks
+    render json: { tasks: progress_tasks.order(:sequence, :id).limit(CASES_LIMIT).map { |t| ref_task(t) } }
   end
 
   def create
@@ -52,6 +61,7 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
   def update
     return link_to_case if params[:case_ticket_id].present?
     return if %w[held no_show].include?(params[:status].to_s) && missing_task_report?(@meeting)
+    return cancel_item if params[:status].to_s == 'cancelled'
 
     if @meeting.update(update_attrs)
       sync_meeting
@@ -62,12 +72,20 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
   end
 
   def destroy
+    return if delete_restricted?(@meeting, @meeting.organizer_id)
+
     Cases::Meetings::GoogleMirrorService.new(@meeting).cancel if @meeting.google_event_id.present?
     @meeting.destroy
     head :no_content
   end
 
   private
+
+  # Cancelar desde el calendario: con motivo, como en el caso.
+  def cancel_item
+    result = run_cancellation(@meeting)
+    render json: { agenda_item: item_json(@meeting.reload), client_notice: result[:notice] }.compact if result
+  end
 
   def range
     from = params[:start].present? ? Time.zone.parse(params[:start]) : Time.current.beginning_of_week
@@ -135,6 +153,7 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
 
   def item_json(meeting)
     { id: meeting.id, title: meeting.title, description: meeting.description, status: meeting.status,
+      cancel_reason: meeting.cancel_reason, work_started: Cases::Cancellation.work_started?(meeting),
       start: meeting.starts_at, end: meeting.ends_at, location: meeting.location,
       google_event_id: meeting.google_event_id, google_calendar_id: meeting.google_calendar_id,
       contact: ref(meeting.client_contact), organization: ref(meeting.client_organization),
@@ -143,6 +162,28 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
 
   def ref(record)
     record&.slice(:id, :name)
+  end
+
+  # Las del cliente las hace el cliente en su portal: no se les reporta avance aquí.
+  def progress_tasks
+    pending = Current.account.case_tasks.pending.where.not(audience: :client)
+    return pending.where(case_ticket_id: account_case_tickets.where(id: params[:case_ticket_id]).select(:id)) if params[:case_ticket_id].present?
+
+    quick_progress_tasks(pending.where(case_ticket_id: nil))
+  end
+
+  # Sin caso: las rápidas del contacto u organización (con Agenda en «solo lo suyo», las suyas).
+  def quick_progress_tasks(quick)
+    filters = { contact_id: params[:contact_id], organization_id: params[:organization_id] }.compact_blank
+    return quick.none if filters.empty?
+
+    quick = quick.where('case_tasks.assignee_id = :me OR case_tasks.requester_id = :me', me: current_user.id) if access_grant.own?(:agenda)
+    filters.map { |field, value| quick.where(field => value) }.reduce(:or)
+  end
+
+  def ref_task(task)
+    { id: task.id, sequence: task.sequence, title: task.title, case_ticket_id: task.case_ticket_id,
+      estimated_minutes: task.estimated_minutes }
   end
 
   def ref_case(ticket)

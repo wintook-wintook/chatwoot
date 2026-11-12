@@ -52,6 +52,28 @@ class ContactTrackings::Assistant::OpenaiChat
     parse(post(body))
   end
 
+  # proyecto@crear_agente_conversando FR (traído de diag/asistente_agentes_ia, P8): con
+  # herramientas. Devuelve el MENSAJE del modelo —con su `content` o con los
+  # `tool_calls` que pide—, o nil. `tool_choice: 'none'` le prohíbe pedir más: tiene que
+  # contestar con lo que ya vio. reasoning_effort: solo para la familia gpt-5; con
+  # herramientas, /chat/completions puede pedir 'none' (medido con gpt-5.5 en el P8).
+  def call_with_tools(messages, tools:, model:, max_tokens:, tool_choice: 'auto', reasoning_effort: nil) # rubocop:disable Metrics/ParameterLists
+    body = { model: model, messages: messages, tools: tools, tool_choice: tool_choice,
+             response_format: { type: 'json_object' } }.merge(limits(model, max_tokens, 0.2))
+    body[:reasoning_effort] = reasoning_effort if reasoning_effort && model.match?(REASONING_MODEL_RE)
+    post_message(body)
+  end
+
+  # Texto plano, sin JSON (crear_agente_conversando §15 P3: los términos de búsqueda del
+  # foro, igual que los pide el motor). Modelo del propósito :router.
+  def call_text(messages, max_tokens: 60)
+    modelo = ContactTrackings::EngineConfig.model_for(@inbox, :router)
+    post({ model: modelo, messages: messages }.merge(limits(modelo, max_tokens, 0.0)))
+  end
+
+  # El texto de la última llamada que falló (para reintentar ante un 400 conocido).
+  attr_reader :last_error
+
   private
 
   # La familia gpt-5 (y los o1/o3/o4) pide max_completion_tokens y no acepta otra
@@ -63,7 +85,12 @@ class ContactTrackings::Assistant::OpenaiChat
   end
 
   def post(body)
+    post_message(body)&.dig('content')
+  end
+
+  def post_message(body)
     @last_usage = nil
+    @last_error = nil
     response = http_client.request(build_request(body))
     return failure("HTTP #{response.code}: #{response.body.to_s[0, 300]}") unless response.is_a?(Net::HTTPSuccess)
 
@@ -74,7 +101,7 @@ class ContactTrackings::Assistant::OpenaiChat
     # si no, el log dice "no es JSON" y no se entiende que falta subir el tope.
     return failure('respuesta cortada por max_tokens: el Entrenamiento no entró entero') if choice&.dig('finish_reason') == 'length'
 
-    choice&.dig('message', 'content')
+    choice&.dig('message')
   rescue StandardError => e
     failure(e.message)
   end
@@ -108,6 +135,7 @@ class ContactTrackings::Assistant::OpenaiChat
   end
 
   def failure(detail)
+    @last_error = detail
     Rails.logger.error("[Asistente] #{detail}")
     nil
   end

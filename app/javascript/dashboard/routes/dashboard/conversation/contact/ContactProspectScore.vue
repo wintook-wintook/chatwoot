@@ -57,7 +57,7 @@ export default {
     <div
       v-if="hasScore"
       v-tooltip.left="breakdown"
-      class="flex items-center w-full gap-2 mt-2 text-sm cursor-help"
+      class="flex items-center w-full gap-2 text-sm cursor-help"
     >
       <span class="text-slate-600 dark:text-slate-300">
         {{ $t('TRACKING_CAMPAIGN_DETAIL.SCORING.TITLE') }}

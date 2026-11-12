@@ -3,7 +3,7 @@
     "HEADER": "Usuarios",
     "HEADER_BTN_TXT": "Agregar usuario",
     "LOADING": "Obteniendo la lista de usuarios",
-    "DESCRIPTION": "Los usuarios son las personas de tu equipo que entran a Wintook: atienden conversaciones, casos y tareas según su rol. La lista muestra todos los usuarios de tu cuenta.",
+    "DESCRIPTION": "Los usuarios son las personas de tu equipo que entran a Kontrolya: atienden conversaciones, casos y tareas según su rol. La lista muestra todos los usuarios de tu cuenta.",
     "LEARN_MORE": "Aprender sobre roles de usuario",
     "AGENT_TYPES": {
       "ADMINISTRATOR": "Administrador",
@@ -44,14 +44,14 @@
       "API": {
         "SUCCESS_MESSAGE": "Usuario agregado exitosamente",
         "EXIST_MESSAGE": "El correo electrónico del usuario ya está en uso, por favor intente con otra dirección de correo electrónico",
-        "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot, por favor intente más tarde"
+        "ERROR_MESSAGE": "No se pudo conectar al servidor de Kontrolya, por favor intente más tarde"
       }
     },
     "DELETE": {
       "BUTTON_TEXT": "Eliminar",
       "API": {
         "SUCCESS_MESSAGE": "Usuario eliminado exitosamente",
-        "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot, por favor intente más tarde"
+        "ERROR_MESSAGE": "No se pudo conectar al servidor de Kontrolya, por favor intente más tarde"
       },
       "CONFIRM": {
         "TITLE": "Confirmar Eliminación",
@@ -87,13 +87,13 @@
       "CANCEL_BUTTON_TEXT": "Cancelar",
       "API": {
         "SUCCESS_MESSAGE": "Usuario actualizado exitosamente",
-        "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot, por favor intente más tarde"
+        "ERROR_MESSAGE": "No se pudo conectar al servidor de Kontrolya, por favor intente más tarde"
       },
       "PASSWORD_RESET": {
         "ADMIN_RESET_BUTTON": "Restablecer Contraseña",
         "ADMIN_SUCCESS_MESSAGE": "Se ha enviado un correo electrónico con instrucciones para restablecer la contraseña al usuario",
         "SUCCESS_MESSAGE": "Contraseña del usuario restablecida exitosamente",
-        "ERROR_MESSAGE": "No se pudo conectar al servidor de Woot, por favor intente más tarde"
+        "ERROR_MESSAGE": "No se pudo conectar al servidor de Kontrolya, por favor intente más tarde"
       }
     },
     "SEARCH": {

@@ -147,4 +147,40 @@ RSpec.describe ContactTrackings::AvailabilitySlotService do
       expect(libres.first).to include(all_day: true, calendar_name: 'C1')
     end
   end
+
+  describe 'el horario ofrecido es el que se confirma' do
+    let(:tz) { 'America/Mexico_City' }
+    let(:user) { create(:user, name: 'Ana López') }
+    let!(:integration) do
+      UserCalendarIntegration.create!(account: user.accounts.first || create(:account), user: user, google_email: 'a@b.com', tokens: {})
+    end
+
+    before { travel_to Time.find_zone(tz).local(2026, 11, 16, 8, 7) } # lunes
+
+    after { travel_back }
+
+    [15, 30, 45, 60, 90].each do |minutes|
+      it "con citas de #{minutes} min, slot_for acepta cada horario que ofreció call" do
+        service = described_class.new(calendar_integration_ids: [integration.id], timezone: tz, slot_duration: minutes)
+        allow(service).to receive_messages(fetch_busy_periods: [], calendar_name_for: nil)
+
+        offered = service.call
+        expect(offered).not_to be_empty
+        offered.each { |o| expect(service.slot_for(o[:slot])&.dig(:slot)).to eq(o[:slot]) }
+      end
+    end
+
+    it 'sin poder leer Google: no es «ocupado», es calendario sin acceso (y de quién)' do
+      service = described_class.new(calendar_integration_ids: [integration.id], timezone: tz)
+      allow(service).to receive(:fetch_busy_periods).and_return(nil)
+
+      expect(service.slot_for(Time.find_zone(tz).local(2026, 11, 17, 10))).to be_nil
+      expect(service.calendars_unreadable?).to be(true)
+      expect(service.unreadable_users).to eq(['Ana López'])
+
+      allow(service).to receive_messages(fetch_busy_periods: [], calendar_name_for: nil)
+      service.slot_for(Time.find_zone(tz).local(2026, 11, 17, 10))
+      expect(service.calendars_unreadable?).to be(false)
+    end
+  end
 end

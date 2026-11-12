@@ -61,7 +61,10 @@ class Api::V1::Accounts::OrganizationsController < Api::V1::Accounts::BaseContro
     @organization.update(organization_params) ? render_organization : render_errors_message(errors_of(@organization))
   end
 
+  # Eliminar pide el permiso «Borrar» del rol (además de poder editar Clientes).
   def destroy
+    return render_access_denied unless access_grant.can?(:delete)
+
     @organization.destroy!
     head :no_content
   end

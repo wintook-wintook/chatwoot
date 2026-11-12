@@ -173,6 +173,101 @@ es:
       no_conversation: 'El cliente no tiene conversaciones para avisarle'
       no_technician: 'La orden no tiene responsable'
       no_technician_contact: '%{name} no tiene su contacto de WhatsApp en Ajustes › Usuarios'
+  # Cancelar tareas y tareas agendadas (Cases::Cancellation)
+  # Tarea ↔ tarea agendada (Cases::Conversion)
+  conversion:
+    reason: 'Se pasó a tarea (sin hora)'
+    client_message: 'Hola %{name}, te avisamos que quitamos de la agenda «%{title}» del %{when}. Lo seguimos atendiendo y te buscamos para lo que sigue.'
+    errors:
+      task_not_open: 'Solo se agenda una tarea pendiente.'
+      meeting_not_open: 'Solo se pasa a tarea una tarea agendada pendiente y sin salida a la visita.'
+      starts_at: 'Elige el día y la hora.'
+  # «Ligar a un cliente» — caso interno que pasa a ser de un cliente (Cases::AssignClient)
+  assign_client:
+    errors:
+      not_internal: 'Este caso ya tiene cliente.'
+      contact_required: 'Elige el contacto del cliente.'
+      organization_missing: 'No se encontró la organización.'
+      contact_other_organization: 'Ese contacto es de otra organización.'
+  # Plantillas de WhatsApp — «Crear con IA» (Whatsapp::TemplateDrafter)
+  whatsapp_templates:
+    ai:
+      no_key: 'Conecta la integración de OpenAI de la cuenta para crear plantillas con IA.'
+      goal_required: 'Escribe qué quieres lograr con la plantilla.'
+      failed: 'No se pudo armar la propuesta. Inténtalo otra vez.'
+  # Plantillas de seguimiento (AiFollowUpPreset)
+  ai_follow_up_presets:
+    not_editable: 'Solo quien la creó o un administrador puede cambiarla o borrarla.'
+  cancellation:
+    meeting_locked: 'La tarea agendada ya está cerrada o cancelada: no se puede cambiar.'
+    meeting_not_closed: 'Solo se reabre una tarea agendada realizada o en la que el cliente no asistió.'
+    closed_locked: 'La tarea ya está concluida o cancelada: reábrela para cambiarla.'
+    report: 'Cancelada: %{reason}'
+    client_message: 'Hola %{name}, te avisamos que cancelamos «%{title}» del %{when}. Cualquier cosa, aquí estamos.'
+    delete_restricted: 'Solo se borra lo capturado por error, en las primeras 24 horas y por quien lo creó. Si ya no se va a hacer, cancélala con su motivo.'
+    errors:
+      reason: 'Elige el motivo de la cancelación.'
+      comment: 'Escribe el motivo.'
+      minutes: 'Ya se trabajó en ella: captura el tiempo dedicado.'
+      not_open: 'Ya no está abierta.'
+  # Portal del cliente — tareas con el cliente (/cliente/:token)
+  client_portal:
+    title: 'Tu portal'
+    hello: 'Hola, %{name}'
+    who_title: '¿Quién eres?'
+    who_help: 'Elige tu nombre para que quede registrado quién avanza cada tarea.'
+    who_change: 'Cambiar'
+    who_save: 'Continuar'
+    needs_title: 'Lo que necesitamos de ti'
+    needs_empty: 'No tienes nada pendiente. ¡Gracias!'
+    cases_title: 'Tus casos y proyectos'
+    cases_empty: 'No hay casos abiertos.'
+    progress: 'Avance %{percent} %'
+    stages: 'Fases'
+    milestones: 'Hitos'
+    children: 'Casos del proyecto'
+    our_tasks: 'Lo que estamos haciendo'
+    your_tasks: 'Lo que te toca'
+    your_done: 'Lo que ya hiciste'
+    due: 'Para el %{date}'
+    overdue: 'Vencida desde el %{date}'
+    requires_file: 'Pide subir un archivo'
+    states:
+      pending: 'Pendiente'
+      in_progress: 'En proceso'
+      done: 'Hecha'
+    our_states:
+      pending: 'Pendiente'
+      done: 'Terminada'
+    done_by: 'Completada por %{name} el %{date}'
+    start: 'Empezar'
+    finish: 'Marcar como hecha'
+    finish_note: 'Comentario (opcional)'
+    comment: 'Comentar'
+    comment_placeholder: 'Escribe un comentario o una duda…'
+    attach: 'Subir archivo'
+    send: 'Enviar'
+    history: 'Historial'
+    kinds:
+      started: 'La empezó'
+      comment: 'Comentó'
+      file: 'Subió un archivo'
+      done: 'La marcó como hecha'
+      returned: 'La regresamos'
+      reply: 'Te respondimos'
+    notify:
+      due: ' (para el %{date})'
+      assigned: 'Hola %{name}, tienes una tarea nueva: «%{title}»%{due}. Aquí la ves y la vas completando: %{url}'
+      returned: 'Hola %{name}, revisamos «%{title}» y te la regresamos con un comentario. Aquí la ves: %{url}'
+      due_soon: 'Hola %{name}, te recordamos que «%{title}» vence mañana. Aquí la completas: %{url}'
+      overdue: 'Hola %{name}, «%{title}» venció ayer. ¿Nos ayudas a completarla? Aquí la ves: %{url}'
+    errors:
+      empty_comment: 'Escribe el comentario.'
+      no_file: 'Elige el archivo.'
+      file_required: 'Esta tarea pide subir un archivo antes de marcarla como hecha.'
+      reason_required: 'Escribe por qué la regresas.'
+      closed: 'Esta tarea ya no está abierta.'
+      who: 'Primero elige quién eres.'
   field_portal:
     title: 'Tu servicio'
     report: 'Ver el reporte del servicio'
@@ -307,6 +402,7 @@ es:
     replaced_by: 'Reemplazada por la versión %{version}'
     delivery_message: "Hola %{name}, te compartimos la cotización %{folio}. Puedes revisarla y aceptarla aquí: %{url}"
     errors:
+      choose_accepted: 'Elige cuál cotización aceptó el cliente'
       not_found: 'Cotización no encontrada'
       not_editable: 'Solo se edita una cotización en borrador o enviada. Haz una nueva versión.'
       only_drafts: 'Solo se borra una cotización en borrador'
@@ -325,14 +421,98 @@ es:
       kept: 'Se conservó %{count} tarea(s) sin caso.'
       cancelled: 'Se cancelaron %{count} tarea(s) pendientes al cerrar el caso.'
       past: 'Se cancelaron %{count} tarea(s) agendada(s) que ya habían pasado.'
+  case_tickets:
+    conflict:
+      by: '%{name} cambió este caso hace un momento. Revisa antes de guardar.'
+      someone: 'Alguien cambió este caso hace un momento. Revisa antes de guardar.'
   assistant:
     unavailable: "No pude responder: revisa que la integración de OpenAI esté activa e intenta de nuevo."
     review_proposal: "Revisa la propuesta y confírmala."
+    capabilities:
+      consult: 'Consultar: buscar clientes, organizaciones y casos; qué ha pasado con un cliente; qué tienes hoy o esta semana (p. ej. «¿qué tengo hoy?», «¿qué pasó con Acme?»).'
+      record: 'Registrar (siempre con una tarjeta que confirmas): notas, tareas, citas en la agenda, mensajes programados y borradores (p. ej. «agéndame una llamada mañana a las 10»).'
+      cases: 'Casos y oportunidades: crear, mover de etapa, ganar o perder, posponer o retomar, y marcar el compromiso del cliente (p. ej. «la ganamos», «se comprometió a cerrar el viernes»).'
+      delegate: 'Delegar a un agente IA para que le dé seguimiento a un cliente, y preguntar cómo va o pausarlo.'
+      sales: 'Ventas: ¿cómo vamos contra la meta?, ranking de vendedores y clientes, qué oportunidades cierran o están vencidas o estancadas, y la salud del embudo (cifras sin IVA).'
+      sales_own: 'Tus ventas: ¿cómo vas contra tu meta?, tus mejores clientes, qué oportunidades tuyas cierran o están vencidas o estancadas (cifras sin IVA).'
+      guide: 'Aprender a usar la plataforma: cómo se hace algo, dónde está cada cosa y para qué sirve (p. ej. «¿cómo creo un contrato?», «¿para qué sirve el embudo?»).'
+      quotes: 'Cotizaciones: armarlas con los productos y precios del catálogo, mandárselas al cliente y ver las que tiene abiertas (p. ej. «cotízale a Mario 3 mantenimientos de minisplit»).'
+      reply: 'Contestar a tus clientes: qué conversaciones esperan respuesta, qué dijeron, y la respuesta lista en una tarjeta para mandarla (p. ej. «¿quién me escribió?», «dile a Mario que llega el jueves»).'
+      field: 'Trabajo en campo: tus visitas del día, cuál sigue, qué se le hizo la última vez al cliente, avisarle «voy en camino» y dictar el reporte de la visita (p. ej. «¿qué visitas tengo hoy?», «reporta la visita: cambié el capacitor»).'
+      nfc: 'Captar en la expo: el enlace NFC del evento para grabarlo en una etiqueta («acercar el celular») y cuántos se captaron (p. ej. «quiero grabar la etiqueta NFC de la expo para Ana»).'
+      client_tasks: 'Tareas con el cliente: qué le falta a un cliente, quién tiene tareas vencidas y asignarle una tarea que trabaja en su portal (p. ej. «asígnale a Acme probar la facturación para el viernes»).'
+      limits: 'Lo que no hace: no le escribe al cliente sin tu confirmación (te deja una tarjeta, un borrador o un mensaje programado) ni hace acciones masivas.'
+    quotes:
+      new_opportunity: 'Se crea una oportunidad nueva'
+    starters:
+      today: '¿Qué tengo hoy?'
+      sales_month: '¿Cómo vamos este mes?'
+      closing: '¿Qué oportunidades cierran esta semana?'
+      how_to: '¿Cómo se usa la Agenda?'
+      help: '¿En qué me puedes ayudar?'
+    shortcuts:
+      today: { label: 'Mi día', prompt: '¿Qué tengo hoy?' }
+      reply: { label: 'Sin responder', prompt: '¿Qué conversaciones tengo sin responder?' }
+      quote: { label: 'Cotizar', prompt: 'Quiero hacer una cotización' }
+      route: { label: 'Visitas de hoy', prompt: '¿Qué visitas tengo hoy?' }
+      meeting: { label: 'Agendar', prompt: 'Quiero agendar una cita' }
+      note: { label: 'Anotar', prompt: 'Quiero anotar algo de un cliente' }
+      sales: { label: 'Ventas', prompt: '¿Cómo vamos este mes?' }
+    sales:
+      suggestions:
+        sales_overview: ['¿Quién va atrás de su meta?', '¿Qué oportunidades cierran este mes?', '¿Cómo vamos contra el año pasado?']
+        budget_progress: ['¿Qué oportunidades cubren lo que falta?', '¿Qué clientes compran menos que su meta?', '¿Cómo está el embudo?']
+        pipeline_health: ['¿Qué compromisos están vencidos?', '¿Qué oportunidades están estancadas?', '¿Cómo vamos este mes?']
+        sales_breakdown: ['¿Quién tiene mejor tasa de cierre?', '¿Quiénes son mis mejores clientes este año?', '¿Cómo vamos este mes?']
+        deal_list: ['¿Cómo vamos contra la meta?', '¿Qué oportunidades están estancadas?', '¿Quién va atrás de su meta?']
+      cards:
+        everyone: 'todo el equipo'
+        no_seller: 'Sin vendedor'
+        won: 'Logrado'
+        budget: 'Meta'
+        progress: 'Avance'
+        vs_previous: 'Contra el anterior'
+        win_rate: 'Tasa de cierre'
+        open: 'Abierto'
+        weighted: 'Ponderado'
+        committed_overdue: 'Compromisos vencidos'
+        stale: 'Estancadas (+%{days} días)'
+        overview_title: 'Ventas %{from} a %{to} · %{who}'
+        budget_title: 'Presupuesto %{from} a %{to}'
+        pipeline_title: 'Embudo · %{who}'
+        breakdown_seller: 'Ranking de vendedores %{from} a %{to}'
+        breakdown_client: 'Mejores clientes %{from} a %{to}'
+        deals_title: 'Oportunidades'
+        deals_closing_this_week: 'Cierran esta semana'
+        deals_closing_this_month: 'Cierran este mes'
+        deals_overdue: 'Cierre vencido'
+        deals_committed_overdue: 'Compromisos vencidos'
+        deals_stale: 'Estancadas'
+        deals_top_open: 'Abiertas más grandes'
+        deals_won_recent: 'Ganadas este mes'
+        open_budget: 'Ver presupuesto'
+        open_pipeline: 'Ver embudo'
+        col_seller: 'Vendedor'
+        col_budget: 'Meta'
+        col_won: 'Logrado'
+        col_progress: 'Avance'
+        col_name: 'Nombre'
+        col_deals: 'Tratos'
+        col_win_rate: 'Cierre'
+        col_avg_ticket: 'Ticket prom.'
+        col_folio: 'Folio'
+        col_client: 'Cliente'
+        col_amount: 'Monto'
+        col_close: 'Cierre'
   task_reports:
     visit_done: 'Visita terminada'
     received_by: 'Recibió: %{name}'
     required: 'Para concluirla, escribe qué se hizo'
     note_title: 'Reporte de cierre: %{title}'
+    activity_note_title: 'Actividad: %{title}'
+    progress_note_title: 'Avance: %{title}'
+    progress_not_open: 'Solo se reporta avance de una tarea pendiente'
+    minutes_required: 'Indica el tiempo dedicado'
   agenda_items:
     already_linked: 'Ese evento ya tiene una tarea agendada'
     all_day: 'Un evento de todo el día no tiene hora: se queda solo en Google'
@@ -385,6 +565,7 @@ es:
         other: "%{count} tareas nuevas · etapa %{stage}: %{titles}"
       stage_ready: "Se terminaron las tareas de %{stage}: ¿pasar a %{next}?"
       stage_ready_doc: "Se terminaron las tareas de %{stage}: documenta para pasar a %{next}"
+      rule_notice: "Regla «%{rule}»: %{title}"
     notification_title:
       conversation_creation: "Una conversación (#%{display_id}) ha sido creada en %{inbox_name}"
       conversation_assignment: "Una conversación (#%{display_id}) te ha sido asignada"
@@ -400,6 +581,8 @@ es:
       missed_call: "Llamada perdida de %{name} (conversación #%{display_id})"
       case_stage_tasks: "Tienes tareas nuevas en el caso %{folio}"
       case_stage_ready: "El caso %{folio} está listo para pasar de etapa"
+      case_rule_notice: "Aviso de una regla en el caso %{folio}"
+      client_task_update: "El cliente avanzó una tarea en el caso %{folio}"
     calendar_event_reminder:
       body: "\"%{title}\" comienza en %{minutes} minutos"
       no_title: "Evento sin título"
@@ -497,7 +680,7 @@ es:
   integration_apps:
     discourse:
       name: "Discourse"
-      description: "Conecta tu foro de Discourse para usarlo como base de conocimiento. Wintook indexará tus topics y usará búsqueda semántica para responder preguntas de clientes automáticamente."
+      description: "Conecta tu foro de Discourse para usarlo como base de conocimiento. Kontrolya indexará tus topics y usará búsqueda semántica para responder preguntas de clientes automáticamente."
     bots_inboxes:
       name: "Activación Bot EVA"
       description: "Activa el asistente EVA en tus bandejas de entrada para que atienda automáticamente a tus clientes, responda sus consultas y derive la conversación a un usuario de tu equipo cuando sea necesario."
@@ -506,14 +689,14 @@ es:
       description: "Las aplicaciones de panel te permiten crear e incrustar aplicaciones que muestran información de usuario, pedidos o historial de pagos, proporcionando más contexto a tu equipo de soporte al cliente."
     dyte:
       name: "Dyte"
-      description: "Dyte es un producto que integra funcionalidades de audio y video en tu aplicación. Con esta integración, tus usuarios pueden iniciar llamadas de video/voz con tus clientes directamente desde Wintook."
+      description: "Dyte es un producto que integra funcionalidades de audio y video en tu aplicación. Con esta integración, tus usuarios pueden iniciar llamadas de video/voz con tus clientes directamente desde Kontrolya."
       meeting_name: "%{agent_name} ha iniciado una reunión"
     slack:
       name: "Slack"
-      description: "Integra Wintook con Slack para mantener a tu equipo sincronizado. Esta integración te permite recibir notificaciones de nuevas conversaciones y responder directamente desde la interfaz de Slack."
+      description: "Integra Kontrolya con Slack para mantener a tu equipo sincronizado. Esta integración te permite recibir notificaciones de nuevas conversaciones y responder directamente desde la interfaz de Slack."
     webhooks:
       name: "Webhook"
-      description: "Los eventos de webhook proporcionan actualizaciones en tiempo real sobre las actividades en tu cuenta de Wintook. Puedes suscribirte a los eventos que prefieras y Wintook te enviará llamadas HTTP con las actualizaciones."
+      description: "Los eventos de webhook proporcionan actualizaciones en tiempo real sobre las actividades en tu cuenta de Kontrolya. Puedes suscribirte a los eventos que prefieras y Kontrolya te enviará llamadas HTTP con las actualizaciones."
     dialogflow:
       name: "Dialogflow"
       description: "Construye chatbots con Dialogflow e intégralos fácilmente en tu bandeja de entrada. Estos bots pueden manejar consultas iniciales antes de transferirlas a un usuario de servicio al cliente."
@@ -532,7 +715,7 @@ es:
       name: "Activación agente seguimiento"
       description: "Automatiza cualquier tipo de seguimiento: ventas, cobranza, recordatorios y más, mantiene activos los procesos sin depender de que el usuario recuerde hacerlo."
     linear:
-      name: "Lineal"
+      name: "Linear"
       description: "Crea problemas en Linear directamente desde tu ventana de conversación. Alternativamente, enlaza problemas existentes en Linear para un proceso de seguimiento de problemas más eficiente y ágil."
     #  proyecto@commands_agents
     command_bot:
@@ -612,6 +795,8 @@ es:
     import:
       no_file: 'Elige un archivo CSV'
       contact_not_found: 'No se encontró el contacto «%{value}»'
+    capture:
+      default_message: 'Hola, los conocí en %{event}. Me gustaría recibir información.'
   # Plan-Organizaciones O1
   organizations:
     change:

@@ -141,9 +141,11 @@ class CaseMeeting < ApplicationRecord
   end
 
   # Vencimiento que cubriría esta reunión, para la acción "mover el vencimiento
-  # de la tarea": el fin de la reunión, no su inicio.
+  # de la tarea": el día en que termina (una tarea vence al final de su día, sin hora).
   def suggested_task_due_at
-    ends_at || starts_at
+    at = ends_at || starts_at
+    zone = ActiveSupport::TimeZone[time_zone.to_s] || Time.zone
+    at&.in_time_zone(zone)&.end_of_day
   end
 
   # Igual que CaseTask#track_completion: el quién/cuándo de `held` y `cancelled`

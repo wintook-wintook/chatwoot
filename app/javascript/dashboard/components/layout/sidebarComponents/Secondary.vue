@@ -18,6 +18,14 @@ import {
   toggleOpenGroup,
 } from 'dashboard/helper/inboxGroups'; // feat/bandejas_por_tipo
 import { INBOX_TYPES } from 'shared/mixins/inboxMixin';
+import {
+  canDispatch,
+  canSeeArea,
+  getUserAccess,
+} from 'dashboard/helper/accessHelper';
+
+// Ítems con `accessCheck`: permisos que no son un área completa.
+const ACCESS_CHECKS = { dispatch: canDispatch };
 
 export default {
   components: {
@@ -171,6 +179,25 @@ export default {
         .filter(item => {
           if (item.showOnlyOnCloud) {
             return this.isOnChatwootCloud;
+          }
+          // Ítem de otra área (p. ej. Inicio › Presupuesto es de Ventas): solo si el rol la ve.
+          if (
+            item.area &&
+            !canSeeArea(
+              getUserAccess(this.currentUser, this.accountId),
+              item.area
+            )
+          ) {
+            return false;
+          }
+          // Permiso que no es un área completa (p. ej. Despacho).
+          if (
+            item.accessCheck &&
+            !ACCESS_CHECKS[item.accessCheck](
+              getUserAccess(this.currentUser, this.accountId)
+            )
+          ) {
+            return false;
           }
           // @tickets_cases — permiso que decide el backend (p. ej. «Resumen del negocio»).
           if (item.visibleGetter) {

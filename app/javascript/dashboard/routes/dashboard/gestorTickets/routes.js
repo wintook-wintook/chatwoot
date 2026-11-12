@@ -85,6 +85,14 @@ export const routes = [
     component: () =>
       import('../../../views/gestorTickets/maintenance/MaintenancePlans.vue'),
   },
+  // Presupuesto de ventas — Inicio › Presupuesto: avance y captura.
+  {
+    path: frontendURL('accounts/:accountId/tickets/budget'),
+    name: 'gestorTickets_sales_budgets',
+    meta: AGENT,
+    component: () =>
+      import('../../../views/gestorTickets/salesBudgets/SalesBudgets.vue'),
+  },
   // Plan-Catalogo-Cotizaciones — Ventas › Cotizaciones (lista, nueva y editor).
   {
     path: frontendURL('accounts/:accountId/tickets/quotes'),

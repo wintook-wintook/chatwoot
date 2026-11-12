@@ -20,12 +20,21 @@ class CaseTicketListener < BaseListener
     return unless reopen_candidate?(message)
 
     closed = closed_tickets_for(message)
-    ticket = closed.first
-    return if ticket.blank?
+    return if closed.empty?
     return unless CaseSetting.for_account(account).reopen_on_customer_reply?
 
-    # Una oportunidad nunca cae aquí fuera de ventana: within_reopen_window? es
-    # siempre true para Comercial (Plan-Clase-Comercial F3, hallazgo #2).
+    # Una oportunidad Ganada o Perdida no se reabre sola: un «gracias» del cliente no
+    # deshace la venta. Solo queda el aviso en su historial; reabrirla es a mano.
+    ticket = closed.find { |t| !t.commercial? }
+    ticket ? reopen_or_follow_up(ticket, closed, message) : note_on_closed_opportunity(closed.first, message)
+  rescue StandardError => e
+    # Un fallo aquí no puede tumbar la entrega del mensaje al cliente.
+    Rails.logger.error("[CaseTicketListener] #{e.class}: #{e.message}")
+  end
+
+  private
+
+  def reopen_or_follow_up(ticket, closed, message)
     if ticket.within_reopen_window?
       # actor: nil → el evento queda con origin :system, no atribuido a un agente.
       ticket.reopen!(actor: nil, reason: REOPEN_REASON)
@@ -35,12 +44,7 @@ class CaseTicketListener < BaseListener
       # nuevo enlazado al viejo, para no perder el hilo ni falsear las métricas.
       spawn_follow_up_ticket(ticket, message)
     end
-  rescue StandardError => e
-    # Un fallo aquí no puede tumbar la entrega del mensaje al cliente.
-    Rails.logger.error("[CaseTicketListener] #{e.class}: #{e.message}")
   end
-
-  private
 
   def reopen_candidate?(message)
     # diag/llamadas_whatsapp: una llamada no reabre un ticket (no es una respuesta escrita)
@@ -65,12 +69,22 @@ class CaseTicketListener < BaseListener
     return if other.blank?
 
     other.case_events.create!(
-      account:    other.account,
+      account: other.account,
       event_type: :message_received,
-      origin:     :system,
-      payload:    { content: "El cliente escribió en la conversación y se reabrió #{reopened.folio || "##{reopened.id}"}. " \
-                             'Revisa si el mensaje era para este caso.',
-                    message_id: message.id, reopened_ticket_id: reopened.id }
+      origin: :system,
+      payload: { content: "El cliente escribió en la conversación y se reabrió #{reopened.folio || "##{reopened.id}"}. " \
+                          'Revisa si el mensaje era para este caso.',
+                 message_id: message.id, reopened_ticket_id: reopened.id }
+    )
+  end
+
+  def note_on_closed_opportunity(opportunity, message)
+    opportunity.case_events.create!(
+      account: opportunity.account,
+      event_type: :message_received,
+      origin: :system,
+      payload: { content: 'El cliente escribió en la conversación. La oportunidad sigue cerrada; reábrela si hace falta.',
+                 message_id: message.id }
     )
   end
 
@@ -86,29 +100,29 @@ class CaseTicketListener < BaseListener
 
   def build_follow_up(old_ticket, message)
     old_ticket.account.case_tickets.create!(
-      title:           "Seguimiento de #{old_ticket.folio || "##{old_ticket.id}"}: #{old_ticket.title}".truncate(255),
-      description:     message.content.to_s.truncate(2000),
-      contact_id:      old_ticket.contact_id,
+      title: "Seguimiento de #{old_ticket.folio || "##{old_ticket.id}"}: #{old_ticket.title}".truncate(255),
+      description: message.content.to_s.truncate(2000),
+      contact_id: old_ticket.contact_id,
       conversation_id: old_ticket.conversation_id,
-      case_type_id:    old_ticket.case_type_id,
-      priority:        old_ticket.priority,
-      origin:          old_ticket.origin
+      case_type_id: old_ticket.case_type_id,
+      priority: old_ticket.priority,
+      origin: old_ticket.origin
     )
   end
 
   def link_follow_up(old_ticket, nuevo)
     CaseTicketRelation.create!(
-      account:        old_ticket.account,
-      ticket:         old_ticket,
+      account: old_ticket.account,
+      ticket: old_ticket,
       related_ticket: nuevo,
-      relation_type:  :parent_child
+      relation_type: :parent_child
     )
 
     nuevo.case_events.create!(
-      account:    old_ticket.account,
+      account: old_ticket.account,
       event_type: :related,
-      origin:     :system,
-      payload:    { reason: "Abierto por respuesta del cliente fuera del plazo de reapertura de #{old_ticket.folio}" }
+      origin: :system,
+      payload: { reason: "Abierto por respuesta del cliente fuera del plazo de reapertura de #{old_ticket.folio}" }
     )
   end
 end

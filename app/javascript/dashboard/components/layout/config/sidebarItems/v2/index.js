@@ -306,8 +306,9 @@ export const primaryMenuV2 = (accountId, route) => {
       key: 'agentes',
       label: 'AI_AGENTS',
       featureFlag: FEATURE_FLAGS.CAMPAIGNS,
-      toState: url('tracking-dashboard/agents'),
-      toStateName: 'contact_trackings_agents',
+      // Abre en «Agentes listos» (la primera del submenú).
+      toState: url('tracking-dashboard/ready-agents'),
+      toStateName: 'ready_agents',
     },
     {
       icon: 'arrow-trending-lines',
@@ -344,23 +345,19 @@ export const primaryMenuV2 = (accountId, route) => {
   ];
 };
 
-// Las notificaciones van aquí (antes, la campanita de la barra principal): con
-// los avisos sin leer al lado, que también salen en el ícono de Inicio.
+// Inicio: Mi resumen (con pestañas Resumen | Mi día | Notificaciones), Mi negocio y
+// Presupuesto. Los avisos sin leer salen en el ícono de Inicio y en la pestaña.
 const inicio = accountId => ({
   parentNav: 'inicio',
   routes: [
     'my_summary',
     'notifications_index',
     'gestorTickets_business_summary',
+    'gestorTickets_sales_budgets',
   ],
+  // Las notificaciones son una pestaña de Mi resumen (?tab=notifications); su página
+  // de siempre (/notifications) sigue abriendo y marca Inicio.
   menuItems: [
-    {
-      icon: 'alert',
-      label: 'NOTIFICATIONS',
-      toState: frontendURL(`accounts/${accountId}/notifications`),
-      toStateName: 'notifications_index',
-      showUnreadNotifications: true,
-    },
     {
       icon: 'home',
       label: 'MY_SUMMARY',
@@ -375,6 +372,15 @@ const inicio = accountId => ({
       toState: frontendURL(`accounts/${accountId}/tickets/summary`),
       toStateName: 'gestorTickets_business_summary',
       visibleGetter: 'caseTickets/getCanViewBusinessSummary',
+    },
+    // Presupuesto de ventas: avance (todos los de Ventas) y captura (Ventas en «Todo»).
+    {
+      icon: 'arrow-trending-lines',
+      label: 'SALES_BUDGET',
+      featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+      area: 'sales',
+      toState: frontendURL(`accounts/${accountId}/tickets/budget`),
+      toStateName: 'gestorTickets_sales_budgets',
     },
   ],
 });
@@ -417,7 +423,7 @@ const ventas = accountId => {
         toStateName: 'kanban_dashboard',
       },
       {
-        icon: 'document',
+        icon: 'receipt', // ícono propio de cotizaciones (antes 'document', igual que otros)
         label: 'QUOTES',
         featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
         toState: frontendURL(`accounts/${accountId}/tickets/quotes`),
@@ -452,6 +458,7 @@ const servicio = (accountId, route) => {
         icon: 'calendar-clock',
         label: 'DISPATCH',
         featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+        accessCheck: 'dispatch',
         toState: frontendURL(`accounts/${accountId}/tickets/dispatch`),
         toStateName: 'gestorTickets_dispatch',
       },
@@ -674,6 +681,7 @@ const campaignItem = (accountId, name, label) => ({
 const agentesIa = accountId => ({
   parentNav: 'agentes',
   routes: [
+    'ready_agents',
     'contact_trackings_agents',
     'contact_trackings_agent',
     'contact_trackings_assistant',
@@ -682,6 +690,18 @@ const agentesIa = accountId => ({
     ...DUPLICATED_SETTINGS,
   ],
   menuItems: [
+    // Agentes listos (puestos empaquetados) primero; los de siempre son «Agentes a medida».
+    {
+      icon: 'bot',
+      label: 'READY_AGENTS',
+      hasSubMenu: false,
+      beta: true,
+      featureFlag: FEATURE_FLAGS.CAMPAIGNS,
+      toState: frontendURL(
+        `accounts/${accountId}/tracking-dashboard/ready-agents`
+      ),
+      toStateName: 'ready_agents',
+    },
     campaignItem(accountId, 'contact_trackings_agents', 'AI_AGENT_LIST'),
     campaignItem(accountId, 'contact_trackings_dashboard', 'TRACKINGS'),
     ...settingsItems(accountId, AI_TOOLS),

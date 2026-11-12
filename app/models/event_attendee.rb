@@ -35,7 +35,7 @@
 # Plan-Eventos E1 — un contacto en un evento y en qué va: invitado, confirmó, asistió,
 # no asistió o canceló, con la fecha de cada paso y de dónde vino (a mano, CSV, agente…).
 class EventAttendee < ApplicationRecord
-  SOURCES = %w[manual csv agent campaign segment].freeze
+  SOURCES = %w[manual csv agent campaign segment nfc].freeze # nfc: escribió con el enlace de la etiqueta
   STAMPS = { 'invited' => :invited_at, 'confirmed' => :confirmed_at, 'attended' => :attended_at,
              'cancelled' => :cancelled_at }.freeze
 
