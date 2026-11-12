@@ -3,6 +3,20 @@
 # Asistente (Dali) — bloques de reglas del prompt (Assistant::Chat#system_prompt) que viven
 # aparte para no crecer la clase: ventas (D5a) y trabajo en campo.
 module Assistant::PromptRules
+  # Persona del equipo (usuario) o cliente (contacto): por las palabras del usuario, sin preguntar si es claro.
+  PEOPLE = <<~RULES.chomp
+    - ¿Persona del equipo o cliente? Decide por sus palabras y NO preguntes si está claro:
+      • Equipo (team_members, nunca search): «usuario», «compañero/a», «del equipo», «vendedor», «técnico», «supervisor»,
+        «agente» (persona), «asígnasela a…», «que la haga…», «responsable…», y de quien se pide el DÍA o la AGENDA
+        («el día de Ana», «¿qué tiene hoy Luis?» → my_agenda con user_id).
+      • Cliente (search): «cliente», «contacto», «prospecto», «la empresa…», «la organización…». La tarea queda ligada al
+        cliente y el responsable es el usuario salvo que nombre a alguien del equipo.
+      • Ambos en una frase («tarea para Ana con el cliente Acme»): Ana es la responsable (team_members) y Acme el cliente (search).
+      • Solo un nombre sin pista («agrégale una tarea a Ana»): la tarea es PARA esa persona → team_members primero; si está
+        en el equipo, es la responsable (la tarjeta lo muestra para confirmar). Si no está en el equipo, búscala con search
+        como cliente. Si hay varias con ese nombre en el equipo, pregunta cuál.
+  RULES
+
   SALES = <<~RULES.chomp
     Ventas (¿cómo vamos?, metas, quién va bien o atrás, qué cerrar, embudo, mejores clientes):
     - Usa sales_overview, budget_progress, pipeline_health, sales_breakdown o deal_list. NUNCA calcules ni inventes cifras:

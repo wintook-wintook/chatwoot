@@ -2,7 +2,7 @@
 key: dali
 title: El asistente (Dali)
 areas: []
-keywords: [asistente, dali, ctrl j, preguntale, pedirle, tarjeta, confirmar, propuesta, nombre del asistente, que puedes hacer, en que me ayudas, borrador, mensaje programado, delegar seguimiento, ventas, meta, conversacion nueva, openai, via dali, telefono, celular, app, instalar, qr, dictar, voz, microfono, portal, contestar, responder, sin responder, quien me escribio, que tengo pendiente, mencion, me mencionaron, chat interno, sin asignar, nota interna, plantilla, 24 horas, visitas, ruta, campo, voy en camino, reporte de la visita, nfc, etiqueta nfc, expo]
+keywords: [asistente, dali, equipo, compañero, dia de otro, el dia de, que tiene hoy, asignar tarea a un compañero, usuario o contacto, ctrl j, preguntale, pedirle, tarjeta, confirmar, propuesta, nombre del asistente, que puedes hacer, en que me ayudas, borrador, mensaje programado, delegar seguimiento, ventas, meta, conversacion nueva, openai, via dali, telefono, celular, app, instalar, qr, dictar, voz, microfono, portal, contestar, responder, sin responder, quien me escribio, que tengo pendiente, mencion, me mencionaron, chat interno, sin asignar, nota interna, plantilla, 24 horas, visitas, ruta, campo, voy en camino, reporte de la visita, nfc, etiqueta nfc, expo]
 pages: []
 ---
 ## Para qué sirve
@@ -17,6 +17,7 @@ El asistente (se llama Dali, o el nombre que le puso tu empresa) contesta en tus
 ## Qué puede hacer
 - Consultar: buscar clientes, organizaciones y casos (con el mismo buscador de la lupa), contarte qué ha pasado con un cliente y qué tienes hoy o esta semana.
 - Registrar: notas, tareas, tareas agendadas (llamadas, reuniones, visitas), mensajes programados al cliente y nuevos contactos.
+- Tu equipo: asignarle una tarea a un compañero («agrégale una tarea a mi compañero Luis») y, si tu rol ve la Agenda de todos (Administrador, Supervisor), ver el día de una persona del equipo: sus tareas, citas y atrasadas («¿qué tiene hoy Ana?»).
 - Casos y oportunidades: crear un caso, pasarlo a otra etapa, marcarlo como ganado, perdido o cancelado, posponerlo o retomarlo, y cambiar monto, cierre estimado, probabilidad o el compromiso del cliente.
 - Cotizaciones (si puedes crear en Ventas): armarlas con los productos y precios del Catálogo, mandárselas al cliente y ver las que tiene abiertas.
 - Contestar a tus clientes: te dice qué conversaciones tuyas esperan respuesta (la que más lleva esperando primero), te resume qué dijeron y te deja la respuesta lista en una tarjeta para mandarla.
@@ -72,6 +73,8 @@ El asistente (se llama Dali, o el nombre que le puso tu empresa) contesta en tus
 - Necesita la integración de OpenAI activa; sin ella el panel avisa «Activa la integración de OpenAI para usar el asistente».
 
 ## Dudas frecuentes
+- ¿Cómo sabe si hablo de alguien de mi equipo o de un cliente? Por tus palabras: «usuario», «compañero», «del equipo», «vendedor», «técnico», a quien le asignas la tarea o de quien pides el día es del equipo; «cliente», «contacto», «prospecto» o «la empresa…» es un cliente. Si solo dices el nombre («agrégale una tarea a Ana»), la tarea es para esa persona: si está en tu equipo, queda como responsable (la tarjeta lo muestra antes de confirmar); si no, la busca entre tus clientes.
+- ¿Puedo ver el día de otra persona? Sí, si tu rol ve la Agenda de todos: pregúntale «¿qué tiene hoy Ana?» o, en Agenda › Tareas › Mi día, elige a la persona en «Día de:». Con «solo lo suyo» solo ves tu día.
 - ¿Dónde queda lo que hizo? En la actividad del caso, marcado como «vía» el asistente.
 - ¿Se puede cambiar su nombre? Sí, en Ajustes › Configuración de Cuenta, sección Asistente, «Nombre del asistente». Vacío = Dali.
 - ¿Recuerda lo que platicamos? Sí, la conversación sigue al volver; con «+» empiezas otra.
