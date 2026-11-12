@@ -41,7 +41,7 @@ Las tarjetas solo avanzan, nunca regresan solas. Si el embudo tiene «La IA muev
 ### Configurar un embudo (administrador)
 1. Entra a Catálogos › Embudos de contactos y, en «Embudos de contactos», pulsa «Agregar» (o «Editar» en uno existente).
 2. Pon el nombre del embudo, descripción y color, y marca «Movimiento automático» y, si quieres, «La IA mueve tarjetas».
-3. En «Bandejas que entran solas» elige de qué bandejas entran las conversaciones nuevas.
+3. En «Bandejas que entran solas» elige por qué bandejas entran los contactos nuevos (su primera conversación); quien ya había escrito antes no entra solo.
 4. Llena «Marcar «Frío» tras estos días sin respuesta del cliente» y «Descartar tras estos días sin respuesta del cliente» (vacío = nunca).
 5. Si quieres, marca «Al descartar por días sin respuesta, resolver la conversación»: se resuelve sin avisarle al cliente. Pulsa «Crear» o «Actualizar».
 6. En «Columnas del embudo» agrega o edita columnas. En «Entra aquí cuando…» eliges el tipo de columna (Normal, Convertido o Descartado), qué la mueve y el «Criterio para la IA».
