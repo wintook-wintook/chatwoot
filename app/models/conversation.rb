@@ -80,6 +80,8 @@ class Conversation < ApplicationRecord
   TIKTOK_MESSAGING_WINDOW_HOURS = 48
 
   has_many :scheduled_messages, dependent: :destroy
+  has_many :ai_follow_ups, dependent: :destroy # Seguimiento IA (FK conversation_id NOT NULL)
+  has_many :ready_agent_sessions, dependent: :destroy # Agentes listos (FK conversation_id NOT NULL)
 
   validates :account_id, presence: true
   validates :inbox_id, presence: true

@@ -78,7 +78,18 @@ class ContactTrackings::Ficha::Updater
       texto = ContactTrackings::Ficha::Questions.new(texto).write(preguntas, @params[:questions_when].to_s).text
     end
     texto = business(texto)
+    texto = style(texto)
     memory(texto)
+  end
+
+  # Trato, tono y ajustes (Ficha::Style): solo lo que cambió contra lo que ya dice [ESTILO],
+  # para que guardar la ficha sin tocarlos no reescriba un [ESTILO] hecho a mano.
+  def style(texto)
+    return texto unless %i[trato tone tone_adjust].any? { |k| @params.key?(k) }
+
+    pedido = @params[:tone_adjust]
+    pedido = pedido.respond_to?(:to_unsafe_h) ? pedido.to_unsafe_h : pedido.to_h
+    ContactTrackings::Ficha::Style.update(texto, trato: @params[:trato], tone: @params[:tone], tone_adjust: pedido)
   end
 
   # Solo si cambió: así un Entrenamiento escrito a mano no se reacomoda al guardar.

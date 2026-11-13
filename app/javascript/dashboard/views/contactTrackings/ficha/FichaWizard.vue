@@ -123,6 +123,8 @@ export default {
       business: '',
       missing: [],
       tone: 'cercano',
+      // Trato al cliente: 'tu' | 'usted' (Ficha::Style).
+      trato: 'tu',
       // Ajustes del tono (emojis, muy cortas, cerrar con pregunta); null = los del tono.
       toneAdjust: null,
       cards: [],
@@ -169,6 +171,7 @@ export default {
           name: this.name,
           displayName: this.displayName,
           tone: this.tone,
+          trato: this.trato,
           toneAdjust: this.toneAdjust,
           objective: this.objective,
           business: this.business,
@@ -178,6 +181,7 @@ export default {
         this.name = datos.name;
         this.displayName = datos.displayName;
         this.tone = datos.tone;
+        this.trato = datos.trato || 'tu';
         this.toneAdjust = datos.toneAdjust || null;
         this.objective = datos.objective;
         this.business = datos.business;
@@ -413,6 +417,7 @@ export default {
         activate: this.activateOnCreate && !!this.inboxId,
         skip: this.skip,
         tone: this.tone,
+        trato: this.trato,
         tone_adjust: this.toneAdjust,
         objective: this.objective.trim(),
         business: this.business.trim(),

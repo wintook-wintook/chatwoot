@@ -119,8 +119,19 @@ export default {
       // Variables por condición y datos del negocio (en el Entrenamiento).
       variables: [],
       businessData: [],
-      // Datos del agente (Agente y canal): { name, displayName, objective, business }.
-      profile: { name: '', displayName: '', objective: '', business: '' },
+      // Datos del agente (Agente y canal): { name, displayName, objective, business } y el
+      // [ESTILO] (trato, tone, toneAdjust; null = el Entrenamiento no lo dice con esas frases).
+      profile: {
+        name: '',
+        displayName: '',
+        objective: '',
+        business: '',
+        trato: null,
+        tone: null,
+        toneAdjust: null,
+      },
+      // El texto de [ESTILO] como está guardado (null = no tiene).
+      styleText: null,
       missing: [],
       profileSuggesting: false,
       maxContext: MAX_CONTEXT_EXISTING,
@@ -274,12 +285,17 @@ export default {
         value: d.value,
       }));
       const datos = data.profile || {};
+      const estilo = data.style || {};
       this.profile = {
         name: datos.name || '',
         displayName: datos.customer_display_name || '',
         objective: datos.objective || '',
         business: datos.ai_context || '',
+        trato: estilo.trato || null,
+        tone: estilo.tone || null,
+        toneAdjust: estilo.tone_adjust ? { ...estilo.tone_adjust } : null,
       };
+      this.styleText = estilo.text === undefined ? null : estilo.text || '';
       const preguntas = data.questions || {};
       this.questionsData = {
         questions: (preguntas.questions || []).map(q => ({
@@ -405,7 +421,18 @@ export default {
         questions_when: this.questionsData.when,
         variables: this.variables.filter(v => (v.name || '').trim()),
         business_data: this.businessRows(),
+        ...this.styleExtras(),
       };
+    },
+    // Solo lo que el [ESTILO] ya dice o lo que la persona eligió: el servidor escribe lo que
+    // cambió (Ficha::Style), así que mandar lo mismo no reescribe nada.
+    styleExtras() {
+      const { trato, tone, toneAdjust } = this.profile;
+      const extras = {};
+      if (trato) extras.trato = trato;
+      if (tone) extras.tone = tone;
+      if (toneAdjust) extras.tone_adjust = { ...toneAdjust };
+      return extras;
     },
     businessRows() {
       return this.businessData.filter(
@@ -728,6 +755,8 @@ export default {
                 :missing.sync="missing"
                 :max-context="maxContext"
                 objective-required
+                show-tone
+                :style-text="styleText"
                 :disabled="busy"
                 @suggest="suggestProfile"
               />

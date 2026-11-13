@@ -72,6 +72,13 @@ RSpec.describe ContactTrackings::Ficha::Generator do
     expect(ajustado).not_to include('Cierro con una pregunta')
   end
 
+  it 'el trato: de tú si no se pide, de usted si se elige' do
+    expect(generar([{ 'key' => "google_sheet:#{hoja.id}" }], tone: 'profesional')[:prompt]).to include('Hablo de tú, ')
+    usted = generar([{ 'key' => "google_sheet:#{hoja.id}" }], tone: 'profesional', trato: 'usted')[:prompt]
+    expect(usted).to include('Hablo de usted, en español de México, con un tono profesional')
+    expect(usted).not_to include('Hablo de tú')
+  end
+
   it 'sin objetivo, lo arma con lo marcado (sin IA)' do
     resultado = generar([{ 'key' => "google_sheet:#{hoja.id}" }], objective: '')
     expect(resultado[:objective]).to start_with('Atender a los clientes de')

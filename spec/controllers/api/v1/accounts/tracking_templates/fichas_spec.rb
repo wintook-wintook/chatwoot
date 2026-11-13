@@ -198,6 +198,26 @@ RSpec.describe 'Ficha del Agente IA API', type: :request do
     expect(template.reload.name).to eq('Ventas Norte')
   end
 
+  it 'en un agente existente cambia trato, tono y ajustes de [ESTILO] sin tocar lo demás' do
+    prompt = "@ruta(info #info: pregunta algo): @buscar_articulo\n\n[ESTILO]\nHablo de tú, en español de México, " \
+             'cálido y cercano, como alguien del negocio. Respuestas cortas y claras, de máximo 4 líneas. Sin emojis. ' \
+             'Las ligas van como texto simple.'
+    template = create(:tracking_template, account: account, complementary_prompt: prompt)
+    get "#{base}/#{template.id}/ficha", headers: admin.create_new_auth_token, as: :json
+    expect(response.parsed_body['style']).to include('trato' => 'tu', 'tone' => 'cercano')
+
+    patch "#{base}/#{template.id}/ficha",
+          params: { items: items, trato: 'usted', tone: 'profesional', tone_adjust: { emojis: false, short: true, question: false } },
+          headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['style']).to include('trato' => 'usted', 'tone' => 'profesional')
+    expect(template.reload.complementary_prompt).to include(
+      'Hablo de usted, en español de México, con un tono profesional', 'Respuestas muy cortas: máximo 2 líneas.',
+      'Las ligas van como texto simple.'
+    )
+  end
+
   it 'las Reglas se guardan al crear y con la ficha' do
     regla = { keyword: 'asesor', action: ContactTrackings::KeywordActionService::VALID_ACTIONS.first,
               direction: ContactTrackings::KeywordActionService::VALID_DIRECTIONS.first }
