@@ -6,16 +6,17 @@
 // eso la pestaña «Ficha de Agente IA» ya no hace falta para el administrador.
 //
 //   Nombre del agente IA *        Nombre que verá el cliente
-//   Tono (solo al crear)
+//   Trato (tú | usted) · Tono · Ajustes        (al crear y, con show-tone, al editar)
 //   Objetivo *                                   [✨ Proponer]
 //   Contexto IA                                  [✨ Proponer]
 //   Te conviene agregar: + horario  + dirección
 //
-// v-model: { name, displayName, tone, objective, business }. ✨ lo resuelve quien lo usa
+// v-model: { name, displayName, trato, tone, toneAdjust, objective, business }. ✨ lo resuelve quien lo usa
 // (evento 'suggest' con 'objective' | 'context'); los datos que faltan llegan en `missing`.
 // ============================================================================
-// 10/11/2026: un tono base (siempre de tú) + ajustes que se suman; dos tonos base juntos se
-// contradicen. Mismos valores que Ficha::Generator::TONES / TONE_DEFAULTS.
+// 10/11/2026: un tono base + ajustes que se suman; dos tonos base juntos se contradicen.
+// 13/11/2026: el trato (tú | usted) se elige aparte; antes los 5 tonos eran de tú. Mismos
+// valores que Ficha::Style::TONE_PHRASES / TRATOS y Ficha::Generator::TONE_DEFAULTS.
 export const TONES = [
   'cercano',
   'profesional',
@@ -23,28 +24,44 @@ export const TONES = [
   'empatico',
   'directo',
 ];
+export const TRATOS = ['tu', 'usted'];
 const ADJUSTS = ['emojis', 'short', 'question'];
 export const toneDefaults = tono => ({
   emojis: ['cercano', 'entusiasta'].includes(tono),
   short: tono === 'directo',
   question: tono === 'entusiasta',
 });
-// Cómo contestaría con cada tono (ejemplo fijo, sin IA).
+// Cómo contestaría con cada tono y trato (ejemplo fijo, sin IA).
 const EXAMPLES = {
-  cercano:
-    '¡Claro! El servicio cuesta $450 y lo tenemos disponible esta semana.',
-  profesional:
-    'Con gusto. El servicio tiene un costo de $450 y contamos con disponibilidad esta semana.',
-  entusiasta:
-    '¡Qué buena elección! El servicio cuesta solo $450 y lo tenemos listo para ti esta misma semana.',
-  empatico:
-    'Entiendo que lo necesitas pronto. El servicio cuesta $450 y te ayudo a apartarlo esta semana.',
-  directo: 'Servicio: $450. Disponible esta semana.',
+  tu: {
+    cercano:
+      '¡Claro! El servicio cuesta $450 y lo tenemos disponible esta semana.',
+    profesional:
+      'Con gusto. El servicio tiene un costo de $450 y contamos con disponibilidad esta semana.',
+    entusiasta:
+      '¡Qué buena elección! El servicio cuesta solo $450 y lo tenemos listo para ti esta misma semana.',
+    empatico:
+      'Entiendo que lo necesitas pronto. El servicio cuesta $450 y te ayudo a apartarlo esta semana.',
+    directo: 'Servicio: $450. Disponible esta semana.',
+  },
+  usted: {
+    cercano:
+      '¡Claro! El servicio cuesta $450 y lo tenemos disponible esta semana.',
+    profesional:
+      'Con gusto. El servicio tiene un costo de $450 y contamos con disponibilidad esta semana.',
+    entusiasta:
+      '¡Qué buena elección! El servicio cuesta solo $450 y lo tenemos listo para usted esta misma semana.',
+    empatico:
+      'Entiendo que lo necesita pronto. El servicio cuesta $450 y le ayudo a apartarlo esta semana.',
+    directo: 'Servicio: $450. Disponible esta semana.',
+  },
 };
-export const toneExample = (tono, ajustes) => {
-  const base = EXAMPLES[tono] || EXAMPLES.cercano;
+const QUESTIONS = { tu: '¿Qué día te acomoda?', usted: '¿Qué día le acomoda?' };
+export const toneExample = (tono, ajustes, trato = 'tu') => {
+  const lista = EXAMPLES[trato] || EXAMPLES.tu;
+  const base = lista[tono] || lista.cercano;
   let texto = ajustes.short ? base.split('. ')[0].replace(/\.?$/, '.') : base;
-  if (ajustes.question) texto += ' ¿Qué día te acomoda?';
+  if (ajustes.question) texto += ` ${QUESTIONS[trato] || QUESTIONS.tu}`;
   if (ajustes.emojis) texto += ' 😊';
   return texto;
 };
@@ -53,6 +70,8 @@ export default {
   props: {
     value: { type: Object, required: true },
     showTone: { type: Boolean, default: false },
+    // Al editar: el [ESTILO] que tiene hoy el Entrenamiento (null = no tiene).
+    styleText: { type: String, default: null },
     // 'objective' | 'context' mientras la IA trabaja; false si no.
     suggesting: { type: [String, Boolean], default: false },
     canSuggest: { type: Boolean, default: false },
@@ -65,7 +84,7 @@ export default {
   },
   emits: ['input', 'suggest', 'update:missing'],
   data() {
-    return { tones: TONES, adjusts: ADJUSTS };
+    return { tones: TONES, tratos: TRATOS, adjusts: ADJUSTS };
   },
   computed: {
     nameError() {
@@ -76,7 +95,7 @@ export default {
       return this.value.toneAdjust || toneDefaults(this.value.tone);
     },
     example() {
-      return toneExample(this.value.tone, this.adjust);
+      return toneExample(this.value.tone, this.adjust, this.value.trato);
     },
     contextLength() {
       return (this.value.business || '').length;
@@ -152,6 +171,31 @@ export default {
 
     <div v-if="showTone" class="flex flex-col gap-2">
       <span class="text-sm text-slate-800 dark:text-slate-100">
+        {{ t('TRATO') }}
+      </span>
+      <div class="flex flex-wrap gap-2">
+        <label
+          v-for="item in tratos"
+          :key="item"
+          class="flex items-center gap-2 !m-0 px-3 py-1.5 text-sm border rounded-lg cursor-pointer"
+          :class="
+            value.trato === item
+              ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20'
+              : 'border-slate-200 dark:border-slate-700'
+          "
+        >
+          <input
+            type="radio"
+            class="!m-0"
+            :value="item"
+            :checked="value.trato === item"
+            :disabled="disabled"
+            @change="set('trato', item)"
+          />
+          {{ t(`TRATO_${item.toUpperCase()}`) }}
+        </label>
+      </div>
+      <span class="text-sm text-slate-800 dark:text-slate-100">
         {{ t('TONE') }}
       </span>
       <div class="flex flex-wrap gap-2">
@@ -178,7 +222,11 @@ export default {
         </label>
       </div>
       <p class="!m-0 text-xs text-slate-500">
-        {{ t(`TONE_${(value.tone || 'cercano').toUpperCase()}_HINT`) }}
+        {{
+          value.tone
+            ? t(`TONE_${value.tone.toUpperCase()}_HINT`)
+            : t('TONE_CUSTOM_HINT')
+        }}
       </p>
       <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
         <span class="text-xs text-slate-500">{{ t('TONE_ADJUST') }}</span>
@@ -206,6 +254,15 @@ export default {
         >
           {{ example }}
         </span>
+      </div>
+      <div v-if="styleText !== null" class="flex flex-col gap-1">
+        <span class="text-xs text-slate-500">{{ t('STYLE_CURRENT') }}</span>
+        <p
+          class="!m-0 p-2 text-xs whitespace-pre-wrap border rounded-lg border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+        >
+          {{ styleText || t('STYLE_NONE') }}
+        </p>
+        <span class="text-xs text-slate-400">{{ t('STYLE_EDIT_HINT') }}</span>
       </div>
     </div>
 

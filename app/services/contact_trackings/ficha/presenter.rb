@@ -41,6 +41,7 @@ class ContactTrackings::Ficha::Presenter
     bienvenida = ContactTrackings::WelcomeMessage.text(@template.complementary_prompt).to_s.lines.grep_v(FILE_LINE_RE).join.strip
     { welcome: ContactTrackings::Ficha::Questions.welcome_without(bienvenida, preguntas), questions: preguntas,
       variables: ContactTrackings::Ficha::Memory.new(@template.complementary_prompt).read,
-      business_data: ContactTrackings::Ficha::BusinessData.new(@template.complementary_prompt).read }
+      business_data: ContactTrackings::Ficha::BusinessData.new(@template.complementary_prompt).read,
+      style: ContactTrackings::Ficha::Style.read(@template.complementary_prompt) }
   end
 end
