@@ -43,8 +43,9 @@ RSpec.describe KnowledgeBase::StagedOffers do
   it 'deja un aviso en lugar de la oferta oculta, para que no diga «no hay otra beca»' do
     salida = filtrar(ficha, 'PRIMERA_BECA')
 
-    expect(salida.scan(described_class::PLACEHOLDER).size).to eq(1)
-    expect(salida.index(described_class::PLACEHOLDER)).to be > salida.index('{{tsbeca1mat}}')
+    aviso = salida.lines.find { |l| l.include?('todavía no toca') }
+    expect(salida.lines.count { |l| l.include?('todavía no toca') }).to eq(1)
+    expect(salida.index(aviso)).to be > salida.index('{{tsbeca1mat}}')
   end
 
   it 'con SEGUNDA_BECA deja las dos (la primera ya se entregó y la pueden reclamar)' do
@@ -76,6 +77,21 @@ RSpec.describe KnowledgeBase::StagedOffers do
 
   it 'sin [VARIABLES] devuelve el contenido igual' do
     expect(described_class.filter(ficha, ContactTrackings::ConversationVariables.parse('Sin variables.'), {})).to eq(ficha)
+  end
+
+  it 'el aviso nombra la oferta que toca ahora, como se llama en la ficha (prod 613 conv 88)' do
+    salida = filtrar(ficha, 'PRIMERA_BECA')
+    expect(salida).to include('lo que le toca ahora es «Primera beca», la de arriba')
+    expect(salida).not_to include('Segunda beca')
+  end
+
+  it 'si la oferta actual no tiene renglón en la ficha, queda el aviso general' do
+    sin_inscripcion = ContactTrackings::ConversationVariables.parse(
+      "[VARIABLES]\nSIGUIENTE_OFERTA = SIN_INSCRIPCION | PRIMERA_BECA | SEGUNDA_BECA\n"
+    )
+    salida = described_class.filter(ficha, sin_inscripcion, { 'SIGUIENTE_OFERTA' => 'SIN_INSCRIPCION' })
+    expect(salida).to include(described_class::PLACEHOLDER)
+    expect(salida).not_to include('Primera beca', 'Segunda beca')
   end
 
   describe '.one_step' do
