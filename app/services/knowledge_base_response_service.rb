@@ -506,8 +506,24 @@ class KnowledgeBaseResponseService
   # perfil de egreso le ganó a «Costos y becas» y el modelo inventó una segunda beca.
   def items_context(items, question)
     items.map.with_index(1) do |i, n|
-      "#{n}. #{i.title}\n#{KnowledgeBase::SectionFit.call(i.content, question, MAX_ITEM_CHARS, title: i.title)}"
+      contenido = staged_offers(i.content, i.title)
+      "#{n}. #{i.title}\n#{KnowledgeBase::SectionFit.call(contenido, question, MAX_ITEM_CHARS, title: i.title)}"
     end.join("\n\n")
+  end
+
+  # Ver KnowledgeBase::StagedOffers: con SIGUIENTE_OFERTA=PRIMERA_BECA el modelo no ve la
+  # segunda beca (cuenta 613 conv 87: «¿y no hay otra beca más?» la daba aunque no tocaba).
+  def staged_offers(content, title)
+    definition = @tracking && ContactTrackings::ConversationVariables.definition_for(@tracking)
+    return content if definition.blank?
+
+    values = ContactTrackings::ConversationVariables.current(@tracking, @conversation, definition)
+    filtrado = KnowledgeBase::StagedOffers.filter(content, definition, values)
+    Rails.logger.info "[KBase] 🎚️ Ofertas que aún no tocan, ocultas en '#{title}'" unless filtrado.equal?(content)
+    filtrado
+  rescue StandardError => e
+    Rails.logger.warn "[KBase] ⚠️ No se pudieron escalonar las ofertas: #{e.message}"
+    content
   end
 
   # proyecto@predefinidas_prompt — la respuesta predefinida con prompt que manda en este
@@ -763,7 +779,7 @@ class KnowledgeBaseResponseService
 
       #{reply_style_rule}
       No uses prefijos como "Asesor:" ni comillas al inicio o final.
-      #{ContactTrackings::CustomerTone::RULE}
+      #{customer_tone_rule}
 
       FIDELIDAD A LA FUENTE (regla dura): la información de arriba se recuperó por
       parecido semántico, así que puede tratar de un tema vecino pero distinto al que
@@ -820,12 +836,12 @@ class KnowledgeBaseResponseService
       #{erp_rows_text(data)}
 
       Responde con esos datos. Tono natural y conversacional. No uses prefijos como "Asesor:" ni comillas.
-      #{ContactTrackings::CustomerTone::RULE}
+      #{customer_tone_rule}
 
       DATOS EXACTOS (regla dura): precios, existencias, códigos y nombres se citan tal como
       están arriba. Nunca inventes productos, precios ni disponibilidad, ni completes con
       "parecidos" que no aparecen. Existencia 0 o negativa = sin existencia. Si no hay
-      resultados, decilo y ofrecé buscar de otra forma o pasarlo con un asesor. No
+      resultados, dilo y ofrece buscar de otra forma o pasarlo con un asesor. No
       menciones que consultaste un sistema ni los nombres de las columnas.
     USER
   end
@@ -863,6 +879,7 @@ class KnowledgeBaseResponseService
       #{canned_prompt.turn_block}
 
       #{agent_system_prompt ? AGENT_STYLE_RULE : 'Tono natural y conversacional.'} No uses prefijos como "Asesor:" ni comillas al inicio o final.
+      #{customer_tone_rule}
     USER
   end
 
@@ -1105,6 +1122,13 @@ class KnowledgeBaseResponseService
     KnowledgeBase::Directives.strip_tokens(prompt).presence
   end
 
+  # El trato (tú o usted) que pide el prompt del agente, en el turno que más pesa. Ver
+  # ContactTrackings::CustomerTone.rule_for: con la regla fija «de tú, salvo…» el agente de
+  # usted tuteaba (cuenta 613, convs 85 y 87, 13/11/2026).
+  def customer_tone_rule
+    ContactTrackings::CustomerTone.rule_for(@tracking&.complementary_prompt)
+  end
+
   # Ver ContactTrackings::ConversationVariables::TopicSwitch: si el cliente nombra otro
   # valor de una variable de texto libre (otra carrera), se cambia ANTES de buscar, para que
   # la búsqueda con el tema guardado (topic_query) y el modelo ya vean el nuevo.
@@ -1234,7 +1258,7 @@ class KnowledgeBaseResponseService
       - No menciones que consultaste un foro o base de conocimiento.
     PROMPT
 
-    system_content += "\n\n#{ContactTrackings::CustomerTone::RULE}"
+    system_content += "\n\n#{customer_tone_rule}"
     attachments_hint = ContactTrackings::AgentAttachments.hint(@tracking&.tracking_template)
     system_content += "\n\n#{attachments_hint}" if attachments_hint
     system_content += "\n\nContenido relevante del foro:\n#{context}#{SOURCE_FIDELITY_RULE}" if context.present?

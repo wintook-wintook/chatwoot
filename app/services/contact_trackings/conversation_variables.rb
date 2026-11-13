@@ -160,6 +160,7 @@ module ContactTrackings::ConversationVariables
 
     clean, changes = extract(text, definition)
     actuales = current(tracking, conversation, definition)
+    changes = KnowledgeBase::StagedOffers.one_step(definition, actuales, changes)
     apply!(tracking, conversation, changes.reject { |nombre, valor| actuales[key(nombre)] == valor })
     clean
   end
