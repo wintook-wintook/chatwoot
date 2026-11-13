@@ -48,7 +48,17 @@ module KnowledgeBase::StagedOffers
     hidden = hidden_labels(content, definition, values)
     return content if hidden.empty?
 
-    strip_lines(content, hidden)
+    strip_lines(content, hidden, placeholder(current_name(content, definition, values)))
+  end
+
+  # Cómo se llama en la ficha la oferta que toca ahora («Primera beca»), o nil.
+  def current_name(content, definition, values)
+    rotulos = definition.variables.filter_map { |clave, _| label(values[clave]) if clave.match?(NAME_RE) }
+    content.each_line do |line|
+      match = line.match(LINE_LABEL_RE)
+      return match[1].strip if match && rotulos.include?(label(match[1]))
+    end
+    nil
   end
 
   # Los rótulos («segunda beca») de las ofertas que vienen después del valor actual.
@@ -97,8 +107,10 @@ module KnowledgeBase::StagedOffers
   end
 
   # Rótulo de un renglón «- Primera beca: …» (nil si no tiene esa forma).
+  LINE_LABEL_RE = /\A[ \t]*(?:#{BULLET}[ \t]*)?([^:\n]{2,40}?)[ \t]*:/
+
   def line_label(line)
-    match = line.match(/\A[ \t]*(?:#{BULLET}[ \t]*)?([^:\n]{2,40}?)[ \t]*:/o)
+    match = line.match(LINE_LABEL_RE)
     match && label(match[1])
   end
 
@@ -108,16 +120,27 @@ module KnowledgeBase::StagedOffers
 
   # En lugar de la oferta oculta. Sin el aviso, el modelo veía una sola beca y le decía al
   # cliente «no contamos con otra beca», y marcaba AGOTADA (dev convs 265-267, 3 de 3).
+  # Con un aviso que solo decía «hay otra oferta que todavía no toca», ante «¿y no hay otra
+  # beca más?» sin haber dado el precio el modelo anunció «una segunda beca» sin montos y se
+  # saltó la primera (prod 613 conv 88). Por eso el aviso nombra la que SÍ toca.
   PLACEHOLDER = '- (Hay otra oferta que todavía no toca: no la menciones, no la anuncies y no digas que no ' \
                 "hay más; se mostrará aquí cuando el cliente vuelva a objetar el precio.)\n"
 
+  def placeholder(actual)
+    return PLACEHOLDER if actual.blank?
+
+    '- (La siguiente oferta todavía no toca. Si el cliente pide otra beca, otro descuento u otra oferta, ' \
+      "lo que le toca ahora es «#{actual}», la de arriba: dela completa, con su imagen si la tiene. No " \
+      "menciones que hay más ni digas que no hay más.)\n"
+  end
+
   # Cambia cada renglón oculto (y los que le siguen hasta el próximo renglón con viñeta, una
   # línea en blanco o el próximo rótulo) por el aviso, una sola vez por bloque.
-  def strip_lines(content, hidden)
+  def strip_lines(content, hidden, aviso = PLACEHOLDER)
     skipping = false
     content.each_line.with_object(+'') do |line, out|
       if hidden.include?(line_label(line).to_s)
-        out << PLACEHOLDER unless out.end_with?(PLACEHOLDER)
+        out << aviso unless out.end_with?(aviso)
         skipping = true
       else
         skipping &&= !starts_new_block?(line)
