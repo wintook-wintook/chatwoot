@@ -101,6 +101,13 @@ module KnowledgeBase::StagedOffers
     options[desde + 1]
   end
 
+  # Los rótulos de las opciones de las variables de «siguiente oferta» («primera beca», …).
+  def staged_labels(definition)
+    return Set.new if definition.blank?
+
+    definition.variables.flat_map { |clave, var| clave.match?(NAME_RE) ? var[:options].map { |o| label(o) } : [] }.to_set
+  end
+
   # «PRIMERA_BECA» → «primera beca» (sin acentos, minúsculas).
   def label(value)
     I18n.transliterate(value.to_s).tr('_', ' ').squish.downcase
