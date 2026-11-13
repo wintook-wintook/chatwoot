@@ -51,7 +51,7 @@
 
 # rubocop:enable Layout/LineLength
 
-class Contact < ApplicationRecord
+class Contact < ApplicationRecord # rubocop:disable Metrics/ClassLength -- ya pasaba del límite antes de este fix
   include Avatarable
   include AvailabilityStatusable
   include Labelable
@@ -80,6 +80,9 @@ class Contact < ApplicationRecord
   has_many :customer_assets, dependent: :destroy_async # Plan-Trabajo-Campo R4
   has_many :maintenance_plans, dependent: :destroy_async # Plan-Trabajo-Campo R4
   has_many :contracts, dependent: :destroy_async # Plan-Contratos R1
+  # Seguimiento IA y Agentes listos: la FK no deja borrar el contacto si quedan filas.
+  has_many :ai_follow_ups, dependent: :destroy
+  has_many :ready_agent_sessions, dependent: :destroy
   # ================================================================================
   # proyecto@contact_tracking
   # ================================================================================
@@ -115,7 +118,6 @@ class Contact < ApplicationRecord
   before_save :sync_contact_attributes
 
   enum contact_type: { visitor: 0, lead: 1, customer: 2 }
-  
 
   scope :order_on_last_activity_at, lambda { |direction|
     order(
