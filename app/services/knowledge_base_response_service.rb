@@ -506,8 +506,24 @@ class KnowledgeBaseResponseService
   # perfil de egreso le ganó a «Costos y becas» y el modelo inventó una segunda beca.
   def items_context(items, question)
     items.map.with_index(1) do |i, n|
-      "#{n}. #{i.title}\n#{KnowledgeBase::SectionFit.call(i.content, question, MAX_ITEM_CHARS, title: i.title)}"
+      contenido = staged_offers(i.content, i.title)
+      "#{n}. #{i.title}\n#{KnowledgeBase::SectionFit.call(contenido, question, MAX_ITEM_CHARS, title: i.title)}"
     end.join("\n\n")
+  end
+
+  # Ver KnowledgeBase::StagedOffers: con SIGUIENTE_OFERTA=PRIMERA_BECA el modelo no ve la
+  # segunda beca (cuenta 613 conv 87: «¿y no hay otra beca más?» la daba aunque no tocaba).
+  def staged_offers(content, title)
+    definition = @tracking && ContactTrackings::ConversationVariables.definition_for(@tracking)
+    return content if definition.blank?
+
+    values = ContactTrackings::ConversationVariables.current(@tracking, @conversation, definition)
+    filtrado = KnowledgeBase::StagedOffers.filter(content, definition, values)
+    Rails.logger.info "[KBase] 🎚️ Ofertas que aún no tocan, ocultas en '#{title}'" unless filtrado.equal?(content)
+    filtrado
+  rescue StandardError => e
+    Rails.logger.warn "[KBase] ⚠️ No se pudieron escalonar las ofertas: #{e.message}"
+    content
   end
 
   # proyecto@predefinidas_prompt — la respuesta predefinida con prompt que manda en este
