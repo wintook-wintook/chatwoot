@@ -76,7 +76,8 @@ class Contact < ApplicationRecord # rubocop:disable Metrics/ClassLength -- ya pa
   # Al ligarlo por primera vez, lo suyo que no tenía organización pasa a ella. Cambiar de
   # una a otra solo con Organizations::ChangeContactOrganization.
   after_update_commit :adopt_unlinked_records, if: -> { saved_change_to_organization_id?(from: nil) }
-  has_many :quotes, dependent: :destroy_async # Plan-Catalogo-Cotizaciones
+  # Plan-Catalogo-Cotizaciones. Síncrono: la FK de quotes (sin ON DELETE) frena el borrar si quedan.
+  has_many :quotes, dependent: :destroy
   has_many :customer_assets, dependent: :destroy_async # Plan-Trabajo-Campo R4
   has_many :maintenance_plans, dependent: :destroy_async # Plan-Trabajo-Campo R4
   has_many :contracts, dependent: :destroy_async # Plan-Contratos R1
