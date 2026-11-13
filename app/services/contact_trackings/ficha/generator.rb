@@ -21,17 +21,10 @@
 # ================================================================================
 
 class ContactTrackings::Ficha::Generator
-  # Un tono base (siempre de tú) + ajustes que se suman (10/11/2026: «¿otros tonos? ¿combinarlos?»).
-  # Dos tonos base juntos se contradicen; por eso es uno y sus ajustes.
-  TONES = {
-    'cercano' => 'Hablo de tú, en español de México, cálido y cercano, como alguien del negocio.',
-    'profesional' => 'Hablo de tú, en español de México, con un tono profesional, amable y serio.',
-    'entusiasta' => 'Hablo de tú, en español de México, con energía y entusiasmo; invito al cliente a dar el ' \
-                    'siguiente paso sin presionarlo.',
-    'empatico' => 'Hablo de tú, en español de México, con empatía: si el cliente tiene un problema o una molestia, ' \
-                  'primero lo reconozco y luego lo ayudo a resolverlo.',
-    'directo' => 'Hablo de tú, en español de México, directo y sin rodeos: digo lo necesario.'
-  }.freeze
+  # Un tono base + ajustes que se suman (10/11/2026: «¿otros tonos? ¿combinarlos?»). Dos tonos
+  # base juntos se contradicen; por eso es uno y sus ajustes. Las frases viven en Ficha::Style;
+  # el trato (tú | usted) se elige aparte (13/11/2026).
+  TONES = ContactTrackings::Ficha::Style::TONE_PHRASES.to_h { |tono, _| [tono, ContactTrackings::Ficha::Style.tone_sentence('tu', tono)] }.freeze
   # Con qué ajustes arranca cada tono si la pantalla no manda los suyos.
   TONE_DEFAULTS = {
     'cercano' => { 'emojis' => true }, 'entusiasta' => { 'emojis' => true, 'question' => true },
@@ -41,7 +34,8 @@ class ContactTrackings::Ficha::Generator
   MAX_CONTEXT = 800
 
   # offers: ContactTrackings::Ficha::Offers#call (solo las que quedaron prendidas)
-  # options: objective:, business:, tone: (una de TONES), tone_adjust: { emojis:, short:, question: }
+  # options: objective:, business:, tone: (una de TONES), trato: ('tu' | 'usted'),
+  #          tone_adjust: { emojis:, short:, question: }
   def initialize(account:, name:, offers:, **options)
     @account = account
     @name = name.to_s.squish.presence || 'tu negocio'
@@ -50,6 +44,7 @@ class ContactTrackings::Ficha::Generator
     @objective = options[:objective].to_s.squish
     @business = options[:business].to_s.strip
     @tone = TONES.key?(options[:tone].to_s) ? options[:tone].to_s : 'cercano'
+    @trato = ContactTrackings::Ficha::Style::TRATOS.include?(options[:trato].to_s) ? options[:trato].to_s : 'tu'
     @tone_adjust = tone_adjust(options[:tone_adjust])
   end
 
@@ -208,11 +203,7 @@ class ContactTrackings::Ficha::Generator
   end
 
   def estilo
-    lineas = [TONES[@tone],
-              @tone_adjust['short'] ? 'Respuestas muy cortas: máximo 2 líneas.' : 'Respuestas cortas y claras, de máximo 4 líneas.',
-              @tone_adjust['emojis'] ? 'Uso uno o dos emojis cuando ayudan; nunca de más.' : 'Sin emojis.']
-    lineas << 'Cierro con una pregunta sencilla para seguir la plática.' if @tone_adjust['question']
-    "[ESTILO]\n#{lineas.join(' ')}"
+    "[ESTILO]\n#{ContactTrackings::Ficha::Style.body(@trato, @tone, @tone_adjust)}"
   end
 
   # { 'emojis' =>, 'short' =>, 'question' => } (true/false); sin ajustes, los del tono.

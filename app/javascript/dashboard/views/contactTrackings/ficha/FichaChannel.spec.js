@@ -376,6 +376,42 @@ describe('Tono', () => {
   });
 });
 
+describe('Trato', () => {
+  it('el ejemplo cambia de tú a usted', async () => {
+    const { toneExample, TRATOS } = await import('./FichaIdentity.vue');
+    expect(TRATOS).toEqual(['tu', 'usted']);
+    const ajustes = { emojis: false, short: false, question: true };
+    expect(toneExample('empatico', ajustes, 'usted')).toBe(
+      'Entiendo que lo necesita pronto. El servicio cuesta $450 y le ayudo a apartarlo esta semana. ¿Qué día le acomoda?'
+    );
+    expect(toneExample('empatico', ajustes)).toContain('¿Qué día te acomoda?');
+  });
+
+  it('elegir usted emite el trato sin tocar el tono', async () => {
+    const { default: FichaIdentity } = await import('./FichaIdentity.vue');
+    const wrapper = shallowMount(FichaIdentity, {
+      propsData: {
+        value: {
+          name: '',
+          trato: 'tu',
+          tone: 'profesional',
+          objective: '',
+          business: '',
+        },
+        showTone: true,
+        styleText: 'Hablo de tú, en español de México.',
+      },
+      mocks: { $t: clave => clave },
+    });
+    wrapper.vm.set('trato', 'usted');
+    expect(wrapper.emitted('input')[0][0]).toMatchObject({
+      trato: 'usted',
+      tone: 'profesional',
+    });
+    expect(wrapper.text()).toContain('Hablo de tú, en español de México.');
+  });
+});
+
 describe('Tope de rutas', () => {
   it('avisa con más de 20 y dice qué tipo pesa más', async () => {
     const { default: FichaRouteLimit } = await import('./FichaRouteLimit.vue');
