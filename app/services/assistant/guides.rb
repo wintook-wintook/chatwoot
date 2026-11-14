@@ -13,11 +13,15 @@
 #   keywords: [caso, oportunidad, etapa, ganar, perder]
 #   pages: [cases, pipeline]        # pantallas de open_page que menciona
 #   category: Primeros pasos        # opcional: categoría en el Centro de ayuda (Assistant::GuidePublisher)
+#   sources: [app/javascript/dashboard/routes/dashboard/contracts/**/*.vue]  # el código que explica
+#   reviewed: 2026-11-14            # última revisión contra las pantallas (aunque no cambiara el texto)
 #   ---
 #   ## Para qué sirve …
 #
 # Una guía se ve si el usuario tiene al menos una de sus áreas (Access::Grant).
 # spec/services/assistant/guides_spec.rb revisa que todas estén completas.
+# `sources` sirve para saber cuándo una guía quedó vieja: rake assistant:guides:stale
+# (Assistant::GuideFreshness) lista las guías cuyo código cambió después de su último commit.
 module Assistant::Guides
   DIR = Rails.root.join('config/assistant/guides')
   FRONT_MATTER = /\A---\s*\n(.*?)\n---\s*\n/m
@@ -30,7 +34,8 @@ module Assistant::Guides
                  dali favor ayuda ayudas usar uso creo crear cambio cambiar cambia pongo poner marco marcar
                  doy hago donde].freeze
 
-  Guide = Struct.new(:key, :title, :areas, :keywords, :pages, :body, :category, keyword_init: true) do
+  Guide = Struct.new(:key, :title, :areas, :keywords, :pages, :body, :category, :sources, :reviewed,
+                     keyword_init: true) do
     def visible_to?(grant)
       areas.empty? || areas.any? { |area| grant.allowed?(area) }
     end
@@ -114,9 +119,10 @@ module Assistant::Guides
 
   def parse(path)
     raw = File.read(path)
-    meta = YAML.safe_load(raw[FRONT_MATTER, 1].to_s) || {}
-    Guide.new(key: meta['key'].to_s, title: meta['title'].to_s, areas: Array(meta['areas']).map(&:to_s),
-              keywords: Array(meta['keywords']).map(&:to_s), pages: Array(meta['pages']).map(&:to_s),
-              category: meta['category'].to_s.presence, body: raw.sub(FRONT_MATTER, '').strip)
+    meta = YAML.safe_load(raw[FRONT_MATTER, 1].to_s, permitted_classes: [Date]) || {}
+    lists = %w[areas keywords pages sources].index_with { |field| Array(meta[field]).map(&:to_s) }
+    Guide.new(key: meta['key'].to_s, title: meta['title'].to_s, **lists.symbolize_keys,
+              category: meta['category'].to_s.presence, reviewed: meta['reviewed'].to_s.presence,
+              body: raw.sub(FRONT_MATTER, '').strip)
   end
 end

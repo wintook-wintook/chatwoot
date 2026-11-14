@@ -42,6 +42,17 @@ RSpec.describe Assistant::Guides do
       end
     end
 
+    it 'sus sources apuntan a archivos que existen y reviewed es una fecha' do
+      freshness = Assistant::GuideFreshness.new
+      guides.each do |guide|
+        guide.sources.each do |glob|
+          files = freshness.files_for(guide.dup.tap { |g| g.sources = [glob] })
+          expect(files).not_to be_empty, "#{guide.key}: sources sin archivos #{glob}"
+        end
+        expect { Date.iso8601(guide.reviewed) }.not_to raise_error, "#{guide.key}: reviewed inválido" if guide.reviewed
+      end
+    end
+
     it 'cada área del menú tiene al menos una guía' do
       covered = guides.flat_map(&:areas)
       expect(AccessRole::AREAS - covered).to be_empty
