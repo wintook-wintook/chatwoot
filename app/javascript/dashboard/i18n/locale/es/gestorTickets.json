@@ -365,6 +365,12 @@
     }
   },
   "CASE_TICKETS": {
+    "CONFIRM_DELETE": {
+      "TITLE": "¿Borrar «{label}»?",
+      "MESSAGE": "Ya no se podrá elegir. Lo que ya lo tenía se queda sin él.",
+      "YES": "Sí, borrar",
+      "NO": "Cancelar"
+    },
     "ASSIGN_CLIENT": {
       "BUTTON": "Ligar a un cliente",
       "TITLE": "Ligar a un cliente · {folio}",
@@ -2753,6 +2759,7 @@
       }
     },
     "TASK_PRIORITY": {
+      "LOADING": "Cargando el puntaje...",
       "PAGE_TITLE": "Puntaje de tareas: cómo se ordena «Mi día»",
       "INTRO": "«Mi día» ordena las tareas pendientes de cada consultor por un puntaje: cada situación suma los puntos de abajo. Más puntos = más arriba. Un peso negativo resta; en 0 no cuenta.",
       "GROUPS": {
@@ -3294,6 +3301,7 @@
       "POSTPONED": "Pospuesta",
       "CANCELLED": "Cancelada",
       "REOPEN": "Reabrir",
+      "RESUME": "Retomar (vuelve a Enviada)",
       "NEW_VERSION": "Nueva versión",
       "DELETE": "Borrar borrador",
       "DELETE_CONFIRM": "¿Borrar este borrador?",
