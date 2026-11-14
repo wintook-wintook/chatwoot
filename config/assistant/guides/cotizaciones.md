@@ -2,7 +2,7 @@
 key: cotizaciones
 title: Cotizaciones
 areas: [sales]
-keywords: [cotizacion, cotizaciones, cotizar, nueva cotizacion, partida, partidas, producto, descuento, iva, impuesto, vigencia, vigente hasta, enviar cotizacion, enlace, copiar enlace, ver como cliente, pdf, firma, aceptar, rechazar, nueva version, borrar borrador, reabrir cotizacion, enviada, vencida, ganada, perdida, pospuesta, cancelada, reemplazada, trabajo adicional, condiciones, notas internas, monto en juego, cotizar con dali, pedirle a dali una cotizacion]
+keywords: [cotizacion, cotizaciones, retomar cotizacion, cotizar, nueva cotizacion, partida, partidas, producto, descuento, iva, impuesto, vigencia, vigente hasta, enviar cotizacion, enlace, copiar enlace, ver como cliente, pdf, firma, aceptar, rechazar, nueva version, borrar borrador, reabrir cotizacion, enviada, vencida, ganada, perdida, pospuesta, cancelada, reemplazada, trabajo adicional, condiciones, notas internas, monto en juego, cotizar con dali, pedirle a dali una cotizacion]
 pages: [quotes, opportunities, case, contact, catalog, commercial_settings]
 sources:
   - app/javascript/dashboard/views/gestorTickets/quotes/*.vue
@@ -55,7 +55,7 @@ También puedes preguntarle «¿qué cotizaciones tiene abiertas Mario?». Lo de
 ### Marcar el resultado
 1. Pulsa «Ganada», «Perdida», «Pospuesta» o «Cancelada». Ganada, Perdida y Cancelada salen en Borrador, Enviada o Pospuesta; Pospuesta, solo en Borrador o Enviada.
 2. Elige el Motivo (sale solo si el catálogo tiene motivos para ese resultado; puedes dejar «Sin motivo») y un Comentario; en Pospuesta, la fecha en «Retomar el» (propone dentro de 14 días).
-3. Pulsa «Guardar». Una perdida o cancelada se puede «Reabrir»: vuelve a Enviada.
+3. Pulsa «Guardar». Una perdida o cancelada se puede «Reabrir»: vuelve a Enviada. Una pospuesta tiene «Retomar (vuelve a Enviada)»; si la oportunidad estaba pospuesta, también se retoma.
 
 ### Cambiar una cotización ya enviada
 1. Solo se editan las cotizaciones en Borrador o Enviada. Las demás dicen «Esta cotización ya no se edita. Para cambiarla, haz una nueva versión.».

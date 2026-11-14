@@ -94,7 +94,7 @@ Si un resultado tiene motivos activos, al marcar la oportunidad hay que elegir u
 Ajustes › Facturación muestra tu «Plan Actual» y licencias. «Ir al portal de facturación» abre tus facturas, datos de pago o la cancelación; «Chatea con nosotros» pide ayuda.
 
 ## Límites
-- Borrar un motivo de cierre o un resultado de tarea no pide confirmación y lo quita de donde se usaba; mejor desactívalo.
+- Borrar un motivo de cierre o un resultado de tarea pide confirmación («¿Borrar …?») y lo quita de donde se usaba; mejor desactívalo.
 - Si borras todos los motivos o resultados de un grupo, vuelven los de fábrica.
 - Renombrar «Otro» en motivos de cancelación hace que ya no pida escribir el motivo.
 
