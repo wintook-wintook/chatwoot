@@ -2,7 +2,7 @@
 key: conversaciones
 title: Conversaciones
 areas: [conversations]
-keywords: [conversacion, conversaciones, chat, whatsapp, correo, bandeja, responder, mensaje, nota privada, asignar, asignar a mi, resolver, reabrir, abrir, pendiente, posponer, etiqueta, filtro, filtrar conversaciones, guardar filtro, carpeta, editar carpeta, ventana 24 horas, plantilla, menciones, no atendidas, sin responder, ligar caso, programar mensaje, mias, no asignadas, todas, ordenar, prioridad, urgente, marcar como no leido, seleccionar varias, cambiar estado, bloquear contacto, desbloquear, enviar transcripcion, buscar mensajes, cambiar el diseno, participantes, unirse a la conversacion, macros, firma, grabar audio, adjuntar, emoji]
+keywords: [conversacion, conversaciones, chat, chat con clientes, chat con el cliente, whatsapp, correo, bandeja, responder, mensaje, nota privada, asignar, asignar a mi, resolver, reabrir, abrir, pendiente, posponer, etiqueta, filtro, filtrar conversaciones, guardar filtro, carpeta, editar carpeta, ventana 24 horas, plantilla, menciones, mencionar, mencionar a un companero, arroba, avisar a un companero, no atendidas, sin responder, ligar caso, programar mensaje, mias, no asignadas, todas, ordenar, prioridad, urgente, marcar como no leido, seleccionar varias, cambiar estado, bloquear contacto, desbloquear, enviar transcripcion, buscar mensajes, cambiar el diseno, participantes, unirse a la conversacion, macros, firma, grabar audio, adjuntar, emoji]
 pages: [conversations, mentions, unattended, conversation, case, contact, labels]
 sources:
   - app/javascript/dashboard/components/ChatList.vue
@@ -86,6 +86,7 @@ Conversaciones, en el menú de la izquierda. Su menú tiene: «Todas las Convers
 
 ## Dudas frecuentes
 - WhatsApp no me deja escribir: pasaron más de 24 horas desde el último mensaje del cliente. Sale «Solo puedes responder a esta conversación usando un mensaje de plantilla debido a restricción de ventana de 24 horas». Manda una plantilla aprobada con el botón «Plantillas de Whatsapp»; cuando el cliente conteste, ya puedes escribir libre.
+- ¿Se puede mencionar a alguien en el chat con un cliente? Sí, pero en una nota privada: cambia a «Nota privada», escribe @ y el nombre del compañero. El cliente no la ve; a tu compañero le llega un aviso y la conversación sale en su «Menciones». En un mensaje normal al cliente no se menciona. Para hablar entre el equipo sin conversación de por medio está el Chat interno.
 - ¿Diferencia entre Menciones y No Atendidas? Menciones: donde alguien te mencionó con @. No Atendidas: las que esperan respuesta de tu equipo.
 - Vista de bandeja: tus avisos (asignaciones, menciones, mensajes nuevos) en una lista; se explica en su propia guía.
 - Programar un mensaje: el ícono de reloj del panel, o pídeselo al asistente («mándale mañana a las 9 que ya está su cotización»).

@@ -70,6 +70,16 @@ RSpec.describe Assistant::Guides do
       expect(described_class.search('cómo concluyo una tarea', admin).first[:key]).to eq('agenda')
     end
 
+    it 'aguanta las faltas de ortografía comunes (c/s/z, v/b, ll/y, h)' do
+      expect(described_class.search('se puedem hacer mensiones en chat con clientes', admin).first[:key]).to eq('conversaciones')
+      expect(described_class.search('como hago una cotisacion', admin).first[:key]).to eq('cotizaciones')
+      expect(described_class.search('como instalo la app en mi selular', admin).first[:key]).to eq('dali_telefono')
+    end
+
+    it 'el verbo poder no cuenta («puedo», «pueden», «puedem»)' do
+      expect(described_class.words_of('¿se pueden hacer menciones? puedem podemos')).to eq(%w[menciones])
+    end
+
     it 'no devuelve nada si no hay coincidencia' do
       expect(described_class.search('xyzzy plugh', admin)).to eq([])
       expect(described_class.search('¿cómo?', admin)).to eq([])

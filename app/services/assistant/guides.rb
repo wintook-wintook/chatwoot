@@ -78,8 +78,11 @@ module Assistant::Guides
     I18n.transliterate(text.to_s.downcase).gsub(/[^a-z0-9ñ ]+/, ' ').squish
   end
 
+  # «puedo», «pueden», «puedem», «podemos», «podria»…: el verbo poder no dice de qué es la pregunta.
+  PODER = /\A(?:pued|pod[eir])/
+
   def words_of(text)
-    normalize(text).split.reject { |w| w.length < MIN_WORD || STOPWORDS.include?(w) }.uniq
+    normalize(text).split.reject { |w| w.length < MIN_WORD || STOPWORDS.include?(w) || w.match?(PODER) }.uniq
   end
 
   # Palabras clave valen más que el título y el título más que el texto.
@@ -89,12 +92,18 @@ module Assistant::Guides
     word.length <= 5 ? word : word.first([5, word.length - 2].max)
   end
 
+  # Las faltas de ortografía más comunes suenan igual: «mensiones» = «menciones»,
+  # «bendedor» = «vendedor», «aser» = «hacer», «llamada» = «yamada». Se comparan así los dos lados.
+  def sound(text)
+    text.gsub('ch', "\u0001").gsub(/c(?=[ei])|z/, 's').tr('v', 'b').gsub('ll', 'y').delete('h').tr("\u0001", 'c')
+  end
+
   def score(guide, words)
-    keywords = guide.keywords.map { |k| normalize(k) }.join(' ')
-    title = normalize(guide.title)
-    body = normalize(guide.body)
+    keywords = sound(guide.keywords.map { |k| normalize(k) }.join(' '))
+    title = sound(normalize(guide.title))
+    body = sound(normalize(guide.body))
     words.sum do |word|
-      stem = stem(word)
+      stem = stem(sound(word))
       (keywords.include?(stem) ? 3 : 0) + (title.include?(stem) ? 2 : 0) + (body.include?(stem) ? 1 : 0)
     end
   end

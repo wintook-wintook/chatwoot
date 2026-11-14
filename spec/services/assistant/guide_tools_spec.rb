@@ -77,7 +77,8 @@ RSpec.describe Assistant::GuideTools do
   describe 'preguntas de uso' do
     it 'reconoce «cómo hago…», «dónde veo…», «para qué sirve…» y «por qué no me deja…»' do
       ['¿Cómo agendo una tarea?', 'como puedo instalar la app en mi  celular', 'donde veo mis ventas',
-       'para qué sirve el embudo', 'por qué no me deja exportar'].each do |q|
+       'para qué sirve el embudo', 'por qué no me deja exportar', 'se puedem hacer mensiones en chat con clientes',
+       '¿puedo mencionar a alguien?', '¿hay forma de exportar contactos?'].each do |q|
         expect(described_class.how_to?(q)).to be(true), q
       end
     end

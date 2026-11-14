@@ -15,12 +15,13 @@ module Assistant::GuideTools
   GUIDE_TOOLS = %w[search_guides read_guide report_gap].freeze
 
   # Preguntas de cómo se usa la plataforma («¿cómo agendo…?», «¿dónde veo…?», «¿para qué
-  # sirve…?»). Con estas, Assistant::Chat obliga a que la primera vuelta sea search_guides:
+  # sirve…?», «¿se pueden hacer menciones…?», «¿puedo…?»). Con estas, Assistant::Chat obliga a que la primera vuelta sea search_guides:
   # el modelo chico a veces contestaba de memoria (o copiaba una respuesta vieja) sin buscar.
   # «¿Cómo va el caso?» o «¿cómo está Mario?» no entran (el verbo no es «yo hago»).
   HOW_TO = /
     \b(?:c[oó]mo|d[oó]nde)\s+(?:puedo|podemos|se|le|lo|la|los|las|me|hago|hacemos|\p{L}{2,}o)\b |
     \bpara\s+qu[eé]\s+sirve |
+    \b(?:se\s+pued\p{L}*|puedo|podemos|es\s+posible|hay\s+(?:forma|manera|modo|opci[oó]n))\b |
     \bpor\s+qu[eé]\s+no\s+(?:me\s+)?(?:deja|puedo|sale|aparece|veo)
   /xi
 
