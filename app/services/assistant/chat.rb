@@ -82,7 +82,7 @@ class Assistant::Chat < Cases::Ai::BaseService
     key = api_key
     return nil if key.blank?
 
-    body = { model: model, messages: messages, tools: Assistant::Tools.definitions, tool_choice: 'auto',
+    body = { model: model, messages: messages, tools: Assistant::Tools.definitions, tool_choice: @tools.tool_choice,
              temperature: 0.2, max_tokens: @analysis ? ANALYSIS_TOKENS : MAX_TOKENS }
     raw = post_raw(key, body)
     raw&.dig('choices', 0, 'message')

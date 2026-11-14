@@ -14,6 +14,18 @@
 module Assistant::GuideTools
   GUIDE_TOOLS = %w[search_guides read_guide report_gap].freeze
 
+  # Preguntas de cómo se usa la plataforma («¿cómo agendo…?», «¿dónde veo…?», «¿para qué
+  # sirve…?»). Con estas, Assistant::Chat obliga a que la primera vuelta sea search_guides:
+  # el modelo chico a veces contestaba de memoria (o copiaba una respuesta vieja) sin buscar.
+  # «¿Cómo va el caso?» o «¿cómo está Mario?» no entran (el verbo no es «yo hago»).
+  HOW_TO = /
+    \b(?:c[oó]mo|d[oó]nde)\s+(?:puedo|podemos|se|le|lo|la|los|las|me|hago|hacemos|\p{L}{2,}o)\b |
+    \bpara\s+qu[eé]\s+sirve |
+    \bpor\s+qu[eé]\s+no\s+(?:me\s+)?(?:deja|puedo|sale|aparece|veo)
+  /xi
+
+  def self.how_to?(text) = HOW_TO.match?(text.to_s)
+
   # Lo que el usuario escribió en este turno y dónde estaba (lo pone Assistant::Chat).
   attr_accessor :turn
 
@@ -22,10 +34,19 @@ module Assistant::GuideTools
   # el modelo pedía read_guide con el título y fallaba).
   def guides_now = @guides_now.to_a.uniq
 
+  # Para Assistant::Chat: la primera vuelta de una pregunta de uso tiene que ser search_guides;
+  # las demás, libres.
+  def tool_choice
+    return 'auto' if @guide_search_forced || !Assistant::GuideTools.how_to?(turn.to_h[:question])
+
+    @guide_search_forced = true
+    { type: 'function', function: { name: 'search_guides' } }
+  end
+
   def tool_search_guides(args)
     results = Assistant::Guides.search(args['query'], @grant)
     (@guides_now ||= []).concat(results.pluck(:key))
-    return { guides: results } if results.any?
+    return { guides: results, next: 'Ahora read_guide (con su key) de la que encaje y contesta con sus pasos.' } if results.any?
 
     record_gap('no_guide')
     { guides: [], note: 'No hay guía de eso. Dilo así («eso todavía no lo tengo documentado; ya quedó anotado») y no inventes ' \

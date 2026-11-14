@@ -2,7 +2,7 @@
 key: agenda
 title: Agenda, tareas y reportes
 areas: [agenda]
-keywords: [agenda, tarea, tareas, mi dia, dia de, dia de otro, ver el dia de, mi dia de otro usuario, supervisar, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, reportar avance, avance, ver reportes, historial, historial de la tarea, ver historial, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada, cancelar, cancelar tarea, cancelar cita, motivo de cancelacion, reabrir, sin responsable, sin asignar, borrar tarea, no puedo borrar, reprogramar, solicitante, prioridad, duracion estimada, programada para, plan de mi dia, siguiente, exportar csv, evidencia, buscar tarea]
+keywords: [agenda, agendar, agendar tarea, agendo, como agendo, tarea, tareas, mi dia, dia de, dia de otro, ver el dia de, mi dia de otro usuario, supervisar, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, reportar avance, avance, ver reportes, historial, historial de la tarea, ver historial, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada, cancelar, cancelar tarea, cancelar cita, motivo de cancelacion, reabrir, sin responsable, sin asignar, borrar tarea, no puedo borrar, reprogramar, solicitante, prioridad, duracion estimada, programada para, plan de mi dia, siguiente, exportar csv, evidencia, buscar tarea]
 pages: [tasks, agenda, my_day, calendar, task_reports, field_route, task_outcomes, task_scoring, case]
 sources:
   - app/javascript/dashboard/views/gestorTickets/Tasks.vue
@@ -126,6 +126,7 @@ Los reportes (cierre, avance y actividad) salen en la actividad del caso como re
 3. Llegadas: una tabla con Cuándo, Quién, Cliente, Visita y Ubicación («Sin ubicación» si no se tomó); «Exportar CSV» las descarga.
 
 ## Dudas frecuentes
+- ¿Cómo agendo una tarea? Agendar es ponerle día y hora para que entre al calendario. Hay tres caminos: (1) una nueva: «Nueva tarea» en Agenda › Tareas (o «Tarea» en la barra de arriba) y llena «Fecha programada» y «Hora (opcional)»; con hora queda agendada; (2) una que ya existe y tiene caso: en el caso, menú de la tarea › «Agendar tarea» (día y hora; se puede repetir o hacer «Serie»); (3) una que ya existe sin caso: «Pasar a la agenda» (eliges día, hora y lugar). También se lo puedes pedir a Dali: «agéndame llamar a Mario el jueves a las 10».
 - ¿Por qué el vencimiento de una tarea no tiene hora? Una tarea sin agendar no entra al calendario: su vencimiento es solo el día y vence al final de ese día. Si necesitas una hora exacta (cita, llamada, visita), es una tarea agendada: usa «Agendar tarea» o «Pasar a la agenda».
 - ¿Es obligatorio el tiempo dedicado? Por omisión sí. El administrador lo cambia en Catálogos › Resultados de tareas («Exigir el tiempo dedicado en los reportes»); ahí también da de alta los resultados.
 - Si concluyes varias tareas a la vez, el tiempo se reparte por igual entre ellas.

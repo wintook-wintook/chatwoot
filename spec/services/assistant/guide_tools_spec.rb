@@ -73,4 +73,30 @@ RSpec.describe Assistant::GuideTools do
     expect(result[:guides].pluck(:key)).to include('dali_telefono')
     expect(gaps.count).to eq(0)
   end
+
+  describe 'preguntas de uso' do
+    it 'reconoce «cómo hago…», «dónde veo…», «para qué sirve…» y «por qué no me deja…»' do
+      ['¿Cómo agendo una tarea?', 'como puedo instalar la app en mi  celular', 'donde veo mis ventas',
+       'para qué sirve el embudo', 'por qué no me deja exportar'].each do |q|
+        expect(described_class.how_to?(q)).to be(true), q
+      end
+    end
+
+    it 'no confunde preguntas de datos ni pedidos' do
+      ['¿cómo va el caso OPB-3?', '¿cómo está Mario?', 'agenda una llamada con Mario mañana', 'qué tengo hoy'].each do |q|
+        expect(described_class.how_to?(q)).to be(false), q
+      end
+    end
+
+    it 'obliga a buscar en las guías solo en la primera vuelta' do
+      tools.turn = { question: '¿Cómo agendo una tarea?' }
+      expect(tools.tool_choice).to eq(type: 'function', function: { name: 'search_guides' })
+      expect(tools.tool_choice).to eq('auto')
+    end
+
+    it 'sin pregunta de uso, deja al modelo elegir' do
+      tools.turn = { question: 'agéndame llamar a Mario el jueves' }
+      expect(tools.tool_choice).to eq('auto')
+    end
+  end
 end
