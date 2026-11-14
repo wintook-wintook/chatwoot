@@ -2,7 +2,7 @@
 key: dali_telefono
 title: Dali en el teléfono (instalarlo como app)
 areas: []
-keywords: [dali en el telefono, celular, movil, instalar, instalar app, icono, pantalla de inicio, agregar a inicio, agregar a pantalla principal, android, iphone, safari, chrome, qr, codigo qr, /dali, app de dali, dictar, microfono, permiso del microfono, no me deja instalar, me pide firmarme, avisos, notificaciones, notificacion, campanita, no me llegan avisos, push, ahora no, marcar todo como leido, cambiar de empresa, ir a kontrolya, abrir en kontrolya, mi ruta, generar otro codigo]
+keywords: [dali en el telefono, celular, movil, app movil, aplicacion, descargar, descargar la app, play store, app store, google play, tienda de aplicaciones, kontrolya en el celular, instalar, instalar app, icono, pantalla de inicio, agregar a inicio, agregar a pantalla principal, android, iphone, safari, chrome, qr, codigo qr, /dali, app de dali, dictar, microfono, permiso del microfono, no me deja instalar, me pide firmarme, avisos, notificaciones, notificacion, campanita, no me llegan avisos, push, ahora no, marcar todo como leido, cambiar de empresa, ir a kontrolya, abrir en kontrolya, mi ruta, generar otro codigo]
 pages: [profile, field_route]
 sources:
   - app/javascript/dashboard/views/dali/**/*.vue
@@ -57,6 +57,7 @@ Usar a Dali desde el celular a pantalla completa, como una app con su propio íc
 - El ícono es el logo de la plataforma.
 
 ## Dudas frecuentes
+- ¿Está en Play Store o en App Store? No. No se descarga de ninguna tienda: se abre en el navegador del teléfono (con el QR de tu perfil o la dirección terminada en /dali) y desde ahí se instala con su ícono, como dicen los pasos de arriba. Desde Dali, el menú ⋮ › «Ir a Kontrolya» abre la plataforma completa.
 - ¿Tengo que escanear el QR cada vez? No. El QR solo es para entrar la primera vez; después abres Dali con el ícono.
 - No me aparece «Instalar»: en Android usa el menú ⋮ de Chrome › «Agregar a la pantalla principal»; en iPhone tiene que ser desde Safari, con Compartir › «Agregar a inicio».
 - En el iPhone, ya instalado, me pidió firmarme otra vez: es normal la primera vez, porque la app instalada guarda su sesión aparte de Safari. Entra con tu correo y contraseña una vez.

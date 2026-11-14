@@ -55,4 +55,22 @@ RSpec.describe Assistant::GuideTools do
     limited = Assistant::Tools.new(account: account, user: user, grant: grant, zone: Time.zone)
     expect(limited.call('read_guide', { 'key' => 'ventas' })[:result]).to have_key(:error)
   end
+
+  # «¿Cómo instalo la app en mi celular?» → «sí»: el modelo pidió la guía por su título.
+  it 'lee la guía aunque le pasen el título, y recuerda cuál fue' do
+    tools.call('search_guides', { 'query' => 'como puedo instalar la app en mi celular' })
+    read = tools.call('read_guide', { 'key' => 'Dali en el teléfono (instalarlo como app)' })[:result]
+
+    expect(read[:key]).to eq('dali_telefono')
+    expect(tools.guides_now.first).to eq('dali_telefono')
+    expect(gaps.count).to eq(0)
+  end
+
+  it 'si la clave no existe, sugiere las parecidas sin anotar nada' do
+    result = tools.call('read_guide', { 'key' => 'instalar dali en el telefono' })[:result]
+
+    expect(result[:error]).to include('key')
+    expect(result[:guides].pluck(:key)).to include('dali_telefono')
+    expect(gaps.count).to eq(0)
+  end
 end

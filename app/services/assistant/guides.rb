@@ -53,8 +53,10 @@ module Assistant::Guides
     @all ||= load_all
   end
 
+  # Por su clave; si el modelo manda el título («Dali en el teléfono (instalarlo como app)»), también.
   def find(key, grant)
-    guide = all.find { |g| g.key == key.to_s.strip }
+    wanted = key.to_s.strip
+    guide = all.find { |g| g.key == wanted } || all.find { |g| normalize(g.title) == normalize(wanted) }
     guide if guide&.visible_to?(grant)
   end
 

@@ -43,12 +43,15 @@ class Assistant::Chat < Cases::Ai::BaseService
     end
     @thread.add_message(role: 'assistant', content: final_text(content, proposals),
                         proposals: proposals, navigate: navigate, cards: cards.first(MAX_CARDS),
-                        suggestions: suggestions.uniq.first(MAX_SUGGESTIONS), listed: @tools.listed_now.presence)
+                        suggestions: suggestions.uniq.first(MAX_SUGGESTIONS), listed: @tools.listed_now.presence,
+                        guides: @tools.guides_now.presence)
   end
 
   private
 
-  def final_text(content, proposals) = Assistant::PageLinks.new(@tools).call(content).presence || fallback(proposals)
+  def final_text(content, proposals)
+    Assistant::PageLinks.new(@tools).call(Assistant::History.clean(content)).presence || fallback(proposals)
+  end
 
   # Guarda lo que escribió y se lo pasa a las funciones (las guías anotan la pregunta).
   def start_turn(text)
@@ -124,13 +127,7 @@ class Assistant::Chat < Cases::Ai::BaseService
     {}
   end
 
-  # Lo dicho antes, en texto: lo que se propuso y en qué quedó va entre corchetes.
-  def history_messages
-    @thread.messages.last(HISTORY).map do |m|
-      notes = Array(m['proposals']).map { |p| "[Propuse #{p['type']}: #{p['labels'].to_h.values.compact.join(', ')} — #{p['status']}]" }
-      { role: m['role'], content: [m['content'], *notes].compact_blank.join("\n") }
-    end
-  end
+  def history_messages = Assistant::History.messages(@thread, HISTORY)
 
   def fallback(proposals)
     proposals.any? ? I18n.t('assistant.review_proposal') : I18n.t('assistant.unavailable')
@@ -198,9 +195,10 @@ class Assistant::Chat < Cases::Ai::BaseService
     - No hagas acciones masivas (a muchos clientes a la vez): di que eso todavía no lo puedes hacer.
 
     Cómo se usa la plataforma («¿cómo creo…?», «¿dónde veo…?», «¿para qué sirve…?», «¿por qué no me deja…?»):
-    - Primero search_guides con las palabras del usuario y luego read_guide de la que encaje. Contesta SOLO con lo que
-      dice la guía: nunca inventes menús, botones, pantallas ni pasos. Si es para hacerlo tú (p. ej. «crea la tarea»),
-      no hace falta guía: usa la función de propuesta.
+    - En el MISMO turno: search_guides con las palabras del usuario, read_guide (con su `key`) de la que encaje y contesta
+      con los pasos. Nunca ofrezcas «abrir la guía» ni preguntes si la quiere: dale la respuesta. Contesta SOLO con lo
+      que dice la guía: nunca inventes menús, botones, pantallas, pasos ni tiendas de apps (Kontrolya no está en Play
+      Store ni App Store). Si es para hacerlo tú (p. ej. «crea la tarea»), no hace falta guía: usa la función de propuesta.
     - Responde con pasos numerados cortos (máximo 6); cada pantalla como liga [[clave]] (ver arriba). Si trae `url`, dalo al final.
     - Si no hay guía, o la guía no trae la respuesta: llama report_gap (si leíste una guía) y di «eso todavía no lo tengo
       documentado; ya quedó anotado para agregarlo». Puedes sugerir a quién preguntarle (su administrador).
