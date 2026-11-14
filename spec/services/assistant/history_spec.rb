@@ -50,6 +50,11 @@ RSpec.describe Assistant::History do
       expect(described_class.clean(text)).to eq('No, no está en Play Store.')
     end
 
+    it 'quita la firma corta con la pantalla' do
+      text = "No encontré a Jane en el equipo.\n\nJohn, 2026-11-14, viendo: my_summary."
+      expect(described_class.clean(text)).to eq('No encontré a Jane en el equipo.')
+    end
+
     it 'no toca un texto normal' do
       expect(described_class.clean('Los datos de la conversación están en la ficha.')).to eq('Los datos de la conversación están en la ficha.')
     end

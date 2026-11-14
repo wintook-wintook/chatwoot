@@ -60,7 +60,7 @@ class Assistant::Chat < Cases::Ai::BaseService
   end
 
   def run(messages)
-    MAX_ROUNDS.times do
+    (MAX_ROUNDS + @tools.guide_rounds).times do
       message = complete(messages)
       return I18n.t('assistant.unavailable') unless message
 

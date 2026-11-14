@@ -97,6 +97,12 @@ RSpec.describe Assistant::GuideTools do
     it 'sin pregunta de uso, deja al modelo elegir' do
       tools.turn = { question: 'agéndame llamar a Mario el jueves' }
       expect(tools.tool_choice).to eq('auto')
+      expect(tools.guide_rounds).to eq(0)
+    end
+
+    it 'a una pregunta de uso le da 2 vueltas más (buscar y leer la guía)' do
+      tools.turn = { question: '¿cómo le hago para agendar una llamada con jane?' }
+      expect(tools.guide_rounds).to eq(2)
     end
   end
 end

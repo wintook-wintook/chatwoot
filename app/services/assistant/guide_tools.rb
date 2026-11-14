@@ -43,6 +43,10 @@ module Assistant::GuideTools
     { type: 'function', function: { name: 'search_guides' } }
   end
 
+  # Buscar y leer la guía gastan 2 vueltas: una pregunta de uso que además pide hacer algo
+  # («¿cómo le hago para agendar una llamada con jane?») se quedaba sin vuelta para contestar.
+  def guide_rounds = Assistant::GuideTools.how_to?(turn.to_h[:question]) ? 2 : 0
+
   def tool_search_guides(args)
     results = Assistant::Guides.search(args['query'], @grant)
     (@guides_now ||= []).concat(results.pluck(:key))
