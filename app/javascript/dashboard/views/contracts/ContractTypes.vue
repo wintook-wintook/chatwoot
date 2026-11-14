@@ -50,6 +50,12 @@ export default {
     this.fetch();
   },
   methods: {
+    // «Sin plazo», «1 mes», «12 meses».
+    termLabel(months) {
+      if (!months) return this.$t('CONTRACTS.TYPES.NO_TERM');
+      if (Number(months) === 1) return this.$t('CONTRACTS.TYPES.MONTH_ONE');
+      return this.$t('CONTRACTS.TYPES.MONTHS', { n: months });
+    },
     everyLabel(type) {
       return everyLabel(
         this.$t.bind(this),
@@ -189,16 +195,12 @@ export default {
             </td>
             <td class="px-3 py-2">{{ everyLabel(type) }}</td>
             <td class="px-3 py-2">
-              {{
-                type.default_term_months
-                  ? $t('CONTRACTS.TYPES.MONTHS', {
-                      n: type.default_term_months,
-                    })
-                  : $t('CONTRACTS.TYPES.NO_TERM')
-              }}
+              {{ termLabel(type.default_term_months) }}
             </td>
             <td class="px-3 py-2 text-slate-600 dark:text-slate-300">
-              {{ type.custom_fields.map(field => field.label).join(', ') || '—' }}
+              {{
+                type.custom_fields.map(field => field.label).join(', ') || '—'
+              }}
             </td>
             <td class="px-3 py-2 text-right">{{ type.contracts_count }}</td>
             <td class="px-3 py-2">
@@ -266,11 +268,7 @@ export default {
             </label>
             <label>
               {{ $t('CONTRACTS.TYPES.FORM.TERM') }}
-              <input
-                v-model="form.default_term_months"
-                type="number"
-                min="1"
-              />
+              <input v-model="form.default_term_months" type="number" min="1" />
               <span class="text-xs text-slate-500 dark:text-slate-400">{{
                 $t('CONTRACTS.TYPES.FORM.TERM_HINT')
               }}</span>
@@ -287,7 +285,9 @@ export default {
 
           <!-- Datos propios del tipo -->
           <div class="mt-3">
-            <p class="m-0 text-sm font-medium text-slate-800 dark:text-slate-100">
+            <p
+              class="m-0 text-sm font-medium text-slate-800 dark:text-slate-100"
+            >
               {{ $t('CONTRACTS.TYPES.FORM.FIELDS') }}
             </p>
             <p class="mb-2 text-xs text-slate-500 dark:text-slate-400">

@@ -1,6 +1,11 @@
 <script>
 import { mapGetters } from 'vuex';
 import { useAdmin } from 'dashboard/composables/useAdmin';
+import {
+  canDo,
+  canSeeArea,
+  getUserAccess,
+} from 'dashboard/helper/accessHelper';
 
 export default {
   props: {
@@ -41,7 +46,14 @@ export default {
     },
     ...mapGetters({
       getAppliedContactFilters: 'contacts/getAppliedContactFilters',
+      currentUser: 'getCurrentUser',
+      accountId: 'getCurrentAccountId',
     }),
+    // Igual que ContactPolicy#export?: el permiso «Exportar» y acceso a Clientes.
+    canExport() {
+      const access = getUserAccess(this.currentUser, this.accountId);
+      return canDo(access, 'export') && canSeeArea(access, 'clients');
+    },
     hasAppliedFilters() {
       return this.getAppliedContactFilters.length;
     },
@@ -217,7 +229,7 @@ export default {
           </woot-button>
 
           <woot-button
-            v-if="isAdmin"
+            v-if="canExport"
             color-scheme="info"
             icon="download"
             class="clear [&>span]:hidden xs:[&>span]:block"

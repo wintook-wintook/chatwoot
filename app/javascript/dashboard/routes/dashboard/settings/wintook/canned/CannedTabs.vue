@@ -1,5 +1,4 @@
 <script>
-import { mapGetters } from 'vuex';
 export default {
   name: 'CannedTabs',
   props: {
@@ -9,9 +8,6 @@ export default {
     },
   },
   computed: {
-    ...mapGetters({
-      globalConfig: 'globalConfig/get',
-    }),
     tabs() {
       return [
         { key: 0, name: 'Respuestas predefinidas' },
@@ -25,7 +21,6 @@ export default {
   methods: {
     onClickTabChange(index) {
       this.$emit('update:selectedTabIndex', index);
-      console.log(globalConfig)
     },
   },
 };

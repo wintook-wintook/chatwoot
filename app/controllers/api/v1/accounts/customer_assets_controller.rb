@@ -7,6 +7,7 @@ class Api::V1::Accounts::CustomerAssetsController < Api::V1::Accounts::BaseContr
   FIELDS = %i[contact_id organization_id name brand model serial location installed_on warranty_until notes active].freeze
 
   before_action :check_access
+  before_action :check_write, only: %i[create update]
   before_action :set_asset, only: %i[show update]
 
   def index
@@ -34,6 +35,12 @@ class Api::V1::Accounts::CustomerAssetsController < Api::V1::Accounts::BaseContr
 
   def check_access
     render_access_denied unless access_grant.allowed?(:clients) || access_grant.case_area_allowed?
+  end
+
+  # Dar de alta o cambiar un equipo pide poder escribir (no solo «Ver») en Clientes o en
+  # el área de los casos que lo usan.
+  def check_write
+    render_access_denied unless %i[clients service sales].any? { |area| access_grant.writable?(area) }
   end
 
   def set_asset

@@ -193,12 +193,22 @@ export default {
     openConversation(id) {
       this.$router.push(`/app/accounts/${this.accountId}/conversations/${id}`);
     },
+    // Con caso, a sus tareas; sin caso (captura rápida), al contacto o a Mi día.
     openTask(row) {
-      this.$router.push({
-        name: 'gestorTickets_detail',
-        params: { id: row.case_ticket.id },
-        query: { tab: 'tasks' },
-      });
+      if (row.case_ticket) {
+        this.$router.push({
+          name: 'gestorTickets_detail',
+          params: { id: row.case_ticket.id },
+          query: { tab: 'tasks' },
+        });
+      } else if (row.contact) {
+        this.$router.push({
+          name: 'contact_profile_dashboard',
+          params: { contactId: row.contact.id },
+        });
+      } else {
+        this.goMyDay();
+      }
     },
     // «Ver todo» de la tarjeta: a la pestaña Mi día, sin salir de Mi resumen.
     goMyDay() {
