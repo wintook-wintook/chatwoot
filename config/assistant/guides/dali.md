@@ -2,20 +2,28 @@
 key: dali
 title: El asistente (Dali)
 areas: []
-keywords: [asistente, dali, equipo, compañero, dia de otro, el dia de, que tiene hoy, asignar tarea a un compañero, usuario o contacto, ctrl j, preguntale, pedirle, tarjeta, confirmar, propuesta, nombre del asistente, que puedes hacer, que haces, que sabes hacer, para que sirves, alcance, alcance de dali, funciones, capacidades, en que me ayudas, borrador, mensaje programado, delegar seguimiento, ventas, meta, conversacion nueva, openai, via dali, telefono, celular, app, instalar, qr, dictar, voz, microfono, portal, contestar, responder, sin responder, quien me escribio, que tengo pendiente, mencion, me mencionaron, chat interno, sin asignar, nota interna, plantilla, 24 horas, visitas, ruta, campo, voy en camino, reporte de la visita, nfc, etiqueta nfc, expo, liga, link, ir a la pantalla, mi perfil, abre mi perfil]
-pages: [profile, account_settings]
+keywords: [asistente, dali, equipo, compañero, dia de otro, el dia de, que tiene hoy, asignar tarea a un compañero, usuario o contacto, ctrl j, preguntale, pedirle, tarjeta, confirmar, propuesta, nombre del asistente, que puedes hacer, que haces, que sabes hacer, para que sirves, alcance, alcance de dali, funciones, capacidades, en que me ayudas, borrador, mensaje programado, delegar seguimiento, ventas, meta, conversacion nueva, openai, via dali, telefono, celular, app, instalar, qr, dictar, voz, microfono, portal, contestar, responder, sin responder, quien me escribio, que tengo pendiente, mencion, me mencionaron, chat interno, sin asignar, nota interna, plantilla, 24 horas, visitas, ruta, campo, voy en camino, reporte de la visita, nfc, etiqueta nfc, expo, liga, link, ir a la pantalla, mi perfil, abre mi perfil, conversacion nueva, abrir en kontrolya, modelo de openai, modelo para analisis de ventas, preguntas de ejemplo, sugerencias]
+pages: [profile, account_settings, my_day, field_route]
+sources:
+  - app/javascript/dashboard/components/assistant/**/*.vue
+  - app/javascript/dashboard/views/dali/**/*.vue
+  - app/services/assistant/**/*.rb
+  - app/controllers/api/v1/accounts/assistant_controller.rb
+  - app/javascript/dashboard/routes/dashboard/settings/account/AccountAssistantSettings.vue
+  - app/javascript/dashboard/routes/dashboard/settings/profile/DaliOnPhone.vue
+reviewed: 2026-11-14
 ---
 ## Para qué sirve
 El asistente (se llama Dali, o el nombre que le puso tu empresa) es el ayudante de quien trabaja en la plataforma: le pides las cosas con tus palabras, escritas o dictadas, y él consulta, registra y te deja listo lo que hay que hacer.
 - Contesta sobre tus clientes, casos, agenda, conversaciones y ventas.
 - Te propone la acción ya llena (una tarea, una cita, una cotización, la respuesta a un cliente) y tú solo la confirmas: nada se hace sin confirmar.
 - Te explica cómo se usa la plataforma.
-- Está en todas las pantallas y en una app para el teléfono, con dictado por voz y avisos.
+- Está en todas las pantallas y en una app para el teléfono (ahí, con dictado por voz y avisos).
 
 ## Dónde está
 - En la caja «Pregúntale a …» de la barra de arriba, en todas las pantallas: escribe y da Enter. Enter con la caja vacía o doble clic en la caja abre el panel.
 - Con el teclado: Ctrl + J (Cmd + J en Mac) lo abre o lo cierra; Esc lo cierra.
-- El panel se abre a la derecha y sigue abierto mientras navegas. Entiende lo que estás viendo: si estás en un caso, contacto, organización o conversación, «esto» es ese registro.
+- El panel se abre a la derecha (arriba dice «Tu asistente · Ctrl + J»; el «+» es «Conversación nueva» y la ✕ lo cierra) y sigue abierto mientras navegas. Entiende lo que estás viendo: si estás en un caso, contacto, organización o conversación, «esto» es ese registro.
 - En el teléfono: el portal de Dali, a pantalla completa y con dictado (ver «Usarlo en el teléfono»).
 
 ## Qué puede hacer
@@ -28,23 +36,24 @@ Su alcance, por área (con un ejemplo de cómo pedirlo):
 - Registrar: notas, tareas, tareas agendadas (llamadas, reuniones, visitas) y mensajes programados al cliente. «Agéndame una llamada con Mario mañana a las 10.»
 - Tareas: cancelarlas con su motivo, pasarlas a la agenda o sacarlas de ella, reportar su avance sin completarlas y contar su historial. «Reporta avance de la T003: llamé al proveedor, 20 minutos», «¿cómo va la T004?»
 - Casos y oportunidades: crear un caso, pasarlo a otra etapa, marcarlo como ganado, perdido o cancelado, posponerlo o retomarlo, y cambiar monto, cierre estimado, probabilidad o el compromiso del cliente. «Marca ganada la oportunidad de Acme.»
-- Cotizaciones (si puedes crear en Ventas): armarlas con los productos y precios del Catálogo, mandárselas al cliente y ver las que tiene abiertas. «Cotízale a Mario 3 paneles y la instalación.»
+- Cotizaciones (si puedes crear en Ventas): armarlas con los productos y precios del Catálogo (la tarjeta trae cantidad, «Precio sin IVA», subtotal, IVA y total; al confirmar queda en borrador), mandárselas al cliente y ver las que tiene abiertas. «Cotízale a Mario 3 paneles y la instalación.»
 - Ventas (si tienes acceso a Ventas): cómo vas contra la meta, ranking de vendedores y clientes, oportunidades que cierran, vencidas o estancadas, y la salud del embudo. Las cifras son sin IVA; con «Solo lo suyo» son solo tus números. «¿Cómo voy este mes?»
 - Seguimiento IA: delegar el seguimiento de un cliente a un agente IA (también con tus plantillas de seguimiento), preguntar cómo va y pausarlo, reanudarlo o cancelarlo. «Dale seguimiento a Mario hasta que confirme la cotización.»
-- Trabajo en campo: tus visitas del día, cuál sigue, qué se le hizo la última vez al cliente, avisarle «voy en camino» y dictar el reporte de la visita (ver la guía «Mi ruta en campo»). «Avísale que llego en 20.»
-- Tareas con el cliente: qué le falta a un cliente, quién tiene tareas vencidas y asignarle una tarea que trabaja en su portal (ver la guía «Tareas con el cliente y su portal»). «Pídele a Acme que firme el contrato.»
-- Captar en la expo: el enlace NFC de un evento para grabarlo en una etiqueta desde el teléfono y cuántos se captaron. «Quiero grabar la etiqueta NFC de la expo para Ana.»
+- Trabajo en campo (si tienes acceso a la Agenda): tus visitas del día, cuál sigue, qué se le hizo la última vez al cliente, avisarle «voy en camino» y dictar el reporte de la visita (ver la guía «Mi ruta en campo»). «Avísale que llego en 20.»
+- Tareas con el cliente (si tu empresa usa casos): qué le falta a un cliente, quién tiene tareas vencidas y asignarle una tarea que trabaja en su portal (ver la guía «Tareas con el cliente y su portal»). «Pídele a Acme que firme el contrato.»
+- Captar en la expo (si tienes acceso a Campañas): el enlace NFC de un evento para grabarlo en una etiqueta desde el teléfono y cuántos se captaron. «Quiero grabar la etiqueta NFC de la expo para Ana.»
 - Ayuda de uso: explicar cómo se hace algo, dónde está y para qué sirve. Cada pantalla que menciona sale como liga: haz clic para ir. «¿Cómo creo un contrato?»
 - Borradores: redacta un mensaje para que lo copies. En Plantillas de WhatsApp, «Crear con Dali» arma la plantilla completa.
 
 ## Cómo se hace
 ### Pedirle algo
 1. Escribe lo que necesitas: «¿qué tengo hoy?», «¿qué pasó con Acme?», «agéndame una llamada con Mario mañana a las 10», «¿cómo creo un contrato?».
-2. Al empezar te sugiere preguntas de ejemplo; después de cada respuesta puede sugerirte cómo seguir. Haz clic en una para preguntarla.
-3. El botón «+» de arriba del panel empieza una conversación nueva.
+2. Al empezar te saluda y te sugiere preguntas de ejemplo según tu rol («¿Qué tengo hoy?», «¿Cómo vamos este mes?» y «¿Qué oportunidades cierran esta semana?» si tienes Ventas, «¿Cómo se usa la Agenda?», «¿En qué me puedes ayudar?»); después de cada respuesta puede sugerirte cómo seguir. Haz clic en una para preguntarla.
+3. Mientras trabaja dice «Dali está pensando…» (con el nombre de tu asistente).
+4. El botón «+» («Conversación nueva») de arriba del panel empieza una conversación nueva.
 
 ### Confirmar lo que propone
-1. Cuando le pides hacer algo, aparece una tarjeta con los datos ya llenos (título, fecha, responsable, texto…).
+1. Cuando le pides hacer algo, aparece una tarjeta con los datos ya llenos (título, fecha, responsable, texto…). Su nombre dice qué es: «Nota», «Tarea», «Tarea agendada», «Mensaje programado», «Nuevo contacto», «Crear caso», «Cambiar etapa», «Cerrar oportunidad», «Posponer», «Nueva cotización», «Enviar cotización», «Responder», «Nota interna (el cliente no la ve)», «Cancelar», «Agenda ↔ tarea», «Avance de tarea», «Voy en camino», «Reporte de la visita», «Tarea del cliente», «Enlace NFC», etc. Una tarea agendada avisa «Se agrega a tu Google Calendar» si lo tienes conectado.
 2. Revísala y corrige lo que haga falta en la misma tarjeta.
 3. Pulsa «Confirmar» para que se haga, o «No» para descartarla. Nada se hace sin confirmar.
 4. Al quedar hecha, la tarjeta dice «Hecho» y, cuando aplica, «Ver» abre lo que se creó.
@@ -56,9 +65,9 @@ Su alcance, por área (con un ejemplo de cómo pedirlo):
 2. Apunta la cámara del teléfono al código: entras ya firmado al portal de Dali de tu empresa. El código sirve una sola vez y vence en 5 minutos; si vence, pulsa «Generar otro código».
 3. Sin QR: en el teléfono abre la dirección de la plataforma terminada en /dali y entra con tu correo y contraseña; te lleva directo a Dali.
 4. Instálalo como app para tener su ícono: en Android, menú ⋮ › «Instalar en este teléfono»; en iPhone, desde Safari, Compartir › «Agregar a inicio». Los pasos completos están en la guía «Dali en el teléfono».
-5. Para dictar, toca el micrófono, habla y vuelve a tocarlo: el texto queda en el cuadro para que lo revises y lo mandes. Cada nota puede durar hasta 2 minutos.
-6. Los botones de abajo (Mi día, Sin responder, Cotizar, Visitas de hoy, Agendar, Anotar y, si tienes Ventas, Ventas) empiezan la plática ya encaminada.
-7. Lo que Dali abre (una cotización, un caso) se abre en la plataforma; el botón «Volver a Dali» te regresa. Arriba, «Mi ruta» abre el portal de campo (llegar, fotos, firma). En el menú ⋮ están «Ir a Kontrolya» y, si estás en varias empresas, el cambio de empresa.
+5. Para dictar (solo en el teléfono), toca el micrófono, habla y vuelve a tocarlo: el texto queda en el cuadro para que lo revises y lo mandes. Cada nota puede durar hasta 2 minutos.
+6. Los botones de abajo empiezan la plática ya encaminada, según tu rol: «Mi día», «Sin responder» (si puedes escribir en Conversaciones), «Cotizar» (si puedes crear en Ventas), «Visitas de hoy» (si tienes Agenda), «Agendar», «Anotar» y «Ventas» (si tienes Ventas).
+7. En el teléfono Dali no cambia de pantalla solo: cuando quiere abrir algo deja el botón «Abrir en Kontrolya». Lo que abre (una cotización, un caso) se abre en la plataforma; el botón «Volver a Dali» te regresa. Arriba, «Mi ruta» (si tienes Agenda) abre el portal de campo (llegar, fotos, firma). En el menú ⋮ están «Ir a Kontrolya» y, si estás en varias empresas, el cambio de empresa.
 
 ### Contestar una conversación
 1. Pregunta «¿qué tengo pendiente?», «¿qué tengo sin responder?» o «¿quién me escribió?» (en el teléfono, el botón «Sin responder»). Dali te contesta por partes, solo las que traigan algo:
@@ -96,4 +105,4 @@ Su alcance, por área (con un ejemplo de cómo pedirlo):
 - No me deja dictar: permite el micrófono al navegador (o a la app) cuando lo pida; si lo negaste, actívalo en los permisos del sitio.
 
 ## Quién puede
-Todos los usuarios lo usan, cada uno con lo que su rol le deja ver y hacer. Solo el Administrador cambia su nombre y el modelo de OpenAI.
+Todos los usuarios lo usan, cada uno con lo que su rol le deja ver y hacer. Solo el Administrador cambia su nombre y, en Ajustes › Configuración de Cuenta › Asistente, el «Modelo de OpenAI» y el «Modelo para análisis de ventas» (el que usa cuando explica cifras de ventas; uno más potente responde mejor pero cuesta más por consulta).

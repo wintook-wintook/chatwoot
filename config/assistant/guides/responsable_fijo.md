@@ -3,14 +3,21 @@ key: responsable_fijo
 title: Responsable fijo del contacto
 areas: [clients]
 keywords: [responsable fijo, responsable, dueno, dueno del cliente, ejecutivo de cuenta, vendedor asignado, asignar contacto, siempre le llega, sus conversaciones, casos nuevos, reglas de asignacion, reasignar, responsable de la organizacion, heredar, sin responsable fijo, asignar a otra persona]
-pages: [contact, organization, contacts]
+pages: [contact, organization, contacts, organizations]
+sources:
+  - app/javascript/dashboard/routes/dashboard/conversation/contact/ContactOwnerField.vue
+  - app/controllers/api/v1/accounts/contacts/owners_controller.rb
+  - app/models/concerns/contact_owner_assignment.rb
+  - app/javascript/dashboard/views/organizations/OrganizationForm.vue
+  - app/services/access/grant.rb
+reviewed: 2026-11-14
 ---
 ## Para qué sirve
 El responsable fijo es la persona que atiende siempre a un contacto. Sus conversaciones y sus casos nuevos le llegan a ella, por encima de la asignación por turnos, las automatizaciones, las reglas de asignación y los Agentes IA.
 
 ## Dónde está
-- En la ficha del contacto, arriba, en «Responsable fijo».
-- En la organización, en su campo «Responsable» (al crearla o con «Editar»).
+- En la ficha del contacto, arriba, en «Responsable fijo» (al pasar el mouse explica: «Sus conversaciones y casos nuevos van siempre con esta persona, sin importar las reglas de asignación.»).
+- En la organización, en su campo «Responsable» (al crearla o con «Editar»). También sale en la columna «Responsable» de Clientes › Organizaciones y en los «Datos» de su página.
 
 ## Cómo se hace
 ### Ponerle responsable fijo a un contacto
@@ -21,7 +28,7 @@ El responsable fijo es la persona que atiende siempre a un contacto. Sus convers
 
 ### Ponerlo para toda una organización
 1. Abre la organización en Clientes › Organizaciones y pulsa «Editar».
-2. Elige el «Responsable» y pulsa «Guardar».
+2. Elige el «Responsable» (o «Sin responsable») y pulsa «Guardar».
 3. Sus contactos que no tienen responsable fijo propio usan este. El propio del contacto gana sobre el de la organización.
 
 ## Qué pasa con las conversaciones
@@ -37,6 +44,8 @@ El responsable fijo es la persona que atiende siempre a un contacto. Sus convers
 
 ## Dudas frecuentes
 - En la ficha dice «Sin responsable fijo» y debajo «Aplica el de su organización …»: el contacto no tiene uno propio y usa el «Responsable» de su organización.
+- No puedo cambiarlo, solo veo el nombre: tu rol no tiene «Asignar a otra persona». Si sale «No se pudo cambiar el responsable fijo», intenta de nuevo o revisa tu permiso.
+- Al fusionar dos contactos, si el que se queda no tiene responsable fijo, toma el del que se elimina.
 - ¿Ver solo lo mío incluye a estos contactos? Sí: con «Solo lo suyo» en Clientes ves los contactos de los que eres responsable fijo y los de las organizaciones a tu cargo.
 
 ## Quién puede
