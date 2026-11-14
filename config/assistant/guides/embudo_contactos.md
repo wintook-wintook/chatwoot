@@ -4,7 +4,7 @@ title: Embudo de contactos
 areas: [sales]
 keywords: [embudo, contacto nuevo, primera conversacion, cliente que vuelve a escribir, por que no entra, salir del embudo, sale del embudo, embudo de contactos, prospecto, prospectos, tablero de conversaciones, kanban, columna, tarjeta, mover tarjeta, convertir, convertido, descartar, descartado, frio, sin respuesta, dias sin respuesta, ia mueve, movimiento automatico, bandejas, criterio, metricas del embudo, interesado, cita, embudo por defecto, etapa por defecto, posicion, tipo de columna, agregar columna, eliminar embudo, mas antiguas, quitar del embudo, meter al embudo]
 pages: [contact_funnel, conversation, opportunities, contact_funnels]
-sources: [app/javascript/dashboard/views/kanbanBoard.vue, app/javascript/dashboard/components/kanban/**/*.vue, app/javascript/dashboard/components/settings/KanbanProcesses/*.vue, app/javascript/dashboard/components/settings/KanbanTypeProcesses/*.vue, app/javascript/dashboard/routes/dashboard/settings/kanban/*.vue, app/javascript/dashboard/routes/dashboard/conversation/ConversationAction.vue, app/services/kanban/*.rb, app/jobs/kanban/*.rb, app/models/concerns/kanban_funnel_trackable.rb]
+sources: [app/javascript/dashboard/views/kanbanBoard.vue, app/javascript/dashboard/components/kanban/**/*.vue, app/javascript/dashboard/components/settings/KanbanProcesses/*.vue, app/javascript/dashboard/components/settings/KanbanTypeProcesses/*.vue, app/javascript/dashboard/routes/dashboard/settings/kanban/*.vue, app/javascript/dashboard/routes/dashboard/conversation/ConversationAction.vue, app/services/kanban/*.rb, app/jobs/kanban/*.rb, app/models/concerns/kanban_funnel_trackable.rb, app/controllers/api/v1/accounts/conversations/kanban_controller.rb]
 reviewed: 2026-11-14
 ---
 ## Para qué sirve
@@ -74,6 +74,7 @@ Las tarjetas solo avanzan, nunca regresan solas. Si el embudo tiene «La IA muev
 
 ## Límites
 - Solo entran solos los contactos nuevos (su primera conversación) y solo en embudos con «Movimiento automático». Si una bandeja está en varios embudos, el contacto entra al más antiguo.
+- En el tablero ves las mismas conversaciones que en Conversaciones: las de tus bandejas y, si tu rol tiene Conversaciones en «Solo lo suyo», solo las tuyas.
 - Una tarjeta convertida ya no se mueve sola; a mano sí se puede arrastrar.
 - Una descartada solo sale sola si se crea su caso o si el cliente vuelve a escribir.
 - El descarte por días sin respuesta solo toca las columnas normales.

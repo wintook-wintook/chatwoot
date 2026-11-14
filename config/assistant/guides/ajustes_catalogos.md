@@ -65,7 +65,7 @@ Si un resultado tiene motivos activos, al marcar la oportunidad hay que elegir u
 5. Edita el texto de cualquiera (se guarda al salir del cuadro) o desmarca «Activo».
 
 ### Crear una etiqueta
-1. Entra a Catálogos › Etiquetas y pulsa el botón para agregar (dice «Add label»).
+1. Entra a Catálogos › Etiquetas y pulsa «Agregar etiqueta».
 2. Escribe el «Nombre de la etiqueta» (mínimo 2 letras, sin espacios; se guarda en minúsculas), una «Descripción» si quieres y el «Color».
 3. Deja «Mostrar etiqueta en la barra lateral» si quieres verla en el menú.
 4. Pulsa «Crear». Para cambiarla usa «Editar»; para quitarla, «Eliminar».

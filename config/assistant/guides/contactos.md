@@ -72,7 +72,7 @@ Un contacto es una persona con quien habla tu empresa. Su ficha junta sus datos,
 2. «Exportar»: confirma con «Sí, exportar». Si tienes un filtro puesto exporta solo los filtrados; si no, todos. Te llega un correo con el archivo.
 
 ## Límites
-- «Importar», «Exportar» y «Eliminar contacto» solo los ve el Administrador.
+- «Importar» y «Eliminar contacto» solo los ve el Administrador. «Exportar» lo ve quien tiene el permiso «Exportar» y acceso a Clientes.
 - El teléfono debe llevar el código de país (+52…) o quedar vacío.
 
 ## Dudas frecuentes
@@ -81,4 +81,4 @@ Un contacto es una persona con quien habla tu empresa. Su ficha junta sus datos,
 - No encuentro a un contacto: con «Solo lo suyo» en Clientes solo ves los tuyos (ver abajo). Si la búsqueda no da nada sale «No se encontraron contactos que coincidan con tu búsqueda».
 
 ## Quién puede
-Con Clientes en «Todo» ves y cambias todos los contactos; con «Solo lo suyo», los que tienen una conversación o un caso tuyo, de los que eres responsable fijo o de las organizaciones a tu cargo; con «Ve todo (sin cambiar)» solo consultas. «Fusionar contacto» pide «Todo» o «Solo lo suyo». «Eliminar contacto», «Importar» y «Exportar» solo los tiene el Administrador. Cambiar el responsable fijo pide el permiso «Asignar a otra persona».
+Con Clientes en «Todo» ves y cambias todos los contactos; con «Solo lo suyo», los que tienen una conversación o un caso tuyo, de los que eres responsable fijo o de las organizaciones a tu cargo; con «Ve todo (sin cambiar)» solo consultas. «Fusionar contacto» pide «Todo» o «Solo lo suyo». «Eliminar contacto» e «Importar» solo los tiene el Administrador; «Exportar», quien tiene el permiso «Exportar». Cambiar el responsable fijo pide el permiso «Asignar a otra persona».
