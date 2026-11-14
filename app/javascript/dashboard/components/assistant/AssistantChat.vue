@@ -15,6 +15,10 @@
 import AssistantAPI from 'dashboard/api/platformAssistant';
 import MessageFormatter from 'shared/helpers/MessageFormatter';
 import {
+  renderWithPageLinks,
+  pageLinkFromEvent,
+} from 'dashboard/helper/assistantPageLinks';
+import {
   assistantState,
   DEFAULT_ASSISTANT_NAME,
 } from 'dashboard/helper/assistantState';
@@ -154,8 +158,18 @@ export default {
     go(path) {
       this.$emit('navigate', path);
     },
+    // Las pantallas que menciona Dali vienen como [[ruta|Nombre]] y salen como liga.
     html(content) {
-      return new MessageFormatter(content || '').formattedMessage;
+      return renderWithPageLinks(
+        content,
+        text => new MessageFormatter(text).formattedMessage
+      );
+    },
+    onContentClick(event) {
+      const path = pageLinkFromEvent(event);
+      if (!path) return;
+      event.preventDefault();
+      this.go(path);
     },
     scrollDown() {
       this.$nextTick(() => {
@@ -269,6 +283,7 @@ export default {
               ? 'bg-woot-500 text-white'
               : 'bg-slate-50 text-slate-800 dark:bg-slate-800 dark:text-slate-100'
           "
+          @click="onContentClick"
           v-html="html(message.content)"
         />
         <!-- Portal: la pantalla que abriría Dali queda como enlace. -->
@@ -365,6 +380,9 @@ export default {
 </template>
 
 <style scoped>
+.assistant-text ::v-deep .dali-page-link {
+  @apply font-medium text-woot-600 underline dark:text-woot-300;
+}
 .assistant-text ::v-deep p {
   margin: 0 0 0.25rem;
 }

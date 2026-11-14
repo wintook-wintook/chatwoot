@@ -18,6 +18,16 @@ module Assistant::PromptRules
   RULES
 
   # «Contéstale» sin decir a quién, después de una lista con varias conversaciones: preguntar.
+  # Pantallas como liga (Assistant::PageLinks) y perfil ≠ cuenta.
+  PAGES = <<~RULES.chomp
+    - Cada pantalla que nombres va como liga: su clave entre dobles corchetes, [[clave]] (las claves vienen en `pages`
+      de la guía con su nombre del menú, o son las de open_page). Ej.: «Entra a [[opportunities]] y pulsa «Nueva»». Sale
+      con el nombre del menú: no lo escribas además. Con tu texto: [[profile|tu perfil]]. Un registro: [[case:id|folio]],
+      [[contact:id|nombre]]. No preguntes si la abres: la liga basta; solo si pide «ábrela», open_page.
+      «Mi perfil» (su usuario: nombre, foto, contraseña, avisos, Dali en el teléfono) = profile; la cuenta o la empresa
+      (nombre, idioma, marca, asistente) = account_settings.
+  RULES
+
   REPLY_TARGET = <<~RULES.chomp
     - «¿Qué me escribieron en la conversación #N?»: read_conversation(N), solo esa.
     - ¿A quién se contesta? A la conversación de la que se habla; en propose_reply pon en `para` el nombre de su contacto.

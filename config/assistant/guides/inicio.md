@@ -3,7 +3,7 @@ key: inicio
 title: Inicio, Mi resumen y notificaciones
 areas: []
 keywords: [inicio, mi resumen, resumen, pantalla de inicio, que tengo hoy, mi dia, notificaciones, avisos, no leidas, marcar todo como hecho, ver todo, mi negocio, resumen del negocio, presupuesto, logo, mi semana, mis casos, mis conversaciones, al iniciar sesion]
-pages: [my_summary, my_day, budget, notifications, business_summary]
+pages: [my_summary, my_day, budget, notifications, business_summary, profile]
 ---
 ## Para qué sirve
 Inicio es tu punto de partida: te dice qué tienes que hacer hoy, qué te avisaron y cómo va tu semana, sin buscar en cada pantalla.

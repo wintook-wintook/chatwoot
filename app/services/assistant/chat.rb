@@ -41,12 +41,14 @@ class Assistant::Chat < Cases::Ai::BaseService
       cards << outcome[:card] if outcome[:card]
       suggestions.concat(Array(outcome[:suggestions]))
     end
-    @thread.add_message(role: 'assistant', content: content.presence || fallback(proposals),
+    @thread.add_message(role: 'assistant', content: final_text(content, proposals),
                         proposals: proposals, navigate: navigate, cards: cards.first(MAX_CARDS),
                         suggestions: suggestions.uniq.first(MAX_SUGGESTIONS), listed: @tools.listed_now.presence)
   end
 
   private
+
+  def final_text(content, proposals) = Assistant::PageLinks.new(@tools).call(content).presence || fallback(proposals)
 
   # Guarda lo que escribió y se lo pasa a las funciones (las guías anotan la pregunta).
   def start_turn(text)
@@ -179,6 +181,7 @@ class Assistant::Chat < Cases::Ai::BaseService
     - Fechas y horas: interpreta «mañana», «el jueves», etc. con la fecha de ahora y escríbelas en hora local YYYY-MM-DDTHH:MM.
       Si no dicen hora para una cita, pregunta. Una tarea solo lleva día (YYYY-MM-DD): vence al final de ese día.
     - «Esto», «este caso», «este cliente» es lo que el usuario está viendo (al final). Abrir o ir a una pantalla: open_page.
+    #{Assistant::PromptRules::PAGES}
     #{Assistant::PromptRules::FOLLOW_UP}
     - «¿Cómo va el seguimiento?»: tracking_status. Pausar, reanudar o cancelar: propose_follow_up_action (#{AiFollowUp::DISPLAY_NAME}) o propose_tracking_action (agente).
     - Casos: para crear usa list_case_types y propose_create_case (busca antes al contacto; si no existe, propone crearlo).
@@ -198,8 +201,7 @@ class Assistant::Chat < Cases::Ai::BaseService
     - Primero search_guides con las palabras del usuario y luego read_guide de la que encaje. Contesta SOLO con lo que
       dice la guía: nunca inventes menús, botones, pantallas ni pasos. Si es para hacerlo tú (p. ej. «crea la tarea»),
       no hace falta guía: usa la función de propuesta.
-    - Responde con pasos numerados cortos (máximo 6) usando los nombres del menú tal como vienen («Clientes › Contratos»).
-      Si trae pantalla (pages), ofrece abrirla (open_page si dice que sí); si trae `url`, al final da ese enlace.
+    - Responde con pasos numerados cortos (máximo 6); cada pantalla como liga [[clave]] (ver arriba). Si trae `url`, dalo al final.
     - Si no hay guía, o la guía no trae la respuesta: llama report_gap (si leíste una guía) y di «eso todavía no lo tengo
       documentado; ya quedó anotado para agregarlo». Puedes sugerir a quién preguntarle (su administrador).
     - Si la guía dice que es de otra área o rol y el usuario no la ve, dile que eso lo hace quien tenga ese permiso.

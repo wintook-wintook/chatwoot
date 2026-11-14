@@ -3,7 +3,7 @@ key: dali_telefono
 title: Dali en el teléfono (instalarlo como app)
 areas: []
 keywords: [dali en el telefono, celular, movil, instalar, instalar app, icono, pantalla de inicio, agregar a inicio, agregar a pantalla principal, android, iphone, safari, chrome, qr, codigo qr, /dali, app de dali, dictar, microfono, permiso del microfono, no me deja instalar, me pide firmarme, avisos, notificaciones, notificacion, campanita, no me llegan avisos, push]
-pages: []
+pages: [profile]
 ---
 ## Para qué sirve
 Usar a Dali desde el celular a pantalla completa, como una app con su propio ícono: escribirle o dictarle, ver qué tienes hoy, contestar a tus clientes, cotizar y agendar, con los mismos permisos que en la plataforma.

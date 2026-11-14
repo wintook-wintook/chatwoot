@@ -2,8 +2,8 @@
 key: dali
 title: El asistente (Dali)
 areas: []
-keywords: [asistente, dali, equipo, compañero, dia de otro, el dia de, que tiene hoy, asignar tarea a un compañero, usuario o contacto, ctrl j, preguntale, pedirle, tarjeta, confirmar, propuesta, nombre del asistente, que puedes hacer, que haces, que sabes hacer, para que sirves, alcance, alcance de dali, funciones, capacidades, en que me ayudas, borrador, mensaje programado, delegar seguimiento, ventas, meta, conversacion nueva, openai, via dali, telefono, celular, app, instalar, qr, dictar, voz, microfono, portal, contestar, responder, sin responder, quien me escribio, que tengo pendiente, mencion, me mencionaron, chat interno, sin asignar, nota interna, plantilla, 24 horas, visitas, ruta, campo, voy en camino, reporte de la visita, nfc, etiqueta nfc, expo]
-pages: []
+keywords: [asistente, dali, equipo, compañero, dia de otro, el dia de, que tiene hoy, asignar tarea a un compañero, usuario o contacto, ctrl j, preguntale, pedirle, tarjeta, confirmar, propuesta, nombre del asistente, que puedes hacer, que haces, que sabes hacer, para que sirves, alcance, alcance de dali, funciones, capacidades, en que me ayudas, borrador, mensaje programado, delegar seguimiento, ventas, meta, conversacion nueva, openai, via dali, telefono, celular, app, instalar, qr, dictar, voz, microfono, portal, contestar, responder, sin responder, quien me escribio, que tengo pendiente, mencion, me mencionaron, chat interno, sin asignar, nota interna, plantilla, 24 horas, visitas, ruta, campo, voy en camino, reporte de la visita, nfc, etiqueta nfc, expo, liga, link, ir a la pantalla, mi perfil, abre mi perfil]
+pages: [profile, account_settings]
 ---
 ## Para qué sirve
 El asistente (se llama Dali, o el nombre que le puso tu empresa) es el ayudante de quien trabaja en la plataforma: le pides las cosas con tus palabras, escritas o dictadas, y él consulta, registra y te deja listo lo que hay que hacer.
@@ -34,7 +34,7 @@ Su alcance, por área (con un ejemplo de cómo pedirlo):
 - Trabajo en campo: tus visitas del día, cuál sigue, qué se le hizo la última vez al cliente, avisarle «voy en camino» y dictar el reporte de la visita (ver la guía «Mi ruta en campo»). «Avísale que llego en 20.»
 - Tareas con el cliente: qué le falta a un cliente, quién tiene tareas vencidas y asignarle una tarea que trabaja en su portal (ver la guía «Tareas con el cliente y su portal»). «Pídele a Acme que firme el contrato.»
 - Captar en la expo: el enlace NFC de un evento para grabarlo en una etiqueta desde el teléfono y cuántos se captaron. «Quiero grabar la etiqueta NFC de la expo para Ana.»
-- Ayuda de uso: explicar cómo se hace algo, dónde está y para qué sirve, y abrirte esa pantalla. «¿Cómo creo un contrato?»
+- Ayuda de uso: explicar cómo se hace algo, dónde está y para qué sirve. Cada pantalla que menciona sale como liga: haz clic para ir. «¿Cómo creo un contrato?»
 - Borradores: redacta un mensaje para que lo copies. En Plantillas de WhatsApp, «Crear con Dali» arma la plantilla completa.
 
 ## Cómo se hace
@@ -87,6 +87,8 @@ Su alcance, por área (con un ejemplo de cómo pedirlo):
 - ¿Cómo sabe si hablo de alguien de mi equipo o de un cliente? Por tus palabras: «usuario», «compañero», «del equipo», «vendedor», «técnico», a quien le asignas la tarea o de quien pides el día es del equipo; «cliente», «contacto», «prospecto» o «la empresa…» es un cliente. Si solo dices el nombre («agrégale una tarea a Ana»), la tarea es para esa persona: si está en tu equipo, queda como responsable (la tarjeta lo muestra antes de confirmar); si no, la busca entre tus clientes.
 - ¿«Mi día» de Dali es igual al de la página? Sí: si preguntas por un día (hoy, mañana o ayer), Dali usa la misma lista que Agenda › Tareas › Mi día y la tarjeta del Resumen. Muestra solo las citas que siguen agendadas, primero «Mi orden de hoy» y luego por prioridad, y no muestra lo que pasaste a otro día. Te enseña las primeras 10 tareas y te dice cuántas más hay. Si preguntas por varios días (la semana), te da las citas agendadas y las tareas que vencen o que pasaste a un día de ese rango.
 - ¿Puedo ver el día de otra persona? Sí, si tu rol ve la Agenda de todos: pregúntale «¿qué tiene hoy Ana?» o, en Agenda › Tareas › Mi día, elige a la persona en «Día de:». Con «solo lo suyo» solo ves tu día.
+- Cuando me explica algo, ¿cómo llego a la pantalla? Cada pantalla que nombra (por ejemplo «Ventas › Oportunidades») sale como liga: haz clic y te lleva sin perder la plática. En el teléfono se abre en la plataforma y «Volver a Dali» te regresa. Si le dices «ábrela», la abre él.
+- «Abre mi perfil» abre tu perfil (tu usuario: nombre, foto, contraseña, avisos y Dali en el teléfono). La configuración de la empresa (nombre, idioma, marca, asistente) es «la configuración de la cuenta», en Ajustes.
 - ¿Dónde queda lo que hizo? En la actividad del caso, marcado como «vía» el asistente.
 - ¿Se puede cambiar su nombre? Sí, en Ajustes › Configuración de Cuenta, sección Asistente, «Nombre del asistente». Vacío = Dali.
 - ¿Recuerda lo que platicamos? Sí, la conversación sigue al volver; con «+» empiezas otra.

@@ -28,7 +28,8 @@ module Assistant::ToolDefinitions
     fn('team_members', 'Personas del equipo (usuarios de la empresa, no clientes) por nombre o correo: compañeros, vendedores, ' \
                        'técnicos, supervisores. Para asignarles una tarea o ver su día.',
        { query: str('Nombre o correo (vacío = todo el equipo)') }),
-    fn('open_page', 'Abre una pantalla para el usuario.',
+    fn('open_page', 'Abre una pantalla para el usuario. profile = su perfil (su usuario); account_settings = la ' \
+                    'configuración de la cuenta (la empresa).',
        { target: { type: 'string', enum: Assistant::Pages::MAP.keys },
          id: int('Id del caso/contacto/organización o número de la conversación') }, %w[target]),
     fn('propose_note', 'Propone dejar una nota interna en un caso o en un contacto. Requiere confirmación.',

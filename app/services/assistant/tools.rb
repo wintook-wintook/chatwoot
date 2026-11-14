@@ -205,6 +205,12 @@ class Assistant::Tools
     { ids: { 'organization_id' => org.id }, label: org.name }
   end
 
+  # La ruta completa de una pantalla de Assistant::Pages (también la usa Assistant::PageLinks).
+  def page_path(target, id = nil)
+    path = Assistant::Pages::MAP[target.to_s]&.call(self, id)
+    path && "/app/accounts/#{@account.id}/#{path}"
+  end
+
   private
 
   # Vence de una tarea: solo el día; vence al final de ese día (la hora es de las agendadas).
@@ -224,10 +230,5 @@ class Assistant::Tools
 
   def google_connected?
     UserCalendarIntegration.exists?(account_id: @account.id, user_id: @user.id)
-  end
-
-  def page_path(target, id)
-    path = Assistant::Pages::MAP[target.to_s]&.call(self, id)
-    path && "/app/accounts/#{@account.id}/#{path}"
   end
 end
