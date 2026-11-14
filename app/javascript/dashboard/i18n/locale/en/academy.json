@@ -41,6 +41,14 @@
       "CLOSE": "Close",
       "FULL": "View in the Help Center"
     },
-    "ERROR": "It didn't work. Try again."
+    "ERROR": "It didn't work. Try again.",
+    "LEVEL": {
+      "required": "Essential",
+      "recommended": "Recommended",
+      "later": "When you're ready"
+    },
+    "GO": "Go",
+    "UNDO": "Undo",
+    "CONFIRMED_BY": "Accepted by {name}"
   }
 }

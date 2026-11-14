@@ -8,6 +8,7 @@ vi.mock('dashboard/api/academy', () => ({
     get: vi.fn(),
     start: vi.fn(() => Promise.resolve({ data: {} })),
     check: vi.fn(),
+    confirm: vi.fn(() => Promise.resolve({ data: {} })),
     guide: vi.fn(),
     createPractice: vi.fn(() => Promise.resolve({ data: {} })),
     deletePractice: vi.fn(),
@@ -67,8 +68,45 @@ const board = {
   ],
 };
 
-const mount = async () => {
-  AcademyAPI.get.mockResolvedValue({ data: board });
+const setupBoard = {
+  done: 1,
+  total: 2,
+  practice: {},
+  modules: [
+    {
+      key: 'cuenta',
+      title: 'Configura tu cuenta',
+      summary: 'Lo básico',
+      status: 'in_progress',
+      done: 1,
+      total: 2,
+      steps: [
+        {
+          key: 'etapas',
+          kind: 'setup',
+          level: 'required',
+          title: 'Revisa tus etapas',
+          path: 'tickets/types',
+          confirm: 'Así me sirven',
+          status: 'pending',
+        },
+        {
+          key: 'motivos',
+          kind: 'setup',
+          level: 'recommended',
+          title: 'Motivos',
+          path: 'tickets/close-reasons',
+          confirm: 'Así me sirven',
+          confirmed_by: 'Ana',
+          status: 'done',
+        },
+      ],
+    },
+  ],
+};
+
+const mount = async (data = board) => {
+  AcademyAPI.get.mockResolvedValue({ data });
   const wrapper = shallowMount(AcademyIndex, {
     mocks: {
       $t: (key, params) => (params ? `${key} ${JSON.stringify(params)}` : key),
@@ -130,5 +168,19 @@ describe('AcademyIndex', () => {
     expect(wrapper.vm.$router.push).toHaveBeenCalledWith(
       '/app/accounts/1/dashboard'
     );
+  });
+
+  it('configuración: «Así me sirve» lo acepta y lo aceptado se puede deshacer', async () => {
+    const wrapper = await mount(setupBoard);
+    expect(wrapper.text()).toContain('ACADEMY.LEVEL.required');
+    expect(wrapper.text()).not.toContain('ACADEMY.PRACTICE.TITLE');
+    const buttons = wrapper.findAll('button').wrappers;
+    await buttons.find(b => b.text() === 'Así me sirven').trigger('click');
+    await flushPromises();
+    expect(AcademyAPI.confirm).toHaveBeenCalledWith('cuenta', 'etapas', false);
+
+    await buttons.find(b => b.text() === 'ACADEMY.UNDO').trigger('click');
+    await flushPromises();
+    expect(AcademyAPI.confirm).toHaveBeenCalledWith('cuenta', 'motivos', true);
   });
 });

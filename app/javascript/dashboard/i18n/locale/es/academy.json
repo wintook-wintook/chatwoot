@@ -41,6 +41,14 @@
       "CLOSE": "Cerrar",
       "FULL": "Ver en el Centro de ayuda"
     },
-    "ERROR": "No se pudo. Intenta de nuevo."
+    "ERROR": "No se pudo. Intenta de nuevo.",
+    "LEVEL": {
+      "required": "Indispensable",
+      "recommended": "Recomendado",
+      "later": "Cuando estés listo"
+    },
+    "GO": "Ir",
+    "UNDO": "Deshacer",
+    "CONFIRMED_BY": "Lo aceptó {name}"
   }
 }

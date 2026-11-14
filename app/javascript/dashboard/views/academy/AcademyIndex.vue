@@ -3,7 +3,9 @@
   lecciones (las guías de Dali) y ejercicios que el servidor revisa con los datos de verdad
   (Academy::Board / Academy::Checks): «Hazlo» lleva a la pantalla y empieza a contar,
   «Revisar» comprueba, «¿Cómo?» le pregunta a Dali. Los de contactos y casos se hacen sobre
-  su Cliente de práctica.
+  su Cliente de práctica. Los pasos de configuración («Configura tu cuenta», «Tu perfil») se
+  revisan en vivo con cómo está la cuenta; los que traen valores de fábrica se aceptan con
+  «Así me sirve» (confirm).
 -->
 <script>
 import AcademyAPI from 'dashboard/api/academy';
@@ -13,6 +15,8 @@ import {
   nextModuleKey,
   percent,
   stepBlockedKey,
+  stepTypeKey,
+  usesPractice,
 } from 'dashboard/views/academy/academyHelpers';
 
 const T = 'ACADEMY';
@@ -38,6 +42,9 @@ export default {
     },
     practice() {
       return (this.board && this.board.practice) || {};
+    },
+    showPractice() {
+      return usesPractice(this.modules);
     },
     nextKey() {
       return nextModuleKey(this.modules);
@@ -76,6 +83,9 @@ export default {
     blockedText(step) {
       const key = stepBlockedKey(step);
       return key ? this.t(key) : '';
+    },
+    typeLabel(step) {
+      return this.t(stepTypeKey(step));
     },
     stepId(mod, step) {
       return `${mod.key}/${step.key}`;
@@ -122,13 +132,33 @@ export default {
         await this.load();
       });
     },
-    how(step) {
+    askDali(question) {
       toggleAssistant(true);
-      const question = this.t('HOW_QUESTION', {
-        title: step.title,
-        text: step.text || '',
-      });
       this.$nextTick(() => this.$emitter.emit('assistant:ask', question));
+    },
+    how(step) {
+      this.askDali(
+        this.t('HOW_QUESTION', { title: step.title, text: step.text || '' })
+      );
+    },
+    async doSetup(mod, step) {
+      if (step.path) {
+        await this.doIt(mod, step);
+        return;
+      }
+      await this.run(this.stepId(mod, step), () =>
+        AcademyAPI.start(mod.key, step.key)
+      );
+      this.askDali(step.ask);
+    },
+    goTo(step) {
+      this.$router.push(`/app/accounts/${this.accountId}/${step.path}`);
+    },
+    async confirm(mod, step, undo = false) {
+      await this.run(this.stepId(mod, step), async () => {
+        await AcademyAPI.confirm(mod.key, step.key, undo);
+        await this.load();
+      });
     },
     async createPractice(mod, step) {
       await this.run(this.stepId(mod, step), async () => {
@@ -192,6 +222,7 @@ export default {
       <template v-else>
         <!-- Cliente de práctica -->
         <section
+          v-if="showPractice"
           class="flex flex-wrap items-center justify-between gap-3 p-4 mb-4 bg-white border rounded-lg border-slate-100 dark:bg-slate-800 dark:border-slate-700"
         >
           <div class="min-w-0">
@@ -286,8 +317,7 @@ export default {
               />
               <div class="flex-1 min-w-0">
                 <p class="m-0 text-xs uppercase text-slate-400">
-                  {{ step.kind === 'lesson' ? t('LESSON') : t('EXERCISE') }}
-                  · {{ t(`STATUS.${step.status}`) }}
+                  {{ typeLabel(step) }} · {{ t(`STATUS.${step.status}`) }}
                 </p>
                 <p class="m-0 font-medium text-slate-800 dark:text-slate-100">
                   {{ step.title }}
@@ -326,6 +356,70 @@ export default {
                   >
                     {{ step.status === 'done' ? t('READ_AGAIN') : t('READ') }}
                   </woot-button>
+                  <!-- Configuración: ya está → «Ir» (y «Deshacer» si se aceptó a mano) -->
+                  <template
+                    v-else-if="step.kind === 'setup' && step.status === 'done'"
+                  >
+                    <span
+                      v-if="step.confirmed_by"
+                      class="self-center text-sm text-slate-500 dark:text-slate-400"
+                    >
+                      {{ t('CONFIRMED_BY', { name: step.confirmed_by }) }}
+                    </span>
+                    <woot-button
+                      v-if="step.path"
+                      size="small"
+                      variant="clear"
+                      @click="goTo(step)"
+                    >
+                      {{ t('GO') }}
+                    </woot-button>
+                    <woot-button
+                      v-if="step.confirmed_by"
+                      size="small"
+                      variant="clear"
+                      color-scheme="secondary"
+                      :is-loading="busy === stepId(mod, step)"
+                      @click="confirm(mod, step, true)"
+                    >
+                      {{ t('UNDO') }}
+                    </woot-button>
+                  </template>
+                  <template v-else-if="step.kind === 'setup'">
+                    <woot-button
+                      size="small"
+                      :is-loading="busy === stepId(mod, step)"
+                      @click="doSetup(mod, step)"
+                    >
+                      {{ t('DO_IT') }}
+                    </woot-button>
+                    <woot-button
+                      size="small"
+                      variant="smooth"
+                      :is-loading="busy === stepId(mod, step)"
+                      @click="check(mod, step)"
+                    >
+                      {{ t('CHECK') }}
+                    </woot-button>
+                    <woot-button
+                      v-if="step.confirm"
+                      size="small"
+                      variant="smooth"
+                      color-scheme="secondary"
+                      :is-loading="busy === stepId(mod, step)"
+                      @click="confirm(mod, step)"
+                    >
+                      {{ step.confirm }}
+                    </woot-button>
+                    <woot-button
+                      size="small"
+                      variant="clear"
+                      color-scheme="secondary"
+                      @click="how(step)"
+                    >
+                      {{ t('HOW') }}
+                    </woot-button>
+                  </template>
                   <template
                     v-else-if="step.status !== 'done' && !blockedText(step)"
                   >

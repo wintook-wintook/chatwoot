@@ -22,6 +22,13 @@ class AcademyAPI extends ApiClient {
     return axios.post(`${this.url}/steps/${moduleKey}/${stepKey}/check`);
   }
 
+  // «Así me sirve» en un paso de configuración (undo: deshacerlo).
+  confirm(moduleKey, stepKey, undo = false) {
+    return axios.post(`${this.url}/steps/${moduleKey}/${stepKey}/confirm`, {
+      undo,
+    });
+  }
+
   guide(key) {
     return axios.get(`${this.url}/guides/${key}`);
   }

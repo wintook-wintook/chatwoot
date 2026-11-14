@@ -4,6 +4,7 @@
 #   GET    …/academy                                   → módulos de su rol, pasos y cómo va (Academy::Board)
 #   POST   …/academy/steps/:module_key/:step_key/start → «Leer» (lección leída) o «Hazlo» (empieza a contar)
 #   POST   …/academy/steps/:module_key/:step_key/check → «Revisar»: { step, found, message }
+#   POST   …/academy/steps/:module_key/:step_key/confirm → «Así me sirve» (undo=1 lo deshace)
 #   GET    …/academy/guides/:key                       → el texto de la guía de una lección
 #   POST   …/academy/practice                          → crea su Cliente de práctica
 #   DELETE …/academy/practice                          → lo borra con lo que hizo en él
@@ -22,6 +23,10 @@ class Api::V1::Accounts::AcademyController < Api::V1::Accounts::BaseController
 
   def check
     render json: board.check(params[:module_key], params[:step_key])
+  end
+
+  def confirm
+    render json: { step: board.confirm(params[:module_key], params[:step_key], undo: ActiveModel::Type::Boolean.new.cast(params[:undo])) }
   end
 
   def guide

@@ -293,8 +293,6 @@ Rails.application.routes.draw do
               post :cancel
             end
           end
-          # «Primeros pasos» (Inicio): qué ya hizo el usuario, revisado en vivo
-          resources :onboarding_steps, only: [:index]
           # Plantillas de seguimiento: la receta de un Seguimiento IA para volver a usarla
           resources :ai_follow_up_presets, only: [:index, :create, :update, :destroy]
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
@@ -509,6 +507,7 @@ Rails.application.routes.draw do
           resource :academy, only: [:show], controller: 'academy' do
             post 'steps/:module_key/:step_key/start', action: :start
             post 'steps/:module_key/:step_key/check', action: :check
+            post 'steps/:module_key/:step_key/confirm', action: :confirm
             get 'guides/:key', action: :guide
             post :practice, action: :create_practice
             delete :practice, action: :destroy_practice

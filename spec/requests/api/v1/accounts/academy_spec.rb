@@ -53,6 +53,26 @@ RSpec.describe 'Academia (Mi capacitación)' do
     expect(Contact.exists?(contact_id)).to be(false)
   end
 
+  it '«Configura tu cuenta» es de administradores y lo que acepta uno vale para todos' do
+    admin = create(:user, account: account, role: :administrator)
+    admin2 = create(:user, account: account, role: :administrator)
+
+    get base, **as(agent)
+    expect(response.parsed_body['modules'].pluck('key')).not_to include('cuenta')
+    post "#{base}/steps/cuenta/etapas/confirm", **as(agent)
+    expect(response).to have_http_status(:not_found)
+
+    post "#{base}/steps/cuenta/etapas/confirm", **as(admin)
+    expect(response.parsed_body['step']).to include('status' => 'done', 'confirmed_by' => admin.name)
+
+    get base, **as(admin2)
+    etapas = response.parsed_body['modules'].first['steps'].find { |s| s['key'] == 'etapas' }
+    expect(etapas).to include('status' => 'done', 'confirmed_by' => admin.name)
+
+    post "#{base}/steps/cuenta/etapas/confirm", params: { undo: true }, **as(admin2)
+    expect(response.parsed_body.dig('step', 'status')).not_to eq('done')
+  end
+
   it 'un paso que no existe da 404' do
     post "#{base}/steps/contactos/inventado/check", **as(agent)
     expect(response).to have_http_status(:not_found)

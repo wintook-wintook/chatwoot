@@ -20,7 +20,7 @@ RSpec.describe Academy::Board do
 
   it 'muestra los módulos con sus pasos pendientes' do
     result = board.call
-    expect(result[:modules].pluck(:key)).to eq(%w[conversaciones contactos casos])
+    expect(result[:modules].pluck(:key)).to eq(%w[cuenta perfil conversaciones contactos casos])
     expect(result[:done]).to eq(0)
     expect(step('contactos', 'nota')).to include(status: 'pending', blocked: true)
   end
@@ -119,15 +119,69 @@ RSpec.describe Academy::Board do
     end
   end
 
+  describe 'configuración (se revisa en vivo con cómo está la cuenta)' do
+    it 'se marca solo, aunque lo haya hecho otro y antes de entrar' do
+      expect(step('cuenta', 'equipo')[:status]).to eq('pending')
+      other # otro usuario en la cuenta
+      expect(step('cuenta', 'equipo')).to include(status: 'done', level: 'required')
+    end
+
+    it 'cada quien con su rol: no cuenta el de por omisión' do
+      au = account.account_users.find_by(user: other)
+      expect(check('cuenta', 'roles')).to include(found: false, message: include('rol de por omisión'))
+      au.update!(access_role: AccessRole.for_account(account).find { |r| r.key == 'viewer' })
+      expect(check('cuenta', 'roles')[:found]).to be(true)
+    end
+
+    it 'una bandeja sin agentes no está lista' do
+      inbox = create(:inbox, account: account)
+      expect(step('cuenta', 'bandejas')[:status]).not_to eq('done')
+      create(:inbox_member, inbox: inbox, user: user)
+      expect(step('cuenta', 'bandejas')[:status]).to eq('done')
+    end
+
+    it 'lo de fábrica se acepta a mano, vale para la cuenta y se puede deshacer' do
+      board.confirm('cuenta', 'etapas')
+      otro_admin = create(:user, account: account, role: :administrator)
+      other_board = described_class.new(account: account, user: otro_admin, grant: admin)
+      etapas = other_board.call[:modules].first[:steps].find { |s| s[:key] == 'etapas' }
+      expect(etapas).to include(status: 'done', confirmed_by: 'Ana Ruiz')
+
+      other_board.confirm('cuenta', 'etapas', undo: true)
+      expect(step('cuenta', 'etapas')[:status]).not_to eq('done')
+    end
+
+    it 'cambiar las etapas cuenta como hecho' do
+      CaseType.ensure_defaults_for(account)
+      expect(step('cuenta', 'etapas')[:status]).not_to eq('done')
+      travel 1.hour do
+        CaseTypeColumn.where(account_id: account.id).first.update!(label: 'Propuesta enviada')
+        expect(described_class.new(account: account, user: user, grant: admin).call[:modules].first[:steps]
+          .find { |s| s[:key] == 'etapas' }[:status]).to eq('done')
+      end
+    end
+
+    it 'un paso sin «Así me sirve» no se acepta a mano' do
+      expect { board.confirm('cuenta', 'bandejas') }.to raise_error(Academy::Board::NotFound)
+    end
+
+    it 'Tu perfil es de cada quien' do
+      user.update!(message_signature: 'Ana · Ventas')
+      expect(step('perfil', 'firma')[:status]).to eq('done')
+      other_keys = described_class.new(account: account, user: other, grant: admin).call[:modules]
+      expect(other_keys.find { |m| m[:key] == 'perfil' }[:steps].find { |s| s[:key] == 'firma' }[:status]).to eq('pending')
+    end
+  end
+
   it 'cada rol ve solo los módulos de sus áreas' do
     role = AccessRole.for_account(account).find { |r| r.key == 'technician' } # conversaciones, clientes, servicio
     au = account.account_users.find_by(user: other)
     au.update!(access_role: role)
     keys = described_class.new(account: account, user: other, grant: Access::Grant.for(au)).call[:modules].pluck(:key)
-    expect(keys).to eq(%w[conversaciones contactos casos])
+    expect(keys).to eq(%w[perfil conversaciones contactos casos]) # «Configura tu cuenta» es de administradores
 
     viewer = AccessRole.for_account(account).find { |r| r.key == 'viewer' }
     au.update!(access_role: viewer)
-    expect(described_class.new(account: account, user: other, grant: Access::Grant.for(au.reload)).call[:modules]).to eq([])
+    expect(described_class.new(account: account, user: other, grant: Access::Grant.for(au.reload)).call[:modules].pluck(:key)).to eq(%w[perfil])
   end
 end

@@ -15,3 +15,17 @@ export const stepBlockedKey = step => {
   if (!step || !step.blocked || step.status === 'done') return null;
   return step.needs === 'practice_case' ? 'BLOCKED_CASE' : 'BLOCKED';
 };
+
+// La etiqueta del tipo de paso (clave de ACADEMY.*): lección, ejercicio, o el nivel de un
+// paso de configuración (indispensable / recomendado / cuando estés listo).
+export const stepTypeKey = step => {
+  if (step.kind === 'lesson') return 'LESSON';
+  if (step.kind === 'setup') return `LEVEL.${step.level || 'recommended'}`;
+  return 'EXERCISE';
+};
+
+// ¿Algún módulo se hace con el Cliente de práctica? (si no, no se muestra su tarjeta).
+export const usesPractice = modules =>
+  (modules || []).some(mod =>
+    mod.steps.some(step => step.needs || step.key === 'practica')
+  );

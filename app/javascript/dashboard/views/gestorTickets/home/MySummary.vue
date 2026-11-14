@@ -16,8 +16,7 @@ import { formatDay } from 'dashboard/helper/caseCommercial';
 import MyDayNotices from '../tasks/MyDayNotices.vue';
 import Tasks from '../Tasks.vue';
 import NotificationsView from 'dashboard/routes/dashboard/notifications/components/NotificationsView.vue';
-import OnboardingStepsAPI from 'dashboard/api/onboardingSteps';
-import OnboardingPanel from './OnboardingPanel.vue'; // «Primeros pasos» (solo si lo pulsa)
+import AcademyAPI from 'dashboard/api/academy'; // «Mi capacitación»: su avance en el botón
 
 // Pestañas de Mi resumen, en orden. Va en la dirección (?tab=…).
 const TABS = ['summary', 'my_day', 'notifications'];
@@ -27,11 +26,10 @@ const TOP_TASKS = 5;
 
 export default {
   name: 'MySummary',
-  components: { MyDayNotices, Tasks, NotificationsView, OnboardingPanel },
+  components: { MyDayNotices, Tasks, NotificationsView },
   data() {
     return {
-      showOnboarding: false,
-      onboardingSteps: [],
+      academy: null, // { done, total }
       isLoading: true,
       tasks: [],
       agenda: [],
@@ -39,11 +37,8 @@ export default {
     };
   },
   computed: {
-    onboardingDone() {
-      return this.onboardingSteps.filter(s => s.done).length;
-    },
-    onboardingPending() {
-      return this.onboardingDone < this.onboardingSteps.length;
+    academyPending() {
+      return !!this.academy && this.academy.done < this.academy.total;
     },
     ...mapGetters({
       currentUser: 'getCurrentUser',
@@ -121,7 +116,7 @@ export default {
   },
   mounted() {
     this.$store.dispatch('caseTickets/fetchSettings');
-    this.loadOnboarding();
+    this.loadAcademy();
   },
   methods: {
     t(key, params) {
@@ -217,18 +212,19 @@ export default {
     goBusinessSummary() {
       this.$router.push({ name: 'gestorTickets_business_summary' });
     },
-    // «Primeros pasos»: el avance se revisa al cargar Inicio y cada vez que se abre.
-    async loadOnboarding() {
+    // «Mi capacitación» (antes «Primeros pasos»): el botón lleva su avance.
+    async loadAcademy() {
       try {
-        const { data } = await OnboardingStepsAPI.list();
-        this.onboardingSteps = data.steps || [];
+        const { data } = await AcademyAPI.get();
+        this.academy = data.total
+          ? { done: data.done, total: data.total }
+          : null;
       } catch {
-        this.onboardingSteps = [];
+        this.academy = null;
       }
     },
-    openOnboarding() {
-      this.showOnboarding = true;
-      this.loadOnboarding();
+    openAcademy() {
+      this.$router.push({ name: 'academy' });
     },
   },
 };
@@ -249,21 +245,16 @@ export default {
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <!-- Primeros pasos: resaltado mientras falten pasos; solo se abre si lo pulsa -->
+          <!-- Mi capacitación: resaltado mientras le falten pasos -->
           <woot-button
-            v-if="onboardingSteps.length"
+            v-if="academy"
             size="small"
-            :variant="onboardingPending ? 'smooth' : 'clear'"
-            :color-scheme="onboardingPending ? 'primary' : 'secondary'"
-            icon="star-emphasis"
-            @click="openOnboarding"
+            :variant="academyPending ? 'smooth' : 'clear'"
+            :color-scheme="academyPending ? 'primary' : 'secondary'"
+            icon="book"
+            @click="openAcademy"
           >
-            {{
-              t('ONBOARDING.BUTTON', {
-                done: onboardingDone,
-                total: onboardingSteps.length,
-              })
-            }}
+            {{ t('ONBOARDING.BUTTON', academy) }}
           </woot-button>
           <woot-button
             v-if="canViewBusinessSummary"
@@ -276,11 +267,6 @@ export default {
           </woot-button>
         </div>
       </header>
-      <OnboardingPanel
-        :show="showOnboarding"
-        :steps="onboardingSteps"
-        @close="showOnboarding = false"
-      />
       <woot-tabs
         v-if="hasCases"
         class="mt-3"
