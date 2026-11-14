@@ -5,6 +5,7 @@
     "my_day": { "path": "start?tab=my_day", "label": "Inicio › Mi día" },
     "notifications": { "path": "start?tab=notifications", "label": "Inicio › Notificaciones" },
     "business_summary": { "path": "tickets/summary", "label": "Inicio › Mi negocio" },
+    "academy": { "path": "academy", "label": "Inicio › Mi capacitación" },
     "budget": { "path": "tickets/budget", "label": "Inicio › Presupuesto" },
     "profile": { "path": "profile/settings", "label": "Mi perfil (Configuración de Perfil)" },
 

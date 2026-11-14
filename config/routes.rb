@@ -505,6 +505,14 @@ Rails.application.routes.draw do
           resources :case_notices, only: [:index]
           # @tickets_cases — «Mi resumen» de la página Inicio
           resource :my_summary, only: [:show], controller: 'my_summary'
+          # Academia Kontrolya — «Mi capacitación» (Inicio): módulos, ejercicios y Cliente de práctica
+          resource :academy, only: [:show], controller: 'academy' do
+            post 'steps/:module_key/:step_key/start', action: :start
+            post 'steps/:module_key/:step_key/check', action: :check
+            get 'guides/:key', action: :guide
+            post :practice, action: :create_practice
+            delete :practice, action: :destroy_practice
+          end
           # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
           resources :task_reports, only: [:index, :create] do # Reporte de cierre
             get :suggestion, on: :collection

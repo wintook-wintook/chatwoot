@@ -2,7 +2,7 @@
 key: primeros_pasos
 title: Primeros pasos (por dónde empezar)
 areas: []
-keywords: [primeros pasos, por donde empiezo, como empiezo, empezar, soy nuevo, cuenta nueva, guia, capacitacion, que hago primero, configurar mi cuenta, arrancar, onboarding, checklist, pasos, hazlo, avance]
+keywords: [primeros pasos, por donde empiezo, como empiezo, empezar, soy nuevo, cuenta nueva, guia, que hago primero, configurar mi cuenta, arrancar, onboarding, checklist, pasos, hazlo, avance]
 pages: [my_summary, inboxes, users, organizations, contacts, cases, calendar]
 sources:
   - app/javascript/dashboard/views/gestorTickets/home/OnboardingPanel.vue
@@ -38,3 +38,5 @@ En Inicio › Mi resumen, arriba a la derecha, el botón «Primeros pasos» con 
 
 ## Quién puede
 Todos los usuarios ven su propia lista; los pasos de WhatsApp y equipo solo los administradores.
+
+Para aprender a usar cada área con ejercicios está Inicio › Mi capacitación (guía «Mi capacitación»).

@@ -1,0 +1,122 @@
+# Academia Kontrolya — los módulos de «Mi capacitación» (Inicio › Mi capacitación).
+#
+# Cada módulo:
+#   key, title, summary
+#   areas:  las áreas del rol que lo ven (AccessRole::AREAS); vacío = todos
+#   steps:  en orden
+#     kind: lesson   → guide: la guía de Dali que se lee (config/assistant/guides/<guide>.md)
+#     kind: exercise → check: el método de Academy::Checks que revisa si lo hizo
+#                      page:  a dónde lleva «Hazlo» (clave de config/assistant/pages.json,
+#                             o practice_contact / practice_case: su Cliente de práctica y su caso)
+#                      needs: practice_contact | practice_case (no se puede sin eso)
+#                      hint:  lo que le dice «Revisar» si todavía no lo encuentra
+#
+# Los ejercicios se revisan con los datos de verdad, no se palomean a mano. Lo que no guarda
+# quién lo hizo (contactos, organizaciones) se hace sobre el Cliente de práctica de cada
+# usuario: así se sabe que fue él. rake academy:check y spec/services/academy revisan este archivo.
+modules:
+  - key: conversaciones
+    title: Conversaciones
+    summary: Contestar a tus clientes, avisarle a un compañero y no dejar a nadie sin respuesta.
+    areas: [conversations]
+    steps:
+      - key: leer
+        kind: lesson
+        title: Cómo se atiende una conversación
+        guide: conversaciones
+      - key: responder
+        kind: exercise
+        title: Contesta a un cliente
+        text: Abre una conversación de un cliente y mándale una respuesta en «Responder» (no en nota privada).
+        page: conversations
+        check: reply_sent
+        hint: Todavía no veo una respuesta tuya a un cliente desde que empezaste. Debe ir en «Responder», no en «Nota privada».
+      - key: mencion
+        kind: exercise
+        title: Avísale a un compañero con una mención
+        text: En una conversación, cambia a «Nota privada», escribe @ y elige a un compañero. El cliente no la ve; a tu compañero le llega un aviso.
+        page: conversations
+        check: mention_note
+        hint: Todavía no veo una nota privada tuya con una mención (@nombre) desde que empezaste.
+
+  - key: contactos
+    title: Contactos y organizaciones
+    summary: Dar de alta a tus clientes, ligarlos a su empresa y dejar notas de lo que platicaron.
+    areas: [clients]
+    steps:
+      - key: leer
+        kind: lesson
+        title: Contactos y su ficha
+        guide: contactos
+      - key: practica
+        kind: exercise
+        title: Crea tu Cliente de práctica
+        text: Es un contacto solo para practicar, a tu nombre. No tiene teléfono ni correo, así que no se le manda nada. Lo borras cuando termines.
+        check: practice_contact
+        hint: Pulsa «Crear mi Cliente de práctica».
+      - key: organizacion
+        kind: exercise
+        title: Liga tu Cliente de práctica a una organización
+        text: En la ficha de tu Cliente de práctica, ponle una organización (puedes crear una nueva, por ejemplo «Empresa de práctica»).
+        page: practice_contact
+        needs: practice_contact
+        check: practice_organization
+        hint: Tu Cliente de práctica todavía no tiene organización.
+      - key: nota
+        kind: exercise
+        title: Déjale una nota
+        text: En la ficha de tu Cliente de práctica, agrega una nota con lo que platicaron (por ejemplo «Le interesa el plan anual»).
+        page: practice_contact
+        needs: practice_contact
+        check: practice_note
+        hint: Todavía no veo una nota tuya en tu Cliente de práctica.
+      - key: leer_organizaciones
+        kind: lesson
+        title: Organizaciones (las empresas de tus clientes)
+        guide: organizaciones
+
+  - key: casos
+    title: Casos y seguimiento
+    summary: Convertir lo que pide un cliente en un caso, con sus tareas, su etapa y su próxima llamada.
+    areas: [sales, service]
+    steps:
+      - key: leer
+        kind: lesson
+        title: Qué es un caso y cómo avanza
+        guide: casos
+      - key: caso
+        kind: exercise
+        title: Crea un caso para tu Cliente de práctica
+        text: Desde la ficha de tu Cliente de práctica, crea un caso (una oportunidad de venta o una solicitud de servicio).
+        page: practice_contact
+        needs: practice_contact
+        check: practice_case
+        hint: Tu Cliente de práctica todavía no tiene un caso creado por ti.
+      - key: tarea
+        kind: exercise
+        title: Agrégale una tarea
+        text: Dentro del caso, en «Tareas», agrega lo que sigue (por ejemplo «Mandar la propuesta»).
+        page: practice_case
+        needs: practice_case
+        check: practice_task
+        hint: Todavía no veo una tarea que hayas creado en el caso de práctica.
+      - key: etapa
+        kind: exercise
+        title: Pásalo a otra etapa
+        text: Mueve el caso de práctica a la siguiente etapa (en el caso o arrastrándolo en el tablero).
+        page: practice_case
+        needs: practice_case
+        check: practice_stage
+        hint: El caso de práctica sigue en la misma etapa.
+      - key: agendar
+        kind: exercise
+        title: Agéndale una llamada
+        text: En el caso, agenda una llamada para mañana. Si tienes Google conectado, también sale en tu Google Calendar.
+        page: practice_case
+        needs: practice_case
+        check: practice_meeting
+        hint: Todavía no veo una llamada agendada por ti en el caso de práctica.
+      - key: leer_agenda
+        kind: lesson
+        title: Tu día y tus tareas
+        guide: agenda

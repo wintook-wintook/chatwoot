@@ -10,12 +10,27 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_11_160000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_14_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
+
+  create_table "academy_progresses", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.string "module_key", null: false
+    t.string "step_key", null: false
+    t.datetime "started_at"
+    t.datetime "completed_at"
+    t.integer "attempts", default: 0, null: false
+    t.string "evidence_type"
+    t.bigint "evidence_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id", "module_key", "step_key"], name: "index_academy_progress_unique", unique: true
+  end
 
   create_table "access_roles", force: :cascade do |t|
     t.bigint "account_id", null: false
