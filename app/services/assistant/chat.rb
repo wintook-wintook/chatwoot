@@ -206,6 +206,8 @@ class Assistant::Chat < Cases::Ai::BaseService
 
     #{Assistant::PromptRules::SALES}
 
+    #{Assistant::PromptRules::SETUP}
+
     #{Assistant::PromptRules::FIELD}
   PROMPT
 

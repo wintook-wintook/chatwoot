@@ -2,9 +2,9 @@
 key: tipos_caso
 title: Tipos de caso, clasificaciones y políticas SLA
 areas: [settings]
-keywords: [tipo de caso, tipos de caso, nuevo tipo, clase de caso, cambiar de clase, soporte, ventas, orden de trabajo, proyecto, prefijo, prefijo del folio, folio, portal, publico, privado, itil, campos, campos personalizados, agregar campo, columnas, etapas, estados, tablero, tareas de la etapa, pasa sola, trabajo en campo, fotos antes y despues, conformidad, reporte al cliente, clasificacion, clasificaciones, servicios afectados, categorias, subcategoria, aplica a, sla, politicas sla, politica, primera respuesta, resolucion, horario laboral, naturaleza itil, incidente, retirado]
+keywords: [tipo de caso, tipos de caso, nuevo tipo, clase de caso, cambiar de clase, soporte, ventas, orden de trabajo, proyecto, prefijo, prefijo del folio, folio, portal, publico, privado, itil, campos, campos personalizados, agregar campo, columnas, etapas, estados, tablero, tareas de la etapa, pasa sola, trabajo en campo, fotos antes y despues, conformidad, reporte al cliente, clasificacion, clasificaciones, servicios afectados, categorias, subcategoria, aplica a, sla, politicas sla, politica, primera respuesta, resolucion, horario laboral, naturaleza itil, incidente, retirado, armar con dali, arma mi cuenta, etapas de mi negocio]
 pages: [case_types, classifications, sla_policies]
-sources: [app/javascript/dashboard/views/gestorTickets/TicketTypes.vue, app/javascript/dashboard/views/gestorTickets/TicketTypeDetail.vue, app/javascript/dashboard/views/gestorTickets/typeDetail/*.vue, app/javascript/dashboard/views/gestorTickets/Classification.vue, app/javascript/dashboard/views/gestorTickets/SlaConfig.vue, app/controllers/api/v1/accounts/case_*_controller.rb, app/models/case_type*.rb, app/models/case_sla_policy.rb, app/services/cases/type_class_change.rb]
+sources: [app/javascript/dashboard/views/gestorTickets/TicketTypes.vue, app/javascript/dashboard/views/gestorTickets/TicketTypeDetail.vue, app/javascript/dashboard/views/gestorTickets/typeDetail/*.vue, app/javascript/dashboard/views/gestorTickets/Classification.vue, app/javascript/dashboard/views/gestorTickets/SlaConfig.vue, app/controllers/api/v1/accounts/case_*_controller.rb, app/models/case_type*.rb, app/models/case_sla_policy.rb, app/services/cases/type_class_change.rb, app/services/cases/quick_setup.rb, app/services/assistant/setup_*.rb]
 reviewed: 2026-11-14
 ---
 ## Para qué sirve
@@ -47,6 +47,13 @@ Estos campos se piden al crear o editar un caso de ese tipo.
 3. Arrastra las filas para cambiar el orden.
 4. Los 13 estados deben quedar cubiertos; si falta alguno sale «Estados sin cubrir» con el botón «Asignar a la última columna».
 5. Pulsa «Guardar columnas». Nada se guarda hasta pulsarlo («Tienes cambios sin guardar.»).
+
+### Armarlos con Dali (administradores)
+1. Pídele a Dali «Ayúdame a armar mis tipos de caso y sus etapas» (o, en Inicio › Mi capacitación › Configura tu cuenta, «Hazlo con Dali» en «Revisa tus tipos de caso y sus etapas»).
+2. Si no lo sabe, te pregunta a qué se dedica tu negocio.
+3. Te deja una tarjeta «Armar tu cuenta» con cada tipo (y su clase: ventas, servicio, orden de trabajo o proyecto), sus etapas en orden y los motivos de venta ganada y perdida. Si empiezas de cero, también los tipos de fábrica que se retiran porque no tienen casos.
+4. Pulsa confirmar: se crean los tipos con esas etapas. Las de espera y resultado (Pospuesta, Ganada, Perdida, Cerrado, Cancelada…) se agregan solas y los 13 estados quedan cubiertos.
+5. Solo agrega: no cambia ni borra los tipos que ya tienes; si ya hay uno con ese nombre, te lo dice. Después puedes ajustar todo aquí.
 
 ### Poner tareas a una etapa
 1. En «Columnas» pulsa «Tareas (…)» de la columna (primero guarda las columnas).

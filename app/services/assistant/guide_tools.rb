@@ -27,8 +27,14 @@ module Assistant::GuideTools
 
   def self.how_to?(text) = HOW_TO.match?(text.to_s)
 
-  # Lo que el usuario escribió en este turno y dónde estaba (lo pone Assistant::Chat).
-  attr_accessor :turn
+  # Lo que el usuario escribió en este turno y dónde estaba (lo pone Assistant::Chat). Un turno
+  # nuevo olvida las propuestas del anterior (Tools#proposal no repite una en el mismo turno).
+  attr_reader :turn
+
+  def turn=(value)
+    @proposed = nil
+    @turn = value
+  end
 
   # Las guías que se encontraron o leyeron en este turno: Assistant::Chat las guarda en la
   # respuesta para que un «sí» o «ábrela» del siguiente turno sepa cuál era (sin la clave,

@@ -151,6 +151,13 @@ export default {
       );
       this.askDali(step.ask);
     },
+    // «Hazlo con Dali»: el paso tiene pantalla y además Dali lo puede hacer.
+    async withDali(mod, step) {
+      await this.run(this.stepId(mod, step), () =>
+        AcademyAPI.start(mod.key, step.key)
+      );
+      this.askDali(step.ask);
+    },
     goTo(step) {
       this.$router.push(`/app/accounts/${this.accountId}/${step.path}`);
     },
@@ -400,6 +407,15 @@ export default {
                       @click="check(mod, step)"
                     >
                       {{ t('CHECK') }}
+                    </woot-button>
+                    <woot-button
+                      v-if="step.ask && step.path"
+                      size="small"
+                      variant="smooth"
+                      icon="chat"
+                      @click="withDali(mod, step)"
+                    >
+                      {{ t('WITH_DALI') }}
                     </woot-button>
                     <woot-button
                       v-if="step.confirm"

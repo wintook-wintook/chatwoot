@@ -435,6 +435,7 @@ es:
       delegate: 'Delegar a un agente IA para que le dé seguimiento a un cliente, y preguntar cómo va o pausarlo.'
       sales: 'Ventas: ¿cómo vamos contra la meta?, ranking de vendedores y clientes, qué oportunidades cierran o están vencidas o estancadas, y la salud del embudo (cifras sin IVA).'
       sales_own: 'Tus ventas: ¿cómo vas contra tu meta?, tus mejores clientes, qué oportunidades tuyas cierran o están vencidas o estancadas (cifras sin IVA).'
+      setup: 'Armar tu cuenta: los tipos de caso con sus etapas y los motivos de cierre según tu negocio (p. ej. «ayúdame a armar mis etapas, vendemos paneles solares»).'
       guide: 'Aprender a usar la plataforma: cómo se hace algo, dónde está cada cosa y para qué sirve (p. ej. «¿cómo creo un contrato?», «¿para qué sirve el embudo?»).'
       quotes: 'Cotizaciones: armarlas con los productos y precios del catálogo, mandárselas al cliente y ver las que tiene abiertas (p. ej. «cotízale a Mario 3 mantenimientos de minisplit»).'
       reply: 'Contestar a tus clientes: qué conversaciones esperan respuesta, qué dijeron, y la respuesta lista en una tarjeta para mandarla (p. ej. «¿quién me escribió?», «dile a Mario que llega el jueves»).'

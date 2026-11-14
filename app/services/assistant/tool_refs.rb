@@ -5,6 +5,15 @@
 module Assistant::ToolRefs
   private
 
+  # Los registros de un grupo de GlobalSearch con su ref y en qué campo apareció (`match`).
+  def with_match(group, scope)
+    records = scope.where(id: group[:items].pluck(:id)).index_by(&:id)
+    group[:items].filter_map do |item|
+      record = records[item[:id]]
+      record && yield(record).merge(match: item[:match]).compact
+    end
+  end
+
   def open_cases_of(contact)
     cases.where(contact_id: contact.id).where.not(status: CaseTicket::CLOSED_STATUSES)
          .order(updated_at: :desc).limit(10).map { |t| case_ref(t) }

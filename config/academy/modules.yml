@@ -78,8 +78,9 @@ modules:
         kind: setup
         level: required
         title: Revisa tus tipos de caso y sus etapas
-        text: Kontrolya trae unos tipos de caso (ventas, servicio) con sus etapas. Cámbialos a como trabaja tu negocio o, si así te sirven, acéptalos.
+        text: Kontrolya trae unos tipos de caso (ventas, servicio) con sus etapas. Cámbialos a como trabaja tu negocio, pídeselo a Dali («Hazlo con Dali», que te pregunta a qué te dedicas y te los propone) o, si así te sirven, acéptalos.
         page: case_types
+        ask: Ayúdame a armar mis tipos de caso y sus etapas para mi negocio.
         check: case_stages
         confirm: Así me sirven
         hint: Los tipos de caso y sus etapas siguen como vienen de fábrica.

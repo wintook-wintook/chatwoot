@@ -41,6 +41,7 @@ Lo que hay que dejar listo para que el equipo trabaje. Cada paso dice si es «In
 1. «Hazlo» te lleva a la pantalla donde se configura.
 2. Cada paso se marca solo cuando ya está, aunque lo haya hecho otro administrador o lo hayas hecho antes. «Revisar» vuelve a comprobar.
 3. Lo que Kontrolya ya trae de fábrica (etapas, motivos, resultados) o lo que no usas tiene un botón para darlo por hecho, por ejemplo «Así me sirven» o «No uso WhatsApp». Vale para toda la cuenta y dice quién lo aceptó; «Deshacer» lo regresa a pendiente.
+4. En «Revisa tus tipos de caso y sus etapas», «Hazlo con Dali» le pide a Dali que te los arme: te pregunta a qué se dedica tu negocio y te deja una tarjeta para confirmar (guía «Tipos de caso»).
 
 ### Tu perfil (todos)
 Tu foto, tu firma, conectar tu Google Calendar, instalar Dali en tu celular y preguntarle algo a Dali. Se marcan solos cuando ya están; la firma, Google y el celular se pueden saltar («No la necesito», «No uso Google», «No lo necesito»).

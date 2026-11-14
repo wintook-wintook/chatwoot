@@ -47,6 +47,7 @@
       "recommended": "Recomendado",
       "later": "Cuando estés listo"
     },
+    "WITH_DALI": "Hazlo con Dali",
     "GO": "Ir",
     "UNDO": "Deshacer",
     "CONFIRMED_BY": "Lo aceptó {name}"

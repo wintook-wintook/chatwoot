@@ -28,6 +28,7 @@ class Assistant::Tools
   include Assistant::FollowUpPresetTools # plantillas de seguimiento
   include Assistant::ProgressTools # reportar avance de una tarea
   include Assistant::PendingTools # menciones, chat interno y sin asignar
+  include Assistant::SetupTools # «Arma tu cuenta con Dali»
 
   LIST_LIMIT = 6
   ACTIVITY_LINES = 15
@@ -42,7 +43,7 @@ class Assistant::Tools
                       propose_create_contact propose_follow_up propose_follow_up_action].freeze +
                    QUOTE_PROPOSAL_TOOLS + CONVERSATION_PROPOSAL_TOOLS + FIELD_PROPOSAL_TOOLS + EVENT_PROPOSAL_TOOLS +
                    CLIENT_TASK_PROPOSAL_TOOLS + CANCEL_PROPOSAL_TOOLS + CONVERT_PROPOSAL_TOOLS + FOLLOW_UP_PRESET_PROPOSAL_TOOLS +
-                   PROGRESS_PROPOSAL_TOOLS + PENDING_PROPOSAL_TOOLS
+                   PROGRESS_PROPOSAL_TOOLS + PENDING_PROPOSAL_TOOLS + SETUP_PROPOSAL_TOOLS
 
   def self.definitions = Assistant::ToolDefinitions.all
 
@@ -77,14 +78,6 @@ class Assistant::Tools
       organizations: found[:organizations][:items].map { |o| o.slice(:id, :name, :match).compact },
       cases: with_match(found[:cases], cases) { |t| case_ref(t) },
       totals: found.transform_values { |group| group[:count] } }
-  end
-
-  def with_match(group, scope)
-    records = scope.where(id: group[:items].pluck(:id)).index_by(&:id)
-    group[:items].filter_map do |item|
-      record = records[item[:id]]
-      record && yield(record).merge(match: item[:match]).compact
-    end
   end
 
   def short_search(args)
@@ -122,8 +115,12 @@ class Assistant::Tools
   end
 
   # --- propuestas -----------------------------------------------------------------
+  # La misma propuesta dos veces en un turno deja una sola tarjeta.
   def proposal(type, args)
     payload, labels = public_send("prepare_#{type}", args)
+    return { result: { ok: true, proposal: type, already_proposed: true } } if (@proposed ||= []).include?([type, payload])
+
+    @proposed << [type, payload]
     { result: { ok: true, proposal: type, waiting_confirmation: true, summary: labels },
       proposal: { 'id' => SecureRandom.hex(6), 'type' => type, 'payload' => payload, 'labels' => labels,
                   'status' => 'pending' } }

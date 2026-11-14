@@ -167,7 +167,8 @@
       "WA_TEMPLATE": "Plantilla de WhatsApp",
       "WA_TEMPLATE_AUTO": "Que el agente elija",
       "PRESET_NAME": "Nombre de la plantilla",
-      "save_follow_up_preset": "Guardar plantilla"
+      "save_follow_up_preset": "Guardar plantilla",
+      "account_setup": "Armar tu cuenta"
     },
     "SETTINGS": {
       "TITLE": "Asistente",

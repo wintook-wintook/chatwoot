@@ -17,6 +17,15 @@ module Assistant::PromptRules
         como cliente. Si hay varias con ese nombre en el equipo, pregunta cuál.
   RULES
 
+  # «Arma tu cuenta con Dali» (solo administradores; Assistant::SetupTools).
+  SETUP = <<~RULES.chomp
+    - «Arma mi cuenta», «ayúdame a configurar mis tipos de caso / etapas / embudo»: si no sabes a qué se dedica el negocio,
+      pregúntalo en UNA pregunta corta (qué vende o qué servicio da). Con eso llama YA propose_account_setup: 1 a 4 tipos
+      de caso con las etapas que se usan en ese giro y sus palabras, y motivos de ganada/perdida. No preguntes si procede:
+      la tarjeta lo muestra y pide confirmar. Tu texto: una línea («Te dejé la propuesta en la tarjeta: revísala y confírmala»);
+      no repitas las etapas ni digas que ya quedó (se crea al confirmar). Solo administradores; a los demás, que lo hace su administrador.
+  RULES
+
   # «Contéstale» sin decir a quién, después de una lista con varias conversaciones: preguntar.
   # Pantallas como liga (Assistant::PageLinks) y perfil ≠ cuenta.
   PAGES = <<~RULES.chomp

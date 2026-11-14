@@ -47,6 +47,8 @@ const ICONS = {
   convert_item: 'calendar',
   // Reportar avance de una tarea (es un reporte, no una nota)
   task_progress: 'clipboard',
+  // «Arma tu cuenta con Dali»: tipos de caso, etapas y motivos
+  account_setup: 'settings',
   // Nota interna en una conversación (para el equipo; el cliente no la ve)
   internal_note: 'document',
 };
@@ -210,6 +212,7 @@ export default {
           template_language: waTemplate ? waTemplate.language : null,
         },
         save_follow_up_preset: { name: f.name },
+        account_setup: {},
         note: { content: f.content },
         internal_note: { content: f.content },
         task: { title: f.title, due_at: dueToIso(f.due_at) },

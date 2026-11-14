@@ -450,6 +450,7 @@ en:
       delegate: 'Delegate a client follow-up to an AI agent, and ask how it is going or pause it.'
       sales: 'Sales: how are we doing vs the target, seller and client rankings, which opportunities close, are overdue or stalled, and pipeline health (amounts before tax).'
       sales_own: 'Your sales: how you are doing vs your target, your best clients, which of your opportunities close, are overdue or stalled (amounts before tax).'
+      setup: 'Set up your account: case types with their stages and close reasons for your business (e.g. «help me set up my stages, we sell solar panels»).'
       guide: 'Learn the platform: how to do something, where each thing is and what it is for (e.g. «how do I create a contract?», «what is the funnel for?»).'
       quotes: 'Quotes: build them with catalog products and prices, send them to the customer and see their open quotes (e.g. «quote Mario 3 AC maintenance services»).'
       reply: 'Answer your customers: which conversations are waiting, what they said, and the reply ready on a card to send it (e.g. “who wrote to me?”, “tell Mario it arrives on Thursday”).'

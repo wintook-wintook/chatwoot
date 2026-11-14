@@ -167,7 +167,8 @@
       "WA_TEMPLATE": "WhatsApp template",
       "WA_TEMPLATE_AUTO": "Let the agent choose",
       "PRESET_NAME": "Template name",
-      "save_follow_up_preset": "Save template"
+      "save_follow_up_preset": "Save template",
+      "account_setup": "Set up your account"
     },
     "SETTINGS": {
       "TITLE": "Assistant",
