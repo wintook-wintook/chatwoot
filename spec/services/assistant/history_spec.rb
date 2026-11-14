@@ -55,6 +55,11 @@ RSpec.describe Assistant::History do
       expect(described_class.clean(text)).to eq('No encontré a Jane en el equipo.')
     end
 
+    it 'quita la firma larga con la fecha y la pantalla en palabras' do
+      text = "Pulsa «Llamar».\n\nJohn, sábado 14 de noviembre de 2026, 20:30. Estás viendo: mi resumen."
+      expect(described_class.clean(text)).to eq('Pulsa «Llamar».')
+    end
+
     it 'no toca un texto normal' do
       expect(described_class.clean('Los datos de la conversación están en la ficha.')).to eq('Los datos de la conversación están en la ficha.')
     end

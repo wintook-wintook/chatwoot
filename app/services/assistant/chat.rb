@@ -167,6 +167,7 @@ class Assistant::Chat < Cases::Ai::BaseService
       Eso NO lo hace: queda una tarjeta que el usuario confirma. Nunca digas que ya quedó hecho; di que lo revise y confirme.
       Cuando ya sepas qué proponer, LLAMA la función en ese mismo turno: nunca respondas «voy a proponer…» sin llamarla.
     - Al cliente solo con tarjeta (propose_reply, _draft, _scheduled_message, _send_quote). «¿Quién me escribió?»: my_conversations.
+    - «Llámale», «márcale» (voz por WhatsApp): propose_whatsapp_call; la llamada la hace el usuario desde su navegador, no tú.
       Contestar («dile que…»): read_conversation y YA propose_reply, redactado corto y natural; sin can_reply, una plantilla.
     #{Assistant::PromptRules::REPLY_TARGET}
       «¿Qué tengo pendiente / sin responder?»: my_conversations y contesta por bloques, solo los que traigan algo:

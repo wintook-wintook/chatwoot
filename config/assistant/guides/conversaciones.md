@@ -2,7 +2,7 @@
 key: conversaciones
 title: Conversaciones
 areas: [conversations]
-keywords: [conversacion, conversaciones, chat, chat con clientes, chat con el cliente, whatsapp, correo, bandeja, responder, mensaje, nota privada, asignar, asignar a mi, resolver, reabrir, abrir, pendiente, posponer, etiqueta, filtro, filtrar conversaciones, guardar filtro, carpeta, editar carpeta, ventana 24 horas, plantilla, menciones, mencionar, mencionar a un companero, arroba, avisar a un companero, no atendidas, sin responder, ligar caso, programar mensaje, mias, no asignadas, todas, ordenar, prioridad, urgente, marcar como no leido, seleccionar varias, cambiar estado, bloquear contacto, desbloquear, enviar transcripcion, buscar mensajes, cambiar el diseno, participantes, unirse a la conversacion, macros, firma, grabar audio, adjuntar, emoji]
+keywords: [conversacion, conversaciones, chat, chat con clientes, chat con el cliente, whatsapp, correo, bandeja, responder, mensaje, nota privada, asignar, asignar a mi, resolver, reabrir, abrir, pendiente, posponer, etiqueta, filtro, filtrar conversaciones, guardar filtro, carpeta, editar carpeta, ventana 24 horas, plantilla, menciones, mencionar, mencionar a un companero, arroba, avisar a un companero, no atendidas, sin responder, ligar caso, programar mensaje, mias, no asignadas, todas, ordenar, prioridad, urgente, marcar como no leido, seleccionar varias, cambiar estado, bloquear contacto, desbloquear, enviar transcripcion, buscar mensajes, cambiar el diseno, participantes, unirse a la conversacion, macros, firma, grabar audio, adjuntar, emoji, llamar, llamada, llamada de whatsapp, llamar por whatsapp, marcarle, permitir llamadas, contestar llamada, colgar, silenciar]
 pages: [conversations, mentions, unattended, conversation, case, contact, labels]
 sources:
   - app/javascript/dashboard/components/ChatList.vue
@@ -18,6 +18,8 @@ sources:
   - app/javascript/dashboard/i18n/locale/es/chatlist.json
   - app/javascript/dashboard/i18n/locale/es/conversation.json
   - app/finders/conversation_finder.rb
+  - app/javascript/dashboard/components/widgets/calls/*.vue
+  - app/javascript/dashboard/i18n/locale/es/whatsappCalls.json
 reviewed: 2026-11-14
 ---
 ## Para qué sirve
@@ -68,6 +70,13 @@ Conversaciones, en el menú de la izquierda. Su menú tiene: «Todas las Convers
 2. Salen las conversaciones donde un compañero te mencionó con @ en una nota privada.
 3. Tienen las mismas pestañas, orden y estado que «Todas las Conversaciones».
 
+### Llamar por WhatsApp
+1. En la conversación de WhatsApp del cliente, arriba a la derecha, pulsa «Llamar» («Llamar al cliente por WhatsApp desde el navegador»). También puedes pedírselo a Dali: «llámale a Mario por WhatsApp».
+2. La llamada sale de tu navegador: la primera vez permite el micrófono. Abajo aparece «Llamada de WhatsApp» con «Sonando…», «Colgar» y «Silenciar».
+3. Si el cliente todavía no permite llamadas, se le envía por WhatsApp la solicitud con el botón «Permitir llamadas» y cuando acepta te avisa, por ejemplo «Mario permitió que le llames por WhatsApp. Ya puedes llamarle.». WhatsApp deja pedirlo máximo 1 vez al día y 2 por semana.
+4. Cuando un cliente te llama, suena y sale «Te están llamando…» con «Contestar» y «Rechazar». La pestaña de Kontrolya debe estar abierta para que suene.
+5. La llamada queda como burbuja en la conversación (contestada o perdida, duración y, si la bandeja graba, la grabación).
+
 ### No atendidas
 1. Entra a Conversaciones › No Atendidas.
 2. Salen las conversaciones que nadie ha contestado todavía o donde el cliente escribió y espera respuesta.
@@ -80,6 +89,7 @@ Conversaciones, en el menú de la izquierda. Su menú tiene: «Todas las Convers
 - Secciones que se abren y se pueden reordenar arrastrando: «Acciones de la conversación» (con el embudo de contactos, responsable, equipo, prioridad y etiquetas), «Participantes de la conversación» (quién la sigue; «Unirse a la conversación» te agrega y te llegan sus avisos), «Información de la conversación», «Atributos del contacto», «Conversaciones anteriores» y «Macros».
 
 ## Límites
+- Las llamadas solo funcionan en bandejas de WhatsApp con la API oficial (Cloud API) y con las llamadas activadas en Ajustes › Bandejas de entrada › la bandeja › pestaña «Llamadas» (ahí se elige «Entrantes y salientes», «Solo entrantes» o «Solo salientes»). Solo llaman los usuarios de esa bandeja y los administradores.
 - La búsqueda pide al menos 3 caracteres.
 - Si tu empresa ocultó los filtros a los agentes, solo el Administrador ve el botón «Filtrar conversaciones».
 - La lista carga de 25 en 25; al bajar se cargan más.

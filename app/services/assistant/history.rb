@@ -37,8 +37,9 @@ module Assistant::History
   # («[Guías: …]», «[Propuse …]»), se quitan (pasa con modelos chicos): el usuario no debe verlas.
   ECHO = /\n+[*_ ]*Datos de (?:la|esta) (?:conversaci[oó]n|pl[aá]tica)[*_ ]*:?.*\z/mi
   NOTE = /^[ \t]*\[(?:Guías|Propuse)\b[^\]\n]*\][ \t]*$\n?/
-  # La firma corta de la última línea: «John, 2026-11-14, viendo: my_summary.»
-  SIGNATURE = /\n+[^\n]{0,80}\b(?:viendo|pantalla)\s*:\s*[a-z_]+\.?[ \t]*\z/i
+  # La firma corta de la última línea: «John, 2026-11-14, viendo: my_summary.» o
+  # «John, sábado 14 de noviembre de 2026, 20:30. Estás viendo: mi resumen.»
+  SIGNATURE = /\n+[^\n]{0,80}\b(?:viendo|pantalla)\s*:\s*[\p{L}_ ]{1,40}\.?[ \t]*\z/i
 
   def clean(text)
     text.to_s.sub(ECHO, '').gsub(NOTE, '').strip.sub(SIGNATURE, '').strip

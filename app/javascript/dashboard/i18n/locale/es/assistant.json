@@ -85,6 +85,7 @@
       "YES": "Sí",
       "NO_WORD": "No",
       "ROWS": {
+        "PHONE": "Teléfono",
         "TYPE": "Tipo",
         "CLIENT": "Cliente",
         "AMOUNT": "Monto",
@@ -168,7 +169,9 @@
       "WA_TEMPLATE_AUTO": "Que el agente elija",
       "PRESET_NAME": "Nombre de la plantilla",
       "save_follow_up_preset": "Guardar plantilla",
-      "account_setup": "Armar tu cuenta"
+      "account_setup": "Armar tu cuenta",
+      "whatsapp_call": "Llamar por WhatsApp",
+      "CALL_HINT": "Al confirmar, la llamada sale de tu navegador y hablas tú (permite el micrófono). Si el cliente no ha permitido llamadas, se le manda la solicitud por WhatsApp."
     },
     "SETTINGS": {
       "TITLE": "Asistente",

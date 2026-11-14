@@ -29,6 +29,7 @@ class Assistant::Tools
   include Assistant::ProgressTools # reportar avance de una tarea
   include Assistant::PendingTools # menciones, chat interno y sin asignar
   include Assistant::SetupTools # «Arma tu cuenta con Dali»
+  include Assistant::CallTools # llamar por WhatsApp
 
   LIST_LIMIT = 6
   ACTIVITY_LINES = 15
@@ -43,7 +44,8 @@ class Assistant::Tools
                       propose_create_contact propose_follow_up propose_follow_up_action].freeze +
                    QUOTE_PROPOSAL_TOOLS + CONVERSATION_PROPOSAL_TOOLS + FIELD_PROPOSAL_TOOLS + EVENT_PROPOSAL_TOOLS +
                    CLIENT_TASK_PROPOSAL_TOOLS + CANCEL_PROPOSAL_TOOLS + CONVERT_PROPOSAL_TOOLS + FOLLOW_UP_PRESET_PROPOSAL_TOOLS +
-                   PROGRESS_PROPOSAL_TOOLS + PENDING_PROPOSAL_TOOLS + SETUP_PROPOSAL_TOOLS
+                   PROGRESS_PROPOSAL_TOOLS + PENDING_PROPOSAL_TOOLS + SETUP_PROPOSAL_TOOLS +
+                   CALL_PROPOSAL_TOOLS
 
   def self.definitions = Assistant::ToolDefinitions.all
 

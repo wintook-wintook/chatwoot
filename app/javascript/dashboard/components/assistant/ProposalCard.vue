@@ -49,6 +49,8 @@ const ICONS = {
   task_progress: 'clipboard',
   // «Arma tu cuenta con Dali»: tipos de caso, etapas y motivos
   account_setup: 'settings',
+  // Llamar por WhatsApp (la llamada sale del navegador al confirmar)
+  whatsapp_call: 'call',
   // Nota interna en una conversación (para el equipo; el cliente no la ve)
   internal_note: 'document',
 };
@@ -213,6 +215,7 @@ export default {
         },
         save_follow_up_preset: { name: f.name },
         account_setup: {},
+        whatsapp_call: {},
         note: { content: f.content },
         internal_note: { content: f.content },
         task: { title: f.title, due_at: dueToIso(f.due_at) },
@@ -310,11 +313,19 @@ export default {
           this.payload()
         );
         this.$emit('updated', data.proposal);
+        this.startCall(data.proposal);
       } catch (e) {
         this.error = e.response?.data?.error || this.t('FAILED');
       } finally {
         this.busy = false;
       }
+    },
+    // Llamar por WhatsApp: el servidor revisó que se puede; el audio sale de aquí, con el
+    // mismo widget que el botón «Llamar» de la conversación (store whatsappCalls).
+    startCall(proposal) {
+      const call = proposal && proposal.result && proposal.result.call;
+      if (proposal.type !== 'whatsapp_call' || !call) return;
+      this.$store.dispatch('whatsappCalls/call', call);
     },
     async cancel() {
       this.busy = true;
@@ -429,6 +440,13 @@ export default {
     </p>
 
     <!-- D4 — lo que la tarjeta resume (tipo, cliente, etapa, resultado, datos…) -->
+    <p
+      v-if="type === 'whatsapp_call' && pending"
+      class="m-0 text-xs text-slate-500"
+      data-test="call-hint"
+    >
+      {{ t('CALL_HINT') }}
+    </p>
     <dl v-if="labels.rows && labels.rows.length" class="m-0 text-xs">
       <div v-for="[key, value] in labels.rows" :key="key" class="flex gap-1">
         <dt class="text-slate-500">{{ rowLabel(key) }}:</dt>

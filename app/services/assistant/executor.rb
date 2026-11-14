@@ -19,6 +19,7 @@ class Assistant::Executor
   include Assistant::FollowUpPresetRunner # guardar plantilla de seguimiento
   include Assistant::ProgressRunner # reportar avance de una tarea
   include Assistant::SetupRunner # «Arma tu cuenta con Dali»
+  include Assistant::CallRunner # llamar por WhatsApp
 
   class Refused < StandardError; end
 
