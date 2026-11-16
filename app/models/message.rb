@@ -498,6 +498,9 @@ class Message < ApplicationRecord
     # Seguimiento IA: con uno vivo en la conversación, contesta SOLO él (ni el agente de
     # seguimiento de siempre ni BotSeller). Pausado no contesta nadie: lo atiende una persona.
     return AiFollowUps::ReplyJob.set(wait: 15.seconds).perform_later(id) if AiFollowUp.live_for?(conversation_id)
+    # Motor 2.0: el seguimiento de esta conversación es de un agente 2.0 → contesta ese motor
+    # (Plan-Motor-Agentes.md §11.11). El 1.0 sigue igual para los demás.
+    return Motor2::ReplyJob.set(wait: Motor2::WAIT).perform_later(id) if Motor2.takes?(self)
     # Agente listo de la bandeja: contesta él (ni el agente a medida ni BotSeller).
     return ReadyAgents::ReplyJob.set(wait: 15.seconds).perform_later(id) if ReadyAgents::Router.takes?(self)
 

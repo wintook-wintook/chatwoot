@@ -265,10 +265,22 @@ Hace las tres partes, pero con los papeles al revés:
 
 - **«Personalizar»** en un agente listo abre la ficha completa del **mismo agente** (no lo copia); ver 11.9.
 - Cada habilidad nueva sirve a las dos puertas. No repetir el error de tener dos motores.
-- **El 2.0 vive aparte:** tablas, pantallas y motor propios. **Agentes a medida (viejo) no se
-  toca** y sigue funcionando.
-- **«Pasar a 2.0»:** lee un agente a medida (solo lectura) y crea su copia en el 2.0, ya
-  acomodada en la ficha. El viejo sigue igual; se regresa cuando se quiera.
+- **Tablas compartidas, pantallas separadas (acordado 2026-11-16, reemplaza «el 2.0 vive
+  aparte»):**
+  - el 2.0 usa la misma lista y las mismas tablas de Agentes a medida: `tracking_templates`
+    gana `engine` («1.0» por omisión / «2.0») y columnas nuevas para lo del 2.0;
+    `contact_trackings` no cambia. Así campañas, asignación masiva, automatizaciones, tablero
+    y «Delegar a agente» funcionan con agentes 2.0 sin reconectar nada;
+  - **«Nuevo»** en la lista pregunta «Motor 1.0 / Motor 2.0»; al abrir un agente se va a la
+    pantalla de su motor; etiqueta «2.0» en la lista;
+  - **la ficha 1.0 no se mueve**; la ficha 2.0 es nueva, en archivos propios;
+  - **desvío** en `Message#analyze_for_active_trackings`: si el agente del seguimiento es 2.0,
+    contesta el motor nuevo; si no, igual que hoy;
+  - **el motor 1.0 no se toca** (`ContactTrackingResponseAnalyzerJob`, `RouterService`, su
+    prompt). Esas cuatro cosas son la única excepción autorizada a «no tocar Agentes a medida».
+- **«Pasar a 2.0»:** el mismo agente cambia de motor y se llenan sus campos nuevos a partir
+  de lo que tiene (se puede regresar a 1.0). Cuando no quede ninguno en 1.0, se apagan su
+  motor y su pantalla.
 - Motor **de cero**; pantallas y aprendizaje **no**: la ficha nueva se hace copiando la idea
   de la actual, sin editar la actual.
 
@@ -554,7 +566,7 @@ y no se toca.
 **Ya acordado** (secciones 11.1–11.9):
 - 11.1: las tres partes;
 - 11.2: qué falla del viejo;
-- 11.3: un motor, dos puertas, aparte del viejo, con «Pasar a 2.0» de solo lectura;
+- 11.3: un motor, dos puertas; tablas compartidas con el 1.0 y pantallas separadas (2026-11-16);
 - 11.4: sin rutas, prompt en tres capas;
 - 11.5: inventario de pantallas a reusar;
 - 11.6: receta de habilidades (5 piezas), con Ofertas escalonadas como primera;
@@ -572,8 +584,9 @@ y no se toca.
 
 **Pendiente de decidir al retomar:**
 - Rehacer la tabla de pasos (sección 7, M1–M5). Fue pensada para la opción B y hay que
-  ajustarla al 2.0 aparte: ficha única, probador, reportes, reparto y «Pasar a 2.0».
-- Si el 2.0 crece sobre la tabla `ready_agents` o usa una tabla nueva.
+  ajustarla al 2.0 (tablas compartidas, pantalla propia): ficha única, probador, reportes,
+  reparto y «Pasar a 2.0».
+- ~~Si el 2.0 crece sobre la tabla `ready_agents` o usa una tabla nueva.~~ Decidido 2026-11-16: comparte las tablas de Agentes a medida (11.3).
 - A qué correo llegan los reportes.
 - Quién puede «Aplicar» cambios en respuestas predefinidas.
 - Dónde se marca el número de probador (ficha o contacto).
@@ -588,3 +601,44 @@ repo.
 1. leer la sección 11 completa;
 2. proponer la nueva tabla de pasos;
 3. esperar el «sí» del usuario.
+
+### 11.11 Decisiones del 2026-11-16 y pasos para construir
+
+**Decisiones del usuario:**
+- **Tablas compartidas, pantallas separadas** (11.3). «Nuevo» pregunta 1.0 / 2.0. La ficha 1.0 no se mueve.
+- **Intentos (cuando el cliente no contesta):**
+  - un agente 2.0 los escribe con el motor 2.0, en modo seguimiento como el Seguimiento IA nuevo;
+  - un agente 1.0 sigue con su seguimiento de adentro (`ContactTrackingJob`).
+- **Desvíos autorizados en código compartido:** cada uno es «si el agente es 2.0 → motor 2.0; si no, igual que hoy»:
+  - `Message#analyze_for_active_trackings`;
+  - `ContactTrackingJob#generate_message` (también lo usa el despachador, `TrackingDispatch::SendJob`).
+- **Piezas del 1.0 que ya funcionan:** el 2.0 las llama tal cual, sin editarlas. Si hay que mejorar una, se copia al 2.0. Ejemplos:
+  - búsqueda en fuentes, hojas y lectura de adjuntos;
+  - horarios, palabras clave, baja y clasificador de prospectos.
+- **El 2.0 es su propio motor.** No se arma modificando el de Agentes listos ni el de Seguimiento IA. Esos dos se conectan al 2.0 después, y cada uno conserva sus pantallas y sus tablas.
+- **Galería y publicar prompts** con agentes 2.0: después.
+- **Entrenador con tres salidas claras** al dar 👎 (manda sobre la tabla de 11.8):
+  - **✏️ Instrucciones o ficha del agente:** lo corrige solo. Le dice «ya lo corregí, pruébalo de nuevo», con Deshacer y versión. Antes corre las pruebas guardadas.
+  - **📚 Fuente:** enseña el texto exacto que encontró y ofrece arreglarlo («Arréglalo tú» / «Lo corrijo yo»). Avisa si esa fuente la usan otros agentes. Si la fuente es externa, dice qué hoja, fila y columna cambiar.
+  - **🔧 Motor:** «Esto no lo puede hacer el motor todavía: búscalo con tu Kontrolya». El reporte sale automático.
+  - Decide con la traza: qué fuente consultó, qué le regresó, qué habilidad usó y qué dicen las instrucciones. Si hay duda, hace una sola pregunta. Si hay dos causas, muestra las dos.
+  - Cada 👎 resuelto se guarda como prueba.
+
+**Nombres en el código:**
+- Módulo `Motor2::` (app/services/motor2/).
+- Columnas nuevas:
+  - `tracking_templates.engine` («1» por omisión / «2»);
+  - `tracking_templates.motor2` (jsonb, la ficha 2.0);
+  - `contact_trackings.motor2_state` (jsonb, la memoria por contacto que mueve el código).
+- Tablas nuevas: `motor2_tests` y `motor2_reports`.
+
+**Pasos** (rama `feat/motor_agentes_2`, un commit por paso):
+
+| Paso | Qué |
+|---|---|
+| M1 | **Motor.** Columnas; `Motor2::Runner` con las habilidades base (Qué sabe, Datos del cliente, Pasar a persona, Terminar); turno de respuesta con las garantías (espera y candado, solo el último mensaje, baja, vendedor atendiendo, palabras clave, bienvenida, clasificador de campaña, antifuga, ligas, reintento); los dos desvíos; intentos con el motor 2.0; traza por respuesta |
+| M2 | **Habilidades.** Ofertas escalonadas, Citas, Tickets, Archivos con regla |
+| M3 | **Pantalla.** API de la ficha 2.0; «Nuevo» con 1.0 / 2.0; etiqueta «2.0» en la lista; abrir según el motor; ficha con 7 secciones y «¿Listo para atender?»; versiones |
+| M4 | **Probador y entrenador.** Chat con traza y 👍/👎; las tres salidas; pruebas guardadas y «Correr todas»; reportes (tabla, lista en Super Admin, correo) |
+| M5 | «Pasar a 2.0», 👍/👎 en la conversación real, guía de Dali, pasada final |
+| Después | Varios agentes por bandeja con reparto; conectar Agentes listos y Seguimiento IA al 2.0; ver imágenes y transcribir audios; galería; puestos de fábrica |
