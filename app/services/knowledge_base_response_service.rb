@@ -511,16 +511,6 @@ class KnowledgeBaseResponseService
     end.join("\n\n")
   end
 
-  # Ver KnowledgeBase::StagedOfferImages: la beca entregada lleva su imagen aunque el
-  # modelo no la haya escrito.
-  def staged_offer_images(reply, context)
-    definition = @tracking && ContactTrackings::ConversationVariables.definition_for(@tracking)
-    KnowledgeBase::StagedOfferImages.call(reply, context, definition)
-  rescue StandardError => e
-    Rails.logger.warn "[KBase] ⚠️ No se pudo revisar la imagen de la oferta: #{e.message}"
-    reply
-  end
-
   # Ver KnowledgeBase::StagedOffers: con SIGUIENTE_OFERTA=PRIMERA_BECA el modelo no ve la
   # segunda beca (cuenta 613 conv 87: «¿y no hay otra beca más?» la daba aunque no tocaba).
   def staged_offers(content, title)
@@ -825,8 +815,6 @@ class KnowledgeBaseResponseService
     reply = strip_echoed_sources(reply)
     reply = guard_links(reply, messages)
     return nil if reply.blank?
-
-    reply = staged_offer_images(reply, context)
 
     # Se revisa ANTES de guardar el historial: una respuesta que copió las instrucciones
     # no puede quedar ahí, porque el modelo la vería en el turno siguiente.
@@ -1449,8 +1437,7 @@ class KnowledgeBaseResponseService
   # sin fuente, y acá llegaba literal al cliente.
   def send_reply(text)
     text = ContactTrackings::ConversationVariables.settle(@tracking, @conversation, text) if @tracking
-    content, attachments = ContactTrackings::AgentAttachments.resolve(@tracking&.tracking_template, text,
-                                                                      conversation: @conversation)
+    content, attachments = ContactTrackings::AgentAttachments.resolve(@tracking&.tracking_template, text)
     params = { content: content, private: false, ai_agent: ContactTrackings::AgentIdentity.for(@tracking&.tracking_template) }
     params[:attachments] = attachments if attachments.any?
     reply_message = Messages::MessageBuilder.new(bot_user, @conversation, params).perform
