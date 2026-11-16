@@ -79,8 +79,8 @@ RSpec.describe KnowledgeBaseResponseService do
     expect(enviado.attachments).to be_empty
   end
 
-  # La marca es solo el registro del historial: nunca manda un archivo, solo se borra. Un
-  # archivo sale únicamente con {{nombre}} escrito por el modelo (16/11/2026, conv 290).
+  # 11/11/2026 (cuenta 1128, conv 168): el modelo copió la marca del historial para mandar
+  # una imagen nueva y al cliente le llegó «(archivo enviado: inbeca1mat)» sin la imagen.
   describe 'cuando el modelo escribe «(archivo enviado: nombre)»' do
     def responde(texto)
       stub_request(:post, chat_url).to_return(
@@ -88,14 +88,14 @@ RSpec.describe KnowledgeBaseResponseService do
       )
     end
 
-    it 'no manda el archivo aunque no haya salido en la conversación, y no deja la marca' do
+    it 'manda el archivo si aún no salió en la conversación y no deja la marca' do
       responde("Derecho tiene 28% de beca.\n\n(archivo enviado: imagen_promo2)\n\n¿Te interesa?")
 
       enviado = contestar
 
       expect(enviado.content).not_to include('archivo enviado')
       expect(enviado.content).to include('Derecho tiene 28% de beca.', '¿Te interesa?')
-      expect(enviado.attachments).to be_empty
+      expect(enviado.attachments.first.file.blob).to eq(adjunto.file.blob)
     end
 
     it 'no lo reenvía si ya salió en la conversación, y tampoco deja la marca' do
