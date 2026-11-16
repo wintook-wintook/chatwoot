@@ -32,15 +32,22 @@ RSpec.describe KnowledgeBaseResponseService do
     body['messages'].last['content']
   end
 
-  it 'con Entrenamiento propio, el motor solo pide no inventar y deja la redacción al prompt' do
-    enviado = ultimo_mensaje("Agente de admisiones.\n\n[FIDELIDAD]\nSi no tengo el dato, comparto el WhatsApp.")
+  it 'con [SIN INFORMACIÓN] en el Entrenamiento, el motor manda a esa sección y prohíbe inventar' do
+    enviado = ultimo_mensaje("Agente de admisiones.\n\n[SIN INFORMACIÓN]\nComparto el WhatsApp 55 1234 5678.")
 
-    expect(enviado).to include(described_class::MISSING_ANSWER_AGENT_RULE)
+    expect(enviado).to include(ContactTrackings::MissingAnswer::NO_INVENT, ContactTrackings::MissingAnswer::WITH_SECTION)
     expect(enviado).not_to include('procedimiento exacto')
     expect(enviado).not_to include('pasarlo con un asesor')
   end
 
+  it 'con Entrenamiento sin esa sección, prohíbe inventar y deja una indicación neutral' do
+    enviado = ultimo_mensaje('Agente de admisiones.')
+
+    expect(enviado).to include(ContactTrackings::MissingAnswer::NO_INVENT, ContactTrackings::MissingAnswer::WITHOUT_SECTION)
+    expect(enviado).not_to include('procedimiento exacto')
+  end
+
   it 'sin Entrenamiento, queda la redacción por defecto' do
-    expect(ultimo_mensaje('')).to include(described_class::MISSING_ANSWER_DEFAULT_RULE)
+    expect(ultimo_mensaje('')).to include(ContactTrackings::MissingAnswer::DEFAULT)
   end
 end

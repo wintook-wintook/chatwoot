@@ -918,21 +918,10 @@ class KnowledgeBaseResponseService
     "Contexto del negocio:\n#{context.truncate(MAX_AGENT_CONTEXT_CHARS)}"
   end
 
-  # Sin el dato. Con Entrenamiento propio, CÓMO decirlo es del autor: el motor solo pide no
-  # inventar. 16/11/2026 (cuenta 1128, conv 300): la frase fija de abajo («aclara que no
-  # tienes el procedimiento exacto») iba pegada a la pregunta y le ganaba a la del prompt
-  # («Lamentablemente, no tengo el procedimiento exacto…» + «ponerlo en contacto con un
-  # asesor», que el Entrenamiento prohíbe). Sin Entrenamiento queda la redacción por defecto.
-  MISSING_ANSWER_AGENT_RULE = 'Si la información no contesta lo que preguntaron, no lo inventes ni lo adaptes: ' \
-                              'di que no tienes ese dato como lo indiquen tus instrucciones para ese caso, ' \
-                              'con sus palabras.'
-  MISSING_ANSWER_DEFAULT_RULE = 'Si la fuente no cubre exactamente lo que preguntaron, dilo de frente: explica ' \
-                                'brevemente qué sí cubre la documentación, aclara que no tienes el procedimiento ' \
-                                'exacto para su caso y ofrece pasarlo con un asesor. Una respuesta honesta que no ' \
-                                'resuelve es mejor que una inventada que parece resolver.'
-
+  # Sin el dato: ver ContactTrackings::MissingAnswer (el motor no dicta la frase; manda a la
+  # sección [SIN INFORMACIÓN] del Entrenamiento y solo prohíbe inventar).
   def missing_answer_rule
-    agent_system_prompt ? MISSING_ANSWER_AGENT_RULE : MISSING_ANSWER_DEFAULT_RULE
+    ContactTrackings::MissingAnswer.rule(agent_system_prompt)
   end
 
   # ==============================================================================
