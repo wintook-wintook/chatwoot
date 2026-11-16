@@ -789,10 +789,7 @@ class KnowledgeBaseResponseService
       los pasos del vendedor). Los nombres de permisos, parámetros, campos y menús se
       citan textualmente como aparecen en la fuente.
 
-      #{agent_data_rule}Si la fuente no cubre exactamente lo que preguntaron, dilo de frente: explica
-      brevemente qué sí cubre la documentación, aclara que no tienes el procedimiento
-      exacto para su caso y #{missing_answer_step}. Una respuesta honesta que no
-      resuelve es mejor que una inventada que parece resolver.
+      #{agent_data_rule}#{missing_answer_rule}
     USER
     user_prompt = erp_user_prompt(first_name, question, erp_data) if erp_data
     user_prompt = canned_prompt_user_prompt(first_name, question, canned_prompt) if canned_prompt
@@ -921,9 +918,21 @@ class KnowledgeBaseResponseService
     "Contexto del negocio:\n#{context.truncate(MAX_AGENT_CONTEXT_CHARS)}"
   end
 
-  # Sin el dato: con Entrenamiento propio, lo que diga él (canal, asesor, nada); si no, el asesor.
-  def missing_answer_step
-    agent_system_prompt ? 'sigue lo que tus instrucciones digan para ese caso' : 'ofrece pasarlo con un asesor'
+  # Sin el dato. Con Entrenamiento propio, CÓMO decirlo es del autor: el motor solo pide no
+  # inventar. 16/11/2026 (cuenta 1128, conv 300): la frase fija de abajo («aclara que no
+  # tienes el procedimiento exacto») iba pegada a la pregunta y le ganaba a la del prompt
+  # («Lamentablemente, no tengo el procedimiento exacto…» + «ponerlo en contacto con un
+  # asesor», que el Entrenamiento prohíbe). Sin Entrenamiento queda la redacción por defecto.
+  MISSING_ANSWER_AGENT_RULE = 'Si la información no contesta lo que preguntaron, no lo inventes ni lo adaptes: ' \
+                              'di que no tienes ese dato como lo indiquen tus instrucciones para ese caso, ' \
+                              'con sus palabras.'
+  MISSING_ANSWER_DEFAULT_RULE = 'Si la fuente no cubre exactamente lo que preguntaron, dilo de frente: explica ' \
+                                'brevemente qué sí cubre la documentación, aclara que no tienes el procedimiento ' \
+                                'exacto para su caso y ofrece pasarlo con un asesor. Una respuesta honesta que no ' \
+                                'resuelve es mejor que una inventada que parece resolver.'
+
+  def missing_answer_rule
+    agent_system_prompt ? MISSING_ANSWER_AGENT_RULE : MISSING_ANSWER_DEFAULT_RULE
   end
 
   # ==============================================================================
