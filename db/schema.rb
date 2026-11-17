@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_14_180000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_17_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -146,6 +146,73 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_14_180000) do
     t.integer "bot_type", default: 0
     t.jsonb "bot_config", default: {}
     t.index ["account_id"], name: "index_agent_bots_on_account_id"
+  end
+
+  create_table "agent_test_batches", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "created_by_id"
+    t.bigint "tracking_template_id"
+    t.date "day"
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_agent_test_batches_on_account_id"
+    t.index ["created_by_id"], name: "index_agent_test_batches_on_created_by_id"
+    t.index ["tracking_template_id", "day"], name: "index_agent_test_batches_on_tracking_template_id_and_day"
+    t.index ["tracking_template_id"], name: "index_agent_test_batches_on_tracking_template_id"
+  end
+
+  create_table "agent_test_cases", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "agent_test_batch_id", null: false
+    t.string "name", null: false
+    t.jsonb "messages", default: [], null: false
+    t.text "expected"
+    t.string "origin", default: "correction", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_agent_test_cases_on_account_id"
+    t.index ["agent_test_batch_id"], name: "index_agent_test_cases_on_agent_test_batch_id"
+  end
+
+  create_table "agent_test_logs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "tracking_template_id"
+    t.bigint "user_id"
+    t.bigint "conversation_id"
+    t.bigint "message_id"
+    t.string "engine", null: false
+    t.string "kind", null: false
+    t.text "feedback"
+    t.text "reply"
+    t.jsonb "diagnosis", default: {}, null: false
+    t.bigint "motor2_report_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "index_agent_test_logs_on_account_id_and_created_at"
+    t.index ["account_id"], name: "index_agent_test_logs_on_account_id"
+    t.index ["tracking_template_id"], name: "index_agent_test_logs_on_tracking_template_id"
+    t.index ["user_id"], name: "index_agent_test_logs_on_user_id"
+  end
+
+  create_table "agent_test_runs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "agent_test_batch_id", null: false
+    t.bigint "tracking_template_id", null: false
+    t.bigint "created_by_id"
+    t.string "status", default: "queued", null: false
+    t.integer "total", default: 0, null: false
+    t.integer "passed", default: 0, null: false
+    t.jsonb "results", default: [], null: false
+    t.jsonb "case_ids", default: [], null: false
+    t.string "label"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_agent_test_runs_on_account_id"
+    t.index ["agent_test_batch_id"], name: "index_agent_test_runs_on_agent_test_batch_id"
+    t.index ["created_by_id"], name: "index_agent_test_runs_on_created_by_id"
+    t.index ["tracking_template_id"], name: "index_agent_test_runs_on_tracking_template_id"
   end
 
   create_table "ai_agent_attachments", force: :cascade do |t|
@@ -1280,6 +1347,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_14_180000) do
     t.datetime "prospect_scored_at"
     t.jsonb "prospect_signals", default: [], null: false
     t.string "prospect_decision_maker"
+    t.jsonb "motor2_state", default: {}, null: false
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
     t.index ["appointment_at"], name: "index_contact_trackings_on_appointment_at"
@@ -1937,6 +2005,55 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_14_180000) do
     t.index ["inbox_id"], name: "index_messages_on_inbox_id"
     t.index ["sender_type", "sender_id"], name: "index_messages_on_sender_type_and_sender_id"
     t.index ["source_id"], name: "index_messages_on_source_id"
+  end
+
+  create_table "motor2_reports", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "tracking_template_id"
+    t.bigint "user_id"
+    t.string "kind", null: false
+    t.string "status", default: "new", null: false
+    t.jsonb "turns", default: [], null: false
+    t.text "reply"
+    t.text "expected"
+    t.text "diagnosis"
+    t.jsonb "trace", default: {}, null: false
+    t.datetime "fixed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_motor2_reports_on_account_id"
+    t.index ["status"], name: "index_motor2_reports_on_status"
+    t.index ["tracking_template_id"], name: "index_motor2_reports_on_tracking_template_id"
+    t.index ["user_id"], name: "index_motor2_reports_on_user_id"
+  end
+
+  create_table "motor2_tests", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "tracking_template_id", null: false
+    t.string "name", null: false
+    t.jsonb "turns", default: [], null: false
+    t.text "expected"
+    t.string "origin", default: "manual", null: false
+    t.jsonb "last_run", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_motor2_tests_on_account_id"
+    t.index ["tracking_template_id"], name: "index_motor2_tests_on_tracking_template_id"
+  end
+
+  create_table "motor2_versions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "tracking_template_id", null: false
+    t.bigint "user_id"
+    t.integer "version", null: false
+    t.string "source", default: "manual", null: false
+    t.string "note"
+    t.jsonb "snapshot", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_motor2_versions_on_account_id"
+    t.index ["tracking_template_id", "version"], name: "index_motor2_versions_on_tracking_template_id_and_version", unique: true
+    t.index ["tracking_template_id"], name: "index_motor2_versions_on_tracking_template_id"
+    t.index ["user_id"], name: "index_motor2_versions_on_user_id"
   end
 
   create_table "notes", force: :cascade do |t|
@@ -2599,6 +2716,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_14_180000) do
     t.text "email_signature"
     t.string "customer_display_name"
     t.jsonb "resources", default: {}, null: false
+    t.string "engine", default: "1", null: false
+    t.jsonb "motor2", default: {}, null: false
+    t.boolean "testing", default: false, null: false
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["archived_at"], name: "index_tracking_templates_on_archived_at"
@@ -2748,6 +2868,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_14_180000) do
   add_foreign_key "account_users", "contacts", column: "agent_contact_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "agent_test_batches", "accounts"
+  add_foreign_key "agent_test_batches", "tracking_templates"
+  add_foreign_key "agent_test_batches", "users", column: "created_by_id"
+  add_foreign_key "agent_test_cases", "accounts"
+  add_foreign_key "agent_test_cases", "agent_test_batches"
+  add_foreign_key "agent_test_logs", "accounts"
+  add_foreign_key "agent_test_logs", "tracking_templates"
+  add_foreign_key "agent_test_logs", "users"
+  add_foreign_key "agent_test_runs", "accounts"
+  add_foreign_key "agent_test_runs", "agent_test_batches"
+  add_foreign_key "agent_test_runs", "tracking_templates"
+  add_foreign_key "agent_test_runs", "users", column: "created_by_id"
   add_foreign_key "ai_agent_attachments", "accounts"
   add_foreign_key "ai_agent_attachments", "tracking_templates"
   add_foreign_key "ai_follow_up_presets", "accounts"
@@ -2883,6 +3015,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_14_180000) do
   add_foreign_key "maintenance_plans", "customer_assets", on_delete: :nullify
   add_foreign_key "maintenance_plans", "organizations", on_delete: :nullify
   add_foreign_key "maintenance_plans", "users", column: "assignee_id", on_delete: :nullify
+  add_foreign_key "motor2_reports", "accounts"
+  add_foreign_key "motor2_reports", "tracking_templates"
+  add_foreign_key "motor2_reports", "users"
+  add_foreign_key "motor2_tests", "accounts"
+  add_foreign_key "motor2_tests", "tracking_templates"
+  add_foreign_key "motor2_versions", "accounts"
+  add_foreign_key "motor2_versions", "tracking_templates"
+  add_foreign_key "motor2_versions", "users"
   add_foreign_key "organization_events", "organizations", on_delete: :cascade
   add_foreign_key "organization_events", "users", on_delete: :nullify
   add_foreign_key "organizations", "accounts"

@@ -25,6 +25,8 @@ import PublishPromptModal from './PublishPromptModal.vue'; // proyecto@publicar_
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import AssistantAPI from 'dashboard/api/assistant';
+import AgentTesterAPI from 'dashboard/api/agentTester'; // Probador: «En prueba»
+import { getUserAccess, areaLevel } from 'dashboard/helper/accessHelper';
 import {
   sortRows,
   nextOrder,
@@ -100,6 +102,12 @@ export default {
     }),
     isAdmin() {
       return this.currentRole === 'administrator';
+    },
+    // Probador de agentes: prender «En prueba» es de quien puede cambiar agentes.
+    canEditAgents() {
+      const params = (this.$route && this.$route.params) || {};
+      const access = getUserAccess(this.currentUser, params.accountId);
+      return areaLevel(access, 'ai_agents') === 'all';
     },
     listTabs() {
       return [
@@ -210,6 +218,18 @@ export default {
     if (this.isAdmin) this.fetchAudit();
   },
   methods: {
+    // «En prueba»: el agente (1.0 o 2.0) sale en Inicio › Probar agentes para cualquier usuario.
+    async toggleTesting(template) {
+      try {
+        const { data } = await AgentTesterAPI.setTesting(
+          template.id,
+          !template.testing
+        );
+        this.$set(template, 'testing', data.testing);
+      } catch (e) {
+        useAlert(this.$t('TRACKING_TEMPLATES.TESTING.ERROR'));
+      }
+    },
     // proyecto@adaptar_prompts_publicados (D7) — ?edit=<id> abre la ficha de ese agente:
     // es a donde lleva «Configurar» del Asistente para la bandeja y el calendario.
     // feat/agentes_ia_unificado: también ?template_id (lo que mandaban el Asistente y
@@ -223,10 +243,25 @@ export default {
     },
     // El espacio del agente. Sin sección, abre la primera que le toque al rol.
     openAgent(template, seccion = null) {
+      // Motor 2.0: cada agente abre en la pantalla de su motor.
+      if (template.engine === '2') {
+        this.$router.push({
+          name: 'motor2_agent',
+          params: { templateId: String(template.id) },
+        });
+        return;
+      }
       this.$router.push({
         name: 'contact_trackings_agent',
         params: { templateId: String(template.id) },
         query: seccion ? { seccion } : {},
+      });
+    },
+    newMotor2Agent() {
+      this.showNewMenu = false;
+      this.$router.push({
+        name: 'motor2_agent',
+        params: { templateId: 'new' },
       });
     },
     newAgent(query = {}) {
@@ -513,6 +548,12 @@ export default {
               class="dropdown-pane dropdown-pane--open !right-0 !left-auto !top-10 w-72"
             >
               <woot-dropdown-menu>
+                <li
+                  v-if="isAdmin"
+                  class="px-2 pt-1 text-[11px] uppercase text-slate-500"
+                >
+                  {{ $t('TRACKING_TEMPLATES.NEW_AGENT.MOTOR1') }}
+                </li>
                 <woot-dropdown-item v-if="isAdmin">
                   <woot-button
                     variant="clear"
@@ -547,6 +588,18 @@ export default {
                     @click="goToCreateForm"
                   >
                     {{ $t('TRACKING_TEMPLATES.NEW_AGENT.FORM') }}
+                  </woot-button>
+                </woot-dropdown-item>
+                <!-- Motor 2.0 (beta), al final: la ficha nueva (habilidades y probador con entrenador). -->
+                <woot-dropdown-item v-if="isAdmin">
+                  <woot-button
+                    variant="clear"
+                    color-scheme="primary"
+                    size="small"
+                    icon="flash-on"
+                    @click="newMotor2Agent"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.NEW_AGENT.MOTOR2') }}
                   </woot-button>
                 </woot-dropdown-item>
               </woot-dropdown-menu>
@@ -773,6 +826,22 @@ export default {
                   >
                     <td class="py-4 pr-4 font-medium">
                       {{ template.name }}
+                      <!-- Probador de agentes -->
+                      <woot-label
+                        v-if="template.testing"
+                        small
+                        :title="$t('TRACKING_TEMPLATES.TESTING.BADGE')"
+                        color-scheme="warning"
+                        class="!mb-0 ltr:ml-2 rtl:mr-2"
+                      />
+                      <!-- Motor 2.0 -->
+                      <woot-label
+                        v-if="template.engine === '2'"
+                        small
+                        :title="$t('TRACKING_TEMPLATES.NEW_AGENT.BADGE')"
+                        color-scheme="primary"
+                        class="!mb-0 ltr:ml-2 rtl:mr-2"
+                      />
                       <!-- proyecto@publicar_prompts (F7): el autor publicó una versión nueva -->
                       <woot-label
                         v-if="template.published_prompt_update"
@@ -823,6 +892,23 @@ export default {
                     <td class="py-4 pr-4">
                       <!-- Abrir o editar = clic en la fila: aquí solo lo que no es abrir. -->
                       <div class="flex items-center gap-2" @click.stop>
+                        <!-- Probador de agentes: prender o apagar «En prueba» -->
+                        <woot-button
+                          v-if="canEditAgents"
+                          v-tooltip.top="$t('TRACKING_TEMPLATES.TESTING.HINT')"
+                          variant="smooth"
+                          size="small"
+                          :color-scheme="
+                            template.testing ? 'warning' : 'secondary'
+                          "
+                          @click="toggleTesting(template)"
+                        >
+                          {{
+                            template.testing
+                              ? $t('TRACKING_TEMPLATES.TESTING.ON')
+                              : $t('TRACKING_TEMPLATES.TESTING.OFF')
+                          }}
+                        </woot-button>
                         <!-- proyecto@publicar_prompts — solo el usuario autorizado -->
                         <woot-button
                           v-if="canPublishPrompts"

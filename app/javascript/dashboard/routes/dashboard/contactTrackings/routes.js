@@ -49,6 +49,24 @@ export const routes = [
       import('../../../views/contactTrackings/AgentWorkspace.vue'),
   },
   {
+    // Probador de agentes (Plan-Motor-Agentes.md §11.13): fuera del diseño de los agentes, para
+    // probar uno 1.0 o 2.0 como cliente, con lotes y bitácora.
+    path: frontendURL('accounts/:accountId/tracking-dashboard/tester'),
+    name: 'agent_tester',
+    meta: { permissions: AGENTS_PERMISSIONS }, // en Inicio: cualquier usuario
+    component: () => import('../../../views/agentTester/AgentTester.vue'),
+  },
+  {
+    // Motor 2.0 (Plan-Motor-Agentes.md §11.11): la ficha de un agente 2.0. Misma lista y
+    // tablas que Agentes a medida; la ficha 1.0 sigue en contact_trackings_agent.
+    path: frontendURL(
+      'accounts/:accountId/tracking-dashboard/agents2/:templateId(\\d+|new)'
+    ),
+    name: 'motor2_agent',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/motor2/AgentPage.vue'),
+  },
+  {
     // proyecto@asistente_agentes_ia — el Asistente ya no es una pantalla aparte: vive
     // dentro del espacio del agente. Los enlaces viejos (?template_id=N, ?nuevo=1)
     // llegan al mismo lugar.

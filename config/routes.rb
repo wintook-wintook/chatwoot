@@ -218,6 +218,53 @@ Rails.application.routes.draw do
               post :initiate
             end
           end
+          # Probador de agentes (Agentes IA › Probador): motor 1.0 y 2.0, entrenador, lotes y bitácora
+          get 'agent_tester/agents', to: 'agent_tester#agents'
+          post 'agent_tester/agents/:template_id/testing', to: 'agent_tester#testing'
+          post 'agent_tester/sessions', to: 'agent_tester#start'
+          get 'agent_tester/sessions/:conversation_id', to: 'agent_tester#show'
+          post 'agent_tester/sessions/:conversation_id/say', to: 'agent_tester#say'
+          post 'agent_tester/sessions/:conversation_id/feedback', to: 'agent_tester#feedback'
+          post 'agent_tester/sessions/:conversation_id/save_case', to: 'agent_tester#save_case'
+          post 'agent_tester/apply', to: 'agent_tester#apply'
+          post 'agent_tester/fix_source', to: 'agent_tester#fix_source'
+          get 'agent_tester/logs', to: 'agent_tester#logs'
+          resources :agent_test_batches, only: [:index, :create, :update, :destroy] do
+            collection do
+              get 'runs(/:run_id)', action: :runs
+              post :run_corrections
+            end
+            member do
+              post :run
+              post :cases, action: :add_case
+              patch 'cases/:case_id', action: :update_case
+              delete 'cases/:case_id', action: :remove_case
+            end
+          end
+          # Motor 2.0 de Agentes a medida (Plan-Motor-Agentes.md §11.11): su ficha, probador y versiones
+          resources :motor2_agents, only: [:show, :create, :update] do
+            collection do
+              get :options
+              post :test
+              get :convertible
+              post :convert
+              post :correct_message
+            end
+            member do
+              post :back_to_v1
+              get :readiness
+              post :activate
+              get :versions
+              post :restore
+            end
+            resources :tests, only: [:index, :create, :destroy], controller: 'motor2_tests' do
+              collection do
+                post :run
+                post :correct
+                post :fix_source
+              end
+            end
+          end
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations
@@ -1281,6 +1328,7 @@ Rails.application.routes.draw do
       resource :instance_status, only: [:show]
       # Asistente (Dali) — preguntas que no supo contestar, de todas las empresas
       resources :assistant_guide_gaps, only: [:index, :update]
+      resources :motor2_reports, only: [:index, :update] # Motor 2.0: lo que el entrenador no pudo corregir
 
       resource :settings, only: [:show] do
         get :refresh, on: :collection

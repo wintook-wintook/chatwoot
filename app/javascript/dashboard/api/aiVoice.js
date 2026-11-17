@@ -7,8 +7,9 @@ class AiVoiceAPI extends ApiClient {
     super('ai_voice', { accountScoped: true });
   }
 
-  update(voice) {
-    return axios.patch(this.url, { voice });
+  // business: los datos del negocio de la cuenta (también los usa el Motor 2.0).
+  update(voice, business) {
+    return axios.patch(this.url, business ? { voice, business } : { voice });
   }
 
   // Mensaje de ejemplo con lo del formulario (sin guardar ni mandar nada).

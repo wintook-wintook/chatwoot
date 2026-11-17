@@ -1,0 +1,69 @@
+<%# Super Admin › Motor 2.0 › Reportes (SuperAdmin::Motor2ReportsController) %>
+<%
+  status_labels = { 'new' => 'Nuevos', 'reviewing' => 'En revisión', 'fixed' => 'Corregidos', 'rejected' => 'No procede' }
+  kind_labels = { 'missing_skill' => 'Falta una habilidad', 'ignored' => 'No obedeció una indicación' }
+%>
+<% content_for(:title) do %>
+  Motor 2.0 · Reportes
+<% end %>
+
+<header class="main-content__header" role="banner">
+  <div>
+    <h1 class="main-content__page-title" id="page-title"><%= content_for(:title) %></h1>
+    <p class="text-sm text-slate-500 m-0">
+      Lo que el entrenador de los agentes 2.0 no pudo corregir. Se arregla en el motor o con una habilidad nueva
+      (docs/vault-tickets/implementacion/Plan-Motor-Agentes.md §11.6).
+    </p>
+  </div>
+</header>
+
+<section class="main-content__body">
+  <div class="flex gap-2 mb-4">
+    <% status_labels.each do |key, label| %>
+      <%= link_to "#{label} (#{@counts[key].to_i})", super_admin_motor2_reports_path(status: key, kind: @kind),
+                  class: "px-3 py-1 rounded-full text-sm border #{key == @status ? 'bg-woot-500 text-white border-woot-500' : 'border-slate-200 text-slate-700'}" %>
+    <% end %>
+  </div>
+
+  <% if @reports.empty? %>
+    <p class="text-slate-500">No hay reportes <%= status_labels[@status].downcase %>.</p>
+  <% else %>
+    <table aria-labelledby="page-title">
+      <thead>
+        <tr><th>Qué falta</th><th>Tipo</th><th>Empresa · agente</th><th>Fecha</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        <% @reports.each do |report| %>
+          <tr class="align-top">
+            <td style="max-width: 34rem">
+              <div class="font-medium text-slate-900"><%= report.diagnosis %></div>
+              <div class="text-xs text-slate-500">
+                <%= report.user&.name || 'Usuario borrado' %>
+                <% if @same[report.diagnosis].to_i > 1 %> · <strong><%= @same[report.diagnosis] %> iguales abiertos</strong><% end %>
+              </div>
+              <details class="text-xs text-slate-600 mt-1">
+                <summary>Plática, respuesta y lo esperado</summary>
+                <% Array(report.turns).each do |turn| %>
+                  <div><strong><%= turn['role'] == 'user' ? 'Cliente' : 'Agente' %>:</strong> <%= turn['content'] %></div>
+                <% end %>
+                <div class="mt-1"><strong>Respondió:</strong> <%= report.reply %></div>
+                <div><strong>Esperaba:</strong> <%= report.expected %></div>
+                <div class="mt-1" style="white-space: pre-wrap"><strong>Traza:</strong> <%= JSON.pretty_generate(report.trace) %></div>
+              </details>
+            </td>
+            <td><%= kind_labels.fetch(report.kind, report.kind) %></td>
+            <td><%= report.account&.name %> <span class="text-xs text-slate-400">#<%= report.account_id %></span><br><%= report.tracking_template&.name %></td>
+            <td><%= l(report.created_at, format: :short) %></td>
+            <td>
+              <% (status_labels.keys - [report.status]).each do |status| %>
+                <%= button_to status_labels[status], super_admin_motor2_report_path(report, status: status), method: :patch,
+                              class: 'button button--small mb-1', form: { style: 'display:inline' } %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <%= paginate @reports %>
+  <% end %>
+</section>

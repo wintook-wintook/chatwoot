@@ -13,6 +13,7 @@ import BubbleMailHead from './bubble/MailHead.vue';
 import BubbleReplyTo from './bubble/ReplyTo.vue';
 import BubbleText from './bubble/Text.vue';
 import BubbleVoiceCall from './bubble/VoiceCall.vue'; // diag/llamadas_whatsapp
+import Motor2Feedback from './bubble/Motor2Feedback.vue'; // Motor 2.0: 👎 en respuestas del agente
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
 // feat/chat_interno: dirección de los mensajes según quién mira en «Interno».
 import {
@@ -35,6 +36,7 @@ import * as Sentry from '@sentry/browser';
 
 export default {
   components: {
+    Motor2Feedback,
     BubbleVoiceCall,
     BubbleActions,
     BubbleContact,
@@ -442,6 +444,13 @@ export default {
     isAiAgentMessage() {
       return Boolean(this.contentAttributes.ai_agent);
     },
+    // Motor 2.0: respuesta de un agente 2.0 que un administrador puede corregir.
+    motor2Correctable() {
+      return (
+        Boolean(this.contentAttributes.motor2_tracking_id) &&
+        this.$store.getters.getCurrentRole === 'administrator'
+      );
+    },
     senderNameForAvatar() {
       if (this.isOutgoing || this.isTemplate) {
         if (this.isAiAgentMessage) {
@@ -690,6 +699,7 @@ export default {
           :inbox-id="data.inbox_id"
           :created-at="createdAt"
         />
+        <Motor2Feedback v-if="motor2Correctable" :message-id="data.id" />
       </div>
       <Spinner v-if="isPending" size="tiny" />
       <div

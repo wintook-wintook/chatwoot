@@ -13,6 +13,7 @@ const campaigns = accountId => ({
     'contact_trackings_metrics',
     'contact_trackings_assistant', // proyecto@asistente_agentes_ia (redirige)
     'contact_trackings_agent', // feat/agentes_ia_unificado — espacio del agente
+    'motor2_agent', // Motor 2.0 — la ficha de un agente 2.0
   ],
   menuItems: [
     // proyecto@contact_tracking — antes en la sección "Agente de Seguimientos"

@@ -20,11 +20,14 @@
 #  complementary_prompt          :text
 #  customer_display_name         :string
 #  email_signature               :text
+#  engine                        :string           default("1"), not null
 #  keyword_actions               :jsonb            not null
+#  motor2                        :jsonb            not null
 #  name                          :string           not null
 #  objective                     :string           not null
 #  previous_complementary_prompt :text
 #  published_prompt_version      :integer
+#  resources                     :jsonb            not null
 #  retry_interval_unit           :string           default("days")
 #  retry_interval_value          :integer          default(1)
 #  slots_presentation            :string           default("detailed"), not null

@@ -48,6 +48,8 @@ class AiFollowUps::Prompt
 
       #{AgentBase::CompanyVoice.block(@account)}
 
+      #{AgentBase::BusinessData.block(@account)}
+
       Eres el asistente de seguimiento de #{@account.name}. Hablas con una persona por #{channel}, en nombre de
       #{@follow_up.created_by&.name || 'la empresa'}. Ahora: #{now}.
 

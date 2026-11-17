@@ -375,6 +375,18 @@
       "LOAD_ERROR": "Could not load templates.",
       "NEED_FIELDS": "Enter the name and what you want to achieve."
     },
+    "BUSINESS": {
+      "TITLE": "Business data",
+      "HINT": "Your company's fixed data, for all your agents (Ready agents, AI follow-up and Engine 2.0). What an agent has of its own wins over this.",
+      "ROWS": "Other fixed data (hours, address, phone, payment methods…)",
+      "FIXED": {
+        "WHAT": "What you sell",
+        "WHO": "Who you sell to (ideal customer)",
+        "COVERAGE": "Where you serve",
+        "WHY": "Why choose you",
+        "PRACTICAL": "Starting prices, payment methods and times"
+      }
+    },
     "TITLE": "How your company talks",
     "SUBTITLE": "General guidance used by AI Follow-up and all Ready agents. Each agent's or follow-up's own settings win over this. Empty fields are not used.",
     "LOADING": "Loading…",

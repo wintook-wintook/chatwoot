@@ -7,6 +7,7 @@
     "business_summary": { "path": "tickets/summary", "label": "Inicio › Mi negocio" },
     "academy": { "path": "academy", "label": "Inicio › Mi capacitación" },
     "budget": { "path": "tickets/budget", "label": "Inicio › Presupuesto" },
+    "agent_tester": { "path": "tracking-dashboard/tester", "label": "Inicio › Probar agentes" },
     "profile": { "path": "profile/settings", "label": "Mi perfil (Configuración de Perfil)" },
 
     "conversations": { "path": "dashboard", "label": "Conversaciones › Todas las conversaciones" },

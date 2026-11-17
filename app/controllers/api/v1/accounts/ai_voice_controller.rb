@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 # «Cómo habla tu empresa» — base común de Seguimiento IA y Agentes listos (no Agentes a medida).
-# GET   /ai_voice           { voice: { who, tone, … }, fields: { who: 'Quiénes somos', … } }
-# PATCH /ai_voice           { voice: { … } } → guarda
+# GET   /ai_voice           { voice: { who, tone, … }, fields: { who: 'Quiénes somos', … },
+#                             business: { fixed: { what, … }, rows: [{ label, value }] } }
+# PATCH /ai_voice           { voice: { … }, business: { … } } → guarda (los datos del negocio los usan
+#                           también los agentes del Motor 2.0)
 # POST  /ai_voice/preview   { voice: { … }, kind: 'follow_up' | 'prospects' } → { message } de ejemplo,
 #                           con lo del formulario sin guardar; no manda nada.
 # Solo administradores.
@@ -15,6 +17,7 @@ class Api::V1::Accounts::AiVoiceController < Api::V1::Accounts::BaseController
 
   def update
     AgentBase::CompanyVoice.update!(Current.account, voice_params)
+    AgentBase::BusinessData.update!(Current.account, business_params) if params.key?(:business)
     render json: payload
   end
 
@@ -35,7 +38,12 @@ class Api::V1::Accounts::AiVoiceController < Api::V1::Accounts::BaseController
     params.fetch(:voice, {}).permit(*AgentBase::CompanyVoice::FIELDS.keys).to_h
   end
 
+  def business_params
+    params.fetch(:business, {}).permit(fixed: AgentBase::BusinessData::FIXED.keys, rows: %i[label value]).to_h
+  end
+
   def payload
-    { voice: AgentBase::CompanyVoice.get(Current.account), fields: AgentBase::CompanyVoice::FIELDS }
+    { voice: AgentBase::CompanyVoice.get(Current.account), fields: AgentBase::CompanyVoice::FIELDS,
+      business: AgentBase::BusinessData.get(Current.account), business_fields: AgentBase::BusinessData::FIXED }
   end
 end
