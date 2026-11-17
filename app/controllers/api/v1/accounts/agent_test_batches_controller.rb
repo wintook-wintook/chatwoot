@@ -18,7 +18,9 @@ class Api::V1::Accounts::AgentTestBatchesController < Api::V1::Accounts::BaseCon
   def index
     scope = batches.includes(:cases, :tracking_template).order(created_at: :desc)
     scope = scope.where(tracking_template_id: params[:template_id]) if params[:template_id].present?
-    render json: scope.limit(200).map { |b| batch_json(b) }
+    list = scope.limit(200).to_a
+    last_runs = last_runs_of(list.map(&:id))
+    render json: list.map { |b| batch_json(b, last_runs[b.id]) }
   end
 
   def run_corrections
@@ -68,9 +70,7 @@ class Api::V1::Accounts::AgentTestBatchesController < Api::V1::Accounts::BaseCon
     template = Current.account.tracking_templates.find(params[:template_id])
     return render json: { error: 'El lote no tiene pruebas.' }, status: :unprocessable_entity if @batch.cases.empty?
 
-    run = @batch.runs.create!(account: Current.account, tracking_template: template, created_by: current_user,
-                              total: @batch.cases.count)
-    AgentTester::RunJob.perform_later(run.id)
+    run = AgentTestRun.start!(batch: @batch, template: template, user: current_user)
     render json: run_json(run), status: :accepted
   end
 
@@ -99,18 +99,25 @@ class Api::V1::Accounts::AgentTestBatchesController < Api::V1::Accounts::BaseCon
       expected: params[:expected].to_s.strip.first(2000) }
   end
 
-  def batch_json(batch)
-    last = batch.runs.order(created_at: :desc).first
-    { id: batch.id, name: batch.name, day: batch.day, template_id: batch.tracking_template_id,
-      cases: batch.cases.sort_by(&:id).map { |c| case_json(c) }, last_run: last && run_json(last) }
+  # La última corrida de cada lote en una sola consulta (antes, una por lote).
+  def last_runs_of(batch_ids)
+    AgentTestRun.where(agent_test_batch_id: batch_ids).includes(:tracking_template)
+                .select('DISTINCT ON (agent_test_batch_id) agent_test_runs.*')
+                .order(:agent_test_batch_id, created_at: :desc).index_by(&:agent_test_batch_id)
   end
 
-  def case_json(test_case) = test_case.slice(:id, :name, :messages, :expected, :origin)
+  # La última corrida va completa: la tarjeta del lote enseña su avance y por qué falló cada prueba.
+  def batch_json(batch, last = nil)
+    { id: batch.id, name: batch.name, day: batch.day, template_id: batch.tracking_template_id,
+      cases: batch.cases.sort_by(&:id).map { |c| case_json(c) }, last_run: last && run_json(last, full: true) }
+  end
+
+  def case_json(test_case) = test_case.slice(:id, :name, :messages, :expected, :origin, :bad_reply)
 
   def run_json(run, full: false)
     json = { id: run.id, batch_id: run.agent_test_batch_id, batch: run.label.presence || run.batch&.name, agent: run.tracking_template&.name,
              engine: run.tracking_template&.engine, status: run.status, total: run.total, passed: run.passed,
-             created_at: run.created_at, finished_at: run.finished_at }
+             done: Array(run.results).size, error: run.error, created_at: run.created_at, finished_at: run.finished_at }
     full ? json.merge(results: run.results) : json
   end
 end

@@ -1,8 +1,40 @@
 # frozen_string_literal: true
 
-# Probador de agentes — la bitácora de correcciones: cada 👎 con lo que dijo el usuario y dónde
-# estuvo el error (prompt, contenido, modelo o motor). Los del motor llevan su reporte a
-# Kontrolya (motor2_reports).
+# == Schema Information
+#
+# Table name: agent_test_logs
+#
+#  id                   :bigint           not null, primary key
+#  diagnosis            :jsonb            not null
+#  engine               :string           not null
+#  feedback             :text
+#  kind                 :string           not null
+#  reply                :text
+#  retest               :jsonb            not null
+#  status               :string           default("pending"), not null
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  account_id           :bigint           not null
+#  agent_test_case_id   :bigint
+#  conversation_id      :bigint
+#  message_id           :bigint
+#  motor2_report_id     :bigint
+#  tracking_template_id :bigint
+#  user_id              :bigint
+#
+# Indexes
+#
+#  index_agent_test_logs_on_account_id                 (account_id)
+#  index_agent_test_logs_on_account_id_and_created_at  (account_id,created_at)
+#  index_agent_test_logs_on_tracking_template_id       (tracking_template_id)
+#  index_agent_test_logs_on_user_id                    (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (tracking_template_id => tracking_templates.id)
+#  fk_rails_...  (user_id => users.id)
+#
 class AgentTestLog < ApplicationRecord
   KINDS = %w[prompt content search model engine question].freeze
   # Seguimiento de cada 👎: pendiente → «Ya lo corregí» corre su prueba otra vez → quedó / sigue fallando.

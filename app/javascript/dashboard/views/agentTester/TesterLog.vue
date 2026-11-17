@@ -24,7 +24,6 @@ const STATUS_CLASS = {
 
 export default {
   props: {
-    stamp: { type: Number, default: 0 },
     // Corridas de lotes: solo quien puede cambiar agentes. Los demás ven sus correcciones.
     canEdit: { type: Boolean, default: false },
   },
@@ -47,9 +46,6 @@ export default {
     },
   },
   watch: {
-    stamp() {
-      this.load();
-    },
     canEdit(value) {
       if (!value) this.tab = 'logs';
       this.load();
@@ -177,6 +173,9 @@ export default {
               >{{ when(run.created_at) }} ·
               {{ t(`STATUS.${run.status}`) }}</span
             >
+            <span v-if="run.error" class="block text-xs text-red-700">{{
+              run.error
+            }}</span>
           </span>
           <span
             class="text-sm font-semibold"

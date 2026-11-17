@@ -291,3 +291,9 @@ agent_tester_cleanup_job:
   cron: '30 3 * * *'
   class: 'AgentTester::CleanupJob'
   queue: scheduled_jobs
+
+# Probador de agentes: las corridas que llevan 30 min sin avanzar se marcan fallidas con su motivo.
+agent_tester_stale_runs_job:
+  cron: '*/10 * * * *'
+  class: 'AgentTester::StaleRunsJob'
+  queue: scheduled_jobs

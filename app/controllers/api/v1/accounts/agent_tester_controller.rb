@@ -78,11 +78,11 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
   def save_case
     template = sandbox.tracking_for(@conversation)&.tracking_template
     turns = Motor2::Prompt.history(@conversation).map(&:stringify_keys)
-    batch = template && AgentTester::AutoCase.add(template, messages: turns, expected: params[:expected].to_s.strip.first(2000),
-                                                            origin: 'manual')
-    return render json: { error: 'Escribe qué se espera y al menos un mensaje del cliente.' }, status: :unprocessable_entity unless batch
+    test_case = template && AgentTester::AutoCase.add(template, messages: turns, expected: params[:expected].to_s.strip.first(2000),
+                                                                origin: 'manual')
+    return render json: { error: 'Escribe qué se espera y al menos un mensaje del cliente.' }, status: :unprocessable_entity unless test_case
 
-    render json: { saved_in: batch.name }
+    render json: { saved_in: test_case.batch.name }
   end
 
   # La corrección de prompt de un agente 2.0 la aplica el mismo usuario (con versión y pruebas).
@@ -111,10 +111,9 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
     test_case = log.agent_test_case
     return render json: { error: 'Este 👎 no guardó prueba: pruébalo a mano en una plática nueva.' }, status: :unprocessable_entity unless test_case
 
-    run = test_case.batch.runs.create!(account: Current.account, tracking_template: log.tracking_template, created_by: current_user,
-                                       total: 1, case_ids: [test_case.id], label: "Probar de nuevo · #{log.tracking_template&.name}")
+    run = AgentTestRun.start!(batch: test_case.batch, template: log.tracking_template, user: current_user, case_ids: [test_case.id],
+                              label: "Probar de nuevo · #{log.tracking_template&.name}")
     log.update!(status: 'retesting', retest: { 'run_id' => run.id })
-    AgentTester::RunJob.perform_later(run.id)
     render json: log_json(log)
   end
 

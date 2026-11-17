@@ -4,6 +4,8 @@ require 'rails_helper'
 
 # Probador de agentes — API: plática, 👎, aplicar (2.0), lotes, corridas y permisos.
 RSpec.describe 'Agent Tester API' do
+  include ActiveJob::TestHelper
+
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:agent_user) { create(:user, account: account, role: :agent) }
@@ -50,7 +52,7 @@ RSpec.describe 'Agent Tester API' do
     batch.cases.create!(account: account, name: 'Precio', messages: ['¿Cuánto?'], expected: 'Da el precio')
     run = batch.runs.create!(account: account, tracking_template: template)
     allow_any_instance_of(AgentTester::ConversationRunner).to receive(:run).and_return({ name: 'Precio', ok: true, reason: 'Lo da' }) # rubocop:disable RSpec/AnyInstance
-    AgentTester::RunJob.perform_now(run.id)
+    perform_enqueued_jobs { AgentTester::RunJob.perform_now(run.id) }
     expect(run.reload).to have_attributes(status: 'done', passed: 1, total: 1)
   end
 

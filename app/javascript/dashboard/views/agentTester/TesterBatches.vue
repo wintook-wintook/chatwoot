@@ -9,7 +9,7 @@ export default {
     agents: { type: Array, default: () => [] },
     batches: { type: Array, default: () => [] },
   },
-  emits: ['changed', 'ran'],
+  emits: ['changed'],
   data() {
     return {
       newName: '',
@@ -18,6 +18,7 @@ export default {
       runAgent: {},
       agentFilter: '',
       runningAll: false,
+      timer: null,
     };
   },
   computed: {
@@ -29,13 +30,45 @@ export default {
       );
     },
   },
+  // Mientras alguna corrida va, la tarjeta se actualiza sola (cada 4 s).
+  mounted() {
+    this.timer = setInterval(() => {
+      if (this.batches.some(b => this.inProgress(b.last_run)))
+        this.$emit('changed');
+    }, 4000);
+  },
+  beforeDestroy() {
+    clearInterval(this.timer);
+  },
   methods: {
+    inProgress(run) {
+      return !!run && (run.status === 'queued' || run.status === 'running');
+    },
+    // Lo que se ve de la última corrida, bajo el nombre del lote.
+    runLine(run) {
+      if (this.inProgress(run))
+        return this.t('PROGRESS', {
+          agent: run.agent,
+          n: Math.min(run.done + 1, run.total),
+          total: run.total,
+        });
+      if (run.status === 'failed')
+        return this.t('RUN_FAILED', { reason: run.error || this.t('ERROR') });
+      return this.t('LAST_RUN', {
+        agent: run.agent,
+        passed: run.passed,
+        total: run.total,
+      });
+    },
+    finishedResults(run) {
+      return run && !this.inProgress(run) ? run.results || [] : [];
+    },
     async runAll() {
       this.runningAll = true;
       try {
         await AgentTestBatchesApi.runCorrections(Number(this.agentFilter));
         useAlert(this.t('RUNNING'));
-        this.$emit('ran');
+        this.$emit('changed');
       } catch (e) {
         const data = e && e.response ? e.response.data : null;
         useAlert((data && data.error) || this.t('ERROR'));
@@ -87,7 +120,7 @@ export default {
       try {
         await AgentTestBatchesApi.run(batch.id, templateId);
         useAlert(this.t('RUNNING'));
-        this.$emit('ran');
+        this.$emit('changed');
       } catch (e) {
         const data = e && e.response ? e.response.data : null;
         useAlert((data && data.error) || this.t('ERROR'));
@@ -151,16 +184,24 @@ export default {
           <span class="block text-sm font-medium">{{ batch.name }}</span>
           <span class="block text-xs text-slate-500">
             {{ t('COUNT', { n: batch.cases.length }) }}
-            <template v-if="batch.last_run">
-              {{
-                t('LAST_RUN', {
-                  agent: batch.last_run.agent,
-                  passed: batch.last_run.passed,
-                  total: batch.last_run.total,
-                })
-              }}
-            </template>
           </span>
+          <span
+            v-if="batch.last_run"
+            class="block text-xs"
+            :class="{
+              'text-woot-600': inProgress(batch.last_run),
+              'text-red-700': batch.last_run.status === 'failed',
+              'text-slate-500': batch.last_run.status === 'done',
+            }"
+            >{{ runLine(batch.last_run) }}</span
+          >
+          <span
+            v-for="r in finishedResults(batch.last_run)"
+            :key="r.case_id"
+            class="block text-xs"
+            :class="r.ok ? 'text-green-700' : 'text-red-700'"
+            >{{ r.ok ? '✅' : '❌' }} {{ r.name }} — {{ r.reason }}</span
+          >
         </button>
         <select v-model="runAgent[batch.id]" class="!mb-0 h-8 text-xs w-56">
           <option :value="undefined">{{ t('PICK_AGENT') }}</option>
@@ -175,7 +216,11 @@ export default {
         </select>
         <woot-button
           size="tiny"
-          :disabled="!runAgent[batch.id] || !batch.cases.length"
+          :disabled="
+            !runAgent[batch.id] ||
+            !batch.cases.length ||
+            inProgress(batch.last_run)
+          "
           @click="run(batch)"
         >
           {{ t('RUN') }}
@@ -206,6 +251,9 @@ export default {
               class="block text-slate-600"
               >{{ t('CUSTOMER', { text: m }) }}</span
             >
+            <span v-if="c.bad_reply" class="block text-slate-500">{{
+              t('BAD_REPLY', { text: c.bad_reply })
+            }}</span>
             <span v-if="c.expected" class="block text-slate-500">{{
               t('EXPECTED', { text: c.expected })
             }}</span>
