@@ -106,3 +106,51 @@ es:
         name: Nombre
         tax_type: Tipo
         percent: Porcentaje
+      crm_quote:
+        series: Serie
+        number: Número
+        folio: Folio
+        status: Estatus
+        organization: Organización
+        contact: Contacto
+        shipping_address: Enviar mercancía a
+        seller: Vendedor
+        currency: Moneda
+        payment_term: Condición de pago
+        exchange_rate: Tipo de cambio
+        quote_date: Fecha
+        valid_until: Vigencia
+        delivery_date: Fecha de entrega
+        cfdi_use: Uso CFDI
+        sat_payment_method: Método de pago SAT
+        purchase_order: Orden de compra
+        purchase_order_date: Fecha de la OC
+        header_notes: Observaciones de encabezado
+        footer_notes: Observaciones de pie
+        extra_discount_value: Descuento extra
+        freight: Fletes
+        other_charges: Otros cargos
+        items: Partidas
+      crm_quote/items: &crm_quote_item
+        parent_item: Kit
+        article: Artículo
+        key: Clave
+        description: Descripción
+        unit: Unidad
+        price_list: Lista de precios
+        quantity: Cantidad
+        unit_price: Precio unitario
+        discount_percent: "% de descuento"
+        tax_ids: Impuestos
+        item_taxes: Impuestos
+      crm_quote_item: *crm_quote_item
+      crm_quote/items/item_taxes: &crm_quote_item_tax
+        name: Impuesto
+        percent: Porcentaje
+      crm_quote_item_tax: *crm_quote_item_tax
+      crm_quote_series:
+        series: Serie
+        user: Agente
+        last_number: Último folio
+      crm_setting:
+        require_delivery_date: Fecha de entrega obligatoria

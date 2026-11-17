@@ -259,7 +259,7 @@ class CrmQuote < ApplicationRecord
   end
 
   def items_present
-    errors.add(:items, 'debe tener al menos una partida') if priced_items.empty?
+    errors.add(:items, 'deben ser al menos una') if priced_items.empty?
   end
 
   def kits_follow_catalog
