@@ -9,7 +9,7 @@ class AgentTester::RunJob < ApplicationJob
     run = AgentTestRun.find_by(id: run_id)
     return unless run
 
-    cases = run.case_ids.present? ? AgentTestCase.where(id: run.case_ids) : run.batch.cases
+    cases = cases_of(run)
     run.update!(status: 'running', total: cases.count)
     runner = AgentTester::ConversationRunner.new(run.tracking_template, user: run.created_by)
     cases.order(:id).each { |test_case| record(run, runner.run(test_case)) }
@@ -17,9 +17,13 @@ class AgentTester::RunJob < ApplicationJob
   rescue StandardError => e
     Rails.logger.error("[AgentTester::RunJob] #{e.class}: #{e.message}")
     run&.update(status: 'failed', finished_at: Time.current)
+  ensure
+    AgentTestLog.finish_retests(run) if run
   end
 
   private
+
+  def cases_of(run) = run.case_ids.present? ? AgentTestCase.where(id: run.case_ids) : run.batch.cases
 
   def record(run, result)
     run.update!(results: run.results + [result.as_json], passed: run.passed + (result[:ok] ? 1 : 0))

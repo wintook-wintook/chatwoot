@@ -12,12 +12,19 @@ import TesterLog from './TesterLog.vue';
 export default {
   components: { TesterChat, TesterBatches, TesterLog },
   data() {
-    return { tab: 'chat', agents: [], batches: [], stamp: 0, canEdit: false };
+    return {
+      tab: 'chat',
+      agents: [],
+      batches: [],
+      stamp: 0,
+      canEdit: false,
+      resume: null,
+    };
   },
   computed: {
-    // Lotes y Bitácora: para quien puede cambiar agentes; los demás solo prueban.
+    // Lotes: para quien puede cambiar agentes. La Bitácora la ven todos (cada quien sus 👎).
     tabs() {
-      return this.canEdit ? ['chat', 'batches', 'log'] : ['chat'];
+      return this.canEdit ? ['chat', 'batches', 'log'] : ['chat', 'log'];
     },
   },
   mounted() {
@@ -36,6 +43,11 @@ export default {
     async loadBatches() {
       const { data } = await AgentTestBatchesApi.get();
       this.batches = data;
+    },
+    // «Seguir la plática» desde la bitácora.
+    resumeChat(conversationId) {
+      this.resume = conversationId;
+      this.tab = 'chat';
     },
     ran() {
       this.stamp += 1;
@@ -75,7 +87,9 @@ export default {
       v-if="tab === 'chat'"
       :agents="agents"
       :can-edit="canEdit"
+      :resume="resume"
       @saved="loadBatches"
+      @resumed="resume = null"
     />
     <TesterBatches
       v-else-if="tab === 'batches'"
@@ -84,6 +98,6 @@ export default {
       @changed="loadBatches"
       @ran="ran"
     />
-    <TesterLog v-else :stamp="stamp" />
+    <TesterLog v-else :stamp="stamp" :can-edit="canEdit" @resume="resumeChat" />
   </div>
 </template>

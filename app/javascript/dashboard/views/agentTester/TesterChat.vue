@@ -11,6 +11,7 @@ const MAX_WAIT_MS = 60000;
 const ICONS = {
   prompt: '✏️',
   content: '📚',
+  search: '🔎',
   model: '🧠',
   engine: '🔧',
   question: '❓',
@@ -22,8 +23,10 @@ export default {
     agents: { type: Array, default: () => [] },
     // Aplicar correcciones y corregir fuentes: solo quien puede cambiar agentes.
     canEdit: { type: Boolean, default: false },
+    // conversation_id de una plática a seguir (desde la bitácora).
+    resume: { type: Number, default: null },
   },
-  emits: ['saved'],
+  emits: ['saved', 'resumed'],
   data() {
     return {
       templateId: '',
@@ -44,6 +47,14 @@ export default {
       return this.agents.find(a => a.id === Number(this.templateId));
     },
   },
+  watch: {
+    resume: {
+      immediate: true,
+      handler(id) {
+        if (id) this.resumeChat(id);
+      },
+    },
+  },
   methods: {
     t(key, args) {
       return this.$t(`AGENT_TESTER.${key}`, args);
@@ -59,6 +70,20 @@ export default {
         this.chat = [];
       } catch (e) {
         useAlert(this.errorText(e));
+      }
+    },
+    // Retoma una plática guardada: se ve como estaba y se sigue escribiendo.
+    async resumeChat(conversationId) {
+      try {
+        const { data } = await AgentTesterAPI.history(conversationId);
+        this.templateId = String(data.template_id);
+        this.session = data;
+        this.chat = data.messages;
+        this.scroll();
+      } catch (e) {
+        useAlert(this.errorText(e));
+      } finally {
+        this.$emit('resumed');
       }
     },
     errorText(e) {
@@ -396,6 +421,23 @@ export default {
                 <span v-if="m.info.fixed" class="block mt-1 text-green-700">{{
                   t('FIXED')
                 }}</span>
+              </span>
+              <span
+                v-else-if="m.info.kind === 'search' && m.info.add"
+                class="block mt-1 text-xs"
+              >
+                <span
+                  class="block p-2 mt-1 whitespace-pre-line rounded bg-white/70 dark:bg-slate-800"
+                  >{{ m.info.add }}</span
+                >
+                <woot-button
+                  size="tiny"
+                  variant="smooth"
+                  class="mt-1"
+                  @click="copy(m.info.add)"
+                >
+                  {{ t('COPY') }}
+                </woot-button>
               </span>
               <span v-else-if="m.info.kind === 'question'" class="block mt-1">
                 <woot-button size="tiny" variant="smooth" @click="answer(m)">{{

@@ -61,6 +61,16 @@ class AgentTesterAPI extends ApiClient {
   logs() {
     return axios.get(`${this.url}/logs`);
   }
+
+  // «Ya lo corregí»: corre otra vez la prueba de ese 👎.
+  retest(logId) {
+    return axios.post(`${this.url}/logs/${logId}/retest`);
+  }
+
+  // La plática completa, para seguirla desde la bitácora.
+  history(conversationId) {
+    return axios.get(`${this.url}/sessions/${conversationId}/history`);
+  }
 }
 
 export default new AgentTesterAPI();

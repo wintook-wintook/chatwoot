@@ -229,6 +229,8 @@ Rails.application.routes.draw do
           post 'agent_tester/apply', to: 'agent_tester#apply'
           post 'agent_tester/fix_source', to: 'agent_tester#fix_source'
           get 'agent_tester/logs', to: 'agent_tester#logs'
+          post 'agent_tester/logs/:id/retest', to: 'agent_tester#retest'
+          get 'agent_tester/sessions/:conversation_id/history', to: 'agent_tester#history'
           resources :agent_test_batches, only: [:index, :create, :update, :destroy] do
             collection do
               get 'runs(/:run_id)', action: :runs

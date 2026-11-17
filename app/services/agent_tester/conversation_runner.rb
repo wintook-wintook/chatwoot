@@ -52,5 +52,10 @@ class AgentTester::ConversationRunner
     out.any? && Time.current - out.last[:created_at] > QUIET
   end
 
-  def replies(conversation, after_id) = @sandbox.since(conversation, after_id).reject { |m| m[:private] }
+  # Sin caché de consultas: el job corre dentro del executor de Rails (caché de SQL activa) y la
+  # respuesta la escribe otro proceso; con caché, la misma consulta devolvía siempre «nada» y la
+  # corrida esperaba MAX_WAIT por mensaje y acababa en «El agente no contestó nada».
+  def replies(conversation, after_id)
+    ActiveRecord::Base.uncached { @sandbox.since(conversation, after_id).reject { |m| m[:private] } }
+  end
 end

@@ -92,7 +92,7 @@ RSpec.describe 'Agent Tester API' do
   end
 
   context 'with un usuario que no cambia agentes' do
-    it 'prueba y guarda pruebas, pero no aplica correcciones, no ve la bitácora ni prende «En prueba»' do
+    it 'prueba y guarda pruebas, pero no aplica correcciones ni prende «En prueba»; en la bitácora solo ve las suyas' do
       post "#{api}/agent_tester/sessions", params: { template_id: template.id }, headers: agent_user.create_new_auth_token, as: :json
       conversation_id = response.parsed_body['conversation_id']
       post "#{api}/agent_tester/sessions/#{conversation_id}/say", params: { content: 'Hola' }, headers: agent_user.create_new_auth_token,
@@ -101,7 +101,14 @@ RSpec.describe 'Agent Tester API' do
       get "#{api}/agent_tester/agents", headers: agent_user.create_new_auth_token
       expect(response.parsed_body['can_edit']).to be(false)
 
-      [[:get, 'agent_tester/logs'], [:post, 'agent_tester/apply'], [:post, "agent_tester/agents/#{template.id}/testing"],
+      AgentTestLog.create!(account: account, tracking_template: template, user: admin, engine: '1', kind: 'prompt')
+      mine = AgentTestLog.create!(account: account, tracking_template: template, user: agent_user, engine: '1', kind: 'prompt')
+      get "#{api}/agent_tester/logs", headers: agent_user.create_new_auth_token
+      expect(response.parsed_body.pluck('id')).to eq([mine.id])
+      get "#{api}/agent_tester/sessions/#{conversation_id}/history", headers: agent_user.create_new_auth_token
+      expect(response.parsed_body['messages'].pluck('content')).to include('Hola')
+
+      [[:post, 'agent_tester/apply'], [:post, "agent_tester/agents/#{template.id}/testing"],
        [:get, 'agent_test_batches']].each do |verb, path|
         send(verb, "#{api}/#{path}", headers: agent_user.create_new_auth_token, as: :json)
         expect(response).to have_http_status(:forbidden).or have_http_status(:unauthorized)

@@ -8,7 +8,7 @@
 # El día es el de la bandeja del agente (o México).
 # Cuando Kontrolya corrige un error del motor, se vuelve a correr el lote del día en que se reportó.
 module AgentTester::AutoCase
-  KINDS = %w[prompt content model engine].freeze
+  KINDS = %w[prompt content search model engine].freeze
   MONTHS = %w[ene feb mar abr may jun jul ago sep oct nov dic].freeze
   ZONE = 'America/Mexico_City'
 
