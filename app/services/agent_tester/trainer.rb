@@ -53,7 +53,7 @@ class AgentTester::Trainer < Cases::Ai::BaseService
     data = diagnose
     return { messages: [{ kind: 'error', text: 'No pude revisar la respuesta en este momento.' }] } unless data.is_a?(Hash)
 
-    log(result_for(data))
+    remember(log(result_for(data)))
   end
 
   attr_reader :messages, :reply, :feedback, :trace
@@ -131,6 +131,13 @@ class AgentTester::Trainer < Cases::Ai::BaseService
   end
 
   def question_result(question) = { messages: [{ kind: 'question', text: question }] }
+
+  # Cada 👎 revisado queda como prueba en «Correcciones · <agente>».
+  def remember(result)
+    batch = AgentTester::AutoCase.save(@template, messages: @messages, feedback: @feedback,
+                                                  kinds: result[:messages].pluck(:kind))
+    batch ? result.merge(saved_in: batch.name) : result
+  end
 
   def log(result)
     result[:messages].each do |msg|

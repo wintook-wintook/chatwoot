@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_17_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_17_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -139,8 +139,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_17_120000) do
     t.string "name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "tracking_template_id"
     t.index ["account_id"], name: "index_agent_test_batches_on_account_id"
     t.index ["created_by_id"], name: "index_agent_test_batches_on_created_by_id"
+    t.index ["tracking_template_id"], name: "index_agent_test_batches_on_tracking_template_id"
   end
 
   create_table "agent_test_cases", force: :cascade do |t|
@@ -2846,6 +2848,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_17_120000) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "agent_test_batches", "accounts"
+  add_foreign_key "agent_test_batches", "tracking_templates"
   add_foreign_key "agent_test_batches", "users", column: "created_by_id"
   add_foreign_key "agent_test_cases", "accounts"
   add_foreign_key "agent_test_cases", "agent_test_batches"

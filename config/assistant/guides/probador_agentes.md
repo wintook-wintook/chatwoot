@@ -26,10 +26,11 @@ Agentes IA › Probador de agentes (abajo de Macros). Tiene tres pestañas: Prob
    - 🧠 Modelo: la indicación y el dato estaban y el modelo no los siguió. Te dice dónde subir el modelo.
    - 🔧 Motor: algo que el motor no hace o no cumplió. No lo puedes corregir tú: queda registrado y el equipo de Kontrolya lo revisa.
 3. Si no está seguro, te hace una pregunta: pulsa «Contestar».
+4. No tienes que guardar nada: cada 👎 revisado queda solo como prueba en el lote «Correcciones · <agente>», con lo que escribiste en el 👎 como lo esperado. Córrelo cuando cambies el agente para ver si algún error de antes volvió. Cuando Kontrolya corrige un error del motor, ese lote se vuelve a correr solo.
 
 ### Lotes de pruebas
 1. En Lotes de pruebas crea un lote (por ejemplo «Becas») y agrégale pruebas: lo que escribe el cliente (un mensaje por renglón) y qué se espera.
-2. También puedes guardar una plática del probador como prueba («Guardar en el lote»).
+2. También puedes guardar una plática del probador como prueba («Guardar en el lote»). Los errores corregidos con 👎 ya se guardan solos en «Correcciones · <agente>».
 3. Elige el agente y pulsa «Correr»: cada prueba se corre con el motor real y un juez dice si cumple. El resultado sale en la Bitácora.
 
 ### Bitácora

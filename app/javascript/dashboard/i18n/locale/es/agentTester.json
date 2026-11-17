@@ -88,6 +88,7 @@
         "engine": "Motor",
         "question": "Pregunta"
       }
-    }
+    },
+    "AUTO_SAVED": "Quedó como prueba en el lote «{batch}»: córrelo cuando cambies el agente."
   }
 }

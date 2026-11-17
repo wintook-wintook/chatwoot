@@ -144,7 +144,13 @@ export default {
             info,
           })
         );
+        if (data.saved_in)
+          this.chat.push({
+            role: 'note',
+            content: this.t('AUTO_SAVED', { batch: data.saved_in }),
+          });
         this.pending = null;
+        this.$emit('saved');
         this.scroll();
       } catch (e) {
         useAlert(this.errorText(e));

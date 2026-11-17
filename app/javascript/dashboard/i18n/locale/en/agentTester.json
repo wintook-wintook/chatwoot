@@ -88,6 +88,7 @@
         "engine": "Engine",
         "question": "Question"
       }
-    }
+    },
+    "AUTO_SAVED": "Saved as a test in batch «{batch}»: run it when you change the agent."
   }
 }

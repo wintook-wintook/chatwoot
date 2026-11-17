@@ -5,6 +5,8 @@
 class AgentTestBatch < ApplicationRecord
   belongs_to :account
   belongs_to :created_by, class_name: 'User', optional: true
+  # El lote «Correcciones · <agente>» que se arma solo con cada 👎 (AgentTester::AutoCase).
+  belongs_to :tracking_template, optional: true
   has_many :cases, class_name: 'AgentTestCase', dependent: :destroy
   has_many :runs, class_name: 'AgentTestRun', dependent: :destroy
 

@@ -58,6 +58,29 @@ RSpec.describe AgentTester::Trainer do
     expect(result[:messages].pluck(:kind)).to eq(['prompt'])
   end
 
+  it 'cada 👎 revisado queda solo como prueba en «Correcciones · <agente>», sin repetirse' do
+    data = { 'causes' => [{ 'kind' => 'prompt', 'where' => '[ROL]', 'text' => 'Una beca a la vez.' }] }
+    result = correct(v1, data)
+    batch = AgentTestBatch.find_by(tracking_template: v1)
+    expect(result[:saved_in]).to eq("Correcciones · #{v1.name}")
+    expect(batch.cases.sole).to have_attributes(messages: ['¿Becas?'], expected: 'Solo la de 20% primero')
+
+    correct(v1, data)
+    expect(batch.cases.count).to eq(1)
+  end
+
+  it 'si el entrenador solo pregunta, no se guarda prueba' do
+    expect(correct(v1, 'causes' => [], 'question' => '¿Seguro?')).not_to have_key(:saved_in)
+    expect(AgentTestBatch.count).to eq(0)
+  end
+
+  it 'al corregir Kontrolya un error del motor, se vuelve a correr el lote de correcciones del agente' do
+    correct(v1, 'causes' => [{ 'kind' => 'engine', 'type' => 'missing_skill', 'what' => 'mandar el PDF' }])
+    report = Motor2Report.last
+    expect { report.update!(status: 'fixed') }.to have_enqueued_job(AgentTester::RunJob)
+    expect(AgentTestRun.last).to have_attributes(tracking_template_id: v1.id, total: 1)
+  end
+
   it 'motor: queda registrado y le llega a Kontrolya' do
     msg = correct(v1, 'causes' => [{ 'kind' => 'engine', 'type' => 'missing_skill', 'what' => 'mandar el PDF del ERP' }])[:messages].first
     expect(msg[:text]).to include('Es del motor', 'ya quedó registrado')
