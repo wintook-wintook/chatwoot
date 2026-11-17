@@ -789,10 +789,7 @@ class KnowledgeBaseResponseService
       los pasos del vendedor). Los nombres de permisos, parámetros, campos y menús se
       citan textualmente como aparecen en la fuente.
 
-      #{agent_data_rule}Si la fuente no cubre exactamente lo que preguntaron, dilo de frente: explica
-      brevemente qué sí cubre la documentación, aclara que no tienes el procedimiento
-      exacto para su caso y #{missing_answer_step}. Una respuesta honesta que no
-      resuelve es mejor que una inventada que parece resolver.
+      #{agent_data_rule}#{missing_answer_rule}
     USER
     user_prompt = erp_user_prompt(first_name, question, erp_data) if erp_data
     user_prompt = canned_prompt_user_prompt(first_name, question, canned_prompt) if canned_prompt
@@ -921,9 +918,10 @@ class KnowledgeBaseResponseService
     "Contexto del negocio:\n#{context.truncate(MAX_AGENT_CONTEXT_CHARS)}"
   end
 
-  # Sin el dato: con Entrenamiento propio, lo que diga él (canal, asesor, nada); si no, el asesor.
-  def missing_answer_step
-    agent_system_prompt ? 'sigue lo que tus instrucciones digan para ese caso' : 'ofrece pasarlo con un asesor'
+  # Sin el dato: ver ContactTrackings::MissingAnswer (el motor no dicta la frase; manda a la
+  # sección [SIN INFORMACIÓN] del Entrenamiento y solo prohíbe inventar).
+  def missing_answer_rule
+    ContactTrackings::MissingAnswer.rule(agent_system_prompt)
   end
 
   # ==============================================================================
