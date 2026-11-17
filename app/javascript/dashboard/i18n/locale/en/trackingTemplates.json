@@ -349,7 +349,7 @@
     },
     "NEW_AGENT": {
       "BUTTON": "New agent",
-      "MOTOR2": "Engine 2.0 (new): skills and tester",
+      "MOTOR2": "Engine 2.0 (beta): skills and tester",
       "MOTOR1": "Engine 1.0",
       "BADGE": "2.0",
       "ASSISTANT": "With the Assistant (chat, paste or import)",
