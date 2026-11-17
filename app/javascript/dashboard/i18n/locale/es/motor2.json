@@ -202,7 +202,8 @@
       "SEND": "Mandar al entrenador",
       "TEST_NAME_PH": "Nombre de la prueba (opcional)",
       "SAVE_TEST": "Guardar como prueba",
-      "SOURCE_FIXED_MARK": "✓ Fuente corregida."
+      "SOURCE_FIXED_MARK": "✓ Fuente corregida.",
+      "GO_SKILLS": "Ir a Qué hace"
     },
     "TESTS": {
       "SAVE_FIRST": "Guarda el agente para poder guardar pruebas.",
@@ -218,6 +219,24 @@
       "LAST_REPLY": "Última respuesta:",
       "ERROR": "No se pudieron correr."
     },
-    "WARN": "⚠ {text}"
+    "WARN": "⚠ {text}",
+    "CONVERT": {
+      "TITLE": "¿Ya tienes este agente en el Motor 1.0?",
+      "HINT": "«Pasar a 2.0» convierte el mismo agente: sigue en sus campañas, seguimientos y automatizaciones, y su Entrenamiento se acomoda en esta ficha. Desde ese momento sus conversaciones las contesta el Motor 2.0. Puedes regresarlo a 1.0 cuando quieras.",
+      "PICK": "Elige un agente 1.0",
+      "BUTTON": "Pasar a 2.0",
+      "CONFIRM": "Desde ahora sus conversaciones las contestará el Motor 2.0. ¿Lo pasas?",
+      "DONE": "Listo: revisa la ficha y pruébalo antes de dejarlo atendiendo.",
+      "BACK": "Regresar a 1.0",
+      "BACK_CONFIRM": "El agente vuelve al Motor 1.0 con su Entrenamiento de siempre (la ficha 2.0 se queda guardada). ¿Lo regresas?"
+    },
+    "REAL": {
+      "BUTTON": "👎 Corregir esta respuesta",
+      "WHAT_WRONG": "¿Qué estuvo mal y cómo debió responder?",
+      "CANCEL": "Cancelar",
+      "SEND": "Mandar al entrenador",
+      "OPEN_AGENT": "Abrir el agente",
+      "ERROR": "No se pudo."
+    }
   }
 }

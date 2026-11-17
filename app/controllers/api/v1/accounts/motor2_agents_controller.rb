@@ -9,12 +9,16 @@
 # POST   /motor2_agents/:id/activate        crea la automatización que le asigna las conversaciones de su bandeja
 # GET    /motor2_agents/:id/versions        historial
 # POST   /motor2_agents/:id/restore         { version_id } vuelve a esa versión (deja una nueva)
+# GET    /motor2_agents/convertible         los agentes 1.0 que se pueden pasar a 2.0
+# POST   /motor2_agents/convert             { template_id } «Pasar a 2.0»: el mismo agente cambia de motor
+# POST   /motor2_agents/:id/back_to_v1      «Regresar a 1.0»: vuelve a su Entrenamiento de siempre
+# POST   /motor2_agents/correct_message     👎 en una conversación real { message_id, feedback }
 # Solo administradores.
 class Api::V1::Accounts::Motor2AgentsController < Api::V1::Accounts::BaseController
   ROLES = %w[user assistant].freeze
 
   before_action :require_admin
-  before_action :set_template, except: %i[options create test]
+  before_action :set_template, except: %i[options create test convertible convert correct_message]
   MAX_TEST_MESSAGES = 30
 
   def options
@@ -47,6 +51,31 @@ class Api::V1::Accounts::Motor2AgentsController < Api::V1::Accounts::BaseControl
     render json: Motor2::Probe.new(draft, messages: test_messages, state: Motor2::Sanitizer.plain(params[:state])).call
   end
 
+  def convertible
+    list = Current.account.tracking_templates.where.not(engine: Motor2::ENGINE).where(archived_at: nil).order(:name)
+    render json: list.map { |t| { id: t.id, name: t.name, objective: t.objective, inbox_name: t.inbox&.name } }
+  end
+
+  def convert
+    @template = Current.account.tracking_templates.where.not(engine: Motor2::ENGINE).find(params[:template_id])
+    Motor2::Convert.new(@template, user: current_user).call
+    render json: agent_json
+  end
+
+  # 👎 en la conversación real: el mismo entrenador, con la plática hasta ese mensaje y su traza.
+  def correct_message
+    message = Current.account.messages.find(params[:message_id])
+    @template = ContactTracking.find_by(id: message.content_attributes['motor2_tracking_id'])&.tracking_template
+    return render(json: { error: 'Ese mensaje no es de un agente 2.0.' }, status: :unprocessable_entity) unless Motor2.on?(@template)
+
+    render json: train_on(message).merge(template_id: @template.id)
+  end
+
+  def back_to_v1
+    @template.update!(engine: '1')
+    render json: { id: @template.id, engine: '1' }
+  end
+
   def readiness
     render json: { items: readiness_service.call }
   end
@@ -70,6 +99,13 @@ class Api::V1::Accounts::Motor2AgentsController < Api::V1::Accounts::BaseControl
   end
 
   private
+
+  def train_on(message)
+    turns = Motor2::Prompt.history(message.conversation, upto: message).map(&:stringify_keys)
+    Motor2::Trainer.new(@template, user: current_user)
+                   .call(messages: turns, reply: message.content.to_s, feedback: params[:feedback].to_s.first(2000),
+                         trace: message.content_attributes['motor2'].to_h)
+  end
 
   def require_admin
     render_access_denied unless access_grant.admin?

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Motor 2.0 — el texto de un intento cuando el cliente no ha contestado (ventana abierta). Lo
-# llama ContactTrackingJob#generate_message (Motor2::AttemptHook) para los agentes 2.0; las plantillas, los tiempos y
+# llama ContactTrackingJob#generate_ai_message (Motor2::AttemptHook) para los agentes 2.0; las plantillas, los tiempos y
 # el despachador de campañas siguen siendo los del 1.0. Si el modelo no da nada, nil (el job usa
 # su mensaje simple de siempre).
 class Motor2::Attempt

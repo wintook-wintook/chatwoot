@@ -10,6 +10,7 @@ import Motor2AgentsAPI from 'dashboard/api/motor2Agents';
 import Tester from './Tester.vue';
 
 const ICONS = {
+  skill: '🧩',
   agent: '✏️',
   agent_blocked: '✏️',
   source: '📚',
@@ -227,6 +228,15 @@ export default {
             message.info.after
           }}</span>
         </span>
+      </span>
+      <span v-else-if="message.info.kind === 'skill'" class="block mt-1">
+        <woot-button
+          size="tiny"
+          variant="smooth"
+          @click="$emit('go', 'skills')"
+        >
+          {{ t('GO_SKILLS') }}
+        </woot-button>
       </span>
       <span v-else-if="message.info.kind === 'question'" class="block mt-1">
         <woot-button size="tiny" variant="smooth" @click="answer(message)">{{

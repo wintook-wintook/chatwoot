@@ -5,7 +5,13 @@ import { fromAgent, toPayload, missingFields, emptyForm } from './agentForm';
 import Tester from './Tester.vue';
 
 vi.mock('dashboard/api/motor2Agents', () => ({
-  default: { test: vi.fn() },
+  default: {
+    test: vi.fn(),
+    options: vi.fn().mockResolvedValue({ data: {} }),
+    convertible: vi
+      .fn()
+      .mockResolvedValue({ data: [{ id: 3, name: 'Viejo' }] }),
+  },
 }));
 
 const agent = {
@@ -101,5 +107,38 @@ describe('Tester', () => {
       expect.objectContaining({ messages: [{ role: 'user', content: 'Hola' }] })
     );
     expect(wrapper.vm.chat[3]).toMatchObject({ content: 'Otra', again: true });
+  });
+});
+
+describe('las secciones de la ficha compilan y pintan con una ficha vacía', () => {
+  const mocks = {
+    $t: key => key,
+    $te: () => false,
+    $route: { params: {}, query: {} },
+    $store: { getters: {}, dispatch: vi.fn() },
+  };
+  const sections = import.meta.glob('./Section*.vue', { eager: true });
+
+  it('la página de un agente nuevo ofrece pasar uno 1.0 a 2.0', async () => {
+    Motor2AgentsAPI.options.mockResolvedValue({ data: {} });
+    Motor2AgentsAPI.convertible.mockResolvedValue({
+      data: [{ id: 3, name: 'Viejo' }],
+    });
+    const { default: AgentPage } = await import('./AgentPage.vue');
+    const wrapper = shallowMount(AgentPage, { mocks });
+    await new Promise(r => {
+      setTimeout(r);
+    });
+    expect(wrapper.vm.convertible).toEqual([{ id: 3, name: 'Viejo' }]);
+    expect(wrapper.html()).toContain('MOTOR2.CONVERT.TITLE');
+  });
+  Object.entries(sections).forEach(([path, mod]) => {
+    it(path, () => {
+      const wrapper = shallowMount(mod.default, {
+        propsData: { value: emptyForm(), options: {}, templateId: null },
+        mocks,
+      });
+      expect(wrapper.html()).toBeTruthy();
+    });
   });
 });

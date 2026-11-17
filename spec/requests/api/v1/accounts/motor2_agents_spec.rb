@@ -82,4 +82,39 @@ RSpec.describe 'Motor2 Agents API' do
     get "#{api}/options", headers: agent_user.create_new_auth_token
     expect(response).to have_http_status(:forbidden)
   end
+
+  describe 'pasar de motor y corregir en real' do
+    let!(:old) { create(:tracking_template, account: account, name: 'Cobranza', complementary_prompt: 'Cobra con amabilidad') }
+
+    it 'pasa un agente 1.0 a 2.0 y lo regresa' do
+      allow_any_instance_of(Motor2::Convert).to receive(:chat).and_return(nil) # rubocop:disable RSpec/AnyInstance
+      get "#{api}/convertible", headers: admin.create_new_auth_token
+      expect(response.parsed_body.pluck('name')).to include('Cobranza')
+
+      post "#{api}/convert", params: { template_id: old.id }, headers: admin.create_new_auth_token, as: :json
+      expect(old.reload.engine).to eq('2')
+
+      post "#{api}/#{old.id}/back_to_v1", headers: admin.create_new_auth_token
+      expect(old.reload).to have_attributes(engine: '1', complementary_prompt: 'Cobra con amabilidad')
+    end
+
+    it '👎 en una respuesta real llega al entrenador con la plática hasta ese mensaje' do
+      old.update!(engine: '2')
+      inbox = create(:inbox, account: account)
+      conversation = create(:conversation, account: account, inbox: inbox)
+      tracking = create(:contact_tracking, account: account, contact: conversation.contact, inbox: inbox, conversation: conversation,
+                                           tracking_template: old)
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: '¿Cuánto debo?')
+      reply = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: 'Nada',
+                               content_attributes: { motor2_tracking_id: tracking.id, motor2: { 'tools' => [] } })
+      trainer = instance_double(Motor2::Trainer, call: { messages: [{ kind: 'question', text: '¿Seguro?' }] })
+      allow(Motor2::Trainer).to receive(:new).and_return(trainer)
+
+      post "#{api}/correct_message", params: { message_id: reply.id, feedback: 'Debe $500' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to include('template_id' => old.id)
+      expect(trainer).to have_received(:call).with(hash_including(reply: 'Nada', feedback: 'Debe $500',
+                                                                  messages: [{ 'role' => 'user', 'content' => '¿Cuánto debo?' },
+                                                                             { 'role' => 'assistant', 'content' => 'Nada' }]))
+    end
+  end
 end

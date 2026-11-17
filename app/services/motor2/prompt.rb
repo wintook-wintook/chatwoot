@@ -35,11 +35,13 @@ class Motor2::Prompt
   end
 
   # La conversación como mensajes reales (cliente = user, nosotros = assistant), sin notas privadas.
-  def self.history(conversation)
+  # upto: hasta ese mensaje, incluido (para corregir una respuesta de una conversación real).
+  def self.history(conversation, upto: nil)
     return [] unless conversation.respond_to?(:messages) && conversation.messages
 
-    conversation.messages.where(private: false, message_type: %i[incoming outgoing])
-                .reorder(created_at: :desc).limit(HISTORY).to_a.reverse.filter_map do |m|
+    scope = conversation.messages.where(private: false, message_type: %i[incoming outgoing])
+    scope = scope.where(id: ..upto.id) if upto
+    scope.reorder(created_at: :desc).limit(HISTORY).to_a.reverse.filter_map do |m|
       text = ContactTrackings::AttachmentText.message_text(m).presence
       next if text.blank?
 

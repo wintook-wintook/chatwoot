@@ -47,6 +47,9 @@ export default {
       activating: false,
       mobileTab: 'form',
       stamp: 0,
+      convertible: [],
+      convertId: '',
+      converting: false,
     };
   },
   computed: {
@@ -79,6 +82,7 @@ export default {
     const id = this.$route.params.templateId;
     try {
       if (id && id !== 'new') await this.load(Number(id));
+      else this.loadConvertible();
       await this.loadOptions(this.form.channel.inboxId);
     } catch (e) {
       useAlert(e.response?.data?.error || this.t('LOAD_ERROR'));
@@ -161,6 +165,39 @@ export default {
     async reloadAttachments() {
       await this.load(this.templateId);
     },
+    async loadConvertible() {
+      const { data } = await Motor2AgentsAPI.convertible();
+      this.convertible = data;
+    },
+    // «Pasar a 2.0»: el mismo agente cambia de motor (sigue en sus campañas y seguimientos).
+    async convert() {
+      // eslint-disable-next-line no-alert
+      if (!window.confirm(this.t('CONVERT.CONFIRM'))) return;
+      this.converting = true;
+      try {
+        const { data } = await Motor2AgentsAPI.convert(Number(this.convertId));
+        this.apply(data);
+        this.loadReadiness();
+        this.$router.replace({
+          name: 'motor2_agent',
+          params: { templateId: String(data.id) },
+        });
+        useAlert(this.t('CONVERT.DONE'));
+      } catch (e) {
+        useAlert(e.response?.data?.error || this.t('SAVE_ERROR'));
+      } finally {
+        this.converting = false;
+      }
+    },
+    async backToV1() {
+      // eslint-disable-next-line no-alert
+      if (!window.confirm(this.t('CONVERT.BACK_CONFIRM'))) return;
+      await Motor2AgentsAPI.backToV1(this.templateId);
+      this.$router.push({
+        name: 'contact_trackings_agent',
+        params: { templateId: String(this.templateId) },
+      });
+    },
     backToList() {
       this.$router.push({ name: 'contact_trackings_agents' });
     },
@@ -191,6 +228,15 @@ export default {
       <span v-if="dirty" class="text-xs text-amber-600">{{
         t('UNSAVED')
       }}</span>
+      <woot-button
+        v-if="templateId"
+        size="small"
+        variant="clear"
+        color-scheme="secondary"
+        @click="backToV1"
+      >
+        {{ t('CONVERT.BACK') }}
+      </woot-button>
       <woot-button
         size="small"
         :is-loading="saving"
@@ -267,6 +313,29 @@ export default {
         class="min-h-0 overflow-y-auto motor2-form"
         :class="{ 'hidden md:block': mobileTab === 'test' }"
       >
+        <div
+          v-if="!templateId && convertible.length && section === 'agent'"
+          class="p-3 mb-4 border rounded-lg border-woot-100 bg-woot-25 dark:border-woot-800 dark:bg-woot-900/20"
+        >
+          <p class="mb-2 text-sm font-medium">{{ t('CONVERT.TITLE') }}</p>
+          <p class="m2-hint">{{ t('CONVERT.HINT') }}</p>
+          <div class="flex gap-2">
+            <select v-model="convertId" class="flex-1">
+              <option value="">{{ t('CONVERT.PICK') }}</option>
+              <option v-for="a in convertible" :key="a.id" :value="a.id">
+                {{ a.name }}
+              </option>
+            </select>
+            <woot-button
+              size="small"
+              :disabled="!convertId"
+              :is-loading="converting"
+              @click="convert"
+            >
+              {{ t('CONVERT.BUTTON') }}
+            </woot-button>
+          </div>
+        </div>
         <SectionAgent
           v-if="section === 'agent'"
           v-model="form"

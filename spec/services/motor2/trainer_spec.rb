@@ -66,6 +66,18 @@ RSpec.describe Motor2::Trainer do
                                                                       expected: 'Primero solo la de 20%')
   end
 
+  it 'habilidad apagada: dice que se arregla en Qué hace y no cambia la ficha' do
+    diagnose('causes' => [{ 'kind' => 'agent', 'field' => 'skill', 'skill' => 'offers', 'summary' => 'Prende Ofertas escalonadas.' }])
+    expect(correct[:messages].first).to include(kind: 'skill', skill: 'offers')
+    expect(Motor2Version.where(tracking_template: template).count).to eq(1)
+  end
+
+  it 'si el modelo no pone «kind», se deduce de lo que sí puso' do
+    diagnose('causes' => [{ 'field' => 'never', 'find' => '', 'replace' => 'Dar el precio sin que lo pidan.' }])
+    expect(correct[:messages].first[:kind]).to eq('agent')
+    expect(template.reload.motor2['never']).to eq('Dar el precio sin que lo pidan.')
+  end
+
   it 'si no está seguro, hace una sola pregunta y no cambia nada' do
     diagnose('causes' => [], 'question' => '¿El precio ya no es correcto, o no debía darlo todavía?')
     expect(correct[:messages]).to eq([{ kind: 'question', text: '¿El precio ya no es correcto, o no debía darlo todavía?' }])

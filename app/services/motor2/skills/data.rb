@@ -36,7 +36,9 @@ class Motor2::Skills::Data < Motor2::Skills::Base
     <<~TEXT.strip
       - DATOS DEL CLIENTE que debes conseguir y guardar con guardar_dato:
       #{lines.join("\n")}
-        Pregunta los marcados «PREGÚNTALO» uno a la vez y en ese orden, sin interrogarlo: entre tus respuestas.
+        En cuanto el cliente diga uno (aunque no se lo hayas preguntado, p. ej. «informes de Derecho»), guárdalo con
+        guardar_dato en ese mismo turno y no se lo vuelvas a preguntar. Los marcados «PREGÚNTALO» que falten, pregúntalos
+        uno a la vez y en ese orden, sin interrogarlo: entre tus respuestas.
     TEXT
   end
 

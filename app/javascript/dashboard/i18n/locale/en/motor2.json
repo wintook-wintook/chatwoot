@@ -202,7 +202,8 @@
       "SEND": "Send to the trainer",
       "TEST_NAME_PH": "Test name (optional)",
       "SAVE_TEST": "Save as test",
-      "SOURCE_FIXED_MARK": "✓ Source fixed."
+      "SOURCE_FIXED_MARK": "✓ Source fixed.",
+      "GO_SKILLS": "Go to What it does"
     },
     "TESTS": {
       "SAVE_FIRST": "Save the agent to keep tests.",
@@ -218,6 +219,24 @@
       "LAST_REPLY": "Last reply:",
       "ERROR": "Could not run."
     },
-    "WARN": "⚠ {text}"
+    "WARN": "⚠ {text}",
+    "CONVERT": {
+      "TITLE": "Already have this agent on Engine 1.0?",
+      "HINT": "«Move to 2.0» converts the same agent: it stays in its campaigns, follow-ups and automations, and its training is laid out in this profile. From then on Engine 2.0 answers its conversations. You can move it back anytime.",
+      "PICK": "Choose a 1.0 agent",
+      "BUTTON": "Move to 2.0",
+      "CONFIRM": "From now on Engine 2.0 will answer its conversations. Move it?",
+      "DONE": "Done: review the profile and test it before leaving it on.",
+      "BACK": "Back to 1.0",
+      "BACK_CONFIRM": "The agent goes back to Engine 1.0 with its usual training (the 2.0 profile stays saved). Move it back?"
+    },
+    "REAL": {
+      "BUTTON": "👎 Correct this reply",
+      "WHAT_WRONG": "What went wrong and how should it have answered?",
+      "CANCEL": "Cancel",
+      "SEND": "Send to the trainer",
+      "OPEN_AGENT": "Open the agent",
+      "ERROR": "Could not."
+    }
   }
 }

@@ -21,18 +21,25 @@ class Motor2::Trainer < Cases::Ai::BaseService
     - "agent": lo que el usuario espera no está cubierto en la ficha (tono, qué decir, cuándo, qué no
       decir, un dato fijo del negocio). Se arregla escribiendo una indicación. Da el cambio:
       field: "instructions" | "never" | "welcome" | "business";
-      para texto: "find" (frase EXACTA de ese campo a reemplazar, o "" para agregar al final) y
+      para texto: "find" (solo si una frase EXACTA de ese campo contradice lo que se espera; para agregar una
+      indicación nueva deja "find" vacío) y
       "replace" (texto nuevo, corto y claro, en segunda persona: «Cuando…, …»);
       para business: "label" y "value". "summary": qué cambiaste, en una línea.
+    - "agent" con field "skill": lo esperado lo hace una HABILIDAD que existe pero está apagada o sin datos
+      (ver HABILIDADES). Da "skill" (su clave) y en "summary" qué prender o llenar. No escribas indicaciones para eso.
     - "source": el agente contestó con lo que le dio una fuente y la fuente está mal o le falta el
       dato. "source": nombre de la fuente; "item": código o título; "found": lo que dice HOY, copiado
       EXACTO de la traza (vacío si no tenía nada); "should": lo que debería decir; "missing": true si
       no lo tenía.
-    - "engine": (a) pide algo que ninguna de sus HERRAMIENTAS hace ("type": "missing_skill"), o (b) la
+    - "engine": (a) pide HACER algo (mandar un archivo de otro sistema, consultar un sistema, cobrar…) que no está en
+      sus HERRAMIENTAS ni en las HABILIDADES ("type": "missing_skill"): una indicación de texto NO le da al agente una
+      herramienta que no tiene; o (b) la
       indicación ya estaba escrita en la ficha o la fuente sí traía el dato correcto y el agente no lo
       siguió ("type": "ignored"). "what": qué no pudo hacer, en una línea.
     Si no puedes saberlo, deja "causes" vacío y haz UNA pregunta corta en "question".
-    Responde JSON: {"causes": [...], "question": ""}. Todo en español.
+    Responde en JSON. Cada causa lleva SIEMPRE "kind". Ejemplo:
+    {"causes": [{"kind": "agent", "field": "instructions", "find": "", "replace": "Cuando…, …", "summary": "…"}], "question": ""}
+    Todo en español.
   TEXT
 
   def initialize(template, user:)
@@ -59,7 +66,8 @@ class Motor2::Trainer < Cases::Ai::BaseService
 
   private
 
-  def model = Assistant::Settings.model_for(@account)
+  # Clasificar el error es análisis: el modelo de análisis de la cuenta (si eligió uno).
+  def model = Assistant::Settings.model_for(@account, :analysis)
 
   def diagnose
     chat(system: SYSTEM, user: context.to_json, json: true, max_tokens: 1200, temperature: 0.1)
@@ -70,9 +78,15 @@ class Motor2::Trainer < Cases::Ai::BaseService
     runner = Motor2::Runner.new(config, state: Motor2::State.new, history: [])
     tools = Motor2::Skills.for(runner).flat_map(&:tools).map { |t| "#{t.dig(:function, :name)}: #{t.dig(:function, :description)}" }
     { ficha: { objetivo: config.objective, instrucciones: config.instructions, nunca: config.never, bienvenida: config.welcome,
-               datos_del_negocio: config.business, habilidades: @template.motor2.to_h['skills'] },
-      herramientas: tools, platica: @messages, respuesta_mala: @reply, lo_que_esperaba_el_usuario: @feedback,
+               datos_del_negocio: config.business },
+      herramientas: tools, habilidades: skills_status(config), platica: @messages, respuesta_mala: @reply, lo_que_esperaba_el_usuario: @feedback,
       traza: @trace.slice('tools', 'sources', 'events') }
+  end
+
+  def skills_status(config)
+    Motor2::Skills::CATALOG.to_h do |key, what|
+      [key, { hace: what, prendida: key == 'files' ? @template.ai_agent_attachments.exists? : config.skill_on?(key) }]
+    end
   end
 
   def respond(causes)
@@ -82,11 +96,20 @@ class Motor2::Trainer < Cases::Ai::BaseService
   end
 
   def handle(cause)
-    case cause['kind']
+    case kind_of(cause)
     when 'agent' then Motor2::Trainer::AgentFix.new(@template, @user, cause).call
     when 'source' then { message: source_message(cause) }
     when 'engine' then { message: engine_message(cause) }
     end
+  end
+
+  # Si el modelo no puso «kind», se deduce de lo que sí puso.
+  def kind_of(cause)
+    return cause['kind'] if %w[agent source engine].include?(cause['kind'])
+    return 'agent' if cause['field'].present?
+    return 'source' if cause['source'].present? || cause.key?('found')
+
+    'engine' if cause['what'].present?
   end
 
   def source_message(cause)

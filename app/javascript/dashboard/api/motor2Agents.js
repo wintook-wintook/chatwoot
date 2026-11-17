@@ -66,6 +66,26 @@ class Motor2AgentsAPI extends ApiClient {
     });
   }
 
+  convertible() {
+    return axios.get(`${this.url}/convertible`);
+  }
+
+  convert(templateId) {
+    return axios.post(`${this.url}/convert`, { template_id: templateId });
+  }
+
+  backToV1(id) {
+    return axios.post(`${this.url}/${id}/back_to_v1`);
+  }
+
+  // 👎 en una conversación real.
+  correctMessage(messageId, feedback) {
+    return axios.post(`${this.url}/correct_message`, {
+      message_id: messageId,
+      feedback,
+    });
+  }
+
   restore(id, versionId) {
     return axios.post(`${this.url}/${id}/restore`, { version_id: versionId });
   }

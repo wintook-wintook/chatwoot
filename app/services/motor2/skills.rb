@@ -10,6 +10,13 @@ module Motor2::Skills
     Motor2::Skills::Tickets, Motor2::Skills::Files, Motor2::Skills::Handoff, Motor2::Skills::Finish
   ].freeze
 
+  # Para el entrenador: qué hace cada una (las que se prenden en «Qué hace»).
+  CATALOG = {
+    'data' => 'pregunta y guarda datos del cliente', 'offers' => 'da becas, descuentos o plazos uno a la vez',
+    'appointments' => 'agenda, mueve o cancela citas en Google Calendar', 'tickets' => 'levanta casos y dice cómo van',
+    'files' => 'manda archivos subidos al agente', 'handoff' => 'pasa la plática a una persona'
+  }.freeze
+
   module_function
 
   def for(turn)

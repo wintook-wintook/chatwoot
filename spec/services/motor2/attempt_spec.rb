@@ -22,7 +22,7 @@ RSpec.describe Motor2::Attempt do
   it 'ContactTrackingJob usa el motor 2.0 para el texto del intento' do
     allow_any_instance_of(Motor2::Runner).to receive(:complete) # rubocop:disable RSpec/AnyInstance
       .and_return({ 'role' => 'assistant', 'content' => 'Mario, ¿te queda bien agendar tu visita esta semana?' })
-    expect(ContactTrackingJob.new.send(:generate_message, tracking)).to eq('Mario, ¿te queda bien agendar tu visita esta semana?')
+    expect(ContactTrackingJob.new.send(:generate_message, tracking)).to eq('Mario, ¿te queda bien agendar tu visita esta semana? #IA')
   end
 
   it 'también el despachador de campañas (hereda de ContactTrackingJob)' do

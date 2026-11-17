@@ -223,8 +223,12 @@ Rails.application.routes.draw do
             collection do
               get :options
               post :test
+              get :convertible
+              post :convert
+              post :correct_message
             end
             member do
+              post :back_to_v1
               get :readiness
               post :activate
               get :versions

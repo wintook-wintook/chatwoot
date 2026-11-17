@@ -1,15 +1,17 @@
 # frozen_string_literal: true
 
 # Motor 2.0 — el desvío de los intentos. ContactTrackingJob (y su hijo TrackingDispatch::SendJob,
-# el despachador de campañas) piden el texto del intento a #generate_message; para un agente 2.0
-# lo escribe Motor2::Attempt y, si el modelo no da nada, el mensaje simple de siempre. Para un
-# agente 1.0 no cambia nada (super).
+# el despachador de campañas) piden el texto con IA del intento a #generate_ai_message; para un
+# agente 2.0 lo escribe Motor2::Attempt (nil = el job usa su mensaje simple de siempre, nunca el
+# texto del 1.0). Para un agente 1.0 no cambia nada (super).
 #
-# Va como `prepend` (config/initializers/motor2.rb) para no editar el job del 1.0.
+# Va como `prepend` (config/initializers/motor2.rb) para no editar el job del 1.0. Se engancha
+# a generate_ai_message y no a generate_message porque las pruebas del 1.0 simulan
+# generate_message con any_instance, que RSpec no permite sobre un método antepuesto.
 module Motor2::AttemptHook
-  def generate_message(tracking, template_content = nil)
+  def generate_ai_message(tracking, template_content = nil)
     return super unless Motor2.on?(tracking.tracking_template)
 
-    ContactTrackings::Signature.apply(Motor2::Attempt.new(tracking).message || generate_simple_message(tracking), tracking)
+    Motor2::Attempt.new(tracking).message
   end
 end

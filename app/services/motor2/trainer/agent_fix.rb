@@ -13,6 +13,8 @@ class Motor2::Trainer::AgentFix
   end
 
   def call
+    return { message: skill_message } if @cause['field'] == 'skill'
+
     motor2 = changed_motor2
     return nil unless motor2
 
@@ -44,9 +46,15 @@ class Motor2::Trainer::AgentFix
     return nil if replace.blank?
 
     @before = text
-    motor2[field] = find.present? && text.include?(find) ? text.sub(find, replace) : [text.presence, replace].compact.join("\n")
+    motor2[field] = replace?(text, find) ? text.sub(find, replace) : [text.presence, replace].compact.join("\n")
     @after = motor2[field]
     motor2
+  end
+
+  # Solo se reemplaza una frase concreta; si lo que quiere reemplazar es casi todo el campo, se
+  # agrega (para no perder las demás indicaciones).
+  def replace?(text, find)
+    find.present? && text.include?(find) && find.length < text.length * 0.6
   end
 
   def add_business(motor2)
@@ -63,7 +71,18 @@ class Motor2::Trainer::AgentFix
   def applied_message(before)
     { kind: 'agent', field: field, before: @before, after: @after, summary: @cause['summary'],
       undo_version_id: before&.id,
-      text: "Ya lo corregí#{": #{@cause['summary']}" if @cause['summary'].present?}. Pruébalo de nuevo." }
+      text: "Ya lo corregí#{": #{summary}" if summary.present?}. Pruébalo de nuevo." }
+  end
+
+  def summary
+    @cause['summary'].to_s.strip.sub(/[.\s]+\z/, '')
+  end
+
+  # La habilidad existe pero está apagada o sin datos: eso lo prende el usuario en «Qué hace».
+  def skill_message
+    key = @cause['skill'].to_s.presence_in(Motor2::Skills::CATALOG.keys)
+    { kind: 'skill', skill: key,
+      text: "Esto lo hace una habilidad del agente#{": #{summary}" if summary.present?}. Se arregla en Qué hace." }
   end
 
   def broken_message(broken)

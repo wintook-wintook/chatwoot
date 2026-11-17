@@ -2,7 +2,7 @@
 key: agentes_motor2
 title: Agentes a medida con Motor 2.0
 areas: [ai_agents]
-keywords: [motor 2.0, motor 2, agente 2.0, nuevo motor, habilidades, que sabe, que hace, ofertas escalonadas, becas, descuentos, preguntas, datos del cliente, citas, casos, archivos, pasar a una persona, probador, probar agente, pulgar abajo, corregir respuesta, entrenador, ya lo corregi, fuente, kontrolya, reporte, pruebas guardadas, correr todas, versiones, deshacer, motor 1.0]
+keywords: [motor 2.0, motor 2, agente 2.0, pasar a 2.0, regresar a 1.0, corregir esta respuesta, nuevo motor, habilidades, que sabe, que hace, ofertas escalonadas, becas, descuentos, preguntas, datos del cliente, citas, casos, archivos, pasar a una persona, probador, probar agente, pulgar abajo, corregir respuesta, entrenador, ya lo corregi, fuente, kontrolya, reporte, pruebas guardadas, correr todas, versiones, deshacer, motor 1.0]
 pages: [ai_agents, trackings]
 ---
 ## Para qué sirve
@@ -20,6 +20,12 @@ Agentes IA › Agentes. Los agentes 2.0 llevan la etiqueta «2.0». Al abrir uno
 4. En Qué hace prende las habilidades que necesita y llena sus datos.
 5. Pulsa «Crear agente». Si arriba aparece «Para atender le falta», arréglalo; «Activar en su bandeja» hace que atienda las conversaciones nuevas de esa bandeja.
 
+### Pasar un agente de antes a 2.0
+1. En Agentes IA › Agentes pulsa «Nuevo agente» › «Motor 2.0 (nuevo)».
+2. Arriba, en «¿Ya tienes este agente en el Motor 1.0?», elige el agente y pulsa «Pasar a 2.0».
+3. Es el mismo agente: sigue en sus campañas, seguimientos y automatizaciones. Su Entrenamiento se acomoda en la ficha (instrucciones, datos del negocio, preguntas, ofertas). Revísala y pruébalo.
+4. Desde ese momento sus conversaciones las contesta el Motor 2.0. «Regresar a 1.0» (arriba en la ficha) lo devuelve con su Entrenamiento de siempre.
+
 ### Las habilidades
 - Preguntas y datos del cliente: pregunta uno a la vez y guarda lo que contesta (con valores permitidos si quieres).
 - Ofertas escalonadas: becas, descuentos o plazos que da uno a la vez cuando el cliente dice que está caro. Nunca junta dos.
@@ -36,6 +42,9 @@ Agentes IA › Agentes. Los agentes 2.0 llevan la etiqueta «2.0». Al abrir uno
    - 📚 En la fuente: te enseña lo que dice hoy y, si es una respuesta predefinida, ofrece «Arréglalo tú». Otras fuentes se corrigen donde viven.
    - 🔧 En el motor: algo que el motor todavía no sabe hacer. No lo puedes corregir tú: búscalo con tu Kontrolya; el reporte ya se mandó con la plática.
 4. Si no está seguro, el entrenador te hace una pregunta antes de cambiar nada.
+
+### Corregir en una conversación real
+En una respuesta de un agente 2.0, el administrador ve «👎 Corregir esta respuesta». Escribe qué estuvo mal y contesta el mismo entrenador del probador; «Abrir el agente» lleva a sus pruebas.
 
 ### Pruebas y versiones
 1. Cada corrección queda como prueba. También puedes guardar una plática con «Guardar como prueba».

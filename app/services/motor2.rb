@@ -6,7 +6,7 @@
 # tracking_templates.engine = '2'. El modelo decide la plática; el código pone las reglas con
 # habilidades (Motor2::Skills). El motor 1.0 (ContactTrackingResponseAnalyzerJob, RouterService)
 # no se toca: solo hay dos desvíos, en Message#analyze_for_active_trackings (respuestas) y en
-# ContactTrackingJob#generate_message (intentos, con Motor2::AttemptHook sin editar el job).
+# ContactTrackingJob#generate_ai_message (intentos, con Motor2::AttemptHook sin editar el job).
 module Motor2
   ENGINE = '2'
   # El cliente suele mandar varios mensajes seguidos: se espera y se contesta solo el último.

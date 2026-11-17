@@ -611,7 +611,7 @@ repo.
   - un agente 1.0 sigue con su seguimiento de adentro (`ContactTrackingJob`).
 - **Desvíos autorizados en código compartido:** cada uno es «si el agente es 2.0 → motor 2.0; si no, igual que hoy»:
   - `Message#analyze_for_active_trackings`;
-  - `ContactTrackingJob#generate_message` (también lo usa el despachador, `TrackingDispatch::SendJob`).
+  - `ContactTrackingJob#generate_ai_message` (también lo usa el despachador, `TrackingDispatch::SendJob`), con `Motor2::AttemptHook` (prepend) sin editar el job.
 - **Piezas del 1.0 que ya funcionan:** el 2.0 las llama tal cual, sin editarlas. Si hay que mejorar una, se copia al 2.0. Ejemplos:
   - búsqueda en fuentes, hojas y lectura de adjuntos;
   - horarios, palabras clave, baja y clasificador de prospectos.
@@ -642,3 +642,44 @@ repo.
 | M4 | **Probador y entrenador.** Chat con traza y 👍/👎; las tres salidas; pruebas guardadas y «Correr todas»; reportes (tabla, lista en Super Admin, correo) |
 | M5 | «Pasar a 2.0», 👍/👎 en la conversación real, guía de Dali, pasada final |
 | Después | Varios agentes por bandeja con reparto; conectar Agentes listos y Seguimiento IA al 2.0; ver imágenes y transcribir audios; galería; puestos de fábrica |
+
+### 11.12 Estado (2026-11-17): M1–M5 hechos en `feat/motor_agentes_2`
+
+**Hecho:** motor, habilidades, ficha 2.0, probador con entrenador, pruebas, reportes, «Pasar a 2.0» / «Regresar a 1.0», 👎 en conversación real y guía de Dali. Rama local, sin subir.
+
+**Decisiones que tomé al construir** (para revisar):
+1. **Versiones del 2.0 en su propia tabla** (`motor2_versions`): el callback del 1.0 ya versiona sus columnas y habría duplicados.
+2. **Desvío de los intentos:**
+   - se hace con `prepend` sobre `ContactTrackingJob#generate_ai_message`, sin editar el job;
+   - en `generate_message` no se puede, porque RSpec no permite simular un método antepuesto con `any_instance` y las pruebas del 1.0 lo simulan;
+   - los intentos del 2.0 llevan la misma marca « #IA» que los del 1.0.
+3. **Seguimiento pausado = no contesta** (lo atiende una persona). El 1.0 también contestaba en pausado.
+4. **Calificación de campañas:** el 2.0 usa tal cual el clasificador del 1.0 (`TrackingCampaigns::ProspectClassifier`). La habilidad «Calificar» queda para después.
+5. **Qué sabe:** búsqueda por parecido en las fuentes marcadas (predefinidas, artículos, documentos, hojas, foro, CONTPAQi). Todavía **no** están la búsqueda exacta en hojas (`hoja_buscar`) ni las consultas al ERP en vivo. Si un agente las necesita, el entrenador lo reporta como falta del motor.
+6. **Montos y ligas:**
+   - un precio, monto o porcentaje que el agente no vio en ningún lado se reescribe una vez; si insiste, no se manda;
+   - las ligas que no vio se quitan (LinkGuard).
+7. **Entrenador:**
+   - corrige solo instrucciones, «nunca», bienvenida y datos del negocio;
+   - si la habilidad está apagada, dice «Ir a Qué hace»;
+   - de las fuentes, solo arregla respuestas predefinidas; las demás dice dónde corregirlas;
+   - usa el modelo de análisis de la cuenta;
+   - antes de aplicar corre hasta 8 pruebas recientes que pasaban;
+   - si el modelo no pone el tipo de error, se deduce;
+   - solo reemplaza una frase concreta; si la frase abarca casi todo el campo, agrega en vez de reemplazar.
+8. **«Pasar a 2.0»** vive en «Nuevo agente» › «Motor 2.0» (la pantalla del 1.0 no se toca). Es el mismo agente y su Entrenamiento 1.0 se queda en su columna. **«Regresar a 1.0»** está arriba en la ficha 2.0.
+9. **Reportes:** correo a `MOTOR2_REPORTS_EMAIL`; sin esa variable, solo la lista en Super Admin.
+10. **Permisos:** la ficha 2.0 y el 👎 en conversaciones reales son solo para administradores.
+11. **Archivos:** comparten la regla por archivo del 1.0 (`resources['files']`).
+
+**Falta probar en real:** conversación por WhatsApp con un agente 2.0, intentos con plantilla, cita en Google, caso con sus reglas, campaña con agente 2.0, correo de reportes y la página de Super Admin con los archivos del front compilados.
+
+**Después:**
+- número probador con `corrige:`;
+- varios agentes por bandeja con reparto;
+- conectar Agentes listos y Seguimiento IA al 2.0;
+- ver imágenes y transcribir audios;
+- búsqueda exacta en hojas y ERP como habilidades;
+- habilidad Calificar;
+- galería;
+- puestos de fábrica.
