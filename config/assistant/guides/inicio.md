@@ -2,22 +2,23 @@
 key: inicio
 title: Inicio, Mi resumen y notificaciones
 areas: []
-keywords: [inicio, mi resumen, resumen, pantalla de inicio, que tengo hoy, mi dia, notificaciones, avisos, avisos importantes, enterado, no leidas, marcar todo como hecho, ver todo, mi negocio, resumen del negocio, presupuesto, logo, mi semana, mis casos, mis conversaciones, esperan tu respuesta, agenda de hoy, lo mas urgente, sla en riesgo, listos para pasar de etapa, promesas de pago, periodo, explicame la semana, al iniciar sesion]
-pages: [my_summary, my_day, notifications, business_summary, budget, profile, business_summary_access]
+keywords: [inicio, mi resumen, resumen, pantalla de inicio, que tengo hoy, mi dia, notificaciones, avisos, avisos importantes, enterado, no leidas, marcar todo como hecho, ver todo, mi negocio, resumen del negocio, presupuesto, mi capacitacion, capacitacion, probar agentes, probador, logo, mi semana, mis casos, mis conversaciones, esperan tu respuesta, agenda de hoy, lo mas urgente, sla en riesgo, listos para pasar de etapa, promesas de pago, periodo, explicame la semana, al iniciar sesion]
+pages: [my_summary, my_day, notifications, business_summary, budget, academy, agent_tester, profile, business_summary_access]
 sources:
   - app/javascript/dashboard/views/gestorTickets/home/MySummary.vue
   - app/javascript/dashboard/views/gestorTickets/tasks/MyDayNotices.vue
   - app/javascript/dashboard/routes/dashboard/notifications/components/*.vue
   - app/javascript/dashboard/views/gestorTickets/summary/BusinessSummary.vue
+  - app/javascript/dashboard/components/layout/config/sidebarItems/v2/index.js
   - app/services/cases/my_summary.rb
-reviewed: 2026-11-14
+reviewed: 2026-11-17
 ---
 ## Para qué sirve
 Inicio es tu punto de partida: te dice qué tienes que hacer hoy, qué te avisaron y cómo va tu semana, sin buscar en cada pantalla.
 
 ## Dónde está
 - Inicio, el primer ícono del menú de la izquierda. El logo de tu empresa, arriba a la izquierda, también lleva a Inicio.
-- Su menú tiene tres opciones: «Mi resumen», «Mi negocio» y «Presupuesto» (estas dos solo si te tocan).
+- Su menú tiene: «Mi resumen», «Mi negocio» y «Presupuesto» (estas dos solo si te tocan), «Mi capacitación» y «Probar agentes».
 - Si tienes avisos sin leer, el número sale sobre el ícono de Inicio y en la pestaña «Notificaciones».
 
 ## Cómo se hace
@@ -52,6 +53,12 @@ Inicio es tu punto de partida: te dice qué tienes que hacer hoy, qué te avisar
 ### Presupuesto
 Inicio › Presupuesto muestra el avance de las ventas contra la meta. Cómo se captura y se lee está en la guía de Presupuesto.
 
+### Mi capacitación
+Inicio › Mi capacitación (o el botón «Mi capacitación N/M» arriba a la derecha en Mi resumen, resaltado mientras te falten pasos) tiene tus lecciones y ejercicios, que la plataforma revisa sola. El detalle está en la guía de la Academia.
+
+### Probar agentes
+Inicio › Probar agentes es para platicar como cliente con un agente IA «En prueba», sin WhatsApp, y marcar con 👎 lo que contestó mal. Solo salen los agentes que alguien puso «En prueba». El detalle está en la guía del Probador de agentes.
+
 ## Dudas frecuentes
 - ¿Puedo entrar directo a otra pantalla al iniciar sesión? Sí: en tu perfil (Configuración de Perfil), en «Al iniciar sesión, ir a», elige «Inicio (Mi resumen)», «Conversaciones» o «Mi día».
 - No veo «Agenda de hoy», «Mis casos» o «ventas ganadas»: si no tienen nada, no se muestran.
@@ -63,3 +70,5 @@ Inicio › Presupuesto muestra el avance de las ventas contra la meta. Cómo se 
 - Mi resumen, Mi día y Notificaciones: todos; cada quien ve lo suyo. Quien ve la Agenda de todos (Administrador, Supervisor) puede ver el Mi día de otra persona en Agenda › Tareas › Mi día, con «Día de:».
 - Mi negocio: el Administrador, los roles que ven todos los Informes (como Supervisor y Consulta) y las personas que el administrador autorice en Ajustes › Casos y etapas › Resumen del negocio: acceso.
 - Presupuesto: quien tiene acceso a Ventas.
+- Mi capacitación: todos; cada quien ve lo de su rol. «Configura tu cuenta» solo los administradores.
+- Probar agentes: todos pueden probar, dar 👎 y guardar pruebas. Aplicar correcciones, lotes y bitácora: solo quien puede cambiar agentes.
