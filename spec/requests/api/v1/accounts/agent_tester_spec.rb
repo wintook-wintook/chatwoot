@@ -52,6 +52,15 @@ RSpec.describe 'Agent Tester API' do
     expect(run.reload).to have_attributes(status: 'done', passed: 1, total: 1)
   end
 
+  it 'avisa si el agente 1.0 cambió después de abrir la plática' do
+    old = create(:tracking_template, account: account, complementary_prompt: 'Versión 1')
+    post "#{api}/agent_tester/sessions", params: { template_id: old.id }, headers: admin.create_new_auth_token, as: :json
+    conversation_id = response.parsed_body['conversation_id']
+    old.update!(complementary_prompt: 'Versión 2')
+    get "#{api}/agent_tester/sessions/#{conversation_id}", headers: admin.create_new_auth_token
+    expect(response.parsed_body['outdated']).to be(true)
+  end
+
   it 'quien no puede cambiar agentes no entra' do
     get "#{api}/agent_tester/agents", headers: agent_user.create_new_auth_token
     expect(response).to have_http_status(:forbidden).or have_http_status(:unauthorized)

@@ -16,9 +16,33 @@ export default {
       open: null,
       form: { name: '', messages: '', expected: '' },
       runAgent: {},
+      agentFilter: '',
+      runningAll: false,
     };
   },
+  computed: {
+    // Los lotes del agente elegido (las correcciones de cada día y los propios); sin filtro, todos.
+    shown() {
+      if (!this.agentFilter) return this.batches;
+      return this.batches.filter(
+        b => b.template_id === Number(this.agentFilter)
+      );
+    },
+  },
   methods: {
+    async runAll() {
+      this.runningAll = true;
+      try {
+        await AgentTestBatchesApi.runCorrections(Number(this.agentFilter));
+        useAlert(this.t('RUNNING'));
+        this.$emit('ran');
+      } catch (e) {
+        const data = e && e.response ? e.response.data : null;
+        useAlert((data && data.error) || this.t('ERROR'));
+      } finally {
+        this.runningAll = false;
+      }
+    },
     t(key, args) {
       return this.$t(`AGENT_TESTER.BATCHES.${key}`, args);
     },
@@ -76,6 +100,29 @@ export default {
 <template>
   <div class="space-y-3 max-w-4xl">
     <p class="m-0 text-sm text-slate-500">{{ t('HINT') }}</p>
+    <div class="flex flex-wrap items-center gap-2">
+      <select v-model="agentFilter" class="!mb-0 h-9 text-sm w-64">
+        <option value="">{{ t('ALL_AGENTS') }}</option>
+        <option v-for="a in agents" :key="a.id" :value="a.id">
+          {{
+            $t('AGENT_TESTER.AGENT_OPTION', {
+              name: a.name,
+              engine: a.engine === '2' ? '2.0' : '1.0',
+            })
+          }}
+        </option>
+      </select>
+      <woot-button
+        v-if="agentFilter"
+        size="small"
+        variant="smooth"
+        :is-loading="runningAll"
+        :title="t('RUN_ALL_HINT')"
+        @click="runAll"
+      >
+        {{ t('RUN_ALL') }}
+      </woot-button>
+    </div>
     <form class="flex gap-2" @submit.prevent="create">
       <input
         v-model="newName"
@@ -87,11 +134,11 @@ export default {
         {{ t('NEW') }}
       </woot-button>
     </form>
-    <p v-if="!batches.length" class="text-sm text-slate-500">
+    <p v-if="!shown.length" class="text-sm text-slate-500">
       {{ t('EMPTY') }}
     </p>
     <div
-      v-for="batch in batches"
+      v-for="batch in shown"
       :key="batch.id"
       class="border rounded-lg border-slate-100 dark:border-slate-700"
     >

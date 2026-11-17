@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_17_140000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_17_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -140,8 +140,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_17_140000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "tracking_template_id"
+    t.date "day"
     t.index ["account_id"], name: "index_agent_test_batches_on_account_id"
     t.index ["created_by_id"], name: "index_agent_test_batches_on_created_by_id"
+    t.index ["tracking_template_id", "day"], name: "index_agent_test_batches_on_tracking_template_id_and_day"
     t.index ["tracking_template_id"], name: "index_agent_test_batches_on_tracking_template_id"
   end
 
@@ -189,6 +191,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_17_140000) do
     t.datetime "finished_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "case_ids", default: [], null: false
+    t.string "label"
     t.index ["account_id"], name: "index_agent_test_runs_on_account_id"
     t.index ["agent_test_batch_id"], name: "index_agent_test_runs_on_agent_test_batch_id"
     t.index ["created_by_id"], name: "index_agent_test_runs_on_created_by_id"

@@ -57,7 +57,10 @@
       "EXPECTED_PH": "Qué se espera de la última respuesta",
       "ADD_CASE": "Agregar prueba",
       "RUNNING": "Corriendo: el resultado aparece en la Bitácora.",
-      "ERROR": "No se pudo."
+      "ERROR": "No se pudo.",
+      "ALL_AGENTS": "Todos los agentes",
+      "RUN_ALL": "Correr todas las correcciones de este agente",
+      "RUN_ALL_HINT": "Junta las pruebas de todos sus días en una sola corrida: para ver si algún error de antes volvió."
     },
     "LOG": {
       "RUNS": "Corridas",
@@ -89,6 +92,7 @@
         "question": "Pregunta"
       }
     },
-    "AUTO_SAVED": "Quedó como prueba en el lote «{batch}»: córrelo cuando cambies el agente."
+    "AUTO_SAVED": "Quedó como prueba en el lote «{batch}»: córrelo cuando cambies el agente.",
+    "OUTDATED": "Este agente cambió después de abrir la plática: empieza una plática nueva para probar la versión nueva."
   }
 }

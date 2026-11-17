@@ -57,7 +57,10 @@
       "EXPECTED_PH": "What is expected from the last reply",
       "ADD_CASE": "Add test",
       "RUNNING": "Running: the result shows in the Log.",
-      "ERROR": "Could not."
+      "ERROR": "Could not.",
+      "ALL_AGENTS": "All agents",
+      "RUN_ALL": "Run all corrections of this agent",
+      "RUN_ALL_HINT": "Joins the tests of all its days in one run: to see if any past error came back."
     },
     "LOG": {
       "RUNS": "Runs",
@@ -89,6 +92,7 @@
         "question": "Question"
       }
     },
-    "AUTO_SAVED": "Saved as a test in batch «{batch}»: run it when you change the agent."
+    "AUTO_SAVED": "Saved as a test in batch «{batch}»: run it when you change the agent.",
+    "OUTDATED": "This agent changed after the chat started: start a new chat to test the new version."
   }
 }

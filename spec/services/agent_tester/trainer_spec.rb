@@ -58,15 +58,27 @@ RSpec.describe AgentTester::Trainer do
     expect(result[:messages].pluck(:kind)).to eq(['prompt'])
   end
 
-  it 'cada 👎 revisado queda solo como prueba en «Correcciones · <agente>», sin repetirse' do
+  it 'cada 👎 revisado queda solo como prueba en el lote del agente y del día, sin repetirse' do
     data = { 'causes' => [{ 'kind' => 'prompt', 'where' => '[ROL]', 'text' => 'Una beca a la vez.' }] }
     result = correct(v1, data)
     batch = AgentTestBatch.find_by(tracking_template: v1)
-    expect(result[:saved_in]).to eq("Correcciones · #{v1.name}")
+    expect(batch.day).to eq(AgentTester::AutoCase.today(v1))
+    expect(result[:saved_in]).to start_with("Correcciones · #{v1.name} · ")
     expect(batch.cases.sole).to have_attributes(messages: ['¿Becas?'], expected: 'Solo la de 20% primero')
 
     correct(v1, data)
     expect(batch.cases.count).to eq(1)
+  end
+
+  it 'otro día, otro lote; «correr todas» junta las pruebas de todos sus días' do
+    data = { 'causes' => [{ 'kind' => 'prompt', 'where' => '[ROL]', 'text' => 'Una beca a la vez.' }] }
+    correct(v1, data)
+    travel_to(2.days.from_now) { correct(v1, data) }
+    expect(AgentTestBatch.where(tracking_template: v1).count).to eq(2)
+
+    run = nil
+    expect { run = AgentTester::AutoCase.run_all(v1, user: user) }.to have_enqueued_job(AgentTester::RunJob)
+    expect(run).to have_attributes(total: 2, label: "Todas las correcciones · #{v1.name}")
   end
 
   it 'si el entrenador solo pregunta, no se guarda prueba' do

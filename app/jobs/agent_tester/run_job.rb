@@ -9,9 +9,10 @@ class AgentTester::RunJob < ApplicationJob
     run = AgentTestRun.find_by(id: run_id)
     return unless run
 
-    run.update!(status: 'running', total: run.batch.cases.count)
+    cases = run.case_ids.present? ? AgentTestCase.where(id: run.case_ids) : run.batch.cases
+    run.update!(status: 'running', total: cases.count)
     runner = AgentTester::ConversationRunner.new(run.tracking_template, user: run.created_by)
-    run.batch.cases.order(:id).each { |test_case| record(run, runner.run(test_case)) }
+    cases.order(:id).each { |test_case| record(run, runner.run(test_case)) }
     run.update!(status: 'done', finished_at: Time.current)
   rescue StandardError => e
     Rails.logger.error("[AgentTester::RunJob] #{e.class}: #{e.message}")

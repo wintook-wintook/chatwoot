@@ -110,7 +110,8 @@ export default {
           lastId = data.messages[data.messages.length - 1].id;
           lastAt = Date.now();
         }
-        this.session.tracking_status = data.tracking_status;
+        this.$set(this.session, 'tracking_status', data.tracking_status);
+        this.$set(this.session, 'outdated', data.outdated);
         this.scroll();
         if (lastAt && Date.now() - lastAt > QUIET_MS) return;
       }
@@ -404,6 +405,12 @@ export default {
           class="m-0 text-xs text-amber-700"
         >
           {{ t('TRACKING_STATUS', { status: session.tracking_status }) }}
+        </p>
+        <p
+          v-if="session && session.outdated"
+          class="m-0 text-xs text-amber-700"
+        >
+          {{ t('OUTDATED') }}
         </p>
       </div>
       <div

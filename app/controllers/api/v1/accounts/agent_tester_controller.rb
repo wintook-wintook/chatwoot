@@ -32,7 +32,7 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
   def show
     tracking = sandbox.tracking_for(@conversation)
     render json: { messages: sandbox.since(@conversation, params[:after]).map { |m| m.merge(lines: AgentTester::Trace.lines(m[:trace])) },
-                   tracking_status: tracking&.status }
+                   tracking_status: tracking&.status, outdated: outdated?(tracking) }
   end
 
   def say
@@ -82,6 +82,15 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
 
   def set_conversation
     @conversation = Current.account.conversations.where(inbox_id: sandbox.inbox.id).find(params[:conversation_id])
+  end
+
+  # El 1.0 guarda una copia del Entrenamiento en cada plática: si el agente cambió después de
+  # abrirla, lo nuevo no se ve aquí hasta empezar otra.
+  def outdated?(tracking)
+    template = tracking&.tracking_template
+    return false if template.nil? || Motor2.on?(template)
+
+    tracking.raw_complementary_prompt.to_s != template.complementary_prompt.to_s
   end
 
   def session_json(conversation, template)

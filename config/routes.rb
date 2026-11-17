@@ -228,7 +228,10 @@ Rails.application.routes.draw do
           post 'agent_tester/fix_source', to: 'agent_tester#fix_source'
           get 'agent_tester/logs', to: 'agent_tester#logs'
           resources :agent_test_batches, only: [:index, :create, :update, :destroy] do
-            collection { get 'runs(/:run_id)', action: :runs }
+            collection do
+              get 'runs(/:run_id)', action: :runs
+              post :run_corrections
+            end
             member do
               post :run
               post :cases, action: :add_case

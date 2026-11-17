@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 # Probador de agentes — lotes de pruebas y sus corridas.
-# GET    /agent_test_batches                         lotes con sus pruebas y la última corrida
+# GET    /agent_test_batches?template_id=            lotes (los más recientes primero) con sus pruebas y la última corrida
+# POST   /agent_test_batches/run_corrections         { template_id } corre todas las correcciones de ese agente
 # POST   /agent_test_batches                         { name }
 # PATCH  /agent_test_batches/:id                     { name }
 # DELETE /agent_test_batches/:id
@@ -15,7 +16,17 @@ class Api::V1::Accounts::AgentTestBatchesController < Api::V1::Accounts::BaseCon
   before_action :set_batch, only: %i[update destroy add_case update_case remove_case run]
 
   def index
-    render json: batches.includes(:cases).order(:name).map { |b| batch_json(b) }
+    scope = batches.includes(:cases, :tracking_template).order(created_at: :desc)
+    scope = scope.where(tracking_template_id: params[:template_id]) if params[:template_id].present?
+    render json: scope.limit(200).map { |b| batch_json(b) }
+  end
+
+  def run_corrections
+    template = Current.account.tracking_templates.find(params[:template_id])
+    run = AgentTester::AutoCase.run_all(template, user: current_user)
+    return render json: { error: 'Ese agente todavía no tiene correcciones.' }, status: :unprocessable_entity unless run
+
+    render json: run_json(run), status: :accepted
   end
 
   def create
@@ -90,13 +101,14 @@ class Api::V1::Accounts::AgentTestBatchesController < Api::V1::Accounts::BaseCon
 
   def batch_json(batch)
     last = batch.runs.order(created_at: :desc).first
-    { id: batch.id, name: batch.name, cases: batch.cases.sort_by(&:id).map { |c| case_json(c) }, last_run: last && run_json(last) }
+    { id: batch.id, name: batch.name, day: batch.day, template_id: batch.tracking_template_id,
+      cases: batch.cases.sort_by(&:id).map { |c| case_json(c) }, last_run: last && run_json(last) }
   end
 
   def case_json(test_case) = test_case.slice(:id, :name, :messages, :expected)
 
   def run_json(run, full: false)
-    json = { id: run.id, batch_id: run.agent_test_batch_id, batch: run.batch&.name, agent: run.tracking_template&.name,
+    json = { id: run.id, batch_id: run.agent_test_batch_id, batch: run.label.presence || run.batch&.name, agent: run.tracking_template&.name,
              engine: run.tracking_template&.engine, status: run.status, total: run.total, passed: run.passed,
              created_at: run.created_at, finished_at: run.finished_at }
     full ? json.merge(results: run.results) : json

@@ -25,6 +25,6 @@ class Motor2Report < ApplicationRecord
     update_column(:fixed_at, Time.current) # rubocop:disable Rails/SkipsModelValidations
     Motor2ReportMailer.with(report: self).fixed.deliver_later
     Motor2::RunTestsJob.perform_later(tracking_template_id) if tracking_template_id
-    AgentTester::AutoCase.rerun(tracking_template, user: user) if tracking_template
+    AgentTester::AutoCase.rerun(tracking_template, at: created_at, user: user) if tracking_template
   end
 end

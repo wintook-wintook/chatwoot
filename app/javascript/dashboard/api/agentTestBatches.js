@@ -21,6 +21,18 @@ class AgentTestBatchesAPI extends ApiClient {
     });
   }
 
+  list(templateId) {
+    return axios.get(this.url, {
+      params: templateId ? { template_id: templateId } : {},
+    });
+  }
+
+  runCorrections(templateId) {
+    return axios.post(`${this.url}/run_corrections`, {
+      template_id: templateId,
+    });
+  }
+
   runs(runId) {
     return axios.get(`${this.url}/runs${runId ? `/${runId}` : ''}`);
   }
