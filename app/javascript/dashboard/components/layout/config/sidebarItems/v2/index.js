@@ -685,6 +685,7 @@ const agentesIa = accountId => ({
     'ai_voice',
     'contact_trackings_agents',
     'contact_trackings_agent',
+    'motor2_agent', // Motor 2.0
     'contact_trackings_assistant',
     'contact_trackings_dashboard',
     ...AI_TOOL_ROUTES,

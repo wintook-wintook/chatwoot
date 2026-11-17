@@ -142,3 +142,23 @@ describe('las secciones de la ficha compilan y pintan con una ficha vacía', () 
     });
   });
 });
+
+// El webpack del proyecto no entiende `??` ni `?.` dentro de las plantillas: la página no carga.
+describe('plantillas sin operadores que el webpack no lee', () => {
+  const files = import.meta.glob(
+    [
+      './*.vue',
+      '../../components/widgets/conversation/bubble/Motor2Feedback.vue',
+    ],
+    {
+      eager: true,
+      as: 'raw',
+    }
+  );
+  Object.entries(files).forEach(([path, source]) => {
+    it(path, () => {
+      const template = source.slice(source.indexOf('<template>'));
+      expect(template).not.toMatch(/\?\?|\?\./);
+    });
+  });
+});

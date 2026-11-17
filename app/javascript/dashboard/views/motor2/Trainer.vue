@@ -112,9 +112,13 @@ export default {
     retry() {
       this.$refs.tester.retryLast();
     },
+    // Lo que escribió el usuario o, si no ha escrito, lo que propuso el entrenador.
+    fixValue(info) {
+      const typed = this.fixText[info.canned_id];
+      return typed === undefined ? info.should : typed;
+    },
     async fixSource(message) {
-      const content =
-        this.fixText[message.info.canned_id] ?? message.info.should;
+      const content = this.fixValue(message.info);
       try {
         await Motor2AgentsAPI.fixSource(this.templateId, {
           cannedId: message.info.canned_id,
@@ -169,7 +173,7 @@ export default {
           <textarea
             class="!mb-1 text-xs"
             rows="3"
-            :value="fixText[message.info.canned_id] ?? message.info.should"
+            :value="fixValue(message.info)"
             @input="$set(fixText, message.info.canned_id, $event.target.value)"
           />
           <span class="block text-[11px] text-slate-500">{{
