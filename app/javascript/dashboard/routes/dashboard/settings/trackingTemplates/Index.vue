@@ -223,10 +223,25 @@ export default {
     },
     // El espacio del agente. Sin sección, abre la primera que le toque al rol.
     openAgent(template, seccion = null) {
+      // Motor 2.0: cada agente abre en la pantalla de su motor.
+      if (template.engine === '2') {
+        this.$router.push({
+          name: 'motor2_agent',
+          params: { templateId: String(template.id) },
+        });
+        return;
+      }
       this.$router.push({
         name: 'contact_trackings_agent',
         params: { templateId: String(template.id) },
         query: seccion ? { seccion } : {},
+      });
+    },
+    newMotor2Agent() {
+      this.showNewMenu = false;
+      this.$router.push({
+        name: 'motor2_agent',
+        params: { templateId: 'new' },
       });
     },
     newAgent(query = {}) {
@@ -513,6 +528,24 @@ export default {
               class="dropdown-pane dropdown-pane--open !right-0 !left-auto !top-10 w-72"
             >
               <woot-dropdown-menu>
+                <!-- Motor 2.0: la ficha nueva (habilidades y probador con entrenador). -->
+                <woot-dropdown-item v-if="isAdmin">
+                  <woot-button
+                    variant="clear"
+                    color-scheme="primary"
+                    size="small"
+                    icon="flash-on"
+                    @click="newMotor2Agent"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.NEW_AGENT.MOTOR2') }}
+                  </woot-button>
+                </woot-dropdown-item>
+                <li
+                  v-if="isAdmin"
+                  class="px-2 pt-1 text-[11px] uppercase text-slate-500"
+                >
+                  {{ $t('TRACKING_TEMPLATES.NEW_AGENT.MOTOR1') }}
+                </li>
                 <woot-dropdown-item v-if="isAdmin">
                   <woot-button
                     variant="clear"
@@ -773,6 +806,14 @@ export default {
                   >
                     <td class="py-4 pr-4 font-medium">
                       {{ template.name }}
+                      <!-- Motor 2.0 -->
+                      <woot-label
+                        v-if="template.engine === '2'"
+                        small
+                        :title="$t('TRACKING_TEMPLATES.NEW_AGENT.BADGE')"
+                        color-scheme="primary"
+                        class="!mb-0 ltr:ml-2 rtl:mr-2"
+                      />
                       <!-- proyecto@publicar_prompts (F7): el autor publicó una versión nueva -->
                       <woot-label
                         v-if="template.published_prompt_update"

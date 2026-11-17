@@ -1,0 +1,6 @@
+<p><strong><%= @report.kind == 'ignored' ? 'El motor no obedeció una indicación' : 'Falta una habilidad' %></strong></p>
+<p><%= @report.diagnosis %></p>
+<p>Empresa: <%= @report.account.name %> (#<%= @report.account_id %>) · Agente: <%= @report.tracking_template&.name %> · Reportó: <%= @report.user&.name %></p>
+<p><strong>Respondió:</strong> <%= @report.reply %></p>
+<p><strong>Esperaba:</strong> <%= @report.expected %></p>
+<p>Detalle en Super Admin › Motor 2.0 › Reportes.</p>

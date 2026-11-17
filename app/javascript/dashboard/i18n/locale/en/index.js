@@ -40,6 +40,7 @@ import organizations from './organizations.json'; // Plan-Organizaciones O1
 import events from './events.json'; // Plan-Eventos E1
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
+import motor2 from './motor2.json'; // Motor 2.0 de Agentes a medida
 import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
 import contactTracking from './contactTracking.js'; // proyecto@contact_tracking
 import googleCalendar from './googleCalendar.js'; // proyecto@google_calendar
@@ -93,6 +94,7 @@ export default {
   ...organizations,
   ...events,
   ...trackingTemplates, // proyecto@tracking_templates
+  ...motor2, // Motor 2.0 de Agentes a medida
   ...knowledgeSources, // @knowledge_sources
   ...contactTracking, // proyecto@contact_tracking
   ...googleCalendar, // proyecto@google_calendar

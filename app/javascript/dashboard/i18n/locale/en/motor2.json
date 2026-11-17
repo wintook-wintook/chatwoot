@@ -1,0 +1,223 @@
+{
+  "MOTOR2": {
+    "NEW_TITLE": "New agent",
+    "BADGE": "Engine 2.0",
+    "UNSAVED": "Unsaved changes",
+    "SAVE": "Save",
+    "CREATE": "Create agent",
+    "READINESS": "Before it can answer:",
+    "ACTIVATE": "Activate in its inbox",
+    "TAB_FORM": "Profile",
+    "TAB_TEST": "Test",
+    "LOADING": "Loading…",
+    "LOAD_ERROR": "Could not open the agent.",
+    "SAVED": "Saved",
+    "SAVE_ERROR": "Could not save.",
+    "ACTIVATED": "Done: new conversations in its inbox are handled by this agent.",
+    "MISSING": {
+      "name": "Give the agent a name (in Agent).",
+      "objective": "Write the agent's objective (in Agent)."
+    },
+    "NAV": {
+      "agent": "Agent",
+      "knows": "What it knows",
+      "skills": "What it does",
+      "rules": "Rules",
+      "instructions": "Instructions",
+      "tests": "Tests",
+      "versions": "Versions"
+    },
+    "INSTRUCTIONS": {
+      "HINT": "Write it as you would explain the job to a new person: tone, what to say and what not, how to handle hard cases. No codes or routes: order, limits and tools come from the skills.",
+      "PLACEHOLDER": "E.g.: Help parents asking about our programs…",
+      "VOICE": "The company's general tone is in",
+      "VOICE_LINK": "How your company talks"
+    },
+    "AGENT": {
+      "NAME": "Agent name (internal)",
+      "NAME_PH": "E.g.: Law scholarships",
+      "DISPLAY_NAME": "Name the customer sees",
+      "DISPLAY_NAME_PH": "E.g.: Sofi",
+      "OBJECTIVE": "Objective",
+      "OBJECTIVE_PH": "E.g.: The student books a campus visit",
+      "CONTEXT": "Context (optional)",
+      "CONTEXT_PH": "Who it talks to and what to know",
+      "TONE": "Formality",
+      "TONE_TU": "Informal (tú)",
+      "TONE_USTED": "Formal (usted)",
+      "CHANNEL": "Channel and attempts"
+    },
+    "KNOWS": {
+      "SOURCES": "Sources",
+      "SOURCES_HINT": "Check where the agent looks before giving a fact. It only gives prices, links and dates found here.",
+      "NO_SOURCES": "The account has no sources yet.",
+      "BUSINESS": "Business data",
+      "BUSINESS_HINT": "What doesn't change: hours, address, phone, payment methods."
+    },
+    "SKILLS": {
+      "HINT": "Turn on what the agent must be able to do. Each skill brings its own rules: you only fill its data.",
+      "ANY_TICKET": "Any case",
+      "UPLOAD_ERROR": "Could not upload the file.",
+      "DATA": {
+        "TITLE": "Questions and customer data",
+        "LINE": "Asks one at a time and saves the answers.",
+        "LABEL": "Data (e.g.: Program of interest)",
+        "VALUES": "Allowed values, comma separated (optional)",
+        "ASK": "Ask it",
+        "ADD": "Add data"
+      },
+      "OFFERS": {
+        "TITLE": "Staged offers",
+        "LINE": "Scholarships, discounts or terms: one at a time when price is objected.",
+        "OBJECTION": "Counts as objection",
+        "OBJECTION_PH": "Too expensive, can't afford it, any discount?",
+        "STEP_PH": "The offer as it can be given",
+        "NO_FILE": "No file",
+        "ADD": "Add step"
+      },
+      "APPOINTMENTS": {
+        "TITLE": "Appointments",
+        "LINE": "Offers free slots and books, moves or cancels.",
+        "NO_CALENDARS": "Nobody has Google Calendar connected.",
+        "KIND": "Type",
+        "KINDS": {
+          "llamada": "Call",
+          "videollamada": "Video call",
+          "visita": "Visit",
+          "oficina": "At the office"
+        },
+        "MINUTES": "Duration (min)",
+        "LOCATION": "Place",
+        "WHEN": "When to offer it",
+        "WHEN_PH": "E.g.: when they want to visit"
+      },
+      "TICKETS": {
+        "TITLE": "Cases",
+        "LINE": "Opens a case with its number and tells how it's going.",
+        "TYPE": "Case type",
+        "WHEN_PH": "When to open it",
+        "ADD": "Add type",
+        "PRIORITY": "Priority",
+        "PRIORITIES": {
+          "auto": "From the type",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "urgent": "Urgent"
+        }
+      },
+      "FILES": {
+        "TITLE": "Files",
+        "LINE": "Sends your files when asked, with the welcome, in an attempt, when booking or opening a case.",
+        "SAVE_FIRST": "Save the agent to upload files.",
+        "UPLOADING": "Uploading…",
+        "UPLOAD": "Upload file"
+      },
+      "HANDOFF": {
+        "TITLE": "Hand over to a person",
+        "LINE": "When it leaves the chat to someone on the team, and to whom.",
+        "WHEN": "When",
+        "WHEN_PH": "E.g.: asks for a person or gets upset",
+        "USER": "Assign to",
+        "TEAM": "Team",
+        "NOBODY": "Nobody in particular"
+      }
+    },
+    "RULES": {
+      "KEYWORDS": "Keywords",
+      "KEYWORDS_HINT": "Exact: the engine applies them instantly.",
+      "NEVER": "It must never…",
+      "NEVER_PH": "E.g.: promise start dates",
+      "WELCOME": "Welcome",
+      "WELCOME_HINT": "Sent once, at the customer's first message. If they also ask something, it answers too."
+    },
+    "VERSIONS": {
+      "RESTORED": "Back to version {n}.",
+      "ERROR": "Could not.",
+      "SAVE_FIRST": "Versions start when you save the agent.",
+      "LOADING": "Loading…",
+      "CURRENT": "Current",
+      "RESTORE": "Restore",
+      "SOURCES": {
+        "create": "Created",
+        "manual": "Saved by hand",
+        "trainer": "Trainer correction",
+        "restore": "Restored",
+        "convert": "Moved to 2.0"
+      },
+      "V": "v{n}"
+    },
+    "TEST": {
+      "TITLE": "Test (you are the customer)",
+      "RESET": "Reset",
+      "HINT": "Write as a customer. Nothing is saved or sent. Use 👎 to tell the trainer what went wrong.",
+      "NO_MESSAGE": "(sent nothing)",
+      "ERROR": "Could not test.",
+      "FOUND": "Searched «{name}»: {n} result(s)",
+      "NOT_FOUND": "Searched «{name}»: nothing",
+      "EVENTS": {
+        "dato": "Saved {text}",
+        "contacto": "Contact: {text}",
+        "oferta": "Offer: {text}",
+        "cita": "Appointment: {text}",
+        "caso": "Case: {text}",
+        "archivo": "File: {text}",
+        "revision": "The code reviewed the reply ({text})",
+        "ligas_quitadas": "Removed links it never saw: {text}"
+      },
+      "FILE": "Would send the file «{name}»",
+      "DECISIONS": {
+        "done": "Would mark the objective met: {text}",
+        "discarded": "Would discard: {text}",
+        "handoff": "Would hand over to a person: {text}"
+      },
+      "UP": "Good",
+      "DOWN": "Wrong: correct it",
+      "TYPING": "Typing…",
+      "PLACEHOLDER": "Write as a customer…",
+      "SEND": "Send",
+      "AGAIN": "New reply"
+    },
+    "TRAINER": {
+      "SAVE_FIRST": "Save the agent's changes before correcting.",
+      "ERROR": "Could not.",
+      "UNDONE": "Done, the change was undone.",
+      "SOURCE_FIXED": "Source fixed.",
+      "EXPECTED_DEFAULT": "Answer like in this conversation.",
+      "TEST_SAVED": "Conversation saved as a test.",
+      "SOURCE_SAYS": "«{name}» says:",
+      "SHOULD_SAY": "What should it say?",
+      "SHARED": "ⓘ Canned responses are also used by your team and other agents.",
+      "FIX_IT": "Fix it for me",
+      "I_FIX": "I'll fix it",
+      "EXTERNAL": "This source is fixed where it lives («{name}»).",
+      "SHOULD": "It should say: {text}",
+      "RETRY": "Try again",
+      "SEE_CHANGE": "See change",
+      "UNDO": "Undo",
+      "ANSWER": "Answer",
+      "WHAT_WRONG": "What went wrong and how should it have answered?",
+      "WHAT_WRONG_PH": "E.g.: It gave both scholarships at once",
+      "CANCEL": "Cancel",
+      "SEND": "Send to the trainer",
+      "TEST_NAME_PH": "Test name (optional)",
+      "SAVE_TEST": "Save as test",
+      "SOURCE_FIXED_MARK": "✓ Source fixed."
+    },
+    "TESTS": {
+      "SAVE_FIRST": "Save the agent to keep tests.",
+      "HINT": "Conversations that must go right. The trainer runs them before correcting anything.",
+      "SUMMARY": "{ok} of {total} pass.",
+      "RUN_ALL": "Run all",
+      "EMPTY": "No tests yet: save a conversation from the tester or correct with 👎.",
+      "FROM_CORRECTION": "from a correction",
+      "RUN": "Run",
+      "EXPECTED": "Expected: {text}",
+      "CUSTOMER": "Customer",
+      "AGENT": "Agent",
+      "LAST_REPLY": "Last reply:",
+      "ERROR": "Could not run."
+    },
+    "WARN": "⚠ {text}"
+  }
+}

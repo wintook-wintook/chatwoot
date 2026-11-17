@@ -9,13 +9,13 @@ pages: [ai_agents, trackings]
 Un agente IA es un asistente que le escribe a tus clientes y les contesta en tu nombre. Cada agente tiene un nombre, un objetivo, la bandeja (canal) donde trabaja y su Entrenamiento: las instrucciones que sigue y los temas que atiende, con la fuente de la que saca cada respuesta. Los usan los seguimientos, las campañas de agentes IA y las reglas de automatización.
 
 ## Dónde está
-Agentes IA › Agentes. La lista muestra Nombre, Objetivo, Canal, Acciones y Actualizado; se busca por nombre y se filtra por canal. Los administradores ven además la columna Revisión y las pestañas «En construcción» (agentes que se están armando y no se han publicado) y «Recursos».
+Agentes IA › Agentes. La lista muestra Nombre, Objetivo, Canal, Acciones y Actualizado (los agentes del Motor 2.0 llevan la etiqueta «2.0»); se busca por nombre y se filtra por canal. Los administradores ven además la columna Revisión y las pestañas «En construcción» (agentes que se están armando y no se han publicado) y «Recursos».
 Al abrir un agente entras a su espacio, con tres pestañas: Entrenamiento, Ficha y Versiones.
 
 ## Cómo se hace
 ### Crear un agente
 1. En Agentes IA › Agentes pulsa «Nuevo agente».
-2. Elige cómo empezar: «Con el Asistente (conversar, pegar o importar)», «Bajar de la Galería» o «Formulario en blanco».
+2. Elige cómo empezar: «Motor 2.0 (nuevo)» (la ficha con habilidades y probador, ver «Agentes a medida con Motor 2.0») o, con el Motor 1.0, «Con el Asistente (conversar, pegar o importar)», «Bajar de la Galería» o «Formulario en blanco».
 3. Con el Asistente, cuéntale qué quieres que haga el agente; él escribe el Entrenamiento y tú lo puedes editar a mano. También puedes pegar un prompt o usar «Crear desde instrucciones (.md)».
 4. Cuando el comprobador ya no marque problemas, pulsa «Crear el Agente IA» y llena nombre, objetivo y bandeja.
 

@@ -218,6 +218,26 @@ Rails.application.routes.draw do
               post :initiate
             end
           end
+          # Motor 2.0 de Agentes a medida (Plan-Motor-Agentes.md §11.11): su ficha, probador y versiones
+          resources :motor2_agents, only: [:show, :create, :update] do
+            collection do
+              get :options
+              post :test
+            end
+            member do
+              get :readiness
+              post :activate
+              get :versions
+              post :restore
+            end
+            resources :tests, only: [:index, :create, :destroy], controller: 'motor2_tests' do
+              collection do
+                post :run
+                post :correct
+                post :fix_source
+              end
+            end
+          end
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations
@@ -1274,6 +1294,7 @@ Rails.application.routes.draw do
       resource :instance_status, only: [:show]
       # Asistente (Dali) — preguntas que no supo contestar, de todas las empresas
       resources :assistant_guide_gaps, only: [:index, :update]
+      resources :motor2_reports, only: [:index, :update] # Motor 2.0: lo que el entrenador no pudo corregir
 
       resource :settings, only: [:show] do
         get :refresh, on: :collection

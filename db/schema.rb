@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_16_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_16_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1959,6 +1959,21 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_16_120000) do
     t.index ["tracking_template_id"], name: "index_motor2_tests_on_tracking_template_id"
   end
 
+  create_table "motor2_versions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "tracking_template_id", null: false
+    t.bigint "user_id"
+    t.integer "version", null: false
+    t.string "source", default: "manual", null: false
+    t.string "note"
+    t.jsonb "snapshot", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_motor2_versions_on_account_id"
+    t.index ["tracking_template_id", "version"], name: "index_motor2_versions_on_tracking_template_id_and_version", unique: true
+    t.index ["tracking_template_id"], name: "index_motor2_versions_on_tracking_template_id"
+    t.index ["user_id"], name: "index_motor2_versions_on_user_id"
+  end
+
   create_table "notes", force: :cascade do |t|
     t.text "content", null: false
     t.bigint "account_id", null: false
@@ -2910,6 +2925,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_16_120000) do
   add_foreign_key "motor2_reports", "users"
   add_foreign_key "motor2_tests", "accounts"
   add_foreign_key "motor2_tests", "tracking_templates"
+  add_foreign_key "motor2_versions", "accounts"
+  add_foreign_key "motor2_versions", "tracking_templates"
+  add_foreign_key "motor2_versions", "users"
   add_foreign_key "organization_events", "organizations", on_delete: :cascade
   add_foreign_key "organization_events", "users", on_delete: :nullify
   add_foreign_key "organizations", "accounts"

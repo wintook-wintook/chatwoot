@@ -349,6 +349,9 @@
     },
     "NEW_AGENT": {
       "BUTTON": "Nuevo agente",
+      "MOTOR2": "Motor 2.0 (nuevo): ficha con habilidades y probador",
+      "MOTOR1": "Motor 1.0",
+      "BADGE": "2.0",
       "ASSISTANT": "Con el Asistente (conversar, pegar o importar)",
       "GALLERY": "Bajar de la Galería",
       "FORM": "Formulario en blanco"

@@ -1,0 +1,223 @@
+{
+  "MOTOR2": {
+    "NEW_TITLE": "Agente nuevo",
+    "BADGE": "Motor 2.0",
+    "UNSAVED": "Cambios sin guardar",
+    "SAVE": "Guardar",
+    "CREATE": "Crear agente",
+    "READINESS": "Para atender le falta:",
+    "ACTIVATE": "Activar en su bandeja",
+    "TAB_FORM": "Ficha",
+    "TAB_TEST": "Probar",
+    "LOADING": "Cargando…",
+    "LOAD_ERROR": "No se pudo abrir el agente.",
+    "SAVED": "Guardado",
+    "SAVE_ERROR": "No se pudo guardar.",
+    "ACTIVATED": "Listo: las conversaciones nuevas de su bandeja las atiende este agente.",
+    "MISSING": {
+      "name": "Ponle nombre al agente (en Agente).",
+      "objective": "Escribe el objetivo del agente (en Agente)."
+    },
+    "NAV": {
+      "agent": "Agente",
+      "knows": "Qué sabe",
+      "skills": "Qué hace",
+      "rules": "Reglas",
+      "instructions": "Instrucciones",
+      "tests": "Pruebas",
+      "versions": "Versiones"
+    },
+    "INSTRUCTIONS": {
+      "HINT": "Escribe como le explicarías el trabajo a una persona nueva: tono, qué decir, qué no, cómo manejar los casos difíciles. Sin códigos ni rutas: el orden, los límites y las herramientas los pone el motor con las habilidades.",
+      "PLACEHOLDER": "Ej.: Atiende a papás que preguntan por las carreras. Explica primero el plan de estudios y la duración; el precio solo si lo preguntan…",
+      "VOICE": "El tono general de la empresa (también para Seguimiento IA y Agentes listos) está en",
+      "VOICE_LINK": "Cómo habla tu empresa"
+    },
+    "AGENT": {
+      "NAME": "Nombre del agente (interno)",
+      "NAME_PH": "Ej.: Becas Derecho",
+      "DISPLAY_NAME": "Nombre que ve el cliente",
+      "DISPLAY_NAME_PH": "Ej.: Sofi",
+      "OBJECTIVE": "Objetivo",
+      "OBJECTIVE_PH": "Ej.: Que el alumno agende su visita al plantel",
+      "CONTEXT": "Contexto (opcional)",
+      "CONTEXT_PH": "A quién atiende y lo que conviene saber de la campaña o del cliente",
+      "TONE": "Trato",
+      "TONE_TU": "De tú",
+      "TONE_USTED": "De usted",
+      "CHANNEL": "Canal e intentos"
+    },
+    "KNOWS": {
+      "SOURCES": "Fuentes",
+      "SOURCES_HINT": "Marca dónde busca el agente antes de dar un dato. Solo da precios, ligas y fechas que encuentre aquí.",
+      "NO_SOURCES": "La cuenta todavía no tiene fuentes (respuestas predefinidas, artículos, hojas o documentos).",
+      "BUSINESS": "Datos del negocio",
+      "BUSINESS_HINT": "Lo que no cambia: horario, dirección, teléfono, formas de pago."
+    },
+    "SKILLS": {
+      "HINT": "Prende lo que el agente debe saber hacer. Cada habilidad trae sus reglas: tú solo llenas sus datos.",
+      "ANY_TICKET": "Cualquier caso",
+      "UPLOAD_ERROR": "No se pudo subir el archivo.",
+      "DATA": {
+        "TITLE": "Preguntas y datos del cliente",
+        "LINE": "Pregunta uno a la vez y guarda lo que el cliente contesta.",
+        "LABEL": "Dato (ej.: Carrera que le interesa)",
+        "VALUES": "Valores permitidos, separados por coma (opcional)",
+        "ASK": "Preguntarlo",
+        "ADD": "Agregar dato"
+      },
+      "OFFERS": {
+        "TITLE": "Ofertas escalonadas",
+        "LINE": "Becas, descuentos o plazos: una a la vez cuando objetan el precio.",
+        "OBJECTION": "Cuenta como objeción",
+        "OBJECTION_PH": "Está caro, no me alcanza, ¿hay descuento?",
+        "STEP_PH": "La oferta tal como la puede dar (ej.: Beca de 20%: queda en $3,360 al mes)",
+        "NO_FILE": "Sin archivo",
+        "ADD": "Agregar escalón"
+      },
+      "APPOINTMENTS": {
+        "TITLE": "Citas",
+        "LINE": "Ofrece horarios libres de la agenda y agenda, mueve o cancela.",
+        "NO_CALENDARS": "Nadie de la cuenta tiene Google Calendar conectado (Agenda › Calendario).",
+        "KIND": "Tipo",
+        "KINDS": {
+          "llamada": "Llamada",
+          "videollamada": "Videollamada",
+          "visita": "Visita",
+          "oficina": "En oficina"
+        },
+        "MINUTES": "Duración (min)",
+        "LOCATION": "Lugar",
+        "WHEN": "Cuándo ofrecerla",
+        "WHEN_PH": "Ej.: cuando quiera conocer el plantel"
+      },
+      "TICKETS": {
+        "TITLE": "Casos",
+        "LINE": "Levanta un caso con su folio y dice cómo va.",
+        "TYPE": "Tipo de caso",
+        "WHEN_PH": "Cuándo levantarlo (ej.: reporta una falla)",
+        "ADD": "Agregar tipo",
+        "PRIORITY": "Prioridad",
+        "PRIORITIES": {
+          "auto": "La del tipo",
+          "low": "Baja",
+          "medium": "Media",
+          "high": "Alta",
+          "urgent": "Urgente"
+        }
+      },
+      "FILES": {
+        "TITLE": "Archivos",
+        "LINE": "Manda tus archivos cuando los pidan, con la bienvenida, en un intento, al agendar o al levantar un caso.",
+        "SAVE_FIRST": "Guarda el agente para poder subir archivos.",
+        "UPLOADING": "Subiendo…",
+        "UPLOAD": "Subir archivo"
+      },
+      "HANDOFF": {
+        "TITLE": "Pasar a una persona",
+        "LINE": "Cuándo deja la plática a alguien del equipo y a quién se la asigna.",
+        "WHEN": "Cuándo",
+        "WHEN_PH": "Ej.: pide hablar con alguien, se molesta o quiere inscribirse ya",
+        "USER": "Se asigna a",
+        "TEAM": "Equipo",
+        "NOBODY": "Nadie en particular"
+      }
+    },
+    "RULES": {
+      "KEYWORDS": "Palabras clave",
+      "KEYWORDS_HINT": "Exactas: el motor las cumple al instante, sin pasar por el modelo.",
+      "NEVER": "Nunca debe…",
+      "NEVER_PH": "Ej.: prometer fechas de inicio; hablar de otras escuelas",
+      "WELCOME": "Bienvenida",
+      "WELCOME_HINT": "Se manda una sola vez, al primer mensaje del cliente. Si además pregunta algo, también le contesta."
+    },
+    "VERSIONS": {
+      "RESTORED": "Volvió a la versión {n}.",
+      "ERROR": "No se pudo.",
+      "SAVE_FIRST": "Las versiones empiezan al guardar el agente.",
+      "LOADING": "Cargando…",
+      "CURRENT": "Actual",
+      "RESTORE": "Volver a esta",
+      "SOURCES": {
+        "create": "Creado",
+        "manual": "Guardado a mano",
+        "trainer": "Corrección del entrenador",
+        "restore": "Restaurado",
+        "convert": "Pasado a 2.0"
+      },
+      "V": "v{n}"
+    },
+    "TEST": {
+      "TITLE": "Probar (tú eres el cliente)",
+      "RESET": "Reiniciar",
+      "HINT": "Escribe como si fueras un cliente. No se guarda ni se manda nada. Con 👎 le dices al entrenador qué estuvo mal.",
+      "NO_MESSAGE": "(no mandó nada)",
+      "ERROR": "No se pudo probar.",
+      "FOUND": "Buscó en «{name}»: {n} resultado(s)",
+      "NOT_FOUND": "Buscó en «{name}»: nada",
+      "EVENTS": {
+        "dato": "Guardó {text}",
+        "contacto": "Contacto: {text}",
+        "oferta": "Oferta: {text}",
+        "cita": "Cita: {text}",
+        "caso": "Caso: {text}",
+        "archivo": "Archivo: {text}",
+        "revision": "El código revisó la respuesta ({text})",
+        "ligas_quitadas": "Se quitaron ligas que no vio: {text}"
+      },
+      "FILE": "Mandaría el archivo «{name}»",
+      "DECISIONS": {
+        "done": "Daría el objetivo por cumplido: {text}",
+        "discarded": "Lo descartaría: {text}",
+        "handoff": "Lo pasaría a una persona: {text}"
+      },
+      "UP": "Bien",
+      "DOWN": "Mal: corregir",
+      "TYPING": "Escribiendo…",
+      "PLACEHOLDER": "Escribe como cliente…",
+      "SEND": "Enviar",
+      "AGAIN": "Respuesta nueva"
+    },
+    "TRAINER": {
+      "SAVE_FIRST": "Guarda los cambios del agente antes de corregir.",
+      "ERROR": "No se pudo.",
+      "UNDONE": "Listo, se deshizo el cambio.",
+      "SOURCE_FIXED": "Fuente corregida.",
+      "EXPECTED_DEFAULT": "Que conteste como en esta plática.",
+      "TEST_SAVED": "Plática guardada como prueba.",
+      "SOURCE_SAYS": "En «{name}» dice:",
+      "SHOULD_SAY": "¿Qué debe decir?",
+      "SHARED": "ⓘ Las respuestas predefinidas también las usan tu equipo y otros agentes.",
+      "FIX_IT": "Arréglalo tú",
+      "I_FIX": "Lo corrijo yo",
+      "EXTERNAL": "Esta fuente se corrige donde vive («{name}»): desde aquí no se puede editar.",
+      "SHOULD": "Debe decir: {text}",
+      "RETRY": "Probar de nuevo",
+      "SEE_CHANGE": "Ver cambio",
+      "UNDO": "Deshacer",
+      "ANSWER": "Contestar",
+      "WHAT_WRONG": "¿Qué estuvo mal y cómo debió responder?",
+      "WHAT_WRONG_PH": "Ej.: Dio las dos becas juntas; primero solo la de 20%",
+      "CANCEL": "Cancelar",
+      "SEND": "Mandar al entrenador",
+      "TEST_NAME_PH": "Nombre de la prueba (opcional)",
+      "SAVE_TEST": "Guardar como prueba",
+      "SOURCE_FIXED_MARK": "✓ Fuente corregida."
+    },
+    "TESTS": {
+      "SAVE_FIRST": "Guarda el agente para poder guardar pruebas.",
+      "HINT": "Pláticas que deben salir bien. El entrenador las corre antes de corregir algo.",
+      "SUMMARY": "{ok} de {total} pasan.",
+      "RUN_ALL": "Correr todas",
+      "EMPTY": "Todavía no hay pruebas: guarda una plática del probador o corrige con 👎.",
+      "FROM_CORRECTION": "de una corrección",
+      "RUN": "Correr",
+      "EXPECTED": "Se espera: {text}",
+      "CUSTOMER": "Cliente",
+      "AGENT": "Agente",
+      "LAST_REPLY": "Última respuesta:",
+      "ERROR": "No se pudieron correr."
+    },
+    "WARN": "⚠ {text}"
+  }
+}
