@@ -220,6 +220,7 @@ Rails.application.routes.draw do
           end
           # Probador de agentes (Agentes IA › Probador): motor 1.0 y 2.0, entrenador, lotes y bitácora
           get 'agent_tester/agents', to: 'agent_tester#agents'
+          post 'agent_tester/agents/:template_id/testing', to: 'agent_tester#testing'
           post 'agent_tester/sessions', to: 'agent_tester#start'
           get 'agent_tester/sessions/:conversation_id', to: 'agent_tester#show'
           post 'agent_tester/sessions/:conversation_id/say', to: 'agent_tester#say'

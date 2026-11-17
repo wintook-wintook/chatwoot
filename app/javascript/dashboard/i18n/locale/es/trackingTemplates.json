@@ -347,6 +347,13 @@
       "SESSIONS": "En construcción",
       "RESOURCES": "Recursos"
     },
+    "TESTING": {
+      "BADGE": "En prueba",
+      "ON": "Quitar de prueba",
+      "OFF": "Poner en prueba",
+      "HINT": "Los agentes en prueba salen en Inicio › Probar agentes para que cualquier usuario los pruebe.",
+      "ERROR": "No se pudo cambiar."
+    },
     "NEW_AGENT": {
       "BUTTON": "Nuevo agente",
       "MOTOR2": "Motor 2.0 (beta): ficha con habilidades y probador",

@@ -4,6 +4,7 @@
 // se toca. Arriba, «¿Listo para atender?» (el del 1.0) con su botón para activarlo.
 import { useAlert } from 'dashboard/composables';
 import Motor2AgentsAPI from 'dashboard/api/motor2Agents';
+import AgentTesterAPI from 'dashboard/api/agentTester';
 import { emptyForm, fromAgent, toPayload, missingFields } from './agentForm';
 import SectionAgent from './SectionAgent.vue';
 import SectionKnows from './SectionKnows.vue';
@@ -189,6 +190,14 @@ export default {
         this.converting = false;
       }
     },
+    // «En prueba»: sale en Inicio › Probar agentes para cualquier usuario.
+    async toggleTesting() {
+      const { data } = await AgentTesterAPI.setTesting(
+        this.templateId,
+        !this.agent.testing
+      );
+      this.$set(this.agent, 'testing', data.testing);
+    },
     async backToV1() {
       // eslint-disable-next-line no-alert
       if (!window.confirm(this.t('CONVERT.BACK_CONFIRM'))) return;
@@ -228,6 +237,16 @@ export default {
       <span v-if="dirty" class="text-xs text-amber-600">{{
         t('UNSAVED')
       }}</span>
+      <woot-button
+        v-if="templateId"
+        size="small"
+        variant="smooth"
+        :color-scheme="agent && agent.testing ? 'warning' : 'secondary'"
+        :title="t('TESTING_HINT')"
+        @click="toggleTesting"
+      >
+        {{ agent && agent.testing ? t('TESTING_ON') : t('TESTING_OFF') }}
+      </woot-button>
       <woot-button
         v-if="templateId"
         size="small"

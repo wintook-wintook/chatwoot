@@ -3,9 +3,11 @@
 # Probador de agentes (Agentes IA › Probador): lotes de pruebas, sus corridas y la bitácora de
 # correcciones. Sirve a los agentes del Motor 1.0 y 2.0 (Plan-Motor-Agentes.md §11.13).
 # Las correcciones de cada 👎 van en un lote por agente y por día (tracking_template_id + day); una
-# corrida puede juntar las pruebas de varios lotes (case_ids, label).
+# corrida puede juntar las pruebas de varios lotes (case_ids, label). Un agente sale en el probador
+# solo si está «En prueba» (tracking_templates.testing).
 class CreateAgentTester < ActiveRecord::Migration[7.0]
   def change
+    add_column :tracking_templates, :testing, :boolean, default: false, null: false
     create_table :agent_test_batches do |t|
       t.references :account, null: false, foreign_key: true
       t.references :created_by, foreign_key: { to_table: :users }

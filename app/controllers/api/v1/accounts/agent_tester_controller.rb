@@ -3,7 +3,8 @@
 # Probador de agentes (Agentes IA › Probador) — probar un agente 1.0 o 2.0 como cliente, en el
 # canal de pruebas, con el motor real; con 👎 el entrenador dice si el error es del prompt, del
 # contenido, del modelo o del motor.
-# GET  /agent_tester/agents                              agentes que se pueden probar (con su motor)
+# GET  /agent_tester/agents                              agentes «En prueba» (con su motor)
+# POST /agent_tester/agents/:template_id/testing         { on } prende o apaga «En prueba» (quien cambia agentes)
 # POST /agent_tester/sessions                            { template_id } → plática nueva
 # GET  /agent_tester/sessions/:conversation_id?after=    lo que contestó el agente después de ese mensaje
 # POST /agent_tester/sessions/:conversation_id/say       { content } → mensaje del cliente
@@ -13,18 +14,27 @@
 # POST /agent_tester/apply                               { log_id } aplica la corrección de prompt (2.0)
 # POST /agent_tester/fix_source                          { canned_id, content } corrige una respuesta predefinida
 # GET  /agent_tester/logs                                bitácora de correcciones
-# Para quien puede cambiar agentes (área Agentes IA en «todo»).
+# Probar, dar 👎 y guardar pruebas: cualquier usuario de la cuenta (el probador está en Inicio).
+# Aplicar correcciones, corregir fuentes, «En prueba» y la bitácora: quien puede cambiar agentes
+# (área Agentes IA en «todo»).
 class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseController
-  before_action :require_writer
+  before_action :require_writer, only: %i[testing apply fix_source logs]
   before_action :set_conversation, only: %i[show say feedback save_case]
 
   def agents
-    list = Current.account.tracking_templates.where(archived_at: nil).order(:name)
-    render json: list.map { |t| { id: t.id, name: t.name, engine: t.engine, objective: t.objective } }
+    list = Current.account.tracking_templates.where(archived_at: nil, testing: true).order(:name)
+    render json: { agents: list.map { |t| { id: t.id, name: t.name, engine: t.engine, objective: t.objective } },
+                   can_edit: access_grant.writable?('ai_agents') }
+  end
+
+  def testing
+    template = Current.account.tracking_templates.find(params[:template_id])
+    template.update_columns(testing: ActiveModel::Type::Boolean.new.cast(params[:on]) || false, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    render json: { id: template.id, testing: template.testing }
   end
 
   def start
-    template = Current.account.tracking_templates.find(params[:template_id])
+    template = Current.account.tracking_templates.find_by!(id: params[:template_id], testing: true)
     conversation = sandbox.start(template, user: current_user)
     return render json: { error: 'No se pudo asignar el agente a la plática de prueba.' }, status: :unprocessable_entity unless conversation
 
@@ -92,8 +102,11 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
 
   def sandbox = @sandbox ||= AgentTester::Sandbox.new(Current.account)
 
+  # Cada quien sus pláticas; quien cambia agentes puede ver cualquiera (p. ej. desde la bitácora).
   def set_conversation
-    @conversation = Current.account.conversations.where(inbox_id: sandbox.inbox.id).find(params[:conversation_id])
+    scope = Current.account.conversations.where(inbox_id: sandbox.inbox.id)
+    scope = scope.where("additional_attributes ->> 'agent_tester_user_id' = ?", current_user.id.to_s) unless access_grant.writable?('ai_agents')
+    @conversation = scope.find(params[:conversation_id])
   end
 
   # El 1.0 guarda una copia del Entrenamiento en cada plática: si el agente cambió después de

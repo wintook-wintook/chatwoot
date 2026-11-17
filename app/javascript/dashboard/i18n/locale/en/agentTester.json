@@ -96,6 +96,8 @@
       }
     },
     "AUTO_SAVED": "Saved as a test in «{batch}»: run it when you change the agent.",
-    "OUTDATED": "This agent changed after the chat started: start a new chat to test the new version."
+    "OUTDATED": "This agent changed after the chat started: start a new chat to test the new version.",
+    "NO_AGENTS": "There are no agents in testing right now. Whoever manages agents puts them «In testing» in AI Agents › Agents.",
+    "ASK_ADMIN": "Tell whoever manages the agent so they fix it; it is already in the log and saved as a test."
   }
 }

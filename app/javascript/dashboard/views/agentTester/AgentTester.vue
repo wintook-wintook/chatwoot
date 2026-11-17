@@ -12,11 +12,16 @@ import TesterLog from './TesterLog.vue';
 export default {
   components: { TesterChat, TesterBatches, TesterLog },
   data() {
-    return { tab: 'chat', agents: [], batches: [], stamp: 0 };
+    return { tab: 'chat', agents: [], batches: [], stamp: 0, canEdit: false };
+  },
+  computed: {
+    // Lotes y Bitácora: para quien puede cambiar agentes; los demás solo prueban.
+    tabs() {
+      return this.canEdit ? ['chat', 'batches', 'log'] : ['chat'];
+    },
   },
   mounted() {
     this.loadAgents();
-    this.loadBatches();
   },
   methods: {
     t(key, args) {
@@ -24,7 +29,9 @@ export default {
     },
     async loadAgents() {
       const { data } = await AgentTesterAPI.agents();
-      this.agents = data;
+      this.agents = data.agents;
+      this.canEdit = data.can_edit;
+      if (this.canEdit) this.loadBatches();
     },
     async loadBatches() {
       const { data } = await AgentTestBatchesApi.get();
@@ -50,7 +57,7 @@ export default {
       class="flex gap-1 mb-4 border-b border-slate-100 dark:border-slate-700"
     >
       <button
-        v-for="key in ['chat', 'batches', 'log']"
+        v-for="key in tabs"
         :key="key"
         type="button"
         class="px-3 py-2 -mb-px text-sm bg-transparent rounded-none !border-x-0 !border-t-0 border-b-2"
@@ -64,7 +71,12 @@ export default {
         {{ t(`TABS.${key}`) }}
       </button>
     </nav>
-    <TesterChat v-if="tab === 'chat'" :agents="agents" @saved="loadBatches" />
+    <TesterChat
+      v-if="tab === 'chat'"
+      :agents="agents"
+      :can-edit="canEdit"
+      @saved="loadBatches"
+    />
     <TesterBatches
       v-else-if="tab === 'batches'"
       :agents="agents"

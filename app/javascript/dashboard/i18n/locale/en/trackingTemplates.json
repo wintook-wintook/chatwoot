@@ -347,6 +347,13 @@
       "SESSIONS": "In progress",
       "RESOURCES": "Resources"
     },
+    "TESTING": {
+      "BADGE": "Testing",
+      "ON": "Stop testing",
+      "OFF": "Put in testing",
+      "HINT": "Agents in testing show in Home › Test agents so any user can test them.",
+      "ERROR": "Could not change it."
+    },
     "NEW_AGENT": {
       "BUTTON": "New agent",
       "MOTOR2": "Engine 2.0 (beta): skills and tester",

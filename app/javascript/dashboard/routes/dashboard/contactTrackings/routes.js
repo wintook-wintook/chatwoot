@@ -53,7 +53,7 @@ export const routes = [
     // probar uno 1.0 o 2.0 como cliente, con lotes y bitácora.
     path: frontendURL('accounts/:accountId/tracking-dashboard/tester'),
     name: 'agent_tester',
-    meta: { permissions: AGENTS_PERMISSIONS },
+    meta: { permissions: AGENTS_PERMISSIONS }, // en Inicio: cualquier usuario
     component: () => import('../../../views/agentTester/AgentTester.vue'),
   },
   {

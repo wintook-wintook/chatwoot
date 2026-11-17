@@ -243,6 +243,9 @@
       "SEND": "Mandar al entrenador",
       "OPEN_AGENT": "Abrir el agente",
       "ERROR": "No se pudo."
-    }
+    },
+    "TESTING_ON": "En prueba ✓",
+    "TESTING_OFF": "Poner en prueba",
+    "TESTING_HINT": "Los agentes en prueba salen en Inicio › Probar agentes para que cualquier usuario los pruebe."
   }
 }

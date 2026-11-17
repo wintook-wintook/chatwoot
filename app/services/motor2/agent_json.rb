@@ -3,7 +3,7 @@
 # Motor 2.0 — la ficha 2.0 como la ve la pantalla (y como se guarda en una versión).
 module Motor2::AgentJson
   COLUMNS = %w[id name customer_display_name objective ai_context inbox_id email_signature retry_interval_value
-               retry_interval_unit calendar_event_duration timezone engine].freeze
+               retry_interval_unit calendar_event_duration timezone engine testing].freeze
 
   module_function
 
@@ -22,6 +22,6 @@ module Motor2::AgentJson
 
   # Lo editable (lo que restaura una versión).
   def snapshot(template)
-    call(template).except('id', 'engine', 'attachments', 'inbox_name', 'updated_at')
+    call(template).except('id', 'engine', 'testing', 'attachments', 'inbox_name', 'updated_at')
   end
 end

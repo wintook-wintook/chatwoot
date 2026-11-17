@@ -8,7 +8,9 @@ RSpec.describe 'Agent Tester API' do
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:agent_user) { create(:user, account: account, role: :agent) }
   let(:api) { "/api/v1/accounts/#{account.id}" }
-  let(:template) { create(:tracking_template, account: account, engine: '2', motor2: { 'instructions' => 'Atiendes alumnos.' }) }
+  let(:template) do
+    create(:tracking_template, account: account, engine: '2', testing: true, motor2: { 'instructions' => 'Atiendes alumnos.' })
+  end
 
   it 'abre una plática, el cliente escribe y se leen las respuestas' do
     post "#{api}/agent_tester/sessions", params: { template_id: template.id }, headers: admin.create_new_auth_token, as: :json
@@ -53,7 +55,7 @@ RSpec.describe 'Agent Tester API' do
   end
 
   it 'avisa si el agente 1.0 cambió después de abrir la plática' do
-    old = create(:tracking_template, account: account, complementary_prompt: 'Versión 1')
+    old = create(:tracking_template, account: account, testing: true, complementary_prompt: 'Versión 1')
     post "#{api}/agent_tester/sessions", params: { template_id: old.id }, headers: admin.create_new_auth_token, as: :json
     conversation_id = response.parsed_body['conversation_id']
     old.update!(complementary_prompt: 'Versión 2')
@@ -72,8 +74,44 @@ RSpec.describe 'Agent Tester API' do
     expect(AgentTestCase.last).to have_attributes(messages: ['¿Cuánto cuesta?'], expected: 'Da el precio', origin: 'manual')
   end
 
-  it 'quien no puede cambiar agentes no entra' do
-    get "#{api}/agent_tester/agents", headers: agent_user.create_new_auth_token
-    expect(response).to have_http_status(:forbidden).or have_http_status(:unauthorized)
+  it 'el combo trae solo los agentes «En prueba»; quien cambia agentes los prende y apaga' do
+    template
+    other = create(:tracking_template, account: account, name: 'Sin probar')
+    get "#{api}/agent_tester/agents", headers: admin.create_new_auth_token
+    expect(response.parsed_body['agents'].pluck('id')).to eq([template.id])
+    expect(response.parsed_body['can_edit']).to be(true)
+
+    post "#{api}/agent_tester/agents/#{other.id}/testing", params: { on: true }, headers: admin.create_new_auth_token, as: :json
+    expect(other.reload.testing).to be(true)
+  end
+
+  it 'un agente que no está en prueba no se puede probar' do
+    other = create(:tracking_template, account: account)
+    post "#{api}/agent_tester/sessions", params: { template_id: other.id }, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:not_found)
+  end
+
+  context 'with un usuario que no cambia agentes' do
+    it 'prueba y guarda pruebas, pero no aplica correcciones, no ve la bitácora ni prende «En prueba»' do
+      post "#{api}/agent_tester/sessions", params: { template_id: template.id }, headers: agent_user.create_new_auth_token, as: :json
+      conversation_id = response.parsed_body['conversation_id']
+      post "#{api}/agent_tester/sessions/#{conversation_id}/say", params: { content: 'Hola' }, headers: agent_user.create_new_auth_token,
+                                                                  as: :json
+      expect(response).to have_http_status(:ok)
+      get "#{api}/agent_tester/agents", headers: agent_user.create_new_auth_token
+      expect(response.parsed_body['can_edit']).to be(false)
+
+      [[:get, 'agent_tester/logs'], [:post, 'agent_tester/apply'], [:post, "agent_tester/agents/#{template.id}/testing"],
+       [:get, 'agent_test_batches']].each do |verb, path|
+        send(verb, "#{api}/#{path}", headers: agent_user.create_new_auth_token, as: :json)
+        expect(response).to have_http_status(:forbidden).or have_http_status(:unauthorized)
+      end
+    end
+
+    it 'no ve las pláticas de prueba de otros' do
+      post "#{api}/agent_tester/sessions", params: { template_id: template.id }, headers: admin.create_new_auth_token, as: :json
+      get "#{api}/agent_tester/sessions/#{response.parsed_body['conversation_id']}", headers: agent_user.create_new_auth_token
+      expect(response).to have_http_status(:not_found)
+    end
   end
 end

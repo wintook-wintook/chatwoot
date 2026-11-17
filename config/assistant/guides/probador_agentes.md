@@ -1,15 +1,17 @@
 ---
 key: probador_agentes
-title: Probador de agentes
+title: Probar agentes (probador)
 areas: [ai_agents]
-keywords: [probador, probar agente, probar mi agente, prueba del agente, contesta mal, error del agente, por que contesto, pulgar abajo, corregir respuesta, lote de pruebas, lotes, correr pruebas, bitacora, error del prompt, error del contenido, error del modelo, error del motor, reporte, canal de pruebas, motor 1.0, motor 2.0]
+keywords: [probar agentes, en prueba, poner en prueba, modo prueba, probador, probar agente, probar mi agente, prueba del agente, contesta mal, error del agente, por que contesto, pulgar abajo, corregir respuesta, lote de pruebas, lotes, correr pruebas, bitacora, error del prompt, error del contenido, error del modelo, error del motor, reporte, canal de pruebas, motor 1.0, motor 2.0]
 pages: [ai_agents, trackings]
 ---
 ## Para qué sirve
 Para probar cualquier agente a medida (Motor 1.0 o 2.0) como si fueras el cliente, sin usar WhatsApp. Contesta el motor de verdad, igual que con un cliente, pero en un canal de pruebas: no sale nada a ningún lado. Cuando una respuesta está mal, te dice de quién es el error y qué hacer.
 
 ## Dónde está
-Agentes IA › Probador de agentes (abajo de Macros). Tiene tres pestañas: Probar, Lotes de pruebas y Bitácora.
+Inicio › Probar agentes: lo ve cualquier usuario. Solo salen los agentes que están «En prueba»; si no hay ninguno, dice «No hay agentes en prueba por ahora».
+Quien puede cambiar agentes pone un agente en prueba en Agentes IA › Agentes, con el botón «Poner en prueba» de su renglón (sirve para agentes 1.0 y 2.0; en un 2.0 también está arriba en su ficha). Los agentes en prueba llevan la etiqueta «En prueba».
+Quien puede cambiar agentes ve además las pestañas Lotes de pruebas y Bitácora.
 
 ## Cómo se hace
 ### Probar un agente
@@ -46,4 +48,4 @@ Agentes IA › Probador de agentes (abajo de Macros). Tiene tres pestañas: Prob
 - El agente dejó de contestar en la plática: alguna palabra clave o «no me escriban» terminó el seguimiento; empieza una plática nueva.
 
 ## Quién puede
-Quien puede crear o cambiar agentes (área Agentes IA en «todo»).
+Probar, dar 👎 y guardar pruebas: cualquier usuario (cada quien ve sus propias pláticas). Aplicar una corrección, corregir una respuesta predefinida, poner agentes «En prueba», los lotes y la bitácora: quien puede crear o cambiar agentes (área Agentes IA en «todo»). A los demás el probador les dice «Avísale a quien administra el agente»; su 👎 ya quedó en la bitácora y como prueba.

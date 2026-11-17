@@ -96,6 +96,8 @@
       }
     },
     "AUTO_SAVED": "Quedó como prueba en «{batch}»: córrelo cuando cambies el agente.",
-    "OUTDATED": "Este agente cambió después de abrir la plática: empieza una plática nueva para probar la versión nueva."
+    "OUTDATED": "Este agente cambió después de abrir la plática: empieza una plática nueva para probar la versión nueva.",
+    "NO_AGENTS": "No hay agentes en prueba por ahora. Quien administra los agentes los pone «En prueba» en Agentes IA › Agentes.",
+    "ASK_ADMIN": "Avísale a quien administra el agente para que lo corrija; ya quedó en la bitácora y como prueba."
   }
 }

@@ -12,6 +12,11 @@ class AgentTesterAPI extends ApiClient {
     return axios.get(`${this.url}/agents`);
   }
 
+  // «En prueba»: el agente sale en el probador.
+  setTesting(templateId, on) {
+    return axios.post(`${this.url}/agents/${templateId}/testing`, { on });
+  }
+
   start(templateId) {
     return axios.post(`${this.url}/sessions`, { template_id: templateId });
   }

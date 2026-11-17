@@ -2703,6 +2703,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_17_120000) do
     t.jsonb "resources", default: {}, null: false
     t.string "engine", default: "1", null: false
     t.jsonb "motor2", default: {}, null: false
+    t.boolean "testing", default: false, null: false
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["archived_at"], name: "index_tracking_templates_on_archived_at"

@@ -25,7 +25,7 @@ class AgentTester::Sandbox
     contact = @account.contacts.create!(name: "Probador · #{user&.name || 'prueba'} · #{template.name}".first(100))
     contact_inbox = ContactInbox.create!(contact: contact, inbox: inbox, source_id: SecureRandom.uuid)
     conversation = Conversation.create!(account: @account, inbox: inbox, contact: contact, contact_inbox: contact_inbox,
-                                        status: :open, additional_attributes: { 'agent_tester' => true })
+                                        status: :open, additional_attributes: { 'agent_tester' => true, 'agent_tester_user_id' => user&.id })
     same_model_as(template)
     ActionService.new(conversation).assign_tracking_template([template.id], inbox_id: inbox.id)
     tracking = tracking_for(conversation)

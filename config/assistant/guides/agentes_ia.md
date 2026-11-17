@@ -25,7 +25,7 @@ Al abrir un agente entras a su espacio, con tres pestañas: Entrenamiento, Ficha
 3. «Analizar» revisa el texto contra las reglas del motor, «Optimizar» propone una versión más corta y «Explicar selección» te dice qué hace un fragmento.
 
 ### Probar como cliente, sin WhatsApp
-En Agentes IA › Probador de agentes pruebas cualquier agente (1.0 o 2.0) como cliente; con 👎 te dice si el error es del prompt, del contenido, del modelo o del motor. Ver la guía «Probador de agentes».
+Pon el agente «En prueba» (botón «Poner en prueba» en su renglón de la lista) y cualquier usuario lo prueba como cliente en Inicio › Probar agentes; con 👎 se sabe si el error es del prompt, del contenido, del modelo o del motor. Ver la guía «Probar agentes (probador)».
 
 ### Publicar cambios y volver atrás
 1. Edita en la pestaña Entrenamiento y pulsa «Publicar cambios». Queda guardado como una versión nueva.

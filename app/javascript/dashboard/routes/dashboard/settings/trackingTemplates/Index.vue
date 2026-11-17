@@ -25,6 +25,8 @@ import PublishPromptModal from './PublishPromptModal.vue'; // proyecto@publicar_
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import AssistantAPI from 'dashboard/api/assistant';
+import AgentTesterAPI from 'dashboard/api/agentTester'; // Probador: «En prueba»
+import { getUserAccess, areaLevel } from 'dashboard/helper/accessHelper';
 import {
   sortRows,
   nextOrder,
@@ -100,6 +102,12 @@ export default {
     }),
     isAdmin() {
       return this.currentRole === 'administrator';
+    },
+    // Probador de agentes: prender «En prueba» es de quien puede cambiar agentes.
+    canEditAgents() {
+      const params = (this.$route && this.$route.params) || {};
+      const access = getUserAccess(this.currentUser, params.accountId);
+      return areaLevel(access, 'ai_agents') === 'all';
     },
     listTabs() {
       return [
@@ -210,6 +218,18 @@ export default {
     if (this.isAdmin) this.fetchAudit();
   },
   methods: {
+    // «En prueba»: el agente (1.0 o 2.0) sale en Inicio › Probar agentes para cualquier usuario.
+    async toggleTesting(template) {
+      try {
+        const { data } = await AgentTesterAPI.setTesting(
+          template.id,
+          !template.testing
+        );
+        this.$set(template, 'testing', data.testing);
+      } catch (e) {
+        useAlert(this.$t('TRACKING_TEMPLATES.TESTING.ERROR'));
+      }
+    },
     // proyecto@adaptar_prompts_publicados (D7) — ?edit=<id> abre la ficha de ese agente:
     // es a donde lleva «Configurar» del Asistente para la bandeja y el calendario.
     // feat/agentes_ia_unificado: también ?template_id (lo que mandaban el Asistente y
@@ -806,6 +826,14 @@ export default {
                   >
                     <td class="py-4 pr-4 font-medium">
                       {{ template.name }}
+                      <!-- Probador de agentes -->
+                      <woot-label
+                        v-if="template.testing"
+                        small
+                        :title="$t('TRACKING_TEMPLATES.TESTING.BADGE')"
+                        color-scheme="warning"
+                        class="!mb-0 ltr:ml-2 rtl:mr-2"
+                      />
                       <!-- Motor 2.0 -->
                       <woot-label
                         v-if="template.engine === '2'"
@@ -864,6 +892,23 @@ export default {
                     <td class="py-4 pr-4">
                       <!-- Abrir o editar = clic en la fila: aquí solo lo que no es abrir. -->
                       <div class="flex items-center gap-2" @click.stop>
+                        <!-- Probador de agentes: prender o apagar «En prueba» -->
+                        <woot-button
+                          v-if="canEditAgents"
+                          v-tooltip.top="$t('TRACKING_TEMPLATES.TESTING.HINT')"
+                          variant="smooth"
+                          size="small"
+                          :color-scheme="
+                            template.testing ? 'warning' : 'secondary'
+                          "
+                          @click="toggleTesting(template)"
+                        >
+                          {{
+                            template.testing
+                              ? $t('TRACKING_TEMPLATES.TESTING.ON')
+                              : $t('TRACKING_TEMPLATES.TESTING.OFF')
+                          }}
+                        </woot-button>
                         <!-- proyecto@publicar_prompts — solo el usuario autorizado -->
                         <woot-button
                           v-if="canPublishPrompts"

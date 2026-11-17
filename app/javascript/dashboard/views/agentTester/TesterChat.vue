@@ -20,6 +20,8 @@ const ICONS = {
 export default {
   props: {
     agents: { type: Array, default: () => [] },
+    // Aplicar correcciones y corregir fuentes: solo quien puede cambiar agentes.
+    canEdit: { type: Boolean, default: false },
   },
   emits: ['saved'],
   data() {
@@ -253,7 +255,10 @@ export default {
         ref="chatBox"
         class="flex-1 min-h-[360px] p-3 space-y-2 overflow-y-auto"
       >
-        <p v-if="!session" class="m-0 text-sm text-slate-500">
+        <p v-if="!agents.length" class="m-0 text-sm text-slate-500">
+          {{ t('NO_AGENTS') }}
+        </p>
+        <p v-else-if="!session" class="m-0 text-sm text-slate-500">
           {{ t('HINT') }}
         </p>
         <p v-else-if="!chat.length" class="m-0 text-sm text-slate-500">
@@ -319,6 +324,15 @@ export default {
               </span>
             </template>
             <template v-if="m.role === 'trainer'">
+              <span
+                v-if="
+                  !canEdit &&
+                  (m.info.kind === 'prompt' || m.info.kind === 'content')
+                "
+                class="block mt-1 text-xs text-slate-500"
+              >
+                {{ t('ASK_ADMIN') }}
+              </span>
               <span v-if="m.info.kind === 'prompt'" class="block mt-1 text-xs">
                 <span
                   class="block p-2 mt-1 rounded bg-white/70 dark:bg-slate-800"
@@ -326,7 +340,7 @@ export default {
                 >
                 <span class="flex flex-wrap gap-2 mt-1">
                   <woot-button
-                    v-if="m.info.engine === '2' && !m.info.applied"
+                    v-if="canEdit && m.info.engine === '2' && !m.info.applied"
                     size="tiny"
                     @click="apply(m)"
                   >
@@ -341,6 +355,7 @@ export default {
                     {{ t('COPY') }}
                   </woot-button>
                   <woot-button
+                    v-if="canEdit"
                     size="tiny"
                     variant="smooth"
                     @click="openTraining"
@@ -358,7 +373,7 @@ export default {
                   class="block p-2 mt-1 rounded bg-white/70 dark:bg-slate-800"
                   >{{ m.info.found }}</span
                 >
-                <template v-if="m.info.can_fix && !m.info.fixed">
+                <template v-if="canEdit && m.info.can_fix && !m.info.fixed">
                   <span class="block mt-1">{{ t('SHOULD_SAY') }}</span>
                   <textarea
                     class="!mb-1 text-xs"

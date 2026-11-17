@@ -243,6 +243,9 @@
       "SEND": "Send to the trainer",
       "OPEN_AGENT": "Open the agent",
       "ERROR": "Could not."
-    }
+    },
+    "TESTING_ON": "In testing ✓",
+    "TESTING_OFF": "Put in testing",
+    "TESTING_HINT": "Agents in testing show in Home › Test agents so any user can test them."
   }
 }

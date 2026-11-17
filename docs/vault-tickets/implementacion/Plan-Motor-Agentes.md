@@ -714,3 +714,13 @@ repo.
 **Probado en desarrollo con el modelo real:**
 - un agente 1.0 contestó en el canal de pruebas, con su traza;
 - el entrenador clasificó bien un error de prompt (con la indicación nueva redactada) y uno de motor.
+
+**Ajuste 2026-11-17 (decisión del usuario):**
+- **Dónde está:** el probador vive en el menú **Inicio › Probar agentes**, para cualquier usuario.
+- **Agentes «En prueba»:** el combo solo trae agentes «En prueba» (`tracking_templates.testing`).
+  - Se prenden en la lista de agentes, en el renglón de cada uno; sirve para 1.0 y 2.0 sin tocar la ficha del 1.0.
+  - En el 2.0 también se prenden desde su ficha.
+  - Solo los prende quien puede cambiar agentes.
+- **Lo que hace cualquier usuario:** probar, dar 👎 y guardar pruebas. Solo ve sus propias pláticas.
+- **Solo quien cambia agentes:** «Aplicar», «Corregirla» (respuestas predefinidas), lotes y bitácora.
+- **Menú «Nuevo agente»:** dice «Motor 2.0 (beta)» y va al final.
