@@ -44,6 +44,22 @@ export default {
     </div>
     <div>
       <h4 class="m2-subtitle">{{ t('KNOWS.BUSINESS') }}</h4>
+      <p class="m2-hint">
+        {{ t('KNOWS.BUSINESS_SHARED') }}
+        <router-link :to="{ name: 'ai_voice' }" class="text-woot-600">
+          {{ t('KNOWS.BUSINESS_EDIT') }}
+        </router-link>
+      </p>
+      <ul
+        v-if="(options.business || []).length"
+        class="p-2 mb-3 text-xs list-none rounded bg-slate-50 dark:bg-slate-800"
+      >
+        <li v-for="(line, i) in options.business" :key="i">{{ line }}</li>
+      </ul>
+      <p v-else class="m2-hint text-amber-700">
+        {{ t('KNOWS.BUSINESS_EMPTY') }}
+      </p>
+      <h4 class="m2-subtitle">{{ t('KNOWS.BUSINESS_OWN') }}</h4>
       <p class="m2-hint">{{ t('KNOWS.BUSINESS_HINT') }}</p>
       <FichaBusiness
         :value="m2.business"

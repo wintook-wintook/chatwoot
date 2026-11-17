@@ -20,6 +20,12 @@ RSpec.describe Motor2::Runner do
     expect(runner.call.reply).to eq('La inscripción es de $1,500.')
   end
 
+  it 'los datos del negocio de la empresa también cuentan como vistos' do
+    AgentBase::BusinessData.update!(account, 'rows' => [{ 'label' => 'Colegiatura', 'value' => '$4,200 al mes' }])
+    allow(runner).to receive(:complete).and_return(answer('La colegiatura es de $4,200.'))
+    expect(runner.call.reply).to eq('La colegiatura es de $4,200.')
+  end
+
   it 'un monto que no vio en ningún lado se reescribe' do
     allow(runner).to receive(:complete).and_return(answer('La colegiatura es de $4,200.'), answer('Déjame confirmarlo con el equipo.'))
     result = runner.call

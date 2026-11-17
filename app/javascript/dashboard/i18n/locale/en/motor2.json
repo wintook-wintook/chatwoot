@@ -52,9 +52,13 @@
       "SOURCES_HINT": "Also select where else the agent looks before giving a fact. It only gives prices, links and dates found in its sources or business data.",
       "NO_SOURCES": "The account has no other sources (articles, sheets, docs, forum): add them in AI Agents › Knowledge Base.",
       "BUSINESS": "Business data",
-      "BUSINESS_HINT": "What doesn't change: hours, address, phone, payment methods.",
+      "BUSINESS_HINT": "What only applies to this agent. It wins over the company's data.",
       "CANNED_ALWAYS": "The agent always checks your canned responses: no need to select them.",
-      "CANNED_WARN": "Note: {text}"
+      "CANNED_WARN": "Note: {text}",
+      "BUSINESS_SHARED": "Your company's data is used by all your agents:",
+      "BUSINESS_EDIT": "edit in How your company talks",
+      "BUSINESS_EMPTY": "Your company has no business data yet: fill it in How your company talks.",
+      "BUSINESS_OWN": "Only for this agent (optional)"
     },
     "SKILLS": {
       "HINT": "Turn on what the agent must be able to do. Each skill brings its own rules: you only fill its data.",

@@ -52,9 +52,13 @@
       "SOURCES_HINT": "Marca además dónde más busca el agente antes de dar un dato. Solo da precios, ligas y fechas que encuentre en sus fuentes o en sus datos del negocio.",
       "NO_SOURCES": "La cuenta no tiene otras fuentes (artículos, hojas, documentos, foro): se agregan en Agentes IA › Base de Conocimiento.",
       "BUSINESS": "Datos del negocio",
-      "BUSINESS_HINT": "Lo que no cambia: horario, dirección, teléfono, formas de pago.",
+      "BUSINESS_HINT": "Lo que solo aplica a este agente (por ejemplo, el precio de la carrera que atiende). Manda sobre lo de la empresa.",
       "CANNED_ALWAYS": "Tus respuestas predefinidas el agente las consulta siempre: no hace falta marcarlas.",
-      "CANNED_WARN": "Ojo: {text}"
+      "CANNED_WARN": "Ojo: {text}",
+      "BUSINESS_SHARED": "Los de tu empresa los toman todos tus agentes:",
+      "BUSINESS_EDIT": "editar en Cómo habla tu empresa",
+      "BUSINESS_EMPTY": "Tu empresa todavía no tiene datos del negocio: llénalos en Cómo habla tu empresa.",
+      "BUSINESS_OWN": "Solo de este agente (opcional)"
     },
     "SKILLS": {
       "HINT": "Prende lo que el agente debe saber hacer. Cada habilidad trae sus reglas: tú solo llenas sus datos.",

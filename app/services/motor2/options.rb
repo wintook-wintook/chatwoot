@@ -15,7 +15,7 @@ class Motor2::Options
   def call
     cards = catalog.call
     { sources: cards.select { |c| SOURCE_KINDS.include?(c[:kind]) }, calendars: cards.select { |c| c[:kind] == 'calendar' },
-      **people, case_types: case_types,
+      **people, case_types: case_types, business: AgentBase::BusinessData.lines(@account),
       inboxes: @account.inboxes.order(:name).map { |i| { id: i.id, name: i.name, channel_type: i.channel_type } } }
   end
 
@@ -29,7 +29,8 @@ class Motor2::Options
   end
 
   def self.business_text(template)
-    Array(template.motor2.to_h['business']).map { |r| r.to_h.values.join(': ') }.join("\n")
+    own = Array(template.motor2.to_h['business']).map { |r| r.to_h.values.join(': ') }
+    (AgentBase::BusinessData.lines(template.account) + own).join("\n")
   end
 
   private

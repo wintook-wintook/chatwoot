@@ -371,6 +371,18 @@
       "LOAD_ERROR": "No se pudieron cargar las plantillas.",
       "NEED_FIELDS": "Escribe el nombre y qué quieres lograr."
     },
+    "BUSINESS": {
+      "TITLE": "Datos del negocio",
+      "HINT": "Lo fijo de tu empresa, para todos tus agentes (Agentes listos, Seguimiento IA y Motor 2.0). Lo que un agente tenga propio manda sobre esto.",
+      "ROWS": "Otros datos fijos (horario, dirección, teléfono, formas de pago…)",
+      "FIXED": {
+        "WHAT": "Qué vendes",
+        "WHO": "A quién le vendes (cliente ideal)",
+        "COVERAGE": "Dónde das servicio",
+        "WHY": "Por qué elegirlos",
+        "PRACTICAL": "Precios desde, formas de pago y tiempos"
+      }
+    },
     "TITLE": "Cómo habla tu empresa",
     "SUBTITLE": "Lo general que toman el Seguimiento IA y todos los Agentes listos. Lo particular de cada agente o seguimiento manda sobre esto. Lo que dejes vacío no se usa.",
     "LOADING": "Cargando…",

@@ -3,11 +3,14 @@
   (no los Agentes a medida, que son otro motor). Lo particular de cada agente o seguimiento
   manda sobre esto. «Probar» arma un mensaje de ejemplo con lo del formulario, sin guardar.
   Pestaña «Plantillas de seguimiento» (?tab=plantillas): el catálogo del Seguimiento IA.
+  Datos del negocio (2026-11-17): de la cuenta, para todos los agentes (Agentes listos,
+  Seguimiento IA y Motor 2.0): los de «Tu negocio» y renglones libres (FichaBusiness).
 -->
 <script>
 import { useAlert } from 'dashboard/composables';
 import AiVoiceAPI from 'dashboard/api/aiVoice';
 import FollowUpPresets from './FollowUpPresets.vue';
+import FichaBusiness from '../contactTrackings/ficha/FichaBusiness.vue';
 
 const T = 'AI_VOICE';
 export const VOICE_FIELDS = [
@@ -20,14 +23,20 @@ export const VOICE_FIELDS = [
   'words',
 ];
 const LONG = ['roles', 'never', 'words'];
+export const BUSINESS_FIXED = ['what', 'who', 'coverage', 'why', 'practical'];
 
 export default {
   name: 'CompanyVoice',
-  components: { FollowUpPresets },
+  components: { FollowUpPresets, FichaBusiness },
   data() {
     return {
       tab: this.$route?.query?.tab === 'plantillas' ? 'presets' : 'voice',
       voice: Object.fromEntries(VOICE_FIELDS.map(k => [k, ''])),
+      business: {
+        fixed: Object.fromEntries(BUSINESS_FIXED.map(k => [k, ''])),
+        rows: [],
+      },
+      businessFixed: BUSINESS_FIXED,
       loading: true,
       saving: false,
       testing: false,
@@ -63,6 +72,7 @@ export default {
       try {
         const { data } = await AiVoiceAPI.get();
         this.voice = { ...this.voice, ...data.voice };
+        this.applyBusiness(data.business);
       } catch (e) {
         useAlert(this.t('LOAD_ERROR'));
       } finally {
@@ -72,14 +82,22 @@ export default {
     async save() {
       this.saving = true;
       try {
-        const { data } = await AiVoiceAPI.update(this.voice);
+        const { data } = await AiVoiceAPI.update(this.voice, this.business);
         this.voice = { ...this.voice, ...data.voice };
+        this.applyBusiness(data.business);
         useAlert(this.t('SAVED'));
       } catch (e) {
         useAlert(this.t('SAVE_ERROR'));
       } finally {
         this.saving = false;
       }
+    },
+    applyBusiness(business) {
+      if (!business) return;
+      this.business = {
+        fixed: { ...this.business.fixed, ...(business.fixed || {}) },
+        rows: business.rows || [],
+      };
     },
     async test() {
       this.testing = true;
@@ -156,6 +174,41 @@ export default {
             :placeholder="t(`FIELDS.${f.key.toUpperCase()}.PLACEHOLDER`)"
           />
         </label>
+        <section
+          class="flex flex-col gap-3 pt-4 border-t border-slate-100 dark:border-slate-700"
+          data-test="voice-business"
+        >
+          <h2
+            class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
+          >
+            {{ t('BUSINESS.TITLE') }}
+          </h2>
+          <p class="m-0 text-sm text-slate-500 dark:text-slate-400">
+            {{ t('BUSINESS.HINT') }}
+          </p>
+          <label
+            v-for="key in businessFixed"
+            :key="key"
+            class="flex flex-col gap-1"
+          >
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
+              {{ t(`BUSINESS.FIXED.${key.toUpperCase()}`) }}
+            </span>
+            <input
+              v-model="business.fixed[key]"
+              type="text"
+              maxlength="600"
+              class="!mb-0 text-sm"
+              :data-test="`business-${key}`"
+            />
+          </label>
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+            {{ t('BUSINESS.ROWS') }}
+          </span>
+          <FichaBusiness v-model="business.rows" />
+        </section>
         <div>
           <woot-button
             type="submit"

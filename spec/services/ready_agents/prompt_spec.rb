@@ -18,6 +18,17 @@ RSpec.describe ReadyAgents::Prompt do
     expect(system).not_to include('EL NEGOCIO', 'OBJECIONES FRECUENTES (', 'DATOS OBLIGATORIOS')
   end
 
+  it 'trae los datos del negocio de la empresa (compartidos con todos los agentes)' do
+    AgentBase::BusinessData.update!(account, 'fixed' => { 'what' => 'Paneles solares' }, 'rows' => [{ 'label' => 'Teléfono', 'value' => '55 1234' }])
+    expect(system).to include('DATOS DEL NEGOCIO (de la empresa', '- Qué vende: Paneles solares', '- Teléfono: 55 1234')
+  end
+
+  it 'lo que el agente ya trae en «Tu negocio» no se repite del bloque de la empresa' do
+    AgentBase::BusinessData.update!(account, 'fixed' => { 'what' => 'Paneles solares' }, 'rows' => [{ 'label' => 'Teléfono', 'value' => '55 1234' }])
+    agent.update!(settings: { 'business_what' => 'Paneles solares' })
+    expect(system.scan('Paneles solares').size).to eq(1)
+  end
+
   it 'con horario de atención en la bandeja, lo trae (para «¿abren el domingo?»)' do
     inbox.update!(working_hours_enabled: true, timezone: 'America/Mexico_City')
     inbox.working_hours.find_by(day_of_week: 0).update!(closed_all_day: true)

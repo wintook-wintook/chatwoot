@@ -64,8 +64,8 @@ class Motor2::Prompt
   end
 
   def company
-    parts = [AgentBase::CompanyVoice.block(@account).presence]
-    parts << "DATOS DEL NEGOCIO:\n#{@config.business.map { |r| "- #{r['label']}: #{r['value']}" }.join("\n")}" if @config.business.any?
+    parts = [AgentBase::CompanyVoice.block(@account).presence, AgentBase::BusinessData.block(@account).presence]
+    parts << "DATOS DE ESTE AGENTE:\n#{@config.business.map { |r| "- #{r['label']}: #{r['value']}" }.join("\n")}" if @config.business.any?
     parts << "NUNCA:\n#{@config.never}" if @config.never.present?
     parts << "INSTRUCCIONES DE LA EMPRESA (si contradicen lo anterior, gana esto):\n#{@config.instructions}" if @config.instructions.present?
     parts.compact.join("\n\n")

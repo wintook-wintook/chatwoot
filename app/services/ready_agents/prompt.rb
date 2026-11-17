@@ -30,6 +30,8 @@ class ReadyAgents::Prompt
 
       #{AgentBase::CompanyVoice.block(@account)}
 
+      #{AgentBase::BusinessData.block(@account, skip: BUSINESS.keys.map { |k| @agent.setting(k).to_s })}
+
       #{business_block}
       #{hours_block}
       #{company_block}
