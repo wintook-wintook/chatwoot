@@ -35,6 +35,13 @@ class AgentTesterAPI extends ApiClient {
     });
   }
 
+  // La plática como prueba: va sola al lote del agente y del día.
+  saveCase(conversationId, expected) {
+    return axios.post(`${this.url}/sessions/${conversationId}/save_case`, {
+      expected,
+    });
+  }
+
   apply(logId) {
     return axios.post(`${this.url}/apply`, { log_id: logId });
   }

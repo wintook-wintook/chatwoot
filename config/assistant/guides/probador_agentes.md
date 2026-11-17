@@ -26,13 +26,13 @@ Agentes IA › Probador de agentes (abajo de Macros). Tiene tres pestañas: Prob
    - 🧠 Modelo: la indicación y el dato estaban y el modelo no los siguió. Te dice dónde subir el modelo.
    - 🔧 Motor: algo que el motor no hace o no cumplió. No lo puedes corregir tú: queda registrado y el equipo de Kontrolya lo revisa.
 3. Si no está seguro, te hace una pregunta: pulsa «Contestar».
-4. No tienes que guardar nada: cada 👎 revisado queda solo como prueba en el lote del agente y del día («Correcciones · <agente> · 17 nov»), con lo que escribiste en el 👎 como lo esperado. Ahí caen los de todos los usuarios ese día. Cuando Kontrolya corrige un error del motor, el lote de ese día se vuelve a correr solo.
+4. No tienes que guardar nada: cada 👎 revisado queda solo como prueba en el lote del agente y del día («Pruebas · <agente> · 17 nov»), con lo que escribiste en el 👎 como lo esperado. Ahí caen los de todos los usuarios ese día. Cuando Kontrolya corrige un error del motor, el lote de ese día se vuelve a correr solo.
 5. En un agente 1.0, si alguien cambia su Entrenamiento mientras pruebas, la plática abierta sigue con el anterior: el probador te avisa y empiezas una plática nueva. En un 2.0 y en el contenido, la corrección se ve desde el siguiente mensaje (también con clientes reales).
 
 ### Lotes de pruebas
 1. En Lotes de pruebas crea un lote (por ejemplo «Becas») y agrégale pruebas: lo que escribe el cliente (un mensaje por renglón) y qué se espera.
-2. También puedes guardar una plática que salió bien como prueba («Guardar en el lote»). Los errores corregidos con 👎 ya se guardan solos en el lote del día.
-3. Filtra por agente para ver sus lotes día por día; «Correr todas las correcciones de este agente» junta las pruebas de todos sus días en una sola corrida.
+2. También puedes guardar a mano una plática que quieras cuidar (por ejemplo, una que salió bien): en Probar, «Guardar como prueba (manual)», escribe qué se espera y pulsa «Guardar prueba». Va sola al lote del agente y del día, igual que las de 👎; cada prueba dice si es «de una corrección» o «manual».
+3. Filtra por agente para ver sus lotes día por día; «Correr todas las pruebas de este agente» junta las pruebas de todos sus días en una sola corrida.
 4. Elige el agente y pulsa «Correr»: cada prueba se corre con el motor real y un juez dice si cumple. El resultado sale en la Bitácora.
 
 ### Bitácora

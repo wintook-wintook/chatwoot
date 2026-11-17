@@ -15,21 +15,24 @@ class CreateAgentTester < ActiveRecord::Migration[7.0]
       t.timestamps
     end
     add_index :agent_test_batches, [:tracking_template_id, :day]
+    create_cases
+    create_runs
+    create_logs
+  end
 
+  private
+
+  def create_cases
     create_table :agent_test_cases do |t|
       t.references :account, null: false, foreign_key: true
       t.references :agent_test_batch, null: false, foreign_key: true
       t.string :name, null: false
       t.jsonb :messages, default: [], null: false # lo que escribe el cliente, en orden
       t.text :expected
+      t.string :origin, default: 'correction', null: false # correction (de un 👎) | manual
       t.timestamps
     end
-
-    create_runs
-    create_logs
   end
-
-  private
 
   def create_runs
     create_table :agent_test_runs do |t|

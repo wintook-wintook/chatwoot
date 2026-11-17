@@ -64,12 +64,7 @@ export default {
         {{ t(`TABS.${key}`) }}
       </button>
     </nav>
-    <TesterChat
-      v-if="tab === 'chat'"
-      :agents="agents"
-      :batches="batches"
-      @saved="loadBatches"
-    />
+    <TesterChat v-if="tab === 'chat'" :agents="agents" @saved="loadBatches" />
     <TesterBatches
       v-else-if="tab === 'batches'"
       :agents="agents"

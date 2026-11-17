@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
-# Probador de agentes — cada 👎 revisado queda solo como prueba en el lote del agente y del día,
-# «Correcciones · <agente> · 17 nov» (se crea solo con el primer 👎 del día; ahí caen los de todos
-# los usuarios). La prueba es lo que escribió el cliente hasta la respuesta mala y, como lo
-# esperado, lo que dijo el usuario en el 👎. El día es el de la bandeja del agente (o México).
+# Probador de agentes — las pruebas van solas al lote del agente y del día, «Pruebas · <agente> ·
+# 17 nov» (se crea solo; ahí caen las de todos los usuarios):
+#   correction  cada 👎 revisado: lo que escribió el cliente hasta la respuesta mala y, como lo
+#               esperado, lo que dijo el usuario en el 👎;
+#   manual      «Guardar prueba» del probador: la plática que el usuario quiere cuidar y lo que espera.
+# El día es el de la bandeja del agente (o México).
 # Cuando Kontrolya corrige un error del motor, se vuelve a correr el lote del día en que se reportó.
 module AgentTester::AutoCase
   KINDS = %w[prompt content model engine].freeze
@@ -14,13 +16,21 @@ module AgentTester::AutoCase
 
   # → el lote (nil si no aplica: solo una pregunta del entrenador, o sin mensajes del cliente).
   def save(template, messages:, feedback:, kinds:)
+    return unless kinds.intersect?(KINDS)
+
+    add(template, messages: messages, expected: feedback, origin: 'correction')
+  end
+
+  # → el lote (nil si no hay mensajes del cliente o no dice qué se espera). No repite una igual.
+  def add(template, messages:, expected:, origin:)
     customer = Array(messages).filter_map { |m| m['content'].to_s.strip.presence if m['role'] == 'user' }
-    return if !kinds.intersect?(KINDS) || customer.empty? || feedback.blank?
+    return if customer.empty? || expected.blank?
 
     batch = batch_for(template)
     customer = customer.last(AgentTestCase::MAX_MESSAGES)
-    unless batch.cases.exists?(['messages = ?::jsonb AND expected = ?', customer.to_json, feedback])
-      batch.cases.create!(account: template.account, name: feedback.first(120), messages: customer, expected: feedback)
+    unless batch.cases.exists?(['messages = ?::jsonb AND expected = ?', customer.to_json, expected])
+      batch.cases.create!(account: template.account, name: expected.first(120), messages: customer, expected: expected,
+                          origin: origin)
     end
     batch
   end
@@ -32,18 +42,18 @@ module AgentTester::AutoCase
 
   def batch_for(template, day = today(template))
     AgentTestBatch.find_or_create_by!(account: template.account, tracking_template: template, day: day) do |batch|
-      batch.name = "Correcciones · #{template.name} · #{day.day} #{MONTHS[day.month - 1]}".first(120)
+      batch.name = "Pruebas · #{template.name} · #{day.day} #{MONTHS[day.month - 1]}".first(120)
     end
   end
 
-  # Todas las pruebas de corrección de un agente (todos sus días), en una sola corrida.
+  # Todas las pruebas de un agente (todos sus días), en una sola corrida.
   def run_all(template, user: nil)
     batches = AgentTestBatch.where(account: template.account, tracking_template: template)
     ids = AgentTestCase.where(agent_test_batch_id: batches.select(:id)).order(:id).ids
     return if ids.empty?
 
     run = batches.order(:day).last.runs.create!(account: template.account, tracking_template: template, created_by: user,
-                                                total: ids.size, case_ids: ids, label: "Todas las correcciones · #{template.name}")
+                                                total: ids.size, case_ids: ids, label: "Todas las pruebas · #{template.name}")
     AgentTester::RunJob.perform_later(run.id)
     run
   end

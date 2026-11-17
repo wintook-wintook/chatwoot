@@ -132,7 +132,7 @@ class AgentTester::Trainer < Cases::Ai::BaseService
 
   def question_result(question) = { messages: [{ kind: 'question', text: question }] }
 
-  # Cada 👎 revisado queda como prueba en «Correcciones · <agente>».
+  # Cada 👎 revisado queda como prueba en el lote del agente y del día («Pruebas · <agente> · 17 nov»).
   def remember(result)
     batch = AgentTester::AutoCase.save(@template, messages: @messages, feedback: @feedback,
                                                   kinds: result[:messages].pluck(:kind))

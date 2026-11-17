@@ -24,7 +24,7 @@ class Api::V1::Accounts::AgentTestBatchesController < Api::V1::Accounts::BaseCon
   def run_corrections
     template = Current.account.tracking_templates.find(params[:template_id])
     run = AgentTester::AutoCase.run_all(template, user: current_user)
-    return render json: { error: 'Ese agente todavía no tiene correcciones.' }, status: :unprocessable_entity unless run
+    return render json: { error: 'Ese agente todavía no tiene pruebas.' }, status: :unprocessable_entity unless run
 
     render json: run_json(run), status: :accepted
   end
@@ -94,7 +94,7 @@ class Api::V1::Accounts::AgentTestBatchesController < Api::V1::Accounts::BaseCon
   end
 
   def case_params
-    { name: params[:name].to_s.strip.first(120).presence || 'Prueba',
+    { name: params[:name].to_s.strip.first(120).presence || 'Prueba', origin: 'manual',
       messages: Array(params[:messages]).map { |m| m.to_s.strip.first(1000) }.compact_blank.first(AgentTestCase::MAX_MESSAGES),
       expected: params[:expected].to_s.strip.first(2000) }
   end
@@ -105,7 +105,7 @@ class Api::V1::Accounts::AgentTestBatchesController < Api::V1::Accounts::BaseCon
       cases: batch.cases.sort_by(&:id).map { |c| case_json(c) }, last_run: last && run_json(last) }
   end
 
-  def case_json(test_case) = test_case.slice(:id, :name, :messages, :expected)
+  def case_json(test_case) = test_case.slice(:id, :name, :messages, :expected, :origin)
 
   def run_json(run, full: false)
     json = { id: run.id, batch_id: run.agent_test_batch_id, batch: run.label.presence || run.batch&.name, agent: run.tracking_template&.name,

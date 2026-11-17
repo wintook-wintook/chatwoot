@@ -194,7 +194,12 @@ export default {
       >
         <div v-for="c in batch.cases" :key="c.id" class="flex gap-2 text-xs">
           <div class="flex-1">
-            <span class="block font-medium">{{ c.name }}</span>
+            <span class="block font-medium">
+              {{ c.name }}
+              <span class="ml-1 font-normal text-slate-500">
+                {{ t(`ORIGIN.${c.origin || 'manual'}`) }}
+              </span>
+            </span>
             <span
               v-for="(m, i) in c.messages"
               :key="i"

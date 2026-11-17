@@ -12,7 +12,7 @@ vi.mock('dashboard/api/agentTestBatches', () => ({
 
 const mountChat = () =>
   shallowMount(TesterChat, {
-    propsData: { agents: [{ id: 3, name: 'Becas', engine: '1' }], batches: [] },
+    propsData: { agents: [{ id: 3, name: 'Becas', engine: '1' }] },
     mocks: {
       $t: (k, a) => (a ? `${k} ${JSON.stringify(a)}` : k),
       $router: { resolve: () => ({ href: '#' }) },

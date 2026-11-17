@@ -8,13 +8,15 @@
 # GET  /agent_tester/sessions/:conversation_id?after=    lo que contestó el agente después de ese mensaje
 # POST /agent_tester/sessions/:conversation_id/say       { content } → mensaje del cliente
 # POST /agent_tester/sessions/:conversation_id/feedback  👎 { message_id, feedback } → lo que dice el entrenador
+# POST /agent_tester/sessions/:conversation_id/save_case { expected } guarda la plática como prueba (va sola
+#                                                       al lote del agente y del día)
 # POST /agent_tester/apply                               { log_id } aplica la corrección de prompt (2.0)
 # POST /agent_tester/fix_source                          { canned_id, content } corrige una respuesta predefinida
 # GET  /agent_tester/logs                                bitácora de correcciones
 # Para quien puede cambiar agentes (área Agentes IA en «todo»).
 class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseController
   before_action :require_writer
-  before_action :set_conversation, only: %i[show say feedback]
+  before_action :set_conversation, only: %i[show say feedback save_case]
 
   def agents
     list = Current.account.tracking_templates.where(archived_at: nil).order(:name)
@@ -50,6 +52,16 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
                                      .call(messages: turns, reply: message.content, feedback: params[:feedback].to_s.first(2000),
                                            trace: AgentTester::Trace.normalize(message.content_attributes.to_h),
                                            conversation_id: @conversation.id, message_id: message.id)
+  end
+
+  def save_case
+    template = sandbox.tracking_for(@conversation)&.tracking_template
+    turns = Motor2::Prompt.history(@conversation).map(&:stringify_keys)
+    batch = template && AgentTester::AutoCase.add(template, messages: turns, expected: params[:expected].to_s.strip.first(2000),
+                                                            origin: 'manual')
+    return render json: { error: 'Escribe qué se espera y al menos un mensaje del cliente.' }, status: :unprocessable_entity unless batch
+
+    render json: { saved_in: batch.name }
   end
 
   # La corrección de prompt de un agente 2.0 la aplica el mismo usuario (con versión y pruebas).

@@ -4,7 +4,6 @@
 // Con 👎 el entrenador dice de quién es el error: prompt, contenido, modelo o motor.
 import { useAlert } from 'dashboard/composables';
 import AgentTesterAPI from 'dashboard/api/agentTester';
-import AgentTestBatchesApi from 'dashboard/api/agentTestBatches';
 
 const POLL_MS = 2000;
 const QUIET_MS = 8000;
@@ -21,7 +20,6 @@ const ICONS = {
 export default {
   props: {
     agents: { type: Array, default: () => [] },
-    batches: { type: Array, default: () => [] },
   },
   emits: ['saved'],
   data() {
@@ -35,7 +33,6 @@ export default {
       feedback: '',
       sending: false,
       fixText: {},
-      saveBatch: '',
       saveExpected: '',
       icons: { up: '👍', down: '👎' },
     };
@@ -207,20 +204,20 @@ export default {
       this.pending = this.chat.map(m => m.role).lastIndexOf('assistant');
       this.feedback = `${message.info.text} → `;
     },
-    // Lo que escribió el cliente en esta plática, para guardarlo como prueba de un lote.
+    // Lo que escribió el cliente en esta plática, como prueba: va sola al lote del agente y del día.
     async saveAsCase() {
-      const messages = this.chat
-        .filter(m => m.role === 'user')
-        .map(m => m.content);
-      if (!this.saveBatch || !messages.length) return;
-      await AgentTestBatchesApi.addCase(Number(this.saveBatch), {
-        name: messages[0].slice(0, 60),
-        messages,
-        expected: this.saveExpected,
-      });
-      this.saveExpected = '';
-      useAlert(this.t('CASE_SAVED'));
-      this.$emit('saved');
+      if (!this.session || !this.saveExpected.trim()) return;
+      try {
+        const { data } = await AgentTesterAPI.saveCase(
+          this.session.conversation_id,
+          this.saveExpected
+        );
+        this.saveExpected = '';
+        useAlert(this.t('CASE_SAVED', { batch: data.saved_in }));
+        this.$emit('saved');
+      } catch (e) {
+        useAlert(this.errorText(e));
+      }
     },
   },
 };
@@ -464,12 +461,6 @@ export default {
     >
       <h3 class="m-0 text-sm font-semibold">{{ t('SAVE_CASE_TITLE') }}</h3>
       <p class="m-0 text-xs text-slate-500">{{ t('SAVE_CASE_HINT') }}</p>
-      <select v-model="saveBatch" class="!mb-0 h-9 text-sm">
-        <option value="">{{ t('PICK_BATCH') }}</option>
-        <option v-for="b in batches" :key="b.id" :value="b.id">
-          {{ b.name }}
-        </option>
-      </select>
       <textarea
         v-model="saveExpected"
         rows="3"
@@ -479,7 +470,7 @@ export default {
       <woot-button
         size="small"
         variant="smooth"
-        :disabled="!saveBatch || !chat.length"
+        :disabled="!session || !chat.length || !saveExpected.trim()"
         @click="saveAsCase"
       >
         {{ t('SAVE_CASE') }}

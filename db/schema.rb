@@ -153,6 +153,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_17_120000) do
     t.string "name", null: false
     t.jsonb "messages", default: [], null: false
     t.text "expected"
+    t.string "origin", default: "correction", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_agent_test_cases_on_account_id"

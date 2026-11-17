@@ -63,8 +63,8 @@ RSpec.describe AgentTester::Trainer do
     result = correct(v1, data)
     batch = AgentTestBatch.find_by(tracking_template: v1)
     expect(batch.day).to eq(AgentTester::AutoCase.today(v1))
-    expect(result[:saved_in]).to start_with("Correcciones · #{v1.name} · ")
-    expect(batch.cases.sole).to have_attributes(messages: ['¿Becas?'], expected: 'Solo la de 20% primero')
+    expect(result[:saved_in]).to start_with("Pruebas · #{v1.name} · ")
+    expect(batch.cases.sole).to have_attributes(messages: ['¿Becas?'], expected: 'Solo la de 20% primero', origin: 'correction')
 
     correct(v1, data)
     expect(batch.cases.count).to eq(1)
@@ -78,7 +78,7 @@ RSpec.describe AgentTester::Trainer do
 
     run = nil
     expect { run = AgentTester::AutoCase.run_all(v1, user: user) }.to have_enqueued_job(AgentTester::RunJob)
-    expect(run).to have_attributes(total: 2, label: "Todas las correcciones · #{v1.name}")
+    expect(run).to have_attributes(total: 2, label: "Todas las pruebas · #{v1.name}")
   end
 
   it 'si el entrenador solo pregunta, no se guarda prueba' do

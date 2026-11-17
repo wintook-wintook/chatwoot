@@ -61,6 +61,17 @@ RSpec.describe 'Agent Tester API' do
     expect(response.parsed_body['outdated']).to be(true)
   end
 
+  it 'guardar como prueba (manual) va solo al lote del agente y del día' do
+    post "#{api}/agent_tester/sessions", params: { template_id: template.id }, headers: admin.create_new_auth_token, as: :json
+    conversation_id = response.parsed_body['conversation_id']
+    post "#{api}/agent_tester/sessions/#{conversation_id}/say", params: { content: '¿Cuánto cuesta?' }, headers: admin.create_new_auth_token,
+                                                                as: :json
+    post "#{api}/agent_tester/sessions/#{conversation_id}/save_case", params: { expected: 'Da el precio' },
+                                                                      headers: admin.create_new_auth_token, as: :json
+    expect(response.parsed_body['saved_in']).to start_with("Pruebas · #{template.name} · ")
+    expect(AgentTestCase.last).to have_attributes(messages: ['¿Cuánto cuesta?'], expected: 'Da el precio', origin: 'manual')
+  end
+
   it 'quien no puede cambiar agentes no entra' do
     get "#{api}/agent_tester/agents", headers: agent_user.create_new_auth_token
     expect(response).to have_http_status(:forbidden).or have_http_status(:unauthorized)

@@ -224,6 +224,7 @@ Rails.application.routes.draw do
           get 'agent_tester/sessions/:conversation_id', to: 'agent_tester#show'
           post 'agent_tester/sessions/:conversation_id/say', to: 'agent_tester#say'
           post 'agent_tester/sessions/:conversation_id/feedback', to: 'agent_tester#feedback'
+          post 'agent_tester/sessions/:conversation_id/save_case', to: 'agent_tester#save_case'
           post 'agent_tester/apply', to: 'agent_tester#apply'
           post 'agent_tester/fix_source', to: 'agent_tester#fix_source'
           get 'agent_tester/logs', to: 'agent_tester#logs'
