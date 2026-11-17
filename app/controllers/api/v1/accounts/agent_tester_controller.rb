@@ -13,13 +13,16 @@
 #                                                       al lote del agente y del día)
 # POST /agent_tester/apply                               { log_id } aplica la corrección de prompt (2.0)
 # POST /agent_tester/fix_source                          { canned_id, content } corrige una respuesta predefinida
-# GET  /agent_tester/logs                                bitácora de correcciones
+# GET  /agent_tester/logs                                bitácora de correcciones (cada quien las suyas; quien
+#                                                       cambia agentes, todas)
+# POST /agent_tester/logs/:id/retest                     «Ya lo corregí»: corre otra vez la prueba de ese 👎
+# GET  /agent_tester/sessions/:conversation_id/history   la plática completa, para seguirla desde la bitácora
 # Probar, dar 👎 y guardar pruebas: cualquier usuario de la cuenta (el probador está en Inicio).
 # Aplicar correcciones, corregir fuentes, «En prueba» y la bitácora: quien puede cambiar agentes
 # (área Agentes IA en «todo»).
 class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseController
-  before_action :require_writer, only: %i[testing apply fix_source logs]
-  before_action :set_conversation, only: %i[show say feedback save_case]
+  before_action :require_writer, only: %i[testing apply fix_source]
+  before_action :set_conversation, only: %i[show history say feedback save_case]
 
   def agents
     list = Current.account.tracking_templates.where(archived_at: nil, testing: true).order(:name)
@@ -45,6 +48,14 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
     tracking = sandbox.tracking_for(@conversation)
     render json: { messages: sandbox.since(@conversation, params[:after]).map { |m| m.merge(lines: AgentTester::Trace.lines(m[:trace])) },
                    tracking_status: tracking&.status, outdated: outdated?(tracking) }
+  end
+
+  def history
+    template = sandbox.tracking_for(@conversation)&.tracking_template
+    return render json: { error: 'La plática ya no tiene agente.' }, status: :unprocessable_entity unless template
+
+    messages = @conversation.messages.where(message_type: %i[incoming outgoing]).order(:id).map { |m| history_json(m) }
+    render json: session_json(@conversation, template).merge(messages: messages)
   end
 
   def say
@@ -90,8 +101,21 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
   end
 
   def logs
-    list = AgentTestLog.where(account_id: Current.account.id).includes(:tracking_template, :user).order(created_at: :desc).limit(200)
-    render json: list.map { |l| log_json(l) }
+    render json: logs_scope.includes(:tracking_template, :user).order(created_at: :desc).limit(200).map { |l| log_json(l) }
+  end
+
+  # «Ya lo corregí»: la prueba que se guardó de ese 👎 se corre otra vez con el agente como está hoy
+  # (plática nueva: en el 1.0 toma el Entrenamiento nuevo). Al terminar dice si quedó.
+  def retest
+    log = logs_scope.find(params[:id])
+    test_case = log.agent_test_case
+    return render json: { error: 'Este 👎 no guardó prueba: pruébalo a mano en una plática nueva.' }, status: :unprocessable_entity unless test_case
+
+    run = test_case.batch.runs.create!(account: Current.account, tracking_template: log.tracking_template, created_by: current_user,
+                                       total: 1, case_ids: [test_case.id], label: "Probar de nuevo · #{log.tracking_template&.name}")
+    log.update!(status: 'retesting', retest: { 'run_id' => run.id })
+    AgentTester::RunJob.perform_later(run.id)
+    render json: log_json(log)
   end
 
   private
@@ -101,6 +125,11 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
   end
 
   def sandbox = @sandbox ||= AgentTester::Sandbox.new(Current.account)
+
+  def logs_scope
+    scope = AgentTestLog.where(account_id: Current.account.id)
+    access_grant.writable?('ai_agents') ? scope : scope.where(user_id: current_user.id)
+  end
 
   # Cada quien sus pláticas; quien cambia agentes puede ver cualquiera (p. ej. desde la bitácora).
   def set_conversation
@@ -123,10 +152,19 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
       name: template.name, after: conversation.messages.maximum(:id).to_i }
   end
 
+  def history_json(message)
+    role = 'assistant'
+    role = 'note' if message.private
+    role = 'user' if message.incoming?
+    { id: message.id, role: role, content: message.content.to_s,
+      lines: AgentTester::Trace.lines(AgentTester::Trace.normalize(message.content_attributes.to_h)) }
+  end
+
   def log_json(log)
     report = log.motor2_report_id && Motor2Report.find_by(id: log.motor2_report_id)
-    { id: log.id, kind: log.kind, engine: log.engine, agent: log.tracking_template&.name, user: log.user&.name,
+    { id: log.id, kind: log.kind, engine: log.engine, agent: log.tracking_template&.name, template_id: log.tracking_template_id, user: log.user&.name,
       feedback: log.feedback, reply: log.reply, diagnosis: log.diagnosis, created_at: log.created_at,
-      report_status: report&.status, conversation_id: log.conversation_id }
+      report_status: report&.status, conversation_id: log.conversation_id, status: log.status, retest: log.retest,
+      has_case: log.agent_test_case_id.present? }
   end
 end

@@ -14,6 +14,7 @@ class AgentTester::Verdict
     case @cause['kind']
     when 'prompt' then prompt
     when 'content' then content
+    when 'search' then search
     when 'model' then model
     else engine(trainer)
     end
@@ -42,6 +43,17 @@ class AgentTester::Verdict
             else
               "Es del contenido: el agente contestó con lo que dice «#{@cause['source']}». Corrígelo ahí y pruébalo de nuevo."
             end }
+  end
+
+  # El dato SÍ está en una fuente, pero la búsqueda no la trajo con lo que escribió el cliente: otro
+  # saludo u otras palabras y entra o no (cuenta 1128, 17/11/2026: «Hola» sí, «Hola buenos días» no).
+  def search
+    canned = @template.account.canned_responses.find_by(short_code: @cause['item'].to_s.split(':').first.to_s.strip)
+    arrived = Array(@cause['arrived']).compact_blank.first(3)
+    { kind: 'search', item: @cause['item'], arrived: arrived, add: @cause['text'], canned_id: canned&.id, can_fix: canned.present?,
+      text: "Es de la búsqueda: «#{@cause['item']}» sí tiene el dato, pero con lo que escribió el cliente no llegó " \
+            "(llegaron #{arrived.map { |a| "«#{a}»" }.join(', ').presence || 'otras'}). Agrega al inicio de esa respuesta " \
+            'cómo lo pregunta el cliente, guárdala y pruébalo de nuevo.' }
   end
 
   def model

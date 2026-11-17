@@ -17,6 +17,7 @@ RSpec.describe AgentTester::Trainer do
   end
 
   before do
+    stub_request(:post, %r{api.openai.com/v1/embeddings}).to_return(status: 500)
     create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled', settings: { 'api_key' => 'sk-test' })
   end
 
@@ -47,15 +48,53 @@ RSpec.describe AgentTester::Trainer do
     expect(msg[:text]).to include('Es del modelo', 'Bot de seguimientos')
   end
 
-  it 'modelo sin cita textual del prompt: no se acepta; se trata como falta de indicación' do
-    msg = correct(v1, 'causes' => [{ 'kind' => 'model', 'quote' => 'Pregunta siempre el nombre de la empresa', 'why' => 'x' }])[:messages].first
-    expect(msg).to include(kind: 'prompt', suggestion: 'Solo la de 20% primero')
+  it 'modelo sin cita textual del prompt: no se acepta; se trata como falta de indicación (con la suya, no la queja)' do
+    msg = correct(v1, 'causes' => [{ 'kind' => 'model', 'quote' => 'Pregunta siempre el nombre de la empresa', 'why' => 'x',
+                                     'where' => '[ROL]', 'text' => 'Da primero solo la beca de 20%.' }])[:messages].first
+    expect(msg).to include(kind: 'prompt', where: '[ROL]', suggestion: 'Da primero solo la beca de 20%.')
+  end
+
+  it 'modelo sin cita ni indicación: la redacta desde lo esperado, no copia la queja' do
+    trainer = described_class.new(v1, user: user)
+    allow(trainer).to receive(:chat).and_return({ 'causes' => [{ 'kind' => 'model', 'quote' => 'no está', 'why' => 'x' }] },
+                                                { 'text' => 'Cuando pregunten por becas, da primero solo la de 20%.' })
+    msg = trainer.call(messages: turns, reply: '20% y 35%', feedback: 'Solo la de 20% primero', trace: { 'engine' => '1' })[:messages].first
+    expect(msg).to include(kind: 'prompt', suggestion: 'Cuando pregunten por becas, da primero solo la de 20%.')
   end
 
   it 'prompt y modelo a la vez sin evidencia: queda solo el de prompt' do
     result = correct(v1, 'causes' => [{ 'kind' => 'prompt', 'where' => '[ROL]', 'text' => 'Una beca a la vez.' },
                                       { 'kind' => 'model', 'quote' => 'algo que no está', 'why' => 'x' }])
     expect(result[:messages].pluck(:kind)).to eq(['prompt'])
+  end
+
+  it 'búsqueda (1.0): el dato está pero no llegó; dice cuál, qué llegó (de la traza) y qué agregarle; liga la prueba' do
+    canned = create(:canned_response, account: account, short_code: 'Formas de titulación', content: '1. Tesis')
+    trainer = described_class.new(v1, user: user)
+    allow(trainer).to receive(:embed).and_return(nil)
+    allow(trainer).to receive(:chat).and_return('causes' => [{ 'kind' => 'search', 'item' => 'Formas de titulación',
+                                                               'arrived' => ['Cédula: texto largo'], 'text' => '¿Cómo me titulo?' }])
+    result = trainer.call(messages: turns, reply: '10 formas', feedback: 'Dar la lista',
+                          trace: { 'engine' => '1', 'fragmentos' => [{ 'titulo' => 'Cédula' }] })
+    msg = result[:messages].first
+    expect(msg).to include(kind: 'search', item: 'Formas de titulación', arrived: ['Cédula'], add: '¿Cómo me titulo?',
+                           canned_id: canned.id)
+    log = AgentTestLog.find(msg[:log_id])
+    expect(log).to have_attributes(status: 'pending', agent_test_case_id: AgentTestCase.last.id)
+    expect(log.diagnosis['text']).to include('Es de la búsqueda')
+  end
+
+  it 'probar de nuevo: al terminar la corrida, la corrección queda «passed» o «failing» con lo que contestó' do
+    trainer = described_class.new(v1, user: user)
+    allow(trainer).to receive(:chat).and_return('causes' => [{ 'kind' => 'prompt', 'where' => '[ROL]', 'text' => 'Lista.' }])
+    log = AgentTestLog.find(trainer.call(messages: turns, reply: 'x', feedback: 'En lista', trace: { 'engine' => '1' })[:messages].first[:log_id])
+    test_case = log.agent_test_case
+    run = test_case.batch.runs.create!(account: account, tracking_template: v1, total: 1, case_ids: [test_case.id], status: 'done',
+                                       results: [{ 'case_id' => test_case.id, 'ok' => true, 'reply' => '1. A', 'reason' => 'Cumple' }])
+    log.update!(status: 'retesting', retest: { 'run_id' => run.id })
+    AgentTestLog.finish_retests(run)
+    expect(log.reload).to have_attributes(status: 'passed')
+    expect(log.retest).to include('reply' => '1. A', 'reason' => 'Cumple')
   end
 
   it 'cada 👎 revisado queda solo como prueba en el lote del agente y del día, sin repetirse' do
