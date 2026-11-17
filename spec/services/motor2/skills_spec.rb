@@ -24,6 +24,14 @@ RSpec.describe Motor2::Skills do
     runner.instance_variable_set(:@skills, described_class.for(runner))
   end
 
+  describe 'qué sabe' do
+    it 'las respuestas predefinidas van siempre, sin marcarlas en la ficha' do
+      create(:canned_response, account: account, short_code: 'horario', content: 'Abrimos de 9 a 18')
+      expect(Motor2::Search.new(account, []).names).to eq(['Respuestas predefinidas'])
+      expect(Motor2::Search.new(account, %w[canned_response]).names).to eq(['Respuestas predefinidas'])
+    end
+  end
+
   describe 'ofertas escalonadas' do
     let(:motor2) do
       { 'skills' => { 'offers' => { 'on' => true, 'steps' => [{ 'text' => 'Beca de 20%: $3,360' }, { 'text' => 'Beca de 35%: $2,730' }] } } }

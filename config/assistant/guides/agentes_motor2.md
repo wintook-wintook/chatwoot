@@ -16,7 +16,7 @@ Agentes IA › Agentes. Los agentes 2.0 llevan la etiqueta «2.0». Al abrir uno
 ### Crear un agente 2.0
 1. En Agentes IA › Agentes pulsa «Nuevo agente» › «Motor 2.0 (nuevo)».
 2. En Agente pon nombre, el nombre que ve el cliente, el objetivo, el trato (de tú o de usted) y el canal con sus intentos.
-3. En Qué sabe marca las fuentes donde busca antes de dar un dato y llena los datos del negocio.
+3. En Qué sabe marca las fuentes donde busca antes de dar un dato (artículos, hojas, documentos, foro) y llena los datos del negocio. Tus respuestas predefinidas las consulta siempre: no se marcan.
 4. En Qué hace prende las habilidades que necesita y llena sus datos.
 5. Pulsa «Crear agente». Si arriba aparece «Para atender le falta», arréglalo; «Activar en su bandeja» hace que atienda las conversaciones nuevas de esa bandeja.
 

@@ -22,10 +22,14 @@ class Motor2::Options
   # «¿Listo para atender?» del 1.0 con las fuentes que marcó la ficha 2.0.
   def self.readiness(template)
     cards = ContactTrackings::Ficha::Catalog.new(template.account, inbox: template.inbox, template: template).call
-    sources = Array(template.motor2.to_h['sources'])
-    business = Array(template.motor2.to_h['business']).map { |r| r.to_h.values.join(': ') }.join("\n")
+    sources = [Motor2::Search::CANNED, *template.motor2.to_h['sources']] # las predefinidas van siempre
+    business = business_text(template)
     ContactTrackings::Ficha::Readiness.new(template.account, offers: cards.select { |c| sources.include?(c[:key]) }, template: template,
                                                              ai_context: template.ai_context.presence || business.presence)
+  end
+
+  def self.business_text(template)
+    Array(template.motor2.to_h['business']).map { |r| r.to_h.values.join(': ') }.join("\n")
   end
 
   private

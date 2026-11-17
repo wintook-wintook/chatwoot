@@ -8,6 +8,15 @@ import FichaBusiness from '../contactTrackings/ficha/FichaBusiness.vue';
 export default {
   components: { FichaCards, FichaBusiness },
   mixins: [formSection],
+  computed: {
+    // Las respuestas predefinidas van siempre: no se marcan, solo se avisa si algo falta.
+    canned() {
+      return (this.options.sources || []).find(c => c.kind === 'canned');
+    },
+    others() {
+      return (this.options.sources || []).filter(c => c.kind !== 'canned');
+    },
+  },
 };
 </script>
 
@@ -16,12 +25,18 @@ export default {
     <div>
       <h4 class="m2-subtitle">{{ t('KNOWS.SOURCES') }}</h4>
       <p class="m2-hint">{{ t('KNOWS.SOURCES_HINT') }}</p>
-      <p v-if="!(options.sources || []).length" class="m2-hint">
+      <p class="p-2 m-0 mb-2 text-xs rounded bg-slate-50 dark:bg-slate-800">
+        {{ t('KNOWS.CANNED_ALWAYS') }}
+        <span v-if="canned && canned.warning" class="block text-amber-700">
+          {{ t('KNOWS.CANNED_WARN', { text: canned.warning }) }}
+        </span>
+      </p>
+      <p v-if="!others.length" class="m2-hint">
         {{ t('KNOWS.NO_SOURCES') }}
       </p>
       <FichaCards
         v-else
-        :cards="options.sources"
+        :cards="others"
         :value="m2.sources"
         :show-headers="false"
         @input="list => setM2('sources', list)"

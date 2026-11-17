@@ -49,10 +49,12 @@
     },
     "KNOWS": {
       "SOURCES": "Sources",
-      "SOURCES_HINT": "Check where the agent looks before giving a fact. It only gives prices, links and dates found here.",
-      "NO_SOURCES": "The account has no sources yet.",
+      "SOURCES_HINT": "Also select where else the agent looks before giving a fact. It only gives prices, links and dates found in its sources or business data.",
+      "NO_SOURCES": "The account has no other sources (articles, sheets, docs, forum): add them in AI Agents › Knowledge Base.",
       "BUSINESS": "Business data",
-      "BUSINESS_HINT": "What doesn't change: hours, address, phone, payment methods."
+      "BUSINESS_HINT": "What doesn't change: hours, address, phone, payment methods.",
+      "CANNED_ALWAYS": "The agent always checks your canned responses: no need to select them.",
+      "CANNED_WARN": "Note: {text}"
     },
     "SKILLS": {
       "HINT": "Turn on what the agent must be able to do. Each skill brings its own rules: you only fill its data.",

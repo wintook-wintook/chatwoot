@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-# Motor 2.0 — buscar en las fuentes que la ficha marcó («Qué sabe»). Usa tal cual lo del 1.0:
+# Motor 2.0 — buscar en las fuentes del agente («Qué sabe»). Las respuestas predefinidas van
+# siempre (no se marcan); las demás, las que marcó la ficha. Usa tal cual lo del 1.0:
 # las predefinidas con AiFollowUps::KnowledgeSearch (separa las instrucciones internas) y el
 # resto por parecido sobre knowledge_items de esa fuente (artículos, documentos, hojas, foro,
 # CONTPAQi), igual que KnowledgeBaseResponseService.
@@ -20,9 +21,9 @@ class Motor2::Search < Cases::Ai::BaseService
     @keys = keys
   end
 
-  # Las fuentes de la ficha que existen y están activas.
+  # Las predefinidas (siempre) y las fuentes de la ficha que existen y están activas.
   def sources
-    @sources ||= @keys.filter_map { |key| resolve(key) }
+    @sources ||= ([CANNED] + @keys).uniq.filter_map { |key| resolve(key) }
   end
 
   def names = sources.map(&:name)
