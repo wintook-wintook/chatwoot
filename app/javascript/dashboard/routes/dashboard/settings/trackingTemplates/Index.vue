@@ -528,18 +528,6 @@ export default {
               class="dropdown-pane dropdown-pane--open !right-0 !left-auto !top-10 w-72"
             >
               <woot-dropdown-menu>
-                <!-- Motor 2.0: la ficha nueva (habilidades y probador con entrenador). -->
-                <woot-dropdown-item v-if="isAdmin">
-                  <woot-button
-                    variant="clear"
-                    color-scheme="primary"
-                    size="small"
-                    icon="flash-on"
-                    @click="newMotor2Agent"
-                  >
-                    {{ $t('TRACKING_TEMPLATES.NEW_AGENT.MOTOR2') }}
-                  </woot-button>
-                </woot-dropdown-item>
                 <li
                   v-if="isAdmin"
                   class="px-2 pt-1 text-[11px] uppercase text-slate-500"
@@ -580,6 +568,18 @@ export default {
                     @click="goToCreateForm"
                   >
                     {{ $t('TRACKING_TEMPLATES.NEW_AGENT.FORM') }}
+                  </woot-button>
+                </woot-dropdown-item>
+                <!-- Motor 2.0 (beta), al final: la ficha nueva (habilidades y probador con entrenador). -->
+                <woot-dropdown-item v-if="isAdmin">
+                  <woot-button
+                    variant="clear"
+                    color-scheme="primary"
+                    size="small"
+                    icon="flash-on"
+                    @click="newMotor2Agent"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.NEW_AGENT.MOTOR2') }}
                   </woot-button>
                 </woot-dropdown-item>
               </woot-dropdown-menu>
