@@ -14,7 +14,7 @@ class Motor2::Reporter
     report = Motor2Report.create!(account: @template.account, tracking_template: @template, user: @user, kind: data[:kind],
                                   turns: Array(data[:turns]).last(30), reply: data[:reply].to_s.first(4000),
                                   expected: data[:expected].to_s.first(2000), diagnosis: data[:diagnosis].to_s.first(1000),
-                                  trace: data[:trace].to_h.slice('tools', 'sources', 'events'))
+                                  trace: data[:trace].to_h)
     Motor2ReportMailer.with(report: report).reported.deliver_later if ENV['MOTOR2_REPORTS_EMAIL'].present?
     report
   end

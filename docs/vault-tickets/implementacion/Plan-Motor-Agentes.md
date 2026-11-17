@@ -683,3 +683,34 @@ repo.
 - habilidad Calificar;
 - galería;
 - puestos de fábrica.
+
+### 11.13 Probador de agentes (2026-11-17, rama `feat/probador_agentes`)
+
+**Qué es:** una pantalla aparte, en el menú de Agentes IA debajo de Macros, para probar como cliente cualquier agente 1.0 o 2.0.
+
+**Lo que decidió el usuario:**
+- el probador viejo del 1.0 no se toca;
+- se elige el agente (1.0 o 2.0);
+- lo usa el mismo usuario que hoy prueba por WhatsApp, y corrige él mismo lo que es de prompt y de contenido.
+
+**Cómo funciona:**
+- **Canal de pruebas:** una bandeja API sin webhook, la misma idea que la pila de pruebas del 1.0; si no existe, se crea «Probador de agentes».
+  - Cada plática es un contacto y una conversación nuevos, con el agente asignado por `ActionService#assign_tracking_template`.
+  - El seguimiento queda «activo» para que no salgan intentos a media prueba.
+  - Contesta el motor real, por el mismo camino que con un cliente.
+  - El 1.0 usa el modelo de la bandeja del agente: el canal de pruebas copia su `model_ia`.
+- **Entrenador** (`AgentTester::Trainer`) con cuatro salidas; nada se aplica solo:
+  - **prompt:** da la indicación lista para pegar. En el 2.0 el usuario pulsa «Aplicar»; en el 1.0 la copia y la pega en su Entrenamiento.
+  - **contenido:** enseña lo que dice la fuente; si es una respuesta predefinida, se corrige ahí mismo.
+  - **modelo:** solo se acepta si el entrenador cita textual lo que el agente no siguió y esa cita está en el prompt o en los fragmentos. Si no, se trata como falta de indicación en el prompt.
+  - **motor:** se manda el reporte a Kontrolya (`motor2_reports`).
+  - Todo queda en `agent_test_logs`.
+- **Lotes** (`agent_test_batches` / `agent_test_cases`) y **corridas** (`agent_test_runs`):
+  - una plática por prueba, con el motor real;
+  - un juez califica la última respuesta.
+- **Bitácora:** corridas y correcciones; las del motor muestran el estado de su reporte.
+- **Permiso:** área Agentes IA en «todo».
+
+**Probado en desarrollo con el modelo real:**
+- un agente 1.0 contestó en el canal de pruebas, con su traza;
+- el entrenador clasificó bien un error de prompt (con la indicación nueva redactada) y uno de motor.

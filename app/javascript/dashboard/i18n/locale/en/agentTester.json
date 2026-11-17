@@ -1,0 +1,93 @@
+{
+  "AGENT_TESTER": {
+    "TITLE": "Agent tester",
+    "SUBTITLE": "Test any agent (Engine 1.0 or 2.0) as if you were the customer. The real engine answers in a test channel: nothing goes to WhatsApp. With 👎 we tell you if the error is in the prompt, the content, the model or the engine.",
+    "TABS": {
+      "chat": "Test",
+      "batches": "Test batches",
+      "log": "Log"
+    },
+    "PICK_AGENT": "Choose an agent",
+    "AGENT_OPTION": "{name} · Engine {engine}",
+    "START": "Start",
+    "NEW_CHAT": "New chat",
+    "HINT": "Choose an agent and press «Start».",
+    "READY": "Ready: write to {name} (Engine {engine}) as a customer would.",
+    "ERROR": "Could not.",
+    "NO_REPLY": "The agent did not answer (it may be paused or without follow-up).",
+    "FILE": "Sent the file «{name}»",
+    "TYPING": "Waiting for the agent…",
+    "TRACKING_STATUS": "The follow-up is «{status}»: the agent no longer answers in this chat. Start a new one.",
+    "WHAT_WRONG": "What went wrong and how should it have answered?",
+    "WHAT_WRONG_PH": "E.g.: it gave both scholarships at once",
+    "CANCEL": "Cancel",
+    "SEND_TRAINER": "Review",
+    "PLACEHOLDER": "Write as a customer…",
+    "SEND": "Send",
+    "APPLY": "Apply",
+    "COPY": "Copy",
+    "COPIED": "Copied",
+    "OPEN_AGENT": "Open the agent",
+    "SHOULD_SAY": "What should it say?",
+    "SHARED": "ⓘ Canned responses are also used by your team and other agents.",
+    "FIX_IT": "Fix it",
+    "SHOULD": "It should say: {text}",
+    "FIXED": "✓ Fixed. Try again.",
+    "ANSWER": "Answer",
+    "SAVE_CASE_TITLE": "Save as test",
+    "SAVE_CASE_HINT": "What you wrote as a customer becomes a test in a batch, to run it when you change the agent.",
+    "PICK_BATCH": "Choose a batch",
+    "EXPECTED_PH": "What is expected from the last reply",
+    "SAVE_CASE": "Save to batch",
+    "CASE_SAVED": "Test saved",
+    "BATCHES": {
+      "HINT": "Grouped tests run in full against an agent. Each test is what the customer writes (one or more messages) and what is expected.",
+      "NEW_PH": "Batch name (e.g.: Scholarships)",
+      "NEW": "New batch",
+      "EMPTY": "No batches yet.",
+      "COUNT": "{n} test(s)",
+      "LAST_RUN": "· last run with {agent}: {passed} of {total}",
+      "PICK_AGENT": "Run with…",
+      "RUN": "Run",
+      "DELETE_CONFIRM": "Delete batch «{name}» and its tests?",
+      "CUSTOMER": "Customer: {text}",
+      "EXPECTED": "Expected: {text}",
+      "CASE_NAME_PH": "Test name (optional)",
+      "MESSAGES_PH": "What the customer writes, one message per line",
+      "EXPECTED_PH": "What is expected from the last reply",
+      "ADD_CASE": "Add test",
+      "RUNNING": "Running: the result shows in the Log.",
+      "ERROR": "Could not."
+    },
+    "LOG": {
+      "RUNS": "Runs",
+      "CORRECTIONS": "Corrections",
+      "NO_RUNS": "No runs yet.",
+      "NO_LOGS": "No corrections yet.",
+      "RUN_TITLE": "{batch} with {agent}",
+      "SCORE": "{passed} of {total}",
+      "STATUS": {
+        "queued": "queued",
+        "running": "running",
+        "done": "done",
+        "failed": "failed"
+      },
+      "REPLY": "Replied: {text}",
+      "FEEDBACK": "Said: {text}",
+      "REPORT": "report {status}",
+      "REPORT_STATUS": {
+        "new": "new",
+        "reviewing": "reviewing",
+        "fixed": "fixed",
+        "rejected": "rejected"
+      },
+      "KINDS": {
+        "prompt": "Prompt",
+        "content": "Content",
+        "model": "Model",
+        "engine": "Engine",
+        "question": "Question"
+      }
+    }
+  }
+}

@@ -299,6 +299,7 @@ describe('Menú v2', () => {
     expect(agentes.parentNav).toBe('agentes');
     expect(agentes.menuItems.map(i => i.label)).toEqual([
       'READY_AGENTS',
+      'AI_VOICE',
       'AI_AGENT_LIST',
       'TRACKINGS',
       'KNOWLEDGE_SOURCES',
@@ -306,6 +307,7 @@ describe('Menú v2', () => {
       'SITE_ANALYSIS',
       'AUTOMATION',
       'MACROS',
+      'AGENT_TESTER',
     ]);
     [
       'automation_list',

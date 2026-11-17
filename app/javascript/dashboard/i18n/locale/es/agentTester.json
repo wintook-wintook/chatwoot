@@ -1,0 +1,93 @@
+{
+  "AGENT_TESTER": {
+    "TITLE": "Probador de agentes",
+    "SUBTITLE": "Prueba cualquier agente (Motor 1.0 o 2.0) como si fueras el cliente. Contesta el motor de verdad en un canal de pruebas: no sale nada a WhatsApp. Con 👎 te decimos si el error es del prompt, del contenido, del modelo o del motor.",
+    "TABS": {
+      "chat": "Probar",
+      "batches": "Lotes de pruebas",
+      "log": "Bitácora"
+    },
+    "PICK_AGENT": "Elige un agente",
+    "AGENT_OPTION": "{name} · Motor {engine}",
+    "START": "Empezar",
+    "NEW_CHAT": "Plática nueva",
+    "HINT": "Elige un agente y pulsa «Empezar».",
+    "READY": "Listo: escríbele a {name} (Motor {engine}) como lo haría un cliente.",
+    "ERROR": "No se pudo.",
+    "NO_REPLY": "El agente no contestó (puede estar pausado o sin seguimiento).",
+    "FILE": "Mandó el archivo «{name}»",
+    "TYPING": "Esperando al agente…",
+    "TRACKING_STATUS": "El seguimiento quedó «{status}»: el agente ya no contesta en esta plática. Empieza una nueva.",
+    "WHAT_WRONG": "¿Qué estuvo mal y cómo debió responder?",
+    "WHAT_WRONG_PH": "Ej.: dio las dos becas juntas; primero solo la de 20%",
+    "CANCEL": "Cancelar",
+    "SEND_TRAINER": "Revisar",
+    "PLACEHOLDER": "Escribe como cliente…",
+    "SEND": "Enviar",
+    "APPLY": "Aplicar",
+    "COPY": "Copiar",
+    "COPIED": "Copiado",
+    "OPEN_AGENT": "Abrir el agente",
+    "SHOULD_SAY": "¿Qué debe decir?",
+    "SHARED": "ⓘ Las respuestas predefinidas también las usan tu equipo y otros agentes.",
+    "FIX_IT": "Corregirla",
+    "SHOULD": "Debe decir: {text}",
+    "FIXED": "✓ Corregida. Pruébalo de nuevo.",
+    "ANSWER": "Contestar",
+    "SAVE_CASE_TITLE": "Guardar como prueba",
+    "SAVE_CASE_HINT": "Lo que escribiste como cliente queda como prueba de un lote, para correrla cuando cambies el agente.",
+    "PICK_BATCH": "Elige un lote",
+    "EXPECTED_PH": "Qué se espera de la última respuesta",
+    "SAVE_CASE": "Guardar en el lote",
+    "CASE_SAVED": "Prueba guardada",
+    "BATCHES": {
+      "HINT": "Pruebas agrupadas que se corren completas contra un agente. Cada prueba es lo que escribe el cliente (uno o varios mensajes) y lo que se espera.",
+      "NEW_PH": "Nombre del lote (ej.: Becas)",
+      "NEW": "Nuevo lote",
+      "EMPTY": "Todavía no hay lotes.",
+      "COUNT": "{n} prueba(s)",
+      "LAST_RUN": "· última corrida con {agent}: {passed} de {total}",
+      "PICK_AGENT": "Correr con…",
+      "RUN": "Correr",
+      "DELETE_CONFIRM": "¿Borrar el lote «{name}» con sus pruebas?",
+      "CUSTOMER": "Cliente: {text}",
+      "EXPECTED": "Se espera: {text}",
+      "CASE_NAME_PH": "Nombre de la prueba (opcional)",
+      "MESSAGES_PH": "Lo que escribe el cliente, un mensaje por renglón",
+      "EXPECTED_PH": "Qué se espera de la última respuesta",
+      "ADD_CASE": "Agregar prueba",
+      "RUNNING": "Corriendo: el resultado aparece en la Bitácora.",
+      "ERROR": "No se pudo."
+    },
+    "LOG": {
+      "RUNS": "Corridas",
+      "CORRECTIONS": "Correcciones",
+      "NO_RUNS": "Todavía no hay corridas.",
+      "NO_LOGS": "Todavía no hay correcciones.",
+      "RUN_TITLE": "{batch} con {agent}",
+      "SCORE": "{passed} de {total}",
+      "STATUS": {
+        "queued": "en espera",
+        "running": "corriendo",
+        "done": "terminada",
+        "failed": "falló"
+      },
+      "REPLY": "Respondió: {text}",
+      "FEEDBACK": "Dijeron: {text}",
+      "REPORT": "reporte {status}",
+      "REPORT_STATUS": {
+        "new": "nuevo",
+        "reviewing": "en revisión",
+        "fixed": "corregido",
+        "rejected": "no procede"
+      },
+      "KINDS": {
+        "prompt": "Prompt",
+        "content": "Contenido",
+        "model": "Modelo",
+        "engine": "Motor",
+        "question": "Pregunta"
+      }
+    }
+  }
+}

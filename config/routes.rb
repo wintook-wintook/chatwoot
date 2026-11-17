@@ -218,6 +218,24 @@ Rails.application.routes.draw do
               post :initiate
             end
           end
+          # Probador de agentes (Agentes IA › Probador): motor 1.0 y 2.0, entrenador, lotes y bitácora
+          get 'agent_tester/agents', to: 'agent_tester#agents'
+          post 'agent_tester/sessions', to: 'agent_tester#start'
+          get 'agent_tester/sessions/:conversation_id', to: 'agent_tester#show'
+          post 'agent_tester/sessions/:conversation_id/say', to: 'agent_tester#say'
+          post 'agent_tester/sessions/:conversation_id/feedback', to: 'agent_tester#feedback'
+          post 'agent_tester/apply', to: 'agent_tester#apply'
+          post 'agent_tester/fix_source', to: 'agent_tester#fix_source'
+          get 'agent_tester/logs', to: 'agent_tester#logs'
+          resources :agent_test_batches, only: [:index, :create, :update, :destroy] do
+            collection { get 'runs(/:run_id)', action: :runs }
+            member do
+              post :run
+              post :cases, action: :add_case
+              patch 'cases/:case_id', action: :update_case
+              delete 'cases/:case_id', action: :remove_case
+            end
+          end
           # Motor 2.0 de Agentes a medida (Plan-Motor-Agentes.md §11.11): su ficha, probador y versiones
           resources :motor2_agents, only: [:show, :create, :update] do
             collection do

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_16_130000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_17_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -131,6 +131,66 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_16_130000) do
     t.integer "bot_type", default: 0
     t.jsonb "bot_config", default: {}
     t.index ["account_id"], name: "index_agent_bots_on_account_id"
+  end
+
+  create_table "agent_test_batches", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "created_by_id"
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_agent_test_batches_on_account_id"
+    t.index ["created_by_id"], name: "index_agent_test_batches_on_created_by_id"
+  end
+
+  create_table "agent_test_cases", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "agent_test_batch_id", null: false
+    t.string "name", null: false
+    t.jsonb "messages", default: [], null: false
+    t.text "expected"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_agent_test_cases_on_account_id"
+    t.index ["agent_test_batch_id"], name: "index_agent_test_cases_on_agent_test_batch_id"
+  end
+
+  create_table "agent_test_logs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "tracking_template_id"
+    t.bigint "user_id"
+    t.bigint "conversation_id"
+    t.bigint "message_id"
+    t.string "engine", null: false
+    t.string "kind", null: false
+    t.text "feedback"
+    t.text "reply"
+    t.jsonb "diagnosis", default: {}, null: false
+    t.bigint "motor2_report_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "index_agent_test_logs_on_account_id_and_created_at"
+    t.index ["account_id"], name: "index_agent_test_logs_on_account_id"
+    t.index ["tracking_template_id"], name: "index_agent_test_logs_on_tracking_template_id"
+    t.index ["user_id"], name: "index_agent_test_logs_on_user_id"
+  end
+
+  create_table "agent_test_runs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "agent_test_batch_id", null: false
+    t.bigint "tracking_template_id", null: false
+    t.bigint "created_by_id"
+    t.string "status", default: "queued", null: false
+    t.integer "total", default: 0, null: false
+    t.integer "passed", default: 0, null: false
+    t.jsonb "results", default: [], null: false
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_agent_test_runs_on_account_id"
+    t.index ["agent_test_batch_id"], name: "index_agent_test_runs_on_agent_test_batch_id"
+    t.index ["created_by_id"], name: "index_agent_test_runs_on_created_by_id"
+    t.index ["tracking_template_id"], name: "index_agent_test_runs_on_tracking_template_id"
   end
 
   create_table "ai_agent_attachments", force: :cascade do |t|
@@ -2785,6 +2845,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_16_130000) do
   add_foreign_key "account_users", "contacts", column: "agent_contact_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "agent_test_batches", "accounts"
+  add_foreign_key "agent_test_batches", "users", column: "created_by_id"
+  add_foreign_key "agent_test_cases", "accounts"
+  add_foreign_key "agent_test_cases", "agent_test_batches"
+  add_foreign_key "agent_test_logs", "accounts"
+  add_foreign_key "agent_test_logs", "tracking_templates"
+  add_foreign_key "agent_test_logs", "users"
+  add_foreign_key "agent_test_runs", "accounts"
+  add_foreign_key "agent_test_runs", "agent_test_batches"
+  add_foreign_key "agent_test_runs", "tracking_templates"
+  add_foreign_key "agent_test_runs", "users", column: "created_by_id"
   add_foreign_key "ai_agent_attachments", "accounts"
   add_foreign_key "ai_agent_attachments", "tracking_templates"
   add_foreign_key "ai_follow_up_presets", "accounts"

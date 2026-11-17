@@ -42,6 +42,7 @@ import contactTracking from './contactTracking.js';
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
 import motor2 from './motor2.json'; // Motor 2.0 de Agentes a medida
+import agentTester from './agentTester.json'; // Probador de agentes
 import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
 import googleCalendar from './googleCalendar.js'; // proyecto@google_calendar
 import gestorTickets from './gestorTickets.json'; // @tickets_cases
@@ -96,6 +97,7 @@ export default {
   ...contactTracking,
   ...trackingTemplates, // proyecto@tracking_templates
   ...motor2, // Motor 2.0 de Agentes a medida
+  ...agentTester, // Probador de agentes
   ...knowledgeSources, // @knowledge_sources
   ...googleCalendar, // proyecto@google_calendar
   ...gestorTickets, // @tickets_cases

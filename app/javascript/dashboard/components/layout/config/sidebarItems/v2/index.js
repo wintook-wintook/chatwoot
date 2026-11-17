@@ -686,6 +686,7 @@ const agentesIa = accountId => ({
     'contact_trackings_agents',
     'contact_trackings_agent',
     'motor2_agent', // Motor 2.0
+    'agent_tester', // Probador de agentes
     'contact_trackings_assistant',
     'contact_trackings_dashboard',
     ...AI_TOOL_ROUTES,
@@ -718,6 +719,14 @@ const agentesIa = accountId => ({
     campaignItem(accountId, 'contact_trackings_agents', 'AI_AGENT_LIST'),
     campaignItem(accountId, 'contact_trackings_dashboard', 'TRACKINGS'),
     ...settingsItems(accountId, AI_TOOLS),
+    // Probador de agentes: abajo de Macros (1.0 y 2.0, lotes y bitácora).
+    {
+      icon: 'chat-multiple',
+      label: 'AGENT_TESTER',
+      hasSubMenu: false,
+      toState: frontendURL(`accounts/${accountId}/tracking-dashboard/tester`),
+      toStateName: 'agent_tester',
+    },
   ],
 });
 
