@@ -35,7 +35,8 @@ class AgentTester::Sandbox
   # → la conversación de prueba (nil si no se pudo asignar el agente).
   def start(template, user:)
     box = inbox(ContactTrackings::EngineConfig.model_for(template.inbox))
-    contact = @account.contacts.create!(name: "Probador · #{user&.name || 'prueba'} · #{template.name}".first(100))
+    contact = @account.contacts.create!(name: "Probador · #{user&.name || 'prueba'} · #{template.name}".first(100),
+                                        additional_attributes: { MARK => true })
     contact_inbox = ContactInbox.create!(contact: contact, inbox: box, source_id: SecureRandom.uuid)
     conversation = Conversation.create!(account: @account, inbox: box, contact: contact, contact_inbox: contact_inbox,
                                         status: :open, additional_attributes: { MARK => true, 'agent_tester_user_id' => user&.id })

@@ -10,6 +10,11 @@ class AsyncDispatcher < BaseDispatcher
       return InternalChannel::Events.publish_internal(listeners, InternalChannel::Events::ASYNC_LISTENERS,
                                                       event_object.method_name, event_object)
     end
+    # Probador de agentes: una plática de prueba no sale a ninguna parte (ver AgentTester::Events).
+    if AgentTester::Events.tester?(data)
+      return InternalChannel::Events.publish_internal(listeners, AgentTester::Events::ASYNC_LISTENERS,
+                                                      event_object.method_name, event_object)
+    end
 
     publish(event_object.method_name, event_object)
   end
