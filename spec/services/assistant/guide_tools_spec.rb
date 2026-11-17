@@ -55,4 +55,55 @@ RSpec.describe Assistant::GuideTools do
     limited = Assistant::Tools.new(account: account, user: user, grant: grant, zone: Time.zone)
     expect(limited.call('read_guide', { 'key' => 'ventas' })[:result]).to have_key(:error)
   end
+
+  # «¿Cómo instalo la app en mi celular?» → «sí»: el modelo pidió la guía por su título.
+  it 'lee la guía aunque le pasen el título, y recuerda cuál fue' do
+    tools.call('search_guides', { 'query' => 'como puedo instalar la app en mi celular' })
+    read = tools.call('read_guide', { 'key' => 'Dali en el teléfono (instalarlo como app)' })[:result]
+
+    expect(read[:key]).to eq('dali_telefono')
+    expect(tools.guides_now.first).to eq('dali_telefono')
+    expect(gaps.count).to eq(0)
+  end
+
+  it 'si la clave no existe, sugiere las parecidas sin anotar nada' do
+    result = tools.call('read_guide', { 'key' => 'instalar dali en el telefono' })[:result]
+
+    expect(result[:error]).to include('key')
+    expect(result[:guides].pluck(:key)).to include('dali_telefono')
+    expect(gaps.count).to eq(0)
+  end
+
+  describe 'preguntas de uso' do
+    it 'reconoce «cómo hago…», «dónde veo…», «para qué sirve…» y «por qué no me deja…»' do
+      ['¿Cómo agendo una tarea?', 'como puedo instalar la app en mi  celular', 'donde veo mis ventas',
+       'para qué sirve el embudo', 'por qué no me deja exportar', 'se puedem hacer mensiones en chat con clientes',
+       '¿puedo mencionar a alguien?', '¿hay forma de exportar contactos?'].each do |q|
+        expect(described_class.how_to?(q)).to be(true), q
+      end
+    end
+
+    it 'no confunde preguntas de datos ni pedidos' do
+      ['¿cómo va el caso OPB-3?', '¿cómo está Mario?', 'agenda una llamada con Mario mañana', 'qué tengo hoy'].each do |q|
+        expect(described_class.how_to?(q)).to be(false), q
+      end
+    end
+
+    it 'obliga a buscar en las guías solo en la primera vuelta' do
+      tools.turn = { question: '¿Cómo agendo una tarea?' }
+      expect(tools.tool_choice).to eq(type: 'function', function: { name: 'search_guides' })
+      expect(tools.tool_choice).to eq('auto')
+    end
+
+    it 'sin pregunta de uso, deja al modelo elegir' do
+      tools.turn = { question: 'agéndame llamar a Mario el jueves' }
+      expect(tools.tool_choice).to eq('auto')
+      expect(tools.guide_rounds).to eq(0)
+    end
+
+    it 'a una pregunta de uso le da 2 vueltas más (buscar y leer la guía)' do
+      tools.turn = { question: '¿cómo le hago para agendar una llamada con jane?' }
+      expect(tools.guide_rounds).to eq(2)
+    end
+  end
 end

@@ -2,8 +2,16 @@
 key: chat_interno
 title: Chat interno del equipo
 areas: [conversations]
-keywords: [chat interno, interno, chatear con un companero, mensaje a un companero, hablar con el equipo, general, grupo, grupos, directo, directos, nuevo chat, sala, miembros, mencionar, en linea, equipo, mensajes entre agentes]
+keywords: [chat interno, sin leer, abrir chat, sin mensajes todavia, interno, chatear con un companero, mensaje a un companero, hablar con el equipo, general, grupo, grupos, directo, directos, nuevo chat, sala, miembros, mencionar, en linea, equipo, mensajes entre agentes]
 pages: [conversations]
+sources:
+  - app/javascript/dashboard/components/internalChat/*.vue
+  - app/javascript/dashboard/helper/internalChat.js
+  - app/javascript/dashboard/i18n/locale/es/internalChat.json
+  - app/javascript/dashboard/components/layout/sidebarComponents/Secondary.vue
+  - app/services/internal_channel/*.rb
+  - app/controllers/api/v1/accounts/internal_channels_controller.rb
+reviewed: 2026-11-14
 ---
 ## Para qué sirve
 El Chat interno es para platicar con tus compañeros dentro de la plataforma, sin que lo vea ningún cliente: con todo el equipo, con un equipo de trabajo o uno a uno.
@@ -16,12 +24,13 @@ En el menú de Conversaciones, después de Todas las Conversaciones, Menciones y
 1. Entra a Conversaciones › Chat interno.
 2. La lista tiene dos partes: Grupos y Directos.
 3. En Grupos están «# general» (todos los usuarios de la cuenta) y una sala por cada equipo (solo sus miembros). Se crean y se actualizan solas cuando cambian los equipos o los usuarios.
-4. En Directos están tus pláticas uno a uno. Haz clic en una sala para abrirla.
+4. En Directos están tus pláticas uno a uno, con la foto de la persona y si está en línea. Haz clic en una sala para abrirla.
+5. Las salas van de la que tuvo el último mensaje a la más vieja. Las que tienen mensajes sin leer salen en negritas con su número, y abajo del nombre ves el último mensaje y quién lo escribió («Tú: …», «Ana: …»).
 
 ### Escribirle a un compañero
 1. En Chat interno pulsa «Nuevo chat».
-2. En «Agente» busca a la persona.
-3. Pulsa «Abrir chat». Si ya tenían una plática, se abre esa.
+2. En «Agente» busca a la persona («Busca un agente»).
+3. Pulsa «Abrir chat». Si ya tenían una plática, se abre esa. Para salir sin abrir nada, «Cancelar».
 
 ### Mandar mensajes
 1. Escribe abajo. Enter envía; Shift + Enter hace un salto de línea.
@@ -38,7 +47,8 @@ En el menú de Conversaciones, después de Todas las Conversaciones, Menciones y
 - ¿Quién ve una sala? Solo sus participantes: un directo, las dos personas; la de un equipo, sus miembros; «# general», todos. Ni el administrador ve los directos de otros.
 - ¿Puedo crear un grupo con quien yo quiera? No: los grupos son los equipos de la cuenta. Para un grupo nuevo, pide que se cree el equipo.
 - No veo «Chat interno»: puede estar apagado para tu empresa. Pregúntale a tu administrador.
-- En el Chat interno no hay filtros, estados (abierta, resuelta) ni panel del contacto: es solo para platicar.
+- En el Chat interno no hay filtros, pestañas, estados (abierta, resuelta) ni panel del contacto: es solo para platicar. Tampoco hay «Nota privada», firma ni plantillas de WhatsApp: todo lo que escribes ya es solo para el equipo.
+- No tengo salas: sale «Todavía no tienes salas. Abre una con «Nuevo chat».». Sin sala elegida sale «Elige una sala o abre una con «Nuevo chat».».
 
 ## Quién puede
 Todos los usuarios que entran a Conversaciones. No depende de «Solo lo suyo»: cada quien ve las salas donde participa.

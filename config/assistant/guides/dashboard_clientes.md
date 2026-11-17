@@ -3,7 +3,12 @@ key: dashboard_clientes
 title: Dashboard de clientes
 areas: [clients]
 keywords: [dashboard de clientes, tablero de clientes, prospectos hoy, clientes hoy, prospectos nuevos, clientes nuevos, conversion, conversion a cliente, tasa de conversion, dias de prospecto a cliente, cuanto tardan en comprar, llegadas por mes, informe de clientes, cuantos clientes tengo, cuantos prospectos]
-pages: [reports, organizations, clients_dashboard]
+pages: [reports, organizations, clients_dashboard, organization, commercial_settings]
+sources:
+  - app/javascript/dashboard/views/organizations/OrganizationsDashboard.vue
+  - app/services/organizations/metrics.rb
+  - app/controllers/api/v1/accounts/organizations_controller.rb
+reviewed: 2026-11-14
 ---
 ## Para qué sirve
 Muestra tus prospectos y clientes: cuántos hay hoy, cuántos llegaron en el periodo, qué porcentaje de prospectos ya compró y cuántos días tardan en pasar de prospecto a cliente. Cuenta organizaciones (no contactos sueltos).
@@ -14,7 +19,7 @@ Informes › Dashboard de clientes.
 ## Cómo se hace
 ### Ver el tablero
 1. Entra a Informes › Dashboard de clientes.
-2. Elige el periodo: «Últimos 3 meses», «Últimos 6 meses» (el que sale primero) o «Últimos 12 meses». El periodo cuenta el mes en curso.
+2. Elige el periodo arriba a la derecha: «Últimos 3 meses», «Últimos 6 meses» (el que sale primero) o «Últimos 12 meses». El periodo empieza el día 1 del mes más viejo y cuenta el mes en curso hasta hoy.
 3. Lee los seis cuadros y, abajo, «Llegadas por mes».
 
 ### Qué dice cada cuadro
@@ -32,4 +37,4 @@ Informes › Dashboard de clientes.
 - Para ver la lista de cada etapa ve a Clientes › Organizaciones (pestañas Prospectos y Clientes).
 
 ## Quién puede
-Hace falta entrar a Informes (para ver la opción en el menú) y a Clientes (los números salen de las organizaciones). Si tu rol no entra a Clientes, el tablero no carga.
+Hace falta entrar a Informes (para ver la opción en el menú) y a Clientes (los números salen de las organizaciones). Si tu rol no entra a Clientes, el tablero no carga y sale un aviso de error: por eso el rol Consulta, que por omisión solo tiene Informes, no lo ve. Quien tiene Clientes en «Todo» o «Ve todo (sin cambiar)» ve toda la empresa.

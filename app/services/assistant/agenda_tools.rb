@@ -37,7 +37,12 @@ module Assistant::AgendaTools
       users = users.where('users.name ILIKE :q OR users.display_name ILIKE :q OR users.email ILIKE :q', q: like)
     end
     roles = @account.account_users.where(user_id: users.limit(TEAM_LIMIT).select(:id)).includes(:access_role).index_by(&:user_id)
-    { team_members: users.limit(TEAM_LIMIT).map { |u| team_ref(u, roles[u.id]) } }
+    members = users.limit(TEAM_LIMIT).map { |u| team_ref(u, roles[u.id]) }
+    return { team_members: members } if members.any? || q.blank?
+
+    # «Llamar a jane»: si no es del equipo, casi siempre es un cliente. Sin esto el modelo
+    # se quedaba preguntando «¿es un contacto?».
+    { team_members: [], note: "«#{q}» no es del equipo: búscalo como cliente con search y sigue con lo que pidió." }
   end
 
   # Solo las que siguen agendadas (las realizadas o «no asistió» ya no son pendientes del día).

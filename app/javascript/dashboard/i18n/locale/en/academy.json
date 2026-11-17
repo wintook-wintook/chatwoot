@@ -1,0 +1,55 @@
+{
+  "ACADEMY": {
+    "TITLE": "My training",
+    "SUBTITLE": "Learn Kontrolya by doing: read the lesson, do the exercise and press «Check». The platform verifies you did it.",
+    "PROGRESS": "{done} of {total} steps",
+    "MODULE_PROGRESS": "{done}/{total}",
+    "STATUS": {
+      "pending": "Pending",
+      "started": "In progress",
+      "done": "Done",
+      "in_progress": "In progress"
+    },
+    "NEXT": "Next up",
+    "EMPTY": "Your role has no training modules yet.",
+    "LOADING": "Loading your training...",
+    "LESSON": "Lesson",
+    "EXERCISE": "Exercise",
+    "READ": "Read",
+    "READ_AGAIN": "Read again",
+    "DO_IT": "Do it",
+    "CHECK": "Check",
+    "HOW": "How?",
+    "FOUND": "Nice! Done.",
+    "ATTEMPTS": "Checked {n} times",
+    "BLOCKED": "First create your practice client (Contacts and organizations module).",
+    "BLOCKED_CASE": "First create the case of your practice client.",
+    "HOW_QUESTION": "How do I do this in Kontrolya? {title}. {text}",
+    "PRACTICE": {
+      "TITLE": "Your practice client",
+      "NONE": "For the contact and case exercises you use a practice-only client: it has no phone or email, so nothing is sent.",
+      "CREATE": "Create my practice client",
+      "OPEN": "Open",
+      "DELETE": "Delete my practice",
+      "CONFIRM_TITLE": "Delete your practice?",
+      "CONFIRM_MESSAGE": "Your practice client, its cases with their tasks and meetings, and its organization (if only used by it) are deleted. Your training progress stays.",
+      "CONFIRM_YES": "Yes, delete",
+      "CONFIRM_NO": "Cancel",
+      "DELETED": "Your practice was deleted."
+    },
+    "GUIDE": {
+      "CLOSE": "Close",
+      "FULL": "View in the Help Center"
+    },
+    "ERROR": "It didn't work. Try again.",
+    "LEVEL": {
+      "required": "Essential",
+      "recommended": "Recommended",
+      "later": "When you're ready"
+    },
+    "WITH_DALI": "Do it with Dali",
+    "GO": "Go",
+    "UNDO": "Undo",
+    "CONFIRMED_BY": "Accepted by {name}"
+  }
+}

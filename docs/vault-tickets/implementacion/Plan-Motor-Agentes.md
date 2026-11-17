@@ -2,6 +2,10 @@
 
 > Acordado con el usuario el 2026-11-09. **Estado: guardado, sin empezar.** Se retoma
 > cuando el usuario diga; la idea es construirlo todo de un jalón (M1–M5) y probar después.
+>
+> **Actualizado 2026-11-14 — ver sección 11.** Cambia la opción B (secciones 2 y 5): el 2.0
+> vive aparte, como Agentes listos, y **Agentes a medida no se toca** (ni interruptor dentro de
+> él). Un solo motor con dos puertas (listo / a medida 2.0). **Para retomar: leer 11.10.**
 
 ## 1. Por qué
 
@@ -221,3 +225,366 @@ Mientras tanto, en el motor (M1–M5) la habilidad «Cotizar» usa el Catálogo 
 Preguntas abiertas:
 - ¿Dónde viven los 50 mil productos: CRM Zeus, el Catálogo de Kontrolya o los dos?
 - ¿Qué empresas usan hoy el vendedor transaccional?
+
+## 11. Agentes a medida 2.0 (acordado 2026-11-14)
+
+Esta sección manda sobre las secciones 2 y 5 donde se contradigan.
+
+### 11.1 Las tres partes de un agente
+
+| Parte | Quién la pone | Qué aporta |
+|---|---|---|
+| **Modelo** (OpenAI) | Lo rentamos | Sabe del mundo, entiende y redacta. No conoce el negocio ni tiene memoria propia |
+| **Código** (la plataforma) | Nosotros | Memoria, reglas que deben cumplirse siempre y habilidades |
+| **Lo que dicta el usuario** | La empresa | Instrucciones (tono, objetivo, qué no hacer) y conocimiento (precios, carreras, fuentes) |
+
+- No se entrena (fine-tuning) al modelo: «entrenar» un agente = darle instrucciones y conocimiento.
+- **Regla para decidir dónde va cada cosa:**
+  - **instrucciones:** tono, qué decir, qué información dar;
+  - **habilidad con estado en el código:** orden, límites, cosas que no se repiten ni se adelantan.
+
+### 11.2 Qué está mal del motor viejo
+
+Hace las tres partes, pero con los papeles al revés:
+- **El código decide la plática** (cadena de 9 pasos y rutas), cuando eso lo hace mejor el modelo.
+- **El modelo carga las reglas**, cuando le tocan al código:
+  - las variables las escribe el mismo modelo;
+  - la búsqueda le pasa información que no debe usar todavía (las dos becas juntas).
+- **Lo del usuario es un prompt técnico** (`@ruta`, `@buscar_…`, variables), difícil de escribir.
+  Por eso los agentes no salen a la primera.
+
+### 11.3 Un solo motor, dos puertas
+
+| | Agentes listos | A medida 2.0 |
+|---|---|---|
+| Para quién | Quien quiere que funcione ya (dos clics) | Quien quiere control |
+| Fuentes | Las del puesto | Las que quiera (Excel, docs, ERP, varias) |
+| Instrucciones | Puesto + «Cómo habla tu empresa» | Puesto (si parte de uno) + las suyas |
+| Habilidades | Las del puesto | Las que prenda |
+| Motor | El mismo (el de Seguimiento IA) | El mismo |
+
+- **«Personalizar»** en un agente listo abre la ficha completa del **mismo agente** (no lo copia); ver 11.9.
+- Cada habilidad nueva sirve a las dos puertas. No repetir el error de tener dos motores.
+- **El 2.0 vive aparte:** tablas, pantallas y motor propios. **Agentes a medida (viejo) no se
+  toca** y sigue funcionando.
+- **«Pasar a 2.0»:** lee un agente a medida (solo lectura) y crea su copia en el 2.0, ya
+  acomodada en la ficha. El viejo sigue igual; se regresa cuando se quiera.
+- Motor **de cero**; pantallas y aprendizaje **no**: la ficha nueva se hace copiando la idea
+  de la actual, sin editar la actual.
+
+### 11.4 Sin rutas; el prompt en tres capas
+
+- Desaparecen las rutas, `@ruta`, `@buscar_…`, `@ruta_por_defecto`, el tope de 20 rutas, el
+  diagrama de rutas, la prueba del clasificador, `training_structure` y la cadena de 9 pasos.
+  El modelo decide hacia dónde va la plática.
+- Lo útil de las rutas pasa a la ficha:
+
+| Hoy en una ruta | En el 2.0 |
+|---|---|
+| `@buscar_…` en tal fuente | Fuentes marcadas |
+| Si pide humano o se enoja → persona | Campo «Cuándo pasar a una persona» y a quién |
+| Si quiere cita → agenda | Habilidad Citas |
+| Si es queja → ticket | Habilidad Tickets, con motivos |
+| Manda tal imagen en tal momento | Archivos con su regla |
+| Precio → beca 1 → beca 2 | Habilidad Ofertas escalonadas |
+
+- **Prompt = puesto (nuestro) + habilidades (nuestras) + instrucciones de la empresa** (texto
+  libre, sin minilenguaje).
+
+### 11.5 Qué se reusa de las pantallas de Agentes a medida
+
+Inventario hecho el 2026-11-14 (rutas en `app/javascript/dashboard/routes/dashboard/contactTrackings/routes.js`;
+ficha en `app/javascript/dashboard/views/contactTrackings/ficha/AgentFicha.vue`).
+
+**Tal cual (la idea y los campos):**
+- **Agente y canal:**
+  - nombre, nombre que ve el cliente, objetivo, contexto;
+  - canal, intentos e intervalo;
+  - plantillas de WhatsApp por intento, firma de correo.
+- **Fuentes de datos** (tarjetas): sheet, doc, articles, canned, forum, contpaq, discourse, erp.
+- **Agenda:** calendarios, duración, presentación de horarios, en qué calendario se aparta la cita.
+- **Tickets:** tipos de caso, motivos y prioridad.
+- **Archivos:** con regla de cuándo se mandan (bienvenida, intento, ruta, cita).
+- **Bienvenida.**
+- **Preguntas:** una a la vez, en qué variable se guarda y qué respuestas acepta.
+- **Datos del negocio:** pares dato/valor.
+- **Palabras clave** (`keyword_actions`): cancel, pause, objective_met, interested, booked.
+- **Versiones:** diff campo por campo y restaurar sin borrar.
+- **Campañas:**
+  - audiencia, ritmo, tope diario;
+  - prueba A/B del asunto y cortes;
+  - calificación caliente/tibio y traspaso al tablero.
+- **Tablero de métricas.**
+- **«¿Listo para atender?».**
+- **Galería e importar.**
+
+**Se reusa cambiando el fondo:**
+- **Variables con reglas `{when, to}`:** las mueve el código, no el modelo. Es la base de las
+  habilidades con estado.
+- **Comprobador:** revisa que la ficha esté completa y sin contradicciones, no la sintaxis del prompt.
+- **Asistente de entrenamiento** (entrevista, encargo .md, «Esto entendí»): llena la ficha en
+  lugar de escribir un prompt.
+- **«Configurar» / `adaptation_answers`:** detectar lo que el agente usa y la cuenta no tiene.
+  Se aplica a la ficha.
+- **Casos de prueba** (`tracking_test_cases`): de «debe ir a la ruta X» a «debe / no debe hacer
+  esto».
+- **Probar fuentes:** igual.
+
+**Se deja atrás:** todo lo de la lista de 11.4.
+
+**Ejemplo Casauranc → ficha 2.0:**
+
+| Prompt de hoy | Ficha 2.0 |
+|---|---|
+| [ROL], bienvenida | Agente y Bienvenida |
+| [DATOS DE LA ESCUELA] | Datos del negocio |
+| [CATÁLOGO] | Fuentes (respuestas predefinidas) |
+| [IMÁGENES DE BECA] | Archivos |
+| [PRECIO Y BECAS] | Ofertas escalonadas |
+| [VARIABLES] | Variables movidas por el código |
+| [ESTILO], [PROHIBIDO] | Instrucciones de la empresa |
+
+### 11.6 Receta para crear una habilidad nueva
+
+Cada habilidad es un paquete de 5 piezas:
+
+| Pieza | Qué es | Ejemplo: Ofertas escalonadas |
+|---|---|---|
+| Campos de la ficha | Lo que llena la empresa | Escalones: texto, precio, cupón, imagen, liga; qué cuenta como objeción |
+| Herramienta | Lo que el modelo puede llamar | `siguiente_oferta` |
+| Memoria | Lo que el código guarda por cliente | «Va en el escalón 2» |
+| Instrucciones | Unas líneas nuestras en archivo | «Si objeta el precio, usa `siguiente_oferta` y da solo lo que te regrese» |
+| Pruebas | Pláticas que deben salir bien | «Nunca aparecen dos becas en el mismo mensaje» |
+
+- **Clave:** el modelo no ve todos los escalones; pide el siguiente y el código le da solo ese
+  y avanza. Lo que no tiene a la vista no lo puede filtrar.
+- **Ofertas escalonadas es genérica:**
+  - becas (escuelas);
+  - descuentos (tiendas);
+  - plazos o meses sin intereses (ventas);
+  - quitas o convenios (cobranza).
+- **Cómo nace una habilidad:**
+  1. **detectar:** prompts que nos traen, pláticas que salen mal, reportes del entrenador;
+  2. **decidir:** si hay que recordar algo, respetar un orden, poner un límite o conectarse a
+     algo, es habilidad; si es tono o forma de decir, va en las instrucciones;
+  3. **construir:** las 5 piezas, en una rama;
+  4. **probar:** primero las pruebas, luego un agente real;
+  5. **soltar:** disponible para todos los 2.0; si conviene, de fábrica en un agente listo.
+- **Reglas:**
+  - mejorar una habilidad mejora a todos los que la usan, así que las pruebas son obligatorias;
+  - una habilidad hace una sola tarea;
+  - debe poder explicarse en una línea en la ficha.
+- **Primeras probables:**
+  - Ofertas escalonadas;
+  - Preguntas (una a la vez, guardando la respuesta);
+  - Leer Excel/Sheets;
+  - Buscar en ERP;
+  - Citas;
+  - Tickets;
+  - Mandar archivos según regla;
+  - Pasar a una persona.
+
+  Varias ya existen a medias en Seguimiento IA o en Agentes listos.
+
+### 11.7 Corregir ahí mismo: el entrenador y los tres tipos de error
+
+> El flujo completo del probador y las correcciones está en **11.8**, que manda sobre esta
+> sección donde se contradigan. Aquí quedan los tres tipos de error y el ejemplo real.
+
+**Botón «Corregir esta respuesta»,** en pruebas o en pláticas reales:
+1. El usuario marca la respuesta mala y escribe qué esperaba.
+2. Un entrenador (como Dali) clasifica el error:
+
+| Tipo | Cómo se reconoce | Qué hace el entrenador | Quién lo arregla |
+|---|---|---|---|
+| **1. Faltaba información** | Dice algo nuevo: horario, precio, tono, a quién pasar | Propone el cambio en instrucciones, datos, fuentes o campo de habilidad; el usuario aprueba | El usuario, ahí mismo |
+| **2. Falta una habilidad** | Pide algo que el motor no sabe hacer (inventario, Excel) | Avisa que falta esa función; mientras, aplica lo mejor posible con instrucciones (p. ej. pasar a persona); manda reporte | Nosotros |
+| **3. Indicación ignorada** | La corrección ya estaba escrita y no se obedeció | Avisa que es falla nuestra; refuerza la indicación para ese agente; manda reporte con prioridad alta | Nosotros, con prioridad |
+
+**Reglas:**
+- **No aprende solo sin aprobación.** El entrenador propone, enseña el cambio, corre las pruebas
+  y el usuario confirma.
+- **Cada corrección aprobada:**
+  - queda como versión (se puede deshacer);
+  - se guarda como **prueba nueva**, para que el error no regrese sin avisar.
+- **Reportes (tipos 2 y 3):**
+  - llegan a una lista en Super Admin, como las «preguntas sin respuesta» de Dali, con la
+    plática, lo esperado y qué falta;
+  - se ordenan por cuántos piden lo mismo.
+
+Así crece el motor: con los errores que los usuarios reportan, no uno por uno a mano.
+
+**Ejemplo real de tipo 3 (2026-11-12, Seguimiento IA):**
+- **Qué pasó:** las indicaciones decían «es una distribuidora, pregúntale si ya le pasó la
+  cotización a su cliente», y el agente le preguntaba a ella si había visto la cotización.
+- **Causa:** estaba en nuestra capa. El prompt base hablaba de «el cliente» y el caso aparecía
+  como suyo.
+- **Arreglo:** el objetivo y las indicaciones mandan y el caso es solo contexto
+  (`app/services/ai_follow_ups/prompt.rb`, commit d616aadb), y el campo nuevo «Quién es quién»
+  en Cómo habla tu empresa (commit 7c72bb1b).
+- **Le sirvió a todos** los agentes de Seguimiento IA y Agentes listos.
+
+### 11.8 Probador y correcciones (acordado 2026-11-14)
+
+Hoy los usuarios prueban directo en WhatsApp o Telegram, y lo que sale mal nos lo traen a mano.
+El 2.0 debe permitir corregir donde se prueba.
+
+**1. Probador dentro del 2.0**
+- Se parte del chat de prueba de Agentes listos:
+  - `ReadyAgentModal.vue`;
+  - `ReadyAgents::Runner#test`;
+  - `POST /ready_agents/test`.
+- Como allá, el usuario es el cliente y no se guarda ni se manda nada.
+- Se le agregan tres cosas:
+  - **👍 / 👎 en cada respuesta;**
+  - **qué hizo el agente:** qué fuente consultó, qué habilidad usó y en qué escalón va;
+  - **guardar la plática como prueba.**
+
+**2. Al dar 👎:** el usuario escribe qué estuvo mal y cómo debió responder. El entrenador contesta
+en el mismo chat según dónde esté el error:
+
+| Dónde está el error | Qué hace el entrenador |
+|---|---|
+| Instrucciones del agente | **Lo corrige solo:** muestra el cambio, ofrece **Deshacer**, deja versión y vuelve a contestar el mismo mensaje para comparar |
+| Respuestas predefinidas | **No las cambia solo** (las usan otros agentes y personas). Dice exactamente qué corregir y ofrece **Aplicar este cambio** a quien tenga permiso |
+| Campo de la ficha (escalones, horario, a quién pasar) | Dice qué campo y qué valor; botón **Aplicar** |
+| No sabe resolverlo (falta habilidad o indicación ignorada) | «Esto no lo puedo corregir yo. Ya lo reporté al equipo y te aviso cuando quede.» → reporte |
+
+**Condiciones para corregir solo las instrucciones:**
+- se ve el cambio;
+- se puede deshacer;
+- queda como versión;
+- antes de aplicarlo **corre las pruebas guardadas**. Si rompe algo que ya funcionaba, avisa en
+  lugar de aplicar.
+
+Cada 👎 corregido se guarda como **prueba**. Al cambiar algo después, se vuelve a correr y avisa si
+el error regresó.
+
+**3. Reporte de lo que no sabe resolver**
+1. **Se guarda** en una tabla de reportes con:
+   - la plática completa;
+   - lo que respondió y lo que el usuario esperaba;
+   - el agente, la empresa y el tipo de error (falta habilidad / indicación ignorada).
+2. **Nos llega:**
+   - un **correo** al equipo;
+   - una **lista en Super Admin**, como «preguntas sin respuesta» de Dali, ordenada por cuántos
+     piden lo mismo.
+
+   Estados: nuevo, en revisión, corregido, no procede.
+3. **Lo corregimos** en el motor, en una habilidad o creando una nueva (receta de 11.6).
+4. **Al marcar «corregido»:**
+   - el usuario recibe un aviso: «Ya quedó lo que reportaste del agente X, pruébalo de nuevo»;
+   - la prueba guardada se corre sola para confirmar.
+
+**4. Corregir desde el canal real (WhatsApp / Telegram)**
+- **👍 / 👎 en la conversación real** dentro de la plataforma, en cada mensaje del agente, con el
+  mismo flujo de corrección.
+- **Número de prueba:** se marca el teléfono del dueño como «probador».
+  - Si escribe `corrige: …`, ese mensaje no lo contesta el agente: va al entrenador.
+  - El entrenador responde ahí mismo y sigue el mismo flujo.
+
+**Pendiente de decidir al construir:**
+- a qué correo llegan los reportes;
+- quién puede «Aplicar» cambios en respuestas predefinidas;
+- si el número de probador se marca en la ficha o en el contacto.
+
+### 11.9 Una ficha, un probador y varios agentes (acordado 2026-11-14)
+
+**Una sola ficha para todos los agentes, con dos vistas:**
+- **Vista corta (agente listo):**
+  - solo las preguntas que sabemos que lleva ese puesto; lo demás viene del puesto;
+  - dos clics y funciona.
+- **Vista completa (botón «Personalizar»):**
+  - el **mismo agente**, no una copia, con todas las secciones abiertas;
+  - las respuestas de la vista corta ya aparecen llenas;
+  - sigue en su bandeja; no hay dos agentes que mantener.
+
+| # | Sección | Qué lleva |
+|---|---|---|
+| 1 | Agente | Nombre, nombre que ve el cliente, objetivo, canal, tono |
+| 2 | Qué sabe | Fuentes: respuestas predefinidas, Excel/Sheets, docs, artículos, ERP |
+| 3 | Qué hace | Habilidades: preguntas, ofertas escalonadas, citas, tickets, archivos, cotizar |
+| 4 | Reglas | Palabras clave, cuándo pasar a persona y a quién, lo que nunca debe hacer |
+| 5 | Instrucciones de la empresa | Texto libre: tono y matices |
+| 6 | Probar | Chat con 👍/👎 y correcciones (11.8) |
+| 7 | Versiones | Cambios y restaurar |
+
+- **Mejoras nuestras:** personalizar fuentes, habilidades, reglas o instrucciones **sigue
+  recibiendo** las mejoras del puesto y las habilidades. Solo si se edita el texto del puesto
+  en modo avanzado deja de recibirlas, y se avisa antes.
+- **Seguimiento IA entra igual:**
+  - sus plantillas (recetas) son su vista corta;
+  - «Personalizar» abre la misma ficha;
+  - mismo motor.
+
+**Un solo probador** para las dos vistas:
+- mismas pruebas guardadas y mismo historial de correcciones;
+- en la vista corta, si la corrección cae en algo que esa vista no muestra (p. ej. una fuente
+  nueva), el entrenador dice «Esto se arregla en Personalizar › Qué sabe» y lleva ahí.
+
+**Varios agentes del mismo tipo:**
+- **Hoy** ya se pueden crear varios agentes listos del mismo tipo, pero solo uno activo por
+  bandeja (`one_agent_per_inbox`, `app/models/ready_agent.rb:69`).
+- **En el 2.0, varios en la misma bandeja con regla de reparto:**
+  - anuncio o campaña de origen;
+  - palabra del primer mensaje;
+  - etiqueta o etapa del contacto;
+  - horario;
+  - si no cumple ninguna, el **agente principal** de la bandeja.
+- **Una sola lista de agentes** (listos y personalizados juntos). Cualquiera se puede elegir en:
+  - campañas;
+  - asignación masiva;
+  - automatizaciones;
+  - «Delegar a agente» del caso;
+  - Dali.
+- **Quién contesta si hay varios en una plática** (gana el más específico):
+  1. Seguimiento IA delegado a esa conversación;
+  2. el agente de la campaña que le escribió a ese contacto;
+  3. el que gane por la regla de reparto de la bandeja;
+  4. el agente principal de la bandeja.
+
+  Ejemplo: la campaña de becas le escribe a Juan con «Becas Derecho». Cuando Juan contesta, lo
+  sigue atendiendo ese agente aunque la bandeja tenga otro.
+
+### 11.10 Dónde nos quedamos (2026-11-14) — para retomar
+
+**Estado:** solo plan y diseño; **no hay código del 2.0**. Agentes a medida (viejo) sigue intacto
+y no se toca.
+
+**Ya acordado** (secciones 11.1–11.9):
+- 11.1: las tres partes;
+- 11.2: qué falla del viejo;
+- 11.3: un motor, dos puertas, aparte del viejo, con «Pasar a 2.0» de solo lectura;
+- 11.4: sin rutas, prompt en tres capas;
+- 11.5: inventario de pantallas a reusar;
+- 11.6: receta de habilidades (5 piezas), con Ofertas escalonadas como primera;
+- 11.7–11.8: probador con 👍/👎, entrenador y reportes;
+- 11.9: ficha única con vista corta y completa, probador único, varios agentes con reparto y
+  prioridad.
+
+**Lo que ya existe y se usa como base:**
+- motor de Seguimiento IA / Agentes listos (`AiFollowUps::Runner`, `ReadyAgents::Runner`);
+- chat de prueba de Agentes listos (`ReadyAgentModal.vue`, `ReadyAgents::Runner#test`);
+- «Cómo habla tu empresa» (`AgentBase::CompanyVoice`, incluye «Quién es quién»);
+- nota del contacto para IA (`AgentBase::ContactNote`);
+- «preguntas sin respuesta» de Dali (modelo para la lista de reportes en Super Admin);
+- ficha de Agentes a medida (`views/contactTrackings/ficha/`) como modelo de secciones.
+
+**Pendiente de decidir al retomar:**
+- Rehacer la tabla de pasos (sección 7, M1–M5). Fue pensada para la opción B y hay que
+  ajustarla al 2.0 aparte: ficha única, probador, reportes, reparto y «Pasar a 2.0».
+- Si el 2.0 crece sobre la tabla `ready_agents` o usa una tabla nueva.
+- A qué correo llegan los reportes.
+- Quién puede «Aplicar» cambios en respuestas predefinidas.
+- Dónde se marca el número de probador (ficha o contacto).
+- Qué reglas de reparto van en la primera versión.
+- Lo de la sección 9 que siga abierto.
+
+**Antecedente que motivó el 2.0:** el prompt de Casauranc. Las becas salían juntas y las variables
+no siempre lo controlaban. El arreglo de texto quedó en el scratchpad de esa sesión; no está en el
+repo.
+
+**Siguiente paso al retomar:**
+1. leer la sección 11 completa;
+2. proponer la nueva tabla de pasos;
+3. esperar el «sí» del usuario.

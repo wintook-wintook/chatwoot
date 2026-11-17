@@ -41,12 +41,17 @@ class Assistant::Chat < Cases::Ai::BaseService
       cards << outcome[:card] if outcome[:card]
       suggestions.concat(Array(outcome[:suggestions]))
     end
-    @thread.add_message(role: 'assistant', content: content.presence || fallback(proposals),
+    @thread.add_message(role: 'assistant', content: final_text(content, proposals),
                         proposals: proposals, navigate: navigate, cards: cards.first(MAX_CARDS),
-                        suggestions: suggestions.uniq.first(MAX_SUGGESTIONS), listed: @tools.listed_now.presence)
+                        suggestions: suggestions.uniq.first(MAX_SUGGESTIONS), listed: @tools.listed_now.presence,
+                        guides: @tools.guides_now.presence)
   end
 
   private
+
+  def final_text(content, proposals)
+    Assistant::PageLinks.new(@tools).call(Assistant::History.clean(content)).presence || fallback(proposals)
+  end
 
   # Guarda lo que escribió y se lo pasa a las funciones (las guías anotan la pregunta).
   def start_turn(text)
@@ -55,7 +60,7 @@ class Assistant::Chat < Cases::Ai::BaseService
   end
 
   def run(messages)
-    MAX_ROUNDS.times do
+    (MAX_ROUNDS + @tools.guide_rounds).times do
       message = complete(messages)
       return I18n.t('assistant.unavailable') unless message
 
@@ -77,7 +82,7 @@ class Assistant::Chat < Cases::Ai::BaseService
     key = api_key
     return nil if key.blank?
 
-    body = { model: model, messages: messages, tools: Assistant::Tools.definitions, tool_choice: 'auto',
+    body = { model: model, messages: messages, tools: Assistant::Tools.definitions, tool_choice: @tools.tool_choice,
              temperature: 0.2, max_tokens: @analysis ? ANALYSIS_TOKENS : MAX_TOKENS }
     raw = post_raw(key, body)
     raw&.dig('choices', 0, 'message')
@@ -122,13 +127,7 @@ class Assistant::Chat < Cases::Ai::BaseService
     {}
   end
 
-  # Lo dicho antes, en texto: lo que se propuso y en qué quedó va entre corchetes.
-  def history_messages
-    @thread.messages.last(HISTORY).map do |m|
-      notes = Array(m['proposals']).map { |p| "[Propuse #{p['type']}: #{p['labels'].to_h.values.compact.join(', ')} — #{p['status']}]" }
-      { role: m['role'], content: [m['content'], *notes].compact_blank.join("\n") }
-    end
-  end
+  def history_messages = Assistant::History.messages(@thread, HISTORY)
 
   def fallback(proposals)
     proposals.any? ? I18n.t('assistant.review_proposal') : I18n.t('assistant.unavailable')
@@ -168,6 +167,7 @@ class Assistant::Chat < Cases::Ai::BaseService
       Eso NO lo hace: queda una tarjeta que el usuario confirma. Nunca digas que ya quedó hecho; di que lo revise y confirme.
       Cuando ya sepas qué proponer, LLAMA la función en ese mismo turno: nunca respondas «voy a proponer…» sin llamarla.
     - Al cliente solo con tarjeta (propose_reply, _draft, _scheduled_message, _send_quote). «¿Quién me escribió?»: my_conversations.
+    - «Llámale», «márcale» (voz por WhatsApp): propose_whatsapp_call; la llamada la hace el usuario desde su navegador, no tú.
       Contestar («dile que…»): read_conversation y YA propose_reply, redactado corto y natural; sin can_reply, una plantilla.
     #{Assistant::PromptRules::REPLY_TARGET}
       «¿Qué tengo pendiente / sin responder?»: my_conversations y contesta por bloques, solo los que traigan algo:
@@ -179,6 +179,7 @@ class Assistant::Chat < Cases::Ai::BaseService
     - Fechas y horas: interpreta «mañana», «el jueves», etc. con la fecha de ahora y escríbelas en hora local YYYY-MM-DDTHH:MM.
       Si no dicen hora para una cita, pregunta. Una tarea solo lleva día (YYYY-MM-DD): vence al final de ese día.
     - «Esto», «este caso», «este cliente» es lo que el usuario está viendo (al final). Abrir o ir a una pantalla: open_page.
+    #{Assistant::PromptRules::PAGES}
     #{Assistant::PromptRules::FOLLOW_UP}
     - «¿Cómo va el seguimiento?»: tracking_status. Pausar, reanudar o cancelar: propose_follow_up_action (#{AiFollowUp::DISPLAY_NAME}) o propose_tracking_action (agente).
     - Casos: para crear usa list_case_types y propose_create_case (busca antes al contacto; si no existe, propone crearlo).
@@ -195,16 +196,18 @@ class Assistant::Chat < Cases::Ai::BaseService
     - No hagas acciones masivas (a muchos clientes a la vez): di que eso todavía no lo puedes hacer.
 
     Cómo se usa la plataforma («¿cómo creo…?», «¿dónde veo…?», «¿para qué sirve…?», «¿por qué no me deja…?»):
-    - Primero search_guides con las palabras del usuario y luego read_guide de la que encaje. Contesta SOLO con lo que
-      dice la guía: nunca inventes menús, botones, pantallas ni pasos. Si es para hacerlo tú (p. ej. «crea la tarea»),
-      no hace falta guía: usa la función de propuesta.
-    - Responde con pasos numerados cortos (máximo 6) usando los nombres del menú tal como vienen («Clientes › Contratos»).
-      Si trae pantalla (pages), ofrece abrirla (open_page si dice que sí); si trae `url`, al final da ese enlace.
+    - En el MISMO turno: search_guides con las palabras del usuario, read_guide (con su `key`) de la que encaje y contesta
+      con los pasos. Nunca ofrezcas «abrir la guía» ni preguntes si la quiere: dale la respuesta. Contesta SOLO con lo
+      que dice la guía: nunca inventes menús, botones, pantallas, pasos ni tiendas de apps (Kontrolya no está en Play
+      Store ni App Store). Si es para hacerlo tú (p. ej. «crea la tarea»), no hace falta guía: usa la función de propuesta.
+    - Responde con pasos numerados cortos (máximo 6); cada pantalla como liga [[clave]] (ver arriba). Si trae `url`, dalo al final.
     - Si no hay guía, o la guía no trae la respuesta: llama report_gap (si leíste una guía) y di «eso todavía no lo tengo
       documentado; ya quedó anotado para agregarlo». Puedes sugerir a quién preguntarle (su administrador).
     - Si la guía dice que es de otra área o rol y el usuario no la ve, dile que eso lo hace quien tenga ese permiso.
 
     #{Assistant::PromptRules::SALES}
+
+    #{Assistant::PromptRules::SETUP}
 
     #{Assistant::PromptRules::FIELD}
   PROMPT

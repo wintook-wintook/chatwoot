@@ -13,6 +13,7 @@ module Assistant::Capabilities
     keys = %w[consult record] + work_keys(grant)
     keys << (grant.own?(:sales) ? 'sales_own' : 'sales') if grant.allowed?(:sales)
     keys << 'quotes' if grant.writable?(:sales)
+    keys << 'setup' if grant.admin?
     keys << 'guide'
     { lines: keys.map { |k| I18n.t("assistant.capabilities.#{k}") } << I18n.t('assistant.capabilities.limits'),
       starters: starters(grant) }

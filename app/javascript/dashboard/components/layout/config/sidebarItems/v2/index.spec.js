@@ -357,13 +357,15 @@ describe('Menú v2', () => {
     expect(ajustes.menuItems.map(i => i.label)).toContain('CASES_AND_STAGES');
   });
 
-  it('Inicio: Mi resumen (con Notificaciones como pestaña), Mi negocio y Presupuesto', () => {
+  it('Inicio: Mi resumen (con Notificaciones como pestaña), Mi negocio, Presupuesto y Mi capacitación', () => {
     const inicio = menuFor(route('my_summary'));
     expect(inicio.menuItems.map(i => i.label)).toEqual([
       'MY_SUMMARY',
       'MY_BUSINESS',
       'SALES_BUDGET',
+      'ACADEMY',
     ]);
+    expect(menuFor(route('academy')).parentNav).toBe('inicio');
     // Presupuesto de ventas: vive en Inicio pero solo lo ve quien tiene Ventas.
     expect(inicio.menuItems[2]).toMatchObject({
       toStateName: 'gestorTickets_sales_budgets',

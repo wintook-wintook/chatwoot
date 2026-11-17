@@ -2,18 +2,25 @@
 key: campanas_eventos
 title: Campañas y eventos
 areas: [campaigns]
-keywords: [campana, campanas, campana de agente ia, nueva campana, agregar campana, poner en curso, pausar campana, asignar agente ia, asignacion masiva, segmento, etiqueta, evento, eventos, invitados, confirmo, asistio, check-in, importar csv, pagina web, sms, dashboard de campanas, prospectos, entregar, nfc, etiqueta nfc, acercar el celular, expo, feria, stand, gafete, captar, wa.me]
-pages: [campaigns, events, contacts, trackings]
+keywords: [campana, campanas, campana de agente ia, nueva campana, agregar campana, poner en curso, pausar campana, asignar agente ia, asignacion masiva, segmento, etiqueta, evento, eventos, invitados, confirmo, asistio, check-in, importar csv, pagina web, sms, dashboard de campanas, prospectos, entregar, nfc, etiqueta nfc, acercar el celular, expo, feria, stand, gafete, captar, wa.me, vender un servicio, vender un producto, promocion, promover, campana de sms, campana sms, campana unica, campana continua, campana de pagina web, sitio web, widget, chat del sitio, mensaje proactivo, hora programada, audiencia, campana whatsapp, whatsapp masivo, envio masivo, curso, demostracion, webinar, cupo, cerrar evento, reabrir evento, no asistio, cancelo, quitar del evento, eliminar evento]
+pages: [campaigns, events, campaigns_sms, campaigns_web, contacts, trackings, inboxes, labels]
+sources: [app/javascript/dashboard/views/events/*.vue, app/javascript/dashboard/views/events/eventHelpers.js, app/javascript/dashboard/i18n/locale/es/events.json, app/controllers/api/v1/accounts/events_controller.rb, app/controllers/api/v1/accounts/event_capture_links_controller.rb, app/models/event*.rb, app/javascript/dashboard/routes/dashboard/settings/campaigns/*.vue, app/javascript/dashboard/i18n/locale/es/campaign.json, app/models/campaign.rb, app/policies/campaign_policy.rb, app/services/sms/oneoff_sms_campaign_service.rb]
+reviewed: 2026-11-14
 ---
 ## Para qué sirve
 - Una campaña de agente IA pone a un Agente IA a escribirle a un grupo de contactos y sigue cómo responde cada uno.
 - Eventos lleva la lista de una feria, curso o demostración: quién está invitado, quién confirmó y quién asistió, para hacerles campañas después.
+- Una campaña de SMS manda un mismo mensaje por SMS, a una hora, a los contactos que tienen ciertas etiquetas.
+- Una campaña de Página web le muestra un mensaje en el chat de tu sitio a quien visita una página.
 
 ## Dónde está
+En el menú Campañas, en este orden:
 - Campañas › De agentes IA: la lista de campañas con su avance.
-- Campañas › Página web y Campañas › SMS: mensajes en el chat del sitio web o por SMS.
+- Campañas › Página web (título «Campañas Webpage»): mensajes en el chat del sitio web.
+- Campañas › SMS (título «Campañas SMS»): mensajes por SMS.
 - Campañas › Dashboard (es el mismo que Informes › Dashboard de campañas): cifras de todos los seguimientos.
-- Campañas › Eventos.
+- Campañas › Eventos: la lista de eventos; al pulsar uno se abre su página.
+- En la ficha del contacto, la pestaña «Eventos» muestra en cuáles está.
 
 ## Cómo se hace
 ### Crear una campaña de agente IA
@@ -34,12 +41,41 @@ pages: [campaigns, events, contacts, trackings]
 2. Arriba ves «Control (ejecución)», «Entrega de Mensajes» y el «Embudo» (contactados, respondieron, interesados, con cita…).
 3. En la pestaña «Prospectos» ves a cada contacto con su estado; «Entregar» pasa un interesado a un vendedor. En «Inscritos» ves quién entró y por dónde.
 
-### Crear un evento y llevar su lista
-1. Campañas › Eventos › «Nuevo evento»: nombre, tipo, inicia, termina, lugar, cupo y responsable. «Guardar».
-2. Abre el evento. Con «Agregar como» eliges el estado y agregas con «Agregar contacto» o «Agregar un segmento».
-3. También puedes bajar la «Plantilla CSV» y usar «Importar».
-4. El día del evento pulsa «Asistió» en cada contacto, o cambia su estado en la lista.
-5. Al terminar, «Cerrar evento»: los que confirmaron y no llegaron quedan como «No asistió».
+### Crear una campaña de SMS
+1. Entra a Campañas › SMS y pulsa «Crear una campaña única».
+2. Escribe el «Título» y el «Mensaje» (texto simple). Los dos son obligatorios.
+3. En «Seleccionar Bandeja de Entrada» elige la bandeja de SMS que envía.
+4. En «Audiencia» elige una o varias etiquetas: el mensaje les llega a todos los contactos con cualquiera de esas etiquetas que tengan teléfono.
+5. En «Hora programada» elige cuándo sale. Si la dejas vacía, sale en cuanto se crea.
+6. Pulsa «Crear». Se manda una sola vez; después queda como «Completado» (antes, «Activo»).
+7. Una campaña de SMS no se puede editar: solo «Eliminar» («Sí, Eliminar» para confirmar).
+
+### Crear una campaña de Página web
+1. Entra a Campañas › Página web y pulsa «Crear una campaña continua».
+2. Escribe el «Título» y el «Mensaje» (con formato).
+3. En «Seleccionar Bandeja de Entrada» elige la bandeja de sitio web (la del chat de tu página).
+4. En «Enviado por» elige quién firma el mensaje: «Bot» o una persona de esa bandeja.
+5. En «URL» pon la dirección de la página donde debe salir; tiene que empezar con http:// o https://.
+6. En «Tiempo en la página (Segundos)» pon cuántos segundos espera antes de mostrarlo (viene en 10).
+7. Marca «Habilitar campaña» (viene marcada) y, si quieres, «Activar solo durante el horario laboral».
+8. Pulsa «Crear». Mientras esté «Habilitado», a cada visitante de esa página le aparece el mensaje en el chat; si contesta, se abre una conversación.
+9. Para cambiarla pulsa «Editar» (ahí también la apagas desmarcando «Habilitar campaña») o «Eliminar».
+
+### Crear un evento
+1. Entra a Campañas › Eventos y pulsa «Nuevo evento».
+2. Escribe el «Nombre» y elige el «Tipo» (Feria, Curso, Demostración, Webinar u Otro) y el «Estado» (Borrador, Abierto o Cerrado; viene en Abierto).
+3. «Inicia» (obligatorio) y, si quieres, «Termina», «Lugar», «Enlace (si es en línea)», «Cupo», «Responsable» y «Descripción».
+4. Pulsa «Guardar».
+5. En la lista ves cada evento con su fecha, cuántos están como Invitado, Confirmó y Asistió, y su estado. Puedes buscar con «Buscar por nombre o lugar» y filtrar con «Todos los estados».
+
+### Llevar la lista del evento
+1. Abre el evento. Las pestañas «Todos», «Invitado», «Confirmó», «Asistió», «No asistió» y «Canceló» filtran la lista; «Buscar contacto» busca en ella.
+2. En «Agregar como» eliges el estado y agregas con «Agregar contacto» o con «Agregar un segmento» (elige el segmento y pulsa «Agregar»). Si alguien ya estaba, no se duplica ni cambia su estado.
+3. También puedes bajar la «Plantilla CSV» y usar «Importar»: columnas contacto (correo o teléfono) y estado (invitado, confirmó, asistió, no asistió, canceló). Si ya está, se le cambia el estado; las filas con error se reportan con su renglón.
+4. El día del evento pulsa «Asistió» en cada contacto, o cambia su estado en la lista. La «x» («Quitar del evento») lo saca de la lista.
+5. Al terminar, «Cerrar evento»: los que confirmaron y no llegaron quedan como «No asistió». Con el evento cerrado ya no se agregan contactos; «Reabrir» lo vuelve a abrir.
+6. Arriba también están «Editar» y el bote («Eliminar evento»): se borra el evento y su lista, los contactos no se borran.
+7. Abajo, «Campañas de este evento» muestra las campañas que lo usan.
 
 ### Captar en la expo «acercando el celular» (NFC)
 1. Abre el evento y baja a «Acercar el celular (NFC)»; pulsa «Nuevo enlace».
@@ -55,12 +91,18 @@ pages: [campaigns, events, contacts, trackings]
 - ¿Puedo detenerla? Sí, «Pausar campaña» y luego «Reanudar campaña». El agente sigue contestando a quien ya respondió.
 - ¿Cuántos contactos caben? Una campaña por segmento, etiqueta o filtro admite hasta 1,000 contactos; si te pasas, ajusta el filtro o excluye contactos.
 - ¿Una campaña puede tomar a los que asistieron? Sí: en «¿Es de un evento?» elige el evento y «Asistió». Si es continua, entra cada contacto en cuanto lo marcan.
-- Página web y SMS necesitan una bandeja de sitio web o de SMS ya creada.
+- Página web y SMS necesitan una bandeja de sitio web o de SMS ya creada; si no hay, la pantalla lo avisa («Por favor cree una bandeja de entrada de SMS…»). Las bandejas se crean en Ajustes › Bandejas de entrada.
+- Quiero hacer una campaña para vender un servicio, ¿qué opciones hay? Depende de cómo quieras llegar al cliente:
+  - Por SMS, a contactos que ya tienes: etiquétalos (por ejemplo «interesados-poliza») y crea una campaña en Campañas › SMS con esa «Audiencia», el mensaje de tu servicio y la «Hora programada».
+  - En tu sitio web, a quien lo visita: en Campañas › Página web crea una campaña con la «URL» de la página del servicio y un mensaje como «¿Te ayudo a cotizar?».
+  - Con un evento (demostración, curso, webinar o feria): créalo en Campañas › Eventos, invita a tus contactos y marca quién confirmó y asistió; en una feria puedes captar con la etiqueta NFC.
+  - Con un Agente IA que les escriba y dé seguimiento uno por uno: existen en Campañas › De agentes IA (ver arriba).
+  Las campañas de SMS y de Página web no mandan por WhatsApp; para escribirle por WhatsApp a un grupo de contactos están las de Campañas › De agentes IA.
 - ¿El asistente puede lanzar una campaña? No, eso se hace desde Campañas.
-
+- No me sale «Nuevo enlace» en el NFC: hace falta una bandeja de WhatsApp con número («Necesitas una bandeja de WhatsApp con número para crear el enlace.») y poder cambiar en Campañas.
 - ¿Qué teléfonos leen la etiqueta NFC? iPhone XS o más nuevo (la lee solo) y Android con NFC encendido. Si alguno no la lee, el mismo enlace sirve como QR.
 - ¿Puedo pasar mi número al cliente acercando los celulares? No: los teléfonos no comparten contactos así con la plataforma. Por eso es al revés: el cliente te escribe y así quedan su número y su permiso.
 - Solo cuenta el primer mensaje de la conversación: si el cliente ya te había escrito antes, no se vuelve a ligar.
 
 ## Quién puede
-Depende del área Campañas del rol. El Administrador y los roles con Campañas en «Todo» crean campañas y eventos. Con «Ve todo (sin cambiar)» (el Supervisor, por omisión) solo se mira. Vendedor, Técnico / Soporte y Consulta no entran por omisión. Página web y SMS son solo del Administrador.
+Depende del área Campañas del rol. El Administrador y los roles con Campañas en «Todo» crean campañas y eventos. Con «Ve todo (sin cambiar)» (el Supervisor, por omisión) solo se mira: en Eventos no salen «Nuevo evento», «Editar», «Importar», «Cerrar evento», «Agregar como» ni los botones de cada contacto. Vendedor, Técnico / Soporte y Consulta no entran por omisión. Página web y SMS son solo del Administrador (ver, crear, editar y eliminar). Al agregar contactos a un evento (por segmento o CSV) solo entran los contactos que tu rol puede ver en Clientes.
