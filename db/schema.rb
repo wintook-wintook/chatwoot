@@ -136,11 +136,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_17_120000) do
   create_table "agent_test_batches", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "created_by_id"
+    t.bigint "tracking_template_id"
+    t.date "day"
     t.string "name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "tracking_template_id"
-    t.date "day"
     t.index ["account_id"], name: "index_agent_test_batches_on_account_id"
     t.index ["created_by_id"], name: "index_agent_test_batches_on_created_by_id"
     t.index ["tracking_template_id", "day"], name: "index_agent_test_batches_on_tracking_template_id_and_day"
@@ -188,11 +188,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_17_120000) do
     t.integer "total", default: 0, null: false
     t.integer "passed", default: 0, null: false
     t.jsonb "results", default: [], null: false
+    t.jsonb "case_ids", default: [], null: false
+    t.string "label"
     t.datetime "finished_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.jsonb "case_ids", default: [], null: false
-    t.string "label"
     t.index ["account_id"], name: "index_agent_test_runs_on_account_id"
     t.index ["agent_test_batch_id"], name: "index_agent_test_runs_on_agent_test_batch_id"
     t.index ["created_by_id"], name: "index_agent_test_runs_on_created_by_id"
