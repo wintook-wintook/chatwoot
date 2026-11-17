@@ -20,7 +20,8 @@ class Motor2::Runner < Cases::Ai::BaseService
   NO_MESSAGE = '[SIN_MENSAJE]'
   MONEY = /(?:\$\s?\d[\d,.]*|\d[\d,.]*\s?(?:pesos|mxn|usd|dólares|%))/i
 
-  Result = Struct.new(:reply, :decision, :trace, :error, keyword_init: true)
+  Result = Struct.new(:reply, :decision, :trace, :error, :attachments, :after, keyword_init: true)
+  MAX_FILES = 5
 
   attr_reader :config, :state, :trace, :conversation, :tracking, :canned_used, :seen
 
@@ -38,6 +39,8 @@ class Motor2::Runner < Cases::Ai::BaseService
     @canned_used = []
     @seen = []
     @decision = nil
+    @attachments = []
+    @after = []
   end
 
   def test? = !@test_history.nil?
@@ -45,6 +48,23 @@ class Motor2::Runner < Cases::Ai::BaseService
   # Las habilidades llaman esto: la decisión se aplica después de mandar el mensaje.
   def decide(kind, text)
     @decision = [kind, text.to_s.strip.first(500)]
+  end
+
+  # Un archivo del agente que va con la respuesta (máximo 5; no se repite en el mismo mensaje).
+  def attach(name)
+    file = @config.template.ai_agent_attachments.where('LOWER(name) = ?', name.to_s.downcase).first
+    return false unless file&.file&.attached?
+    return true if @attachments.any? { |a| a[:id] == file.id }
+    return false if @attachments.size >= MAX_FILES
+
+    @attachments << { id: file.id, name: file.name, signed_id: file.file.blob.signed_id }
+    @trace.event(:archivo, file.name)
+    true
+  end
+
+  # Lo que va después de mandar el mensaje (archivos de la cita o del caso, reglas del caso).
+  def after_send(&block)
+    @after << block
   end
 
   def call
@@ -55,7 +75,8 @@ class Motor2::Runner < Cases::Ai::BaseService
     content = first_answer(messages)
     return Result.new(error: ['El modelo no respondió.', @error].compact.join(' — '), trace: @trace.to_h) if content.nil?
 
-    Result.new(reply: review(messages, clean(content)), decision: @decision, trace: @trace.to_h)
+    Result.new(reply: review(messages, clean(content)), decision: @decision, trace: @trace.to_h,
+               attachments: @attachments, after: @after)
   end
 
   private

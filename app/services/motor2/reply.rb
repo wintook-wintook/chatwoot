@@ -64,6 +64,9 @@ class Motor2::Reply
     return false if @config.welcome.blank? || state['welcome_sent']
 
     Motor2::Delivery.send_reply(@tracking, @conversation, @config.welcome)
+    names = Motor2::Skills::Files.welcome_names(@tracking.tracking_template)
+    ContactTrackings::EventFiles.deliver(@tracking.tracking_template, @conversation, names, Motor2::Delivery.sender(@config.account))
+    state.files_sent.concat(@tracking.tracking_template.ai_agent_attachments.where(name: names).ids)
     state['welcome_sent'] = true
     save_state
     true
@@ -73,8 +76,11 @@ class Motor2::Reply
     result = Motor2::Runner.new(@config, state: state, conversation: @conversation, tracking: @tracking).call
     return failed(result.error) if result.error
 
-    Motor2::Delivery.send_reply(@tracking, @conversation, result.reply, trace: result.trace)
+    Motor2::Delivery.send_reply(@tracking, @conversation, result.reply, trace: result.trace,
+                                                                        attachments: result.attachments.pluck(:signed_id))
+    state.files_sent.concat(result.attachments.pluck(:id)).uniq!
     save_state
+    result.after.each(&:call)
     Motor2::Outcomes.new(@tracking, @conversation, @config).apply(*result.decision) if result.decision
   end
 

@@ -6,7 +6,8 @@
 # agentes que la tienen prendida.
 module Motor2::Skills
   ALL = [
-    Motor2::Skills::Knowledge, Motor2::Skills::Data, Motor2::Skills::Handoff, Motor2::Skills::Finish
+    Motor2::Skills::Knowledge, Motor2::Skills::Data, Motor2::Skills::Offers, Motor2::Skills::Appointments,
+    Motor2::Skills::Tickets, Motor2::Skills::Files, Motor2::Skills::Handoff, Motor2::Skills::Finish
   ].freeze
 
   module_function

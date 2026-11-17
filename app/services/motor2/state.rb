@@ -15,6 +15,8 @@ class Motor2::State
 
   def [](key) = @values[key.to_s]
 
+  def dig(*keys) = @values.dig(*keys.map(&:to_s))
+
   def []=(key, value)
     @values[key.to_s] = value
   end
