@@ -66,6 +66,12 @@ namespace :assistant do
         problems << "#{guide.key}: pantallas desconocidas #{unknown}" if unknown.any?
         puts "#{guide.key.ljust(20)} #{guide.title} [#{guide.areas.join(', ').presence || 'todos'}] #{guide.body.size} car."
       end
+      freshness = Assistant::GuideFreshness.new
+      Assistant::Guides.all.each do |guide|
+        guide.sources.each do |glob|
+          problems << "#{guide.key}: sources sin archivos #{glob}" if freshness.files_for(guide.dup.tap { |g| g.sources = [glob] }).empty?
+        end
+      end
       missing = AccessRole::AREAS - Assistant::Guides.all.flat_map(&:areas)
       problems << "áreas sin guía: #{missing}" if missing.any?
       abort(problems.join("\n")) if problems.any?
@@ -96,6 +102,24 @@ namespace :assistant do
       puts "  nuevas: #{result.created.join(', ')}" if result.created.any?
       puts "  actualizadas: #{result.updated.join(', ')}" if result.updated.any?
       puts "  archivadas: #{result.archived.join(', ')}" if result.archived.any?
+    end
+  end
+end
+
+namespace :assistant do
+  namespace :guides do
+    desc 'Guías que pueden estar viejas: su código (sources) cambió después de su último commit'
+    task stale: :environment do
+      result = Assistant::GuideFreshness.new.call
+      result[:stale].each do |report|
+        puts "#{report.guide.key} (guía: #{report.guide_at&.first(10) || 'sin commit'})"
+        report.commits.first(10).each { |commit| puts "  #{commit}" }
+        puts "  … y #{report.commits.size - 10} más" if report.commits.size > 10
+        puts "  sin commit: #{report.dirty.join(', ')}" if report.dirty.any?
+      end
+      puts "Al día: #{result[:fresh].size} · por revisar: #{result[:stale].size} · sin sources: #{result[:without_sources].size}"
+      puts "  sin sources: #{result[:without_sources].map(&:key).join(', ')}" if result[:without_sources].any?
+      puts 'Actualiza la guía o pon `reviewed:` con la fecha de hoy si sigue bien.' if result[:stale].any?
     end
   end
 end

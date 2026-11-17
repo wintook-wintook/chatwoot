@@ -358,14 +358,16 @@ describe('Menú v2', () => {
     expect(ajustes.menuItems.map(i => i.label)).toContain('CASES_AND_STAGES');
   });
 
-  it('Inicio: Mi resumen (con Notificaciones como pestaña), Mi negocio, Presupuesto y Probar agentes', () => {
+  it('Inicio: Mi resumen (con Notificaciones como pestaña), Mi negocio, Presupuesto, Mi capacitación y Probar agentes', () => {
     const inicio = menuFor(route('my_summary'));
     expect(inicio.menuItems.map(i => i.label)).toEqual([
       'MY_SUMMARY',
       'MY_BUSINESS',
       'SALES_BUDGET',
+      'ACADEMY',
       'AGENT_TESTER',
     ]);
+    expect(menuFor(route('academy')).parentNav).toBe('inicio');
     // Probar agentes es de Inicio: cualquier usuario entra (ve los agentes «En prueba»).
     expect(menuFor(route('agent_tester')).parentNav).toBe('inicio');
     // Presupuesto de ventas: vive en Inicio pero solo lo ve quien tiene Ventas.

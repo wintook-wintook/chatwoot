@@ -246,7 +246,8 @@ export default {
     editableHint(status) {
       return (
         {
-          PENDING: 'En revisión por Meta: no se puede editar hasta que resuelva.',
+          PENDING:
+            'En revisión por Meta: no se puede editar hasta que resuelva.',
           DRAFT: 'Falló el último envío a Meta: sincroniza para recuperarla.',
           IN_APPEAL: 'En apelación ante Meta: no se puede editar.',
           DISABLED: 'Deshabilitada por Meta: no se puede editar.',
@@ -285,8 +286,10 @@ export default {
       return inbox ? inbox.name : '—';
     },
     async sync() {
+      // El filtro guarda el id del canal; sync pide el de la bandeja.
+      const filtered = this.channelFilterInboxId();
       const targets = this.channelFilter
-        ? [Number(this.channelFilter)]
+        ? [filtered].filter(Boolean)
         : this.whatsappInboxes.map(i => i.id);
       if (!targets.length) {
         useAlert('No hay canales de WhatsApp configurados.');
@@ -324,7 +327,9 @@ export default {
           })
           .join(' · ');
         useAlert(
-          `Se sincronizaron ${targets.length - failed.length} de ${targets.length} bandejas. Falló ${detalle}`
+          `Se sincronizaron ${targets.length - failed.length} de ${
+            targets.length
+          } bandejas. Falló ${detalle}`
         );
         return;
       }
@@ -426,8 +431,8 @@ export default {
   >
     <template #header>
       <BaseSettingsHeader
-        title="Plantillas de WhatsApp"
-        description="Crea, envía a aprobación y gestiona las plantillas de todos tus canales de WhatsApp sin entrar a Meta."
+        :title="$t('WHATSAPP_TEMPLATES.SETTINGS.TITLE')"
+        :description="$t('WHATSAPP_TEMPLATES.SETTINGS.DESCRIPTION')"
       >
         <template #actions>
           <woot-button
@@ -436,10 +441,10 @@ export default {
             :is-loading="uiFlags.syncing"
             @click="sync"
           >
-            Sincronizar
+            {{ $t('WHATSAPP_TEMPLATES.SETTINGS.SYNC') }}
           </woot-button>
           <woot-button icon="add-circle" @click="openNew">
-            Nueva plantilla
+            {{ $t('WHATSAPP_TEMPLATES.SETTINGS.NEW') }}
           </woot-button>
         </template>
       </BaseSettingsHeader>

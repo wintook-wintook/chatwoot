@@ -129,6 +129,10 @@ export default {
         color: c.color || COLUMN_PALETTE[i % COLUMN_PALETTE.length],
         statuses: [...(c.statuses || [])],
         advance_mode: c.advance_mode || 'suggest',
+        // Las etapas de resultado (Ganada/Perdida) y su probabilidad no se editan
+        // aquí, pero hay que mandarlas de vuelta o el reemplazo las borra.
+        outcome: c.outcome || null,
+        probability: c.probability ?? null,
         tasks_count: c.tasks_count || 0,
         // T4 — qué mueve la etapa (obligatorias, reglas que traen casos, avisos).
         required_count: c.required_count || 0,
@@ -252,6 +256,8 @@ export default {
         color: c.color,
         position: i,
         statuses: c.statuses,
+        outcome: c.outcome || null,
+        probability: c.probability ?? null,
       }));
       try {
         await this.$store.dispatch('caseTickets/replaceTypeColumns', {

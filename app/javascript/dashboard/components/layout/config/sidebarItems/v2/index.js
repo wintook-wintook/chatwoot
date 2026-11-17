@@ -354,6 +354,7 @@ const inicio = accountId => ({
     'notifications_index',
     'gestorTickets_business_summary',
     'gestorTickets_sales_budgets',
+    'academy',
     'agent_tester', // Probar agentes: para cualquier usuario
   ],
   // Las notificaciones son una pestaña de Mi resumen (?tab=notifications); su página
@@ -382,6 +383,14 @@ const inicio = accountId => ({
       area: 'sales',
       toState: frontendURL(`accounts/${accountId}/tickets/budget`),
       toStateName: 'gestorTickets_sales_budgets',
+    },
+    // Academia Kontrolya: lecciones y ejercicios que la plataforma revisa sola.
+    {
+      icon: 'book',
+      label: 'ACADEMY',
+      featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+      toState: frontendURL(`accounts/${accountId}/academy`),
+      toStateName: 'academy',
     },
     // Probar agentes (1.0 y 2.0): cualquier usuario prueba los agentes «En prueba».
     {

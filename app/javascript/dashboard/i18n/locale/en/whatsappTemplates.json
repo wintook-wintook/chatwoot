@@ -1,5 +1,11 @@
 {
     "WHATSAPP_TEMPLATES": {
+        "SETTINGS": {
+            "TITLE": "WhatsApp templates",
+            "DESCRIPTION": "Create, submit for approval and manage the templates of all your WhatsApp channels without going to Meta.",
+            "SYNC": "Sync",
+            "NEW": "New template"
+        },
         "MODAL": {
             "TITLE": "Whatsapp Templates",
             "SUBTITLE": "Select the whatsapp template you want to send",

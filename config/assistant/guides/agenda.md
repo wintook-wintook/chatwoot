@@ -2,26 +2,37 @@
 key: agenda
 title: Agenda, tareas y reportes
 areas: [agenda]
-keywords: [agenda, tarea, tareas, mi dia, dia de, dia de otro, ver el dia de, mi dia de otro usuario, supervisar, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, reportar avance, avance, ver reportes, historial, historial de la tarea, ver historial, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada, cancelar, cancelar tarea, cancelar cita, motivo de cancelacion, reabrir, sin responsable, sin asignar, borrar tarea, no puedo borrar, reprogramar]
-pages: [tasks, my_day, calendar, task_reports, task_outcomes, task_scoring]
+keywords: [agenda, agendar, agendar tarea, agendo, como agendo, tarea, tareas, mi dia, dia de, dia de otro, ver el dia de, mi dia de otro usuario, supervisar, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, reportar avance, avance, ver reportes, historial, historial de la tarea, ver historial, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada, cancelar, cancelar tarea, cancelar cita, motivo de cancelacion, reabrir, sin responsable, sin asignar, borrar tarea, no puedo borrar, reprogramar, solicitante, prioridad, duracion estimada, programada para, plan de mi dia, siguiente, exportar csv, evidencia, buscar tarea]
+pages: [tasks, agenda, my_day, calendar, task_reports, field_route, task_outcomes, task_scoring, case]
+sources:
+  - app/javascript/dashboard/views/gestorTickets/Tasks.vue
+  - app/javascript/dashboard/views/gestorTickets/TaskReports.vue
+  - app/javascript/dashboard/views/gestorTickets/tasks/*.vue
+  - app/javascript/dashboard/components/cancel/*.vue
+  - app/javascript/dashboard/components/convert/*.vue
+  - app/controllers/api/v1/accounts/case_tasks_index_controller.rb
+  - app/controllers/api/v1/accounts/task_reports_controller.rb
+  - app/controllers/api/v1/accounts/task_histories_controller.rb
+reviewed: 2026-11-14
 ---
 ## Para qué sirve
 La Agenda junta todo lo que tienes que hacer: tareas (con fecha, sin hora) y tareas agendadas (con hora: llamadas, reuniones, visitas), y lo que ya se hizo, con su reporte.
 
 ## Dónde está
-- Agenda › Tareas: pestañas Mi día, Mías, No asignadas y Todas. Abre en Mi día. Mi día también está en Inicio › Mi resumen.
+- Agenda › Tareas: pestañas Mi día, Mías, No asignadas y Todas. Abre en Mi día. Mi día también está en Inicio › Mi resumen. Arriba a la derecha, el botón «Nueva tarea».
 - Agenda › Calendario (si tu empresa lo tiene): ver la guía del calendario.
 - Agenda › Reportes: pestañas Reportes y Llegadas.
 - Agenda › Mi ruta en campo: la pantalla para celular de quien sale a visitas.
 
 ## Cómo se hace
 ### Trabajar Mi día
-1. Entra a Agenda › Tareas › Mi día. Arriba ves cuántas tareas tienes para hoy y su tiempo estimado.
-2. «Sugeridas por prioridad» trae tus pendientes ordenadas por un puntaje, con el motivo de su lugar (vencida, vence hoy, SLA en riesgo…).
-3. Arma «Mi orden de hoy»: arrastra tareas ahí o pulsa la flecha ↑ («Agregar a mi orden de hoy») y reordénalas arrastrando. La primera queda como «Siguiente».
-4. En cada tarea: «Completar» para concluirla o «Pasar a mañana» para programarla al día siguiente.
-5. A la derecha están la «Agenda de hoy» (tus tareas agendadas) y «Hecho hoy» (lo que ya concluiste). La palomita de una tarea agendada la completa: llenas el reporte de cierre y eliges si se realizó o el cliente no asistió. Un clic en la cita abre su caso (o su contacto).
-6. Si quedaron tareas programadas sin hacer, sale un aviso con «Pasarlas a hoy» o «Ignorar». Si llega una urgente después de armar tu día, te avisa con «Subir al inicio».
+1. Entra a Agenda › Tareas › Mi día. Arriba ves «Para hoy: N tareas» (o «Nada vence hoy»), su tiempo estimado, cuántas no tienen estimado, cuántas pendientes hay en total y cuántas están programadas para después. Puedes filtrar por tipo de caso («Todos los tipos»).
+2. «Sugeridas por prioridad» trae tus pendientes ordenadas por un puntaje, con el motivo de su lugar (vencida, vence hoy, SLA en riesgo, visita hoy, caso en espera…).
+3. Arma «Mi orden de hoy»: arrastra tareas ahí o pulsa la flecha ↑ («Agregar a mi orden de hoy») y reordénalas arrastrando; «Quitar de mi orden de hoy» la saca. La primera queda como «Siguiente».
+4. La tarea «Siguiente» trae los botones «Completar», «Reportar avance», «Ver historial», «Abrir caso» (si tiene caso) y «Pasar a mañana» (la programa para el día siguiente). En las demás, un clic abre la tarea para editarla y el ícono de reloj abre su historial.
+5. Si tu empresa tiene la inteligencia artificial de casos activa, «Plan de mi día con Dali» te sugiere en qué orden hacer tus tareas y cuáles «Puede esperar a mañana». Es solo una sugerencia: no cambia tu orden. «Volver a generar» arma otro.
+6. A la derecha están la «Agenda de hoy» (tus tareas agendadas) y «Hecho hoy» (lo que ya concluiste). La palomita de una tarea agendada la completa: llenas el reporte de cierre y eliges si se realizó o el cliente no asistió. Un clic en la cita abre su caso (o su contacto).
+7. Si quedaron tareas programadas sin hacer, sale un aviso con «Pasarlas a hoy» o «Ignorar». Si llega una urgente después de armar tu día, te avisa con «Subir al inicio».
 
 ### Ver el Mi día de otra persona
 1. En Agenda › Tareas › Mi día, junto a «Actualizar», elige a la persona en «Día de:» («Mío» es el tuyo). Solo sale si tu rol ve la Agenda de todos (Administrador, Supervisor).
@@ -31,15 +42,23 @@ La Agenda junta todo lo que tienes que hacer: tareas (con fecha, sin hora) y tar
 
 ### Ver y filtrar tareas
 1. Usa las pestañas Mías, No asignadas o Todas.
-2. Filtra por estado (Pendientes, Completadas), por tipo (No agendadas, Agendadas), por tipo de caso, por vencimiento (Vencidas, Vencen hoy, Esta semana) y por solicitante; en Todas, también por responsable.
-3. Busca en el título o la descripción. «Actualizar» recarga la lista. Cada pestaña recuerda sus filtros.
+2. Filtra por estado (Pendientes, Completadas, Todos los estados), por tipo (Todas, No agendadas, Agendadas), por tipo de caso («Todos los tipos»), por vencimiento (Cualquier fecha, Vencidas, Vencen hoy, Esta semana) y por solicitante («Solicitante: todos»); en Todas, también por responsable («Responsable: todos»).
+3. Busca en «Buscar en el título o la descripción…». El botón de flechas («Actualizar») recarga la lista sin perder los filtros. Cada pestaña recuerda sus filtros.
+4. La tabla muestra Folio (T001…), Caso, Tarea, Prioridad, Solicitante, Responsable, Vence, Programada y Estado (con «Completar» en las pendientes). Un clic en una tarea la abre para editarla; si está concluida, cancelada o su caso está cerrado, se abre en modo lectura («Ver tarea»). Un clic en una tarea agendada abre su caso.
+5. Si nada coincide sale «No hay tareas que coincidan con los filtros.».
+
+### Editar una tarea
+1. Haz clic en la tarea o elige «Editar» en su menú ⋮. Se abre «Editar tarea».
+2. Puedes cambiar «Título», «Solicitante» (solo si la tarea no lo tenía), «Responsable», «Descripción (opcional)», «Vence», «Programada para» (el día que piensas hacerla; si queda después del vencimiento avisa «Queda después del vencimiento: se entregará tarde.»), «Prioridad», «Duración estimada» y «Estado».
+3. Si tu empresa tiene la IA de casos, abajo de la descripción hay botones para corregir o mejorar el texto (y deshacerlo).
+4. Pulsa «Guardar». Si el caso está cerrado no se puede modificar: reábrelo primero.
 
 ### Crear una tarea
 1. Pulsa «Nueva tarea» en Agenda › Tareas, o «Tarea» en la barra de arriba.
-2. Llena «Qué hay que hacer» y, si quieres, descripción, responsable, fecha programada, hora y fecha de vencimiento.
+2. Llena «Qué hay que hacer» y, si quieres, «Descripción (opcional)», «Responsable», «Fecha programada», «Hora (opcional)» y «Fecha de vencimiento».
 3. Sin hora es una tarea. Con hora es una tarea agendada: va al calendario y, si el responsable conectó Google, a su Google Calendar.
 4. Para una visita marca «Es una visita al cliente» (pide fecha y hora; la dirección es opcional).
-5. Elige organización o contacto si es para un cliente, y su caso si aplica. Sin cliente solo se ve en tu Mi día.
+5. Elige organización o contacto si es para un cliente, y su caso en «Caso (opcional)». Sin contacto ni organización se ve solo en Mi día.
 6. Pulsa «Crear tarea».
 
 ### Concluir con reporte
@@ -60,14 +79,14 @@ Al guardar una tarea (dentro del caso o al editarla en Agenda › Tareas) con «
 
 ### El menú de cada tarea
 Son los tres puntos ⋮ al final de la fila; siempre se ven, aunque la tabla se mueva de lado. Arriba van las acciones, solo las que se pueden hacer según el estado:
-- Pendiente: «Reportar avance» (la primera), «Editar», «Agendar tarea», «Agregar nota», «Pasar a la agenda», «Cancelar…» y «Eliminar».
+- Pendiente: «Reportar avance» (la primera), «Editar», «Agregar nota», «Pasar a la agenda», «Cancelar…» y «Eliminar». Dentro del caso sale además «Agendar tarea», después de «Editar».
 - Concluida o cancelada: «Ver», «Agregar nota», «Reabrir» y «Eliminar». Una tarea concluida o cancelada no se edita: se ve en modo lectura (la cancelada, con su motivo). Para cambiarle algo, primero «Reabrir»: regresa a pendiente y conserva su reporte.
 «Eliminar» solo sale si la creaste tú en las últimas 24 horas o eres administrador. Abajo de la línea va «Ver historial»: todo lo de la tarea en un solo lugar. Si no cabe hacia abajo, el menú se abre hacia arriba.
 
 ### Historial de la tarea
 1. Ábrelo con «Ver historial» en el menú ⋮ de la tarea, con un clic en su folio (T004) dentro del caso, con el botón «Ver historial» en Mi día, o con un clic en la tarea en la ficha del contacto (también las tareas sin caso).
 2. Arriba: estado, responsable, vence, programada y el tiempo reportado contra lo estimado («1 h 30 min de 2 h estimado»), y el caso o el cliente.
-3. Botones (con la tarea pendiente): «Reportar avance», «Agregar nota», «Agendar» y «Completar». En la ficha del contacto solo «Reportar avance».
+3. Botones (con la tarea pendiente): «Reportar avance», «Agregar nota», «Agendar» y «Completar». En la ficha del contacto solo «Reportar avance». En una tarea del cliente no sale «Reportar avance». En Agenda › Tareas, «Agendar» te lleva al caso para agendarla; si no tiene caso, abre «Pasar a la agenda».
 4. Abajo, por día, todo lo que pasó: se creó, cambios de vencimiento, notas, reportes de avance y de cierre (con tiempo, resultado y evidencia), sus tareas agendadas (agendada, movida, realizada, no asistió o cancelada, con su reporte), lo que hizo el cliente en su portal y si se completó, canceló o reabrió.
 5. Filtros: Todo, Notas, Reportes, Agendadas, Cliente y Cambios, con cuántos hay de cada uno.
 6. También se lo puedes pedir a Dali: «¿cómo va la T004?».
@@ -102,11 +121,12 @@ Pulsa «Reportar actividad» en la barra de arriba: Título, «Qué se hizo», f
 Los reportes (cierre, avance y actividad) salen en la actividad del caso como reporte, con su ícono; la pestaña Notas es solo para las notas escritas.
 
 ### Revisar lo hecho
-1. Entra a Agenda › Reportes y filtra por persona y fechas (Desde, Hasta).
-2. Reportes: las tareas concluidas y actividades, con su reporte.
-3. Llegadas: cuándo llegó cada quien a cada visita y desde dónde; «Exportar CSV» las descarga.
+1. Entra a Agenda › Reportes y filtra por persona («Todas las personas») y fechas (Desde, Hasta).
+2. Reportes: las tareas concluidas, avances y actividades, con su tipo (Tarea, Tarea agendada, Orden de trabajo, Actividad o Avance), resultado, tiempo dedicado (contra lo estimado), evidencia, llegada, cliente y caso. Arriba sale el «Tiempo total» y, si hay varias personas, cuánto lleva cada una. En una orden de trabajo, «Ver reporte de servicio» lo abre. «Ver más» trae los siguientes.
+3. Llegadas: una tabla con Cuándo, Quién, Cliente, Visita y Ubicación («Sin ubicación» si no se tomó); «Exportar CSV» las descarga.
 
 ## Dudas frecuentes
+- ¿Cómo agendo una tarea? Agendar es ponerle día y hora para que entre al calendario. Hay tres caminos: (1) una nueva: «Nueva tarea» en Agenda › Tareas (o «Tarea» en la barra de arriba) y llena «Fecha programada» y «Hora (opcional)»; con hora queda agendada; (2) una que ya existe y tiene caso: en el caso, menú de la tarea › «Agendar tarea» (día y hora; se puede repetir o hacer «Serie»); (3) una que ya existe sin caso: «Pasar a la agenda» (eliges día, hora y lugar). También se lo puedes pedir a Dali: «agéndame llamar a Mario el jueves a las 10».
 - ¿Por qué el vencimiento de una tarea no tiene hora? Una tarea sin agendar no entra al calendario: su vencimiento es solo el día y vence al final de ese día. Si necesitas una hora exacta (cita, llamada, visita), es una tarea agendada: usa «Agendar tarea» o «Pasar a la agenda».
 - ¿Es obligatorio el tiempo dedicado? Por omisión sí. El administrador lo cambia en Catálogos › Resultados de tareas («Exigir el tiempo dedicado en los reportes»); ahí también da de alta los resultados.
 - Si concluyes varias tareas a la vez, el tiempo se reparte por igual entre ellas.

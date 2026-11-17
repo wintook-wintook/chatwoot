@@ -42,6 +42,17 @@ RSpec.describe Assistant::Guides do
       end
     end
 
+    it 'sus sources apuntan a archivos que existen y reviewed es una fecha' do
+      freshness = Assistant::GuideFreshness.new
+      guides.each do |guide|
+        guide.sources.each do |glob|
+          files = freshness.files_for(guide.dup.tap { |g| g.sources = [glob] })
+          expect(files).not_to be_empty, "#{guide.key}: sources sin archivos #{glob}"
+        end
+        expect { Date.iso8601(guide.reviewed) }.not_to raise_error, "#{guide.key}: reviewed inválido" if guide.reviewed
+      end
+    end
+
     it 'cada área del menú tiene al menos una guía' do
       covered = guides.flat_map(&:areas)
       expect(AccessRole::AREAS - covered).to be_empty
@@ -57,6 +68,16 @@ RSpec.describe Assistant::Guides do
       expect(described_class.search('¿cómo creo un contrato?', admin).first[:key]).to eq('contratos')
       expect(described_class.search('para qué sirve el embudo de contactos', admin).first[:key]).to eq('embudo_contactos')
       expect(described_class.search('cómo concluyo una tarea', admin).first[:key]).to eq('agenda')
+    end
+
+    it 'aguanta las faltas de ortografía comunes (c/s/z, v/b, ll/y, h)' do
+      expect(described_class.search('se puedem hacer mensiones en chat con clientes', admin).first[:key]).to eq('conversaciones')
+      expect(described_class.search('como hago una cotisacion', admin).first[:key]).to eq('cotizaciones')
+      expect(described_class.search('como instalo la app en mi selular', admin).first[:key]).to eq('dali_telefono')
+    end
+
+    it 'el verbo poder no cuenta («puedo», «pueden», «puedem»)' do
+      expect(described_class.words_of('¿se pueden hacer menciones? puedem podemos')).to eq(%w[menciones])
     end
 
     it 'no devuelve nada si no hay coincidencia' do

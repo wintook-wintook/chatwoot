@@ -3,7 +3,14 @@ key: clientes
 title: Clientes, panorama general
 areas: [clients]
 keywords: [clientes, cliente, buscar, busqueda, lupa, ctrl k, encontrar, contacto, contactos, organizacion, organizaciones, empresa, prospecto, prospectos, publico en general, contrato, contratos, dashboard de clientes, responsable fijo, ficha del cliente]
-pages: [organizations, contacts, contracts, organization, contact]
+pages: [organizations, contacts, contracts, organization, contact, clients_dashboard, contract_types]
+sources:
+  - app/javascript/dashboard/components/layout/config/sidebarItems/v2/index.js
+  - app/javascript/dashboard/routes/dashboard/contacts/routes.js
+  - app/javascript/dashboard/routes/dashboard/organizations/routes.js
+  - app/javascript/dashboard/routes/dashboard/contracts/routes.js
+  - app/services/access/grant.rb
+reviewed: 2026-11-14
 ---
 ## Para qué sirve
 El área Clientes junta a la gente y a las empresas con las que trabajas:
@@ -12,6 +19,7 @@ El área Clientes junta a la gente y a las empresas con las que trabajas:
 - Contrato: un servicio que el cliente paga cada cierto tiempo (monitoreo, iguala, licencia, póliza…).
 
 ## Dónde está
+En el menú Clientes, en este orden (al entrar abre Organizaciones):
 - Clientes › Organizaciones: prospectos y clientes (guía «Organizaciones»).
 - Clientes › Contactos: las personas, con su ficha completa (guía «Contactos»).
 - Clientes › Contratos: los servicios recurrentes (guía «Contratos»).
@@ -27,13 +35,13 @@ El área Clientes junta a la gente y a las empresas con las que trabajas:
 El detalle completo está en la guía de la barra de arriba.
 
 ### Dar de alta un contacto rápido
-1. Pulsa «Nuevo contacto» en la barra de arriba.
-2. Llena al menos el «Nombre completo» y pulsa «Crear contacto».
+1. Pulsa «Nuevo contacto» en la barra de arriba (o en Clientes › Contactos).
+2. Llena al menos el «Nombre completo» y pulsa «Crear contacto». Lo demás está en la guía «Contactos».
 
 ## Dudas frecuentes
-- ¿Dónde veo todo lo de un cliente? En la ficha del contacto (pestañas Resumen, Conversaciones, Casos, Contratos…) o en la página de su organización, que junta lo de todos sus contactos.
+- ¿Dónde veo todo lo de un cliente? En la ficha del contacto (pestañas Resumen, Conversaciones, Casos, Cotizaciones, Tareas, Equipos, Contratos, Eventos y Notas) o en la página de su organización, que junta lo de todos sus contactos.
 - ¿Qué es el responsable fijo? La persona a la que le llegan siempre las conversaciones y los casos nuevos de un contacto. Ver la guía «Responsable fijo».
 - ¿Cómo paso un contacto a otra empresa? En su ficha, bloque «Organización» › «Cambiar de organización». Ver la guía «Organizaciones».
 
 ## Quién puede
-Depende del nivel de tu rol en el área Clientes: «Todo» ve y cambia todo; «Solo lo suyo» ve y cambia solo sus clientes (los contactos con una conversación o un caso suyo, o de los que es responsable); «Ve todo (sin cambiar)» solo consulta; «No entra» no ve el área.
+Depende del nivel de tu rol en el área Clientes: «Todo» ve y cambia todo; «Solo lo suyo» ve y cambia solo sus clientes (los contactos con una conversación o un caso suyo, de los que es responsable fijo o de las organizaciones a su cargo); «Ve todo (sin cambiar)» solo consulta; «No entra» no ve el área. Por omisión Supervisor tiene «Todo», Vendedor y Técnico / Soporte «Solo lo suyo» y Consulta no entra. Los contratos también se ven con acceso a Ventas.

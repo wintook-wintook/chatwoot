@@ -85,6 +85,7 @@
       "YES": "Yes",
       "NO_WORD": "No",
       "ROWS": {
+        "PHONE": "Phone",
         "TYPE": "Type",
         "CLIENT": "Customer",
         "AMOUNT": "Amount",
@@ -167,7 +168,10 @@
       "WA_TEMPLATE": "WhatsApp template",
       "WA_TEMPLATE_AUTO": "Let the agent choose",
       "PRESET_NAME": "Template name",
-      "save_follow_up_preset": "Save template"
+      "save_follow_up_preset": "Save template",
+      "account_setup": "Set up your account",
+      "whatsapp_call": "WhatsApp call",
+      "CALL_HINT": "When you confirm, the call starts from your browser and you talk (allow the microphone). If the client has not allowed calls, the request is sent by WhatsApp."
     },
     "SETTINGS": {
       "TITLE": "Assistant",

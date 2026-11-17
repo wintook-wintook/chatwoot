@@ -28,7 +28,8 @@ module Assistant::ToolDefinitions
     fn('team_members', 'Personas del equipo (usuarios de la empresa, no clientes) por nombre o correo: compañeros, vendedores, ' \
                        'técnicos, supervisores. Para asignarles una tarea o ver su día.',
        { query: str('Nombre o correo (vacío = todo el equipo)') }),
-    fn('open_page', 'Abre una pantalla para el usuario.',
+    fn('open_page', 'Abre una pantalla para el usuario. profile = su perfil (su usuario); account_settings = la ' \
+                    'configuración de la cuenta (la empresa).',
        { target: { type: 'string', enum: Assistant::Pages::MAP.keys },
          id: int('Id del caso/contacto/organización o número de la conversación') }, %w[target]),
     fn('propose_note', 'Propone dejar una nota interna en un caso o en un contacto. Requiere confirmación.',
@@ -100,7 +101,8 @@ module Assistant::ToolDefinitions
        { conversation_id: int('Número de la conversación, si aplica'), content: str('Texto del borrador') }, %w[content])
   ].freeze
 
-  EXTRA = %w[Sales Guide Quote Conversation Field Event ClientTask Cancel Convert FollowUp Progress].freeze # Assistant::<X>ToolDefinitions::ALL
+  # Assistant::<X>ToolDefinitions::ALL
+  EXTRA = %w[Sales Guide Quote Conversation Field Event ClientTask Cancel Convert FollowUp Progress Setup Call].freeze
 
   # Al primer uso, no al cargar: los <X>ToolDefinitions usan D.fn de aquí (carga circular en eager load).
   def self.all = @all ||= (BASE + EXTRA.flat_map { |x| "Assistant::#{x}ToolDefinitions".constantize::ALL }).freeze

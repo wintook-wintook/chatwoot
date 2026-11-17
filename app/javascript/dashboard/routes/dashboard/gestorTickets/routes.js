@@ -226,6 +226,13 @@ export const routes = [
     meta: AGENT,
     component: () => import('../../../views/gestorTickets/home/MySummary.vue'),
   },
+  // Academia Kontrolya — «Mi capacitación»: cada quien su avance (los módulos van por su rol).
+  {
+    path: frontendURL('accounts/:accountId/academy'),
+    name: 'academy',
+    meta: AGENT,
+    component: () => import('../../../views/academy/AcademyIndex.vue'),
+  },
   // «Resumen del negocio»: la ruta es de agente; el backend decide quién lo ve
   // (administradores y autorizados) y el menú lo oculta a los demás.
   {

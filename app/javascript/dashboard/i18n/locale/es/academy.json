@@ -1,0 +1,55 @@
+{
+  "ACADEMY": {
+    "TITLE": "Mi capacitación",
+    "SUBTITLE": "Aprende Kontrolya haciendo: lee la lección, haz el ejercicio y pulsa «Revisar». La plataforma comprueba que sí lo hiciste.",
+    "PROGRESS": "{done} de {total} pasos",
+    "MODULE_PROGRESS": "{done}/{total}",
+    "STATUS": {
+      "pending": "Pendiente",
+      "started": "En curso",
+      "done": "Hecho",
+      "in_progress": "En curso"
+    },
+    "NEXT": "Sigue con",
+    "EMPTY": "Tu rol todavía no tiene módulos de capacitación.",
+    "LOADING": "Cargando tu capacitación...",
+    "LESSON": "Lección",
+    "EXERCISE": "Ejercicio",
+    "READ": "Leer",
+    "READ_AGAIN": "Volver a leer",
+    "DO_IT": "Hazlo",
+    "CHECK": "Revisar",
+    "HOW": "¿Cómo?",
+    "FOUND": "¡Bien! Ya quedó.",
+    "ATTEMPTS": "Revisado {n} veces",
+    "BLOCKED": "Primero crea tu Cliente de práctica (módulo Contactos y organizaciones).",
+    "BLOCKED_CASE": "Primero crea el caso de tu Cliente de práctica.",
+    "HOW_QUESTION": "¿Cómo hago esto en Kontrolya? {title}. {text}",
+    "PRACTICE": {
+      "TITLE": "Tu Cliente de práctica",
+      "NONE": "Para los ejercicios de contactos y casos usas un cliente solo de práctica: no tiene teléfono ni correo, así que no se le manda nada.",
+      "CREATE": "Crear mi Cliente de práctica",
+      "OPEN": "Abrir",
+      "DELETE": "Borrar mi práctica",
+      "CONFIRM_TITLE": "¿Borrar tu práctica?",
+      "CONFIRM_MESSAGE": "Se borran tu Cliente de práctica, sus casos con sus tareas y citas, y su organización si solo era de él. Tu avance de la capacitación se queda.",
+      "CONFIRM_YES": "Sí, borrar",
+      "CONFIRM_NO": "Cancelar",
+      "DELETED": "Se borró tu práctica."
+    },
+    "GUIDE": {
+      "CLOSE": "Cerrar",
+      "FULL": "Ver en el Centro de ayuda"
+    },
+    "ERROR": "No se pudo. Intenta de nuevo.",
+    "LEVEL": {
+      "required": "Indispensable",
+      "recommended": "Recomendado",
+      "later": "Cuando estés listo"
+    },
+    "WITH_DALI": "Hazlo con Dali",
+    "GO": "Ir",
+    "UNDO": "Deshacer",
+    "CONFIRMED_BY": "Lo aceptó {name}"
+  }
+}

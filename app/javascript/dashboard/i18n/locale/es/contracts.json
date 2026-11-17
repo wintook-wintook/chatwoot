@@ -122,6 +122,7 @@
       "SAVED": "Tipo de contrato guardado",
       "ERROR": "No se pudo guardar el tipo",
       "MONTHS": "{n} meses",
+      "MONTH_ONE": "1 mes",
       "NO_TERM": "Sin plazo",
       "COLUMNS": {
         "NAME": "Nombre",

@@ -20,6 +20,12 @@ RSpec.describe Assistant::AgendaTools do
     expect(found.first).to include(id: ana.id, email: ana.email)
   end
 
+  it 'team_members sin resultado sugiere buscarlo como cliente' do
+    result = call('team_members', { 'query' => 'jane' })
+    expect(result[:team_members]).to eq([])
+    expect(result[:note]).to include('search')
+  end
+
   it 'team_members sin texto trae a todo el equipo y marca al usuario' do
     ana
     found = call('team_members', {})[:team_members]

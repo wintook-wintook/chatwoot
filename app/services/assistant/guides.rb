@@ -13,11 +13,15 @@
 #   keywords: [caso, oportunidad, etapa, ganar, perder]
 #   pages: [cases, pipeline]        # pantallas de open_page que menciona
 #   category: Primeros pasos        # opcional: categoría en el Centro de ayuda (Assistant::GuidePublisher)
+#   sources: [app/javascript/dashboard/routes/dashboard/contracts/**/*.vue]  # el código que explica
+#   reviewed: 2026-11-14            # última revisión contra las pantallas (aunque no cambiara el texto)
 #   ---
 #   ## Para qué sirve …
 #
 # Una guía se ve si el usuario tiene al menos una de sus áreas (Access::Grant).
 # spec/services/assistant/guides_spec.rb revisa que todas estén completas.
+# `sources` sirve para saber cuándo una guía quedó vieja: rake assistant:guides:stale
+# (Assistant::GuideFreshness) lista las guías cuyo código cambió después de su último commit.
 module Assistant::Guides
   DIR = Rails.root.join('config/assistant/guides')
   FRONT_MATTER = /\A---\s*\n(.*?)\n---\s*\n/m
@@ -30,7 +34,8 @@ module Assistant::Guides
                  dali favor ayuda ayudas usar uso creo crear cambio cambiar cambia pongo poner marco marcar
                  doy hago donde].freeze
 
-  Guide = Struct.new(:key, :title, :areas, :keywords, :pages, :body, :category, keyword_init: true) do
+  Guide = Struct.new(:key, :title, :areas, :keywords, :pages, :body, :category, :sources, :reviewed,
+                     keyword_init: true) do
     def visible_to?(grant)
       areas.empty? || areas.any? { |area| grant.allowed?(area) }
     end
@@ -48,8 +53,10 @@ module Assistant::Guides
     @all ||= load_all
   end
 
+  # Por su clave; si el modelo manda el título («Dali en el teléfono (instalarlo como app)»), también.
   def find(key, grant)
-    guide = all.find { |g| g.key == key.to_s.strip }
+    wanted = key.to_s.strip
+    guide = all.find { |g| g.key == wanted } || all.find { |g| normalize(g.title) == normalize(wanted) }
     guide if guide&.visible_to?(grant)
   end
 
@@ -71,8 +78,11 @@ module Assistant::Guides
     I18n.transliterate(text.to_s.downcase).gsub(/[^a-z0-9ñ ]+/, ' ').squish
   end
 
+  # «puedo», «pueden», «puedem», «podemos», «podria»…: el verbo poder no dice de qué es la pregunta.
+  PODER = /\A(?:pued|pod[eir])/
+
   def words_of(text)
-    normalize(text).split.reject { |w| w.length < MIN_WORD || STOPWORDS.include?(w) }.uniq
+    normalize(text).split.reject { |w| w.length < MIN_WORD || STOPWORDS.include?(w) || w.match?(PODER) }.uniq
   end
 
   # Palabras clave valen más que el título y el título más que el texto.
@@ -82,12 +92,18 @@ module Assistant::Guides
     word.length <= 5 ? word : word.first([5, word.length - 2].max)
   end
 
+  # Las faltas de ortografía más comunes suenan igual: «mensiones» = «menciones»,
+  # «bendedor» = «vendedor», «aser» = «hacer», «llamada» = «yamada». Se comparan así los dos lados.
+  def sound(text)
+    text.gsub('ch', "\u0001").gsub(/c(?=[ei])|z/, 's').tr('v', 'b').gsub('ll', 'y').delete('h').tr("\u0001", 'c')
+  end
+
   def score(guide, words)
-    keywords = guide.keywords.map { |k| normalize(k) }.join(' ')
-    title = normalize(guide.title)
-    body = normalize(guide.body)
+    keywords = sound(guide.keywords.map { |k| normalize(k) }.join(' '))
+    title = sound(normalize(guide.title))
+    body = sound(normalize(guide.body))
     words.sum do |word|
-      stem = stem(word)
+      stem = stem(sound(word))
       (keywords.include?(stem) ? 3 : 0) + (title.include?(stem) ? 2 : 0) + (body.include?(stem) ? 1 : 0)
     end
   end
@@ -114,9 +130,10 @@ module Assistant::Guides
 
   def parse(path)
     raw = File.read(path)
-    meta = YAML.safe_load(raw[FRONT_MATTER, 1].to_s) || {}
-    Guide.new(key: meta['key'].to_s, title: meta['title'].to_s, areas: Array(meta['areas']).map(&:to_s),
-              keywords: Array(meta['keywords']).map(&:to_s), pages: Array(meta['pages']).map(&:to_s),
-              category: meta['category'].to_s.presence, body: raw.sub(FRONT_MATTER, '').strip)
+    meta = YAML.safe_load(raw[FRONT_MATTER, 1].to_s, permitted_classes: [Date]) || {}
+    lists = %w[areas keywords pages sources].index_with { |field| Array(meta[field]).map(&:to_s) }
+    Guide.new(key: meta['key'].to_s, title: meta['title'].to_s, **lists.symbolize_keys,
+              category: meta['category'].to_s.presence, reviewed: meta['reviewed'].to_s.presence,
+              body: raw.sub(FRONT_MATTER, '').strip)
   end
 end
