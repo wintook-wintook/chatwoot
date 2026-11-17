@@ -117,6 +117,18 @@
       "ENABLE_REGEX": {
         "LABEL": "Habilitar validación regex"
       }
+    },
+    "MODEL_OPTIONS": {
+      "CONVERSATION": "Conversación",
+      "CONTACT": "Contacto"
+    },
+    "TYPE_OPTIONS": {
+      "TEXT": "Texto",
+      "NUMBER": "Número",
+      "LINK": "Liga",
+      "DATE": "Fecha",
+      "LIST": "Lista",
+      "CHECKBOX": "Casilla"
     }
   }
 }

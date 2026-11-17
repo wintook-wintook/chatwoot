@@ -1,10 +1,10 @@
 {
   "LABEL_MGMT": {
-    "HEADER": "Labels",
-    "HEADER_BTN_TXT": "Add label",
-    "LOADING": "Fetching labels",
+    "HEADER": "Etiquetas",
+    "HEADER_BTN_TXT": "Agregar etiqueta",
+    "LOADING": "Cargando etiquetas",
     "DESCRIPTION": "Las etiquetas te ayudan a categorizar y priorizar conversaciones y prospectos. Puedes asignar una etiqueta a una conversación o contacto usando el panel lateral.",
-    "LEARN_MORE": "Learn more about labels",
+    "LEARN_MORE": "Más sobre las etiquetas",
     "SEARCH_404": "No hay elementos que coincidan con esta consulta",
     "LIST": {
       "404": "No hay etiquetas disponibles en esta cuenta.",

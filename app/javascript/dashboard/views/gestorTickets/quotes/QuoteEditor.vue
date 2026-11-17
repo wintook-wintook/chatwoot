@@ -378,6 +378,10 @@ export default {
     reopen() {
       return this.run(() => QuotesAPI.transition(this.quote.id, 'reopen'));
     },
+    // Pospuesta → Enviada (el servidor lo permite; también retoma la oportunidad).
+    resume() {
+      return this.run(() => QuotesAPI.transition(this.quote.id, 'sent'));
+    },
     async copyLink() {
       await copyTextToClipboard(this.quote.public_url);
       useAlert(this.$t('QUOTES.ACTIONS.LINK_COPIED'));
@@ -500,6 +504,15 @@ export default {
             @click="outcomeStatus = status"
           >
             {{ $t(`QUOTES.ACTIONS.${status.toUpperCase()}`) }}
+          </woot-button>
+          <woot-button
+            v-if="quote.status === 'postponed'"
+            size="small"
+            variant="smooth"
+            color-scheme="secondary"
+            @click="resume"
+          >
+            {{ $t('QUOTES.ACTIONS.RESUME') }}
           </woot-button>
           <woot-button
             v-if="quote.status === 'lost' || quote.status === 'cancelled'"

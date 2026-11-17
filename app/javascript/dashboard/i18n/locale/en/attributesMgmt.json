@@ -117,6 +117,18 @@
       "ENABLE_REGEX": {
         "LABEL": "Enable regex validation"
       }
+    },
+    "MODEL_OPTIONS": {
+      "CONVERSATION": "Conversation",
+      "CONTACT": "Contact"
+    },
+    "TYPE_OPTIONS": {
+      "TEXT": "Text",
+      "NUMBER": "Number",
+      "LINK": "Link",
+      "DATE": "Date",
+      "LIST": "List",
+      "CHECKBOX": "Checkbox"
     }
   }
 }

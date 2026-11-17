@@ -10,6 +10,7 @@ export default {
   data() {
     return {
       outcomes: [],
+      toDelete: null,
       newLabel: '',
       requireMinutes: true,
       reasons: [],
@@ -59,7 +60,11 @@ export default {
     saveRequireMinutes(value) {
       this.run(() => TaskOutcomesAPI.updateSettings({ requireMinutes: value }));
     },
-    remove(outcome) {
+    async remove(outcome) {
+      this.toDelete = outcome;
+      const ok = await this.$refs.confirmDelete.showConfirmation();
+      this.toDelete = null;
+      if (!ok) return;
       this.run(() => TaskOutcomesAPI.delete(outcome.id));
     },
   },
@@ -187,5 +192,16 @@ export default {
         </woot-button>
       </form>
     </div>
+    <woot-confirm-modal
+      ref="confirmDelete"
+      :title="
+        $t('CASE_TICKETS.CONFIRM_DELETE.TITLE', {
+          label: toDelete ? toDelete.label : '',
+        })
+      "
+      :description="$t('CASE_TICKETS.CONFIRM_DELETE.MESSAGE')"
+      :confirm-label="$t('CASE_TICKETS.CONFIRM_DELETE.YES')"
+      :cancel-label="$t('CASE_TICKETS.CONFIRM_DELETE.NO')"
+    />
   </div>
 </template>

@@ -365,6 +365,12 @@
     }
   },
   "CASE_TICKETS": {
+    "CONFIRM_DELETE": {
+      "TITLE": "Delete “{label}”?",
+      "MESSAGE": "It can no longer be chosen. Records that had it keep no value.",
+      "YES": "Yes, delete",
+      "NO": "Cancel"
+    },
     "ASSIGN_CLIENT": {
       "BUTTON": "Link to a client",
       "TITLE": "Link to a client · {folio}",
@@ -2742,6 +2748,7 @@
       }
     },
     "TASK_PRIORITY": {
+      "LOADING": "Loading scoring...",
       "PAGE_TITLE": "Task scoring: how «My day» is sorted",
       "INTRO": "«My day» sorts each agent's pending tasks by a score: each situation adds the points below. More points = higher up. A negative weight subtracts; 0 ignores it.",
       "GROUPS": {
@@ -3233,6 +3240,7 @@
       "POSTPONED": "Postponed",
       "CANCELLED": "Cancelled",
       "REOPEN": "Reopen",
+      "RESUME": "Resume (back to Sent)",
       "NEW_VERSION": "New version",
       "DELETE": "Delete draft",
       "DELETE_CONFIRM": "Delete this draft?",

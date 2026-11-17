@@ -216,7 +216,7 @@ export default {
       </div>
 
       <p v-if="!loaded" class="m-0 text-sm text-slate-400">
-        {{ $t('CASE_TICKETS.LIST.LOADING') }}
+        {{ $t('CASE_TICKETS.TASK_PRIORITY.LOADING') }}
       </p>
 
       <template v-else>

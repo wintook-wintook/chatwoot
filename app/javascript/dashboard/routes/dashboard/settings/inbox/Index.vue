@@ -91,6 +91,7 @@ const channelTypeOptions = computed(() => [
   },
   { value: 'Channel::Telegram', label: t('INBOX_MGMT.CHANNELS.TELEGRAM') },
   { value: 'Channel::Line', label: t('INBOX_MGMT.CHANNELS.LINE') },
+  { value: 'Channel::Tiktok', label: t('INBOX_MGMT.CHANNELS.TIKTOK') },
   { value: 'Channel::Api', label: t('INBOX_MGMT.CHANNELS.API') },
   { value: 'Channel::Sms', label: t('INBOX_MGMT.CHANNELS.SMS') },
 ]);

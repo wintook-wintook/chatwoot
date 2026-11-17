@@ -122,6 +122,7 @@
       "SAVED": "Contract type saved",
       "ERROR": "Could not save the type",
       "MONTHS": "{n} months",
+      "MONTH_ONE": "1 month",
       "NO_TERM": "No term",
       "COLUMNS": {
         "NAME": "Name",

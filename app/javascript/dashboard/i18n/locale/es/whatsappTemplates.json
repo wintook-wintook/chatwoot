@@ -1,5 +1,11 @@
 {
     "WHATSAPP_TEMPLATES": {
+        "SETTINGS": {
+            "TITLE": "Plantillas de WhatsApp",
+            "DESCRIPTION": "Crea, envía a aprobación y gestiona las plantillas de todos tus canales de WhatsApp sin entrar a Meta.",
+            "SYNC": "Sincronizar",
+            "NEW": "Nueva plantilla"
+        },
         "MODAL": {
             "TITLE": "Plantillas de Whatsapp",
             "SUBTITLE": "Seleccione la plantilla de whatsapp que desea enviar",
