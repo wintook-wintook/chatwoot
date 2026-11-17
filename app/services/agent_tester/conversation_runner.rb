@@ -22,6 +22,8 @@ class AgentTester::ConversationRunner
     verdict = AgentTester::Judge.new(account: @template.account).call(turns: turns, reply: last[:text], expected: test_case.expected)
     { case_id: test_case.id, name: test_case.name, conversation_id: conversation.display_id, reply: last[:text].to_s,
       trace: last[:trace], **verdict }
+  ensure
+    @sandbox.finish(conversation)
   end
 
   private

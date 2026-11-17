@@ -133,7 +133,7 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
 
   # Cada quien sus pláticas; quien cambia agentes puede ver cualquiera (p. ej. desde la bitácora).
   def set_conversation
-    scope = Current.account.conversations.where(inbox_id: sandbox.inbox.id)
+    scope = sandbox.conversations
     scope = scope.where("additional_attributes ->> 'agent_tester_user_id' = ?", current_user.id.to_s) unless access_grant.writable?('ai_agents')
     @conversation = scope.find(params[:conversation_id])
   end
