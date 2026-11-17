@@ -511,16 +511,6 @@ class KnowledgeBaseResponseService
     end.join("\n\n")
   end
 
-  # Ver KnowledgeBase::StagedOfferImages: la beca entregada lleva su imagen aunque el
-  # modelo no la haya escrito.
-  def staged_offer_images(reply, context)
-    definition = @tracking && ContactTrackings::ConversationVariables.definition_for(@tracking)
-    KnowledgeBase::StagedOfferImages.call(reply, context, definition)
-  rescue StandardError => e
-    Rails.logger.warn "[KBase] ⚠️ No se pudo revisar la imagen de la oferta: #{e.message}"
-    reply
-  end
-
   # Ver KnowledgeBase::StagedOffers: con SIGUIENTE_OFERTA=PRIMERA_BECA el modelo no ve la
   # segunda beca (cuenta 613 conv 87: «¿y no hay otra beca más?» la daba aunque no tocaba).
   def staged_offers(content, title)
@@ -799,10 +789,7 @@ class KnowledgeBaseResponseService
       los pasos del vendedor). Los nombres de permisos, parámetros, campos y menús se
       citan textualmente como aparecen en la fuente.
 
-      #{agent_data_rule}Si la fuente no cubre exactamente lo que preguntaron, dilo de frente: explica
-      brevemente qué sí cubre la documentación, aclara que no tienes el procedimiento
-      exacto para su caso y #{missing_answer_step}. Una respuesta honesta que no
-      resuelve es mejor que una inventada que parece resolver.
+      #{agent_data_rule}#{missing_answer_rule}
     USER
     user_prompt = erp_user_prompt(first_name, question, erp_data) if erp_data
     user_prompt = canned_prompt_user_prompt(first_name, question, canned_prompt) if canned_prompt
@@ -825,8 +812,6 @@ class KnowledgeBaseResponseService
     reply = strip_echoed_sources(reply)
     reply = guard_links(reply, messages)
     return nil if reply.blank?
-
-    reply = staged_offer_images(reply, context)
 
     # Se revisa ANTES de guardar el historial: una respuesta que copió las instrucciones
     # no puede quedar ahí, porque el modelo la vería en el turno siguiente.
@@ -933,9 +918,10 @@ class KnowledgeBaseResponseService
     "Contexto del negocio:\n#{context.truncate(MAX_AGENT_CONTEXT_CHARS)}"
   end
 
-  # Sin el dato: con Entrenamiento propio, lo que diga él (canal, asesor, nada); si no, el asesor.
-  def missing_answer_step
-    agent_system_prompt ? 'sigue lo que tus instrucciones digan para ese caso' : 'ofrece pasarlo con un asesor'
+  # Sin el dato: ver ContactTrackings::MissingAnswer (el motor no dicta la frase; manda a la
+  # sección [SIN INFORMACIÓN] del Entrenamiento y solo prohíbe inventar).
+  def missing_answer_rule
+    ContactTrackings::MissingAnswer.rule(agent_system_prompt)
   end
 
   # ==============================================================================

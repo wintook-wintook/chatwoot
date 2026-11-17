@@ -750,6 +750,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
         #{conversational_form(clean_cp)}
         #{CONVERSATIONAL_GUARD}
+        #{clean_cp.present? ? ContactTrackings::MissingAnswer.rule(clean_cp) : ''}
         No uses prefijos como "Asesor:" o "Bot:". No incluyas comillas al inicio ni al final.
         #{clean_cp.present? ? 'Si las INSTRUCCIONES ADICIONALES de arriba definen etiquetas de cierre, esta respuesta debe terminar con la que corresponda, sola en la última línea — no es opcional.' : ''}
       USER
