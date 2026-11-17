@@ -28,6 +28,9 @@ RSpec.describe AgentTester::ConversationRunner do
       next unless calls == 1
 
       conversation = Conversation.where(account: account).order(:id).last
+      # La escribe «otro proceso» (el motor): no vacía la caché de consultas de esta conexión.
+      connection = ActiveRecord::Base.connection
+      allow(connection).to receive(:clear_query_cache)
       create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing,
                        content: '1. Tesis 2. CENEVAL')
     end
