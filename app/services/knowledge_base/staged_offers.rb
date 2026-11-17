@@ -101,13 +101,6 @@ module KnowledgeBase::StagedOffers
     options[desde + 1]
   end
 
-  # Los rótulos de las opciones de las variables de «siguiente oferta» («primera beca», …).
-  def staged_labels(definition)
-    return Set.new if definition.blank?
-
-    definition.variables.flat_map { |clave, var| clave.match?(NAME_RE) ? var[:options].map { |o| label(o) } : [] }.to_set
-  end
-
   # «PRIMERA_BECA» → «primera beca» (sin acentos, minúsculas).
   def label(value)
     I18n.transliterate(value.to_s).tr('_', ' ').squish.downcase
@@ -137,8 +130,7 @@ module KnowledgeBase::StagedOffers
     return PLACEHOLDER if actual.blank?
 
     '- (La siguiente oferta todavía no toca. Si el cliente pide otra beca, otro descuento u otra oferta, ' \
-      "lo que le toca ahora es «#{actual}», la de arriba: dela completa, con su imagen si la tiene. No " \
-      "menciones que hay más ni digas que no hay más.)\n"
+      "lo que le toca ahora es «#{actual}», la de arriba: dela completa. No menciones que hay más ni digas que no hay más.)\n"
   end
 
   # Cambia cada renglón oculto (y los que le siguen hasta el próximo renglón con viñeta, una
