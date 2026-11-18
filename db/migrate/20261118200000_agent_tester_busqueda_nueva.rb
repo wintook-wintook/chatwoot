@@ -7,14 +7,9 @@
 #   agent_test_cases.variables   las variables de la plática al guardar la prueba (CARRERA,
 #                                PRODUCTO…): la corrida las pone antes de escribir, para no perder
 #                                de qué se hablaba.
-#   agent_test_logs.note         «¿Qué estuvo mal?» (opcional) de quien probó; `feedback` es «¿Qué
-#                                debió responder?». El diagnóstico lo ve solo quien revisa.
-#   agent_test_logs.dismissed_reason  por qué quien revisa dijo «No es error».
 class AgentTesterBusquedaNueva < ActiveRecord::Migration[7.0]
   def change
     add_column :agent_test_runs, :seleccion, :string
     add_column :agent_test_cases, :variables, :jsonb, null: false, default: {}
-    add_column :agent_test_logs, :note, :text
-    add_column :agent_test_logs, :dismissed_reason, :text
   end
 end
