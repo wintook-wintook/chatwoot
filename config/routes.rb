@@ -183,16 +183,12 @@ Rails.application.routes.draw do
               post :reauthorize_page
             end
           end
-          # proyecto@respuestas_predefinidas R3
-          resources :canned_response_categories, only: [:index, :create, :update, :destroy] do
-            get :suggestions, on: :collection
-          end
           resources :canned_responses, only: [:index, :create, :update, :destroy] do
             # proyecto@respuestas_predefinidas R1: meterlas a la fuente de datos (una o hasta 20)
             post :vectorize, on: :member
             post :vectorize, on: :collection, action: :vectorize_many
             post :destroy_many, on: :collection
-            post :assign_category, on: :collection
+            post :assign_kind, on: :collection # proyecto@predefinidas_que_contestan
             # proyecto@arreglar_predefinidas
             get :fix, on: :member, to: 'canned_response_fixes#latest', as: :latest_fix
             post :fix, on: :member, to: 'canned_response_fixes#create_oversize'

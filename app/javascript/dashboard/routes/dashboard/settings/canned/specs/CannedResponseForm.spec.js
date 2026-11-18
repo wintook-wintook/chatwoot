@@ -1,10 +1,5 @@
 import { shallowMount } from '@vue/test-utils';
-import CategoryAPI from 'dashboard/api/cannedResponseCategory';
 import CannedResponseForm from '../CannedResponseForm.vue';
-
-vi.mock('dashboard/api/cannedResponseCategory', () => ({
-  default: { get: vi.fn() },
-}));
 
 // proyecto@predefinidas_prompt — docs/predefinidas_prompt_plan.md §3.4
 const montar = (
@@ -31,9 +26,7 @@ const montar = (
   });
 
 describe('CannedResponseForm', () => {
-  beforeEach(() => {
-    CategoryAPI.get.mockResolvedValue({ data: [{ id: 4, name: 'PATITAS' }] });
-  });
+  beforeEach(() => {});
 
   it('entrega el nombre, el mensaje y el prompt al guardar', () => {
     const wrapper = montar({ contentPrompts: '1. Pedí la cantidad.' });
@@ -45,27 +38,36 @@ describe('CannedResponseForm', () => {
       content: 'Cotización de equipo.',
       content_prompts: '1. Pedí la cantidad.',
       content_is_prompt: false,
-      category_id: null,
+      kind: 'general',
     });
   });
 
-  // proyecto@respuestas_predefinidas R3: la categoría, junto al nombre.
-  it('ofrece las categorías y entrega la elegida (o null)', async () => {
-    const wrapper = montar({ categoryId: 4 });
-    await new Promise(resolve => {
-      setTimeout(resolve);
-    });
-
-    expect(CategoryAPI.get).toHaveBeenCalled();
-    expect(wrapper.findAll('option').wrappers.map(o => o.text())).toContain(
-      'PATITAS'
-    );
+  // proyecto@predefinidas_que_contestan: el tipo y los topes que valida el servidor.
+  it('entrega el tipo elegido', () => {
+    const wrapper = montar({ kind: 'ficha' });
     wrapper.vm.submit();
-    expect(wrapper.emitted('submit')[0][0].category_id).toBe(4);
+    expect(wrapper.emitted('submit')[0][0].kind).toBe('ficha');
+  });
 
-    wrapper.setData({ form: { ...wrapper.vm.form, categoryId: '' } });
-    wrapper.vm.submit();
-    expect(wrapper.emitted('submit')[1][0].category_id).toBeNull();
+  it('no deja guardar si nombre + mensaje pasan de 3,500 o el Prompt de 2,000', async () => {
+    const larga = montar({ content: 'a'.repeat(3500) });
+    larga.vm.submit();
+    expect(larga.emitted('submit')).toBeUndefined();
+    expect(larga.vm.tooLong).toBe(true);
+
+    const prompt = montar({ contentPrompts: 'b'.repeat(2001) });
+    prompt.vm.submit();
+    expect(prompt.emitted('submit')).toBeUndefined();
+
+    const bien = montar({ content: 'a'.repeat(3000) });
+    bien.vm.submit();
+    expect(bien.emitted('submit')).toHaveLength(1);
+  });
+
+  // proyecto@predefinidas_que_contestan: la categoría es fija.
+  it('ofrece las tres categorías fijas', () => {
+    const wrapper = montar();
+    expect(wrapper.findAll('[data-test="canned-kind"] option').length).toBe(3);
   });
 
   // La casilla "El mensaje es el prompt" viaja aparte del Prompt de Contenido.

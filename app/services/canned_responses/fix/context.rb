@@ -36,7 +36,7 @@ class CannedResponses::Fix::Context
     return @sources.first unless @kind == 'merge'
 
     @target ||= @sources.min_by do |r|
-      [r.category_id ? 0 : 1, groups.required_prefixes(r.short_code).any? ? 0 : 1, r.created_at || Time.current, r.id.to_i]
+      [r.kind == 'general' ? 1 : 0, groups.required_prefixes(r.short_code).any? ? 0 : 1, r.created_at || Time.current, r.id.to_i]
     end
   end
 
@@ -68,9 +68,6 @@ class CannedResponses::Fix::Context
     return [] unless @kind == 'merge' && other
 
     perdidos = groups.required_prefixes(other.short_code) - groups.required_prefixes(target.short_code)
-    perdidos += [other.category.name] if other.category && other.category_id != target.category_id && groups.used.any? do |g|
-                                           g.casecmp?(other.category.name)
-                                         end
     perdidos.uniq
   end
 

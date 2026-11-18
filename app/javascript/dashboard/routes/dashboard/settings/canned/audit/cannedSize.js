@@ -5,17 +5,23 @@
 // (KnowledgeBaseResponseService::MAX_ITEM_CHARS). Si pasa, recibe el nombre y las
 // secciones que más se parecen a la pregunta (KnowledgeBase::SectionFit), no todo.
 // Mismos números que CannedResponses::Audit::Report.
+//
+// proyecto@predefinidas_que_contestan: 3,500 y 2,000 para el Prompt, los mismos que
+// valida el servidor (CannedResponse::MAX_AGENT_CHARS / MAX_PROMPT_CHARS). Pasado el
+// tope ya no se puede guardar: lo que se guarda, el agente lo recibe completo.
 // ============================================================================
-export const MAX_CHARS = 2000;
-export const WARN_CHARS = 1600;
+export const MAX_CHARS = 3500;
+export const WARN_CHARS = 3000;
+export const PROMPT_MAX_CHARS = 2000;
+export const PROMPT_WARN_CHARS = 1700;
 
 export const agentChars = (shortCode, content) =>
   `${shortCode || ''}: ${content || ''}`.length;
 
 // 'ok' | 'near' | 'over'
-export const sizeLevel = chars => {
-  if (chars > MAX_CHARS) return 'over';
-  if (chars > WARN_CHARS) return 'near';
+export const sizeLevel = (chars, max = MAX_CHARS, warn = WARN_CHARS) => {
+  if (chars > max) return 'over';
+  if (chars > warn) return 'near';
   return 'ok';
 };
 

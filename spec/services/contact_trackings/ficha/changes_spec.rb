@@ -61,23 +61,23 @@ RSpec.describe ContactTrackings::Ficha::Changes do
 
   # 11/11/2026, agente 1583 (cuenta 1128): la ruta usa (!Información) y la ficha avisaba
   # «Agregaste Licenciatura / generales (Maestría)», que esa ruta ya cubre.
+  # proyecto@predefinidas_que_contestan: con las categorías fijas, (!General).
   describe 'con un grupo negado @buscar_predefinidas(!Grupo)' do
-    def categoria(nombre, codigos)
-      cat = CannedResponseCategory.create!(account: account, name: nombre)
-      codigos.each { |c| create(:canned_response, account: account, short_code: c, content: c, category_id: cat.id) }
+    def categoria(kind, codigos)
+      codigos.each { |c| create(:canned_response, account: account, short_code: c, content: c, kind: kind) }
     end
 
     let(:negada) do
       create(:tracking_template, account: account,
-                                 complementary_prompt: "@ruta(carreras #carreras: pregunta por una carrera): @buscar_predefinidas(!Información)\n")
+                                 complementary_prompt: "@ruta(carreras #carreras: pregunta por una carrera): @buscar_predefinidas(!General)\n")
     end
 
     before do
       create(:knowledge_source, account: account, source_type: 'canned_response', name: 'Respuestas')
-      categoria('Licenciatura', ['Licenciatura en Derecho', 'Licenciatura en Psicología', 'Licenciaturas: servicio social',
-                                 'Licenciaturas: prácticas'])
-      categoria('Maestría', ['Maestría en Educación'])
-      categoria('Información', %w[Horario Dirección Tarea Contacto])
+      categoria('ficha', ['Licenciatura en Derecho', 'Licenciatura en Psicología', 'Licenciaturas: servicio social',
+                          'Licenciaturas: prácticas'])
+      categoria('objecion', ['Maestría en Educación'])
+      categoria('general', %w[Horario Dirección Tarea Contacto])
     end
 
     def con_ficha(partes)
@@ -87,18 +87,18 @@ RSpec.describe ContactTrackings::Ficha::Changes do
     end
 
     it 'cubre los demás grupos: no pide agregar Licenciatura ni generales (Maestría)' do
-      expect(con_ficha(%w[Licenciatura Maestría])[:added]).to eq([])
+      expect(con_ficha(%w[Ficha Objeción])[:added]).to eq([])
     end
 
     it 'el grupo excluido sí se avisa' do
-      expect(con_ficha(%w[Licenciatura Información])[:added].pluck(:name)).to eq(['Información'])
+      expect(con_ficha(%w[Ficha General])[:added].pluck(:name)).to eq(['General'])
     end
 
     it 'la descripción quita el grupo solo como palabra completa' do
       cards = ContactTrackings::Ficha::Catalog.new(account, template: negada).call
       partes = cards.find { |c| c[:kind] == 'canned' }[:parts].index_by { |p| p[:label] }
 
-      expect(partes['Licenciatura'][:topics]).to include('en derecho', 'licenciaturas: servicio social')
+      expect(partes['LICENCIATURA'][:topics]).to include('en derecho', 'en psicología')
     end
   end
 

@@ -10,8 +10,6 @@ import Vocabulary from '../wintook/canned/Vocabulary.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 // proyecto@respuestas_predefinidas R2: la tabla paginada (incluye el estado de R1).
 import CannedResponsesTable from './CannedResponsesTable.vue';
-// R3: administrar las categorías (y aceptar las sugeridas).
-import CannedCategoriesModal from './CannedCategoriesModal.vue';
 // proyecto@auditoria_predefinidas: la pestaña «Auditoría».
 import CannedAudit from './audit/CannedAudit.vue';
 // proyecto@arreglar_predefinidas: «Arreglar con IA» (pasa del tope y cada sección de la
@@ -45,7 +43,6 @@ const showTableWithSize = async size => {
   await nextTick();
   if (table.value) table.value.filterBySize(size);
 };
-const showCategories = ref(false);
 const fixTarget = ref(null);
 // La tabla manda la predefinida; la auditoría, { kind, response | finding }.
 const openFix = payload => {
@@ -56,10 +53,6 @@ const openFix = payload => {
 const showBulk = ref(false);
 const closeFix = () => {
   fixTarget.value = null;
-};
-const onCategoriesChanged = () => {
-  reloadTable();
-  if (table.value) table.value.loadCategories();
 };
 
 const deleteConfirmText = computed(
@@ -136,16 +129,6 @@ const confirmDeletion = () => {
     >
       <template #actions>
         <woot-button
-          v-if="selectedTabIndex == 0"
-          class="rounded-md"
-          variant="smooth"
-          color-scheme="secondary"
-          icon="folder"
-          @click="showCategories = true"
-        >
-          {{ $t('CANNED_MGMT.CATEGORIES.OPEN') }}
-        </woot-button>
-        <woot-button
           class="button nice rounded-md"
           icon="add-circle"
           @click="openAddPopup"
@@ -198,12 +181,6 @@ const confirmDeletion = () => {
       :show="showBulk"
       @close="showBulk = false"
       @applied="reloadTable"
-    />
-
-    <CannedCategoriesModal
-      :show="showCategories"
-      @close="showCategories = false"
-      @changed="onCategoriesChanged"
     />
 
     <woot-modal :show.sync="showAddPopup" :on-close="hideAddPopup">

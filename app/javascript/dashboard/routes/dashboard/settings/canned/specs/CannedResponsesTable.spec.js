@@ -1,14 +1,10 @@
 import { shallowMount } from '@vue/test-utils';
 import CannedResponseAPI from 'dashboard/api/cannedResponse';
-import CategoryAPI from 'dashboard/api/cannedResponseCategory';
 import CannedResponsesTable from '../CannedResponsesTable.vue';
 
-vi.mock('dashboard/api/cannedResponseCategory', () => ({
-  default: { get: vi.fn() },
-}));
 vi.mock('dashboard/api/cannedResponse', () => ({
   default: {
-    assignCategory: vi.fn(),
+    assignKind: vi.fn(),
     list: vi.fn(),
     vectorize: vi.fn(),
     vectorizeMany: vi.fn(),
@@ -63,7 +59,6 @@ const montar = async () => {
 describe('CannedResponsesTable', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    CategoryAPI.get.mockResolvedValue({ data: [{ id: 4, name: 'PATITAS' }] });
     CannedResponseAPI.list.mockResolvedValue(
       respuesta([fila(1), fila(2, { embedding_state: 'missing' })], {
         count: 30,
@@ -144,33 +139,25 @@ describe('CannedResponsesTable', () => {
     expect(CannedResponseAPI.list).toHaveBeenCalledTimes(2);
   });
 
-  // proyecto@respuestas_predefinidas R3
+  // proyecto@predefinidas_que_contestan: la categoría es fija (General, Ficha, Objeción).
   it('filtra por categoría y cambia la de las seleccionadas', async () => {
-    CannedResponseAPI.assignCategory.mockResolvedValue({
-      data: [fila(1, { category_name: 'PATITAS', category_id: 4 })],
+    CannedResponseAPI.assignKind.mockResolvedValue({
+      data: [fila(1, { kind: 'ficha' })],
     });
     const wrapper = await montar();
-    expect(wrapper.vm.categories).toEqual([{ id: 4, name: 'PATITAS' }]);
+    expect(wrapper.vm.kinds).toEqual(['general', 'ficha', 'objecion']);
 
-    wrapper.setData({ category: 'none' });
+    wrapper.setData({ category: 'objecion' });
     await flushPromises();
     expect(CannedResponseAPI.list).toHaveBeenLastCalledWith(
-      expect.objectContaining({ category: 'none', page: 1 })
+      expect.objectContaining({ kind: 'objecion', page: 1 })
     );
 
     wrapper.vm.toggle(1);
-    wrapper.setData({ bulkCategory: '4' });
+    wrapper.setData({ bulkCategory: 'ficha' });
     await wrapper.vm.assignSelected();
-    expect(CannedResponseAPI.assignCategory).toHaveBeenCalledWith([1], 4);
-    expect(wrapper.vm.records[0].category_name).toBe('PATITAS');
-
-    wrapper.vm.toggle(1);
-    wrapper.setData({ bulkCategory: 'none' });
-    await wrapper.vm.assignSelected();
-    expect(CannedResponseAPI.assignCategory).toHaveBeenLastCalledWith(
-      [1],
-      null
-    );
+    expect(CannedResponseAPI.assignKind).toHaveBeenCalledWith([1], 'ficha');
+    expect(wrapper.vm.records[0].kind).toBe('ficha');
   });
 
   it('Creada y Cambió muestran la fecha y la hora', async () => {

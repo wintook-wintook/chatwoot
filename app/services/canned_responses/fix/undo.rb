@@ -26,7 +26,7 @@ class CannedResponses::Fix::Undo
     end
   end
 
-  RESTORE_FIELDS = %w[short_code content content_prompts content_is_prompt category_id menu opcion content_full
+  RESTORE_FIELDS = %w[short_code content content_prompts content_is_prompt kind menu opcion content_full
                       url_content url_short_code].freeze
 
   def initialize(fix)

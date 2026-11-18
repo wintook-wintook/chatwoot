@@ -26,6 +26,11 @@ class CannedResponse extends ApiClient {
     });
   }
 
+  // proyecto@predefinidas_que_contestan: cambiar el tipo de varias.
+  assignKind(ids, kind) {
+    return axios.post(`${this.url}/assign_kind`, { ids, kind });
+  }
+
   destroyMany(ids) {
     return axios.post(`${this.url}/destroy_many`, { ids });
   }

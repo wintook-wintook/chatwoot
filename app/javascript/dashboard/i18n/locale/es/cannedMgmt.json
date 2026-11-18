@@ -234,13 +234,17 @@
         "LABEL": "Caracteres que recibe el agente",
         "OK": "Cabe completa: el agente la recibe entera (nombre incluido).",
         "NEAR": "Cerca del límite.",
-        "OVER": "Pasa del tope: el agente verá el nombre y solo las secciones que más se parezcan a la pregunta.",
+        "OVER": "Pasa del tope: no se puede guardar. Pártela en varias respuestas, una por tema.",
         "SHOW_BLOCKS": "Ver los {count} bloques",
-        "HIDE_BLOCKS": "Ocultar bloques"
+        "HIDE_BLOCKS": "Ocultar bloques",
+        "PROMPT_LABEL": "Caracteres del Prompt",
+        "PROMPT_OK": "El Prompt cabe completo.",
+        "PROMPT_NEAR": "Prompt cerca del límite.",
+        "PROMPT_OVER": "El Prompt pasa del tope: no se puede guardar. Deja aquí solo cómo contestar; los datos van en el mensaje."
       },
       "TABLE": {
         "COL_CHARS": "Caracteres",
-        "COL_CHARS_HELP": "Lo que recibe el agente: nombre + contenido. Tope: 2,000",
+        "COL_CHARS_HELP": "Lo que recibe el agente: nombre + contenido. Tope: 3,500",
         "FILTER_SIZE": "Tamaño",
         "ALL_SIZES": "Cualquier tamaño",
         "SIZE_OVER": "Pasan el tope",
@@ -407,6 +411,15 @@
         "DONE": "Aplicadas: {ok}. Con error: {failed}.",
         "UNCHANGED": "Sin cambios"
       }
+    },
+    "KIND": {
+      "LABEL": "Categoría",
+      "GENERAL": "General",
+      "FICHA": "Ficha",
+      "OBJECION": "Objeción",
+      "GENERAL_HELP": "General: vale igual para todos (horarios, datos de la empresa, cómo pedir, formas de pago).",
+      "FICHA_HELP": "Ficha: es de un solo sujeto (un producto, servicio, plan, sucursal o carrera). Pon en el nombre de qué sujeto es; el agente nunca la usa para dar datos de otro.",
+      "OBJECION_HELP": "Objeción: cómo contestar un pretexto del cliente («está caro», «lo pienso»). El agente solo la usa cuando el cliente objeta."
     }
   }
 }

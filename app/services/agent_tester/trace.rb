@@ -39,8 +39,34 @@ module AgentTester::Trace
     Array(trace['fragmentos']).each do |f|
       out << ["Fragmento: #{f['titulo']} (#{f['similitud']})", avisos[f['titulo']]].compact.join(' ')
     end
+    out.concat(selection_lines(trace))
     out << "Contestó: #{trace['camino']}" if trace['camino']
     out
+  end
+
+  # proyecto@predefinidas_que_contestan: qué escogió la IA entre las candidatas y por qué,
+  # si no escogió ninguna, y los datos que se quitaron por no venir de las fuentes.
+  def selection_lines(trace)
+    chosen_lines(trace['seleccion'].to_h) + removed_lines(trace['datos_quitados'].to_h)
+  end
+
+  def chosen_lines(sel)
+    return [] if sel.blank?
+
+    sujeto = " · sujeto: #{Array(sel['sujeto']).join(', ')}" if sel['sujeto'].present?
+    out = ["Selección: #{Array(sel['escogidas']).size} de #{sel['candidatas']} candidatas#{sujeto}"]
+    Array(sel['escogidas']).each do |e|
+      out << "Escogió [#{e['tipo']}] #{e['titulo']}#{" — #{e['por_que']}" if e['por_que'].present?}"
+    end
+    out << "Ninguna contesta#{": falta #{sel['falta']}" if sel['falta'].present?}" if sel['ninguna']
+    out
+  end
+
+  def removed_lines(quitados)
+    return [] if quitados.blank?
+
+    ["Datos que no estaban en las fuentes: #{Array(quitados['inventados']).join(', ')}" \
+     "#{' (se quitaron)' if Array(quitados['quedaron']).any?}"]
   end
 
   def lines_v2(trace)
@@ -50,10 +76,7 @@ module AgentTester::Trace
 
   # { título => '⚠ Auditoría: …' } de los fragmentos que son predefinidas con algo pendiente.
   def canned_warnings(trace, account)
-    return {} unless account && trace.dig('fuente', 'modo') == 'canned_response'
-
-    titulos = Array(trace['fragmentos']).filter_map { |f| f['titulo'].presence }
-    predefinidas = account.canned_responses.where(short_code: titulos).to_a
+    predefinidas = canned_fragments(trace, account)
     return {} if predefinidas.empty?
 
     tipos = open_kinds(account, predefinidas.map(&:id))
@@ -61,6 +84,14 @@ module AgentTester::Trace
       partes = warning_parts(r, tipos[r.id])
       acc[r.short_code] = "⚠ Auditoría: #{partes.join(', ')}" if partes.any?
     end
+  end
+
+  # Las predefinidas que salieron como fragmentos (solo si la fuente fue de predefinidas).
+  def canned_fragments(trace, account)
+    return [] unless account && trace.dig('fuente', 'modo') == 'canned_response'
+
+    titulos = Array(trace['fragmentos']).filter_map { |f| f['titulo'].presence }
+    account.canned_responses.where(short_code: titulos).to_a
   end
 
   # { id => [kind, …] } de los hallazgos abiertos, contando las dos del par.

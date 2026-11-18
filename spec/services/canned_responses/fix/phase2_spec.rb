@@ -42,8 +42,7 @@ RSpec.describe 'Arreglos con IA de la auditoría' do # rubocop:disable RSpec/Des
   end
 
   describe 'aplicar y deshacer' do
-    let(:categoria) { CannedResponseCategory.create!(account: account, name: 'Productos') }
-    let!(:a) { create(:canned_response, account: account, short_code: 'Precio X', content: 'X cuesta $1,500.', category: categoria) }
+    let!(:a) { create(:canned_response, account: account, short_code: 'Precio X', content: 'X cuesta $1,500.', kind: 'ficha') }
     let!(:b) { create(:canned_response, account: account, short_code: 'Costo X', content: 'La colegiatura de X es de $1,800.') }
 
     def fix(kind, partes, sources: [a, b], input: {})
@@ -54,7 +53,7 @@ RSpec.describe 'Arreglos con IA de la auditoría' do # rubocop:disable RSpec/Des
       )
     end
 
-    it 'unir: se queda la que tiene categoría, toma el texto unido y la otra se elimina; deshacer las regresa' do
+    it 'unir: se queda la que no es General, toma el texto unido y la otra se elimina; deshacer las regresa' do
       arreglo = fix('merge', [{ 'short_code' => 'Precio X', 'content' => 'X cuesta $1,500. La colegiatura es de $1,800.' }])
 
       CannedResponses::Fix::Applier.new(arreglo).call(parts: arreglo.proposal['parts'])
@@ -150,8 +149,8 @@ RSpec.describe 'Arreglos con IA de la auditoría' do # rubocop:disable RSpec/Des
     end
 
     it 'unir: la primera parte lleva el nombre de la que se conserva' do
-      allow(chat).to receive(:call).and_return('parts' => [{ 'short_code' => 'otro nombre', 'content' => 'Lunes a viernes de 9:00 a 18:00 hrs. Llámenos.' }],
-                                               'questions' => [{ 'text' => '¿A qué hora abren?', 'part' => 0 }])
+      parte = { 'short_code' => 'otro nombre', 'content' => 'Lunes a viernes de 9:00 a 18:00 hrs. Llámenos.' }
+      allow(chat).to receive(:call).and_return('parts' => [parte], 'questions' => [{ 'text' => '¿A qué hora abren?', 'part' => 0 }])
       contexto = CannedResponses::Fix::Context.new(account, kind: 'merge', sources: [a, b])
 
       salida = CannedResponses::Fix::MergeBuilder.new(contexto).call

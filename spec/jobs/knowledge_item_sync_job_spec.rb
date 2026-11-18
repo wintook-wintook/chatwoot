@@ -34,15 +34,15 @@ RSpec.describe KnowledgeItemSyncJob do
     )
   end
 
-  it 'guarda la categoría en el vector, sin meterla al texto (D2)' do
+  it 'guarda la categoría fija en el vector, sin meterla al texto' do
     con_openai
-    canned.update_columns(category_id: CannedResponseCategory.create!(account: account, name: 'PATITAS').id) # rubocop:disable Rails/SkipsModelValidations
+    canned.update_columns(kind: 'ficha') # rubocop:disable Rails/SkipsModelValidations
     stub_request(:post, url).to_return(status: 200, body: { data: [{ embedding: Array.new(1536, 0.1) }] }.to_json)
 
     correr
 
     item = KnowledgeItem.find_by(source_id: canned.id)
-    expect(item.metadata).to include('category' => 'PATITAS')
+    expect(item.metadata).to include('kind' => 'ficha')
     expect(item.content).to eq('PATITAS_CONSULTA: Cuesta $300')
   end
 

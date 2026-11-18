@@ -3,12 +3,14 @@
 # ================================================================================
 # feat/ficha_agente_ia F1 — LOS GRUPOS DE PREDEFINIDAS QUE SE ELIGEN EN LA FICHA
 # ================================================================================
-# Lo que va en @buscar_predefinidas(GRUPO). Desde R4 de respuestas predefinidas el motor
-# entiende las dos formas (KnowledgeBase::CannedGroup):
-#   · una CATEGORÍA (canned_response_categories)          → source: 'category'
-#   · el PRINCIPIO del nombre de las que no tienen categoría → source: 'prefix'
-# Un prefijo que choca con el nombre de una categoría no se ofrece: el motor buscaría
-# la categoría.
+# Lo que va en @buscar_predefinidas(GRUPO). El motor entiende dos formas
+# (KnowledgeBase::CannedGroup):
+#   · una CATEGORÍA fija: General, Ficha u Objeción          → source: 'kind'
+#     (proyecto@predefinidas_que_contestan; solo si la cuenta ya usa alguna que no sea
+#     General: con todas en General, «General» sería todo)
+#   · el PRINCIPIO del nombre                                  → source: 'prefix'
+# Un prefijo que se llama como una categoría fija no se ofrece: el motor buscaría la
+# categoría.
 #
 # not_ready = cuántas del grupo no tienen vector: el agente no las encontraría.
 # topics    = de qué tratan (los nombres sin el grupo), para describir la ruta.
@@ -22,13 +24,13 @@ class ContactTrackings::Ficha::CannedGroups
   end
 
   def call
-    (categories + prefixes).sort_by { |g| [-g[:count], g[:label]] }
+    (kinds + prefixes).sort_by { |g| [-g[:count], g[:label]] }
   end
 
   private
 
   def rows
-    @rows ||= @account.canned_responses.pluck(:id, :short_code, :category_id)
+    @rows ||= @account.canned_responses.pluck(:id, :short_code, :kind)
   end
 
   def ready_ids
@@ -36,23 +38,18 @@ class ContactTrackings::Ficha::CannedGroups
                                 .where.not(embedding: nil).distinct.pluck(:source_id).to_set
   end
 
-  def category_names
-    @category_names ||= @account.canned_response_categories.pluck(:id, :name).to_h
-  end
+  KIND_LABELS = { 'general' => 'General', 'ficha' => 'Ficha', 'objecion' => 'Objeción' }.freeze
 
-  def categories
-    rows.select { |r| r[2] }.group_by { |r| r[2] }.filter_map do |category_id, grupo|
-      nombre = category_names[category_id]
-      next if nombre.blank?
+  def kinds
+    por_kind = rows.group_by { |r| r[2].presence || 'general' }
+    return [] if por_kind.keys == ['general']
 
-      group(nombre, grupo, 'category')
-    end
+    por_kind.filter_map { |kind, grupo| (label = KIND_LABELS[kind]) && group(label, grupo, 'kind') }
   end
 
   def prefixes
-    ocupados = category_names.values.map(&:downcase)
-    rows.reject { |r| r[2] }.group_by { |r| prefix(r[1]) }.filter_map do |prefijo, grupo|
-      next if prefijo.nil? || ocupados.include?(prefijo.downcase)
+    rows.group_by { |r| prefix(r[1]) }.filter_map do |prefijo, grupo|
+      next if prefijo.nil? || KnowledgeBase::CannedGroup.kind_named(prefijo)
 
       group(prefijo, grupo, 'prefix')
     end

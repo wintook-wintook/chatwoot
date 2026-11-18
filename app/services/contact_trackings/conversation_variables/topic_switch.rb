@@ -54,7 +54,7 @@ module ContactTrackings::ConversationVariables::TopicSwitch
   end
 
   def named_sibling(account_id, valor, stems)
-    titles = CannedResponse.where(account_id: account_id).pluck(:short_code, :category_id)
+    titles = CannedResponse.where(account_id: account_id).pluck(:short_code, :kind)
     anchor = anchor_for(titles, valor)
     return nil if anchor.nil?
 
