@@ -335,6 +335,16 @@ export const primaryMenuV2 = (accountId, route) => {
         alternatives: rest.map(target),
       };
     })(),
+    // Centro de ayuda de vuelta en el menú principal, antes de Ajustes.
+    {
+      icon: 'library',
+      key: 'helpcenter',
+      label: 'HELP_CENTER.TITLE',
+      featureFlag: FEATURE_FLAGS.HELP_CENTER,
+      alwaysVisibleOnChatwootInstances: true,
+      toState: url('portals'),
+      toStateName: 'default_portal_articles',
+    },
     {
       icon: 'settings',
       key: 'settings',
@@ -489,21 +499,14 @@ const servicio = (accountId, route) => {
       },
       // Mismos ítems (íconos y permisos de administrador) que en Casos y etapas.
       ...caseSettingsItems(accountId, SERVICE_TOOLS),
-      {
-        icon: 'library',
-        label: 'HELP_CENTER.TITLE',
-        featureFlag: FEATURE_FLAGS.HELP_CENTER,
-        toState: frontendURL(`accounts/${accountId}/portals`),
-        toStateName: 'default_portal_articles',
-      },
     ],
   };
 };
 
 // Dentro del Centro de ayuda manda su propio menú: este registro, sin opciones,
-// solo marca Servicio en el menú principal (Secondary no pinta un menú vacío).
+// solo marca Centro de ayuda en el menú principal (Secondary no pinta un menú vacío).
 const centroDeAyuda = () => ({
-  parentNav: 'servicio',
+  parentNav: 'helpcenter',
   routes: [],
   matches: route => HELP_CENTER_PATH.test((route && route.path) || ''),
   menuItems: [],

@@ -32,6 +32,7 @@ describe('Menú v2', () => {
       'agentes',
       'reports',
       'catalogos',
+      'helpcenter',
       'settings',
     ]);
   });
@@ -106,7 +107,7 @@ describe('Menú v2', () => {
     const menus = getSidebarItemsV2(ACCOUNT, route('home')).secondaryMenu;
     const item = key => menus.find(m => m.parentNav === key).menuItems;
     expect(item('ventas')[0].toState).toContain('tickets/commercial/metrics');
-    expect(item('servicio')).toHaveLength(5);
+    expect(item('servicio')).toHaveLength(4);
     expect(item('servicio')[0].toState).toContain('tickets/support/board');
     const primary = primaryMenuV2(ACCOUNT, route('home'));
     expect(primary.find(i => i.key === 'servicio').toState).toContain(
@@ -216,7 +217,7 @@ describe('Menú v2', () => {
     );
   });
 
-  it('Servicio: casos, despacho, mantenimientos, portales y Centro de ayuda', () => {
+  it('Servicio: casos, despacho, mantenimientos y portales', () => {
     const servicio = menuFor(
       route('gestorTickets_class_list', { caseClass: 'support' })
     );
@@ -225,20 +226,19 @@ describe('Menú v2', () => {
       'gestorTickets_dispatch',
       'gestorTickets_maintenance',
       'gestorTickets_portals',
-      'default_portal_articles',
     ]);
     [
       'gestorTickets_dispatch',
       'gestorTickets_maintenance',
       'gestorTickets_portals',
     ].forEach(name => expect(menuFor(route(name)).parentNav).toBe('servicio'));
-    // Dentro del Centro de ayuda solo se marca Servicio (su menú es el suyo).
+    // Dentro del Centro de ayuda se marca su ícono del menú principal (su menú es el suyo).
     const ayuda = menuFor({
       name: 'list_all_locale_articles',
       path: '/app/accounts/1/portals/x/es/articles',
       params: {},
     });
-    expect(ayuda.parentNav).toBe('servicio');
+    expect(ayuda.parentNav).toBe('helpcenter');
     expect(ayuda.menuItems).toEqual([]);
     // Y salen de Ajustes › Casos y etapas.
     const grupo = menuFor(route('agent_list')).menuItems.find(
