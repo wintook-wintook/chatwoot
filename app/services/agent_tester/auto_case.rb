@@ -8,7 +8,7 @@
 # El día es el de la bandeja del agente (o México).
 # Cuando Kontrolya corrige un error del motor, se vuelve a correr el lote del día en que se reportó.
 module AgentTester::AutoCase
-  KINDS = %w[prompt content search model engine].freeze
+  KINDS = %w[prompt content search category model engine].freeze
   MONTHS = %w[ene feb mar abr may jun jul ago sep oct nov dic].freeze
   ZONE = 'America/Mexico_City'
 
@@ -16,15 +16,16 @@ module AgentTester::AutoCase
 
   # → la prueba (nil si no aplica: solo una pregunta del entrenador, o sin mensajes del cliente).
   # `bad_reply`: la respuesta del 👎, para que el juez sepa qué estaba mal.
-  def save(template, messages:, feedback:, kinds:, bad_reply: nil)
+  def save(template, messages:, feedback:, kinds:, bad_reply: nil, variables: {}) # rubocop:disable Metrics/ParameterLists
     return unless kinds.intersect?(KINDS)
 
-    add(template, messages: messages, expected: feedback, origin: 'correction', bad_reply: bad_reply)
+    add(template, messages: messages, expected: feedback, origin: 'correction', bad_reply: bad_reply, variables: variables)
   end
 
   # → la prueba, nueva o la igual que ya estaba (nil si no hay mensajes del cliente o no dice qué
   # se espera). Su lote es `prueba.batch`.
-  def add(template, messages:, expected:, origin:, bad_reply: nil)
+  # `variables`: las de la plática (CARRERA, PRODUCTO…), para que la corrida sepa de qué se hablaba.
+  def add(template, messages:, expected:, origin:, bad_reply: nil, variables: {}) # rubocop:disable Metrics/ParameterLists
     customer = Array(messages).filter_map { |m| m['content'].to_s.strip.presence if m['role'] == 'user' }
     return if customer.empty? || expected.blank?
 
@@ -32,7 +33,7 @@ module AgentTester::AutoCase
     customer = customer.last(AgentTestCase::MAX_MESSAGES)
     batch.cases.where('messages = ?::jsonb AND expected = ?', customer.to_json, expected).first ||
       batch.cases.create!(account: template.account, name: expected.first(120), messages: customer, expected: expected,
-                          origin: origin, bad_reply: bad_reply.to_s.strip.first(4000).presence)
+                          origin: origin, bad_reply: bad_reply.to_s.strip.first(4000).presence, variables: variables.to_h)
   end
 
   def today(template, at = Time.current)
@@ -47,13 +48,13 @@ module AgentTester::AutoCase
   end
 
   # Todas las pruebas de un agente (todos sus días), en una sola corrida.
-  def run_all(template, user: nil)
+  def run_all(template, user: nil, seleccion: nil)
     batches = AgentTestBatch.where(account: template.account, tracking_template: template)
     ids = AgentTestCase.where(agent_test_batch_id: batches.select(:id)).order(:id).ids
     return if ids.empty?
 
     AgentTestRun.start!(batch: batches.order(:day).last, template: template, user: user, case_ids: ids,
-                        label: "Todas las pruebas · #{template.name}")
+                        label: "Todas las pruebas · #{template.name}", seleccion: seleccion)
   end
 
   # Al corregirse un error del motor: el lote del día en que se reportó.

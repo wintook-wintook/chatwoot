@@ -11,6 +11,7 @@
 #  label                :string
 #  passed               :integer          default(0), not null
 #  results              :jsonb            not null
+#  seleccion            :string
 #  status               :string           default("queued"), not null
 #  total                :integer          default(0), not null
 #  created_at           :datetime         not null
@@ -43,6 +44,9 @@ class AgentTestRun < ApplicationRecord
   belongs_to :created_by, class_name: 'User', optional: true
 
   validates :status, inclusion: { in: STATUSES }
+  # Con qué búsqueda de predefinidas corrió: nil = la de la cuenta; 'on' la nueva; 'off' la de siempre.
+  SELECCIONES = %w[on off].freeze
+  validates :seleccion, inclusion: { in: SELECCIONES }, allow_nil: true
 
   IN_PROGRESS = %w[queued running].freeze
   # Una prueba tarda como mucho ~14 min (8 mensajes × 100 s de espera + el juez). Sin avanzar más
@@ -54,12 +58,14 @@ class AgentTestRun < ApplicationRecord
 
   # La corrida nueva, o la que ya va con lo mismo (doble clic, o «Correr» otra vez porque no se veía
   # avanzar): no se encolan dos iguales.
-  def self.start!(batch:, template:, user:, case_ids: [], label: nil)
-    run = batch.runs.in_progress.where(tracking_template: template).find_by('case_ids = ?::jsonb', Array(case_ids).to_json)
+  def self.start!(batch:, template:, user:, case_ids: [], label: nil, seleccion: nil) # rubocop:disable Metrics/ParameterLists
+    seleccion = seleccion.presence_in(SELECCIONES)
+    run = batch.runs.in_progress.where(tracking_template: template, seleccion: seleccion)
+               .find_by('case_ids = ?::jsonb', Array(case_ids).to_json)
     return run if run
 
     run = batch.runs.create!(account: batch.account, tracking_template: template, created_by: user, case_ids: Array(case_ids),
-                             label: label, total: case_ids.presence&.size || batch.cases.count)
+                             label: label, total: case_ids.presence&.size || batch.cases.count, seleccion: seleccion)
     AgentTester::RunJob.perform_later(run.id)
     run
   end

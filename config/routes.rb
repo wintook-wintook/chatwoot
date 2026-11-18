@@ -244,6 +244,8 @@ Rails.application.routes.draw do
           post 'agent_tester/sessions/:conversation_id/save_case', to: 'agent_tester#save_case'
           post 'agent_tester/apply', to: 'agent_tester#apply'
           post 'agent_tester/fix_source', to: 'agent_tester#fix_source'
+          post 'agent_tester/fix_kind', to: 'agent_tester#fix_kind' # proyecto@predefinidas_que_contestan
+          post 'agent_tester/fix_start', to: 'agent_tester#fix_start'
           get 'agent_tester/logs', to: 'agent_tester#logs'
           post 'agent_tester/logs/:id/retest', to: 'agent_tester#retest'
           get 'agent_tester/sessions/:conversation_id/history', to: 'agent_tester#history'
@@ -251,9 +253,12 @@ Rails.application.routes.draw do
             collection do
               get 'runs(/:run_id)', action: :runs
               post :run_corrections
+              post :import # proyecto@predefinidas_que_contestan
+              post :import_pila
             end
             member do
               post :run
+              post :compare
               post :cases, action: :add_case
               patch 'cases/:case_id', action: :update_case
               delete 'cases/:case_id', action: :remove_case

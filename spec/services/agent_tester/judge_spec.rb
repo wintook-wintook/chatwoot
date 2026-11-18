@@ -22,4 +22,12 @@ RSpec.describe AgentTester::Judge do
     judge.call(turns: [], reply: 'algo', expected: 'otra cosa')
     expect(judge).to have_received(:chat) { |args| expect(JSON.parse(args[:user])).not_to have_key('respuesta_mala_anterior') }
   end
+
+  # proyecto@predefinidas_que_contestan
+  it 'un dato que el agente no vio reprueba sin preguntarle al modelo' do
+    allow(judge).to receive(:chat)
+    result = judge.call(turns: [], reply: 'Hay 52% de descuento', expected: 'la primera beca', seen: 'Primera beca: 38%')
+    expect(result).to include(ok: false, invented: ['52%'])
+    expect(judge).not_to have_received(:chat)
+  end
 end

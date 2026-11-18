@@ -1,6 +1,9 @@
 <script>
 // Probador de agentes › Lotes: pruebas agrupadas (lo que escribe el cliente y lo que se espera)
 // que se corren completas contra un agente 1.0 o 2.0, con el motor real en el canal de pruebas.
+// proyecto@predefinidas_que_contestan: se corre con la búsqueda de predefinidas que se elija (la
+// de la cuenta, la nueva o la de siempre) sin tocar la cuenta; «Comparar búsquedas» corre las dos;
+// «Importar preguntas» arma un lote pegando filas de una hoja o con la pila vieja del agente.
 import { useAlert } from 'dashboard/composables';
 import AgentTestBatchesApi from 'dashboard/api/agentTestBatches';
 
@@ -19,6 +22,13 @@ export default {
       agentFilter: '',
       runningAll: false,
       timer: null,
+      seleccion: '',
+      selecciones: ['', 'on', 'off'],
+      showImport: false,
+      importText: '',
+      importName: '',
+      importing: false,
+      importResult: null,
     };
   },
   computed: {
@@ -54,11 +64,21 @@ export default {
         });
       if (run.status === 'failed')
         return this.t('RUN_FAILED', { reason: run.error || this.t('ERROR') });
-      return this.t('LAST_RUN', {
+      return `${this.t('LAST_RUN', {
         agent: run.agent,
         passed: run.passed,
         total: run.total,
-      });
+      })}${this.seleccionText(run)}`;
+    },
+    seleccionText(run) {
+      return run && run.seleccion
+        ? ` · ${this.t(`SELECCION.${run.seleccion.toUpperCase()}`)}`
+        : '';
+    },
+    variablesText(variables) {
+      return Object.entries(variables || {})
+        .map(([k, v]) => `${k} = ${v}`)
+        .join(' · ');
     },
     finishedResults(run) {
       return run && !this.inProgress(run) ? run.results || [] : [];
@@ -66,7 +86,10 @@ export default {
     async runAll() {
       this.runningAll = true;
       try {
-        await AgentTestBatchesApi.runCorrections(Number(this.agentFilter));
+        await AgentTestBatchesApi.runCorrections(
+          Number(this.agentFilter),
+          this.seleccion
+        );
         useAlert(this.t('RUNNING'));
         this.$emit('changed');
       } catch (e) {
@@ -118,12 +141,48 @@ export default {
       const templateId = Number(this.runAgent[batch.id]);
       if (!templateId) return;
       try {
-        await AgentTestBatchesApi.run(batch.id, templateId);
+        await AgentTestBatchesApi.run(batch.id, templateId, this.seleccion);
         useAlert(this.t('RUNNING'));
         this.$emit('changed');
       } catch (e) {
         const data = e && e.response ? e.response.data : null;
         useAlert((data && data.error) || this.t('ERROR'));
+      }
+    },
+    // Las mismas pruebas con la búsqueda nueva y con la de siempre (dos corridas).
+    async compare(batch) {
+      const templateId = Number(this.runAgent[batch.id]);
+      if (!templateId) return;
+      try {
+        await AgentTestBatchesApi.compare(batch.id, templateId);
+        useAlert(this.t('COMPARING'));
+        this.$emit('changed');
+      } catch (e) {
+        const data = e && e.response ? e.response.data : null;
+        useAlert((data && data.error) || this.t('ERROR'));
+      }
+    },
+    async importRows(pila = false) {
+      const templateId = Number(this.agentFilter);
+      if (!templateId || (!pila && !this.importText.trim())) return;
+      this.importing = true;
+      try {
+        const { data } = pila
+          ? await AgentTestBatchesApi.importPila(templateId)
+          : await AgentTestBatchesApi.importRows(
+              templateId,
+              this.importText,
+              this.importName.trim()
+            );
+        this.importResult = data;
+        this.importText = '';
+        this.importName = '';
+        this.$emit('changed');
+      } catch (e) {
+        const data = e && e.response ? e.response.data : null;
+        useAlert((data && data.error) || this.t('ERROR'));
+      } finally {
+        this.importing = false;
       }
     },
   },
@@ -145,6 +204,17 @@ export default {
           }}
         </option>
       </select>
+      <!-- Con qué búsqueda de predefinidas corren (sin tocar la cuenta). -->
+      <select
+        v-model="seleccion"
+        class="!mb-0 h-9 text-sm w-56"
+        :title="t('SELECCION.HINT')"
+        data-test="seleccion"
+      >
+        <option v-for="s in selecciones" :key="s" :value="s">
+          {{ t(`SELECCION.${(s || 'account').toUpperCase()}`) }}
+        </option>
+      </select>
       <woot-button
         v-if="agentFilter"
         size="small"
@@ -155,6 +225,68 @@ export default {
       >
         {{ t('RUN_ALL') }}
       </woot-button>
+      <woot-button
+        v-if="agentFilter"
+        size="small"
+        variant="smooth"
+        color-scheme="secondary"
+        icon="arrow-download"
+        @click="showImport = !showImport"
+      >
+        {{ t('IMPORT.OPEN') }}
+      </woot-button>
+    </div>
+    <div
+      v-if="showImport && agentFilter"
+      class="grid gap-2 p-3 border rounded-lg border-slate-100 dark:border-slate-700"
+      data-test="import"
+    >
+      <p class="m-0 text-xs text-slate-500">{{ t('IMPORT.HINT') }}</p>
+      <input
+        v-model="importName"
+        type="text"
+        class="!mb-0 h-8 text-xs"
+        :placeholder="t('IMPORT.NAME_PH')"
+      />
+      <textarea
+        v-model="importText"
+        rows="6"
+        class="!mb-0 text-xs font-mono"
+        :placeholder="t('IMPORT.ROWS_PH')"
+      />
+      <div class="flex flex-wrap gap-2">
+        <woot-button
+          size="tiny"
+          :is-loading="importing"
+          :disabled="!importText.trim()"
+          @click="importRows(false)"
+        >
+          {{ t('IMPORT.GO') }}
+        </woot-button>
+        <woot-button
+          size="tiny"
+          variant="smooth"
+          color-scheme="secondary"
+          :is-loading="importing"
+          @click="importRows(true)"
+        >
+          {{ t('IMPORT.PILA') }}
+        </woot-button>
+      </div>
+      <p v-if="importResult" class="m-0 text-xs text-slate-600">
+        {{
+          t('IMPORT.DONE', {
+            n: importResult.created,
+            name: importResult.batch.name,
+          })
+        }}
+        <span
+          v-for="s in importResult.skipped"
+          :key="s.line"
+          class="block text-amber-700"
+          >{{ t('IMPORT.SKIPPED', { line: s.line, reason: s.reason }) }}</span
+        >
+      </p>
     </div>
     <form class="flex gap-2" @submit.prevent="create">
       <input
@@ -227,6 +359,19 @@ export default {
         </woot-button>
         <woot-button
           size="tiny"
+          variant="smooth"
+          :title="t('COMPARE_HINT')"
+          :disabled="
+            !runAgent[batch.id] ||
+            !batch.cases.length ||
+            inProgress(batch.last_run)
+          "
+          @click="compare(batch)"
+        >
+          {{ t('COMPARE') }}
+        </woot-button>
+        <woot-button
+          size="tiny"
           variant="clear"
           color-scheme="secondary"
           icon="delete"
@@ -250,6 +395,11 @@ export default {
               :key="i"
               class="block text-slate-600"
               >{{ t('CUSTOMER', { text: m }) }}</span
+            >
+            <span
+              v-if="variablesText(c.variables)"
+              class="block text-slate-500"
+              >{{ t('VARIABLES', { text: variablesText(c.variables) }) }}</span
             >
             <span v-if="c.bad_reply" class="block text-slate-500">{{
               t('BAD_REPLY', { text: c.bad_reply })

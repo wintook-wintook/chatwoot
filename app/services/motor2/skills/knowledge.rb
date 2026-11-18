@@ -30,13 +30,27 @@ class Motor2::Skills::Knowledge < Motor2::Skills::Base
 
     found = search.call(question, only: args['fuente'])
     found.each { |f| note(f, question) }
+    note_selection
     found = found.reject { |f| f[:resultados].empty? }
     found.any? ? { resultados: found } : { resultados: [], nota: 'No se encontró nada. No lo inventes.' }
   end
 
   private
 
-  def search = @search ||= Motor2::Search.new(config.account, config.sources)
+  def search = @search ||= Motor2::Search.new(config.account, config.sources, conversation: @turn.conversation)
+
+  # proyecto@predefinidas_que_contestan: qué escogió la búsqueda nueva, para el probador.
+  def note_selection
+    sel = search.selection
+    return if sel.nil?
+
+    texto = if sel[:ninguna]
+              "ninguna de #{sel[:candidatas]} candidatas#{" (falta: #{sel[:falta]})" if sel[:falta]}"
+            else
+              "#{sel[:escogidas].size} de #{sel[:candidatas]} candidatas: #{sel[:escogidas].join(' · ')}"
+            end
+    trace.event('seleccion', texto)
+  end
 
   # A la traza (con lo que regresó, para el entrenador) y a lo «visto» (para revisar montos y ligas).
   def note(found, question)

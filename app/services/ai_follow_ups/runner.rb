@@ -27,7 +27,7 @@ class AiFollowUps::Runner < Cases::Ai::BaseService # rubocop:disable Metrics/Cla
     @follow_up = follow_up
     @trigger = trigger.to_sym
     @conversation = follow_up.conversation
-    @search = AiFollowUps::KnowledgeSearch.new(account: @account)
+    @search = AiFollowUps::KnowledgeSearch.new(account: @account, conversation: @conversation)
     @canned_used = []
     @decision = nil
     @scheduled_at = nil

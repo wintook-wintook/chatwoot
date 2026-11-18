@@ -16,9 +16,13 @@ import CannedAudit from './audit/CannedAudit.vue';
 // auditoría) y «Corregir todas» de redacción.
 import FixModal from './audit/FixModal.vue';
 import BulkWritingModal from './audit/BulkWritingModal.vue';
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { useI18n } from 'dashboard/composables/useI18n';
 import { useStore } from 'dashboard/composables/store';
+import { useRoute } from 'dashboard/composables/route';
+// proyecto@predefinidas_que_contestan: el probador abre una respuesta con ?fix=<id>.
+import CannedResponseAPI from 'dashboard/api/cannedResponse';
+import { MAX_CHARS } from './audit/cannedSize';
 
 const store = useStore();
 const { t } = useI18n();
@@ -83,6 +87,24 @@ const hideAddPopup = () => {
   showAddPopup.value = false;
   reloadTable();
 };
+
+// ?fix=<id> (desde el 👎 del probador): si pasa del tope, «Arreglar con IA»; si no, editarla.
+const route = useRoute();
+const openFromLink = async () => {
+  const id = Number(route.query && route.query.fix);
+  if (!id) return;
+  try {
+    const { data } = await CannedResponseAPI.list({ page: 1, per_page: 1, id });
+    const record = (data.payload || [])[0];
+    if (!record) return;
+    if ((record.agent_chars || 0) > MAX_CHARS) openFix(record);
+    // eslint-disable-next-line no-use-before-define
+    else openEditPopup(record);
+  } catch (e) {
+    // sin la respuesta, la lista como siempre
+  }
+};
+onMounted(openFromLink);
 
 const openEditPopup = response => {
   showEditPopup.value = true;

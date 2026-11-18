@@ -11,8 +11,14 @@ class AgentTester::Judge < Cases::Ai::BaseService
     Responde en JSON: {"ok": true|false, "reason": "una línea en español"}.
   TEXT
 
-  def call(turns:, reply:, expected:, bad_reply: nil)
+  # seen: lo que el agente tuvo a la vista (AgentTester::Seen). Un monto, porcentaje o código que
+  # no esté ahí lo inventó: la prueba no pasa, diga lo que diga el modelo
+  # (proyecto@predefinidas_que_contestan, KnowledgeBase::DataGuard).
+  def call(turns:, reply:, expected:, bad_reply: nil, seen: nil)
     return { ok: false, reason: 'El agente no contestó nada.' } if reply.blank?
+
+    inventados = seen.nil? ? [] : KnowledgeBase::DataGuard.invented(reply, seen)
+    return { ok: false, reason: "Dio datos que no están en sus fuentes: #{inventados.join(', ')}.", invented: inventados } if inventados.any?
     return { ok: true, reason: 'Contestó (la prueba no dice qué se espera).' } if expected.blank?
 
     input = { platica: turns, respuesta: reply, esperado: expected }

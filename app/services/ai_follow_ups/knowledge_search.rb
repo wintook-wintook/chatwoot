@@ -25,6 +25,16 @@ class AiFollowUps::KnowledgeSearch < Cases::Ai::BaseService
   MAX_CHARS = CannedResponse::MAX_AGENT_CHARS
   MAX_PROMPT_CHARS = CannedResponse::MAX_PROMPT_CHARS
   CANNED = 'canned_response'
+  # conversation: la plática (una del probador puede forzar la búsqueda, ver
+  # KnowledgeBase::Selection.enabled?).
+  def initialize(account:, conversation: nil)
+    super(account: account)
+    @conversation = conversation
+  end
+
+  # Lo que escogió la última búsqueda con selección, para la traza (Motor2::Skills::Knowledge).
+  attr_reader :last_selection
+
   STOPWORDS = %w[
     el la los las un una unos unas de del al a en y o u que qué con por para como cómo es son se su sus
     lo le les me mi mis tu tus te nos ya hay muy mas más pero si sí no cual cuál cuando cuándo donde dónde
@@ -51,9 +61,14 @@ class AiFollowUps::KnowledgeSearch < Cases::Ai::BaseService
 
   private
 
+  def selection_summary(candidates, result)
+    { candidatas: candidates.size, ninguna: result[:none], falta: result[:missing].presence,
+      escogidas: result[:chosen].map { |c| c.item.title.to_s.truncate(120) } }
+  end
+
   # Con la selección prendida, buscar y escoger; si está apagada o falla, la de siempre.
   def find(question)
-    responses = selected(question) if KnowledgeBase::Selection.enabled?(@account)
+    responses = selected(question) if KnowledgeBase::Selection.enabled?(@account, @conversation)
     responses.nil? ? (semantic(question).presence || keyword(question)) : responses
   end
 
@@ -64,6 +79,8 @@ class AiFollowUps::KnowledgeSearch < Cases::Ai::BaseService
                                                       embed: ->(texto) { embed(texto) }).call
     result = KnowledgeBase::Selector.new(@account).call(question: question, candidates: candidates)
     return nil if result.nil?
+
+    @last_selection = selection_summary(candidates, result)
 
     ids = result[:chosen].map { |c| c.item.source_id }
     @account.canned_responses.where(id: ids).index_by(&:id).values_at(*ids).compact

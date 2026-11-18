@@ -12,6 +12,7 @@ const ICONS = {
   prompt: '✏️',
   content: '📚',
   search: '🔎',
+  category: '🏷️',
   model: '🧠',
   engine: '🔧',
   question: '❓',
@@ -40,6 +41,9 @@ export default {
       fixText: {},
       saveExpected: '',
       icons: { up: '👍', down: '👎' },
+      // proyecto@predefinidas_que_contestan: búsqueda de predefinidas solo en esta plática.
+      seleccion: '',
+      selecciones: ['', 'on', 'off'],
     };
   },
   computed: {
@@ -65,7 +69,10 @@ export default {
     async start() {
       if (!this.templateId) return;
       try {
-        const { data } = await AgentTesterAPI.start(Number(this.templateId));
+        const { data } = await AgentTesterAPI.start(
+          Number(this.templateId),
+          this.seleccion
+        );
         this.session = data;
         this.chat = [];
       } catch (e) {
@@ -201,15 +208,50 @@ export default {
       return typed === undefined ? info.should : typed;
     },
     async fixSource(message) {
-      try {
-        await AgentTesterAPI.fixSource(
+      await this.fixWith(message, () =>
+        AgentTesterAPI.fixSource(
           message.info.canned_id,
           this.fixValue(message.info)
-        );
+        )
+      );
+    },
+    // 👎 «es de la búsqueda»: agrega al inicio cómo lo pregunta el cliente.
+    async fixStart(message) {
+      await this.fixWith(message, () =>
+        AgentTesterAPI.fixStart(message.info.canned_id, message.info.add)
+      );
+    },
+    // 👎 «es de la categoría»: la cambia a la que propuso el entrenador.
+    async fixKind(message) {
+      await this.fixWith(message, () =>
+        AgentTesterAPI.fixKind(message.info.canned_id, message.info.should_kind)
+      );
+    },
+    // Si no cabe en los topes (3,500 / 2,000), se dice y se ofrece abrirla para partirla.
+    async fixWith(message, call) {
+      try {
+        await call();
         this.$set(message.info, 'fixed', true);
+        this.$set(message.info, 'fixError', null);
       } catch (e) {
-        useAlert(this.errorText(e));
+        const data = e && e.response ? e.response.data : null;
+        this.$set(
+          message.info,
+          'fixError',
+          (data && data.error) || this.t('ERROR')
+        );
+        this.$set(message.info, 'tooLong', !!(data && data.too_long));
       }
+    },
+    openCanned(cannedId) {
+      const route = {
+        name: 'canned_list',
+        query: { fix: String(cannedId) },
+      };
+      window.open(this.$router.resolve(route).href, '_blank');
+    },
+    kindName(kind) {
+      return this.$t(`CANNED_MGMT.KIND.${(kind || 'general').toUpperCase()}`);
     },
     copy(text) {
       if (navigator.clipboard) navigator.clipboard.writeText(text);
@@ -269,6 +311,22 @@ export default {
                 name: a.name,
                 engine: a.engine === '2' ? '2.0' : '1.0',
               })
+            }}
+          </option>
+        </select>
+        <select
+          v-model="seleccion"
+          class="!mb-0 h-9 text-sm w-48"
+          :title="$t('AGENT_TESTER.BATCHES.SELECCION.HINT')"
+          data-test="chat-seleccion"
+        >
+          <option v-for="s in selecciones" :key="s" :value="s">
+            {{
+              $t(
+                `AGENT_TESTER.BATCHES.SELECCION.${(
+                  s || 'account'
+                ).toUpperCase()}`
+              )
             }}
           </option>
         </select>
@@ -430,14 +488,76 @@ export default {
                   class="block p-2 mt-1 whitespace-pre-line rounded bg-white/70 dark:bg-slate-800"
                   >{{ m.info.add }}</span
                 >
-                <woot-button
-                  size="tiny"
-                  variant="smooth"
-                  class="mt-1"
-                  @click="copy(m.info.add)"
+                <span class="flex flex-wrap gap-2 mt-1">
+                  <woot-button
+                    v-if="canEdit && m.info.can_fix && !m.info.fixed"
+                    size="tiny"
+                    @click="fixStart(m)"
+                  >
+                    {{ t('ADD_AT_START') }}
+                  </woot-button>
+                  <woot-button
+                    size="tiny"
+                    variant="smooth"
+                    @click="copy(m.info.add)"
+                  >
+                    {{ t('COPY') }}
+                  </woot-button>
+                  <woot-button
+                    v-if="canEdit && m.info.canned_id"
+                    size="tiny"
+                    variant="smooth"
+                    color-scheme="secondary"
+                    @click="openCanned(m.info.canned_id)"
+                  >
+                    {{ t('OPEN_CANNED') }}
+                  </woot-button>
+                </span>
+                <span v-if="m.info.fixed" class="block mt-1 text-green-700">{{
+                  t('FIXED')
+                }}</span>
+              </span>
+              <span
+                v-else-if="m.info.kind === 'category'"
+                class="block mt-1 text-xs"
+              >
+                <span class="flex flex-wrap gap-2 mt-1">
+                  <woot-button
+                    v-if="canEdit && m.info.can_fix && !m.info.fixed"
+                    size="tiny"
+                    @click="fixKind(m)"
+                  >
+                    {{
+                      t('CHANGE_KIND', { kind: kindName(m.info.should_kind) })
+                    }}
+                  </woot-button>
+                  <woot-button
+                    v-if="canEdit && m.info.canned_id"
+                    size="tiny"
+                    variant="smooth"
+                    color-scheme="secondary"
+                    @click="openCanned(m.info.canned_id)"
+                  >
+                    {{ t('OPEN_CANNED') }}
+                  </woot-button>
+                </span>
+                <span v-if="m.info.fixed" class="block mt-1 text-green-700">{{
+                  t('FIXED')
+                }}</span>
+              </span>
+              <span
+                v-if="m.info.fixError"
+                class="block mt-1 text-xs text-red-700"
+              >
+                {{ m.info.fixError }}
+                <button
+                  v-if="m.info.tooLong && m.info.canned_id"
+                  type="button"
+                  class="ml-1 underline"
+                  @click="openCanned(m.info.canned_id)"
                 >
-                  {{ t('COPY') }}
-                </woot-button>
+                  {{ t('SPLIT_IT') }}
+                </button>
               </span>
               <span v-else-if="m.info.kind === 'question'" class="block mt-1">
                 <woot-button size="tiny" variant="smooth" @click="answer(m)">{{

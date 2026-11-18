@@ -11,6 +11,7 @@ const ICONS = {
   prompt: '✏️',
   content: '📚',
   search: '🔎',
+  category: '🏷️',
   model: '🧠',
   engine: '🔧',
   question: '❓',
@@ -100,7 +101,9 @@ export default {
       return log.kind === 'search' ? d.add || '' : d.suggestion || '';
     },
     canFix(log) {
-      return ['prompt', 'content', 'search', 'model'].includes(log.kind);
+      return ['prompt', 'content', 'search', 'category', 'model'].includes(
+        log.kind
+      );
     },
     openAgent(log) {
       const id = String(log.template_id);
@@ -170,8 +173,15 @@ export default {
               t('RUN_TITLE', { batch: run.batch, agent: run.agent })
             }}</span>
             <span class="block text-xs text-slate-500"
-              >{{ when(run.created_at) }} ·
-              {{ t(`STATUS.${run.status}`) }}</span
+              >{{ when(run.created_at) }} · {{ t(`STATUS.${run.status}`)
+              }}<template v-if="run.seleccion">
+                ·
+                {{
+                  $t(
+                    `AGENT_TESTER.BATCHES.SELECCION.${run.seleccion.toUpperCase()}`
+                  )
+                }}</template
+              ></span
             >
             <span v-if="run.error" class="block text-xs text-red-700">{{
               run.error
@@ -190,9 +200,31 @@ export default {
           v-if="open === run.id && detail"
           class="p-3 space-y-2 border-t border-slate-100 dark:border-slate-700"
         >
+          <!-- proyecto@predefinidas_que_contestan: contra la vez anterior con el mismo agente. -->
+          <p
+            v-if="detail.worse || detail.better"
+            class="m-0 text-xs font-medium"
+          >
+            <span v-if="detail.worse" class="text-red-700">{{
+              t('WORSE', { n: detail.worse })
+            }}</span>
+            <span v-if="detail.better" class="ml-2 text-green-700">{{
+              t('BETTER', { n: detail.better })
+            }}</span>
+          </p>
           <div v-for="(r, i) in detail.results" :key="i" class="text-xs">
             <span class="font-medium"
               >{{ r.ok ? '✅' : '❌' }} {{ r.name }}</span
+            >
+            <span
+              v-if="r.antes === true && !r.ok"
+              class="ml-1 px-1 rounded bg-red-50 text-red-800"
+              >{{ t('WAS_OK') }}</span
+            >
+            <span
+              v-else-if="r.antes === false && r.ok"
+              class="ml-1 px-1 rounded bg-green-50 text-green-800"
+              >{{ t('WAS_BAD') }}</span
             >
             <span class="block text-slate-600">{{
               t('REPLY', { text: r.reply })
@@ -324,6 +356,20 @@ export default {
             <span class="block mt-1 text-slate-500">{{
               t('TODO_CONTENT')
             }}</span>
+          </template>
+          <template v-else-if="log.kind === 'category'">
+            <span class="block mt-1">
+              {{
+                t('KIND_CHANGE', {
+                  item: log.diagnosis.item,
+                  kind: $t(
+                    `CANNED_MGMT.KIND.${(
+                      log.diagnosis.should_kind || 'ficha'
+                    ).toUpperCase()}`
+                  ),
+                })
+              }}
+            </span>
           </template>
           <template v-else-if="log.kind === 'model'">
             <span class="block mt-1">

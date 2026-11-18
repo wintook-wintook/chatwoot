@@ -33,19 +33,39 @@ class AgentTester::Sandbox
   def conversations = @account.conversations.where("conversations.additional_attributes ->> '#{MARK}' = 'true'")
 
   # → la conversación de prueba (nil si no se pudo asignar el agente).
-  def start(template, user:)
+  # seleccion: 'on' | 'off' fuerza la búsqueda de predefinidas solo en esta plática
+  #            (KnowledgeBase::Selection); nil = la de la cuenta.
+  # variables: las de la plática donde se guardó la prueba (CARRERA, PRODUCTO…), puestas antes
+  #            de que el cliente escriba.
+  def start(template, user:, seleccion: nil, variables: nil)
     box = inbox(ContactTrackings::EngineConfig.model_for(template.inbox))
     contact = @account.contacts.create!(name: "Probador · #{user&.name || 'prueba'} · #{template.name}".first(100),
                                         additional_attributes: { MARK => true })
     contact_inbox = ContactInbox.create!(contact: contact, inbox: box, source_id: SecureRandom.uuid)
     conversation = Conversation.create!(account: @account, inbox: box, contact: contact, contact_inbox: contact_inbox,
-                                        status: :open, additional_attributes: { MARK => true, 'agent_tester_user_id' => user&.id })
+                                        status: :open, additional_attributes: test_attributes(user, seleccion))
     ActionService.new(conversation).assign_tracking_template([template.id], inbox_id: box.id)
     tracking = tracking_for(conversation)
     return nil unless tracking
 
     tracking.update_columns(status: 'active', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    seed_variables(tracking, conversation, variables)
     conversation
+  end
+
+  # Las variables de una plática (solo las que tienen valor distinto al inicial), para guardarlas
+  # con la prueba.
+  def variables_for(conversation)
+    tracking = tracking_for(conversation)
+    return {} if tracking.nil? || Motor2.on?(tracking.tracking_template)
+
+    definition = ContactTrackings::ConversationVariables.definition_for(tracking)
+    return {} if definition.blank?
+
+    ContactTrackings::ConversationVariables.current(tracking, conversation, definition)
+                                           .reject { |nombre, valor| valor.blank? || definition.initial[nombre] == valor }
+  rescue StandardError
+    {}
   end
 
   def say(conversation, text)
@@ -78,6 +98,20 @@ class AgentTester::Sandbox
   end
 
   private
+
+  def test_attributes(user, seleccion)
+    attrs = { MARK => true, 'agent_tester_user_id' => user&.id }
+    attrs[KnowledgeBase::Selection::FORCE_KEY] = seleccion if %w[on off].include?(seleccion)
+    attrs
+  end
+
+  def seed_variables(tracking, conversation, variables)
+    return if variables.blank? || Motor2.on?(tracking.tracking_template)
+
+    ContactTrackings::ConversationVariables.apply!(tracking, conversation, variables.to_h)
+  rescue StandardError => e
+    Rails.logger.warn("[AgentTester] variables de la prueba: #{e.message}")
+  end
 
   def find_inbox(model)
     @account.inboxes.joins('INNER JOIN channel_api ON channel_api.id = inboxes.channel_id')

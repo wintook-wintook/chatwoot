@@ -36,7 +36,7 @@
 #  fk_rails_...  (user_id => users.id)
 #
 class AgentTestLog < ApplicationRecord
-  KINDS = %w[prompt content search model engine question].freeze
+  KINDS = %w[prompt content search category model engine question].freeze
   # Seguimiento de cada 👎: pendiente → «Ya lo corregí» corre su prueba otra vez → quedó / sigue fallando.
   STATUSES = %w[pending retesting passed failing].freeze
 

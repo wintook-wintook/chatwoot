@@ -41,4 +41,13 @@ RSpec.describe KnowledgeBase::Selection do
     expect(texto).to include('Envíos nacionales')
     expect(texto).to include('No inventes')
   end
+
+  it 'una plática del probador la fuerza prendida o apagada, gane lo que diga la cuenta' do
+    account = create(:account, custom_attributes: { 'kbase_search' => { 'seleccion' => true } })
+    apagada = Conversation.new(additional_attributes: { 'agent_tester_seleccion' => 'off' })
+    prendida = Conversation.new(additional_attributes: { 'agent_tester_seleccion' => 'on' })
+    expect(described_class.enabled?(account, apagada)).to be(false)
+    expect(described_class.enabled?(create(:account), prendida)).to be(true)
+    expect(described_class.enabled?(account, Conversation.new)).to be(true)
+  end
 end

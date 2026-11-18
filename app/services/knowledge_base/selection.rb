@@ -21,10 +21,12 @@
 # 0.005 y ganaba la de otro. La similitud sirve para encontrar, no para decidir.
 #
 # Se activa por cuenta mientras se mide: custom_attributes.kbase_search.seleccion = true.
-# Apagada, la búsqueda es la de siempre.
+# Apagada, la búsqueda es la de siempre. Una plática del probador puede forzarla ('on'/'off' en
+# additional_attributes.agent_tester_seleccion) para comparar sin tocar la cuenta.
 # ================================================================================
 module KnowledgeBase::Selection
   FLAG = 'seleccion'
+  FORCE_KEY = 'agent_tester_seleccion'
 
   # Las marcas con que cada escogida le llega al modelo.
   LABELS = {
@@ -52,7 +54,10 @@ module KnowledgeBase::Selection
 
   module_function
 
-  def enabled?(account)
+  def enabled?(account, conversation = nil)
+    forzada = conversation&.additional_attributes.to_h[FORCE_KEY]
+    return forzada == 'on' if %w[on off].include?(forzada)
+
     value = account&.custom_attributes&.dig('kbase_search', FLAG)
     ActiveModel::Type::Boolean.new.cast(value) || false
   end

@@ -91,4 +91,22 @@ RSpec.describe AgentTester::Sandbox do
     expect(reply).to include(content: 'Hola, soy Sofi')
     expect(AgentTester::Trace.lines(reply[:trace])).to eq(['Ruta: saludo', 'Contestó: kbase'])
   end
+
+  # proyecto@predefinidas_que_contestan
+  describe 'búsqueda por plática y variables' do
+    let(:prompt) { "[VARIABLES]\nCARRERA = VACÍO | texto\n" }
+    let(:template) { create(:tracking_template, account: account, complementary_prompt: prompt) }
+
+    it 'la plática fuerza la búsqueda sin tocar la cuenta' do
+      conversation = sandbox.start(template, user: user, seleccion: 'on')
+      expect(KnowledgeBase::Selection.enabled?(account, conversation)).to be(true)
+      expect(KnowledgeBase::Selection.enabled?(account)).to be(false)
+      expect(sandbox.start(template, user: user, seleccion: 'otra').additional_attributes).not_to have_key('agent_tester_seleccion')
+    end
+
+    it 'pone las variables de la prueba antes de que el cliente escriba, y las lee para guardarlas' do
+      conversation = sandbox.start(template, user: user, variables: { 'CARRERA' => 'Licenciatura en Derecho' })
+      expect(sandbox.variables_for(conversation)).to eq('CARRERA' => 'Licenciatura en Derecho')
+    end
+  end
 end

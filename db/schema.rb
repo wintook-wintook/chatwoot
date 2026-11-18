@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_18_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_18_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -172,6 +172,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_18_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.text "bad_reply"
+    t.jsonb "variables", default: {}, null: false
     t.index ["account_id"], name: "index_agent_test_cases_on_account_id"
     t.index ["agent_test_batch_id"], name: "index_agent_test_cases_on_agent_test_batch_id"
   end
@@ -214,6 +215,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_18_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "error"
+    t.string "seleccion"
     t.index ["account_id"], name: "index_agent_test_runs_on_account_id"
     t.index ["agent_test_batch_id"], name: "index_agent_test_runs_on_agent_test_batch_id"
     t.index ["created_by_id"], name: "index_agent_test_runs_on_created_by_id"

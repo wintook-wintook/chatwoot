@@ -31,7 +31,8 @@ class AgentTester::RunJob < ApplicationJob
 
   # Siempre con el case_id de la prueba que se corrió: es lo que marca qué falta (sin él, se repetiría).
   def result_for(run, test_case)
-    AgentTester::ConversationRunner.new(run.tracking_template, user: run.created_by).run(test_case).merge(case_id: test_case.id)
+    AgentTester::ConversationRunner.new(run.tracking_template, user: run.created_by, seleccion: run.seleccion)
+                                   .run(test_case).merge(case_id: test_case.id)
   rescue StandardError => e
     Rails.logger.error("[AgentTester::RunJob] corrida #{run.id}, prueba #{test_case.id}: #{e.class}: #{e.message}")
     { case_id: test_case.id, name: test_case.name, ok: false, reply: '', trace: nil,

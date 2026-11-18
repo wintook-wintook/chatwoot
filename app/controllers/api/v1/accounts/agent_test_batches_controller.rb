@@ -2,18 +2,22 @@
 
 # Probador de agentes — lotes de pruebas y sus corridas.
 # GET    /agent_test_batches?template_id=            lotes (los más recientes primero) con sus pruebas y la última corrida
-# POST   /agent_test_batches/run_corrections         { template_id } corre todas las correcciones de ese agente
+# POST   /agent_test_batches/run_corrections         { template_id, seleccion } corre todas las correcciones de ese agente
+# POST   /agent_test_batches/import                  { template_id, name, rows } lote desde lo pegado de una hoja
+# POST   /agent_test_batches/import_pila             { template_id } lote desde la pila vieja del agente (1.0)
 # POST   /agent_test_batches                         { name }
 # PATCH  /agent_test_batches/:id                     { name }
 # DELETE /agent_test_batches/:id
 # POST   /agent_test_batches/:id/cases               { name, messages: [], expected }
 # PATCH  /agent_test_batches/:id/cases/:case_id
 # DELETE /agent_test_batches/:id/cases/:case_id
-# POST   /agent_test_batches/:id/run                 { template_id } → corrida (corre en segundo plano)
+# POST   /agent_test_batches/:id/run                 { template_id, seleccion } → corrida (corre en segundo plano)
+#        seleccion: 'on' (búsqueda nueva de predefinidas) | 'off' (la de siempre) | vacío (la de la cuenta)
+# POST   /agent_test_batches/:id/compare             { template_id } → dos corridas: búsqueda nueva y la de siempre
 # GET    /agent_test_batches/runs                    bitácora de corridas; GET …/runs/:run_id una corrida
 class Api::V1::Accounts::AgentTestBatchesController < Api::V1::Accounts::BaseController
   before_action :require_writer
-  before_action :set_batch, only: %i[update destroy add_case update_case remove_case run]
+  before_action :set_batch, only: %i[update destroy add_case update_case remove_case run compare]
 
   def index
     scope = batches.includes(:cases, :tracking_template).order(created_at: :desc)
@@ -25,7 +29,7 @@ class Api::V1::Accounts::AgentTestBatchesController < Api::V1::Accounts::BaseCon
 
   def run_corrections
     template = Current.account.tracking_templates.find(params[:template_id])
-    run = AgentTester::AutoCase.run_all(template, user: current_user)
+    run = AgentTester::AutoCase.run_all(template, user: current_user, seleccion: params[:seleccion].presence)
     return render json: { error: 'Ese agente todavía no tiene pruebas.' }, status: :unprocessable_entity unless run
 
     render json: run_json(run), status: :accepted
@@ -70,13 +74,41 @@ class Api::V1::Accounts::AgentTestBatchesController < Api::V1::Accounts::BaseCon
     template = Current.account.tracking_templates.find(params[:template_id])
     return render json: { error: 'El lote no tiene pruebas.' }, status: :unprocessable_entity if @batch.cases.empty?
 
-    run = AgentTestRun.start!(batch: @batch, template: template, user: current_user)
+    run = AgentTestRun.start!(batch: @batch, template: template, user: current_user, seleccion: params[:seleccion].presence)
     render json: run_json(run), status: :accepted
+  end
+
+  # proyecto@predefinidas_que_contestan: las mismas pruebas con la búsqueda nueva y con la de
+  # siempre, sin prenderla en la cuenta (cada plática de prueba la fuerza para sí).
+  def compare
+    template = Current.account.tracking_templates.find(params[:template_id])
+    return render json: { error: 'El lote no tiene pruebas.' }, status: :unprocessable_entity if @batch.cases.empty?
+
+    runs = { 'on' => 'búsqueda nueva', 'off' => 'búsqueda de siempre' }.map do |sel, nombre|
+      AgentTestRun.start!(batch: @batch, template: template, user: current_user, seleccion: sel, label: "#{@batch.name} · #{nombre}")
+    end
+    render json: runs.map { |r| run_json(r) }, status: :accepted
+  end
+
+  def import
+    template = Current.account.tracking_templates.find(params[:template_id])
+    result = AgentTester::Importer.new(template, user: current_user).from_text(params[:rows], name: params[:name])
+    render json: import_json(result), status: :created
+  end
+
+  def import_pila
+    template = Current.account.tracking_templates.find(params[:template_id])
+    unless TrackingTestCase.exists?(tracking_template_id: template.id)
+      return render json: { error: 'Ese agente no tiene pila de pruebas.' }, status: :unprocessable_entity
+    end
+
+    result = AgentTester::Importer.new(template, user: current_user).from_pila
+    render json: import_json(result), status: :created
   end
 
   def runs
     scope = AgentTestRun.where(account_id: Current.account.id).includes(:batch, :tracking_template).order(created_at: :desc)
-    return render json: run_json(scope.find(params[:run_id]), full: true) if params[:run_id]
+    return render json: run_json(scope.find(params[:run_id]), full: true, compare: true) if params[:run_id]
 
     render json: scope.limit(100).map { |r| run_json(r) }
   end
@@ -112,12 +144,32 @@ class Api::V1::Accounts::AgentTestBatchesController < Api::V1::Accounts::BaseCon
       cases: batch.cases.sort_by(&:id).map { |c| case_json(c) }, last_run: last && run_json(last, full: true) }
   end
 
-  def case_json(test_case) = test_case.slice(:id, :name, :messages, :expected, :origin, :bad_reply)
+  def case_json(test_case) = test_case.slice(:id, :name, :messages, :expected, :origin, :bad_reply, :variables)
 
-  def run_json(run, full: false)
+  def import_json(result)
+    { batch: batch_json(result[:batch]), created: result[:created], skipped: result[:skipped] }
+  end
+
+  # compare: cada resultado dice cómo salió esa prueba la vez anterior con el mismo agente
+  # («antes»: true/false/nil) y la corrida cuenta cuántas empeoraron y cuántas mejoraron.
+  def run_json(run, full: false, compare: false)
     json = { id: run.id, batch_id: run.agent_test_batch_id, batch: run.label.presence || run.batch&.name, agent: run.tracking_template&.name,
              engine: run.tracking_template&.engine, status: run.status, total: run.total, passed: run.passed,
-             done: Array(run.results).size, error: run.error, created_at: run.created_at, finished_at: run.finished_at }
-    full ? json.merge(results: run.results) : json
+             done: Array(run.results).size, error: run.error, seleccion: run.seleccion,
+             created_at: run.created_at, finished_at: run.finished_at }
+    return json unless full
+
+    results = Array(run.results)
+    return json.merge(results: results) unless compare
+
+    with_before(json, run, results)
+  end
+
+  def with_before(json, run, results)
+    antes = AgentTester::Regressions.before(run)
+    marcadas = results.map { |r| r.merge('antes' => antes[r['case_id'].to_i]) }
+    json.merge(results: marcadas,
+               worse: marcadas.count { |r| r['antes'] == true && !r['ok'] },
+               better: marcadas.count { |r| r['antes'] == false && r['ok'] })
   end
 end

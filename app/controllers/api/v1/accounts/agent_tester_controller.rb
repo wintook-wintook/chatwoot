@@ -5,7 +5,8 @@
 # contenido, del modelo o del motor.
 # GET  /agent_tester/agents                              agentes «En prueba» (con su motor)
 # POST /agent_tester/agents/:template_id/testing         { on } prende o apaga «En prueba» (quien cambia agentes)
-# POST /agent_tester/sessions                            { template_id } → plática nueva
+# POST /agent_tester/sessions                            { template_id, seleccion } → plática nueva (seleccion:
+#                                                       'on' | 'off' fuerza la búsqueda de predefinidas solo en ella)
 # GET  /agent_tester/sessions/:conversation_id?after=    lo que contestó el agente después de ese mensaje
 # POST /agent_tester/sessions/:conversation_id/say       { content } → mensaje del cliente
 # POST /agent_tester/sessions/:conversation_id/feedback  👎 { message_id, feedback } → lo que dice el entrenador
@@ -13,6 +14,9 @@
 #                                                       al lote del agente y del día)
 # POST /agent_tester/apply                               { log_id } aplica la corrección de prompt (2.0)
 # POST /agent_tester/fix_source                          { canned_id, content } corrige una respuesta predefinida
+#                                                       (422 con el motivo si pasa de los topes)
+# POST /agent_tester/fix_kind                            { canned_id, kind } le cambia la categoría fija
+# POST /agent_tester/fix_start                           { canned_id, text } agrega al inicio cómo lo pregunta el cliente
 # GET  /agent_tester/logs                                bitácora de correcciones (cada quien las suyas; quien
 #                                                       cambia agentes, todas)
 # POST /agent_tester/logs/:id/retest                     «Ya lo corregí»: corre otra vez la prueba de ese 👎
@@ -21,7 +25,7 @@
 # Aplicar correcciones, corregir fuentes, «En prueba» y la bitácora: quien puede cambiar agentes
 # (área Agentes IA en «todo»).
 class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseController
-  before_action :require_writer, only: %i[testing apply fix_source]
+  before_action :require_writer, only: %i[testing apply fix_source fix_kind fix_start]
   before_action :set_conversation, only: %i[show history say feedback save_case]
 
   def agents
@@ -38,7 +42,7 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
 
   def start
     template = Current.account.tracking_templates.find_by!(id: params[:template_id], testing: true)
-    conversation = sandbox.start(template, user: current_user)
+    conversation = sandbox.start(template, user: current_user, seleccion: params[:seleccion].presence)
     return render json: { error: 'No se pudo asignar el agente a la plática de prueba.' }, status: :unprocessable_entity unless conversation
 
     render json: session_json(conversation, template)
@@ -69,18 +73,14 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
     template = sandbox.tracking_for(@conversation)&.tracking_template
     return render json: { error: 'La plática ya no tiene agente.' }, status: :unprocessable_entity unless template
 
-    turns = Motor2::Prompt.history(@conversation, upto: message).map(&:stringify_keys)
-    render json: AgentTester::Trainer.new(template, user: current_user)
-                                     .call(messages: turns, reply: message.content, feedback: params[:feedback].to_s.first(2000),
-                                           trace: AgentTester::Trace.normalize(message.content_attributes.to_h),
-                                           conversation_id: @conversation.id, message_id: message.id)
+    render json: AgentTester::Trainer.new(template, user: current_user).call(**trainer_input(message))
   end
 
   def save_case
     template = sandbox.tracking_for(@conversation)&.tracking_template
     turns = Motor2::Prompt.history(@conversation).map(&:stringify_keys)
     test_case = template && AgentTester::AutoCase.add(template, messages: turns, expected: params[:expected].to_s.strip.first(2000),
-                                                                origin: 'manual')
+                                                                origin: 'manual', variables: sandbox.variables_for(@conversation))
     return render json: { error: 'Escribe qué se espera y al menos un mensaje del cliente.' }, status: :unprocessable_entity unless test_case
 
     render json: { saved_in: test_case.batch.name }
@@ -97,8 +97,26 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
 
   def fix_source
     canned = Current.account.canned_responses.find(params[:canned_id])
-    canned.update!(content: params[:content].to_s.strip.first(10_000))
-    render json: { ok: true }
+    save_canned(canned, content: params[:content].to_s.strip.first(10_000))
+  end
+
+  # proyecto@predefinidas_que_contestan: «Cambiar categoría» de la respuesta culpable (👎 «es de la
+  # categoría»).
+  def fix_kind
+    canned = Current.account.canned_responses.find(params[:canned_id])
+    return render json: { error: 'Categoría inválida.' }, status: :unprocessable_entity unless CannedResponse::KINDS.include?(params[:kind])
+
+    save_canned(canned, kind: params[:kind])
+  end
+
+  # 👎 «es de la búsqueda»: agrega al inicio de la respuesta cómo lo pregunta el cliente (lo que propuso
+  # el entrenador), para que la búsqueda la junte.
+  def fix_start
+    canned = Current.account.canned_responses.find(params[:canned_id])
+    texto = params[:text].to_s.strip.first(500)
+    return render json: { error: 'No hay nada que agregar.' }, status: :unprocessable_entity if texto.blank?
+
+    save_canned(canned, content: "#{texto}\n\n#{canned.content}")
   end
 
   def logs
@@ -119,6 +137,23 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
   end
 
   private
+
+  def trainer_input(message)
+    { messages: Motor2::Prompt.history(@conversation, upto: message).map(&:stringify_keys), reply: message.content,
+      feedback: params[:feedback].to_s.first(2000), trace: AgentTester::Trace.normalize(message.content_attributes.to_h),
+      variables: sandbox.variables_for(@conversation), conversation_id: @conversation.id, message_id: message.id }
+  end
+
+  # Con los topes de las predefinidas (3,500 / 2,000): si no cabe se dice por qué, con la liga para
+  # partirla en Catálogos › Respuestas Predefinidas (FixModal: «Arreglar con IA»).
+  def save_canned(canned, attrs)
+    if canned.update(attrs)
+      render json: { ok: true, canned_id: canned.id, kind: canned.kind, agent_chars: canned.agent_chars }
+    else
+      render json: { error: canned.errors.full_messages.to_sentence, canned_id: canned.id, too_long: canned.errors.key?(:content) },
+             status: :unprocessable_entity
+    end
+  end
 
   def require_writer
     render_access_denied unless access_grant.writable?('ai_agents')
