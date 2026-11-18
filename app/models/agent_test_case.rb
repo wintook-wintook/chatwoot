@@ -1,7 +1,30 @@
 # frozen_string_literal: true
 
-# Probador de agentes — una prueba del lote: lo que escribe el cliente (uno o varios mensajes,
-# en orden) y lo que se espera de la última respuesta.
+# == Schema Information
+#
+# Table name: agent_test_cases
+#
+#  id                  :bigint           not null, primary key
+#  bad_reply           :text
+#  expected            :text
+#  messages            :jsonb            not null
+#  name                :string           not null
+#  origin              :string           default("correction"), not null
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  account_id          :bigint           not null
+#  agent_test_batch_id :bigint           not null
+#
+# Indexes
+#
+#  index_agent_test_cases_on_account_id           (account_id)
+#  index_agent_test_cases_on_agent_test_batch_id  (agent_test_batch_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (agent_test_batch_id => agent_test_batches.id)
+#
 class AgentTestCase < ApplicationRecord
   MAX_MESSAGES = 8
   ORIGINS = %w[correction manual].freeze # de un 👎 | guardada a mano desde el probador

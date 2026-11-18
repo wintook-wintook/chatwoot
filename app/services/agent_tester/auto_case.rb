@@ -14,25 +14,25 @@ module AgentTester::AutoCase
 
   module_function
 
-  # → el lote (nil si no aplica: solo una pregunta del entrenador, o sin mensajes del cliente).
-  def save(template, messages:, feedback:, kinds:)
+  # → la prueba (nil si no aplica: solo una pregunta del entrenador, o sin mensajes del cliente).
+  # `bad_reply`: la respuesta del 👎, para que el juez sepa qué estaba mal.
+  def save(template, messages:, feedback:, kinds:, bad_reply: nil)
     return unless kinds.intersect?(KINDS)
 
-    add(template, messages: messages, expected: feedback, origin: 'correction')
+    add(template, messages: messages, expected: feedback, origin: 'correction', bad_reply: bad_reply)
   end
 
-  # → el lote (nil si no hay mensajes del cliente o no dice qué se espera). No repite una igual.
-  def add(template, messages:, expected:, origin:)
+  # → la prueba, nueva o la igual que ya estaba (nil si no hay mensajes del cliente o no dice qué
+  # se espera). Su lote es `prueba.batch`.
+  def add(template, messages:, expected:, origin:, bad_reply: nil)
     customer = Array(messages).filter_map { |m| m['content'].to_s.strip.presence if m['role'] == 'user' }
     return if customer.empty? || expected.blank?
 
     batch = batch_for(template)
     customer = customer.last(AgentTestCase::MAX_MESSAGES)
-    unless batch.cases.exists?(['messages = ?::jsonb AND expected = ?', customer.to_json, expected])
+    batch.cases.where('messages = ?::jsonb AND expected = ?', customer.to_json, expected).first ||
       batch.cases.create!(account: template.account, name: expected.first(120), messages: customer, expected: expected,
-                          origin: origin)
-    end
-    batch
+                          origin: origin, bad_reply: bad_reply.to_s.strip.first(4000).presence)
   end
 
   def today(template, at = Time.current)
@@ -52,10 +52,8 @@ module AgentTester::AutoCase
     ids = AgentTestCase.where(agent_test_batch_id: batches.select(:id)).order(:id).ids
     return if ids.empty?
 
-    run = batches.order(:day).last.runs.create!(account: template.account, tracking_template: template, created_by: user,
-                                                total: ids.size, case_ids: ids, label: "Todas las pruebas · #{template.name}")
-    AgentTester::RunJob.perform_later(run.id)
-    run
+    AgentTestRun.start!(batch: batches.order(:day).last, template: template, user: user, case_ids: ids,
+                        label: "Todas las pruebas · #{template.name}")
   end
 
   # Al corregirse un error del motor: el lote del día en que se reportó.
@@ -63,8 +61,6 @@ module AgentTester::AutoCase
     batch = AgentTestBatch.find_by(account: template.account, tracking_template: template, day: today(template, at))
     return unless batch&.cases&.exists?
 
-    run = batch.runs.create!(account: template.account, tracking_template: template, created_by: user, total: batch.cases.count)
-    AgentTester::RunJob.perform_later(run.id)
-    run
+    AgentTestRun.start!(batch: batch, template: template, user: user)
   end
 end

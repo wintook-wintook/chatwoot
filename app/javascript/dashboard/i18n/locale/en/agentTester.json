@@ -55,7 +55,7 @@
       "MESSAGES_PH": "What the customer writes, one message per line",
       "EXPECTED_PH": "What is expected from the last reply",
       "ADD_CASE": "Add test",
-      "RUNNING": "Running: the result shows in the Log.",
+      "RUNNING": "Running: progress shows on the batch card.",
       "ERROR": "Could not.",
       "ALL_AGENTS": "All agents",
       "RUN_ALL": "Run all tests of this agent",
@@ -63,7 +63,10 @@
       "ORIGIN": {
         "correction": "· from a correction",
         "manual": "· manual"
-      }
+      },
+      "PROGRESS": "Running with {agent}: test {n} of {total}…",
+      "RUN_FAILED": "The last run didn't finish: {reason}",
+      "BAD_REPLY": "Reply marked as bad: {text}"
     },
     "LOG": {
       "RUNS": "Runs",

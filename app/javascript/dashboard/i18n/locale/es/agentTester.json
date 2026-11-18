@@ -55,7 +55,7 @@
       "MESSAGES_PH": "Lo que escribe el cliente, un mensaje por renglón",
       "EXPECTED_PH": "Qué se espera de la última respuesta",
       "ADD_CASE": "Agregar prueba",
-      "RUNNING": "Corriendo: el resultado aparece en la Bitácora.",
+      "RUNNING": "Corriendo: el avance se ve en la tarjeta del lote.",
       "ERROR": "No se pudo.",
       "ALL_AGENTS": "Todos los agentes",
       "RUN_ALL": "Correr todas las pruebas de este agente",
@@ -63,7 +63,10 @@
       "ORIGIN": {
         "correction": "· de una corrección",
         "manual": "· manual"
-      }
+      },
+      "PROGRESS": "Corriendo con {agent}: prueba {n} de {total}…",
+      "RUN_FAILED": "La última corrida no terminó: {reason}",
+      "BAD_REPLY": "Respuesta que se marcó como mala: {text}"
     },
     "LOG": {
       "RUNS": "Corridas",

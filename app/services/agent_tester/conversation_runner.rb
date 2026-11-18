@@ -16,12 +16,19 @@ class AgentTester::ConversationRunner
 
   def run(test_case)
     conversation = @sandbox.start(@template, user: @user)
-    return { name: test_case.name, ok: false, reason: 'No se pudo asignar el agente a la plática de prueba.' } unless conversation
+    unless conversation
+      return { case_id: test_case.id, name: test_case.name, ok: false, reply: '', trace: nil,
+               reason: 'No se pudo asignar el agente a la plática de prueba.' }
+    end
 
     turns, last = converse(conversation, test_case.messages)
-    verdict = AgentTester::Judge.new(account: @template.account).call(turns: turns, reply: last[:text], expected: test_case.expected)
-    { case_id: test_case.id, name: test_case.name, conversation_id: conversation.display_id, reply: last[:text].to_s,
-      trace: last[:trace], **verdict }
+    verdict = AgentTester::Judge.new(account: @template.account).call(turns: turns, reply: last[:text], expected: test_case.expected,
+                                                                      bad_reply: test_case.bad_reply)
+    # conversation_id: el id (lo que abre «Seguir la plática»); display_id: el número que ve el usuario.
+    { case_id: test_case.id, name: test_case.name, conversation_id: conversation.id, display_id: conversation.display_id,
+      reply: last[:text].to_s, trace: last[:trace], **verdict }
+  ensure
+    @sandbox.finish(conversation)
   end
 
   private

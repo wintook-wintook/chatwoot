@@ -146,15 +146,20 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
   end
 
   # Espera hasta que el agente conteste y se quede callado QUIET_SECONDS, o WAIT_SECONDS.
+  # Sin caché de consultas: el job corre con la caché de SQL del executor y la respuesta la escribe
+  # otro proceso; con caché la misma consulta devolvía siempre «nada» (el mismo error que tenía el
+  # Probador de agentes, AgentTester::ConversationRunner#replies).
   def wait_reply(conversacion, desde)
-    inicio = Time.current
-    loop do
-      sleep 3
-      salientes = conversacion.messages.where('id > ?', desde).where(message_type: :outgoing, private: false).order(:id)
-      break if salientes.any? && Time.current - salientes.last.created_at > QUIET_SECONDS
-      break if Time.current - inicio > WAIT_SECONDS
+    ActiveRecord::Base.uncached do
+      inicio = Time.current
+      loop do
+        sleep 3
+        salientes = conversacion.messages.where('id > ?', desde).where(message_type: :outgoing, private: false).order(:id)
+        break if salientes.any? && Time.current - salientes.last.created_at > QUIET_SECONDS
+        break if Time.current - inicio > WAIT_SECONDS
+      end
+      conversacion.messages.where('id > ?', desde).where(message_type: :outgoing, private: false).order(:id).pluck(:content).join("\n\n")
     end
-    conversacion.messages.where('id > ?', desde).where(message_type: :outgoing, private: false).order(:id).pluck(:content).join("\n\n")
   end
 
   def cases(conversacion)

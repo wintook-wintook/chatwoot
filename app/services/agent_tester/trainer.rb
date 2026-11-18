@@ -181,13 +181,12 @@ class AgentTester::Trainer < Cases::Ai::BaseService
 
   # Cada 👎 revisado queda como prueba en el lote del agente y del día («Pruebas · <agente> · 17 nov»).
   def remember(result)
-    batch = AgentTester::AutoCase.save(@template, messages: @messages, feedback: @feedback,
-                                                  kinds: result[:messages].pluck(:kind))
-    return result unless batch
+    test_case = AgentTester::AutoCase.save(@template, messages: @messages, feedback: @feedback, bad_reply: @reply,
+                                                      kinds: result[:messages].pluck(:kind))
+    return result unless test_case
 
-    test_case = batch.cases.where(expected: @feedback).order(:id).last
-    AgentTestLog.where(id: result[:messages].pluck(:log_id).compact).update_all(agent_test_case_id: test_case&.id) # rubocop:disable Rails/SkipsModelValidations
-    result.merge(saved_in: batch.name)
+    AgentTestLog.where(id: result[:messages].pluck(:log_id).compact).update_all(agent_test_case_id: test_case.id) # rubocop:disable Rails/SkipsModelValidations
+    result.merge(saved_in: test_case.batch.name)
   end
 
   def log(result)
