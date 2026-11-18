@@ -55,14 +55,38 @@
       "MESSAGES_PH": "Lo que escribe el cliente, un mensaje por renglón",
       "EXPECTED_PH": "Qué se espera de la última respuesta",
       "ADD_CASE": "Agregar prueba",
-      "RUNNING": "Corriendo: el resultado aparece en la Bitácora.",
+      "RUNNING": "Corriendo: el avance se ve en la tarjeta del lote.",
       "ERROR": "No se pudo.",
       "ALL_AGENTS": "Todos los agentes",
       "RUN_ALL": "Correr todas las pruebas de este agente",
       "RUN_ALL_HINT": "Junta las pruebas de todos sus días en una sola corrida: para ver si algún error de antes volvió.",
       "ORIGIN": {
         "correction": "· de una corrección",
-        "manual": "· manual"
+        "manual": "· manual",
+        "import": "· importada"
+      },
+      "PROGRESS": "Corriendo con {agent}: prueba {n} de {total}…",
+      "RUN_FAILED": "La última corrida no terminó: {reason}",
+      "BAD_REPLY": "Respuesta que se marcó como mala: {text}",
+      "SELECCION": {
+        "ACCOUNT": "Búsqueda: la de la cuenta",
+        "ON": "Búsqueda nueva",
+        "OFF": "Búsqueda de siempre",
+        "HINT": "Con qué búsqueda de respuestas predefinidas corren las pruebas. No cambia nada en la cuenta: solo en las pláticas de prueba."
+      },
+      "COMPARE": "Comparar búsquedas",
+      "COMPARE_HINT": "Corre las mismas pruebas dos veces: con la búsqueda nueva y con la de siempre. El resultado de cada una sale en la Bitácora.",
+      "COMPARING": "Corriendo dos veces: con la búsqueda nueva y con la de siempre. Los resultados salen en la Bitácora.",
+      "VARIABLES": "Se hablaba de: {text}",
+      "IMPORT": {
+        "OPEN": "Importar preguntas",
+        "HINT": "Pega filas copiadas de una hoja (Excel o Sheets): mensajes del cliente | lo que se espera | variables (opcional). Varios mensajes en la misma celda van separados por «|»; variables como «CARRERA=Licenciatura en Derecho».",
+        "NAME_PH": "Nombre del lote (opcional)",
+        "ROWS_PH": "Hola | ¿cuánto cuesta?\tQue dé el precio normal por materia\tCARRERA=Licenciatura en Derecho",
+        "GO": "Importar filas",
+        "PILA": "Traer la pila vieja del agente",
+        "DONE": "{n} prueba(s) en «{name}».",
+        "SKIPPED": "Fila {line}: {reason}"
       }
     },
     "LOG": {
@@ -93,7 +117,8 @@
         "model": "Modelo",
         "engine": "Motor",
         "question": "Pregunta",
-        "search": "Búsqueda"
+        "search": "Búsqueda",
+        "category": "Categoría"
       },
       "WHERE": "Va en: {where}",
       "SOURCE": "Fuente: {source} › {item}",
@@ -123,11 +148,20 @@
         "retesting": "Probando…",
         "passed": "Quedó",
         "failing": "Sigue fallando"
-      }
+      },
+      "WORSE": "⚠ {n} empeoraron (pasaban la vez anterior)",
+      "BETTER": "{n} mejoraron",
+      "WAS_OK": "antes pasaba",
+      "WAS_BAD": "antes fallaba",
+      "KIND_CHANGE": "«{item}»: cambiar su categoría a «{kind}» (en Respuestas Predefinidas, o con el botón del probador)."
     },
     "AUTO_SAVED": "Quedó en la Bitácora (Correcciones) con qué hacer, y como prueba en «{batch}». Si sales, la retomas desde ahí.",
     "OUTDATED": "Este agente cambió después de abrir la plática: empieza una plática nueva para probar la versión nueva.",
     "NO_AGENTS": "No hay agentes en prueba por ahora. Quien administra los agentes los pone «En prueba» en Agentes IA › Agentes.",
-    "ASK_ADMIN": "Avísale a quien administra el agente para que lo corrija; ya quedó en la bitácora y como prueba."
+    "ASK_ADMIN": "Avísale a quien administra el agente para que lo corrija; ya quedó en la bitácora y como prueba.",
+    "ADD_AT_START": "Agregar al inicio de la respuesta",
+    "OPEN_CANNED": "Abrir la respuesta",
+    "CHANGE_KIND": "Cambiar a «{kind}»",
+    "SPLIT_IT": "Abrirla para partirla con IA"
   }
 }

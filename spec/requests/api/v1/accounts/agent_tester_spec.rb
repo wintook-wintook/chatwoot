@@ -4,6 +4,8 @@ require 'rails_helper'
 
 # Probador de agentes — API: plática, 👎, aplicar (2.0), lotes, corridas y permisos.
 RSpec.describe 'Agent Tester API' do
+  include ActiveJob::TestHelper
+
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:agent_user) { create(:user, account: account, role: :agent) }
@@ -50,7 +52,7 @@ RSpec.describe 'Agent Tester API' do
     batch.cases.create!(account: account, name: 'Precio', messages: ['¿Cuánto?'], expected: 'Da el precio')
     run = batch.runs.create!(account: account, tracking_template: template)
     allow_any_instance_of(AgentTester::ConversationRunner).to receive(:run).and_return({ name: 'Precio', ok: true, reason: 'Lo da' }) # rubocop:disable RSpec/AnyInstance
-    AgentTester::RunJob.perform_now(run.id)
+    perform_enqueued_jobs { AgentTester::RunJob.perform_now(run.id) }
     expect(run.reload).to have_attributes(status: 'done', passed: 1, total: 1)
   end
 
@@ -119,6 +121,47 @@ RSpec.describe 'Agent Tester API' do
       post "#{api}/agent_tester/sessions", params: { template_id: template.id }, headers: admin.create_new_auth_token, as: :json
       get "#{api}/agent_tester/sessions/#{response.parsed_body['conversation_id']}", headers: agent_user.create_new_auth_token
       expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  # proyecto@predefinidas_que_contestan
+  describe 'búsqueda nueva, comparar, importar y arreglos de un clic' do
+    let(:v1) { create(:tracking_template, account: account, testing: true, complementary_prompt: 'Sé amable') }
+    let(:batch) { AgentTestBatch.create!(account: account, tracking_template: v1, name: 'Lote') }
+
+    it 'compara: dos corridas, una con la búsqueda nueva y otra con la de siempre' do
+      batch.cases.create!(account: account, name: 'p', messages: ['Hola'], expected: 'saluda', origin: 'manual')
+      post "#{api}/agent_test_batches/#{batch.id}/compare", params: { template_id: v1.id }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:accepted)
+      expect(response.parsed_body.pluck('seleccion')).to eq(%w[on off])
+    end
+
+    it 'importa filas pegadas' do
+      post "#{api}/agent_test_batches/import", params: { template_id: v1.id, rows: "Hola\tQue salude" },
+                                               headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body).to include('created' => 1)
+    end
+
+    it 'cambia la categoría y agrega al inicio; si no cabe, dice por qué' do
+      canned = create(:canned_response, account: account, short_code: 'Plan X', content: 'Precio $10')
+      post "#{api}/agent_tester/fix_kind", params: { canned_id: canned.id, kind: 'ficha' }, headers: admin.create_new_auth_token, as: :json
+      expect(canned.reload.kind).to eq('ficha')
+
+      post "#{api}/agent_tester/fix_start", params: { canned_id: canned.id, text: '¿Cuánto cuesta el Plan X?' },
+                                            headers: admin.create_new_auth_token, as: :json
+      expect(canned.reload.content).to start_with('¿Cuánto cuesta el Plan X?')
+
+      post "#{api}/agent_tester/fix_source", params: { canned_id: canned.id, content: 'x' * 4000 },
+                                             headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('too_long' => true)
+    end
+
+    it 'los arreglos de un clic son solo para quien cambia agentes' do
+      canned = create(:canned_response, account: account, short_code: 'Plan X', content: 'Precio $10')
+      post "#{api}/agent_tester/fix_kind", params: { canned_id: canned.id, kind: 'ficha' }, headers: agent_user.create_new_auth_token, as: :json
+      expect(canned.reload.kind).to eq('general')
     end
   end
 end

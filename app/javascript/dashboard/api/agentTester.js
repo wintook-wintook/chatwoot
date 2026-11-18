@@ -17,8 +17,12 @@ class AgentTesterAPI extends ApiClient {
     return axios.post(`${this.url}/agents/${templateId}/testing`, { on });
   }
 
-  start(templateId) {
-    return axios.post(`${this.url}/sessions`, { template_id: templateId });
+  // seleccion: 'on' | 'off' | '' — la búsqueda de predefinidas solo en esta plática.
+  start(templateId, seleccion = '') {
+    return axios.post(`${this.url}/sessions`, {
+      template_id: templateId,
+      seleccion: seleccion || undefined,
+    });
   }
 
   say(conversationId, content) {
@@ -56,6 +60,15 @@ class AgentTesterAPI extends ApiClient {
       canned_id: cannedId,
       content,
     });
+  }
+
+  // proyecto@predefinidas_que_contestan: arreglos de un clic desde el 👎.
+  fixKind(cannedId, kind) {
+    return axios.post(`${this.url}/fix_kind`, { canned_id: cannedId, kind });
+  }
+
+  fixStart(cannedId, text) {
+    return axios.post(`${this.url}/fix_start`, { canned_id: cannedId, text });
   }
 
   logs() {

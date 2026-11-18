@@ -138,4 +138,44 @@ RSpec.describe AgentTester::Trainer do
     expect(Motor2Report.find(msg[:report_id])).to have_attributes(kind: 'missing_skill', tracking_template_id: v1.id)
     expect(AgentTestLog.last.motor2_report_id).to eq(msg[:report_id])
   end
+
+  # proyecto@predefinidas_que_contestan: el entrenador entiende la búsqueda nueva.
+  describe 'con la búsqueda nueva' do
+    def correct_with(trace, data)
+      trainer = described_class.new(v1, user: user)
+      allow(trainer).to receive(:chat).and_return(data)
+      trainer.call(messages: turns, reply: '20% y 35%', feedback: 'la primera beca', trace: trace)
+    end
+
+    let(:seleccion) do
+      { 'engine' => '1', 'fragmentos' => [{ 'titulo' => 'Horario' }],
+        'seleccion' => { 'candidatas' => 2, 'candidatas_titulos' => ['Horario', 'Becas — Licenciatura'], 'escogidas' => [] } }
+    end
+
+    it 'dice si la que tenía el dato estuvo entre las candidatas (escoger) o ni eso (juntar)' do
+      create(:canned_response, account: account, short_code: 'Becas — Licenciatura', content: 'Primera beca 20%')
+      estuvo = correct_with(seleccion, 'causes' => [{ 'kind' => 'search', 'item' => 'Becas — Licenciatura', 'text' => '¿hay becas?' }])
+      expect(estuvo[:messages].first).to include(kind: 'search', stage: 'escoger', can_fix: true)
+      expect(estuvo[:messages].first[:text]).to include('estuvo entre las candidatas')
+
+      no_estuvo = correct_with(seleccion, 'causes' => [{ 'kind' => 'search', 'item' => 'Otra respuesta', 'text' => '¿hay becas?' }])
+      expect(no_estuvo[:messages].first).to include(stage: 'juntar')
+    end
+
+    it 'categoría equivocada: propone cambiarla con un clic' do
+      canned = create(:canned_response, account: account, short_code: 'Plan Básico — Precio', content: 'Precio $990')
+      msg = correct_with(seleccion, 'causes' => [{ 'kind' => 'category', 'item' => 'Plan Básico — Precio', 'should_kind' => 'ficha',
+                                                   'why' => 'es de otro plan' }])[:messages].first
+      expect(msg).to include(kind: 'category', canned_id: canned.id, should_kind: 'ficha', current_kind: 'general', can_fix: true)
+      expect(AgentTestLog.find(msg[:log_id]).kind).to eq('category')
+    end
+
+    it 'no propone escribir lo que el Entrenamiento ya dice' do
+      v1.update!(complementary_prompt: "[ROL]\nAtiendes alumnos.\nCuando pidan descuento, menciona solamente la primera beca disponible.")
+      msg = correct(v1, 'causes' => [{ 'kind' => 'prompt', 'where' => '[ROL]',
+                                       'text' => 'Menciona solamente la primera beca disponible cuando pidan descuento.' }])[:messages].first
+      expect(msg).to include(kind: 'prompt', already: true)
+      expect(msg[:text]).to include('ya está escrito')
+    end
+  end
 end

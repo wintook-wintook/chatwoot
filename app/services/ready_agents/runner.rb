@@ -23,7 +23,7 @@ class ReadyAgents::Runner < Cases::Ai::BaseService
     @conversation = session&.conversation
     @test_history = history
     @answers = session&.answers.to_h.dup || {}
-    @search = AiFollowUps::KnowledgeSearch.new(account: @account)
+    @search = AiFollowUps::KnowledgeSearch.new(account: @account, conversation: @conversation)
     @used_tools = []
     @decision = nil
   end

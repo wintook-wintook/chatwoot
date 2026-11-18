@@ -540,7 +540,7 @@ class KnowledgeBaseResponseService
 
   # Solo respuestas predefinidas, y solo en las cuentas que la tienen prendida.
   def selecting?(source_type)
-    source_type == 'canned_response' && KnowledgeBase::Selection.enabled?(@account)
+    source_type == 'canned_response' && KnowledgeBase::Selection.enabled?(@account, @conversation)
   end
 
   # Las escogidas, en el orden en que la IA las puso (la principal primero: es la que manda
@@ -605,6 +605,8 @@ class KnowledgeBaseResponseService
     end)
     ContactTrackings::EngineTrace.record('seleccion', {
       'candidatas' => @selection[:candidates].size,
+      # Para el entrenador del probador: ¿la que debía llegar estaba entre las candidatas?
+      'candidatas_titulos' => @selection[:candidates].map { |c| c.item.title.to_s.truncate(120) },
       'sujeto' => @selection[:subjects].presence,
       'escogidas' => chosen.map do |c|
         { 'titulo' => c.item.title.to_s.truncate(120), 'tipo' => KnowledgeBase::Selection.item_kind(c.item),

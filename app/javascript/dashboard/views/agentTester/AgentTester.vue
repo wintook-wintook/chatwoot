@@ -16,7 +16,6 @@ export default {
       tab: 'chat',
       agents: [],
       batches: [],
-      stamp: 0,
       canEdit: false,
       resume: null,
     };
@@ -48,10 +47,6 @@ export default {
     resumeChat(conversationId) {
       this.resume = conversationId;
       this.tab = 'chat';
-    },
-    ran() {
-      this.stamp += 1;
-      this.tab = 'log';
     },
   },
 };
@@ -96,8 +91,7 @@ export default {
       :agents="agents"
       :batches="batches"
       @changed="loadBatches"
-      @ran="ran"
     />
-    <TesterLog v-else :stamp="stamp" :can-edit="canEdit" @resume="resumeChat" />
+    <TesterLog v-else :can-edit="canEdit" @resume="resumeChat" />
   </div>
 </template>

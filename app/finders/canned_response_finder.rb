@@ -11,6 +11,7 @@
 #            (todas las que el agente no encontraría: missing, no_key, failed)
 #   prompt   'with' | 'without' (prompt propio o la respuesta es un prompt)
 #   kind     general | ficha | objecion   proyecto@predefinidas_que_contestan: la categoría fija
+#   id       una sola (el probador la abre con ?fix=<id>)
 #   size     'over' (pasa del tope que recibe el agente) | 'near' (cerca del tope)
 #            proyecto@auditoria_predefinidas, ver CannedResponses::Audit::Report
 #   sort     short_code | kind | created_at | updated_at | chars     order  asc | desc
@@ -52,6 +53,7 @@ class CannedResponseFinder
 
   def filtered
     scope = @account.canned_responses
+    scope = scope.where(id: @params[:id].to_i) if @params[:id].present?
     scope = search(scope)
     scope = by_prompt(scope)
     scope = by_kind(scope)

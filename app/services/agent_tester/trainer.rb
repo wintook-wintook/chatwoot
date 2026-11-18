@@ -4,14 +4,19 @@
 # prompt/ficha del agente y lo que esperaba el usuario dónde está el error:
 #   prompt   el Entrenamiento (1.0) o las instrucciones/ficha (2.0) no lo cubren → qué cambiar
 #   content  la fuente tenía el dato mal o no lo tenía → lo que dice hoy y qué debe decir
-#   search   la fuente sí lo tenía pero la búsqueda no lo trajo (1.0) → qué agregarle para que llegue
+#   search   la fuente sí lo tenía pero la búsqueda no lo trajo (1.0) → qué agregarle para que llegue;
+#            con la búsqueda nueva dice en qué paso se perdió: «juntar» (no estuvo ni entre las
+#            candidatas) o «escoger» (estuvo y la IA no la escogió)
+#   category llegó una respuesta de OTRO sujeto o una objeción usada como dato: su categoría fija
+#            (General, Ficha, Objeción) está mal → cambiarla con un clic
 #   model    estaba claro en el prompt y en la fuente y el modelo no lo siguió → probar uno mayor
 #   engine   pide algo que el motor no hace o el motor no cumplió una regla → bitácora + reporte
 #   question si no está seguro, una pregunta
 # No cambia nada solo: el mismo usuario aplica lo de prompt y contenido (en el 2.0 con «Aplicar»;
 # en el 1.0 en su Entrenamiento de siempre, que no se toca desde aquí). Todo queda en la bitácora.
 class AgentTester::Trainer < Cases::Ai::BaseService
-  KINDS = %w[prompt content search model engine].freeze
+  include AgentTester::TrainerFacts
+  KINDS = %w[prompt content search category model engine].freeze
   MAX_PROMPT = 14_000
 
   SYSTEM = <<~TEXT
@@ -28,6 +33,15 @@ class AgentTester::Trainer < Cases::Ai::BaseService
       con lo que escribió el cliente. "item" (su título EXACTO), "arrived" (títulos que sí llegaron, de FRAGMENTOS) y
       "text": 1 o 2 preguntas como las escribiría un cliente para agregarlas al inicio de esa respuesta. Si el dato
       está ahí y no llegó, es "search", no "model" ni "prompt".
+    - "category": llegó una respuesta de OTRO producto/servicio/sujeto distinto al de la plática (SUJETO_EN_CURSO) o
+      una objeción usada como información, y el agente dio sus datos. Su categoría está mal: "item" (título EXACTO de
+      FRAGMENTOS), "should_kind" ("ficha" si es de un solo sujeto, "objecion" si es cómo contestar un pretexto,
+      "general" si vale para todos) y "why" en una línea.
+    - DATOS_INVENTADOS son montos, porcentajes o códigos de la respuesta que no aparecen en nada de lo que el agente
+      vio: si hay, la causa es "content" (el dato no existe en ninguna fuente) o "search" (existe y no le llegó),
+      nunca "prompt" ni "model".
+    - SELECCION (si viene) es la búsqueda nueva: "candidatas_titulos" lo que juntó, "escogidas" lo que llegó,
+      "ninguna"/"falta" si no escogió nada. Úsala para saber si la respuesta correcta estuvo entre las candidatas.
     - "model": la indicación YA está escrita en el prompt (o el dato correcto vino en la fuente) y la respuesta no
       lo siguió. Da "quote": la frase EXACTA del prompt o de los fragmentos que no siguió, "why" en una línea, y
       "where" + "text": la indicación que la reforzaría (redactada igual que en "prompt").
@@ -49,8 +63,9 @@ class AgentTester::Trainer < Cases::Ai::BaseService
   end
 
   # input: messages: (la plática hasta la respuesta mala), reply:, feedback:, trace: (AgentTester::Trace.normalize),
-  #        conversation_id:, message_id: (para la bitácora)
+  #        variables: (las de la plática: el sujeto en curso), conversation_id:, message_id: (para la bitácora)
   def call(**input)
+    @variables = input[:variables].to_h
     @messages = input[:messages]
     @reply = input[:reply].to_s
     @feedback = input[:feedback].to_s.strip
@@ -82,8 +97,14 @@ class AgentTester::Trainer < Cases::Ai::BaseService
   end
 
   # Lo que sí llegó sale de la traza, no de lo que diga el modelo (que copia el fragmento entero).
+  # En qué paso se perdió (juntar / escoger) y si una indicación ya estaba escrita, también: se
+  # comprueban aquí, no se le creen al modelo.
   def with_facts(cause)
-    cause['kind'] == 'search' ? cause.merge('arrived' => arrived_titles) : cause
+    case cause['kind']
+    when 'search' then cause.merge('arrived' => arrived_titles, 'stage' => stage_for(cause['item']))
+    when 'prompt' then cause.merge('already' => already_written?(cause['text'].presence || cause['replace']))
+    else cause
+    end
   end
 
   # Si el modelo no puso «kind», se deduce del primer campo que trae.
@@ -125,26 +146,35 @@ class AgentTester::Trainer < Cases::Ai::BaseService
     words.length >= 12 && normalize([prompt_text.to_json, fragments.join(' ')].join(' ')).include?(words)
   end
 
-  def normalize(text) = I18n.transliterate(text.to_s).downcase.gsub(/[^a-z0-9]+/, ' ').squish
-
   def context
     { motor: @v2 ? '2.0' : '1.0', objetivo: @template.objective, prompt: prompt_text, herramientas: tools,
-      platica: @messages, respuesta_mala: @reply, lo_que_esperaba_el_usuario: @feedback, traza: @trace,
-      fragmentos: fragments, en_la_base_pero_no_llego: missed }
+      platica: @messages, respuesta_mala: @reply, lo_que_esperaba_el_usuario: @feedback,
+      traza: @trace.except('seleccion'), seleccion: @trace['seleccion'], sujeto_en_curso: @variables.presence,
+      datos_inventados: invented.presence, fragmentos: fragments, en_la_base_pero_no_llego: missed }.compact
   end
+
+  # Lo que la respuesta trae y el agente no vio (KnowledgeBase::DataGuard).
+  def invented
+    @invented ||= KnowledgeBase::DataGuard.invented(@reply, AgentTester::Seen.new(@template).text(@messages, @trace))
+  rescue StandardError
+    []
+  end
+
+  # Cuánto de cada fragmento ve el entrenador: lo que tiene que ver con la pregunta y la queja.
+  FRAGMENT_CHARS = 2000
 
   MISSED = 4
 
-  # 1.0: lo que hay en la base sobre lo que esperaba el usuario y NO le llegó al agente (la búsqueda
-  # se queda con 3). Sin esto, «el dato está pero no llegó» parecía del modelo o del prompt.
+  # 1.0: lo que hay en la base sobre lo que esperaba el usuario y NO le llegó al agente. Con las
+  # mismas redes que la búsqueda nueva (palabras, similitud y la ficha del sujeto en curso): solo
+  # por similitud y sin el sujeto, «¿hay otro descuento?» traía las becas de OTRAS carreras.
   def missed
     return [] if @v2
 
-    vector = embed([last_customer_text, @feedback].compact_blank.join(' ').first(1000))
-    return [] if vector.blank?
-
-    found = @account.knowledge_items.search_by_embedding(vector, limit: MISSED + arrived_titles.size, threshold: 0.2)
-    found.reject { |i| arrived_titles.include?(i.title) }.first(MISSED).map { |i| "#{i.title}: #{i.content.to_s.first(600)}" }
+    pregunta = [last_customer_text, @feedback].compact_blank.join(' ').first(1000)
+    candidatas = KnowledgeBase::Candidates.new(@account.knowledge_items, queries: [pregunta], question: pregunta,
+                                                                         subjects: @variables.values, embed: ->(t) { embed(t) }).call
+    candidatas.map(&:item).reject { |i| arrived?(i.title) }.first(MISSED).map { |i| fragment_text(i) }
   rescue StandardError => e
     Rails.logger.warn("[AgentTester::Trainer] búsqueda de lo que no llegó: #{e.message}")
     []
@@ -165,12 +195,21 @@ class AgentTester::Trainer < Cases::Ai::BaseService
     Motor2::Skills.for(runner).flat_map(&:tools).map { |t| t.dig(:function, :name) }
   end
 
-  # El 1.0 guarda en la traza solo los títulos: el texto se busca para poder enseñarlo.
+  # El 1.0 guarda en la traza solo los títulos (recortados si son largos): el texto se busca por su
+  # principio para poder enseñarlo, con su categoría y lo que tiene que ver con la queja.
   def fragments
     return Array(@trace['sources']).flat_map { |s| Array(s['found']) }.first(4) if @v2
 
-    titles = Array(@trace['fragmentos']).pluck('titulo').compact_blank
-    @account.knowledge_items.where(title: titles).limit(4).map { |i| "#{i.title}: #{i.content.to_s.first(600)}" }
+    arrived_titles.first(4).filter_map do |t|
+      item = @account.knowledge_items.where('title LIKE ?', "#{ActiveRecord::Base.sanitize_sql_like(t.sub(/(\.\.\.|…)\z/, ''))}%").first
+      item && fragment_text(item)
+    end
+  end
+
+  def fragment_text(item)
+    pregunta = [last_customer_text, @feedback].compact_blank.join(' ')
+    texto = KnowledgeBase::SectionFit.call(item.content.to_s, pregunta, FRAGMENT_CHARS, title: item.title)
+    "[#{KnowledgeBase::Selection.item_kind(item)}] #{item.title}: #{texto}"
   end
 
   def arrived_titles = @arrived_titles ||= Array(@trace['fragmentos']).pluck('titulo').compact_blank
@@ -181,13 +220,12 @@ class AgentTester::Trainer < Cases::Ai::BaseService
 
   # Cada 👎 revisado queda como prueba en el lote del agente y del día («Pruebas · <agente> · 17 nov»).
   def remember(result)
-    batch = AgentTester::AutoCase.save(@template, messages: @messages, feedback: @feedback,
-                                                  kinds: result[:messages].pluck(:kind))
-    return result unless batch
+    test_case = AgentTester::AutoCase.save(@template, messages: @messages, feedback: @feedback, bad_reply: @reply,
+                                                      kinds: result[:messages].pluck(:kind), variables: @variables)
+    return result unless test_case
 
-    test_case = batch.cases.where(expected: @feedback).order(:id).last
-    AgentTestLog.where(id: result[:messages].pluck(:log_id).compact).update_all(agent_test_case_id: test_case&.id) # rubocop:disable Rails/SkipsModelValidations
-    result.merge(saved_in: batch.name)
+    AgentTestLog.where(id: result[:messages].pluck(:log_id).compact).update_all(agent_test_case_id: test_case.id) # rubocop:disable Rails/SkipsModelValidations
+    result.merge(saved_in: test_case.batch.name)
   end
 
   def log(result)

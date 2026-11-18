@@ -16,10 +16,14 @@ class Motor2::Search < Cases::Ai::BaseService
 
   Source = Struct.new(:key, :name, :kind, :knowledge_source_ids, keyword_init: true)
 
-  def initialize(account, keys)
+  def initialize(account, keys, conversation: nil)
     super(account: account)
     @keys = keys
+    @conversation = conversation
   end
+
+  # Lo que escogió la búsqueda nueva de predefinidas (nil si no corrió), para la traza.
+  def selection = @canned&.last_selection
 
   # Las predefinidas (siempre) y las fuentes de la ficha que existen y están activas.
   def sources
@@ -49,7 +53,7 @@ class Motor2::Search < Cases::Ai::BaseService
     source && Source.new(key: key, name: source.name, kind: type, knowledge_source_ids: [source.id])
   end
 
-  def canned = @canned ||= AiFollowUps::KnowledgeSearch.new(account: @account)
+  def canned = @canned ||= AiFollowUps::KnowledgeSearch.new(account: @account, conversation: @conversation)
 
   def search(source, question)
     return Array(canned.canned(question)[:results]) if source.kind == 'canned'

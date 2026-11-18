@@ -55,14 +55,38 @@
       "MESSAGES_PH": "What the customer writes, one message per line",
       "EXPECTED_PH": "What is expected from the last reply",
       "ADD_CASE": "Add test",
-      "RUNNING": "Running: the result shows in the Log.",
+      "RUNNING": "Running: progress shows on the batch card.",
       "ERROR": "Could not.",
       "ALL_AGENTS": "All agents",
       "RUN_ALL": "Run all tests of this agent",
       "RUN_ALL_HINT": "Joins the tests of all its days in one run: to see if any past error came back.",
       "ORIGIN": {
         "correction": "· from a correction",
-        "manual": "· manual"
+        "manual": "· manual",
+        "import": "· imported"
+      },
+      "PROGRESS": "Running with {agent}: test {n} of {total}…",
+      "RUN_FAILED": "The last run didn't finish: {reason}",
+      "BAD_REPLY": "Reply marked as bad: {text}",
+      "SELECCION": {
+        "ACCOUNT": "Search: the account's",
+        "ON": "New search",
+        "OFF": "Classic search",
+        "HINT": "Which canned-response search the tests run with. Nothing changes in the account: only in the test chats."
+      },
+      "COMPARE": "Compare searches",
+      "COMPARE_HINT": "Runs the same tests twice: with the new search and with the classic one. Each result shows up in the Log.",
+      "COMPARING": "Running twice: with the new search and with the classic one. Results show up in the Log.",
+      "VARIABLES": "Talking about: {text}",
+      "IMPORT": {
+        "OPEN": "Import questions",
+        "HINT": "Paste rows copied from a spreadsheet: customer messages | what is expected | variables (optional). Several messages in one cell are separated by «|»; variables like «PRODUCT=Plan X».",
+        "NAME_PH": "Batch name (optional)",
+        "ROWS_PH": "Hi | how much is it?\tGives the regular price\tPRODUCT=Plan X",
+        "GO": "Import rows",
+        "PILA": "Bring the agent's old test stack",
+        "DONE": "{n} test(s) in «{name}».",
+        "SKIPPED": "Row {line}: {reason}"
       }
     },
     "LOG": {
@@ -93,7 +117,8 @@
         "model": "Model",
         "engine": "Engine",
         "question": "Question",
-        "search": "Search"
+        "search": "Search",
+        "category": "Category"
       },
       "WHERE": "Goes in: {where}",
       "SOURCE": "Source: {source} › {item}",
@@ -123,11 +148,20 @@
         "retesting": "Testing…",
         "passed": "Fixed",
         "failing": "Still failing"
-      }
+      },
+      "WORSE": "⚠ {n} got worse (they passed last time)",
+      "BETTER": "{n} got better",
+      "WAS_OK": "passed before",
+      "WAS_BAD": "failed before",
+      "KIND_CHANGE": "«{item}»: change its category to «{kind}» (in Canned Responses, or with the tester button)."
     },
     "AUTO_SAVED": "Saved in the Log (Corrections) with what to do, and as a test in «{batch}». If you leave, pick it up from there.",
     "OUTDATED": "This agent changed after the chat started: start a new chat to test the new version.",
     "NO_AGENTS": "There are no agents in testing right now. Whoever manages agents puts them «In testing» in AI Agents › Agents.",
-    "ASK_ADMIN": "Tell whoever manages the agent so they fix it; it is already in the log and saved as a test."
+    "ASK_ADMIN": "Tell whoever manages the agent so they fix it; it is already in the log and saved as a test.",
+    "ADD_AT_START": "Add at the start of the response",
+    "OPEN_CANNED": "Open the response",
+    "CHANGE_KIND": "Change to «{kind}»",
+    "SPLIT_IT": "Open it to split it with AI"
   }
 }

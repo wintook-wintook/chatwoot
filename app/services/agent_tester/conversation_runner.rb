@@ -8,20 +8,30 @@ class AgentTester::ConversationRunner
   QUIET = 8
   MAX_WAIT = 100
 
-  def initialize(template, user:)
+  # seleccion: 'on' | 'off' | nil (ver AgentTester::Sandbox#start).
+  def initialize(template, user:, seleccion: nil)
     @template = template
     @sandbox = AgentTester::Sandbox.new(template.account)
     @user = user
+    @seleccion = seleccion
   end
 
   def run(test_case)
-    conversation = @sandbox.start(@template, user: @user)
-    return { name: test_case.name, ok: false, reason: 'No se pudo asignar el agente a la plática de prueba.' } unless conversation
+    conversation = @sandbox.start(@template, user: @user, seleccion: @seleccion, variables: test_case.try(:variables))
+    unless conversation
+      return { case_id: test_case.id, name: test_case.name, ok: false, reply: '', trace: nil,
+               reason: 'No se pudo asignar el agente a la plática de prueba.' }
+    end
 
     turns, last = converse(conversation, test_case.messages)
-    verdict = AgentTester::Judge.new(account: @template.account).call(turns: turns, reply: last[:text], expected: test_case.expected)
-    { case_id: test_case.id, name: test_case.name, conversation_id: conversation.display_id, reply: last[:text].to_s,
-      trace: last[:trace], **verdict }
+    verdict = AgentTester::Judge.new(account: @template.account).call(turns: turns, reply: last[:text], expected: test_case.expected,
+                                                                      bad_reply: test_case.bad_reply,
+                                                                      seen: AgentTester::Seen.new(@template).text(turns, last[:trace]))
+    # conversation_id: el id (lo que abre «Seguir la plática»); display_id: el número que ve el usuario.
+    { case_id: test_case.id, name: test_case.name, conversation_id: conversation.id, display_id: conversation.display_id,
+      reply: last[:text].to_s, trace: last[:trace], **verdict }
+  ensure
+    @sandbox.finish(conversation)
   end
 
   private
