@@ -11,10 +11,12 @@ export default {
     tabs() {
       return [
         { key: 0, name: 'Respuestas predefinidas' },
-        { key: 1, name: 'Vocabulario' },
-        { key: 2, name: 'Sinónimos' },
-        { key: 3, name: 'Foros' },
-        { key: 4, name: 'Menú del sistema' },
+        // proyecto@auditoria_predefinidas: junto a la lista, que es lo que audita.
+        { key: 1, name: this.$t('CANNED_MGMT.AUDIT.TAB') },
+        { key: 2, name: 'Vocabulario' },
+        { key: 3, name: 'Sinónimos' },
+        { key: 4, name: 'Foros' },
+        { key: 5, name: 'Menú del sistema' },
       ];
     },
   },

@@ -18,6 +18,8 @@ import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import { messageStamp } from 'shared/helpers/timeHelper';
 import { useAlert } from 'dashboard/composables';
 import EmbeddingState from './EmbeddingState.vue';
+// proyecto@auditoria_predefinidas: columna y filtro de tamaño (lo que recibe el agente).
+import { MAX_CHARS, sizeLevel, LEVEL_TEXT } from './audit/cannedSize';
 
 const PER_PAGE = 25;
 const PER_PAGE_OPTIONS = [25, 50, 100];
@@ -28,13 +30,14 @@ const POLL_MS = 4000;
 const MAX_POLLS = 15;
 const STATE_FILTERS = ['', 'not_ready', 'ready', 'pending', 'stale'];
 const PROMPT_FILTERS = ['', 'with', 'without'];
-const SORTS = ['short_code', 'category', 'created_at', 'updated_at'];
+const SIZE_FILTERS = ['', 'over', 'near'];
+const SORTS = ['short_code', 'category', 'created_at', 'updated_at', 'chars'];
 // El valor del filtro y del «cambiar a» que significa «sin categoría».
 const NO_CATEGORY = 'none';
 
 export default {
   components: { TableFooter, EmbeddingState },
-  emits: ['edit', 'delete'],
+  emits: ['edit', 'delete', 'fix'],
   data() {
     return {
       records: [],
@@ -45,6 +48,7 @@ export default {
       state: '',
       prompt: '',
       category: '',
+      size: '',
       categories: [],
       bulkCategory: '',
       sort: 'short_code',
@@ -56,6 +60,8 @@ export default {
       confirmBulkDelete: false,
       stateFilters: STATE_FILTERS,
       promptFilters: PROMPT_FILTERS,
+      sizeFilters: SIZE_FILTERS,
+      maxChars: MAX_CHARS,
       sorts: SORTS,
       perPage: PER_PAGE,
       perPageOptions: PER_PAGE_OPTIONS,
@@ -78,7 +84,11 @@ export default {
     },
     filtersActive() {
       return Boolean(
-        this.query.trim() || this.state || this.prompt || this.category
+        this.query.trim() ||
+          this.state ||
+          this.prompt ||
+          this.category ||
+          this.size
       );
     },
   },
@@ -94,6 +104,9 @@ export default {
       this.goTo(1);
     },
     category() {
+      this.goTo(1);
+    },
+    size() {
       this.goTo(1);
     },
     perPage() {
@@ -120,6 +133,7 @@ export default {
         state: this.state || undefined,
         prompt: this.prompt || undefined,
         category: this.category || undefined,
+        size: this.size || undefined,
         sort: this.sort,
         order: this.order,
       };
@@ -262,6 +276,14 @@ export default {
       this.state = '';
       this.prompt = '';
       this.category = '';
+      this.size = '';
+    },
+    // Público: la pestaña «Auditoría» abre la tabla con este filtro.
+    filterBySize(valor) {
+      this.size = valor;
+    },
+    sizeClass(item) {
+      return LEVEL_TEXT[sizeLevel(item.agent_chars || 0)];
     },
     // La fecha y la hora tal cual (pedido del usuario, 05/11/2026): «2 days ago» salía en
     // inglés y no decía cuándo. Formato con números: no depende del idioma.
@@ -365,6 +387,19 @@ export default {
             opcion
               ? $t(`CANNED_MGMT.TABLE.PROMPT_${opcion.toUpperCase()}`)
               : $t('CANNED_MGMT.TABLE.ALL_PROMPTS')
+          }}
+        </option>
+      </select>
+      <select
+        v-model="size"
+        class="list-filter"
+        :aria-label="$t('CANNED_MGMT.AUDIT.TABLE.FILTER_SIZE')"
+      >
+        <option v-for="opcion in sizeFilters" :key="opcion" :value="opcion">
+          {{
+            opcion
+              ? $t(`CANNED_MGMT.AUDIT.TABLE.SIZE_${opcion.toUpperCase()}`)
+              : $t('CANNED_MGMT.AUDIT.TABLE.ALL_SIZES')
           }}
         </option>
       </select>
@@ -487,6 +522,23 @@ export default {
                 {{ $t('CANNED_MGMT.TABLE.COL_CONTENT') }}
               </th>
               <th
+                class="py-3 pr-4 text-right font-semibold whitespace-nowrap text-slate-700 dark:text-slate-300"
+              >
+                <button
+                  type="button"
+                  class="flex items-center gap-1 ml-auto"
+                  :title="$t('CANNED_MGMT.AUDIT.TABLE.COL_CHARS_HELP')"
+                  @click="sortBy('chars')"
+                >
+                  {{ $t('CANNED_MGMT.AUDIT.TABLE.COL_CHARS') }}
+                  <fluent-icon
+                    v-if="sortIcon('chars')"
+                    :icon="sortIcon('chars')"
+                    size="14"
+                  />
+                </button>
+              </th>
+              <th
                 class="py-3 pr-4 text-left font-semibold text-slate-700 dark:text-slate-300"
               >
                 <button
@@ -562,11 +614,29 @@ export default {
                 >
                   {{ $t('CANNED_MGMT.FORM_PROMPT.LIST_BADGE_IS_PROMPT') }}
                 </span>
+                <span
+                  v-if="item.open_findings"
+                  v-tooltip.top="
+                    $t('CANNED_MGMT.AUDIT.TABLE.FINDINGS_BADGE_HELP', {
+                      count: item.open_findings,
+                    })
+                  "
+                  class="inline-flex items-center gap-0.5 ml-1 px-1.5 py-0.5 text-xs font-normal rounded bg-amber-50 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                >
+                  <fluent-icon icon="warning" size="12" />
+                  {{ item.open_findings }}
+                </span>
               </td>
               <td class="py-3 pr-4 align-top whitespace-normal md:break-all">
                 <div class="line-clamp-2" :title="item.content">
                   {{ item.content }}
                 </div>
+              </td>
+              <td
+                class="py-3 pr-4 text-right align-top tabular-nums whitespace-nowrap font-medium"
+                :class="sizeClass(item)"
+              >
+                {{ (item.agent_chars || 0).toLocaleString() }}
               </td>
               <td class="py-3 pr-4 align-top whitespace-nowrap">
                 <span
@@ -598,6 +668,15 @@ export default {
               </td>
               <td class="py-3 align-top">
                 <div class="flex justify-end gap-1">
+                  <!-- proyecto@arreglar_predefinidas: solo las que pasan el tope. -->
+                  <woot-button
+                    v-if="(item.agent_chars || 0) > maxChars"
+                    v-tooltip.top="$t('CANNED_MGMT.FIX.OPEN')"
+                    variant="smooth"
+                    size="tiny"
+                    icon="wand"
+                    @click="$emit('fix', item)"
+                  />
                   <woot-button
                     v-tooltip.top="$t('CANNED_MGMT.EDIT.BUTTON_TEXT')"
                     variant="smooth"

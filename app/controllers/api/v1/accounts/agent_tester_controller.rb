@@ -46,7 +46,8 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
 
   def show
     tracking = sandbox.tracking_for(@conversation)
-    render json: { messages: sandbox.since(@conversation, params[:after]).map { |m| m.merge(lines: AgentTester::Trace.lines(m[:trace])) },
+    render json: { messages: sandbox.since(@conversation, params[:after])
+                                    .map { |m| m.merge(lines: AgentTester::Trace.lines(m[:trace], account: Current.account)) },
                    tracking_status: tracking&.status, outdated: outdated?(tracking) }
   end
 
@@ -157,7 +158,7 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
     role = 'note' if message.private
     role = 'user' if message.incoming?
     { id: message.id, role: role, content: message.content.to_s,
-      lines: AgentTester::Trace.lines(AgentTester::Trace.normalize(message.content_attributes.to_h)) }
+      lines: AgentTester::Trace.lines(AgentTester::Trace.normalize(message.content_attributes.to_h), account: Current.account) }
   end
 
   def log_json(log)
