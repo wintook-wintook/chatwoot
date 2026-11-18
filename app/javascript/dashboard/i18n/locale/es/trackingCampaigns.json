@@ -197,6 +197,9 @@
     "HANDOFF_ATTENDED": "✓ Atendido",
     "HANDOFF_OVERDUE": "⏰ Vencido",
     "HANDOFF_DUE": "✓ Entregado · vence {at}",
+    "SETTINGS_MENU": {
+      "BUTTON": "Ajustes"
+    },
     "HANDOFF_SETTINGS": {
       "TITLE": "🤝 Entrega de interesados",
       "DESC": "Qué pasa cuando un prospecto dice que le interesa. Vale para los próximos interesados.",

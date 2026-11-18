@@ -197,6 +197,9 @@
     "HANDOFF_ATTENDED": "✓ Attended",
     "HANDOFF_OVERDUE": "⏰ Overdue",
     "HANDOFF_DUE": "✓ Handed off · due {at}",
+    "SETTINGS_MENU": {
+      "BUTTON": "Settings"
+    },
     "HANDOFF_SETTINGS": {
       "TITLE": "🤝 Interested prospects hand-off",
       "DESC": "What happens when a prospect says they are interested. Applies to the next interested prospects.",
