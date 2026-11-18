@@ -3,14 +3,18 @@
 // que pueda cambiar agentes los prueba como cliente, con el motor real (1.0 o 2.0) en el canal de
 // pruebas, y el entrenador le dice si el error es del prompt, del contenido, del modelo o del
 // motor. Lotes de pruebas y bitácora. Plan-Motor-Agentes.md §11.13.
+//
+// Quien prueba solo dice qué debió responder (👎) o que estuvo bien (👍); el diagnóstico lo ve
+// quien entrena en «Revisión», plática por plática y mensaje por mensaje.
 import AgentTesterAPI from 'dashboard/api/agentTester';
 import AgentTestBatchesApi from 'dashboard/api/agentTestBatches';
 import TesterChat from './TesterChat.vue';
 import TesterBatches from './TesterBatches.vue';
 import TesterLog from './TesterLog.vue';
+import TesterReview from './TesterReview.vue';
 
 export default {
-  components: { TesterChat, TesterBatches, TesterLog },
+  components: { TesterChat, TesterBatches, TesterLog, TesterReview },
   data() {
     return {
       tab: 'chat',
@@ -18,12 +22,16 @@ export default {
       batches: [],
       canEdit: false,
       resume: null,
+      // 👎 por revisar (el contador de la pestaña).
+      openReviews: 0,
     };
   },
   computed: {
     // Lotes: para quien puede cambiar agentes. La Bitácora la ven todos (cada quien sus 👎).
     tabs() {
-      return this.canEdit ? ['chat', 'batches', 'log'] : ['chat', 'log'];
+      return this.canEdit
+        ? ['chat', 'review', 'batches', 'log']
+        : ['chat', 'log'];
     },
   },
   mounted() {
@@ -37,7 +45,28 @@ export default {
       const { data } = await AgentTesterAPI.agents();
       this.agents = data.agents;
       this.canEdit = data.can_edit;
-      if (this.canEdit) this.loadBatches();
+      if (this.canEdit) {
+        this.loadBatches();
+        this.loadReviewCount();
+      }
+    },
+    async loadReviewCount() {
+      try {
+        const { data } = await AgentTesterAPI.review({ status: 'open' });
+        this.openReviews = (data.agents || []).reduce((n, a) => n + a.open, 0);
+      } catch (e) {
+        this.openReviews = 0;
+      }
+    },
+    onSaved() {
+      this.loadBatches();
+      if (this.canEdit) this.loadReviewCount();
+    },
+    tabLabel(key) {
+      const label = this.t(`TABS.${key}`);
+      return key === 'review' && this.openReviews
+        ? `${label} (${this.openReviews})`
+        : label;
     },
     async loadBatches() {
       const { data } = await AgentTestBatchesApi.get();
@@ -75,7 +104,7 @@ export default {
         "
         @click="tab = key"
       >
-        {{ t(`TABS.${key}`) }}
+        {{ tabLabel(key) }}
       </button>
     </nav>
     <TesterChat
@@ -83,8 +112,13 @@ export default {
       :agents="agents"
       :can-edit="canEdit"
       :resume="resume"
-      @saved="loadBatches"
+      @saved="onSaved"
       @resumed="resume = null"
+    />
+    <TesterReview
+      v-else-if="tab === 'review'"
+      :agents="agents"
+      @changed="loadReviewCount"
     />
     <TesterBatches
       v-else-if="tab === 'batches'"

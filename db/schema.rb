@@ -194,6 +194,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_18_200000) do
     t.string "status", default: "pending", null: false
     t.bigint "agent_test_case_id"
     t.jsonb "retest", default: {}, null: false
+    t.text "note"
+    t.text "dismissed_reason"
     t.index ["account_id", "created_at"], name: "index_agent_test_logs_on_account_id_and_created_at"
     t.index ["account_id"], name: "index_agent_test_logs_on_account_id"
     t.index ["tracking_template_id"], name: "index_agent_test_logs_on_tracking_template_id"

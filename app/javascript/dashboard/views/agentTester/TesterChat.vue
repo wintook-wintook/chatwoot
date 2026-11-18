@@ -36,7 +36,11 @@ export default {
       draft: '',
       waiting: false,
       pending: null,
+      // 👎: «¿Qué debió responder?» (obligatorio) y «¿Qué estuvo mal?» (opcional). Quien prueba no
+      // ve el diagnóstico: queda para «Revisión». Quien entrena puede verlo al momento.
       feedback: '',
+      note: '',
+      diagnoseNow: false,
       sending: false,
       fixText: {},
       saveExpected: '',
@@ -159,6 +163,25 @@ export default {
       this.$set(this.chat[index], 'rating', value);
       this.pending = value === 'down' ? index : null;
       this.feedback = '';
+      this.note = '';
+      if (value === 'up') this.saveGood(this.chat[index]);
+    },
+    // 👍: la respuesta queda como prueba «a cuidar».
+    async saveGood(message) {
+      try {
+        const { data } = await AgentTesterAPI.good(
+          this.session.conversation_id,
+          message.id
+        );
+        if (data.saved_in)
+          this.chat.push({
+            role: 'note',
+            content: this.t('GOOD_SAVED', { batch: data.saved_in }),
+          });
+        this.scroll();
+      } catch (e) {
+        useAlert(this.errorText(e));
+      }
     },
     async sendFeedback() {
       const bad = this.chat[this.pending];
@@ -167,8 +190,17 @@ export default {
         const { data } = await AgentTesterAPI.feedback(
           this.session.conversation_id,
           bad.id,
-          this.feedback
+          this.feedback,
+          this.note,
+          this.canEdit && this.diagnoseNow
         );
+        if (data.queued) {
+          this.chat.push({ role: 'note', content: this.t('QUEUED') });
+          this.pending = null;
+          this.$emit('saved');
+          this.scroll();
+          return;
+        }
         (data.messages || []).forEach(info =>
           this.chat.push({
             role: 'trainer',
@@ -591,14 +623,29 @@ export default {
         v-if="pending !== null"
         class="p-2 space-y-1 border-t border-slate-100 dark:border-slate-700"
       >
-        <span class="block text-xs font-medium">{{ t('WHAT_WRONG') }}</span>
+        <span class="block text-xs font-medium">{{ t('SHOULD_ANSWER') }}</span>
         <textarea
           v-model="feedback"
           rows="3"
           class="!mb-0 text-sm"
+          :placeholder="t('SHOULD_ANSWER_PH')"
+          data-test="should-answer"
+        />
+        <span class="block text-xs font-medium">{{ t('WHAT_WRONG_OPT') }}</span>
+        <textarea
+          v-model="note"
+          rows="2"
+          class="!mb-0 text-sm"
           :placeholder="t('WHAT_WRONG_PH')"
         />
-        <span class="flex justify-end gap-2">
+        <span class="flex flex-wrap items-center justify-end gap-2">
+          <label
+            v-if="canEdit"
+            class="flex items-center gap-1 mr-auto !mb-0 text-xs text-slate-600"
+          >
+            <input v-model="diagnoseNow" type="checkbox" class="!m-0" />
+            {{ t('DIAGNOSE_NOW') }}
+          </label>
           <woot-button size="tiny" variant="clear" @click="pending = null">{{
             t('CANCEL')
           }}</woot-button>
@@ -608,7 +655,7 @@ export default {
             :disabled="!feedback.trim()"
             @click="sendFeedback"
           >
-            {{ t('SEND_TRAINER') }}
+            {{ canEdit && diagnoseNow ? t('SEND_TRAINER') : t('SEND_REVIEW') }}
           </woot-button>
         </span>
       </div>

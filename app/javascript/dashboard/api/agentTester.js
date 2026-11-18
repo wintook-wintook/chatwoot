@@ -37,11 +37,43 @@ class AgentTesterAPI extends ApiClient {
     });
   }
 
-  feedback(conversationId, messageId, feedback) {
+  // 👎: lo que debió responder (y, opcional, qué estuvo mal). now: el diagnóstico al momento
+  // (solo quien cambia agentes); si no, queda para «Revisión».
+  feedback(conversationId, messageId, feedback, note = '', now = false) {
     return axios.post(`${this.url}/sessions/${conversationId}/feedback`, {
       message_id: messageId,
       feedback,
+      note: note || undefined,
+      now: now || undefined,
     });
+  }
+
+  // 👍: la respuesta queda como prueba a cuidar.
+  good(conversationId, messageId) {
+    return axios.post(`${this.url}/sessions/${conversationId}/good`, {
+      message_id: messageId,
+    });
+  }
+
+  // «Revisión» (quien entrena).
+  review(params = {}) {
+    return axios.get(`${this.url}/review`, { params });
+  }
+
+  reviewConversation(conversationId) {
+    return axios.get(`${this.url}/review/${conversationId}`);
+  }
+
+  dismiss(logId, reason) {
+    return axios.post(`${this.url}/logs/${logId}/dismiss`, { reason });
+  }
+
+  rediagnose(logId, note) {
+    return axios.post(`${this.url}/logs/${logId}/rediagnose`, { note });
+  }
+
+  retestGroup(ids) {
+    return axios.post(`${this.url}/logs/retest_group`, { ids });
   }
 
   // La plática como prueba: va sola al lote del agente y del día.

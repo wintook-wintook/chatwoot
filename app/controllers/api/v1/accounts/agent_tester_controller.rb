@@ -9,7 +9,12 @@
 #                                                       'on' | 'off' fuerza la búsqueda de predefinidas solo en ella)
 # GET  /agent_tester/sessions/:conversation_id?after=    lo que contestó el agente después de ese mensaje
 # POST /agent_tester/sessions/:conversation_id/say       { content } → mensaje del cliente
-# POST /agent_tester/sessions/:conversation_id/feedback  👎 { message_id, feedback } → lo que dice el entrenador
+# POST /agent_tester/sessions/:conversation_id/feedback  👎 { message_id, feedback («¿Qué debió responder?»), note
+#                                                       («¿Qué estuvo mal?», opcional), now } → queda para revisión y
+#                                                       el diagnóstico corre aparte; con now (solo quien cambia
+#                                                       agentes: «Ver diagnóstico al momento») lo dice el entrenador ya
+# POST /agent_tester/sessions/:conversation_id/good      👍 { message_id } → la respuesta queda como prueba a cuidar
+# «Revisión» (la causa de cada 👎): Api::V1::Accounts::AgentTesterReviewsController.
 # POST /agent_tester/sessions/:conversation_id/save_case { expected } guarda la plática como prueba (va sola
 #                                                       al lote del agente y del día)
 # POST /agent_tester/apply                               { log_id } aplica la corrección de prompt (2.0)
@@ -26,7 +31,7 @@
 # (área Agentes IA en «todo»).
 class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseController
   before_action :require_writer, only: %i[testing apply fix_source fix_kind fix_start]
-  before_action :set_conversation, only: %i[show history say feedback save_case]
+  before_action :set_conversation, only: %i[show history say feedback good save_case]
 
   def agents
     list = Current.account.tracking_templates.where(archived_at: nil, testing: true).order(:name)
@@ -45,7 +50,7 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
     conversation = sandbox.start(template, user: current_user, seleccion: params[:seleccion].presence)
     return render json: { error: 'No se pudo asignar el agente a la plática de prueba.' }, status: :unprocessable_entity unless conversation
 
-    render json: session_json(conversation, template)
+    render json: AgentTester::LogJson.session(conversation, template)
   end
 
   def show
@@ -59,8 +64,10 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
     template = sandbox.tracking_for(@conversation)&.tracking_template
     return render json: { error: 'La plática ya no tiene agente.' }, status: :unprocessable_entity unless template
 
-    messages = @conversation.messages.where(message_type: %i[incoming outgoing]).order(:id).map { |m| history_json(m) }
-    render json: session_json(@conversation, template).merge(messages: messages)
+    messages = @conversation.messages.where(message_type: %i[incoming outgoing]).order(:id).map do |m|
+      AgentTester::LogJson.message(m, Current.account)
+    end
+    render json: AgentTester::LogJson.session(@conversation, template).merge(messages: messages)
   end
 
   def say
@@ -68,12 +75,26 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
     render json: { message_id: message.id }
   end
 
+  # Quien prueba solo dice qué debió responder: queda para revisión y la causa la ve quien revisa
+  # (con now, quien cambia agentes la ve al momento).
   def feedback
-    message = @conversation.messages.find(params[:message_id])
-    template = sandbox.tracking_for(@conversation)&.tracking_template
-    return render json: { error: 'La plática ya no tiene agente.' }, status: :unprocessable_entity unless template
+    return unless (feedback = rated_message)
+    return render json: { error: 'Escribe qué debió responder.' }, status: :unprocessable_entity if params[:feedback].to_s.strip.blank?
 
-    render json: AgentTester::Trainer.new(template, user: current_user).call(**trainer_input(message))
+    input = AgentTester::FeedbackInput.for(@conversation, @message, feedback: params[:feedback].to_s.strip, note: params[:note])
+    if diagnose_now?
+      feedback.rate('down')
+      return render json: AgentTester::Trainer.new(@template, user: current_user).call(**input)
+    end
+
+    render json: feedback.down(input)
+  end
+
+  # 👍: la respuesta estaba bien; queda como prueba «a cuidar» para ver si después se rompe.
+  def good
+    return unless (feedback = rated_message)
+
+    render json: feedback.up
   end
 
   def save_case
@@ -119,8 +140,11 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
     save_canned(canned, content: "#{texto}\n\n#{canned.content}")
   end
 
+  # Quien no cambia agentes ve sus 👎 y cómo van, sin el diagnóstico (eso es de quien revisa).
   def logs
-    render json: logs_scope.includes(:tracking_template, :user).order(created_at: :desc).limit(200).map { |l| log_json(l) }
+    writer = access_grant.writable?('ai_agents')
+    list = logs_scope.includes(:tracking_template, :user).order(created_at: :desc).limit(200)
+    render json: list.map { |l| writer ? AgentTester::LogJson.call(l) : AgentTester::LogJson.tester(l) }
   end
 
   # «Ya lo corregí»: la prueba que se guardó de ese 👎 se corre otra vez con el agente como está hoy
@@ -133,15 +157,21 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
     run = AgentTestRun.start!(batch: test_case.batch, template: log.tracking_template, user: current_user, case_ids: [test_case.id],
                               label: "Probar de nuevo · #{log.tracking_template&.name}")
     log.update!(status: 'retesting', retest: { 'run_id' => run.id })
-    render json: log_json(log)
+    render json: AgentTester::LogJson.call(log)
   end
 
   private
 
-  def trainer_input(message)
-    { messages: Motor2::Prompt.history(@conversation, upto: message).map(&:stringify_keys), reply: message.content,
-      feedback: params[:feedback].to_s.first(2000), trace: AgentTester::Trace.normalize(message.content_attributes.to_h),
-      variables: sandbox.variables_for(@conversation), conversation_id: @conversation.id, message_id: message.id }
+  def diagnose_now? = access_grant.writable?('ai_agents') && ActiveModel::Type::Boolean.new.cast(params[:now])
+
+  # El mensaje calificado y su AgentTester::Feedback (nil, ya contestado, si la plática no tiene agente).
+  def rated_message
+    @message = @conversation.messages.find(params[:message_id])
+    @template = sandbox.tracking_for(@conversation)&.tracking_template
+    return AgentTester::Feedback.new(@conversation, @message, template: @template, user: current_user) if @template
+
+    render json: { error: 'La plática ya no tiene agente.' }, status: :unprocessable_entity
+    nil
   end
 
   # Con los topes de las predefinidas (3,500 / 2,000): si no cabe se dice por qué, con la liga para
@@ -180,26 +210,5 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
     return false if template.nil? || Motor2.on?(template)
 
     tracking.raw_complementary_prompt.to_s != template.complementary_prompt.to_s
-  end
-
-  def session_json(conversation, template)
-    { conversation_id: conversation.id, display_id: conversation.display_id, template_id: template.id, engine: template.engine,
-      name: template.name, after: conversation.messages.maximum(:id).to_i }
-  end
-
-  def history_json(message)
-    role = 'assistant'
-    role = 'note' if message.private
-    role = 'user' if message.incoming?
-    { id: message.id, role: role, content: message.content.to_s,
-      lines: AgentTester::Trace.lines(AgentTester::Trace.normalize(message.content_attributes.to_h), account: Current.account) }
-  end
-
-  def log_json(log)
-    report = log.motor2_report_id && Motor2Report.find_by(id: log.motor2_report_id)
-    { id: log.id, kind: log.kind, engine: log.engine, agent: log.tracking_template&.name, template_id: log.tracking_template_id, user: log.user&.name,
-      feedback: log.feedback, reply: log.reply, diagnosis: log.diagnosis, created_at: log.created_at,
-      report_status: report&.status, conversation_id: log.conversation_id, status: log.status, retest: log.retest,
-      has_case: log.agent_test_case_id.present? }
   end
 end

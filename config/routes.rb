@@ -248,6 +248,12 @@ Rails.application.routes.draw do
           post 'agent_tester/fix_start', to: 'agent_tester#fix_start'
           get 'agent_tester/logs', to: 'agent_tester#logs'
           post 'agent_tester/logs/:id/retest', to: 'agent_tester#retest'
+          post 'agent_tester/sessions/:conversation_id/good', to: 'agent_tester#good' # revisión aparte de la prueba
+          get 'agent_tester/review', to: 'agent_tester_reviews#index'
+          get 'agent_tester/review/:conversation_id', to: 'agent_tester_reviews#show'
+          post 'agent_tester/logs/retest_group', to: 'agent_tester_reviews#retest_group'
+          post 'agent_tester/logs/:id/dismiss', to: 'agent_tester_reviews#dismiss'
+          post 'agent_tester/logs/:id/rediagnose', to: 'agent_tester_reviews#rediagnose'
           get 'agent_tester/sessions/:conversation_id/history', to: 'agent_tester#history'
           resources :agent_test_batches, only: [:index, :create, :update, :destroy] do
             collection do

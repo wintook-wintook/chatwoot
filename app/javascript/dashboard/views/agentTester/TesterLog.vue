@@ -100,10 +100,17 @@ export default {
       const d = log.diagnosis || {};
       return log.kind === 'search' ? d.add || '' : d.suggestion || '';
     },
+    // El diagnóstico lo ve solo quien entrena; quien probó ve su 👎 y cómo va.
     canFix(log) {
-      return ['prompt', 'content', 'search', 'category', 'model'].includes(
-        log.kind
+      return (
+        this.canEdit &&
+        ['prompt', 'content', 'search', 'category', 'model'].includes(log.kind)
       );
+    },
+    header(log) {
+      return this.canEdit
+        ? `${this.icon(log.kind)} ${this.t(`KINDS.${log.kind}`)}`
+        : `📝 ${this.t('FOR_REVIEW')}`;
     },
     openAgent(log) {
       const id = String(log.template_id);
@@ -265,9 +272,7 @@ export default {
         class="p-3 text-xs border rounded-lg border-slate-100 dark:border-slate-700"
       >
         <span class="flex items-center gap-2 text-sm font-medium">
-          <span class="flex-1">
-            {{ icon(log.kind) }} {{ t(`KINDS.${log.kind}`) }} · {{ log.agent }}
-          </span>
+          <span class="flex-1"> {{ header(log) }} · {{ log.agent }} </span>
           <span
             class="px-2 py-0.5 text-[11px] rounded-full"
             :class="statusClass(log.status)"
@@ -292,7 +297,7 @@ export default {
         </span>
 
         <div
-          v-if="log.diagnosis && log.diagnosis.text"
+          v-if="canEdit && log.diagnosis && log.diagnosis.text"
           class="p-2 mt-2 rounded bg-slate-50 dark:bg-slate-800"
         >
           <span class="block font-medium">{{ t('CAUSE') }}</span>

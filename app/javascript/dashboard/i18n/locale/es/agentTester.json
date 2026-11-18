@@ -4,6 +4,7 @@
     "SUBTITLE": "Prueba cualquier agente (Motor 1.0 o 2.0) como si fueras el cliente. Contesta el motor de verdad en un canal de pruebas: no sale nada a WhatsApp. Con 👎 te decimos si el error es del prompt, del contenido, del modelo o del motor.",
     "TABS": {
       "chat": "Probar",
+      "review": "Revisión",
       "batches": "Lotes de pruebas",
       "log": "Bitácora"
     },
@@ -63,7 +64,8 @@
       "ORIGIN": {
         "correction": "· de una corrección",
         "manual": "· manual",
-        "import": "· importada"
+        "import": "· importada",
+        "good": "· 👍 a cuidar"
       },
       "PROGRESS": "Corriendo con {agent}: prueba {n} de {total}…",
       "RUN_FAILED": "La última corrida no terminó: {reason}",
@@ -118,7 +120,8 @@
         "engine": "Motor",
         "question": "Pregunta",
         "search": "Búsqueda",
-        "category": "Categoría"
+        "category": "Categoría",
+        "pending": "Por revisar"
       },
       "WHERE": "Va en: {where}",
       "SOURCE": "Fuente: {source} › {item}",
@@ -147,13 +150,15 @@
         "pending": "Pendiente",
         "retesting": "Probando…",
         "passed": "Quedó",
-        "failing": "Sigue fallando"
+        "failing": "Sigue fallando",
+        "dismissed": "No es error"
       },
       "WORSE": "⚠ {n} empeoraron (pasaban la vez anterior)",
       "BETTER": "{n} mejoraron",
       "WAS_OK": "antes pasaba",
       "WAS_BAD": "antes fallaba",
-      "KIND_CHANGE": "«{item}»: cambiar su categoría a «{kind}» (en Respuestas Predefinidas, o con el botón del probador)."
+      "KIND_CHANGE": "«{item}»: cambiar su categoría a «{kind}» (en Respuestas Predefinidas, o con el botón del probador).",
+      "FOR_REVIEW": "Para revisión"
     },
     "AUTO_SAVED": "Quedó en la Bitácora (Correcciones) con qué hacer, y como prueba en «{batch}». Si sales, la retomas desde ahí.",
     "OUTDATED": "Este agente cambió después de abrir la plática: empieza una plática nueva para probar la versión nueva.",
@@ -162,6 +167,41 @@
     "ADD_AT_START": "Agregar al inicio de la respuesta",
     "OPEN_CANNED": "Abrir la respuesta",
     "CHANGE_KIND": "Cambiar a «{kind}»",
-    "SPLIT_IT": "Abrirla para partirla con IA"
+    "SPLIT_IT": "Abrirla para partirla con IA",
+    "SHOULD_ANSWER": "¿Qué debió responder?",
+    "SHOULD_ANSWER_PH": "Ej.: «Tenemos una beca del 38%: queda en $1,990 por materia.»",
+    "WHAT_WRONG_OPT": "¿Qué estuvo mal? (opcional)",
+    "DIAGNOSE_NOW": "Ver diagnóstico al momento",
+    "SEND_REVIEW": "Enviar",
+    "QUEUED": "Gracias, quedó para revisión.",
+    "GOOD_SAVED": "👍 Guardada como prueba a cuidar en «{batch}».",
+    "REVIEW": {
+      "HINT": "Lo que marcaron con 👎 quienes probaron: la plática completa, lo que debió responder y la causa que encontró el entrenador. Corrige, prueba de nuevo o descarta.",
+      "ALL_AGENTS": "Todos los agentes",
+      "OPEN": "Por revisar",
+      "ALL": "Todas",
+      "EMPTY": "No hay nada por revisar.",
+      "CHAT_TITLE": "{agent} · probó {tester}",
+      "COUNT": "{open} por revisar de {total}",
+      "CUSTOMER": "Cliente",
+      "AGENT": "Agente",
+      "SHOULD": "Debió responder: {text}",
+      "NOTE": "Qué estuvo mal: {text}",
+      "DIAGNOSING": "Revisando la causa…",
+      "RETEST": "Corregido · probar de nuevo",
+      "RETEST_SAME": "Probar de nuevo los {n} con la misma respuesta",
+      "NOTE_PH": "Nota para otro diagnóstico o por qué no es error",
+      "REDIAGNOSE": "Otro diagnóstico",
+      "DISMISS": "No es error",
+      "DISMISSED_REASON": "No es error: {text}",
+      "ERROR": "No se pudo.",
+      "STATUS": {
+        "pending": "Pendiente",
+        "retesting": "Probando…",
+        "passed": "Quedó",
+        "failing": "Sigue fallando",
+        "dismissed": "No es error"
+      }
+    }
   }
 }
