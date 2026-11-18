@@ -4,12 +4,18 @@
 //   ███████████░░░░░  1,734 / 2,000  · Cerca del límite
 //
 // Cuenta lo que recibe el agente (nombre + «: » + contenido, ver cannedSize.js), no
-// solo el contenido. Avisa, no bloquea: una predefinida larga funciona, pero el agente
-// ve solo una parte. Pasado el tope enseña los bloques (como los parte SectionFit) con
+// solo el contenido. Pasado el tope enseña los bloques (como los parte SectionFit) con
 // su tamaño, para ver qué conviene llevar a otra predefinida.
+//
+// proyecto@predefinidas_que_contestan: pasado el tope ya no se puede guardar (el
+// formulario lo bloquea). Con `prompt` mide la pestaña Prompt: solo su texto, con su
+// propio tope.
 // ============================================================================
 import {
   MAX_CHARS,
+  WARN_CHARS,
+  PROMPT_MAX_CHARS,
+  PROMPT_WARN_CHARS,
   agentChars,
   sizeLevel,
   blocksOf,
@@ -21,19 +27,32 @@ export default {
   props: {
     shortCode: { type: String, default: '' },
     content: { type: String, default: '' },
+    // Mide la pestaña Prompt (solo el texto, tope PROMPT_MAX_CHARS).
+    prompt: { type: Boolean, default: false },
   },
   data() {
-    return { showBlocks: false, max: MAX_CHARS };
+    return { showBlocks: false };
   },
   computed: {
+    max() {
+      return this.prompt ? PROMPT_MAX_CHARS : MAX_CHARS;
+    },
+    warn() {
+      return this.prompt ? PROMPT_WARN_CHARS : WARN_CHARS;
+    },
     chars() {
-      return agentChars(this.shortCode, this.content);
+      return this.prompt
+        ? (this.content || '').length
+        : agentChars(this.shortCode, this.content);
     },
     level() {
-      return sizeLevel(this.chars);
+      return sizeLevel(this.chars, this.max, this.warn);
+    },
+    prefix() {
+      return this.prompt ? 'PROMPT_' : '';
     },
     percent() {
-      return Math.min(100, Math.round((this.chars / MAX_CHARS) * 100));
+      return Math.min(100, Math.round((this.chars / this.max) * 100));
     },
     textClass() {
       return LEVEL_TEXT[this.level];
@@ -66,7 +85,7 @@ export default {
         :aria-valuenow="chars"
         aria-valuemin="0"
         :aria-valuemax="max"
-        :aria-label="$t('CANNED_MGMT.AUDIT.METER.LABEL')"
+        :aria-label="$t(`CANNED_MGMT.AUDIT.METER.${prefix}LABEL`)"
       >
         <div
           class="h-full transition-all"
@@ -82,9 +101,9 @@ export default {
       </span>
     </div>
     <p class="!m-0" :class="textClass">
-      {{ $t(`CANNED_MGMT.AUDIT.METER.${level.toUpperCase()}`) }}
+      {{ $t(`CANNED_MGMT.AUDIT.METER.${prefix}${level.toUpperCase()}`) }}
       <button
-        v-if="level === 'over'"
+        v-if="level === 'over' && !prompt"
         type="button"
         class="ml-1 underline"
         @click="showBlocks = !showBlocks"
@@ -99,7 +118,7 @@ export default {
       </button>
     </p>
     <ol
-      v-if="level === 'over' && showBlocks"
+      v-if="level === 'over' && showBlocks && !prompt"
       class="!m-0 max-h-32 overflow-y-auto list-none !pl-0 flex flex-col gap-0.5"
     >
       <li

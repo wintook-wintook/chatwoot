@@ -17,7 +17,7 @@ Quien puede cambiar agentes ve además las pestañas Lotes de pruebas y Bitácor
 ### Probar un agente
 1. En Probar elige el agente (dice si es Motor 1.0 o 2.0) y pulsa «Empezar».
 2. Escribe como lo haría un cliente. El agente contesta en unos segundos (el 2.0 espera a que termines de escribir, como en real).
-3. Bajo cada respuesta ves qué hizo: la ruta, la fuente y los fragmentos que consultó (1.0) o las fuentes y habilidades (2.0).
+3. Bajo cada respuesta ves qué hizo: la ruta, la fuente y los fragmentos que consultó (1.0) o las fuentes y habilidades (2.0). Si la empresa tiene la búsqueda nueva de respuestas predefinidas, también ves cuántas candidatas juntó, cuáles escogió y por qué, si ninguna contestaba y los datos que se quitaron por no estar en las fuentes.
 4. «Plática nueva» empieza de cero, como un cliente nuevo.
 
 ### Cuando una respuesta está mal

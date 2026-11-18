@@ -2,7 +2,7 @@
 key: respuestas_plantillas
 title: Respuestas predefinidas y plantillas de WhatsApp
 areas: [conversations]
-keywords: [respuesta predefinida, respuestas predefinidas, codigo corto, diagonal, respuesta rapida, categoria, prompt de contenido, vectorizar, fuente de datos, plantilla, plantillas de whatsapp, nueva plantilla, aprobada, rechazada, en revision, meta, ventana 24 horas, reabrir whatsapp, sincronizar, variables, buscar respuesta, eliminar varias, editar respuesta, sugeridas, empezar desde, recordatorio de pago, confirmacion de cita, promocion con imagen, encabezado, pie, botones, respuesta rapida, liga, copiar codigo, datos del sistema, vista previa, guardar borrador, enviar a revision, duplicar, ver en meta, calidad, se puede enviar, eliminar plantilla, filtros de plantillas]
+keywords: [respuesta predefinida, respuestas predefinidas, codigo corto, diagonal, respuesta rapida, categoria, tipo, general, ficha, objecion, tope de caracteres, 3500, muy larga, no me deja guardar, prompt de contenido, vectorizar, fuente de datos, plantilla, plantillas de whatsapp, nueva plantilla, aprobada, rechazada, en revision, meta, ventana 24 horas, reabrir whatsapp, sincronizar, variables, buscar respuesta, eliminar varias, editar respuesta, sugeridas, empezar desde, recordatorio de pago, confirmacion de cita, promocion con imagen, encabezado, pie, botones, respuesta rapida, liga, copiar codigo, datos del sistema, vista previa, guardar borrador, enviar a revision, duplicar, ver en meta, calidad, se puede enviar, eliminar plantilla, filtros de plantillas]
 pages: [conversations, conversation, canned_responses, whatsapp_templates]
 sources:
   - app/javascript/dashboard/routes/dashboard/settings/canned/*.vue
@@ -13,7 +13,8 @@ sources:
   - app/javascript/dashboard/i18n/locale/es/whatsappTemplates.json
   - app/controllers/api/v1/accounts/canned_responses_controller.rb
   - app/models/whatsapp_template.rb
-reviewed: 2026-11-14
+  - app/models/canned_response.rb
+reviewed: 2026-11-18
 ---
 ## Para qué sirve
 - Respuestas predefinidas: textos guardados para contestar rápido. También son información que los agentes IA consultan para contestarle al cliente.
@@ -25,13 +26,21 @@ En Catálogos › Respuestas Predefinidas y Catálogos › Plantillas de WhatsAp
 ## Cómo se hace
 ### Crear una respuesta predefinida
 1. Entra a Catálogos › Respuestas Predefinidas y pulsa «Agregar respuesta predefinida».
-2. Escribe el «Código corto» (el nombre con que la vas a llamar; es obligatorio) y, si quieres, elige su «Categoría» (o «Sin categoría»).
-3. En la pestaña «Mensaje» escribe el texto (es obligatorio). Escribe {{ para insertar un dato que se llena solo, como el nombre del contacto.
-4. Opcional, para los agentes IA: en «Prompt de Contenido» explica cómo debe usar el agente ese mensaje (el cliente no lo ve). Si el mensaje no es información para el cliente sino instrucciones para el agente, marca «El mensaje es el prompt».
-5. Pulsa «Enviar».
+2. Escribe el «Código corto» (el nombre con que la vas a llamar; es obligatorio).
+3. Elige su «Categoría»: «General» (vale igual para todos: horarios, datos de la empresa, cómo pedir, formas de pago), «Ficha» (es de un solo producto, servicio, plan, sucursal o carrera; pon en el nombre de cuál es) u «Objeción» (cómo contestar un pretexto del cliente, como «está caro» o «lo pienso»). Si no eliges, queda «General». Las categorías son esas tres; ya no se crean otras.
+4. En la pestaña «Mensaje» escribe el texto (es obligatorio). Escribe {{ para insertar un dato que se llena solo, como el nombre del contacto.
+5. Opcional, para los agentes IA: en «Prompt de Contenido» explica cómo debe usar el agente ese mensaje (el cliente no lo ve). Si el mensaje no es información para el cliente sino instrucciones para el agente, marca «El mensaje es el prompt».
+6. Pulsa «Enviar». Abajo, el medidor dice cuántos caracteres recibe el agente: nombre y mensaje juntos hasta 3,500, y el Prompt hasta 2,000. Si pasas el tope no se puede guardar: pártela en varias respuestas, una por tema.
+
+### Escribirla para que el agente la encuentre
+- Nombre que diga de qué trata: «Sujeto — temas que trae», por ejemplo «Plan Empresarial — Precio, promociones y cómo contratar». Evita nombres como «Información 3».
+- Primera línea del mensaje: de qué trata y cómo lo pregunta el cliente («Precio, mensualidad, descuentos y cómo contratar el Plan Empresarial.»).
+- Un tema por respuesta, o temas que el cliente pregunta juntos (todo lo de dinero junto).
+- Cada dato en un solo lugar: el precio de un producto, solo en su ficha. Las generales sin datos de un producto en particular.
+- En el Prompt va solo cómo contestar; los datos van en el mensaje, porque la búsqueda no lee el Prompt.
 
 ### Buscar, editar y eliminar respuestas
-1. En la lista busca con «Buscar en el nombre o el contenido…» y filtra por categoría («Todas las categorías», «Sin categoría» o una tuya). «Quitar filtros» limpia todo.
+1. En la lista busca con «Buscar en el nombre o el contenido…» y filtra por categoría («Todas las categorías», «General», «Ficha» u «Objeción»). «Quitar filtros» limpia todo.
 2. Las columnas son «Nombre», «Contenido», «Categoría», «Fuente de datos», «Creada», «Cambió» y «Acciones». Pulsa el título de una columna para ordenar.
 3. En «Acciones», el lápiz («Editar») abre la respuesta y el bote («Eliminar») la borra, después de confirmar.
 4. Para borrar varias, marca sus casillas (o «Seleccionar todas las de esta página») y pulsa «Eliminar»; sale «Se eliminarán N respuesta(s) predefinida(s)…» y confirmas con «Sí, eliminar».
@@ -41,14 +50,14 @@ En Catálogos › Respuestas Predefinidas y Catálogos › Plantillas de WhatsAp
 1. En la caja de respuesta de una conversación escribe «/» y el código corto.
 2. Elige la respuesta de la lista: se pega en la caja y puedes ajustarla antes de enviar.
 
-### Organizarlas por categoría
-1. Pulsa «Categorías». Escribe el nombre en «Nueva categoría» y pulsa «Agregar». El nombre no lleva paréntesis ni «!» al principio.
-2. Ahí mismo, en «Tus categorías», puedes «Renombrar» o «Eliminar» una (sus respuestas no se borran, quedan sin categoría).
-3. En «Sugeridas por los nombres» salen grupos de respuestas que ya empiezan igual: «Crear y asignar» crea esa categoría y se las pone.
-4. En la lista puedes filtrar por categoría o seleccionar varias y usar «Cambiar categoría…».
+### Cambiar la categoría de varias
+1. En la lista marca las respuestas y elige «Cambiar categoría…»: «General», «Ficha» u «Objeción».
+2. Para agruparlas a tu gusto usa el principio del nombre (por ejemplo, todas las de un producto empiezan igual): los agentes también pueden buscar por ese principio.
 
 ### Que los agentes IA las encuentren
 La columna «Fuente de datos» dice si cada respuesta ya está lista para los agentes. Si dice «No está en la fuente de datos», pulsa «Vectorizar». Necesita la integración de OpenAI activa.
+
+Cuando la empresa tiene prendida la búsqueda nueva, el agente junta las respuestas que podrían servir (por palabras, por significado y la ficha del producto del que se está hablando) y escoge solo las que sí contestan. Usa la «Categoría»: una «Ficha» nunca se usa para dar datos de otro producto, y una «Objeción» solo cuando el cliente objeta. Si ninguna contesta, el agente lo dice en vez de inventar, y no deja pasar montos, porcentajes ni códigos que no estén en tus respuestas.
 
 ### Ver y filtrar las plantillas de WhatsApp
 1. Entra a Catálogos › Plantillas de WhatsApp.

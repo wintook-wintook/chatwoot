@@ -49,33 +49,27 @@ RSpec.describe KnowledgeBase::CannedGroup do
   end
 
   # respuestas_predefinidas R4: si hay una categoría con ese nombre, el grupo es la categoría.
-  describe '.scope por categoría' do
+  # proyecto@predefinidas_que_contestan: la categoría es fija (General, Ficha, Objeción).
+  describe '.scope por categoría fija' do
     before do
-      CannedResponseCategory.create!(account: account, name: 'Ventas Norte')
       create(:knowledge_item, account: account, knowledge_source: source, source_type: 'canned_response',
-                              title: 'PRECIO grúa', metadata: { 'category' => 'Ventas Norte' })
+                              title: 'Plan X — Precio', metadata: { 'kind' => 'ficha' })
       create(:knowledge_item, account: account, knowledge_source: source, source_type: 'canned_response',
-                              title: 'VENTAS sin categoría')
-      item('HORARIO DE OFICINA')
+                              title: 'ESTÁ MUY CARO', metadata: { 'kind' => 'objecion' })
+      item('Horario de atención')
     end
 
-    it 'busca por la categoría, sin importar mayúsculas, y no por el prefijo' do
-      expect(described_class.scope(account, 'canned_response', 'ventas norte').pluck(:title)).to eq(['PRECIO grúa'])
-    end
-
-    it 'negada deja fuera la categoría y conserva las que no tienen' do
-      titulos = described_class.scope(account, 'canned_response', '!Ventas Norte').pluck(:title)
-
-      expect(titulos).to contain_exactly('VENTAS sin categoría', 'HORARIO DE OFICINA')
-    end
-
-    it 'sin categoría con ese nombre sigue por el prefijo' do
-      expect(described_class.scope(account, 'canned_response', 'VENTAS').pluck(:title)).to eq(['VENTAS sin categoría'])
+    it '«Ficha», «Objeción» y «General» filtran por tipo; sin tipo cuenta como general' do
+      expect(described_class.scope(account, 'canned_response', 'Fichas').pluck(:title)).to eq(['Plan X — Precio'])
+      expect(described_class.scope(account, 'canned_response', 'objecion').pluck(:title)).to eq(['ESTÁ MUY CARO'])
+      expect(described_class.scope(account, 'canned_response', 'General').pluck(:title)).to eq(['Horario de atención'])
+      expect(described_class.scope(account, 'canned_response', '!Objeción').pluck(:title))
+        .to contain_exactly('Plan X — Precio', 'Horario de atención')
     end
 
     it 'el motor hace exactamente lo mismo' do
       service = KnowledgeBaseResponseService.new(Message.new(account: account, content: 'hola'))
-      ['Ventas Norte', '!Ventas Norte', 'VENTAS'].each do |group|
+      %w[Ficha !Objeción General].each do |group|
         expect(described_class.scope(account, 'canned_response', group).pluck(:id).sort)
           .to eq(service.send(:grouped_items, 'canned_response', group).pluck(:id).sort)
       end

@@ -4,8 +4,9 @@
 # proyecto@arreglar_predefinidas — LOS GRUPOS QUE NO SE PUEDEN ROMPER
 # ================================================================================
 # Un agente puede buscar solo en un grupo: @buscar_predefinidas(GRUPO). El grupo es una
-# CATEGORÍA o el PRINCIPIO del nombre (KnowledgeBase::CannedGroup). La categoría la
-# heredan las partes solas; el principio del nombre no: si la original se llama
+# CATEGORÍA fija (General, Ficha, Objeción) o el PRINCIPIO del nombre
+# (KnowledgeBase::CannedGroup). La categoría la heredan las partes solas; el principio del
+# nombre no: si la original se llama
 # «SOPORTE Alta de empresa» y un agente busca en SOPORTE, cada parte tiene que empezar
 # también con «SOPORTE» o ese agente deja de encontrarla.
 #
@@ -41,6 +42,6 @@ class CannedResponses::Fix::Groups
     (directivas + partes).map { |g| g.to_s.strip }
   end
 
-  def category?(name) = KnowledgeBase::CannedGroup.category?(@account, name)
+  def category?(name) = KnowledgeBase::CannedGroup.kind_named(name).present?
   def key(texto) = ActiveSupport::Inflector.transliterate(texto.to_s).downcase.strip
 end

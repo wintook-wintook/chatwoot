@@ -7,7 +7,12 @@ RSpec.describe 'Canned Response Audit API', type: :request do
   let(:account) { create(:account) }
   let(:agent) { create(:user, account: account, role: :agent) }
   let(:url) { "/api/v1/accounts/#{account.id}/canned_response_audit" }
-  let!(:larga) { create(:canned_response, account: account, short_code: 'LARGA', content: "#{'a' * 1500}\n\n#{'b' * 600}") }
+  # proyecto@predefinidas_que_contestan: ya no se deja guardar una de más de 3,500; esta es una
+  # vieja que pasaba el tope (escrita directo en la base).
+  let!(:larga) do
+    create(:canned_response, account: account, short_code: 'LARGA', content: 'corta')
+      .tap { |c| c.update_column(:content, "#{'a' * 3000}\n\n#{'b' * 600}") } # rubocop:disable Rails/SkipsModelValidations
+  end
   let!(:copia) { create(:canned_response, account: account, short_code: 'COPIA', content: 'igual') }
   let!(:finding) do
     account.canned_response_findings.create!(canned_response: larga, other_canned_response: copia, kind: 'duplicate',
@@ -19,8 +24,8 @@ RSpec.describe 'Canned Response Audit API', type: :request do
 
     body = response.parsed_body
     expect(body['summary']).to include('oversize' => 1, 'duplicate' => 1, 'contradiction' => 0)
-    expect(body['oversize'].sole).to include('short_code' => 'LARGA', 'agent_chars' => 2109)
-    expect(body['oversize'].sole['blocks'].pluck('chars')).to eq([1507, 600])
+    expect(body['oversize'].sole).to include('short_code' => 'LARGA', 'agent_chars' => 3609)
+    expect(body['oversize'].sole['blocks'].pluck('chars')).to eq([3007, 600])
     expect(body['findings'].sole['responses'].pluck('short_code')).to eq(%w[LARGA COPIA])
   end
 
@@ -77,7 +82,7 @@ RSpec.describe 'Canned Response Audit API', type: :request do
                                                            headers: agent.create_new_auth_token
 
     fila = response.parsed_body['payload'].sole
-    expect(fila).to include('short_code' => 'LARGA', 'agent_chars' => 2109, 'open_findings' => 1)
+    expect(fila).to include('short_code' => 'LARGA', 'agent_chars' => 3609, 'open_findings' => 1)
 
     get "/api/v1/accounts/#{account.id}/canned_responses", params: { page: 1, sort: 'chars', order: 'asc' },
                                                            headers: agent.create_new_auth_token

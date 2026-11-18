@@ -97,7 +97,6 @@ class Account < ApplicationRecord
   has_many :canned_response_audits, dependent: :delete_all
   has_many :canned_response_findings, dependent: :delete_all
   has_many :canned_response_fixes, dependent: :delete_all # proyecto@arreglar_predefinidas
-  has_many :canned_response_categories, dependent: :destroy_async
   has_many :knowledge_sources, dependent: :destroy # @knowledge_sources
   has_many :knowledge_items, dependent: :destroy   # @knowledge_sources
   has_many :categories, dependent: :destroy_async, class_name: '::Category'

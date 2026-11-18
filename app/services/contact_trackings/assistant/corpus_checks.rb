@@ -89,11 +89,11 @@ class ContactTrackings::Assistant::CorpusChecks
   end
 
   # El grupo es el prefijo del short_code, que es lo que se vectoriza como título.
-  # respuestas_predefinidas R4: el grupo puede ser una categoría (la misma regla que el motor).
+  # proyecto@predefinidas_que_contestan: el grupo puede ser una categoría fija (la misma regla
+  # que el motor, KnowledgeBase::CannedGroup.kind_named).
   def canned_count_for(group)
-    if KnowledgeBase::CannedGroup.category?(@account, group)
-      return @account.canned_responses.joins(:category).where('lower(canned_response_categories.name) = lower(?)', group.strip).count
-    end
+    kind = KnowledgeBase::CannedGroup.kind_named(group)
+    return @account.canned_responses.where(kind: kind).count if kind
 
     @account.canned_responses.where('UPPER(short_code) LIKE ?', "#{group.upcase}%").count
   end

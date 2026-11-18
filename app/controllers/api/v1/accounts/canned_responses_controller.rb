@@ -5,8 +5,8 @@
 # R2: GET …/canned_responses?page=N (+ q, state, prompt, sort, order, per_page) → la tabla,
 #   paginada: { payload: [...], meta: { count, page, per_page } } (CannedResponseFinder).
 #   Sin `page`, la lista completa como siempre: la usa el «/» del editor de mensajes.
-# R3: `category_id` al crear/editar; `category_name` en cada una; filtro `category`
-#   (id o 'none'); POST …/canned_responses/assign_category { ids, category_id } (nil = quitar).
+# proyecto@predefinidas_que_contestan: `kind` (la categoría fija: general, ficha, objecion) al
+#   crear/editar; filtro `kind`; POST …/canned_responses/assign_kind { ids, kind }.
 class Api::V1::Accounts::CannedResponsesController < Api::V1::Accounts::BaseController
   MAX_VECTORIZE = 20
 
@@ -37,15 +37,24 @@ class Api::V1::Accounts::CannedResponsesController < Api::V1::Accounts::BaseCont
     render json: with_embedding_state([@canned_response.reload]).first
   end
 
-  # R3: cambiar la categoría de varias (category_id vacío = sin categoría).
-  def assign_category
+  # proyecto@predefinidas_que_contestan: cambiar el tipo de varias (el tipo es la categoría).
+  def assign_kind
     ids = Array(params[:ids]).map(&:to_i).uniq
-    return render json: { error: 'too_many', max: MAX_DESTROY }, status: :unprocessable_entity if ids.size > MAX_DESTROY
+    error = assign_kind_error(ids)
+    return render json: error, status: :unprocessable_entity if error
 
-    categoria = Current.account.canned_response_categories.find(params[:category_id]) if params[:category_id].present?
     registros = Current.account.canned_responses.where(id: ids).to_a
-    registros.each { |r| r.update!(category: categoria) }
-    render json: with_embedding_state(registros)
+    # Solo el tipo (update_columns + el vector a mano): una vieja que pasa el tope no se
+    # rompe por cambiarle el tipo.
+    registros.each { |r| r.update_columns(kind: params[:kind], updated_at: Time.current) } # rubocop:disable Rails/SkipsModelValidations
+    CannedResponse.sync_kind_metadata(registros.map(&:id), params[:kind])
+    render json: with_embedding_state(registros.each(&:reload))
+  end
+
+  def assign_kind_error(ids)
+    return { error: 'too_many', max: MAX_DESTROY } if ids.size > MAX_DESTROY
+
+    { error: 'invalid_kind' } unless CannedResponse::KINDS.include?(params[:kind])
   end
 
   # R2: eliminar varias desde la tabla.
@@ -91,7 +100,7 @@ class Api::V1::Accounts::CannedResponsesController < Api::V1::Accounts::BaseCont
       :content,
       :content_prompts,
       :content_is_prompt,
-      :category_id,
+      :kind,
       :menu,
       :opcion,
       :content_full,
@@ -103,14 +112,12 @@ class Api::V1::Accounts::CannedResponsesController < Api::V1::Accounts::BaseCont
   # Dos consultas para toda la lista: si la cuenta tiene OpenAI y cuáles tienen vector.
   def with_embedding_state(registros)
     registros = registros.to_a
-    nombres = category_names(registros)
     con_clave = Current.account.hooks.exists?(app_id: 'openai', status: 'enabled')
     con_vector = KnowledgeItem.where(account_id: Current.account.id, source_type: 'canned_response', source_id: registros.map(&:id))
                               .where.not(embedding: nil).distinct.pluck(:source_id).to_set
     hallazgos = open_findings(registros)
     registros.map do |r|
       r.as_json.merge('embedding_state' => r.embedding_state(has_vector: con_vector.include?(r.id), has_key: con_clave),
-                      'category_name' => nombres[r.category_id],
                       # proyecto@auditoria_predefinidas: lo que recibe el agente y lo pendiente de revisar.
                       'agent_chars' => r.agent_chars, 'open_findings' => hallazgos[r.id] || 0)
     end
@@ -122,10 +129,6 @@ class Api::V1::Accounts::CannedResponsesController < Api::V1::Accounts::BaseCont
     pares = Current.account.canned_response_findings.unresolved.involving(ids)
                    .pluck(:canned_response_id, :other_canned_response_id)
     pares.flatten.compact.select { |id| ids.include?(id) }.tally
-  end
-
-  def category_names(registros)
-    Current.account.canned_response_categories.where(id: registros.filter_map(&:category_id)).pluck(:id, :name).to_h
   end
 
   def canned_responses

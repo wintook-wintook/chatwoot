@@ -41,7 +41,7 @@ module KnowledgeBase::CannedGroup
     negated = group.start_with?('!')
     name    = group.delete_prefix('!').strip
     return scope if name.blank?
-    return by_category(scope, name, negated) if source_type == 'canned_response' && category?(account, name)
+    return by_kind(scope, kind_named(name), negated) if source_type == 'canned_response' && kind_named(name)
 
     pattern = "#{ActiveRecord::Base.sanitize_sql_like(name)}%"
 
@@ -50,18 +50,20 @@ module KnowledgeBase::CannedGroup
     negated ? scope.where('title IS NULL OR title NOT ILIKE ?', pattern) : scope.where('title ILIKE ?', pattern)
   end
 
-  # respuestas_predefinidas R4: ¿el grupo es el nombre de una categoría de la cuenta?
-  def category?(account, name)
-    CannedResponseCategory.where(account_id: account.id).exists?(['lower(name) = lower(?)', name.to_s.strip])
+  # proyecto@predefinidas_que_contestan: la categoría es fija. «General», «Ficha» u «Objeción»
+  # (con o sin acento, en plural) filtran por ella; cualquier otro grupo es el principio del
+  # nombre, como siempre. Las categorías que inventaba cada cuenta ya no existen.
+  KIND_NAMES = { 'general' => 'general', 'generales' => 'general', 'ficha' => 'ficha', 'fichas' => 'ficha',
+                 'objecion' => 'objecion', 'objeciones' => 'objecion' }.freeze
+
+  def kind_named(name)
+    KIND_NAMES[KnowledgeBase::Selection.key(name)]
   end
 
-  # Por la categoría guardada en el vector (metadata.category, sin re-vectorizar: D2).
-  # Negada: también las que no tienen categoría.
-  def by_category(scope, name, negated)
-    igual = "lower(knowledge_items.metadata->>'category') = lower(?)"
-    return scope.where(igual, name) unless negated
-
-    scope.where("knowledge_items.metadata->>'category' IS NULL OR NOT (#{igual})", name)
+  # Sin tipo en el vector cuenta como general (el de omisión).
+  def by_kind(scope, kind, negated)
+    tipo = "COALESCE(knowledge_items.metadata->>'kind', 'general')"
+    negated ? scope.where("#{tipo} <> ?", kind) : scope.where("#{tipo} = ?", kind)
   end
 
   # Solo el grupo positivo sube el listón. El negado (!GESTION) sigue siendo el corpus

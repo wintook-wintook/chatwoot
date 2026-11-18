@@ -18,14 +18,17 @@ class KnowledgeBaseResponseService
   DEFAULTS = {
     'similarity_threshold' => 0.20,
     'max_results' => 3,
-    'max_context_chars' => 6000
+    # proyecto@predefinidas_que_contestan: 3 items x MAX_ITEM_CHARS.
+    'max_context_chars' => 10_500
   }.freeze
 
   # Configuración para modo Discourse
   MAX_RESULTS    = 3
   MAX_HISTORY    = 6
-  # Por item recuperado. 3 items x 2000 = el tope de max_context_chars (6000).
-  MAX_ITEM_CHARS = 2000
+  # Por item recuperado. proyecto@predefinidas_que_contestan: es lo mismo que se deja guardar
+  # en una respuesta predefinida (CannedResponse::MAX_AGENT_CHARS): lo que se guarda, el
+  # agente lo recibe completo. Antes 2000; las que ya pasan siguen con SectionFit.
+  MAX_ITEM_CHARS = 3500
   # Umbral para @buscar_predefinidas(GRUPO). El general (0.20) es deliberadamente
   # permisivo: sobre el corpus completo, traer algo flojo es mejor que no traer nada.
   # En un grupo pasa lo contrario. Un grupo es un corpus estrecho y hecho a proposito
@@ -57,12 +60,12 @@ class KnowledgeBaseResponseService
     name    = group.delete_prefix('!').strip
     return scope if name.blank?
 
-    # respuestas_predefinidas R4: si hay una CATEGORÍA con ese nombre, el grupo es la
-    # categoría (metadata.category del vector); si no, el prefijo del nombre, como siempre.
-    # Misma regla en KnowledgeBase::CannedGroup (amarradas por canned_group_spec).
-    if source_type == 'canned_response' && KnowledgeBase::CannedGroup.category?(account, name)
-      Rails.logger.info "[KBase] \u{1F5C2}\uFE0F Categoría #{negated ? 'excluida' : 'exigida'}: #{name}"
-      return KnowledgeBase::CannedGroup.by_category(scope, name, negated)
+    # proyecto@predefinidas_que_contestan: «General», «Ficha» u «Objeción» es la categoría
+    # fija; cualquier otro grupo, el principio del nombre. Misma regla en
+    # KnowledgeBase::CannedGroup (amarradas por canned_group_spec).
+    if source_type == 'canned_response' && (kind = KnowledgeBase::CannedGroup.kind_named(name))
+      Rails.logger.info "[KBase] \u{1F5C2}\uFE0F Tipo #{negated ? 'excluido' : 'exigido'}: #{kind}"
+      return KnowledgeBase::CannedGroup.by_kind(scope, kind, negated)
     end
 
     pattern = "#{ActiveRecord::Base.sanitize_sql_like(name)}%"
@@ -496,13 +499,17 @@ class KnowledgeBaseResponseService
   end
 
   def perform_pgvector(question, source_type, group = nil)
-    items = search_items(grouped_items(source_type, group), threshold: group_threshold(group))
+    scope = grouped_items(source_type, group)
+    # proyecto@predefinidas_que_contestan: buscar y escoger (nil = apagada o falló la IA →
+    # la búsqueda de siempre).
+    items = select_items(scope, question) if selecting?(source_type)
+    items ||= search_items(scope, threshold: group_threshold(group))
     return false if items.nil?
 
     # proyecto@predefinidas_prompt — un guion en curso sigue aunque este mensaje no
     # encuentre nada: "el martes a las 10" no se parece a ninguna respuesta predefinida.
     prompt = canned_prompt_for(source_type, items)
-    if items.empty? && prompt.nil?
+    if items.empty? && prompt.nil? && !selection_none?
       Rails.logger.info "[KBase] ⚠️ Sin resultados en #{source_type}"
       return false
     end
@@ -511,6 +518,9 @@ class KnowledgeBaseResponseService
 
     reply_text = (canned_prompt_reply(question, prompt) if prompt)
     reply_text ||= generate_contextual_reply(question, pgvector_context(items, question)) if items.any?
+    # La IA no escogió ninguna: el agente lo dice (o contesta con lo que su Entrenamiento da
+    # por cierto) en vez de que el turno pase al conversacional sin saber que no había dato.
+    reply_text ||= generate_contextual_reply(question, selection_none_context) if selection_none?
     return false if reply_text.blank?
 
     source_tag = @account.knowledge_sources.find_by(source_type: source_type)&.name ||
@@ -520,7 +530,115 @@ class KnowledgeBaseResponseService
   end
 
   def pgvector_context(items, question)
-    items_context(items, question).truncate(kbase_setting('max_context_chars'))
+    context = items_context(items, question).truncate(kbase_setting('max_context_chars'))
+    @selection ? "#{KnowledgeBase::Selection::RULES}\n\n#{context}" : context
+  end
+
+  # ==============================================================================
+  # proyecto@predefinidas_que_contestan — BUSCAR Y ESCOGER (ver KnowledgeBase::Selection)
+  # ==============================================================================
+
+  # Solo respuestas predefinidas, y solo en las cuentas que la tienen prendida.
+  def selecting?(source_type)
+    source_type == 'canned_response' && KnowledgeBase::Selection.enabled?(@account)
+  end
+
+  # Las escogidas, en el orden en que la IA las puso (la principal primero: es la que manda
+  # si trae prompt, ver canned_prompt_for). nil si la IA no contestó.
+  def select_items(scope, question)
+    subjects = topic_subjects
+    candidates = KnowledgeBase::Candidates.new(scope, queries: @search_texts, question: question, subjects: subjects,
+                                                      embed: method(:generate_embedding_openai)).call
+    selector = KnowledgeBase::Selector.new(@account, api_key: openai_api_key)
+    result = selector.call(question: question, candidates: candidates, conversation: recent_context_for_branch,
+                           subjects: subjects)
+    if result.nil?
+      Rails.logger.warn '[KBase] ⚠️ La selección falló → búsqueda de siempre'
+      return nil
+    end
+
+    @selection = result.merge(subjects: subjects, candidates: candidates)
+    trace_selection(selector.last_usage)
+    result[:chosen].map(&:item)
+  end
+
+  def selection_none?
+    @selection.present? && @selection[:none]
+  end
+
+  # Lo que recibe el modelo cuando no se escogió ninguna: qué falta y lo más cercano que sí
+  # existe (solo si se parece de verdad), para ofrecerlo.
+  NEARBY_SIMILARITY = 0.45
+
+  def selection_none_context
+    cercanas = @selection[:candidates].select { |c| c.similarity.to_f >= NEARBY_SIMILARITY }
+                                      .sort_by { |c| -c.similarity.to_f }.map { |c| c.item.title.to_s }
+    KnowledgeBase::Selection.none_context(@selection[:missing], cercanas)
+  end
+
+  # Los valores de las variables de texto libre (el sujeto en curso: PRODUCTO, SUCURSAL,
+  # CARRERA…). Como topic_values, pero también los que la pregunta ya nombra: aquí sirven
+  # para reconocer las fichas de ese sujeto, no para enriquecer la búsqueda.
+  def topic_subjects
+    return [] if @tracking.nil? || @conversation.nil?
+
+    definition = ContactTrackings::ConversationVariables.definition_for(@tracking)
+    return [] if definition.blank?
+
+    ContactTrackings::ConversationVariables.current(@tracking, @conversation, definition).filter_map do |nombre, valor|
+      var = definition.variable(nombre)
+      next unless var&.dig(:free) && valor.present?
+      next if var[:options].any? { |o| ContactTrackings::ConversationVariables.key(o) == ContactTrackings::ConversationVariables.key(valor) }
+
+      valor
+    end
+  rescue StandardError => e
+    Rails.logger.warn "[KBase] ⚠️ Sujeto en curso: #{e.message}"
+    []
+  end
+
+  # Para el probador (AgentTester::Trace): cuántas candidatas, cuáles se escogieron y por qué.
+  def trace_selection(usage)
+    chosen = @selection[:chosen]
+    ContactTrackings::EngineTrace.record('fragmentos', chosen.map do |c|
+      { 'titulo' => c.item.title.to_s.truncate(120), 'similitud' => c.similarity }.compact
+    end)
+    ContactTrackings::EngineTrace.record('seleccion', {
+      'candidatas' => @selection[:candidates].size,
+      'sujeto' => @selection[:subjects].presence,
+      'escogidas' => chosen.map do |c|
+        { 'titulo' => c.item.title.to_s.truncate(120), 'tipo' => KnowledgeBase::Selection.item_kind(c.item),
+          'por' => c.via, 'por_que' => @selection[:reasons][c.item.id] }.compact
+      end,
+      'ninguna' => @selection[:none],
+      'falta' => @selection[:missing].presence,
+      'tokens' => usage&.values_at('prompt_tokens', 'completion_tokens')&.compact&.sum
+    }.compact)
+    Rails.logger.info "[KBase] 🎯 Selección: #{chosen.size} de #{@selection[:candidates].size} candidatas" \
+                      "#{" (ninguna: #{@selection[:missing]})" if @selection[:none]}"
+  end
+
+  # Ver KnowledgeBase::DataGuard. Una vez se le pide la respuesta sin los datos que no vio;
+  # si siguen, se quitan las oraciones que los traen.
+  DATA_RETRY = 'REVISIÓN: tu respuesta trae estos datos que NO aparecen en la información que tienes ni en tus ' \
+               'instrucciones: %<values>s. Reescribe la respuesta completa sin ellos. Si el cliente los necesita, ' \
+               'dilo como piden tus instrucciones para cuando no tienes el dato. Solo la respuesta, sin explicar.'
+
+  def guard_data(reply, messages)
+    seen = messages.pluck(:content).join("\n")
+    invented = KnowledgeBase::DataGuard.invented(reply, seen)
+    return reply if invented.empty?
+
+    Rails.logger.warn "[KBase] 🔢 Datos que no están en las fuentes: #{invented.join(', ')} → se pide de nuevo"
+    retry_messages = messages + [{ role: 'assistant', content: reply },
+                                 { role: 'user', content: format(DATA_RETRY, values: invented.join(', ')) }]
+    second = call_openai_simple(retry_messages, max_tokens: 800)&.strip
+    second = guard_links(strip_echoed_sources(second), messages) if second.present?
+    final = second.presence || reply
+    still = KnowledgeBase::DataGuard.invented(final, seen)
+    final = KnowledgeBase::DataGuard.strip(final, still) if still.any?
+    ContactTrackings::EngineTrace.record('datos_quitados', { 'inventados' => invented.first(5), 'quedaron' => still.first(5) })
+    final.presence
   end
 
   # SectionFit y no truncate: un item largo conserva las secciones que tienen que ver con
@@ -531,7 +649,9 @@ class KnowledgeBaseResponseService
   def items_context(items, question)
     items.map.with_index(1) do |i, n|
       contenido = staged_offers(i.content, i.title)
-      "#{n}. #{i.title}\n#{KnowledgeBase::SectionFit.call(contenido, question, MAX_ITEM_CHARS, title: i.title)}"
+      # proyecto@predefinidas_que_contestan: con la selección, cada una con su marca.
+      marca = @selection ? "[#{KnowledgeBase::Selection.label(i, @selection[:subjects])}] " : ''
+      "#{n}. #{marca}#{i.title}\n#{KnowledgeBase::SectionFit.call(contenido, question, MAX_ITEM_CHARS, title: i.title)}"
     end.join("\n\n")
   end
 
@@ -835,6 +955,7 @@ class KnowledgeBaseResponseService
 
     reply = strip_echoed_sources(reply)
     reply = guard_links(reply, messages)
+    reply = guard_data(reply, messages) if @selection && reply.present?
     return nil if reply.blank?
 
     # Se revisa ANTES de guardar el historial: una respuesta que copió las instrucciones

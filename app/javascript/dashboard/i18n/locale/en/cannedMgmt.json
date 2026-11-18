@@ -234,13 +234,17 @@
         "LABEL": "Characters the agent receives",
         "OK": "Fits: the agent receives all of it (name included).",
         "NEAR": "Close to the limit.",
-        "OVER": "Over the limit: the agent will see the name and only the sections most similar to the question.",
+        "OVER": "Over the limit: it can't be saved. Split it into several responses, one per topic.",
         "SHOW_BLOCKS": "Show the {count} blocks",
-        "HIDE_BLOCKS": "Hide blocks"
+        "HIDE_BLOCKS": "Hide blocks",
+        "PROMPT_LABEL": "Prompt characters",
+        "PROMPT_OK": "The prompt fits.",
+        "PROMPT_NEAR": "Prompt close to the limit.",
+        "PROMPT_OVER": "The prompt is over the limit: it can't be saved. Keep only how to answer here; data goes in the message."
       },
       "TABLE": {
         "COL_CHARS": "Characters",
-        "COL_CHARS_HELP": "What the agent receives: name + content. Limit: 2,000",
+        "COL_CHARS_HELP": "What the agent receives: name + content. Limit: 3,500",
         "FILTER_SIZE": "Size",
         "ALL_SIZES": "Any size",
         "SIZE_OVER": "Over the limit",
@@ -407,6 +411,15 @@
         "DONE": "Applied: {ok}. With errors: {failed}.",
         "UNCHANGED": "No changes"
       }
+    },
+    "KIND": {
+      "LABEL": "Category",
+      "GENERAL": "General",
+      "FICHA": "Profile",
+      "OBJECION": "Objection",
+      "GENERAL_HELP": "General: the same for everyone (opening hours, company details, how to order, payment methods).",
+      "FICHA_HELP": "Profile: about a single subject (a product, service, plan, branch or program). Name the subject in the title; the agent never uses it for another subject.",
+      "OBJECION_HELP": "Objection: how to answer a customer's pushback (\"it's expensive\", \"let me think\"). The agent only uses it when the customer objects."
     }
   }
 }

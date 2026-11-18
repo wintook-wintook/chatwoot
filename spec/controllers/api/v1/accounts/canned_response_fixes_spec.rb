@@ -6,10 +6,9 @@ require 'rails_helper'
 RSpec.describe 'Canned Response Fixes API', type: :request do
   let(:account) { create(:account) }
   let(:agent) { create(:user, account: account, role: :agent) }
-  let(:categoria) { CannedResponseCategory.create!(account: account, name: 'Productos') }
   let(:contenido) { "Producto X\n\nCuesta $1,500.\n\n#{'Detalle. ' * 200}" }
   let!(:original) do
-    create(:canned_response, account: account, short_code: 'Producto X', content: contenido, category: categoria,
+    create(:canned_response, account: account, short_code: 'Producto X', content: contenido, kind: 'ficha',
                              content_prompts: 'Sé breve', opcion: 3)
   end
   let(:partes) do
@@ -46,7 +45,7 @@ RSpec.describe 'Canned Response Fixes API', type: :request do
     expect(response).to have_http_status(:ok)
     nuevas = account.canned_responses.order(:id)
     expect(nuevas.pluck(:short_code)).to eq(['Producto X — Precio', 'Producto X — Detalle'])
-    expect(nuevas.map { |r| [r.category_id, r.content_prompts, r.opcion] }.uniq).to eq([[categoria.id, 'Sé breve', 0]])
+    expect(nuevas.map { |r| [r.kind, r.content_prompts, r.opcion] }.uniq).to eq([['ficha', 'Sé breve', 0]])
     expect(fix.reload.status).to eq('applied')
     expect(fix.result['deleted_ids']).to eq([original.id])
     expect(fix.snapshot.pluck('short_code')).to eq(['Producto X'])
@@ -66,7 +65,7 @@ RSpec.describe 'Canned Response Fixes API', type: :request do
   end
 
   it 'no aplica una parte que pasa del tope, ni con force' do
-    grande = [{ 'short_code' => 'Producto X', 'content' => "Producto X cuesta $1,500. #{'Detalle. ' * 260}" }]
+    grande = [{ 'short_code' => 'Producto X', 'content' => "Producto X cuesta $1,500. #{'Detalle. ' * 450}" }]
 
     post "/api/v1/accounts/#{account.id}/canned_response_fixes/#{fix.id}/apply", params: { parts: grande, force: true },
                                                                                  headers: headers, as: :json

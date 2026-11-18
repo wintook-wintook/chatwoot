@@ -37,7 +37,7 @@ class CannedResponses::Fix::Applier
 
   class Stale < StandardError; end
 
-  SNAPSHOT_FIELDS = %w[id short_code content content_prompts content_is_prompt category_id menu opcion content_full
+  SNAPSHOT_FIELDS = %w[id short_code content content_prompts content_is_prompt kind menu opcion content_full
                        url_content url_short_code created_at].freeze
 
   def initialize(fix)
@@ -51,9 +51,7 @@ class CannedResponses::Fix::Applier
     raise Blocked, @fix.checks.merge('blocking' => ['not_advised']) if @fix.proposal['not_advised']
 
     parts = normalize(parts)
-    revision = @context.checks.call(parts, [], embeddings: false)
-    bloquean = revision['blocking'] - (force ? CannedResponses::Fix::Checks::FORCEABLE : [])
-    raise Blocked, revision if bloquean.any? || parts.empty?
+    revision = review!(parts, force)
 
     CannedResponse.transaction do
       foto = @context.sources.map { |r| r.attributes.slice(*SNAPSHOT_FIELDS) }
@@ -65,6 +63,15 @@ class CannedResponses::Fix::Applier
   end
 
   private
+
+  # Los candados sin vectores; los que bloquean (y no se pueden saltar con force) detienen.
+  def review!(parts, force)
+    revision = @context.checks.call(parts, [], embeddings: false)
+    bloquean = revision['blocking'] - (force ? CannedResponses::Fix::Checks::FORCEABLE : [])
+    raise Blocked, revision if bloquean.any? || parts.empty?
+
+    revision
+  end
 
   # separate / resolve: el nombre es el de cada original, aunque llegue otro.
   def normalize(parts)
@@ -123,7 +130,7 @@ class CannedResponses::Fix::Applier
   end
 
   def inherited_attrs(original)
-    { category_id: original.category_id, content_prompts: original.content_prompts,
+    { kind: original.kind, content_prompts: original.content_prompts,
       content_is_prompt: original.content_is_prompt }
   end
 

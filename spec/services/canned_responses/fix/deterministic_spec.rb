@@ -81,8 +81,7 @@ RSpec.describe 'Arreglar predefinidas sin IA' do # rubocop:disable RSpec/Describ
     let(:account) { create(:account) }
 
     before do
-      CannedResponseCategory.create!(account: account, name: 'Ventas')
-      directivas = 'Usa @buscar_predefinidas(SOPORTE) y @buscar_predefinidas(Ventas) y @buscar_predefinidas(!INTERNO)'
+      directivas = 'Usa @buscar_predefinidas(SOPORTE) y @buscar_predefinidas(Fichas) y @buscar_predefinidas(!INTERNO)'
       create(:tracking_template, account: account, complementary_prompt: directivas)
     end
 
@@ -90,7 +89,7 @@ RSpec.describe 'Arreglar predefinidas sin IA' do # rubocop:disable RSpec/Describ
       grupos = described_class.new(account)
 
       expect(grupos.required_prefixes('SOPORTE Alta de empresa')).to eq(['SOPORTE'])
-      expect(grupos.required_prefixes('Ventas de licencias')).to eq([])
+      expect(grupos.required_prefixes('Fichas de licencias')).to eq([])
       expect(grupos.required_prefixes('INTERNO notas')).to eq([])
     end
   end
