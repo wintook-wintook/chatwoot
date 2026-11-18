@@ -29,9 +29,10 @@
 class ContactTrackings::BulkAssignPreviewService
   include ContactTrackings::Eligibility
 
-  # Tope de seguridad de contactos a clasificar/listar (la audiencia puede ser
-  # mayor, pero el bulk real se limita a MAX_BULK_ASSIGN). Ver Preview-buckets-modal §6.
-  PREVIEW_LIMIT = 200
+  # Tope de contactos a clasificar/listar. Igual al tope de lanzamiento
+  # (BulkAssignService::MAX_BULK_ASSIGN) para que toda campaña que se puede lanzar
+  # tenga su desglose. Arriba de eso solo se devuelve el total (counts_only).
+  PREVIEW_LIMIT = ContactTrackings::BulkAssignService::MAX_BULK_ASSIGN
 
   def initialize(account:, current_user:, filter_payload:, template_id:,
                  skip_active: true, excluded_contact_ids: [])

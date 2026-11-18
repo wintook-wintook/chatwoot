@@ -14,9 +14,13 @@
 <script>
 import Thumbnail from 'dashboard/components/widgets/Thumbnail.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import { sortRows, nextSort, sortArrow } from 'dashboard/helper/tableSort';
 
 const PAGE_SIZE = 15;
 const NATURAL_TABS = ['ready', 'in_tracking', 'unreachable'];
+// Tabs que muestran la columna Motivo
+const REASON_TABS = ['unreachable', 'in_tracking'];
+const DEFAULT_SORT = { key: 'name', direction: 'asc' };
 
 export default {
   components: { Thumbnail, TableFooter },
@@ -32,6 +36,7 @@ export default {
       activeTab: 'ready',
       currentPage: 1,
       pageSize: PAGE_SIZE,
+      sort: { ...DEFAULT_SORT }, // clic en columna: ↑/↓
     };
   },
   computed: {
@@ -75,9 +80,25 @@ export default {
       const i = this.tabs.findIndex(t => t.key === this.activeTab);
       return i === -1 ? 0 : i;
     },
+    showReason() {
+      return REASON_TABS.includes(this.activeTab);
+    },
+    // Contactos del tab activo, ordenados por la columna elegida (sin valor, al final).
     currentTabContacts() {
-      return this.contacts.filter(
+      const inTab = this.contacts.filter(
         c => this.effectiveBucket(c) === this.activeTab
+      );
+      const sortValues = {
+        name: c => c.name,
+        contact: c => this.contactValue(c),
+        reason: c => this.reasonFor(c),
+      };
+      return sortRows(inTab, sortValues[this.sort.key], this.sort.direction);
+    },
+    lastPage() {
+      return Math.max(
+        Math.ceil(this.currentTabContacts.length / this.pageSize),
+        1
       );
     },
     paginatedContacts() {
@@ -91,6 +112,11 @@ export default {
       this.activeTab = 'ready';
       this.currentPage = 1;
     },
+    // Al excluir el último contacto de la última página, no quedarse en una vacía
+    // (la lista se actualiza después del clic, cuando el padre cambia los excluidos).
+    lastPage(page) {
+      if (this.currentPage > page) this.currentPage = page;
+    },
   },
   methods: {
     onTabChange(index) {
@@ -98,6 +124,23 @@ export default {
       if (!tab) return;
       this.activeTab = tab.key;
       this.currentPage = 1;
+      // El tab nuevo no tiene columna Motivo: volver al orden por nombre.
+      if (this.sort.key === 'reason' && !this.showReason) {
+        this.sort = { ...DEFAULT_SORT };
+      }
+    },
+    sortBy(key) {
+      this.sort = nextSort(this.sort, key);
+      this.currentPage = 1;
+    },
+    headerClass(key) {
+      return this.sort.key === key
+        ? 'text-woot-600'
+        : 'text-slate-600 dark:text-slate-300';
+    },
+    columnHeader(key, labelKey) {
+      const label = this.$t(`BULK_TRACKING_ASSIGN.PREVIEW.${labelKey}`);
+      return `${label} ${sortArrow(this.sort, key)}`;
     },
     onPageChange(page) {
       this.currentPage = page;
@@ -107,11 +150,6 @@ export default {
     },
     toggleExclude(contactId) {
       this.$emit('toggleExclude', contactId);
-      const lastPage = Math.max(
-        Math.ceil(this.currentTabContacts.length / this.pageSize),
-        1
-      );
-      if (this.currentPage > lastPage) this.currentPage = lastPage;
     },
     reasonFor(contact) {
       if (this.activeTab === 'in_tracking') {
@@ -168,23 +206,28 @@ export default {
         <table class="min-w-full text-sm">
           <thead class="bg-slate-50 dark:bg-slate-800">
             <tr>
+              <!-- Clic: ordena ↑; otro clic: ↓ -->
               <th
-                class="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-300"
+                class="px-3 py-2 text-left font-semibold cursor-pointer select-none"
+                :class="headerClass('name')"
+                @click="sortBy('name')"
               >
-                {{ $t('BULK_TRACKING_ASSIGN.PREVIEW.COL_NAME') }}
+                {{ columnHeader('name', 'COL_NAME') }}
               </th>
               <th
-                class="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-300"
+                class="px-3 py-2 text-left font-semibold cursor-pointer select-none"
+                :class="headerClass('contact')"
+                @click="sortBy('contact')"
               >
-                {{ $t('BULK_TRACKING_ASSIGN.PREVIEW.COL_CONTACT') }}
+                {{ columnHeader('contact', 'COL_CONTACT') }}
               </th>
               <th
-                v-if="
-                  activeTab === 'unreachable' || activeTab === 'in_tracking'
-                "
-                class="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-300"
+                v-if="showReason"
+                class="px-3 py-2 text-left font-semibold cursor-pointer select-none"
+                :class="headerClass('reason')"
+                @click="sortBy('reason')"
               >
-                {{ $t('BULK_TRACKING_ASSIGN.PREVIEW.COL_REASON') }}
+                {{ columnHeader('reason', 'COL_REASON') }}
               </th>
               <th
                 class="px-3 py-2 text-right font-semibold text-slate-600 dark:text-slate-300 w-28"
@@ -216,9 +259,7 @@ export default {
                 {{ contactValue(contact) }}
               </td>
               <td
-                v-if="
-                  activeTab === 'unreachable' || activeTab === 'in_tracking'
-                "
+                v-if="showReason"
                 class="px-3 py-2 text-slate-500 dark:text-slate-400"
               >
                 {{ reasonFor(contact) }}

@@ -7,7 +7,7 @@
 #   Listado paginado y filtrable de seguimientos a nivel cuenta.
 #   Filtros: status, inbox_id, template_id, last_intent, outcome,
 #            date_from, date_to, q (objetivo / nombre de contacto), overdue.
-#   Paginación: page (1), per_page (25, máx 100). Orden: scheduled_for desc.
+#   Paginación: page (1), per_page (25, máx 100). Orden: scheduled_for desc, id desc.
 #   Cada fila trae conversation_display_id para navegar a la conversación.
 # ================================================================================
 class Api::V1::Accounts::ContactTrackings::ListController < Api::V1::Accounts::BaseController
@@ -18,7 +18,7 @@ class Api::V1::Accounts::ContactTrackings::ListController < Api::V1::Accounts::B
     scope = filtered_scope
     total = scope.count
     records = scope.includes(:contact, :conversation, :inbox, :tracking_template)
-                   .order(scheduled_for: :desc)
+                   .order(scheduled_for: :desc, id: :desc) # id desempata: OFFSET estable entre páginas
                    .offset((page - 1) * per_page)
                    .limit(per_page)
 
