@@ -62,15 +62,13 @@ class AgentTester::Trainer < Cases::Ai::BaseService
     @v2 = Motor2.on?(template)
   end
 
-  # input: messages: (la plática hasta la respuesta mala), reply:, feedback:, trace: (AgentTester::Trace.normalize),
-  #        variables: (las de la plática: el sujeto en curso), conversation_id:, message_id: (para la bitácora)
+  # input: messages: (la plática hasta la respuesta mala), reply:, feedback: («¿Qué debió responder?»),
+  #        note: («¿Qué estuvo mal?», opcional), review_note: (lo que pidió quien revisa con «Otro
+  #        diagnóstico»), trace: (AgentTester::Trace.normalize), variables: (el sujeto en curso),
+  #        conversation_id:, message_id: (para la bitácora), into: (el AgentTestLog «pending» que
+  #        dejó el 👎: la primera causa se escribe en él, las demás van aparte)
   def call(**input)
-    @variables = input[:variables].to_h
-    @messages = input[:messages]
-    @reply = input[:reply].to_s
-    @feedback = input[:feedback].to_s.strip
-    @trace = input[:trace].to_h
-    @where = input.slice(:conversation_id, :message_id)
+    read(input)
     data = diagnose
     return { messages: [{ kind: 'error', text: 'No pude revisar la respuesta en este momento.' }] } unless data.is_a?(Hash)
 
@@ -80,6 +78,18 @@ class AgentTester::Trainer < Cases::Ai::BaseService
   attr_reader :messages, :reply, :feedback, :trace
 
   private
+
+  def read(input)
+    @into = input[:into]
+    @note = input[:note].to_s.strip.presence
+    @review_note = input[:review_note].to_s.strip.presence
+    @variables = input[:variables].to_h
+    @messages = input[:messages]
+    @reply = input[:reply].to_s
+    @feedback = input[:feedback].to_s.strip
+    @trace = input[:trace].to_h
+    @where = input.slice(:conversation_id, :message_id)
+  end
 
   def model = Assistant::Settings.model_for(@account, :analysis)
 
@@ -148,16 +158,10 @@ class AgentTester::Trainer < Cases::Ai::BaseService
 
   def context
     { motor: @v2 ? '2.0' : '1.0', objetivo: @template.objective, prompt: prompt_text, herramientas: tools,
-      platica: @messages, respuesta_mala: @reply, lo_que_esperaba_el_usuario: @feedback,
+      platica: @messages, respuesta_mala: @reply, lo_que_esperaba_el_usuario: @feedback, que_estuvo_mal: @note,
+      nota_de_quien_revisa: @review_note,
       traza: @trace.except('seleccion'), seleccion: @trace['seleccion'], sujeto_en_curso: @variables.presence,
       datos_inventados: invented.presence, fragmentos: fragments, en_la_base_pero_no_llego: missed }.compact
-  end
-
-  # Lo que la respuesta trae y el agente no vio (KnowledgeBase::DataGuard).
-  def invented
-    @invented ||= KnowledgeBase::DataGuard.invented(@reply, AgentTester::Seen.new(@template).text(@messages, @trace))
-  rescue StandardError
-    []
   end
 
   # Cuánto de cada fragmento ve el entrenador: lo que tiene que ver con la pregunta y la queja.
@@ -232,11 +236,17 @@ class AgentTester::Trainer < Cases::Ai::BaseService
     result[:messages].each do |msg|
       next if msg[:kind] == 'error'
 
-      entry = AgentTestLog.create!(account: @account, tracking_template: @template, user: @user, engine: @v2 ? '2' : '1',
-                                   kind: msg[:kind], feedback: @feedback, reply: @reply, diagnosis: msg,
-                                   motor2_report_id: msg[:report_id], **@where)
-      msg[:log_id] = entry.id
+      msg[:log_id] = log_entry(msg).id
     end
     result
+  end
+
+  # La primera causa va en el 👎 «pending» que dejó quien probó; las demás, aparte.
+  def log_entry(msg)
+    attrs = { kind: msg[:kind], feedback: @feedback, reply: @reply, diagnosis: msg, motor2_report_id: msg[:report_id] }
+    return @into.tap { |l| l.update!(attrs) } if @into&.diagnosing?
+
+    AgentTestLog.create!(account: @account, tracking_template: @template, user: @into&.user || @user,
+                         engine: @v2 ? '2' : '1', note: @note, **attrs, **@where)
   end
 end

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 # Probador de agentes — lo que el entrenador comprueba él mismo en vez de creerle al modelo
-# (proyecto@predefinidas_que_contestan). Lo incluye AgentTester::Trainer, que da @trace,
-# #arrived_titles y #prompt_text.
+# (proyecto@predefinidas_que_contestan). Lo incluye AgentTester::Trainer, que da @trace, @reply,
+# @messages, @template, #arrived_titles y #prompt_text.
 module AgentTester::TrainerFacts
   # Títulos iguales aunque la traza los haya recortado.
   TITLE_KEY = 60
@@ -28,6 +28,13 @@ module AgentTester::TrainerFacts
 
     prompt = normalize(prompt_text.to_json)
     palabras.count { |w| prompt.include?(w) } >= (palabras.size * 0.7).ceil
+  end
+
+  # Lo que la respuesta trae y el agente no vio (KnowledgeBase::DataGuard).
+  def invented
+    @invented ||= KnowledgeBase::DataGuard.invented(@reply, AgentTester::Seen.new(@template).text(@messages, @trace))
+  rescue StandardError
+    []
   end
 
   def arrived?(title)

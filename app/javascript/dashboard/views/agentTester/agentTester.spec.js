@@ -4,6 +4,7 @@ import AgentTesterAPI from 'dashboard/api/agentTester';
 import AgentTestBatchesApi from 'dashboard/api/agentTestBatches';
 import TesterChat from './TesterChat.vue';
 import TesterBatches from './TesterBatches.vue';
+import TesterReview from './TesterReview.vue';
 
 vi.mock('dashboard/api/agentTester', () => ({
   default: {
@@ -14,6 +15,14 @@ vi.mock('dashboard/api/agentTester', () => ({
     fixKind: vi.fn(),
     fixStart: vi.fn(),
     fixSource: vi.fn(),
+    good: vi.fn(),
+    review: vi.fn(),
+    reviewConversation: vi.fn(),
+    dismiss: vi.fn(),
+    rediagnose: vi.fn(),
+    retestGroup: vi.fn(),
+    retest: vi.fn(),
+    apply: vi.fn(),
   },
 }));
 vi.mock('dashboard/api/agentTestBatches', () => ({
@@ -27,9 +36,9 @@ vi.mock('dashboard/api/agentTestBatches', () => ({
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
-const mountChat = () =>
+const mountChat = (props = {}) =>
   shallowMount(TesterChat, {
-    propsData: { agents: [{ id: 3, name: 'Becas', engine: '1' }] },
+    propsData: { agents: [{ id: 3, name: 'Becas', engine: '1' }], ...props },
     mocks: {
       $t: (k, a) => (a ? `${k} ${JSON.stringify(a)}` : k),
       $router: { resolve: () => ({ href: '#' }) },
@@ -76,11 +85,12 @@ describe('TesterChat', () => {
     expect(wrapper.vm.chat[1].lines).toEqual(['Ruta: saludo']);
   });
 
-  it('👎 manda la corrección y pinta lo que dice el entrenador', async () => {
+  it('👎 de quien entrena con «Ver diagnóstico al momento»: pinta lo que dice el entrenador', async () => {
     AgentTesterAPI.feedback.mockResolvedValue({
       data: { messages: [{ kind: 'engine', text: 'Es del motor' }] },
     });
-    const wrapper = mountChat();
+    const wrapper = mountChat({ canEdit: true });
+    wrapper.vm.diagnoseNow = true;
     wrapper.vm.session = { conversation_id: 9 };
     wrapper.vm.chat = [
       { role: 'user', content: 'Hola' },
@@ -92,7 +102,9 @@ describe('TesterChat', () => {
     expect(AgentTesterAPI.feedback).toHaveBeenCalledWith(
       9,
       51,
-      'Debió saludar'
+      'Debió saludar',
+      '',
+      true
     );
     expect(wrapper.vm.chat[2]).toMatchObject({
       role: 'trainer',
@@ -102,6 +114,92 @@ describe('TesterChat', () => {
 });
 
 // El webpack del proyecto no entiende `??` ni `?.` dentro de las plantillas.
+// Quien prueba solo dice qué debió responder; el diagnóstico queda para «Revisión».
+describe('TesterChat de quien prueba', () => {
+  it('👎 manda lo que debió responder y lo que estuvo mal; no enseña causas', async () => {
+    AgentTesterAPI.feedback.mockResolvedValue({ data: { queued: true } });
+    const wrapper = mountChat();
+    wrapper.vm.session = { conversation_id: 9 };
+    wrapper.vm.chat = [{ role: 'assistant', id: 51, content: 'Mal' }];
+    wrapper.vm.rate(0, 'down');
+    wrapper.vm.feedback = 'Debió saludar';
+    wrapper.vm.note = 'no saludó';
+    wrapper.vm.diagnoseNow = true;
+    await wrapper.vm.sendFeedback();
+    expect(AgentTesterAPI.feedback).toHaveBeenCalledWith(
+      9,
+      51,
+      'Debió saludar',
+      'no saludó',
+      false
+    );
+    expect(wrapper.vm.chat.map(m => m.role)).toEqual(['assistant', 'note']);
+    expect(wrapper.vm.chat[1].content).toBe('AGENT_TESTER.QUEUED');
+  });
+
+  it('👍 guarda la respuesta como prueba a cuidar', async () => {
+    AgentTesterAPI.good.mockResolvedValue({ data: { saved_in: 'Lote' } });
+    const wrapper = mountChat();
+    wrapper.vm.session = { conversation_id: 9 };
+    wrapper.vm.chat = [{ role: 'assistant', id: 51, content: 'Bien' }];
+    wrapper.vm.rate(0, 'up');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(AgentTesterAPI.good).toHaveBeenCalledWith(9, 51);
+  });
+});
+
+describe('TesterReview', () => {
+  const mountReview = () =>
+    shallowMount(TesterReview, {
+      propsData: { agents: [{ id: 3, name: 'Becas' }] },
+      mocks: {
+        $t: (k, a) => (a ? `${k} ${JSON.stringify(a)}` : k),
+        $router: { resolve: () => ({ href: '#' }) },
+      },
+      stubs: { WootButton: true },
+    });
+
+  it('carga lo pendiente, abre la plática y descarta o pide otro diagnóstico', async () => {
+    AgentTesterAPI.review.mockResolvedValue({
+      data: { conversations: [{ conversation_id: 9, open: 1, total: 1 }] },
+    });
+    AgentTesterAPI.reviewConversation.mockResolvedValue({
+      data: { messages: [{ id: 51, role: 'assistant', logs: [{ id: 4 }] }] },
+    });
+    AgentTesterAPI.dismiss.mockResolvedValue({ data: {} });
+    AgentTesterAPI.rediagnose.mockResolvedValue({ data: {} });
+    const wrapper = mountReview();
+    await Promise.resolve();
+    expect(AgentTesterAPI.review).toHaveBeenCalledWith({
+      status: 'open',
+      template_id: undefined,
+    });
+    await wrapper.vm.select({ conversation_id: 9 });
+    expect(wrapper.vm.detail.messages[0].logs[0].id).toBe(4);
+
+    wrapper.vm.notes = { 4: 'esa beca no existe' };
+    await wrapper.vm.dismiss({ id: 4 });
+    expect(AgentTesterAPI.dismiss).toHaveBeenCalledWith(
+      4,
+      'esa beca no existe'
+    );
+    await wrapper.vm.rediagnose({ id: 4 });
+    expect(AgentTesterAPI.rediagnose).toHaveBeenCalledWith(
+      4,
+      'esa beca no existe'
+    );
+  });
+
+  it('«probar de nuevo» los que apuntan a la misma respuesta, juntos', async () => {
+    AgentTesterAPI.review.mockResolvedValue({ data: { conversations: [] } });
+    AgentTesterAPI.retestGroup.mockResolvedValue({ data: {} });
+    const wrapper = mountReview();
+    await wrapper.vm.retestSame({ id: 4, same_canned: [6, 7] });
+    expect(AgentTesterAPI.retestGroup).toHaveBeenCalledWith([4, 6, 7]);
+  });
+});
+
 // proyecto@predefinidas_que_contestan
 describe('TesterChat con la búsqueda nueva', () => {
   it('empieza la plática con la búsqueda elegida', async () => {

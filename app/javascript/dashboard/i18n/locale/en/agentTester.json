@@ -4,6 +4,7 @@
     "SUBTITLE": "Test any agent (Engine 1.0 or 2.0) as if you were the customer. The real engine answers in a test channel: nothing goes to WhatsApp. With 👎 we tell you if the error is in the prompt, the content, the model or the engine.",
     "TABS": {
       "chat": "Test",
+      "review": "Review",
       "batches": "Test batches",
       "log": "Log"
     },
@@ -63,7 +64,8 @@
       "ORIGIN": {
         "correction": "· from a correction",
         "manual": "· manual",
-        "import": "· imported"
+        "import": "· imported",
+        "good": "· 👍 to keep"
       },
       "PROGRESS": "Running with {agent}: test {n} of {total}…",
       "RUN_FAILED": "The last run didn't finish: {reason}",
@@ -118,7 +120,8 @@
         "engine": "Engine",
         "question": "Question",
         "search": "Search",
-        "category": "Category"
+        "category": "Category",
+        "pending": "To review"
       },
       "WHERE": "Goes in: {where}",
       "SOURCE": "Source: {source} › {item}",
@@ -147,13 +150,15 @@
         "pending": "Open",
         "retesting": "Testing…",
         "passed": "Fixed",
-        "failing": "Still failing"
+        "failing": "Still failing",
+        "dismissed": "Not an error"
       },
       "WORSE": "⚠ {n} got worse (they passed last time)",
       "BETTER": "{n} got better",
       "WAS_OK": "passed before",
       "WAS_BAD": "failed before",
-      "KIND_CHANGE": "«{item}»: change its category to «{kind}» (in Canned Responses, or with the tester button)."
+      "KIND_CHANGE": "«{item}»: change its category to «{kind}» (in Canned Responses, or with the tester button).",
+      "FOR_REVIEW": "For review"
     },
     "AUTO_SAVED": "Saved in the Log (Corrections) with what to do, and as a test in «{batch}». If you leave, pick it up from there.",
     "OUTDATED": "This agent changed after the chat started: start a new chat to test the new version.",
@@ -162,6 +167,41 @@
     "ADD_AT_START": "Add at the start of the response",
     "OPEN_CANNED": "Open the response",
     "CHANGE_KIND": "Change to «{kind}»",
-    "SPLIT_IT": "Open it to split it with AI"
+    "SPLIT_IT": "Open it to split it with AI",
+    "SHOULD_ANSWER": "What should it have answered?",
+    "SHOULD_ANSWER_PH": "E.g.: «We have a 38% scholarship: it costs $1,990 per course.»",
+    "WHAT_WRONG_OPT": "What was wrong? (optional)",
+    "DIAGNOSE_NOW": "See the diagnosis now",
+    "SEND_REVIEW": "Send",
+    "QUEUED": "Thanks, it's queued for review.",
+    "GOOD_SAVED": "👍 Saved as a test to keep in «{batch}».",
+    "REVIEW": {
+      "HINT": "What testers marked with 👎: the whole chat, what it should have answered and the cause the trainer found. Fix it, test again or dismiss.",
+      "ALL_AGENTS": "All agents",
+      "OPEN": "To review",
+      "ALL": "All",
+      "EMPTY": "Nothing to review.",
+      "CHAT_TITLE": "{agent} · tested by {tester}",
+      "COUNT": "{open} to review of {total}",
+      "CUSTOMER": "Customer",
+      "AGENT": "Agent",
+      "SHOULD": "Should have answered: {text}",
+      "NOTE": "What was wrong: {text}",
+      "DIAGNOSING": "Finding the cause…",
+      "RETEST": "Fixed · test again",
+      "RETEST_SAME": "Test again the {n} with the same response",
+      "NOTE_PH": "Note for another diagnosis or why it's not an error",
+      "REDIAGNOSE": "Another diagnosis",
+      "DISMISS": "Not an error",
+      "DISMISSED_REASON": "Not an error: {text}",
+      "ERROR": "Couldn't do it.",
+      "STATUS": {
+        "pending": "Pending",
+        "retesting": "Testing…",
+        "passed": "Fixed",
+        "failing": "Still failing",
+        "dismissed": "Not an error"
+      }
+    }
   }
 }

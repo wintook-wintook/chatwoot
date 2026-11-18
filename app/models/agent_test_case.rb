@@ -30,8 +30,9 @@ class AgentTestCase < ApplicationRecord
   # Toda la plática del cliente (antes 8: se perdía de qué producto se hablaba y la corrida
   # contestaba con otro).
   MAX_MESSAGES = 20
-  # de un 👎 | guardada a mano desde el probador | pegada de una hoja o de la pila vieja del agente
-  ORIGINS = %w[correction manual import].freeze
+  # de un 👎 | guardada a mano desde el probador | pegada de una hoja o de la pila vieja del agente |
+  # un 👍 (respuesta que estaba bien, para ver si después se rompe)
+  ORIGINS = %w[correction manual import good].freeze
 
   belongs_to :account
   belongs_to :batch, class_name: 'AgentTestBatch', foreign_key: :agent_test_batch_id, inverse_of: :cases

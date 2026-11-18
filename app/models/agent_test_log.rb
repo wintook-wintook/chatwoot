@@ -36,9 +36,15 @@
 #  fk_rails_...  (user_id => users.id)
 #
 class AgentTestLog < ApplicationRecord
-  KINDS = %w[prompt content search category model engine question].freeze
-  # Seguimiento de cada 👎: pendiente → «Ya lo corregí» corre su prueba otra vez → quedó / sigue fallando.
-  STATUSES = %w[pending retesting passed failing].freeze
+  # 'pending': el 👎 ya quedó y su diagnóstico corre en segundo plano (AgentTester::DiagnoseJob).
+  KINDS = %w[pending prompt content search category model engine question].freeze
+  # Seguimiento de cada 👎: pendiente → «Ya lo corregí» corre su prueba otra vez → quedó / sigue fallando;
+  # o quien revisa dice «No es error» (dismissed, con dismissed_reason).
+  STATUSES = %w[pending retesting passed failing dismissed].freeze
+  # Lo que le falta a quien revisa (el contador de «Revisión»).
+  OPEN = %w[pending failing].freeze
+
+  scope :open_review, -> { where(status: OPEN) }
 
   belongs_to :account
   belongs_to :tracking_template, optional: true
@@ -48,6 +54,8 @@ class AgentTestLog < ApplicationRecord
   validates :kind, inclusion: { in: KINDS }
   validates :engine, inclusion: { in: %w[1 2] }
   validates :status, inclusion: { in: STATUSES }
+
+  def diagnosing? = kind == 'pending'
 
   # Al terminar la corrida de «Probar de nuevo»: quedó o sigue fallando, con lo que contestó.
   def self.finish_retests(run)
