@@ -219,16 +219,40 @@ class KnowledgeBaseResponseService
     enriched
   end
 
-  # Entrelaza en vez de concatenar: concatenadas, las MAX_RESULTS primeras salen todas de
-  # la primera consulta y la segunda no aporta nada. Alternando, ambas quedan representadas
-  # dentro del tope.
+  # Qué entra dentro del tope. Antes se entrelazaban las listas (1.º de cada consulta, luego
+  # 2.º…) para que todas quedaran representadas. 18/11/2026 (cuenta 1, conv 182): con la
+  # ficha de la carrera dividida en «Datos generales y costos» y «Plan de estudios… y
+  # titulación», «que precio tiene» trajo Apartar precio (0.425, de la pregunta sola), la
+  # parte de titulación (0.742) y Mensualidad (0.356): la parte de costos (0.721, 2.º lugar
+  # de las consultas con el tema) quedó fuera y el modelo inventó precio y beca.
+  #
+  # Ahora cada consulta tiene un lugar asegurado —su mejor resultado— solo si compite: a no
+  # más de REPRESENTATION_MARGIN del mejor del turno. El resto de los lugares se llena por
+  # parecido, venga de la consulta que venga. Se conserva lo que el entrelazado cuidaba (la
+  # pregunta sola gana cuando el tema heredado mete ruido, porque entonces su mejor resultado
+  # es alto) sin que un 0.425 le quite el lugar a un 0.721.
+  REPRESENTATION_MARGIN = 0.15
+
+  # Para los foros (Discourse), que no traen similitud: alternar sigue siendo la forma de
+  # que cada consulta quede representada.
   def interleave(lists)
     return [] if lists.empty?
 
     Array.new(lists.map(&:size).max.to_i) { |i| lists.pluck(i) }.flatten.compact
   end
 
-  # Recupera con TODAS las consultas del turno sobre el mismo scope, entrelaza y deduplica.
+  def pick_items(lists, max)
+    best = ->(item) { item.respond_to?(:neighbor_distance) && item.neighbor_distance ? 1 - item.neighbor_distance : 0.0 }
+    todos = lists.flatten
+    return [] if todos.empty?
+
+    tope = todos.map(&best).max
+    asegurados = lists.filter_map(&:first).select { |item| best.call(item) >= tope - REPRESENTATION_MARGIN }.uniq(&:id)
+    resto = todos.sort_by { |item| -best.call(item) }.uniq(&:id).reject { |item| asegurados.any? { |a| a.id == item.id } }
+    (asegurados + resto).first(max)
+  end
+
+  # Recupera con TODAS las consultas del turno sobre el mismo scope y elige (pick_items).
   # nil = ninguna consulta pudo embeberse (fallo de API); [] = se buscó y no hubo nada.
   def search_items(scope, threshold: nil)
     threshold ||= kbase_setting('similarity_threshold')
@@ -240,12 +264,12 @@ class KnowledgeBaseResponseService
     end
     return nil if lists.empty?
 
-    items = by_similarity(interleave(lists).uniq(&:id).first(kbase_setting('max_results')), lists)
+    items = by_similarity(pick_items(lists, kbase_setting('max_results').to_i), lists)
     ContactTrackings::EngineTrace.fragments(items) # proyecto@diagrama_agente_ia F0
     items
   end
 
-  # El entrelazado decide QUÉ entra (cada consulta queda representada); el orden en que se
+  # pick_items decide QUÉ entra; el orden en que se
   # le entregan al modelo es otro asunto: de la más parecida a la menos, con la mejor
   # similitud que tuvo cada item en cualquiera de las consultas. 11/11/2026 (cuenta 1128,
   # conv 205): CARRERA=Trabajo Social y «No me alcanza… ¿tiene un precio mejor?». La

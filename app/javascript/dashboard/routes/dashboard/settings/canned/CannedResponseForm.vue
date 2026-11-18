@@ -33,6 +33,8 @@ import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vu
 import WootSubmitButton from 'dashboard/components/buttons/FormSubmitButton.vue';
 // proyecto@respuestas_predefinidas R3: la categoría, junto al nombre.
 import CategoryAPI from 'dashboard/api/cannedResponseCategory';
+// proyecto@auditoria_predefinidas: cuánto de esta respuesta recibe el agente.
+import CharMeter from './audit/CharMeter.vue';
 
 // Lo que alguien escribió después de un "#", hasta un espacio o una puntuación.
 const WRITTEN_TAG_RE = /#[^\s#.,;:!?¿¡()"'«»]+/g;
@@ -43,7 +45,7 @@ const MESSAGE_TAB = 0;
 const PROMPT_TAB = 1;
 
 export default {
-  components: { WootMessageEditor, WootSubmitButton },
+  components: { WootMessageEditor, WootSubmitButton, CharMeter },
   props: {
     shortCode: { type: String, default: '' },
     content: { type: String, default: '' },
@@ -243,6 +245,9 @@ export default {
         {{ aviso }}
       </p>
     </div>
+
+    <!-- proyecto@auditoria_predefinidas: fuera de las pestañas, se ve en las dos. -->
+    <CharMeter :short-code="form.shortCode" :content="form.content" />
 
     <!-- Las opciones de la respuesta (menú, contenido completo, link) van afuera de las
          pestañas: no son del mensaje ni del prompt, son de la respuesta entera, y se

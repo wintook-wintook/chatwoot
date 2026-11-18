@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_17_180000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_17_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -450,6 +450,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_17_180000) do
     t.index ["scheduled_at"], name: "index_campaigns_on_scheduled_at"
   end
 
+  create_table "canned_response_audits", force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.string "status", default: "running", null: false
+    t.jsonb "stats", default: {}, null: false
+    t.string "error"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_canned_response_audits_on_account_id"
+  end
+
   create_table "canned_response_categories", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -458,6 +469,52 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_17_180000) do
     t.datetime "updated_at", null: false
     t.index "account_id, lower((name)::text)", name: "index_canned_categories_on_account_and_lower_name", unique: true
     t.index ["account_id"], name: "index_canned_response_categories_on_account_id"
+  end
+
+  create_table "canned_response_findings", force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.integer "canned_response_id", null: false
+    t.integer "other_canned_response_id"
+    t.string "kind", null: false
+    t.string "severity", default: "medium", null: false
+    t.string "status", default: "open", null: false
+    t.float "similarity"
+    t.jsonb "details", default: {}, null: false
+    t.string "digest", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "index_canned_response_findings_on_account_id_and_status"
+    t.index ["account_id"], name: "index_canned_response_findings_on_account_id"
+    t.index ["canned_response_id"], name: "index_canned_response_findings_on_canned_response_id"
+    t.index ["other_canned_response_id"], name: "index_canned_response_findings_on_other_canned_response_id"
+  end
+
+  create_table "canned_response_fixes", force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.integer "canned_response_id"
+    t.integer "user_id"
+    t.string "status", default: "running", null: false
+    t.string "source_digest"
+    t.jsonb "proposal", default: {}, null: false
+    t.jsonb "checks", default: {}, null: false
+    t.string "error"
+    t.jsonb "result", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "kind", default: "oversize", null: false
+    t.bigint "finding_id"
+    t.jsonb "source_ids", default: [], null: false
+    t.jsonb "source_digests", default: {}, null: false
+    t.jsonb "input", default: {}, null: false
+    t.jsonb "snapshot", default: [], null: false
+    t.string "batch"
+    t.datetime "undone_at"
+    t.index ["account_id", "status"], name: "index_canned_response_fixes_on_account_id_and_status"
+    t.index ["account_id"], name: "index_canned_response_fixes_on_account_id"
+    t.index ["batch"], name: "index_canned_response_fixes_on_batch"
+    t.index ["canned_response_id"], name: "index_canned_response_fixes_on_canned_response_id"
+    t.index ["finding_id"], name: "index_canned_response_fixes_on_finding_id"
+    t.index ["user_id"], name: "index_canned_response_fixes_on_user_id"
   end
 
   create_table "canned_responses", id: :serial, force: :cascade do |t|
@@ -2896,7 +2953,15 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_17_180000) do
   add_foreign_key "assistant_guide_gaps", "users", on_delete: :nullify
   add_foreign_key "assistant_threads", "accounts", on_delete: :cascade
   add_foreign_key "assistant_threads", "users", on_delete: :cascade
+  add_foreign_key "canned_response_audits", "accounts"
   add_foreign_key "canned_response_categories", "accounts", on_delete: :cascade
+  add_foreign_key "canned_response_findings", "accounts"
+  add_foreign_key "canned_response_findings", "canned_responses", column: "other_canned_response_id", on_delete: :cascade
+  add_foreign_key "canned_response_findings", "canned_responses", on_delete: :cascade
+  add_foreign_key "canned_response_fixes", "accounts"
+  add_foreign_key "canned_response_fixes", "canned_response_findings", column: "finding_id", on_delete: :nullify
+  add_foreign_key "canned_response_fixes", "canned_responses", on_delete: :nullify
+  add_foreign_key "canned_response_fixes", "users", on_delete: :nullify
   add_foreign_key "canned_responses", "canned_response_categories", column: "category_id", on_delete: :nullify
   add_foreign_key "case_ai_configs", "accounts"
   add_foreign_key "case_categories", "case_types"

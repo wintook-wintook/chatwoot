@@ -20,6 +20,14 @@
 #  account_id        :integer          not null
 #  category_id       :bigint
 #
+# Indexes
+#
+#  index_canned_responses_on_category_id  (category_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (category_id => canned_response_categories.id) ON DELETE => nullify
+#
 
 class CannedResponse < ApplicationRecord
   validates :content, presence: true
@@ -31,6 +39,23 @@ class CannedResponse < ApplicationRecord
   # proyecto@respuestas_predefinidas R3: una categoría o ninguna (D1).
   belongs_to :category, class_name: 'CannedResponseCategory', optional: true, inverse_of: :canned_responses
   validate :category_from_account
+  # proyecto@auditoria_predefinidas: lo que encontró la auditoría (las borra la FK al
+  # eliminar la predefinida, de los dos lados del par).
+  has_many :audit_findings, class_name: 'CannedResponseFinding', dependent: nil
+
+  # Lo que el agente recibe de una predefinida es «nombre: contenido» (el texto que se
+  # vectoriza, KnowledgeItemSyncJob#extract_content), hasta este tope por respuesta
+  # (KnowledgeBaseResponseService::MAX_ITEM_CHARS). Más largo, el modelo ve solo el
+  # nombre y las secciones que más se parecen a la pregunta (KnowledgeBase::SectionFit).
+  def self.agent_text(short_code, content) = "#{short_code}: #{content}"
+  def agent_text = self.class.agent_text(short_code, content)
+  def agent_chars = agent_text.size
+
+  # Lo que necesita el formulario para editarla (sin columnas pesadas como `embedding`,
+  # que algunas bases todavía tienen).
+  FORM_FIELDS = %w[id short_code content content_prompts content_is_prompt category_id menu opcion
+                   content_full url_content url_short_code].freeze
+  def form_json = as_json.slice(*FORM_FIELDS).merge('agent_chars' => agent_chars)
 
   # @knowledge_sources — sincroniza embeddings al crear/actualizar/eliminar
   # proyecto@predefinidas_prompt — solo se vectoriza lo que se busca (el nombre y el
@@ -94,7 +119,7 @@ class CannedResponse < ApplicationRecord
   # [Vectorizar] / [Reintentar] de la pantalla: una a la vez (D4).
   def queue_embedding!
     update_columns(embedding_status: 'pending', embedding_error: nil) # rubocop:disable Rails/SkipsModelValidations
-    sync_knowledge_embedding
+    sync_knowledge_embedding(audit: false)
   end
 
   private
@@ -112,14 +137,19 @@ class CannedResponse < ApplicationRecord
   end
 
   # @knowledge_sources
-  def sync_knowledge_embedding
+  # audit: proyecto@auditoria_predefinidas — al guardar desde el formulario (no al
+  # [Vectorizar], que no cambia el texto), lo que se había encontrado de esta predefinida
+  # ya no vale y, en cuanto tenga su vector nuevo, se revisa contra sus vecinas.
+  def sync_knowledge_embedding(audit: true)
     # Marca de «en camino» sin callbacks (update_columns): el job la cambia al terminar.
     update_columns(embedding_status: 'pending', embedding_error: nil) unless embedding_status == 'pending' # rubocop:disable Rails/SkipsModelValidations
+    CannedResponseFinding.involving(id).unresolved.delete_all if audit
     KnowledgeItemSyncJob.perform_later(
       action: 'upsert',
       source_type: 'canned_response',
       source_id: id,
-      account_id: account_id
+      account_id: account_id,
+      audit: audit
     )
   end
 

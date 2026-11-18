@@ -22,6 +22,29 @@ RSpec.describe KnowledgeBaseResponseService do
     Struct.new(:id, :title, :neighbor_distance).new(id, "item #{id}", distance)
   end
 
+  # 18/11/2026 (cuenta 1, conv 182): la parte de costos (0.721) quedaba fuera por un 0.425
+  # de la pregunta sola, y el modelo inventó precio y beca.
+  describe '#pick_items' do
+    def item(id, similitud) = Struct.new(:id, :title, :neighbor_distance).new(id, "item #{id}", 1 - similitud)
+
+    it 'una consulta floja no le quita el lugar a un resultado mucho más parecido' do
+      apartar = item(1, 0.425)
+      mensualidad = item(2, 0.356)
+      titulacion = item(3, 0.742)
+      costos = item(4, 0.721)
+      listas = [[apartar, mensualidad], [titulacion, costos], [titulacion, costos]]
+
+      expect(service.send(:pick_items, listas, 3).map(&:id)).to contain_exactly(1, 3, 4)
+    end
+
+    it 'una consulta que compite conserva su lugar aunque otra tenga varios mejores' do
+      domingo = item(1, 0.62)
+      ruido = [item(2, 0.70), item(3, 0.69), item(4, 0.68)]
+
+      expect(service.send(:pick_items, [[domingo], ruido], 3).map(&:id)).to contain_exactly(1, 2, 3)
+    end
+  end
+
   describe '#by_similarity' do
     it 'entrega primero el item más parecido de cualquiera de las consultas' do
       derecho = item(1, 0.52)

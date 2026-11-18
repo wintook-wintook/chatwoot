@@ -25,9 +25,12 @@ class KnowledgeItemSyncJob < ApplicationJob
     job.mark_failed(error.message.presence || 'temporary')
   end
 
-  def perform(action:, source_type:, source_id:, account_id:)
+  # audit: proyecto@auditoria_predefinidas — con el vector nuevo listo, revisar esta
+  # predefinida contra sus vecinas (solo al guardarla desde el formulario).
+  def perform(action:, source_type:, source_id:, account_id:, audit: false)
     @source_type = source_type
     @source_id = source_id
+    @audit = audit
     account = Account.find_by(id: account_id)
     return unless account
 
@@ -71,6 +74,7 @@ class KnowledgeItemSyncJob < ApplicationJob
 
     save_item(account, source, record, content, embedding)
     mark(embedding_status: 'ready', embedding_error: nil, embedded_at: Time.current)
+    CannedResponses::AuditOneJob.perform_later(record.id) if @audit && source_type == 'canned_response'
   rescue PermanentError => e
     mark(embedding_status: 'failed', embedding_error: e.message)
   end

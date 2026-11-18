@@ -107,10 +107,21 @@ class Api::V1::Accounts::CannedResponsesController < Api::V1::Accounts::BaseCont
     con_clave = Current.account.hooks.exists?(app_id: 'openai', status: 'enabled')
     con_vector = KnowledgeItem.where(account_id: Current.account.id, source_type: 'canned_response', source_id: registros.map(&:id))
                               .where.not(embedding: nil).distinct.pluck(:source_id).to_set
+    hallazgos = open_findings(registros)
     registros.map do |r|
       r.as_json.merge('embedding_state' => r.embedding_state(has_vector: con_vector.include?(r.id), has_key: con_clave),
-                      'category_name' => nombres[r.category_id])
+                      'category_name' => nombres[r.category_id],
+                      # proyecto@auditoria_predefinidas: lo que recibe el agente y lo pendiente de revisar.
+                      'agent_chars' => r.agent_chars, 'open_findings' => hallazgos[r.id] || 0)
     end
+  end
+
+  # { canned_response_id => hallazgos abiertos }, contando las dos del par.
+  def open_findings(registros)
+    ids = registros.map(&:id)
+    pares = Current.account.canned_response_findings.unresolved.involving(ids)
+                   .pluck(:canned_response_id, :other_canned_response_id)
+    pares.flatten.compact.select { |id| ids.include?(id) }.tally
   end
 
   def category_names(registros)

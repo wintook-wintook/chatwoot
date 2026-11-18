@@ -193,6 +193,26 @@ Rails.application.routes.draw do
             post :vectorize, on: :collection, action: :vectorize_many
             post :destroy_many, on: :collection
             post :assign_category, on: :collection
+            # proyecto@arreglar_predefinidas
+            get :fix, on: :member, to: 'canned_response_fixes#latest', as: :latest_fix
+            post :fix, on: :member, to: 'canned_response_fixes#create_oversize'
+          end
+          resources :canned_response_fixes, only: [:index, :show, :create] do
+            collection do
+              post :resolve_preview
+              post :bulk_writing
+            end
+            member do
+              post :check
+              post :apply
+              post :discard
+              post :undo
+            end
+          end
+          # proyecto@auditoria_predefinidas
+          resource :canned_response_audit, only: [:show, :create] do
+            patch 'findings/:finding_id', action: :update_finding, as: :finding
+            post 'findings/:finding_id/keep', action: :keep, as: :keep_finding
           end
           # Sinónimos nativos (esquema legacy wintook; reemplaza al servicio WINTOOK_BOT)
           resources :palabras_sinonimos, only: [:index, :create, :update, :destroy]
