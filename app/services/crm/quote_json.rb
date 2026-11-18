@@ -6,6 +6,7 @@ module Crm::QuoteJson
                      { items: :item_taxes }].freeze
   AMOUNTS = %i[subtotal discount_total extra_discount_value extra_discount_percent extra_discount_amount net_amount freight
                other_charges tax_total withholding_total total].freeze
+  TAX_AMOUNTS = %i[percent base_amount gross_base_amount amount gross_amount].freeze
   ITEM_AMOUNTS = %i[quantity unit_price discount_percent gross_amount discount_amount net_amount tax_amount
                     withholding_amount].freeze
 
@@ -41,7 +42,7 @@ module Crm::QuoteJson
     AMOUNTS.index_with { |name| quote[name].to_f }.merge(
       extra_discount_type: quote.extra_discount_type, exchange_rate: quote.exchange_rate.to_f,
       sat_payment_method: quote.sat_payment_method, items: item_tree(quote),
-      tax_summary: quote.tax_summary.map { |row| row.merge(row.slice(:percent, :base_amount, :amount).transform_values(&:to_f)) }
+      tax_summary: quote.tax_summary.map { |row| row.merge(row.slice(*TAX_AMOUNTS).transform_values(&:to_f)) }
     )
   end
 

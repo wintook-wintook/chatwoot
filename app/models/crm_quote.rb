@@ -102,6 +102,9 @@ class CrmQuote < ApplicationRecord
 
   has_many :items, -> { order(:position, :id) }, class_name: 'CrmQuoteItem', foreign_key: :quote_id, inverse_of: :quote,
                                                  dependent: :destroy, autosave: true
+  # Q3.1 — impuestos del documento (IMPUESTOS_DCDOCTOS_PDV), los escribe Crm::QuoteTotals.
+  has_many :taxes, -> { order(:position, :id) }, class_name: 'CrmQuoteTax', foreign_key: :quote_id, inverse_of: :quote,
+                                                 dependent: :delete_all, autosave: true
 
   # Mismas letras que ESTATUS de CRMZeus.
   enum status: { pending: 'N', won: 'E', lost: 'P', cancelled: 'C' }, _prefix: :status
@@ -193,11 +196,11 @@ class CrmQuote < ApplicationRecord
   end
 
   # Un renglón por impuesto con su base y su importe (IMPUESTOS_DCDOCTOS_PDV).
+  # Impuestos del documento para la pantalla (los guardados, o los recién calculados en `calculate`).
   def tax_summary
-    priced_items.flat_map(&:item_taxes).reject(&:marked_for_destruction?).group_by { |t| [t.tax_id, t.name, t.percent] }
-                .map do |(tax_id, name, percent), rows|
-      { tax_id: tax_id, name: name, percent: percent, tax_type: rows.first.tax_type,
-        base_amount: rows.sum(&:base_amount), amount: rows.sum(&:amount).round(2) }
+    taxes.reject(&:marked_for_destruction?).map do |row|
+      row.slice(:tax_id, :name, :tax_type, :percent, :base_amount, :gross_base_amount)
+         .merge(amount: row.amount.round(2), gross_amount: row.gross_amount.round(2)).symbolize_keys
     end
   end
 

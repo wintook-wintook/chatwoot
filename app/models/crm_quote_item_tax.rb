@@ -2,17 +2,19 @@
 #
 # Table name: crm_quote_item_taxes
 #
-#  id          :bigint           not null, primary key
-#  amount      :decimal(18, 6)   default(0.0), not null
-#  base_amount :decimal(15, 2)   default(0.0), not null
-#  name        :string(30)       not null
-#  percent     :decimal(9, 6)    default(0.0), not null
-#  tax_type    :integer          not null
-#  created_at  :datetime         not null
-#  updated_at  :datetime         not null
-#  account_id  :bigint           not null
-#  item_id     :bigint           not null
-#  tax_id      :bigint
+#  id                :bigint           not null, primary key
+#  amount            :decimal(18, 6)   default(0.0), not null
+#  base_amount       :decimal(15, 2)   default(0.0), not null
+#  gross_amount      :decimal(18, 6)   default(0.0), not null
+#  gross_base_amount :decimal(15, 2)   default(0.0), not null
+#  name              :string(30)       not null
+#  percent           :decimal(9, 6)    default(0.0), not null
+#  tax_type          :integer          not null
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  account_id        :bigint           not null
+#  item_id           :bigint           not null
+#  tax_id            :bigint
 #
 # Indexes
 #

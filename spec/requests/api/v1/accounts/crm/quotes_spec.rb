@@ -61,7 +61,8 @@ RSpec.describe 'CrmZeus Quotes API' do
     body = response.parsed_body['quote']
     expect(body).to include('net_amount' => 984.87, 'tax_total' => 157.58, 'total' => 1142.45)
     expect(body['items'].first).to include('net_amount' => 855.0, 'tax_ids' => [iva.id])
-    expect(body['tax_summary'].sole).to include('name' => 'IVA 16%', 'amount' => 157.58)
+    expect(body['tax_summary'].sole).to include('name' => 'IVA 16%', 'amount' => 157.58, 'base_amount' => 1004.97,
+                                                'gross_base_amount' => 1149.97)
     expect(account.crm_quotes.count).to eq(0)
   end
 

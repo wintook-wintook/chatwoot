@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_12_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_12_100100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1692,6 +1692,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_12_100000) do
     t.decimal "amount", precision: 18, scale: 6, default: "0.0", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "gross_base_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "gross_amount", precision: 18, scale: 6, default: "0.0", null: false
     t.index ["account_id"], name: "index_crm_quote_item_taxes_on_account_id"
     t.index ["item_id", "tax_id"], name: "index_crm_quote_item_taxes_on_item_id_and_tax_id", unique: true
     t.index ["item_id"], name: "index_crm_quote_item_taxes_on_item_id"
@@ -1739,6 +1741,26 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_12_100000) do
     t.index ["account_id", "user_id"], name: "index_crm_quote_series_on_account_id_and_user_id", unique: true
     t.index ["account_id"], name: "index_crm_quote_series_on_account_id"
     t.index ["user_id"], name: "index_crm_quote_series_on_user_id"
+  end
+
+  create_table "crm_quote_taxes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "quote_id", null: false
+    t.bigint "tax_id"
+    t.string "name", limit: 30, null: false
+    t.integer "tax_type", null: false
+    t.decimal "percent", precision: 9, scale: 6, default: "0.0", null: false
+    t.decimal "base_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "gross_base_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "amount", precision: 18, scale: 6, default: "0.0", null: false
+    t.decimal "gross_amount", precision: 18, scale: 6, default: "0.0", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_quote_taxes_on_account_id"
+    t.index ["quote_id", "tax_id"], name: "index_crm_quote_taxes_on_quote_id_and_tax_id", unique: true
+    t.index ["quote_id"], name: "index_crm_quote_taxes_on_quote_id"
+    t.index ["tax_id"], name: "index_crm_quote_taxes_on_tax_id"
   end
 
   create_table "crm_quotes", force: :cascade do |t|
@@ -3245,6 +3267,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_12_100000) do
   add_foreign_key "crm_quote_items", "crm_quotes", column: "quote_id", on_delete: :cascade
   add_foreign_key "crm_quote_series", "accounts"
   add_foreign_key "crm_quote_series", "users", on_delete: :cascade
+  add_foreign_key "crm_quote_taxes", "accounts"
+  add_foreign_key "crm_quote_taxes", "crm_quotes", column: "quote_id", on_delete: :cascade
+  add_foreign_key "crm_quote_taxes", "crm_taxes", column: "tax_id", on_delete: :nullify
   add_foreign_key "crm_quotes", "accounts"
   add_foreign_key "crm_quotes", "contacts", on_delete: :nullify
   add_foreign_key "crm_quotes", "crm_currencies", column: "currency_id", on_delete: :nullify

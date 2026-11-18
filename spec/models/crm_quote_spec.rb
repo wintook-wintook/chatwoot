@@ -80,6 +80,25 @@ RSpec.describe CrmQuote do
         .to eq([['IVA 16%', 1000, 160], ['Ret. IVA 10.67%', 1000, BigDecimal('106.7')]])
     end
 
+    it 'guarda los impuestos del documento (IMPUESTOS_DCDOCTOS_PDV) con netos y brutos, y quita los que ya no van' do
+      quote = build_quote(extra_discount_value: 10)
+      add_item(quote, quantity: 2, unit_price: 500, discount_percent: 20, tax_ids: [iva.id, ret_iva.id])
+      add_item(quote, unit_price: 100, tax_ids: [iva.id])
+      quote.save!
+
+      item_tax = quote.items.first.item_taxes.find_by!(tax: iva)
+      expect(item_tax).to have_attributes(base_amount: 800, gross_base_amount: 1000, amount: BigDecimal('115.2'),
+                                          gross_amount: 144)
+      expect(quote.taxes.reload.map { |t| [t.name, t.position, t.base_amount, t.gross_base_amount, t.amount, t.gross_amount] })
+        .to eq([['IVA 16%', 0, 900, 1100, BigDecimal('129.6'), BigDecimal('158.4')],
+                ['Ret. IVA 10.67%', 1, 800, 1000, BigDecimal('76.824'), BigDecimal('96.03')]])
+
+      quote.items.first.tax_ids = [iva.id]
+      quote.save!
+      expect(quote.taxes.reload.map(&:name)).to eq(['IVA 16%'])
+      expect(CrmQuoteTax.where(quote: quote).count).to eq(1)
+    end
+
     it 'con descuento extra por importe baja los impuestos en la misma proporción' do
       quote = build_quote(extra_discount_type: :amount, extra_discount_value: 100)
       add_item(quote, unit_price: 1000)
