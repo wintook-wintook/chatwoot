@@ -54,15 +54,36 @@ RSpec.describe Motor2::Functions::Prospects do
     expect(Motor2Version.where(tracking_template_id: agent.id).count).to eq(1)
   end
 
-  it 'el prompt trae el puesto, el negocio, las preguntas prendidas, las objeciones y los datos a juntar' do
-    save_agent(settings.merge('business_what' => 'Paneles solares', 'qualify' => [{ 'key' => 'budget', 'on' => true, 'text' => '' }],
+  def system_prompt(state = Motor2::State.new)
+    runner = Motor2::Runner.new(Motor2::Config.new(agent.reload), state: state, history: [])
+    Motor2::Prompt.new(runner, Motor2::Skills.for(runner)).system
+  end
+
+  it 'el prompt trae el puesto, el negocio, sus preguntas tal cual y en orden, las objeciones y los datos a juntar' do
+    save_agent(settings.merge('business_what' => 'Paneles solares', 'question_list' => ['¿Qué auto buscas?', '¿Es para tu familia?'],
                               'objections' => [{ 'objection' => 'Está caro', 'answer' => 'Se paga solo en 4 años' }],
                               'required_contact' => %w[email]), template: agent)
-    runner = Motor2::Runner.new(Motor2::Config.new(agent.reload), state: Motor2::State.new, history: [])
-    system = Motor2::Prompt.new(runner, Motor2::Skills.for(runner)).system
 
-    expect(system).to include('ERES: el primer contacto', 'Qué vende: Paneles solares', 'Presupuesto', 'Qué necesita y para qué',
-                              '«Está caro» → Se paga solo', 'DATOS OBLIGATORIOS', 'su correo', 'TEMPERATURA')
+    expect(system_prompt).to include('ERES: el primer contacto', 'Qué vende: Paneles solares', 'TAL CUAL',
+                                     "1. «¿Qué auto buscas?»\n2. «¿Es para tu familia?»",
+                                     '«Está caro» → Se paga solo', 'DATOS OBLIGATORIOS', 'su correo', 'TEMPERATURA',
+                                     'TE FALTA PREGUNTAR (en orden; la siguiente es la 1): 1, 2')
+  end
+
+  it 'los agentes de antes: sus preguntas armadas prendidas y las propias pasan a la lista' do
+    save_agent(settings.merge('qualify' => [{ 'key' => 'need', 'on' => false }, { 'key' => 'budget', 'on' => true, 'text' => '' }]),
+               template: agent)
+    expect(system_prompt).to include("1. «¿Tienes un presupuesto aproximado?»\n2. «qué busca y su ciudad»")
+  end
+
+  it 'guarda cada respuesta con el número de la pregunta y lleva la cuenta de cuál sigue' do
+    save_agent(settings.merge('question_list' => ['¿Qué auto buscas?', '¿Para cuándo?', '¿Presupuesto?']), template: agent)
+    stub_model(tool_call('guardar_respuesta', { numero: 2, respuesta: 'mañana' }), tool_call('guardar_respuesta', { numero: 1, respuesta: 'sedán' }),
+               answer('¡Va! ¿Tienes un presupuesto?'))
+    reply_to(incoming('Un sedán, lo quiero para mañana'))
+
+    expect(tracking.motor2_state['answers']).to eq('¿Para cuándo?' => 'mañana', '¿Qué auto buscas?' => 'sedán')
+    expect(system_prompt(Motor2::State.new(tracking.motor2_state))).to include('TE FALTA PREGUNTAR (en orden; la siguiente es la 3): 3')
   end
 
   it 'el mensaje del cliente en su bandeja lo toma el motor 2.0 (sin automatización)' do

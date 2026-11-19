@@ -6,8 +6,10 @@
 #
 #   objective          handoff | opportunity | collect | appointment   (qué hace al calificarlo)
 #   tone               cercano | formal | directo
-#   qualify            [{ key, on, text }]   preguntas armadas que prendió (texto editado)
-#   questions          preguntas propias (texto libre)
+#   question_list      ['¿Qué auto buscas?', …]   las preguntas para calificarlo, en orden y tal cual se
+#                      hacen (una sola lista: vienen unas de ejemplo que se quitan o cambian)
+#   qualify / questions  (agentes de antes) preguntas armadas prendidas + preguntas propias en texto
+#                      libre; se usan solo si no hay question_list
 #   qualified_when / discard_when
 #   objections         [{ objection, answer }]
 #   required_contact   ['name', 'email', 'company', 'city']   datos a juntar antes de calificarlo
@@ -51,39 +53,15 @@ class Motor2::Functions::Prospects
   TEMPERATURES = %w[caliente tibio frio].freeze
   APPOINTMENT_KINDS = %w[llamada videollamada visita oficina].freeze
   MAX_OBJECTIONS = 15
+  MAX_QUESTIONS = 10
   TEXTS = %w[objective tone questions qualified_when discard_when appointment_kind appointment_location
              business_what business_who business_coverage business_why business_practical].freeze
   IDS = %w[handoff_user_id handoff_team_id client_user_id client_team_id case_type_id appointment_minutes].freeze
   BOOLEANS = %w[only_prospects business_use_catalog].freeze
   WEEKDAYS = %w[domingo lunes martes miércoles jueves viernes sábado].freeze
 
-  # Lo que manda el asistente, limpio: solo las llaves que conoce la función, con tope.
-  def self.sanitize(raw)
-    raw = Motor2::Sanitizer.plain(raw)
-    out = TEXTS.index_with { |k| raw[k].to_s.strip.first(1000) }
-    IDS.each { |k| out[k] = raw[k].to_s.strip.presence&.to_i }
-    BOOLEANS.each { |k| out[k] = raw.key?(k) ? ActiveModel::Type::Boolean.new.cast(raw[k]) || false : k == 'only_prospects' }
-    out.merge(lists(raw)).compact
-  end
-
-  def self.lists(raw)
-    { 'appointment_user_ids' => Array(raw['appointment_user_ids']).map(&:to_i).select(&:positive?).uniq,
-      'required_contact' => Array(raw['required_contact']).map(&:to_s) & CONTACT_FIELDS.keys,
-      'qualify' => Array(raw['qualify']).filter_map { |q| qualify_row(Motor2::Sanitizer.plain(q)) },
-      'objections' => Array(raw['objections']).filter_map { |o| objection_row(Motor2::Sanitizer.plain(o)) }.first(MAX_OBJECTIONS) }
-  end
-
-  def self.qualify_row(row)
-    return unless QUESTIONS.key?(row['key'])
-
-    { 'key' => row['key'], 'on' => ActiveModel::Type::Boolean.new.cast(row['on']) || false, 'text' => row['text'].to_s.strip.first(300) }
-  end
-
-  def self.objection_row(row)
-    objection = row['objection'].to_s.strip.first(300)
-    answer = row['answer'].to_s.strip.first(800)
-    { 'objection' => objection, 'answer' => answer } if objection.present? && answer.present?
-  end
+  # Lo que manda el asistente, limpio (Motor2::Functions::ProspectAnswers).
+  def self.sanitize(raw) = Motor2::Functions::ProspectAnswers.call(raw)
 
   attr_reader :config
 
@@ -133,15 +111,21 @@ class Motor2::Functions::Prospects
      objections_block, contact_block, appointment_block].map(&:to_s).map(&:strip).compact_blank.join("\n\n")
   end
 
-  # [{ key:, label:, ask: }] de las prendidas, en el orden del catálogo. Sin `qualify` guardado va
-  # la de «qué necesita» prendida, como viene en el asistente.
+  # [{ number:, ask: }] en orden: las de la lista del asistente, tal cual; en los agentes de antes,
+  # las armadas prendidas (sin `qualify` guardado, la de «qué necesita») y sus preguntas propias.
   def questions
+    list = Array(answer(:question_list)).compact_blank
+    list = legacy_questions if list.empty?
+    list.each_with_index.map { |ask, i| { number: i + 1, ask: ask } }
+  end
+
+  def legacy_questions
     saved = Array(answer(:qualify)).index_by { |q| q['key'].to_s }
     QUESTIONS.filter_map do |k, base|
       row = saved[k]
       on = row ? ActiveModel::Type::Boolean.new.cast(row['on']) : base[:on]
-      { key: k, label: base[:label], ask: row&.dig('text').presence || base[:ask] } if on
-    end
+      row&.dig('text').presence || base[:ask] if on
+    end + [answer(:questions).to_s.strip.presence].compact
   end
 
   def objections
@@ -210,12 +194,12 @@ class Motor2::Functions::Prospects
   end
 
   def questions_block
-    lines = questions.map { |q| "- #{q[:label]}: «#{q[:ask]}»" }
-    lines << "- Preguntas propias de la empresa: #{answer(:questions)}" if answer(:questions).present?
-    lines << '- Qué busca y para cuándo' if lines.empty?
+    lines = questions.map { |q| "#{q[:number]}. «#{q[:ask]}»" }
+    lines << '1. «¿Qué buscas y para cuándo?»' if lines.empty?
     <<~TEXT
-      PREGUNTAS PARA CALIFICARLO (en este orden, una por mensaje, con tus palabras y sin repetir lo que ya dijo).
-      Al guardar_respuesta usa como «pregunta» el nombre de antes de los dos puntos (p. ej. «Presupuesto»):
+      PREGUNTAS PARA CALIFICARLO: hazlas TAL CUAL están escritas (puedes ajustar solo el tú/usted), en este orden y una
+      por mensaje, entre tus respuestas. Si ya lo dijo en la plática, no la hagas: guarda su respuesta. Cada respuesta
+      guárdala con guardar_respuesta y el número de la pregunta en ese mismo turno:
       #{lines.join("\n")}
 
       TEMPERATURA: al calificarlo (o pasarlo a una persona) di qué tan listo está:

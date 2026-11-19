@@ -6,7 +6,11 @@
 # oportunidad). Viene del agente listo de antes (ReadyAgents::Runner#save_answer / #decide).
 #
 #   skills.qualify = { 'on' => true }   (lo prende la función «Atención a prospectos»)
-#   memoria: state['answers'] = { 'Presupuesto' => '20 mil' }, state['temperature'] = 'caliente'
+#   memoria: state['answers'] = { '¿Tienes un presupuesto?' => '20 mil' }, state['temperature'] = 'caliente'
+#
+# Las preguntas vienen numeradas de la función (Motor2::Functions::Prospects#questions): el modelo
+# guarda con el número y el código lleva la cuenta (cuáles ya contestó y cuál sigue), como en
+# «Datos del cliente». Así no se salta ni repite y cada respuesta queda en la nota.
 class Motor2::Skills::Qualify < Motor2::Skills::Base
   TEMPERATURES = %w[caliente tibio frio].freeze
   TEMPERATURE = { type: 'string', enum: TEMPERATURES, description: 'Qué tan listo está para comprar' }.freeze
@@ -16,16 +20,20 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
   def on? = config.skill_on?(key)
 
   def tools
-    [fn('guardar_respuesta', 'Guarda lo que el prospecto contestó a una de las preguntas para calificarlo.',
-        { pregunta: STR, respuesta: STR }, %w[pregunta respuesta]),
+    [fn('guardar_respuesta', 'Guarda lo que el prospecto contestó a una de las preguntas para calificarlo (en cuanto lo diga, ' \
+                             'aunque no se lo hayas preguntado).',
+        { numero: { type: 'integer', description: 'El número de la pregunta' }, respuesta: STR }, %w[numero respuesta]),
      fn('prospecto_calificado', 'El prospecto cumple lo de «calificado»: se pasa al siguiente paso. Después escribe solo ' \
                                 'la despedida con el siguiente paso.', { resumen: STR, temperatura: TEMPERATURE },
         %w[resumen temperatura])]
   end
 
   def memory
-    saved = answers
-    saved.any? ? "LO QUE YA CONTESTÓ: #{saved.map { |q, a| "#{q}: #{a}" }.join(' | ')}" : ''
+    lines = []
+    lines << "LO QUE YA CONTESTÓ: #{answers.map { |q, a| "#{q} → #{a}" }.join(' | ')}" if answers.any?
+    pending = questions.reject { |q| answers.key?(q[:ask]) }.pluck(:number)
+    lines << "TE FALTA PREGUNTAR (en orden; la siguiente es la #{pending.first}): #{pending.join(', ')}" if pending.any?
+    lines.join("\n")
   end
 
   def call(name, args)
@@ -41,11 +49,16 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
 
   def answers = (state['answers'] ||= {})
 
-  def save(args)
-    return { error: 'Falta la pregunta o la respuesta.' } if args['pregunta'].blank? || args['respuesta'].blank?
+  def questions = config.function.respond_to?(:questions) ? config.function.questions : []
 
-    answers[args['pregunta'].to_s.first(80)] = args['respuesta'].to_s.first(300)
-    trace.event(:respuesta, "#{args['pregunta']}: #{args['respuesta']}")
+  # Con el número de la pregunta (o, si no hay lista, el texto de la pregunta).
+  def save(args)
+    question = questions.find { |q| q[:number] == args['numero'].to_i }&.dig(:ask) || args['pregunta'].to_s.strip.presence
+    return { error: "No existe la pregunta #{args['numero']}." } if question.nil?
+    return { error: 'Falta la respuesta.' } if args['respuesta'].blank?
+
+    answers[question.first(300)] = args['respuesta'].to_s.first(300)
+    trace.event(:respuesta, "#{question}: #{args['respuesta']}")
     { ok: true }
   end
 

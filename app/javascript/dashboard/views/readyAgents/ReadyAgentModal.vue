@@ -14,7 +14,9 @@ import { useAlert } from 'dashboard/composables';
 import ReadyAgentsAPI from 'dashboard/api/readyAgents';
 
 const T = 'READY_AGENTS';
-// Preguntas armadas para calificar (el texto vacío = la pregunta de siempre, la del placeholder).
+// Las preguntas para calificar: una sola lista, en orden, que se hacen tal cual. Un agente nuevo
+// trae unas de ejemplo (se quitan o cambian). Los de antes traían armadas con casilla
+// (`qualify`) y preguntas propias en texto (`questions`): se pasan a la lista.
 const QUALIFY_KEYS = [
   'need',
   'when',
@@ -24,17 +26,9 @@ const QUALIFY_KEYS = [
   'quantity',
   'source',
 ];
+const EXAMPLE_KEYS = ['need', 'when', 'budget'];
+const MAX_QUESTIONS = 10;
 const CONTACT_FIELDS = ['name', 'email', 'company', 'city'];
-const defaultQualify = () =>
-  QUALIFY_KEYS.map(key => ({ key, on: key === 'need', text: '' }));
-// Lo guardado + las que falten (agentes de antes o preguntas nuevas), en el orden del catálogo.
-const mergeQualify = saved => {
-  if (!Array.isArray(saved) || !saved.length) return defaultQualify();
-  return defaultQualify().map(base => {
-    const row = saved.find(q => q.key === base.key);
-    return row ? { ...base, on: !!row.on, text: row.text || '' } : base;
-  });
-};
 const STEPS = [
   'agent',
   'business',
@@ -56,7 +50,8 @@ const blank = kind => ({
   inbox_ids: [],
   settings: {
     objective: 'handoff',
-    questions: '',
+    // [{ text }] en la pantalla; se manda como lista de textos (question_list).
+    question_list: [],
     qualified_when: '',
     discard_when: '',
     tone: 'cercano',
@@ -79,7 +74,6 @@ const blank = kind => ({
     business_why: '',
     business_practical: '',
     // Calificar, objeciones y datos antes de pasarlo
-    qualify: defaultQualify(),
     objections: [],
     required_contact: [],
   },
@@ -127,6 +121,9 @@ export default {
     contactFields() {
       return CONTACT_FIELDS;
     },
+    canAddQuestion() {
+      return this.form.settings.question_list.length < MAX_QUESTIONS;
+    },
     cannedSource() {
       return this.sources.find(s => s.key === 'canned_response');
     },
@@ -173,12 +170,18 @@ export default {
             settings: {
               ...base.settings,
               ...JSON.parse(JSON.stringify(this.agent.settings || {})),
-              qualify: mergeQualify(this.agent.settings?.qualify),
+              question_list: this.questionsOf(this.agent.settings || {}),
               objections: this.agent.settings?.objections || [],
               required_contact: this.agent.settings?.required_contact || [],
             },
           }
-        : base;
+        : {
+            ...base,
+            settings: {
+              ...base.settings,
+              question_list: this.exampleQuestions(),
+            },
+          };
       this.chat = [];
       this.chatState = {};
       this.draft = '';
@@ -206,6 +209,35 @@ export default {
     resetChat() {
       this.chat = [];
       this.chatState = {};
+    },
+    // Las de ejemplo (agente nuevo) o las guardadas; en un agente de antes, sus armadas prendidas
+    // y sus preguntas propias.
+    questionsOf(settings) {
+      const saved = settings.question_list;
+      if (Array.isArray(saved) && saved.length)
+        return saved.map(text => ({ text }));
+      if (!Array.isArray(settings.qualify) || !settings.qualify.length)
+        return settings.questions
+          ? [{ text: this.t('QUALIFY.need.ASK') }, { text: settings.questions }]
+          : this.exampleQuestions();
+      const armed = QUALIFY_KEYS.filter(key =>
+        settings.qualify.some(q => q.key === key && q.on)
+      ).map(key => {
+        const row = settings.qualify.find(q => q.key === key);
+        return { text: row.text || this.t(`QUALIFY.${key}.ASK`) };
+      });
+      const own = settings.questions ? [{ text: settings.questions }] : [];
+      return [...armed, ...own];
+    },
+    exampleQuestions() {
+      return EXAMPLE_KEYS.map(key => ({ text: this.t(`QUALIFY.${key}.ASK`) }));
+    },
+    addQuestion() {
+      if (this.canAddQuestion)
+        this.form.settings.question_list.push({ text: '' });
+    },
+    removeQuestion(index) {
+      this.form.settings.question_list.splice(index, 1);
     },
     toggleCalendarUser(id) {
       const ids = this.form.settings.appointment_user_ids.map(String);
@@ -244,6 +276,12 @@ export default {
         name: this.form.name.trim(),
         settings: {
           ...settings,
+          // Una sola lista: lo de antes (armadas con casilla y preguntas propias) se deja vacío.
+          question_list: settings.question_list
+            .map(q => q.text.trim())
+            .filter(Boolean),
+          qualify: [],
+          questions: '',
           objections: settings.objections.filter(
             o => o.objection.trim() && o.answer.trim()
           ),
@@ -511,35 +549,43 @@ export default {
           <!-- 4 · Qué le preguntas -->
           <template v-if="step === 'questions'">
             <div
-              v-for="q in form.settings.qualify"
-              :key="q.key"
+              v-for="(q, i) in form.settings.question_list"
+              :key="i"
               class="flex items-center gap-2"
             >
-              <input v-model="q.on" type="checkbox" class="!m-0 shrink-0" />
-              <span
-                class="w-36 text-sm shrink-0"
-                :class="
-                  q.on ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400'
-                "
-              >
-                {{ t(`QUALIFY.${q.key}.LABEL`) }}
-              </span>
+              <span class="w-5 text-xs text-right shrink-0 text-slate-500">{{
+                t('QUESTIONS_LIST.NUMBER', { n: i + 1 })
+              }}</span>
               <input
                 v-model="q.text"
                 type="text"
+                maxlength="300"
                 class="flex-1 !mb-0 h-8 text-sm"
-                :disabled="!q.on"
-                :placeholder="t(`QUALIFY.${q.key}.ASK`)"
+                :placeholder="t('QUESTIONS_LIST.PLACEHOLDER')"
               />
+              <button
+                type="button"
+                class="px-1 text-slate-400 hover:text-red-600"
+                :title="t('QUESTIONS_LIST.REMOVE')"
+                @click="removeQuestion(i)"
+              >
+                <fluent-icon icon="dismiss" size="14" />
+              </button>
             </div>
-            <label class="block mt-1">
-              <span class="field-label">{{ t('FIELDS.QUESTIONS') }}</span>
-              <textarea
-                v-model="form.settings.questions"
-                rows="2"
-                :placeholder="t('FIELDS.QUESTIONS_PLACEHOLDER')"
-              />
-            </label>
+            <p
+              v-if="!form.settings.question_list.length"
+              class="m-0 text-xs text-amber-700"
+            >
+              {{ t('QUESTIONS_LIST.EMPTY') }}
+            </p>
+            <button
+              v-if="canAddQuestion"
+              type="button"
+              class="self-start text-xs text-woot-600 hover:underline"
+              @click="addQuestion"
+            >
+              {{ t('QUESTIONS_LIST.ADD') }}
+            </button>
           </template>
 
           <!-- 5 · Cuándo califica y cuándo no -->

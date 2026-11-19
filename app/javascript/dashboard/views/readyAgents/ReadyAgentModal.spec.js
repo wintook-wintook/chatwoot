@@ -17,33 +17,49 @@ const mountModal = props =>
   });
 
 describe('ReadyAgentModal', () => {
-  it('nuevo: trae las 7 preguntas armadas con «qué necesita» prendida', () => {
-    const { qualify } = mountModal().vm.form.settings;
-    expect(qualify.map(q => q.key)).toEqual([
-      'need',
-      'when',
-      'budget',
-      'decides',
-      'location',
-      'quantity',
-      'source',
+  it('nuevo: trae unas preguntas de ejemplo que se pueden quitar, cambiar y agregar', () => {
+    const { vm } = mountModal();
+    expect(vm.form.settings.question_list.map(q => q.text)).toEqual([
+      'READY_AGENTS.QUALIFY.need.ASK',
+      'READY_AGENTS.QUALIFY.when.ASK',
+      'READY_AGENTS.QUALIFY.budget.ASK',
     ]);
-    expect(qualify.filter(q => q.on).map(q => q.key)).toEqual(['need']);
+    vm.removeQuestion(1);
+    vm.form.settings.question_list[0].text = '¿Qué auto buscas?';
+    vm.addQuestion();
+    vm.form.settings.question_list[2].text = '¿Es para tu familia?';
+    vm.addQuestion(); // vacía: no se manda
+    expect(vm.payload().settings.question_list).toEqual([
+      '¿Qué auto buscas?',
+      'READY_AGENTS.QUALIFY.budget.ASK',
+      '¿Es para tu familia?',
+    ]);
   });
 
-  it('un agente de antes conserva sus preguntas propias y recibe las armadas', () => {
-    const wrapper = mountModal({
+  it('un agente de antes: sus armadas prendidas y sus preguntas propias pasan a la lista', () => {
+    const { vm } = mountModal({
       agent: {
         id: 1,
         name: 'Sofi',
         inbox_ids: [1],
-        settings: { objective: 'handoff', questions: 'qué busca' },
+        settings: {
+          qualify: [
+            { key: 'need', on: false, text: '' },
+            { key: 'budget', on: true, text: '¿Cuánto pagas?' },
+            { key: 'location', on: true, text: '' },
+          ],
+          questions: 'qué busca',
+        },
       },
     });
-    const { settings } = wrapper.vm.form;
-    expect(settings.questions).toBe('qué busca');
-    expect(settings.qualify).toHaveLength(7);
-    expect(settings.objections).toEqual([]);
+    expect(vm.form.settings.question_list.map(q => q.text)).toEqual([
+      '¿Cuánto pagas?',
+      'READY_AGENTS.QUALIFY.location.ASK',
+      'qué busca',
+    ]);
+    const { settings } = vm.payload();
+    expect(settings.qualify).toEqual([]);
+    expect(settings.questions).toBe('');
   });
 
   it('respeta lo guardado y no manda objeciones a medias', () => {
@@ -53,10 +69,7 @@ describe('ReadyAgentModal', () => {
         name: 'Sofi',
         inbox_ids: [1],
         settings: {
-          qualify: [
-            { key: 'need', on: false, text: '' },
-            { key: 'budget', on: true, text: '¿Cuánto pagas?' },
-          ],
+          question_list: ['¿Qué buscas?'],
           objections: [{ objection: 'Está caro', answer: 'Se paga solo' }],
           required_contact: ['email'],
         },
@@ -64,11 +77,7 @@ describe('ReadyAgentModal', () => {
     });
     wrapper.vm.addObjection();
     const { settings } = wrapper.vm.payload();
-    expect(settings.qualify.find(q => q.key === 'need').on).toBe(false);
-    expect(settings.qualify.find(q => q.key === 'budget')).toMatchObject({
-      on: true,
-      text: '¿Cuánto pagas?',
-    });
+    expect(settings.question_list).toEqual(['¿Qué buscas?']);
     expect(settings.objections).toEqual([
       { objection: 'Está caro', answer: 'Se paga solo' },
     ]);
