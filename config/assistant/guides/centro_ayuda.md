@@ -11,12 +11,12 @@ reviewed: 2026-11-14
 El Centro de ayuda es una página pública con artículos (cómo se usa, preguntas frecuentes, políticas) para que tus clientes resuelvan solos sin escribirte. Puedes tener varios portales, cada uno con sus categorías y sus idiomas. No es lo mismo que los Portales del cliente, donde el cliente abre y consulta solicitudes.
 
 ## Dónde está
-- Servicio › Centro de Ayuda. Adentro tiene su propio menú: «Todos los Artículos», «Mis Artículos», «Borrador», «Archivado», «Configuración» y la lista de categorías.
+- Agentes IA › Centro de Ayuda, justo debajo de «Bases de conocimiento» (sus artículos son una de las fuentes que leen los agentes: «Artículos de ayuda» en «Qué sabe»). Adentro tiene su propio menú: «Todos los Artículos», «Mis Artículos», «Borrador», «Archivado», «Configuración» y la lista de categorías.
 - La página pública queda en la dirección de la plataforma con /hc/slug-del-portal/idioma (o en tu dominio personalizado).
 
 ## Cómo se hace
 ### Crear un portal
-1. En Servicio › Centro de Ayuda pulsa el botón para cambiar de portal (arriba del menú del Centro de ayuda) › «Configuraciones del portal». Ahí ves «Portales» y pulsas «Nuevo Portal».
+1. En Agentes IA › Centro de Ayuda pulsa el botón para cambiar de portal (arriba del menú del Centro de ayuda) › «Configuraciones del portal». Ahí ves «Portales» y pulsas «Nuevo Portal».
 2. En «Información del centro de ayuda» sube el «Logo» (sale en el encabezado), escribe el «Nombre», el «Slug» (para la dirección) y, si quieres, el «Dominio Personalizado». Pulsa «Crear configuraciones básicas del portal».
 3. En «Personalización del centro de ayuda» elige el «Color del tema del portal» y escribe el «Título de la Página», el «Texto del Encabezado» y el «Enlace de la Página de Inicio» (para regresar a tu sitio). Pulsa «Actualizar configuraciones del portal».
 4. Pulsa «Ir a la página de todos los portales».
@@ -57,4 +57,4 @@ Mientras no lo publiques queda en «Borrador».
 - No confundas el Centro de ayuda con Servicio › Portales del cliente: ahí el cliente abre solicitudes y consulta su folio.
 
 ## Quién puede
-Servicio › Centro de Ayuda solo le aparece en el menú al Administrador, que crea portales, idiomas, categorías y artículos. Insertar artículos al contestar lo puede hacer cualquiera que conteste conversaciones en una bandeja con Centro de ayuda ligado.
+Agentes IA › Centro de Ayuda solo le aparece en el menú al Administrador, que crea portales, idiomas, categorías y artículos. Insertar artículos al contestar lo puede hacer cualquiera que conteste conversaciones en una bandeja con Centro de ayuda ligado.

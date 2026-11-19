@@ -335,16 +335,8 @@ export const primaryMenuV2 = (accountId, route) => {
         alternatives: rest.map(target),
       };
     })(),
-    // Centro de ayuda de vuelta en el menú principal, antes de Ajustes.
-    {
-      icon: 'library',
-      key: 'helpcenter',
-      label: 'HELP_CENTER.TITLE',
-      featureFlag: FEATURE_FLAGS.HELP_CENTER,
-      alwaysVisibleOnChatwootInstances: true,
-      toState: url('portals'),
-      toStateName: 'default_portal_articles',
-    },
+    // El Centro de ayuda ya no va en el menú principal: está en Agentes IA, junto a Bases de
+    // conocimiento (sus artículos son una de las fuentes que leen los agentes).
     {
       icon: 'settings',
       key: 'settings',
@@ -503,10 +495,10 @@ const servicio = (accountId, route) => {
   };
 };
 
-// Dentro del Centro de ayuda manda su propio menú: este registro, sin opciones,
-// solo marca Centro de ayuda en el menú principal (Secondary no pinta un menú vacío).
+// Dentro del Centro de ayuda manda su propio menú: este registro, sin opciones, solo marca
+// Agentes IA en el menú principal (ahí vive el Centro de ayuda; Secondary no pinta un menú vacío).
 const centroDeAyuda = () => ({
-  parentNav: 'helpcenter',
+  parentNav: 'agentes',
   routes: [],
   matches: route => HELP_CENTER_PATH.test((route && route.path) || ''),
   menuItems: [],
@@ -737,7 +729,20 @@ const agentesIa = accountId => ({
     },
     campaignItem(accountId, 'contact_trackings_agents', 'AI_AGENT_LIST'),
     campaignItem(accountId, 'contact_trackings_dashboard', 'TRACKINGS'),
-    ...settingsItems(accountId, AI_TOOLS),
+    // Lo que saben: Bases de conocimiento y, junto, el Centro de ayuda (sus artículos son una fuente).
+    ...settingsItems(accountId, ['knowledge_sources_list']),
+    {
+      icon: 'library',
+      label: 'HELP_CENTER.TITLE',
+      hasSubMenu: false,
+      featureFlag: FEATURE_FLAGS.HELP_CENTER,
+      toState: frontendURL(`accounts/${accountId}/portals`),
+      toStateName: 'default_portal_articles',
+    },
+    ...settingsItems(
+      accountId,
+      AI_TOOLS.filter(name => name !== 'knowledge_sources_list')
+    ),
   ],
 });
 
