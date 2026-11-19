@@ -29,5 +29,5 @@ class AgentTester::Judge < Cases::Ai::BaseService
 
   private
 
-  def model = Assistant::Settings.model_for(@account)
+  def model = AiModels::REVIEW
 end

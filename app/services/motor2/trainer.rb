@@ -67,7 +67,7 @@ class Motor2::Trainer < Cases::Ai::BaseService
   private
 
   # Clasificar el error es análisis: el modelo de análisis de la cuenta (si eligió uno).
-  def model = Assistant::Settings.model_for(@account, :analysis)
+  def model = AiModels::REVIEW
 
   def diagnose
     chat(system: SYSTEM, user: context.to_json, json: true, max_tokens: 1200, temperature: 0.1)

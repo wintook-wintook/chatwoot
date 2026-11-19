@@ -179,11 +179,48 @@
       "HINT": "Everyone will see this name. Empty = Dali.",
       "SAVE": "Save",
       "SAVED": "Assistant settings saved",
-      "MODEL": "OpenAI model",
-      "MODEL_DEFAULT": "The usual one ({model})",
-      "ANALYSIS_MODEL": "Model for sales analysis",
-      "ANALYSIS_MODEL_DEFAULT": "Same as the general one",
-      "MODEL_HINT": "The analysis model is used only when the assistant explains sales figures; a stronger one answers better but costs more per question."
+      "MODELS": {
+        "TITLE": "Platform AI models",
+        "HINT": "Just so you know what each part uses. They are the same for every account and we change them with an update when it makes sense.",
+        "GROUP": "Group",
+        "USED_FOR": "Used for",
+        "MODEL": "Model",
+        "PER_INBOX": "Its inbox's model",
+        "GROUPS": {
+          "dali": {
+            "NAME": "Dali",
+            "USE": "The platform assistant: understand, propose and do what it's asked"
+          },
+          "dali_analysis": {
+            "NAME": "Dali (figures)",
+            "USE": "When Dali explains sales figures"
+          },
+          "agents": {
+            "NAME": "Customer-facing agents",
+            "USE": "2.0 agents, ready agents and AI follow-up"
+          },
+          "review": {
+            "NAME": "Review and training",
+            "USE": "Agent tester trainer, judge and tests; «Move to 2.0»"
+          },
+          "canned_selector": {
+            "NAME": "Pick canned responses",
+            "USE": "The new search: picks which ones reach the agent"
+          },
+          "sheets": {
+            "NAME": "Google Sheets (Data)",
+            "USE": "Turns the question into a query; the system computes the number"
+          },
+          "agents_v1": {
+            "NAME": "Custom agents 1.0",
+            "USE": "Agents on the previous engine"
+          },
+          "other": {
+            "NAME": "Other AI features",
+            "USE": "Summaries, classification, suggestions and the rest"
+          }
+        }
+      }
     },
     "VIA": "via {name}",
     "MENU": "Ask {name}…",

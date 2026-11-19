@@ -179,11 +179,48 @@
       "HINT": "Así lo verán todos en la plataforma. Vacío = Dali.",
       "SAVE": "Guardar",
       "SAVED": "Ajustes del asistente guardados",
-      "MODEL": "Modelo de OpenAI",
-      "MODEL_DEFAULT": "El de siempre ({model})",
-      "ANALYSIS_MODEL": "Modelo para análisis de ventas",
-      "ANALYSIS_MODEL_DEFAULT": "El mismo que el general",
-      "MODEL_HINT": "El de análisis solo se usa cuando el asistente explica cifras de ventas; uno más potente responde mejor pero cuesta más por consulta."
+      "MODELS": {
+        "TITLE": "Modelos de IA de la plataforma",
+        "HINT": "Solo para que sepas qué usa cada parte. Son los mismos para todas las cuentas y los cambiamos nosotros con una actualización cuando conviene.",
+        "GROUP": "Grupo",
+        "USED_FOR": "Para qué",
+        "MODEL": "Modelo",
+        "PER_INBOX": "El de su bandeja",
+        "GROUPS": {
+          "dali": {
+            "NAME": "Dali",
+            "USE": "El asistente de la plataforma: entender, proponer y hacer lo que le piden"
+          },
+          "dali_analysis": {
+            "NAME": "Dali (cifras)",
+            "USE": "Cuando Dali explica cifras de ventas"
+          },
+          "agents": {
+            "NAME": "Agentes que atienden clientes",
+            "USE": "Agentes 2.0, agentes listos y Seguimiento IA"
+          },
+          "review": {
+            "NAME": "Revisar y entrenar",
+            "USE": "Entrenador, juez y pruebas del Probador de agentes; «Pasar a 2.0»"
+          },
+          "canned_selector": {
+            "NAME": "Escoger respuestas predefinidas",
+            "USE": "La búsqueda nueva: escoge cuáles le llegan al agente"
+          },
+          "sheets": {
+            "NAME": "Hojas de Google (Datos)",
+            "USE": "Traduce la pregunta a la consulta; el número lo calcula el sistema"
+          },
+          "agents_v1": {
+            "NAME": "Agentes a medida 1.0",
+            "USE": "Los agentes del motor de antes"
+          },
+          "other": {
+            "NAME": "Otras funciones de IA",
+            "USE": "Resúmenes, clasificar, sugerencias y demás"
+          }
+        }
+      }
     },
     "VIA": "vía {name}",
     "MENU": "Pedirle a {name}…",

@@ -91,7 +91,7 @@ class AgentTester::Trainer < Cases::Ai::BaseService
     @where = input.slice(:conversation_id, :message_id)
   end
 
-  def model = Assistant::Settings.model_for(@account, :analysis)
+  def model = AiModels::REVIEW
 
   def diagnose
     chat(system: format(SYSTEM, prompt_extra: @v2 ? PROMPT_V2 : ''), user: context.to_json, json: true, max_tokens: 1200,

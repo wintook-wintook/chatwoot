@@ -107,4 +107,4 @@ Su alcance, por área (con un ejemplo de cómo pedirlo):
 - No me deja dictar: permite el micrófono al navegador (o a la app) cuando lo pida; si lo negaste, actívalo en los permisos del sitio.
 
 ## Quién puede
-Todos los usuarios lo usan, cada uno con lo que su rol le deja ver y hacer. Solo el Administrador cambia su nombre y, en Ajustes › Configuración de Cuenta › Asistente, el «Modelo de OpenAI» y el «Modelo para análisis de ventas» (el que usa cuando explica cifras de ventas; uno más potente responde mejor pero cuesta más por consulta).
+Todos los usuarios lo usan, cada uno con lo que su rol le deja ver y hacer. Solo el Administrador cambia su nombre, en Ajustes › Configuración de Cuenta › Asistente. Ahí mismo, la tabla «Modelos de IA de la plataforma» dice qué modelo de OpenAI usa Dali (y para cifras de ventas) y cada otra parte; es solo informativa: los define Kontrolya para todas las cuentas y se cambian con una actualización.
