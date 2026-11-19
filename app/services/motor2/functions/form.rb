@@ -14,6 +14,8 @@
 #   settings      → motor2['answers'] (limpias por la función); settings.instructions → motor2['instructions'];
 #                   settings.welcome → motor2['welcome'] (la bienvenida, combinada con la primera respuesta)
 #   sources       → motor2['sources'] (las fuentes que marcó en «Qué sabe»; las predefinidas van siempre)
+#   channel       → «Vendedor de campaña» (no atiende bandejas: lo usa una campaña): por dónde escribe y sus
+#                   toques { inbox_id, whatsapp_templates: [], retry_value, retry_unit, attempts, email_signature }
 # Sin `settings` (p. ej. prender o apagar desde la lista) no se tocan las respuestas.
 class Motor2::Functions::Form
   def initialize(account, params, user:, template: nil)
@@ -42,6 +44,7 @@ class Motor2::Functions::Form
     assign_columns
     assign_settings(kind) if @params.key?('settings')
     assign_sources if @params.key?('sources')
+    assign_channel if kind == Motor2::Functions::CampaignSeller::KEY
     @template
   end
 
@@ -59,6 +62,28 @@ class Motor2::Functions::Form
     ordered = Array(@params['inbox_ids']).map(&:to_i) & ids
     @template.attend_inbox_ids = ordered
     @template.inbox_id = ordered.first
+  end
+
+  UNITS = %w[minutes hours days].freeze
+
+  # El Vendedor de campaña no atiende bandejas; escribe por la de su canal, con una plantilla por toque.
+  def assign_channel
+    @template.attending = false
+    @template.attend_inbox_ids = []
+    return unless @params['channel'].is_a?(Hash)
+
+    channel = @params['channel']
+    @template.inbox_id = @account.inboxes.where(id: channel['inbox_id']).pick(:id) if channel.key?('inbox_id')
+    @template.email_signature = channel['email_signature'].to_s.first(1000) if channel.key?('email_signature')
+    assign_touches(channel)
+  end
+
+  # Cada cuánto y cuántos toques (sin plantillas, los que diga; con plantillas, uno por plantilla).
+  def assign_touches(channel)
+    @template.whatsapp_templates = Array(channel['whatsapp_templates']).map { |t| t.to_s.strip }.first(10) if channel.key?('whatsapp_templates')
+    @template.retry_interval_value = channel['retry_value'].to_i.clamp(1, 999) if channel['retry_value'].present?
+    @template.retry_interval_unit = channel['retry_unit'].to_s.presence_in(UNITS) || 'days' if channel.key?('retry_unit')
+    @template.follow_up_attempts = channel['attempts'] if channel['attempts'].present?
   end
 
   # Solo las que la cuenta tiene (Motor2::SourceMap#available); las predefinidas no se marcan.

@@ -12,7 +12,8 @@
 module Motor2::Functions
   DIR = Rails.root.join('config/agent_functions')
   CUSTOM = 'custom'
-  CLASSES = { 'prospects' => 'Motor2::Functions::Prospects', 'customers' => 'Motor2::Functions::Customers' }.freeze
+  CLASSES = { 'prospects' => 'Motor2::Functions::Prospects', 'customers' => 'Motor2::Functions::Customers',
+              'campaign_seller' => 'Motor2::Functions::CampaignSeller' }.freeze
 
   module_function
 

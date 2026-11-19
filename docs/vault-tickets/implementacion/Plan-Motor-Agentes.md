@@ -1005,7 +1005,7 @@ Coinciden en: (1) un **clasificador** que mira la plática completa (no la palab
 - **Pruebas con el modelo real:** cotización incompleta → aclaración → oportunidad; RFC → una pregunta → canaliza a Administrativo; «no puedo operar» → caso urgente al instante; «¿qué planes tienen?» sin fuente → no inventa y ofrece vendedor; «quiero hablar con una persona» → pregunta qué necesita → canaliza al área.
 
 
-### 11.16 Vendedor de campaña — análisis y plan 1.0 (2026-11-19, sin empezar)
+### 11.16 Vendedor de campaña — análisis y plan 1.0 (2026-11-19; el agente hecho el mismo día, ver §11.16.9)
 
 **La idea:** el agente de campaña **toca la puerta**: la campaña manda el primer mensaje y, cuando el contacto contesta, el agente despierta el interés, resuelve 2 o 3 dudas básicas y **pasa el relevo** a quien sabe vender (el agente de «Atención a prospectos», el de «Atención a clientes» o una persona). No negocia, no cierra ni cobra. Así queda simple, y lo sofisticado vive en un solo lugar (el que recibe el relevo), que sirve igual para quien llega solo y para quien viene de una campaña.
 
@@ -1095,3 +1095,18 @@ Vendedor sofisticado que negocia y cierra; secuencias multicanal que se adaptan 
 3. **El relevo va al agente de la bandeja** (prospectos o clientes, según quién es); si no hay, a una persona con plazo.
 4. **Cotizar es una habilidad compartida** y por omisión deja un **borrador** para que el vendedor lo revise; mandarla sola es una opción.
 5. **No se tocan las campañas que ya existen** ni el motor 1.0: el Vendedor de campaña es un agente más que se elige en la campaña.
+
+#### 11.16.9 Cómo quedó el agente (2026-11-19, rama feat/vendedor_campana_motor2)
+
+El usuario pidió **solo el agente**; la pantalla de campañas va en un plan aparte. Por eso **la oferta vive en el agente** por ahora (`motor2['answers']`); cuando la campaña tenga su «Qué ofreces», el agente leerá la de la campaña.
+
+| Paso | Hecho | Dónde |
+|---|---|---|
+| V0 | Función `campaign_seller` (no atiende bandejas: `attending` false; escribe por su canal con una plantilla por toque), puesto, oferta con 5 usos, asistente de 7 pasos con el chat que empieza con el mensaje de la campaña | `Motor2::Functions::CampaignSeller`, `config/agent_functions/campaign_seller.{yml,md}`, `Form#assign_channel`, `CampaignSellerModal.vue` (reusa `FichaChannel` y `ReadyAgentChat`) |
+| V1 | **Relevo**: al agente de la bandeja (con el par, prospectos o clientes según quién es) en el mismo mensaje y sin que conteste el de campaña (`Runner#silence!`); si no hay, a la persona o a la entrega de la campaña (`HandOff`) | `Motor2::Relay`, `Skills::Campaign#interested` |
+| V2 | **Invitar**: `confirmar_asistencia` → `EventAttendee` confirmó/canceló (origen «agent»); el evento entra a LA OFERTA | `Skills::Campaign` |
+| V3 | **Encuesta**: preguntas tal cual y en orden; el código lleva el número; `AnswerCheck` no deja guardar «va»; calificación baja → caso de soporte prioridad alta | `Skills::Campaign`, `CampaignSellerOutcomes#survey_done` |
+| — | No fingir acciones (confirmar, agendar, pasar); sin `objetivo_cumplido`/`descartar` (tiene `le_interesa`/`no_le_interesa`) | `Motor2::AreaChecks::CAMPAIGN_CLAIMED`, `Skills::Finish#on?` |
+
+**Pendiente:** V4 (habilidad compartida «Cotizar»), V5 (primer mensaje por receta con Dali) y la **pantalla de campañas** («Qué ofreces» por campaña, plan aparte).
+

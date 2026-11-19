@@ -15,7 +15,11 @@ module Motor2::AreaChecks
   # «Atención a clientes»: dice que ya levantó, registró, agendó o lo pasó sin haber llamado la herramienta.
   CLAIMED = /(levant[eé]|registr[eé]|agend[eé]|cre[eé])\s+(tu|su|el|la|una?)\b|tu\s+folio|n[uú]mero\s+de\s+(caso|folio)|
              ya\s+(qued[oó]|est[aá])\s+(registrad|levantad|agendad)|te\s+(paso|pasé|canalicé)\s+con/xi
-  ACTION_TOOLS = %w[crear_caso registrar_gestion canalizar pasar_a_humano agendar_cita estado_caso].freeze
+  ACTION_TOOLS = %w[crear_caso registrar_gestion canalizar pasar_a_humano agendar_cita estado_caso le_interesa
+                    confirmar_asistencia guardar_respuesta].freeze
+  # «Vendedor de campaña»: dice que ya confirmó su lugar, lo agendó o lo pasó sin hacerlo.
+  CAMPAIGN_CLAIMED = /(confirm[eé]\s+tu\s+(lugar|asistencia)|qued[oó]\s+confirmad|ya\s+est[aá]s\s+(confirmad|registrad|inscrit)|
+                      \bagendé|te\s+(paso|pasé)\s+con|ya\s+le\s+(pasé|avisé))/xi
   NO_CLAIM = 'Dijiste que ya hiciste algo (levantar el caso, registrar, agendar o pasarlo) pero no llamaste la herramienta. ' \
              'Si toca hacerlo, llama la herramienta ahora (crear_caso, registrar_gestion, canalizar o agendar_cita) y luego ' \
              'contesta; si no toca, reescribe sin decir que ya lo hiciste.'
@@ -83,6 +87,12 @@ module Motor2::AreaChecks
 
     areas = find_skill('areas')
     return areas.human_asked? ? nil : CLAIMED if areas
+
+    other_claim_pattern
+  end
+
+  def other_claim_pattern
+    return CAMPAIGN_CLAIMED if find_skill('campaign')
 
     BOOKED if find_skill('appointments') && find_skill('qualify')
   end

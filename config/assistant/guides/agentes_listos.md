@@ -2,7 +2,7 @@
 key: agentes_listos
 title: Agentes listos
 areas: [ai_agents]
-keywords: [agentes listos, atencion a clientes, clientes, soporte, comercial, administrativo, areas, ejemplos si y no, probar la matriz, levantar caso, folio, severidad, cotizacion, demo, visita, factura, rfc, canalizar, no es cliente, varias cosas a la vez, productos y precios, catalogo de productos, no doy precios, hablar con una persona, pasar a un asesor, retomar preguntas, mensaje de bienvenida, bienvenida, orden de las preguntas, asistente, wizard, crear uno, varios agentes, lista de agentes, nombre que ve el cliente, motor 2.0, como habla tu empresa, tono general, firma, quien es quien, distribuidores, nota para ia, tu negocio, preguntas para calificar, temperatura, caliente, tibio, frio, objeciones, esta caro, datos obligatorios, agente listo, atencion a prospectos, prospectos, anuncios, redes sociales, campañas de redes, activar agente, chat de prueba, sofi, calificar, descartar, pasar a una persona, atendida por, pausar agente, reanudar agente, agendar cita, cita, horarios, horario ocupado, no disponible, reconectar google, mover cita, cancelar cita, agentes a medida, ya es cliente]
+keywords: [agentes listos, vendedor de campaña, campañas, invitar, invitacion a evento, confirmar asistencia, ofrecer, promocion, reactivar, renovar, encuesta de satisfaccion, relevo, le interesa, toques, plantilla por toque, atencion a clientes, clientes, soporte, comercial, administrativo, areas, ejemplos si y no, probar la matriz, levantar caso, folio, severidad, cotizacion, demo, visita, factura, rfc, canalizar, no es cliente, varias cosas a la vez, productos y precios, catalogo de productos, no doy precios, hablar con una persona, pasar a un asesor, retomar preguntas, mensaje de bienvenida, bienvenida, orden de las preguntas, asistente, wizard, crear uno, varios agentes, lista de agentes, nombre que ve el cliente, motor 2.0, como habla tu empresa, tono general, firma, quien es quien, distribuidores, nota para ia, tu negocio, preguntas para calificar, temperatura, caliente, tibio, frio, objeciones, esta caro, datos obligatorios, agente listo, atencion a prospectos, prospectos, anuncios, redes sociales, campañas de redes, activar agente, chat de prueba, sofi, calificar, descartar, pasar a una persona, atendida por, pausar agente, reanudar agente, agendar cita, cita, horarios, horario ocupado, no disponible, reconectar google, mover cita, cancelar cita, agentes a medida, ya es cliente]
 pages: [ready_agents, ai_agents]
 ---
 ## Para qué sirve
@@ -15,7 +15,8 @@ En el menú «Agentes IA» › «Agentes listos» (la primera opción): una tarj
 ## Qué agentes hay
 - Atención a prospectos: atiende a la gente nueva que escribe (anuncios en redes, página, campañas), contesta sus dudas con tus fuentes (respuestas predefinidas, catálogo, hojas…), lo califica con tus preguntas y lo pasa a tu equipo o le crea la oportunidad.
 - Atención a clientes: atiende a tus clientes. Entiende si lo que pide es de Soporte, Comercial o Administrativo (o de otra área que agregues), contesta con tus fuentes, levanta su caso o registra la oportunidad, o lo pasa al equipo de esa área.
-- Próximamente: Cobranza y Vendedor de campaña.
+- Vendedor de campaña: toca la puerta en tus campañas. La campaña manda el primer mensaje y él sigue cuando el contacto contesta: invita a un evento, ofrece, reactiva, recuerda una renovación o hace una encuesta; resuelve las primeras dudas y pasa al interesado a quien sigue.
+- Próximamente: Cobranza.
 
 ## Cómo se hace
 ### Crear un agente
@@ -53,6 +54,18 @@ En el menú «Agentes IA» › «Agentes listos» (la primera opción): una tarj
 - Si quien escribe no es cliente: lo atiende igual (recomendado) o lo pasa a una persona. Una bandeja puede tener un agente de «Atención a prospectos» y uno de «Atención a clientes»: quien ya es cliente (su organización está en etapa Cliente, o tiene una oportunidad ganada o un caso de servicio) va con el de clientes y los demás con el de prospectos.
 - Nunca dice «ya levanté tu caso», «ya lo registré» o «ya te agendé» si no lo hizo de verdad: el sistema lo revisa antes de mandar.
 - Pruébalo: «Probar la matriz» corre todos tus ejemplos de sí y no y te dice cuáles cayeron en su área (✅) y cuáles no (❌); si uno falla, agrega más ejemplos parecidos. En el chat de prueba ves qué área detectó en cada mensaje y qué hizo; en la prueba no se crean casos reales (sale el folio PRUEBA-1).
+
+### Vendedor de campaña
+- No atiende bandejas: lo creas aquí y lo eliges en la pantalla de campañas (en «¿Qué?»). Un mismo agente puede ir en varias campañas; en la lista ves en cuántas está.
+- Pasos del asistente: El agente · Qué ofreces · Canal y toques · Tu negocio y qué sabe · Cómo platica y el relevo · Indicaciones · Pruébalo y guarda.
+- Qué ofreces: para qué es la campaña:
+  - Ofrecer, Reactivar o Recordar/renovar: qué ofreces y, si quieres, precio, vigencia y condiciones. Si le interesa, lo pasa a quien sigue (o le agenda una cita, si lo eliges y hay alguien con Google Calendar).
+  - Invitar: eliges el evento de Eventos (fecha, lugar y liga salen de ahí). Cuando dice que va (o que no), queda confirmado o cancelado en la lista del evento.
+  - Encuesta: hasta 3 preguntas; las hace tal cual, en orden y una por mensaje, y no toma «va» o «sí» como respuesta. Si una calificación queda por debajo de la que elijas (7 por omisión), levanta un caso con prioridad alta para la persona que elijas.
+- Canal y toques: por dónde escribe, cuántos toques da y cada cuánto. En WhatsApp cada toque usa una plantilla aprobada (fuera de las 24 horas solo se puede con plantilla).
+- El relevo: si le interesa, lo pasa al agente de la bandeja («Atención a prospectos», o «Atención a clientes» si ya es cliente) en la misma conversación y sin que lo note: el de campaña no contesta y el que sigue contesta ese mismo mensaje, con una nota de contexto («le interesó la campaña X…»). Si no hay agente, o eliges «a una persona», va a la persona o equipo que elijas (si la campaña tiene tablero de entrega, entra ahí con su plazo).
+- Siempre: una pregunta por mensaje; de la oferta solo dice lo que pusiste o lo que está en tus fuentes; si dice que no, se despide sin insistir y no hay más toques; «ya no me escriban» lo da de baja.
+- Pruébalo: el chat empieza con el mensaje de la campaña (puedes cambiarlo); contesta como tu contacto. En la prueba no se toca nada real.
 
 ### Cómo habla tu empresa (lo general de todos los agentes)
 En Agentes IA › «Cómo habla tu empresa» (solo el Administrador) llenas lo que aplica a todos: quiénes somos, tono, cómo firmar, quién es quién (por ejemplo «los distribuidores son socios: se les pregunta por sus prospectos»), qué decir fuera de horario, lo que nunca deben hacer y palabras propias. Abajo, en «Datos del negocio», van los datos fijos de la empresa para todos los agentes: qué vendes, a quién, dónde das servicio, por qué elegirlos, precios/pagos/tiempos y otros datos (horario, dirección, teléfono…). Lo que pongas en «Tu negocio» de un agente manda sobre esto. Lo toman el Seguimiento IA y todos los Agentes listos; lo particular de cada uno manda (por ejemplo, el tono que elegiste en el agente). «Probar» arma un mensaje de ejemplo sin guardar ni enviar. Los Agentes a medida no lo usan: tienen su propio entrenamiento.

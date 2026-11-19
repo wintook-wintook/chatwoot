@@ -21,12 +21,13 @@ RSpec.describe 'Ready Agents API' do
     account.tracking_templates.find(response.parsed_body.dig('agent', 'id'))
   end
 
-  it 'el catálogo trae «Atención a prospectos» y «Atención a clientes» disponibles y las demás como próximamente' do
+  it 'el catálogo trae prospectos, clientes y vendedor de campaña disponibles y Cobranza como próximamente' do
     get "#{api}/ready_agents", headers: admin.create_new_auth_token
     catalog = response.parsed_body['catalog']
     expect(catalog.first).to include('kind' => 'prospects', 'title' => 'Atención a prospectos', 'available' => true)
     expect(catalog.second).to include('kind' => 'customers', 'title' => 'Atención a clientes', 'available' => true)
-    expect(catalog.pluck('available').count(false)).to eq(2)
+    expect(catalog.third).to include('kind' => 'campaign_seller', 'title' => 'Vendedor de campaña', 'available' => true)
+    expect(catalog.pluck('available').count(false)).to eq(1)
   end
 
   it 'guarda las áreas de «Atención a clientes» que manda el asistente' do

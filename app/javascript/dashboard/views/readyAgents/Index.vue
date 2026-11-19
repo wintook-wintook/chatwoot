@@ -11,6 +11,7 @@ import { useAlert } from 'dashboard/composables';
 import ReadyAgentsAPI from 'dashboard/api/readyAgents';
 import ReadyAgentModal from './ReadyAgentModal.vue';
 import CustomersAgentModal from './CustomersAgentModal.vue';
+import CampaignSellerModal from './CampaignSellerModal.vue';
 
 const T = 'READY_AGENTS';
 // Una bandeja puede tener un agente de cada uno de estos dos (TrackingTemplate::ATTENDING_PAIR).
@@ -18,7 +19,7 @@ const PAIR = ['prospects', 'customers'];
 
 export default {
   name: 'ReadyAgentsIndex',
-  components: { ReadyAgentModal, CustomersAgentModal },
+  components: { ReadyAgentModal, CustomersAgentModal, CampaignSellerModal },
   data() {
     return {
       catalog: [],
@@ -27,6 +28,7 @@ export default {
       calendarUsers: [],
       sources: [], // las fuentes de la cuenta y qué hay en cada una (paso «Qué sabe»)
       caseTypes: [], // «Atención a clientes»: los tipos de caso que puede levantar
+      events: [], // «Vendedor de campaña» › Invitar: los eventos próximos
       loading: true,
       modal: null,
       queryHandled: false,
@@ -48,6 +50,7 @@ export default {
         this.calendarUsers = data.calendar_users || [];
         this.sources = data.sources || [];
         this.caseTypes = data.case_types || [];
+        this.events = data.events || [];
         this.openFromQuery();
       } catch (e) {
         useAlert(e.response?.data?.error || this.t('LOAD_ERROR'));
@@ -57,6 +60,20 @@ export default {
     },
     agentsOf(kind) {
       return this.agents.filter(a => a.kind === kind);
+    },
+    // El Vendedor de campaña está «prendido» si alguna campaña lo usa (no atiende bandejas).
+    isOn(agent) {
+      return agent.kind === 'campaign_seller'
+        ? agent.campaigns > 0
+        : agent.enabled;
+    },
+    // El Vendedor de campaña no atiende bandejas: se dice en cuántas campañas está.
+    whereLine(agent) {
+      if (agent.kind === 'campaign_seller')
+        return agent.campaigns
+          ? this.t('CAMPAIGN.IN_CAMPAIGNS', { n: agent.campaigns })
+          : this.t('CAMPAIGN.NO_CAMPAIGNS');
+      return this.inboxNames(agent) || this.t('NO_INBOXES');
     },
     inboxNames(agent) {
       return this.inboxes
@@ -164,8 +181,8 @@ export default {
           >
             <span
               class="w-2 h-2 rounded-full flex-shrink-0"
-              :class="agent.enabled ? 'bg-green-500' : 'bg-slate-300'"
-              :title="agent.enabled ? t('ON') : t('OFF')"
+              :class="isOn(agent) ? 'bg-green-500' : 'bg-slate-300'"
+              :title="isOn(agent) ? t('ON') : t('OFF')"
             />
             <div class="flex-1 min-w-0">
               <p
@@ -174,7 +191,7 @@ export default {
                 {{ agent.name }}
               </p>
               <p class="m-0 text-xs truncate text-slate-500">
-                {{ inboxNames(agent) || t('NO_INBOXES') }}
+                {{ whereLine(agent) }}
                 <template v-if="agent.live_sessions">
                   · {{ t('LIVE', { n: agent.live_sessions }) }}
                 </template>
@@ -184,6 +201,7 @@ export default {
               </p>
             </div>
             <woot-button
+              v-if="agent.kind !== 'campaign_seller'"
               size="tiny"
               variant="clear"
               color-scheme="secondary"
@@ -214,8 +232,19 @@ export default {
         </template>
       </section>
     </div>
+    <CampaignSellerModal
+      v-if="modal && modal.entry.kind === 'campaign_seller'"
+      show
+      :title="modal.entry.title"
+      :agent="modal.agent"
+      :calendar-users="calendarUsers"
+      :sources="sources"
+      :events="events"
+      @close="modal = null"
+      @saved="onSaved"
+    />
     <CustomersAgentModal
-      v-if="modal && modal.entry.kind === 'customers'"
+      v-else-if="modal && modal.entry.kind === 'customers'"
       show
       :title="modal.entry.title"
       :agent="modal.agent"

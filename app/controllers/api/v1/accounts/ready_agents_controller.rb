@@ -19,9 +19,11 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
   SETTINGS = %w[objective questions qualified_when discard_when tone instructions handoff_user_id handoff_team_id
                 client_user_id client_team_id only_prospects case_type_id appointment_minutes appointment_kind
                 appointment_location business_what business_who business_coverage business_why business_practical
-                business_use_catalog doubts not_found off_topic welcome price_source not_client human user_id team_id].freeze
+                business_use_catalog doubts not_found off_topic welcome price_source not_client human user_id team_id
+                purpose offer_what offer_details offer_goal event_id low_score relay].freeze
   LISTS = { question_list: [], appointment_user_ids: [], required_contact: [], qualify: %i[key on text],
-            objections: %i[objection answer], areas: {} }.freeze
+            objections: %i[objection answer], areas: {}, survey_questions: [] }.freeze
+  CHANNEL = [:inbox_id, :retry_value, :retry_unit, :attempts, :email_signature, { whatsapp_templates: [] }].freeze
   MAX_TEST_MESSAGES = 30
   ROLES = %w[user assistant].freeze
 
@@ -31,7 +33,8 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
   def index
     render json: { catalog: catalog, agents: function_agents.order(:id).map { |t| Motor2::Functions::AgentJson.call(t) },
                    inboxes: inboxes, calendar_users: calendar_users, sources: Motor2::SourceMap.new(Current.account).available,
-                   case_types: Current.account.case_types.active.order(:name).map { |c| { id: c.id, name: c.name, case_class: c.case_class } } }
+                   case_types: Current.account.case_types.active.order(:name).map { |c| { id: c.id, name: c.name, case_class: c.case_class } },
+                   events: upcoming_events }
   end
 
   def create
@@ -101,7 +104,7 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
   # Sin `settings` en el pedido (p. ej. el interruptor de prender/apagar de la lista) no se tocan.
   def agent_params
     raw = params.require(:ready_agent)
-    permitted = raw.permit(:kind, :name, :display_name, :enabled, inbox_ids: [], sources: []).to_h
+    permitted = raw.permit(:kind, :name, :display_name, :enabled, inbox_ids: [], sources: [], channel: CHANNEL).to_h
     permitted[:inbox_ids] ||= [] if raw.key?(:inbox_ids)
     permitted[:sources] ||= [] if raw.key?(:sources)
     return permitted unless raw[:settings].respond_to?(:permit)
@@ -130,6 +133,12 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
   def inboxes
     Current.account.inboxes.where.not(channel_type: 'Channel::Internal').order(:name)
            .map { |i| { id: i.id, name: i.name, channel_type: i.channel_type } }
+  end
+
+  # «Vendedor de campaña» › Invitar: los eventos que todavía no pasan.
+  def upcoming_events
+    Current.account.events.where(closed_at: nil).where('starts_at > ?', 1.day.ago).order(:starts_at).limit(50)
+           .map { |e| { id: e.id, name: e.name, starts_at: e.starts_at } }
   end
 
   # Con quién se puede agendar: quien tiene Google Calendar conectado.
