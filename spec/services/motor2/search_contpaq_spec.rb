@@ -37,4 +37,19 @@ RSpec.describe Motor2::Search do
     expect(agent).to have_received(:answer).with(hash_including(user_id: start_with('prueba_'), conversation_id: nil))
     expect(found.find { |f| f[:fuente] == 'CONTPAQi' }[:resultados]).to eq([])
   end
+
+  it 'le pregunta con las palabras del cliente, no con la búsqueda que redactó el modelo' do
+    allow(agent).to receive(:answer).and_return(Contpaq::ServiceAgent::Result.new(answer: 'Catálogos > Clientes', sources: []))
+    described_class.new(account, ["contpaq_support:#{source.id}"], customer_words: 'comp puedo dar de alta un cliente comercial premium')
+                   .call('dar de alta cliente en CONTPAQi Comercial Premium', only: 'CONTPAQi')
+    expect(agent).to have_received(:answer).with(hash_including(question: 'comp puedo dar de alta un cliente comercial premium'))
+  end
+
+  it 'si lo último que dijo es corto, va con lo que dijo antes' do
+    runner = instance_double(Motor2::Runner)
+    skill = Motor2::Skills::Knowledge.new(runner)
+    skill.prepare([{ role: 'user', content: 'comp puedo dar de alta un cliente' }, { role: 'assistant', content: '¿En qué sistema?' },
+                   { role: 'user', content: 'comercial premium' }])
+    expect(skill.instance_variable_get(:@customer_words)).to eq('comp puedo dar de alta un cliente comercial premium')
+  end
 end

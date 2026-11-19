@@ -10,6 +10,17 @@ class Motor2::Skills::Knowledge < Motor2::Skills::Base
   # Una función puede apagarla (p. ej. «Atención a prospectos» que no contesta dudas).
   def on? = config.skill(key)['on'] != false && search.sources.any?
 
+  # Lo que escribió el cliente, con sus palabras (CONTPAQi contesta mejor así que con la búsqueda que
+  # redacta el modelo). Si lo último es corto («comercial premium»), va con lo que dijo antes.
+  SHORT_WORDS = 4
+
+  def prepare(history)
+    said = Array(history).select { |m| m[:role].to_s == 'user' }.map { |m| m[:content].to_s.squish }.compact_blank
+    last = said.last.to_s
+    @customer_words = last.split.size <= SHORT_WORDS && said.size > 1 ? "#{said[-2]} #{last}" : last
+    @search = nil # se armó antes (on?) sin sus palabras
+  end
+
   def tools
     return [] unless searchable?
 
@@ -63,7 +74,9 @@ class Motor2::Skills::Knowledge < Motor2::Skills::Base
 
   private
 
-  def search = @search ||= Motor2::Search.new(config.account, config.sources, conversation: @turn.conversation)
+  def search
+    @search ||= Motor2::Search.new(config.account, config.sources, conversation: @turn.conversation, customer_words: @customer_words)
+  end
 
   # proyecto@predefinidas_que_contestan: qué escogió la búsqueda nueva, para el probador.
   def note_selection

@@ -20,10 +20,12 @@ class Motor2::Search < Cases::Ai::BaseService
 
   Source = Struct.new(:key, :name, :kind, :knowledge_source_ids, :record, keyword_init: true)
 
-  def initialize(account, keys, conversation: nil)
+  # customer_words: lo que escribió el cliente (CONTPAQi lo recibe tal cual, como en el 1.0).
+  def initialize(account, keys, conversation: nil, customer_words: nil)
     super(account: account)
     @keys = keys
     @conversation = conversation
+    @customer_words = customer_words.to_s.strip.presence
   end
 
   # Lo que escogió la búsqueda nueva de predefinidas (nil si no corrió), para la traza.
@@ -98,7 +100,8 @@ class Motor2::Search < Cases::Ai::BaseService
   # En vivo: CONTPAQi contesta ya redactado (y con su documentación). En el chat de prueba no hay contacto:
   # se pregunta con un identificador de prueba de la cuenta y sin memoria.
   def contpaq(source, question)
-    result = Contpaq::ServiceAgent.new(source.record).answer(question: question.to_s.first(1000), user_id: contpaq_user,
+    asked = (@customer_words || question).to_s.first(1000) # con las palabras del cliente: así contesta mejor
+    result = Contpaq::ServiceAgent.new(source.record).answer(question: asked, user_id: contpaq_user,
                                                              conversation_id: contpaq_conversation)
     return [] unless result.ok?
 
