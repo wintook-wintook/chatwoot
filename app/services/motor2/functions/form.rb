@@ -14,6 +14,10 @@
 #   settings      → motor2['answers'] (limpias por la función); settings.instructions → motor2['instructions'];
 #                   settings.welcome → motor2['welcome'] (la bienvenida, combinada con la primera respuesta)
 #   sources       → motor2['sources'] (las fuentes que marcó en «Qué sabe»; las predefinidas van siempre)
+#   files         → cuándo se manda cada archivo del agente (resources['files'], Motor2::Skills::Files):
+#                   { 'folleto' => { about, ask, welcome, interest, confirm, booking, tickets: [], attempts: [] } }
+#   channel       → «Vendedor de campaña» (no atiende bandejas: lo usa una campaña): por dónde escribe y sus
+#                   toques { inbox_id, whatsapp_templates: [], retry_value, retry_unit, attempts, email_signature }
 # Sin `settings` (p. ej. prender o apagar desde la lista) no se tocan las respuestas.
 class Motor2::Functions::Form
   def initialize(account, params, user:, template: nil)
@@ -41,11 +45,18 @@ class Motor2::Functions::Form
     @template.objective = Motor2::Functions.entry(kind)['objective'] if @template.objective.blank?
     assign_columns
     assign_settings(kind) if @params.key?('settings')
-    assign_sources if @params.key?('sources')
+    assign_extras(kind)
     @template
   end
 
   private
+
+  # Fuentes, archivos y (Vendedor de campaña) canal y toques.
+  def assign_extras(kind)
+    assign_sources if @params.key?('sources')
+    assign_channel if kind == Motor2::Functions::CampaignSeller::KEY
+    assign_files if @params.key?('files')
+  end
 
   def assign_columns
     @template.name = @params['name'].to_s.squish.first(100) if @params.key?('name')
@@ -59,6 +70,41 @@ class Motor2::Functions::Form
     ordered = Array(@params['inbox_ids']).map(&:to_i) & ids
     @template.attend_inbox_ids = ordered
     @template.inbox_id = ordered.first
+  end
+
+  UNITS = %w[minutes hours days].freeze
+  FILE_FLAGS = %w[ask welcome interest confirm booking].freeze
+
+  # Las reglas de los archivos (los que se suben después de crear el agente ya traen su regla por nombre).
+  def assign_files
+    rules = Motor2::Sanitizer.plain(@params['files']).to_h { |name, raw| [name.to_s.first(60), file_rule(Motor2::Sanitizer.plain(raw))] }
+    @template.resources = @template.resources.to_h.merge('files' => rules)
+  end
+
+  def file_rule(raw)
+    FILE_FLAGS.index_with { |f| ActiveModel::Type::Boolean.new.cast(raw[f]) || false }
+              .merge('about' => raw['about'].to_s.squish.first(200), 'tickets' => Array(raw['tickets']).map(&:to_s).first(10),
+                     'attempts' => Array(raw['attempts']).map(&:to_i).select(&:positive?).first(10))
+  end
+
+  # El Vendedor de campaña no atiende bandejas; escribe por la de su canal, con una plantilla por toque.
+  def assign_channel
+    @template.attending = false
+    @template.attend_inbox_ids = []
+    return unless @params['channel'].is_a?(Hash)
+
+    channel = @params['channel']
+    @template.inbox_id = @account.inboxes.where(id: channel['inbox_id']).pick(:id) if channel.key?('inbox_id')
+    @template.email_signature = channel['email_signature'].to_s.first(1000) if channel.key?('email_signature')
+    assign_touches(channel)
+  end
+
+  # Cada cuánto y cuántos toques (sin plantillas, los que diga; con plantillas, uno por plantilla).
+  def assign_touches(channel)
+    @template.whatsapp_templates = Array(channel['whatsapp_templates']).map { |t| t.to_s.strip }.first(10) if channel.key?('whatsapp_templates')
+    @template.retry_interval_value = channel['retry_value'].to_i.clamp(1, 999) if channel['retry_value'].present?
+    @template.retry_interval_unit = channel['retry_unit'].to_s.presence_in(UNITS) || 'days' if channel.key?('retry_unit')
+    @template.follow_up_attempts = channel['attempts'] if channel['attempts'].present?
   end
 
   # Solo las que la cuenta tiene (Motor2::SourceMap#available); las predefinidas no se marcan.

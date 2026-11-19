@@ -549,7 +549,8 @@
       "SEND": "Send",
       "TOOL": "⚙ {tool}",
       "DECISION": "→ {decision}",
-      "NOT_DONE": "(not done)"
+      "NOT_DONE": "(not done)",
+      "FILES": "📎 Sent: {files}"
     },
     "TOOLS": {
       "buscar_respuesta_predefinida": "Searched canned responses",
@@ -567,7 +568,11 @@
       "canalizar": "Hands it to the team",
       "crear_caso": "Opened the case",
       "registrar_gestion": "Registered the request",
-      "estado_caso": "Checked their case"
+      "estado_caso": "Checked their case",
+      "le_interesa": "Interested: hands over",
+      "no_le_interesa": "Not interested",
+      "confirmar_asistencia": "Confirmed or declined the event",
+      "enviar_archivo": "Sent a file"
     },
     "DECISIONS": {
       "prospecto_calificado": "Qualified prospect",
@@ -576,7 +581,8 @@
       "qualified": "Qualified prospect",
       "discarded": "Discarded: the conversation is resolved",
       "handoff": "Hand off to a person",
-      "done": "Goal met"
+      "done": "Goal met",
+      "relay": "Hands over to the next one"
     },
     "SESSION": {
       "FAILED": "Could not change it.",
@@ -589,7 +595,8 @@
         "handed_off": "handed to a person",
         "discarded": "discarded",
         "client": "was a customer: handed to their owner",
-        "not_client": "not a customer: handed to a person"
+        "not_client": "not a customer: handed to a person",
+        "relayed": "handed over"
       }
     },
     "APPOINTMENT_KINDS": {
@@ -681,7 +688,8 @@
       "after": "When qualified",
       "objections": "Objections",
       "instructions": "Instructions",
-      "test": "Try it and save"
+      "test": "Try it and save",
+      "files": "Images and files"
     },
     "STEP_HINTS": {
       "agent": "Give it a name for your team, the name the customer sees and the inboxes where it answers whoever writes.",
@@ -693,7 +701,8 @@
       "after": "What it does when the lead qualifies, who gets it and which details it collects first.",
       "objections": "What people say to stall the purchase and how to answer. It uses the idea in its own words and never invents discounts.",
       "instructions": "Anything else it should know or do (optional). If it contradicts the above, this wins.",
-      "test": "Try it in the chat on the right as if you were a lead and save it if you like it."
+      "test": "Try it in the chat on the right as if you were a lead and save it if you like it.",
+      "files": "What it can send and when."
     },
     "STEP_TEST": {
       "READY": "«{name}» is ready. When saved it goes to the agents list labeled «Lead handling».",
@@ -759,7 +768,8 @@
         "knows": "What it knows",
         "talk": "How it talks",
         "instructions": "Instructions",
-        "test": "Test and save"
+        "test": "Test and save",
+        "files": "Images and files"
       },
       "STEP_HINTS": {
         "agent": "Its name, tone and the inboxes where it serves your customers.",
@@ -768,7 +778,8 @@
         "knows": "Where it looks up answers. It only answers with what it finds there.",
         "talk": "How it greets, and what it does when someone asks for a person or is not a customer.",
         "instructions": "Anything else it should know or do (optional).",
-        "test": "Check every example lands in its area and chat with it as your customer."
+        "test": "Check every example lands in its area and chat with it as your customer.",
+        "files": "What it can send and when."
       },
       "AREAS": {
         "support": {
@@ -868,6 +879,137 @@
       },
       "TEST_HINT": "Write as your customer: «I can't log in», «I want a quote», «my invoice has the wrong tax ID»…",
       "TEST_AREA": "Area: {area}"
+    },
+    "CAMPAIGN": {
+      "SUBTITLE": "Knocks on the door in your campaigns: the campaign sends the first message and it follows up when they reply. It sparks interest, answers the first questions and hands the interested ones over.",
+      "NAME_PLACEHOLDER": "e.g. Ana – campaigns",
+      "WHERE_USED": "It doesn't serve inboxes: you pick it on the campaigns screen, under «What?».",
+      "STEPS": {
+        "agent": "The agent",
+        "offer": "What you offer",
+        "channel": "Channel and touches",
+        "knows": "Your business and what it knows",
+        "talk": "How it talks and the handover",
+        "instructions": "Instructions",
+        "test": "Test and save",
+        "files": "Images and files"
+      },
+      "STEP_HINTS": {
+        "agent": "Its name and tone.",
+        "offer": "What the campaign is for and what you offer. It only says what you put here or what it finds in your sources.",
+        "channel": "Where it writes and how many touches. On WhatsApp, each touch uses an approved template.",
+        "knows": "The basics of your business and where it looks up answers.",
+        "talk": "Who gets the interested contact and how it answers objections.",
+        "instructions": "Anything else it should know or do (optional).",
+        "test": "The chat starts with the campaign message: reply as your contact would.",
+        "files": "What it can send and when."
+      },
+      "PURPOSE": "What is the campaign for?",
+      "PURPOSES": {
+        "offer": {
+          "TITLE": "Offer",
+          "ABOUT": "A product, service or promotion. If they're interested, it hands them over."
+        },
+        "invite": {
+          "TITLE": "Invite",
+          "ABOUT": "To an event. Confirms whether they'll come and updates the event list."
+        },
+        "reactivate": {
+          "TITLE": "Win back",
+          "ABOUT": "Customers who haven't bought in a while. If interested, it hands them over."
+        },
+        "renew": {
+          "TITLE": "Remind or renew",
+          "ABOUT": "Something expiring (license, policy, service). If interested, it hands them over."
+        },
+        "survey": {
+          "TITLE": "Survey",
+          "ABOUT": "Up to 3 satisfaction questions. A low score opens a case."
+        }
+      },
+      "EVENT": "The event",
+      "EVENT_CHOOSE": "Choose the event",
+      "NO_EVENTS": "No upcoming events: create one in Events.",
+      "INVITE_WHAT": "What to tell them about the event (optional)",
+      "OFFER_WHAT": "What you offer",
+      "OFFER_DETAILS": "Price, validity and conditions (optional)",
+      "OFFER_DETAILS_PLACEHOLDER": "e.g. 20% off if you sign up before November 30",
+      "PLACEHOLDERS": {
+        "offer": "e.g. Training for your sales team",
+        "invite": "e.g. Live demo and coffee break",
+        "reactivate": "e.g. We miss you: 15% off your next purchase",
+        "renew": "e.g. Your license expires this month; renew at the same price",
+        "survey": ""
+      },
+      "GOAL": "If they're interested",
+      "GOALS": {
+        "relay": "Hands them over (agent or person)",
+        "appointment": "Books an appointment"
+      },
+      "SURVEY": {
+        "QUESTIONS": "The questions (up to 3, asked as written and in order)",
+        "PLACEHOLDER_1": "From 0 to 10, how likely are you to recommend us?",
+        "PLACEHOLDER_2": "What do you like most?",
+        "PLACEHOLDER_3": "What can we improve?",
+        "ADD": "+ Add question",
+        "LOW_SCORE": "Low score: below"
+      },
+      "MISSING": {
+        "offer": "Say what you offer.",
+        "invite": "Choose the event.",
+        "survey": "Add at least one question."
+      },
+      "RELAY": "The interested contact goes to",
+      "RELAYS": {
+        "agent": "The inbox agent: «Prospect care» (or «Customer care» if already a customer). If none, the person or team below.",
+        "person": "The person or team below (if the campaign has a handover board, it goes there with its deadline)"
+      },
+      "PERSON": "Person",
+      "TEAM": "Team",
+      "RULES": "Always: one question per message; if they say no, it says goodbye without insisting; «stop messaging me» opts them out; it never makes up prices or dates.",
+      "OBJECTIONS": "Common objections (optional)",
+      "OBJECTION_PLACEHOLDER": "What they say («too expensive»)",
+      "ANSWER_PLACEHOLDER": "How to answer",
+      "ADD_OBJECTION": "+ Add objection",
+      "REMOVE": "Remove",
+      "OPENER": "The campaign message for the test (the real campaign uses your template)",
+      "OPENER_LABEL": "Campaign message",
+      "OPENERS": {
+        "offer": "Hi! I'm writing about this: {what}. Want to hear more?",
+        "invite": "Hi! You're invited to {event}. Shall we save you a spot?",
+        "reactivate": "Hi! It's been a while: {what}. Interested?",
+        "renew": "Hi! A reminder: {what}. Shall I help you renew?",
+        "survey": "Hi! Could you spare a minute for a short survey?",
+        "SOMETHING": "our offer",
+        "EVENT": "our event"
+      },
+      "TEST_READY": "«{name}» is ready. Save it and pick it in a campaign.",
+      "TEST_HINT": "Reply as your contact: «yes, how much?», «no thanks», «what time is it?»…",
+      "IN_CAMPAIGNS": "In {n} campaigns",
+      "NO_CAMPAIGNS": "Not in any campaign yet"
+    },
+    "FILES": {
+      "HINT": "Upload images or files the agent can send (product photos, flyer, catalog, map…). Give each one a description: the agent can't see the image, so that's how it knows when it helps and doesn't make up what it shows.",
+      "FIRST_MESSAGE": "The image in the campaign's first message goes in the WhatsApp template (Settings › WhatsApp templates, image header). Here go the ones it sends afterwards.",
+      "ABOUT_PLACEHOLDER": "What it is (e.g. photo of the Basic package with its price)",
+      "ABOUT_MISSING": "Without a description the agent doesn't know when to send it.",
+      "WHEN": {
+        "interest": "When they show interest",
+        "ask": "When they ask or it helps",
+        "confirm": "When they confirm the event",
+        "welcome": "With the welcome",
+        "booking": "When the appointment is booked",
+        "tickets": "When a case is opened",
+        "touch": "On touch {n}"
+      },
+      "ADD": "Upload images or files",
+      "UPLOADING": "Uploading…",
+      "PENDING": "Uploads when you save the agent",
+      "REMOVE": "Remove",
+      "LIMITS": "At most 2 per message and never repeats one unless asked. WhatsApp accepts JPG or PNG images up to 5 MB, video up to 16 MB and PDF up to 100 MB. On a touch it only goes out if the 24 h window is open.",
+      "IMAGE_TYPE": "«{name}»: the image must be JPG or PNG.",
+      "TOO_BIG": "«{name}» is bigger than WhatsApp accepts.",
+      "UPLOAD_ERROR": "Could not upload the file."
     }
   }
 }

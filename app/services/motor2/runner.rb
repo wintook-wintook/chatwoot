@@ -28,7 +28,8 @@ class Motor2::Runner < Cases::Ai::BaseService
   Result = Struct.new(:reply, :decision, :trace, :error, :attachments, :after, keyword_init: true)
   MAX_FILES = 5
 
-  attr_reader :config, :state, :trace, :conversation, :tracking, :canned_used, :seen, :noted_contact, :evidence
+  attr_reader :config, :state, :trace, :conversation, :tracking, :canned_used, :seen, :noted_contact, :evidence, :last_customer,
+              :attachments
 
   # opts: conversation:, tracking:, history: (chat de prueba), mode: :reply | :attempt, attempt: [n, total],
   #       welcome: (bienvenida combinada: va tal cual al inicio del mensaje; el modelo no vuelve a saludar)
@@ -59,9 +60,12 @@ class Motor2::Runner < Cases::Ai::BaseService
     @decision = [kind, text.to_s.strip.first(500)]
   end
 
+  # Este turno no lleva mensaje (p. ej. el relevo del Vendedor de campaña: contesta quien sigue).
+  def silence! = (@silent = true)
+
   # Un archivo del agente que va con la respuesta (máximo 5; no se repite en el mismo mensaje).
   def attach(name)
-    file = @config.template.ai_agent_attachments.where('LOWER(name) = ?', name.to_s.downcase).first
+    file = @config.attachments.where('LOWER(name) = ?', name.to_s.downcase).first
     return false unless file&.file&.attached?
     return true if @attachments.any? { |a| a[:id] == file.id }
     return false if @attachments.size >= MAX_FILES
@@ -72,9 +76,7 @@ class Motor2::Runner < Cases::Ai::BaseService
   end
 
   # Lo que va después de mandar el mensaje (archivos de la cita o del caso, reglas del caso).
-  def after_send(&block)
-    @after << block
-  end
+  def after_send(&block) = @after << block
 
   def call
     return Result.new(error: 'La cuenta no tiene OpenAI configurado.', trace: @trace.to_h) if api_key.blank?
@@ -84,8 +86,8 @@ class Motor2::Runner < Cases::Ai::BaseService
     content = first_answer(messages)
     return Result.new(error: ['El modelo no respondió.', @error].compact.join(' — '), trace: @trace.to_h) if content.nil?
 
-    Result.new(reply: with_welcome(review(messages, clean(content))), decision: @decision, trace: @trace.to_h,
-               attachments: @attachments, after: @after)
+    reply = @silent ? '' : with_welcome(review(messages, clean(content)))
+    Result.new(reply: reply, decision: @decision, trace: @trace.to_h, attachments: @attachments, after: @after)
   end
 
   private

@@ -14,9 +14,16 @@ module Motor2::Functions::AgentJson
     { id: template.id, kind: template.agent_function, name: template.name, display_name: template.customer_display_name,
       enabled: template.attending, inbox_ids: Array(template.attend_inbox_ids).map(&:to_i), testing: template.testing,
       settings: motor2['answers'].to_h.merge('instructions' => motor2['instructions'].to_s, 'welcome' => motor2['welcome'].to_s),
-      sources: Array(motor2['sources']),
-      created_at: template.created_at }
-      .merge(sessions(template))
+      sources: Array(motor2['sources']), created_at: template.created_at }
+      .merge(sessions(template)).merge(channel(template))
+  end
+
+  # «Vendedor de campaña»: por dónde escribe y sus toques (Motor2::Functions::Form#assign_channel).
+  def channel(template)
+    { channel: { inbox_id: template.inbox_id, whatsapp_templates: Array(template.whatsapp_templates), attempts: template.follow_up_attempts,
+                 retry_value: template.retry_interval_value, retry_unit: template.retry_interval_unit,
+                 email_signature: template.email_signature.to_s },
+      campaigns: TrackingCampaign.where(tracking_template_id: template.id).count, files: template.file_rules }
   end
 
   # Cuántas pláticas atiende ahora y cómo terminaron las demás (calificado, pasado, descartado, era cliente).
@@ -31,12 +38,15 @@ module Motor2::Functions::AgentJson
     { live_sessions: live, finished: finished }
   end
 
+  # «handed_off: Soporte» (Atención a clientes), «relayed: Ana» (Vendedor de campaña).
+  PREFIXES = %w[handed_off relayed].freeze
   OUTCOMES = { 'handed_off' => 'handed_off', 'discarded' => 'discarded', 'rejected' => 'discarded', 'client' => 'client',
                'not_client' => 'not_client' }.freeze
 
   def result_of(status, outcome)
     text = outcome.to_s
-    return 'handed_off' if text == 'handed_off' || text.start_with?('handed_off:') # Atención a clientes: «handed_off: Soporte»
+    prefix = PREFIXES.find { |p| text.start_with?(p) }
+    return prefix if prefix
     return 'live' if LIVE.include?(status.to_s)
     return OUTCOMES[text] if OUTCOMES.key?(text)
 

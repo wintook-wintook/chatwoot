@@ -32,14 +32,35 @@ class AiAgentAttachment < ApplicationRecord
 
   validates :name, presence: true,
                    length: { minimum: 1, maximum: 60 },
-                   format: { with: NAME_FORMAT,
-                             message: 'solo admite letras, números, guion y guion bajo (sin espacios)' },
                    uniqueness: { scope: :tracking_template_id, case_sensitive: false }
+  validate :name_format
   validate :file_must_be_attached
+  validate :whatsapp_limits, on: :create
+
+  # Lo que WhatsApp acepta (los agentes los mandan por ahí): imagen JPG/PNG hasta 5 MB, video o audio
+  # hasta 16 MB, documento hasta 100 MB.
+  LIMITS_MB = { 'image' => 5, 'video' => 16, 'audio' => 16 }.freeze
+  IMAGE_TYPES = %w[image/jpeg image/png].freeze
+  DOCUMENT_MB = 100
 
   private
 
+  def name_format
+    return if name.blank? || name.to_s.match?(NAME_FORMAT)
+
+    errors.add(:name, 'solo admite letras, números, guion y guion bajo (sin espacios)')
+  end
+
   def file_must_be_attached
     errors.add(:file, 'debe adjuntarse un archivo') unless file.attached?
+  end
+
+  def whatsapp_limits
+    return unless file.attached?
+
+    type = file.content_type.to_s
+    errors.add(:file, 'la imagen debe ser JPG o PNG (WhatsApp no manda otras)') if type.start_with?('image/') && IMAGE_TYPES.exclude?(type)
+    limit = LIMITS_MB[type.split('/').first] || DOCUMENT_MB
+    errors.add(:file, "pesa más de #{limit} MB (lo más que acepta WhatsApp)") if file.byte_size.to_i > limit.megabytes
   end
 end

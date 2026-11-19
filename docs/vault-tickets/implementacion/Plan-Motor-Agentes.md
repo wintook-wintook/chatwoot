@@ -1004,3 +1004,113 @@ Coinciden en: (1) un **clasificador** que mira la plática completa (no la palab
 - Finish (`objetivo_cumplido` / `descartar`) no aplica en clientes; `pasar_a_humano` solo sin área (con área se usa `canalizar`, que asigna a la persona o equipo de esa área).
 - **Pruebas con el modelo real:** cotización incompleta → aclaración → oportunidad; RFC → una pregunta → canaliza a Administrativo; «no puedo operar» → caso urgente al instante; «¿qué planes tienen?» sin fuente → no inventa y ofrece vendedor; «quiero hablar con una persona» → pregunta qué necesita → canaliza al área.
 
+
+### 11.16 Vendedor de campaña — análisis y plan 1.0 (2026-11-19; el agente hecho el mismo día, ver §11.16.9)
+
+**La idea:** el agente de campaña **toca la puerta**: la campaña manda el primer mensaje y, cuando el contacto contesta, el agente despierta el interés, resuelve 2 o 3 dudas básicas y **pasa el relevo** a quien sabe vender (el agente de «Atención a prospectos», el de «Atención a clientes» o una persona). No negocia, no cierra ni cobra. Así queda simple, y lo sofisticado vive en un solo lugar (el que recibe el relevo), que sirve igual para quien llega solo y para quien viene de una campaña.
+
+#### 11.16.1 Cómo lo hacen otros (investigación 19/11)
+
+| Plataforma | Idea que tomamos |
+|---|---|
+| HubSpot Prospecting Agent | «Plays» (instrucciones por tipo de campaña), una llamada a la acción por campaña (liga de cita, documento), ventana y frecuencia de envío, aprobación opcional antes de mandar. |
+| Salesforce Agentforce SDR | Secuencia fija: primer mensaje → recordatorios → pedir la cita → contestar dudas con sus fuentes → **baja** del prospecto; trabaja con reglas de contacto y preferencias de baja. |
+| Respond.io / Kommo / WATI (WhatsApp) | Distinguen el agente que **solo contesta** del que **actúa**: califica, asigna al vendedor correcto, actualiza el contacto y agenda el siguiente paso; reglas de descarte definidas antes; al pasar a una persona, **resumen** de la plática. |
+| Meta (WhatsApp) | Fuera de la ventana de 24 h solo plantillas aprobadas; la baja de marketing la maneja WhatsApp y no se puede saltar; límite de plantillas de marketing por usuario (esperar 24 h para reintentar). |
+
+Coinciden en: (1) **un objetivo y una llamada a la acción por campaña**; (2) contestar dudas solo con fuentes; (3) **pasar a quien sigue con contexto**; (4) respetar la baja y no insistir con quien dijo que no.
+
+#### 11.16.2 Lo que ya tenemos (no se rehace)
+
+- **Campañas** (`TrackingCampaigns::*`): audiencia por lote o continua, topes por día, horario hábil, toques con plantillas, embudo, puntuación del prospecto.
+- **Clasificador de respuestas V5** (`ProspectClassifier`, ya corre en el motor 2.0): interesado / no ahora (un toque más en 30 días) / no le interesa (cierra) / no es la persona (cierra).
+- **Entrega a un vendedor** (`HandOff`): tablero de oportunidades, plazo y escalación, nota con @mención.
+- **Eventos**: la campaña de un evento (`event_id`) y confirmó/asistió por contacto.
+- **Cotizaciones**: `Quotes::Builder` (borrador desde el catálogo, con oportunidad) y `Quotes::Delivery` (manda la liga por su conversación); Dali ya cotiza hablando (`Assistant::QuoteTools`).
+- **Motor 2.0**: habilidades de fuentes, citas, preguntas (Calificar), objeciones, evidencia, «no fingir acciones»; Atención a prospectos y a clientes como destinos del relevo.
+
+#### 11.16.3 Lo que puede hacer (y qué entra en 1.0)
+
+| # | Uso | Qué hace el agente cuando contesta | ¿1.0? |
+|---|---|---|---|
+| 1 | **Invitar** (evento, webinar, inauguración) | Confirma o declina → marca su asistencia en Eventos; contesta dudas (fecha, lugar, costo) | ✅ |
+| 2 | **Ofrecer** producto, servicio o promoción | Contesta 2–3 dudas con fuentes y la oferta; si le interesa → **relevo** | ✅ |
+| 3 | **Reactivar** clientes inactivos o recompra | Igual que «ofrecer», con audiencia de clientes (el relevo va con Atención a clientes) | ✅ (receta de 2) |
+| 4 | **Recordar / renovar** (vence tu licencia, póliza, servicio) | Igual que «ofrecer», con la fecha en el mensaje | ✅ (receta de 2) |
+| 5 | **Encuesta de satisfacción** (1–3 preguntas) | Hace las preguntas (escala o texto), guarda las respuestas; calificación baja → caso con Atención a clientes | ✅ |
+| 6 | **Agendar** cita o demo directo | Con «Citas» prendida, ofrece horarios y agenda | ✅ opcional |
+| 7 | **Cotizar** | Habilidad **compartida «Cotizar»** (catálogo → borrador → liga), la usa sobre todo quien recibe el relevo | 🟡 fase V4 |
+| 8 | Negociar, descuentos, cerrar, cobrar | No es de este agente: Atención a prospectos / vendedor / Cobranza | ❌ |
+| 9 | Prospección en frío por correo (secuencias) | Ya lo hace la campaña de tipo Prospección; el agente solo contesta | — |
+
+#### 11.16.4 ¿El mismo asistente o un agente aparte?
+
+**Un agente aparte, con asistente corto y propio**, hecho con las mismas piezas (Tu negocio, Qué sabe, Cómo platica, Objeciones, chat de prueba). El de Atención a prospectos no sirve tal cual: está hecho para **quien llega** (atiende una bandeja, califica con hasta 10 preguntas, decide qué hacer al calificar); el de campaña **no atiende bandejas** (lo usa una campaña), **no saluda primero** (el primer mensaje es la plantilla) y tiene **un solo objetivo** por campaña.
+
+**La oferta va en la campaña, no en el agente:** un mismo agente («Ana – campañas») sirve para muchas campañas. La campaña lleva su **brief** (qué ofreces, precio y vigencia, llamada a la acción, para qué es); el agente lleva el tono, el negocio, sus fuentes y a quién pasa el relevo. El agente lee el brief de su campaña (`tracking.tracking_campaign`) en cada turno.
+
+**Asistente del agente (5 pasos):** 1 El agente · 2 Tu negocio y qué sabe · 3 Cómo platica (dudas, objeciones, si dice que no, baja) · 4 El relevo (a qué agente o persona, según sea prospecto o cliente) · 5 Pruébalo (chat que empieza con el mensaje de una campaña de ejemplo).
+
+**En la campaña, un paso nuevo «Qué ofreces»:** «¿Para qué es?» (Invitar · Ofrecer · Reactivar · Recordar/renovar · Encuesta) y, según eso, 3–4 campos (qué, precio/vigencia, llamada a la acción, o las preguntas de la encuesta). La receta llena sola el objetivo y sugiere la plantilla con «Crear con Dali».
+
+#### 11.16.5 Cómo funciona (lo manda el código)
+
+```
+Campaña ──toque 1 (plantilla)──► contacto
+                 │ contesta
+                 ▼
+     Vendedor de campaña (motor 2.0 + brief de la campaña)
+       · clasificador V5: no ahora / no le interesa / no es la persona / baja → se cierra (ya existe)
+       · dudas: solo con fuentes + brief (EvidenceCheck, como Comercial de clientes)
+       · Invitar: confirma o declina → Eventos
+       · Encuesta: preguntas → respuestas → baja calificación = caso
+       · interesado ──► RELEVO
+                          ├─ es cliente → agente de «Atención a clientes» de la bandeja
+                          ├─ no es cliente → agente de «Atención a prospectos» de la bandeja
+                          └─ sin agente o lo eligió → persona (HandOff: tablero, plazo, @mención)
+```
+
+- **Relevo (nuevo, `Motor2::Relay`):** cierra el seguimiento de la campaña como «interesado» y abre el del agente destino en la misma conversación (como `InboxRouter.start`), con una nota de contexto: «Viene de la campaña X: le interesó Y; preguntó Z». El destino contesta en ese mismo turno, sin que el cliente note el cambio, y no vuelve a preguntar lo que ya dijo.
+- **Reglas fijas:** una pregunta por mensaje; máximo 2 insistencias si no contesta (las da la campaña); si dice que no, se despide y no insiste; «baja», «ya no me escriban» → baja (lista de no contactar) y despedida; no inventa precio ni vigencia (solo los del brief o las fuentes); no finge acciones.
+
+#### 11.16.6 Pasos
+
+| Paso | Qué | Reúsa |
+|---|---|---|
+| V0 | Función `campaign_seller` (puesto, clase, asistente corto) + brief en la campaña («Qué ofreces» con las 5 recetas) + el agente lee el brief | Prompt, fuentes, Cómo platica, objeciones |
+| V1 | **Relevo** a Atención a prospectos / clientes / persona, con nota de contexto; probado con el modelo real | `InboxRouter.start`, `ClientCheck`, `HandOff` |
+| V2 | **Invitar**: confirmar o declinar → Eventos; recordatorio antes del evento | Eventos E1–E3 |
+| V3 | **Encuesta**: preguntas de escala o texto, guardar respuestas, baja calificación → caso | Calificar (lista de preguntas), Atención a clientes |
+| V4 | Habilidad compartida **«Cotizar»**: busca en el catálogo, arma el borrador (con su oportunidad) y, según la empresa, **lo deja para que el vendedor lo revise** (por omisión) o manda la liga | `Quotes::Builder`, `Quotes::Delivery`, `AreaSales` |
+| V5 | Primer mensaje por receta con «Crear con Dali», guía de Dali, el embudo de la campaña muestra relevos y encuestas | Plantillas con IA, `CampaignFunnel` |
+
+#### 11.16.7 Fuera de 1.0
+
+Vendedor sofisticado que negocia y cierra; secuencias multicanal que se adaptan solas; investigar al prospecto antes de escribirle; A/B de mensajes con IA; llamadas.
+
+#### 11.16.8 Decisiones que propongo (para revisar)
+
+1. **Agente aparte con asistente corto**, no el de prospectos.
+2. **La oferta vive en la campaña** (brief), no en el agente: un agente sirve para muchas campañas.
+3. **El relevo va al agente de la bandeja** (prospectos o clientes, según quién es); si no hay, a una persona con plazo.
+4. **Cotizar es una habilidad compartida** y por omisión deja un **borrador** para que el vendedor lo revise; mandarla sola es una opción.
+5. **No se tocan las campañas que ya existen** ni el motor 1.0: el Vendedor de campaña es un agente más que se elige en la campaña.
+
+#### 11.16.9 Cómo quedó el agente (2026-11-19, rama feat/vendedor_campana_motor2)
+
+El usuario pidió **solo el agente**; la pantalla de campañas va en un plan aparte. Por eso **la oferta vive en el agente** por ahora (`motor2['answers']`); cuando la campaña tenga su «Qué ofreces», el agente leerá la de la campaña.
+
+| Paso | Hecho | Dónde |
+|---|---|---|
+| V0 | Función `campaign_seller` (no atiende bandejas: `attending` false; escribe por su canal con una plantilla por toque), puesto, oferta con 5 usos, asistente de 7 pasos con el chat que empieza con el mensaje de la campaña | `Motor2::Functions::CampaignSeller`, `config/agent_functions/campaign_seller.{yml,md}`, `Form#assign_channel`, `CampaignSellerModal.vue` (reusa `FichaChannel` y `ReadyAgentChat`) |
+| V1 | **Relevo**: al agente de la bandeja (con el par, prospectos o clientes según quién es) en el mismo mensaje y sin que conteste el de campaña (`Runner#silence!`); si no hay, a la persona o a la entrega de la campaña (`HandOff`) | `Motor2::Relay`, `Skills::Campaign#interested` |
+| V2 | **Invitar**: `confirmar_asistencia` → `EventAttendee` confirmó/canceló (origen «agent»); el evento entra a LA OFERTA | `Skills::Campaign` |
+| V3 | **Encuesta**: preguntas tal cual y en orden; el código lleva el número; `AnswerCheck` no deja guardar «va»; calificación baja → caso de soporte prioridad alta | `Skills::Campaign`, `CampaignSellerOutcomes#survey_done` |
+| — | No fingir acciones (confirmar, agendar, pasar); sin `objetivo_cumplido`/`descartar` (tiene `le_interesa`/`no_le_interesa`) | `Motor2::AreaChecks::CAMPAIGN_CLAIMED`, `Skills::Finish#on?` |
+
+**Pendiente:** V4 (habilidad compartida «Cotizar»), V5 (primer mensaje por receta con Dali) y la **pantalla de campañas** («Qué ofreces» por campaña, plan aparte).
+
+
+#### 11.16.10 Imágenes y archivos en los agentes listos (2026-11-19)
+
+Paso «Imágenes y archivos» en los tres asistentes (`AgentFiles.vue`): se suben (agente nuevo: al guardar), cada uno con **descripción** (el modelo no ve la imagen) y **cuándo se manda**: todos «cuando lo pida o le sirva»; campaña «cuando muestre interés» (lo manda `Motor2::Relay` antes de que conteste quien sigue, o va con el mensaje si pasa a una persona), «al confirmar el evento» y «en el toque N»; prospectos «con la bienvenida» y «al agendar»; clientes «al levantar un caso» (va con el folio). Reglas en `resources['files']` (`Form#assign_files`, `about` nuevo); `Skills::Files` da la descripción al modelo, máximo 2 por mensaje; `AreaChecks#ensure_file_claim` no deja decir «te mando la foto» sin archivo; `AiAgentAttachment` valida lo que acepta WhatsApp al subir (JPG/PNG ≤ 5 MB, video/audio ≤ 16 MB, documento ≤ 100 MB). El chat de prueba usa los archivos del agente (`TrackingTemplate#draft_of`) y muestra «📎 Mandó: …». La imagen del primer mensaje sigue en el encabezado de la plantilla de WhatsApp.

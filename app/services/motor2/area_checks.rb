@@ -7,7 +7,9 @@
 #   - ya levantó el caso o registró lo que pidió: se quita «¿quieres que te pase con alguien?»;
 #   - Comercial (información): lo que afirma debe estar en lo que trajeron las fuentes (Motor2::EvidenceCheck,
 #     «fail closed»); si no, se reescribe con lo confirmado y diciendo que lo demás no se puede confirmar;
-#   - «Atención a prospectos» también: dice que ya agendó la cita sin haberla agendado → se reescribe.
+#   - «Atención a prospectos» también: dice que ya agendó la cita sin haberla agendado → se reescribe;
+#   - todos: dice «te mando la foto / el catálogo» y no va ningún archivo → se le pide que lo mande con
+#     enviar_archivo o que no lo diga; si insiste, se quita esa frase.
 # Lo incluye Motor2::Runner (usa @mode, @decision, @trace, #run, #clean, #unsourced? y #find_skill).
 module Motor2::AreaChecks
   private
@@ -15,7 +17,11 @@ module Motor2::AreaChecks
   # «Atención a clientes»: dice que ya levantó, registró, agendó o lo pasó sin haber llamado la herramienta.
   CLAIMED = /(levant[eé]|registr[eé]|agend[eé]|cre[eé])\s+(tu|su|el|la|una?)\b|tu\s+folio|n[uú]mero\s+de\s+(caso|folio)|
              ya\s+(qued[oó]|est[aá])\s+(registrad|levantad|agendad)|te\s+(paso|pasé|canalicé)\s+con/xi
-  ACTION_TOOLS = %w[crear_caso registrar_gestion canalizar pasar_a_humano agendar_cita estado_caso].freeze
+  ACTION_TOOLS = %w[crear_caso registrar_gestion canalizar pasar_a_humano agendar_cita estado_caso le_interesa
+                    confirmar_asistencia guardar_respuesta].freeze
+  # «Vendedor de campaña»: dice que ya confirmó su lugar, lo agendó o lo pasó sin hacerlo.
+  CAMPAIGN_CLAIMED = /(confirm[eé]\s+tu\s+(lugar|asistencia)|qued[oó]\s+confirmad|ya\s+est[aá]s\s+(confirmad|registrad|inscrit)|
+                      \bagendé|te\s+(paso|pasé)\s+con|ya\s+le\s+(pasé|avisé))/xi
   NO_CLAIM = 'Dijiste que ya hiciste algo (levantar el caso, registrar, agendar o pasarlo) pero no llamaste la herramienta. ' \
              'Si toca hacerlo, llama la herramienta ahora (crear_caso, registrar_gestion, canalizar o agendar_cita) y luego ' \
              'contesta; si no toca, reescribe sin decir que ya lo hiciste.'
@@ -48,6 +54,24 @@ module Motor2::AreaChecks
   end
 
   def evidence_text = @evidence.join("\n---\n").first(6000)
+
+  FILE_CLAIM = /\b(te|le)\s+(env[ií]o|mando|comparto|adjunto|dejo)\s+(aqu[ií]\s+)?(la|el|las|los|una|un|nuestr[oa]s?)?\s*
+                (fotos?|im[aá]gen(es)?|archivos?|flyers?|cat[aá]logos?|pdf|fichas?|mapas?|videos?|documentos?|folletos?|brochures?)/xi
+  NO_FILE = 'Dijiste que le mandas un archivo pero no va ninguno. Si tienes ese archivo, mándalo con enviar_archivo; si no, ' \
+            'reescribe sin decir que lo mandas.'
+
+  def ensure_file_claim(messages, text)
+    return text unless file_claim?(text)
+
+    @trace.event(:revision, "dijo que manda un archivo sin mandarlo: #{text[FILE_CLAIM]}")
+    messages << { role: 'assistant', content: text } << { role: 'system', content: NO_FILE }
+    again = clean(run(messages))
+    return text if again.blank? || unsourced?(again)
+
+    file_claim?(again) ? without_claims(again, FILE_CLAIM) : again
+  end
+
+  def file_claim?(text) = @mode == :reply && @attachments.empty? && text.match?(FILE_CLAIM)
 
   def ensure_area_action(messages, text)
     text = without_offer(text)
@@ -83,6 +107,12 @@ module Motor2::AreaChecks
 
     areas = find_skill('areas')
     return areas.human_asked? ? nil : CLAIMED if areas
+
+    other_claim_pattern
+  end
+
+  def other_claim_pattern
+    return CAMPAIGN_CLAIMED if find_skill('campaign')
 
     BOOKED if find_skill('appointments') && find_skill('qualify')
   end

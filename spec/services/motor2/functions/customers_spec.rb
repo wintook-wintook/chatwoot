@@ -119,6 +119,17 @@ RSpec.describe Motor2::Functions::Customers do
     expect(tracking.reload.motor2_state['case_folio']).to be_present
   end
 
+  it 'Soporte: con el folio manda el instructivo de «al levantar un caso»' do
+    account.case_types.create!(name: 'Soporte', case_class: :support)
+    create(:ai_agent_attachment, tracking_template: agent, account: account, name: 'instructivo')
+    agent.update!(resources: { 'files' => { 'instructivo' => { 'about' => 'Pasos para entrar', 'tickets' => ['*'] } } })
+    triage('support', severidad: 1, intencion: 'no abre el sistema')
+    stub_model(tool_call('crear_caso', { titulo: 'No abre', descripcion: 'No abre' }), answer('Tu folio es el que te di.'))
+    reply_to(incoming('el sistema no abre, no puedo operar'))
+
+    expect(conversation.messages.outgoing.where(private: false).last.attachments.count).to eq(1)
+  end
+
   it 'Comercial: la cotización se registra como oportunidad con el vendedor; no se abre otra si ya tiene una' do
     account.case_types.create!(name: 'Oportunidad', case_class: :commercial)
     triage('sales', gestion: 'cotizacion', intencion: 'cotización de 10 usuarios')

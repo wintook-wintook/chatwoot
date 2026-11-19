@@ -2,7 +2,9 @@
   Agentes listos — el chat de prueba de un asistente (motor 2.0 real, sin guardar ni mandar nada):
   tú eres el cliente y ves qué contesta, qué herramientas usó y qué decidió. `payload` es una
   función que regresa lo que hay en el asistente; `agentId` el agente que se está cambiando.
-  Lo usa el asistente de «Atención a clientes» (CustomersAgentModal).
+  Lo usa el asistente de «Atención a clientes» (CustomersAgentModal) y el del «Vendedor de campaña»
+  (CampaignSellerModal): con `opener`, la plática empieza con el mensaje de la campaña (el agente sigue
+  cuando el cliente contesta).
 -->
 <script>
 import ReadyAgentsAPI from 'dashboard/api/readyAgents';
@@ -15,6 +17,7 @@ export default {
     payload: { type: Function, required: true },
     agentId: { type: Number, default: null },
     hint: { type: String, default: '' },
+    opener: { type: String, default: '' },
   },
   data() {
     return { chat: [], chatState: {}, draft: '', testing: false };
@@ -36,9 +39,14 @@ export default {
       try {
         const { data } = await ReadyAgentsAPI.test(
           this.payload(),
-          this.chat
-            .filter(m => ['user', 'assistant'].includes(m.role))
-            .map(({ role, content }) => ({ role, content })),
+          [
+            ...(this.opener.trim()
+              ? [{ role: 'assistant', content: this.opener.trim() }]
+              : []),
+            ...this.chat
+              .filter(m => ['user', 'assistant'].includes(m.role))
+              .map(({ role, content }) => ({ role, content })),
+          ],
           { id: this.agentId, state: this.chatState }
         );
         this.chatState = data.state || this.chatState;
@@ -47,6 +55,7 @@ export default {
           content: data.reply || this.t('TEST.NO_MESSAGE'),
           tools: data.tools || [],
           decision: data.decision,
+          files: data.files || [],
           area: this.areaOf(data.state),
         });
       } catch (e) {
@@ -104,6 +113,16 @@ export default {
       </button>
     </div>
     <div ref="chatBox" class="flex-1 min-h-0 p-3 space-y-2 overflow-y-auto">
+      <div v-if="opener.trim()" class="flex justify-end">
+        <div
+          class="max-w-[85%] px-3 py-2 text-sm rounded-lg whitespace-pre-line bg-woot-50 text-slate-800 dark:bg-woot-900/30 dark:text-slate-100"
+        >
+          <span class="block mb-1 text-[11px] text-slate-500">
+            {{ t('CAMPAIGN.OPENER_LABEL') }}
+          </span>
+          {{ opener.trim() }}
+        </div>
+      </div>
       <p v-if="!chat.length" class="m-0 text-xs text-slate-500">
         {{ hint || t('TEST.HINT') }}
       </p>
@@ -137,6 +156,12 @@ export default {
             class="block mt-1 text-[11px] text-slate-500"
           >
             {{ t('TEST.TOOL', { tool: toolLine(tool) }) }}
+          </span>
+          <span
+            v-if="(m.files || []).length"
+            class="block mt-1 text-[11px] text-slate-500"
+          >
+            {{ t('TEST.FILES', { files: m.files.join(', ') }) }}
           </span>
           <span
             v-if="m.decision"

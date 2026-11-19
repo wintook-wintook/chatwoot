@@ -198,6 +198,9 @@ class TrackingTemplate < ApplicationRecord
     guardados.positive? ? guardados.clamp(1, 10) : DEFAULT_FOLLOW_UP_ATTEMPTS
   end
 
+  # La copia sin guardar de un agente (chat de prueba de Agentes listos): de cuál viene, para usar sus archivos.
+  attr_accessor :draft_of
+
   # feat/ficha_agente_ia — cuándo se manda cada archivo del agente:
   #   { 'catalogo' => { 'ask' => true, 'welcome' => false, 'attempts' => [2] } }
   # ask: cuando el cliente lo pide (el modelo escribe {{catalogo}}); welcome: con la

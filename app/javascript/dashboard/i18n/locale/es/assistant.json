@@ -549,7 +549,8 @@
       "SEND": "Enviar",
       "TOOL": "⚙ {tool}",
       "DECISION": "→ {decision}",
-      "NOT_DONE": "(no se hizo)"
+      "NOT_DONE": "(no se hizo)",
+      "FILES": "📎 Mandó: {files}"
     },
     "TOOLS": {
       "buscar_respuesta_predefinida": "Buscó en respuestas predefinidas",
@@ -567,7 +568,11 @@
       "canalizar": "Lo pasa al equipo",
       "crear_caso": "Levantó el caso",
       "registrar_gestion": "Registró la gestión",
-      "estado_caso": "Revisó su caso"
+      "estado_caso": "Revisó su caso",
+      "le_interesa": "Le interesa: pasa el relevo",
+      "no_le_interesa": "No le interesa",
+      "confirmar_asistencia": "Confirmó o declinó el evento",
+      "enviar_archivo": "Mandó un archivo"
     },
     "DECISIONS": {
       "prospecto_calificado": "Prospecto calificado",
@@ -576,7 +581,8 @@
       "qualified": "Prospecto calificado",
       "discarded": "Descartado: la conversación se resuelve",
       "handoff": "Pasa a una persona",
-      "done": "Objetivo cumplido"
+      "done": "Objetivo cumplido",
+      "relay": "Pasa el relevo a quien sigue"
     },
     "SESSION": {
       "FAILED": "No se pudo cambiar.",
@@ -589,7 +595,8 @@
         "handed_off": "pasado a una persona",
         "discarded": "descartado",
         "client": "era cliente: pasado a su responsable",
-        "not_client": "no era cliente: pasado a una persona"
+        "not_client": "no era cliente: pasado a una persona",
+        "relayed": "pasados a quien sigue"
       }
     },
     "APPOINTMENT_KINDS": {
@@ -681,7 +688,8 @@
       "after": "Al calificar",
       "objections": "Objeciones",
       "instructions": "Indicaciones",
-      "test": "Pruébalo y guarda"
+      "test": "Pruébalo y guarda",
+      "files": "Imágenes y archivos"
     },
     "STEP_HINTS": {
       "agent": "Ponle un nombre para tu equipo, el nombre que verá el cliente y las bandejas donde va a atender a quien escriba.",
@@ -693,7 +701,8 @@
       "after": "Qué hace cuando califica, a quién se lo pasa y qué datos junta antes.",
       "objections": "Lo que suelen decir para frenar la compra y cómo contestarlo. Usa la idea con sus palabras y no inventa descuentos.",
       "instructions": "Algo más que deba saber o hacer (opcional). Si contradice lo anterior, gana esto.",
-      "test": "Prueba en el chat de la derecha como si fueras un prospecto y, si te gusta, guarda."
+      "test": "Prueba en el chat de la derecha como si fueras un prospecto y, si te gusta, guarda.",
+      "files": "Lo que puede mandar y cuándo."
     },
     "STEP_TEST": {
       "READY": "«{name}» está listo. Al guardar queda en la lista de agentes con la etiqueta «Atención a prospectos».",
@@ -759,7 +768,8 @@
         "knows": "Qué sabe",
         "talk": "Cómo platica",
         "instructions": "Indicaciones",
-        "test": "Pruébalo y guarda"
+        "test": "Pruébalo y guarda",
+        "files": "Imágenes y archivos"
       },
       "STEP_HINTS": {
         "agent": "Cómo se llama, con qué tono habla y en qué bandejas atiende a tus clientes.",
@@ -768,7 +778,8 @@
         "knows": "Dónde busca lo que le preguntan. Solo contesta con lo que encuentre ahí.",
         "talk": "Cómo saluda, qué hace cuando pide una persona y cuando quien escribe no es cliente.",
         "instructions": "Algo más que deba saber o hacer (opcional).",
-        "test": "Prueba que cada ejemplo caiga en su área y platica con él como si fueras tu cliente."
+        "test": "Prueba que cada ejemplo caiga en su área y platica con él como si fueras tu cliente.",
+        "files": "Lo que puede mandar y cuándo."
       },
       "AREAS": {
         "support": {
@@ -868,6 +879,137 @@
       },
       "TEST_HINT": "Escribe como tu cliente: «no puedo entrar al sistema», «quiero una cotización», «mi factura tiene mal el RFC»…",
       "TEST_AREA": "Área: {area}"
+    },
+    "CAMPAIGN": {
+      "SUBTITLE": "Toca la puerta en tus campañas: la campaña manda el primer mensaje y él sigue cuando contestan. Despierta el interés, resuelve las primeras dudas y pasa al interesado a quien sigue.",
+      "NAME_PLACEHOLDER": "p. ej. Ana – campañas",
+      "WHERE_USED": "No atiende bandejas: lo eliges en la pantalla de campañas, en «¿Qué?».",
+      "STEPS": {
+        "agent": "El agente",
+        "offer": "Qué ofreces",
+        "channel": "Canal y toques",
+        "knows": "Tu negocio y qué sabe",
+        "talk": "Cómo platica y el relevo",
+        "instructions": "Indicaciones",
+        "test": "Pruébalo y guarda",
+        "files": "Imágenes y archivos"
+      },
+      "STEP_HINTS": {
+        "agent": "Cómo se llama y con qué tono escribe.",
+        "offer": "Para qué es la campaña y qué ofreces. De la oferta solo dice lo que pongas aquí o lo que encuentre en tus fuentes.",
+        "channel": "Por dónde escribe y cuántos toques da. En WhatsApp, cada toque usa una plantilla aprobada.",
+        "knows": "Lo básico de tu negocio y dónde busca lo que le preguntan.",
+        "talk": "A quién pasa al interesado y cómo contesta las objeciones.",
+        "instructions": "Algo más que deba saber o hacer (opcional).",
+        "test": "El chat empieza con el mensaje de la campaña: contesta como lo haría tu contacto.",
+        "files": "Lo que puede mandar y cuándo."
+      },
+      "PURPOSE": "¿Para qué es la campaña?",
+      "PURPOSES": {
+        "offer": {
+          "TITLE": "Ofrecer",
+          "ABOUT": "Un producto, servicio o promoción. Si le interesa, lo pasa a quien sigue."
+        },
+        "invite": {
+          "TITLE": "Invitar",
+          "ABOUT": "A un evento de Eventos. Confirma si va y lo deja en la lista del evento."
+        },
+        "reactivate": {
+          "TITLE": "Reactivar",
+          "ABOUT": "A clientes que hace tiempo no compran. Si le interesa, lo pasa a quien sigue."
+        },
+        "renew": {
+          "TITLE": "Recordar o renovar",
+          "ABOUT": "Algo que vence (licencia, póliza, servicio). Si le interesa, lo pasa a quien sigue."
+        },
+        "survey": {
+          "TITLE": "Encuesta",
+          "ABOUT": "Hasta 3 preguntas de satisfacción. Con una calificación baja levanta un caso."
+        }
+      },
+      "EVENT": "El evento",
+      "EVENT_CHOOSE": "Elige el evento",
+      "NO_EVENTS": "No tienes eventos próximos: créalo en Eventos.",
+      "INVITE_WHAT": "Qué le dices del evento (opcional)",
+      "OFFER_WHAT": "Qué ofreces",
+      "OFFER_DETAILS": "Precio, vigencia y condiciones (opcional)",
+      "OFFER_DETAILS_PLACEHOLDER": "p. ej. 20% de descuento si contratas antes del 30 de noviembre",
+      "PLACEHOLDERS": {
+        "offer": "p. ej. Capacitación para tu equipo de ventas",
+        "invite": "p. ej. Habrá demostración en vivo y coffee break",
+        "reactivate": "p. ej. Te extrañamos: 15% en tu siguiente compra",
+        "renew": "p. ej. Tu licencia vence este mes; renueva con el mismo precio",
+        "survey": ""
+      },
+      "GOAL": "Si le interesa",
+      "GOALS": {
+        "relay": "Lo pasa a quien sigue (agente o persona)",
+        "appointment": "Le agenda una cita"
+      },
+      "SURVEY": {
+        "QUESTIONS": "Las preguntas (hasta 3, las hace tal cual y en orden)",
+        "PLACEHOLDER_1": "Del 0 al 10, ¿qué tanto nos recomendarías?",
+        "PLACEHOLDER_2": "¿Qué es lo que más te gusta?",
+        "PLACEHOLDER_3": "¿Qué podemos mejorar?",
+        "ADD": "+ Agregar pregunta",
+        "LOW_SCORE": "Calificación baja: menor a"
+      },
+      "MISSING": {
+        "offer": "Falta decir qué ofreces.",
+        "invite": "Falta elegir el evento.",
+        "survey": "Falta al menos una pregunta."
+      },
+      "RELAY": "Al interesado lo pasa a",
+      "RELAYS": {
+        "agent": "Al agente de la bandeja: «Atención a prospectos» (o «Atención a clientes» si ya es cliente). Si no hay, a la persona o equipo de abajo.",
+        "person": "A la persona o equipo de abajo (si la campaña tiene tablero de entrega, entra ahí con su plazo)"
+      },
+      "PERSON": "Persona",
+      "TEAM": "Equipo",
+      "RULES": "Siempre: una pregunta por mensaje; si dice que no, se despide sin insistir; «ya no me escriban» lo da de baja; no inventa precios ni fechas.",
+      "OBJECTIONS": "Objeciones frecuentes (opcional)",
+      "OBJECTION_PLACEHOLDER": "Lo que dicen («está caro»)",
+      "ANSWER_PLACEHOLDER": "Cómo contestarlo",
+      "ADD_OBJECTION": "+ Agregar objeción",
+      "REMOVE": "Quitar",
+      "OPENER": "El mensaje de la campaña para la prueba (en la campaña real va tu plantilla)",
+      "OPENER_LABEL": "Mensaje de la campaña",
+      "OPENERS": {
+        "offer": "¡Hola! Te escribo por esto: {what}. ¿Te cuento más?",
+        "invite": "¡Hola! Te invitamos a {event}. ¿Te apartamos un lugar?",
+        "reactivate": "¡Hola! Hace tiempo que no sabemos de ti: {what}. ¿Te interesa?",
+        "renew": "¡Hola! Te recordamos esto: {what}. ¿Te ayudo a renovarlo?",
+        "survey": "¡Hola! ¿Nos regalas un minuto para una encuesta corta?",
+        "SOMETHING": "nuestra oferta",
+        "EVENT": "nuestro evento"
+      },
+      "TEST_READY": "«{name}» está listo. Guárdalo y elígelo en una campaña.",
+      "TEST_HINT": "Contesta como tu contacto: «sí, ¿cuánto cuesta?», «no gracias», «¿a qué hora es?»…",
+      "IN_CAMPAIGNS": "En {n} campañas",
+      "NO_CAMPAIGNS": "Todavía en ninguna campaña"
+    },
+    "FILES": {
+      "HINT": "Sube imágenes o archivos que el agente pueda mandar (fotos del producto, flyer, catálogo, mapa…). Ponle a cada uno una descripción: el agente no ve la imagen, con eso sabe cuándo sirve y no inventa lo que trae.",
+      "FIRST_MESSAGE": "La imagen del primer mensaje de la campaña va en la plantilla de WhatsApp (Ajustes › Plantillas de WhatsApp, encabezado con imagen). Aquí van las que manda después.",
+      "ABOUT_PLACEHOLDER": "Qué es (p. ej. foto del paquete Básico con su precio)",
+      "ABOUT_MISSING": "Sin descripción el agente no sabe cuándo mandarla.",
+      "WHEN": {
+        "interest": "Cuando muestre interés",
+        "ask": "Cuando lo pida o le sirva",
+        "confirm": "Al confirmar el evento",
+        "welcome": "Con la bienvenida",
+        "booking": "Al agendar la cita",
+        "tickets": "Al levantar un caso",
+        "touch": "En el toque {n}"
+      },
+      "ADD": "Subir imágenes o archivos",
+      "UPLOADING": "Subiendo…",
+      "PENDING": "Se sube al guardar el agente",
+      "REMOVE": "Quitar",
+      "LIMITS": "Máximo 2 por mensaje y nunca repite uno, salvo que se lo pidan. WhatsApp acepta imagen JPG o PNG hasta 5 MB, video hasta 16 MB y PDF hasta 100 MB. En un toque solo sale si la ventana de 24 h está abierta.",
+      "IMAGE_TYPE": "«{name}»: la imagen debe ser JPG o PNG.",
+      "TOO_BIG": "«{name}» pesa más de lo que acepta WhatsApp.",
+      "UPLOAD_ERROR": "No se pudo subir el archivo."
     }
   }
 }
