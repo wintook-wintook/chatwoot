@@ -8,8 +8,17 @@
 //   WhatsApp: plantilla por intento (obligatoria)  ·  Correo: firma
 // Los canales: las bandejas con el bot de seguimiento activo (como EditTemplate).
 // v-model: { inboxId, retryValue, retryUnit, attempts, whatsappTemplates: [], emailSignature }
+//
+// fix/campanas (punto 3): junto a cada intento, «Ver» despliega la plantilla como la verá
+// el cliente (TemplatePreview de Configuración › Plantillas de WhatsApp). Sale del módulo
+// de plantillas y, si ahí no está, de lo que trae Meta en la bandeja.
 // ============================================================================
 import { mapGetters } from 'vuex';
+import TemplatePreview from 'dashboard/routes/dashboard/settings/whatsappTemplates/TemplatePreview.vue';
+import {
+  formFromMetaTemplate,
+  formFromTemplate,
+} from 'dashboard/routes/dashboard/settings/whatsappTemplates/templateEditor';
 
 const UNITS = ['minutes', 'hours', 'days'];
 const MAX_ATTEMPTS = 6;
@@ -40,18 +49,21 @@ export const channelKind = inbox => {
 };
 
 export default {
+  components: { TemplatePreview },
   model: { prop: 'value', event: 'input' },
   props: {
     value: { type: Object, required: true },
   },
   emits: ['input'],
   data() {
-    return { units: UNITS, maxAttempts: MAX_ATTEMPTS };
+    // previewIndex: el intento cuya plantilla se está viendo (null = ninguna)
+    return { units: UNITS, maxAttempts: MAX_ATTEMPTS, previewIndex: null };
   },
   computed: {
     ...mapGetters({
       appIntegrations: 'integrations/getAppIntegrations',
       inboxes: 'inboxes/getInboxes',
+      moduleTemplates: 'whatsappTemplates/getTemplates',
     }),
     channels() {
       return trackingChannels(this.appIntegrations, this.inboxes);
@@ -62,13 +74,40 @@ export default {
     kind() {
       return channelKind(this.selected);
     },
-    waTemplates() {
+    // Las plantillas tal como las trae Meta en la bandeja (con sus components).
+    metaTemplates() {
       if (this.kind !== 'whatsapp') return [];
-      const lista =
+      return (
         this.$store.getters['inboxes/getWhatsAppTemplates'](
           Number(this.value.inboxId)
-        ) || [];
-      return lista.map(item => ({ name: item.name, language: item.language }));
+        ) || []
+      );
+    },
+    waTemplates() {
+      return this.metaTemplates.map(item => ({
+        name: item.name,
+        language: item.language,
+      }));
+    },
+    channelId() {
+      const inbox = (this.inboxes || []).find(
+        item => item.id === Number(this.value.inboxId)
+      );
+      return inbox ? inbox.channel_id : null;
+    },
+    // La vista previa del intento abierto: del módulo de plantillas (trae el archivo del
+    // encabezado) o, si no está ahí, de Meta.
+    previewForm() {
+      if (this.previewIndex === null) return null;
+      const nombre = (this.value.whatsappTemplates || [])[this.previewIndex];
+      if (!nombre) return null;
+      const delModulo = (this.moduleTemplates || []).find(
+        item =>
+          item.name === nombre && item.channel_whatsapp_id === this.channelId
+      );
+      if (delModulo) return formFromTemplate(delModulo);
+      const deMeta = this.metaTemplates.find(item => item.name === nombre);
+      return deMeta ? formFromMetaTemplate(deMeta) : null;
     },
     attemptList() {
       return Array.from({ length: this.value.attempts || 1 }, (_, i) => i);
@@ -80,9 +119,16 @@ export default {
       );
     },
   },
+  watch: {
+    'value.inboxId': function cambiarBandeja() {
+      this.previewIndex = null;
+      this.loadModuleTemplates();
+    },
+  },
   async mounted() {
     if (!this.appIntegrations || !this.appIntegrations.length)
       await this.$store.dispatch('integrations/get');
+    this.loadModuleTemplates();
   },
   methods: {
     t(key, args) {
@@ -104,6 +150,22 @@ export default {
       const plantillas = [...(this.value.whatsappTemplates || [])];
       plantillas[indice] = nombre;
       this.set('whatsappTemplates', plantillas);
+      if (!nombre && this.previewIndex === indice) this.previewIndex = null;
+    },
+    togglePreview(indice) {
+      this.previewIndex = this.previewIndex === indice ? null : indice;
+    },
+    // Las plantillas del módulo traen el archivo del encabezado; si falla, queda Meta.
+    async loadModuleTemplates() {
+      if (this.kind !== 'whatsapp') return;
+      try {
+        await this.$store.dispatch(
+          'whatsappTemplates/fetch',
+          Number(this.value.inboxId)
+        );
+      } catch (error) {
+        // sin el módulo, la vista previa sale de lo que trae Meta
+      }
     },
   },
 };
@@ -182,27 +244,48 @@ export default {
         <div
           v-for="indice in attemptList"
           :key="indice"
-          class="flex items-center gap-2"
+          class="flex flex-col gap-2"
         >
-          <span
-            class="w-24 text-sm shrink-0 text-slate-600 dark:text-slate-300"
-          >
-            {{ t('ATTEMPT_N', { n: indice + 1 }) }}
-          </span>
-          <select
-            class="!mb-0"
-            :value="(value.whatsappTemplates || [])[indice] || ''"
-            @change="setTemplate(indice, $event.target.value)"
-          >
-            <option value="">{{ t('WA_CHOOSE') }}</option>
-            <option
-              v-for="plantilla in waTemplates"
-              :key="`${plantilla.name}-${plantilla.language}`"
-              :value="plantilla.name"
+          <div class="flex items-center gap-2">
+            <span
+              class="w-24 text-sm shrink-0 text-slate-600 dark:text-slate-300"
             >
-              {{ plantilla.name }} ({{ plantilla.language }})
-            </option>
-          </select>
+              {{ t('ATTEMPT_N', { n: indice + 1 }) }}
+            </span>
+            <select
+              class="!mb-0"
+              :value="(value.whatsappTemplates || [])[indice] || ''"
+              @change="setTemplate(indice, $event.target.value)"
+            >
+              <option value="">{{ t('WA_CHOOSE') }}</option>
+              <option
+                v-for="plantilla in waTemplates"
+                :key="`${plantilla.name}-${plantilla.language}`"
+                :value="plantilla.name"
+              >
+                {{ plantilla.name }} ({{ plantilla.language }})
+              </option>
+            </select>
+            <woot-button
+              variant="smooth"
+              color-scheme="secondary"
+              size="small"
+              icon="eye-show"
+              class="shrink-0"
+              :is-disabled="!(value.whatsappTemplates || [])[indice]"
+              @click="togglePreview(indice)"
+            >
+              {{
+                previewIndex === indice ? t('WA_PREVIEW_HIDE') : t('WA_PREVIEW')
+              }}
+            </woot-button>
+          </div>
+          <div v-if="previewIndex === indice" class="max-w-sm sm:pl-[6.5rem]">
+            <TemplatePreview v-if="previewForm" :form="previewForm" />
+            <p v-else class="!m-0 text-xs text-slate-500 dark:text-slate-400">
+              {{ t('WA_PREVIEW_MISSING') }}
+            </p>
+          </div>
         </div>
       </template>
       <p v-if="missingTemplates" class="!m-0 text-xs text-red-600">

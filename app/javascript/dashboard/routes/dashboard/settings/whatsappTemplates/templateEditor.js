@@ -79,6 +79,42 @@ export const formFromTemplate = template => {
   };
 };
 
+// fix/campanas (punto 3) — una plantilla tal como la trae Meta (components: HEADER, BODY,
+// FOOTER, BUTTONS) al formulario de la vista previa. La usa el asistente para crear agentes
+// (FichaChannel) cuando la plantilla no está en el módulo de Plantillas de WhatsApp.
+export const formFromMetaTemplate = template => {
+  const components = (template && template.components) || [];
+  const find = type => components.find(c => c.type === type) || {};
+  const header = find('HEADER');
+  const body = find('BODY');
+  const headerType = (header.format || '').toLowerCase();
+  const example = header.example || {};
+  return {
+    ...emptyForm(),
+    name: template.name || '',
+    language: template.language || '',
+    category: template.category || '',
+    header_type: headerType,
+    header_content: headerType === 'text' ? header.text || '' : '',
+    header_media_url:
+      headerType && headerType !== 'text'
+        ? (example.header_handle || [])[0] || ''
+        : '',
+    body_text: body.text || '',
+    footer_text: find('FOOTER').text || '',
+    buttons: (find('BUTTONS').buttons || []).map(b => ({
+      ...emptyButton(b.type),
+      text: b.text || '',
+      url: b.url || '',
+      phone_number: b.phone_number || '',
+    })),
+    sample_values: {
+      body: ((body.example || {}).body_text || [])[0] || [],
+      header: example.header_text || [],
+    },
+  };
+};
+
 const SERVER_FIELDS = [
   'name',
   'category',

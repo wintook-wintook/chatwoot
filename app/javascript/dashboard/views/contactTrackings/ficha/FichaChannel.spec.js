@@ -433,3 +433,78 @@ describe('Tope de rutas', () => {
     ]);
   });
 });
+
+// fix/campanas (punto 3): ver la plantilla de cada intento al crear el agente.
+describe('FichaChannel · vista previa de la plantilla', () => {
+  const META = [
+    {
+      name: 'promo_1',
+      language: 'es_MX',
+      components: [
+        { type: 'BODY', text: 'Hola {{1}}', example: { body_text: [['Ana']] } },
+      ],
+    },
+    { name: 'promo_2', language: 'es_MX', components: [] },
+  ];
+  const MODULO = [
+    {
+      name: 'promo_2',
+      channel_whatsapp_id: 7,
+      header_type: 'image',
+      header_media_link: 'https://x/flyer.jpg',
+      body_text: 'Del módulo',
+    },
+  ];
+  const montar = value =>
+    shallowMount(FichaChannel, {
+      propsData: { value },
+      mocks: {
+        $t: clave => clave,
+        $store: {
+          dispatch: vi.fn(),
+          getters: {
+            'integrations/getAppIntegrations': INTEGRATIONS,
+            'inboxes/getInboxes': [{ ...INBOXES[0], channel_id: 7 }],
+            'inboxes/getWhatsAppTemplates': () => META,
+            'whatsappTemplates/getTemplates': MODULO,
+          },
+        },
+      },
+    });
+
+  it('carga las plantillas del módulo de la bandeja', () => {
+    const wrapper = montar({ inboxId: 1, attempts: 1, whatsappTemplates: [] });
+    expect(wrapper.vm.$store.dispatch).toHaveBeenCalledWith(
+      'whatsappTemplates/fetch',
+      1
+    );
+  });
+
+  it('«Ver» abre la plantilla de ese intento: de Meta si no está en el módulo', async () => {
+    const wrapper = montar({
+      inboxId: 1,
+      attempts: 2,
+      whatsappTemplates: ['promo_1', 'promo_2'],
+    });
+    expect(wrapper.vm.previewForm).toBeNull();
+
+    wrapper.vm.togglePreview(0);
+    expect(wrapper.vm.previewForm).toMatchObject({
+      body_text: 'Hola {{1}}',
+      sample_values: { body: ['Ana'] },
+    });
+
+    wrapper.vm.togglePreview(1);
+    expect(wrapper.vm.previewForm).toMatchObject({
+      body_text: 'Del módulo',
+      header_preview_url: 'https://x/flyer.jpg',
+    });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.findComponent({ name: 'TemplatePreview' }).exists()).toBe(
+      true
+    );
+
+    wrapper.vm.togglePreview(1);
+    expect(wrapper.vm.previewIndex).toBeNull();
+  });
+});
