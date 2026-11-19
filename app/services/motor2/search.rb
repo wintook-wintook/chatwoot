@@ -5,7 +5,9 @@
 # las predefinidas con AiFollowUps::KnowledgeSearch (separa las instrucciones internas) y el
 # resto por parecido sobre knowledge_items de esa fuente (artículos, documentos, hojas, foro,
 # CONTPAQi), igual que KnowledgeBaseResponseService. Una hoja en modo «Datos» se busca EXACTO en sus
-# filas con SheetQueryService (el código calcula, sin inventar números), como en el 1.0.
+# filas con SheetQueryService (el código calcula, sin inventar números), como en el 1.0. CONTPAQi no
+# guarda nada en la plataforma: se le pregunta en vivo a su Agente de Servicio (Contpaq::ServiceAgent,
+# el mismo cliente del 1.0, con el mismo identificador del contacto y la memoria por conversación).
 #
 #   Motor2::Search.new(account, sources).call('¿cuánto cuesta Derecho?', only: 'Precios')
 #   → [{ fuente: 'Precios', resultados: [...] }]
@@ -58,6 +60,7 @@ class Motor2::Search < Cases::Ai::BaseService
     return Array(canned.canned(question)[:results]) if source.kind == 'canned'
     return catalog_results(question) if source.kind == 'catalog'
     return exact_sheet(source, question) if data_sheet?(source)
+    return contpaq(source, question) if source.kind == 'contpaq_support'
 
     semantic(source, question)
   end
@@ -86,6 +89,30 @@ class Motor2::Search < Cases::Ai::BaseService
   def data_sheet?(source)
     source.kind == 'google_sheet' && source.record&.config.to_h&.dig('sheet_mode') == 'data'
   end
+
+  CONTPAQ_NOTE = 'Respuesta del Agente de Servicio CONTPAQi: dásela completa, con sus pasos y datos tal cual (sin cambiarlos ' \
+                 'ni agregar otros); si trae liga de documentación, inclúyela.'
+
+  # En vivo: CONTPAQi contesta ya redactado (y con su documentación). En el chat de prueba no hay contacto:
+  # se pregunta con un identificador de prueba de la cuenta y sin memoria.
+  def contpaq(source, question)
+    result = Contpaq::ServiceAgent.new(source.record).answer(question: question.to_s.first(1000), user_id: contpaq_user,
+                                                             conversation_id: contpaq_conversation)
+    return [] unless result.ok?
+
+    url = Array(result.sources).find { |s| s[:url].present? }&.dig(:url)
+    [{ titulo: source.name, informacion: "#{CONTPAQ_NOTE}\n#{result.answer}".first(4000), liga: url }.compact]
+  rescue StandardError => e
+    Rails.logger.warn("[Motor2::Search] CONTPAQi: #{e.class}: #{e.message}")
+    []
+  end
+
+  def contpaq_user
+    Contpaq::UserIdBuilder.new(@conversation&.contact, @account).build ||
+      "prueba_#{@account.id.to_s.rjust(Contpaq::UserIdBuilder::ACCOUNT_WIDTH, '0')}@#{Contpaq::UserIdBuilder::DOMAIN}"
+  end
+
+  def contpaq_conversation = @conversation && "acct-#{@account.id}-conv-#{@conversation.display_id}"
 
   # El resultado lo calcula Ruby sobre las filas (exacto): el modelo solo lo redacta.
   def exact_sheet(source, question)
