@@ -194,8 +194,10 @@ export const formatDateTime = (dateString) => {
    * @param {string} status - Estado actual
    * @returns {boolean}
    */
+  // fix/campanas (punto 4): igual que ContactTracking#can_pause? — un pendiente también se
+  // pausa (antes el panel de la conversación solo ofrecía Cancelar y Editar).
   export const canPause = (status) => {
-    return ['active', 'scheduled'].includes(status);
+    return ['pending', 'scheduled', 'active'].includes(status);
   };
   
   /**
