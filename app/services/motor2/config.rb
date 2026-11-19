@@ -32,6 +32,9 @@ class Motor2::Config
 
   def account = @template.account
 
+  # Los archivos del agente (en el chat de prueba, los del agente del que es copia).
+  def attachments = AiAgentAttachment.where(tracking_template_id: @template.id || @template.draft_of)
+
   def name = @columns['name'].to_s
 
   # El nombre que ve el cliente (si no hay, no se presenta con nombre).

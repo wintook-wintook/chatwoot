@@ -7,7 +7,9 @@
 #   - ya levantó el caso o registró lo que pidió: se quita «¿quieres que te pase con alguien?»;
 #   - Comercial (información): lo que afirma debe estar en lo que trajeron las fuentes (Motor2::EvidenceCheck,
 #     «fail closed»); si no, se reescribe con lo confirmado y diciendo que lo demás no se puede confirmar;
-#   - «Atención a prospectos» también: dice que ya agendó la cita sin haberla agendado → se reescribe.
+#   - «Atención a prospectos» también: dice que ya agendó la cita sin haberla agendado → se reescribe;
+#   - todos: dice «te mando la foto / el catálogo» y no va ningún archivo → se le pide que lo mande con
+#     enviar_archivo o que no lo diga; si insiste, se quita esa frase.
 # Lo incluye Motor2::Runner (usa @mode, @decision, @trace, #run, #clean, #unsourced? y #find_skill).
 module Motor2::AreaChecks
   private
@@ -52,6 +54,24 @@ module Motor2::AreaChecks
   end
 
   def evidence_text = @evidence.join("\n---\n").first(6000)
+
+  FILE_CLAIM = /\b(te|le)\s+(env[ií]o|mando|comparto|adjunto|dejo)\s+(aqu[ií]\s+)?(la|el|las|los|una|un|nuestr[oa]s?)?\s*
+                (fotos?|im[aá]gen(es)?|archivos?|flyers?|cat[aá]logos?|pdf|fichas?|mapas?|videos?|documentos?|folletos?|brochures?)/xi
+  NO_FILE = 'Dijiste que le mandas un archivo pero no va ninguno. Si tienes ese archivo, mándalo con enviar_archivo; si no, ' \
+            'reescribe sin decir que lo mandas.'
+
+  def ensure_file_claim(messages, text)
+    return text unless file_claim?(text)
+
+    @trace.event(:revision, "dijo que manda un archivo sin mandarlo: #{text[FILE_CLAIM]}")
+    messages << { role: 'assistant', content: text } << { role: 'system', content: NO_FILE }
+    again = clean(run(messages))
+    return text if again.blank? || unsourced?(again)
+
+    file_claim?(again) ? without_claims(again, FILE_CLAIM) : again
+  end
+
+  def file_claim?(text) = @mode == :reply && @attachments.empty? && text.match?(FILE_CLAIM)
 
   def ensure_area_action(messages, text)
     text = without_offer(text)

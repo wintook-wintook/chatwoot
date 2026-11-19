@@ -50,6 +50,7 @@ class Motor2::Relay
   def to_agent(template, summary)
     note("Le interesó la campaña#{campaign_name}: pasa a «#{template.name}». #{summary}".strip)
     finish("relayed: #{template.name}")
+    interest_files # las imágenes de «cuando muestre interés», antes de que conteste quien sigue
     tracking = ContactTracking.create!(Motor2::InboxRouter.attributes(template, @conversation)
                                          .merge(motor2_state: { 'welcome_sent' => true, 'from_campaign' => summary.to_s.first(300) }))
     last = @conversation.messages.incoming.order(:id).last
@@ -64,6 +65,12 @@ class Motor2::Relay
     assign(@function.handoff_target) unless delivered
     @tracking.update_columns(outcome: 'relayed: person', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     @tracking.pause!
+  end
+
+  def interest_files
+    own = @tracking.tracking_template
+    names = Motor2::Skills::Files.with_rule(own, 'interest', own.ai_agent_attachments).first(Motor2::Skills::Files::MAX_PER_MESSAGE)
+    ContactTrackings::EventFiles.deliver(own, @conversation, names, Motor2::Delivery.sender(@conversation.account))
   end
 
   def finish(outcome)

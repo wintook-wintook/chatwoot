@@ -549,7 +549,8 @@
       "SEND": "Enviar",
       "TOOL": "⚙ {tool}",
       "DECISION": "→ {decision}",
-      "NOT_DONE": "(no se hizo)"
+      "NOT_DONE": "(no se hizo)",
+      "FILES": "📎 Mandó: {files}"
     },
     "TOOLS": {
       "buscar_respuesta_predefinida": "Buscó en respuestas predefinidas",
@@ -570,7 +571,8 @@
       "estado_caso": "Revisó su caso",
       "le_interesa": "Le interesa: pasa el relevo",
       "no_le_interesa": "No le interesa",
-      "confirmar_asistencia": "Confirmó o declinó el evento"
+      "confirmar_asistencia": "Confirmó o declinó el evento",
+      "enviar_archivo": "Mandó un archivo"
     },
     "DECISIONS": {
       "prospecto_calificado": "Prospecto calificado",
@@ -686,7 +688,8 @@
       "after": "Al calificar",
       "objections": "Objeciones",
       "instructions": "Indicaciones",
-      "test": "Pruébalo y guarda"
+      "test": "Pruébalo y guarda",
+      "files": "Imágenes y archivos"
     },
     "STEP_HINTS": {
       "agent": "Ponle un nombre para tu equipo, el nombre que verá el cliente y las bandejas donde va a atender a quien escriba.",
@@ -698,7 +701,8 @@
       "after": "Qué hace cuando califica, a quién se lo pasa y qué datos junta antes.",
       "objections": "Lo que suelen decir para frenar la compra y cómo contestarlo. Usa la idea con sus palabras y no inventa descuentos.",
       "instructions": "Algo más que deba saber o hacer (opcional). Si contradice lo anterior, gana esto.",
-      "test": "Prueba en el chat de la derecha como si fueras un prospecto y, si te gusta, guarda."
+      "test": "Prueba en el chat de la derecha como si fueras un prospecto y, si te gusta, guarda.",
+      "files": "Lo que puede mandar y cuándo."
     },
     "STEP_TEST": {
       "READY": "«{name}» está listo. Al guardar queda en la lista de agentes con la etiqueta «Atención a prospectos».",
@@ -764,7 +768,8 @@
         "knows": "Qué sabe",
         "talk": "Cómo platica",
         "instructions": "Indicaciones",
-        "test": "Pruébalo y guarda"
+        "test": "Pruébalo y guarda",
+        "files": "Imágenes y archivos"
       },
       "STEP_HINTS": {
         "agent": "Cómo se llama, con qué tono habla y en qué bandejas atiende a tus clientes.",
@@ -773,7 +778,8 @@
         "knows": "Dónde busca lo que le preguntan. Solo contesta con lo que encuentre ahí.",
         "talk": "Cómo saluda, qué hace cuando pide una persona y cuando quien escribe no es cliente.",
         "instructions": "Algo más que deba saber o hacer (opcional).",
-        "test": "Prueba que cada ejemplo caiga en su área y platica con él como si fueras tu cliente."
+        "test": "Prueba que cada ejemplo caiga en su área y platica con él como si fueras tu cliente.",
+        "files": "Lo que puede mandar y cuándo."
       },
       "AREAS": {
         "support": {
@@ -885,7 +891,8 @@
         "knows": "Tu negocio y qué sabe",
         "talk": "Cómo platica y el relevo",
         "instructions": "Indicaciones",
-        "test": "Pruébalo y guarda"
+        "test": "Pruébalo y guarda",
+        "files": "Imágenes y archivos"
       },
       "STEP_HINTS": {
         "agent": "Cómo se llama y con qué tono escribe.",
@@ -894,7 +901,8 @@
         "knows": "Lo básico de tu negocio y dónde busca lo que le preguntan.",
         "talk": "A quién pasa al interesado y cómo contesta las objeciones.",
         "instructions": "Algo más que deba saber o hacer (opcional).",
-        "test": "El chat empieza con el mensaje de la campaña: contesta como lo haría tu contacto."
+        "test": "El chat empieza con el mensaje de la campaña: contesta como lo haría tu contacto.",
+        "files": "Lo que puede mandar y cuándo."
       },
       "PURPOSE": "¿Para qué es la campaña?",
       "PURPOSES": {
@@ -979,6 +987,29 @@
       "TEST_HINT": "Contesta como tu contacto: «sí, ¿cuánto cuesta?», «no gracias», «¿a qué hora es?»…",
       "IN_CAMPAIGNS": "En {n} campañas",
       "NO_CAMPAIGNS": "Todavía en ninguna campaña"
+    },
+    "FILES": {
+      "HINT": "Sube imágenes o archivos que el agente pueda mandar (fotos del producto, flyer, catálogo, mapa…). Ponle a cada uno una descripción: el agente no ve la imagen, con eso sabe cuándo sirve y no inventa lo que trae.",
+      "FIRST_MESSAGE": "La imagen del primer mensaje de la campaña va en la plantilla de WhatsApp (Ajustes › Plantillas de WhatsApp, encabezado con imagen). Aquí van las que manda después.",
+      "ABOUT_PLACEHOLDER": "Qué es (p. ej. foto del paquete Básico con su precio)",
+      "ABOUT_MISSING": "Sin descripción el agente no sabe cuándo mandarla.",
+      "WHEN": {
+        "interest": "Cuando muestre interés",
+        "ask": "Cuando lo pida o le sirva",
+        "confirm": "Al confirmar el evento",
+        "welcome": "Con la bienvenida",
+        "booking": "Al agendar la cita",
+        "tickets": "Al levantar un caso",
+        "touch": "En el toque {n}"
+      },
+      "ADD": "Subir imágenes o archivos",
+      "UPLOADING": "Subiendo…",
+      "PENDING": "Se sube al guardar el agente",
+      "REMOVE": "Quitar",
+      "LIMITS": "Máximo 2 por mensaje y nunca repite uno, salvo que se lo pidan. WhatsApp acepta imagen JPG o PNG hasta 5 MB, video hasta 16 MB y PDF hasta 100 MB. En un toque solo sale si la ventana de 24 h está abierta.",
+      "IMAGE_TYPE": "«{name}»: la imagen debe ser JPG o PNG.",
+      "TOO_BIG": "«{name}» pesa más de lo que acepta WhatsApp.",
+      "UPLOAD_ERROR": "No se pudo subir el archivo."
     }
   }
 }

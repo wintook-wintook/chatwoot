@@ -12,6 +12,8 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import ReadyAgentsAPI from 'dashboard/api/readyAgents';
 import ReadyAgentChat from './ReadyAgentChat.vue';
+import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
+import AgentFiles from './AgentFiles.vue';
 
 const T = 'READY_AGENTS';
 const STEPS = [
@@ -19,6 +21,7 @@ const STEPS = [
   'business',
   'areas',
   'knows',
+  'files',
   'talk',
   'instructions',
   'test',
@@ -97,6 +100,7 @@ const blank = () => ({
   enabled: true,
   sources: [],
   inbox_ids: [],
+  files: {},
   settings: {
     tone: 'cercano',
     welcome: '',
@@ -117,7 +121,7 @@ const blank = () => ({
 
 export default {
   name: 'CustomersAgentModal',
-  components: { ReadyAgentChat },
+  components: { ReadyAgentChat, AgentFiles },
   props: {
     show: { type: Boolean, default: false },
     title: { type: String, default: '' },
@@ -137,6 +141,7 @@ export default {
       openArea: 'support',
       matrix: null,
       matrixRunning: false,
+      pendingFiles: [],
     };
   },
   computed: {
@@ -221,6 +226,7 @@ export default {
         this.form = {
           ...base,
           ...saved,
+          files: saved.files || {},
           settings: {
             ...base.settings,
             ...settings,
@@ -236,6 +242,7 @@ export default {
         this.form = base;
       }
       this.step = 'agent';
+      this.pendingFiles = [];
       this.matrix = null;
       this.$store.dispatch('agents/get');
       this.$store.dispatch('teams/get');
@@ -339,6 +346,17 @@ export default {
         settings: { ...settings, areas },
       };
     },
+    // Agente nuevo: los archivos que eligió en «Imágenes y archivos» se suben ya que existe.
+    async uploadPending(agentId) {
+      if (this.agent || !this.pendingFiles.length) return;
+      try {
+        await Promise.all(
+          this.pendingFiles.map(f => AiAgentAttachmentsAPI.upload(agentId, f))
+        );
+      } catch (e) {
+        useAlert(e.response?.data?.message || this.t('FILES.UPLOAD_ERROR'));
+      }
+    },
     async save() {
       if (!this.canSave || this.saving) return;
       this.saving = true;
@@ -348,6 +366,7 @@ export default {
               ready_agent: this.payload(),
             })
           : await ReadyAgentsAPI.create({ ready_agent: this.payload() });
+        await this.uploadPending(data.agent.id);
         this.$emit('saved', data.agent);
       } catch (e) {
         useAlert(e.response?.data?.error || this.t('SAVE_ERROR'));
@@ -846,6 +865,16 @@ export default {
               </span>
             </label>
             <p class="m-0 text-xs text-slate-500">{{ c('KNOWS_HINT') }}</p>
+          </template>
+
+          <!-- Imágenes y archivos -->
+          <template v-if="step === 'files'">
+            <AgentFiles
+              v-model="form.files"
+              kind="customers"
+              :agent-id="agent ? agent.id : null"
+              @pending="pendingFiles = $event"
+            />
           </template>
 
           <!-- 5 · Cómo platica -->

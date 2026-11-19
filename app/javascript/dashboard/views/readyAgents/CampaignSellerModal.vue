@@ -11,6 +11,8 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import ReadyAgentsAPI from 'dashboard/api/readyAgents';
 import ReadyAgentChat from './ReadyAgentChat.vue';
+import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
+import AgentFiles from './AgentFiles.vue';
 import FichaChannel from '../contactTrackings/ficha/FichaChannel.vue';
 
 const T = 'READY_AGENTS';
@@ -20,6 +22,7 @@ const STEPS = [
   'channel',
   'knows',
   'talk',
+  'files',
   'instructions',
   'test',
 ];
@@ -35,6 +38,8 @@ const blank = () => ({
   enabled: true,
   sources: [],
   inbox_ids: [],
+  // Cuándo se manda cada imagen o archivo (AgentFiles).
+  files: {},
   channel: {
     inboxId: '',
     retryValue: 2,
@@ -70,7 +75,7 @@ const blank = () => ({
 
 export default {
   name: 'CampaignSellerModal',
-  components: { ReadyAgentChat, FichaChannel },
+  components: { ReadyAgentChat, FichaChannel, AgentFiles },
   props: {
     show: { type: Boolean, default: false },
     title: { type: String, default: '' },
@@ -81,7 +86,13 @@ export default {
   },
   emits: ['close', 'saved'],
   data() {
-    return { form: blank(), saving: false, step: 'agent', opener: '' };
+    return {
+      form: blank(),
+      saving: false,
+      step: 'agent',
+      opener: '',
+      pendingFiles: [],
+    };
   },
   computed: {
     ...mapGetters({ agents: 'agents/getAgents', teams: 'teams/getTeams' }),
@@ -180,6 +191,7 @@ export default {
         this.form = {
           ...base,
           ...saved,
+          files: saved.files || {},
           channel: {
             inboxId: channel.inbox_id || '',
             retryValue: channel.retry_value || 2,
@@ -205,6 +217,7 @@ export default {
         this.form = base;
       }
       this.step = 'agent';
+      this.pendingFiles = [];
       this.opener = this.defaultOpener;
       this.$store.dispatch('agents/get');
       this.$store.dispatch('teams/get');
@@ -261,6 +274,7 @@ export default {
         display_name: this.form.display_name,
         enabled: true,
         sources: this.form.sources,
+        files: this.form.files,
         channel: {
           inbox_id: channel.inboxId,
           retry_value: channel.retryValue,
@@ -280,6 +294,17 @@ export default {
         },
       };
     },
+    // Agente nuevo: los archivos que eligió en «Imágenes y archivos» se suben ya que existe.
+    async uploadPending(agentId) {
+      if (this.agent || !this.pendingFiles.length) return;
+      try {
+        await Promise.all(
+          this.pendingFiles.map(f => AiAgentAttachmentsAPI.upload(agentId, f))
+        );
+      } catch (e) {
+        useAlert(e.response?.data?.message || this.t('FILES.UPLOAD_ERROR'));
+      }
+    },
     async save() {
       if (!this.canSave || this.saving) return;
       this.saving = true;
@@ -289,6 +314,7 @@ export default {
               ready_agent: this.payload(),
             })
           : await ReadyAgentsAPI.create({ ready_agent: this.payload() });
+        await this.uploadPending(data.agent.id);
         this.$emit('saved', data.agent);
       } catch (e) {
         useAlert(e.response?.data?.error || this.t('SAVE_ERROR'));
@@ -661,7 +687,19 @@ export default {
             </template>
           </template>
 
-          <!-- 6 · Indicaciones -->
+          <!-- 6 · Imágenes y archivos -->
+          <template v-if="step === 'files'">
+            <AgentFiles
+              v-model="form.files"
+              kind="campaign_seller"
+              :agent-id="agent ? agent.id : null"
+              :touches="Number(form.channel.attempts) || 0"
+              :invite="isInvite"
+              @pending="pendingFiles = $event"
+            />
+          </template>
+
+          <!-- 7 · Indicaciones -->
           <template v-if="step === 'instructions'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.INSTRUCTIONS') }}</span>

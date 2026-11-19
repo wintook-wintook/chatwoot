@@ -23,7 +23,7 @@ module Motor2::Functions::AgentJson
     { channel: { inbox_id: template.inbox_id, whatsapp_templates: Array(template.whatsapp_templates), attempts: template.follow_up_attempts,
                  retry_value: template.retry_interval_value, retry_unit: template.retry_interval_unit,
                  email_signature: template.email_signature.to_s },
-      campaigns: TrackingCampaign.where(tracking_template_id: template.id).count }
+      campaigns: TrackingCampaign.where(tracking_template_id: template.id).count, files: template.file_rules }
   end
 
   # Cuántas pláticas atiende ahora y cómo terminaron las demás (calificado, pasado, descartado, era cliente).

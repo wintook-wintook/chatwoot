@@ -68,6 +68,8 @@ module Motor2::ReplyChecks
                  'buscar_en_fuentes antes de contestar y, si no sale, no lo afirmes (sigue CÓMO PLATICAS). Si no tiene que ' \
                  'ver con el negocio, no busques: sigue la regla de «fuera de tema». Luego la pregunta pendiente.'
   SEARCH_TOOLS = %w[buscar_en_fuentes buscar_en_catalogo].freeze
+  # Ya contestó con otra cosa (el estado de su caso, el archivo que pidió): no hace falta buscar.
+  ANSWERED_BY = %w[estado_caso enviar_archivo].freeze
 
   def ensure_searched(messages, text)
     return text unless unsearched_question?
@@ -85,7 +87,7 @@ module Motor2::ReplyChecks
   end
 
   def can_search_unused?
-    find_skill('knowledge')&.searchable? && @trace.tools.none? { |t| t['name'] == 'estado_caso' } && @trace.tools.none? do |t|
+    find_skill('knowledge')&.searchable? && @trace.tools.none? { |t| ANSWERED_BY.include?(t['name']) && t['ok'] } && @trace.tools.none? do |t|
       SEARCH_TOOLS.include?(t['name'])
     end
   end

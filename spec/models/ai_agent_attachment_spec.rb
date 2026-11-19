@@ -51,4 +51,16 @@ RSpec.describe AiAgentAttachment do
       expect(other).to be_valid
     end
   end
+
+  describe 'lo que WhatsApp acepta (al subir)' do
+    it 'una imagen que no es JPG ni PNG, o muy pesada, no se sube' do
+      gif = build(:ai_agent_attachment, file: Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/sample.png'), 'image/png'))
+      gif.file.blob.content_type = 'image/gif'
+      expect(gif).not_to be_valid
+      expect(gif.errors[:file].join).to include('JPG o PNG')
+
+      png = build(:ai_agent_attachment, file: Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/sample.png'), 'image/png'))
+      expect(png).to be_valid
+    end
+  end
 end

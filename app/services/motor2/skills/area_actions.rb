@@ -90,10 +90,18 @@ module Motor2::Skills::AreaActions
     ticket = new_case(args['titulo'], args['descripcion'], type_id, priority)
     state['case_folio'] = ticket.try(:folio) || ticket.id
     trace.event(:caso, "#{area_title}: #{ticket.title}")
+    case_files(type_id)
     { ok: true, folio: ticket.try(:folio) || ticket.id, nota: CASE_DONE }
   end
 
+  # Los archivos de «al levantar un caso» (instructivo, formato…) van con el mensaje del folio.
+  def case_files(type_id)
+    type = config.account.case_types.find_by(id: type_id)
+    config.template.files_for_ticket(type&.name).first(Motor2::Skills::Files::MAX_PER_MESSAGE).each { |name| @turn.attach(name) }
+  end
+
   def test_case
+    case_files(case_type_for(area_key, :support))
     state['case_folio'] = 'PRUEBA-1'
     { ok: true, prueba: true, folio: 'PRUEBA-1', nota: CASE_DONE }
   end

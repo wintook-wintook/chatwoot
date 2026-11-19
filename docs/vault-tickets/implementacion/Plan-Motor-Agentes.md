@@ -1110,3 +1110,7 @@ El usuario pidió **solo el agente**; la pantalla de campañas va en un plan apa
 
 **Pendiente:** V4 (habilidad compartida «Cotizar»), V5 (primer mensaje por receta con Dali) y la **pantalla de campañas** («Qué ofreces» por campaña, plan aparte).
 
+
+#### 11.16.10 Imágenes y archivos en los agentes listos (2026-11-19)
+
+Paso «Imágenes y archivos» en los tres asistentes (`AgentFiles.vue`): se suben (agente nuevo: al guardar), cada uno con **descripción** (el modelo no ve la imagen) y **cuándo se manda**: todos «cuando lo pida o le sirva»; campaña «cuando muestre interés» (lo manda `Motor2::Relay` antes de que conteste quien sigue, o va con el mensaje si pasa a una persona), «al confirmar el evento» y «en el toque N»; prospectos «con la bienvenida» y «al agendar»; clientes «al levantar un caso» (va con el folio). Reglas en `resources['files']` (`Form#assign_files`, `about` nuevo); `Skills::Files` da la descripción al modelo, máximo 2 por mensaje; `AreaChecks#ensure_file_claim` no deja decir «te mando la foto» sin archivo; `AiAgentAttachment` valida lo que acepta WhatsApp al subir (JPG/PNG ≤ 5 MB, video/audio ≤ 16 MB, documento ≤ 100 MB). El chat de prueba usa los archivos del agente (`TrackingTemplate#draft_of`) y muestra «📎 Mandó: …». La imagen del primer mensaje sigue en el encabezado de la plantilla de WhatsApp.

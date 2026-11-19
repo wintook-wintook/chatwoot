@@ -549,7 +549,8 @@
       "SEND": "Send",
       "TOOL": "⚙ {tool}",
       "DECISION": "→ {decision}",
-      "NOT_DONE": "(not done)"
+      "NOT_DONE": "(not done)",
+      "FILES": "📎 Sent: {files}"
     },
     "TOOLS": {
       "buscar_respuesta_predefinida": "Searched canned responses",
@@ -570,7 +571,8 @@
       "estado_caso": "Checked their case",
       "le_interesa": "Interested: hands over",
       "no_le_interesa": "Not interested",
-      "confirmar_asistencia": "Confirmed or declined the event"
+      "confirmar_asistencia": "Confirmed or declined the event",
+      "enviar_archivo": "Sent a file"
     },
     "DECISIONS": {
       "prospecto_calificado": "Qualified prospect",
@@ -686,7 +688,8 @@
       "after": "When qualified",
       "objections": "Objections",
       "instructions": "Instructions",
-      "test": "Try it and save"
+      "test": "Try it and save",
+      "files": "Images and files"
     },
     "STEP_HINTS": {
       "agent": "Give it a name for your team, the name the customer sees and the inboxes where it answers whoever writes.",
@@ -698,7 +701,8 @@
       "after": "What it does when the lead qualifies, who gets it and which details it collects first.",
       "objections": "What people say to stall the purchase and how to answer. It uses the idea in its own words and never invents discounts.",
       "instructions": "Anything else it should know or do (optional). If it contradicts the above, this wins.",
-      "test": "Try it in the chat on the right as if you were a lead and save it if you like it."
+      "test": "Try it in the chat on the right as if you were a lead and save it if you like it.",
+      "files": "What it can send and when."
     },
     "STEP_TEST": {
       "READY": "«{name}» is ready. When saved it goes to the agents list labeled «Lead handling».",
@@ -764,7 +768,8 @@
         "knows": "What it knows",
         "talk": "How it talks",
         "instructions": "Instructions",
-        "test": "Test and save"
+        "test": "Test and save",
+        "files": "Images and files"
       },
       "STEP_HINTS": {
         "agent": "Its name, tone and the inboxes where it serves your customers.",
@@ -773,7 +778,8 @@
         "knows": "Where it looks up answers. It only answers with what it finds there.",
         "talk": "How it greets, and what it does when someone asks for a person or is not a customer.",
         "instructions": "Anything else it should know or do (optional).",
-        "test": "Check every example lands in its area and chat with it as your customer."
+        "test": "Check every example lands in its area and chat with it as your customer.",
+        "files": "What it can send and when."
       },
       "AREAS": {
         "support": {
@@ -885,7 +891,8 @@
         "knows": "Your business and what it knows",
         "talk": "How it talks and the handover",
         "instructions": "Instructions",
-        "test": "Test and save"
+        "test": "Test and save",
+        "files": "Images and files"
       },
       "STEP_HINTS": {
         "agent": "Its name and tone.",
@@ -894,7 +901,8 @@
         "knows": "The basics of your business and where it looks up answers.",
         "talk": "Who gets the interested contact and how it answers objections.",
         "instructions": "Anything else it should know or do (optional).",
-        "test": "The chat starts with the campaign message: reply as your contact would."
+        "test": "The chat starts with the campaign message: reply as your contact would.",
+        "files": "What it can send and when."
       },
       "PURPOSE": "What is the campaign for?",
       "PURPOSES": {
@@ -979,6 +987,29 @@
       "TEST_HINT": "Reply as your contact: «yes, how much?», «no thanks», «what time is it?»…",
       "IN_CAMPAIGNS": "In {n} campaigns",
       "NO_CAMPAIGNS": "Not in any campaign yet"
+    },
+    "FILES": {
+      "HINT": "Upload images or files the agent can send (product photos, flyer, catalog, map…). Give each one a description: the agent can't see the image, so that's how it knows when it helps and doesn't make up what it shows.",
+      "FIRST_MESSAGE": "The image in the campaign's first message goes in the WhatsApp template (Settings › WhatsApp templates, image header). Here go the ones it sends afterwards.",
+      "ABOUT_PLACEHOLDER": "What it is (e.g. photo of the Basic package with its price)",
+      "ABOUT_MISSING": "Without a description the agent doesn't know when to send it.",
+      "WHEN": {
+        "interest": "When they show interest",
+        "ask": "When they ask or it helps",
+        "confirm": "When they confirm the event",
+        "welcome": "With the welcome",
+        "booking": "When the appointment is booked",
+        "tickets": "When a case is opened",
+        "touch": "On touch {n}"
+      },
+      "ADD": "Upload images or files",
+      "UPLOADING": "Uploading…",
+      "PENDING": "Uploads when you save the agent",
+      "REMOVE": "Remove",
+      "LIMITS": "At most 2 per message and never repeats one unless asked. WhatsApp accepts JPG or PNG images up to 5 MB, video up to 16 MB and PDF up to 100 MB. On a touch it only goes out if the 24 h window is open.",
+      "IMAGE_TYPE": "«{name}»: the image must be JPG or PNG.",
+      "TOO_BIG": "«{name}» is bigger than WhatsApp accepts.",
+      "UPLOAD_ERROR": "Could not upload the file."
     }
   }
 }

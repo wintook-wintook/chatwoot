@@ -104,7 +104,7 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
   # Sin `settings` en el pedido (p. ej. el interruptor de prender/apagar de la lista) no se tocan.
   def agent_params
     raw = params.require(:ready_agent)
-    permitted = raw.permit(:kind, :name, :display_name, :enabled, inbox_ids: [], sources: [], channel: CHANNEL).to_h
+    permitted = raw.permit(:kind, :name, :display_name, :enabled, inbox_ids: [], sources: [], channel: CHANNEL, files: {}).to_h
     permitted[:inbox_ids] ||= [] if raw.key?(:inbox_ids)
     permitted[:sources] ||= [] if raw.key?(:sources)
     return permitted unless raw[:settings].respond_to?(:permit)
@@ -115,7 +115,8 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
   # Lo que hay en el asistente, sin guardar (sobre una copia del agente si ya existe).
   def test_draft
     template = function_agents.find_by(id: params[:id]) if params[:id].present?
-    Motor2::Functions::Form.new(Current.account, agent_params, user: current_user, template: template&.dup).build
+    draft = template&.dup&.tap { |copy| copy.draft_of = template.id }
+    Motor2::Functions::Form.new(Current.account, agent_params, user: current_user, template: draft).build
   end
 
   def error_text(error)

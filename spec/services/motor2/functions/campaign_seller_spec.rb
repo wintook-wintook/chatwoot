@@ -130,4 +130,46 @@ RSpec.describe Motor2::Functions::CampaignSeller do
     expect(tracking.status).to eq('objective_met')
     expect(CaseTicket.find_by(contact: contact)).to have_attributes(priority: 'high', assignee_id: seller.id)
   end
+
+  describe 'imágenes y archivos' do
+    def image(template, name, rule)
+      create(:ai_agent_attachment, tracking_template: template, account: account, name: name,
+                                   file: fixture_file_upload(Rails.root.join('spec/assets/sample.png'), 'image/png'))
+      template.update!(resources: template.resources.to_h.merge('files' => template.file_rules.merge(name => rule)))
+    end
+
+    it 'el asistente guarda cuándo va cada archivo, con su descripción' do
+      save_agent(settings, name: 'Con archivos', extra: { files: { 'foto' => { about: 'Foto del paquete', interest: true, attempts: [2] } } })
+        .then { |t| expect(t.file_rules['foto']).to include('about' => 'Foto del paquete', 'interest' => true, 'ask' => false, 'attempts' => [2]) }
+    end
+
+    it 'al mostrar interés, la foto sale antes de que conteste el agente que sigue' do
+      save_agent({ 'objective' => 'handoff', 'question_list' => ['¿Qué buscas?'] }, kind: 'prospects', name: 'Prospectos')
+      image(agent, 'foto-paquete', { 'about' => 'Foto del paquete', 'interest' => true })
+      campaign_tracking
+      stub_model(tool_call('le_interesa', { resumen: 'Le interesa' }), answer('[SIN_MENSAJE]'))
+      reply_to(incoming('me interesa'))
+
+      sent = conversation.messages.outgoing.where(private: false).last
+      expect(sent.attachments.count).to eq(1)
+    end
+
+    it 'al confirmar el evento manda el mapa con su mensaje' do
+      event = account.events.create!(name: 'Expo', starts_at: 3.days.from_now)
+      invite = save_agent({ 'purpose' => 'invite', 'event_id' => event.id }, name: 'Invitación')
+      image(invite, 'mapa', { 'about' => 'Mapa para llegar', 'confirm' => true })
+      campaign_tracking(invite)
+      stub_model(tool_call('confirmar_asistencia', { asistira: true }), answer('¡Te esperamos! Te dejo el mapa.'))
+      reply_to(incoming('sí voy'))
+
+      expect(conversation.messages.outgoing.where(private: false).last.attachments.count).to eq(1)
+    end
+
+    it 'no dice que manda la foto si no la manda' do
+      campaign_tracking
+      stub_model(answer('Claro, te mando la foto del paquete.'), answer('Claro, el paquete incluye 10 horas.'))
+      reply_to(incoming('¿tienes fotos?'))
+      expect(conversation.messages.outgoing.where(private: false).last.content).to eq('Claro, el paquete incluye 10 horas.')
+    end
+  end
 end

@@ -87,13 +87,21 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
     target = test? ? nil : Motor2::Relay.target_for(@turn.tracking, function)
     @turn.decide('relay', summary.to_s)
     state['relay'] = target ? target[:name] : 'equipo'
-    if target&.dig(:agent) || (test? && !function.relay_to_person?)
+    silent = silent_relay?(target)
+    # Las imágenes de «cuando muestre interés»: con el relevo a un agente las manda Motor2::Relay (este
+    # turno no lleva mensaje); a una persona, van con este mensaje. En la prueba se ven en el chat.
+    attach_rule('interest') if !silent || test?
+    if silent
       @turn.silence! # quien sigue contesta este mismo mensaje (Motor2::Relay)
       return { ok: true, nota: 'Listo: quien sigue le contesta ahora mismo. Escribe solo [SIN_MENSAJE].' }
     end
 
-    { ok: true, nota: 'Listo: alguien del equipo le escribe. Dile en una frase que con gusto, que en un momento lo contactan.' }
+    { ok: true, nota: 'Listo: alguien del equipo le escribe. Dile en una frase que con gusto, que en un momento lo contactan; ' \
+                      'sin preguntas ni ofrecer nada más.' }
   end
+
+  # Con el relevo a un agente, este turno no lleva mensaje (contesta quien sigue).
+  def silent_relay?(target) = target&.dig(:agent).present? || (test? && !function.relay_to_person?)
 
   def not_interested!(reason)
     @turn.decide('discarded', reason.to_s)
@@ -107,6 +115,7 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
 
     text = status == :confirmed ? 'Confirmó su asistencia' : ['No va', note.presence].compact.join(': ')
     trace.event(:evento, text)
+    attach_rule('confirm') if status == :confirmed # mapa, agenda, boleto…
     @turn.decide('done', text)
     { ok: true, nota: status == :confirmed ? CONFIRMED : 'Quedó como que no va: agradécele en una frase, sin preguntas.' }
   end
@@ -154,4 +163,10 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
   end
 
   def contact = @turn.conversation&.contact
+
+  # Los archivos del agente con esa regla van con el mensaje de este turno.
+  def attach_rule(rule)
+    names = Motor2::Skills::Files.with_rule(config.template, rule, config.attachments)
+    names.first(Motor2::Skills::Files::MAX_PER_MESSAGE).each { |name| @turn.attach(name) }
+  end
 end

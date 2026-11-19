@@ -55,6 +55,7 @@ export default {
           content: data.reply || this.t('TEST.NO_MESSAGE'),
           tools: data.tools || [],
           decision: data.decision,
+          files: data.files || [],
           area: this.areaOf(data.state),
         });
       } catch (e) {
@@ -155,6 +156,12 @@ export default {
             class="block mt-1 text-[11px] text-slate-500"
           >
             {{ t('TEST.TOOL', { tool: toolLine(tool) }) }}
+          </span>
+          <span
+            v-if="(m.files || []).length"
+            class="block mt-1 text-[11px] text-slate-500"
+          >
+            {{ t('TEST.FILES', { files: m.files.join(', ') }) }}
           </span>
           <span
             v-if="m.decision"

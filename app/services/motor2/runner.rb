@@ -28,7 +28,8 @@ class Motor2::Runner < Cases::Ai::BaseService
   Result = Struct.new(:reply, :decision, :trace, :error, :attachments, :after, keyword_init: true)
   MAX_FILES = 5
 
-  attr_reader :config, :state, :trace, :conversation, :tracking, :canned_used, :seen, :noted_contact, :evidence, :last_customer
+  attr_reader :config, :state, :trace, :conversation, :tracking, :canned_used, :seen, :noted_contact, :evidence, :last_customer,
+              :attachments
 
   # opts: conversation:, tracking:, history: (chat de prueba), mode: :reply | :attempt, attempt: [n, total],
   #       welcome: (bienvenida combinada: va tal cual al inicio del mensaje; el modelo no vuelve a saludar)
@@ -64,7 +65,7 @@ class Motor2::Runner < Cases::Ai::BaseService
 
   # Un archivo del agente que va con la respuesta (máximo 5; no se repite en el mismo mensaje).
   def attach(name)
-    file = @config.template.ai_agent_attachments.where('LOWER(name) = ?', name.to_s.downcase).first
+    file = @config.attachments.where('LOWER(name) = ?', name.to_s.downcase).first
     return false unless file&.file&.attached?
     return true if @attachments.any? { |a| a[:id] == file.id }
     return false if @attachments.size >= MAX_FILES
@@ -75,9 +76,7 @@ class Motor2::Runner < Cases::Ai::BaseService
   end
 
   # Lo que va después de mandar el mensaje (archivos de la cita o del caso, reglas del caso).
-  def after_send(&block)
-    @after << block
-  end
+  def after_send(&block) = @after << block
 
   def call
     return Result.new(error: 'La cuenta no tiene OpenAI configurado.', trace: @trace.to_h) if api_key.blank?
