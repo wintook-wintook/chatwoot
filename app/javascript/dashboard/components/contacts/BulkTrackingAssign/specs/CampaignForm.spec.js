@@ -88,6 +88,7 @@ describe('CampaignForm con ventana', () => {
         daily_cap: 200,
         entry_delay_minutes: 60,
         respect_working_hours: true,
+        launch: false, // fix/campanas: nace Guardada
       })
     );
     expect(contactTrackingBulkAssignsAPI.create).not.toHaveBeenCalled();
@@ -95,7 +96,7 @@ describe('CampaignForm con ventana', () => {
       campaign_id: 9,
       campaign_name: 'Octubre',
       mode: 'continuous',
-      launch: true,
+      launch: false,
     });
   });
 
@@ -266,8 +267,9 @@ describe('CampaignForm al modificar una Guardada', () => {
     });
 
     expect(wrapper.vm.scheduledFor).toMatch(/^2020-01-01T\d\d:00$/);
-    expect(wrapper.vm.startPassed).toBe(true);
-    expect(wrapper.text()).toContain('BULK_TRACKING_ASSIGN.MODAL.START_PASSED');
+    expect(wrapper.vm.dateWarnings.map(alert => alert.key)).toContain(
+      'START_PASSED'
+    );
     expect(wrapper.vm.allowAudienceSelection).toBe(true);
     expect(wrapper.vm.effectiveFilterPayload).toEqual([
       { attribute_key: 'name' },
@@ -352,26 +354,28 @@ describe('CampaignForm al modificar una Guardada', () => {
     );
   });
 
-  it('Guardar y poner en curso guarda los cambios y después la lanza', async () => {
+  // fix/campanas: el formulario solo guarda; se pone en curso desde la tabla o el detalle.
+  it('solo ofrece Guardar y Guardar no la pone en curso', async () => {
     TrackingCampaignsAPI.update.mockResolvedValue({
       data: { campaign_id: 12 },
-    });
-    TrackingCampaignsAPI.launch.mockResolvedValue({
-      data: { campaign_id: 12, status: 'running' },
     });
     const wrapper = mountForm({
       campaign: { ...savedBatch, mode: 'continuous', audience: {} },
     });
 
-    await wrapper.vm.onConfirm(true);
+    const buttons = wrapper.findAll('woot-button-stub');
+    expect(buttons.length).toBe(1);
+    expect(buttons.at(0).text()).toBe('BULK_TRACKING_ASSIGN.MODAL.SAVE');
+
+    await wrapper.vm.onConfirm();
 
     expect(TrackingCampaignsAPI.update).toHaveBeenCalledWith(
       12,
       expect.objectContaining({ name: 'Lote', tracking_template_id: 3 })
     );
-    expect(TrackingCampaignsAPI.launch).toHaveBeenCalledWith(12);
+    expect(TrackingCampaignsAPI.launch).not.toHaveBeenCalled();
     expect(wrapper.emitted('updated')[0][0]).toEqual(
-      expect.objectContaining({ status: 'running', launch: true })
+      expect.objectContaining({ launch: false })
     );
   });
 
@@ -432,5 +436,72 @@ describe('CampaignForm › Evento', () => {
     await wrapper.setData({ eventId: 4, eventStatus: 'attended' });
     expect(wrapper.vm.hasAudienceSelected).toBe(true);
     expect(wrapper.vm.effectiveFilterPayload).toHaveLength(1);
+  });
+});
+
+// fix/campanas — Duplicar: el formulario arranca con los datos de otra campaña (de
+// cualquier estado) pero crea una nueva, Guardada.
+describe('CampaignForm al duplicar una campaña', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const running = {
+    id: 20,
+    name: 'Noviembre',
+    mode: 'batch',
+    status: 'running',
+    tracking_template_id: 3,
+    scheduled_for: '2099-11-01T16:00:00Z',
+    ends_at: '2099-11-30T16:00:00Z',
+    entry_delay_minutes: 15,
+    respect_working_hours: false,
+    daily_cap: 50,
+    stop_when_not_interested: false,
+    audience: {
+      filter_payload: [{ attribute_key: 'labels', values: ['demo'] }],
+      excluded_contact_ids: [4],
+      skip_active: true,
+      source: { type: 'label', label: 'demo' },
+    },
+  };
+
+  it('copia la configuración con otro nombre y no es modificar', () => {
+    const wrapper = mountForm({ copyFrom: running });
+
+    expect(wrapper.vm.isEditing).toBe(false);
+    expect(wrapper.vm.isCopy).toBe(true);
+    expect(wrapper.vm).toMatchObject({
+      campaignName: 'TRACKING_CAMPAIGNS_VIEW.DUPLICATE_NAME',
+      selectedTemplateId: 3,
+      audienceType: 'label',
+      selectedLabel: 'demo',
+      excludedContactIds: [4],
+      entryDelayMinutes: 15,
+      respectWorkingHours: false,
+      dailyCap: 50,
+      stopWhenNotInterested: false,
+    });
+    expect(wrapper.text()).toContain('TRACKING_CAMPAIGNS_VIEW.DUPLICATE_HINT');
+  });
+
+  it('al guardar crea una campaña nueva, Guardada', async () => {
+    contactTrackingBulkAssignsAPI.create.mockResolvedValue({
+      data: { saved: true, campaign_id: 21, campaign_name: 'copia' },
+    });
+    const wrapper = mountForm({ copyFrom: running });
+
+    await wrapper.vm.onConfirm();
+
+    expect(contactTrackingBulkAssignsAPI.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        launch: false,
+        templateId: 3,
+        audienceSource: { type: 'label', label: 'demo' },
+      })
+    );
+    expect(contactTrackingBulkAssignsAPI.update).not.toHaveBeenCalled();
+    expect(TrackingCampaignsAPI.update).not.toHaveBeenCalled();
+    expect(wrapper.emitted('created')[0][0]).toEqual(
+      expect.objectContaining({ campaign_id: 21, launch: false })
+    );
   });
 });

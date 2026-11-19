@@ -5,6 +5,8 @@
 // de audiencia debajo) y "Volver a campañas" regresa. Una campaña Guardada no corre
 // hasta "Poner en curso" (proyecto@automatizacion_campanas, TrackingCampaigns::Launch);
 // mientras siga Guardada se puede modificar (clic en su fila, o ?edit=<id> desde el detalle).
+// fix/campanas: cualquier campaña se puede duplicar (botón de la fila, o ?duplicate=<id> desde
+// el detalle): abre «Nueva campaña» llena con sus datos y la copia nace Guardada.
 // La tabla es la de Contactos (VeTable): clic en una columna la ordena (en cliente).
 // ================================================================================
 import { VeTable } from 'vue-easytable';
@@ -12,6 +14,7 @@ import { useAlert } from 'dashboard/composables';
 import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import CampaignForm from 'dashboard/components/contacts/BulkTrackingAssign/CampaignForm.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import CampaignLaunchModal from './CampaignLaunchModal.vue';
 import { progressPct, sortCampaigns, sortFromParams } from './campaignsTable';
 
 const STATUS_COLOR = {
@@ -23,7 +26,7 @@ const STATUS_COLOR = {
 };
 
 export default {
-  components: { CampaignForm, TableFooter, VeTable },
+  components: { CampaignForm, CampaignLaunchModal, TableFooter, VeTable },
   data() {
     return {
       campaigns: [],
@@ -64,6 +67,8 @@ export default {
       activeTab: 'list', // 'list' · 'new' · 'edit'
       // La campaña Guardada que se está modificando (tab 'edit')
       campaignToEdit: null,
+      // fix/campanas: la campaña que se duplica (tab 'new' lleno con sus datos)
+      campaignToCopy: null,
       // proyecto@automatizacion_campanas: la campaña continua recién creada, para
       // ofrecer el siguiente paso (crear la automatización que la llena).
       createdContinuous: null,
@@ -272,6 +277,14 @@ export default {
               )}
               <woot-button
                 variant="smooth"
+                color-scheme="secondary"
+                size="small"
+                icon="copy"
+                title={this.$t('TRACKING_CAMPAIGNS_VIEW.DUPLICATE')}
+                onClick={() => this.openDuplicate(row)}
+              />
+              <woot-button
+                variant="smooth"
                 color-scheme="alert"
                 size="small"
                 icon="delete"
@@ -313,6 +326,24 @@ export default {
         this.filteredCampaigns.length === 0
       );
     },
+    // Título sobre el formulario: modificar, duplicar o nueva.
+    formTitle() {
+      if (this.activeTab === 'edit') {
+        return this.$t('TRACKING_CAMPAIGNS_VIEW.EDIT_CAMPAIGN', {
+          name: this.campaignToEdit.name,
+        });
+      }
+      if (this.campaignToCopy) {
+        return this.$t('TRACKING_CAMPAIGNS_VIEW.DUPLICATE_CAMPAIGN', {
+          name: this.campaignToCopy.name,
+        });
+      }
+      return this.$t('TRACKING_CAMPAIGNS_VIEW.NEW_CAMPAIGN');
+    },
+    // Otro formulario al pasar de «nueva» a «duplicar» (o duplicar otra).
+    newFormKey() {
+      return this.campaignToCopy ? `copy-${this.campaignToCopy.id}` : 'new';
+    },
     deleteMessageValue() {
       return this.campaignToDelete ? ` «${this.campaignToDelete.name}»?` : '';
     },
@@ -346,6 +377,9 @@ export default {
     }
     this.fetchCampaigns();
     if (this.$route.query.edit) this.openEdit({ id: this.$route.query.edit });
+    if (this.$route.query.duplicate) {
+      this.openDuplicate({ id: this.$route.query.duplicate });
+    }
   },
   methods: {
     async fetchCampaigns() {
@@ -384,7 +418,21 @@ export default {
     goToList() {
       this.activeTab = 'list';
       this.campaignToEdit = null;
-      if (this.$route.query.edit) this.$router.replace({ query: {} });
+      this.campaignToCopy = null;
+      if (this.$route.query.edit || this.$route.query.duplicate) {
+        this.$router.replace({ query: {} });
+      }
+    },
+    // fix/campanas: trae la campaña completa y abre «Nueva campaña» con sus datos.
+    async openDuplicate(campaign) {
+      try {
+        const { data } = await TrackingCampaignsAPI.show(campaign.id);
+        this.presetFilter = null;
+        this.campaignToCopy = data;
+        this.activeTab = 'new';
+      } catch (error) {
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.DUPLICATE_ERROR'));
+      }
     },
     // Trae la campaña completa (audiencia incluida) y abre el formulario con sus datos.
     async openEdit(campaign) {
@@ -420,6 +468,7 @@ export default {
     },
     goToNew() {
       this.presetFilter = null;
+      this.campaignToCopy = null;
       this.activeTab = 'new';
     },
     openLaunch(campaign) {
@@ -590,7 +639,9 @@ export default {
         );
       }
       this.presetFilter = null;
+      this.campaignToCopy = null;
       this.activeTab = 'list';
+      if (this.$route.query.duplicate) this.$router.replace({ query: {} });
       this.fetchCampaigns();
     },
   },
@@ -628,13 +679,7 @@ export default {
 
     <div v-if="activeTab !== 'list'" class="mb-4 shrink-0">
       <h2 class="text-base font-semibold text-slate-700 dark:text-slate-200">
-        {{
-          activeTab === 'edit'
-            ? $t('TRACKING_CAMPAIGNS_VIEW.EDIT_CAMPAIGN', {
-                name: campaignToEdit.name,
-              })
-            : $t('TRACKING_CAMPAIGNS_VIEW.NEW_CAMPAIGN')
-        }}
+        {{ formTitle }}
       </h2>
     </div>
 
@@ -650,7 +695,9 @@ export default {
     <!-- Tab: Nueva campaña -->
     <div v-else-if="activeTab === 'new'" class="flex-1 min-h-0 overflow-y-auto">
       <CampaignForm
+        :key="newFormKey"
         :preset-filter-payload="presetFilter"
+        :copy-from="campaignToCopy"
         @created="onCampaignCreated"
       />
     </div>
@@ -804,15 +851,10 @@ export default {
       :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_YES')"
       :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
     />
-    <woot-delete-modal
-      :show="!!campaignToLaunch"
-      :on-close="closeLaunch"
-      :on-confirm="confirmLaunch"
-      :title="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH')"
-      :message="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_CONFIRM')"
-      :message-value="campaignToLaunch ? ` «${campaignToLaunch.name}»?` : ''"
-      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_YES')"
-      :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
+    <CampaignLaunchModal
+      :campaign="campaignToLaunch"
+      @close="closeLaunch"
+      @confirm="confirmLaunch"
     />
   </div>
 </template>
