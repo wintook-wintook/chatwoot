@@ -160,9 +160,7 @@ class ContactTrackingJob < ApplicationJob
       # CASO 4: Otro canal (no WhatsApp)
       Rails.logger.info "[ContactTracking] 💬 USANDO MENSAJE NORMAL (canal: #{tracking.inbox.channel_type})"
       message_body = generate_message(tracking)
-      success = send_message_via_chatwoot(tracking, message_body)
-      # feat/ficha_agente_ia: los archivos que la ficha manda en este intento
-      ContactTrackings::AttemptFiles.send_for(tracking, tracking.attempt_count + 1, sender: bot_user(tracking.account)) if success
+      success = send_attempt_with_files(tracking, message_body)
     end
     success
   end
@@ -733,7 +731,26 @@ class ContactTrackingJob < ApplicationJob
     end
   end
 
-  def send_message_via_chatwoot(tracking, message_body)
+  # feat/ficha_agente_ia: los archivos que la ficha manda en este intento. fix/campanas: en
+  # correo van ADJUNTOS al mismo correo del intento (antes llegaba un segundo correo vacío
+  # con el archivo); en los demás canales, en un mensaje aparte como siempre.
+  def send_attempt_with_files(tracking, message_body)
+    numero = tracking.attempt_count + 1
+    if email_channel?(tracking)
+      return send_message_via_chatwoot(tracking, message_body,
+                                       attachments: ContactTrackings::AttemptFiles.signed_ids_for(tracking, numero))
+    end
+
+    success = send_message_via_chatwoot(tracking, message_body)
+    ContactTrackings::AttemptFiles.send_for(tracking, numero, sender: bot_user(tracking.account)) if success
+    success
+  end
+
+  def email_channel?(tracking)
+    tracking.inbox&.channel_type == 'Channel::Email'
+  end
+
+  def send_message_via_chatwoot(tracking, message_body, attachments: [])
     conversation = find_or_create_conversation(tracking)
     return false unless conversation
 
@@ -756,7 +773,7 @@ class ContactTrackingJob < ApplicationJob
         content_attributes: {
           automation_rule_id: nil
         }
-      }
+      }.merge(attachments.present? ? { attachments: attachments } : {})
     ).perform
 
     if message.present?

@@ -124,6 +124,24 @@ class TrackingCampaign < ApplicationRecord
     starts > now ? 'draft' : 'running'
   end
 
+  # fix/campanas (punto 2): pausada A MANO = el Agente IA tampoco contesta a quien ya respondió.
+  # La pausa por un error de Meta (paused_reason) solo frena los envíos: la plática sigue.
+  LIVE_TRACKING_STATUSES = %w[active scheduled pending paused].freeze
+
+  def silenced?
+    status == 'paused' && paused_reason.blank?
+  end
+
+  # ¿La conversación tiene un seguimiento vivo de una campaña pausada a mano? Lo pregunta
+  # Message#analyze_for_active_trackings antes de pasarle el mensaje a cualquier IA.
+  def self.silences_conversation?(conversation_id)
+    return false if conversation_id.blank?
+
+    ContactTracking.where(conversation_id: conversation_id, status: LIVE_TRACKING_STATUSES)
+                   .joins(:tracking_campaign)
+                   .exists?(tracking_campaigns: { status: 'paused', paused_reason: [nil, ''] })
+  end
+
   def continuous?
     mode == 'continuous'
   end

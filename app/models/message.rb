@@ -498,6 +498,9 @@ class Message < ApplicationRecord
     # Seguimiento IA: con uno vivo en la conversación, contesta SOLO él (ni el agente de
     # seguimiento de siempre ni BotSeller). Pausado no contesta nadie: lo atiende una persona.
     return AiFollowUps::ReplyJob.set(wait: 15.seconds).perform_later(id) if AiFollowUp.live_for?(conversation_id)
+    # fix/campanas (punto 2): su campaña está pausada a mano → no contesta ninguna IA (ni el
+    # Motor 2.0, ni el de siempre, ni BotSeller); el mensaje queda para una persona.
+    return log_silenced_by_campaign if TrackingCampaign.silences_conversation?(conversation_id)
     # Motor 2.0: el seguimiento de esta conversación es de un agente 2.0, o la bandeja la atiende
     # un agente 2.0 (los agentes listos, §11.14) → contesta ese motor (Plan-Motor-Agentes.md
     # §11.11). El 1.0 sigue igual para los demás.
@@ -507,6 +510,10 @@ class Message < ApplicationRecord
     ContactTrackingResponseAnalyzerJob.set(wait: wait).perform_later(id)
   rescue StandardError => e
     Rails.logger.error "[Message] Error queueing sentiment analysis: #{e.message}"
+  end
+
+  def log_silenced_by_campaign
+    Rails.logger.info "[Message] ⏸️ Conversación ##{conversation_id}: campaña pausada, la IA no contesta el mensaje ##{id}"
   end
 
   # @query_databases — encola la respuesta IA (Modo B) solo si el inbox tiene un bot

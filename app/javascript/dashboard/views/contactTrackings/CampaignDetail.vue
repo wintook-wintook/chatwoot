@@ -15,6 +15,7 @@ import CampaignEntries from './CampaignEntries.vue';
 import CampaignHandoffSettings from './CampaignHandoffSettings.vue';
 import CampaignScoringSettings from './CampaignScoringSettings.vue';
 import CampaignSettingsMenu from './CampaignSettingsMenu.vue';
+import CampaignLaunchModal from './CampaignLaunchModal.vue';
 
 const PAGE_SIZE = 25;
 
@@ -110,6 +111,7 @@ const PROSPECT_FILTERS = {
 
 export default {
   components: {
+    CampaignLaunchModal,
     TableFooter,
     CampaignEntries,
     CampaignHandoffSettings,
@@ -848,6 +850,18 @@ export default {
         >
           {{ $t('TRACKING_CAMPAIGNS_VIEW.PAUSE') }}
         </woot-button>
+        <!-- fix/campanas: duplicar abre «Nueva campaña» llena con esta -->
+        <woot-button
+          variant="smooth"
+          color-scheme="secondary"
+          size="small"
+          icon="copy"
+          @click="
+            $router.push({ ...backRoute, query: { duplicate: campaign.id } })
+          "
+        >
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.DUPLICATE') }}
+        </woot-button>
         <woot-button
           variant="smooth"
           color-scheme="alert"
@@ -1377,15 +1391,10 @@ export default {
       :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_YES')"
       :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
     />
-    <woot-delete-modal
-      :show="showLaunchModal"
-      :on-close="() => (showLaunchModal = false)"
-      :on-confirm="confirmLaunch"
-      :title="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH')"
-      :message="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_CONFIRM')"
-      :message-value="campaign ? ` «${campaign.name}»?` : ''"
-      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_YES')"
-      :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
+    <CampaignLaunchModal
+      :campaign="showLaunchModal ? campaign : null"
+      @close="showLaunchModal = false"
+      @confirm="confirmLaunch"
     />
   </div>
 </template>
