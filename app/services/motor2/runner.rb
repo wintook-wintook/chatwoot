@@ -173,7 +173,7 @@ class Motor2::Runner < Cases::Ai::BaseService
   def tool(name, args)
     skill = @skills.find { |s| s.handles?(name) }
     result = skill ? skill.call(name, args) : { error: "herramienta desconocida: #{name}" }
-    @trace.tool(name, args, result)
+    @trace.tool(name, args, result) unless result.to_h[:sin_cambio] # volver a guardar lo mismo no se enseña
     result
   rescue StandardError => e
     Rails.logger.error("[Motor2] #{name}: #{e.class}: #{e.message}")

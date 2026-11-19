@@ -128,11 +128,22 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
     return { error: "No existe la pregunta #{args['numero']}." } if question.nil?
     return { error: 'Falta la respuesta.' } if args['respuesta'].blank?
     return { error: 'Eso lo preguntó el cliente: no es su respuesta. Contéstale y vuelve a hacer la pregunta.' } if its_question?(args)
+    return { ok: true, sin_cambio: true } if answers[question] == args['respuesta'].to_s.first(300)
+    return not_an_answer(question) unless answer_check.answers?(question: question, message: args['respuesta'])
 
     answers[question.first(300)] = args['respuesta'].to_s.first(300)
     trace.event(:respuesta, "#{question}: #{args['respuesta']}")
     progress
   end
+
+  # Lo que dijo no contesta esa pregunta (una objeción, otro tema): no se guarda y se vuelve a hacer.
+  def not_an_answer(question)
+    @rejected = true
+    { error: "Eso no contesta «#{question}»: NO lo guardes. Atiende lo que dijo (objeción, duda u otro tema) y vuelve a " \
+             'hacer esa pregunta.' }
+  end
+
+  def answer_check = @answer_check ||= Motor2::AnswerCheck.new(account: config.account)
 
   def question_for(args)
     questions.find { |q| q[:number] == args['numero'].to_i }&.dig(:ask) || args['pregunta'].to_s.strip.presence

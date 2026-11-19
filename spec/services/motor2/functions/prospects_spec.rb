@@ -47,6 +47,8 @@ RSpec.describe Motor2::Functions::Prospects do
   before do
     admin
     create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled', settings: { 'api_key' => 'sk-test' })
+    # «¿Contesta la pregunta?» (Motor2::AnswerCheck): sí, salvo en las pruebas que lo cambian.
+    allow_any_instance_of(Motor2::AnswerCheck).to receive_messages(answers?: true, about_business?: true) # rubocop:disable RSpec/AnyInstance
   end
 
   it 'queda en la lista de agentes como agente 2.0 de «Atención a prospectos»' do
@@ -419,7 +421,7 @@ RSpec.describe Motor2::Functions::Prospects do
     it 'una duda sin «?» («das financiamiento…») no se guarda como respuesta y retoma conectando' do
       stub_model(tool_call('guardar_respuesta', { numero: 1, respuesta: 'das financiamiento con banamex' }),
                  tool_call('buscar_en_fuentes', { pregunta: 'financiamiento' }), answer('No tengo ese dato.'))
-      result = probe('das financiamiento con banamex')
+      result = probe('hola', 'das financiamiento con banamex')
       expect(result[:state]['answers'].to_h).to be_empty
       expect(result[:reply]).to include('solo me faltan 4 preguntas')
     end
@@ -434,9 +436,23 @@ RSpec.describe Motor2::Functions::Prospects do
       expect(result[:trace]['events']).to include(include('text' => 'prometió un asesor (eligieron no hacerlo)'))
     end
 
+    it 'una objeción o algo de otro tema no se guarda como respuesta (AnswerCheck) y la pregunta se retoma conectando' do
+      allow_any_instance_of(Motor2::AnswerCheck).to receive(:answers?).and_return(false) # rubocop:disable RSpec/AnyInstance
+      stub_model(tool_call('guardar_respuesta', { numero: 1, respuesta: 'no me gusta el color' }), answer('El morado es muy bonito.'))
+      result = probe('hola', 'no me gusta el color')
+
+      expect(result[:state]['answers'].to_h).to be_empty
+      expect(result[:reply]).to match(/El morado es muy bonito\.\n\n.*solo me faltan 4 preguntas.*\n\n¿Qué buscas\?/m)
+    end
+
+    it 'en el primer mensaje no hay frase para retomar (no hay nada que retomar)' do
+      stub_model(answer('Abrimos de 9 a 6.'))
+      expect(probe('¿a qué hora abren?')[:reply]).to eq("Abrimos de 9 a 6.\n\n¿Qué buscas?")
+    end
+
     it 'al retomar después de una duda, la pregunta va con la frase que conecta' do
       stub_model(answer('Abrimos de 9 a 6.'))
-      result = probe('¿a qué hora abren?')
+      result = probe('hola', '¿a qué hora abren?')
       expect(result[:reply]).to match(/Abrimos de 9 a 6\.\n\n.*solo me faltan 4 preguntas.*\n\n¿Qué buscas\?/m)
     end
   end
@@ -483,7 +499,7 @@ RSpec.describe Motor2::Functions::Prospects do
       stub_model(answer('¡Muy bien! ¿Tienes algún modelo en mente?'))
       result = Motor2::Probe.new(agent, messages: chat).call
 
-      expect(result[:reply]).to eq("¡Muy bien!\n\n¿Qué buscas?")
+      expect(result[:reply]).to eq("¡Muy bien!\n\nSi te parece, seguimos: solo me faltan 2 preguntas y terminamos.\n\n¿Qué buscas?")
       expect(result[:trace]['events']).to include(include('kind' => 'revision', 'text' => 'pregunta pendiente'))
     end
   end

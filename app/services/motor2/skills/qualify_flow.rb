@@ -21,7 +21,7 @@ module Motor2::Skills::QualifyFlow
   # Interrogativos con acento («qué», «cuánto»…: sin acento suelen ser respuesta: «que sea rojo») y verbos
   # de pregunta al inicio («das financiamiento», «tienen sedanes», «conoces a…»).
   ASKING = /\A[^[:alnum:]]*(qué|cuál|cuáles|cuánto|cuánta|cuántos|cuántas|cómo|dónde|cuándo|quién|quiénes|por\s+qué|tienen|tienes|
-            hay|manejan|manejas|aceptan|dan|das|venden|vendes|puedo|pueden|puedes|me\s+das|me\s+dan|conoces|conocen|sabes|saben|
+            hay|manejan|manejas|aceptan|dan|das|venden|vendes|puedo|pueden|puedes|me\s+das|me\s+dan|conoces|conocen|sabe|sabes|saben|
             es\s+posible|hacen|haces|incluye|cuesta|cuestan|cuanto\s+cuesta|cuanto\s+sale|cuanto\s+es)(?![[:alnum:]])/xi
   BRIDGES = ['Si te parece, seguimos: %<faltan>s y terminamos.', 'Para avanzar, %<faltan>s.',
              'Ya casi terminamos: %<faltan>s.'].freeze
@@ -29,6 +29,7 @@ module Motor2::Skills::QualifyFlow
   # Lo que se deduce de la plática antes de armar el prompt.
   def scan_flow(history)
     @held_before = state['handoff_held'] # ya se detuvo un pase en un turno anterior
+    @agent_spoke = agent_spoke?(history)
     customer = Array(history).select { |m| m[:role].to_s == 'user' }.map { |m| m[:content].to_s }
     @last_customer = customer.last.to_s
     @human_requests = customer.count { |text| text.match?(HUMAN) }
@@ -36,6 +37,9 @@ module Motor2::Skills::QualifyFlow
 
     state['human_pending'] = pending.first(Motor2::Functions::ProspectRules::MAX_BEFORE_HUMAN).pluck(:number)
   end
+
+  # Ya hubo un mensaje del agente: hay algo que retomar.
+  def agent_spoke?(history) = Array(history).any? { |m| m[:role].to_s == 'assistant' }
 
   # Las que faltan en este turno: si pidió una persona (terminar primero), solo las anotadas.
   def pending_now
@@ -88,9 +92,16 @@ module Motor2::Skills::QualifyFlow
   # Se desvió: preguntó algo o pidió una persona.
   def detour? = Motor2::Skills::QualifyFlow.asking?(@last_customer)
 
+  # Al terminar el turno: además, lo que dijo no contestó la pregunta que se le hizo (una objeción, otro
+  # tema: Motor2::AnswerCheck no dejó guardarlo, o el modelo no la guardó).
+  def detour_after_turn?
+    detour? || @rejected || (@just_asked && pending_now.include?(@just_asked)).present?
+  end
+
   # «Si te parece, seguimos: solo me faltan 2 preguntas y terminamos.» (varía por turno).
-  def bridge
-    return nil unless detour? && pending_now.any?
+  # Solo si ya había una plática que retomar (no en el primer mensaje). after_turn: con lo que pasó en el turno.
+  def bridge(after_turn: false)
+    return nil unless @agent_spoke && (after_turn ? detour_after_turn? : detour?) && pending_now.any?
 
     count = pending_now.size
     faltan = count == 1 ? 'solo me falta una pregunta' : "solo me faltan #{count} preguntas"

@@ -12,10 +12,8 @@ module Motor2::QuestionGuard
               '(aunque sea de pasada, p. ej. «busco un sedán»), guárdala con guardar_respuesta y termina con la siguiente que ' \
               'falte. Reescríbelo corto, con una sola pregunta al final.'
 
-  # La bienvenida ya hace una pregunta y el cliente solo saludó: en este turno no se agrega otra.
-  def welcome_asks?
-    @welcome.to_s.include?('?') && ContactTrackings::WelcomeMessage.only_greeting?(@last_customer)
-  end
+  # La bienvenida ya hace una pregunta: en ese primer mensaje no se agrega otra (nunca dos preguntas).
+  def welcome_asks? = @welcome.to_s.include?('?')
 
   # La habilidad Calificar del turno (también la usa Motor2::Skills::Handoff).
   def qualify_skill = Array(@skills).find { |s| s.key == 'qualify' }
@@ -25,7 +23,7 @@ module Motor2::QuestionGuard
   # Las revisiones de la plática, en orden: buscó si le preguntaron, no prometió sin decidir, termina
   # con la pregunta pendiente.
   def guard_turn(messages, text)
-    checks = %i[ensure_handoff ensure_searched ensure_no_advisor ensure_decision ensure_question]
+    checks = %i[ensure_handoff ensure_searched ensure_no_advisor ensure_defer ensure_decision ensure_question ensure_bridge]
     text = checks.reduce(text) do |current, check|
       current.present? ? send(check, messages, current) : current
     end
@@ -46,7 +44,33 @@ module Motor2::QuestionGuard
     return text if ask.blank?
 
     # Si el modelo ya hizo otra pregunta, se cambia por la pendiente (nunca dos preguntas al final).
-    [without_last_question(text), qualify_skill&.bridge, ask].compact_blank.join("\n\n")
+    [without_last_question(text), qualify_skill&.bridge(after_turn: true), ask].compact_blank.join("\n\n")
+  end
+
+  # Retomar conectando: si no contestó la pregunta que se le hizo (preguntó otra cosa, una objeción,
+  # otro tema) y el mensaje no trae ya la frase, va antes de la pregunta pendiente.
+  def ensure_bridge(_messages, text)
+    text = fix_missing_count(text).gsub(BRIDGE_AFTER_COMMA, '. \\1')
+    phrase = qualify_skill&.bridge(after_turn: true)
+    return text if phrase.blank? || text.match?(/\bfalta(n)?\b/i) || text.exclude?('¿')
+
+    index = text.rindex('¿')
+    before = text[0...index].strip.sub(/[,;:]?\s*\b(y|pero|entonces|ahora|bueno|así que|por cierto|oye|dime)?\s*[,;:]?\s*\z/i, '')
+    before = "#{before}." if before.present? && !before.match?(/[.!?…)]\z/)
+    [before, phrase, text[index..]].compact_blank.join("\n\n")
+  end
+
+  # «…bonito, Para avanzar…» → «…bonito. Para avanzar…» (cuando el modelo la escribe pegada).
+  BRIDGE_AFTER_COMMA = /,\s+(Para avanzar|Si te parece|Ya casi terminamos|Ya casi acabamos|Solo me falta)/
+
+  MISSING = /\b(me\s+)?falta(n)?\s+(\d+|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|algunas|unas|pocas)\s+preguntas?/i
+
+  # Si el modelo dijo cuántas faltan, el número lo pone el código («me faltan 2» cuando faltan 3).
+  def fix_missing_count(text)
+    count = qualify_skill&.pending_now&.size.to_i
+    return text if count.zero? || !text.match?(MISSING)
+
+    text.sub(MISSING, count == 1 ? 'me falta una pregunta' : "me faltan #{count} preguntas")
   end
 
   def usable_again?(again, ask)
@@ -62,6 +86,11 @@ module Motor2::QuestionGuard
     return text if extras.empty?
 
     extras.reduce(text) { |current, extra| current.sub(extra, '') }.gsub(/[ \t]{2,}/, ' ').gsub(/[ \t]+\n/, "\n").strip
+  end
+
+  # Sin ninguna pregunta (la bienvenida ya pregunta) y sin la frase que quedó colgando («Sobre precios,»).
+  def without_questions(text)
+    text.to_s.gsub(/¿[^¿?]*\?/, '').gsub(/[^.!?\n]*[,:;]\s*(?=\n|\z|[[:upper:]¡])/, '').squeeze(' ').strip
   end
 
   def without_last_question(text)
@@ -84,7 +113,7 @@ module Motor2::QuestionGuard
     # signos), se quita: va una sola vez.
     rest = text.to_s.gsub(welcome_pattern, '').strip.sub(/\A[\s.,;:!?]+/, '')
     # Si la bienvenida ya pregunta y el cliente solo saludó, no lleva otra pregunta.
-    rest = without_last_question(rest) if welcome_asks?
+    rest = without_questions(rest) if welcome_asks?
     [@welcome, rest].compact_blank.join("\n\n")
   end
 

@@ -12,7 +12,10 @@
 #     se le pide que lo haga o que no lo prometa.
 # Usa @mode, @decision, @skills, @trace, @config, @last_customer, #run, #clean, #unsourced? y #qualify_skill.
 module Motor2::ReplyChecks
-  PROMISE = /(pas(o|ar|aré|o) (tu|sus|la) (información|info|datos)|te (contact|escrib|llam)(a|e|ar)|un asesor te|alguien del equipo te)/i
+  # Prometer que lo pasan o que lo van a buscar (no «un asesor te confirma el precio»: eso es otra regla).
+  PROMISE = /(pas(o|ar|aré)\s+(tu|sus|la)\s+(información|info|datos)|te\s+(contactar|escribir|llamar)[aá]|
+             (asesor|alguien\s+del\s+equipo|el\s+equipo)\s+(te\s+)?(contactar|escribir|llamar|buscar)[aá]|
+             se\s+pondr[aá]\s+en\s+contacto|te\s+(paso|pasar[eé])\s+con)/xi
   NO_PROMISE = 'Dijiste que lo pasas al equipo, pero no llamaste ninguna herramienta. Si ya cumple lo de «calificado», llama ' \
                'prospecto_calificado (o pasar_a_humano) y despídete; si no, no le digas que lo pasas y sigue con lo que falte.'
 
@@ -31,8 +34,12 @@ module Motor2::ReplyChecks
     messages << { role: 'assistant', content: text } << { role: 'system', content: NO_ADVISOR }
     again = clean(run(messages))
     again = text if again.blank? || unsourced?(again)
-    again.gsub(ADVISOR, '').gsub(/\s+([,.])/, '\1').gsub(/\.{2,}/, '.').squeeze(' ').strip.sub(/\A[,.\s]+/, '')
+    cleaned = again.gsub(ADVISOR, '').gsub(/\s+([,.])/, '\1').gsub(/\.{2,}/, '.').squeeze(' ').strip.sub(/\A[,.\s]+/, '')
+    # Si se fue la frase entera, que al menos diga que no tiene el dato.
+    cleaned.match?(NO_DATA) || !again.match?(NO_DATA) ? cleaned : "No tengo ese dato a la mano. #{cleaned}".strip
   end
+
+  NO_DATA = /\bno\s+(tengo|tenemos|encontr|cuento|contamos|manejo|manejamos|dispongo)/i
 
   # «Si busca y no encuentra» = sin prometer asesor, y no es que pidió una persona (ahí sí se habla de asesor).
   def silent_not_found?
@@ -57,8 +64,9 @@ module Motor2::ReplyChecks
     HANDOFF_TEXT
   end
 
-  SEARCH_FIRST = 'El cliente preguntó algo y contestaste sin buscar. Búscalo con buscar_en_fuentes antes de contestar; ' \
-                 'si no sale, no lo afirmes: dile que un asesor se lo confirma y sigue con la pregunta pendiente.'
+  SEARCH_FIRST = 'El cliente preguntó algo y contestaste sin buscar. Si es sobre la empresa o lo que vende, búscalo con ' \
+                 'buscar_en_fuentes antes de contestar y, si no sale, no lo afirmes (sigue CÓMO PLATICAS). Si no tiene que ' \
+                 'ver con el negocio, no busques: sigue la regla de «fuera de tema». Luego la pregunta pendiente.'
   SEARCH_TOOLS = %w[buscar_en_fuentes buscar_en_catalogo].freeze
 
   def ensure_searched(messages, text)
@@ -70,9 +78,31 @@ module Motor2::ReplyChecks
     again.present? && !unsourced?(again) ? again : text
   end
 
+  # Preguntó algo del negocio y no buscó (lo de otro tema sigue la regla de «fuera de tema», sin buscar).
   def unsearched_question?
-    @mode == :reply && @decision.nil? && Motor2::Skills::QualifyFlow.asking_info?(@last_customer) &&
-      @skills.any? { |s| s.key == 'knowledge' } && @trace.tools.none? { |t| SEARCH_TOOLS.include?(t['name']) }
+    @mode == :reply && @decision.nil? && Motor2::Skills::QualifyFlow.asking_info?(@last_customer) && can_search_unused? &&
+      Motor2::AnswerCheck.new(account: @account).about_business?(message: @last_customer, business: business_text)
+  end
+
+  def can_search_unused?
+    @skills.any? { |s| s.key == 'knowledge' } && @trace.tools.none? { |t| SEARCH_TOOLS.include?(t['name']) }
+  end
+
+  def business_text = @config.function.respond_to?(:answer) ? @config.function.answer(:business_what) : @config.objective
+
+  DEFER = 'Eso te lo resuelve un asesor en cuanto te atienda.'
+
+  # «No contesta dudas»: si preguntó algo y el mensaje no dice que un asesor se lo resuelve, se agrega.
+  def ensure_defer(_messages, text)
+    return text unless deferring? && Motor2::Skills::QualifyFlow.asking_info?(@last_customer) && !text.match?(/asesor|equipo/i)
+
+    @trace.event(:revision, 'no contesta dudas: un asesor se lo resuelve')
+    "#{DEFER} #{text}".strip
+  end
+
+  def deferring?
+    @mode == :reply && @decision.nil? && @config.function.is_a?(Motor2::Functions::Prospects) &&
+      !Motor2::Functions::ProspectRules.answers_doubts?(@config.answers)
   end
 
   # Prometió pasarlo sin llamar la herramienta: se le pide una vez que lo haga bien.
@@ -85,7 +115,8 @@ module Motor2::ReplyChecks
     again.present? && !unsourced?(again) ? again : text
   end
 
+  # Si pidió una persona y toca terminar primero, «con gusto te paso…» es lo que se espera.
   def undecided_promise?(text)
-    @mode == :reply && @decision.nil? && @skills.any? { |s| s.key == 'qualify' } && text.match?(PROMISE)
+    @mode == :reply && @decision.nil? && qualify_skill.present? && !qualify_skill.human_requested? && text.match?(PROMISE)
   end
 end
