@@ -383,7 +383,7 @@ export default {
         :header-content="t('MODAL_SUBTITLE')"
       />
       <div
-        class="grid flex-1 min-h-0 grid-cols-1 gap-5 px-8 pb-4 overflow-hidden md:grid-cols-2 md:grid-rows-1"
+        class="grid flex-1 min-h-0 grid-cols-1 gap-5 px-4 pb-4 overflow-y-auto md:px-8 md:grid-cols-2 md:grid-rows-1 md:overflow-hidden"
       >
         <!-- El asistente: un paso a la vez -->
         <form
@@ -897,7 +897,7 @@ export default {
 
         <!-- Chat de prueba: tú eres el cliente -->
         <div
-          class="flex flex-col min-h-0 border rounded-lg border-slate-100 dark:border-slate-700"
+          class="flex flex-col min-h-[22rem] border rounded-lg md:min-h-0 border-slate-100 dark:border-slate-700"
         >
           <div
             class="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-slate-700"

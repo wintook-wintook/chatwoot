@@ -230,9 +230,10 @@ export default {
         </div>
       </section>
 
-      <!-- Por vendedor (y sus clientes) -->
+      <!-- Por vendedor (y sus clientes). overflow-x-auto: en ventanas angostas los montos y el %
+           se desplazan en vez de cortarse (Plan-Pantallas-Responsive #3). -->
       <section
-        class="overflow-hidden bg-white border rounded-xl border-slate-100 dark:bg-slate-800 dark:border-slate-700"
+        class="overflow-x-auto bg-white border rounded-xl border-slate-100 dark:bg-slate-800 dark:border-slate-700"
       >
         <p
           v-if="!sellers.length"
