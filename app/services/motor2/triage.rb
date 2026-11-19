@@ -26,6 +26,8 @@ class Motor2::Triage < Cases::Ai::BaseService
     hable de cotizaciones o facturas) es soporte; si quiere conocer, cotizar, comprar o contratar es
     comercial; si es una gestión de su cuenta (factura, pago, saldo, RFC) es administrativo.
     Reglas:
+    - Usa EL NEGOCIO para entender lo que pide: si la empresa da soporte o capacitación de un sistema, preguntar cómo
+      hacer algo en ese sistema («cómo doy de alta un cliente», «cómo timbro») es soporte (duda de uso), no comercial.
     - Si hay una ACLARACIÓN PENDIENTE, primero ve si el último mensaje la contesta: entonces es la MISMA
       solicitud completada (misma área), no una nueva («10 usuarios» completa «quiero una cotización»).
     - «suficiente»: false solo si no se entiende qué necesita para poder actuar («quiero información»,
@@ -48,7 +50,8 @@ class Motor2::Triage < Cases::Ai::BaseService
      "pide_persona": false}, "pendientes": [{"area": "...", "intencion": "..."}]}
   TEXT
 
-  def call(areas:, history:, pending: nil, queue: [])
+  def call(areas:, history:, pending: nil, queue: [], business: nil)
+    @business = business
     result = chat(system: SYSTEM, user: context(areas, history, pending, queue), json: true, temperature: 0, max_tokens: 400)
     clean(result, areas)
   rescue StandardError => e
@@ -61,12 +64,18 @@ class Motor2::Triage < Cases::Ai::BaseService
   def model = AiModels::REVIEW
 
   def context(areas, history, pending, queue)
-    lines = ['ÁREAS:', *areas.flat_map { |a| area_lines(a) }]
-    lines << "ACLARACIÓN PENDIENTE: #{pending['area']} — «#{pending['intencion']}»; se le preguntó: «#{pending['aclaracion']}»" if pending
-    lines << "PENDIENTES DE ANTES: #{queue.map { |q| "#{q['area']}: #{q['intencion']}" }.join(' | ')}" if queue.present?
+    lines = ["EL NEGOCIO: #{@business.presence || 'sin descripción'}", 'ÁREAS:', *areas.flat_map { |a| area_lines(a) }]
+    lines.concat(pending_lines(pending, queue))
     lines << 'PLÁTICA (la última línea es el mensaje a clasificar):'
     Array(history).last(HISTORY).each { |m| lines << "#{m[:role].to_s == 'user' ? 'CLIENTE' : 'AGENTE'}: #{m[:content].to_s.first(400)}" }
     lines.join("\n")
+  end
+
+  def pending_lines(pending, queue)
+    lines = []
+    lines << "ACLARACIÓN PENDIENTE: #{pending['area']} — «#{pending['intencion']}»; se le preguntó: «#{pending['aclaracion']}»" if pending
+    lines << "PENDIENTES DE ANTES: #{queue.map { |q| "#{q['area']}: #{q['intencion']}" }.join(' | ')}" if queue.present?
+    lines
   end
 
   def area_lines(area)

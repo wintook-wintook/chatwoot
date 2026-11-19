@@ -60,7 +60,7 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
     return act_now_note if must_act?
     return "Falta aclarar: haz SOLO esta pregunta, sin buscar ni contestar otra cosa: «#{now['aclaracion']}»" unless sufficient?
 
-    [area_note, queue_note].compact.join("\n")
+    [clarified_note || area_note, queue_note].compact.join("\n")
   end
 
   # Pidió una persona y ya toca pasarlo: de inmediato, si lo vuelve a pedir, o si ya se sabe qué necesita.
@@ -100,19 +100,39 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
   def function = config.function
 
   def classify(history)
-    result = Motor2::Triage.new(account: config.account).call(areas: function.areas, history: history, pending: state['pendiente'],
-                                                              queue: queue)
+    had_pending = state['pendiente'].present?
+    result = triage(history)
     return unless result
 
     count_turn(result['atender'])
     state['triage'] = result['atender']
+    clarified! if had_pending && !sufficient?
     state['cola'] = result['pendientes']
     remember_pending
     trace.event(:area, "#{area_title}: #{now['intencion']}#{gestion_text}#{' (falta aclarar)' unless sufficient?}")
   end
 
+  def clarified_note
+    return nil unless @clarified
+
+    "Ya aclaró lo que necesita («#{now['intencion']}»): NO preguntes más. Búscalo con buscar_en_fuentes y contesta con lo que encuentres."
+  end
+
+  # Ya se le pidió aclarar y contestó: no se le vuelve a preguntar, se busca con lo que hay.
+  def clarified!
+    state['triage'] = now.merge('suficiente' => true)
+    @clarified = true
+  end
+
+  def triage(history)
+    Motor2::Triage.new(account: config.account).call(areas: function.areas, history: history, pending: state['pendiente'],
+                                                     queue: queue, business: business_text)
+  end
+
+  def business_text = [function.answer(:business_what), function.answer(:business_who)].compact_blank.join(' — ')
+
   def remember_pending
-    if sufficient? || area_key == 'none'
+    if sufficient?
       state.values.delete('pendiente')
     else
       state['pendiente'] = now.slice('area', 'intencion', 'aclaracion')
@@ -145,7 +165,8 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
            else
              'llama canalizar con lo que ya te dijo'
            end
-    "Ya tienes lo necesario: NO hagas más preguntas; #{what}."
+    first = area_key == 'support' ? 'primero búscalo con buscar_en_fuentes y, si trae cómo resolverlo, dale los pasos; si no, ' : ''
+    "Ya tienes lo necesario: NO hagas más preguntas; #{first}#{what}."
   end
 
   def human? = @human_requests.to_i.positive? || now['pide_persona'] == true

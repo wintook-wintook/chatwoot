@@ -92,6 +92,17 @@ RSpec.describe Motor2::Functions::Customers do
     expect(state['pendiente']).to include('area' => 'sales', 'aclaracion' => '¿Qué deseas cotizar?')
   end
 
+  it 'si ya se le pidió aclarar y contestó, no pregunta otra vez: busca con lo que hay' do
+    create(:canned_response, account: account, short_code: 'horario', content: 'De 9 a 6')
+    triage('none', suficiente: false, aclaracion: '¿En qué sistema?', intencion: 'dar de alta un cliente')
+    state = Motor2::State.new
+    tools_for(state)
+    expect(state['pendiente']).to include('intencion' => 'dar de alta un cliente')
+
+    expect(tools_for(state)).to include('buscar_en_fuentes') # sigue «falta aclarar», pero ya se aclaró una vez
+    expect(state['triage']).to include('suficiente' => true)
+  end
+
   it 'Administrativo: canaliza al equipo de esa área, con nota, y el agente se pausa' do
     triage('admin', intencion: 'corregir RFC de una factura')
     stub_model(tool_call('canalizar', { motivo: 'Corregir el RFC de la factura A-1' }),
