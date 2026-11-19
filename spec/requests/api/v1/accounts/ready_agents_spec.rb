@@ -12,7 +12,8 @@ RSpec.describe 'Ready Agents API' do
   let(:api) { "/api/v1/accounts/#{account.id}" }
   let(:params) do
     { ready_agent: { kind: 'prospects', name: 'Prospectos Facebook', display_name: 'Sofi', enabled: true, inbox_ids: [inbox.id],
-                     settings: { objective: 'handoff', questions: 'qué busca', only_prospects: 'false', instructions: 'Sé breve' } } }
+                     settings: { objective: 'handoff', questions: 'qué busca', only_prospects: 'false', instructions: 'Sé breve',
+                                 question_list: ['¿Qué buscas?'] } } }
   end
 
   def create_agent(extra = {})
@@ -35,6 +36,7 @@ RSpec.describe 'Ready Agents API' do
                                         agent_function: 'prospects', attending: true, attend_inbox_ids: [inbox.id])
     expect(template.motor2['answers']).to include('objective' => 'handoff', 'only_prospects' => false)
     expect(template.motor2['instructions']).to eq('Sé breve')
+    expect(template.motor2['answers']['question_list']).to eq(['¿Qué buscas?'])
     expect(response.parsed_body['agent']).to include('kind' => 'prospects', 'enabled' => true, 'inbox_ids' => [inbox.id],
                                                      'settings' => include('instructions' => 'Sé breve'))
   end

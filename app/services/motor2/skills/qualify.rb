@@ -8,12 +8,22 @@
 #   skills.qualify = { 'on' => true }   (lo prende la función «Atención a prospectos»)
 #   memoria: state['answers'] = { '¿Tienes un presupuesto?' => '20 mil' }, state['temperature'] = 'caliente'
 #
-# Las preguntas vienen numeradas de la función (Motor2::Functions::Prospects#questions): el modelo
-# guarda con el número y el código lleva la cuenta (cuáles ya contestó y cuál sigue), como en
-# «Datos del cliente». Así no se salta ni repite y cada respuesta queda en la nota.
+# Las preguntas vienen numeradas de la función (Motor2::Functions::Prospects#questions) y la
+# secuencia la manda el código, no el modelo (gpt-4o-mini se las saltaba y no las guardaba):
+#   - prepare: ve qué pregunta hizo el agente en su último mensaje (tal cual);
+#   - turn_note: al final del turno le dice «el cliente acaba de contestar la pregunta N: si la
+#     contesta, guárdala; si no, vuelve a hacerla» y con qué pregunta debe terminar su mensaje (no se
+#     guarda a ciegas: «para viajar» no es la respuesta de «¿Para cuándo?»);
+#   - required_question: Motor2::Runner revisa que la traiga (si no, se la pide o la agrega).
+# El modelo también puede guardar con guardar_respuesta (si lo dijo de pasada).
 class Motor2::Skills::Qualify < Motor2::Skills::Base
   TEMPERATURES = %w[caliente tibio frio].freeze
   TEMPERATURE = { type: 'string', enum: TEMPERATURES, description: 'Qué tan listo está para comprar' }.freeze
+
+  # Ya contestó todo: no se inventan más preguntas; se decide.
+  ALL_ANSWERED = 'YA CONTESTÓ TODAS TUS PREGUNTAS: no inventes otras. Si cumple lo de «calificado», llama ' \
+                 'prospecto_calificado; si no, pregúntale solo lo que falte para saberlo, o descártalo si cumple lo de ' \
+                 '«se descarta». Si pregunta algo, contéstale.'
 
   def self.key = 'qualify'
 
@@ -30,11 +40,16 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
 
   def memory
     lines = []
-    lines << "LO QUE YA CONTESTÓ: #{answers.map { |q, a| "#{q} → #{a}" }.join(' | ')}" if answers.any?
-    pending = questions.reject { |q| answers.key?(q[:ask]) }.pluck(:number)
-    if pending.any?
-      lines << "TE FALTA PREGUNTAR (en orden; la siguiente es la #{pending.first}): #{pending.join(', ')}. Aunque contestes " \
-               "otra cosa, termina tu mensaje con la pregunta #{pending.first} (si no la acaba de contestar)."
+    if answers.any?
+      lines << "LO QUE YA CONTESTÓ: #{answers.map { |q, a| "#{q} → #{a}" }.join(' | ')} (si después da una mejor respuesta a " \
+               'una, guárdala otra vez con su número: reemplaza la anterior)'
+    end
+    numbers = pending.pluck(:number)
+    if numbers.any?
+      lines << "TE FALTA PREGUNTAR (en orden; la siguiente es la #{numbers.first}): #{numbers.join(', ')}. Aunque contestes " \
+               "otra cosa, termina tu mensaje con la pregunta #{numbers.first}."
+    elsif questions.any?
+      lines << ALL_ANSWERED
     end
     lines.join("\n")
   end
@@ -42,6 +57,36 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
   def call(name, args)
     name == 'guardar_respuesta' ? save(args) : qualified(args)
   end
+
+  # La pregunta pendiente que hizo el agente en su último mensaje (si el cliente ya contestó después).
+  def prepare(history)
+    last = Array(history).rindex { |m| m[:role].to_s == 'assistant' }
+    return @just_asked = nil unless last && history[(last + 1)..].any? { |m| m[:role].to_s == 'user' }
+
+    @just_asked = pending.reverse.find { |q| self.class.asks?(history[last][:content], q[:ask]) }
+  end
+
+  def turn_note
+    notes = []
+    if @just_asked
+      notes << "Le preguntaste #{@just_asked[:number]}. «#{@just_asked[:ask]}». ¿Su último mensaje contesta EXACTAMENTE eso? Si sí, " \
+               "guárdalo YA con guardar_respuesta numero #{@just_asked[:number]}. Si contesta otra cosa (p. ej. le preguntas para " \
+               'cuándo y dice para qué), guarda eso en la pregunta que sí contesta y vuelve a hacer esta.'
+    end
+    ask = required_question
+    notes << "Termina tu mensaje con la pregunta pendiente, tal cual: «#{ask}» (salvo que lo califiques, descartes o pases)." if ask
+    notes.join("\n")
+  end
+
+  def required_question = pending.first&.dig(:ask)
+
+  # ¿El texto trae la pregunta? Sin acentos, mayúsculas ni signos.
+  def self.asks?(text, ask)
+    key = normalize(ask)
+    key.present? && normalize(text).include?(key)
+  end
+
+  def self.normalize(text) = I18n.transliterate(text.to_s.downcase).gsub(/[^a-z0-9 ]/, ' ').squish
 
   # La temperatura que dio el modelo al calificar o al pasarlo (también la usa pasar_a_humano).
   def self.note_temperature(state, value)
@@ -53,6 +98,8 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
   def answers = (state['answers'] ||= {})
 
   def questions = config.function.respond_to?(:questions) ? config.function.questions : []
+
+  def pending = questions.reject { |q| answers.key?(q[:ask]) }
 
   # Con el número de la pregunta (o, si no hay lista, el texto de la pregunta).
   def save(args)

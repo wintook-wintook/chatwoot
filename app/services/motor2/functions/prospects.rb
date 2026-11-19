@@ -208,8 +208,8 @@ class Motor2::Functions::Prospects
     lines = questions.map { |q| "#{q[:number]}. «#{q[:ask]}»" }
     lines << '1. «¿Qué buscas y para cuándo?»' if lines.empty?
     <<~TEXT
-      PREGUNTAS PARA CALIFICARLO: hazlas TAL CUAL están escritas (puedes ajustar solo el tú/usted), en este orden y una
-      por mensaje, entre tus respuestas. Si ya lo dijo en la plática, no la hagas: guarda su respuesta. Cada respuesta
+      PREGUNTAS PARA CALIFICARLO: hazlas TAL CUAL están escritas, en este orden y una por mensaje, al final de tu
+      mensaje. No inventes otras preguntas para calificar. Si ya lo dijo en la plática, no la hagas: guarda su respuesta. Cada respuesta
       guárdala con guardar_respuesta y el número de la pregunta en ese mismo turno:
       #{lines.join("\n")}
 

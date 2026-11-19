@@ -13,7 +13,9 @@ RSpec.describe Motor2::Functions::Prospects do
   let(:contact) { create(:contact, account: account, name: 'Mario Pérez') }
   let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact, assignee: nil) }
   let(:objective) { 'handoff' }
-  let(:settings) { { 'objective' => objective, 'questions' => 'qué busca y su ciudad', 'handoff_user_id' => seller.id } }
+  let(:settings) do
+    { 'objective' => objective, 'question_list' => ['¿Qué buscas?', '¿En qué ciudad estás?'], 'handoff_user_id' => seller.id }
+  end
   let!(:agent) { save_agent(settings) }
 
   def save_agent(answers, template: nil)
@@ -71,7 +73,8 @@ RSpec.describe Motor2::Functions::Prospects do
   end
 
   it 'los agentes de antes: sus preguntas armadas prendidas y las propias pasan a la lista' do
-    save_agent(settings.merge('qualify' => [{ 'key' => 'need', 'on' => false }, { 'key' => 'budget', 'on' => true, 'text' => '' }]),
+    save_agent(settings.merge('question_list' => [], 'questions' => 'qué busca y su ciudad',
+                              'qualify' => [{ 'key' => 'need', 'on' => false }, { 'key' => 'budget', 'on' => true, 'text' => '' }]),
                template: agent)
     expect(system_prompt).to include("1. «¿Tienes un presupuesto aproximado?»\n2. «qué busca y su ciudad»")
   end
@@ -92,7 +95,7 @@ RSpec.describe Motor2::Functions::Prospects do
   end
 
   it 'contesta, guarda lo que el prospecto dijo y el seguimiento queda activo y sin intentos' do
-    stub_model(tool_call('guardar_respuesta', { pregunta: 'Qué busca', respuesta: 'Paneles solares' }),
+    stub_model(tool_call('guardar_respuesta', { numero: 1, respuesta: 'Paneles solares' }),
                answer('¡Hola Mario! ¿En qué ciudad estás?'))
     reply_to(incoming('Busco paneles solares'))
 
@@ -101,7 +104,7 @@ RSpec.describe Motor2::Functions::Prospects do
     expect(sent.content_attributes).to include('ai_agent' => true)
     expect(tracking).to have_attributes(status: 'active', tracking_template_id: agent.id, max_attempts: 1)
     expect(tracking.scheduled_for).to be > 1.year.from_now
-    expect(tracking.motor2_state['answers']).to eq('Qué busca' => 'Paneles solares')
+    expect(tracking.motor2_state['answers']).to eq('¿Qué buscas?' => 'Paneles solares')
   end
 
   it 'calificado: etiqueta «interesado», nota con sus respuestas y se pasa a la persona' do
@@ -295,12 +298,40 @@ RSpec.describe Motor2::Functions::Prospects do
   end
 
   it 'chat de prueba: contesta con el motor 2.0 sin guardar ni mandar nada' do
-    stub_model(tool_call('guardar_respuesta', { pregunta: 'Ciudad', respuesta: 'Monterrey' }), answer('¡Perfecto! ¿Para cuándo?'))
+    stub_model(tool_call('guardar_respuesta', { numero: 2, respuesta: 'Monterrey' }), answer('¡Perfecto! ¿Qué buscas?'))
     result = nil
     expect { result = Motor2::Probe.new(agent, messages: [{ role: 'user', content: 'Soy de Monterrey' }]).call }
       .not_to change(ContactTracking, :count)
 
-    expect(result).to include(reply: '¡Perfecto! ¿Para cuándo?')
-    expect(result[:state]['answers']).to eq('Ciudad' => 'Monterrey')
+    expect(result).to include(reply: '¡Perfecto! ¿Qué buscas?')
+    expect(result[:state]['answers']).to eq('¿En qué ciudad estás?' => 'Monterrey')
+  end
+
+  context 'with la secuencia de preguntas (la manda el código)' do
+    let(:chat) do
+      [{ role: 'user', content: 'hola' }, { role: 'assistant', content: '¡Hola! ¿Qué buscas?' }, { role: 'user', content: 'un sedán' }]
+    end
+
+    it 'le dice que acaba de contestar la pregunta que hizo (para que la guarde) y con cuál terminar' do
+      replies = [tool_call('guardar_respuesta', { numero: 1, respuesta: 'un sedán' }), answer('¡Muy bien! ¿En qué ciudad estás?')]
+      sent = []
+      allow_any_instance_of(Motor2::Runner).to receive(:complete) do |_runner, messages| # rubocop:disable RSpec/AnyInstance
+        sent << messages.last[:content].to_s
+        replies.shift
+      end
+      result = Motor2::Probe.new(agent, messages: chat).call
+
+      expect(sent.first).to include('Le preguntaste 1. «¿Qué buscas?»', 'guardar_respuesta numero 1', 'tal cual: «¿Qué buscas?»')
+      expect(result[:state]['answers']).to eq('¿Qué buscas?' => 'un sedán')
+      expect(result[:reply]).to eq('¡Muy bien! ¿En qué ciudad estás?')
+    end
+
+    it 'si no termina con la pendiente, se la pide; si tampoco, la agrega tal cual' do
+      stub_model(answer('¡Muy bien! ¿Tienes algún modelo en mente?'))
+      result = Motor2::Probe.new(agent, messages: chat).call
+
+      expect(result[:reply]).to eq("¡Muy bien! ¿Tienes algún modelo en mente?\n\n¿Qué buscas?")
+      expect(result[:trace]['events']).to include(include('kind' => 'revision', 'text' => 'pregunta pendiente'))
+    end
   end
 end

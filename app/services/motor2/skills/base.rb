@@ -26,6 +26,16 @@ class Motor2::Skills::Base
   # Lo que el código recuerda, para que el modelo lo vea en cada turno.
   def memory = ''
 
+  # Antes de armar el prompt, con la plática (cliente = user, agente = assistant): lo que el código
+  # puede deducir solo (p. ej. a qué pregunta contestó el cliente).
+  def prepare(_history); end
+
+  # Una línea para el final del turno (lo último que lee el modelo antes de contestar).
+  def turn_note = ''
+
+  # La pregunta con la que debe terminar su mensaje (el código lo revisa), o nil.
+  def required_question = nil
+
   def call(_name, _args) = { error: 'herramienta desconocida' }
 
   private

@@ -18,7 +18,8 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
                 client_user_id client_team_id only_prospects case_type_id appointment_minutes appointment_kind
                 appointment_location business_what business_who business_coverage business_why business_practical
                 business_use_catalog doubts not_found off_topic].freeze
-  LISTS = { appointment_user_ids: [], required_contact: [], qualify: %i[key on text], objections: %i[objection answer] }.freeze
+  LISTS = { question_list: [], appointment_user_ids: [], required_contact: [], qualify: %i[key on text],
+            objections: %i[objection answer] }.freeze
   MAX_TEST_MESSAGES = 30
   ROLES = %w[user assistant].freeze
 

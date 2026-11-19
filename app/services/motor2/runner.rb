@@ -13,8 +13,11 @@
 #   - respuesta vacía de OpenAI → se pide otra vez (e4fae498);
 #   - copia instrucciones internas de una predefinida → se reescribe una vez;
 #   - da un precio o porcentaje que no vio en ningún lado → se reescribe una vez;
-#   - ligas que no vio → se quitan (KnowledgeBase::LinkGuard).
+#   - ligas que no vio → se quitan (KnowledgeBase::LinkGuard);
+#   - con preguntas en secuencia (Calificar), si no termina con la pendiente → se pide una vez y,
+#     si aun así no, se agrega tal cual.
 class Motor2::Runner < Cases::Ai::BaseService
+  include Motor2::QuestionGuard
   MAX_ROUNDS = 6
   MAX_TOKENS = 700
   NO_MESSAGE = '[SIN_MENSAJE]'
@@ -85,9 +88,11 @@ class Motor2::Runner < Cases::Ai::BaseService
   def initial_messages
     prompt = Motor2::Prompt.new(self, @skills)
     history = test? ? @test_history.map { |m| m.to_h.symbolize_keys.slice(:role, :content) } : Motor2::Prompt.history(@conversation)
+    @skills.each { |skill| skill.prepare(history) }
     system = prompt.system
     @seen << system << history.pluck(:content).join("\n")
-    [{ role: 'system', content: system }, *history, { role: 'system', content: prompt.turn_message(@mode, attempt: @attempt) }]
+    turn = [prompt.turn_message(@mode, attempt: @attempt), *@skills.map(&:turn_note)].compact_blank.join("\n")
+    [{ role: 'system', content: system }, *history, { role: 'system', content: turn }]
   end
 
   # --- el modelo ----------------------------------------------------------------------
@@ -177,6 +182,8 @@ class Motor2::Runner < Cases::Ai::BaseService
 
     text = rewrite(messages, text, :leak) if leaks?(text)
     text = rewrite(messages, text, :unsourced) if text.present? && unsourced?(text)
+    text = ensure_decision(messages, text) if text.present?
+    text = ensure_question(messages, text) if text.present?
     guard_links(text)
   end
 
