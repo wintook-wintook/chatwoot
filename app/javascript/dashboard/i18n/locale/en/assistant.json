@@ -436,7 +436,7 @@
   },
   "READY_AGENTS": {
     "TITLE": "Ready agents",
-    "SUBTITLE": "Agents that come built: turn them on, name them, pick their inbox and answer a few questions. They start attending on their own, no automations.",
+    "SUBTITLE": "Each function has its own wizard: answer a few questions, name it and you're done. You can have several of the same kind; they all go to the agents list and work in campaigns, automations and Delegate.",
     "LOADING": "Loading…",
     "LOAD_ERROR": "The agents could not be loaded.",
     "SOON": "Coming soon",
@@ -446,21 +446,21 @@
     "LIVE": "attending {n}",
     "TURN_OFF": "Turn off",
     "TURN_ON": "Turn on",
-    "ACTIVATE": "Activate",
+    "ACTIVATE": "Create one",
     "SAVED": "Agent saved",
     "SAVE_ERROR": "The agent could not be saved.",
-    "DELETE_CONFIRM": "Delete the agent «{name}»? It stops attending its inboxes.",
-    "NEW_TITLE": "Activate · {title}",
+    "DELETE_CONFIRM": "Delete the agent «{name}»? It stops answering. If it already handled chats or a campaign uses it, it is archived.",
+    "NEW_TITLE": "New agent · {title}",
     "EDIT_TITLE": "Agent «{name}»",
-    "MODAL_SUBTITLE": "Answer the left side and test it on the right: you are the customer.",
+    "MODAL_SUBTITLE": "Answer step by step and try it on the right: you are the customer.",
     "CANCEL": "Cancel",
     "SAVE": "Save",
     "FIELDS": {
-      "NAME": "Agent name",
-      "NAME_PLACEHOLDER": "E.g. Sofi",
+      "NAME": "Agent name (for your team)",
+      "NAME_PLACEHOLDER": "E.g. Ana – Facebook",
       "TONE": "Tone",
       "INBOXES": "Inboxes it attends",
-      "INBOX_TAKEN": "This inbox already has another ready agent on",
+      "INBOX_TAKEN": "Another active agent already answers this inbox",
       "OBJECTIVE": "When the prospect qualifies…",
       "QUESTIONS": "Your own questions (optional)",
       "QUESTIONS_PLACEHOLDER": "E.g. is your roof metal or concrete?",
@@ -486,7 +486,9 @@
       "APPOINTMENT_LOCATION": "Place or link (optional)",
       "APPOINTMENT_LOCATION_PLACEHOLDER": "E.g. Google Meet",
       "APPOINTMENT_HINT": "Offers free times from their Google within the inbox working hours (or Mon–Fri 9–18). The appointment goes to the Agenda and their Google, and the conversation is assigned to them.",
-      "REQUIRED_CONTACT": "Details to collect before handing off"
+      "REQUIRED_CONTACT": "Details to collect before handing off",
+      "DISPLAY_NAME": "Name the customer sees (optional)",
+      "DISPLAY_NAME_PLACEHOLDER": "E.g. Ana"
     },
     "TONES": {
       "cercano": "Friendly",
@@ -522,12 +524,17 @@
       "ver_horarios": "Checked free times",
       "agendar_cita": "Booked",
       "mover_cita": "Moved the appointment",
-      "cancelar_cita": "Cancelled the appointment"
+      "cancelar_cita": "Cancelled the appointment",
+      "buscar_en_fuentes": "Searched its knowledge"
     },
     "DECISIONS": {
       "prospecto_calificado": "Qualified prospect",
       "descartar": "Discarded: the conversation is resolved",
-      "pasar_a_humano": "Hand off to a person"
+      "pasar_a_humano": "Hand off to a person",
+      "qualified": "Qualified prospect",
+      "discarded": "Discarded: the conversation is resolved",
+      "handoff": "Hand off to a person",
+      "done": "Goal met"
     },
     "SESSION": {
       "FAILED": "Could not change it.",
@@ -617,6 +624,33 @@
       "caliente": "🔥 hot",
       "tibio": "🌤 warm",
       "frio": "❄️ cold"
+    },
+    "BACK": "Back",
+    "NEXT": "Next",
+    "STEPS": {
+      "NUMBERED": "{n}. {step}",
+      "agent": "The agent",
+      "business": "Your business",
+      "questions": "What to ask",
+      "qualify": "When it qualifies",
+      "after": "When qualified",
+      "objections": "Objections",
+      "instructions": "Instructions",
+      "test": "Try it and save"
+    },
+    "STEP_HINTS": {
+      "agent": "Give it a name for your team, the name the customer sees and the inboxes where it answers whoever writes.",
+      "business": "What the agent must know to explain and to discard people outside your area or offer.",
+      "questions": "Turn on the questions you want and edit their text. It asks them one at a time; each answer goes to the note and the opportunity.",
+      "qualify": "With this it knows when to pass it to your team and when it is not for you.",
+      "after": "What it does when the lead qualifies, who gets it and which details it collects first.",
+      "objections": "What people say to stall the purchase and how to answer. It uses the idea in its own words and never invents discounts.",
+      "instructions": "Anything else it should know or do (optional). If it contradicts the above, this wins.",
+      "test": "Try it in the chat on the right as if you were a lead and save it if you like it."
+    },
+    "STEP_TEST": {
+      "READY": "«{name}» is ready. When saved it goes to the agents list labeled «Lead handling».",
+      "OFF": "It is off: it won't answer its inboxes until you turn it on (it can still be used in campaigns and automations)."
     }
   }
 }

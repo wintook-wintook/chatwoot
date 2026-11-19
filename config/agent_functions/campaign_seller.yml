@@ -1,0 +1,5 @@
+key: campaign_seller
+order: 4
+available: false
+title: Vendedor de campaña
+summary: Le escribe a una lista de contactos con una oferta concreta y detecta a quién le interesa.

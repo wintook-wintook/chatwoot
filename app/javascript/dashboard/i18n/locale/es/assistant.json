@@ -436,7 +436,7 @@
   },
   "READY_AGENTS": {
     "TITLE": "Agentes listos",
-    "SUBTITLE": "Agentes que ya vienen armados: actívalos, ponles nombre, elige su bandeja y contesta unas preguntas. Empiezan a atender solos, sin automatizaciones.",
+    "SUBTITLE": "Cada función trae su asistente: contesta unas preguntas, ponle nombre y listo. Puedes tener varios del mismo tipo; todos quedan en la lista de agentes y se usan en campañas, automatizaciones y Delegar.",
     "LOADING": "Cargando…",
     "LOAD_ERROR": "No se pudieron cargar los agentes.",
     "SOON": "Próximamente",
@@ -446,21 +446,21 @@
     "LIVE": "atendiendo {n}",
     "TURN_OFF": "Apagar",
     "TURN_ON": "Prender",
-    "ACTIVATE": "Activar",
+    "ACTIVATE": "Crear uno",
     "SAVED": "Agente guardado",
     "SAVE_ERROR": "No se pudo guardar el agente.",
-    "DELETE_CONFIRM": "¿Borrar el agente «{name}»? Deja de atender en sus bandejas.",
-    "NEW_TITLE": "Activar · {title}",
+    "DELETE_CONFIRM": "¿Borrar el agente «{name}»? Deja de atender. Si ya atendió pláticas o lo usa una campaña, se archiva.",
+    "NEW_TITLE": "Nuevo agente · {title}",
     "EDIT_TITLE": "Agente «{name}»",
-    "MODAL_SUBTITLE": "Contesta lo de la izquierda y pruébalo a la derecha: tú eres el cliente.",
+    "MODAL_SUBTITLE": "Contesta paso a paso y pruébalo a la derecha: tú eres el cliente.",
     "CANCEL": "Cancelar",
     "SAVE": "Guardar",
     "FIELDS": {
-      "NAME": "Nombre del agente",
-      "NAME_PLACEHOLDER": "Ej. Sofi",
+      "NAME": "Nombre del agente (para tu equipo)",
+      "NAME_PLACEHOLDER": "Ej. Ana – Facebook",
       "TONE": "Tono",
       "INBOXES": "Bandejas donde atiende",
-      "INBOX_TAKEN": "Esta bandeja ya tiene otro agente listo prendido",
+      "INBOX_TAKEN": "Esta bandeja ya la atiende otro agente prendido",
       "OBJECTIVE": "Cuando el prospecto califica…",
       "QUESTIONS": "Tus preguntas propias (opcional)",
       "QUESTIONS_PLACEHOLDER": "Ej. ¿tienes techo de lámina o de concreto?",
@@ -486,7 +486,9 @@
       "APPOINTMENT_LOCATION": "Lugar o liga (opcional)",
       "APPOINTMENT_LOCATION_PLACEHOLDER": "Ej. Google Meet, sucursal Centro",
       "APPOINTMENT_HINT": "Ofrece los horarios libres de su Google dentro del horario de atención de la bandeja (o lun–vie 9 a 18). La cita queda en la Agenda y en su Google, y la conversación se le asigna.",
-      "REQUIRED_CONTACT": "Datos que debe juntar antes de pasarlo"
+      "REQUIRED_CONTACT": "Datos que debe juntar antes de pasarlo",
+      "DISPLAY_NAME": "Nombre que ve el cliente (opcional)",
+      "DISPLAY_NAME_PLACEHOLDER": "Ej. Ana"
     },
     "TONES": {
       "cercano": "Cercano (de tú)",
@@ -522,12 +524,17 @@
       "ver_horarios": "Vio horarios libres",
       "agendar_cita": "Agendó la cita",
       "mover_cita": "Movió la cita",
-      "cancelar_cita": "Canceló la cita"
+      "cancelar_cita": "Canceló la cita",
+      "buscar_en_fuentes": "Buscó en lo que sabe"
     },
     "DECISIONS": {
       "prospecto_calificado": "Prospecto calificado",
       "descartar": "Descartado: la conversación se resuelve",
-      "pasar_a_humano": "Pasa a una persona"
+      "pasar_a_humano": "Pasa a una persona",
+      "qualified": "Prospecto calificado",
+      "discarded": "Descartado: la conversación se resuelve",
+      "handoff": "Pasa a una persona",
+      "done": "Objetivo cumplido"
     },
     "SESSION": {
       "FAILED": "No se pudo cambiar.",
@@ -617,6 +624,33 @@
       "caliente": "🔥 caliente",
       "tibio": "🌤 tibio",
       "frio": "❄️ frío"
+    },
+    "BACK": "Atrás",
+    "NEXT": "Siguiente",
+    "STEPS": {
+      "NUMBERED": "{n}. {step}",
+      "agent": "El agente",
+      "business": "Tu negocio",
+      "questions": "Qué le preguntas",
+      "qualify": "Cuándo califica",
+      "after": "Al calificar",
+      "objections": "Objeciones",
+      "instructions": "Indicaciones",
+      "test": "Pruébalo y guarda"
+    },
+    "STEP_HINTS": {
+      "agent": "Ponle un nombre para tu equipo, el nombre que verá el cliente y las bandejas donde va a atender a quien escriba.",
+      "business": "Lo que el agente debe saber para explicar y para descartar a quien está fuera de zona o de lo que vendes.",
+      "questions": "Prende las preguntas que quieras y cambia su texto si quieres. Las hace una por una, en plática; cada respuesta queda en la nota y en la oportunidad.",
+      "qualify": "Con esto sabe cuándo pasarlo a tu equipo y cuándo no es para ti.",
+      "after": "Qué hace cuando califica, a quién se lo pasa y qué datos junta antes.",
+      "objections": "Lo que suelen decir para frenar la compra y cómo contestarlo. Usa la idea con sus palabras y no inventa descuentos.",
+      "instructions": "Algo más que deba saber o hacer (opcional). Si contradice lo anterior, gana esto.",
+      "test": "Prueba en el chat de la derecha como si fueras un prospecto y, si te gusta, guarda."
+    },
+    "STEP_TEST": {
+      "READY": "«{name}» está listo. Al guardar queda en la lista de agentes con la etiqueta «Atención a prospectos».",
+      "OFF": "Está apagado: no atenderá sus bandejas hasta que lo prendas (sí se puede usar en campañas y automatizaciones)."
     }
   }
 }

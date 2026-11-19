@@ -2,34 +2,36 @@
 key: agentes_listos
 title: Agentes listos
 areas: [ai_agents]
-keywords: [agentes listos, como habla tu empresa, tono general, firma, quien es quien, distribuidores, nota para ia, tu negocio, preguntas para calificar, temperatura, caliente, tibio, frio, objeciones, esta caro, datos obligatorios, agente listo, atencion a prospectos, prospectos, anuncios, redes sociales, campañas de redes, activar agente, chat de prueba, sofi, calificar, descartar, pasar a una persona, atendida por, pausar agente, reanudar agente, agendar cita, cita, horarios, horario ocupado, no disponible, reconectar google, mover cita, cancelar cita, agentes a medida, ya es cliente]
+keywords: [agentes listos, asistente, wizard, crear uno, varios agentes, lista de agentes, nombre que ve el cliente, motor 2.0, como habla tu empresa, tono general, firma, quien es quien, distribuidores, nota para ia, tu negocio, preguntas para calificar, temperatura, caliente, tibio, frio, objeciones, esta caro, datos obligatorios, agente listo, atencion a prospectos, prospectos, anuncios, redes sociales, campañas de redes, activar agente, chat de prueba, sofi, calificar, descartar, pasar a una persona, atendida por, pausar agente, reanudar agente, agendar cita, cita, horarios, horario ocupado, no disponible, reconectar google, mover cita, cancelar cita, agentes a medida, ya es cliente]
 pages: [ready_agents, ai_agents]
 ---
 ## Para qué sirve
-Los agentes listos vienen armados por nosotros: tú solo los activas, les pones nombre, eliges en qué bandeja atienden y contestas unas preguntas. Desde ese momento contestan solos en esa bandeja, sin automatizaciones. Los agentes que se arman desde cero siguen en «Agentes a medida».
+Los agentes listos vienen armados por nosotros. Cada función (por ejemplo «Atención a prospectos») trae su asistente: contestas sus preguntas paso a paso, le pones nombre, eliges en qué bandejas atiende y listo. Desde ese momento contesta solo en esas bandejas, sin automatizaciones.
+Puedes tener varios del mismo tipo (por ejemplo «Ana – Facebook» y «Recepción web»). Todos quedan en la lista de agentes con la etiqueta de su función, así que también se pueden usar en campañas, automatizaciones, asignación masiva, «Delegar a agente» y Dali. Usan el motor nuevo de agentes (2.0), el mismo de los agentes a medida 2.0.
 
 ## Dónde está
-En el menú «Agentes IA» › «Agentes listos» (la primera opción). «Agentes a medida» es la lista de agentes de siempre.
+En el menú «Agentes IA» › «Agentes listos» (la primera opción): una tarjeta por función, con los agentes que ya creaste y «Crear uno». También salen en «Agentes a medida» (la lista de agentes), con la etiqueta de su función; al abrir uno desde ahí se abre su mismo asistente.
 
 ## Qué agentes hay
 - Atención a prospectos: atiende a la gente nueva que escribe (anuncios en redes, página, campañas), contesta sus dudas con las respuestas predefinidas (y con el catálogo de productos solo si lo marcas en «Tu negocio»), lo califica con tus preguntas y lo pasa a tu equipo o le crea la oportunidad.
 - Próximamente: Atención a clientes, Cobranza y Vendedor de campaña.
 
 ## Cómo se hace
-### Activar un agente
-1. Entra a Agentes IA › Agentes listos y en la tarjeta del agente pulsa «Activar».
-2. Ponle nombre (por ejemplo «Sofi») y tono, y elige las bandejas donde atiende. Una bandeja solo puede tener un agente listo prendido.
-3. Contesta qué hace cuando el prospecto califica: pasarlo a una persona, agendarle una cita, crearle la oportunidad o solo juntar sus datos.
-4. Llena las secciones (ver «Configurar lo que sabe y pregunta»): Tu negocio, Preguntas para calificar, Objeciones frecuentes y Al pasarlo.
-5. Prueba en el «Chat de prueba» de la derecha: tú eres el cliente. Ves qué contesta y qué hizo (buscó en el catálogo, guardó un dato, calificado…). No se guarda ni se manda nada.
-6. Deja marcado «Prendido» y pulsa «Guardar». Empieza a atender en esas bandejas. Los cambios que guardes los toma desde el siguiente mensaje.
+### Crear un agente
+1. Entra a Agentes IA › Agentes listos y en la tarjeta de la función pulsa «Crear uno». Se abre su asistente, paso a paso.
+2. Paso «El agente»: el nombre para tu equipo (por ejemplo «Ana – Facebook»), el nombre que ve el cliente (opcional, por ejemplo «Ana»), el tono y las bandejas donde atiende. Una bandeja solo puede tenerla un agente prendido. Sin nombre y bandeja no deja avanzar.
+3. Pasos «Tu negocio», «Qué le preguntas», «Cuándo califica», «Al calificar», «Objeciones» e «Indicaciones»: ver «Configurar lo que sabe y pregunta».
+4. Paso «Pruébalo y guarda»: prueba en el «Chat de prueba» de la derecha (está en todos los pasos): tú eres el cliente. Ves qué contesta y qué hizo (buscó en lo que sabe, guardó un dato, calificado…). No se guarda ni se manda nada.
+5. Pulsa «Guardar». Si quedó «Prendido», empieza a atender en esas bandejas. Los cambios que guardes los toma desde el siguiente mensaje.
+6. Para cambiarlo, el lápiz de su renglón (o ábrelo desde la lista de agentes): se abre el mismo asistente y puedes saltar a cualquier paso y guardar.
 
 ### Configurar lo que sabe y pregunta
 - Tu negocio: qué vendes (y, solo si tus productos y precios están en el Catálogo, marca «Lo que vendo y sus precios están en mi Catálogo»; si no, contesta precios y dudas con las respuestas predefinidas), a quién le vendes, dónde das servicio, por qué elegirte y precios desde, formas de pago y tiempos. Con eso explica mejor y descarta a quien está fuera de tu zona o de lo que vendes.
 - Preguntas para calificar: prende las que quieras y cambia su texto si quieres: qué necesita y para qué (viene prendida), para cuándo, presupuesto, quién decide, ubicación, cantidad o tamaño y cómo nos conoció. Abajo van tus preguntas propias, cuándo está calificado y cuándo se descarta. Las hace una por una, en plática, y cada respuesta queda en la nota y en la oportunidad.
 - Temperatura: al calificarlo (o pasarlo a una persona) lo marca caliente (lo necesita pronto y tiene presupuesto o decide), tibio o frío, con la etiqueta «prospecto-caliente», «prospecto-tibio» o «prospecto-frio» y en la nota. Así tu equipo atiende primero a los calientes.
 - Objeciones frecuentes: lo que suelen decir para frenar la compra («está caro», «lo voy a pensar») y cómo contestarlo. Usa la idea con sus palabras y no inventa descuentos.
-- Al pasarlo: los datos que debe juntar antes de calificarlo (nombre, correo, empresa, ciudad) y a quién se lo pasa (persona o equipo). Si falta uno, se lo pide antes de pasarlo.
+- Al calificar: qué hace (pasarlo a una persona, agendarle una cita, crearle la oportunidad o solo juntar sus datos), a quién se lo pasa (persona o equipo), los datos que debe juntar antes (nombre, correo, empresa, ciudad: si falta uno, se lo pide antes de pasarlo) y qué hacer con quien ya es cliente.
+- Indicaciones: algo más que deba saber o hacer, en tus palabras. Si contradice lo anterior, gana esto. Aquí también queda lo que corrige el entrenador del Probador de agentes.
 
 ### Cómo habla tu empresa (lo general de todos los agentes)
 En Agentes IA › «Cómo habla tu empresa» (solo el Administrador) llenas lo que aplica a todos: quiénes somos, tono, cómo firmar, quién es quién (por ejemplo «los distribuidores son socios: se les pregunta por sus prospectos»), qué decir fuera de horario, lo que nunca deben hacer y palabras propias. Abajo, en «Datos del negocio», van los datos fijos de la empresa para todos los agentes: qué vendes, a quién, dónde das servicio, por qué elegirlos, precios/pagos/tiempos y otros datos (horario, dirección, teléfono…). Lo que pongas en «Tu negocio» de un agente manda sobre esto. Lo toman el Seguimiento IA y todos los Agentes listos; lo particular de cada uno manda (por ejemplo, el tono que elegiste en el agente). «Probar» arma un mensaje de ejemplo sin guardar ni enviar. Los Agentes a medida no lo usan: tienen su propio entrenamiento.
@@ -56,13 +58,17 @@ En Agentes IA › «Cómo habla tu empresa» (solo el Administrador) llenas lo q
 Con «Solo atiende prospectos» marcado (así viene), a quien ya es cliente (su organización está en etapa Cliente o ya tiene una oportunidad ganada o un caso de servicio) no le hace preguntas: le contesta «Te comunico con Ana, en un momento te escribe» (fuera de horario, «te escribe en cuanto abramos»), se lo asigna a su responsable fijo (o a quien elegiste para clientes sin responsable) y deja una nota.
 
 ### Pausar o reanudar en una conversación
-En el panel de la conversación sale «Sofi · atendiendo» con «Pausar». Pausado ya no contesta en esa conversación; «Reanudar» lo regresa. Si una persona del equipo le escribe al cliente, el agente se hace a un lado solo en esa conversación.
+En el panel de la conversación sale el nombre del agente y «atendiendo», con «Pausar». Pausado ya no contesta en esa conversación; «Reanudar» lo regresa. Si una persona del equipo le escribe al cliente, el agente se hace a un lado solo en esa conversación.
 
 ### Apagar o cambiar un agente
-En su tarjeta: «Apagar» o «Prender» (no cambia su configuración), el lápiz para cambiar lo que contestaste y el bote para borrarlo.
+En su tarjeta: «Apagar» o «Prender» (no cambia su configuración), el lápiz para cambiar lo que contestaste y el bote para borrarlo. Si ya atendió pláticas o lo usa una campaña, en vez de borrarse se archiva: deja de atender y sale de las listas.
+
+### Probarlo con el Probador de agentes
+Como está en la lista de agentes, se prende «En prueba» en su renglón y se prueba en Inicio › Probar agentes con 👍/👎, lotes y revisión, como cualquier agente 2.0. Lo que el entrenador corrige queda en el paso «Indicaciones» de su asistente.
 
 ## Límites
-- Solo contesta cuando el cliente escribe; no le escribe primero.
+- Por su bandeja solo contesta cuando el cliente escribe; no le escribe primero (una campaña sí puede usarlo para escribir primero).
+- Si la conversación ya tiene otro agente (por una campaña o una automatización), contesta ese.
 - Para agendar necesita al menos una persona con Google Calendar conectado.
 - No inventa precios ni promociones: usa las respuestas predefinidas y el catálogo; si no lo encuentra, lo pasa al equipo.
 - Lee la nota «para IA» del contacto (si tiene) para personalizar, sin recitársela.

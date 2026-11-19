@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 # Motor 2.0 — lo que el agente lee en cada turno, en capas (plan §11.4):
-#   1. lo nuestro, igual para todos (reglas y cómo usar cada habilidad);
+#   1. lo nuestro, igual para todos (reglas y cómo usar cada habilidad) y, si el agente es de una
+#      función (§11.14), su puesto con lo que la empresa contestó en el asistente;
 #   2. la empresa: «Cómo habla tu empresa», datos del negocio, lo que nunca debe hacer y sus
 #      instrucciones en texto libre (si contradicen la capa 1, ganan, salvo las reglas del código);
 #   3. el agente: quién es, su objetivo y contexto;
@@ -27,7 +28,7 @@ class Motor2::Prompt
   end
 
   def system
-    [ours, company, agent, moment].compact_blank.join("\n\n")
+    [ours, function, company, agent, moment].compact_blank.join("\n\n")
   end
 
   def turn_message(mode, attempt: nil)
@@ -63,13 +64,18 @@ class Motor2::Prompt
     TEXT
   end
 
+  def function = @config.function&.prompt(@turn.conversation)
+
   def company
-    parts = [AgentBase::CompanyVoice.block(@account).presence, AgentBase::BusinessData.block(@account).presence]
+    parts = [AgentBase::CompanyVoice.block(@account).presence, AgentBase::BusinessData.block(@account, skip: own_business).presence]
     parts << "DATOS DE ESTE AGENTE:\n#{@config.business.map { |r| "- #{r['label']}: #{r['value']}" }.join("\n")}" if @config.business.any?
     parts << "NUNCA:\n#{@config.never}" if @config.never.present?
     parts << "INSTRUCCIONES DE LA EMPRESA (si contradicen lo anterior, gana esto):\n#{@config.instructions}" if @config.instructions.present?
     parts.compact.join("\n\n")
   end
+
+  # Lo que el agente de una función ya trae en su «Tu negocio» no se repite de los datos de la empresa.
+  def own_business = @config.function.respond_to?(:business_values) ? @config.function.business_values : []
 
   def agent
     who = @config.display_name ? "Te llamas #{@config.display_name}" : 'No tienes nombre propio'

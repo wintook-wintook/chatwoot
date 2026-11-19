@@ -11,13 +11,16 @@ class Motor2::Skills::Handoff < Motor2::Skills::Base
   def self.key = 'handoff'
 
   def tools
+    props = { motivo: STR }
+    props[:temperatura] = Motor2::Skills::Qualify::TEMPERATURE if config.skill_on?(:qualify)
     [fn('pasar_a_humano', "Pásalo a una persona del equipo cuando: #{when_text}. Después escribe solo la despedida.",
-        { motivo: STR }, %w[motivo])]
+        props, %w[motivo])]
   end
 
   def instructions = "- Pasa a una persona (pasar_a_humano) cuando: #{when_text}."
 
   def call(_name, args)
+    Motor2::Skills::Qualify.note_temperature(state, args['temperatura'])
     @turn.decide('handoff', args['motivo'])
     { ok: true, nota: 'Listo. Ahora escribe solo la despedida para el cliente: dile que una persona le sigue.' }
   end

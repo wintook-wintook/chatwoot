@@ -75,3 +75,45 @@ describe('ReadyAgentModal', () => {
     expect(settings.required_contact).toEqual(['email']);
   });
 });
+
+describe('ReadyAgentModal · asistente paso a paso', () => {
+  it('nuevo: no avanza sin nombre y bandeja; después va paso por paso', () => {
+    const wrapper = mountModal({ inboxes: [{ id: 3, name: 'WhatsApp' }] });
+    const { vm } = wrapper;
+    expect(vm.step).toBe('agent');
+    vm.next();
+    expect(vm.step).toBe('agent');
+
+    vm.form.name = 'Ana – Facebook';
+    vm.toggleInbox(3);
+    vm.next();
+    expect(vm.step).toBe('business');
+    vm.back();
+    expect(vm.step).toBe('agent');
+    vm.go('test');
+    expect(vm.isLast).toBe(true);
+  });
+
+  it('al editar se puede saltar a cualquier paso', () => {
+    const wrapper = mountModal({
+      agent: { id: 1, name: 'Sofi', inbox_ids: [1], settings: {} },
+    });
+    wrapper.vm.go('objections');
+    expect(wrapper.vm.step).toBe('objections');
+  });
+
+  it('manda el nombre que ve el cliente y las indicaciones', () => {
+    const wrapper = mountModal({
+      agent: {
+        id: 1,
+        name: 'Prospectos FB',
+        display_name: 'Sofi',
+        inbox_ids: [1],
+        settings: { instructions: 'Sé breve' },
+      },
+    });
+    const payload = wrapper.vm.payload();
+    expect(payload.display_name).toBe('Sofi');
+    expect(payload.settings.instructions).toBe('Sé breve');
+  });
+});

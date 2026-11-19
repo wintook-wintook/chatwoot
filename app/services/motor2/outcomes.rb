@@ -4,6 +4,8 @@
 #   done      → objetivo cumplido (el seguimiento termina)
 #   discarded → no le interesa / no es para nosotros (se cancela, outcome «rejected»)
 #   handoff   → nota privada, se asigna a quien dice la ficha y el agente se pausa
+# Un agente de función (§11.14) usa los resultados de su función (p. ej.
+# Motor2::Functions::ProspectOutcomes: calificado, descartado, pasado, cita agendada).
 class Motor2::Outcomes
   def initialize(tracking, conversation, config)
     @tracking = tracking
@@ -12,6 +14,8 @@ class Motor2::Outcomes
   end
 
   def apply(kind, text)
+    return function_outcomes.apply(kind, text) if function_outcomes
+
     case kind
     when 'done' then done(text)
     when 'discarded' then discarded(text)
@@ -19,7 +23,18 @@ class Motor2::Outcomes
     end
   end
 
+  # Se agendó una cita (Motor2::Skills::Appointments, después de mandar el mensaje).
+  def booked(meeting)
+    function_outcomes&.booked(meeting)
+  end
+
   private
+
+  def function_outcomes
+    return @function_outcomes if defined?(@function_outcomes)
+
+    @function_outcomes = @config.function.respond_to?(:outcomes) ? @config.function.outcomes(@tracking, @conversation) : nil
+  end
 
   def done(text)
     note("🎯 Objetivo cumplido: #{text}")

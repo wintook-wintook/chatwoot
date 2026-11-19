@@ -23,7 +23,7 @@ class Motor2::Runner < Cases::Ai::BaseService
   Result = Struct.new(:reply, :decision, :trace, :error, :attachments, :after, keyword_init: true)
   MAX_FILES = 5
 
-  attr_reader :config, :state, :trace, :conversation, :tracking, :canned_used, :seen
+  attr_reader :config, :state, :trace, :conversation, :tracking, :canned_used, :seen, :noted_contact
 
   # opts: conversation:, tracking:, history: (chat de prueba), mode: :reply | :attempt, attempt: [n, total]
   def initialize(config, state:, **opts)
@@ -38,6 +38,7 @@ class Motor2::Runner < Cases::Ai::BaseService
     @trace = Motor2::Trace.new
     @canned_used = []
     @seen = []
+    @noted_contact = {} # lo que el cliente dio con actualizar_contacto en este turno (Calificar lo revisa)
     @decision = nil
     @attachments = []
     @after = []

@@ -30,8 +30,10 @@ module Motor2
                    .order(created_at: :desc).first
   end
 
-  # Para el desvío de Message: el mensaje es del cliente y lo atiende un agente 2.0.
+  # Para el desvío de Message: el mensaje es del cliente y lo atiende un agente 2.0, ya sea
+  # porque la conversación tiene su seguimiento o porque el agente atiende esa bandeja
+  # (Motor2::InboxRouter).
   def takes?(message)
-    message.incoming? && tracking_for(message).present?
+    message.incoming? && (tracking_for(message).present? || Motor2::InboxRouter.takes?(message))
   end
 end

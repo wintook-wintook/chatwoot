@@ -12,8 +12,11 @@
 #
 #  id                            :bigint           not null, primary key
 #  adaptation_answers            :jsonb            not null
+#  agent_function                :string
 #  ai_context                    :text
 #  archived_at                   :datetime
+#  attend_inbox_ids              :bigint           default([]), not null, is an Array
+#  attending                     :boolean          default(FALSE), not null
 #  booking_calendar_ids          :jsonb            not null
 #  calendar_event_duration       :integer          default(30)
 #  calendar_integration_ids      :jsonb            not null
@@ -32,6 +35,7 @@
 #  retry_interval_value          :integer          default(1)
 #  slots_presentation            :string           default("detailed"), not null
 #  tags                          :json
+#  testing                       :boolean          default(FALSE), not null
 #  timezone                      :string
 #  training_structure            :jsonb            not null
 #  whatsapp_templates            :json
@@ -48,6 +52,7 @@
 #  index_tracking_templates_on_account_id           (account_id)
 #  index_tracking_templates_on_account_id_and_name  (account_id,name) UNIQUE
 #  index_tracking_templates_on_archived_at          (archived_at)
+#  index_tracking_templates_on_attend_inbox_ids     (attend_inbox_ids) USING gin
 #  index_tracking_templates_on_inbox_id             (inbox_id)
 #  index_tracking_templates_on_kbase_hook_id        (kbase_hook_id)
 #  index_tracking_templates_on_published_prompt_id  (published_prompt_id)
@@ -110,6 +115,10 @@ class TrackingTemplate < ApplicationRecord
   # cuando cambia la bandeja o el texto, para no trabar ediciones que no tienen que ver.
   validate :inbox_requires_complete_setup,
            if: -> { inbox_id.present? && (will_save_change_to_inbox_id? || will_save_change_to_complementary_prompt?) }
+  # Motor 2.0 — agentes por función (Plan-Motor-Agentes.md §11.14): el que atiende a quien escribe a
+  # una bandeja es uno solo por bandeja (Motor2::InboxRouter).
+  before_validation { self.attend_inbox_ids = Array(attend_inbox_ids).compact_blank.map(&:to_i).uniq }
+  validate :one_attending_per_inbox, if: -> { attending? && attend_inbox_ids.any? }
 
   scope :by_tag, ->(tag) { where('tags @> ?', [tag].to_json) }
   scope :by_inbox, ->(inbox_id) { where(inbox_id: inbox_id) }
@@ -175,6 +184,12 @@ class TrackingTemplate < ApplicationRecord
   # no, 3. Antes, sin plantillas, ActionService daba 1 por un clamp(1, 10) sobre 0.
   DEFAULT_FOLLOW_UP_ATTEMPTS = 3
 
+  # Motor 2.0 — la función del agente («Atención a prospectos»…) si es de una que ya existe; nil
+  # en los a medida y los 1.0 (Plan-Motor-Agentes §11.14).
+  def function_title
+    Motor2::Functions.title(agent_function) if Motor2::Functions.available?(agent_function)
+  end
+
   def follow_up_attempts
     plantillas = Array(whatsapp_templates).count(&:present?)
     return plantillas.clamp(1, 10) if plantillas.positive?
@@ -216,6 +231,15 @@ class TrackingTemplate < ApplicationRecord
   end
 
   private
+
+  def one_attending_per_inbox
+    others = TrackingTemplate.where(account_id: account_id, attending: true, archived_at: nil).where.not(id: id)
+                             .where('attend_inbox_ids && ARRAY[?]::bigint[]', attend_inbox_ids)
+    names = others.pluck(:name)
+    return if names.empty?
+
+    errors.add(:attend_inbox_ids, "ya tienen un agente que las atiende (#{names.join(', ')}): una bandeja solo puede tener uno")
+  end
 
   # ── Un snapshot por guardado que cambie el comportamiento del agente ──────────
   # update_columns se salta esto a propósito (DirectiveReferenceService renombra un

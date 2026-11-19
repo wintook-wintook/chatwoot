@@ -30,13 +30,24 @@ class Motor2::Trainer::AgentFix
 
   private
 
-  def field = @cause['field'].to_s.presence_in(TEXT_FIELDS + ['business'])
+  # Un agente de función (Atención a prospectos…) se edita con su asistente, que solo enseña
+  # «Indicaciones»: todo lo que corrige el entrenador va ahí (un dato del negocio, como un renglón).
+  def field
+    key = @cause['field'].to_s.presence_in(TEXT_FIELDS + ['business'])
+    key && @template.try(:function_title) ? 'instructions' : key
+  end
 
   def changed_motor2
     motor2 = @template.motor2.to_h.deep_dup
     return nil unless field
+    return add_business(motor2) if field == 'business'
 
-    field == 'business' ? add_business(motor2) : edit_text(motor2)
+    business_as_text if @cause['field'] == 'business'
+    edit_text(motor2)
+  end
+
+  def business_as_text
+    @cause = @cause.merge('find' => '', 'replace' => [@cause['label'], @cause['value']].map { |v| v.to_s.strip }.compact_blank.join(': '))
   end
 
   def edit_text(motor2)

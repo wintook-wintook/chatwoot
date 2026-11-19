@@ -498,11 +498,10 @@ class Message < ApplicationRecord
     # Seguimiento IA: con uno vivo en la conversación, contesta SOLO él (ni el agente de
     # seguimiento de siempre ni BotSeller). Pausado no contesta nadie: lo atiende una persona.
     return AiFollowUps::ReplyJob.set(wait: 15.seconds).perform_later(id) if AiFollowUp.live_for?(conversation_id)
-    # Motor 2.0: el seguimiento de esta conversación es de un agente 2.0 → contesta ese motor
-    # (Plan-Motor-Agentes.md §11.11). El 1.0 sigue igual para los demás.
+    # Motor 2.0: el seguimiento de esta conversación es de un agente 2.0, o la bandeja la atiende
+    # un agente 2.0 (los agentes listos, §11.14) → contesta ese motor (Plan-Motor-Agentes.md
+    # §11.11). El 1.0 sigue igual para los demás.
     return Motor2::ReplyJob.set(wait: Motor2::WAIT).perform_later(id) if Motor2.takes?(self)
-    # Agente listo de la bandeja: contesta él (ni el agente a medida ni BotSeller).
-    return ReadyAgents::ReplyJob.set(wait: 15.seconds).perform_later(id) if ReadyAgents::Router.takes?(self)
 
     wait = will_trigger_tracking_automation? ? 5.seconds : 0.seconds
     ContactTrackingResponseAnalyzerJob.set(wait: wait).perform_later(id)
@@ -522,9 +521,9 @@ class Message < ApplicationRecord
     Rails.logger.error "[Message] Error encolando respuesta ERP Modo B: #{e.message}"
   end
 
-  # Seguimiento IA o agente listo de la bandeja: no contestan dos a la vez.
+  # Seguimiento IA o agente 2.0 que atiende la bandeja (agentes listos): no contestan dos a la vez.
   def answered_by_ai_agent?
-    AiFollowUp.live_for?(conversation_id) || ReadyAgents::Router.takes?(self)
+    AiFollowUp.live_for?(conversation_id) || Motor2::InboxRouter.takes?(self)
   end
 
   # proyecto@contact_tracking: ¿alguna AutomationRule (conversation_created,

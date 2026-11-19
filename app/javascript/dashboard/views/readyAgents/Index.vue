@@ -1,8 +1,10 @@
 <!--
-  Agentes listos: los puestos que armamos nosotros (el cerebro es el del Seguimiento IA). La
-  empresa activa uno, le pone nombre, elige sus bandejas, contesta sus preguntas y lo prueba;
-  desde ese momento atiende solo en esas bandejas (sin automatizaciones). Los que todavía no
-  están salen como «Próximamente». Los agentes a la medida siguen en «Agentes a medida».
+  Agentes listos: el catálogo de funciones (Atención a prospectos, Atención a clientes…). Cada
+  función trae su asistente: la empresa contesta sus preguntas, le pone nombre, elige sus bandejas
+  y lo prueba; desde ese momento atiende solo en esas bandejas (sin automatizaciones). Se pueden
+  tener varios del mismo tipo. Todos usan el motor 2.0 y quedan en la lista de agentes
+  (Plan-Motor-Agentes §11.14). Los que todavía no están salen como «Próximamente».
+  ?edit=<id> abre ese agente (la lista de agentes lo manda aquí).
 -->
 <script>
 import { useAlert } from 'dashboard/composables';
@@ -22,6 +24,7 @@ export default {
       calendarUsers: [],
       loading: true,
       modal: null,
+      queryHandled: false,
     };
   },
   mounted() {
@@ -38,6 +41,7 @@ export default {
         this.agents = data.agents;
         this.inboxes = data.inboxes;
         this.calendarUsers = data.calendar_users || [];
+        this.openFromQuery();
       } catch (e) {
         useAlert(e.response?.data?.error || this.t('LOAD_ERROR'));
       } finally {
@@ -57,6 +61,15 @@ export default {
       return this.agents
         .filter(a => a.enabled && (!agent || a.id !== agent.id))
         .flatMap(a => a.inbox_ids);
+    },
+    // Solo la primera vez: después de guardar se recarga y no se vuelve a abrir.
+    openFromQuery() {
+      if (this.queryHandled) return;
+      this.queryHandled = true;
+      const id = Number(this.$route.query.edit);
+      const agent = id && this.agents.find(a => a.id === id);
+      const entry = agent && this.catalog.find(e => e.kind === agent.kind);
+      if (entry) this.open(entry, agent);
     },
     open(entry, agent = null) {
       this.modal = { entry, agent };

@@ -1,0 +1,11 @@
+# Función «Atención a prospectos» (Plan-Motor-Agentes.md §11.14.5). El puesto va en prospects.md;
+# cómo se usan las respuestas del asistente, en Motor2::Functions::Prospects.
+key: prospects
+order: 1
+available: true
+title: Atención a prospectos
+summary: Atiende a la gente nueva que escribe (anuncios en redes, página, campañas), contesta sus dudas, la califica con tus preguntas y la pasa a tu equipo o le crea la oportunidad.
+# Lo que se guarda en la columna objective (la lista y las campañas lo enseñan).
+objective: Atender a la gente nueva que escribe, resolver sus dudas, calificarla y pasarla al equipo.
+# Cómo entra a una plática: atiende a quien escribe a sus bandejas (además de campañas y automatizaciones).
+entry: inbox

@@ -22,16 +22,19 @@ module AgentBase::BusinessData
 
   module_function
 
-  # Si la cuenta nunca los guardó, salen de «Tu negocio» del primer Agente listo que los tenga
-  # (se guardan en la cuenta la próxima vez que se guarde «Cómo habla tu empresa»).
+  # Si la cuenta nunca los guardó, salen de «Tu negocio» del primer agente de «Atención a
+  # prospectos» que los tenga (se guardan en la cuenta la próxima vez que se guarde «Cómo habla tu
+  # empresa»). Sus respuestas viven en motor2['answers'] (Plan-Motor-Agentes §11.14).
   def get(account)
     saved = account.custom_attributes.to_h[KEY].presence&.to_h || from_ready_agent(account)
     { 'fixed' => FIXED.keys.index_with { |k| saved.dig('fixed', k).to_s }, 'rows' => Array(saved['rows']) }
   end
 
   def from_ready_agent(account)
-    agent = account.ready_agents.order(:id).find { |a| FIXED.keys.any? { |k| a.setting("business_#{k}").present? } }
-    agent ? { 'fixed' => FIXED.keys.index_with { |k| agent.setting("business_#{k}").to_s } } : {}
+    answers = account.tracking_templates.where(agent_function: 'prospects', archived_at: nil).order(:id)
+                     .map { |t| t.motor2.to_h['answers'].to_h }
+                     .find { |a| FIXED.keys.any? { |k| a["business_#{k}"].present? } }
+    answers ? { 'fixed' => FIXED.keys.index_with { |k| answers["business_#{k}"].to_s } } : {}
   end
 
   def update!(account, attrs)
