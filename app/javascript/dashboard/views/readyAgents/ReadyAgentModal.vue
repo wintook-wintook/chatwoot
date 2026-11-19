@@ -90,7 +90,8 @@ const blank = kind => ({
     appointment_location: '',
     // Tu negocio
     business_what: '',
-    business_use_catalog: false,
+    // ¿Dónde están tus productos y precios? catalog | google_sheet:<id> | canned | none (paso «Qué sabe»).
+    price_source: '',
     business_who: '',
     business_coverage: '',
     business_why: '',
@@ -156,8 +157,33 @@ export default {
     cannedSource() {
       return this.sources.find(s => s.key === 'canned_response');
     },
+    // Las que se marcan (el Catálogo de productos va en «productos y precios»).
     otherSources() {
-      return this.sources.filter(s => s.key !== 'canned_response');
+      return this.sources.filter(
+        s => s.key !== 'canned_response' && s.kind !== 'catalog'
+      );
+    },
+    // ¿Dónde están tus productos y precios?: catálogo, cada hoja, predefinidas o no da precios.
+    priceOptions() {
+      const options = this.sources
+        .filter(s => s.kind === 'catalog' || s.kind === 'google_sheet')
+        .map(s => ({
+          value: s.key,
+          label: s.name,
+          about: s.about,
+          faq: s.sheet_mode === 'faq',
+        }));
+      return [
+        ...options,
+        { value: 'canned', label: this.t('KNOWS.PRICES.canned') },
+        { value: 'none', label: this.t('KNOWS.PRICES.none') },
+      ];
+    },
+    priceSheetFaq() {
+      const picked = this.priceOptions.find(
+        o => o.value === this.form.settings.price_source
+      );
+      return !!(picked && picked.faq);
     },
     steps() {
       return STEPS;
@@ -201,6 +227,7 @@ export default {
               ...JSON.parse(JSON.stringify(this.agent.settings || {})),
               question_list: this.questionsOf(this.agent.settings || {}),
               ...this.rulesOf(this.agent.settings || {}),
+              price_source: this.priceSourceOf(this.agent.settings || {}),
               objections: this.agent.settings?.objections || [],
               required_contact: this.agent.settings?.required_contact || [],
             },
@@ -210,6 +237,7 @@ export default {
             settings: {
               ...base.settings,
               question_list: this.exampleQuestions(),
+              price_source: this.priceSourceOf({}),
             },
           };
       this.chat = [];
@@ -262,6 +290,15 @@ export default {
       });
       const own = settings.questions ? [{ text: settings.questions }] : [];
       return [...armed, ...own];
+    },
+    // Lo guardado; los de antes con «mis precios están en el Catálogo» → el catálogo; un agente
+    // nuevo, el catálogo si la cuenta tiene, si no las predefinidas.
+    priceSourceOf(settings) {
+      if (settings.price_source) return settings.price_source;
+      const hasCatalog = this.sources.some(s => s.kind === 'catalog');
+      if (settings.business_use_catalog || (!this.agent && hasCatalog))
+        return 'catalog';
+      return 'canned';
     },
     // Las opciones guardadas; las de antes pasan a la recomendada.
     rulesOf(settings) {
@@ -518,16 +555,6 @@ export default {
                 :placeholder="t('BUSINESS.WHAT_PLACEHOLDER')"
               />
             </label>
-            <label
-              class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
-            >
-              <input
-                v-model="form.settings.business_use_catalog"
-                type="checkbox"
-                class="!m-0"
-              />
-              {{ t('BUSINESS.USE_CATALOG') }}
-            </label>
             <label class="block">
               <span class="field-label">{{ t('BUSINESS.WHO') }}</span>
               <textarea
@@ -564,6 +591,44 @@ export default {
 
           <!-- 3 · Qué sabe: sus fuentes y qué hay en cada una -->
           <template v-if="step === 'knows'">
+            <fieldset
+              class="flex flex-col gap-1 p-2 m-0 border rounded-md border-slate-100 dark:border-slate-700"
+              :disabled="!answersDoubts"
+              :class="{ 'opacity-50': !answersDoubts }"
+            >
+              <legend
+                class="px-1 text-xs font-medium text-slate-600 dark:text-slate-300"
+              >
+                {{ t('KNOWS.PRICES.QUESTION') }}
+              </legend>
+              <label
+                v-for="option in priceOptions"
+                :key="option.value"
+                class="flex items-start gap-2 text-sm cursor-pointer text-slate-700 dark:text-slate-200"
+              >
+                <input
+                  v-model="form.settings.price_source"
+                  type="radio"
+                  class="!m-0 mt-1 shrink-0"
+                  :value="option.value"
+                />
+                <span>
+                  {{ option.label }}
+                  <span
+                    v-if="option.about"
+                    class="block text-xs text-slate-500"
+                  >
+                    {{ option.about }}
+                  </span>
+                </span>
+              </label>
+              <p
+                v-if="priceSheetFaq"
+                class="m-0 text-xs text-amber-700 dark:text-amber-400"
+              >
+                {{ t('KNOWS.PRICES.SHEET_FAQ') }}
+              </p>
+            </fieldset>
             <p
               v-if="!answersDoubts"
               class="p-2 m-0 text-xs rounded-md bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"

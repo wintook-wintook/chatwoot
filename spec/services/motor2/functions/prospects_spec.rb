@@ -150,7 +150,8 @@ RSpec.describe Motor2::Functions::Prospects do
     expect(contact.additional_attributes).to include('company_name' => 'Acme')
   end
 
-  it 'el Catálogo de productos solo si la empresa lo marcó' do
+  it 'productos y precios: el catálogo entra a sus fuentes y se busca con buscar_en_fuentes (los de antes con la casilla también)' do
+    account.catalog_items.create!(name: 'Pickup 2020', price: 320_000, active: true)
     names = lambda do
       runner = Motor2::Runner.new(Motor2::Config.new(agent.reload), state: Motor2::State.new, history: [])
       Motor2::Skills.for(runner).flat_map(&:tools).map { |t| t.dig(:function, :name) }
@@ -158,8 +159,18 @@ RSpec.describe Motor2::Functions::Prospects do
     expect(names.call).to include('guardar_respuesta', 'prospecto_calificado', 'descartar', 'pasar_a_humano')
     expect(names.call).not_to include('buscar_en_catalogo', 'objetivo_cumplido', 'ver_horarios')
 
-    save_agent(settings.merge('business_use_catalog' => true), template: agent)
-    expect(names.call).to include('buscar_en_catalogo')
+    save_agent(settings.merge('business_use_catalog' => true), template: agent) # agente de antes
+    expect(Motor2::Config.new(agent.reload).sources).to include('catalog')
+    expect(system_prompt).to include('SOLO en «Catálogo de productos»')
+
+    found = Motor2::Search.new(account, ['catalog']).call('pickup', only: 'Catálogo de productos')
+    expect(found.first[:resultados].first).to include(titulo: 'Pickup 2020', informacion: include('Precio: $320,000'))
+  end
+
+  it 'productos y precios: «no doy precios» lo dice un asesor' do
+    save_agent(settings.merge('price_source' => 'none'), template: agent)
+    expect(system_prompt).to include('Precios: NO los das')
+    expect(Motor2::Config.new(agent.reload).sources).not_to include('catalog')
   end
 
   context 'with objetivo «juntar sus datos»' do

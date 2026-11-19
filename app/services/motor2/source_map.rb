@@ -7,13 +7,15 @@
 #   - respuestas predefinidas: sus categorías (General, Ficha, Objeción) con algunos nombres;
 #   - hoja: sus columnas y cuántas filas (y si contesta datos exactos);
 #   - documento y artículos: algunos títulos;
-#   - foro y CONTPAQi: se consultan en vivo.
+#   - foro y CONTPAQi: se consultan en vivo;
+#   - Catálogo de productos (catalog_items): cuántos productos con precio y algunos nombres.
 #
 #   Motor2::SourceMap.new(account).entries(['canned_response', 'google_sheet:12'])
 #   → [{ key:, name:, kind:, about:, purpose:, auto: }]
 #   Motor2::SourceMap.new(account).available   → todas las de la cuenta (para el asistente)
 class Motor2::SourceMap
   CANNED = 'canned_response'
+  CATALOG = 'catalog'
   TYPES = %w[google_sheet google_doc discourse contpaq_support].freeze
   KIND_TITLES = { 'general' => 'General', 'ficha' => 'Fichas', 'objecion' => 'Objeciones' }.freeze
   SAMPLE = 6
@@ -26,6 +28,7 @@ class Motor2::SourceMap
   # Las fuentes que la cuenta le puede dar a un agente (las predefinidas primero).
   def available
     keys = [CANNED]
+    keys << CATALOG if catalog_items.exists?
     keys << 'article' if @account.knowledge_sources.active.exists?(source_type: 'article')
     keys += @account.knowledge_sources.active.where(source_type: TYPES).order(:name).map { |s| "#{s.source_type}:#{s.id}" }
     entries(keys)
@@ -47,6 +50,7 @@ class Motor2::SourceMap
   def entry(key)
     return canned_entry if key == CANNED
     return articles_entry if key == 'article'
+    return catalog_entry if key == CATALOG
 
     type, id = key.to_s.split(':', 2)
     source = @account.knowledge_sources.active.find_by(id: id, source_type: type) if id && TYPES.include?(type)
@@ -55,8 +59,22 @@ class Motor2::SourceMap
 
   def build(key, name, kind, source, auto)
     purpose = self.class.clean_purpose(source&.config.to_h&.dig('purpose')).presence
-    { key: key, name: name, kind: kind, id: source&.id, purpose: purpose, auto: auto, about: purpose || auto }
+    { key: key, name: name, kind: kind, id: source&.id, purpose: purpose, auto: auto, about: purpose || auto,
+      sheet_mode: (source.config.to_h['sheet_mode'] || 'faq' if kind == 'google_sheet') }.compact
   end
+
+  def catalog_items = @account.catalog_items.where(active: true)
+
+  # El Catálogo de productos no es una fuente de Bases de conocimiento: no tiene «¿Qué hay aquí?».
+  def catalog_entry
+    items = catalog_items
+    return nil unless items.exists?
+
+    about = "#{items.count} productos o servicios con su precio, como: #{sample(items.order(:name).limit(SAMPLE).pluck(:name))}"
+    { key: CATALOG, name: CATALOG_NAME, kind: 'catalog', id: nil, purpose: nil, auto: about, about: about }
+  end
+
+  CATALOG_NAME = 'Catálogo de productos'
 
   def canned_entry
     responses = @account.canned_responses

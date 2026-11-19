@@ -17,12 +17,15 @@
 #   only_prospects + client_user_id / client_team_id   quien ya es cliente va con su responsable
 #   case_type_id                          tipo de caso de la oportunidad
 #   appointment_user_ids / appointment_minutes / appointment_kind / appointment_location
-#   business_what / _who / _coverage / _why / _practical, business_use_catalog
+#   business_what / _who / _coverage / _why / _practical
+#   price_source                          dónde están sus productos y precios (Motor2::Functions::ProspectPrices;
+#                                         antes business_use_catalog)
 #   doubts / not_found / off_topic        «Cómo platica» (Motor2::Functions::ProspectRules)
 #
 # Las indicaciones en texto libre van en motor2['instructions'] (las mismas que corrige el
 # entrenador), no en answers.
 class Motor2::Functions::Prospects
+  include Motor2::Functions::ProspectPrices
   KEY = 'prospects'
   OBJECTIVES = {
     'handoff' => 'pasárselo a una persona del equipo para que lo atienda',
@@ -55,7 +58,7 @@ class Motor2::Functions::Prospects
   APPOINTMENT_KINDS = %w[llamada videollamada visita oficina].freeze
   MAX_OBJECTIONS = 15
   MAX_QUESTIONS = 10
-  TEXTS = %w[objective tone questions qualified_when discard_when appointment_kind appointment_location
+  TEXTS = %w[objective tone questions qualified_when discard_when appointment_kind appointment_location price_source
              business_what business_who business_coverage business_why business_practical].freeze
   IDS = %w[handoff_user_id handoff_team_id client_user_id client_team_id case_type_id appointment_minutes].freeze
   BOOLEANS = %w[only_prospects business_use_catalog].freeze
@@ -84,8 +87,6 @@ class Motor2::Functions::Prospects
 
   def only_prospects? = answer(:only_prospects) != false
 
-  def use_catalog? = answer(:business_use_catalog) == true
-
   # Cuándo pasarlo a una persona (lo de «pide una persona» lo dice CÓMO PLATICAS).
   def handoff_when = 'pide hablar con una persona (como dice CÓMO PLATICAS), se molesta o ya es cliente'
 
@@ -106,7 +107,6 @@ class Motor2::Functions::Prospects
     {
       'qualify' => { 'on' => true },
       'knowledge' => { 'on' => answers_doubts? },
-      'catalog' => { 'on' => use_catalog? && answers_doubts? },
       'handoff' => { 'on' => true, 'when' => handoff_when }.merge(handoff_target.transform_keys(&:to_s)),
       'appointments' => { 'on' => appointment?, 'kind' => answer(:appointment_kind).presence_in(APPOINTMENT_KINDS) || 'llamada',
                           'location' => answer(:appointment_location).to_s, 'when' => 'ya califica',
@@ -161,7 +161,7 @@ class Motor2::Functions::Prospects
   # Lo que la empresa contó de su negocio: para explicar y para descartar a quien está fuera.
   def business_block
     lines = BUSINESS.filter_map { |k, label| "- #{label}: #{answer(k)}" if answer(k).present? }
-    lines << '- Lo que vendemos y sus precios están en el Catálogo: búscalo con buscar_en_catalogo.' if use_catalog?
+    lines << price_line
     return '' if lines.empty?
 
     "EL NEGOCIO (úsalo para explicar; si el prospecto está fuera de la zona o de lo que vendemos, es para descartar):\n" \

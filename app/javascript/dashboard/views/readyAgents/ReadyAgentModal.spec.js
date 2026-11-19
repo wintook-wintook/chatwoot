@@ -184,3 +184,52 @@ describe('ReadyAgentModal · bienvenida y orden de preguntas', () => {
     expect(vm.payload().settings.welcome).toBe('¡Hola! Soy Ana');
   });
 });
+
+describe('ReadyAgentModal · productos y precios', () => {
+  const sources = [
+    { key: 'canned_response', kind: 'canned', name: 'Respuestas predefinidas' },
+    {
+      key: 'catalog',
+      kind: 'catalog',
+      name: 'Catálogo de productos',
+      about: '3 productos',
+    },
+    {
+      key: 'google_sheet:7',
+      kind: 'google_sheet',
+      name: 'Precios',
+      sheet_mode: 'faq',
+    },
+  ];
+
+  it('nuevo con catálogo: los precios están en el catálogo; ofrece catálogo, hojas, predefinidas o no dar precios', () => {
+    const { vm } = mountModal({ sources });
+    expect(vm.form.settings.price_source).toBe('catalog');
+    expect(vm.priceOptions.map(o => o.value)).toEqual([
+      'catalog',
+      'google_sheet:7',
+      'canned',
+      'none',
+    ]);
+    expect(vm.otherSources.map(s => s.key)).toEqual(['google_sheet:7']);
+  });
+
+  it('una hoja en modo preguntas frecuentes avisa que la pase a «Datos»', () => {
+    const { vm } = mountModal({ sources });
+    vm.form.settings.price_source = 'google_sheet:7';
+    expect(vm.priceSheetFaq).toBe(true);
+  });
+
+  it('un agente de antes con la casilla del catálogo queda en el catálogo', () => {
+    const { vm } = mountModal({
+      sources,
+      agent: {
+        id: 1,
+        name: 'Sofi',
+        inbox_ids: [1],
+        settings: { business_use_catalog: true },
+      },
+    });
+    expect(vm.form.settings.price_source).toBe('catalog');
+  });
+});

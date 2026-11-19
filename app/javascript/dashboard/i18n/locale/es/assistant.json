@@ -699,7 +699,13 @@
       "NO_CANNED": "Todavía no hay respuestas predefinidas: agrégalas en Catálogos › Respuestas predefinidas.",
       "NO_OTHERS": "No hay otras fuentes conectadas. Puedes agregar hojas, documentos o un foro en Ajustes › Bases de conocimiento.",
       "WHERE_HINT": "El agente recibe qué hay en cada fuente para buscar en la que corresponde. Si una descripción no es exacta, cámbiala en «¿Qué hay aquí?» de Ajustes › Bases de conocimiento.",
-      "NO_DOUBTS": "Elegiste que no conteste dudas (paso «Cómo platica»): no busca en ninguna fuente."
+      "NO_DOUBTS": "Elegiste que no conteste dudas (paso «Cómo platica»): no busca en ninguna fuente.",
+      "PRICES": {
+        "QUESTION": "¿Dónde están tus productos y precios?",
+        "canned": "En mis respuestas predefinidas",
+        "none": "No doy precios: un asesor los da",
+        "SHEET_FAQ": "Esta hoja está en modo «Preguntas frecuentes». Para que los precios salgan exactos, pásala a modo «Datos» en Ajustes › Bases de conocimiento."
+      }
     },
     "QUESTIONS_LIST": {
       "NUMBER": "{n}.",

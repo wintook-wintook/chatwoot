@@ -69,7 +69,11 @@ class Motor2::Config
     end
   end
 
-  def sources = Array(@data['sources']).map(&:to_s).compact_blank.uniq
+  # Las que marcó y las que pone su función (p. ej. dónde están sus productos y precios).
+  def sources
+    extra = function.respond_to?(:extra_sources) ? function.extra_sources : []
+    (Array(@data['sources']) + extra).map(&:to_s).compact_blank.uniq
+  end
 
   def skill(key)
     base = function ? function.skills[key.to_s].to_h : {}

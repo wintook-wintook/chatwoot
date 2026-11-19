@@ -225,10 +225,13 @@ class Motor2::Runner < Cases::Ai::BaseService
   # Un monto que no aparece en nada de lo que vio (instrucciones, fuentes, plática).
   def unsourced?(text)
     seen = digits(@seen.join("\n"))
-    text.scan(MONEY).any? { |amount| seen.exclude?(amount.gsub(/\D/, '')) }
+    text.scan(MONEY).any? { |amount| seen.exclude?(amount_key(amount)) }
   end
 
-  def digits(text) = text.scan(/\d[\d,.]*/).to_set { |n| n.gsub(/\D/, '') }
+  def digits(text) = text.scan(/\d[\d,.]*/).to_set { |n| amount_key(n) }
+
+  # «$1,200», «1,200.0» y «1200.00» son el mismo monto: sin separadores ni centavos en cero.
+  def amount_key(text) = text.to_s[/\d[\d,.]*/].to_s.sub(/[.,]0{1,2}\z/, '').gsub(/\D/, '')
 
   def guard_links(text)
     kept, removed = KnowledgeBase::LinkGuard.call(text, @seen.join("\n"))

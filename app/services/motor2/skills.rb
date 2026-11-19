@@ -6,7 +6,7 @@
 # agentes que la tienen prendida.
 module Motor2::Skills
   ALL = [
-    Motor2::Skills::Knowledge, Motor2::Skills::Catalog, Motor2::Skills::Data, Motor2::Skills::Qualify, Motor2::Skills::Offers,
+    Motor2::Skills::Knowledge, Motor2::Skills::Data, Motor2::Skills::Qualify, Motor2::Skills::Offers,
     Motor2::Skills::Appointments, Motor2::Skills::Tickets, Motor2::Skills::Files, Motor2::Skills::Handoff, Motor2::Skills::Finish
   ].freeze
 
@@ -15,7 +15,7 @@ module Motor2::Skills
     'data' => 'pregunta y guarda datos del cliente', 'offers' => 'da becas, descuentos o plazos uno a la vez',
     'appointments' => 'agenda, mueve o cancela citas en Google Calendar', 'tickets' => 'levanta casos y dice cómo van',
     'files' => 'manda archivos subidos al agente', 'handoff' => 'pasa la plática a una persona',
-    'qualify' => 'califica al prospecto con las preguntas de la empresa', 'catalog' => 'busca productos y precios en el Catálogo'
+    'qualify' => 'califica al prospecto con las preguntas de la empresa'
   }.freeze
 
   module_function

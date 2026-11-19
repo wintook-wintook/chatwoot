@@ -43,11 +43,9 @@ class Motor2::Search < Cases::Ai::BaseService
 
   def resolve(key)
     return Source.new(key: key, name: 'Respuestas predefinidas', kind: 'canned') if key == CANNED && canned.canned_available?
+    return catalog_source(key) if key == Motor2::SourceMap::CATALOG
 
-    if key == 'article'
-      ids = @account.knowledge_sources.active.where(source_type: 'article').ids
-      return ids.any? ? Source.new(key: key, name: 'Artículos de ayuda', kind: 'article', knowledge_source_ids: ids) : nil
-    end
+    return articles_source(key) if key == 'article'
 
     type, id = key.to_s.split(':', 2)
     source = @account.knowledge_sources.active.find_by(id: id, source_type: type) if id
@@ -58,10 +56,32 @@ class Motor2::Search < Cases::Ai::BaseService
 
   def search(source, question)
     return Array(canned.canned(question)[:results]) if source.kind == 'canned'
+    return catalog_results(question) if source.kind == 'catalog'
     return exact_sheet(source, question) if data_sheet?(source)
 
     semantic(source, question)
   end
+
+  def articles_source(key)
+    ids = @account.knowledge_sources.active.where(source_type: 'article').ids
+    ids.any? ? Source.new(key: key, name: 'Artículos de ayuda', kind: 'article', knowledge_source_ids: ids) : nil
+  end
+
+  # El Catálogo de productos (catalog_items) como una fuente más: por palabras, con su precio.
+  def catalog_source(key)
+    return nil unless @account.catalog_items.exists?(active: true)
+
+    Source.new(key: key, name: Motor2::SourceMap::CATALOG_NAME, kind: 'catalog')
+  end
+
+  def catalog_results(question)
+    Array(Motor2::CatalogSearch.new(@account).call(question)[:results]).map do |row|
+      price = row[:precio] ? "Precio: $#{money(row[:precio])}" : 'Sin precio'
+      { titulo: row[:nombre], informacion: [price, row[:unidad] && "por #{row[:unidad]}", row[:descripcion]].compact_blank.join('. ') }
+    end
+  end
+
+  def money(value) = ActiveSupport::NumberHelper.number_to_delimited(value.round(2).to_s.delete_suffix('.0'))
 
   def data_sheet?(source)
     source.kind == 'google_sheet' && source.record&.config.to_h&.dig('sheet_mode') == 'data'
