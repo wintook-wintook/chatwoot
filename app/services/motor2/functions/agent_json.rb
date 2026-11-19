@@ -31,11 +31,12 @@ module Motor2::Functions::AgentJson
     { live_sessions: live, finished: finished }
   end
 
-  OUTCOMES = { 'handed_off' => 'handed_off', 'discarded' => 'discarded', 'rejected' => 'discarded', 'client' => 'client' }.freeze
+  OUTCOMES = { 'handed_off' => 'handed_off', 'discarded' => 'discarded', 'rejected' => 'discarded', 'client' => 'client',
+               'not_client' => 'not_client' }.freeze
 
   def result_of(status, outcome)
     text = outcome.to_s
-    return 'handed_off' if text == 'handed_off'
+    return 'handed_off' if text == 'handed_off' || text.start_with?('handed_off:') # Atención a clientes: «handed_off: Soporte»
     return 'live' if LIVE.include?(status.to_s)
     return OUTCOMES[text] if OUTCOMES.key?(text)
 

@@ -4,7 +4,8 @@
 class Motor2::Skills::Finish < Motor2::Skills::Base
   def self.key = 'finish'
 
-  def on? = true
+  # «Atención a clientes» (Áreas) no termina ni descarta: atiende, levanta casos o pasa al equipo.
+  def on? = !config.skill_on?(:areas)
 
   # Con «Calificar» prendida, el objetivo se cumple con prospecto_calificado (no hay objetivo_cumplido).
   def tools

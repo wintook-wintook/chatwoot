@@ -48,12 +48,12 @@ module Motor2::ReplyChecks
       Motor2::Functions::ProspectRules.active(answers)['not_found'] == 'silent' && !qualify_skill&.human_requested?
   end
 
-  HANDOFF_ASK = 'Pidió hablar con una persona y ya toca pasarlo: llama pasar_a_humano y despídete (en un momento lo atiende ' \
+  HANDOFF_ASK = 'Pidió hablar con una persona y ya toca pasarlo: llama pasar_a_humano (o canalizar) y despídete (en un momento lo atiende ' \
                 'un asesor). No hagas más preguntas.'
   HANDOFF_TEXT = 'Claro, en un momento te atiende un asesor. ¡Gracias por tu paciencia!'
 
   def ensure_handoff(messages, text)
-    return text unless @mode == :reply && @decision.nil? && qualify_skill&.must_handoff?
+    return text unless @mode == :reply && @decision.nil? && flow_skill&.must_handoff?
 
     @trace.event(:revision, 'pidió una persona: se pasa')
     messages << { role: 'assistant', content: text } << { role: 'system', content: HANDOFF_ASK }
@@ -85,7 +85,9 @@ module Motor2::ReplyChecks
   end
 
   def can_search_unused?
-    @skills.any? { |s| s.key == 'knowledge' } && @trace.tools.none? { |t| SEARCH_TOOLS.include?(t['name']) }
+    find_skill('knowledge')&.searchable? && @trace.tools.none? { |t| t['name'] == 'estado_caso' } && @trace.tools.none? do |t|
+      SEARCH_TOOLS.include?(t['name'])
+    end
   end
 
   def business_text = @config.function.respond_to?(:answer) ? @config.function.answer(:business_what) : @config.objective

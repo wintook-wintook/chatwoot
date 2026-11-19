@@ -16,14 +16,20 @@ module Motor2::QuestionGuard
   def welcome_asks? = @welcome.to_s.include?('?')
 
   # La habilidad Calificar del turno (también la usa Motor2::Skills::Handoff).
-  def qualify_skill = Array(@skills).find { |s| s.key == 'qualify' }
+  def qualify_skill = find_skill('qualify')
+
+  # La que lleva la plática y sabe si ya toca pasarlo con una persona: Calificar o Áreas.
+  def flow_skill = qualify_skill || find_skill('areas')
+
+  def find_skill(key) = Array(@skills).find { |s| s.key == key.to_s }
 
   private
 
   # Las revisiones de la plática, en orden: buscó si le preguntaron, no prometió sin decidir, termina
   # con la pregunta pendiente.
   def guard_turn(messages, text)
-    checks = %i[ensure_handoff ensure_searched ensure_no_advisor ensure_defer ensure_decision ensure_question ensure_bridge]
+    checks = %i[ensure_handoff ensure_searched ensure_no_advisor ensure_defer ensure_decision ensure_area_action ensure_evidence ensure_question
+                ensure_bridge]
     text = checks.reduce(text) do |current, check|
       current.present? ? send(check, messages, current) : current
     end
@@ -79,6 +85,8 @@ module Motor2::QuestionGuard
 
   # Una sola pregunta al final: si trae la pendiente, se quitan las otras que el modelo agregó.
   def only_pending_question(text)
+    return one_question(text) if find_skill('areas')
+
     ask = pending_question
     return text if ask.blank? || !Motor2::Skills::Qualify.asks?(text, ask)
 
@@ -86,6 +94,14 @@ module Motor2::QuestionGuard
     return text if extras.empty?
 
     extras.reduce(text) { |current, extra| current.sub(extra, '') }.gsub(/[ \t]{2,}/, ' ').gsub(/[ \t]+\n/, "\n").strip
+  end
+
+  # «Atención a clientes»: una sola pregunta por mensaje (la primera, que es la que importa).
+  def one_question(text)
+    asks = text.scan(/¿[^¿?]*\?/)
+    return text if asks.size < 2
+
+    asks.drop(1).reduce(text) { |current, extra| current.sub(extra, '') }.gsub(/[ \t]{2,}/, ' ').gsub(/[ \t]+\n/, "\n").strip
   end
 
   # Sin ninguna pregunta (la bienvenida ya pregunta) y sin la frase que quedó colgando («Sobre precios,»).

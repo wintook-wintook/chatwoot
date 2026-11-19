@@ -61,6 +61,9 @@ class Motor2::Functions::ProspectOutcomes
     @tracking.update_columns(outcome: 'client', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
+  # Motor2::InboxRouter: no le toca atenderlo.
+  def turn_away! = client!
+
   def note(text)
     Motor2::Delivery.note(@tracking, @conversation, "🤖 #{@template.name}: #{text}")
   end

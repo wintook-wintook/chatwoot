@@ -19,6 +19,7 @@
 class Motor2::Runner < Cases::Ai::BaseService
   include Motor2::QuestionGuard
   include Motor2::ReplyChecks
+  include Motor2::AreaChecks
   MAX_ROUNDS = 6
   MAX_TOKENS = 700
   NO_MESSAGE = '[SIN_MENSAJE]'
@@ -27,7 +28,7 @@ class Motor2::Runner < Cases::Ai::BaseService
   Result = Struct.new(:reply, :decision, :trace, :error, :attachments, :after, keyword_init: true)
   MAX_FILES = 5
 
-  attr_reader :config, :state, :trace, :conversation, :tracking, :canned_used, :seen, :noted_contact
+  attr_reader :config, :state, :trace, :conversation, :tracking, :canned_used, :seen, :noted_contact, :evidence
 
   # opts: conversation:, tracking:, history: (chat de prueba), mode: :reply | :attempt, attempt: [n, total],
   #       welcome: (bienvenida combinada: va tal cual al inicio del mensaje; el modelo no vuelve a saludar)
@@ -44,6 +45,7 @@ class Motor2::Runner < Cases::Ai::BaseService
     @trace = Motor2::Trace.new
     @canned_used = []
     @seen = []
+    @evidence = [] # lo que regresaron las fuentes en este turno (Motor2::AreaChecks#ensure_evidence)
     @noted_contact = {} # lo que el cliente dio con actualizar_contacto en este turno (Calificar lo revisa)
     @decision = nil
     @attachments = []

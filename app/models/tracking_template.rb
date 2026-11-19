@@ -232,13 +232,20 @@ class TrackingTemplate < ApplicationRecord
 
   private
 
+  # Una bandeja tiene un agente que atiende; o un par: uno de «Atención a prospectos» y otro de
+  # «Atención a clientes» (Motor2::InboxRouter manda a cada quien con el suyo).
+  ATTENDING_PAIR = %w[prospects customers].freeze
+
   def one_attending_per_inbox
     others = TrackingTemplate.where(account_id: account_id, attending: true, archived_at: nil).where.not(id: id)
                              .where('attend_inbox_ids && ARRAY[?]::bigint[]', attend_inbox_ids)
+    partner = (ATTENDING_PAIR - [agent_function.to_s]).first if ATTENDING_PAIR.include?(agent_function.to_s)
+    others = others.where('agent_function IS NULL OR agent_function <> ?', partner) if partner
     names = others.pluck(:name)
     return if names.empty?
 
-    errors.add(:attend_inbox_ids, "ya tienen un agente que las atiende (#{names.join(', ')}): una bandeja solo puede tener uno")
+    errors.add(:attend_inbox_ids, "ya tienen un agente que las atiende (#{names.join(', ')}): una bandeja solo puede tener uno " \
+                                  '(o uno de Atención a prospectos y otro de Atención a clientes)')
   end
 
   # ── Un snapshot por guardado que cambie el comportamiento del agente ──────────

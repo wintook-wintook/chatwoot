@@ -1,0 +1,187 @@
+# frozen_string_literal: true
+
+# «Áreas» — lo de «Atención a clientes» que manda el código (Plan-Motor-Agentes §11.15):
+#   - prepare: el clasificador (Motor2::Triage) decide el área, si es suficiente, la gestión o la severidad;
+#     guarda la aclaración pendiente (continuidad) y la cola de lo demás que pidió (multi-intención);
+#   - memory / turn_note: qué toca hacer en este mensaje (aclarar, contestar, levantar caso, registrar
+#     la gestión, canalizar) y lo que sigue pendiente;
+#   - tools: solo las del área en curso (Administrativo no busca; Comercial no levanta casos de soporte);
+#   - allows_search?: sin búsqueda si falta aclarar o si el área no consulta fuentes (Motor2::Skills::Knowledge);
+#   - must_handoff? / hold_handoff?: pide una persona (Motor2::ReplyChecks, Motor2::Skills::Handoff).
+#
+#   memoria: state['triage'] (lo de este mensaje), state['pendiente'] (aclaración), state['cola'],
+#            state['handoff_area'] (a qué equipo se pasa), state['case_id']
+class Motor2::Skills::Areas < Motor2::Skills::Base
+  include Motor2::Skills::AreaActions
+
+  GESTION = { type: 'string', enum: %w[cotizacion demo visita vendedor contratar otra] }.freeze
+
+  def self.key = 'areas'
+
+  def on? = config.skill_on?(key) && function.respond_to?(:areas)
+
+  def prepare(history)
+    customer = Array(history).select { |m| m[:role].to_s == 'user' }.map { |m| m[:content].to_s }
+    @human_requests = customer.count { |t| t.match?(Motor2::Skills::QualifyFlow::HUMAN) }
+    @held_before = state['handoff_held']
+    classify(history) if customer.any?
+    state['handoff_held'] = true if human? && !must_handoff? # ya se le preguntó qué necesita: la próxima, se pasa
+  end
+
+  def tools
+    list = [fn('estado_caso', 'Cómo va el caso abierto del cliente (folio y estado).')]
+    return list if area_key == 'none'
+
+    list << fn('canalizar', "Pasa la plática al equipo de #{area_title}. Después escribe solo la despedida (en cuanto puedan lo atienden).",
+               { motivo: STR }, %w[motivo])
+    if support_case?
+      list << fn('crear_caso', 'Levanta su caso de soporte. Después dale el folio.', { titulo: STR, descripcion: STR },
+                 %w[titulo descripcion])
+    end
+    if area_key == 'sales'
+      list << fn('registrar_gestion', 'Hace la gestión comercial que pidió (cotización, demo, visita, vendedor, contratar).',
+                 { tipo: GESTION, detalle: STR }, %w[tipo detalle])
+    end
+    list
+  end
+
+  def allows_search? = sufficient? && %w[support sales none].include?(area_key)
+
+  def memory
+    lines = []
+    lines << "ÁREA EN CURSO: #{area_title} — «#{now['intencion']}»#{gestion_text}" unless area_key == 'none'
+    lines << "DESPUÉS NO OLVIDES: #{queue.map { |q| "#{title_of(q['area'])}: #{q['intencion']}" }.join(' | ')}" if queue.any?
+    lines.join("\n")
+  end
+
+  def turn_note
+    return handoff_note if must_handoff?
+    return 'Pidió una persona: dile que con gusto y pregúntale UNA vez qué necesita, para pasarlo al equipo correcto.' if hold_handoff_note?
+    return act_now_note if must_act?
+    return "Falta aclarar: haz SOLO esta pregunta, sin buscar ni contestar otra cosa: «#{now['aclaracion']}»" unless sufficient?
+
+    [area_note, queue_note].compact.join("\n")
+  end
+
+  # Pidió una persona y ya toca pasarlo: de inmediato, si lo vuelve a pedir, o si ya se sabe qué necesita.
+  def must_handoff?
+    return false if @acted || !human? # ya levantó el caso o registró lo que pidió: eso ya lo atiende alguien
+
+    function.human_now? || @held_before || (area_key != 'none' && sufficient?)
+  end
+
+  # Todavía no se sabe qué necesita: se pregunta una vez antes de pasarlo.
+  def hold_handoff?
+    return false unless human? && !must_handoff?
+
+    state['handoff_held'] = true
+  end
+
+  def call(name, args)
+    case name
+    when 'estado_caso' then case_status
+    when 'canalizar' then channel(args['motivo'])
+    when 'crear_caso' then create_case(args)
+    else register(args)
+    end
+  end
+
+  def area_title = title_of(area_key)
+
+  # Pidió una persona (Motor2::ReplyChecks: «te paso con…» ahí es lo esperado).
+  def human_asked? = human?
+
+  def area_key = now['area'] || 'none'
+
+  def now = state['triage'].to_h
+
+  private
+
+  def function = config.function
+
+  def classify(history)
+    result = Motor2::Triage.new(account: config.account).call(areas: function.areas, history: history, pending: state['pendiente'],
+                                                              queue: queue)
+    return unless result
+
+    count_turn(result['atender'])
+    state['triage'] = result['atender']
+    state['cola'] = result['pendientes']
+    remember_pending
+    trace.event(:area, "#{area_title}: #{now['intencion']}#{gestion_text}#{' (falta aclarar)' unless sufficient?}")
+  end
+
+  def remember_pending
+    if sufficient? || area_key == 'none'
+      state.values.delete('pendiente')
+    else
+      state['pendiente'] = now.slice('area', 'intencion', 'aclaracion')
+    end
+  end
+
+  def sufficient? = now.fetch('suficiente', true)
+
+  # Cuántos mensajes lleva la misma solicitud (misma área e intención): para no pedir datos sin fin.
+  def count_turn(fresh)
+    same = now['area'] == fresh['area'] && now['area'] != 'none'
+    state['area_turns'] = same ? state['area_turns'].to_i + 1 : 0
+    state.values.delete('case_folio') unless same # el folio de esta solicitud (no se levanta dos veces)
+  end
+
+  # Ya preguntó lo que tocaba: toca actuar (una pregunta y con su respuesta se levanta o se pasa).
+  # (Comercial cuenta solo para una gestión: una duda de información no se «resuelve» pasándola.)
+  ENOUGH_ASKS = { 'admin' => 1, 'support' => 1, 'sales' => 1, 'other' => 0 }.freeze
+
+  def must_act?
+    return false if area_key == 'sales' && %w[info demo visita].include?(now['gestion'].to_s.presence || 'info')
+
+    ENOUGH_ASKS.key?(area_key) && state['area_turns'].to_i >= ENOUGH_ASKS[area_key]
+  end
+
+  # Ya se le preguntó lo necesario: no más preguntas, se hace.
+  def act_now_note
+    what = if area_key == 'sales' then 'llama registrar_gestion con lo que ya te dijo'
+           elsif support_case? then 'levanta su caso con crear_caso (con lo que ya te dijo) y dale el folio'
+           else
+             'llama canalizar con lo que ya te dijo'
+           end
+    "Ya tienes lo necesario: NO hagas más preguntas; #{what}."
+  end
+
+  def human? = @human_requests.to_i.positive? || now['pide_persona'] == true
+
+  def hold_handoff_note? = human? && !must_handoff?
+
+  def queue = Array(state['cola'])
+
+  def case_status
+    return { prueba: true, nota: 'En la prueba no hay casos reales.' } if test?
+
+    ticket = orchestrator.find_active_ticket
+    return { nota: 'No tiene casos abiertos.' } unless ticket
+
+    { folio: ticket.try(:folio) || ticket.id, titulo: ticket.title, estado: ticket.status }
+  end
+
+  def title_of(key)
+    key.to_s == 'none' ? 'su consulta' : function.area(key)&.dig('title') || key.to_s
+  end
+
+  def gestion_text
+    return " (severidad #{now['severidad']})" if area_key == 'support' && now['severidad'].to_i.positive?
+
+    now['gestion'].present? ? " (#{now['gestion']})" : ''
+  end
+
+  def handoff_note
+    state['handoff_area'] = area_key unless area_key == 'none'
+    'PIDIÓ HABLAR CON UNA PERSONA y ya toca: llama YA canalizar (o pasar_a_humano) y despídete diciendo que en cuanto puedan lo ' \
+      'atienden. No hagas más preguntas.'
+  end
+
+  def queue_note
+    return nil if queue.empty?
+
+    'Al terminar con esto, pregúntale si seguimos con lo otro que pidió (DESPUÉS NO OLVIDES).'
+  end
+end

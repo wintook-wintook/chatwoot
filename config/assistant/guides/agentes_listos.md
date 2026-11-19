@@ -2,7 +2,7 @@
 key: agentes_listos
 title: Agentes listos
 areas: [ai_agents]
-keywords: [agentes listos, productos y precios, catalogo de productos, no doy precios, hablar con una persona, pasar a un asesor, retomar preguntas, mensaje de bienvenida, bienvenida, orden de las preguntas, asistente, wizard, crear uno, varios agentes, lista de agentes, nombre que ve el cliente, motor 2.0, como habla tu empresa, tono general, firma, quien es quien, distribuidores, nota para ia, tu negocio, preguntas para calificar, temperatura, caliente, tibio, frio, objeciones, esta caro, datos obligatorios, agente listo, atencion a prospectos, prospectos, anuncios, redes sociales, campañas de redes, activar agente, chat de prueba, sofi, calificar, descartar, pasar a una persona, atendida por, pausar agente, reanudar agente, agendar cita, cita, horarios, horario ocupado, no disponible, reconectar google, mover cita, cancelar cita, agentes a medida, ya es cliente]
+keywords: [agentes listos, atencion a clientes, clientes, soporte, comercial, administrativo, areas, ejemplos si y no, probar la matriz, levantar caso, folio, severidad, cotizacion, demo, visita, factura, rfc, canalizar, no es cliente, varias cosas a la vez, productos y precios, catalogo de productos, no doy precios, hablar con una persona, pasar a un asesor, retomar preguntas, mensaje de bienvenida, bienvenida, orden de las preguntas, asistente, wizard, crear uno, varios agentes, lista de agentes, nombre que ve el cliente, motor 2.0, como habla tu empresa, tono general, firma, quien es quien, distribuidores, nota para ia, tu negocio, preguntas para calificar, temperatura, caliente, tibio, frio, objeciones, esta caro, datos obligatorios, agente listo, atencion a prospectos, prospectos, anuncios, redes sociales, campañas de redes, activar agente, chat de prueba, sofi, calificar, descartar, pasar a una persona, atendida por, pausar agente, reanudar agente, agendar cita, cita, horarios, horario ocupado, no disponible, reconectar google, mover cita, cancelar cita, agentes a medida, ya es cliente]
 pages: [ready_agents, ai_agents]
 ---
 ## Para qué sirve
@@ -13,8 +13,9 @@ Puedes tener varios del mismo tipo (por ejemplo «Ana – Facebook» y «Recepci
 En el menú «Agentes IA» › «Agentes listos» (la primera opción): una tarjeta por función, con los agentes que ya creaste y «Crear uno». También salen en «Agentes a medida» (la lista de agentes), con la etiqueta de su función; al abrir uno desde ahí se abre su mismo asistente.
 
 ## Qué agentes hay
-- Atención a prospectos: atiende a la gente nueva que escribe (anuncios en redes, página, campañas), contesta sus dudas con las respuestas predefinidas (y con el catálogo de productos solo si lo marcas en «Tu negocio»), lo califica con tus preguntas y lo pasa a tu equipo o le crea la oportunidad.
-- Próximamente: Atención a clientes, Cobranza y Vendedor de campaña.
+- Atención a prospectos: atiende a la gente nueva que escribe (anuncios en redes, página, campañas), contesta sus dudas con tus fuentes (respuestas predefinidas, catálogo, hojas…), lo califica con tus preguntas y lo pasa a tu equipo o le crea la oportunidad.
+- Atención a clientes: atiende a tus clientes. Entiende si lo que pide es de Soporte, Comercial o Administrativo (o de otra área que agregues), contesta con tus fuentes, levanta su caso o registra la oportunidad, o lo pasa al equipo de esa área.
+- Próximamente: Cobranza y Vendedor de campaña.
 
 ## Cómo se hace
 ### Crear un agente
@@ -41,6 +42,18 @@ En el menú «Agentes IA» › «Agentes listos» (la primera opción): una tarj
 - Al calificar: qué hace (pasarlo a una persona, agendarle una cita, crearle la oportunidad o solo juntar sus datos), a quién se lo pasa (persona o equipo), los datos que debe juntar antes (nombre, correo, empresa, ciudad: si falta uno, se lo pide antes de pasarlo) y qué hacer con quien ya es cliente.
 - Indicaciones: algo más que deba saber o hacer, en tus palabras. Si contradice lo anterior, gana esto. Aquí también queda lo que corrige el entrenador del Probador de agentes.
 
+### Atención a clientes
+- Pasos del asistente: El agente · Tu negocio · Qué atiende · Qué sabe · Cómo platica · Indicaciones · Pruébalo y guarda.
+- Qué atiende: prende las áreas que atiendes: Soporte, Comercial, Administrativo y, si quieres, «Otra área» con su nombre y lo que atiende. Cada área trae ejemplos de «sí es de esta área» y «no es de esta área» (ya vienen llenos, por ejemplo «No puedo enviar una cotización a pedido» es Soporte y no Comercial); cámbialos o agrega los tuyos. El agente decide por lo que el cliente quiere lograr, no por una palabra suelta. En cada área eliges a quién se lo pasa (persona o equipo); si no eliges, va al de «Cómo platica».
+- Soporte: si tus fuentes traen cómo resolverlo, le da los pasos; si no, levanta un caso y le da el folio (o lo pasa a soporte, si así lo eliges). Antes hace una sola pregunta (desde cuándo pasa o a cuántos afecta). La prioridad sale sola: no puede operar → urgente (levanta el caso de inmediato, sin preguntar); funciona con falla → alta; duda de uso → media. No levanta dos casos del mismo tipo: si ya tiene uno abierto, le da ese folio.
+- Comercial: contesta solo lo que confirman tus fuentes; lo que no, dice que no lo puede confirmar y ofrece un vendedor. Nunca ofrece algo parecido en lugar de lo que pidió (una demo no es una visita). Cotización, contratar o hablar con un vendedor: crea la oportunidad con el vendedor (o se lo pasa); si ya tiene una abierta, se le agrega. Demo o visita: la agenda (si eliges «La agenda» y hay alguien con Google Calendar) o el vendedor la acuerda.
+- Administrativo: no busca en tus fuentes ni da saldos o montos (no los ve). Pide lo que falte en una sola pregunta (por ejemplo el RFC correcto) y lo pasa a la persona o equipo, o levanta un caso administrativo si lo eliges.
+- Si falta algo para entender qué quiere («quiero una cotización»), hace una sola pregunta y su respuesta completa lo mismo («10 usuarios»). Si pide varias cosas a la vez, las atiende una por una; si lo pasa a una persona, lo que quedó pendiente va en la nota.
+- Si pide una persona: primero le pregunta qué necesita, para pasarlo al equipo correcto (si lo vuelve a pedir, lo pasa); o, si lo eliges, lo pasa de inmediato.
+- Si quien escribe no es cliente: lo atiende igual (recomendado) o lo pasa a una persona. Una bandeja puede tener un agente de «Atención a prospectos» y uno de «Atención a clientes»: quien ya es cliente (su organización está en etapa Cliente, o tiene una oportunidad ganada o un caso de servicio) va con el de clientes y los demás con el de prospectos.
+- Nunca dice «ya levanté tu caso», «ya lo registré» o «ya te agendé» si no lo hizo de verdad: el sistema lo revisa antes de mandar.
+- Pruébalo: «Probar la matriz» corre todos tus ejemplos de sí y no y te dice cuáles cayeron en su área (✅) y cuáles no (❌); si uno falla, agrega más ejemplos parecidos. En el chat de prueba ves qué área detectó en cada mensaje y qué hizo; en la prueba no se crean casos reales (sale el folio PRUEBA-1).
+
 ### Cómo habla tu empresa (lo general de todos los agentes)
 En Agentes IA › «Cómo habla tu empresa» (solo el Administrador) llenas lo que aplica a todos: quiénes somos, tono, cómo firmar, quién es quién (por ejemplo «los distribuidores son socios: se les pregunta por sus prospectos»), qué decir fuera de horario, lo que nunca deben hacer y palabras propias. Abajo, en «Datos del negocio», van los datos fijos de la empresa para todos los agentes: qué vendes, a quién, dónde das servicio, por qué elegirlos, precios/pagos/tiempos y otros datos (horario, dirección, teléfono…). Lo que pongas en «Tu negocio» de un agente manda sobre esto. Lo toman el Seguimiento IA y todos los Agentes listos; lo particular de cada uno manda (por ejemplo, el tono que elegiste en el agente). «Probar» arma un mensaje de ejemplo sin guardar ni enviar. Los Agentes a medida no lo usan: tienen su propio entrenamiento.
 
@@ -63,7 +76,7 @@ En Agentes IA › «Cómo habla tu empresa» (solo el Administrador) llenas lo q
 - El Embudo de contactos se mueve solo con eso: su primera respuesta lo pasa a Contactado, la etiqueta «interesado» a Interesado, la oportunidad a Convertido y resolver a Descartado.
 
 ### Si quien escribe ya es cliente
-Con «Solo atiende prospectos» marcado (así viene), a quien ya es cliente (su organización está en etapa Cliente o ya tiene una oportunidad ganada o un caso de servicio) no le hace preguntas: le contesta «Te comunico con Ana, en un momento te escribe» (fuera de horario, «te escribe en cuanto abramos»), se lo asigna a su responsable fijo (o a quien elegiste para clientes sin responsable) y deja una nota.
+Si en la misma bandeja tienes un agente de «Atención a clientes», quien ya es cliente va con él. Si no, con «Solo atiende prospectos» marcado (así viene), a quien ya es cliente (su organización está en etapa Cliente o ya tiene una oportunidad ganada o un caso de servicio) no le hace preguntas: le contesta «Te comunico con Ana, en un momento te escribe» (fuera de horario, «te escribe en cuanto abramos»), se lo asigna a su responsable fijo (o a quien elegiste para clientes sin responsable) y deja una nota.
 
 ### Pausar o reanudar en una conversación
 En el panel de la conversación sale el nombre del agente y «atendiendo», con «Pausar». Pausado ya no contesta en esa conversación; «Reanudar» lo regresa. Si una persona del equipo le escribe al cliente, el agente se hace a un lado solo en esa conversación.

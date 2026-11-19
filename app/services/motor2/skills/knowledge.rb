@@ -11,12 +11,20 @@ class Motor2::Skills::Knowledge < Motor2::Skills::Base
   def on? = config.skill(key)['on'] != false && search.sources.any?
 
   def tools
+    return [] unless searchable?
+
     [fn('buscar_en_fuentes',
         "Busca en lo que sabe la empresa (#{search.names.join(', ')}). Úsala ANTES de dar cualquier dato: precios, " \
         'horarios, requisitos, fechas, ligas, cómo funciona… Busca por el tema («horario de atención» para «¿abren ' \
         'el domingo?») y, si no sale, con otras palabras.',
         { pregunta: STR, fuente: { type: 'string', enum: search.names, description: 'Opcional: solo en esta fuente' } },
         %w[pregunta])]
+  end
+
+  # «Atención a clientes»: sin búsqueda si falta aclarar o el área no consulta fuentes (Motor2::Skills::Areas).
+  def searchable?
+    areas = @turn.find_skill('areas')
+    areas.nil? || areas.allows_search?
   end
 
   def instructions
@@ -76,6 +84,7 @@ class Motor2::Skills::Knowledge < Motor2::Skills::Base
     trace.source(name: found[:fuente], kind: found[:tipo], query: question, found: results.map { |r| snippet(r) })
     @turn.canned_used.concat(results.filter_map { |r| r[:codigo] if r[:instrucciones_internas] })
     @turn.seen << results.to_json
+    @turn.evidence << "#{found[:fuente]}: #{results.to_json}" if results.any?
   end
 
   def snippet(result)

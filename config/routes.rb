@@ -634,6 +634,7 @@ Rails.application.routes.draw do
           # Agentes listos: puestos empaquetados que la empresa activa en sus bandejas
           resources :ready_agents, only: [:index, :create, :update, :destroy] do
             post :test, on: :collection # chat de prueba (no guarda ni manda nada)
+            post :matrix, on: :collection # «Atención a clientes»: probar los ejemplos sí/no de las áreas
           end
           resources :ready_agent_sessions, only: [:index] do
             member do

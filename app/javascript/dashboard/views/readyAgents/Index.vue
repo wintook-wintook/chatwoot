@@ -10,12 +10,15 @@
 import { useAlert } from 'dashboard/composables';
 import ReadyAgentsAPI from 'dashboard/api/readyAgents';
 import ReadyAgentModal from './ReadyAgentModal.vue';
+import CustomersAgentModal from './CustomersAgentModal.vue';
 
 const T = 'READY_AGENTS';
+// Una bandeja puede tener un agente de cada uno de estos dos (TrackingTemplate::ATTENDING_PAIR).
+const PAIR = ['prospects', 'customers'];
 
 export default {
   name: 'ReadyAgentsIndex',
-  components: { ReadyAgentModal },
+  components: { ReadyAgentModal, CustomersAgentModal },
   data() {
     return {
       catalog: [],
@@ -23,6 +26,7 @@ export default {
       inboxes: [],
       calendarUsers: [],
       sources: [], // las fuentes de la cuenta y qué hay en cada una (paso «Qué sabe»)
+      caseTypes: [], // «Atención a clientes»: los tipos de caso que puede levantar
       loading: true,
       modal: null,
       queryHandled: false,
@@ -43,6 +47,7 @@ export default {
         this.inboxes = data.inboxes;
         this.calendarUsers = data.calendar_users || [];
         this.sources = data.sources || [];
+        this.caseTypes = data.case_types || [];
         this.openFromQuery();
       } catch (e) {
         useAlert(e.response?.data?.error || this.t('LOAD_ERROR'));
@@ -59,9 +64,12 @@ export default {
         .map(i => i.name)
         .join(', ');
     },
-    takenFor(agent) {
+    // Las bandejas que ya atiende otro agente; con el par (prospectos + clientes) se comparten.
+    takenFor(agent, kind) {
+      const partner = PAIR.includes(kind) ? PAIR.find(k => k !== kind) : null;
       return this.agents
         .filter(a => a.enabled && (!agent || a.id !== agent.id))
+        .filter(a => !partner || a.kind !== partner)
         .flatMap(a => a.inbox_ids);
     },
     // Solo la primera vez: después de guardar se recarga y no se vuelve a abrir.
@@ -206,14 +214,27 @@ export default {
         </template>
       </section>
     </div>
+    <CustomersAgentModal
+      v-if="modal && modal.entry.kind === 'customers'"
+      show
+      :title="modal.entry.title"
+      :agent="modal.agent"
+      :inboxes="inboxes"
+      :taken-inbox-ids="takenFor(modal.agent, 'customers')"
+      :calendar-users="calendarUsers"
+      :sources="sources"
+      :case-types="caseTypes"
+      @close="modal = null"
+      @saved="onSaved"
+    />
     <ReadyAgentModal
-      v-if="modal"
+      v-else-if="modal"
       show
       :kind="modal.entry.kind"
       :title="modal.entry.title"
       :agent="modal.agent"
       :inboxes="inboxes"
-      :taken-inbox-ids="takenFor(modal.agent)"
+      :taken-inbox-ids="takenFor(modal.agent, modal.entry.kind)"
       :calendar-users="calendarUsers"
       :sources="sources"
       @close="modal = null"

@@ -919,7 +919,7 @@ Lo que **falta en el 2.0** para que las funciones vivan ahí:
 - **Asistente de Atención a prospectos**: paso nuevo «Qué sabe», después de «Tu negocio». Las predefinidas van siempre y las demás se marcan; se guardan en `motor2['sources']`.
 - **Entrenador**: causa nueva «🧭 Dónde busca» (`where`). El dato estaba en otra fuente y su «¿Qué hay aquí?» no lo dejaba ver. Propone el texto y «Cambiar «¿Qué hay aquí?»» lo guarda de un clic (`agent_tester/fix_purpose`). El entrenador recibe `mapa_de_fuentes`.
 
-### 11.15 Atención a clientes — análisis y plan (2026-11-19, sin empezar)
+### 11.15 Atención a clientes — análisis y plan (2026-11-19; C0–C5 hechos el mismo día, ver §11.15.6)
 
 **Base:** el «PLAN FUNCIONAL — RAMAS COMERCIAL Y ADMINISTRATIVO» del Agente Coordinador Kontrolya V1.0 (lo pasó el usuario; define Comercial y Administrativo; Soporte solo se menciona, con severidades #soporte1/2/3). Lo traduzco al motor 2.0: **sin rutas ni @directivas**, con **áreas** que se eligen en el asistente y reglas que **manda el código** (lo que aprendimos con Atención a prospectos: lo que solo se le pide al modelo, a veces no lo hace).
 
@@ -984,3 +984,23 @@ Coinciden en: (1) un **clasificador** que mira la plática completa (no la palab
 4. **Evidencia fail closed solo en Comercial** (tu plan); en Soporte se contesta con fuentes y, si no hay, se levanta caso o se pasa.
 5. **«Probar la matriz»** usa los mismos ejemplos sí/no del paso 3; los que fallen se pueden mandar al probador (lotes).
 6. **Quien no es cliente:** por omisión se pasa al agente de «Atención a prospectos» de la bandeja (si hay) o a una persona.
+
+#### 11.15.6 Cómo quedó (2026-11-19, rama feat/atencion_clientes_motor2)
+
+| Paso | Hecho | Dónde |
+|---|---|---|
+| C0 | Función `customers` disponible; puesto, negocio, precios, tono; «¿no es cliente?» | `config/agent_functions/customers.{yml,md}`, `Motor2::Functions::Customers`, `CustomerOutcomes` |
+| C1 | Clasificador con continuidad, multi-intención, severidad, pide persona; «Probar la matriz» (22/22 con los ejemplos de fábrica) | `Motor2::Triage`, `Motor2::TriageMatrix`, `POST /ready_agents/matrix` |
+| C2 | Administrativo: sin fuentes, una pregunta y canaliza (o caso administrativo) | `Motor2::Skills::Areas` + `AreaActions` |
+| C3 | Comercial: evidencia fail closed (`Motor2::EvidenceCheck`), candado visita ≠ demo, oportunidad / vendedor / cita | `AreaSales`, `Motor2::AreaChecks#ensure_evidence` |
+| C4 | Soporte: fuentes, severidad → prioridad (1 urgente sin preguntar, 2 alta, 3 media), caso sin duplicar, `estado_caso` | `AreaActions#create_case` |
+| C5 | No simular acciones (también la cita en prospectos), pide persona (pregunta una vez y canaliza al área), par prospectos + clientes por bandeja, asistente, guía de Dali | `Motor2::AreaChecks`, `Motor2::InboxRouter`, `TrackingTemplate::ATTENDING_PAIR`, `CustomersAgentModal.vue` |
+
+**Decisiones al hacerlo (cambian lo de §11.15.5):**
+- **No es cliente:** por omisión **lo atiende igual** (`not_client: serve`); muchos clientes reales no están marcados como tales (sin organización en etapa Cliente ni casos), y rechazarlos sería peor. Si la bandeja tiene el par, los que no son clientes ya van con el de prospectos.
+- **Una pregunta y se actúa:** en Administrativo, Soporte y una gestión comercial, después de una aclaración el código obliga a actuar (levantar, registrar o canalizar); nada de pedir datos uno por uno.
+- **Multi-intención:** se atiende la primera; si se canaliza, lo pendiente de la cola va en la nota para la persona (no se pierde) en vez de seguir el agente con otra área ya pausado.
+- **Severidad fija** (no se cambia en el asistente): se explica en el paso de Soporte.
+- Finish (`objetivo_cumplido` / `descartar`) no aplica en clientes; `pasar_a_humano` solo sin área (con área se usa `canalizar`, que asigna a la persona o equipo de esa área).
+- **Pruebas con el modelo real:** cotización incompleta → aclaración → oportunidad; RFC → una pregunta → canaliza a Administrativo; «no puedo operar» → caso urgente al instante; «¿qué planes tienen?» sin fuente → no inventa y ofrece vendedor; «quiero hablar con una persona» → pregunta qué necesita → canaliza al área.
+

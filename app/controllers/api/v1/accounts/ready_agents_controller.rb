@@ -10,6 +10,8 @@
 # DELETE /ready_agents/:id      se borra; si está en uso (pláticas, campañas, automatizaciones), se archiva
 # POST   /ready_agents/test     chat de prueba con lo que hay en el asistente (motor 2.0, sin guardar ni mandar)
 #                               { ready_agent: {...}, id:, messages: [{ role, content }], state: {} }
+# POST   /ready_agents/matrix   «Atención a clientes» › Probar la matriz: los ejemplos sí/no de cada área por el
+#                               clasificador → { rows: [{ example, area, kind, got, ok }] }
 # ready_agent.sources: las fuentes que marcó en «Qué sabe» (llaves de Motor2::SourceMap); el índice
 # trae `sources` con todas las de la cuenta y qué hay en cada una.
 # Solo administradores.
@@ -17,9 +19,9 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
   SETTINGS = %w[objective questions qualified_when discard_when tone instructions handoff_user_id handoff_team_id
                 client_user_id client_team_id only_prospects case_type_id appointment_minutes appointment_kind
                 appointment_location business_what business_who business_coverage business_why business_practical
-                business_use_catalog doubts not_found off_topic welcome price_source].freeze
+                business_use_catalog doubts not_found off_topic welcome price_source not_client human user_id team_id].freeze
   LISTS = { question_list: [], appointment_user_ids: [], required_contact: [], qualify: %i[key on text],
-            objections: %i[objection answer] }.freeze
+            objections: %i[objection answer], areas: {} }.freeze
   MAX_TEST_MESSAGES = 30
   ROLES = %w[user assistant].freeze
 
@@ -28,7 +30,8 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
 
   def index
     render json: { catalog: catalog, agents: function_agents.order(:id).map { |t| Motor2::Functions::AgentJson.call(t) },
-                   inboxes: inboxes, calendar_users: calendar_users, sources: Motor2::SourceMap.new(Current.account).available }
+                   inboxes: inboxes, calendar_users: calendar_users, sources: Motor2::SourceMap.new(Current.account).available,
+                   case_types: Current.account.case_types.active.order(:name).map { |c| { id: c.id, name: c.name, case_class: c.case_class } } }
   end
 
   def create
@@ -53,6 +56,15 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
   rescue ActiveRecord::InvalidForeignKey
     archive
     head :ok
+  end
+
+  def matrix
+    function = Motor2::Config.new(test_draft).function
+    raise ArgumentError, 'Solo para «Atención a clientes».' unless function.respond_to?(:areas)
+
+    render json: { rows: Motor2::TriageMatrix.new(Current.account, function.areas).call }
+  rescue ArgumentError => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   def test

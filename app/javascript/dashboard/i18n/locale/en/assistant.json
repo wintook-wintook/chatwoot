@@ -563,7 +563,11 @@
       "agendar_cita": "Booked",
       "mover_cita": "Moved the appointment",
       "cancelar_cita": "Cancelled the appointment",
-      "buscar_en_fuentes": "Searched its knowledge"
+      "buscar_en_fuentes": "Searched its knowledge",
+      "canalizar": "Hands it to the team",
+      "crear_caso": "Opened the case",
+      "registrar_gestion": "Registered the request",
+      "estado_caso": "Checked their case"
     },
     "DECISIONS": {
       "prospecto_calificado": "Qualified prospect",
@@ -584,7 +588,8 @@
         "qualified": "qualified",
         "handed_off": "handed to a person",
         "discarded": "discarded",
-        "client": "was a customer: handed to their owner"
+        "client": "was a customer: handed to their owner",
+        "not_client": "not a customer: handed to a person"
       }
     },
     "APPOINTMENT_KINDS": {
@@ -742,6 +747,127 @@
         "finish_first": "It asks to finish the remaining questions (2 at most) and hands off; if they insist or get upset, it hands off right away",
         "now": "It hands off right away: it pauses and assigns to whoever you chose in «When qualified»"
       }
+    },
+    "CUSTOMERS": {
+      "SUBTITLE": "Serves your customers: tells support, sales and admin apart, answers from your sources and opens a case or hands it to the right team.",
+      "NAME_PLACEHOLDER": "e.g. WhatsApp customers",
+      "PAIR_HINT": "An inbox can have this agent and a «Prospect care» one: existing customers come here, everyone else goes to prospects.",
+      "STEPS": {
+        "agent": "The agent",
+        "business": "Your business",
+        "areas": "What it handles",
+        "knows": "What it knows",
+        "talk": "How it talks",
+        "instructions": "Instructions",
+        "test": "Test and save"
+      },
+      "STEP_HINTS": {
+        "agent": "Its name, tone and the inboxes where it serves your customers.",
+        "business": "The basics of your business, so it explains in your words.",
+        "areas": "What it handles and who gets it. Each message is classified by what the customer wants, not by a single word: the examples teach it.",
+        "knows": "Where it looks up answers. It only answers with what it finds there.",
+        "talk": "How it greets, and what it does when someone asks for a person or is not a customer.",
+        "instructions": "Anything else it should know or do (optional).",
+        "test": "Check every example lands in its area and chat with it as your customer."
+      },
+      "AREAS": {
+        "support": {
+          "TITLE": "Support",
+          "ABOUT": "Failures, errors, something not working or how-to questions."
+        },
+        "sales": {
+          "TITLE": "Sales",
+          "ABOUT": "Plans, prices, quotes, demos, visits or buying."
+        },
+        "admin": {
+          "TITLE": "Billing & admin",
+          "ABOUT": "Invoices, payments, balance, tax ID or account data."
+        },
+        "other": {
+          "TITLE": "Other area",
+          "ABOUT": "Something else your company handles (name it)."
+        }
+      },
+      "AREAS_NONE": "Turn on at least one area.",
+      "EXAMPLES": {
+        "YES": "It is this area (examples)",
+        "NO": "It is not this area (examples)",
+        "PLACEHOLDER": "What a customer would write",
+        "ADD": "+ Add example",
+        "REMOVE": "Remove"
+      },
+      "OTHER": {
+        "NAME": "Area name",
+        "NAME_PLACEHOLDER": "e.g. Human resources",
+        "DESCRIPTION": "What it handles",
+        "DESCRIPTION_PLACEHOLDER": "e.g. job openings, applications, certificates"
+      },
+      "SUPPORT": {
+        "ACTION": "If it can't be solved with what it knows",
+        "ACTIONS": {
+          "case": "Opens a case and gives the ticket number",
+          "handoff": "Hands it to a support person"
+        },
+        "DETAILS": "First asks since when it happens or how many are affected (a single question)",
+        "SEVERITY": "Priority is automatic: can't operate → urgent (opened right away); works with a failure → high; how-to → medium."
+      },
+      "SALES": {
+        "quote": {
+          "LABEL": "Quote, buying or talking to a salesperson",
+          "opportunity": "Creates the opportunity for the salesperson",
+          "handoff": "Hands it to the salesperson"
+        },
+        "demo": {
+          "LABEL": "If they ask for a demo",
+          "handoff": "The salesperson arranges it",
+          "appointment": "Schedules it"
+        },
+        "visit": {
+          "LABEL": "If they ask for a salesperson visit",
+          "handoff": "The salesperson arranges it",
+          "appointment": "Schedules it"
+        },
+        "EVIDENCE": "It only states what your sources confirm; the rest it says it can't confirm. It never offers a demo instead of a visit."
+      },
+      "ADMIN": {
+        "CASE": "Opens an admin case (otherwise hands it to the person or team)",
+        "NO_SOURCES": "It doesn't search your sources or give balances: it asks what's missing in one question and hands it over."
+      },
+      "CASE_TYPE": "Case type",
+      "CASE_TYPE_FIRST": "The first of that class",
+      "AREA_USER": "Hands it to",
+      "AREA_TEAM": "Team",
+      "GENERAL": "The one in «How it talks»",
+      "KNOWS_HINT": "Sales and Support search here; Admin doesn't.",
+      "WELCOME_PLACEHOLDER": "e.g. Hi! I'm Sofi, from customer care.",
+      "TALK": {
+        "human": {
+          "LABEL": "If they ask to talk to a person",
+          "understand_first": "First asks what they need, to hand them to the right team (recommended)",
+          "now": "Hands them over right away"
+        },
+        "not_client": {
+          "LABEL": "If the person writing is not a customer",
+          "serve": "Serves them anyway (recommended)",
+          "handoff": "Hands them to the person or team below without serving them"
+        },
+        "MULTI": "If they ask for several things, it handles them one by one; anything pending goes in the note when it hands over."
+      },
+      "GENERAL_USER": "What belongs to no area goes to",
+      "GENERAL_TEAM": "Team",
+      "MATRIX": {
+        "TITLE": "Test the matrix",
+        "RUN": "Run",
+        "HINT": "Runs every «yes» and «no» example of your areas and tells you if it landed where it should.",
+        "RESULT": "{ok} of {total} right",
+        "NOT": "not {area}",
+        "LINE": "expected {expected}, got {got}",
+        "NONE": "none",
+        "ERROR": "Could not test the matrix.",
+        "ROW": "{icon} «{example}» — {line}"
+      },
+      "TEST_HINT": "Write as your customer: «I can't log in», «I want a quote», «my invoice has the wrong tax ID»…",
+      "TEST_AREA": "Area: {area}"
     }
   }
 }

@@ -21,11 +21,24 @@ RSpec.describe 'Ready Agents API' do
     account.tracking_templates.find(response.parsed_body.dig('agent', 'id'))
   end
 
-  it 'el catálogo trae «Atención a prospectos» disponible y las demás funciones como próximamente' do
+  it 'el catálogo trae «Atención a prospectos» y «Atención a clientes» disponibles y las demás como próximamente' do
     get "#{api}/ready_agents", headers: admin.create_new_auth_token
     catalog = response.parsed_body['catalog']
     expect(catalog.first).to include('kind' => 'prospects', 'title' => 'Atención a prospectos', 'available' => true)
-    expect(catalog.pluck('available').count(false)).to eq(3)
+    expect(catalog.second).to include('kind' => 'customers', 'title' => 'Atención a clientes', 'available' => true)
+    expect(catalog.pluck('available').count(false)).to eq(2)
+  end
+
+  it 'guarda las áreas de «Atención a clientes» que manda el asistente' do
+    post "#{api}/ready_agents", headers: admin.create_new_auth_token, as: :json,
+                                params: { ready_agent: { kind: 'customers', name: 'Clientes', enabled: false, inbox_ids: [inbox.id],
+                                                         settings: { human: 'now', areas: { admin: { on: false },
+                                                                                            sales: { quote: 'handoff',
+                                                                                                     examples_yes: ['¿Precio?'] } } } } }
+    answers = account.tracking_templates.find(response.parsed_body.dig('agent', 'id')).motor2['answers']
+    expect(answers).to include('human' => 'now')
+    expect(answers['areas']['admin']).to include('on' => false)
+    expect(answers['areas']['sales']).to include('quote' => 'handoff', 'examples_yes' => ['¿Precio?'])
   end
 
   it 'lo crea como agente 2.0 de la lista, con lo que se contestó' do

@@ -17,6 +17,11 @@ class ReadyAgentsAPI extends ApiClient {
       state,
     });
   }
+
+  // «Atención a clientes» › Probar la matriz: { rows: [{ example, area, kind, got, ok }] }.
+  matrix(readyAgent, { id = null } = {}) {
+    return axios.post(`${this.url}/matrix`, { ready_agent: readyAgent, id });
+  }
 }
 
 export default new ReadyAgentsAPI();
