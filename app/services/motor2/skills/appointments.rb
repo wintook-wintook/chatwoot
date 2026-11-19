@@ -11,6 +11,9 @@
 # pero no crea nada.
 #
 #   skills.appointments = { 'on' => true, 'kind' => 'visita', 'location' => 'Av. Juárez 10', 'when' => 'quiere conocer el plantel' }
+# Una función (§11.14) puede dar con quién y cuánto dura: 'user_ids' (personas con Google
+# conectado; si no, las agendas de la ficha) y 'minutes'. Al agendar, la función hace lo suyo
+# (Motor2::Outcomes#booked: en «Atención a prospectos», etiqueta, nota y a quién se asigna).
 class Motor2::Skills::Appointments < Motor2::Skills::Base
   DAYS = %w[domingo lunes martes miércoles jueves viernes sábado].freeze
   MONTHS = %w[enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre].freeze
@@ -60,13 +63,16 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
   private
 
   def integration_ids
-    @integration_ids ||= UserCalendarIntegration.where(account_id: config.account.id,
-                                                       id: Array(config.template.calendar_integration_ids)).pluck(:id)
+    @integration_ids ||= begin
+      scope = UserCalendarIntegration.where(account_id: config.account.id)
+      users = Array(setting(:user_ids)).map(&:to_i).select(&:positive?)
+      (users.any? ? scope.where(user_id: users) : scope.where(id: Array(config.template.calendar_integration_ids))).pluck(:id)
+    end
   end
 
   def kind = setting(:kind).presence_in(KINDS) || 'llamada'
 
-  def minutes = config.template.calendar_event_duration.to_i.clamp(15, 240)
+  def minutes = (setting(:minutes).presence || config.template.calendar_event_duration).to_i.clamp(15, 240)
 
   def zone = config.zone
 
@@ -116,6 +122,7 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
     created = create_meeting(slot, notes)
     trace.event(:cita, local(created.starts_at))
     @turn.after_send { booked_files }
+    @turn.after_send { Motor2::Outcomes.new(@turn.tracking, @turn.conversation, config).booked(created) }
     { ok: true, cita: local(created.starts_at), con: created.organizer&.name }
   end
 

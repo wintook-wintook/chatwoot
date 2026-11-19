@@ -16,7 +16,7 @@
 # en el 1.0 en su Entrenamiento de siempre, que no se toca desde aquí). Todo queda en la bitácora.
 class AgentTester::Trainer < Cases::Ai::BaseService
   include AgentTester::TrainerFacts
-  KINDS = %w[prompt content search category model engine].freeze
+  KINDS = %w[prompt content search category where model engine].freeze
   MAX_PROMPT = 14_000
 
   SYSTEM = <<~TEXT
@@ -37,6 +37,8 @@ class AgentTester::Trainer < Cases::Ai::BaseService
       una objeción usada como información, y el agente dio sus datos. Su categoría está mal: "item" (título EXACTO de
       FRAGMENTOS), "should_kind" ("ficha" si es de un solo sujeto, "objecion" si es cómo contestar un pretexto,
       "general" si vale para todos) y "why" en una línea.
+    - "where" (2.0): el dato estaba en una fuente que no consultó porque MAPA_DE_FUENTES no deja ver que está ahí.
+      "source": nombre EXACTO de esa fuente (de MAPA_DE_FUENTES); "text": cómo debe decir su «¿Qué hay aquí?», en una línea.
     - DATOS_INVENTADOS son montos, porcentajes o códigos de la respuesta que no aparecen en nada de lo que el agente
       vio: si hay, la causa es "content" (el dato no existe en ninguna fuente) o "search" (existe y no le llegó),
       nunca "prompt" ni "model".
@@ -52,8 +54,6 @@ class AgentTester::Trainer < Cases::Ai::BaseService
     Puede haber dos causas. Si no puedes saberlo, "causes": [] y una pregunta corta en "question".
     Responde en JSON: {"causes": [{"kind": "...", ...}], "question": ""}. Todo en español, cada causa con "kind".
   TEXT
-  PROMPT_V2 = 'En agentes 2.0 usa además "field" ("instructions" | "never" | "welcome" | "business"), "find" ' \
-              '(frase exacta a reemplazar o "" para agregar) y "replace" (= "text"); para business "label" y "value".'
 
   def initialize(template, user:)
     super(account: template.account)
@@ -91,7 +91,7 @@ class AgentTester::Trainer < Cases::Ai::BaseService
     @where = input.slice(:conversation_id, :message_id)
   end
 
-  def model = Assistant::Settings.model_for(@account, :analysis)
+  def model = AiModels::REVIEW
 
   def diagnose
     chat(system: format(SYSTEM, prompt_extra: @v2 ? PROMPT_V2 : ''), user: context.to_json, json: true, max_tokens: 1200,
@@ -113,6 +113,7 @@ class AgentTester::Trainer < Cases::Ai::BaseService
     case cause['kind']
     when 'search' then cause.merge('arrived' => arrived_titles, 'stage' => stage_for(cause['item']))
     when 'prompt' then cause.merge('already' => already_written?(cause['text'].presence || cause['replace']))
+    when 'where' then cause.merge(where_facts(cause['source']))
     else cause
     end
   end
@@ -161,7 +162,7 @@ class AgentTester::Trainer < Cases::Ai::BaseService
       platica: @messages, respuesta_mala: @reply, lo_que_esperaba_el_usuario: @feedback, que_estuvo_mal: @note,
       nota_de_quien_revisa: @review_note,
       traza: @trace.except('seleccion'), seleccion: @trace['seleccion'], sujeto_en_curso: @variables.presence,
-      datos_inventados: invented.presence, fragmentos: fragments, en_la_base_pero_no_llego: missed }.compact
+      datos_inventados: invented.presence, fragmentos: fragments, en_la_base_pero_no_llego: missed, mapa_de_fuentes: source_map.presence }.compact
   end
 
   # Cuánto de cada fragmento ve el entrenador: lo que tiene que ver con la pregunta y la queja.
@@ -189,7 +190,7 @@ class AgentTester::Trainer < Cases::Ai::BaseService
 
     config = Motor2::Config.new(@template)
     { instrucciones: config.instructions, nunca: config.never, bienvenida: config.welcome, datos_del_agente: config.business,
-      datos_de_la_empresa: AgentBase::BusinessData.lines(@account) }
+      datos_de_la_empresa: AgentBase::BusinessData.lines(@account), reglas_elegidas: chosen_rules(config) }.compact
   end
 
   def tools

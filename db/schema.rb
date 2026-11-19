@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_18_210000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_19_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2774,9 +2774,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_18_210000) do
     t.string "engine", default: "1", null: false
     t.jsonb "motor2", default: {}, null: false
     t.boolean "testing", default: false, null: false
+    t.string "agent_function"
+    t.boolean "attending", default: false, null: false
+    t.bigint "attend_inbox_ids", default: [], null: false, array: true
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["archived_at"], name: "index_tracking_templates_on_archived_at"
+    t.index ["attend_inbox_ids"], name: "index_tracking_templates_on_attend_inbox_ids", using: :gin
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"
     t.index ["kbase_hook_id"], name: "index_tracking_templates_on_kbase_hook_id"
     t.index ["published_prompt_id"], name: "index_tracking_templates_on_published_prompt_id"

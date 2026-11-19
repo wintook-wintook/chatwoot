@@ -41,7 +41,7 @@ class Motor2::Convert < Cases::Ai::BaseService
 
   private
 
-  def model = Assistant::Settings.model_for(@account)
+  def model = AiModels::REVIEW
 
   def ficha
     keys = ContactTrackings::Ficha::Changes.new(@template, cards: cards).items.map { |i| i.to_h['key'].to_s }

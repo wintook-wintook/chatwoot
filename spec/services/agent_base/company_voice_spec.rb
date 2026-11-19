@@ -28,9 +28,10 @@ RSpec.describe AgentBase::CompanyVoice do
     conversation = create(:conversation, account: account, inbox: inbox, contact: contact)
     follow_up = AiFollowUp.create!(account: account, conversation: conversation, contact: contact, objective: 'Saber cómo va',
                                    created_by: user)
-    agent = ReadyAgent.create!(account: account, kind: 'prospects', name: 'Sofi', inbox_ids: [inbox.id], settings: {})
+    agent = Motor2::Functions::Form.new(account, { kind: 'prospects', name: 'Sofi', inbox_ids: [inbox.id], settings: {} }, user: user).save
+    runner = Motor2::Runner.new(Motor2::Config.new(agent), state: Motor2::State.new, conversation: conversation)
 
-    prompts = [AiFollowUps::Prompt.new(follow_up).system, ReadyAgents::Prompt.new(agent, conversation).system]
+    prompts = [AiFollowUps::Prompt.new(follow_up).system, Motor2::Prompt.new(runner, Motor2::Skills.for(runner)).system]
     expect(prompts).to all(include('Distribuidores: son socios', 'Viene recomendado por Juan'))
   end
 end

@@ -2,7 +2,7 @@
 key: ajustes_catalogos
 title: Ajustes y catálogos
 areas: [settings]
-keywords: [ajustes, configuracion, configuracion de cuenta, nombre de la cuenta, idioma, idioma del sitio, id de la cuenta, logo, marca, color de la empresa, nombre del asistente, modelo de openai, resolver automaticamente, facturacion, plan, licencias, catalogo, catalogos, etiquetas, crear etiqueta, atributos personalizados, campo extra, respuestas predefinidas, plantillas de whatsapp, productos y servicios, motivos de cierre, ganada, perdida, pospuesta, cancelada, resultados de tareas, tiempo dedicado, motivos de cancelacion, embudos de contactos, tipos de caso, clasificaciones, politicas sla, tipos de contrato, datos propios, puntaje de tareas, pesos, restaurar de fabrica, casos y etapas, folio]
+keywords: [ajustes, configuracion, configuracion de cuenta, nombre de la cuenta, idioma, idioma del sitio, id de la cuenta, logo, marca, color de la empresa, nombre del asistente, modelo de openai, modelos de ia, que modelo usa, resolver automaticamente, facturacion, plan, licencias, catalogo, catalogos, etiquetas, crear etiqueta, atributos personalizados, campo extra, respuestas predefinidas, plantillas de whatsapp, productos y servicios, motivos de cierre, ganada, perdida, pospuesta, cancelada, resultados de tareas, tiempo dedicado, motivos de cancelacion, embudos de contactos, tipos de caso, clasificaciones, politicas sla, tipos de contrato, datos propios, puntaje de tareas, pesos, restaurar de fabrica, casos y etapas, folio]
 pages: [settings, catalog, account_settings, users, roles, teams, inboxes, integrations, billing, case_types, close_reasons, task_outcomes, labels, custom_attributes, canned_responses, whatsapp_templates, contact_funnels, contract_types, sla_policies, classifications, case_rules, task_scoring]
 sources: [app/javascript/dashboard/components/layout/config/sidebarItems/v2/index.js, app/javascript/dashboard/routes/dashboard/settings/account/*.vue, app/javascript/dashboard/routes/dashboard/settings/billing/**/*.vue, app/javascript/dashboard/routes/dashboard/settings/labels/*.vue, app/javascript/dashboard/routes/dashboard/settings/attributes/*.vue, app/javascript/dashboard/views/gestorTickets/OutcomeReasonsConfig.vue, app/javascript/dashboard/views/gestorTickets/commercial/OutcomeReasons.vue, app/javascript/dashboard/views/gestorTickets/TaskOutcomesConfig.vue, app/javascript/dashboard/views/gestorTickets/TaskPriorityConfig.vue, app/javascript/dashboard/views/contracts/ContractTypes.vue, app/javascript/dashboard/i18n/locale/es/generalSettings.json, app/javascript/dashboard/i18n/locale/es/labelsMgmt.json, app/javascript/dashboard/i18n/locale/es/attributesMgmt.json]
 reviewed: 2026-11-14
@@ -44,12 +44,12 @@ Más abajo, «ID de la cuenta» muestra el número de tu cuenta, que se usa para
 3. En «Color de la empresa» elige: «Predeterminado», «Cálido», «Bosque», «Índigo», «Sepia», «Alto contraste», «Violeta», «Turquesa», «Rosa» o «Grafito».
 Se guarda al momento. El logo sale arriba del menú y el color es el de todo el equipo; cada quien puede elegir otro en su perfil (guía mi_perfil).
 
-### Cambiar el nombre del asistente o su modelo de IA
+### Cambiar el nombre del asistente y ver qué modelos de IA se usan
 1. Entra a Ajustes › Configuración de Cuenta.
 2. Baja al apartado «Asistente».
 3. Escribe el «Nombre del asistente» (hasta 30 letras) o déjalo vacío para que se llame Dali.
-4. Si quieres, elige el «Modelo de OpenAI» y el «Modelo para análisis de ventas» («El mismo que el general» o uno de la lista). Uno más potente contesta mejor pero cuesta más por consulta.
-5. Pulsa «Guardar» de ese apartado.
+4. Pulsa «Guardar» de ese apartado.
+5. Abajo está la tabla «Modelos de IA de la plataforma»: qué modelo de OpenAI usa cada parte (Dali, Dali para cifras, agentes que atienden clientes, revisar y entrenar, escoger respuestas predefinidas, hojas de Google, agentes 1.0 y otras funciones). Es solo informativa: los modelos son los mismos para todas las cuentas y Kontrolya los cambia con una actualización cuando conviene; ya no se eligen por cuenta.
 
 ### Dar de alta motivos de cierre
 1. Entra a Catálogos › Motivos de cierre. Hay cuatro grupos: «Ganada», «Perdida», «Pospuesta» y «Cancelada».

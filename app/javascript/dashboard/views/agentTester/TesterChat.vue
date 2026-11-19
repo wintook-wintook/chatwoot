@@ -13,6 +13,7 @@ const ICONS = {
   content: '📚',
   search: '🔎',
   category: '🏷️',
+  where: '🧭',
   model: '🧠',
   engine: '🔧',
   question: '❓',
@@ -257,6 +258,15 @@ export default {
     async fixKind(message) {
       await this.fixWith(message, () =>
         AgentTesterAPI.fixKind(message.info.canned_id, message.info.should_kind)
+      );
+    },
+    // 👎 «es de dónde busca»: el «¿Qué hay aquí?» de la fuente donde sí estaba.
+    async fixPurpose(message) {
+      await this.fixWith(message, () =>
+        AgentTesterAPI.fixPurpose(
+          message.info.source_id,
+          message.info.suggestion
+        )
       );
     },
     // Si no cabe en los topes (3,500 / 2,000), se dice y se ofrece abrirla para partirla.
@@ -543,6 +553,34 @@ export default {
                     @click="openCanned(m.info.canned_id)"
                   >
                     {{ t('OPEN_CANNED') }}
+                  </woot-button>
+                </span>
+                <span v-if="m.info.fixed" class="block mt-1 text-green-700">{{
+                  t('FIXED')
+                }}</span>
+              </span>
+              <span
+                v-else-if="m.info.kind === 'where'"
+                class="block mt-1 text-xs"
+              >
+                <span
+                  class="block p-2 mt-1 whitespace-pre-line rounded bg-white dark:bg-slate-900"
+                  >{{ m.info.suggestion }}</span
+                >
+                <span class="flex flex-wrap gap-2 mt-1">
+                  <woot-button
+                    v-if="canEdit && m.info.can_fix && !m.info.fixed"
+                    size="tiny"
+                    @click="fixPurpose(m)"
+                  >
+                    {{ t('CHANGE_PURPOSE', { source: m.info.source }) }}
+                  </woot-button>
+                  <woot-button
+                    size="tiny"
+                    variant="smooth"
+                    @click="copy(m.info.suggestion)"
+                  >
+                    {{ t('COPY') }}
                   </woot-button>
                 </span>
                 <span v-if="m.info.fixed" class="block mt-1 text-green-700">{{

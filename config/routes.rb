@@ -246,6 +246,7 @@ Rails.application.routes.draw do
           post 'agent_tester/fix_source', to: 'agent_tester#fix_source'
           post 'agent_tester/fix_kind', to: 'agent_tester#fix_kind' # proyecto@predefinidas_que_contestan
           post 'agent_tester/fix_start', to: 'agent_tester#fix_start'
+          post 'agent_tester/fix_purpose', to: 'agent_tester#fix_purpose' # «¿Qué hay aquí?» de una fuente
           get 'agent_tester/logs', to: 'agent_tester#logs'
           post 'agent_tester/logs/:id/retest', to: 'agent_tester#retest'
           post 'agent_tester/sessions/:conversation_id/good', to: 'agent_tester#good' # revisión aparte de la prueba
@@ -464,7 +465,8 @@ Rails.application.routes.draw do
           patch  'knowledge_base/sources/:id',      to: 'knowledge_base#update'
           delete 'knowledge_base/sources/:id',      to: 'knowledge_base#destroy'
           post   'knowledge_base/sources/:id/sync', to: 'knowledge_base#sync'
-          post   'knowledge_base/search',           to: 'knowledge_base#search'
+          patch  'knowledge_base/sources/:id/purpose', to: 'knowledge_base#purpose' # «¿Qué hay aquí?» (Motor2::SourceMap)
+          post   'knowledge_base/search', to: 'knowledge_base#search'
           post   'knowledge_base/discourse_categories', to: 'knowledge_base#discourse_categories'
           get    'knowledge_base/search_settings',  to: 'knowledge_base#search_settings'
           patch  'knowledge_base/search_settings',  to: 'knowledge_base#update_search_settings'
@@ -632,6 +634,7 @@ Rails.application.routes.draw do
           # Agentes listos: puestos empaquetados que la empresa activa en sus bandejas
           resources :ready_agents, only: [:index, :create, :update, :destroy] do
             post :test, on: :collection # chat de prueba (no guarda ni manda nada)
+            post :matrix, on: :collection # «Atención a clientes»: probar los ejemplos sí/no de las áreas
           end
           resources :ready_agent_sessions, only: [:index] do
             member do

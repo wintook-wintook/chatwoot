@@ -61,7 +61,6 @@ class Api::V1::Accounts::AssistantController < Api::V1::Accounts::BaseController
     return render json: { error: 'Solo un administrador cambia el nombre' }, status: :forbidden unless access_grant.admin?
 
     name = params.key?(:name) ? Assistant::Settings.update_name!(Current.account, params[:name]) : Assistant::Settings.name_for(Current.account)
-    update_models if params.key?(:model) || params.key?(:analysis_model)
     render json: { name: name, models: Assistant::Settings.models(Current.account) }
   rescue ArgumentError => e
     render json: { error: e.message }, status: :unprocessable_entity
@@ -129,10 +128,6 @@ class Api::V1::Accounts::AssistantController < Api::V1::Accounts::BaseController
 
   def context_params
     params.fetch(:context, {}).permit(*CONTEXT_KEYS).to_h
-  end
-
-  def update_models
-    Assistant::Settings.update_models!(Current.account, model: params[:model], analysis_model: params[:analysis_model])
   end
 
   def thread_json

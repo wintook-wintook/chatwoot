@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
-# Agentes listos — buscar en el Catálogo de la empresa, como search_catalog de Dali: por
-# palabras (sirve para catálogos chicos; el buscador para bases grandes viene después).
-class ReadyAgents::CatalogSearch
+# Motor 2.0 — buscar en el Catálogo de la empresa, como search_catalog de Dali: por
+# palabras (sirve para catálogos chicos; el buscador para bases grandes viene después). Viene del
+# agente listo de antes (ReadyAgents::CatalogSearch).
+class Motor2::CatalogSearch
   LIMIT = 5
   SCAN = 2000
 

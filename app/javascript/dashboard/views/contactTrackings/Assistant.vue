@@ -1750,9 +1750,11 @@ export default {
             </woot-button>
           </div>
 
+          <!-- overflow-y-auto en angosto: las dos columnas se apilan y la de abajo se alcanza con
+               scroll en vez de quedar cortada (Plan-Pantallas-Responsive #8). -->
           <div
             v-show="view === 'training'"
-            class="grid flex-1 min-h-0 gap-4 md:grid-cols-2"
+            class="grid flex-1 min-h-0 gap-4 overflow-y-auto md:grid-cols-2 md:overflow-visible"
           >
             <!-- La columna izquierda: la Estructura del Agente o la conversación,
                  una a la vez, con el selector arriba. -->
@@ -2184,7 +2186,7 @@ export default {
                corriendo y el camino elegido sigue iluminado al ir y volver. -->
           <div
             v-show="view === 'tests'"
-            class="grid flex-1 min-h-0 gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
+            class="grid flex-1 min-h-0 gap-4 overflow-y-auto md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:overflow-visible"
           >
             <section
               class="flex flex-col min-h-0 p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"

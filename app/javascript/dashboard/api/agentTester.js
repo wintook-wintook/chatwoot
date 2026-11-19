@@ -103,6 +103,11 @@ class AgentTesterAPI extends ApiClient {
     return axios.post(`${this.url}/fix_start`, { canned_id: cannedId, text });
   }
 
+  // 👎 «es de dónde busca»: el «¿Qué hay aquí?» de la fuente donde sí estaba el dato.
+  fixPurpose(sourceId, text) {
+    return axios.post(`${this.url}/fix_purpose`, { source_id: sourceId, text });
+  }
+
   logs() {
     return axios.get(`${this.url}/logs`);
   }

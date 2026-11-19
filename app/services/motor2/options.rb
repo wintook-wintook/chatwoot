@@ -14,7 +14,8 @@ class Motor2::Options
 
   def call
     cards = catalog.call
-    { sources: cards.select { |c| SOURCE_KINDS.include?(c[:kind]) }, calendars: cards.select { |c| c[:kind] == 'calendar' },
+    sources = cards.select { |c| SOURCE_KINDS.include?(c[:kind]) } + [products_card].compact
+    { sources: sources, calendars: cards.select { |c| c[:kind] == 'calendar' },
       **people, case_types: case_types, business: AgentBase::BusinessData.lines(@account),
       inboxes: @account.inboxes.order(:name).map { |i| { id: i.id, name: i.name, channel_type: i.channel_type } } }
   end
@@ -45,4 +46,11 @@ class Motor2::Options
   end
 
   def catalog = ContactTrackings::Ficha::Catalog.new(@account, inbox: @inbox, template: @template)
+
+  # El Catálogo de productos como una fuente más de «Qué sabe» (Motor2::Search lo busca con su precio).
+  def products_card
+    entry = Motor2::SourceMap.new(@account).entries([Motor2::SourceMap::CATALOG]).find { |e| e[:kind] == 'catalog' }
+    entry && { key: entry[:key], kind: 'catalog', name: entry[:name], summary: entry[:about], status: 'ready', warning: nil,
+               fix: nil, examples: [], parts: nil }
+  end
 end

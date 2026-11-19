@@ -108,6 +108,11 @@ export default {
       const start = (this.currentPage - 1) * this.perPage;
       return this.sortedCampaigns.slice(start, start + this.perPage);
     },
+    // Ancho total: la tabla se mueve de lado en vez de esconder las columnas de la derecha
+    // (Plan-Pantallas-Responsive #2).
+    tableWidth() {
+      return this.columns.reduce((sum, c) => sum + (c.width || 120), 0);
+    },
     columns() {
       const col = (field, key, extra = {}) => ({
         field,
@@ -119,6 +124,8 @@ export default {
       });
       return [
         col('name', 'NAME', {
+          width: 240,
+          fixed: 'left', // al moverse de lado no se pierde de qué campaña es
           renderBodyCell: ({ row }) => (
             <div class="flex flex-col leading-5">
               <span class="font-medium text-woot-600 dark:text-woot-400">
@@ -139,9 +146,11 @@ export default {
           ),
         }),
         col('template_name', 'AGENT', {
+          width: 180,
           renderBodyCell: ({ row }) => row.template_name || '—',
         }),
         col('inbox_name', 'CHANNEL', {
+          width: 160,
           renderBodyCell: ({ row }) => row.inbox_name || '—',
         }),
         // Fecha arriba y hora abajo (como Ventana), para que no se pegue a Tipo
@@ -753,6 +762,7 @@ export default {
             fixed-header
             max-height="100%"
             row-key-field-name="id"
+            :scroll-width="tableWidth"
             :columns="columns"
             :table-data="pagedCampaigns"
             :border-around="false"

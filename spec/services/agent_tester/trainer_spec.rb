@@ -121,8 +121,9 @@ RSpec.describe AgentTester::Trainer do
   end
 
   it 'si el entrenador solo pregunta, no se guarda prueba' do
-    expect(correct(v1, 'causes' => [], 'question' => '¿Seguro?')).not_to have_key(:saved_in)
-    expect(AgentTestBatch.count).to eq(0)
+    result = nil
+    expect { result = correct(v1, 'causes' => [], 'question' => '¿Seguro?') }.not_to change(AgentTestBatch, :count)
+    expect(result).not_to have_key(:saved_in)
   end
 
   it 'al corregir Kontrolya un error del motor, se vuelve a correr el lote de correcciones del agente' do

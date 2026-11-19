@@ -34,6 +34,7 @@ class Motor2::AgentForm
   # Lo de la pantalla puesto en el agente, sin guardar (el chat de prueba usa esto).
   def build
     @template.assign_attributes(columns.merge(engine: Motor2::ENGINE))
+    @template.agent_function ||= Motor2::Functions::CUSTOM # a medida 2.0 (§11.14); los de función guardan con su asistente
     assign_lists
     @template.motor2 = Motor2::Sanitizer.call(@params['motor2']) if @params.key?('motor2')
     @template

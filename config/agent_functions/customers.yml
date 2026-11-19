@@ -1,0 +1,10 @@
+# Función «Atención a clientes» (Plan-Motor-Agentes.md §11.15). El puesto va en customers.md; las
+# áreas (Soporte, Comercial, Administrativo, Otra) y cómo se usan sus respuestas, en
+# Motor2::Functions::Customers; el clasificador por intención, en Motor2::Triage.
+key: customers
+order: 2
+available: true
+title: Atención a clientes
+summary: 'Atiende a tus clientes: entiende si es soporte, algo comercial o administrativo, contesta con tus fuentes, levanta su caso o lo pasa al equipo correcto.'
+objective: Atender a los clientes, entender qué necesitan (soporte, comercial o administrativo) y resolverlo o pasarlo al equipo correcto.
+entry: inbox

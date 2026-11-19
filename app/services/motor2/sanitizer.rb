@@ -14,10 +14,16 @@ module Motor2::Sanitizer
   def call(raw)
     raw = plain(raw)
     out = TEXTS.to_h { |key, max| [key, raw[key].to_s.strip.first(max)] }
-    out.merge('tone' => raw['tone'].to_s.presence_in(Motor2::Config::TONES) || 'tu',
-              'business' => list(raw['business'], 30) { |r| row(r) },
-              'sources' => Array(raw['sources']).map(&:to_s).compact_blank.uniq.first(30),
-              'skills' => skills(plain(raw['skills'])))
+    keep_answers(raw, out.merge('tone' => raw['tone'].to_s.presence_in(Motor2::Config::TONES) || 'tu',
+                                'business' => list(raw['business'], 30) { |r| row(r) },
+                                'sources' => Array(raw['sources']).map(&:to_s).compact_blank.uniq.first(30),
+                                'skills' => skills(plain(raw['skills']))))
+  end
+
+  # Las respuestas del asistente de una función (§11.14) ya vienen limpias por su función
+  # (Motor2::Functions::Form): se conservan al restaurar una versión o cuando corrige el entrenador.
+  def keep_answers(raw, out)
+    raw.key?('answers') ? out.merge('answers' => plain(raw['answers'])) : out
   end
 
   def skills(raw)

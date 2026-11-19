@@ -16,6 +16,7 @@ class AgentTester::Verdict
     when 'content' then content
     when 'search' then search
     when 'category' then category
+    when 'where' then where
     when 'model' then model
     else engine(trainer)
     end
@@ -31,10 +32,29 @@ class AgentTester::Verdict
 
     if @v2
       base.merge(cause: @cause.slice('field', 'find', 'replace', 'label', 'value', 'summary').merge('replace' => text),
-                 text: "Es del prompt: falta indicarle esto en «#{where}». Pulsa «Aplicar» y pruébalo de nuevo.")
+                 text: "Es del prompt: falta indicarle esto en «#{where}». Pulsa «Aplicar» y pruébalo de nuevo.#{wizard_hint}")
     else
       base.merge(text: "Es del prompt: agrega esto en «#{where}» de su Entrenamiento y pruébalo de nuevo.")
     end
+  end
+
+  # Buscó en la fuente equivocada: se propone cómo debe decir el «¿Qué hay aquí?» de la fuente donde
+  # sí estaba (Bases de conocimiento). Con «Cambiarlo» se guarda ahí mismo.
+  def where
+    text = @cause['text'].to_s.squish.first(300)
+    { kind: 'where', source: @cause['source'], source_id: @cause['source_id'], before: @cause['about'], suggestion: text,
+      can_fix: @cause['source_id'].present? && text.present?,
+      text: "Es de dónde busca: «#{@cause['source']}» sí tenía el dato, pero lo que dice de ella («¿Qué hay aquí?») no lo deja " \
+            'ver, y el agente buscó en otra. Propuesta para su «¿Qué hay aquí?»:' }
+  end
+
+  # Agente de una función (Atención a prospectos…): se edita con su asistente, no con la ficha 2.0.
+  # Lo que aplica el entrenador cae en el paso «Indicaciones» (motor2['instructions']).
+  def wizard_hint
+    title = @template.try(:function_title)
+    return '' unless title
+
+    " Queda en el paso «Indicaciones» del asistente de «#{title}» (Agentes listos), donde puedes revisarlo."
   end
 
   # La indicación que propondría ya está escrita: agregarla otra vez no cambia nada (pasó con «solo

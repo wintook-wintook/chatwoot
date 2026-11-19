@@ -724,3 +724,283 @@ repo.
 - **Lo que hace cualquier usuario:** probar, dar 👎 y guardar pruebas. Solo ve sus propias pláticas.
 - **Solo quien cambia agentes:** «Aplicar», «Corregirla» (respuestas predefinidas), lotes y bitácora.
 - **Menú «Nuevo agente»:** dice «Motor 2.0 (beta)» y va al final.
+
+### 11.14 Un solo motor, agentes por función con su asistente (acordado 2026-11-19)
+
+**Idea del usuario:** un solo motor (el 2.0). Encima viven tres clases de agente: **listos**, **a medida** y **seguimiento**. Cada **función** (atención a prospectos, atención a clientes, cobranza, vendedor de campaña, seguimiento) tiene **su propio asistente** (wizard): el usuario solo contesta preguntas, le pone nombre y guarda.
+- Puede tener **varios del mismo tipo**, por ejemplo «Prospectos Facebook» y «Prospectos página».
+- Todos quedan en **la lista de agentes**. Al abrir uno se abre el asistente de su función, porque el agente sabe de qué función es.
+- Por estar en la lista, se usan **en toda la plataforma**: campañas, asignación masiva, automatizaciones, «Delegar a agente» del caso, Dali y comandos.
+- **Ahora** solo se hacen los asistentes por función. **El asistente genérico de a medida queda para después.**
+- Todo lo que se construye para una función (habilidades, revisiones, entrenador) se queda en el motor. Así, cuando se haga el genérico, ya «sabe» todo.
+
+#### 11.14.1 Cómo está hoy (análisis)
+
+Hay **tres motores y tres tablas** que hacen casi lo mismo:
+
+| | Agentes a medida 2.0 | Agentes listos | Seguimiento IA |
+|---|---|---|---|
+| Tabla del agente | `tracking_templates` (engine '2', `motor2`) | `ready_agents` (`kind`, `settings`) | No hay agente: cada seguimiento es una fila (`ai_follow_ups`). Las «recetas» viven en `ai_follow_up_presets` |
+| Plática en curso | `contact_trackings` (+ `motor2_state`) | `ready_agent_sessions` (`answers`) | `ai_follow_ups` (estado, intentos, log) |
+| Cómo entra a una plática | Automatización, campaña, asignación masiva, Delegar, Dali (crean `contact_tracking`) | **Por bandeja**: atiende al que escribe si nadie le ha contestado (`ReadyAgents::Router`); uno por bandeja | Delegar desde el caso o Dali, con objetivo propio de esa vez |
+| Motor | `Motor2::Runner` + habilidades | `ReadyAgents::Runner` | `AiFollowUps::Runner` |
+| Revisa montos, ligas y fugas, con traza | ✅ | ❌ | ❌ |
+| Probador y entrenador | ✅ | Solo su chat de prueba | ❌ |
+| ¿Sale en la lista y en toda la plataforma? | ✅ | ❌ (solo su pantalla) | ❌ |
+
+Quién contesta, en `Message#analyze_for_active_trackings`, en este orden: Seguimiento IA → 2.0 → agente listo de la bandeja → 1.0.
+
+Lo que **ya existe** y sirve de base:
+- `tracking_templates` ya es «la lista»: campañas, `ActionService#assign_tracking_template`, asignación masiva, `Assistant::DelegationRunner` y comandos ya la usan.
+- `contact_trackings` ya guarda **objetivo, intentos e intervalo propios por asignación** (`objective`, `ai_context`, `max_attempts`, `retry_interval_*`). Es justo lo que pide «Delegar seguimiento» con objetivo de esa vez.
+- El 2.0 ya tiene intentos (`Motor2::Attempt` + `AttemptHook`), citas, casos, archivos, ofertas escalonadas, datos del cliente y pasar a persona.
+- Los puestos ya son archivos globales (`config/ready_agents/<kind>.md`, con `title`, `summary` y el texto del puesto). Si mejoramos uno, mejora para todas las empresas.
+- `ReadyAgentModal.vue` ya tiene las preguntas de Prospectos (calificar, objetivo, citas, tono, cliente existente) y el chat de prueba.
+
+Lo que **falta en el 2.0** para que las funciones vivan ahí:
+- **Entrar por bandeja** (lo que hace `ReadyAgents::Router`). Sin esto, un agente de prospectos solo atiende si una automatización lo asigna.
+- Habilidades de los otros motores:
+  - **Calificar** (`prospecto_calificado` / `descartar`, con sus resultados: oportunidad, pasar, recolectar);
+  - **Catálogo** (`buscar_en_catalogo`);
+  - **Seguimiento** (`programar_siguiente_contacto`, `marcar_cumplido`, `cerrar_sin_exito`, y el turno de plantilla con la ventana de WhatsApp cerrada);
+  - avisos a quien delegó (`AiFollowUps::Notifier`).
+- **Capa «puesto»** en `Motor2::Prompt`: hoy el prompt es habilidades + instrucciones de la empresa; falta el texto del puesto de la función.
+
+#### 11.14.2 Cómo queda
+
+```
+                    MOTOR 2.0 (Motor2::Runner + habilidades + revisiones + traza)
+                                          │
+      ┌───────────────────────────────────┼───────────────────────────────────┐
+  Función: Prospectos      Clientes   Cobranza   Vendedor campaña   Seguimiento     A medida (después)
+  (puesto + habilidades fijas + preguntas del asistente + valores por omisión + pruebas)
+      │
+  Asistente de la función ──► guarda un tracking_template (engine '2', function 'prospects', nombre)
+      │
+  Lista de agentes (todos) ──► campañas · asignación masiva · automatizaciones · Delegar · Dali · bandeja
+      │
+  Plática en curso = contact_tracking (motor2_state) — una sola forma para todos
+```
+
+- **Una tabla de agentes:** `tracking_templates` gana `function`, con valores `prospects`, `customers`, `collections`, `campaign_seller`, `follow_up` y `custom`. `custom` es el a medida 2.0 de hoy.
+- **Una tabla de pláticas:** `contact_trackings`. Los seguimientos y las sesiones de agentes listos pasan a ser `contact_trackings` de un agente 2.0.
+- **Una función = un archivo de catálogo** (`config/agent_functions/<function>.yml` + el `.md` del puesto). Trae:
+  - **puesto:** el texto del puesto, que va en el prompt;
+  - **habilidades** que trae prendidas y las que el asistente deja escoger;
+  - **preguntas del asistente**, con su campo en `motor2` y su valor por omisión;
+  - **cómo entra:** por bandeja, asignado o delegado;
+  - **pruebas base:** pláticas que todo agente de esa función debe pasar (para el probador).
+- **El asistente lee el catálogo** y escribe en la misma ficha `motor2` que el a medida. Por eso, cuando exista el genérico, un agente de función se puede abrir ahí («Personalizar») sin copiarlo.
+- **Mejoras:** quien edita en el asistente sigue recibiendo las mejoras del puesto y de las habilidades. Solo dejaría de recibirlas al editar el texto del puesto en el genérico, y se avisa antes (§11.9).
+- **Entrar por bandeja:** la ficha guarda «Atiende a quien escribe a la bandeja X».
+  - Para el 2.0 se copia la regla de `ReadyAgents::Router`: atiende si nadie del equipo ha contestado, crea el `contact_tracking` y, si una persona escribe, se hace a un lado.
+  - **Un agente principal por bandeja** (como hoy). El reparto entre varios queda para después (§11.9).
+- **Seguimiento como función:**
+  - «Delegar seguimiento» (caso o Dali) sigue pidiendo el objetivo de esa vez. Por dentro crea un `contact_tracking` del agente de seguimiento, con su objetivo, intentos e intervalo.
+  - Las **recetas** (`ai_follow_up_presets`) pasan a ser **agentes de la función Seguimiento** en la lista.
+  - Cada cuenta tiene uno base, «Seguimiento», para delegar sin receta.
+  - Quien delegó recibe los mismos avisos de hoy.
+- **El orden de quién contesta** se simplifica: el `contact_tracking` vivo de la plática (2.0) → si no hay, el agente principal de la bandeja → 1.0.
+
+#### 11.14.3 Pasos (un commit por paso, rama nueva desde develop)
+
+| Paso | Qué | Resultado para el usuario |
+|---|---|---|
+| **F0 Base** | `tracking_templates.function` (los 2.0 de hoy → `custom`); catálogo de funciones (`Motor2::Functions`) leído de `config/agent_functions`; capa «puesto» en `Motor2::Prompt`; la lista muestra la función y abre su asistente; «Nuevo agente» muestra las funciones (las que faltan, «Próximamente») | Nada cambia todavía; la lista ya distingue funciones |
+| **F1 Entrar por bandeja** | «Atiende a quien escribe a la bandeja» en el 2.0 (router propio, un principal por bandeja, se hace a un lado si escribe una persona); ese lugar va en `analyze_for_active_trackings` | Un agente 2.0 puede atender una bandeja sin automatización |
+| **F2 Habilidades que faltan** | Calificar, Catálogo, Seguimiento (siguiente contacto, cumplido, cerrar sin éxito, plantilla con ventana cerrada) y avisos a quien delegó, cada una con sus 5 piezas (§11.6) y pruebas copiadas de los motores viejos | El motor ya sabe todo lo que saben los tres |
+| **F3 Prospectos** | Asistente paso a paso (preguntas de `ReadyAgentModal`, una por pantalla, con el chat de prueba al final, nombre y guardar), sobre `tracking_templates`; migración `ready_agents` → `tracking_templates` (`function: prospects`); sesiones activas → `contact_trackings`; «Cómo habla tu empresa» sigue igual | Prospectos en la lista, varios por cuenta, usables en campañas y automatizaciones |
+| **F4 Seguimiento** | Función `follow_up`: recetas → agentes; «Delegar seguimiento» y Dali crean `contact_tracking`; avisos; los `ai_follow_ups` vivos terminan con el motor viejo y los nuevos van al 2.0 | Un solo motor para seguimientos, con traza y probador |
+| **F5 Probador por función** | El probador trae todos los agentes de la lista; el entrenador corrige en la pregunta del asistente donde vive el error («Esto se cambia en el paso Calificar»); cada función trae sus pruebas base | Los 👎 llevan a la pantalla que el usuario conoce |
+| **F6 Funciones nuevas** | Atención a clientes (casos, estado, quejas), Cobranza (promesa de pago), Vendedor de campaña. Cada una = puesto + habilidades (las que falten se agregan al motor) + asistente + pruebas base. Una por commit | Más agentes listos, cada uno en dos clics |
+| **F7 Limpieza** | Se borran `ReadyAgents::Runner`, `AiFollowUps::Runner` y sus rutas de respuesta, y las tablas viejas cuando no quede nada vivo; guías de Dali; el «Agentes listos» del menú lleva a la lista filtrada | Un motor, una lista |
+| **Después** | Asistente genérico de a medida (todas las habilidades, «Personalizar»); varios agentes por bandeja con reparto; apagar el 1.0 | — |
+
+#### 11.14.4 Cuidados y decisiones que tomé (para revisar)
+
+- **No se toca el 1.0** (excepción de §11.3: los desvíos para que conteste el 2.0).
+- **Migraciones sin perder nada:** cada agente listo y cada receta pasan con su nombre, bandejas, preguntas y estado. Las pláticas vivas pasan sin cortar, o terminan con el motor viejo (Seguimiento IA).
+- **Antes de borrar un motor viejo**, sus pruebas actuales se pasan al 2.0 y tienen que pasar.
+- **Varios del mismo tipo:** se pueden tener varios Prospectos. Para atender la misma bandeja, solo uno es el principal; los demás entran por campaña, automatización o asignación.
+- **Interruptor por cuenta** mientras se prueba en real (por ejemplo, Prospectos sigue con el motor viejo). Se quita en F7.
+- **Pendiente de decidir con el usuario:**
+  - el orden de las funciones nuevas en F6;
+  - si «Agentes listos» sigue como entrada del menú (catálogo de funciones) o solo queda «Nuevo agente» en la lista.
+
+#### 11.14.5 Decisiones del 2026-11-19 y plan de Atención a prospectos (la primera función)
+
+**Decisiones del usuario:**
+- **Primero Atención a prospectos.** Se alinea al motor 2.0 y queda como modelo para las demás funciones. Después sigue Atención a clientes, y así una por una.
+- **Catálogo de funciones en archivos** (`config/agent_functions/<función>.yml` + `.md` del puesto), no en una tabla.
+- **Agentes creados en `tracking_templates`** (columna `function`). Los campos especiales de cada función van en `motor2.answers`, que son **las respuestas del asistente tal cual**. El motor arma el prompt al vuelo con el puesto y esas respuestas, así que mejorar el uso de una respuesta mejora a todos los agentes de esa función.
+- **«Agentes listos» se queda en el menú como catálogo:** una tarjeta por función, con los agentes que tiene la empresa y «+ Crear uno». Los agentes también salen en la lista de agentes con su etiqueta y se abren con su mismo asistente.
+
+**Lo que hace hoy el agente de Atención a prospectos (y tiene que seguir haciendo):**
+- **Entrar:** atiende por bandeja (varias bandejas por agente) al que escribe si nadie del equipo le ha contestado, con un agente prendido por bandeja. Si una persona escribe, se hace a un lado.
+- **Preguntas para calificar:** 7 armadas que se prenden y editan (necesidad, cuándo, presupuesto, quién decide, ubicación, cantidad, de dónde viene), más preguntas propias.
+- **Cuándo califica y cuándo se descarta**, con **temperatura** (caliente, tibio, frío) y su etiqueta.
+- **Objetivo al calificar:** pasar a persona o equipo, crear la oportunidad, juntar datos, o agendar cita.
+- **Datos obligatorios antes de pasarlo:** nombre, correo, empresa, ciudad.
+- **Objeciones frecuentes** con su respuesta.
+- **Tu negocio:** qué vende, a quién, cobertura, por qué elegirnos, datos prácticos y, si se quiere, el Catálogo de productos.
+- **Ya es cliente:** se lo pasa a su responsable fijo o a quien se eligió, y no entra al embudo.
+- **Citas** en Google con varias personas a elegir, con duración, tipo y lugar.
+- **Resultados que mueven el embudo de contactos:** etiqueta «interesado», nota con las respuestas, oportunidad, conversación resuelta al descartar.
+- **«Cómo habla tu empresa»** y la nota del contacto para IA.
+- En la conversación, el panel del contacto muestra el estado del agente (`ReadyAgentStatus.vue`).
+
+**Pasos** (rama nueva desde develop, un commit por paso):
+
+| Paso | Qué | Detalle |
+|---|---|---|
+| **P0 Base** | Función en el agente y catálogo | `tracking_templates.function` (los 2.0 de hoy → `custom`) y `tracking_templates.attend_inbox_ids` (bigint[]: las bandejas que atiende sin automatización). `config/agent_functions/prospects.yml` (título, resumen, habilidades, preguntas del asistente, valores por omisión, cómo entra) y `prospects.md` (el puesto que hoy está en `config/ready_agents`). `Motor2::Functions` lee el catálogo. `Motor2::Prompt` gana la capa «puesto» y los bloques que salen de `answers` (preguntas, objeciones, datos obligatorios, negocio, cita), copiados de `ReadyAgents::Prompt` |
+| **P1 Entrar por bandeja** | Que un agente 2.0 atienda una bandeja | `Motor2::InboxRouter`, copia de la regla de `ReadyAgents::Router`. Al primer mensaje crea el `contact_tracking` del agente, activo y **sin intentos** (el de prospectos no persigue al cliente; si un día se quiere, se prende). Un agente principal por bandeja (validación). Se hace a un lado si una persona escribe. Su lugar en `analyze_for_active_trackings`: después del 2.0 con seguimiento vivo y antes del agente listo viejo |
+| **P2 Habilidades** | Lo que el 2.0 no sabe y prospectos sí | **Calificar** (`prospecto_calificado` / `descartar`, con temperatura y los resultados de `ReadyAgents::Outcomes`, copiados). **Catálogo** (`buscar_en_catalogo`). **Ya es cliente** (`ClientCheck` + `ClientHandoff`, copiados). **Datos obligatorios** con la habilidad Datos (nombre, correo, empresa, ciudad → contacto). **Citas:** la del 2.0 gana «personas a elegir» además de las agendas de la ficha. Cada una con sus pruebas, copiadas de `spec/services/ready_agents` |
+| **P3 Asistente** | La pantalla paso a paso | Pasos: 1 nombre y bandejas · 2 tu negocio · 3 qué le preguntas · 4 cuándo califica y cuándo no · 5 qué hacer al calificar y a quién · 6 objeciones · 7 tono e indicaciones · 8 pruébalo (chat con el motor 2.0 real y su traza) · 9 guardar. Al editar se abre el mismo asistente y se puede saltar a cualquier paso. La tarjeta de «Agentes listos» lista los agentes `prospects`; la lista de agentes los muestra con la etiqueta «Prospectos» y abre su asistente |
+| **P4 Migración** | Pasar los que ya existen | Cada `ready_agent` → `tracking_template` (`function: prospects`, `engine: '2'`, mismo nombre, `attend_inbox_ids`, `answers` = sus `settings`, prendido o apagado igual). Cada sesión activa → `contact_tracking` con sus respuestas en `motor2_state`. Las tablas viejas no se borran todavía: quedan de respaldo hasta P6 |
+| **P5 Probador, panel y Dali** | Que todo lo demás lo vea | Los agentes de prospectos salen en el probador («En prueba»); el entrenador dice en qué paso del asistente se corrige. El panel de la conversación muestra su estado desde el `contact_tracking`. Guía de Dali `agentes_listos.md` |
+| **P6 Limpieza** | Quitar el motor viejo de prospectos | Se borran `ReadyAgents::Runner`, `Router`, `ReplyJob`, el modal viejo y sus rutas. Las tablas `ready_agents` y `ready_agent_sessions` se borran en una migración aparte cuando ya esté probado en real |
+
+**Al terminar:** el agente de Atención a prospectos ya funciona con el motor 2.0. Se puede tener varios, salen en la lista y se pueden usar en campañas, automatizaciones, asignación masiva, «Delegar a agente» y Dali. Todo lo que se hizo (puesto, calificar, catálogo, ya es cliente, entrar por bandeja) queda en el motor para las funciones siguientes.
+
+**Cuidados:**
+- El 1.0 no se toca.
+- Seguimiento IA no se toca en esta etapa: va en su propio turno, como función.
+- Mientras exista el motor viejo, nunca contestan dos. Una bandeja tiene agente principal 2.0 o agente listo viejo, no los dos: la migración apaga el viejo al prender el nuevo.
+
+**Nombres (decisión del usuario, 2026-11-19):** la **función** se llama siempre con su nombre completo: «Atención a prospectos», «Atención a clientes», «Cobranza», «Vendedor de campaña», «Seguimiento». Ese nombre sale en la tarjeta, en la etiqueta de la lista y en el asistente; no se abrevia a «Prospectos». El **nombre del agente** lo pone cada empresa («Ana – Facebook»). La clave `prospects` solo vive en el código.
+
+#### 11.14.6 Estado (2026-11-19): P0–P6 hechos en `feat/atencion_prospectos_motor2`
+
+**Hecho:** «Atención a prospectos» funciona con el motor 2.0. El agente vive en la lista de agentes, se crea y edita con su asistente paso a paso y puede haber varios.
+
+**Decisiones que tomé** (para revisar):
+1. **Columnas:** se llaman `agent_function` (no `function`, para no chocar con la palabra de SQL ni con métodos de Ruby), `attending` (prendido/apagado) y `attend_inbox_ids`. Los 2.0 que ya existían quedan como `custom`.
+2. **Catálogo:** `config/agent_functions/*.yml` + `prospects.md`. Las funciones que aún no existen salen como «Próximamente» porque no tienen clase (`Motor2::Functions::CLASSES`).
+3. **Respuestas del asistente** en `motor2['answers']`. Las indicaciones van en `motor2['instructions']`, el mismo campo que corrige el entrenador. Por eso, en un agente de función, todo lo que corrige el entrenador cae en «Indicaciones», que es el único texto libre que enseña el asistente (`Motor2::Trainer::AgentFix`).
+4. **Nombre que ve el cliente** separado del nombre del agente: el asistente pregunta los dos. Los agentes listos de antes pasan con su nombre en los dos.
+5. **Entrar por bandeja** (`Motor2::InboxRouter`): el seguimiento se crea **activo, con 1 intento y fecha a 10 años**. `ContactTrackingJob` no corre intentos en activo y nadie lo toma por pendiente. Si mientras espera una automatización le da un agente 1.0 a la conversación, contesta ese 1.0 (`Motor2::ReplyJob#hand_to_v1`).
+6. **Quién gana:** si la conversación ya tuvo un agente (campaña o automatización), contesta ese y no el de la bandeja (§11.9).
+7. **Resultados** (`Motor2::Functions::ProspectOutcomes`, copia de `ReadyAgents::Outcomes`):
+   - calificado → `objective_met` (outcome `qualified…`);
+   - descartado → `cancelled` (outcome `discarded`) y la conversación se resuelve;
+   - pasado a persona → `paused` (outcome `handed_off`, se puede reanudar);
+   - era cliente → `objective_met` (outcome `client`);
+   - con cita → sigue activo (outcome `Cita …`).
+8. **Habilidades nuevas del motor** (sirven a todos los agentes 2.0): **Calificar** (`qualify`) y **Catálogo** (`catalog`). Con Calificar prendida no sale `objetivo_cumplido` y `pasar_a_humano` acepta temperatura. **Citas** acepta `user_ids` y `minutes` de la función. Al agendar, la función hace lo suyo (`Motor2::Outcomes#booked`).
+9. **Ya es cliente** (`Motor2::ClientCheck`): se revisa al empezar, sin llamar al modelo.
+10. **Borrar** un agente de función con historia lo **archiva**. Las versiones y pruebas no dejan borrarlo por llave foránea, cosa que ya pasaba con los 2.0. La lista de agentes ya no enseña los archivados.
+11. **Migración** (`20261119120000_agent_functions`, una sola): pasa cada agente listo y sus pláticas vivas, apaga el de antes y guarda `settings.moved_to`. No pasa dos veces. Si el nombre ya existe, le agrega «(Atención a prospectos)». Las tablas `ready_agents` y `ready_agent_sessions` se quedan de respaldo; el panel de la conversación todavía enseña las sesiones viejas.
+12. **Limpieza (P6):**
+    - se borraron `ReadyAgents::Runner`, `Router`, `Prompt`, `Outcomes`, `Qualification`, `Appointments`, `ClientCheck`, `ClientHandoff`, `CatalogSearch`, `Catalog`, `ToolDefinitions`, `ReplyJob` y `config/ready_agents`;
+    - se quedan los modelos `ReadyAgent` / `ReadyAgentSession` (respaldo);
+    - los datos del negocio de la cuenta, si nunca se guardaron, salen ahora del agente de función.
+
+**Falta probar en real:** una bandeja de WhatsApp con el agente prendido, cita con Google, oportunidad, y la migración con los agentes listos de dev.wintook.com.
+
+**Siguiente función:** Atención a clientes, con la misma receta (yml + md + clase de la función + asistente).
+
+#### 11.14.7 Qué sabe cada agente y dónde busca (2026-11-19)
+
+**Pedido del usuario:**
+- en el asistente se eligen las fuentes;
+- el agente debe saber qué hay en cada una para buscar en la que corresponde;
+- la búsqueda nueva de predefinidas, que ya usa el 2.0, se queda.
+
+**Hecho:**
+- **Bases de conocimiento sigue siendo el único lugar para conectar fuentes.** Cada tarjeta gana «¿Qué hay aquí y para qué sirve?» (`knowledge_sources.config['purpose']`, `PATCH knowledge_base/sources/:id/purpose`). Vacío, enseña lo que se calcula de lo que tiene.
+- **`Motor2::SourceMap`**: qué hay en cada fuente, sin IA. Usa el `purpose` o lo calculado:
+  - predefinidas: sus categorías General / Fichas / Objeciones con algunos nombres;
+  - hoja: sus columnas, cuántas filas y si es de datos exactos;
+  - documento y artículos: algunos títulos;
+  - foro: se consulta en vivo.
+- **El agente recibe «DÓNDE BUSCAR»** en las instrucciones de «Qué sabe» (solo con dos fuentes o más): busca primero con `fuente` en la que corresponde y, si no sale, en todas.
+- **Hojas en modo «Datos»**: `Motor2::Search` las busca exacto con `SheetQueryService`, como el 1.0, en vez de por parecido. Cierra el hueco de la hoja de Google del 17/11.
+- **Asistente de Atención a prospectos**: paso nuevo «Qué sabe», después de «Tu negocio». Las predefinidas van siempre y las demás se marcan; se guardan en `motor2['sources']`.
+- **Entrenador**: causa nueva «🧭 Dónde busca» (`where`). El dato estaba en otra fuente y su «¿Qué hay aquí?» no lo dejaba ver. Propone el texto y «Cambiar «¿Qué hay aquí?»» lo guarda de un clic (`agent_tester/fix_purpose`). El entrenador recibe `mapa_de_fuentes`.
+
+### 11.15 Atención a clientes — análisis y plan (2026-11-19; C0–C5 hechos el mismo día, ver §11.15.6)
+
+**Base:** el «PLAN FUNCIONAL — RAMAS COMERCIAL Y ADMINISTRATIVO» del Agente Coordinador Kontrolya V1.0 (lo pasó el usuario; define Comercial y Administrativo; Soporte solo se menciona, con severidades #soporte1/2/3). Lo traduzco al motor 2.0: **sin rutas ni @directivas**, con **áreas** que se eligen en el asistente y reglas que **manda el código** (lo que aprendimos con Atención a prospectos: lo que solo se le pide al modelo, a veces no lo hace).
+
+#### 11.15.1 Cómo lo resuelven otros (investigación 19/11)
+
+| Plataforma | Idea que tomamos |
+|---|---|
+| Intercom Fin | **Procedures:** instrucciones en lenguaje natural con controles deterministas (condiciones, conectores de datos). **Cuándo se activa:** descripción corta + ejemplos de «sí aplica» y «no aplica» (hasta 20). **Escalación** en dos capas: reglas por datos (sentimiento, tipo, VIP) y guía en texto; recomiendan guía concreta («más reglas = más escalaciones»); nunca ofrecer escalar dos veces seguidas. Se prueban con simulaciones antes de publicar. |
+| Zendesk AI agents | Respuestas generativas para preguntas frecuentes (desde el centro de ayuda); **procedimientos** paso a paso con entradas y salidas; al pasar a una persona, el contexto viaja y se rutea al equipo correcto. |
+| Salesforce Agentforce | El agente = **temas** (ahora «subagentes») con **instrucciones + acciones**, y un **router** que elige el tema. Guardrails en las instrucciones (p. ej. «si la base tiene información contradictoria, no contestes: ofrece levantar un caso»). |
+| HubSpot Customer Agent | Fuentes sincronizadas (artículos, páginas, archivos); pasa a una persona cuando **la confianza es baja** o se cumple una regla; reparto por equipo/canal. |
+| Decagon (AOPs) | Por cada mensaje: **extraer la intención con toda la plática**, elegir el procedimiento; si ninguno aplica, contestar con la base de conocimiento. Las acciones sensibles solo por procedimiento. |
+
+Coinciden en: (1) un **clasificador** que mira la plática completa (no la palabra), (2) cada tema con **qué hace y qué no**, (3) **contestar solo con lo que está en las fuentes**, (4) **acciones reales** (crear caso, agendar) y nunca simuladas, (5) **ejemplos de sí/no** para afinar la clasificación y **probar antes de publicar**.
+
+#### 11.15.2 Cómo queda en el motor 2.0
+
+- **Función** `customers` («Atención a clientes») en `config/agent_functions` + `Motor2::Functions::Customers`, con su asistente (mismo patrón que prospectos).
+- **Áreas** (las de tu plan): **Soporte**, **Comercial**, **Administrativo**; se prenden las que la empresa atiende (y se puede agregar «Otra» con su nombre). Cada área trae: cómo se reconoce (ejemplos sí/no, ya llenos con la matriz del plan), qué hace, a quién se pasa y qué fuentes usa.
+- **Clasificador (router) del código** — `Motor2::Triage`, revisión corta con IA (como `AnswerCheck`) en cada mensaje del cliente, con la plática y lo pendiente:
+  `{ areas: ['comercial', 'administrativo'], intencion: 'cotización de 10 usuarios', suficiente: true|false, aclaracion: '¿Qué deseas cotizar?', sub: 'informacion'|'gestion', severidad: 1..3 }`.
+  - **Continuidad (§18):** si quedó una aclaración pendiente, el siguiente mensaje se evalúa primero contra ella («10 usuarios» completa «cotización»), guardado en `motor2_state['pendiente']`.
+  - **Multi-intención (§19):** se guardan todas en `motor2_state['pendientes']` y se atienden una por una; ninguna se pierde (el código le recuerda las que faltan).
+  - **Por intención, no por palabra (§2):** ejemplos de la matriz («No puedo enviar una cotización a pedido» → Soporte) van en el prompt del clasificador.
+- **Lo que manda el código en cada turno** (no solo se le pide al modelo):
+  - **Solo herramientas del área en curso** (Administrativo no tiene buscar; Comercial no levanta casos de soporte): así no invade otra área.
+  - **Insuficiente → una sola aclaración y no busca** (§5): ese turno no tiene herramienta de búsqueda y el mensaje se revisa para que sea una sola pregunta.
+  - **Evidencia (§6–8, fail closed):** en Comercial, antes de mandar, una revisión con IA compara la respuesta con lo que trajo la búsqueda: EXACTA → se manda; PARCIAL/NO_CONFIRMADA/CONTRADICTORIA/SIN_EVIDENCIA → se reescribe diciendo lo que sí está confirmado y que lo demás no se puede confirmar. Incluye el **candado**: no cambiar la intención (visita ≠ demo).
+  - **No simular acciones (§13, inv. 12):** si el mensaje dice «ya agendé / ya levanté tu caso / ya te pasé» sin que la herramienta lo haya hecho, se reescribe (como la revisión de «prometió pasarlo»).
+  - **Información ≠ acción (inv. 8):** «Quiero una demo» con evidencia de que hay demos → se reconoce la gestión y se hace la acción elegida (agendar / pasar al vendedor); nunca «ya quedó» sin herramienta.
+
+#### 11.15.3 El asistente (wizard) que propongo
+
+| Paso | Qué pregunta | Notas |
+|---|---|---|
+| 1 El agente | Nombre, nombre que ve el cliente, tono, bandejas, prendido | Igual que prospectos |
+| 2 Tu negocio | Qué vendes / a quién / cobertura | Reusa |
+| 3 Qué atiende | Tarjetas: **Soporte**, **Comercial**, **Administrativo** (+ «Otra área»). En cada una: «Cómo se reconoce» con ejemplos **sí** y **no** (vienen llenos con la matriz del plan; se editan) | La matriz del §15 ya queda como ejemplos y como pruebas |
+| 4 Soporte | Fuentes (foro, predefinidas, CONTPAQi); si no se resuelve: **levantar caso** (tipo) con su **severidad** (bloqueo total / parcial / duda) o **pasar al equipo**; preguntas mínimas (qué pasa, desde cuándo, a cuántos afecta) | Severidad la decide el código con el clasificador |
+| 5 Comercial | Fuentes (predefinidas, catálogo, hojas); qué hace con cada gestión: **cotización** (crear oportunidad / pasar al vendedor), **demo** y **visita** (agendar con quién / pasar), **hablar con vendedor** (a quién) | Candado visita ≠ demo fijo |
+| 6 Administrativo | A quién se pasa (persona o equipo); ¿levantar un caso administrativo? | No consulta fuentes (fijo en esta versión) |
+| 7 Cómo platica | Bienvenida; si no es cliente (atenderlo igual / pasarlo al agente de «Atención a prospectos» / a una persona); si pide una persona (de inmediato / primero entender qué necesita); varias cosas a la vez (atiende una por una — fijo) | Mismo estilo de opciones que prospectos |
+| 8 Indicaciones | Texto libre (opcional) | |
+| 9 Pruébalo | Chat de prueba **+ «Probar la matriz»**: corre todos los ejemplos sí/no y muestra área detectada vs esperada (✅/❌) | Lo que recomiendan Intercom y Zendesk: probar antes de publicar |
+
+#### 11.15.4 Pasos (cada uno con pruebas con el modelo real, como con prospectos)
+
+| Paso | Qué |
+|---|---|
+| C0 | Función `customers` (catálogo, clase, asistente pasos 1–2–7–8–9), estado de su caso (`estado_caso`) y «¿es cliente?» con su opción |
+| C1 | **Clasificador** (`Motor2::Triage`): áreas, suficiencia, continuidad, multi-intención; paso 3 del asistente; **«Probar la matriz»** |
+| C2 | **Administrativo:** entender y canalizar, sin fuentes, sin pedir datos de más (el más simple; sirve para probar el clasificador de punta a punta) |
+| C3 | **Comercial:** información con **evidencia (fail closed)** y candado de intención; gestiones (oportunidad, cita de demo/visita, vendedor) |
+| C4 | **Soporte:** fuentes técnicas, severidad, levantar caso / pasar, estado de caso |
+| C5 | No simular acciones, pide persona, no es cliente, probador por área, guía de Dali |
+
+#### 11.15.5 Decisiones que tomé (para revisar)
+
+1. **Áreas fijas (Soporte, Comercial, Administrativo) + «Otra»**, no texto libre: es lo de tu plan y lo que hacen Salesforce (temas) e Intercom (procedimientos); «Otra» cubre negocios distintos.
+2. **El clasificador es una llamada aparte con IA** (gpt-4.1-mini, AiModels::REVIEW), no el modelo que contesta: así decide con la plática completa y su decisión la usa el código (herramientas del turno, continuidad), como el router de Agentforce y la extracción de intención de Decagon.
+3. **Severidad de soporte** (tu plan solo la nombra): #soporte1 = no puede operar (bloqueo total); #soporte2 = funciona con falla o a medias; #soporte3 = duda de uso o configuración. Se puede cambiar en el asistente.
+4. **Evidencia fail closed solo en Comercial** (tu plan); en Soporte se contesta con fuentes y, si no hay, se levanta caso o se pasa.
+5. **«Probar la matriz»** usa los mismos ejemplos sí/no del paso 3; los que fallen se pueden mandar al probador (lotes).
+6. **Quien no es cliente:** por omisión se pasa al agente de «Atención a prospectos» de la bandeja (si hay) o a una persona.
+
+#### 11.15.6 Cómo quedó (2026-11-19, rama feat/atencion_clientes_motor2)
+
+| Paso | Hecho | Dónde |
+|---|---|---|
+| C0 | Función `customers` disponible; puesto, negocio, precios, tono; «¿no es cliente?» | `config/agent_functions/customers.{yml,md}`, `Motor2::Functions::Customers`, `CustomerOutcomes` |
+| C1 | Clasificador con continuidad, multi-intención, severidad, pide persona; «Probar la matriz» (22/22 con los ejemplos de fábrica) | `Motor2::Triage`, `Motor2::TriageMatrix`, `POST /ready_agents/matrix` |
+| C2 | Administrativo: sin fuentes, una pregunta y canaliza (o caso administrativo) | `Motor2::Skills::Areas` + `AreaActions` |
+| C3 | Comercial: evidencia fail closed (`Motor2::EvidenceCheck`), candado visita ≠ demo, oportunidad / vendedor / cita | `AreaSales`, `Motor2::AreaChecks#ensure_evidence` |
+| C4 | Soporte: fuentes, severidad → prioridad (1 urgente sin preguntar, 2 alta, 3 media), caso sin duplicar, `estado_caso` | `AreaActions#create_case` |
+| C5 | No simular acciones (también la cita en prospectos), pide persona (pregunta una vez y canaliza al área), par prospectos + clientes por bandeja, asistente, guía de Dali | `Motor2::AreaChecks`, `Motor2::InboxRouter`, `TrackingTemplate::ATTENDING_PAIR`, `CustomersAgentModal.vue` |
+
+**Decisiones al hacerlo (cambian lo de §11.15.5):**
+- **No es cliente:** por omisión **lo atiende igual** (`not_client: serve`); muchos clientes reales no están marcados como tales (sin organización en etapa Cliente ni casos), y rechazarlos sería peor. Si la bandeja tiene el par, los que no son clientes ya van con el de prospectos.
+- **Una pregunta y se actúa:** en Administrativo, Soporte y una gestión comercial, después de una aclaración el código obliga a actuar (levantar, registrar o canalizar); nada de pedir datos uno por uno.
+- **Multi-intención:** se atiende la primera; si se canaliza, lo pendiente de la cola va en la nota para la persona (no se pierde) en vez de seguir el agente con otra área ya pausado.
+- **Severidad fija** (no se cambia en el asistente): se explica en el paso de Soporte.
+- Finish (`objetivo_cumplido` / `descartar`) no aplica en clientes; `pasar_a_humano` solo sin área (con área se usa `canalizar`, que asigna a la persona o equipo de esa área).
+- **Pruebas con el modelo real:** cotización incompleta → aclaración → oportunidad; RFC → una pregunta → canaliza a Administrativo; «no puedo operar» → caso urgente al instante; «¿qué planes tienen?» sin fuente → no inventa y ofrece vendedor; «quiero hablar con una persona» → pregunta qué necesita → canaliza al área.
+

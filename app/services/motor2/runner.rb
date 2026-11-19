@@ -13,8 +13,13 @@
 #   - respuesta vacía de OpenAI → se pide otra vez (e4fae498);
 #   - copia instrucciones internas de una predefinida → se reescribe una vez;
 #   - da un precio o porcentaje que no vio en ningún lado → se reescribe una vez;
-#   - ligas que no vio → se quitan (KnowledgeBase::LinkGuard).
+#   - ligas que no vio → se quitan (KnowledgeBase::LinkGuard);
+#   - con preguntas en secuencia (Calificar), si no termina con la pendiente → se pide una vez y,
+#     si aun así no, se agrega tal cual.
 class Motor2::Runner < Cases::Ai::BaseService
+  include Motor2::QuestionGuard
+  include Motor2::ReplyChecks
+  include Motor2::AreaChecks
   MAX_ROUNDS = 6
   MAX_TOKENS = 700
   NO_MESSAGE = '[SIN_MENSAJE]'
@@ -23,9 +28,10 @@ class Motor2::Runner < Cases::Ai::BaseService
   Result = Struct.new(:reply, :decision, :trace, :error, :attachments, :after, keyword_init: true)
   MAX_FILES = 5
 
-  attr_reader :config, :state, :trace, :conversation, :tracking, :canned_used, :seen
+  attr_reader :config, :state, :trace, :conversation, :tracking, :canned_used, :seen, :noted_contact, :evidence
 
-  # opts: conversation:, tracking:, history: (chat de prueba), mode: :reply | :attempt, attempt: [n, total]
+  # opts: conversation:, tracking:, history: (chat de prueba), mode: :reply | :attempt, attempt: [n, total],
+  #       welcome: (bienvenida combinada: va tal cual al inicio del mensaje; el modelo no vuelve a saludar)
   def initialize(config, state:, **opts)
     super(account: config.account)
     @config = config
@@ -35,9 +41,12 @@ class Motor2::Runner < Cases::Ai::BaseService
     @test_history = opts[:history]
     @mode = opts[:mode] || :reply
     @attempt = opts[:attempt]
+    @welcome = opts[:welcome].to_s.strip.presence
     @trace = Motor2::Trace.new
     @canned_used = []
     @seen = []
+    @evidence = [] # lo que regresaron las fuentes en este turno (Motor2::AreaChecks#ensure_evidence)
+    @noted_contact = {} # lo que el cliente dio con actualizar_contacto en este turno (Calificar lo revisa)
     @decision = nil
     @attachments = []
     @after = []
@@ -75,7 +84,7 @@ class Motor2::Runner < Cases::Ai::BaseService
     content = first_answer(messages)
     return Result.new(error: ['El modelo no respondió.', @error].compact.join(' — '), trace: @trace.to_h) if content.nil?
 
-    Result.new(reply: review(messages, clean(content)), decision: @decision, trace: @trace.to_h,
+    Result.new(reply: with_welcome(review(messages, clean(content))), decision: @decision, trace: @trace.to_h,
                attachments: @attachments, after: @after)
   end
 
@@ -83,10 +92,19 @@ class Motor2::Runner < Cases::Ai::BaseService
 
   def initial_messages
     prompt = Motor2::Prompt.new(self, @skills)
-    history = test? ? @test_history.map { |m| m.to_h.symbolize_keys.slice(:role, :content) } : Motor2::Prompt.history(@conversation)
+    history = turn_history
     system = prompt.system
     @seen << system << history.pluck(:content).join("\n")
-    [{ role: 'system', content: system }, *history, { role: 'system', content: prompt.turn_message(@mode, attempt: @attempt) }]
+    turn = [prompt.turn_message(@mode, attempt: @attempt), welcome_note, *@skills.map(&:turn_note)].compact_blank.join("\n")
+    [{ role: 'system', content: system }, *history, { role: 'system', content: turn }]
+  end
+
+  # La plática del turno; las habilidades deducen lo suyo (p. ej. qué pregunta acaba de contestar).
+  def turn_history
+    history = test? ? @test_history.map { |m| m.to_h.symbolize_keys.slice(:role, :content) } : Motor2::Prompt.history(@conversation)
+    @skills.each { |skill| skill.prepare(history) }
+    @last_customer = history.reverse.find { |m| m[:role].to_s == 'user' }&.dig(:content).to_s
+    history
   end
 
   # --- el modelo ----------------------------------------------------------------------
@@ -117,7 +135,7 @@ class Motor2::Runner < Cases::Ai::BaseService
   end
 
   def complete(messages)
-    body = { model: Assistant::Settings.model_for(@account), messages: messages, temperature: 0.4,
+    body = { model: AiModels::AGENTS, messages: messages, temperature: 0.4,
              max_tokens: MAX_TOKENS, tools: tool_definitions, tool_choice: 'auto' }
     response = http.request(request(body))
     return JSON.parse(response.body).dig('choices', 0, 'message') if response.is_a?(Net::HTTPSuccess)
@@ -157,7 +175,7 @@ class Motor2::Runner < Cases::Ai::BaseService
   def tool(name, args)
     skill = @skills.find { |s| s.handles?(name) }
     result = skill ? skill.call(name, args) : { error: "herramienta desconocida: #{name}" }
-    @trace.tool(name, args, result)
+    @trace.tool(name, args, result) unless result.to_h[:sin_cambio] # volver a guardar lo mismo no se enseña
     result
   rescue StandardError => e
     Rails.logger.error("[Motor2] #{name}: #{e.class}: #{e.message}")
@@ -176,6 +194,7 @@ class Motor2::Runner < Cases::Ai::BaseService
 
     text = rewrite(messages, text, :leak) if leaks?(text)
     text = rewrite(messages, text, :unsourced) if text.present? && unsourced?(text)
+    text = guard_turn(messages, text) if text.present?
     guard_links(text)
   end
 
@@ -208,10 +227,13 @@ class Motor2::Runner < Cases::Ai::BaseService
   # Un monto que no aparece en nada de lo que vio (instrucciones, fuentes, plática).
   def unsourced?(text)
     seen = digits(@seen.join("\n"))
-    text.scan(MONEY).any? { |amount| seen.exclude?(amount.gsub(/\D/, '')) }
+    text.scan(MONEY).any? { |amount| seen.exclude?(amount_key(amount)) }
   end
 
-  def digits(text) = text.scan(/\d[\d,.]*/).to_set { |n| n.gsub(/\D/, '') }
+  def digits(text) = text.scan(/\d[\d,.]*/).to_set { |n| amount_key(n) }
+
+  # «$1,200», «1,200.0» y «1200.00» son el mismo monto: sin separadores ni centavos en cero.
+  def amount_key(text) = text.to_s[/\d[\d,.]*/].to_s.sub(/[.,]0{1,2}\z/, '').gsub(/\D/, '')
 
   def guard_links(text)
     kept, removed = KnowledgeBase::LinkGuard.call(text, @seen.join("\n"))

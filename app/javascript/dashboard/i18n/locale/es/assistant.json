@@ -179,11 +179,48 @@
       "HINT": "Así lo verán todos en la plataforma. Vacío = Dali.",
       "SAVE": "Guardar",
       "SAVED": "Ajustes del asistente guardados",
-      "MODEL": "Modelo de OpenAI",
-      "MODEL_DEFAULT": "El de siempre ({model})",
-      "ANALYSIS_MODEL": "Modelo para análisis de ventas",
-      "ANALYSIS_MODEL_DEFAULT": "El mismo que el general",
-      "MODEL_HINT": "El de análisis solo se usa cuando el asistente explica cifras de ventas; uno más potente responde mejor pero cuesta más por consulta."
+      "MODELS": {
+        "TITLE": "Modelos de IA de la plataforma",
+        "HINT": "Solo para que sepas qué usa cada parte. Son los mismos para todas las cuentas y los cambiamos nosotros con una actualización cuando conviene.",
+        "GROUP": "Grupo",
+        "USED_FOR": "Para qué",
+        "MODEL": "Modelo",
+        "PER_INBOX": "El de su bandeja",
+        "GROUPS": {
+          "dali": {
+            "NAME": "Dali",
+            "USE": "El asistente de la plataforma: entender, proponer y hacer lo que le piden"
+          },
+          "dali_analysis": {
+            "NAME": "Dali (cifras)",
+            "USE": "Cuando Dali explica cifras de ventas"
+          },
+          "agents": {
+            "NAME": "Agentes que atienden clientes",
+            "USE": "Agentes 2.0, agentes listos y Seguimiento IA"
+          },
+          "review": {
+            "NAME": "Revisar y entrenar",
+            "USE": "Entrenador, juez y pruebas del Probador de agentes; «Pasar a 2.0»"
+          },
+          "canned_selector": {
+            "NAME": "Escoger respuestas predefinidas",
+            "USE": "La búsqueda nueva: escoge cuáles le llegan al agente"
+          },
+          "sheets": {
+            "NAME": "Hojas de Google (Datos)",
+            "USE": "Traduce la pregunta a la consulta; el número lo calcula el sistema"
+          },
+          "agents_v1": {
+            "NAME": "Agentes a medida 1.0",
+            "USE": "Los agentes del motor de antes"
+          },
+          "other": {
+            "NAME": "Otras funciones de IA",
+            "USE": "Resúmenes, clasificar, sugerencias y demás"
+          }
+        }
+      }
     },
     "VIA": "vía {name}",
     "MENU": "Pedirle a {name}…",
@@ -436,7 +473,7 @@
   },
   "READY_AGENTS": {
     "TITLE": "Agentes listos",
-    "SUBTITLE": "Agentes que ya vienen armados: actívalos, ponles nombre, elige su bandeja y contesta unas preguntas. Empiezan a atender solos, sin automatizaciones.",
+    "SUBTITLE": "Cada función trae su asistente: contesta unas preguntas, ponle nombre y listo. Puedes tener varios del mismo tipo; todos quedan en la lista de agentes y se usan en campañas, automatizaciones y Delegar.",
     "LOADING": "Cargando…",
     "LOAD_ERROR": "No se pudieron cargar los agentes.",
     "SOON": "Próximamente",
@@ -446,21 +483,21 @@
     "LIVE": "atendiendo {n}",
     "TURN_OFF": "Apagar",
     "TURN_ON": "Prender",
-    "ACTIVATE": "Activar",
+    "ACTIVATE": "Crear uno",
     "SAVED": "Agente guardado",
     "SAVE_ERROR": "No se pudo guardar el agente.",
-    "DELETE_CONFIRM": "¿Borrar el agente «{name}»? Deja de atender en sus bandejas.",
-    "NEW_TITLE": "Activar · {title}",
+    "DELETE_CONFIRM": "¿Borrar el agente «{name}»? Deja de atender. Si ya atendió pláticas o lo usa una campaña, se archiva.",
+    "NEW_TITLE": "Nuevo agente · {title}",
     "EDIT_TITLE": "Agente «{name}»",
-    "MODAL_SUBTITLE": "Contesta lo de la izquierda y pruébalo a la derecha: tú eres el cliente.",
+    "MODAL_SUBTITLE": "Contesta paso a paso y pruébalo a la derecha: tú eres el cliente.",
     "CANCEL": "Cancelar",
     "SAVE": "Guardar",
     "FIELDS": {
-      "NAME": "Nombre del agente",
-      "NAME_PLACEHOLDER": "Ej. Sofi",
+      "NAME": "Nombre del agente (para tu equipo)",
+      "NAME_PLACEHOLDER": "Ej. Ana – Facebook",
       "TONE": "Tono",
       "INBOXES": "Bandejas donde atiende",
-      "INBOX_TAKEN": "Esta bandeja ya tiene otro agente listo prendido",
+      "INBOX_TAKEN": "Esta bandeja ya la atiende otro agente prendido",
       "OBJECTIVE": "Cuando el prospecto califica…",
       "QUESTIONS": "Tus preguntas propias (opcional)",
       "QUESTIONS_PLACEHOLDER": "Ej. ¿tienes techo de lámina o de concreto?",
@@ -486,7 +523,9 @@
       "APPOINTMENT_LOCATION": "Lugar o liga (opcional)",
       "APPOINTMENT_LOCATION_PLACEHOLDER": "Ej. Google Meet, sucursal Centro",
       "APPOINTMENT_HINT": "Ofrece los horarios libres de su Google dentro del horario de atención de la bandeja (o lun–vie 9 a 18). La cita queda en la Agenda y en su Google, y la conversación se le asigna.",
-      "REQUIRED_CONTACT": "Datos que debe juntar antes de pasarlo"
+      "REQUIRED_CONTACT": "Datos que debe juntar antes de pasarlo",
+      "DISPLAY_NAME": "Nombre que ve el cliente (opcional)",
+      "DISPLAY_NAME_PLACEHOLDER": "Ej. Ana"
     },
     "TONES": {
       "cercano": "Cercano (de tú)",
@@ -509,7 +548,8 @@
       "PLACEHOLDER": "Escribe como cliente…",
       "SEND": "Enviar",
       "TOOL": "⚙ {tool}",
-      "DECISION": "→ {decision}"
+      "DECISION": "→ {decision}",
+      "NOT_DONE": "(no se hizo)"
     },
     "TOOLS": {
       "buscar_respuesta_predefinida": "Buscó en respuestas predefinidas",
@@ -522,12 +562,21 @@
       "ver_horarios": "Vio horarios libres",
       "agendar_cita": "Agendó la cita",
       "mover_cita": "Movió la cita",
-      "cancelar_cita": "Canceló la cita"
+      "cancelar_cita": "Canceló la cita",
+      "buscar_en_fuentes": "Buscó en lo que sabe",
+      "canalizar": "Lo pasa al equipo",
+      "crear_caso": "Levantó el caso",
+      "registrar_gestion": "Registró la gestión",
+      "estado_caso": "Revisó su caso"
     },
     "DECISIONS": {
       "prospecto_calificado": "Prospecto calificado",
       "descartar": "Descartado: la conversación se resuelve",
-      "pasar_a_humano": "Pasa a una persona"
+      "pasar_a_humano": "Pasa a una persona",
+      "qualified": "Prospecto calificado",
+      "discarded": "Descartado: la conversación se resuelve",
+      "handoff": "Pasa a una persona",
+      "done": "Objetivo cumplido"
     },
     "SESSION": {
       "FAILED": "No se pudo cambiar.",
@@ -539,7 +588,8 @@
         "qualified": "calificado",
         "handed_off": "pasado a una persona",
         "discarded": "descartado",
-        "client": "era cliente: pasado a su responsable"
+        "client": "era cliente: pasado a su responsable",
+        "not_client": "no era cliente: pasado a una persona"
       }
     },
     "APPOINTMENT_KINDS": {
@@ -617,6 +667,207 @@
       "caliente": "🔥 caliente",
       "tibio": "🌤 tibio",
       "frio": "❄️ frío"
+    },
+    "BACK": "Atrás",
+    "NEXT": "Siguiente",
+    "STEPS": {
+      "NUMBERED": "{n}. {step}",
+      "agent": "El agente",
+      "business": "Tu negocio",
+      "knows": "Qué sabe",
+      "questions": "Qué le preguntas",
+      "talk": "Cómo platica",
+      "qualify": "Cuándo califica",
+      "after": "Al calificar",
+      "objections": "Objeciones",
+      "instructions": "Indicaciones",
+      "test": "Pruébalo y guarda"
+    },
+    "STEP_HINTS": {
+      "agent": "Ponle un nombre para tu equipo, el nombre que verá el cliente y las bandejas donde va a atender a quien escriba.",
+      "business": "Lo que el agente debe saber para explicar y para descartar a quien está fuera de zona o de lo que vendes.",
+      "knows": "Dónde busca lo que le preguntan. Las respuestas predefinidas van siempre; marca las demás fuentes que use este agente.",
+      "questions": "Las preguntas que hace para calificarlo, tal cual las escribas y en este orden (cámbialo con ↑ ↓), una por mensaje. Vienen unas de ejemplo: quítalas, cámbialas o agrega las tuyas.",
+      "talk": "Su bienvenida y qué hace cuando el cliente pregunta algo, no encuentra la respuesta, escribe algo que no es de tu negocio o pide una persona. Siempre regresa a la pregunta pendiente, conectando («Si te parece, seguimos: solo me faltan 2 preguntas…»).",
+      "qualify": "Con esto sabe cuándo pasarlo a tu equipo y cuándo no es para ti.",
+      "after": "Qué hace cuando califica, a quién se lo pasa y qué datos junta antes.",
+      "objections": "Lo que suelen decir para frenar la compra y cómo contestarlo. Usa la idea con sus palabras y no inventa descuentos.",
+      "instructions": "Algo más que deba saber o hacer (opcional). Si contradice lo anterior, gana esto.",
+      "test": "Prueba en el chat de la derecha como si fueras un prospecto y, si te gusta, guarda."
+    },
+    "STEP_TEST": {
+      "READY": "«{name}» está listo. Al guardar queda en la lista de agentes con la etiqueta «Atención a prospectos».",
+      "OFF": "Está apagado: no atenderá sus bandejas hasta que lo prendas (sí se puede usar en campañas y automatizaciones)."
+    },
+    "KNOWS": {
+      "CANNED": "Respuestas predefinidas (siempre)",
+      "NO_CANNED": "Todavía no hay respuestas predefinidas: agrégalas en Catálogos › Respuestas predefinidas.",
+      "NO_OTHERS": "No hay otras fuentes conectadas. Puedes agregar hojas, documentos o un foro en Ajustes › Bases de conocimiento.",
+      "WHERE_HINT": "El agente recibe qué hay en cada fuente para buscar en la que corresponde. Si una descripción no es exacta, cámbiala en «¿Qué hay aquí?» de Ajustes › Bases de conocimiento.",
+      "NO_DOUBTS": "Elegiste que no conteste dudas (paso «Cómo platica»): no busca en ninguna fuente.",
+      "PRICES": {
+        "QUESTION": "¿Dónde están tus productos y precios?",
+        "canned": "En mis respuestas predefinidas",
+        "none": "No doy precios: un asesor los da",
+        "SHEET_FAQ": "Esta hoja está en modo «Preguntas frecuentes». Para que los precios salgan exactos, pásala a modo «Datos» en Ajustes › Bases de conocimiento."
+      }
+    },
+    "QUESTIONS_LIST": {
+      "NUMBER": "{n}.",
+      "PLACEHOLDER": "Escribe la pregunta como quieres que la haga",
+      "REMOVE": "Quitar esta pregunta",
+      "ADD": "+ Agregar pregunta",
+      "EMPTY": "Sin preguntas, solo preguntará qué busca.",
+      "UP": "Subir",
+      "DOWN": "Bajar"
+    },
+    "TALK": {
+      "WELCOME": "Mensaje de bienvenida (opcional)",
+      "WELCOME_PLACEHOLDER": "Ej. ¡Hola! Soy Ana de Autos Guadalajara, gracias por escribirnos 🚗",
+      "WELCOME_HINT": "Va tal cual al inicio de su primera respuesta, en el mismo mensaje: después contesta lo que preguntó y sigue con la pregunta 1. Mejor sin pregunta al final (la pregunta la pone tu lista); si termina en pregunta y el cliente solo saludó, ese primer mensaje no lleva la pregunta 1. Sin bienvenida, saluda con sus palabras.",
+      "RECOMMENDED": "(recomendada)",
+      "doubts": {
+        "QUESTION": "Si el cliente pregunta algo en lugar de contestar:",
+        "answer": "Le contesta con lo que sabe y regresa a la pregunta que quedó pendiente",
+        "defer": "No contesta dudas: le dice que un asesor se las resuelve y sigue con sus preguntas (no busca en ninguna fuente)"
+      },
+      "not_found": {
+        "QUESTION": "Si busca y no encuentra la respuesta:",
+        "advisor": "Le dice que no tiene ese dato, que un asesor se lo confirma, y sigue con sus preguntas",
+        "silent": "Le dice que no tiene ese dato y sigue con sus preguntas (sin prometer asesor)"
+      },
+      "off_topic": {
+        "QUESTION": "Si escribe algo que no tiene que ver con tu negocio:",
+        "redirect": "Lo regresa con amabilidad a la plática y sigue con sus preguntas",
+        "answer": "Le contesta en 1 o 2 líneas (sin buscar en tus fuentes) y sigue con sus preguntas"
+      },
+      "ONLY_IF_ANSWERS": "Solo aplica si contesta dudas (primera opción de arriba).",
+      "human": {
+        "QUESTION": "Si pide hablar con una persona:",
+        "finish_first": "Le pide terminar las preguntas que faltan (máximo 2) y lo pasa; si insiste o se molesta, lo pasa ya",
+        "now": "Lo pasa de inmediato: se pausa y se asigna a quien elegiste en «Al calificar»"
+      }
+    },
+    "CUSTOMERS": {
+      "SUBTITLE": "Atiende a tus clientes: entiende si es soporte, algo comercial o administrativo, contesta con tus fuentes y levanta su caso o lo pasa al equipo correcto.",
+      "NAME_PLACEHOLDER": "p. ej. Clientes WhatsApp",
+      "PAIR_HINT": "Una bandeja puede tener este agente y uno de «Atención a prospectos»: quien ya es cliente viene aquí y los demás van con el de prospectos.",
+      "STEPS": {
+        "agent": "El agente",
+        "business": "Tu negocio",
+        "areas": "Qué atiende",
+        "knows": "Qué sabe",
+        "talk": "Cómo platica",
+        "instructions": "Indicaciones",
+        "test": "Pruébalo y guarda"
+      },
+      "STEP_HINTS": {
+        "agent": "Cómo se llama, con qué tono habla y en qué bandejas atiende a tus clientes.",
+        "business": "Lo básico de tu negocio, para que explique con tus palabras.",
+        "areas": "Lo que atiende y a quién se lo pasa. Cada mensaje se clasifica por lo que el cliente quiere lograr, no por una palabra suelta: los ejemplos le enseñan.",
+        "knows": "Dónde busca lo que le preguntan. Solo contesta con lo que encuentre ahí.",
+        "talk": "Cómo saluda, qué hace cuando pide una persona y cuando quien escribe no es cliente.",
+        "instructions": "Algo más que deba saber o hacer (opcional).",
+        "test": "Prueba que cada ejemplo caiga en su área y platica con él como si fueras tu cliente."
+      },
+      "AREAS": {
+        "support": {
+          "TITLE": "Soporte",
+          "ABOUT": "Fallas, errores, algo que no funciona o dudas de uso."
+        },
+        "sales": {
+          "TITLE": "Comercial",
+          "ABOUT": "Planes, precios, cotizaciones, demos, visitas o contratar."
+        },
+        "admin": {
+          "TITLE": "Administrativo",
+          "ABOUT": "Facturas, pagos, saldo, RFC o datos de su cuenta."
+        },
+        "other": {
+          "TITLE": "Otra área",
+          "ABOUT": "Algo más que atiende tu empresa (ponle nombre)."
+        }
+      },
+      "AREAS_NONE": "Prende al menos un área.",
+      "EXAMPLES": {
+        "YES": "Sí es de esta área (ejemplos)",
+        "NO": "No es de esta área (ejemplos)",
+        "PLACEHOLDER": "Lo que escribiría un cliente",
+        "ADD": "+ Agregar ejemplo",
+        "REMOVE": "Quitar"
+      },
+      "OTHER": {
+        "NAME": "Nombre del área",
+        "NAME_PLACEHOLDER": "p. ej. Recursos humanos",
+        "DESCRIPTION": "Qué atiende",
+        "DESCRIPTION_PLACEHOLDER": "p. ej. vacantes, solicitudes de empleo, constancias"
+      },
+      "SUPPORT": {
+        "ACTION": "Si no se resuelve con lo que sabe",
+        "ACTIONS": {
+          "case": "Levanta un caso y le da el folio",
+          "handoff": "Lo pasa a una persona de soporte"
+        },
+        "DETAILS": "Antes pregunta desde cuándo pasa o a cuántos afecta (una sola pregunta)",
+        "SEVERITY": "La prioridad sale sola: no puede operar → urgente (se levanta de inmediato); funciona con falla → alta; duda de uso → media."
+      },
+      "SALES": {
+        "quote": {
+          "LABEL": "Cotización, contratar o hablar con un vendedor",
+          "opportunity": "Crea la oportunidad para el vendedor",
+          "handoff": "Lo pasa al vendedor"
+        },
+        "demo": {
+          "LABEL": "Si pide una demo",
+          "handoff": "El vendedor la acuerda",
+          "appointment": "La agenda"
+        },
+        "visit": {
+          "LABEL": "Si pide que un vendedor lo visite",
+          "handoff": "El vendedor la acuerda",
+          "appointment": "La agenda"
+        },
+        "EVIDENCE": "Solo afirma lo que confirman tus fuentes; lo demás dice que no lo puede confirmar. Nunca ofrece una demo en lugar de una visita."
+      },
+      "ADMIN": {
+        "CASE": "Levanta un caso administrativo (si no, lo pasa a la persona o equipo)",
+        "NO_SOURCES": "No busca en tus fuentes ni da saldos o montos: pide lo que falte en una sola pregunta y lo pasa."
+      },
+      "CASE_TYPE": "Tipo de caso",
+      "CASE_TYPE_FIRST": "El primero de esa clase",
+      "AREA_USER": "Se lo pasa a",
+      "AREA_TEAM": "Equipo",
+      "GENERAL": "Al de «Cómo platica»",
+      "KNOWS_HINT": "Comercial y Soporte buscan aquí; Administrativo no busca.",
+      "WELCOME_PLACEHOLDER": "p. ej. ¡Hola! Soy Sofi, de soporte y atención a clientes.",
+      "TALK": {
+        "human": {
+          "LABEL": "Si pide hablar con una persona",
+          "understand_first": "Primero le pregunta qué necesita, para pasarlo al equipo correcto (recomendado)",
+          "now": "Lo pasa de inmediato"
+        },
+        "not_client": {
+          "LABEL": "Si quien escribe no es cliente",
+          "serve": "Lo atiende igual (recomendado)",
+          "handoff": "Lo pasa a la persona o equipo de abajo, sin atenderlo"
+        },
+        "MULTI": "Si pide varias cosas a la vez, las atiende una por una; lo que quede pendiente va en la nota cuando lo pasa."
+      },
+      "GENERAL_USER": "Lo que no es de ningún área, a",
+      "GENERAL_TEAM": "Equipo",
+      "MATRIX": {
+        "TITLE": "Probar la matriz",
+        "RUN": "Probar",
+        "HINT": "Corre cada ejemplo de «sí» y «no» de tus áreas y te dice si cayó donde debía.",
+        "RESULT": "{ok} de {total} bien",
+        "NOT": "no {area}",
+        "LINE": "esperaba {expected}, salió {got}",
+        "NONE": "ninguna",
+        "ERROR": "No se pudo probar la matriz.",
+        "ROW": "{icon} «{example}» — {line}"
+      },
+      "TEST_HINT": "Escribe como tu cliente: «no puedo entrar al sistema», «quiero una cotización», «mi factura tiene mal el RFC»…",
+      "TEST_AREA": "Área: {area}"
     }
   }
 }

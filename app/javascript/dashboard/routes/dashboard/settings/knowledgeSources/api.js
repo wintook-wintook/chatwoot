@@ -15,7 +15,9 @@ export default {
   },
 
   getItemCategories(accountId, knowledge_source_id) {
-    return axios.get(`${base(accountId)}/item_categories`, { params: { knowledge_source_id } });
+    return axios.get(`${base(accountId)}/item_categories`, {
+      params: { knowledge_source_id },
+    });
   },
 
   getSources(accountId) {
@@ -32,6 +34,11 @@ export default {
     return axios.patch(`${base(accountId)}/sources/${id}`, {
       knowledge_source: payload,
     });
+  },
+
+  // «¿Qué hay aquí?» de la fuente: el agente 2.0 lo lee para saber dónde buscar.
+  setPurpose(accountId, id, purpose) {
+    return axios.patch(`${base(accountId)}/sources/${id}/purpose`, { purpose });
   },
 
   deleteSource(accountId, id) {

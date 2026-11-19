@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
-# Agentes listos — ¿ya es cliente? Su organización está en etapa Cliente, o ya tiene una
-# oportunidad ganada o un caso de servicio (soporte, orden de trabajo, proyecto).
-module ReadyAgents::ClientCheck
+# Motor 2.0 — ¿ya es cliente? Su organización está en etapa Cliente, o ya tiene una
+# oportunidad ganada o un caso de servicio (soporte, orden de trabajo, proyecto). Viene de
+# ReadyAgents::ClientCheck (agentes listos de antes).
+module Motor2::ClientCheck
   module_function
 
   def client?(contact)

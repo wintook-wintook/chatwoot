@@ -98,6 +98,7 @@ class Motor2::Skills::Data < Motor2::Skills::Base
   # En el chat de prueba solo se anota.
   def update_contact(args)
     data = contact_data(args)
+    @turn.noted_contact.merge!(data)
     trace.event(:contacto, data.map { |k, v| "#{k}=#{v}" }.join(', ')) if data.any?
     contact = @turn.conversation&.contact
     write_contact(contact, data) if data.any? && !test? && contact

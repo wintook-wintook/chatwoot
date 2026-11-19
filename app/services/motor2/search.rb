@@ -4,7 +4,8 @@
 # siempre (no se marcan); las demás, las que marcó la ficha. Usa tal cual lo del 1.0:
 # las predefinidas con AiFollowUps::KnowledgeSearch (separa las instrucciones internas) y el
 # resto por parecido sobre knowledge_items de esa fuente (artículos, documentos, hojas, foro,
-# CONTPAQi), igual que KnowledgeBaseResponseService.
+# CONTPAQi), igual que KnowledgeBaseResponseService. Una hoja en modo «Datos» se busca EXACTO en sus
+# filas con SheetQueryService (el código calcula, sin inventar números), como en el 1.0.
 #
 #   Motor2::Search.new(account, sources).call('¿cuánto cuesta Derecho?', only: 'Precios')
 #   → [{ fuente: 'Precios', resultados: [...] }]
@@ -14,7 +15,7 @@ class Motor2::Search < Cases::Ai::BaseService
   THRESHOLD = 0.2
   MAX_CHARS = 1500
 
-  Source = Struct.new(:key, :name, :kind, :knowledge_source_ids, keyword_init: true)
+  Source = Struct.new(:key, :name, :kind, :knowledge_source_ids, :record, keyword_init: true)
 
   def initialize(account, keys, conversation: nil)
     super(account: account)
@@ -42,23 +43,54 @@ class Motor2::Search < Cases::Ai::BaseService
 
   def resolve(key)
     return Source.new(key: key, name: 'Respuestas predefinidas', kind: 'canned') if key == CANNED && canned.canned_available?
+    return catalog_source(key) if key == Motor2::SourceMap::CATALOG
 
-    if key == 'article'
-      ids = @account.knowledge_sources.active.where(source_type: 'article').ids
-      return ids.any? ? Source.new(key: key, name: 'Artículos de ayuda', kind: 'article', knowledge_source_ids: ids) : nil
-    end
+    return articles_source(key) if key == 'article'
 
     type, id = key.to_s.split(':', 2)
     source = @account.knowledge_sources.active.find_by(id: id, source_type: type) if id
-    source && Source.new(key: key, name: source.name, kind: type, knowledge_source_ids: [source.id])
+    source && Source.new(key: key, name: source.name, kind: type, knowledge_source_ids: [source.id], record: source)
   end
 
   def canned = @canned ||= AiFollowUps::KnowledgeSearch.new(account: @account, conversation: @conversation)
 
   def search(source, question)
     return Array(canned.canned(question)[:results]) if source.kind == 'canned'
+    return catalog_results(question) if source.kind == 'catalog'
+    return exact_sheet(source, question) if data_sheet?(source)
 
     semantic(source, question)
+  end
+
+  def articles_source(key)
+    ids = @account.knowledge_sources.active.where(source_type: 'article').ids
+    ids.any? ? Source.new(key: key, name: 'Artículos de ayuda', kind: 'article', knowledge_source_ids: ids) : nil
+  end
+
+  # El Catálogo de productos (catalog_items) como una fuente más: por palabras, con su precio.
+  def catalog_source(key)
+    return nil unless @account.catalog_items.exists?(active: true)
+
+    Source.new(key: key, name: Motor2::SourceMap::CATALOG_NAME, kind: 'catalog')
+  end
+
+  def catalog_results(question)
+    Array(Motor2::CatalogSearch.new(@account).call(question)[:results]).map do |row|
+      price = row[:precio] ? "Precio: $#{money(row[:precio])}" : 'Sin precio'
+      { titulo: row[:nombre], informacion: [price, row[:unidad] && "por #{row[:unidad]}", row[:descripcion]].compact_blank.join('. ') }
+    end
+  end
+
+  def money(value) = ActiveSupport::NumberHelper.number_to_delimited(value.round(2).to_s.delete_suffix('.0'))
+
+  def data_sheet?(source)
+    source.kind == 'google_sheet' && source.record&.config.to_h&.dig('sheet_mode') == 'data'
+  end
+
+  # El resultado lo calcula Ruby sobre las filas (exacto): el modelo solo lo redacta.
+  def exact_sheet(source, question)
+    result = SheetQueryService.new(source.record, question, @account).perform
+    result.present? ? [{ titulo: source.name, informacion: "Resultado exacto de la hoja: #{result}".first(MAX_CHARS) }] : []
   end
 
   def semantic(source, question)

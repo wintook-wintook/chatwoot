@@ -1,27 +1,35 @@
 <!--
-  Agentes listos: los puestos que armamos nosotros (el cerebro es el del Seguimiento IA). La
-  empresa activa uno, le pone nombre, elige sus bandejas, contesta sus preguntas y lo prueba;
-  desde ese momento atiende solo en esas bandejas (sin automatizaciones). Los que todavía no
-  están salen como «Próximamente». Los agentes a la medida siguen en «Agentes a medida».
+  Agentes listos: el catálogo de funciones (Atención a prospectos, Atención a clientes…). Cada
+  función trae su asistente: la empresa contesta sus preguntas, le pone nombre, elige sus bandejas
+  y lo prueba; desde ese momento atiende solo en esas bandejas (sin automatizaciones). Se pueden
+  tener varios del mismo tipo. Todos usan el motor 2.0 y quedan en la lista de agentes
+  (Plan-Motor-Agentes §11.14). Los que todavía no están salen como «Próximamente».
+  ?edit=<id> abre ese agente (la lista de agentes lo manda aquí).
 -->
 <script>
 import { useAlert } from 'dashboard/composables';
 import ReadyAgentsAPI from 'dashboard/api/readyAgents';
 import ReadyAgentModal from './ReadyAgentModal.vue';
+import CustomersAgentModal from './CustomersAgentModal.vue';
 
 const T = 'READY_AGENTS';
+// Una bandeja puede tener un agente de cada uno de estos dos (TrackingTemplate::ATTENDING_PAIR).
+const PAIR = ['prospects', 'customers'];
 
 export default {
   name: 'ReadyAgentsIndex',
-  components: { ReadyAgentModal },
+  components: { ReadyAgentModal, CustomersAgentModal },
   data() {
     return {
       catalog: [],
       agents: [],
       inboxes: [],
       calendarUsers: [],
+      sources: [], // las fuentes de la cuenta y qué hay en cada una (paso «Qué sabe»)
+      caseTypes: [], // «Atención a clientes»: los tipos de caso que puede levantar
       loading: true,
       modal: null,
+      queryHandled: false,
     };
   },
   mounted() {
@@ -38,6 +46,9 @@ export default {
         this.agents = data.agents;
         this.inboxes = data.inboxes;
         this.calendarUsers = data.calendar_users || [];
+        this.sources = data.sources || [];
+        this.caseTypes = data.case_types || [];
+        this.openFromQuery();
       } catch (e) {
         useAlert(e.response?.data?.error || this.t('LOAD_ERROR'));
       } finally {
@@ -53,10 +64,22 @@ export default {
         .map(i => i.name)
         .join(', ');
     },
-    takenFor(agent) {
+    // Las bandejas que ya atiende otro agente; con el par (prospectos + clientes) se comparten.
+    takenFor(agent, kind) {
+      const partner = PAIR.includes(kind) ? PAIR.find(k => k !== kind) : null;
       return this.agents
         .filter(a => a.enabled && (!agent || a.id !== agent.id))
+        .filter(a => !partner || a.kind !== partner)
         .flatMap(a => a.inbox_ids);
+    },
+    // Solo la primera vez: después de guardar se recarga y no se vuelve a abrir.
+    openFromQuery() {
+      if (this.queryHandled) return;
+      this.queryHandled = true;
+      const id = Number(this.$route.query.edit);
+      const agent = id && this.agents.find(a => a.id === id);
+      const entry = agent && this.catalog.find(e => e.kind === agent.kind);
+      if (entry) this.open(entry, agent);
     },
     open(entry, agent = null) {
       this.modal = { entry, agent };
@@ -191,15 +214,29 @@ export default {
         </template>
       </section>
     </div>
+    <CustomersAgentModal
+      v-if="modal && modal.entry.kind === 'customers'"
+      show
+      :title="modal.entry.title"
+      :agent="modal.agent"
+      :inboxes="inboxes"
+      :taken-inbox-ids="takenFor(modal.agent, 'customers')"
+      :calendar-users="calendarUsers"
+      :sources="sources"
+      :case-types="caseTypes"
+      @close="modal = null"
+      @saved="onSaved"
+    />
     <ReadyAgentModal
-      v-if="modal"
+      v-else-if="modal"
       show
       :kind="modal.entry.kind"
       :title="modal.entry.title"
       :agent="modal.agent"
       :inboxes="inboxes"
-      :taken-inbox-ids="takenFor(modal.agent)"
+      :taken-inbox-ids="takenFor(modal.agent, modal.entry.kind)"
       :calendar-users="calendarUsers"
+      :sources="sources"
       @close="modal = null"
       @saved="onSaved"
     />

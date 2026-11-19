@@ -1,6 +1,11 @@
 <!-- @knowledge_sources -->
 <!-- Tarjeta individual de una fuente de conocimiento configurada. -->
+<!-- «¿Qué hay aquí?»: lo lee el agente 2.0 para saber en qué fuente buscar cada cosa
+     (Motor2::SourceMap). Vacío = lo que se calcula de lo que tiene dentro (about_auto). -->
 <script>
+import { useAlert } from 'dashboard/composables';
+import KnowledgeBaseAPI from './api';
+
 export default {
   name: 'KnowledgeSourceCard',
   props: {
@@ -11,7 +16,22 @@ export default {
     googleDisabled: { type: Boolean, default: false },
   },
   emits: ['sync', 'delete', 'edit'],
+  data() {
+    // saved: lo que se guardó aquí (la lista no se recarga); null = lo que trajo la fuente.
+    return {
+      editingPurpose: false,
+      purposeDraft: '',
+      savingPurpose: false,
+      saved: null,
+    };
+  },
   computed: {
+    purpose() {
+      return this.saved === null ? this.source.purpose || '' : this.saved;
+    },
+    about() {
+      return this.purpose || this.source.about_auto || '';
+    },
     sourceIcon() {
       return (
         {
@@ -93,6 +113,28 @@ export default {
       return this.source.config?.username || null;
     },
   },
+  methods: {
+    editPurpose() {
+      this.purposeDraft = this.purpose;
+      this.editingPurpose = true;
+    },
+    async savePurpose() {
+      this.savingPurpose = true;
+      try {
+        const { data } = await KnowledgeBaseAPI.setPurpose(
+          this.$route.params.accountId,
+          this.source.id,
+          this.purposeDraft.trim()
+        );
+        this.saved = data.purpose || '';
+        this.editingPurpose = false;
+      } catch (e) {
+        useAlert(this.$t('KNOWLEDGE_CARD.PURPOSE.ERROR'));
+      } finally {
+        this.savingPurpose = false;
+      }
+    },
+  },
 };
 </script>
 
@@ -141,8 +183,7 @@ export default {
     >
       <fluent-icon icon="warning" size="14" class="text-amber-500" />
       <span class="text-sm text-amber-700">
-        Integración de Google desactivada para esta cuenta: esta fuente y su
-        directiva no funcionan hasta reactivarla.
+        {{ $t('KNOWLEDGE_CARD.GOOGLE_OFF') }}
       </span>
     </div>
 
@@ -153,7 +194,7 @@ export default {
     >
       <fluent-icon icon="warning" size="14" class="text-amber-500" />
       <span class="text-sm text-amber-700">
-        Configura la integración de OpenAI para vectorizar esta fuente.
+        {{ $t('KNOWLEDGE_CARD.NEEDS_OPENAI') }}
       </span>
     </div>
 
@@ -167,7 +208,8 @@ export default {
           class="inline-block w-2 h-2 rounded-full bg-woot-500 animate-pulse"
         />
         <span class="text-sm text-woot-700 font-medium">
-          Sincronizando{{ syncProgress ? ` — ${syncProgress}` : '...' }}
+          {{ $t('KNOWLEDGE_CARD.SYNCING')
+          }}{{ syncProgress ? ` — ${syncProgress}` : '…' }}
         </span>
       </div>
       <div
@@ -182,9 +224,64 @@ export default {
         <span class="text-sm text-red-700">{{ syncError }}</span>
       </div>
       <div v-else class="text-sm text-slate-400">
-        Última sync: {{ lastSynced }}
+        {{ $t('KNOWLEDGE_CARD.LAST_SYNC', { when: lastSynced }) }}
       </div>
     </template>
+
+    <!-- ¿Qué hay aquí? (lo lee el agente para saber dónde buscar) -->
+    <div class="flex flex-col gap-1 text-sm">
+      <span class="text-xs font-medium text-slate-600">
+        {{ $t('KNOWLEDGE_CARD.PURPOSE.LABEL') }}
+      </span>
+      <template v-if="editingPurpose">
+        <textarea
+          v-model="purposeDraft"
+          rows="3"
+          maxlength="300"
+          class="!mb-0 text-sm"
+          :placeholder="
+            source.about_auto || $t('KNOWLEDGE_CARD.PURPOSE.PLACEHOLDER')
+          "
+        />
+        <p class="m-0 text-xs text-slate-500">
+          {{ $t('KNOWLEDGE_CARD.PURPOSE.HINT') }}
+        </p>
+        <div class="flex gap-2">
+          <woot-button
+            size="tiny"
+            :is-loading="savingPurpose"
+            @click="savePurpose"
+          >
+            {{ $t('KNOWLEDGE_CARD.PURPOSE.SAVE') }}
+          </woot-button>
+          <woot-button
+            size="tiny"
+            variant="clear"
+            color-scheme="secondary"
+            @click="editingPurpose = false"
+          >
+            {{ $t('KNOWLEDGE_CARD.PURPOSE.CANCEL') }}
+          </woot-button>
+        </div>
+      </template>
+      <button
+        v-else
+        type="button"
+        class="text-left text-slate-600 hover:underline"
+        :title="$t('KNOWLEDGE_CARD.PURPOSE.EDIT')"
+        @click="editPurpose"
+      >
+        <span v-if="about">{{ about }}</span>
+        <span v-else class="text-slate-400">{{
+          $t('KNOWLEDGE_CARD.PURPOSE.EMPTY')
+        }}</span>
+        <span
+          v-if="!purpose && source.about_auto"
+          class="block text-xs text-slate-400"
+          >{{ $t('KNOWLEDGE_CARD.PURPOSE.AUTO') }}</span
+        >
+      </button>
+    </div>
 
     <!-- Acciones -->
     <div

@@ -243,6 +243,14 @@ export default {
     },
     // El espacio del agente. Sin sección, abre la primera que le toque al rol.
     openAgent(template, seccion = null) {
+      // Agente de una función (Atención a prospectos…): se abre con el asistente de su función.
+      if (template.function_title) {
+        this.$router.push({
+          name: 'ready_agents',
+          query: { edit: String(template.id) },
+        });
+        return;
+      }
       // Motor 2.0: cada agente abre en la pantalla de su motor.
       if (template.engine === '2') {
         this.$router.push({
@@ -832,6 +840,14 @@ export default {
                         small
                         :title="$t('TRACKING_TEMPLATES.TESTING.BADGE')"
                         color-scheme="warning"
+                        class="!mb-0 ltr:ml-2 rtl:mr-2"
+                      />
+                      <!-- Agente de una función: «Atención a prospectos»… -->
+                      <woot-label
+                        v-if="template.function_title"
+                        small
+                        :title="template.function_title"
+                        color-scheme="success"
                         class="!mb-0 ltr:ml-2 rtl:mr-2"
                       />
                       <!-- Motor 2.0 -->

@@ -199,9 +199,9 @@ export default {
         />
       </woot-tabs>
 
-      <!-- Tabla del tab activo -->
+      <!-- Tabla del tab activo (overflow-x-auto: las columnas de la derecha se desplazan, no se cortan) -->
       <div
-        class="border border-slate-100 dark:border-slate-700 rounded-md overflow-hidden"
+        class="border border-slate-100 dark:border-slate-700 rounded-md overflow-x-auto"
       >
         <table class="min-w-full text-sm">
           <thead class="bg-slate-50 dark:bg-slate-800">

@@ -12,10 +12,20 @@ class Motor2::Probe
   end
 
   def call
-    result = Motor2::Runner.new(Motor2::Config.new(@template), state: @state, history: @messages).call
+    config = Motor2::Config.new(@template)
+    result = Motor2::Runner.new(config, state: @state, history: @messages, welcome: first_welcome(config)).call
     return { error: result.error, trace: result.trace } if result.error
 
     { reply: result.reply, decision: result.decision, trace: result.trace, state: @state.to_h,
       files: result.attachments.pluck(:name) }
+  end
+
+  private
+
+  # Como con un cliente: la bienvenida combinada va en la primera respuesta (agentes de una función).
+  def first_welcome(config)
+    return nil unless config.function && config.welcome.present?
+
+    @messages.none? { |m| m.to_h.symbolize_keys[:role].to_s == 'assistant' } ? config.welcome : nil
   end
 end

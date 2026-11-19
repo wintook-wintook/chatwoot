@@ -9,7 +9,11 @@
 #     'sources' => ['canned_response', 'article', 'google_sheet:12', …],   # llaves de ContactTrackings::Ficha::Catalog
 #     'never' => 'lo que nunca debe hacer',
 #     'skills' => { 'data' => { 'on' => true, 'fields' => [...] }, 'offers' => {...}, 'appointments' => {...},
-#                   'tickets' => {...}, 'files' => {...}, 'handoff' => {...} } }
+#                   'tickets' => {...}, 'files' => {...}, 'handoff' => {...} },
+#     'answers' => { … } }   # agentes de una función (§11.14): lo que contestó en su asistente
+#
+# Un agente de función (tracking_templates.agent_function, p. ej. «Atención a prospectos») trae
+# su puesto y sus habilidades de Motor2::Functions; lo que tenga motor2['skills'] gana.
 #
 # Para el chat de prueba se le pasa lo que hay en la pantalla sin guardar (draft).
 class Motor2::Config
@@ -39,7 +43,17 @@ class Motor2::Config
 
   def inbox = @inbox ||= account.inboxes.find_by(id: @columns['inbox_id'])
 
-  def tone = @data['tone'].presence_in(TONES) || 'tu'
+  def tone = function&.tone || @data['tone'].presence_in(TONES) || 'tu'
+
+  # Lo que se contestó en el asistente de la función.
+  def answers = @data['answers'].to_h
+
+  # La función del agente (Motor2::Functions::Prospects…), o nil si es a medida.
+  def function
+    return @function if defined?(@function)
+
+    @function = Motor2::Functions.for(self)
+  end
 
   def instructions = text('instructions')
 
@@ -55,9 +69,16 @@ class Motor2::Config
     end
   end
 
-  def sources = Array(@data['sources']).map(&:to_s).compact_blank.uniq
+  # Las que marcó y las que pone su función (p. ej. dónde están sus productos y precios).
+  def sources
+    extra = function.respond_to?(:extra_sources) ? function.extra_sources : []
+    (Array(@data['sources']) + extra).map(&:to_s).compact_blank.uniq
+  end
 
-  def skill(key) = @data.dig('skills', key.to_s).to_h
+  def skill(key)
+    base = function ? function.skills[key.to_s].to_h : {}
+    base.merge(@data.dig('skills', key.to_s).to_h.reject { |_, v| v.nil? || v == '' })
+  end
 
   # Pasar a una persona viene prendida: un agente sin salida a una persona se atora.
   def skill_on?(key)

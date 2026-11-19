@@ -12,6 +12,7 @@ const ICONS = {
   content: '📚',
   search: '🔎',
   category: '🏷️',
+  where: '🧭',
   model: '🧠',
   engine: '🔧',
   question: '❓',
@@ -104,7 +105,9 @@ export default {
     canFix(log) {
       return (
         this.canEdit &&
-        ['prompt', 'content', 'search', 'category', 'model'].includes(log.kind)
+        ['prompt', 'content', 'search', 'category', 'where', 'model'].includes(
+          log.kind
+        )
       );
     },
     header(log) {
