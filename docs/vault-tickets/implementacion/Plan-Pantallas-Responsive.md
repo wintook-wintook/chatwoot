@@ -11,7 +11,7 @@ del ancho de la ventana.
 tienen `overflow-hidden`: lo que se sale y no está dentro de un contenedor con scroll queda cortado, sin forma de
 desplazarse.
 
-## Etapa 1 — se pierden datos (columnas o botones que no se ven) — EN CURSO
+## Etapa 1 — se pierden datos (columnas o botones que no se ven) — HECHA (2026-11-19, commit 971d1026)
 
 | # | Pantalla | Archivo | Qué pasa | Arreglo |
 |---|---|---|---|---|
@@ -50,3 +50,8 @@ Tareas (`Tasks.vue`) ya tiene scroll y acciones fijas; solo obliga a moverse de 
 
 Organizaciones, Contratos, Eventos, Catálogo, Cotizaciones (lista y editor), Presupuesto por vendedor y por cliente,
 Consola ERP, Bases de conocimiento, lista de Agentes, Seguimientos, Kanban de casos, Despacho.
+
+**Estado de la etapa 1 (2026-11-19):**
+- Hechos y guardados: 1, 2, 3, 5, 6, 8. La lista de casos queda con la casilla, editar y «Contacto / asunto» fijos a la izquierda; Campañas, con el nombre fijo.
+- Hechos pero SIN guardar: 4 (`components/settings/KanbanProcesses/Index.vue`, `KanbanTypeProcesses/Index.vue`) y 7 (`views/kanbanBoard.vue`). Esos archivos ya traían errores del revisor de estilo (textos sin traducir, `console.log`…) y el hook no deja guardarlos. Hay que decidir si se limpian (cambio grande) o se guardan saltando el hook.
+- Descartados: `components/KanbanTypeProcesses-Simple.vue`, `KanbanProcesses-Simple.vue` y `SimpleCrudTable.vue`, porque no los usa ninguna pantalla.
