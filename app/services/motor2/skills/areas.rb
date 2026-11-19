@@ -100,7 +100,7 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
   def function = config.function
 
   def classify(history)
-    had_pending = state['pendiente'].present?
+    had_pending = pending_from(history)
     result = triage(history)
     return unless result
 
@@ -122,6 +122,22 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
   def clarified!
     state['triage'] = now.merge('suficiente' => true)
     @clarified = true
+  end
+
+  def pending_from(history)
+    state['pendiente'] ||= agent_question(history)
+    state['pendiente'].present?
+  end
+
+  # Si el agente terminó su mensaje con una pregunta (p. ej. «¿en qué sistema?», después de buscar) y el
+  # cliente contestó, eso también es una aclaración: se completa lo mismo y no se vuelve a preguntar.
+  def agent_question(history)
+    list = Array(history)
+    last_agent = list[0...-1].reverse.find { |m| m[:role].to_s == 'assistant' }&.dig(:content).to_s
+    asked = last_agent[/¿[^¿?]*\?/]
+    return nil unless asked && list.last && list.last[:role].to_s == 'user'
+
+    { 'area' => now['area'], 'intencion' => now['intencion'].presence || 'lo que pidió antes', 'aclaracion' => asked }
   end
 
   def triage(history)

@@ -103,6 +103,16 @@ RSpec.describe Motor2::Functions::Customers do
     expect(state['triage']).to include('suficiente' => true)
   end
 
+  it 'si el agente preguntó algo (aunque no lo pidiera el clasificador) y contestó, no vuelve a preguntar: busca' do
+    create(:canned_response, account: account, short_code: 'alta', content: 'Catálogos › Clientes')
+    triage('support', suficiente: false, aclaracion: '¿En qué sistema?', intencion: 'dar de alta un cliente')
+    history = [{ role: 'user', content: 'cómo doy de alta un cliente' }, { role: 'assistant', content: '¿En qué sistema estás trabajando?' },
+               { role: 'user', content: 'comercial premium' }]
+    state = Motor2::State.new
+    expect(tools_for(state, history)).to include('buscar_en_fuentes')
+    expect(state['triage']).to include('suficiente' => true)
+  end
+
   it 'Soporte: no lo pasa ni levanta el caso sin antes buscar la solución en sus fuentes' do
     create(:canned_response, account: account, short_code: 'alta', content: 'Para dar de alta un cliente ve a Catálogos › Clientes.')
     triage('support', intencion: 'dar de alta un cliente', severidad: 3)
