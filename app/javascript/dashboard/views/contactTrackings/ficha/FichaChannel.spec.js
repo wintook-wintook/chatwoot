@@ -480,31 +480,47 @@ describe('FichaChannel · vista previa de la plantilla', () => {
     );
   });
 
-  it('«Ver» abre la plantilla de ese intento: de Meta si no está en el módulo', async () => {
+  it('la plantilla se ve siempre a la derecha: la del intento seleccionado', async () => {
     const wrapper = montar({
       inboxId: 1,
       attempts: 2,
       whatsappTemplates: ['promo_1', 'promo_2'],
     });
-    expect(wrapper.vm.previewForm).toBeNull();
-
-    wrapper.vm.togglePreview(0);
+    // de entrada, el intento 1 (de Meta: no está en el módulo)
+    expect(wrapper.vm.previewIndex).toBe(0);
     expect(wrapper.vm.previewForm).toMatchObject({
       body_text: 'Hola {{1}}',
       sample_values: { body: ['Ana'] },
-    });
-
-    wrapper.vm.togglePreview(1);
-    expect(wrapper.vm.previewForm).toMatchObject({
-      body_text: 'Del módulo',
-      header_preview_url: 'https://x/flyer.jpg',
     });
     await wrapper.vm.$nextTick();
     expect(wrapper.findComponent({ name: 'TemplatePreview' }).exists()).toBe(
       true
     );
 
-    wrapper.vm.togglePreview(1);
-    expect(wrapper.vm.previewIndex).toBeNull();
+    wrapper.vm.selectPreview(1);
+    expect(wrapper.vm.previewForm).toMatchObject({
+      body_text: 'Del módulo',
+      header_preview_url: 'https://x/flyer.jpg',
+    });
+    expect(wrapper.vm.previewTitle).toBe(
+      'TRACKING_TEMPLATES.FICHA.WA_PREVIEW_TITLE'
+    );
+  });
+
+  it('al elegir la plantilla de un intento, ese intento pasa a la vista previa', () => {
+    const wrapper = montar({ inboxId: 1, attempts: 3, whatsappTemplates: [] });
+    expect(wrapper.vm.previewForm).toBeNull();
+    expect(wrapper.vm.previewEmptyText).toBe(
+      'TRACKING_TEMPLATES.FICHA.WA_PREVIEW_EMPTY'
+    );
+    wrapper.vm.setTemplate(2, 'promo_1');
+    expect(wrapper.vm.previewIndex).toBe(2);
+  });
+
+  it('si bajan los intentos, la vista previa no se queda en uno que ya no existe', () => {
+    const wrapper = montar({ inboxId: 1, attempts: 3, whatsappTemplates: [] });
+    wrapper.vm.selectPreview(2);
+    wrapper.vm.setAttempts(1);
+    expect(wrapper.vm.previewIndex).toBe(0);
   });
 });
