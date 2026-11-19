@@ -27,6 +27,10 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
   ALL_ANSWERED = 'YA CONTESTÓ TODAS TUS PREGUNTAS: no inventes otras. Si cumple lo de «calificado», llama ' \
                  'prospecto_calificado; si no, pregúntale solo lo que falte para saberlo, o descártalo si cumple lo de ' \
                  '«se descarta». Si pregunta algo, contéstale.'
+  # Con el objetivo «agendarle una cita», al terminar las preguntas toca ofrecer horarios.
+  ALL_ANSWERED_APPOINTMENT = 'YA CONTESTÓ TODAS TUS PREGUNTAS: no inventes otras. Si cumple lo de «calificado», ofrécele ' \
+                             'YA 2 o 3 horarios de ver_horarios (agendar la cita lo califica); si no cumple, pregúntale solo ' \
+                             'lo que falte para saberlo. Si pregunta algo, contéstale.'
 
   def self.key = 'qualify'
 
@@ -54,7 +58,7 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
       lines << "TE FALTA PREGUNTAR (en orden; la siguiente es la #{numbers.first}): #{numbers.join(', ')}. Aunque contestes " \
                "otra cosa, termina tu mensaje con la pregunta #{numbers.first}."
     elsif questions.any?
-      lines << ALL_ANSWERED
+      lines << all_answered_note
     end
     lines.join("\n")
   end
@@ -120,14 +124,28 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
 
   # Con el número de la pregunta (o, si no hay lista, el texto de la pregunta).
   def save(args)
-    question = questions.find { |q| q[:number] == args['numero'].to_i }&.dig(:ask) || args['pregunta'].to_s.strip.presence
+    question = question_for(args)
     return { error: "No existe la pregunta #{args['numero']}." } if question.nil?
     return { error: 'Falta la respuesta.' } if args['respuesta'].blank?
     return { error: 'Eso lo preguntó el cliente: no es su respuesta. Contéstale y vuelve a hacer la pregunta.' } if its_question?(args)
 
     answers[question.first(300)] = args['respuesta'].to_s.first(300)
     trace.event(:respuesta, "#{question}: #{args['respuesta']}")
-    { ok: true }
+    progress
+  end
+
+  def question_for(args)
+    questions.find { |q| q[:number] == args['numero'].to_i }&.dig(:ask) || args['pregunta'].to_s.strip.presence
+  end
+
+  # En el mismo turno se entera de cómo va (si no, inventa preguntas o no lo califica).
+  def progress
+    next_up = pending_now.first
+    next_up ? { ok: true, siguiente: "#{next_up[:number]}. #{next_up[:ask]}" } : { ok: true, nota: all_answered_note }
+  end
+
+  def all_answered_note
+    config.function.respond_to?(:appointment?) && config.function.appointment? ? ALL_ANSWERED_APPOINTMENT : ALL_ANSWERED
   end
 
   # Calificarlo pide antes los datos obligatorios del contacto (los que marcó la empresa).

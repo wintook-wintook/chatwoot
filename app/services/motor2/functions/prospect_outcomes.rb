@@ -116,9 +116,10 @@ class Motor2::Functions::ProspectOutcomes
     @conversation.update!(attrs.compact) if attrs.compact.any?
   end
 
+  # Con las etiquetas recién leídas: al agendar y calificar en el mismo turno, una no borra a la otra.
   def add_label
     @conversation.account.labels.find_or_create_by!(title: QUALIFIED_LABEL) { |label| label.color = '#16a34a' }
-    @conversation.add_labels([QUALIFIED_LABEL])
+    @conversation.reload.add_labels([QUALIFIED_LABEL])
   end
 
   def answers_text
@@ -132,7 +133,7 @@ class Motor2::Functions::ProspectOutcomes
     title, color = TEMPERATURE_LABELS[temperature]
     @conversation.account.labels.find_or_create_by!(title: title) { |label| label.color = color }
     others = TEMPERATURE_LABELS.values.map(&:first) - [title]
-    @conversation.update_labels((@conversation.label_list - others) | [title])
+    @conversation.reload.update_labels((@conversation.label_list - others) | [title])
   end
 
   # El caso comercial (el embudo la pasa sola a Convertido) con el responsable a quien se pasa.

@@ -18,6 +18,7 @@
 #     si aun así no, se agrega tal cual.
 class Motor2::Runner < Cases::Ai::BaseService
   include Motor2::QuestionGuard
+  include Motor2::ReplyChecks
   MAX_ROUNDS = 6
   MAX_TOKENS = 700
   NO_MESSAGE = '[SIN_MENSAJE]'

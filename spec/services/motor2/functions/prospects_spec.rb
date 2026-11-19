@@ -160,6 +160,30 @@ RSpec.describe Motor2::Functions::Prospects do
     expect(names.call).to include('buscar_en_catalogo')
   end
 
+  context 'with objetivo «juntar sus datos»' do
+    let(:objective) { 'collect' }
+
+    it 'al guardar la última respuesta se entera de que terminó y lo califica: nota, etiqueta y se asigna' do
+      stub_model(tool_call('guardar_respuesta', { numero: 1, respuesta: 'sedán' }), tool_call('guardar_respuesta', { numero: 2, respuesta: 'GDL' }),
+                 tool_call('prospecto_calificado', { resumen: 'Sedán en GDL', temperatura: 'tibio' }), answer('¡Gracias! Ana te escribe.'))
+      reply_to(incoming('Busco un sedán, estoy en GDL'))
+
+      last_tool = tracking.motor2_state['answers']
+      expect(last_tool).to eq('¿Qué buscas?' => 'sedán', '¿En qué ciudad estás?' => 'GDL')
+      expect(conversation.reload.label_list).to include('interesado', 'prospecto-tibio')
+      expect(conversation.assignee_id).to eq(seller.id)
+      expect(tracking.status).to eq('objective_met')
+    end
+
+    it 'guardar_respuesta le dice cuál sigue o que ya terminó' do
+      runner = Motor2::Runner.new(Motor2::Config.new(agent), state: Motor2::State.new, history: [])
+      qualify = Motor2::Skills.for(runner).find { |s| s.key == 'qualify' }
+      qualify.prepare([])
+      expect(qualify.call('guardar_respuesta', { 'numero' => 1, 'respuesta' => 'sedán' })).to include(siguiente: '2. ¿En qué ciudad estás?')
+      expect(qualify.call('guardar_respuesta', { 'numero' => 2, 'respuesta' => 'GDL' })[:nota]).to include('YA CONTESTÓ TODAS')
+    end
+  end
+
   context 'with objetivo «crear la oportunidad»' do
     let(:objective) { 'opportunity' }
 
@@ -368,7 +392,7 @@ RSpec.describe Motor2::Functions::Prospects do
       stub_model(answer('Te paso en un momento, ¿qué buscas?'))
       second = probe('quiero hablar con un asesor', 'ya te dije, pásame con una persona')
       expect(second[:decision]).to eq(['handoff', 'Pidió hablar con una persona.'])
-      expect(second[:reply]).to eq(Motor2::QuestionGuard::HANDOFF_TEXT)
+      expect(second[:reply]).to eq(Motor2::ReplyChecks::HANDOFF_TEXT)
     end
 
     it 'de inmediato: lo pasa a la primera' do
