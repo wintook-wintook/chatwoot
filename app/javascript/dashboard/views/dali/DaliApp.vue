@@ -1,5 +1,5 @@
 <!--
-  Portal de Dali — Dali a pantalla completa, pensado para el teléfono y para
+  Portal de Dali (arriba a la izquierda, el logo de Kontrolya) — Dali a pantalla completa, pensado para el teléfono y para
   instalarse como app («Agregar a pantalla de inicio»; manifiesto /dali-manifest.json).
     /dali  y  /app/dali          → el de la empresa activa
     /app/accounts/:id/dali       → el de esa empresa
@@ -47,10 +47,6 @@ export default {
     // Quien ve la Agenda tiene «Mi ruta» (Assistant::Capabilities.shortcuts 'route').
     hasRoute() {
       return this.shortcuts.some(s => s.key === 'route');
-    },
-    accountName() {
-      const account = this.accounts.find(a => a.id === this.accountId);
-      return account ? account.name : '';
     },
   },
   watch: {
@@ -138,14 +134,14 @@ export default {
     <header
       class="relative flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800"
     >
-      <span
-        class="flex items-center justify-center rounded-full w-9 h-9 shrink-0 bg-woot-50 text-woot-600 dark:bg-woot-900/40"
-      >
-        <fluent-icon icon="wand" size="18" />
-      </span>
+      <!-- proyecto@logo_kontrolya: el logo va donde decía «Dali» (con varias empresas, la activa se ve en el menú ⋮). -->
       <div class="flex flex-col flex-1 min-w-0">
-        <span class="text-base font-semibold truncate">{{ name }}</span>
-        <span class="text-xs truncate text-slate-500">{{ accountName }}</span>
+        <img
+          src="/brand-assets/kontrolya/logo.png"
+          alt="Kontrolya"
+          class="self-start object-contain w-auto h-7 max-w-full select-none"
+          draggable="false"
+        />
       </div>
       <!-- Portal de campo (Mi ruta): llegar, fotos, firma; regresa con «Volver a Dali» -->
       <woot-button
