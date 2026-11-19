@@ -7,7 +7,8 @@
 class Motor2::Skills::Knowledge < Motor2::Skills::Base
   def self.key = 'knowledge'
 
-  def on? = search.sources.any?
+  # Una función puede apagarla (p. ej. «Atención a prospectos» que no contesta dudas).
+  def on? = config.skill(key)['on'] != false && search.sources.any?
 
   def tools
     [fn('buscar_en_fuentes',

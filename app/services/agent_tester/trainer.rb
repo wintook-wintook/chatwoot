@@ -54,8 +54,6 @@ class AgentTester::Trainer < Cases::Ai::BaseService
     Puede haber dos causas. Si no puedes saberlo, "causes": [] y una pregunta corta en "question".
     Responde en JSON: {"causes": [{"kind": "...", ...}], "question": ""}. Todo en español, cada causa con "kind".
   TEXT
-  PROMPT_V2 = 'En agentes 2.0 usa además "field" ("instructions" | "never" | "welcome" | "business"), "find" ' \
-              '(frase exacta a reemplazar o "" para agregar) y "replace" (= "text"); para business "label" y "value".'
 
   def initialize(template, user:)
     super(account: template.account)
@@ -192,7 +190,7 @@ class AgentTester::Trainer < Cases::Ai::BaseService
 
     config = Motor2::Config.new(@template)
     { instrucciones: config.instructions, nunca: config.never, bienvenida: config.welcome, datos_del_agente: config.business,
-      datos_de_la_empresa: AgentBase::BusinessData.lines(@account) }
+      datos_de_la_empresa: AgentBase::BusinessData.lines(@account), reglas_elegidas: chosen_rules(config) }.compact
   end
 
   def tools

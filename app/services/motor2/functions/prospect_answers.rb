@@ -12,7 +12,7 @@ module Motor2::Functions::ProspectAnswers
     out = P::TEXTS.index_with { |k| raw[k].to_s.strip.first(1000) }
     P::IDS.each { |k| out[k] = raw[k].to_s.strip.presence&.to_i }
     P::BOOLEANS.each { |k| out[k] = raw.key?(k) ? ActiveModel::Type::Boolean.new.cast(raw[k]) || false : k == 'only_prospects' }
-    out.merge(lists(raw), rows(raw)).compact
+    out.merge(lists(raw), rows(raw), Motor2::Functions::ProspectRules.sanitize(raw)).compact
   end
 
   def lists(raw)

@@ -633,6 +633,7 @@
       "business": "Your business",
       "knows": "What it knows",
       "questions": "What to ask",
+      "talk": "How it talks",
       "qualify": "When it qualifies",
       "after": "When qualified",
       "objections": "Objections",
@@ -644,6 +645,7 @@
       "business": "What the agent must know to explain and to discard people outside your area or offer.",
       "knows": "Where it looks up what it is asked. Canned responses are always on; tick the other sources this agent uses.",
       "questions": "The questions it asks to qualify the lead, exactly as written and in this order, one per message. Some examples come in: remove them, edit them or add your own.",
+      "talk": "What it does when the customer asks something, when it can't find the answer, or when they write about something unrelated. It always goes back to the pending question.",
       "qualify": "With this it knows when to pass it to your team and when it is not for you.",
       "after": "What it does when the lead qualifies, who gets it and which details it collects first.",
       "objections": "What people say to stall the purchase and how to answer. It uses the idea in its own words and never invents discounts.",
@@ -658,7 +660,8 @@
       "CANNED": "Canned responses (always)",
       "NO_CANNED": "No canned responses yet: add them in Catalogs › Canned responses.",
       "NO_OTHERS": "No other sources connected. You can add sheets, documents or a forum in Settings › Knowledge bases.",
-      "WHERE_HINT": "The agent gets what's in each source to search the right one. If a description is off, change «What's in here?» in Settings › Knowledge bases."
+      "WHERE_HINT": "The agent gets what's in each source to search the right one. If a description is off, change «What's in here?» in Settings › Knowledge bases.",
+      "NO_DOUBTS": "You chose not to answer questions (step «How it talks»): it won't search any source."
     },
     "QUESTIONS_LIST": {
       "NUMBER": "{n}.",
@@ -666,6 +669,24 @@
       "REMOVE": "Remove this question",
       "ADD": "+ Add question",
       "EMPTY": "Without questions it will only ask what they're looking for."
+    },
+    "TALK": {
+      "RECOMMENDED": "(recommended)",
+      "doubts": {
+        "QUESTION": "If the customer asks something instead of answering:",
+        "answer": "It answers with what it knows and goes back to the pending question",
+        "defer": "It doesn't answer questions: says an advisor will help and keeps asking (searches no source)"
+      },
+      "not_found": {
+        "QUESTION": "If it searches and can't find the answer:",
+        "continue": "It says it doesn't have that info, an advisor will confirm it, and keeps asking",
+        "handoff": "It hands off to a person"
+      },
+      "off_topic": {
+        "QUESTION": "If they write something unrelated to your business:",
+        "redirect": "It politely brings them back and keeps asking",
+        "discard": "It politely discards them"
+      }
     }
   }
 }

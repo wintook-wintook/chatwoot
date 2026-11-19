@@ -32,7 +32,10 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
     lines = []
     lines << "LO QUE YA CONTESTÓ: #{answers.map { |q, a| "#{q} → #{a}" }.join(' | ')}" if answers.any?
     pending = questions.reject { |q| answers.key?(q[:ask]) }.pluck(:number)
-    lines << "TE FALTA PREGUNTAR (en orden; la siguiente es la #{pending.first}): #{pending.join(', ')}" if pending.any?
+    if pending.any?
+      lines << "TE FALTA PREGUNTAR (en orden; la siguiente es la #{pending.first}): #{pending.join(', ')}. Aunque contestes " \
+               "otra cosa, termina tu mensaje con la pregunta #{pending.first} (si no la acaba de contestar)."
+    end
     lines.join("\n")
   end
 

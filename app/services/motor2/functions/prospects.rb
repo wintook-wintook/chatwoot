@@ -18,6 +18,7 @@
 #   case_type_id                          tipo de caso de la oportunidad
 #   appointment_user_ids / appointment_minutes / appointment_kind / appointment_location
 #   business_what / _who / _coverage / _why / _practical, business_use_catalog
+#   doubts / not_found / off_topic        «Cómo platica» (Motor2::Functions::ProspectRules)
 #
 # Las indicaciones en texto libre van en motor2['instructions'] (las mismas que corrige el
 # entrenador), no en answers.
@@ -85,6 +86,15 @@ class Motor2::Functions::Prospects
 
   def use_catalog? = answer(:business_use_catalog) == true
 
+  # Cuándo pasarlo a una persona: lo que no encuentra solo si así lo eligió («Cómo platica»).
+  def handoff_when
+    base = 'pide hablar con una persona, se molesta o ya es cliente'
+    Motor2::Functions::ProspectRules.choice(answers, 'not_found') == 'handoff' ? "#{base}, o no encuentras lo que pregunta" : base
+  end
+
+  # «Cómo platica»: si no contesta dudas, no busca en ninguna fuente.
+  def answers_doubts? = Motor2::Functions::ProspectRules.answers_doubts?(answers)
+
   def handoff_target = { user_id: answer(:handoff_user_id), team_id: answer(:handoff_team_id) }
 
   def client_target = { user_id: answer(:client_user_id), team_id: answer(:client_team_id) }
@@ -96,9 +106,9 @@ class Motor2::Functions::Prospects
   def skills
     {
       'qualify' => { 'on' => true },
-      'catalog' => { 'on' => use_catalog? },
-      'handoff' => { 'on' => true, 'when' => 'pide hablar con una persona, se molesta, ya es cliente o pide algo que no ' \
-                                             'puedes resolver con lo que sabes' }.merge(handoff_target.transform_keys(&:to_s)),
+      'knowledge' => { 'on' => answers_doubts? },
+      'catalog' => { 'on' => use_catalog? && answers_doubts? },
+      'handoff' => { 'on' => true, 'when' => handoff_when }.merge(handoff_target.transform_keys(&:to_s)),
       'appointments' => { 'on' => appointment?, 'kind' => answer(:appointment_kind).presence_in(APPOINTMENT_KINDS) || 'llamada',
                           'location' => answer(:appointment_location).to_s, 'when' => 'ya califica',
                           'user_ids' => Array(answer(:appointment_user_ids)), 'minutes' => answer(:appointment_minutes) }
@@ -107,8 +117,9 @@ class Motor2::Functions::Prospects
 
   # El puesto y lo que contestó la empresa, en el orden del agente listo de antes.
   def prompt(conversation = nil)
-    [Motor2::Functions.puesto(KEY), business_block, hours_block(conversation), company_block, questions_block,
-     objections_block, contact_block, appointment_block].map(&:to_s).map(&:strip).compact_blank.join("\n\n")
+    blocks = [Motor2::Functions.puesto(KEY), business_block, hours_block(conversation), company_block, questions_block,
+              objections_block, contact_block, appointment_block, Motor2::Functions::ProspectRules.block(answers)]
+    blocks.map { |b| b.to_s.strip }.compact_blank.join("\n\n")
   end
 
   # [{ number:, ask: }] en orden: las de la lista del asistente, tal cual; en los agentes de antes,

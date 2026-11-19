@@ -261,6 +261,30 @@ RSpec.describe Motor2::Functions::Prospects do
     expect(Motor2.takes?(incoming('Hola'))).to be(false)
   end
 
+  context 'with «Cómo platica»' do
+    it 'por omisión: contesta dudas con sus fuentes, sigue si no encuentra y regresa a la plática si es fuera de tema' do
+      expect(system_prompt).to include('CÓMO PLATICAS', 'contéstale con lo que encuentres', 'un asesor se lo confirma',
+                                       'regrésalo con', 'termina tu mensaje con la pregunta 1')
+      expect(agent.motor2['answers']).to include('doubts' => 'answer', 'not_found' => 'continue', 'off_topic' => 'redirect')
+    end
+
+    it 'si no contesta dudas, no tiene con qué buscar (ni en predefinidas ni en el catálogo)' do
+      create(:canned_response, account: account, short_code: 'Precios', content: 'Desde $100')
+      save_agent(settings.merge('doubts' => 'defer', 'business_use_catalog' => true), template: agent)
+      runner = Motor2::Runner.new(Motor2::Config.new(agent.reload), state: Motor2::State.new, history: [])
+      names = Motor2::Skills.for(runner).flat_map(&:tools).map { |t| t.dig(:function, :name) }
+
+      expect(names).not_to include('buscar_en_fuentes', 'buscar_en_catalogo')
+      expect(system_prompt).to include('NO contestas dudas')
+    end
+
+    it 'si no encuentra, puede pasarlo a una persona; si es fuera de tema, descartarlo' do
+      save_agent(settings.merge('not_found' => 'handoff', 'off_topic' => 'discard', 'doubts' => 'raro'), template: agent)
+      expect(agent.reload.motor2['answers']).to include('doubts' => 'answer', 'not_found' => 'handoff', 'off_topic' => 'discard')
+      expect(system_prompt).to include('pásalo a una persona (pasar_a_humano)', 'descártalo', 'o no encuentras lo que pregunta')
+    end
+  end
+
   it 'lo que corrige el entrenador cae en «Indicaciones» (lo único de texto libre que enseña el asistente)' do
     cause = { 'kind' => 'agent', 'field' => 'never', 'replace' => 'Nunca prometas descuentos.', 'summary' => 'Sin descuentos' }
     Motor2::Trainer::AgentFix.new(agent, admin, cause).call

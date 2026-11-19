@@ -2,8 +2,8 @@
   Asistente de la función «Atención a prospectos» (Plan-Motor-Agentes §11.14.5): crear o cambiar
   un agente, paso a paso, sin tener que pensar, solo contestar:
     1 el agente y sus bandejas · 2 tu negocio · 3 qué sabe (sus fuentes) · 4 qué le preguntas ·
-    5 cuándo califica y cuándo no · 6 qué hacer al calificar y a quién · 7 objeciones ·
-    8 indicaciones · 9 pruébalo y guarda
+    5 cómo platica (dudas, lo que no encuentra, fuera de tema) · 6 cuándo califica y cuándo no ·
+    7 qué hacer al calificar y a quién · 8 objeciones · 9 indicaciones · 10 pruébalo y guarda
   A la derecha, el chat de prueba con el motor 2.0 real: tú eres el cliente y ves qué contesta y
   qué hizo, sin guardar ni mandar nada. Al editar se puede saltar a cualquier paso y guardar.
   El agente queda en la lista de agentes. Emite `saved` con el agente.
@@ -28,12 +28,20 @@ const QUALIFY_KEYS = [
 ];
 const EXAMPLE_KEYS = ['need', 'when', 'budget'];
 const MAX_QUESTIONS = 10;
+// «Cómo platica»: opciones, no texto libre (Motor2::Functions::ProspectRules). La primera es la
+// recomendada.
+const RULES = {
+  doubts: ['answer', 'defer'],
+  not_found: ['continue', 'handoff'],
+  off_topic: ['redirect', 'discard'],
+};
 const CONTACT_FIELDS = ['name', 'email', 'company', 'city'];
 const STEPS = [
   'agent',
   'business',
   'knows',
   'questions',
+  'talk',
   'qualify',
   'after',
   'objections',
@@ -52,6 +60,9 @@ const blank = kind => ({
     objective: 'handoff',
     // [{ text }] en la pantalla; se manda como lista de textos (question_list).
     question_list: [],
+    doubts: 'answer',
+    not_found: 'continue',
+    off_topic: 'redirect',
     qualified_when: '',
     discard_when: '',
     tone: 'cercano',
@@ -120,6 +131,13 @@ export default {
     },
     contactFields() {
       return CONTACT_FIELDS;
+    },
+    rules() {
+      return RULES;
+    },
+    // Sin contestar dudas no busca en ninguna fuente: «Qué sabe» no aplica.
+    answersDoubts() {
+      return this.form.settings.doubts !== 'defer';
     },
     canAddQuestion() {
       return this.form.settings.question_list.length < MAX_QUESTIONS;
@@ -511,6 +529,12 @@ export default {
 
           <!-- 3 · Qué sabe: sus fuentes y qué hay en cada una -->
           <template v-if="step === 'knows'">
+            <p
+              v-if="!answersDoubts"
+              class="p-2 m-0 text-xs rounded-md bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+            >
+              {{ t('KNOWS.NO_DOUBTS') }}
+            </p>
             <div
               class="p-2 text-xs rounded-md bg-slate-25 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
             >
@@ -532,6 +556,7 @@ export default {
                 type="checkbox"
                 class="!m-0 mt-0.5 shrink-0"
                 :checked="form.sources.includes(src.key)"
+                :disabled="!answersDoubts"
                 @change="toggleSource(src.key)"
               />
               <span class="text-sm">
@@ -588,7 +613,40 @@ export default {
             </button>
           </template>
 
-          <!-- 5 · Cuándo califica y cuándo no -->
+          <!-- 5 · Cómo platica: dudas, lo que no encuentra y lo que no es del negocio -->
+          <template v-if="step === 'talk'">
+            <fieldset
+              v-for="(values, rule) in rules"
+              :key="rule"
+              class="flex flex-col gap-1 p-2 m-0 border rounded-md border-slate-100 dark:border-slate-700"
+            >
+              <legend
+                class="px-1 text-xs font-medium text-slate-600 dark:text-slate-300"
+              >
+                {{ t(`TALK.${rule}.QUESTION`) }}
+              </legend>
+              <label
+                v-for="(value, i) in values"
+                :key="value"
+                class="flex items-start gap-2 text-sm cursor-pointer text-slate-700 dark:text-slate-200"
+              >
+                <input
+                  v-model="form.settings[rule]"
+                  type="radio"
+                  class="!m-0 mt-1 shrink-0"
+                  :value="value"
+                />
+                <span>
+                  {{ t(`TALK.${rule}.${value}`) }}
+                  <span v-if="i === 0" class="text-xs text-woot-600">{{
+                    t('TALK.RECOMMENDED')
+                  }}</span>
+                </span>
+              </label>
+            </fieldset>
+          </template>
+
+          <!-- 6 · Cuándo califica y cuándo no -->
           <template v-if="step === 'qualify'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.QUALIFIED_WHEN') }}</span>
@@ -611,7 +669,7 @@ export default {
             </p>
           </template>
 
-          <!-- 6 · Qué hacer al calificar y a quién -->
+          <!-- 7 · Qué hacer al calificar y a quién -->
           <template v-if="step === 'after'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.OBJECTIVE') }}</span>
@@ -772,7 +830,7 @@ export default {
             </div>
           </template>
 
-          <!-- 7 · Objeciones -->
+          <!-- 8 · Objeciones -->
           <template v-if="step === 'objections'">
             <div
               v-for="(o, i) in form.settings.objections"
@@ -811,7 +869,7 @@ export default {
             </button>
           </template>
 
-          <!-- 8 · Indicaciones -->
+          <!-- 9 · Indicaciones -->
           <template v-if="step === 'instructions'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.INSTRUCTIONS') }}</span>
@@ -823,7 +881,7 @@ export default {
             </label>
           </template>
 
-          <!-- 9 · Pruébalo y guarda -->
+          <!-- 10 · Pruébalo y guarda -->
           <template v-if="step === 'test'">
             <p class="m-0 text-sm text-slate-700 dark:text-slate-200">
               {{ t('STEP_TEST.READY', { name: form.name.trim() || '—' }) }}

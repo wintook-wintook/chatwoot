@@ -633,6 +633,7 @@
       "business": "Tu negocio",
       "knows": "Qué sabe",
       "questions": "Qué le preguntas",
+      "talk": "Cómo platica",
       "qualify": "Cuándo califica",
       "after": "Al calificar",
       "objections": "Objeciones",
@@ -644,6 +645,7 @@
       "business": "Lo que el agente debe saber para explicar y para descartar a quien está fuera de zona o de lo que vendes.",
       "knows": "Dónde busca lo que le preguntan. Las respuestas predefinidas van siempre; marca las demás fuentes que use este agente.",
       "questions": "Las preguntas que hace para calificarlo, tal cual las escribas y en este orden, una por mensaje. Vienen unas de ejemplo: quítalas, cámbialas o agrega las tuyas.",
+      "talk": "Qué hace cuando el cliente pregunta algo, cuando no encuentra la respuesta o cuando escribe algo que no es de tu negocio. Siempre regresa a la pregunta que quedó pendiente.",
       "qualify": "Con esto sabe cuándo pasarlo a tu equipo y cuándo no es para ti.",
       "after": "Qué hace cuando califica, a quién se lo pasa y qué datos junta antes.",
       "objections": "Lo que suelen decir para frenar la compra y cómo contestarlo. Usa la idea con sus palabras y no inventa descuentos.",
@@ -658,7 +660,8 @@
       "CANNED": "Respuestas predefinidas (siempre)",
       "NO_CANNED": "Todavía no hay respuestas predefinidas: agrégalas en Catálogos › Respuestas predefinidas.",
       "NO_OTHERS": "No hay otras fuentes conectadas. Puedes agregar hojas, documentos o un foro en Ajustes › Bases de conocimiento.",
-      "WHERE_HINT": "El agente recibe qué hay en cada fuente para buscar en la que corresponde. Si una descripción no es exacta, cámbiala en «¿Qué hay aquí?» de Ajustes › Bases de conocimiento."
+      "WHERE_HINT": "El agente recibe qué hay en cada fuente para buscar en la que corresponde. Si una descripción no es exacta, cámbiala en «¿Qué hay aquí?» de Ajustes › Bases de conocimiento.",
+      "NO_DOUBTS": "Elegiste que no conteste dudas (paso «Cómo platica»): no busca en ninguna fuente."
     },
     "QUESTIONS_LIST": {
       "NUMBER": "{n}.",
@@ -666,6 +669,24 @@
       "REMOVE": "Quitar esta pregunta",
       "ADD": "+ Agregar pregunta",
       "EMPTY": "Sin preguntas, solo preguntará qué busca."
+    },
+    "TALK": {
+      "RECOMMENDED": "(recomendada)",
+      "doubts": {
+        "QUESTION": "Si el cliente pregunta algo en lugar de contestar:",
+        "answer": "Le contesta con lo que sabe y regresa a la pregunta que quedó pendiente",
+        "defer": "No contesta dudas: le dice que un asesor se las resuelve y sigue con sus preguntas (no busca en ninguna fuente)"
+      },
+      "not_found": {
+        "QUESTION": "Si busca y no encuentra la respuesta:",
+        "continue": "Le dice que no tiene ese dato, que un asesor se lo confirma, y sigue con sus preguntas",
+        "handoff": "Lo pasa a una persona"
+      },
+      "off_topic": {
+        "QUESTION": "Si escribe algo que no tiene que ver con tu negocio:",
+        "redirect": "Lo regresa con amabilidad a la plática y sigue con sus preguntas",
+        "discard": "Lo descarta con amabilidad"
+      }
     }
   }
 }

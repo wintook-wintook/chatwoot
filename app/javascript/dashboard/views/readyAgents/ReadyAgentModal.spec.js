@@ -126,3 +126,22 @@ describe('ReadyAgentModal · asistente paso a paso', () => {
     expect(payload.settings.instructions).toBe('Sé breve');
   });
 });
+
+describe('ReadyAgentModal · cómo platica', () => {
+  it('nuevo: vienen las recomendadas y se mandan con las respuestas', () => {
+    const { vm } = mountModal();
+    expect(vm.steps).toContain('talk');
+    const { settings } = vm.payload();
+    expect(settings).toMatchObject({
+      doubts: 'answer',
+      not_found: 'continue',
+      off_topic: 'redirect',
+    });
+  });
+
+  it('si no contesta dudas, «Qué sabe» no aplica', () => {
+    const { vm } = mountModal();
+    vm.form.settings.doubts = 'defer';
+    expect(vm.answersDoubts).toBe(false);
+  });
+});
