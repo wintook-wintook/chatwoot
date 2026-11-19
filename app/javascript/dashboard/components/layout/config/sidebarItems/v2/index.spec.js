@@ -32,7 +32,6 @@ describe('Menú v2', () => {
       'agentes',
       'reports',
       'catalogos',
-      'helpcenter',
       'settings',
     ]);
   });
@@ -232,14 +231,20 @@ describe('Menú v2', () => {
       'gestorTickets_maintenance',
       'gestorTickets_portals',
     ].forEach(name => expect(menuFor(route(name)).parentNav).toBe('servicio'));
-    // Dentro del Centro de ayuda se marca su ícono del menú principal (su menú es el suyo).
+    // El Centro de ayuda está en Agentes IA, junto a Bases de conocimiento; dentro manda su
+    // propio menú y se marca Agentes IA en el menú principal.
     const ayuda = menuFor({
       name: 'list_all_locale_articles',
       path: '/app/accounts/1/portals/x/es/articles',
       params: {},
     });
-    expect(ayuda.parentNav).toBe('helpcenter');
+    expect(ayuda.parentNav).toBe('agentes');
     expect(ayuda.menuItems).toEqual([]);
+    const agentes = menuFor(route('ready_agents')).menuItems.map(
+      i => i.toStateName
+    );
+    const base = agentes.indexOf('knowledge_sources_list');
+    expect(agentes[base + 1]).toBe('default_portal_articles');
     // Y salen de Ajustes › Casos y etapas.
     const grupo = menuFor(route('agent_list')).menuItems.find(
       i => i.label === 'CASES_AND_STAGES'
@@ -303,6 +308,7 @@ describe('Menú v2', () => {
       'AI_AGENT_LIST',
       'TRACKINGS',
       'KNOWLEDGE_SOURCES',
+      'HELP_CENTER.TITLE',
       'CHATGPT',
       'SITE_ANALYSIS',
       'AUTOMATION',
