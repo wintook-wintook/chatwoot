@@ -171,6 +171,16 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
 
   def human? = @human_requests.to_i.positive? || now['pide_persona'] == true
 
+  # Soporte: antes de pasarlo o levantar el caso se busca la solución en sus fuentes (lo hace el código: el
+  # modelo a veces se la salta). No aplica si pidió una persona o no puede operar (urgente).
+  def search_first?
+    area_key == 'support' && @turn.find_skill('knowledge')&.searchable? && !searched_now? && !human? &&
+      now['severidad'] != 1
+  end
+
+  # En este mismo mensaje (con lo último que dijo el cliente).
+  def searched_now? = trace.tools.any? { |t| t['name'] == 'buscar_en_fuentes' }
+
   def hold_handoff_note? = human? && !must_handoff?
 
   def queue = Array(state['cola'])

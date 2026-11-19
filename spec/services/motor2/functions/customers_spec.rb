@@ -103,6 +103,17 @@ RSpec.describe Motor2::Functions::Customers do
     expect(state['triage']).to include('suficiente' => true)
   end
 
+  it 'Soporte: no lo pasa ni levanta el caso sin antes buscar la solución en sus fuentes' do
+    create(:canned_response, account: account, short_code: 'alta', content: 'Para dar de alta un cliente ve a Catálogos › Clientes.')
+    triage('support', intencion: 'dar de alta un cliente', severidad: 3)
+    stub_model(tool_call('canalizar', { motivo: 'alta de cliente' }), answer('Te paso con soporte.'))
+    reply_to(incoming('cómo doy de alta un cliente'))
+
+    tools = conversation.messages.outgoing.where(private: false).last.content_attributes.dig('motor2', 'tools')
+    expect(tools.first).to include('name' => 'canalizar', 'ok' => false)
+    expect(tracking.reload.status).to eq('active') # no se pasó
+  end
+
   it 'Administrativo: canaliza al equipo de esa área, con nota, y el agente se pausa' do
     triage('admin', intencion: 'corregir RFC de una factura')
     stub_model(tool_call('canalizar', { motivo: 'Corregir el RFC de la factura A-1' }),

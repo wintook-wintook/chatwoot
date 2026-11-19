@@ -12,6 +12,8 @@
 module Motor2::Skills::AreaActions
   include Motor2::Skills::AreaSales
 
+  SEARCH_FIRST = 'Todavía no: primero búscalo con buscar_en_fuentes. Si ahí está cómo resolverlo, dale los pasos al cliente; ' \
+                 'solo si no está, lo pasas o levantas su caso.'
   SEVERITY = { 1 => 'urgent', 2 => 'high', 3 => 'medium' }.freeze # severidad de soporte → prioridad del caso
   CHANNELED = 'Listo, ya se pasó. Escribe un mensaje corto y cálido: qué le pasas y a quién (p. ej. «le paso tu solicitud de ' \
               'visita a nuestro equipo comercial») y que en cuanto puedan lo atienden. Sin preguntas: ya no sigues tú.'
@@ -58,6 +60,7 @@ module Motor2::Skills::AreaActions
 
   def channel(reason)
     return { ok: true, nota: 'Ya quedó registrado: NO hace falta pasarlo. Solo dile que su vendedor le da seguimiento.' } if @acted
+    return { error: SEARCH_FIRST } if search_first?
 
     state['handoff_area'] = area_key
     @turn.decide('handoff', "#{area_title}: #{reason}")
@@ -67,6 +70,7 @@ module Motor2::Skills::AreaActions
   def create_case(args)
     return { error: 'Esta área no levanta casos: llama canalizar.' } unless support_case?
     return { error: ASK_FIRST } if ask_first?
+    return { error: SEARCH_FIRST } if search_first?
 
     @acted = true
     return { ya_existe: true, folio: state['case_folio'], nota: 'Ya le levantaste este caso: dale ese folio.' } if state['case_folio']
