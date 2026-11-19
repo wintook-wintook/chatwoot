@@ -10,7 +10,9 @@
 #     así no afirma «sí lo tenemos» sin haberlo visto;
 #   - si pidió una persona y ya toca pasarlo (Motor2::Skills::QualifyFlow), se pasa aunque el modelo
 #     no llame la herramienta;
-#   - al agregar la pregunta pendiente después de un desvío, va con la frase que conecta.
+#   - al agregar la pregunta pendiente después de un desvío, va con la frase que conecta;
+#   - con «no encontró → sin prometer asesor» (Atención a prospectos), si el mensaje promete que un
+#     asesor lo confirma, se le pide quitarlo y, si insiste, el código quita esa frase.
 # Lo incluye Motor2::Runner (usa @mode, @decision, @skills, @trace, @welcome, #run, #clean y #unsourced?).
 module Motor2::QuestionGuard
   ASK_AGAIN = 'Tu mensaje debe terminar con esta pregunta, tal cual: «%<ask>s». Reescríbelo (corto) terminando con ella.'
@@ -31,7 +33,7 @@ module Motor2::QuestionGuard
   # Las revisiones de la plática, en orden: buscó si le preguntaron, no prometió sin decidir, termina
   # con la pregunta pendiente.
   def guard_turn(messages, text)
-    %i[ensure_handoff ensure_searched ensure_decision ensure_question].reduce(text) do |current, check|
+    %i[ensure_handoff ensure_searched ensure_no_advisor ensure_decision ensure_question].reduce(text) do |current, check|
       current.present? ? send(check, messages, current) : current
     end
   end
@@ -53,6 +55,29 @@ module Motor2::QuestionGuard
 
   def without_last_question(text)
     text.to_s.sub(/¿[^¿]*\?[\s\p{Emoji_Presentation}]*\z/, '').strip
+  end
+
+  # La frase (o el «, pero …» de una frase) que promete que un asesor lo confirma.
+  ADVISOR = /(,?\s*\b(pero|y|aunque)\s+)?[^.!?¡¿\n,]*\b(asesor|asesora|ejecutivo|ejecutiva|alguien\s+del\s+equipo|nuestro\s+equipo|
+             el\s+equipo)\b[^.!?\n]*\b(confirm|resuelv|resolv|ayud|dir[aá]|inform|contact|escrib|comunic|atend|revis)\w*[^.!?\n]*/xi
+  NO_ADVISOR = 'La empresa eligió NO prometer que un asesor confirma lo que no encontraste. Reescribe tu mensaje sin esa ' \
+               'promesa: di solo que no tienes ese dato y sigue con la pregunta pendiente.'
+
+  def ensure_no_advisor(messages, text)
+    return text unless silent_not_found? && text.match?(ADVISOR)
+
+    @trace.event(:revision, 'prometió un asesor (eligieron no hacerlo)')
+    messages << { role: 'assistant', content: text } << { role: 'system', content: NO_ADVISOR }
+    again = clean(run(messages))
+    again = text if again.blank? || unsourced?(again)
+    again.gsub(ADVISOR, '').gsub(/\s+([,.])/, '\1').gsub(/\.{2,}/, '.').squeeze(' ').strip.sub(/\A[,.\s]+/, '')
+  end
+
+  # «Si busca y no encuentra» = sin prometer asesor, y no es que pidió una persona (ahí sí se habla de asesor).
+  def silent_not_found?
+    answers = @config.answers
+    @mode == :reply && @decision.nil? && @config.function.is_a?(Motor2::Functions::Prospects) &&
+      Motor2::Functions::ProspectRules.active(answers)['not_found'] == 'silent' && !qualify_skill&.human_requested?
   end
 
   HANDOFF_ASK = 'Pidió hablar con una persona y ya toca pasarlo: llama pasar_a_humano y despídete (en un momento lo atiende ' \

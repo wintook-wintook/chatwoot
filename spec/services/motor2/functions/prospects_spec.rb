@@ -400,6 +400,16 @@ RSpec.describe Motor2::Functions::Prospects do
       expect(result[:reply]).to include('solo me faltan 4 preguntas')
     end
 
+    it 'con «no encontró → sin prometer asesor», se quita la promesa aunque el modelo insista' do
+      save_agent(settings.merge('not_found' => 'silent'), template: agent)
+      stub_model(tool_call('buscar_en_fuentes', { pregunta: 'financiamiento' }),
+                 answer('No tengo ese dato, pero un asesor te lo confirma. ¿Qué buscas?'))
+      result = probe('¿dan financiamiento?')
+      expect(result[:reply]).to start_with('No tengo ese dato.')
+      expect(result[:reply]).not_to include('asesor')
+      expect(result[:trace]['events']).to include(include('text' => 'prometió un asesor (eligieron no hacerlo)'))
+    end
+
     it 'al retomar después de una duda, la pregunta va con la frase que conecta' do
       stub_model(answer('Abrimos de 9 a 6.'))
       result = probe('¿a qué hora abren?')
