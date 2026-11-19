@@ -682,7 +682,7 @@
       "business": "Lo que el agente debe saber para explicar y para descartar a quien está fuera de zona o de lo que vendes.",
       "knows": "Dónde busca lo que le preguntan. Las respuestas predefinidas van siempre; marca las demás fuentes que use este agente.",
       "questions": "Las preguntas que hace para calificarlo, tal cual las escribas y en este orden (cámbialo con ↑ ↓), una por mensaje. Vienen unas de ejemplo: quítalas, cámbialas o agrega las tuyas.",
-      "talk": "Su bienvenida y qué hace cuando el cliente pregunta algo, cuando no encuentra la respuesta o cuando escribe algo que no es de tu negocio. Siempre regresa a la pregunta que quedó pendiente.",
+      "talk": "Su bienvenida y qué hace cuando el cliente pregunta algo, no encuentra la respuesta, escribe algo que no es de tu negocio o pide una persona. Siempre regresa a la pregunta pendiente, conectando («Si te parece, seguimos: solo me faltan 2 preguntas…»).",
       "qualify": "Con esto sabe cuándo pasarlo a tu equipo y cuándo no es para ti.",
       "after": "Qué hace cuando califica, a quién se lo pasa y qué datos junta antes.",
       "objections": "Lo que suelen decir para frenar la compra y cómo contestarlo. Usa la idea con sus palabras y no inventa descuentos.",
@@ -721,13 +721,19 @@
       },
       "not_found": {
         "QUESTION": "Si busca y no encuentra la respuesta:",
-        "continue": "Le dice que no tiene ese dato, que un asesor se lo confirma, y sigue con sus preguntas",
-        "handoff": "Lo pasa a una persona"
+        "advisor": "Le dice que no tiene ese dato, que un asesor se lo confirma, y sigue con sus preguntas",
+        "silent": "Le dice que no tiene ese dato y sigue con sus preguntas (sin prometer asesor)"
       },
       "off_topic": {
         "QUESTION": "Si escribe algo que no tiene que ver con tu negocio:",
         "redirect": "Lo regresa con amabilidad a la plática y sigue con sus preguntas",
-        "discard": "Lo descarta con amabilidad"
+        "answer": "Le contesta en 1 o 2 líneas (sin buscar en tus fuentes) y sigue con sus preguntas"
+      },
+      "ONLY_IF_ANSWERS": "Solo aplica si contesta dudas (primera opción de arriba).",
+      "human": {
+        "QUESTION": "Si pide hablar con una persona:",
+        "finish_first": "Le pide terminar las preguntas que faltan (máximo 2) y lo pasa; si insiste o se molesta, lo pasa ya",
+        "now": "Lo pasa de inmediato: se pausa y se asigna a quien elegiste en «Al calificar»"
       }
     }
   }

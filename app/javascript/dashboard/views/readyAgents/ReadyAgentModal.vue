@@ -32,8 +32,16 @@ const MAX_QUESTIONS = 10;
 // recomendada.
 const RULES = {
   doubts: ['answer', 'defer'],
-  not_found: ['continue', 'handoff'],
-  off_topic: ['redirect', 'discard'],
+  not_found: ['advisor', 'silent'],
+  off_topic: ['redirect', 'answer'],
+  human: ['finish_first', 'now'],
+};
+// Solo aplican si contesta dudas (con «No contesta dudas» se ven en gris).
+const NEEDS_DOUBTS = ['not_found', 'off_topic'];
+// Valores de antes: «lo pasa a una persona» y «lo descarta» se quitaron.
+const LEGACY = {
+  not_found: { continue: 'advisor', handoff: 'advisor' },
+  off_topic: { discard: 'redirect' },
 };
 const CONTACT_FIELDS = ['name', 'email', 'company', 'city'];
 const STEPS = [
@@ -61,8 +69,9 @@ const blank = kind => ({
     // [{ text }] en la pantalla; se manda como lista de textos (question_list).
     question_list: [],
     doubts: 'answer',
-    not_found: 'continue',
+    not_found: 'advisor',
     off_topic: 'redirect',
+    human: 'finish_first',
     // Bienvenida: va tal cual al inicio de su primera respuesta (motor2['welcome']).
     welcome: '',
     qualified_when: '',
@@ -191,6 +200,7 @@ export default {
               ...base.settings,
               ...JSON.parse(JSON.stringify(this.agent.settings || {})),
               question_list: this.questionsOf(this.agent.settings || {}),
+              ...this.rulesOf(this.agent.settings || {}),
               objections: this.agent.settings?.objections || [],
               required_contact: this.agent.settings?.required_contact || [],
             },
@@ -220,6 +230,10 @@ export default {
     back() {
       if (this.stepIndex > 0) this.step = STEPS[this.stepIndex - 1];
     },
+    // «No encontró» y «fuera de tema» solo aplican si contesta dudas.
+    ruleOff(rule) {
+      return !this.answersDoubts && NEEDS_DOUBTS.includes(rule);
+    },
     toggleSource(key) {
       const list = this.form.sources;
       this.form.sources = list.includes(key)
@@ -248,6 +262,16 @@ export default {
       });
       const own = settings.questions ? [{ text: settings.questions }] : [];
       return [...armed, ...own];
+    },
+    // Las opciones guardadas; las de antes pasan a la recomendada.
+    rulesOf(settings) {
+      return Object.fromEntries(
+        Object.entries(RULES).map(([rule, values]) => {
+          const saved = settings[rule];
+          const value = (LEGACY[rule] && LEGACY[rule][saved]) || saved;
+          return [rule, values.includes(value) ? value : values[0]];
+        })
+      );
     },
     exampleQuestions() {
       return EXAMPLE_KEYS.map(key => ({ text: this.t(`QUALIFY.${key}.ASK`) }));
@@ -657,13 +681,18 @@ export default {
             <fieldset
               v-for="(values, rule) in rules"
               :key="rule"
+              :disabled="ruleOff(rule)"
               class="flex flex-col gap-1 p-2 m-0 border rounded-md border-slate-100 dark:border-slate-700"
+              :class="{ 'opacity-50': ruleOff(rule) }"
             >
               <legend
                 class="px-1 text-xs font-medium text-slate-600 dark:text-slate-300"
               >
                 {{ t(`TALK.${rule}.QUESTION`) }}
               </legend>
+              <p v-if="ruleOff(rule)" class="m-0 text-xs text-slate-500">
+                {{ t('TALK.ONLY_IF_ANSWERS') }}
+              </p>
               <label
                 v-for="(value, i) in values"
                 :key="value"

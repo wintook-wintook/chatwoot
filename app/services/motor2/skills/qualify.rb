@@ -16,7 +16,10 @@
 #     guarda a ciegas: «para viajar» no es la respuesta de «¿Para cuándo?»);
 #   - required_question: Motor2::Runner revisa que la traiga (si no, se la pide o la agrega).
 # El modelo también puede guardar con guardar_respuesta (si lo dijo de pasada).
+# Quién pide una persona y la frase para retomar conectando: Motor2::Skills::QualifyFlow.
 class Motor2::Skills::Qualify < Motor2::Skills::Base
+  include Motor2::Skills::QualifyFlow
+
   TEMPERATURES = %w[caliente tibio frio].freeze
   TEMPERATURE = { type: 'string', enum: TEMPERATURES, description: 'Qué tan listo está para comprar' }.freeze
 
@@ -44,8 +47,10 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
       lines << "LO QUE YA CONTESTÓ: #{answers.map { |q, a| "#{q} → #{a}" }.join(' | ')} (si después da una mejor respuesta a " \
                'una, guárdala otra vez con su número: reemplaza la anterior)'
     end
-    numbers = pending.pluck(:number)
-    if numbers.any?
+    numbers = pending_now.pluck(:number)
+    if must_handoff?
+      lines << handoff_note
+    elsif numbers.any?
       lines << "TE FALTA PREGUNTAR (en orden; la siguiente es la #{numbers.first}): #{numbers.join(', ')}. Aunque contestes " \
                "otra cosa, termina tu mensaje con la pregunta #{numbers.first}."
     elsif questions.any?
@@ -60,6 +65,7 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
 
   # La pregunta pendiente que hizo el agente en su último mensaje (si el cliente ya contestó después).
   def prepare(history)
+    scan_flow(history)
     last = Array(history).rindex { |m| m[:role].to_s == 'assistant' }
     return @just_asked = nil unless last && history[(last + 1)..].any? { |m| m[:role].to_s == 'user' }
 
@@ -67,18 +73,24 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
   end
 
   def turn_note
+    return handoff_note if must_handoff?
+
     notes = []
-    if @just_asked
+    if @just_asked && detour?
+      notes << "En vez de contestar tu pregunta #{@just_asked[:number]} («#{@just_asked[:ask]}»), el cliente preguntó o pidió " \
+               'otra cosa: atiéndelo y vuelve a hacerla. NO guardes lo que preguntó como respuesta.'
+    elsif @just_asked
       notes << "Le preguntaste #{@just_asked[:number]}. «#{@just_asked[:ask]}». ¿Su último mensaje contesta EXACTAMENTE eso? Si sí, " \
                "guárdalo YA con guardar_respuesta numero #{@just_asked[:number]}. Si contesta otra cosa (p. ej. le preguntas para " \
                'cuándo y dice para qué), guarda eso en la pregunta que sí contesta y vuelve a hacer esta.'
     end
     ask = required_question
+    notes << bridge_note if ask
     notes << "Termina tu mensaje con la pregunta pendiente, tal cual: «#{ask}» (salvo que lo califiques, descartes o pases)." if ask
-    notes.join("\n")
+    notes.compact.join("\n")
   end
 
-  def required_question = pending.first&.dig(:ask)
+  def required_question = must_handoff? ? nil : pending_now.first&.dig(:ask)
 
   # ¿El texto trae la pregunta? Sin acentos, mayúsculas ni signos.
   def self.asks?(text, ask)
@@ -106,6 +118,7 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
     question = questions.find { |q| q[:number] == args['numero'].to_i }&.dig(:ask) || args['pregunta'].to_s.strip.presence
     return { error: "No existe la pregunta #{args['numero']}." } if question.nil?
     return { error: 'Falta la respuesta.' } if args['respuesta'].blank?
+    return { error: 'Eso lo preguntó el cliente: no es su respuesta. Contéstale y vuelve a hacer la pregunta.' } if its_question?(args)
 
     answers[question.first(300)] = args['respuesta'].to_s.first(300)
     trace.event(:respuesta, "#{question}: #{args['respuesta']}")

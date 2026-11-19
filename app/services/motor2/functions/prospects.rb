@@ -86,11 +86,10 @@ class Motor2::Functions::Prospects
 
   def use_catalog? = answer(:business_use_catalog) == true
 
-  # Cuándo pasarlo a una persona: lo que no encuentra solo si así lo eligió («Cómo platica»).
-  def handoff_when
-    base = 'pide hablar con una persona, se molesta o ya es cliente'
-    Motor2::Functions::ProspectRules.choice(answers, 'not_found') == 'handoff' ? "#{base}, o no encuentras lo que pregunta" : base
-  end
+  # Cuándo pasarlo a una persona (lo de «pide una persona» lo dice CÓMO PLATICAS).
+  def handoff_when = 'pide hablar con una persona (como dice CÓMO PLATICAS), se molesta o ya es cliente'
+
+  def human_now? = Motor2::Functions::ProspectRules.human_now?(answers)
 
   # «Cómo platica»: si no contesta dudas, no busca en ninguna fuente.
   def answers_doubts? = Motor2::Functions::ProspectRules.answers_doubts?(answers)

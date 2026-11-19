@@ -682,7 +682,7 @@
       "business": "What the agent must know to explain and to discard people outside your area or offer.",
       "knows": "Where it looks up what it is asked. Canned responses are always on; tick the other sources this agent uses.",
       "questions": "The questions it asks to qualify the lead, exactly as written and in this order (change it with ↑ ↓), one per message. Some examples come in: remove them, edit them or add your own.",
-      "talk": "Its welcome and what it does when the customer asks something, when it can't find the answer, or when they write about something unrelated. It always goes back to the pending question.",
+      "talk": "Its welcome and what it does when the customer asks something, it can't find the answer, they write about something unrelated or ask for a person. It always goes back to the pending question, bridging («If you like, let's continue: just 2 more questions…»).",
       "qualify": "With this it knows when to pass it to your team and when it is not for you.",
       "after": "What it does when the lead qualifies, who gets it and which details it collects first.",
       "objections": "What people say to stall the purchase and how to answer. It uses the idea in its own words and never invents discounts.",
@@ -721,13 +721,19 @@
       },
       "not_found": {
         "QUESTION": "If it searches and can't find the answer:",
-        "continue": "It says it doesn't have that info, an advisor will confirm it, and keeps asking",
-        "handoff": "It hands off to a person"
+        "advisor": "It says it doesn't have that info, an advisor will confirm it, and keeps asking",
+        "silent": "It says it doesn't have that info and keeps asking (no advisor promised)"
       },
       "off_topic": {
         "QUESTION": "If they write something unrelated to your business:",
         "redirect": "It politely brings them back and keeps asking",
-        "discard": "It politely discards them"
+        "answer": "It answers in 1–2 lines (without searching your sources) and keeps asking"
+      },
+      "ONLY_IF_ANSWERS": "Only applies if it answers questions (first option above).",
+      "human": {
+        "QUESTION": "If they ask to talk to a person:",
+        "finish_first": "It asks to finish the remaining questions (2 at most) and hands off; if they insist or get upset, it hands off right away",
+        "now": "It hands off right away: it pauses and assigns to whoever you chose in «When qualified»"
       }
     }
   }

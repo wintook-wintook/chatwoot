@@ -304,26 +304,71 @@ RSpec.describe Motor2::Functions::Prospects do
   end
 
   context 'with «Cómo platica»' do
-    it 'por omisión: contesta dudas con sus fuentes, sigue si no encuentra y regresa a la plática si es fuera de tema' do
+    it 'por omisión: contesta dudas, si no encuentra un asesor lo confirma, fuera de tema lo regresa, persona: terminar primero' do
       expect(system_prompt).to include('CÓMO PLATICAS', 'contéstale con lo que encuentres', 'un asesor se lo confirma',
-                                       'regrésalo con', 'termina tu mensaje con la pregunta 1')
-      expect(agent.motor2['answers']).to include('doubts' => 'answer', 'not_found' => 'continue', 'off_topic' => 'redirect')
+                                       'regrésalo con', 'solo te faltan unas preguntas', 'termina tu mensaje con la pregunta 1')
+      expect(agent.motor2['answers']).to include('doubts' => 'answer', 'not_found' => 'advisor', 'off_topic' => 'redirect',
+                                                 'human' => 'finish_first')
     end
 
-    it 'si no contesta dudas, no tiene con qué buscar (ni en predefinidas ni en el catálogo)' do
+    it 'si no contesta dudas, no tiene con qué buscar y «no encontró» y «fuera de tema» no aplican' do
       create(:canned_response, account: account, short_code: 'Precios', content: 'Desde $100')
-      save_agent(settings.merge('doubts' => 'defer', 'business_use_catalog' => true), template: agent)
+      save_agent(settings.merge('doubts' => 'defer', 'business_use_catalog' => true, 'off_topic' => 'answer'), template: agent)
       runner = Motor2::Runner.new(Motor2::Config.new(agent.reload), state: Motor2::State.new, history: [])
       names = Motor2::Skills.for(runner).flat_map(&:tools).map { |t| t.dig(:function, :name) }
 
       expect(names).not_to include('buscar_en_fuentes', 'buscar_en_catalogo')
       expect(system_prompt).to include('NO contestas dudas')
+      expect(system_prompt).not_to include('Si buscas y no encuentras', 'contéstale con amabilidad en 1 o 2 líneas')
     end
 
-    it 'si no encuentra, puede pasarlo a una persona; si es fuera de tema, descartarlo' do
+    it 'las otras opciones; y las de antes («lo pasa», «lo descarta») pasan a las recomendadas' do
+      save_agent(settings.merge('not_found' => 'silent', 'off_topic' => 'answer', 'human' => 'now'), template: agent)
+      expect(system_prompt).to include('No prometas que un asesor', 'contéstale con amabilidad en 1 o 2 líneas', 'pásalo de inmediato')
+
       save_agent(settings.merge('not_found' => 'handoff', 'off_topic' => 'discard', 'doubts' => 'raro'), template: agent)
-      expect(agent.reload.motor2['answers']).to include('doubts' => 'answer', 'not_found' => 'handoff', 'off_topic' => 'discard')
-      expect(system_prompt).to include('pásalo a una persona (pasar_a_humano)', 'descártalo', 'o no encuentras lo que pregunta')
+      expect(agent.reload.motor2['answers']).to include('doubts' => 'answer', 'not_found' => 'advisor', 'off_topic' => 'redirect')
+    end
+  end
+
+  context 'with «pide hablar con una persona»' do
+    let(:settings) do
+      { 'objective' => 'handoff', 'handoff_user_id' => seller.id,
+        'question_list' => ['¿Qué buscas?', '¿Para cuándo?', '¿Presupuesto?', '¿Ciudad?'] }
+    end
+
+    let(:memory) { {} }
+
+    def probe(*customer)
+      chat = customer.each_with_index.flat_map do |text, i|
+        [{ role: 'user', content: text }, ({ role: 'assistant', content: '¿Qué buscas?' } if i < customer.size - 1)].compact
+      end
+      Motor2::Probe.new(agent.reload, messages: chat, state: memory[:state] || {}).call.tap { |r| memory[:state] = r[:state] }
+    end
+
+    it 'terminar primero: solo pide las que faltan (máx. 2) con la frase que conecta; si insiste, lo pasa ya' do
+      stub_model(answer('Claro, con gusto. ¿Qué buscas?'))
+      first = probe('quiero hablar con un asesor')
+      expect(first[:state]['human_pending']).to eq([1, 2])
+      expect(first[:decision]).to be_nil
+
+      stub_model(answer('Te paso en un momento, ¿qué buscas?'))
+      second = probe('quiero hablar con un asesor', 'ya te dije, pásame con una persona')
+      expect(second[:decision]).to eq(['handoff', 'Pidió hablar con una persona.'])
+      expect(second[:reply]).to eq(Motor2::QuestionGuard::HANDOFF_TEXT)
+    end
+
+    it 'de inmediato: lo pasa a la primera' do
+      save_agent(settings.merge('human' => 'now'), template: agent)
+      stub_model(tool_call('pasar_a_humano', { motivo: 'Pidió una persona' }), answer('En un momento te atiende un asesor.'))
+      result = probe('¿me pasas con un humano?')
+      expect(result[:decision].first).to eq('handoff')
+    end
+
+    it 'al retomar después de una duda, la pregunta va con la frase que conecta' do
+      stub_model(answer('Abrimos de 9 a 6.'))
+      result = probe('¿a qué hora abren?')
+      expect(result[:reply]).to match(/Abrimos de 9 a 6\.\n\n.*solo me faltan 4 preguntas.*\n\n¿Qué buscas\?/m)
     end
   end
 

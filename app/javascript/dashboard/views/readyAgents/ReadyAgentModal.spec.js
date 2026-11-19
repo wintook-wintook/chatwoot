@@ -134,15 +134,35 @@ describe('ReadyAgentModal · cómo platica', () => {
     const { settings } = vm.payload();
     expect(settings).toMatchObject({
       doubts: 'answer',
-      not_found: 'continue',
+      not_found: 'advisor',
       off_topic: 'redirect',
+      human: 'finish_first',
     });
   });
 
-  it('si no contesta dudas, «Qué sabe» no aplica', () => {
+  it('si no contesta dudas, «Qué sabe», «no encontró» y «fuera de tema» no aplican', () => {
     const { vm } = mountModal();
     vm.form.settings.doubts = 'defer';
     expect(vm.answersDoubts).toBe(false);
+    expect(vm.ruleOff('not_found')).toBe(true);
+    expect(vm.ruleOff('off_topic')).toBe(true);
+    expect(vm.ruleOff('human')).toBe(false);
+  });
+
+  it('un agente con opciones de antes pasa a las recomendadas', () => {
+    const { vm } = mountModal({
+      agent: {
+        id: 1,
+        name: 'Sofi',
+        inbox_ids: [1],
+        settings: { not_found: 'handoff', off_topic: 'discard' },
+      },
+    });
+    expect(vm.form.settings).toMatchObject({
+      not_found: 'advisor',
+      off_topic: 'redirect',
+      human: 'finish_first',
+    });
   });
 });
 
