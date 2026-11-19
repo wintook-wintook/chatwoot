@@ -281,6 +281,19 @@ RSpec.describe Motor2::Functions::Prospects do
       expect(conversation.messages.outgoing.where(private: false).last.content).to eq('¡Perfecto! ¿En qué ciudad estás?')
     end
 
+    it 'si el modelo la repite con otros espacios o signos, igual sale una sola vez' do
+      stub_model(answer('¡Hola!   Soy Ana de Autos GDL 🚗 ¿Qué buscas?'))
+      reply = Motor2::Probe.new(agent.reload, messages: [{ role: 'user', content: 'buen día, info' }]).call[:reply]
+      expect(reply).to eq("¡Hola! Soy Ana de Autos GDL 🚗\n\n¿Qué buscas?")
+    end
+
+    it 'si la bienvenida ya pregunta y el cliente solo saludó, no lleva otra pregunta' do
+      save_agent(settings.merge('welcome' => '¡Hola! Soy Ana, ¿en qué te ayudo?'), template: agent)
+      stub_model(answer('¡Hola! Soy Ana, ¿en qué te ayudo? ¿Qué buscas?'))
+      reply = Motor2::Probe.new(agent.reload, messages: [{ role: 'user', content: 'hola' }]).call[:reply]
+      expect(reply).to eq('¡Hola! Soy Ana, ¿en qué te ayudo?')
+    end
+
     it 'en el chat de prueba también: solo en la primera respuesta' do
       stub_model(answer('¿Qué buscas?'))
       first = Motor2::Probe.new(agent.reload, messages: [{ role: 'user', content: 'hola' }]).call
@@ -365,6 +378,28 @@ RSpec.describe Motor2::Functions::Prospects do
       expect(result[:decision].first).to eq('handoff')
     end
 
+    it 'si en el mismo turno intenta pasarlo dos veces, se detienen las dos (la primera vez que lo pide)' do
+      stub_model(tool_call('pasar_a_humano', { motivo: 'x' }), tool_call('pasar_a_humano', { motivo: 'x' }), answer('Claro. ¿Qué buscas?'))
+      result = probe('pasame con un humano')
+      expect(result[:decision]).to be_nil
+      expect(result[:trace]['tools'].pluck('ok')).to eq([false, false])
+    end
+
+    it 'la segunda vez lo pasa aunque lo escriba con errores' do
+      stub_model(answer('Claro. ¿Qué buscas?'))
+      probe('pasame con un humano')
+      stub_model(answer('Te paso.'))
+      expect(probe('pasame con un humano', 'pasme con un humano')[:decision].first).to eq('handoff')
+    end
+
+    it 'una duda sin «?» («das financiamiento…») no se guarda como respuesta y retoma conectando' do
+      stub_model(tool_call('guardar_respuesta', { numero: 1, respuesta: 'das financiamiento con banamex' }),
+                 tool_call('buscar_en_fuentes', { pregunta: 'financiamiento' }), answer('No tengo ese dato.'))
+      result = probe('das financiamiento con banamex')
+      expect(result[:state]['answers'].to_h).to be_empty
+      expect(result[:reply]).to include('solo me faltan 4 preguntas')
+    end
+
     it 'al retomar después de una duda, la pregunta va con la frase que conecta' do
       stub_model(answer('Abrimos de 9 a 6.'))
       result = probe('¿a qué hora abren?')
@@ -410,11 +445,11 @@ RSpec.describe Motor2::Functions::Prospects do
       expect(result[:reply]).to eq('¡Muy bien! ¿En qué ciudad estás?')
     end
 
-    it 'si no termina con la pendiente, se la pide; si tampoco, la agrega tal cual' do
+    it 'si no termina con la pendiente, se la pide; si tampoco, cambia su pregunta por la pendiente (nunca dos)' do
       stub_model(answer('¡Muy bien! ¿Tienes algún modelo en mente?'))
       result = Motor2::Probe.new(agent, messages: chat).call
 
-      expect(result[:reply]).to eq("¡Muy bien! ¿Tienes algún modelo en mente?\n\n¿Qué buscas?")
+      expect(result[:reply]).to eq("¡Muy bien!\n\n¿Qué buscas?")
       expect(result[:trace]['events']).to include(include('kind' => 'revision', 'text' => 'pregunta pendiente'))
     end
   end

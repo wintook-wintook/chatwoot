@@ -548,7 +548,8 @@
       "PLACEHOLDER": "Write as the customer…",
       "SEND": "Send",
       "TOOL": "⚙ {tool}",
-      "DECISION": "→ {decision}"
+      "DECISION": "→ {decision}",
+      "NOT_DONE": "(not done)"
     },
     "TOOLS": {
       "buscar_respuesta_predefinida": "Searched canned responses",
@@ -712,7 +713,7 @@
     "TALK": {
       "WELCOME": "Welcome message (optional)",
       "WELCOME_PLACEHOLDER": "E.g. Hi! I'm Ana from Autos Guadalajara, thanks for writing 🚗",
-      "WELCOME_HINT": "Goes as-is at the start of its first reply, in the same message: then it answers what they asked and continues with question 1. Without it, it greets in its own words.",
+      "WELCOME_HINT": "Goes as-is at the start of its first reply, in the same message: then it answers what they asked and continues with question 1. Better without a question at the end (your list asks); if it ends with a question and the customer only greeted, that first message skips question 1. Without it, it greets in its own words.",
       "RECOMMENDED": "(recommended)",
       "doubts": {
         "QUESTION": "If the customer asks something instead of answering:",

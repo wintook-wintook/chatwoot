@@ -548,7 +548,8 @@
       "PLACEHOLDER": "Escribe como cliente…",
       "SEND": "Enviar",
       "TOOL": "⚙ {tool}",
-      "DECISION": "→ {decision}"
+      "DECISION": "→ {decision}",
+      "NOT_DONE": "(no se hizo)"
     },
     "TOOLS": {
       "buscar_respuesta_predefinida": "Buscó en respuestas predefinidas",
@@ -712,7 +713,7 @@
     "TALK": {
       "WELCOME": "Mensaje de bienvenida (opcional)",
       "WELCOME_PLACEHOLDER": "Ej. ¡Hola! Soy Ana de Autos Guadalajara, gracias por escribirnos 🚗",
-      "WELCOME_HINT": "Va tal cual al inicio de su primera respuesta, en el mismo mensaje: después contesta lo que preguntó y sigue con la pregunta 1. Sin bienvenida, saluda con sus palabras.",
+      "WELCOME_HINT": "Va tal cual al inicio de su primera respuesta, en el mismo mensaje: después contesta lo que preguntó y sigue con la pregunta 1. Mejor sin pregunta al final (la pregunta la pone tu lista); si termina en pregunta y el cliente solo saludó, ese primer mensaje no lleva la pregunta 1. Sin bienvenida, saluda con sus palabras.",
       "RECOMMENDED": "(recomendada)",
       "doubts": {
         "QUESTION": "Si el cliente pregunta algo en lugar de contestar:",

@@ -18,6 +18,11 @@ module Motor2::QuestionGuard
   NO_PROMISE = 'Dijiste que lo pasas al equipo, pero no llamaste ninguna herramienta. Si ya cumple lo de «calificado», llama ' \
                'prospecto_calificado (o pasar_a_humano) y despídete; si no, no le digas que lo pasas y sigue con lo que falte.'
 
+  # La bienvenida ya hace una pregunta y el cliente solo saludó: en este turno no se agrega otra.
+  def welcome_asks?
+    @welcome.to_s.include?('?') && ContactTrackings::WelcomeMessage.only_greeting?(@last_customer)
+  end
+
   # La habilidad Calificar del turno (también la usa Motor2::Skills::Handoff).
   def qualify_skill = Array(@skills).find { |s| s.key == 'qualify' }
 
@@ -42,7 +47,12 @@ module Motor2::QuestionGuard
     again = clean(run(messages))
     return again if again.present? && Motor2::Skills::Qualify.asks?(again, ask) && !unsourced?(again)
 
-    [text, qualify_skill&.bridge, ask].compact_blank.join("\n\n")
+    # Si el modelo ya hizo otra pregunta, se cambia por la pendiente (nunca dos preguntas al final).
+    [without_last_question(text), qualify_skill&.bridge, ask].compact_blank.join("\n\n")
+  end
+
+  def without_last_question(text)
+    text.to_s.sub(/¿[^¿]*\?[\s\p{Emoji_Presentation}]*\z/, '').strip
   end
 
   HANDOFF_ASK = 'Pidió hablar con una persona y ya toca pasarlo: llama pasar_a_humano y despídete (en un momento lo atiende ' \
@@ -73,9 +83,18 @@ module Motor2::QuestionGuard
     return text unless @welcome
 
     @trace.event(:bienvenida, 'combinada con la respuesta')
-    # Si el modelo la volvió a escribir (pasa aunque se le diga), se quita: va una sola vez.
-    rest = text.to_s.gsub(@welcome, '').strip.sub(/\A[\s.,;:!¡]+/, '')
+    # Si el modelo la volvió a escribir (pasa aunque se le diga, a veces con otros espacios o
+    # signos), se quita: va una sola vez.
+    rest = text.to_s.gsub(welcome_pattern, '').strip.sub(/\A[\s.,;:!?]+/, '')
+    # Si la bienvenida ya pregunta y el cliente solo saludó, no lleva otra pregunta.
+    rest = without_last_question(rest) if welcome_asks?
     [@welcome, rest].compact_blank.join("\n\n")
+  end
+
+  # La bienvenida con cualquier espacio o signo entre sus palabras.
+  def welcome_pattern
+    words = @welcome.scan(/[[:alnum:]]+/).map { |w| Regexp.escape(w) }
+    Regexp.new("[¿¡]?\\s*#{words.join('[^[:alnum:]]+')}[^[:alnum:]\\n¿¡]*", Regexp::IGNORECASE)
   end
 
   SEARCH_FIRST = 'El cliente preguntó algo y contestaste sin buscar. Búscalo con buscar_en_fuentes antes de contestar; ' \
@@ -92,7 +111,7 @@ module Motor2::QuestionGuard
   end
 
   def unsearched_question?
-    @mode == :reply && @decision.nil? && @last_customer.to_s.include?('?') &&
+    @mode == :reply && @decision.nil? && Motor2::Skills::QualifyFlow.asking_info?(@last_customer) &&
       @skills.any? { |s| s.key == 'knowledge' } && @trace.tools.none? { |t| SEARCH_TOOLS.include?(t['name']) }
   end
 

@@ -90,7 +90,12 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
     notes.compact.join("\n")
   end
 
-  def required_question = must_handoff? ? nil : pending_now.first&.dig(:ask)
+  # Sin pregunta si toca pasarlo, o si la bienvenida ya pregunta y el cliente solo saludó.
+  def required_question
+    return nil if must_handoff? || (@turn.respond_to?(:welcome_asks?) && @turn.welcome_asks?)
+
+    pending_now.first&.dig(:ask)
+  end
 
   # ¿El texto trae la pregunta? Sin acentos, mayúsculas ni signos.
   def self.asks?(text, ask)

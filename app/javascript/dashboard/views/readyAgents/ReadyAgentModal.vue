@@ -398,7 +398,9 @@ export default {
       const detail = Object.values(tool.args || {})
         .filter(Boolean)
         .join(' · ');
-      return detail ? `${label}: ${detail}` : label;
+      const line = detail ? `${label}: ${detail}` : label;
+      // Lo que el código no dejó hacer (p. ej. pasarlo antes de terminar las preguntas).
+      return tool.ok === false ? `${line} ${this.t('TEST.NOT_DONE')}` : line;
     },
   },
 };
