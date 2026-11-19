@@ -918,3 +918,69 @@ Lo que **falta en el 2.0** para que las funciones vivan ahí:
 - **Hojas en modo «Datos»**: `Motor2::Search` las busca exacto con `SheetQueryService`, como el 1.0, en vez de por parecido. Cierra el hueco de la hoja de Google del 17/11.
 - **Asistente de Atención a prospectos**: paso nuevo «Qué sabe», después de «Tu negocio». Las predefinidas van siempre y las demás se marcan; se guardan en `motor2['sources']`.
 - **Entrenador**: causa nueva «🧭 Dónde busca» (`where`). El dato estaba en otra fuente y su «¿Qué hay aquí?» no lo dejaba ver. Propone el texto y «Cambiar «¿Qué hay aquí?»» lo guarda de un clic (`agent_tester/fix_purpose`). El entrenador recibe `mapa_de_fuentes`.
+
+### 11.15 Atención a clientes — análisis y plan (2026-11-19, sin empezar)
+
+**Base:** el «PLAN FUNCIONAL — RAMAS COMERCIAL Y ADMINISTRATIVO» del Agente Coordinador Kontrolya V1.0 (lo pasó el usuario; define Comercial y Administrativo; Soporte solo se menciona, con severidades #soporte1/2/3). Lo traduzco al motor 2.0: **sin rutas ni @directivas**, con **áreas** que se eligen en el asistente y reglas que **manda el código** (lo que aprendimos con Atención a prospectos: lo que solo se le pide al modelo, a veces no lo hace).
+
+#### 11.15.1 Cómo lo resuelven otros (investigación 19/11)
+
+| Plataforma | Idea que tomamos |
+|---|---|
+| Intercom Fin | **Procedures:** instrucciones en lenguaje natural con controles deterministas (condiciones, conectores de datos). **Cuándo se activa:** descripción corta + ejemplos de «sí aplica» y «no aplica» (hasta 20). **Escalación** en dos capas: reglas por datos (sentimiento, tipo, VIP) y guía en texto; recomiendan guía concreta («más reglas = más escalaciones»); nunca ofrecer escalar dos veces seguidas. Se prueban con simulaciones antes de publicar. |
+| Zendesk AI agents | Respuestas generativas para preguntas frecuentes (desde el centro de ayuda); **procedimientos** paso a paso con entradas y salidas; al pasar a una persona, el contexto viaja y se rutea al equipo correcto. |
+| Salesforce Agentforce | El agente = **temas** (ahora «subagentes») con **instrucciones + acciones**, y un **router** que elige el tema. Guardrails en las instrucciones (p. ej. «si la base tiene información contradictoria, no contestes: ofrece levantar un caso»). |
+| HubSpot Customer Agent | Fuentes sincronizadas (artículos, páginas, archivos); pasa a una persona cuando **la confianza es baja** o se cumple una regla; reparto por equipo/canal. |
+| Decagon (AOPs) | Por cada mensaje: **extraer la intención con toda la plática**, elegir el procedimiento; si ninguno aplica, contestar con la base de conocimiento. Las acciones sensibles solo por procedimiento. |
+
+Coinciden en: (1) un **clasificador** que mira la plática completa (no la palabra), (2) cada tema con **qué hace y qué no**, (3) **contestar solo con lo que está en las fuentes**, (4) **acciones reales** (crear caso, agendar) y nunca simuladas, (5) **ejemplos de sí/no** para afinar la clasificación y **probar antes de publicar**.
+
+#### 11.15.2 Cómo queda en el motor 2.0
+
+- **Función** `customers` («Atención a clientes») en `config/agent_functions` + `Motor2::Functions::Customers`, con su asistente (mismo patrón que prospectos).
+- **Áreas** (las de tu plan): **Soporte**, **Comercial**, **Administrativo**; se prenden las que la empresa atiende (y se puede agregar «Otra» con su nombre). Cada área trae: cómo se reconoce (ejemplos sí/no, ya llenos con la matriz del plan), qué hace, a quién se pasa y qué fuentes usa.
+- **Clasificador (router) del código** — `Motor2::Triage`, revisión corta con IA (como `AnswerCheck`) en cada mensaje del cliente, con la plática y lo pendiente:
+  `{ areas: ['comercial', 'administrativo'], intencion: 'cotización de 10 usuarios', suficiente: true|false, aclaracion: '¿Qué deseas cotizar?', sub: 'informacion'|'gestion', severidad: 1..3 }`.
+  - **Continuidad (§18):** si quedó una aclaración pendiente, el siguiente mensaje se evalúa primero contra ella («10 usuarios» completa «cotización»), guardado en `motor2_state['pendiente']`.
+  - **Multi-intención (§19):** se guardan todas en `motor2_state['pendientes']` y se atienden una por una; ninguna se pierde (el código le recuerda las que faltan).
+  - **Por intención, no por palabra (§2):** ejemplos de la matriz («No puedo enviar una cotización a pedido» → Soporte) van en el prompt del clasificador.
+- **Lo que manda el código en cada turno** (no solo se le pide al modelo):
+  - **Solo herramientas del área en curso** (Administrativo no tiene buscar; Comercial no levanta casos de soporte): así no invade otra área.
+  - **Insuficiente → una sola aclaración y no busca** (§5): ese turno no tiene herramienta de búsqueda y el mensaje se revisa para que sea una sola pregunta.
+  - **Evidencia (§6–8, fail closed):** en Comercial, antes de mandar, una revisión con IA compara la respuesta con lo que trajo la búsqueda: EXACTA → se manda; PARCIAL/NO_CONFIRMADA/CONTRADICTORIA/SIN_EVIDENCIA → se reescribe diciendo lo que sí está confirmado y que lo demás no se puede confirmar. Incluye el **candado**: no cambiar la intención (visita ≠ demo).
+  - **No simular acciones (§13, inv. 12):** si el mensaje dice «ya agendé / ya levanté tu caso / ya te pasé» sin que la herramienta lo haya hecho, se reescribe (como la revisión de «prometió pasarlo»).
+  - **Información ≠ acción (inv. 8):** «Quiero una demo» con evidencia de que hay demos → se reconoce la gestión y se hace la acción elegida (agendar / pasar al vendedor); nunca «ya quedó» sin herramienta.
+
+#### 11.15.3 El asistente (wizard) que propongo
+
+| Paso | Qué pregunta | Notas |
+|---|---|---|
+| 1 El agente | Nombre, nombre que ve el cliente, tono, bandejas, prendido | Igual que prospectos |
+| 2 Tu negocio | Qué vendes / a quién / cobertura | Reusa |
+| 3 Qué atiende | Tarjetas: **Soporte**, **Comercial**, **Administrativo** (+ «Otra área»). En cada una: «Cómo se reconoce» con ejemplos **sí** y **no** (vienen llenos con la matriz del plan; se editan) | La matriz del §15 ya queda como ejemplos y como pruebas |
+| 4 Soporte | Fuentes (foro, predefinidas, CONTPAQi); si no se resuelve: **levantar caso** (tipo) con su **severidad** (bloqueo total / parcial / duda) o **pasar al equipo**; preguntas mínimas (qué pasa, desde cuándo, a cuántos afecta) | Severidad la decide el código con el clasificador |
+| 5 Comercial | Fuentes (predefinidas, catálogo, hojas); qué hace con cada gestión: **cotización** (crear oportunidad / pasar al vendedor), **demo** y **visita** (agendar con quién / pasar), **hablar con vendedor** (a quién) | Candado visita ≠ demo fijo |
+| 6 Administrativo | A quién se pasa (persona o equipo); ¿levantar un caso administrativo? | No consulta fuentes (fijo en esta versión) |
+| 7 Cómo platica | Bienvenida; si no es cliente (atenderlo igual / pasarlo al agente de «Atención a prospectos» / a una persona); si pide una persona (de inmediato / primero entender qué necesita); varias cosas a la vez (atiende una por una — fijo) | Mismo estilo de opciones que prospectos |
+| 8 Indicaciones | Texto libre (opcional) | |
+| 9 Pruébalo | Chat de prueba **+ «Probar la matriz»**: corre todos los ejemplos sí/no y muestra área detectada vs esperada (✅/❌) | Lo que recomiendan Intercom y Zendesk: probar antes de publicar |
+
+#### 11.15.4 Pasos (cada uno con pruebas con el modelo real, como con prospectos)
+
+| Paso | Qué |
+|---|---|
+| C0 | Función `customers` (catálogo, clase, asistente pasos 1–2–7–8–9), estado de su caso (`estado_caso`) y «¿es cliente?» con su opción |
+| C1 | **Clasificador** (`Motor2::Triage`): áreas, suficiencia, continuidad, multi-intención; paso 3 del asistente; **«Probar la matriz»** |
+| C2 | **Administrativo:** entender y canalizar, sin fuentes, sin pedir datos de más (el más simple; sirve para probar el clasificador de punta a punta) |
+| C3 | **Comercial:** información con **evidencia (fail closed)** y candado de intención; gestiones (oportunidad, cita de demo/visita, vendedor) |
+| C4 | **Soporte:** fuentes técnicas, severidad, levantar caso / pasar, estado de caso |
+| C5 | No simular acciones, pide persona, no es cliente, probador por área, guía de Dali |
+
+#### 11.15.5 Decisiones que tomé (para revisar)
+
+1. **Áreas fijas (Soporte, Comercial, Administrativo) + «Otra»**, no texto libre: es lo de tu plan y lo que hacen Salesforce (temas) e Intercom (procedimientos); «Otra» cubre negocios distintos.
+2. **El clasificador es una llamada aparte con IA** (gpt-4.1-mini, AiModels::REVIEW), no el modelo que contesta: así decide con la plática completa y su decisión la usa el código (herramientas del turno, continuidad), como el router de Agentforce y la extracción de intención de Decagon.
+3. **Severidad de soporte** (tu plan solo la nombra): #soporte1 = no puede operar (bloqueo total); #soporte2 = funciona con falla o a medias; #soporte3 = duda de uso o configuración. Se puede cambiar en el asistente.
+4. **Evidencia fail closed solo en Comercial** (tu plan); en Soporte se contesta con fuentes y, si no hay, se levanta caso o se pasa.
+5. **«Probar la matriz»** usa los mismos ejemplos sí/no del paso 3; los que fallen se pueden mandar al probador (lotes).
+6. **Quien no es cliente:** por omisión se pasa al agente de «Atención a prospectos» de la bandeja (si hay) o a una persona.
