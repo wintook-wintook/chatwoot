@@ -7,7 +7,8 @@
 
   A la derecha, los accesos rápidos (Tarea, Reportar actividad, Buscar, Nuevo
   contacto, Ayuda), que antes estaban en el menú del logo. Sus ventanas viven aquí.
-  En pantallas angostas solo se ve el ícono.
+  En pantallas angostas solo se ve el ícono. Al final, el logo de Kontrolya
+  (public/brand-assets/kontrolya/logo.png), oculto en pantallas angostas.
 -->
 <script>
 import { mapGetters } from 'vuex';
@@ -197,6 +198,13 @@ export default {
         <fluent-icon icon="chat-help" size="16" />
       </a>
     </div>
+    <!-- proyecto@logo_kontrolya: marca en la esquina superior derecha; se oculta en pantallas angostas. -->
+    <img
+      src="/brand-assets/kontrolya/logo.png"
+      alt="Kontrolya"
+      class="flex-shrink-0 hidden object-contain w-auto h-7 pl-3 ml-3 border-l select-none md:block border-slate-100 dark:border-slate-800"
+      draggable="false"
+    />
     <QuickTaskModal :show="modal === 'task'" @close="closeModal" />
     <ActivityReportModal
       :show="modal === 'activity'"
