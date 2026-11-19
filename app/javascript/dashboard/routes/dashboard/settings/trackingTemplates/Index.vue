@@ -70,6 +70,7 @@ export default {
   },
   data() {
     return {
+      savingTesting: [], // agentes cuyo «En prueba» se está guardando
       currentView: 'list',
       formMode: 'create',
       selectedTemplate: null,
@@ -219,15 +220,23 @@ export default {
   },
   methods: {
     // «En prueba»: el agente (1.0 o 2.0) sale en Inicio › Probar agentes para cualquier usuario.
+    // Cambia al instante (aunque el servidor esté ocupado) y queda deshabilitado mientras se
+    // guarda; si falla, regresa a como estaba.
     async toggleTesting(template) {
+      if (this.savingTesting.includes(template.id)) return;
+      const before = !!template.testing;
+      this.$set(template, 'testing', !before);
+      this.savingTesting.push(template.id);
       try {
-        const { data } = await AgentTesterAPI.setTesting(
-          template.id,
-          !template.testing
-        );
+        const { data } = await AgentTesterAPI.setTesting(template.id, !before);
         this.$set(template, 'testing', data.testing);
       } catch (e) {
+        this.$set(template, 'testing', before);
         useAlert(this.$t('TRACKING_TEMPLATES.TESTING.ERROR'));
+      } finally {
+        this.savingTesting = this.savingTesting.filter(
+          id => id !== template.id
+        );
       }
     },
     // proyecto@adaptar_prompts_publicados (D7) — ?edit=<id> abre la ficha de ese agente:
@@ -901,6 +910,7 @@ export default {
                           :color-scheme="
                             template.testing ? 'warning' : 'secondary'
                           "
+                          :disabled="savingTesting.includes(template.id)"
                           @click="toggleTesting(template)"
                         >
                           {{
