@@ -121,6 +121,7 @@
         "question": "Question",
         "search": "Search",
         "category": "Category",
+        "where": "Where it searches",
         "pending": "To review"
       },
       "WHERE": "Goes in: {where}",
@@ -202,6 +203,7 @@
         "failing": "Still failing",
         "dismissed": "Not an error"
       }
-    }
+    },
+    "CHANGE_PURPOSE": "Change «What's in here?» of «{source}»"
   }
 }

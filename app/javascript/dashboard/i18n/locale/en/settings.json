@@ -546,5 +546,22 @@
       "ALT_OR_OPTION_KEY": "Alt / ⌥",
       "FORWARD_SLASH_KEY": "/"
     }
+  },
+  "KNOWLEDGE_CARD": {
+    "GOOGLE_OFF": "Google integration is off for this account: this source and its directive won't work until it is turned back on.",
+    "NEEDS_OPENAI": "Set up the OpenAI integration to index this source.",
+    "SYNCING": "Syncing",
+    "LAST_SYNC": "Last sync: {when}",
+    "PURPOSE": {
+      "LABEL": "What's in here and what is it for?",
+      "PLACEHOLDER": "E.g. the exact price per service and area",
+      "HINT": "Agents read this to know which source to search for each thing. If empty, they use what's inside the source.",
+      "EMPTY": "No description: click to write what's in here",
+      "AUTO": "(computed from its content; click to write your own)",
+      "EDIT": "Edit what's in here",
+      "SAVE": "Save",
+      "CANCEL": "Cancel",
+      "ERROR": "Could not save."
+    }
   }
 }

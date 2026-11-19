@@ -12,6 +12,7 @@ const ICONS = {
   content: '📚',
   search: '🔎',
   category: '🏷️',
+  where: '🧭',
   model: '🧠',
   engine: '🔧',
   question: '❓',
@@ -145,6 +146,14 @@ export default {
     fixStart(log) {
       return this.act(() =>
         AgentTesterAPI.fixStart(log.diagnosis.canned_id, log.diagnosis.add)
+      );
+    },
+    fixPurpose(log) {
+      return this.act(() =>
+        AgentTesterAPI.fixPurpose(
+          log.diagnosis.source_id,
+          log.diagnosis.suggestion
+        )
       );
     },
     apply(log) {
@@ -319,6 +328,17 @@ export default {
                 {{
                   $t('AGENT_TESTER.CHANGE_KIND', {
                     kind: kindName(log.diagnosis.should_kind),
+                  })
+                }}
+              </woot-button>
+              <woot-button
+                v-if="log.kind === 'where' && log.diagnosis.can_fix"
+                size="tiny"
+                @click="fixPurpose(log)"
+              >
+                {{
+                  $t('AGENT_TESTER.CHANGE_PURPOSE', {
+                    source: log.diagnosis.source,
                   })
                 }}
               </woot-button>

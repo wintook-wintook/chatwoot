@@ -30,6 +30,13 @@ Y estas se agregan a mano: Discourse (un foro), Agente de Servicio CONTPAQi, y, 
 5. Pulsa «Agregar fuente».
 6. En la pestaña Fuentes pulsa «Sincronizar» para que se lea su contenido.
 
+### Decir qué hay en cada fuente («¿Qué hay aquí?»)
+Cada tarjeta de fuente tiene «¿Qué hay aquí y para qué sirve?». Los agentes nuevos (motor 2.0, como los de Agentes listos) lo leen para saber en qué fuente buscar cada cosa.
+1. Si está vacío, la tarjeta enseña lo que se calcula de lo que tiene dentro: las categorías y algunos nombres de las respuestas predefinidas, las columnas de una hoja, los títulos de un documento.
+2. Púlsalo para escribirlo tú, en una línea: qué tiene y para qué preguntas sirve. Por ejemplo: «Precios: el precio exacto por servicio y zona».
+3. Pulsa «Guardar». Lo toman desde el siguiente mensaje.
+Una hoja en modo «Datos» se busca exacto en sus filas: el número lo calcula el sistema, no lo inventa el agente.
+
 ### Probar qué encuentra
 1. Abre la pestaña «Consola de Búsqueda (Fuentes)».
 2. En «Consulta» escribe una pregunta como la haría un cliente y pulsa «Buscar». Verás los textos que el agente usaría.

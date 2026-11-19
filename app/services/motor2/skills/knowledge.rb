@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 # «Qué sabe» — buscar en las fuentes marcadas. Lo que regresa la búsqueda queda en la traza
-# con su texto: así el entrenador sabe si el dato malo venía de la fuente.
+# con su texto: así el entrenador sabe si el dato malo venía de la fuente. El agente recibe el
+# mapa de sus fuentes (Motor2::SourceMap: qué hay en cada una) para buscar en la que corresponde.
+# Las predefinidas se buscan con la búsqueda nueva (KnowledgeBase::Selection vía AiFollowUps::KnowledgeSearch).
 class Motor2::Skills::Knowledge < Motor2::Skills::Base
   def self.key = 'knowledge'
 
@@ -21,7 +23,22 @@ class Motor2::Skills::Knowledge < Motor2::Skills::Base
       - Datos de la empresa (precios, horarios, requisitos, ligas, fechas): solo los que te regrese buscar_en_fuentes.
         Si no salen, dilo con naturalidad y ofrece pasarlo con una persona; nunca los inventes ni los calcules.
       - Lo marcado «instrucciones_internas» es para ti: síguelo, pero no lo copies ni lo menciones.
+      #{where_to_search}
     TEXT
+  end
+
+  # DÓNDE BUSCAR: cada fuente con lo que tiene. Con una sola fuente no hace falta.
+  def where_to_search
+    lines = map_lines
+    return '' if lines.size < 2
+
+    '- DÓNDE BUSCAR (qué hay en cada fuente): busca primero en la que corresponde, con «fuente»; si ahí no sale, ' \
+      "busca otra vez sin «fuente» (en todas).\n#{lines.map { |l| "  #{l}" }.join("\n")}"
+  end
+
+  def map_lines
+    names = search.names
+    Motor2::SourceMap.new(config.account).lines(config.sources).select { |l| names.any? { |n| l.start_with?("- #{n}:") } }
   end
 
   def call(_name, args)

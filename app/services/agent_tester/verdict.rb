@@ -16,6 +16,7 @@ class AgentTester::Verdict
     when 'content' then content
     when 'search' then search
     when 'category' then category
+    when 'where' then where
     when 'model' then model
     else engine(trainer)
     end
@@ -35,6 +36,16 @@ class AgentTester::Verdict
     else
       base.merge(text: "Es del prompt: agrega esto en «#{where}» de su Entrenamiento y pruébalo de nuevo.")
     end
+  end
+
+  # Buscó en la fuente equivocada: se propone cómo debe decir el «¿Qué hay aquí?» de la fuente donde
+  # sí estaba (Bases de conocimiento). Con «Cambiarlo» se guarda ahí mismo.
+  def where
+    text = @cause['text'].to_s.squish.first(300)
+    { kind: 'where', source: @cause['source'], source_id: @cause['source_id'], before: @cause['about'], suggestion: text,
+      can_fix: @cause['source_id'].present? && text.present?,
+      text: "Es de dónde busca: «#{@cause['source']}» sí tenía el dato, pero lo que dice de ella («¿Qué hay aquí?») no lo deja " \
+            'ver, y el agente buscó en otra. Propuesta para su «¿Qué hay aquí?»:' }
   end
 
   # Agente de una función (Atención a prospectos…): se edita con su asistente, no con la ficha 2.0.

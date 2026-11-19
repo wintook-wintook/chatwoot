@@ -10,6 +10,8 @@
 # DELETE /ready_agents/:id      se borra; si está en uso (pláticas, campañas, automatizaciones), se archiva
 # POST   /ready_agents/test     chat de prueba con lo que hay en el asistente (motor 2.0, sin guardar ni mandar)
 #                               { ready_agent: {...}, id:, messages: [{ role, content }], state: {} }
+# ready_agent.sources: las fuentes que marcó en «Qué sabe» (llaves de Motor2::SourceMap); el índice
+# trae `sources` con todas las de la cuenta y qué hay en cada una.
 # Solo administradores.
 class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseController
   SETTINGS = %w[objective questions qualified_when discard_when tone instructions handoff_user_id handoff_team_id
@@ -25,7 +27,7 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
 
   def index
     render json: { catalog: catalog, agents: function_agents.order(:id).map { |t| Motor2::Functions::AgentJson.call(t) },
-                   inboxes: inboxes, calendar_users: calendar_users }
+                   inboxes: inboxes, calendar_users: calendar_users, sources: Motor2::SourceMap.new(Current.account).available }
   end
 
   def create
@@ -86,8 +88,9 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
   # Sin `settings` en el pedido (p. ej. el interruptor de prender/apagar de la lista) no se tocan.
   def agent_params
     raw = params.require(:ready_agent)
-    permitted = raw.permit(:kind, :name, :display_name, :enabled, inbox_ids: []).to_h
+    permitted = raw.permit(:kind, :name, :display_name, :enabled, inbox_ids: [], sources: []).to_h
     permitted[:inbox_ids] ||= [] if raw.key?(:inbox_ids)
+    permitted[:sources] ||= [] if raw.key?(:sources)
     return permitted unless raw[:settings].respond_to?(:permit)
 
     permitted.merge(settings: raw[:settings].permit(*SETTINGS, **LISTS).to_h)

@@ -37,7 +37,8 @@
 #
 class AgentTestLog < ApplicationRecord
   # 'pending': el 👎 ya quedó y su diagnóstico corre en segundo plano (AgentTester::DiagnoseJob).
-  KINDS = %w[pending prompt content search category model engine question].freeze
+  # where: buscó en la fuente equivocada (su «¿Qué hay aquí?» no lo dejaba claro, Motor2::SourceMap).
+  KINDS = %w[pending prompt content search category where model engine question].freeze
   # Seguimiento de cada 👎: pendiente → «Ya lo corregí» corre su prueba otra vez → quedó / sigue fallando;
   # o quien revisa dice «No es error» (dismissed, con dismissed_reason).
   STATUSES = %w[pending retesting passed failing dismissed].freeze

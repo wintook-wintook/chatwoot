@@ -1,8 +1,9 @@
 <!--
   Asistente de la función «Atención a prospectos» (Plan-Motor-Agentes §11.14.5): crear o cambiar
   un agente, paso a paso, sin tener que pensar, solo contestar:
-    1 el agente y sus bandejas · 2 tu negocio · 3 qué le preguntas · 4 cuándo califica y cuándo no ·
-    5 qué hacer al calificar y a quién · 6 objeciones · 7 indicaciones · 8 pruébalo y guarda
+    1 el agente y sus bandejas · 2 tu negocio · 3 qué sabe (sus fuentes) · 4 qué le preguntas ·
+    5 cuándo califica y cuándo no · 6 qué hacer al calificar y a quién · 7 objeciones ·
+    8 indicaciones · 9 pruébalo y guarda
   A la derecha, el chat de prueba con el motor 2.0 real: tú eres el cliente y ves qué contesta y
   qué hizo, sin guardar ni mandar nada. Al editar se puede saltar a cualquier paso y guardar.
   El agente queda en la lista de agentes. Emite `saved` con el agente.
@@ -37,6 +38,7 @@ const mergeQualify = saved => {
 const STEPS = [
   'agent',
   'business',
+  'knows',
   'questions',
   'qualify',
   'after',
@@ -49,6 +51,8 @@ const blank = kind => ({
   name: '',
   display_name: '',
   enabled: true,
+  // Fuentes que marcó en «Qué sabe» (las predefinidas van siempre, no se marcan).
+  sources: [],
   inbox_ids: [],
   settings: {
     objective: 'handoff',
@@ -93,6 +97,8 @@ export default {
     takenInboxIds: { type: Array, default: () => [] },
     // Personas con Google Calendar conectado (con quién se agenda la cita).
     calendarUsers: { type: Array, default: () => [] },
+    // Las fuentes de la cuenta con qué hay en cada una (Motor2::SourceMap).
+    sources: { type: Array, default: () => [] },
   },
   emits: ['close', 'saved'],
   data() {
@@ -120,6 +126,12 @@ export default {
     },
     contactFields() {
       return CONTACT_FIELDS;
+    },
+    cannedSource() {
+      return this.sources.find(s => s.key === 'canned_response');
+    },
+    otherSources() {
+      return this.sources.filter(s => s.key !== 'canned_response');
     },
     steps() {
       return STEPS;
@@ -184,6 +196,12 @@ export default {
     },
     back() {
       if (this.stepIndex > 0) this.step = STEPS[this.stepIndex - 1];
+    },
+    toggleSource(key) {
+      const list = this.form.sources;
+      this.form.sources = list.includes(key)
+        ? list.filter(k => k !== key)
+        : [...list, key];
     },
     resetChat() {
       this.chat = [];
@@ -453,7 +471,44 @@ export default {
             </label>
           </template>
 
-          <!-- 3 · Qué le preguntas -->
+          <!-- 3 · Qué sabe: sus fuentes y qué hay en cada una -->
+          <template v-if="step === 'knows'">
+            <div
+              class="p-2 text-xs rounded-md bg-slate-25 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+            >
+              <span class="block font-medium">{{ t('KNOWS.CANNED') }}</span>
+              <span v-if="cannedSource">{{ cannedSource.about }}</span>
+              <span v-else class="text-amber-700">{{
+                t('KNOWS.NO_CANNED')
+              }}</span>
+            </div>
+            <p v-if="!otherSources.length" class="m-0 text-xs text-slate-500">
+              {{ t('KNOWS.NO_OTHERS') }}
+            </p>
+            <label
+              v-for="src in otherSources"
+              :key="src.key"
+              class="flex items-start gap-2 p-2 border rounded-md cursor-pointer border-slate-100 dark:border-slate-700"
+            >
+              <input
+                type="checkbox"
+                class="!m-0 mt-0.5 shrink-0"
+                :checked="form.sources.includes(src.key)"
+                @change="toggleSource(src.key)"
+              />
+              <span class="text-sm">
+                <span class="block font-medium">{{ src.name }}</span>
+                <span class="block text-xs text-slate-500">{{
+                  src.about
+                }}</span>
+              </span>
+            </label>
+            <p class="m-0 text-xs text-slate-500">
+              {{ t('KNOWS.WHERE_HINT') }}
+            </p>
+          </template>
+
+          <!-- 4 · Qué le preguntas -->
           <template v-if="step === 'questions'">
             <div
               v-for="q in form.settings.qualify"
@@ -487,7 +542,7 @@ export default {
             </label>
           </template>
 
-          <!-- 4 · Cuándo califica y cuándo no -->
+          <!-- 5 · Cuándo califica y cuándo no -->
           <template v-if="step === 'qualify'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.QUALIFIED_WHEN') }}</span>
@@ -510,7 +565,7 @@ export default {
             </p>
           </template>
 
-          <!-- 5 · Qué hacer al calificar y a quién -->
+          <!-- 6 · Qué hacer al calificar y a quién -->
           <template v-if="step === 'after'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.OBJECTIVE') }}</span>
@@ -671,7 +726,7 @@ export default {
             </div>
           </template>
 
-          <!-- 6 · Objeciones -->
+          <!-- 7 · Objeciones -->
           <template v-if="step === 'objections'">
             <div
               v-for="(o, i) in form.settings.objections"
@@ -710,7 +765,7 @@ export default {
             </button>
           </template>
 
-          <!-- 7 · Indicaciones -->
+          <!-- 8 · Indicaciones -->
           <template v-if="step === 'instructions'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.INSTRUCTIONS') }}</span>
@@ -722,7 +777,7 @@ export default {
             </label>
           </template>
 
-          <!-- 8 · Pruébalo y guarda -->
+          <!-- 9 · Pruébalo y guarda -->
           <template v-if="step === 'test'">
             <p class="m-0 text-sm text-slate-700 dark:text-slate-200">
               {{ t('STEP_TEST.READY', { name: form.name.trim() || '—' }) }}

@@ -631,6 +631,7 @@
       "NUMBERED": "{n}. {step}",
       "agent": "El agente",
       "business": "Tu negocio",
+      "knows": "Qué sabe",
       "questions": "Qué le preguntas",
       "qualify": "Cuándo califica",
       "after": "Al calificar",
@@ -641,6 +642,7 @@
     "STEP_HINTS": {
       "agent": "Ponle un nombre para tu equipo, el nombre que verá el cliente y las bandejas donde va a atender a quien escriba.",
       "business": "Lo que el agente debe saber para explicar y para descartar a quien está fuera de zona o de lo que vendes.",
+      "knows": "Dónde busca lo que le preguntan. Las respuestas predefinidas van siempre; marca las demás fuentes que use este agente.",
       "questions": "Prende las preguntas que quieras y cambia su texto si quieres. Las hace una por una, en plática; cada respuesta queda en la nota y en la oportunidad.",
       "qualify": "Con esto sabe cuándo pasarlo a tu equipo y cuándo no es para ti.",
       "after": "Qué hace cuando califica, a quién se lo pasa y qué datos junta antes.",
@@ -651,6 +653,12 @@
     "STEP_TEST": {
       "READY": "«{name}» está listo. Al guardar queda en la lista de agentes con la etiqueta «Atención a prospectos».",
       "OFF": "Está apagado: no atenderá sus bandejas hasta que lo prendas (sí se puede usar en campañas y automatizaciones)."
+    },
+    "KNOWS": {
+      "CANNED": "Respuestas predefinidas (siempre)",
+      "NO_CANNED": "Todavía no hay respuestas predefinidas: agrégalas en Catálogos › Respuestas predefinidas.",
+      "NO_OTHERS": "No hay otras fuentes conectadas. Puedes agregar hojas, documentos o un foro en Ajustes › Bases de conocimiento.",
+      "WHERE_HINT": "El agente recibe qué hay en cada fuente para buscar en la que corresponde. Si una descripción no es exacta, cámbiala en «¿Qué hay aquí?» de Ajustes › Bases de conocimiento."
     }
   }
 }

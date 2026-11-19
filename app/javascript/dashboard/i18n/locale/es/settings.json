@@ -546,5 +546,22 @@
       "ALT_OR_OPTION_KEY": "Alt / ⌥",
       "FORWARD_SLASH_KEY": "/"
     }
+  },
+  "KNOWLEDGE_CARD": {
+    "GOOGLE_OFF": "Integración de Google desactivada para esta cuenta: esta fuente y su directiva no funcionan hasta reactivarla.",
+    "NEEDS_OPENAI": "Configura la integración de OpenAI para vectorizar esta fuente.",
+    "SYNCING": "Sincronizando",
+    "LAST_SYNC": "Última sync: {when}",
+    "PURPOSE": {
+      "LABEL": "¿Qué hay aquí y para qué sirve?",
+      "PLACEHOLDER": "Ej. el precio exacto por servicio y zona",
+      "HINT": "Los agentes lo leen para saber en qué fuente buscar cada cosa. Si lo dejas vacío, usan lo que se ve dentro de la fuente.",
+      "EMPTY": "Sin descripción: pulsa para escribir qué hay aquí",
+      "AUTO": "(calculado de lo que tiene; pulsa para escribirlo tú)",
+      "EDIT": "Cambiar qué hay aquí",
+      "SAVE": "Guardar",
+      "CANCEL": "Cancelar",
+      "ERROR": "No se pudo guardar."
+    }
   }
 }

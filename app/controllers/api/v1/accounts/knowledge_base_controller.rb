@@ -2,7 +2,7 @@
 # Controlador para la base de conocimiento semántica.
 # Endpoints: CRUD de fuentes + búsqueda semántica por similitud coseno.
 class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseController
-  before_action :set_source, only: %i[update destroy sync]
+  before_action :set_source, only: %i[update destroy sync purpose]
 
   # `directive` solo soporta @buscar_predefinidas SIN argumento (sin GRUPO): se valida
   # por match exacto, no por include?, para rechazar con 422 en vez de aceptar en
@@ -52,10 +52,20 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     )
     # openai_configured: el front avisa/deshabilita el sync si la cuenta no tiene integración OpenAI.
     configured = openai_api_key.present?
+    about = source_map_by_id
     list = current_account.knowledge_sources.order(order).map do |source|
-      source.as_json.merge(openai_configured: configured)
+      source.as_json.merge(openai_configured: configured, purpose: source.config.to_h['purpose'], about_auto: about[source.id])
     end
     render json: list
+  end
+
+  # PATCH /api/v1/accounts/:account_id/knowledge_base/sources/:id/purpose  { purpose }
+  # «¿Qué hay aquí y para qué sirve?»: lo lee el agente 2.0 para saber en qué fuente buscar cada
+  # cosa (Motor2::SourceMap). Vacío = lo que se calcula solo de lo que tiene dentro.
+  def purpose
+    text = Motor2::SourceMap.clean_purpose(params[:purpose])
+    @source.update!(config: @source.config.to_h.merge('purpose' => text.presence).compact)
+    render json: @source.as_json.merge(purpose: text.presence, about_auto: source_map_by_id[@source.id])
   end
 
   # POST /api/v1/accounts/:account_id/knowledge_base/sources
@@ -315,6 +325,11 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
       created_at: item.created_at,
       updated_at: item.updated_at
     }
+  end
+
+  # Lo que tiene dentro cada fuente (sin IA), para enseñarlo junto a su «¿Qué hay aquí?».
+  def source_map_by_id
+    Motor2::SourceMap.new(current_account).available.to_h { |e| [e[:id], e[:auto]] }
   end
 
   def set_source

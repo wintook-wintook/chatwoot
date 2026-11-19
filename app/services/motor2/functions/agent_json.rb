@@ -13,7 +13,8 @@ module Motor2::Functions::AgentJson
     motor2 = template.motor2.to_h
     { id: template.id, kind: template.agent_function, name: template.name, display_name: template.customer_display_name,
       enabled: template.attending, inbox_ids: Array(template.attend_inbox_ids).map(&:to_i), testing: template.testing,
-      settings: motor2['answers'].to_h.merge('instructions' => motor2['instructions'].to_s), created_at: template.created_at }
+      settings: motor2['answers'].to_h.merge('instructions' => motor2['instructions'].to_s), sources: Array(motor2['sources']),
+      created_at: template.created_at }
       .merge(sessions(template))
   end
 

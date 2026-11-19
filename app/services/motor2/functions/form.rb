@@ -12,6 +12,7 @@
 #   inbox_ids     → attend_inbox_ids (la primera también es la bandeja del agente: identidad, plantillas)
 #   display_name  → customer_display_name (el nombre que ve el cliente)
 #   settings      → motor2['answers'] (limpias por la función); settings.instructions → motor2['instructions']
+#   sources       → motor2['sources'] (las fuentes que marcó en «Qué sabe»; las predefinidas van siempre)
 # Sin `settings` (p. ej. prender o apagar desde la lista) no se tocan las respuestas.
 class Motor2::Functions::Form
   def initialize(account, params, user:, template: nil)
@@ -39,6 +40,7 @@ class Motor2::Functions::Form
     @template.objective = Motor2::Functions.entry(kind)['objective'] if @template.objective.blank?
     assign_columns
     assign_settings(kind) if @params.key?('settings')
+    assign_sources if @params.key?('sources')
     @template
   end
 
@@ -56,6 +58,12 @@ class Motor2::Functions::Form
     ordered = Array(@params['inbox_ids']).map(&:to_i) & ids
     @template.attend_inbox_ids = ordered
     @template.inbox_id = ordered.first
+  end
+
+  # Solo las que la cuenta tiene (Motor2::SourceMap#available); las predefinidas no se marcan.
+  def assign_sources
+    allowed = Motor2::SourceMap.new(@account).available.pluck(:key) - [Motor2::SourceMap::CANNED]
+    @template.motor2 = @template.motor2.to_h.merge('sources' => Array(@params['sources']).map(&:to_s) & allowed)
   end
 
   def assign_settings(kind)

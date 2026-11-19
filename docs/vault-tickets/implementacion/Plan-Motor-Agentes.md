@@ -899,3 +899,22 @@ Lo que **falta en el 2.0** para que las funciones vivan ahí:
 **Falta probar en real:** una bandeja de WhatsApp con el agente prendido, cita con Google, oportunidad, y la migración con los agentes listos de dev.wintook.com.
 
 **Siguiente función:** Atención a clientes, con la misma receta (yml + md + clase de la función + asistente).
+
+#### 11.14.7 Qué sabe cada agente y dónde busca (2026-11-19)
+
+**Pedido del usuario:**
+- en el asistente se eligen las fuentes;
+- el agente debe saber qué hay en cada una para buscar en la que corresponde;
+- la búsqueda nueva de predefinidas, que ya usa el 2.0, se queda.
+
+**Hecho:**
+- **Bases de conocimiento sigue siendo el único lugar para conectar fuentes.** Cada tarjeta gana «¿Qué hay aquí y para qué sirve?» (`knowledge_sources.config['purpose']`, `PATCH knowledge_base/sources/:id/purpose`). Vacío, enseña lo que se calcula de lo que tiene.
+- **`Motor2::SourceMap`**: qué hay en cada fuente, sin IA. Usa el `purpose` o lo calculado:
+  - predefinidas: sus categorías General / Fichas / Objeciones con algunos nombres;
+  - hoja: sus columnas, cuántas filas y si es de datos exactos;
+  - documento y artículos: algunos títulos;
+  - foro: se consulta en vivo.
+- **El agente recibe «DÓNDE BUSCAR»** en las instrucciones de «Qué sabe» (solo con dos fuentes o más): busca primero con `fuente` en la que corresponde y, si no sale, en todas.
+- **Hojas en modo «Datos»**: `Motor2::Search` las busca exacto con `SheetQueryService`, como el 1.0, en vez de por parecido. Cierra el hueco de la hoja de Google del 17/11.
+- **Asistente de Atención a prospectos**: paso nuevo «Qué sabe», después de «Tu negocio». Las predefinidas van siempre y las demás se marcan; se guardan en `motor2['sources']`.
+- **Entrenador**: causa nueva «🧭 Dónde busca» (`where`). El dato estaba en otra fuente y su «¿Qué hay aquí?» no lo dejaba ver. Propone el texto y «Cambiar «¿Qué hay aquí?»» lo guarda de un clic (`agent_tester/fix_purpose`). El entrenador recibe `mapa_de_fuentes`.

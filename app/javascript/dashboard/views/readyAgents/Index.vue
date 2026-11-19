@@ -22,6 +22,7 @@ export default {
       agents: [],
       inboxes: [],
       calendarUsers: [],
+      sources: [], // las fuentes de la cuenta y qué hay en cada una (paso «Qué sabe»)
       loading: true,
       modal: null,
       queryHandled: false,
@@ -41,6 +42,7 @@ export default {
         this.agents = data.agents;
         this.inboxes = data.inboxes;
         this.calendarUsers = data.calendar_users || [];
+        this.sources = data.sources || [];
         this.openFromQuery();
       } catch (e) {
         useAlert(e.response?.data?.error || this.t('LOAD_ERROR'));
@@ -213,6 +215,7 @@ export default {
       :inboxes="inboxes"
       :taken-inbox-ids="takenFor(modal.agent)"
       :calendar-users="calendarUsers"
+      :sources="sources"
       @close="modal = null"
       @saved="onSaved"
     />

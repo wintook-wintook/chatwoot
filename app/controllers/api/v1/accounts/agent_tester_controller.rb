@@ -22,6 +22,7 @@
 #                                                       (422 con el motivo si pasa de los topes)
 # POST /agent_tester/fix_kind                            { canned_id, kind } le cambia la categoría fija
 # POST /agent_tester/fix_start                           { canned_id, text } agrega al inicio cómo lo pregunta el cliente
+# POST /agent_tester/fix_purpose                         { source_id, text } cambia el «¿Qué hay aquí?» de una fuente (👎 «es de dónde busca»)
 # GET  /agent_tester/logs                                bitácora de correcciones (cada quien las suyas; quien
 #                                                       cambia agentes, todas)
 # POST /agent_tester/logs/:id/retest                     «Ya lo corregí»: corre otra vez la prueba de ese 👎
@@ -30,7 +31,7 @@
 # Aplicar correcciones, corregir fuentes, «En prueba» y la bitácora: quien puede cambiar agentes
 # (área Agentes IA en «todo»).
 class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseController
-  before_action :require_writer, only: %i[testing apply fix_source fix_kind fix_start]
+  before_action :require_writer, only: %i[testing apply fix_source fix_kind fix_start fix_purpose]
   before_action :set_conversation, only: %i[show history say feedback good save_case]
 
   def agents
@@ -138,6 +139,16 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
     return render json: { error: 'No hay nada que agregar.' }, status: :unprocessable_entity if texto.blank?
 
     save_canned(canned, content: "#{texto}\n\n#{canned.content}")
+  end
+
+  # 👎 «es de dónde busca»: el «¿Qué hay aquí?» de la fuente donde sí estaba el dato (Motor2::SourceMap).
+  def fix_purpose
+    source = Current.account.knowledge_sources.find(params[:source_id])
+    text = Motor2::SourceMap.clean_purpose(params[:text])
+    return render json: { error: 'No hay nada que poner.' }, status: :unprocessable_entity if text.blank?
+
+    source.update!(config: source.config.to_h.merge('purpose' => text))
+    render json: { ok: true, source_id: source.id, purpose: text }
   end
 
   # Quien no cambia agentes ve sus 👎 y cómo van, sin el diagnóstico (eso es de quien revisa).

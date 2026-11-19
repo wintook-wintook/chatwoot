@@ -41,4 +41,18 @@ module AgentTester::TrainerFacts
     clave = normalize(title).first(TITLE_KEY)
     arrived_titles.any? { |t| normalize(t).first(TITLE_KEY) == clave }
   end
+
+  # 2.0: qué hay en cada fuente del agente (lo mismo que lee el agente para saber dónde buscar).
+  def source_map
+    return [] unless @v2
+
+    Motor2::SourceMap.new(@account).lines(Motor2::Config.new(@template).sources)
+  end
+
+  # La fuente que nombró el entrenador, con lo que dice hoy su «¿Qué hay aquí?» (si es de las del agente).
+  def where_facts(name)
+    entry = Motor2::SourceMap.new(@account).entries(Motor2::Config.new(@template).sources)
+                             .find { |e| e[:name].to_s.casecmp?(name.to_s.strip) }
+    entry ? { 'source' => entry[:name], 'source_id' => entry[:id], 'about' => entry[:about] } : {}
+  end
 end

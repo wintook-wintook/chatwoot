@@ -631,6 +631,7 @@
       "NUMBERED": "{n}. {step}",
       "agent": "The agent",
       "business": "Your business",
+      "knows": "What it knows",
       "questions": "What to ask",
       "qualify": "When it qualifies",
       "after": "When qualified",
@@ -641,6 +642,7 @@
     "STEP_HINTS": {
       "agent": "Give it a name for your team, the name the customer sees and the inboxes where it answers whoever writes.",
       "business": "What the agent must know to explain and to discard people outside your area or offer.",
+      "knows": "Where it looks up what it is asked. Canned responses are always on; tick the other sources this agent uses.",
       "questions": "Turn on the questions you want and edit their text. It asks them one at a time; each answer goes to the note and the opportunity.",
       "qualify": "With this it knows when to pass it to your team and when it is not for you.",
       "after": "What it does when the lead qualifies, who gets it and which details it collects first.",
@@ -651,6 +653,12 @@
     "STEP_TEST": {
       "READY": "«{name}» is ready. When saved it goes to the agents list labeled «Lead handling».",
       "OFF": "It is off: it won't answer its inboxes until you turn it on (it can still be used in campaigns and automations)."
+    },
+    "KNOWS": {
+      "CANNED": "Canned responses (always)",
+      "NO_CANNED": "No canned responses yet: add them in Catalogs › Canned responses.",
+      "NO_OTHERS": "No other sources connected. You can add sheets, documents or a forum in Settings › Knowledge bases.",
+      "WHERE_HINT": "The agent gets what's in each source to search the right one. If a description is off, change «What's in here?» in Settings › Knowledge bases."
     }
   }
 }

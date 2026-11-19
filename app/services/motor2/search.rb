@@ -4,7 +4,8 @@
 # siempre (no se marcan); las demás, las que marcó la ficha. Usa tal cual lo del 1.0:
 # las predefinidas con AiFollowUps::KnowledgeSearch (separa las instrucciones internas) y el
 # resto por parecido sobre knowledge_items de esa fuente (artículos, documentos, hojas, foro,
-# CONTPAQi), igual que KnowledgeBaseResponseService.
+# CONTPAQi), igual que KnowledgeBaseResponseService. Una hoja en modo «Datos» se busca EXACTO en sus
+# filas con SheetQueryService (el código calcula, sin inventar números), como en el 1.0.
 #
 #   Motor2::Search.new(account, sources).call('¿cuánto cuesta Derecho?', only: 'Precios')
 #   → [{ fuente: 'Precios', resultados: [...] }]
@@ -14,7 +15,7 @@ class Motor2::Search < Cases::Ai::BaseService
   THRESHOLD = 0.2
   MAX_CHARS = 1500
 
-  Source = Struct.new(:key, :name, :kind, :knowledge_source_ids, keyword_init: true)
+  Source = Struct.new(:key, :name, :kind, :knowledge_source_ids, :record, keyword_init: true)
 
   def initialize(account, keys, conversation: nil)
     super(account: account)
@@ -50,15 +51,26 @@ class Motor2::Search < Cases::Ai::BaseService
 
     type, id = key.to_s.split(':', 2)
     source = @account.knowledge_sources.active.find_by(id: id, source_type: type) if id
-    source && Source.new(key: key, name: source.name, kind: type, knowledge_source_ids: [source.id])
+    source && Source.new(key: key, name: source.name, kind: type, knowledge_source_ids: [source.id], record: source)
   end
 
   def canned = @canned ||= AiFollowUps::KnowledgeSearch.new(account: @account, conversation: @conversation)
 
   def search(source, question)
     return Array(canned.canned(question)[:results]) if source.kind == 'canned'
+    return exact_sheet(source, question) if data_sheet?(source)
 
     semantic(source, question)
+  end
+
+  def data_sheet?(source)
+    source.kind == 'google_sheet' && source.record&.config.to_h&.dig('sheet_mode') == 'data'
+  end
+
+  # El resultado lo calcula Ruby sobre las filas (exacto): el modelo solo lo redacta.
+  def exact_sheet(source, question)
+    result = SheetQueryService.new(source.record, question, @account).perform
+    result.present? ? [{ titulo: source.name, informacion: "Resultado exacto de la hoja: #{result}".first(MAX_CHARS) }] : []
   end
 
   def semantic(source, question)

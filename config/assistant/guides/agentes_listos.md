@@ -20,12 +20,13 @@ En el menú «Agentes IA» › «Agentes listos» (la primera opción): una tarj
 ### Crear un agente
 1. Entra a Agentes IA › Agentes listos y en la tarjeta de la función pulsa «Crear uno». Se abre su asistente, paso a paso.
 2. Paso «El agente»: el nombre para tu equipo (por ejemplo «Ana – Facebook»), el nombre que ve el cliente (opcional, por ejemplo «Ana»), el tono y las bandejas donde atiende. Una bandeja solo puede tenerla un agente prendido. Sin nombre y bandeja no deja avanzar.
-3. Pasos «Tu negocio», «Qué le preguntas», «Cuándo califica», «Al calificar», «Objeciones» e «Indicaciones»: ver «Configurar lo que sabe y pregunta».
+3. Pasos «Tu negocio», «Qué sabe», «Qué le preguntas», «Cuándo califica», «Al calificar», «Objeciones» e «Indicaciones»: ver «Configurar lo que sabe y pregunta».
 4. Paso «Pruébalo y guarda»: prueba en el «Chat de prueba» de la derecha (está en todos los pasos): tú eres el cliente. Ves qué contesta y qué hizo (buscó en lo que sabe, guardó un dato, calificado…). No se guarda ni se manda nada.
 5. Pulsa «Guardar». Si quedó «Prendido», empieza a atender en esas bandejas. Los cambios que guardes los toma desde el siguiente mensaje.
 6. Para cambiarlo, el lápiz de su renglón (o ábrelo desde la lista de agentes): se abre el mismo asistente y puedes saltar a cualquier paso y guardar.
 
 ### Configurar lo que sabe y pregunta
+- Qué sabe: dónde busca lo que le preguntan. Las respuestas predefinidas van siempre; marca las demás fuentes que use este agente (hojas, documentos, artículos, foro). Junto a cada una sale qué hay dentro; el agente lo recibe para buscar en la que corresponde. Si una descripción no es exacta, cámbiala en «¿Qué hay aquí?» de Ajustes › Bases de conocimiento.
 - Tu negocio: qué vendes (y, solo si tus productos y precios están en el Catálogo, marca «Lo que vendo y sus precios están en mi Catálogo»; si no, contesta precios y dudas con las respuestas predefinidas), a quién le vendes, dónde das servicio, por qué elegirte y precios desde, formas de pago y tiempos. Con eso explica mejor y descarta a quien está fuera de tu zona o de lo que vendes.
 - Preguntas para calificar: prende las que quieras y cambia su texto si quieres: qué necesita y para qué (viene prendida), para cuándo, presupuesto, quién decide, ubicación, cantidad o tamaño y cómo nos conoció. Abajo van tus preguntas propias, cuándo está calificado y cuándo se descarta. Las hace una por una, en plática, y cada respuesta queda en la nota y en la oportunidad.
 - Temperatura: al calificarlo (o pasarlo a una persona) lo marca caliente (lo necesita pronto y tiene presupuesto o decide), tibio o frío, con la etiqueta «prospecto-caliente», «prospecto-tibio» o «prospecto-frio» y en la nota. Así tu equipo atiende primero a los calientes.

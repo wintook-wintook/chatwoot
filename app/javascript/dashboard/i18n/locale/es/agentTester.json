@@ -121,6 +121,7 @@
         "question": "Pregunta",
         "search": "Búsqueda",
         "category": "Categoría",
+        "where": "Dónde busca",
         "pending": "Por revisar"
       },
       "WHERE": "Va en: {where}",
@@ -202,6 +203,7 @@
         "failing": "Sigue fallando",
         "dismissed": "No es error"
       }
-    }
+    },
+    "CHANGE_PURPOSE": "Cambiar «¿Qué hay aquí?» de «{source}»"
   }
 }
