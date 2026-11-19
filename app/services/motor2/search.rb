@@ -7,7 +7,8 @@
 # CONTPAQi), igual que KnowledgeBaseResponseService. Una hoja en modo «Datos» se busca EXACTO en sus
 # filas con SheetQueryService (el código calcula, sin inventar números), como en el 1.0. CONTPAQi no
 # guarda nada en la plataforma: se le pregunta en vivo a su Agente de Servicio (Contpaq::ServiceAgent,
-# el mismo cliente del 1.0, con el mismo identificador del contacto y la memoria por conversación).
+# el mismo cliente del 1.0, con el mismo identificador del contacto y la memoria por conversación). El
+# foro (discourse) tampoco: se consulta en vivo con Motor2::ForumSearch.
 #
 #   Motor2::Search.new(account, sources).call('¿cuánto cuesta Derecho?', only: 'Precios')
 #   → [{ fuente: 'Precios', resultados: [...] }]
@@ -61,6 +62,7 @@ class Motor2::Search < Cases::Ai::BaseService
     return catalog_results(question) if source.kind == 'catalog'
     return exact_sheet(source, question) if data_sheet?(source)
     return contpaq(source, question) if source.kind == 'contpaq_support'
+    return forum(source, question) if source.kind == 'discourse'
 
     semantic(source, question)
   end
@@ -105,6 +107,15 @@ class Motor2::Search < Cases::Ai::BaseService
   rescue StandardError => e
     Rails.logger.warn("[Motor2::Search] CONTPAQi: #{e.class}: #{e.message}")
     []
+  end
+
+  # El foro en vivo; la búsqueda normal le pide a la IA 1–3 búsquedas cortas.
+  def forum(source, question)
+    ask = lambda do |messages|
+      chat(system: messages.find { |m| m[:role] == 'system' }&.dig(:content).to_s,
+           user: messages.find { |m| m[:role] == 'user' }&.dig(:content).to_s, temperature: 0, max_tokens: 60)
+    end
+    Motor2::ForumSearch.new(source.record, ask: ask).call(question.to_s.first(500))
   end
 
   def contpaq_user
