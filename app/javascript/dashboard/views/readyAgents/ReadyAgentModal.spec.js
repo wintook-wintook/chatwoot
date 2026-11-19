@@ -145,3 +145,22 @@ describe('ReadyAgentModal · cómo platica', () => {
     expect(vm.answersDoubts).toBe(false);
   });
 });
+
+describe('ReadyAgentModal · bienvenida y orden de preguntas', () => {
+  it('sube y baja preguntas; el orden se manda tal cual', () => {
+    const { vm } = mountModal();
+    vm.moveQuestion(2, -1);
+    vm.moveQuestion(0, -1); // la primera no sube más
+    expect(vm.payload().settings.question_list).toEqual([
+      'READY_AGENTS.QUALIFY.need.ASK',
+      'READY_AGENTS.QUALIFY.budget.ASK',
+      'READY_AGENTS.QUALIFY.when.ASK',
+    ]);
+  });
+
+  it('manda la bienvenida con las respuestas', () => {
+    const { vm } = mountModal();
+    vm.form.settings.welcome = '¡Hola! Soy Ana';
+    expect(vm.payload().settings.welcome).toBe('¡Hola! Soy Ana');
+  });
+});

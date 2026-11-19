@@ -63,6 +63,8 @@ const blank = kind => ({
     doubts: 'answer',
     not_found: 'continue',
     off_topic: 'redirect',
+    // Bienvenida: va tal cual al inicio de su primera respuesta (motor2['welcome']).
+    welcome: '',
     qualified_when: '',
     discard_when: '',
     tone: 'cercano',
@@ -256,6 +258,13 @@ export default {
     },
     removeQuestion(index) {
       this.form.settings.question_list.splice(index, 1);
+    },
+    // ↑ / ↓: el agente las hace en el orden de la lista.
+    moveQuestion(index, step) {
+      const list = this.form.settings.question_list;
+      const to = index + step;
+      if (to < 0 || to >= list.length) return;
+      list.splice(to, 0, list.splice(index, 1)[0]);
     },
     toggleCalendarUser(id) {
       const ids = this.form.settings.appointment_user_ids.map(String);
@@ -590,6 +599,24 @@ export default {
               />
               <button
                 type="button"
+                class="px-1 text-slate-400 hover:text-slate-700 disabled:opacity-30"
+                :title="t('QUESTIONS_LIST.UP')"
+                :disabled="i === 0"
+                @click="moveQuestion(i, -1)"
+              >
+                <fluent-icon icon="chevron-up" size="14" />
+              </button>
+              <button
+                type="button"
+                class="px-1 text-slate-400 hover:text-slate-700 disabled:opacity-30"
+                :title="t('QUESTIONS_LIST.DOWN')"
+                :disabled="i === form.settings.question_list.length - 1"
+                @click="moveQuestion(i, 1)"
+              >
+                <fluent-icon icon="chevron-down" size="14" />
+              </button>
+              <button
+                type="button"
                 class="px-1 text-slate-400 hover:text-red-600"
                 :title="t('QUESTIONS_LIST.REMOVE')"
                 @click="removeQuestion(i)"
@@ -615,6 +642,18 @@ export default {
 
           <!-- 5 · Cómo platica: dudas, lo que no encuentra y lo que no es del negocio -->
           <template v-if="step === 'talk'">
+            <label class="block">
+              <span class="field-label">{{ t('TALK.WELCOME') }}</span>
+              <textarea
+                v-model="form.settings.welcome"
+                rows="3"
+                maxlength="1500"
+                :placeholder="t('TALK.WELCOME_PLACEHOLDER')"
+              />
+              <span class="block mt-1 text-xs text-slate-500">{{
+                t('TALK.WELCOME_HINT')
+              }}</span>
+            </label>
             <fieldset
               v-for="(values, rule) in rules"
               :key="rule"

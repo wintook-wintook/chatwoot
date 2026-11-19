@@ -264,6 +264,45 @@ RSpec.describe Motor2::Functions::Prospects do
     expect(Motor2.takes?(incoming('Hola'))).to be(false)
   end
 
+  context 'with mensaje de bienvenida' do
+    before { save_agent(settings.merge('welcome' => '¡Hola! Soy Ana de Autos GDL 🚗'), template: agent) }
+
+    it 'va tal cual al inicio de su primera respuesta, en el mismo mensaje, y solo una vez' do
+      stub_model(answer('Con gusto te ayudo. ¿Qué buscas?'))
+      reply_to(incoming('¿Precio del sedán?'))
+
+      expect(conversation.messages.outgoing.where(private: false).count).to eq(1)
+      expect(conversation.messages.outgoing.where(private: false).last.content)
+        .to eq("¡Hola! Soy Ana de Autos GDL 🚗\n\nCon gusto te ayudo. ¿Qué buscas?")
+      expect(tracking.motor2_state['welcome_sent']).to be(true)
+
+      stub_model(tool_call('guardar_respuesta', { numero: 1, respuesta: 'un sedán' }), answer('¡Perfecto! ¿En qué ciudad estás?'))
+      reply_to(incoming('un sedán'))
+      expect(conversation.messages.outgoing.where(private: false).last.content).to eq('¡Perfecto! ¿En qué ciudad estás?')
+    end
+
+    it 'en el chat de prueba también: solo en la primera respuesta' do
+      stub_model(answer('¿Qué buscas?'))
+      first = Motor2::Probe.new(agent.reload, messages: [{ role: 'user', content: 'hola' }]).call
+      expect(first[:reply]).to eq("¡Hola! Soy Ana de Autos GDL 🚗\n\n¿Qué buscas?")
+
+      later = Motor2::Probe.new(agent, messages: [{ role: 'user', content: 'hola' }, { role: 'assistant', content: first[:reply] },
+                                                  { role: 'user', content: 'un sedán' }]).call
+      expect(later[:reply]).not_to include('Soy Ana')
+    end
+  end
+
+  it 'si el cliente pregunta algo y contesta sin buscar, se le pide que busque antes de afirmarlo' do
+    create(:canned_response, account: account, short_code: 'Horario', content: 'Abrimos de 9 a 6')
+    stub_model(answer('Sí, abrimos el domingo. ¿Qué buscas?'), tool_call('buscar_en_fuentes', { pregunta: 'horario domingo' }),
+               answer('Abrimos de 9 a 6 entre semana; un asesor te confirma el domingo. ¿Qué buscas?'))
+    allow_any_instance_of(AiFollowUps::KnowledgeSearch).to receive(:canned).and_return({ results: [] }) # rubocop:disable RSpec/AnyInstance
+    result = Motor2::Probe.new(agent, messages: [{ role: 'user', content: '¿abren el domingo?' }]).call
+
+    expect(result[:reply]).to include('un asesor te confirma')
+    expect(result[:trace]['events']).to include(include('text' => 'contestó sin buscar'))
+  end
+
   context 'with «Cómo platica»' do
     it 'por omisión: contesta dudas con sus fuentes, sigue si no encuentra y regresa a la plática si es fuera de tema' do
       expect(system_prompt).to include('CÓMO PLATICAS', 'contéstale con lo que encuentres', 'un asesor se lo confirma',

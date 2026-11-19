@@ -681,8 +681,8 @@
       "agent": "Give it a name for your team, the name the customer sees and the inboxes where it answers whoever writes.",
       "business": "What the agent must know to explain and to discard people outside your area or offer.",
       "knows": "Where it looks up what it is asked. Canned responses are always on; tick the other sources this agent uses.",
-      "questions": "The questions it asks to qualify the lead, exactly as written and in this order, one per message. Some examples come in: remove them, edit them or add your own.",
-      "talk": "What it does when the customer asks something, when it can't find the answer, or when they write about something unrelated. It always goes back to the pending question.",
+      "questions": "The questions it asks to qualify the lead, exactly as written and in this order (change it with ↑ ↓), one per message. Some examples come in: remove them, edit them or add your own.",
+      "talk": "Its welcome and what it does when the customer asks something, when it can't find the answer, or when they write about something unrelated. It always goes back to the pending question.",
       "qualify": "With this it knows when to pass it to your team and when it is not for you.",
       "after": "What it does when the lead qualifies, who gets it and which details it collects first.",
       "objections": "What people say to stall the purchase and how to answer. It uses the idea in its own words and never invents discounts.",
@@ -705,9 +705,14 @@
       "PLACEHOLDER": "Write the question as you want it asked",
       "REMOVE": "Remove this question",
       "ADD": "+ Add question",
-      "EMPTY": "Without questions it will only ask what they're looking for."
+      "EMPTY": "Without questions it will only ask what they're looking for.",
+      "UP": "Move up",
+      "DOWN": "Move down"
     },
     "TALK": {
+      "WELCOME": "Welcome message (optional)",
+      "WELCOME_PLACEHOLDER": "E.g. Hi! I'm Ana from Autos Guadalajara, thanks for writing 🚗",
+      "WELCOME_HINT": "Goes as-is at the start of its first reply, in the same message: then it answers what they asked and continues with question 1. Without it, it greets in its own words.",
       "RECOMMENDED": "(recommended)",
       "doubts": {
         "QUESTION": "If the customer asks something instead of answering:",

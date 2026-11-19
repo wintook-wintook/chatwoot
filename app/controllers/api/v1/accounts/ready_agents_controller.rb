@@ -17,7 +17,7 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
   SETTINGS = %w[objective questions qualified_when discard_when tone instructions handoff_user_id handoff_team_id
                 client_user_id client_team_id only_prospects case_type_id appointment_minutes appointment_kind
                 appointment_location business_what business_who business_coverage business_why business_practical
-                business_use_catalog doubts not_found off_topic].freeze
+                business_use_catalog doubts not_found off_topic welcome].freeze
   LISTS = { question_list: [], appointment_user_ids: [], required_contact: [], qualify: %i[key on text],
             objections: %i[objection answer] }.freeze
   MAX_TEST_MESSAGES = 30

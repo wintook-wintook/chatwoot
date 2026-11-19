@@ -39,9 +39,11 @@ class Motor2::Reply
       @tracking.pause!
     else
       Motor2::TicketHook.call(@message)
-      # Mismo orden que el 1.0: bienvenida, palabras clave y luego la respuesta.
-      greeted_only = welcome! && ContactTrackings::WelcomeMessage.only_greeting?(text)
-      answer unless greeted_only || keyword_fired?
+      # Mismo orden que el 1.0: bienvenida, palabras clave y luego la respuesta. Los agentes de una
+      # función (Atención a prospectos…) la mandan combinada con su primera respuesta, en un mensaje.
+      combined = combined_welcome
+      greeted_only = combined.nil? && welcome! && ContactTrackings::WelcomeMessage.only_greeting?(text)
+      answer(welcome: combined) unless greeted_only || keyword_fired?
     end
   end
 
@@ -72,10 +74,22 @@ class Motor2::Reply
     true
   end
 
-  def answer
-    result = Motor2::Runner.new(@config, state: state, conversation: @conversation, tracking: @tracking).call
+  # La bienvenida que va al inicio de la primera respuesta (agentes de una función), o nil.
+  def combined_welcome
+    return nil unless @config.function && @config.welcome.present? && !state['welcome_sent']
+
+    @config.welcome
+  end
+
+  def answer(welcome: nil)
+    result = Motor2::Runner.new(@config, state: state, conversation: @conversation, tracking: @tracking, welcome: welcome).call
     return failed(result.error) if result.error
 
+    state['welcome_sent'] = true if welcome
+    deliver(result)
+  end
+
+  def deliver(result)
     Motor2::Delivery.send_reply(@tracking, @conversation, result.reply, trace: result.trace,
                                                                         attachments: result.attachments.pluck(:signed_id))
     state.files_sent.concat(result.attachments.pluck(:id)).uniq!

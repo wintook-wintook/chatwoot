@@ -4,8 +4,11 @@
 #   - si el mensaje del agente no termina con la pregunta pendiente, se le pide una vez y, si
 #     tampoco, se agrega tal cual;
 #   - si dice que lo pasa al equipo sin haberlo calificado ni pasado (sin llamar la herramienta),
-#     se le pide que lo haga o que no lo prometa.
-# Lo incluye Motor2::Runner (usa @mode, @decision, @skills, @trace, #run, #clean y #unsourced?).
+#     se le pide que lo haga o que no lo prometa;
+#   - la bienvenida combinada (agentes de una función) va tal cual al inicio de la primera respuesta;
+#   - si el cliente preguntó algo y contestó sin buscar (puede buscar), se le pide que busque antes:
+#     así no afirma «sí lo tenemos» sin haberlo visto.
+# Lo incluye Motor2::Runner (usa @mode, @decision, @skills, @trace, @welcome, #run, #clean y #unsourced?).
 module Motor2::QuestionGuard
   ASK_AGAIN = 'Tu mensaje debe terminar con esta pregunta, tal cual: «%<ask>s». Reescríbelo (corto) terminando con ella.'
   PROMISE = /(pas(o|ar|aré|o) (tu|sus|la) (información|info|datos)|te (contact|escrib|llam)(a|e|ar)|un asesor te|alguien del equipo te)/i
@@ -13,6 +16,14 @@ module Motor2::QuestionGuard
                'prospecto_calificado (o pasar_a_humano) y despídete; si no, no le digas que lo pasas y sigue con lo que falte.'
 
   private
+
+  # Las revisiones de la plática, en orden: buscó si le preguntaron, no prometió sin decidir, termina
+  # con la pregunta pendiente.
+  def guard_turn(messages, text)
+    %i[ensure_searched ensure_decision ensure_question].reduce(text) do |current, check|
+      current.present? ? send(check, messages, current) : current
+    end
+  end
 
   # La secuencia de preguntas la manda el código: si no terminó con la pendiente, se le pide una vez
   # y, si tampoco, se agrega tal cual (no se queda sin preguntar).
@@ -26,6 +37,41 @@ module Motor2::QuestionGuard
     return again if again.present? && Motor2::Skills::Qualify.asks?(again, ask) && !unsourced?(again)
 
     "#{text}\n\n#{ask}"
+  end
+
+  # La bienvenida de la empresa va tal cual al inicio del primer mensaje (la pone el código).
+  def welcome_note
+    return nil unless @welcome
+
+    "Tu mensaje lo empieza la bienvenida de la empresa (la pone el código): «#{@welcome}». No saludes ni te presentes " \
+      'otra vez: escribe solo lo que sigue (contesta lo que preguntó, si preguntó algo, y la pregunta pendiente).'
+  end
+
+  def with_welcome(text)
+    return text unless @welcome
+
+    @trace.event(:bienvenida, 'combinada con la respuesta')
+    # Si el modelo la volvió a escribir (pasa aunque se le diga), se quita: va una sola vez.
+    rest = text.to_s.gsub(@welcome, '').strip
+    [@welcome, rest].compact_blank.join("\n\n")
+  end
+
+  SEARCH_FIRST = 'El cliente preguntó algo y contestaste sin buscar. Búscalo con buscar_en_fuentes antes de contestar; ' \
+                 'si no sale, no lo afirmes: dile que un asesor se lo confirma y sigue con la pregunta pendiente.'
+  SEARCH_TOOLS = %w[buscar_en_fuentes buscar_en_catalogo].freeze
+
+  def ensure_searched(messages, text)
+    return text unless unsearched_question?
+
+    @trace.event(:revision, 'contestó sin buscar')
+    messages << { role: 'assistant', content: text } << { role: 'system', content: SEARCH_FIRST }
+    again = clean(run(messages))
+    again.present? && !unsourced?(again) ? again : text
+  end
+
+  def unsearched_question?
+    @mode == :reply && @decision.nil? && @last_customer.to_s.include?('?') &&
+      @skills.any? { |s| s.key == 'knowledge' } && @trace.tools.none? { |t| SEARCH_TOOLS.include?(t['name']) }
   end
 
   # Prometió pasarlo sin llamar la herramienta: se le pide una vez que lo haga bien.

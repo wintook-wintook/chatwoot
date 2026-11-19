@@ -11,7 +11,8 @@
 #   enabled       → attending (atiende a quien escribe a sus bandejas)
 #   inbox_ids     → attend_inbox_ids (la primera también es la bandeja del agente: identidad, plantillas)
 #   display_name  → customer_display_name (el nombre que ve el cliente)
-#   settings      → motor2['answers'] (limpias por la función); settings.instructions → motor2['instructions']
+#   settings      → motor2['answers'] (limpias por la función); settings.instructions → motor2['instructions'];
+#                   settings.welcome → motor2['welcome'] (la bienvenida, combinada con la primera respuesta)
 #   sources       → motor2['sources'] (las fuentes que marcó en «Qué sabe»; las predefinidas van siempre)
 # Sin `settings` (p. ej. prender o apagar desde la lista) no se tocan las respuestas.
 class Motor2::Functions::Form
@@ -70,7 +71,9 @@ class Motor2::Functions::Form
     settings = Motor2::Sanitizer.plain(@params['settings'])
     data = @template.motor2.to_h.deep_dup
     data['answers'] = Motor2::Functions.klass(kind).sanitize(settings)
-    data['instructions'] = settings['instructions'].to_s.strip.first(Motor2::Sanitizer::TEXTS['instructions']) if settings.key?('instructions')
+    %w[instructions welcome].each do |key|
+      data[key] = settings[key].to_s.strip.first(Motor2::Sanitizer::TEXTS[key]) if settings.key?(key)
+    end
     @template.motor2 = data
     minutes = data.dig('answers', 'appointment_minutes').to_i
     @template.calendar_event_duration = minutes if minutes.positive?

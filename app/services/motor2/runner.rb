@@ -28,7 +28,8 @@ class Motor2::Runner < Cases::Ai::BaseService
 
   attr_reader :config, :state, :trace, :conversation, :tracking, :canned_used, :seen, :noted_contact
 
-  # opts: conversation:, tracking:, history: (chat de prueba), mode: :reply | :attempt, attempt: [n, total]
+  # opts: conversation:, tracking:, history: (chat de prueba), mode: :reply | :attempt, attempt: [n, total],
+  #       welcome: (bienvenida combinada: va tal cual al inicio del mensaje; el modelo no vuelve a saludar)
   def initialize(config, state:, **opts)
     super(account: config.account)
     @config = config
@@ -38,6 +39,7 @@ class Motor2::Runner < Cases::Ai::BaseService
     @test_history = opts[:history]
     @mode = opts[:mode] || :reply
     @attempt = opts[:attempt]
+    @welcome = opts[:welcome].to_s.strip.presence
     @trace = Motor2::Trace.new
     @canned_used = []
     @seen = []
@@ -79,7 +81,7 @@ class Motor2::Runner < Cases::Ai::BaseService
     content = first_answer(messages)
     return Result.new(error: ['El modelo no respondió.', @error].compact.join(' — '), trace: @trace.to_h) if content.nil?
 
-    Result.new(reply: review(messages, clean(content)), decision: @decision, trace: @trace.to_h,
+    Result.new(reply: with_welcome(review(messages, clean(content))), decision: @decision, trace: @trace.to_h,
                attachments: @attachments, after: @after)
   end
 
@@ -87,12 +89,19 @@ class Motor2::Runner < Cases::Ai::BaseService
 
   def initial_messages
     prompt = Motor2::Prompt.new(self, @skills)
-    history = test? ? @test_history.map { |m| m.to_h.symbolize_keys.slice(:role, :content) } : Motor2::Prompt.history(@conversation)
-    @skills.each { |skill| skill.prepare(history) }
+    history = turn_history
     system = prompt.system
     @seen << system << history.pluck(:content).join("\n")
-    turn = [prompt.turn_message(@mode, attempt: @attempt), *@skills.map(&:turn_note)].compact_blank.join("\n")
+    turn = [prompt.turn_message(@mode, attempt: @attempt), welcome_note, *@skills.map(&:turn_note)].compact_blank.join("\n")
     [{ role: 'system', content: system }, *history, { role: 'system', content: turn }]
+  end
+
+  # La plática del turno; las habilidades deducen lo suyo (p. ej. qué pregunta acaba de contestar).
+  def turn_history
+    history = test? ? @test_history.map { |m| m.to_h.symbolize_keys.slice(:role, :content) } : Motor2::Prompt.history(@conversation)
+    @skills.each { |skill| skill.prepare(history) }
+    @last_customer = history.reverse.find { |m| m[:role].to_s == 'user' }&.dig(:content).to_s
+    history
   end
 
   # --- el modelo ----------------------------------------------------------------------
@@ -182,8 +191,7 @@ class Motor2::Runner < Cases::Ai::BaseService
 
     text = rewrite(messages, text, :leak) if leaks?(text)
     text = rewrite(messages, text, :unsourced) if text.present? && unsourced?(text)
-    text = ensure_decision(messages, text) if text.present?
-    text = ensure_question(messages, text) if text.present?
+    text = guard_turn(messages, text) if text.present?
     guard_links(text)
   end
 
