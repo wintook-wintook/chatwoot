@@ -147,7 +147,7 @@ class AiFollowUps::Runner < Cases::Ai::BaseService # rubocop:disable Metrics/Cla
   end
 
   def complete(messages)
-    body = { model: Assistant::Settings.model_for(@account), messages: messages, temperature: 0.4,
+    body = { model: AiModels::AGENTS, messages: messages, temperature: 0.4,
              max_tokens: MAX_TOKENS, tools: tools, tool_choice: 'auto' }
     response = http.request(request(body))
     return JSON.parse(response.body).dig('choices', 0, 'message') if response.is_a?(Net::HTTPSuccess)

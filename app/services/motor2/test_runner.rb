@@ -49,5 +49,5 @@ class Motor2::TestRunner < Cases::Ai::BaseService
     data.is_a?(Hash) ? { ok: data['ok'] == true, reason: data['reason'].to_s.first(300) } : { ok: false, reason: 'No se pudo revisar.' }
   end
 
-  def model = Assistant::Settings.model_for(@account)
+  def model = AiModels::REVIEW
 end
