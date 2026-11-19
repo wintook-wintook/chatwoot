@@ -54,4 +54,36 @@ RSpec.describe ContactTrackings::AttemptFiles do
     template.update!(resources: { 'files' => { 'formato' => { 'tickets' => ['*'] } } })
     expect(template.files_for_ticket('Ventas')).to eq(['formato'])
   end
+
+  # fix/campanas: en correo el archivo del intento va adjunto al MISMO correo del intento.
+  describe 'en un canal de correo' do
+    let(:email_channel) { create(:channel_email, account: account) }
+    let(:email_inbox) { email_channel.inbox }
+    let(:template) { create(:tracking_template, account: account, inbox: email_inbox) }
+    let(:conversation) { create(:conversation, account: account, inbox: email_inbox) }
+    let(:tracking) do
+      create(:contact_tracking, account: account, inbox: email_inbox, contact: conversation.contact,
+                                conversation: conversation, tracking_template: template, status: 'active', attempt_count: 0)
+    end
+
+    before do
+      adjuntar('flyer')
+      template.update!(resources: { 'files' => { 'flyer' => { 'attempts' => [1, 2] } } })
+    end
+
+    it 'signed_ids_for da los archivos de ese intento' do
+      expect(described_class.signed_ids_for(tracking, 1).size).to eq(1)
+      expect(described_class.signed_ids_for(tracking, 3)).to eq([])
+    end
+
+    it 'el intento sale en un solo correo con el texto y el flyer' do
+      expect do
+        expect(ContactTrackingJob.new.send(:send_attempt_with_files, tracking, 'Te comparto la promoción')).to be(true)
+      end.to change(conversation.messages, :count).by(1)
+
+      mensaje = conversation.messages.last
+      expect(mensaje.content).to eq('Te comparto la promoción')
+      expect(mensaje.attachments.map { |a| a.file.filename.to_s }).to eq(['flyer.pdf'])
+    end
+  end
 end

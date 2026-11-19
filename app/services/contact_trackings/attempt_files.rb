@@ -8,7 +8,8 @@
 # qué intentos va (TrackingTemplate#file_rules → 'attempts').
 #
 # El mensaje del intento lo escribe la IA y ahí un {{archivo}} no se resuelve; por eso,
-# si el intento salió bien, los archivos van en un mensaje aparte por el flujo normal
+# en correo van adjuntos al mismo correo del intento (fix/campanas) y, en los demás
+# canales, si el intento salió bien, en un mensaje aparte por el flujo normal
 # (MessageBuilder → envío del canal): sirve en WhatsApp con la ventana abierta y en los
 # demás canales. Con la ventana de WhatsApp cerrada solo puede salir la plantilla (su
 # encabezado puede llevar el archivo): ahí no se manda nada.
@@ -32,5 +33,18 @@ module ContactTrackings::AttemptFiles
   rescue StandardError => e
     Rails.logger.error "[ContactTracking] 📎 no se mandaron los archivos del intento #{numero}: #{e.message}"
     nil
+  end
+
+  # fix/campanas: en correo los archivos van adjuntos al mismo correo del intento
+  # (ContactTrackingJob#send_attempt_with_files). Regresa los signed_id de sus blobs.
+  def signed_ids_for(tracking, numero)
+    template = tracking.tracking_template
+    return [] if template.nil?
+
+    nombres = template.files_for_attempt(numero)
+    nombres.empty? ? [] : ContactTrackings::AgentAttachments.signed_ids(template, nombres)
+  rescue StandardError => e
+    Rails.logger.error "[ContactTracking] 📎 no se tomaron los archivos del intento #{numero}: #{e.message}"
+    []
   end
 end
