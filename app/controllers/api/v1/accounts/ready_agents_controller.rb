@@ -20,9 +20,12 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
                 client_user_id client_team_id only_prospects case_type_id appointment_minutes appointment_kind
                 appointment_location business_what business_who business_coverage business_why business_practical
                 business_use_catalog doubts not_found off_topic welcome price_source not_client human user_id team_id
-                purpose offer_what offer_details offer_goal event_id low_score relay].freeze
+                purpose offer_what offer_details offer_goal event_id low_score relay hot_when voice_mode
+                business_mode attend_hours].freeze
   LISTS = { question_list: [], appointment_user_ids: [], required_contact: [], qualify: %i[key on text],
-            objections: %i[objection answer], areas: {}, survey_questions: [] }.freeze
+            objections: %i[objection answer], areas: {}, survey_questions: [],
+            # Los de Motor2::Functions::Extras (cada función los limpia al guardar).
+            quote: {}, follow_up: {}, voice: {}, appointment_notice: {} }.freeze
   CHANNEL = [:inbox_id, :retry_value, :retry_unit, :attempts, :email_signature, { whatsapp_templates: [] }].freeze
   MAX_TEST_MESSAGES = 30
   ROLES = %w[user assistant].freeze
@@ -72,7 +75,10 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
 
   # Ejemplos por área («Atención a clientes») o preguntas para calificar («Atención a prospectos») según su negocio.
   def suggest
-    business = { what: params[:business_what].to_s.first(1000), who: params[:business_who].to_s.first(1000) }
+    # Con «Usar los de la empresa» no vienen: se toman de «Cómo habla tu empresa».
+    company = AgentBase::BusinessData.get(Current.account)['fixed']
+    business = { what: params[:business_what].presence || company['what'], who: params[:business_who].presence || company['who'] }
+               .transform_values { |v| v.to_s.first(1000) }
     render json: Motor2::BusinessSuggestions.new(account: Current.account)
                                             .call(kind: params[:kind], business: business, areas: Array(params[:areas]).map(&:to_s))
   end

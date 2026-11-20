@@ -120,6 +120,7 @@ class Motor2::Functions::Form
       data[key] = settings[key].to_s.strip.first(Motor2::Sanitizer::TEXTS[key]) if settings.key?(key)
     end
     data['voice'] = AgentBase::CompanyVoice.clean(settings['voice']) if settings.key?('voice')
+    data['voice_mode'] = settings['voice_mode'].to_s.presence_in(%w[company own]) || 'company' if settings.key?('voice_mode')
   end
 
   def assign_settings(kind)

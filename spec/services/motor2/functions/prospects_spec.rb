@@ -529,6 +529,58 @@ RSpec.describe Motor2::Functions::Prospects do
     expect(questions.last).to eq(number: 2, ask: '¿Cuántos empleados tienen?', condition: 'es empresa')
   end
 
+  describe 'cotizar' do
+    before do
+      account.case_types.create!(name: 'Ventas', case_class: :commercial)
+      account.catalog_items.create!(name: 'Panel solar 550W', price: 4200, kind: :product)
+    end
+
+    it 'cotiza en cuanto la pide (sin terminar las preguntas) y eso lo califica, caliente, sin abrir otra oportunidad' do
+      save_agent(settings.merge('objective' => 'opportunity', 'quote' => { 'mode' => 'draft' }), template: agent)
+      stub_model(tool_call('cotizar', { partidas: [{ producto: 'panel solar', cantidad: 10 }] }), answer('Tu asesor te la manda en un momento.'))
+      reply_to(incoming('cotízame 10 paneles solares'))
+
+      quote = account.quotes.last
+      expect(quote.items.first).to have_attributes(quantity: 10, unit_price: 4200)
+      expect(tracking.reload).to have_attributes(status: 'objective_met', outcome: "qualified: Cotización #{quote.folio}")
+      expect(tracking.motor2_state['temperature']).to eq('caliente')
+      expect(CaseTicket.where(contact: contact).count).to eq(1) # la de la cotización, no otra
+      expect(conversation.reload).to have_attributes(assignee_id: seller.id)
+      expect(conversation.label_list).to include('interesado', 'prospecto-caliente', 'cotizacion')
+    end
+
+    it 'en borrador, el seguimiento de la cotización empieza cuando el vendedor la manda; pasadas 24 h usa SU plantilla' do
+      save_agent(settings.merge('quote' => { 'mode' => 'draft', 'follow_days' => 2, 'template' => 'pregunta_cotizacion' }), template: agent)
+      stub_model(tool_call('cotizar', { partidas: [{ producto: 'panel solar', cantidad: 1 }] }), answer('Tu asesor te la manda.'))
+      expect { reply_to(incoming('cotízame un panel')) }.not_to have_enqueued_job(Motor2::QuoteFollowUpJob)
+
+      quote = account.quotes.last
+      expect { Quotes::Delivery.new(quote, seller).deliver! }.to have_enqueued_job(Motor2::QuoteFollowUpJob).with(tracking.id, quote.id)
+
+      expect(Motor2::LateMessage).to receive(:deliver).with(anything, anything, template: 'pregunta_cotizacion').and_return(nil)
+      travel(3.days) { Motor2::QuoteFollowUpJob.perform_now(tracking.id, quote.id) }
+      expect(note).to include('no se le pudo preguntar', quote.folio) # el vendedor sabe que no le llegó
+    end
+
+    it 'no le pregunta por la cotización si ya escribió después de recibirla, ni si se apagó la opción' do
+      save_agent(settings.merge('quote' => { 'mode' => 'send', 'follow' => false }), template: agent)
+      stub_model(tool_call('cotizar', { partidas: [{ producto: 'panel solar', cantidad: 1 }] }), answer('Ya te la mandé.'))
+      expect { reply_to(incoming('cotízame un panel')) }.not_to have_enqueued_job(Motor2::QuoteFollowUpJob)
+
+      quote = account.quotes.last
+      travel(1.minute) { incoming('gracias, la reviso') }
+      expect(Motor2::LateMessage).not_to receive(:deliver)
+      Motor2::QuoteFollowUpJob.perform_now(tracking.id, quote.id)
+    end
+
+    it 'antes de cotizar pide los datos obligatorios' do
+      save_agent(settings.merge('quote' => { 'mode' => 'draft' }, 'required_contact' => %w[email]), template: agent)
+      stub_model(tool_call('cotizar', { partidas: [{ producto: 'panel solar', cantidad: 1 }] }), answer('¿Me compartes tu correo?'))
+      reply_to(incoming('cotízame un panel'))
+      expect(account.quotes.count).to eq(0)
+    end
+  end
+
   describe 'recomendar del Catálogo' do
     let(:settings) do
       { 'objective' => 'handoff', 'question_list' => ['¿Qué buscas?'], 'handoff_user_id' => seller.id, 'price_source' => 'catalog' }
@@ -557,6 +609,29 @@ RSpec.describe Motor2::Functions::Prospects do
       expect(Motor2::Config.new(agent.reload).skill_on?('recommend')).to be(true)
       save_agent(settings.merge('price_source' => 'canned'), template: agent)
       expect(Motor2::Config.new(agent.reload).skill_on?('recommend')).to be(false)
+    end
+  end
+
+  describe 'archivos con la bienvenida' do
+    let(:settings) do
+      { 'objective' => 'handoff', 'question_list' => ['¿Qué buscas?'], 'handoff_user_id' => seller.id, 'welcome' => '¡Hola! Soy Sofi.' }
+    end
+
+    it 'van junto con la bienvenida combinada (también en «Probar», con su miniatura) y no se repiten' do
+      create(:ai_agent_attachment, tracking_template: agent, name: 'promo',
+                                   file: fixture_file_upload(Rails.root.join('spec/assets/sample.png'), 'image/png'))
+      agent.update!(resources: { 'files' => { 'promo' => { 'welcome' => true, 'ask' => false } } })
+      stub_model(answer('¿Qué buscas?'))
+
+      result = Motor2::Probe.new(agent.reload, messages: [{ role: 'user', content: 'hola' }]).call
+      expect(result[:reply]).to start_with('¡Hola! Soy Sofi.')
+      expect(result[:files]).to eq(['promo'])
+      expect(result[:previews].first).to include(name: 'promo', image: true)
+
+      reply_to(incoming('hola'))
+      expect(conversation.messages.outgoing.last.attachments.size).to eq(1)
+      reply_to(incoming('busco camioneta'))
+      expect(conversation.messages.outgoing.last.attachments.size).to eq(0)
     end
   end
 

@@ -1,32 +1,55 @@
 <!--
-  «Cómo habla tu empresa» dentro de cada agente listo: un botón abre lo que tiene la empresa y, campo por
-  campo, se elige «Como la empresa» (si cambia allá, cambia aquí) o «Solo para este agente» (se edita aquí y
-  queda solo para él; Motor2::Config#voice). v-model: solo los campos que este agente cambió.
+  «Cómo habla tu empresa» dentro de cada agente listo (los tres), con un selector:
+    - «Usar el de la empresa»: se ven sus campos (solo lectura); si la empresa lo cambia, el agente también;
+    - «Personalizar para este agente»: los campos ya llenos con lo de la empresa, para cambiar lo que quiera; queda solo
+      para él (Motor2::Config#voice). Al personalizar, el Tono del agente pasa a «El de Cómo habla tu empresa».
+  v-model: los settings del agente (usa voice, voice_mode y tone).
 -->
 <script>
 import AiVoiceAPI from 'dashboard/api/aiVoice';
+import { frontendURL } from 'dashboard/helper/URLHelper';
 import { VOICE_FIELDS } from './CompanyVoice.vue';
 
 export default {
   name: 'AgentVoice',
   model: { prop: 'value', event: 'input' },
   props: {
-    value: { type: Object, default: () => ({}) },
+    value: { type: Object, required: true },
   },
   emits: ['input'],
   data() {
-    return { open: false, company: {}, loaded: false };
+    return { company: {}, loaded: false };
   },
   computed: {
     fields() {
       return VOICE_FIELDS;
     },
-    ownCount() {
-      return Object.keys(this.value || {}).filter(k => this.isOwn(k)).length;
+    voice() {
+      return this.value.voice || {};
     },
-    companyCount() {
-      return VOICE_FIELDS.filter(k => (this.company[k] || '').trim()).length;
+    // Los de antes (con algo propio y sin modo) también cuentan como personalizados.
+    mode() {
+      if (this.value.voice_mode) return this.value.voice_mode;
+      return Object.values(this.voice).some(v => (v || '').trim())
+        ? 'own'
+        : 'company';
     },
+    companyEmpty() {
+      return !VOICE_FIELDS.some(k => (this.company[k] || '').trim());
+    },
+    companyUrl() {
+      return frontendURL(
+        `accounts/${this.$route.params.accountId}/tracking-dashboard/company-voice`
+      );
+    },
+  },
+  async mounted() {
+    try {
+      const { data } = await AiVoiceAPI.get();
+      this.company = data.voice || {};
+    } finally {
+      this.loaded = true;
+    }
   },
   methods: {
     t(key, params) {
@@ -35,91 +58,94 @@ export default {
     label(key) {
       return this.$t(`AI_VOICE.FIELDS.${key.toUpperCase()}.LABEL`);
     },
-    async toggle() {
-      this.open = !this.open;
-      if (this.open && !this.loaded) {
-        try {
-          const { data } = await AiVoiceAPI.get();
-          this.company = data.voice || {};
-        } finally {
-          this.loaded = true;
-        }
+    setMode(mode) {
+      if (mode === 'own') {
+        // Arranca con lo de la empresa (lo que ya tenía personalizado gana) y el tono pasa a ser el de aquí.
+        const voice = Object.fromEntries(
+          VOICE_FIELDS.map(k => [k, this.voice[k] || this.company[k] || ''])
+        );
+        this.$emit('input', {
+          ...this.value,
+          voice_mode: 'own',
+          voice,
+          tone: 'empresa',
+        });
+      } else {
+        this.$emit('input', {
+          ...this.value,
+          voice_mode: 'company',
+          voice: {},
+        });
       }
     },
-    isOwn(key) {
-      return Object.prototype.hasOwnProperty.call(this.value || {}, key);
-    },
-    // «Solo para este agente» arranca con lo de la empresa, para cambiarlo.
-    useOwn(key, own) {
-      const next = { ...(this.value || {}) };
-      if (own) next[key] = next[key] ?? this.company[key] ?? '';
-      else delete next[key];
-      this.$emit('input', next);
-    },
-    setOwn(key, text) {
-      this.$emit('input', { ...(this.value || {}), [key]: text });
+    setField(key, text) {
+      this.$emit('input', {
+        ...this.value,
+        voice_mode: 'own',
+        voice: { ...this.voice, [key]: text },
+      });
     },
   },
 };
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-    <div class="flex flex-wrap items-center gap-2">
-      <woot-button
-        size="small"
-        variant="smooth"
-        color-scheme="secondary"
-        icon="chat"
-        @click="toggle"
-      >
-        {{ t('BUTTON') }}
-      </woot-button>
-      <span class="text-xs text-slate-500">
-        {{ ownCount ? t('OWN', { n: ownCount }) : t('ALL_COMPANY') }}
-      </span>
-    </div>
-    <div
-      v-if="open"
-      class="flex flex-col gap-3 p-3 border rounded-md border-slate-100 dark:border-slate-700"
-    >
-      <p class="m-0 text-xs text-slate-500">{{ t('HINT') }}</p>
-      <p v-if="loaded && !companyCount" class="m-0 text-xs text-amber-700">
+  <section
+    class="flex flex-col gap-2 p-3 border rounded-md border-slate-100 dark:border-slate-700"
+  >
+    <span class="text-sm font-medium text-slate-800 dark:text-slate-100">
+      {{ t('TITLE') }}
+    </span>
+    <select class="!mb-0" :value="mode" @change="setMode($event.target.value)">
+      <option value="company">{{ t('MODE_COMPANY') }}</option>
+      <option value="own">{{ t('MODE_OWN') }}</option>
+    </select>
+    <p class="m-0 text-xs text-slate-500">
+      {{ mode === 'own' ? t('HINT_OWN') : t('HINT_COMPANY') }}
+    </p>
+
+    <template v-if="mode === 'company'">
+      <p v-if="loaded && companyEmpty" class="m-0 text-xs text-amber-700">
         {{ t('EMPTY') }}
       </p>
-      <div v-for="key in fields" :key="key" class="flex flex-col gap-1">
-        <div class="flex flex-wrap items-center gap-3 text-sm">
-          <span class="font-medium">{{ label(key) }}</span>
-          <label class="flex items-center gap-1 text-xs">
-            <input
-              type="radio"
-              class="!m-0"
-              :checked="!isOwn(key)"
-              @change="useOwn(key, false)"
-            />
-            {{ t('COMPANY') }}
-          </label>
-          <label class="flex items-center gap-1 text-xs">
-            <input
-              type="radio"
-              class="!m-0"
-              :checked="isOwn(key)"
-              @change="useOwn(key, true)"
-            />
-            {{ t('ONLY_HERE') }}
-          </label>
-        </div>
+      <dl v-else class="m-0 text-xs">
+        <template v-for="key in fields">
+          <dt
+            v-if="(company[key] || '').trim()"
+            :key="`${key}-l`"
+            class="mt-1 font-medium text-slate-600 dark:text-slate-300"
+          >
+            {{ label(key) }}
+          </dt>
+          <dd
+            v-if="(company[key] || '').trim()"
+            :key="`${key}-v`"
+            class="m-0 text-slate-600 dark:text-slate-300"
+          >
+            {{ company[key] }}
+          </dd>
+        </template>
+      </dl>
+      <a
+        :href="companyUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-xs text-woot-600 hover:underline"
+      >
+        {{ t('EDIT_COMPANY') }}
+      </a>
+    </template>
+
+    <template v-else>
+      <label v-for="key in fields" :key="key" class="block">
+        <span class="field-label">{{ label(key) }}</span>
         <textarea
-          v-if="isOwn(key)"
           rows="2"
           maxlength="600"
-          :value="value[key]"
-          @input="setOwn(key, $event.target.value)"
+          :value="voice[key]"
+          @input="setField(key, $event.target.value)"
         />
-        <p v-else class="m-0 text-xs text-slate-600 dark:text-slate-300">
-          {{ (company[key] || '').trim() || t('NOT_SET') }}
-        </p>
-      </div>
-    </div>
-  </div>
+      </label>
+    </template>
+  </section>
 </template>

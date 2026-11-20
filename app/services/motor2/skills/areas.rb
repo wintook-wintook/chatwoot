@@ -171,7 +171,7 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
                                                      about: { business: business_text, catalog: case_catalog })
   end
 
-  def business_text = [function.answer(:business_what), function.answer(:business_who)].compact_blank.join(' — ')
+  def business_text = [function.business_info(:business_what), function.business_info(:business_who)].compact_blank.join(' — ')
 
   def remember_pending
     if sufficient?

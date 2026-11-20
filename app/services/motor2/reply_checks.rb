@@ -92,7 +92,7 @@ module Motor2::ReplyChecks
     end
   end
 
-  def business_text = @config.function.respond_to?(:answer) ? @config.function.answer(:business_what) : @config.objective
+  def business_text = @config.function.respond_to?(:business_info) ? @config.function.business_info(:business_what) : @config.objective
 
   DEFER = 'Eso te lo resuelve un asesor en cuanto te atienda.'
 

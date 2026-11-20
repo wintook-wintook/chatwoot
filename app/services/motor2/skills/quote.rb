@@ -28,6 +28,9 @@ class Motor2::Skills::Quote < Motor2::Skills::Base
   end
 
   def call(_name, args)
+    data = missing_contact
+    return { error: "Antes de cotizar pídele su #{data.join(' y ')} (en una pregunta) y guárdalo con actualizar_contacto." } if data.any?
+
     items, missing = items_for(Array(args['partidas']).first(MAX_ITEMS))
     return { error: "No están en el Catálogo: #{missing.join(', ')}. Pregúntale qué producto es o pásalo al vendedor." } if missing.any?
     return { error: 'Falta qué productos quiere.' } if items.empty?
@@ -42,7 +45,25 @@ class Motor2::Skills::Quote < Motor2::Skills::Base
     state['quote'] = { 'id' => quote.id, 'folio' => quote.folio }
     trace.event(:cotizacion, "#{quote.folio} (#{mode})")
     @turn.after_send { after(quote) }
+    qualify!(quote.folio)
     { ok: true, folio: quote.folio, total: quote.total.to_f, nota: note_for_agent }
+  end
+
+  def prospects? = function.key == 'prospects'
+
+  # Atención a prospectos: pedir la cotización lo califica, caliente.
+  def qualify!(folio)
+    return unless prospects?
+
+    Motor2::Skills::Qualify.note_temperature(state, 'caliente')
+    @turn.decide('qualified', "Pidió la cotización #{folio}")
+  end
+
+  # Los datos obligatorios que marcó la empresa (Atención a prospectos), antes de cotizar.
+  def missing_contact
+    return [] unless function.respond_to?(:missing_contact)
+
+    function.missing_contact(@turn.conversation&.contact, @turn.noted_contact)
   end
 
   def function = config.function
@@ -66,6 +87,7 @@ class Motor2::Skills::Quote < Motor2::Skills::Base
   def preview(items)
     lines = items.map { |(item, qty)| { producto: item.name, cantidad: qty, precio: item.price.to_f } }
     @turn.seen << lines.to_json
+    qualify!('PRUEBA-COT')
     { ok: true, prueba: true, partidas: lines, total: lines.sum { |l| l[:precio] * l[:cantidad] }, nota: note_for_agent }
   end
 
@@ -87,18 +109,17 @@ class Motor2::Skills::Quote < Motor2::Skills::Base
   end
 
   def note_for_agent
-    return 'Ya quedó: dile que se la manda su asesor en un momento (no le des el total: lo revisa el asesor).' if mode == 'draft'
+    done = prospects? ? ' Con esto queda listo: despídete (ya no hagas las preguntas que faltaban).' : ''
+    return "Ya quedó: dile que se la manda su asesor en un momento (no le des el total: lo revisa el asesor).#{done}" if mode == 'draft'
 
-    'Ya se la mandamos por aquí con su liga: dile el folio y que cualquier duda te la resuelves.'
+    "Ya se la mandamos por aquí con su liga: dile el folio y que cualquier duda te la resuelves.#{done}"
   end
 
-  # Después de mandar el mensaje: la manda (si toca), avisa al vendedor y programa el seguimiento.
+  # Después de mandar el mensaje: la manda (si toca) y avisa al vendedor. El seguimiento lo programa
+  # Motor2::QuoteFollowUpJob.schedule al quedar enviada (aquí o, en borrador, cuando la manda el vendedor).
   def after(quote)
     tracking = @turn.tracking
-    if mode == 'send'
-      Quotes::Delivery.new(quote, Motor2::Delivery.sender(config.account)).deliver!
-      Motor2::QuoteFollowUpJob.set(wait: function.quote_follow_days.days).perform_later(tracking.id, quote.id) if tracking
-    end
+    Quotes::Delivery.new(quote, Motor2::Delivery.sender(config.account)).deliver! if mode == 'send'
     notify(tracking, quote)
   end
 

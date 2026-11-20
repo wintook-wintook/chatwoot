@@ -68,11 +68,15 @@ class Motor2::Config
 
   def never = text('never')
 
-  # «Cómo habla tu empresa» con lo que este agente cambió solo para él (motor2['voice']).
-  def voice = AgentBase::CompanyVoice.for_agent(account, @data['voice'].to_h)
+  # «Cómo habla tu empresa»: el de la empresa o, si este agente lo personalizó (motor2['voice_mode'] = 'own'), solo el
+  # suyo (motor2['voice'], completo: lo que dejó vacío no se toma de la empresa).
+  def voice = own_voice? ? AgentBase::CompanyVoice.clean(@data['voice'].to_h) : AgentBase::CompanyVoice.get(account)
 
-  # Los campos que este agente cambió (para el chat de prueba: «habló como…»).
-  def own_voice_fields = AgentBase::CompanyVoice.clean(@data['voice'].to_h).keys
+  # Personalizado para este agente (los de antes, con algo en motor2['voice'] y sin modo, también).
+  def own_voice? = @data['voice_mode'] == 'own' || (@data['voice_mode'].blank? && @data['voice'].to_h.compact_blank.any?)
+
+  # Para el chat de prueba («habló como…»): los campos que tomó de este agente.
+  def own_voice_fields = own_voice? ? voice.keys : []
 
   def business
     Array(@data['business']).filter_map do |row|

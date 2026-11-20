@@ -1,6 +1,8 @@
 <!--
   Cotizar (los tres agentes listos; Motor2::Skills::Quote): no cotiza, arma un borrador para el vendedor o se la
-  manda con precios del Catálogo, y a los N días le pregunta si pudo revisarla. v-model: { mode, follow_days }.
+  manda con precios del Catálogo, y a los N días le pregunta si pudo revisarla (en borrador, desde que el vendedor la
+  manda), con su PROPIA plantilla si ya pasaron 24 h (no la del Seguimiento).
+  v-model: { mode, follow, follow_days, template }.
 -->
 <script>
 export default {
@@ -10,6 +12,8 @@ export default {
     value: { type: Object, required: true },
     // Sin productos en el Catálogo no puede cotizar.
     hasCatalog: { type: Boolean, default: false },
+    // Plantillas aprobadas de su bandeja de WhatsApp.
+    templates: { type: Array, default: () => [] },
   },
   emits: ['input'],
   methods: {
@@ -48,18 +52,48 @@ export default {
         }}</span>
       </span>
     </label>
-    <label v-if="value.mode === 'send'" class="flex items-center gap-2 text-sm">
-      {{ t('FOLLOW') }}
-      <select
-        class="!mb-0 !w-20"
-        :value="value.follow_days"
-        @change="set('follow_days', Number($event.target.value))"
-      >
-        <option v-for="d in [1, 2, 3, 5, 7]" :key="d" :value="d">
-          {{ d }}
-        </option>
-      </select>
-      {{ t('DAYS') }}
-    </label>
+    <template v-if="value.mode !== 'off'">
+      <label class="flex flex-wrap items-center gap-2 mt-2 text-sm">
+        <input
+          type="checkbox"
+          class="!m-0"
+          :checked="value.follow !== false"
+          @change="set('follow', $event.target.checked)"
+        />
+        {{ t('FOLLOW') }}
+        <select
+          class="!mb-0 !w-20"
+          :value="value.follow_days || 3"
+          :disabled="value.follow === false"
+          @change="set('follow_days', Number($event.target.value))"
+        >
+          <option v-for="d in [1, 2, 3, 5, 7]" :key="d" :value="d">
+            {{ d }}
+          </option>
+        </select>
+        {{ t(value.mode === 'draft' ? 'DAYS_DRAFT' : 'DAYS') }}
+      </label>
+      <template v-if="value.follow !== false">
+        <label class="block">
+          <span class="field-label">{{ t('TEMPLATE') }}</span>
+          <select
+            class="!mb-0"
+            :value="value.template || ''"
+            @change="set('template', $event.target.value)"
+          >
+            <option value="">{{ t('NO_TEMPLATE_OPTION') }}</option>
+            <option v-for="name in templates" :key="name" :value="name">
+              {{ name }}
+            </option>
+          </select>
+        </label>
+        <p v-if="!value.template" class="m-0 text-xs text-amber-700">
+          {{ templates.length ? t('TEMPLATE_WARN') : t('TEMPLATE_NONE') }}
+        </p>
+        <p v-else class="m-0 text-xs text-slate-500">
+          {{ t('TEMPLATE_HINT') }}
+        </p>
+      </template>
+    </template>
   </fieldset>
 </template>

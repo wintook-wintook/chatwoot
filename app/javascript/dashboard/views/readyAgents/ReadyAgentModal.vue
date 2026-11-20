@@ -18,6 +18,7 @@ import SourceOrder, { addSource } from './SourceOrder.vue';
 import WizardTabs from './WizardTabs.vue';
 import SubTabs from './SubTabs.vue';
 import AgentVoice from './AgentVoice.vue';
+import AgentBusiness from './AgentBusiness.vue';
 import FollowUpPlan from './FollowUpPlan.vue';
 import QuoteMode from './QuoteMode.vue';
 
@@ -60,6 +61,7 @@ const STEPS = [
   'talk',
   'qualify',
   'follow',
+  'quote',
   'files',
 ];
 const blank = kind => ({
@@ -89,6 +91,7 @@ const blank = kind => ({
     tone: 'cercano',
     // «Cómo habla tu empresa» que cambió solo para este agente (AgentVoice).
     voice: {},
+    voice_mode: 'company',
     instructions: '',
     handoff_user_id: '',
     handoff_team_id: '',
@@ -132,6 +135,7 @@ export default {
     AgentVoice,
     WizardTabs,
     SubTabs,
+    AgentBusiness,
   },
   props: {
     show: { type: Boolean, default: false },
@@ -524,6 +528,7 @@ export default {
           tools: data.tools || [],
           decision: data.decision,
           files: data.files || [],
+          previews: data.previews || [],
           temperature: (data.state || {}).temperature,
         });
       } catch (e) {
@@ -649,46 +654,8 @@ export default {
 
           <!-- 2 · Tu negocio -->
           <template v-if="step === 'business'">
-            <label class="block">
-              <span class="field-label">{{ t('BUSINESS.WHAT') }}</span>
-              <textarea
-                v-model="form.settings.business_what"
-                rows="2"
-                :placeholder="t('BUSINESS.WHAT_PLACEHOLDER')"
-              />
-            </label>
-            <label class="block">
-              <span class="field-label">{{ t('BUSINESS.WHO') }}</span>
-              <textarea
-                v-model="form.settings.business_who"
-                rows="2"
-                :placeholder="t('BUSINESS.WHO_PLACEHOLDER')"
-              />
-            </label>
-            <label class="block">
-              <span class="field-label">{{ t('BUSINESS.COVERAGE') }}</span>
-              <textarea
-                v-model="form.settings.business_coverage"
-                rows="2"
-                :placeholder="t('BUSINESS.COVERAGE_PLACEHOLDER')"
-              />
-            </label>
-            <label class="block">
-              <span class="field-label">{{ t('BUSINESS.WHY') }}</span>
-              <textarea
-                v-model="form.settings.business_why"
-                rows="2"
-                :placeholder="t('BUSINESS.WHY_PLACEHOLDER')"
-              />
-            </label>
-            <label class="block">
-              <span class="field-label">{{ t('BUSINESS.PRACTICAL') }}</span>
-              <textarea
-                v-model="form.settings.business_practical"
-                rows="2"
-                :placeholder="t('BUSINESS.PRACTICAL_PLACEHOLDER')"
-              />
-            </label>
+            <AgentBusiness v-model="form.settings" />
+            <AgentVoice v-model="form.settings" />
           </template>
 
           <!-- 3 · Qué sabe: sus fuentes y qué hay en cada una -->
@@ -782,7 +749,6 @@ export default {
                 variant="smooth"
                 icon="wand"
                 :is-loading="suggesting"
-                :disabled="!form.settings.business_what.trim()"
                 @click="suggestQuestions"
               >
                 {{ t('QUESTIONS_LIST.SUGGEST') }}
@@ -854,7 +820,6 @@ export default {
 
           <!-- 5 · Cómo platica: dudas, lo que no encuentra y lo que no es del negocio -->
           <template v-if="step === 'talk'">
-            <AgentVoice v-model="form.settings.voice" />
             <label class="block">
               <span class="field-label">{{ t('TALK.WELCOME') }}</span>
               <textarea
@@ -955,11 +920,24 @@ export default {
           </template>
 
           <!-- 7 · Qué hacer al calificar y a quién -->
+          <!-- Cotizaciones: la arma cuando la pide (en cualquier momento) y eso lo califica (Motor2::Skills::Quote) -->
+          <template v-if="step === 'quote'">
+            <QuoteMode
+              v-model="form.settings.quote"
+              :has-catalog="hasCatalog"
+              :templates="waTemplates"
+            />
+            <p class="m-0 text-xs text-slate-500">
+              {{ t('QUOTE.PROSPECTS_HINT') }}
+            </p>
+          </template>
+
           <!-- Seguimiento: si deja de contestar (Motor2::FollowUp), con su línea de tiempo -->
           <template v-if="step === 'follow'">
             <FollowUpPlan
               v-model="form.settings.follow_up"
               :templates="waTemplates"
+              :quote="form.settings.quote"
               kind="prospects"
             />
           </template>
@@ -1109,10 +1087,6 @@ export default {
                 t('FIELDS.ATTEND_HINT')
               }}</span>
             </label>
-            <QuoteMode
-              v-model="form.settings.quote"
-              :has-catalog="hasCatalog"
-            />
             <span class="field-label">{{ t('FIELDS.REQUIRED_CONTACT') }}</span>
             <div class="flex flex-wrap gap-1.5">
               <button
@@ -1295,6 +1269,28 @@ export default {
                   class="block mt-1 text-[11px] text-slate-500"
                 >
                   {{ t('TEST.FILES', { files: m.files.join(', ') }) }}
+                </span>
+                <!-- Lo que mandaría: la miniatura de la imagen o la liga del archivo. -->
+                <span
+                  v-if="(m.previews || []).length"
+                  class="flex flex-wrap gap-2 mt-1"
+                >
+                  <a
+                    v-for="file in m.previews"
+                    :key="file.url"
+                    :href="file.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-[11px] text-woot-600 hover:underline"
+                  >
+                    <img
+                      v-if="file.image"
+                      :src="file.url"
+                      :alt="file.name"
+                      class="object-cover w-32 h-32 border rounded-md border-slate-100 dark:border-slate-700"
+                    />
+                    <span v-else>{{ file.name }}</span>
+                  </a>
                 </span>
                 <span
                   v-if="m.decision"

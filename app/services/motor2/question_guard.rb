@@ -132,12 +132,19 @@ module Motor2::QuestionGuard
     return text unless @welcome
 
     @trace.event(:bienvenida, 'combinada con la respuesta')
+    attach_welcome_files
     # Si el modelo la volvió a escribir (pasa aunque se le diga, a veces con otros espacios o
     # signos), se quita: va una sola vez.
     rest = text.to_s.gsub(welcome_pattern, '').strip.sub(/\A[\s.,;:!?]+/, '')
     # Si la bienvenida ya pregunta y el cliente solo saludó, no lleva otra pregunta.
     rest = without_questions(rest) if welcome_asks?
     [@welcome, rest].compact_blank.join("\n\n")
+  end
+
+  # Los archivos marcados «con la bienvenida» van con ella (también en «Probar»); Motor2::Reply los anota
+  # como enviados, así no se repiten.
+  def attach_welcome_files
+    Motor2::Skills::Files.welcome_names(@config.template).each { |name| attach(name) }
   end
 
   # La bienvenida con cualquier espacio o signo entre sus palabras.

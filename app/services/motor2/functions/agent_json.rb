@@ -12,7 +12,7 @@ module Motor2::Functions::AgentJson
   # Las respuestas del asistente + indicaciones, bienvenida y lo que cambió de «Cómo habla tu empresa».
   def settings(motor2)
     motor2['answers'].to_h.merge('instructions' => motor2['instructions'].to_s, 'welcome' => motor2['welcome'].to_s,
-                                 'voice' => motor2['voice'].to_h)
+                                 'voice' => motor2['voice'].to_h, 'voice_mode' => motor2['voice_mode'].to_s)
   end
 
   def call(template)

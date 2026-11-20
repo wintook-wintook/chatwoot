@@ -56,6 +56,7 @@ export default {
           tools: data.tools || [],
           decision: data.decision,
           files: data.files || [],
+          previews: data.previews || [],
           labels: data.labels || [],
           voice: (data.trace?.events || []).find(e => e.kind === 'voz')?.text,
           area: this.areaOf(data.state),
@@ -164,6 +165,28 @@ export default {
             class="block mt-1 text-[11px] text-slate-500"
           >
             {{ t('TEST.FILES', { files: m.files.join(', ') }) }}
+          </span>
+          <!-- Lo que mandaría: la miniatura de la imagen o la liga del archivo. -->
+          <span
+            v-if="(m.previews || []).length"
+            class="flex flex-wrap gap-2 mt-1"
+          >
+            <a
+              v-for="file in m.previews"
+              :key="file.url"
+              :href="file.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-[11px] text-woot-600 hover:underline"
+            >
+              <img
+                v-if="file.image"
+                :src="file.url"
+                :alt="file.name"
+                class="object-cover w-32 h-32 border rounded-md border-slate-100 dark:border-slate-700"
+              />
+              <span v-else>{{ file.name }}</span>
+            </a>
           </span>
           <span v-if="m.voice" class="block mt-1 text-[11px] text-slate-500">
             {{ t('TEST.VOICE', { voice: m.voice }) }}

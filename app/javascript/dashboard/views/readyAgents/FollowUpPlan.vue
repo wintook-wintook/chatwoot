@@ -16,9 +16,19 @@ export default {
     templates: { type: Array, default: () => [] },
     // prospects | customers | campaign_seller: qué retoma cada recordatorio.
     kind: { type: String, default: 'prospects' },
+    // Lo de la pestaña Cotizaciones ({ mode, follow, follow_days, template }): su seguimiento va aparte.
+    quote: { type: Object, default: null },
   },
   emits: ['input'],
   computed: {
+    quoteLine() {
+      const q = this.quote;
+      if (!q || !q.mode || q.mode === 'off' || q.follow === false) return '';
+      const how = q.template
+        ? this.t('QUOTE_TEMPLATE', { name: q.template })
+        : this.t('QUOTE_NO_TEMPLATE');
+      return this.t('QUOTE', { n: q.follow_days || 3, how });
+    },
     timeline() {
       const rows = NUDGE_HOURS.slice(0, this.value.nudges).map((h, i) => ({
         when: this.t('AT_HOURS', { n: h }),
@@ -132,6 +142,12 @@ export default {
           <span class="text-slate-700 dark:text-slate-200">{{ row.what }}</span>
         </li>
       </ol>
+      <p
+        v-if="quoteLine"
+        class="m-0 mt-2 pl-3 text-sm border-l-2 border-amber-200 text-slate-700 dark:text-slate-200"
+      >
+        {{ quoteLine }}
+      </p>
       <p class="m-0 mt-2 text-xs text-slate-500">
         {{ t(`EXAMPLE.${kind}`) }}
       </p>

@@ -17,13 +17,24 @@ import SourceOrder, { addSource } from './SourceOrder.vue';
 import WizardTabs from './WizardTabs.vue';
 import SubTabs from './SubTabs.vue';
 import AgentVoice from './AgentVoice.vue';
+import AgentBusiness from './AgentBusiness.vue';
 import FollowUpPlan from './FollowUpPlan.vue';
 import AfterHandoff from './AfterHandoff.vue';
 import QuoteMode from './QuoteMode.vue';
 import FichaChannel from '../contactTrackings/ficha/FichaChannel.vue';
 
 const T = 'READY_AGENTS';
-const STEPS = ['agent', 'offer', 'channel', 'knows', 'talk', 'follow', 'files'];
+const STEPS = [
+  'agent',
+  'offer',
+  'business',
+  'channel',
+  'knows',
+  'talk',
+  'follow',
+  'quote',
+  'files',
+];
 const PURPOSES = ['offer', 'invite', 'reactivate', 'renew', 'survey'];
 const MAX_QUESTIONS = 3;
 const MAX_OBJECTIONS = 15;
@@ -50,6 +61,7 @@ const blank = () => ({
     tone: 'cercano',
     // «Cómo habla tu empresa» que cambió solo para este agente (AgentVoice).
     voice: {},
+    voice_mode: 'company',
     purpose: 'offer',
     offer_what: '',
     offer_details: '',
@@ -91,6 +103,7 @@ export default {
     AgentVoice,
     WizardTabs,
     SubTabs,
+    AgentBusiness,
   },
   props: {
     show: { type: Boolean, default: false },
@@ -593,17 +606,12 @@ export default {
           </template>
 
           <!-- 4 · Tu negocio y qué sabe -->
+          <template v-if="step === 'business'">
+            <AgentBusiness v-model="form.settings" />
+            <AgentVoice v-model="form.settings" />
+          </template>
+
           <template v-if="step === 'knows'">
-            <label v-for="field in business" :key="field" class="block">
-              <span class="field-label">
-                {{ t(`BUSINESS.${field.toUpperCase()}`) }}
-              </span>
-              <textarea
-                v-model="form.settings[`business_${field}`]"
-                rows="2"
-                :placeholder="t(`BUSINESS.${field.toUpperCase()}_PLACEHOLDER`)"
-              />
-            </label>
             <template v-if="!isSurvey">
               <span class="field-label">{{ t('KNOWS.PRICES.QUESTION') }}</span>
               <label
@@ -651,7 +659,6 @@ export default {
 
           <!-- 5 · Cómo platica y el relevo -->
           <template v-if="step === 'talk'">
-            <AgentVoice v-model="form.settings.voice" />
             <template v-if="!isSurvey && !isInvite">
               <span class="field-label">{{ c('RELAY') }}</span>
               <label
@@ -724,11 +731,20 @@ export default {
               >
                 {{ c('ADD_OBJECTION') }}
               </button>
-              <QuoteMode
-                v-model="form.settings.quote"
-                :has-catalog="hasCatalog"
-              />
             </template>
+          </template>
+
+          <!-- Cotizaciones: si le interesa y pide una cotización (Motor2::Skills::Quote) -->
+          <template v-if="step === 'quote'">
+            <p v-if="isSurvey || isInvite" class="m-0 text-xs text-amber-700">
+              {{ c('QUOTE_NOT_FOR_PURPOSE') }}
+            </p>
+            <QuoteMode
+              v-model="form.settings.quote"
+              :has-catalog="hasCatalog"
+              :templates="waTemplates"
+            />
+            <p class="m-0 text-xs text-slate-500">{{ c('QUOTE_HINT') }}</p>
           </template>
 
           <!-- Seguimiento: si deja de contestar a media plática, el plazo y el recordatorio de la cita -->
@@ -744,6 +760,7 @@ export default {
               v-if="followTab === 'reminders'"
               v-model="form.settings.follow_up"
               :templates="waTemplates"
+              :quote="form.settings.quote"
               kind="campaign_seller"
             />
             <AfterHandoff

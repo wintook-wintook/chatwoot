@@ -512,7 +512,10 @@
         "customers": "Ejemplo: «¿Se resolvió con los pasos que te pasé? Responde RESUELTO o ESCALAR.»",
         "campaign_seller": "Ejemplo: «¿Te quedó alguna duda de la promoción?»"
       },
-      "HINT": "Si contesta, todo vuelve a empezar desde su nuevo mensaje. Si ya lo calificaste, descartaste o pasaste a una persona, no le escribe. En cada conversación verás el próximo recordatorio y podrás cancelarlo."
+      "HINT": "Si contesta, todo vuelve a empezar desde su nuevo mensaje. Si ya lo calificaste, descartaste o pasaste a una persona, no le escribe. En cada conversación verás el próximo recordatorio y podrás cancelarlo.",
+      "QUOTE": "🧾 Día {n} desde que se manda la cotización: le pregunta por ella ({how})",
+      "QUOTE_TEMPLATE": "plantilla «{name}» si ya pasaron 24 h",
+      "QUOTE_NO_TEMPLATE": "sin plantilla: solo si sigue dentro de las 24 h"
     },
     "QUOTE": {
       "TITLE": "Cotizaciones",
@@ -524,7 +527,14 @@
       },
       "RECOMMENDED": "(recomendado)",
       "FOLLOW": "Si no contesta, le pregunta por ella a los",
-      "DAYS": "días"
+      "DAYS": "días",
+      "PROSPECTS_HINT": "Si el prospecto pide una cotización, la arma en ese momento (aunque no haya terminado tus preguntas) y eso lo califica como caliente: queda «interesado» con la etiqueta #cotizacion y pasa al vendedor. Antes le pide los datos obligatorios que marcaste en «Al calificar».",
+      "DAYS_DRAFT": "días de que el vendedor la manda",
+      "TEMPLATE": "Plantilla para preguntarle si ya pasaron 24 h (solo para cotizaciones)",
+      "NO_TEMPLATE_OPTION": "Sin plantilla",
+      "TEMPLATE_WARN": "Sin plantilla, si ya pasaron 24 h desde su último mensaje no se le podrá preguntar (WhatsApp no deja): se le avisa al vendedor para que le escriba.",
+      "TEMPLATE_NONE": "Tu bandeja de WhatsApp no tiene plantillas aprobadas: créala en Ajustes › Bandejas › Plantillas (o con «Crear con Dali»). Sin ella, pasadas 24 h no se le podrá preguntar.",
+      "TEMPLATE_HINT": "Dentro de las 24 h le escribe con su voz; pasadas, con esta plantilla. Es aparte de las de Seguimiento."
     },
     "SOURCE_ORDER": {
       "TITLE": "Orden de consulta",
@@ -782,11 +792,12 @@
       "NUMBERED": "{n}. {step}",
       "follow": "Seguimiento",
       "agent": "El agente",
-      "business": "Tu negocio",
+      "business": "Tu empresa",
       "knows": "Qué sabe",
       "questions": "Qué le preguntas",
       "talk": "Cómo platica",
       "qualify": "Al calificar",
+      "quote": "Cotizaciones",
       "after": "Al calificar",
       "objections": "Objeciones",
       "instructions": "Indicaciones",
@@ -795,7 +806,7 @@
     },
     "STEP_HINTS": {
       "agent": "Ponle un nombre para tu equipo, el nombre que verá el cliente y las bandejas donde va a atender a quien escriba.",
-      "business": "Lo que el agente debe saber para explicar y para descartar a quien está fuera de zona o de lo que vendes.",
+      "business": "Datos del negocio y cómo habla: los de tu empresa o personalizados para este agente.",
       "knows": "Dónde busca lo que le preguntan. Las respuestas predefinidas van siempre; marca las demás fuentes que use este agente.",
       "questions": "Las preguntas que hace para calificarlo, tal cual las escribas y en este orden (cámbialo con ↑ ↓), una por mensaje. Vienen unas de ejemplo: quítalas, cámbialas o agrega las tuyas.",
       "talk": "Su voz (Cómo habla tu empresa), la bienvenida, qué hace cuando pregunta algo, no encuentra la respuesta o pide una persona, y tus indicaciones en texto libre (abajo).",
@@ -805,7 +816,8 @@
       "instructions": "Algo más que deba saber o hacer (opcional). Si contradice lo anterior, gana esto.",
       "test": "Prueba en el chat de la derecha como si fueras un prospecto y, si te gusta, guarda.",
       "files": "Las imágenes y archivos que manda y cuándo. Prueba en el chat de la derecha y guarda.",
-      "follow": "Si deja de contestar: los recordatorios, las plantillas y la línea de tiempo de lo que va a pasar."
+      "follow": "Si deja de contestar: los recordatorios, las plantillas y la línea de tiempo de lo que va a pasar.",
+      "quote": "Si pide una cotización la arma en ese momento y eso lo califica (caliente); antes le pide los datos obligatorios."
     },
     "STEP_TEST": {
       "READY": "«{name}» está listo. Al guardar queda en la lista de agentes con la etiqueta «Atención a prospectos».",
@@ -880,10 +892,11 @@
       "PAIR_HINT": "Una bandeja puede tener este agente y uno de «Atención a prospectos»: quien ya es cliente viene aquí y los demás van con el de prospectos.",
       "STEPS": {
         "agent": "El agente",
-        "business": "Tu negocio",
+        "business": "Tu empresa",
         "areas": "Qué atiende",
         "knows": "Qué sabe",
         "talk": "Cómo platica",
+        "quote": "Cotizaciones",
         "follow": "Seguimiento",
         "instructions": "Indicaciones",
         "test": "Pruébalo y guarda",
@@ -891,14 +904,15 @@
       },
       "STEP_HINTS": {
         "agent": "Cómo se llama, con qué tono habla y en qué bandejas atiende a tus clientes.",
-        "business": "Lo básico de tu negocio, para que explique con tus palabras.",
+        "business": "Datos del negocio y cómo habla: los de tu empresa o personalizados para este agente.",
         "areas": "Lo que atiende y a quién se lo pasa. Cada mensaje se clasifica por lo que el cliente quiere lograr, no por una palabra suelta: los ejemplos le enseñan.",
         "knows": "Dónde busca lo que le preguntan. Solo contesta con lo que encuentre ahí.",
         "talk": "Su voz (Cómo habla tu empresa), la bienvenida, qué hace si pide una persona o no es cliente, y tus indicaciones en texto libre (abajo).",
         "instructions": "Algo más que deba saber o hacer (opcional).",
         "test": "Prueba que cada ejemplo caiga en su área y platica con él como si fueras tu cliente.",
         "files": "Las imágenes y archivos que manda y cuándo. Prueba en el chat de la derecha y guarda.",
-        "follow": "Si deja de contestar, el plazo para que tu equipo le escriba y el recordatorio de las citas."
+        "follow": "Si deja de contestar, el plazo para que tu equipo le escriba y el recordatorio de las citas.",
+        "quote": "Cuando el cliente pide una cotización en Comercial y ya se sabe qué productos y cuántos, la arma con los precios del Catálogo."
       },
       "AREAS": {
         "support": {
@@ -1031,7 +1045,9 @@
         "HOURS_HINT": "Fuera de ese horario, toma lo que necesita y le dice que el equipo le escribe en cuanto abra. Sin horario, atiende siempre igual."
       },
       "AREA_ON": "Atender esta área",
-      "AREA_OFF": "(apagada)"
+      "AREA_OFF": "(apagada)",
+      "QUOTE_NEEDS_SALES": "Cotiza solo cuando el área Comercial está prendida (en «Qué atiende»).",
+      "QUOTE_HINT": "Cuando el cliente pide una cotización en Comercial y ya se sabe qué productos y cuántos, la arma con los precios del Catálogo."
     },
     "CAMPAIGN": {
       "SUBTITLE": "Toca la puerta en tus campañas: la campaña manda el primer mensaje y él sigue cuando contestan. Despierta el interés, resuelve las primeras dudas y pasa al interesado a quien sigue.",
@@ -1040,9 +1056,11 @@
       "STEPS": {
         "agent": "El agente",
         "offer": "Qué ofreces",
+        "business": "Tu empresa",
         "channel": "Canal y toques",
-        "knows": "Tu negocio y qué sabe",
+        "knows": "Qué sabe",
         "talk": "Cómo platica y el relevo",
+        "quote": "Cotizaciones",
         "follow": "Seguimiento",
         "instructions": "Indicaciones",
         "test": "Pruébalo y guarda",
@@ -1057,7 +1075,9 @@
         "instructions": "Algo más que deba saber o hacer (opcional).",
         "test": "El chat empieza con el mensaje de la campaña: contesta como lo haría tu contacto.",
         "files": "Las imágenes y archivos que manda y cuándo. Prueba en el chat de la derecha y guarda.",
-        "follow": "Si contesta y se queda a media plática: los recordatorios y la línea de tiempo; el plazo y el recordatorio de cita."
+        "follow": "Si contesta y se queda a media plática: los recordatorios y la línea de tiempo; el plazo y el recordatorio de cita.",
+        "quote": "Si le interesa la oferta y pide una cotización, la arma con los precios del Catálogo.",
+        "business": "Datos del negocio y cómo habla: los de tu empresa o personalizados para este agente."
       },
       "PURPOSE": "¿Para qué es la campaña?",
       "PURPOSES": {
@@ -1141,7 +1161,9 @@
       "TEST_READY": "«{name}» está listo. Guárdalo y elígelo en una campaña.",
       "TEST_HINT": "Contesta como tu contacto: «sí, ¿cuánto cuesta?», «no gracias», «¿a qué hora es?»…",
       "IN_CAMPAIGNS": "En {n} campañas",
-      "NO_CAMPAIGNS": "Todavía en ninguna campaña"
+      "NO_CAMPAIGNS": "Todavía en ninguna campaña",
+      "QUOTE_NOT_FOR_PURPOSE": "En una encuesta o una invitación no cotiza.",
+      "QUOTE_HINT": "Si le interesa la oferta y pide una cotización, la arma con los precios del Catálogo."
     },
     "FILES": {
       "HINT": "Sube imágenes o archivos que el agente pueda mandar (fotos del producto, flyer, catálogo, mapa…). Ponle a cada uno una descripción: el agente no ve la imagen, con eso sabe cuándo sirve y no inventa lo que trae.",
@@ -1167,14 +1189,13 @@
       "UPLOAD_ERROR": "No se pudo subir el archivo."
     },
     "AGENT_VOICE": {
-      "BUTTON": "Cómo habla tu empresa",
-      "OWN": "{n} cambio(s) solo para este agente",
-      "ALL_COMPANY": "Usa lo de la empresa",
-      "HINT": "Lo general se cambia en «Cómo habla tu empresa». Aquí, en cada campo, eliges si este agente usa lo de la empresa o algo solo para él (por ejemplo, otra firma u otro tono).",
-      "EMPTY": "Tu empresa todavía no lo tiene lleno: llénalo en «Cómo habla tu empresa» para que lo usen todos tus agentes.",
-      "COMPANY": "Como la empresa",
-      "ONLY_HERE": "Solo para este agente",
-      "NOT_SET": "(vacío en la empresa)"
+      "TITLE": "Cómo habla este agente",
+      "MODE_COMPANY": "Usar el de la empresa (Cómo habla tu empresa)",
+      "MODE_OWN": "Personalizar para este agente",
+      "HINT_COMPANY": "Toma lo de «Cómo habla tu empresa»: si lo cambias allá, este agente también cambia.",
+      "HINT_OWN": "Solo para este agente: arranca con lo de la empresa y cambias lo que quieras. Ya no sigue los cambios de la empresa. Si regresas a «Usar el de la empresa», se borra lo personalizado.",
+      "EMPTY": "Tu empresa todavía no lo tiene lleno: llénalo en «Cómo habla tu empresa» o personalízalo aquí.",
+      "EDIT_COMPANY": "Cambiarlo en «Cómo habla tu empresa» ↗"
     },
     "SUBTABS": {
       "WHEN": "Cuándo califica",
@@ -1182,6 +1203,15 @@
       "OBJECTIONS": "Objeciones",
       "REMINDERS": "Si deja de contestar",
       "HANDOFF": "Plazo del equipo y citas"
+    },
+    "AGENT_BUSINESS": {
+      "TITLE": "Datos del negocio",
+      "MODE_COMPANY": "Usar los de la empresa (Cómo habla tu empresa)",
+      "MODE_OWN": "Personalizar para este agente",
+      "HINT_COMPANY": "Toma qué vendes, a quién, dónde, por qué elegirte y precios de «Cómo habla tu empresa»: si los cambias allá, este agente también cambia.",
+      "HINT_OWN": "Solo para este agente: arranca con los de la empresa y cambias lo que quieras (por ejemplo, otra línea de productos). Ya no sigue los cambios de la empresa.",
+      "EMPTY": "Tu empresa todavía no los tiene llenos: llénalos en «Cómo habla tu empresa» o personalízalos aquí.",
+      "EDIT_COMPANY": "Cambiarlos en «Cómo habla tu empresa» ↗"
     }
   }
 }

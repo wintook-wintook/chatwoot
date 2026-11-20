@@ -157,7 +157,6 @@ class Motor2::Functions::Prospects
   end
 
   # Lo que el agente ya trae en «Tu negocio»: no se repite del bloque de datos de la empresa.
-  def business_values = BUSINESS.keys.map { |k| answer(k).to_s }
 
   def required_contact = Array(answer(:required_contact)).map(&:to_s) & CONTACT_FIELDS.keys
 
@@ -172,7 +171,7 @@ class Motor2::Functions::Prospects
 
   # Lo que la empresa contó de su negocio: para explicar y para descartar a quien está fuera.
   def business_block
-    lines = BUSINESS.filter_map { |k, label| "- #{label}: #{answer(k)}" if answer(k).present? }
+    lines = BUSINESS.filter_map { |k, label| "- #{label}: #{own_business(k)}" if own_business(k).present? }
     lines << price_line
     return '' if lines.empty?
 

@@ -19,6 +19,7 @@ import SourceOrder, { addSource } from './SourceOrder.vue';
 import WizardTabs from './WizardTabs.vue';
 import SubTabs from './SubTabs.vue';
 import AgentVoice from './AgentVoice.vue';
+import AgentBusiness from './AgentBusiness.vue';
 import FollowUpPlan from './FollowUpPlan.vue';
 import AfterHandoff from './AfterHandoff.vue';
 import QuoteMode from './QuoteMode.vue';
@@ -31,6 +32,7 @@ const STEPS = [
   'knows',
   'talk',
   'follow',
+  'quote',
   'files',
 ];
 const AREA_KEYS = ['support', 'sales', 'admin', 'other'];
@@ -121,6 +123,7 @@ const blank = () => ({
     tone: 'cercano',
     // «Cómo habla tu empresa» que cambió solo para este agente (AgentVoice).
     voice: {},
+    voice_mode: 'company',
     welcome: '',
     instructions: '',
     human: 'understand_first',
@@ -155,6 +158,7 @@ export default {
     AgentVoice,
     WizardTabs,
     SubTabs,
+    AgentBusiness,
   },
   props: {
     show: { type: Boolean, default: false },
@@ -652,20 +656,8 @@ export default {
 
           <!-- 2 · Tu negocio -->
           <template v-if="step === 'business'">
-            <label
-              v-for="field in ['what', 'who', 'coverage', 'why', 'practical']"
-              :key="field"
-              class="block"
-            >
-              <span class="field-label">{{
-                t(`BUSINESS.${field.toUpperCase()}`)
-              }}</span>
-              <textarea
-                v-model="form.settings[`business_${field}`]"
-                rows="2"
-                :placeholder="t(`BUSINESS.${field.toUpperCase()}_PLACEHOLDER`)"
-              />
-            </label>
+            <AgentBusiness v-model="form.settings" />
+            <AgentVoice v-model="form.settings" />
           </template>
 
           <!-- 3 · Qué atiende: las áreas -->
@@ -677,7 +669,6 @@ export default {
                 variant="smooth"
                 icon="wand"
                 :is-loading="suggesting"
-                :disabled="!form.settings.business_what.trim()"
                 @click="suggestExamples"
               >
                 {{ c('SUGGEST_EXAMPLES') }}
@@ -927,10 +918,6 @@ export default {
                   <p class="m-0 text-xs text-slate-500">
                     {{ c('SALES.EVIDENCE') }}
                   </p>
-                  <QuoteMode
-                    v-model="form.settings.quote"
-                    :has-catalog="hasCatalog"
-                  />
                 </template>
 
                 <template v-if="key === 'admin'">
@@ -1109,7 +1096,6 @@ export default {
 
           <!-- 5 · Cómo platica -->
           <template v-if="step === 'talk'">
-            <AgentVoice v-model="form.settings.voice" />
             <label class="block">
               <span class="field-label">{{ t('TALK.WELCOME') }}</span>
               <textarea
@@ -1161,6 +1147,19 @@ export default {
             </div>
           </template>
 
+          <!-- Cotizaciones (área Comercial): borrador para el vendedor o se la manda (Motor2::Skills::Quote) -->
+          <template v-if="step === 'quote'">
+            <p v-if="!area('sales').on" class="m-0 text-xs text-amber-700">
+              {{ c('QUOTE_NEEDS_SALES') }}
+            </p>
+            <QuoteMode
+              v-model="form.settings.quote"
+              :has-catalog="hasCatalog"
+              :templates="waTemplates"
+            />
+            <p class="m-0 text-xs text-slate-500">{{ c('QUOTE_HINT') }}</p>
+          </template>
+
           <!-- Seguimiento: si deja de contestar, el plazo del equipo y el recordatorio de la cita -->
           <template v-if="step === 'follow'">
             <SubTabs
@@ -1174,6 +1173,7 @@ export default {
               v-if="followTab === 'reminders'"
               v-model="form.settings.follow_up"
               :templates="waTemplates"
+              :quote="form.settings.quote"
               kind="customers"
             />
             <AfterHandoff

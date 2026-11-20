@@ -78,6 +78,23 @@ RSpec.describe 'Ready Agents API' do
                                     { 'key' => 'budget', 'on' => false, 'text' => '¿Cuánto pagas?' }])
   end
 
+  it 'guarda lo que manda el asistente de cotizar, seguimiento, voz, negocio, cita y plazo (no lo descarta)' do
+    settings = params[:ready_agent][:settings].merge(
+      hot_when: 'compra este mes', attend_hours: 4, voice_mode: 'own', business_mode: 'company',
+      voice: { tone: 'usted', signature: 'Equipo Ventas' }, appointment_notice: { on: true, template: 'cita' },
+      quote: { mode: 'send', follow_days: 3, follow: true, template: 'cotizacion' },
+      follow_up: { nudges: 2, templates: %w[retomar], template_days: 2 }
+    )
+    saved = create_agent(settings: settings).motor2
+
+    expect(saved).to include('voice_mode' => 'own')
+    expect(saved['answers']).to include('hot_when' => 'compra este mes', 'attend_hours' => 4, 'business_mode' => 'company',
+                                        'appointment_notice' => { 'on' => true, 'template' => 'cita' })
+    expect(saved['answers']['quote']).to include('mode' => 'send', 'follow_days' => 3, 'template' => 'cotizacion')
+    expect(saved['answers']['follow_up']).to include('nudges' => 2, 'templates' => %w[retomar])
+    expect(saved['voice'].to_h).to include('signature' => 'Equipo Ventas')
+  end
+
   it 'prenderlo o apagarlo desde la lista no borra su configuración' do
     template = create_agent
 
@@ -112,6 +129,7 @@ RSpec.describe 'Ready Agents API' do
 
   it 'chat de prueba con el motor 2.0, sin guardar nada' do
     allow_any_instance_of(Motor2::Runner).to receive(:complete).and_return({ 'role' => 'assistant', 'content' => '¡Hola! ¿Qué buscas?' }) # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(Motor2::AnswerExtractor).to receive(:call).and_return({}) # rubocop:disable RSpec/AnyInstance
     create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled', settings: { 'api_key' => 'sk-test' })
 
     expect do
