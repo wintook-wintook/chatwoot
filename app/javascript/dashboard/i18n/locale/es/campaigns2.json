@@ -123,7 +123,8 @@
         "in_tracking": "Ya está en otra conversación con un agente",
         "unreachable": "Sin teléfono o correo válido",
         "excluded": "Quitados por ti"
-      }
+      },
+      "list": "Subir una lista de correos"
     },
     "MESSAGES": {
       "CHANNEL": "Canal",
@@ -314,7 +315,34 @@
         "low_score": "Calificación baja",
         "failed": "Falló el envío"
       },
-      "CLOSE": "Cerrar"
+      "CLOSE": "Cerrar",
+      "LIST_TITLE": "Lista «{name}»",
+      "LIST_STATS": "{rows} renglones · {valid} válidos · {existing} ya eran contactos",
+      "LIST_PROMOTED": "{n} contestaron o dieron clic y ya son contactos",
+      "LIST_QUARANTINE": "{n} siguen en cuarentena: se borran {days} días después de terminar la campaña.",
+      "LIST_CLEANED": "Limpieza hecha: se borraron {n} que nunca contestaron."
+    },
+    "LIST": {
+      "HINT": "Para una audiencia que no te conoce. La lista se limpia antes de crear nada: sin correo o mal escrito, repetidos, de rol (info@, ventas@…), que se dieron de baja o rebotaron antes y dominios que no reciben correo. Si el correo ya es de un contacto tuyo, se usa ese. Los nuevos quedan en cuarentena: no salen en Contactos hasta que contestan o dan clic; los que nunca contestan se borran solos.",
+      "ONLY_EMAIL": "Las listas son solo para correo: en WhatsApp escribirle a quien no te conoce hace que te bloqueen y Meta puede bajar o suspender tu número.",
+      "INBOX": "Bandeja de correo",
+      "NO_EMAIL_INBOX": "No tienes bandejas de correo. Crea una en Ajustes › Bandejas (de preferencia con un dominio aparte para listas frías).",
+      "NAME": "Nombre de la lista",
+      "NAME_PLACEHOLDER": "Ej. Expo industrial 2026",
+      "CLEANUP": "Borrar los que nunca contesten a los (días)",
+      "COLUMNS": "CSV con encabezados: correo (o email) obligatorio; nombre, empresa y teléfono opcionales. Hasta 5,000 renglones.",
+      "UPLOAD": "Subir y limpiar",
+      "NEEDS_SELLER": "Primero elige el vendedor (paso Oferta y vendedor).",
+      "ERROR": "No se pudo subir la lista.",
+      "RESULT": "De {rows} renglones: {valid} listos ({created} nuevos en cuarentena y {existing} que ya eran tus contactos).",
+      "LOADED": "Lista «{name}»: {n} contactos.",
+      "DISCARDED": {
+        "invalid": "{n} sin correo o mal escrito",
+        "duplicate": "{n} repetidos",
+        "role": "{n} de rol (info@, ventas@…)",
+        "suppressed": "{n} se dieron de baja o rebotaron antes",
+        "undeliverable": "{n} de dominios que no reciben correo"
+      }
     }
   }
 }

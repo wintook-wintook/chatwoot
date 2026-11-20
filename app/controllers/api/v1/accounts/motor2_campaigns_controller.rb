@@ -10,6 +10,7 @@
 #   POST  motor2_campaigns/test_email           «Enviarme una prueba» { subject, body, template_id }
 #   GET   motor2_campaigns/:id                  para editarla
 #   POST  motor2_campaigns  · PATCH :id          guardar (nace y sigue Guardada; solo se modifica Guardada)
+#   POST  motor2_campaigns/:id/list             subir una lista fría de correos (CSV) { file, name, cleanup_days }
 #   GET   motor2_campaigns/:id/check            la revisión antes de lanzar
 #   POST  motor2_campaigns/:id/launch           revisa y la pone en curso (TrackingCampaigns::Launch)
 #   GET   motor2_campaigns/:id/results          el tablero · GET :id/contacts?group=… los de un grupo
@@ -57,6 +58,18 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
     return render_error('Solo se puede modificar una campaña Guardada.') unless @campaign.saved?
 
     render_form(TrackingCampaigns::Motor2Form.new(Current.account, current_user, form_params, campaign: @campaign).save)
+  end
+
+  # Subir una lista fría de correos (CSV) a una campaña Guardada (ProspectLists::Import).
+  def list
+    return render_error('Solo se puede subir a una campaña Guardada.') unless @campaign.saved?
+    return render_error('Sube un archivo CSV.') if params[:file].blank?
+
+    result = ProspectLists::Import.new(@campaign, current_user, params[:file], name: params[:name],
+                                                                               cleanup_days: params[:cleanup_days].presence || 30).call
+    return render_error(result[:error]) if result[:error]
+
+    render json: { list: result[:list].summary, campaign: campaign_json(@campaign.reload) }
   end
 
   def check = render(json: { items: TrackingCampaigns::Motor2Check.new(@campaign).call })

@@ -297,3 +297,9 @@ agent_tester_stale_runs_job:
   cron: '*/10 * * * *'
   class: 'AgentTester::StaleRunsJob'
   queue: scheduled_jobs
+
+# Campaña con Vendedor IA: borra los contactos de listas frías de correo que nunca contestaron (pasados sus días)
+prospect_lists_cleanup_job:
+  cron: '45 3 * * *'
+  class: 'ProspectLists::CleanupJob'
+  queue: scheduled_jobs

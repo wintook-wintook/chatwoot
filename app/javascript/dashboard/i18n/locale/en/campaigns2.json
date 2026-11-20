@@ -123,7 +123,8 @@
         "in_tracking": "Already in a conversation with an agent",
         "unreachable": "No valid phone or email",
         "excluded": "Removed by you"
-      }
+      },
+      "list": "Upload an email list"
     },
     "MESSAGES": {
       "CHANNEL": "Channel",
@@ -314,7 +315,34 @@
         "low_score": "Low score",
         "failed": "Send failed"
       },
-      "CLOSE": "Close"
+      "CLOSE": "Close",
+      "LIST_TITLE": "List «{name}»",
+      "LIST_STATS": "{rows} rows · {valid} valid · {existing} were already contacts",
+      "LIST_PROMOTED": "{n} replied or clicked and are now contacts",
+      "LIST_QUARANTINE": "{n} still quarantined: deleted {days} days after the campaign ends.",
+      "LIST_CLEANED": "Cleanup done: {n} who never replied were deleted."
+    },
+    "LIST": {
+      "HINT": "For an audience that doesn't know you. The list is cleaned before creating anything: missing or malformed email, duplicates, role addresses (info@, sales@…), previously unsubscribed or bounced, and domains that don't receive mail. If the email already belongs to a contact, that one is used. New ones are quarantined: they don't show in Contacts until they reply or click; those who never reply are deleted automatically.",
+      "ONLY_EMAIL": "Lists are email only: on WhatsApp, writing to people who don't know you gets you blocked and Meta can downgrade or suspend your number.",
+      "INBOX": "Email inbox",
+      "NO_EMAIL_INBOX": "You have no email inboxes. Create one in Settings › Inboxes (ideally with a separate domain for cold lists).",
+      "NAME": "List name",
+      "NAME_PLACEHOLDER": "E.g. Industrial expo 2026",
+      "CLEANUP": "Delete those who never reply after (days)",
+      "COLUMNS": "CSV with headers: email required; name, company and phone optional. Up to 5,000 rows.",
+      "UPLOAD": "Upload and clean",
+      "NEEDS_SELLER": "First choose the seller (Offer and seller step).",
+      "ERROR": "The list couldn't be uploaded.",
+      "RESULT": "Of {rows} rows: {valid} ready ({created} new in quarantine and {existing} already your contacts).",
+      "LOADED": "List «{name}»: {n} contacts.",
+      "DISCARDED": {
+        "invalid": "{n} missing or malformed email",
+        "duplicate": "{n} duplicates",
+        "role": "{n} role addresses (info@, sales@…)",
+        "suppressed": "{n} previously unsubscribed or bounced",
+        "undeliverable": "{n} from domains that don't receive mail"
+      }
     }
   }
 }

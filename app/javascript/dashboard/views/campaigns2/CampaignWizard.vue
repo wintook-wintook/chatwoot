@@ -89,6 +89,12 @@ export default {
       checks: [],
       touchTab: 1,
       sendingTest: false,
+      // Lista fría de correos (solo correo)
+      listFile: null,
+      listName: '',
+      listDays: 30,
+      listInfo: null,
+      uploading: false,
     };
   },
   computed: {
@@ -125,6 +131,14 @@ export default {
     },
     isEmail() {
       return this.inbox?.channel_type === 'Channel::Email';
+    },
+    emailInboxes() {
+      return this.options.inboxes.filter(
+        i => i.channel_type === 'Channel::Email'
+      );
+    },
+    isList() {
+      return this.sourceType === 'list';
     },
     kind() {
       return this.form.brief.kind;
@@ -439,6 +453,8 @@ export default {
       }
     },
     setSource(type) {
+      if (type === 'list' && !this.isEmail)
+        this.form.inbox_id = this.emailInboxes[0]?.id || '';
       this.form.audience.source = { type };
       this.form.audience.excluded_contact_ids = [];
       this.loadPreview();
@@ -459,6 +475,30 @@ export default {
       const list = [...this.form.touches.emails];
       list[n - 1] = value;
       this.form.touches.emails = list;
+    },
+    async uploadList() {
+      if (!this.listFile) return;
+      if (!(await this.save())) return;
+      this.uploading = true;
+      try {
+        const { data } = await Motor2CampaignsAPI.uploadList(
+          this.campaignId,
+          this.listFile,
+          this.listName,
+          this.listDays
+        );
+        this.listInfo = data.list;
+        this.form.audience = {
+          ...this.form.audience,
+          source: data.campaign.audience.source,
+          contact_ids: data.campaign.audience.contact_ids,
+        };
+        if (!this.form.daily_cap) this.form.daily_cap = 50;
+      } catch (e) {
+        useAlert(e.response?.data?.error || this.t('LIST.ERROR'));
+      } finally {
+        this.uploading = false;
+      }
     },
     async sendTestEmail() {
       this.sendingTest = true;
@@ -699,7 +739,13 @@ export default {
           <template v-if="step === 'audience'">
             <div class="flex flex-wrap gap-2">
               <button
-                v-for="type in ['segment', 'label', 'event', 'continuous']"
+                v-for="type in [
+                  'segment',
+                  'label',
+                  'event',
+                  'continuous',
+                  'list',
+                ]"
                 :key="type"
                 type="button"
                 class="px-3 py-1.5 text-sm border rounded-full"
@@ -767,9 +813,115 @@ export default {
               {{ t('AUDIENCE.CONTINUOUS_HINT') }}
             </p>
 
+            <!-- Lista fría de correos: solo correo; sus contactos nuevos quedan en cuarentena -->
+            <div
+              v-if="isList"
+              class="flex flex-col gap-2 p-3 border rounded-md border-slate-100 dark:border-slate-700"
+            >
+              <p class="m-0 text-xs text-slate-600 dark:text-slate-300">
+                {{ t('LIST.HINT') }}
+              </p>
+              <p class="m-0 text-xs text-amber-700">
+                {{ t('LIST.ONLY_EMAIL') }}
+              </p>
+              <label class="block">
+                <span class="field-label">{{ t('LIST.INBOX') }}</span>
+                <select v-model="form.inbox_id">
+                  <option value="">{{ t('MESSAGES.CHANNEL_PICK') }}</option>
+                  <option v-for="i in emailInboxes" :key="i.id" :value="i.id">
+                    {{ i.name }}
+                  </option>
+                </select>
+                <span
+                  v-if="!emailInboxes.length"
+                  class="block text-xs text-red-600"
+                >
+                  {{ t('LIST.NO_EMAIL_INBOX') }}
+                </span>
+              </label>
+              <template v-if="isEmail">
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <label class="block">
+                    <span class="field-label">{{ t('LIST.NAME') }}</span>
+                    <input
+                      v-model="listName"
+                      type="text"
+                      maxlength="160"
+                      :placeholder="t('LIST.NAME_PLACEHOLDER')"
+                    />
+                  </label>
+                  <label class="block">
+                    <span class="field-label">{{ t('LIST.CLEANUP') }}</span>
+                    <input
+                      v-model.number="listDays"
+                      type="number"
+                      min="1"
+                      max="365"
+                    />
+                  </label>
+                </div>
+                <p class="m-0 text-xs text-slate-500">
+                  {{ t('LIST.COLUMNS') }}
+                </p>
+                <div class="flex flex-wrap items-center gap-2">
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    class="!mb-0 text-sm"
+                    @change="listFile = $event.target.files[0] || null"
+                  />
+                  <woot-button
+                    size="small"
+                    icon="arrow-upload"
+                    :is-loading="uploading"
+                    :disabled="!listFile || !form.tracking_template_id"
+                    @click="uploadList"
+                  >
+                    {{ t('LIST.UPLOAD') }}
+                  </woot-button>
+                </div>
+                <p
+                  v-if="!form.tracking_template_id"
+                  class="m-0 text-xs text-amber-700"
+                >
+                  {{ t('LIST.NEEDS_SELLER') }}
+                </p>
+              </template>
+              <div
+                v-if="listInfo"
+                class="p-2 text-sm rounded-md bg-slate-25 dark:bg-slate-800"
+              >
+                <p class="m-0 font-medium">
+                  {{
+                    t('LIST.RESULT', {
+                      rows: listInfo.rows,
+                      valid: listInfo.valid,
+                      created: listInfo.created,
+                      existing: listInfo.existing,
+                    })
+                  }}
+                </p>
+                <p
+                  v-for="(n, reason) in listInfo.discarded"
+                  :key="reason"
+                  class="m-0 text-xs text-slate-500"
+                >
+                  {{ t(`LIST.DISCARDED.${reason}`, { n }) }}
+                </p>
+              </div>
+              <p v-else-if="form.audience.source.list_id" class="m-0 text-sm">
+                {{
+                  t('LIST.LOADED', {
+                    name: form.audience.source.name,
+                    n: (form.audience.contact_ids || []).length,
+                  })
+                }}
+              </p>
+            </div>
+
             <!-- Cuántos le llegan y quiénes se excluyen -->
             <div
-              v-if="!continuous && sourceType !== 'campaign'"
+              v-if="!continuous && !isList && sourceType !== 'campaign'"
               class="p-3 rounded-md bg-slate-25 dark:bg-slate-800"
             >
               <p v-if="!canSave" class="m-0 text-xs text-amber-700">
@@ -883,6 +1035,9 @@ export default {
               {{ t('MESSAGES.TOUCHES_HINT') }}
             </p>
 
+            <p v-if="isList && !isEmail" class="m-0 text-xs text-red-600">
+              {{ t('LIST.ONLY_EMAIL') }}
+            </p>
             <template v-if="isWhatsapp">
               <label v-for="n in touchNumbers" :key="n" class="block">
                 <span class="field-label">

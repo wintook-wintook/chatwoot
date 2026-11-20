@@ -416,6 +416,45 @@ export default {
         </section>
       </div>
 
+      <!-- Lista fría de correos: limpieza, cuarentena y cuántos ya son contactos -->
+      <section
+        v-if="data.list"
+        class="p-3 mt-4 border rounded-lg border-slate-100 dark:border-slate-700"
+      >
+        <h2 class="m-0 mb-1 text-sm font-semibold">
+          {{ t('LIST_TITLE', { name: data.list.name }) }}
+        </h2>
+        <p class="m-0 text-sm">
+          {{
+            t('LIST_STATS', {
+              rows: data.list.rows,
+              valid: data.list.valid,
+              existing: data.list.existing,
+            })
+          }}
+        </p>
+        <p
+          v-for="(n, reason) in data.list.discarded"
+          :key="reason"
+          class="m-0 text-xs text-slate-500"
+        >
+          {{ $t(`CAMPAIGNS2.LIST.DISCARDED.${reason}`, { n }) }}
+        </p>
+        <p class="m-0 mt-1 text-sm text-green-700">
+          {{ t('LIST_PROMOTED', { n: data.list.promoted }) }}
+        </p>
+        <p class="m-0 text-xs text-slate-500">
+          {{
+            data.list.cleaned_at
+              ? t('LIST_CLEANED', { n: data.list.removed })
+              : t('LIST_QUARANTINE', {
+                  n: data.list.quarantined,
+                  days: data.list.cleanup_days,
+                })
+          }}
+        </p>
+      </section>
+
       <!-- Qué dicen los contactos -->
       <section
         class="p-3 mt-4 border rounded-lg border-slate-100 dark:border-slate-700"

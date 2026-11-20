@@ -21,7 +21,7 @@ class TrackingCampaigns::Motor2Results
   end
 
   def call
-    { funnel: funnel, exits: exits, kind: kind_results, money: money, reasons: reasons,
+    { funnel: funnel, exits: exits, kind: kind_results, money: money, reasons: reasons, list: list_summary,
       channel: @campaign.inbox&.whatsapp? ? 'whatsapp' : 'email' }
   end
 
@@ -37,6 +37,12 @@ class TrackingCampaigns::Motor2Results
   end
 
   private
+
+  # La lista fría subida, si hay: cuántos válidos, descartados por motivo, cuántos ya contestaron.
+  def list_summary
+    id = @campaign.audience.to_h.dig('source', 'list_id')
+    ProspectList.find_by(id: id, account_id: @campaign.account_id)&.summary
+  end
 
   def funnel
     { audience: @campaign.entries.count, enrolled: @campaign.entries.enrolled.count, sent: sent.count,

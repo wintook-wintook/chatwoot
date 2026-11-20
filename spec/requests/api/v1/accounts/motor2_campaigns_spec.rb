@@ -126,6 +126,73 @@ RSpec.describe 'Motor2 campaigns API' do
     expect(copy.reload.status).to eq('running')
   end
 
+  describe 'lista fría de correos' do
+    let(:csv) do
+      Rack::Test::UploadedFile.new(StringIO.new(<<~CSV), 'text/csv', original_filename: 'lista.csv')
+        Correo;Nombre;Empresa
+        ana@ejemplo.com;Ana Ruiz;Grúas del Norte
+        ANA@ejemplo.com;Ana repetida;
+        info@ejemplo.com;Info;
+        mal-correo;Nadie;
+        baja@ejemplo.com;Se dio de baja;
+        #{contacts.first.email};Ya es cliente;
+      CSV
+    end
+
+    before do
+      allow(ContactTrackings::EmailCheck).to receive(:domain_receives_mail?).and_return(true)
+      EmailSuppression.add!(account, 'baja@ejemplo.com', 'opted_out')
+    end
+
+    def upload(campaign)
+      post "#{api}/#{campaign.id}/list", params: { file: csv, name: 'Expo', cleanup_days: 15 }, headers: headers
+      expect(response).to have_http_status(:ok)
+      ProspectList.find(response.parsed_body.dig('list', 'id'))
+    end
+
+    it 'se limpia, reusa los contactos que ya existen y los nuevos quedan en cuarentena (no salen en Contactos)' do
+      campaign = create_campaign
+      list = upload(campaign)
+      expect(list.stats).to include('rows' => 6, 'valid' => 2, 'created' => 1, 'existing' => 1)
+      expect(list.stats['discarded']).to include('duplicate' => 1, 'role' => 1, 'invalid' => 1, 'suppressed' => 1)
+      ana = account.contacts.from_email('ana@ejemplo.com')
+      expect(ana).to have_attributes(list_quarantine: true, prospect_list_id: list.id)
+      expect(contacts.first.reload.list_quarantine).to be(false)
+      expect(campaign.reload.audience['contact_ids']).to contain_exactly(ana.id, contacts.first.id)
+
+      get "/api/v1/accounts/#{account.id}/contacts", headers: headers
+      expect(response.parsed_body['payload'].pluck('email')).not_to include('ana@ejemplo.com')
+    end
+
+    it 'solo para correo; con lista pide tope diario' do
+      wa = create_campaign(inbox_id: wa_inbox.id, touches: { attempts: 1, templates: ['sample_shipping_confirmation'] })
+      post "#{api}/#{wa.id}/list", params: { file: csv }, headers: headers
+      expect(response.parsed_body['error']).to include('solo se puede usar en campañas por correo')
+
+      campaign = create_campaign
+      upload(campaign)
+      get "#{api}/#{campaign.id}/check", headers: headers
+      expect(response.parsed_body['items'].find { |i| i['key'] == 'daily_cap' }['level']).to eq('error')
+    end
+
+    it 'al contestar deja la cuarentena; los que nunca contestan se borran y las bajas van a la exclusión' do
+      campaign = create_campaign
+      list = upload(campaign)
+      ana = account.contacts.from_email('ana@ejemplo.com')
+      ProspectLists.promote!(ana)
+      expect(ana.reload.list_quarantine).to be(false)
+
+      ghost = account.contacts.create!(name: 'Fantasma', email: 'fantasma@ejemplo.com', prospect_list: list, list_quarantine: true,
+                                       opted_out_at: Time.current)
+      campaign.update!(ends_at: 20.days.ago, scheduled_for: 30.days.ago)
+      ProspectLists::CleanupJob.perform_now
+      expect(Contact.exists?(ghost.id)).to be(false)
+      expect(Contact.exists?(ana.id)).to be(true)
+      expect(EmailSuppression.exists?(account_id: account.id, email: 'fantasma@ejemplo.com')).to be(true)
+      expect(list.reload).to have_attributes(cleaned_at: be_present)
+    end
+  end
+
   it '«Probar» con la oferta de la campaña sin guardarla' do
     create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled', settings: { 'api_key' => 'sk-test' })
     allow_any_instance_of(Motor2::AnswerExtractor).to receive(:call).and_return({}) # rubocop:disable RSpec/AnyInstance

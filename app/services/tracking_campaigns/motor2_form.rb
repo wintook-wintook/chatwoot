@@ -58,12 +58,17 @@ class TrackingCampaigns::Motor2Form
   end
 
   def audience
+    # Lista fría subida (ProspectLists::Import): sus contactos se quedan como los dejó la importación.
+    return @campaign.audience if @campaign.audience.to_h.dig('source', 'type') == 'list' && list_source?
+
     raw = Motor2::Sanitizer.plain(@params[:audience])
     { 'source' => raw['source'].presence, 'filter_payload' => Array(@params.dig(:audience, :filter_payload)).map { |c| c.to_h.deep_stringify_keys },
       'excluded_contact_ids' => Array(raw['excluded_contact_ids']).map(&:to_i).uniq,
       'contact_ids' => Array(raw['contact_ids']).map(&:to_i).uniq.first(ContactTrackings::BulkAssignService::MAX_BULK_ASSIGN),
       'skip_active' => true }.compact
   end
+
+  def list_source? = @params.dig(:audience, :source, :type).to_s == 'list'
 
   def window
     { scheduled_for: time(@params[:scheduled_for]) || Time.current, ends_at: time(@params[:ends_at]),

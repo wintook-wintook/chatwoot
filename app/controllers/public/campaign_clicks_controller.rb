@@ -9,6 +9,7 @@ class Public::CampaignClicksController < PublicController
     return redirect_to(ENV.fetch('FRONTEND_URL', '/'), allow_other_host: true) unless tracking && url.to_s.match?(%r{\Ahttps?://})
 
     record(tracking, url)
+    ProspectLists.promote!(tracking.contact) # dio clic: deja la cuarentena de la lista fría
     redirect_to url, allow_other_host: true
   end
 

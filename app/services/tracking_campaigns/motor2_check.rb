@@ -13,7 +13,7 @@ class TrackingCampaigns::Motor2Check
   end
 
   def call
-    @call ||= [seller, offer, audience, channel, *touch_items, relay, window].compact
+    @call ||= [seller, offer, audience, channel, *list_items, *touch_items, relay, window].compact
   end
 
   def ready? = call.none? { |item| item[:level] == 'error' }
@@ -55,6 +55,17 @@ class TrackingCampaigns::Motor2Check
     data = @campaign.audience.to_h
     chosen = Array(data['filter_payload']).any? || Array(data['contact_ids']).any?
     chosen ? item(:audience, 'ok', 'La audiencia está elegida.') : item(:audience, 'error', 'Elige a quién se le manda.')
+  end
+
+  # Lista fría de correo: solo por correo, con tope diario (los rebotes y las quejas queman el buzón).
+  def list_items
+    return [] unless @campaign.audience.to_h.dig('source', 'type') == 'list'
+    return [item(:list, 'error', 'Una lista subida solo se puede mandar por correo.')] unless @campaign.inbox&.email?
+
+    cap = @campaign.daily_cap.to_i
+    [cap.zero? ? item(:daily_cap, 'error', 'Con una lista fría pon un máximo por día (empieza con 50 a 100).') : nil,
+     cap > 200 ? item(:daily_cap, 'warning', "#{cap} al día es mucho para una lista fría: sube poco a poco.") : nil,
+     item(:list_inbox, 'warning', 'Para listas frías usa una bandeja o dominio aparte, no el correo principal de tu empresa.')].compact
   end
 
   def channel

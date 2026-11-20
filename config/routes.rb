@@ -385,6 +385,7 @@ Rails.application.routes.draw do
               post :test_email
             end
             member do
+              post :list
               get :check
               post :launch
               get :results

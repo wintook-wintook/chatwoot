@@ -15,6 +15,7 @@ class Motor2::Reply
   end
 
   def call
+    ProspectLists.promote!(@conversation.contact) # contestó: deja la cuarentena de la lista fría (aunque sea para darse de baja)
     return opt_out! if ContactTrackings::OptOut.requested_in?(text)
     return if TrackingCampaigns::HandoffAttention.seller_owns?(@conversation)
 

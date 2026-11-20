@@ -23,6 +23,15 @@ class Motor2CampaignsAPI extends ApiClient {
     return axios.post(`${this.url}/test_email`, body);
   }
 
+  // Lista fría de correos (CSV) a una campaña Guardada.
+  uploadList(id, file, name, cleanupDays) {
+    const data = new FormData();
+    data.append('file', file);
+    if (name) data.append('name', name);
+    data.append('cleanup_days', cleanupDays || 30);
+    return axios.post(`${this.url}/${id}/list`, data);
+  }
+
   check(id) {
     return axios.get(`${this.url}/${id}/check`);
   }
