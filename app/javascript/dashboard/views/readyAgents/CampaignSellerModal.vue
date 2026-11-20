@@ -13,6 +13,11 @@ import ReadyAgentsAPI from 'dashboard/api/readyAgents';
 import ReadyAgentChat from './ReadyAgentChat.vue';
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 import AgentFiles from './AgentFiles.vue';
+import SourceOrder, { addSource } from './SourceOrder.vue';
+import AgentVoice from './AgentVoice.vue';
+import FollowUpPlan from './FollowUpPlan.vue';
+import AfterHandoff from './AfterHandoff.vue';
+import QuoteMode from './QuoteMode.vue';
 import FichaChannel from '../contactTrackings/ficha/FichaChannel.vue';
 
 const T = 'READY_AGENTS';
@@ -22,6 +27,7 @@ const STEPS = [
   'channel',
   'knows',
   'talk',
+  'follow',
   'files',
   'instructions',
   'test',
@@ -50,6 +56,8 @@ const blank = () => ({
   },
   settings: {
     tone: 'cercano',
+    // «Cómo habla tu empresa» que cambió solo para este agente (AgentVoice).
+    voice: {},
     purpose: 'offer',
     offer_what: '',
     offer_details: '',
@@ -70,12 +78,26 @@ const blank = () => ({
     business_coverage: '',
     business_why: '',
     business_practical: '',
+    // Lo que comparten los tres agentes (Motor2::Functions::Extras).
+    follow_up: { nudges: 2, templates: [], template_days: 2 },
+    attend_hours: 1,
+    appointment_notice: { on: true, template: '' },
+    quote: { mode: 'off', follow_days: 3 },
   },
 });
 
 export default {
   name: 'CampaignSellerModal',
-  components: { ReadyAgentChat, FichaChannel, AgentFiles },
+  components: {
+    ReadyAgentChat,
+    FichaChannel,
+    AgentFiles,
+    SourceOrder,
+    FollowUpPlan,
+    AfterHandoff,
+    QuoteMode,
+    AgentVoice,
+  },
   props: {
     show: { type: Boolean, default: false },
     title: { type: String, default: '' },
@@ -106,7 +128,7 @@ export default {
       return BUSINESS;
     },
     tones() {
-      return ['cercano', 'formal', 'directo'];
+      return ['cercano', 'formal', 'directo', 'empresa'];
     },
     stepIndex() {
       return STEPS.indexOf(this.step);
@@ -116,6 +138,18 @@ export default {
     },
     purpose() {
       return this.form.settings.purpose;
+    },
+    hasCatalog() {
+      return this.sources.some(s => s.key === 'catalog');
+    },
+    // Las plantillas aprobadas de la bandeja por la que escribe (para después de las 24 h).
+    waTemplates() {
+      if (!this.form.channel.inboxId) return [];
+      const list =
+        this.$store.getters['inboxes/getWhatsAppTemplates'](
+          Number(this.form.channel.inboxId)
+        ) || [];
+      return [...new Set(list.map(item => item.name))];
     },
     isSurvey() {
       return this.purpose === 'survey';
@@ -209,11 +243,26 @@ export default {
             objections: settings.objections || [],
             appointment_user_ids: settings.appointment_user_ids || [],
             survey_questions: questions.length ? questions : [{ text: '' }],
+            // Los agentes de antes no tenían esto: queda apagado hasta que lo prendan.
+            follow_up: {
+              nudges: 0,
+              templates: [],
+              template_days: 2,
+              ...(settings.follow_up || {}),
+            },
+            attend_hours: settings.attend_hours ?? 0,
+            appointment_notice: {
+              on: false,
+              template: '',
+              ...(settings.appointment_notice || {}),
+            },
+            quote: { mode: 'off', follow_days: 3, ...(settings.quote || {}) },
           },
         };
       } else {
         const hasCatalog = this.sources.some(s => s.kind === 'catalog');
         base.settings.price_source = hasCatalog ? 'catalog' : 'canned';
+        base.settings.quote.mode = hasCatalog ? 'draft' : 'off';
         this.form = base;
       }
       this.step = 'agent';
@@ -237,7 +286,7 @@ export default {
       const list = this.form.sources;
       this.form.sources = list.includes(key)
         ? list.filter(k => k !== key)
-        : [...list, key];
+        : addSource(list, key);
     },
     addQuestion() {
       const list = this.form.settings.survey_questions;
@@ -607,11 +656,13 @@ export default {
                   </span>
                 </span>
               </label>
+              <SourceOrder v-model="form.sources" :sources="sources" />
             </template>
           </template>
 
           <!-- 5 · Cómo platica y el relevo -->
           <template v-if="step === 'talk'">
+            <AgentVoice v-model="form.settings.voice" />
             <template v-if="!isSurvey && !isInvite">
               <span class="field-label">{{ c('RELAY') }}</span>
               <label
@@ -684,7 +735,25 @@ export default {
               >
                 {{ c('ADD_OBJECTION') }}
               </button>
+              <QuoteMode
+                v-model="form.settings.quote"
+                :has-catalog="hasCatalog"
+              />
             </template>
+          </template>
+
+          <!-- Seguimiento: si deja de contestar a media plática, el plazo y el recordatorio de la cita -->
+          <template v-if="step === 'follow'">
+            <FollowUpPlan
+              v-model="form.settings.follow_up"
+              :templates="waTemplates"
+              kind="campaign_seller"
+            />
+            <AfterHandoff
+              v-model="form.settings"
+              :templates="waTemplates"
+              :appointments="!!form.settings.appointment_user_ids.length"
+            />
           </template>
 
           <!-- 6 · Imágenes y archivos -->

@@ -63,6 +63,7 @@ class Motor2::Relay
     note("Le interesó la campaña#{campaign_name}: pasa a una persona. #{summary}".strip)
     delivered = @tracking.tracking_campaign&.handoff_board_id.present? && TrackingCampaigns::HandOff.new(@tracking).call
     assign(@function.handoff_target) unless delivered
+    Motor2::AttendClock.start(@tracking, @conversation, @function) unless delivered # la entrega de la campaña ya trae su reloj
     @tracking.update_columns(outcome: 'relayed: person', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     @tracking.pause!
   end

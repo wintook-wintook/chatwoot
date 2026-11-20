@@ -7,8 +7,10 @@
 module Motor2::Skills
   # Áreas va primero: decide qué toca en el mensaje (y si se busca) antes que las demás.
   ALL = [
-    Motor2::Skills::Areas, Motor2::Skills::Campaign, Motor2::Skills::Knowledge, Motor2::Skills::Data, Motor2::Skills::Qualify, Motor2::Skills::Offers,
-    Motor2::Skills::Appointments, Motor2::Skills::Tickets, Motor2::Skills::Files, Motor2::Skills::Handoff, Motor2::Skills::Finish
+    Motor2::Skills::Areas, Motor2::Skills::Identity, Motor2::Skills::Campaign, Motor2::Skills::Knowledge, Motor2::Skills::Data,
+    Motor2::Skills::Qualify, Motor2::Skills::Recommend, Motor2::Skills::Quote, Motor2::Skills::Offers,
+    Motor2::Skills::Appointments, Motor2::Skills::Tickets, Motor2::Skills::Files, Motor2::Skills::Handoff, Motor2::Skills::Finish,
+    Motor2::Skills::Tags
   ].freeze
 
   # Para el entrenador: qué hace cada una (las que se prenden en «Qué hace»).
@@ -18,7 +20,10 @@ module Motor2::Skills
     'files' => 'manda archivos subidos al agente', 'handoff' => 'pasa la plática a una persona',
     'qualify' => 'califica al prospecto con las preguntas de la empresa',
     'areas' => 'entiende si es soporte, comercial o administrativo y lo resuelve o lo pasa a esa área',
-    'campaign' => 'despierta el interés en la oferta de la campaña y pasa el relevo a quien sigue'
+    'campaign' => 'despierta el interés en la oferta de la campaña y pasa el relevo a quien sigue',
+    'identity' => 'sabe de qué empresa es el cliente (o se lo pregunta una vez) y lo que ya se sabe de él',
+    'recommend' => 'recomienda 2 o 3 productos del Catálogo, con su precio y su foto, según lo que busca',
+    'quote' => 'arma la cotización con precios del Catálogo (borrador para el vendedor o se la manda)'
   }.freeze
 
   module_function

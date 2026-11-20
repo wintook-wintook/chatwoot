@@ -18,6 +18,9 @@ RSpec.describe Motor2::Functions::Prospects do
   end
   let!(:agent) { save_agent(settings) }
 
+  # La frase para retomar cuando faltan varias preguntas (sin «me faltan 4 preguntas»).
+  def neutral = '(Si te parece, seguimos\\.|Para ayudarte mejor:|Y para darte la mejor opción:)'
+
   def save_agent(answers, template: nil)
     Motor2::Functions::Form.new(account, { kind: 'prospects', name: 'Prospectos Facebook', display_name: 'Sofi', enabled: true,
                                            inbox_ids: [inbox.id], settings: answers }, user: admin, template: template).save
@@ -49,6 +52,7 @@ RSpec.describe Motor2::Functions::Prospects do
     create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled', settings: { 'api_key' => 'sk-test' })
     # «¿Contesta la pregunta?» (Motor2::AnswerCheck): sí, salvo en las pruebas que lo cambian.
     allow_any_instance_of(Motor2::AnswerCheck).to receive_messages(answers?: true, about_business?: true) # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(Motor2::AnswerExtractor).to receive(:call).and_return({}) # rubocop:disable RSpec/AnyInstance
   end
 
   it 'queda en la lista de agentes como agente 2.0 de «Atención a prospectos»' do
@@ -120,6 +124,19 @@ RSpec.describe Motor2::Functions::Prospects do
     expect(tracking).to have_attributes(status: 'objective_met', outcome: start_with('qualified'))
   end
 
+  it 'si dice su empresa y está en Organizaciones, liga el contacto' do
+    org = account.organizations.create!(name: 'Ferretería Sol')
+    stub_model(tool_call('actualizar_contacto', { empresa: 'ferretería sol' }), answer('¡Gracias! ¿Qué buscas?'))
+    reply_to(incoming('soy de ferretería sol'))
+    expect(contact.reload.organization).to eq(org)
+  end
+
+  it 'deja la etiqueta de cómo terminó (calificado, descartado…), además de «interesado» y la temperatura' do
+    stub_model(tool_call('prospecto_calificado', { resumen: 'Lo quiere ya', temperatura: 'caliente' }), answer('¡Listo!'))
+    reply_to(incoming('Lo necesito ya'))
+    expect(conversation.reload.label_list).to include('calificado', 'interesado', 'prospecto-caliente')
+  end
+
   it 'con temperatura, la nueva etiqueta reemplaza a la anterior' do
     conversation.update_labels(['prospecto-frio'])
     stub_model(tool_call('prospecto_calificado', { resumen: 'Lo quiere este mes', temperatura: 'caliente' }), answer('¡Listo!'))
@@ -127,6 +144,33 @@ RSpec.describe Motor2::Functions::Prospects do
 
     expect(conversation.reload.label_list).to include('interesado', 'prospecto-caliente')
     expect(conversation.label_list).not_to include('prospecto-frio')
+  end
+
+  it 'lo que se supo queda en el contacto: temperatura (atributo filtrable) y sus respuestas' do
+    stub_model(tool_call('prospecto_calificado', { resumen: 'Lo quiere este mes', temperatura: 'caliente' }), answer('¡Listo!'))
+    reply_to(incoming('Lo necesito ya y tengo el presupuesto'))
+
+    expect(contact.reload.custom_attributes).to include('temperatura_prospecto' => 'caliente')
+    expect(contact.additional_attributes['calificacion']).to include('agente' => 'Prospectos Facebook', 'temperatura' => 'caliente')
+    expect(account.custom_attribute_definitions.find_by(attribute_key: 'temperatura_prospecto')).to have_attributes(attribute_display_type: 'list')
+  end
+
+  it 'métricas: cómo terminan, el % que califica y en qué pregunta se van' do
+    base = { account: account, inbox_id: inbox.id, tracking_template: agent, objective: 'Atender prospectos', max_attempts: 1,
+             scheduled_for: 1.day.from_now }
+    3.times do |i|
+      conv = create(:conversation, account: account, inbox: inbox, contact: create(:contact, account: account),
+                                   additional_attributes: { 'ad_referral' => { 'headline' => 'Camionetas 2019' } })
+      ContactTracking.create!(base.merge(contact: conv.contact, conversation: conv, status: 'completed',
+                                         motor2_state: { 'answers' => i.zero? ? { '¿Qué buscas?' => 'un sedán' } : {} }))
+    end
+    ContactTracking.create!(base.merge(contact: contact, conversation: conversation, status: 'objective_met', outcome: 'qualified: ok'))
+
+    metrics = Motor2::ProspectMetrics.new(agent).call
+    expect(metrics).to include(total: 4, conversion: 25)
+    expect(metrics[:results]).to include('no_answer' => 3, 'qualified' => 1)
+    expect(metrics[:drop_off]).to eq([{ question: '¿Qué buscas?', count: 2 }, { question: '¿En qué ciudad estás?', count: 1 }])
+    expect(metrics[:ads]).to eq([{ headline: 'Camionetas 2019', total: 3, good: 0 }])
   end
 
   it 'con datos obligatorios: no lo califica hasta tener su correo' do
@@ -434,7 +478,7 @@ RSpec.describe Motor2::Functions::Prospects do
                  tool_call('buscar_en_fuentes', { pregunta: 'financiamiento' }), answer('No tengo ese dato.'))
       result = probe('hola', 'das financiamiento con banamex')
       expect(result[:state]['answers'].to_h).to be_empty
-      expect(result[:reply]).to include('solo me faltan 4 preguntas')
+      expect(result[:reply]).to match(/#{neutral}/) # sin «me faltan 4 preguntas»: suena a encuesta
     end
 
     it 'con «no encontró → sin prometer asesor», se quita la promesa aunque el modelo insista' do
@@ -453,7 +497,7 @@ RSpec.describe Motor2::Functions::Prospects do
       result = probe('hola', 'no me gusta el color')
 
       expect(result[:state]['answers'].to_h).to be_empty
-      expect(result[:reply]).to match(/El morado es muy bonito\.\n\n.*solo me faltan 4 preguntas.*\n\n¿Qué buscas\?/m)
+      expect(result[:reply]).to match(/El morado es muy bonito\.\n\n#{neutral}\n\n¿Qué buscas\?/m)
     end
 
     it 'en el primer mensaje no hay frase para retomar (no hay nada que retomar)' do
@@ -464,7 +508,141 @@ RSpec.describe Motor2::Functions::Prospects do
     it 'al retomar después de una duda, la pregunta va con la frase que conecta' do
       stub_model(answer('Abrimos de 9 a 6.'))
       result = probe('hola', '¿a qué hora abren?')
-      expect(result[:reply]).to match(/Abrimos de 9 a 6\.\n\n.*solo me faltan 4 preguntas.*\n\n¿Qué buscas\?/m)
+      expect(result[:reply]).to match(/Abrimos de 9 a 6\.\n\n#{neutral}\n\n¿Qué buscas\?/m)
+    end
+  end
+
+  it 'lo que ya dijo de pasada lo guarda el código (Motor2::AnswerExtractor) y no se le vuelve a preguntar' do
+    allow_any_instance_of(Motor2::AnswerExtractor).to receive(:call).and_return({ 1 => 'una camioneta familiar' }) # rubocop:disable RSpec/AnyInstance
+    stub_model(answer('Con gusto. ¿Qué buscas?'), answer('Con gusto. ¿En qué ciudad estás?'))
+    result = Motor2::Probe.new(agent.reload, messages: [{ role: 'user', content: 'busco una camioneta familiar, ¿qué precio tienen?' }]).call
+
+    expect(result[:state]['answers']).to eq('¿Qué buscas?' => 'una camioneta familiar')
+    expect(result[:reply]).to end_with('¿En qué ciudad estás?')
+    expect(result[:trace]['events']).to include(include('text' => '¿Qué buscas?: una camioneta familiar (de la plática)'))
+  end
+
+  it 'una pregunta con «[solo si …]» lleva su condición y se hace sin ella' do
+    conditional = save_agent(settings.merge('question_list' => ['¿Qué buscas?', '¿Cuántos empleados tienen? [solo si es empresa]']),
+                             template: agent)
+    questions = Motor2::Config.new(conditional.reload).function.questions
+    expect(questions.last).to eq(number: 2, ask: '¿Cuántos empleados tienen?', condition: 'es empresa')
+  end
+
+  describe 'recomendar del Catálogo' do
+    let(:settings) do
+      { 'objective' => 'handoff', 'question_list' => ['¿Qué buscas?'], 'handoff_user_id' => seller.id, 'price_source' => 'catalog' }
+    end
+
+    def item(name, price, photo: false)
+      account.catalog_items.create!(name: name, price: price, kind: :product, description: 'Camioneta familiar').tap do |it|
+        it.image.attach(io: Rails.root.join('spec/assets/sample.png').open, filename: 'foto.png', content_type: 'image/png') if photo
+      end
+    end
+
+    it 'propone hasta 3 que le alcancen, con su precio, y manda sus fotos; no repite lo ya recomendado' do
+      item('Camioneta Tiguan 2019', 239_000, photo: true)
+      item('Camioneta CRV 2018', 245_000)
+      item('Camioneta Suburban 2021', 690_000)
+      stub_model(tool_call('recomendar', { lo_que_busca: 'camioneta familiar', presupuesto: 250_000 }),
+                 answer('Te propongo la Tiguan 2019 en $239,000 y la CRV 2018 en $245,000. ¿Qué buscas?'))
+      result = Motor2::Probe.new(agent.reload, messages: [{ role: 'user', content: 'busco camioneta, tengo 250 mil' }]).call
+
+      expect(result[:state]['recomendados'].size).to eq(2) # la Suburban no le alcanza
+      expect(result[:files]).to eq(['Camioneta Tiguan 2019'])
+      expect(result[:reply]).to include('$239,000')
+    end
+
+    it 'solo con los precios en el Catálogo (si no, no tiene la herramienta)' do
+      expect(Motor2::Config.new(agent.reload).skill_on?('recommend')).to be(true)
+      save_agent(settings.merge('price_source' => 'canned'), template: agent)
+      expect(Motor2::Config.new(agent.reload).skill_on?('recommend')).to be(false)
+    end
+  end
+
+  describe 'después de pasarlo o agendarlo' do
+    it 'al pasarlo arranca el reloj: si nadie le escribe a tiempo, se avisa (TrackingCampaigns::HandoffSweepJob)' do
+      save_agent(settings.merge('attend_hours' => 1), template: agent)
+      stub_model(tool_call('pasar_a_humano', { motivo: 'Quiere hablar con alguien' }), answer('En un momento te atiende Ana.'))
+      reply_to(incoming('quiero hablar con alguien ya'))
+      reply_to(incoming('pásame con una persona'))
+
+      expect(tracking.reload).to have_attributes(status: 'paused')
+      expect(tracking.handed_off_at).to be_present
+      expect(tracking.handoff_due_at).to be > tracking.handed_off_at
+      TrackingCampaigns::HandoffSweepJob.new.perform(tracking.handoff_escalate_at + 1.minute)
+      expect(conversation.messages.where(private: true).pluck(:content).join).to include('⏰', '🚨', 'Prospectos Facebook')
+    end
+
+    it 'recordatorio de la cita: con día, hora y con quién; si la movieron, el aviso viejo no sale' do
+      stub_model(answer('¿Qué buscas?'))
+      reply_to(incoming('hola'))
+      meeting = instance_double(CaseMeeting, starts_at: Time.zone.parse('2026-11-27 10:00'), organizer: seller,
+                                             scheduled?: true, rescheduled?: false, no_show?: false)
+      Motor2::AppointmentNotice.deliver(tracking, meeting, 'reminder')
+
+      expect(conversation.messages.outgoing.where(private: false).last.content)
+        .to include('¡Hola Mario!', 'Te recuerdo tu cita', '10:00', 'con Ana', '¿Nos confirmas')
+      expect(Motor2::AppointmentNotice.due?(meeting, 'reminder', meeting.starts_at.iso8601)).to be(true)
+      expect(Motor2::AppointmentNotice.due?(meeting, 'reminder', 1.day.ago.iso8601)).to be(false)
+      expect(Motor2::AppointmentNotice.due?(meeting, 'no_show', meeting.starts_at.iso8601)).to be(false)
+    end
+  end
+
+  describe 'si deja de contestar' do
+    let(:settings) do
+      { 'objective' => 'handoff', 'question_list' => ['¿Qué buscas?', '¿En qué ciudad estás?'], 'handoff_user_id' => seller.id,
+        'follow_up' => { 'nudges' => 2, 'templates' => ['seguimiento_1'], 'template_days' => 2 } }
+    end
+
+    it 'sin recordatorios guardados (agentes de antes) no se programa nada' do
+      save_agent(settings.except('follow_up'), template: agent)
+      stub_model(answer('¿En qué ciudad estás?'))
+      expect { reply_to(incoming('Busco paneles')) }.not_to have_enqueued_job(Motor2::FollowUpJob)
+    end
+
+    it 'después de contestarle, programa el recordatorio a las 2 horas de su mensaje' do
+      stub_model(answer('¿En qué ciudad estás?'))
+      message = incoming('Busco paneles')
+      expect { reply_to(message) }.to have_enqueued_job(Motor2::FollowUpJob).with(kind_of(Integer), message.id, 0)
+                                                                            .at(a_value_within(1.second).of(message.created_at + 2.hours))
+      expect(tracking.motor2_state).to include('follow_up' => true, 'follow_up_message' => message.id)
+    end
+
+    it 'el recordatorio retoma la plática si sigue sin contestar; si ya contestó, no' do
+      stub_model(answer('¿En qué ciudad estás?'))
+      message = incoming('Busco paneles')
+      reply_to(message)
+      allow_any_instance_of(Motor2::Attempt).to receive(:message).and_return('¿Pudiste ver lo de tu ciudad?') # rubocop:disable RSpec/AnyInstance
+
+      expect { Motor2::FollowUpJob.perform_now(tracking.id, message.id, 0) }
+        .to change { conversation.messages.outgoing.where(private: false).count }.by(1)
+        .and have_enqueued_job(Motor2::FollowUpJob).with(tracking.id, message.id, 1)
+      incoming('en Monterrey')
+      expect { Motor2::FollowUpJob.perform_now(tracking.id, message.id, 1) }.not_to(change { conversation.messages.outgoing.count })
+    end
+
+    it 'después de los recordatorios van las plantillas (24 h después de su mensaje, una cada N días)' do
+      stub_model(answer('¿En qué ciudad estás?'))
+      message = incoming('Busco paneles')
+      reply_to(message)
+      allow(Motor2::FollowUp).to receive(:whatsapp?).and_return(true)
+      Motor2::FollowUp.next_step(tracking, message, 2, Motor2::Config.new(agent.reload).function.follow_up)
+
+      expect(tracking.reload).to have_attributes(status: 'scheduled', whatsapp_templates: ['seguimiento_1'], max_attempts: 1,
+                                                 retry_interval_value: 2, retry_interval_unit: 'days')
+      expect(tracking.scheduled_for).to be_within(1.minute).of(message.created_at + 3.days)
+    end
+
+    it 'si contesta después del último toque, el agente lo retoma' do
+      stub_model(answer('¿En qué ciudad estás?'))
+      reply_to(incoming('Busco paneles'))
+      tracking.update_columns(status: 'completed') # rubocop:disable Rails/SkipsModelValidations
+
+      stub_model(answer('¡Perfecto! Te paso con Ana.'))
+      reply_to(incoming('perdón, estoy en Monterrey'))
+      expect(tracking.reload.status).to eq('active')
+      expect(conversation.messages.outgoing.where(private: false).last.content).to include('Perfecto')
     end
   end
 
@@ -510,7 +688,7 @@ RSpec.describe Motor2::Functions::Prospects do
       stub_model(answer('¡Muy bien! ¿Tienes algún modelo en mente?'))
       result = Motor2::Probe.new(agent, messages: chat).call
 
-      expect(result[:reply]).to eq("¡Muy bien!\n\nSi te parece, seguimos: solo me faltan 2 preguntas y terminamos.\n\n¿Qué buscas?")
+      expect(result[:reply]).to match(/\A¡Muy bien!\n\n(Ya casi terminamos|Para avanzar)[,:] solo me faltan 2 preguntas\.\n\n¿Qué buscas\?\z/)
       expect(result[:trace]['events']).to include(include('kind' => 'revision', 'text' => 'pregunta pendiente'))
     end
   end

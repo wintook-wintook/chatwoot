@@ -10,6 +10,17 @@ class Motor2::Skills::Knowledge < Motor2::Skills::Base
   # Una función puede apagarla (p. ej. «Atención a prospectos» que no contesta dudas).
   def on? = config.skill(key)['on'] != false && search.sources.any?
 
+  # Lo que escribió el cliente, con sus palabras (CONTPAQi contesta mejor así que con la búsqueda que
+  # redacta el modelo). Si lo último es corto («comercial premium»), va con lo que dijo antes.
+  SHORT_WORDS = 4
+
+  def prepare(history)
+    said = Array(history).select { |m| m[:role].to_s == 'user' }.map { |m| m[:content].to_s.squish }.compact_blank
+    last = said.last.to_s
+    @customer_words = last.split.size <= SHORT_WORDS && said.size > 1 ? "#{said[-2]} #{last}" : last
+    @search = nil # se armó antes (on?) sin sus palabras
+  end
+
   def tools
     return [] unless searchable?
 
@@ -58,12 +69,24 @@ class Motor2::Skills::Knowledge < Motor2::Skills::Base
     found.each { |f| note(f, question) }
     note_selection
     found = found.reject { |f| f[:resultados].empty? }
-    found.any? ? { resultados: found } : { resultados: [], nota: 'No se encontró nada. No lo inventes.' }
+    judged = judge(question, found)
+    return { resultados: found }.merge(judged.to_h) if found.any?
+
+    { resultados: [], nota: judged&.dig(:nota) || 'No se encontró nada. No lo inventes.' }
   end
 
   private
 
-  def search = @search ||= Motor2::Search.new(config.account, config.sources, conversation: @turn.conversation)
+  # «Atención a clientes» › Soporte: ¿lo encontrado resuelve lo que pidió? (Motor2::Skills::SupportFlow#judge)
+  def judge(question, found)
+    # Si la cascada ya lo revisó y se detuvo con una exacta, no se revisa otra vez.
+    done = search.last_check if search.last_check.to_h['tipo'] == 'exacta'
+    @turn.find_skill('areas')&.judge([@customer_words, question].compact_blank.uniq.join(' — búsqueda: '), found, done)
+  end
+
+  def search
+    @search ||= Motor2::Search.new(config.account, config.sources, conversation: @turn.conversation, customer_words: @customer_words)
+  end
 
   # proyecto@predefinidas_que_contestan: qué escogió la búsqueda nueva, para el probador.
   def note_selection

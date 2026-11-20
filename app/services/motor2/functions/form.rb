@@ -107,19 +107,26 @@ class Motor2::Functions::Form
     @template.follow_up_attempts = channel['attempts'] if channel['attempts'].present?
   end
 
-  # Solo las que la cuenta tiene (Motor2::SourceMap#available); las predefinidas no se marcan.
+  # Solo las que la cuenta tiene (Motor2::SourceMap#available), en el orden de consulta que dejó la empresa
+  # (las predefinidas van siempre: si vienen en la lista, es solo para su lugar en el orden).
   def assign_sources
-    allowed = Motor2::SourceMap.new(@account).available.pluck(:key) - [Motor2::SourceMap::CANNED]
+    allowed = Motor2::SourceMap.new(@account).available.pluck(:key) | [Motor2::SourceMap::CANNED]
     @template.motor2 = @template.motor2.to_h.merge('sources' => Array(@params['sources']).map(&:to_s) & allowed)
+  end
+
+  # Indicaciones, bienvenida y lo de «Cómo habla tu empresa» que es solo para este agente.
+  def texts(data, settings)
+    %w[instructions welcome].each do |key|
+      data[key] = settings[key].to_s.strip.first(Motor2::Sanitizer::TEXTS[key]) if settings.key?(key)
+    end
+    data['voice'] = AgentBase::CompanyVoice.clean(settings['voice']) if settings.key?('voice')
   end
 
   def assign_settings(kind)
     settings = Motor2::Sanitizer.plain(@params['settings'])
     data = @template.motor2.to_h.deep_dup
     data['answers'] = Motor2::Functions.klass(kind).sanitize(settings)
-    %w[instructions welcome].each do |key|
-      data[key] = settings[key].to_s.strip.first(Motor2::Sanitizer::TEXTS[key]) if settings.key?(key)
-    end
+    texts(data, settings)
     @template.motor2 = data
     minutes = data.dig('answers', 'appointment_minutes').to_i
     @template.calendar_event_duration = minutes if minutes.positive?

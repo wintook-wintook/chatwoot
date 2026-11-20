@@ -17,7 +17,7 @@ class Motor2::Probe
     return { error: result.error, trace: result.trace } if result.error
 
     { reply: result.reply, decision: result.decision, trace: result.trace, state: @state.to_h,
-      files: result.attachments.pluck(:name) }
+      files: result.attachments.pluck(:name), labels: Array(result.labels) }
   end
 
   private

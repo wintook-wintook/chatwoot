@@ -12,8 +12,11 @@ module Motor2::Functions::ProspectAnswers
     out = P::TEXTS.index_with { |k| raw[k].to_s.strip.first(1000) }
     P::IDS.each { |k| out[k] = raw[k].to_s.strip.presence&.to_i }
     P::BOOLEANS.each { |k| out[k] = raw.key?(k) ? ActiveModel::Type::Boolean.new.cast(raw[k]) || false : k == 'only_prospects' }
-    out.merge(lists(raw), rows(raw), Motor2::Functions::ProspectRules.sanitize(raw)).compact
+    out.merge(lists(raw), rows(raw), extras(raw)).compact
   end
+
+  # Lo de «Cómo platica» y lo que comparten los tres agentes (Motor2::Functions::Extras).
+  def extras(raw) = Motor2::Functions::ProspectRules.sanitize(raw).merge(Motor2::Functions::Extras.sanitize(raw))
 
   def lists(raw)
     { 'question_list' => Array(raw['question_list']).map { |q| q.to_s.squish.first(300) }.compact_blank.first(P::MAX_QUESTIONS),

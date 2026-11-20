@@ -85,4 +85,19 @@ RSpec.describe 'Catalog Items API' do
     get url, headers: agent.create_new_auth_token, as: :json
     expect(response).to have_http_status(:forbidden)
   end
+
+  it 'sube y quita la foto del producto (solo PNG, JPG o WEBP)' do
+    product = item
+    post "#{url}/#{product.id}/image", params: { image: fixture_file_upload(Rails.root.join('spec/assets/sample.png'), 'image/png') },
+                                       headers: admin.create_new_auth_token
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.dig('catalog_item', 'image_url')).to be_present
+
+    post "#{url}/#{product.id}/image", params: { image: fixture_file_upload(Rails.root.join('spec/assets/sample.pdf'), 'application/pdf') },
+                                       headers: admin.create_new_auth_token
+    expect(response).to have_http_status(:unprocessable_entity)
+
+    delete "#{url}/#{product.id}/image", headers: admin.create_new_auth_token
+    expect(response.parsed_body.dig('catalog_item', 'image_url')).to be_nil
+  end
 end

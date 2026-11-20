@@ -37,16 +37,27 @@ module Motor2::AreaChecks
   def ensure_evidence(messages, text)
     return text unless evidence_needed?
 
-    check = Motor2::EvidenceCheck.new(account: @account).call(question: @last_customer, reply: text, evidence: evidence_text)
+    support = support_evidence?
+    check = Motor2::EvidenceCheck.new(account: @account).call(question: @last_customer, reply: text, evidence: evidence_text, support: support)
     return text if check['veredicto'] == 'EXACTA'
 
     @trace.event(:evidencia, "#{check['veredicto']}: #{check['falta']}")
-    messages << { role: 'assistant', content: text } << { role: 'system', content: format(NOT_CONFIRMED, falta: check['falta'].presence || 'parte') }
+    rewrite_unconfirmed(messages, text, check['falta'].presence || 'parte', support)
+  end
+
+  # Se reescribe con lo confirmado; si no sale, el mensaje seguro (de ventas o de soporte).
+  def rewrite_unconfirmed(messages, text, missing, support)
+    note = format(support ? Motor2::SupportChecks::NOT_CONFIRMED_SUPPORT : NOT_CONFIRMED, falta: missing)
+    messages << { role: 'assistant', content: text } << { role: 'system', content: note }
     again = clean(run(messages))
-    again.present? && !unsourced?(again) ? again : FALLBACK
+    return again if again.present? && !unsourced?(again)
+
+    support ? Motor2::SupportChecks::FALLBACK_SUPPORT : FALLBACK
   end
 
   def evidence_needed?
+    return true if support_evidence?
+
     areas = find_skill('areas')
     return false unless @mode == :reply && @decision.nil? && areas&.area_key == 'sales'
 

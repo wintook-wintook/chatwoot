@@ -17,6 +17,7 @@
 # La oferta vive en el agente por ahora; la pantalla de campañas podrá mandar la suya (brief) después.
 class Motor2::Functions::CampaignSeller
   include Motor2::Functions::ProspectPrices
+  include Motor2::Functions::Extras
 
   KEY = 'campaign_seller'
   PURPOSES = %w[invite offer reactivate renew survey].freeze
@@ -39,7 +40,7 @@ class Motor2::Functions::CampaignSeller
     raw = Motor2::Sanitizer.plain(raw)
     out = TEXTS.index_with { |k| raw[k].to_s.strip.first(1000) }
     CHOICES.each { |k, values| out[k] = raw[k].to_s.presence_in(values) || values.first }
-    out.merge(ids(raw)).merge(lists(raw)).compact
+    out.merge(ids(raw)).merge(lists(raw)).merge(Motor2::Functions::Extras.sanitize(raw)).compact
   end
 
   def self.ids(raw)
@@ -97,6 +98,8 @@ class Motor2::Functions::CampaignSeller
   def skills
     { 'campaign' => { 'on' => true },
       'knowledge' => { 'on' => !survey? },
+      'recommend' => { 'on' => !survey? && price_source == 'catalog' },
+      'quote' => { 'on' => !survey? && quote_mode != 'off' },
       'handoff' => { 'on' => true, 'when' => 'pide hablar con una persona o se molesta' }.merge(handoff_target.transform_keys(&:to_s)),
       'appointments' => { 'on' => appointment?, 'kind' => 'llamada', 'when' => 'le interesa y quiere una cita',
                           'user_ids' => appointment_user_ids, 'minutes' => answer(:appointment_minutes) } }

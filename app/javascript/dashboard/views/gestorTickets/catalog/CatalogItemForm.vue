@@ -19,7 +19,8 @@ export default {
   },
   emits: ['close', 'saved'],
   data() {
-    return { form: this.blank(), saving: false };
+    // image: la foto que eligió (se sube al guardar); dropImage: quitar la que tenía.
+    return { form: this.blank(), saving: false, image: null, dropImage: false };
   },
   computed: {
     isEdit() {
@@ -33,14 +34,33 @@ export default {
     show: {
       immediate: true,
       handler(open) {
-        if (open)
-          this.form = this.item
-            ? { ...this.blank(), ...this.item }
-            : this.blank();
+        if (!open) return;
+        this.form = this.item
+          ? { ...this.blank(), ...this.item }
+          : this.blank();
+        this.image = null;
+        this.dropImage = false;
       },
     },
   },
   methods: {
+    pickImage(event) {
+      const [file] = event.target.files || [];
+      this.image = file || null;
+      this.dropImage = false;
+    },
+    // La foto va aparte del producto (multipart): después de guardarlo.
+    async saveImage(item) {
+      if (this.image) {
+        const { data } = await CatalogItemsAPI.uploadImage(item.id, this.image);
+        return data.catalog_item;
+      }
+      if (this.dropImage && item.image_url) {
+        const { data } = await CatalogItemsAPI.removeImage(item.id);
+        return data.catalog_item;
+      }
+      return item;
+    },
     blank() {
       return {
         name: '',
@@ -66,8 +86,9 @@ export default {
               catalog_item: payload,
             })
           : await CatalogItemsAPI.create({ catalog_item: payload });
+        const saved = await this.saveImage(data.catalog_item);
         useAlert(this.$t('CATALOG.SAVED'));
-        this.$emit('saved', data.catalog_item);
+        this.$emit('saved', saved);
       } catch (error) {
         const message = error?.response?.data?.error;
         useAlert(
@@ -170,6 +191,35 @@ export default {
           {{ $t('CATALOG.FORM.DESCRIPTION') }}
           <textarea v-model="form.description" rows="3" />
         </label>
+        <div class="flex flex-col gap-1">
+          <span>{{ $t('CATALOG.FORM.IMAGE') }}</span>
+          <div
+            v-if="form.image_url && !dropImage && !image"
+            class="flex items-center gap-3"
+          >
+            <img
+              :src="form.image_url"
+              :alt="form.name"
+              class="object-cover w-16 h-16 rounded"
+            />
+            <button
+              type="button"
+              class="text-xs text-red-600 hover:underline"
+              @click="dropImage = true"
+            >
+              {{ $t('CATALOG.FORM.IMAGE_REMOVE') }}
+            </button>
+          </div>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            class="!mb-0"
+            @change="pickImage"
+          />
+          <span class="text-xs text-slate-500 dark:text-slate-400">{{
+            $t('CATALOG.FORM.IMAGE_HINT')
+          }}</span>
+        </div>
         <label class="flex items-center gap-2">
           <input v-model="form.active" type="checkbox" class="m-0" />
           {{ $t('CATALOG.FORM.ACTIVE') }}

@@ -5,6 +5,7 @@
 #   GET   /catalog_items/export     CSV
 #   POST  /catalog_items/import     CSV (file): actualiza por clave, si no, por nombre
 #   POST  /catalog_items            PATCH /catalog_items/:id
+#   POST  /catalog_items/:id/image  (image) · DELETE /catalog_items/:id/image   la foto del producto
 #
 # Lo consulta quien tiene Ventas o Servicio; lo edita Ventas con «Todo» (o el
 # Administrador). El costo solo viaja con «Ver montos». No se borra: se desactiva.
@@ -15,8 +16,8 @@ class Api::V1::Accounts::CatalogItemsController < Api::V1::Accounts::BaseControl
   CSV_COLUMNS = %w[clave nombre tipo categoria unidad precio moneda costo descripcion activo].freeze
 
   before_action :check_read_access
-  before_action :check_write_access, only: %i[create update import]
-  before_action :set_item, only: %i[update]
+  before_action :check_write_access, only: %i[create update import image remove_image]
+  before_action :set_item, only: %i[update image remove_image]
 
   def index
     items = filtered.ordered
@@ -38,6 +39,22 @@ class Api::V1::Accounts::CatalogItemsController < Api::V1::Accounts::BaseControl
 
   def update
     @item.update(item_params) ? render(json: { catalog_item: item_json(@item) }) : render_errors(@item)
+  end
+
+  def image
+    return render json: { error: [I18n.t('catalog_items.image.invalid')] }, status: :unprocessable_entity if params[:image].blank?
+
+    file = params[:image]
+    ok_type = CatalogItem::IMAGE_TYPES.include?(file.content_type.to_s) && file.size <= CatalogItem::MAX_IMAGE
+    return render json: { error: [I18n.t('catalog_items.image.invalid')] }, status: :unprocessable_entity unless ok_type
+
+    @item.image.attach(file)
+    render json: { catalog_item: item_json(@item) }
+  end
+
+  def remove_image
+    @item.image.purge if @item.image.attached?
+    render json: { catalog_item: item_json(@item) }
   end
 
   def export
@@ -102,7 +119,8 @@ class Api::V1::Accounts::CatalogItemsController < Api::V1::Accounts::BaseControl
     {
       id: item.id, name: item.name, sku: item.sku, kind: item.kind, category: item.category, unit: item.unit,
       price: item.price.to_f, currency: item.currency, description: item.description, active: item.active,
-      cost: (item.cost&.to_f if access_grant.can?(:see_amounts))
+      cost: (item.cost&.to_f if access_grant.can?(:see_amounts)),
+      image_url: (url_for(item.image) if item.image.attached?)
     }
   end
 

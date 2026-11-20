@@ -15,8 +15,17 @@ module Motor2::Skills::AreaSales
     case now['gestion']
     when nil, 'info' then SALES_INFO
     when 'demo', 'visita' then appointment_note(sales)
+    when 'cotizacion' then quote_note
     else 'Pidió una gestión comercial: llama registrar_gestion con lo que pidió (qué y cuántos) y dile que su vendedor le da seguimiento.'
     end
+  end
+
+  # Con «cotizar» prendido, la arma él (Motor2::Skills::Quote); si no, se registra para el vendedor.
+  def quote_note
+    return 'Pidió una cotización: si ya sabes qué productos y cuántos, llama cotizar; si falta, pregúntalo (una pregunta).' if
+      @turn.find_skill('quote')
+
+    'Pidió una gestión comercial: llama registrar_gestion con lo que pidió (qué y cuántos) y dile que su vendedor le da seguimiento.'
   end
 
   def appointment_note(sales)

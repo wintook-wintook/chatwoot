@@ -480,6 +480,90 @@
     "ON": "On",
     "OFF": "Off",
     "NO_INBOXES": "No inbox",
+    "FOLLOW_PLAN": {
+      "INTRO": "If they stop answering mid-conversation, the same agent reaches out again. This is what will happen:",
+      "NUDGES": "Reminders within 24 h (WhatsApp allows free text)",
+      "NUDGES_2": "2: 2 h and 20 h after their last message",
+      "NUDGES_1": "1: after 2 h",
+      "NUDGES_0": "None",
+      "RECOMMENDED": "(recommended)",
+      "TEMPLATES": "After 24 h (approved templates only), sends these, one at a time:",
+      "EVERY": "One every",
+      "DAYS": "days",
+      "NO_TEMPLATES": "After 24 h WhatsApp only allows approved templates; your inbox has none (or the agent has no WhatsApp inbox).",
+      "TIMELINE": "If they don't answer:",
+      "AT_HOURS": "at {n} h",
+      "AT_DAY": "day {n}",
+      "AFTER": "after",
+      "LAST_IN_WINDOW": " (last within 24 h)",
+      "TEMPLATE": "template «{name}»",
+      "NUDGE": {
+        "prospects": "reminder: picks up the pending question",
+        "customers": "reminder: picks up what's pending or asks if it was solved",
+        "campaign_seller": "reminder: picks up their question or the offer"
+      },
+      "END": {
+        "prospects": "marked «no answer»; if they answer, the agent picks it up",
+        "customers": "if a solution was given: «solved, unconfirmed»; if data was missing, hands it to the area team",
+        "campaign_seller": "marked «no answer»; if they answer, the agent picks it up"
+      },
+      "EXAMPLE": {
+        "prospects": "Example: «Did you get a chance to think about the budget? 😊»",
+        "customers": "Example: «Did the steps I sent solve it? Reply RESUELTO or ESCALAR.»",
+        "campaign_seller": "Example: «Any questions about the promotion?»"
+      },
+      "HINT": "If they answer, it starts over from their new message. If qualified, discarded or handed to a person, it doesn't write. Each conversation shows the next reminder and lets you cancel it."
+    },
+    "QUOTE": {
+      "TITLE": "Quotes",
+      "NO_CATALOG": "To quote it needs products with prices in Sales › Catalog.",
+      "MODES": {
+        "off": "Doesn't quote: records the request and hands it to the seller",
+        "draft": "Builds a draft quote (Catalog prices) and alerts the seller to review and send it",
+        "send": "Builds the quote and sends it to the customer (Catalog prices only, no discounts) and alerts the seller"
+      },
+      "RECOMMENDED": "(recommended)",
+      "FOLLOW": "If they don't answer, asks about it after",
+      "DAYS": "days"
+    },
+    "SOURCE_ORDER": {
+      "TITLE": "Lookup order",
+      "HINT": "It searches in this order. Before a slow source (forum, CONTPAQi) it checks whether what's above already answers; if so, it skips it. Put your own, most reliable sources on top."
+    },
+    "FOLLOW_LINE": {
+      "TEXT": "Follow-up: {what}",
+      "NUDGES": "{n} reminder(s)",
+      "TEMPLATES": "{n} template(s) every {days} days",
+      "NONE": "No follow-up"
+    },
+    "METRICS": {
+      "BUTTON": "How it's doing",
+      "TITLE": "How «{name}» is doing",
+      "LOADING": "Loading…",
+      "ERROR": "Couldn't load the metrics.",
+      "EMPTY": "No conversations in the last {days} days.",
+      "SUMMARY": {
+        "prospects": "Served {total} in the last {days} days: {conversion}% qualified or booked.",
+        "customers": "Handled {total} conversations in the last {days} days: {conversion}% solved without handing over.",
+        "campaign_seller": "{total} replied in the last {days} days: {conversion}% were interested."
+      },
+      "RESULTS": {
+        "qualified": "Qualified",
+        "appointment": "Booked",
+        "handed_off": "Handed to a person",
+        "discarded": "Discarded",
+        "client": "Already customers",
+        "no_answer": "Stopped answering",
+        "live": "Talking now",
+        "interested": "Interested",
+        "not_interested": "Not interested",
+        "done": "Done"
+      },
+      "DROP_OFF": "Where they stop answering (the question they were missing)",
+      "ADS": "Which ad they came from",
+      "AD_LINE": "{total} · {good} qualified",
+      "GROUPS": "What they ask for"
+    },
     "LIVE": "attending {n}",
     "TURN_OFF": "Turn off",
     "TURN_ON": "Turn on",
@@ -505,6 +589,9 @@
       "QUALIFIED_PLACEHOLDER": "E.g. said what they need and want it this month",
       "DISCARD_WHEN": "Discarded when…",
       "DISCARD_PLACEHOLDER": "E.g. looking for a job or not interested",
+      "DISCARD_IDEAS": "is outside our service area|their budget is below what we handle|wants something we don't sell|is a supplier or looking for a job|only comparing prices, no intention to buy",
+      "HOT_WHEN": "When is a prospect hot? (optional)",
+      "HOT_PLACEHOLDER": "E.g. wants it this month and has a down payment or approved credit",
       "HANDOFF_USER": "Hand off to (person)",
       "HANDOFF_TEAM": "or team",
       "NOBODY": "— Nobody: stays unassigned —",
@@ -523,6 +610,13 @@
       "APPOINTMENT_LOCATION": "Place or link (optional)",
       "APPOINTMENT_LOCATION_PLACEHOLDER": "E.g. Google Meet",
       "APPOINTMENT_HINT": "Offers free times from their Google within the inbox working hours (or Mon–Fri 9–18). The appointment goes to the Agenda and their Google, and the conversation is assigned to them.",
+      "APPOINTMENT_NOTICE": "Reminds them of the appointment a day before (or 2 hours before if same day) and, if marked «no show», offers another time",
+      "APPOINTMENT_NOTICE_TEMPLATE": "If 24 h have passed since their last message, use this template",
+      "NO_TEMPLATE": "No template (only within 24 h)",
+      "ATTEND_HOURS": "After handing over, how soon must someone write to them?",
+      "ATTEND_HOURS_N": "Within {n} business hours",
+      "ATTEND_OFF": "No alert",
+      "ATTEND_HINT": "If nobody writes in time, it leaves a note @mentioning the seller; at three times the time, it alerts the administrators.",
       "REQUIRED_CONTACT": "Details to collect before handing off",
       "DISPLAY_NAME": "Name the customer sees (optional)",
       "DISPLAY_NAME_PLACEHOLDER": "E.g. Ana"
@@ -530,7 +624,8 @@
     "TONES": {
       "cercano": "Friendly",
       "formal": "Formal",
-      "directo": "Direct"
+      "directo": "Direct",
+      "empresa": "The one in «How your company talks»"
     },
     "OBJECTIVES": {
       "handoff": "Hand them to a team member",
@@ -550,7 +645,8 @@
       "TOOL": "⚙ {tool}",
       "DECISION": "→ {decision}",
       "NOT_DONE": "(not done)",
-      "FILES": "📎 Sent: {files}"
+      "FILES": "📎 Sent: {files}",
+      "VOICE": "🗣 Spoke as: {voice}"
     },
     "TOOLS": {
       "buscar_respuesta_predefinida": "Searched canned responses",
@@ -585,6 +681,11 @@
       "relay": "Hands over to the next one"
     },
     "SESSION": {
+      "NEXT_TOUCH": {
+        "nudge": "Next reminder: {when}",
+        "template": "Next template: {when}",
+        "CANCEL": "Stop reminders"
+      },
       "FAILED": "Could not change it.",
       "PAUSE": "Pause",
       "RESUME": "Resume",
@@ -679,6 +780,7 @@
     "NEXT": "Next",
     "STEPS": {
       "NUMBERED": "{n}. {step}",
+      "follow": "Follow-up",
       "agent": "The agent",
       "business": "Your business",
       "knows": "What it knows",
@@ -721,7 +823,21 @@
         "SHEET_FAQ": "This sheet is in «FAQ» mode. For exact prices, switch it to «Data» mode in Settings › Knowledge bases."
       }
     },
+    "FOLLOW_UP": {
+      "TITLE": "If they stop answering",
+      "NUDGES_2": "Sends 2 reminders: 2 hours and 20 hours after their last message, picking up where it left off",
+      "NUDGES_1": "Sends 1 reminder after 2 hours",
+      "NUDGES_0": "Doesn't write again",
+      "TEMPLATES": "After 24 hours (WhatsApp only allows approved templates), sends these templates, one at a time:",
+      "EVERY": "One every",
+      "DAYS": "days",
+      "HINT": "If they answer, it starts over from their new message. If they were qualified, discarded or handed to a person, it doesn't write. If they answer after the last reminder, the agent picks it up."
+    },
     "QUESTIONS_LIST": {
+      "SUGGEST": "Suggest questions for my business",
+      "SUGGEST_HINT": "Based on «Your business». Edit them as you like.",
+      "SUGGEST_ERROR": "Couldn't suggest them now; try again.",
+      "SMART": "It does not ask what the prospect already said (even in passing). For a question that only applies sometimes, add the condition in brackets at the end, e.g. «How many employees? [solo si es empresa]».",
       "NUMBER": "{n}.",
       "PLACEHOLDER": "Write the question as you want it asked",
       "REMOVE": "Remove this question",
@@ -767,6 +883,7 @@
         "areas": "What it handles",
         "knows": "What it knows",
         "talk": "How it talks",
+        "follow": "Follow-up",
         "instructions": "Instructions",
         "test": "Test and save",
         "files": "Images and files"
@@ -817,10 +934,16 @@
         "ACTION": "If it can't be solved with what it knows",
         "ACTIONS": {
           "case": "Opens a case and gives the ticket number",
-          "handoff": "Hands it to a support person"
+          "handoff": "Hands it to a support person",
+          "visit": "If it can't be solved here, books a technical visit"
         },
-        "DETAILS": "First asks since when it happens or how many are affected (a single question)",
-        "SEVERITY": "Priority is automatic: can't operate → urgent (opened right away); works with a failure → high; how-to → medium."
+        "DETAILS": "Before opening the case, asks since when it happens or how many are affected (a single question)",
+        "VISIT_HINT": "Asks for the address and, if possible, a photo of the equipment; offers times from whoever you choose and books the visit (for on-site businesses: AC, installations…).",
+        "SEVERITY": "Priority is automatic: can't operate → urgent (opened right away); works with a failure → high; how-to → medium.",
+        "DEFAULT_SERVICE": "If the customer doesn't say which equipment, product or service, assume",
+        "DEFAULT_SERVICE_NONE": "Don't assume any",
+        "DEFAULT_SERVICE_HELP": "Just a frame of reference: the AI decides which module it is with your Affected services (Cases › Classification) and, if not said, uses this one. The case gets that service and its category.",
+        "EVIDENCE": "Answers only with what your sources say: with an exact solution it gives the steps as written, with links, and closes with RESUELTO / ESCALAR; if it is for another system it says so; if several apply it asks which; if nothing, it says so and hands it over. Each conversation gets labels showing how it was classified (#soporte-falla, #respondida, #canalizada…)."
       },
       "SALES": {
         "quote": {
@@ -850,6 +973,10 @@
       "AREA_TEAM": "Team",
       "GENERAL": "The one in «How it talks»",
       "KNOWS_HINT": "Sales and Support search here; Admin doesn't.",
+      "SUGGEST_EXAMPLES": "Build examples for my business",
+      "SUGGEST_EXAMPLES_HINT": "Replaces the yes/no examples of the enabled areas with ones using your business vocabulary («Your business»).",
+      "SUGGEST_DONE": "Done: review each area's examples.",
+      "SUGGEST_ERROR": "Couldn't build them now; try again.",
       "WELCOME_PLACEHOLDER": "e.g. Hi! I'm Sofi, from customer care.",
       "TALK": {
         "human": {
@@ -861,6 +988,11 @@
           "LABEL": "If the person writing is not a customer",
           "serve": "Serves them anyway (recommended)",
           "handoff": "Hands them to the person or team below without serving them"
+        },
+        "identify": {
+          "LABEL": "If we don't know their company",
+          "ask": "Asks once which company they write from and their email, and links them to their organization (recommended). From a company email it links them by domain on its own",
+          "no": "Doesn't ask"
         },
         "MULTI": "If they ask for several things, it handles them one by one; anything pending goes in the note when it hands over."
       },
@@ -878,7 +1010,24 @@
         "ROW": "{icon} «{example}» — {line}"
       },
       "TEST_HINT": "Write as your customer: «I can't log in», «I want a quote», «my invoice has the wrong tax ID»…",
-      "TEST_AREA": "Area: {area}"
+      "TEST_AREA": "Area: {area}",
+      "RULES": {
+        "LABEL": "Rules for this area (optional)",
+        "PLACEHOLDER": {
+          "support": "E.g. Before giving steps, confirm they have the latest version.",
+          "sales": "E.g. Never offer discounts; prices already include VAT.",
+          "admin": "E.g. Invoices can only be corrected within the same month.",
+          "other": "E.g. Ask for their order number before handing over."
+        },
+        "HOURS": "Area hours (optional): from",
+        "TO": "to",
+        "DAYS": {
+          "weekdays": "Monday to Friday",
+          "saturday": "Monday to Saturday",
+          "all": "every day"
+        },
+        "HOURS_HINT": "Outside those hours, it takes what they need and says the team will write as soon as it opens. Without hours, it always serves the same."
+      }
     },
     "CAMPAIGN": {
       "SUBTITLE": "Knocks on the door in your campaigns: the campaign sends the first message and it follows up when they reply. It sparks interest, answers the first questions and hands the interested ones over.",
@@ -890,6 +1039,7 @@
         "channel": "Channel and touches",
         "knows": "Your business and what it knows",
         "talk": "How it talks and the handover",
+        "follow": "Follow-up",
         "instructions": "Instructions",
         "test": "Test and save",
         "files": "Images and files"
@@ -1010,6 +1160,16 @@
       "IMAGE_TYPE": "«{name}»: the image must be JPG or PNG.",
       "TOO_BIG": "«{name}» is bigger than WhatsApp accepts.",
       "UPLOAD_ERROR": "Could not upload the file."
+    },
+    "AGENT_VOICE": {
+      "BUTTON": "How your company talks",
+      "OWN": "{n} change(s) only for this agent",
+      "ALL_COMPANY": "Uses the company's",
+      "HINT": "The general one is changed in «How your company talks». Here, for each field, choose whether this agent uses the company's or something only for it (e.g. another signature or tone).",
+      "EMPTY": "Your company hasn't filled it in yet: do it in «How your company talks» so all your agents use it.",
+      "COMPANY": "Like the company",
+      "ONLY_HERE": "Only for this agent",
+      "NOT_SET": "(empty in the company)"
     }
   }
 }

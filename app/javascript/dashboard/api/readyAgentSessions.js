@@ -18,6 +18,11 @@ class ReadyAgentSessionsAPI extends ApiClient {
   resume(id) {
     return axios.patch(`${this.url}/${id}/resume`);
   }
+
+  // No más recordatorios de su seguimiento corto (alguien del equipo lo va a atender).
+  cancelFollowUp(id) {
+    return axios.patch(`${this.url}/${id}/cancel_follow_up`);
+  }
 }
 
 export default new ReadyAgentSessionsAPI();

@@ -21,11 +21,15 @@
 #   price_source                          dónde están sus productos y precios (Motor2::Functions::ProspectPrices;
 #                                         antes business_use_catalog)
 #   doubts / not_found / off_topic        «Cómo platica» (Motor2::Functions::ProspectRules)
+#   follow_up { nudges 0-2, templates [], template_days }   si deja de contestar (Motor2::FollowUp)
+#   appointment_notice { on, template }   recordatorio de la cita y «¿otro horario?» si no llegó (Motor2::AppointmentNotice)
+#   attend_hours                          en cuántas horas (hábiles) debe escribirle el vendedor; si no, aviso y escala
 #
 # Las indicaciones en texto libre van en motor2['instructions'] (las mismas que corrige el
 # entrenador), no en answers.
 class Motor2::Functions::Prospects
   include Motor2::Functions::ProspectPrices
+  include Motor2::Functions::ProspectExtras
   KEY = 'prospects'
   OBJECTIVES = {
     'handoff' => 'pasárselo a una persona del equipo para que lo atienda',
@@ -34,7 +38,8 @@ class Motor2::Functions::Prospects
     'appointment' => 'agendarle una cita'
   }.freeze
   TONES = { 'cercano' => ['tu', 'cercano y amable'], 'formal' => ['usted', 'formal y respetuoso'],
-            'directo' => ['tu', 'directo y práctico'] }.freeze
+            'directo' => ['tu', 'directo y práctico'],
+            'empresa' => ['tu', 'el de ASÍ HABLA LA EMPRESA (si dice «de usted», de usted)'] }.freeze
   BUSINESS = { 'business_what' => 'Qué vende', 'business_who' => 'A quién le vende (cliente ideal)',
                'business_coverage' => 'Dónde da servicio', 'business_why' => 'Por qué elegirnos',
                'business_practical' => 'Precios desde, formas de pago y tiempos' }.freeze
@@ -58,11 +63,10 @@ class Motor2::Functions::Prospects
   APPOINTMENT_KINDS = %w[llamada videollamada visita oficina].freeze
   MAX_OBJECTIONS = 15
   MAX_QUESTIONS = 10
-  TEXTS = %w[objective tone questions qualified_when discard_when appointment_kind appointment_location price_source
+  TEXTS = %w[objective tone questions qualified_when discard_when hot_when appointment_kind appointment_location price_source
              business_what business_who business_coverage business_why business_practical].freeze
   IDS = %w[handoff_user_id handoff_team_id client_user_id client_team_id case_type_id appointment_minutes].freeze
   BOOLEANS = %w[only_prospects business_use_catalog].freeze
-  WEEKDAYS = %w[domingo lunes martes miércoles jueves viernes sábado].freeze
 
   # Lo que manda el asistente, limpio (Motor2::Functions::ProspectAnswers).
   def self.sanitize(raw) = Motor2::Functions::ProspectAnswers.call(raw)
@@ -106,6 +110,8 @@ class Motor2::Functions::Prospects
   def skills
     {
       'qualify' => { 'on' => true },
+      'recommend' => { 'on' => answers_doubts? && price_source == 'catalog' },
+      'quote' => { 'on' => quote_mode != 'off' },
       'knowledge' => { 'on' => answers_doubts? },
       'handoff' => { 'on' => true, 'when' => handoff_when }.merge(handoff_target.transform_keys(&:to_s)),
       'appointments' => { 'on' => appointment?, 'kind' => answer(:appointment_kind).presence_in(APPOINTMENT_KINDS) || 'llamada',
@@ -116,18 +122,24 @@ class Motor2::Functions::Prospects
 
   # El puesto y lo que contestó la empresa, en el orden del agente listo de antes.
   def prompt(conversation = nil)
-    blocks = [Motor2::Functions.puesto(KEY), business_block, hours_block(conversation), company_block, questions_block,
+    blocks = [Motor2::Functions.puesto(KEY), business_block, ad_block(conversation), company_block, questions_block,
               objections_block, contact_block, appointment_block, Motor2::Functions::ProspectRules.block(answers)]
     blocks.map { |b| b.to_s.strip }.compact_blank.join("\n\n")
   end
 
-  # [{ number:, ask: }] en orden: las de la lista del asistente, tal cual; en los agentes de antes,
+  # [{ number:, ask:, condition: }] en orden: las de la lista del asistente, tal cual; en los agentes de antes,
   # las armadas prendidas (sin `qualify` guardado, la de «qué necesita») y sus preguntas propias.
+  # «¿Cuántos empleados tienen? [solo si es empresa]» → condition 'es empresa' (Motor2::AnswerExtractor).
   def questions
     list = Array(answer(:question_list)).compact_blank
     list = legacy_questions if list.empty?
-    list.each_with_index.map { |ask, i| { number: i + 1, ask: ask } }
+    list.each_with_index.map do |text, i|
+      condition = text[CONDITION, 1]
+      { number: i + 1, ask: text.sub(CONDITION, '').strip, condition: condition&.strip }.compact
+    end
   end
+
+  CONDITION = /\s*[\[(]\s*solo\s+si\s+([^\])]+)[\])]\s*\z/i
 
   def legacy_questions
     saved = Array(answer(:qualify)).index_by { |q| q['key'].to_s }
@@ -168,30 +180,6 @@ class Motor2::Functions::Prospects
       "#{lines.join("\n")}"
   end
 
-  # El horario de atención de la bandeja (si lo tiene prendido): para «¿abren el domingo?».
-  def hours_block(conversation)
-    inbox = conversation.try(:inbox) || config.inbox
-    return '' unless inbox.respond_to?(:working_hours_enabled?) && inbox.working_hours_enabled?
-
-    days = inbox.working_hours.sort_by { |w| (w.day_of_week + 6) % 7 }.map { |w| "#{WEEKDAYS[w.day_of_week]} #{hours_text(w)}" }
-    ["HORARIO DE ATENCIÓN (#{config.zone.tzinfo.name}): #{days.join('; ')}.", off_hours(inbox)].compact.join("\n")
-  end
-
-  def off_hours(inbox)
-    return unless inbox.respond_to?(:out_of_office?) && inbox.out_of_office?
-
-    'AHORA ESTÁ FUERA DEL HORARIO DE ATENCIÓN: atiéndelo igual, pero si toca pasarlo a una persona dile que le escriben ' \
-      'en cuanto abran.'
-  end
-
-  def hours_text(hours)
-    return 'cerrado' if hours.closed_all_day?
-    return 'todo el día' if hours.open_all_day?
-
-    format('%<oh>02d:%<om>02d a %<ch>02d:%<cm>02d', oh: hours.open_hour.to_i, om: hours.open_minutes.to_i,
-                                                    ch: hours.close_hour.to_i, cm: hours.close_minutes.to_i)
-  end
-
   def company_block
     style = (TONES[answer(:tone)] || TONES['cercano']).last
     <<~TEXT
@@ -213,7 +201,7 @@ class Motor2::Functions::Prospects
       #{lines.join("\n")}
 
       TEMPERATURA: al calificarlo (o pasarlo a una persona) di qué tan listo está:
-      - caliente: lo necesita pronto (este mes) y tiene presupuesto o decide la compra.
+      - caliente: #{answer(:hot_when).presence || 'lo necesita pronto (este mes) y tiene presupuesto o decide la compra'}.
       - tibio: le interesa, pero es para más adelante o falta saber el presupuesto o quién decide.
       - frio: solo está explorando o comparando, sin fecha.
     TEXT

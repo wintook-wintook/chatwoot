@@ -56,6 +56,8 @@ export default {
           tools: data.tools || [],
           decision: data.decision,
           files: data.files || [],
+          labels: data.labels || [],
+          voice: (data.trace?.events || []).find(e => e.kind === 'voz')?.text,
           area: this.areaOf(data.state),
         });
       } catch (e) {
@@ -162,6 +164,22 @@ export default {
             class="block mt-1 text-[11px] text-slate-500"
           >
             {{ t('TEST.FILES', { files: m.files.join(', ') }) }}
+          </span>
+          <span v-if="m.voice" class="block mt-1 text-[11px] text-slate-500">
+            {{ t('TEST.VOICE', { voice: m.voice }) }}
+          </span>
+          <!-- Cómo lo catalogó la IA: las mismas etiquetas que quedan en la conversación. -->
+          <span
+            v-if="(m.labels || []).length"
+            class="flex flex-wrap items-center gap-1 mt-1"
+          >
+            <span
+              v-for="label in m.labels"
+              :key="label"
+              class="px-1.5 py-0.5 text-[10px] rounded bg-white text-slate-600 border border-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600"
+            >
+              #{{ label }}
+            </span>
           </span>
           <span
             v-if="m.decision"

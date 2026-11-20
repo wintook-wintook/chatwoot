@@ -114,5 +114,14 @@ class Motor2::Skills::Data < Motor2::Skills::Base
   def write_contact(contact, data)
     attrs = contact.additional_attributes.to_h.merge({ 'company_name' => data['empresa'], 'city' => data['ciudad'] }.compact)
     contact.update(name: data['nombre'] || contact.name, email: data['correo'] || contact.email, additional_attributes: attrs)
+    link_company(contact, data['empresa'])
+  end
+
+  # Si la empresa que dijo está en Organizaciones (o su correo es de un dominio conocido), se liga (los tres agentes).
+  def link_company(contact, company)
+    return if contact.organization
+
+    org = company.present? ? Motor2::CustomerIdentity.find(config.account, company) : nil
+    org ? contact.update(organization: org) : Motor2::CustomerIdentity.by_domain!(contact)
   end
 end

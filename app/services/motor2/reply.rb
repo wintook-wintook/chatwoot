@@ -18,7 +18,9 @@ class Motor2::Reply
     return opt_out! if ContactTrackings::OptOut.requested_in?(text)
     return if TrackingCampaigns::HandoffAttention.seller_owns?(@conversation)
 
-    ContactTrackings::ProspectReply.call(@tracking, at: @message.created_at)
+    Motor2::FollowUp.revive!(@tracking) # contestó después del último recordatorio
+    # Con seguimiento corto (Motor2::FollowUp), ese manda; si no, el «siguiente toque en 3 días hábiles» de las campañas.
+    ContactTrackings::ProspectReply.call(@tracking, at: @message.created_at) unless Motor2::FollowUp.plan_for(@config.function)
     TrackingCampaigns::ProspectClassifier.call(@tracking, @message)
     @tracking.with_lock { turn }
   end
@@ -95,7 +97,9 @@ class Motor2::Reply
     state.files_sent.concat(result.attachments.pluck(:id)).uniq!
     save_state
     result.after.each(&:call)
+    Motor2::Labels.apply(@conversation, result.labels)
     Motor2::Outcomes.new(@tracking, @conversation, @config).apply(*result.decision) if result.decision
+    Motor2::FollowUp.schedule!(@tracking, @config.function, result.reply) unless result.decision # si deja de contestar
   end
 
   def failed(error)

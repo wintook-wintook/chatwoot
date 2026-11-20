@@ -10,6 +10,8 @@
 #   handoff   (pasar_a_humano)       → nota con el motivo y sus respuestas y se pasa a la persona o equipo
 #   booked (se agendó la cita)       → etiqueta, nota, se asigna a quien la atiende y el embudo pasa a «Cita»
 #   client! (ya es cliente)          → lo pasa a su responsable sin atenderlo como prospecto
+# Al pasarlo a una persona (calificado o pasar_a_humano) arranca el reloj de atención (attend_hours): si nadie le
+# escribe a tiempo, TrackingCampaigns::HandoffSweepJob avisa al vendedor y luego escala a los administradores.
 # Con temperatura (caliente, tibio, frío) queda la etiqueta «prospecto-caliente»… y va en la nota.
 class Motor2::Functions::ProspectOutcomes
   QUALIFIED_LABEL = 'interesado'
@@ -26,6 +28,7 @@ class Motor2::Functions::ProspectOutcomes
 
   def apply(kind, text)
     add_temperature_label if temperature
+    Motor2::ProspectRecord.save(@conversation.contact, @template, state)
     case kind
     when 'qualified' then qualified(text)
     when 'discarded' then discarded(text)
@@ -41,6 +44,7 @@ class Motor2::Functions::ProspectOutcomes
   # tenía a nadie). El embudo pasa a «Cita». El seguimiento sigue: el cliente puede moverla.
   def booked(meeting)
     add_label
+    Motor2::ProspectRecord.save(@conversation.contact, @template, state)
     when_text = Motor2::Skills::Appointments.label(meeting.starts_at.in_time_zone(@function.config.zone))
     note("Cita agendada: #{when_text} con #{meeting.organizer&.name}.\n#{answers_text}".strip)
     @conversation.update!(assignee_id: meeting.organizer_id) if @conversation.assignee_id.blank? && meeting.organizer_id
@@ -54,7 +58,7 @@ class Motor2::Functions::ProspectOutcomes
     owner = @conversation.contact&.effective_owner_id
     assign(owner ? { user_id: owner } : @function.client_target)
     who = @conversation.reload.assignee&.name
-    Motor2::Delivery.send_reply(@tracking, @conversation, greeting(who))
+    Motor2::Delivery.send_reply(@tracking, @conversation, Motor2::VoiceText.call(@function.config, greeting(who)))
     org = @conversation.contact&.organization
     note("Es cliente#{" (#{org.name})" if org}: se pasó a #{who || 'una persona del equipo'}.")
     @tracking.mark_objective_met!
@@ -87,6 +91,7 @@ class Motor2::Functions::ProspectOutcomes
     else
       note("Prospecto calificado.\n#{detail}")
       assign(@function.handoff_target)
+      Motor2::AttendClock.start(@tracking, @conversation, @function)
       finish('qualified', summary)
     end
   end
@@ -102,6 +107,7 @@ class Motor2::Functions::ProspectOutcomes
   def handed_off(reason)
     note(["Pasa a una persona: #{reason}", answers_text].compact_blank.join("\n"))
     assign(@function.handoff_target)
+    Motor2::AttendClock.start(@tracking, @conversation, @function)
     @tracking.update_columns(outcome: 'handed_off', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     @tracking.pause!
   end

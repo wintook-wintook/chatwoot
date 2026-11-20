@@ -49,6 +49,7 @@ RSpec.describe Motor2::Functions::CampaignSeller do
   before do
     create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled', settings: { 'api_key' => 'sk-test' })
     allow_any_instance_of(Motor2::AnswerCheck).to receive_messages(answers?: true, about_business?: true) # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(Motor2::AnswerExtractor).to receive(:call).and_return({}) # rubocop:disable RSpec/AnyInstance
     allow(TrackingCampaigns::ProspectClassifier).to receive(:call)
   end
 
@@ -129,6 +130,46 @@ RSpec.describe Motor2::Functions::CampaignSeller do
     expect(tracking.reload.motor2_state['survey'].keys).to eq(%w[1 2])
     expect(tracking.status).to eq('objective_met')
     expect(CaseTicket.find_by(contact: contact)).to have_attributes(priority: 'high', assignee_id: seller.id)
+  end
+
+  describe 'lo que comparten los tres agentes' do
+    it 'deja etiquetas de cómo terminó (le interesa / no le interesa)' do
+      campaign_tracking
+      stub_model(tool_call('no_le_interesa', { motivo: 'No lo necesita' }), answer('Gracias, ¡buen día!'))
+      reply_to(incoming('no gracias'))
+      expect(conversation.reload.label_list).to include('no-le-interesa')
+    end
+
+    it 'con seguimiento corto: si contesta y se queda a media plática, el agente lo retoma (no «3 días hábiles»)' do
+      templated = save_agent(settings.merge('follow_up' => { 'nudges' => 2 }), name: 'Con seguimiento')
+      tracking = campaign_tracking(templated)
+      stub_model(answer('Es de 20 horas. ¿Te late que te pase los horarios?'))
+      message = incoming('¿cuántas horas dura?')
+      expect { reply_to(message) }.to have_enqueued_job(Motor2::FollowUpJob).with(tracking.id, message.id, 0)
+      expect(tracking.reload).to have_attributes(status: 'active', max_attempts: tracking.max_attempts)
+    end
+
+    it 'cotizar y mandarla: se la manda, avisa y a los días le pregunta si la revisó' do
+      account.case_types.create!(name: 'Ventas', case_class: :commercial)
+      account.catalog_items.create!(name: 'Capacitación', price: 1500, kind: :service)
+      quoting = save_agent(settings.merge('quote' => { 'mode' => 'send', 'follow_days' => 2 }, 'price_source' => 'catalog'),
+                           name: 'Con cotización')
+      tracking = campaign_tracking(quoting)
+      stub_model(tool_call('cotizar', { partidas: [{ producto: 'capacitación', cantidad: 2 }] }), answer('Listo, te la mandé.'))
+      expect { reply_to(incoming('mándame la cotización para 2')) }.to have_enqueued_job(Motor2::QuoteFollowUpJob)
+
+      quote = account.quotes.last
+      expect(quote).to have_attributes(status: 'sent')
+      Motor2::QuoteFollowUpJob.perform_now(tracking.id, quote.id)
+      expect(conversation.messages.outgoing.where(private: false).last.content).to include('¿Pudiste revisar la cotización', quote.folio)
+    end
+
+    it 'métricas: de los que contestaron, a cuántos les interesó' do
+      campaign_tracking.update!(outcome: 'relayed: Prospectos')
+      incoming('me interesa')
+      metrics = Motor2::AgentMetrics.new(agent).call
+      expect(metrics).to include(kind: 'campaign_seller', total: 1, rate: 100)
+    end
   end
 
   describe 'imágenes y archivos' do

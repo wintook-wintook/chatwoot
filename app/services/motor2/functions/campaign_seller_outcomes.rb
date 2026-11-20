@@ -82,6 +82,7 @@ class Motor2::Functions::CampaignSellerOutcomes
   def handed_off(reason)
     note("Pasa a una persona: #{reason}")
     assign(@function.handoff_target)
+    Motor2::AttendClock.start(@tracking, @conversation, @function)
     @tracking.update_columns(outcome: 'handed_off', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     @tracking.pause!
   end

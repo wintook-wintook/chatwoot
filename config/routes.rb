@@ -164,6 +164,10 @@ Rails.application.routes.draw do
               get :export
               post :import
             end
+            member do
+              post :image
+              delete :image, action: :remove_image
+            end
           end
           resources :agent_bots, only: [:index, :create, :show, :update, :destroy] do
             delete :avatar, on: :member
@@ -635,11 +639,14 @@ Rails.application.routes.draw do
           resources :ready_agents, only: [:index, :create, :update, :destroy] do
             post :test, on: :collection # chat de prueba (no guarda ni manda nada)
             post :matrix, on: :collection # «Atención a clientes»: probar los ejemplos sí/no de las áreas
+            get :metrics, on: :member # «Atención a prospectos»: cómo terminan, dónde se van y de qué anuncio vienen
+            post :suggest, on: :collection # ejemplos por área o preguntas para calificar, según «Tu negocio»
           end
           resources :ready_agent_sessions, only: [:index] do
             member do
               patch :pause
               patch :resume
+              patch :cancel_follow_up # «no le escribas más»: alguien del equipo lo va a atender
             end
           end
           resources :case_types, only: [:index, :create, :update, :destroy] do

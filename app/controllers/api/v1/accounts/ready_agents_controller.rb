@@ -28,7 +28,7 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
   ROLES = %w[user assistant].freeze
 
   before_action :require_admin
-  before_action :set_agent, only: %i[update destroy]
+  before_action :set_agent, only: %i[update destroy metrics]
 
   def index
     render json: { catalog: catalog, agents: function_agents.order(:id).map { |t| Motor2::Functions::AgentJson.call(t) },
@@ -68,6 +68,18 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
     render json: { rows: Motor2::TriageMatrix.new(Current.account, function.areas).call }
   rescue ArgumentError => e
     render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # Ejemplos por área («Atención a clientes») o preguntas para calificar («Atención a prospectos») según su negocio.
+  def suggest
+    business = { what: params[:business_what].to_s.first(1000), who: params[:business_who].to_s.first(1000) }
+    render json: Motor2::BusinessSuggestions.new(account: Current.account)
+                                            .call(kind: params[:kind], business: business, areas: Array(params[:areas]).map(&:to_s))
+  end
+
+  # «Cómo le va» de cualquiera de los tres agentes (Motor2::AgentMetrics).
+  def metrics
+    render json: Motor2::AgentMetrics.new(@agent).call
   end
 
   def test

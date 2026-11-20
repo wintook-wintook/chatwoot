@@ -53,14 +53,26 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
 
   def call(name, args)
     case name
-    when 'ver_horarios' then slots(args['desde'])
-    when 'agendar_cita' then book(args['inicio'], args['notas'])
+    when 'ver_horarios' then missing_contact || slots(args['desde'])
+    when 'agendar_cita' then missing_contact || book(args['inicio'], args['notas'])
     when 'mover_cita' then move(args['inicio'])
     else cancel(args['motivo'])
     end
   end
 
   private
+
+  # Los datos obligatorios del contacto (Atención a prospectos) van antes de la cita: después ya no los da.
+  def missing_contact
+    function = config.function
+    return nil unless function.respond_to?(:missing_contact)
+
+    missing = function.missing_contact(@turn.conversation&.contact, @turn.noted_contact)
+    return unless missing.any?
+
+    { error: "Antes de ofrecerle horarios pídele su #{missing.join(' y ')} (con naturalidad, en una pregunta) y guárdalo con " \
+             'actualizar_contacto.' }
+  end
 
   def integration_ids
     @integration_ids ||= begin
@@ -120,10 +132,16 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
     return { ok: true, prueba: true, cita: local(slot[:slot]), con: slot[:agent_name] } if test?
 
     created = create_meeting(slot, notes)
+    after_booking(created)
+    { ok: true, cita: local(created.starts_at), con: created.organizer&.name }
+  end
+
+  # Después de mandar el mensaje: los archivos de la cita, la nota y etiqueta, y el recordatorio.
+  def after_booking(created)
     trace.event(:cita, local(created.starts_at))
     @turn.after_send { booked_files }
     @turn.after_send { Motor2::Outcomes.new(@turn.tracking, @turn.conversation, config).booked(created) }
-    { ok: true, cita: local(created.starts_at), con: created.organizer&.name }
+    notice(created)
   end
 
   def move(from)
@@ -133,10 +151,15 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
     return slot if slot[:error]
     return { ok: true, prueba: true, cita: local(slot[:slot]) } if test?
 
+    reschedule(slot)
+    { ok: true, cita: local(meeting.starts_at) }
+  end
+
+  def reschedule(slot)
     meeting.update!(starts_at: slot[:slot], ends_at: slot[:end_time])
     Cases::MeetingSyncJob.perform_later(meeting.id, 'update', meeting.saved_changes.except('updated_at'))
     trace.event(:cita, "movida a #{local(slot[:slot])}")
-    { ok: true, cita: local(meeting.starts_at) }
+    notice(meeting)
   end
 
   def cancel(reason)
@@ -147,6 +170,12 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
     Cases::MeetingSyncJob.perform_later(meeting.id, 'cancel')
     trace.event(:cita, 'cancelada')
     { ok: true }
+  end
+
+  # El recordatorio y el «¿otro horario?» si no llega (Motor2::AppointmentNotice), con la hora nueva.
+  def notice(scheduled)
+    tracking = @turn.tracking
+    @turn.after_send { Motor2::AppointmentNotice.schedule!(tracking, scheduled) } if tracking
   end
 
   def parse(value)

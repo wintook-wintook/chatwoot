@@ -416,6 +416,8 @@ es:
     not_found: 'Producto o servicio no encontrado'
     import:
       no_file: 'Adjunta el archivo CSV del catálogo.'
+    image:
+      invalid: 'La foto debe ser PNG, JPG o WEBP de hasta 5 MB.'
   case_tasks:
     on_close:
       kept: 'Se conservó %{count} tarea(s) sin caso.'

@@ -43,7 +43,7 @@ class Motor2::Prompt
     scope = conversation.messages.where(private: false, message_type: %i[incoming outgoing])
     scope = scope.where(id: ..upto.id) if upto
     scope.reorder(created_at: :desc).limit(HISTORY).to_a.reverse.filter_map do |m|
-      text = ContactTrackings::AttachmentText.message_text(m).presence
+      text = Motor2::MessageText.call(m).presence # con lo que dicen sus notas de voz e imágenes
       next if text.blank?
 
       { role: m.incoming? ? 'user' : 'assistant', content: text.first(MESSAGE_CHARS) }
@@ -67,11 +67,29 @@ class Motor2::Prompt
   def function = @config.function&.prompt(@turn.conversation)
 
   def company
-    parts = [AgentBase::CompanyVoice.block(@account).presence, AgentBase::BusinessData.block(@account, skip: own_business).presence]
+    parts = [voice_block, AgentBase::BusinessData.block(@account, skip: own_business).presence]
     parts << "DATOS DE ESTE AGENTE:\n#{@config.business.map { |r| "- #{r['label']}: #{r['value']}" }.join("\n")}" if @config.business.any?
     parts << "NUNCA:\n#{@config.never}" if @config.never.present?
     parts << "INSTRUCCIONES DE LA EMPRESA (si contradicen lo anterior, gana esto):\n#{@config.instructions}" if @config.instructions.present?
     parts.compact.join("\n\n")
+  end
+
+  # Agentes listos: la de la empresa con lo de este agente, y manda; los demás, la general como siempre.
+  def voice_block
+    return AgentBase::CompanyVoice.block(@account).presence unless @config.function
+
+    values = @config.voice
+    note_voice(values)
+    AgentBase::CompanyVoice.block(@account, values, strong: true).presence
+  end
+
+  # Para el chat de prueba: qué tomó («Cómo habla tu empresa», y qué cambió este agente).
+  def note_voice(values)
+    used = values.compact_blank.keys.map { |k| AgentBase::CompanyVoice::FIELDS[k] }
+    return if used.empty?
+
+    own = @config.own_voice_fields.map { |k| AgentBase::CompanyVoice::FIELDS[k] }
+    @turn.trace.event(:voz, "Cómo habla tu empresa: #{used.join(', ')}#{" (de este agente: #{own.join(', ')})" if own.any?}")
   end
 
   # Lo que el agente de una función ya trae en su «Tu negocio» no se repite de los datos de la empresa.
@@ -90,6 +108,7 @@ class Motor2::Prompt
     conversation = @turn.conversation
     lines = ["Ahora: #{Time.current.in_time_zone(@config.zone).strftime('%Y-%m-%d %H:%M (%A)')}. Canal: #{channel}."]
     lines << "CLIENTE: #{contact_line(conversation&.contact)}"
+    lines << Motor2::InboxHours.block(conversation.try(:inbox) || @config.inbox, @config.zone) if @config.function
     lines << AgentBase::ContactNote.block(conversation&.contact)
     lines.concat(@skills.map(&:memory))
     lines.compact_blank.join("\n")

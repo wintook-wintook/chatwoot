@@ -20,16 +20,18 @@ class Motor2::Runner < Cases::Ai::BaseService
   include Motor2::QuestionGuard
   include Motor2::ReplyChecks
   include Motor2::AreaChecks
+  include Motor2::SupportChecks
+  include Motor2::TurnFiles
   MAX_ROUNDS = 6
   MAX_TOKENS = 700
   NO_MESSAGE = '[SIN_MENSAJE]'
   MONEY = /(?:\$\s?\d[\d,.]*|\d[\d,.]*\s?(?:pesos|mxn|usd|dólares|%))/i
 
-  Result = Struct.new(:reply, :decision, :trace, :error, :attachments, :after, keyword_init: true)
+  Result = Struct.new(:reply, :decision, :trace, :error, :attachments, :after, :labels, keyword_init: true)
   MAX_FILES = 5
 
   attr_reader :config, :state, :trace, :conversation, :tracking, :canned_used, :seen, :noted_contact, :evidence, :last_customer,
-              :attachments
+              :attachments, :decision
 
   # opts: conversation:, tracking:, history: (chat de prueba), mode: :reply | :attempt, attempt: [n, total],
   #       welcome: (bienvenida combinada: va tal cual al inicio del mensaje; el modelo no vuelve a saludar)
@@ -55,6 +57,9 @@ class Motor2::Runner < Cases::Ai::BaseService
 
   def test? = !@test_history.nil?
 
+  # Un recordatorio (el cliente no ha contestado): Motor2::Attempt / Motor2::FollowUp.
+  def attempt? = @mode == :attempt
+
   # Las habilidades llaman esto: la decisión se aplica después de mandar el mensaje.
   def decide(kind, text)
     @decision = [kind, text.to_s.strip.first(500)]
@@ -62,18 +67,6 @@ class Motor2::Runner < Cases::Ai::BaseService
 
   # Este turno no lleva mensaje (p. ej. el relevo del Vendedor de campaña: contesta quien sigue).
   def silence! = (@silent = true)
-
-  # Un archivo del agente que va con la respuesta (máximo 5; no se repite en el mismo mensaje).
-  def attach(name)
-    file = @config.attachments.where('LOWER(name) = ?', name.to_s.downcase).first
-    return false unless file&.file&.attached?
-    return true if @attachments.any? { |a| a[:id] == file.id }
-    return false if @attachments.size >= MAX_FILES
-
-    @attachments << { id: file.id, name: file.name, signed_id: file.file.blob.signed_id }
-    @trace.event(:archivo, file.name)
-    true
-  end
 
   # Lo que va después de mandar el mensaje (archivos de la cita o del caso, reglas del caso).
   def after_send(&block) = @after << block
@@ -86,8 +79,8 @@ class Motor2::Runner < Cases::Ai::BaseService
     content = first_answer(messages)
     return Result.new(error: ['El modelo no respondió.', @error].compact.join(' — '), trace: @trace.to_h) if content.nil?
 
-    reply = @silent ? '' : with_welcome(review(messages, clean(content)))
-    Result.new(reply: reply, decision: @decision, trace: @trace.to_h, attachments: @attachments, after: @after)
+    reply = @silent ? '' : with_welcome(finish(review(messages, clean(content))))
+    Result.new(reply: reply, decision: @decision, trace: @trace.to_h, attachments: @attachments, after: @after, labels: labels)
   end
 
   private
@@ -235,7 +228,8 @@ class Motor2::Runner < Cases::Ai::BaseService
   def digits(text) = text.scan(/\d[\d,.]*/).to_set { |n| amount_key(n) }
 
   # «$1,200», «1,200.0» y «1200.00» son el mismo monto: sin separadores ni centavos en cero.
-  def amount_key(text) = text.to_s[/\d[\d,.]*/].to_s.sub(/[.,]0{1,2}\z/, '').gsub(/\D/, '')
+  # El signo que sigue al número («245000.0,» en un JSON, «$245,000.» al final de la frase) no es parte del monto.
+  def amount_key(text) = text.to_s[/\d[\d,.]*/].to_s.sub(/[.,]+\z/, '').sub(/[.,]0{1,2}\z/, '').gsub(/\D/, '')
 
   def guard_links(text)
     kept, removed = KnowledgeBase::LinkGuard.call(text, @seen.join("\n"))
