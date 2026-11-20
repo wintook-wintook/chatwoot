@@ -1094,7 +1094,7 @@ class KnowledgeBaseResponseService
     answer  = ask_openai_with_history(question, result[:context], history)
     return false if answer.blank?
 
-    answer         = strip_echoed_sources(answer)
+    answer         = strip_echoed_sources(answer, bare_links: true)
     answer, footer = split_declared_source(answer, result[:sources], question)
     return false if answer.blank?
 
@@ -1125,7 +1125,7 @@ class KnowledgeBaseResponseService
     answer  = ask_openai_with_history(question, result[:context], history)
     return false if answer.blank?
 
-    answer         = strip_echoed_sources(answer)
+    answer         = strip_echoed_sources(answer, bare_links: true)
     answer, footer = split_declared_source(answer, result[:sources], question)
     return false if answer.blank?
 
@@ -1430,11 +1430,17 @@ class KnowledgeBaseResponseService
   # generando su propio link — a veces el equivocado — antes de que agreguemos el
   # nuestro. Lo quitamos del texto del modelo para mostrar un solo link, siempre
   # el que resuelve split_declared_source.
-  def strip_echoed_sources(text)
+  #
+  # Los renglones que son solo un link se quitan únicamente en las respuestas del foro
+  # (bare_links: true), que son las que llevan footer. En las demás (predefinidas, hojas)
+  # el link es parte de la información: «¿Tienes fotos?» perdía la liga del catálogo y
+  # «¿Dónde están?» la de Maps (Seminuevos Valera, 20/11/2026). Las ligas que el modelo
+  # inventó las sigue quitando guard_links.
+  def strip_echoed_sources(text, bare_links: false)
     text.split("\n").reject do |line|
       line.match?(/^\s*📚/) ||
         line.match?(/^\s*fuentes relacionadas:?\s*$/i) ||
-        line.match?(%r{^\s*[-*]?\s*https?://\S+\s*$}i)
+        (bare_links && line.match?(%r{^\s*[-*]?\s*https?://\S+\s*$}i))
     end.join("\n").gsub(/\n{3,}/, "\n\n").strip
   end
 
