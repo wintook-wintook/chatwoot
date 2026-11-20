@@ -117,6 +117,11 @@ export default {
     &.medium {
       @apply max-w-[80%] w-[56.25rem];
     }
+
+    // Asistentes de los agentes listos: formulario con pestañas y chat de prueba lado a lado.
+    &.large {
+      @apply max-w-[95%] w-[75rem];
+    }
     // .content-box {
     //   @apply h-auto p-0;
     // }

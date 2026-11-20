@@ -16,6 +16,8 @@ import ReadyAgentChat from './ReadyAgentChat.vue';
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 import AgentFiles from './AgentFiles.vue';
 import SourceOrder, { addSource } from './SourceOrder.vue';
+import WizardTabs from './WizardTabs.vue';
+import SubTabs from './SubTabs.vue';
 import AgentVoice from './AgentVoice.vue';
 import FollowUpPlan from './FollowUpPlan.vue';
 import AfterHandoff from './AfterHandoff.vue';
@@ -27,11 +29,9 @@ const STEPS = [
   'business',
   'areas',
   'knows',
-  'files',
   'talk',
   'follow',
-  'instructions',
-  'test',
+  'files',
 ];
 const AREA_KEYS = ['support', 'sales', 'admin', 'other'];
 const MAX_EXAMPLES = 20;
@@ -153,6 +153,8 @@ export default {
     AfterHandoff,
     QuoteMode,
     AgentVoice,
+    WizardTabs,
+    SubTabs,
   },
   props: {
     show: { type: Boolean, default: false },
@@ -167,6 +169,7 @@ export default {
   emits: ['close', 'saved'],
   data() {
     return {
+      followTab: 'reminders', // pestañas dentro de «Seguimiento»
       form: blank(),
       saving: false,
       step: 'agent',
@@ -195,6 +198,9 @@ export default {
     },
     tones() {
       return ['cercano', 'formal', 'directo', 'empresa'];
+    },
+    stepLabels() {
+      return Object.fromEntries(STEPS.map(s => [s, this.c(`STEPS.${s}`)]));
     },
     stepIndex() {
       return STEPS.indexOf(this.step);
@@ -228,6 +234,15 @@ export default {
       const list =
         this.$store.getters['inboxes/getWhatsAppTemplates'](inbox.id) || [];
       return [...new Set(list.map(item => item.name))];
+    },
+    // Pestañas de «Qué atiende»: el nombre del área (y «apagada» si no la atiende).
+    areaTabs() {
+      return AREA_KEYS.map(key => ({
+        key,
+        label: this.area(key).on
+          ? this.areaTitle(key)
+          : `${this.areaTitle(key)} ${this.c('AREA_OFF')}`,
+      }));
     },
     areasOn() {
       return AREA_KEYS.filter(k => this.form.settings.areas[k].on);
@@ -542,7 +557,7 @@ export default {
 </script>
 
 <template>
-  <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
+  <woot-modal :show="show" size="large" :on-close="() => $emit('close')">
     <div class="flex flex-col h-[85vh] min-h-0">
       <woot-modal-header
         :header-title="
@@ -552,6 +567,13 @@ export default {
         "
         :header-content="c('SUBTITLE')"
       />
+      <WizardTabs
+        class="px-4 md:px-8"
+        :steps="steps"
+        :current="step"
+        :labels="stepLabels"
+        @go="go"
+      />
       <div
         class="grid flex-1 min-h-0 grid-cols-1 gap-5 px-4 pb-4 overflow-y-auto md:px-8 md:grid-cols-2 md:grid-rows-1 md:overflow-hidden"
       >
@@ -559,22 +581,6 @@ export default {
           class="ready-form flex flex-col gap-2.5 overflow-y-auto !p-0 !pr-1 !self-stretch"
           @submit.prevent="isLast || agent ? save() : next()"
         >
-          <ol class="flex flex-wrap gap-1 p-0 m-0 list-none">
-            <li v-for="(s, i) in steps" :key="s">
-              <button
-                type="button"
-                class="px-2 py-0.5 text-xs border rounded-full"
-                :class="
-                  s === step
-                    ? 'border-woot-500 bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200'
-                    : 'border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400'
-                "
-                @click="go(s)"
-              >
-                {{ t('STEPS.NUMBERED', { n: i + 1, step: c(`STEPS.${s}`) }) }}
-              </button>
-            </li>
-          </ol>
           <p class="m-0 text-xs text-slate-500">
             {{ c(`STEP_HINTS.${step}`) }}
           </p>
@@ -683,38 +689,29 @@ export default {
             <p v-if="!areasOn.length" class="m-0 text-xs text-red-600">
               {{ c('AREAS_NONE') }}
             </p>
+            <!-- Las áreas en pestañas (las mismas de Kontrolya); dentro, «Atender esta área» -->
+            <SubTabs v-model="openArea" :tabs="areaTabs" />
             <section
               v-for="key in areaKeys"
+              v-show="openArea === key"
               :key="key"
-              class="border rounded-md border-slate-100 dark:border-slate-700"
+              class="flex flex-col gap-2"
             >
-              <header class="flex items-center gap-2 px-2 py-1.5">
+              <label class="flex items-start gap-2 text-sm">
                 <input
                   v-model="area(key).on"
                   type="checkbox"
-                  class="!m-0"
+                  class="!m-0 mt-1"
                   :aria-label="areaTitle(key)"
                 />
-                <button
-                  type="button"
-                  class="flex-1 text-sm font-medium text-left text-slate-800 dark:text-slate-100"
-                  @click="openArea = openArea === key ? '' : key"
-                >
-                  {{ areaTitle(key) }}
-                  <span class="block text-xs font-normal text-slate-500">
+                <span>
+                  <span class="font-medium">{{ c('AREA_ON') }}</span>
+                  <span class="block text-xs text-slate-500">
                     {{ c(`AREAS.${key}.ABOUT`) }}
                   </span>
-                </button>
-                <fluent-icon
-                  :icon="openArea === key ? 'chevron-up' : 'chevron-down'"
-                  size="14"
-                  class="text-slate-400"
-                />
-              </header>
-              <div
-                v-if="openArea === key && area(key).on"
-                class="flex flex-col gap-2 px-2 pb-2"
-              >
+                </span>
+              </label>
+              <div v-if="area(key).on" class="flex flex-col gap-2 pl-1">
                 <template v-if="key === 'other'">
                   <label class="block">
                     <span class="field-label">{{ c('OTHER.NAME') }}</span>
@@ -1166,12 +1163,21 @@ export default {
 
           <!-- Seguimiento: si deja de contestar, el plazo del equipo y el recordatorio de la cita -->
           <template v-if="step === 'follow'">
+            <SubTabs
+              v-model="followTab"
+              :tabs="[
+                { key: 'reminders', label: t('SUBTABS.REMINDERS') },
+                { key: 'handoff', label: t('SUBTABS.HANDOFF') },
+              ]"
+            />
             <FollowUpPlan
+              v-if="followTab === 'reminders'"
               v-model="form.settings.follow_up"
               :templates="waTemplates"
               kind="customers"
             />
             <AfterHandoff
+              v-else
               v-model="form.settings"
               :templates="waTemplates"
               :appointments="takesAppointments"
@@ -1179,7 +1185,7 @@ export default {
           </template>
 
           <!-- 6 · Indicaciones -->
-          <template v-if="step === 'instructions'">
+          <template v-if="step === 'talk'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.INSTRUCTIONS') }}</span>
               <textarea
@@ -1191,17 +1197,24 @@ export default {
           </template>
 
           <!-- 7 · Pruébalo: la matriz y el chat -->
-          <template v-if="step === 'test'">
-            <p class="m-0 text-sm text-slate-700 dark:text-slate-200">
+          <!-- Al final: listo para guardar; en «Qué atiende»: probar la matriz de las áreas -->
+          <template v-if="isLast || step === 'areas'">
+            <p
+              v-if="isLast"
+              class="m-0 text-sm text-slate-700 dark:text-slate-200"
+            >
               {{ t('STEP_TEST.READY', { name: form.name.trim() || '—' }) }}
             </p>
             <p
-              v-if="!form.enabled"
+              v-if="isLast && !form.enabled"
               class="m-0 text-xs text-amber-700 dark:text-amber-400"
             >
               {{ t('STEP_TEST.OFF') }}
             </p>
-            <div class="p-2 rounded-md bg-slate-25 dark:bg-slate-800">
+            <div
+              v-if="step === 'areas'"
+              class="p-2 rounded-md bg-slate-25 dark:bg-slate-800"
+            >
               <div class="flex items-center justify-between gap-2">
                 <span
                   class="text-sm font-medium text-slate-800 dark:text-slate-100"
@@ -1274,12 +1287,7 @@ export default {
         >
           {{ t('NEXT') }}
         </woot-button>
-        <woot-button
-          v-if="isLast || agent"
-          :is-loading="saving"
-          :disabled="!canSave"
-          @click="save"
-        >
+        <woot-button :is-loading="saving" :disabled="!canSave" @click="save">
           {{ t('SAVE') }}
         </woot-button>
       </div>

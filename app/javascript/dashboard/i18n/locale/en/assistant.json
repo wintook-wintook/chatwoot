@@ -786,7 +786,7 @@
       "knows": "What it knows",
       "questions": "What to ask",
       "talk": "How it talks",
-      "qualify": "When it qualifies",
+      "qualify": "When qualified",
       "after": "When qualified",
       "objections": "Objections",
       "instructions": "Instructions",
@@ -798,13 +798,14 @@
       "business": "What the agent must know to explain and to discard people outside your area or offer.",
       "knows": "Where it looks up what it is asked. Canned responses are always on; tick the other sources this agent uses.",
       "questions": "The questions it asks to qualify the lead, exactly as written and in this order (change it with ↑ ↓), one per message. Some examples come in: remove them, edit them or add your own.",
-      "talk": "Its welcome and what it does when the customer asks something, it can't find the answer, they write about something unrelated or ask for a person. It always goes back to the pending question, bridging («If you like, let's continue: just 2 more questions…»).",
-      "qualify": "With this it knows when to pass it to your team and when it is not for you.",
+      "talk": "Its voice (How your company talks), welcome, what it does when they ask something, it finds no answer or they ask for a person, and your free-text instructions (below).",
+      "qualify": "When it qualifies or discards, what it does when qualified (who gets it, appointments, quotes) and frequent objections.",
       "after": "What it does when the lead qualifies, who gets it and which details it collects first.",
       "objections": "What people say to stall the purchase and how to answer. It uses the idea in its own words and never invents discounts.",
       "instructions": "Anything else it should know or do (optional). If it contradicts the above, this wins.",
       "test": "Try it in the chat on the right as if you were a lead and save it if you like it.",
-      "files": "What it can send and when."
+      "files": "The images and files it sends and when. Test in the chat on the right and save.",
+      "follow": "If they stop answering: reminders, templates and the timeline of what will happen."
     },
     "STEP_TEST": {
       "READY": "«{name}» is ready. When saved it goes to the agents list labeled «Lead handling».",
@@ -893,10 +894,11 @@
         "business": "The basics of your business, so it explains in your words.",
         "areas": "What it handles and who gets it. Each message is classified by what the customer wants, not by a single word: the examples teach it.",
         "knows": "Where it looks up answers. It only answers with what it finds there.",
-        "talk": "How it greets, and what it does when someone asks for a person or is not a customer.",
+        "talk": "Its voice (How your company talks), welcome, what it does if they ask for a person or are not a customer, and your free-text instructions (below).",
         "instructions": "Anything else it should know or do (optional).",
         "test": "Check every example lands in its area and chat with it as your customer.",
-        "files": "What it can send and when."
+        "files": "The images and files it sends and when. Test in the chat on the right and save.",
+        "follow": "If they stop answering, how soon your team must write and appointment reminders."
       },
       "AREAS": {
         "support": {
@@ -1027,7 +1029,9 @@
           "all": "every day"
         },
         "HOURS_HINT": "Outside those hours, it takes what they need and says the team will write as soon as it opens. Without hours, it always serves the same."
-      }
+      },
+      "AREA_ON": "Handle this area",
+      "AREA_OFF": "(off)"
     },
     "CAMPAIGN": {
       "SUBTITLE": "Knocks on the door in your campaigns: the campaign sends the first message and it follows up when they reply. It sparks interest, answers the first questions and hands the interested ones over.",
@@ -1049,10 +1053,11 @@
         "offer": "What the campaign is for and what you offer. It only says what you put here or what it finds in your sources.",
         "channel": "Where it writes and how many touches. On WhatsApp, each touch uses an approved template.",
         "knows": "The basics of your business and where it looks up answers.",
-        "talk": "Who gets the interested contact and how it answers objections.",
+        "talk": "Its voice (How your company talks), who gets the relay, objections, quotes and your free-text instructions (below).",
         "instructions": "Anything else it should know or do (optional).",
         "test": "The chat starts with the campaign message: reply as your contact would.",
-        "files": "What it can send and when."
+        "files": "The images and files it sends and when. Test in the chat on the right and save.",
+        "follow": "If they reply and go quiet mid-conversation: reminders and timeline; handoff time and appointment reminder."
       },
       "PURPOSE": "What is the campaign for?",
       "PURPOSES": {
@@ -1170,6 +1175,13 @@
       "COMPANY": "Like the company",
       "ONLY_HERE": "Only for this agent",
       "NOT_SET": "(empty in the company)"
+    },
+    "SUBTABS": {
+      "WHEN": "When it qualifies",
+      "AFTER": "What it does",
+      "OBJECTIONS": "Objections",
+      "REMINDERS": "If they stop answering",
+      "HANDOFF": "Team time and appointments"
     }
   }
 }

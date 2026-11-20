@@ -786,7 +786,7 @@
       "knows": "Qué sabe",
       "questions": "Qué le preguntas",
       "talk": "Cómo platica",
-      "qualify": "Cuándo califica",
+      "qualify": "Al calificar",
       "after": "Al calificar",
       "objections": "Objeciones",
       "instructions": "Indicaciones",
@@ -798,13 +798,14 @@
       "business": "Lo que el agente debe saber para explicar y para descartar a quien está fuera de zona o de lo que vendes.",
       "knows": "Dónde busca lo que le preguntan. Las respuestas predefinidas van siempre; marca las demás fuentes que use este agente.",
       "questions": "Las preguntas que hace para calificarlo, tal cual las escribas y en este orden (cámbialo con ↑ ↓), una por mensaje. Vienen unas de ejemplo: quítalas, cámbialas o agrega las tuyas.",
-      "talk": "Su bienvenida y qué hace cuando el cliente pregunta algo, no encuentra la respuesta, escribe algo que no es de tu negocio o pide una persona. Siempre regresa a la pregunta pendiente, conectando («Si te parece, seguimos: solo me faltan 2 preguntas…»).",
-      "qualify": "Con esto sabe cuándo pasarlo a tu equipo y cuándo no es para ti.",
+      "talk": "Su voz (Cómo habla tu empresa), la bienvenida, qué hace cuando pregunta algo, no encuentra la respuesta o pide una persona, y tus indicaciones en texto libre (abajo).",
+      "qualify": "Cuándo califica y cuándo se descarta, qué hace al calificarlo (a quién se lo pasa, citas, cotizaciones) y las objeciones frecuentes.",
       "after": "Qué hace cuando califica, a quién se lo pasa y qué datos junta antes.",
       "objections": "Lo que suelen decir para frenar la compra y cómo contestarlo. Usa la idea con sus palabras y no inventa descuentos.",
       "instructions": "Algo más que deba saber o hacer (opcional). Si contradice lo anterior, gana esto.",
       "test": "Prueba en el chat de la derecha como si fueras un prospecto y, si te gusta, guarda.",
-      "files": "Lo que puede mandar y cuándo."
+      "files": "Las imágenes y archivos que manda y cuándo. Prueba en el chat de la derecha y guarda.",
+      "follow": "Si deja de contestar: los recordatorios, las plantillas y la línea de tiempo de lo que va a pasar."
     },
     "STEP_TEST": {
       "READY": "«{name}» está listo. Al guardar queda en la lista de agentes con la etiqueta «Atención a prospectos».",
@@ -893,10 +894,11 @@
         "business": "Lo básico de tu negocio, para que explique con tus palabras.",
         "areas": "Lo que atiende y a quién se lo pasa. Cada mensaje se clasifica por lo que el cliente quiere lograr, no por una palabra suelta: los ejemplos le enseñan.",
         "knows": "Dónde busca lo que le preguntan. Solo contesta con lo que encuentre ahí.",
-        "talk": "Cómo saluda, qué hace cuando pide una persona y cuando quien escribe no es cliente.",
+        "talk": "Su voz (Cómo habla tu empresa), la bienvenida, qué hace si pide una persona o no es cliente, y tus indicaciones en texto libre (abajo).",
         "instructions": "Algo más que deba saber o hacer (opcional).",
         "test": "Prueba que cada ejemplo caiga en su área y platica con él como si fueras tu cliente.",
-        "files": "Lo que puede mandar y cuándo."
+        "files": "Las imágenes y archivos que manda y cuándo. Prueba en el chat de la derecha y guarda.",
+        "follow": "Si deja de contestar, el plazo para que tu equipo le escriba y el recordatorio de las citas."
       },
       "AREAS": {
         "support": {
@@ -1027,7 +1029,9 @@
           "all": "todos los días"
         },
         "HOURS_HINT": "Fuera de ese horario, toma lo que necesita y le dice que el equipo le escribe en cuanto abra. Sin horario, atiende siempre igual."
-      }
+      },
+      "AREA_ON": "Atender esta área",
+      "AREA_OFF": "(apagada)"
     },
     "CAMPAIGN": {
       "SUBTITLE": "Toca la puerta en tus campañas: la campaña manda el primer mensaje y él sigue cuando contestan. Despierta el interés, resuelve las primeras dudas y pasa al interesado a quien sigue.",
@@ -1049,10 +1053,11 @@
         "offer": "Para qué es la campaña y qué ofreces. De la oferta solo dice lo que pongas aquí o lo que encuentre en tus fuentes.",
         "channel": "Por dónde escribe y cuántos toques da. En WhatsApp, cada toque usa una plantilla aprobada.",
         "knows": "Lo básico de tu negocio y dónde busca lo que le preguntan.",
-        "talk": "A quién pasa al interesado y cómo contesta las objeciones.",
+        "talk": "Su voz (Cómo habla tu empresa), a quién pasa el relevo, objeciones, cotizaciones y tus indicaciones en texto libre (abajo).",
         "instructions": "Algo más que deba saber o hacer (opcional).",
         "test": "El chat empieza con el mensaje de la campaña: contesta como lo haría tu contacto.",
-        "files": "Lo que puede mandar y cuándo."
+        "files": "Las imágenes y archivos que manda y cuándo. Prueba en el chat de la derecha y guarda.",
+        "follow": "Si contesta y se queda a media plática: los recordatorios y la línea de tiempo; el plazo y el recordatorio de cita."
       },
       "PURPOSE": "¿Para qué es la campaña?",
       "PURPOSES": {
@@ -1170,6 +1175,13 @@
       "COMPANY": "Como la empresa",
       "ONLY_HERE": "Solo para este agente",
       "NOT_SET": "(vacío en la empresa)"
+    },
+    "SUBTABS": {
+      "WHEN": "Cuándo califica",
+      "AFTER": "Qué hace al calificar",
+      "OBJECTIONS": "Objeciones",
+      "REMINDERS": "Si deja de contestar",
+      "HANDOFF": "Plazo del equipo y citas"
     }
   }
 }

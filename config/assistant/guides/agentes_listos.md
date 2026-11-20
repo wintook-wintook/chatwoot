@@ -22,8 +22,8 @@ En el menú «Agentes IA» › «Agentes listos» (la primera opción): una tarj
 ### Crear un agente
 1. Entra a Agentes IA › Agentes listos y en la tarjeta de la función pulsa «Crear uno». Se abre su asistente, paso a paso.
 2. Paso «El agente»: el nombre para tu equipo (por ejemplo «Ana – Facebook»), el nombre que ve el cliente (opcional, por ejemplo «Ana»), el tono y las bandejas donde atiende. Una bandeja solo puede tenerla un agente prendido. Sin nombre y bandeja no deja avanzar.
-3. Pasos «Tu negocio», «Qué sabe», «Qué le preguntas», «Cómo platica», «Cuándo califica», «Al calificar», «Objeciones» e «Indicaciones»: ver «Configurar lo que sabe y pregunta».
-4. Paso «Pruébalo y guarda»: prueba en el «Chat de prueba» de la derecha (está en todos los pasos): tú eres el cliente. Ves qué contesta y qué hizo (buscó en lo que sabe, guardó un dato, calificado…). No se guarda ni se manda nada.
+3. Los pasos van como pestañas arriba (puedes saltar a cualquiera al editar): El agente · Tu negocio · Qué sabe · Qué le preguntas · Cómo platica (con tus Indicaciones abajo) · Al calificar (pestañas: Cuándo califica · Qué hace al calificar · Objeciones) · Seguimiento · Imágenes y archivos. Ver «Configurar lo que sabe y pregunta». «Guardar» está siempre abajo.
+4. Prueba en el «Chat de prueba» de la derecha (está en todos los pasos): tú eres el cliente. Ves qué contesta y qué hizo (buscó en lo que sabe, guardó un dato, calificado…). No se guarda ni se manda nada.
 5. Pulsa «Guardar». Si quedó «Prendido», empieza a atender en esas bandejas. Los cambios que guardes los toma desde el siguiente mensaje.
 6. Para cambiarlo, el lápiz de su renglón (o ábrelo desde la lista de agentes): se abre el mismo asistente y puedes saltar a cualquier paso y guardar.
 
@@ -55,7 +55,7 @@ En el menú «Agentes IA» › «Agentes listos» (la primera opción): una tarj
 - Indicaciones: algo más que deba saber o hacer, en tus palabras. Si contradice lo anterior, gana esto. Aquí también queda lo que corrige el entrenador del Probador de agentes.
 
 ### Atención a clientes
-- Pasos del asistente: El agente · Tu negocio · Qué atiende · Qué sabe · Cómo platica · Indicaciones · Pruébalo y guarda.
+- Pasos del asistente (pestañas arriba): El agente · Tu negocio · Qué atiende (una pestaña por área: Soporte · Comercial · Administrativo · Otra, con punto verde si está prendida; abajo «Probar la matriz») · Qué sabe · Cómo platica (con tus Indicaciones abajo) · Seguimiento (pestañas: Si deja de contestar · Plazo del equipo y citas) · Imágenes y archivos.
 - Qué atiende: prende las áreas que atiendes: Soporte, Comercial, Administrativo y, si quieres, «Otra área» con su nombre y lo que atiende. Cada área trae ejemplos de «sí es de esta área» y «no es de esta área» (ya vienen llenos, por ejemplo «No puedo enviar una cotización a pedido» es Soporte y no Comercial); cámbialos o agrega los tuyos. El agente decide por lo que el cliente quiere lograr, no por una palabra suelta. En cada área eliges a quién se lo pasa (persona o equipo); si no eliges, va al de «Cómo platica».
 - Soporte: primero busca en tus fuentes y contesta solo con lo que dicen:
   - si encuentra la solución exacta, le da los pasos tal cual vienen (con los nombres exactos de botones y menús), agrega «Fuentes relacionadas» con las ligas reales y cierra con «Para avanzar responde: RESUELTO / ESCALAR»; mientras no le dé esa solución, no lo pasa ni levanta caso;
@@ -83,7 +83,7 @@ En el menú «Agentes IA» › «Agentes listos» (la primera opción): una tarj
 
 ### Vendedor de campaña
 - No atiende bandejas: lo creas aquí y lo eliges en la pantalla de campañas (en «¿Qué?»). Un mismo agente puede ir en varias campañas; en la lista ves en cuántas está.
-- Pasos del asistente: El agente · Qué ofreces · Canal y toques · Tu negocio y qué sabe · Cómo platica y el relevo · Indicaciones · Pruébalo y guarda.
+- Pasos del asistente (pestañas arriba): El agente · Qué ofreces · Canal y toques · Tu negocio y qué sabe · Cómo platica y el relevo (con tus Indicaciones abajo) · Seguimiento · Imágenes y archivos.
 - Qué ofreces: para qué es la campaña:
   - Ofrecer, Reactivar o Recordar/renovar: qué ofreces y, si quieres, precio, vigencia y condiciones. Si le interesa, lo pasa a quien sigue (o le agenda una cita, si lo eliges y hay alguien con Google Calendar).
   - Invitar: eliges el evento de Eventos (fecha, lugar y liga salen de ahí). Cuando dice que va (o que no), queda confirmado o cancelado en la lista del evento.
@@ -137,7 +137,7 @@ En el panel de la conversación sale el nombre del agente y «atendiendo», con 
 En su tarjeta: «Apagar» o «Prender» (no cambia su configuración), el lápiz para cambiar lo que contestaste y el bote para borrarlo. Si ya atendió pláticas o lo usa una campaña, en vez de borrarse se archiva: deja de atender y sale de las listas.
 
 ### Probarlo con el Probador de agentes
-Como está en la lista de agentes, se prende «En prueba» en su renglón y se prueba en Inicio › Probar agentes con 👍/👎, lotes y revisión, como cualquier agente 2.0. Lo que el entrenador corrige queda en el paso «Indicaciones» de su asistente.
+Como está en la lista de agentes, se prende «En prueba» en su renglón y se prueba en Inicio › Probar agentes con 👍/👎, lotes y revisión, como cualquier agente 2.0. Lo que el entrenador corrige queda en «Indicaciones», al final del paso «Cómo platica» de su asistente.
 
 ## Límites
 - Por su bandeja solo contesta cuando el cliente escribe; no le escribe primero (una campaña sí puede usarlo para escribir primero).

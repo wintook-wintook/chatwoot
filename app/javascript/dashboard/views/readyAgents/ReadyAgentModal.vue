@@ -15,6 +15,8 @@ import ReadyAgentsAPI from 'dashboard/api/readyAgents';
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 import AgentFiles from './AgentFiles.vue';
 import SourceOrder, { addSource } from './SourceOrder.vue';
+import WizardTabs from './WizardTabs.vue';
+import SubTabs from './SubTabs.vue';
 import AgentVoice from './AgentVoice.vue';
 import FollowUpPlan from './FollowUpPlan.vue';
 import QuoteMode from './QuoteMode.vue';
@@ -57,12 +59,8 @@ const STEPS = [
   'questions',
   'talk',
   'qualify',
-  'after',
   'follow',
-  'objections',
   'files',
-  'instructions',
-  'test',
 ];
 const blank = kind => ({
   kind,
@@ -126,7 +124,15 @@ const blank = kind => ({
 
 export default {
   name: 'ReadyAgentModal',
-  components: { AgentFiles, SourceOrder, FollowUpPlan, QuoteMode, AgentVoice },
+  components: {
+    AgentFiles,
+    SourceOrder,
+    FollowUpPlan,
+    QuoteMode,
+    AgentVoice,
+    WizardTabs,
+    SubTabs,
+  },
   props: {
     show: { type: Boolean, default: false },
     kind: { type: String, default: 'prospects' },
@@ -146,6 +152,7 @@ export default {
       form: blank(this.kind),
       saving: false,
       suggesting: false,
+      subTab: 'when', // pestañas dentro de «Al calificar» (y «Seguimiento»)
       chat: [],
       // La memoria del cliente en el chat de prueba (respuestas, cita…): va y viene con el motor.
       chatState: {},
@@ -227,6 +234,9 @@ export default {
     },
     steps() {
       return STEPS;
+    },
+    stepLabels() {
+      return Object.fromEntries(STEPS.map(s => [s, this.t(`STEPS.${s}`)]));
     },
     stepIndex() {
       return STEPS.indexOf(this.step);
@@ -545,7 +555,7 @@ export default {
 </script>
 
 <template>
-  <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
+  <woot-modal :show="show" size="large" :on-close="() => $emit('close')">
     <div class="flex flex-col h-[85vh] min-h-0">
       <woot-modal-header
         :header-title="
@@ -554,6 +564,13 @@ export default {
             : t('NEW_TITLE', { title })
         "
         :header-content="t('MODAL_SUBTITLE')"
+      />
+      <WizardTabs
+        class="px-4 md:px-8"
+        :steps="steps"
+        :current="step"
+        :labels="stepLabels"
+        @go="go"
       />
       <div
         class="grid flex-1 min-h-0 grid-cols-1 gap-5 px-4 pb-4 overflow-y-auto md:px-8 md:grid-cols-2 md:grid-rows-1 md:overflow-hidden"
@@ -564,22 +581,6 @@ export default {
           @submit.prevent="isLast || agent ? save() : next()"
         >
           <!-- Los pasos: al editar se puede saltar a cualquiera -->
-          <ol class="flex flex-wrap gap-1 p-0 m-0 list-none">
-            <li v-for="(s, i) in steps" :key="s">
-              <button
-                type="button"
-                class="px-2 py-0.5 text-xs border rounded-full"
-                :class="
-                  s === step
-                    ? 'border-woot-500 bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200'
-                    : 'border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400'
-                "
-                @click="go(s)"
-              >
-                {{ t('STEPS.NUMBERED', { n: i + 1, step: t(`STEPS.${s}`) }) }}
-              </button>
-            </li>
-          </ol>
           <p class="m-0 text-xs text-slate-500">
             {{ t(`STEP_HINTS.${step}`) }}
           </p>
@@ -903,7 +904,16 @@ export default {
           </template>
 
           <!-- 6 · Cuándo califica y cuándo no -->
-          <template v-if="step === 'qualify'">
+          <SubTabs
+            v-if="step === 'qualify'"
+            v-model="subTab"
+            :tabs="[
+              { key: 'when', label: t('SUBTABS.WHEN') },
+              { key: 'after', label: t('SUBTABS.AFTER') },
+              { key: 'objections', label: t('SUBTABS.OBJECTIONS') },
+            ]"
+          />
+          <template v-if="step === 'qualify' && subTab === 'when'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.QUALIFIED_WHEN') }}</span>
               <textarea
@@ -954,7 +964,7 @@ export default {
             />
           </template>
 
-          <template v-if="step === 'after'">
+          <template v-if="step === 'qualify' && subTab === 'after'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.OBJECTIVE') }}</span>
               <select v-model="form.settings.objective">
@@ -1156,7 +1166,7 @@ export default {
           </template>
 
           <!-- 8 · Objeciones -->
-          <template v-if="step === 'objections'">
+          <template v-if="step === 'qualify' && subTab === 'objections'">
             <div
               v-for="(o, i) in form.settings.objections"
               :key="i"
@@ -1205,7 +1215,7 @@ export default {
             />
           </template>
 
-          <template v-if="step === 'instructions'">
+          <template v-if="step === 'talk'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.INSTRUCTIONS') }}</span>
               <textarea
@@ -1217,7 +1227,7 @@ export default {
           </template>
 
           <!-- 10 · Pruébalo y guarda -->
-          <template v-if="step === 'test'">
+          <template v-if="isLast">
             <p class="m-0 text-sm text-slate-700 dark:text-slate-200">
               {{ t('STEP_TEST.READY', { name: form.name.trim() || '—' }) }}
             </p>
@@ -1349,12 +1359,7 @@ export default {
         >
           {{ t('NEXT') }}
         </woot-button>
-        <woot-button
-          v-if="isLast || agent"
-          :is-loading="saving"
-          :disabled="!canSave"
-          @click="save"
-        >
+        <woot-button :is-loading="saving" :disabled="!canSave" @click="save">
           {{ t('SAVE') }}
         </woot-button>
       </div>
