@@ -853,23 +853,6 @@ export default {
       <div class="grid grid-cols-1 gap-3 px-8 pb-8 sm:grid-cols-2">
         <button
           type="button"
-          class="flex flex-col gap-1 p-4 text-left border rounded-lg border-woot-500 bg-woot-25 dark:bg-woot-900/20"
-          @click="newMotor2"
-        >
-          <span
-            class="text-sm font-semibold text-slate-800 dark:text-slate-100"
-          >
-            {{ $t('CAMPAIGNS2.CHOICE.MOTOR2') }}
-          </span>
-          <span class="text-xs text-woot-700">{{
-            $t('CAMPAIGNS2.CHOICE.RECOMMENDED')
-          }}</span>
-          <span class="text-xs text-slate-600 dark:text-slate-300">
-            {{ $t('CAMPAIGNS2.CHOICE.MOTOR2_ABOUT') }}
-          </span>
-        </button>
-        <button
-          type="button"
           class="flex flex-col gap-1 p-4 text-left border rounded-lg border-slate-100 dark:border-slate-700 hover:border-woot-200"
           @click="newClassic"
         >
@@ -880,6 +863,25 @@ export default {
           </span>
           <span class="text-xs text-slate-600 dark:text-slate-300">
             {{ $t('CAMPAIGNS2.CHOICE.MOTOR1_ABOUT') }}
+          </span>
+        </button>
+        <button
+          type="button"
+          class="flex flex-col gap-1 p-4 text-left border rounded-lg border-slate-100 dark:border-slate-700 hover:border-woot-200"
+          @click="newMotor2"
+        >
+          <span
+            class="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100"
+          >
+            {{ $t('CAMPAIGNS2.CHOICE.MOTOR2') }}
+            <span
+              class="px-1.5 py-0.5 text-[10px] font-semibold uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100"
+            >
+              {{ $t('CAMPAIGNS2.CHOICE.BETA') }}
+            </span>
+          </span>
+          <span class="text-xs text-slate-600 dark:text-slate-300">
+            {{ $t('CAMPAIGNS2.CHOICE.MOTOR2_ABOUT') }}
           </span>
         </button>
       </div>

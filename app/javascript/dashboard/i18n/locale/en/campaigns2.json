@@ -218,10 +218,10 @@
       "TITLE": "Which campaign do you want to create?",
       "SUBTITLE": "Both use your contacts, segments and schedules.",
       "MOTOR2": "Campaign with AI Seller (Engine 2.0)",
-      "RECOMMENDED": "Recommended",
       "MOTOR2_ABOUT": "Offer, invite, reactivate, renew or survey by WhatsApp or email. Your Campaign Seller handles replies, quotes, books and hands off; the dashboard shows up to what was won.",
       "MOTOR1": "Classic campaign (Engine 1.0)",
-      "MOTOR1_ABOUT": "As always: with a Custom agent and its card."
+      "MOTOR1_ABOUT": "As always: with a Custom agent and its card.",
+      "BETA": "Beta"
     },
     "STATUS": {
       "saved": "Saved",

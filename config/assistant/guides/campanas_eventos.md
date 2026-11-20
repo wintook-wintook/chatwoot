@@ -23,7 +23,7 @@ En el menú Campañas, en este orden:
 - En la ficha del contacto, la pestaña «Eventos» muestra en cuáles está.
 
 ## Cómo se hace
-Al pulsar «Agregar campaña» eliges cuál: «Campaña con Vendedor IA (Motor 2.0)» (recomendada) o «Campaña clásica (Motor 1.0)», la de siempre con un Agente a medida.
+Al pulsar «Agregar campaña» eliges cuál: «Campaña clásica (Motor 1.0)», la de siempre con un Agente a medida, o «Campaña con Vendedor IA (Motor 2.0)», marcada como Beta.
 
 ### Crear una campaña con Vendedor IA (Motor 2.0)
 Necesitas un «Vendedor de campaña» (Agentes listos). Seis pasos como pestañas; a la derecha siempre ves cómo le llega el mensaje (el teléfono en WhatsApp o el correo) y «Probar», donde tú eres el contacto y el vendedor te contesta con la oferta de esta campaña.

@@ -218,10 +218,10 @@
       "TITLE": "¿Qué campaña quieres crear?",
       "SUBTITLE": "Las dos usan tus contactos, segmentos y horarios.",
       "MOTOR2": "Campaña con Vendedor IA (Motor 2.0)",
-      "RECOMMENDED": "Recomendada",
       "MOTOR2_ABOUT": "Ofrecer, invitar, reactivar, renovar o encuestar por WhatsApp o correo. Tu Vendedor de campaña atiende las respuestas, cotiza, agenda y pasa el relevo; el tablero muestra hasta lo ganado.",
       "MOTOR1": "Campaña clásica (Motor 1.0)",
-      "MOTOR1_ABOUT": "Como siempre: con un Agente a medida y su ficha."
+      "MOTOR1_ABOUT": "Como siempre: con un Agente a medida y su ficha.",
+      "BETA": "Beta"
     },
     "STATUS": {
       "saved": "Guardada",
