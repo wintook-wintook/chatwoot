@@ -1,0 +1,85 @@
+# frozen_string_literal: true
+
+# Campaña con Vendedor IA (Motor 2.0) — lo que trae la campaña y no el agente:
+#
+#   brief    { kind        offer | invite | reactivate | renew | survey   (para qué es)
+#              offer_what  qué ofrece / a qué invita / qué vence          offer_details precio, vigencia, condiciones
+#              offer_goal  relay (si le interesa → relevo) | appointment (le agenda la cita)
+#              event_id    Invitar: el evento (también arma la audiencia)
+#              survey_questions [≤3] · low_score (menor a esto, de 0 a 10, es baja)
+#              rest_days   no se le escribe si otra campaña 2.0 le escribió hace menos de estos días (0 = sin regla) }
+#   touches  { attempts 1..6 · every_value / every_unit (hours | days) entre toques
+#              templates [nombre de plantilla de WhatsApp por toque]
+#              emails    [{ body, blocks }] por toque (el asunto del primero es email_subject / email_subject_b);
+#                        un cuerpo vacío lo escribe el agente con IA }
+#
+# El agente lo recibe como si lo hubiera contestado en su asistente (seller_answers → Motor2::Config).
+module TrackingCampaigns::Motor2Brief
+  KINDS = %w[offer invite reactivate renew survey].freeze
+  GOALS = %w[relay appointment].freeze
+  UNITS = %w[hours days].freeze
+  MAX_TOUCHES = 6
+  MAX_QUESTIONS = 3
+  MAX_TEXT = 1500
+  MAX_BODY = 6000
+
+  module_function
+
+  def brief(raw)
+    raw = Motor2::Sanitizer.plain(raw)
+    {
+      'kind' => raw['kind'].to_s.presence_in(KINDS) || 'offer', 'offer_goal' => raw['offer_goal'].to_s.presence_in(GOALS) || 'relay',
+      'offer_what' => text(raw['offer_what']), 'offer_details' => text(raw['offer_details']),
+      'event_id' => raw['event_id'].to_s.presence&.to_i, 'survey_questions' => questions(raw['survey_questions']),
+      'low_score' => number(raw['low_score'], 7, 1..10), 'rest_days' => number(raw['rest_days'], 0, 0..90)
+    }.compact
+  end
+
+  def touches(raw)
+    raw = Motor2::Sanitizer.plain(raw)
+    attempts = number(raw['attempts'], 2, 1..MAX_TOUCHES)
+    { 'attempts' => attempts, 'every_value' => number(raw['every_value'], 2, 1..30),
+      'every_unit' => raw['every_unit'].to_s.presence_in(UNITS) || 'days',
+      'templates' => Array(raw['templates']).map { |t| t.to_s.strip.first(200) }.first(attempts),
+      'emails' => Array(raw['emails']).first(attempts).map { |e| email(e.to_h) } }
+  end
+
+  BLOCKS = %w[heading text button image].freeze
+
+  # Un correo: su texto (markdown, el que sale) y los bloques del editor (para volver a abrirlo igual).
+  def email(raw)
+    blocks = Array(raw['blocks']).first(30).filter_map do |b|
+      b = b.to_h
+      { 'type' => b['type'], 'text' => b['text'].to_s.first(MAX_BODY), 'url' => b['url'].to_s.strip.first(2000) } if BLOCKS.include?(b['type'])
+    end
+    { 'body' => raw['body'].to_s.strip.first(MAX_BODY), 'blocks' => blocks }
+  end
+
+  def questions(list) = Array(list).map { |q| q.to_s.squish.first(300) }.compact_blank.first(MAX_QUESTIONS)
+
+  def number(value, default, range) = (value.presence || default).to_i.clamp(range.min, range.max)
+
+  def text(value) = value.to_s.strip.first(MAX_TEXT)
+
+  # Lo que el «Vendedor de campaña» usa como si viniera de su asistente (Motor2::Functions::CampaignSeller).
+  def seller_answers(campaign)
+    data = campaign.brief.to_h
+    { 'purpose' => data['kind'], 'offer_what' => data['offer_what'], 'offer_details' => data['offer_details'],
+      'offer_goal' => data['offer_goal'], 'event_id' => data['event_id'], 'survey_questions' => data['survey_questions'],
+      'low_score' => data['low_score'] }.compact
+  end
+
+  # Los intentos y su ritmo para cada seguimiento (TrackingCampaigns::TrackingBuilder).
+  def tracking_touches(campaign)
+    data = campaign.touches.to_h
+    attempts = (data['attempts'].presence || 2).to_i
+    templates = campaign.inbox&.whatsapp? ? Array(data['templates']).first(attempts) : []
+    { max_attempts: attempts, retry_interval_value: (data['every_value'].presence || 2).to_i,
+      retry_interval_unit: data['every_unit'] == 'hours' ? 'hours' : 'days', whatsapp_templates: templates }
+  end
+
+  # El cuerpo del correo del toque n (1, 2…), o nil si lo escribe el agente.
+  def email_body(campaign, touch)
+    Array(campaign.touches.to_h['emails'])[touch.to_i - 1].to_h['body'].presence
+  end
+end

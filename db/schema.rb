@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_19_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_20_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2634,6 +2634,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_19_120000) do
     t.index ["user_id"], name: "index_tracking_assistant_sessions_on_user_id"
   end
 
+  create_table "tracking_campaign_clicks", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "tracking_campaign_id", null: false
+    t.bigint "contact_tracking_id", null: false
+    t.bigint "contact_id", null: false
+    t.string "url", limit: 2000, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_tracking_campaign_clicks_on_account_id"
+    t.index ["tracking_campaign_id", "contact_id"], name: "index_campaign_clicks_on_campaign_and_contact"
+    t.index ["tracking_campaign_id"], name: "index_tracking_campaign_clicks_on_tracking_campaign_id"
+  end
+
   create_table "tracking_campaign_entries", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "tracking_campaign_id", null: false
@@ -2689,6 +2701,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_19_120000) do
     t.boolean "retry_not_now", default: true, null: false
     t.bigint "event_id"
     t.string "event_status"
+    t.string "engine", default: "1", null: false
+    t.jsonb "brief", default: {}, null: false
+    t.jsonb "touches", default: {}, null: false
     t.index ["account_id", "purpose"], name: "index_tracking_campaigns_on_account_id_and_purpose"
     t.index ["account_id", "status"], name: "index_tracking_campaigns_on_account_id_and_status"
     t.index ["account_id"], name: "index_tracking_campaigns_on_account_id"
@@ -3146,6 +3161,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_19_120000) do
   add_foreign_key "tracking_campaign_entries", "contacts", on_delete: :cascade
   add_foreign_key "tracking_campaign_entries", "conversations", on_delete: :nullify
   add_foreign_key "tracking_campaign_entries", "tracking_campaigns", on_delete: :cascade
+  add_foreign_key "tracking_campaign_clicks", "accounts"
+  add_foreign_key "tracking_campaign_clicks", "tracking_campaigns", on_delete: :cascade
   add_foreign_key "tracking_campaigns", "accounts"
   add_foreign_key "tracking_campaigns", "events", on_delete: :nullify
   add_foreign_key "tracking_campaigns", "inboxes"

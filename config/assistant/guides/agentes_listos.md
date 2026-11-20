@@ -82,13 +82,13 @@ En el menú «Agentes IA» › «Agentes listos» (la primera opción): una tarj
 - Pruébalo: «Probar la matriz» corre todos tus ejemplos de sí y no y te dice cuáles cayeron en su área (✅) y cuáles no (❌); si uno falla, agrega más ejemplos parecidos. En el chat de prueba ves qué área detectó en cada mensaje y qué hizo; en la prueba no se crean casos reales (sale el folio PRUEBA-1).
 
 ### Vendedor de campaña
-- No atiende bandejas: lo creas aquí y lo eliges en la pantalla de campañas (en «¿Qué?»). Un mismo agente puede ir en varias campañas; en la lista ves en cuántas está.
-- Pasos del asistente (pestañas arriba): El agente · Qué ofreces · Tu empresa · Canal y toques · Qué sabe · Cómo platica y el relevo (con tus Indicaciones abajo) · Cotizaciones (no aplica en encuestas ni invitaciones) · Seguimiento · Imágenes y archivos.
-- Qué ofreces: para qué es la campaña:
-  - Ofrecer, Reactivar o Recordar/renovar: qué ofreces y, si quieres, precio, vigencia y condiciones. Si le interesa, lo pasa a quien sigue (o le agenda una cita, si lo eliges y hay alguien con Google Calendar).
-  - Invitar: eliges el evento de Eventos (fecha, lugar y liga salen de ahí). Cuando dice que va (o que no), queda confirmado o cancelado en la lista del evento.
-  - Encuesta: hasta 3 preguntas; las hace tal cual, en orden y una por mensaje, y no toma «va» o «sí» como respuesta. Si una calificación queda por debajo de la que elijas (7 por omisión), levanta un caso con prioridad alta para la persona que elijas.
-- Canal y toques: por dónde escribe, cuántos toques da y cada cuánto. En WhatsApp cada toque usa una plantilla aprobada (fuera de las 24 horas solo se puede con plantilla).
+- No atiende bandejas: lo creas aquí y lo eliges en Campañas › «Agregar campaña» › «Campaña con Vendedor IA (Motor 2.0)». Un mismo vendedor sirve para muchas campañas: cada campaña trae su oferta, su canal y sus mensajes; el vendedor pone cómo vende (su voz, lo que sabe, a quién pasa el relevo, seguimiento, cotizaciones y archivos).
+- Pasos del asistente (pestañas arriba): El agente · Tu empresa · Qué sabe · Cómo platica y el relevo (con tus Indicaciones abajo) · Seguimiento · Cotizaciones · Imágenes y archivos. Ya no lleva «Qué ofreces» ni «Canal y toques»: eso va en cada campaña.
+- Junto al chat de prueba está «Oferta de ejemplo para probar» (para qué es, qué ofreces, evento o preguntas de encuesta): solo sirve para «Probar» aquí y para llenar de inicio las campañas nuevas. Los vendedores que ya tenías conservan su oferta y su canal, y sus campañas clásicas siguen igual.
+- Lo que hace según el tipo de campaña:
+  - Ofrecer, Reactivar o Recordar/renovar: despierta el interés con la oferta de la campaña; si le interesa, lo pasa a quien sigue (o le agenda una cita, si la campaña lo pide y hay alguien con Google Calendar).
+  - Invitar: con el evento de la campaña (fecha, lugar y liga salen de Eventos). Cuando dice que va (o que no), queda confirmado o cancelado en la lista del evento.
+  - Encuesta: hasta 3 preguntas; las hace tal cual, en orden y una por mensaje. Si una calificación queda por debajo de la de la campaña (7 por omisión), levanta un caso con prioridad alta.
 - El relevo: si le interesa, lo pasa al agente de la bandeja («Atención a prospectos», o «Atención a clientes» si ya es cliente) en la misma conversación y sin que lo note: el de campaña no contesta y el que sigue contesta ese mismo mensaje, con una nota de contexto («le interesó la campaña X…»). Si no hay agente, o eliges «a una persona», va a la persona o equipo que elijas (si la campaña tiene tablero de entrega, entra ahí con su plazo).
 - Siempre: una pregunta por mensaje; de la oferta solo dice lo que pusiste o lo que está en tus fuentes; si dice que no, se despide sin insistir y no hay más toques; «ya no me escriban» lo da de baja.
 - Pruébalo: el chat empieza con el mensaje de la campaña (puedes cambiarlo); contesta como tu contacto. En la prueba no se toca nada real.

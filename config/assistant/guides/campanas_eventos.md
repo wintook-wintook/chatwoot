@@ -2,10 +2,10 @@
 key: campanas_eventos
 title: Campañas y eventos
 areas: [campaigns]
-keywords: [campana, campanas, campana de agente ia, nueva campana, agregar campana, poner en curso, pausar campana, asignar agente ia, asignacion masiva, segmento, etiqueta, evento, eventos, invitados, confirmo, asistio, check-in, importar csv, pagina web, sms, dashboard de campanas, prospectos, entregar, nfc, etiqueta nfc, acercar el celular, expo, feria, stand, gafete, captar, wa.me, vender un servicio, vender un producto, promocion, promover, campana de sms, campana sms, campana unica, campana continua, campana de pagina web, sitio web, widget, chat del sitio, mensaje proactivo, hora programada, audiencia, campana whatsapp, whatsapp masivo, envio masivo, curso, demostracion, webinar, cupo, cerrar evento, reabrir evento, no asistio, cancelo, quitar del evento, eliminar evento]
+keywords: [campana con vendedor ia, motor 2.0, vendedor de campana, campana 2.0, embudo de campana, resumen con ia, prueba a/b, asunto, clics, plantilla por toque, siguiente campana, no leyeron, campana, campanas, campana de agente ia, nueva campana, agregar campana, poner en curso, pausar campana, asignar agente ia, asignacion masiva, segmento, etiqueta, evento, eventos, invitados, confirmo, asistio, check-in, importar csv, pagina web, sms, dashboard de campanas, prospectos, entregar, nfc, etiqueta nfc, acercar el celular, expo, feria, stand, gafete, captar, wa.me, vender un servicio, vender un producto, promocion, promover, campana de sms, campana sms, campana unica, campana continua, campana de pagina web, sitio web, widget, chat del sitio, mensaje proactivo, hora programada, audiencia, campana whatsapp, whatsapp masivo, envio masivo, curso, demostracion, webinar, cupo, cerrar evento, reabrir evento, no asistio, cancelo, quitar del evento, eliminar evento]
 pages: [campaigns, events, campaigns_sms, campaigns_web, contacts, trackings, inboxes, labels]
-sources: [app/javascript/dashboard/views/events/*.vue, app/javascript/dashboard/views/events/eventHelpers.js, app/javascript/dashboard/i18n/locale/es/events.json, app/controllers/api/v1/accounts/events_controller.rb, app/controllers/api/v1/accounts/event_capture_links_controller.rb, app/models/event*.rb, app/javascript/dashboard/routes/dashboard/settings/campaigns/*.vue, app/javascript/dashboard/i18n/locale/es/campaign.json, app/models/campaign.rb, app/policies/campaign_policy.rb, app/services/sms/oneoff_sms_campaign_service.rb]
-reviewed: 2026-11-14
+sources: [app/javascript/dashboard/views/campaigns2/*.vue, app/controllers/api/v1/accounts/motor2_campaigns_controller.rb, app/services/tracking_campaigns/motor2_*.rb, app/javascript/dashboard/views/events/*.vue, app/javascript/dashboard/views/events/eventHelpers.js, app/javascript/dashboard/i18n/locale/es/events.json, app/controllers/api/v1/accounts/events_controller.rb, app/controllers/api/v1/accounts/event_capture_links_controller.rb, app/models/event*.rb, app/javascript/dashboard/routes/dashboard/settings/campaigns/*.vue, app/javascript/dashboard/i18n/locale/es/campaign.json, app/models/campaign.rb, app/policies/campaign_policy.rb, app/services/sms/oneoff_sms_campaign_service.rb]
+reviewed: 2026-11-20
 ---
 ## Para qué sirve
 - Una campaña de agente IA pone a un Agente IA a escribirle a un grupo de contactos y sigue cómo responde cada uno.
@@ -23,8 +23,28 @@ En el menú Campañas, en este orden:
 - En la ficha del contacto, la pestaña «Eventos» muestra en cuáles está.
 
 ## Cómo se hace
-### Crear una campaña de agente IA
-1. Entra a Campañas › De agentes IA y pulsa «Agregar campaña».
+Al pulsar «Agregar campaña» eliges cuál: «Campaña con Vendedor IA (Motor 2.0)» (recomendada) o «Campaña clásica (Motor 1.0)», la de siempre con un Agente a medida.
+
+### Crear una campaña con Vendedor IA (Motor 2.0)
+Necesitas un «Vendedor de campaña» (Agentes listos). Seis pasos como pestañas; a la derecha siempre ves cómo le llega el mensaje (el teléfono en WhatsApp o el correo) y «Probar», donde tú eres el contacto y el vendedor te contesta con la oferta de esta campaña.
+1. Objetivo: Ofrecer, Invitar, Reactivar, Recordar o renovar o Encuesta, y qué sigue si le interesa (relevo o cita). El nombre es opcional: si lo dejas vacío se arma solo.
+2. Oferta y vendedor: el Vendedor de campaña que atiende y qué ofreces con sus detalles (precio, vigencia, condiciones); en Invitar, el evento; en Encuesta, hasta 3 preguntas y desde qué calificación es baja. «No escribirle si otra campaña le escribió hace menos de N días» evita saturar al contacto.
+3. Audiencia: un segmento, una etiqueta, los asistentes de un evento (con su estado) o «Los que agreguen mis automatizaciones». Ves cuántos le llegan, cuántos ya están en conversación con un agente, cuántos no tienen teléfono o correo y puedes quitar contactos.
+4. Mensajes: el canal (solo bandejas de WhatsApp o de correo), cuántos toques y cada cuánto. En WhatsApp eliges la plantilla aprobada de cada toque. En correo: el asunto (con {{contacto}} y {{empresa}}), un asunto B opcional para la prueba A/B, y cada correo por bloques (título, texto, botón, imagen); un correo sin bloques lo escribe el vendedor con IA. «Enviarme una prueba» te lo manda a tu correo. Las ligas cuentan clics y al final va la liga para darse de baja.
+5. Cuándo: en cuanto la lances o en una fecha, fin opcional, solo en horario de atención y máximo de contactos por día.
+6. Revisar y lanzar: una lista en verde, amarillo o rojo (vendedor, oferta, audiencia, canal, plantilla de cada toque, asunto, a quién pasa el relevo, fechas). Con algo en rojo no deja lanzar. «Guardar borrador» la deja Guardada.
+
+### Resultados de una campaña con Vendedor IA
+- Embudo: inscritos, enviados, entregados, leídos (WhatsApp) o dieron clic (correo), contestaron, les interesó, pasaron al relevo, con cita, cotizaciones y ganadas, con el % sobre lo enviado. Clic en un cuadro para ver esos contactos (y abrir su conversación).
+- Ventas de la campaña: lo cotizado y lo ganado de sus contactos desde que empezó.
+- Salidas: no les interesó, no contestaron, pidieron una persona, se dieron de baja, falló el envío y los omitidos con su motivo.
+- Por tipo: en Invitar, confirmaron contra el cupo y los que no van; en Encuesta, cuántos contestaron, el promedio y las calificaciones bajas con sus casos.
+- «Qué dicen los contactos»: «Resumir con IA» arma de 3 a 5 puntos (qué preguntan, objeciones, qué mejorar) y abajo salen los motivos de «no le interesa».
+- «Siguiente campaña con…»: arma otra campaña Guardada con los que no leyeron, no contestaron, dieron clic, les interesó o dijeron que no.
+- Arriba: Modificar (si está Guardada), Pausar o Reanudar, Duplicar y Actualizar. En la lista de campañas llevan la etiqueta «Vendedor IA».
+
+### Crear una campaña clásica (Motor 1.0)
+1. Entra a Campañas › De agentes IA, pulsa «Agregar campaña» y elige «Campaña clásica (Motor 1.0)».
 2. En «1 · ¿Qué?» escribe el «Nombre de la campaña» y elige el «Agente IA». El canal y las plantillas de WhatsApp de cada intento vienen del agente.
 3. En «2 · ¿A quién?» elige «Un segmento», «Una etiqueta» o «Los que agreguen mis automatizaciones» (campaña continua).
 4. Si es de un evento, en «¿Es de un evento? (opcional)» elige el evento y el estado (por ejemplo, «Asistió»).

@@ -66,7 +66,7 @@ module Motor2::FollowUp
 
   # Nunca contestó: la etiqueta y, en clientes a medio caso, al equipo del área.
   def finish!(tracking)
-    config = Motor2::Config.new(tracking.tracking_template)
+    config = Motor2::Config.for(tracking)
     state = tracking.motor2_state.to_h
     solved = state['opciones'].present?
     Motor2::Labels.apply(tracking.conversation, [solved ? 'resuelto-sin-confirmar' : 'sin-respuesta'])
@@ -109,7 +109,7 @@ module Motor2::FollowUp
 
   def next_nudge_at(tracking, message_id)
     message = Message.find_by(id: message_id)
-    plan = plan_for(Motor2::Config.new(tracking.tracking_template).function)
+    plan = plan_for(Motor2::Config.for(tracking).function)
     return nil unless message && plan && tracking.status == 'active'
 
     NUDGE_HOURS.first(plan[:nudges]).map { |h| message.created_at + h.hours }.find(&:future?)

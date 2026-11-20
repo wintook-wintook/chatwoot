@@ -376,6 +376,24 @@ Rails.application.routes.draw do
           end
           # Plantillas de seguimiento: la receta de un Seguimiento IA para volver a usarla
           resources :ai_follow_up_presets, only: [:index, :create, :update, :destroy]
+          # Campaña con Vendedor IA (Motor 2.0): pantalla nueva; pausar/reanudar son los de tracking_campaigns
+          resources :motor2_campaigns, only: [:show, :create, :update] do
+            collection do
+              get :options
+              post :preview
+              post :test
+              post :test_email
+            end
+            member do
+              get :check
+              post :launch
+              get :results
+              get :contacts
+              post :insights
+              post :follow_up
+              post :duplicate
+            end
+          end
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
             post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada
@@ -1266,6 +1284,8 @@ Rails.application.routes.draw do
   # prospeccion V4 — baja desde el enlace de un correo del Agente IA (GET confirma, POST da de baja)
   get  'baja/:token', to: 'public/opt_outs#show', as: :public_opt_out
   post 'baja/:token', to: 'public/opt_outs#create'
+  # Campaña con Vendedor IA — clic en una liga de un correo de campaña (TrackingCampaigns::ClickLink)
+  get 'c/:token', to: 'public/campaign_clicks#show', as: :public_campaign_click
 
   # Plan-Trabajo-Campo R5 — portal del cliente de su orden y visita del técnico externo.
   get  'servicio/:token', to: 'public/service_portals#show', as: :public_service_portal

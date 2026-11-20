@@ -5,14 +5,16 @@
 # va y viene con la pantalla. Regresa también qué hizo el agente (la traza) para enseñarla bajo
 # cada respuesta.
 class Motor2::Probe
-  def initialize(template, messages:, state: {})
+  # answers: encima de lo del agente (la oferta de una Campaña con Vendedor IA, sin guardar).
+  def initialize(template, messages:, state: {}, answers: nil)
     @template = template
+    @answers = answers
     @messages = messages
     @state = Motor2::State.new(state)
   end
 
   def call
-    config = Motor2::Config.new(@template)
+    config = Motor2::Config.new(@template, answers: @answers)
     result = Motor2::Runner.new(config, state: @state, history: @messages, welcome: first_welcome(config)).call
     return { error: result.error, trace: result.trace } if result.error
 

@@ -43,7 +43,9 @@ class Motor2::Functions::CampaignSellerOutcomes
 
   def discarded(reason)
     note("No le interesa: #{reason}")
-    @tracking.update_columns(outcome: 'discarded', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    # El motivo queda en su memoria para «En qué se van» de la Campaña con Vendedor IA (Motor2CampaignResults).
+    @tracking.update_columns(outcome: 'discarded', motor2_state: state.merge('exit_reason' => reason.to_s.first(200)), # rubocop:disable Rails/SkipsModelValidations
+                             updated_at: Time.current)
     @tracking.cancel!
   end
 

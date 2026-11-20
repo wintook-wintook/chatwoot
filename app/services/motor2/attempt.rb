@@ -7,7 +7,7 @@
 class Motor2::Attempt
   def initialize(tracking)
     @tracking = tracking
-    @config = Motor2::Config.new(tracking.tracking_template)
+    @config = Motor2::Config.for(tracking)
   end
 
   def message

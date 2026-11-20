@@ -11,7 +11,7 @@ class Motor2::QuoteFollowUpJob < ApplicationJob
   def self.schedule(quote)
     tracking = ContactTracking.where(account_id: quote.account_id).where("motor2_state -> 'quote' ->> 'id' = ?", quote.id.to_s)
                               .order(id: :desc).first
-    function = tracking && Motor2::Config.new(tracking.tracking_template).function
+    function = tracking && Motor2::Config.for(tracking).function
     return unless function.respond_to?(:quote_follow?) && function.quote_follow?
 
     set(wait: function.quote_follow_days.days).perform_later(tracking.id, quote.id)
@@ -22,7 +22,7 @@ class Motor2::QuoteFollowUpJob < ApplicationJob
     quote = Quote.find_by(id: quote_id)
     return unless tracking&.conversation && quote&.status == 'sent' && !answered?(tracking, quote)
 
-    config = Motor2::Config.new(tracking.tracking_template)
+    config = Motor2::Config.for(tracking)
     message = Motor2::VoiceText.call(config, text(tracking, quote))
     sent = Motor2::LateMessage.deliver(tracking, message, template: config.function.try(:quote_template))
     Motor2::Delivery.note(tracking, tracking.conversation, note(quote, sent))

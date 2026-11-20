@@ -26,6 +26,8 @@ export default {
   components: { CampaignForm, TableFooter, VeTable },
   data() {
     return {
+      // Campaña con Vendedor IA: el modal «¿Qué campaña?» (1.0 o 2.0)
+      showEngineChoice: false,
       campaigns: [],
       isLoading: false,
       // Actualizar recarga solo la tabla: no la quita ni muestra "Cargando".
@@ -40,10 +42,7 @@ export default {
       // de indicadores. Los botones de la fila cortan la propagación.
       eventCustomOption: {
         bodyRowEvents: ({ row }) => ({
-          click: () =>
-            row.status === 'saved'
-              ? this.openEdit(row)
-              : this.openCampaign(row),
+          click: () => this.openRow(row),
         }),
       },
       rowStyleOption: {
@@ -130,6 +129,12 @@ export default {
             <div class="flex flex-col leading-5">
               <span class="font-medium text-woot-600 dark:text-woot-400">
                 {row.name}
+                {/* Campaña con Vendedor IA (Motor 2.0) */}
+                {row.engine === '2' ? (
+                  <span class="ml-1 px-1.5 text-[10px] font-semibold rounded bg-woot-50 text-woot-700 dark:bg-woot-800 dark:text-woot-100">
+                    {this.$t('CAMPAIGNS2.BADGE')}
+                  </span>
+                ) : null}
               </span>
               {/* Plan-Eventos E3 — la campaña de un evento y con qué estado */}
               {row.event_name ? (
@@ -418,9 +423,31 @@ export default {
     onPageChange(page) {
       this.currentPage = page;
     },
+    // Campaña con Vendedor IA (Motor 2.0): antes de la 1.0 se elige cuál.
     goToNew() {
+      this.showEngineChoice = true;
+    },
+    newClassic() {
+      this.showEngineChoice = false;
       this.presetFilter = null;
       this.activeTab = 'new';
+    },
+    newMotor2() {
+      this.showEngineChoice = false;
+      this.$router.push({ name: 'campaigns2_new' });
+    },
+    // Una 2.0 abre su pantalla nueva (Guardada: el asistente; si no, su tablero).
+    openRow(row) {
+      if (row.engine === '2') {
+        this.$router.push({
+          name:
+            row.status === 'saved' ? 'campaigns2_edit' : 'campaigns2_detail',
+          params: { campaignId: row.id },
+        });
+        return;
+      }
+      if (row.status === 'saved') this.openEdit(row);
+      else this.openCampaign(row);
     },
     openLaunch(campaign) {
       this.campaignToLaunch = campaign;
@@ -814,6 +841,49 @@ export default {
       :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_YES')"
       :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
     />
+    <!-- Campaña con Vendedor IA: elegir 1.0 o 2.0 -->
+    <woot-modal
+      :show="showEngineChoice"
+      :on-close="() => (showEngineChoice = false)"
+    >
+      <woot-modal-header
+        :header-title="$t('CAMPAIGNS2.CHOICE.TITLE')"
+        :header-content="$t('CAMPAIGNS2.CHOICE.SUBTITLE')"
+      />
+      <div class="grid grid-cols-1 gap-3 px-8 pb-8 sm:grid-cols-2">
+        <button
+          type="button"
+          class="flex flex-col gap-1 p-4 text-left border rounded-lg border-woot-500 bg-woot-25 dark:bg-woot-900/20"
+          @click="newMotor2"
+        >
+          <span
+            class="text-sm font-semibold text-slate-800 dark:text-slate-100"
+          >
+            {{ $t('CAMPAIGNS2.CHOICE.MOTOR2') }}
+          </span>
+          <span class="text-xs text-woot-700">{{
+            $t('CAMPAIGNS2.CHOICE.RECOMMENDED')
+          }}</span>
+          <span class="text-xs text-slate-600 dark:text-slate-300">
+            {{ $t('CAMPAIGNS2.CHOICE.MOTOR2_ABOUT') }}
+          </span>
+        </button>
+        <button
+          type="button"
+          class="flex flex-col gap-1 p-4 text-left border rounded-lg border-slate-100 dark:border-slate-700 hover:border-woot-200"
+          @click="newClassic"
+        >
+          <span
+            class="text-sm font-semibold text-slate-800 dark:text-slate-100"
+          >
+            {{ $t('CAMPAIGNS2.CHOICE.MOTOR1') }}
+          </span>
+          <span class="text-xs text-slate-600 dark:text-slate-300">
+            {{ $t('CAMPAIGNS2.CHOICE.MOTOR1_ABOUT') }}
+          </span>
+        </button>
+      </div>
+    </woot-modal>
   </div>
 </template>
 

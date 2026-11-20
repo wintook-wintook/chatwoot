@@ -14,7 +14,7 @@ module Motor2::AppointmentNotice
   module_function
 
   def schedule!(tracking, meeting)
-    function = Motor2::Config.new(tracking.tracking_template).function
+    function = Motor2::Config.for(tracking).function
     return unless function.respond_to?(:appointment_notice) && function.appointment_notice[:on]
 
     at = meeting.starts_at - BEFORE
@@ -44,10 +44,10 @@ module Motor2::AppointmentNotice
   end
 
   def deliver(tracking, meeting, kind)
-    config = Motor2::Config.new(tracking.tracking_template)
+    config = Motor2::Config.for(tracking)
     message = Motor2::VoiceText.call(config, text(tracking, meeting, kind)) # con la voz de la empresa o del agente
     Motor2::LateMessage.deliver(tracking, message, template: config.function.appointment_notice[:template])
   end
 
-  def zone(tracking) = Motor2::Config.new(tracking.tracking_template).zone
+  def zone(tracking) = Motor2::Config.for(tracking).zone
 end

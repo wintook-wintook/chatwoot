@@ -1055,9 +1055,7 @@
       "WHERE_USED": "No atiende bandejas: lo eliges en la pantalla de campañas, en «¿Qué?».",
       "STEPS": {
         "agent": "El agente",
-        "offer": "Qué ofreces",
         "business": "Tu empresa",
-        "channel": "Canal y toques",
         "knows": "Qué sabe",
         "talk": "Cómo platica y el relevo",
         "quote": "Cotizaciones",
@@ -1068,8 +1066,6 @@
       },
       "STEP_HINTS": {
         "agent": "Cómo se llama y con qué tono escribe.",
-        "offer": "Para qué es la campaña y qué ofreces. De la oferta solo dice lo que pongas aquí o lo que encuentre en tus fuentes.",
-        "channel": "Por dónde escribe y cuántos toques da. En WhatsApp, cada toque usa una plantilla aprobada.",
         "knows": "Lo básico de tu negocio y dónde busca lo que le preguntan.",
         "talk": "Su voz (Cómo habla tu empresa), a quién pasa el relevo, objeciones, cotizaciones y tus indicaciones en texto libre (abajo).",
         "instructions": "Algo más que deba saber o hacer (opcional).",
@@ -1163,7 +1159,11 @@
       "IN_CAMPAIGNS": "En {n} campañas",
       "NO_CAMPAIGNS": "Todavía en ninguna campaña",
       "QUOTE_NOT_FOR_PURPOSE": "En una encuesta o una invitación no cotiza.",
-      "QUOTE_HINT": "Si le interesa la oferta y pide una cotización, la arma con los precios del Catálogo."
+      "QUOTE_HINT": "Si le interesa la oferta y pide una cotización, la arma con los precios del Catálogo.",
+      "EXAMPLE": {
+        "TITLE": "Oferta de ejemplo para probar",
+        "HINT": "Cada campaña trae su propia oferta, canal y mensajes (Campañas › Campaña con Vendedor IA). Esta oferta es solo para «Probar» aquí y para llenar de inicio las campañas nuevas."
+      }
     },
     "FILES": {
       "HINT": "Sube imágenes o archivos que el agente pueda mandar (fotos del producto, flyer, catálogo, mapa…). Ponle a cada uno una descripción: el agente no ve la imagen, con eso sabe cuándo sirve y no inventa lo que trae.",

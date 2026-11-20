@@ -16,6 +16,8 @@
 # su puesto y sus habilidades de Motor2::Functions; lo que tenga motor2['skills'] gana.
 #
 # Para el chat de prueba se le pasa lo que hay en la pantalla sin guardar (draft).
+# En una Campaña con Vendedor IA (TrackingCampaign#motor2?) la oferta y la bandeja son de la campaña:
+# Motor2::Config.for(tracking) las pone encima de lo del agente (answers: lo mismo para «Probar»).
 class Motor2::Config
   COLUMNS = %w[name customer_display_name objective ai_context email_signature inbox_id].freeze
   TONES = %w[tu usted].freeze
@@ -23,12 +25,19 @@ class Motor2::Config
 
   attr_reader :template, :data
 
-  def initialize(template, draft: nil)
+  def initialize(template, draft: nil, campaign: nil, answers: nil)
     @template = template
     draft = draft.to_h.deep_stringify_keys if draft
     @columns = template.attributes.slice(*COLUMNS).merge(draft.to_h.slice(*COLUMNS).compact)
     @data = (draft&.key?('motor2') ? draft['motor2'] : template.motor2).to_h.deep_stringify_keys
+    with_campaign(campaign&.motor2? ? campaign : nil, answers)
   end
+
+  # La del seguimiento: con la oferta de su campaña si es una Campaña con Vendedor IA.
+  def self.for(tracking) = new(tracking.tracking_template, campaign: tracking.tracking_campaign)
+
+  # La campaña 2.0 a la que pertenece (nil si no).
+  attr_reader :campaign
 
   def account = @template.account
 
@@ -108,6 +117,14 @@ class Motor2::Config
   def zone = ActiveSupport::TimeZone[@template.timezone.to_s] || ActiveSupport::TimeZone[inbox&.timezone.to_s] || Time.zone
 
   private
+
+  def with_campaign(campaign, answers)
+    @campaign = campaign
+    extra = answers.to_h.deep_stringify_keys
+    extra = TrackingCampaigns::Motor2Brief.seller_answers(campaign).merge(extra) if campaign
+    @columns['inbox_id'] = campaign.inbox_id if campaign&.inbox_id
+    @data = @data.merge('answers' => @data['answers'].to_h.merge(extra)) if extra.any?
+  end
 
   def text(key) = @data[key].to_s.strip.first(MAX_TEXT)
 end

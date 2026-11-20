@@ -1055,9 +1055,7 @@
       "WHERE_USED": "It doesn't serve inboxes: you pick it on the campaigns screen, under «What?».",
       "STEPS": {
         "agent": "The agent",
-        "offer": "What you offer",
         "business": "Your company",
-        "channel": "Channel and touches",
         "knows": "What it knows",
         "talk": "How it talks and the handover",
         "quote": "Quotes",
@@ -1068,8 +1066,6 @@
       },
       "STEP_HINTS": {
         "agent": "Its name and tone.",
-        "offer": "What the campaign is for and what you offer. It only says what you put here or what it finds in your sources.",
-        "channel": "Where it writes and how many touches. On WhatsApp, each touch uses an approved template.",
         "knows": "The basics of your business and where it looks up answers.",
         "talk": "Its voice (How your company talks), who gets the relay, objections, quotes and your free-text instructions (below).",
         "instructions": "Anything else it should know or do (optional).",
@@ -1163,7 +1159,11 @@
       "IN_CAMPAIGNS": "In {n} campaigns",
       "NO_CAMPAIGNS": "Not in any campaign yet",
       "QUOTE_NOT_FOR_PURPOSE": "It doesn't quote in a survey or an invitation.",
-      "QUOTE_HINT": "If they are interested in the offer and ask for a quote, it builds it with Catalog prices."
+      "QUOTE_HINT": "If they are interested in the offer and ask for a quote, it builds it with Catalog prices.",
+      "EXAMPLE": {
+        "TITLE": "Example offer for testing",
+        "HINT": "Each campaign brings its own offer, channel and messages (Campaigns › Campaign with AI Seller). This offer is only for «Test» here and to prefill new campaigns."
+      }
     },
     "FILES": {
       "HINT": "Upload images or files the agent can send (product photos, flyer, catalog, map…). Give each one a description: the agent can't see the image, so that's how it knows when it helps and doesn't make up what it shows.",

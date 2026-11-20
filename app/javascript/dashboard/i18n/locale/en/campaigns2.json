@@ -1,0 +1,320 @@
+{
+  "CAMPAIGNS2": {
+    "BADGE": "AI Seller",
+    "NEW_TITLE": "New campaign with AI Seller",
+    "EDIT_TITLE": "Edit campaign with AI Seller",
+    "SUBTITLE": "The campaign sends the first message and your Campaign Seller handles whoever replies: answers questions, quotes, books and hands off.",
+    "BACK": "Back to campaigns",
+    "LOADING": "Loading…",
+    "LOAD_ERROR": "The campaign couldn't be loaded.",
+    "NO_SELLERS": "You don't have a «Campaign Seller» yet. Create it in Ready agents to handle the replies.",
+    "NAME": "Campaign name",
+    "NAME_PLACEHOLDER": "E.g. Air conditioning promo — March",
+    "NEEDS_SELLER_AND_CHANNEL": "Choose the seller (Offer step) and the channel (Messages step) to save it.",
+    "SAVE_ERROR": "The campaign couldn't be saved.",
+    "SAVED": "Campaign saved.",
+    "LAUNCHED": "Campaign launched!",
+    "LAUNCH_ERROR": "The campaign couldn't be launched.",
+    "SAVE_DRAFT": "Save draft",
+    "PREV": "Back",
+    "NEXT": "Next",
+    "LAUNCH": "Launch campaign",
+    "SCHEDULE": "Schedule campaign",
+    "STEPS": {
+      "goal": "Goal",
+      "offer": "Offer and seller",
+      "audience": "Audience",
+      "messages": "Messages",
+      "when": "When",
+      "review": "Review and launch"
+    },
+    "HINTS": {
+      "goal": "What the campaign is for and what counts as success.",
+      "offer": "What you offer in this campaign and which seller handles the replies. The offer belongs to the campaign: one seller works for many campaigns.",
+      "audience": "Who gets it. You'll see how many it reaches and who is left out and why.",
+      "messages": "Where it goes out (WhatsApp or email), how many touches and what each one says.",
+      "when": "When it starts, when it ends and at what pace, so your team isn't flooded with replies.",
+      "review": "We check everything before launching: red items are missing."
+    },
+    "KINDS": {
+      "offer": {
+        "TITLE": "Offer",
+        "ABOUT": "A product, service or promotion. If interested, it hands them off."
+      },
+      "invite": {
+        "TITLE": "Invite",
+        "ABOUT": "To an event in Events. Confirms attendance and updates the event list."
+      },
+      "reactivate": {
+        "TITLE": "Reactivate",
+        "ABOUT": "Customers who haven't bought in a while. If interested, it hands them off."
+      },
+      "renew": {
+        "TITLE": "Remind or renew",
+        "ABOUT": "Something that expires (license, policy, service). If interested, it hands them off."
+      },
+      "survey": {
+        "TITLE": "Survey",
+        "ABOUT": "Up to 3 satisfaction questions. A low score opens a case."
+      }
+    },
+    "GOAL": {
+      "QUESTION": "If interested, what's next?",
+      "relay": "Hand off to the next agent or seller",
+      "appointment": "Book an appointment (with whoever has Google Calendar on the seller)"
+    },
+    "OFFER": {
+      "SELLER": "Campaign Seller that handles it",
+      "SELLER_PICK": "Choose a seller",
+      "SELLER_HINT": "Handles with its voice, knowledge, follow-up and quotes.",
+      "RELAY": {
+        "agent": "If interested, it hands off to the inbox's service agent.",
+        "person": "If interested, it hands off to its configured person or team."
+      },
+      "EVENT": "Event",
+      "EVENT_PICK": "Choose the event",
+      "NO_EVENTS": "No upcoming events. Create it in Events.",
+      "QUESTION": "Question {n}",
+      "QUESTION_PLACEHOLDER_1": "From 1 to 10, how satisfied are you with the service?",
+      "QUESTION_PLACEHOLDER_2": "What did you like the most?",
+      "QUESTION_PLACEHOLDER_3": "What could we improve?",
+      "LOW_SCORE": "Low score: below",
+      "WHAT": {
+        "offer": "What you offer",
+        "invite": "What you invite to (what the contact sees)",
+        "reactivate": "What you offer so they come back",
+        "renew": "What expires and how to renew"
+      },
+      "WHAT_PLACEHOLDER": {
+        "offer": "Mini-split maintenance with 20% off",
+        "invite": "Free e-invoicing workshop",
+        "reactivate": "This year's news and 15% off your next purchase",
+        "renew": "Your annual license expires on March 30; renew and keep your price"
+      },
+      "DETAILS": "Details: price, validity, conditions",
+      "DETAILS_PLACEHOLDER": "Valid until March 31 · local only · single payment",
+      "REST_DAYS": "Don't write if another campaign wrote less than",
+      "DAYS": "days ago",
+      "REST_HINT": "Saturation guard: contacts who got another AI Seller campaign recently are left out (0 = no rule)."
+    },
+    "AUDIENCE": {
+      "segment": "Segment",
+      "label": "Label",
+      "event": "Event attendees",
+      "continuous": "Added by my automations",
+      "SEGMENT": "Contact segment",
+      "LABEL": "Label",
+      "PICK": "Choose…",
+      "ATTENDEES": "With status",
+      "STATUS": {
+        "invited": "Invited",
+        "confirmed": "Confirmed",
+        "attended": "Attended",
+        "no_show": "No-show",
+        "cancelled": "Not going"
+      },
+      "CONTINUOUS_HINT": "Continuous campaign: every contact an automation adds with «Add to campaign» enters.",
+      "FROM_CAMPAIGN": "{n} contacts from another campaign.",
+      "NEEDS_CHANNEL": "Choose the seller and channel to see how many it reaches.",
+      "COUNTING": "Counting…",
+      "PICK_FIRST": "Choose the audience to see how many it reaches.",
+      "BUCKETS": {
+        "ready": "Reaches",
+        "in_tracking": "Already in a conversation with an agent",
+        "unreachable": "No valid phone or email",
+        "excluded": "Removed by you"
+      }
+    },
+    "MESSAGES": {
+      "CHANNEL": "Channel",
+      "CHANNEL_PICK": "Choose the inbox",
+      "CHANNEL_HINT": "Campaigns go out by WhatsApp (approved template) or email.",
+      "TYPES": {
+        "Whatsapp": "WhatsApp",
+        "Email": "Email"
+      },
+      "TOUCHES": "Touches",
+      "EVERY": "one every",
+      "HOURS": "hours",
+      "DAYS": "days",
+      "TOUCHES_HINT": "If they don't reply, it writes again. As soon as they reply there are no more touches: the seller takes over.",
+      "TEMPLATE_FOR": "Template for touch {n}",
+      "TEMPLATE_PICK": "Choose the approved template",
+      "NO_TEMPLATES": "This inbox has no approved templates. Create them in Settings › Inboxes › Templates (or «Create with Dali»).",
+      "NO_TEMPLATE_PREVIEW": "Choose the first touch's template to see how it arrives.",
+      "PICK_CHANNEL_FIRST": "Choose the channel to write the messages."
+    },
+    "EMAIL": {
+      "SUBJECT": "Subject",
+      "SUBJECT_PLACEHOLDER": "{{contacto}}, an idea for {{empresa}}",
+      "SUBJECT_B": "Subject B (A/B test, optional)",
+      "SUBJECT_B_PLACEHOLDER": "Another way to say it: the one with more replies wins",
+      "TOUCH": "Email {n}",
+      "SEND_TEST": "Send me a test",
+      "TEST_SENT": "We sent the test to {email}.",
+      "TEST_ERROR": "The test couldn't be sent.",
+      "AI_WRITES": "Without blocks, the seller writes this email with AI for each contact. Add blocks to write it yourself.",
+      "AI_PREVIEW": "The seller writes this email with AI for each contact.",
+      "NO_SUBJECT": "(no subject)",
+      "UNSUBSCRIBE": "The unsubscribe link goes at the end.",
+      "SIGNATURE": "The seller's signature goes at the end.",
+      "TYPES": {
+        "heading": "Heading",
+        "text": "Text",
+        "button": "Button",
+        "image": "Image"
+      },
+      "PLACEHOLDER": {
+        "heading": "Email heading",
+        "button": "Button text (e.g. See the promo)",
+        "image": "Image description"
+      },
+      "URL": {
+        "button": "Button link (https://…)",
+        "image": "Image link (https://…)"
+      },
+      "TEXT_PLACEHOLDER": "Hi {{contacto}}, …",
+      "VAR": {
+        "contacto": "+ name",
+        "empresa": "+ company"
+      },
+      "UP": "Move up",
+      "DOWN": "Move down",
+      "REMOVE": "Remove"
+    },
+    "WHEN": {
+      "START": "Starts",
+      "NOW": "As soon as I launch it",
+      "LATER": "On a date and time",
+      "ENDS": "Ends (optional)",
+      "WORKING_HOURS": "Only during the inbox's business hours",
+      "DAILY_CAP": "Max contacts per day",
+      "NO_CAP": "No cap",
+      "DAILY_CAP_HINT": "Spread sends over several days so your team can handle interested contacts.",
+      "DELAY": "Wait before the first message",
+      "MINUTES": "minutes"
+    },
+    "REVIEW": {
+      "SUMMARY": "{kind} · handled by {seller} · goes out via {channel} · {touches} touch(es)",
+      "AUDIENCE": "Reaches {n} contact(s).",
+      "CHECKING": "Checking…"
+    },
+    "PREVIEW": {
+      "TITLE": "How it arrives",
+      "PICK_CHANNEL": "Choose the channel in the Messages step to see how it arrives."
+    },
+    "CHAT": {
+      "TITLE": "Test: you are the contact",
+      "RESET": "Start over",
+      "NEEDS_SELLER": "Choose the seller to test.",
+      "PLACEHOLDER": "Reply as the contact would…",
+      "SEND": "Send",
+      "THINKING": "Typing…",
+      "NO_MESSAGE": "(no reply)",
+      "ERROR": "The test failed.",
+      "DECISION": "Decided: {decision}"
+    },
+    "CHOICE": {
+      "TITLE": "Which campaign do you want to create?",
+      "SUBTITLE": "Both use your contacts, segments and schedules.",
+      "MOTOR2": "Campaign with AI Seller (Engine 2.0)",
+      "RECOMMENDED": "Recommended",
+      "MOTOR2_ABOUT": "Offer, invite, reactivate, renew or survey by WhatsApp or email. Your Campaign Seller handles replies, quotes, books and hands off; the dashboard shows up to what was won.",
+      "MOTOR1": "Classic campaign (Engine 1.0)",
+      "MOTOR1_ABOUT": "As always: with a Custom agent and its card."
+    },
+    "STATUS": {
+      "saved": "Saved",
+      "draft": "Scheduled",
+      "running": "Running",
+      "paused": "Paused",
+      "finished": "Finished"
+    },
+    "RESULTS": {
+      "TITLE": "Campaign",
+      "SUBTITLE": "{status} · handled by {seller} · {channel}",
+      "BACK": "Back to campaigns",
+      "EDIT": "Edit",
+      "PAUSE": "Pause",
+      "RESUME": "Resume",
+      "DUPLICATE": "Duplicate",
+      "REFRESH": "Refresh",
+      "LOADING": "Loading…",
+      "LOAD_ERROR": "Results couldn't be loaded.",
+      "ACTION_ERROR": "It couldn't be done.",
+      "PAUSED_REASON": "Paused: {reason}",
+      "FUNNEL": "Funnel",
+      "PCT": "({pct}%)",
+      "STEPS": {
+        "enrolled": "Enrolled",
+        "sent": "Sent",
+        "delivered": "Delivered",
+        "read": "Read",
+        "clicked": "Clicked",
+        "replied": "Replied",
+        "interested": "Interested",
+        "relayed": "Handed off",
+        "appointment": "With appointment",
+        "quotes": "Quotes",
+        "won": "Won"
+      },
+      "MONEY": "Campaign sales",
+      "QUOTED": "Quoted: {total} ({n})",
+      "WON": "Won: {total} ({n})",
+      "EXITS": "Exits",
+      "EXIT": {
+        "not_interested": "Not interested",
+        "no_reply": "No reply",
+        "handed_off": "Asked for a person",
+        "opted_out": "Unsubscribed",
+        "failed": "Send failed"
+      },
+      "SKIPPED": {
+        "campaign_closed": "Skipped: campaign closed",
+        "already_enrolled": "Skipped: already enrolled",
+        "active_tracking": "Skipped: already talking to an agent",
+        "not_contactable": "Skipped: no phone or email",
+        "outside_window": "Skipped: outside the window",
+        "daily_cap": "Skipped: daily cap",
+        "opted_out": "Skipped: unsubscribed",
+        "invalid_email": "Skipped: invalid email",
+        "recently_contacted": "Skipped: another campaign wrote recently"
+      },
+      "CONFIRMED": "Confirmed: {n} (capacity {capacity})",
+      "DECLINED": "Not going: {n}",
+      "ANSWERED": "Answered: {n}",
+      "AVERAGE": "Average: {avg}",
+      "LOW": "Low scores: {n} · cases: {cases}",
+      "INSIGHTS": "What contacts say",
+      "INSIGHTS_RUN": "Summarize with AI",
+      "INSIGHTS_REFRESH": "Summarize again",
+      "INSIGHTS_EMPTY": "Once they reply, AI summarizes what they ask, their objections and what to improve.",
+      "REASONS": "Why they said no",
+      "NEXT_CAMPAIGN": "Next campaign with…",
+      "FOLLOW": {
+        "not_read": "Those who didn't read",
+        "no_reply": "Those who didn't reply",
+        "clicked": "Those who clicked",
+        "interested": "Those interested",
+        "not_interested": "Those who said no"
+      },
+      "FOLLOW_CREATED": "Ready: adjust the offer and message and launch it.",
+      "GROUP_TITLE": "{group} ({n})",
+      "GROUPS": {
+        "replied": "Replied",
+        "interested": "Interested",
+        "relayed": "Handed off",
+        "appointment": "With appointment",
+        "not_interested": "Not interested",
+        "no_reply": "No reply",
+        "not_read": "Didn't read",
+        "clicked": "Clicked",
+        "confirmed": "Confirmed",
+        "declined": "Not going",
+        "low_score": "Low score",
+        "failed": "Send failed"
+      },
+      "CLOSE": "Close"
+    }
+  }
+}

@@ -11,7 +11,7 @@ class Motor2::Reply
     @tracking = tracking
     @message = message
     @conversation = message.conversation
-    @config = Motor2::Config.new(tracking.tracking_template)
+    @config = Motor2::Config.for(tracking)
   end
 
   def call
