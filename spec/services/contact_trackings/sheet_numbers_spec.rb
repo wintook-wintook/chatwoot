@@ -26,4 +26,17 @@ RSpec.describe ContactTrackings::SheetNumbers do
       expect(described_class.cell('sin dato')).to be_nil
     end
   end
+
+  describe 'años' do
+    it 'lee el año sin unidad en una columna de año' do
+      expect(described_class.kind('MODELO')).to eq(:year)
+      expect(described_class.in_text('¿Qué tienen del 2020 en adelante?', 'MODELO')).to eq([2020])
+      expect(described_class.in_text('más nuevo que 2021', 'año')).to eq([2021])
+    end
+
+    it 'no toma precios ni teléfonos por años' do
+      expect(described_class.in_text('menos de $200,000 o 2020 mil', 'MODELO')).to eq([])
+      expect(described_class.in_text('mi cel 3312020567', 'MODELO')).to eq([])
+    end
+  end
 end
