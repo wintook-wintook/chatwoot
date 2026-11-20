@@ -96,4 +96,24 @@ RSpec.describe ContactTrackings::WelcomeMessage do
       expect(described_class.opening('¿En qué te puedo ayudar?')).to eq('¿En qué te puedo ayudar?')
     end
   end
+
+  describe '.personalize' do
+    let(:texto) { "Hola, [NOMBRE]. Gracias por escribir.\nte ayudo con gusto" }
+
+    it 'pone el primer nombre del contacto' do
+      expect(ContactTrackings::WelcomeName.personalize(texto, build(:contact, name: 'JUAN carlos'))).to start_with('Hola, Juan. Gracias')
+    end
+
+    it 'sin un nombre usable quita [NOMBRE] y su coma, sin tocar los demás renglones' do
+      ['+52 33 1234 5678', 'WhatsApp User', '😀'].each do |nombre|
+        expect(ContactTrackings::WelcomeName.personalize(texto, build(:contact, name: nombre)))
+          .to eq("Hola. Gracias por escribir.\nte ayudo con gusto")
+      end
+      expect(ContactTrackings::WelcomeName.personalize('[NOMBRE], bienvenido', build(:contact, name: ''))).to eq('Bienvenido')
+    end
+
+    it 'un renglón que empieza con [NOMBRE] no cierra la bienvenida' do
+      expect(described_class.text("[MENSAJE DE BIENVENIDA]\nHola\n[NOMBRE], pásale\n[ESTILO]\nx")).to eq("Hola\n[NOMBRE], pásale")
+    end
+  end
 end

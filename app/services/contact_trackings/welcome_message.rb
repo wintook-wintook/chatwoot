@@ -36,6 +36,8 @@
 # (hold), el primer envío del turno la pone al inicio (combine) y, si el turno no mandó
 # nada que se pueda combinar, se manda sola al final. Mismo criterio que el motor 2.0
 # (Motor2::Runner#with_welcome).
+#
+# [NOMBRE] en el texto: el primer nombre del contacto (ver ContactTrackings::WelcomeName).
 # ================================================================================
 
 module ContactTrackings::WelcomeMessage
@@ -46,7 +48,7 @@ module ContactTrackings::WelcomeMessage
   HEADER_RE = /\A[ \t]*\[[ \t]*MENSAJE[ \t]+DE[ \t]+BIENVENIDA[ \t]*\][ \t]*(.*)\z/i
   # Cualquier otro rótulo cierra la sección, también los que llevan el texto en la misma
   # línea («[ESTILO] Dos párrafos…»), además del rótulo markdown.
-  NEXT_HEADER_RE = /\A[ \t]*\[[^\]\n]+\]/
+  NEXT_HEADER_RE = /\A[ \t]*\[(?![ \t]*NOMBRE[ \t]*\])[^\]\n]+\]/i
 
   # Palabras de saludo o de pedido genérico: si el mensaje no trae nada más, basta la
   # bienvenida («¿En qué puedo ayudarte?»). Sin acentos y en minúsculas.
@@ -124,7 +126,7 @@ module ContactTrackings::WelcomeMessage
     welcome = text(tracking&.complementary_prompt)
     return nil if welcome.blank? || conversation.nil?
 
-    "#{welcome}\n\n#{TAG}" if mark_sent(tracking, conversation)
+    "#{ContactTrackings::WelcomeName.personalize(welcome, conversation.contact)}\n\n#{TAG}" if mark_sent(tracking, conversation)
   end
 
   # La bienvenida que va al inicio de la respuesta: sin el rótulo #bienvenida (combine lo
