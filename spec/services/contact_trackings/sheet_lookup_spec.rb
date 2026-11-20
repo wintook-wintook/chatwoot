@@ -263,4 +263,42 @@ RSpec.describe ContactTrackings::SheetLookup do
       expect(described_class.calendar_id(' abc@group.calendar.google.com ')).to eq('abc@group.calendar.google.com')
     end
   end
+
+  describe 'toda la hoja, precios y orden' do
+    let!(:autos) do
+      create(:knowledge_source, account: account, source_type: 'google_sheet', name: 'Inventario', config: { 'sheet_mode' => 'faq' })
+    end
+
+    before do
+      [%w[NISSAN Versa 2021 $210,000.00], %w[FIAT Uno 2013 $139,800.00], %w[NISSAN March 2019 $185,500.00],
+       ['FORD', 'Escape', '2023', 'sin precio']].each_with_index do |(marca, tipo, modelo, precio), i|
+        GoogleSheetRow.create!(account: account, knowledge_source: autos, row_index: i,
+                               data: { 'MARCA' => marca, 'TIPO' => tipo, 'MODELO' => modelo, 'PRECIO' => precio })
+      end
+    end
+
+    def con_texto(inner, texto)
+      described_class.new(account, described_class.parse(inner), text: texto).call
+    end
+
+    it 'con «*» y «orden: PRECIO menor, 1» da el más barato de toda la hoja' do
+      result = con_texto('Inventario | * | TIPO, PRECIO | orden: PRECIO menor, 1', '¿cuál es el más barato?')
+      expect(result.rows.pluck('TIPO')).to eq(['Uno'])
+    end
+
+    it 'filtra por precio dicho como «200 mil» y ordena; sin precio va al final con «mayor»' do
+      expect(con_texto('Inventario | PRECIO<=? | TIPO | orden: PRECIO menor', 'algo de menos de 200 mil').rows.pluck('TIPO'))
+        .to eq(%w[Uno March])
+      expect(con_texto('Inventario | * | TIPO | orden: PRECIO mayor', 'x').rows.pluck('TIPO')).to eq(%w[Versa March Uno Escape])
+    end
+
+    it 'filtra por año sin que el cliente escriba la columna' do
+      expect(con_texto('Inventario | MODELO>=? | TIPO', 'del 2020 en adelante').rows.pluck('TIPO')).to eq(%w[Versa Escape])
+    end
+
+    it 'un «orden:» mal escrito invalida la directiva' do
+      expect(described_class.parse('Inventario | * | TIPO | orden: PRECIO barato')).to be_nil
+      expect(described_class.parse('Inventario | * | TIPO').columns).to eq(['TIPO'])
+    end
+  end
 end

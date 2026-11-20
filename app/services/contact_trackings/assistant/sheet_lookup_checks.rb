@@ -6,7 +6,7 @@
 # El motor es fail-soft: una {{hoja_buscar:}} mal escrita o contra una columna que no
 # existe no da error, la agenda solo deja de ofrecer horarios. Aquí se dice por qué:
 #
-#   rojo   la directiva no tiene sus tres partes (hoja | buscar | regresar)
+#   rojo   la directiva no tiene sus tres partes (hoja | buscar | regresar) o su «orden:» está mal
 #   rojo   la hoja no existe (o está inactiva) en la cuenta
 #   rojo   una columna de buscar o de regresar no está en los encabezados
 #   ámbar  la hoja no tiene sus filas guardadas: hay que sincronizarla
@@ -53,7 +53,7 @@ class ContactTrackings::Assistant::SheetLookupChecks
 
   def check_columns(spec, headers, raw, where)
     known = headers.map { |h| h.to_s.strip.downcase }
-    missing = (spec.filters.map(&:column) + spec.returns).uniq.reject { |col| known.include?(col.strip.downcase) }
+    missing = spec.columns.reject { |col| known.include?(col.strip.downcase) }
     return if missing.empty?
 
     add(:blocking, :sheet_lookup_column_missing, raw, where,

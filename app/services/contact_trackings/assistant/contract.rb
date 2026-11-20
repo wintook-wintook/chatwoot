@@ -117,6 +117,12 @@ class ContactTrackings::Assistant::Contract
          Como FUENTE de la ruta (antes de la flecha):
            @ruta(datos_… #…: qué placas tiene la TP-63…): {{hoja_buscar: <Hoja> | <columna>=? | <col 1>, <col 2>}}
          Antes de la flecha = datos para responder; después de la flecha = agenda.
+      C2. «Que busque en TODA la hoja: el más barato, menos de X pesos, todas las de una marca»
+           @ruta(mas_barato #…: el más barato, el más económico…): {{hoja_buscar: <Hoja> | * | <col 1>, <precio> | orden: <precio> menor, 1}}
+           @ruta(por_precio #…: menos de 200 mil, hasta 250,000…): {{hoja_buscar: <Hoja> | <precio><=? | <col 1>, <precio> | orden: <precio> menor}}
+         «*» = todas las filas. «orden: <columna> menor|mayor» ordena por el número de la
+         celda; «, N» da solo las primeras N. El precio se lee de «200 mil», «$250,000», «200k»;
+         el año («del 2020 en adelante», <año>>=?) sin que el cliente escriba la columna.
       D. «Servicios largos, de noche, en madrugada o en domingo»
            @agendar_calendar(duracion=?, horario=24h)   ← duracion=? la dice el cliente;
            o fija: duracion=90 / duracion=2h. «6 meses», «renta mensual» = bloque de días.

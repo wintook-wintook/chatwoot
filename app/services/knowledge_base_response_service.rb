@@ -865,13 +865,22 @@ class KnowledgeBaseResponseService
     {}
   end
 
+  # Con «orden:», el modelo sabe que la primera fila es la más barata (o la mayor) de la hoja.
+  def order_note(spec)
+    order = spec.order
+    return '' if order.nil?
+
+    sentido = order.direction == 'menor' ? 'de menor a mayor' : 'de mayor a menor'
+    ", de toda la hoja y ordenados por #{order.column} #{sentido}"
+  end
+
   # nil = la hoja no respondió (no existe, columna mal escrita): sigue el conversacional.
   def sheet_lookup_context(spec, result)
     case result.status
     when :ok
       filas = ContactTrackings::SheetLookup.describe(spec, result.rows)
       extra = filas.size > MAX_LOOKUP_ROWS ? "\n(y #{filas.size - MAX_LOOKUP_ROWS} más)" : ''
-      "Datos exactos de la hoja «#{spec.sheet}» (úsalos tal cual; lo que no esté aquí no lo sabes):\n" \
+      "Datos exactos de la hoja «#{spec.sheet}» (úsalos tal cual; lo que no esté aquí no lo sabes)#{order_note(spec)}:\n" \
         "#{filas.first(MAX_LOOKUP_ROWS).join("\n")}#{extra}"
     when :needs_value
       "Para responder falta saber «#{result.asked}». Pregúntaselo al cliente en una sola pregunta; no respondas nada más."
