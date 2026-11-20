@@ -16,7 +16,10 @@ import ReadyAgentChat from './ReadyAgentChat.vue';
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 import AgentFiles from './AgentFiles.vue';
 import SourceOrder, { addSource } from './SourceOrder.vue';
+import WizardTabs from './WizardTabs.vue';
+import SubTabs from './SubTabs.vue';
 import AgentVoice from './AgentVoice.vue';
+import AgentBusiness from './AgentBusiness.vue';
 import FollowUpPlan from './FollowUpPlan.vue';
 import AfterHandoff from './AfterHandoff.vue';
 import QuoteMode from './QuoteMode.vue';
@@ -27,11 +30,10 @@ const STEPS = [
   'business',
   'areas',
   'knows',
-  'files',
   'talk',
   'follow',
-  'instructions',
-  'test',
+  'quote',
+  'files',
 ];
 const AREA_KEYS = ['support', 'sales', 'admin', 'other'];
 const MAX_EXAMPLES = 20;
@@ -121,6 +123,7 @@ const blank = () => ({
     tone: 'cercano',
     // «Cómo habla tu empresa» que cambió solo para este agente (AgentVoice).
     voice: {},
+    voice_mode: 'company',
     welcome: '',
     instructions: '',
     human: 'understand_first',
@@ -153,6 +156,9 @@ export default {
     AfterHandoff,
     QuoteMode,
     AgentVoice,
+    WizardTabs,
+    SubTabs,
+    AgentBusiness,
   },
   props: {
     show: { type: Boolean, default: false },
@@ -167,6 +173,7 @@ export default {
   emits: ['close', 'saved'],
   data() {
     return {
+      followTab: 'reminders', // pestañas dentro de «Seguimiento»
       form: blank(),
       saving: false,
       step: 'agent',
@@ -179,6 +186,10 @@ export default {
     };
   },
   computed: {
+    // «Qué atiende» usa todo el ancho (las áreas en dos columnas, sin el chat de prueba).
+    wide() {
+      return this.step === 'areas';
+    },
     ...mapGetters({ agents: 'agents/getAgents', teams: 'teams/getTeams' }),
     steps() {
       return STEPS;
@@ -195,6 +206,9 @@ export default {
     },
     tones() {
       return ['cercano', 'formal', 'directo', 'empresa'];
+    },
+    stepLabels() {
+      return Object.fromEntries(STEPS.map(s => [s, this.c(`STEPS.${s}`)]));
     },
     stepIndex() {
       return STEPS.indexOf(this.step);
@@ -228,6 +242,15 @@ export default {
       const list =
         this.$store.getters['inboxes/getWhatsAppTemplates'](inbox.id) || [];
       return [...new Set(list.map(item => item.name))];
+    },
+    // Pestañas de «Qué atiende»: el nombre del área (y «apagada» si no la atiende).
+    areaTabs() {
+      return AREA_KEYS.map(key => ({
+        key,
+        label: this.area(key).on
+          ? this.areaTitle(key)
+          : `${this.areaTitle(key)} ${this.c('AREA_OFF')}`,
+      }));
     },
     areasOn() {
       return AREA_KEYS.filter(k => this.form.settings.areas[k].on);
@@ -542,7 +565,7 @@ export default {
 </script>
 
 <template>
-  <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
+  <woot-modal :show="show" size="large" :on-close="() => $emit('close')">
     <div class="flex flex-col h-[85vh] min-h-0">
       <woot-modal-header
         :header-title="
@@ -552,30 +575,22 @@ export default {
         "
         :header-content="c('SUBTITLE')"
       />
+      <WizardTabs
+        class="px-4 md:px-8"
+        :steps="steps"
+        :current="step"
+        :labels="stepLabels"
+        @go="go"
+      />
       <div
         class="grid flex-1 min-h-0 grid-cols-1 gap-5 px-4 pb-4 overflow-y-auto md:px-8 md:grid-cols-2 md:grid-rows-1 md:overflow-hidden"
       >
         <form
           class="ready-form flex flex-col gap-2.5 overflow-y-auto !p-0 !pr-1 !self-stretch"
+          :class="{ 'md:col-span-2': wide }"
           @submit.prevent="isLast || agent ? save() : next()"
         >
-          <ol class="flex flex-wrap gap-1 p-0 m-0 list-none">
-            <li v-for="(s, i) in steps" :key="s">
-              <button
-                type="button"
-                class="px-2 py-0.5 text-xs border rounded-full"
-                :class="
-                  s === step
-                    ? 'border-woot-500 bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200'
-                    : 'border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400'
-                "
-                @click="go(s)"
-              >
-                {{ t('STEPS.NUMBERED', { n: i + 1, step: c(`STEPS.${s}`) }) }}
-              </button>
-            </li>
-          </ol>
-          <p class="m-0 text-xs text-slate-500">
+          <p v-if="!wide" class="m-0 text-xs text-slate-500">
             {{ c(`STEP_HINTS.${step}`) }}
           </p>
 
@@ -646,384 +661,370 @@ export default {
 
           <!-- 2 · Tu negocio -->
           <template v-if="step === 'business'">
-            <label
-              v-for="field in ['what', 'who', 'coverage', 'why', 'practical']"
-              :key="field"
-              class="block"
-            >
-              <span class="field-label">{{
-                t(`BUSINESS.${field.toUpperCase()}`)
-              }}</span>
-              <textarea
-                v-model="form.settings[`business_${field}`]"
-                rows="2"
-                :placeholder="t(`BUSINESS.${field.toUpperCase()}_PLACEHOLDER`)"
-              />
-            </label>
+            <AgentBusiness v-model="form.settings" />
+            <AgentVoice v-model="form.settings" />
           </template>
 
           <!-- 3 · Qué atiende: las áreas -->
           <template v-if="step === 'areas'">
-            <!-- Cualquier giro: los ejemplos de sí y no con el vocabulario de su negocio («Tu negocio»). -->
-            <div class="flex items-center gap-2">
-              <woot-button
-                size="small"
-                variant="smooth"
-                icon="wand"
-                :is-loading="suggesting"
-                :disabled="!form.settings.business_what.trim()"
-                @click="suggestExamples"
-              >
-                {{ c('SUGGEST_EXAMPLES') }}
-              </woot-button>
-              <span class="text-xs text-slate-500">{{
-                c('SUGGEST_EXAMPLES_HINT')
-              }}</span>
-            </div>
             <p v-if="!areasOn.length" class="m-0 text-xs text-red-600">
               {{ c('AREAS_NONE') }}
             </p>
+            <!-- Las áreas en pestañas (las mismas de Kontrolya); dentro, «Atender esta área» -->
+            <SubTabs v-model="openArea" :tabs="areaTabs" />
             <section
               v-for="key in areaKeys"
+              v-show="openArea === key"
               :key="key"
-              class="border rounded-md border-slate-100 dark:border-slate-700"
+              class="flex flex-col gap-2"
             >
-              <header class="flex items-center gap-2 px-2 py-1.5">
-                <input
-                  v-model="area(key).on"
-                  type="checkbox"
-                  class="!m-0"
-                  :aria-label="areaTitle(key)"
-                />
-                <button
-                  type="button"
-                  class="flex-1 text-sm font-medium text-left text-slate-800 dark:text-slate-100"
-                  @click="openArea = openArea === key ? '' : key"
-                >
-                  {{ areaTitle(key) }}
-                  <span class="block text-xs font-normal text-slate-500">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <label class="flex items-center gap-2 text-sm">
+                  <input
+                    v-model="area(key).on"
+                    type="checkbox"
+                    class="!m-0"
+                    :aria-label="areaTitle(key)"
+                  />
+                  <span class="font-medium">{{ c('AREA_ON') }}</span>
+                  <span class="text-xs text-slate-500">
                     {{ c(`AREAS.${key}.ABOUT`) }}
                   </span>
-                </button>
-                <fluent-icon
-                  :icon="openArea === key ? 'chevron-up' : 'chevron-down'"
-                  size="14"
-                  class="text-slate-400"
-                />
-              </header>
-              <div
-                v-if="openArea === key && area(key).on"
-                class="flex flex-col gap-2 px-2 pb-2"
-              >
-                <template v-if="key === 'other'">
-                  <label class="block">
-                    <span class="field-label">{{ c('OTHER.NAME') }}</span>
-                    <input
-                      v-model="area('other').name"
-                      type="text"
-                      maxlength="60"
-                      :placeholder="c('OTHER.NAME_PLACEHOLDER')"
-                    />
-                  </label>
-                  <label class="block">
-                    <span class="field-label">{{
-                      c('OTHER.DESCRIPTION')
-                    }}</span>
-                    <textarea
-                      v-model="area('other').description"
-                      rows="2"
-                      maxlength="300"
-                      :placeholder="c('OTHER.DESCRIPTION_PLACEHOLDER')"
-                    />
-                  </label>
-                </template>
-
-                <!-- Cómo se reconoce: ejemplos sí / no -->
-                <div
-                  v-for="field in ['examples_yes', 'examples_no']"
-                  :key="field"
+                </label>
+                <!-- Cualquier giro: los ejemplos de sí y no con el vocabulario de su negocio («Tu empresa»). -->
+                <woot-button
+                  v-if="area(key).on"
+                  size="small"
+                  variant="smooth"
+                  icon="wand"
+                  type="button"
+                  :title="c('SUGGEST_EXAMPLES_HINT')"
+                  :is-loading="suggesting"
+                  @click="suggestExamples"
                 >
-                  <span class="field-label">
-                    {{
-                      c(
-                        field === 'examples_yes'
-                          ? 'EXAMPLES.YES'
-                          : 'EXAMPLES.NO'
-                      )
-                    }}
-                  </span>
+                  {{ c('SUGGEST_EXAMPLES') }}
+                </woot-button>
+              </div>
+              <div
+                v-if="area(key).on"
+                class="grid grid-cols-1 gap-x-6 gap-y-2 md:grid-cols-2"
+              >
+                <!-- Izquierda: cómo se reconoce -->
+                <div class="flex flex-col gap-2">
+                  <template v-if="key === 'other'">
+                    <label class="block">
+                      <span class="field-label">{{ c('OTHER.NAME') }}</span>
+                      <input
+                        v-model="area('other').name"
+                        type="text"
+                        maxlength="60"
+                        :placeholder="c('OTHER.NAME_PLACEHOLDER')"
+                      />
+                    </label>
+                    <label class="block">
+                      <span class="field-label">{{
+                        c('OTHER.DESCRIPTION')
+                      }}</span>
+                      <textarea
+                        v-model="area('other').description"
+                        rows="2"
+                        maxlength="300"
+                        :placeholder="c('OTHER.DESCRIPTION_PLACEHOLDER')"
+                      />
+                    </label>
+                  </template>
+
+                  <!-- Cómo se reconoce: ejemplos sí / no -->
                   <div
-                    v-for="(e, i) in area(key)[field]"
-                    :key="i"
-                    class="flex items-center gap-1 mb-1"
+                    v-for="field in ['examples_yes', 'examples_no']"
+                    :key="field"
                   >
-                    <input
-                      v-model="e.text"
-                      type="text"
-                      maxlength="200"
-                      class="flex-1 !mb-0 h-8 text-sm"
-                      :placeholder="c('EXAMPLES.PLACEHOLDER')"
-                    />
+                    <span class="field-label">
+                      {{
+                        c(
+                          field === 'examples_yes'
+                            ? 'EXAMPLES.YES'
+                            : 'EXAMPLES.NO'
+                        )
+                      }}
+                    </span>
+                    <div
+                      v-for="(e, i) in area(key)[field]"
+                      :key="i"
+                      class="flex items-center gap-1 mb-1"
+                    >
+                      <input
+                        v-model="e.text"
+                        type="text"
+                        maxlength="200"
+                        class="flex-1 !mb-0 h-8 text-sm"
+                        :placeholder="c('EXAMPLES.PLACEHOLDER')"
+                      />
+                      <button
+                        type="button"
+                        class="px-1 text-slate-400 hover:text-red-600"
+                        :title="c('EXAMPLES.REMOVE')"
+                        @click="removeExample(key, field, i)"
+                      >
+                        <fluent-icon icon="dismiss" size="14" />
+                      </button>
+                    </div>
                     <button
                       type="button"
-                      class="px-1 text-slate-400 hover:text-red-600"
-                      :title="c('EXAMPLES.REMOVE')"
-                      @click="removeExample(key, field, i)"
+                      class="text-xs text-woot-600 hover:underline"
+                      @click="addExample(key, field)"
                     >
-                      <fluent-icon icon="dismiss" size="14" />
+                      {{ c('EXAMPLES.ADD') }}
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    class="text-xs text-woot-600 hover:underline"
-                    @click="addExample(key, field)"
-                  >
-                    {{ c('EXAMPLES.ADD') }}
-                  </button>
                 </div>
-
-                <!-- Qué hace -->
-                <template v-if="key === 'support'">
-                  <span class="field-label">{{ c('SUPPORT.ACTION') }}</span>
-                  <label
-                    v-for="value in ['case', 'handoff', 'visit']"
-                    :key="value"
-                    class="flex items-center gap-2 text-sm"
-                  >
-                    <input
-                      v-model="area('support').action"
-                      type="radio"
-                      class="!m-0"
-                      :value="value"
-                    />
-                    {{ c(`SUPPORT.ACTIONS.${value}`) }}
-                  </label>
-                  <label v-if="area('support').action === 'case'" class="block">
-                    <span class="field-label">{{ c('CASE_TYPE') }}</span>
-                    <select v-model="area('support').case_type_id">
-                      <option value="">{{ c('CASE_TYPE_FIRST') }}</option>
-                      <option
-                        v-for="ct in casesOf('support')"
-                        :key="ct.id"
-                        :value="ct.id"
-                      >
-                        {{ ct.name }}
-                      </option>
-                    </select>
-                  </label>
-                  <div v-if="area('support').action === 'visit'">
-                    <span class="field-label">{{
-                      t('FIELDS.APPOINTMENT_USERS')
-                    }}</span>
-                    <p
-                      v-if="!calendarUsers.length"
-                      class="m-0 text-xs text-amber-700"
-                    >
-                      {{ t('FIELDS.NO_CALENDARS') }}
-                    </p>
+                <!-- Derecha: qué hace, a quién lo pasa, reglas y horario -->
+                <div class="flex flex-col gap-2">
+                  <!-- Qué hace -->
+                  <template v-if="key === 'support'">
+                    <span class="field-label">{{ c('SUPPORT.ACTION') }}</span>
                     <label
-                      v-for="u in calendarUsers"
-                      :key="u.id"
+                      v-for="value in ['case', 'handoff', 'visit']"
+                      :key="value"
                       class="flex items-center gap-2 text-sm"
                     >
                       <input
+                        v-model="area('support').action"
+                        type="radio"
+                        class="!m-0"
+                        :value="value"
+                      />
+                      {{ c(`SUPPORT.ACTIONS.${value}`) }}
+                    </label>
+                    <label
+                      v-if="area('support').action === 'case'"
+                      class="block"
+                    >
+                      <span class="field-label">{{ c('CASE_TYPE') }}</span>
+                      <select v-model="area('support').case_type_id">
+                        <option value="">{{ c('CASE_TYPE_FIRST') }}</option>
+                        <option
+                          v-for="ct in casesOf('support')"
+                          :key="ct.id"
+                          :value="ct.id"
+                        >
+                          {{ ct.name }}
+                        </option>
+                      </select>
+                    </label>
+                    <div v-if="area('support').action === 'visit'">
+                      <span class="field-label">{{
+                        t('FIELDS.APPOINTMENT_USERS')
+                      }}</span>
+                      <p
+                        v-if="!calendarUsers.length"
+                        class="m-0 text-xs text-amber-700"
+                      >
+                        {{ t('FIELDS.NO_CALENDARS') }}
+                      </p>
+                      <label
+                        v-for="u in calendarUsers"
+                        :key="u.id"
+                        class="flex items-center gap-2 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          class="!m-0"
+                          :checked="calendarUserOn(u.id, 'support')"
+                          @change="toggleCalendarUser(u.id, 'support')"
+                        />
+                        {{ u.name }}
+                      </label>
+                      <p class="m-0 text-xs text-slate-500">
+                        {{ c('SUPPORT.VISIT_HINT') }}
+                      </p>
+                    </div>
+                    <label class="flex items-center gap-2 text-sm">
+                      <input
+                        v-model="area('support').details"
                         type="checkbox"
                         class="!m-0"
-                        :checked="calendarUserOn(u.id, 'support')"
-                        @change="toggleCalendarUser(u.id, 'support')"
                       />
-                      {{ u.name }}
+                      {{ c('SUPPORT.DETAILS') }}
+                    </label>
+                    <label v-if="services.length" class="block">
+                      <span class="field-label">{{
+                        c('SUPPORT.DEFAULT_SERVICE')
+                      }}</span>
+                      <select v-model="area('support').default_service_id">
+                        <option value="">
+                          {{ c('SUPPORT.DEFAULT_SERVICE_NONE') }}
+                        </option>
+                        <option v-for="s in services" :key="s.id" :value="s.id">
+                          {{ s.name }}
+                        </option>
+                      </select>
+                      <span class="block mt-1 text-xs text-slate-500">
+                        {{ c('SUPPORT.DEFAULT_SERVICE_HELP') }}
+                      </span>
                     </label>
                     <p class="m-0 text-xs text-slate-500">
-                      {{ c('SUPPORT.VISIT_HINT') }}
+                      {{ c('SUPPORT.SEVERITY') }}
                     </p>
-                  </div>
-                  <label class="flex items-center gap-2 text-sm">
-                    <input
-                      v-model="area('support').details"
-                      type="checkbox"
-                      class="!m-0"
-                    />
-                    {{ c('SUPPORT.DETAILS') }}
-                  </label>
-                  <label v-if="services.length" class="block">
-                    <span class="field-label">{{
-                      c('SUPPORT.DEFAULT_SERVICE')
-                    }}</span>
-                    <select v-model="area('support').default_service_id">
-                      <option value="">
-                        {{ c('SUPPORT.DEFAULT_SERVICE_NONE') }}
-                      </option>
-                      <option v-for="s in services" :key="s.id" :value="s.id">
-                        {{ s.name }}
-                      </option>
-                    </select>
-                    <span class="block mt-1 text-xs text-slate-500">
-                      {{ c('SUPPORT.DEFAULT_SERVICE_HELP') }}
-                    </span>
-                  </label>
-                  <p class="m-0 text-xs text-slate-500">
-                    {{ c('SUPPORT.SEVERITY') }}
-                  </p>
-                  <p class="m-0 text-xs text-slate-500">
-                    {{ c('SUPPORT.EVIDENCE') }}
-                  </p>
-                </template>
+                    <p class="m-0 text-xs text-slate-500">
+                      {{ c('SUPPORT.EVIDENCE') }}
+                    </p>
+                  </template>
 
-                <template v-if="key === 'sales'">
-                  <div v-for="field in ['quote', 'demo', 'visit']" :key="field">
-                    <span class="field-label">{{
-                      c(`SALES.${field}.LABEL`)
-                    }}</span>
-                    <select v-model="area('sales')[field]">
-                      <option
-                        v-for="value in field === 'quote'
-                          ? ['opportunity', 'handoff']
-                          : ['handoff', 'appointment']"
-                        :key="value"
-                        :value="value"
-                      >
-                        {{ c(`SALES.${field}.${value}`) }}
-                      </option>
-                    </select>
-                  </div>
-                  <label
-                    v-if="area('sales').quote === 'opportunity'"
-                    class="block"
-                  >
-                    <span class="field-label">{{ c('CASE_TYPE') }}</span>
-                    <select v-model="area('sales').case_type_id">
-                      <option value="">{{ c('CASE_TYPE_FIRST') }}</option>
-                      <option
-                        v-for="ct in casesOf('commercial')"
-                        :key="ct.id"
-                        :value="ct.id"
-                      >
-                        {{ ct.name }}
-                      </option>
-                    </select>
-                  </label>
-                  <div v-if="salesAppointments()">
-                    <span class="field-label">{{
-                      t('FIELDS.APPOINTMENT_USERS')
-                    }}</span>
-                    <p
-                      v-if="!calendarUsers.length"
-                      class="m-0 text-xs text-amber-700"
+                  <template v-if="key === 'sales'">
+                    <div
+                      v-for="field in ['quote', 'demo', 'visit']"
+                      :key="field"
                     >
-                      {{ t('FIELDS.NO_CALENDARS') }}
-                    </p>
+                      <span class="field-label">{{
+                        c(`SALES.${field}.LABEL`)
+                      }}</span>
+                      <select v-model="area('sales')[field]">
+                        <option
+                          v-for="value in field === 'quote'
+                            ? ['opportunity', 'handoff']
+                            : ['handoff', 'appointment']"
+                          :key="value"
+                          :value="value"
+                        >
+                          {{ c(`SALES.${field}.${value}`) }}
+                        </option>
+                      </select>
+                    </div>
                     <label
-                      v-for="u in calendarUsers"
-                      :key="u.id"
-                      class="flex items-center gap-2 text-sm"
+                      v-if="area('sales').quote === 'opportunity'"
+                      class="block"
                     >
+                      <span class="field-label">{{ c('CASE_TYPE') }}</span>
+                      <select v-model="area('sales').case_type_id">
+                        <option value="">{{ c('CASE_TYPE_FIRST') }}</option>
+                        <option
+                          v-for="ct in casesOf('commercial')"
+                          :key="ct.id"
+                          :value="ct.id"
+                        >
+                          {{ ct.name }}
+                        </option>
+                      </select>
+                    </label>
+                    <div v-if="salesAppointments()">
+                      <span class="field-label">{{
+                        t('FIELDS.APPOINTMENT_USERS')
+                      }}</span>
+                      <p
+                        v-if="!calendarUsers.length"
+                        class="m-0 text-xs text-amber-700"
+                      >
+                        {{ t('FIELDS.NO_CALENDARS') }}
+                      </p>
+                      <label
+                        v-for="u in calendarUsers"
+                        :key="u.id"
+                        class="flex items-center gap-2 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          class="!m-0"
+                          :checked="calendarUserOn(u.id)"
+                          @change="toggleCalendarUser(u.id)"
+                        />
+                        {{ u.name }}
+                      </label>
+                    </div>
+                    <p class="m-0 text-xs text-slate-500">
+                      {{ c('SALES.EVIDENCE') }}
+                    </p>
+                  </template>
+
+                  <template v-if="key === 'admin'">
+                    <label class="flex items-center gap-2 text-sm">
                       <input
+                        v-model="area('admin').case"
                         type="checkbox"
                         class="!m-0"
-                        :checked="calendarUserOn(u.id)"
-                        @change="toggleCalendarUser(u.id)"
                       />
-                      {{ u.name }}
+                      {{ c('ADMIN.CASE') }}
+                    </label>
+                    <label v-if="area('admin').case" class="block">
+                      <span class="field-label">{{ c('CASE_TYPE') }}</span>
+                      <select v-model="area('admin').case_type_id">
+                        <option value="">{{ c('CASE_TYPE_FIRST') }}</option>
+                        <option
+                          v-for="ct in caseTypes"
+                          :key="ct.id"
+                          :value="ct.id"
+                        >
+                          {{ ct.name }}
+                        </option>
+                      </select>
+                    </label>
+                    <p class="m-0 text-xs text-slate-500">
+                      {{ c('ADMIN.NO_SOURCES') }}
+                    </p>
+                  </template>
+
+                  <!-- A quién se pasa -->
+                  <div class="grid grid-cols-2 gap-2">
+                    <label class="block">
+                      <span class="field-label">{{ c('AREA_USER') }}</span>
+                      <select v-model="area(key).user_id">
+                        <option value="">{{ c('GENERAL') }}</option>
+                        <option v-for="u in agents" :key="u.id" :value="u.id">
+                          {{ u.name }}
+                        </option>
+                      </select>
+                    </label>
+                    <label class="block">
+                      <span class="field-label">{{ c('AREA_TEAM') }}</span>
+                      <select v-model="area(key).team_id">
+                        <option value="">{{ t('FIELDS.NO_TEAM') }}</option>
+                        <option
+                          v-for="team in teams"
+                          :key="team.id"
+                          :value="team.id"
+                        >
+                          {{ team.name }}
+                        </option>
+                      </select>
                     </label>
                   </div>
-                  <p class="m-0 text-xs text-slate-500">
-                    {{ c('SALES.EVIDENCE') }}
-                  </p>
-                  <QuoteMode
-                    v-model="form.settings.quote"
-                    :has-catalog="hasCatalog"
-                  />
-                </template>
-
-                <template v-if="key === 'admin'">
-                  <label class="flex items-center gap-2 text-sm">
-                    <input
-                      v-model="area('admin').case"
-                      type="checkbox"
-                      class="!m-0"
+                  <!-- Reglas propias del área y su horario (Motor2::Skills::AreaRules) -->
+                  <label class="block">
+                    <span class="field-label">{{ c('RULES.LABEL') }}</span>
+                    <textarea
+                      v-model="area(key).rules"
+                      rows="2"
+                      maxlength="800"
+                      :placeholder="c(`RULES.PLACEHOLDER.${key}`)"
                     />
-                    {{ c('ADMIN.CASE') }}
                   </label>
-                  <label v-if="area('admin').case" class="block">
-                    <span class="field-label">{{ c('CASE_TYPE') }}</span>
-                    <select v-model="area('admin').case_type_id">
-                      <option value="">{{ c('CASE_TYPE_FIRST') }}</option>
+                  <div class="flex flex-wrap items-center gap-2 text-sm">
+                    <span>{{ c('RULES.HOURS') }}</span>
+                    <input
+                      v-model="hoursOf(key).from"
+                      type="time"
+                      class="!mb-0 !w-28"
+                    />
+                    <span>{{ c('RULES.TO') }}</span>
+                    <input
+                      v-model="hoursOf(key).to"
+                      type="time"
+                      class="!mb-0 !w-28"
+                    />
+                    <select v-model="hoursOf(key).days" class="!mb-0 !w-40">
                       <option
-                        v-for="ct in caseTypes"
-                        :key="ct.id"
-                        :value="ct.id"
+                        v-for="d in ['weekdays', 'saturday', 'all']"
+                        :key="d"
+                        :value="d"
                       >
-                        {{ ct.name }}
+                        {{ c(`RULES.DAYS.${d}`) }}
                       </option>
                     </select>
-                  </label>
+                  </div>
                   <p class="m-0 text-xs text-slate-500">
-                    {{ c('ADMIN.NO_SOURCES') }}
+                    {{ c('RULES.HOURS_HINT') }}
                   </p>
-                </template>
-
-                <!-- A quién se pasa -->
-                <div class="grid grid-cols-2 gap-2">
-                  <label class="block">
-                    <span class="field-label">{{ c('AREA_USER') }}</span>
-                    <select v-model="area(key).user_id">
-                      <option value="">{{ c('GENERAL') }}</option>
-                      <option v-for="u in agents" :key="u.id" :value="u.id">
-                        {{ u.name }}
-                      </option>
-                    </select>
-                  </label>
-                  <label class="block">
-                    <span class="field-label">{{ c('AREA_TEAM') }}</span>
-                    <select v-model="area(key).team_id">
-                      <option value="">{{ t('FIELDS.NO_TEAM') }}</option>
-                      <option
-                        v-for="team in teams"
-                        :key="team.id"
-                        :value="team.id"
-                      >
-                        {{ team.name }}
-                      </option>
-                    </select>
-                  </label>
                 </div>
-                <!-- Reglas propias del área y su horario (Motor2::Skills::AreaRules) -->
-                <label class="block">
-                  <span class="field-label">{{ c('RULES.LABEL') }}</span>
-                  <textarea
-                    v-model="area(key).rules"
-                    rows="2"
-                    maxlength="800"
-                    :placeholder="c(`RULES.PLACEHOLDER.${key}`)"
-                  />
-                </label>
-                <div class="flex flex-wrap items-center gap-2 text-sm">
-                  <span>{{ c('RULES.HOURS') }}</span>
-                  <input
-                    v-model="hoursOf(key).from"
-                    type="time"
-                    class="!mb-0 !w-28"
-                  />
-                  <span>{{ c('RULES.TO') }}</span>
-                  <input
-                    v-model="hoursOf(key).to"
-                    type="time"
-                    class="!mb-0 !w-28"
-                  />
-                  <select v-model="hoursOf(key).days" class="!mb-0 !w-40">
-                    <option
-                      v-for="d in ['weekdays', 'saturday', 'all']"
-                      :key="d"
-                      :value="d"
-                    >
-                      {{ c(`RULES.DAYS.${d}`) }}
-                    </option>
-                  </select>
-                </div>
-                <p class="m-0 text-xs text-slate-500">
-                  {{ c('RULES.HOURS_HINT') }}
-                </p>
               </div>
             </section>
           </template>
@@ -1112,7 +1113,6 @@ export default {
 
           <!-- 5 · Cómo platica -->
           <template v-if="step === 'talk'">
-            <AgentVoice v-model="form.settings.voice" />
             <label class="block">
               <span class="field-label">{{ t('TALK.WELCOME') }}</span>
               <textarea
@@ -1164,14 +1164,37 @@ export default {
             </div>
           </template>
 
+          <!-- Cotizaciones (área Comercial): borrador para el vendedor o se la manda (Motor2::Skills::Quote) -->
+          <template v-if="step === 'quote'">
+            <p v-if="!area('sales').on" class="m-0 text-xs text-amber-700">
+              {{ c('QUOTE_NEEDS_SALES') }}
+            </p>
+            <QuoteMode
+              v-model="form.settings.quote"
+              :has-catalog="hasCatalog"
+              :templates="waTemplates"
+            />
+            <p class="m-0 text-xs text-slate-500">{{ c('QUOTE_HINT') }}</p>
+          </template>
+
           <!-- Seguimiento: si deja de contestar, el plazo del equipo y el recordatorio de la cita -->
           <template v-if="step === 'follow'">
+            <SubTabs
+              v-model="followTab"
+              :tabs="[
+                { key: 'reminders', label: t('SUBTABS.REMINDERS') },
+                { key: 'handoff', label: t('SUBTABS.HANDOFF') },
+              ]"
+            />
             <FollowUpPlan
+              v-if="followTab === 'reminders'"
               v-model="form.settings.follow_up"
               :templates="waTemplates"
+              :quote="form.settings.quote"
               kind="customers"
             />
             <AfterHandoff
+              v-else
               v-model="form.settings"
               :templates="waTemplates"
               :appointments="takesAppointments"
@@ -1179,7 +1202,7 @@ export default {
           </template>
 
           <!-- 6 · Indicaciones -->
-          <template v-if="step === 'instructions'">
+          <template v-if="step === 'talk'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.INSTRUCTIONS') }}</span>
               <textarea
@@ -1191,17 +1214,24 @@ export default {
           </template>
 
           <!-- 7 · Pruébalo: la matriz y el chat -->
-          <template v-if="step === 'test'">
-            <p class="m-0 text-sm text-slate-700 dark:text-slate-200">
+          <!-- Al final: listo para guardar; en «Qué atiende»: probar la matriz de las áreas -->
+          <template v-if="isLast || step === 'areas'">
+            <p
+              v-if="isLast"
+              class="m-0 text-sm text-slate-700 dark:text-slate-200"
+            >
               {{ t('STEP_TEST.READY', { name: form.name.trim() || '—' }) }}
             </p>
             <p
-              v-if="!form.enabled"
+              v-if="isLast && !form.enabled"
               class="m-0 text-xs text-amber-700 dark:text-amber-400"
             >
               {{ t('STEP_TEST.OFF') }}
             </p>
-            <div class="p-2 rounded-md bg-slate-25 dark:bg-slate-800">
+            <div
+              v-if="step === 'areas'"
+              class="p-2 rounded-md bg-slate-25 dark:bg-slate-800"
+            >
               <div class="flex items-center justify-between gap-2">
                 <span
                   class="text-sm font-medium text-slate-800 dark:text-slate-100"
@@ -1246,7 +1276,9 @@ export default {
           </template>
         </form>
 
+        <!-- En «Qué atiende» la ventana es toda para las áreas (se prueba con la matriz, abajo) -->
         <ReadyAgentChat
+          v-show="!wide"
           :payload="payload"
           :agent-id="agent ? agent.id : null"
           :hint="c('TEST_HINT')"
@@ -1274,12 +1306,7 @@ export default {
         >
           {{ t('NEXT') }}
         </woot-button>
-        <woot-button
-          v-if="isLast || agent"
-          :is-loading="saving"
-          :disabled="!canSave"
-          @click="save"
-        >
+        <woot-button :is-loading="saving" :disabled="!canSave" @click="save">
           {{ t('SAVE') }}
         </woot-button>
       </div>

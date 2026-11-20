@@ -93,8 +93,6 @@ class Motor2::Functions::CampaignSeller
     @event = answer(:event_id).present? ? config.account.events.find_by(id: answer(:event_id)) : nil
   end
 
-  def business_values = BUSINESS.keys.map { |k| answer(k).to_s }
-
   def skills
     { 'campaign' => { 'on' => true },
       'knowledge' => { 'on' => !survey? },
@@ -134,7 +132,7 @@ class Motor2::Functions::CampaignSeller
   end
 
   def business_block
-    lines = BUSINESS.filter_map { |k, label| "- #{label}: #{answer(k)}" if answer(k).present? }
+    lines = BUSINESS.filter_map { |k, label| "- #{label}: #{own_business(k)}" if own_business(k).present? }
     lines << price_line unless survey?
     lines.empty? ? '' : "EL NEGOCIO:\n#{lines.join("\n")}"
   end

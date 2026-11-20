@@ -81,6 +81,7 @@ class Motor2::Functions::ProspectOutcomes
   def qualified(summary)
     add_label
     detail = [summary, answers_text].compact_blank.join("\n")
+    return quoted(detail) if state['quote'] # pidió la cotización: ya trae su oportunidad
     # Con citas, calificar no termina: falta que elija horario (el seguimiento sigue).
     return note("Prospecto calificado.\n#{detail}") if @function.appointment?
 
@@ -94,6 +95,14 @@ class Motor2::Functions::ProspectOutcomes
       Motor2::AttendClock.start(@tracking, @conversation, @function)
       finish('qualified', summary)
     end
+  end
+
+  # Lo calificó la cotización (Motor2::Skills::Quote): al vendedor, sin abrir otra oportunidad (la cotización ya la tiene).
+  def quoted(detail)
+    note("Prospecto calificado: pidió la cotización #{state.dig('quote', 'folio')}.\n#{detail}")
+    assign(@function.handoff_target)
+    Motor2::AttendClock.start(@tracking, @conversation, @function)
+    finish('qualified', "Cotización #{state.dig('quote', 'folio')}")
   end
 
   def discarded(reason)

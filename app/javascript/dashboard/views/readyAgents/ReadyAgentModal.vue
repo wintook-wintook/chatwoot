@@ -15,7 +15,10 @@ import ReadyAgentsAPI from 'dashboard/api/readyAgents';
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 import AgentFiles from './AgentFiles.vue';
 import SourceOrder, { addSource } from './SourceOrder.vue';
+import WizardTabs from './WizardTabs.vue';
+import SubTabs from './SubTabs.vue';
 import AgentVoice from './AgentVoice.vue';
+import AgentBusiness from './AgentBusiness.vue';
 import FollowUpPlan from './FollowUpPlan.vue';
 import QuoteMode from './QuoteMode.vue';
 
@@ -57,12 +60,9 @@ const STEPS = [
   'questions',
   'talk',
   'qualify',
-  'after',
   'follow',
-  'objections',
+  'quote',
   'files',
-  'instructions',
-  'test',
 ];
 const blank = kind => ({
   kind,
@@ -91,6 +91,7 @@ const blank = kind => ({
     tone: 'cercano',
     // «Cómo habla tu empresa» que cambió solo para este agente (AgentVoice).
     voice: {},
+    voice_mode: 'company',
     instructions: '',
     handoff_user_id: '',
     handoff_team_id: '',
@@ -126,7 +127,16 @@ const blank = kind => ({
 
 export default {
   name: 'ReadyAgentModal',
-  components: { AgentFiles, SourceOrder, FollowUpPlan, QuoteMode, AgentVoice },
+  components: {
+    AgentFiles,
+    SourceOrder,
+    FollowUpPlan,
+    QuoteMode,
+    AgentVoice,
+    WizardTabs,
+    SubTabs,
+    AgentBusiness,
+  },
   props: {
     show: { type: Boolean, default: false },
     kind: { type: String, default: 'prospects' },
@@ -146,6 +156,7 @@ export default {
       form: blank(this.kind),
       saving: false,
       suggesting: false,
+      subTab: 'when', // pestañas dentro de «Al calificar» (y «Seguimiento»)
       chat: [],
       // La memoria del cliente en el chat de prueba (respuestas, cita…): va y viene con el motor.
       chatState: {},
@@ -227,6 +238,9 @@ export default {
     },
     steps() {
       return STEPS;
+    },
+    stepLabels() {
+      return Object.fromEntries(STEPS.map(s => [s, this.t(`STEPS.${s}`)]));
     },
     stepIndex() {
       return STEPS.indexOf(this.step);
@@ -514,6 +528,7 @@ export default {
           tools: data.tools || [],
           decision: data.decision,
           files: data.files || [],
+          previews: data.previews || [],
           temperature: (data.state || {}).temperature,
         });
       } catch (e) {
@@ -545,7 +560,7 @@ export default {
 </script>
 
 <template>
-  <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
+  <woot-modal :show="show" size="large" :on-close="() => $emit('close')">
     <div class="flex flex-col h-[85vh] min-h-0">
       <woot-modal-header
         :header-title="
@@ -554,6 +569,13 @@ export default {
             : t('NEW_TITLE', { title })
         "
         :header-content="t('MODAL_SUBTITLE')"
+      />
+      <WizardTabs
+        class="px-4 md:px-8"
+        :steps="steps"
+        :current="step"
+        :labels="stepLabels"
+        @go="go"
       />
       <div
         class="grid flex-1 min-h-0 grid-cols-1 gap-5 px-4 pb-4 overflow-y-auto md:px-8 md:grid-cols-2 md:grid-rows-1 md:overflow-hidden"
@@ -564,22 +586,6 @@ export default {
           @submit.prevent="isLast || agent ? save() : next()"
         >
           <!-- Los pasos: al editar se puede saltar a cualquiera -->
-          <ol class="flex flex-wrap gap-1 p-0 m-0 list-none">
-            <li v-for="(s, i) in steps" :key="s">
-              <button
-                type="button"
-                class="px-2 py-0.5 text-xs border rounded-full"
-                :class="
-                  s === step
-                    ? 'border-woot-500 bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200'
-                    : 'border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400'
-                "
-                @click="go(s)"
-              >
-                {{ t('STEPS.NUMBERED', { n: i + 1, step: t(`STEPS.${s}`) }) }}
-              </button>
-            </li>
-          </ol>
           <p class="m-0 text-xs text-slate-500">
             {{ t(`STEP_HINTS.${step}`) }}
           </p>
@@ -648,46 +654,8 @@ export default {
 
           <!-- 2 · Tu negocio -->
           <template v-if="step === 'business'">
-            <label class="block">
-              <span class="field-label">{{ t('BUSINESS.WHAT') }}</span>
-              <textarea
-                v-model="form.settings.business_what"
-                rows="2"
-                :placeholder="t('BUSINESS.WHAT_PLACEHOLDER')"
-              />
-            </label>
-            <label class="block">
-              <span class="field-label">{{ t('BUSINESS.WHO') }}</span>
-              <textarea
-                v-model="form.settings.business_who"
-                rows="2"
-                :placeholder="t('BUSINESS.WHO_PLACEHOLDER')"
-              />
-            </label>
-            <label class="block">
-              <span class="field-label">{{ t('BUSINESS.COVERAGE') }}</span>
-              <textarea
-                v-model="form.settings.business_coverage"
-                rows="2"
-                :placeholder="t('BUSINESS.COVERAGE_PLACEHOLDER')"
-              />
-            </label>
-            <label class="block">
-              <span class="field-label">{{ t('BUSINESS.WHY') }}</span>
-              <textarea
-                v-model="form.settings.business_why"
-                rows="2"
-                :placeholder="t('BUSINESS.WHY_PLACEHOLDER')"
-              />
-            </label>
-            <label class="block">
-              <span class="field-label">{{ t('BUSINESS.PRACTICAL') }}</span>
-              <textarea
-                v-model="form.settings.business_practical"
-                rows="2"
-                :placeholder="t('BUSINESS.PRACTICAL_PLACEHOLDER')"
-              />
-            </label>
+            <AgentBusiness v-model="form.settings" />
+            <AgentVoice v-model="form.settings" />
           </template>
 
           <!-- 3 · Qué sabe: sus fuentes y qué hay en cada una -->
@@ -781,7 +749,6 @@ export default {
                 variant="smooth"
                 icon="wand"
                 :is-loading="suggesting"
-                :disabled="!form.settings.business_what.trim()"
                 @click="suggestQuestions"
               >
                 {{ t('QUESTIONS_LIST.SUGGEST') }}
@@ -853,7 +820,6 @@ export default {
 
           <!-- 5 · Cómo platica: dudas, lo que no encuentra y lo que no es del negocio -->
           <template v-if="step === 'talk'">
-            <AgentVoice v-model="form.settings.voice" />
             <label class="block">
               <span class="field-label">{{ t('TALK.WELCOME') }}</span>
               <textarea
@@ -903,7 +869,16 @@ export default {
           </template>
 
           <!-- 6 · Cuándo califica y cuándo no -->
-          <template v-if="step === 'qualify'">
+          <SubTabs
+            v-if="step === 'qualify'"
+            v-model="subTab"
+            :tabs="[
+              { key: 'when', label: t('SUBTABS.WHEN') },
+              { key: 'after', label: t('SUBTABS.AFTER') },
+              { key: 'objections', label: t('SUBTABS.OBJECTIONS') },
+            ]"
+          />
+          <template v-if="step === 'qualify' && subTab === 'when'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.QUALIFIED_WHEN') }}</span>
               <textarea
@@ -945,16 +920,29 @@ export default {
           </template>
 
           <!-- 7 · Qué hacer al calificar y a quién -->
+          <!-- Cotizaciones: la arma cuando la pide (en cualquier momento) y eso lo califica (Motor2::Skills::Quote) -->
+          <template v-if="step === 'quote'">
+            <QuoteMode
+              v-model="form.settings.quote"
+              :has-catalog="hasCatalog"
+              :templates="waTemplates"
+            />
+            <p class="m-0 text-xs text-slate-500">
+              {{ t('QUOTE.PROSPECTS_HINT') }}
+            </p>
+          </template>
+
           <!-- Seguimiento: si deja de contestar (Motor2::FollowUp), con su línea de tiempo -->
           <template v-if="step === 'follow'">
             <FollowUpPlan
               v-model="form.settings.follow_up"
               :templates="waTemplates"
+              :quote="form.settings.quote"
               kind="prospects"
             />
           </template>
 
-          <template v-if="step === 'after'">
+          <template v-if="step === 'qualify' && subTab === 'after'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.OBJECTIVE') }}</span>
               <select v-model="form.settings.objective">
@@ -1099,10 +1087,6 @@ export default {
                 t('FIELDS.ATTEND_HINT')
               }}</span>
             </label>
-            <QuoteMode
-              v-model="form.settings.quote"
-              :has-catalog="hasCatalog"
-            />
             <span class="field-label">{{ t('FIELDS.REQUIRED_CONTACT') }}</span>
             <div class="flex flex-wrap gap-1.5">
               <button
@@ -1156,7 +1140,7 @@ export default {
           </template>
 
           <!-- 8 · Objeciones -->
-          <template v-if="step === 'objections'">
+          <template v-if="step === 'qualify' && subTab === 'objections'">
             <div
               v-for="(o, i) in form.settings.objections"
               :key="i"
@@ -1205,7 +1189,7 @@ export default {
             />
           </template>
 
-          <template v-if="step === 'instructions'">
+          <template v-if="step === 'talk'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.INSTRUCTIONS') }}</span>
               <textarea
@@ -1217,7 +1201,7 @@ export default {
           </template>
 
           <!-- 10 · Pruébalo y guarda -->
-          <template v-if="step === 'test'">
+          <template v-if="isLast">
             <p class="m-0 text-sm text-slate-700 dark:text-slate-200">
               {{ t('STEP_TEST.READY', { name: form.name.trim() || '—' }) }}
             </p>
@@ -1286,6 +1270,28 @@ export default {
                 >
                   {{ t('TEST.FILES', { files: m.files.join(', ') }) }}
                 </span>
+                <!-- Lo que mandaría: la miniatura de la imagen o la liga del archivo. -->
+                <span
+                  v-if="(m.previews || []).length"
+                  class="flex flex-wrap gap-2 mt-1"
+                >
+                  <a
+                    v-for="file in m.previews"
+                    :key="file.url"
+                    :href="file.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-[11px] text-woot-600 hover:underline"
+                  >
+                    <img
+                      v-if="file.image"
+                      :src="file.url"
+                      :alt="file.name"
+                      class="object-cover w-32 h-32 border rounded-md border-slate-100 dark:border-slate-700"
+                    />
+                    <span v-else>{{ file.name }}</span>
+                  </a>
+                </span>
                 <span
                   v-if="m.decision"
                   class="block mt-1 text-[11px] font-medium text-woot-700"
@@ -1349,12 +1355,7 @@ export default {
         >
           {{ t('NEXT') }}
         </woot-button>
-        <woot-button
-          v-if="isLast || agent"
-          :is-loading="saving"
-          :disabled="!canSave"
-          @click="save"
-        >
+        <woot-button :is-loading="saving" :disabled="!canSave" @click="save">
           {{ t('SAVE') }}
         </woot-button>
       </div>

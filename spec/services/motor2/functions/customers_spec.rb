@@ -355,17 +355,39 @@ RSpec.describe Motor2::Functions::Customers do
       expect(metrics[:groups]).to include('soporte-duda' => 1, 'administrativo' => 1)
     end
 
-    it '«Cómo habla tu empresa»: manda en el prompt, y lo que el agente cambió es solo para él' do
+    it '«Cómo habla tu empresa»: el de la empresa, o el personalizado de este agente (completo, en vez del de la empresa)' do
       AgentBase::CompanyVoice.update!(account, { 'tone' => 'Formal, de usted', 'signature' => '— Equipo ACME' })
-      save_agent(settings.merge('tone' => 'empresa', 'voice' => { 'signature' => '— Soporte ACME' }), template: agent)
-      config = Motor2::Config.new(agent.reload)
-      runner = Motor2::Runner.new(config, state: Motor2::State.new, history: [{ role: 'user', content: 'hola' }])
-      system = Motor2::Prompt.new(runner, Motor2::Skills.for(runner)).system
+      system_of = lambda do
+        runner = Motor2::Runner.new(Motor2::Config.new(agent.reload), state: Motor2::State.new, history: [{ role: 'user', content: 'hola' }])
+        [Motor2::Prompt.new(runner, Motor2::Skills.for(runner)).system, runner]
+      end
+      expect(system_of.call.first).to include('ASÍ HABLA LA EMPRESA', 'Formal, de usted', '— Equipo ACME')
 
-      expect(system).to include('ASÍ HABLA LA EMPRESA', 'Formal, de usted', '— Soporte ACME')
-      expect(system).not_to include('— Equipo ACME')
-      expect(config.tone).to eq('usted')
-      expect(runner.trace.events.last['text']).to include('de este agente: Cómo firmar o despedirse')
+      save_agent(settings.merge('tone' => 'empresa', 'voice_mode' => 'own',
+                                'voice' => { 'tone' => 'De tú, muy cercano', 'signature' => '— Soporte ACME' }), template: agent)
+      system, runner = system_of.call
+      expect(system).to include('De tú, muy cercano', '— Soporte ACME')
+      expect(system).not_to include('— Equipo ACME', 'Formal, de usted')
+      expect(Motor2::Config.new(agent.reload).tone).to eq('tu')
+      expect(runner.trace.events.last['text']).to include('de este agente: Tono, Cómo firmar o despedirse')
+
+      save_agent(settings.merge('voice_mode' => 'company', 'voice' => {}), template: agent)
+      expect(system_of.call.first).to include('— Equipo ACME')
+    end
+
+    it 'datos del negocio: los de la empresa o los personalizados de este agente (en vez de los de la empresa)' do
+      AgentBase::BusinessData.update!(account, { 'fixed' => { 'what' => 'Software para talleres' } })
+      prompt = lambda do
+        runner = Motor2::Runner.new(Motor2::Config.new(agent.reload), state: Motor2::State.new, history: [{ role: 'user', content: 'hola' }])
+        Motor2::Prompt.new(runner, Motor2::Skills.for(runner)).system
+      end
+      save_agent(settings.except('business_what').merge('business_mode' => 'company'), template: agent)
+      expect(prompt.call).to include('Software para talleres')
+      expect(Motor2::Config.new(agent.reload).function.business_info(:business_what)).to eq('Software para talleres')
+
+      save_agent(settings.merge('business_mode' => 'own', 'business_what' => 'Reparamos minisplits'), template: agent)
+      expect(prompt.call).to include('Reparamos minisplits')
+      expect(prompt.call).not_to include('Software para talleres')
     end
 
     it 'los mensajes que arma el código salen con su voz (y sin voz, tal cual)' do

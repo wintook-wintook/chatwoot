@@ -91,6 +91,8 @@ class Quote < ApplicationRecord
   # Plan-Organizaciones O3 — enviada → prospecto; aceptada → cliente (si la regla está encendida).
   after_commit -> { Organizations::StageRules.call(:prospect_on_quote_sent, self) },
                on: %i[create update], if: -> { saved_change_to_status? && sent? }
+  # La armó un agente listo: a los N días le pregunta por ella (Motor2::QuoteFollowUpJob).
+  after_commit -> { Motor2::QuoteFollowUpJob.schedule(self) }, on: %i[create update], if: -> { saved_change_to_status? && sent? }
   after_commit -> { Organizations::StageRules.call(:customer_on_quote_accepted, self) },
                on: %i[create update], if: -> { saved_change_to_status? && won? }
 

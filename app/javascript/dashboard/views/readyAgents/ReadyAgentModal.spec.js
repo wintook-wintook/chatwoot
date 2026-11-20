@@ -99,7 +99,7 @@ describe('ReadyAgentModal · asistente paso a paso', () => {
     expect(vm.step).toBe('business');
     vm.back();
     expect(vm.step).toBe('agent');
-    vm.go('test');
+    vm.go('files'); // el último: probar y guardar ya no es un paso (el chat siempre está a la derecha)
     expect(vm.isLast).toBe(true);
   });
 
@@ -107,8 +107,8 @@ describe('ReadyAgentModal · asistente paso a paso', () => {
     const wrapper = mountModal({
       agent: { id: 1, name: 'Sofi', inbox_ids: [1], settings: {} },
     });
-    wrapper.vm.go('objections');
-    expect(wrapper.vm.step).toBe('objections');
+    wrapper.vm.go('qualify'); // objeciones y «qué hace» van en «Al calificar»
+    expect(wrapper.vm.step).toBe('qualify');
   });
 
   it('manda el nombre que ve el cliente y las indicaciones', () => {

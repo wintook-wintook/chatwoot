@@ -14,7 +14,10 @@ import ReadyAgentChat from './ReadyAgentChat.vue';
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 import AgentFiles from './AgentFiles.vue';
 import SourceOrder, { addSource } from './SourceOrder.vue';
+import WizardTabs from './WizardTabs.vue';
+import SubTabs from './SubTabs.vue';
 import AgentVoice from './AgentVoice.vue';
+import AgentBusiness from './AgentBusiness.vue';
 import FollowUpPlan from './FollowUpPlan.vue';
 import AfterHandoff from './AfterHandoff.vue';
 import QuoteMode from './QuoteMode.vue';
@@ -24,13 +27,13 @@ const T = 'READY_AGENTS';
 const STEPS = [
   'agent',
   'offer',
+  'business',
   'channel',
   'knows',
   'talk',
   'follow',
+  'quote',
   'files',
-  'instructions',
-  'test',
 ];
 const PURPOSES = ['offer', 'invite', 'reactivate', 'renew', 'survey'];
 const MAX_QUESTIONS = 3;
@@ -58,6 +61,7 @@ const blank = () => ({
     tone: 'cercano',
     // «Cómo habla tu empresa» que cambió solo para este agente (AgentVoice).
     voice: {},
+    voice_mode: 'company',
     purpose: 'offer',
     offer_what: '',
     offer_details: '',
@@ -97,6 +101,9 @@ export default {
     AfterHandoff,
     QuoteMode,
     AgentVoice,
+    WizardTabs,
+    SubTabs,
+    AgentBusiness,
   },
   props: {
     show: { type: Boolean, default: false },
@@ -109,6 +116,7 @@ export default {
   emits: ['close', 'saved'],
   data() {
     return {
+      followTab: 'reminders', // pestañas dentro de «Seguimiento»
       form: blank(),
       saving: false,
       step: 'agent',
@@ -129,6 +137,9 @@ export default {
     },
     tones() {
       return ['cercano', 'formal', 'directo', 'empresa'];
+    },
+    stepLabels() {
+      return Object.fromEntries(STEPS.map(s => [s, this.c(`STEPS.${s}`)]));
     },
     stepIndex() {
       return STEPS.indexOf(this.step);
@@ -376,7 +387,7 @@ export default {
 </script>
 
 <template>
-  <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
+  <woot-modal :show="show" size="large" :on-close="() => $emit('close')">
     <div class="flex flex-col h-[85vh] min-h-0">
       <woot-modal-header
         :header-title="
@@ -386,6 +397,13 @@ export default {
         "
         :header-content="c('SUBTITLE')"
       />
+      <WizardTabs
+        class="px-4 md:px-8"
+        :steps="steps"
+        :current="step"
+        :labels="stepLabels"
+        @go="go"
+      />
       <div
         class="grid flex-1 min-h-0 grid-cols-1 gap-5 px-4 pb-4 overflow-y-auto md:px-8 md:grid-cols-2 md:grid-rows-1 md:overflow-hidden"
       >
@@ -393,22 +411,6 @@ export default {
           class="ready-form flex flex-col gap-2.5 overflow-y-auto !p-0 !pr-1 !self-stretch"
           @submit.prevent="isLast || agent ? save() : next()"
         >
-          <ol class="flex flex-wrap gap-1 p-0 m-0 list-none">
-            <li v-for="(s, i) in steps" :key="s">
-              <button
-                type="button"
-                class="px-2 py-0.5 text-xs border rounded-full"
-                :class="
-                  s === step
-                    ? 'border-woot-500 bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200'
-                    : 'border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400'
-                "
-                @click="go(s)"
-              >
-                {{ t('STEPS.NUMBERED', { n: i + 1, step: c(`STEPS.${s}`) }) }}
-              </button>
-            </li>
-          </ol>
           <p class="m-0 text-xs text-slate-500">
             {{ c(`STEP_HINTS.${step}`) }}
           </p>
@@ -604,17 +606,12 @@ export default {
           </template>
 
           <!-- 4 · Tu negocio y qué sabe -->
+          <template v-if="step === 'business'">
+            <AgentBusiness v-model="form.settings" />
+            <AgentVoice v-model="form.settings" />
+          </template>
+
           <template v-if="step === 'knows'">
-            <label v-for="field in business" :key="field" class="block">
-              <span class="field-label">
-                {{ t(`BUSINESS.${field.toUpperCase()}`) }}
-              </span>
-              <textarea
-                v-model="form.settings[`business_${field}`]"
-                rows="2"
-                :placeholder="t(`BUSINESS.${field.toUpperCase()}_PLACEHOLDER`)"
-              />
-            </label>
             <template v-if="!isSurvey">
               <span class="field-label">{{ t('KNOWS.PRICES.QUESTION') }}</span>
               <label
@@ -662,7 +659,6 @@ export default {
 
           <!-- 5 · Cómo platica y el relevo -->
           <template v-if="step === 'talk'">
-            <AgentVoice v-model="form.settings.voice" />
             <template v-if="!isSurvey && !isInvite">
               <span class="field-label">{{ c('RELAY') }}</span>
               <label
@@ -735,21 +731,40 @@ export default {
               >
                 {{ c('ADD_OBJECTION') }}
               </button>
-              <QuoteMode
-                v-model="form.settings.quote"
-                :has-catalog="hasCatalog"
-              />
             </template>
+          </template>
+
+          <!-- Cotizaciones: si le interesa y pide una cotización (Motor2::Skills::Quote) -->
+          <template v-if="step === 'quote'">
+            <p v-if="isSurvey || isInvite" class="m-0 text-xs text-amber-700">
+              {{ c('QUOTE_NOT_FOR_PURPOSE') }}
+            </p>
+            <QuoteMode
+              v-model="form.settings.quote"
+              :has-catalog="hasCatalog"
+              :templates="waTemplates"
+            />
+            <p class="m-0 text-xs text-slate-500">{{ c('QUOTE_HINT') }}</p>
           </template>
 
           <!-- Seguimiento: si deja de contestar a media plática, el plazo y el recordatorio de la cita -->
           <template v-if="step === 'follow'">
+            <SubTabs
+              v-model="followTab"
+              :tabs="[
+                { key: 'reminders', label: t('SUBTABS.REMINDERS') },
+                { key: 'handoff', label: t('SUBTABS.HANDOFF') },
+              ]"
+            />
             <FollowUpPlan
+              v-if="followTab === 'reminders'"
               v-model="form.settings.follow_up"
               :templates="waTemplates"
+              :quote="form.settings.quote"
               kind="campaign_seller"
             />
             <AfterHandoff
+              v-else
               v-model="form.settings"
               :templates="waTemplates"
               :appointments="!!form.settings.appointment_user_ids.length"
@@ -769,7 +784,7 @@ export default {
           </template>
 
           <!-- 7 · Indicaciones -->
-          <template v-if="step === 'instructions'">
+          <template v-if="step === 'talk'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.INSTRUCTIONS') }}</span>
               <textarea
@@ -781,7 +796,7 @@ export default {
           </template>
 
           <!-- 7 · Pruébalo -->
-          <template v-if="step === 'test'">
+          <template v-if="isLast">
             <p class="m-0 text-sm text-slate-700 dark:text-slate-200">
               {{ c('TEST_READY', { name: form.name.trim() || '—' }) }}
             </p>
@@ -822,12 +837,7 @@ export default {
         >
           {{ t('NEXT') }}
         </woot-button>
-        <woot-button
-          v-if="isLast || agent"
-          :is-loading="saving"
-          :disabled="!canSave"
-          @click="save"
-        >
+        <woot-button :is-loading="saving" :disabled="!canSave" @click="save">
           {{ t('SAVE') }}
         </woot-button>
       </div>

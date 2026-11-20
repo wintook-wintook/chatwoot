@@ -122,7 +122,7 @@ class Motor2::Functions::Customers
   private
 
   def business_block
-    lines = BUSINESS.filter_map { |k, label| "- #{label}: #{answer(k)}" if answer(k).present? }
+    lines = BUSINESS.filter_map { |k, label| "- #{label}: #{own_business(k)}" if own_business(k).present? }
     lines << price_line
     "EL NEGOCIO:\n#{lines.join("\n")}"
   end
