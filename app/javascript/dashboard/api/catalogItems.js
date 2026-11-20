@@ -20,6 +20,17 @@ class CatalogItemsAPI extends ApiClient {
     return axios.get(`${this.url}/export`, { responseType: 'blob' });
   }
 
+  // La foto del producto (la manda el agente de prospectos al recomendarlo).
+  uploadImage(id, file) {
+    const data = new FormData();
+    data.append('image', file);
+    return axios.post(`${this.url}/${id}/image`, data);
+  }
+
+  removeImage(id) {
+    return axios.delete(`${this.url}/${id}/image`);
+  }
+
   importCsv(file) {
     const data = new FormData();
     data.append('file', file);

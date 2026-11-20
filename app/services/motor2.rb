@@ -24,8 +24,11 @@ module Motor2
   def tracking_for(message)
     return if message.conversation_id.blank?
 
+    # También el que terminó sus recordatorios sin respuesta (Motor2::FollowUp): si contesta, lo retoma.
     ContactTracking.joins(:tracking_template)
-                   .where(conversation_id: message.conversation_id, status: LIVE + %w[paused])
+                   .where(conversation_id: message.conversation_id)
+                   .where("contact_trackings.status IN (:live) OR (contact_trackings.status = 'completed' AND " \
+                          "contact_trackings.motor2_state ->> 'follow_up' = 'true')", live: LIVE + %w[paused])
                    .where(tracking_templates: { engine: ENGINE })
                    .order(created_at: :desc).first
   end

@@ -11,8 +11,11 @@
 #
 #   memoria: state['triage'] (lo de este mensaje), state['pendiente'] (aclaración), state['cola'],
 #            state['handoff_area'] (a qué equipo se pasa), state['case_id']
+#   Soporte con evidencia, RESUELTO / ESCALAR, fuentes y etiquetas: Motor2::Skills::SupportFlow.
 class Motor2::Skills::Areas < Motor2::Skills::Base
   include Motor2::Skills::AreaActions
+  include Motor2::Skills::SupportFlow
+  include Motor2::Skills::AreaRules
 
   GESTION = { type: 'string', enum: %w[cotizacion demo visita vendedor contratar otra] }.freeze
 
@@ -21,10 +24,12 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
   def on? = config.skill_on?(key) && function.respond_to?(:areas)
 
   def prepare(history)
+    return if @turn.attempt? # recordatorio: no hay mensaje nuevo que clasificar (attempt_note)
+
     customer = Array(history).select { |m| m[:role].to_s == 'user' }.map { |m| m[:content].to_s }
     @human_requests = customer.count { |t| t.match?(Motor2::Skills::QualifyFlow::HUMAN) }
     @held_before = state['handoff_held']
-    classify(history) if customer.any?
+    route_turn(customer, history)
     state['handoff_held'] = true if human? && !must_handoff? # ya se le preguntó qué necesita: la próxima, se pasa
   end
 
@@ -45,22 +50,25 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
     list
   end
 
-  def allows_search? = sufficient? && %w[support sales none].include?(area_key)
+  def allows_search? = sufficient? && !@resolved && !@escalate && %w[support sales none].include?(area_key)
 
   def memory
     lines = []
     lines << "ÁREA EN CURSO: #{area_title} — «#{now['intencion']}»#{gestion_text}" unless area_key == 'none'
+    lines << system_line if area_key == 'support' && service_name
     lines << "DESPUÉS NO OLVIDES: #{queue.map { |q| "#{title_of(q['area'])}: #{q['intencion']}" }.join(' | ')}" if queue.any?
     lines.join("\n")
   end
 
   def turn_note
-    return handoff_note if must_handoff?
-    return 'Pidió una persona: dile que con gusto y pregúntale UNA vez qué necesita, para pasarlo al equipo correcto.' if hold_handoff_note?
+    return attempt_note if @turn.attempt?
+
+    first = first_note
+    return first if first
     return act_now_note if must_act?
     return "Falta aclarar: haz SOLO esta pregunta, sin buscar ni contestar otra cosa: «#{now['aclaracion']}»" unless sufficient?
 
-    [clarified_note || area_note, queue_note].compact.join("\n")
+    [clarified_note || area_note, area_rules_note, queue_note].compact.join("\n")
   end
 
   # Pidió una persona y ya toca pasarlo: de inmediato, si lo vuelve a pedir, o si ya se sabe qué necesita.
@@ -99,7 +107,24 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
 
   def function = config.function
 
+  # RESUELTO / ESCALAR (Motor2::Skills::SupportFlow) o, si no, el clasificador.
+  def route_turn(customer, history)
+    keyword = keyword_turn(customer.last.to_s)
+    return apply_keyword(keyword) if keyword
+
+    classify(history) if customer.any?
+  end
+
+  # Lo que va antes que todo: pidió una persona o dijo RESUELTO / ESCALAR.
+  def first_note
+    return handoff_note if must_handoff?
+    return 'Pidió una persona: dile que con gusto y pregúntale UNA vez qué necesita, para pasarlo al equipo correcto.' if hold_handoff_note?
+
+    keyword_note if @resolved || @escalate
+  end
+
   def classify(history)
+    @last_ask = agent_question(history)&.dig('aclaracion') # para la revisión de lo encontrado (Motor2::ResultCheck)
     had_pending = pending_from(history)
     result = triage(history)
     return unless result
@@ -142,7 +167,8 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
 
   def triage(history)
     Motor2::Triage.new(account: config.account).call(areas: function.areas, history: history, pending: state['pendiente'],
-                                                     queue: queue, business: business_text)
+                                                     queue: queue,
+                                                     about: { business: business_text, catalog: case_catalog })
   end
 
   def business_text = [function.answer(:business_what), function.answer(:business_who)].compact_blank.join(' — ')
@@ -181,7 +207,7 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
            else
              'llama canalizar con lo que ya te dijo'
            end
-    first = area_key == 'support' ? 'primero búscalo con buscar_en_fuentes y, si trae cómo resolverlo, dale los pasos; si no, ' : ''
+    first = area_key == 'support' ? 'primero búscalo con buscar_en_fuentes; si hay solución exacta, dale los pasos; si no, ' : ''
     "Ya tienes lo necesario: NO hagas más preguntas; #{first}#{what}."
   end
 
@@ -190,7 +216,7 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
   # Soporte: antes de pasarlo o levantar el caso se busca la solución en sus fuentes (lo hace el código: el
   # modelo a veces se la salta). No aplica si pidió una persona o no puede operar (urgente).
   def search_first?
-    area_key == 'support' && @turn.find_skill('knowledge')&.searchable? && !searched_now? && !human? &&
+    area_key == 'support' && !@escalate && @turn.find_skill('knowledge')&.searchable? && !searched_now? && !human? &&
       now['severidad'] != 1
   end
 

@@ -14,6 +14,10 @@ import { useAlert } from 'dashboard/composables';
 import ReadyAgentsAPI from 'dashboard/api/readyAgents';
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 import AgentFiles from './AgentFiles.vue';
+import SourceOrder, { addSource } from './SourceOrder.vue';
+import AgentVoice from './AgentVoice.vue';
+import FollowUpPlan from './FollowUpPlan.vue';
+import QuoteMode from './QuoteMode.vue';
 
 const T = 'READY_AGENTS';
 // Las preguntas para calificar: una sola lista, en orden, que se hacen tal cual. Un agente nuevo
@@ -54,6 +58,7 @@ const STEPS = [
   'talk',
   'qualify',
   'after',
+  'follow',
   'objections',
   'files',
   'instructions',
@@ -80,8 +85,12 @@ const blank = kind => ({
     // Bienvenida: va tal cual al inicio de su primera respuesta (motor2['welcome']).
     welcome: '',
     qualified_when: '',
+    // Cuándo es «caliente» (si no, la regla de siempre: lo necesita este mes y tiene presupuesto o decide).
+    hot_when: '',
     discard_when: '',
     tone: 'cercano',
+    // «Cómo habla tu empresa» que cambió solo para este agente (AgentVoice).
+    voice: {},
     instructions: '',
     handoff_user_id: '',
     handoff_team_id: '',
@@ -104,12 +113,20 @@ const blank = kind => ({
     // Calificar, objeciones y datos antes de pasarlo
     objections: [],
     required_contact: [],
+    // Si deja de contestar (Motor2::FollowUp): recordatorios en 24 h y plantillas después.
+    follow_up: { nudges: 2, templates: [], template_days: 2 },
+    // Recordatorio de la cita y «¿otro horario?» si no llegó (Motor2::AppointmentNotice).
+    appointment_notice: { on: true, template: '' },
+    // En cuántas horas hábiles le debe escribir el vendedor (0 = sin aviso).
+    attend_hours: 1,
+    // Cotizar (Motor2::Skills::Quote): off | draft | send.
+    quote: { mode: 'off', follow_days: 3 },
   },
 });
 
 export default {
   name: 'ReadyAgentModal',
-  components: { AgentFiles },
+  components: { AgentFiles, SourceOrder, FollowUpPlan, QuoteMode, AgentVoice },
   props: {
     show: { type: Boolean, default: false },
     kind: { type: String, default: 'prospects' },
@@ -128,6 +145,7 @@ export default {
     return {
       form: blank(this.kind),
       saving: false,
+      suggesting: false,
       chat: [],
       // La memoria del cliente en el chat de prueba (respuestas, cita…): va y viene con el motor.
       chatState: {},
@@ -139,6 +157,21 @@ export default {
   },
   computed: {
     ...mapGetters({ agents: 'agents/getAgents', teams: 'teams/getTeams' }),
+    hasCatalog() {
+      return this.sources.some(s => s.key === 'catalog');
+    },
+    // Las plantillas aprobadas de su primera bandeja de WhatsApp (para después de las 24 h).
+    waTemplates() {
+      const inbox = this.inboxes.find(
+        i =>
+          this.form.inbox_ids.includes(i.id) &&
+          String(i.channel_type).includes('Whatsapp')
+      );
+      if (!inbox) return [];
+      const list =
+        this.$store.getters['inboxes/getWhatsAppTemplates'](inbox.id) || [];
+      return [...new Set(list.map(item => item.name))];
+    },
     objectives() {
       return ['handoff', 'appointment', 'opportunity', 'collect'];
     },
@@ -146,7 +179,7 @@ export default {
       return this.form.settings.objective === 'appointment';
     },
     tones() {
-      return ['cercano', 'formal', 'directo'];
+      return ['cercano', 'formal', 'directo', 'empresa'];
     },
     contactFields() {
       return CONTACT_FIELDS;
@@ -237,6 +270,24 @@ export default {
               price_source: this.priceSourceOf(this.agent.settings || {}),
               objections: this.agent.settings?.objections || [],
               required_contact: this.agent.settings?.required_contact || [],
+              // Los agentes de antes no tenían recordatorios: siguen sin ellos hasta que los prendan.
+              follow_up: {
+                nudges: 0,
+                templates: [],
+                template_days: 2,
+                ...(this.agent.settings?.follow_up || {}),
+              },
+              appointment_notice: {
+                on: false,
+                template: '',
+                ...(this.agent.settings?.appointment_notice || {}),
+              },
+              attend_hours: this.agent.settings?.attend_hours ?? 0,
+              quote: {
+                mode: 'off',
+                follow_days: 3,
+                ...(this.agent.settings?.quote || {}),
+              },
             },
           }
         : {
@@ -245,6 +296,11 @@ export default {
               ...base.settings,
               question_list: this.exampleQuestions(),
               price_source: this.priceSourceOf({}),
+              // Nuevo: con Catálogo, borrador para el vendedor (recomendado).
+              quote: {
+                mode: this.hasCatalog ? 'draft' : 'off',
+                follow_days: 3,
+              },
             },
           };
       this.chat = [];
@@ -274,7 +330,7 @@ export default {
       const list = this.form.sources;
       this.form.sources = list.includes(key)
         ? list.filter(k => k !== key)
-        : [...list, key];
+        : addSource(list, key);
     },
     resetChat() {
       this.chat = [];
@@ -320,6 +376,30 @@ export default {
     },
     exampleQuestions() {
       return EXAMPLE_KEYS.map(key => ({ text: this.t(`QUALIFY.${key}.ASK`) }));
+    },
+    // Ideas comunes para descartar (fuera de zona, presupuesto, no lo vendemos…): se agregan al texto.
+    addDiscardIdea(idea) {
+      const now = this.form.settings.discard_when.trim();
+      if (now.includes(idea)) return;
+      this.form.settings.discard_when = now ? `${now}; ${idea}` : idea;
+    },
+    // Preguntas para calificar según su negocio (cualquier giro); quedan para que las cambie.
+    async suggestQuestions() {
+      this.suggesting = true;
+      try {
+        const { data } = await ReadyAgentsAPI.suggest(
+          'questions',
+          this.form.settings
+        );
+        if (data.questions?.length)
+          this.form.settings.question_list = data.questions.map(text => ({
+            text,
+          }));
+      } catch (e) {
+        useAlert(this.t('QUESTIONS_LIST.SUGGEST_ERROR'));
+      } finally {
+        this.suggesting = false;
+      }
     },
     addQuestion() {
       if (this.canAddQuestion)
@@ -687,6 +767,7 @@ export default {
                 }}</span>
               </span>
             </label>
+            <SourceOrder v-model="form.sources" :sources="sources" />
             <p class="m-0 text-xs text-slate-500">
               {{ t('KNOWS.WHERE_HINT') }}
             </p>
@@ -694,6 +775,21 @@ export default {
 
           <!-- 4 · Qué le preguntas -->
           <template v-if="step === 'questions'">
+            <div class="flex items-center gap-2">
+              <woot-button
+                size="small"
+                variant="smooth"
+                icon="wand"
+                :is-loading="suggesting"
+                :disabled="!form.settings.business_what.trim()"
+                @click="suggestQuestions"
+              >
+                {{ t('QUESTIONS_LIST.SUGGEST') }}
+              </woot-button>
+              <span class="text-xs text-slate-500">{{
+                t('QUESTIONS_LIST.SUGGEST_HINT')
+              }}</span>
+            </div>
             <div
               v-for="(q, i) in form.settings.question_list"
               :key="i"
@@ -750,10 +846,14 @@ export default {
             >
               {{ t('QUESTIONS_LIST.ADD') }}
             </button>
+            <p class="m-0 text-xs text-slate-500">
+              {{ t('QUESTIONS_LIST.SMART') }}
+            </p>
           </template>
 
           <!-- 5 · Cómo platica: dudas, lo que no encuentra y lo que no es del negocio -->
           <template v-if="step === 'talk'">
+            <AgentVoice v-model="form.settings.voice" />
             <label class="block">
               <span class="field-label">{{ t('TALK.WELCOME') }}</span>
               <textarea
@@ -820,12 +920,40 @@ export default {
                 :placeholder="t('FIELDS.DISCARD_PLACEHOLDER')"
               />
             </label>
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                v-for="(idea, i) in t('FIELDS.DISCARD_IDEAS').split('|')"
+                :key="i"
+                type="button"
+                class="px-2.5 py-1 text-xs border rounded-full border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                @click="addDiscardIdea(idea)"
+              >
+                + {{ idea }}
+              </button>
+            </div>
+            <label class="block">
+              <span class="field-label">{{ t('FIELDS.HOT_WHEN') }}</span>
+              <textarea
+                v-model="form.settings.hot_when"
+                rows="2"
+                :placeholder="t('FIELDS.HOT_PLACEHOLDER')"
+              />
+            </label>
             <p class="m-0 text-xs text-slate-500">
               {{ t('SECTIONS.TEMPERATURE_HINT') }}
             </p>
           </template>
 
           <!-- 7 · Qué hacer al calificar y a quién -->
+          <!-- Seguimiento: si deja de contestar (Motor2::FollowUp), con su línea de tiempo -->
+          <template v-if="step === 'follow'">
+            <FollowUpPlan
+              v-model="form.settings.follow_up"
+              :templates="waTemplates"
+              kind="prospects"
+            />
+          </template>
+
           <template v-if="step === 'after'">
             <label class="block">
               <span class="field-label">{{ t('FIELDS.OBJECTIVE') }}</span>
@@ -913,6 +1041,28 @@ export default {
               <p class="m-0 text-xs text-slate-500">
                 {{ t('FIELDS.APPOINTMENT_HINT') }}
               </p>
+              <label class="flex items-start gap-2 text-sm">
+                <input
+                  v-model="form.settings.appointment_notice.on"
+                  type="checkbox"
+                  class="!m-0 mt-1"
+                />
+                {{ t('FIELDS.APPOINTMENT_NOTICE') }}
+              </label>
+              <label
+                v-if="form.settings.appointment_notice.on && waTemplates.length"
+                class="block"
+              >
+                <span class="field-label">{{
+                  t('FIELDS.APPOINTMENT_NOTICE_TEMPLATE')
+                }}</span>
+                <select v-model="form.settings.appointment_notice.template">
+                  <option value="">{{ t('FIELDS.NO_TEMPLATE') }}</option>
+                  <option v-for="tpl in waTemplates" :key="tpl" :value="tpl">
+                    {{ tpl }}
+                  </option>
+                </select>
+              </label>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <label class="block">
@@ -934,6 +1084,25 @@ export default {
                 </select>
               </label>
             </div>
+            <label class="block">
+              <span class="field-label">{{ t('FIELDS.ATTEND_HOURS') }}</span>
+              <select v-model.number="form.settings.attend_hours">
+                <option v-for="h in [0, 1, 2, 4, 8]" :key="h" :value="h">
+                  {{
+                    h
+                      ? t('FIELDS.ATTEND_HOURS_N', { n: h })
+                      : t('FIELDS.ATTEND_OFF')
+                  }}
+                </option>
+              </select>
+              <span class="block mt-1 text-xs text-slate-500">{{
+                t('FIELDS.ATTEND_HINT')
+              }}</span>
+            </label>
+            <QuoteMode
+              v-model="form.settings.quote"
+              :has-catalog="hasCatalog"
+            />
             <span class="field-label">{{ t('FIELDS.REQUIRED_CONTACT') }}</span>
             <div class="flex flex-wrap gap-1.5">
               <button

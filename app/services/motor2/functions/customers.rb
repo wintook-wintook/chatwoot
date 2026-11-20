@@ -10,16 +10,18 @@
 #                    también hay un agente de «Atención a prospectos», los que no son clientes van con él
 #                    (Motor2::InboxRouter) y esto ni aplica.
 #   human            understand_first (primero entiende qué necesita y lo pasa al equipo de esa área) | now
+#   identify         ask (si no se sabe de qué empresa es, se lo pregunta una vez: Motor2::Skills::Identity) | no
 #   user_id/team_id  a quién se pasa lo que no tiene área (o si el área no dice)
 #
 # Qué área toca en cada mensaje lo decide el código (Motor2::Triage, en Motor2::Skills::Areas), no el
 # modelo que contesta.
 class Motor2::Functions::Customers
   include Motor2::Functions::ProspectPrices
+  include Motor2::Functions::Extras
 
   KEY = 'customers'
   TEXTS = %w[tone price_source business_what business_who business_coverage business_why business_practical].freeze
-  OPTIONS = { 'not_client' => %w[serve handoff], 'human' => %w[understand_first now] }.freeze
+  OPTIONS = { 'not_client' => %w[serve handoff], 'human' => %w[understand_first now], 'identify' => %w[ask no] }.freeze
   BUSINESS = Motor2::Functions::Prospects::BUSINESS
   TONES = Motor2::Functions::Prospects::TONES
 
@@ -28,7 +30,7 @@ class Motor2::Functions::Customers
     out = TEXTS.index_with { |k| raw[k].to_s.strip.first(1000) }
     OPTIONS.each { |k, values| out[k] = raw[k].to_s.presence_in(values) || values.first }
     %w[user_id team_id].each { |k| out[k] = raw[k].to_s.presence&.to_i }
-    out.merge('areas' => Motor2::Functions::CustomerAreas.sanitize(raw['areas'])).compact
+    out.merge('areas' => Motor2::Functions::CustomerAreas.sanitize(raw['areas'])).merge(Motor2::Functions::Extras.sanitize(raw)).compact
   end
 
   attr_reader :config
@@ -65,18 +67,32 @@ class Motor2::Functions::Customers
   end
 
   def skills
-    { 'areas' => { 'on' => true },
+    { 'areas' => { 'on' => true }, 'identity' => { 'on' => option(:identify) == 'ask' },
+      'recommend' => { 'on' => price_source == 'catalog' && area('sales').present? },
+      'quote' => { 'on' => quote_mode != 'off' && area('sales').present? },
       'handoff' => { 'on' => true, 'when' => 'pide una persona (como dice REGLAS DE ATENCIÓN), se molesta, o lo pide su área' }
         .merge(handoff_target.transform_keys(&:to_s)),
       'appointments' => appointments }
   end
 
-  # Demo o visita de Comercial con «agendar»: la cita con las personas elegidas.
+  # Demo o visita de Comercial con «agendar», o la visita técnica de Soporte: la cita con las personas elegidas.
   def appointments
+    return technical_visit if support_visit?
+
     sales = area('sales').to_h
     wants = %w[demo visit].any? { |k| sales[k] == 'appointment' }
     { 'on' => wants && Array(sales['appointment_user_ids']).any?, 'kind' => sales['visit'] == 'appointment' ? 'visita' : 'videollamada',
       'when' => 'pide una demo o una visita', 'user_ids' => Array(sales['appointment_user_ids']), 'minutes' => sales['appointment_minutes'] }
+  end
+
+  def support_visit? = area('support').to_h['action'] == 'visit' && Array(area('support')['appointment_user_ids']).any?
+
+  def technical_visit
+    support = area('support')
+    sales = area('sales').to_h
+    users = (Array(support['appointment_user_ids']) + Array(sales['appointment_user_ids'])).uniq
+    { 'on' => true, 'kind' => 'visita', 'when' => 'hace falta una visita técnica (o pide una demo o visita)', 'user_ids' => users,
+      'minutes' => support['appointment_minutes'] || sales['appointment_minutes'] }
   end
 
   def outcomes(tracking, conversation) = Motor2::Functions::CustomerOutcomes.new(tracking, conversation, self)

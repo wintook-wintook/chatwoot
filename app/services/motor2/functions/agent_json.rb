@@ -9,11 +9,17 @@ module Motor2::Functions::AgentJson
 
   module_function
 
+  # Las respuestas del asistente + indicaciones, bienvenida y lo que cambió de «Cómo habla tu empresa».
+  def settings(motor2)
+    motor2['answers'].to_h.merge('instructions' => motor2['instructions'].to_s, 'welcome' => motor2['welcome'].to_s,
+                                 'voice' => motor2['voice'].to_h)
+  end
+
   def call(template)
     motor2 = template.motor2.to_h
     { id: template.id, kind: template.agent_function, name: template.name, display_name: template.customer_display_name,
       enabled: template.attending, inbox_ids: Array(template.attend_inbox_ids).map(&:to_i), testing: template.testing,
-      settings: motor2['answers'].to_h.merge('instructions' => motor2['instructions'].to_s, 'welcome' => motor2['welcome'].to_s),
+      settings: settings(motor2),
       sources: Array(motor2['sources']), created_at: template.created_at }
       .merge(sessions(template)).merge(channel(template))
   end

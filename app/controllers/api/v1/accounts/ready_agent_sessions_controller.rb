@@ -2,7 +2,7 @@
 
 # El agente listo en una conversación: «Atendida por Sofi» con Pausar / Reanudar.
 # GET   /ready_agent_sessions?conversation_id=   la plática viva o la última (o nada)
-# PATCH /ready_agent_sessions/:id/pause | resume
+# PATCH /ready_agent_sessions/:id/pause | resume | cancel_follow_up (no más recordatorios: Motor2::FollowUp)
 # Desde §11.14.5 los agentes de función (motor 2.0) atienden con un contact_tracking: su id viaja
 # como «t<id>». Las sesiones de antes (ready_agent_sessions) se siguen viendo mientras existan.
 class Api::V1::Accounts::ReadyAgentSessionsController < Api::V1::Accounts::BaseController
@@ -23,6 +23,14 @@ class Api::V1::Accounts::ReadyAgentSessionsController < Api::V1::Accounts::BaseC
 
   def resume
     change(:resume)
+  end
+
+  def cancel_follow_up
+    tracking = function_trackings.find(params[:id].to_s[TRACKING, 1])
+    return render_access_denied unless visible_conversations.exists?(id: tracking.conversation_id)
+
+    Motor2::FollowUp.cancel!(tracking)
+    render json: { session: tracking_json(tracking.reload) }
   end
 
   private
@@ -66,7 +74,8 @@ class Api::V1::Accounts::ReadyAgentSessionsController < Api::V1::Accounts::BaseC
     status = 'paused' if tracking.paused? && result != 'handed_off'
     state = tracking.motor2_state.to_h
     { id: "t#{tracking.id}", status: status, outcome: tracking.outcome, answers: state['answers'].to_h, updated_at: tracking.updated_at,
-      agent: { id: template.id, name: template.name, kind: template.agent_function }, log: [] }
+      agent: { id: template.id, name: template.name, kind: template.agent_function }, log: [],
+      next_touch: Motor2::FollowUp.next_touch(tracking) }
   end
 
   def session_json(session)

@@ -23,7 +23,6 @@ import TemplateForm from './EditTemplate.vue';
 import ImportModal from './ImportModal.vue'; // proyecto@import_seguimiento
 import PublishPromptModal from './PublishPromptModal.vue'; // proyecto@publicar_prompts
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
-import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import AssistantAPI from 'dashboard/api/assistant';
 import AgentTesterAPI from 'dashboard/api/agentTester'; // Probador: «En prueba»
 import { getUserAccess, areaLevel } from 'dashboard/helper/accessHelper';
@@ -64,7 +63,6 @@ export default {
     ImportModal,
     PublishPromptModal,
     TableFooter,
-    BaseSettingsHeader,
     SessionsPanel,
     InventoryPanel,
   },
@@ -80,7 +78,7 @@ export default {
       showImportModal: false, // proyecto@import_seguimiento
       templateToPublish: null, // proyecto@publicar_prompts
       currentPage: 1,
-      perPage: 10,
+      perPage: 25,
       // feat/agentes_ia_unificado
       listTab: 'agents',
       isRefreshing: false,
@@ -495,19 +493,32 @@ export default {
 <template>
   <!-- feat/agentes_ia_unificado (fase A): mismo contenedor, encabezado, pestañas,
        tabla y paginado que las pantallas nativas de Ajustes (SettingsWrapper,
-       BaseSettingsHeader, Respuestas predefinidas, Registros de auditoría).
+       Respuestas predefinidas, Registros de auditoría).
        La pantalla no se desplaza: encabezado, pestañas, filtros y paginado quedan
        fijos y solo la tabla hace scroll por dentro (pedido del usuario). -->
   <div
-    class="flex flex-col flex-1 w-full h-full min-h-0 p-6 overflow-hidden bg-white sm:py-8 lg:px-16 dark:bg-slate-900 font-inter"
+    class="flex flex-col flex-1 w-full h-full min-h-0 px-4 py-4 overflow-hidden bg-white sm:px-6 lg:px-8 dark:bg-slate-900 font-inter"
   >
     <div class="flex flex-col flex-1 w-full min-h-0 mx-auto max-w-8xl">
-      <BaseSettingsHeader
-        class="shrink-0"
-        :title="$t('TRACKING_TEMPLATES.HEADER')"
-        :description="$t('TRACKING_TEMPLATES.DESCRIPTION')"
+      <!-- Encabezado compacto (20/11/2026): título y descripción de una línea, para
+           que la tabla de agentes tenga casi toda la altura. -->
+      <div
+        class="flex flex-wrap items-center justify-between shrink-0 gap-x-4 gap-y-2"
       >
-        <template #actions>
+        <div class="min-w-0">
+          <h1
+            class="mb-0 text-xl font-semibold font-interDisplay text-slate-900 dark:text-slate-25"
+          >
+            {{ $t('TRACKING_TEMPLATES.HEADER') }}
+          </h1>
+          <p
+            class="mb-0 text-sm truncate text-slate-500 dark:text-slate-400"
+            :title="$t('TRACKING_TEMPLATES.DESCRIPTION')"
+          >
+            {{ $t('TRACKING_TEMPLATES.DESCRIPTION') }}
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
           <!-- El formulario en blanco no es una ruta: «Volver» regresa a la lista
                (BackButton haría router.go(-1) y sacaría de la pantalla). -->
           <woot-button
@@ -613,11 +624,11 @@ export default {
               </woot-dropdown-menu>
             </div>
           </div>
-        </template>
-      </BaseSettingsHeader>
+        </div>
+      </div>
 
       <!-- VISTA: FORMULARIO (agente nuevo en blanco) -->
-      <div v-if="isFormView" class="flex-1 min-h-0 mt-6 overflow-auto">
+      <div v-if="isFormView" class="flex-1 min-h-0 mt-3 overflow-auto">
         <TemplateForm
           :mode="formMode"
           :template-data="selectedTemplate || {}"
@@ -627,44 +638,29 @@ export default {
       </div>
 
       <template v-else>
-        <woot-tabs
-          v-if="listTabs.length > 1"
-          class="mt-4 shrink-0"
-          :index="listTabPosition"
-          :border="false"
-          @change="listTab = listTabs[$event].id"
-        >
-          <woot-tabs-item
-            v-for="(tab, position) in listTabs"
-            :key="tab.id"
-            :index="position"
-            :name="$t(tab.label)"
-            :count="tab.count || 0"
-            :show-badge="!!tab.count"
-          />
-        </woot-tabs>
-
-        <SessionsPanel
-          v-if="isAdmin"
-          v-show="listTab === 'sessions'"
-          ref="sessions"
-          class="flex-1 min-h-0 mt-6"
-          @open="openSession"
-        />
-        <InventoryPanel
-          v-if="listTab === 'resources'"
-          ref="inventory"
-          class="flex-1 min-h-0 mt-6"
-        />
-
-        <!-- VISTA: LISTA -->
+        <!-- Pestañas y buscador en un solo renglón (en celular, uno abajo del otro). -->
         <div
-          v-else-if="listTab === 'agents'"
-          class="flex flex-col flex-1 min-h-0 mt-6 text-slate-700 dark:text-slate-300"
+          class="flex flex-wrap items-center justify-between mt-2 shrink-0 gap-x-4 gap-y-2"
         >
+          <woot-tabs
+            v-if="listTabs.length > 1"
+            class="shrink-0"
+            :index="listTabPosition"
+            :border="false"
+            @change="listTab = listTabs[$event].id"
+          >
+            <woot-tabs-item
+              v-for="(tab, position) in listTabs"
+              :key="tab.id"
+              :index="position"
+              :name="$t(tab.label)"
+              :count="tab.count || 0"
+              :show-badge="!!tab.count"
+            />
+          </woot-tabs>
           <div
-            v-if="hasTemplates"
-            class="flex flex-wrap items-center gap-3 mb-2 shrink-0"
+            v-if="listTab === 'agents' && hasTemplates"
+            class="flex flex-wrap items-center flex-1 gap-3 sm:justify-end"
           >
             <div class="relative flex-1 min-w-[12rem] max-w-md">
               <fluent-icon
@@ -697,7 +693,26 @@ export default {
               </option>
             </select>
           </div>
+        </div>
 
+        <SessionsPanel
+          v-if="isAdmin"
+          v-show="listTab === 'sessions'"
+          ref="sessions"
+          class="flex-1 min-h-0 mt-3"
+          @open="openSession"
+        />
+        <InventoryPanel
+          v-if="listTab === 'resources'"
+          ref="inventory"
+          class="flex-1 min-h-0 mt-3"
+        />
+
+        <!-- VISTA: LISTA -->
+        <div
+          v-else-if="listTab === 'agents'"
+          class="flex flex-col flex-1 min-h-0 mt-2 text-slate-700 dark:text-slate-300"
+        >
           <woot-loading-state
             v-if="uiFlags.fetchingList && !hasTemplates"
             :message="$t('TRACKING_TEMPLATES.LOADING')"
@@ -724,7 +739,7 @@ export default {
                      Revisión · Acciones · Fecha. «Creado por» va en el tooltip de la fecha. -->
                 <thead class="sticky top-0 z-10 bg-white dark:bg-slate-900">
                   <th
-                    class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
+                    class="py-2.5 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
                     <button
                       class="flex items-center p-0 cursor-pointer"
@@ -741,7 +756,7 @@ export default {
                     </button>
                   </th>
                   <th
-                    class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
+                    class="py-2.5 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
                     <button
                       class="flex items-center p-0 cursor-pointer"
@@ -758,7 +773,7 @@ export default {
                     </button>
                   </th>
                   <th
-                    class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
+                    class="py-2.5 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
                     <button
                       class="flex items-center p-0 cursor-pointer"
@@ -776,7 +791,7 @@ export default {
                   </th>
                   <th
                     v-if="isAdmin"
-                    class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
+                    class="py-2.5 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
                     <span class="inline-flex items-center gap-1">
                       <button
@@ -801,12 +816,12 @@ export default {
                     </span>
                   </th>
                   <th
-                    class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
+                    class="py-2.5 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
                     {{ $t('TRACKING_TEMPLATES.TABLE.ACTIONS') }}
                   </th>
                   <th
-                    class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
+                    class="py-2.5 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
                     <button
                       class="flex items-center p-0 cursor-pointer"
@@ -832,7 +847,7 @@ export default {
                     class="transition-colors cursor-pointer hover:bg-woot-75 dark:hover:bg-woot-800/40"
                     @click="openAgent(template)"
                   >
-                    <td class="py-4 pr-4 font-medium">
+                    <td class="py-2.5 pr-4 font-medium">
                       {{ template.name }}
                       <!-- Probador de agentes -->
                       <woot-label
@@ -878,12 +893,12 @@ export default {
                         class="!mb-0 ltr:ml-2 rtl:mr-2"
                       />
                     </td>
-                    <td class="max-w-xs py-4 pr-4">
+                    <td class="max-w-xs py-2.5 pr-4">
                       <div class="line-clamp-2" :title="template.objective">
                         {{ template.objective || '-' }}
                       </div>
                     </td>
-                    <td class="py-4 pr-4">
+                    <td class="py-2.5 pr-4">
                       <woot-label
                         v-if="template.inbox_id"
                         small
@@ -895,7 +910,7 @@ export default {
                     </td>
                     <!-- El comprobador sobre el Entrenamiento publicado. El tooltip dice
                          qué significa el estado y, si no ejecuta, el primer error. -->
-                    <td v-if="isAdmin" class="py-4 pr-4">
+                    <td v-if="isAdmin" class="py-2.5 pr-4">
                       <woot-label
                         v-if="auditFor(template)"
                         v-tooltip.top="auditTooltip(auditFor(template))"
@@ -905,7 +920,7 @@ export default {
                         class="!mb-0 cursor-help"
                       />
                     </td>
-                    <td class="py-4 pr-4">
+                    <td class="py-2.5 pr-4">
                       <!-- Abrir o editar = clic en la fila: aquí solo lo que no es abrir. -->
                       <div class="flex items-center gap-2" @click.stop>
                         <!-- Probador de agentes: prender o apagar «En prueba» -->
@@ -949,7 +964,7 @@ export default {
                     </td>
                     <td
                       v-tooltip.top="creatorHint(template)"
-                      class="py-4 pr-4 whitespace-nowrap"
+                      class="py-2.5 pr-4 whitespace-nowrap"
                     >
                       {{ formatDate(template.updated_at) }}
                     </td>
@@ -961,7 +976,7 @@ export default {
               :current-page="currentPage"
               :total-count="filteredTemplates.length"
               :page-size="perPage"
-              class="border-t shrink-0 border-slate-50 dark:border-slate-800 !px-0 py-4"
+              class="border-t shrink-0 border-slate-50 dark:border-slate-800 !px-0 py-2"
               @pageChange="onPageChange"
             />
           </div>

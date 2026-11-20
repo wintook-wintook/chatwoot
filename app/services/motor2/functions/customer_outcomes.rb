@@ -34,8 +34,8 @@ class Motor2::Functions::CustomerOutcomes
     target = @function.handoff_target
     assign(target)
     who = @conversation.reload.assignee&.name.to_s.split.first
-    Motor2::Delivery.send_reply(@tracking, @conversation,
-                                "¡Hola! Te comunico con #{who.presence || 'alguien de nuestro equipo'}, en un momento te escribe.")
+    text = "¡Hola! Te comunico con #{who.presence || 'alguien de nuestro equipo'}, en un momento te escribe."
+    Motor2::Delivery.send_reply(@tracking, @conversation, Motor2::VoiceText.call(@function.config, text))
     note('No es cliente: se pasó a una persona.')
     @tracking.mark_objective_met!
     @tracking.update_columns(outcome: 'not_client', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
@@ -52,6 +52,7 @@ class Motor2::Functions::CustomerOutcomes
     title = @function.area(area)&.dig('title')
     note(["Pasa a una persona#{" (#{title})" if title}: #{reason}", pending_text].compact_blank.join("\n"))
     assign(@function.handoff_target(area))
+    Motor2::AttendClock.start(@tracking, @conversation, @function) # si nadie le escribe a tiempo, aviso y escala
     @tracking.update_columns(outcome: "handed_off#{": #{title}" if title}".first(250), updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     @tracking.pause!
   end

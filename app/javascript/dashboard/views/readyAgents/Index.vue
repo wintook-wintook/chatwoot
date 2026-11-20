@@ -12,6 +12,7 @@ import ReadyAgentsAPI from 'dashboard/api/readyAgents';
 import ReadyAgentModal from './ReadyAgentModal.vue';
 import CustomersAgentModal from './CustomersAgentModal.vue';
 import CampaignSellerModal from './CampaignSellerModal.vue';
+import ProspectMetrics from './ProspectMetrics.vue';
 
 const T = 'READY_AGENTS';
 // Una bandeja puede tener un agente de cada uno de estos dos (TrackingTemplate::ATTENDING_PAIR).
@@ -19,7 +20,12 @@ const PAIR = ['prospects', 'customers'];
 
 export default {
   name: 'ReadyAgentsIndex',
-  components: { ReadyAgentModal, CustomersAgentModal, CampaignSellerModal },
+  components: {
+    ReadyAgentModal,
+    CustomersAgentModal,
+    CampaignSellerModal,
+    ProspectMetrics,
+  },
   data() {
     return {
       catalog: [],
@@ -31,6 +37,7 @@ export default {
       events: [], // «Vendedor de campaña» › Invitar: los eventos próximos
       loading: true,
       modal: null,
+      metricsFor: null, // «Atención a prospectos»: el agente cuyas métricas se ven
       queryHandled: false,
     };
   },
@@ -123,6 +130,23 @@ export default {
       await ReadyAgentsAPI.delete(agent.id);
       this.load();
     },
+    // «Seguimiento: 2 recordatorios + 2 plantillas cada 2 días» (Motor2::FollowUp) o «Sin seguimiento».
+    followLine(agent) {
+      const f = agent.settings?.follow_up || {};
+      const nudges = Number(f.nudges) || 0;
+      const templates = (f.templates || []).length;
+      if (!nudges && !templates) return this.t('FOLLOW_LINE.NONE');
+      const parts = [];
+      if (nudges) parts.push(this.t('FOLLOW_LINE.NUDGES', { n: nudges }));
+      if (templates)
+        parts.push(
+          this.t('FOLLOW_LINE.TEMPLATES', {
+            n: templates,
+            days: f.template_days || 2,
+          })
+        );
+      return this.t('FOLLOW_LINE.TEXT', { what: parts.join(' + ') });
+    },
     finishedLine(agent) {
       const f = agent.finished || {};
       return Object.keys(f)
@@ -198,8 +222,18 @@ export default {
                 <template v-if="finishedLine(agent)">
                   · {{ finishedLine(agent) }}
                 </template>
+                · {{ followLine(agent) }}
               </p>
             </div>
+            <woot-button
+              size="tiny"
+              variant="clear"
+              color-scheme="secondary"
+              icon="data-usage"
+              @click="metricsFor = agent"
+            >
+              {{ t('METRICS.BUTTON') }}
+            </woot-button>
             <woot-button
               v-if="agent.kind !== 'campaign_seller'"
               size="tiny"
@@ -268,6 +302,11 @@ export default {
       :sources="sources"
       @close="modal = null"
       @saved="onSaved"
+    />
+    <ProspectMetrics
+      v-if="metricsFor"
+      :agent="metricsFor"
+      @close="metricsFor = null"
     />
   </div>
 </template>

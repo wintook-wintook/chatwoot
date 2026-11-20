@@ -18,6 +18,21 @@ class ReadyAgentsAPI extends ApiClient {
     });
   }
 
+  // Sugerencias con «Tu negocio»: kind 'areas' → { support: { yes, no }, … } · 'questions' → { questions }.
+  suggest(kind, settings, areas = []) {
+    return axios.post(`${this.url}/suggest`, {
+      kind,
+      business_what: settings.business_what,
+      business_who: settings.business_who,
+      areas,
+    });
+  }
+
+  // «Atención a prospectos»: { total, results, conversion, drop_off: [{ question, count }], ads: [...] }.
+  metrics(id) {
+    return axios.get(`${this.url}/${id}/metrics`);
+  }
+
   // «Atención a clientes» › Probar la matriz: { rows: [{ example, area, kind, got, ok }] }.
   matrix(readyAgent, { id = null } = {}) {
     return axios.post(`${this.url}/matrix`, { ready_agent: readyAgent, id });

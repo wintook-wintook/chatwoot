@@ -23,8 +23,10 @@ module Motor2::Skills::QualifyFlow
   ASKING = /\A[^[:alnum:]]*(qué|cuál|cuáles|cuánto|cuánta|cuántos|cuántas|cómo|dónde|cuándo|quién|quiénes|por\s+qué|tienen|tienes|
             hay|manejan|manejas|aceptan|dan|das|venden|vendes|puedo|pueden|puedes|me\s+das|me\s+dan|conoces|conocen|sabe|sabes|saben|
             es\s+posible|hacen|haces|incluye|cuesta|cuestan|cuanto\s+cuesta|cuanto\s+sale|cuanto\s+es)(?![[:alnum:]])/xi
-  BRIDGES = ['Si te parece, seguimos: %<faltan>s y terminamos.', 'Para avanzar, %<faltan>s.',
-             'Ya casi terminamos: %<faltan>s.'].freeze
+  # Sin «me faltan 4 preguntas» (suena a encuesta): el número solo cuando ya casi acaba.
+  BRIDGES = ['Si te parece, seguimos.', 'Para ayudarte mejor:', 'Y para darte la mejor opción:'].freeze
+  BRIDGES_LAST = ['Ya casi terminamos: %<faltan>s.', 'Para avanzar, %<faltan>s.'].freeze
+  MAX_COUNTED = 2
 
   # Lo que se deduce de la plática antes de armar el prompt.
   def scan_flow(history)
@@ -104,15 +106,31 @@ module Motor2::Skills::QualifyFlow
     return nil unless @agent_spoke && (after_turn ? detour_after_turn? : detour?) && pending_now.any?
 
     count = pending_now.size
+    turn = state.to_h.to_s.length
+    return BRIDGES[turn % BRIDGES.size] if count > MAX_COUNTED
+
     faltan = count == 1 ? 'solo me falta una pregunta' : "solo me faltan #{count} preguntas"
-    format(BRIDGES[state.to_h.to_s.length % BRIDGES.size], faltan: faltan)
+    format(BRIDGES_LAST[turn % BRIDGES_LAST.size], faltan: faltan)
+  end
+
+  # Lo que ya contestó en la plática (aunque sea de pasada) lo guarda el código (Motor2::AnswerExtractor):
+  # así no se le vuelve a preguntar. Solo cuando el último mensaje es del cliente.
+  def extract_answers(history)
+    list = pending
+    return if list.empty? || Array(history).last.to_h[:role].to_s != 'user'
+
+    Motor2::AnswerExtractor.new(account: config.account).call(questions: list, history: history).each do |number, text|
+      question = list.find { |q| q[:number] == number }
+      answers[question[:ask].first(300)] = text
+      trace.event(:respuesta, "#{question[:ask]}: #{text} (de la plática)")
+    end
   end
 
   def bridge_note
     phrase = bridge
     return nil unless phrase
 
-    "Antes de la pregunta pendiente, conecta con una frase como «#{phrase}» (con tus palabras, pero di el número exacto de " \
-      'preguntas que faltan; no la repitas igual cada vez).'
+    "Antes de la pregunta pendiente, conecta con una frase corta como «#{phrase}» (con tus palabras; si dices cuántas faltan, " \
+      'di el número exacto). Una sola frase: no la repitas.'
   end
 end

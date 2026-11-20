@@ -7,7 +7,10 @@
 #
 # En answers['areas'][clave] (lo que contestó en el asistente):
 #   on, examples_yes [], examples_no [], user_id, team_id          (todas)
-#   support: action 'case' | 'handoff', case_type_id, details (pide qué pasa / desde cuándo / a cuántos)
+#   rules (sus reglas propias), hours { from, to, days }           (todas: Motor2::Skills::AreaRules)
+#   support: action 'case' | 'handoff' | 'visit' (visita técnica: appointment_user_ids, appointment_minutes), case_type_id,
+#            details (pide qué pasa / desde cuándo / a cuántos),
+#            default_service_id (el sistema que atiende si el cliente no dice otro: Servicios afectados del catálogo)
 #   sales:   quote 'opportunity' | 'handoff', demo 'appointment' | 'handoff', visit 'appointment' | 'handoff',
 #            appointment_user_ids [], appointment_minutes, case_type_id
 #   admin:   case (bool), case_type_id
@@ -48,7 +51,7 @@ module Motor2::Functions::CustomerAreas
     'other' => { 'title' => 'Otra', 'when' => '', 'examples_yes' => [], 'examples_no' => [], 'on' => false }
   }.freeze
 
-  ACTIONS = { 'action' => %w[case handoff], 'quote' => %w[opportunity handoff], 'demo' => %w[appointment handoff],
+  ACTIONS = { 'action' => %w[case handoff visit], 'quote' => %w[opportunity handoff], 'demo' => %w[appointment handoff],
               'visit' => %w[appointment handoff] }.freeze
 
   module_function
@@ -63,7 +66,7 @@ module Motor2::Functions::CustomerAreas
     out = { 'on' => raw.key?('on') ? ActiveModel::Type::Boolean.new.cast(raw['on']) || false : DEFAULTS[key]['on'],
             'examples_yes' => examples(raw, 'examples_yes', key), 'examples_no' => examples(raw, 'examples_no', key),
             'user_id' => raw['user_id'].to_s.presence&.to_i, 'team_id' => raw['team_id'].to_s.presence&.to_i }
-    out.merge(specific(key, raw)).compact
+    out.merge(own_rules(raw)).merge(specific(key, raw)).compact
   end
 
   def examples(raw, field, key)
@@ -74,7 +77,8 @@ module Motor2::Functions::CustomerAreas
   def specific(key, raw)
     case key
     when 'support' then { 'action' => choice(raw, 'action', key), 'case_type_id' => id(raw['case_type_id']),
-                          'details' => raw.key?('details') ? ActiveModel::Type::Boolean.new.cast(raw['details']) || false : true }
+                          'details' => raw.key?('details') ? ActiveModel::Type::Boolean.new.cast(raw['details']) || false : true,
+                          'default_service_id' => id(raw['default_service_id']) }.merge(visit(raw))
     when 'sales' then sales(raw)
     when 'admin' then { 'case' => ActiveModel::Type::Boolean.new.cast(raw['case']) || false, 'case_type_id' => id(raw['case_type_id']) }
     else { 'name' => raw['name'].to_s.squish.first(60), 'description' => raw['description'].to_s.squish.first(300) }
@@ -86,6 +90,23 @@ module Motor2::Functions::CustomerAreas
                         .merge('appointment_user_ids' => Array(raw['appointment_user_ids']).map(&:to_i).select(&:positive?).uniq,
                                'appointment_minutes' => raw['appointment_minutes'].to_s.presence&.to_i,
                                'case_type_id' => id(raw['case_type_id']))
+  end
+
+  # Soporte que va a domicilio (aire acondicionado, instalaciones…): con quién y cuánto dura la visita técnica.
+  def visit(raw)
+    { 'appointment_user_ids' => Array(raw['appointment_user_ids']).map(&:to_i).select(&:positive?).uniq,
+      'appointment_minutes' => raw['appointment_minutes'].to_s.presence&.to_i }
+  end
+
+  def own_rules(raw) = { 'rules' => raw['rules'].to_s.strip.first(800).presence, 'hours' => hours(raw['hours']) }
+
+  # El horario del área («09:00» a «14:00», lunes a viernes); sin las dos horas, nada.
+  def hours(raw)
+    raw = Motor2::Sanitizer.plain(raw)
+    from, to = raw.values_at('from', 'to').map { |h| h.to_s[/\A\d{2}:\d{2}\z/] }
+    return nil unless from && to
+
+    { 'from' => from, 'to' => to, 'days' => raw['days'].to_s.presence_in(%w[weekdays saturday all]) || 'weekdays' }
   end
 
   def choice(raw, field, key) = raw[field].to_s.presence_in(ACTIONS[field]) || DEFAULTS[key][field]

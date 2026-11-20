@@ -64,8 +64,9 @@ class TrackingCampaigns::HandoffSweepJob < ApplicationJob
     users.map { |user| "#{TrackingCampaigns::HandOff.mention(user)} " }.join
   end
 
+  # Sin campaña (lo pasó el agente de Atención a prospectos): el nombre del agente.
   def campaign_name(tracking)
-    tracking.tracking_campaign&.name
+    tracking.tracking_campaign&.name || tracking.tracking_template&.name
   end
 
   def zone(tracking)

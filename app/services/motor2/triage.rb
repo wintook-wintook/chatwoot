@@ -9,11 +9,13 @@
 #   - en Comercial, si es información o una gestión (cotización, demo, visita, vendedor, contratar);
 #   - en Soporte, la severidad (1 no puede operar, 2 funciona con falla, 3 duda de uso/configuración);
 #   - si pide una persona;
-#   - las otras solicitudes del mismo mensaje (multi-intención): ninguna se pierde.
+#   - las otras solicitudes del mismo mensaje (multi-intención): ninguna se pierde;
+#   - en Soporte, de qué sistema o módulo habla y qué tipo de problema es, con los Servicios afectados y
+#     las Categorías del catálogo de casos como marco de referencia (si no lo dice, el que eligió la empresa).
 # Continuidad: si quedó una aclaración pendiente, el mensaje se evalúa primero contra ella («10
 # usuarios» completa «quiero una cotización»).
 #
-#   Motor2::Triage.new(account).call(areas:, history:, pending:, queue:)
+#   Motor2::Triage.new(account).call(areas:, history:, pending:, queue:, about: { business:, catalog: })
 #   → { 'atender' => { 'area', 'intencion', 'suficiente', 'aclaracion', 'gestion', 'severidad', 'pide_persona' },
 #       'pendientes' => [{ 'area', 'intencion' }] }
 class Motor2::Triage < Cases::Ai::BaseService
@@ -26,12 +28,13 @@ class Motor2::Triage < Cases::Ai::BaseService
     hable de cotizaciones o facturas) es soporte; si quiere conocer, cotizar, comprar o contratar es
     comercial; si es una gestión de su cuenta (factura, pago, saldo, RFC) es administrativo.
     Reglas:
-    - Usa EL NEGOCIO para entender lo que pide: si la empresa da soporte o capacitación de un sistema, preguntar cómo
-      hacer algo en ese sistema («cómo doy de alta un cliente», «cómo timbro») es soporte (duda de uso), no comercial.
+    - Usa EL NEGOCIO para entender lo que pide: preguntar cómo usar o hacer algo con lo que la empresa vende, instala o
+      atiende («cómo doy de alta un cliente», «cómo programo el minisplit») es soporte (duda de uso), no comercial; algo
+      que dejó de funcionar o se descompuso también es soporte.
     - Si hay una ACLARACIÓN PENDIENTE, primero ve si el último mensaje la contesta: entonces es la MISMA
       solicitud completada (misma área), no una nueva («10 usuarios» completa «quiero una cotización»).
     - «suficiente»: false solo si no se entiende qué necesita para poder actuar («quiero información»,
-      «quiero una cotización» sin decir de qué, «tengo un problema con una factura»); entonces da en
+      «quiero una cotización» sin decir de qué, «tengo un problema» o «tengo un problema con una factura» sin decir qué pasa); entonces da en
       «aclaracion» UNA pregunta corta. Una gestión administrativa clara («mi factura tiene mal el RFC») ya
       es suficiente: no pidas datos de más.
     - «gestion» (solo comercial): info si busca información (preguntar «¿cuánto cuesta…?» o «¿qué planes
@@ -45,15 +48,20 @@ class Motor2::Triage < Cases::Ai::BaseService
       «pendientes». Conserva en «pendientes» las que ya estaban pendientes y no se han atendido.
     - «pide_persona»: true si pide hablar con una persona, un asesor o un humano. Si pide una persona sin
       decir para qué, el área es "none" (no la adivines); «quiero hablar con un vendedor» sí es comercial.
+    - «servicio» y «categoria» (solo soporte): de SERVICIOS y CATEGORÍAS, el nombre exacto del que mejor describe
+      de qué equipo, producto, sistema o servicio habla y qué tipo de problema es (por lo que quiere decir: «enviar el
+      pedido a Microsip» es la integración con Microsip; «el minisplit no enfría» es el minisplit). Solo si lo nombra
+      o dice algo que solo existe en uno; «no funciona» o «no puedo facturar» no bastan: entonces "" (no lo inventes).
     Responde solo JSON:
     {"atender": {"area": "...", "intencion": "...", "suficiente": true, "aclaracion": "", "gestion": "", "severidad": 0,
-     "pide_persona": false}, "pendientes": [{"area": "...", "intencion": "..."}]}
+     "pide_persona": false, "servicio": "", "categoria": ""}, "pendientes": [{"area": "...", "intencion": "..."}]}
   TEXT
 
-  def call(areas:, history:, pending: nil, queue: [], business: nil)
-    @business = business
+  def call(areas:, history:, pending: nil, queue: [], about: {})
+    @business = about[:business]
+    @catalog = about[:catalog].to_h
     result = chat(system: SYSTEM, user: context(areas, history, pending, queue), json: true, temperature: 0, max_tokens: 400)
-    clean(result, areas)
+    clean(result, areas)&.tap { |out| out['atender'].merge!(classification(result['atender'])) }
   rescue StandardError => e
     Rails.logger.warn("[Motor2::Triage] #{e.class}: #{e.message}")
     nil
@@ -65,6 +73,7 @@ class Motor2::Triage < Cases::Ai::BaseService
 
   def context(areas, history, pending, queue)
     lines = ["EL NEGOCIO: #{@business.presence || 'sin descripción'}", 'ÁREAS:', *areas.flat_map { |a| area_lines(a) }]
+    lines.concat(catalog_lines)
     lines.concat(pending_lines(pending, queue))
     lines << 'PLÁTICA (la última línea es el mensaje a clasificar):'
     Array(history).last(HISTORY).each { |m| lines << "#{m[:role].to_s == 'user' ? 'CLIENTE' : 'AGENTE'}: #{m[:content].to_s.first(400)}" }
@@ -76,6 +85,21 @@ class Motor2::Triage < Cases::Ai::BaseService
     lines << "ACLARACIÓN PENDIENTE: #{pending['area']} — «#{pending['intencion']}»; se le preguntó: «#{pending['aclaracion']}»" if pending
     lines << "PENDIENTES DE ANTES: #{queue.map { |q| "#{q['area']}: #{q['intencion']}" }.join(' | ')}" if queue.present?
     lines
+  end
+
+  def catalog_lines
+    lines = []
+    lines << "SERVICIOS (equipos, productos, sistemas o servicios): #{@catalog[:services].join(' | ')}" if @catalog[:services].present?
+    lines << "  Si no dice de cuál habla, el que usa normalmente: #{@catalog[:default]}" if @catalog[:default].present?
+    lines << "CATEGORÍAS: #{@catalog[:categories].join(' | ')}" if @catalog[:categories].present?
+    lines
+  end
+
+  # Solo nombres que existen en el catálogo.
+  def classification(now)
+    now = now.to_h
+    { 'servicio' => now['servicio'].to_s.presence_in(Array(@catalog[:services])),
+      'categoria' => now['categoria'].to_s.presence_in(Array(@catalog[:categories])) }.compact
   end
 
   def area_lines(area)

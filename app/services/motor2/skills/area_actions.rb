@@ -11,16 +11,13 @@
 # No repite un caso abierto de la misma clase. En el chat de prueba no crea nada (folio PRUEBA-1).
 module Motor2::Skills::AreaActions
   include Motor2::Skills::AreaSales
+  include Motor2::Skills::AreaSupport
 
-  SEARCH_FIRST = 'Todavía no: primero búscalo con buscar_en_fuentes. Si ahí está cómo resolverlo, dale los pasos al cliente; ' \
-                 'solo si no está, lo pasas o levantas su caso.'
+  SEARCH_FIRST = 'Todavía no: primero búscalo con buscar_en_fuentes. Si ahí está cómo resolverlo, dale los pasos; si no, lo pasas.'
   SEVERITY = { 1 => 'urgent', 2 => 'high', 3 => 'medium' }.freeze # severidad de soporte → prioridad del caso
   CHANNELED = 'Listo, ya se pasó. Escribe un mensaje corto y cálido: qué le pasas y a quién (p. ej. «le paso tu solicitud de ' \
               'visita a nuestro equipo comercial») y que en cuanto puedan lo atienden. Sin preguntas: ya no sigues tú.'
   CASE_DONE = 'Dale el folio y dile que el equipo le da seguimiento. Sin más preguntas ni ofrecer pasarlo con nadie.'
-  URGENT = 'Soporte — no puede operar: es urgente. NO le hagas preguntas: levanta YA su caso con crear_caso (con lo que dijo) y dale el folio.'
-  SUPPORT_ASK = 'Si no sabes qué pasa exactamente, desde cuándo o a cuántos afecta, pregunta SOLO lo que falte (una cosa). '
-  SUPPORT_CASE = 'Si no se resuelve (o ya lo intentó), levanta su caso con crear_caso y dale el folio.'
 
   # ¿Esta área levanta casos? (si no, se pasa al equipo).
   def support_case?
@@ -40,16 +37,6 @@ module Motor2::Skills::AreaActions
 
   private
 
-  def support_note
-    return URGENT if now['severidad'] == 1 && support_case?
-
-    data = function.area('support').to_h
-    ask = data['details'] == false ? '' : SUPPORT_ASK
-    fix = 'Si buscar_en_fuentes trae cómo resolverlo, dale los pasos. '
-    rest = support_case? ? SUPPORT_CASE : 'Si no se resuelve, llama canalizar.'
-    "Soporte#{' — no puede operar: es urgente, no le hagas dar vueltas' if now['severidad'] == 1}. #{ask}#{fix}#{rest}"
-  end
-
   def admin_note
     rest = support_case? ? 'levanta su caso con crear_caso y dale el folio' : 'llama canalizar'
     'Administrativo: tú no ves saldos, facturas ni pagos; no inventes montos ni fechas. Si falta un dato para la gestión ' \
@@ -61,16 +48,19 @@ module Motor2::Skills::AreaActions
   def channel(reason)
     return { ok: true, nota: 'Ya quedó registrado: NO hace falta pasarlo. Solo dile que su vendedor le da seguimiento.' } if @acted
     return { error: SEARCH_FIRST } if search_first?
+    return { error: Motor2::Skills::SupportFlow::SOLUTION_FIRST } if solution_first?
 
     state['handoff_area'] = area_key
     @turn.decide('handoff', "#{area_title}: #{reason}")
-    { ok: true, nota: CHANNELED + (queue.any? ? " Lo otro que pidió (#{queue.pluck('intencion').join('; ')}) también se lo pasas: díselo." : '') }
+    { ok: true, nota: no_docs_note + CHANNELED + queue_line }
   end
+
+  def queue_line = queue.any? ? " Lo otro que pidió (#{queue.pluck('intencion').join('; ')}) también se lo pasas: díselo." : ''
 
   def create_case(args)
     return { error: 'Esta área no levanta casos: llama canalizar.' } unless support_case?
     return { error: ASK_FIRST } if ask_first?
-    return { error: SEARCH_FIRST } if search_first?
+    return { error: case_blocker } if case_blocker
 
     @acted = true
     return { ya_existe: true, folio: state['case_folio'], nota: 'Ya le levantaste este caso: dale ese folio.' } if state['case_folio']
@@ -84,7 +74,7 @@ module Motor2::Skills::AreaActions
   # Soporte con «pedir detalles»: el caso se levanta después de una pregunta (salvo que no pueda operar).
   def ask_first?
     area_key == 'support' && function.area('support').to_h['details'] != false && state['area_turns'].to_i.zero? &&
-      now['severidad'] != 1
+      now['severidad'] != 1 && !@escalate
   end
 
   def open_case(args, type_id)
@@ -95,7 +85,7 @@ module Motor2::Skills::AreaActions
     state['case_folio'] = ticket.try(:folio) || ticket.id
     trace.event(:caso, "#{area_title}: #{ticket.title}")
     case_files(type_id)
-    { ok: true, folio: ticket.try(:folio) || ticket.id, nota: CASE_DONE }
+    { ok: true, folio: ticket.try(:folio) || ticket.id, nota: no_docs_note + CASE_DONE }
   end
 
   # Los archivos de «al levantar un caso» (instructivo, formato…) van con el mensaje del folio.
@@ -107,13 +97,14 @@ module Motor2::Skills::AreaActions
   def test_case
     case_files(case_type_for(area_key, :support))
     state['case_folio'] = 'PRUEBA-1'
-    { ok: true, prueba: true, folio: 'PRUEBA-1', nota: CASE_DONE }
+    { ok: true, prueba: true, folio: 'PRUEBA-1', nota: no_docs_note + CASE_DONE }
   end
 
   def new_case(title, description, type_id, prio)
     target = function.handoff_target(area_key)
     ticket = orchestrator.create_for_manual(title: title.to_s.first(200), description: description.to_s.first(4000), case_type_id: type_id,
-                                            priority: prio, assignee_id: target[:user_id], team_id: target[:team_id])
+                                            priority: prio, assignee_id: target[:user_id], team_id: target[:team_id],
+                                            **case_classification)
     state['case_id'] = ticket.id
     ticket
   end

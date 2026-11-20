@@ -70,6 +70,7 @@ class Motor2::Skills::Qualify < Motor2::Skills::Base
   # La pregunta pendiente que hizo el agente en su último mensaje (si el cliente ya contestó después).
   def prepare(history)
     scan_flow(history)
+    extract_answers(history)
     last = Array(history).rindex { |m| m[:role].to_s == 'assistant' }
     return @just_asked = nil unless last && history[(last + 1)..].any? { |m| m[:role].to_s == 'user' }
 

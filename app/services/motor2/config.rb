@@ -46,7 +46,11 @@ class Motor2::Config
 
   def inbox = @inbox ||= account.inboxes.find_by(id: @columns['inbox_id'])
 
-  def tone = function&.tone || @data['tone'].presence_in(TONES) || 'tu'
+  def tone
+    return voice['tone'].to_s.match?(/\busted\b/i) ? 'usted' : 'tu' if function.respond_to?(:answer) && function.answer(:tone) == 'empresa'
+
+    function&.tone || @data['tone'].presence_in(TONES) || 'tu'
+  end
 
   # Lo que se contestó en el asistente de la función.
   def answers = @data['answers'].to_h
@@ -63,6 +67,12 @@ class Motor2::Config
   def welcome = text('welcome')
 
   def never = text('never')
+
+  # «Cómo habla tu empresa» con lo que este agente cambió solo para él (motor2['voice']).
+  def voice = AgentBase::CompanyVoice.for_agent(account, @data['voice'].to_h)
+
+  # Los campos que este agente cambió (para el chat de prueba: «habló como…»).
+  def own_voice_fields = AgentBase::CompanyVoice.clean(@data['voice'].to_h).keys
 
   def business
     Array(@data['business']).filter_map do |row|

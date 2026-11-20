@@ -11,9 +11,15 @@
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import ReadyAgentsAPI from 'dashboard/api/readyAgents';
+import CaseServicesAPI from 'dashboard/api/caseServices';
 import ReadyAgentChat from './ReadyAgentChat.vue';
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 import AgentFiles from './AgentFiles.vue';
+import SourceOrder, { addSource } from './SourceOrder.vue';
+import AgentVoice from './AgentVoice.vue';
+import FollowUpPlan from './FollowUpPlan.vue';
+import AfterHandoff from './AfterHandoff.vue';
+import QuoteMode from './QuoteMode.vue';
 
 const T = 'READY_AGENTS';
 const STEPS = [
@@ -23,6 +29,7 @@ const STEPS = [
   'knows',
   'files',
   'talk',
+  'follow',
   'instructions',
   'test',
 ];
@@ -70,7 +77,16 @@ const EXAMPLES = {
   other: { yes: [], no: [] },
 };
 const AREA_DEFAULTS = {
-  support: { on: true, action: 'case', details: true, case_type_id: '' },
+  support: {
+    on: true,
+    action: 'case',
+    details: true,
+    case_type_id: '',
+    default_service_id: '',
+    // Visita técnica (giros que van a domicilio): con quién y cuánto dura.
+    appointment_user_ids: [],
+    appointment_minutes: '60',
+  },
   sales: {
     on: true,
     quote: 'opportunity',
@@ -103,10 +119,18 @@ const blank = () => ({
   files: {},
   settings: {
     tone: 'cercano',
+    // «Cómo habla tu empresa» que cambió solo para este agente (AgentVoice).
+    voice: {},
     welcome: '',
     instructions: '',
     human: 'understand_first',
     not_client: 'serve',
+    identify: 'ask',
+    // Lo que comparten los tres agentes (Motor2::Functions::Extras): seguimiento, plazo, recordatorio de cita, cotizar.
+    follow_up: { nudges: 2, templates: [], template_days: 2 },
+    attend_hours: 1,
+    appointment_notice: { on: true, template: '' },
+    quote: { mode: 'off', follow_days: 3 },
     user_id: '',
     team_id: '',
     price_source: '',
@@ -121,7 +145,15 @@ const blank = () => ({
 
 export default {
   name: 'CustomersAgentModal',
-  components: { ReadyAgentChat, AgentFiles },
+  components: {
+    ReadyAgentChat,
+    AgentFiles,
+    SourceOrder,
+    FollowUpPlan,
+    AfterHandoff,
+    QuoteMode,
+    AgentVoice,
+  },
   props: {
     show: { type: Boolean, default: false },
     title: { type: String, default: '' },
@@ -141,6 +173,8 @@ export default {
       openArea: 'support',
       matrix: null,
       matrixRunning: false,
+      services: [], // Servicios afectados del catálogo de casos (marco de referencia de Soporte)
+      suggesting: false,
       pendingFiles: [],
     };
   },
@@ -152,8 +186,15 @@ export default {
     areaKeys() {
       return AREA_KEYS;
     },
+    talkOptions() {
+      return {
+        human: ['understand_first', 'now'],
+        not_client: ['serve', 'handoff'],
+        identify: ['ask', 'no'],
+      };
+    },
     tones() {
-      return ['cercano', 'formal', 'directo'];
+      return ['cercano', 'formal', 'directo', 'empresa'];
     },
     stepIndex() {
       return STEPS.indexOf(this.step);
@@ -163,6 +204,30 @@ export default {
     },
     agentReady() {
       return !!(this.form.name.trim() && this.form.inbox_ids.length);
+    },
+    hasCatalog() {
+      return this.sources.some(s => s.key === 'catalog');
+    },
+    // Agenda demos o visitas (Comercial) o visitas técnicas (Soporte).
+    takesAppointments() {
+      const sales = this.area('sales');
+      return (
+        this.area('support').action === 'visit' ||
+        sales.demo === 'appointment' ||
+        sales.visit === 'appointment'
+      );
+    },
+    // Las plantillas aprobadas de su primera bandeja de WhatsApp (para después de las 24 h).
+    waTemplates() {
+      const inbox = this.inboxes.find(
+        i =>
+          this.form.inbox_ids.includes(i.id) &&
+          String(i.channel_type).includes('Whatsapp')
+      );
+      if (!inbox) return [];
+      const list =
+        this.$store.getters['inboxes/getWhatsAppTemplates'](inbox.id) || [];
+      return [...new Set(list.map(item => item.name))];
     },
     areasOn() {
       return AREA_KEYS.filter(k => this.form.settings.areas[k].on);
@@ -207,7 +272,10 @@ export default {
     show: {
       immediate: true,
       handler(open) {
-        if (open) this.reset();
+        if (open) {
+          this.reset();
+          this.loadServices();
+        }
       },
     },
   },
@@ -234,11 +302,26 @@ export default {
             team_id: settings.team_id || '',
             price_source: settings.price_source || 'canned',
             areas: this.areasOf(settings.areas || {}),
+            // Los agentes de antes no tenían esto: queda apagado hasta que lo prendan.
+            follow_up: {
+              nudges: 0,
+              templates: [],
+              template_days: 2,
+              ...(settings.follow_up || {}),
+            },
+            attend_hours: settings.attend_hours ?? 0,
+            appointment_notice: {
+              on: false,
+              template: '',
+              ...(settings.appointment_notice || {}),
+            },
+            quote: { mode: 'off', follow_days: 3, ...(settings.quote || {}) },
           },
         };
       } else {
         const hasCatalog = this.sources.some(s => s.kind === 'catalog');
         base.settings.price_source = hasCatalog ? 'catalog' : 'canned';
+        base.settings.quote.mode = hasCatalog ? 'draft' : 'off';
         this.form = base;
       }
       this.step = 'agent';
@@ -260,6 +343,15 @@ export default {
           area.user_id = area.user_id || '';
           area.team_id = area.team_id || '';
           area.case_type_id = area.case_type_id || '';
+          area.rules = area.rules || '';
+          area.hours = {
+            from: '',
+            to: '',
+            days: 'weekdays',
+            ...(area.hours || {}),
+          };
+          if (key === 'support')
+            area.default_service_id = area.default_service_id || '';
           return [key, area];
         })
       );
@@ -284,7 +376,14 @@ export default {
       const list = this.form.sources;
       this.form.sources = list.includes(key)
         ? list.filter(k => k !== key)
-        : [...list, key];
+        : addSource(list, key);
+    },
+    // El horario del área (vacío = sin horario propio).
+    hoursOf(key) {
+      const area = this.area(key);
+      if (!area.hours)
+        this.$set(area, 'hours', { from: '', to: '', days: 'weekdays' });
+      return area.hours;
     },
     area(key) {
       return this.form.settings.areas[key];
@@ -301,6 +400,37 @@ export default {
     removeExample(key, field, index) {
       this.area(key)[field].splice(index, 1);
     },
+    // Los ejemplos de sí y no de las áreas prendidas, con el vocabulario de su negocio.
+    async suggestExamples() {
+      this.suggesting = true;
+      try {
+        const { data } = await ReadyAgentsAPI.suggest(
+          'areas',
+          this.form.settings,
+          this.areasOn
+        );
+        Object.entries(data || {}).forEach(([key, row]) => {
+          const area = this.area(key);
+          if (!area) return;
+          if (row.yes?.length)
+            area.examples_yes = row.yes.map(text => ({ text }));
+          if (row.no?.length) area.examples_no = row.no.map(text => ({ text }));
+        });
+        useAlert(this.c('SUGGEST_DONE'));
+      } catch (e) {
+        useAlert(this.c('SUGGEST_ERROR'));
+      } finally {
+        this.suggesting = false;
+      }
+    },
+    async loadServices() {
+      try {
+        const { data } = await CaseServicesAPI.getAll();
+        this.services = (data.case_services || []).filter(s => s.active);
+      } catch (e) {
+        this.services = [];
+      }
+    },
     casesOf(klass) {
       return this.caseTypes.filter(ct => ct.case_class === klass);
     },
@@ -308,17 +438,17 @@ export default {
       const sales = this.area('sales');
       return sales.demo === 'appointment' || sales.visit === 'appointment';
     },
-    toggleCalendarUser(id) {
-      const sales = this.area('sales');
-      const ids = sales.appointment_user_ids.map(String);
-      const key = String(id);
-      sales.appointment_user_ids = ids.includes(key)
-        ? ids.filter(i => i !== key)
-        : [...ids, key];
+    toggleCalendarUser(id, key = 'sales') {
+      const area = this.area(key);
+      const ids = (area.appointment_user_ids || []).map(String);
+      const user = String(id);
+      area.appointment_user_ids = ids.includes(user)
+        ? ids.filter(i => i !== user)
+        : [...ids, user];
     },
-    calendarUserOn(id) {
-      return this.area('sales')
-        .appointment_user_ids.map(String)
+    calendarUserOn(id, key = 'sales') {
+      return (this.area(key).appointment_user_ids || [])
+        .map(String)
         .includes(String(id));
     },
     payload() {
@@ -534,6 +664,22 @@ export default {
 
           <!-- 3 · Qué atiende: las áreas -->
           <template v-if="step === 'areas'">
+            <!-- Cualquier giro: los ejemplos de sí y no con el vocabulario de su negocio («Tu negocio»). -->
+            <div class="flex items-center gap-2">
+              <woot-button
+                size="small"
+                variant="smooth"
+                icon="wand"
+                :is-loading="suggesting"
+                :disabled="!form.settings.business_what.trim()"
+                @click="suggestExamples"
+              >
+                {{ c('SUGGEST_EXAMPLES') }}
+              </woot-button>
+              <span class="text-xs text-slate-500">{{
+                c('SUGGEST_EXAMPLES_HINT')
+              }}</span>
+            </div>
             <p v-if="!areasOn.length" class="m-0 text-xs text-red-600">
               {{ c('AREAS_NONE') }}
             </p>
@@ -640,7 +786,7 @@ export default {
                 <template v-if="key === 'support'">
                   <span class="field-label">{{ c('SUPPORT.ACTION') }}</span>
                   <label
-                    v-for="value in ['case', 'handoff']"
+                    v-for="value in ['case', 'handoff', 'visit']"
                     :key="value"
                     class="flex items-center gap-2 text-sm"
                   >
@@ -665,6 +811,33 @@ export default {
                       </option>
                     </select>
                   </label>
+                  <div v-if="area('support').action === 'visit'">
+                    <span class="field-label">{{
+                      t('FIELDS.APPOINTMENT_USERS')
+                    }}</span>
+                    <p
+                      v-if="!calendarUsers.length"
+                      class="m-0 text-xs text-amber-700"
+                    >
+                      {{ t('FIELDS.NO_CALENDARS') }}
+                    </p>
+                    <label
+                      v-for="u in calendarUsers"
+                      :key="u.id"
+                      class="flex items-center gap-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        class="!m-0"
+                        :checked="calendarUserOn(u.id, 'support')"
+                        @change="toggleCalendarUser(u.id, 'support')"
+                      />
+                      {{ u.name }}
+                    </label>
+                    <p class="m-0 text-xs text-slate-500">
+                      {{ c('SUPPORT.VISIT_HINT') }}
+                    </p>
+                  </div>
                   <label class="flex items-center gap-2 text-sm">
                     <input
                       v-model="area('support').details"
@@ -673,8 +846,27 @@ export default {
                     />
                     {{ c('SUPPORT.DETAILS') }}
                   </label>
+                  <label v-if="services.length" class="block">
+                    <span class="field-label">{{
+                      c('SUPPORT.DEFAULT_SERVICE')
+                    }}</span>
+                    <select v-model="area('support').default_service_id">
+                      <option value="">
+                        {{ c('SUPPORT.DEFAULT_SERVICE_NONE') }}
+                      </option>
+                      <option v-for="s in services" :key="s.id" :value="s.id">
+                        {{ s.name }}
+                      </option>
+                    </select>
+                    <span class="block mt-1 text-xs text-slate-500">
+                      {{ c('SUPPORT.DEFAULT_SERVICE_HELP') }}
+                    </span>
+                  </label>
                   <p class="m-0 text-xs text-slate-500">
                     {{ c('SUPPORT.SEVERITY') }}
+                  </p>
+                  <p class="m-0 text-xs text-slate-500">
+                    {{ c('SUPPORT.EVIDENCE') }}
                   </p>
                 </template>
 
@@ -738,6 +930,10 @@ export default {
                   <p class="m-0 text-xs text-slate-500">
                     {{ c('SALES.EVIDENCE') }}
                   </p>
+                  <QuoteMode
+                    v-model="form.settings.quote"
+                    :has-catalog="hasCatalog"
+                  />
                 </template>
 
                 <template v-if="key === 'admin'">
@@ -792,6 +988,42 @@ export default {
                     </select>
                   </label>
                 </div>
+                <!-- Reglas propias del área y su horario (Motor2::Skills::AreaRules) -->
+                <label class="block">
+                  <span class="field-label">{{ c('RULES.LABEL') }}</span>
+                  <textarea
+                    v-model="area(key).rules"
+                    rows="2"
+                    maxlength="800"
+                    :placeholder="c(`RULES.PLACEHOLDER.${key}`)"
+                  />
+                </label>
+                <div class="flex flex-wrap items-center gap-2 text-sm">
+                  <span>{{ c('RULES.HOURS') }}</span>
+                  <input
+                    v-model="hoursOf(key).from"
+                    type="time"
+                    class="!mb-0 !w-28"
+                  />
+                  <span>{{ c('RULES.TO') }}</span>
+                  <input
+                    v-model="hoursOf(key).to"
+                    type="time"
+                    class="!mb-0 !w-28"
+                  />
+                  <select v-model="hoursOf(key).days" class="!mb-0 !w-40">
+                    <option
+                      v-for="d in ['weekdays', 'saturday', 'all']"
+                      :key="d"
+                      :value="d"
+                    >
+                      {{ c(`RULES.DAYS.${d}`) }}
+                    </option>
+                  </select>
+                </div>
+                <p class="m-0 text-xs text-slate-500">
+                  {{ c('RULES.HOURS_HINT') }}
+                </p>
               </div>
             </section>
           </template>
@@ -864,6 +1096,7 @@ export default {
                 }}</span>
               </span>
             </label>
+            <SourceOrder v-model="form.sources" :sources="sources" />
             <p class="m-0 text-xs text-slate-500">{{ c('KNOWS_HINT') }}</p>
           </template>
 
@@ -879,6 +1112,7 @@ export default {
 
           <!-- 5 · Cómo platica -->
           <template v-if="step === 'talk'">
+            <AgentVoice v-model="form.settings.voice" />
             <label class="block">
               <span class="field-label">{{ t('TALK.WELCOME') }}</span>
               <textarea
@@ -888,12 +1122,13 @@ export default {
                 :placeholder="c('WELCOME_PLACEHOLDER')"
               />
             </label>
-            <div v-for="rule in ['human', 'not_client']" :key="rule">
+            <div
+              v-for="rule in ['human', 'not_client', 'identify']"
+              :key="rule"
+            >
               <span class="field-label">{{ c(`TALK.${rule}.LABEL`) }}</span>
               <label
-                v-for="value in rule === 'human'
-                  ? ['understand_first', 'now']
-                  : ['serve', 'handoff']"
+                v-for="value in talkOptions[rule]"
                 :key="value"
                 class="flex items-start gap-2 text-sm"
               >
@@ -927,6 +1162,20 @@ export default {
                 </select>
               </label>
             </div>
+          </template>
+
+          <!-- Seguimiento: si deja de contestar, el plazo del equipo y el recordatorio de la cita -->
+          <template v-if="step === 'follow'">
+            <FollowUpPlan
+              v-model="form.settings.follow_up"
+              :templates="waTemplates"
+              kind="customers"
+            />
+            <AfterHandoff
+              v-model="form.settings"
+              :templates="waTemplates"
+              :appointments="takesAppointments"
+            />
           </template>
 
           <!-- 6 · Indicaciones -->

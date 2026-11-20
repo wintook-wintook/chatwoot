@@ -37,6 +37,10 @@ class CatalogItem < ApplicationRecord
   }.freeze
 
   belongs_to :account
+  # La foto del producto: la manda el agente de prospectos al recomendarlo (Motor2::Skills::Recommend).
+  has_one_attached :image
+  IMAGE_TYPES = %w[image/png image/jpeg image/webp].freeze
+  MAX_IMAGE = 5.megabytes
 
   enum kind: { product: 0, service: 1, part: 2 }
 
@@ -48,6 +52,7 @@ class CatalogItem < ApplicationRecord
   validates :currency, format: { with: /\A[A-Z]{3}\z/ }
   validates :price, numericality: { greater_than_or_equal_to: 0 }
   validates :cost, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validate :image_ok, if: -> { image.attached? }
 
   scope :active, -> { where(active: true) }
   scope :ordered, -> { order(:name) }
@@ -82,5 +87,11 @@ class CatalogItem < ApplicationRecord
 
   def account_currency
     (account && CaseSetting.for_account(account).default_currency) || 'MXN'
+  end
+
+  # PNG, JPG o WEBP de hasta 5 MB (WhatsApp no manda otras).
+  def image_ok
+    errors.add(:image, 'debe ser PNG, JPG o WEBP') unless IMAGE_TYPES.include?(image.blob.content_type)
+    errors.add(:image, 'debe pesar menos de 5 MB') if image.blob.byte_size > MAX_IMAGE
   end
 end

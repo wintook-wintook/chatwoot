@@ -29,7 +29,7 @@ module Motor2::QuestionGuard
   # con la pregunta pendiente.
   def guard_turn(messages, text)
     checks = %i[ensure_handoff ensure_searched ensure_no_advisor ensure_defer ensure_decision ensure_area_action ensure_file_claim
-                ensure_evidence ensure_question ensure_bridge]
+                ensure_no_guessing ensure_evidence ensure_question ensure_bridge]
     text = checks.reduce(text) do |current, check|
       current.present? ? send(check, messages, current) : current
     end
@@ -50,7 +50,8 @@ module Motor2::QuestionGuard
     return text if ask.blank?
 
     # Si el modelo ya hizo otra pregunta, se cambia por la pendiente (nunca dos preguntas al final).
-    [without_last_question(text), qualify_skill&.bridge(after_turn: true), ask].compact_blank.join("\n\n")
+    phrase = qualify_skill&.bridge(after_turn: true) unless bridged?(without_last_question(text))
+    [without_last_question(text), phrase, ask].compact_blank.join("\n\n")
   end
 
   # Retomar conectando: si no contestó la pregunta que se le hizo (preguntó otra cosa, una objeción,
@@ -58,13 +59,19 @@ module Motor2::QuestionGuard
   def ensure_bridge(_messages, text)
     text = fix_missing_count(text).gsub(BRIDGE_AFTER_COMMA, '. \\1')
     phrase = qualify_skill&.bridge(after_turn: true)
-    return text if phrase.blank? || text.match?(/\bfalta(n)?\b/i) || text.exclude?('¿')
+    return text if phrase.blank? || bridged?(text)
 
     index = text.rindex('¿')
     before = text[0...index].strip.sub(/[,;:]?\s*\b(y|pero|entonces|ahora|bueno|así que|por cierto|oye|dime)?\s*[,;:]?\s*\z/i, '')
     before = "#{before}." if before.present? && !before.match?(/[.!?…)]\z/)
     [before, phrase, text[index..]].compact_blank.join("\n\n")
   end
+
+  # Ya conecta (dice cuántas faltan o trae su propia frase) o no lleva pregunta.
+  def bridged?(text) = text.match?(/\bfalta(n)?\b/i) || text.match?(OWN_BRIDGE) || text.exclude?('¿')
+
+  # El modelo ya conectó con sus palabras: no se agrega otra frase (salía «Para seguir. Para avanzar…»).
+  OWN_BRIDGE = /\b(para\s+(seguir|avanzar|continuar|ayudarte)|seguimos|sigamos|continuemos|ya\s+casi|si\s+te\s+parece)\b/i
 
   # «…bonito, Para avanzar…» → «…bonito. Para avanzar…» (cuando el modelo la escribe pegada).
   BRIDGE_AFTER_COMMA = /,\s+(Para avanzar|Si te parece|Ya casi terminamos|Ya casi acabamos|Solo me falta)/

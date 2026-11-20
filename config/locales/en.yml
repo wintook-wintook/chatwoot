@@ -431,6 +431,8 @@ en:
     not_found: 'Product or service not found'
     import:
       no_file: 'Attach the catalog CSV file.'
+    image:
+      invalid: 'The photo must be PNG, JPG or WEBP up to 5 MB.'
   case_tasks:
     on_close:
       kept: 'Kept %{count} task(s) without a case.'

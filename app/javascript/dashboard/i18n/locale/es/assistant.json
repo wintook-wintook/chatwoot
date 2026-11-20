@@ -480,6 +480,90 @@
     "ON": "Prendido",
     "OFF": "Apagado",
     "NO_INBOXES": "Sin bandeja",
+    "FOLLOW_PLAN": {
+      "INTRO": "Si deja de contestar a media plática, el mismo agente lo vuelve a buscar. Esto es lo que va a pasar:",
+      "NUDGES": "Recordatorios dentro de las 24 h (WhatsApp deja escribir libre)",
+      "NUDGES_2": "2: a las 2 h y a las 20 h de su último mensaje",
+      "NUDGES_1": "1: a las 2 h",
+      "NUDGES_0": "Ninguno",
+      "RECOMMENDED": "(recomendado)",
+      "TEMPLATES": "Después de 24 h (solo con plantilla aprobada), le manda estas, una por vez:",
+      "EVERY": "Una cada",
+      "DAYS": "días",
+      "NO_TEMPLATES": "Después de 24 h WhatsApp solo deja escribir con plantilla aprobada; tu bandeja no tiene (o el agente no tiene bandeja de WhatsApp).",
+      "TIMELINE": "Si no contesta:",
+      "AT_HOURS": "a las {n} h",
+      "AT_DAY": "día {n}",
+      "AFTER": "después",
+      "LAST_IN_WINDOW": " (último dentro de las 24 h)",
+      "TEMPLATE": "plantilla «{name}»",
+      "NUDGE": {
+        "prospects": "recordatorio: retoma la pregunta que quedó pendiente",
+        "customers": "recordatorio: retoma lo pendiente o le pregunta si se resolvió",
+        "campaign_seller": "recordatorio: retoma su duda o la oferta"
+      },
+      "END": {
+        "prospects": "queda «sin respuesta»; si contesta, el agente lo retoma",
+        "customers": "si le diste una solución: «resuelto sin confirmar»; si faltaba un dato, pasa al equipo del área",
+        "campaign_seller": "queda «sin respuesta»; si contesta, el agente lo retoma"
+      },
+      "EXAMPLE": {
+        "prospects": "Ejemplo: «¿Pudiste ver lo del presupuesto? 😊»",
+        "customers": "Ejemplo: «¿Se resolvió con los pasos que te pasé? Responde RESUELTO o ESCALAR.»",
+        "campaign_seller": "Ejemplo: «¿Te quedó alguna duda de la promoción?»"
+      },
+      "HINT": "Si contesta, todo vuelve a empezar desde su nuevo mensaje. Si ya lo calificaste, descartaste o pasaste a una persona, no le escribe. En cada conversación verás el próximo recordatorio y podrás cancelarlo."
+    },
+    "QUOTE": {
+      "TITLE": "Cotizaciones",
+      "NO_CATALOG": "Para cotizar necesita productos con precio en Ventas › Catálogo.",
+      "MODES": {
+        "off": "No cotiza: registra lo que pidió y lo pasa al vendedor",
+        "draft": "Arma la cotización en borrador (precios del Catálogo) y avisa al vendedor para que la revise y la mande",
+        "send": "Arma la cotización y se la manda al cliente (solo precios del Catálogo, sin descuentos) y avisa al vendedor"
+      },
+      "RECOMMENDED": "(recomendado)",
+      "FOLLOW": "Si no contesta, le pregunta por ella a los",
+      "DAYS": "días"
+    },
+    "SOURCE_ORDER": {
+      "TITLE": "Orden de consulta",
+      "HINT": "Busca en este orden. Antes de una fuente lenta (foro, CONTPAQi) revisa si lo de arriba ya contesta; si sí, no la consulta. Pon arriba lo tuyo y más confiable."
+    },
+    "FOLLOW_LINE": {
+      "TEXT": "Seguimiento: {what}",
+      "NUDGES": "{n} recordatorio(s)",
+      "TEMPLATES": "{n} plantilla(s) cada {days} días",
+      "NONE": "Sin seguimiento"
+    },
+    "METRICS": {
+      "BUTTON": "Cómo le va",
+      "TITLE": "Cómo le va a «{name}»",
+      "LOADING": "Cargando…",
+      "ERROR": "No se pudieron cargar las métricas.",
+      "EMPTY": "No ha atendido a nadie en los últimos {days} días.",
+      "SUMMARY": {
+        "prospects": "Atendió a {total} en los últimos {days} días: {conversion}% calificó o agendó cita.",
+        "customers": "Atendió {total} conversaciones en los últimos {days} días: {conversion}% las resolvió sin pasarlas.",
+        "campaign_seller": "Contestaron {total} en los últimos {days} días: a {conversion}% le interesó."
+      },
+      "RESULTS": {
+        "qualified": "Calificados",
+        "appointment": "Con cita",
+        "handed_off": "Pasados a una persona",
+        "discarded": "Descartados",
+        "client": "Ya eran clientes",
+        "no_answer": "Dejaron de contestar",
+        "live": "Platicando ahora",
+        "interested": "Le interesó",
+        "not_interested": "No le interesó",
+        "done": "Terminado"
+      },
+      "DROP_OFF": "Dónde dejan de contestar (la pregunta que les faltaba)",
+      "ADS": "De qué anuncio vienen",
+      "AD_LINE": "{total} · {good} calificaron",
+      "GROUPS": "Qué piden"
+    },
     "LIVE": "atendiendo {n}",
     "TURN_OFF": "Apagar",
     "TURN_ON": "Prender",
@@ -505,6 +589,9 @@
       "QUALIFIED_PLACEHOLDER": "Ej. dijo qué busca, es de Monterrey y lo quiere este mes",
       "DISCARD_WHEN": "Se descarta cuando…",
       "DISCARD_PLACEHOLDER": "Ej. busca empleo, es de otro país o no le interesa",
+      "DISCARD_IDEAS": "está fuera de nuestra zona de servicio|su presupuesto es menor a lo que manejamos|busca algo que no vendemos|es proveedor o busca trabajo|solo quiere comparar precios, sin intención de comprar",
+      "HOT_WHEN": "¿Cuándo es un prospecto caliente? (opcional)",
+      "HOT_PLACEHOLDER": "Ej. lo quiere este mes y tiene enganche o crédito aprobado",
       "HANDOFF_USER": "Pasarlo a (persona)",
       "HANDOFF_TEAM": "o al equipo",
       "NOBODY": "— Nadie: queda sin asignar —",
@@ -523,6 +610,13 @@
       "APPOINTMENT_LOCATION": "Lugar o liga (opcional)",
       "APPOINTMENT_LOCATION_PLACEHOLDER": "Ej. Google Meet, sucursal Centro",
       "APPOINTMENT_HINT": "Ofrece los horarios libres de su Google dentro del horario de atención de la bandeja (o lun–vie 9 a 18). La cita queda en la Agenda y en su Google, y la conversación se le asigna.",
+      "APPOINTMENT_NOTICE": "Le recuerda su cita un día antes (o 2 horas antes si es el mismo día) y, si la marcan «no llegó», le ofrece otro horario",
+      "APPOINTMENT_NOTICE_TEMPLATE": "Si ya pasaron 24 h desde su último mensaje, con esta plantilla",
+      "NO_TEMPLATE": "Sin plantilla (solo si está dentro de las 24 h)",
+      "ATTEND_HOURS": "Al pasarlo, ¿en cuánto tiempo le debe escribir alguien?",
+      "ATTEND_HOURS_N": "En {n} h hábiles",
+      "ATTEND_OFF": "Sin aviso",
+      "ATTEND_HINT": "Si nadie le escribe a tiempo, deja una nota con @mención al vendedor; al triple del tiempo, avisa a los administradores.",
       "REQUIRED_CONTACT": "Datos que debe juntar antes de pasarlo",
       "DISPLAY_NAME": "Nombre que ve el cliente (opcional)",
       "DISPLAY_NAME_PLACEHOLDER": "Ej. Ana"
@@ -530,7 +624,8 @@
     "TONES": {
       "cercano": "Cercano (de tú)",
       "formal": "Formal (de usted)",
-      "directo": "Directo (de tú)"
+      "directo": "Directo (de tú)",
+      "empresa": "El de «Cómo habla tu empresa»"
     },
     "OBJECTIVES": {
       "handoff": "Pasarlo a una persona del equipo",
@@ -550,7 +645,8 @@
       "TOOL": "⚙ {tool}",
       "DECISION": "→ {decision}",
       "NOT_DONE": "(no se hizo)",
-      "FILES": "📎 Mandó: {files}"
+      "FILES": "📎 Mandó: {files}",
+      "VOICE": "🗣 Habló como: {voice}"
     },
     "TOOLS": {
       "buscar_respuesta_predefinida": "Buscó en respuestas predefinidas",
@@ -585,6 +681,11 @@
       "relay": "Pasa el relevo a quien sigue"
     },
     "SESSION": {
+      "NEXT_TOUCH": {
+        "nudge": "Próximo recordatorio: {when}",
+        "template": "Próxima plantilla: {when}",
+        "CANCEL": "No escribirle"
+      },
       "FAILED": "No se pudo cambiar.",
       "PAUSE": "Pausar",
       "RESUME": "Reanudar",
@@ -679,6 +780,7 @@
     "NEXT": "Siguiente",
     "STEPS": {
       "NUMBERED": "{n}. {step}",
+      "follow": "Seguimiento",
       "agent": "El agente",
       "business": "Tu negocio",
       "knows": "Qué sabe",
@@ -721,7 +823,21 @@
         "SHEET_FAQ": "Esta hoja está en modo «Preguntas frecuentes». Para que los precios salgan exactos, pásala a modo «Datos» en Ajustes › Bases de conocimiento."
       }
     },
+    "FOLLOW_UP": {
+      "TITLE": "Si deja de contestar",
+      "NUDGES_2": "Le escribe 2 recordatorios: a las 2 horas y a las 20 horas de su último mensaje, retomando donde se quedó",
+      "NUDGES_1": "Le escribe 1 recordatorio a las 2 horas",
+      "NUDGES_0": "No le vuelve a escribir",
+      "TEMPLATES": "Después de 24 horas (WhatsApp solo deja escribir con plantilla aprobada), le manda estas plantillas, una por vez:",
+      "EVERY": "Una cada",
+      "DAYS": "días",
+      "HINT": "Si contesta, vuelve a empezar desde su nuevo mensaje. Si ya lo calificaste, descartaste o pasaste a una persona, no le escribe. Si contesta después del último recordatorio, el agente lo retoma."
+    },
     "QUESTIONS_LIST": {
+      "SUGGEST": "Sugerir preguntas para mi negocio",
+      "SUGGEST_HINT": "Con lo que pusiste en «Tu negocio». Las cambias como quieras.",
+      "SUGGEST_ERROR": "No se pudieron sugerir ahora; intenta de nuevo.",
+      "SMART": "No pregunta lo que el prospecto ya dijo (aunque lo haya dicho de pasada). Para una pregunta que solo aplica a veces, agrega al final la condición entre corchetes, p. ej. «¿Cuántos empleados tienen? [solo si es empresa]».",
       "NUMBER": "{n}.",
       "PLACEHOLDER": "Escribe la pregunta como quieres que la haga",
       "REMOVE": "Quitar esta pregunta",
@@ -767,6 +883,7 @@
         "areas": "Qué atiende",
         "knows": "Qué sabe",
         "talk": "Cómo platica",
+        "follow": "Seguimiento",
         "instructions": "Indicaciones",
         "test": "Pruébalo y guarda",
         "files": "Imágenes y archivos"
@@ -817,10 +934,16 @@
         "ACTION": "Si no se resuelve con lo que sabe",
         "ACTIONS": {
           "case": "Levanta un caso y le da el folio",
-          "handoff": "Lo pasa a una persona de soporte"
+          "handoff": "Lo pasa a una persona de soporte",
+          "visit": "Si no se resuelve por aquí, agenda una visita técnica"
         },
-        "DETAILS": "Antes pregunta desde cuándo pasa o a cuántos afecta (una sola pregunta)",
-        "SEVERITY": "La prioridad sale sola: no puede operar → urgente (se levanta de inmediato); funciona con falla → alta; duda de uso → media."
+        "DETAILS": "Antes de levantar el caso, pregunta desde cuándo pasa o a cuántos afecta (una sola pregunta)",
+        "VISIT_HINT": "Pide la dirección y, si puede, una foto del equipo; ofrece horarios de quien elijas y agenda la visita (para giros que van a domicilio: aire acondicionado, instalaciones…).",
+        "SEVERITY": "La prioridad sale sola: no puede operar → urgente (se levanta de inmediato); funciona con falla → alta; duda de uso → media.",
+        "DEFAULT_SERVICE": "Si el cliente no dice de qué equipo, producto o servicio habla, asume",
+        "DEFAULT_SERVICE_NONE": "No asumir ninguno",
+        "DEFAULT_SERVICE_HELP": "Es solo el marco de referencia: la IA decide de qué módulo habla con tus Servicios afectados (Casos › Clasificación) y, si no lo dice, usa este. El caso sale con ese servicio y su categoría.",
+        "EVIDENCE": "Contesta solo con lo que dicen tus fuentes: si encuentra la solución exacta da los pasos tal cual con las ligas y cierra con RESUELTO / ESCALAR; si es de otro sistema lo dice; si hay varias posibles pregunta cuál; si no hay nada lo dice y lo pasa. Cada conversación queda con etiquetas de cómo la catalogó (#soporte-falla, #respondida, #canalizada…)."
       },
       "SALES": {
         "quote": {
@@ -850,6 +973,10 @@
       "AREA_TEAM": "Equipo",
       "GENERAL": "Al de «Cómo platica»",
       "KNOWS_HINT": "Comercial y Soporte buscan aquí; Administrativo no busca.",
+      "SUGGEST_EXAMPLES": "Armar ejemplos para mi negocio",
+      "SUGGEST_EXAMPLES_HINT": "Cambia los ejemplos de sí y no de las áreas prendidas por unos con el vocabulario de tu negocio («Tu negocio»).",
+      "SUGGEST_DONE": "Listo: revisa los ejemplos de cada área.",
+      "SUGGEST_ERROR": "No se pudieron armar ahora; intenta de nuevo.",
       "WELCOME_PLACEHOLDER": "p. ej. ¡Hola! Soy Sofi, de soporte y atención a clientes.",
       "TALK": {
         "human": {
@@ -861,6 +988,11 @@
           "LABEL": "Si quien escribe no es cliente",
           "serve": "Lo atiende igual (recomendado)",
           "handoff": "Lo pasa a la persona o equipo de abajo, sin atenderlo"
+        },
+        "identify": {
+          "LABEL": "Si no sabemos de qué empresa es",
+          "ask": "Le pregunta una vez de qué empresa escribe y su correo, y lo liga a su organización (recomendado). Si escribe desde un correo de empresa, lo liga solo por el dominio",
+          "no": "No le pregunta"
         },
         "MULTI": "Si pide varias cosas a la vez, las atiende una por una; lo que quede pendiente va en la nota cuando lo pasa."
       },
@@ -878,7 +1010,24 @@
         "ROW": "{icon} «{example}» — {line}"
       },
       "TEST_HINT": "Escribe como tu cliente: «no puedo entrar al sistema», «quiero una cotización», «mi factura tiene mal el RFC»…",
-      "TEST_AREA": "Área: {area}"
+      "TEST_AREA": "Área: {area}",
+      "RULES": {
+        "LABEL": "Reglas de esta área (opcional)",
+        "PLACEHOLDER": {
+          "support": "Ej. Antes de dar pasos, confirma que tiene la versión más reciente.",
+          "sales": "Ej. Nunca ofrezcas descuentos; los precios ya incluyen IVA.",
+          "admin": "Ej. Las facturas solo se corrigen dentro del mismo mes.",
+          "other": "Ej. Pide su número de pedido antes de pasarlo."
+        },
+        "HOURS": "Horario del área (opcional): de",
+        "TO": "a",
+        "DAYS": {
+          "weekdays": "lunes a viernes",
+          "saturday": "lunes a sábado",
+          "all": "todos los días"
+        },
+        "HOURS_HINT": "Fuera de ese horario, toma lo que necesita y le dice que el equipo le escribe en cuanto abra. Sin horario, atiende siempre igual."
+      }
     },
     "CAMPAIGN": {
       "SUBTITLE": "Toca la puerta en tus campañas: la campaña manda el primer mensaje y él sigue cuando contestan. Despierta el interés, resuelve las primeras dudas y pasa al interesado a quien sigue.",
@@ -890,6 +1039,7 @@
         "channel": "Canal y toques",
         "knows": "Tu negocio y qué sabe",
         "talk": "Cómo platica y el relevo",
+        "follow": "Seguimiento",
         "instructions": "Indicaciones",
         "test": "Pruébalo y guarda",
         "files": "Imágenes y archivos"
@@ -1010,6 +1160,16 @@
       "IMAGE_TYPE": "«{name}»: la imagen debe ser JPG o PNG.",
       "TOO_BIG": "«{name}» pesa más de lo que acepta WhatsApp.",
       "UPLOAD_ERROR": "No se pudo subir el archivo."
+    },
+    "AGENT_VOICE": {
+      "BUTTON": "Cómo habla tu empresa",
+      "OWN": "{n} cambio(s) solo para este agente",
+      "ALL_COMPANY": "Usa lo de la empresa",
+      "HINT": "Lo general se cambia en «Cómo habla tu empresa». Aquí, en cada campo, eliges si este agente usa lo de la empresa o algo solo para él (por ejemplo, otra firma u otro tono).",
+      "EMPTY": "Tu empresa todavía no lo tiene lleno: llénalo en «Cómo habla tu empresa» para que lo usen todos tus agentes.",
+      "COMPANY": "Como la empresa",
+      "ONLY_HERE": "Solo para este agente",
+      "NOT_SET": "(vacío en la empresa)"
     }
   }
 }

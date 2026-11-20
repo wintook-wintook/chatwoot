@@ -26,6 +26,17 @@ export default {
       );
       return [s.outcome, ...answers].filter(Boolean).join('\n');
     },
+    // «Próximo recordatorio: hoy 16:30» (seguimiento corto, Motor2::FollowUp).
+    nextTouch() {
+      const touch = this.session?.next_touch;
+      if (!touch) return '';
+      const when = new Date(touch.at).toLocaleString(undefined, {
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      return this.t(`NEXT_TOUCH.${touch.kind}`, { when });
+    },
   },
   watch: {
     conversationId: { immediate: true, handler: 'load' },
@@ -78,6 +89,16 @@ export default {
       v-if="['active', 'paused'].includes(session.status)"
       class="flex flex-shrink-0 gap-2 ltr:ml-auto rtl:mr-auto"
     >
+      <span v-if="nextTouch" class="text-slate-500">{{ nextTouch }}</span>
+      <button
+        v-if="nextTouch"
+        type="button"
+        class="text-slate-600 hover:underline dark:text-slate-300"
+        :disabled="busy"
+        @click="change('cancelFollowUp')"
+      >
+        {{ t('NEXT_TOUCH.CANCEL') }}
+      </button>
       <button
         v-if="session.status === 'active'"
         type="button"

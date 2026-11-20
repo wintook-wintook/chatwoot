@@ -69,10 +69,20 @@ class Motor2::Skills::Knowledge < Motor2::Skills::Base
     found.each { |f| note(f, question) }
     note_selection
     found = found.reject { |f| f[:resultados].empty? }
-    found.any? ? { resultados: found } : { resultados: [], nota: 'No se encontró nada. No lo inventes.' }
+    judged = judge(question, found)
+    return { resultados: found }.merge(judged.to_h) if found.any?
+
+    { resultados: [], nota: judged&.dig(:nota) || 'No se encontró nada. No lo inventes.' }
   end
 
   private
+
+  # «Atención a clientes» › Soporte: ¿lo encontrado resuelve lo que pidió? (Motor2::Skills::SupportFlow#judge)
+  def judge(question, found)
+    # Si la cascada ya lo revisó y se detuvo con una exacta, no se revisa otra vez.
+    done = search.last_check if search.last_check.to_h['tipo'] == 'exacta'
+    @turn.find_skill('areas')&.judge([@customer_words, question].compact_blank.uniq.join(' — búsqueda: '), found, done)
+  end
 
   def search
     @search ||= Motor2::Search.new(config.account, config.sources, conversation: @turn.conversation, customer_words: @customer_words)

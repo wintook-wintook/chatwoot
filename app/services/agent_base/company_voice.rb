@@ -7,6 +7,8 @@
 #   AgentBase::CompanyVoice.get(account)            → { 'who' => …, 'tone' => …, … }
 #   AgentBase::CompanyVoice.update!(account, attrs)  → guarda (vacío = no se usa)
 #   AgentBase::CompanyVoice.block(account, draft)    → el bloque para el prompt ('' si no hay nada)
+#   AgentBase::CompanyVoice.for_agent(account, own)  → lo de la empresa con lo que un agente listo cambió solo para él
+#   AgentBase::CompanyVoice.clean(attrs)             → solo los campos que existen, con tope
 #
 # Vive en account.custom_attributes['ai_voice'].
 module AgentBase::CompanyVoice
@@ -29,20 +31,31 @@ module AgentBase::CompanyVoice
     FIELDS.keys.index_with { |key| saved[key].to_s }
   end
 
+  def clean(attrs) = FIELDS.keys.index_with { |key| attrs.to_h.stringify_keys[key].to_s.strip.first(MAX_CHARS) }.compact_blank
+
+  # Agentes listos (motor 2.0): lo que el agente cambió «solo para este agente» gana sobre lo de la empresa.
+  def for_agent(account, own) = get(account).merge(clean(own))
+
   def update!(account, attrs)
-    clean = FIELDS.keys.index_with { |key| attrs.to_h.stringify_keys[key].to_s.strip.first(MAX_CHARS) }.compact_blank
+    clean = clean(attrs)
     account.custom_attributes = account.custom_attributes.to_h.merge(KEY => clean)
     account.save!
     get(account)
   end
 
   # `draft`: lo que está en el formulario sin guardar (para «Probar»).
-  def block(account, draft = nil)
+  # strong: los agentes listos (motor 2.0) lo siguen siempre (ya trae lo que el agente cambió para él).
+  def block(account, draft = nil, strong: false)
     values = draft ? draft.to_h.stringify_keys : get(account)
     lines = FIELDS.filter_map { |key, label| "- #{label}: #{values[key].to_s.strip.first(MAX_CHARS)}" if values[key].present? }
     return '' if lines.empty?
 
-    "CÓMO HABLA LA EMPRESA (general para todos sus agentes; lo particular de este agente o seguimiento manda):\n" \
-      "#{lines.join("\n")}"
+    head = if strong
+             'ASÍ HABLA LA EMPRESA (síguelo SIEMPRE en cada mensaje: tono, palabras, firma y lo que nunca se dice; ' \
+               'manda sobre el estilo general de arriba):'
+           else
+             'CÓMO HABLA LA EMPRESA (general para todos sus agentes; lo particular de este agente o seguimiento manda):'
+           end
+    "#{head}\n#{lines.join("\n")}"
   end
 end

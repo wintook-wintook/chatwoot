@@ -10,6 +10,11 @@
 # el mismo cliente del 1.0, con el mismo identificador del contacto y la memoria por conversación). El
 # foro (discourse) tampoco: se consulta en vivo con Motor2::ForumSearch.
 #
+# Orden de consulta (en cascada): en el orden que dejó la empresa en «Qué sabe» (con ↑ ↓) o, si no lo
+# ordenó, predefinidas → Catálogo → hojas y artículos → documentos → foro → CONTPAQi. Antes de una fuente
+# lenta (foro, CONTPAQi) se revisa si lo encontrado ya lo contesta (Motor2::ResultCheck): si sí, no se
+# consulta (se ahorra tiempo y costo). Con «fuente», solo esa.
+#
 #   Motor2::Search.new(account, sources).call('¿cuánto cuesta Derecho?', only: 'Precios')
 #   → [{ fuente: 'Precios', resultados: [...] }]
 class Motor2::Search < Cases::Ai::BaseService
@@ -19,6 +24,12 @@ class Motor2::Search < Cases::Ai::BaseService
   MAX_CHARS = 1500
 
   Source = Struct.new(:key, :name, :kind, :knowledge_source_ids, :record, keyword_init: true)
+  # Sin orden de la empresa: de lo propio y rápido a lo externo y lento.
+  PRIORITY = { 'canned' => 0, 'catalog' => 1, 'google_sheet' => 2, 'article' => 2, 'discourse' => 8, 'contpaq_support' => 9 }.freeze
+  SLOW = %w[discourse contpaq_support].freeze
+
+  # Lo que concluyó la cascada al detenerse (para no revisarlo otra vez: Motor2::Skills::SupportFlow#judge).
+  attr_reader :last_check
 
   # customer_words: lo que escribió el cliente (CONTPAQi lo recibe tal cual, como en el 1.0).
   def initialize(account, keys, conversation: nil, customer_words: nil)
@@ -33,18 +44,52 @@ class Motor2::Search < Cases::Ai::BaseService
 
   # Las predefinidas (siempre) y las fuentes de la ficha que existen y están activas.
   def sources
-    @sources ||= ([CANNED] + @keys).uniq.filter_map { |key| resolve(key) }
+    @sources ||= ordered_keys.filter_map { |key| resolve(key) }
+  end
+
+  # Con las predefinidas en la lista, la empresa ya las ordenó; si no, por PRIORITY (las de antes).
+  def ordered_keys
+    keys = Array(@keys).map(&:to_s)
+    return keys.uniq if keys.include?(CANNED)
+
+    ([CANNED] + keys).uniq.each_with_index.sort_by { |key, i| [PRIORITY.fetch(key.split(':').first, 5), i] }.map(&:first)
   end
 
   def names = sources.map(&:name)
 
   def call(question, only: nil)
-    targets = only.present? ? sources.select { |s| s.name.casecmp?(only.to_s) } : sources
-    targets = sources if targets.empty?
-    targets.map { |source| { fuente: source.name, tipo: source.kind, resultados: search(source, question) } }
+    @last_check = nil
+    targets = only.present? ? sources.select { |s| s.name.casecmp?(only.to_s) } : []
+    return targets.map { |source| found(source, question) } if targets.any?
+
+    cascade(question)
   end
 
   private
+
+  def found(source, question) = { fuente: source.name, tipo: source.kind, resultados: search(source, question) }
+
+  # Una tras otra; antes de una lenta, si lo encontrado ya lo contesta, se detiene.
+  def cascade(question)
+    sources.each_with_index.with_object([]) do |(source, i), out|
+      break out if SLOW.include?(source.kind) && answered?(question, out, sources[i..])
+
+      out << found(source, question)
+    end
+  end
+
+  # Lo que falta consultar va con lo que tiene (otro sistema, otro producto): si no dijo de cuál habla, se sigue.
+  def answered?(question, out, rest)
+    hits = out.reject { |f| f[:resultados].empty? }
+    return false if hits.empty?
+
+    pending = rest.map { |s| [s.name, about(s)].compact_blank.join(': ') }
+    @last_check = Motor2::ResultCheck.new(account: @account).call(question: @customer_words || question, found: hits, pending: pending)
+    @last_check.to_h['tipo'] == 'exacta'
+  end
+
+  # Qué hay en esa fuente (Motor2::SourceMap: lo que dice la empresa o lo que se dedujo).
+  def about(source) = Motor2::SourceMap.new(@account).entries([source.key]).find { |e| e[:key] == source.key }&.dig(:about).to_s.first(200)
 
   def resolve(key)
     return Source.new(key: key, name: 'Respuestas predefinidas', kind: 'canned') if key == CANNED && canned.canned_available?
