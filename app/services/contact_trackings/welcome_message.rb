@@ -29,11 +29,19 @@
 # de Derecho?» recibía solo la bienvenida, la carrera nunca se guardaba y el resto de la
 # plática se contestó con otra carrera. Ahora va la bienvenida y, detrás, la respuesta
 # normal del motor. «Hola, buenos días» sigue recibiendo solo la bienvenida.
+#
+# Bienvenida COMBINADA (20/11/2026, Seminuevos Valera): con pregunta, en vez de dos
+# mensajes («…¿Qué auto estás buscando?» y enseguida la respuesta) va uno solo: la
+# bienvenida sin su pregunta final y, en el mismo mensaje, la respuesta. El job la aparta
+# (hold), el primer envío del turno la pone al inicio (combine) y, si el turno no mandó
+# nada que se pueda combinar, se manda sola al final. Mismo criterio que el motor 2.0
+# (Motor2::Runner#with_welcome).
 # ================================================================================
 
 module ContactTrackings::WelcomeMessage
   STORE_KEY = 'welcome_sent'
   TAG       = '#bienvenida'
+  TAG_RE    = /#[a-z0-9_]{3,}/i # como ANY_TAG_RE del motor
 
   HEADER_RE = /\A[ \t]*\[[ \t]*MENSAJE[ \t]+DE[ \t]+BIENVENIDA[ \t]*\][ \t]*(.*)\z/i
   # Cualquier otro rótulo cierra la sección, también los que llevan el texto en la misma
@@ -48,6 +56,15 @@ module ContactTrackings::WelcomeMessage
     joven quiero quisiera queria necesito busco me nos puede puedes podria podrias dar das da informacion informes
     info mas por favor una un de la el a y o
   ].freeze
+
+  # La bienvenida apartada en un turno con pregunta: la toma (take) el primer envío.
+  Held = Struct.new(:text) do
+    def pending? = text.present?
+
+    def take
+      text.tap { self.text = nil }
+    end
+  end
 
   module_function
 
@@ -108,6 +125,47 @@ module ContactTrackings::WelcomeMessage
     return nil if welcome.blank? || conversation.nil?
 
     "#{welcome}\n\n#{TAG}" if mark_sent(tracking, conversation)
+  end
+
+  # La bienvenida que va al inicio de la respuesta: sin el rótulo #bienvenida (combine lo
+  # pone al final, junto a la etiqueta de la rama) y sin su pregunta final, para que el
+  # mensaje cierre con una sola pregunta, la de la respuesta.
+  def opening(welcome)
+    body = welcome.to_s.sub(/\s*#{Regexp.escape(TAG)}\s*\z/o, '').strip
+    without_closing_question(body)
+  end
+
+  # «…brindarte información. ¿Qué auto estás buscando?» → «…brindarte información.» Si la
+  # bienvenida es solo la pregunta, se deja como está.
+  def without_closing_question(text)
+    return text unless text.end_with?('?')
+
+    corte = text.rindex(/(?<=[.!…\n])\s+(?=[¿\p{L}])|\n/)
+    return text if corte.nil?
+
+    rest = text[0...corte].rstrip
+    rest.presence || text
+  end
+
+  # La respuesta con la bienvenida al inicio. Si el modelo la volvió a escribir, se quita.
+  def combine(welcome, reply)
+    open = opening(welcome)
+    rest = reply.to_s.sub(open, '').strip.sub(/\A[\s.,;:!?]+/, '')
+    # #bienvenida junto a la última etiqueta de la respuesta (#promociones #bienvenida), así
+    # queda antes de la firma; sin etiqueta, al final.
+    last_tag = rest.rindex(TAG_RE)
+    rest = if last_tag
+             rest[0...last_tag] + rest[last_tag..].sub(TAG_RE) { |tag| "#{tag} #{TAG}" }
+           else
+             [rest, TAG].compact_blank.join("\n\n")
+           end
+    [open, rest].compact_blank.join("\n\n")
+  end
+
+  # Para el modelo: el mensaje ya empieza con la bienvenida.
+  def model_note(welcome)
+    "Tu mensaje lo empieza la bienvenida de la empresa (la pone el sistema): «#{opening(welcome)}». " \
+      'No saludes ni te presentes otra vez: escribe solo la respuesta a lo que preguntó el cliente.'
   end
 
   # true si esta llamada la marcó como enviada. Se bloquea la fila por id, no el objeto:

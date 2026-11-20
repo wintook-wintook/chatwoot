@@ -76,4 +76,24 @@ RSpec.describe ContactTrackings::WelcomeMessage do
       expect(described_class.sent?(tracking, conversation.reload)).to be(true)
     end
   end
+
+  describe '.combine' do
+    let(:welcome) { "Gracias por tu interés. 🚗 Estoy aquí para ayudarte. ¿Qué auto estás buscando?\n\n#bienvenida" }
+
+    it 'pone la bienvenida sin su pregunta final al inicio y #bienvenida junto a la etiqueta' do
+      combined = described_class.combine(welcome, "¡Hay promos! ¿Te interesa alguna?\n\n#promociones\n\n-TB")
+      expect(combined).to eq("Gracias por tu interés. 🚗 Estoy aquí para ayudarte.\n\n¡Hay promos! ¿Te interesa alguna?\n\n" \
+                             "#promociones #bienvenida\n\n-TB")
+    end
+
+    it 'no repite la bienvenida si el modelo la escribió' do
+      combined = described_class.combine(welcome, "Gracias por tu interés. 🚗 Estoy aquí para ayudarte.\n\nSí hay crédito.")
+      expect(combined.scan('Gracias por tu interés').size).to eq(1)
+      expect(combined).to end_with("Sí hay crédito.\n\n#bienvenida")
+    end
+
+    it 'deja la bienvenida que es solo una pregunta' do
+      expect(described_class.opening('¿En qué te puedo ayudar?')).to eq('¿En qué te puedo ayudar?')
+    end
+  end
 end

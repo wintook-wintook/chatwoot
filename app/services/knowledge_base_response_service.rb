@@ -86,7 +86,9 @@ class KnowledgeBaseResponseService
 
   # `branch:` — rama ya decidida por el job (@ruta). Se recibe para no clasificar dos
   # veces y pagar dos llamadas al LLM en el mismo turno. `:auto` = clasificar aquí.
-  def initialize(message, tracking: nil, branch: :auto)
+  # welcome: la bienvenida apartada del turno (WelcomeMessage::Held); va al inicio de la respuesta.
+  def initialize(message, tracking: nil, branch: :auto, welcome: nil)
+    @welcome      = welcome
     @branch       = branch
     @route        = nil
     @message      = message
@@ -1347,6 +1349,8 @@ class KnowledgeBaseResponseService
     # modelo creía que nadie había saludado y volvía a presentarse.
     escribimos ||= ContactTrackings::WelcomeMessage.sent?(@tracking, @conversation)
     @conversation_turn_note = escribimos ? LATER_TURN_NOTE : FIRST_TURN_NOTE
+    @conversation_turn_note = "#{@conversation_turn_note}\n#{ContactTrackings::WelcomeMessage.model_note(@welcome.text)}" if @welcome&.pending?
+    @conversation_turn_note
   end
 
   # La regla de [VARIABLES] va en el system prompt, lejos del final, y aquí el último mensaje
@@ -1588,6 +1592,7 @@ class KnowledgeBaseResponseService
   # sin fuente, y acá llegaba literal al cliente.
   def send_reply(text)
     text = ContactTrackings::ConversationVariables.settle(@tracking, @conversation, text) if @tracking
+    text = ContactTrackings::WelcomeMessage.combine(@welcome.take, text) if @welcome&.pending?
     content, attachments = ContactTrackings::AgentAttachments.resolve(@tracking&.tracking_template, text,
                                                                       conversation: @conversation)
     params = { content: content, private: false, ai_agent: ContactTrackings::AgentIdentity.for(@tracking&.tracking_template) }
