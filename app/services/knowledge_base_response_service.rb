@@ -99,6 +99,8 @@ class KnowledgeBaseResponseService
   end
 
   def perform
+    return true if next_lookup_page
+
     directive = detect_directive
     unless directive
       Rails.logger.info '[KBase] ⏭️  Sin directiva kbase → skip'
@@ -814,7 +816,7 @@ class KnowledgeBaseResponseService
   AGENT_STYLE_RULE = 'Responde solo lo que preguntó, con esa información. Respeta la longitud, el tono y la pregunta ' \
                      'final que piden tus instrucciones. No agregues cierres genéricos ("¿Hay algo más en lo que ' \
                      'le podamos ayudar?", "estamos aquí para ayudarle", "quedamos atentos").'
-  MAX_LOOKUP_ROWS = 20
+  MAX_LOOKUP_ROWS = ContactTrackings::SheetLookup::Pages::SIZE
   NO_MATCH_RULE = 'Dilo con claridad y no inventes otra opción.'
 
   def perform_sheet_lookup(question, inner)
@@ -823,16 +825,51 @@ class KnowledgeBaseResponseService
     spec = ContactTrackings::SheetLookup.parse(inner)
     return false if spec.nil?
 
-    result = ContactTrackings::SheetLookup.new(@account, spec, conversation: @conversation, variables: lookup_variables).call
-    context = sheet_lookup_context(spec, result)
+    answer_sheet_lookup(question, inner, spec, run_sheet_lookup(spec))
+  end
+
+  def run_sheet_lookup(spec)
+    ContactTrackings::SheetLookup.new(@account, spec, conversation: @conversation, variables: lookup_variables).call
+  end
+
+  # offset: cuántas filas ya se le dieron (ver SheetLookup::Pages).
+  def answer_sheet_lookup(question, inner, spec, result, offset: 0)
+    context = sheet_lookup_context(spec, result, offset)
     return false if context.nil?
 
     reply_text = generate_contextual_reply(question, context)
     return false if reply_text.blank?
 
-    send_reply("#{with_branch_tag(reply_text)}\n\n_#{spec.sheet}_")
+    reply = send_reply("#{with_branch_tag(reply_text)}\n\n_#{spec.sheet}_")
+    remember_lookup_page(reply, inner, result, offset)
     follow_switch(result.switch, reply_text)
     true
+  end
+
+  # «¿Cuáles son las otras?» después de una búsqueda cortada: la misma búsqueda, la página
+  # siguiente, sin importar a qué rama lo mande el clasificador. Si al correrla otra vez
+  # cambian los criterios (nombró otra cosa), es una búsqueda nueva y sigue el camino normal.
+  def next_lookup_page
+    page = ContactTrackings::SheetLookup::Pages.pending(@tracking, @conversation, @message)
+    return false if page.nil? || !google_feature_enabled?
+
+    spec = ContactTrackings::SheetLookup.parse(page['directive'])
+    result = spec && run_sheet_lookup(spec)
+    return false unless result&.ok? && result.criteria == page['criteria'] && result.rows.size > page['shown']
+
+    @route = ContactTrackings::RouteMap.parse(@tracking.complementary_prompt).routes.find { |r| r.name == page['route'] }
+    Rails.logger.info "[KBase] 📄 Ver más de '#{page['route']}': desde la fila #{page['shown'] + 1} de #{result.rows.size}"
+    ContactTrackings::EngineTrace.record('ver_mas', { 'ruta' => page['route'], 'desde' => page['shown'] + 1, 'total' => result.rows.size })
+    answer_sheet_lookup(@message.content.strip, page['directive'], spec, result, offset: page['shown'])
+  end
+
+  def remember_lookup_page(reply, inner, result, offset)
+    return unless result.ok?
+
+    total = result.rows.size
+    ContactTrackings::SheetLookup::Pages.save(@tracking, @conversation, reply,
+                                              { 'route' => @route&.name, 'directive' => inner, 'criteria' => result.criteria,
+                                                'shown' => [offset + MAX_LOOKUP_ROWS, total].min, 'total' => total })
   end
 
   # El cliente cambió de valor (otra carrera) y la respuesta ya habla del nuevo, pero el
@@ -865,6 +902,21 @@ class KnowledgeBaseResponseService
     {}
   end
 
+  # La página siguiente: que no repita las que ya dio ni diga «algunas opciones».
+  def page_note(offset, total)
+    return '' if offset.zero?
+
+    hasta = [offset + MAX_LOOKUP_ROWS, total].min
+    ". Son las #{offset + 1} a #{hasta} de #{total}: las primeras #{offset} ya se las diste, no las repitas"
+  end
+
+  # Lo que quedó fuera: el cliente puede pedirlas (SheetLookup::Pages).
+  def more_note(restantes)
+    return '' unless restantes.positive?
+
+    "\n(y #{restantes} más: dile que hay #{restantes} más y pregúntale si quiere verlas)"
+  end
+
   # Con «orden:», el modelo sabe que la primera fila es la más barata (o la mayor) de la hoja.
   def order_note(spec)
     order = spec.order
@@ -875,13 +927,13 @@ class KnowledgeBaseResponseService
   end
 
   # nil = la hoja no respondió (no existe, columna mal escrita): sigue el conversacional.
-  def sheet_lookup_context(spec, result)
+  def sheet_lookup_context(spec, result, offset = 0)
     case result.status
     when :ok
       filas = ContactTrackings::SheetLookup.describe(spec, result.rows)
-      extra = filas.size > MAX_LOOKUP_ROWS ? "\n(y #{filas.size - MAX_LOOKUP_ROWS} más)" : ''
-      "Datos exactos de la hoja «#{spec.sheet}» (úsalos tal cual; lo que no esté aquí no lo sabes)#{order_note(spec)}:\n" \
-        "#{filas.first(MAX_LOOKUP_ROWS).join("\n")}#{extra}"
+      "Datos exactos de la hoja «#{spec.sheet}» (úsalos tal cual; lo que no esté aquí no lo sabes)" \
+        "#{order_note(spec)}#{page_note(offset, filas.size)}:\n#{filas.drop(offset).first(MAX_LOOKUP_ROWS).join("\n")}" \
+        "#{more_note(filas.size - offset - MAX_LOOKUP_ROWS)}"
     when :needs_value
       "Para responder falta saber «#{result.asked}». Pregúntaselo al cliente en una sola pregunta; no respondas nada más."
     when :no_match

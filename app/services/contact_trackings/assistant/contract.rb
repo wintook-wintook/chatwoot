@@ -123,6 +123,8 @@ class ContactTrackings::Assistant::Contract
          «*» = todas las filas. «orden: <columna> menor|mayor» ordena por el número de la
          celda; «, N» da solo las primeras N. El precio se lee de «200 mil», «$250,000», «200k»;
          el año («del 2020 en adelante», <año>>=?) sin que el cliente escriba la columna.
+         Como fuente da hasta 20 filas; si hay más, el agente ofrece verlas y a «¿cuáles son
+         las otras?» el motor da las siguientes 20 solo (no hace falta una ruta para eso).
       D. «Servicios largos, de noche, en madrugada o en domingo»
            @agendar_calendar(duracion=?, horario=24h)   ← duracion=? la dice el cliente;
            o fija: duracion=90 / duracion=2h. «6 meses», «renta mensual» = bloque de días.
