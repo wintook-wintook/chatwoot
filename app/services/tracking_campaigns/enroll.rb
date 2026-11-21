@@ -64,6 +64,7 @@ class TrackingCampaigns::Enroll
     return 'already_enrolled' if @campaign.entries.enrolled.exists?(contact_id: @contact.id)
     return 'daily_cap' if daily_cap_reached?
     return 'active_tracking' if @skip_active && active_tracking?
+    return 'recently_contacted' if recently_contacted?
 
     contact_reason
   end
@@ -99,6 +100,16 @@ class TrackingCampaigns::Enroll
     @campaign.entries.enrolled.count / @campaign.daily_cap
   end
 
+  # Campaña con Vendedor IA: si otra campaña 2.0 ya le escribió hace menos de rest_days, se omite (no saturar).
+  def recently_contacted?
+    days = @campaign.motor2? ? @campaign.brief.to_h['rest_days'].to_i : 0
+    return false unless days.positive?
+
+    TrackingCampaignEntry.enrolled.where(contact_id: @contact.id, account_id: @campaign.account_id)
+                         .where.not(tracking_campaign_id: @campaign.id).where('tracking_campaign_entries.created_at > ?', days.days.ago)
+                         .joins(:tracking_campaign).exists?(tracking_campaigns: { engine: '2' })
+  end
+
   def active_tracking?
     ContactTracking.exists?(contact_id: @contact.id, inbox_id: @campaign.inbox_id, status: ACTIVE_STATUSES)
   end
@@ -122,7 +133,12 @@ class TrackingCampaigns::Enroll
   def follow_up_delay
     template = @campaign.tracking_template
     value = template.retry_interval_value.presence || 1
-    case template.retry_interval_unit
+    unit = template.retry_interval_unit
+    if @campaign.motor2?
+      value, unit = TrackingCampaigns::Motor2Brief.tracking_touches(@campaign).values_at(:retry_interval_value,
+                                                                                         :retry_interval_unit)
+    end
+    case unit
     when 'minutes' then value.minutes
     when 'hours' then value.hours
     else value.days

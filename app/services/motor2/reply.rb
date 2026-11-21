@@ -11,10 +11,11 @@ class Motor2::Reply
     @tracking = tracking
     @message = message
     @conversation = message.conversation
-    @config = Motor2::Config.new(tracking.tracking_template)
+    @config = Motor2::Config.for(tracking)
   end
 
   def call
+    ProspectLists.promote!(@conversation.contact) # contestó: deja la cuarentena de la lista fría (aunque sea para darse de baja)
     return opt_out! if ContactTrackings::OptOut.requested_in?(text)
     return if TrackingCampaigns::HandoffAttention.seller_owns?(@conversation)
 

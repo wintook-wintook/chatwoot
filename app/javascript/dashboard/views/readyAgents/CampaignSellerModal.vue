@@ -21,14 +21,13 @@ import AgentBusiness from './AgentBusiness.vue';
 import FollowUpPlan from './FollowUpPlan.vue';
 import AfterHandoff from './AfterHandoff.vue';
 import QuoteMode from './QuoteMode.vue';
-import FichaChannel from '../contactTrackings/ficha/FichaChannel.vue';
 
 const T = 'READY_AGENTS';
+// La oferta, el canal y los toques son de cada Campaña con Vendedor IA (pantalla de campañas 2.0); aquí queda
+// una oferta de ejemplo, solo para «Probar» y para llenar de inicio las campañas nuevas.
 const STEPS = [
   'agent',
-  'offer',
   'business',
-  'channel',
   'knows',
   'talk',
   'follow',
@@ -94,7 +93,6 @@ export default {
   name: 'CampaignSellerModal',
   components: {
     ReadyAgentChat,
-    FichaChannel,
     AgentFiles,
     SourceOrder,
     FollowUpPlan,
@@ -168,18 +166,12 @@ export default {
     isInvite() {
       return this.purpose === 'invite';
     },
-    // Lo mínimo para guardar: nombre y lo que necesita su «para qué».
-    offerReady() {
-      const s = this.form.settings;
-      if (this.isSurvey) return s.survey_questions.some(q => q.text.trim());
-      if (this.isInvite) return !!s.event_id;
-      return !!s.offer_what.trim();
-    },
     agentReady() {
       return !!this.form.name.trim();
     },
+    // La oferta ya no es obligatoria: es de cada campaña (aquí, solo de ejemplo).
     canSave() {
-      return this.agentReady && this.offerReady;
+      return this.agentReady;
     },
     priceOptions() {
       const options = this.sources
@@ -207,6 +199,10 @@ export default {
     },
   },
   watch: {
+    // La oferta de ejemplo cambió: «Probar» empieza con su mensaje.
+    defaultOpener(text) {
+      this.opener = text;
+    },
     show: {
       immediate: true,
       handler(open) {
@@ -287,7 +283,6 @@ export default {
       this.step = step;
     },
     next() {
-      if (this.step === 'offer') this.opener = this.defaultOpener;
       if (!this.isLast) this.go(STEPS[this.stepIndex + 1]);
     },
     back() {
@@ -448,162 +443,6 @@ export default {
           </template>
 
           <!-- 2 · Qué ofreces -->
-          <template v-if="step === 'offer'">
-            <span class="field-label">{{ c('PURPOSE') }}</span>
-            <label
-              v-for="value in purposes"
-              :key="value"
-              class="flex items-start gap-2 text-sm cursor-pointer"
-            >
-              <input
-                v-model="form.settings.purpose"
-                type="radio"
-                class="!m-0 mt-1"
-                :value="value"
-              />
-              <span>
-                {{ c(`PURPOSES.${value}.TITLE`) }}
-                <span class="block text-xs text-slate-500">
-                  {{ c(`PURPOSES.${value}.ABOUT`) }}
-                </span>
-              </span>
-            </label>
-
-            <template v-if="isSurvey">
-              <span class="field-label">{{ c('SURVEY.QUESTIONS') }}</span>
-              <div
-                v-for="(q, i) in form.settings.survey_questions"
-                :key="i"
-                class="flex items-center gap-1"
-              >
-                <input
-                  v-model="q.text"
-                  type="text"
-                  maxlength="300"
-                  class="flex-1"
-                  :placeholder="c(`SURVEY.PLACEHOLDER_${i + 1}`)"
-                />
-                <button
-                  type="button"
-                  class="px-1 text-slate-400 hover:text-red-600"
-                  :title="c('REMOVE')"
-                  @click="removeQuestion(i)"
-                >
-                  <fluent-icon icon="dismiss" size="14" />
-                </button>
-              </div>
-              <button
-                v-if="form.settings.survey_questions.length < 3"
-                type="button"
-                class="self-start text-xs text-woot-600 hover:underline"
-                @click="addQuestion"
-              >
-                {{ c('SURVEY.ADD') }}
-              </button>
-              <label class="block">
-                <span class="field-label">{{ c('SURVEY.LOW_SCORE') }}</span>
-                <input
-                  v-model.number="form.settings.low_score"
-                  type="number"
-                  min="1"
-                  max="10"
-                  class="!w-24 h-9 text-sm"
-                />
-              </label>
-            </template>
-
-            <template v-else>
-              <label v-if="isInvite" class="block">
-                <span class="field-label">{{ c('EVENT') }}</span>
-                <select v-model="form.settings.event_id">
-                  <option value="">{{ c('EVENT_CHOOSE') }}</option>
-                  <option v-for="e in events" :key="e.id" :value="e.id">
-                    {{ e.name }}
-                  </option>
-                </select>
-                <span
-                  v-if="!events.length"
-                  class="block mt-1 text-xs text-amber-700"
-                >
-                  {{ c('NO_EVENTS') }}
-                </span>
-              </label>
-              <label class="block">
-                <span class="field-label">
-                  {{ c(isInvite ? 'INVITE_WHAT' : 'OFFER_WHAT') }}
-                </span>
-                <textarea
-                  v-model="form.settings.offer_what"
-                  rows="2"
-                  maxlength="1000"
-                  :placeholder="c(`PLACEHOLDERS.${purpose}`)"
-                />
-              </label>
-              <label class="block">
-                <span class="field-label">{{ c('OFFER_DETAILS') }}</span>
-                <textarea
-                  v-model="form.settings.offer_details"
-                  rows="2"
-                  maxlength="1000"
-                  :placeholder="c('OFFER_DETAILS_PLACEHOLDER')"
-                />
-              </label>
-              <template v-if="!isInvite">
-                <span class="field-label">{{ c('GOAL') }}</span>
-                <label
-                  v-for="value in ['relay', 'appointment']"
-                  :key="value"
-                  class="flex items-center gap-2 text-sm"
-                >
-                  <input
-                    v-model="form.settings.offer_goal"
-                    type="radio"
-                    class="!m-0"
-                    :value="value"
-                  />
-                  {{ c(`GOALS.${value}`) }}
-                </label>
-                <div v-if="form.settings.offer_goal === 'appointment'">
-                  <span class="field-label">
-                    {{ t('FIELDS.APPOINTMENT_USERS') }}
-                  </span>
-                  <p
-                    v-if="!calendarUsers.length"
-                    class="m-0 text-xs text-amber-700"
-                  >
-                    {{ t('FIELDS.NO_CALENDARS') }}
-                  </p>
-                  <label
-                    v-for="u in calendarUsers"
-                    :key="u.id"
-                    class="flex items-center gap-2 text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      class="!m-0"
-                      :checked="calendarUserOn(u.id)"
-                      @change="toggleCalendarUser(u.id)"
-                    />
-                    {{ u.name }}
-                  </label>
-                </div>
-              </template>
-            </template>
-            <p v-if="!offerReady" class="m-0 text-xs text-amber-700">
-              {{
-                c(
-                  `MISSING.${
-                    isSurvey ? 'survey' : isInvite ? 'invite' : 'offer'
-                  }`
-                )
-              }}
-            </p>
-          </template>
-
-          <!-- 3 · Canal y toques -->
-          <template v-if="step === 'channel'">
-            <FichaChannel v-model="form.channel" />
-          </template>
 
           <!-- 4 · Tu negocio y qué sabe -->
           <template v-if="step === 'business'">
@@ -807,13 +646,167 @@ export default {
           </template>
         </form>
 
-        <ReadyAgentChat
-          :key="opener"
-          :payload="payload"
-          :agent-id="agent ? agent.id : null"
-          :opener="opener"
-          :hint="c('TEST_HINT')"
-        />
+        <!-- Oferta de ejemplo: solo para «Probar» (cada campaña trae la suya) -->
+        <div class="flex flex-col min-h-0 gap-2">
+          <details
+            class="p-2 border rounded-md shrink-0 border-slate-100 dark:border-slate-700"
+          >
+            <summary class="text-sm font-medium cursor-pointer">
+              {{ c('EXAMPLE.TITLE') }}
+            </summary>
+            <div class="flex flex-col gap-2 mt-2 overflow-y-auto max-h-80">
+              <p class="m-0 text-xs text-slate-500">{{ c('EXAMPLE.HINT') }}</p>
+
+              <span class="field-label">{{ c('PURPOSE') }}</span>
+              <label
+                v-for="value in purposes"
+                :key="value"
+                class="flex items-start gap-2 text-sm cursor-pointer"
+              >
+                <input
+                  v-model="form.settings.purpose"
+                  type="radio"
+                  class="!m-0 mt-1"
+                  :value="value"
+                />
+                <span>
+                  {{ c(`PURPOSES.${value}.TITLE`) }}
+                  <span class="block text-xs text-slate-500">
+                    {{ c(`PURPOSES.${value}.ABOUT`) }}
+                  </span>
+                </span>
+              </label>
+
+              <template v-if="isSurvey">
+                <span class="field-label">{{ c('SURVEY.QUESTIONS') }}</span>
+                <div
+                  v-for="(q, i) in form.settings.survey_questions"
+                  :key="i"
+                  class="flex items-center gap-1"
+                >
+                  <input
+                    v-model="q.text"
+                    type="text"
+                    maxlength="300"
+                    class="flex-1"
+                    :placeholder="c(`SURVEY.PLACEHOLDER_${i + 1}`)"
+                  />
+                  <button
+                    type="button"
+                    class="px-1 text-slate-400 hover:text-red-600"
+                    :title="c('REMOVE')"
+                    @click="removeQuestion(i)"
+                  >
+                    <fluent-icon icon="dismiss" size="14" />
+                  </button>
+                </div>
+                <button
+                  v-if="form.settings.survey_questions.length < 3"
+                  type="button"
+                  class="self-start text-xs text-woot-600 hover:underline"
+                  @click="addQuestion"
+                >
+                  {{ c('SURVEY.ADD') }}
+                </button>
+                <label class="block">
+                  <span class="field-label">{{ c('SURVEY.LOW_SCORE') }}</span>
+                  <input
+                    v-model.number="form.settings.low_score"
+                    type="number"
+                    min="1"
+                    max="10"
+                    class="!w-24 h-9 text-sm"
+                  />
+                </label>
+              </template>
+
+              <template v-else>
+                <label v-if="isInvite" class="block">
+                  <span class="field-label">{{ c('EVENT') }}</span>
+                  <select v-model="form.settings.event_id">
+                    <option value="">{{ c('EVENT_CHOOSE') }}</option>
+                    <option v-for="e in events" :key="e.id" :value="e.id">
+                      {{ e.name }}
+                    </option>
+                  </select>
+                  <span
+                    v-if="!events.length"
+                    class="block mt-1 text-xs text-amber-700"
+                  >
+                    {{ c('NO_EVENTS') }}
+                  </span>
+                </label>
+                <label class="block">
+                  <span class="field-label">
+                    {{ c(isInvite ? 'INVITE_WHAT' : 'OFFER_WHAT') }}
+                  </span>
+                  <textarea
+                    v-model="form.settings.offer_what"
+                    rows="2"
+                    maxlength="1000"
+                    :placeholder="c(`PLACEHOLDERS.${purpose}`)"
+                  />
+                </label>
+                <label class="block">
+                  <span class="field-label">{{ c('OFFER_DETAILS') }}</span>
+                  <textarea
+                    v-model="form.settings.offer_details"
+                    rows="2"
+                    maxlength="1000"
+                    :placeholder="c('OFFER_DETAILS_PLACEHOLDER')"
+                  />
+                </label>
+                <template v-if="!isInvite">
+                  <span class="field-label">{{ c('GOAL') }}</span>
+                  <label
+                    v-for="value in ['relay', 'appointment']"
+                    :key="value"
+                    class="flex items-center gap-2 text-sm"
+                  >
+                    <input
+                      v-model="form.settings.offer_goal"
+                      type="radio"
+                      class="!m-0"
+                      :value="value"
+                    />
+                    {{ c(`GOALS.${value}`) }}
+                  </label>
+                  <div v-if="form.settings.offer_goal === 'appointment'">
+                    <span class="field-label">
+                      {{ t('FIELDS.APPOINTMENT_USERS') }}
+                    </span>
+                    <p
+                      v-if="!calendarUsers.length"
+                      class="m-0 text-xs text-amber-700"
+                    >
+                      {{ t('FIELDS.NO_CALENDARS') }}
+                    </p>
+                    <label
+                      v-for="u in calendarUsers"
+                      :key="u.id"
+                      class="flex items-center gap-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        class="!m-0"
+                        :checked="calendarUserOn(u.id)"
+                        @change="toggleCalendarUser(u.id)"
+                      />
+                      {{ u.name }}
+                    </label>
+                  </div>
+                </template>
+              </template>
+            </div>
+          </details>
+          <ReadyAgentChat
+            :key="opener"
+            :payload="payload"
+            :agent-id="agent ? agent.id : null"
+            :opener="opener"
+            :hint="c('TEST_HINT')"
+          />
+        </div>
       </div>
       <div class="flex justify-end gap-2 px-8 pb-6">
         <woot-button variant="clear" type="button" @click="$emit('close')">

@@ -14,7 +14,7 @@ class Motor2::FollowUpJob < ApplicationJob
     return unless message && Time.current < message.created_at + 24.hours
 
     nudge(tracking)
-    plan = Motor2::FollowUp.plan_for(Motor2::Config.new(tracking.tracking_template).function)
+    plan = Motor2::FollowUp.plan_for(Motor2::Config.for(tracking).function)
     Motor2::FollowUp.next_step(tracking, message, step + 1, plan) if plan
   end
 

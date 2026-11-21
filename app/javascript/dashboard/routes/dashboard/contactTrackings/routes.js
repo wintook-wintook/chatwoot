@@ -105,4 +105,27 @@ export const routes = [
     component: () =>
       import('../../../views/contactTrackings/CampaignDetail.vue'),
   },
+  // Campaña con Vendedor IA (Motor 2.0): pantalla nueva (la 1.0 de arriba no cambia)
+  {
+    path: frontendURL('accounts/:accountId/tracking-dashboard/campaigns2/new'),
+    name: 'campaigns2_new',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () => import('../../../views/campaigns2/CampaignWizard.vue'),
+  },
+  {
+    path: frontendURL(
+      'accounts/:accountId/tracking-dashboard/campaigns2/:campaignId/edit'
+    ),
+    name: 'campaigns2_edit',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () => import('../../../views/campaigns2/CampaignWizard.vue'),
+  },
+  {
+    path: frontendURL(
+      'accounts/:accountId/tracking-dashboard/campaigns2/:campaignId'
+    ),
+    name: 'campaigns2_detail',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () => import('../../../views/campaigns2/CampaignResults.vue'),
+  },
 ];

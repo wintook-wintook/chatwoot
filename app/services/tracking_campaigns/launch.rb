@@ -33,11 +33,22 @@ class TrackingCampaigns::Launch
       return { campaign: @campaign }
     end
 
+    return contacts_launch(open_campaign) if contact_ids.any?
+
     result = batch_service(start).enqueue!(&open_campaign)
     result[:error] ? result : { campaign: @campaign, queued: result[:queued] }
   end
 
   private
+
+  # Campaña con Vendedor IA armada desde otra («con los que les interesó»): la audiencia es una lista de contactos.
+  def contact_ids = @campaign.motor2? ? Array(@campaign.audience.to_h['contact_ids']).map(&:to_i) : []
+
+  def contacts_launch(open_campaign)
+    open_campaign.call
+    TrackingCampaigns::Motor2EnrollJob.perform_later(@campaign.id, contact_ids, @user&.id)
+    { campaign: @campaign, queued: contact_ids.size }
+  end
 
   def batch_service(start)
     audience = (@campaign.audience || {}).with_indifferent_access

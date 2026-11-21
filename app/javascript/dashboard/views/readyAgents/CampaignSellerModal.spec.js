@@ -24,7 +24,7 @@ const mountModal = props =>
   });
 
 describe('CampaignSellerModal', () => {
-  it('nuevo: ofrecer, relevo al agente de la bandeja y pide qué ofreces para guardar', () => {
+  it('nuevo: ofrecer y relevo al agente de la bandeja; para guardar basta el nombre (la oferta es de cada campaña)', () => {
     const { vm } = mountModal({
       sources: [{ key: 'catalog', kind: 'catalog' }],
     });
@@ -33,24 +33,22 @@ describe('CampaignSellerModal', () => {
       relay: 'agent',
       price_source: 'catalog',
     });
-    vm.form.name = 'Ana – campañas';
     expect(vm.canSave).toBeFalsy();
-    vm.form.settings.offer_what = 'Capacitación';
+    vm.form.name = 'Ana – campañas';
     expect(vm.canSave).toBeTruthy();
+    expect(vm.steps).not.toContain('offer');
+    expect(vm.steps).not.toContain('channel');
   });
 
-  it('invitar pide el evento; la encuesta, al menos una pregunta (las vacías no se mandan)', async () => {
+  it('oferta de ejemplo: invitar usa el evento en «Probar»; de la encuesta, las vacías no se mandan', async () => {
     const { vm } = mountModal({ events: [{ id: 9, name: 'Expo' }] });
     vm.form.name = 'Invitación';
     vm.form.settings.purpose = 'invite';
-    expect(vm.offerReady).toBe(false);
     vm.form.settings.event_id = 9;
-    expect(vm.offerReady).toBe(true);
     await vm.$nextTick();
     expect(vm.opener).toContain('Expo');
 
     vm.form.settings.purpose = 'survey';
-    expect(vm.offerReady).toBe(false);
     vm.form.settings.survey_questions[0].text = '¿Nos recomendarías?';
     vm.addQuestion();
     expect(vm.payload().settings.survey_questions).toEqual([

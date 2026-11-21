@@ -65,6 +65,11 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     result = ::Contacts::FilterService.new(Current.account, Current.user, params.permit!).perform
     contacts = result[:contacts]
     @contacts_count = result[:count]
+    # Campaña con Vendedor IA: sin los de listas frías en cuarentena (salvo que los pidan).
+    unless params[:list_prospects] == 'true'
+      contacts = contacts.where(list_quarantine: false)
+      @contacts_count = contacts.count
+    end
     @contacts = fetch_contacts(contacts)
   rescue CustomExceptions::CustomFilter::InvalidAttribute,
          CustomExceptions::CustomFilter::InvalidOperator,
@@ -97,8 +102,8 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     # 'Channel::TwilioSms', 'Channel::Whatsapp', 'Channel::Sms'
     Contact.transaction do
       @contact.contact_inboxes
-        .select{ |ci| ['Channel::Whatsapp'].include?(ci.inbox.channel_type) }
-        .each{ |ci| ci.update_attribute(:source_id, @contact.phone_number.delete('+').to_s) }
+              .select { |ci| ci.inbox.channel_type == 'Channel::Whatsapp' }
+              .each { |ci| ci.update_attribute(:source_id, @contact.phone_number.delete('+').to_s) } # rubocop:disable Rails/SkipsModelValidations
       @contact.save!
     end
     process_avatar_from_url
@@ -129,6 +134,8 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
     # Plan-Roles-Permisos — con Clientes en «solo lo suyo», solo sus contactos.
     @resolved_contacts = access_grant.contacts(Current.account.contacts).resolved_contacts
+    # Campaña con Vendedor IA: los de una lista fría de correo en cuarentena no salen hasta que contestan.
+    @resolved_contacts = @resolved_contacts.where(list_quarantine: false) unless params[:list_prospects] == 'true'
 
     @resolved_contacts = @resolved_contacts.tagged_with(params[:labels], any: true) if params[:labels].present?
     @resolved_contacts

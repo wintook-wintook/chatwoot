@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_19_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_20_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1446,6 +1446,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_19_120000) do
     t.datetime "email_bounced_at"
     t.string "email_bounce_reason"
     t.bigint "organization_id"
+    t.bigint "prospect_list_id"
+    t.boolean "list_quarantine", default: false, null: false
     t.index "lower((email)::text), account_id", name: "index_contacts_on_lower_email_account_id"
     t.index ["account_id", "email", "phone_number", "identifier"], name: "index_contacts_on_nonempty_fields", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
     t.index ["account_id", "last_activity_at"], name: "index_contacts_on_account_id_and_last_activity_at", order: { last_activity_at: "DESC NULLS LAST" }
@@ -1458,6 +1460,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_19_120000) do
     t.index ["organization_id"], name: "index_contacts_on_organization_id"
     t.index ["owner_id"], name: "index_contacts_on_owner_id"
     t.index ["phone_number", "account_id"], name: "index_contacts_on_phone_number_and_account_id"
+    t.index ["account_id", "list_quarantine"], name: "index_contacts_on_list_quarantine", where: "list_quarantine"
+    t.index ["prospect_list_id"], name: "index_contacts_on_prospect_list_id"
   end
 
   create_table "contract_types", force: :cascade do |t|
@@ -1680,6 +1684,15 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_19_120000) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["account_id"], name: "index_data_imports_on_account_id"
+  end
+
+  create_table "email_suppressions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "email", null: false
+    t.string "reason", null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id", "email"], name: "index_email_suppressions_on_account_id_and_email", unique: true
+    t.index ["account_id"], name: "index_email_suppressions_on_account_id"
   end
 
   create_table "email_templates", force: :cascade do |t|
@@ -2254,6 +2267,20 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_19_120000) do
     t.index ["user_id"], name: "index_portals_members_on_user_id"
   end
 
+  create_table "prospect_lists", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "tracking_campaign_id"
+    t.bigint "uploaded_by_id"
+    t.string "name", null: false
+    t.integer "cleanup_days", default: 30, null: false
+    t.jsonb "stats", default: {}, null: false
+    t.datetime "cleaned_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_prospect_lists_on_account_id"
+    t.index ["tracking_campaign_id"], name: "index_prospect_lists_on_tracking_campaign_id"
+  end
+
   create_table "published_prompt_files", force: :cascade do |t|
     t.bigint "published_prompt_id", null: false
     t.string "name", null: false
@@ -2634,6 +2661,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_19_120000) do
     t.index ["user_id"], name: "index_tracking_assistant_sessions_on_user_id"
   end
 
+  create_table "tracking_campaign_clicks", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "tracking_campaign_id", null: false
+    t.bigint "contact_tracking_id", null: false
+    t.bigint "contact_id", null: false
+    t.string "url", limit: 2000, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_tracking_campaign_clicks_on_account_id"
+    t.index ["tracking_campaign_id", "contact_id"], name: "index_campaign_clicks_on_campaign_and_contact"
+    t.index ["tracking_campaign_id"], name: "index_tracking_campaign_clicks_on_tracking_campaign_id"
+  end
+
   create_table "tracking_campaign_entries", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "tracking_campaign_id", null: false
@@ -2689,6 +2728,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_19_120000) do
     t.boolean "retry_not_now", default: true, null: false
     t.bigint "event_id"
     t.string "event_status"
+    t.string "engine", default: "1", null: false
+    t.jsonb "brief", default: {}, null: false
+    t.jsonb "touches", default: {}, null: false
     t.index ["account_id", "purpose"], name: "index_tracking_campaigns_on_account_id_and_purpose"
     t.index ["account_id", "status"], name: "index_tracking_campaigns_on_account_id_and_status"
     t.index ["account_id"], name: "index_tracking_campaigns_on_account_id"
@@ -3146,6 +3188,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_19_120000) do
   add_foreign_key "tracking_campaign_entries", "contacts", on_delete: :cascade
   add_foreign_key "tracking_campaign_entries", "conversations", on_delete: :nullify
   add_foreign_key "tracking_campaign_entries", "tracking_campaigns", on_delete: :cascade
+  add_foreign_key "email_suppressions", "accounts"
+  add_foreign_key "prospect_lists", "accounts"
+  add_foreign_key "prospect_lists", "tracking_campaigns", on_delete: :nullify
+  add_foreign_key "tracking_campaign_clicks", "accounts"
+  add_foreign_key "tracking_campaign_clicks", "tracking_campaigns", on_delete: :cascade
   add_foreign_key "tracking_campaigns", "accounts"
   add_foreign_key "tracking_campaigns", "events", on_delete: :nullify
   add_foreign_key "tracking_campaigns", "inboxes"

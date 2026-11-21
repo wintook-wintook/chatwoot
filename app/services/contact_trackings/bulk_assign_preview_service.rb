@@ -34,8 +34,10 @@ class ContactTrackings::BulkAssignPreviewService
   # tenga su desglose. Arriba de eso solo se devuelve el total (counts_only).
   PREVIEW_LIMIT = ContactTrackings::BulkAssignService::MAX_BULK_ASSIGN
 
-  def initialize(account:, current_user:, filter_payload:, template_id:,
-                 skip_active: true, excluded_contact_ids: [])
+  # inbox_id: Campaña con Vendedor IA, el canal es de la campaña (no del agente).
+  def initialize(account:, current_user:, filter_payload:, template_id:, # rubocop:disable Metrics/ParameterLists
+                 skip_active: true, excluded_contact_ids: [], inbox_id: nil)
+    @inbox_id             = inbox_id
     @account              = account
     @current_user         = current_user
     @filter_payload       = filter_payload
@@ -48,7 +50,7 @@ class ContactTrackings::BulkAssignPreviewService
     template = @account.tracking_templates.find_by(id: @template_id)
     return { error: 'Plantilla no encontrada' } unless template
 
-    inbox = template.inbox
+    inbox = @inbox_id ? @account.inboxes.find_by(id: @inbox_id) : template.inbox
     return { error: no_inbox_error(template) } unless inbox
 
     total = resolved[:count]

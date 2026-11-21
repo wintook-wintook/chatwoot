@@ -12,6 +12,6 @@ module Motor2::AttemptHook
   def generate_ai_message(tracking, template_content = nil)
     return super unless Motor2.on?(tracking.tracking_template)
 
-    Motor2::Attempt.new(tracking).message
+    Motor2::CampaignTouch.text(tracking) || Motor2::Attempt.new(tracking).message
   end
 end

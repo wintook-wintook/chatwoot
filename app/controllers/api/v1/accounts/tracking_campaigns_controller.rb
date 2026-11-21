@@ -179,7 +179,7 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   # §10.12: el canal (filtro de la lista, U4) y, en todas las campañas, entrega (P2), prueba de
   # asuntos (P3) y puntuación (P4).
   def extras_json(campaign)
-    campaign.handoff_settings.merge(channel_type: campaign.inbox&.channel_type,
+    campaign.handoff_settings.merge(channel_type: campaign.inbox&.channel_type, engine: campaign.engine, # Campaña con Vendedor IA
                                     subject_test: TrackingCampaigns::SubjectTest.stats(campaign),
                                     scoring: TrackingCampaigns::ScoringConfig.for(campaign))
   end

@@ -106,6 +106,11 @@ class TrackingCampaigns::TrackingBuilder
   def max_attempts = template.follow_up_attempts
 
   def tracking_attributes(conversation_id)
+    base_attributes(conversation_id).merge(@campaign.motor2? ? TrackingCampaigns::Motor2Brief.tracking_touches(@campaign) : {})
+  end
+
+  # Campaña con Vendedor IA: los toques (cuántos, cada cuánto, plantilla de cada uno) son de la campaña.
+  def base_attributes(conversation_id)
     {
       account_id: @account.id, contact_id: @contact.id, inbox_id: @campaign.inbox_id, conversation_id: conversation_id,
       tracking_template_id: template.id, tracking_campaign_id: @campaign.id, objective: template.objective,
