@@ -332,7 +332,7 @@ class KnowledgeBaseResponseService
 
     @conversation.messages.where(message_type: %i[incoming outgoing])
                  .where('id < ?', @message.id).order(id: :desc).limit(4)
-                 .reverse.map { |m| "#{m.incoming? ? 'Cliente' : 'Asesor'}: #{m.content.to_s.truncate(120)}" }
+                 .reverse.map { |m| "#{m.incoming? ? 'Cliente' : 'Asesor'}: #{ContactTrackings::ContextLine.brief(m.content)}" }
                  .join("\n")
   rescue StandardError
     ''

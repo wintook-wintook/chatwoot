@@ -2412,7 +2412,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     messages.map do |msg|
       sender = msg.incoming? ? 'Cliente' : 'Bot'
-      "#{sender}: #{message_text_for_ai(msg, with_file_text: false).truncate(120)}"
+      "#{sender}: #{ContactTrackings::ContextLine.brief(message_text_for_ai(msg, with_file_text: false))}"
     end.join("\n")
   rescue StandardError
     ''
