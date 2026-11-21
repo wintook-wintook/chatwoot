@@ -90,6 +90,7 @@ RSpec.describe KnowledgeBaseResponseService do
       expect(responder('Favor de confirmar datos de la unidad TP-60')).to be(true)
       expect(enviado).to include('economico: TP-60 · operador: Engar Bravo · placas: 82AU1W')
       expect(enviado).not_to include('telefono')
+      expect(enviado).to include('Estas 1 fila(s) cumplen lo que pidió el cliente (economico = TP-60)')
     end
 
     it 'si no nombró la unidad, le pide que pregunte cuál' do

@@ -927,13 +927,22 @@ class KnowledgeBaseResponseService
   end
 
   # nil = la hoja no respondió (no existe, columna mal escrita): sigue el conversacional.
+  # 21/11/2026 (Seminuevos Valera): con 2 filas «entre 100 mil y 150 mil» el modelo contestó
+  # «no contamos con unidades en ese precio»: no sabía que esas filas SON lo que pidió.
+  def match_note(result, total)
+    criterios = result.criteria.to_a.grep_v(/\Aorden:/)
+    return '' if criterios.empty?
+
+    "\nEstas #{total} fila(s) cumplen lo que pidió el cliente (#{criterios.join('; ')}): dáselas; no digas que no hay."
+  end
+
   def sheet_lookup_context(spec, result, offset = 0)
     case result.status
     when :ok
       filas = ContactTrackings::SheetLookup.describe(spec, result.rows)
       "Datos exactos de la hoja «#{spec.sheet}» (úsalos tal cual; lo que no esté aquí no lo sabes)" \
         "#{order_note(spec)}#{page_note(offset, filas.size)}:\n#{filas.drop(offset).first(MAX_LOOKUP_ROWS).join("\n")}" \
-        "#{more_note(filas.size - offset - MAX_LOOKUP_ROWS)}"
+        "#{more_note(filas.size - offset - MAX_LOOKUP_ROWS)}#{match_note(result, filas.size)}"
     when :needs_value
       "Para responder falta saber «#{result.asked}». Pregúntaselo al cliente en una sola pregunta; no respondas nada más."
     when :no_match
