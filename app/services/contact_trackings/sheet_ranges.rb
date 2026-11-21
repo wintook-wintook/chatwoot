@@ -57,4 +57,12 @@ module ContactTrackings::SheetRanges
     bajo ||= ContactTrackings::SheetNumbers.with_unit(m[2], m[6]) if m[6]
     bajo && [bajo, alto].sort
   end
+
+  # Una celda sin número no cumple ninguna comparación; con rango, entre los dos.
+  def within?(operator, value, threshold)
+    return false if value.nil?
+    return threshold.cover?(value) if threshold.is_a?(Range)
+
+    value.public_send(operator, threshold)
+  end
 end

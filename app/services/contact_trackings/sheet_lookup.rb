@@ -13,7 +13,8 @@
 # · buscar:   columna=valores. Varias condiciones con «;». Valores separados por coma;
 #             se comparan sin mayúsculas, acentos, espacios ni guiones («tp 63» = «TP-63»).
 #             «?» = el valor sale de la conversación (ver #mentioned_values).
-#             También columna!=valores, y con números columna>=, <=, >, < (pieza 1,
+#             columna~? = la celda CONTIENE la palabra que dijo («gris» → GRIS PLATA;
+#             21/11/2026, ver Contains). También columna!=valores, y con números columna>=, <=, >, < (pieza 1,
 #             26/09/2026): «capacidad_t>=?» = las grúas que aguantan lo que dijo el
 #             cliente («26 toneladas»). Ver SheetNumbers.
 #             «*» = todas las filas, sin condición (para ordenar toda la hoja).
@@ -36,6 +37,7 @@ class ContactTrackings::SheetLookup
   include ContactTrackings::SheetLookup::ServiceText
   include ContactTrackings::SheetLookup::VariableValues
   include ContactTrackings::SheetLookup::ShortNames
+  include ContactTrackings::SheetLookup::Contains
   extend ContactTrackings::SheetLookup::Describe
   DIRECTIVE_RE = /\{\{\s*hoja_buscar\s*:([^{}]*)\}\}/i
   ASK = '?'
@@ -43,12 +45,12 @@ class ContactTrackings::SheetLookup
   # se está hablando ahora, no lo que se dijo hace media conversación.
   RECENT_MESSAGES = 6
 
-  OPERATOR_RE = /\A(.+?)\s*(>=|<=|!=|=|>|<)\s*(.*)\z/
+  OPERATOR_RE = /\A(.+?)\s*(>=|<=|!=|~|=|>|<)\s*(.*)\z/
   ALL_ROWS = '*'
   ORDER_RE = /\Aorden\s*:\s*(.+?)\s+(menor|mayor)(?:\s*,\s*(\d+))?\z/i
   NUMERIC_OPS = %w[>= <= > <].freeze
 
-  # op: '=', '!=', o una comparación numérica. wanted: ASK, textos, o [número].
+  # op: '=', '!=', '~' (contiene la palabra, ver Contains) o una comparación numérica. wanted: ASK, textos, o [número].
   Filter = Struct.new(:column, :op, :wanted, keyword_init: true) do
     def ask?
       wanted == ASK
@@ -56,6 +58,10 @@ class ContactTrackings::SheetLookup
 
     def numeric?
       NUMERIC_OPS.include?(op)
+    end
+
+    def contains?
+      op == ContactTrackings::SheetLookup::Contains::OP
     end
   end
 
@@ -185,6 +191,7 @@ class ContactTrackings::SheetLookup
   end
 
   def asked_values(filter, rows)
+    return contains_values(filter.column, rows) if filter.contains?
     return mentioned_values(filter.column, rows) unless filter.numeric?
 
     numero = mentioned_number(filter)
@@ -199,22 +206,15 @@ class ContactTrackings::SheetLookup
     rango = wanted.first
     return "#{filter.column} entre #{rango.begin.to_i} y #{rango.end.to_i}" if rango.is_a?(Range)
 
-    "#{filter.column} #{filter.op} #{wanted.join(', ')}"
+    "#{filter.column} #{filter.contains? ? 'contiene' : filter.op} #{wanted.join(', ')}"
   end
 
   def keeps?(filter, wanted, value)
-    return within?(filter.op, ContactTrackings::SheetNumbers.cell(value), wanted.first) if filter.numeric?
+    return ContactTrackings::SheetRanges.within?(filter.op, ContactTrackings::SheetNumbers.cell(value), wanted.first) if filter.numeric?
+    return contains_word?(wanted, value) if filter.contains?
 
     dentro = wanted.map { |v| loose(v) }.include?(loose(value))
     filter.op == '!=' ? !dentro : dentro
-  end
-
-  # Una celda sin número no cumple ninguna comparación.
-  def within?(operator, value, threshold)
-    return false if value.nil?
-    return threshold.cover?(value) if threshold.is_a?(Range)
-
-    value.public_send(operator, threshold)
   end
 
   # El número del cliente para esa columna: del mensaje suyo más reciente que traiga uno.

@@ -123,6 +123,8 @@ class ContactTrackings::Assistant::Contract
          «*» = todas las filas. «orden: <columna> menor|mayor» ordena por el número de la
          celda; «, N» da solo las primeras N. El precio se lee de «200 mil», «$250,000», «200k»;
          el año («del 2020 en adelante», <año>>=?) sin que el cliente escriba la columna.
+         Para una columna que es FAMILIA de valores (color: GRIS, GRIS PLATA, GRIS OBS) usa
+         <columna>~? : la celda contiene la palabra que dijo el cliente («gris» trae los tres).
          Como fuente da hasta 20 filas; si hay más, el agente ofrece verlas y a «¿cuáles son
          las otras?» el motor da las siguientes 20 solo (no hace falta una ruta para eso).
       D. «Servicios largos, de noche, en madrugada o en domingo»

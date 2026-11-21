@@ -306,6 +306,40 @@ RSpec.describe ContactTrackings::SheetLookup do
       expect(con_texto('Inventario | MODELO>=? | TIPO', 'del 2019 al 2021').rows.pluck('TIPO')).to eq(%w[Versa March])
     end
 
+    describe 'COLOR~? (contiene la palabra)' do
+      let(:conversation) { create(:conversation, account: account) }
+
+      before do
+        colores = { 'Versa' => 'GRIS', 'Uno' => 'GRIS PLATA', 'March' => 'BLANCO', 'Escape' => 'CAFÉ ARENA' }
+        GoogleSheetRow.where(knowledge_source: autos).find_each do |row|
+          row.update!(data: row.data.merge('COLOR' => colores[row.data['TIPO']]))
+        end
+      end
+
+      def en_platica(inner, *mensajes)
+        mensajes.each do |tipo, texto|
+          create(:message, conversation: conversation, account: account, message_type: tipo, content: texto)
+        end
+        described_class.new(account, described_class.parse(inner), conversation: conversation).call
+      end
+
+      it '«gris» trae toda la familia y «cafe» sin acento trae CAFÉ ARENA' do
+        expect(en_platica('Inventario | COLOR~? | TIPO', [:incoming, '¿tienes algo en gris?']).rows.pluck('TIPO'))
+          .to contain_exactly('Versa', 'Uno')
+        expect(con_texto('Inventario | COLOR~? | TIPO', 'alguno cafe').rows.pluck('TIPO')).to eq(['Escape'])
+      end
+
+      it 'con «=» sigue igual: «gris» solo trae GRIS' do
+        expect(en_platica('Inventario | COLOR=? | TIPO', [:incoming, 'algo en gris']).rows.pluck('TIPO')).to eq(['Versa'])
+      end
+
+      it 'toma las palabras del cliente, no los colores que listó el agente' do
+        result = en_platica('Inventario | COLOR~? | TIPO', [:outgoing, 'Tenemos GRIS y BLANCO'], [:incoming, '¿y en café?'])
+        expect(result.rows.pluck('TIPO')).to eq(['Escape'])
+        expect(result.criteria).to include('COLOR contiene cafe')
+      end
+    end
+
     it 'un «orden:» mal escrito invalida la directiva' do
       expect(described_class.parse('Inventario | * | TIPO | orden: PRECIO barato')).to be_nil
       expect(described_class.parse('Inventario | * | TIPO').columns).to eq(['TIPO'])
