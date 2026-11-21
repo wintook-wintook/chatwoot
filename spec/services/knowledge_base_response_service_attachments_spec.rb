@@ -119,4 +119,38 @@ RSpec.describe KnowledgeBaseResponseService do
       expect(enviado.attachments).to be_empty
     end
   end
+
+  # 21/11/2026 (Seminuevos Valera): el archivo marcado «con la ruta X» salía solo si el modelo
+  # escribía {{nombre}}, y la imagen de Atemajac no salía en dos de tres pruebas.
+  describe 'archivo con la regla «con la ruta X»' do
+    let(:rama) { ContactTrackings::RouteMap.parse('@ruta(becas: beca de una carrera): {{hoja: CATALOGO DE CARRERAS}}').routes.first }
+
+    before do
+      template.update!(resources: { 'files' => { 'imagen_promo2' => { 'ask' => true, 'routes' => ['becas'] } } })
+      stub_request(:post, chat_url).to_return(
+        status: 200, body: { choices: [{ message: { content: 'Derecho tiene 28% de beca.' } }] }.to_json
+      )
+    end
+
+    def contestar_en(branch)
+      service = described_class.new(message, tracking: tracking, branch: branch)
+      allow(service).to receive(:search_items).and_return([fila])
+      service.instance_variable_set(:@route, branch)
+      service.send(:perform_sheet_faq, message.content, source)
+      conversation.messages.outgoing.last
+    end
+
+    it 'lo manda aunque el modelo no escriba {{…}}, y una sola vez por conversación' do
+      primero = contestar_en(rama)
+      expect(primero.attachments.first.file.blob).to eq(adjunto.file.blob)
+      expect(primero.content).to start_with('Derecho tiene 28% de beca.')
+      expect(primero.content).not_to include('{{')
+
+      expect(contestar_en(rama).attachments).to be_empty
+    end
+
+    it 'en otra rama no lo manda' do
+      expect(contestar_en(nil).attachments).to be_empty
+    end
+  end
 end

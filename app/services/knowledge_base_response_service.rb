@@ -1654,6 +1654,7 @@ class KnowledgeBaseResponseService
   def send_reply(text)
     text = ContactTrackings::ConversationVariables.settle(@tracking, @conversation, text) if @tracking
     text = ContactTrackings::WelcomeMessage.combine(@welcome.take, text) if @welcome&.pending?
+    text = ContactTrackings::AgentAttachments.with_route_files(@tracking&.tracking_template, @route&.name, text, @conversation)
     content, attachments = ContactTrackings::AgentAttachments.resolve(@tracking&.tracking_template, text,
                                                                       conversation: @conversation)
     params = { content: content, private: false, ai_agent: ContactTrackings::AgentIdentity.for(@tracking&.tracking_template) }

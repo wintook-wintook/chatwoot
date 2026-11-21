@@ -22,6 +22,12 @@
 # se manda como si fuera {{nombre}}, salvo que ese archivo ya se haya mandado en la
 # conversación (es justo lo que la marca evita: reenviarlo en cada turno). La marca nunca
 # llega al cliente.
+#
+# «Con la ruta X» — 21/11/2026 (Seminuevos Valera, la imagen de Caja Popular Atemajac): la
+# regla del archivo `routes` solo se cumplía si el modelo escribía {{nombre}}, y en dos de
+# tres pruebas no lo escribió aunque el alcance de la rama lo pedía con «SIEMPRE». Ahora, si
+# la rama que contestó está en `routes` del archivo y el modelo no lo puso, se agrega solo,
+# una vez por conversación (si ya salió, no se reenvía en cada turno de esa rama).
 # ================================================================================
 
 module ContactTrackings::AgentAttachments
@@ -46,6 +52,24 @@ module ContactTrackings::AgentAttachments
     return [marked ? clean(content) : content, []] if names.blank? || template.nil?
 
     [clean(content), signed_ids(template, names)]
+  end
+
+  # Los archivos con la regla «con la ruta X» para la rama que contestó, como {{nombre}}
+  # al final del texto, si el modelo no los escribió y no han salido en la conversación.
+  def with_route_files(template, route_name, content, conversation)
+    return content if template.nil? || route_name.blank?
+
+    faltan = route_files(template, route_name)
+             .reject { |name| content.to_s.match?(/\{\{\s*#{Regexp.escape(name)}\s*\}\}/i) }
+             .select { |name| pending?(template, name, conversation) }
+    return content if faltan.empty?
+
+    Rails.logger.info "[AgentAttachments] 📎 rama #{route_name} → se manda #{faltan.join(', ')}"
+    "#{content}#{faltan.map { |name| " {{#{name}}}" }.join}"
+  end
+
+  def route_files(template, route_name)
+    template.file_rules.select { |_n, regla| Array(regla['routes']).include?(route_name) }.keys
   end
 
   # Lo que se guarda en el historial: si el token queda tal cual, el modelo lo imita
