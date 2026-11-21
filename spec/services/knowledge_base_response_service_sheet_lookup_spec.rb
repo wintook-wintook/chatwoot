@@ -90,6 +90,7 @@ RSpec.describe KnowledgeBaseResponseService do
       expect(responder('Favor de confirmar datos de la unidad TP-60')).to be(true)
       expect(enviado).to include('economico: TP-60 · operador: Engar Bravo · placas: 82AU1W')
       expect(enviado).not_to include('telefono')
+      expect(enviado).to include('Estas 1 fila(s) cumplen lo que pidió el cliente (economico = TP-60)')
     end
 
     it 'si no nombró la unidad, le pide que pregunte cuál' do
@@ -103,6 +104,46 @@ RSpec.describe KnowledgeBaseResponseService do
       it 'lo dice sin inventar' do
         responder('Datos de la unidad')
         expect(enviado).to include('no hay ninguna fila con: economico = TP-999')
+      end
+    end
+
+    describe 'ver más (búsqueda cortada a 20 filas)' do
+      let(:lookup) { '{{hoja_buscar: Unidades | tipo=? | economico}}' }
+      let(:prompt) { "@ruta(por_tipo: todas las de un tipo): #{lookup}\n@ruta(otra: otra cosa): -" }
+      let(:tracking) do
+        create(:contact_tracking, account: account, contact: contact, inbox: inbox, complementary_prompt: prompt)
+      end
+
+      before do
+        GoogleSheetRow.where(knowledge_source: unidades).delete_all
+        25.times do |i|
+          GoogleSheetRow.create!(account: account, knowledge_source: unidades, row_index: i,
+                                 data: { 'economico' => format('U-%02d', i + 1), 'tipo' => 'grua' })
+        end
+      end
+
+      def turno(texto, ruta)
+        msg = create(:message, account: account, inbox: inbox, conversation: conversation, sender: contact, content: texto)
+        WebMock::RequestRegistry.instance.reset!
+        rama = ContactTrackings::RouteMap.parse(prompt).routes.find { |r| r.name == ruta }
+        described_class.new(msg, tracking: tracking, branch: rama).perform
+      end
+
+      it 'da las 20 primeras y, a «¿cuáles son las otras?», las 5 que faltan aunque el clasificador elija otra rama' do
+        expect(turno('todas las grua', 'por_tipo')).to be(true)
+        primero = enviado
+        expect(primero).to include('U-20').and include('(y 5 más')
+        expect(primero).not_to include('U-21')
+
+        expect(turno('¿cuáles son las otras?', 'otra')).to be(true)
+        segundo = enviado
+        expect(segundo).to include('U-21').and include('U-25').and include('Son las 21 a 25 de 25')
+        expect(segundo).not_to include('economico: U-20')
+      end
+
+      it 'si el cliente pregunta otra cosa no pagina' do
+        turno('todas las grua', 'por_tipo')
+        expect(turno('¿y el más barato?', 'otra')).to be(false)
       end
     end
   end

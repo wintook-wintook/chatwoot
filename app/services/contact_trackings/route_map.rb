@@ -25,7 +25,10 @@ module ContactTrackings
     # rama. Existe porque el motor no puede saberlo solo: los nombres de rama los elige
     # quien configura el agente, asi que la correspondencia rama->etiqueta la declara el.
     #   @ruta(comercial_gestion #gestion: quiere que hagamos algo): @buscar_predefinidas(GESTION)
-    LINE_RE    = /^[ \t]*@ruta\([ \t]*([a-z0-9_-]+)[ \t]*(?:\#([a-z0-9_]+))?[ \t]*(?::[ \t]*([^)]*))?\)[ \t]*:[ \t]*(.*)$/i
+    # La descripción puede traer paréntesis («es visita (todavía no dice qué día)»): termina
+    # en el primer «):». Antes un «)» adentro hacía que la línea no se leyera y la rama
+    # desaparecía sin aviso (21/11/2026, Seminuevos Valera: se perdieron asesor y la por defecto).
+    LINE_RE    = /^[ \t]*@ruta\([ \t]*([a-z0-9_-]+)[ \t]*(?:\#([a-z0-9_]+))?[ \t]*(?::[ \t]*((?:[^)\n]|\)(?![ \t]*:))*))?\)[ \t]*:[ \t]*(.*)$/i
     DEFAULT_RE = /^[ \t]*@ruta_por_defecto[ \t]*:[ \t]*([a-z0-9_-]+)[ \t]*$/i
     # Marcas que declaran explícitamente "sin fuente": guion corto, medio o largo.
     NO_SOURCE  = ['-', '–', '—'].freeze

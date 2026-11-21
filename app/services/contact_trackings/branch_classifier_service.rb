@@ -110,7 +110,9 @@ module ContactTrackings
     def contexto
       return '' if @context.blank?
 
-      "Mensajes recientes de la conversación:\n#{@context.truncate(MAX_HISTORY_CHARS)}\n\n"
+      # Si no cabe, se pierde lo más viejo: lo último es lo que el cliente está contestando.
+      reciente = @context.size > MAX_HISTORY_CHARS ? "…#{@context.last(MAX_HISTORY_CHARS - 1)}" : @context
+      "Mensajes recientes de la conversación:\n#{reciente}\n\n"
     end
 
     def openai_api_key

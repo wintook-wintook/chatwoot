@@ -263,4 +263,86 @@ RSpec.describe ContactTrackings::SheetLookup do
       expect(described_class.calendar_id(' abc@group.calendar.google.com ')).to eq('abc@group.calendar.google.com')
     end
   end
+
+  describe 'toda la hoja, precios y orden' do
+    let!(:autos) do
+      create(:knowledge_source, account: account, source_type: 'google_sheet', name: 'Inventario', config: { 'sheet_mode' => 'faq' })
+    end
+
+    before do
+      [%w[NISSAN Versa 2021 $210,000.00], %w[FIAT Uno 2013 $139,800.00], %w[NISSAN March 2019 $185,500.00],
+       ['FORD', 'Escape', '2023', 'sin precio']].each_with_index do |(marca, tipo, modelo, precio), i|
+        GoogleSheetRow.create!(account: account, knowledge_source: autos, row_index: i,
+                               data: { 'MARCA' => marca, 'TIPO' => tipo, 'MODELO' => modelo, 'PRECIO' => precio })
+      end
+    end
+
+    def con_texto(inner, texto)
+      described_class.new(account, described_class.parse(inner), text: texto).call
+    end
+
+    it 'con «*» y «orden: PRECIO menor, 1» da el más barato de toda la hoja' do
+      result = con_texto('Inventario | * | TIPO, PRECIO | orden: PRECIO menor, 1', '¿cuál es el más barato?')
+      expect(result.rows.pluck('TIPO')).to eq(['Uno'])
+    end
+
+    it 'filtra por precio dicho como «200 mil» y ordena; sin precio va al final con «mayor»' do
+      expect(con_texto('Inventario | PRECIO<=? | TIPO | orden: PRECIO menor', 'algo de menos de 200 mil').rows.pluck('TIPO'))
+        .to eq(%w[Uno March])
+      expect(con_texto('Inventario | * | TIPO | orden: PRECIO mayor', 'x').rows.pluck('TIPO')).to eq(%w[Versa March Uno Escape])
+    end
+
+    it 'filtra por año sin que el cliente escriba la columna' do
+      expect(con_texto('Inventario | MODELO>=? | TIPO', 'del 2020 en adelante').rows.pluck('TIPO')).to eq(%w[Versa Escape])
+    end
+
+    it '«entre 150 mil y 200 mil» con PRECIO<=? da las del rango, no las de menos de 150 mil' do
+      result = con_texto('Inventario | PRECIO<=? | TIPO | orden: PRECIO menor', '¿algún auto entre 150 mil y 200 mil?')
+      expect(result.rows.pluck('TIPO')).to eq(['March'])
+      expect(result.criteria).to include('PRECIO entre 150000 y 200000')
+    end
+
+    it '«del 2019 al 2021» con MODELO>=? da solo esos años' do
+      expect(con_texto('Inventario | MODELO>=? | TIPO', 'del 2019 al 2021').rows.pluck('TIPO')).to eq(%w[Versa March])
+    end
+
+    describe 'COLOR~? (contiene la palabra)' do
+      let(:conversation) { create(:conversation, account: account) }
+
+      before do
+        colores = { 'Versa' => 'GRIS', 'Uno' => 'GRIS PLATA', 'March' => 'BLANCO', 'Escape' => 'CAFÉ ARENA' }
+        GoogleSheetRow.where(knowledge_source: autos).find_each do |row|
+          row.update!(data: row.data.merge('COLOR' => colores[row.data['TIPO']]))
+        end
+      end
+
+      def en_platica(inner, *mensajes)
+        mensajes.each do |tipo, texto|
+          create(:message, conversation: conversation, account: account, message_type: tipo, content: texto)
+        end
+        described_class.new(account, described_class.parse(inner), conversation: conversation).call
+      end
+
+      it '«gris» trae toda la familia y «cafe» sin acento trae CAFÉ ARENA' do
+        expect(en_platica('Inventario | COLOR~? | TIPO', [:incoming, '¿tienes algo en gris?']).rows.pluck('TIPO'))
+          .to contain_exactly('Versa', 'Uno')
+        expect(con_texto('Inventario | COLOR~? | TIPO', 'alguno cafe').rows.pluck('TIPO')).to eq(['Escape'])
+      end
+
+      it 'con «=» sigue igual: «gris» solo trae GRIS' do
+        expect(en_platica('Inventario | COLOR=? | TIPO', [:incoming, 'algo en gris']).rows.pluck('TIPO')).to eq(['Versa'])
+      end
+
+      it 'toma las palabras del cliente, no los colores que listó el agente' do
+        result = en_platica('Inventario | COLOR~? | TIPO', [:outgoing, 'Tenemos GRIS y BLANCO'], [:incoming, '¿y en café?'])
+        expect(result.rows.pluck('TIPO')).to eq(['Escape'])
+        expect(result.criteria).to include('COLOR contiene cafe')
+      end
+    end
+
+    it 'un «orden:» mal escrito invalida la directiva' do
+      expect(described_class.parse('Inventario | * | TIPO | orden: PRECIO barato')).to be_nil
+      expect(described_class.parse('Inventario | * | TIPO').columns).to eq(['TIPO'])
+    end
+  end
 end

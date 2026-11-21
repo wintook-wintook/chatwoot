@@ -5,7 +5,7 @@
 module ContactTrackings::SheetLookup::Describe
   # Lo que regresa, fila por fila y con los criterios: para dárselo al modelo tal cual.
   def describe(spec, rows)
-    columnas = (spec.filters.map(&:column) + spec.returns).uniq
+    columnas = spec.columns
     rows.map do |row|
       columnas.filter_map do |col|
         key = row.keys.find { |k| k.to_s.strip.casecmp?(col) }

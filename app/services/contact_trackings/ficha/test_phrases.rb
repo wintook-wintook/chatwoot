@@ -19,7 +19,7 @@
 class ContactTrackings::Ficha::TestPhrases
   PER_ROUTE = 2
   REAL_LIMIT = 6
-  KEY_RE = /\{\{\s*hoja_buscar:\s*[^|]+\|\s*([^=|]+?)\s*=\s*\?\s*\|\s*([^}]+)\}\}/
+  KEY_RE = /\{\{\s*hoja_buscar:\s*[^|]+\|\s*([^=|]+?)\s*=\s*\?\s*\|\s*([^}|]+?)\s*(?:\|[^}]*)?\}\}/
 
   # from_description: un agente escrito a mano: sus descripciones ya están en palabras del
   # cliente (y dos rutas pueden usar el mismo recurso para cosas distintas, p. ej. agendar

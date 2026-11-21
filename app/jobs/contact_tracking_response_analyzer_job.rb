@@ -101,6 +101,15 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # Retorna true si envió una respuesta, false si no (para que el Coordinator
   # decida si escala a BotSeller)
   def process_message_for_tracking(tracking, message)
+    @held_welcome = ContactTrackings::WelcomeMessage::Held.new
+    replied = run_tracking_turn(tracking, message)
+    # La bienvenida apartada que ninguna respuesta se llevó (palabra clave, agenda, ticket
+    # o sin respuesta) se manda sola: nunca se pierde.
+    send_auto_reply(tracking, message, @held_welcome.take) if @held_welcome.pending?
+    replied
+  end
+
+  def run_tracking_turn(tracking, message)
     Rails.logger.info "[TrackingBot] 🔍 Tracking ##{tracking.id} (#{tracking.status})"
     # proyecto@adaptar_prompts_publicados (F5): con <PENDIENTE:> en su Entrenamiento no contesta.
     if ContactTrackings::PendingSetup.blocked?(tracking)
@@ -136,10 +145,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # [0] proyecto@contact_tracking — el primer mensaje del cliente se contesta con la
     # sección [MENSAJE DE BIENVENIDA] tal cual (ver WelcomeMessage). Si además trae una
     # pregunta, se sigue y se contesta también.
-    if send_welcome_message(tracking, message)
-      return answered(:bienvenida) if ContactTrackings::WelcomeMessage.only_greeting?(message.content)
-
-      Rails.logger.info '[TrackingBot] 👋 La bienvenida va con pregunta → se contesta también'
+    # Con pregunta, la bienvenida no sale sola: se aparta y va al inicio de la respuesta, en
+    # el mismo mensaje (ver WelcomeMessage, «Bienvenida COMBINADA»).
+    if ContactTrackings::WelcomeMessage.only_greeting?(message.content)
+      return answered(:bienvenida) if send_welcome_message(tracking, message)
+    elsif (welcome = ContactTrackings::WelcomeMessage.claim(tracking, message.conversation))
+      @held_welcome.text = welcome
+      Rails.logger.info '[TrackingBot] 👋 La bienvenida va con pregunta → se combina con la respuesta'
     end
 
     # [1] Keywords — prioridad máxima, sin IA (solo si hay texto)
@@ -283,7 +295,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # la hoja nunca se come la recolección de datos ni la confirmación de agenda.
     if kbase_available?(message, tracking)
       Rails.logger.info '[TrackingBot] 📚 KBase disponible → intentando búsqueda semántica'
-      kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking, branch: branch).perform
+      kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking, branch: branch, welcome: @held_welcome).perform
       if kbase_replied
         Rails.logger.info '[TrackingBot] ✅ KBase respondió'
         return answered(:kbase)
@@ -749,6 +761,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         "#{message_text_for_ai(message).truncate(300)}"
 
         #{conversational_form(clean_cp)}
+        #{ContactTrackings::WelcomeMessage.model_note(@held_welcome.text) if @held_welcome&.pending?}
         #{CONVERSATIONAL_GUARD}
         #{clean_cp.present? ? ContactTrackings::MissingAnswer.rule(clean_cp) : ''}
         No uses prefijos como "Asesor:" o "Bot:". No incluyas comillas al inicio ni al final.
@@ -2264,6 +2277,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     # proyecto@contact_tracking: la línea «VARIABLES: …» se guarda y no llega al cliente
     reply_content = ContactTrackings::ConversationVariables.settle(tracking, message.conversation, reply_content)
+    reply_content = ContactTrackings::WelcomeMessage.combine(@held_welcome.take, reply_content) if @held_welcome&.pending?
 
     # proyecto@ai_agent_attachments: resuelve {{nombre}} → archivos del Agente IA
     clean_content, attachment_signed_ids = resolve_attachment_directives(tracking, reply_content)
@@ -2398,7 +2412,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     messages.map do |msg|
       sender = msg.incoming? ? 'Cliente' : 'Bot'
-      "#{sender}: #{message_text_for_ai(msg, with_file_text: false).truncate(120)}"
+      "#{sender}: #{ContactTrackings::ContextLine.brief(message_text_for_ai(msg, with_file_text: false))}"
     end.join("\n")
   rescue StandardError
     ''

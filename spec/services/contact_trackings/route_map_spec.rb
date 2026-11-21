@@ -116,4 +116,16 @@ RSpec.describe ContactTrackings::RouteMap do
       expect(described_class.strip('@discourse\n[ROL]')).to eq('@discourse\n[ROL]')
     end
   end
+
+  it 'una descripción con paréntesis no borra la rama' do
+    map = described_class.parse(<<~PROMPT)
+      @ruta(asesor #asesor_ventas: contesta que sí, NO es esta rama: es visita (todavía no dice qué día).): -
+      @ruta(inventario #inventario: elige un auto (lo nombra o dice el segundo), aunque antes hablamos de otra cosa): {{hoja: INVENTARIO}}
+      @ruta_por_defecto: inventario
+    PROMPT
+    expect(map.names).to eq(%w[asesor inventario])
+    expect(map['asesor'].description).to include('(todavía no dice qué día)')
+    expect(map['inventario'].directive).to eq('{{hoja: INVENTARIO}}')
+    expect(map.default.name).to eq('inventario')
+  end
 end

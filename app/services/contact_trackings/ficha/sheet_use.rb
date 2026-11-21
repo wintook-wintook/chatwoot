@@ -14,7 +14,7 @@
 # ================================================================================
 
 module ContactTrackings::Ficha::SheetUse
-  KEY_RE = /\{\{\s*hoja_buscar:\s*[^|]+\|\s*([^=|]+?)\s*=\s*\?\s*\|\s*([^}]+)\}\}/
+  KEY_RE = /\{\{\s*hoja_buscar:\s*[^|]+\|\s*([^=|]+?)\s*=\s*\?\s*\|\s*([^}|]+?)\s*(?:\|[^}]*)?\}\}/
   PREVIEW_ROWS = 3
   MAX_VALUE = 80
   MAX_PURPOSE = 200
