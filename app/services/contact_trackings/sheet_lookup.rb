@@ -180,7 +180,7 @@ class ContactTrackings::SheetLookup
       return nil
     end
     @asked ||= wanted if filter.ask? && !filter.numeric?
-    @criteria << "#{filter.column} #{filter.op} #{wanted.join(', ')}"
+    @criteria << criterion(filter, wanted)
     wanted
   end
 
@@ -194,16 +194,25 @@ class ContactTrackings::SheetLookup
     @text ? :skip : []
   end
 
+  # Un rango («entre 100 mil y 200 mil») vale para >= y <= por igual.
+  def criterion(filter, wanted)
+    rango = wanted.first
+    return "#{filter.column} entre #{rango.begin.to_i} y #{rango.end.to_i}" if rango.is_a?(Range)
+
+    "#{filter.column} #{filter.op} #{wanted.join(', ')}"
+  end
+
   def keeps?(filter, wanted, value)
-    return compare(filter.op, ContactTrackings::SheetNumbers.cell(value), wanted.first) if filter.numeric?
+    return within?(filter.op, ContactTrackings::SheetNumbers.cell(value), wanted.first) if filter.numeric?
 
     dentro = wanted.map { |v| loose(v) }.include?(loose(value))
     filter.op == '!=' ? !dentro : dentro
   end
 
   # Una celda sin número no cumple ninguna comparación.
-  def compare(operator, value, threshold)
+  def within?(operator, value, threshold)
     return false if value.nil?
+    return threshold.cover?(value) if threshold.is_a?(Range)
 
     value.public_send(operator, threshold)
   end
@@ -211,16 +220,17 @@ class ContactTrackings::SheetLookup
   # El número del cliente para esa columna: del mensaje suyo más reciente que traiga uno.
   # Con «>=» manda el mayor que dijo («grúa de 80 t para una carga de 26 t» → 80): es lo
   # que cubre todo; con «<=», el menor.
+  # Con un rango de dinero o año («entre 100 mil y 200 mil») → ese rango (ver SheetRanges).
   def mentioned_number(filter)
     return service_number(filter) if @text
     return nil if @conversation.nil?
 
     recent_messages.select(&:incoming?).each do |msg|
-      numeros = ContactTrackings::SheetNumbers.in_text(msg.content, filter.column)
-      next if numeros.empty?
+      numero = ContactTrackings::SheetRanges.wanted(msg.content, filter)
+      next if numero.nil?
 
       @mentioned_in = [@mentioned_in, msg.id].compact.max
-      return filter.op.start_with?('>') ? numeros.max : numeros.min
+      return numero
     end
     nil
   end

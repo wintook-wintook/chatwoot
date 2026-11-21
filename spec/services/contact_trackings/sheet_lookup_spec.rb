@@ -296,6 +296,16 @@ RSpec.describe ContactTrackings::SheetLookup do
       expect(con_texto('Inventario | MODELO>=? | TIPO', 'del 2020 en adelante').rows.pluck('TIPO')).to eq(%w[Versa Escape])
     end
 
+    it '«entre 150 mil y 200 mil» con PRECIO<=? da las del rango, no las de menos de 150 mil' do
+      result = con_texto('Inventario | PRECIO<=? | TIPO | orden: PRECIO menor', '¿algún auto entre 150 mil y 200 mil?')
+      expect(result.rows.pluck('TIPO')).to eq(['March'])
+      expect(result.criteria).to include('PRECIO entre 150000 y 200000')
+    end
+
+    it '«del 2019 al 2021» con MODELO>=? da solo esos años' do
+      expect(con_texto('Inventario | MODELO>=? | TIPO', 'del 2019 al 2021').rows.pluck('TIPO')).to eq(%w[Versa March])
+    end
+
     it 'un «orden:» mal escrito invalida la directiva' do
       expect(described_class.parse('Inventario | * | TIPO | orden: PRECIO barato')).to be_nil
       expect(described_class.parse('Inventario | * | TIPO').columns).to eq(['TIPO'])

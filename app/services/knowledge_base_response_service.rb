@@ -817,7 +817,7 @@ class KnowledgeBaseResponseService
                      'final que piden tus instrucciones. No agregues cierres genéricos ("¿Hay algo más en lo que ' \
                      'le podamos ayudar?", "estamos aquí para ayudarle", "quedamos atentos").'
   MAX_LOOKUP_ROWS = ContactTrackings::SheetLookup::Pages::SIZE
-  NO_MATCH_RULE = 'Dilo con claridad y no inventes otra opción.'
+  NO_MATCH_RULE = 'Dilo con claridad y no inventes otra opción ni la tomes de mensajes anteriores.'
 
   def perform_sheet_lookup(question, inner)
     return false unless google_feature_enabled?
