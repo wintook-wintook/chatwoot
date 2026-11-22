@@ -31,7 +31,7 @@ class Assistant::GuidePublisher
     'settings' => 'Ajustes y catálogos'
   }.freeze
 
-  Result = Struct.new(:created, :updated, :unchanged, :archived, keyword_init: true)
+  Result = Struct.new(:created, :updated, :unchanged, :archived, :failed, keyword_init: true)
 
   def self.portal_slug
     ENV.fetch('PLATFORM_HELP_PORTAL_SLUG', DEFAULT_PORTAL_SLUG)
@@ -75,7 +75,7 @@ class Assistant::GuidePublisher
   end
 
   def call
-    result = Result.new(created: [], updated: [], unchanged: [], archived: [])
+    result = Result.new(created: [], updated: [], unchanged: [], archived: [], failed: [])
     @guides.each { |guide| publish(guide, result) }
     archive_missing(result)
     result
@@ -90,7 +90,9 @@ class Assistant::GuidePublisher
 
     created = article.new_record?
     article.assign_attributes(attrs)
-    article.save!
+    # Una guía que no cabe (p. ej. más de 20,000 caracteres) no detiene a las demás: se reporta.
+    return result.failed << "#{guide.key}: #{article.errors.full_messages.to_sentence}" unless article.save
+
     (created ? result.created : result.updated) << guide.key
   end
 
