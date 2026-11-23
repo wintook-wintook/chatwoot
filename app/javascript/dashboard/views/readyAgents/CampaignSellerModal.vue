@@ -24,6 +24,8 @@ import QuoteMode from './QuoteMode.vue';
 const T = 'READY_AGENTS';
 // La oferta, el canal y los toques son de cada Campaña con Vendedor IA (pantalla de campañas 2.0); aquí queda
 // una oferta de ejemplo, solo para «Probar» y para llenar de inicio las campañas nuevas.
+// Lo más que puede llevar una campaña (TrackingCampaigns::Motor2Brief::MAX_TOUCHES).
+const MAX_TOUCHES = 6;
 const STEPS = [
   'agent',
   'business',
@@ -139,14 +141,22 @@ export default {
     hasCatalog() {
       return this.sources.some(s => s.key === 'catalog');
     },
-    // Las plantillas aprobadas de la bandeja por la que escribe (para después de las 24 h).
+    // Las plantillas de todas las bandejas de WhatsApp: el vendedor atiende campañas de cualquiera. La revisión de
+    // cada campaña (Motor2Check) avisa si una de estas no está aprobada en la bandeja de esa campaña.
     waTemplates() {
-      if (!this.form.channel.inboxId) return [];
-      const list =
-        this.$store.getters['inboxes/getWhatsAppTemplates'](
-          Number(this.form.channel.inboxId)
-        ) || [];
-      return [...new Set(list.map(item => item.name))];
+      const inboxes = (this.$store.getters['inboxes/getInboxes'] || []).filter(
+        i => (i.channel_type || '').includes('Whatsapp')
+      );
+      const names = inboxes.flatMap(i =>
+        (this.$store.getters['inboxes/getWhatsAppTemplates'](i.id) || []).map(
+          item => item.name
+        )
+      );
+      return [...new Set(names)];
+    },
+    // Los toques los define cada campaña (hasta 6): un archivo puede ir en cualquiera.
+    maxTouches() {
+      return MAX_TOUCHES;
     },
     agentReady() {
       return !!this.form.name.trim();
@@ -370,7 +380,7 @@ export default {
 
           <!-- 1 · El agente -->
           <template v-if="step === 'agent'">
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label class="block">
                 <span class="field-label">{{ t('FIELDS.NAME') }}</span>
                 <input
@@ -398,6 +408,15 @@ export default {
               </select>
             </label>
             <p class="m-0 text-xs text-slate-500">{{ c('WHERE_USED') }}</p>
+            <label class="block">
+              <span class="field-label">{{ c('EMAIL_SIGNATURE') }}</span>
+              <textarea
+                v-model="form.channel.emailSignature"
+                rows="3"
+                maxlength="1000"
+                :placeholder="c('EMAIL_SIGNATURE_PLACEHOLDER')"
+              />
+            </label>
           </template>
 
           <!-- 2 · Qué ofreces -->
@@ -585,7 +604,7 @@ export default {
               v-model="form.files"
               kind="campaign_seller"
               :agent-id="agent ? agent.id : null"
-              :touches="Number(form.channel.attempts) || 0"
+              :touches="maxTouches"
               @pending="pendingFiles = $event"
             />
           </template>

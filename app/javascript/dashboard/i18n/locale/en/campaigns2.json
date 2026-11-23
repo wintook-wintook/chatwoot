@@ -159,7 +159,8 @@
       "TEMPLATE_PICK": "Choose the approved template",
       "NO_TEMPLATES": "This inbox has no approved templates. Create them in Settings › Inboxes › Templates (or «Create with Dali»).",
       "NO_TEMPLATE_PREVIEW": "Choose the first touch's template to see how it arrives.",
-      "PICK_CHANNEL_FIRST": "Choose the channel to write the messages."
+      "PICK_CHANNEL_FIRST": "Choose the channel to write the messages.",
+      "CHANNEL_IS": "Channel: {name} (chosen in «Offer and seller»)."
     },
     "EMAIL": {
       "SUBJECT": "Subject",
@@ -211,12 +212,27 @@
       "DELAY": "Wait before the first message",
       "MINUTES": "minutes",
       "WARMUP": "Warm up the domain",
-      "WARMUP_HINT": "For a new domain or a cold list: 50 go out on day one, then 100, 200… up to {cap} a day. If more than 5% bounce, the campaign pauses itself."
+      "WARMUP_HINT": "For a new domain or a cold list: 50 go out on day one, then 100, 200… up to {cap} a day. If more than 5% bounce, the campaign pauses itself.",
+      "NEEDS_FUTURE": "To schedule it pick a future date and time.",
+      "ENDS_BEFORE": "The end date must be after the start."
     },
     "REVIEW": {
       "SUMMARY": "{kind} · handled by {seller} · goes out via {channel} · {touches} touch(es)",
       "AUDIENCE": "Reaches {n} contact(s).",
-      "CHECKING": "Checking…"
+      "CHECKING": "Checking…",
+      "CHECK_ERROR": "Could not review the campaign.",
+      "RETRY": "Retry",
+      "STARTS_AT": "Starts: {at}",
+      "STARTS_NOW": "Starts as soon as you launch it",
+      "ENDS_AT": "Ends: {at} (pending touches are not sent)",
+      "NO_END": "No end date",
+      "PACE": "{n} touch(es), every {every} {unit} if no reply; once they reply, the rest are not sent",
+      "CAP": "Up to {n} messages a day (all touches count)",
+      "CAP_WARMUP": "Warming up: 50 the first day, rising to {n} a day",
+      "NO_CAP": "No daily limit",
+      "HOURS_ON": "Only during business hours (no inbox hours: 9 am to 7 pm, Monday to Friday)",
+      "HOURS_OFF": "At any time",
+      "ONE_A_DAY": "Never more than one campaign message a day per contact"
     },
     "PREVIEW": {
       "TITLE": "How it arrives",
@@ -286,7 +302,9 @@
         "no_reply": "No reply",
         "handed_off": "Asked for a person",
         "opted_out": "Unsubscribed",
-        "failed": "Send failed"
+        "failed": "Send failed",
+        "in_progress": "Still has touches pending",
+        "bounced": "Email bounced"
       },
       "SKIPPED": {
         "campaign_closed": "Skipped: campaign closed",
@@ -331,14 +349,35 @@
         "confirmed": "Confirmed",
         "declined": "Not going",
         "low_score": "Low score",
-        "failed": "Send failed"
+        "failed": "Send failed",
+        "in_progress": "Still has touches pending",
+        "bounced": "Email bounced"
       },
       "CLOSE": "Close",
       "LIST_TITLE": "List «{name}»",
       "LIST_STATS": "{rows} rows · {valid} valid · {existing} were already contacts",
       "LIST_PROMOTED": "{n} replied or clicked and are now contacts",
       "LIST_QUARANTINE": "{n} still quarantined: deleted {days} days after the campaign ends.",
-      "LIST_CLEANED": "Cleanup done: {n} who never replied were deleted."
+      "LIST_CLEANED": "Cleanup done: {n} who never replied were deleted.",
+      "TOUCHES": {
+        "TITLE": "By touch",
+        "TOUCH": "Touch",
+        "SENT": "Sent",
+        "REPLIED": "Replied after this one",
+        "N": "Touch {n}",
+        "HINT": "If a touch barely gets replies, change its text or remove it."
+      },
+      "OUTCOMES": {
+        "relayed": "Relayed",
+        "discarded": "Not interested",
+        "handed_off": "Asked for a person",
+        "objective_met": "Done",
+        "opted_out": "Opted out",
+        "campaign_ended": "Campaign ended",
+        "campaign_finished": "Campaign ended",
+        "Cita": "Booked an appointment",
+        "Encuesta contestada": "Answered the survey"
+      }
     },
     "LIST": {
       "HINT": "For an audience that doesn't know you. The list is cleaned before creating anything: missing or malformed email, duplicates, role addresses (info@, sales@…), previously unsubscribed or bounced, and domains that don't receive mail. If the email already belongs to a contact, that one is used. New ones are quarantined: they don't show in Contacts until they reply or click; those who never reply are deleted automatically.",
@@ -444,6 +483,11 @@
         "outgoing": "Sent",
         "incoming": "Replied",
         "note": "Note"
+      },
+      "WAIT": {
+        "hours": "waiting for business hours",
+        "daily_cap": "waiting: daily limit reached",
+        "frequency": "waiting: another campaign wrote today"
       }
     }
   }

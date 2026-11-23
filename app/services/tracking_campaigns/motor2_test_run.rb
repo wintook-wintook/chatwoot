@@ -128,7 +128,8 @@ class TrackingCampaigns::Motor2TestRun
   def tracking_json(tracking)
     { status: tracking.status, attempt: tracking.attempt_count, attempts: tracking.max_attempts,
       next_at: LIVE.include?(tracking.status) ? tracking.scheduled_for : nil, outcome: tracking.outcome,
-      stage: tracking.prospect_stage, error: tracking.last_error, conversation_id: tracking.conversation&.display_id }
+      stage: tracking.prospect_stage, error: tracking.last_error, conversation_id: tracking.conversation&.display_id,
+      wait: tracking.motor2_state.to_h['send_wait'] }
   end
 
   # Lo que pasó en la conversación: lo que salió, lo que contestó y las notas (relevo, cita, no le interesa…).

@@ -116,6 +116,32 @@ describe('CampaignWizard', () => {
   });
 });
 
+describe('CampaignWizard › Revisar', () => {
+  it('«Más tarde» sin fecha futura o fin antes del inicio no deja lanzar; el resumen dice el ritmo y el tope', async () => {
+    const w = mount(CampaignWizard, { mocks, stubs });
+    await flush();
+    w.vm.form.start = 'later';
+    expect(w.vm.scheduleProblem).toContain('WHEN.NEEDS_FUTURE');
+    w.vm.form.scheduled_for = new Date(Date.now() + 86400000).toISOString();
+    w.vm.form.ends_at = new Date(Date.now() + 3600000).toISOString();
+    expect(w.vm.scheduleProblem).toContain('WHEN.ENDS_BEFORE');
+    w.vm.form.ends_at = '';
+    expect(w.vm.scheduleProblem).toBe('');
+    w.vm.form.daily_cap = 80;
+    expect(w.vm.reviewLines.join(' ')).toContain('REVIEW.CAP');
+    expect(w.vm.reviewLines.join(' ')).toContain('REVIEW.ONE_A_DAY');
+  });
+
+  it('cambiar a encuesta quita un relevo «al agente» que ya no aplica', async () => {
+    const w = mount(CampaignWizard, { mocks, stubs });
+    await flush();
+    w.vm.form.brief.relay = 'agent';
+    w.vm.form.brief.kind = 'survey';
+    await w.vm.$nextTick();
+    expect(w.vm.form.brief.relay).toBe('');
+  });
+});
+
 describe('CampaignResults', () => {
   it('el embudo con % sobre lo enviado (WhatsApp: leídos)', async () => {
     const w = mount(CampaignResults, {

@@ -159,7 +159,8 @@
       "TEMPLATE_PICK": "Elige la plantilla aprobada",
       "NO_TEMPLATES": "Esta bandeja no tiene plantillas aprobadas. Créalas en Ajustes › Bandejas › Plantillas (o con «Crear con Dali»).",
       "NO_TEMPLATE_PREVIEW": "Elige la plantilla del primer toque para ver cómo llega.",
-      "PICK_CHANNEL_FIRST": "Elige el canal para escribir los mensajes."
+      "PICK_CHANNEL_FIRST": "Elige el canal para escribir los mensajes.",
+      "CHANNEL_IS": "Canal: {name} (se elige en «Oferta y vendedor»)."
     },
     "EMAIL": {
       "SUBJECT": "Asunto",
@@ -211,12 +212,27 @@
       "DELAY": "Esperar antes del primer mensaje",
       "MINUTES": "minutos",
       "WARMUP": "Calentar el dominio",
-      "WARMUP_HINT": "Para un dominio nuevo o una lista fría: el primer día salen 50, luego 100, 200… hasta {cap} al día. Si rebota más del 5 %, la campaña se pausa sola."
+      "WARMUP_HINT": "Para un dominio nuevo o una lista fría: el primer día salen 50, luego 100, 200… hasta {cap} al día. Si rebota más del 5 %, la campaña se pausa sola.",
+      "NEEDS_FUTURE": "Para programarla elige una fecha y hora futuras.",
+      "ENDS_BEFORE": "La fecha de fin debe ser después del inicio."
     },
     "REVIEW": {
       "SUMMARY": "{kind} · atiende {seller} · sale por {channel} · {touches} toque(s)",
       "AUDIENCE": "Le llega a {n} contacto(s).",
-      "CHECKING": "Revisando…"
+      "CHECKING": "Revisando…",
+      "CHECK_ERROR": "No se pudo revisar la campaña.",
+      "RETRY": "Reintentar",
+      "STARTS_AT": "Empieza: {at}",
+      "STARTS_NOW": "Empieza en cuanto la lances",
+      "ENDS_AT": "Termina: {at} (los toques que falten ya no salen)",
+      "NO_END": "Sin fecha de fin",
+      "PACE": "{n} toque(s), cada {every} {unit} si no contesta; si contesta, ya no salen los que faltan",
+      "CAP": "Máximo {n} mensajes al día (cuentan todos los toques)",
+      "CAP_WARMUP": "Calentando: 50 el primer día y sube hasta {n} al día",
+      "NO_CAP": "Sin máximo por día",
+      "HOURS_ON": "Solo en horario de atención (sin horario en la bandeja: de 9 a 19 h, lunes a viernes)",
+      "HOURS_OFF": "A cualquier hora",
+      "ONE_A_DAY": "Nunca más de un mensaje de campañas al día por contacto"
     },
     "PREVIEW": {
       "TITLE": "Así le llega",
@@ -286,7 +302,9 @@
         "no_reply": "No contestaron",
         "handed_off": "Pidieron una persona",
         "opted_out": "Se dieron de baja",
-        "failed": "Falló el envío"
+        "failed": "Falló el envío",
+        "in_progress": "Aún con toques por salir",
+        "bounced": "Rebotó el correo"
       },
       "SKIPPED": {
         "campaign_closed": "Omitidos: campaña cerrada",
@@ -331,14 +349,35 @@
         "confirmed": "Confirmaron",
         "declined": "No van",
         "low_score": "Calificación baja",
-        "failed": "Falló el envío"
+        "failed": "Falló el envío",
+        "in_progress": "Aún con toques por salir",
+        "bounced": "Rebotó el correo"
       },
       "CLOSE": "Cerrar",
       "LIST_TITLE": "Lista «{name}»",
       "LIST_STATS": "{rows} renglones · {valid} válidos · {existing} ya eran contactos",
       "LIST_PROMOTED": "{n} contestaron o dieron clic y ya son contactos",
       "LIST_QUARANTINE": "{n} siguen en cuarentena: se borran {days} días después de terminar la campaña.",
-      "LIST_CLEANED": "Limpieza hecha: se borraron {n} que nunca contestaron."
+      "LIST_CLEANED": "Limpieza hecha: se borraron {n} que nunca contestaron.",
+      "TOUCHES": {
+        "TITLE": "Por toque",
+        "TOUCH": "Toque",
+        "SENT": "Les salió",
+        "REPLIED": "Contestaron después de este",
+        "N": "Toque {n}",
+        "HINT": "Si un toque casi no consigue respuestas, cambia su texto o quítalo."
+      },
+      "OUTCOMES": {
+        "relayed": "Pasó al relevo",
+        "discarded": "No le interesó",
+        "handed_off": "Pidió una persona",
+        "objective_met": "Cumplido",
+        "opted_out": "Se dio de baja",
+        "campaign_ended": "Terminó la campaña",
+        "campaign_finished": "Terminó la campaña",
+        "Cita": "Agendó cita",
+        "Encuesta contestada": "Contestó la encuesta"
+      }
     },
     "LIST": {
       "HINT": "Para una audiencia que no te conoce. La lista se limpia antes de crear nada: sin correo o mal escrito, repetidos, de rol (info@, ventas@…), que se dieron de baja o rebotaron antes y dominios que no reciben correo. Si el correo ya es de un contacto tuyo, se usa ese. Los nuevos quedan en cuarentena: no salen en Contactos hasta que contestan o dan clic; los que nunca contestan se borran solos.",
@@ -444,6 +483,11 @@
         "outgoing": "Salió",
         "incoming": "Contestó",
         "note": "Nota"
+      },
+      "WAIT": {
+        "hours": "esperando horario",
+        "daily_cap": "esperando: llegó al tope del día",
+        "frequency": "esperando: otra campaña le escribió hoy"
       }
     }
   }

@@ -100,6 +100,7 @@ export default {
       preview: null,
       previewLoading: false,
       checks: [],
+      checkError: false,
       touchTab: 1,
       testTab: 'simulate',
       testTabs: TEST_TABS,
@@ -168,7 +169,7 @@ export default {
       return this.form.brief.kind;
     },
     event() {
-      return this.options.events.find(
+      return this.audienceEvents.find(
         e => e.id === Number(this.form.brief.event_id)
       );
     },
@@ -239,6 +240,58 @@ export default {
     canSave() {
       return !!(this.form.tracking_template_id && this.form.inbox_id);
     },
+    // «Más tarde» necesita una fecha futura, y el fin va después del inicio.
+    // Audiencia por evento: también los recientes (seguimiento después de la expo: asistió, no se presentó).
+    audienceEvents() {
+      return [
+        ...(this.options.events || []),
+        ...(this.options.past_events || []),
+      ];
+    },
+    scheduleProblem() {
+      const f = this.form;
+      const start =
+        f.start === 'later' && f.scheduled_for
+          ? new Date(f.scheduled_for)
+          : new Date();
+      if (f.start === 'later' && (!f.scheduled_for || start <= new Date()))
+        return this.t('WHEN.NEEDS_FUTURE');
+      if (f.ends_at && new Date(f.ends_at) <= start)
+        return this.t('WHEN.ENDS_BEFORE');
+      return '';
+    },
+    // El resumen de «Revisar»: cuándo, ritmo y horario.
+    reviewLines() {
+      const f = this.form;
+      const fmt = v =>
+        new Date(v).toLocaleString([], {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        });
+      const lines = [
+        f.start === 'later' && f.scheduled_for
+          ? this.t('REVIEW.STARTS_AT', { at: fmt(f.scheduled_for) })
+          : this.t('REVIEW.STARTS_NOW'),
+        f.ends_at
+          ? this.t('REVIEW.ENDS_AT', { at: fmt(f.ends_at) })
+          : this.t('REVIEW.NO_END'),
+        this.t('REVIEW.PACE', {
+          n: this.attempts,
+          every: f.touches.every_value,
+          unit: this.t(`SIM.UNITS.${f.touches.every_unit}`),
+        }),
+        f.daily_cap
+          ? this.t(f.brief.warmup ? 'REVIEW.CAP_WARMUP' : 'REVIEW.CAP', {
+              n: f.daily_cap,
+            })
+          : this.t('REVIEW.NO_CAP'),
+        this.t(
+          f.respect_working_hours ? 'REVIEW.HOURS_ON' : 'REVIEW.HOURS_OFF'
+        ),
+        this.t('REVIEW.ONE_A_DAY'),
+      ];
+      return lines;
+    },
     readyCount() {
       return this.preview?.counts?.ready ?? null;
     },
@@ -253,9 +306,14 @@ export default {
       this.form.touches.emails = this.form.touches.emails.slice(0, count);
       if (this.touchTab > count) this.touchTab = count;
     },
+    // Solo cuando la persona cambia el tipo (no al abrir una campaña guardada).
     'form.brief.kind'(kind) {
+      if (this.loading) return;
       if (kind === 'invite' && this.sourceType === 'segment') {
         this.form.audience.source = { type: 'event' };
+      }
+      if (!this.relayChoices.includes(this.form.brief.relay)) {
+        this.form.brief.relay = '';
       }
     },
   },
@@ -270,6 +328,9 @@ export default {
       const id = this.$route.params.campaignId;
       if (id) await this.load(Number(id));
       else this.applyDefaults();
+      if (this.campaignId && this.$route.query.step === 'review') {
+        this.$nextTick(() => this.go('review'));
+      }
     } catch (e) {
       useAlert(this.t('LOAD_ERROR'));
     } finally {
@@ -307,6 +368,14 @@ export default {
     },
     async load(id) {
       const { data } = await Motor2CampaignsAPI.show(id);
+      // Solo se modifica Guardada: una en curso o terminada abre su tablero.
+      if (data.status !== 'saved') {
+        this.$router.replace({
+          name: 'campaigns2_detail',
+          params: { campaignId: data.id },
+        });
+        return;
+      }
       this.campaignId = data.id;
       const blank = blankForm();
       const questions = [...(data.brief?.survey_questions || []), '', '', ''];
@@ -427,9 +496,17 @@ export default {
       }
     },
     async saveAndCheck() {
-      if (!(await this.save())) return;
-      const { data } = await Motor2CampaignsAPI.check(this.campaignId);
-      this.checks = data.items || [];
+      this.checkError = false;
+      if (!(await this.save())) {
+        this.checkError = true;
+        return;
+      }
+      try {
+        const { data } = await Motor2CampaignsAPI.check(this.campaignId);
+        this.checks = data.items || [];
+      } catch (e) {
+        this.checkError = true;
+      }
     },
     async launch() {
       await this.saveAndCheck();
@@ -675,6 +752,26 @@ export default {
                 }}
               </span>
             </label>
+            <label class="block">
+              <span class="field-label">{{ t('MESSAGES.CHANNEL') }}</span>
+              <select v-model="form.inbox_id">
+                <option value="">{{ t('MESSAGES.CHANNEL_PICK') }}</option>
+                <option v-for="i in options.inboxes" :key="i.id" :value="i.id">
+                  {{ i.name }} ·
+                  {{
+                    t(
+                      `MESSAGES.TYPES.${i.channel_type.replace(
+                        'Channel::',
+                        ''
+                      )}`
+                    )
+                  }}
+                </option>
+              </select>
+              <span class="block text-xs text-slate-500">
+                {{ t('MESSAGES.CHANNEL_HINT') }}
+              </span>
+            </label>
             <template v-if="kind === 'invite'">
               <label class="block">
                 <span class="field-label">{{ t('OFFER.EVENT') }}</span>
@@ -773,7 +870,7 @@ export default {
             </label>
             <div
               v-if="form.brief.relay === 'person'"
-              class="grid grid-cols-2 gap-2"
+              class="grid grid-cols-1 gap-2 sm:grid-cols-2"
             >
               <label class="block">
                 <span class="field-label">{{ t('OFFER.RELAY_USER') }}</span>
@@ -807,7 +904,7 @@ export default {
               <div
                 v-for="(o, i) in form.brief.objections"
                 :key="i"
-                class="grid grid-cols-[1fr_1fr_auto] gap-1"
+                class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-1"
               >
                 <input
                   v-model="o.objection"
@@ -852,7 +949,7 @@ export default {
                   'label',
                   'event',
                   'continuous',
-                  'list',
+                  ...(isWhatsapp ? [] : ['list']),
                 ]"
                 :key="type"
                 type="button"
@@ -898,12 +995,15 @@ export default {
                 </option>
               </select>
             </label>
-            <div v-if="sourceType === 'event'" class="grid grid-cols-2 gap-2">
+            <div
+              v-if="sourceType === 'event'"
+              class="grid grid-cols-1 gap-2 sm:grid-cols-2"
+            >
               <label class="block">
                 <span class="field-label">{{ t('OFFER.EVENT') }}</span>
                 <select v-model="form.brief.event_id" @change="loadPreview">
                   <option value="">{{ t('OFFER.EVENT_PICK') }}</option>
-                  <option v-for="e in options.events" :key="e.id" :value="e.id">
+                  <option v-for="e in audienceEvents" :key="e.id" :value="e.id">
                     {{ e.name }}
                   </option>
                 </select>
@@ -1096,26 +1196,13 @@ export default {
 
           <!-- 4 · Mensajes -->
           <template v-if="step === 'messages'">
-            <label class="block">
-              <span class="field-label">{{ t('MESSAGES.CHANNEL') }}</span>
-              <select v-model="form.inbox_id">
-                <option value="">{{ t('MESSAGES.CHANNEL_PICK') }}</option>
-                <option v-for="i in options.inboxes" :key="i.id" :value="i.id">
-                  {{ i.name }} ·
-                  {{
-                    t(
-                      `MESSAGES.TYPES.${i.channel_type.replace(
-                        'Channel::',
-                        ''
-                      )}`
-                    )
-                  }}
-                </option>
-              </select>
-              <span class="block text-xs text-slate-500">
-                {{ t('MESSAGES.CHANNEL_HINT') }}
-              </span>
-            </label>
+            <p class="m-0 text-xs text-slate-500">
+              {{
+                t('MESSAGES.CHANNEL_IS', {
+                  name: inbox ? inbox.name : '—',
+                })
+              }}
+            </p>
             <div class="flex flex-wrap items-center gap-2 text-sm">
               {{ t('MESSAGES.TOUCHES') }}
               <select
@@ -1343,6 +1430,14 @@ export default {
               <p v-if="readyCount !== null" class="m-0 text-xs text-slate-500">
                 {{ t('REVIEW.AUDIENCE', { n: readyCount }) }}
               </p>
+              <ul
+                class="m-0 text-xs list-disc text-slate-600 dark:text-slate-300 ltr:pl-4 rtl:pr-4"
+              >
+                <li v-for="line in reviewLines" :key="line">{{ line }}</li>
+              </ul>
+              <p v-if="scheduleProblem" class="m-0 text-xs text-red-600">
+                {{ scheduleProblem }}
+              </p>
             </div>
             <ul class="flex flex-col gap-1 m-0 list-none">
               <li
@@ -1359,7 +1454,20 @@ export default {
                 <span>{{ c.text }}</span>
               </li>
             </ul>
-            <p v-if="!checks.length" class="m-0 text-xs text-slate-500">
+            <p
+              v-if="checkError"
+              class="flex items-center gap-2 m-0 text-xs text-red-600"
+            >
+              {{ t('REVIEW.CHECK_ERROR') }}
+              <button
+                type="button"
+                class="text-woot-600 hover:underline"
+                @click="saveAndCheck"
+              >
+                {{ t('REVIEW.RETRY') }}
+              </button>
+            </p>
+            <p v-else-if="!checks.length" class="m-0 text-xs text-slate-500">
               {{ t('REVIEW.CHECKING') }}
             </p>
           </template>
@@ -1463,7 +1571,7 @@ export default {
           v-else
           icon="send"
           :is-loading="saving"
-          :disabled="!!errors.length || !checks.length"
+          :disabled="!!errors.length || !checks.length || !!scheduleProblem"
           @click="launch"
         >
           {{ form.start === 'later' ? t('SCHEDULE') : t('LAUNCH') }}

@@ -124,7 +124,9 @@ export default {
       const next = tr.next_at
         ? this.t('NEXT', { at: this.time(tr.next_at) })
         : '';
-      return [base, next].filter(Boolean).join(' · ');
+      const wait =
+        tr.wait && tr.status === 'scheduled' ? this.t(`WAIT.${tr.wait}`) : '';
+      return [base, next, wait].filter(Boolean).join(' · ');
     },
     conversationPath(c) {
       const id = c.tracking?.conversation_id;

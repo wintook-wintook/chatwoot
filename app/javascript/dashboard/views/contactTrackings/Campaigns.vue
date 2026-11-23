@@ -12,6 +12,7 @@
 import { VeTable } from 'vue-easytable';
 import { useAlert } from 'dashboard/composables';
 import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
+import Motor2CampaignsAPI from 'dashboard/api/motor2Campaigns';
 import CampaignForm from 'dashboard/components/contacts/BulkTrackingAssign/CampaignForm.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import CampaignLaunchModal from './CampaignLaunchModal.vue';
@@ -19,7 +20,7 @@ import { progressPct, sortCampaigns, sortFromParams } from './campaignsTable';
 
 const STATUS_COLOR = {
   saved: 'text-woot-700 bg-woot-50 dark:text-woot-300 dark:bg-woot-900/30',
-  draft: 'text-slate-500 bg-slate-100 dark:bg-slate-700',
+  draft: 'text-sky-700 bg-sky-100 dark:text-sky-300 dark:bg-sky-900/30', // Programada: no se confunde con Terminada
   running: 'text-green-700 bg-green-100 dark:bg-green-900/30',
   paused: 'text-amber-800 bg-amber-100 dark:bg-amber-900/30',
   finished: 'text-slate-600 bg-slate-100 dark:bg-slate-700',
@@ -76,6 +77,7 @@ export default {
       // Filtro + paginado (cliente) de la tabla de campañas.
       searchQuery: '',
       statusFilter: 'all',
+      engineFilter: 'all', // clásica (1.0) o con Vendedor IA (2.0)
       currentPage: 1,
       perPage: 10,
     };
@@ -89,6 +91,12 @@ export default {
       const query = this.searchQuery.trim().toLowerCase();
       return this.campaigns.filter(c => {
         if (this.statusFilter !== 'all' && c.status !== this.statusFilter) {
+          return false;
+        }
+        if (
+          this.engineFilter !== 'all' &&
+          (c.engine || '1') !== this.engineFilter
+        ) {
           return false;
         }
         if (!query) return true;
@@ -361,6 +369,9 @@ export default {
     statusFilter() {
       this.currentPage = 1;
     },
+    engineFilter() {
+      this.currentPage = 1;
+    },
     // Si el listado se encoge (borrado/refetch), evitar quedar en página vacía.
     totalPages(pages) {
       if (this.currentPage > pages) this.currentPage = pages;
@@ -430,6 +441,10 @@ export default {
     },
     // fix/campanas: trae la campaña completa y abre «Nueva campaña» con sus datos.
     async openDuplicate(campaign) {
+      if (campaign.engine === '2') {
+        this.duplicateMotor2(campaign);
+        return;
+      }
       try {
         const { data } = await TrackingCampaignsAPI.show(campaign.id);
         this.presetFilter = null;
@@ -441,6 +456,10 @@ export default {
     },
     // Trae la campaña completa (audiencia incluida) y abre el formulario con sus datos.
     async openEdit(campaign) {
+      if (campaign.engine === '2') {
+        this.openMotor2(campaign, 'edit');
+        return;
+      }
       try {
         const { data } = await TrackingCampaignsAPI.show(campaign.id);
         if (data.status !== 'saved') {
@@ -498,8 +517,29 @@ export default {
       if (row.status === 'saved') this.openEdit(row);
       else this.openCampaign(row);
     },
+    // Una 2.0 se lanza desde «Revisar y lanzar» de su asistente: ahí pasa por su revisión (Motor2Check).
     openLaunch(campaign) {
+      if (campaign.engine === '2') {
+        this.openMotor2(campaign, 'review');
+        return;
+      }
       this.campaignToLaunch = campaign;
+    },
+    openMotor2(campaign, step) {
+      this.$router.push({
+        name: 'campaigns2_edit',
+        params: { campaignId: campaign.id },
+        query: step === 'review' ? { step: 'review' } : {},
+      });
+    },
+    // Duplicar una 2.0: copia Guardada con su motor y se abre para editarla.
+    async duplicateMotor2(campaign) {
+      try {
+        const { data } = await Motor2CampaignsAPI.duplicate(campaign.id);
+        this.openMotor2(data, 'edit');
+      } catch (error) {
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.DUPLICATE_ERROR'));
+      }
     },
     closeLaunch() {
       this.campaignToLaunch = null;
@@ -817,6 +857,20 @@ export default {
             </option>
             <option v-for="s in statusOptions" :key="s" :value="s">
               {{ statusLabel(s) }}
+            </option>
+          </select>
+          <select
+            v-model="engineFilter"
+            class="box-border shrink-0 w-44 h-9 text-sm rounded-md border border-solid border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-2 outline-none focus:border-woot-500 dark:focus:border-woot-600"
+          >
+            <option value="all">
+              {{ $t('TRACKING_CAMPAIGNS_VIEW.FILTER_ENGINE.all') }}
+            </option>
+            <option value="2">
+              {{ $t('TRACKING_CAMPAIGNS_VIEW.FILTER_ENGINE.motor2') }}
+            </option>
+            <option value="1">
+              {{ $t('TRACKING_CAMPAIGNS_VIEW.FILTER_ENGINE.classic') }}
             </option>
           </select>
         </div>

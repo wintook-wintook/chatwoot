@@ -1163,7 +1163,9 @@
       "QUOTE_NOT_FOR_PURPOSE": "Invite and Survey campaigns do not quote.",
       "QUOTE_HINT": "If they are interested in the offer and ask for a quote, it builds it with Catalog prices.",
       "TEST_IN_CAMPAIGN": "«{name}» is ready. To test it, create or open a campaign and in «Review and launch» use «Simulate the campaign», «Chat with the seller» or «Real test»: that is where it is tested with the real offer.",
-      "APPOINTMENT_HINT": "When a campaign's goal is «Book an appointment», the seller books on these people's calendars."
+      "APPOINTMENT_HINT": "When a campaign's goal is «Book an appointment», the seller books on these people's calendars.",
+      "EMAIL_SIGNATURE": "Email signature",
+      "EMAIL_SIGNATURE_PLACEHOLDER": "Ana López · Sales\nGrúas del Norte · 81 1234 5678"
     },
     "FILES": {
       "HINT": "Upload images or files the agent can send (product photos, flyer, catalog, map…). Give each one a description: the agent can't see the image, so that's how it knows when it helps and doesn't make up what it shows.",

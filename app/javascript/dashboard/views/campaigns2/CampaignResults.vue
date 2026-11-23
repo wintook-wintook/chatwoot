@@ -9,6 +9,27 @@ import { useAlert } from 'dashboard/composables';
 import Motor2CampaignsAPI from 'dashboard/api/motor2Campaigns';
 import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 
+const REFRESH_MS = 60000;
+const OUTCOME_KEYS = [
+  'relayed',
+  'discarded',
+  'handed_off',
+  'objective_met',
+  'opted_out',
+  'campaign_ended',
+  'campaign_finished',
+  'Cita',
+  'Encuesta contestada',
+];
+// Las salidas que se pueden abrir para ver sus contactos (Motor2Results::GROUPS).
+const EXIT_GROUPS = [
+  'not_interested',
+  'no_reply',
+  'in_progress',
+  'failed',
+  'bounced',
+];
+
 const FOLLOW_GROUPS = [
   'not_read',
   'no_reply',
@@ -21,6 +42,8 @@ export default {
   name: 'CampaignResults',
   data() {
     return {
+      EXIT_GROUPS,
+      timer: null,
       data: null,
       loading: true,
       group: null,
@@ -75,6 +98,20 @@ export default {
     exits() {
       return this.data?.exits || {};
     },
+    exitKeys() {
+      const keys = [
+        'not_interested',
+        'no_reply',
+        'in_progress',
+        'handed_off',
+        'opted_out',
+      ];
+      if (!this.isWhatsapp) keys.push('bounced');
+      return [...keys, 'failed'];
+    },
+    touchRows() {
+      return this.data?.touches || [];
+    },
     kindData() {
       return this.data?.kind || {};
     },
@@ -96,11 +133,16 @@ export default {
   mounted() {
     this.load();
   },
+  beforeDestroy() {
+    clearTimeout(this.timer);
+  },
   methods: {
     t(key, params) {
       return this.$t(`CAMPAIGNS2.RESULTS.${key}`, params);
     },
+    // En curso: se actualiza sola cada REFRESH_MS.
     async load() {
+      clearTimeout(this.timer);
       this.loading = !this.data;
       try {
         const { data } = await Motor2CampaignsAPI.results(this.id);
@@ -110,6 +152,16 @@ export default {
       } finally {
         this.loading = false;
       }
+      if (this.data?.campaign?.status === 'running') {
+        this.timer = setTimeout(this.load, REFRESH_MS);
+      }
+    },
+    outcomeText(outcome) {
+      if (!outcome) return '';
+      // «relayed: Atención a prospectos», «Cita viernes 10:00»… → por cómo empieza.
+      const text = String(outcome);
+      const key = OUTCOME_KEYS.find(k => text.startsWith(k));
+      return key ? this.$t(`CAMPAIGNS2.RESULTS.OUTCOMES.${key}`) : text;
     },
     money$(value) {
       return new Intl.NumberFormat('es-MX', {
@@ -125,8 +177,14 @@ export default {
       try {
         const { data } = await Motor2CampaignsAPI.contacts(this.id, group);
         this.groupContacts = data.contacts || [];
+      } catch (e) {
+        this.groupContacts = [];
+        useAlert(this.t('LOAD_ERROR'));
       } finally {
         this.groupLoading = false;
+        this.$nextTick(() =>
+          this.$refs.groupBox?.scrollIntoView({ behavior: 'smooth' })
+        );
       }
     },
     async followUp(group) {
@@ -297,6 +355,40 @@ export default {
         </div>
       </section>
 
+      <!-- Por toque: a cuántos les salió cada toque y cuántos contestaron después de ese -->
+      <section
+        v-if="touchRows.length > 1"
+        class="p-3 mb-4 border rounded-lg border-slate-100 dark:border-slate-700"
+      >
+        <h2 class="m-0 mb-2 text-sm font-semibold">{{ t('TOUCHES.TITLE') }}</h2>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-xs text-left text-slate-500">
+              <th class="py-1 font-normal">{{ t('TOUCHES.TOUCH') }}</th>
+              <th class="py-1 font-normal">{{ t('TOUCHES.SENT') }}</th>
+              <th class="py-1 font-normal">{{ t('TOUCHES.REPLIED') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="row in touchRows"
+              :key="row.n"
+              class="border-t border-slate-50 dark:border-slate-700"
+            >
+              <td class="py-1">{{ t('TOUCHES.N', { n: row.n }) }}</td>
+              <td class="py-1">{{ row.sent }}</td>
+              <td class="py-1">
+                {{ row.replied }}
+                <span v-if="row.sent" class="text-xs text-slate-500">
+                  ({{ Math.round((row.replied * 100) / row.sent) }}%)
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="m-0 mt-1 text-xs text-slate-500">{{ t('TOUCHES.HINT') }}</p>
+      </section>
+
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <!-- Lo ganado -->
         <section
@@ -323,30 +415,18 @@ export default {
           class="p-3 border rounded-lg border-slate-100 dark:border-slate-700"
         >
           <h2 class="m-0 mb-2 text-sm font-semibold">{{ t('EXITS') }}</h2>
-          <button
-            v-for="key in [
-              'not_interested',
-              'no_reply',
-              'handed_off',
-              'opted_out',
-              'failed',
-            ]"
+          <component
+            :is="EXIT_GROUPS.includes(key) ? 'button' : 'p'"
+            v-for="key in exitKeys"
             :key="key"
-            type="button"
-            class="flex justify-between w-full text-sm text-left"
-            @click="
-              openGroup(
-                {
-                  not_interested: 'not_interested',
-                  no_reply: 'no_reply',
-                  failed: 'failed',
-                }[key]
-              )
-            "
+            :type="EXIT_GROUPS.includes(key) ? 'button' : null"
+            class="flex justify-between w-full m-0 text-sm text-left"
+            :class="EXIT_GROUPS.includes(key) ? 'hover:text-woot-600' : ''"
+            @click="EXIT_GROUPS.includes(key) && openGroup(key)"
           >
             <span>{{ t(`EXIT.${key}`) }}</span>
             <span class="font-medium">{{ exits[key] || 0 }}</span>
-          </button>
+          </component>
           <p
             v-for="(count, reason) in exits.skipped || {}"
             :key="reason"
@@ -512,6 +592,7 @@ export default {
       <!-- Los de un grupo -->
       <section
         v-if="group"
+        ref="groupBox"
         class="p-3 mt-4 border rounded-lg border-slate-100 dark:border-slate-700"
       >
         <div class="flex items-center justify-between gap-2 mb-2">
@@ -546,7 +627,9 @@ export default {
               <td class="py-1 text-xs text-slate-500">
                 {{ isWhatsapp ? row.phone_number : row.email }}
               </td>
-              <td class="py-1 text-xs text-slate-500">{{ row.outcome }}</td>
+              <td class="py-1 text-xs text-slate-500">
+                {{ outcomeText(row.outcome) }}
+              </td>
             </tr>
           </tbody>
         </table>

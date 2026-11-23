@@ -1163,7 +1163,9 @@
       "QUOTE_NOT_FOR_PURPOSE": "En campañas de Invitar y Encuesta no se cotiza.",
       "QUOTE_HINT": "Si le interesa la oferta y pide una cotización, la arma con los precios del Catálogo.",
       "TEST_IN_CAMPAIGN": "Listo «{name}». Para probarlo, crea o abre una campaña y en «Revisar y lanzar» usa «Simular la campaña», «Chatear con el vendedor» o «Prueba real»: ahí se prueba con la oferta de verdad.",
-      "APPOINTMENT_HINT": "Cuando una campaña tiene como meta «Agendar cita», el vendedor agenda en el calendario de estas personas."
+      "APPOINTMENT_HINT": "Cuando una campaña tiene como meta «Agendar cita», el vendedor agenda en el calendario de estas personas.",
+      "EMAIL_SIGNATURE": "Firma de sus correos",
+      "EMAIL_SIGNATURE_PLACEHOLDER": "Ana López · Ventas\nGrúas del Norte · 81 1234 5678"
     },
     "FILES": {
       "HINT": "Sube imágenes o archivos que el agente pueda mandar (fotos del producto, flyer, catálogo, mapa…). Ponle a cada uno una descripción: el agente no ve la imagen, con eso sabe cuándo sirve y no inventa lo que trae.",

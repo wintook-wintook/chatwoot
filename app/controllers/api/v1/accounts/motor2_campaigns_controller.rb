@@ -26,7 +26,7 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
   def options
     render json: { sellers: TrackingCampaigns::Motor2Form.sellers(Current.account).map { |t| seller_json(t) },
                    inboxes: TrackingCampaigns::Motor2Form.inboxes(Current.account).map { |i| inbox_json(i) },
-                   events: upcoming_events, users: names(Current.account.users), teams: names(Current.account.teams) }
+                   events: upcoming_events, past_events: recent_events, users: names(Current.account.users), teams: names(Current.account.teams) }
   end
 
   def preview
@@ -133,6 +133,12 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
 
   def upcoming_events
     Current.account.events.where(closed_at: nil).where('starts_at > ?', Time.current).order(:starts_at)
+           .limit(50).map { |e| { id: e.id, name: e.name, starts_at: e.starts_at, capacity: e.capacity } }
+  end
+
+  # Para la audiencia «asistentes de un evento» después del evento (asistió, no se presentó): los de 90 días.
+  def recent_events
+    Current.account.events.where(starts_at: 90.days.ago..Time.current).order(starts_at: :desc)
            .limit(50).map { |e| { id: e.id, name: e.name, starts_at: e.starts_at, capacity: e.capacity } }
   end
 
