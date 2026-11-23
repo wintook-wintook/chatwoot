@@ -27,6 +27,9 @@ const options = {
 vi.mock('dashboard/api/motor2Campaigns', () => ({
   default: {
     options: () => Promise.resolve({ data: options }),
+    show: vi.fn(() => Promise.reject(new Error('caché'))),
+    create: vi.fn(() => Promise.resolve({ data: { id: 99, name: 'x' } })),
+    update: vi.fn(() => Promise.resolve({ data: { id: 15, name: 'x' } })),
     results: () =>
       Promise.resolve({
         data: {
@@ -119,6 +122,23 @@ describe('CampaignWizard', () => {
         { type: 'button', text: 'Ver', url: 'https://x.com' },
       ])
     ).toBe('## Promo\n\nHola {{contacto}}\n\n[Ver](https://x.com)');
+  });
+});
+
+describe('CampaignWizard › Editar', () => {
+  it('editando, «Guardar» modifica esa campaña aunque no haya cargado su número todavía', async () => {
+    const API = (await import('dashboard/api/motor2Campaigns')).default;
+    const w = mount(CampaignWizard, {
+      mocks: { ...mocks, $route: { params: { campaignId: '15' }, query: {} } },
+      stubs,
+    });
+    await flush();
+    // No se pudo cargar: no guarda (crearía otra campaña).
+    expect(await w.vm.save()).toBe(false);
+    w.vm.loadFailed = false;
+    await w.vm.save();
+    expect(API.update).toHaveBeenCalledWith(15, expect.any(Object));
+    expect(API.create).not.toHaveBeenCalled();
   });
 });
 

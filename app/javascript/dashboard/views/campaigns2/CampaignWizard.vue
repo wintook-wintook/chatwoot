@@ -122,6 +122,7 @@ export default {
       previewLoading: false,
       checks: [],
       checkError: false,
+      loadFailed: false, // editando, no se pudo traer la campaña: no se guarda (crearía otra)
       touchTab: 1,
       testTab: 'simulate',
       testTabs: TEST_TABS,
@@ -352,6 +353,7 @@ export default {
         this.$nextTick(() => this.go('review'));
       }
     } catch (e) {
+      this.loadFailed = !!this.$route.params.campaignId;
       useAlert(this.t('LOAD_ERROR'));
     } finally {
       this.loading = false;
@@ -501,7 +503,14 @@ export default {
         .slice(0, 120);
     },
     // Se guarda en cualquier momento (aunque falte el canal): lo que falte lo marca «Revisar y lanzar».
+    // Editando (la dirección trae su número) siempre se modifica esa; si no se pudo cargar, no se guarda una copia.
     async save() {
+      if (this.loadFailed) {
+        useAlert(this.t('LOAD_ERROR'));
+        return false;
+      }
+      this.campaignId =
+        this.campaignId || Number(this.$route.params.campaignId) || null;
       this.saving = true;
       try {
         const { data } = this.campaignId

@@ -2,13 +2,21 @@
 // Campaña con Vendedor IA (Motor 2.0): la pantalla nueva. Pausar y reanudar son los de trackingCampaigns.
 import ApiClient from './ApiClient';
 
+// Las consultas GET llevan `_` (la hora) para que ninguna caché intermedia (Cloudflare, navegador) conteste con una
+// respuesta vieja: pasaba con las opciones y con la campaña al editarla (se guardaba como nueva).
+const fresh = (params = {}) => ({ params: { ...params, _: Date.now() } });
+
 class Motor2CampaignsAPI extends ApiClient {
   constructor() {
     super('motor2_campaigns', { accountScoped: true });
   }
 
+  show(id) {
+    return axios.get(`${this.url}/${id}`, fresh());
+  }
+
   options() {
-    return axios.get(`${this.url}/options`);
+    return axios.get(`${this.url}/options`, fresh());
   }
 
   preview(body) {
@@ -33,7 +41,7 @@ class Motor2CampaignsAPI extends ApiClient {
   }
 
   check(id) {
-    return axios.get(`${this.url}/${id}/check`);
+    return axios.get(`${this.url}/${id}/check`, fresh());
   }
 
   launch(id) {
@@ -41,11 +49,11 @@ class Motor2CampaignsAPI extends ApiClient {
   }
 
   results(id) {
-    return axios.get(`${this.url}/${id}/results`);
+    return axios.get(`${this.url}/${id}/results`, fresh());
   }
 
   contacts(id, group) {
-    return axios.get(`${this.url}/${id}/contacts`, { params: { group } });
+    return axios.get(`${this.url}/${id}/contacts`, fresh({ group }));
   }
 
   insights(id) {
@@ -67,7 +75,7 @@ class Motor2CampaignsAPI extends ApiClient {
 
   // «Prueba real»: a los contactos de prueba, con los toques cada pocos minutos.
   testRun(id) {
-    return axios.get(`${this.url}/${id}/test_run`);
+    return axios.get(`${this.url}/${id}/test_run`, fresh());
   }
 
   startTestRun(id, recipients, everyMinutes) {
@@ -83,7 +91,7 @@ class Motor2CampaignsAPI extends ApiClient {
 
   // «Imágenes y archivos de esta oferta» (Motor2Campaigns::FilesController).
   files(id) {
-    return axios.get(`${this.url}/${id}/files`);
+    return axios.get(`${this.url}/${id}/files`, fresh());
   }
 
   uploadFile(id, file, about) {
