@@ -644,6 +644,8 @@ Rails.application.routes.draw do
             get :cases, on: :collection
             get :tasks, on: :collection # tareas pendientes para «Reportar avance»
             post :to_task, on: :member # pasarla a tarea sin hora
+            post :decline, on: :member # participante: «No puedo ir»
+            get :busy, on: :collection # ¿los participantes ya tienen algo a esa hora?
           end
           resources :case_tasks, only: [:index], controller: 'case_tasks_index' do
             put :my_day_plan, on: :collection # Plan-Bandeja-Prioridad F2 — orden propio de «Mi día»

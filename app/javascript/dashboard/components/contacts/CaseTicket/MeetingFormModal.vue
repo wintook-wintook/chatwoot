@@ -7,8 +7,11 @@
   horaria (§11.3/§11.5). No se permiten series infinitas.
 -->
 <script>
+import ParticipantsPicker from 'dashboard/components/agenda/ParticipantsPicker.vue';
+
 export default {
   name: 'MeetingFormModal',
+  components: { ParticipantsPicker },
   props: {
     show: { type: Boolean, default: false },
     // Reunión existente (edición) o null (alta).
@@ -42,6 +45,8 @@ export default {
         organizer_id: '',
         notify_client: true,
         guests: '',
+        // Agenda: otros del equipo que van (además del responsable).
+        participant_ids: [],
       },
       // F4 — repetición. `single` = reunión suelta (lo de F2).
       mode: 'single',
@@ -197,6 +202,7 @@ export default {
         // prometía un aviso al cliente que nunca iba a salir.
         notify_client: m ? m.notify_client : !!this.contactEmail,
         guests: (m?.attendee_emails || []).join(', '),
+        participant_ids: (m?.participants || []).map(p => p.id),
       };
     },
     // Mañana a las 10:00 como valor por defecto: agendar es casi siempre a futuro.
@@ -265,6 +271,7 @@ export default {
         organizer_id: this.form.organizer_id || null,
         notify_client: this.form.notify_client,
         attendee_emails: [...new Set(attendees)],
+        participant_ids: this.form.participant_ids,
         // Zona horaria del navegador del agente: se guarda para no re-interpretar
         // los históricos si luego cambia (plan §8.6).
         time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -371,6 +378,17 @@ export default {
           >
             {{ dateError }}
           </p>
+
+          <!-- Agenda: participantes (en una serie no aplican) -->
+          <ParticipantsPicker
+            v-if="!isSeries && !readonly"
+            v-model="form.participant_ids"
+            :organizer-id="form.organizer_id || $store.getters.getCurrentUserID"
+            :starts-at="form.starts_at"
+            :ends-at="form.ends_at"
+            :exclude-id="meeting && meeting.id"
+            :current="(meeting && meeting.participants) || []"
+          />
 
           <!-- Tarea · Lugar -->
           <div class="grid grid-cols-2 gap-3">

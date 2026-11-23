@@ -14,7 +14,7 @@
 # cambiar la lista de invitados escribe al cliente; corregir un typo no.
 class Cases::Meetings::GoogleMirrorService
   # Campos cuyo cambio SÍ justifica reenviar la invitación por correo.
-  NOTIFYING_FIELDS = %w[starts_at ends_at attendee_emails].freeze
+  NOTIFYING_FIELDS = %w[starts_at ends_at attendee_emails participants].freeze
 
   def initialize(meeting)
     @meeting = meeting
@@ -128,8 +128,14 @@ class Cases::Meetings::GoogleMirrorService
       @meeting.organizer&.email,
       @ticket&.assignee&.email
     ]
-    emails += Array(@meeting.attendee_emails)
+    emails += Array(@meeting.attendee_emails) + participant_emails
     emails.compact_blank.map { |e| e.to_s.downcase }.uniq
+  end
+
+  # Agenda: los participantes que tienen Google Calendar conectado van como invitados (les aparece en su Google).
+  def participant_emails
+    ids = @meeting.participants.where(status: 'invited').pluck(:user_id)
+    ids.empty? ? [] : UserCalendarIntegration.where(account_id: @meeting.account_id, user_id: ids).pluck(:google_email)
   end
 
   private

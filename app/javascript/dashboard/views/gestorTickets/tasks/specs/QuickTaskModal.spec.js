@@ -21,6 +21,7 @@ const context = data => ({
   title: 'Llamar',
   description: '',
   assigneeId: 5,
+  participantIds: [],
   dueDate: '',
   plannedDate: '2026-11-10',
   time: '',
@@ -52,6 +53,15 @@ describe('QuickTaskModal', () => {
     });
     expect(new Date(payload.due_at).getDate()).toBe(12);
     expect(ctx.$emitter.emit).toHaveBeenCalledWith('agendaChanged');
+  });
+
+  it('con hora manda los participantes, sin repetir al responsable', async () => {
+    await methods.submit.call(
+      context({ time: '10:00', participantIds: [5, 8, 9] })
+    );
+    expect(AgendaItemsAPI.create.mock.calls[0][0].participant_ids).toEqual([
+      8, 9,
+    ]);
   });
 
   it('con hora crea una tarea agendada de una hora, para el responsable', async () => {

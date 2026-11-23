@@ -49,6 +49,8 @@ module CaseMeetingSerializer
       notify_client: meeting.notify_client,
       attendee_emails: meeting.attendee_emails,
       organizer: ref_user(meeting.organizer),
+      # Agenda: los participantes (además del responsable), con «No puedo ir» y su nota.
+      participants: Cases::Meetings::Participants.json(meeting),
       case_task: ref_task(meeting.case_task),
       series: ref_series(meeting.case_meeting_series)
     }

@@ -22,6 +22,8 @@ import MyDayNotices from './MyDayNotices.vue';
 import TaskReportsList from './TaskReportsList.vue';
 import { format } from 'date-fns';
 import { mapGetters } from 'vuex';
+import { useAlert } from 'dashboard/composables';
+import AgendaItemsAPI from 'dashboard/api/agendaItems';
 
 const DISMISSED_KEY = 'case_tickets::my_day_dismissed';
 
@@ -209,14 +211,33 @@ export default {
       return formatMinutes(value);
     },
     // Cita de hoy que se puede completar aquí (agendada, caso abierto, día propio).
+    // Participante (otro es el responsable): la ve, no la concluye.
     canCompleteMeeting(m) {
       const st = m.case_ticket && m.case_ticket.status;
       return (
         !this.readonly &&
+        !m.participating &&
         m.status === 'scheduled' &&
         st !== 'closed' &&
         st !== 'cancelled'
       );
+    },
+    canDecline(m) {
+      return !this.readonly && m.participating && m.status === 'scheduled';
+    },
+    // «No puedo ir»: le llega al responsable con el motivo.
+    async declineMeeting(m) {
+      // eslint-disable-next-line no-alert
+      const note = window.prompt(this.$t('AGENDA_PARTICIPANTS.CANT_GO_PROMPT'));
+      if (note === null) return;
+      try {
+        await AgendaItemsAPI.decline(m.id, { note: note.trim() || undefined });
+        useAlert(this.$t('AGENDA_PARTICIPANTS.CANT_GO_SENT'));
+      } catch (e) {
+        useAlert(
+          e?.response?.data?.error || this.$t('AGENDA_PARTICIPANTS.CANT_GO')
+        );
+      }
     },
     timeLabel(iso) {
       return new Date(iso).toLocaleTimeString(undefined, {
@@ -525,7 +546,7 @@ export default {
           <button
             type="button"
             class="flex items-start w-full gap-3 px-3 py-2 text-left bg-white border rounded-lg border-slate-100 dark:bg-slate-800 dark:border-slate-700 hover:border-woot-300 dark:hover:border-woot-600"
-            :class="{ 'pr-12': canCompleteMeeting(m) }"
+            :class="{ 'pr-12': canCompleteMeeting(m), 'pr-24': canDecline(m) }"
             @click="$emit('openMeeting', m)"
           >
             <span
@@ -538,6 +559,13 @@ export default {
                 class="block text-sm truncate text-slate-800 dark:text-slate-100"
               >
                 {{ m.title }}
+              </span>
+              <span
+                v-if="m.participating"
+                class="inline-block mt-0.5 px-1.5 text-[11px] rounded bg-woot-50 text-woot-700 dark:bg-woot-900/50 dark:text-woot-200"
+              >
+                {{ $t('AGENDA_PARTICIPANTS.PARTICIPATING') }}
+                <template v-if="m.organizer">· {{ m.organizer.name }}</template>
               </span>
               <span
                 v-if="m.case_ticket"
@@ -566,6 +594,17 @@ export default {
             data-test="my-day-complete-meeting"
             @click="$emit('completeMeeting', m)"
           />
+          <woot-button
+            v-if="canDecline(m)"
+            size="tiny"
+            variant="smooth"
+            color-scheme="alert"
+            class="!absolute top-2 right-2"
+            data-test="my-day-decline-meeting"
+            @click="declineMeeting(m)"
+          >
+            {{ $t('AGENDA_PARTICIPANTS.CANT_GO') }}
+          </woot-button>
         </li>
       </ul>
 

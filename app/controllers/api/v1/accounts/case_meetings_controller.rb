@@ -19,6 +19,7 @@
 # ================================================================================
 
 class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseController
+  include MeetingParticipantsActions # participantes: «No puedo ir» y avisos
   include CancelAndDeleteGuard # cancelar con motivo; borrar solo errores de captura
   include ItemConversionActions # pasarla a tarea
   include CaseMeetingSerializer
@@ -72,6 +73,7 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
     meeting.sync_status = :pending
 
     if meeting.save
+      sync_participants(meeting)
       log_event(:meeting_scheduled, meeting)
       # El espejo va FUERA del request: agendar no depende de la latencia de Google.
       Cases::MeetingSyncJob.perform_later(meeting.id, 'create')
@@ -84,7 +86,8 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
   def update
     moved = date_change?(meeting_params)
 
-    if @meeting.update(meeting_params)
+    if notifying_participants(@meeting) { @meeting.update(meeting_params) }
+      sync_participants(@meeting)
       # Solo se anota en la bitácora si de verdad se movió de fecha/hora: editar el
       # título no merece una línea en el Avance.
       log_event(:meeting_updated, @meeting) if moved
@@ -132,7 +135,7 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
       return render json: { error: 'No pertenece a una serie' }, status: :unprocessable_entity
     end
 
-    result = run_cancellation(@meeting)
+    result = notifying_participants(@meeting) { run_cancellation(@meeting) }
     return if result.nil?
 
     log_event(:meeting_cancelled, @meeting.reload, scope: scope)
@@ -213,6 +216,13 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
     # El organizador debe ser un usuario de la cuenta (si no, se ignora).
     permitted[:organizer_id] = Current.account.users.where(id: permitted[:organizer_id]).pick(:id) if permitted.key?(:organizer_id)
     permitted
+  end
+
+  # Agenda: los participantes (usuarios del equipo además del responsable), si vienen en el pedido.
+  def sync_participants(meeting)
+    return unless params[:case_meeting].respond_to?(:key?) && params[:case_meeting].key?(:participant_ids)
+
+    sync_meeting_participants(meeting, params[:case_meeting][:participant_ids])
   end
 
   # ¿La edición mueve la reunión de fecha/hora? (compara contra lo ya guardado)

@@ -570,6 +570,13 @@ es:
       stage_ready: "Se terminaron las tareas de %{stage}: ¿pasar a %{next}?"
       stage_ready_doc: "Se terminaron las tareas de %{stage}: documenta para pasar a %{next}"
       rule_notice: "Regla «%{rule}»: %{title}"
+    case_meeting_participant:
+      added: "Te agregaron a «%{title}»"
+      rescheduled: "Cambió la hora de «%{title}»"
+      cancelled: "Se canceló «%{title}»"
+      reminder: "Está por empezar «%{title}»"
+      declined: "%{name} no puede ir a «%{title}»"
+      removed: "Ya no participas en «%{title}»"
     notification_title:
       conversation_creation: "Una conversación (#%{display_id}) ha sido creada en %{inbox_name}"
       conversation_assignment: "Una conversación (#%{display_id}) te ha sido asignada"
@@ -587,6 +594,7 @@ es:
       case_stage_ready: "El caso %{folio} está listo para pasar de etapa"
       case_rule_notice: "Aviso de una regla en el caso %{folio}"
       client_task_update: "El cliente avanzó una tarea en el caso %{folio}"
+      case_meeting_participant: "Tarea agendada"
     calendar_event_reminder:
       body: "\"%{title}\" comienza en %{minutes} minutos"
       no_title: "Evento sin título"

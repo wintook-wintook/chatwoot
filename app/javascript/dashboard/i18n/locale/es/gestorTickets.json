@@ -3568,5 +3568,19 @@
       "ACTIVE": "Activo",
       "EMPTY": "Sin mantenimientos recurrentes."
     }
+  },
+  "AGENDA_PARTICIPANTS": {
+    "LABEL": "Participantes",
+    "HINT": "Otros del equipo que van contigo: la ven en su agenda y reciben aviso. Solo el responsable la concluye.",
+    "DECLINED": "no puede ir",
+    "DECLINED_NOTE": "{name} no puede ir: «{note}»",
+    "BUSY": "{name} ya tiene algo a esa hora: {what}",
+    "PARTICIPATING": "Participas",
+    "WITH": "Con: {names}",
+    "CANT_GO": "No puedo ir",
+    "CANT_GO_PROMPT": "¿Por qué no puedes ir? (le llega al responsable)",
+    "CANT_GO_SENT": "Le avisamos al responsable",
+    "ONLY_OWNER": "Solo el responsable ({name}) marca llegada y la concluye.",
+    "TOAST": "{task}"
   }
 }

@@ -3557,5 +3557,19 @@
       "ACTIVE": "Active",
       "EMPTY": "No recurring maintenance."
     }
+  },
+  "AGENDA_PARTICIPANTS": {
+    "LABEL": "Participants",
+    "HINT": "Other teammates going with you: they see it in their agenda and get notified. Only the owner completes it.",
+    "DECLINED": "can't go",
+    "DECLINED_NOTE": "{name} can't go: «{note}»",
+    "BUSY": "{name} already has something at that time: {what}",
+    "PARTICIPATING": "Participating",
+    "WITH": "With: {names}",
+    "CANT_GO": "I can't go",
+    "CANT_GO_PROMPT": "Why can't you go? (the owner will be notified)",
+    "CANT_GO_SENT": "We let the owner know",
+    "ONLY_OWNER": "Only the owner ({name}) checks in and completes it.",
+    "TOAST": "{task}"
   }
 }

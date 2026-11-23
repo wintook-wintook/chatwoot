@@ -74,7 +74,8 @@ class Assistant::Executor
   def run_meeting(payload)
     ticket = payload['case_id'].present? ? writable_case(payload['case_id']) : nil
     meeting = AgendaItems::Creator.new(account: @account, user: @user, attrs: meeting_attrs(payload),
-                                       client: ticket ? { case_ticket: ticket } : client(payload)).call
+                                       client: ticket ? { case_ticket: ticket } : client(payload),
+                                       participant_ids: payload['participant_ids']).call
     done("Tarea agendada «#{meeting.title}»", ticket ? case_path(ticket) : "#{base}/tickets/tasks")
   end
 

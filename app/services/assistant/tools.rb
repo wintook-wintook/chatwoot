@@ -153,12 +153,13 @@ class Assistant::Tools
     starts = parse_local(args['starts_at'])
     raise ArgumentError, 'Falta la fecha y hora de inicio (YYYY-MM-DDTHH:MM).' unless starts
 
-    minutes = args['duration_minutes'].to_i.positive? ? args['duration_minutes'].to_i : 30
+    minutes = [args['duration_minutes'].to_i, 0].max.nonzero? || 30
     payload = (target ? target[:ids] : {}).merge(
       'title' => args['title'].to_s.first(255), 'description' => args['description'].to_s, 'location' => args['location'].to_s,
       'is_visit' => args['is_visit'] == true, 'starts_at' => starts.iso8601, 'ends_at' => (starts + minutes.minutes).iso8601
     )
-    [payload, { 'target' => target&.dig(:label), 'google' => google_connected? }]
+    labels = { 'target' => target&.dig(:label), 'google' => google_connected? }
+    Assistant::MeetingParticipants.add(@account, @user, args, payload, labels)
   end
 
   def prepare_scheduled_message(args)

@@ -4,6 +4,7 @@ import { useAlert } from 'dashboard/composables';
 import { format, parseISO } from 'date-fns';
 import AgendaItemsAPI from 'dashboard/api/agendaItems';
 import OrganizationContactFields from 'dashboard/views/organizations/OrganizationContactFields.vue';
+import ParticipantsPicker from 'dashboard/components/agenda/ParticipantsPicker.vue';
 
 function toDatetimeLocal(isoString) {
   if (!isoString) return '';
@@ -34,7 +35,7 @@ function toIso(localDatetime) {
 
 export default {
   name: 'CreateEventModal',
-  components: { OrganizationContactFields },
+  components: { OrganizationContactFields, ParticipantsPicker },
   props: {
     // Desde una conversación: el contacto ya está elegido.
     prefillContact: { type: Object, default: null },
@@ -66,6 +67,10 @@ export default {
       },
       attendees: [],
       attendeeInputValue: '',
+      // Agenda: otros del equipo que van (además del responsable).
+      participantIds: [],
+      declineNote: '',
+      declining: false,
       // Plan-Agenda — de quién es. «Interno» se queda solo en Google.
       internal: false,
       isVisit: false,
@@ -118,6 +123,13 @@ export default {
       return this.isGoogleEvent && !!this.editEvent.allDay;
     },
     // Tarea agendada de Kontrolya, salvo «Interno».
+    // La ve por ser participante: no la edita; puede decir «No puedo ir».
+    participating() {
+      return !!this.agendaItem?.participating;
+    },
+    participantNames() {
+      return (this.agendaItem?.participants || []).map(p => p.name).join(', ');
+    },
     isAgenda() {
       return !!this.agendaItem || (!this.internal && !this.isAllDayEvent);
     },
@@ -177,6 +189,10 @@ export default {
       this.form.type = 'event';
       this.attendees = [];
       this.attendeeInputValue = '';
+      this.participantIds = (this.agendaItem?.participants || []).map(
+        p => p.id
+      );
+      this.declineNote = '';
       this.internal = false;
       this.isVisit = false;
       this.address = '';
@@ -255,7 +271,22 @@ export default {
         description: this.form.description,
         starts_at: toIso(this.form.start_time),
         ends_at: toIso(this.form.end_time),
+        participant_ids: this.participantIds,
       };
+    },
+    async decline() {
+      this.declining = true;
+      try {
+        await AgendaItemsAPI.decline(this.agendaItem.id, {
+          note: this.declineNote.trim() || undefined,
+        });
+        this.showAlert(this.$t('AGENDA_PARTICIPANTS.CANT_GO_SENT'));
+        this.onClose();
+      } catch {
+        this.showAlert(this.$t('GOOGLE_CALENDAR.CREATE_EVENT.ERROR'));
+      } finally {
+        this.declining = false;
+      }
     },
     clientFields() {
       return {
@@ -285,6 +316,7 @@ export default {
       return this.$store.dispatch('googleCalendar/createAgendaItem', {
         google_event_id: this.editEvent.id,
         calendar_id: this.form.calendar_id,
+        participant_ids: this.participantIds,
         ...this.clientFields(),
       });
     },
@@ -626,6 +658,50 @@ export default {
           "
         />
 
+        <!-- Agenda: participantes (solo el responsable los cambia) -->
+        <div
+          v-if="participating"
+          class="p-3 space-y-2 text-sm rounded-lg bg-woot-50 dark:bg-woot-900/40 text-slate-700 dark:text-slate-200"
+        >
+          <p class="m-0">
+            {{
+              $t('AGENDA_PARTICIPANTS.ONLY_OWNER', {
+                name: agendaItem.organizer && agendaItem.organizer.name,
+              })
+            }}
+          </p>
+          <p v-if="participantNames" class="m-0">
+            {{ $t('AGENDA_PARTICIPANTS.WITH', { names: participantNames }) }}
+          </p>
+          <input
+            v-model="declineNote"
+            type="text"
+            class="mb-0"
+            :placeholder="$t('AGENDA_PARTICIPANTS.CANT_GO_PROMPT')"
+          />
+          <woot-button
+            type="button"
+            size="small"
+            color-scheme="alert"
+            variant="smooth"
+            :is-loading="declining"
+            @click="decline"
+          >
+            {{ $t('AGENDA_PARTICIPANTS.CANT_GO') }}
+          </woot-button>
+        </div>
+        <ParticipantsPicker
+          v-else-if="isAgenda && form.type === 'event' && !isAllDayEvent"
+          v-model="participantIds"
+          :organizer-id="
+            agendaItem && agendaItem.organizer && agendaItem.organizer.id
+          "
+          :starts-at="form.start_time"
+          :ends-at="form.end_time"
+          :exclude-id="agendaItem && agendaItem.id"
+          :current="(agendaItem && agendaItem.participants) || []"
+        />
+
         <template v-if="isAgenda && !isEditing">
           <label class="flex items-center gap-2 cursor-pointer w-fit">
             <input
@@ -740,7 +816,11 @@ export default {
           <woot-button type="button" variant="clear" @click="onClose">
             {{ $t('GOOGLE_CALENDAR.CREATE_EVENT.CANCEL') }}
           </woot-button>
-          <woot-button type="submit" :is-loading="isCreating">
+          <woot-button
+            v-if="!participating"
+            type="submit"
+            :is-loading="isCreating"
+          >
             {{ submitLabel }}
           </woot-button>
         </div>

@@ -62,7 +62,10 @@ class Notification < ApplicationRecord
     # «Notificar usuario» de una regla de casos (Cases::RuleEngineService). Solo campanita + toast.
     case_rule_notice: 16,
     # Tareas con el cliente — el cliente avanzó, comentó o completó una tarea en su portal. Solo campanita + toast.
-    client_task_update: 17
+    client_task_update: 17,
+    # Agenda — participantes de una tarea agendada (actor: la CaseMeeting): te agregaron, cambió la hora, se canceló,
+    # está por empezar o (al responsable) alguien no puede ir. meta: { kind, title, when }. Solo campanita + toast.
+    case_meeting_participant: 18
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
@@ -72,7 +75,7 @@ class Notification < ApplicationRecord
   after_destroy_commit :dispatch_destroy_event
   after_update_commit :dispatch_update_event
 
-  PRIMARY_ACTORS = %w[Conversation CaseTicket].freeze # @tickets_cases Fase A
+  PRIMARY_ACTORS = %w[Conversation CaseTicket CaseMeeting].freeze # @tickets_cases Fase A; CaseMeeting: participantes de la Agenda
   CASE_TITLE_TYPES = %w[case_ticket_assignment case_task_assignment case_task_completed
                         case_stage_tasks case_stage_ready case_rule_notice client_task_update].freeze
 
@@ -130,7 +133,8 @@ class Notification < ApplicationRecord
       'case_stage_tasks' => 'notifications.notification_title.case_stage_tasks',
       'case_stage_ready' => 'notifications.notification_title.case_stage_ready',
       'case_rule_notice' => 'notifications.notification_title.case_rule_notice',
-      'client_task_update' => 'notifications.notification_title.client_task_update'
+      'client_task_update' => 'notifications.notification_title.client_task_update',
+      'case_meeting_participant' => 'notifications.notification_title.case_meeting_participant'
     }
 
     i18n_key = notification_title_map[notification_type]
@@ -140,6 +144,9 @@ class Notification < ApplicationRecord
       I18n.t(i18n_key, display_id: conversation.display_id, inbox_name: primary_actor.inbox.name)
     elsif notification_type == 'calendar_event_reminder'
       I18n.t(i18n_key)
+    elsif notification_type == 'case_meeting_participant'
+      I18n.t("notifications.case_meeting_participant.#{meta&.dig('kind') || 'added'}", title: meta&.dig('title').to_s,
+                                                                                       name: meta&.dig('name').to_s)
     elsif notification_type == 'missed_call'
       I18n.t(i18n_key, name: meta&.dig('contact_name').to_s, display_id: conversation.display_id)
     elsif CASE_TITLE_TYPES.include?(notification_type)
@@ -174,6 +181,8 @@ class Notification < ApplicationRecord
          'client_task_update'
       # primary_actor es el TICKET (ruteo reusado); el nombre de la tarea viaja en meta.
       meta&.dig('task_title').to_s
+    when 'case_meeting_participant'
+      [meta&.dig('when'), meta&.dig('note')].compact_blank.join(' · ')
     else
       ''
     end

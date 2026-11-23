@@ -12,6 +12,7 @@ import AgendaItemsAPI from 'dashboard/api/agendaItems';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import QuickTasksAPI from 'dashboard/api/quickTasks';
 import OrganizationContactFields from 'dashboard/views/organizations/OrganizationContactFields.vue';
+import ParticipantsPicker from 'dashboard/components/agenda/ParticipantsPicker.vue';
 
 const HOUR = 60 * 60 * 1000;
 const today = () => format(new Date(), 'yyyy-MM-dd');
@@ -19,7 +20,7 @@ const endOfDayIso = date => new Date(`${date}T23:59:59`).toISOString();
 
 export default {
   name: 'QuickTaskModal',
-  components: { OrganizationContactFields },
+  components: { OrganizationContactFields, ParticipantsPicker },
   props: {
     show: { type: Boolean, default: false },
     // Desde el panel del contacto: el contacto ya elegido.
@@ -31,6 +32,8 @@ export default {
       title: '',
       description: '',
       assigneeId: null,
+      // Con hora: otros del equipo que van (además del responsable).
+      participantIds: [],
       dueDate: '',
       plannedDate: '',
       time: '',
@@ -48,6 +51,13 @@ export default {
       agents: 'agents/getAgents',
       currentUserId: 'getCurrentUserID',
     }),
+    startsLocal() {
+      return this.time ? `${this.plannedDate}T${this.time}` : '';
+    },
+    endsLocal() {
+      if (!this.time) return '';
+      return new Date(new Date(this.startsLocal).getTime() + HOUR).toString();
+    },
     hasClient() {
       return !!(this.contact || this.organization);
     },
@@ -64,6 +74,7 @@ export default {
       this.title = '';
       this.description = '';
       this.assigneeId = this.currentUserId;
+      this.participantIds = [];
       this.dueDate = '';
       this.plannedDate = today();
       this.time = '';
@@ -115,6 +126,9 @@ export default {
         is_visit: this.isVisit,
         location: this.address.trim() || undefined,
         case_ticket_id: this.caseId || undefined,
+        participant_ids: this.participantIds.filter(
+          id => id !== this.assigneeId
+        ),
       });
     },
     create() {
@@ -221,6 +235,14 @@ export default {
       >
         {{ $t('QUICK_ACTIONS.TASK.SCHEDULED_HINT') }}
       </p>
+      <!-- Solo las agendadas (con hora) llevan participantes -->
+      <ParticipantsPicker
+        v-if="time"
+        v-model="participantIds"
+        :organizer-id="assigneeId"
+        :starts-at="startsLocal"
+        :ends-at="endsLocal"
+      />
       <!-- Es una visita (y su dirección, en la misma línea) -->
       <div class="flex items-center gap-3">
         <label class="flex items-center flex-shrink-0 gap-2 cursor-pointer">

@@ -1,9 +1,3 @@
-<template>
-  <div class="flex flex-col flex-1 h-full overflow-hidden fc-wrapper">
-    <FullCalendar ref="fullCalendar" :options="calendarOptions" />
-  </div>
-</template>
-
 <script>
 import FullCalendar from '@fullcalendar/vue';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -12,8 +6,22 @@ import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import esLocale from '@fullcalendar/core/locales/es';
 
-const COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-const AGENT_COLORS = ['#f43f5e', '#fb923c', '#a3e635', '#22d3ee', '#818cf8', '#e879f9'];
+const COLORS = [
+  '#6366f1',
+  '#0ea5e9',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#8b5cf6',
+];
+const AGENT_COLORS = [
+  '#f43f5e',
+  '#fb923c',
+  '#a3e635',
+  '#22d3ee',
+  '#818cf8',
+  '#e879f9',
+];
 const LOCAL_COLOR = '#475569';
 
 // Color de respaldo cuando no conocemos el calendario del evento (hash del id).
@@ -35,11 +43,94 @@ export default {
     calendars: { type: Array, default: () => [] },
   },
   emits: ['rangeChanged', 'eventDropped', 'eventClicked', 'dateSelected'],
+  computed: {
+    calendarOptions() {
+      return {
+        plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
+        locale: esLocale,
+        initialView: 'timeGridWeek',
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'timeGridWeek,dayGridMonth,listWeek',
+        },
+        buttonText: {
+          today: this.$t('GOOGLE_CALENDAR.AGENDA.TODAY'),
+          week: this.$t('GOOGLE_CALENDAR.CALENDAR.WEEK'),
+          month: this.$t('GOOGLE_CALENDAR.CALENDAR.MONTH'),
+          list: this.$t('GOOGLE_CALENDAR.CALENDAR.AGENDA'),
+        },
+        height: '100%',
+        editable: true,
+        droppable: false,
+        eventDurationEditable: true,
+        selectable: true,
+        selectMirror: true,
+        // Arrastre en un hueco → rango prellenado.
+        select: info => {
+          this.$emit('dateSelected', {
+            start: info.startStr,
+            end: info.endStr,
+            allDay: info.allDay,
+          });
+          this.$refs.fullCalendar?.getApi().unselect();
+        },
+        // Clic simple en una hora → cita de 1h (o tarea si es todo el día) prellenada.
+        dateClick: info => {
+          const end = info.allDay
+            ? info.dateStr
+            : new Date(info.date.getTime() + 60 * 60 * 1000).toISOString();
+          this.$emit('dateSelected', {
+            start: info.dateStr,
+            end,
+            allDay: info.allDay,
+          });
+        },
+        datesSet: info => {
+          this.$emit('rangeChanged', {
+            start: info.startStr,
+            end: info.endStr,
+          });
+        },
+        eventClick: info => {
+          this.$emit('eventClicked', info.event);
+        },
+        eventDrop: info => {
+          this.$emit('eventDropped', {
+            eventId: info.event.id,
+            start_time: info.event.startStr,
+            end_time: info.event.endStr,
+            calendar_id: info.event.extendedProps?.calendarId || 'primary',
+            agendaItem: info.event.extendedProps?.agendaItem,
+            revert: info.revert,
+          });
+        },
+        eventResize: info => {
+          this.$emit('eventDropped', {
+            eventId: info.event.id,
+            start_time: info.event.startStr,
+            end_time: info.event.endStr,
+            calendar_id: info.event.extendedProps?.calendarId || 'primary',
+            agendaItem: info.event.extendedProps?.agendaItem,
+            revert: info.revert,
+          });
+        },
+      };
+    },
+  },
   watch: {
-    events() { this.syncEvents(); },
-    agendaItems() { this.syncEvents(); },
-    availability() { this.syncEvents(); },
-    calendars() { this.syncEvents(); },
+    events() {
+      this.syncEvents();
+    },
+    agendaItems() {
+      this.syncEvents();
+    },
+    availability() {
+      this.syncEvents();
+    },
+    calendars() {
+      this.syncEvents();
+    },
   },
   methods: {
     // Cada evento se pinta con el color de SU calendario (igual que Google y que el
@@ -55,7 +146,11 @@ export default {
     },
     itemTitle(title, item) {
       const client = item && (item.contact || item.organization);
-      return client ? `${title} · ${client.name}` : title;
+      // Agenda: la ve por ser participante (otro es el responsable).
+      const own = item?.participating
+        ? `${this.$t('AGENDA_PARTICIPANTS.PARTICIPATING')} · ${title}`
+        : title;
+      return client ? `${own} · ${client.name}` : own;
     },
     // Lo que no vino en la lista de Google: sin Google conectado, o sin evento allá.
     addLocalItems(api) {
@@ -134,83 +229,14 @@ export default {
       });
     },
   },
-  computed: {
-    calendarOptions() {
-      return {
-        plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
-        locale: esLocale,
-        initialView: 'timeGridWeek',
-        headerToolbar: {
-          left: 'prev,next today',
-          center: 'title',
-          right: 'timeGridWeek,dayGridMonth,listWeek',
-        },
-        buttonText: {
-          today: this.$t('GOOGLE_CALENDAR.AGENDA.TODAY'),
-          week: this.$t('GOOGLE_CALENDAR.CALENDAR.WEEK'),
-          month: this.$t('GOOGLE_CALENDAR.CALENDAR.MONTH'),
-          list: this.$t('GOOGLE_CALENDAR.CALENDAR.AGENDA'),
-        },
-        height: '100%',
-        editable: true,
-        droppable: false,
-        eventDurationEditable: true,
-        selectable: true,
-        selectMirror: true,
-        // Arrastre en un hueco → rango prellenado.
-        select: info => {
-          this.$emit('dateSelected', {
-            start: info.startStr,
-            end: info.endStr,
-            allDay: info.allDay,
-          });
-          this.$refs.fullCalendar?.getApi().unselect();
-        },
-        // Clic simple en una hora → cita de 1h (o tarea si es todo el día) prellenada.
-        dateClick: info => {
-          const end = info.allDay
-            ? info.dateStr
-            : new Date(info.date.getTime() + 60 * 60 * 1000).toISOString();
-          this.$emit('dateSelected', {
-            start: info.dateStr,
-            end,
-            allDay: info.allDay,
-          });
-        },
-        datesSet: info => {
-          this.$emit('rangeChanged', {
-            start: info.startStr,
-            end: info.endStr,
-          });
-        },
-        eventClick: info => {
-          this.$emit('eventClicked', info.event);
-        },
-        eventDrop: info => {
-          this.$emit('eventDropped', {
-            eventId: info.event.id,
-            start_time: info.event.startStr,
-            end_time: info.event.endStr,
-            calendar_id: info.event.extendedProps?.calendarId || 'primary',
-            agendaItem: info.event.extendedProps?.agendaItem,
-            revert: info.revert,
-          });
-        },
-        eventResize: info => {
-          this.$emit('eventDropped', {
-            eventId: info.event.id,
-            start_time: info.event.startStr,
-            end_time: info.event.endStr,
-            calendar_id: info.event.extendedProps?.calendarId || 'primary',
-            agendaItem: info.event.extendedProps?.agendaItem,
-            revert: info.revert,
-          });
-        },
-      };
-    },
-  },
 };
 </script>
+
+<template>
+  <div class="flex flex-col flex-1 h-full overflow-hidden fc-wrapper">
+    <FullCalendar ref="fullCalendar" :options="calendarOptions" />
+  </div>
+</template>
 
 <style>
 .fc-wrapper {

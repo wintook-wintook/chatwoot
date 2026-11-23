@@ -26,7 +26,8 @@ class Field::Route
 
   # Tareas agendadas marcadas como visita; las de una orden ya van arriba.
   def agenda_visits
-    CaseMeeting.where(is_visit: true, organizer_id: @user.id, starts_at: @hours).where.not(status: %i[cancelled rescheduled])
+    # Las suyas: como responsable o participante (técnico y ayudante); solo el responsable marca llegada y concluye.
+    CaseMeeting.for_user(@user.id).where(is_visit: true, starts_at: @hours).where.not(status: %i[cancelled rescheduled])
                .includes(:contact, :organization, case_ticket: %i[contact organization case_type])
                .reject { |meeting| meeting.case_ticket&.work_order? }
                .map { |meeting| Field::AgendaVisitSerializer.new(meeting).summary }
@@ -36,8 +37,10 @@ class Field::Route
     orders = @scope.where(case_type_id: CaseType.where(case_class: :work_order).select(:id))
                    .where.not(status: %w[closed cancelled])
     CaseMeeting.active.where(case_ticket_id: orders.select(:id), starts_at: @hours)
-               .where('case_meetings.organizer_id = :me OR case_meetings.case_ticket_id IN (:mine)',
-                      me: @user.id, mine: orders.where(assignee_id: @user.id).select(:id))
+               .where('case_meetings.organizer_id = :me OR case_meetings.case_ticket_id IN (:mine) OR ' \
+                      'case_meetings.id IN (:participating)',
+                      me: @user.id, mine: orders.where(assignee_id: @user.id).select(:id),
+                      participating: CaseMeetingParticipant.where(user_id: @user.id).select(:case_meeting_id))
                .includes(case_ticket: %i[contact case_type])
                .order(:starts_at)
                .select { |meeting| meeting.case_ticket.on_site_effective }
