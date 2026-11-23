@@ -1583,11 +1583,20 @@ export default {
 
           <!-- Tareas que se repiten: solo al crear y si la hace el equipo (no el cliente). -->
           <template v-if="!isEditing && !viewing && form.audience !== 'client'">
-            <label class="flex items-center gap-2 text-sm">
+            <RecurrenceFields v-if="repeats" v-model="recurrence">
+              <template #before>
+                <label
+                  class="flex items-center gap-2 text-sm ltr:mr-1 rtl:ml-1"
+                >
+                  <input v-model="repeats" type="checkbox" class="!m-0" />
+                  {{ $t('CASE_TICKETS.TASKS.MODAL.REPEATS') }}
+                </label>
+              </template>
+            </RecurrenceFields>
+            <label v-else class="flex items-center gap-2 text-sm w-fit">
               <input v-model="repeats" type="checkbox" class="!m-0" />
               {{ $t('CASE_TICKETS.TASKS.MODAL.REPEATS') }}
             </label>
-            <RecurrenceFields v-if="repeats" v-model="recurrence" />
           </template>
           <p
             v-if="form.status === 'cancelled' && form.cancel_reason"

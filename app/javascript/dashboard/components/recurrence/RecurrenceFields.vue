@@ -31,6 +31,8 @@ export default {
 <template>
   <!-- Todo en un renglón (se acomoda en dos si no cabe): tipo · cada N … · días · termina. -->
   <div class="flex flex-wrap items-center gap-1.5 text-sm">
+    <!-- La casilla «Se repite» (o lo que quiera poner quien lo usa) en el mismo renglón -->
+    <slot name="before" />
     <select
       :value="value.mode"
       class="!w-auto !mb-0 h-8 text-sm"
