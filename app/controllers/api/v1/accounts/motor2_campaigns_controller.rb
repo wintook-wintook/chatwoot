@@ -93,7 +93,7 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
   def insights = render(json: TrackingCampaigns::Motor2Insights.new(@campaign).call)
 
   def follow_up
-    ids = TrackingCampaigns::Motor2Results.new(@campaign).contacts(params[:group]).pluck(:contact_id).uniq
+    ids = TrackingCampaigns::Motor2Results.new(@campaign).contact_ids(params[:group])
     return render_error('No hay contactos en ese grupo.') if ids.empty?
 
     copy = copy_of(@campaign, name: params[:name].presence || "#{@campaign.name} — seguimiento",

@@ -18,13 +18,14 @@ RSpec.describe 'Motor2 campaigns API' do
 
   # El dominio de la bandeja (SPF, DKIM, DMARC) sin ir al DNS de verdad.
   before do
+    account.hooks.create!(app_id: 'openai', status: 'enabled', settings: { 'api_key' => 'sk-test' }) # sin IA no deja lanzar
     allow(TrackingCampaigns::EmailDomainCheck).to receive(:call)
       .and_return({ domain: 'example.com', free: false, spf: true, dmarc: true, dkim: true })
   end
 
   def body(extra = {})
     { name: 'Promo marzo', tracking_template_id: seller.id, inbox_id: email_inbox.id, email_subject: 'Hola {{contacto}}',
-      brief: { kind: 'offer', offer_what: 'Mantenimiento gratis', offer_details: 'Hasta el 31' },
+      brief: { kind: 'offer', offer_what: 'Mantenimiento gratis', offer_details: 'Hasta el 31', relay: 'person', relay_user_id: admin.id },
       touches: { attempts: 2, every_value: 3, every_unit: 'days',
                  emails: [{ body: 'Hola {{contacto}}, mira https://ejemplo.com/promo' }, { body: '' }] },
       audience: { source: { type: 'label', label: 'vip' },
@@ -277,7 +278,7 @@ RSpec.describe 'Motor2 campaigns API' do
   end
 
   it '«Probar» con la oferta de la campaña sin guardarla' do
-    create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled', settings: { 'api_key' => 'sk-test' })
+    account.hooks.find_by(app_id: 'openai')
     allow_any_instance_of(Motor2::AnswerExtractor).to receive(:call).and_return({}) # rubocop:disable RSpec/AnyInstance
     prompts = []
     allow_any_instance_of(Motor2::Runner).to receive(:complete) do |_runner, messages| # rubocop:disable RSpec/AnyInstance

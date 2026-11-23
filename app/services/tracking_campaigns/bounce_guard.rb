@@ -13,7 +13,7 @@ module TrackingCampaigns::BounceGuard
     return unless campaign&.motor2? && TrackingCampaigns::Pause::PAUSABLE_STATUSES.include?(campaign.status)
 
     trackings = ContactTracking.where(tracking_campaign_id: campaign.id)
-    sent = trackings.where('attempt_count > 0').count
+    sent = trackings.where('attempt_count > 0 OR last_attempt_at IS NOT NULL').count
     return if sent < MIN_SENT
 
     bounced = trackings.where(prospect_exit: 'bounced').count

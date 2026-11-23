@@ -4,7 +4,10 @@
 #
 #   funnel   audiencia → inscritos → enviados → entregados → leídos (WhatsApp) / clics (correo) → contestaron →
 #            le interesó → pasó el relevo / cita → cotizaciones → ganadas
-#   exits    no le interesa, pidió una persona, se dio de baja, falló el envío, omitidos y por qué
+#   touches  por toque: a cuántos les salió y cuántos contestaron después de ese toque
+#   exits    no le interesa, pidió una persona, se dio de baja, rebotó, falló el envío, no contestó (ya sin toques),
+#            en curso (aún con toques por salir), omitidos y por qué
+#   Cotizaciones y ganadas: de los que contestaron, hechas desde que empezó y hasta ATTRIBUTION después del fin.
 #   kind     invitar: confirmó / no va / sin respuesta · encuesta: contestaron, promedio, bajas y casos
 #   money    cotizaciones y lo ganado de sus contactos desde que empezó
 #   reasons  los últimos motivos de «no le interesa»
@@ -12,8 +15,12 @@
 #   TrackingCampaigns::Motor2Results.new(campaign).call
 #   TrackingCampaigns::Motor2Results.new(campaign).contacts(group) → [{ contact_id, name, … }] (los de un grupo)
 class TrackingCampaigns::Motor2Results
-  GROUPS = %w[replied interested relayed appointment not_interested no_reply not_read clicked confirmed declined low_score failed].freeze
+  GROUPS = %w[replied interested relayed appointment not_interested no_reply in_progress not_read clicked confirmed declined low_score
+              failed bounced].freeze
   MAX_LIST = 500
+  ATTRIBUTION = 30.days
+  FINISHED = %w[completed cancelled].freeze
+  WAITING = %w[pending scheduled active paused].freeze
 
   def initialize(campaign)
     @campaign = campaign
@@ -21,7 +28,7 @@ class TrackingCampaigns::Motor2Results
   end
 
   def call
-    { funnel: funnel, exits: exits, kind: kind_results, money: money, reasons: reasons, list: list_summary,
+    { funnel: funnel, touches: touches, exits: exits, kind: kind_results, money: money, reasons: reasons, list: list_summary,
       channel: @campaign.inbox&.whatsapp? ? 'whatsapp' : 'email' }
   end
 
@@ -34,6 +41,12 @@ class TrackingCampaigns::Motor2Results
       { contact_id: t.contact_id, name: t.contact&.name, phone_number: t.contact&.phone_number, email: t.contact&.email,
         conversation_id: t.conversation&.display_id, outcome: t.outcome, status: t.status }
     end
+  end
+
+  # Todos los contactos de un grupo (para «Otra campaña con…»; sin el tope de MAX_LIST de la lista en pantalla).
+  def contact_ids(group)
+    scope = group_scope(group.to_s)
+    scope ? scope.distinct.limit(ContactTrackings::BulkAssignService::MAX_BULK_ASSIGN).pluck(:contact_id) : []
   end
 
   private
@@ -53,8 +66,18 @@ class TrackingCampaigns::Motor2Results
 
   def exits
     { not_interested: @trackings.where(outcome: 'discarded').count, handed_off: @trackings.where(outcome: 'handed_off').count,
-      opted_out: opted_out_count, failed: @trackings.where(status: 'failed').count, no_reply: no_reply.count,
-      skipped: @campaign.entries.skipped.group(:reason).count }
+      opted_out: opted_out_count, bounced: bounced.count, failed: @trackings.where(status: 'failed').count, no_reply: no_reply.count,
+      in_progress: in_progress.count, skipped: @campaign.entries.skipped.group(:reason).count }
+  end
+
+  # Por toque (Motor2::CampaignSendHook anota motor2_state.touches_sent y Motor2::Reply replied_on_touch).
+  def touches
+    attempts = @campaign.touches.to_h['attempts'].to_i.clamp(1, TrackingCampaigns::Motor2Brief::MAX_TOUCHES)
+    sent_by = @trackings.where("motor2_state ? 'touches_sent'").group(Arel.sql("(motor2_state->>'touches_sent')::int")).count
+    replied_by = @trackings.where("motor2_state ? 'replied_on_touch'").group(Arel.sql("(motor2_state->>'replied_on_touch')::int")).count
+    (1..attempts).map do |n|
+      { n: n, sent: sent_by.sum { |k, v| k.to_i >= n ? v : 0 }, replied: replied_by.fetch(n, 0) }
+    end
   end
 
   def kind_results
@@ -96,12 +119,15 @@ class TrackingCampaigns::Motor2Results
               .pluck(Arel.sql("motor2_state->>'exit_reason'")).compact_blank
   end
 
-  def sent = @trackings.where('attempt_count > 0')
+  # Ya le salió al menos un toque (attempt_count lo reinicia el seguimiento corto; last_attempt_at no).
+  def sent = @trackings.where('contact_trackings.attempt_count > 0 OR contact_trackings.last_attempt_at IS NOT NULL')
+
+  def bounced = @trackings.where(prospect_exit: 'bounced')
 
   def deliveries(statuses) = TrackingDelivery.where(contact_tracking_id: @trackings.select(:id), status: statuses).select(:contact_tracking_id)
 
   def delivered
-    return sent.where.not(status: 'failed') unless @campaign.inbox&.whatsapp?
+    return sent.where.not(status: 'failed').where('prospect_exit IS DISTINCT FROM ?', 'bounced') unless @campaign.inbox&.whatsapp?
 
     @trackings.where(id: deliveries(%w[delivered read]))
   end
@@ -116,7 +142,13 @@ class TrackingCampaigns::Motor2Results
                      'AND m.message_type = 0 AND m.created_at > contact_trackings.created_at)')
   end
 
-  def no_reply = sent.where.not(id: replied.select(:id)).where(status: %w[completed cancelled failed scheduled active pending])
+  # No contestó y ya no le sale nada (terminó sus toques); los que aún esperan toques van en «en curso».
+  def no_reply
+    sent.where.not(id: replied.select(:id)).where(status: FINISHED, prospect_exit: nil)
+        .where("contact_trackings.outcome IS NULL OR contact_trackings.outcome NOT IN ('discarded', 'opted_out')")
+  end
+
+  def in_progress = @trackings.where.not(id: replied.select(:id)).where(status: WAITING)
 
   def interested = @trackings.where("interested_at IS NOT NULL OR outcome LIKE 'relayed%'")
 
@@ -124,9 +156,12 @@ class TrackingCampaigns::Motor2Results
 
   def appointment = @trackings.where("booked_at IS NOT NULL OR outcome LIKE 'Cita %'")
 
+  # Atribución: solo de los que contestaron, y hasta ATTRIBUTION después del fin (o de hoy, si sigue).
   def quotes
-    @quotes ||= Quote.where(account_id: @campaign.account_id, contact_id: @trackings.select(:contact_id))
-                     .where('created_at >= ?', @campaign.scheduled_for || @campaign.created_at)
+    start = @campaign.scheduled_for || @campaign.created_at
+    finish = (@campaign.ends_at && @campaign.ends_at < Time.current ? @campaign.ends_at : Time.current) + ATTRIBUTION
+    @quotes ||= Quote.where(account_id: @campaign.account_id, contact_id: replied.select(:contact_id))
+                     .where(created_at: start..finish)
   end
 
   def opted_out_count
@@ -141,7 +176,7 @@ class TrackingCampaigns::Motor2Results
                 'clicked' => -> { @trackings.where(contact_id: clicked_contact_ids) },
                 'confirmed' => -> { attendee_scope(%w[confirmed attended]) }, 'declined' => -> { attendee_scope('cancelled') },
                 'low_score' => -> { @trackings.where('outcome LIKE ?', 'Encuesta baja%') },
-                'failed' => -> { @trackings.where(status: 'failed') } }
+                'failed' => -> { @trackings.where(status: 'failed') }, 'bounced' => -> { bounced } }
     special[group]&.call || send(group)
   end
 

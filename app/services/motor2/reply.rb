@@ -20,8 +20,14 @@ class Motor2::Reply
     return if TrackingCampaigns::HandoffAttention.seller_owns?(@conversation)
 
     Motor2::FollowUp.revive!(@tracking) # contestó después del último recordatorio
-    # Con seguimiento corto (Motor2::FollowUp), ese manda; si no, el «siguiente toque en 3 días hábiles» de las campañas.
-    ContactTrackings::ProspectReply.call(@tracking, at: @message.created_at) unless Motor2::FollowUp.plan_for(@config.function)
+    note_replied_touch!
+    # Con seguimiento corto (Motor2::FollowUp), ese manda y los toques que faltaban ya no salen; si no, queda un solo
+    # toque de recuperación en 3 días hábiles (ProspectReply).
+    if Motor2::FollowUp.plan_for(@config.function)
+      stop_campaign_touches!
+    else
+      ContactTrackings::ProspectReply.call(@tracking, at: @message.created_at)
+    end
     TrackingCampaigns::ProspectClassifier.call(@tracking, @message)
     @tracking.with_lock { turn }
   end
@@ -29,6 +35,23 @@ class Motor2::Reply
   private
 
   def text = @message.content.to_s
+
+  # Campaña con Vendedor IA: después de qué toque contestó la primera vez (resultados «por toque»).
+  def note_replied_touch!
+    state = @tracking.motor2_state.to_h
+    return unless @tracking.tracking_campaign&.motor2? && state['touches_sent'] && !state.key?('replied_on_touch')
+
+    @tracking.update_columns(motor2_state: state.merge('replied_on_touch' => state['touches_sent'])) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # Campaña con Vendedor IA: contestó, así que los toques que faltaban ya no salen solos (pase lo que pase con la
+  # respuesta del vendedor: antes seguían si su respuesta no preguntaba nada). Si deja de contestar, lo retoma el
+  # seguimiento corto del vendedor (Motor2::FollowUp).
+  def stop_campaign_touches!
+    return unless @tracking.tracking_campaign&.motor2? && %w[pending scheduled].include?(@tracking.status)
+
+    @tracking.update_columns(status: 'active', scheduled_for: Motor2::InboxRouter::NO_ATTEMPTS.from_now, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
 
   def opt_out!
     ContactTrackings::OptOut.call(@conversation.contact, source: 'reply')

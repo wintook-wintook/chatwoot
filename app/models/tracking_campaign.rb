@@ -166,6 +166,16 @@ class TrackingCampaign < ApplicationRecord
     engine == '2'
   end
 
+  # Campaña con Vendedor IA: cuántos toques pueden salir ese día (nil = sin tope). Calentando el dominio, el tope
+  # arranca en Motor2Brief::WARMUP_START y se duplica cada día desde que empezó.
+  def daily_send_cap(day)
+    return nil if daily_cap.blank?
+    return daily_cap unless motor2? && brief.to_h['warmup'] == true
+
+    started = (scheduled_for || created_at).in_time_zone(day.time_zone).to_date
+    TrackingCampaigns::Motor2Brief.warmup_cap(daily_cap, (day.to_date - started).to_i)
+  end
+
   # La copia de «Prueba real»: sus toques salen cada pocos minutos y no aparece en listados.
   def test_run?
     test_of_id.present?

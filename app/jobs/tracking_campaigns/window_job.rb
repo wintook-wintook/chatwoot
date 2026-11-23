@@ -18,10 +18,23 @@ class TrackingCampaigns::WindowJob < ApplicationJob
   queue_as :scheduled_jobs
 
   def perform(now = Time.current)
-    finished = TrackingCampaign.where(status: %w[draft running paused]).where(ends_at: ..now)
-                               .update_all(status: 'finished', updated_at: now) # rubocop:disable Rails/SkipsModelValidations
+    closing = TrackingCampaign.where(status: %w[draft running paused]).where(ends_at: ..now)
+    ids = closing.pluck(:id)
+    finished = closing.update_all(status: 'finished', updated_at: now) # rubocop:disable Rails/SkipsModelValidations
+    cancel_pending_motor2(ids)
     started = TrackingCampaign.where(status: 'draft').where(scheduled_for: ..now)
                               .update_all(status: 'running', updated_at: now) # rubocop:disable Rails/SkipsModelValidations
     Rails.logger.info "[TrackingCampaigns::WindowJob] abiertas=#{started} finalizadas=#{finished}" if (started + finished).positive?
+  end
+
+  private
+
+  # Campaña con Vendedor IA que llegó a su fin: los toques que faltaban ya no salen (antes seguían después del fin).
+  # Las pláticas en curso (activas) siguen: el vendedor contesta a quien ya respondió.
+  def cancel_pending_motor2(ids)
+    return if ids.empty?
+
+    ContactTracking.joins(:tracking_campaign).where(tracking_campaign_id: ids, status: %w[pending scheduled], tracking_campaigns: { engine: '2' })
+                   .find_each(&:cancel!)
   end
 end

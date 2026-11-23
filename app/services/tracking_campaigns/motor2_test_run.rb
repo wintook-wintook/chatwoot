@@ -38,6 +38,7 @@ class TrackingCampaigns::Motor2TestRun
   def stop
     @campaign.test_runs.where.not(status: 'finished').find_each do |run|
       run.contact_trackings.where(status: LIVE).find_each(&:cancel!)
+      relayed_during(run).find_each(&:cancel!)
       run.update!(status: 'finished')
     end
   end
@@ -56,6 +57,13 @@ class TrackingCampaigns::Motor2TestRun
   private
 
   def whatsapp? = @campaign.inbox&.whatsapp?
+
+  # Lo que abrió la prueba fuera de su copia: el seguimiento del agente al que pasó el relevo (sin campaña), en la
+  # misma bandeja y para los mismos contactos, desde que arrancó. Si no, la siguiente prueba sale «ya en plática».
+  def relayed_during(run)
+    ContactTracking.where(inbox_id: run.inbox_id, contact_id: run.entries.select(:contact_id), tracking_campaign_id: nil,
+                          status: LIVE).where('created_at >= ?', run.created_at)
+  end
 
   def setup_error
     return 'Elige el vendedor y el canal de la campaña.' unless @campaign.tracking_template && @campaign.inbox

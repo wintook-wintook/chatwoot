@@ -54,14 +54,22 @@ class TrackingCampaigns::ProspectClassifier
 
   private
 
+  # Campaña con Vendedor IA (Motor 2.0): solo se anotan la etapa y las señales. Cerrar, reprogramar o entregar lo
+  # decide el vendedor después de contestar (Motor2::Functions::CampaignSellerOutcomes), no esta clasificación.
   def apply(label, answer = {})
     attrs = { prospect_classified_at: Time.current,
               prospect_stage: stage_at_least(label == 'interested' ? 'interested' : 'replied') }
-    attrs.merge!(outcome_attributes(label), signal_attributes(label, answer))
+    attrs.merge!(motor2? ? interest_attributes(label) : outcome_attributes(label), signal_attributes(label, answer))
     return Rails.logger.warn("[ProspectClassifier] #{@tracking.errors.full_messages.join(', ')}") unless @tracking.update(attrs)
 
     TrackingCampaigns::ProspectScore.call(@tracking) # prospeccion P4
-    auto_hand_off
+    auto_hand_off unless motor2?
+  end
+
+  def motor2? = campaign.motor2?
+
+  def interest_attributes(label)
+    label == 'interested' ? { interested_at: @tracking.interested_at || Time.current } : {}
   end
 
   # prospeccion P4.2: lo que la IA leyó para la puntuación. Los motivos se acumulan (pidió precio

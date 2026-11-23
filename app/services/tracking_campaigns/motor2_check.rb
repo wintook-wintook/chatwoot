@@ -13,7 +13,8 @@ class TrackingCampaigns::Motor2Check
   end
 
   def call
-    @call ||= [seller, offer, audience, channel, *list_items, *domain_items, *touch_items, relay, window].compact
+    @call ||= [seller, ai, offer, appointment, audience, channel, *list_items, *domain_items, *touch_items, *plan.seller_templates, plan.cost,
+               relay, window, plan.capacity].compact
   end
 
   def ready? = call.none? { |item| item[:level] == 'error' }
@@ -27,6 +28,25 @@ class TrackingCampaigns::Motor2Check
     return item(:seller, 'error', 'Elige el Vendedor de campaña.') unless agent && agent.archived_at.nil?
 
     item(:seller, 'ok', "La atiende «#{agent.name}».")
+  end
+
+  # Sin OpenAI en la cuenta el vendedor no puede contestar (ni escribir los toques sin texto).
+  def ai
+    return nil if @campaign.account.hooks.exists?(app_id: 'openai', status: 'enabled')
+
+    item(:ai, 'error', 'La cuenta no tiene la integración de OpenAI: el vendedor no podría contestar. Actívala en Integraciones.')
+  end
+
+  def plan = @plan ||= TrackingCampaigns::Motor2PlanCheck.new(@campaign, answers, attempts)
+
+  def answers = @answers ||= @campaign.tracking_template&.motor2.to_h['answers'].to_h
+
+  # «Le agenda la cita» necesita con quién: los calendarios del vendedor.
+  def appointment
+    return nil unless @brief['offer_goal'] == 'appointment' && %w[survey invite].exclude?(@brief['kind'])
+    return item(:appointment, 'ok', 'Agenda citas en los calendarios del vendedor.') if Array(answers['appointment_user_ids']).any?
+
+    item(:appointment, 'error', 'La meta es agendar cita, pero el vendedor no tiene con quién: elige los calendarios en su «Cómo platica».')
   end
 
   def offer
@@ -163,21 +183,35 @@ class TrackingCampaigns::Motor2Check
   def relay
     return nil if @brief['kind'] == 'survey'
 
-    answers = @campaign.tracking_template&.motor2.to_h['answers'].to_h.merge(TrackingCampaigns::Motor2Brief.relay_answers(@brief))
+    merged = answers.merge(TrackingCampaigns::Motor2Brief.relay_answers(@brief))
     whose = @brief['relay'].present? ? 'de la campaña' : 'del vendedor'
-    return item(:relay, 'ok', 'Si le interesa, lo pasa al agente de atención de la bandeja.') unless answers['relay'] == 'person'
-    return item(:relay, 'ok', "Si le interesa, lo pasa a la persona o equipo #{whose}.") if answers['user_id'].present? || answers['team_id'].present?
+    person = merged['user_id'].present? || merged['team_id'].present?
+    return relay_to_agent(person) unless merged['relay'] == 'person'
+    return item(:relay, 'ok', "Si le interesa, lo pasa a la persona o equipo #{whose}.") if person
 
-    item(:relay, 'warning', 'No hay a quién pasar a los interesados: elígelo en «Oferta» (Si le interesa, pasa a) o en el vendedor.')
+    item(:relay, 'error', 'No hay a quién pasar a los interesados: elige persona o equipo en «Oferta» (Si le interesa, pasa a) o en el vendedor.')
+  end
+
+  # Al agente de la bandeja: si la bandeja no tiene agente que atienda, cae a la persona del vendedor.
+  def relay_to_agent(person)
+    agent = @campaign.inbox && Motor2::InboxRouter.principal(@campaign.account_id, @campaign.inbox_id)
+    return item(:relay, 'ok', "Si le interesa, lo pasa a «#{agent.name}», el agente de la bandeja.") if agent
+    return item(:relay, 'warning', 'La bandeja no tiene agente que atienda: los interesados pasan a la persona o equipo.') if person
+
+    item(:relay, 'error', 'La bandeja no tiene agente que atienda y no hay persona o equipo: los interesados quedarían sin nadie.')
   end
 
   def window
     return item(:window, 'error', 'La fecha de fin ya pasó.') if @campaign.ends_at && @campaign.ends_at <= Time.current
 
     start = @campaign.scheduled_for
+    return item(:window, 'error', 'La fecha de fin es antes del inicio.') if ends_before_start?
+
     text = start && start > Time.current ? "Empieza el #{I18n.l(start, format: :short)}." : 'Empieza en cuanto la lances.'
     item(:window, 'ok', text)
   end
+
+  def ends_before_start? = @campaign.scheduled_for && @campaign.ends_at && @campaign.ends_at <= @campaign.scheduled_for
 
   def attempts = (@touches['attempts'].presence || 1).to_i
 end

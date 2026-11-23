@@ -87,11 +87,17 @@ module Motor2::FollowUp
 
   # ¿Sigue esperando su respuesta? (no escribió después, nadie del equipo tomó la plática, sigue vivo)
   def waiting?(tracking, message_id)
-    return false unless tracking&.status == 'active' && tracking.motor2_state.to_h['follow_up_message'] == message_id
+    return false unless waiting_on?(tracking, message_id)
 
     conversation = tracking.conversation
     conversation.present? && !conversation.resolved? && !conversation.messages.incoming.exists?(['id > ?', message_id]) &&
       !person_wrote_after?(conversation, message_id)
+  end
+
+  # Vivo, esperando ESE mensaje y sin la campaña pausada (a mano o por rebotes: tampoco salen los recordatorios).
+  def waiting_on?(tracking, message_id)
+    tracking&.status == 'active' && tracking.motor2_state.to_h['follow_up_message'] == message_id &&
+      tracking.tracking_campaign&.status != 'paused'
   end
 
   def person_wrote_after?(conversation, message_id)

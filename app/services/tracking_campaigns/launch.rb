@@ -46,7 +46,7 @@ class TrackingCampaigns::Launch
 
   def contacts_launch(open_campaign)
     open_campaign.call
-    TrackingCampaigns::Motor2EnrollJob.perform_later(@campaign.id, contact_ids, @user&.id)
+    TrackingCampaigns::Motor2EnrollJob.perform_later(@campaign.id, nil, @user&.id) # lee los ids de la campaña
     { campaign: @campaign, queued: contact_ids.size }
   end
 
