@@ -67,7 +67,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     @contacts_count = result[:count]
     # Campaña con Vendedor IA: sin los de listas frías en cuarentena (salvo que los pidan).
     unless params[:list_prospects] == 'true'
-      contacts = contacts.where(list_quarantine: false)
+      contacts = list_prospects_scope(contacts)
       @contacts_count = contacts.count
     end
     @contacts = fetch_contacts(contacts)
@@ -135,10 +135,19 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     # Plan-Roles-Permisos — con Clientes en «solo lo suyo», solo sus contactos.
     @resolved_contacts = access_grant.contacts(Current.account.contacts).resolved_contacts
     # Campaña con Vendedor IA: los de una lista fría de correo en cuarentena no salen hasta que contestan.
-    @resolved_contacts = @resolved_contacts.where(list_quarantine: false) unless params[:list_prospects] == 'true'
+    @resolved_contacts = list_prospects_scope(@resolved_contacts)
 
     @resolved_contacts = @resolved_contacts.tagged_with(params[:labels], any: true) if params[:labels].present?
     @resolved_contacts
+  end
+
+  # list_prospects: 'only' = solo los de listas frías en cuarentena (botón «Prospectos de listas»), 'true' = todos.
+  def list_prospects_scope(contacts)
+    case params[:list_prospects]
+    when 'true' then contacts
+    when 'only' then contacts.where(list_quarantine: true)
+    else contacts.where(list_quarantine: false)
+    end
   end
 
   def set_current_page

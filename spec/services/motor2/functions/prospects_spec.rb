@@ -709,6 +709,34 @@ RSpec.describe Motor2::Functions::Prospects do
       expect(tracking.scheduled_for).to be_within(1.minute).of(message.created_at + 3.days)
     end
 
+    it 'si el recordatorio llega tarde (ventana cerrada) no manda texto libre: sigue con las plantillas, o cierra sin ellas' do
+      stub_model(answer('¿En qué ciudad estás?'))
+      message = incoming('Busco paneles')
+      reply_to(message)
+      allow(Motor2::LateMessage).to receive(:window_open?).and_return(false)
+      allow(Motor2::FollowUp).to receive(:whatsapp?).and_return(true)
+
+      expect { Motor2::FollowUpJob.perform_now(tracking.id, message.id, 1) }.not_to(change do
+                                                                                      conversation.messages.outgoing.where(private: false).count
+                                                                                    end)
+      expect(tracking.reload).to have_attributes(status: 'scheduled', whatsapp_templates: ['seguimiento_1'])
+
+      save_agent(settings.merge('follow_up' => { 'nudges' => 2, 'templates' => [] }), template: agent)
+      tracking.update_columns(status: 'active', motor2_state: tracking.motor2_state.merge('follow_up_message' => message.id)) # rubocop:disable Rails/SkipsModelValidations
+      Motor2::FollowUpJob.perform_now(tracking.id, message.id, 1)
+      expect(conversation.reload.label_list).to include('sin-respuesta')
+    end
+
+    it 'en WhatsApp deja una hora de margen antes de que cierre la ventana de 24 h' do
+      wa = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false).inbox
+      chat = create(:conversation, account: account, inbox: wa, contact: contact)
+      last = create(:message, account: account, inbox: wa, conversation: chat, message_type: :incoming, content: 'hola', sender: contact)
+      last.update_columns(created_at: 22.hours.ago) # rubocop:disable Rails/SkipsModelValidations
+      expect(Motor2::LateMessage.window_open?(chat.reload)).to be(true)
+      last.update_columns(created_at: 23.5.hours.ago) # rubocop:disable Rails/SkipsModelValidations
+      expect(Motor2::LateMessage.window_open?(chat.reload)).to be(false)
+    end
+
     it 'si contesta después del último toque, el agente lo retoma' do
       stub_model(answer('¿En qué ciudad estás?'))
       reply_to(incoming('Busco paneles'))

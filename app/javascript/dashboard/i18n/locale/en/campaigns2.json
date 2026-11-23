@@ -193,7 +193,9 @@
       "NO_CAP": "No cap",
       "DAILY_CAP_HINT": "Spread sends over several days so your team can handle interested contacts.",
       "DELAY": "Wait before the first message",
-      "MINUTES": "minutes"
+      "MINUTES": "minutes",
+      "WARMUP": "Warm up the domain",
+      "WARMUP_HINT": "For a new domain or a cold list: 50 go out on day one, then 100, 200… up to {cap} a day. If more than 5% bounce, the campaign pauses itself."
     },
     "REVIEW": {
       "SUMMARY": "{kind} · handled by {seller} · goes out via {channel} · {touches} touch(es)",

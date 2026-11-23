@@ -55,8 +55,12 @@ class TrackingCampaigns::TrackingBuilder
     @tracking = tracking
 
     contact_inbox = ContactInboxBuilder.new(contact: @contact, inbox: @campaign.inbox).perform
+    # Campaña con Vendedor IA: el contacto de una lista fría en cuarentena no se le asigna a nadie (Motor2::ListConversation).
+    # Nace pospuesta: así tampoco entra la asignación automática de la bandeja.
+    quiet = @campaign.motor2? && @contact.list_quarantine?
     conversation = ConversationBuilder.new(
-      params: ActionController::Parameters.new(assignee_id: @agent.id, additional_attributes: email_subject_attributes),
+      params: ActionController::Parameters.new({ assignee_id: quiet ? nil : @agent.id, additional_attributes: email_subject_attributes,
+                                                 status: quiet ? 'snoozed' : nil }.compact),
       contact_inbox: contact_inbox
     ).perform
     Messages::MessageBuilder.new(@agent, conversation, { content: @note, private: true }).perform

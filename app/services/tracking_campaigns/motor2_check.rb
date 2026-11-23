@@ -13,7 +13,7 @@ class TrackingCampaigns::Motor2Check
   end
 
   def call
-    @call ||= [seller, offer, audience, channel, *list_items, *touch_items, relay, window].compact
+    @call ||= [seller, offer, audience, channel, *list_items, *domain_items, *touch_items, relay, window].compact
   end
 
   def ready? = call.none? { |item| item[:level] == 'error' }
@@ -65,8 +65,55 @@ class TrackingCampaigns::Motor2Check
     cap = @campaign.daily_cap.to_i
     [cap.zero? ? item(:daily_cap, 'error', 'Con una lista fría pon un máximo por día (empieza con 50 a 100).') : nil,
      cap > 200 ? item(:daily_cap, 'warning', "#{cap} al día es mucho para una lista fría: sube poco a poco.") : nil,
+     warmup_item(cap),
      item(:list_inbox, 'warning', 'Para listas frías usa una bandeja o dominio aparte, no el correo principal de tu empresa.')].compact
   end
+
+  def warmup_item(cap)
+    return nil if cap.zero?
+
+    unless @brief['warmup']
+      return item(:warmup, 'warning',
+                  'Si el dominio es nuevo, prende «Calentar el dominio»: empieza con 50 al día y sube solo.')
+    end
+
+    item(:warmup, 'ok', "Calentando el dominio: 50 el primer día, luego 100, 200… hasta #{cap} al día.")
+  end
+
+  # Correo: el dominio de la bandeja (SPF, DKIM, DMARC). Con lista fría, sin SPF o con un correo gratis no se lanza.
+  def domain_items
+    return [] unless @campaign.inbox&.email?
+
+    check = TrackingCampaigns::EmailDomainCheck.call(@campaign.inbox.channel.try(:email))
+    if check[:free]
+      return [item(:domain, list? ? 'error' : 'warning',
+                   "«#{check[:domain]}» es un correo gratis: para campañas usa el de tu dominio.")]
+    end
+
+    [spf_item(check), dkim_item(check), dmarc_item(check)]
+  end
+
+  def spf_item(check)
+    return item(:spf, 'ok', "#{check[:domain]}: SPF listo.") if check[:spf]
+    return item(:spf, 'warning', "No se pudo revisar el SPF de #{check[:domain]}.") if check[:spf].nil?
+
+    item(:spf, list? ? 'error' : 'warning',
+         "#{check[:domain]} no tiene SPF: tu correo caerá en spam. Agrégalo en el DNS (te lo da tu proveedor de correo).")
+  end
+
+  def dkim_item(check)
+    return item(:dkim, 'ok', "#{check[:domain]}: DKIM listo.") if check[:dkim]
+
+    item(:dkim, 'warning', "No encontramos la firma DKIM de #{check[:domain]}: confírmala con tu proveedor de correo.")
+  end
+
+  def dmarc_item(check)
+    return item(:dmarc, 'ok', "#{check[:domain]}: DMARC listo.") if check[:dmarc]
+
+    item(:dmarc, 'warning', "#{check[:domain]} no tiene DMARC: Gmail y Yahoo lo piden para envíos masivos (un TXT en _dmarc.#{check[:domain]}).")
+  end
+
+  def list? = @campaign.audience.to_h.dig('source', 'type') == 'list'
 
   def channel
     inbox = @campaign.inbox

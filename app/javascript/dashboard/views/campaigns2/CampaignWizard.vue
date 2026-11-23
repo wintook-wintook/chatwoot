@@ -38,6 +38,7 @@ const blankForm = () => ({
     survey_questions: ['', '', ''],
     low_score: 7,
     rest_days: 7,
+    warmup: false,
   },
   touches: {
     attempts: 2,
@@ -493,7 +494,8 @@ export default {
           source: data.campaign.audience.source,
           contact_ids: data.campaign.audience.contact_ids,
         };
-        if (!this.form.daily_cap) this.form.daily_cap = 50;
+        if (!this.form.daily_cap) this.form.daily_cap = 200;
+        this.form.brief.warmup = true;
       } catch (e) {
         useAlert(e.response?.data?.error || this.t('LIST.ERROR'));
       } finally {
@@ -1184,6 +1186,21 @@ export default {
             <p class="m-0 text-xs text-slate-500">
               {{ t('WHEN.DAILY_CAP_HINT') }}
             </p>
+            <!-- Correo: calentar el dominio (el tope arranca en 50 y se duplica cada día) -->
+            <label v-if="isEmail" class="flex items-start gap-2 text-sm">
+              <input
+                v-model="form.brief.warmup"
+                type="checkbox"
+                class="!m-0 mt-1"
+                :disabled="!form.daily_cap"
+              />
+              <span>
+                {{ t('WHEN.WARMUP') }}
+                <span class="block text-xs text-slate-500">
+                  {{ t('WHEN.WARMUP_HINT', { cap: form.daily_cap || '—' }) }}
+                </span>
+              </span>
+            </label>
             <label
               v-if="continuous"
               class="flex flex-wrap items-center gap-2 text-sm"

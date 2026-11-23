@@ -17,13 +17,14 @@ class ContactAPI extends ApiClient {
     super('contacts', { accountScoped: true });
   }
 
-  get(page, sortAttr = 'name', label = '') {
+  // listProspects: solo los contactos de listas frías en cuarentena (Campaña con Vendedor IA).
+  get(page, sortAttr = 'name', label = '', listProspects = false) {
     let requestURL = `${this.url}?${buildContactParams(
       page,
       sortAttr,
       label,
       ''
-    )}`;
+    )}${listProspects ? '&list_prospects=only' : ''}`;
     return axios.get(requestURL);
   }
 
@@ -43,13 +44,19 @@ class ContactAPI extends ApiClient {
     return axios.post(`${this.url}/${contactId}/labels`, { labels });
   }
 
-  search(search = '', page = 1, sortAttr = 'name', label = '') {
+  search(
+    search = '',
+    page = 1,
+    sortAttr = 'name',
+    label = '',
+    listProspects = false
+  ) {
     let requestURL = `${this.url}/search?${buildContactParams(
       page,
       sortAttr,
       label,
       search
-    )}`;
+    )}${listProspects ? '&list_prospects=only' : ''}`;
     return axios.get(requestURL);
   }
 

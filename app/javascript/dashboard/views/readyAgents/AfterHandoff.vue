@@ -71,6 +71,13 @@ export default {
           </option>
         </select>
       </label>
+      <!-- Sin plantilla, pasadas 24 h el recordatorio no sale (Motor2::LateMessage): se avisa a quien atiende la cita. -->
+      <p
+        v-if="notice.on && templates.length && !notice.template"
+        class="m-0 text-xs text-amber-700"
+      >
+        {{ t('APPOINTMENT_NOTICE_NO_TEMPLATE') }}
+      </p>
     </template>
   </div>
 </template>

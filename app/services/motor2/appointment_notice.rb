@@ -46,7 +46,19 @@ module Motor2::AppointmentNotice
   def deliver(tracking, meeting, kind)
     config = Motor2::Config.for(tracking)
     message = Motor2::VoiceText.call(config, text(tracking, meeting, kind)) # con la voz de la empresa o del agente
-    Motor2::LateMessage.deliver(tracking, message, template: config.function.appointment_notice[:template])
+    sent = Motor2::LateMessage.deliver(tracking, message, template: config.function.appointment_notice[:template])
+    not_sent(tracking, meeting, kind) unless sent
+  end
+
+  # No se pudo (ventana cerrada y sin plantilla): que quien atiende la cita lo sepa y le escriba.
+  def not_sent(tracking, meeting, kind)
+    return unless tracking.conversation
+
+    who = meeting.organizer ? "#{TrackingCampaigns::HandOff.mention(meeting.organizer)} " : ''
+    what = kind.to_s == 'reminder' ? 'el recordatorio de la cita' : 'el mensaje de la cita a la que no llegó'
+    Motor2::Delivery.note(tracking, tracking.conversation,
+                          "⚠️ #{who}no se le pudo mandar #{what}: ya pasaron 24 h desde su último mensaje y el agente no tiene " \
+                          'plantilla para el recordatorio de cita. Escríbele tú o elige una en la pestaña Seguimiento.')
   end
 
   def zone(tracking) = Motor2::Config.for(tracking).zone

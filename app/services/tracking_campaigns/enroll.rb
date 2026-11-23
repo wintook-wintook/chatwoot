@@ -90,12 +90,23 @@ class TrackingCampaigns::Enroll
     return false if @campaign.daily_cap.blank? || !@campaign.continuous?
 
     day = @at.in_time_zone(@campaign.inbox.timezone.presence || 'UTC')
-    @campaign.entries.enrolled.where(created_at: day.all_day).count >= @campaign.daily_cap
+    @campaign.entries.enrolled.where(created_at: day.all_day).count >= cap_today(day)
   end
+
+  # Campaña con Vendedor IA calentando el dominio: el tope de hoy sube cada día desde que empezó (Motor2Brief).
+  def cap_today(day)
+    return @campaign.daily_cap unless warmup?
+
+    started = (@campaign.scheduled_for || @campaign.created_at).in_time_zone(day.time_zone).to_date
+    TrackingCampaigns::Motor2Brief.warmup_cap(@campaign.daily_cap, (day.to_date - started).to_i)
+  end
+
+  def warmup? = @campaign.motor2? && @campaign.brief.to_h['warmup'] == true
 
   # prospeccion V3: por lote, con tope, el inscrito número n sale el día hábil n / tope.
   def batch_day_offset
     return 0 if @campaign.continuous? || @campaign.daily_cap.blank?
+    return TrackingCampaigns::Motor2Brief.warmup_day(@campaign.entries.enrolled.count, @campaign.daily_cap) if warmup?
 
     @campaign.entries.enrolled.count / @campaign.daily_cap
   end

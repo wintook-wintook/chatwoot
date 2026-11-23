@@ -16,6 +16,12 @@ RSpec.describe 'Motor2 campaigns API' do
   end
   let(:contacts) { Array.new(2) { |i| create(:contact, account: account, name: "Cliente #{i}", email: "c#{i}@ejemplo.com") } }
 
+  # El dominio de la bandeja (SPF, DKIM, DMARC) sin ir al DNS de verdad.
+  before do
+    allow(TrackingCampaigns::EmailDomainCheck).to receive(:call)
+      .and_return({ domain: 'example.com', free: false, spf: true, dmarc: true, dkim: true })
+  end
+
   def body(extra = {})
     { name: 'Promo marzo', tracking_template_id: seller.id, inbox_id: email_inbox.id, email_subject: 'Hola {{contacto}}',
       brief: { kind: 'offer', offer_what: 'Mantenimiento gratis', offer_details: 'Hasta el 31' },
@@ -190,6 +196,83 @@ RSpec.describe 'Motor2 campaigns API' do
       expect(Contact.exists?(ana.id)).to be(true)
       expect(EmailSuppression.exists?(account_id: account.id, email: 'fantasma@ejemplo.com')).to be(true)
       expect(list.reload).to have_attributes(cleaned_at: be_present)
+    end
+  end
+
+  describe 'correo profesional: bandeja limpia, dominio y calentamiento' do
+    def quarantined(campaign)
+      account.contacts.create!(name: 'Fría', email: 'fria@ejemplo.com', list_quarantine: true,
+                               additional_attributes: { 'company_name' => 'Grúas del Norte' }).tap do |c|
+        campaign.update!(status: 'running', scheduled_for: 1.minute.ago)
+        TrackingCampaigns::Enroll.new(campaign, c, source: 'batch', agent: admin).call
+      end
+    end
+
+    it 'la conversación de un contacto en cuarentena nace pospuesta y sin asignar, y se calla después de cada toque' do
+      campaign = create_campaign
+      contact = quarantined(campaign)
+      tracking = ContactTracking.find_by(contact_id: contact.id)
+      conversation = TrackingCampaigns::TrackingBuilder.new(campaign, contact, agent: admin).open_conversation(tracking: tracking)
+      expect(conversation).to have_attributes(status: 'snoozed', assignee_id: nil)
+
+      tracking.update!(conversation_id: conversation.id)
+      conversation.update!(status: :open, assignee: admin) # el 1.0 la reabre al mandar
+      Motor2::ListConversation.quiet!(tracking)
+      expect(conversation.reload).to have_attributes(status: 'snoozed', assignee_id: nil)
+
+      ProspectLists.promote!(contact) # contestó: ya no se calla y queda ligado a su empresa
+      expect(contact.reload.organization&.name).to eq('Grúas del Norte')
+      conversation.update!(status: :open)
+      Motor2::ListConversation.quiet!(tracking)
+      expect(conversation.reload.status).to eq('open')
+    end
+
+    it 'revisión del dominio: con lista fría, sin SPF o con correo gratis no se lanza' do
+      campaign = create_campaign
+      campaign.update!(audience: { 'source' => { 'type' => 'list', 'list_id' => 1 }, 'contact_ids' => [1] }, daily_cap: 100)
+      allow(TrackingCampaigns::EmailDomainCheck).to receive(:call).and_return({ domain: 'empresa.com', free: false, spf: false,
+                                                                                dmarc: false, dkim: nil })
+      items = TrackingCampaigns::Motor2Check.new(campaign.reload).call.index_by { |i| i[:key] }
+      expect(items[:spf][:level]).to eq('error')
+      expect(items[:dmarc][:level]).to eq('warning')
+      expect(items[:warmup][:level]).to eq('warning')
+
+      allow(TrackingCampaigns::EmailDomainCheck).to receive(:call).and_return({ domain: 'gmail.com', free: true })
+      expect(TrackingCampaigns::Motor2Check.new(campaign).call.find { |i| i[:key] == :domain }[:level]).to eq('error')
+    end
+
+    it 'lee SPF, DMARC y DKIM del DNS' do
+      allow(Rails.cache).to receive(:fetch).and_yield
+      allow(TrackingCampaigns::EmailDomainCheck).to receive(:call).and_call_original
+      allow(TrackingCampaigns::EmailDomainCheck).to receive(:texts) do |name|
+        { 'empresa.com' => ['v=spf1 include:_spf.google.com ~all'], '_dmarc.empresa.com' => ['v=DMARC1; p=none'],
+          'google._domainkey.empresa.com' => ['v=DKIM1; k=rsa; p=MIIB'] }.fetch(name, [])
+      end
+      expect(TrackingCampaigns::EmailDomainCheck.call('ventas@empresa.com')).to include(spf: true, dmarc: true, dkim: true)
+      expect(TrackingCampaigns::EmailDomainCheck.call('yo@gmail.com')).to include(free: true)
+    end
+
+    it 'calentando el dominio el tope sube 50, 100, 200… y por lote cada contacto cae en su día' do
+      expect((0..3).map { |d| TrackingCampaigns::Motor2Brief.warmup_cap(300, d) }).to eq([50, 100, 200, 300])
+      expect([0, 49, 50, 149, 150, 349, 350].map { |i| TrackingCampaigns::Motor2Brief.warmup_day(i, 200) }).to eq([0, 0, 1, 1, 2, 2, 3])
+    end
+
+    it 'si rebota más del 5 % (desde 20 enviados) la campaña se pausa sola' do
+      campaign = create_campaign
+      campaign.update!(status: 'running', scheduled_for: 1.minute.ago)
+      20.times do |i|
+        c = account.contacts.create!(name: "C#{i}", email: "c#{i}@ejemplo.com")
+        tracking = TrackingCampaigns::Enroll.new(campaign, c, source: 'batch', agent: admin).call.contact_tracking
+        tracking.update_columns(attempt_count: 1, prospect_exit: i < 2 ? 'bounced' : nil) # rubocop:disable Rails/SkipsModelValidations
+      end
+      TrackingCampaigns::BounceGuard.check(campaign)
+      expect(campaign.reload).to have_attributes(status: 'paused', paused_reason: a_string_including('10%'))
+    end
+
+    it 'en Contactos, «Prospectos de listas» muestra solo los que están en cuarentena' do
+      account.contacts.create!(name: 'Fría', email: 'fria@ejemplo.com', list_quarantine: true)
+      get "/api/v1/accounts/#{account.id}/contacts", params: { list_prospects: 'only' }, headers: headers
+      expect(response.parsed_body['payload'].pluck('email')).to eq(['fria@ejemplo.com'])
     end
   end
 

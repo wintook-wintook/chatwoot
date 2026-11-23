@@ -515,7 +515,8 @@
       "HINT": "If they answer, it starts over from their new message. If qualified, discarded or handed to a person, it doesn't write. Each conversation shows the next reminder and lets you cancel it.",
       "QUOTE": "🧾 Day {n} after the quote is sent: asks about it ({how})",
       "QUOTE_TEMPLATE": "template «{name}» after 24 h",
-      "QUOTE_NO_TEMPLATE": "no template: only within 24 h"
+      "QUOTE_NO_TEMPLATE": "no template: only within 24 h",
+      "NO_TEMPLATE_PICKED": "Without a template, after 24 h you can't write on WhatsApp anymore: when the window closes the follow-up ends with #sin-respuesta."
     },
     "QUOTE": {
       "TITLE": "Quotes",
@@ -629,7 +630,8 @@
       "ATTEND_HINT": "If nobody writes in time, it leaves a note @mentioning the seller; at three times the time, it alerts the administrators.",
       "REQUIRED_CONTACT": "Details to collect before handing off",
       "DISPLAY_NAME": "Name the customer sees (optional)",
-      "DISPLAY_NAME_PLACEHOLDER": "E.g. Ana"
+      "DISPLAY_NAME_PLACEHOLDER": "E.g. Ana",
+      "APPOINTMENT_NOTICE_NO_TEMPLATE": "Without a template, if 24 h have passed since their last message the reminder can't be sent (WhatsApp doesn't allow it): whoever handles the appointment is notified to write."
     },
     "TONES": {
       "cercano": "Friendly",

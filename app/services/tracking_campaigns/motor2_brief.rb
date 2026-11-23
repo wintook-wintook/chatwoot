@@ -7,7 +7,8 @@
 #              offer_goal  relay (si le interesa → relevo) | appointment (le agenda la cita)
 #              event_id    Invitar: el evento (también arma la audiencia)
 #              survey_questions [≤3] · low_score (menor a esto, de 0 a 10, es baja)
-#              rest_days   no se le escribe si otra campaña 2.0 le escribió hace menos de estos días (0 = sin regla) }
+#              rest_days   no se le escribe si otra campaña 2.0 le escribió hace menos de estos días (0 = sin regla)
+#              warmup      calentar el dominio: el tope diario arranca en WARMUP_START y se duplica cada día }
 #   touches  { attempts 1..6 · every_value / every_unit (hours | days) entre toques
 #              templates [nombre de plantilla de WhatsApp por toque]
 #              emails    [{ body, blocks }] por toque (el asunto del primero es email_subject / email_subject_b);
@@ -22,8 +23,23 @@ module TrackingCampaigns::Motor2Brief
   MAX_QUESTIONS = 3
   MAX_TEXT = 1500
   MAX_BODY = 6000
+  WARMUP_START = 50
 
   module_function
+
+  # Calentando: cuántos van el día n (0, 1, 2…) desde que empezó: 50, 100, 200… hasta el tope de la campaña.
+  def warmup_cap(cap, day) = [cap, WARMUP_START * (2**day.clamp(0, 20))].min
+
+  # Calentando y por lote: en qué día (0, 1, 2…) sale el inscrito número n.
+  def warmup_day(index, cap)
+    day = 0
+    total = warmup_cap(cap, 0)
+    while index >= total
+      day += 1
+      total += warmup_cap(cap, day)
+    end
+    day
+  end
 
   def brief(raw)
     raw = Motor2::Sanitizer.plain(raw)
@@ -31,7 +47,8 @@ module TrackingCampaigns::Motor2Brief
       'kind' => raw['kind'].to_s.presence_in(KINDS) || 'offer', 'offer_goal' => raw['offer_goal'].to_s.presence_in(GOALS) || 'relay',
       'offer_what' => text(raw['offer_what']), 'offer_details' => text(raw['offer_details']),
       'event_id' => raw['event_id'].to_s.presence&.to_i, 'survey_questions' => questions(raw['survey_questions']),
-      'low_score' => number(raw['low_score'], 7, 1..10), 'rest_days' => number(raw['rest_days'], 0, 0..90)
+      'low_score' => number(raw['low_score'], 7, 1..10), 'rest_days' => number(raw['rest_days'], 0, 0..90),
+      'warmup' => ActiveModel::Type::Boolean.new.cast(raw['warmup']) || false
     }.compact
   end
 

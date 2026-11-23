@@ -3,10 +3,10 @@ key: campana_correo_vendedor_ia
 title: Campaña por correo con Vendedor IA, de la lista a la venta
 areas: [campaigns]
 category: Campañas
-keywords: [importo, importar contactos, contactos en cuarentena, cuarentena de contactos, campana por correo, campana de correo, lista fria, lista de correos, subir lista, importar lista, csv, cuarentena, prospectos de lista, de la lista a la venta, proceso completo, flujo de la campana, vendedor ia, vendedor de campana, relevo, atencion a prospectos, calificar, cotizar, oportunidad, seguimiento de cotizacion, cierre, ganada, perdida, limpieza automatica, lista de exclusion, darse de baja, rebote, tope diario, prueba a/b, que hace el humano, automatico]
+keywords: [calentar el dominio, spf, dkim, dmarc, rebotes, campana pausada, prospectos de listas, importo, importar contactos, contactos en cuarentena, cuarentena de contactos, campana por correo, campana de correo, lista fria, lista de correos, subir lista, importar lista, csv, cuarentena, prospectos de lista, de la lista a la venta, proceso completo, flujo de la campana, vendedor ia, vendedor de campana, relevo, atencion a prospectos, calificar, cotizar, oportunidad, seguimiento de cotizacion, cierre, ganada, perdida, limpieza automatica, lista de exclusion, darse de baja, rebote, tope diario, prueba a/b, que hace el humano, automatico]
 pages: [campaigns, ready_agents, contacts, quotes, opportunities, catalog, inboxes]
 sources: [app/javascript/dashboard/views/campaigns2/*.vue, app/services/prospect_lists/import.rb, app/jobs/prospect_lists/cleanup_job.rb, app/services/tracking_campaigns/motor2_*.rb, app/services/motor2/relay.rb, app/services/motor2/skills/quote.rb, app/jobs/motor2/quote_follow_up_job.rb]
-reviewed: 2026-11-22
+reviewed: 2026-11-23
 ---
 ## Para qué sirve
 Una campaña por correo con Vendedor IA lleva a un contacto desde una lista fría hasta una venta ganada. Los agentes hacen casi todo; una persona de tu equipo entra solo en algunos momentos: preparar, lanzar, atender a quien pide hablar con alguien, revisar la cotización y cerrar.
@@ -43,11 +43,15 @@ El flujo de un vistazo:
 3. Kontrolya quita, y te dice cuántos y por qué: sin correo o mal escrito, repetidos, correos de rol (info@, ventas@, contacto@…), los que antes se dieron de baja o rebotaron y los de dominios que no reciben correo.
 4. Si el correo ya es de un contacto tuyo, usa ese y no lo duplica.
 5. Los nuevos quedan en cuarentena: no aparecen en Contactos ni en búsquedas hasta que contesten o den clic.
+6. Sus conversaciones tampoco llenan tu bandeja: nacen pospuestas y sin asignar, y vuelven a «Abiertas» solas cuando el contacto contesta. Para verlos, en Contactos usa el botón «Prospectos de listas».
+7. Cuando contesta o da clic, si la lista traía su empresa, se liga a esa organización (la que ya tengas con ese nombre o una nueva, como prospecto).
 
 Las listas son solo para correo. En WhatsApp no se ofrece: escribirle a quien no te conoce hace que te bloqueen, y Meta puede bajar o suspender tu número.
 
 ### 2. Revisar y lanzar
 - En «Revisar y lanzar» Kontrolya revisa la oferta, el vendedor, el asunto, a quién se pasan los interesados y las fechas. Con algo en rojo no deja lanzar.
+- Revisa el dominio de tu bandeja de correo: SPF, DKIM y DMARC (los piden Gmail y Yahoo). Con lista fría, sin SPF o con un correo gratis (gmail.com, hotmail.com…) no deja lanzar.
+- «Calentar el dominio» (paso Cuándo; al subir una lista se prende solo): el primer día salen 50, luego 100, 200… hasta tu máximo por día. Si rebota más del 5 % de lo enviado (desde 20 envíos), la campaña se pausa sola para que revises la lista y el dominio.
 - Con lista pide un máximo de envíos por día: de inicio pone 50 y avisa si pasas de 200.
 - Antes de lanzar, usa «Probar» (tú eres el contacto y el vendedor te contesta con la oferta) y «Enviarme una prueba» para ver el correo en tu bandeja.
 
@@ -100,10 +104,11 @@ El interesado pasa a Atención a prospectos en la misma conversación, sin que e
 - Mejora (quien hace la campaña): lee el tablero y arma la siguiente campaña.
 
 ## Dudas frecuentes
-- ¿Por qué no veo en Contactos a los de mi lista? Están en cuarentena hasta que contestan o dan clic; los ves en el tablero de la campaña.
+- ¿Por qué no veo en Contactos a los de mi lista? Están en cuarentena hasta que contestan o dan clic; los ves con el botón «Prospectos de listas» en Contactos o en el tablero de la campaña.
+- ¿Por qué se pausó mi campaña sola? Rebotó más del 5 % de los correos: revisa la lista (correos viejos o inventados) y el dominio, y reanúdala.
 - ¿Puedo subir una lista para WhatsApp? No: solo para correo, para cuidar tu número.
 - ¿Qué pasa con los que nunca contestan? Se borran solos a los días que elegiste después de que termina la campaña.
-- ¿Se crea la organización (empresa) del contacto? No sola: cuando contesta pasa a contacto normal y la organización la agregas tú si la necesitas.
+- ¿Se crea la organización (empresa) del contacto? Sí, si la lista traía la columna empresa: al contestar se liga a la organización con ese nombre o se crea como prospecto.
 - ¿Con cuántos empiezo? Con una campaña chica, 50 contactos y un tope de 50 al día, para verla andar de punta a punta.
 
 ## Quién puede
