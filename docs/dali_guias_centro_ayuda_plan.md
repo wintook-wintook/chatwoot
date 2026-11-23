@@ -173,6 +173,11 @@ Hoy en producción `@all ||=` deja las guías fijas hasta reiniciar Puma.
    - `meta` idéntico a la cabecera;
    - mismas categorías.
 
+> **Adelantado en dev (2026-11-23):** portal `ayuda-dali` creado en la cuenta 2 y `rake assistant:guides:publish`
+> con el `meta` completo: **54 nuevas, 0 fallidas**; segunda pasada 54 sin cambios. `kontrolya-agenda` trae las
+> 66 keywords del `.md`; liga `https://develop.wintook.com/hc/ayuda-dali/articles/kontrolya-agenda`.
+> Publicar no vectoriza (Article no tiene hook de embeddings). Falta el `verify` carácter por carácter.
+
 ### Paso 9. Apagar la sobrescritura
 
 - `rake assistant:guides:publish` ya **no** debe reescribir artículos (borraría lo editado en el portal). Quitarlo del deploy si está y dejarlo como `import` explícito con confirmación (`FORCE=1`), solo para la migración inicial o para restaurar.
