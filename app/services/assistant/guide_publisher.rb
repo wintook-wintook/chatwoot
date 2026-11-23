@@ -53,6 +53,22 @@ class Assistant::GuidePublisher
     article && "#{base_url}/hc/#{portal.slug}/articles/#{article.slug}"
   end
 
+  # Pantallas de un registro (Assistant::Pages::RECORDS): no están en el menú, no tienen etiqueta.
+  RECORD_PAGE_LABELS = {
+    'case' => 'Un caso (por su número)',
+    'contact' => 'Un contacto',
+    'organization' => 'Una empresa',
+    'conversation' => 'Una conversación'
+  }.freeze
+
+  # Lo que el editor del Centro de ayuda ofrece para las guías de Dali (ArticleSettings.vue).
+  def self.editor_options
+    pages = Assistant::Pages::MAP.keys.map do |key|
+      { key: key, label: Assistant::Pages.label(key) || RECORD_PAGE_LABELS.fetch(key, key) }
+    end
+    { areas: AccessRole::AREAS, pages: pages }
+  end
+
   def self.base_url
     ENV.fetch('FRONTEND_URL', '').chomp('/')
   end

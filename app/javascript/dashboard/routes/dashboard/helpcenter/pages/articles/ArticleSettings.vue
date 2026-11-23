@@ -20,6 +20,12 @@ export default {
       metaTags: [],
       metaOptions: [],
       tagInputValue: '',
+      // Guía de Dali (portal «Guías de Dali»): lo que Dali usa para encontrarla y mostrarla.
+      daliAreas: [],
+      daliKeywords: [],
+      daliPages: [],
+      daliReviewed: '',
+      keywordInputValue: '',
     };
   },
   computed: {
@@ -36,6 +42,40 @@ export default {
     allTags() {
       return this.metaTags.map(item => item.name);
     },
+    portal() {
+      return (
+        this.$store.getters['portals/portalBySlug'](
+          this.$route.params.portalSlug
+        ) || {}
+      );
+    },
+    daliOptions() {
+      return this.portal.dali_guides || null;
+    },
+    isDaliGuide() {
+      return Boolean(
+        this.daliOptions && this.article && this.article.dali_guide
+      );
+    },
+    daliKey() {
+      return this.isDaliGuide ? this.article.dali_guide.key || '' : '';
+    },
+    areaOptions() {
+      if (!this.daliOptions) return [];
+      return this.daliOptions.areas.map(key => ({
+        key,
+        label: this.$t(`ACCESS_ROLES.AREAS.${key.toUpperCase()}`),
+      }));
+    },
+    pageOptions() {
+      return this.daliOptions ? this.daliOptions.pages : [];
+    },
+    allKeywords() {
+      return this.daliKeywords.map(item => item.name);
+    },
+    hasNoKeywords() {
+      return this.isDaliGuide && !this.daliKeywords.length;
+    },
   },
   watch: {
     article: {
@@ -48,8 +88,15 @@ export default {
           this.metaDescription = description;
           this.metaTags = this.formattedTags({ tags });
         }
+        this.loadDaliGuide();
       },
       deep: true,
+      immediate: true,
+    },
+    isDaliGuide: {
+      handler() {
+        this.loadDaliGuide();
+      },
       immediate: true,
     },
   },
@@ -61,6 +108,21 @@ export default {
             title: this.metaTitle,
             description: this.metaDescription,
             tags: this.allTags,
+          },
+        });
+      },
+      1000,
+      false
+    );
+    // Solo manda lo de la guía: el servidor lo combina con el resto del meta.
+    this.saveDaliGuide = debounce(
+      () => {
+        this.$emit('saveArticle', {
+          meta: {
+            areas: this.daliAreas.map(item => item.key),
+            keywords: this.allKeywords,
+            pages: this.daliPages.map(item => item.key),
+            reviewed: this.daliReviewed || null,
           },
         });
       },
@@ -114,6 +176,47 @@ export default {
     },
     updateMeta() {
       this.$emit('updateMeta');
+    },
+    loadDaliGuide() {
+      if (!this.isDaliGuide) return;
+      const meta = this.article.meta || {};
+      const areas = meta.areas || [];
+      const pages = meta.pages || [];
+      this.daliAreas = this.areaOptions.filter(item =>
+        areas.includes(item.key)
+      );
+      this.daliPages = pages.map(
+        key =>
+          this.pageOptions.find(item => item.key === key) || {
+            key,
+            label: key,
+          }
+      );
+      this.daliKeywords = this.formattedTags({ tags: meta.keywords || [] });
+      this.daliReviewed = meta.reviewed || '';
+    },
+    addKeywordValue(value) {
+      const keywords = value
+        .split(',')
+        .map(keyword => keyword.trim())
+        .filter(keyword => keyword && !this.allKeywords.includes(keyword));
+
+      this.daliKeywords.push(
+        ...this.formattedTags({ tags: [...new Set(keywords)] })
+      );
+      this.keywordInputValue = '';
+      this.saveDaliGuide();
+    },
+    handleKeywordSearchChange(value) {
+      this.keywordInputValue = value;
+    },
+    onKeywordsBlur() {
+      if (this.keywordInputValue) {
+        this.addKeywordValue(this.keywordInputValue);
+      }
+    },
+    onChangeDaliGuide() {
+      this.saveDaliGuide();
     },
   },
 };
@@ -202,6 +305,7 @@ export default {
           {{ $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.META_TAGS.LABEL') }}
           <multiselect
             v-model="metaTags"
+            class="tags-input"
             :placeholder="
               $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.META_TAGS.PLACEHOLDER')
             "
@@ -217,6 +321,99 @@ export default {
             @remove="removeTag"
           />
         </label>
+      </div>
+      <div
+        v-if="isDaliGuide"
+        class="pt-4 mb-6 border-t border-solid border-slate-50 dark:border-slate-700"
+      >
+        <h3 class="text-base text-slate-800 dark:text-slate-100">
+          {{ $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.DALI.TITLE') }}
+        </h3>
+        <p class="mb-4 text-xs text-slate-600 dark:text-slate-300">
+          {{ $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.DALI.ABOUT') }}
+        </p>
+        <label>
+          {{ $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.DALI.KEY') }}
+          <input :value="daliKey" type="text" readonly />
+        </label>
+        <p class="-mt-2 mb-4 text-xs text-slate-600 dark:text-slate-300">
+          {{ $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.DALI.KEY_HELP') }}
+        </p>
+        <label>
+          {{ $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.DALI.AREAS') }}
+          <multiselect
+            v-model="daliAreas"
+            :options="areaOptions"
+            track-by="key"
+            label="label"
+            multiple
+            :close-on-select="false"
+            :clear-on-select="false"
+            :placeholder="
+              $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.DALI.AREAS_PLACEHOLDER')
+            "
+            selected-label
+            :select-label="$t('FORMS.MULTISELECT.ENTER_TO_SELECT')"
+            :deselect-label="$t('FORMS.MULTISELECT.ENTER_TO_REMOVE')"
+            @input="onChangeDaliGuide"
+          />
+        </label>
+        <p class="mt-1 mb-4 text-xs text-slate-600 dark:text-slate-300">
+          {{ $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.DALI.AREAS_HELP') }}
+        </p>
+        <label>
+          {{ $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.DALI.KEYWORDS') }}
+          <multiselect
+            v-model="daliKeywords"
+            class="tags-input"
+            :placeholder="
+              $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.DALI.KEYWORDS_PLACEHOLDER')
+            "
+            label="name"
+            :options="[]"
+            track-by="name"
+            multiple
+            taggable
+            :close-on-select="false"
+            @search-change="handleKeywordSearchChange"
+            @close="onKeywordsBlur"
+            @tag="addKeywordValue"
+            @remove="onChangeDaliGuide"
+          />
+        </label>
+        <p v-if="hasNoKeywords" class="mt-1 mb-4 text-xs text-red-600">
+          {{ $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.DALI.KEYWORDS_EMPTY') }}
+        </p>
+        <label class="mt-4">
+          {{ $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.DALI.PAGES') }}
+          <multiselect
+            v-model="daliPages"
+            :options="pageOptions"
+            track-by="key"
+            label="label"
+            multiple
+            :close-on-select="false"
+            :clear-on-select="false"
+            :placeholder="
+              $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.DALI.PAGES_PLACEHOLDER')
+            "
+            selected-label
+            :select-label="$t('FORMS.MULTISELECT.ENTER_TO_SELECT')"
+            :deselect-label="$t('FORMS.MULTISELECT.ENTER_TO_REMOVE')"
+            @input="onChangeDaliGuide"
+          />
+        </label>
+        <label class="mt-4">
+          {{ $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.DALI.REVIEWED') }}
+          <input
+            v-model="daliReviewed"
+            type="date"
+            @change="onChangeDaliGuide"
+          />
+        </label>
+        <p class="-mt-2 text-xs text-slate-600 dark:text-slate-300">
+          {{ $t('HELP_CENTER.ARTICLE_SETTINGS.FORM.DALI.REVIEWED_HELP') }}
+        </p>
       </div>
       <div class="flex flex-col">
         <woot-button
@@ -248,7 +445,9 @@ export default {
     @apply mb-0;
   }
 
-  .multiselect__content-wrapper {
+  // Etiquetas y palabras clave se escriben libres: sin lista desplegable.
+  .tags-input .multiselect__content-wrapper,
+  .tags-input .multiselect__select {
     @apply hidden;
   }
 
@@ -259,10 +458,6 @@ export default {
 
   .multiselect__placeholder {
     @apply text-slate-300 dark:text-slate-200 pt-2 mb-0;
-  }
-
-  .multiselect__select {
-    @apply hidden;
   }
 }
 </style>
