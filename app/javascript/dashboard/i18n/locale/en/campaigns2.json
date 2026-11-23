@@ -376,7 +376,8 @@
         "campaign_ended": "Campaign ended",
         "campaign_finished": "Campaign ended",
         "Cita": "Booked an appointment",
-        "Encuesta contestada": "Answered the survey"
+        "Encuesta contestada": "Answered the survey",
+        "later": "Writing again later"
       }
     },
     "LIST": {
@@ -439,7 +440,8 @@
         "discarded": "Not interested: leaves the campaign and gets no more touches; the reason shows in «Why they leave».",
         "handoff": "Asks for a person or gets upset: goes to {to} and the seller stops.",
         "done": "Finishes (confirmed, not coming or answered the survey): marked as done.",
-        "no_reply": "Never replies: after {n} touches it ends as «No reply»."
+        "no_reply": "Never replies: after {n} touches it ends as «No reply».",
+        "later": "«Not now» or out of office: it writes once more on the date they say (30 days if not)."
       },
       "WARNINGS": {
         "no_address": "This contact has no data for the channel: it would not reach them.",

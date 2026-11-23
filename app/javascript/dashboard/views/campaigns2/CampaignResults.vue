@@ -20,6 +20,7 @@ const OUTCOME_KEYS = [
   'campaign_finished',
   'Cita',
   'Encuesta contestada',
+  'later',
 ];
 // Las salidas que se pueden abrir para ver sus contactos (Motor2Results::GROUPS).
 const EXIT_GROUPS = [

@@ -376,7 +376,8 @@
         "campaign_ended": "Terminó la campaña",
         "campaign_finished": "Terminó la campaña",
         "Cita": "Agendó cita",
-        "Encuesta contestada": "Contestó la encuesta"
+        "Encuesta contestada": "Contestó la encuesta",
+        "later": "Le escriben más adelante"
       }
     },
     "LIST": {
@@ -439,7 +440,8 @@
         "discarded": "No le interesa: sale de la campaña y ya no recibe toques; el motivo queda en «En qué se van».",
         "handoff": "Pide una persona o se molesta: pasa a {to} y el vendedor se detiene.",
         "done": "Termina (confirmó, no va o contestó la encuesta): queda cumplido.",
-        "no_reply": "Nunca contesta: después de {n} toques termina como «No contestó»."
+        "no_reply": "Nunca contesta: después de {n} toques termina como «No contestó».",
+        "later": "«Ahora no» o fuera de la oficina: se le vuelve a escribir una vez en la fecha que diga (30 días si no dice)."
       },
       "WARNINGS": {
         "no_address": "Este contacto no tiene el dato del canal: no le llegaría.",

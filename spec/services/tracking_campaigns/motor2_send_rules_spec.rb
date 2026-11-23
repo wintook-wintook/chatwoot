@@ -98,6 +98,20 @@ RSpec.describe 'Motor2 campaign send rules' do # rubocop:disable RSpec/DescribeC
     end
   end
 
+  describe '«más adelante»' do
+    it 'un solo toque más en esos días, a hora hábil, con la plantilla del último toque si ese no tiene' do
+      camp = campaign
+      trk = tracking(camp, status: 'active', attempt_count: 1, max_attempts: 1, whatsapp_templates: ['promo_1'])
+      conversation = create(:conversation, account: account, inbox: inbox, contact: contact)
+      trk.update!(conversation: conversation)
+      function = Motor2::Config.for(trk).function
+      Motor2::Functions::CampaignSellerOutcomes.new(trk, conversation, function).apply('later', '10|De vacaciones')
+      trk.reload
+      expect(trk).to have_attributes(status: 'scheduled', max_attempts: 2, outcome: 'later', whatsapp_templates: %w[promo_1 promo_1])
+      expect(trk.scheduled_for).to be > 9.days.from_now
+    end
+  end
+
   describe 'inscribir' do
     it 'un seguimiento «solo contesta» viejo de la bandeja ya no deja fuera al contacto' do
       old = ContactTracking.create!(account: account, contact: contact, inbox: inbox, tracking_template: seller, status: 'active',

@@ -93,6 +93,7 @@ class TrackingCampaigns::Motor2Simulation
     return [] unless function.respond_to?(:survey?)
 
     list = [interested, { kind: 'discarded' }, { kind: 'handoff', to: person_name(function.handoff_target) }]
+    list << { kind: 'later' } unless function.survey?
     list << { kind: 'done' } if function.survey? || function.invite?
     list << { kind: 'no_reply', attempts: attempts }
   end

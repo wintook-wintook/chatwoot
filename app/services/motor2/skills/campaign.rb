@@ -3,6 +3,7 @@
 # «Campaña» — lo del Vendedor de campaña que manda el código (Plan-Motor-Agentes §11.16):
 #   - Ofrecer / Reactivar / Renovar: le_interesa → relevo (Motor2::Relay) a quien sigue;
 #     no_le_interesa → se despide y el seguimiento se cierra;
+#     mas_adelante («ahora no», «escríbeme en marzo», fuera de la oficina) → un solo toque más en esa fecha;
 #   - Invitar: confirmar_asistencia → su lugar en el evento (EventAttendee confirmó o canceló);
 #   - Encuesta: las preguntas tal cual y en orden, una por mensaje (el código lleva cuál sigue);
 #     guardar_respuesta; al terminar, si una calificación es baja, se levanta un caso.
@@ -20,7 +21,7 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
 
     [fn('le_interesa', "Le interesa la oferta: pásalo a quien sigue (#{relay_label}). Llámala en cuanto muestre interés " \
                        '(pide precio, detalles, quiere comprar o que lo contacten).', { resumen: STR }, %w[resumen]),
-     not_interested]
+     not_interested, later]
   end
 
   def memory
@@ -52,6 +53,7 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
     case name
     when 'le_interesa' then interested(args['resumen'])
     when 'no_le_interesa' then not_interested!(args['motivo'])
+    when 'mas_adelante' then later!(args['dias'], args['motivo'])
     when 'confirmar_asistencia' then attendance(args['asistira'], args['nota'])
     else save_answer(args)
     end
@@ -68,10 +70,25 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
        { motivo: STR }, %w[motivo])
   end
 
+  MAX_LATER_DAYS = 120
+
+  def later
+    fn('mas_adelante', 'Dice que AHORA NO pero no cierra la puerta («ahorita no», «escríbeme en marzo», «estoy de vacaciones», ' \
+                       'respuesta automática de fuera de la oficina): se le vuelve a escribir una vez en esa fecha. Después ' \
+                       'despídete en una frase diciendo que le escribes entonces (no lo uses si dijo que no le interesa).',
+       { dias: { type: 'integer', description: 'En cuántos días volver a escribirle (si no dijo, 30)' }, motivo: STR }, %w[dias])
+  end
+
+  def later!(days, reason)
+    days = (days.presence || 30).to_i.clamp(1, MAX_LATER_DAYS)
+    @turn.decide('later', "#{days}|#{reason}")
+    { ok: true, nota: "Listo: se le vuelve a escribir en #{days} días. Despídete en una frase, sin preguntas." }
+  end
+
   def invite_tools
     [fn('confirmar_asistencia', 'Dijo si va o no va al evento: lo deja confirmado o cancelado.',
         { asistira: { type: 'boolean' }, nota: STR }, %w[asistira]),
-     not_interested]
+     not_interested, later]
   end
 
   def survey_tools

@@ -114,6 +114,7 @@ export default {
         relay: ['appointment', 'relay_agent', 'relay_person'],
         discarded: ['discarded'],
         handoff: ['handoff'],
+        later: ['later'],
         done: ['done'],
       };
       const o = outcomes.find(x => (map[kind] || []).includes(x.kind));
