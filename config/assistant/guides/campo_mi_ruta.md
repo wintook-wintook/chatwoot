@@ -2,14 +2,14 @@
 key: campo_mi_ruta
 title: Mi ruta en campo (celular)
 areas: [agenda, service]
-keywords: [mi ruta, mi ruta en campo, campo, celular, tecnico, visitas de hoy, voy en camino, llegue, ubicacion, termine, terminar visita, firma, concluir, mis trabajos, como llegar, google maps, llamar, whatsapp, sin senal, visita sin orden, vendedor en campo, dali, dictar reporte, volver a dali, guardar nota, fotos, antes, despues, materiales, refacciones, cotizar trabajo adicional, cotizacion en campo, cierre con el cliente, quien recibe, calificacion, horas, ir a kontrolya, dia anterior, dia siguiente]
+keywords: [mi ruta, mi ruta en campo, campo, celular, tecnico, visitas de hoy, voy en camino, llegue, ubicacion, termine, terminar visita, firma, concluir, mis trabajos, como llegar, google maps, llamar, whatsapp, sin senal, visita sin orden, vendedor en campo, dali, dictar reporte, volver a dali, guardar nota, fotos, antes, despues, materiales, refacciones, cotizar trabajo adicional, cotizacion en campo, cierre con el cliente, quien recibe, calificacion, horas, ir a kontrolya, dia anterior, dia siguiente, participante, participas, ayudante, acompañante]
 pages: [agenda, my_day, case, field_route, dispatch, task_reports]
 sources:
   - app/javascript/dashboard/views/field/**/*
   - app/services/field/**/*.rb
   - app/controllers/api/v1/accounts/field_visits_controller.rb
   - app/controllers/api/v1/accounts/agenda_visits_controller.rb
-reviewed: 2026-11-14
+reviewed: 2026-11-23
 ---
 ## Para qué sirve
 Mi ruta en campo es la pantalla para el celular de quien sale a visitar clientes: técnicos con órdenes de trabajo y vendedores con visitas de su agenda. Muestra las visitas del día en orden de hora y permite avisar que vas en camino, marcar tu llegada y terminar con el reporte, sin el menú completo de la plataforma.
@@ -42,6 +42,7 @@ Son las tareas agendadas marcadas con «Es una visita al cliente» (por ejemplo,
 1. Abre la visita y elige en «Llego en» los minutos; pulsa «Voy en camino» (solo mientras está «Por visitar»). Si el cliente tiene conversación, le llega el aviso; si no, solo queda la hora.
 2. Pulsa «Llegué» al llegar (guarda hora y ubicación; solo cuenta la primera llegada).
 3. Pulsa «Concluir» y llena el reporte de cierre. Arriba eliges «¿Cómo terminó?»: «Se realizó» o «El cliente no asistió» (también lleva qué pasó y el tiempo). Luego resultado, comentario, evidencia y tiempo dedicado.
+4. Si vas como participante (otro es el responsable), la visita sale en tu Mi ruta con cómo llegar y llamar, pero sin «Voy en camino», «Llegué» ni «Concluir»: eso lo marca el responsable.
 
 ### Hacerlo platicando con Dali
 1. En Dali pregunta «¿qué visitas tengo hoy?» (botón «Visitas de hoy»), «¿cuál sigue?» o «¿qué le hicimos la última vez a Mario?».

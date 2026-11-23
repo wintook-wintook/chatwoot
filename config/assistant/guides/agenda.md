@@ -2,7 +2,7 @@
 key: agenda
 title: Agenda, tareas y reportes
 areas: [agenda]
-keywords: [agenda, agendar, agendar tarea, agendo, como agendo, tarea, tareas, mi dia, dia de, dia de otro, ver el dia de, mi dia de otro usuario, supervisar, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, reportar avance, avance, ver reportes, historial, historial de la tarea, ver historial, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada, cancelar, cancelar tarea, cancelar cita, motivo de cancelacion, reabrir, sin responsable, sin asignar, borrar tarea, no puedo borrar, reprogramar, solicitante, prioridad, duracion estimada, programada para, plan de mi dia, siguiente, exportar csv, evidencia, buscar tarea]
+keywords: [agenda, agendar, agendar tarea, agendo, como agendo, tarea, tareas, mi dia, dia de, dia de otro, ver el dia de, mi dia de otro usuario, supervisar, mi orden de hoy, pasar a manana, completar, concluir, hecho hoy, tarea agendada, cita, llamada, visita, reporte, reporte de cierre, reportar actividad, reportar avance, avance, ver reportes, historial, historial de la tarea, ver historial, tiempo dedicado, minutos, horas, llegadas, mi ruta, puntaje de tareas, mias, no asignadas, vencidas, programada, cancelar, cancelar tarea, cancelar cita, motivo de cancelacion, reabrir, sin responsable, sin asignar, borrar tarea, no puedo borrar, reprogramar, solicitante, prioridad, duracion estimada, programada para, plan de mi dia, siguiente, exportar csv, evidencia, buscar tarea, participantes, participas, invitar compañero, con quien voy, no puedo ir, ocupado a esa hora]
 pages: [tasks, agenda, my_day, calendar, task_reports, field_route, task_outcomes, task_scoring, case]
 sources:
   - app/javascript/dashboard/views/gestorTickets/Tasks.vue
@@ -13,7 +13,9 @@ sources:
   - app/controllers/api/v1/accounts/case_tasks_index_controller.rb
   - app/controllers/api/v1/accounts/task_reports_controller.rb
   - app/controllers/api/v1/accounts/task_histories_controller.rb
-reviewed: 2026-11-14
+  - app/javascript/dashboard/components/agenda/ParticipantsPicker.vue
+  - app/services/cases/meetings/participants.rb
+reviewed: 2026-11-23
 ---
 ## Para qué sirve
 La Agenda junta todo lo que tienes que hacer: tareas (con fecha, sin hora) y tareas agendadas (con hora: llamadas, reuniones, visitas), y lo que ya se hizo, con su reporte.
@@ -112,6 +114,14 @@ Son dos cosas distintas:
 2. «Pasar a la agenda»: la tarea deja de ser tarea y se vuelve una sola tarea agendada, con el tiempo que ya tenía reportado. Ya trae el título, la descripción y la duración estimada; eliges día, hora y lugar. Solo sale en tareas pendientes que no tienen tareas agendadas y que no son obligatorias, de la etapa ni del cliente (esas solo se agendan).
 3. Al revés, una tarea agendada pasa a tarea sin hora con «Pasar a tarea (sin hora)», en su menú dentro del caso o en el calendario al abrirla. Se quita de la agenda y de Google Calendar y queda como tarea con fecha límite ese mismo día, el organizador como responsable y lo que duraba como tiempo estimado. Si tiene cliente, puedes avisarle que se quita la cita. Si era la sesión de una tarea, no se crea otra: queda esa tarea. Si es de una serie, solo esa vez sale de la agenda. No se puede si ya se hizo, se canceló o ya marcaron «voy en camino».
 4. Queda en la actividad del caso («Tarea ↔ agenda»). También se lo puedes pedir a Dali: «pasa a la agenda la tarea de llamar a Mario, el jueves a las 10» o «la visita de mañana quítala de la agenda y déjala como tarea».
+
+### Participantes de una tarea agendada
+Solo las agendadas (con hora) llevan participantes: otros del equipo que van además del responsable.
+1. Al agendar (en «Tarea» con hora, en «Agendar tarea» del caso o en el calendario) toca los nombres en «Participantes». Si alguno ya tiene algo a esa hora (en Kontrolya o en su Google Calendar), te lo avisa; puedes agendar igual.
+2. Cada participante la ve en su Agenda, su Mi día y su Mi ruta con la etiqueta «Participas», y le llega aviso cuando lo agregan o quitan, si cambia la hora, si se cancela y media hora antes de empezar. Si tiene Google Calendar conectado, le llega también como invitación.
+3. Solo el responsable la edita, marca «Voy en camino» y «Llegué» y la concluye con el reporte.
+4. Si no puedes ir, pulsa «No puedo ir» (en Mi día o al abrirla en el calendario) y escribe por qué: le llega al responsable y en el formulario sale «no puede ir».
+5. A Dali: «agéndame la visita a Grúas el jueves a las 10 con Beto».
 
 ### Borrar una tarea
 Solo para lo que se capturó por error: la borra quien la creó en las primeras 24 horas, o un administrador. Si ya no se puede borrar, te lo dice y te abre «Cancelar» para hacerlo con su motivo.

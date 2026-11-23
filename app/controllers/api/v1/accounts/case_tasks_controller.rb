@@ -50,7 +50,7 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
 
     prev_assignee_id = @task.assignee_id
     was_done = @task.done?
-    return if !was_done && task_params[:status].to_s == 'done' && missing_task_report?(@task)
+    return if missing_close_report?(@task, was_done, task_params[:status])
 
     # @tickets_cases — solicitante: solo se puede fijar si aún NO tiene (tareas
     # antiguas). Una vez puesto es firma inmutable, no se reasigna.

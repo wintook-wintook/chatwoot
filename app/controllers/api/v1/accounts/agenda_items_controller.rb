@@ -15,6 +15,7 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
   include CancelAndDeleteGuard # cancelar con motivo; borrar solo errores de captura
   include ItemConversionActions # pasarla a tarea
   include TaskReportGuard
+  include MeetingParticipantsActions # participantes: «No puedo ir» y avisos
 
   CASES_LIMIT = 50
   FROZEN_MSG = 'Ticket cerrado: no se puede modificar. Reábrelo si necesitas cambiarlo.'
@@ -24,9 +25,10 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
   before_action :lock_closed_meeting, only: :update # realizada, no asistió o cancelada: solo lectura
 
   def index
-    meetings = Current.account.case_meetings.where(organizer_id: current_user.id, starts_at: range)
+    # Las suyas: como responsable o como participante (Cases::Meetings::Participants).
+    meetings = Current.account.case_meetings.for_user(current_user.id).where(starts_at: range)
                       .where.not(status: %i[cancelled rescheduled])
-                      .includes(:contact, :organization, case_ticket: %i[contact organization])
+                      .includes(:contact, :organization, { participants: :user }, case_ticket: %i[contact organization])
     render json: { agenda_items: meetings.map { |m| item_json(m) } }
   end
 
@@ -43,13 +45,24 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
     render json: { tasks: progress_tasks.order(:sequence, :id).limit(CASES_LIMIT).map { |t| ref_task(t) } }
   end
 
+  # ¿Los participantes ya tienen algo a esa hora? { busy: [{ user_id, name, items: [{ title, start, end }] }] }
+  # (sus tareas agendadas en Kontrolya y, si tienen Google conectado, lo ocupado en su calendario).
+  def busy
+    from = Time.zone.parse(params[:start].to_s)
+    to = Time.zone.parse(params[:end].to_s)
+    return render(json: { busy: [] }) unless from && to && to > from
+
+    render json: { busy: AgendaItems::Busy.new(Current.account, params[:user_ids], from, to, exclude_id: params[:exclude_id]).call }
+  end
+
   def create
     ticket = find_ticket
     return render json: { error: FROZEN_MSG }, status: :unprocessable_entity if ticket&.frozen_for_edit?
 
     meeting = AgendaItems::Creator.new(account: Current.account, user: current_user, attrs: create_attrs,
-                                       client: client_for(ticket), organizer: find_assignee).call
-    render json: { agenda_item: item_json(meeting) }, status: :created
+                                       client: client_for(ticket), organizer: find_assignee,
+                                       participant_ids: params[:participant_ids]).call
+    render json: { agenda_item: item_json(meeting.reload) }, status: :created
   rescue AgendaItems::Creator::AlreadyLinked
     render json: { error: I18n.t('agenda_items.already_linked') }, status: :unprocessable_entity
   rescue AgendaItems::Creator::AllDayEvent
@@ -63,7 +76,8 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
     return if %w[held no_show].include?(params[:status].to_s) && missing_task_report?(@meeting)
     return cancel_item if params[:status].to_s == 'cancelled'
 
-    if @meeting.update(update_attrs)
+    if notifying_participants(@meeting) { @meeting.update(update_attrs) }
+      sync_participants(@meeting)
       sync_meeting
       render json: { agenda_item: item_json(@meeting) }
     else
@@ -83,7 +97,7 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
 
   # Cancelar desde el calendario: con motivo, como en el caso.
   def cancel_item
-    result = run_cancellation(@meeting)
+    result = notifying_participants(@meeting) { run_cancellation(@meeting) }
     render json: { agenda_item: item_json(@meeting.reload), client_notice: result[:notice] }.compact if result
   end
 
@@ -143,6 +157,11 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
     render json: { agenda_item: item_json(AgendaItems::Linker.new(@meeting, ticket, current_user).call) }
   end
 
+  # Participantes: los usuarios del equipo que también la ven en su Agenda (si vienen en el pedido).
+  def sync_participants(meeting)
+    sync_meeting_participants(meeting, params[:participant_ids]) if params.key?(:participant_ids)
+  end
+
   def sync_meeting
     if @meeting.saved_change_to_status? && @meeting.cancelled?
       Cases::MeetingSyncJob.perform_later(@meeting.id, 'cancel')
@@ -157,7 +176,13 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
       start: meeting.starts_at, end: meeting.ends_at, location: meeting.location,
       google_event_id: meeting.google_event_id, google_calendar_id: meeting.google_calendar_id,
       contact: ref(meeting.client_contact), organization: ref(meeting.client_organization),
-      case_ticket: meeting.case_ticket && ref_case(meeting.case_ticket) }
+      case_ticket: meeting.case_ticket && ref_case(meeting.case_ticket),
+      organizer: ref(meeting.organizer) }.merge(participation_json(meeting))
+  end
+
+  # Si la ve por ser participante (no responsable) y quiénes participan.
+  def participation_json(meeting)
+    { participating: meeting.organizer_id != current_user.id, participants: participants_json(meeting) }
   end
 
   def ref(record)

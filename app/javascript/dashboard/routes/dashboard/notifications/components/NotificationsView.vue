@@ -48,6 +48,13 @@ export default {
       });
 
       // @tickets_cases Fase A — los tickets no tienen conversación: van a su detalle.
+      // Agenda: participante de una tarea agendada → su «Mi día».
+      if (primaryActorType === 'CaseMeeting') {
+        this.$router.push(
+          `/app/accounts/${this.accountId}/tickets/tasks?tab=my_day`
+        );
+        return;
+      }
       if (primaryActorType === 'CaseTicket') {
         this.$router.push(
           `/app/accounts/${this.accountId}/tickets/${primaryActorId}`

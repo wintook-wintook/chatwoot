@@ -161,9 +161,13 @@ export default {
     },
     async toggleTask(task) {
       try {
-        await CaseTasksAPI.updateTask(this.ticketId, task.id, {
-          status: task.status === 'done' ? 'pending' : 'done',
-        });
+        // Lista de verificación: cierra con el reporte de servicio, sin reporte por punto.
+        await CaseTasksAPI.updateTask(
+          this.ticketId,
+          task.id,
+          { status: task.status === 'done' ? 'pending' : 'done' },
+          { service_checklist: true }
+        );
         await this.fetch();
       } catch (error) {
         this.fail(error);

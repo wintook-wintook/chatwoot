@@ -304,6 +304,12 @@ prospect_lists_cleanup_job:
   class: 'ProspectLists::CleanupJob'
   queue: scheduled_jobs
 
+# Agenda: recordatorio a los participantes de las tareas agendadas que empiezan en la próxima media hora
+meeting_participants_reminder_job:
+  cron: '*/5 * * * *'
+  class: 'Cases::MeetingParticipantsReminderJob'
+  queue: scheduled_jobs
+
 # Cobranza: cada hora, los agentes de cobranza cuya hora de envío es esta le cobran a quien le toca
 receivables_outreach_job:
   cron: '5 * * * *'

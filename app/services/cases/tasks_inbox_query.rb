@@ -365,7 +365,7 @@ class Cases::TasksInboxQuery::MeetingScope
   end
 
   def includes
-    %i[organizer contact organization]
+    [:organizer, :contact, :organization, { participants: :user }]
   end
 
   def filtered
@@ -410,9 +410,10 @@ class Cases::TasksInboxQuery::MeetingScope
 
     return scope if raw == 'all'
     return scope.where(organizer_id: nil) if raw == 'unassigned'
-    return scope.where(organizer_id: current_user.id) if raw.nil?
+    # Las de la persona: como responsable o como participante (Cases::Meetings::Participants).
+    return scope.for_user(current_user.id) if raw.nil?
 
-    scope.where(organizer_id: raw)
+    scope.for_user(raw)
   end
 
   # CaseMeeting no tiene solicitante: si se pide un filtro explícito, ninguna

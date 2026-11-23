@@ -22,7 +22,8 @@ class Cases::MyDayNotices
   LIMIT = 50
   HIGH_TYPES = %w[sla_missed_first_response sla_missed_next_response sla_missed_resolution conversation_mention].freeze
   MEDIUM_TYPES = %w[client_task_update case_rule_notice case_stage_ready case_stage_tasks case_task_assignment case_ticket_assignment
-                    conversation_assignment assigned_conversation_new_message calendar_event_reminder].freeze
+                    conversation_assignment assigned_conversation_new_message calendar_event_reminder
+                    case_meeting_participant].freeze
   WEIGHT_ORDER = { 'high' => 0, 'medium' => 1 }.freeze
 
   def initialize(user:, account:)
@@ -71,6 +72,8 @@ class Cases::MyDayNotices
 
   def weight(notification, actor)
     return 'high' if HIGH_TYPES.include?(notification.notification_type)
+    # Agenda: está por empezar o se canceló una tarea agendada donde participa.
+    return 'high' if notification.notification_type == 'case_meeting_participant' && %w[reminder cancelled].include?(notification.meta&.dig('kind'))
 
     high_case_notice?(notification, actor) ? 'high' : 'medium'
   end
@@ -94,6 +97,7 @@ class Cases::MyDayNotices
   def link(actor)
     return { kind: 'case', id: actor.id, folio: actor.folio } if actor.is_a?(CaseTicket)
     return { kind: 'conversation', id: actor.display_id } if actor.is_a?(Conversation)
+    return { kind: 'case', id: actor.case_ticket.id, folio: actor.case_ticket.folio } if actor.is_a?(CaseMeeting) && actor.case_ticket
 
     { kind: 'other' }
   end

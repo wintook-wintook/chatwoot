@@ -86,6 +86,9 @@ class CaseMeeting < ApplicationRecord
   belongs_to :organizer,    class_name: 'User', optional: true
   belongs_to :cancelled_by, class_name: 'User', optional: true
   belongs_to :held_by,      class_name: 'User', optional: true
+  # Participantes: otros usuarios del equipo que la ven en su Agenda (CaseMeetings::Participants).
+  has_many :participants, class_name: 'CaseMeetingParticipant', dependent: :delete_all
+  has_many :participant_users, through: :participants, source: :user
 
   enum status: { scheduled: 0, held: 1, no_show: 2, cancelled: 3, rescheduled: 4 }
   # `local_only` = existe solo en MGCI. Modo degradado válido de la Opción B.
@@ -99,6 +102,10 @@ class CaseMeeting < ApplicationRecord
 
   scope :ordered, -> { order(:starts_at, :id) }
   scope :active,  -> { where(status: %i[scheduled rescheduled]) }
+  # Las de una persona: las que tiene como responsable o en las que participa.
+  scope :for_user, lambda { |user_id|
+    where(organizer_id: user_id).or(where(id: CaseMeetingParticipant.where(user_id: user_id).select(:case_meeting_id)))
+  }
 
   # La tarea agendada de una orden de trabajo siempre es visita.
   before_validation -> { self.is_visit = true }, if: -> { case_ticket&.work_order? }
@@ -153,6 +160,13 @@ class CaseMeeting < ApplicationRecord
   before_save :track_signatures, if: :will_save_change_to_status?
   # Consecutivo estable por ticket (R001, R002…): no se recicla al borrar.
   before_create :assign_sequence
+
+  # Para los avisos (Notification#push_event_data) y la campanita.
+  def push_event_data
+    { id: id, title: title, starts_at: starts_at, ends_at: ends_at, case_ticket_id: case_ticket_id, is_visit: is_visit }
+  end
+
+  def participant?(user) = user.present? && participants.exists?(user_id: user.id)
 
   private
 

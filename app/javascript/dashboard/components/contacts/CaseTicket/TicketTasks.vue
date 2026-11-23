@@ -725,7 +725,7 @@ export default {
     // firma (fecha + quién) del cambio de estado, así que basta con el status.
     complete(task) {
       if (this.completingId) return;
-      // La lista de verificación de una orden cierra con su reporte de servicio.
+      // Las del cliente no llevan reporte (lo hace el cliente en su portal).
       if (task.report_required === false) {
         this.continueComplete(task);
         return;

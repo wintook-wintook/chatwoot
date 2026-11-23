@@ -5,12 +5,15 @@ class AgendaItems::Creator
   class AlreadyLinked < StandardError; end
   class AllDayEvent < StandardError; end
 
-  def initialize(account:, user:, attrs:, client: {}, organizer: nil)
+  # participant_ids: otros usuarios del equipo que también la ven en su Agenda (Cases::Meetings::Participants), antes
+  # de crear el evento de Google para que vayan como invitados.
+  def initialize(account:, user:, attrs:, client: {}, organizer: nil, participant_ids: nil) # rubocop:disable Metrics/ParameterLists
     @account = account
     @user = user
     @attrs = attrs
     @client = client
     @organizer = organizer || user
+    @participant_ids = participant_ids
   end
 
   def call
@@ -22,6 +25,7 @@ class AgendaItems::Creator
   def from_form
     meeting = build(@attrs)
     meeting.save!
+    add_participants(meeting)
     AgendaItems::Linker.meeting_added(meeting, @user)
     Cases::MeetingSyncJob.perform_later(meeting.id, 'create')
     meeting
@@ -36,9 +40,14 @@ class AgendaItems::Creator
     meeting = build(google_attrs(event))
     meeting.google_event_id = event['id']
     meeting.save!
+    add_participants(meeting)
     AgendaItems::Linker.meeting_added(meeting, @user)
     AgendaItems::EventLineJob.perform_later(meeting.id)
     meeting
+  end
+
+  def add_participants(meeting)
+    Cases::Meetings::Participants.sync!(meeting, @participant_ids, actor: @user) if @participant_ids.present?
   end
 
   def calendar_id
