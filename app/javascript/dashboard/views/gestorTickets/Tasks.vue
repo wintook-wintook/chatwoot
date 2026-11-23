@@ -1165,7 +1165,7 @@ export default {
     // quién) la deriva el backend del cambio de estado.
     complete(task) {
       if (this.completingId) return;
-      // La lista de verificación de una orden cierra con su reporte de servicio.
+      // Las del cliente no llevan reporte (lo hace el cliente en su portal).
       if (task.report_required === false) {
         this.finishComplete(task);
         return;

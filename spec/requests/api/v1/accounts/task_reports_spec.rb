@@ -48,6 +48,26 @@ RSpec.describe 'Task Reports API' do
       expect(meeting.reload).to be_scheduled
     end
 
+    it 'orden de trabajo: desde Tareas o el caso pide reporte; palomeada en la lista de Mi ruta, no' do
+      order_type = CaseType.create!(account: account, name: 'Mantenimiento', color: '#0d9488', case_class: :work_order)
+      order = CaseTicket.create!(account: account, contact: contact, title: 'Orden', case_type: order_type)
+      first = CaseTask.create!(account: account, case_ticket: order, title: 'Hacer reporte de ventas', assignee: agent)
+      second = CaseTask.create!(account: account, case_ticket: order, title: 'Cambiar filtro', assignee: agent)
+      url = ->(t) { "#{api}/case_tickets/#{order.id}/tasks/#{t.id}" }
+
+      patch url.call(first), params: { case_task: { status: 'done' } }, headers: headers, as: :json
+      expect(response.parsed_body['report_required']).to be(true)
+      expect(first.reload).to be_pending
+
+      patch url.call(second), params: { case_task: { status: 'done' }, service_checklist: true }, headers: headers, as: :json
+      expect(second.reload).to be_done
+
+      # La bandera no salta el reporte fuera de una orden de trabajo.
+      patch "#{api}/case_tickets/#{ticket.id}/tasks/#{task.id}", params: { case_task: { status: 'done' }, service_checklist: true },
+                                                                 headers: headers, as: :json
+      expect(task.reload).to be_pending
+    end
+
     it 'con reporte se concluye, lo cierra y entra a la bitácora del caso' do
       outcome = TaskOutcome.ensure_defaults_for(account).first
       report(task, 'task', task_outcome_id: outcome.id)
