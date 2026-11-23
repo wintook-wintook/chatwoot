@@ -128,6 +128,9 @@ pantalla borraría `guide_key` y `areas`: Dali perdería esa guía o se la mostr
 
 ### Paso 4. Proteger el portal de Dali
 
+> **⏸ PENDIENTE (2026-11-23, decisión del usuario):** se deja para después; por ahora las guías se siguen
+> agregando y editando libremente en el portal. Pasos 1–3 vistos en el navegador en dev (cuenta 2).
+
 Si el portal se archiva o le cambian el slug, Dali se queda sin guías **en todas las cuentas**.
 
 - `portals_controller.rb#update`: no permitir cambiar `slug` ni `archived` del portal de Dali (error claro). Sí permitir nombre, color, textos.
