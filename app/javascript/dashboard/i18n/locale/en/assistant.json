@@ -500,17 +500,20 @@
       "NUDGE": {
         "prospects": "reminder: picks up the pending question",
         "customers": "reminder: picks up what's pending or asks if it was solved",
-        "campaign_seller": "reminder: picks up their question or the offer"
+        "campaign_seller": "reminder: picks up their question or the offer",
+        "collections": "Reminds them of the pending payment or the date they were going to give"
       },
       "END": {
         "prospects": "marked «no answer»; if they answer, the agent picks it up",
         "customers": "if a solution was given: «solved, unconfirmed»; if data was missing, hands it to the area team",
-        "campaign_seller": "marked «no answer»; if they answer, the agent picks it up"
+        "campaign_seller": "marked «no answer»; if they answer, the agent picks it up",
+        "collections": "Ends without reply (the next collection reminder follows «When it collects»)"
       },
       "EXAMPLE": {
         "prospects": "Example: «Did you get a chance to think about the budget? 😊»",
         "customers": "Example: «Did the steps I sent solve it? Reply RESUELTO or ESCALAR.»",
-        "campaign_seller": "Example: «Any questions about the promotion?»"
+        "campaign_seller": "Example: «Any questions about the promotion?»",
+        "collections": "E.g.: «Did you get to the payment? If you already did, send me the proof.»"
       },
       "HINT": "If they answer, it starts over from their new message. If qualified, discarded or handed to a person, it doesn't write. Each conversation shows the next reminder and lets you cancel it.",
       "QUOTE": "🧾 Day {n} after the quote is sent: asks about it ({how})",
@@ -1214,6 +1217,79 @@
       "HINT_OWN": "Only for this agent: starts from the company's and you change what you want (e.g. another product line). It no longer follows company changes.",
       "EMPTY": "Your company hasn't filled them in yet: do it in «How your company talks» or customize them here.",
       "EDIT_COMPANY": "Change them in «How your company talks» ↗"
+    },
+    "COLLECTIONS": {
+      "EDIT_TITLE": "Collections: {name}",
+      "SUBTITLE": "Writes to customers with a balance (from your receivables in Sales › Collections), gives the summary and payment details, records payment promises and proofs, and hands off what needs a person.",
+      "STEPS": {
+        "agent": "The agent",
+        "business": "Your company",
+        "channel": "Channel and templates",
+        "rules": "When it collects",
+        "pay": "Payment details",
+        "talk": "How it talks",
+        "follow": "Follow-up",
+        "test": "Test"
+      },
+      "HINTS": {
+        "agent": "Its name and who gets customers that need a person (if the receivables don't name a collector).",
+        "business": "Business details and voice: your company's or customized.",
+        "channel": "Where it collects: WhatsApp (one approved template per stage) or email.",
+        "rules": "At what time, how often and how many customers per day.",
+        "pay": "What it gives the customer when they ask how to pay, as is.",
+        "talk": "The tone and your instructions.",
+        "follow": "If they reply and go quiet mid-conversation: the reminders.",
+        "test": "Test with a customer from your receivables (the first with a balance, as an example)."
+      },
+      "NAME": "Agent name",
+      "DISPLAY_NAME": "Name the customer sees (optional)",
+      "DISPLAY_NAME_PLACEHOLDER": "E.g. Acme Collections",
+      "COLLECTOR": "Default collector",
+      "TEAM": "Team",
+      "NOBODY": "— None —",
+      "COLLECTOR_HINT": "If the receivables have a Collector column, each customer goes to theirs.",
+      "CHANNEL": "Channel",
+      "CHANNEL_PICK": "Pick a WhatsApp or email inbox",
+      "TEMPLATES_HINT": "WhatsApp only allows writing first with an approved template. Use balance variables: {{cobranza_saldo}}, {{cobranza_vencido}}, {{cobranza_facturas}}, {{cobranza_dias}}, {{cobranza_vence}} and {{nombre}}.",
+      "STAGES": {
+        "preventive": "Before due",
+        "due": "Overdue 1–15 days",
+        "overdue_30": "Overdue 16–30 days",
+        "overdue_60": "Overdue 31–60 days",
+        "overdue_plus": "Overdue 60+ days"
+      },
+      "NO_TEMPLATE": "No template (not contacted at that stage)",
+      "NO_TEMPLATE_HINT": "A stage without a template isn't contacted on WhatsApp. Once the customer replies, the agent writes freely with the exact summary.",
+      "SIGNATURE": "Email signature",
+      "OUTREACH_ON": "Collect automatically",
+      "OUTREACH_HINT": "Off, it only answers whoever writes. On, it writes to whoever is due by these rules.",
+      "SEND_AT": "Sends at",
+      "HOUR": "{h}:00",
+      "WEEKDAYS": "weekdays only",
+      "REMIND_BEFORE": "Reminds before due",
+      "DAYS_BEFORE": "days before (0 = off)",
+      "EVERY": "For those still owing, writes again every",
+      "DAYS": "days",
+      "MAX_PER_DAY": "Max customers per day",
+      "MIN_BALANCE": "Doesn't collect balances under",
+      "RULES_HINT": "It won't write to customers with an active payment promise, a proof pending review, disputed invoices, or someone already handling them.",
+      "PAYMENT_INFO": "Payment details",
+      "PAYMENT_PLACEHOLDER": "Bank: …\nAccount: …\nReference: your customer code",
+      "PAYMENT_HINT": "Without details, when asked how to pay it hands off to the collector.",
+      "TONE": "Tone",
+      "TONES": {
+        "cercano": "Friendly (informal)",
+        "formal": "Formal and respectful"
+      },
+      "INSTRUCTIONS": "Instructions (optional)",
+      "INSTRUCTIONS_PLACEHOLDER": "E.g. Cash payments are made at the branch. Don't offer payment plans: hand off.",
+      "TEST_HINT": "Write as the customer: «how much do I owe?», «I'll pay Friday», «I already paid», «that invoice isn't mine».",
+      "CHAT_HINT": "You are the customer (one from your receivables, as an example). Nothing is saved.",
+      "CANCEL": "Cancel",
+      "SAVE": "Save",
+      "SAVE_ERROR": "It couldn't be saved.",
+      "IN_LIST": "{n} customers with balance · {contacted} contacted in 7 days",
+      "OUTREACH_OFF": "auto-collect: off"
     }
   }
 }

@@ -105,6 +105,13 @@ export const routes = [
     component: () =>
       import('../../../views/contactTrackings/CampaignDetail.vue'),
   },
+  // Cobranza: la cartera por cortes y su agente (solo administradores)
+  {
+    path: frontendURL('accounts/:accountId/collections'),
+    name: 'collections',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/collections/Index.vue'),
+  },
   // Campaña con Vendedor IA (Motor 2.0): pantalla nueva (la 1.0 de arriba no cambia)
   {
     path: frontendURL('accounts/:accountId/tracking-dashboard/campaigns2/new'),

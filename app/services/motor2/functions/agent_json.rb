@@ -30,6 +30,7 @@ module Motor2::Functions::AgentJson
                  retry_value: template.retry_interval_value, retry_unit: template.retry_interval_unit,
                  email_signature: template.email_signature.to_s },
       campaigns: TrackingCampaign.where(tracking_template_id: template.id).count, files: template.file_rules }
+      .merge(template.agent_function == 'collections' ? { collections: Receivables::Overview.agent(template) } : {})
   end
 
   # Cuántas pláticas atiende ahora y cómo terminaron las demás (calificado, pasado, descartado, era cliente).

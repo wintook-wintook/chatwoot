@@ -500,17 +500,20 @@
       "NUDGE": {
         "prospects": "recordatorio: retoma la pregunta que quedó pendiente",
         "customers": "recordatorio: retoma lo pendiente o le pregunta si se resolvió",
-        "campaign_seller": "recordatorio: retoma su duda o la oferta"
+        "campaign_seller": "recordatorio: retoma su duda o la oferta",
+        "collections": "Le recuerda su pago pendiente o la fecha que iba a darte"
       },
       "END": {
         "prospects": "queda «sin respuesta»; si contesta, el agente lo retoma",
         "customers": "si le diste una solución: «resuelto sin confirmar»; si faltaba un dato, pasa al equipo del área",
-        "campaign_seller": "queda «sin respuesta»; si contesta, el agente lo retoma"
+        "campaign_seller": "queda «sin respuesta»; si contesta, el agente lo retoma",
+        "collections": "Termina sin respuesta (el siguiente aviso de cobranza sale con las reglas de «Cuándo cobra»)"
       },
       "EXAMPLE": {
         "prospects": "Ejemplo: «¿Pudiste ver lo del presupuesto? 😊»",
         "customers": "Ejemplo: «¿Se resolvió con los pasos que te pasé? Responde RESUELTO o ESCALAR.»",
-        "campaign_seller": "Ejemplo: «¿Te quedó alguna duda de la promoción?»"
+        "campaign_seller": "Ejemplo: «¿Te quedó alguna duda de la promoción?»",
+        "collections": "Ej.: «¿Pudiste ver lo de tu pago? Si ya lo hiciste, mándame el comprobante.»"
       },
       "HINT": "Si contesta, todo vuelve a empezar desde su nuevo mensaje. Si ya lo calificaste, descartaste o pasaste a una persona, no le escribe. En cada conversación verás el próximo recordatorio y podrás cancelarlo.",
       "QUOTE": "🧾 Día {n} desde que se manda la cotización: le pregunta por ella ({how})",
@@ -1214,6 +1217,79 @@
       "HINT_OWN": "Solo para este agente: arranca con los de la empresa y cambias lo que quieras (por ejemplo, otra línea de productos). Ya no sigue los cambios de la empresa.",
       "EMPTY": "Tu empresa todavía no los tiene llenos: llénalos en «Cómo habla tu empresa» o personalízalos aquí.",
       "EDIT_COMPANY": "Cambiarlos en «Cómo habla tu empresa» ↗"
+    },
+    "COLLECTIONS": {
+      "EDIT_TITLE": "Cobranza: {name}",
+      "SUBTITLE": "Le escribe a tus clientes con saldo (de tu cartera en Ventas › Cobranza), les da el resumen y los datos para pagar, registra promesas de pago y comprobantes, y pasa al cobrador lo que necesita una persona.",
+      "STEPS": {
+        "agent": "El agente",
+        "business": "Tu empresa",
+        "channel": "Canal y plantillas",
+        "rules": "Cuándo cobra",
+        "pay": "Datos para pagar",
+        "talk": "Cómo platica",
+        "follow": "Seguimiento",
+        "test": "Probar"
+      },
+      "HINTS": {
+        "agent": "Su nombre y a quién le pasa los clientes que necesitan una persona (si la cartera no trae cobrador).",
+        "business": "Datos del negocio y cómo habla: los de tu empresa o personalizados.",
+        "channel": "Por dónde cobra: WhatsApp (con una plantilla aprobada por etapa) o correo.",
+        "rules": "A qué hora, cada cuánto y a cuántos clientes por día.",
+        "pay": "Lo que le da al cliente cuando pregunta cómo pagar, tal cual.",
+        "talk": "El tono y tus indicaciones.",
+        "follow": "Si contesta y se queda a media plática: los recordatorios.",
+        "test": "Prueba con un cliente de tu cartera (el primero con saldo, de ejemplo)."
+      },
+      "NAME": "Nombre del agente",
+      "DISPLAY_NAME": "Nombre que ve el cliente (opcional)",
+      "DISPLAY_NAME_PLACEHOLDER": "Ej. Cobranza Grúas del Norte",
+      "COLLECTOR": "Cobrador por omisión",
+      "TEAM": "Equipo",
+      "NOBODY": "— Nadie —",
+      "COLLECTOR_HINT": "Si la cartera trae la columna Cobrador, cada cliente va con el suyo.",
+      "CHANNEL": "Canal",
+      "CHANNEL_PICK": "Elige una bandeja de WhatsApp o de correo",
+      "TEMPLATES_HINT": "WhatsApp solo deja escribir primero con plantilla aprobada. Usa variables con el saldo: {{cobranza_saldo}}, {{cobranza_vencido}}, {{cobranza_facturas}}, {{cobranza_dias}}, {{cobranza_vence}} y {{nombre}}.",
+      "STAGES": {
+        "preventive": "Antes de vencer",
+        "due": "Vencido 1–15 días",
+        "overdue_30": "Vencido 16–30 días",
+        "overdue_60": "Vencido 31–60 días",
+        "overdue_plus": "Vencido más de 60 días"
+      },
+      "NO_TEMPLATE": "Sin plantilla (no se le escribe en esa etapa)",
+      "NO_TEMPLATE_HINT": "En la etapa sin plantilla no se le escribe por WhatsApp. Cuando el cliente contesta, el agente ya le escribe libre con el resumen exacto.",
+      "SIGNATURE": "Firma del correo",
+      "OUTREACH_ON": "Cobrar solo",
+      "OUTREACH_HINT": "Apagado, solo atiende a quien le escriba. Prendido, le escribe a quien le toca según estas reglas.",
+      "SEND_AT": "Envía a las",
+      "HOUR": "{h}:00",
+      "WEEKDAYS": "solo de lunes a viernes",
+      "REMIND_BEFORE": "Avisa antes de vencer",
+      "DAYS_BEFORE": "días antes (0 = no avisa)",
+      "EVERY": "A quien sigue debiendo, le vuelve a escribir cada",
+      "DAYS": "días",
+      "MAX_PER_DAY": "Máximo de clientes por día",
+      "MIN_BALANCE": "No cobra saldos menores a",
+      "RULES_HINT": "No le escribe a quien tiene una promesa de pago vigente, mandó un comprobante por validar, tiene facturas en aclaración o ya lo está atendiendo una persona.",
+      "PAYMENT_INFO": "Datos para pagar",
+      "PAYMENT_PLACEHOLDER": "Banco: BBVA\nCuenta: 0123456789\nCLABE: 012345678901234567\nReferencia: tu clave de cliente",
+      "PAYMENT_HINT": "Sin datos, cuando pregunten cómo pagar lo pasa al cobrador.",
+      "TONE": "Tono",
+      "TONES": {
+        "cercano": "Cercano y amable (de tú)",
+        "formal": "Formal y respetuoso (de usted)"
+      },
+      "INSTRUCTIONS": "Indicaciones (opcional)",
+      "INSTRUCTIONS_PLACEHOLDER": "Ej. Los pagos en efectivo se hacen en sucursal. No ofrezcas convenios: pásalo al cobrador.",
+      "TEST_HINT": "Escribe como si fueras el cliente: «¿cuánto debo?», «pago el viernes», «ya pagué», «esa factura no es mía».",
+      "CHAT_HINT": "Tú eres el cliente (uno de tu cartera, de ejemplo). No se guarda nada.",
+      "CANCEL": "Cancelar",
+      "SAVE": "Guardar",
+      "SAVE_ERROR": "No se pudo guardar.",
+      "IN_LIST": "{n} clientes con saldo · {contacted} contactados en 7 días",
+      "OUTREACH_OFF": "cobrar solo: apagado"
     }
   }
 }

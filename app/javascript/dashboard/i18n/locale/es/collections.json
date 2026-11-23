@@ -1,0 +1,186 @@
+{
+  "COLLECTIONS": {
+    "TITLE": "Cobranza",
+    "SUBTITLE": "Tu cartera por cobrar y el agente que le cobra a cada cliente. Sube tu cartera en Excel; después la conectaremos a tu sistema administrativo.",
+    "LOADING": "Cargando…",
+    "NO_AGENT": "Todavía no tienes el agente de Cobranza: actívalo en Agentes listos para que le escriba a tus clientes.",
+    "GO_AGENTS": "Ir a Agentes listos",
+    "START": "Empieza subiendo tu cartera: una fila por cada factura con saldo.",
+    "TABS": {
+      "overview": "Tablero",
+      "upload": "Subir la cartera",
+      "customers": "Clientes",
+      "promises": "Promesas de pago",
+      "claims": "Comprobantes",
+      "imports": "Cortes"
+    },
+    "CARDS": {
+      "TOTAL": "Por cobrar",
+      "OVERDUE": "Vencido",
+      "COLLECTED": "Cobrado (30 días)",
+      "CUSTOMERS": "Clientes con saldo",
+      "CONTACTED": "{n} contactados en 7 días",
+      "CLAIMS": "Comprobantes por validar",
+      "PROMISES": "Promesas vigentes · 30 días: {kept} cumplidas, {broken} incumplidas",
+      "PENDING_LINK": "Clientes por ligar (sin contacto, no se les cobra)"
+    },
+    "AGING_TITLE": "Antigüedad de saldos",
+    "LAST_IMPORT": "Último corte: {date} · {source} {file}",
+    "AGING": {
+      "EMPTY": "Sin saldos por cobrar.",
+      "CURRENCY": "Moneda",
+      "TOTAL": "Total",
+      "PCT": "{pct}%",
+      "not_due": "Por vencer",
+      "d1_15": "1–15 días",
+      "d16_30": "16–30 días",
+      "d31_60": "31–60 días",
+      "d61_90": "61–90 días",
+      "d90_plus": "Más de 90"
+    },
+    "UPLOAD": {
+      "INTRO": "Sube tu cartera en Excel (.xlsx) o CSV: una fila por cada factura con saldo. Obligatorio: cliente, folio, vencimiento y saldo; para cobrarle, su WhatsApp o correo.",
+      "REPLACES": "Cada corte reemplaza al anterior: la factura que ya no viene, o viene en 0, se toma como pagada; si bajó el saldo, es un abono.",
+      "TEMPLATE": "Descargar la plantilla",
+      "READING": "Leyendo el archivo…",
+      "COLUMNS": "Columnas: las de la plantilla se reconocen solas; si usas tu propio Excel, elige cuál es cuál (se recuerda para la próxima).",
+      "FIELDS": {
+        "customer_key": "Clave cliente",
+        "customer_name": "Cliente",
+        "rfc": "RFC",
+        "contact_name": "Contacto",
+        "phone": "WhatsApp",
+        "email": "Correo",
+        "folio": "Folio",
+        "issued_on": "Fecha factura",
+        "due_on": "Vencimiento",
+        "total": "Total",
+        "balance": "Saldo",
+        "currency": "Moneda",
+        "collector_email": "Cobrador (correo)"
+      },
+      "REQUIRED_MARK": "*",
+      "NONE": "— No viene —",
+      "MISSING": "Faltan columnas obligatorias (*).",
+      "SUMMARY": "{valid} de {rows} filas listas · {customers} clientes · {invoices} facturas con saldo",
+      "DIFF": {
+        "new": "Facturas nuevas",
+        "payments": "Con abono ({amount})",
+        "paid": "Pagadas ({amount})",
+        "unlinked": "Clientes nuevos por ligar"
+      },
+      "ERRORS": "{n} filas no se toman:",
+      "ERROR_ROW": "Fila {row}: {reason}",
+      "APPLY": "Aplicar el corte",
+      "APPLIED": "Cartera actualizada.",
+      "RESULT": "Listo: {invoices} facturas de {customers} clientes. Por ligar: {unlinked}.",
+      "ERROR": "No se pudo leer el archivo."
+    },
+    "CUSTOMERS": {
+      "FILTERS": {
+        "balance": "Con saldo",
+        "pending": "Por ligar",
+        "ignored": "Ignorados",
+        "all": "Todos"
+      },
+      "SEARCH": "Buscar cliente, RFC o clave",
+      "CREATE_ALL": "Crear los {n} por ligar",
+      "PENDING_HINT": "No los encontramos por su WhatsApp, correo o RFC. «Crear» los da de alta como organización y contacto con los datos de la cartera; «Ligar» los une a un contacto que ya tienes. Mientras no estén ligados, el agente no les cobra.",
+      "LOADING": "Cargando…",
+      "EMPTY": "No hay clientes aquí.",
+      "COLS": {
+        "CUSTOMER": "Cliente",
+        "CONTACT": "Contacto",
+        "BALANCE": "Saldo",
+        "OVERDUE": "Vencido",
+        "STAGE": "Etapa",
+        "LAST": "Último aviso"
+      },
+      "LINK": {
+        "pending": "Por ligar",
+        "linked": "Ligado",
+        "ignored": "Ignorado"
+      },
+      "STAGES": {
+        "preventive": "Por vencer",
+        "due": "Vencido 1–15 días",
+        "overdue_30": "Vencido 16–30 días",
+        "overdue_60": "Vencido 31–60 días",
+        "overdue_plus": "Vencido más de 60"
+      },
+      "CREATE": "Crear",
+      "LINK_BUTTON": "Ligar",
+      "IGNORE": "Ignorar",
+      "PREV": "Anterior",
+      "NEXT": "Siguiente",
+      "PAGE": "Página {page} de {pages}",
+      "LINK_TITLE": "Ligar «{name}» a un contacto",
+      "SEARCH_CONTACT": "Buscar contacto por nombre, teléfono o correo",
+      "NO_CONTACTS": "Sin resultados.",
+      "DETAIL_SUB": "Debe {total} · vencido {overdue}",
+      "OPEN_CONVERSATION": "Abrir su conversación",
+      "INV": {
+        "FOLIO": "Folio",
+        "DUE": "Vencimiento",
+        "BALANCE": "Saldo",
+        "STATUS": "Estado",
+        "DISPUTED": "En aclaración",
+        "CLAIMED": "«Ya pagué» por validar",
+        "open": "Por cobrar",
+        "paid": "Pagada"
+      },
+      "PROMISES": "Promesas de pago",
+      "PROMISE_LINE": "{date} · {status}",
+      "ERROR": "No se pudo hacer."
+    },
+    "PROMISES": {
+      "STATUS": {
+        "pending": "Vigentes",
+        "kept": "Cumplidas",
+        "broken": "Incumplidas"
+      },
+      "LOADING": "Cargando…",
+      "EMPTY": "No hay promesas aquí.",
+      "COLS": {
+        "CUSTOMER": "Cliente",
+        "DATE": "Paga el",
+        "AMOUNT": "Monto",
+        "NOTE": "Nota"
+      }
+    },
+    "CLAIMS": {
+      "STATUS": {
+        "pending": "Por validar",
+        "validated": "Validados",
+        "rejected": "Rechazados"
+      },
+      "HINT": "Validado: sus facturas no se cobran hasta que el siguiente corte las traiga pagadas. Rechazado: se le vuelve a cobrar.",
+      "LOADING": "Cargando…",
+      "EMPTY": "No hay comprobantes aquí.",
+      "NO_FILE": "Sin archivo adjunto",
+      "CONVERSATION": "Conversación",
+      "VALIDATE": "Validar",
+      "REJECT": "Rechazar",
+      "REJECT_NOTE": "¿Por qué lo rechazas? (se anota en la conversación)",
+      "ERROR": "No se pudo revisar."
+    },
+    "IMPORTS": {
+      "LOADING": "Cargando…",
+      "EMPTY": "Todavía no has subido tu cartera.",
+      "COLS": {
+        "DATE": "Fecha",
+        "SOURCE": "De dónde",
+        "INVOICES": "Cartera",
+        "CHANGES": "Cambios"
+      },
+      "SOURCES": {
+        "upload": "Excel/CSV",
+        "microsip": "Microsip",
+        "sae": "Aspel SAE",
+        "contpaqi": "CONTPAQi"
+      },
+      "COUNTS": "{invoices} facturas · {customers} clientes",
+      "DIFF": "{new} nuevas · {payments} abonos · {paid} pagadas · cobrado {collected}"
+    }
+  }
+}

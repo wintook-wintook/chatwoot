@@ -2234,6 +2234,36 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_25_100000) do
     t.index ["owner_id"], name: "index_organizations_on_owner_id"
   end
 
+  create_table "payment_claims", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "receivable_customer_id", null: false
+    t.bigint "conversation_id"
+    t.bigint "message_id"
+    t.decimal "amount", precision: 14, scale: 2
+    t.string "note"
+    t.string "status", default: "pending", null: false
+    t.bigint "reviewed_by_id"
+    t.datetime "reviewed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_payment_claims_on_account_id"
+    t.index ["receivable_customer_id"], name: "index_payment_claims_on_receivable_customer_id"
+  end
+
+  create_table "payment_promises", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "receivable_customer_id", null: false
+    t.bigint "conversation_id"
+    t.date "promised_on", null: false
+    t.decimal "amount", precision: 14, scale: 2
+    t.string "status", default: "pending", null: false
+    t.string "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_payment_promises_on_account_id"
+    t.index ["receivable_customer_id"], name: "index_payment_promises_on_receivable_customer_id"
+  end
+
   create_table "platform_app_permissibles", force: :cascade do |t|
     t.bigint "platform_app_id", null: false
     t.string "permissible_type", null: false
@@ -2432,6 +2462,73 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_25_100000) do
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_ready_agents_on_account_id"
     t.index ["created_by_id"], name: "index_ready_agents_on_created_by_id"
+  end
+
+  create_table "receivable_customers", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "external_key", null: false
+    t.string "name", null: false
+    t.string "rfc"
+    t.string "contact_name"
+    t.string "phone"
+    t.string "email"
+    t.bigint "collector_id"
+    t.bigint "organization_id"
+    t.bigint "contact_id"
+    t.string "link_status", default: "pending", null: false
+    t.datetime "last_contacted_at"
+    t.integer "touches", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "external_key"], name: "index_receivable_customers_on_account_id_and_external_key", unique: true
+    t.index ["account_id", "link_status"], name: "index_receivable_customers_on_account_id_and_link_status"
+    t.index ["account_id"], name: "index_receivable_customers_on_account_id"
+    t.index ["contact_id"], name: "index_receivable_customers_on_contact_id"
+  end
+
+  create_table "receivable_events", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "receivable_id", null: false
+    t.bigint "receivable_import_id"
+    t.string "kind", null: false
+    t.decimal "amount", precision: 14, scale: 2
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_receivable_events_on_account_id"
+    t.index ["receivable_id"], name: "index_receivable_events_on_receivable_id"
+  end
+
+  create_table "receivable_imports", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.string "source", default: "upload", null: false
+    t.string "source_ref"
+    t.jsonb "stats", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_receivable_imports_on_account_id"
+  end
+
+  create_table "receivables", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "receivable_customer_id", null: false
+    t.string "source", default: "upload", null: false
+    t.string "folio", null: false
+    t.date "issued_on"
+    t.date "due_on", null: false
+    t.decimal "total", precision: 14, scale: 2
+    t.decimal "balance", precision: 14, scale: 2, default: "0.0", null: false
+    t.string "currency", default: "MXN", null: false
+    t.string "status", default: "open", null: false
+    t.datetime "paid_at"
+    t.datetime "disputed_at"
+    t.datetime "claimed_at"
+    t.bigint "last_import_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "receivable_customer_id", "folio"], name: "index_receivables_on_customer_folio", unique: true
+    t.index ["account_id", "status", "due_on"], name: "index_receivables_on_account_id_and_status_and_due_on"
+    t.index ["account_id"], name: "index_receivables_on_account_id"
+    t.index ["receivable_customer_id"], name: "index_receivables_on_receivable_customer_id"
   end
 
   create_table "related_categories", force: :cascade do |t|
@@ -3192,6 +3289,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_25_100000) do
   add_foreign_key "organization_events", "users", on_delete: :nullify
   add_foreign_key "organizations", "accounts"
   add_foreign_key "organizations", "users", column: "owner_id", on_delete: :nullify
+  add_foreign_key "payment_claims", "accounts"
+  add_foreign_key "payment_claims", "receivable_customers", on_delete: :cascade
+  add_foreign_key "payment_promises", "accounts"
+  add_foreign_key "payment_promises", "receivable_customers", on_delete: :cascade
   add_foreign_key "published_prompt_files", "published_prompts", on_delete: :cascade
   add_foreign_key "published_prompts", "accounts"
   add_foreign_key "published_prompts", "tracking_templates", on_delete: :nullify
@@ -3214,6 +3315,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_25_100000) do
   add_foreign_key "ready_agent_sessions", "ready_agents"
   add_foreign_key "ready_agents", "accounts"
   add_foreign_key "ready_agents", "users", column: "created_by_id"
+  add_foreign_key "receivable_customers", "accounts"
+  add_foreign_key "receivable_events", "accounts"
+  add_foreign_key "receivable_events", "receivables", on_delete: :cascade
+  add_foreign_key "receivable_imports", "accounts"
+  add_foreign_key "receivables", "accounts"
+  add_foreign_key "receivables", "receivable_customers", on_delete: :cascade
   add_foreign_key "sales_budget_lines", "accounts", on_delete: :cascade
   add_foreign_key "sales_budget_lines", "catalog_items", on_delete: :cascade
   add_foreign_key "sales_budget_lines", "contacts", on_delete: :cascade

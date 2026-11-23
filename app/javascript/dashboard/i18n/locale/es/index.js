@@ -51,6 +51,7 @@ import erp from './erp.json'; // @query_databases
 import bulkTrackingAssign from './bulkTrackingAssign.json'; // proyecto@bulk_tracking_assign
 import trackingCampaigns from './trackingCampaigns.json'; // @campanas_vendedor
 import campaigns2 from './campaigns2.json'; // Campaña con Vendedor IA (Motor 2.0)
+import collections from './collections.json'; // Cobranza
 import trackingAssistant from './trackingAssistant.json'; // proyecto@asistente_agentes_ia
 import whatsappCalls from './whatsappCalls.json'; // diag/llamadas_whatsapp
 import internalChat from './internalChat.json';
@@ -108,6 +109,7 @@ export default {
   ...bulkTrackingAssign, // proyecto@bulk_tracking_assign
   ...trackingCampaigns, // @campanas_vendedor
   ...campaigns2, // Campaña con Vendedor IA (Motor 2.0)
+  ...collections, // Cobranza
   ...trackingAssistant, // proyecto@asistente_agentes_ia
   ...whatsappCalls, // diag/llamadas_whatsapp
   ...internalChat, // feat/chat_interno

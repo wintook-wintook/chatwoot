@@ -487,7 +487,8 @@
     "SHOW_LESS": "Show less",
     "INTERNAL_CHAT_NEW": "New chat",
     "MAINTENANCE": "Maintenance",
-    "INTERNAL_CHAT": "Internal chat"
+    "INTERNAL_CHAT": "Internal chat",
+    "COLLECTIONS": "Collections"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Billing",

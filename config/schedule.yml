@@ -315,3 +315,9 @@ task_recurrences_run_job:
   cron: '7 * * * *'
   class: 'TaskRecurrences::RunJob'
   queue: scheduled_jobs
+
+# Cobranza: cada hora, los agentes de cobranza cuya hora de envío es esta le cobran a quien le toca
+receivables_outreach_job:
+  cron: '5 * * * *'
+  class: 'Receivables::OutreachJob'
+  queue: scheduled_jobs

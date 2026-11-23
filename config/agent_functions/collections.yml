@@ -1,5 +1,10 @@
+# Función «Cobranza» (agente listo). Le escribe a los clientes con saldo de la cartera de la empresa (Cobranza ›
+# subir la cartera en Excel/CSV, o después la sincronización con su sistema administrativo) y atiende lo que contesten:
+# resumen de saldo, datos para pagar, promesa de pago, «ya pagué» con comprobante, aclaraciones y pasar al cobrador.
+# El puesto va en collections.md; la lógica, en Motor2::Functions::Collections y Motor2::Skills::Collections.
 key: collections
-order: 3
-available: false
+order: 4
+available: true
 title: Cobranza
-summary: Recuerda pagos pendientes, negocia la fecha y consigue el pago o la promesa de pago.
+summary: 'Recuerda los pagos pendientes de tu cartera (Excel o tu sistema administrativo), da el resumen de saldo y los datos para pagar, registra promesas de pago y comprobantes, y pasa al cobrador lo que necesita una persona.'
+objective: Que el cliente pague o deje una fecha de pago, con un trato amable y sin presionar de más.
