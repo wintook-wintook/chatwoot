@@ -139,6 +139,12 @@ export default {
       </button>
       <div class="flex flex-wrap items-center gap-1.5 mt-1">
         <span class="font-mono text-xs text-slate-400">{{ taskFolio }}</span>
+        <span
+          v-if="row.recurring"
+          class="px-1.5 text-[11px] rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+        >
+          {{ $t('RECURRING_TASKS.RECURRING_BADGE') }}
+        </span>
         <button
           v-if="row.case_ticket"
           type="button"

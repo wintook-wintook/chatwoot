@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_25_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -674,6 +674,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
     t.jsonb "arrival_location", default: {}, null: false
     t.string "cancel_reason"
     t.datetime "participants_reminded_at"
+    t.bigint "task_recurrence_id"
     t.index ["account_id", "starts_at"], name: "index_case_meetings_on_account_id_and_starts_at"
     t.index ["account_id", "starts_at"], name: "index_case_meetings_on_visits", where: "is_visit"
     t.index ["case_meeting_series_id"], name: "index_case_meetings_on_series_id"
@@ -683,6 +684,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
     t.index ["contact_id"], name: "index_case_meetings_on_contact_id"
     t.index ["google_event_id"], name: "index_case_meetings_on_google_event_id"
     t.index ["organization_id"], name: "index_case_meetings_on_organization_id"
+    t.index ["task_recurrence_id"], name: "index_case_meetings_on_task_recurrence_id"
   end
 
   create_table "case_outcome_reasons", force: :cascade do |t|
@@ -824,6 +826,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
     t.boolean "requires_file", default: false, null: false
     t.string "client_status"
     t.bigint "completed_by_contact_id"
+    t.bigint "task_recurrence_id"
     t.index ["account_id", "priority"], name: "index_case_tasks_on_account_id_and_priority"
     t.index ["account_id"], name: "index_case_tasks_on_account_id"
     t.index ["assignee_id", "planned_on"], name: "index_case_tasks_on_assignee_id_and_planned_on"
@@ -837,6 +840,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
     t.index ["contact_id"], name: "index_case_tasks_on_contact_id"
     t.index ["organization_id"], name: "index_case_tasks_on_organization_id"
     t.index ["requester_id"], name: "index_case_tasks_on_requester_id"
+    t.index ["task_recurrence_id"], name: "index_case_tasks_on_task_recurrence_id"
   end
 
   create_table "case_ticket_conversations", force: :cascade do |t|
@@ -2576,6 +2580,42 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
     t.index ["account_id"], name: "index_task_outcomes_on_account_id"
   end
 
+  create_table "task_recurrences", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "assignee_id"
+    t.bigint "contact_id"
+    t.bigint "organization_id"
+    t.bigint "case_ticket_id"
+    t.string "title", null: false
+    t.text "description"
+    t.integer "priority", default: 1, null: false
+    t.integer "estimated_minutes"
+    t.string "mode", default: "fixed", null: false
+    t.integer "every", default: 1, null: false
+    t.string "unit", default: "week", null: false
+    t.integer "weekdays", default: [], null: false, array: true
+    t.string "at_time"
+    t.string "time_zone"
+    t.date "starts_on", null: false
+    t.date "ends_on"
+    t.integer "max_count"
+    t.integer "generated_count", default: 0, null: false
+    t.integer "missed_count", default: 0, null: false
+    t.date "next_on"
+    t.date "last_generated_on"
+    t.string "status", default: "active", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_task_recurrences_on_account_id"
+    t.index ["assignee_id"], name: "index_task_recurrences_on_assignee_id"
+    t.index ["case_ticket_id"], name: "index_task_recurrences_on_case_ticket_id"
+    t.index ["contact_id"], name: "index_task_recurrences_on_contact_id"
+    t.index ["organization_id"], name: "index_task_recurrences_on_organization_id"
+    t.index ["status", "next_on"], name: "index_task_recurrences_on_status_and_next_on"
+    t.index ["user_id"], name: "index_task_recurrences_on_user_id"
+  end
+
   create_table "task_reports", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "case_task_id"
@@ -3032,6 +3072,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
   add_foreign_key "case_meetings", "case_tickets"
   add_foreign_key "case_meetings", "contacts", on_delete: :cascade
   add_foreign_key "case_meetings", "organizations", on_delete: :nullify
+  add_foreign_key "case_meetings", "task_recurrences", on_delete: :nullify
   add_foreign_key "case_meetings", "users", column: "cancelled_by_id", on_delete: :nullify
   add_foreign_key "case_meetings", "users", column: "held_by_id", on_delete: :nullify
   add_foreign_key "case_meetings", "users", column: "organizer_id", on_delete: :nullify
@@ -3052,6 +3093,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
   add_foreign_key "case_tasks", "case_type_columns", on_delete: :nullify
   add_foreign_key "case_tasks", "contacts", on_delete: :cascade
   add_foreign_key "case_tasks", "organizations", on_delete: :nullify
+  add_foreign_key "case_tasks", "task_recurrences", on_delete: :nullify
   add_foreign_key "case_tasks", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "case_tasks", "users", column: "completed_by_id", on_delete: :nullify
   add_foreign_key "case_tasks", "users", column: "requester_id", on_delete: :nullify
@@ -3185,6 +3227,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
   add_foreign_key "scheduled_messages", "conversations"
   add_foreign_key "scheduled_messages", "users", on_delete: :cascade
   add_foreign_key "task_outcomes", "accounts"
+  add_foreign_key "task_recurrences", "accounts"
+  add_foreign_key "task_recurrences", "case_tickets", on_delete: :cascade
+  add_foreign_key "task_recurrences", "contacts", on_delete: :nullify
+  add_foreign_key "task_recurrences", "organizations", on_delete: :nullify
+  add_foreign_key "task_recurrences", "users"
+  add_foreign_key "task_recurrences", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "task_reports", "accounts"
   add_foreign_key "task_reports", "case_meetings", on_delete: :nullify
   add_foreign_key "task_reports", "case_tasks", on_delete: :nullify

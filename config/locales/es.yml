@@ -570,6 +570,8 @@ es:
       stage_ready: "Se terminaron las tareas de %{stage}: ¿pasar a %{next}?"
       stage_ready_doc: "Se terminaron las tareas de %{stage}: documenta para pasar a %{next}"
       rule_notice: "Regla «%{rule}»: %{title}"
+    task_recurrence_missed:
+      body: "%{assignee} · vencía el %{due} y sigue pendiente"
     case_meeting_participant:
       added: "Te agregaron a «%{title}»"
       rescheduled: "Cambió la hora de «%{title}»"
@@ -595,6 +597,7 @@ es:
       case_rule_notice: "Aviso de una regla en el caso %{folio}"
       client_task_update: "El cliente avanzó una tarea en el caso %{folio}"
       case_meeting_participant: "Tarea agendada"
+      task_recurrence_missed: "No se hizo «%{title}»"
     calendar_event_reminder:
       body: "\"%{title}\" comienza en %{minutes} minutos"
       no_title: "Evento sin título"

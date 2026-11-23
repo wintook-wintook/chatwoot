@@ -65,7 +65,8 @@ class Notification < ApplicationRecord
     client_task_update: 17,
     # Agenda — participantes de una tarea agendada (actor: la CaseMeeting): te agregaron, cambió la hora, se canceló,
     # está por empezar o (al responsable) alguien no puede ir. meta: { kind, title, when }. Solo campanita + toast.
-    case_meeting_participant: 18
+    case_meeting_participant: 18,
+    task_recurrence_missed: 19 # Tareas que se repiten: la anterior sigue pendiente (actor: TaskRecurrence). Campanita + toast
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
@@ -75,7 +76,7 @@ class Notification < ApplicationRecord
   after_destroy_commit :dispatch_destroy_event
   after_update_commit :dispatch_update_event
 
-  PRIMARY_ACTORS = %w[Conversation CaseTicket CaseMeeting].freeze # @tickets_cases Fase A; CaseMeeting: participantes de la Agenda
+  PRIMARY_ACTORS = %w[Conversation CaseTicket CaseMeeting TaskRecurrence].freeze # @tickets_cases Fase A; CaseMeeting: participantes de la Agenda
   CASE_TITLE_TYPES = %w[case_ticket_assignment case_task_assignment case_task_completed
                         case_stage_tasks case_stage_ready case_rule_notice client_task_update].freeze
 
@@ -137,6 +138,8 @@ class Notification < ApplicationRecord
       'case_meeting_participant' => 'notifications.notification_title.case_meeting_participant'
     }
 
+    return TaskRecurrences::Notifier.title(meta) if task_recurrence_missed?
+
     i18n_key = notification_title_map[notification_type]
     return '' unless i18n_key
 
@@ -183,6 +186,7 @@ class Notification < ApplicationRecord
       meta&.dig('task_title').to_s
     when 'case_meeting_participant'
       [meta&.dig('when'), meta&.dig('note')].compact_blank.join(' · ')
+    when 'task_recurrence_missed' then TaskRecurrences::Notifier.body(meta)
     else
       ''
     end

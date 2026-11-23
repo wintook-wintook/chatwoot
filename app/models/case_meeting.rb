@@ -80,6 +80,7 @@ class CaseMeeting < ApplicationRecord
   include AgendaLink
   include TaskReportable
   belongs_to :case_task, optional: true
+  belongs_to :task_recurrence, optional: true # Tareas que se repiten (con hora)
   belongs_to :case_meeting_series, optional: true
   # Dueño del calendario donde vive el evento: reasignar el ticket NO lo mueve
   # (§8.7 del plan), por eso se persiste y se muestra en la fila.

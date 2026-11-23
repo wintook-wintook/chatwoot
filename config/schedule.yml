@@ -310,6 +310,12 @@ meeting_participants_reminder_job:
   class: 'Cases::MeetingParticipantsReminderJob'
   queue: scheduled_jobs
 
+# Tareas que se repiten: crea las que tocan hoy y cuenta las no hechas
+task_recurrences_run_job:
+  cron: '7 * * * *'
+  class: 'TaskRecurrences::RunJob'
+  queue: scheduled_jobs
+
 # Cobranza: cada hora, los agentes de cobranza cuya hora de envío es esta le cobran a quien le toca
 receivables_outreach_job:
   cron: '5 * * * *'

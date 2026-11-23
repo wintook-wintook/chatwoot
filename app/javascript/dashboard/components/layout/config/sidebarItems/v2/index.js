@@ -654,6 +654,7 @@ const agenda = accountId => ({
   routes: [
     'gestorTickets_tasks',
     'gestorTickets_task_reports',
+    'gestorTickets_recurring_tasks',
     'google_calendar',
   ],
   menuItems: [
@@ -670,6 +671,14 @@ const agenda = accountId => ({
       featureFlag: FEATURE_FLAGS.GOOGLE_CALENDAR,
       toState: frontendURL(`accounts/${accountId}/google-calendar`),
       toStateName: 'google_calendar',
+    },
+    // Tareas fijas que se vuelven a crear cada cierto tiempo.
+    {
+      icon: 'arrow-clockwise',
+      label: 'RECURRING_TASKS',
+      featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+      toState: frontendURL(`accounts/${accountId}/tickets/recurring-tasks`),
+      toStateName: 'gestorTickets_recurring_tasks',
     },
     // Reportes de cierre y llegadas, en dos pestañas.
     {

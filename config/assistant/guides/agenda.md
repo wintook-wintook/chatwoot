@@ -137,6 +137,7 @@ Los reportes (cierre, avance y actividad) salen en la actividad del caso como re
 
 ## Dudas frecuentes
 - ¿Cómo agendo una tarea? Agendar es ponerle día y hora para que entre al calendario. Hay tres caminos: (1) una nueva: «Nueva tarea» en Agenda › Tareas (o «Tarea» en la barra de arriba) y llena «Fecha programada» y «Hora (opcional)»; con hora queda agendada; (2) una que ya existe y tiene caso: en el caso, menú de la tarea › «Agendar tarea» (día y hora; se puede repetir o hacer «Serie»); (3) una que ya existe sin caso: «Pasar a la agenda» (eliges día, hora y lugar). También se lo puedes pedir a Dali: «agéndame llamar a Mario el jueves a las 10».
+- ¿Una tarea fija que se vuelva a crear cada semana o cada mes? Marca «Se repite» al crearla; se ven en Agenda › Tareas que se repiten (guía [[tareas_que_se_repiten]]).
 - ¿Por qué el vencimiento de una tarea no tiene hora? Una tarea sin agendar no entra al calendario: su vencimiento es solo el día y vence al final de ese día. Si necesitas una hora exacta (cita, llamada, visita), es una tarea agendada: usa «Agendar tarea» o «Pasar a la agenda».
 - ¿Es obligatorio el tiempo dedicado? Por omisión sí. El administrador lo cambia en Catálogos › Resultados de tareas («Exigir el tiempo dedicado en los reportes»); ahí también da de alta los resultados.
 - Si concluyes varias tareas a la vez, el tiempo se reparte por igual entre ellas.

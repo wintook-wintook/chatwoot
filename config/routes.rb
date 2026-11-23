@@ -659,6 +659,7 @@ Rails.application.routes.draw do
             post :schedule, on: :member # pasarla a la agenda
           end
           # Plan-Agenda — lo agendado desde el calendario: con caso o solo con su contacto.
+          resources :task_recurrences, only: [:index, :create, :update, :destroy] # Tareas que se repiten
           resources :agenda_items, only: [:index, :create, :update, :destroy] do
             get :cases, on: :collection
             get :tasks, on: :collection # tareas pendientes para «Reportar avance»
