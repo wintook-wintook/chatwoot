@@ -1148,7 +1148,6 @@
       "ANSWER_PLACEHOLDER": "How to answer",
       "ADD_OBJECTION": "+ Add objection",
       "REMOVE": "Remove",
-      "OPENER": "The campaign message for the test (the real campaign uses your template)",
       "OPENER_LABEL": "Campaign message",
       "OPENERS": {
         "offer": "Hi! I'm writing about this: {what}. Want to hear more?",
@@ -1159,16 +1158,12 @@
         "SOMETHING": "our offer",
         "EVENT": "our event"
       },
-      "TEST_READY": "«{name}» is ready. Save it and pick it in a campaign.",
-      "TEST_HINT": "Reply as your contact: «yes, how much?», «no thanks», «what time is it?»…",
       "IN_CAMPAIGNS": "In {n} campaigns",
       "NO_CAMPAIGNS": "Not in any campaign yet",
-      "QUOTE_NOT_FOR_PURPOSE": "It doesn't quote in a survey or an invitation.",
+      "QUOTE_NOT_FOR_PURPOSE": "Invite and Survey campaigns do not quote.",
       "QUOTE_HINT": "If they are interested in the offer and ask for a quote, it builds it with Catalog prices.",
-      "EXAMPLE": {
-        "TITLE": "Example offer for testing",
-        "HINT": "Each campaign brings its own offer, channel and messages (Campaigns › Campaign with AI Seller). This offer is only for «Test» here and to prefill new campaigns."
-      }
+      "TEST_IN_CAMPAIGN": "«{name}» is ready. To test it, create or open a campaign and in «Review and launch» use «Simulate the campaign», «Chat with the seller» or «Real test»: that is where it is tested with the real offer.",
+      "APPOINTMENT_HINT": "When a campaign's goal is «Book an appointment», the seller books on these people's calendars."
     },
     "FILES": {
       "HINT": "Upload images or files the agent can send (product photos, flyer, catalog, map…). Give each one a description: the agent can't see the image, so that's how it knows when it helps and doesn't make up what it shows.",

@@ -187,8 +187,7 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
   def seller_json(template)
     answers = template.motor2.to_h['answers'].to_h
     { id: template.id, name: template.name, display_name: template.customer_display_name, email_signature: template.email_signature,
-      example: answers.slice(*%w[purpose offer_what offer_details offer_goal event_id survey_questions low_score]),
-      relay: answers['relay'] || 'agent' }
+      relay: answers['relay'] || 'agent', appointments: Array(answers['appointment_user_ids']).any? }
   end
 
   def inbox_json(inbox)

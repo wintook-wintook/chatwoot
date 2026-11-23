@@ -9,7 +9,6 @@ const options = {
       id: 7,
       name: 'Vendedor IA',
       relay: 'agent',
-      example: { offer_what: 'Oferta del agente' },
     },
   ],
   inboxes: [
@@ -80,12 +79,12 @@ const flush = () =>
   });
 
 describe('CampaignWizard', () => {
-  it('con un solo vendedor lo elige y trae su oferta de ejemplo; arma la audiencia por etiqueta', async () => {
+  it('con un solo vendedor lo elige (la oferta es de la campaña: no se copia del vendedor); arma la audiencia por etiqueta', async () => {
     const w = mount(CampaignWizard, { mocks, stubs });
     await flush();
     expect(w.vm.form.tracking_template_id).toBe(7);
     await w.vm.$nextTick();
-    expect(w.vm.form.brief.offer_what).toBe('Oferta del agente');
+    expect(w.vm.form.brief.offer_what).toBe('');
     w.vm.form.audience.source = { type: 'label', label: 'vip' };
     expect(w.vm.body().audience.filter_payload[0]).toMatchObject({
       attribute_key: 'labels',

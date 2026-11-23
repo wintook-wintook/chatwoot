@@ -1148,7 +1148,6 @@
       "ANSWER_PLACEHOLDER": "Cómo contestarlo",
       "ADD_OBJECTION": "+ Agregar objeción",
       "REMOVE": "Quitar",
-      "OPENER": "El mensaje de la campaña para la prueba (en la campaña real va tu plantilla)",
       "OPENER_LABEL": "Mensaje de la campaña",
       "OPENERS": {
         "offer": "¡Hola! Te escribo por esto: {what}. ¿Te cuento más?",
@@ -1159,16 +1158,12 @@
         "SOMETHING": "nuestra oferta",
         "EVENT": "nuestro evento"
       },
-      "TEST_READY": "«{name}» está listo. Guárdalo y elígelo en una campaña.",
-      "TEST_HINT": "Contesta como tu contacto: «sí, ¿cuánto cuesta?», «no gracias», «¿a qué hora es?»…",
       "IN_CAMPAIGNS": "En {n} campañas",
       "NO_CAMPAIGNS": "Todavía en ninguna campaña",
-      "QUOTE_NOT_FOR_PURPOSE": "En una encuesta o una invitación no cotiza.",
+      "QUOTE_NOT_FOR_PURPOSE": "En campañas de Invitar y Encuesta no se cotiza.",
       "QUOTE_HINT": "Si le interesa la oferta y pide una cotización, la arma con los precios del Catálogo.",
-      "EXAMPLE": {
-        "TITLE": "Oferta de ejemplo para probar",
-        "HINT": "Cada campaña trae su propia oferta, canal y mensajes (Campañas › Campaña con Vendedor IA). Esta oferta es solo para «Probar» aquí y para llenar de inicio las campañas nuevas."
-      }
+      "TEST_IN_CAMPAIGN": "Listo «{name}». Para probarlo, crea o abre una campaña y en «Revisar y lanzar» usa «Simular la campaña», «Chatear con el vendedor» o «Prueba real»: ahí se prueba con la oferta de verdad.",
+      "APPOINTMENT_HINT": "Cuando una campaña tiene como meta «Agendar cita», el vendedor agenda en el calendario de estas personas."
     },
     "FILES": {
       "HINT": "Sube imágenes o archivos que el agente pueda mandar (fotos del producto, flyer, catálogo, mapa…). Ponle a cada uno una descripción: el agente no ve la imagen, con eso sabe cuándo sirve y no inventa lo que trae.",

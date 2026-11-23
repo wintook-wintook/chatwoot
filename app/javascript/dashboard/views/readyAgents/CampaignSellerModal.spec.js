@@ -17,7 +17,6 @@ const mountModal = props =>
       WootModal: true,
       WootModalHeader: true,
       WootButton: true,
-      ReadyAgentChat: true,
       FichaChannel: true,
       FluentIcon: true,
     },
@@ -40,20 +39,12 @@ describe('CampaignSellerModal', () => {
     expect(vm.steps).not.toContain('channel');
   });
 
-  it('oferta de ejemplo: invitar usa el evento en «Probar»; de la encuesta, las vacías no se mandan', async () => {
-    const { vm } = mountModal({ events: [{ id: 9, name: 'Expo' }] });
-    vm.form.name = 'Invitación';
-    vm.form.settings.purpose = 'invite';
-    vm.form.settings.event_id = 9;
-    await vm.$nextTick();
-    expect(vm.opener).toContain('Expo');
-
-    vm.form.settings.purpose = 'survey';
-    vm.form.settings.survey_questions[0].text = '¿Nos recomendarías?';
-    vm.addQuestion();
-    expect(vm.payload().settings.survey_questions).toEqual([
-      '¿Nos recomendarías?',
-    ]);
+  it('solo configura cómo vende: sin oferta de ejemplo ni chat; se prueba en la campaña', () => {
+    const { vm } = mountModal({ calendarUsers: [{ id: 4, name: 'Ana' }] });
+    vm.form.name = 'Ventas';
+    expect(vm.$options.components.ReadyAgentChat).toBeUndefined();
+    vm.toggleCalendarUser(4);
+    expect(vm.payload().settings.appointment_user_ids).toEqual(['4']);
   });
 
   it('un agente guardado: su canal y toques vuelven al asistente y se mandan con sus nombres', () => {

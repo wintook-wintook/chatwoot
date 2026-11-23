@@ -253,9 +253,6 @@ export default {
       this.form.touches.emails = this.form.touches.emails.slice(0, count);
       if (this.touchTab > count) this.touchTab = count;
     },
-    'form.tracking_template_id'() {
-      this.prefillFromSeller();
-    },
     'form.brief.kind'(kind) {
       if (kind === 'invite' && this.sourceType === 'segment') {
         this.form.audience.source = { type: 'event' };
@@ -307,17 +304,6 @@ export default {
         body: '',
         blocks: [],
       }));
-    },
-    // Agente nuevo en la campaña: su oferta de ejemplo llena lo que falte.
-    prefillFromSeller() {
-      const example = this.seller?.example || {};
-      const brief = this.form.brief;
-      if (!brief.offer_what && example.offer_what) {
-        brief.offer_what = example.offer_what;
-      }
-      if (!brief.offer_details && example.offer_details) {
-        brief.offer_details = example.offer_details;
-      }
     },
     async load(id) {
       const { data } = await Motor2CampaignsAPI.show(id);
