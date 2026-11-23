@@ -18,6 +18,8 @@ import {
   errorMessage,
   isQuotableKit,
   kitComponentRows,
+  lineAmounts,
+  priceWithTaxes,
   scaleComponents,
   withUnitsPerKit,
 } from './crmHelpers';
@@ -57,16 +59,15 @@ export default {
     },
     // Precio con impuestos (sin descuento), como lo enseña CRMZeus junto al precio.
     priceWithTaxes() {
-      const percent = this.taxes
-        .filter(tax => this.form.tax_ids.includes(tax.id))
-        .reduce(
-          (sum, tax) =>
-            sum + (tax.tax_type.endsWith('withholding') ? -1 : 1) * tax.percent,
-          0
-        );
-      return (Number(this.form.unit_price || 0) * (1 + percent / 100)).toFixed(
-        2
+      return priceWithTaxes(
+        this.form.unit_price,
+        this.form.tax_ids,
+        this.taxes
       );
+    },
+    // Importe y con impuesto de la partida (sin el descuento extra), como CRMZeus.
+    amounts() {
+      return lineAmounts(this.form, this.taxes, this.form.tax_ids);
     },
   },
   watch: {
@@ -346,6 +347,10 @@ export default {
             <input v-model="form.unit_price" type="number" min="0" step="any" />
           </label>
           <label>
+            {{ $t('CRM_ZEUS.QUOTE_FORM.PRICE_WITH_TAXES') }}
+            <input :value="priceWithTaxes" type="text" disabled />
+          </label>
+          <label>
             {{ $t('CRM_ZEUS.QUOTE_FORM.DISCOUNT_PERCENT') }}
             <input
               v-model="form.discount_percent"
@@ -356,8 +361,12 @@ export default {
             />
           </label>
           <label>
-            {{ $t('CRM_ZEUS.QUOTE_FORM.PRICE_WITH_TAXES') }}
-            <input :value="priceWithTaxes" type="text" disabled />
+            {{ $t('CRM_ZEUS.QUOTE_FORM.LINE_AMOUNT') }}
+            <input :value="amounts.amount" type="text" disabled />
+          </label>
+          <label>
+            {{ $t('CRM_ZEUS.QUOTE_FORM.LINE_AMOUNT_WITH_TAXES') }}
+            <input :value="amounts.amountWithTaxes" type="text" disabled />
           </label>
         </div>
         <fieldset v-if="isKit" class="mb-3">

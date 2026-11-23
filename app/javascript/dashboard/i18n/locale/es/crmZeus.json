@@ -467,6 +467,8 @@
       "UNIT_PRICE": "Precio unitario",
       "DISCOUNT_PERCENT": "% de descuento",
       "PRICE_WITH_TAXES": "Precio con impuestos",
+      "LINE_AMOUNT": "Importe",
+      "LINE_AMOUNT_WITH_TAXES": "Importe con impuestos",
       "TAXES": "Impuestos",
       "NOTES": "Notas",
       "EXTRA_NOTES": "Notas extras",

@@ -467,6 +467,8 @@
       "UNIT_PRICE": "Unit price",
       "DISCOUNT_PERCENT": "Discount %",
       "PRICE_WITH_TAXES": "Price with taxes",
+      "LINE_AMOUNT": "Amount",
+      "LINE_AMOUNT_WITH_TAXES": "Amount with taxes",
       "TAXES": "Taxes",
       "NOTES": "Notes",
       "EXTRA_NOTES": "Extra notes",

@@ -246,4 +246,73 @@ describe('CrmQuoteItemModal (impuestos según el cliente)', () => {
       await elegir({ id: 7, charge_taxes: false, withholds_taxes: true })
     ).toEqual([2, 3]);
   });
+
+  describe('precio con impuesto', () => {
+    const precio = (unitPrice, taxIds) => {
+      const wrapper = shallowMount(QuoteItemModal, {
+        propsData: {
+          item: { ...blankItem(), unit_price: unitPrice, tax_ids: taxIds },
+          taxes: TAXES,
+        },
+        mocks: { $t: clave => clave },
+        stubs: ['woot-modal', 'woot-modal-header', 'woot-submit-button'],
+      });
+      return wrapper.vm.priceWithTaxes;
+    };
+
+    it('solo suma los trasladados, sin restar retenciones', () => {
+      expect(precio(100, [1, 2, 3])).toBe('116.00');
+      expect(precio(100, [2, 3])).toBe('100.00');
+    });
+
+    it('redondea el precio y el impuesto por separado', () => {
+      // 10.555 → 10.56; 10.56 × 16 % = 1.6896 → 1.69; total 12.25
+      // (redondeando una sola vez daría 10.555 × 1.16 = 12.2438 → 12.24).
+      expect(precio(10.555, [1])).toBe('12.25');
+    });
+
+    it('sin precio enseña cero', () => {
+      expect(precio('', [1])).toBe('0.00');
+    });
+  });
+
+  describe('importe y con impuesto', () => {
+    const importes = item =>
+      shallowMount(QuoteItemModal, {
+        propsData: { item: { ...blankItem(), ...item }, taxes: TAXES },
+        mocks: { $t: clave => clave },
+        stubs: ['woot-modal', 'woot-modal-header', 'woot-submit-button'],
+      }).vm.amounts;
+
+    it('cantidad × precio menos descuento; solo suma los trasladados', () => {
+      expect(
+        importes({
+          quantity: 3,
+          unit_price: 100,
+          discount_percent: 10,
+          tax_ids: [1, 2, 3],
+        })
+      ).toEqual({ amount: '270.00', amountWithTaxes: '313.20' });
+    });
+
+    it('redondea el bruto, el descuento y el impuesto por separado', () => {
+      // 1 × 10.125 → 10.13; descuento 10.13 × 10 % = 1.013 → 1.01; neto 9.12;
+      // IVA 9.12 × 16 % = 1.4592 → 1.46; con impuesto 10.58.
+      expect(
+        importes({
+          quantity: 1,
+          unit_price: 10.125,
+          discount_percent: 10,
+          tax_ids: [1],
+        })
+      ).toEqual({ amount: '9.12', amountWithTaxes: '10.58' });
+    });
+
+    it('sin cantidad ni precio enseña cero', () => {
+      expect(importes({ quantity: '', unit_price: '', tax_ids: [1] })).toEqual({
+        amount: '0.00',
+        amountWithTaxes: '0.00',
+      });
+    });
+  });
 });

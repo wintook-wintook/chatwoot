@@ -120,6 +120,39 @@ export const scaleComponents = (components, kitQuantity) =>
 // trasladados solo si cobra impuestos y las retenciones solo si retiene.
 export const isWithholding = tax => tax.tax_type.endsWith('withholding');
 
+const round2 = value =>
+  Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+
+// Q3.1 — precio e importe con impuesto que enseña el modal, como CRMZeus (`config.js`
+// PRECIO_IMPTO / IMPORTE_IMPTO). Solo informativos: los importes guardados los calcula el
+// servidor. Solo suman los trasladados, sin restar retenciones, y redondean la base y el
+// impuesto por separado. El importe no considera el descuento extra del encabezado.
+const transferredPercent = (taxIds, taxes) =>
+  taxes
+    .filter(tax => taxIds.includes(tax.id) && !isWithholding(tax))
+    .reduce((sum, tax) => sum + Number(tax.percent), 0);
+
+const withTaxes = (base, percent) =>
+  (base + round2((base * percent) / 100)).toFixed(2);
+
+export const priceWithTaxes = (price, taxIds, taxes) =>
+  withTaxes(round2(price || 0), transferredPercent(taxIds, taxes));
+
+// Importe de la partida como `Crm::QuoteCalculator#line_amounts`: cantidad × precio a 2
+// decimales, menos el descuento (también a 2 decimales).
+export const lineAmounts = (
+  { quantity, unit_price, discount_percent },
+  taxes,
+  taxIds
+) => {
+  const gross = round2(Number(quantity || 0) * Number(unit_price || 0));
+  const net = gross - round2((gross * Number(discount_percent || 0)) / 100);
+  return {
+    amount: net.toFixed(2),
+    amountWithTaxes: withTaxes(net, transferredPercent(taxIds, taxes)),
+  };
+};
+
 export const applicableTaxIds = (taxIds, taxes, organization) => {
   if (!organization) return [...taxIds];
   return taxIds.filter(id => {
