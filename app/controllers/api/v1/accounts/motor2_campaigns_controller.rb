@@ -24,8 +24,8 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
   before_action :set_campaign, except: %i[options preview test test_email create]
 
   def options
-    render json: { sellers: TrackingCampaigns::Motor2Form.sellers(Current.account).map { |t| seller_json(t) },
-                   inboxes: TrackingCampaigns::Motor2Form.inboxes(Current.account).map { |i| inbox_json(i) },
+    render json: { attend: TrackingCampaigns::CampaignAgent.defaults(Current.account), sources: Motor2::SourceMap.new(Current.account).available,
+                   calendar_users: calendar_users, inboxes: TrackingCampaigns::Motor2Form.inboxes(Current.account).map { |i| inbox_json(i) },
                    events: upcoming_events, past_events: recent_events, users: names(Current.account.users), teams: names(Current.account.teams) }
   end
 
@@ -37,18 +37,18 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
     render json: result, status: result[:error] ? :unprocessable_entity : :ok
   end
 
+  # Con «Cómo atiende» de la pantalla (sin guardar) sobre el agente de la campaña, si ya existe.
   def test
-    seller = TrackingCampaigns::Motor2Form.sellers(Current.account).find(params[:template_id])
+    seller = test_agent
     answers = TrackingCampaigns::Motor2Brief.seller_answers(TrackingCampaign.new(brief: TrackingCampaigns::Motor2Brief.brief(params[:brief])))
     result = Motor2::Probe.new(seller, messages: test_messages, state: Motor2::Sanitizer.plain(params[:state]), answers: answers).call
     render json: result.merge(tools: Array(result.dig(:trace, 'tools'))), status: result[:error] ? :unprocessable_entity : :ok
   end
 
   def test_email
-    seller = TrackingCampaigns::Motor2Form.sellers(Current.account).find_by(id: params[:template_id])
     body = Motor2::CampaignTouch.fill(params[:body].to_s.first(6000), Contact.new(name: current_user.name))
     Motor2CampaignMailer.test_touch(to: current_user.email, subject: params[:subject].to_s, body: body,
-                                    signature: seller&.email_signature).deliver_later
+                                    signature: test_signature).deliver_later
     render json: { sent_to: current_user.email }
   end
 
@@ -131,6 +131,12 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
     @campaign = Current.account.tracking_campaigns.real.where(engine: '2').find(params[:id])
   end
 
+  # Con quién se pueden agendar citas: quien tiene Google Calendar conectado.
+  def calendar_users
+    UserCalendarIntegration.where(account_id: Current.account.id).includes(:user)
+                           .filter_map { |i| i.user && { id: i.user.id, name: i.user.name } }
+  end
+
   def upcoming_events
     Current.account.events.where(closed_at: nil).where('starts_at > ?', Time.current).order(:starts_at)
            .limit(50).map { |e| { id: e.id, name: e.name, starts_at: e.starts_at, capacity: e.capacity } }
@@ -145,17 +151,29 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
   # Para «Si le interesa, pasa a» de la campaña.
   def names(scope) = scope.order(:name).map { |r| { id: r.id, name: r.name } }
 
+  # La firma de «Cómo atiende» en pantalla; si no llegó, la del agente de la campaña.
+  def test_signature
+    params[:email_signature].presence || Current.account.tracking_templates.find_by(id: params[:template_id])&.email_signature
+  end
+
+  def test_agent
+    campaign = Current.account.tracking_campaigns.real.find_by(id: params[:campaign_id], engine: '2') ||
+               Current.account.tracking_campaigns.new(engine: '2', name: 'Prueba', brief: {})
+    campaign.brief = TrackingCampaigns::Motor2Brief.brief(params[:brief]) if params[:brief]
+    TrackingCampaigns::CampaignAgent.new(campaign, current_user).draft(params[:attend]&.permit!&.to_h || {})
+  end
+
   def test_runner = @test_runner ||= TrackingCampaigns::Motor2TestRun.new(@campaign, current_user)
 
   ROLES = %w[user assistant].freeze
   COPY_FIELDS = %i[tracking_template_id inbox_id objective mode purpose brief touches respect_working_hours daily_cap
                    entry_delay_minutes email_subject email_subject_b event_id event_status engine].freeze
-  FORM_KEYS = %i[name tracking_template_id inbox_id mode event_status scheduled_for ends_at entry_delay_minutes
+  FORM_KEYS = %i[name inbox_id mode event_status scheduled_for ends_at entry_delay_minutes
                  respect_working_hours daily_cap email_subject email_subject_b].freeze
 
   def form_params
     params.permit(*FORM_KEYS).to_h.merge(brief: params[:brief]&.permit!.to_h, touches: params[:touches]&.permit!.to_h,
-                                         audience: params[:audience]&.permit!.to_h)
+                                         audience: params[:audience]&.permit!.to_h, attend: params[:attend]&.permit!.to_h)
   end
 
   def render_form(result)
@@ -173,6 +191,7 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
                      audience: audience || campaign.audience, brief: campaign.brief.to_h.except('insights'))
     )
     copy_files(campaign, copy)
+    TrackingCampaigns::CampaignAgent.new(copy, current_user).copy_from!(campaign.tracking_template)
     copy
   end
 
@@ -199,14 +218,8 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
     campaign.slice(*%i[id name status mode engine brief touches audience scheduled_for ends_at entry_delay_minutes
                        respect_working_hours daily_cap email_subject email_subject_b event_id event_status tracking_template_id
                        inbox_id paused_reason paused_at created_at])
-            .merge(seller_name: campaign.tracking_template&.name, inbox_name: campaign.inbox&.name,
+            .merge(attend: TrackingCampaigns::CampaignAgent.attend(campaign.tracking_template), inbox_name: campaign.inbox&.name,
                    channel: campaign.inbox&.whatsapp? ? 'whatsapp' : 'email', stats: campaign.stats)
-  end
-
-  def seller_json(template)
-    answers = template.motor2.to_h['answers'].to_h
-    { id: template.id, name: template.name, display_name: template.customer_display_name, email_signature: template.email_signature,
-      relay: answers['relay'] || 'agent', appointments: Array(answers['appointment_user_ids']).any? }
   end
 
   def inbox_json(inbox)

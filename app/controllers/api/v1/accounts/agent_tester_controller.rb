@@ -35,7 +35,7 @@ class Api::V1::Accounts::AgentTesterController < Api::V1::Accounts::BaseControll
   before_action :set_conversation, only: %i[show history say feedback good save_case]
 
   def agents
-    list = Current.account.tracking_templates.where(archived_at: nil, testing: true).order(:name)
+    list = Current.account.tracking_templates.listable.where(archived_at: nil, testing: true).order(:name)
     render json: { agents: list.map { |t| { id: t.id, name: t.name, engine: t.engine, objective: t.objective } },
                    can_edit: access_grant.writable?('ai_agents') }
   end

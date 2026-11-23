@@ -25,9 +25,10 @@ class TrackingCampaigns::Motor2Check
 
   def seller
     agent = @campaign.tracking_template
-    return item(:seller, 'error', 'Elige el Vendedor de campaña.') unless agent && agent.archived_at.nil?
+    return item(:seller, 'error', 'Revisa el paso «Cómo atiende».') unless agent && agent.archived_at.nil?
 
-    item(:seller, 'ok', "La atiende «#{agent.name}».")
+    name = agent.customer_display_name.presence
+    item(:seller, 'ok', name ? "Atiende como «#{name}»." : 'Cómo atiende está listo.')
   end
 
   # Sin OpenAI en la cuenta el vendedor no puede contestar (ni escribir los toques sin texto).

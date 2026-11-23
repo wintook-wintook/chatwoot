@@ -3,14 +3,13 @@
     "BADGE": "AI Seller",
     "NEW_TITLE": "New campaign with AI Seller",
     "EDIT_TITLE": "Edit campaign with AI Seller",
-    "SUBTITLE": "The campaign sends the first message and your Campaign Seller handles whoever replies: answers questions, quotes, books and hands off.",
+    "SUBTITLE": "The campaign sends the first message and its AI Seller handles whoever replies: answers questions, quotes, books and hands off.",
     "BACK": "Back to campaigns",
     "LOADING": "Loading…",
     "LOAD_ERROR": "The campaign couldn't be loaded.",
-    "NO_SELLERS": "You don't have a «Campaign Seller» yet. Create it in Ready agents to handle the replies.",
     "NAME": "Campaign name",
     "NAME_PLACEHOLDER": "E.g. Air conditioning promo — March",
-    "NEEDS_SELLER_AND_CHANNEL": "Choose the seller (Offer step) and the channel (Messages step) to save it.",
+    "NEEDS_SELLER_AND_CHANNEL": "Pick the channel (Offer and channel step) to save it.",
     "SAVE_ERROR": "The campaign couldn't be saved.",
     "SAVED": "Campaign saved.",
     "LAUNCHED": "Campaign launched!",
@@ -22,17 +21,19 @@
     "SCHEDULE": "Schedule campaign",
     "STEPS": {
       "goal": "Goal",
-      "offer": "Offer and seller",
+      "offer": "Offer and channel",
       "audience": "Audience",
       "messages": "Messages",
+      "attend": "How it handles replies",
       "when": "When",
       "review": "Review and launch"
     },
     "HINTS": {
       "goal": "What the campaign is for and what counts as success.",
-      "offer": "What you offer in this campaign and which seller handles the replies. The offer belongs to the campaign: one seller works for many campaigns.",
+      "offer": "What you offer in this campaign, which channel it goes through, its objections and its images.",
       "audience": "Who gets it. You'll see how many it reaches and who is left out and why.",
       "messages": "Where it goes out (WhatsApp or email), how many touches and what each one says.",
+      "attend": "How it answers those who reply: name, voice, what it knows, how it quotes, follow-up and who gets the interested contact. Starts from your last campaign.",
       "when": "When it starts, when it ends and at what pace, so your team isn't flooded with replies.",
       "review": "We check everything before launching: red items are missing."
     },
@@ -61,16 +62,9 @@
     "GOAL": {
       "QUESTION": "If interested, what's next?",
       "relay": "Hand off to the next agent or seller",
-      "appointment": "Book an appointment (with whoever has Google Calendar on the seller)"
+      "appointment": "Books an appointment (with whoever you choose in «How it handles replies», with Google Calendar)"
     },
     "OFFER": {
-      "SELLER": "Campaign Seller that handles it",
-      "SELLER_PICK": "Choose a seller",
-      "SELLER_HINT": "Handles with its voice, knowledge, follow-up and quotes.",
-      "RELAY": {
-        "agent": "If interested, it hands off to the inbox's service agent.",
-        "person": "If interested, it hands off to its configured person or team."
-      },
       "EVENT": "Event",
       "EVENT_PICK": "Choose the event",
       "NO_EVENTS": "No upcoming events. Create it in Events.",
@@ -98,7 +92,6 @@
       "REST_HINT": "Saturation guard: contacts who got another AI Seller campaign recently are left out (0 = no rule).",
       "RELAY_TITLE": "If interested (or asks for a person), goes to",
       "RELAY_CHOICES": {
-        "seller": "Whatever the seller says — {what}",
         "agent": "The inbox's service agent (prospects or customers)",
         "person": "A person or team for this campaign"
       },
@@ -107,7 +100,7 @@
       "NOBODY": "Nobody",
       "NO_TEAM": "No team",
       "OBJECTIONS": "Objections to this offer",
-      "OBJECTIONS_HINT": "What people usually reply to THIS offer and the idea to answer. Added to the seller's general ones; if it is the same objection, this one wins.",
+      "OBJECTIONS_HINT": "What people usually reply to THIS offer and the idea to answer.",
       "OBJECTION_PLACEHOLDER": "E.g. «It's expensive»",
       "ANSWER_PLACEHOLDER": "E.g. Includes installation and a 12-month warranty",
       "ADD_OBJECTION": "+ Add objection",
@@ -131,7 +124,7 @@
       },
       "CONTINUOUS_HINT": "Continuous campaign: every contact an automation adds with «Add to campaign» enters.",
       "FROM_CAMPAIGN": "{n} contacts from another campaign.",
-      "NEEDS_CHANNEL": "Choose the seller and channel to see how many it reaches.",
+      "NEEDS_CHANNEL": "Pick the channel (Offer and channel step) to see how many it reaches.",
       "COUNTING": "Counting…",
       "PICK_FIRST": "Choose the audience to see how many it reaches.",
       "BUCKETS": {
@@ -160,7 +153,7 @@
       "NO_TEMPLATES": "This inbox has no approved templates. Create them in Settings › Inboxes › Templates (or «Create with Dali»).",
       "NO_TEMPLATE_PREVIEW": "Choose the first touch's template to see how it arrives.",
       "PICK_CHANNEL_FIRST": "Choose the channel to write the messages.",
-      "CHANNEL_IS": "Channel: {name} (chosen in «Offer and seller»)."
+      "CHANNEL_IS": "Channel: {name} (chosen in «Offer and channel»)."
     },
     "EMAIL": {
       "SUBJECT": "Subject",
@@ -175,7 +168,7 @@
       "AI_PREVIEW": "The seller writes this email with AI for each contact.",
       "NO_SUBJECT": "(no subject)",
       "UNSUBSCRIBE": "The unsubscribe link goes at the end.",
-      "SIGNATURE": "The seller's signature goes at the end.",
+      "SIGNATURE": "The signature from «How it handles replies» goes at the end.",
       "TYPES": {
         "heading": "Heading",
         "text": "Text",
@@ -217,7 +210,7 @@
       "ENDS_BEFORE": "The end date must be after the start."
     },
     "REVIEW": {
-      "SUMMARY": "{kind} · handled by {seller} · goes out via {channel} · {touches} touch(es)",
+      "SUMMARY": "{kind} · introduces itself as {seller} · goes out via {channel} · {touches} touch(es)",
       "AUDIENCE": "Reaches {n} contact(s).",
       "CHECKING": "Checking…",
       "CHECK_ERROR": "Could not review the campaign.",
@@ -241,7 +234,7 @@
     "CHAT": {
       "TITLE": "Test: you are the contact",
       "RESET": "Start over",
-      "NEEDS_SELLER": "Choose the seller to test.",
+      "NEEDS_SELLER": "Pick the channel to test.",
       "PLACEHOLDER": "Reply as the contact would…",
       "SEND": "Send",
       "THINKING": "Typing…",
@@ -253,7 +246,7 @@
       "TITLE": "Which campaign do you want to create?",
       "SUBTITLE": "Both use your contacts, segments and schedules.",
       "MOTOR2": "Campaign with AI Seller (Engine 2.0)",
-      "MOTOR2_ABOUT": "Offer, invite, reactivate, renew or survey by WhatsApp or email. Your Campaign Seller handles replies, quotes, books and hands off; the dashboard shows up to what was won.",
+      "MOTOR2_ABOUT": "Offer, invite, reactivate, renew or survey by WhatsApp or email. The campaign AI Seller handles replies, quotes, books and hands off the interested contact.",
       "MOTOR1": "Classic campaign (Engine 1.0)",
       "MOTOR1_ABOUT": "As always: with a Custom agent and its card.",
       "BETA": "Beta"
@@ -390,7 +383,7 @@
       "CLEANUP": "Delete those who never reply after (days)",
       "COLUMNS": "CSV with headers: email required; name, company and phone optional. Up to 5,000 rows.",
       "UPLOAD": "Upload and clean",
-      "NEEDS_SELLER": "First choose the seller (Offer and seller step).",
+      "NEEDS_SELLER": "Pick the channel first (Offer and channel step).",
       "ERROR": "The list couldn't be uploaded.",
       "RESULT": "Of {rows} rows: {valid} ready ({created} new in quarantine and {existing} already your contacts).",
       "LOADED": "List «{name}»: {n} contacts.",
@@ -411,7 +404,7 @@
       "INTRO": "See the whole campaign as a contact would get it: each touch with its text and when it goes out, and what happens depending on the reply. Nothing is sent.",
       "SEARCH": "Search a contact…",
       "AS_ME": "Simulate with me",
-      "NEEDS_SETUP": "Pick the seller and the channel to simulate.",
+      "NEEDS_SETUP": "Pick the channel to simulate.",
       "LOADING": "Building the simulation…",
       "ERROR": "Could not simulate.",
       "FOR": "For {name} ({address})",
@@ -493,11 +486,9 @@
         "frequency": "waiting: another campaign wrote today"
       }
     },
-    "CREATE_SELLER": "Create seller",
-    "REFRESH_SELLERS": "Done: refresh",
     "FILES": {
       "TITLE": "Images and files for this offer",
-      "HINT": "The promo product photo, the event flyer… Say what each one is (the seller cannot see the image) and when it goes. General ones (catalog, company deck) live in the seller.",
+      "HINT": "The promo product photo, the event flyer, the catalog… Say what each one is (the seller cannot see the image) and when it goes.",
       "ABOUT_PLACEHOLDER": "What it is (e.g. photo of the promo bundle with its price)",
       "ABOUT_MISSING": "Without a description the seller does not know when to send it.",
       "TOUCH": "In touch {n}",
@@ -509,10 +500,29 @@
       "ADD": "+ Upload images or files",
       "UPLOADING": "Uploading…",
       "REMOVE": "Remove",
-      "LIMITS": "Up to 10. WhatsApp accepts JPG or PNG up to 5 MB, video up to 16 MB and PDF up to 100 MB. On WhatsApp, a touch file only goes if the contact wrote in the last 24 h (otherwise the template goes, which can carry its header image). If the seller has one with the same name, the campaign one wins.",
+      "LIMITS": "Up to 10. WhatsApp accepts JPG or PNG up to 5 MB, video up to 16 MB and PDF up to 100 MB. On WhatsApp, a touch file only goes if the contact wrote in the last 24 h (otherwise the template goes, which can carry its header image).",
       "IMAGE_TYPE": "«{name}»: the image must be JPG or PNG.",
       "UPLOAD_ERROR": "Could not upload the file.",
       "UPDATE_ERROR": "Could not save the change."
+    },
+    "ATTEND": {
+      "HINT": "This is how it answers those who reply. It starts from your last campaign (the first time, your company voice and all your sources); change only what this campaign needs.",
+      "TABS": {
+        "who": "Who speaks",
+        "knows": "What it knows",
+        "quote": "Quotes and bookings",
+        "follow": "If they go quiet",
+        "notes": "Instructions"
+      },
+      "DISPLAY_NAME": "Name it introduces itself with (optional)",
+      "DISPLAY_NAME_PLACEHOLDER": "E.g. Ana, from Grúas del Norte",
+      "SIGNATURE": "Email signature",
+      "SIGNATURE_PLACEHOLDER": "Ana López · Ventas\nGrúas del Norte · 81 1234 5678",
+      "CALENDARS": "Who does it book appointments with?",
+      "CALENDARS_HINT": "If the campaign goal is «Book an appointment», it books on these people's calendars.",
+      "NO_CALENDARS": "Nobody has Google Calendar connected: connect it in Agenda › Calendar.",
+      "INSTRUCTIONS": "Instructions (optional)",
+      "INSTRUCTIONS_PLACEHOLDER": "E.g. do not give installation prices; offer the free visit"
     }
   }
 }

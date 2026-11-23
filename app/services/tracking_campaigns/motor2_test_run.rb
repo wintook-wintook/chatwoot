@@ -66,7 +66,7 @@ class TrackingCampaigns::Motor2TestRun
   end
 
   def setup_error
-    return 'Elige el vendedor y el canal de la campaña.' unless @campaign.tracking_template && @campaign.inbox
+    return 'Elige el canal de la campaña.' unless @campaign.tracking_template && @campaign.inbox
     return 'Para WhatsApp, el primer toque necesita una plantilla aprobada.' if whatsapp? && Array(@campaign.touches.to_h['templates']).first.blank?
 
     nil

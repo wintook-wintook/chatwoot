@@ -10,7 +10,7 @@ module Assistant::DelegationRunner
 
   def run_delegate(payload)
     conversation = @tools.find_conversation(payload['conversation_id'])
-    agent = @account.tracking_templates.where(archived_at: nil).find(payload['agent_id'])
+    agent = @account.tracking_templates.listable.where(archived_at: nil).find(payload['agent_id'])
     ticket = payload['case_id'].present? ? @tools.cases.find(payload['case_id']) : nil
     tracking = ContactTracking.create!(tracking_attrs(payload, conversation, agent))
     link_case(ticket, tracking, agent) if ticket

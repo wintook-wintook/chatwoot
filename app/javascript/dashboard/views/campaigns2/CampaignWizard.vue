@@ -16,11 +16,20 @@ import CampaignChat from './CampaignChat.vue';
 import CampaignSimulator from './CampaignSimulator.vue';
 import CampaignTestRun from './CampaignTestRun.vue';
 import CampaignFiles from './CampaignFiles.vue';
+import CampaignAttend from './CampaignAttend.vue';
 
 // En «Revisar»: probar la campaña completa, no solo al vendedor.
 const TEST_TABS = ['simulate', 'chat', 'real'];
 
-const STEPS = ['goal', 'offer', 'audience', 'messages', 'when', 'review'];
+const STEPS = [
+  'goal',
+  'offer',
+  'audience',
+  'messages',
+  'attend',
+  'when',
+  'review',
+];
 const KINDS = ['offer', 'invite', 'reactivate', 'renew', 'survey'];
 const FILTER_TYPE_CONTACT = 'contact';
 const ATTENDEE_STATUSES = [
@@ -33,7 +42,8 @@ const ATTENDEE_STATUSES = [
 
 const blankForm = () => ({
   name: '',
-  tracking_template_id: '',
+  // «Cómo atiende» (la campaña arma su agente): se llena con lo de la última campaña al abrir.
+  attend: null,
   inbox_id: '',
   brief: {
     kind: 'offer',
@@ -47,7 +57,7 @@ const blankForm = () => ({
     warmup: false,
     // De esta oferta (además de las generales del vendedor) y quién atiende a los de esta campaña.
     objections: [],
-    relay: '',
+    relay: 'agent',
     relay_user_id: '',
     relay_team_id: '',
   },
@@ -90,12 +100,21 @@ export default {
     CampaignSimulator,
     CampaignTestRun,
     CampaignFiles,
+    CampaignAttend,
   },
   data() {
     return {
       step: 'goal',
       form: blankForm(),
-      options: { sellers: [], inboxes: [], events: [], users: [], teams: [] },
+      options: {
+        inboxes: [],
+        events: [],
+        users: [],
+        teams: [],
+        sources: [],
+        calendar_users: [],
+        attend: null,
+      },
       loading: true,
       saving: false,
       campaignId: null,
@@ -120,11 +139,12 @@ export default {
     // Encuesta e invitación no llevan relevo: solo a quién pasa el que pide una persona.
     relayChoices() {
       return ['survey', 'invite'].includes(this.kind)
-        ? ['', 'person']
-        : ['', 'agent', 'person'];
+        ? ['person']
+        : ['agent', 'person'];
     },
-    sellerRelayText() {
-      return this.seller ? this.t(`OFFER.RELAY.${this.seller.relay}`) : '—';
+    // Las plantillas aprobadas de la bandeja (para el seguimiento pasadas 24 h y el aviso de la cita).
+    inboxTemplates() {
+      return (this.inbox?.templates || []).map(tpl => tpl.name);
     },
     steps() {
       return STEPS;
@@ -141,11 +161,6 @@ export default {
     segments() {
       return this.$store.getters['customViews/getCustomViewsByFilterType'](
         FILTER_TYPE_CONTACT
-      );
-    },
-    seller() {
-      return this.options.sellers.find(
-        s => s.id === Number(this.form.tracking_template_id)
       );
     },
     inbox() {
@@ -240,7 +255,7 @@ export default {
       return this.checks.filter(c => c.level === 'error');
     },
     canSave() {
-      return !!(this.form.tracking_template_id && this.form.inbox_id);
+      return !!this.form.inbox_id;
     },
     // «Más tarde» necesita una fecha futura, y el fin va después del inicio.
     // Audiencia por evento: también los recientes (seguimiento después de la expo: asistió, no se presentó).
@@ -315,7 +330,7 @@ export default {
         this.form.audience.source = { type: 'event' };
       }
       if (!this.relayChoices.includes(this.form.brief.relay)) {
-        this.form.brief.relay = '';
+        [this.form.brief.relay] = this.relayChoices;
       }
     },
   },
@@ -354,9 +369,6 @@ export default {
       try {
         const { data } = await Motor2CampaignsAPI.options();
         this.options = data;
-        if (!this.form.tracking_template_id && data.sellers.length === 1) {
-          this.form.tracking_template_id = data.sellers[0].id;
-        }
       } catch (e) {
         // se queda lo que había
       }
@@ -375,9 +387,7 @@ export default {
       if (i > 0) this.go(STEPS[i - 1]);
     },
     applyDefaults() {
-      if (this.options.sellers.length === 1) {
-        this.form.tracking_template_id = this.options.sellers[0].id;
-      }
+      this.form.attend = this.copyAttend(this.options.attend);
       if (this.options.inboxes.length === 1) {
         this.form.inbox_id = this.options.inboxes[0].id;
       }
@@ -402,7 +412,7 @@ export default {
       this.form = {
         ...blank,
         name: data.name,
-        tracking_template_id: data.tracking_template_id || '',
+        attend: this.copyAttend(data.attend || this.options.attend),
         inbox_id: data.inbox_id || '',
         brief: {
           ...blank.brief,
@@ -451,7 +461,7 @@ export default {
       const f = this.form;
       return {
         name: f.name.trim() || this.defaultName(),
-        tracking_template_id: f.tracking_template_id,
+        attend: f.attend,
         inbox_id: f.inbox_id,
         mode: this.continuous ? 'continuous' : 'batch',
         brief: {
@@ -555,7 +565,7 @@ export default {
       try {
         const { data } = await Motor2CampaignsAPI.preview({
           payload: this.filterPayload,
-          template_id: this.form.tracking_template_id,
+          template_id: null,
           inbox_id: this.form.inbox_id,
           excluded_contact_ids: this.form.audience.excluded_contact_ids,
         });
@@ -619,7 +629,7 @@ export default {
       this.sendingTest = true;
       try {
         const { data } = await Motor2CampaignsAPI.testEmail({
-          template_id: this.form.tracking_template_id,
+          email_signature: this.form.attend?.email_signature,
           subject: this.form.email_subject,
           body: this.currentEmail.body,
         });
@@ -630,11 +640,24 @@ export default {
         this.sendingTest = false;
       }
     },
+    // «Probar»: con «Cómo atiende» y la oferta de la pantalla (sin guardar).
     chatPayload() {
       return {
-        template_id: this.form.tracking_template_id,
+        campaign_id: this.campaignId,
         brief: this.body().brief,
+        attend: this.form.attend,
       };
+    },
+    copyAttend(attend) {
+      const base = attend || {
+        display_name: '',
+        sources: [],
+        email_signature: '',
+        settings: {},
+      };
+      return JSON.parse(
+        JSON.stringify({ ...base, settings: base.settings || {} })
+      );
     },
     levelClass(level) {
       return {
@@ -680,26 +703,6 @@ export default {
 
     <p v-if="loading" class="text-sm text-slate-500">{{ t('LOADING') }}</p>
     <template v-else>
-      <p
-        v-if="!options.sellers.length"
-        class="p-3 mb-2 text-sm rounded-md text-amber-800 bg-amber-50 dark:bg-amber-900/20"
-      >
-        {{ t('NO_SELLERS') }}
-        <router-link
-          :to="{ name: 'ready_agents' }"
-          target="_blank"
-          class="underline ltr:ml-1 rtl:mr-1"
-        >
-          {{ t('CREATE_SELLER') }}
-        </router-link>
-        <button
-          type="button"
-          class="underline ltr:ml-2 rtl:mr-2"
-          @click="refreshOptions"
-        >
-          {{ t('REFRESH_SELLERS') }}
-        </button>
-      </p>
       <WizardTabs
         :steps="steps"
         :current="step"
@@ -770,22 +773,6 @@ export default {
 
           <!-- 2 · Oferta y vendedor -->
           <template v-if="step === 'offer'">
-            <label class="block">
-              <span class="field-label">{{ t('OFFER.SELLER') }}</span>
-              <select v-model="form.tracking_template_id">
-                <option value="">{{ t('OFFER.SELLER_PICK') }}</option>
-                <option v-for="s in options.sellers" :key="s.id" :value="s.id">
-                  {{ s.name }}
-                </option>
-              </select>
-              <span class="block text-xs text-slate-500">
-                {{
-                  seller
-                    ? t(`OFFER.RELAY.${seller.relay}`)
-                    : t('OFFER.SELLER_HINT')
-                }}
-              </span>
-            </label>
             <label class="block">
               <span class="field-label">{{ t('MESSAGES.CHANNEL') }}</span>
               <select v-model="form.inbox_id">
@@ -882,53 +869,6 @@ export default {
               {{ t('OFFER.DAYS') }}
             </label>
             <p class="m-0 text-xs text-slate-500">{{ t('OFFER.REST_HINT') }}</p>
-
-            <!-- Quién atiende a los de esta campaña (encima del vendedor) -->
-            <span class="field-label">{{ t('OFFER.RELAY_TITLE') }}</span>
-            <label
-              v-for="value in relayChoices"
-              :key="value || 'seller'"
-              class="flex items-start gap-2 text-sm"
-            >
-              <input
-                v-model="form.brief.relay"
-                type="radio"
-                class="!m-0 mt-1"
-                :value="value"
-              />
-              {{
-                value
-                  ? t(`OFFER.RELAY_CHOICES.${value}`)
-                  : t('OFFER.RELAY_CHOICES.seller', { what: sellerRelayText })
-              }}
-            </label>
-            <div
-              v-if="form.brief.relay === 'person'"
-              class="grid grid-cols-1 gap-2 sm:grid-cols-2"
-            >
-              <label class="block">
-                <span class="field-label">{{ t('OFFER.RELAY_USER') }}</span>
-                <select v-model="form.brief.relay_user_id">
-                  <option value="">{{ t('OFFER.NOBODY') }}</option>
-                  <option v-for="u in options.users" :key="u.id" :value="u.id">
-                    {{ u.name }}
-                  </option>
-                </select>
-              </label>
-              <label class="block">
-                <span class="field-label">{{ t('OFFER.RELAY_TEAM') }}</span>
-                <select v-model="form.brief.relay_team_id">
-                  <option value="">{{ t('OFFER.NO_TEAM') }}</option>
-                  <option
-                    v-for="team in options.teams"
-                    :key="team.id"
-                    :value="team.id"
-                  >
-                    {{ team.name }}
-                  </option>
-                </select>
-              </label>
-            </div>
 
             <template v-if="kind !== 'survey'">
               <span class="field-label">{{ t('OFFER.OBJECTIONS') }}</span>
@@ -1123,16 +1063,13 @@ export default {
                     size="small"
                     icon="arrow-upload"
                     :is-loading="uploading"
-                    :disabled="!listFile || !form.tracking_template_id"
+                    :disabled="!listFile || !canSave"
                     @click="uploadList"
                   >
                     {{ t('LIST.UPLOAD') }}
                   </woot-button>
                 </div>
-                <p
-                  v-if="!form.tracking_template_id"
-                  class="m-0 text-xs text-amber-700"
-                >
+                <p v-if="!canSave" class="m-0 text-xs text-amber-700">
                   {{ t('LIST.NEEDS_SELLER') }}
                 </p>
               </template>
@@ -1341,7 +1278,7 @@ export default {
               <EmailEditor
                 :key="touchTab"
                 :value="currentEmail"
-                :signature="seller && seller.email_signature"
+                :signature="form.attend ? form.attend.email_signature : ''"
                 @input="setEmail(touchTab, $event)"
               />
               <div>
@@ -1363,6 +1300,61 @@ export default {
           </template>
 
           <!-- 5 · Cuándo -->
+          <!-- 5 · Cómo atiende (la campaña arma su agente) -->
+          <template v-if="step === 'attend'">
+            <CampaignAttend
+              v-if="form.attend"
+              v-model="form.attend"
+              :sources="options.sources || []"
+              :calendar-users="options.calendar_users || []"
+              :templates="inboxTemplates"
+              :is-email="isEmail"
+              :appointments="form.brief.offer_goal === 'appointment'"
+            />
+            <!-- Si le interesa (o pide una persona), a quién pasa -->
+            <span class="field-label">{{ t('OFFER.RELAY_TITLE') }}</span>
+            <label
+              v-for="value in relayChoices"
+              :key="value"
+              class="flex items-start gap-2 text-sm"
+            >
+              <input
+                v-model="form.brief.relay"
+                type="radio"
+                class="!m-0 mt-1"
+                :value="value"
+              />
+              {{ t(`OFFER.RELAY_CHOICES.${value}`) }}
+            </label>
+            <div
+              v-if="form.brief.relay === 'person' || relayChoices.length === 1"
+              class="grid grid-cols-1 gap-2 sm:grid-cols-2"
+            >
+              <label class="block">
+                <span class="field-label">{{ t('OFFER.RELAY_USER') }}</span>
+                <select v-model="form.brief.relay_user_id">
+                  <option value="">{{ t('OFFER.NOBODY') }}</option>
+                  <option v-for="u in options.users" :key="u.id" :value="u.id">
+                    {{ u.name }}
+                  </option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('OFFER.RELAY_TEAM') }}</span>
+                <select v-model="form.brief.relay_team_id">
+                  <option value="">{{ t('OFFER.NO_TEAM') }}</option>
+                  <option
+                    v-for="team in options.teams"
+                    :key="team.id"
+                    :value="team.id"
+                  >
+                    {{ team.name }}
+                  </option>
+                </select>
+              </label>
+            </div>
+          </template>
+
           <template v-if="step === 'when'">
             <fieldset class="flex flex-col gap-1">
               <legend class="field-label">{{ t('WHEN.START') }}</legend>
@@ -1462,7 +1454,7 @@ export default {
                 {{
                   t('REVIEW.SUMMARY', {
                     kind: t(`KINDS.${kind}.TITLE`),
-                    seller: seller ? seller.name : '—',
+                    seller: (form.attend && form.attend.display_name) || '—',
                     channel: inbox ? inbox.name : '—',
                     touches: attempts,
                   })
@@ -1527,7 +1519,7 @@ export default {
             :subject="form.email_subject"
             :from="inbox ? inbox.name : ''"
             :blocks="currentEmail.blocks || []"
-            :signature="seller ? seller.email_signature || '' : ''"
+            :signature="form.attend ? form.attend.email_signature || '' : ''"
           />
           <p v-else class="m-0 text-xs text-slate-500">
             {{ t('PREVIEW.PICK_CHANNEL') }}
@@ -1537,7 +1529,7 @@ export default {
             class="flex-1"
             :payload="chatPayload"
             :opener="opener"
-            :disabled="!form.tracking_template_id"
+            :disabled="!canSave"
           />
           <template v-else>
             <div
@@ -1573,7 +1565,7 @@ export default {
               class="flex-1"
               :payload="chatPayload"
               :opener="opener"
-              :disabled="!form.tracking_template_id"
+              :disabled="!canSave"
             />
             <CampaignTestRun
               v-else

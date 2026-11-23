@@ -35,32 +35,49 @@ RSpec.describe 'Motor2 campaigns API' do
 
   def create_campaign(extra = {})
     post api, params: body(extra), headers: headers, as: :json
-    expect(response).to have_http_status(:ok)
+    expect(response).to have_http_status(:ok), response.body
     TrackingCampaign.find(response.parsed_body['id'])
   end
 
-  it 'opciones: solo vendedores de campaña y bandejas de WhatsApp o correo, con sus plantillas aprobadas' do
+  it 'opciones: «Cómo atiende» de inicio, fuentes y bandejas de WhatsApp o correo, con sus plantillas aprobadas' do
     email_inbox
     wa_inbox
     create(:inbox, account: account, name: 'Chat web')
     get "#{api}/options", headers: headers
     data = response.parsed_body
-    expect(data['sellers'].pluck('id')).to eq([seller.id])
+    expect(data['attend']['settings']).to include('tone' => 'empresa')
+    expect(data).not_to have_key('sellers')
     expect(data['inboxes'].pluck('channel_type')).to contain_exactly('Channel::Email', 'Channel::Whatsapp')
     wa = data['inboxes'].find { |i| i['channel_type'] == 'Channel::Whatsapp' }
     expect(wa['templates'].first).to include('name' => 'sample_shipping_confirmation', 'body' => a_string_including('{{1}}'))
   end
 
-  it 'guarda la campaña 2.0 Guardada, con su oferta y toques, y el agente usa la oferta de la campaña' do
-    campaign = create_campaign
-    expect(campaign).to have_attributes(engine: '2', status: 'saved', inbox_id: email_inbox.id, tracking_template_id: seller.id)
+  it 'guarda la campaña 2.0 Guardada con su propio agente («Cómo atiende»), que no sale en las listas' do # rubocop:disable RSpec/MultipleExpectations -- un recorrido
+    campaign = create_campaign(attend: { display_name: 'Ana', settings: { tone: 'formal', instructions: 'Sin descuentos' } })
+    agent = campaign.tracking_template
+    expect(campaign).to have_attributes(engine: '2', status: 'saved', inbox_id: email_inbox.id)
+    expect(agent).to have_attributes(campaign_owned: true, customer_display_name: 'Ana', agent_function: 'campaign_seller')
+    expect(agent.motor2['answers']).to include('tone' => 'formal')
+    expect(TrackingTemplate.listable.where(id: agent.id)).to be_empty
+
+    patch "#{api}/#{campaign.id}", params: body(attend: { display_name: 'Beto', settings: { tone: 'cercano' } }), headers: headers, as: :json
+    expect(campaign.reload.tracking_template_id).to eq(agent.id) # el mismo, actualizado
+    expect(agent.reload.customer_display_name).to eq('Beto')
+
+    seller = agent
     expect(campaign.brief).to include('kind' => 'offer', 'offer_what' => 'Mantenimiento gratis')
     expect(campaign.touches).to include('attempts' => 2, 'every_value' => 3)
 
     tracking = ContactTracking.new(tracking_template: seller, tracking_campaign: campaign)
     function = Motor2::Config.for(tracking).function
     expect(function.answer(:offer_what)).to eq('Mantenimiento gratis')
-    expect(Motor2::Config.new(seller).function.answer(:offer_what)).to eq('Oferta del agente') # el agente no cambia
+    get "#{api}/#{campaign.id}", headers: headers
+    expect(response.parsed_body.dig('attend', 'display_name')).to eq('Beto')
+
+    post "#{api}/#{campaign.id}/duplicate", headers: headers, as: :json
+    copy = TrackingCampaign.find(response.parsed_body['id'])
+    expect(copy.tracking_template_id).not_to eq(agent.id) # la copia arma el suyo
+    expect(copy.tracking_template.customer_display_name).to eq('Beto')
   end
 
   it 'no guarda sin vendedor o con un canal que no es WhatsApp ni correo' do

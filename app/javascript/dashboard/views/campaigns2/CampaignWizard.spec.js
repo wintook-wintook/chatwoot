@@ -4,13 +4,14 @@ import CampaignResults from './CampaignResults.vue';
 import { toMarkdown } from './EmailEditor.vue';
 
 const options = {
-  sellers: [
-    {
-      id: 7,
-      name: 'Vendedor IA',
-      relay: 'agent',
-    },
-  ],
+  attend: {
+    display_name: 'Ana',
+    sources: ['catalog'],
+    email_signature: '',
+    settings: { tone: 'empresa', price_source: 'catalog' },
+  },
+  sources: [{ key: 'catalog', kind: 'catalog', name: 'Catálogo' }],
+  calendar_users: [],
   inboxes: [
     {
       id: 3,
@@ -79,10 +80,15 @@ const flush = () =>
   });
 
 describe('CampaignWizard', () => {
-  it('con un solo vendedor lo elige (la oferta es de la campaña: no se copia del vendedor); arma la audiencia por etiqueta', async () => {
+  it('«Cómo atiende» viene lleno con lo de la última campaña y va al guardar; arma la audiencia por etiqueta', async () => {
     const w = mount(CampaignWizard, { mocks, stubs });
     await flush();
-    expect(w.vm.form.tracking_template_id).toBe(7);
+    expect(w.vm.form.attend).toMatchObject({
+      display_name: 'Ana',
+      sources: ['catalog'],
+    });
+    expect(w.vm.body().attend.settings.tone).toBe('empresa');
+    expect(w.vm.steps).toContain('attend');
     await w.vm.$nextTick();
     expect(w.vm.form.brief.offer_what).toBe('');
     w.vm.form.audience.source = { type: 'label', label: 'vip' };
@@ -132,13 +138,13 @@ describe('CampaignWizard › Revisar', () => {
     expect(w.vm.reviewLines.join(' ')).toContain('REVIEW.ONE_A_DAY');
   });
 
-  it('cambiar a encuesta quita un relevo «al agente» que ya no aplica', async () => {
+  it('en una encuesta no hay relevo «al agente»: queda a una persona', async () => {
     const w = mount(CampaignWizard, { mocks, stubs });
     await flush();
     w.vm.form.brief.relay = 'agent';
     w.vm.form.brief.kind = 'survey';
     await w.vm.$nextTick();
-    expect(w.vm.form.brief.relay).toBe('');
+    expect(w.vm.form.brief.relay).toBe('person');
   });
 });
 

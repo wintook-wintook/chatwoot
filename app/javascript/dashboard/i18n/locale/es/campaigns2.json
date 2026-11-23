@@ -3,14 +3,13 @@
     "BADGE": "Vendedor IA",
     "NEW_TITLE": "Nueva campaña con Vendedor IA",
     "EDIT_TITLE": "Modificar campaña con Vendedor IA",
-    "SUBTITLE": "La campaña manda el primer mensaje y tu Vendedor de campaña atiende a quien conteste: resuelve dudas, cotiza, agenda y pasa el relevo.",
+    "SUBTITLE": "La campaña manda el primer mensaje y su Vendedor IA atiende a quien conteste: resuelve dudas, cotiza, agenda y pasa el relevo.",
     "BACK": "Volver a campañas",
     "LOADING": "Cargando…",
     "LOAD_ERROR": "No se pudo cargar la campaña.",
-    "NO_SELLERS": "Todavía no tienes un «Vendedor de campaña». Créalo en Agentes listos para que atienda las respuestas.",
     "NAME": "Nombre de la campaña",
     "NAME_PLACEHOLDER": "Ej. Promo de aire acondicionado — marzo",
-    "NEEDS_SELLER_AND_CHANNEL": "Elige el vendedor (paso Oferta) y el canal (paso Mensajes) para guardarla.",
+    "NEEDS_SELLER_AND_CHANNEL": "Elige el canal (paso Oferta y canal) para guardarla.",
     "SAVE_ERROR": "No se pudo guardar la campaña.",
     "SAVED": "Campaña guardada.",
     "LAUNCHED": "¡Campaña en marcha!",
@@ -22,17 +21,19 @@
     "SCHEDULE": "Programar campaña",
     "STEPS": {
       "goal": "Objetivo",
-      "offer": "Oferta y vendedor",
+      "offer": "Oferta y canal",
       "audience": "Audiencia",
       "messages": "Mensajes",
+      "attend": "Cómo atiende",
       "when": "Cuándo",
       "review": "Revisar y lanzar"
     },
     "HINTS": {
       "goal": "Para qué es la campaña y qué cuenta como éxito.",
-      "offer": "Qué ofreces en esta campaña y qué vendedor atiende las respuestas. La oferta es de la campaña: el mismo vendedor sirve para muchas campañas.",
+      "offer": "Qué ofreces en esta campaña, por qué canal sale, sus objeciones y sus imágenes.",
       "audience": "A quién se le manda. Verás cuántos le llegan y quiénes se quedan fuera y por qué.",
       "messages": "Por dónde sale (WhatsApp o correo), cuántos toques y qué dice cada uno.",
+      "attend": "Cómo contesta a los que responden: nombre, voz, qué sabe, cómo cotiza, si deja de contestar y a quién pasa al interesado. Viene con lo de tu última campaña.",
       "when": "Cuándo empieza, cuándo termina y a qué ritmo, para no saturar a tu equipo con respuestas.",
       "review": "Revisamos todo antes de lanzar: en rojo, lo que falta."
     },
@@ -61,16 +62,9 @@
     "GOAL": {
       "QUESTION": "Si le interesa, ¿qué sigue?",
       "relay": "Lo pasa al agente o vendedor que sigue (relevo)",
-      "appointment": "Le agenda una cita (con quien tenga Google Calendar en el vendedor)"
+      "appointment": "Le agenda una cita (con quien elijas en «Cómo atiende», con Google Calendar)"
     },
     "OFFER": {
-      "SELLER": "Vendedor de campaña que atiende",
-      "SELLER_PICK": "Elige un vendedor",
-      "SELLER_HINT": "Atiende con su voz, lo que sabe, su seguimiento y cotizaciones.",
-      "RELAY": {
-        "agent": "Si le interesa, lo pasa al agente de atención de la bandeja.",
-        "person": "Si le interesa, lo pasa a la persona o equipo que tiene configurado."
-      },
       "EVENT": "Evento",
       "EVENT_PICK": "Elige el evento",
       "NO_EVENTS": "No hay eventos próximos. Créalo en Eventos.",
@@ -98,7 +92,6 @@
       "REST_HINT": "Protección contra saturar: los que recibieron otra campaña con Vendedor IA hace poco se quedan fuera (0 = sin regla).",
       "RELAY_TITLE": "Si le interesa (o pide una persona), pasa a",
       "RELAY_CHOICES": {
-        "seller": "Lo que diga el vendedor — {what}",
         "agent": "Al agente de atención de la bandeja (prospectos o clientes)",
         "person": "A una persona o equipo de esta campaña"
       },
@@ -107,7 +100,7 @@
       "NOBODY": "Nadie",
       "NO_TEAM": "Sin equipo",
       "OBJECTIONS": "Objeciones de esta oferta",
-      "OBJECTIONS_HINT": "Lo que suelen contestar a ESTA oferta y la idea para responder. Van además de las generales del vendedor; si es la misma objeción, gana la de aquí.",
+      "OBJECTIONS_HINT": "Lo que suelen contestar a ESTA oferta y la idea para responder.",
       "OBJECTION_PLACEHOLDER": "Ej. «Está caro»",
       "ANSWER_PLACEHOLDER": "Ej. Incluye instalación y 12 meses de garantía",
       "ADD_OBJECTION": "+ Agregar objeción",
@@ -131,7 +124,7 @@
       },
       "CONTINUOUS_HINT": "Campaña continua: entra cada contacto que agregue una automatización con la acción «Agregar a campaña».",
       "FROM_CAMPAIGN": "{n} contactos de otra campaña.",
-      "NEEDS_CHANNEL": "Elige el vendedor y el canal para ver a cuántos les llega.",
+      "NEEDS_CHANNEL": "Elige el canal (paso Oferta y canal) para ver a cuántos les llega.",
       "COUNTING": "Contando…",
       "PICK_FIRST": "Elige la audiencia para ver a cuántos les llega.",
       "BUCKETS": {
@@ -160,7 +153,7 @@
       "NO_TEMPLATES": "Esta bandeja no tiene plantillas aprobadas. Créalas en Ajustes › Bandejas › Plantillas (o con «Crear con Dali»).",
       "NO_TEMPLATE_PREVIEW": "Elige la plantilla del primer toque para ver cómo llega.",
       "PICK_CHANNEL_FIRST": "Elige el canal para escribir los mensajes.",
-      "CHANNEL_IS": "Canal: {name} (se elige en «Oferta y vendedor»)."
+      "CHANNEL_IS": "Canal: {name} (se elige en «Oferta y canal»)."
     },
     "EMAIL": {
       "SUBJECT": "Asunto",
@@ -175,7 +168,7 @@
       "AI_PREVIEW": "Este correo lo escribe el vendedor con IA para cada contacto.",
       "NO_SUBJECT": "(sin asunto)",
       "UNSUBSCRIBE": "Al final va la liga para darse de baja.",
-      "SIGNATURE": "Al final va la firma del vendedor.",
+      "SIGNATURE": "Al final va la firma de «Cómo atiende».",
       "TYPES": {
         "heading": "Título",
         "text": "Texto",
@@ -217,7 +210,7 @@
       "ENDS_BEFORE": "La fecha de fin debe ser después del inicio."
     },
     "REVIEW": {
-      "SUMMARY": "{kind} · atiende {seller} · sale por {channel} · {touches} toque(s)",
+      "SUMMARY": "{kind} · se presenta como {seller} · sale por {channel} · {touches} toque(s)",
       "AUDIENCE": "Le llega a {n} contacto(s).",
       "CHECKING": "Revisando…",
       "CHECK_ERROR": "No se pudo revisar la campaña.",
@@ -241,7 +234,7 @@
     "CHAT": {
       "TITLE": "Probar: tú eres el contacto",
       "RESET": "Empezar de nuevo",
-      "NEEDS_SELLER": "Elige el vendedor para probar.",
+      "NEEDS_SELLER": "Elige el canal para probar.",
       "PLACEHOLDER": "Contesta como lo haría el contacto…",
       "SEND": "Enviar",
       "THINKING": "Escribiendo…",
@@ -253,7 +246,7 @@
       "TITLE": "¿Qué campaña quieres crear?",
       "SUBTITLE": "Las dos usan tus contactos, segmentos y horarios.",
       "MOTOR2": "Campaña con Vendedor IA (Motor 2.0)",
-      "MOTOR2_ABOUT": "Ofrecer, invitar, reactivar, renovar o encuestar por WhatsApp o correo. Tu Vendedor de campaña atiende las respuestas, cotiza, agenda y pasa el relevo; el tablero muestra hasta lo ganado.",
+      "MOTOR2_ABOUT": "Ofrecer, invitar, reactivar, renovar o encuestar por WhatsApp o correo. El Vendedor IA de la campaña atiende las respuestas, cotiza, agenda y pasa al interesado.",
       "MOTOR1": "Campaña clásica (Motor 1.0)",
       "MOTOR1_ABOUT": "Como siempre: con un Agente a medida y su ficha.",
       "BETA": "Beta"
@@ -390,7 +383,7 @@
       "CLEANUP": "Borrar los que nunca contesten a los (días)",
       "COLUMNS": "CSV con encabezados: correo (o email) obligatorio; nombre, empresa y teléfono opcionales. Hasta 5,000 renglones.",
       "UPLOAD": "Subir y limpiar",
-      "NEEDS_SELLER": "Primero elige el vendedor (paso Oferta y vendedor).",
+      "NEEDS_SELLER": "Primero elige el canal (paso Oferta y canal).",
       "ERROR": "No se pudo subir la lista.",
       "RESULT": "De {rows} renglones: {valid} listos ({created} nuevos en cuarentena y {existing} que ya eran tus contactos).",
       "LOADED": "Lista «{name}»: {n} contactos.",
@@ -411,7 +404,7 @@
       "INTRO": "Ve la campaña completa como la recibiría un contacto: cada toque con su texto y cuándo sale, y qué pasa según conteste. No se manda nada.",
       "SEARCH": "Busca un contacto…",
       "AS_ME": "Simular conmigo",
-      "NEEDS_SETUP": "Elige el vendedor y el canal para simular.",
+      "NEEDS_SETUP": "Elige el canal para simular.",
       "LOADING": "Armando la simulación…",
       "ERROR": "No se pudo simular.",
       "FOR": "Para {name} ({address})",
@@ -493,11 +486,9 @@
         "frequency": "esperando: otra campaña le escribió hoy"
       }
     },
-    "CREATE_SELLER": "Crear vendedor",
-    "REFRESH_SELLERS": "Ya lo creé: actualizar",
     "FILES": {
       "TITLE": "Imágenes y archivos de esta oferta",
-      "HINT": "La foto del producto en promoción, el flyer del evento… Ponle a cada uno qué es (el vendedor no ve la imagen) y cuándo va. Los generales (catálogo, presentación de la empresa) van en el vendedor.",
+      "HINT": "La foto del producto en promoción, el flyer del evento, el catálogo… Ponle a cada uno qué es (el vendedor no ve la imagen) y cuándo va.",
       "ABOUT_PLACEHOLDER": "Qué es (p. ej. foto del paquete en promoción con su precio)",
       "ABOUT_MISSING": "Sin descripción el vendedor no sabe cuándo mandarla.",
       "TOUCH": "En el toque {n}",
@@ -509,10 +500,29 @@
       "ADD": "+ Subir imágenes o archivos",
       "UPLOADING": "Subiendo…",
       "REMOVE": "Quitar",
-      "LIMITS": "Hasta 10. WhatsApp acepta JPG o PNG hasta 5 MB, video hasta 16 MB y PDF hasta 100 MB. En WhatsApp, en un toque solo sale si el contacto escribió en las últimas 24 h (si no, va la plantilla, que puede llevar su imagen en el encabezado). Si el vendedor tiene uno con el mismo nombre, gana el de la campaña.",
+      "LIMITS": "Hasta 10. WhatsApp acepta JPG o PNG hasta 5 MB, video hasta 16 MB y PDF hasta 100 MB. En WhatsApp, en un toque solo sale si el contacto escribió en las últimas 24 h (si no, va la plantilla, que puede llevar su imagen en el encabezado).",
       "IMAGE_TYPE": "«{name}»: la imagen debe ser JPG o PNG.",
       "UPLOAD_ERROR": "No se pudo subir el archivo.",
       "UPDATE_ERROR": "No se pudo guardar el cambio."
+    },
+    "ATTEND": {
+      "HINT": "Así contesta a los que responden. Viene con lo de tu última campaña (la primera vez, con la voz de tu empresa y todas tus fuentes); cambia solo lo que esta campaña necesite distinto.",
+      "TABS": {
+        "who": "Quién habla",
+        "knows": "Qué sabe",
+        "quote": "Cotiza y agenda",
+        "follow": "Si deja de contestar",
+        "notes": "Indicaciones"
+      },
+      "DISPLAY_NAME": "Nombre con el que se presenta (opcional)",
+      "DISPLAY_NAME_PLACEHOLDER": "Ej. Ana, de Grúas del Norte",
+      "SIGNATURE": "Firma de los correos",
+      "SIGNATURE_PLACEHOLDER": "Ana López · Ventas\nGrúas del Norte · 81 1234 5678",
+      "CALENDARS": "¿Con quién agenda citas?",
+      "CALENDARS_HINT": "Si la meta de la campaña es «Agendar cita», agenda en el calendario de estas personas.",
+      "NO_CALENDARS": "Nadie tiene Google Calendar conectado: conéctalo en Agenda › Calendario.",
+      "INSTRUCTIONS": "Indicaciones (opcional)",
+      "INSTRUCTIONS_PLACEHOLDER": "Ej. no des precios de instalación; ofrece la visita gratis"
     }
   }
 }

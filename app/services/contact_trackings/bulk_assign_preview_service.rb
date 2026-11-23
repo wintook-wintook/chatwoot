@@ -48,7 +48,8 @@ class ContactTrackings::BulkAssignPreviewService
 
   def call
     template = @account.tracking_templates.find_by(id: @template_id)
-    return { error: 'Plantilla no encontrada' } unless template
+    # Campaña con Vendedor IA: no lleva agente elegido (lo arma la campaña); basta la bandeja.
+    return { error: 'Plantilla no encontrada' } unless template || @inbox_id
 
     inbox = @inbox_id ? @account.inboxes.find_by(id: @inbox_id) : template.inbox
     return { error: no_inbox_error(template) } unless inbox

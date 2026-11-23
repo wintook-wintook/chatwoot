@@ -194,5 +194,5 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
   end
 
   # Los archivados (p. ej. un agente de función borrado que ya tenía historia) no salen.
-  def listed_templates = Current.account.tracking_templates.where(archived_at: nil)
+  def listed_templates = Current.account.tracking_templates.listable.where(archived_at: nil)
 end

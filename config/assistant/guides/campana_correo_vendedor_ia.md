@@ -58,7 +58,7 @@ Las listas son solo para correo. En WhatsApp no se ofrece: escribirle a quien no
 ### 3. Envíos y toques (automático)
 - Cada contacto recibe su primer correo en el horario de atención, sin pasar el tope del día.
 - No se le escribe a quien otra campaña contactó hace poco, a quien se dio de baja ni a quien tiene un correo inválido.
-- El primer correo es el que escribiste (con el nombre y la empresa del contacto) o, si lo dejaste vacío, uno que la IA escribe para cada contacto. Lleva el asunto A o B, la firma del vendedor, la liga para darse de baja y ligas que cuentan los clics.
+- El primer correo es el que escribiste (con el nombre y la empresa del contacto) o, si lo dejaste vacío, uno que la IA escribe para cada contacto. Lleva el asunto A o B, la firma de «Cómo atiende», la liga para darse de baja y ligas que cuentan los clics.
 - Si no contesta, sale el siguiente correo cada N días, hasta el número de toques que elegiste. En cuanto contesta, ya no salen más.
 
 ### 4. El contacto contesta (automático)
