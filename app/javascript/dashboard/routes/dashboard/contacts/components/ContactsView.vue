@@ -43,6 +43,8 @@ export default {
   },
   data() {
     return {
+      // Campaña con Vendedor IA: ver solo los de listas frías en cuarentena
+      listProspects: false,
       searchQuery: '',
       showCreateModal: false,
       showImportModal: false,
@@ -226,6 +228,7 @@ export default {
           page,
           sortAttr: this.getSortAttribute(),
           label: this.label,
+          listProspects: this.listProspects,
         };
         if (!value) {
           this.$store.dispatch('contacts/get', requestParams);
@@ -443,6 +446,10 @@ export default {
     },
     // proyecto@bulk_tracking_assign / @campanas_vendedor
     // Lleva el filtro actual de Contactos al tab "Nueva campaña" de Campañas.
+    onToggleListProspects() {
+      this.listProspects = !this.listProspects;
+      this.fetchContacts(DEFAULT_PAGE);
+    },
     onToggleBulkAssign() {
       sessionStorage.setItem(
         'campaignPresetFilter',
@@ -466,6 +473,7 @@ export default {
         :header-title="pageTitle"
         :segments-id="segmentsId"
         :label="label"
+        :list-prospects="listProspects"
         this-selected-contact-id=""
         @onInputSearch="onInputSearch"
         @onToggleCreate="onToggleCreate"
@@ -477,6 +485,7 @@ export default {
         @onToggleDeleteFilter="onToggleDeleteFilters"
         @onToggleEditFilter="onToggleFilters"
         @onToggleBulkAssign="onToggleBulkAssign"
+        @onToggleListProspects="onToggleListProspects"
       />
       <ContactsTable
         :contacts="records"

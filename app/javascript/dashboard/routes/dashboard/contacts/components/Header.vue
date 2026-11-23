@@ -25,6 +25,11 @@ export default {
       type: String,
       default: '',
     },
+    // Campaña con Vendedor IA: viendo solo los contactos de listas frías en cuarentena
+    listProspects: {
+      type: Boolean,
+      default: false,
+    },
   },
   setup() {
     const { isAdmin } = useAdmin();
@@ -84,6 +89,9 @@ export default {
     },
     toggleImport() {
       this.$emit('onToggleImport');
+    },
+    toggleListProspects() {
+      this.$emit('onToggleListProspects');
     },
     // proyecto@bulk_tracking_assign
     toggleBulkAssign() {
@@ -216,6 +224,22 @@ export default {
             @click="toggleCreate"
           >
             {{ $t('CREATE_CONTACT.BUTTON_LABEL') }}
+          </woot-button>
+
+          <!-- Campaña con Vendedor IA: los de listas frías en cuarentena no salen hasta que contestan -->
+          <woot-button
+            :color-scheme="listProspects ? 'primary' : 'secondary'"
+            :variant="listProspects ? 'smooth' : 'clear'"
+            icon="mail"
+            class="[&>span]:hidden xs:[&>span]:block"
+            :title="$t('CONTACTS_PAGE.LIST_PROSPECTS.HINT')"
+            @click="toggleListProspects"
+          >
+            {{
+              listProspects
+                ? $t('CONTACTS_PAGE.LIST_PROSPECTS.BACK')
+                : $t('CONTACTS_PAGE.LIST_PROSPECTS.BUTTON')
+            }}
           </woot-button>
 
           <woot-button

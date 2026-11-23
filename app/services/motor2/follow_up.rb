@@ -57,6 +57,14 @@ module Motor2::FollowUp
     end
   end
 
+  # Ya no se le puede escribir libre: sus plantillas o, sin ellas, el cierre sin respuesta (ya, no a las 23 h).
+  def after_window(tracking, message, plan)
+    return finish!(tracking) unless plan
+    return templates!(tracking, message, plan) if plan[:templates].any? && whatsapp?(tracking)
+
+    finish!(tracking)
+  end
+
   # Pasadas las 24 h: el envío de siempre con sus plantillas (una cada template_days).
   def templates!(tracking, message, plan)
     tracking.update!(status: 'scheduled', attempt_count: 0, max_attempts: plan[:templates].size,

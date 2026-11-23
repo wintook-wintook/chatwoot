@@ -124,6 +124,13 @@ export default {
       </label>
     </fieldset>
     <p v-else class="m-0 text-xs text-slate-500">{{ t('NO_TEMPLATES') }}</p>
+    <!-- WhatsApp sin plantilla elegida: pasadas 24 h ya no se le puede escribir (Motor2::FollowUp.after_window). -->
+    <p
+      v-if="templates.length && !value.templates.length"
+      class="m-0 text-xs text-amber-700"
+    >
+      {{ t('NO_TEMPLATE_PICKED') }}
+    </p>
     <div
       class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
     >

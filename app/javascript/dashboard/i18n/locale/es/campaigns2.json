@@ -193,7 +193,9 @@
       "NO_CAP": "Sin tope",
       "DAILY_CAP_HINT": "Reparte los envíos en varios días para que tu equipo alcance a atender a los interesados.",
       "DELAY": "Esperar antes del primer mensaje",
-      "MINUTES": "minutos"
+      "MINUTES": "minutos",
+      "WARMUP": "Calentar el dominio",
+      "WARMUP_HINT": "Para un dominio nuevo o una lista fría: el primer día salen 50, luego 100, 200… hasta {cap} al día. Si rebota más del 5 %, la campaña se pausa sola."
     },
     "REVIEW": {
       "SUMMARY": "{kind} · atiende {seller} · sale por {channel} · {touches} toque(s)",

@@ -102,6 +102,7 @@ namespace :assistant do
       puts "  nuevas: #{result.created.join(', ')}" if result.created.any?
       puts "  actualizadas: #{result.updated.join(', ')}" if result.updated.any?
       puts "  archivadas: #{result.archived.join(', ')}" if result.archived.any?
+      puts "  NO publicadas: #{result.failed.join(' · ')}" if result.failed.any?
     end
   end
 end

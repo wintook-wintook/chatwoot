@@ -515,7 +515,8 @@
       "HINT": "Si contesta, todo vuelve a empezar desde su nuevo mensaje. Si ya lo calificaste, descartaste o pasaste a una persona, no le escribe. En cada conversación verás el próximo recordatorio y podrás cancelarlo.",
       "QUOTE": "🧾 Día {n} desde que se manda la cotización: le pregunta por ella ({how})",
       "QUOTE_TEMPLATE": "plantilla «{name}» si ya pasaron 24 h",
-      "QUOTE_NO_TEMPLATE": "sin plantilla: solo si sigue dentro de las 24 h"
+      "QUOTE_NO_TEMPLATE": "sin plantilla: solo si sigue dentro de las 24 h",
+      "NO_TEMPLATE_PICKED": "Sin plantilla, después de 24 h ya no se le puede escribir por WhatsApp: al cerrarse la ventana el seguimiento termina con #sin-respuesta."
     },
     "QUOTE": {
       "TITLE": "Cotizaciones",
@@ -629,7 +630,8 @@
       "ATTEND_HINT": "Si nadie le escribe a tiempo, deja una nota con @mención al vendedor; al triple del tiempo, avisa a los administradores.",
       "REQUIRED_CONTACT": "Datos que debe juntar antes de pasarlo",
       "DISPLAY_NAME": "Nombre que ve el cliente (opcional)",
-      "DISPLAY_NAME_PLACEHOLDER": "Ej. Ana"
+      "DISPLAY_NAME_PLACEHOLDER": "Ej. Ana",
+      "APPOINTMENT_NOTICE_NO_TEMPLATE": "Sin plantilla, si ya pasaron 24 h desde su último mensaje el recordatorio no le llega (WhatsApp no deja): se le avisa a quien atiende la cita para que le escriba."
     },
     "TONES": {
       "cercano": "Cercano (de tú)",

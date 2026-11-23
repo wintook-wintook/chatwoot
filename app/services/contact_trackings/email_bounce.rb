@@ -53,6 +53,7 @@ module ContactTrackings::EmailBounce
       tracking.update_column(:prospect_exit, 'bounced') # rubocop:disable Rails/SkipsModelValidations
       tracking.cancel!
       note(tracking, contact, reason)
+      TrackingCampaigns::BounceGuard.check(tracking.tracking_campaign) # Campaña con Vendedor IA: pausa si rebota mucho
     end
     Rails.logger.info "[EmailBounce] Contacto ##{contact.id}: rebotó #{contact.email} (#{reason})"
   end
