@@ -318,12 +318,14 @@ export default {
     },
   },
   async mounted() {
+    // Segmentos y etiquetas aparte: si fallan, los vendedores y canales igual se cargan.
+    [['customViews/get', FILTER_TYPE_CONTACT], ['labels/get']].forEach(
+      ([action, arg]) =>
+        Promise.resolve(this.$store.dispatch(action, arg)).catch(() => {})
+    );
+    window.addEventListener('focus', this.refreshOptions);
     try {
-      const [{ data }] = await Promise.all([
-        Motor2CampaignsAPI.options(),
-        this.$store.dispatch('customViews/get', FILTER_TYPE_CONTACT),
-        this.$store.dispatch('labels/get'),
-      ]);
+      const { data } = await Motor2CampaignsAPI.options();
       this.options = data;
       const id = this.$route.params.campaignId;
       if (id) await this.load(Number(id));
@@ -337,9 +339,25 @@ export default {
       this.loading = false;
     }
   },
+  beforeDestroy() {
+    window.removeEventListener('focus', this.refreshOptions);
+  },
   methods: {
     t(key, params) {
       return this.$t(`CAMPAIGNS2.${key}`, params);
+    },
+    // Al volver a la pestaña (p. ej. después de crear el vendedor en Agentes listos) se recargan vendedores y canales.
+    async refreshOptions() {
+      if (this.loading) return;
+      try {
+        const { data } = await Motor2CampaignsAPI.options();
+        this.options = data;
+        if (!this.form.tracking_template_id && data.sellers.length === 1) {
+          this.form.tracking_template_id = data.sellers[0].id;
+        }
+      } catch (e) {
+        // se queda lo que había
+      }
     },
     go(step) {
       this.step = step;
@@ -665,6 +683,20 @@ export default {
         class="p-3 mb-2 text-sm rounded-md text-amber-800 bg-amber-50 dark:bg-amber-900/20"
       >
         {{ t('NO_SELLERS') }}
+        <router-link
+          :to="{ name: 'ready_agents' }"
+          target="_blank"
+          class="underline ltr:ml-1 rtl:mr-1"
+        >
+          {{ t('CREATE_SELLER') }}
+        </router-link>
+        <button
+          type="button"
+          class="underline ltr:ml-2 rtl:mr-2"
+          @click="refreshOptions"
+        >
+          {{ t('REFRESH_SELLERS') }}
+        </button>
       </p>
       <WizardTabs
         :steps="steps"

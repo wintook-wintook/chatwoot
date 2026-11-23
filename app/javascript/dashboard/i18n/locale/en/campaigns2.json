@@ -491,6 +491,8 @@
         "daily_cap": "waiting: daily limit reached",
         "frequency": "waiting: another campaign wrote today"
       }
-    }
+    },
+    "CREATE_SELLER": "Create seller",
+    "REFRESH_SELLERS": "Done: refresh"
   }
 }

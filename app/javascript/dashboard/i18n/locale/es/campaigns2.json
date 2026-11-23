@@ -491,6 +491,8 @@
         "daily_cap": "esperando: llegó al tope del día",
         "frequency": "esperando: otra campaña le escribió hoy"
       }
-    }
+    },
+    "CREATE_SELLER": "Crear vendedor",
+    "REFRESH_SELLERS": "Ya lo creé: actualizar"
   }
 }
