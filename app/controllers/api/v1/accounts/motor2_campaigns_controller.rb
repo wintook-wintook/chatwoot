@@ -26,8 +26,7 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
   def options
     render json: { sellers: TrackingCampaigns::Motor2Form.sellers(Current.account).map { |t| seller_json(t) },
                    inboxes: TrackingCampaigns::Motor2Form.inboxes(Current.account).map { |i| inbox_json(i) },
-                   events: Current.account.events.where(closed_at: nil).where('starts_at > ?', Time.current).order(:starts_at)
-                                  .limit(50).map { |e| { id: e.id, name: e.name, starts_at: e.starts_at, capacity: e.capacity } } }
+                   events: upcoming_events, users: names(Current.account.users), teams: names(Current.account.teams) }
   end
 
   def preview
@@ -131,6 +130,14 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
   def set_campaign
     @campaign = Current.account.tracking_campaigns.real.where(engine: '2').find(params[:id])
   end
+
+  def upcoming_events
+    Current.account.events.where(closed_at: nil).where('starts_at > ?', Time.current).order(:starts_at)
+           .limit(50).map { |e| { id: e.id, name: e.name, starts_at: e.starts_at, capacity: e.capacity } }
+  end
+
+  # Para «Si le interesa, pasa a» de la campaña.
+  def names(scope) = scope.order(:name).map { |r| { id: r.id, name: r.name } }
 
   def test_runner = @test_runner ||= TrackingCampaigns::Motor2TestRun.new(@campaign, current_user)
 

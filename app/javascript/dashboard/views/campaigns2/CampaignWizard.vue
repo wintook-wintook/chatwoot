@@ -44,6 +44,11 @@ const blankForm = () => ({
     low_score: 7,
     rest_days: 7,
     warmup: false,
+    // De esta oferta (además de las generales del vendedor) y quién atiende a los de esta campaña.
+    objections: [],
+    relay: '',
+    relay_user_id: '',
+    relay_team_id: '',
   },
   touches: {
     attempts: 2,
@@ -88,7 +93,7 @@ export default {
     return {
       step: 'goal',
       form: blankForm(),
-      options: { sellers: [], inboxes: [], events: [] },
+      options: { sellers: [], inboxes: [], events: [], users: [], teams: [] },
       loading: true,
       saving: false,
       campaignId: null,
@@ -109,6 +114,15 @@ export default {
   },
   computed: {
     ...mapGetters({ labels: 'labels/getLabels' }),
+    // Encuesta e invitación no llevan relevo: solo a quién pasa el que pide una persona.
+    relayChoices() {
+      return ['survey', 'invite'].includes(this.kind)
+        ? ['', 'person']
+        : ['', 'agent', 'person'];
+    },
+    sellerRelayText() {
+      return this.seller ? this.t(`OFFER.RELAY.${this.seller.relay}`) : '—';
+    },
     steps() {
       return STEPS;
     },
@@ -319,6 +333,10 @@ export default {
           ...blank.brief,
           ...data.brief,
           event_id: data.brief?.event_id || '',
+          objections: (data.brief?.objections || []).map(o => ({ ...o })),
+          relay: data.brief?.relay || '',
+          relay_user_id: data.brief?.relay_user_id || '',
+          relay_team_id: data.brief?.relay_team_id || '',
           survey_questions: questions.slice(0, 3),
         },
         touches: {
@@ -364,6 +382,9 @@ export default {
         brief: {
           ...f.brief,
           survey_questions: f.brief.survey_questions.filter(q => q.trim()),
+          objections: f.brief.objections.filter(
+            o => o.objection.trim() && o.answer.trim()
+          ),
         },
         touches: f.touches,
         audience: {
@@ -744,6 +765,96 @@ export default {
               {{ t('OFFER.DAYS') }}
             </label>
             <p class="m-0 text-xs text-slate-500">{{ t('OFFER.REST_HINT') }}</p>
+
+            <!-- Quién atiende a los de esta campaña (encima del vendedor) -->
+            <span class="field-label">{{ t('OFFER.RELAY_TITLE') }}</span>
+            <label
+              v-for="value in relayChoices"
+              :key="value || 'seller'"
+              class="flex items-start gap-2 text-sm"
+            >
+              <input
+                v-model="form.brief.relay"
+                type="radio"
+                class="!m-0 mt-1"
+                :value="value"
+              />
+              {{
+                value
+                  ? t(`OFFER.RELAY_CHOICES.${value}`)
+                  : t('OFFER.RELAY_CHOICES.seller', { what: sellerRelayText })
+              }}
+            </label>
+            <div
+              v-if="form.brief.relay === 'person'"
+              class="grid grid-cols-2 gap-2"
+            >
+              <label class="block">
+                <span class="field-label">{{ t('OFFER.RELAY_USER') }}</span>
+                <select v-model="form.brief.relay_user_id">
+                  <option value="">{{ t('OFFER.NOBODY') }}</option>
+                  <option v-for="u in options.users" :key="u.id" :value="u.id">
+                    {{ u.name }}
+                  </option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('OFFER.RELAY_TEAM') }}</span>
+                <select v-model="form.brief.relay_team_id">
+                  <option value="">{{ t('OFFER.NO_TEAM') }}</option>
+                  <option
+                    v-for="team in options.teams"
+                    :key="team.id"
+                    :value="team.id"
+                  >
+                    {{ team.name }}
+                  </option>
+                </select>
+              </label>
+            </div>
+
+            <template v-if="kind !== 'survey'">
+              <span class="field-label">{{ t('OFFER.OBJECTIONS') }}</span>
+              <p class="m-0 text-xs text-slate-500">
+                {{ t('OFFER.OBJECTIONS_HINT') }}
+              </p>
+              <div
+                v-for="(o, i) in form.brief.objections"
+                :key="i"
+                class="grid grid-cols-[1fr_1fr_auto] gap-1"
+              >
+                <input
+                  v-model="o.objection"
+                  type="text"
+                  maxlength="300"
+                  :placeholder="t('OFFER.OBJECTION_PLACEHOLDER')"
+                />
+                <input
+                  v-model="o.answer"
+                  type="text"
+                  maxlength="800"
+                  :placeholder="t('OFFER.ANSWER_PLACEHOLDER')"
+                />
+                <button
+                  type="button"
+                  class="px-1 text-slate-400 hover:text-red-600"
+                  :aria-label="t('OFFER.REMOVE')"
+                  @click="form.brief.objections.splice(i, 1)"
+                >
+                  <fluent-icon icon="dismiss" size="14" />
+                </button>
+              </div>
+              <button
+                v-if="form.brief.objections.length < 10"
+                type="button"
+                class="self-start text-xs text-woot-600 hover:underline"
+                @click="
+                  form.brief.objections.push({ objection: '', answer: '' })
+                "
+              >
+                {{ t('OFFER.ADD_OBJECTION') }}
+              </button>
+            </template>
           </template>
 
           <!-- 3 · Audiencia -->

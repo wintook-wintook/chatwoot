@@ -163,15 +163,12 @@ class TrackingCampaigns::Motor2Check
   def relay
     return nil if @brief['kind'] == 'survey'
 
-    answers = @campaign.tracking_template&.motor2.to_h['answers'].to_h
+    answers = @campaign.tracking_template&.motor2.to_h['answers'].to_h.merge(TrackingCampaigns::Motor2Brief.relay_answers(@brief))
+    whose = @brief['relay'].present? ? 'de la campaña' : 'del vendedor'
     return item(:relay, 'ok', 'Si le interesa, lo pasa al agente de atención de la bandeja.') unless answers['relay'] == 'person'
+    return item(:relay, 'ok', "Si le interesa, lo pasa a la persona o equipo #{whose}.") if answers['user_id'].present? || answers['team_id'].present?
 
-    if answers['user_id'].present? || answers['team_id'].present?
-      return item(:relay, 'ok',
-                  'Si le interesa, lo pasa a la persona o equipo del agente.')
-    end
-
-    item(:relay, 'warning', 'El agente no tiene a quién pasar a los interesados: elígelo en su pestaña «Cómo platica».')
+    item(:relay, 'warning', 'No hay a quién pasar a los interesados: elígelo en «Oferta» (Si le interesa, pasa a) o en el vendedor.')
   end
 
   def window

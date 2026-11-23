@@ -48,6 +48,34 @@ RSpec.describe 'Motor2 campaign tests' do
     end
   end
 
+  describe 'Lo de la campaña encima del vendedor' do
+    let(:beto) { create(:user, account: account, name: 'Beto Ventas') }
+
+    it 'el relevo de la campaña gana; sin elegir, el del vendedor' do
+      rec = campaign
+      rec.update!(brief: rec.brief.merge('relay' => 'person', 'relay_user_id' => beto.id))
+      post "#{api}/#{rec.id}/simulate", params: { contact_id: mario.id }, headers: headers, as: :json
+      expect(response.parsed_body['outcomes'].first).to include('kind' => 'relay_person', 'to' => 'Beto Ventas')
+      expect(TrackingCampaigns::Motor2Check.new(rec).call.find { |i| i[:key] == :relay }[:text]).to include('de la campaña')
+
+      rec.update!(brief: rec.brief.except('relay', 'relay_user_id'))
+      post "#{api}/#{rec.id}/simulate", params: { contact_id: mario.id }, headers: headers, as: :json
+      expect(response.parsed_body['outcomes'].first['to']).to eq('Ana Admin')
+    end
+
+    it 'objeciones: las de la oferta y las generales del vendedor que la campaña no repite' do
+      seller.update!(motor2: seller.motor2.deep_merge('answers' => { 'objections' => [
+                                                        { 'objection' => 'Está caro', 'answer' => 'general' },
+                                                        { 'objection' => 'Ya tengo proveedor', 'answer' => 'comparemos' }
+                                                      ] }))
+      brief = TrackingCampaigns::Motor2Brief.brief('objections' => [{ 'objection' => 'está caro', 'answer' => 'incluye instalación' }])
+      rec = campaign.tap { |c| c.update!(brief: c.brief.merge(brief.slice('objections'))) }
+      prompt = Motor2::Config.for(ContactTracking.new(tracking_template: seller, tracking_campaign: rec)).function.prompt
+      expect(prompt).to include('incluye instalación', 'comparemos')
+      expect(prompt).not_to include('→ general')
+    end
+  end
+
   describe 'Prueba real' do
     it 'una copia oculta solo a los contactos de prueba, con toques en minutos; otra prueba termina la anterior' do # rubocop:disable RSpec/MultipleExpectations -- un recorrido
       rec = campaign

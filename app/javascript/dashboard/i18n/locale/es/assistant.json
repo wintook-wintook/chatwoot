@@ -1072,7 +1072,7 @@
       "STEP_HINTS": {
         "agent": "Cómo se llama y con qué tono escribe.",
         "knows": "Lo básico de tu negocio y dónde busca lo que le preguntan.",
-        "talk": "Su voz (Cómo habla tu empresa), a quién pasa el relevo, objeciones, cotizaciones y tus indicaciones en texto libre (abajo).",
+        "talk": "Su voz (Cómo habla tu empresa), el relevo por omisión, las objeciones generales, cotizaciones y tus indicaciones en texto libre (abajo).",
         "instructions": "Algo más que deba saber o hacer (opcional).",
         "test": "El chat empieza con el mensaje de la campaña: contesta como lo haría tu contacto.",
         "files": "Las imágenes y archivos que manda y cuándo. Prueba en el chat de la derecha y guarda.",
@@ -1135,7 +1135,7 @@
         "invite": "Falta elegir el evento.",
         "survey": "Falta al menos una pregunta."
       },
-      "RELAY": "Al interesado lo pasa a",
+      "RELAY": "Relevo por omisión: al interesado lo pasa a (cada campaña lo puede cambiar)",
       "RELAYS": {
         "agent": "Al agente de la bandeja: «Atención a prospectos» (o «Atención a clientes» si ya es cliente). Si no hay, a la persona o equipo de abajo.",
         "person": "A la persona o equipo de abajo (si la campaña tiene tablero de entrega, entra ahí con su plazo)"
@@ -1143,7 +1143,7 @@
       "PERSON": "Persona",
       "TEAM": "Equipo",
       "RULES": "Siempre: una pregunta por mensaje; si dice que no, se despide sin insistir; «ya no me escriban» lo da de baja; no inventa precios ni fechas.",
-      "OBJECTIONS": "Objeciones frecuentes (opcional)",
+      "OBJECTIONS": "Objeciones generales (sirven para todas las campañas; las de una oferta van en la campaña)",
       "OBJECTION_PLACEHOLDER": "Lo que dicen («está caro»)",
       "ANSWER_PLACEHOLDER": "Cómo contestarlo",
       "ADD_OBJECTION": "+ Agregar objeción",

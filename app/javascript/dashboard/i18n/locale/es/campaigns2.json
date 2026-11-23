@@ -95,7 +95,23 @@
       "DETAILS_PLACEHOLDER": "Válido hasta el 31 de marzo · solo Guadalajara · pago en una exhibición",
       "REST_DAYS": "No escribirle si otra campaña le escribió hace menos de",
       "DAYS": "días",
-      "REST_HINT": "Protección contra saturar: los que recibieron otra campaña con Vendedor IA hace poco se quedan fuera (0 = sin regla)."
+      "REST_HINT": "Protección contra saturar: los que recibieron otra campaña con Vendedor IA hace poco se quedan fuera (0 = sin regla).",
+      "RELAY_TITLE": "Si le interesa (o pide una persona), pasa a",
+      "RELAY_CHOICES": {
+        "seller": "Lo que diga el vendedor — {what}",
+        "agent": "Al agente de atención de la bandeja (prospectos o clientes)",
+        "person": "A una persona o equipo de esta campaña"
+      },
+      "RELAY_USER": "Persona",
+      "RELAY_TEAM": "Equipo",
+      "NOBODY": "Nadie",
+      "NO_TEAM": "Sin equipo",
+      "OBJECTIONS": "Objeciones de esta oferta",
+      "OBJECTIONS_HINT": "Lo que suelen contestar a ESTA oferta y la idea para responder. Van además de las generales del vendedor; si es la misma objeción, gana la de aquí.",
+      "OBJECTION_PLACEHOLDER": "Ej. «Está caro»",
+      "ANSWER_PLACEHOLDER": "Ej. Incluye instalación y 12 meses de garantía",
+      "ADD_OBJECTION": "+ Agregar objeción",
+      "REMOVE": "Quitar"
     },
     "AUDIENCE": {
       "segment": "Segmento",

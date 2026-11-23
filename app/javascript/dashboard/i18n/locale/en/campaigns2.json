@@ -95,7 +95,23 @@
       "DETAILS_PLACEHOLDER": "Valid until March 31 · local only · single payment",
       "REST_DAYS": "Don't write if another campaign wrote less than",
       "DAYS": "days ago",
-      "REST_HINT": "Saturation guard: contacts who got another AI Seller campaign recently are left out (0 = no rule)."
+      "REST_HINT": "Saturation guard: contacts who got another AI Seller campaign recently are left out (0 = no rule).",
+      "RELAY_TITLE": "If interested (or asks for a person), goes to",
+      "RELAY_CHOICES": {
+        "seller": "Whatever the seller says — {what}",
+        "agent": "The inbox's service agent (prospects or customers)",
+        "person": "A person or team for this campaign"
+      },
+      "RELAY_USER": "Person",
+      "RELAY_TEAM": "Team",
+      "NOBODY": "Nobody",
+      "NO_TEAM": "No team",
+      "OBJECTIONS": "Objections to this offer",
+      "OBJECTIONS_HINT": "What people usually reply to THIS offer and the idea to answer. Added to the seller's general ones; if it is the same objection, this one wins.",
+      "OBJECTION_PLACEHOLDER": "E.g. «It's expensive»",
+      "ANSWER_PLACEHOLDER": "E.g. Includes installation and a 12-month warranty",
+      "ADD_OBJECTION": "+ Add objection",
+      "REMOVE": "Remove"
     },
     "AUDIENCE": {
       "segment": "Segment",

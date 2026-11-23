@@ -1072,7 +1072,7 @@
       "STEP_HINTS": {
         "agent": "Its name and tone.",
         "knows": "The basics of your business and where it looks up answers.",
-        "talk": "Its voice (How your company talks), who gets the relay, objections, quotes and your free-text instructions (below).",
+        "talk": "Its voice (How your company talks), the default relay, general objections, quotes and your free-text instructions (below).",
         "instructions": "Anything else it should know or do (optional).",
         "test": "The chat starts with the campaign message: reply as your contact would.",
         "files": "The images and files it sends and when. Test in the chat on the right and save.",
@@ -1135,7 +1135,7 @@
         "invite": "Choose the event.",
         "survey": "Add at least one question."
       },
-      "RELAY": "The interested contact goes to",
+      "RELAY": "Default relay: the interested contact goes to (each campaign can change it)",
       "RELAYS": {
         "agent": "The inbox agent: «Prospect care» (or «Customer care» if already a customer). If none, the person or team below.",
         "person": "The person or team below (if the campaign has a handover board, it goes there with its deadline)"
@@ -1143,7 +1143,7 @@
       "PERSON": "Person",
       "TEAM": "Team",
       "RULES": "Always: one question per message; if they say no, it says goodbye without insisting; «stop messaging me» opts them out; it never makes up prices or dates.",
-      "OBJECTIONS": "Common objections (optional)",
+      "OBJECTIONS": "General objections (for every campaign; offer-specific ones go in the campaign)",
       "OBJECTION_PLACEHOLDER": "What they say («too expensive»)",
       "ANSWER_PLACEHOLDER": "How to answer",
       "ADD_OBJECTION": "+ Add objection",

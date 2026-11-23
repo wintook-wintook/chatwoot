@@ -8,7 +8,11 @@
 #              event_id    Invitar: el evento (también arma la audiencia)
 #              survey_questions [≤3] · low_score (menor a esto, de 0 a 10, es baja)
 #              rest_days   no se le escribe si otra campaña 2.0 le escribió hace menos de estos días (0 = sin regla)
-#              warmup      calentar el dominio: el tope diario arranca en WARMUP_START y se duplica cada día }
+#              warmup      calentar el dominio: el tope diario arranca en WARMUP_START y se duplica cada día
+#              objections  [{ objection, answer }] de ESTA oferta: van además de las generales del vendedor y, si es
+#                          la misma objeción, gana la de la campaña
+#              relay       '' (lo que diga el vendedor) | agent | person · relay_user_id / relay_team_id: quién atiende
+#                          a los de esta campaña (el interesado y el que pide una persona) }
 #   touches  { attempts 1..6 · every_value / every_unit (hours | days) entre toques
 #              templates [nombre de plantilla de WhatsApp por toque]
 #              emails    [{ body, blocks }] por toque (el asunto del primero es email_subject / email_subject_b);
@@ -47,10 +51,27 @@ module TrackingCampaigns::Motor2Brief
     {
       'kind' => raw['kind'].to_s.presence_in(KINDS) || 'offer', 'offer_goal' => raw['offer_goal'].to_s.presence_in(GOALS) || 'relay',
       'offer_what' => text(raw['offer_what']), 'offer_details' => text(raw['offer_details']),
-      'event_id' => raw['event_id'].to_s.presence&.to_i, 'survey_questions' => questions(raw['survey_questions']),
+      'event_id' => id(raw['event_id']), 'survey_questions' => questions(raw['survey_questions']),
       'low_score' => number(raw['low_score'], 7, 1..10), 'rest_days' => number(raw['rest_days'], 0, 0..90),
-      'warmup' => ActiveModel::Type::Boolean.new.cast(raw['warmup']) || false
-    }.compact
+      'warmup' => flag(raw['warmup'])
+    }.merge(talk(raw)).compact
+  end
+
+  # Cómo atiende a los de ESTA campaña, encima del vendedor: objeciones de la oferta y el relevo.
+  def talk(raw) = { 'objections' => objections(raw['objections']) }.merge(relay(raw))
+
+  MAX_OBJECTIONS = 10
+
+  def objections(list)
+    Array(list).filter_map { |o| Motor2::Functions::ProspectAnswers.objection_row(Motor2::Sanitizer.plain(o)) }.first(MAX_OBJECTIONS)
+  end
+
+  # Vacío: el relevo del vendedor. Con persona, la persona y el equipo de la campaña.
+  def relay(raw)
+    mode = raw['relay'].to_s.presence_in(%w[agent person])
+    return { 'relay' => mode } unless mode == 'person'
+
+    { 'relay' => mode, 'relay_user_id' => id(raw['relay_user_id']), 'relay_team_id' => id(raw['relay_team_id']) }
   end
 
   def touches(raw)
@@ -75,6 +96,10 @@ module TrackingCampaigns::Motor2Brief
 
   def questions(list) = Array(list).map { |q| q.to_s.squish.first(300) }.compact_blank.first(MAX_QUESTIONS)
 
+  def id(value) = value.to_s.presence&.to_i
+
+  def flag(value) = ActiveModel::Type::Boolean.new.cast(value) || false
+
   def number(value, default, range) = (value.presence || default).to_i.clamp(range.min, range.max)
 
   def text(value) = value.to_s.strip.first(MAX_TEXT)
@@ -84,7 +109,16 @@ module TrackingCampaigns::Motor2Brief
     data = campaign.brief.to_h
     { 'purpose' => data['kind'], 'offer_what' => data['offer_what'], 'offer_details' => data['offer_details'],
       'offer_goal' => data['offer_goal'], 'event_id' => data['event_id'], 'survey_questions' => data['survey_questions'],
-      'low_score' => data['low_score'] }.compact
+      'low_score' => data['low_score'], 'campaign_objections' => data['objections'].presence }.merge(relay_answers(data)).compact
+  end
+
+  # El relevo de la campaña encima del del vendedor (solo si la campaña lo eligió).
+  def relay_answers(data)
+    case data['relay']
+    when 'agent' then { 'relay' => 'agent' }
+    when 'person' then { 'relay' => 'person', 'user_id' => data['relay_user_id'], 'team_id' => data['relay_team_id'] }
+    else {}
+    end
   end
 
   # Los intentos y su ritmo para cada seguimiento (TrackingCampaigns::TrackingBuilder).

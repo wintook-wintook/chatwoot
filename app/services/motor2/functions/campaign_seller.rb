@@ -137,8 +137,15 @@ class Motor2::Functions::CampaignSeller
     lines.empty? ? '' : "EL NEGOCIO:\n#{lines.join("\n")}"
   end
 
+  # Las de la campaña (de esta oferta) primero; de las generales del vendedor, las que la campaña no repite.
+  def objection_rows
+    own = Array(answer(:campaign_objections))
+    taken = own.map { |o| o['objection'].to_s.squish.downcase }
+    own + Array(answer(:objections)).reject { |o| taken.include?(o['objection'].to_s.squish.downcase) }
+  end
+
   def objections_block
-    rows = Array(answer(:objections)).select { |o| o['objection'].present? && o['answer'].present? }
+    rows = objection_rows.select { |o| o['objection'].present? && o['answer'].present? }
     return '' if rows.empty?
 
     "OBJECIONES FRECUENTES (contesta con esta idea, con tus palabras; no ofrezcas descuentos que no estén aquí):\n" \
