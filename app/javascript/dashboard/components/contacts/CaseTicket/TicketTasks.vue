@@ -25,6 +25,13 @@ import ScheduleTaskModal from 'dashboard/components/convert/ScheduleTaskModal.vu
 import TaskHistoryModal from 'dashboard/views/gestorTickets/tasks/TaskHistoryModal.vue';
 import ClientTaskEntries from 'dashboard/components/clientPortal/ClientTaskEntries.vue'; // tareas con el cliente
 import CancelItemModal from 'dashboard/components/cancel/CancelItemModal.vue'; // cancelar con motivo
+import TaskRecurrencesAPI from 'dashboard/api/taskRecurrences'; // tareas que se repiten
+import RecurrenceFields from 'dashboard/components/recurrence/RecurrenceFields.vue';
+import {
+  defaultRecurrence,
+  caseRecurrencePayload,
+  describeRecurrence,
+} from 'dashboard/components/recurrence/recurrence';
 import {
   ESTIMATE_OPTIONS,
   formatMinutes,
@@ -48,6 +55,7 @@ const PRIORITY_RANK = { low: 0, medium: 1, high: 2, urgent: 3 };
 export default {
   name: 'TicketTasks',
   components: {
+    RecurrenceFields,
     VeTable,
     TableFooter,
     WootMessageEditor,
@@ -74,6 +82,9 @@ export default {
   },
   data() {
     return {
+      // «Se repite» (solo al crear): la tarea sale sola cada cierto tiempo, ligada a este caso.
+      repeats: false,
+      recurrence: defaultRecurrence(),
       audiences: ['internal', 'visible', 'client'], // tareas con el cliente
       // Cancelar con motivo: la tarea a cancelar, si está guardando y el error.
       cancelTarget: null,
@@ -921,9 +932,50 @@ export default {
         requester_id: '',
         requester_locked: true,
       };
+      this.repeats = false;
+      this.recurrence = defaultRecurrence();
       this.resetAi();
       this.showModal = true;
       this.$nextTick(() => this.$refs.titleInput?.focus());
+    },
+    // Tarea que se repite en este caso: se programa (TaskRecurrence) y la primera sale hoy si toca.
+    async createRecurring(title) {
+      const start =
+        this.form.planned_on || new Date().toISOString().slice(0, 10);
+      if (
+        this.recurrence.mode === 'fixed' &&
+        this.recurrence.unit === 'week' &&
+        !this.recurrence.weekdays.length
+      ) {
+        useAlert(this.$t('RECURRING_TASKS.WEEKDAYS_REQUIRED'));
+        return;
+      }
+      this.isSaving = true;
+      try {
+        await TaskRecurrencesAPI.create(
+          caseRecurrencePayload(
+            { ...this.form, title },
+            this.recurrence,
+            this.ticketId,
+            start
+          )
+        );
+        useAlert(
+          this.$t('CASE_TICKETS.TASKS.MODAL.REPEATS_SAVED', {
+            when: describeRecurrence(this.recurrence, this),
+          })
+        );
+        this.showModal = false;
+        await this.load();
+        this.$emit('saved');
+      } catch (e) {
+        useAlert(
+          e.response?.data?.error ||
+            this.$t('CASE_TICKETS.TASKS.MODAL.REPEATS_ERROR')
+        );
+      } finally {
+        this.isSaving = false;
+      }
     },
     openEdit(task) {
       this.editingId = task.id;
@@ -986,6 +1038,10 @@ export default {
     async submitForm(reported = false) {
       const title = this.form.title.trim();
       if (!title || this.isSaving) return;
+      if (this.repeats && !this.isEditing) {
+        this.createRecurring(title);
+        return;
+      }
       // Concluirla desde el formulario también pide el reporte.
       const editing = this.tasks.find(t => t.id === this.editingId);
       const concludes =
@@ -1524,6 +1580,20 @@ export default {
           >
             {{ $t('CASE_TICKETS.TASKS.MODAL.PLANNED_AFTER_DUE') }}
           </p>
+
+          <!-- Tareas que se repiten: solo al crear y si la hace el equipo (no el cliente). -->
+          <template v-if="!isEditing && !viewing && form.audience !== 'client'">
+            <label class="flex items-center gap-2 text-sm">
+              <input v-model="repeats" type="checkbox" class="!m-0" />
+              {{ $t('CASE_TICKETS.TASKS.MODAL.REPEATS') }}
+            </label>
+            <template v-if="repeats">
+              <RecurrenceFields v-model="recurrence" />
+              <p class="m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400">
+                {{ $t('CASE_TICKETS.TASKS.MODAL.REPEATS_HINT') }}
+              </p>
+            </template>
+          </template>
           <p
             v-if="form.status === 'cancelled' && form.cancel_reason"
             class="m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400"

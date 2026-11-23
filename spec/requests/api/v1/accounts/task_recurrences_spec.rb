@@ -140,6 +140,18 @@ RSpec.describe 'Task recurrences' do
       expect(rec.reload.status).to eq('ended')
     end
 
+    it 'dentro de un caso: la tarea sale ligada al caso' do
+      soporte = CaseType.create!(account: account, name: 'Soporte', color: '#3b82f6')
+      ticket = CaseTicket.create!(account: account, title: 'Grúa 12', contact: contact, case_type: soporte)
+      post api, params: { title: 'Revisar inventario', unit: 'day', starts_on: Date.current, case_ticket_id: ticket.id,
+                          assignee_id: ana.id, priority: 'high', time_zone: 'America/Mexico_City' },
+                headers: ana.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:created)
+      rec = TaskRecurrence.last
+      expect(rec).to have_attributes(case_ticket_id: ticket.id, priority: 'high')
+      expect(rec.case_tasks.last).to have_attributes(case_ticket_id: ticket.id, title: 'Revisar inventario')
+    end
+
     it 'las estadísticas: a tiempo, tarde, pendientes y no hechas' do
       rec = recurrence(missed_count: 2)
       CaseTask.create!(account: account, title: 'a', task_recurrence: rec, due_at: 1.day.from_now, status: :done, assignee: ana)

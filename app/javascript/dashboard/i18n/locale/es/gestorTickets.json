@@ -833,7 +833,11 @@
         "ESTIMATE_LABEL": "Duración estimada",
         "ESTIMATE_NONE": "Sin estimar",
         "PLANNED_LABEL": "Programada para",
-        "PLANNED_AFTER_DUE": "Queda después del vencimiento: se entregará tarde."
+        "PLANNED_AFTER_DUE": "Queda después del vencimiento: se entregará tarde.",
+        "REPEATS": "Se repite",
+        "REPEATS_HINT": "La primera sale el día «Programada para» (o hoy) y luego sola, cada vez que toque, ligada a este caso. Se ven y se pausan en Agenda › Tareas que se repiten.",
+        "REPEATS_SAVED": "Listo: se repite {when}.",
+        "REPEATS_ERROR": "No se pudo programar la tarea."
       },
       "ADD_NOTE": "Agregar nota",
       "REFRESH": "Actualizar",

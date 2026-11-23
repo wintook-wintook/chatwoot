@@ -35,40 +35,25 @@ export default {
 </script>
 
 <template>
+  <!-- Compacto: el tipo, «cada N …» y hasta cuándo en renglones cortos (antes dos tarjetas anchas). -->
   <div
-    class="flex flex-col gap-2 p-3 border rounded-lg border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50"
+    class="flex flex-col gap-1.5 p-2 text-sm border rounded-md max-w-xl border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50"
   >
-    <!-- Fecha fija o después de hacerla -->
-    <div class="grid grid-cols-2 gap-2">
-      <label
-        v-for="mode in ['fixed', 'after_done']"
-        :key="mode"
-        class="flex items-start gap-2 p-2 bg-white border rounded-md cursor-pointer dark:bg-slate-900"
-        :class="
-          value.mode === mode
-            ? 'border-woot-500'
-            : 'border-slate-200 dark:border-slate-600'
-        "
+    <div class="flex flex-wrap items-center gap-1.5">
+      <select
+        :value="value.mode"
+        class="!w-auto !mb-0 h-8 text-sm"
+        :title="$t(`RECURRING_TASKS.MODE_${value.mode.toUpperCase()}_HINT`)"
+        @change="set('mode', $event.target.value)"
       >
-        <input
-          type="radio"
-          class="mt-0.5"
-          :checked="value.mode === mode"
-          @change="set('mode', mode)"
-        />
-        <span class="text-xs">
-          <span class="block font-medium text-slate-800 dark:text-slate-100">
-            {{ $t(`RECURRING_TASKS.MODE_${mode.toUpperCase()}`) }}
-          </span>
-          <span class="text-slate-500 dark:text-slate-400">
-            {{ $t(`RECURRING_TASKS.MODE_${mode.toUpperCase()}_HINT`) }}
-          </span>
-        </span>
-      </label>
-    </div>
-
-    <!-- Cada N días / semanas / meses -->
-    <div class="flex items-center gap-2 text-sm">
+        <option
+          v-for="mode in ['fixed', 'after_done']"
+          :key="mode"
+          :value="mode"
+        >
+          {{ $t(`RECURRING_TASKS.MODE_${mode.toUpperCase()}`) }}
+        </option>
+      </select>
       <span class="text-slate-600 dark:text-slate-300">
         {{ $t('RECURRING_TASKS.EVERY') }}
       </span>
@@ -77,7 +62,7 @@ export default {
         type="number"
         min="1"
         max="365"
-        class="!w-16 !mb-0 h-8 text-sm"
+        class="!w-14 !mb-0 h-8 text-sm"
         @input="set('every', Number($event.target.value) || 1)"
       />
       <select
@@ -106,7 +91,7 @@ export default {
         v-for="day in weekdays"
         :key="day"
         type="button"
-        class="w-9 h-8 text-xs border rounded-md"
+        class="h-7 text-xs border rounded w-8"
         :class="
           value.weekdays.includes(day)
             ? 'bg-woot-500 border-woot-500 text-white'
@@ -119,7 +104,7 @@ export default {
     </div>
 
     <!-- Hasta cuándo -->
-    <div class="flex flex-wrap items-center gap-2 text-sm">
+    <div class="flex flex-wrap items-center gap-1.5">
       <span class="text-slate-600 dark:text-slate-300">
         {{ $t('RECURRING_TASKS.ENDS') }}
       </span>
@@ -144,7 +129,7 @@ export default {
           :value="value.max_count"
           type="number"
           min="1"
-          class="!w-16 !mb-0 h-8 text-sm"
+          class="!w-14 !mb-0 h-8 text-sm"
           @input="set('max_count', Number($event.target.value) || 1)"
         />
         <span class="text-slate-600 dark:text-slate-300">

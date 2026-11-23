@@ -1,4 +1,5 @@
 import {
+  caseRecurrencePayload,
   defaultRecurrence,
   describeRecurrence,
   fromRecurrence,
@@ -55,5 +56,23 @@ describe('recurrence', () => {
     expect(fromRecurrence({ ...defaultRecurrence(), max_count: 3 }).ends).toBe(
       'after'
     );
+  });
+
+  it('dentro de un caso: ligada al caso y empieza el día «Programada para» (o hoy)', () => {
+    const rec = { ...defaultRecurrence(new Date(2026, 10, 23)), unit: 'day' };
+    const form = {
+      title: ' Revisar ',
+      priority: 'high',
+      assignee_id: 7,
+      planned_on: '',
+    };
+    expect(caseRecurrencePayload(form, rec, 42, '2026-11-23')).toMatchObject({
+      title: 'Revisar',
+      case_ticket_id: 42,
+      starts_on: '2026-11-23',
+      priority: 'high',
+      assignee_id: 7,
+      unit: 'day',
+    });
   });
 });

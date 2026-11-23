@@ -777,7 +777,11 @@
         "ESTIMATE_LABEL": "Estimated time",
         "ESTIMATE_NONE": "Not estimated",
         "PLANNED_LABEL": "Planned for",
-        "PLANNED_AFTER_DUE": "After the due date: it will be late."
+        "PLANNED_AFTER_DUE": "After the due date: it will be late.",
+        "REPEATS": "Repeats",
+        "REPEATS_HINT": "The first one appears on the «Planned for» day (or today) and then by itself each time, linked to this case. See and pause them in Agenda › Recurring tasks.",
+        "REPEATS_SAVED": "Done: it repeats {when}.",
+        "REPEATS_ERROR": "Could not schedule the task."
       },
       "INBOX": {
         "TITLE": "Tasks",
