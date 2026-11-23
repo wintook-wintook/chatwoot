@@ -13,6 +13,13 @@ import CaseTasksAPI from 'dashboard/api/caseTasks';
 import QuickTasksAPI from 'dashboard/api/quickTasks';
 import OrganizationContactFields from 'dashboard/views/organizations/OrganizationContactFields.vue';
 import ParticipantsPicker from 'dashboard/components/agenda/ParticipantsPicker.vue';
+import TaskRecurrencesAPI from 'dashboard/api/taskRecurrences';
+import RecurrenceFields from 'dashboard/components/recurrence/RecurrenceFields.vue';
+import {
+  defaultRecurrence,
+  describeRecurrence,
+  recurrencePayload,
+} from 'dashboard/components/recurrence/recurrence';
 
 const HOUR = 60 * 60 * 1000;
 const today = () => format(new Date(), 'yyyy-MM-dd');
@@ -20,9 +27,15 @@ const endOfDayIso = date => new Date(`${date}T23:59:59`).toISOString();
 
 export default {
   name: 'QuickTaskModal',
-  components: { OrganizationContactFields, ParticipantsPicker },
+  components: {
+    OrganizationContactFields,
+    ParticipantsPicker,
+    RecurrenceFields,
+  },
   props: {
     show: { type: Boolean, default: false },
+    // Desde «Tareas que se repiten»: abre con «Se repite» marcado.
+    presetRepeat: { type: Boolean, default: false },
     // Desde el panel del contacto: el contacto ya elegido.
     presetContact: { type: Object, default: null },
   },
@@ -44,6 +57,9 @@ export default {
       caseId: '',
       cases: [],
       saving: false,
+      // Tareas que se repiten: Kontrolya la vuelve a crear sola cada vez que toca.
+      repeats: false,
+      recurrence: defaultRecurrence(),
     };
   },
   computed: {
@@ -68,11 +84,19 @@ export default {
     },
     contact: 'loadCases',
     organization: 'loadCases',
+    // Se repite cada semana: el día sugerido sigue a la fecha programada (si solo hay uno).
+    plannedDate(date) {
+      if (!date || this.recurrence.weekdays.length > 1) return;
+      const day = new Date(`${date}T00:00`).getDay();
+      this.recurrence = { ...this.recurrence, weekdays: [day] };
+    },
   },
   methods: {
     reset() {
       this.title = '';
       this.description = '';
+      this.repeats = this.presetRepeat;
+      this.recurrence = defaultRecurrence();
       this.assigneeId = this.currentUserId;
       this.participantIds = [];
       this.dueDate = '';
@@ -131,7 +155,27 @@ export default {
         ),
       });
     },
+    // La primera sale el día de «Fecha programada» (o el primero de los días elegidos desde ahí).
+    async createRecurring() {
+      const { data } = await TaskRecurrencesAPI.create({
+        ...this.clientFields(),
+        title: this.title.trim(),
+        description: this.description.trim() || undefined,
+        case_ticket_id: this.caseId || undefined,
+        at_time: this.time || null,
+        starts_on: this.plannedDate,
+        ...recurrencePayload(this.recurrence),
+      });
+      return data;
+    },
+    recurringText() {
+      return describeRecurrence(
+        { ...this.recurrence, at_time: this.time },
+        this
+      );
+    },
     create() {
+      if (this.repeats) return this.createRecurring();
       if (this.time) return this.createScheduled();
       if (this.caseId) {
         return CaseTasksAPI.createTask(this.caseId, this.taskFields());
@@ -151,6 +195,16 @@ export default {
         useAlert(this.$t('QUICK_ACTIONS.TASK.VISIT_TIME_REQUIRED'));
         return;
       }
+      if (this.repeats && !this.plannedDate) {
+        useAlert(this.$t('QUICK_ACTIONS.TASK.DATE_REQUIRED'));
+        return;
+      }
+      const weekly =
+        this.recurrence.mode === 'fixed' && this.recurrence.unit === 'week';
+      if (this.repeats && weekly && !this.recurrence.weekdays.length) {
+        useAlert(this.$t('RECURRING_TASKS.WEEKDAYS_REQUIRED'));
+        return;
+      }
       if (this.time && !this.plannedDate) {
         useAlert(this.$t('QUICK_ACTIONS.TASK.DATE_REQUIRED'));
         return;
@@ -158,7 +212,11 @@ export default {
       this.saving = true;
       try {
         await this.create();
-        useAlert(this.$t('QUICK_ACTIONS.TASK.SUCCESS'));
+        useAlert(
+          this.repeats
+            ? this.$t('RECURRING_TASKS.CREATED', { text: this.recurringText() })
+            : this.$t('QUICK_ACTIONS.TASK.SUCCESS')
+        );
         this.$emitter.emit('agendaChanged');
         this.$emit('close');
       } catch (error) {
@@ -224,7 +282,7 @@ export default {
           <span class="field-label">{{ $t('QUICK_ACTIONS.TASK.TIME') }}</span>
           <input v-model="time" type="time" />
         </label>
-        <label v-if="!time" class="block">
+        <label v-if="!time && !repeats" class="block">
           <span class="field-label">{{ $t('QUICK_ACTIONS.TASK.DUE') }}</span>
           <input v-model="dueDate" type="date" />
         </label>
@@ -235,16 +293,32 @@ export default {
       >
         {{ $t('QUICK_ACTIONS.TASK.SCHEDULED_HINT') }}
       </p>
+      <!-- Se repite: cada cuánto y hasta cuándo -->
+      <label class="flex items-center gap-2 cursor-pointer w-fit">
+        <input
+          v-model="repeats"
+          type="checkbox"
+          class="w-4 h-4 rounded accent-woot-500"
+          data-test="quick-task-repeats"
+        />
+        <span class="text-sm text-slate-700 dark:text-slate-200">
+          {{ $t('RECURRING_TASKS.REPEATS') }}
+        </span>
+        <span class="text-xs text-slate-500 dark:text-slate-400">
+          {{ $t('RECURRING_TASKS.REPEATS_HINT') }}
+        </span>
+      </label>
+      <RecurrenceFields v-if="repeats" v-model="recurrence" :at-time="time" />
       <!-- Solo las agendadas (con hora) llevan participantes -->
       <ParticipantsPicker
-        v-if="time"
+        v-if="time && !repeats"
         v-model="participantIds"
         :organizer-id="assigneeId"
         :starts-at="startsLocal"
         :ends-at="endsLocal"
       />
       <!-- Es una visita (y su dirección, en la misma línea) -->
-      <div class="flex items-center gap-3">
+      <div v-if="!repeats" class="flex items-center gap-3">
         <label class="flex items-center flex-shrink-0 gap-2 cursor-pointer">
           <input
             v-model="isVisit"

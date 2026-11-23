@@ -73,6 +73,7 @@ class CaseTask < ApplicationRecord
   include TaskReportable
   include CaseTaskActivity # Plan Actividad del caso
   belongs_to :assignee, class_name: 'User', optional: true
+  belongs_to :task_recurrence, optional: true # Tareas que se repiten: la vez que la creó
   # @tickets_cases — solicitante: quién dio de alta la tarea. Se fija al crear con
   # el agente actual y no se edita desde la UI (a diferencia del responsable).
   belongs_to :requester, class_name: 'User', optional: true

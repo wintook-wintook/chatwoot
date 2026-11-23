@@ -229,6 +229,11 @@ class ActionCableConnector extends BaseActionCableConnector {
         icon: 'alert',
       },
       // Agenda — te agregaron, cambió la hora, se canceló, está por empezar o alguien no puede ir.
+      // Tareas que se repiten — la anterior sigue pendiente.
+      task_recurrence_missed: {
+        key: 'AGENDA_PARTICIPANTS.TOAST',
+        icon: 'alert',
+      },
       case_meeting_participant: {
         key: 'AGENDA_PARTICIPANTS.TOAST',
         icon: 'calendar-clock',

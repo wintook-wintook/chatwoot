@@ -18,6 +18,7 @@
     "agenda": { "path": "tickets/tasks?tab=my_day", "label": "Agenda › Tareas" },
     "tasks": { "path": "tickets/tasks", "label": "Agenda › Tareas" },
     "calendar": { "path": "google-calendar", "label": "Agenda › Calendario" },
+    "recurring_tasks": { "path": "tickets/recurring-tasks", "label": "Agenda › Tareas que se repiten" },
     "task_reports": { "path": "tickets/task-reports", "label": "Agenda › Reportes" },
     "field_route": { "path": "campo", "label": "Agenda › Mi ruta en campo" },
 
