@@ -1,0 +1,186 @@
+{
+  "COLLECTIONS": {
+    "TITLE": "Collections",
+    "SUBTITLE": "Your receivables and the agent that collects from each customer. Upload your receivables in Excel; later we'll connect your accounting system.",
+    "LOADING": "Loading…",
+    "NO_AGENT": "You don't have the Collections agent yet: activate it in Ready agents so it writes to your customers.",
+    "GO_AGENTS": "Go to Ready agents",
+    "START": "Start by uploading your receivables: one row per invoice with a balance.",
+    "TABS": {
+      "overview": "Dashboard",
+      "upload": "Upload receivables",
+      "customers": "Customers",
+      "promises": "Payment promises",
+      "claims": "Payment proofs",
+      "imports": "Snapshots"
+    },
+    "CARDS": {
+      "TOTAL": "Receivable",
+      "OVERDUE": "Overdue",
+      "COLLECTED": "Collected (30 days)",
+      "CUSTOMERS": "Customers with balance",
+      "CONTACTED": "{n} contacted in 7 days",
+      "CLAIMS": "Proofs to review",
+      "PROMISES": "Active promises · 30 days: {kept} kept, {broken} broken",
+      "PENDING_LINK": "Customers to link (no contact, not collected)"
+    },
+    "AGING_TITLE": "Aging",
+    "LAST_IMPORT": "Last snapshot: {date} · {source} {file}",
+    "AGING": {
+      "EMPTY": "No receivables.",
+      "CURRENCY": "Currency",
+      "TOTAL": "Total",
+      "PCT": "{pct}%",
+      "not_due": "Not due",
+      "d1_15": "1–15 days",
+      "d16_30": "16–30 days",
+      "d31_60": "31–60 days",
+      "d61_90": "61–90 days",
+      "d90_plus": "Over 90"
+    },
+    "UPLOAD": {
+      "INTRO": "Upload your receivables in Excel (.xlsx) or CSV: one row per invoice with a balance. Required: customer, invoice number, due date and balance; to collect, their WhatsApp or email.",
+      "REPLACES": "Each snapshot replaces the previous one: an invoice that no longer appears, or comes with 0, is taken as paid; if the balance dropped, it's a partial payment.",
+      "TEMPLATE": "Download the template",
+      "READING": "Reading the file…",
+      "COLUMNS": "Columns: the template's are recognized automatically; if you use your own Excel, pick which is which (remembered next time).",
+      "FIELDS": {
+        "customer_key": "Customer code",
+        "customer_name": "Customer",
+        "rfc": "Tax ID (RFC)",
+        "contact_name": "Contact",
+        "phone": "WhatsApp",
+        "email": "Email",
+        "folio": "Invoice number",
+        "issued_on": "Invoice date",
+        "due_on": "Due date",
+        "total": "Total",
+        "balance": "Balance",
+        "currency": "Currency",
+        "collector_email": "Collector (email)"
+      },
+      "REQUIRED_MARK": "*",
+      "NONE": "— Not in file —",
+      "MISSING": "Required columns (*) are missing.",
+      "SUMMARY": "{valid} of {rows} rows ready · {customers} customers · {invoices} invoices with balance",
+      "DIFF": {
+        "new": "New invoices",
+        "payments": "Partial payments ({amount})",
+        "paid": "Paid ({amount})",
+        "unlinked": "New customers to link"
+      },
+      "ERRORS": "{n} rows are skipped:",
+      "ERROR_ROW": "Row {row}: {reason}",
+      "APPLY": "Apply snapshot",
+      "APPLIED": "Receivables updated.",
+      "RESULT": "Done: {invoices} invoices from {customers} customers. To link: {unlinked}.",
+      "ERROR": "The file couldn't be read."
+    },
+    "CUSTOMERS": {
+      "FILTERS": {
+        "balance": "With balance",
+        "pending": "To link",
+        "ignored": "Ignored",
+        "all": "All"
+      },
+      "SEARCH": "Search customer, RFC or code",
+      "CREATE_ALL": "Create the {n} to link",
+      "PENDING_HINT": "We couldn't find them by WhatsApp, email or RFC. «Create» adds them as organization and contact with the receivables data; «Link» joins them to an existing contact. Until linked, the agent won't collect from them.",
+      "LOADING": "Loading…",
+      "EMPTY": "No customers here.",
+      "COLS": {
+        "CUSTOMER": "Customer",
+        "CONTACT": "Contact",
+        "BALANCE": "Balance",
+        "OVERDUE": "Overdue",
+        "STAGE": "Stage",
+        "LAST": "Last reminder"
+      },
+      "LINK": {
+        "pending": "To link",
+        "linked": "Linked",
+        "ignored": "Ignored"
+      },
+      "STAGES": {
+        "preventive": "Not due yet",
+        "due": "Overdue 1–15 days",
+        "overdue_30": "Overdue 16–30 days",
+        "overdue_60": "Overdue 31–60 days",
+        "overdue_plus": "Overdue 60+"
+      },
+      "CREATE": "Create",
+      "LINK_BUTTON": "Link",
+      "IGNORE": "Ignore",
+      "PREV": "Previous",
+      "NEXT": "Next",
+      "PAGE": "Page {page} of {pages}",
+      "LINK_TITLE": "Link «{name}» to a contact",
+      "SEARCH_CONTACT": "Search contact by name, phone or email",
+      "NO_CONTACTS": "No results.",
+      "DETAIL_SUB": "Owes {total} · overdue {overdue}",
+      "OPEN_CONVERSATION": "Open conversation",
+      "INV": {
+        "FOLIO": "Invoice",
+        "DUE": "Due date",
+        "BALANCE": "Balance",
+        "STATUS": "Status",
+        "DISPUTED": "Disputed",
+        "CLAIMED": "Payment claimed",
+        "open": "Open",
+        "paid": "Paid"
+      },
+      "PROMISES": "Payment promises",
+      "PROMISE_LINE": "{date} · {status}",
+      "ERROR": "It couldn't be done."
+    },
+    "PROMISES": {
+      "STATUS": {
+        "pending": "Active",
+        "kept": "Kept",
+        "broken": "Broken"
+      },
+      "LOADING": "Loading…",
+      "EMPTY": "No promises here.",
+      "COLS": {
+        "CUSTOMER": "Customer",
+        "DATE": "Pays on",
+        "AMOUNT": "Amount",
+        "NOTE": "Note"
+      }
+    },
+    "CLAIMS": {
+      "STATUS": {
+        "pending": "To review",
+        "validated": "Validated",
+        "rejected": "Rejected"
+      },
+      "HINT": "Validated: their invoices aren't collected until the next snapshot shows them paid. Rejected: collection resumes.",
+      "LOADING": "Loading…",
+      "EMPTY": "No proofs here.",
+      "NO_FILE": "No attachment",
+      "CONVERSATION": "Conversation",
+      "VALIDATE": "Validate",
+      "REJECT": "Reject",
+      "REJECT_NOTE": "Why reject it? (noted in the conversation)",
+      "ERROR": "It couldn't be reviewed."
+    },
+    "IMPORTS": {
+      "LOADING": "Loading…",
+      "EMPTY": "You haven't uploaded your receivables yet.",
+      "COLS": {
+        "DATE": "Date",
+        "SOURCE": "Source",
+        "INVOICES": "Receivables",
+        "CHANGES": "Changes"
+      },
+      "SOURCES": {
+        "upload": "Excel/CSV",
+        "microsip": "Microsip",
+        "sae": "Aspel SAE",
+        "contpaqi": "CONTPAQi"
+      },
+      "COUNTS": "{invoices} invoices · {customers} customers",
+      "DIFF": "{new} new · {payments} partial · {paid} paid · collected {collected}"
+    }
+  }
+}

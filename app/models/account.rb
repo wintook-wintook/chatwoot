@@ -54,6 +54,12 @@ class Account < ApplicationRecord
   has_many :maintenance_plans, dependent: :destroy # Plan-Trabajo-Campo R4
   has_many :contracts, dependent: :destroy # Plan-Contratos R1
   has_many :organizations, dependent: :destroy # Plan-Organizaciones O1
+  # Cobranza (agente listo «Cobranza»): la cartera por cortes (Receivables::Snapshot)
+  has_many :receivable_imports, dependent: :destroy_async
+  has_many :receivable_customers, dependent: :destroy_async
+  has_many :receivables, dependent: :destroy_async
+  has_many :payment_promises, dependent: :destroy_async
+  has_many :payment_claims, dependent: :destroy_async
   has_many :events, dependent: :destroy # Plan-Eventos E1
   has_many :client_portal_links, dependent: :destroy # Portal del cliente (tareas con el cliente)
   has_many :contract_types, dependent: :destroy # Plan-Contratos R1

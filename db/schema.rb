@@ -151,11 +151,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_20_200000) do
   create_table "agent_test_batches", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "created_by_id"
-    t.bigint "tracking_template_id"
-    t.date "day"
     t.string "name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "tracking_template_id"
+    t.date "day"
     t.index ["account_id"], name: "index_agent_test_batches_on_account_id"
     t.index ["created_by_id"], name: "index_agent_test_batches_on_created_by_id"
     t.index ["tracking_template_id", "day"], name: "index_agent_test_batches_on_tracking_template_id_and_day"
@@ -168,9 +168,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_20_200000) do
     t.string "name", null: false
     t.jsonb "messages", default: [], null: false
     t.text "expected"
-    t.string "origin", default: "correction", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "origin", default: "correction", null: false
     t.text "bad_reply"
     t.jsonb "variables", default: {}, null: false
     t.index ["account_id"], name: "index_agent_test_cases_on_account_id"
@@ -211,11 +211,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_20_200000) do
     t.integer "total", default: 0, null: false
     t.integer "passed", default: 0, null: false
     t.jsonb "results", default: [], null: false
-    t.jsonb "case_ids", default: [], null: false
-    t.string "label"
     t.datetime "finished_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "case_ids", default: [], null: false
+    t.string "label"
     t.string "error"
     t.string "seleccion"
     t.index ["account_id"], name: "index_agent_test_runs_on_account_id"
@@ -1451,6 +1451,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_20_200000) do
     t.index "lower((email)::text), account_id", name: "index_contacts_on_lower_email_account_id"
     t.index ["account_id", "email", "phone_number", "identifier"], name: "index_contacts_on_nonempty_fields", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
     t.index ["account_id", "last_activity_at"], name: "index_contacts_on_account_id_and_last_activity_at", order: { last_activity_at: "DESC NULLS LAST" }
+    t.index ["account_id", "list_quarantine"], name: "index_contacts_on_list_quarantine", where: "list_quarantine"
     t.index ["account_id"], name: "index_contacts_on_account_id"
     t.index ["account_id"], name: "index_resolved_contact_account_id", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
     t.index ["blocked"], name: "index_contacts_on_blocked"
@@ -1460,7 +1461,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_20_200000) do
     t.index ["organization_id"], name: "index_contacts_on_organization_id"
     t.index ["owner_id"], name: "index_contacts_on_owner_id"
     t.index ["phone_number", "account_id"], name: "index_contacts_on_phone_number_and_account_id"
-    t.index ["account_id", "list_quarantine"], name: "index_contacts_on_list_quarantine", where: "list_quarantine"
     t.index ["prospect_list_id"], name: "index_contacts_on_prospect_list_id"
   end
 
@@ -3099,6 +3099,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_20_200000) do
   add_foreign_key "customer_assets", "accounts"
   add_foreign_key "customer_assets", "contacts", on_delete: :cascade
   add_foreign_key "customer_assets", "organizations", on_delete: :nullify
+  add_foreign_key "email_suppressions", "accounts"
   add_foreign_key "event_attendees", "accounts"
   add_foreign_key "event_attendees", "contacts", on_delete: :cascade
   add_foreign_key "event_attendees", "events", on_delete: :cascade
@@ -3134,6 +3135,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_20_200000) do
   add_foreign_key "organization_events", "users", on_delete: :nullify
   add_foreign_key "organizations", "accounts"
   add_foreign_key "organizations", "users", column: "owner_id", on_delete: :nullify
+  add_foreign_key "prospect_lists", "accounts"
+  add_foreign_key "prospect_lists", "tracking_campaigns", on_delete: :nullify
   add_foreign_key "published_prompt_files", "published_prompts", on_delete: :cascade
   add_foreign_key "published_prompts", "accounts"
   add_foreign_key "published_prompts", "tracking_templates", on_delete: :nullify
@@ -3182,17 +3185,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_20_200000) do
   add_foreign_key "tracking_assistant_sessions", "accounts"
   add_foreign_key "tracking_assistant_sessions", "tracking_templates", on_delete: :nullify
   add_foreign_key "tracking_assistant_sessions", "users", on_delete: :cascade
+  add_foreign_key "tracking_campaign_clicks", "accounts"
+  add_foreign_key "tracking_campaign_clicks", "tracking_campaigns", on_delete: :cascade
   add_foreign_key "tracking_campaign_entries", "accounts", on_delete: :cascade
   add_foreign_key "tracking_campaign_entries", "automation_rules", on_delete: :nullify
   add_foreign_key "tracking_campaign_entries", "contact_trackings", on_delete: :nullify
   add_foreign_key "tracking_campaign_entries", "contacts", on_delete: :cascade
   add_foreign_key "tracking_campaign_entries", "conversations", on_delete: :nullify
   add_foreign_key "tracking_campaign_entries", "tracking_campaigns", on_delete: :cascade
-  add_foreign_key "email_suppressions", "accounts"
-  add_foreign_key "prospect_lists", "accounts"
-  add_foreign_key "prospect_lists", "tracking_campaigns", on_delete: :nullify
-  add_foreign_key "tracking_campaign_clicks", "accounts"
-  add_foreign_key "tracking_campaign_clicks", "tracking_campaigns", on_delete: :cascade
   add_foreign_key "tracking_campaigns", "accounts"
   add_foreign_key "tracking_campaigns", "events", on_delete: :nullify
   add_foreign_key "tracking_campaigns", "inboxes"

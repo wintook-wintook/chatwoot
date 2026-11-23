@@ -21,11 +21,12 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
                 appointment_location business_what business_who business_coverage business_why business_practical
                 business_use_catalog doubts not_found off_topic welcome price_source not_client human user_id team_id
                 purpose offer_what offer_details offer_goal event_id low_score relay hot_when voice_mode
-                business_mode attend_hours].freeze
+                business_mode attend_hours payment_info send_hour remind_before_days every_days max_per_day min_balance
+                outreach_on weekdays_only].freeze
   LISTS = { question_list: [], appointment_user_ids: [], required_contact: [], qualify: %i[key on text],
             objections: %i[objection answer], areas: {}, survey_questions: [],
             # Los de Motor2::Functions::Extras (cada función los limpia al guardar).
-            quote: {}, follow_up: {}, voice: {}, appointment_notice: {} }.freeze
+            quote: {}, follow_up: {}, voice: {}, appointment_notice: {}, templates: {} }.freeze
   CHANNEL = [:inbox_id, :retry_value, :retry_unit, :attempts, :email_signature, { whatsapp_templates: [] }].freeze
   MAX_TEST_MESSAGES = 30
   ROLES = %w[user assistant].freeze

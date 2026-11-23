@@ -12,6 +12,7 @@ import ReadyAgentsAPI from 'dashboard/api/readyAgents';
 import ReadyAgentModal from './ReadyAgentModal.vue';
 import CustomersAgentModal from './CustomersAgentModal.vue';
 import CampaignSellerModal from './CampaignSellerModal.vue';
+import CollectionsAgentModal from './CollectionsAgentModal.vue';
 import ProspectMetrics from './ProspectMetrics.vue';
 
 const T = 'READY_AGENTS';
@@ -24,6 +25,7 @@ export default {
     ReadyAgentModal,
     CustomersAgentModal,
     CampaignSellerModal,
+    CollectionsAgentModal,
     ProspectMetrics,
   },
   data() {
@@ -70,12 +72,25 @@ export default {
     },
     // El Vendedor de campaña está «prendido» si alguna campaña lo usa (no atiende bandejas).
     isOn(agent) {
+      if (agent.kind === 'collections')
+        return !!(agent.collections && agent.collections.outreach_on);
       return agent.kind === 'campaign_seller'
         ? agent.campaigns > 0
         : agent.enabled;
     },
     // El Vendedor de campaña no atiende bandejas: se dice en cuántas campañas está.
     whereLine(agent) {
+      // Cobranza: a cuántos clientes de la cartera les cobra.
+      if (agent.kind === 'collections') {
+        const info = agent.collections || {};
+        const line = this.t('COLLECTIONS.IN_LIST', {
+          n: info.with_balance || 0,
+          contacted: info.contacted_7 || 0,
+        });
+        return info.outreach_on
+          ? line
+          : `${line} · ${this.t('COLLECTIONS.OUTREACH_OFF')}`;
+      }
       if (agent.kind === 'campaign_seller')
         return agent.campaigns
           ? this.t('CAMPAIGN.IN_CAMPAIGNS', { n: agent.campaigns })
@@ -235,7 +250,7 @@ export default {
               {{ t('METRICS.BUTTON') }}
             </woot-button>
             <woot-button
-              v-if="agent.kind !== 'campaign_seller'"
+              v-if="!['campaign_seller', 'collections'].includes(agent.kind)"
               size="tiny"
               variant="clear"
               color-scheme="secondary"
@@ -274,6 +289,15 @@ export default {
       :calendar-users="calendarUsers"
       :sources="sources"
       :events="events"
+      @close="modal = null"
+      @saved="onSaved"
+    />
+    <CollectionsAgentModal
+      v-else-if="modal && modal.entry.kind === 'collections'"
+      show
+      :title="modal.entry.title"
+      :agent="modal.agent"
+      :inboxes="inboxes"
       @close="modal = null"
       @saved="onSaved"
     />

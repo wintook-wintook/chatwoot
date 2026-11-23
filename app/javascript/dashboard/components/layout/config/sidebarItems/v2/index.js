@@ -87,6 +87,7 @@ const CATALOG_CASE_SETTINGS = [
 ];
 // Plan-Catalogo-Cotizaciones — pantallas propias de Ventas.
 const SALES_ROUTES = [
+  'collections', // Cobranza
   'gestorTickets_quotes',
   'gestorTickets_quote_new',
   'gestorTickets_quote',
@@ -448,6 +449,13 @@ const ventas = accountId => {
         toState: frontendURL(`accounts/${accountId}/tickets/quotes`),
         toStateName: 'gestorTickets_quotes',
         activeRoutes: ['gestorTickets_quote_new', 'gestorTickets_quote'],
+      },
+      // Cobranza: la cartera (Excel o sistema administrativo) y su agente
+      {
+        icon: 'building-bank',
+        label: 'COLLECTIONS',
+        toState: frontendURL(`accounts/${accountId}/collections`),
+        toStateName: 'collections',
       },
     ],
   };

@@ -25,6 +25,7 @@
     "opportunities": { "path": "tickets/commercial/board", "label": "Ventas › Oportunidades" },
     "contact_funnel": { "path": "kanban", "label": "Ventas › Embudo de contactos" },
     "quotes": { "path": "tickets/quotes", "label": "Ventas › Cotizaciones" },
+    "collections": { "path": "collections", "label": "Ventas › Cobranza" },
 
     "service_cases": { "path": "tickets/support/list", "label": "Servicio › Casos" },
     "dispatch": { "path": "tickets/dispatch", "label": "Servicio › Despacho" },

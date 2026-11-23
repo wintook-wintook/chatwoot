@@ -376,6 +376,25 @@ Rails.application.routes.draw do
           end
           # Plantillas de seguimiento: la receta de un Seguimiento IA para volver a usarla
           resources :ai_follow_up_presets, only: [:index, :create, :update, :destroy]
+          # Cobranza: la cartera por cortes (Excel/CSV y, después, los sistemas administrativos) y su agente
+          resources :collections, only: [] do
+            collection do
+              get :overview
+              get :template
+              post :preview
+              get :imports
+              post :imports, action: :create_import
+              get :customers
+              post 'customers/create_pending', action: :create_pending
+              get 'customers/:id', action: :customer
+              post 'customers/:id/link', action: :link
+              post 'customers/:id/create', action: :create_customer
+              post 'customers/:id/ignore', action: :ignore
+              get :promises
+              get :claims
+              post 'claims/:id/review', action: :review_claim
+            end
+          end
           # Campaña con Vendedor IA (Motor 2.0): pantalla nueva; pausar/reanudar son los de tracking_campaigns
           resources :motor2_campaigns, only: [:show, :create, :update] do
             collection do

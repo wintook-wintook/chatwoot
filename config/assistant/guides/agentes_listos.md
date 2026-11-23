@@ -16,7 +16,7 @@ En el menú «Agentes IA» › «Agentes listos» (la primera opción): una tarj
 - Atención a prospectos: atiende a la gente nueva que escribe (anuncios en redes, página, campañas), contesta sus dudas con tus fuentes (respuestas predefinidas, catálogo, hojas…), lo califica con tus preguntas y lo pasa a tu equipo o le crea la oportunidad.
 - Atención a clientes: atiende a tus clientes. Entiende si lo que pide es de Soporte, Comercial o Administrativo (o de otra área que agregues), contesta con tus fuentes, levanta su caso o registra la oportunidad, o lo pasa al equipo de esa área.
 - Vendedor de campaña: toca la puerta en tus campañas. La campaña manda el primer mensaje y él sigue cuando el contacto contesta: invita a un evento, ofrece, reactiva, recuerda una renovación o hace una encuesta; resuelve las primeras dudas y pasa al interesado a quien sigue.
-- Próximamente: Cobranza.
+- Cobranza: le cobra a tus clientes con saldo, con tu cartera de Ventas › Cobranza (Excel hoy; tu sistema administrativo después): les da el resumen de saldo y los datos para pagar, registra promesas de pago y comprobantes, y pasa al cobrador lo que necesita una persona. Ver [[cobranza]].
 
 ## Cómo se hace
 Cada agente tiene su guía con todo lo que hace: [[agentes_atencion_prospectos]] (preguntas, citas, cotizar, seguimiento), [[agentes_atencion_clientes]] (áreas, soporte, casos) y [[agentes_vendedor_campana]] (campañas). Aquí va lo común a los tres.

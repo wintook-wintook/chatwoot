@@ -54,7 +54,7 @@ class Motor2::Functions::Form
   # Fuentes, archivos y (Vendedor de campaña) canal y toques.
   def assign_extras(kind)
     assign_sources if @params.key?('sources')
-    assign_channel if kind == Motor2::Functions::CampaignSeller::KEY
+    assign_channel if [Motor2::Functions::CampaignSeller::KEY, Motor2::Functions::Collections::KEY].include?(kind)
     assign_files if @params.key?('files')
   end
 
@@ -87,7 +87,7 @@ class Motor2::Functions::Form
                      'attempts' => Array(raw['attempts']).map(&:to_i).select(&:positive?).first(10))
   end
 
-  # El Vendedor de campaña no atiende bandejas; escribe por la de su canal, con una plantilla por toque.
+  # El Vendedor de campaña y Cobranza no atienden bandejas: escriben por la de su canal (y les contestan ahí mismo).
   def assign_channel
     @template.attending = false
     @template.attend_inbox_ids = []
