@@ -308,7 +308,7 @@ export default {
           {{ $t('RECURRING_TASKS.REPEATS_HINT') }}
         </span>
       </label>
-      <RecurrenceFields v-if="repeats" v-model="recurrence" :at-time="time" />
+      <RecurrenceFields v-if="repeats" v-model="recurrence" />
       <!-- Solo las agendadas (con hora) llevan participantes -->
       <ParticipantsPicker
         v-if="time && !repeats"

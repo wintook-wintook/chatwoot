@@ -779,7 +779,6 @@
         "PLANNED_LABEL": "Planned for",
         "PLANNED_AFTER_DUE": "After the due date: it will be late.",
         "REPEATS": "Repeats",
-        "REPEATS_HINT": "The first one appears on the «Planned for» day (or today) and then by itself each time, linked to this case. See and pause them in Agenda › Recurring tasks.",
         "REPEATS_SAVED": "Done: it repeats {when}.",
         "REPEATS_ERROR": "Could not schedule the task."
       },
@@ -3581,7 +3580,6 @@
     "TITLE": "Recurring tasks",
     "SUBTITLE": "Fixed tasks Kontrolya creates again on its own every so often. Each time they show up in the owner's My day and are completed with their report.",
     "REPEATS": "Repeats",
-    "REPEATS_HINT": "Kontrolya creates it again every time it is due.",
     "MODE_FIXED": "On a fixed date",
     "MODE_FIXED_HINT": "Due on its date even if the previous one wasn't done (e.g. every Monday).",
     "MODE_AFTER_DONE": "After doing it",

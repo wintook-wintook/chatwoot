@@ -1587,12 +1587,7 @@ export default {
               <input v-model="repeats" type="checkbox" class="!m-0" />
               {{ $t('CASE_TICKETS.TASKS.MODAL.REPEATS') }}
             </label>
-            <template v-if="repeats">
-              <RecurrenceFields v-model="recurrence" />
-              <p class="m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {{ $t('CASE_TICKETS.TASKS.MODAL.REPEATS_HINT') }}
-              </p>
-            </template>
+            <RecurrenceFields v-if="repeats" v-model="recurrence" />
           </template>
           <p
             v-if="form.status === 'cancelled' && form.cancel_reason"
