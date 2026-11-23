@@ -119,11 +119,16 @@ class CaseTask < ApplicationRecord
     done?
   end
 
-  # La orden de trabajo ya cierra con su reporte de servicio y firma: su lista de
-  # verificación no lleva un reporte por punto.
-  # Tampoco las del cliente: lo que hizo queda en sus entradas del portal.
+  # Las del cliente no llevan reporte: lo que hizo queda en sus entradas del portal.
+  # Las de una orden de trabajo sí, salvo cuando el técnico las palomea en la lista de
+  # verificación (Mi ruta o el reporte de servicio de la orden): ver checklist_item?.
   def report_required?
-    !case_ticket&.work_order? && !for_client?
+    !for_client?
+  end
+
+  # Punto de la lista de verificación de una orden de trabajo (Mi ruta en campo).
+  def checklist_item?
+    case_ticket&.work_order? || false
   end
 
   def report_ready?

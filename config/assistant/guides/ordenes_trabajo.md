@@ -5,7 +5,7 @@ areas: [service]
 keywords: [orden de trabajo, ordenes, crear orden, tecnico, visita, programar visita, visita vencida, visitas vencidas, por programar, programadas, en ejecucion, checklist, lista de verificacion, bitacora, fotos antes despues, horas reales, horas estimadas, cronometro, materiales, refacciones, firma, conformidad, quien recibio, reporte de servicio, enviar reporte, trabajo adicional, cotizar en sitio, tecnico externo, facturable, enviar al tecnico, equipo de la orden, metricas de ordenes, retrabajos, a la primera]
 pages: [case, cases, service_cases, quotes, dispatch, field_route, maintenance]
 sources: [app/javascript/dashboard/views/gestorTickets/workOrder/*.vue, app/javascript/dashboard/views/gestorTickets/CaseTicketInternalModal.vue, app/javascript/dashboard/views/gestorTickets/Index.vue, app/javascript/dashboard/helper/caseFilters.js, app/javascript/dashboard/views/gestorTickets/typeDetail/FieldWorkTab.vue]
-reviewed: 2026-11-14
+reviewed: 2026-11-23
 ---
 ## Para qué sirve
 Una orden de trabajo es un trabajo planeado para un cliente: tiene técnico (su responsable), dirección, visitas, horas, materiales y, al final, un reporte de servicio con la conformidad de quien recibió. Lo común a todos los casos está en la guía de casos.
@@ -38,7 +38,7 @@ La lista muestra Próxima visita, Horas (real / est.), Técnico y Etapa.
 ### Llevar el reporte de servicio
 1. «Dónde se atiende»: En campo o En oficina o remoto (por omisión, «(como dice el tipo)»). En campo y con técnico, «Enviar al técnico» le manda la visita a su WhatsApp.
 2. «Equipo»: el equipo del cliente que se atiende (o «Sin equipo»). Si nació de un mantenimiento, dice «Del mantenimiento «…»».
-3. «Checklist»: las tareas de la etapa; las marcadas «Obligatoria» se deben terminar.
+3. «Checklist»: las tareas de la etapa; las marcadas «Obligatoria» se deben terminar. Palomearlas aquí o en Mi ruta no pide reporte por punto (la orden cierra con su reporte de servicio); concluirlas desde Tareas, Mi día o el caso sí pide el reporte de cierre.
 4. «Bitácora»: escribe qué se hizo y pulsa «Agregar nota»; también «Foto antes», «Foto después» y «Archivo».
 5. «Horas»: «Iniciar» y «Terminar» para el cronómetro, o escribe «Minutos» y una «Nota» y pulsa «Agregar». Abajo sale «Horas reales: …».
 6. En la tarjeta «Orden de trabajo» editas «Dirección del servicio», «Horas estimadas», «Horas reales» y «Facturable», y pulsas «Guardar» (o «Descartar»).
