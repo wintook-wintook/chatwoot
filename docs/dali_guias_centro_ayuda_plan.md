@@ -68,6 +68,23 @@ Título → `title`, texto → `content`, resumen → `description`, categoría 
 
 **Hecho cuando:** tras publicar, cada artículo tiene `meta` igual a su cabecera.
 
+> **✅ Pasos 1 y 2 hechos (2026-11-23)**
+>
+> - **Qué se hizo:** `GuidePublisher` usa por defecto el slug `ayuda-dali` y el nombre «Guías de Dali»
+>   (`DEFAULT_PORTAL_SLUG`, `DEFAULT_PORTAL_NAME`); `PLATFORM_HELP_PORTAL_SLUG` lo sigue cambiando sin tocar código.
+>   El rake `assistant:guides:portal` toma ese nombre si no se da `NAME`. Cada artículo guarda en `meta` toda la
+>   cabecera (`meta_for`): `guide_key`, `areas`, `keywords` (todas), `tags` (primeras 10), `pages`, `sources`,
+>   `reviewed` (se omite si la guía no lo tiene).
+> - **Cómo funciona:** `same?` ya comparaba el `meta` completo, así que cambiar solo la cabecera de un `.md`
+>   (áreas, keywords…) marca el artículo como actualizado en el siguiente `publish`. Dali todavía lee los `.md`:
+>   esto solo prepara los datos para el paso 5.
+> - **Pruebas:** `spec/services/assistant/guide_publisher_spec.rb` (8 ejemplos): slug por defecto `ayuda-dali`,
+>   `meta` igual a la cabecera con 12 keywords (tags = 10), y cambio solo de cabecera ⇒ `updated`.
+>   `guides_spec` + `guide_tools_spec` siguen verdes (26). Se corren con
+>   `POSTGRES_DATABASE=chatwoot_test RAILS_ENV=test bundle exec rspec …` (a `chatwoot_test` se le activó
+>   `vector` y se le cargó el esquema).
+> - **Pendiente de los textos:** `centro_ayuda.md` y `dali.md` no mencionan el portal global; se explican en el paso 15.
+
 ### Paso 3. Que el editor del Centro de ayuda NO borre esos datos  ⚠️ riesgo principal
 
 Hoy `articles_controller.rb#update` hace `@article.update!(article_params)` y `article_params` solo permite
