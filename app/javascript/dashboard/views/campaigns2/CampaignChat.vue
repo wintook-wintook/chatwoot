@@ -1,6 +1,7 @@
 <!--
   Campaña con Vendedor IA — «Probar»: tú eres el contacto que contesta el primer mensaje; el vendedor contesta con
   la oferta de esta campaña (sin guardar ni mandar nada). payload(): { template_id, brief }.
+  explain(kind): desde «Simular», qué pasaría en la campaña con esa decisión (relevo a…, sale de la campaña…).
 -->
 <script>
 import Motor2CampaignsAPI from 'dashboard/api/motor2Campaigns';
@@ -11,9 +12,16 @@ export default {
     payload: { type: Function, required: true },
     opener: { type: String, default: '' },
     disabled: { type: Boolean, default: false },
+    explain: { type: Function, default: null },
   },
   data() {
     return { chat: [], chatState: {}, draft: '', testing: false };
+  },
+  watch: {
+    // Otro toque como punto de partida: la plática empieza de nuevo.
+    opener() {
+      this.reset();
+    },
   },
   methods: {
     t(key, params) {
@@ -115,6 +123,12 @@ export default {
           class="block mt-1 text-[11px] font-medium text-woot-700"
         >
           {{ t('DECISION', { decision: m.decision[0] || m.decision }) }}
+        </span>
+        <span
+          v-if="m.decision && explain && explain(m.decision[0])"
+          class="block mt-0.5 text-[11px] text-slate-600 dark:text-slate-300"
+        >
+          {{ explain(m.decision[0]) }}
         </span>
         <span
           v-if="(m.previews || []).length"

@@ -17,6 +17,9 @@
 #   POST  motor2_campaigns/:id/insights         «Qué dicen los contactos» (IA)
 #   POST  motor2_campaigns/:id/follow_up        otra campaña Guardada con los de un grupo { group }
 #   POST  motor2_campaigns/:id/duplicate        copia Guardada
+#   POST  motor2_campaigns/:id/simulate         «Simular» la campaña para un contacto { contact_id } (sin mandar nada)
+#   GET   motor2_campaigns/:id/test_run         «Prueba real»: cómo va · POST la arranca { recipients, every_minutes }
+#   DELETE motor2_campaigns/:id/test_run        la termina (cancela los toques que falten)
 class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseController
   before_action :set_campaign, except: %i[options preview test test_email create]
 
@@ -102,11 +105,34 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
 
   def duplicate = render(json: campaign_json(copy_of(@campaign, name: "#{@campaign.name} (copia)")))
 
+  def simulate
+    contact = Current.account.contacts.find_by(id: params[:contact_id]) ||
+              Contact.new(account: Current.account, name: current_user.name, email: current_user.email)
+    render json: TrackingCampaigns::Motor2Simulation.new(@campaign, contact).call
+  end
+
+  def test_run = render(json: test_runner.status)
+
+  def start_test_run
+    result = test_runner.start(recipients: params.permit(recipients: %i[contact_id email phone])[:recipients],
+                               every_minutes: params[:every_minutes])
+    return render_error(result[:error]) if result[:error]
+
+    render json: test_runner.status
+  end
+
+  def stop_test_run
+    test_runner.stop
+    render json: test_runner.status
+  end
+
   private
 
   def set_campaign
-    @campaign = Current.account.tracking_campaigns.where(engine: '2').find(params[:id])
+    @campaign = Current.account.tracking_campaigns.real.where(engine: '2').find(params[:id])
   end
+
+  def test_runner = @test_runner ||= TrackingCampaigns::Motor2TestRun.new(@campaign, current_user)
 
   ROLES = %w[user assistant].freeze
   COPY_FIELDS = %i[tracking_template_id inbox_id objective mode purpose brief touches respect_working_hours daily_cap

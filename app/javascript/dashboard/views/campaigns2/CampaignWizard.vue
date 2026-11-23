@@ -13,6 +13,11 @@ import PhonePreview from './PhonePreview.vue';
 import EmailPreview from './EmailPreview.vue';
 import EmailEditor from './EmailEditor.vue';
 import CampaignChat from './CampaignChat.vue';
+import CampaignSimulator from './CampaignSimulator.vue';
+import CampaignTestRun from './CampaignTestRun.vue';
+
+// En «Revisar»: probar la campaña completa, no solo al vendedor.
+const TEST_TABS = ['simulate', 'chat', 'real'];
 
 const STEPS = ['goal', 'offer', 'audience', 'messages', 'when', 'review'];
 const KINDS = ['offer', 'invite', 'reactivate', 'renew', 'survey'];
@@ -76,6 +81,8 @@ export default {
     EmailPreview,
     EmailEditor,
     CampaignChat,
+    CampaignSimulator,
+    CampaignTestRun,
   },
   data() {
     return {
@@ -89,6 +96,8 @@ export default {
       previewLoading: false,
       checks: [],
       touchTab: 1,
+      testTab: 'simulate',
+      testTabs: TEST_TABS,
       sendingTest: false,
       // Lista fría de correos (solo correo)
       listFile: null,
@@ -1278,11 +1287,56 @@ export default {
             {{ t('PREVIEW.PICK_CHANNEL') }}
           </p>
           <CampaignChat
+            v-if="step !== 'review'"
             class="flex-1"
             :payload="chatPayload"
             :opener="opener"
             :disabled="!form.tracking_template_id"
           />
+          <template v-else>
+            <div
+              class="flex gap-1 p-1 rounded-md bg-slate-25 dark:bg-slate-800"
+              role="tablist"
+            >
+              <button
+                v-for="tab in testTabs"
+                :key="tab"
+                type="button"
+                role="tab"
+                :aria-selected="testTab === tab"
+                class="flex-1 px-2 py-1 text-xs rounded"
+                :class="
+                  testTab === tab
+                    ? 'bg-white dark:bg-slate-700 font-medium text-woot-700 dark:text-woot-300'
+                    : 'text-slate-600 dark:text-slate-300'
+                "
+                @click="testTab = tab"
+              >
+                {{ t(`TEST_TABS.${tab}`) }}
+              </button>
+            </div>
+            <CampaignSimulator
+              v-if="testTab === 'simulate'"
+              :campaign-id="campaignId"
+              :save="save"
+              :payload="chatPayload"
+              :disabled="!canSave"
+            />
+            <CampaignChat
+              v-else-if="testTab === 'chat'"
+              class="flex-1"
+              :payload="chatPayload"
+              :opener="opener"
+              :disabled="!form.tracking_template_id"
+            />
+            <CampaignTestRun
+              v-else
+              :campaign-id="campaignId"
+              :save="save"
+              :is-whatsapp="isWhatsapp"
+              :disabled="!canSave"
+            />
+          </template>
         </div>
       </div>
 

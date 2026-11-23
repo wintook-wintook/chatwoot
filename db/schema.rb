@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_25_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_26_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2884,11 +2884,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_25_100000) do
     t.string "engine", default: "1", null: false
     t.jsonb "brief", default: {}, null: false
     t.jsonb "touches", default: {}, null: false
+    t.bigint "test_of_id"
     t.index ["account_id", "purpose"], name: "index_tracking_campaigns_on_account_id_and_purpose"
     t.index ["account_id", "status"], name: "index_tracking_campaigns_on_account_id_and_status"
     t.index ["account_id"], name: "index_tracking_campaigns_on_account_id"
     t.index ["event_id"], name: "index_tracking_campaigns_on_event_id"
     t.index ["inbox_id"], name: "index_tracking_campaigns_on_inbox_id"
+    t.index ["test_of_id"], name: "index_tracking_campaigns_on_test_of_id"
     t.index ["tracking_template_id"], name: "index_tracking_campaigns_on_tracking_template_id"
     t.index ["user_id"], name: "index_tracking_campaigns_on_user_id"
   end
@@ -3367,6 +3369,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_25_100000) do
   add_foreign_key "tracking_campaigns", "accounts"
   add_foreign_key "tracking_campaigns", "events", on_delete: :nullify
   add_foreign_key "tracking_campaigns", "inboxes"
+  add_foreign_key "tracking_campaigns", "tracking_campaigns", column: "test_of_id", on_delete: :cascade
   add_foreign_key "tracking_campaigns", "tracking_templates"
   add_foreign_key "tracking_campaigns", "users", on_delete: :nullify
   add_foreign_key "tracking_deliveries", "accounts", on_delete: :cascade

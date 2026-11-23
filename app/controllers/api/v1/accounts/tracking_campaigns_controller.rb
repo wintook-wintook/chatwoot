@@ -29,7 +29,7 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   def index
     return render(json: lite_list) if ActiveModel::Type::Boolean.new.cast(params[:lite])
 
-    campaigns = Current.account.tracking_campaigns
+    campaigns = Current.account.tracking_campaigns.real
                        .includes(:tracking_template, :inbox, :handoff_board, :handoff_column)
                        .order(created_at: :desc)
     ids = campaigns.map(&:id)
@@ -141,7 +141,7 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
 
   # proyecto@automatizacion_campanas — para el desplegable "Agregar a campaña".
   def lite_list
-    Current.account.tracking_campaigns.order(created_at: :desc)
+    Current.account.tracking_campaigns.real.order(created_at: :desc)
            .map { |c| c.slice(*LITE_FIELDS) }
   end
 

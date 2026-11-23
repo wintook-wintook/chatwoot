@@ -104,6 +104,9 @@ class TrackingCampaign < ApplicationRecord
   has_many :contact_trackings, dependent: :nullify
   has_many :entries, class_name: 'TrackingCampaignEntry', dependent: :delete_all
   has_many :clicks, class_name: 'TrackingCampaignClick', dependent: :delete_all # Campaña con Vendedor IA
+  # Campaña con Vendedor IA — «Prueba real»: la copia que va solo a los contactos de prueba (TrackingCampaigns::Motor2TestRun).
+  belongs_to :test_of, class_name: 'TrackingCampaign', optional: true
+  has_many :test_runs, class_name: 'TrackingCampaign', foreign_key: :test_of_id, dependent: :destroy, inverse_of: :test_of
 
   validates :name, presence: true, length: { minimum: 2, maximum: 120 }
   validates :status, inclusion: { in: STATUSES }
@@ -128,6 +131,8 @@ class TrackingCampaign < ApplicationRecord
   validate :window_order
 
   scope :active, -> { where(status: %w[saved draft running paused]) }
+  # Las de verdad: sin las copias de «Prueba real».
+  scope :real, -> { where(test_of_id: nil) }
 
   # Estado al ponerla en curso: inicio futuro → Programada (la abre WindowJob); si no, En curso.
   def self.status_for(starts, now = Time.current)
@@ -159,6 +164,11 @@ class TrackingCampaign < ApplicationRecord
   # Campaña con Vendedor IA (Motor 2.0): su oferta y sus toques viven aquí, no en el agente.
   def motor2?
     engine == '2'
+  end
+
+  # La copia de «Prueba real»: sus toques salen cada pocos minutos y no aparece en listados.
+  def test_run?
+    test_of_id.present?
   end
 
   def prospecting?

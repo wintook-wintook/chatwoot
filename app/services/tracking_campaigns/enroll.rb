@@ -113,12 +113,12 @@ class TrackingCampaigns::Enroll
 
   # Campaña con Vendedor IA: si otra campaña 2.0 ya le escribió hace menos de rest_days, se omite (no saturar).
   def recently_contacted?
-    days = @campaign.motor2? ? @campaign.brief.to_h['rest_days'].to_i : 0
+    days = @campaign.motor2? && !@campaign.test_run? ? @campaign.brief.to_h['rest_days'].to_i : 0
     return false unless days.positive?
 
     TrackingCampaignEntry.enrolled.where(contact_id: @contact.id, account_id: @campaign.account_id)
                          .where.not(tracking_campaign_id: @campaign.id).where('tracking_campaign_entries.created_at > ?', days.days.ago)
-                         .joins(:tracking_campaign).exists?(tracking_campaigns: { engine: '2' })
+                         .joins(:tracking_campaign).exists?(tracking_campaigns: { engine: '2', test_of_id: nil })
   end
 
   def active_tracking?

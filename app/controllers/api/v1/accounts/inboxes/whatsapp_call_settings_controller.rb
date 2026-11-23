@@ -102,7 +102,7 @@ class Api::V1::Accounts::Inboxes::WhatsappCallSettingsController < Api::V1::Acco
     {
       labels: Current.account.labels.order(:title).pluck(:title),
       case_types: Current.account.case_types.order(:position).map { |tipo| { id: tipo.id, name: tipo.name } },
-      campaigns: Current.account.tracking_campaigns.order(created_at: :desc).map { |c| { id: c.id, name: c.name, status: c.status } }
+      campaigns: Current.account.tracking_campaigns.real.order(created_at: :desc).map { |c| { id: c.id, name: c.name, status: c.status } }
     }
   end
 

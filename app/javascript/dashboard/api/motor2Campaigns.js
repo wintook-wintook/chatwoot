@@ -59,6 +59,27 @@ class Motor2CampaignsAPI extends ApiClient {
   duplicate(id) {
     return axios.post(`${this.url}/${id}/duplicate`);
   }
+
+  // «Simular»: la campaña completa para un contacto, sin mandar nada.
+  simulate(id, contactId) {
+    return axios.post(`${this.url}/${id}/simulate`, { contact_id: contactId });
+  }
+
+  // «Prueba real»: a los contactos de prueba, con los toques cada pocos minutos.
+  testRun(id) {
+    return axios.get(`${this.url}/${id}/test_run`);
+  }
+
+  startTestRun(id, recipients, everyMinutes) {
+    return axios.post(`${this.url}/${id}/test_run`, {
+      recipients,
+      every_minutes: everyMinutes,
+    });
+  }
+
+  stopTestRun(id) {
+    return axios.delete(`${this.url}/${id}/test_run`);
+  }
 }
 
 export default new Motor2CampaignsAPI();

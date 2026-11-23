@@ -144,7 +144,7 @@ class TrackingTemplate < ApplicationRecord
     {
       active_trackings: ContactTracking.where(tracking_template_id: id,
                                               status: ContactTrackings::Eligibility::ACTIVE_STATUSES).count,
-      campaigns: TrackingCampaign.where(tracking_template_id: id).count,
+      campaigns: TrackingCampaign.real.where(tracking_template_id: id).count,
       automations: automations_using.map(&:name)
     }
   end

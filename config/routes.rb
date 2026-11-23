@@ -412,6 +412,10 @@ Rails.application.routes.draw do
               post :insights
               post :follow_up
               post :duplicate
+              post :simulate
+              get :test_run
+              post :test_run, action: :start_test_run
+              delete :test_run, action: :stop_test_run
             end
           end
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do

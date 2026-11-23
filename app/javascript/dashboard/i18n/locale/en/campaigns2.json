@@ -345,6 +345,90 @@
         "suppressed": "{n} previously unsubscribed or bounced",
         "undeliverable": "{n} from domains that don't receive mail"
       }
+    },
+    "TEST_TABS": {
+      "simulate": "Simulate the campaign",
+      "chat": "Chat with the seller",
+      "real": "Real test"
+    },
+    "SIM": {
+      "INTRO": "See the whole campaign as a contact would get it: each touch with its text and when it goes out, and what happens depending on the reply. Nothing is sent.",
+      "SEARCH": "Search a contact…",
+      "AS_ME": "Simulate with me",
+      "NEEDS_SETUP": "Pick the seller and the channel to simulate.",
+      "LOADING": "Building the simulation…",
+      "ERROR": "Could not simulate.",
+      "FOR": "For {name} ({address})",
+      "NO_ADDRESS": "no data for this channel",
+      "TOUCH": "Touch {n}",
+      "FIRST": "when the campaign starts",
+      "AFTER": "if no reply yet, {n} {unit} later",
+      "UNITS": {
+        "hours": "hours",
+        "days": "days"
+      },
+      "FROM_TEMPLATE": "WhatsApp template «{name}»",
+      "FROM_CAMPAIGN": "The campaign text",
+      "FROM_AI": "The seller writes it with AI at that moment",
+      "FROM_AI_WHATSAPP": "No template: the seller writes it, only if the contact wrote in the last 24 hours",
+      "SUBJECT": "Subject: {subject}",
+      "AI_WRITES": "The seller writes it with whatever happened up to then.",
+      "REPLY_HERE": "Reply here",
+      "STOPS_ON_REPLY": "If they reply, the remaining touches stop: the seller answers and, if they go quiet, follows up.",
+      "OUTCOMES_TITLE": "What happens depending on the reply",
+      "NOBODY": "nobody chosen",
+      "OUTCOMES": {
+        "appointment": "Interested: the seller books the appointment with {to}.",
+        "relay_agent": "Interested: goes to the agent «{to}» in the same conversation.",
+        "relay_person": "Interested: goes to a person ({to}).",
+        "discarded": "Not interested: leaves the campaign and gets no more touches; the reason shows in «Why they leave».",
+        "handoff": "Asks for a person or gets upset: goes to {to} and the seller stops.",
+        "done": "Finishes (confirmed, not coming or answered the survey): marked as done.",
+        "no_reply": "Never replies: after {n} touches it ends as «No reply»."
+      },
+      "WARNINGS": {
+        "no_address": "This contact has no data for the channel: it would not reach them.",
+        "opted_out": "This contact asked not to be contacted: it would not reach them.",
+        "whatsapp_no_template": "Touches {touches} have no template: if the contact did not write in the last 24 hours, they are not sent."
+      }
+    },
+    "TEST_RUN": {
+      "INTRO": "Send the real campaign only to you or your team, with touches every few minutes. Messages arrive, conversations and the relay are created as with a customer. It does not count in the results.",
+      "EMAILS": "Test emails",
+      "PHONES": "Test WhatsApp numbers (with country code)",
+      "EMAIL_PLACEHOLDER": "you@email.com",
+      "PHONE_PLACEHOLDER": "+52 81 1234 5678",
+      "ADD": "+ Add another",
+      "REMOVE": "Remove",
+      "EVERY": "One touch every",
+      "MINUTES": "minutes",
+      "NOTE": "The seller's waits are shortened too: each hour is one minute. A new test ends the previous one.",
+      "START": "Start the test",
+      "START_AGAIN": "Start another test",
+      "NEED_RECIPIENT": "Add at least one test contact.",
+      "STARTED": "Test running: check your WhatsApp or email.",
+      "ERROR": "Could not start the test.",
+      "RUNNING": "Test running since {at} · one touch every {n} min",
+      "FINISHED": "Test from {at} finished",
+      "REFRESH": "Refresh",
+      "STOP": "End test",
+      "OPEN": "Open conversation",
+      "NEXT": "next at {at}",
+      "SKIPPED": "Not enrolled: {reason}",
+      "STATUS": {
+        "pending": "About to go out",
+        "scheduled": "On touch {n} of {total}",
+        "active": "Replied: the seller is handling it",
+        "paused": "Passed to a person",
+        "completed": "Finished",
+        "failed": "Could not send",
+        "cancelled": "Ended"
+      },
+      "KIND": {
+        "outgoing": "Sent",
+        "incoming": "Replied",
+        "note": "Note"
+      }
     }
   }
 }

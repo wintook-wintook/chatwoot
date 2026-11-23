@@ -53,7 +53,7 @@ Las listas son solo para correo. En WhatsApp no se ofrece: escribirle a quien no
 - Revisa el dominio de tu bandeja de correo: SPF, DKIM y DMARC (los piden Gmail y Yahoo). Con lista fría, sin SPF o con un correo gratis (gmail.com, hotmail.com…) no deja lanzar.
 - «Calentar el dominio» (paso Cuándo; al subir una lista se prende solo): el primer día salen 50, luego 100, 200… hasta tu máximo por día. Si rebota más del 5 % de lo enviado (desde 20 envíos), la campaña se pausa sola para que revises la lista y el dominio.
 - Con lista pide un máximo de envíos por día: de inicio pone 50 y avisa si pasas de 200.
-- Antes de lanzar, usa «Probar» (tú eres el contacto y el vendedor te contesta con la oferta) y «Enviarme una prueba» para ver el correo en tu bandeja.
+- Antes de lanzar, en «Revisar y lanzar»: «Simular la campaña» enseña todos los correos ya personalizados para un contacto y qué pasa según conteste; «Prueba real» manda la campaña completa a tu correo con un toque cada pocos minutos (no cuenta en resultados); «Chatear con el vendedor» y «Enviarme una prueba» siguen igual. Ver [[campanas_eventos]].
 
 ### 3. Envíos y toques (automático)
 - Cada contacto recibe su primer correo en el horario de atención, sin pasar el tope del día.

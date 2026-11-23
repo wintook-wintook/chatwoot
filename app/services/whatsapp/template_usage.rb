@@ -61,7 +61,7 @@ class Whatsapp::TemplateUsage
   def campaigns_of(agentes)
     return [] if agentes.empty?
 
-    TrackingCampaign.where(tracking_template_id: agentes.map(&:id)).where.not(status: 'finished').select(:id, :name)
+    TrackingCampaign.real.where(tracking_template_id: agentes.map(&:id)).where.not(status: 'finished').select(:id, :name)
   end
 
   def scheduled_count

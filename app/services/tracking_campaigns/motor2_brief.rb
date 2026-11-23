@@ -24,6 +24,7 @@ module TrackingCampaigns::Motor2Brief
   MAX_TEXT = 1500
   MAX_BODY = 6000
   WARMUP_START = 50
+  TEST_EVERY_MINUTES = 3
 
   module_function
 
@@ -91,8 +92,17 @@ module TrackingCampaigns::Motor2Brief
     data = campaign.touches.to_h
     attempts = (data['attempts'].presence || 2).to_i
     templates = campaign.inbox&.whatsapp? ? Array(data['templates']).first(attempts) : []
-    { max_attempts: attempts, retry_interval_value: (data['every_value'].presence || 2).to_i,
-      retry_interval_unit: data['every_unit'] == 'hours' ? 'hours' : 'days', whatsapp_templates: templates }
+    { max_attempts: attempts, whatsapp_templates: templates }.merge(pace(campaign, data))
+  end
+
+  # Cada cuánto: el de la campaña; en «Prueba real», cada test_every_minutes minutos.
+  def pace(campaign, data)
+    if campaign.test_run?
+      return { retry_interval_value: (data['test_every_minutes'].presence || TEST_EVERY_MINUTES).to_i.clamp(1, 60),
+               retry_interval_unit: 'minutes' }
+    end
+
+    { retry_interval_value: (data['every_value'].presence || 2).to_i, retry_interval_unit: data['every_unit'] == 'hours' ? 'hours' : 'days' }
   end
 
   # El cuerpo del correo del toque n (1, 2…), o nil si lo escribe el agente.

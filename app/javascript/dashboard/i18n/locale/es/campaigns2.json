@@ -345,6 +345,90 @@
         "suppressed": "{n} se dieron de baja o rebotaron antes",
         "undeliverable": "{n} de dominios que no reciben correo"
       }
+    },
+    "TEST_TABS": {
+      "simulate": "Simular la campaña",
+      "chat": "Chatear con el vendedor",
+      "real": "Prueba real"
+    },
+    "SIM": {
+      "INTRO": "Ve la campaña completa como la recibiría un contacto: cada toque con su texto y cuándo sale, y qué pasa según conteste. No se manda nada.",
+      "SEARCH": "Busca un contacto…",
+      "AS_ME": "Simular conmigo",
+      "NEEDS_SETUP": "Elige el vendedor y el canal para simular.",
+      "LOADING": "Armando la simulación…",
+      "ERROR": "No se pudo simular.",
+      "FOR": "Para {name} ({address})",
+      "NO_ADDRESS": "sin dato para este canal",
+      "TOUCH": "Toque {n}",
+      "FIRST": "al lanzar la campaña",
+      "AFTER": "si no ha contestado, {n} {unit} después",
+      "UNITS": {
+        "hours": "horas",
+        "days": "días"
+      },
+      "FROM_TEMPLATE": "Plantilla de WhatsApp «{name}»",
+      "FROM_CAMPAIGN": "El texto de la campaña",
+      "FROM_AI": "Lo escribe el vendedor con IA en ese momento",
+      "FROM_AI_WHATSAPP": "Sin plantilla: lo escribe el vendedor, solo si el contacto escribió en las últimas 24 horas",
+      "SUBJECT": "Asunto: {subject}",
+      "AI_WRITES": "El vendedor lo escribe con lo que haya pasado hasta ese momento.",
+      "REPLY_HERE": "Contesta aquí",
+      "STOPS_ON_REPLY": "Si contesta, ya no salen los toques que faltan: el vendedor le responde y, si deja de contestar, lo vuelve a buscar.",
+      "OUTCOMES_TITLE": "Qué pasa según conteste",
+      "NOBODY": "nadie elegido",
+      "OUTCOMES": {
+        "appointment": "Le interesa: el vendedor le agenda la cita con {to}.",
+        "relay_agent": "Le interesa: pasa al agente «{to}» en la misma conversación.",
+        "relay_person": "Le interesa: pasa a una persona ({to}).",
+        "discarded": "No le interesa: sale de la campaña y ya no recibe toques; el motivo queda en «En qué se van».",
+        "handoff": "Pide una persona o se molesta: pasa a {to} y el vendedor se detiene.",
+        "done": "Termina (confirmó, no va o contestó la encuesta): queda cumplido.",
+        "no_reply": "Nunca contesta: después de {n} toques termina como «No contestó»."
+      },
+      "WARNINGS": {
+        "no_address": "Este contacto no tiene el dato del canal: no le llegaría.",
+        "opted_out": "Este contacto pidió no ser contactado: no le llegaría.",
+        "whatsapp_no_template": "Los toques {touches} no tienen plantilla: si el contacto no escribió en las últimas 24 horas, no salen."
+      }
+    },
+    "TEST_RUN": {
+      "INTRO": "Manda la campaña de verdad, solo a ti o a tu equipo, con los toques cada pocos minutos. Llegan los mensajes, se crean las conversaciones y el relevo como con un cliente. No cuenta en los resultados.",
+      "EMAILS": "Correos de prueba",
+      "PHONES": "WhatsApp de prueba (con lada del país)",
+      "EMAIL_PLACEHOLDER": "tu@correo.com",
+      "PHONE_PLACEHOLDER": "+52 81 1234 5678",
+      "ADD": "+ Agregar otro",
+      "REMOVE": "Quitar",
+      "EVERY": "Un toque cada",
+      "MINUTES": "minutos",
+      "NOTE": "Las esperas del vendedor también se acortan: cada hora es un minuto. Una prueba nueva termina la anterior.",
+      "START": "Empezar la prueba",
+      "START_AGAIN": "Empezar otra prueba",
+      "NEED_RECIPIENT": "Agrega al menos un contacto de prueba.",
+      "STARTED": "Prueba en curso: revisa tu WhatsApp o tu correo.",
+      "ERROR": "No se pudo empezar la prueba.",
+      "RUNNING": "Prueba en curso desde las {at} · un toque cada {n} min",
+      "FINISHED": "Prueba de las {at} terminada",
+      "REFRESH": "Actualizar",
+      "STOP": "Terminar prueba",
+      "OPEN": "Abrir conversación",
+      "NEXT": "siguiente a las {at}",
+      "SKIPPED": "No entró: {reason}",
+      "STATUS": {
+        "pending": "Por salir",
+        "scheduled": "Va en el toque {n} de {total}",
+        "active": "Contestó: lo atiende el vendedor",
+        "paused": "Pasó a una persona",
+        "completed": "Terminó",
+        "failed": "No se pudo mandar",
+        "cancelled": "Terminado"
+      },
+      "KIND": {
+        "outgoing": "Salió",
+        "incoming": "Contestó",
+        "note": "Nota"
+      }
     }
   }
 }
