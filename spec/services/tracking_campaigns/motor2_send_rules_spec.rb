@@ -112,6 +112,62 @@ RSpec.describe 'Motor2 campaign send rules' do # rubocop:disable RSpec/DescribeC
     end
   end
 
+  describe 'WhatsApp: apertura y «Mensaje 2»' do
+    let(:wa) { create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false).inbox }
+
+    def wa_campaign(brief = {}, touches = {})
+      base = { 'kind' => 'offer', 'offer_what' => 'Mantenimiento gratis', 'content' => 'Hola {{contacto}}: todo sobre {{oferta}}' }
+      campaign(inbox: wa, brief: base.merge(brief),
+               touches: { 'attempts' => 1, 'templates' => ['sample_shipping_confirmation'] }.merge(touches))
+    end
+
+    it 'las variables de la plantilla salen de lo que eligió la campaña' do
+      camp = wa_campaign({}, 'template_vars' => { 'sample_shipping_confirmation' => { '1' => { 'source' => 'offer_what' } } })
+      trk = ContactTracking.new(account: account, contact: contact, inbox: wa, tracking_template: seller, tracking_campaign: camp)
+      result = Whatsapp::TemplateParamsProcessor.new(trk, 'sample_shipping_confirmation').process
+      expect(result[:parameters].pluck(:text)).to eq(['Mantenimiento gratis'])
+    end
+
+    it 'con la ventana abierta, el primer toque es la apertura escrita' do
+      camp = wa_campaign('opener' => 'Hola {{contacto}}, tenemos {{oferta}}. ¿Te mando info?')
+      trk = ContactTracking.new(account: account, contact: contact, inbox: wa, tracking_template: seller, tracking_campaign: camp,
+                                attempt_count: 0)
+      expect(Motor2::CampaignTouch.text(trk)).to eq('Hola Mario, tenemos Mantenimiento gratis. ¿Te mando info?')
+      trk.attempt_count = 1
+      expect(Motor2::CampaignTouch.text(trk)).to be_nil
+    end
+
+    it 'enviar_informacion manda el «Mensaje 2» tal cual después del turno y le_interesa queda para cuando lo quiere' do # -- un recorrido
+      camp = wa_campaign
+      trk = tracking(camp)
+      conversation = create(:conversation, account: account, inbox: wa, contact: contact)
+      config = Motor2::Config.for(trk)
+      after = []
+      turn = instance_double(Motor2::Runner, config: config, state: Motor2::State.new, trace: Motor2::Trace.new, test?: false,
+                                             tracking: trk, conversation: conversation, silence!: true)
+      allow(turn).to receive(:after_send) { |&block| after << block }
+      allow(turn).to receive(:attach)
+      skill = Motor2::Skills::Campaign.new(turn)
+      names = skill.tools.map { |t| t.dig(:function, :name) }
+      expect(names).to include('enviar_informacion', 'le_interesa')
+      expect(skill.tools.find { |t| t.dig(:function, :name) == 'le_interesa' }.dig(:function, :description)).to include('YA lo quiere')
+
+      skill.call('enviar_informacion', {})
+      expect(turn.state['content_sent']).to be(true)
+      expect(Motor2::Delivery).to receive(:send_reply).with(trk, conversation, 'Hola Mario: todo sobre Mantenimiento gratis')
+      after.each(&:call)
+      expect(skill.tools.map { |t| t.dig(:function, :name) }).not_to include('enviar_informacion')
+      expect(config.function.prompt).to include('todo sobre {{oferta}}')
+    end
+
+    it 'la revisión avisa variables sin origen y un «Mensaje 2» vacío' do
+      camp = wa_campaign('content' => '')
+      items = TrackingCampaigns::Motor2Check.new(camp).call
+      expect(items.find { |i| i[:key] == :vars_1 }[:level]).to eq('warning')
+      expect(items.find { |i| i[:key] == :content }[:level]).to eq('warning')
+    end
+  end
+
   describe 'inscribir' do
     it 'un seguimiento «solo contesta» viejo de la bandeja ya no deja fuera al contacto' do
       old = ContactTracking.create!(account: account, contact: contact, inbox: inbox, tracking_template: seller, status: 'active',

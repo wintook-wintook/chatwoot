@@ -19,7 +19,7 @@ class TrackingCampaigns::Motor2Simulation
   end
 
   def call
-    { contact: { id: @contact.id, name: @contact.name, address: address },
+    { contact: { id: @contact.id, name: @contact.name, address: address }, info: info,
       touches: touches, outcomes: outcomes, warnings: warnings }
   end
 
@@ -67,7 +67,21 @@ class TrackingCampaigns::Motor2Simulation
     name = Array(data['templates'])[touch - 1].presence
     return { channel: 'whatsapp', source: 'ai', template: nil } unless name
 
-    { channel: 'whatsapp', source: 'template', template: name, text: template_text(name) }
+    { channel: 'whatsapp', source: 'template', template: name, text: template_text(name), opener: touch == 1 ? opener_text : nil }
+  end
+
+  # La apertura escrita para cuando la ventana de 24 h está abierta (vacía: la escribe la IA).
+  def opener_text
+    opener = @campaign.brief.to_h['opener'].to_s.strip
+    opener.present? ? Motor2::CampaignTouch.fill(opener, @contact, @campaign) : nil
+  end
+
+  # «Mensaje 2»: lo que se manda tal cual cuando pide información (WhatsApp), con sus imágenes.
+  def info
+    content = @campaign.brief.to_h['content'].to_s.strip
+    return nil if content.blank? || !whatsapp?
+
+    { text: Motor2::CampaignTouch.fill(content, @contact, @campaign), files: interest_files }
   end
 
   def template_text(name)
@@ -81,7 +95,7 @@ class TrackingCampaigns::Motor2Simulation
   # Las variables con los datos del contacto, como al mandarla (Whatsapp::TemplateParamsProcessor).
   def fill_template(body, name)
     tracking = ContactTracking.new(account: @campaign.account, contact: @contact, inbox: @inbox, tracking_template: @seller,
-                                   whatsapp_templates: [name], objective: @seller&.objective)
+                                   tracking_campaign: @campaign, whatsapp_templates: [name], objective: @seller&.objective)
     params = Array(Whatsapp::TemplateParamsProcessor.new(tracking, name).process[:parameters])
     params.each_with_index.reduce(body) do |text, (param, index)|
       variable = param[:parameter_name] ? /\{\{\s*#{Regexp.escape(param[:parameter_name])}\s*\}\}/ : "{{#{index + 1}}}"
@@ -105,7 +119,10 @@ class TrackingCampaigns::Motor2Simulation
   def outcomes
     return [] unless function.respond_to?(:survey?)
 
-    list = [interested.merge(files: interest_files), { kind: 'discarded' }, { kind: 'handoff', to: person_name(function.handoff_target) }]
+    # Con «Mensaje 2», las imágenes «con la información» van con él; sin él, cuando muestra interés.
+    list = [interested.merge(files: info ? [] : interest_files), { kind: 'discarded' },
+            { kind: 'handoff', to: person_name(function.handoff_target) }]
+    list.unshift({ kind: 'info', files: interest_files }) if info
     list << { kind: 'later' } unless function.survey?
     list << { kind: 'done' } if function.survey? || function.invite?
     list << { kind: 'no_reply', attempts: attempts }

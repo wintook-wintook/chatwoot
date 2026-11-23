@@ -8,4 +8,8 @@ Rails.application.config.to_prepare do
   ContactTrackingJob.prepend(Motor2::ListConversationHook) unless ContactTrackingJob <= Motor2::ListConversationHook
   # Campaña con Vendedor IA: antes de cada toque, horario, topes, baja y si ya lo atiende una persona (SendGate).
   ContactTrackingJob.prepend(Motor2::CampaignSendHook) unless ContactTrackingJob <= Motor2::CampaignSendHook
+  # Campaña con Vendedor IA por WhatsApp: las variables de la plantilla, de lo que eligió la campaña.
+  unless Whatsapp::TemplateParamsProcessor <= Motor2::CampaignTemplateVarsHook
+    Whatsapp::TemplateParamsProcessor.prepend(Motor2::CampaignTemplateVarsHook)
+  end
 end

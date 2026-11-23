@@ -434,14 +434,17 @@
         "handoff": "Asks for a person or gets upset: goes to {to} and the seller stops.",
         "done": "Finishes (confirmed, not coming or answered the survey): marked as done.",
         "no_reply": "Never replies: after {n} touches it ends as «No reply».",
-        "later": "«Not now» or out of office: it writes once more on the date they say (30 days if not)."
+        "later": "«Not now» or out of office: it writes once more on the date they say (30 days if not).",
+        "info": "Asks for details: your Message 2 goes as is, with its images; then it answers questions."
       },
       "WARNINGS": {
         "no_address": "This contact has no data for the channel: it would not reach them.",
         "opted_out": "This contact asked not to be contacted: it would not reach them.",
         "whatsapp_no_template": "Touches {touches} have no template: if the contact did not write in the last 24 hours, they are not sent."
       },
-      "FILES": "📎 {names}"
+      "FILES": "📎 {names}",
+      "OPENER": "If they wrote in the last 24 h, instead of the template: «{text}»",
+      "INFO": "Message 2 · if they ask for details, sent as is"
     },
     "TEST_RUN": {
       "INTRO": "Send the real campaign only to you or your team, with touches every few minutes. Messages arrive, conversations and the relay are created as with a customer. It does not count in the results.",
@@ -493,7 +496,7 @@
       "ABOUT_MISSING": "Without a description the seller does not know when to send it.",
       "TOUCH": "In touch {n}",
       "WHEN": {
-        "interest": "When they show interest",
+        "interest": "With the details (when they show interest)",
         "ask": "When they ask or it helps",
         "confirm": "When they confirm the event"
       },
@@ -523,6 +526,78 @@
       "NO_CALENDARS": "Nobody has Google Calendar connected: connect it in Agenda › Calendar.",
       "INSTRUCTIONS": "Instructions (optional)",
       "INSTRUCTIONS_PLACEHOLDER": "E.g. do not give installation prices; offer the free visit"
+    },
+    "FLOW": {
+      "OPENER_TITLE": "Message 1 · Opener",
+      "OPENER_HINT": "Short, so they reply. If they have not written in 24 hours, WhatsApp only allows an approved template: pick it and where each variable comes from.",
+      "TEMPLATE_OPENER": "Opener template (touch 1)",
+      "TEMPLATE_TOUCH": "If no reply · touch {n}",
+      "TEMPLATE_PICK": "Pick the approved template",
+      "FIXED_TEXT": "Fixed text",
+      "TOUCHES_NOTE": "If they reply to any touch, the rest are not sent.",
+      "OPEN_WINDOW": "If they wrote in the last 24 hours, this text goes (optional)",
+      "OPEN_WINDOW_PLACEHOLDER": "Hi {{contacto}}, we have {{oferta}}. Shall I send you the details?",
+      "OPEN_WINDOW_HINT": "With {{contacto}}, {{empresa}} and {{oferta}}. Empty: the AI writes it with the same idea.",
+      "INFO_TITLE": {
+        "offer": "Message 2 · If they ask for details, this goes",
+        "reactivate": "Message 2 · If they ask for details, this goes",
+        "renew": "Message 2 · If they ask for details, this goes (optional)",
+        "invite": "Message 2 · If they want to know about the event, this goes",
+        "survey": "Message 2 · If they accept, the questions"
+      },
+      "INFO_HINT": {
+        "offer": "Sent as is: the full copy (what it is, price, what it includes, validity). End with a closing question. Everything here is also what the seller knows to answer questions.",
+        "reactivate": "Sent as is: the offer to come back. End with a closing question. It is also what the seller knows.",
+        "renew": "Sent as is: options, price and how to renew. If your template already has everything, leave it empty. It is also what the seller knows.",
+        "invite": "Sent as is: place, time, agenda and how to get there. End with «Shall I confirm your spot?». It is also what the seller knows."
+      },
+      "INFO_PLACEHOLDER": {
+        "offer": "Preventive maintenance 30% off…\n\nShall I reserve it?",
+        "reactivate": "We miss you, {{contacto}}…\n\nDo you want it?",
+        "renew": "Your policy expires on December 15…\n\nShall I renew it?",
+        "invite": "Industrial Expo · November 30…\n\nShall I confirm your spot?"
+      },
+      "INFO_COUNT": "{n} of {max} characters",
+      "INFO_FILES": "Offer images and files marked «When they show interest» go with this message (first the image, then the text). Without this message, the AI writes the details.",
+      "FROM_EVENT": "Fill with the event details",
+      "EVENT_DRAFT": {
+        "TITLE": "{name}",
+        "WHEN": "When: {when}",
+        "WHERE": "Where: {where}",
+        "CLOSE": "Shall I confirm your spot?"
+      },
+      "SURVEY_HINT": "If they accept, your questions («Offer and channel» step) are asked one per message, in this order:",
+      "SURVEY_EMPTY": "Write the questions in the «Offer and channel» step.",
+      "AFTER": {
+        "offer": "Then: the seller answers questions and leads to the close; when they want it, it hands off, quotes or books.",
+        "reactivate": "Then: answers questions and leads to the close; when they want it, it hands off.",
+        "renew": "Then: answers questions and leads to renewal; when they accept, it hands off or quotes.",
+        "invite": "Then: answers questions and asks if they are coming; marked «Confirmed» or «Not coming» on the event list.",
+        "survey": "Then: saves each answer; a low score opens a case."
+      },
+      "SOURCES": {
+        "contact_first_name": "Contact first name",
+        "contact_name": "Full name",
+        "contact_company": "Contact company",
+        "offer_what": "What you offer",
+        "offer_details": "Offer details",
+        "event_name": "Event name",
+        "event_date": "Event date",
+        "event_place": "Event place",
+        "text": "Fixed text"
+      },
+      "PREVIEW": {
+        "STEP_1": "Message 1 · Opener",
+        "REPLY": "Yes, send me the details",
+        "REPLY_SURVEY": "Sure",
+        "STEP_2": "Message 2",
+        "IMAGES": "🖼️ Your images «with the details»",
+        "AI_WRITES": "(no Message 2: the AI writes the details)",
+        "AFTER": {
+          "sale": "From here, the seller answers questions and leads to the close.",
+          "survey": "Then the other questions, one per message."
+        }
+      }
     }
   }
 }

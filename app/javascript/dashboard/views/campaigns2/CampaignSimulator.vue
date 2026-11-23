@@ -227,6 +227,12 @@ export default {
             {{ t('AI_WRITES') }}
           </p>
           <p
+            v-if="touch.opener"
+            class="m-0 mt-1 text-xs whitespace-pre-line text-slate-600 dark:text-slate-300"
+          >
+            {{ t('OPENER', { text: touch.opener }) }}
+          </p>
+          <p
             v-if="(touch.files || []).length"
             class="m-0 mt-1 text-[11px] text-slate-600 dark:text-slate-300"
           >
@@ -235,6 +241,19 @@ export default {
         </li>
       </ol>
       <p class="m-0 text-xs text-slate-500">{{ t('STOPS_ON_REPLY') }}</p>
+
+      <div
+        v-if="sim.info"
+        class="p-2 border rounded-md border-woot-100 dark:border-woot-700"
+      >
+        <span class="text-xs font-medium text-woot-700 dark:text-woot-300">
+          {{ t('INFO') }}
+        </span>
+        <p v-if="sim.info.files.length" class="m-0 text-[11px] text-slate-600">
+          {{ t('FILES', { names: sim.info.files.join(', ') }) }}
+        </p>
+        <p class="m-0 mt-1 text-sm whitespace-pre-line">{{ sim.info.text }}</p>
+      </div>
 
       <div class="flex flex-col gap-1">
         <p class="m-0 text-xs font-medium text-slate-600 dark:text-slate-300">

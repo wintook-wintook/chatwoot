@@ -13,8 +13,8 @@ class TrackingCampaigns::Motor2Check
   end
 
   def call
-    @call ||= [seller, ai, offer, appointment, audience, channel, *list_items, *domain_items, *touch_items, *plan.seller_templates, plan.cost,
-               relay, window, plan.capacity].compact
+    @call ||= [seller, ai, offer, appointment, audience, channel, *list_items, *domain_items, *touch_items, *plan.whatsapp_flow,
+               *plan.seller_templates, plan.cost, relay, window, plan.capacity].compact
   end
 
   def ready? = call.none? { |item| item[:level] == 'error' }

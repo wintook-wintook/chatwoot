@@ -116,7 +116,16 @@ class Motor2::Functions::CampaignSeller
     lines << "- Precio, vigencia y condiciones: #{answer(:offer_details)}" if answer(:offer_details).present?
     lines << event_line if invite? && event
     lines << '- Si le interesa: agéndale la cita (ver_horarios y agendar_cita).' if appointment?
+    lines << content_line if content.present?
     lines.join("\n")
+  end
+
+  # «Mensaje 2» de la campaña (WhatsApp): sale tal cual con enviar_informacion y es lo que sabe de la oferta.
+  def content = answer(:content).to_s.strip
+
+  def content_line
+    '- LA INFORMACIÓN COMPLETA DE LA OFERTA (es lo que sabes: contesta sus dudas con esto, con tus palabras; no inventes ' \
+      "nada que no esté aquí ni en tus fuentes):\n#{content.first(TrackingCampaigns::Motor2Brief::MAX_CONTENT)}"
   end
 
   private

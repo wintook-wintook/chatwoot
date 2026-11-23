@@ -434,14 +434,17 @@
         "handoff": "Pide una persona o se molesta: pasa a {to} y el vendedor se detiene.",
         "done": "Termina (confirmó, no va o contestó la encuesta): queda cumplido.",
         "no_reply": "Nunca contesta: después de {n} toques termina como «No contestó».",
-        "later": "«Ahora no» o fuera de la oficina: se le vuelve a escribir una vez en la fecha que diga (30 días si no dice)."
+        "later": "«Ahora no» o fuera de la oficina: se le vuelve a escribir una vez en la fecha que diga (30 días si no dice).",
+        "info": "Pide información: se manda tu Mensaje 2 tal cual, con sus imágenes; luego resuelve dudas."
       },
       "WARNINGS": {
         "no_address": "Este contacto no tiene el dato del canal: no le llegaría.",
         "opted_out": "Este contacto pidió no ser contactado: no le llegaría.",
         "whatsapp_no_template": "Los toques {touches} no tienen plantilla: si el contacto no escribió en las últimas 24 horas, no salen."
       },
-      "FILES": "📎 {names}"
+      "FILES": "📎 {names}",
+      "OPENER": "Si escribió en las últimas 24 h, en lugar de la plantilla: «{text}»",
+      "INFO": "Mensaje 2 · si pide información, se manda tal cual"
     },
     "TEST_RUN": {
       "INTRO": "Manda la campaña de verdad, solo a ti o a tu equipo, con los toques cada pocos minutos. Llegan los mensajes, se crean las conversaciones y el relevo como con un cliente. No cuenta en los resultados.",
@@ -493,7 +496,7 @@
       "ABOUT_MISSING": "Sin descripción el vendedor no sabe cuándo mandarla.",
       "TOUCH": "En el toque {n}",
       "WHEN": {
-        "interest": "Cuando muestre interés",
+        "interest": "Con la información (cuando muestre interés)",
         "ask": "Cuando lo pida o le sirva",
         "confirm": "Al confirmar el evento"
       },
@@ -523,6 +526,78 @@
       "NO_CALENDARS": "Nadie tiene Google Calendar conectado: conéctalo en Agenda › Calendario.",
       "INSTRUCTIONS": "Indicaciones (opcional)",
       "INSTRUCTIONS_PLACEHOLDER": "Ej. no des precios de instalación; ofrece la visita gratis"
+    },
+    "FLOW": {
+      "OPENER_TITLE": "Mensaje 1 · Apertura",
+      "OPENER_HINT": "Corto, para que conteste. Si no ha escrito en 24 horas, WhatsApp solo deja mandar una plantilla aprobada: elige cuál y de dónde sale cada variable.",
+      "TEMPLATE_OPENER": "Plantilla de apertura (toque 1)",
+      "TEMPLATE_TOUCH": "Si no contesta · toque {n}",
+      "TEMPLATE_PICK": "Elige la plantilla aprobada",
+      "FIXED_TEXT": "Texto fijo",
+      "TOUCHES_NOTE": "Si contesta en cualquier toque, ya no salen los que faltan.",
+      "OPEN_WINDOW": "Si escribió en las últimas 24 horas, sale este texto (opcional)",
+      "OPEN_WINDOW_PLACEHOLDER": "Hola {{contacto}}, tenemos {{oferta}}. ¿Te mando la información?",
+      "OPEN_WINDOW_HINT": "Con {{contacto}}, {{empresa}} y {{oferta}}. Vacío: lo escribe la IA con la misma idea.",
+      "INFO_TITLE": {
+        "offer": "Mensaje 2 · Si pide información, se manda",
+        "reactivate": "Mensaje 2 · Si pide información, se manda",
+        "renew": "Mensaje 2 · Si pide los detalles, se manda (opcional)",
+        "invite": "Mensaje 2 · Si quiere saber del evento, se manda",
+        "survey": "Mensaje 2 · Si acepta, las preguntas"
+      },
+      "INFO_HINT": {
+        "offer": "Sale tal cual: el copy completo (qué es, precio, qué incluye, vigencia). Termina con una pregunta de cierre («¿Te lo aparto?»). Todo lo que pongas aquí también es lo que sabe el vendedor para contestar dudas.",
+        "reactivate": "Sale tal cual: la oferta para que vuelva. Termina con una pregunta de cierre. También es lo que sabe el vendedor.",
+        "renew": "Sale tal cual: opciones, precio y cómo renovar. Si tu plantilla ya trae todo, déjalo vacío. También es lo que sabe el vendedor.",
+        "invite": "Sale tal cual: lugar, horario, agenda y cómo llegar. Termina con «¿Te confirmo tu lugar?». También es lo que sabe el vendedor."
+      },
+      "INFO_PLACEHOLDER": {
+        "offer": "Mantenimiento preventivo con 30% de descuento…\n• Incluye revisión de frenos y aceite\n• Precio: $1,800 (antes $2,600)\n• Válido hasta el 30 de noviembre\n\n¿Te lo aparto?",
+        "reactivate": "Te extrañamos, {{contacto}}. Para que regreses: …\n\n¿Lo quieres?",
+        "renew": "Tu póliza vence el 15 de diciembre. Para renovarla: …\n\n¿La renuevo?",
+        "invite": "Expo Industrial · 30 de noviembre, 10:00 a 18:00\nLugar: Cintermex, sala B\nAgenda: …\n\n¿Te confirmo tu lugar?"
+      },
+      "INFO_COUNT": "{n} de {max} caracteres",
+      "INFO_FILES": "Las imágenes y archivos de la oferta marcados «Cuando muestre interés» se mandan junto con este mensaje (primero la imagen y luego el texto). Sin este mensaje, la información la escribe la IA.",
+      "FROM_EVENT": "Llenar con los datos del evento",
+      "EVENT_DRAFT": {
+        "TITLE": "{name}",
+        "WHEN": "Cuándo: {when}",
+        "WHERE": "Dónde: {where}",
+        "CLOSE": "¿Te confirmo tu lugar?"
+      },
+      "SURVEY_HINT": "Si acepta, se hacen tus preguntas (paso «Oferta y canal») una por mensaje, en este orden:",
+      "SURVEY_EMPTY": "Escribe las preguntas en el paso «Oferta y canal».",
+      "AFTER": {
+        "offer": "Después: el vendedor resuelve sus dudas y lo lleva al cierre; cuando lo quiere, pasa a quien elegiste, cotiza o agenda.",
+        "reactivate": "Después: resuelve sus dudas y lo lleva al cierre; cuando lo quiere, pasa a quien elegiste.",
+        "renew": "Después: resuelve sus dudas y lo lleva a renovar; cuando acepta, pasa a quien elegiste o cotiza.",
+        "invite": "Después: resuelve sus dudas y le pregunta si va; queda «Confirmó» o «No va» en la lista del evento.",
+        "survey": "Después: guarda cada respuesta; con una calificación baja levanta un caso."
+      },
+      "SOURCES": {
+        "contact_first_name": "Nombre del contacto",
+        "contact_name": "Nombre completo",
+        "contact_company": "Empresa del contacto",
+        "offer_what": "Qué ofreces",
+        "offer_details": "Detalles de la oferta",
+        "event_name": "Nombre del evento",
+        "event_date": "Fecha del evento",
+        "event_place": "Lugar del evento",
+        "text": "Texto fijo"
+      },
+      "PREVIEW": {
+        "STEP_1": "Mensaje 1 · Apertura",
+        "REPLY": "Sí, mándame la información",
+        "REPLY_SURVEY": "Sí, claro",
+        "STEP_2": "Mensaje 2",
+        "IMAGES": "🖼️ Tus imágenes «con la información»",
+        "AI_WRITES": "(sin Mensaje 2: la información la escribe la IA)",
+        "AFTER": {
+          "sale": "A partir de aquí, el vendedor contesta sus dudas y lo lleva al cierre.",
+          "survey": "Sigue con las demás preguntas, una por mensaje."
+        }
+      }
     }
   }
 }

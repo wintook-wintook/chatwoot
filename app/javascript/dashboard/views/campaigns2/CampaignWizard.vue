@@ -9,7 +9,6 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import Motor2CampaignsAPI from 'dashboard/api/motor2Campaigns';
 import WizardTabs from 'dashboard/views/readyAgents/WizardTabs.vue';
-import PhonePreview from './PhonePreview.vue';
 import EmailPreview from './EmailPreview.vue';
 import EmailEditor from './EmailEditor.vue';
 import CampaignChat from './CampaignChat.vue';
@@ -17,6 +16,9 @@ import CampaignSimulator from './CampaignSimulator.vue';
 import CampaignTestRun from './CampaignTestRun.vue';
 import CampaignFiles from './CampaignFiles.vue';
 import CampaignAttend from './CampaignAttend.vue';
+import WhatsappFlow from './WhatsappFlow.vue';
+import ConversationPreview from './ConversationPreview.vue';
+import { fillTemplate, sampleValues } from './campaignFlow';
 
 // En «Revisar»: probar la campaña completa, no solo al vendedor.
 const TEST_TABS = ['simulate', 'chat', 'real'];
@@ -57,6 +59,9 @@ const blankForm = () => ({
     warmup: false,
     // De esta oferta (además de las generales del vendedor) y quién atiende a los de esta campaña.
     objections: [],
+    // WhatsApp: la apertura si la ventana está abierta y el «Mensaje 2» (sale tal cual si pide información).
+    opener: '',
+    content: '',
     relay: 'agent',
     relay_user_id: '',
     relay_team_id: '',
@@ -66,6 +71,7 @@ const blankForm = () => ({
     every_value: 2,
     every_unit: 'days',
     templates: [],
+    template_vars: {},
     emails: [],
   },
   audience: { source: { type: 'segment' }, excluded_contact_ids: [] },
@@ -93,7 +99,6 @@ export default {
   name: 'CampaignWizard',
   components: {
     WizardTabs,
-    PhonePreview,
     EmailPreview,
     EmailEditor,
     CampaignChat,
@@ -101,6 +106,8 @@ export default {
     CampaignTestRun,
     CampaignFiles,
     CampaignAttend,
+    WhatsappFlow,
+    ConversationPreview,
   },
   data() {
     return {
@@ -234,6 +241,12 @@ export default {
       if (src.type === 'campaign') return [];
       return [];
     },
+    rulesFor() {
+      return n => {
+        const tpl = this.templateFor(n);
+        return (tpl && (this.form.touches.template_vars || {})[tpl.name]) || {};
+      };
+    },
     templateFor() {
       return n =>
         (this.inbox?.templates || []).find(
@@ -246,7 +259,13 @@ export default {
     opener() {
       if (this.isWhatsapp) {
         const tpl = this.templateFor(1);
-        return tpl ? (tpl.body || '').replace(/\{\{\s*1\s*\}\}/g, 'Mario') : '';
+        return tpl
+          ? fillTemplate(
+              tpl.body,
+              this.rulesFor(1),
+              sampleValues(this.form.brief, this.event)
+            )
+          : '';
       }
       return (this.form.touches.emails[0]?.body || '')
         .replace(/\{\{\s*contacto\s*\}\}/gi, 'Mario')
@@ -1218,32 +1237,15 @@ export default {
             <p v-if="isList && !isEmail" class="m-0 text-xs text-red-600">
               {{ t('LIST.ONLY_EMAIL') }}
             </p>
-            <template v-if="isWhatsapp">
-              <label v-for="n in touchNumbers" :key="n" class="block">
-                <span class="field-label">
-                  {{ t('MESSAGES.TEMPLATE_FOR', { n }) }}
-                </span>
-                <select
-                  :value="form.touches.templates[n - 1] || ''"
-                  @change="setTemplate(n, $event.target.value)"
-                >
-                  <option value="">{{ t('MESSAGES.TEMPLATE_PICK') }}</option>
-                  <option
-                    v-for="tpl in inbox.templates"
-                    :key="tpl.name"
-                    :value="tpl.name"
-                  >
-                    {{ tpl.name }}
-                  </option>
-                </select>
-              </label>
-              <p
-                v-if="!inbox.templates.length"
-                class="m-0 text-xs text-amber-700"
-              >
-                {{ t('MESSAGES.NO_TEMPLATES') }}
-              </p>
-            </template>
+            <WhatsappFlow
+              v-if="isWhatsapp"
+              :touches.sync="form.touches"
+              :brief.sync="form.brief"
+              :templates="inbox.templates"
+              :attempts="attempts"
+              :kind="kind"
+              :event="event"
+            />
 
             <template v-if="isEmail">
               <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -1520,7 +1522,14 @@ export default {
           <p class="m-0 text-xs font-medium text-slate-600 dark:text-slate-300">
             {{ t('PREVIEW.TITLE') }}
           </p>
-          <PhonePreview v-if="isWhatsapp" :template="templateFor(1)" />
+          <ConversationPreview
+            v-if="isWhatsapp"
+            :template="templateFor(1)"
+            :rules="rulesFor(1)"
+            :brief="form.brief"
+            :kind="kind"
+            :event="event"
+          />
           <EmailPreview
             v-else-if="isEmail"
             :subject="form.email_subject"

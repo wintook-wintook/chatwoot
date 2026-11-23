@@ -4,6 +4,7 @@
 #   capacity          con tope diario y fecha de fin, ¿alcanzan los días hábiles para todos los toques?
 #   cost              WhatsApp: cuántas plantillas de marketing (las cobra Meta) puede llevar la campaña
 #   seller_templates  las plantillas que usa el vendedor (seguimiento pasadas 24 h, aviso de cita) en ESTA bandeja
+#   whatsapp_flow     WhatsApp: variables de cada plantilla sin de dónde salir y el «Mensaje 2» (la información)
 class TrackingCampaigns::Motor2PlanCheck
   def initialize(campaign, answers, attempts)
     @campaign = campaign
@@ -51,7 +52,40 @@ class TrackingCampaigns::Motor2PlanCheck
     end
   end
 
+  def whatsapp_flow
+    return [] unless @campaign.inbox&.whatsapp?
+
+    [*unmapped_variables, content_item].compact
+  end
+
   private
+
+  def unmapped_variables
+    templates = Array(@campaign.inbox.channel.try(:message_templates)).index_by { |t| t['name'] }
+    Array(@campaign.touches.to_h['templates']).first(@attempts).each_with_index.filter_map do |name, i|
+      template = templates[name]
+      next unless template
+
+      missing = missing_variables(template, name)
+      next if missing.empty?
+
+      item(:"vars_#{i + 1}", 'warning', "Toque #{i + 1}: elige de dónde sale #{missing.map { |v| "{{#{v}}}" }.join(', ')} " \
+                                        '(si no, se llena con los datos del contacto que se puedan).')
+    end
+  end
+
+  def missing_variables(template, name)
+    rules = TrackingCampaigns::TemplateVars.mapping(@campaign, name)
+    TrackingCampaigns::TemplateVars.variables(template).reject { |var| rules[var].present? }
+  end
+
+  def content_item
+    brief = @campaign.brief.to_h
+    return nil if brief['kind'] == 'survey'
+    return item(:content, 'ok', 'Si pide información, se manda tu «Mensaje 2» tal cual.') if brief['content'].present?
+
+    item(:content, 'warning', 'Sin «Mensaje 2»: si pide información, la escribe el vendedor con IA. Escríbelo en «Mensajes».')
+  end
 
   def item(key, level, text) = { key: key, level: level, text: text }
 
