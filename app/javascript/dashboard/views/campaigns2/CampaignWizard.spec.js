@@ -26,7 +26,7 @@ const options = {
 
 vi.mock('dashboard/api/motor2Campaigns', () => ({
   default: {
-    options: () => Promise.resolve({ data: options }),
+    formOptions: () => Promise.resolve({ data: options }),
     show: vi.fn(() => Promise.reject(new Error('caché'))),
     create: vi.fn(() => Promise.resolve({ data: { id: 99, name: 'x' } })),
     update: vi.fn(() => Promise.resolve({ data: { id: 15, name: 'x' } })),

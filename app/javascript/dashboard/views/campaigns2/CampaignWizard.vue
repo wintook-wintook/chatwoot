@@ -344,7 +344,7 @@ export default {
     );
     window.addEventListener('focus', this.refreshOptions);
     try {
-      const { data } = await Motor2CampaignsAPI.options();
+      const { data } = await Motor2CampaignsAPI.formOptions();
       this.options = data;
       const id = this.$route.params.campaignId;
       if (id) await this.load(Number(id));
@@ -370,7 +370,7 @@ export default {
     async refreshOptions() {
       if (this.loading) return;
       try {
-        const { data } = await Motor2CampaignsAPI.options();
+        const { data } = await Motor2CampaignsAPI.formOptions();
         this.options = data;
       } catch (e) {
         // se queda lo que había

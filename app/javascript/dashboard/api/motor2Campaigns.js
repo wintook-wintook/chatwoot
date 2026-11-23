@@ -15,7 +15,9 @@ class Motor2CampaignsAPI extends ApiClient {
     return axios.get(`${this.url}/${id}`, fresh());
   }
 
-  options() {
+  // Ojo: no puede llamarse options() — ApiClient guarda su configuración en this.options y tapaba el método
+  // (la pantalla tronaba al abrir: no salían vendedores ni canales y al editar se creaba otra campaña).
+  formOptions() {
     return axios.get(`${this.url}/options`, fresh());
   }
 
