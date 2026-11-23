@@ -26,6 +26,16 @@ class AgendaItemsAPI extends ApiClient {
     return axios.post(`${this.url}/${id}/to_task`, data);
   }
 
+  // ¿Los participantes ya tienen algo a esa hora? { user_ids, start, end, exclude_id }
+  busy(params = {}) {
+    return axios.get(`${this.url}/busy`, { params });
+  }
+
+  // Participante: «No puedo ir» { note }.
+  decline(id, data = {}) {
+    return axios.post(`${this.url}/${id}/decline`, data);
+  }
+
   updateItem(id, data) {
     return axios.patch(`${this.url}/${id}`, data);
   }

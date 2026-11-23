@@ -47,7 +47,7 @@ module Assistant::AgendaTools
 
   # Solo las que siguen agendadas (las realizadas o «no asistió» ya no son pendientes del día).
   def my_meetings(range, person = @user)
-    @account.case_meetings.where(organizer_id: person.id, starts_at: range, status: :scheduled)
+    @account.case_meetings.for_user(person.id).where(starts_at: range, status: :scheduled)
             .order(:starts_at).limit(30).map { |m| meeting_ref(m) }
   end
 

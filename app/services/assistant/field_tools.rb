@@ -74,7 +74,8 @@ module Assistant::FieldTools
   # Visitas agendadas: las que organiza el usuario o las de un caso que ve.
   def field_meeting(id)
     @account.case_meetings.where(is_visit: true)
-            .where('case_meetings.organizer_id = :me OR case_meetings.case_ticket_id IN (:visible)', me: @user.id, visible: cases.select(:id))
+            .where('case_meetings.organizer_id = :me OR case_meetings.case_ticket_id IN (:visible) OR case_meetings.id IN (:mine)',
+                   me: @user.id, visible: cases.select(:id), mine: CaseMeetingParticipant.where(user_id: @user.id).select(:case_meeting_id))
             .find(id)
   end
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_20_200000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -591,6 +591,21 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_20_200000) do
     t.index ["account_id", "counter_key"], name: "index_case_folio_counters_on_account_id_and_counter_key", unique: true
   end
 
+  create_table "case_meeting_participants", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_meeting_id", null: false
+    t.bigint "user_id", null: false
+    t.string "status", default: "invited", null: false
+    t.string "note"
+    t.datetime "responded_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_meeting_participants_on_account_id"
+    t.index ["case_meeting_id", "user_id"], name: "index_meeting_participants_on_meeting_and_user", unique: true
+    t.index ["case_meeting_id"], name: "index_case_meeting_participants_on_case_meeting_id"
+    t.index ["user_id"], name: "index_case_meeting_participants_on_user_id"
+  end
+
   create_table "case_meeting_series", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "case_ticket_id", null: false
@@ -658,6 +673,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_20_200000) do
     t.datetime "arrived_at"
     t.jsonb "arrival_location", default: {}, null: false
     t.string "cancel_reason"
+    t.datetime "participants_reminded_at"
     t.index ["account_id", "starts_at"], name: "index_case_meetings_on_account_id_and_starts_at"
     t.index ["account_id", "starts_at"], name: "index_case_meetings_on_visits", where: "is_visit"
     t.index ["case_meeting_series_id"], name: "index_case_meetings_on_series_id"
@@ -3242,4 +3258,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_20_200000) do
     "NEW.display_id := nextval('camp_dpid_seq_' || NEW.account_id);"
   end
 
+  add_foreign_key "case_meeting_participants", "accounts"
+  add_foreign_key "case_meeting_participants", "case_meetings", on_delete: :cascade
+  add_foreign_key "case_meeting_participants", "users", on_delete: :cascade
 end

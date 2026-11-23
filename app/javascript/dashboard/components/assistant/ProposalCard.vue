@@ -920,6 +920,9 @@ export default {
     <p v-if="labels.assignee" class="m-0 text-xs text-slate-500">
       {{ t('ASSIGNEE') }}: {{ labels.assignee }}
     </p>
+    <p v-if="labels.participants" class="m-0 text-xs text-slate-500">
+      {{ $t('AGENDA_PARTICIPANTS.LABEL') }}: {{ labels.participants }}
+    </p>
     <p
       v-if="type === 'meeting' && labels.google"
       class="m-0 text-xs text-slate-500"

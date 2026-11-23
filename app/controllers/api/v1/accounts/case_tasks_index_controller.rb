@@ -88,6 +88,11 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
     end
   end
 
+  # De quién es el día que se ve («Día de:» de otro, o el propio).
+  def day_user_id
+    @day_user_id ||= params[:assignee_id].to_s.match?(/\A\d+\z/) ? params[:assignee_id].to_i : current_user&.id
+  end
+
   # Plan-Bandeja-Prioridad F1 — «Mi día»: la agenda de hoy y la carga del día.
   def my_day_meta(result)
     return {} unless result.key?(:agenda)
@@ -144,7 +149,9 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
   def meeting_row_json(meeting)
     meeting_json(meeting).merge(
       item_type: 'meeting',
-      case_ticket: ticket_context(meeting.case_ticket)
+      case_ticket: ticket_context(meeting.case_ticket),
+      # Agenda: la persona del día la ve por ser participante (no responsable): «Participas» y «No puedo ir».
+      participating: meeting.organizer_id != day_user_id && meeting.participants.any? { |p| p.user_id == day_user_id }
     ).merge(agenda_client(meeting))
   end
 

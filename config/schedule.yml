@@ -303,3 +303,9 @@ prospect_lists_cleanup_job:
   cron: '45 3 * * *'
   class: 'ProspectLists::CleanupJob'
   queue: scheduled_jobs
+
+# Agenda: recordatorio a los participantes de las tareas agendadas que empiezan en la próxima media hora
+meeting_participants_reminder_job:
+  cron: '*/5 * * * *'
+  class: 'Cases::MeetingParticipantsReminderJob'
+  queue: scheduled_jobs
