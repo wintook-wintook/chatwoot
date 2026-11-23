@@ -80,7 +80,20 @@ RSpec.describe 'Motor2 campaigns API' do
     expect(copy.tracking_template.customer_display_name).to eq('Beto')
   end
 
-  it 'no guarda sin vendedor o con un canal que no es WhatsApp ni correo' do
+  it 'se guarda en cualquier momento, aun sin canal; la revisión lo pide y no deja lanzar' do
+    post api, params: { name: 'A medias', brief: { kind: 'offer' } }, headers: headers, as: :json
+    expect(response).to have_http_status(:ok)
+    campaign = TrackingCampaign.find(response.parsed_body['id'])
+    expect(campaign).to have_attributes(status: 'saved', inbox_id: nil)
+    expect(campaign.tracking_template).to be_present
+
+    get "#{api}/#{campaign.id}/check", headers: headers
+    expect(response.parsed_body['items'].find { |i| i['key'] == 'channel' }['level']).to eq('error')
+    get "/api/v1/accounts/#{account.id}/tracking_campaigns", headers: headers
+    expect(response).to have_http_status(:ok)
+  end
+
+  it 'no guarda con un canal que no es WhatsApp ni correo' do
     post api, params: body(inbox_id: create(:inbox, account: account).id), headers: headers, as: :json
     expect(response.parsed_body['error']).to include('WhatsApp o de correo')
   end

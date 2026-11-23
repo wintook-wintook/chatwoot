@@ -54,7 +54,12 @@ class TrackingCampaigns::Motor2Form
     @inbox ||= self.class.inboxes(@account).find_by(id: @params[:inbox_id])
   end
 
-  def inbox_error = inbox ? nil : 'Elige el canal: una bandeja de WhatsApp o de correo.'
+  # Sin canal se guarda igual (la revisión antes de lanzar lo pide); uno que no es WhatsApp ni correo, no.
+  def inbox_error
+    return nil if @params[:inbox_id].blank? || inbox
+
+    'Elige el canal: una bandeja de WhatsApp o de correo.'
+  end
 
   def attributes
     brief = TrackingCampaigns::Motor2Brief.brief(@params[:brief])
@@ -93,7 +98,7 @@ class TrackingCampaigns::Motor2Form
   end
 
   def subjects
-    return { email_subject: nil, email_subject_b: nil } unless inbox.email?
+    return { email_subject: nil, email_subject_b: nil } unless inbox&.email?
 
     { email_subject: @params[:email_subject].to_s.strip.first(TrackingCampaigns::EmailSubject::MAX_LENGTH).presence,
       email_subject_b: @params[:email_subject_b].to_s.strip.first(TrackingCampaigns::EmailSubject::MAX_LENGTH).presence }

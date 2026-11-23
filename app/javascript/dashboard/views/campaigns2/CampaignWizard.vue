@@ -254,7 +254,8 @@ export default {
     errors() {
       return this.checks.filter(c => c.level === 'error');
     },
-    canSave() {
+    // Contar la audiencia, subir una lista, simular y la prueba real necesitan el canal.
+    hasChannel() {
       return !!this.form.inbox_id;
     },
     // «Más tarde» necesita una fecha futura, y el fin va después del inicio.
@@ -499,11 +500,8 @@ export default {
         .join(' — ')
         .slice(0, 120);
     },
+    // Se guarda en cualquier momento (aunque falte el canal): lo que falte lo marca «Revisar y lanzar».
     async save() {
-      if (!this.canSave) {
-        useAlert(this.t('NEEDS_SELLER_AND_CHANNEL'));
-        return false;
-      }
       this.saving = true;
       try {
         const { data } = this.campaignId
@@ -557,7 +555,7 @@ export default {
       }
     },
     async loadPreview() {
-      if (this.continuous || !this.filterPayload.length || !this.canSave) {
+      if (this.continuous || !this.filterPayload.length || !this.hasChannel) {
         this.preview = null;
         return;
       }
@@ -1063,13 +1061,13 @@ export default {
                     size="small"
                     icon="arrow-upload"
                     :is-loading="uploading"
-                    :disabled="!listFile || !canSave"
+                    :disabled="!listFile || !hasChannel"
                     @click="uploadList"
                   >
                     {{ t('LIST.UPLOAD') }}
                   </woot-button>
                 </div>
-                <p v-if="!canSave" class="m-0 text-xs text-amber-700">
+                <p v-if="!hasChannel" class="m-0 text-xs text-amber-700">
                   {{ t('LIST.NEEDS_SELLER') }}
                 </p>
               </template>
@@ -1110,7 +1108,7 @@ export default {
               v-if="!continuous && !isList && sourceType !== 'campaign'"
               class="p-3 rounded-md bg-slate-25 dark:bg-slate-800"
             >
-              <p v-if="!canSave" class="m-0 text-xs text-amber-700">
+              <p v-if="!hasChannel" class="m-0 text-xs text-amber-700">
                 {{ t('AUDIENCE.NEEDS_CHANNEL') }}
               </p>
               <p v-else-if="previewLoading" class="m-0 text-xs text-slate-500">
@@ -1529,7 +1527,7 @@ export default {
             class="flex-1"
             :payload="chatPayload"
             :opener="opener"
-            :disabled="!canSave"
+            :disabled="!hasChannel"
           />
           <template v-else>
             <div
@@ -1558,21 +1556,21 @@ export default {
               :campaign-id="campaignId"
               :save="save"
               :payload="chatPayload"
-              :disabled="!canSave"
+              :disabled="!hasChannel"
             />
             <CampaignChat
               v-else-if="testTab === 'chat'"
               class="flex-1"
               :payload="chatPayload"
               :opener="opener"
-              :disabled="!canSave"
+              :disabled="!hasChannel"
             />
             <CampaignTestRun
               v-else
               :campaign-id="campaignId"
               :save="save"
               :is-whatsapp="isWhatsapp"
-              :disabled="!canSave"
+              :disabled="!hasChannel"
             />
           </template>
         </div>
@@ -1581,12 +1579,7 @@ export default {
       <div
         class="flex flex-wrap justify-end gap-2 pt-3 mt-2 border-t shrink-0 border-slate-100 dark:border-slate-700"
       >
-        <woot-button
-          variant="clear"
-          :is-loading="saving"
-          :disabled="!canSave"
-          @click="saveDraft"
-        >
+        <woot-button variant="clear" :is-loading="saving" @click="saveDraft">
           {{ t('SAVE_DRAFT') }}
         </woot-button>
         <woot-button
