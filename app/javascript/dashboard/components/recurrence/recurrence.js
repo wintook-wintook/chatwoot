@@ -36,6 +36,19 @@ export const recurrencePayload = value => ({
   time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 });
 
+// Tarea que se repite dentro de un caso (TicketTasks): lo del formulario de la tarea + cada cuánto. Empieza el día
+// «Programada para» o, si no hay, hoy.
+export const caseRecurrencePayload = (form, recurrence, ticketId, today) => ({
+  title: (form.title || '').trim(),
+  description: (form.description || '').trim() || undefined,
+  priority: form.priority || 'medium',
+  estimated_minutes: form.estimated_minutes || null,
+  assignee_id: form.assignee_id || undefined,
+  case_ticket_id: ticketId,
+  starts_on: form.planned_on || today,
+  ...recurrencePayload(recurrence),
+});
+
 // El texto corto para la lista y la confirmación. `vm`: el componente (su $t y $tc).
 export const describeRecurrence = (rec, vm) => {
   const t = (key, params) => vm.$t(key, params);

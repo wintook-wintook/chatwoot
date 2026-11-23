@@ -833,7 +833,10 @@
         "ESTIMATE_LABEL": "Duración estimada",
         "ESTIMATE_NONE": "Sin estimar",
         "PLANNED_LABEL": "Programada para",
-        "PLANNED_AFTER_DUE": "Queda después del vencimiento: se entregará tarde."
+        "PLANNED_AFTER_DUE": "Queda después del vencimiento: se entregará tarde.",
+        "REPEATS": "Se repite",
+        "REPEATS_SAVED": "Listo: se repite {when}.",
+        "REPEATS_ERROR": "No se pudo programar la tarea."
       },
       "ADD_NOTE": "Agregar nota",
       "REFRESH": "Actualizar",
@@ -3588,7 +3591,6 @@
     "TITLE": "Tareas que se repiten",
     "SUBTITLE": "Tareas fijas que Kontrolya vuelve a crear solas cada cierto tiempo. Cada vez salen en el Mi día del responsable y se concluyen con su reporte.",
     "REPEATS": "Se repite",
-    "REPEATS_HINT": "Kontrolya la vuelve a crear sola cada vez que toca.",
     "MODE_FIXED": "En fecha fija",
     "MODE_FIXED_HINT": "Toca en su fecha aunque no se haya hecho la anterior (p. ej. cada lunes).",
     "MODE_AFTER_DONE": "Después de hacerla",
