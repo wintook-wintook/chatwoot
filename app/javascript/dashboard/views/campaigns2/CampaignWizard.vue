@@ -15,6 +15,7 @@ import EmailEditor from './EmailEditor.vue';
 import CampaignChat from './CampaignChat.vue';
 import CampaignSimulator from './CampaignSimulator.vue';
 import CampaignTestRun from './CampaignTestRun.vue';
+import CampaignFiles from './CampaignFiles.vue';
 
 // En «Revisar»: probar la campaña completa, no solo al vendedor.
 const TEST_TABS = ['simulate', 'chat', 'real'];
@@ -88,6 +89,7 @@ export default {
     CampaignChat,
     CampaignSimulator,
     CampaignTestRun,
+    CampaignFiles,
   },
   data() {
     return {
@@ -970,6 +972,13 @@ export default {
                 {{ t('OFFER.ADD_OBJECTION') }}
               </button>
             </template>
+
+            <CampaignFiles
+              :campaign-id="campaignId"
+              :save="save"
+              :attempts="attempts"
+              :kind="kind"
+            />
           </template>
 
           <!-- 3 · Audiencia -->

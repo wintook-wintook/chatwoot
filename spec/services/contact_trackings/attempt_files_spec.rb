@@ -30,7 +30,8 @@ RSpec.describe ContactTrackings::AttemptFiles do
     adjuntar('catalogo')
     adjuntar('garantia')
     template.update!(resources: { 'files' => { 'catalogo' => { 'attempts' => [2] }, 'garantia' => { 'attempts' => [3] } } })
-    tracking = instance_double(ContactTracking, tracking_template: template, conversation: conversation, conversation_id: conversation.id)
+    tracking = instance_double(ContactTracking, tracking_template: template, tracking_campaign: nil, conversation: conversation,
+                                                conversation_id: conversation.id)
 
     expect(described_class.send_for(tracking, 1, sender: bot)).to be_nil
     mensaje = described_class.send_for(tracking, 2, sender: bot)
@@ -43,7 +44,7 @@ RSpec.describe ContactTrackings::AttemptFiles do
     adjuntar('formato')
     template.update!(resources: { 'files' => { 'mapa' => { 'booking' => true },
                                                'formato' => { 'tickets' => ['Soporte'] } } })
-    tracking = instance_double(ContactTracking, tracking_template: template)
+    tracking = instance_double(ContactTracking, tracking_template: template, tracking_campaign: nil)
 
     cita = ContactTrackings::EventFiles.send_for(tracking, :booking, conversation: conversation, sender: bot)
     expect(cita.attachments.first.file.filename.to_s).to eq('mapa.pdf')

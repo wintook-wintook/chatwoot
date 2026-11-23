@@ -76,6 +76,50 @@ RSpec.describe 'Motor2 campaign tests' do
     end
   end
 
+  describe 'Imágenes y archivos de esta oferta' do
+    let(:png) { Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/sample.png'), 'image/png') }
+
+    def upload(rec, extra = {})
+      post "#{api}/#{rec.id}/files", params: { file: png }.merge(extra), headers: headers
+      expect(response).to have_http_status(:created)
+      rec.files.find(response.parsed_body['id'])
+    end
+
+    it 'se suben a la campaña con su regla y van en su toque, antes que los del vendedor' do # rubocop:disable RSpec/MultipleExpectations -- un recorrido
+      rec = campaign
+      file = upload(rec, about: 'Foto de la promo')
+      expect(file).to have_attributes(name: 'sample', tracking_template_id: nil)
+      patch "#{api}/#{rec.id}/files/#{file.id}", params: { rules: { about: 'Foto de la promo', attempts: [2], interest: true } },
+                                                 headers: headers, as: :json
+      expect(file.reload.rules).to include('attempts' => [2], 'interest' => true, 'ask' => false)
+      expect(upload(rec).name).to eq('sample-2') # sin repetir nombre
+
+      tracking = ContactTracking.new(tracking_template: seller, tracking_campaign: rec)
+      expect(ContactTrackings::AttemptFiles.names_for(tracking, 2)).to eq(['sample'])
+      expect(ContactTrackings::AttemptFiles.names_for(tracking, 1)).to eq([])
+      config = Motor2::Config.for(tracking)
+      expect(Motor2::Skills::Files.with_rule(config, 'interest', config.attachments)).to eq(['sample'])
+
+      post "#{api}/#{rec.id}/simulate", params: { contact_id: mario.id }, headers: headers, as: :json
+      expect(response.parsed_body['touches'][1]['files']).to eq(['sample'])
+      expect(response.parsed_body['outcomes'].first['files']).to eq(['sample'])
+    end
+
+    it 'la «Prueba real» usa los de su campaña y «Duplicar» se los lleva' do
+      rec = campaign
+      file = upload(rec)
+      file.update!(rules: { 'attempts' => [1] })
+      copy = account.tracking_campaigns.create!(rec.slice(:tracking_template_id, :inbox_id, :engine, :touches, :brief)
+                                                   .merge(name: 'Prueba', status: 'running', test_of: rec, user: admin))
+      expect(ContactTrackings::AttemptFiles.names_for(ContactTracking.new(tracking_template: seller, tracking_campaign: copy), 1))
+        .to eq(['sample'])
+
+      post "#{api}/#{rec.id}/duplicate", headers: headers, as: :json
+      dup = TrackingCampaign.find(response.parsed_body['id'])
+      expect(dup.files.map { |f| [f.name, f.rules['attempts']] }).to eq([['sample', [1]]])
+    end
+  end
+
   describe 'Prueba real' do
     it 'una copia oculta solo a los contactos de prueba, con toques en minutos; otra prueba termina la anterior' do # rubocop:disable RSpec/MultipleExpectations -- un recorrido
       rec = campaign

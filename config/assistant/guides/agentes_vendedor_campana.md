@@ -5,7 +5,7 @@ areas: [ai_agents]
 category: Agentes IA
 keywords: [objeciones, objeciones de la oferta, relevo de la campana, vendedor de campana, campanas, campana con vendedor ia, toca la puerta, relevo, le interesa, invitar, invitacion a evento, confirmar asistencia, ofrecer, promocion, reactivar, renovar, encuesta de satisfaccion, oferta de ejemplo, probar]
 pages: [ready_agents, ai_agents]
-sources: [app/javascript/dashboard/views/readyAgents/CampaignSellerModal.vue, app/services/motor2/functions/campaign_seller.rb]
+sources: [app/javascript/dashboard/views/readyAgents/CampaignSellerModal.vue, app/services/motor2/functions/campaign_seller.rb, app/javascript/dashboard/views/campaigns2/CampaignFiles.vue]
 reviewed: 2026-11-23
 ---
 ## Para qué sirve
@@ -19,7 +19,7 @@ Agentes IA › Agentes listos: «Editar» en el agente (o crea uno nuevo). Lo co
 - No atiende bandejas: lo creas aquí y lo eliges en Campañas › «Agregar campaña» › «Campaña con Vendedor IA (Motor 2.0)». Un mismo vendedor sirve para muchas campañas: cada campaña trae su oferta, su canal y sus mensajes; el vendedor pone cómo vende (su voz, lo que sabe, el relevo por omisión, las objeciones generales, seguimiento, cotizaciones y archivos). Cada campaña puede cambiar a quién pasa el interesado y agregar las objeciones de su oferta.
 - Pasos del asistente (pestañas arriba): El agente · Tu empresa · Qué sabe · Cómo platica y el relevo (con tus Indicaciones abajo) · Seguimiento · Cotizaciones · Imágenes y archivos. Ya no lleva «Qué ofreces» ni «Canal y toques»: eso va en cada campaña.
 - El vendedor solo se configura: ya no trae oferta de ejemplo ni chat de prueba. Se prueba en la campaña, con su oferta de verdad: en «Revisar y lanzar», «Simular la campaña», «Chatear con el vendedor» o «Prueba real» (ver [[campanas_eventos]]).
-- En «El agente» va la firma de sus correos. En «Cómo platica» eliges con quién agenda citas (los calendarios), que usan las campañas con meta «Agendar cita». Las plantillas de WhatsApp para el seguimiento pasadas las 24 h y el aviso de cita salen de todas tus bandejas de WhatsApp; la revisión de cada campaña avisa si una no está aprobada en la bandeja de esa campaña. Los archivos se pueden ligar a cualquiera de los 6 toques.
+- En «El agente» va la firma de sus correos. En «Cómo platica» eliges con quién agenda citas (los calendarios), que usan las campañas con meta «Agendar cita». Las plantillas de WhatsApp para el seguimiento pasadas las 24 h y el aviso de cita salen de todas tus bandejas de WhatsApp; la revisión de cada campaña avisa si una no está aprobada en la bandeja de esa campaña. «Archivos generales»: los que sirven para cualquier campaña (catálogo, presentación de la empresa, lista de precios); se pueden ligar a cualquiera de los 6 toques. Las imágenes de una oferta van en la campaña (paso «Oferta»); si la campaña y el vendedor tienen un archivo con el mismo nombre, gana el de la campaña.
 - Lo que hace según el tipo de campaña:
   - Ofrecer, Reactivar o Recordar/renovar: despierta el interés con la oferta de la campaña; si le interesa, lo pasa a quien sigue (o le agenda una cita, si la campaña lo pide y hay alguien con Google Calendar).
   - Invitar: con el evento de la campaña (fecha, lugar y liga salen de Eventos). Cuando dice que va (o que no), queda confirmado o cancelado en la lista del evento.

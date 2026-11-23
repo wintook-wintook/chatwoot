@@ -1067,7 +1067,7 @@
         "follow": "Follow-up",
         "instructions": "Instructions",
         "test": "Test and save",
-        "files": "Images and files"
+        "files": "General files"
       },
       "STEP_HINTS": {
         "agent": "Its name and tone.",
@@ -1075,7 +1075,7 @@
         "talk": "Its voice (How your company talks), the default relay, general objections, quotes and your free-text instructions (below).",
         "instructions": "Anything else it should know or do (optional).",
         "test": "The chat starts with the campaign message: reply as your contact would.",
-        "files": "The images and files it sends and when. Test in the chat on the right and save.",
+        "files": "Ones that work for any campaign: catalog, company deck, price list. Images for one offer (the promo photo, the event flyer) go in the campaign, «Offer» step.",
         "follow": "If they reply and go quiet mid-conversation: reminders and timeline; handoff time and appointment reminder.",
         "quote": "If they are interested in the offer and ask for a quote, it builds it with Catalog prices.",
         "business": "Business details and how it talks: your company's or customized for this agent."

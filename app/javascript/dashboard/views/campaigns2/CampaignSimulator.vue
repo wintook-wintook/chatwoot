@@ -226,6 +226,12 @@ export default {
           <p v-else class="m-0 mt-1 text-xs italic text-slate-500">
             {{ t('AI_WRITES') }}
           </p>
+          <p
+            v-if="(touch.files || []).length"
+            class="m-0 mt-1 text-[11px] text-slate-600 dark:text-slate-300"
+          >
+            {{ t('FILES', { names: touch.files.join(', ') }) }}
+          </p>
         </li>
       </ol>
       <p class="m-0 text-xs text-slate-500">{{ t('STOPS_ON_REPLY') }}</p>
@@ -237,6 +243,9 @@ export default {
         <ul class="flex flex-col gap-1 m-0 text-xs list-disc ltr:pl-4 rtl:pr-4">
           <li v-for="o in sim.outcomes" :key="o.kind">
             {{ outcomeText(o) }}
+            <span v-if="(o.files || []).length" class="text-slate-500">
+              {{ t('FILES', { names: o.files.join(', ') }) }}
+            </span>
           </li>
         </ul>
       </div>

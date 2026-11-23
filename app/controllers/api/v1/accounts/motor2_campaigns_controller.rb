@@ -167,11 +167,24 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
   def render_error(message) = render(json: { error: message }, status: :unprocessable_entity)
 
   def copy_of(campaign, name:, audience: nil)
-    Current.account.tracking_campaigns.create!(
+    copy = Current.account.tracking_campaigns.create!(
       campaign.slice(*COPY_FIELDS)
               .merge(name: name.first(120), status: 'saved', user: current_user, scheduled_for: Time.current,
                      audience: audience || campaign.audience, brief: campaign.brief.to_h.except('insights'))
     )
+    copy_files(campaign, copy)
+    copy
+  end
+
+  # Los archivos de la oferta van con la copia (el mismo archivo guardado, sin subirlo otra vez).
+  def copy_files(from, to)
+    from.files.each do |file|
+      next unless file.file.attached?
+
+      copy = to.files.new(account: Current.account, name: file.name, rules: file.rules)
+      copy.file.attach(file.file.blob)
+      copy.save!
+    end
   end
 
   def test_messages

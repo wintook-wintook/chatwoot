@@ -21,18 +21,25 @@
 #  fk_rails_...  (tracking_template_id => tracking_templates.id)
 #
 
+# Del vendedor (tracking_template) o de una Campaña con Vendedor IA (tracking_campaign: «Imágenes y archivos de esta
+# oferta», con su regla en `rules`: { 'about', 'attempts' => [1, 2], 'interest', 'ask', 'confirm' }).
 class AiAgentAttachment < ApplicationRecord
-  belongs_to :tracking_template
+  belongs_to :tracking_template, optional: true
+  belongs_to :tracking_campaign, optional: true
   belongs_to :account
+
+  # Los de la oferta de una campaña (en «Prueba real», los de la campaña de verdad).
+  scope :of_campaign, ->(campaign) { where(tracking_campaign_id: campaign.test_of_id || campaign.id) }
 
   has_one_attached :file
 
   # Slug inequívoco para que el token {{name}} termine sin ambigüedad al parsearse.
   NAME_FORMAT = /\A[a-zA-Z0-9_-]+\z/
 
-  validates :name, presence: true,
-                   length: { minimum: 1, maximum: 60 },
-                   uniqueness: { scope: :tracking_template_id, case_sensitive: false }
+  # Un índice único por dueño (agente o campaña): ai_agent_attachments_on_template_and_name / _on_campaign_and_name.
+  validates :name, presence: true, length: { minimum: 1, maximum: 60 }
+  validates :name, uniqueness: { scope: %i[tracking_template_id tracking_campaign_id], case_sensitive: false } # rubocop:disable Rails/UniqueValidationWithoutIndex
+  validate :owner_present
   validate :name_format
   validate :file_must_be_attached
   validate :whatsapp_limits, on: :create
@@ -44,6 +51,10 @@ class AiAgentAttachment < ApplicationRecord
   DOCUMENT_MB = 100
 
   private
+
+  def owner_present
+    errors.add(:base, 'el archivo es de un agente o de una campaña') if tracking_template.nil? && tracking_campaign.nil?
+  end
 
   def name_format
     return if name.blank? || name.to_s.match?(NAME_FORMAT)

@@ -115,11 +115,13 @@ module ContactTrackings::AgentAttachments
     template&.ai_agent_attachments&.exists? ? HINT : nil
   end
 
-  def signed_ids(template, names)
+  # scope: de dónde se buscan (por omisión, los del agente; con una Campaña con Vendedor IA, también los suyos).
+  def signed_ids(template, names, scope: nil)
+    scope ||= template.ai_agent_attachments
     names.uniq.each_with_object([]) do |name, ids|
       break ids if ids.size >= MAX
 
-      attachment = template.ai_agent_attachments.where('LOWER(name) = ?', name.downcase).first
+      attachment = scope.where('LOWER(name) = ?', name.downcase).order(Arel.sql('tracking_campaign_id IS NULL')).first
       if attachment&.file&.attached?
         ids << attachment.file.blob.signed_id
       else

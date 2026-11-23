@@ -447,7 +447,8 @@
         "no_address": "This contact has no data for the channel: it would not reach them.",
         "opted_out": "This contact asked not to be contacted: it would not reach them.",
         "whatsapp_no_template": "Touches {touches} have no template: if the contact did not write in the last 24 hours, they are not sent."
-      }
+      },
+      "FILES": "📎 {names}"
     },
     "TEST_RUN": {
       "INTRO": "Send the real campaign only to you or your team, with touches every few minutes. Messages arrive, conversations and the relay are created as with a customer. It does not count in the results.",
@@ -493,6 +494,25 @@
       }
     },
     "CREATE_SELLER": "Create seller",
-    "REFRESH_SELLERS": "Done: refresh"
+    "REFRESH_SELLERS": "Done: refresh",
+    "FILES": {
+      "TITLE": "Images and files for this offer",
+      "HINT": "The promo product photo, the event flyer… Say what each one is (the seller cannot see the image) and when it goes. General ones (catalog, company deck) live in the seller.",
+      "ABOUT_PLACEHOLDER": "What it is (e.g. photo of the promo bundle with its price)",
+      "ABOUT_MISSING": "Without a description the seller does not know when to send it.",
+      "TOUCH": "In touch {n}",
+      "WHEN": {
+        "interest": "When they show interest",
+        "ask": "When they ask or it helps",
+        "confirm": "When they confirm the event"
+      },
+      "ADD": "+ Upload images or files",
+      "UPLOADING": "Uploading…",
+      "REMOVE": "Remove",
+      "LIMITS": "Up to 10. WhatsApp accepts JPG or PNG up to 5 MB, video up to 16 MB and PDF up to 100 MB. On WhatsApp, a touch file only goes if the contact wrote in the last 24 h (otherwise the template goes, which can carry its header image). If the seller has one with the same name, the campaign one wins.",
+      "IMAGE_TYPE": "«{name}»: the image must be JPG or PNG.",
+      "UPLOAD_ERROR": "Could not upload the file.",
+      "UPDATE_ERROR": "Could not save the change."
+    }
   }
 }

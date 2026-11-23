@@ -1067,7 +1067,7 @@
         "follow": "Seguimiento",
         "instructions": "Indicaciones",
         "test": "Pruébalo y guarda",
-        "files": "Imágenes y archivos"
+        "files": "Archivos generales"
       },
       "STEP_HINTS": {
         "agent": "Cómo se llama y con qué tono escribe.",
@@ -1075,7 +1075,7 @@
         "talk": "Su voz (Cómo habla tu empresa), el relevo por omisión, las objeciones generales, cotizaciones y tus indicaciones en texto libre (abajo).",
         "instructions": "Algo más que deba saber o hacer (opcional).",
         "test": "El chat empieza con el mensaje de la campaña: contesta como lo haría tu contacto.",
-        "files": "Las imágenes y archivos que manda y cuándo. Prueba en el chat de la derecha y guarda.",
+        "files": "Los que sirven para cualquier campaña: catálogo, presentación de la empresa, lista de precios. Las imágenes de una oferta (la foto de la promoción, el flyer del evento) van en la campaña, paso «Oferta».",
         "follow": "Si contesta y se queda a media plática: los recordatorios y la línea de tiempo; el plazo y el recordatorio de cita.",
         "quote": "Si le interesa la oferta y pide una cotización, la arma con los precios del Catálogo.",
         "business": "Datos del negocio y cómo habla: los de tu empresa o personalizados para este agente."

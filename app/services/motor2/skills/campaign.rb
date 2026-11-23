@@ -183,7 +183,7 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
 
   # Los archivos del agente con esa regla van con el mensaje de este turno.
   def attach_rule(rule)
-    names = Motor2::Skills::Files.with_rule(config.template, rule, config.attachments)
+    names = Motor2::Skills::Files.with_rule(config, rule, config.attachments)
     names.first(Motor2::Skills::Files::MAX_PER_MESSAGE).each { |name| @turn.attach(name) }
   end
 end

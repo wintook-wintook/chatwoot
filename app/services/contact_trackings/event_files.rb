@@ -26,10 +26,10 @@ module ContactTrackings::EventFiles
     nil
   end
 
-  def deliver(template, conversation, nombres, sender)
+  def deliver(template, conversation, nombres, sender, scope: nil)
     return nil if nombres.empty?
 
-    signed = ContactTrackings::AgentAttachments.signed_ids(template, nombres)
+    signed = ContactTrackings::AgentAttachments.signed_ids(template, nombres, scope: scope)
     return nil if signed.empty?
 
     Messages::MessageBuilder.new(sender, conversation,

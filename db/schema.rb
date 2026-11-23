@@ -225,12 +225,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_26_100000) do
   end
 
   create_table "ai_agent_attachments", force: :cascade do |t|
-    t.bigint "tracking_template_id", null: false
+    t.bigint "tracking_template_id"
     t.bigint "account_id", null: false
     t.string "name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "tracking_campaign_id"
+    t.jsonb "rules", default: {}, null: false
     t.index ["account_id"], name: "index_ai_agent_attachments_on_account_id"
+    t.index ["tracking_campaign_id", "name"], name: "index_ai_agent_attachments_on_campaign_and_name", unique: true
+    t.index ["tracking_campaign_id"], name: "index_ai_agent_attachments_on_tracking_campaign_id"
     t.index ["tracking_template_id", "name"], name: "index_ai_agent_attachments_on_template_and_name", unique: true
     t.index ["tracking_template_id"], name: "index_ai_agent_attachments_on_tracking_template_id"
   end
@@ -3138,6 +3142,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_26_100000) do
   add_foreign_key "agent_test_runs", "users", column: "created_by_id"
   add_foreign_key "ai_agent_attachments", "accounts"
   add_foreign_key "ai_agent_attachments", "tracking_templates"
+  add_foreign_key "ai_agent_attachments", "tracking_campaigns", on_delete: :cascade
   add_foreign_key "ai_follow_up_presets", "accounts"
   add_foreign_key "ai_follow_up_presets", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "ai_follow_ups", "accounts"

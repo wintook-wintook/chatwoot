@@ -5,7 +5,8 @@ require 'rails_helper'
 # proyecto@ai_agent_attachments
 RSpec.describe AiAgentAttachment do
   describe 'associations' do
-    it { is_expected.to belong_to(:tracking_template) }
+    it { is_expected.to belong_to(:tracking_template).optional } # o es de una Campaña con Vendedor IA
+    it { is_expected.to belong_to(:tracking_campaign).optional }
     it { is_expected.to belong_to(:account) }
   end
 

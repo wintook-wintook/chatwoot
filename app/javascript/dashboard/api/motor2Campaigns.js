@@ -80,6 +80,26 @@ class Motor2CampaignsAPI extends ApiClient {
   stopTestRun(id) {
     return axios.delete(`${this.url}/${id}/test_run`);
   }
+
+  // «Imágenes y archivos de esta oferta» (Motor2Campaigns::FilesController).
+  files(id) {
+    return axios.get(`${this.url}/${id}/files`);
+  }
+
+  uploadFile(id, file, about) {
+    const data = new FormData();
+    data.append('file', file);
+    if (about) data.append('about', about);
+    return axios.post(`${this.url}/${id}/files`, data);
+  }
+
+  updateFile(id, fileId, rules) {
+    return axios.patch(`${this.url}/${id}/files/${fileId}`, { rules });
+  }
+
+  removeFile(id, fileId) {
+    return axios.delete(`${this.url}/${id}/files/${fileId}`);
+  }
 }
 
 export default new Motor2CampaignsAPI();

@@ -447,7 +447,8 @@
         "no_address": "Este contacto no tiene el dato del canal: no le llegaría.",
         "opted_out": "Este contacto pidió no ser contactado: no le llegaría.",
         "whatsapp_no_template": "Los toques {touches} no tienen plantilla: si el contacto no escribió en las últimas 24 horas, no salen."
-      }
+      },
+      "FILES": "📎 {names}"
     },
     "TEST_RUN": {
       "INTRO": "Manda la campaña de verdad, solo a ti o a tu equipo, con los toques cada pocos minutos. Llegan los mensajes, se crean las conversaciones y el relevo como con un cliente. No cuenta en los resultados.",
@@ -493,6 +494,25 @@
       }
     },
     "CREATE_SELLER": "Crear vendedor",
-    "REFRESH_SELLERS": "Ya lo creé: actualizar"
+    "REFRESH_SELLERS": "Ya lo creé: actualizar",
+    "FILES": {
+      "TITLE": "Imágenes y archivos de esta oferta",
+      "HINT": "La foto del producto en promoción, el flyer del evento… Ponle a cada uno qué es (el vendedor no ve la imagen) y cuándo va. Los generales (catálogo, presentación de la empresa) van en el vendedor.",
+      "ABOUT_PLACEHOLDER": "Qué es (p. ej. foto del paquete en promoción con su precio)",
+      "ABOUT_MISSING": "Sin descripción el vendedor no sabe cuándo mandarla.",
+      "TOUCH": "En el toque {n}",
+      "WHEN": {
+        "interest": "Cuando muestre interés",
+        "ask": "Cuando lo pida o le sirva",
+        "confirm": "Al confirmar el evento"
+      },
+      "ADD": "+ Subir imágenes o archivos",
+      "UPLOADING": "Subiendo…",
+      "REMOVE": "Quitar",
+      "LIMITS": "Hasta 10. WhatsApp acepta JPG o PNG hasta 5 MB, video hasta 16 MB y PDF hasta 100 MB. En WhatsApp, en un toque solo sale si el contacto escribió en las últimas 24 h (si no, va la plantilla, que puede llevar su imagen en el encabezado). Si el vendedor tiene uno con el mismo nombre, gana el de la campaña.",
+      "IMAGE_TYPE": "«{name}»: la imagen debe ser JPG o PNG.",
+      "UPLOAD_ERROR": "No se pudo subir el archivo.",
+      "UPDATE_ERROR": "No se pudo guardar el cambio."
+    }
   }
 }

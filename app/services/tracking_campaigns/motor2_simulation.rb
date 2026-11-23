@@ -35,8 +35,15 @@ class TrackingCampaigns::Motor2Simulation
 
   def touches
     (1..attempts).map do |n|
-      { n: n, wait: wait(n) }.merge(whatsapp? ? whatsapp_touch(n) : email_touch(n))
+      { n: n, wait: wait(n), files: touch_files(n) }.merge(whatsapp? ? whatsapp_touch(n) : email_touch(n))
     end
+  end
+
+  # Los archivos que van con el toque n: los de la oferta y los del vendedor (en WhatsApp, solo si la ventana de 24 h
+  # está abierta; con plantilla va la plantilla sola).
+  def touch_files(touch)
+    tracking = ContactTracking.new(tracking_template: @seller, tracking_campaign: @campaign)
+    @seller ? ContactTrackings::AttemptFiles.names_for(tracking, touch) : []
   end
 
   # Cuánto después del primero sale el toque n (nil el primero).
@@ -89,10 +96,16 @@ class TrackingCampaigns::Motor2Simulation
     @function ||= @seller && Motor2::Config.new(@seller, answers: TrackingCampaigns::Motor2Brief.seller_answers(@campaign)).function
   end
 
+  # «Le interesa» también manda los de «cuando muestre interés».
+  def interest_files
+    config = Motor2::Config.new(@seller, campaign: @campaign)
+    Motor2::Skills::Files.with_rule(config, 'interest', config.attachments).first(Motor2::Skills::Files::MAX_PER_MESSAGE)
+  end
+
   def outcomes
     return [] unless function.respond_to?(:survey?)
 
-    list = [interested, { kind: 'discarded' }, { kind: 'handoff', to: person_name(function.handoff_target) }]
+    list = [interested.merge(files: interest_files), { kind: 'discarded' }, { kind: 'handoff', to: person_name(function.handoff_target) }]
     list << { kind: 'later' } unless function.survey?
     list << { kind: 'done' } if function.survey? || function.invite?
     list << { kind: 'no_reply', attempts: attempts }
