@@ -2,6 +2,8 @@ import QuickTaskModal from '../QuickTaskModal.vue';
 import AgendaItemsAPI from 'dashboard/api/agendaItems';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import QuickTasksAPI from 'dashboard/api/quickTasks';
+import TaskRecurrencesAPI from 'dashboard/api/taskRecurrences';
+import { defaultRecurrence } from 'dashboard/components/recurrence/recurrence';
 
 vi.mock('dashboard/api/agendaItems', () => ({
   default: { create: vi.fn().mockResolvedValue({}), cases: vi.fn() },
@@ -11,6 +13,9 @@ vi.mock('dashboard/api/caseTasks', () => ({
 }));
 vi.mock('dashboard/api/quickTasks', () => ({
   default: { create: vi.fn().mockResolvedValue({}) },
+}));
+vi.mock('dashboard/api/taskRecurrences', () => ({
+  default: { create: vi.fn().mockResolvedValue({ data: {} }) },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
@@ -22,6 +27,9 @@ const context = data => ({
   description: '',
   assigneeId: 5,
   participantIds: [],
+  repeats: false,
+  recurrence: defaultRecurrence(),
+  $tc: key => key,
   dueDate: '',
   plannedDate: '2026-11-10',
   time: '',
@@ -53,6 +61,31 @@ describe('QuickTaskModal', () => {
     });
     expect(new Date(payload.due_at).getDate()).toBe(12);
     expect(ctx.$emitter.emit).toHaveBeenCalledWith('agendaChanged');
+  });
+
+  it('«Se repite» crea la tarea que se repite, no una tarea suelta', async () => {
+    const recurrence = { ...defaultRecurrence(), weekdays: [1, 4] };
+    await methods.submit.call(
+      context({ repeats: true, recurrence, time: '09:00', contact: { id: 7 } })
+    );
+    expect(TaskRecurrencesAPI.create.mock.calls[0][0]).toMatchObject({
+      title: 'Llamar',
+      starts_on: '2026-11-10',
+      at_time: '09:00',
+      mode: 'fixed',
+      unit: 'week',
+      weekdays: [1, 4],
+      contact_id: 7,
+      assignee_id: 5,
+    });
+    expect(AgendaItemsAPI.create).not.toHaveBeenCalled();
+    expect(QuickTasksAPI.create).not.toHaveBeenCalled();
+  });
+
+  it('«Se repite» cada semana sin días no se guarda', async () => {
+    const recurrence = { ...defaultRecurrence(), weekdays: [] };
+    await methods.submit.call(context({ repeats: true, recurrence }));
+    expect(TaskRecurrencesAPI.create).not.toHaveBeenCalled();
   });
 
   it('con hora manda los participantes, sin repetir al responsable', async () => {

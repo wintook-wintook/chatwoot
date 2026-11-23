@@ -257,11 +257,12 @@ describe('Menú v2', () => {
     );
   });
 
-  it('Agenda: Tareas (abre en Mi día), Calendario, Reportes y Ruta de campo', () => {
+  it('Agenda: Tareas (abre en Mi día), Calendario, Tareas que se repiten, Reportes y Ruta de campo', () => {
     const agenda = menuFor(route('gestorTickets_tasks'));
     expect(agenda.menuItems.map(i => i.label)).toEqual([
       'TASKS_V2',
       'CALENDAR',
+      'RECURRING_TASKS',
       'TASK_REPORTS',
       'FIELD_ROUTE',
     ]);

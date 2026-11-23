@@ -44,6 +44,7 @@ class Account < ApplicationRecord
   has_many :case_tickets, dependent: :destroy # @tickets_cases
   has_many :case_tasks, dependent: :destroy # Plan-Agenda — incluye las que no tienen caso
   has_many :case_meetings, dependent: :destroy
+  has_many :task_recurrences, dependent: :destroy # Tareas que se repiten
   has_many :task_outcomes, dependent: :destroy # Reporte de cierre
   has_many :task_reports, dependent: :destroy
   has_many :access_roles, dependent: :destroy # Plan-Roles-Permisos

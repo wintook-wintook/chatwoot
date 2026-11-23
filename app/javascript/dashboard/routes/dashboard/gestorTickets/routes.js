@@ -204,6 +204,14 @@ export const routes = [
     component: () => import('../../../views/gestorTickets/TaskReports.vue'),
   },
   {
+    // Tareas que se repiten: tareas fijas que se vuelven a crear cada cierto tiempo.
+    path: frontendURL('accounts/:accountId/tickets/recurring-tasks'),
+    name: 'gestorTickets_recurring_tasks',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () =>
+      import('../../../views/gestorTickets/recurring/RecurringTasks.vue'),
+  },
+  {
     path: frontendURL('accounts/:accountId/tickets/task-outcomes'),
     name: 'gestorTickets_task_outcomes',
     meta: { permissions: ['administrator'] },

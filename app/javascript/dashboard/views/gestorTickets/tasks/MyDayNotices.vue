@@ -77,6 +77,8 @@ export default {
         this.$router.push(
           `/app/accounts/${accountId}/conversations/${link.id}`
         );
+      } else if (link.kind === 'recurring') {
+        this.$router.push({ name: 'gestorTickets_recurring_tasks' });
       }
     },
     when(ts) {

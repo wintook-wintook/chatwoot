@@ -220,13 +220,16 @@ RSpec.describe 'Agenda Visits API' do
   end
 
   describe 'lista de verificación de una orden' do
-    it 'no pide reporte por punto; una tarea de otro caso sí' do
+    it 'palomeada en la lista no pide reporte por punto; concluida desde Tareas o el caso, sí' do
       type = CaseType.create!(account: account, name: 'Orden', color: '#000000', case_class: :work_order)
       order = CaseTicket.create!(account: account, contact: contact, case_type: type, title: 'Orden')
       task = CaseTask.create!(account: account, case_ticket: order, title: 'Revisar', assignee: vendor)
+      url = "#{api}/case_tickets/#{order.id}/tasks/#{task.id}"
 
-      patch "#{api}/case_tickets/#{order.id}/tasks/#{task.id}", params: { case_task: { status: 'done' } }, headers: headers, as: :json
+      patch url, params: { case_task: { status: 'done' } }, headers: headers, as: :json
+      expect(task.reload).to be_pending
 
+      patch url, params: { case_task: { status: 'done' }, service_checklist: true }, headers: headers, as: :json
       expect(task.reload).to be_done
     end
   end
