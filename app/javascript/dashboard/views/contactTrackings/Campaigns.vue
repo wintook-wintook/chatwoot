@@ -142,12 +142,6 @@ export default {
             <div class="flex flex-col leading-5">
               <span class="font-medium text-woot-600 dark:text-woot-400">
                 {row.name}
-                {/* Campaña con Vendedor IA (Motor 2.0) */}
-                {row.engine === '2' ? (
-                  <span class="ml-1 px-1.5 text-[10px] font-semibold rounded bg-woot-50 text-woot-700 dark:bg-woot-800 dark:text-woot-100">
-                    {this.$t('CAMPAIGNS2.BADGE')}
-                  </span>
-                ) : null}
               </span>
               {/* Plan-Eventos E3 — la campaña de un evento y con qué estado */}
               {row.event_name ? (
