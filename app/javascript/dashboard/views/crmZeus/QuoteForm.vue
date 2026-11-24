@@ -295,7 +295,8 @@ export default {
       this.contacts = contacts.data.contacts;
       this.consignees = consignees ? consignees.data.consignees : [];
     },
-    // Al elegir la organización se proponen sus datos (como CRMZeus).
+    // Al elegir la organización se proponen sus datos (como CRMZeus), incluidos el contacto y
+    // el consignatario por omisión (Crm::QuoteDefaults).
     async pickOrganization(org) {
       try {
         const { data } = await CrmQuotes.draft(org.id);
@@ -303,8 +304,8 @@ export default {
         this.organization = defaults.organization;
         Object.assign(this.quote, {
           organization_id: org.id,
-          contact_id: '',
-          shipping_address_id: '',
+          contact_id: blank(defaults.contact_id),
+          shipping_address_id: blank(defaults.shipping_address_id),
           seller_id: blank(defaults.seller_id),
           payment_term_id: blank(defaults.payment_term_id),
           cfdi_use: blank(defaults.cfdi_use),

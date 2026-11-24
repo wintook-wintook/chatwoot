@@ -40,7 +40,8 @@ class Api::V1::Accounts::Crm::QuotesController < Api::V1::Accounts::Crm::BaseCon
   def new
     quote = quotes.new(organization: params[:organization_id].presence && organizations.find(params[:organization_id]),
                        created_by: Current.user)
-    render json: { quote: Crm::QuoteJson.draft(quote.fill_from_organization.preview), series: series_json }
+    Crm::QuoteDefaults.new(quote.fill_from_organization).apply
+    render json: { quote: Crm::QuoteJson.draft(quote.preview), series: series_json }
   end
 
   def create

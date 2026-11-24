@@ -54,6 +54,56 @@ RSpec.describe 'CrmZeus Quotes API' do
                                                      'charge_taxes' => true, 'withholds_taxes' => false)
   end
 
+  describe 'valores por omisión del alta (Q3.1)' do
+    def contact(name)
+      create(:contact, account: account, name: name).tap { |row| organization.contact_links.create!(contact: row) }
+    end
+
+    def draft(params = { organization_id: organization.id })
+      get "#{url}/new", params: params, headers: agent.create_new_auth_token, as: :json
+      response.parsed_body['quote']
+    end
+
+    it 'vigencia y entrega hoy, aun sin organización' do
+      expect(draft({})).to include('valid_until' => Time.zone.today.iso8601, 'delivery_date' => Time.zone.today.iso8601,
+                                   'contact_id' => nil, 'shipping_address_id' => nil)
+    end
+
+    it 'con un solo contacto y un solo consignatario, esos' do
+      ana = contact('Ana López')
+      bodega = organization.consignees.create!(consignee_name: 'Bodega', street: 'Calle 5')
+
+      expect(draft).to include('contact_id' => ana.id, 'shipping_address_id' => bodega.id)
+    end
+
+    it 'con varios, ninguno; pero el contacto de la última cotización si sigue ligado' do
+      ana = contact('Ana López')
+      beto = contact('Beto Ruiz')
+      2.times { |n| organization.consignees.create!(consignee_name: "Bodega #{n}", street: 'Calle 5') }
+      expect(draft).to include('contact_id' => nil, 'shipping_address_id' => nil)
+
+      create_quote(agent, contact_id: beto.id, quote_date: 3.days.ago.to_date)
+      create_quote(agent, contact_id: ana.id)
+      expect(draft['contact_id']).to eq(ana.id)
+
+      organization.contact_links.find_by!(contact: ana).destroy!
+      expect(draft['contact_id']).to eq(beto.id)
+    end
+
+    it 'un prospecto no lleva consignatario' do
+      organization.update!(organization_type: :prospect)
+      organization.consignees.create!(consignee_name: 'Bodega', street: 'Calle 5')
+
+      expect(draft['shipping_address_id']).to be_nil
+    end
+
+    it 'al guardar no se ponen: el agente los puede dejar vacíos' do
+      contact('Ana López')
+
+      expect(create_quote(agent, contact_id: nil)).to include('contact_id' => nil)
+    end
+  end
+
   it 'calcula sin guardar, ignorando los totales que manda el navegador' do
     post "#{url}/calculate", params: { quote: payload(extra_discount_value: 2, total: 1) },
                              headers: agent.create_new_auth_token, as: :json

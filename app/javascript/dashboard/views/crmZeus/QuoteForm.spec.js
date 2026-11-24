@@ -90,6 +90,26 @@ describe('CrmZeusQuoteForm', () => {
     expect(wrapper.text()).not.toContain('LAU000125');
   });
 
+  it('al elegir la organización toma el contacto y el consignatario por omisión', async () => {
+    const wrapper = montar({ query: {} });
+    await flushPromises();
+    CrmQuotes.draft.mockResolvedValue({
+      data: {
+        quote: { ...DRAFT, contact_id: 21, shipping_address_id: 31 },
+        series: null,
+      },
+    });
+
+    await wrapper.vm.pickOrganization({ id: 7 });
+
+    expect(CrmQuotes.draft).toHaveBeenLastCalledWith(7);
+    expect(wrapper.vm.quote).toMatchObject({
+      organization_id: 7,
+      contact_id: 21,
+      shipping_address_id: 31,
+    });
+  });
+
   it('bloquea el vendedor si la organización lo respeta (RESPETAR_VENDEDOR)', async () => {
     const wrapper = montar();
     await flushPromises();
