@@ -149,6 +149,27 @@ Si el portal se archiva o le cambian el slug, Dali se queda sin guías **en toda
 - `read_guide` sigue regresando `url` con `GuidePublisher.article_url` (usa el slug nuevo).
 - Separar la lectura de archivos en un método (`load_files`) para el respaldo del paso 7 y para la migración.
 
+> **✅ Paso 5 hecho (2026-11-23)** — con el respaldo del paso 7 incluido.
+>
+> - **Qué se hizo:** `Assistant::Guides.all` → `load_all`: primero `load_portal` (nuevo
+>   `app/services/assistant/guide_portal_source.rb`: artículos `published`, `locale: 'es'`, con `meta.guide_key`,
+>   ordenados por clave = mismo orden que los archivos); si no hay portal o no tiene guías → `load_files` (los `.md`)
+>   y un aviso en el log **una sola vez** por proceso. Sin `Current.account` ni id de cuenta.
+>   `search`/`find`/`score`/`stem`/`sound`/`summary`/`visible_to?` sin cambios.
+> - **`GuidePublisher` publica siempre desde `load_files`** (si usara `all` copiaría el portal sobre sí mismo).
+> - **Caché:** en producción sigue `@all ||=` (fijo hasta reiniciar: paso 6); en dev y test se lee en cada llamada.
+>   Hoy prod no tiene portal ⇒ sigue con los `.md`, sin cambio.
+> - **Paridad medida en dev (solo lectura):** 54 = 54, mismo orden, todos los campos iguales salvo el texto de
+>   `vista_bandeja` (editado en el navegador al probar el paso 3). `search` con 158 preguntas (gaps + mensajes de
+>   `assistant_threads` + keywords + títulos) × 11 permisos (admin, sin áreas, cada área): **0 diferencias**.
+>   Script: scratchpad `paridad_guias.rb` (base para el rake del paso 13).
+> - **Visto en vivo (paso 10):** al guardar desde la pantalla, el editor agrega línea en blanco tras cada `##` y
+>   cambia viñetas `-` por `*`. El contenido y la búsqueda quedan iguales (`normalize` idéntico).
+> - **Pruebas:** `guides_spec.rb` (+3): sin portal ⇒ archivos; con portal ⇒ solo publicados con clave, en orden,
+>   todos los campos, y se encuentra desde otra cuenta; portal vacío ⇒ archivos. Las pruebas de «los archivos»
+>   leen `load_files`. 65 verdes (guides, guide_tools, publisher, freshness, dali_guide_articles, academy/board).
+>   `rake assistant:guides:check` en dev: «Guías en orden» (ya sobre el portal).
+
 ### Paso 6. Caché que se vacía al editar
 
 Hoy en producción `@all ||=` deja las guías fijas hasta reiniciar Puma.

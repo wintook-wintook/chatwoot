@@ -85,7 +85,8 @@ class Assistant::GuidePublisher
     end
   end
 
-  def initialize(portal: self.class.portal, author: nil, guides: Assistant::Guides.all)
+  # Siempre desde los archivos: Guides.all ya puede venir del mismo portal.
+  def initialize(portal: self.class.portal, author: nil, guides: Assistant::Guides.load_files)
     raise ArgumentError, "No existe el portal «#{self.class.portal_slug}» (rake assistant:guides:portal)" unless portal
 
     @portal = portal
