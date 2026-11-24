@@ -18,18 +18,37 @@
 module ContactTrackings::AttemptFiles
   module_function
 
+  # Campaña con Vendedor IA: primero los archivos de la oferta para ese toque, luego los del vendedor.
+  def names_for(tracking, numero)
+    (campaign_names(tracking, numero) + tracking.tracking_template.files_for_attempt(numero)).uniq
+  end
+
+  def campaign_names(tracking, numero)
+    campaign = tracking.tracking_campaign
+    return [] unless campaign&.motor2?
+
+    campaign.offer_files.select { |f| Array(f.rules.to_h['attempts']).map(&:to_i).include?(numero.to_i) }.map(&:name)
+  end
+
+  def scope_for(tracking)
+    campaign = tracking.tracking_campaign
+    return nil unless campaign&.motor2?
+
+    AiAgentAttachment.where(tracking_template_id: tracking.tracking_template_id).or(AiAgentAttachment.of_campaign(campaign))
+  end
+
   # numero: el intento que se acaba de mandar (1, 2, …). Regresa el mensaje o nil.
   def send_for(tracking, numero, sender:)
     template = tracking.tracking_template
     return nil if template.nil?
 
-    nombres = template.files_for_attempt(numero)
+    nombres = names_for(tracking, numero)
     return nil if nombres.empty?
 
     conversation = tracking.conversation || Conversation.find_by(id: tracking.conversation_id)
     return nil if conversation.nil?
 
-    ContactTrackings::EventFiles.deliver(template, conversation, nombres, sender)
+    ContactTrackings::EventFiles.deliver(template, conversation, nombres, sender, scope: scope_for(tracking))
   rescue StandardError => e
     Rails.logger.error "[ContactTracking] 📎 no se mandaron los archivos del intento #{numero}: #{e.message}"
     nil
@@ -41,8 +60,8 @@ module ContactTrackings::AttemptFiles
     template = tracking.tracking_template
     return [] if template.nil?
 
-    nombres = template.files_for_attempt(numero)
-    nombres.empty? ? [] : ContactTrackings::AgentAttachments.signed_ids(template, nombres)
+    nombres = names_for(tracking, numero)
+    nombres.empty? ? [] : ContactTrackings::AgentAttachments.signed_ids(template, nombres, scope: scope_for(tracking))
   rescue StandardError => e
     Rails.logger.error "[ContactTracking] 📎 no se tomaron los archivos del intento #{numero}: #{e.message}"
     []

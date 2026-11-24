@@ -55,7 +55,20 @@ module ContactTrackings::EmailBounce
       note(tracking, contact, reason)
       TrackingCampaigns::BounceGuard.check(tracking.tracking_campaign) # Campaña con Vendedor IA: pausa si rebota mucho
     end
+    mark_finished(contact)
     Rails.logger.info "[EmailBounce] Contacto ##{contact.id}: rebotó #{contact.email} (#{reason})"
+  end
+
+  # Campaña con Vendedor IA: el rebote del ÚLTIMO toque llega con el seguimiento ya terminado; también cuenta como
+  # rebote (si no, BounceGuard nunca pausa una campaña de un solo toque). Solo los de la última semana.
+  def mark_finished(contact)
+    done = contact.contact_trackings.joins(:inbox, :tracking_campaign)
+                  .where(status: 'completed', prospect_exit: nil, inboxes: { channel_type: 'Channel::Email' }, tracking_campaigns: { engine: '2' })
+                  .where('contact_trackings.last_attempt_at > ?', 7.days.ago)
+    done.find_each do |tracking|
+      tracking.update_column(:prospect_exit, 'bounced') # rubocop:disable Rails/SkipsModelValidations
+      TrackingCampaigns::BounceGuard.check(tracking.tracking_campaign)
+    end
   end
 
   def note(tracking, contact, reason)

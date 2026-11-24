@@ -3,7 +3,8 @@
 # Campaña con Vendedor IA — guardar lo que llega del asistente (Motor2CampaignWizard) en una TrackingCampaign
 # engine '2'. Nace Guardada (saved); ponerla en curso es TrackingCampaigns::Launch, como la 1.0.
 #
-#   params: name, tracking_template_id (un «Vendedor de campaña»), inbox_id (WhatsApp o correo), mode batch|continuous,
+#   params: name, attend { … } (cómo atiende: la campaña arma su agente, TrackingCampaigns::CampaignAgent),
+#           inbox_id (WhatsApp o correo), mode batch|continuous,
 #           brief {…}, touches {…} (TrackingCampaigns::Motor2Brief), audience { source, filter_payload,
 #           excluded_contact_ids, contact_ids }, event_status, scheduled_for, ends_at, entry_delay_minutes,
 #           respect_working_hours, daily_cap, email_subject, email_subject_b
@@ -20,11 +21,16 @@ class TrackingCampaigns::Motor2Form
   end
 
   def save
-    error = seller_error || inbox_error
+    error = inbox_error
     return { error: error } if error
 
-    @campaign.assign_attributes(attributes)
-    return { error: @campaign.errors.full_messages.to_sentence } unless @campaign.save
+    ActiveRecord::Base.transaction do
+      @campaign.assign_attributes(attributes)
+      raise ActiveRecord::Rollback unless @campaign.save
+
+      save_agent
+    end
+    return { error: @campaign.errors.full_messages.to_sentence } if @campaign.errors.any? || !@campaign.persisted?
 
     { campaign: @campaign }
   end
@@ -37,22 +43,28 @@ class TrackingCampaigns::Motor2Form
 
   private
 
-  def seller
-    @seller ||= self.class.sellers(@account).find_by(id: @params[:tracking_template_id])
+  # «Cómo atiende»: lo que llegó o, si no llegó (campaña nueva sin tocar ese paso), lo de la última campaña.
+  def save_agent
+    return if @params[:attend].blank? && @campaign.tracking_template&.campaign_owned?
+
+    TrackingCampaigns::CampaignAgent.new(@campaign, @user).save!(@params[:attend].presence&.to_h)
   end
 
   def inbox
     @inbox ||= self.class.inboxes(@account).find_by(id: @params[:inbox_id])
   end
 
-  def seller_error = seller ? nil : 'Elige el Vendedor de campaña que va a atender.'
+  # Sin canal se guarda igual (la revisión antes de lanzar lo pide); uno que no es WhatsApp ni correo, no.
+  def inbox_error
+    return nil if @params[:inbox_id].blank? || inbox
 
-  def inbox_error = inbox ? nil : 'Elige el canal: una bandeja de WhatsApp o de correo.'
+    'Elige el canal: una bandeja de WhatsApp o de correo.'
+  end
 
   def attributes
     brief = TrackingCampaigns::Motor2Brief.brief(@params[:brief])
-    { name: @params[:name].to_s.strip.presence || 'Campaña sin nombre', tracking_template: seller, inbox: inbox,
-      objective: seller.objective, mode: @params[:mode].to_s.presence_in(TrackingCampaign::MODES) || 'batch',
+    { name: @params[:name].to_s.strip.presence || 'Campaña sin nombre', inbox: inbox,
+      mode: @params[:mode].to_s.presence_in(TrackingCampaign::MODES) || 'batch',
       purpose: 'prospecting', brief: brief, touches: TrackingCampaigns::Motor2Brief.touches(@params[:touches]),
       audience: audience }.merge(window, event(brief), subjects)
   end
@@ -86,7 +98,7 @@ class TrackingCampaigns::Motor2Form
   end
 
   def subjects
-    return { email_subject: nil, email_subject_b: nil } unless inbox.email?
+    return { email_subject: nil, email_subject_b: nil } unless inbox&.email?
 
     { email_subject: @params[:email_subject].to_s.strip.first(TrackingCampaigns::EmailSubject::MAX_LENGTH).presence,
       email_subject_b: @params[:email_subject_b].to_s.strip.first(TrackingCampaigns::EmailSubject::MAX_LENGTH).presence }

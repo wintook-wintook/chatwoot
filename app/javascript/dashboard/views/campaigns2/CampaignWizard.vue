@@ -9,12 +9,29 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import Motor2CampaignsAPI from 'dashboard/api/motor2Campaigns';
 import WizardTabs from 'dashboard/views/readyAgents/WizardTabs.vue';
-import PhonePreview from './PhonePreview.vue';
 import EmailPreview from './EmailPreview.vue';
 import EmailEditor from './EmailEditor.vue';
 import CampaignChat from './CampaignChat.vue';
+import CampaignSimulator from './CampaignSimulator.vue';
+import CampaignTestRun from './CampaignTestRun.vue';
+import CampaignFiles from './CampaignFiles.vue';
+import CampaignAttend from './CampaignAttend.vue';
+import WhatsappFlow from './WhatsappFlow.vue';
+import ConversationPreview from './ConversationPreview.vue';
+import { fillTemplate, sampleValues } from './campaignFlow';
 
-const STEPS = ['goal', 'offer', 'audience', 'messages', 'when', 'review'];
+// En «Revisar»: probar la campaña completa, no solo al vendedor.
+const TEST_TABS = ['simulate', 'chat', 'real'];
+
+const STEPS = [
+  'goal',
+  'offer',
+  'audience',
+  'messages',
+  'attend',
+  'when',
+  'review',
+];
 const KINDS = ['offer', 'invite', 'reactivate', 'renew', 'survey'];
 const FILTER_TYPE_CONTACT = 'contact';
 const ATTENDEE_STATUSES = [
@@ -27,7 +44,8 @@ const ATTENDEE_STATUSES = [
 
 const blankForm = () => ({
   name: '',
-  tracking_template_id: '',
+  // «Cómo atiende» (la campaña arma su agente): se llena con lo de la última campaña al abrir.
+  attend: null,
   inbox_id: '',
   brief: {
     kind: 'offer',
@@ -39,12 +57,21 @@ const blankForm = () => ({
     low_score: 7,
     rest_days: 7,
     warmup: false,
+    // De esta oferta (además de las generales del vendedor) y quién atiende a los de esta campaña.
+    objections: [],
+    // WhatsApp: la apertura si la ventana está abierta y el «Mensaje 2» (sale tal cual si pide información).
+    opener: '',
+    content: '',
+    relay: 'agent',
+    relay_user_id: '',
+    relay_team_id: '',
   },
   touches: {
     attempts: 2,
     every_value: 2,
     every_unit: 'days',
     templates: [],
+    template_vars: {},
     emails: [],
   },
   audience: { source: { type: 'segment' }, excluded_contact_ids: [] },
@@ -72,23 +99,40 @@ export default {
   name: 'CampaignWizard',
   components: {
     WizardTabs,
-    PhonePreview,
     EmailPreview,
     EmailEditor,
     CampaignChat,
+    CampaignSimulator,
+    CampaignTestRun,
+    CampaignFiles,
+    CampaignAttend,
+    WhatsappFlow,
+    ConversationPreview,
   },
   data() {
     return {
       step: 'goal',
       form: blankForm(),
-      options: { sellers: [], inboxes: [], events: [] },
+      options: {
+        inboxes: [],
+        events: [],
+        users: [],
+        teams: [],
+        sources: [],
+        calendar_users: [],
+        attend: null,
+      },
       loading: true,
       saving: false,
       campaignId: null,
       preview: null,
       previewLoading: false,
       checks: [],
+      checkError: false,
+      loadFailed: false, // editando, no se pudo traer la campaña: no se guarda (crearía otra)
       touchTab: 1,
+      testTab: 'simulate',
+      testTabs: TEST_TABS,
       sendingTest: false,
       // Lista fría de correos (solo correo)
       listFile: null,
@@ -100,6 +144,16 @@ export default {
   },
   computed: {
     ...mapGetters({ labels: 'labels/getLabels' }),
+    // Encuesta e invitación no llevan relevo: solo a quién pasa el que pide una persona.
+    relayChoices() {
+      return ['survey', 'invite'].includes(this.kind)
+        ? ['person']
+        : ['agent', 'person'];
+    },
+    // Las plantillas aprobadas de la bandeja (para el seguimiento pasadas 24 h y el aviso de la cita).
+    inboxTemplates() {
+      return (this.inbox?.templates || []).map(tpl => tpl.name);
+    },
     steps() {
       return STEPS;
     },
@@ -115,11 +169,6 @@ export default {
     segments() {
       return this.$store.getters['customViews/getCustomViewsByFilterType'](
         FILTER_TYPE_CONTACT
-      );
-    },
-    seller() {
-      return this.options.sellers.find(
-        s => s.id === Number(this.form.tracking_template_id)
       );
     },
     inbox() {
@@ -145,7 +194,7 @@ export default {
       return this.form.brief.kind;
     },
     event() {
-      return this.options.events.find(
+      return this.audienceEvents.find(
         e => e.id === Number(this.form.brief.event_id)
       );
     },
@@ -192,6 +241,12 @@ export default {
       if (src.type === 'campaign') return [];
       return [];
     },
+    rulesFor() {
+      return n => {
+        const tpl = this.templateFor(n);
+        return (tpl && (this.form.touches.template_vars || {})[tpl.name]) || {};
+      };
+    },
     templateFor() {
       return n =>
         (this.inbox?.templates || []).find(
@@ -204,7 +259,13 @@ export default {
     opener() {
       if (this.isWhatsapp) {
         const tpl = this.templateFor(1);
-        return tpl ? (tpl.body || '').replace(/\{\{\s*1\s*\}\}/g, 'Mario') : '';
+        return tpl
+          ? fillTemplate(
+              tpl.body,
+              this.rulesFor(1),
+              sampleValues(this.form.brief, this.event)
+            )
+          : '';
       }
       return (this.form.touches.emails[0]?.body || '')
         .replace(/\{\{\s*contacto\s*\}\}/gi, 'Mario')
@@ -213,8 +274,61 @@ export default {
     errors() {
       return this.checks.filter(c => c.level === 'error');
     },
-    canSave() {
-      return !!(this.form.tracking_template_id && this.form.inbox_id);
+    // Contar la audiencia, subir una lista, simular y la prueba real necesitan el canal.
+    hasChannel() {
+      return !!this.form.inbox_id;
+    },
+    // «Más tarde» necesita una fecha futura, y el fin va después del inicio.
+    // Audiencia por evento: también los recientes (seguimiento después de la expo: asistió, no se presentó).
+    audienceEvents() {
+      return [
+        ...(this.options.events || []),
+        ...(this.options.past_events || []),
+      ];
+    },
+    scheduleProblem() {
+      const f = this.form;
+      const start =
+        f.start === 'later' && f.scheduled_for
+          ? new Date(f.scheduled_for)
+          : new Date();
+      if (f.start === 'later' && (!f.scheduled_for || start <= new Date()))
+        return this.t('WHEN.NEEDS_FUTURE');
+      if (f.ends_at && new Date(f.ends_at) <= start)
+        return this.t('WHEN.ENDS_BEFORE');
+      return '';
+    },
+    // El resumen de «Revisar»: cuándo, ritmo y horario.
+    reviewLines() {
+      const f = this.form;
+      const fmt = v =>
+        new Date(v).toLocaleString([], {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        });
+      const lines = [
+        f.start === 'later' && f.scheduled_for
+          ? this.t('REVIEW.STARTS_AT', { at: fmt(f.scheduled_for) })
+          : this.t('REVIEW.STARTS_NOW'),
+        f.ends_at
+          ? this.t('REVIEW.ENDS_AT', { at: fmt(f.ends_at) })
+          : this.t('REVIEW.NO_END'),
+        this.t('REVIEW.PACE', {
+          n: this.attempts,
+          every: f.touches.every_value,
+          unit: this.t(`SIM.UNITS.${f.touches.every_unit}`),
+        }),
+        f.daily_cap
+          ? this.t(f.brief.warmup ? 'REVIEW.CAP_WARMUP' : 'REVIEW.CAP', {
+              n: f.daily_cap,
+            })
+          : this.t('REVIEW.NO_CAP'),
+        this.t(
+          f.respect_working_hours ? 'REVIEW.HOURS_ON' : 'REVIEW.HOURS_OFF'
+        ),
+        this.t('REVIEW.ONE_A_DAY'),
+      ];
+      return lines;
     },
     readyCount() {
       return this.preview?.counts?.ready ?? null;
@@ -230,35 +344,56 @@ export default {
       this.form.touches.emails = this.form.touches.emails.slice(0, count);
       if (this.touchTab > count) this.touchTab = count;
     },
-    'form.tracking_template_id'() {
-      this.prefillFromSeller();
-    },
+    // Solo cuando la persona cambia el tipo (no al abrir una campaña guardada).
     'form.brief.kind'(kind) {
+      if (this.loading) return;
       if (kind === 'invite' && this.sourceType === 'segment') {
         this.form.audience.source = { type: 'event' };
+      }
+      if (!this.relayChoices.includes(this.form.brief.relay)) {
+        [this.form.brief.relay] = this.relayChoices;
       }
     },
   },
   async mounted() {
+    // Segmentos y etiquetas aparte: si fallan, los vendedores y canales igual se cargan.
+    [['customViews/get', FILTER_TYPE_CONTACT], ['labels/get']].forEach(
+      ([action, arg]) =>
+        Promise.resolve(this.$store.dispatch(action, arg)).catch(() => {})
+    );
+    window.addEventListener('focus', this.refreshOptions);
     try {
-      const [{ data }] = await Promise.all([
-        Motor2CampaignsAPI.options(),
-        this.$store.dispatch('customViews/get', FILTER_TYPE_CONTACT),
-        this.$store.dispatch('labels/get'),
-      ]);
+      const { data } = await Motor2CampaignsAPI.formOptions();
       this.options = data;
       const id = this.$route.params.campaignId;
       if (id) await this.load(Number(id));
       else this.applyDefaults();
+      if (this.campaignId && this.$route.query.step === 'review') {
+        this.$nextTick(() => this.go('review'));
+      }
     } catch (e) {
+      this.loadFailed = !!this.$route.params.campaignId;
       useAlert(this.t('LOAD_ERROR'));
     } finally {
       this.loading = false;
     }
   },
+  beforeDestroy() {
+    window.removeEventListener('focus', this.refreshOptions);
+  },
   methods: {
     t(key, params) {
       return this.$t(`CAMPAIGNS2.${key}`, params);
+    },
+    // Al volver a la pestaña (p. ej. después de crear el vendedor en Agentes listos) se recargan vendedores y canales.
+    async refreshOptions() {
+      if (this.loading) return;
+      try {
+        const { data } = await Motor2CampaignsAPI.formOptions();
+        this.options = data;
+      } catch (e) {
+        // se queda lo que había
+      }
     },
     go(step) {
       this.step = step;
@@ -274,9 +409,7 @@ export default {
       if (i > 0) this.go(STEPS[i - 1]);
     },
     applyDefaults() {
-      if (this.options.sellers.length === 1) {
-        this.form.tracking_template_id = this.options.sellers[0].id;
-      }
+      this.form.attend = this.copyAttend(this.options.attend);
       if (this.options.inboxes.length === 1) {
         this.form.inbox_id = this.options.inboxes[0].id;
       }
@@ -285,31 +418,32 @@ export default {
         blocks: [],
       }));
     },
-    // Agente nuevo en la campaña: su oferta de ejemplo llena lo que falte.
-    prefillFromSeller() {
-      const example = this.seller?.example || {};
-      const brief = this.form.brief;
-      if (!brief.offer_what && example.offer_what) {
-        brief.offer_what = example.offer_what;
-      }
-      if (!brief.offer_details && example.offer_details) {
-        brief.offer_details = example.offer_details;
-      }
-    },
     async load(id) {
       const { data } = await Motor2CampaignsAPI.show(id);
+      // Solo se modifica Guardada: una en curso o terminada abre su tablero.
+      if (data.status !== 'saved') {
+        this.$router.replace({
+          name: 'campaigns2_detail',
+          params: { campaignId: data.id },
+        });
+        return;
+      }
       this.campaignId = data.id;
       const blank = blankForm();
       const questions = [...(data.brief?.survey_questions || []), '', '', ''];
       this.form = {
         ...blank,
         name: data.name,
-        tracking_template_id: data.tracking_template_id || '',
+        attend: this.copyAttend(data.attend || this.options.attend),
         inbox_id: data.inbox_id || '',
         brief: {
           ...blank.brief,
           ...data.brief,
           event_id: data.brief?.event_id || '',
+          objections: (data.brief?.objections || []).map(o => ({ ...o })),
+          relay: data.brief?.relay || '',
+          relay_user_id: data.brief?.relay_user_id || '',
+          relay_team_id: data.brief?.relay_team_id || '',
           survey_questions: questions.slice(0, 3),
         },
         touches: {
@@ -349,12 +483,15 @@ export default {
       const f = this.form;
       return {
         name: f.name.trim() || this.defaultName(),
-        tracking_template_id: f.tracking_template_id,
+        attend: f.attend,
         inbox_id: f.inbox_id,
         mode: this.continuous ? 'continuous' : 'batch',
         brief: {
           ...f.brief,
           survey_questions: f.brief.survey_questions.filter(q => q.trim()),
+          objections: f.brief.objections.filter(
+            o => o.objection.trim() && o.answer.trim()
+          ),
         },
         touches: f.touches,
         audience: {
@@ -384,11 +521,15 @@ export default {
         .join(' — ')
         .slice(0, 120);
     },
+    // Se guarda en cualquier momento (aunque falte el canal): lo que falte lo marca «Revisar y lanzar».
+    // Editando (la dirección trae su número) siempre se modifica esa; si no se pudo cargar, no se guarda una copia.
     async save() {
-      if (!this.canSave) {
-        useAlert(this.t('NEEDS_SELLER_AND_CHANNEL'));
+      if (this.loadFailed) {
+        useAlert(this.t('LOAD_ERROR'));
         return false;
       }
+      this.campaignId =
+        this.campaignId || Number(this.$route.params.campaignId) || null;
       this.saving = true;
       try {
         const { data } = this.campaignId
@@ -411,9 +552,17 @@ export default {
       }
     },
     async saveAndCheck() {
-      if (!(await this.save())) return;
-      const { data } = await Motor2CampaignsAPI.check(this.campaignId);
-      this.checks = data.items || [];
+      this.checkError = false;
+      if (!(await this.save())) {
+        this.checkError = true;
+        return;
+      }
+      try {
+        const { data } = await Motor2CampaignsAPI.check(this.campaignId);
+        this.checks = data.items || [];
+      } catch (e) {
+        this.checkError = true;
+      }
     },
     async launch() {
       await this.saveAndCheck();
@@ -434,7 +583,7 @@ export default {
       }
     },
     async loadPreview() {
-      if (this.continuous || !this.filterPayload.length || !this.canSave) {
+      if (this.continuous || !this.filterPayload.length || !this.hasChannel) {
         this.preview = null;
         return;
       }
@@ -442,7 +591,7 @@ export default {
       try {
         const { data } = await Motor2CampaignsAPI.preview({
           payload: this.filterPayload,
-          template_id: this.form.tracking_template_id,
+          template_id: null,
           inbox_id: this.form.inbox_id,
           excluded_contact_ids: this.form.audience.excluded_contact_ids,
         });
@@ -506,7 +655,7 @@ export default {
       this.sendingTest = true;
       try {
         const { data } = await Motor2CampaignsAPI.testEmail({
-          template_id: this.form.tracking_template_id,
+          email_signature: this.form.attend?.email_signature,
           subject: this.form.email_subject,
           body: this.currentEmail.body,
         });
@@ -517,11 +666,24 @@ export default {
         this.sendingTest = false;
       }
     },
+    // «Probar»: con «Cómo atiende» y la oferta de la pantalla (sin guardar).
     chatPayload() {
       return {
-        template_id: this.form.tracking_template_id,
+        campaign_id: this.campaignId,
         brief: this.body().brief,
+        attend: this.form.attend,
       };
+    },
+    copyAttend(attend) {
+      const base = attend || {
+        display_name: '',
+        sources: [],
+        email_signature: '',
+        settings: {},
+      };
+      return JSON.parse(
+        JSON.stringify({ ...base, settings: base.settings || {} })
+      );
     },
     levelClass(level) {
       return {
@@ -567,12 +729,6 @@ export default {
 
     <p v-if="loading" class="text-sm text-slate-500">{{ t('LOADING') }}</p>
     <template v-else>
-      <p
-        v-if="!options.sellers.length"
-        class="p-3 mb-2 text-sm rounded-md text-amber-800 bg-amber-50 dark:bg-amber-900/20"
-      >
-        {{ t('NO_SELLERS') }}
-      </p>
       <WizardTabs
         :steps="steps"
         :current="step"
@@ -644,19 +800,23 @@ export default {
           <!-- 2 · Oferta y vendedor -->
           <template v-if="step === 'offer'">
             <label class="block">
-              <span class="field-label">{{ t('OFFER.SELLER') }}</span>
-              <select v-model="form.tracking_template_id">
-                <option value="">{{ t('OFFER.SELLER_PICK') }}</option>
-                <option v-for="s in options.sellers" :key="s.id" :value="s.id">
-                  {{ s.name }}
+              <span class="field-label">{{ t('MESSAGES.CHANNEL') }}</span>
+              <select v-model="form.inbox_id">
+                <option value="">{{ t('MESSAGES.CHANNEL_PICK') }}</option>
+                <option v-for="i in options.inboxes" :key="i.id" :value="i.id">
+                  {{ i.name }} ·
+                  {{
+                    t(
+                      `MESSAGES.TYPES.${i.channel_type.replace(
+                        'Channel::',
+                        ''
+                      )}`
+                    )
+                  }}
                 </option>
               </select>
               <span class="block text-xs text-slate-500">
-                {{
-                  seller
-                    ? t(`OFFER.RELAY.${seller.relay}`)
-                    : t('OFFER.SELLER_HINT')
-                }}
+                {{ t('MESSAGES.CHANNEL_HINT') }}
               </span>
             </label>
             <template v-if="kind === 'invite'">
@@ -735,6 +895,56 @@ export default {
               {{ t('OFFER.DAYS') }}
             </label>
             <p class="m-0 text-xs text-slate-500">{{ t('OFFER.REST_HINT') }}</p>
+
+            <template v-if="kind !== 'survey'">
+              <span class="field-label">{{ t('OFFER.OBJECTIONS') }}</span>
+              <p class="m-0 text-xs text-slate-500">
+                {{ t('OFFER.OBJECTIONS_HINT') }}
+              </p>
+              <div
+                v-for="(o, i) in form.brief.objections"
+                :key="i"
+                class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-1"
+              >
+                <input
+                  v-model="o.objection"
+                  type="text"
+                  maxlength="300"
+                  :placeholder="t('OFFER.OBJECTION_PLACEHOLDER')"
+                />
+                <input
+                  v-model="o.answer"
+                  type="text"
+                  maxlength="800"
+                  :placeholder="t('OFFER.ANSWER_PLACEHOLDER')"
+                />
+                <button
+                  type="button"
+                  class="px-1 text-slate-400 hover:text-red-600"
+                  :aria-label="t('OFFER.REMOVE')"
+                  @click="form.brief.objections.splice(i, 1)"
+                >
+                  <fluent-icon icon="dismiss" size="14" />
+                </button>
+              </div>
+              <button
+                v-if="form.brief.objections.length < 10"
+                type="button"
+                class="self-start text-xs text-woot-600 hover:underline"
+                @click="
+                  form.brief.objections.push({ objection: '', answer: '' })
+                "
+              >
+                {{ t('OFFER.ADD_OBJECTION') }}
+              </button>
+            </template>
+
+            <CampaignFiles
+              :campaign-id="campaignId"
+              :save="save"
+              :attempts="attempts"
+              :kind="kind"
+            />
           </template>
 
           <!-- 3 · Audiencia -->
@@ -746,7 +956,7 @@ export default {
                   'label',
                   'event',
                   'continuous',
-                  'list',
+                  ...(isWhatsapp ? [] : ['list']),
                 ]"
                 :key="type"
                 type="button"
@@ -792,12 +1002,15 @@ export default {
                 </option>
               </select>
             </label>
-            <div v-if="sourceType === 'event'" class="grid grid-cols-2 gap-2">
+            <div
+              v-if="sourceType === 'event'"
+              class="grid grid-cols-1 gap-2 sm:grid-cols-2"
+            >
               <label class="block">
                 <span class="field-label">{{ t('OFFER.EVENT') }}</span>
                 <select v-model="form.brief.event_id" @change="loadPreview">
                   <option value="">{{ t('OFFER.EVENT_PICK') }}</option>
-                  <option v-for="e in options.events" :key="e.id" :value="e.id">
+                  <option v-for="e in audienceEvents" :key="e.id" :value="e.id">
                     {{ e.name }}
                   </option>
                 </select>
@@ -876,16 +1089,13 @@ export default {
                     size="small"
                     icon="arrow-upload"
                     :is-loading="uploading"
-                    :disabled="!listFile || !form.tracking_template_id"
+                    :disabled="!listFile || !hasChannel"
                     @click="uploadList"
                   >
                     {{ t('LIST.UPLOAD') }}
                   </woot-button>
                 </div>
-                <p
-                  v-if="!form.tracking_template_id"
-                  class="m-0 text-xs text-amber-700"
-                >
+                <p v-if="!hasChannel" class="m-0 text-xs text-amber-700">
                   {{ t('LIST.NEEDS_SELLER') }}
                 </p>
               </template>
@@ -926,7 +1136,7 @@ export default {
               v-if="!continuous && !isList && sourceType !== 'campaign'"
               class="p-3 rounded-md bg-slate-25 dark:bg-slate-800"
             >
-              <p v-if="!canSave" class="m-0 text-xs text-amber-700">
+              <p v-if="!hasChannel" class="m-0 text-xs text-amber-700">
                 {{ t('AUDIENCE.NEEDS_CHANNEL') }}
               </p>
               <p v-else-if="previewLoading" class="m-0 text-xs text-slate-500">
@@ -990,26 +1200,13 @@ export default {
 
           <!-- 4 · Mensajes -->
           <template v-if="step === 'messages'">
-            <label class="block">
-              <span class="field-label">{{ t('MESSAGES.CHANNEL') }}</span>
-              <select v-model="form.inbox_id">
-                <option value="">{{ t('MESSAGES.CHANNEL_PICK') }}</option>
-                <option v-for="i in options.inboxes" :key="i.id" :value="i.id">
-                  {{ i.name }} ·
-                  {{
-                    t(
-                      `MESSAGES.TYPES.${i.channel_type.replace(
-                        'Channel::',
-                        ''
-                      )}`
-                    )
-                  }}
-                </option>
-              </select>
-              <span class="block text-xs text-slate-500">
-                {{ t('MESSAGES.CHANNEL_HINT') }}
-              </span>
-            </label>
+            <p class="m-0 text-xs text-slate-500">
+              {{
+                t('MESSAGES.CHANNEL_IS', {
+                  name: inbox ? inbox.name : '—',
+                })
+              }}
+            </p>
             <div class="flex flex-wrap items-center gap-2 text-sm">
               {{ t('MESSAGES.TOUCHES') }}
               <select
@@ -1040,32 +1237,15 @@ export default {
             <p v-if="isList && !isEmail" class="m-0 text-xs text-red-600">
               {{ t('LIST.ONLY_EMAIL') }}
             </p>
-            <template v-if="isWhatsapp">
-              <label v-for="n in touchNumbers" :key="n" class="block">
-                <span class="field-label">
-                  {{ t('MESSAGES.TEMPLATE_FOR', { n }) }}
-                </span>
-                <select
-                  :value="form.touches.templates[n - 1] || ''"
-                  @change="setTemplate(n, $event.target.value)"
-                >
-                  <option value="">{{ t('MESSAGES.TEMPLATE_PICK') }}</option>
-                  <option
-                    v-for="tpl in inbox.templates"
-                    :key="tpl.name"
-                    :value="tpl.name"
-                  >
-                    {{ tpl.name }}
-                  </option>
-                </select>
-              </label>
-              <p
-                v-if="!inbox.templates.length"
-                class="m-0 text-xs text-amber-700"
-              >
-                {{ t('MESSAGES.NO_TEMPLATES') }}
-              </p>
-            </template>
+            <WhatsappFlow
+              v-if="isWhatsapp"
+              :touches.sync="form.touches"
+              :brief.sync="form.brief"
+              :templates="inbox.templates"
+              :attempts="attempts"
+              :kind="kind"
+              :event="event"
+            />
 
             <template v-if="isEmail">
               <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -1107,7 +1287,7 @@ export default {
               <EmailEditor
                 :key="touchTab"
                 :value="currentEmail"
-                :signature="seller && seller.email_signature"
+                :signature="form.attend ? form.attend.email_signature : ''"
                 @input="setEmail(touchTab, $event)"
               />
               <div>
@@ -1129,6 +1309,61 @@ export default {
           </template>
 
           <!-- 5 · Cuándo -->
+          <!-- 5 · Cómo atiende (la campaña arma su agente) -->
+          <template v-if="step === 'attend'">
+            <CampaignAttend
+              v-if="form.attend"
+              v-model="form.attend"
+              :sources="options.sources || []"
+              :calendar-users="options.calendar_users || []"
+              :templates="inboxTemplates"
+              :is-email="isEmail"
+              :appointments="form.brief.offer_goal === 'appointment'"
+            />
+            <!-- Si le interesa (o pide una persona), a quién pasa -->
+            <span class="field-label">{{ t('OFFER.RELAY_TITLE') }}</span>
+            <label
+              v-for="value in relayChoices"
+              :key="value"
+              class="flex items-start gap-2 text-sm"
+            >
+              <input
+                v-model="form.brief.relay"
+                type="radio"
+                class="!m-0 mt-1"
+                :value="value"
+              />
+              {{ t(`OFFER.RELAY_CHOICES.${value}`) }}
+            </label>
+            <div
+              v-if="form.brief.relay === 'person' || relayChoices.length === 1"
+              class="grid grid-cols-1 gap-2 sm:grid-cols-2"
+            >
+              <label class="block">
+                <span class="field-label">{{ t('OFFER.RELAY_USER') }}</span>
+                <select v-model="form.brief.relay_user_id">
+                  <option value="">{{ t('OFFER.NOBODY') }}</option>
+                  <option v-for="u in options.users" :key="u.id" :value="u.id">
+                    {{ u.name }}
+                  </option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('OFFER.RELAY_TEAM') }}</span>
+                <select v-model="form.brief.relay_team_id">
+                  <option value="">{{ t('OFFER.NO_TEAM') }}</option>
+                  <option
+                    v-for="team in options.teams"
+                    :key="team.id"
+                    :value="team.id"
+                  >
+                    {{ team.name }}
+                  </option>
+                </select>
+              </label>
+            </div>
+          </template>
+
           <template v-if="step === 'when'">
             <fieldset class="flex flex-col gap-1">
               <legend class="field-label">{{ t('WHEN.START') }}</legend>
@@ -1228,7 +1463,7 @@ export default {
                 {{
                   t('REVIEW.SUMMARY', {
                     kind: t(`KINDS.${kind}.TITLE`),
-                    seller: seller ? seller.name : '—',
+                    seller: (form.attend && form.attend.display_name) || '—',
                     channel: inbox ? inbox.name : '—',
                     touches: attempts,
                   })
@@ -1236,6 +1471,14 @@ export default {
               </p>
               <p v-if="readyCount !== null" class="m-0 text-xs text-slate-500">
                 {{ t('REVIEW.AUDIENCE', { n: readyCount }) }}
+              </p>
+              <ul
+                class="m-0 text-xs list-disc text-slate-600 dark:text-slate-300 ltr:pl-4 rtl:pr-4"
+              >
+                <li v-for="line in reviewLines" :key="line">{{ line }}</li>
+              </ul>
+              <p v-if="scheduleProblem" class="m-0 text-xs text-red-600">
+                {{ scheduleProblem }}
               </p>
             </div>
             <ul class="flex flex-col gap-1 m-0 list-none">
@@ -1253,7 +1496,20 @@ export default {
                 <span>{{ c.text }}</span>
               </li>
             </ul>
-            <p v-if="!checks.length" class="m-0 text-xs text-slate-500">
+            <p
+              v-if="checkError"
+              class="flex items-center gap-2 m-0 text-xs text-red-600"
+            >
+              {{ t('REVIEW.CHECK_ERROR') }}
+              <button
+                type="button"
+                class="text-woot-600 hover:underline"
+                @click="saveAndCheck"
+              >
+                {{ t('REVIEW.RETRY') }}
+              </button>
+            </p>
+            <p v-else-if="!checks.length" class="m-0 text-xs text-slate-500">
               {{ t('REVIEW.CHECKING') }}
             </p>
           </template>
@@ -1266,35 +1522,82 @@ export default {
           <p class="m-0 text-xs font-medium text-slate-600 dark:text-slate-300">
             {{ t('PREVIEW.TITLE') }}
           </p>
-          <PhonePreview v-if="isWhatsapp" :template="templateFor(1)" />
+          <ConversationPreview
+            v-if="isWhatsapp"
+            :template="templateFor(1)"
+            :rules="rulesFor(1)"
+            :brief="form.brief"
+            :kind="kind"
+            :event="event"
+          />
           <EmailPreview
             v-else-if="isEmail"
             :subject="form.email_subject"
             :from="inbox ? inbox.name : ''"
             :blocks="currentEmail.blocks || []"
-            :signature="seller ? seller.email_signature || '' : ''"
+            :signature="form.attend ? form.attend.email_signature || '' : ''"
           />
           <p v-else class="m-0 text-xs text-slate-500">
             {{ t('PREVIEW.PICK_CHANNEL') }}
           </p>
           <CampaignChat
+            v-if="step !== 'review'"
             class="flex-1"
             :payload="chatPayload"
             :opener="opener"
-            :disabled="!form.tracking_template_id"
+            :disabled="!hasChannel"
           />
+          <template v-else>
+            <div
+              class="flex gap-1 p-1 rounded-md bg-slate-25 dark:bg-slate-800"
+              role="tablist"
+            >
+              <button
+                v-for="tab in testTabs"
+                :key="tab"
+                type="button"
+                role="tab"
+                :aria-selected="testTab === tab"
+                class="flex-1 px-2 py-1 text-xs rounded"
+                :class="
+                  testTab === tab
+                    ? 'bg-white dark:bg-slate-700 font-medium text-woot-700 dark:text-woot-300'
+                    : 'text-slate-600 dark:text-slate-300'
+                "
+                @click="testTab = tab"
+              >
+                {{ t(`TEST_TABS.${tab}`) }}
+              </button>
+            </div>
+            <CampaignSimulator
+              v-if="testTab === 'simulate'"
+              :campaign-id="campaignId"
+              :save="save"
+              :payload="chatPayload"
+              :disabled="!hasChannel"
+            />
+            <CampaignChat
+              v-else-if="testTab === 'chat'"
+              class="flex-1"
+              :payload="chatPayload"
+              :opener="opener"
+              :disabled="!hasChannel"
+            />
+            <CampaignTestRun
+              v-else
+              :campaign-id="campaignId"
+              :save="save"
+              :is-whatsapp="isWhatsapp"
+              :disabled="!hasChannel"
+            />
+          </template>
         </div>
       </div>
 
       <div
         class="flex flex-wrap justify-end gap-2 pt-3 mt-2 border-t shrink-0 border-slate-100 dark:border-slate-700"
       >
-        <woot-button
-          variant="clear"
-          :is-loading="saving"
-          :disabled="!canSave"
-          @click="saveDraft"
-        >
+        <woot-button variant="clear" :is-loading="saving" @click="saveDraft">
           {{ t('SAVE_DRAFT') }}
         </woot-button>
         <woot-button
@@ -1312,7 +1615,7 @@ export default {
           v-else
           icon="send"
           :is-loading="saving"
-          :disabled="!!errors.length || !checks.length"
+          :disabled="!!errors.length || !checks.length || !!scheduleProblem"
           @click="launch"
         >
           {{ form.start === 'later' ? t('SCHEDULE') : t('LAUNCH') }}

@@ -1067,15 +1067,15 @@
         "follow": "Follow-up",
         "instructions": "Instructions",
         "test": "Test and save",
-        "files": "Images and files"
+        "files": "General files"
       },
       "STEP_HINTS": {
         "agent": "Its name and tone.",
         "knows": "The basics of your business and where it looks up answers.",
-        "talk": "Its voice (How your company talks), who gets the relay, objections, quotes and your free-text instructions (below).",
+        "talk": "Its voice (How your company talks), the default relay, general objections, quotes and your free-text instructions (below).",
         "instructions": "Anything else it should know or do (optional).",
         "test": "The chat starts with the campaign message: reply as your contact would.",
-        "files": "The images and files it sends and when. Test in the chat on the right and save.",
+        "files": "Ones that work for any campaign: catalog, company deck, price list. Images for one offer (the promo photo, the event flyer) go in the campaign, «Offer» step.",
         "follow": "If they reply and go quiet mid-conversation: reminders and timeline; handoff time and appointment reminder.",
         "quote": "If they are interested in the offer and ask for a quote, it builds it with Catalog prices.",
         "business": "Business details and how it talks: your company's or customized for this agent."
@@ -1135,7 +1135,7 @@
         "invite": "Choose the event.",
         "survey": "Add at least one question."
       },
-      "RELAY": "The interested contact goes to",
+      "RELAY": "Default relay: the interested contact goes to (each campaign can change it)",
       "RELAYS": {
         "agent": "The inbox agent: «Prospect care» (or «Customer care» if already a customer). If none, the person or team below.",
         "person": "The person or team below (if the campaign has a handover board, it goes there with its deadline)"
@@ -1143,12 +1143,11 @@
       "PERSON": "Person",
       "TEAM": "Team",
       "RULES": "Always: one question per message; if they say no, it says goodbye without insisting; «stop messaging me» opts them out; it never makes up prices or dates.",
-      "OBJECTIONS": "Common objections (optional)",
+      "OBJECTIONS": "General objections (for every campaign; offer-specific ones go in the campaign)",
       "OBJECTION_PLACEHOLDER": "What they say («too expensive»)",
       "ANSWER_PLACEHOLDER": "How to answer",
       "ADD_OBJECTION": "+ Add objection",
       "REMOVE": "Remove",
-      "OPENER": "The campaign message for the test (the real campaign uses your template)",
       "OPENER_LABEL": "Campaign message",
       "OPENERS": {
         "offer": "Hi! I'm writing about this: {what}. Want to hear more?",
@@ -1159,16 +1158,14 @@
         "SOMETHING": "our offer",
         "EVENT": "our event"
       },
-      "TEST_READY": "«{name}» is ready. Save it and pick it in a campaign.",
-      "TEST_HINT": "Reply as your contact: «yes, how much?», «no thanks», «what time is it?»…",
       "IN_CAMPAIGNS": "In {n} campaigns",
       "NO_CAMPAIGNS": "Not in any campaign yet",
-      "QUOTE_NOT_FOR_PURPOSE": "It doesn't quote in a survey or an invitation.",
+      "QUOTE_NOT_FOR_PURPOSE": "Invite and Survey campaigns do not quote.",
       "QUOTE_HINT": "If they are interested in the offer and ask for a quote, it builds it with Catalog prices.",
-      "EXAMPLE": {
-        "TITLE": "Example offer for testing",
-        "HINT": "Each campaign brings its own offer, channel and messages (Campaigns › Campaign with AI Seller). This offer is only for «Test» here and to prefill new campaigns."
-      }
+      "TEST_IN_CAMPAIGN": "«{name}» is ready. To test it, create or open a campaign and in «Review and launch» use «Simulate the campaign», «Chat with the seller» or «Real test»: that is where it is tested with the real offer.",
+      "APPOINTMENT_HINT": "When a campaign's goal is «Book an appointment», the seller books on these people's calendars.",
+      "EMAIL_SIGNATURE": "Email signature",
+      "EMAIL_SIGNATURE_PLACEHOLDER": "Ana López · Sales\nGrúas del Norte · 81 1234 5678"
     },
     "FILES": {
       "HINT": "Upload images or files the agent can send (product photos, flyer, catalog, map…). Give each one a description: the agent can't see the image, so that's how it knows when it helps and doesn't make up what it shows.",

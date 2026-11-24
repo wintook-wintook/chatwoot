@@ -35,6 +35,12 @@ class TrackingCampaigns::Schedule
     time
   end
 
+  # La siguiente hora en que se puede escribir a partir de `time` (horario de la bandeja o días hábiles), sin la
+  # ventana de la campaña. La usa TrackingCampaigns::SendGate para los toques 2 en adelante.
+  def next_send_time(time = Time.current) = open_time(time)
+
+  def zone_name = zone
+
   private
 
   # Dentro del horario de la bandeja; sin horario, con «días hábiles» al menos nunca en fin de semana.

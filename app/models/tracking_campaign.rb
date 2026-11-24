@@ -104,6 +104,11 @@ class TrackingCampaign < ApplicationRecord
   has_many :contact_trackings, dependent: :nullify
   has_many :entries, class_name: 'TrackingCampaignEntry', dependent: :delete_all
   has_many :clicks, class_name: 'TrackingCampaignClick', dependent: :delete_all # Campaña con Vendedor IA
+  # Campaña con Vendedor IA — «Imágenes y archivos de esta oferta» (con su regla en rules).
+  has_many :files, class_name: 'AiAgentAttachment', dependent: :destroy
+  # Campaña con Vendedor IA — «Prueba real»: la copia que va solo a los contactos de prueba (TrackingCampaigns::Motor2TestRun).
+  belongs_to :test_of, class_name: 'TrackingCampaign', optional: true
+  has_many :test_runs, class_name: 'TrackingCampaign', foreign_key: :test_of_id, dependent: :destroy, inverse_of: :test_of
 
   validates :name, presence: true, length: { minimum: 2, maximum: 120 }
   validates :status, inclusion: { in: STATUSES }
@@ -128,6 +133,8 @@ class TrackingCampaign < ApplicationRecord
   validate :window_order
 
   scope :active, -> { where(status: %w[saved draft running paused]) }
+  # Las de verdad: sin las copias de «Prueba real».
+  scope :real, -> { where(test_of_id: nil) }
 
   # Estado al ponerla en curso: inicio futuro → Programada (la abre WindowJob); si no, En curso.
   def self.status_for(starts, now = Time.current)
@@ -159,6 +166,27 @@ class TrackingCampaign < ApplicationRecord
   # Campaña con Vendedor IA (Motor 2.0): su oferta y sus toques viven aquí, no en el agente.
   def motor2?
     engine == '2'
+  end
+
+  # Campaña con Vendedor IA: cuántos toques pueden salir ese día (nil = sin tope). Calentando el dominio, el tope
+  # arranca en Motor2Brief::WARMUP_START y se duplica cada día desde que empezó.
+  # Sus archivos con la regla de cada uno: { nombre => rules } (como TrackingTemplate#file_rules).
+  def file_rules = offer_files.to_h { |f| [f.name, f.rules.to_h] }
+
+  # Los archivos de la oferta (la copia de «Prueba real» usa los de su campaña).
+  def offer_files = AiAgentAttachment.of_campaign(self).order(:id)
+
+  def daily_send_cap(day)
+    return nil if daily_cap.blank?
+    return daily_cap unless motor2? && brief.to_h['warmup'] == true
+
+    started = (scheduled_for || created_at).in_time_zone(day.time_zone).to_date
+    TrackingCampaigns::Motor2Brief.warmup_cap(daily_cap, (day.to_date - started).to_i)
+  end
+
+  # La copia de «Prueba real»: sus toques salen cada pocos minutos y no aparece en listados.
+  def test_run?
+    test_of_id.present?
   end
 
   def prospecting?

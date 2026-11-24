@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 # «Campaña» — lo del Vendedor de campaña que manda el código (Plan-Motor-Agentes §11.16):
-#   - Ofrecer / Reactivar / Renovar: le_interesa → relevo (Motor2::Relay) a quien sigue;
+#   - Ofrecer / Reactivar / Renovar / Invitar, con «Mensaje 2» (WhatsApp): enviar_informacion → manda el contenido
+#     de la campaña TAL CUAL (con sus imágenes «con la información») y sigue la plática hasta el cierre;
+#   - Ofrecer / Reactivar / Renovar: le_interesa (ya lo quiere) → relevo (Motor2::Relay) a quien sigue;
 #     no_le_interesa → se despide y el seguimiento se cierra;
+#     mas_adelante («ahora no», «escríbeme en marzo», fuera de la oficina) → un solo toque más en esa fecha;
 #   - Invitar: confirmar_asistencia → su lugar en el evento (EventAttendee confirmó o canceló);
 #   - Encuesta: las preguntas tal cual y en orden, una por mensaje (el código lleva cuál sigue);
 #     guardar_respuesta; al terminar, si una calificación es baja, se levanta un caso.
@@ -18,9 +21,8 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
     return survey_tools if function.survey?
     return invite_tools if function.invite?
 
-    [fn('le_interesa', "Le interesa la oferta: pásalo a quien sigue (#{relay_label}). Llámala en cuanto muestre interés " \
-                       '(pide precio, detalles, quiere comprar o que lo contacten).', { resumen: STR }, %w[resumen]),
-     not_interested]
+    [*info_tool, fn('le_interesa', "Ya lo quiere: pásalo a quien sigue (#{relay_label}). #{interest_when}", { resumen: STR }, %w[resumen]),
+     not_interested, later]
   end
 
   def memory
@@ -31,7 +33,7 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
   end
 
   def turn_note
-    return '' unless function.survey?
+    return info_note unless function.survey?
 
     number, question = next_question
     return 'Ya contestó toda la encuesta: agradécele en una frase.' unless number
@@ -50,8 +52,10 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
 
   def call(name, args)
     case name
+    when 'enviar_informacion' then send_info!
     when 'le_interesa' then interested(args['resumen'])
     when 'no_le_interesa' then not_interested!(args['motivo'])
+    when 'mas_adelante' then later!(args['dias'], args['motivo'])
     when 'confirmar_asistencia' then attendance(args['asistira'], args['nota'])
     else save_answer(args)
     end
@@ -68,10 +72,69 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
        { motivo: STR }, %w[motivo])
   end
 
+  MAX_LATER_DAYS = 120
+
+  # «Mensaje 2» (solo si la campaña lo trae y no se ha mandado): la información completa, tal cual.
+  def info_tool
+    return [] unless content? && !state['content_sent']
+
+    [fn('enviar_informacion', 'Contestó que sí, pide información o quiere saber más (aún no dice que lo quiere): se le manda la ' \
+                              'información completa de la campaña tal cual, con sus imágenes.')]
+  end
+
+  def content? = function.respond_to?(:content) && function.content.present?
+
+  def interest_when
+    return 'Llámala en cuanto muestre interés (pide precio, detalles, quiere comprar o que lo contacten).' unless content?
+
+    'Llámala cuando YA lo quiere (comprar, apartar, cotización, que lo contacten para cerrar); si solo pide información, ' \
+      'usa enviar_informacion.'
+  end
+
+  INFO_SENT = 'Ya le mandaste la información completa: resuelve sus dudas con ella y llévalo al cierre (pregúntale si lo quiere).'
+
+  def info_note
+    return '' unless content?
+    return INFO_SENT if state['content_sent']
+
+    'Si contesta que sí o pide información, usa enviar_informacion (no la escribas tú).'
+  end
+
+  # El texto sale aparte, tal cual, después de este turno (sin mensaje de la IA); las imágenes «con la información»
+  # van en este turno (primero la imagen, luego el texto). En la prueba no se manda nada: se enseña en el chat.
+  def send_info!
+    state['content_sent'] = true
+    trace.event(:informacion, 'Mensaje 2 de la campaña')
+    attach_rule('interest')
+    return { ok: true, nota: "Es una prueba: escribe TAL CUAL este texto, sin cambiarlo:\n#{info_text}" } if test?
+
+    text = info_text
+    tracking = @turn.tracking
+    conversation = @turn.conversation
+    @turn.after_send { Motor2::Delivery.send_reply(tracking, conversation, text) }
+    @turn.silence!
+    { ok: true, nota: 'Listo: se le manda la información tal cual. Escribe solo [SIN_MENSAJE].' }
+  end
+
+  def info_text = Motor2::CampaignTouch.fill(function.content, contact, @turn.tracking&.tracking_campaign)
+
+  def later
+    fn('mas_adelante', 'Dice que AHORA NO pero no cierra la puerta («ahorita no», «escríbeme en marzo», «estoy de vacaciones», ' \
+                       'respuesta automática de fuera de la oficina): se le vuelve a escribir una vez en esa fecha. Después ' \
+                       'despídete en una frase diciendo que le escribes entonces (no lo uses si dijo que no le interesa).',
+       { dias: { type: 'integer', description: 'En cuántos días volver a escribirle (si no dijo, 30)' }, motivo: STR }, %w[dias])
+  end
+
+  def later!(days, reason)
+    days = (days.presence || 30).to_i.clamp(1, MAX_LATER_DAYS)
+    @turn.decide('later', "#{days}|#{reason}")
+    { ok: true, nota: "Listo: se le vuelve a escribir en #{days} días. Despídete en una frase, sin preguntas." }
+  end
+
   def invite_tools
-    [fn('confirmar_asistencia', 'Dijo si va o no va al evento: lo deja confirmado o cancelado.',
-        { asistira: { type: 'boolean' }, nota: STR }, %w[asistira]),
-     not_interested]
+    [*info_tool, fn('confirmar_asistencia', 'Dijo si va o no va al evento: lo deja confirmado o cancelado.',
+                    { asistira: { type: 'boolean' }, nota: STR }, %w[asistira]),
+     not_interested, later]
   end
 
   def survey_tools
@@ -166,7 +229,7 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
 
   # Los archivos del agente con esa regla van con el mensaje de este turno.
   def attach_rule(rule)
-    names = Motor2::Skills::Files.with_rule(config.template, rule, config.attachments)
+    names = Motor2::Skills::Files.with_rule(config, rule, config.attachments)
     names.first(Motor2::Skills::Files::MAX_PER_MESSAGE).each { |name| @turn.attach(name) }
   end
 end

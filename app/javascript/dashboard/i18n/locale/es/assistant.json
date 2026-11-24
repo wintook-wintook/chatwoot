@@ -1067,15 +1067,15 @@
         "follow": "Seguimiento",
         "instructions": "Indicaciones",
         "test": "Pruébalo y guarda",
-        "files": "Imágenes y archivos"
+        "files": "Archivos generales"
       },
       "STEP_HINTS": {
         "agent": "Cómo se llama y con qué tono escribe.",
         "knows": "Lo básico de tu negocio y dónde busca lo que le preguntan.",
-        "talk": "Su voz (Cómo habla tu empresa), a quién pasa el relevo, objeciones, cotizaciones y tus indicaciones en texto libre (abajo).",
+        "talk": "Su voz (Cómo habla tu empresa), el relevo por omisión, las objeciones generales, cotizaciones y tus indicaciones en texto libre (abajo).",
         "instructions": "Algo más que deba saber o hacer (opcional).",
         "test": "El chat empieza con el mensaje de la campaña: contesta como lo haría tu contacto.",
-        "files": "Las imágenes y archivos que manda y cuándo. Prueba en el chat de la derecha y guarda.",
+        "files": "Los que sirven para cualquier campaña: catálogo, presentación de la empresa, lista de precios. Las imágenes de una oferta (la foto de la promoción, el flyer del evento) van en la campaña, paso «Oferta».",
         "follow": "Si contesta y se queda a media plática: los recordatorios y la línea de tiempo; el plazo y el recordatorio de cita.",
         "quote": "Si le interesa la oferta y pide una cotización, la arma con los precios del Catálogo.",
         "business": "Datos del negocio y cómo habla: los de tu empresa o personalizados para este agente."
@@ -1135,7 +1135,7 @@
         "invite": "Falta elegir el evento.",
         "survey": "Falta al menos una pregunta."
       },
-      "RELAY": "Al interesado lo pasa a",
+      "RELAY": "Relevo por omisión: al interesado lo pasa a (cada campaña lo puede cambiar)",
       "RELAYS": {
         "agent": "Al agente de la bandeja: «Atención a prospectos» (o «Atención a clientes» si ya es cliente). Si no hay, a la persona o equipo de abajo.",
         "person": "A la persona o equipo de abajo (si la campaña tiene tablero de entrega, entra ahí con su plazo)"
@@ -1143,12 +1143,11 @@
       "PERSON": "Persona",
       "TEAM": "Equipo",
       "RULES": "Siempre: una pregunta por mensaje; si dice que no, se despide sin insistir; «ya no me escriban» lo da de baja; no inventa precios ni fechas.",
-      "OBJECTIONS": "Objeciones frecuentes (opcional)",
+      "OBJECTIONS": "Objeciones generales (sirven para todas las campañas; las de una oferta van en la campaña)",
       "OBJECTION_PLACEHOLDER": "Lo que dicen («está caro»)",
       "ANSWER_PLACEHOLDER": "Cómo contestarlo",
       "ADD_OBJECTION": "+ Agregar objeción",
       "REMOVE": "Quitar",
-      "OPENER": "El mensaje de la campaña para la prueba (en la campaña real va tu plantilla)",
       "OPENER_LABEL": "Mensaje de la campaña",
       "OPENERS": {
         "offer": "¡Hola! Te escribo por esto: {what}. ¿Te cuento más?",
@@ -1159,16 +1158,14 @@
         "SOMETHING": "nuestra oferta",
         "EVENT": "nuestro evento"
       },
-      "TEST_READY": "«{name}» está listo. Guárdalo y elígelo en una campaña.",
-      "TEST_HINT": "Contesta como tu contacto: «sí, ¿cuánto cuesta?», «no gracias», «¿a qué hora es?»…",
       "IN_CAMPAIGNS": "En {n} campañas",
       "NO_CAMPAIGNS": "Todavía en ninguna campaña",
-      "QUOTE_NOT_FOR_PURPOSE": "En una encuesta o una invitación no cotiza.",
+      "QUOTE_NOT_FOR_PURPOSE": "En campañas de Invitar y Encuesta no se cotiza.",
       "QUOTE_HINT": "Si le interesa la oferta y pide una cotización, la arma con los precios del Catálogo.",
-      "EXAMPLE": {
-        "TITLE": "Oferta de ejemplo para probar",
-        "HINT": "Cada campaña trae su propia oferta, canal y mensajes (Campañas › Campaña con Vendedor IA). Esta oferta es solo para «Probar» aquí y para llenar de inicio las campañas nuevas."
-      }
+      "TEST_IN_CAMPAIGN": "Listo «{name}». Para probarlo, crea o abre una campaña y en «Revisar y lanzar» usa «Simular la campaña», «Chatear con el vendedor» o «Prueba real»: ahí se prueba con la oferta de verdad.",
+      "APPOINTMENT_HINT": "Cuando una campaña tiene como meta «Agendar cita», el vendedor agenda en el calendario de estas personas.",
+      "EMAIL_SIGNATURE": "Firma de sus correos",
+      "EMAIL_SIGNATURE_PLACEHOLDER": "Ana López · Ventas\nGrúas del Norte · 81 1234 5678"
     },
     "FILES": {
       "HINT": "Sube imágenes o archivos que el agente pueda mandar (fotos del producto, flyer, catálogo, mapa…). Ponle a cada uno una descripción: el agente no ve la imagen, con eso sabe cuándo sirve y no inventa lo que trae.",

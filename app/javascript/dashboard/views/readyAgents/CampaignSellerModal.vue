@@ -10,7 +10,6 @@
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import ReadyAgentsAPI from 'dashboard/api/readyAgents';
-import ReadyAgentChat from './ReadyAgentChat.vue';
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 import AgentFiles from './AgentFiles.vue';
 import SourceOrder, { addSource } from './SourceOrder.vue';
@@ -25,6 +24,8 @@ import QuoteMode from './QuoteMode.vue';
 const T = 'READY_AGENTS';
 // La oferta, el canal y los toques son de cada Campaña con Vendedor IA (pantalla de campañas 2.0); aquí queda
 // una oferta de ejemplo, solo para «Probar» y para llenar de inicio las campañas nuevas.
+// Lo más que puede llevar una campaña (TrackingCampaigns::Motor2Brief::MAX_TOUCHES).
+const MAX_TOUCHES = 6;
 const STEPS = [
   'agent',
   'business',
@@ -34,8 +35,6 @@ const STEPS = [
   'quote',
   'files',
 ];
-const PURPOSES = ['offer', 'invite', 'reactivate', 'renew', 'survey'];
-const MAX_QUESTIONS = 3;
 const MAX_OBJECTIONS = 15;
 const BUSINESS = ['what', 'who', 'coverage', 'why', 'practical'];
 
@@ -92,7 +91,6 @@ const blank = () => ({
 export default {
   name: 'CampaignSellerModal',
   components: {
-    ReadyAgentChat,
     AgentFiles,
     SourceOrder,
     FollowUpPlan,
@@ -109,7 +107,6 @@ export default {
     agent: { type: Object, default: null },
     calendarUsers: { type: Array, default: () => [] },
     sources: { type: Array, default: () => [] },
-    events: { type: Array, default: () => [] },
   },
   emits: ['close', 'saved'],
   data() {
@@ -118,7 +115,6 @@ export default {
       form: blank(),
       saving: false,
       step: 'agent',
-      opener: '',
       pendingFiles: [],
     };
   },
@@ -126,9 +122,6 @@ export default {
     ...mapGetters({ agents: 'agents/getAgents', teams: 'teams/getTeams' }),
     steps() {
       return STEPS;
-    },
-    purposes() {
-      return PURPOSES;
     },
     business() {
       return BUSINESS;
@@ -145,31 +138,30 @@ export default {
     isLast() {
       return this.stepIndex === STEPS.length - 1;
     },
-    purpose() {
-      return this.form.settings.purpose;
-    },
     hasCatalog() {
       return this.sources.some(s => s.key === 'catalog');
     },
-    // Las plantillas aprobadas de la bandeja por la que escribe (para después de las 24 h).
+    // Las plantillas de todas las bandejas de WhatsApp: el vendedor atiende campañas de cualquiera. La revisión de
+    // cada campaña (Motor2Check) avisa si una de estas no está aprobada en la bandeja de esa campaña.
     waTemplates() {
-      if (!this.form.channel.inboxId) return [];
-      const list =
-        this.$store.getters['inboxes/getWhatsAppTemplates'](
-          Number(this.form.channel.inboxId)
-        ) || [];
-      return [...new Set(list.map(item => item.name))];
+      const inboxes = (this.$store.getters['inboxes/getInboxes'] || []).filter(
+        i => (i.channel_type || '').includes('Whatsapp')
+      );
+      const names = inboxes.flatMap(i =>
+        (this.$store.getters['inboxes/getWhatsAppTemplates'](i.id) || []).map(
+          item => item.name
+        )
+      );
+      return [...new Set(names)];
     },
-    isSurvey() {
-      return this.purpose === 'survey';
-    },
-    isInvite() {
-      return this.purpose === 'invite';
+    // Los toques los define cada campaña (hasta 6): un archivo puede ir en cualquiera.
+    maxTouches() {
+      return MAX_TOUCHES;
     },
     agentReady() {
       return !!this.form.name.trim();
     },
-    // La oferta ya no es obligatoria: es de cada campaña (aquí, solo de ejemplo).
+    // La oferta es de cada campaña: aquí solo cómo vende.
     canSave() {
       return this.agentReady;
     },
@@ -188,29 +180,13 @@ export default {
         s => s.key !== 'canned_response' && s.kind !== 'catalog'
       );
     },
-    // El mensaje con el que empieza la prueba (como si la campaña ya le hubiera escrito).
-    defaultOpener() {
-      const s = this.form.settings;
-      const event = this.events.find(e => e.id === Number(s.event_id));
-      return this.c(`OPENERS.${this.purpose}`, {
-        what: s.offer_what.trim() || this.c('OPENERS.SOMETHING'),
-        event: event ? event.name : this.c('OPENERS.EVENT'),
-      });
-    },
   },
   watch: {
-    // La oferta de ejemplo cambió: «Probar» empieza con su mensaje.
-    defaultOpener(text) {
-      this.opener = text;
-    },
     show: {
       immediate: true,
       handler(open) {
         if (open) this.reset();
       },
-    },
-    purpose() {
-      this.opener = this.defaultOpener;
     },
   },
   methods: {
@@ -274,7 +250,6 @@ export default {
       }
       this.step = 'agent';
       this.pendingFiles = [];
-      this.opener = this.defaultOpener;
       this.$store.dispatch('agents/get');
       this.$store.dispatch('teams/get');
     },
@@ -293,13 +268,6 @@ export default {
       this.form.sources = list.includes(key)
         ? list.filter(k => k !== key)
         : addSource(list, key);
-    },
-    addQuestion() {
-      const list = this.form.settings.survey_questions;
-      if (list.length < MAX_QUESTIONS) list.push({ text: '' });
-    },
-    removeQuestion(index) {
-      this.form.settings.survey_questions.splice(index, 1);
     },
     addObjection() {
       const list = this.form.settings.objections;
@@ -400,7 +368,7 @@ export default {
         @go="go"
       />
       <div
-        class="grid flex-1 min-h-0 grid-cols-1 gap-5 px-4 pb-4 overflow-y-auto md:px-8 md:grid-cols-2 md:grid-rows-1 md:overflow-hidden"
+        class="flex flex-col flex-1 w-full max-w-3xl min-h-0 gap-5 px-4 pb-4 mx-auto overflow-y-auto md:px-8"
       >
         <form
           class="ready-form flex flex-col gap-2.5 overflow-y-auto !p-0 !pr-1 !self-stretch"
@@ -412,7 +380,7 @@ export default {
 
           <!-- 1 · El agente -->
           <template v-if="step === 'agent'">
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label class="block">
                 <span class="field-label">{{ t('FIELDS.NAME') }}</span>
                 <input
@@ -440,6 +408,15 @@ export default {
               </select>
             </label>
             <p class="m-0 text-xs text-slate-500">{{ c('WHERE_USED') }}</p>
+            <label class="block">
+              <span class="field-label">{{ c('EMAIL_SIGNATURE') }}</span>
+              <textarea
+                v-model="form.channel.emailSignature"
+                rows="3"
+                maxlength="1000"
+                :placeholder="c('EMAIL_SIGNATURE_PLACEHOLDER')"
+              />
+            </label>
           </template>
 
           <!-- 2 · Qué ofreces -->
@@ -451,69 +428,62 @@ export default {
           </template>
 
           <template v-if="step === 'knows'">
-            <template v-if="!isSurvey">
-              <span class="field-label">{{ t('KNOWS.PRICES.QUESTION') }}</span>
-              <label
-                v-for="option in priceOptions"
-                :key="option.value"
-                class="flex items-start gap-2 text-sm"
-              >
-                <input
-                  v-model="form.settings.price_source"
-                  type="radio"
-                  class="!m-0 mt-1"
-                  :value="option.value"
-                />
-                <span>
-                  {{ option.label }}
-                  <span
-                    v-if="option.about"
-                    class="block text-xs text-slate-500"
-                  >
-                    {{ option.about }}
-                  </span>
+            <span class="field-label">{{ t('KNOWS.PRICES.QUESTION') }}</span>
+            <label
+              v-for="option in priceOptions"
+              :key="option.value"
+              class="flex items-start gap-2 text-sm"
+            >
+              <input
+                v-model="form.settings.price_source"
+                type="radio"
+                class="!m-0 mt-1"
+                :value="option.value"
+              />
+              <span>
+                {{ option.label }}
+                <span v-if="option.about" class="block text-xs text-slate-500">
+                  {{ option.about }}
                 </span>
-              </label>
-              <label
-                v-for="src in otherSources"
-                :key="src.key"
-                class="flex items-start gap-2 p-2 border rounded-md cursor-pointer border-slate-100 dark:border-slate-700"
-              >
-                <input
-                  type="checkbox"
-                  class="!m-0 mt-0.5 shrink-0"
-                  :checked="form.sources.includes(src.key)"
-                  @change="toggleSource(src.key)"
-                />
-                <span class="text-sm">
-                  <span class="block font-medium">{{ src.name }}</span>
-                  <span class="block text-xs text-slate-500">
-                    {{ src.about }}
-                  </span>
+              </span>
+            </label>
+            <label
+              v-for="src in otherSources"
+              :key="src.key"
+              class="flex items-start gap-2 p-2 border rounded-md cursor-pointer border-slate-100 dark:border-slate-700"
+            >
+              <input
+                type="checkbox"
+                class="!m-0 mt-0.5 shrink-0"
+                :checked="form.sources.includes(src.key)"
+                @change="toggleSource(src.key)"
+              />
+              <span class="text-sm">
+                <span class="block font-medium">{{ src.name }}</span>
+                <span class="block text-xs text-slate-500">
+                  {{ src.about }}
                 </span>
-              </label>
-              <SourceOrder v-model="form.sources" :sources="sources" />
-            </template>
+              </span>
+            </label>
+            <SourceOrder v-model="form.sources" :sources="sources" />
           </template>
 
           <!-- 5 · Cómo platica y el relevo -->
           <template v-if="step === 'talk'">
-            <template v-if="!isSurvey && !isInvite">
-              <span class="field-label">{{ c('RELAY') }}</span>
-              <label
-                v-for="value in ['agent', 'person']"
-                :key="value"
-                class="flex items-start gap-2 text-sm"
-              >
-                <input
-                  v-model="form.settings.relay"
-                  type="radio"
-                  class="!m-0 mt-1"
-                  :value="value"
-                />
-                {{ c(`RELAYS.${value}`) }}
-              </label>
-            </template>
+            <span class="field-label">{{ c('RELAY') }}</span>
+            <label
+              v-for="value in ['agent', 'person']"
+              :key="value"
+              class="flex items-start gap-2 text-sm"
+            >
+              <input
+                v-model="form.settings.relay"
+                type="radio"
+                class="!m-0 mt-1"
+                :value="value"
+              />
+              {{ c(`RELAYS.${value}`) }}
+            </label>
             <div class="grid grid-cols-2 gap-2">
               <label class="block">
                 <span class="field-label">{{ c('PERSON') }}</span>
@@ -534,48 +504,66 @@ export default {
                 </select>
               </label>
             </div>
+            <span class="field-label">{{ t('FIELDS.APPOINTMENT_USERS') }}</span>
+            <p class="m-0 text-xs text-slate-500">
+              {{ c('APPOINTMENT_HINT') }}
+            </p>
+            <p v-if="!calendarUsers.length" class="m-0 text-xs text-amber-700">
+              {{ t('FIELDS.NO_CALENDARS') }}
+            </p>
+            <label
+              v-for="u in calendarUsers"
+              :key="u.id"
+              class="flex items-center gap-2 text-sm"
+            >
+              <input
+                type="checkbox"
+                class="!m-0"
+                :checked="calendarUserOn(u.id)"
+                @change="toggleCalendarUser(u.id)"
+              />
+              {{ u.name }}
+            </label>
             <p class="m-0 text-xs text-slate-500">{{ c('RULES') }}</p>
-            <template v-if="!isSurvey">
-              <span class="field-label">{{ c('OBJECTIONS') }}</span>
-              <div
-                v-for="(o, i) in form.settings.objections"
-                :key="i"
-                class="grid grid-cols-[1fr_1fr_auto] gap-1"
-              >
-                <input
-                  v-model="o.objection"
-                  type="text"
-                  maxlength="300"
-                  :placeholder="c('OBJECTION_PLACEHOLDER')"
-                />
-                <input
-                  v-model="o.answer"
-                  type="text"
-                  maxlength="600"
-                  :placeholder="c('ANSWER_PLACEHOLDER')"
-                />
-                <button
-                  type="button"
-                  class="px-1 text-slate-400 hover:text-red-600"
-                  :title="c('REMOVE')"
-                  @click="removeObjection(i)"
-                >
-                  <fluent-icon icon="dismiss" size="14" />
-                </button>
-              </div>
+            <span class="field-label">{{ c('OBJECTIONS') }}</span>
+            <div
+              v-for="(o, i) in form.settings.objections"
+              :key="i"
+              class="grid grid-cols-[1fr_1fr_auto] gap-1"
+            >
+              <input
+                v-model="o.objection"
+                type="text"
+                maxlength="300"
+                :placeholder="c('OBJECTION_PLACEHOLDER')"
+              />
+              <input
+                v-model="o.answer"
+                type="text"
+                maxlength="600"
+                :placeholder="c('ANSWER_PLACEHOLDER')"
+              />
               <button
                 type="button"
-                class="self-start text-xs text-woot-600 hover:underline"
-                @click="addObjection"
+                class="px-1 text-slate-400 hover:text-red-600"
+                :title="c('REMOVE')"
+                @click="removeObjection(i)"
               >
-                {{ c('ADD_OBJECTION') }}
+                <fluent-icon icon="dismiss" size="14" />
               </button>
-            </template>
+            </div>
+            <button
+              type="button"
+              class="self-start text-xs text-woot-600 hover:underline"
+              @click="addObjection"
+            >
+              {{ c('ADD_OBJECTION') }}
+            </button>
           </template>
 
           <!-- Cotizaciones: si le interesa y pide una cotización (Motor2::Skills::Quote) -->
           <template v-if="step === 'quote'">
-            <p v-if="isSurvey || isInvite" class="m-0 text-xs text-amber-700">
+            <p class="m-0 text-xs text-slate-500">
               {{ c('QUOTE_NOT_FOR_PURPOSE') }}
             </p>
             <QuoteMode
@@ -616,8 +604,7 @@ export default {
               v-model="form.files"
               kind="campaign_seller"
               :agent-id="agent ? agent.id : null"
-              :touches="Number(form.channel.attempts) || 0"
-              :invite="isInvite"
+              :touches="maxTouches"
               @pending="pendingFiles = $event"
             />
           </template>
@@ -634,179 +621,14 @@ export default {
             </label>
           </template>
 
-          <!-- 7 · Pruébalo -->
-          <template v-if="isLast">
-            <p class="m-0 text-sm text-slate-700 dark:text-slate-200">
-              {{ c('TEST_READY', { name: form.name.trim() || '—' }) }}
-            </p>
-            <label class="block">
-              <span class="field-label">{{ c('OPENER') }}</span>
-              <textarea v-model="opener" rows="3" maxlength="1000" />
-            </label>
-          </template>
-        </form>
-
-        <!-- Oferta de ejemplo: solo para «Probar» (cada campaña trae la suya) -->
-        <div class="flex flex-col min-h-0 gap-2">
-          <details
-            class="p-2 border rounded-md shrink-0 border-slate-100 dark:border-slate-700"
+          <!-- Al final: cómo se prueba (en la campaña, con su oferta) -->
+          <p
+            v-if="isLast"
+            class="p-2 m-0 text-xs rounded-md bg-woot-25 dark:bg-woot-800 text-slate-700 dark:text-slate-200"
           >
-            <summary class="text-sm font-medium cursor-pointer">
-              {{ c('EXAMPLE.TITLE') }}
-            </summary>
-            <div class="flex flex-col gap-2 mt-2 overflow-y-auto max-h-80">
-              <p class="m-0 text-xs text-slate-500">{{ c('EXAMPLE.HINT') }}</p>
-
-              <span class="field-label">{{ c('PURPOSE') }}</span>
-              <label
-                v-for="value in purposes"
-                :key="value"
-                class="flex items-start gap-2 text-sm cursor-pointer"
-              >
-                <input
-                  v-model="form.settings.purpose"
-                  type="radio"
-                  class="!m-0 mt-1"
-                  :value="value"
-                />
-                <span>
-                  {{ c(`PURPOSES.${value}.TITLE`) }}
-                  <span class="block text-xs text-slate-500">
-                    {{ c(`PURPOSES.${value}.ABOUT`) }}
-                  </span>
-                </span>
-              </label>
-
-              <template v-if="isSurvey">
-                <span class="field-label">{{ c('SURVEY.QUESTIONS') }}</span>
-                <div
-                  v-for="(q, i) in form.settings.survey_questions"
-                  :key="i"
-                  class="flex items-center gap-1"
-                >
-                  <input
-                    v-model="q.text"
-                    type="text"
-                    maxlength="300"
-                    class="flex-1"
-                    :placeholder="c(`SURVEY.PLACEHOLDER_${i + 1}`)"
-                  />
-                  <button
-                    type="button"
-                    class="px-1 text-slate-400 hover:text-red-600"
-                    :title="c('REMOVE')"
-                    @click="removeQuestion(i)"
-                  >
-                    <fluent-icon icon="dismiss" size="14" />
-                  </button>
-                </div>
-                <button
-                  v-if="form.settings.survey_questions.length < 3"
-                  type="button"
-                  class="self-start text-xs text-woot-600 hover:underline"
-                  @click="addQuestion"
-                >
-                  {{ c('SURVEY.ADD') }}
-                </button>
-                <label class="block">
-                  <span class="field-label">{{ c('SURVEY.LOW_SCORE') }}</span>
-                  <input
-                    v-model.number="form.settings.low_score"
-                    type="number"
-                    min="1"
-                    max="10"
-                    class="!w-24 h-9 text-sm"
-                  />
-                </label>
-              </template>
-
-              <template v-else>
-                <label v-if="isInvite" class="block">
-                  <span class="field-label">{{ c('EVENT') }}</span>
-                  <select v-model="form.settings.event_id">
-                    <option value="">{{ c('EVENT_CHOOSE') }}</option>
-                    <option v-for="e in events" :key="e.id" :value="e.id">
-                      {{ e.name }}
-                    </option>
-                  </select>
-                  <span
-                    v-if="!events.length"
-                    class="block mt-1 text-xs text-amber-700"
-                  >
-                    {{ c('NO_EVENTS') }}
-                  </span>
-                </label>
-                <label class="block">
-                  <span class="field-label">
-                    {{ c(isInvite ? 'INVITE_WHAT' : 'OFFER_WHAT') }}
-                  </span>
-                  <textarea
-                    v-model="form.settings.offer_what"
-                    rows="2"
-                    maxlength="1000"
-                    :placeholder="c(`PLACEHOLDERS.${purpose}`)"
-                  />
-                </label>
-                <label class="block">
-                  <span class="field-label">{{ c('OFFER_DETAILS') }}</span>
-                  <textarea
-                    v-model="form.settings.offer_details"
-                    rows="2"
-                    maxlength="1000"
-                    :placeholder="c('OFFER_DETAILS_PLACEHOLDER')"
-                  />
-                </label>
-                <template v-if="!isInvite">
-                  <span class="field-label">{{ c('GOAL') }}</span>
-                  <label
-                    v-for="value in ['relay', 'appointment']"
-                    :key="value"
-                    class="flex items-center gap-2 text-sm"
-                  >
-                    <input
-                      v-model="form.settings.offer_goal"
-                      type="radio"
-                      class="!m-0"
-                      :value="value"
-                    />
-                    {{ c(`GOALS.${value}`) }}
-                  </label>
-                  <div v-if="form.settings.offer_goal === 'appointment'">
-                    <span class="field-label">
-                      {{ t('FIELDS.APPOINTMENT_USERS') }}
-                    </span>
-                    <p
-                      v-if="!calendarUsers.length"
-                      class="m-0 text-xs text-amber-700"
-                    >
-                      {{ t('FIELDS.NO_CALENDARS') }}
-                    </p>
-                    <label
-                      v-for="u in calendarUsers"
-                      :key="u.id"
-                      class="flex items-center gap-2 text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        class="!m-0"
-                        :checked="calendarUserOn(u.id)"
-                        @change="toggleCalendarUser(u.id)"
-                      />
-                      {{ u.name }}
-                    </label>
-                  </div>
-                </template>
-              </template>
-            </div>
-          </details>
-          <ReadyAgentChat
-            :key="opener"
-            :payload="payload"
-            :agent-id="agent ? agent.id : null"
-            :opener="opener"
-            :hint="c('TEST_HINT')"
-          />
-        </div>
+            {{ c('TEST_IN_CAMPAIGN', { name: form.name.trim() || '—' }) }}
+          </p>
+        </form>
       </div>
       <div class="flex justify-end gap-2 px-8 pb-6">
         <woot-button variant="clear" type="button" @click="$emit('close')">

@@ -5,16 +5,26 @@
 class TrackingCampaigns::Motor2EnrollJob < ApplicationJob
   queue_as :default
 
-  def perform(campaign_id, contact_ids, user_id = nil)
+  # contact_ids nil: los de la audiencia guardada (así una lista de miles no viaja en el argumento del job). Si Sidekiq
+  # se reinicia a media inscripción, correrlo otra vez es seguro: los ya inscritos quedan «already_enrolled».
+  def perform(campaign_id, contact_ids = nil, user_id = nil)
     campaign = TrackingCampaign.find_by(id: campaign_id)
     return unless campaign
 
     agent = campaign.account.users.find_by(id: user_id)
-    excluded = Array(campaign.audience.to_h['excluded_contact_ids']).map(&:to_i)
-    campaign.account.contacts.where(id: Array(contact_ids) - excluded).find_each do |contact|
+    campaign.account.contacts.where(id: pending_ids(campaign, contact_ids)).find_each do |contact|
       TrackingCampaigns::Enroll.new(campaign, contact, source: 'batch', agent: agent).call
     rescue StandardError => e
       Rails.logger.error("[Motor2EnrollJob] campaña #{campaign_id}, contacto #{contact.id}: #{e.message}")
     end
+  end
+
+  private
+
+  # Los de la audiencia (o los que se pasaron), sin los excluidos ni los que ya tienen su inscripción.
+  def pending_ids(campaign, contact_ids)
+    audience = campaign.audience.to_h
+    ids = contact_ids.nil? ? Array(audience['contact_ids']) : Array(contact_ids)
+    ids.map(&:to_i) - Array(audience['excluded_contact_ids']).map(&:to_i) - campaign.entries.pluck(:contact_id)
   end
 end

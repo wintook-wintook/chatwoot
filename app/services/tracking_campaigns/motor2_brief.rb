@@ -8,9 +8,17 @@
 #              event_id    Invitar: el evento (también arma la audiencia)
 #              survey_questions [≤3] · low_score (menor a esto, de 0 a 10, es baja)
 #              rest_days   no se le escribe si otra campaña 2.0 le escribió hace menos de estos días (0 = sin regla)
-#              warmup      calentar el dominio: el tope diario arranca en WARMUP_START y se duplica cada día }
+#              warmup      calentar el dominio: el tope diario arranca en WARMUP_START y se duplica cada día
+#              content     WhatsApp, «Mensaje 2»: lo que se manda TAL CUAL cuando pide información (el copy; sus imágenes
+#                          son los archivos de la oferta «con la información»). También es lo que sabe el vendedor.
+#              opener      WhatsApp: la apertura cuando la ventana de 24 h está abierta (vacía: la escribe la IA)
+#              objections  [{ objection, answer }] de ESTA oferta: van además de las generales del vendedor y, si es
+#                          la misma objeción, gana la de la campaña
+#              relay       '' (lo que diga el vendedor) | agent | person · relay_user_id / relay_team_id: quién atiende
+#                          a los de esta campaña (el interesado y el que pide una persona) }
 #   touches  { attempts 1..6 · every_value / every_unit (hours | days) entre toques
-#              templates [nombre de plantilla de WhatsApp por toque]
+#              templates [nombre de plantilla de WhatsApp por toque] · template_vars { plantilla => { variable =>
+#                        { source, text } } }: de dónde sale cada variable (TrackingCampaigns::TemplateVars)
 #              emails    [{ body, blocks }] por toque (el asunto del primero es email_subject / email_subject_b);
 #                        un cuerpo vacío lo escribe el agente con IA }
 #
@@ -24,6 +32,7 @@ module TrackingCampaigns::Motor2Brief
   MAX_TEXT = 1500
   MAX_BODY = 6000
   WARMUP_START = 50
+  TEST_EVERY_MINUTES = 3
 
   module_function
 
@@ -46,10 +55,31 @@ module TrackingCampaigns::Motor2Brief
     {
       'kind' => raw['kind'].to_s.presence_in(KINDS) || 'offer', 'offer_goal' => raw['offer_goal'].to_s.presence_in(GOALS) || 'relay',
       'offer_what' => text(raw['offer_what']), 'offer_details' => text(raw['offer_details']),
-      'event_id' => raw['event_id'].to_s.presence&.to_i, 'survey_questions' => questions(raw['survey_questions']),
+      'event_id' => id(raw['event_id']), 'survey_questions' => questions(raw['survey_questions']),
       'low_score' => number(raw['low_score'], 7, 1..10), 'rest_days' => number(raw['rest_days'], 0, 0..90),
-      'warmup' => ActiveModel::Type::Boolean.new.cast(raw['warmup']) || false
-    }.compact
+      'warmup' => flag(raw['warmup'])
+    }.merge(talk(raw)).compact
+  end
+
+  # Cómo atiende a los de ESTA campaña, encima del vendedor: objeciones de la oferta y el relevo.
+  def talk(raw)
+    { 'objections' => objections(raw['objections']), 'content' => raw['content'].to_s.strip.first(MAX_CONTENT),
+      'opener' => raw['opener'].to_s.strip.first(MAX_TEXT) }.merge(relay(raw))
+  end
+
+  MAX_OBJECTIONS = 10
+  MAX_CONTENT = 4000 # lo más que manda WhatsApp en un mensaje de texto es 4,096
+
+  def objections(list)
+    Array(list).filter_map { |o| Motor2::Functions::ProspectAnswers.objection_row(Motor2::Sanitizer.plain(o)) }.first(MAX_OBJECTIONS)
+  end
+
+  # Vacío: el relevo del vendedor. Con persona, la persona y el equipo de la campaña.
+  def relay(raw)
+    mode = raw['relay'].to_s.presence_in(%w[agent person])
+    return { 'relay' => mode } unless mode == 'person'
+
+    { 'relay' => mode, 'relay_user_id' => id(raw['relay_user_id']), 'relay_team_id' => id(raw['relay_team_id']) }
   end
 
   def touches(raw)
@@ -58,7 +88,8 @@ module TrackingCampaigns::Motor2Brief
     { 'attempts' => attempts, 'every_value' => number(raw['every_value'], 2, 1..30),
       'every_unit' => raw['every_unit'].to_s.presence_in(UNITS) || 'days',
       'templates' => Array(raw['templates']).map { |t| t.to_s.strip.first(200) }.first(attempts),
-      'emails' => Array(raw['emails']).first(attempts).map { |e| email(e.to_h) } }
+      'emails' => Array(raw['emails']).first(attempts).map { |e| email(e.to_h) },
+      'template_vars' => TrackingCampaigns::TemplateVars.sanitize(raw['template_vars']) }
   end
 
   BLOCKS = %w[heading text button image].freeze
@@ -74,6 +105,10 @@ module TrackingCampaigns::Motor2Brief
 
   def questions(list) = Array(list).map { |q| q.to_s.squish.first(300) }.compact_blank.first(MAX_QUESTIONS)
 
+  def id(value) = value.to_s.presence&.to_i
+
+  def flag(value) = ActiveModel::Type::Boolean.new.cast(value) || false
+
   def number(value, default, range) = (value.presence || default).to_i.clamp(range.min, range.max)
 
   def text(value) = value.to_s.strip.first(MAX_TEXT)
@@ -83,7 +118,17 @@ module TrackingCampaigns::Motor2Brief
     data = campaign.brief.to_h
     { 'purpose' => data['kind'], 'offer_what' => data['offer_what'], 'offer_details' => data['offer_details'],
       'offer_goal' => data['offer_goal'], 'event_id' => data['event_id'], 'survey_questions' => data['survey_questions'],
-      'low_score' => data['low_score'] }.compact
+      'low_score' => data['low_score'], 'campaign_objections' => data['objections'].presence,
+      'content' => data['content'].presence }.merge(relay_answers(data)).compact
+  end
+
+  # El relevo de la campaña encima del del vendedor (solo si la campaña lo eligió).
+  def relay_answers(data)
+    case data['relay']
+    when 'agent' then { 'relay' => 'agent' }
+    when 'person' then { 'relay' => 'person', 'user_id' => data['relay_user_id'], 'team_id' => data['relay_team_id'] }
+    else {}
+    end
   end
 
   # Los intentos y su ritmo para cada seguimiento (TrackingCampaigns::TrackingBuilder).
@@ -91,8 +136,17 @@ module TrackingCampaigns::Motor2Brief
     data = campaign.touches.to_h
     attempts = (data['attempts'].presence || 2).to_i
     templates = campaign.inbox&.whatsapp? ? Array(data['templates']).first(attempts) : []
-    { max_attempts: attempts, retry_interval_value: (data['every_value'].presence || 2).to_i,
-      retry_interval_unit: data['every_unit'] == 'hours' ? 'hours' : 'days', whatsapp_templates: templates }
+    { max_attempts: attempts, whatsapp_templates: templates }.merge(pace(campaign, data))
+  end
+
+  # Cada cuánto: el de la campaña; en «Prueba real», cada test_every_minutes minutos.
+  def pace(campaign, data)
+    if campaign.test_run?
+      return { retry_interval_value: (data['test_every_minutes'].presence || TEST_EVERY_MINUTES).to_i.clamp(1, 60),
+               retry_interval_unit: 'minutes' }
+    end
+
+    { retry_interval_value: (data['every_value'].presence || 2).to_i, retry_interval_unit: data['every_unit'] == 'hours' ? 'hours' : 'days' }
   end
 
   # El cuerpo del correo del toque n (1, 2…), o nil si lo escribe el agente.

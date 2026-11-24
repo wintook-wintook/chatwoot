@@ -86,8 +86,9 @@ class TrackingCampaigns::Enroll
   end
 
   # Continua: el que pasa del tope del día queda omitido. Por lote se reparte (batch_day_offset).
+  # Campaña con Vendedor IA: no se omite; el tope del día lo cuida SendGate al mandar (pasa al día siguiente).
   def daily_cap_reached?
-    return false if @campaign.daily_cap.blank? || !@campaign.continuous?
+    return false if @campaign.daily_cap.blank? || !@campaign.continuous? || @campaign.motor2?
 
     day = @at.in_time_zone(@campaign.inbox.timezone.presence || 'UTC')
     @campaign.entries.enrolled.where(created_at: day.all_day).count >= cap_today(day)
@@ -113,16 +114,28 @@ class TrackingCampaigns::Enroll
 
   # Campaña con Vendedor IA: si otra campaña 2.0 ya le escribió hace menos de rest_days, se omite (no saturar).
   def recently_contacted?
-    days = @campaign.motor2? ? @campaign.brief.to_h['rest_days'].to_i : 0
+    days = @campaign.motor2? && !@campaign.test_run? ? @campaign.brief.to_h['rest_days'].to_i : 0
     return false unless days.positive?
 
     TrackingCampaignEntry.enrolled.where(contact_id: @contact.id, account_id: @campaign.account_id)
                          .where.not(tracking_campaign_id: @campaign.id).where('tracking_campaign_entries.created_at > ?', days.days.ago)
-                         .joins(:tracking_campaign).exists?(tracking_campaigns: { engine: '2' })
+                         .joins(:tracking_campaign).exists?(tracking_campaigns: { engine: '2', test_of_id: nil })
   end
 
   def active_tracking?
+    close_stale_trackings! if @campaign.motor2?
     ContactTracking.exists?(contact_id: @contact.id, inbox_id: @campaign.inbox_id, status: ACTIVE_STATUSES)
+  end
+
+  STALE_AFTER = 7.days
+
+  # Campaña con Vendedor IA: el seguimiento «solo contesta» del agente de la bandeja (o uno que quedó pausado tras un
+  # relevo) no tiene toques pendientes; si lleva STALE_AFTER sin moverse, ya no detiene la campaña nueva: se cierra.
+  # Uno con toques por salir (pending/scheduled) o con plática reciente sí la detiene.
+  def close_stale_trackings!
+    ContactTracking.where(contact_id: @contact.id, inbox_id: @campaign.inbox_id).where('updated_at < ?', STALE_AFTER.ago)
+                   .where("status = 'paused' OR (status = 'active' AND (scheduled_for IS NULL OR scheduled_for > ?))", 1.year.from_now)
+                   .update_all(status: 'completed', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def contactability

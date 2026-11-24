@@ -3,14 +3,13 @@
     "BADGE": "Vendedor IA",
     "NEW_TITLE": "Nueva campaña con Vendedor IA",
     "EDIT_TITLE": "Modificar campaña con Vendedor IA",
-    "SUBTITLE": "La campaña manda el primer mensaje y tu Vendedor de campaña atiende a quien conteste: resuelve dudas, cotiza, agenda y pasa el relevo.",
+    "SUBTITLE": "La campaña manda el primer mensaje y su Vendedor IA atiende a quien conteste: resuelve dudas, cotiza, agenda y pasa el relevo.",
     "BACK": "Volver a campañas",
     "LOADING": "Cargando…",
     "LOAD_ERROR": "No se pudo cargar la campaña.",
-    "NO_SELLERS": "Todavía no tienes un «Vendedor de campaña». Créalo en Agentes listos para que atienda las respuestas.",
     "NAME": "Nombre de la campaña",
     "NAME_PLACEHOLDER": "Ej. Promo de aire acondicionado — marzo",
-    "NEEDS_SELLER_AND_CHANNEL": "Elige el vendedor (paso Oferta) y el canal (paso Mensajes) para guardarla.",
+    "NEEDS_SELLER_AND_CHANNEL": "Elige el canal (paso Oferta y canal) para guardarla.",
     "SAVE_ERROR": "No se pudo guardar la campaña.",
     "SAVED": "Campaña guardada.",
     "LAUNCHED": "¡Campaña en marcha!",
@@ -22,17 +21,19 @@
     "SCHEDULE": "Programar campaña",
     "STEPS": {
       "goal": "Objetivo",
-      "offer": "Oferta y vendedor",
+      "offer": "Oferta y canal",
       "audience": "Audiencia",
       "messages": "Mensajes",
+      "attend": "Cómo atiende",
       "when": "Cuándo",
       "review": "Revisar y lanzar"
     },
     "HINTS": {
       "goal": "Para qué es la campaña y qué cuenta como éxito.",
-      "offer": "Qué ofreces en esta campaña y qué vendedor atiende las respuestas. La oferta es de la campaña: el mismo vendedor sirve para muchas campañas.",
+      "offer": "Qué ofreces en esta campaña, por qué canal sale, sus objeciones y sus imágenes.",
       "audience": "A quién se le manda. Verás cuántos le llegan y quiénes se quedan fuera y por qué.",
       "messages": "Por dónde sale (WhatsApp o correo), cuántos toques y qué dice cada uno.",
+      "attend": "Cómo contesta a los que responden: nombre, voz, qué sabe, cómo cotiza, si deja de contestar y a quién pasa al interesado. Viene con lo de tu última campaña.",
       "when": "Cuándo empieza, cuándo termina y a qué ritmo, para no saturar a tu equipo con respuestas.",
       "review": "Revisamos todo antes de lanzar: en rojo, lo que falta."
     },
@@ -61,16 +62,9 @@
     "GOAL": {
       "QUESTION": "Si le interesa, ¿qué sigue?",
       "relay": "Lo pasa al agente o vendedor que sigue (relevo)",
-      "appointment": "Le agenda una cita (con quien tenga Google Calendar en el vendedor)"
+      "appointment": "Le agenda una cita (con quien elijas en «Cómo atiende», con Google Calendar)"
     },
     "OFFER": {
-      "SELLER": "Vendedor de campaña que atiende",
-      "SELLER_PICK": "Elige un vendedor",
-      "SELLER_HINT": "Atiende con su voz, lo que sabe, su seguimiento y cotizaciones.",
-      "RELAY": {
-        "agent": "Si le interesa, lo pasa al agente de atención de la bandeja.",
-        "person": "Si le interesa, lo pasa a la persona o equipo que tiene configurado."
-      },
       "EVENT": "Evento",
       "EVENT_PICK": "Elige el evento",
       "NO_EVENTS": "No hay eventos próximos. Créalo en Eventos.",
@@ -95,7 +89,22 @@
       "DETAILS_PLACEHOLDER": "Válido hasta el 31 de marzo · solo Guadalajara · pago en una exhibición",
       "REST_DAYS": "No escribirle si otra campaña le escribió hace menos de",
       "DAYS": "días",
-      "REST_HINT": "Protección contra saturar: los que recibieron otra campaña con Vendedor IA hace poco se quedan fuera (0 = sin regla)."
+      "REST_HINT": "Protección contra saturar: los que recibieron otra campaña con Vendedor IA hace poco se quedan fuera (0 = sin regla).",
+      "RELAY_TITLE": "Si le interesa (o pide una persona), pasa a",
+      "RELAY_CHOICES": {
+        "agent": "Al agente de atención de la bandeja (prospectos o clientes)",
+        "person": "A una persona o equipo de esta campaña"
+      },
+      "RELAY_USER": "Persona",
+      "RELAY_TEAM": "Equipo",
+      "NOBODY": "Nadie",
+      "NO_TEAM": "Sin equipo",
+      "OBJECTIONS": "Objeciones de esta oferta",
+      "OBJECTIONS_HINT": "Lo que suelen contestar a ESTA oferta y la idea para responder.",
+      "OBJECTION_PLACEHOLDER": "Ej. «Está caro»",
+      "ANSWER_PLACEHOLDER": "Ej. Incluye instalación y 12 meses de garantía",
+      "ADD_OBJECTION": "+ Agregar objeción",
+      "REMOVE": "Quitar"
     },
     "AUDIENCE": {
       "segment": "Segmento",
@@ -115,7 +124,7 @@
       },
       "CONTINUOUS_HINT": "Campaña continua: entra cada contacto que agregue una automatización con la acción «Agregar a campaña».",
       "FROM_CAMPAIGN": "{n} contactos de otra campaña.",
-      "NEEDS_CHANNEL": "Elige el vendedor y el canal para ver a cuántos les llega.",
+      "NEEDS_CHANNEL": "Elige el canal (paso Oferta y canal) para ver a cuántos les llega.",
       "COUNTING": "Contando…",
       "PICK_FIRST": "Elige la audiencia para ver a cuántos les llega.",
       "BUCKETS": {
@@ -143,7 +152,8 @@
       "TEMPLATE_PICK": "Elige la plantilla aprobada",
       "NO_TEMPLATES": "Esta bandeja no tiene plantillas aprobadas. Créalas en Ajustes › Bandejas › Plantillas (o con «Crear con Dali»).",
       "NO_TEMPLATE_PREVIEW": "Elige la plantilla del primer toque para ver cómo llega.",
-      "PICK_CHANNEL_FIRST": "Elige el canal para escribir los mensajes."
+      "PICK_CHANNEL_FIRST": "Elige el canal para escribir los mensajes.",
+      "CHANNEL_IS": "Canal: {name} (se elige en «Oferta y canal»)."
     },
     "EMAIL": {
       "SUBJECT": "Asunto",
@@ -158,7 +168,7 @@
       "AI_PREVIEW": "Este correo lo escribe el vendedor con IA para cada contacto.",
       "NO_SUBJECT": "(sin asunto)",
       "UNSUBSCRIBE": "Al final va la liga para darse de baja.",
-      "SIGNATURE": "Al final va la firma del vendedor.",
+      "SIGNATURE": "Al final va la firma de «Cómo atiende».",
       "TYPES": {
         "heading": "Título",
         "text": "Texto",
@@ -195,12 +205,27 @@
       "DELAY": "Esperar antes del primer mensaje",
       "MINUTES": "minutos",
       "WARMUP": "Calentar el dominio",
-      "WARMUP_HINT": "Para un dominio nuevo o una lista fría: el primer día salen 50, luego 100, 200… hasta {cap} al día. Si rebota más del 5 %, la campaña se pausa sola."
+      "WARMUP_HINT": "Para un dominio nuevo o una lista fría: el primer día salen 50, luego 100, 200… hasta {cap} al día. Si rebota más del 5 %, la campaña se pausa sola.",
+      "NEEDS_FUTURE": "Para programarla elige una fecha y hora futuras.",
+      "ENDS_BEFORE": "La fecha de fin debe ser después del inicio."
     },
     "REVIEW": {
-      "SUMMARY": "{kind} · atiende {seller} · sale por {channel} · {touches} toque(s)",
+      "SUMMARY": "{kind} · se presenta como {seller} · sale por {channel} · {touches} toque(s)",
       "AUDIENCE": "Le llega a {n} contacto(s).",
-      "CHECKING": "Revisando…"
+      "CHECKING": "Revisando…",
+      "CHECK_ERROR": "No se pudo revisar la campaña.",
+      "RETRY": "Reintentar",
+      "STARTS_AT": "Empieza: {at}",
+      "STARTS_NOW": "Empieza en cuanto la lances",
+      "ENDS_AT": "Termina: {at} (los toques que falten ya no salen)",
+      "NO_END": "Sin fecha de fin",
+      "PACE": "{n} toque(s), cada {every} {unit} si no contesta; si contesta, ya no salen los que faltan",
+      "CAP": "Máximo {n} mensajes al día (cuentan todos los toques)",
+      "CAP_WARMUP": "Calentando: 50 el primer día y sube hasta {n} al día",
+      "NO_CAP": "Sin máximo por día",
+      "HOURS_ON": "Solo en horario de atención (sin horario en la bandeja: de 9 a 19 h, lunes a viernes)",
+      "HOURS_OFF": "A cualquier hora",
+      "ONE_A_DAY": "Nunca más de un mensaje de campañas al día por contacto"
     },
     "PREVIEW": {
       "TITLE": "Así le llega",
@@ -209,7 +234,7 @@
     "CHAT": {
       "TITLE": "Probar: tú eres el contacto",
       "RESET": "Empezar de nuevo",
-      "NEEDS_SELLER": "Elige el vendedor para probar.",
+      "NEEDS_SELLER": "Elige el canal para probar.",
       "PLACEHOLDER": "Contesta como lo haría el contacto…",
       "SEND": "Enviar",
       "THINKING": "Escribiendo…",
@@ -221,7 +246,7 @@
       "TITLE": "¿Qué campaña quieres crear?",
       "SUBTITLE": "Las dos usan tus contactos, segmentos y horarios.",
       "MOTOR2": "Campaña con Vendedor IA (Motor 2.0)",
-      "MOTOR2_ABOUT": "Ofrecer, invitar, reactivar, renovar o encuestar por WhatsApp o correo. Tu Vendedor de campaña atiende las respuestas, cotiza, agenda y pasa el relevo; el tablero muestra hasta lo ganado.",
+      "MOTOR2_ABOUT": "Ofrecer, invitar, reactivar, renovar o encuestar por WhatsApp o correo. El Vendedor IA de la campaña atiende las respuestas, cotiza, agenda y pasa al interesado.",
       "MOTOR1": "Campaña clásica (Motor 1.0)",
       "MOTOR1_ABOUT": "Como siempre: con un Agente a medida y su ficha.",
       "BETA": "Beta"
@@ -270,7 +295,9 @@
         "no_reply": "No contestaron",
         "handed_off": "Pidieron una persona",
         "opted_out": "Se dieron de baja",
-        "failed": "Falló el envío"
+        "failed": "Falló el envío",
+        "in_progress": "Aún con toques por salir",
+        "bounced": "Rebotó el correo"
       },
       "SKIPPED": {
         "campaign_closed": "Omitidos: campaña cerrada",
@@ -315,14 +342,36 @@
         "confirmed": "Confirmaron",
         "declined": "No van",
         "low_score": "Calificación baja",
-        "failed": "Falló el envío"
+        "failed": "Falló el envío",
+        "in_progress": "Aún con toques por salir",
+        "bounced": "Rebotó el correo"
       },
       "CLOSE": "Cerrar",
       "LIST_TITLE": "Lista «{name}»",
       "LIST_STATS": "{rows} renglones · {valid} válidos · {existing} ya eran contactos",
       "LIST_PROMOTED": "{n} contestaron o dieron clic y ya son contactos",
       "LIST_QUARANTINE": "{n} siguen en cuarentena: se borran {days} días después de terminar la campaña.",
-      "LIST_CLEANED": "Limpieza hecha: se borraron {n} que nunca contestaron."
+      "LIST_CLEANED": "Limpieza hecha: se borraron {n} que nunca contestaron.",
+      "TOUCHES": {
+        "TITLE": "Por toque",
+        "TOUCH": "Toque",
+        "SENT": "Les salió",
+        "REPLIED": "Contestaron después de este",
+        "N": "Toque {n}",
+        "HINT": "Si un toque casi no consigue respuestas, cambia su texto o quítalo."
+      },
+      "OUTCOMES": {
+        "relayed": "Pasó al relevo",
+        "discarded": "No le interesó",
+        "handed_off": "Pidió una persona",
+        "objective_met": "Cumplido",
+        "opted_out": "Se dio de baja",
+        "campaign_ended": "Terminó la campaña",
+        "campaign_finished": "Terminó la campaña",
+        "Cita": "Agendó cita",
+        "Encuesta contestada": "Contestó la encuesta",
+        "later": "Le escriben más adelante"
+      }
     },
     "LIST": {
       "HINT": "Para una audiencia que no te conoce. La lista se limpia antes de crear nada: sin correo o mal escrito, repetidos, de rol (info@, ventas@…), que se dieron de baja o rebotaron antes y dominios que no reciben correo. Si el correo ya es de un contacto tuyo, se usa ese. Los nuevos quedan en cuarentena: no salen en Contactos hasta que contestan o dan clic; los que nunca contestan se borran solos.",
@@ -334,7 +383,7 @@
       "CLEANUP": "Borrar los que nunca contesten a los (días)",
       "COLUMNS": "CSV con encabezados: correo (o email) obligatorio; nombre, empresa y teléfono opcionales. Hasta 5,000 renglones.",
       "UPLOAD": "Subir y limpiar",
-      "NEEDS_SELLER": "Primero elige el vendedor (paso Oferta y vendedor).",
+      "NEEDS_SELLER": "Primero elige el canal (paso Oferta y canal).",
       "ERROR": "No se pudo subir la lista.",
       "RESULT": "De {rows} renglones: {valid} listos ({created} nuevos en cuarentena y {existing} que ya eran tus contactos).",
       "LOADED": "Lista «{name}»: {n} contactos.",
@@ -344,6 +393,210 @@
         "role": "{n} de rol (info@, ventas@…)",
         "suppressed": "{n} se dieron de baja o rebotaron antes",
         "undeliverable": "{n} de dominios que no reciben correo"
+      }
+    },
+    "TEST_TABS": {
+      "simulate": "Simular la campaña",
+      "chat": "Chatear con el vendedor",
+      "real": "Prueba real"
+    },
+    "SIM": {
+      "INTRO": "Ve la campaña completa como la recibiría un contacto: cada toque con su texto y cuándo sale, y qué pasa según conteste. No se manda nada.",
+      "SEARCH": "Busca un contacto…",
+      "AS_ME": "Simular conmigo",
+      "NEEDS_SETUP": "Elige el canal para simular.",
+      "LOADING": "Armando la simulación…",
+      "ERROR": "No se pudo simular.",
+      "FOR": "Para {name} ({address})",
+      "NO_ADDRESS": "sin dato para este canal",
+      "TOUCH": "Toque {n}",
+      "FIRST": "al lanzar la campaña",
+      "AFTER": "si no ha contestado, {n} {unit} después",
+      "UNITS": {
+        "hours": "horas",
+        "days": "días"
+      },
+      "FROM_TEMPLATE": "Plantilla de WhatsApp «{name}»",
+      "FROM_CAMPAIGN": "El texto de la campaña",
+      "FROM_AI": "Lo escribe el vendedor con IA en ese momento",
+      "FROM_AI_WHATSAPP": "Sin plantilla: lo escribe el vendedor, solo si el contacto escribió en las últimas 24 horas",
+      "SUBJECT": "Asunto: {subject}",
+      "AI_WRITES": "El vendedor lo escribe con lo que haya pasado hasta ese momento.",
+      "REPLY_HERE": "Contesta aquí",
+      "STOPS_ON_REPLY": "Si contesta, ya no salen los toques que faltan: el vendedor le responde y, si deja de contestar, lo vuelve a buscar.",
+      "OUTCOMES_TITLE": "Qué pasa según conteste",
+      "NOBODY": "nadie elegido",
+      "OUTCOMES": {
+        "appointment": "Le interesa: el vendedor le agenda la cita con {to}.",
+        "relay_agent": "Le interesa: pasa al agente «{to}» en la misma conversación.",
+        "relay_person": "Le interesa: pasa a una persona ({to}).",
+        "discarded": "No le interesa: sale de la campaña y ya no recibe toques; el motivo queda en «En qué se van».",
+        "handoff": "Pide una persona o se molesta: pasa a {to} y el vendedor se detiene.",
+        "done": "Termina (confirmó, no va o contestó la encuesta): queda cumplido.",
+        "no_reply": "Nunca contesta: después de {n} toques termina como «No contestó».",
+        "later": "«Ahora no» o fuera de la oficina: se le vuelve a escribir una vez en la fecha que diga (30 días si no dice).",
+        "info": "Pide información: se manda tu Mensaje 2 tal cual, con sus imágenes; luego resuelve dudas."
+      },
+      "WARNINGS": {
+        "no_address": "Este contacto no tiene el dato del canal: no le llegaría.",
+        "opted_out": "Este contacto pidió no ser contactado: no le llegaría.",
+        "whatsapp_no_template": "Los toques {touches} no tienen plantilla: si el contacto no escribió en las últimas 24 horas, no salen."
+      },
+      "FILES": "📎 {names}",
+      "OPENER": "Si escribió en las últimas 24 h, en lugar de la plantilla: «{text}»",
+      "INFO": "Mensaje 2 · si pide información, se manda tal cual"
+    },
+    "TEST_RUN": {
+      "INTRO": "Manda la campaña de verdad, solo a ti o a tu equipo, con los toques cada pocos minutos. Llegan los mensajes, se crean las conversaciones y el relevo como con un cliente. No cuenta en los resultados.",
+      "EMAILS": "Correos de prueba",
+      "PHONES": "WhatsApp de prueba (con lada del país)",
+      "EMAIL_PLACEHOLDER": "tu@correo.com",
+      "PHONE_PLACEHOLDER": "+52 81 1234 5678",
+      "ADD": "+ Agregar otro",
+      "REMOVE": "Quitar",
+      "EVERY": "Un toque cada",
+      "MINUTES": "minutos",
+      "NOTE": "Las esperas del vendedor también se acortan: cada hora es un minuto. Una prueba nueva termina la anterior.",
+      "START": "Empezar la prueba",
+      "START_AGAIN": "Empezar otra prueba",
+      "NEED_RECIPIENT": "Agrega al menos un contacto de prueba.",
+      "STARTED": "Prueba en curso: revisa tu WhatsApp o tu correo.",
+      "ERROR": "No se pudo empezar la prueba.",
+      "RUNNING": "Prueba en curso desde las {at} · un toque cada {n} min",
+      "FINISHED": "Prueba de las {at} terminada",
+      "REFRESH": "Actualizar",
+      "STOP": "Terminar prueba",
+      "OPEN": "Abrir conversación",
+      "NEXT": "siguiente a las {at}",
+      "SKIPPED": "No entró: {reason}",
+      "STATUS": {
+        "pending": "Por salir",
+        "scheduled": "Va en el toque {n} de {total}",
+        "active": "Contestó: lo atiende el vendedor",
+        "paused": "Pasó a una persona",
+        "completed": "Terminó",
+        "failed": "No se pudo mandar",
+        "cancelled": "Terminado"
+      },
+      "KIND": {
+        "outgoing": "Salió",
+        "incoming": "Contestó",
+        "note": "Nota"
+      },
+      "WAIT": {
+        "hours": "esperando horario",
+        "daily_cap": "esperando: llegó al tope del día",
+        "frequency": "esperando: otra campaña le escribió hoy"
+      }
+    },
+    "FILES": {
+      "TITLE": "Imágenes y archivos de esta oferta",
+      "HINT": "La foto del producto en promoción, el flyer del evento, el catálogo… Ponle a cada uno qué es (el vendedor no ve la imagen) y cuándo va.",
+      "ABOUT_PLACEHOLDER": "Qué es (p. ej. foto del paquete en promoción con su precio)",
+      "ABOUT_MISSING": "Sin descripción el vendedor no sabe cuándo mandarla.",
+      "TOUCH": "En el toque {n}",
+      "WHEN": {
+        "interest": "Con la información (cuando muestre interés)",
+        "ask": "Cuando lo pida o le sirva",
+        "confirm": "Al confirmar el evento"
+      },
+      "ADD": "+ Subir imágenes o archivos",
+      "UPLOADING": "Subiendo…",
+      "REMOVE": "Quitar",
+      "LIMITS": "Hasta 10. WhatsApp acepta JPG o PNG hasta 5 MB, video hasta 16 MB y PDF hasta 100 MB. En WhatsApp, en un toque solo sale si el contacto escribió en las últimas 24 h (si no, va la plantilla, que puede llevar su imagen en el encabezado).",
+      "IMAGE_TYPE": "«{name}»: la imagen debe ser JPG o PNG.",
+      "UPLOAD_ERROR": "No se pudo subir el archivo.",
+      "UPDATE_ERROR": "No se pudo guardar el cambio."
+    },
+    "ATTEND": {
+      "HINT": "Así contesta a los que responden. Viene con lo de tu última campaña (la primera vez, con la voz de tu empresa y todas tus fuentes); cambia solo lo que esta campaña necesite distinto.",
+      "TABS": {
+        "who": "Quién habla",
+        "knows": "Qué sabe",
+        "quote": "Cotiza y agenda",
+        "follow": "Si deja de contestar",
+        "notes": "Indicaciones"
+      },
+      "DISPLAY_NAME": "Nombre con el que se presenta (opcional)",
+      "DISPLAY_NAME_PLACEHOLDER": "Ej. Ana, de Grúas del Norte",
+      "SIGNATURE": "Firma de los correos",
+      "SIGNATURE_PLACEHOLDER": "Ana López · Ventas\nGrúas del Norte · 81 1234 5678",
+      "CALENDARS": "¿Con quién agenda citas?",
+      "CALENDARS_HINT": "Si la meta de la campaña es «Agendar cita», agenda en el calendario de estas personas.",
+      "NO_CALENDARS": "Nadie tiene Google Calendar conectado: conéctalo en Agenda › Calendario.",
+      "INSTRUCTIONS": "Indicaciones (opcional)",
+      "INSTRUCTIONS_PLACEHOLDER": "Ej. no des precios de instalación; ofrece la visita gratis"
+    },
+    "FLOW": {
+      "OPENER_TITLE": "Mensaje 1 · Apertura",
+      "OPENER_HINT": "Corto, para que conteste. Si no ha escrito en 24 horas, WhatsApp solo deja mandar una plantilla aprobada: elige cuál y de dónde sale cada variable.",
+      "TEMPLATE_OPENER": "Plantilla de apertura (toque 1)",
+      "TEMPLATE_TOUCH": "Si no contesta · toque {n}",
+      "TEMPLATE_PICK": "Elige la plantilla aprobada",
+      "FIXED_TEXT": "Texto fijo",
+      "TOUCHES_NOTE": "Si contesta en cualquier toque, ya no salen los que faltan.",
+      "OPEN_WINDOW": "Si escribió en las últimas 24 horas, sale este texto (opcional)",
+      "OPEN_WINDOW_PLACEHOLDER": "Hola {{contacto}}, tenemos {{oferta}}. ¿Te mando la información?",
+      "OPEN_WINDOW_HINT": "Con {{contacto}}, {{empresa}} y {{oferta}}. Vacío: lo escribe la IA con la misma idea.",
+      "INFO_TITLE": {
+        "offer": "Mensaje 2 · Si pide información, se manda",
+        "reactivate": "Mensaje 2 · Si pide información, se manda",
+        "renew": "Mensaje 2 · Si pide los detalles, se manda (opcional)",
+        "invite": "Mensaje 2 · Si quiere saber del evento, se manda",
+        "survey": "Mensaje 2 · Si acepta, las preguntas"
+      },
+      "INFO_HINT": {
+        "offer": "Sale tal cual: el copy completo (qué es, precio, qué incluye, vigencia). Termina con una pregunta de cierre («¿Te lo aparto?»). Todo lo que pongas aquí también es lo que sabe el vendedor para contestar dudas.",
+        "reactivate": "Sale tal cual: la oferta para que vuelva. Termina con una pregunta de cierre. También es lo que sabe el vendedor.",
+        "renew": "Sale tal cual: opciones, precio y cómo renovar. Si tu plantilla ya trae todo, déjalo vacío. También es lo que sabe el vendedor.",
+        "invite": "Sale tal cual: lugar, horario, agenda y cómo llegar. Termina con «¿Te confirmo tu lugar?». También es lo que sabe el vendedor."
+      },
+      "INFO_PLACEHOLDER": {
+        "offer": "Mantenimiento preventivo con 30% de descuento…\n• Incluye revisión de frenos y aceite\n• Precio: $1,800 (antes $2,600)\n• Válido hasta el 30 de noviembre\n\n¿Te lo aparto?",
+        "reactivate": "Te extrañamos, {{contacto}}. Para que regreses: …\n\n¿Lo quieres?",
+        "renew": "Tu póliza vence el 15 de diciembre. Para renovarla: …\n\n¿La renuevo?",
+        "invite": "Expo Industrial · 30 de noviembre, 10:00 a 18:00\nLugar: Cintermex, sala B\nAgenda: …\n\n¿Te confirmo tu lugar?"
+      },
+      "INFO_COUNT": "{n} de {max} caracteres",
+      "INFO_FILES": "Las imágenes y archivos de la oferta marcados «Cuando muestre interés» se mandan junto con este mensaje (primero la imagen y luego el texto). Sin este mensaje, la información la escribe la IA.",
+      "FROM_EVENT": "Llenar con los datos del evento",
+      "EVENT_DRAFT": {
+        "TITLE": "{name}",
+        "WHEN": "Cuándo: {when}",
+        "WHERE": "Dónde: {where}",
+        "CLOSE": "¿Te confirmo tu lugar?"
+      },
+      "SURVEY_HINT": "Si acepta, se hacen tus preguntas (paso «Oferta y canal») una por mensaje, en este orden:",
+      "SURVEY_EMPTY": "Escribe las preguntas en el paso «Oferta y canal».",
+      "AFTER": {
+        "offer": "Después: el vendedor resuelve sus dudas y lo lleva al cierre; cuando lo quiere, pasa a quien elegiste, cotiza o agenda.",
+        "reactivate": "Después: resuelve sus dudas y lo lleva al cierre; cuando lo quiere, pasa a quien elegiste.",
+        "renew": "Después: resuelve sus dudas y lo lleva a renovar; cuando acepta, pasa a quien elegiste o cotiza.",
+        "invite": "Después: resuelve sus dudas y le pregunta si va; queda «Confirmó» o «No va» en la lista del evento.",
+        "survey": "Después: guarda cada respuesta; con una calificación baja levanta un caso."
+      },
+      "SOURCES": {
+        "contact_first_name": "Nombre del contacto",
+        "contact_name": "Nombre completo",
+        "contact_company": "Empresa del contacto",
+        "offer_what": "Qué ofreces",
+        "offer_details": "Detalles de la oferta",
+        "event_name": "Nombre del evento",
+        "event_date": "Fecha del evento",
+        "event_place": "Lugar del evento",
+        "text": "Texto fijo"
+      },
+      "PREVIEW": {
+        "STEP_1": "Mensaje 1 · Apertura",
+        "REPLY": "Sí, mándame la información",
+        "REPLY_SURVEY": "Sí, claro",
+        "STEP_2": "Mensaje 2",
+        "IMAGES": "🖼️ Tus imágenes «con la información»",
+        "AI_WRITES": "(sin Mensaje 2: la información la escribe la IA)",
+        "AFTER": {
+          "sale": "A partir de aquí, el vendedor contesta sus dudas y lo lleva al cierre.",
+          "survey": "Sigue con las demás preguntas, una por mensaje."
+        }
       }
     }
   }

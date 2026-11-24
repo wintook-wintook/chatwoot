@@ -124,6 +124,8 @@ class TrackingTemplate < ApplicationRecord
   scope :by_inbox, ->(inbox_id) { where(inbox_id: inbox_id) }
   scope :search_by_name, ->(query) { where('name ILIKE ?', "%#{query}%") }
   scope :ordered, -> { order(updated_at: :desc) }
+  # Sin los agentes que arma cada Campaña con Vendedor IA («Cómo atiende»): esos no salen en listas ni se eligen.
+  scope :listable, -> { where(campaign_owned: false) }
 
   before_save :ensure_arrays
   # proyecto@asistente_agentes_ia — el Entrenamiento por bloques (plan:
@@ -144,7 +146,7 @@ class TrackingTemplate < ApplicationRecord
     {
       active_trackings: ContactTracking.where(tracking_template_id: id,
                                               status: ContactTrackings::Eligibility::ACTIVE_STATUSES).count,
-      campaigns: TrackingCampaign.where(tracking_template_id: id).count,
+      campaigns: TrackingCampaign.real.where(tracking_template_id: id).count,
       automations: automations_using.map(&:name)
     }
   end

@@ -9,13 +9,33 @@ module Motor2::CampaignTouch
 
   def text(tracking)
     campaign = tracking.tracking_campaign
-    return unless campaign&.motor2? && tracking.inbox&.email?
+    return unless campaign&.motor2?
+    return whatsapp_opener(campaign, tracking) if tracking.inbox&.whatsapp?
+
+    email_text(campaign, tracking)
+  end
+
+  def email_text(campaign, tracking)
+    return unless tracking.inbox&.email?
 
     body = TrackingCampaigns::Motor2Brief.email_body(campaign, tracking.attempt_count + 1)
     body && TrackingCampaigns::ClickLink.wrap(fill(body, tracking.contact), tracking)
   end
 
-  def fill(body, contact)
+  # WhatsApp con la ventana abierta: la apertura que escribió la empresa (solo el primer toque; vacía, la escribe la IA).
+  def whatsapp_opener(campaign, tracking)
+    opener = campaign.brief.to_h['opener'].to_s.strip
+    opener.present? && tracking.attempt_count.zero? ? fill(opener, tracking.contact, campaign) : nil
+  end
+
+  # {{contacto}}, {{empresa}} y, en WhatsApp, {{oferta}} (lo que ofrece la campaña).
+  def fill(body, contact, campaign = nil)
+    offer = campaign&.brief.to_h['offer_what'].to_s.squish
+    body = body.gsub(/\{\{\s*oferta\s*\}\}/i, offer)
+    fill_contact(body, contact)
+  end
+
+  def fill_contact(body, contact)
     first = contact&.name.to_s.strip.split(/\s+/).first.to_s
     attrs = contact&.additional_attributes || {}
     company = (attrs['company_name'].presence || attrs['company'].presence).to_s.strip

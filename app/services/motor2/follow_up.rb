@@ -49,11 +49,11 @@ module Motor2::FollowUp
   # El recordatorio `step`; si ya no hay, las plantillas o, sin ellas, el cierre al final de las 24 h.
   def next_step(tracking, message, step, plan)
     if step < plan[:nudges]
-      Motor2::FollowUpJob.set(wait_until: message.created_at + NUDGE_HOURS[step].hours).perform_later(tracking.id, message.id, step)
+      Motor2::FollowUpJob.set(wait_until: message.created_at + hours(tracking, NUDGE_HOURS[step])).perform_later(tracking.id, message.id, step)
     elsif plan[:templates].any? && whatsapp?(tracking)
       templates!(tracking, message, plan)
     else
-      Motor2::FollowUpJob.set(wait_until: message.created_at + END_AFTER).perform_later(tracking.id, message.id, END_STEP)
+      Motor2::FollowUpJob.set(wait_until: message.created_at + hours(tracking, END_AFTER / 1.hour)).perform_later(tracking.id, message.id, END_STEP)
     end
   end
 
@@ -67,9 +67,10 @@ module Motor2::FollowUp
 
   # Pasadas las 24 h: el envío de siempre con sus plantillas (una cada template_days).
   def templates!(tracking, message, plan)
+    test = test_run?(tracking)
     tracking.update!(status: 'scheduled', attempt_count: 0, max_attempts: plan[:templates].size,
-                     whatsapp_templates: plan[:templates], retry_interval_value: plan[:template_days], retry_interval_unit: 'days',
-                     scheduled_for: message.created_at + 24.hours + plan[:template_days].days)
+                     whatsapp_templates: plan[:templates], retry_interval_value: plan[:template_days], retry_interval_unit: test ? 'minutes' : 'days',
+                     scheduled_for: message.created_at + hours(tracking, 24) + (test ? plan[:template_days].minutes : plan[:template_days].days))
   end
 
   # Nunca contestó: la etiqueta y, en clientes a medio caso, al equipo del área.
@@ -86,11 +87,17 @@ module Motor2::FollowUp
 
   # ¿Sigue esperando su respuesta? (no escribió después, nadie del equipo tomó la plática, sigue vivo)
   def waiting?(tracking, message_id)
-    return false unless tracking&.status == 'active' && tracking.motor2_state.to_h['follow_up_message'] == message_id
+    return false unless waiting_on?(tracking, message_id)
 
     conversation = tracking.conversation
     conversation.present? && !conversation.resolved? && !conversation.messages.incoming.exists?(['id > ?', message_id]) &&
       !person_wrote_after?(conversation, message_id)
+  end
+
+  # Vivo, esperando ESE mensaje y sin la campaña pausada (a mano o por rebotes: tampoco salen los recordatorios).
+  def waiting_on?(tracking, message_id)
+    tracking&.status == 'active' && tracking.motor2_state.to_h['follow_up_message'] == message_id &&
+      tracking.tracking_campaign&.status != 'paused'
   end
 
   def person_wrote_after?(conversation, message_id)
@@ -120,7 +127,7 @@ module Motor2::FollowUp
     plan = plan_for(Motor2::Config.for(tracking).function)
     return nil unless message && plan && tracking.status == 'active'
 
-    NUDGE_HOURS.first(plan[:nudges]).map { |h| message.created_at + h.hours }.find(&:future?)
+    NUDGE_HOURS.first(plan[:nudges]).map { |h| message.created_at + hours(tracking, h) }.find(&:future?)
   end
 
   # Alguien del equipo lo va a atender: no más toques de este seguimiento.
@@ -132,4 +139,9 @@ module Motor2::FollowUp
   end
 
   def whatsapp?(tracking) = tracking.inbox&.channel_type.to_s.include?('Whatsapp')
+
+  # «Prueba real» de una campaña: cada hora de espera es un minuto, para verlo completo en un rato.
+  def hours(tracking, count) = test_run?(tracking) ? count.minutes : count.hours
+
+  def test_run?(tracking) = tracking.tracking_campaign&.test_run? || false
 end

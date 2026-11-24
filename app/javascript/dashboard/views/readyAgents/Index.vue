@@ -36,7 +36,6 @@ export default {
       calendarUsers: [],
       sources: [], // las fuentes de la cuenta y qué hay en cada una (paso «Qué sabe»)
       caseTypes: [], // «Atención a clientes»: los tipos de caso que puede levantar
-      events: [], // «Vendedor de campaña» › Invitar: los eventos próximos
       loading: true,
       modal: null,
       metricsFor: null, // «Atención a prospectos»: el agente cuyas métricas se ven
@@ -59,7 +58,6 @@ export default {
         this.calendarUsers = data.calendar_users || [];
         this.sources = data.sources || [];
         this.caseTypes = data.case_types || [];
-        this.events = data.events || [];
         this.openFromQuery();
       } catch (e) {
         useAlert(e.response?.data?.error || this.t('LOAD_ERROR'));
@@ -288,7 +286,6 @@ export default {
       :agent="modal.agent"
       :calendar-users="calendarUsers"
       :sources="sources"
-      :events="events"
       @close="modal = null"
       @saved="onSaved"
     />

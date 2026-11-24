@@ -109,7 +109,7 @@ class Api::V1::Accounts::ReadyAgentsController < Api::V1::Accounts::BaseControll
   end
 
   def function_agents
-    Current.account.tracking_templates.where(agent_function: Motor2::Functions::CLASSES.keys, archived_at: nil)
+    Current.account.tracking_templates.listable.where(agent_function: Motor2::Functions::CLASSES.keys, archived_at: nil)
   end
 
   def set_agent

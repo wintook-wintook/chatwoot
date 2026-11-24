@@ -116,7 +116,16 @@ class Motor2::Functions::CampaignSeller
     lines << "- Precio, vigencia y condiciones: #{answer(:offer_details)}" if answer(:offer_details).present?
     lines << event_line if invite? && event
     lines << '- Si le interesa: agéndale la cita (ver_horarios y agendar_cita).' if appointment?
+    lines << content_line if content.present?
     lines.join("\n")
+  end
+
+  # «Mensaje 2» de la campaña (WhatsApp): sale tal cual con enviar_informacion y es lo que sabe de la oferta.
+  def content = answer(:content).to_s.strip
+
+  def content_line
+    '- LA INFORMACIÓN COMPLETA DE LA OFERTA (es lo que sabes: contesta sus dudas con esto, con tus palabras; no inventes ' \
+      "nada que no esté aquí ni en tus fuentes):\n#{content.first(TrackingCampaigns::Motor2Brief::MAX_CONTENT)}"
   end
 
   private
@@ -137,8 +146,15 @@ class Motor2::Functions::CampaignSeller
     lines.empty? ? '' : "EL NEGOCIO:\n#{lines.join("\n")}"
   end
 
+  # Las de la campaña (de esta oferta) primero; de las generales del vendedor, las que la campaña no repite.
+  def objection_rows
+    own = Array(answer(:campaign_objections))
+    taken = own.map { |o| o['objection'].to_s.squish.downcase }
+    own + Array(answer(:objections)).reject { |o| taken.include?(o['objection'].to_s.squish.downcase) }
+  end
+
   def objections_block
-    rows = Array(answer(:objections)).select { |o| o['objection'].present? && o['answer'].present? }
+    rows = objection_rows.select { |o| o['objection'].present? && o['answer'].present? }
     return '' if rows.empty?
 
     "OBJECIONES FRECUENTES (contesta con esta idea, con tus palabras; no ofrezcas descuentos que no estén aquí):\n" \

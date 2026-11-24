@@ -5,6 +5,7 @@
 #   discarded (no_le_interesa)          → nota con el motivo; el seguimiento se cierra (no más toques)
 #   done      (confirmó / no va / terminó la encuesta) → nota y cumplido; encuesta con calificación baja → caso
 #   handoff   (pasar_a_humano)          → nota, se asigna a la persona o equipo y el agente se pausa
+#   later     (mas_adelante)            → un solo toque más en N días (a su hora hábil); si no contesta, termina
 #   booked    (agendó la cita)          → nota, se asigna a quien la atiende y cumplido
 class Motor2::Functions::CampaignSellerOutcomes
   def initialize(tracking, conversation, function)
@@ -20,6 +21,7 @@ class Motor2::Functions::CampaignSellerOutcomes
     when 'discarded' then discarded(text)
     when 'done' then done(text)
     when 'handoff' then handed_off(text)
+    when 'later' then later(text)
     end
   rescue StandardError => e
     Rails.logger.error("[Motor2::CampaignSellerOutcomes] #{e.class}: #{e.message}")
@@ -79,6 +81,30 @@ class Motor2::Functions::CampaignSellerOutcomes
                               .create_for_manual(title: "Encuesta con calificación baja: #{@conversation.contact&.name}".first(200),
                                                  description: answers.join("\n"), case_type_id: type_id, priority: 'high',
                                                  assignee_id: target[:user_id], team_id: target[:team_id])
+  end
+
+  # «Ahora no»: un toque más en N días. En WhatsApp, pasadas las 24 h solo sale con plantilla: si ese toque no tiene,
+  # va la del último toque de la campaña. En «Prueba real», N minutos.
+  def later(text)
+    days, reason = text.to_s.split('|', 2)
+    days = days.to_i.clamp(1, Motor2::Skills::Campaign::MAX_LATER_DAYS)
+    campaign = @tracking.tracking_campaign
+    at = campaign&.test_run? ? days.minutes.from_now : later_time(campaign, days.days.from_now)
+    note("Pidió que le escriban más adelante (#{days} días#{": #{reason}" if reason.present?}).")
+    @tracking.update_columns(later_attributes(at, days)) # rubocop:disable Rails/SkipsModelValidations
+    ContactTrackingJob.set(wait_until: at).perform_later(@tracking.id) unless TrackingDispatch.enabled_for?(@tracking.account_id)
+  end
+
+  def later_time(campaign, time)
+    campaign ? TrackingCampaigns::Schedule.new(campaign).next_send_time(time) || time : time
+  end
+
+  def later_attributes(at, days)
+    next_touch = @tracking.attempt_count + 1
+    templates = Array(@tracking.whatsapp_templates)
+    templates = templates.dup.tap { |list| list[next_touch - 1] = list.compact_blank.last } if templates.any? && templates[next_touch - 1].blank?
+    { status: 'scheduled', scheduled_for: at, max_attempts: next_touch, whatsapp_templates: templates, outcome: 'later',
+      motor2_state: state.merge('later_days' => days, 'follow_up' => nil), updated_at: Time.current }
   end
 
   def handed_off(reason)

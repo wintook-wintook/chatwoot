@@ -5,7 +5,8 @@
 module Motor2::TurnFiles
   # Un archivo del agente que va con la respuesta (máximo 5; no se repite en el mismo mensaje).
   def attach(name)
-    file = @config.attachments.where('LOWER(name) = ?', name.to_s.downcase).first
+    # Si la campaña y el vendedor tienen uno con el mismo nombre, gana el de la campaña.
+    file = @config.attachments.where('LOWER(name) = ?', name.to_s.downcase).order(Arel.sql('tracking_campaign_id IS NULL')).first
     file&.file&.attached? ? attach_blob(file.id, file.name, file.file.blob) : false
   end
 

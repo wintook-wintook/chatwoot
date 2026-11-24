@@ -14,4 +14,14 @@ module Motor2::AttemptHook
 
     Motor2::CollectionsTouch.text(tracking) || Motor2::CampaignTouch.text(tracking) || Motor2::Attempt.new(tracking).message
   end
+
+  private
+
+  # Sin IA en la cuenta (o si falló), el texto que escribió la empresa en la campaña sigue saliendo tal cual (no
+  # necesita IA); antes salía el «Hola, te escribo para dar seguimiento…» genérico.
+  def generate_simple_message(tracking)
+    return super unless Motor2.on?(tracking.tracking_template)
+
+    Motor2::CollectionsTouch.text(tracking) || Motor2::CampaignTouch.text(tracking) || super
+  end
 end

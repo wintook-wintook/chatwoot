@@ -41,8 +41,18 @@ class Motor2::Config
 
   def account = @template.account
 
-  # Los archivos del agente (en el chat de prueba, los del agente del que es copia).
-  def attachments = AiAgentAttachment.where(tracking_template_id: @template.id || @template.draft_of)
+  # Los archivos del agente (en el chat de prueba, los del agente del que es copia) y, en una Campaña con Vendedor IA,
+  # los de su oferta.
+  def attachments
+    own = AiAgentAttachment.where(tracking_template_id: @template.id || @template.draft_of)
+    @campaign ? own.or(AiAgentAttachment.of_campaign(@campaign)) : own
+  end
+
+  # La regla de cada archivo: los de la campaña primero (y ganan si se llaman igual), luego los del vendedor.
+  def file_rules
+    own = @template.file_rules
+    @campaign ? @campaign.file_rules.merge(own.except(*@campaign.file_rules.keys)) : own
+  end
 
   def name = @columns['name'].to_s
 

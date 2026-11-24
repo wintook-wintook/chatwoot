@@ -95,7 +95,12 @@
     "PAUSED_MANUAL_HINT": "Messages that arrive while it is paused are handled by your team from the conversation. When resumed, the AI Agent answers again and the stopped messages go out again starting in a minute.",
     "RESUME": "Resume campaign",
     "RESUME_SUCCESS": "Campaign resumed: {count} follow-ups send again in a minute.",
-    "RESUME_ERROR": "The campaign could not be resumed."
+    "RESUME_ERROR": "The campaign could not be resumed.",
+    "FILTER_ENGINE": {
+      "all": "All campaigns",
+      "motor2": "With AI Seller",
+      "classic": "Classic (Engine 1.0)"
+    }
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campaigns",

@@ -36,9 +36,10 @@ class Motor2::Skills::Files < Motor2::Skills::Base
     @turn.attach(name) ? { ok: true, nota: 'Se manda junto con tu mensaje.' } : { error: 'No se pudo adjuntar.' }
   end
 
-  # Los nombres con la regla (p. ej. 'interest' o 'confirm') que sí están subidos.
-  def self.with_rule(template, rule, attachments)
-    names_where(template) { |r| r[rule.to_s] } & attachments.pluck(:name)
+  # Los nombres con la regla (p. ej. 'interest' o 'confirm') que sí están subidos. source: lo que tiene #file_rules
+  # (la Config, que junta los de la campaña y los del vendedor, o el agente).
+  def self.with_rule(source, rule, attachments)
+    names_where(source) { |r| r[rule.to_s] } & attachments.pluck(:name)
   end
 
   # Los archivos que van con la bienvenida (los manda Motor2::Reply).
@@ -51,12 +52,12 @@ class Motor2::Skills::Files < Motor2::Skills::Base
   private
 
   def askable
-    @askable ||= self.class.with_rule(config.template, 'ask', config.attachments)
+    @askable ||= self.class.with_rule(config, 'ask', config.attachments)
   end
 
   # «folleto (los 3 paquetes y sus precios), mapa (cómo llegar al evento)»
   def catalog_text
-    rules = config.template.file_rules
+    rules = config.file_rules
     askable.map { |name| [name, rules.dig(name, 'about').presence].compact.then { |n, a| a ? "#{n} (#{a})" : n } }.join(', ')
   end
 

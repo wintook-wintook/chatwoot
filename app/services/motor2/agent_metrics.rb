@@ -28,7 +28,12 @@ class Motor2::AgentMetrics
 
   private
 
-  def trackings = ContactTracking.where(tracking_template_id: @template.id).where(created_at: @since..).includes(:conversation).to_a
+  # Sin las copias de «Prueba real» de las campañas.
+  def trackings
+    tests = TrackingCampaign.where.not(test_of_id: nil).select(:id)
+    ContactTracking.where(tracking_template_id: @template.id).where(created_at: @since..)
+                   .where('tracking_campaign_id IS NULL OR tracking_campaign_id NOT IN (?)', tests).includes(:conversation).to_a
+  end
 
   def customers
     labels = trackings.map { |t| Array(t.conversation&.label_list) }

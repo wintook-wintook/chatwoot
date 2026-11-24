@@ -95,7 +95,12 @@
     "PAUSED_MANUAL_HINT": "Los mensajes que lleguen mientras está pausada los atiende tu equipo desde la conversación. Al reanudarla, el Agente IA vuelve a contestar y los envíos detenidos salen de nuevo a partir de un minuto.",
     "RESUME": "Reanudar campaña",
     "RESUME_SUCCESS": "Campaña reanudada: {count} seguimientos vuelven a enviar en un minuto.",
-    "RESUME_ERROR": "No se pudo reanudar la campaña."
+    "RESUME_ERROR": "No se pudo reanudar la campaña.",
+    "FILTER_ENGINE": {
+      "all": "Todas las campañas",
+      "motor2": "Con Vendedor IA",
+      "classic": "Clásicas (Motor 1.0)"
+    }
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campañas",

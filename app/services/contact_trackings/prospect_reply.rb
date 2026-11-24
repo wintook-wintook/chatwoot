@@ -33,7 +33,9 @@ module ContactTrackings::ProspectReply
     return false unless WAITING_STATUSES.include?(tracking.status)
 
     remaining = [tracking.max_attempts, tracking.attempt_count + 1].min
-    ok = tracking.update(scheduled_for: recovery_at(at, tracking.inbox), max_attempts: remaining)
+    # «Prueba real» de una Campaña con Vendedor IA: en minutos, para verlo en un rato.
+    when_at = tracking.tracking_campaign&.test_run? ? at + RECOVERY_BUSINESS_DAYS.minutes : recovery_at(at, tracking.inbox)
+    ok = tracking.update(scheduled_for: when_at, max_attempts: remaining)
     Rails.logger.warn "[ProspectReply] Tracking ##{tracking.id}: #{tracking.errors.full_messages.join(', ')}" unless ok
     ok
   end
