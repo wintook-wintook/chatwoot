@@ -16,7 +16,7 @@ class Motor2::Reply
 
   def call
     ProspectLists.promote!(@conversation.contact) # contestó: deja la cuarentena de la lista fría (aunque sea para darse de baja)
-    return opt_out! if ContactTrackings::OptOut.requested_in?(text)
+    return opt_out! if opt_out_requested?
     return if TrackingCampaigns::HandoffAttention.seller_owns?(@conversation)
 
     Motor2::FollowUp.revive!(@tracking) # contestó después del último recordatorio
@@ -51,6 +51,17 @@ class Motor2::Reply
     return unless @tracking.tracking_campaign&.motor2? && %w[pending scheduled].include?(@tracking.status)
 
     @tracking.update_columns(status: 'active', scheduled_for: Motor2::InboxRouter::NO_ATTEMPTS.from_now, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # Campaña con IA con etiqueta «no…» (TrackingCampaigns::CampaignKit): solo la baja dicha así es general; «no me
+  # inviten» lo decide su agente (no_contactar → sale de las campañas de ese tipo, no de todo).
+  def opt_out_requested?
+    campaign = @tracking.tracking_campaign
+    if campaign&.motor2? && TrackingCampaigns::CampaignKit.label(campaign.brief, 'opt_out').present?
+      return ContactTrackings::OptOut.hard_requested_in?(text)
+    end
+
+    ContactTrackings::OptOut.requested_in?(text)
   end
 
   def opt_out!

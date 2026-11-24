@@ -3,10 +3,10 @@ key: campana_correo_vendedor_ia
 title: Campaña por correo con Vendedor IA, de la lista a la venta
 areas: [campaigns]
 category: Campañas
-keywords: [calentar el dominio, spf, dkim, dmarc, rebotes, campana pausada, prospectos de listas, importo, importar contactos, contactos en cuarentena, cuarentena de contactos, campana por correo, campana de correo, lista fria, lista de correos, subir lista, importar lista, csv, cuarentena, prospectos de lista, de la lista a la venta, proceso completo, flujo de la campana, vendedor ia, vendedor de campana, relevo, atencion a prospectos, calificar, cotizar, oportunidad, seguimiento de cotizacion, cierre, ganada, perdida, limpieza automatica, lista de exclusion, darse de baja, rebote, tope diario, prueba a/b, que hace el humano, automatico]
+keywords: [ficha de campana, si ya dio clic, encuesta por correo, botones de calificacion, etiqueta del contacto, calentar el dominio, spf, dkim, dmarc, rebotes, campana pausada, prospectos de listas, importo, importar contactos, contactos en cuarentena, cuarentena de contactos, campana por correo, campana de correo, lista fria, lista de correos, subir lista, importar lista, csv, cuarentena, prospectos de lista, de la lista a la venta, proceso completo, flujo de la campana, vendedor ia, vendedor de campana, relevo, atencion a prospectos, calificar, cotizar, oportunidad, seguimiento de cotizacion, cierre, ganada, perdida, limpieza automatica, lista de exclusion, darse de baja, rebote, tope diario, prueba a/b, que hace el humano, automatico]
 pages: [campaigns, ready_agents, contacts, quotes, opportunities, catalog, inboxes]
 sources: [app/javascript/dashboard/views/campaigns2/*.vue, app/services/prospect_lists/import.rb, app/jobs/prospect_lists/cleanup_job.rb, app/services/tracking_campaigns/motor2_*.rb, app/services/motor2/relay.rb, app/services/motor2/skills/quote.rb, app/jobs/motor2/quote_follow_up_job.rb]
-reviewed: 2026-11-23
+reviewed: 2026-11-24
 ---
 ## Para qué sirve
 Una campaña por correo con Vendedor IA lleva a un contacto desde una lista fría hasta una venta ganada. Los agentes hacen casi todo; una persona de tu equipo entra solo en algunos momentos: preparar, lanzar, atender a quien pide hablar con alguien, revisar la cotización y cerrar.
@@ -28,7 +28,7 @@ El flujo de un vistazo:
 ## Dónde está
 - La campaña: Campañas › De agentes IA › «Agregar campaña» › «Campaña con Vendedor IA (Motor 2.0)» (marcada Beta).
 - Los agentes: Agentes IA › Agentes listos (Vendedor de campaña y Atención a prospectos).
-- Los resultados: abre la campaña en la lista de Campañas; las de Vendedor IA llevan la etiqueta «Vendedor IA».
+- Los resultados: abre la campaña en la lista de Campañas (se filtran con «Con Vendedor IA»).
 
 ## Cómo se hace
 ### Antes de empezar (una sola vez)
@@ -58,14 +58,16 @@ Las listas son solo para correo. En WhatsApp no se ofrece: escribirle a quien no
 ### 3. Envíos y toques (automático)
 - Cada contacto recibe su primer correo en el horario de atención, sin pasar el tope del día.
 - No se le escribe a quien otra campaña contactó hace poco, a quien se dio de baja ni a quien tiene un correo inválido.
-- El primer correo es el que escribiste (con el nombre y la empresa del contacto) o, si lo dejaste vacío, uno que la IA escribe para cada contacto. Lleva el asunto A o B, la firma de «Cómo atiende», la liga para darse de baja y ligas que cuentan los clics.
-- Si no contesta, sale el siguiente correo cada N días, hasta el número de toques que elegiste. En cuanto contesta, ya no salen más.
+- El primer correo lleva todo (en correo casi nadie contesta «mándame info»): el que escribiste (con {{contacto}}, {{empresa}}, {{oferta}} y, en Recordar, {{vence}} y {{monto}}) o, si lo dejaste vacío, uno que la IA escribe con lo esencial de «La ficha» y la liga principal como botón. Lleva el asunto A o B, la firma, la liga para darse de baja y ligas que cuentan los clics.
+- Si no contesta, sale el siguiente cada N días. Cada toque cambia según lo que hizo: a quien ya dio clic y no confirmó le sale su versión «si ya dio clic» (o la IA le pregunta si pudo hacerlo); a los demás, otro ángulo más corto. En cuanto contesta o lo logra, ya no salen más.
+- Encuesta por correo: la primera pregunta va con botones del 0 al 10; el botón abre una página donde confirma y contesta las demás (abrir la liga no guarda nada). Una calificación baja levanta un caso, como en WhatsApp.
 
 ### 4. El contacto contesta (automático)
-Al contestar o dar clic sale de la cuarentena y ya es un contacto normal. El Vendedor de campaña contesta solo, con la oferta de la campaña y la información de tu empresa, sin inventar precios ni datos; si se queda callado a media plática, le vuelve a escribir.
-- Le interesa: lo pasa a Atención a prospectos.
-- «No me interesa»: se despide sin insistir y guarda el motivo.
-- «Ya no me escriban»: lo da de baja; no recibe más campañas.
+Al contestar o dar clic sale de la cuarentena y ya es un contacto normal. La campaña contesta sola con «La ficha» (lo que no esté ahí ni en tus fuentes, dice que no lo tiene) y las respuestas de «Respuestas y resultados»; si se queda callado a media plática, le vuelve a escribir.
+- Lo logró (según el objetivo: le interesa y pasa a Atención a prospectos, agenda, confirma, o escribe la palabra clave): queda con su etiqueta.
+- «No puedo esta vez»: le pregunta una vez si le escribimos la próxima; si dice que sí o que no, queda con su etiqueta (por ejemplo avisar-promociones o no-ofrecer).
+- «No me manden nada»: lo respeta ya, con la etiqueta «no…»; no entra a las siguientes campañas de ese tipo. «Darme de baja» o «stop» lo da de baja de todo.
+- Pide una liga o no le llegó el correo: le manda la liga exacta que toca.
 - Pide hablar con una persona: se lo pasa a alguien de tu equipo y deja de contestar.
 
 ### 5. Relevo a Atención a prospectos (automático)

@@ -10,7 +10,8 @@ class Motor2::Skills::Tags < Motor2::Skills::Base
   BY_FUNCTION = {
     'prospects' => { 'prospecto_calificado' => 'calificado', 'descartar' => 'descartado' },
     'campaign_seller' => { 'le_interesa' => 'le-interesa', 'no_le_interesa' => 'no-le-interesa',
-                           'confirmar_asistencia' => 'confirmo-asistencia', 'guardar_respuesta' => 'encuesta' }
+                           'confirmar_asistencia' => 'asistencia', 'guardar_respuesta' => 'encuesta', 'ya_lo_hizo' => 'lo-logro',
+                           'no_esta_vez' => 'no-esta-vez', 'no_contactar' => 'no-contactar' }
   }.freeze
 
   def self.key = 'tags'

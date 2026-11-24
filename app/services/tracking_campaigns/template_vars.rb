@@ -9,8 +9,8 @@
 # Lo usa Motor2::CampaignTemplateVarsHook (Whatsapp::TemplateParamsProcessor) al mandar el toque, y «Simular». Si la
 # plantilla no tiene su mapa, trae variables en el encabezado o falta un dato, se llena como siempre.
 module TrackingCampaigns::TemplateVars
-  SOURCES = %w[contact_first_name contact_name contact_company offer_what offer_details event_name event_date event_place
-               text].freeze
+  SOURCES = %w[contact_first_name contact_name contact_company offer_what event_name event_date event_place
+               last_purchase due_what due_date due_amount text].freeze
   VAR = /\{\{\s*([\w.]+)\s*\}\}/
 
   module_function
@@ -64,10 +64,17 @@ module TrackingCampaigns::TemplateVars
     when 'contact_first_name' then contact&.name.to_s.strip.split(/\s+/).first
     when 'contact_name' then contact&.name.to_s.strip
     when 'contact_company' then company(contact)
-    when 'offer_what', 'offer_details' then campaign.brief.to_h[rule['source']].to_s.squish.first(200)
+    when 'offer_what' then campaign.brief.to_h['offer_what'].to_s.squish.first(200)
     when 'event_name', 'event_date', 'event_place' then event_value(campaign, rule['source'])
-    else rule['text'].to_s
+    else other_value(contact, rule)
     end.presence
+  end
+
+  # Los datos de cada contacto (TrackingCampaigns::ContactFacts) o el texto fijo.
+  def other_value(contact, rule)
+    return rule['text'].to_s unless TrackingCampaigns::ContactFacts::KEYS.include?(rule['source'])
+
+    contact ? TrackingCampaigns::ContactFacts.new(contact).values[rule['source']] : nil
   end
 
   def company(contact)

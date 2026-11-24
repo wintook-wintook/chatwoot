@@ -99,6 +99,33 @@ export default {
     exits() {
       return this.data?.exits || {};
     },
+    // El objetivo (TrackingCampaigns::CampaignKit): lo lograron, no esta vez, aceptan la próxima, no quieren.
+    goalCards() {
+      const g = this.data?.goal;
+      if (!g) return [];
+      const labels = g.labels || {};
+      return [
+        {
+          key: 'achieved',
+          value: g.achieved,
+          group: 'achieved',
+          label: labels.achieved,
+        },
+        { key: 'not_now', value: g.not_now, group: 'not_now' },
+        {
+          key: 'future_yes',
+          value: g.future_yes,
+          group: 'future_yes',
+          label: labels.future_yes,
+        },
+        {
+          key: 'opt_out',
+          value: g.opt_out,
+          group: 'not_interested',
+          label: labels.opt_out,
+        },
+      ];
+    },
     exitKeys() {
       const keys = [
         'not_interested',
@@ -351,6 +378,34 @@ export default {
               <span v-if="s.pct !== null" class="text-woot-600">
                 {{ t('PCT', { pct: s.pct }) }}
               </span>
+            </p>
+          </button>
+        </div>
+      </section>
+
+      <!-- El objetivo: cómo terminaron y con qué etiqueta -->
+      <section v-if="goalCards.length" class="mb-4">
+        <h2
+          class="m-0 mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
+        >
+          {{ t('GOAL.TITLE') }}
+        </h2>
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <button
+            v-for="c in goalCards"
+            :key="c.key"
+            type="button"
+            class="p-3 text-left border rounded-lg border-slate-100 dark:border-slate-700 hover:border-woot-300"
+            @click="openGroup(c.group)"
+          >
+            <p
+              class="m-0 text-2xl font-semibold text-slate-800 dark:text-slate-100"
+            >
+              {{ c.value || 0 }}
+            </p>
+            <p class="m-0 text-xs text-slate-500">{{ t(`GOAL.${c.key}`) }}</p>
+            <p v-if="c.label" class="m-0 text-[11px] text-woot-600">
+              {{ t('GOAL.LABEL', { label: c.label }) }}
             </p>
           </button>
         </div>

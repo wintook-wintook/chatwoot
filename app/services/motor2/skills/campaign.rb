@@ -1,28 +1,54 @@
 # frozen_string_literal: true
 
-# «Campaña» — lo del Vendedor de campaña que manda el código (Plan-Motor-Agentes §11.16):
-#   - Ofrecer / Reactivar / Renovar / Invitar, con «Mensaje 2» (WhatsApp): enviar_informacion → manda el contenido
-#     de la campaña TAL CUAL (con sus imágenes «con la información») y sigue la plática hasta el cierre;
-#   - Ofrecer / Reactivar / Renovar: le_interesa (ya lo quiere) → relevo (Motor2::Relay) a quien sigue;
-#     no_le_interesa → se despide y el seguimiento se cierra;
-#     mas_adelante («ahora no», «escríbeme en marzo», fuera de la oficina) → un solo toque más en esa fecha;
-#   - Invitar: confirmar_asistencia → su lugar en el evento (EventAttendee confirmó o canceló);
-#   - Encuesta: las preguntas tal cual y en orden, una por mensaje (el código lleva cuál sigue);
-#     guardar_respuesta; al terminar, si una calificación es baja, se levanta un caso.
-# En el chat de prueba no se toca nada real (ni eventos, ni casos, ni relevo).
+# «Campaña» — lo de la campaña que manda el código (TrackingCampaigns::CampaignKit dice qué trae cada tipo):
+#   - el paquete (WhatsApp): enviar_informacion manda la información completa TAL CUAL (con sus imágenes «con la
+#     información») UNA vez; reenviar_informacion solo si la vuelve a pedir;
+#   - lo logró, según el objetivo de la campaña:
+#       relay / appointment → le_interesa (relevo, Motor2::Relay) o la cita (Motor2::Skills::Appointments)
+#       confirm (Invitar)   → confirmar_asistencia (EventAttendee confirmó o canceló)
+#       external / done     → ya_lo_hizo: escribió la palabra clave o confirma que YA lo hizo
+#       answers (Encuesta)  → guardar_respuesta, una por una y en orden
+#   - no esta vez (Invitar, Ofrecer, Reactivar): no_esta_vez → la respuesta fija que pregunta si puede escribirle la
+#     próxima; futuras(acepta) con lo que conteste → etiqueta «volver a…» o «no…»;
+#   - no_contactar: no quiere que le escriban de esto (baja inmediata, sin pedir motivo);
+#     no_le_interesa (Recordar, Encuesta) · mas_adelante: un solo toque más en esa fecha;
+#   - las respuestas fijas salen TAL CUAL (la de la campaña o la de fábrica); las etiquetas del contacto las pone
+#     Motor2::Functions::CampaignSellerOutcomes después de mandar.
+# En el chat de prueba no se toca nada real (ni eventos, ni casos, ni etiquetas, ni relevo).
 #
-#   memoria: state['survey'] { '1' => { 'respuesta', 'calificacion' } }, state['relay'] (a quién se pasó)
+#   memoria: state['content_sent'], state['asked_future'], state['survey'] { '1' => { 'respuesta', 'calificacion' } },
+#            state['relay'] (a quién se pasó)
 class Motor2::Skills::Campaign < Motor2::Skills::Base
+  include Motor2::Skills::CampaignAnswers
+  include Motor2::Skills::CampaignNotes
+
   def self.key = 'campaign'
 
   def on? = config.skill_on?(key) && function.respond_to?(:purpose)
 
   def tools
-    return survey_tools if function.survey?
-    return invite_tools if function.invite?
+    return [*survey_tools, stop_tool] if function.survey?
 
-    [*info_tool, fn('le_interesa', "Ya lo quiere: pásalo a quien sigue (#{relay_label}). #{interest_when}", { resumen: STR }, %w[resumen]),
-     not_interested, later]
+    [*info_tools, *link_tools, *goal_tools, *negative_tools, stop_tool, *(function.invite? ? [] : [later])].compact
+  end
+
+  RULES = <<~TEXT.strip
+    REGLAS DE LA CAMPAÑA:
+    - Contesta primero lo que preguntó. Si en un mensaje pide dos cosas, atiende las dos.
+    - Una duda concreta (fecha, hora, precio, costo, para quién es) se contesta con LA FICHA, sin mandar la información completa.
+    - La información completa se manda una sola vez; si ya se mandó, no la repitas salvo que la pida otra vez. Si solo pide la liga, manda solo esa liga.
+    - Lo que no es de esta campaña (otros productos o servicios, cómo funciona la empresa): contesta SOLO con tus fuentes; si no hay, dilo en corto. No lo mezcles con la ficha ni aproveches para invitarlo u ofrecerle la campaña.
+    - Si solo saluda o agradece («gracias», «ok», «👍»): contesta corto («¡Con gusto! 😊»), sin preguntas, ligas ni información. «Gracias, pero no» NO es cortesía: es una negativa.
+    - Si pide una liga o tiene un problema para entrar, mándale la liga que corresponda de LIGAS en ese mismo mensaje (no le preguntes si la quiere).
+    - «Para quién es / no es» sirve para contestar si él pregunta; NO le preguntes si cumple (p. ej. «¿eres distribuidor?») ni le pidas que lo confirme.
+    - Si no hace falta preguntar nada, no preguntes: está bien terminar sin pregunta.
+    - Nunca pidas nombre, teléfono, correo ni comprobantes, ni digas que revisaste algo que no puedes ver.
+    - Si pide que no le escriban, eso gana sobre todo lo demás: no sigas con la campaña.
+    - No insistas ni vuelvas a ofrecer por tu cuenta, ni ofrezcas recordatorios o seguimientos: eso lo hace la campaña.
+  TEXT
+
+  def instructions
+    [RULES, email? ? '- Es por CORREO: saludo y despedida breves; puedes ser un poco más completo; sin emojis de más.' : nil].compact.join("\n")
   end
 
   def memory
@@ -33,13 +59,22 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
   end
 
   def turn_note
-    return info_note unless function.survey?
+    return attempt_note if @turn.attempt?
+    return message_note if message_note
+    return [info_note, future_note].compact_blank.join(' ') unless function.survey?
 
     number, question = next_question
     return 'Ya contestó toda la encuesta: agradécele en una frase.' unless number
 
     "Si su mensaje contesta la pregunta pendiente, guárdala con guardar_respuesta. Después haz la #{number} " \
       "tal cual, sola: «#{question}»"
+  end
+
+  # La liga que mandó con mandar_liga va sí o sí, exacta (si la IA la cambió o no la puso, se agrega al final).
+  def polish(reply)
+    return reply if @link_url.blank? || reply.blank? || reply.include?(@link_url)
+
+    "#{reply.rstrip}\n\n#{@link_url}"
   end
 
   def required_question
@@ -50,61 +85,63 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
     question && (question[/¿[^¿?]*\?/] || question)
   end
 
+  CALLS = {
+    'enviar_informacion' => ->(_a) { send_info! }, 'reenviar_informacion' => ->(_a) { send_info! },
+    'le_interesa' => ->(a) { interested(a['resumen']) }, 'ya_lo_hizo' => ->(a) { achieved!(a['nota']) },
+    'confirmar_asistencia' => ->(a) { attendance(a['asistira'], a['nota']) }, 'no_esta_vez' => ->(a) { not_now!(a['motivo']) },
+    'futuras' => ->(a) { future!(a['acepta'], a['motivo']) }, 'mandar_liga' => ->(a) { send_link(a['liga']) },
+    'no_contactar' => ->(a) { opt_out!(a['motivo']) },
+    'no_le_interesa' => ->(a) { not_interested!(a['motivo']) }, 'mas_adelante' => ->(a) { later!(a['dias'], a['motivo']) }
+  }.freeze
+
   def call(name, args)
-    case name
-    when 'enviar_informacion' then send_info!
-    when 'le_interesa' then interested(args['resumen'])
-    when 'no_le_interesa' then not_interested!(args['motivo'])
-    when 'mas_adelante' then later!(args['dias'], args['motivo'])
-    when 'confirmar_asistencia' then attendance(args['asistira'], args['nota'])
-    else save_answer(args)
-    end
+    handler = CALLS[name]
+    handler ? instance_exec(args, &handler) : save_answer(args)
   end
 
   private
 
   def function = config.function
 
-  CONFIRMED = 'Quedó confirmado: agradécele y recuérdale fecha, hora y lugar (o liga) en una o dos frases, sin preguntas.'
+  def email? = (@turn.tracking&.inbox || @turn.conversation.try(:inbox)).try(:email?) || false
 
-  def not_interested
-    fn('no_le_interesa', 'Dijo claramente que no le interesa. Después escribe solo una despedida corta y amable.',
-       { motivo: STR }, %w[motivo])
-  end
+  def contact = @turn.conversation.try(:contact)
 
   MAX_LATER_DAYS = 120
 
-  # «Mensaje 2» (solo si la campaña lo trae y no se ha mandado): la información completa, tal cual.
-  def info_tool
-    return [] unless content? && !state['content_sent']
-
-    [fn('enviar_informacion', 'Contestó que sí, pide información o quiere saber más (aún no dice que lo quiere): se le manda la ' \
-                              'información completa de la campaña tal cual, con sus imágenes.')]
-  end
+  # ---------- el paquete ----------
 
   def content? = function.respond_to?(:content) && function.content.present?
 
-  def interest_when
-    return 'Llámala en cuanto muestre interés (pide precio, detalles, quiere comprar o que lo contacten).' unless content?
+  def info_tools
+    return [] unless content?
+    return [] if !state['content_sent'] && concrete_question?
+    if state['content_sent']
+      return [fn('reenviar_informacion', 'Pide EXPRESAMENTE que le vuelvas a mandar la información completa (el flyer, la promoción).')]
+    end
 
-    'Llámala cuando YA lo quiere (comprar, apartar, cotización, que lo contacten para cerrar); si solo pide información, ' \
-      'usa enviar_informacion.'
+    [fn('enviar_informacion', 'SOLO si contesta que sí, que le interesa o pide la información completa: se le manda la ' \
+                              'información de la campaña tal cual, con sus imágenes. NO la uses si pregunta un dato (fecha, hora, ' \
+                              'costo, para quién) ni si pregunta algo que no es de la campaña: eso se contesta con LA FICHA o tus fuentes.')]
   end
-
-  INFO_SENT = 'Ya le mandaste la información completa: resuelve sus dudas con ella y llévalo al cierre (pregúntale si lo quiere).'
 
   def info_note
     return '' unless content?
-    return INFO_SENT if state['content_sent']
 
-    'Si contesta que sí o pide información, usa enviar_informacion (no la escribas tú).'
+    if state['content_sent']
+      return 'Ya le mandaste la información completa: no la repitas; contesta sus dudas con LA FICHA. Si pide la liga, mándale ' \
+             'la que corresponda de LIGAS, exacta.'
+    end
+
+    'Si contesta que sí o pide la información completa, usa enviar_informacion (no la escribas tú). Una duda concreta se contesta sin ella.'
   end
 
   # El texto sale aparte, tal cual, después de este turno (sin mensaje de la IA); las imágenes «con la información»
   # van en este turno (primero la imagen, luego el texto). En la prueba no se manda nada: se enseña en el chat.
   def send_info!
     state['content_sent'] = true
-    trace.event(:informacion, 'Mensaje 2 de la campaña')
+    @info_now = true # en este turno solo va la información (el relevo, cuando ya la tiene)
+    trace.event(:informacion, 'La información completa de la campaña')
     attach_rule('interest')
     return { ok: true, nota: "Es una prueba: escribe TAL CUAL este texto, sin cambiarlo:\n#{info_text}" } if test?
 
@@ -118,29 +155,44 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
 
   def info_text = Motor2::CampaignTouch.fill(function.content, contact, @turn.tracking&.tracking_campaign)
 
-  def later
-    fn('mas_adelante', 'Dice que AHORA NO pero no cierra la puerta («ahorita no», «escríbeme en marzo», «estoy de vacaciones», ' \
-                       'respuesta automática de fuera de la oficina): se le vuelve a escribir una vez en esa fecha. Después ' \
-                       'despídete en una frase diciendo que le escribes entonces (no lo uses si dijo que no le interesa).',
-       { dias: { type: 'integer', description: 'En cuántos días volver a escribirle (si no dijo, 30)' }, motivo: STR }, %w[dias])
+  # ---------- lo logró ----------
+
+  def goal_tools
+    case function.goal
+    when 'confirm'
+      [fn('confirmar_asistencia', 'Dijo claramente si va o no va al evento («me interesa» no es «sí voy»).',
+          { asistira: { type: 'boolean' }, nota: STR }, %w[asistira])]
+    when 'external', 'done' then will_do? ? [] : [achieved_tool]
+    else interest_tools
+    end
   end
 
-  def later!(days, reason)
-    days = (days.presence || 30).to_i.clamp(1, MAX_LATER_DAYS)
-    @turn.decide('later', "#{days}|#{reason}")
-    { ok: true, nota: "Listo: se le vuelve a escribir en #{days} días. Despídete en una frase, sin preguntas." }
+  # Con información completa, primero va ella: «le interesa» (el relevo) hasta que ya la tiene.
+  def interest_tools
+    return [] if (content? && !state['content_sent']) || @info_now
+
+    [fn('le_interesa', "Ya lo quiere: pásalo a quien sigue (#{relay_label}). Una pregunta (precio, condiciones) NO es " \
+                       "«lo quiere». #{interest_when}", { resumen: STR }, %w[resumen])]
   end
 
-  def invite_tools
-    [*info_tool, fn('confirmar_asistencia', 'Dijo si va o no va al evento: lo deja confirmado o cancelado.',
-                    { asistira: { type: 'boolean' }, nota: STR }, %w[asistira]),
-     not_interested, later]
+  def achieved_tool
+    word = function.goal == 'external' ? "escribió «#{function.keyword}» o " : ''
+    fn('ya_lo_hizo', "#{word.capitalize}confirma sin duda que YA lo hizo (no «me interesa», «ahorita lo hago» ni una pregunta). " \
+                     'Después escribe la respuesta que te da la herramienta.', { nota: STR })
   end
 
-  def survey_tools
-    [fn('guardar_respuesta', 'Guarda lo que contestó a la pregunta pendiente de la encuesta.',
-        { respuesta: STR, calificacion: { type: 'integer', description: 'Si la pregunta es de 0 a 10 (o 1 a 5), el número que dio' } },
-        %w[respuesta])]
+  def interest_when
+    return 'Llámala en cuanto muestre interés (pide precio, detalles, quiere comprar o que lo contacten).' unless content?
+
+    'Llámala cuando YA lo quiere (comprar, apartar, cotización, que lo contacten para cerrar); si solo pide información, ' \
+      'usa enviar_informacion.'
+  end
+
+  def achieved!(note)
+    @turn.decide('achieved', note.presence || 'Lo hizo')
+    trace.event(:campana, 'Lo logró')
+    attach_rule('confirm')
+    fixed('achieved')
   end
 
   def relay_label = function.relay_to_person? ? 'tu equipo' : 'el agente que sigue o tu equipo'
@@ -166,66 +218,29 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
   # Con el relevo a un agente, este turno no lleva mensaje (contesta quien sigue).
   def silent_relay?(target) = target&.dig(:agent).present? || (test? && !function.relay_to_person?)
 
-  def not_interested!(reason)
-    @turn.decide('discarded', reason.to_s)
-    { ok: true, nota: 'Listo. Despídete en una frase, sin insistir.' }
-  end
-
   def attendance(going, note)
     status = going == true ? :confirmed : :cancelled
     error = test? ? nil : mark_attendee(status)
     return { error: error } if error
 
-    text = status == :confirmed ? 'Confirmó su asistencia' : ['No va', note.presence].compact.join(': ')
-    trace.event(:evento, text)
-    attach_rule('confirm') if status == :confirmed # mapa, agenda, boleto…
-    @turn.decide('done', text)
-    { ok: true, nota: status == :confirmed ? CONFIRMED : 'Quedó como que no va: agradécele en una frase, sin preguntas.' }
+    trace.event(:evento, status == :confirmed ? 'Confirmó su asistencia' : 'No va')
+    return not_now!(note.presence || 'No va') unless status == :confirmed
+
+    @turn.decide('achieved', ['Confirmó su asistencia', note.presence].compact.join(': '))
+    attach_rule('confirm') # mapa, agenda, boleto…
+    fixed('achieved')
   end
 
   # Su lugar en el evento (Eventos): confirmó o canceló. Regresa el error, o nil.
   def mark_attendee(status)
     event = function.event
-    return 'El agente no tiene evento: pásalo con una persona.' unless event && contact
+    return 'La campaña no tiene evento: pásalo con una persona.' unless event && contact
 
     attendee = event.attendees.find_or_initialize_by(contact: contact) { |a| a.account_id = event.account_id }
     attendee.source = 'agent' if attendee.new_record?
     attendee.update!(status: status)
     nil
   end
-
-  def save_answer(args)
-    number, question = next_question # el código sabe cuál toca (el modelo se equivoca de número)
-    return { error: 'Ya contestó todas: agradécele.' } unless question
-    return { error: NOT_AN_ANSWER } unless answers?(question)
-
-    survey[number.to_s] = { 'respuesta' => args['respuesta'].to_s.first(500), 'calificacion' => args['calificacion'] }.compact
-    state['survey'] = survey
-    trace.event(:encuesta, "#{number}: #{args['respuesta']}")
-    return { ok: true } if next_question
-
-    @turn.decide('done', 'Contestó la encuesta')
-    { ok: true, nota: 'Ya contestó toda la encuesta: agradécele en una frase (sin más preguntas).' }
-  end
-
-  NOT_AN_ANSWER = 'Eso no contesta la pregunta (dijo que sí a la encuesta, saludó o preguntó otra cosa): no la guardes; ' \
-                  'haz la pregunta pendiente tal cual.'
-
-  # ¿Lo que dijo contesta la pregunta? («va», «sí, claro» no contestan «del 0 al 10…»).
-  def answers?(question)
-    Motor2::AnswerCheck.new(account: config.account).answers?(question: question, message: @turn.last_customer)
-  end
-
-  def survey = (state['survey'] ||= {})
-
-  def next_question
-    function.survey_questions.each_with_index do |question, i|
-      return [i + 1, question] unless survey.key?((i + 1).to_s)
-    end
-    nil
-  end
-
-  def contact = @turn.conversation&.contact
 
   # Los archivos del agente con esa regla van con el mensaje de este turno.
   def attach_rule(rule)

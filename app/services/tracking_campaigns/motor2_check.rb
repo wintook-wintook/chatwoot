@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Campaña con Vendedor IA — la revisión antes de lanzar (paso «Revisar y lanzar»): cada punto en verde, amarillo
+# Campaña con IA — la revisión antes de lanzar (paso «Revisar y lanzar»): cada punto en verde, amarillo
 # (aviso) o rojo (no deja lanzar).
 #
 #   TrackingCampaigns::Motor2Check.new(campaign).call → [{ key:, level: 'ok' | 'warning' | 'error', text: }]
@@ -13,9 +13,11 @@ class TrackingCampaigns::Motor2Check
   end
 
   def call
-    @call ||= [seller, ai, offer, appointment, audience, channel, *list_items, *domain_items, *touch_items, *plan.whatsapp_flow,
+    @call ||= [seller, ai, offer, *knowledge, appointment, audience, channel, *list_items, *domain_items, *touch_items, *plan.whatsapp_flow,
                *plan.seller_templates, plan.cost, relay, window, plan.capacity].compact
   end
+
+  def knowledge = TrackingCampaigns::Motor2KnowledgeCheck.new(@campaign).call
 
   def ready? = call.none? { |item| item[:level] == 'error' }
 

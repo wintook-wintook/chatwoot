@@ -76,7 +76,7 @@ class TrackingCampaigns::Motor2Simulation
     opener.present? ? Motor2::CampaignTouch.fill(opener, @contact, @campaign) : nil
   end
 
-  # «Mensaje 2»: lo que se manda tal cual cuando pide información (WhatsApp), con sus imágenes.
+  # La información completa: lo que se manda tal cual cuando le interesa (WhatsApp), con sus imágenes.
   def info
     content = @campaign.brief.to_h['content'].to_s.strip
     return nil if content.blank? || !whatsapp?
@@ -119,13 +119,29 @@ class TrackingCampaigns::Motor2Simulation
   def outcomes
     return [] unless function.respond_to?(:survey?)
 
-    # Con «Mensaje 2», las imágenes «con la información» van con él; sin él, cuando muestra interés.
-    list = [interested.merge(files: info ? [] : interest_files), { kind: 'discarded' },
-            { kind: 'handoff', to: person_name(function.handoff_target) }]
+    # Con la información completa, las imágenes «con la información» van con ella; sin ella, cuando muestra interés.
+    list = [goal_outcome, *negative_outcomes, { kind: 'handoff', to: person_name(function.handoff_target) }]
     list.unshift({ kind: 'info', files: interest_files }) if info
-    list << { kind: 'later' } unless function.survey?
-    list << { kind: 'done' } if function.survey? || function.invite?
+    list << { kind: 'later' } unless function.survey? || function.invite?
     list << { kind: 'no_reply', attempts: attempts }
+  end
+
+  # Lo logró, según el objetivo: relevo o cita (le interesa), confirma, lo hace por su cuenta o contesta la encuesta.
+  def goal_outcome
+    case function.goal
+    when 'relay', 'appointment' then interested.merge(files: info ? [] : interest_files, label: function.label_for('achieved').presence)
+    else { kind: 'achieved', goal: function.goal, keyword: function.goal == 'external' ? function.keyword : nil,
+           label: function.label_for('achieved').presence, reply: function.reply_text('achieved').presence }.compact
+    end
+  end
+
+  # No esta vez (pregunta por la próxima) o no le interesa, y «no me escriban» (su etiqueta lo deja fuera de las siguientes).
+  def negative_outcomes
+    stop = { kind: 'opt_out', label: function.label_for('opt_out').presence, reply: function.reply_text('opt_out').presence }.compact
+    return [{ kind: 'discarded' }, stop] unless function.asks_future?
+
+    [{ kind: 'not_now', reply: function.reply_text('not_now'), yes_label: function.label_for('future_yes').presence,
+       no_label: function.label_for('opt_out').presence }.compact, stop]
   end
 
   # Le interesa: le agenda la cita, o el relevo al agente de la bandeja o a una persona.

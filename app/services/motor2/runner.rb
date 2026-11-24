@@ -79,11 +79,14 @@ class Motor2::Runner < Cases::Ai::BaseService
     content = first_answer(messages)
     return Result.new(error: ['El modelo no respondió.', @error].compact.join(' — '), trace: @trace.to_h) if content.nil?
 
-    reply = @silent ? '' : with_welcome(finish(review(messages, clean(content))))
+    reply = @silent ? '' : with_welcome(polish(finish(review(messages, clean(content)))))
     Result.new(reply: reply, decision: @decision, trace: @trace.to_h, attachments: @attachments, after: @after, labels: labels)
   end
 
   private
+
+  # Lo último que una habilidad asegura en el texto (p. ej. la liga exacta que mandó «Campaña»).
+  def polish(reply) = @skills.reduce(reply) { |text, skill| skill.polish(text) }
 
   def initial_messages
     prompt = Motor2::Prompt.new(self, @skills)

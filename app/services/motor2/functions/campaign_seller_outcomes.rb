@@ -7,6 +7,11 @@
 #   handoff   (pasar_a_humano)          → nota, se asigna a la persona o equipo y el agente se pausa
 #   later     (mas_adelante)            → un solo toque más en N días (a su hora hábil); si no contesta, termina
 #   booked    (agendó la cita)          → nota, se asigna a quien la atiende y cumplido
+#   achieved  (ya_lo_hizo / confirmó)   → nota, etiqueta «lo logró» al contacto y cumplido
+#   not_now   (no_esta_vez)             → nota; ya no hay más toques y se espera si acepta la próxima
+#   future_yes (futuras: sí)            → etiqueta «volver a…» (quita la de «no…») y termina
+#   opt_out   (no_contactar / futuras: no) → etiqueta «no…» (quita la de «volver a…»); la siguiente campaña del mismo
+#                                          tipo ya no lo inscribe (TrackingCampaigns::Enroll)
 class Motor2::Functions::CampaignSellerOutcomes
   def initialize(tracking, conversation, function)
     @tracking = tracking
@@ -15,14 +20,13 @@ class Motor2::Functions::CampaignSellerOutcomes
     @template = tracking.tracking_template
   end
 
+  HANDLERS = { 'discarded' => :discarded, 'done' => :done, 'handoff' => :handed_off, 'later' => :later, 'achieved' => :achieved,
+               'not_now' => :not_now, 'future_yes' => :future_yes, 'opt_out' => :opt_out }.freeze
+
   def apply(kind, text)
-    case kind
-    when 'relay' then Motor2::Relay.new(@tracking, @conversation, @function).call(text)
-    when 'discarded' then discarded(text)
-    when 'done' then done(text)
-    when 'handoff' then handed_off(text)
-    when 'later' then later(text)
-    end
+    return Motor2::Relay.new(@tracking, @conversation, @function).call(text) if kind == 'relay'
+
+    send(HANDLERS[kind], text) if HANDLERS.key?(kind)
   rescue StandardError => e
     Rails.logger.error("[Motor2::CampaignSellerOutcomes] #{e.class}: #{e.message}")
     @tracking.update_columns(last_error: "#{kind}: #{e.message}".first(250), updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
@@ -32,10 +36,13 @@ class Motor2::Functions::CampaignSellerOutcomes
     when_text = Motor2::Skills::Appointments.label(meeting.starts_at.in_time_zone(@function.config.zone))
     note("Le interesó y agendó: #{when_text} con #{meeting.organizer&.name}.")
     @conversation.update!(assignee_id: meeting.organizer_id) if @conversation.assignee_id.blank? && meeting.organizer_id
+    label('achieved')
     finish("Cita #{when_text}")
   end
 
   def note(text)
+    return if @conversation.nil? # encuesta contestada desde el correo, antes de que haya plática
+
     Motor2::Delivery.note(@tracking, @conversation, "🤖 #{@template.name}: #{text}")
   end
 
@@ -43,11 +50,49 @@ class Motor2::Functions::CampaignSellerOutcomes
 
   def state = @tracking.motor2_state.to_h
 
-  def discarded(reason)
-    note("No le interesa: #{reason}")
-    # El motivo queda en su memoria para «En qué se van» de la Campaña con Vendedor IA (Motor2CampaignResults).
+  # La etiqueta de ese resultado al contacto (la de la campaña o la de fábrica); quita la contraria.
+  def label(key)
+    opposite = { 'future_yes' => %w[opt_out], 'opt_out' => %w[future_yes], 'achieved' => %w[opt_out] }[key]
+    TrackingCampaigns::ContactLabels.apply(@tracking.contact, add: @function.label_for(key), kind: key,
+                                                              remove: opposite.map { |k| @function.label_for(k) })
+  end
+
+  def achieved(text)
+    note("🎯 Lo logró: #{text}")
+    label('achieved')
+    finish("Logrado: #{text}")
+  end
+
+  # «No esta vez»: ya contestó (no salen más toques); se queda esperando si acepta que le escriban la próxima.
+  def not_now(reason)
+    note("No esta vez: #{reason}. Se le preguntó si le escribimos la próxima.")
+    @tracking.update_columns(outcome: 'not_now', motor2_state: state.merge('exit_reason' => reason.to_s.first(200)), # rubocop:disable Rails/SkipsModelValidations
+                             updated_at: Time.current)
+  end
+
+  def future_yes(text)
+    note("Acepta que le escribamos la próxima#{": #{text}" if text.present?}.")
+    label('future_yes')
+    @tracking.update_columns(outcome: 'future_yes', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    @tracking.cancel!
+  end
+
+  def opt_out(reason)
+    note("No quiere que le escribamos de esto#{": #{reason}" if reason.present?}.")
+    label('opt_out')
+    discarded_columns(reason.presence || state['exit_reason'] || 'No quiere que le escribamos')
+    @tracking.cancel!
+  end
+
+  def discarded_columns(reason)
+    # El motivo queda en su memoria para «En qué se van» de la campaña (Motor2Results).
     @tracking.update_columns(outcome: 'discarded', motor2_state: state.merge('exit_reason' => reason.to_s.first(200)), # rubocop:disable Rails/SkipsModelValidations
                              updated_at: Time.current)
+  end
+
+  def discarded(reason)
+    note("No le interesa: #{reason}")
+    discarded_columns(reason)
     @tracking.cancel!
   end
 
@@ -60,14 +105,18 @@ class Motor2::Functions::CampaignSellerOutcomes
 
   # Las respuestas en la nota; con una calificación baja, un caso para que alguien lo atienda.
   def survey_done
-    answers = @function.survey_questions.each_with_index.map do |q, i|
-      saved = state.dig('survey', (i + 1).to_s).to_h
-      "• #{q}: #{saved['respuesta'] || '—'}"
-    end
-    low = low_scores
-    note(["Contestó la encuesta#{' — calificación baja' if low.any?}:", *answers].join("\n"))
-    ticket = low.any? ? low_score_case(answers) : nil
+    answers = survey_lines
+    low = low_scores.any?
+    note(["Contestó la encuesta#{' — calificación baja' if low}:", *answers].join("\n"))
+    label('achieved')
+    ticket = low && @conversation ? low_score_case(answers) : nil
     finish(ticket ? "Encuesta baja: caso #{ticket.try(:folio) || ticket.id}" : 'Encuesta contestada')
+  end
+
+  def survey_lines
+    @function.survey_questions.each_with_index.map do |q, i|
+      "• #{q}: #{state.dig('survey', (i + 1).to_s).to_h['respuesta'] || '—'}"
+    end
   end
 
   def low_scores

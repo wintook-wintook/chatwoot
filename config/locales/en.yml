@@ -349,6 +349,13 @@ en:
       not_found: 'Maintenance plan not found'
       asset_not_found: 'Equipment not found'
   # prospeccion V4 — opt-out from the link in an AI Agent email
+  public_campaign_survey:
+    title: "Your opinion matters"
+    body: "Answer these questions from %{name}. It takes less than a minute."
+    pick: "Pick one"
+    send: "Send answers"
+    done_title: "Thanks for your time!"
+    done_body: "%{name} received your answers."
   public_opt_out:
     title: "Don't want to receive our emails anymore?"
     body: "Confirm and %{name} won't write to you again."

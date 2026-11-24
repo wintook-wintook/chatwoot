@@ -21,48 +21,80 @@
     "SCHEDULE": "Programar campaña",
     "STEPS": {
       "goal": "Objetivo",
-      "offer": "Oferta y canal",
       "audience": "Audiencia",
       "messages": "Mensajes",
       "attend": "Cómo atiende",
       "when": "Cuándo",
-      "review": "Revisar y lanzar"
+      "review": "Revisar y lanzar",
+      "knowledge": "La ficha",
+      "replies": "Respuestas y resultados"
     },
     "HINTS": {
-      "goal": "Para qué es la campaña y qué cuenta como éxito.",
-      "offer": "Qué ofreces en esta campaña, por qué canal sale, sus objeciones y sus imágenes.",
+      "goal": "Para qué es la campaña, qué cuenta como logrado y por qué canal sale.",
       "audience": "A quién se le manda. Verás cuántos le llegan y quiénes se quedan fuera y por qué.",
-      "messages": "Por dónde sale (WhatsApp o correo), cuántos toques y qué dice cada uno.",
+      "messages": "Lo que se MANDA: el primer mensaje, la información completa cuando le interesa y los toques si no contesta.",
       "attend": "Cómo contesta a los que responden: nombre, voz, qué sabe, cómo cotiza, si deja de contestar y a quién pasa al interesado. Viene con lo de tu última campaña.",
-      "when": "Cuándo empieza, cuándo termina y a qué ritmo, para no saturar a tu equipo con respuestas.",
-      "review": "Revisamos todo antes de lanzar: en rojo, lo que falta."
+      "when": "Cuándo empieza, cuándo termina, a qué ritmo y cada cuánto se le puede escribir a un contacto.",
+      "review": "Revisamos todo antes de lanzar: en rojo, lo que falta.",
+      "knowledge": "Lo que SABE la IA para contestar: los datos, las preguntas autorizadas, las ligas con su uso y los archivos. Lo que se manda va en «Mensajes».",
+      "replies": "Lo que contesta tal cual en cada momento y la etiqueta que le queda al contacto."
     },
     "KINDS": {
       "offer": {
         "TITLE": "Ofrecer",
-        "ABOUT": "Un producto, servicio o promoción. Si le interesa, lo pasa a quien sigue."
+        "ABOUT": "Un producto, servicio o promoción: que lo pida, lo cotice o compre."
       },
       "invite": {
         "TITLE": "Invitar",
-        "ABOUT": "A un evento de Eventos. Confirma si va y lo deja en la lista del evento."
+        "ABOUT": "A un evento: que confirme o se registre (Zoom, formulario)."
       },
       "reactivate": {
         "TITLE": "Reactivar",
-        "ABOUT": "A clientes que hace tiempo no compran. Si le interesa, lo pasa a quien sigue."
+        "ABOUT": "A clientes que hace tiempo no compran: que vuelvan. Sabe qué compraba cada uno."
       },
       "renew": {
         "TITLE": "Recordar o renovar",
-        "ABOUT": "Algo que vence (licencia, póliza, servicio). Si le interesa, lo pasa a quien sigue."
+        "ABOUT": "Algo que le toca (vencimiento, pago, renovación): con su fecha y su monto."
       },
       "survey": {
         "TITLE": "Encuesta",
-        "ABOUT": "Hasta 3 preguntas de satisfacción. Con una calificación baja levanta un caso."
+        "ABOUT": "Hasta 3 preguntas. Con una calificación baja levanta un caso."
       }
     },
     "GOAL": {
-      "QUESTION": "Si le interesa, ¿qué sigue?",
-      "relay": "Lo pasa al agente o vendedor que sigue (relevo)",
-      "appointment": "Le agenda una cita (con quien elijas en «Cómo atiende», con Google Calendar)"
+      "QUESTION": "¿Qué cuenta como logrado?",
+      "KEYWORD": "Palabra con la que avisa que ya lo hizo",
+      "KEYWORD_HINT": "Ponla también en la información completa («Cuando termines, escríbeme REGISTRADO»). «Me interesa» no cuenta.",
+      "confirm": {
+        "invite": "Confirma que va",
+        "ABOUT": "Queda como «confirmó» en la lista del evento."
+      },
+      "external": {
+        "invite": "Se registra por su cuenta (Zoom, formulario) y avisa",
+        "offer": "Compra en línea y avisa",
+        "reactivate": "Compra en línea y avisa",
+        "renew": "Paga o renueva en línea y avisa",
+        "ABOUT": "Lo hace con la liga de «La ficha» y lo da por hecho cuando escribe la palabra clave."
+      },
+      "done": {
+        "renew": "Confirma que ya lo hizo (pagó, renovó)",
+        "ABOUT": "«Ya pagué», «ya lo renové». «Luego lo hago» no cuenta."
+      },
+      "relay": {
+        "offer": "Le interesa: pasa a quien sigue",
+        "reactivate": "Le interesa: pasa a quien sigue",
+        "renew": "Necesita ayuda: pasa a una persona",
+        "ABOUT": "Al agente de la bandeja o a la persona que elijas en «Cómo atiende»."
+      },
+      "appointment": {
+        "offer": "Agenda una cita",
+        "reactivate": "Agenda una cita",
+        "ABOUT": "Con los calendarios que elijas en «Cómo atiende»."
+      },
+      "answers": {
+        "survey": "Contesta la encuesta",
+        "ABOUT": ""
+      }
     },
     "OFFER": {
       "EVENT": "Evento",
@@ -74,22 +106,20 @@
       "QUESTION_PLACEHOLDER_3": "¿Qué podríamos mejorar?",
       "LOW_SCORE": "Calificación baja: menor a",
       "WHAT": {
-        "offer": "Qué ofreces",
-        "invite": "A qué invitas (lo que verá el contacto)",
-        "reactivate": "Qué le ofreces para que regrese",
-        "renew": "Qué vence y cómo se renueva"
+        "offer": "Nombre corto de lo que ofreces",
+        "invite": "Nombre corto del evento",
+        "reactivate": "Nombre corto de la oferta para volver",
+        "renew": "Nombre corto de lo que le toca"
       },
       "WHAT_PLACEHOLDER": {
-        "offer": "Mantenimiento de minisplit con 20% de descuento",
-        "invite": "Taller gratuito de facturación 4.0",
-        "reactivate": "Las novedades de este año y 15% en tu próxima compra",
-        "renew": "Tu licencia anual vence el 30 de marzo; renuévala y conserva tu precio"
+        "offer": "Mantenimiento de minisplit con 20%",
+        "invite": "Lanzamiento de la nueva app",
+        "reactivate": "15% en tu próxima compra",
+        "renew": "Renovación de tu póliza"
       },
-      "DETAILS": "Detalles: precio, vigencia, condiciones",
-      "DETAILS_PLACEHOLDER": "Válido hasta el 31 de marzo · solo Guadalajara · pago en una exhibición",
       "REST_DAYS": "No escribirle si otra campaña le escribió hace menos de",
       "DAYS": "días",
-      "REST_HINT": "Protección contra saturar: los que recibieron otra campaña con Vendedor IA hace poco se quedan fuera (0 = sin regla).",
+      "REST_HINT": "Para no saturar: a quien recibió otra campaña con IA hace poco no se le escribe (0 = sin regla).",
       "RELAY_TITLE": "Si le interesa (o pide una persona), pasa a",
       "RELAY_CHOICES": {
         "agent": "Al agente de atención de la bandeja (prospectos o clientes)",
@@ -104,7 +134,8 @@
       "OBJECTION_PLACEHOLDER": "Ej. «Está caro»",
       "ANSWER_PLACEHOLDER": "Ej. Incluye instalación y 12 meses de garantía",
       "ADD_OBJECTION": "+ Agregar objeción",
-      "REMOVE": "Quitar"
+      "REMOVE": "Quitar",
+      "WHAT_HINT": "Llena {{oferta}} en las plantillas y sale en resultados. Lo demás va en «La ficha»."
     },
     "AUDIENCE": {
       "segment": "Segmento",
@@ -191,7 +222,10 @@
       },
       "UP": "Subir",
       "DOWN": "Bajar",
-      "REMOVE": "Quitar"
+      "REMOVE": "Quitar",
+      "CLICKED": "Si ya dio clic en una liga y no ha contestado (opcional)",
+      "CLICKED_PLACEHOLDER": "Hola {{contacto}}, vi que abriste el registro. ¿Pudiste terminarlo?",
+      "CLICKED_HINT": "Sale en lugar del de arriba a quien ya dio clic. Vacío: el de arriba (o, si también está vacío, la IA le pregunta si pudo)."
     },
     "WHEN": {
       "START": "Empieza",
@@ -308,7 +342,8 @@
         "daily_cap": "Omitidos: tope del día",
         "opted_out": "Omitidos: dados de baja",
         "invalid_email": "Omitidos: correo inválido",
-        "recently_contacted": "Omitidos: otra campaña les escribió hace poco"
+        "recently_contacted": "Omitidos: otra campaña les escribió hace poco",
+        "excluded_label": "Omitidos: pidieron no recibir campañas de este tipo"
       },
       "CONFIRMED": "Confirmaron: {n} (cupo {capacity})",
       "DECLINED": "No van: {n}",
@@ -344,7 +379,10 @@
         "low_score": "Calificación baja",
         "failed": "Falló el envío",
         "in_progress": "Aún con toques por salir",
-        "bounced": "Rebotó el correo"
+        "bounced": "Rebotó el correo",
+        "achieved": "Lo lograron",
+        "not_now": "No esta vez",
+        "future_yes": "Aceptan la próxima"
       },
       "CLOSE": "Cerrar",
       "LIST_TITLE": "Lista «{name}»",
@@ -371,6 +409,14 @@
         "Cita": "Agendó cita",
         "Encuesta contestada": "Contestó la encuesta",
         "later": "Le escriben más adelante"
+      },
+      "GOAL": {
+        "TITLE": "El objetivo",
+        "achieved": "Lo lograron",
+        "not_now": "No esta vez (esperando respuesta)",
+        "future_yes": "Aceptan la próxima",
+        "opt_out": "No quieren que les escribamos",
+        "LABEL": "etiqueta «{label}»"
       }
     },
     "LIST": {
@@ -397,8 +443,9 @@
     },
     "TEST_TABS": {
       "simulate": "Simular la campaña",
-      "chat": "Chatear con el vendedor",
-      "real": "Prueba real"
+      "chat": "Chatear",
+      "real": "Prueba real",
+      "cases": "Casos"
     },
     "SIM": {
       "INTRO": "Ve la campaña completa como la recibiría un contacto: cada toque con su texto y cuándo sale, y qué pasa según conteste. No se manda nada.",
@@ -435,7 +482,10 @@
         "done": "Termina (confirmó, no va o contestó la encuesta): queda cumplido.",
         "no_reply": "Nunca contesta: después de {n} toques termina como «No contestó».",
         "later": "«Ahora no» o fuera de la oficina: se le vuelve a escribir una vez en la fecha que diga (30 días si no dice).",
-        "info": "Pide información: se manda tu Mensaje 2 tal cual, con sus imágenes; luego resuelve dudas."
+        "info": "Le interesa: se manda tu información completa tal cual (una vez), con sus imágenes; luego contesta con la ficha.",
+        "achieved": "Lo logra ({goal}): termina como logrado.",
+        "not_now": "«No puedo esta vez»: se le pregunta si le escribimos la próxima (sí → {yes}; no → {no}).",
+        "opt_out": "«No me manden nada»: sale de la campaña."
       },
       "WARNINGS": {
         "no_address": "Este contacto no tiene el dato del canal: no le llegaría.",
@@ -444,7 +494,16 @@
       },
       "FILES": "📎 {names}",
       "OPENER": "Si escribió en las últimas 24 h, en lugar de la plantilla: «{text}»",
-      "INFO": "Mensaje 2 · si pide información, se manda tal cual"
+      "INFO": "Mensaje 2 · si pide información, se manda tal cual",
+      "GOALS": {
+        "confirm": "confirma que va",
+        "external": "escribe la palabra clave",
+        "done": "confirma que ya lo hizo",
+        "relay": "le interesa",
+        "appointment": "agenda la cita",
+        "answers": "contesta la encuesta"
+      },
+      "LABEL": "Etiqueta: «{label}»."
     },
     "TEST_RUN": {
       "INTRO": "Manda la campaña de verdad, solo a ti o a tu equipo, con los toques cada pocos minutos. Llegan los mensajes, se crean las conversaciones y el relevo como con un cliente. No cuenta en los resultados.",
@@ -539,17 +598,17 @@
       "OPEN_WINDOW_PLACEHOLDER": "Hola {{contacto}}, tenemos {{oferta}}. ¿Te mando la información?",
       "OPEN_WINDOW_HINT": "Con {{contacto}}, {{empresa}} y {{oferta}}. Vacío: lo escribe la IA con la misma idea.",
       "INFO_TITLE": {
-        "offer": "Mensaje 2 · Si pide información, se manda",
-        "reactivate": "Mensaje 2 · Si pide información, se manda",
-        "renew": "Mensaje 2 · Si pide los detalles, se manda (opcional)",
-        "invite": "Mensaje 2 · Si quiere saber del evento, se manda",
-        "survey": "Mensaje 2 · Si acepta, las preguntas"
+        "offer": "Información completa · si le interesa, se manda",
+        "reactivate": "Información completa · si le interesa, se manda",
+        "renew": "Información completa · si pide los detalles (opcional)",
+        "invite": "Información completa · si quiere saber del evento",
+        "survey": "Si acepta, las preguntas"
       },
       "INFO_HINT": {
-        "offer": "Sale tal cual: el copy completo (qué es, precio, qué incluye, vigencia). Termina con una pregunta de cierre («¿Te lo aparto?»). Todo lo que pongas aquí también es lo que sabe el vendedor para contestar dudas.",
-        "reactivate": "Sale tal cual: la oferta para que vuelva. Termina con una pregunta de cierre. También es lo que sabe el vendedor.",
-        "renew": "Sale tal cual: opciones, precio y cómo renovar. Si tu plantilla ya trae todo, déjalo vacío. También es lo que sabe el vendedor.",
-        "invite": "Sale tal cual: lugar, horario, agenda y cómo llegar. Termina con «¿Te confirmo tu lugar?». También es lo que sabe el vendedor."
+        "offer": "Sale tal cual y una sola vez: el copy (qué es, precio, vigencia) con la liga. Una duda concreta se contesta con la ficha, sin mandar esto.",
+        "reactivate": "Sale tal cual y una sola vez: la oferta para que vuelva, con la liga si hay.",
+        "renew": "Sale tal cual: su fecha ({{vence}}), su monto ({{monto}}) y cómo hacerlo. Si tu plantilla ya trae todo, déjalo vacío.",
+        "invite": "Sale tal cual y una sola vez: el flyer, el copy y la liga de registro. Si el objetivo es registrarse, termina con «escríbeme REGISTRADO»."
       },
       "INFO_PLACEHOLDER": {
         "offer": "Mantenimiento preventivo con 30% de descuento…\n• Incluye revisión de frenos y aceite\n• Precio: $1,800 (antes $2,600)\n• Válido hasta el 30 de noviembre\n\n¿Te lo aparto?",
@@ -558,7 +617,7 @@
         "invite": "Expo Industrial · 30 de noviembre, 10:00 a 18:00\nLugar: Cintermex, sala B\nAgenda: …\n\n¿Te confirmo tu lugar?"
       },
       "INFO_COUNT": "{n} de {max} caracteres",
-      "INFO_FILES": "Las imágenes y archivos de la oferta marcados «Cuando muestre interés» se mandan junto con este mensaje (primero la imagen y luego el texto). Sin este mensaje, la información la escribe la IA.",
+      "INFO_FILES": "Las imágenes y archivos marcados «Cuando muestre interés» van con este mensaje (primero la imagen y luego el texto). Sin este mensaje, contesta con la ficha.",
       "FROM_EVENT": "Llenar con los datos del evento",
       "EVENT_DRAFT": {
         "TITLE": "{name}",
@@ -566,8 +625,8 @@
         "WHERE": "Dónde: {where}",
         "CLOSE": "¿Te confirmo tu lugar?"
       },
-      "SURVEY_HINT": "Si acepta, se hacen tus preguntas (paso «Oferta y canal») una por mensaje, en este orden:",
-      "SURVEY_EMPTY": "Escribe las preguntas en el paso «Oferta y canal».",
+      "SURVEY_HINT": "Si acepta, se hacen tus preguntas («La ficha») una por mensaje, en este orden:",
+      "SURVEY_EMPTY": "Escribe las preguntas en «La ficha».",
       "AFTER": {
         "offer": "Después: el vendedor resuelve sus dudas y lo lleva al cierre; cuando lo quiere, pasa a quien elegiste, cotiza o agenda.",
         "reactivate": "Después: resuelve sus dudas y lo lleva al cierre; cuando lo quiere, pasa a quien elegiste.",
@@ -580,11 +639,14 @@
         "contact_name": "Nombre completo",
         "contact_company": "Empresa del contacto",
         "offer_what": "Qué ofreces",
-        "offer_details": "Detalles de la oferta",
         "event_name": "Nombre del evento",
         "event_date": "Fecha del evento",
         "event_place": "Lugar del evento",
-        "text": "Texto fijo"
+        "text": "Texto fijo",
+        "last_purchase": "Lo último que compró",
+        "due_what": "Lo que le toca",
+        "due_date": "Su fecha de vencimiento",
+        "due_amount": "Su monto"
       },
       "PREVIEW": {
         "STEP_1": "Mensaje 1 · Apertura",
@@ -597,7 +659,131 @@
           "sale": "A partir de aquí, el vendedor contesta sus dudas y lo lleva al cierre.",
           "survey": "Sigue con las demás preguntas, una por mensaje."
         }
+      },
+      "INSERT_LINK": "Insertar liga…"
+    },
+    "KNOWLEDGE": {
+      "HINT": "Es lo ÚNICO que sabe la IA de esta campaña: si le preguntan algo que no está aquí ni en sus fuentes, dice que no tiene ese dato.",
+      "SURVEY_TITLE": "Las preguntas (tal cual y en orden)",
+      "FACTS_TITLE": "Los datos",
+      "FACTS_HINT": "Llena lo que aplique; lo vacío no lo sabe.",
+      "FROM_EVENT": "Llenar con los datos del evento",
+      "FACTS": {
+        "when": "Cuándo",
+        "place": "Dónde o cómo",
+        "cost": "Costo",
+        "audience": "Para quién es",
+        "not_for": "Para quién NO es",
+        "agenda": "Qué se verá",
+        "what_is": "Qué es",
+        "price": "Precio",
+        "valid_until": "Vigencia",
+        "conditions": "Condiciones",
+        "delivery": "Entrega o existencias",
+        "news": "Qué hay de nuevo",
+        "incentive": "Incentivo para volver",
+        "what_due": "Qué le toca",
+        "how": "Cómo hacerlo (pasos)",
+        "where_pay": "Dónde pagar o renovar",
+        "if_not": "Qué pasa si no lo hace",
+        "purpose": "Para qué es la encuesta",
+        "duration": "Cuánto tarda",
+        "use": "Qué se hace con las respuestas",
+        "more": "Más datos"
+      },
+      "PLACEHOLDERS": {
+        "invite": {
+          "when": "Viernes 13 de noviembre, de 9:15 a 10:00",
+          "place": "En línea por Zoom",
+          "cost": "Sin costo",
+          "audience": "Solo distribuidores",
+          "not_for": "Clientes finales: no pueden invitarlos",
+          "agenda": "La nueva app y Dalí, el asistente con IA",
+          "more": "Se puede asistir solo a la demo o solo a la plática. Cupo y vestimenta: no aplican."
+        },
+        "offer": {
+          "what_is": "Mantenimiento preventivo de minisplit",
+          "price": "$1,800 (antes $2,600)",
+          "valid_until": "Hasta el 30 de noviembre",
+          "conditions": "Solo Guadalajara · pago en una exhibición",
+          "audience": "Clientes con equipo de hasta 2 toneladas",
+          "delivery": "Agenda en 48 horas"
+        },
+        "reactivate": {
+          "news": "Nueva línea de refacciones",
+          "incentive": "15% en tu próxima compra",
+          "valid_until": "Hasta fin de mes",
+          "conditions": "Compra mínima de $2,000"
+        },
+        "renew": {
+          "what_due": "Póliza anual de mantenimiento",
+          "how": "Transferencia y nos mandas el comprobante",
+          "where_pay": "BBVA, cuenta 0123456789",
+          "if_not": "Se suspenden las visitas programadas"
+        },
+        "survey": {
+          "purpose": "Mejorar el servicio",
+          "duration": "1 minuto",
+          "use": "Las lee el gerente de servicio"
+        }
+      },
+      "FAQ_TITLE": "Preguntas y objeciones autorizadas",
+      "FAQ_HINT": "Lo que suelen preguntar o responder, con la respuesta que sí puede dar.",
+      "FAQ_QUESTION": "¿Puedo invitar a un cliente?",
+      "FAQ_ANSWER": "No, es solo para distribuidores.",
+      "FAQ_ADD": "+ Agregar pregunta",
+      "REMOVE": "Quitar",
+      "LINKS": {
+        "TITLE": "Ligas",
+        "HINT": "Cada liga con cuándo se manda: no son intercambiables. La IA la manda exacta.",
+        "FIRST_NAME": "Registro",
+        "NAME": "Nombre (Registro, Pago…)",
+        "ADD": "+ Agregar liga",
+        "USES": {
+          "package": "Con la información y cuando la pida",
+          "request": "Solo si la pide",
+          "problem": "Solo si tiene un problema (no le llegó el correo…)"
+        },
+        "URL": "https://"
       }
+    },
+    "REPLIES": {
+      "HINT": "Vacío = el texto en gris. La IA lo escribe tal cual (si además preguntó algo, lo contesta antes).",
+      "ACHIEVED": {
+        "confirm": "Confirma que va",
+        "external": "Escribe la palabra clave (ya lo hizo)",
+        "done": "Confirma que ya lo hizo",
+        "relay": "Le interesa (pasa a quien sigue)",
+        "appointment": "Agenda la cita",
+        "answers": "Termina la encuesta"
+      },
+      "MOMENTS": {
+        "not_now": "No esta vez",
+        "future_yes": "Acepta que le escribamos la próxima",
+        "opt_out": "No quiere que le escribamos de esto"
+      },
+      "ABOUT": {
+        "achieved": "Termina como logrado.",
+        "not_now": "«No puedo esta vez», «por ahora paso»: no es una baja. Se le pregunta una vez si le escribimos la próxima.",
+        "future_yes": "Contestó que sí a esa pregunta.",
+        "opt_out": "«No me manden nada», «no me inviten», o dijo que no a la pregunta: se respeta ya, sin pedir el motivo."
+      },
+      "REPLY": "Respuesta",
+      "LABEL": "Etiqueta del contacto",
+      "NO_LABEL": "sin etiqueta",
+      "EXCLUDES": "Quien tenga «{label}» ya no entra a las siguientes campañas de {kind}.",
+      "GLOBAL_OPT_OUT": "«Baja», «stop» o «darme de baja» lo da de baja de todo (ya no le llega ninguna campaña)."
+    },
+    "CASES": {
+      "HINT": "Pruebas que se arman solas con lo que tiene la campaña. La IA contesta como con un contacto, sin mandar ni guardar nada.",
+      "RUN_ALL": "Correr todos",
+      "RELOAD": "Volver a armar",
+      "SCORE": "{ok} de {n} bien",
+      "LOADING": "Armando los casos…",
+      "ERROR": "No se pudo correr.",
+      "RUN": "Correr",
+      "TOOLS": "hizo: {names}",
+      "SAYS": "«{message}»"
     }
   }
 }
