@@ -446,22 +446,26 @@ export default {
 
             <div
               v-if="isSeries"
-              class="flex flex-col gap-3 p-3 border rounded-md border-slate-100 dark:border-slate-600 bg-slate-25 dark:bg-slate-900/40"
+              class="flex flex-col gap-1.5 p-2.5 border rounded-md border-slate-100 dark:border-slate-600 bg-slate-25 dark:bg-slate-900/40"
             >
-              <div class="flex items-end gap-2">
-                <label class="m-0">
-                  <span class="text-sm text-slate-700 dark:text-slate-200">{{
-                    $t('CASE_TICKETS.MEETINGS.MODAL.REPEAT_EVERY')
-                  }}</span>
-                  <input
-                    v-model="series.interval"
-                    type="number"
-                    min="1"
-                    max="52"
-                    class="w-20"
-                  />
-                </label>
-                <select v-model="series.freq" class="w-40">
+              <!-- Dos renglones, como «Se repite»:
+                   Repetir cada [N] [semanas ▾]  [Lu][Ma]…
+                   Termina [Después de ▾] [N] veces  |  [fecha] -->
+              <div class="flex flex-wrap items-center gap-1.5 text-sm">
+                <span class="text-slate-700 dark:text-slate-200">
+                  {{ $t('CASE_TICKETS.MEETINGS.MODAL.REPEAT_EVERY') }}
+                </span>
+                <input
+                  v-model="series.interval"
+                  type="number"
+                  min="1"
+                  max="52"
+                  class="!w-14 !mb-0 !h-8 !py-0 leading-8 text-sm"
+                />
+                <select
+                  v-model="series.freq"
+                  class="!w-auto !mb-0 !h-8 !py-0 leading-8 text-sm"
+                >
                   <option value="daily">
                     {{ $t('CASE_TICKETS.MEETINGS.MODAL.FREQ.DAILY') }}
                   </option>
@@ -472,67 +476,60 @@ export default {
                     {{ $t('CASE_TICKETS.MEETINGS.MODAL.FREQ.MONTHLY') }}
                   </option>
                 </select>
-              </div>
-
-              <div v-if="series.freq === 'weekly'">
-                <span class="text-sm text-slate-700 dark:text-slate-200">{{
-                  $t('CASE_TICKETS.MEETINGS.MODAL.DAYS_LABEL')
-                }}</span>
-                <div class="flex flex-wrap gap-1 mt-1">
+                <span
+                  v-if="series.freq === 'weekly'"
+                  class="inline-flex gap-0.5 ltr:ml-2 rtl:mr-2"
+                >
                   <button
                     v-for="d in weekDays"
                     :key="d.code"
                     type="button"
-                    class="px-2 py-1 text-xs font-medium border rounded"
+                    class="w-8 h-8 text-xs border rounded"
                     :class="
                       series.by_day.includes(d.code)
                         ? 'bg-woot-500 text-white border-woot-500'
-                        : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200'
                     "
                     @click="toggleDay(d.code)"
                   >
                     {{ d.label }}
                   </button>
-                </div>
+                </span>
               </div>
 
-              <div class="flex flex-wrap items-center gap-4">
-                <label class="flex items-center gap-2 m-0">
-                  <input
-                    v-model="series.end_mode"
-                    type="radio"
-                    value="count"
-                    class="m-0"
-                  />
-                  <span class="text-sm text-slate-700 dark:text-slate-200">{{
-                    $t('CASE_TICKETS.MEETINGS.MODAL.END_AFTER')
-                  }}</span>
+              <div class="flex flex-wrap items-center gap-1.5 text-sm">
+                <span class="text-slate-700 dark:text-slate-200">
+                  {{ $t('RECURRING_TASKS.ENDS') }}
+                </span>
+                <select
+                  v-model="series.end_mode"
+                  class="!w-auto !mb-0 !h-8 !py-0 leading-8 text-sm"
+                >
+                  <option value="count">
+                    {{ $t('RECURRING_TASKS.ENDS_AFTER') }}
+                  </option>
+                  <option value="until">
+                    {{ $t('RECURRING_TASKS.ENDS_ON') }}
+                  </option>
+                </select>
+                <template v-if="series.end_mode === 'count'">
                   <input
                     v-model="series.count"
                     type="number"
                     min="1"
                     max="100"
-                    class="w-20 m-0"
-                    :disabled="series.end_mode !== 'count'"
+                    class="!w-14 !mb-0 !h-8 !py-0 leading-8 text-sm"
                   />
-                </label>
-                <label class="flex items-center gap-2 m-0">
-                  <input
-                    v-model="series.end_mode"
-                    type="radio"
-                    value="until"
-                    class="m-0"
-                  />
-                  <span class="text-sm text-slate-700 dark:text-slate-200">{{
-                    $t('CASE_TICKETS.MEETINGS.MODAL.END_ON')
-                  }}</span>
-                  <input
-                    v-model="series.until_at"
-                    type="date"
-                    class="m-0"
-                    :disabled="series.end_mode !== 'until'"
-                  />
-                </label>
+                  <span class="text-slate-700 dark:text-slate-200">
+                    {{ $t('RECURRING_TASKS.TIMES') }}
+                  </span>
+                </template>
+                <input
+                  v-else
+                  v-model="series.until_at"
+                  type="date"
+                  class="!w-auto !mb-0 !h-8 !py-0 leading-8 text-sm"
+                />
               </div>
 
               <!-- Vista previa: lo que se va a crear, antes de confirmar. -->
