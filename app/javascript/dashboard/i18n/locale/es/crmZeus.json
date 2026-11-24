@@ -401,6 +401,9 @@
       "CREATED_BY": "Creó: {name}",
       "CREATED": "Cotización {folio} guardada",
       "DUPLICATE": "Duplicar",
+      "DUPLICATE_ACCEPT": "Sí, duplicar",
+      "DUPLICATE_CONFIRM": "¿Está seguro de duplicar esta cotización?",
+      "DUPLICATE_REMOVED": "Los siguientes artículos están de baja o suspendidos de ventas: {names}. Al duplicar, no se incluirán.",
       "NOT_OWNER": "Solo quien creó la cotización o un Administrador la puede modificar.",
       "LOCKED": "La cotización está {status}: solo se edita en Pendiente.",
       "TABS": {

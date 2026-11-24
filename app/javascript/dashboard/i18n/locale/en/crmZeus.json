@@ -401,6 +401,9 @@
       "CREATED_BY": "Created by: {name}",
       "CREATED": "Quote {folio} saved",
       "DUPLICATE": "Duplicate",
+      "DUPLICATE_ACCEPT": "Yes, duplicate",
+      "DUPLICATE_CONFIRM": "Are you sure you want to duplicate this quote?",
+      "DUPLICATE_REMOVED": "The following articles are inactive or suspended for sales: {names}. They will not be included in the copy.",
       "NOT_OWNER": "Only whoever created the quote or an Administrator can change it.",
       "LOCKED": "The quote is {status}: only Pending quotes can be edited.",
       "TABS": {

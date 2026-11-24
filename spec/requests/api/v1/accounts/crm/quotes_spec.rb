@@ -346,16 +346,55 @@ RSpec.describe 'CrmZeus Quotes API' do
     expect(fetch.call(view: 'all', organization_id: organization.id, created_by_id: other_agent.id)).to eq(['PED000001'])
   end
 
-  it 'duplica sin guardar: misma partida, fecha de hoy y los mismos días de vigencia' do
+  it 'duplica sin guardar: mismas partidas; fecha, vigencia y entrega de hoy' do
     created = create_quote
     post "#{url}/#{created['id']}/duplicate", headers: other_agent.create_new_auth_token, as: :json
 
     body = response.parsed_body
-    expect(body['quote']).to include('organization_id' => organization.id, 'quote_date' => Time.zone.today.to_s,
-                                     'valid_until' => 15.days.from_now.to_date.to_s, 'total' => created['total'])
+    today = Time.zone.today.to_s
+    expect(body['quote']).to include('organization_id' => organization.id, 'quote_date' => today, 'valid_until' => today,
+                                     'delivery_date' => today, 'total' => created['total'])
     expect(body['quote']['items'].pluck('description', 'id')).to eq([['Tornillo 1/2', nil], ['Rondana', nil]])
+    expect(body['removed_items']).to eq([])
     expect(body['series']['series']).to eq('PED')
     expect(account.crm_quotes.count).to eq(1)
+  end
+
+  it 'duplica lo que hay en pantalla aunque no esté guardado (como master2)' do
+    created = create_quote
+    screen = payload(header_notes: 'Cambiado sin guardar', purchase_order: 'OC-77', purchase_order_date: '2026-11-20',
+                     items: [created['items'].first.slice('id', 'article_id', 'quantity', 'unit_price'),
+                             { article_id: safety_kit.id, role: 'kit', quantity: 1, unit_price: 500 }])
+    safety_kit.update!(status: :inactive)
+    post "#{url}/#{created['id']}/duplicate", params: { quote: screen }, headers: agent.create_new_auth_token, as: :json
+
+    body = response.parsed_body
+    expect(body['quote']).to include('header_notes' => 'Cambiado sin guardar', 'valid_until' => Time.zone.today.to_s,
+                                     'purchase_order' => 'OC-77', 'purchase_order_date' => '2026-11-20')
+    expect(body['quote']['items'].pluck('description', 'id')).to eq([['Tornillo 1/2', nil]])
+    expect(body['removed_items']).to eq(['Kit de seguridad'])
+    expect(account.crm_quotes.find(created['id']).items.count).to eq(2)
+  end
+
+  it 'al duplicar quita las partidas de artículos de baja o suspendidos de ventas, con todo y componentes (Q3.1)' do
+    created = create_quote(agent, items: [{ article_id: screws.id, quantity: 1, unit_price: 100 },
+                                          { article_id: safety_kit.id, role: 'kit', quantity: 1, unit_price: 500 },
+                                          { article_id: gloves.id, quantity: 1, unit_price: 10 }])
+    duplicate = lambda do
+      post "#{url}/#{created['id']}/duplicate", headers: agent.create_new_auth_token, as: :json
+      response.parsed_body
+    end
+
+    safety_kit.update!(status: :sales_suspended)
+    screws.update!(status: :purchases_suspended)
+    body = duplicate.call
+    expect(body['quote']['items'].pluck('description')).to eq(['Tornillo 1/2', 'Guantes'])
+    expect(body['removed_items']).to eq(['Kit de seguridad'])
+
+    gloves.update!(status: :inactive)
+    screws.update!(status: :suspended)
+    expect(duplicate.call).to include('removed_items' => ['Tornillo 1/2', 'Kit de seguridad', 'Guantes'])
+    expect(response.parsed_body['quote']['items']).to eq([])
   end
 
   it 'sin Ventas con escritura (Técnico) no da de alta' do

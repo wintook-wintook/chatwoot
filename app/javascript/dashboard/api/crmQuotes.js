@@ -31,8 +31,9 @@ class CrmQuotesAPI extends ApiClient {
     return axios.post(`${this.url}/${id}/status`, { status });
   }
 
-  duplicate(id) {
-    return axios.post(`${this.url}/${id}/duplicate`);
+  // `quote`: lo que hay en pantalla (sin guardar); sin él se duplica lo guardado.
+  duplicate(id, quote) {
+    return axios.post(`${this.url}/${id}/duplicate`, quote ? { quote } : {});
   }
 }
 

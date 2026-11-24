@@ -217,6 +217,51 @@ describe('CrmZeusQuoteForm', () => {
     expect(wrapper.vm.quote.items[0].tax_ids).toEqual([]);
   });
 
+  it('Duplicar avisa qué artículos no se copian y pide confirmación (master2)', async () => {
+    CrmQuotes.show.mockResolvedValue({
+      data: { quote: { ...DRAFT, id: 9, folio: 'LAU000125', can_edit: true } },
+    });
+    CrmQuotes.duplicate.mockResolvedValue({
+      data: { quote: DRAFT, removed_items: ['Casco', 'Guantes'], series: null },
+    });
+    const wrapper = montar({ quoteId: '9', query: {} });
+    await flushPromises();
+    const confirmar = vi.fn().mockResolvedValue(false);
+    wrapper.vm.$refs.duplicateDialog.showConfirmation = confirmar;
+
+    await wrapper.vm.duplicate();
+
+    expect(CrmQuotes.duplicate).toHaveBeenCalledWith(
+      '9',
+      expect.objectContaining({ organization_id: 7, items: [] })
+    );
+    expect(wrapper.vm.duplicateMessage).toBe(
+      'CRM_ZEUS.QUOTE_FORM.DUPLICATE_REMOVED {"names":"Casco, Guantes"} CRM_ZEUS.QUOTE_FORM.DUPLICATE_CONFIRM'
+    );
+    expect(wrapper.vm.$router.push).not.toHaveBeenCalled();
+
+    confirmar.mockResolvedValue(true);
+    CrmQuotes.duplicate.mockResolvedValue({
+      data: { quote: DRAFT, removed_items: [], series: null },
+    });
+    await wrapper.vm.duplicate();
+
+    expect(wrapper.vm.duplicateMessage).toBe(
+      'CRM_ZEUS.QUOTE_FORM.DUPLICATE_CONFIRM'
+    );
+    expect(wrapper.vm.$router.push).toHaveBeenCalledWith({
+      name: 'crmzeus_quote_new',
+      query: { from: '9' },
+    });
+
+    // La ruta nueva usa el borrador de pantalla, sin volver a pedirlo.
+    CrmQuotes.duplicate.mockClear();
+    const copia = montar({ query: { from: '9' } });
+    await flushPromises();
+    expect(CrmQuotes.duplicate).not.toHaveBeenCalled();
+    expect(copia.vm.quote.organization_id).toBe(7);
+  });
+
   it('los días de entrega ponen la fecha', () => {
     expect(addDays('2026-11-28', 7)).toBe('2026-12-05');
   });

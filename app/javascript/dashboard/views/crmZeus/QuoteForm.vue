@@ -85,6 +85,9 @@ const withUid = item => {
   uidCounter += 1;
   return { ...item, uid: uidCounter, tax_ids: [...(item.tax_ids || [])] };
 };
+// Borrador de «Duplicar» armado con lo que había en pantalla: lo toma la ruta `?from=` al abrir
+// (si se recarga la página ya no está y se duplica lo guardado).
+let pendingDuplicate = null;
 const blank = value => (value === null || value === undefined ? '' : value);
 
 export default {
@@ -116,6 +119,7 @@ export default {
       itemForm: null,
       deliveryDays: '',
       pendingStatus: null,
+      duplicateRemoved: [],
       loading: true,
       saving: false,
       calculating: false,
@@ -123,6 +127,14 @@ export default {
     };
   },
   computed: {
+    duplicateMessage() {
+      const confirm = this.$t('CRM_ZEUS.QUOTE_FORM.DUPLICATE_CONFIRM');
+      if (!this.duplicateRemoved.length) return confirm;
+      const names = this.duplicateRemoved.join(', ');
+      return `${this.$t('CRM_ZEUS.QUOTE_FORM.DUPLICATE_REMOVED', {
+        names,
+      })} ${confirm}`;
+    },
     isNew() {
       return !this.quoteId;
     },
@@ -235,9 +247,15 @@ export default {
           this.fromApi(response.data.quote);
         } else {
           const { from, organization_id: organizationId } = this.$route.query;
-          const response = from
-            ? await CrmQuotes.duplicate(from)
-            : await CrmQuotes.draft(organizationId);
+          const stashed =
+            from && pendingDuplicate && pendingDuplicate.from === String(from)
+              ? pendingDuplicate
+              : null;
+          pendingDuplicate = null;
+          let response;
+          if (stashed) response = stashed.response;
+          else if (from) response = await CrmQuotes.duplicate(from);
+          else response = await CrmQuotes.draft(organizationId);
           this.info = {};
           this.series = response.data.series;
           this.fromApi(response.data.quote);
@@ -450,7 +468,19 @@ export default {
         useAlert(errorMessage(error, this.$t('CRM_ZEUS.ERROR')));
       }
     },
-    duplicate() {
+    // Como master2: se duplica lo que hay en pantalla (aunque no esté guardado). Antes avisa qué
+    // partidas no se copian (artículo de baja o suspendido de ventas) y pide confirmación.
+    async duplicate() {
+      let response;
+      try {
+        response = await CrmQuotes.duplicate(this.quoteId, this.payload());
+        this.duplicateRemoved = response.data.removed_items || [];
+      } catch (error) {
+        useAlert(errorMessage(error, this.$t('CRM_ZEUS.ERROR')));
+        return;
+      }
+      if (!(await this.$refs.duplicateDialog.showConfirmation())) return;
+      pendingDuplicate = { from: String(this.quoteId), response };
       this.$router.push({
         name: 'crmzeus_quote_new',
         query: { from: this.quoteId },
@@ -1060,6 +1090,13 @@ export default {
           : ''
       "
       :confirm-label="$t('CRM_ZEUS.QUOTE_FORM.STATUS_ACCEPT')"
+      :cancel-label="$t('CRM_ZEUS.CANCEL')"
+    />
+    <woot-confirm-modal
+      ref="duplicateDialog"
+      :title="$t('CRM_ZEUS.QUOTE_FORM.DUPLICATE')"
+      :description="duplicateMessage"
+      :confirm-label="$t('CRM_ZEUS.QUOTE_FORM.DUPLICATE_ACCEPT')"
       :cancel-label="$t('CRM_ZEUS.CANCEL')"
     />
   </div>

@@ -7,7 +7,7 @@
 #   PATCH /crm/quotes/:id             la lista de partidas reemplaza a la guardada; solo en Pendiente
 #   POST  /crm/quotes/calculate       mismos datos que el alta (+ quote_id si ya existe): regresa los importes sin guardar
 #   POST  /crm/quotes/:id/status      { status: won|lost|cancelled|pending }
-#   POST  /crm/quotes/:id/duplicate   borrador sin guardar con los mismos datos (como CRMZeus, en el navegador)
+#   POST  /crm/quotes/:id/duplicate   borrador sin guardar; con `quote` (lo que hay en pantalla) copia eso, si no la guardada
 #
 # Todos los de Ventas ven todas; edita y cambia el estatus quien tiene Ventas con escritura y es
 # el creador o un administrador (decisión 4). No se borran: se cancelan. Los totales los pone el
@@ -74,7 +74,8 @@ class Api::V1::Accounts::Crm::QuotesController < Api::V1::Accounts::Crm::BaseCon
   end
 
   def duplicate
-    render json: { quote: Crm::QuoteJson.draft(Crm::QuoteCopy.new(@quote, Current.user).build), series: series_json }
+    copy = Crm::QuoteCopy.new(@quote, Current.user, params[:quote].present? ? quote_params : nil)
+    render json: { quote: Crm::QuoteJson.draft(copy.build), removed_items: copy.removed, series: series_json }
   end
 
   private
@@ -88,7 +89,7 @@ class Api::V1::Accounts::Crm::QuotesController < Api::V1::Accounts::Crm::BaseCon
   end
 
   def set_quote
-    @quote = quotes.includes(items: :item_taxes).find(params[:id])
+    @quote = quotes.includes(items: %i[item_taxes article]).find(params[:id])
   end
 
   def check_owner
