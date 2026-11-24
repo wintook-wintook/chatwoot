@@ -116,7 +116,7 @@ export default {
       <p class="m-0 -mt-1 text-xs text-slate-500">
         {{ $t('RECURRING_TASKS.TIME_HINT') }}
       </p>
-      <RecurrenceFields v-model="form.cadence" :at-time="form.at_time" />
+      <RecurrenceFields v-model="form.cadence" />
       <div class="flex justify-end gap-2">
         <woot-button type="button" variant="clear" @click="$emit('close')">
           {{ $t('RECURRING_TASKS.CANCEL') }}

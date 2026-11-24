@@ -1,24 +1,18 @@
 <!--
-  Tareas que se repiten — «Cada cuánto» y «Hasta cuándo». v-model = el objeto de
+  Tareas que se repiten — «Cada cuánto» y «Hasta cuándo», en un renglón. v-model = el objeto de
   defaultRecurrence() (recurrence.js).
 -->
 <script>
-import { UNITS, WEEKDAYS, describeRecurrence } from './recurrence';
+import { UNITS, WEEKDAYS } from './recurrence';
 
 export default {
   name: 'RecurrenceFields',
   model: { prop: 'value', event: 'input' },
   props: {
     value: { type: Object, required: true },
-    atTime: { type: String, default: '' },
   },
   data() {
     return { units: UNITS, weekdays: WEEKDAYS };
-  },
-  computed: {
-    summary() {
-      return describeRecurrence({ ...this.value, at_time: this.atTime }, this);
-    },
   },
   methods: {
     set(field, val) {
@@ -35,40 +29,26 @@ export default {
 </script>
 
 <template>
-  <div
-    class="flex flex-col gap-2 p-3 border rounded-lg border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50"
-  >
-    <!-- Fecha fija o después de hacerla -->
-    <div class="grid grid-cols-2 gap-2">
-      <label
-        v-for="mode in ['fixed', 'after_done']"
-        :key="mode"
-        class="flex items-start gap-2 p-2 bg-white border rounded-md cursor-pointer dark:bg-slate-900"
-        :class="
-          value.mode === mode
-            ? 'border-woot-500'
-            : 'border-slate-200 dark:border-slate-600'
-        "
+  <!-- Dos renglones fijos (el segundo alineado debajo del tipo):
+       [casilla] [tipo] cada [N] [unidad]
+                 [días de la semana]  Termina [nunca / el día / después de N veces] -->
+  <div class="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1.5 text-sm">
+    <div><slot name="before" /></div>
+    <div class="flex flex-wrap items-center gap-1.5">
+      <select
+        :value="value.mode"
+        class="!w-auto !mb-0 h-8 text-sm"
+        :title="$t(`RECURRING_TASKS.MODE_${value.mode.toUpperCase()}_HINT`)"
+        @change="set('mode', $event.target.value)"
       >
-        <input
-          type="radio"
-          class="mt-0.5"
-          :checked="value.mode === mode"
-          @change="set('mode', mode)"
-        />
-        <span class="text-xs">
-          <span class="block font-medium text-slate-800 dark:text-slate-100">
-            {{ $t(`RECURRING_TASKS.MODE_${mode.toUpperCase()}`) }}
-          </span>
-          <span class="text-slate-500 dark:text-slate-400">
-            {{ $t(`RECURRING_TASKS.MODE_${mode.toUpperCase()}_HINT`) }}
-          </span>
-        </span>
-      </label>
-    </div>
-
-    <!-- Cada N días / semanas / meses -->
-    <div class="flex items-center gap-2 text-sm">
+        <option
+          v-for="mode in ['fixed', 'after_done']"
+          :key="mode"
+          :value="mode"
+        >
+          {{ $t(`RECURRING_TASKS.MODE_${mode.toUpperCase()}`) }}
+        </option>
+      </select>
       <span class="text-slate-600 dark:text-slate-300">
         {{ $t('RECURRING_TASKS.EVERY') }}
       </span>
@@ -77,7 +57,7 @@ export default {
         type="number"
         min="1"
         max="365"
-        class="!w-16 !mb-0 h-8 text-sm"
+        class="!w-14 !mb-0 h-8 text-sm"
         @input="set('every', Number($event.target.value) || 1)"
       />
       <select
@@ -97,29 +77,27 @@ export default {
       </span>
     </div>
 
-    <!-- Los días (solo fecha fija semanal) -->
-    <div
-      v-if="value.mode === 'fixed' && value.unit === 'week'"
-      class="flex flex-wrap gap-1"
-    >
-      <button
-        v-for="day in weekdays"
-        :key="day"
-        type="button"
-        class="w-9 h-8 text-xs border rounded-md"
-        :class="
-          value.weekdays.includes(day)
-            ? 'bg-woot-500 border-woot-500 text-white'
-            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200'
-        "
-        @click="toggleDay(day)"
+    <div />
+    <div class="flex flex-wrap items-center gap-1.5">
+      <span
+        v-if="value.mode === 'fixed' && value.unit === 'week'"
+        class="inline-flex gap-0.5 ltr:mr-2 rtl:ml-2"
       >
-        {{ $t(`RECURRING_TASKS.DAYS_SHORT.${day}`) }}
-      </button>
-    </div>
-
-    <!-- Hasta cuándo -->
-    <div class="flex flex-wrap items-center gap-2 text-sm">
+        <button
+          v-for="day in weekdays"
+          :key="day"
+          type="button"
+          class="w-8 h-8 text-xs border rounded"
+          :class="
+            value.weekdays.includes(day)
+              ? 'bg-woot-500 border-woot-500 text-white'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200'
+          "
+          @click="toggleDay(day)"
+        >
+          {{ $t(`RECURRING_TASKS.DAYS_SHORT.${day}`) }}
+        </button>
+      </span>
       <span class="text-slate-600 dark:text-slate-300">
         {{ $t('RECURRING_TASKS.ENDS') }}
       </span>
@@ -144,7 +122,7 @@ export default {
           :value="value.max_count"
           type="number"
           min="1"
-          class="!w-16 !mb-0 h-8 text-sm"
+          class="!w-14 !mb-0 h-8 text-sm"
           @input="set('max_count', Number($event.target.value) || 1)"
         />
         <span class="text-slate-600 dark:text-slate-300">
@@ -152,9 +130,5 @@ export default {
         </span>
       </template>
     </div>
-
-    <p class="m-0 text-xs font-medium text-woot-700 dark:text-woot-300">
-      {{ summary }}
-    </p>
   </div>
 </template>

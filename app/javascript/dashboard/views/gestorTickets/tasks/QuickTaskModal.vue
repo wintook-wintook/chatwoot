@@ -293,8 +293,25 @@ export default {
       >
         {{ $t('QUICK_ACTIONS.TASK.SCHEDULED_HINT') }}
       </p>
-      <!-- Se repite: cada cuánto y hasta cuándo -->
-      <label class="flex items-center gap-2 cursor-pointer w-fit">
+      <!-- Se repite: la casilla y cada cuánto / hasta cuándo, en un renglón -->
+      <RecurrenceFields v-if="repeats" v-model="recurrence">
+        <template #before>
+          <label
+            class="flex items-center gap-2 cursor-pointer ltr:mr-1 rtl:ml-1"
+          >
+            <input
+              v-model="repeats"
+              type="checkbox"
+              class="w-4 h-4 rounded accent-woot-500"
+              data-test="quick-task-repeats"
+            />
+            <span class="text-sm text-slate-700 dark:text-slate-200">
+              {{ $t('RECURRING_TASKS.REPEATS') }}
+            </span>
+          </label>
+        </template>
+      </RecurrenceFields>
+      <label v-else class="flex items-center gap-2 cursor-pointer w-fit">
         <input
           v-model="repeats"
           type="checkbox"
@@ -304,11 +321,7 @@ export default {
         <span class="text-sm text-slate-700 dark:text-slate-200">
           {{ $t('RECURRING_TASKS.REPEATS') }}
         </span>
-        <span class="text-xs text-slate-500 dark:text-slate-400">
-          {{ $t('RECURRING_TASKS.REPEATS_HINT') }}
-        </span>
       </label>
-      <RecurrenceFields v-if="repeats" v-model="recurrence" :at-time="time" />
       <!-- Solo las agendadas (con hora) llevan participantes -->
       <ParticipantsPicker
         v-if="time && !repeats"

@@ -16,7 +16,7 @@ reviewed: 2026-11-23
 Para un seguimiento fijo que hace una persona (no un agente IA): una tarea que das de alta una vez y que Kontrolya vuelve a crear sola cada cierto tiempo. Cada vez sale en el Mi día del responsable como cualquier tarea y se concluye con su reporte de cierre, así queda evidencia de cada seguimiento.
 
 ## Dónde está
-- Para crearla: «Tarea» (barra de arriba) o «Nueva tarea» en Agenda, marcando «Se repite».
+- Para crearla: «Tarea» (barra de arriba), «Nueva tarea» en Agenda o «Nueva tarea» dentro de un caso, marcando «Se repite».
 - Para verlas todas: Agenda › Tareas que se repiten.
 
 ## Cómo se hace
@@ -24,10 +24,14 @@ Para un seguimiento fijo que hace una persona (no un agente IA): una tarea que d
 1. Abre «Tarea» y llena el título, el responsable y, si es de un cliente, el contacto u organización (y el caso, si quieres).
 2. «Fecha programada» es el día en que empieza. Si le pones «Hora», cada vez sale como tarea agendada (entra al calendario).
 3. Marca «Se repite» y elige cómo cuenta el tiempo:
+   - Junto a «cada N días/semanas/meses» eliges «En fecha fija» o «Después de hacerla»:
    - «En fecha fija»: toca en su fecha aunque no se haya hecho la anterior. Cada N días, cada N semanas (eliges los días: Lu, Ma, Mi…) o cada N meses (el mismo día del mes; si el mes es más corto, su último día).
    - «Después de hacerla»: N días, semanas o meses contados desde el día que la concluyes. Si te atrasas, la siguiente también se recorre.
 4. En «Termina» eliges: Nunca, El día (una fecha) o Después de N veces.
 5. Abajo se lee cómo quedó (por ejemplo, «Cada semana: lunes, jueves · 10:30»). Pulsa «Crear tarea».
+
+### Dentro de un caso
+En el caso, pestaña de tareas › «Nueva tarea»: llena la tarea como siempre y marca «Se repite» (solo al crearla y si la hace tu equipo, no el cliente). La primera sale el día «Programada para» (o hoy) y las siguientes salen solas, ligadas a ese caso, con su responsable, prioridad y duración. Si el caso se cierra o se cancela, deja de repetirse.
 
 ### Qué pasa cada vez que toca
 - Ese día sale la tarea en el Mi día del responsable, con la etiqueta «Se repite».
