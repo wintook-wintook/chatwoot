@@ -33,6 +33,8 @@ export default {
     // La organización de la cotización: decide qué impuestos del artículo aplican.
     organization: { type: Object, default: null },
     priceLists: { type: Array, default: () => [] },
+    // MOSTRAR_NOTAS de master2: al elegir el artículo se ponen sus notas (si no, quedan vacías).
+    showArticleNotes: { type: Boolean, default: true },
   },
   data() {
     return {
@@ -45,6 +47,7 @@ export default {
             : [],
       },
       prices: [],
+      articleNotes: '',
       replacing: null,
       loadingArticle: false,
       error: '',
@@ -86,11 +89,21 @@ export default {
       try {
         const { data } = await CrmArticles.show(articleId);
         this.prices = data.article.prices;
+        this.articleNotes = (data.article.notes || '').trim();
         return data.article;
       } catch (e) {
         this.prices = [];
+        this.articleNotes = '';
         return null;
       }
+    },
+    // Botón «Notas del artículo» de master2: agrega las notas del artículo al final (otro renglón).
+    addArticleNotes() {
+      const current = (this.form.notes || '').trim();
+      if (!this.articleNotes) return;
+      this.form.notes = current
+        ? `${current}\n${this.articleNotes}`
+        : this.articleNotes;
     },
     async pickArticle(listItem) {
       this.loadingArticle = true;
@@ -121,6 +134,8 @@ export default {
           ),
           price_list_id: listId,
           components: kit ? kitComponentRows(article, this.form.quantity) : [],
+          // Como master2: al cambiar de artículo las notas se reemplazan.
+          notes: this.showArticleNotes ? this.articleNotes : '',
         };
         this.applyPrice();
       } catch (e) {
@@ -479,7 +494,18 @@ export default {
           </div>
         </fieldset>
         <label>
-          {{ $t('CRM_ZEUS.QUOTE_FORM.NOTES') }}
+          <span class="flex items-center justify-between">
+            {{ $t('CRM_ZEUS.QUOTE_FORM.NOTES') }}
+            <button
+              v-if="form.article_id && !isKit"
+              type="button"
+              class="button clear tiny"
+              :disabled="!articleNotes"
+              @click="addArticleNotes"
+            >
+              {{ $t('CRM_ZEUS.QUOTE_FORM.ADD_ARTICLE_NOTES') }}
+            </button>
+          </span>
           <textarea v-model="form.notes" rows="2" />
         </label>
         <label>

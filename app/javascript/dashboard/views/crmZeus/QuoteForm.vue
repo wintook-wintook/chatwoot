@@ -166,6 +166,9 @@ export default {
     deliveryDateRequired() {
       return !!(this.catalogs.settings || {}).require_delivery_date;
     },
+    showArticleNotes() {
+      return (this.catalogs.settings || {}).show_article_notes !== false;
+    },
     // RESPETAR_VENDEDOR: la organización fija su vendedor y no se cambia.
     sellerLocked() {
       return !!(
@@ -1075,6 +1078,7 @@ export default {
       :taxes="catalogs.taxes"
       :organization="organization"
       :price-lists="priceLists"
+      :show-article-notes="showArticleNotes"
       @save="saveItem"
       @close="itemForm = null"
     />

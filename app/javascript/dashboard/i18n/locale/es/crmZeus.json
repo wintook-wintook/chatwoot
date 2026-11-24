@@ -401,6 +401,7 @@
       "CREATED_BY": "Creó: {name}",
       "CREATED": "Cotización {folio} guardada",
       "DUPLICATE": "Duplicar",
+      "ADD_ARTICLE_NOTES": "Notas del artículo",
       "DUPLICATE_ACCEPT": "Sí, duplicar",
       "DUPLICATE_CONFIRM": "¿Está seguro de duplicar esta cotización?",
       "DUPLICATE_REMOVED": "Los siguientes artículos están de baja o suspendidos de ventas: {names}. Al duplicar, no se incluirán.",
@@ -521,7 +522,9 @@
     "QUOTE_SETTINGS": {
       "DESCRIPTION": "Reglas de las cotizaciones de toda la cuenta. Solo el Administrador las cambia.",
       "REQUIRE_DELIVERY_DATE": "La fecha de entrega es obligatoria",
-      "REQUIRE_DELIVERY_DATE_HINT": "Si está apagado, la cotización se puede guardar sin fecha de entrega."
+      "REQUIRE_DELIVERY_DATE_HINT": "Si está apagado, la cotización se puede guardar sin fecha de entrega.",
+      "SHOW_ARTICLE_NOTES": "Poner las notas del artículo en la partida",
+      "SHOW_ARTICLE_NOTES_HINT": "Al elegir el artículo, las notas de la partida se reemplazan por las suyas. Si está apagado quedan vacías; el botón «Notas del artículo» las agrega cuando se necesiten."
     }
   }
 }

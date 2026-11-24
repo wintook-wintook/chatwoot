@@ -401,6 +401,7 @@
       "CREATED_BY": "Created by: {name}",
       "CREATED": "Quote {folio} saved",
       "DUPLICATE": "Duplicate",
+      "ADD_ARTICLE_NOTES": "Article notes",
       "DUPLICATE_ACCEPT": "Yes, duplicate",
       "DUPLICATE_CONFIRM": "Are you sure you want to duplicate this quote?",
       "DUPLICATE_REMOVED": "The following articles are inactive or suspended for sales: {names}. They will not be included in the copy.",
@@ -521,7 +522,9 @@
     "QUOTE_SETTINGS": {
       "DESCRIPTION": "Quote rules for the whole account. Only the Administrator can change them.",
       "REQUIRE_DELIVERY_DATE": "Delivery date is required",
-      "REQUIRE_DELIVERY_DATE_HINT": "When off, a quote can be saved without a delivery date."
+      "REQUIRE_DELIVERY_DATE_HINT": "When off, a quote can be saved without a delivery date.",
+      "SHOW_ARTICLE_NOTES": "Fill the line notes with the article notes",
+      "SHOW_ARTICLE_NOTES_HINT": "When an article is picked, the line notes are replaced with its notes. If off, they stay empty; the «Article notes» button adds them when needed."
     }
   }
 }

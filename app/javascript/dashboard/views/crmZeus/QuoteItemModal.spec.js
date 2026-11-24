@@ -316,3 +316,59 @@ describe('CrmQuoteItemModal (impuestos según el cliente)', () => {
     });
   });
 });
+
+// Q3.1 punto 7 — notas del artículo (master2 quotations/article.js: MOSTRAR_NOTAS y «Notas del artículo»).
+describe('CrmQuoteItemModal (notas del artículo)', () => {
+  const TORNILLO = {
+    id: 5,
+    key: 'TOR-12',
+    name: 'Tornillo',
+    unit: null,
+    tax_ids: [],
+    prices: [],
+    notes: '  Acero inoxidable  ',
+  };
+  const montarCon = (item, props = {}) =>
+    shallowMount(QuoteItemModal, {
+      propsData: { item, ...props },
+      mocks: { $t: clave => clave },
+      stubs: ['woot-modal', 'woot-modal-header', 'woot-submit-button'],
+    });
+
+  beforeEach(() => {
+    CrmArticles.show.mockResolvedValue({ data: { article: TORNILLO } });
+  });
+
+  it('al elegir el artículo reemplaza las notas por las suyas', async () => {
+    const wrapper = montarCon({ ...blankItem(), notes: 'escrita antes' });
+    await wrapper.vm.pickArticle({ id: 5 });
+
+    expect(wrapper.vm.form.notes).toBe('Acero inoxidable');
+  });
+
+  it('con el parámetro apagado las notas quedan vacías', async () => {
+    const wrapper = montarCon(
+      { ...blankItem(), notes: 'escrita antes' },
+      { showArticleNotes: false }
+    );
+    await wrapper.vm.pickArticle({ id: 5 });
+
+    expect(wrapper.vm.form.notes).toBe('');
+  });
+
+  it('«Notas del artículo» las agrega al final en otro renglón', async () => {
+    const wrapper = montarCon(
+      { ...blankItem(), uid: 1, article_id: 5, notes: ' Entregar en caja ' },
+      { showArticleNotes: false }
+    );
+    await flushPromises();
+    expect(wrapper.vm.form.notes).toBe(' Entregar en caja ');
+
+    wrapper.vm.addArticleNotes();
+    expect(wrapper.vm.form.notes).toBe('Entregar en caja\nAcero inoxidable');
+
+    wrapper.vm.form.notes = '';
+    wrapper.vm.addArticleNotes();
+    expect(wrapper.vm.form.notes).toBe('Acero inoxidable');
+  });
+});

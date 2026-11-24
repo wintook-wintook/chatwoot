@@ -9,6 +9,9 @@ import CrmCatalogs from 'dashboard/api/crmCatalogs';
 import Spinner from 'shared/components/Spinner.vue';
 import { errorMessage } from './crmHelpers';
 
+// Parámetros de master2: VALIDAR_FECHA_ENTREGA y MOSTRAR_NOTAS.
+const KEYS = ['require_delivery_date', 'show_article_notes'];
+
 export default {
   name: 'CrmQuoteSettingsPanel',
   components: { Spinner },
@@ -16,7 +19,7 @@ export default {
     isAdmin: { type: Boolean, default: false },
   },
   data() {
-    return { settings: null, saving: false };
+    return { settings: null, saving: false, keys: KEYS };
   },
   mounted() {
     this.fetch();
@@ -55,20 +58,26 @@ export default {
       {{ $t('CRM_ZEUS.QUOTE_SETTINGS.DESCRIPTION') }}
     </p>
     <Spinner v-if="!settings" />
-    <label v-else class="flex items-start max-w-xl gap-2 text-sm">
-      <input
-        :checked="settings.require_delivery_date"
-        type="checkbox"
-        class="!m-0 mt-0.5"
-        :disabled="!isAdmin || saving"
-        @change="toggle('require_delivery_date', $event.target.checked)"
-      />
-      <span>
-        {{ $t('CRM_ZEUS.QUOTE_SETTINGS.REQUIRE_DELIVERY_DATE') }}
-        <span class="block text-xs text-slate-500">
-          {{ $t('CRM_ZEUS.QUOTE_SETTINGS.REQUIRE_DELIVERY_DATE_HINT') }}
+    <div v-else class="flex flex-col gap-4">
+      <label
+        v-for="key in keys"
+        :key="key"
+        class="flex items-start max-w-xl gap-2 text-sm"
+      >
+        <input
+          :checked="settings[key]"
+          type="checkbox"
+          class="!m-0 mt-0.5"
+          :disabled="!isAdmin || saving"
+          @change="toggle(key, $event.target.checked)"
+        />
+        <span>
+          {{ $t(`CRM_ZEUS.QUOTE_SETTINGS.${key.toUpperCase()}`) }}
+          <span class="block text-xs text-slate-500">
+            {{ $t(`CRM_ZEUS.QUOTE_SETTINGS.${key.toUpperCase()}_HINT`) }}
+          </span>
         </span>
-      </span>
-    </label>
+      </label>
+    </div>
   </div>
 </template>

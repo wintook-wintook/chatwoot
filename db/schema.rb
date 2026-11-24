@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_12_100100) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1835,6 +1835,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_12_100100) do
   create_table "crm_settings", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.boolean "require_delivery_date", default: false, null: false
+    t.boolean "show_article_notes", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_crm_settings_on_account_id", unique: true

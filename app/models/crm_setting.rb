@@ -4,6 +4,7 @@
 #
 #  id                    :bigint           not null, primary key
 #  require_delivery_date :boolean          default(FALSE), not null
+#  show_article_notes    :boolean          default(TRUE), not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #  account_id            :bigint           not null
@@ -27,6 +28,6 @@ class CrmSetting < ApplicationRecord
   end
 
   def as_crm_json
-    slice(:require_delivery_date)
+    slice(:require_delivery_date, :show_article_notes)
   end
 end
