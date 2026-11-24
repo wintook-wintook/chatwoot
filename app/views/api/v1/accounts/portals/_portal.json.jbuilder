@@ -19,6 +19,9 @@ end
 
 json.logo portal.file_base_data if portal.logo.present?
 
+# Portal «Guías de Dali»: opciones de los campos de la guía en el editor del artículo.
+json.dali_guides Assistant::GuidePublisher.editor_options if Article.dali_portal?(portal)
+
 json.portal_members do
   if portal.members.any?
     json.array! portal.members.each do |member|

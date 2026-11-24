@@ -75,6 +75,22 @@
         "META_TAGS": {
           "LABEL": "Meta tags",
           "PLACEHOLDER": "Add meta tags separated by comma..."
+        },
+        "DALI": {
+          "TITLE": "Dali guide",
+          "ABOUT": "Dali uses this article to answer in every account.",
+          "KEY": "Key",
+          "KEY_HELP": "It can't be changed: Dali and its links use it to find the guide.",
+          "AREAS": "Areas",
+          "AREAS_PLACEHOLDER": "All areas",
+          "AREAS_HELP": "Only users with one of these areas see it. Empty: everyone sees it.",
+          "KEYWORDS": "Keywords",
+          "KEYWORDS_PLACEHOLDER": "Add words separated by comma...",
+          "KEYWORDS_EMPTY": "Without keywords Dali can hardly find this guide.",
+          "PAGES": "Screens",
+          "PAGES_PLACEHOLDER": "Screens the guide mentions",
+          "REVIEWED": "Reviewed on",
+          "REVIEWED_HELP": "Last day it was checked against the screens, even if the text didn't change."
         }
       },
       "BUTTONS": {

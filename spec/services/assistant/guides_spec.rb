@@ -6,7 +6,8 @@ require 'rails_helper'
 # de open_page, se agrega un área sin guía o una guía queda incompleta, esto falla.
 RSpec.describe Assistant::Guides do
   let(:admin) { Access::Grant.new(nil, nil) }
-  let(:guides) { described_class.all }
+  # Las pruebas de los archivos leen los .md directo (all puede venir del portal «Guías de Dali»).
+  let(:guides) { described_class.load_files }
 
   def grant_with(*areas)
     instance_double(Access::Grant, allowed?: false).tap do |grant|
@@ -96,6 +97,49 @@ RSpec.describe Assistant::Guides do
       expect(described_class.find('ventas', admin)).to be_present
       expect(described_class.find('ventas', grant_with('agenda'))).to be_nil
       expect(described_class.find('dali', grant_with)).to be_present
+    end
+  end
+
+  describe '.all (de dónde salen)' do
+    let(:slug) { "ayuda-dali-spec-#{SecureRandom.hex(3)}" }
+    let(:owner) { create(:account) }
+    let(:other_account) { create(:account) }
+    let(:author) { create(:user, account: owner, role: :administrator) }
+
+    around { |example| ClimateControl.modify(PLATFORM_HELP_PORTAL_SLUG: slug) { example.run } }
+
+    def publish_guide(portal, key, status: :published, **meta)
+      create(:article, portal: portal, account_id: owner.id, author_id: author.id, title: key.titleize, status: status, locale: 'es',
+                       slug: "#{key.dasherize}-#{SecureRandom.hex(3)}", content: "## Para qué sirve\nTexto de #{key}.",
+                       meta: { 'guide_key' => key, 'areas' => [], 'keywords' => ['palabra'] }.merge(meta))
+    end
+
+    it 'sin portal usa los archivos' do
+      expect(described_class.all.map(&:key)).to eq(described_class.load_files.map(&:key))
+    end
+
+    it 'con portal usa sus artículos publicados con clave, ordenados por clave, sin importar la cuenta' do
+      portal = create(:portal, slug: slug, account_id: owner.id, config: { allowed_locales: ['es'], default_locale: 'es' })
+      publish_guide(portal, 'zeta', 'areas' => %w[sales], 'pages' => %w[case], 'sources' => ['a.rb'], 'reviewed' => '2026-11-20')
+      publish_guide(portal, 'alfa')
+      publish_guide(portal, 'borrador', status: :draft)
+      # Uno sin clave (p. ej. de antes): el portal le pone clave a lo nuevo, así que se le quita a mano.
+      create(:article, portal: portal, account_id: owner.id, author_id: author.id, locale: 'es').update_column(:meta, {}) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(described_class.all.map(&:key)).to eq(%w[alfa zeta])
+      zeta = described_class.all.last
+      expect(zeta).to have_attributes(title: 'Zeta', areas: %w[sales], keywords: ['palabra'], pages: %w[case],
+                                      sources: ['a.rb'], reviewed: '2026-11-20', body: "## Para qué sirve\nTexto de zeta.")
+
+      Current.account = other_account
+      expect(described_class.search('palabra zeta', admin).pluck(:key)).to include('zeta')
+    ensure
+      Current.reset
+    end
+
+    it 'si el portal no tiene guías vuelve a los archivos' do
+      create(:portal, slug: slug, account_id: owner.id)
+      expect(described_class.all.map(&:key)).to eq(described_class.load_files.map(&:key))
     end
   end
 end
