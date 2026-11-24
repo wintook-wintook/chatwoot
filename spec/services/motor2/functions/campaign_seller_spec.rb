@@ -64,8 +64,9 @@ RSpec.describe Motor2::Functions::CampaignSeller do
 
   it 'el prompt trae la oferta; cada uso trae sus herramientas y no las de terminar' do
     runner = Motor2::Runner.new(Motor2::Config.new(agent.reload), state: Motor2::State.new, history: [])
-    expect(Motor2::Prompt.new(runner, Motor2::Skills.for(runner)).system).to include('LA OFERTA', 'OFRECER', 'Capacitación', '20% hasta')
-    expect(tools_for).to include('le_interesa', 'no_le_interesa', 'pasar_a_humano')
+    expect(Motor2::Prompt.new(runner, Motor2::Skills.for(runner)).system).to include('LA CAMPAÑA', 'OFRECER', 'Capacitación', '20% hasta',
+                                                                                     'REGLAS DE LA CAMPAÑA')
+    expect(tools_for).to include('le_interesa', 'no_esta_vez', 'no_contactar', 'mas_adelante', 'pasar_a_humano')
     expect(tools_for).not_to include('objetivo_cumplido', 'descartar', 'confirmar_asistencia')
 
     survey = save_agent({ 'purpose' => 'survey', 'survey_questions' => ['Del 0 al 10, ¿nos recomendarías?'] }, name: 'Encuesta')
@@ -100,11 +101,27 @@ RSpec.describe Motor2::Functions::CampaignSeller do
     expect(conversation.messages.outgoing.where(private: false).last.content).to include('te contactan')
   end
 
-  it 'no le interesa: se despide y no hay más toques' do
+  it '«no esta vez»: la respuesta fija pregunta por la próxima; «sí» deja la etiqueta y termina' do
     tracking = campaign_tracking
-    stub_model(tool_call('no_le_interesa', { motivo: 'No lo necesita' }), answer('Gracias, ¡buen día!'))
-    reply_to(incoming('no gracias'))
+    stub_model(tool_call('no_esta_vez', { motivo: 'No tiene tiempo' }), answer('Entiendo, no hay problema 😊 ¿Te aviso de la próxima?'))
+    reply_to(incoming('ahorita no tengo tiempo'))
+    expect(tracking.reload).to have_attributes(status: 'active', outcome: 'not_now')
+    expect(tracking.motor2_state['asked_future']).to be(true)
+
+    stub_model(tool_call('futuras', { acepta: true }), answer('¡Va! Te aviso de la próxima. 😊'))
+    reply_to(incoming('sí, avísame'))
+    expect(tracking.reload).to have_attributes(status: 'cancelled', outcome: 'future_yes')
+    expect(contact.reload.label_list).to include('avisar-promociones')
+  end
+
+  it '«no me manden nada»: baja de este tipo de campaña, con su etiqueta (gana la última voluntad)' do
+    contact.update!(label_list: ['avisar-promociones'])
+    tracking = campaign_tracking
+    stub_model(tool_call('no_contactar', { motivo: 'No quiere' }), answer('Entendido, ya no te enviaremos promociones.'))
+    reply_to(incoming('ya no quiero promociones'))
     expect(tracking.reload.status).to eq('cancelled')
+    expect(contact.reload.label_list).to include('no-ofrecer')
+    expect(contact.label_list).not_to include('avisar-promociones')
   end
 
   it 'invitar: confirma su lugar en el evento' do
@@ -133,11 +150,11 @@ RSpec.describe Motor2::Functions::CampaignSeller do
   end
 
   describe 'lo que comparten los tres agentes' do
-    it 'deja etiquetas de cómo terminó (le interesa / no le interesa)' do
+    it 'deja etiquetas de cómo terminó (le interesa / no contactar)' do
       campaign_tracking
-      stub_model(tool_call('no_le_interesa', { motivo: 'No lo necesita' }), answer('Gracias, ¡buen día!'))
-      reply_to(incoming('no gracias'))
-      expect(conversation.reload.label_list).to include('no-le-interesa')
+      stub_model(tool_call('no_contactar', { motivo: 'No lo necesita' }), answer('Entendido.'))
+      reply_to(incoming('ya no quiero promociones'))
+      expect(conversation.reload.label_list).to include('no-contactar')
     end
 
     it 'con seguimiento corto: si contesta y se queda a media plática, el agente lo retoma (no «3 días hábiles»)' do

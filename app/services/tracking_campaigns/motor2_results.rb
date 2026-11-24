@@ -16,7 +16,7 @@
 #   TrackingCampaigns::Motor2Results.new(campaign).contacts(group) → [{ contact_id, name, … }] (los de un grupo)
 class TrackingCampaigns::Motor2Results
   GROUPS = %w[replied interested relayed appointment not_interested no_reply in_progress not_read clicked confirmed declined low_score
-              failed bounced].freeze
+              failed bounced achieved not_now future_yes].freeze
   MAX_LIST = 500
   ATTRIBUTION = 30.days
   FINISHED = %w[completed cancelled].freeze
@@ -29,6 +29,7 @@ class TrackingCampaigns::Motor2Results
 
   def call
     { funnel: funnel, touches: touches, exits: exits, kind: kind_results, money: money, reasons: reasons, list: list_summary,
+      goal: goal_results,
       channel: @campaign.inbox&.whatsapp? ? 'whatsapp' : 'email' }
   end
 
@@ -109,6 +110,20 @@ class TrackingCampaigns::Motor2Results
     { answered: answered, average: scores.any? ? (scores.sum / scores.size).round(1) : nil,
       low: scores.count { |s| s < low }, cases: @trackings.where('outcome LIKE ?', 'Encuesta baja%').count }
   end
+
+  # El objetivo de la campaña (TrackingCampaigns::CampaignKit): lo lograron, «no esta vez», aceptan la próxima, no quieren.
+  def goal_results
+    brief = @campaign.brief.to_h
+    { goal: brief['offer_goal'], achieved: achieved.count, not_now: @trackings.where(outcome: 'not_now').count,
+      future_yes: @trackings.where(outcome: 'future_yes').count, opt_out: @trackings.where(outcome: 'discarded').count,
+      labels: TrackingCampaigns::CampaignKit::LABEL_KEYS.index_with { |k| TrackingCampaigns::CampaignKit.label(brief, k).presence } }
+  end
+
+  def achieved = @trackings.where('outcome LIKE ?', 'Logrado:%')
+
+  def not_now = @trackings.where(outcome: %w[not_now])
+
+  def future_yes = @trackings.where(outcome: 'future_yes')
 
   def money
     { quoted_total: quotes.sum(:total).to_f, won_total: quotes.won.sum(:total).to_f, currency: quotes.pick(:currency) || 'MXN' }

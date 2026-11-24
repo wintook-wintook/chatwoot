@@ -402,6 +402,8 @@ Rails.application.routes.draw do
               post :preview
               post :test
               post :test_email
+              post :cases
+              post :run_case
             end
             member do
               post :list
@@ -1314,6 +1316,9 @@ Rails.application.routes.draw do
   post 'baja/:token', to: 'public/opt_outs#create'
   # Campaña con Vendedor IA — clic en una liga de un correo de campaña (TrackingCampaigns::ClickLink)
   get 'c/:token', to: 'public/campaign_clicks#show', as: :public_campaign_click
+  # Campaña con IA — Encuesta por correo (TrackingCampaigns::SurveyLink): GET las preguntas, POST las guarda
+  get  'encuesta/:token', to: 'public/campaign_surveys#show', as: :public_campaign_survey
+  post 'encuesta/:token', to: 'public/campaign_surveys#create'
 
   # Plan-Trabajo-Campo R5 — portal del cliente de su orden y visita del técnico externo.
   get  'servicio/:token', to: 'public/service_portals#show', as: :public_service_portal

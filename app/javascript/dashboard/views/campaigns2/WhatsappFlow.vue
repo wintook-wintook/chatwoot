@@ -2,9 +2,9 @@
   Campaña con Vendedor IA por WhatsApp — paso «Mensajes», en el orden en que pasa:
     Mensaje 1 · Apertura   la plantilla del toque 1 (y de dónde sale cada variable) o, si escribió en las últimas 24 h,
                            el texto de apertura (vacío: lo escribe la IA). Toques 2…n si no contesta.
-    Mensaje 2              si pide información: el copy que sale TAL CUAL (con las imágenes «con la información»);
-                           en Encuesta, las preguntas.
-    Después                la IA resuelve dudas con eso y lleva al cierre del tipo.
+    Información completa   si le interesa: el copy que sale TAL CUAL, una sola vez (con las imágenes «con la
+                           información» y la liga que elijas de la ficha); en Encuesta, las preguntas.
+    Después                la IA resuelve dudas con LA FICHA y lleva al objetivo.
   .sync: touches (templates, template_vars) y brief (opener, content).
 -->
 <script>
@@ -27,6 +27,8 @@ export default {
     attempts: { type: Number, default: 1 },
     kind: { type: String, default: 'offer' },
     event: { type: Object, default: null },
+    // Las ligas de la ficha, para meterlas en la información completa.
+    links: { type: Array, default: () => [] },
   },
   emits: ['update:touches', 'update:brief'],
   data() {
@@ -105,6 +107,15 @@ export default {
       };
       vars[tpl.name] = rules;
       this.$emit('update:touches', { ...this.touches, template_vars: vars });
+    },
+    insertLink(index) {
+      const link = this.links[Number(index)];
+      if (!link || !link.url) return;
+      const content = (this.brief.content || '').trimEnd();
+      this.setBrief(
+        'content',
+        `${content}${content ? '\n\n' : ''}👉 ${link.url}`
+      );
     },
     setBrief(field, value) {
       this.$emit('update:brief', { ...this.brief, [field]: value });
@@ -236,14 +247,35 @@ export default {
           <span class="text-[11px] text-slate-500">
             {{ t('INFO_COUNT', { n: contentLength, max: maxContent }) }}
           </span>
-          <button
-            v-if="kind === 'invite' && event"
-            type="button"
-            class="text-xs text-woot-600 hover:underline"
-            @click="fillFromEvent"
-          >
-            {{ t('FROM_EVENT') }}
-          </button>
+          <span class="flex flex-wrap items-center gap-2">
+            <select
+              v-if="links.some(l => l.url)"
+              class="!mb-0 !w-auto !h-7 !py-0 text-xs"
+              value=""
+              @change="
+                insertLink($event.target.value);
+                $event.target.value = '';
+              "
+            >
+              <option value="">{{ t('INSERT_LINK') }}</option>
+              <option
+                v-for="(l, i) in links"
+                v-show="l.url"
+                :key="i"
+                :value="i"
+              >
+                {{ l.name || l.url }}
+              </option>
+            </select>
+            <button
+              v-if="kind === 'invite' && event"
+              type="button"
+              class="text-xs text-woot-600 hover:underline"
+              @click="fillFromEvent"
+            >
+              {{ t('FROM_EVENT') }}
+            </button>
+          </span>
         </div>
         <p class="m-0 text-[11px] text-slate-500">{{ t('INFO_FILES') }}</p>
       </template>

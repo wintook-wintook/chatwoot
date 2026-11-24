@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Campaña con Vendedor IA — la parte de la revisión antes de lanzar (Motor2Check) que mira el plan completo:
+# Campaña con IA — la parte de la revisión antes de lanzar (Motor2Check) que mira el plan completo:
 #   capacity          con tope diario y fecha de fin, ¿alcanzan los días hábiles para todos los toques?
 #   cost              WhatsApp: cuántas plantillas de marketing (las cobra Meta) puede llevar la campaña
 #   seller_templates  las plantillas que usa el vendedor (seguimiento pasadas 24 h, aviso de cita) en ESTA bandeja
@@ -82,9 +82,9 @@ class TrackingCampaigns::Motor2PlanCheck
   def content_item
     brief = @campaign.brief.to_h
     return nil if brief['kind'] == 'survey'
-    return item(:content, 'ok', 'Si pide información, se manda tu «Mensaje 2» tal cual.') if brief['content'].present?
+    return item(:content, 'ok', 'Si le interesa, se manda tu información completa tal cual (una sola vez).') if brief['content'].present?
 
-    item(:content, 'warning', 'Sin «Mensaje 2»: si pide información, la escribe el vendedor con IA. Escríbelo en «Mensajes».')
+    item(:content, 'warning', 'Sin la información completa: si le interesa, la IA le contesta con la ficha. Escríbela en «Mensajes».')
   end
 
   def item(key, level, text) = { key: key, level: level, text: text }

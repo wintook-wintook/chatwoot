@@ -1,7 +1,9 @@
 <!--
-  Campaña con Vendedor IA (Motor 2.0) — la pantalla nueva para crear o modificar una campaña (la 1.0, CampaignForm,
-  no cambia). Seis pasos como pestañas: Objetivo · Oferta y vendedor · Audiencia · Mensajes · Cuándo · Revisar y
-  lanzar. A la derecha, siempre: cómo se ve el mensaje (teléfono o correo) y «Probar» con el vendedor.
+  Campaña con IA (Motor 2.0) — la pantalla para crear o modificar una campaña (la 1.0, CampaignForm, no cambia). Pasos
+  como pestañas, en el orden en que pasa la plática: Objetivo (tipo, qué cuenta como logrado, canal) · La ficha (lo que
+  sabe la IA: datos, preguntas, ligas, archivos) · Audiencia · Mensajes (lo que se manda) · Respuestas y resultados
+  (respuestas fijas y etiquetas del contacto) · Cómo atiende · Cuándo · Revisar y lanzar (con «Casos»). A la derecha,
+  siempre: cómo se ve el mensaje (teléfono o correo) y «Probar».
   Ruta: tracking-dashboard/campaigns2/new | campaigns2/:campaignId/edit.
 -->
 <script>
@@ -14,20 +16,23 @@ import EmailEditor from './EmailEditor.vue';
 import CampaignChat from './CampaignChat.vue';
 import CampaignSimulator from './CampaignSimulator.vue';
 import CampaignTestRun from './CampaignTestRun.vue';
-import CampaignFiles from './CampaignFiles.vue';
+import CampaignKnowledge from './CampaignKnowledge.vue';
+import CampaignReplies from './CampaignReplies.vue';
+import CampaignCases from './CampaignCases.vue';
 import CampaignAttend from './CampaignAttend.vue';
 import WhatsappFlow from './WhatsappFlow.vue';
 import ConversationPreview from './ConversationPreview.vue';
 import { fillTemplate, sampleValues } from './campaignFlow';
 
 // En «Revisar»: probar la campaña completa, no solo al vendedor.
-const TEST_TABS = ['simulate', 'chat', 'real'];
+const TEST_TABS = ['cases', 'simulate', 'chat', 'real'];
 
 const STEPS = [
   'goal',
-  'offer',
+  'knowledge',
   'audience',
   'messages',
+  'replies',
   'attend',
   'when',
   'review',
@@ -50,8 +55,13 @@ const blankForm = () => ({
   brief: {
     kind: 'offer',
     offer_what: '',
-    offer_details: '',
     offer_goal: 'relay',
+    goal_keyword: '',
+    // La ficha (lo que sabe la IA), sus ligas, las respuestas fijas y las etiquetas del contacto (CampaignKit).
+    facts: {},
+    links: [],
+    replies: {},
+    labels: null,
     event_id: '',
     survey_questions: ['', '', ''],
     low_score: 7,
@@ -104,7 +114,9 @@ export default {
     CampaignChat,
     CampaignSimulator,
     CampaignTestRun,
-    CampaignFiles,
+    CampaignKnowledge,
+    CampaignReplies,
+    CampaignCases,
     CampaignAttend,
     WhatsappFlow,
     ConversationPreview,
@@ -131,7 +143,7 @@ export default {
       checkError: false,
       loadFailed: false, // editando, no se pudo traer la campaña: no se guarda (crearía otra)
       touchTab: 1,
-      testTab: 'simulate',
+      testTab: 'cases',
       testTabs: TEST_TABS,
       sendingTest: false,
       // Lista fría de correos (solo correo)
@@ -192,6 +204,13 @@ export default {
     },
     kind() {
       return this.form.brief.kind;
+    },
+    // Lo de fábrica del tipo (TrackingCampaigns::CampaignKit): objetivos, campos de la ficha, respuestas, etiquetas.
+    kit() {
+      return (this.options.kit || {})[this.kind] || null;
+    },
+    goals() {
+      return this.kit ? this.kit.goals : ['relay'];
     },
     event() {
       return this.audienceEvents.find(
@@ -353,6 +372,13 @@ export default {
       if (!this.relayChoices.includes(this.form.brief.relay)) {
         [this.form.brief.relay] = this.relayChoices;
       }
+      if (!this.goals.includes(this.form.brief.offer_goal)) {
+        [this.form.brief.offer_goal] = this.goals;
+      }
+      this.resetLabels();
+    },
+    'form.brief.offer_goal'() {
+      if (!this.loading) this.resetLabels();
     },
   },
   async mounted() {
@@ -408,8 +434,21 @@ export default {
       const i = STEPS.indexOf(this.step);
       if (i > 0) this.go(STEPS[i - 1]);
     },
+    // Las etiquetas de fábrica del tipo y objetivo (se pueden cambiar en «Respuestas y resultados»).
+    resetLabels() {
+      const labels = this.kit?.labels?.[this.form.brief.offer_goal];
+      this.form.brief.labels = labels ? { ...labels } : {};
+      if (
+        this.form.brief.offer_goal === 'external' &&
+        !this.form.brief.goal_keyword
+      ) {
+        this.form.brief.goal_keyword = this.kit?.keyword || '';
+      }
+    },
     applyDefaults() {
       this.form.attend = this.copyAttend(this.options.attend);
+      [this.form.brief.offer_goal] = this.goals;
+      this.resetLabels();
       if (this.options.inboxes.length === 1) {
         this.form.inbox_id = this.options.inboxes[0].id;
       }
@@ -441,6 +480,11 @@ export default {
           ...data.brief,
           event_id: data.brief?.event_id || '',
           objections: (data.brief?.objections || []).map(o => ({ ...o })),
+          facts: { ...(data.brief?.facts || {}) },
+          links: (data.brief?.links || []).map(l => ({ ...l })),
+          replies: { ...(data.brief?.replies || {}) },
+          labels: data.brief?.labels ? { ...data.brief.labels } : null,
+          goal_keyword: data.brief?.goal_keyword || '',
           relay: data.brief?.relay || '',
           relay_user_id: data.brief?.relay_user_id || '',
           relay_team_id: data.brief?.relay_team_id || '',
@@ -453,6 +497,7 @@ export default {
           emails: (data.touches?.emails || []).map(e => ({
             body: e.body || '',
             blocks: e.blocks || [],
+            clicked_body: e.clicked_body || '',
           })),
         },
         audience: {
@@ -478,6 +523,7 @@ export default {
       while (this.form.touches.emails.length < this.attempts) {
         this.form.touches.emails.push({ body: '', blocks: [] });
       }
+      if (!this.form.brief.labels) this.resetLabels();
     },
     body() {
       const f = this.form;
@@ -492,6 +538,7 @@ export default {
           objections: f.brief.objections.filter(
             o => o.objection.trim() && o.answer.trim()
           ),
+          links: (f.brief.links || []).filter(l => (l.url || '').trim()),
         },
         touches: f.touches,
         audience: {
@@ -672,7 +719,14 @@ export default {
         campaign_id: this.campaignId,
         brief: this.body().brief,
         attend: this.form.attend,
+        opener: this.opener,
       };
+    },
+    setClickedBody(value) {
+      this.setEmail(this.touchTab, {
+        ...this.currentEmail,
+        clicked_body: value,
+      });
     },
     copyAttend(attend) {
       const base = attend || {
@@ -742,7 +796,7 @@ export default {
         <div class="flex flex-col gap-3 pr-1 md:col-span-3 md:overflow-y-auto">
           <p class="m-0 text-xs text-slate-500">{{ t(`HINTS.${step}`) }}</p>
 
-          <!-- 1 · Objetivo -->
+          <!-- 1 · Objetivo: tipo, qué cuenta como logrado, nombre corto y canal -->
           <template v-if="step === 'goal'">
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <button
@@ -767,38 +821,70 @@ export default {
                 </span>
               </button>
             </div>
-            <fieldset
-              v-if="!['invite', 'survey'].includes(kind)"
-              class="flex flex-col gap-1"
-            >
+            <fieldset v-if="goals.length > 1" class="flex flex-col gap-1">
               <legend class="field-label">{{ t('GOAL.QUESTION') }}</legend>
               <label
-                v-for="g in ['relay', 'appointment']"
+                v-for="g in goals"
                 :key="g"
-                class="flex items-center gap-2 text-sm"
+                class="flex items-start gap-2 text-sm"
               >
                 <input
                   v-model="form.brief.offer_goal"
                   type="radio"
-                  class="!m-0"
+                  class="!m-0 mt-1"
                   :value="g"
                 />
-                {{ t(`GOAL.${g}`) }}
+                <span>
+                  {{ t(`GOAL.${g}.${kind}`) }}
+                  <span class="block text-xs text-slate-500">
+                    {{ t(`GOAL.${g}.ABOUT`) }}
+                  </span>
+                </span>
               </label>
             </fieldset>
-            <label class="block">
-              <span class="field-label">{{ t('NAME') }}</span>
+            <label
+              v-if="form.brief.offer_goal === 'external'"
+              class="flex flex-wrap items-center gap-2 text-sm"
+            >
+              {{ t('GOAL.KEYWORD') }}
               <input
-                v-model="form.name"
+                v-model="form.brief.goal_keyword"
                 type="text"
-                maxlength="120"
-                :placeholder="defaultName() || t('NAME_PLACEHOLDER')"
+                maxlength="40"
+                class="!mb-0 !w-40 uppercase"
+                :placeholder="kit ? kit.keyword : ''"
               />
+              <span class="block w-full text-xs text-slate-500">
+                {{ t('GOAL.KEYWORD_HINT') }}
+              </span>
             </label>
-          </template>
-
-          <!-- 2 · Oferta y vendedor -->
-          <template v-if="step === 'offer'">
+            <label v-if="kind === 'invite'" class="block">
+              <span class="field-label">{{ t('OFFER.EVENT') }}</span>
+              <select v-model="form.brief.event_id">
+                <option value="">{{ t('OFFER.EVENT_PICK') }}</option>
+                <option v-for="e in options.events" :key="e.id" :value="e.id">
+                  {{ e.name }}
+                </option>
+              </select>
+              <span
+                v-if="!options.events.length"
+                class="block text-xs text-amber-700"
+              >
+                {{ t('OFFER.NO_EVENTS') }}
+              </span>
+            </label>
+            <label v-if="kind !== 'survey'" class="block">
+              <span class="field-label">{{ t(`OFFER.WHAT.${kind}`) }}</span>
+              <input
+                v-model="form.brief.offer_what"
+                type="text"
+                maxlength="200"
+                :placeholder="t(`OFFER.WHAT_PLACEHOLDER.${kind}`)"
+              />
+              <span class="block text-xs text-slate-500">
+                {{ t('OFFER.WHAT_HINT') }}
+              </span>
+            </label>
             <label class="block">
               <span class="field-label">{{ t('MESSAGES.CHANNEL') }}</span>
               <select v-model="form.inbox_id">
@@ -819,133 +905,28 @@ export default {
                 {{ t('MESSAGES.CHANNEL_HINT') }}
               </span>
             </label>
-            <template v-if="kind === 'invite'">
-              <label class="block">
-                <span class="field-label">{{ t('OFFER.EVENT') }}</span>
-                <select v-model="form.brief.event_id">
-                  <option value="">{{ t('OFFER.EVENT_PICK') }}</option>
-                  <option v-for="e in options.events" :key="e.id" :value="e.id">
-                    {{ e.name }}
-                  </option>
-                </select>
-                <span
-                  v-if="!options.events.length"
-                  class="block text-xs text-amber-700"
-                >
-                  {{ t('OFFER.NO_EVENTS') }}
-                </span>
-              </label>
-            </template>
-            <template v-else-if="kind === 'survey'">
-              <label
-                v-for="(_q, i) in form.brief.survey_questions"
-                :key="i"
-                class="block"
-              >
-                <span class="field-label">
-                  {{ t('OFFER.QUESTION', { n: i + 1 }) }}
-                </span>
-                <input
-                  v-model="form.brief.survey_questions[i]"
-                  type="text"
-                  maxlength="300"
-                  :placeholder="t(`OFFER.QUESTION_PLACEHOLDER_${i + 1}`)"
-                />
-              </label>
-              <label class="flex items-center gap-2 text-sm">
-                {{ t('OFFER.LOW_SCORE') }}
-                <input
-                  v-model.number="form.brief.low_score"
-                  type="number"
-                  min="1"
-                  max="10"
-                  class="!mb-0 !w-20"
-                />
-              </label>
-            </template>
-            <template v-if="kind !== 'survey'">
-              <label class="block">
-                <span class="field-label">{{ t(`OFFER.WHAT.${kind}`) }}</span>
-                <textarea
-                  v-model="form.brief.offer_what"
-                  rows="3"
-                  maxlength="1500"
-                  :placeholder="t(`OFFER.WHAT_PLACEHOLDER.${kind}`)"
-                />
-              </label>
-              <label class="block">
-                <span class="field-label">{{ t('OFFER.DETAILS') }}</span>
-                <textarea
-                  v-model="form.brief.offer_details"
-                  rows="2"
-                  maxlength="1500"
-                  :placeholder="t('OFFER.DETAILS_PLACEHOLDER')"
-                />
-              </label>
-            </template>
-            <label class="flex flex-wrap items-center gap-2 text-sm">
-              {{ t('OFFER.REST_DAYS') }}
+            <label class="block">
+              <span class="field-label">{{ t('NAME') }}</span>
               <input
-                v-model.number="form.brief.rest_days"
-                type="number"
-                min="0"
-                max="90"
-                class="!mb-0 !w-20"
+                v-model="form.name"
+                type="text"
+                maxlength="120"
+                :placeholder="defaultName() || t('NAME_PLACEHOLDER')"
               />
-              {{ t('OFFER.DAYS') }}
             </label>
-            <p class="m-0 text-xs text-slate-500">{{ t('OFFER.REST_HINT') }}</p>
-
-            <template v-if="kind !== 'survey'">
-              <span class="field-label">{{ t('OFFER.OBJECTIONS') }}</span>
-              <p class="m-0 text-xs text-slate-500">
-                {{ t('OFFER.OBJECTIONS_HINT') }}
-              </p>
-              <div
-                v-for="(o, i) in form.brief.objections"
-                :key="i"
-                class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-1"
-              >
-                <input
-                  v-model="o.objection"
-                  type="text"
-                  maxlength="300"
-                  :placeholder="t('OFFER.OBJECTION_PLACEHOLDER')"
-                />
-                <input
-                  v-model="o.answer"
-                  type="text"
-                  maxlength="800"
-                  :placeholder="t('OFFER.ANSWER_PLACEHOLDER')"
-                />
-                <button
-                  type="button"
-                  class="px-1 text-slate-400 hover:text-red-600"
-                  :aria-label="t('OFFER.REMOVE')"
-                  @click="form.brief.objections.splice(i, 1)"
-                >
-                  <fluent-icon icon="dismiss" size="14" />
-                </button>
-              </div>
-              <button
-                v-if="form.brief.objections.length < 10"
-                type="button"
-                class="self-start text-xs text-woot-600 hover:underline"
-                @click="
-                  form.brief.objections.push({ objection: '', answer: '' })
-                "
-              >
-                {{ t('OFFER.ADD_OBJECTION') }}
-              </button>
-            </template>
-
-            <CampaignFiles
-              :campaign-id="campaignId"
-              :save="save"
-              :attempts="attempts"
-              :kind="kind"
-            />
           </template>
+
+          <!-- 2 · La ficha: lo que sabe la IA -->
+          <CampaignKnowledge
+            v-if="step === 'knowledge'"
+            :brief.sync="form.brief"
+            :kind="kind"
+            :kit="kit"
+            :event="event"
+            :campaign-id="campaignId"
+            :save="save"
+            :attempts="attempts"
+          />
 
           <!-- 3 · Audiencia -->
           <template v-if="step === 'audience'">
@@ -1245,6 +1226,7 @@ export default {
               :attempts="attempts"
               :kind="kind"
               :event="event"
+              :links="form.brief.links"
             />
 
             <template v-if="isEmail">
@@ -1290,6 +1272,19 @@ export default {
                 :signature="form.attend ? form.attend.email_signature : ''"
                 @input="setEmail(touchTab, $event)"
               />
+              <label v-if="touchTab > 1" class="block">
+                <span class="field-label">{{ t('EMAIL.CLICKED') }}</span>
+                <textarea
+                  :value="currentEmail.clicked_body"
+                  rows="3"
+                  maxlength="6000"
+                  :placeholder="t('EMAIL.CLICKED_PLACEHOLDER')"
+                  @input="setClickedBody($event.target.value)"
+                />
+                <span class="block text-xs text-slate-500">
+                  {{ t('EMAIL.CLICKED_HINT') }}
+                </span>
+              </label>
               <div>
                 <woot-button
                   size="small"
@@ -1308,8 +1303,15 @@ export default {
             </p>
           </template>
 
-          <!-- 5 · Cuándo -->
-          <!-- 5 · Cómo atiende (la campaña arma su agente) -->
+          <!-- 5 · Respuestas y resultados -->
+          <CampaignReplies
+            v-if="step === 'replies'"
+            :brief.sync="form.brief"
+            :kind="kind"
+            :kit="kit"
+          />
+
+          <!-- 6 · Cómo atiende (la campaña arma su agente) -->
           <template v-if="step === 'attend'">
             <CampaignAttend
               v-if="form.attend"
@@ -1365,6 +1367,18 @@ export default {
           </template>
 
           <template v-if="step === 'when'">
+            <label class="flex flex-wrap items-center gap-2 text-sm">
+              {{ t('OFFER.REST_DAYS') }}
+              <input
+                v-model.number="form.brief.rest_days"
+                type="number"
+                min="0"
+                max="90"
+                class="!mb-0 !w-20"
+              />
+              {{ t('OFFER.DAYS') }}
+            </label>
+            <p class="m-0 text-xs text-slate-500">{{ t('OFFER.REST_HINT') }}</p>
             <fieldset class="flex flex-col gap-1">
               <legend class="field-label">{{ t('WHEN.START') }}</legend>
               <label class="flex items-center gap-2 text-sm">
@@ -1569,8 +1583,13 @@ export default {
                 {{ t(`TEST_TABS.${tab}`) }}
               </button>
             </div>
+            <CampaignCases
+              v-if="testTab === 'cases'"
+              :payload="chatPayload"
+              :disabled="!hasChannel"
+            />
             <CampaignSimulator
-              v-if="testTab === 'simulate'"
+              v-else-if="testTab === 'simulate'"
               :campaign-id="campaignId"
               :save="save"
               :payload="chatPayload"

@@ -29,6 +29,15 @@ class Motor2CampaignsAPI extends ApiClient {
     return axios.post(`${this.url}/test`, body);
   }
 
+  // «Casos»: la lista de pruebas de la campaña en pantalla y correr una (TrackingCampaigns::Motor2Cases).
+  cases(body) {
+    return axios.post(`${this.url}/cases`, body);
+  }
+
+  runCase(body) {
+    return axios.post(`${this.url}/run_case`, body);
+  }
+
   testEmail(body) {
     return axios.post(`${this.url}/test_email`, body);
   }

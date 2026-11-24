@@ -21,48 +21,80 @@
     "SCHEDULE": "Schedule campaign",
     "STEPS": {
       "goal": "Goal",
-      "offer": "Offer and channel",
       "audience": "Audience",
       "messages": "Messages",
-      "attend": "How it handles replies",
+      "attend": "How it answers",
       "when": "When",
-      "review": "Review and launch"
+      "review": "Review and launch",
+      "knowledge": "Fact sheet",
+      "replies": "Replies and results"
     },
     "HINTS": {
-      "goal": "What the campaign is for and what counts as success.",
-      "offer": "What you offer in this campaign, which channel it goes through, its objections and its images.",
+      "goal": "What the campaign is for, what counts as done and which channel it uses.",
       "audience": "Who gets it. You'll see how many it reaches and who is left out and why.",
-      "messages": "Where it goes out (WhatsApp or email), how many touches and what each one says.",
+      "messages": "What is SENT: the first message, the full information when interested and the touches if there is no reply.",
       "attend": "How it answers those who reply: name, voice, what it knows, how it quotes, follow-up and who gets the interested contact. Starts from your last campaign.",
-      "when": "When it starts, when it ends and at what pace, so your team isn't flooded with replies.",
-      "review": "We check everything before launching: red items are missing."
+      "when": "When it starts, ends, its pace and how often a contact can be written to.",
+      "review": "We check everything before launching: red items are missing.",
+      "knowledge": "What the AI KNOWS to answer: facts, approved answers, links with their use and files. What is sent goes in «Messages».",
+      "replies": "What it answers word for word at each moment and the label the contact keeps."
     },
     "KINDS": {
       "offer": {
         "TITLE": "Offer",
-        "ABOUT": "A product, service or promotion. If interested, it hands them off."
+        "ABOUT": "A product, service or promotion: get them to ask, quote or buy."
       },
       "invite": {
         "TITLE": "Invite",
-        "ABOUT": "To an event in Events. Confirms attendance and updates the event list."
+        "ABOUT": "To an event: get them to confirm or register (Zoom, form)."
       },
       "reactivate": {
         "TITLE": "Reactivate",
-        "ABOUT": "Customers who haven't bought in a while. If interested, it hands them off."
+        "ABOUT": "Customers who stopped buying: bring them back. Knows what each one bought."
       },
       "renew": {
         "TITLE": "Remind or renew",
-        "ABOUT": "Something that expires (license, policy, service). If interested, it hands them off."
+        "ABOUT": "Something due (expiration, payment, renewal): with their date and amount."
       },
       "survey": {
         "TITLE": "Survey",
-        "ABOUT": "Up to 3 satisfaction questions. A low score opens a case."
+        "ABOUT": "Up to 3 questions. A low score opens a case."
       }
     },
     "GOAL": {
-      "QUESTION": "If interested, what's next?",
-      "relay": "Hand off to the next agent or seller",
-      "appointment": "Books an appointment (with whoever you choose in «How it handles replies», with Google Calendar)"
+      "QUESTION": "What counts as done?",
+      "KEYWORD": "Word they write when it is done",
+      "KEYWORD_HINT": "Also put it in the full information («When you finish, write REGISTERED»). «I'm interested» does not count.",
+      "confirm": {
+        "invite": "Confirms they will attend",
+        "ABOUT": "Marked as confirmed in the event list."
+      },
+      "external": {
+        "invite": "Registers on their own (Zoom, form) and tells us",
+        "offer": "Buys online and tells us",
+        "reactivate": "Buys online and tells us",
+        "renew": "Pays or renews online and tells us",
+        "ABOUT": "They use the link in «Fact sheet»; done when they write the keyword."
+      },
+      "done": {
+        "renew": "Confirms it is done (paid, renewed)",
+        "ABOUT": "«I paid», «I renewed». «I'll do it later» does not count."
+      },
+      "relay": {
+        "offer": "Interested: hand over",
+        "reactivate": "Interested: hand over",
+        "renew": "Needs help: hand over to a person",
+        "ABOUT": "To the inbox agent or the person chosen in «How it answers»."
+      },
+      "appointment": {
+        "offer": "Books a meeting",
+        "reactivate": "Books a meeting",
+        "ABOUT": "With the calendars chosen in «How it answers»."
+      },
+      "answers": {
+        "survey": "Answers the survey",
+        "ABOUT": ""
+      }
     },
     "OFFER": {
       "EVENT": "Event",
@@ -74,22 +106,20 @@
       "QUESTION_PLACEHOLDER_3": "What could we improve?",
       "LOW_SCORE": "Low score: below",
       "WHAT": {
-        "offer": "What you offer",
-        "invite": "What you invite to (what the contact sees)",
-        "reactivate": "What you offer so they come back",
-        "renew": "What expires and how to renew"
+        "offer": "Short name of the offer",
+        "invite": "Short name of the event",
+        "reactivate": "Short name of the comeback offer",
+        "renew": "Short name of what is due"
       },
       "WHAT_PLACEHOLDER": {
-        "offer": "Mini-split maintenance with 20% off",
-        "invite": "Free e-invoicing workshop",
-        "reactivate": "This year's news and 15% off your next purchase",
-        "renew": "Your annual license expires on March 30; renew and keep your price"
+        "offer": "Mini-split maintenance 20% off",
+        "invite": "New app launch",
+        "reactivate": "15% off your next order",
+        "renew": "Your policy renewal"
       },
-      "DETAILS": "Details: price, validity, conditions",
-      "DETAILS_PLACEHOLDER": "Valid until March 31 · local only · single payment",
       "REST_DAYS": "Don't write if another campaign wrote less than",
       "DAYS": "days ago",
-      "REST_HINT": "Saturation guard: contacts who got another AI Seller campaign recently are left out (0 = no rule).",
+      "REST_HINT": "To avoid overload: contacts who got another AI campaign recently are skipped (0 = no rule).",
       "RELAY_TITLE": "If interested (or asks for a person), goes to",
       "RELAY_CHOICES": {
         "agent": "The inbox's service agent (prospects or customers)",
@@ -104,7 +134,8 @@
       "OBJECTION_PLACEHOLDER": "E.g. «It's expensive»",
       "ANSWER_PLACEHOLDER": "E.g. Includes installation and a 12-month warranty",
       "ADD_OBJECTION": "+ Add objection",
-      "REMOVE": "Remove"
+      "REMOVE": "Remove",
+      "WHAT_HINT": "Fills {{oferta}} in templates and shows in results. Everything else goes in «Fact sheet»."
     },
     "AUDIENCE": {
       "segment": "Segment",
@@ -191,7 +222,10 @@
       },
       "UP": "Move up",
       "DOWN": "Move down",
-      "REMOVE": "Remove"
+      "REMOVE": "Remove",
+      "CLICKED": "If they clicked a link and did not reply (optional)",
+      "CLICKED_PLACEHOLDER": "Hi {{contacto}}, did you finish registering?",
+      "CLICKED_HINT": "Sent instead of the one above to those who clicked. Empty: the one above (or the AI asks if they managed)."
     },
     "WHEN": {
       "START": "Starts",
@@ -308,7 +342,8 @@
         "daily_cap": "Skipped: daily cap",
         "opted_out": "Skipped: unsubscribed",
         "invalid_email": "Skipped: invalid email",
-        "recently_contacted": "Skipped: another campaign wrote recently"
+        "recently_contacted": "Skipped: another campaign wrote recently",
+        "excluded_label": "Skipped: asked not to get this type of campaign"
       },
       "CONFIRMED": "Confirmed: {n} (capacity {capacity})",
       "DECLINED": "Not going: {n}",
@@ -344,7 +379,10 @@
         "low_score": "Low score",
         "failed": "Send failed",
         "in_progress": "Still has touches pending",
-        "bounced": "Email bounced"
+        "bounced": "Email bounced",
+        "achieved": "Done",
+        "not_now": "Not this time",
+        "future_yes": "Next time OK"
       },
       "CLOSE": "Close",
       "LIST_TITLE": "List «{name}»",
@@ -371,6 +409,14 @@
         "Cita": "Booked an appointment",
         "Encuesta contestada": "Answered the survey",
         "later": "Writing again later"
+      },
+      "GOAL": {
+        "TITLE": "Goal",
+        "achieved": "Done",
+        "not_now": "Not this time",
+        "future_yes": "Next time OK",
+        "opt_out": "Do not want to hear from us",
+        "LABEL": "label «{label}»"
       }
     },
     "LIST": {
@@ -396,9 +442,10 @@
       }
     },
     "TEST_TABS": {
-      "simulate": "Simulate the campaign",
-      "chat": "Chat with the seller",
-      "real": "Real test"
+      "simulate": "Simulate",
+      "chat": "Chat",
+      "real": "Real test",
+      "cases": "Cases"
     },
     "SIM": {
       "INTRO": "See the whole campaign as a contact would get it: each touch with its text and when it goes out, and what happens depending on the reply. Nothing is sent.",
@@ -435,7 +482,10 @@
         "done": "Finishes (confirmed, not coming or answered the survey): marked as done.",
         "no_reply": "Never replies: after {n} touches it ends as «No reply».",
         "later": "«Not now» or out of office: it writes once more on the date they say (30 days if not).",
-        "info": "Asks for details: your Message 2 goes as is, with its images; then it answers questions."
+        "info": "Interested: your full information is sent once, with images.",
+        "achieved": "Done ({goal}).",
+        "not_now": "«Not this time»: we ask about next time (yes → {yes}; no → {no}).",
+        "opt_out": "«Don't send me anything»: leaves the campaign."
       },
       "WARNINGS": {
         "no_address": "This contact has no data for the channel: it would not reach them.",
@@ -444,7 +494,16 @@
       },
       "FILES": "📎 {names}",
       "OPENER": "If they wrote in the last 24 h, instead of the template: «{text}»",
-      "INFO": "Message 2 · if they ask for details, sent as is"
+      "INFO": "Message 2 · if they ask for details, sent as is",
+      "GOALS": {
+        "confirm": "confirms",
+        "external": "writes the keyword",
+        "done": "confirms it is done",
+        "relay": "interested",
+        "appointment": "books",
+        "answers": "answers"
+      },
+      "LABEL": "Label: «{label}»."
     },
     "TEST_RUN": {
       "INTRO": "Send the real campaign only to you or your team, with touches every few minutes. Messages arrive, conversations and the relay are created as with a customer. It does not count in the results.",
@@ -539,11 +598,11 @@
       "OPEN_WINDOW_PLACEHOLDER": "Hi {{contacto}}, we have {{oferta}}. Shall I send you the details?",
       "OPEN_WINDOW_HINT": "With {{contacto}}, {{empresa}} and {{oferta}}. Empty: the AI writes it with the same idea.",
       "INFO_TITLE": {
-        "offer": "Message 2 · If they ask for details, this goes",
-        "reactivate": "Message 2 · If they ask for details, this goes",
-        "renew": "Message 2 · If they ask for details, this goes (optional)",
-        "invite": "Message 2 · If they want to know about the event, this goes",
-        "survey": "Message 2 · If they accept, the questions"
+        "offer": "Full information · sent when interested",
+        "reactivate": "Full information · sent when interested",
+        "renew": "Full information · when they ask (optional)",
+        "invite": "Full information · when they want to know more",
+        "survey": "If they agree, the questions"
       },
       "INFO_HINT": {
         "offer": "Sent as is: the full copy (what it is, price, what it includes, validity). End with a closing question. Everything here is also what the seller knows to answer questions.",
@@ -580,11 +639,14 @@
         "contact_name": "Full name",
         "contact_company": "Contact company",
         "offer_what": "What you offer",
-        "offer_details": "Offer details",
         "event_name": "Event name",
         "event_date": "Event date",
         "event_place": "Event place",
-        "text": "Fixed text"
+        "text": "Fixed text",
+        "last_purchase": "Last purchase",
+        "due_what": "What is due",
+        "due_date": "Due date",
+        "due_amount": "Amount due"
       },
       "PREVIEW": {
         "STEP_1": "Message 1 · Opener",
@@ -597,7 +659,96 @@
           "sale": "From here, the seller answers questions and leads to the close.",
           "survey": "Then the other questions, one per message."
         }
+      },
+      "INSERT_LINK": "Insert link…"
+    },
+    "KNOWLEDGE": {
+      "HINT": "This is ALL the AI knows about this campaign: if asked something not here or in its sources, it says it does not have it.",
+      "SURVEY_TITLE": "The questions (word for word, in order)",
+      "FACTS_TITLE": "Facts",
+      "FACTS_HINT": "Fill in what applies; anything empty is unknown.",
+      "FROM_EVENT": "Fill with the event data",
+      "FACTS": {
+        "when": "When",
+        "place": "Where or how",
+        "cost": "Cost",
+        "audience": "Who it is for",
+        "not_for": "Who it is NOT for",
+        "agenda": "Agenda",
+        "what_is": "What it is",
+        "price": "Price",
+        "valid_until": "Valid until",
+        "conditions": "Conditions",
+        "delivery": "Delivery or stock",
+        "news": "What's new",
+        "incentive": "Comeback incentive",
+        "what_due": "What is due",
+        "how": "How to do it (steps)",
+        "where_pay": "Where to pay or renew",
+        "if_not": "What happens if not",
+        "purpose": "What the survey is for",
+        "duration": "How long it takes",
+        "use": "What we do with the answers",
+        "more": "More facts"
+      },
+      "PLACEHOLDERS": {},
+      "FAQ_TITLE": "Approved questions and objections",
+      "FAQ_HINT": "What they usually ask or say, with the answer it may give.",
+      "FAQ_QUESTION": "Can I invite a customer?",
+      "FAQ_ANSWER": "No, it is only for distributors.",
+      "FAQ_ADD": "+ Add question",
+      "REMOVE": "Remove",
+      "LINKS": {
+        "TITLE": "Links",
+        "HINT": "Each link with when it is sent: they are not interchangeable. The AI sends it exactly.",
+        "FIRST_NAME": "Registration",
+        "NAME": "Name (Registration, Payment…)",
+        "ADD": "+ Add link",
+        "USES": {
+          "package": "With the information and when asked",
+          "request": "Only when asked",
+          "problem": "Only if they have a problem (no email…)"
+        },
+        "URL": "https://"
       }
+    },
+    "REPLIES": {
+      "HINT": "Empty = the grey text. The AI writes it word for word (if they also asked something, it answers first).",
+      "ACHIEVED": {
+        "confirm": "Confirms they will attend",
+        "external": "Writes the keyword (done)",
+        "done": "Confirms it is done",
+        "relay": "Interested (hand over)",
+        "appointment": "Books the meeting",
+        "answers": "Finishes the survey"
+      },
+      "MOMENTS": {
+        "not_now": "Not this time",
+        "future_yes": "Agrees to hear from us next time",
+        "opt_out": "Does not want to hear about this"
+      },
+      "ABOUT": {
+        "achieved": "Ends as done.",
+        "not_now": "«I can't this time»: not an opt-out. We ask once if we can write next time.",
+        "future_yes": "Said yes to that question.",
+        "opt_out": "«Don't send me anything», or said no to the question: respected right away."
+      },
+      "REPLY": "Reply",
+      "LABEL": "Contact label",
+      "NO_LABEL": "no label",
+      "EXCLUDES": "Contacts with «{label}» are left out of the next {kind} campaigns.",
+      "GLOBAL_OPT_OUT": "«Unsubscribe», «stop» opts them out of everything."
+    },
+    "CASES": {
+      "HINT": "Tests built from the campaign. The AI answers as it would to a contact, without sending or saving anything.",
+      "RUN_ALL": "Run all",
+      "RELOAD": "Rebuild",
+      "SCORE": "{ok} of {n} passed",
+      "LOADING": "Building cases…",
+      "ERROR": "Could not run.",
+      "RUN": "Run",
+      "TOOLS": "did: {names}",
+      "SAYS": "«{message}»"
     }
   }
 }

@@ -5,10 +5,13 @@ export const VAR_SOURCES = [
   'contact_name',
   'contact_company',
   'offer_what',
-  'offer_details',
   'event_name',
   'event_date',
   'event_place',
+  'last_purchase',
+  'due_what',
+  'due_date',
+  'due_amount',
   'text',
 ];
 
@@ -25,7 +28,11 @@ export const sampleValues = (brief = {}, event = null) => ({
   contact_name: 'Mario López',
   contact_company: 'Grúas del Norte',
   offer_what: (brief.offer_what || '').trim(),
-  offer_details: (brief.offer_details || '').trim(),
+  // De cada contacto (TrackingCampaigns::ContactFacts): ejemplos.
+  last_purchase: 'Mantenimiento de minisplit',
+  due_what: 'Póliza anual',
+  due_date: '30 de noviembre',
+  due_amount: '$1,800 MXN',
   event_name: event?.name || '',
   event_date: event?.starts_at
     ? new Date(event.starts_at).toLocaleString([], {
@@ -50,6 +57,10 @@ export const guessSource = (variable, index) => {
   if (['fecha', 'date'].includes(key)) return 'event_date';
   if (['lugar', 'place'].includes(key)) return 'event_place';
   if (['evento', 'event'].includes(key)) return 'event_name';
+  if (['monto', 'saldo', 'importe'].includes(key)) return 'due_amount';
+  if (['vence', 'vencimiento'].includes(key)) return 'due_date';
+  if (['compra', 'ultima_compra', 'producto_anterior'].includes(key))
+    return 'last_purchase';
   return 'text';
 };
 
@@ -67,9 +78,14 @@ export const fillTemplate = (text, rules = {}, samples = {}) => {
   });
 };
 
-// {{contacto}}, {{empresa}} y {{oferta}} en la apertura escrita y en el «Mensaje 2».
+// {{contacto}}, {{empresa}}, {{oferta}} y, de cada contacto, {{ultima_compra}}, {{que_vence}}, {{vence}} y {{monto}}
+// en la apertura escrita y en la información completa (como Motor2::CampaignTouch.fill).
 export const fillCampaignText = (text, samples = {}) =>
   (text || '')
     .replace(/\{\{\s*contacto\s*\}\}/gi, samples.contact_first_name || '')
     .replace(/\{\{\s*empresa\s*\}\}/gi, samples.contact_company || '')
-    .replace(/\{\{\s*oferta\s*\}\}/gi, samples.offer_what || '');
+    .replace(/\{\{\s*oferta\s*\}\}/gi, samples.offer_what || '')
+    .replace(/\{\{\s*ultima_compra\s*\}\}/gi, samples.last_purchase || '')
+    .replace(/\{\{\s*que_vence\s*\}\}/gi, samples.due_what || '')
+    .replace(/\{\{\s*vence\s*\}\}/gi, samples.due_date || '')
+    .replace(/\{\{\s*monto\s*\}\}/gi, samples.due_amount || '');

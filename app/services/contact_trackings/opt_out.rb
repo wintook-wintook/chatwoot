@@ -58,6 +58,15 @@ module ContactTrackings::OptOut
     text.match?(ONLY_WORD) || text.match?(REQUEST)
   end
 
+  # Solo la baja dicha con esas palabras («baja», «stop», «darme de baja»). La usa una Campaña con IA que tiene su
+  # propia etiqueta «no…»: «no me inviten», «no me manden nada» los decide su agente (solo de ese tipo de campaña).
+  HARD = /\b(?:d[aeé]n?me|darme|dar)\s+de\s+baja\b/i
+
+  def hard_requested_in?(text)
+    text = text.to_s
+    text.match?(ONLY_WORD) || text.match?(HARD)
+  end
+
   def token(contact)
     contact.signed_id(purpose: :opt_out)
   end
