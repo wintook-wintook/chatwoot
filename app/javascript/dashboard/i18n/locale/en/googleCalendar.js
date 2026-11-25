@@ -74,6 +74,13 @@ export default {
       FREE: 'Free',
       NOT_CONNECTED: 'No calendar',
     },
+    SCHEDULE_FOR: {
+      LABEL: 'Schedule for',
+      ME: 'Me',
+      HINT: 'To schedule for a teammate, ask them for "Make changes" in "Share my calendar".',
+      FOR_OTHER_HINT:
+        'It is saved to your teammate calendar, not yours. They become the owner.',
+    },
     SHARE_CALENDAR: {
       BUTTON: 'Share my calendar',
       TITLE: 'Share my calendar',

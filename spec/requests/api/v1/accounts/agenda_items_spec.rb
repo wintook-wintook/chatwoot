@@ -40,6 +40,36 @@ RSpec.describe 'Agenda Items API' do
       expect(CaseMeeting.last).to have_attributes(contact_id: nil, organization_id: nil, case_ticket_id: nil, organizer_id: tecnico.id)
     end
 
+    # fix/calendario_google F3b — si el otro tiene Google, la tarea acaba en SU calendario:
+    # solo si me dio «Hacer cambios» (lo pregunta GoogleCalendarScheduleGuard).
+    context 'when es para otra persona con Google Calendar' do
+      let(:tecnico) { create(:user, account: account, role: :agent) }
+      let(:guard) { instance_double(GoogleCalendarScheduleGuard) }
+
+      before do
+        allow(GoogleCalendarScheduleGuard).to receive(:new).and_return(guard)
+        allow(guard).to receive(:call).and_return(guard)
+      end
+
+      it 'sin su permiso no la crea y dice por qué' do
+        allow(guard).to receive(:error).and_return('Tu compañero no te dio permiso')
+        expect { create_item(meeting_params(assignee_id: tecnico.id)) }.not_to change(CaseMeeting, :count)
+
+        expect(response).to have_http_status(:forbidden)
+        expect(response.parsed_body['error']).to eq('Tu compañero no te dio permiso')
+      end
+
+      it 'con su permiso queda como responsable' do
+        allow(guard).to receive(:error).and_return(nil)
+        create_item(meeting_params(assignee_id: tecnico.id))
+
+        expect(response).to have_http_status(:created)
+        expect(CaseMeeting.last.organizer_id).to eq(tecnico.id)
+        expect(GoogleCalendarScheduleGuard).to have_received(:new)
+          .with(account: account, viewer: agent, agent_id: tecnico.id, allow_without_google: true)
+      end
+    end
+
     it 'no acepta un contacto de otra cuenta' do
       create_item(meeting_params(contact_id: create(:contact).id))
 

@@ -48,6 +48,19 @@ class GoogleCalendarCoworkerService
     coworker_integrations.map { |integration| fetch(integration, time_min: time_min, time_max: time_max) }
   end
 
+  # F3b — antes de escribir en el calendario de un compañero se pregunta a Google EN ESE
+  # MOMENTO (sin caché): ¿quien mira tiene «Hacer cambios» (writer/owner)?
+  def can_schedule?(coworker_integration)
+    return false if same_google?(coworker_integration)
+
+    now = Time.current
+    result = @service.list_shared_events(calendar_id: coworker_integration.google_email, time_min: now, time_max: now + 1.minute)
+    result[:code] == 200 && SCHEDULE_ROLES.include?(result[:access_role])
+  rescue StandardError => e
+    Rails.logger.warn "[GoogleCalendarCoworker] can_schedule? #{@viewer.google_email} → #{coworker_integration.google_email}: #{e.message}"
+    false
+  end
+
   private
 
   def query(coworker, time_min, time_max)

@@ -85,6 +85,22 @@ RSpec.describe GoogleCalendarCoworkerService do
     expect(viewer_service).to have_received(:list_shared_events).with(calendar_id: 'b@gmail.com', time_min: tmin, time_max: tmax)
   end
 
+  describe '#can_schedule?' do
+    it 'sí con writer/owner, preguntando a Google sin caché' do
+      allow(viewer_service).to receive(:list_shared_events).and_return({ code: 200, access_role: 'writer', items: [] })
+      expect(service.can_schedule?(coworker)).to be(true)
+    end
+
+    it 'no con reader, 404 o error' do
+      allow(viewer_service).to receive(:list_shared_events).and_return({ code: 200, access_role: 'reader', items: [] })
+      expect(service.can_schedule?(coworker)).to be(false)
+      allow(viewer_service).to receive(:list_shared_events).and_return({ code: 404, access_role: nil, items: [] })
+      expect(service.can_schedule?(coworker)).to be(false)
+      allow(viewer_service).to receive(:list_shared_events).and_raise('timeout')
+      expect(service.can_schedule?(coworker)).to be(false)
+    end
+  end
+
   describe 'caché' do
     let(:store) { ActiveSupport::Cache::MemoryStore.new }
 

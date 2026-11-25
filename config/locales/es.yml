@@ -560,6 +560,12 @@ es:
     progress_note_title: 'Avance: %{title}'
     progress_not_open: 'Solo se reporta avance de una tarea pendiente'
     minutes_required: 'Indica el tiempo dedicado'
+  google_calendar_schedule:
+    agent_not_found: 'Ese agente no es de esta cuenta'
+    viewer_not_connected: 'Conecta tu Google Calendar para agendarle a un compañero'
+    agent_not_connected: 'Ese compañero no tiene Google Calendar conectado'
+    same_google: 'Ese compañero usa tu mismo Google: agéndalo para ti'
+    no_permission: 'Tu compañero no te dio permiso de hacer cambios en su calendario. Pídele que te lo dé en «Compartir mi calendario».'
   agenda_items:
     already_linked: 'Ese evento ya tiene una tarea agendada'
     all_day: 'Un evento de todo el día no tiene hora: se queda solo en Google'

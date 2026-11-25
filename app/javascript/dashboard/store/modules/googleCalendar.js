@@ -286,8 +286,6 @@ const actions = {
     commit('SET_CALENDAR_UI_FLAG', { isCreating: true });
     try {
       await GoogleCalendarAPI.createEvent(payload);
-    } catch (error) {
-      throw new Error(error);
     } finally {
       commit('SET_CALENDAR_UI_FLAG', { isCreating: false });
     }

@@ -126,4 +126,42 @@ RSpec.describe 'Google Calendar coworkers API', type: :request do
       expect(response.parsed_body['availability']).to eq([])
     end
   end
+
+  # F3b — «Agendar a»: el evento va al calendario del compañero, creado con MI conexión.
+  describe 'POST /events con agent_id' do
+    let(:guard) { instance_double(GoogleCalendarScheduleGuard) }
+    let(:beto_integration) { UserCalendarIntegration.find_by(user: beto) }
+    let(:payload) { { summary: 'Visita', start_time: '2026-11-26T07:00:00-06:00', end_time: '2026-11-26T07:15:00-06:00' } }
+
+    before do
+      allow(GoogleCalendarScheduleGuard).to receive(:new).and_return(guard)
+      allow(guard).to receive(:call).and_return(guard)
+      allow(google).to receive(:create_event).and_return({ 'id' => 'e1' })
+    end
+
+    it 'con permiso crea en el calendario del compañero, sin invitarme' do
+      allow(guard).to receive_messages(ok?: true, coworker_integration: beto_integration)
+      post "#{base_url}/events", params: payload.merge(agent_id: beto.id), headers: viewer.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:created)
+      expect(google).to have_received(:create_event).with(hash_including(calendar_id: 'beto@gmail.com', attendees: []))
+      expect(GoogleCalendarService).to have_received(:new).with(viewer_integration)
+    end
+
+    it 'sin permiso responde 403 con el motivo y no crea nada' do
+      allow(guard).to receive_messages(ok?: false, error: 'Tu compañero no te dio permiso')
+      post "#{base_url}/events", params: payload.merge(agent_id: beto.id), headers: viewer.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body['error']).to eq('Tu compañero no te dio permiso')
+      expect(google).not_to have_received(:create_event)
+    end
+
+    it 'sin agent_id (o para mí) crea en mi calendario como siempre' do
+      post "#{base_url}/events", params: payload.merge(agent_id: viewer.id), headers: viewer.create_new_auth_token, as: :json
+
+      expect(google).to have_received(:create_event).with(hash_including(calendar_id: 'primary'))
+      expect(GoogleCalendarScheduleGuard).not_to have_received(:new)
+    end
+  end
 end

@@ -81,6 +81,13 @@ export default {
       NOT_CONNECTED: 'Sin calendario',
     },
     // fix/calendario_google — calendario de compañeros (Google aplica lo que cada uno comparte).
+    SCHEDULE_FOR: {
+      LABEL: 'Agendar a',
+      ME: 'Mí',
+      HINT: 'Para agendarle a un compañero, pídele «Hacer cambios» en «Compartir mi calendario».',
+      FOR_OTHER_HINT:
+        'Se guarda en el calendario de tu compañero y no en el tuyo. Él queda como responsable.',
+    },
     SHARE_CALENDAR: {
       BUTTON: 'Compartir mi calendario',
       TITLE: 'Compartir mi calendario',

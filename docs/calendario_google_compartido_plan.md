@@ -394,6 +394,45 @@ calendario.
 - Mismo Google (#1 y #4): «Agendar a» al otro = agendarse a sí mismo → se oculta de la lista.
 - Fuera de esta fase: **editar, mover o borrar** eventos del compañero.
 
+#### F3b — HECHA (25/11/2026) · sin probar en navegador
+
+**Hallazgo al hacerla:** las tareas agendadas ya aceptaban `assignee_id` (responsable = otro
+agente) y su evento de Google se crea con la conexión **del responsable**
+(`Cases::Meetings::GoogleMirrorService`). Ninguna pantalla lo mandaba. Se reutiliza tal cual,
+pero ahora el servidor **pregunta antes** si quien agenda tiene «Hacer cambios».
+
+**Qué se hizo**
+- `GoogleCalendarCoworkerService#can_schedule?(compañero)` — pregunta a Google **sin caché**.
+- `GoogleCalendarScheduleGuard` (`app/services/google_calendar_schedule_guard.rb`) — motivo
+  (`agent_not_found` · `viewer_not_connected` · `agent_not_connected` · `same_google` ·
+  `no_permission`) con texto en `config/locales/{es,en}.yml` → `google_calendar_schedule.*`.
+- Dos caminos:
+  - **Evento interno** — `POST /google_calendar/events` con `agent_id`: se crea en el
+    calendario principal del compañero **con mi conexión**; yo no voy como invitado.
+    Sin permiso → **403** con el motivo.
+  - **Tarea agendada** — `POST /agenda_items` con `assignee_id` de otro: si ese agente tiene
+    Google, exige «Hacer cambios» (403 si no); si no tiene Google se deja como siempre
+    (`allow_without_google`: no hay calendario que invadir). Él queda como responsable.
+- Pantalla (`CreateEventModal.vue`): campo **«Agendar a»** (Mí + compañeros con
+  `can_schedule`) solo al crear y solo en la pantalla Calendario. Con un compañero: se oculta
+  «Calendario», la tarea va a su principal con `assignee_id`, el evento interno con
+  `agent_id`, y el compañero no se repite como participante. Ayuda: «pídele "Hacer cambios"».
+- Store: `createEvent` ya no envuelve el error → el modal muestra el motivo del servidor.
+
+**Pila de pruebas**
+- Ruby: `google_calendar_schedule_guard_spec.rb` (6), `can_schedule?` (2), `POST /events con
+  agent_id` (3), `agenda_items_spec.rb` + 2 (con/sin permiso). Todo:
+  `POSTGRES_DATABASE=chatwoot_test bundle exec rspec spec/controllers/api/v1/accounts/google_calendar/ spec/services/google_calendar_service_spec.rb spec/services/google_calendar_coworker_service_spec.rb spec/services/google_calendar_schedule_guard_spec.rb spec/requests/api/v1/accounts/agenda_items_spec.rb` → 63/63
+  (incluye la de antes «puede ser para otra persona», técnico sin Google).
+- JS: `components/GoogleCalendar/specs/CreateEventModal.scheduleFor.spec.js` (5) + las 8
+  previas del modal + store → specs del front que tocan calendario/agenda: 37/37.
+- **Contra Google real** (dev, cuenta 2, vía API): Andres da «Hacer cambios» → Admin crea
+  evento «para Andres» → organizer Andres, creator Admin, 0 invitados; **en el calendario de
+  Andres sí, en el de Admin no**; borrado. Con «Ver detalles» → 403 con el mensaje. Estado
+  final: Andres sin compartir.
+- **Navegador (pendiente):** pasos 9–10 de la §6 F6; tarea agendada «para» un compañero (no
+  se probó en vivo para no crear registros reales en la cuenta 2).
+
 ### F3c — «Compartir mi calendario» desde el sistema
 
 Google permite administrar con quién se comparte un calendario (reglas de acceso, ACL) con el
