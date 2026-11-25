@@ -18,6 +18,24 @@ class GoogleCalendarService
     response['items'] || []
   end
 
+  # Calendario de OTRA persona leído con MI token (fix/calendario_google). Google decide qué
+  # llega según lo que el dueño compartió: `accessRole` (freeBusyReader/reader/writer/owner)
+  # y los eventos ya recortados (sin título si solo es libre/ocupado o si son privados).
+  # No lanza en 404: «no compartido» es una respuesta normal, no un error.
+  # => { code:, access_role:, items: }
+  def list_shared_events(calendar_id:, time_min:, time_max:)
+    response = HTTParty.get(
+      "#{CALENDAR_API}/calendars/#{CGI.escape(calendar_id)}/events",
+      headers: auth_headers,
+      query: { timeMin: time_min.utc.iso8601, timeMax: time_max.utc.iso8601,
+               singleEvents: true, orderBy: 'startTime', maxResults: 250 }
+    )
+    return { code: response.code, access_role: nil, items: [] } unless response.success?
+
+    parsed = response.parsed_response
+    { code: response.code, access_role: parsed['accessRole'], items: parsed['items'] || [] }
+  end
+
   # @tickets_cases F3 — `recurrence`, `with_meet`, `location` y `send_updates` son
   # kwargs NUEVOS y opcionales: los llamadores existentes (events_controller y el
   # job de seguimientos) siguen funcionando igual.

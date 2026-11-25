@@ -252,6 +252,31 @@ suscribe solo) → **no** sirve para saber el permiso; se usa `accessRole` de `e
                     los títulos)         sin título)
 ```
 
+#### F1 — HECHA (25/11/2026)
+
+**Qué se hizo**
+- `GoogleCalendarService#list_shared_events(calendar_id:, time_min:, time_max:)`: lee el
+  calendario de otra persona con el token propio; devuelve `{ code:, access_role:, items: }`
+  y **no** lanza en 404.
+- `app/services/google_calendar_coworker_service.rb` (`GoogleCalendarCoworkerService`):
+  `fetch(integración_compañero, time_min:, time_max:)` y `fetch_many(...)` →
+  `{ agent_id, google_email, access, can_schedule, events: [{ id, summary, location, start, end, all_day, private }] }`.
+  - `access`: `none` (404) · `free_busy` · `details` · `same_google` · `error`.
+  - `can_schedule` = `accessRole` writer/owner.
+  - Caché 2 min por par (quien mira → compañero → rango); `clear_cache_for(correo_dueño)`
+    la invalida (lo usará F3c al cambiar un permiso).
+  - Error con un compañero (403 cuota, red) → solo ese sale `error`.
+
+**Cómo funciona** — nunca usa el token del compañero: por eso un compañero con permiso de
+Google **vencido** (camion01) se puede ver igual si compartió; basta su correo. El estado
+`reconnect` queda solo para **quien mira** (lo resuelve F2: sin token propio no hay nada).
+
+**Pila de pruebas**
+- `spec/services/google_calendar_coworker_service_spec.rb` — 10 casos (los niveles de F0,
+  todo el día, 403, excepción, mismo Google, usa token de quien mira, caché).
+  `POSTGRES_DATABASE=chatwoot_test bundle exec rspec spec/services/google_calendar_coworker_service_spec.rb spec/services/google_calendar_service_spec.rb` → 17/17.
+- Contra Google real (cuenta 2, solo lectura): Admin → Andres = `none`, Admin → Jose Luis = `none`.
+
 ### F2 — Ruta en el servidor
 - `GET /api/v1/accounts/:id/google_calendar/coworkers` → lista de compañeros de **la cuenta**
   con su estado (sin pedir eventos): conectado / sin conectar.
