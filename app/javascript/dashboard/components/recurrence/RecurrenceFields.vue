@@ -37,7 +37,7 @@ export default {
     <div class="flex flex-wrap items-center gap-1.5">
       <select
         :value="value.mode"
-        class="!w-auto !mb-0 h-8 text-sm"
+        class="!w-auto !mb-0 !h-8 !py-0 leading-8 text-sm"
         :title="$t(`RECURRING_TASKS.MODE_${value.mode.toUpperCase()}_HINT`)"
         @change="set('mode', $event.target.value)"
       >
@@ -57,12 +57,12 @@ export default {
         type="number"
         min="1"
         max="365"
-        class="!w-14 !mb-0 h-8 text-sm"
+        class="!w-14 !mb-0 !h-8 !py-0 leading-8 text-sm"
         @input="set('every', Number($event.target.value) || 1)"
       />
       <select
         :value="value.unit"
-        class="!w-auto !mb-0 h-8 text-sm"
+        class="!w-auto !mb-0 !h-8 !py-0 leading-8 text-sm"
         @change="set('unit', $event.target.value)"
       >
         <option v-for="unit in units" :key="unit" :value="unit">
@@ -103,7 +103,7 @@ export default {
       </span>
       <select
         :value="value.ends"
-        class="!w-auto !mb-0 h-8 text-sm"
+        class="!w-auto !mb-0 !h-8 !py-0 leading-8 text-sm"
         @change="set('ends', $event.target.value)"
       >
         <option value="never">{{ $t('RECURRING_TASKS.ENDS_NEVER') }}</option>
@@ -114,7 +114,7 @@ export default {
         v-if="value.ends === 'on'"
         :value="value.ends_on"
         type="date"
-        class="!w-auto !mb-0 h-8 text-sm"
+        class="!w-auto !mb-0 !h-8 !py-0 leading-8 text-sm"
         @input="set('ends_on', $event.target.value)"
       />
       <template v-if="value.ends === 'after'">
@@ -122,7 +122,7 @@ export default {
           :value="value.max_count"
           type="number"
           min="1"
-          class="!w-14 !mb-0 h-8 text-sm"
+          class="!w-14 !mb-0 !h-8 !py-0 leading-8 text-sm"
           @input="set('max_count', Number($event.target.value) || 1)"
         />
         <span class="text-slate-600 dark:text-slate-300">
