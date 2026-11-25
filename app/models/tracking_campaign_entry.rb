@@ -38,7 +38,7 @@
 #  fk_rails_...  (tracking_campaign_id => tracking_campaigns.id) ON DELETE => cascade
 #
 class TrackingCampaignEntry < ApplicationRecord
-  SOURCES = %w[batch automation missed_call event].freeze # missed_call: diag/llamadas_whatsapp (F8); event: Plan-Eventos E3
+  SOURCES = %w[batch automation missed_call event renew].freeze # missed_call: diag/llamadas_whatsapp (F8); event: Plan-Eventos E3; renew: Recordar
   STATUSES = %w[enrolled skipped].freeze
   # invalid_email: prospeccion V7a · recently_contacted: Campaña con IA (otra 2.0 le escribió hace poco)
   # excluded_label: Campaña con IA (tiene la etiqueta «no…» de ese tipo de campaña)

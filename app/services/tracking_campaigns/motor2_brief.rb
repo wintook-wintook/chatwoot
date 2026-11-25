@@ -122,11 +122,10 @@ module TrackingCampaigns::Motor2Brief
   # Lo que el «Vendedor de campaña» usa como si viniera de su asistente (Motor2::Functions::CampaignSeller).
   def seller_answers(campaign)
     data = campaign.brief.to_h
-    { 'purpose' => data['kind'], 'offer_what' => data['offer_what'], 'offer_goal' => data['offer_goal'],
-      'goal_keyword' => data['goal_keyword'], 'facts' => data['facts'].presence, 'links' => data['links'].presence,
-      'replies' => data['replies'].presence, 'labels' => data['labels'], 'event_id' => data['event_id'],
-      'survey_questions' => data['survey_questions'], 'low_score' => data['low_score'],
-      'campaign_objections' => data['objections'].presence, 'content' => data['content'].presence }.merge(relay_answers(data)).compact
+    same = data.slice(*%w[offer_what offer_goal goal_keyword labels event_id survey_questions low_score valid_until survey_items low_case])
+    { 'purpose' => data['kind'], 'facts' => data['facts'].presence, 'links' => data['links'].presence, 'replies' => data['replies'].presence,
+      'campaign_objections' => data['objections'].presence, 'content' => data['content'].presence,
+      'products' => data['products'].presence }.merge(same, relay_answers(data)).compact
   end
 
   # El relevo de la campaña encima del del vendedor (solo si la campaña lo eligió).

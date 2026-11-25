@@ -14,6 +14,9 @@ export default {
     hasCatalog: { type: Boolean, default: false },
     // Plantillas aprobadas de su bandeja de WhatsApp.
     templates: { type: Array, default: () => [] },
+    // Campaña de Ofrecer: solo borrador o mandarla, con sus textos (precio de promoción); los agentes listos, todo.
+    modes: { type: Array, default: () => ['off', 'draft', 'send'] },
+    labels: { type: Object, default: null },
   },
   emits: ['input'],
   methods: {
@@ -34,7 +37,7 @@ export default {
       {{ t('NO_CATALOG') }}
     </p>
     <label
-      v-for="mode in ['off', 'draft', 'send']"
+      v-for="mode in modes"
       :key="mode"
       class="flex items-start gap-2 text-sm cursor-pointer"
     >
@@ -46,7 +49,7 @@ export default {
         @change="set('mode', mode)"
       />
       <span>
-        {{ t(`MODES.${mode}`) }}
+        {{ (labels && labels[mode]) || t(`MODES.${mode}`) }}
         <span v-if="mode === 'draft'" class="text-xs text-woot-600">{{
           t('RECOMMENDED')
         }}</span>

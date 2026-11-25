@@ -79,7 +79,7 @@ class TrackingCampaigns::TrackingBuilder
     return {} unless @campaign.inbox&.email?
 
     template, variant = TrackingCampaigns::SubjectTest.pick(@campaign)
-    subject = TrackingCampaigns::EmailSubject.render(template, @contact)
+    subject = TrackingCampaigns::EmailSubject.render(template, @contact, @campaign)
     return {} unless subject
 
     @tracking&.update_column(:subject_variant, variant) if variant # rubocop:disable Rails/SkipsModelValidations

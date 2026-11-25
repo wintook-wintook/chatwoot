@@ -18,6 +18,8 @@ class TrackingCampaigns::Motor2KnowledgeCheck
   def facts_item
     return item(:facts, 'ok', 'La ficha tiene lo que sabe la IA.') if @brief['facts'].present? || Array(@brief['objections']).any?
 
+    return item(:facts, 'ok', 'La oferta tiene sus productos del Catálogo.') if Array(@brief['products']).any?
+
     item(:facts, 'warning', "La ficha está vacía: la IA solo sabrá el nombre y la información que se manda. Llénala en #{step}.")
   end
 
@@ -29,7 +31,7 @@ class TrackingCampaigns::Motor2KnowledgeCheck
   end
 
   def link_items
-    return [item(:links, 'warning', "Agrega en #{step} la liga donde lo hace (registro, compra, pago).")] if needs_link?
+    return [item(:links, 'warning', "Agrega en #{link_step} la liga donde lo hace (registro, compra, pago).")] if needs_link?
     return [] unless package_text?
 
     links.select { |l| l['use'] == 'package' && content.exclude?(l['url']) }.map do |l|
@@ -48,7 +50,10 @@ class TrackingCampaigns::Motor2KnowledgeCheck
   private
 
   # Dónde se llena: Invitar lo tiene en «El evento».
-  def step = @brief['kind'] == 'invite' ? '«El evento»' : '«La ficha»'
+  def step = { 'invite' => '«El evento»', 'offer' => '«La oferta»', 'reactivate' => '«Qué les ofreces»' }.fetch(@brief['kind'], '«La ficha»')
+
+  # La liga de compra de Ofrecer y Reactivar va junto a la palabra clave.
+  def link_step = %w[offer reactivate].include?(@brief['kind']) ? '«Cuando le interesa»' : step
 
   def item(key, level, text) = { key: key, level: level, text: text }
 end

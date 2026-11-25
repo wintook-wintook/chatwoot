@@ -5,7 +5,15 @@
 # ahí confirma y contesta las demás (abrir la liga no guarda nada: los antivirus las abren solos).
 # El token va firmado: lleva el seguimiento y la calificación elegida.
 module TrackingCampaigns::SurveyLink
-  SCORE = /\b[01]\s*(al|a|-)\s*10\b/i
+  SCORE = /\b[01]\s*(al|a|-)\s*(10|5)\b/i
+
+  # De dónde a dónde va la calificación de esa pregunta: 0..10, 1..10 o 1..5 (nil si no es de calificación).
+  def self.range(question)
+    match = question.to_s.match(SCORE)
+    return unless match
+
+    match[0].start_with?('1') ? 1..match[2].to_i : 0..match[2].to_i
+  end
 
   module_function
 
@@ -21,10 +29,10 @@ module TrackingCampaigns::SurveyLink
   def survey_email?(campaign, tracking) = campaign&.motor2? && campaign.brief.to_h['kind'] == 'survey' && tracking.inbox&.email?
 
   def buttons(question, tracking)
-    return "**#{question}**\n\n[Contestar la encuesta](#{url(tracking, nil)})" unless question.match?(SCORE)
+    scale = range(question)
+    return "**#{question}**\n\n[Contestar la encuesta](#{url(tracking, nil)})" unless scale
 
-    from = question.match?(/\b1\s*(al|a|-)\s*10\b/i) ? 1 : 0
-    "**#{question}**\n\n#{(from..10).map { |n| "[#{n}](#{url(tracking, n)})" }.join(' · ')}"
+    "**#{question}**\n\n#{scale.map { |n| "[#{n}](#{url(tracking, n)})" }.join(' · ')}"
   end
 
   def url(tracking, score) = "#{host}/encuesta/#{verifier.generate([tracking.id, score])}"

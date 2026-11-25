@@ -60,7 +60,9 @@ module TrackingCampaigns::CampaignKitData
       goals: %w[answers], keyword: '',
       facts: %w[purpose duration use more],
       replies: { 'achieved' => '¡Gracias por tu tiempo! 😊', 'not_now' => '', 'future_yes' => '',
-                 'opt_out' => 'Entendido, gracias de todos modos. 😊' },
+                 'opt_out' => 'Entendido, gracias de todos modos. 😊',
+                 'low' => 'Gracias por decírnoslo. Lamentamos que no haya sido una buena experiencia; alguien del equipo te va a ' \
+                          'contactar para ayudarte.' },
       labels: { 'opt_out' => 'no-encuestas' }
     }
   }.freeze

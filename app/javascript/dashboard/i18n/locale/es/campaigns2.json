@@ -165,7 +165,10 @@
         "excluded": "Quitados por ti"
       },
       "list": "Subir una lista de correos",
-      "EVENT_OF": "Asistentes de este evento"
+      "EVENT_OF": "Asistentes de este evento",
+      "inactive": "No compran desde hace…",
+      "served": "Atendidos hace poco",
+      "contracts": "Contratos por vencer"
     },
     "MESSAGES": {
       "CHANNEL": "Canal",
@@ -219,7 +222,12 @@
       "TEXT_PLACEHOLDER": "Hola {{contacto}}, …",
       "VAR": {
         "contacto": "+ nombre",
-        "empresa": "+ empresa"
+        "empresa": "+ empresa",
+        "oferta": "+ oferta",
+        "ultima_compra": "+ última compra",
+        "que_vence": "+ qué le vence",
+        "vence": "+ fecha",
+        "monto": "+ monto"
       },
       "UP": "Subir",
       "DOWN": "Bajar",
@@ -284,7 +292,10 @@
       "MOTOR2_ABOUT": "Ofrecer, invitar, reactivar, renovar o encuestar por WhatsApp o correo. El Vendedor IA de la campaña atiende las respuestas, cotiza, agenda y pasa al interesado.",
       "MOTOR1": "Campaña clásica (Motor 1.0)",
       "MOTOR1_ABOUT": "Como siempre: con un Agente a medida y su ficha.",
-      "BETA": "Beta"
+      "BETA": "Beta",
+      "KIND_TITLE": "¿Qué quieres hacer con esta campaña?",
+      "KIND_SUBTITLE": "Elige el tipo. Cada uno trae sus pasos, su ficha y sus respuestas; después ya no se cambia.",
+      "BACK": "‹ Atrás"
     },
     "STATUS": {
       "saved": "Guardada",
@@ -418,7 +429,9 @@
         "future_yes": "Aceptan la próxima",
         "opt_out": "No quieren que les escribamos",
         "LABEL": "etiqueta «{label}»"
-      }
+      },
+      "NPS": "NPS: {score} ({promoters} promotores · {passives} pasivos · {detractors} detractores)",
+      "COMMENTS": "Comentarios ({n})"
     },
     "LIST": {
       "HINT": "Para una audiencia que no te conoce. La lista se limpia antes de crear nada: sin correo o mal escrito, repetidos, de rol (info@, ventas@…), que se dieron de baja o rebotaron antes y dominios que no reciben correo. Si el correo ya es de un contacto tuyo, se usa ese. Los nuevos quedan en cuarentena: no salen en Contactos hasta que contestan o dan clic; los que nunca contestan se borran solos.",
@@ -797,14 +810,14 @@
       "HIDE_ADVANCED": "Ocultar opciones avanzadas",
       "ENDS_AT_EVENT": "Termina sola cuando empieza el evento.",
       "EVENT_TITLE": "¿A qué evento invitas?",
-      "CREATE_EVENT": "Crear un evento ↗",
+      "CREATE_EVENT": "+ Crear evento",
       "PICK_EVENT": "Elige el evento",
       "NO_EVENTS": "No hay eventos de hoy en adelante. Créalo en Eventos y vuelve aquí.",
       "WHEN": "Cuándo",
       "WHERE": "Dónde",
       "LINK": "Liga",
       "CAPACITY": "Cupo",
-      "FROM_EVENT_HINT": "La IA ya sabe esto (sale del evento). Si algo cambia, cámbialo en Eventos.",
+      "FROM_EVENT_HINT": "La IA ya sabe esto (sale del evento). Si algo cambia, usa «Editar evento».",
       "CONFIRM_TITLE": "¿Cómo confirma?",
       "GOALS": {
         "confirm": "Aquí en la plática",
@@ -830,22 +843,225 @@
       "HINTS": {
         "event": "El evento al que invitas, cómo confirma y lo que la IA debe saber.",
         "audience": "Por qué canal y a quién le llega la invitación.",
-        "messages": "La invitación, la información completa, los toques a quien no contesta y los recordatorios a quien confirma.",
+        "messages": "La invitación, la información completa, los toques a quien no contesta y los recordatorios del evento.",
         "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
         "review": "Nombre, cuándo sale, la revisión y las pruebas (los Casos corren solos)."
-      }
+      },
+      "EDIT_EVENT": "Editar evento",
+      "EVENT_ERROR": "No se pudo abrir el evento"
     },
     "REMINDERS": {
-      "TITLE": "Recordatorios a los que confirmaron",
-      "HINT": "Solo les llegan a los que dijeron que sí van (o se registraron).",
+      "TITLE": "Recordatorios del evento",
+      "HINT": "Solo a quien no ha dicho que no. Elige para cada uno a quién le llega.",
       "KINDS": {
         "day_before": "Un día antes",
         "hour_before": "Una hora antes, con la liga"
       },
       "VARIABLES": "Puedes usar {{nombre}} {{evento}} {{cuando}} {{lugar}} {{liga}}. Vacío = el texto en gris.",
-      "TEMPLATE": "Plantilla para los recordatorios",
+      "TEMPLATE": "Plantilla para los que confirmaron",
       "NO_TEMPLATE": "Sin plantilla",
-      "TEMPLATE_HINT": "WhatsApp solo deja escribir libre 24 h después de su último mensaje; pasado eso, el recordatorio sale con esta plantilla."
+      "TEMPLATE_HINT": "WhatsApp solo deja escribir libre 24 h después de su último mensaje; pasado eso, el recordatorio sale con esta plantilla.",
+      "WHO": {
+        "confirmed": "Solo a los que confirmaron",
+        "pending": "Confirmados y los que no han contestado"
+      },
+      "TO_CONFIRMED": "A los que confirmaron",
+      "TO_PENDING": "A los que no han contestado (última invitación)",
+      "NEVER": "Nunca a los que dijeron que no, pidieron que no les escribieran, se dieron de baja o ya atiende una persona. A quien no ha contestado y todavía tenía toques, ya no le salen.",
+      "PENDING_TEMPLATE": "Plantilla para los que no han contestado",
+      "SAME_TEMPLATE": "La misma de los confirmados",
+      "COST_HINT": " A los que no han contestado casi siempre les llega con plantilla: Meta la cobra como mensaje de marketing."
+    },
+    "OFFER_FLOW": {
+      "STEPS": {
+        "offer": "La oferta",
+        "interest": "Cuando le interesa",
+        "audience": "A quién",
+        "messages": "Mensajes",
+        "replies": "Cuando contesta",
+        "review": "Revisar y lanzar"
+      },
+      "HINTS": {
+        "offer": "Qué ofreces (del Catálogo), a qué precio de promoción, hasta cuándo y lo que la IA debe saber.",
+        "interest": "Qué hace la IA cuando le interesa. Elige una opción; abajo sale solo lo que necesita.",
+        "audience": "Por qué canal y a quién le llega la oferta.",
+        "messages": "La apertura, la información completa, los toques a quien no contesta y qué pasa si contestó y se calla.",
+        "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
+        "review": "Nombre, cuándo sale, la revisión y las pruebas (los Casos corren solos)."
+      },
+      "PRODUCTS_TITLE": "¿Qué ofreces?",
+      "PRODUCTS_HINT": "Busca en tu Catálogo: cada producto llega con su nombre, precio, descripción y foto (la foto se agrega sola como imagen de la oferta). Pon el precio de promoción o el % de descuento.",
+      "NORMAL": "Precio normal: {price}",
+      "PROMO": "Precio de promoción",
+      "PROMO_PLACEHOLDER": "Sin promoción",
+      "REMOVE": "Quitar",
+      "NO_PRODUCTS": "¿No está en tu Catálogo? Escribe qué es y su precio abajo, en «Lo que sabe la IA».",
+      "VALID_UNTIL": "Vigencia: hasta el",
+      "VALID_HINT": "Ese día termina la campaña sola; después, la IA dice que la promoción ya terminó y cotiza al precio normal.",
+      "KNOWLEDGE_TITLE": "Lo que sabe la IA de la oferta",
+      "INTEREST": {
+        "CHOICES": {
+          "relay": "Lo paso a alguien",
+          "quote": "Le armo la cotización",
+          "appointment": "Le agendo una cita",
+          "external": "Compra en línea"
+        },
+        "ABOUT": {
+          "relay": "La IA resuelve dudas y, cuando le interesa, lo pasa al agente de la bandeja o a una persona.",
+          "quote": "La IA arma la cotización con el precio de promoción (borrador o se la manda) y lo pasa.",
+          "appointment": "La IA le ofrece horarios y agenda en el calendario de quien elijas.",
+          "external": "Le mandamos la liga de compra y lo damos por logrado cuando escribe la palabra clave."
+        },
+        "QUOTE_PROMO": "Mientras dure la vigencia, la cotización lleva el precio de promoción de cada producto; después, el normal.",
+        "RELAY_TO": "Después, lo pasa a",
+        "CALENDARS": "¿En el calendario de quién?",
+        "NO_CALENDARS": "Nadie tiene Google Calendar conectado.",
+        "PURCHASE_URL": "Liga de compra",
+        "PURCHASE_PLACEHOLDER": "https://tutienda.com/promo",
+        "PURCHASE_NAME": "Compra",
+        "KEYWORD": "Palabra clave",
+        "KEYWORD_HINT": "Cuando escribe esta palabra (ej. LISTO), queda como logrado.",
+        "QUOTE_MODES": {
+          "draft": "La arma en borrador y avisa al vendedor para que la revise y la mande",
+          "send": "La arma y se la manda al cliente (con el precio de promoción) y avisa al vendedor"
+        }
+      },
+      "ENDS_AT_VALIDITY": "Termina sola cuando vence la promoción.",
+      "BUILD_CONTENT": "Armar la información completa con la oferta",
+      "CONTENT_VALID": "Vigente hasta el {date}.",
+      "SILENT_TITLE": "Si contestó y luego se calla",
+      "SILENT_HINT": "Los toques son para quien nunca contestó; esto es para quien ya platicó y dejó de contestar.",
+      "WHO": "A quién se lo ofreces"
+    },
+    "REACT_FLOW": {
+      "STEPS": {
+        "audience": "A quién reactivas",
+        "offer": "Qué les ofreces",
+        "interest": "Cuando le interesa",
+        "messages": "Mensajes",
+        "replies": "Cuando contesta",
+        "review": "Revisar y lanzar"
+      },
+      "HINTS": {
+        "audience": "Los clientes que ya no compran: elige desde hace cuántos días y el canal. En la muestra ves lo último que compró cada uno.",
+        "offer": "La novedad o el incentivo para que vuelvan (del Catálogo con precio de promoción, o escrito), hasta cuándo y lo que sabe la IA.",
+        "interest": "Qué hace la IA cuando le interesa volver. Elige una opción; abajo sale solo lo que necesita.",
+        "messages": "La apertura (puede usar {{ultima_compra}}), la información completa, los toques y qué pasa si contestó y se calla.",
+        "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
+        "review": "Nombre, cuándo sale, la revisión y las pruebas (los Casos corren solos)."
+      },
+      "DAYS": "No compran desde hace (días)",
+      "CATEGORY": "De la categoría (opcional)",
+      "ANY_CATEGORY": "Cualquier producto",
+      "DAYS_HINT": "Cuenta su última cotización ganada o contrato. Quien tiene un contrato activo no entra (sigue siendo cliente).",
+      "LAST_PURCHASE": "· {what}, hace {days} días",
+      "PRODUCTS_TITLE": "¿Qué les ofreces para que vuelvan?",
+      "PRODUCTS_HINT": "Busca en tu Catálogo y pon el precio de promoción o el % de descuento (la foto se agrega sola). O escribe la novedad o el incentivo abajo.",
+      "NO_PRODUCTS": "¿No es un producto? Escribe la novedad o el incentivo abajo, en «Lo que sabe la IA».",
+      "KNOWLEDGE_TITLE": "Lo que sabe la IA para reactivarlos",
+      "WHO": "A quién reactivas"
+    },
+    "RENEW_FLOW": {
+      "STEPS": {
+        "due": "Qué recuerdas",
+        "pay": "Cómo se paga",
+        "messages": "Mensajes",
+        "replies": "Cuando contesta",
+        "review": "Revisar y lanzar"
+      },
+      "HINTS": {
+        "due": "De qué contratos y en qué días antes de vencer salen los mensajes; cada contacto los recibe según SU fecha.",
+        "pay": "Qué cuenta como logrado y lo que sabe la IA para que pague o renueve (lo que le vence sale de su contrato).",
+        "messages": "El texto de cada recordatorio (puede usar {{que_vence}}, {{vence}} y {{monto}}).",
+        "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
+        "review": "Nombre, la revisión y las pruebas. Queda prendida: cada mañana entran los contratos que ya les toca."
+      },
+      "WHO": "Quiénes entran ahora",
+      "DUE_LINE": "· {what}: {date} {amount}",
+      "TYPE": "¿De qué contratos?",
+      "ALL_TYPES": "Todos los tipos",
+      "WHEN_TITLE": "¿Cuándo se le escribe?",
+      "ON_DAY": "el día que vence",
+      "ONE_DAY": "día antes",
+      "DAYS_BEFORE": "días antes",
+      "REMOVE": "Quitar",
+      "ADD": "+ Otro día",
+      "WHEN_HINT": "Hasta 4 días. Cada contacto entra cuando su contrato ya cae en el primero y recibe un mensaje en cada día (a las 10 a.m.). Si contesta, ya no salen los que faltan.",
+      "PACE": "Toques: {days} días antes de que venza (según la fecha de cada contrato).",
+      "PAY": {
+        "GOAL_TITLE": "¿Qué cuenta como logrado?",
+        "GOALS": {
+          "done": "Dice que ya pagó o renovó",
+          "relay": "Lo paso a alguien",
+          "external": "Paga en línea y avisa"
+        },
+        "ABOUT": {
+          "done": "Queda una tarea para que el responsable del contrato verifique el pago.",
+          "relay": "A la persona o equipo que elijas, para cobrar o renovar.",
+          "external": "Le mandamos la liga de pago y lo damos por logrado cuando escribe la palabra clave."
+        },
+        "PAYMENT_PLACEHOLDER": "Liga de pago: https://…",
+        "PAYMENT_NAME": "Pago",
+        "KNOWLEDGE_TITLE": "Lo que sabe la IA (cómo pagar, dónde, qué pasa si no…)"
+      }
+    },
+    "SURVEY_FLOW": {
+      "STEPS": {
+        "questions": "Las preguntas",
+        "low": "Si califica bajo",
+        "audience": "A quién",
+        "messages": "Mensajes",
+        "replies": "Cuando contesta",
+        "review": "Revisar y lanzar"
+      },
+      "HINTS": {
+        "questions": "Hasta 5 preguntas, cada una con su tipo. La IA las hace tal cual, una por mensaje, en este orden.",
+        "low": "Qué pasa si alguien califica bajo: a quién le llega el caso y qué se le contesta.",
+        "audience": "Por qué canal y a quién: de entrada, los que atendiste en los últimos días.",
+        "messages": "La invitación a contestar (en correo, la primera pregunta va con botones) y los toques a quien no contesta.",
+        "replies": "Qué contesta al terminar o si no quiere contestar, y la etiqueta que le queda.",
+        "review": "Nombre, cuándo sale, la revisión y las pruebas (los Casos corren solos)."
+      },
+      "WHO": "A quién le preguntas",
+      "QUESTIONS_TITLE": "Las preguntas",
+      "QUESTIONS_HINT": "La de 0 a 10 da el NPS en Resultados. En las de calificación, menor al número es «baja» y levanta un caso.",
+      "TYPES": {
+        "scale10": "Del 0 al 10",
+        "scale5": "Del 1 al 5",
+        "yesno": "Sí o no",
+        "open": "Abierta"
+      },
+      "PLACEHOLDERS": {
+        "scale10": "¿Qué tan probable es que nos recomiendes?",
+        "scale5": "¿Cómo calificas la atención?",
+        "yesno": "¿Se resolvió lo que necesitabas?",
+        "open": "¿Qué podemos mejorar?"
+      },
+      "LOW_BELOW": "Baja si es menor a",
+      "REMOVE": "Quitar",
+      "ADD": "+ Agregar pregunta",
+      "KNOWLEDGE_TITLE": "Lo que sabe la IA (para qué es, cuánto tarda…)",
+      "DAYS": "Atendidos en los últimos (días)",
+      "DAYS_HINT": "Caso resuelto o cerrado, o cotización ganada, en esos días.",
+      "LOW": {
+        "CASE_TITLE": "El caso por calificación baja",
+        "CASE_HINT": "Se levanta un caso con sus respuestas para que alguien lo atienda.",
+        "USER": "Se le asigna a",
+        "TEAM": "Equipo",
+        "NOBODY": "— A nadie —",
+        "NO_TEAM": "— Sin equipo —",
+        "CASE_TYPE": "Tipo de caso",
+        "FIRST_SUPPORT": "El primero de soporte",
+        "PRIORITY": "Prioridad",
+        "PRIORITIES": {
+          "low": "Baja",
+          "medium": "Media",
+          "high": "Alta",
+          "urgent": "Urgente"
+        },
+        "REPLY_TITLE": "Qué le contesta al cliente",
+        "REPLY_HINT": "Sale tal cual al terminar la encuesta si alguna respuesta fue baja. Vacío = el texto en gris."
+      }
     }
   }
 }

@@ -26,6 +26,8 @@ export default {
   props: {
     value: { type: Object, required: true },
     signature: { type: String, default: '' },
+    // Las variables que tiene este tipo de campaña ({{ultima_compra}} en Reactivar, {{que_vence}} en Recordar…).
+    vars: { type: Array, default: () => ['contacto', 'empresa'] },
   },
   emits: ['input'],
   computed: {
@@ -139,7 +141,7 @@ export default {
         class="flex gap-2"
       >
         <button
-          v-for="name in ['contacto', 'empresa']"
+          v-for="name in vars"
           :key="name"
           type="button"
           class="px-2 text-xs rounded bg-slate-50 dark:bg-slate-700 text-woot-600"

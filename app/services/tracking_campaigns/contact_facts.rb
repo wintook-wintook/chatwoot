@@ -6,7 +6,8 @@
 #   last_purchase       lo último que compró: la cotización ganada más reciente (sus 3 primeros conceptos) o, si no
 #                       hay, su contrato más reciente
 #   last_purchase_date  cuándo · days_since: hace cuántos días
-#   due_what / due_date / due_amount   lo que le vence: su contrato activo más próximo a cobrarse o terminar; si no
+#   due_what / due_date / due_amount   lo que le vence: el contrato que le recuerda su campaña de Recordar; si no,
+#                       su contrato activo más próximo a cobrarse o terminar; si no
 #                       tiene, su saldo vencido o por vencer en Cobranza (cartera)
 #
 #   TrackingCampaigns::ContactFacts.new(contact).values → { 'last_purchase' => …, 'due_date' => '30 de noviembre', … }
@@ -52,12 +53,23 @@ class TrackingCampaigns::ContactFacts
   end
 
   def due
+    linked = campaign_contract
+    return contract_due(linked) if linked
+
     contract = Contract.where(account_id: @contact.account_id, contact_id: @contact.id, status: :active)
                        .where('next_charge_on IS NOT NULL OR ends_on IS NOT NULL')
                        .order(Arel.sql('LEAST(COALESCE(next_charge_on, ends_on), COALESCE(ends_on, next_charge_on))')).first
     return contract_due(contract) if contract
 
     receivables_due
+  end
+
+  # Recordar: el contrato que su campaña le recuerda (TrackingCampaigns::RenewEnroll), si sigue activo.
+  def campaign_contract
+    tracking = ContactTracking.where(account_id: @contact.account_id, contact_id: @contact.id).where.not(contract_id: nil)
+                              .order(created_at: :desc).first
+    contract = tracking&.contract
+    contract if contract&.active?
   end
 
   def contract_due(contract)

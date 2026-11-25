@@ -87,7 +87,7 @@ class Api::V1::Accounts::CatalogItemsController < Api::V1::Accounts::BaseControl
   def filtered
     items = catalog.search(params[:q])
     items = items.where(kind: params[:kind]) if CatalogItem.kinds.key?(params[:kind].to_s)
-    items = by_category(items)
+    items = by_ids(by_category(items))
     case params[:active].to_s
     when 'all' then items
     when 'false' then items.where(active: false)
@@ -193,6 +193,11 @@ class Api::V1::Accounts::CatalogItemsController < Api::V1::Accounts::BaseControl
   end
 
   YES = %w[si sí yes true 1 x].freeze
+
+  # Los de una campaña (Ofrecer: ?ids=1,2).
+  def by_ids(items)
+    params[:ids].present? ? items.where(id: params[:ids].to_s.split(',').map(&:to_i)) : items
+  end
 
   # Por categoría: la del texto (como antes) o la de la lista con sus subcategorías.
   def by_category(items)

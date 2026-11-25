@@ -182,11 +182,17 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
   end
 
   def interest_when
-    return 'Llámala en cuanto muestre interés (pide precio, detalles, quiere comprar o que lo contacten).' unless content?
-
-    'Llámala cuando YA lo quiere (comprar, apartar, cotización, que lo contacten para cerrar); si solo pide información, ' \
-      'usa enviar_informacion.'
+    base = if content?
+             'Llámala cuando YA lo quiere (comprar, apartar, que lo contacten para cerrar); si solo pide información, usa enviar_informacion.'
+           else
+             'Llámala cuando muestre interés de verdad (quiere comprar, apartar o que lo contacten); si solo pregunta un dato ' \
+               '(precio, vigencia, condiciones), contéstalo con LA FICHA y pregúntale si le interesa.'
+           end
+    quote_first? ? "#{base} Si pide una COTIZACIÓN, primero llama cotizar y después esta herramienta." : base
   end
+
+  # Ofrecer con cotización: la cotización va antes del relevo.
+  def quote_first? = function.respond_to?(:quote_mode) && function.quote_mode.to_s != 'off' && !function.survey?
 
   def achieved!(note)
     @turn.decide('achieved', note.presence || 'Lo hizo')

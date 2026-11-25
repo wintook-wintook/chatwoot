@@ -84,6 +84,11 @@ class Motor2::Functions::CampaignSeller
 
   def low_score = (answer(:low_score).presence || LOW_SCORE).to_i
 
+  # Encuesta: las preguntas con tipo y si esa respuesta es baja (TrackingCampaigns::SurveyItems).
+  def survey_items = Array(answer(:survey_items))
+
+  def low_answer?(number, value) = TrackingCampaigns::SurveyItems.low?(survey_items, number, value, low_score)
+
   def relay_to_person? = answer(:relay) == 'person'
 
   def handoff_target = { user_id: answer(:user_id), team_id: answer(:team_id) }
@@ -159,10 +164,26 @@ class Motor2::Functions::CampaignSeller
     end
     # El vendedor de Agentes listos (sin campaña) trae su «precio, vigencia y condiciones».
     rows << "- Precio, vigencia y condiciones: #{answer(:offer_details)}" if answer(:offer_details).present?
+    rows.concat(offer_rows)
     return '' if rows.empty?
 
     'LA FICHA (es lo ÚNICO que sabes de esta campaña y lo puedes decir, aunque sea un precio o costo; si te preguntan algo ' \
       "que no está aquí ni en tus fuentes, di que no tienes ese dato confirmado y no lo inventes):\n#{rows.join("\n")}"
+  end
+
+  # Ofrecer: los productos del Catálogo con su precio de promoción y la vigencia (TrackingCampaigns::OfferProducts).
+  def offer_rows
+    products = Array(answer(:products))
+    return [] if products.empty? && answer(:valid_until).blank?
+
+    rows = TrackingCampaigns::OfferProducts.lines(config.account, products, answer(:valid_until))
+    rows.unshift('- Productos de la promoción (precio normal → de promoción):') if rows.any?
+    [*rows, TrackingCampaigns::OfferProducts.vigencia_line(answer(:valid_until))].compact
+  end
+
+  # Para cotizar: el precio de promoción de ese producto mientras dure (Motor2::Skills::Quote).
+  def promo_price_for(catalog_item)
+    TrackingCampaigns::OfferProducts.promo_price(answer(:products), answer(:valid_until), catalog_item)
   end
 
   LINK_USE = {

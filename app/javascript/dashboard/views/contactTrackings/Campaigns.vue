@@ -16,6 +16,7 @@ import Motor2CampaignsAPI from 'dashboard/api/motor2Campaigns';
 import CampaignForm from 'dashboard/components/contacts/BulkTrackingAssign/CampaignForm.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import CampaignLaunchModal from './CampaignLaunchModal.vue';
+import CampaignKindPicker from 'dashboard/views/campaigns2/CampaignKindPicker.vue';
 import { progressPct, sortCampaigns, sortFromParams } from './campaignsTable';
 
 const STATUS_COLOR = {
@@ -27,7 +28,13 @@ const STATUS_COLOR = {
 };
 
 export default {
-  components: { CampaignForm, CampaignLaunchModal, TableFooter, VeTable },
+  components: {
+    CampaignForm,
+    CampaignLaunchModal,
+    CampaignKindPicker,
+    TableFooter,
+    VeTable,
+  },
   data() {
     return {
       // Campaña con Vendedor IA: el modal «¿Qué campaña?» (1.0 o 2.0)
@@ -484,19 +491,13 @@ export default {
     onPageChange(page) {
       this.currentPage = page;
     },
-    // Campaña con Vendedor IA (Motor 2.0): antes de la 1.0 se elige cuál.
+    // Nueva campaña: solo Motor 2.0 (la 1.0 ya no se crea); se elige el tipo y se entra directo a su asistente.
     goToNew() {
       this.showEngineChoice = true;
     },
-    newClassic() {
+    newMotor2Kind(kind) {
       this.showEngineChoice = false;
-      this.presetFilter = null;
-      this.campaignToCopy = null;
-      this.activeTab = 'new';
-    },
-    newMotor2() {
-      this.showEngineChoice = false;
-      this.$router.push({ name: 'campaigns2_new' });
+      this.$router.push({ name: 'campaigns2_new', query: { kind } });
     },
     // Una 2.0 abre su pantalla nueva (Guardada: el asistente; si no, su tablero).
     openRow(row) {
@@ -931,49 +932,17 @@ export default {
       @close="closeLaunch"
       @confirm="confirmLaunch"
     />
-    <!-- Campaña con Vendedor IA: elegir 1.0 o 2.0 -->
+    <!-- Nueva campaña (Motor 2.0): elegir el tipo -->
     <woot-modal
       :show="showEngineChoice"
       :on-close="() => (showEngineChoice = false)"
     >
       <woot-modal-header
-        :header-title="$t('CAMPAIGNS2.CHOICE.TITLE')"
-        :header-content="$t('CAMPAIGNS2.CHOICE.SUBTITLE')"
+        :header-title="$t('CAMPAIGNS2.CHOICE.KIND_TITLE')"
+        :header-content="$t('CAMPAIGNS2.CHOICE.KIND_SUBTITLE')"
       />
-      <div class="grid grid-cols-1 gap-3 px-8 pb-8 sm:grid-cols-2">
-        <button
-          type="button"
-          class="flex flex-col gap-1 p-4 text-left border rounded-lg border-slate-100 dark:border-slate-700 hover:border-woot-200"
-          @click="newClassic"
-        >
-          <span
-            class="text-sm font-semibold text-slate-800 dark:text-slate-100"
-          >
-            {{ $t('CAMPAIGNS2.CHOICE.MOTOR1') }}
-          </span>
-          <span class="text-xs text-slate-600 dark:text-slate-300">
-            {{ $t('CAMPAIGNS2.CHOICE.MOTOR1_ABOUT') }}
-          </span>
-        </button>
-        <button
-          type="button"
-          class="flex flex-col gap-1 p-4 text-left border rounded-lg border-slate-100 dark:border-slate-700 hover:border-woot-200"
-          @click="newMotor2"
-        >
-          <span
-            class="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100"
-          >
-            {{ $t('CAMPAIGNS2.CHOICE.MOTOR2') }}
-            <span
-              class="px-1.5 py-0.5 text-[10px] font-semibold uppercase rounded bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100"
-            >
-              {{ $t('CAMPAIGNS2.CHOICE.BETA') }}
-            </span>
-          </span>
-          <span class="text-xs text-slate-600 dark:text-slate-300">
-            {{ $t('CAMPAIGNS2.CHOICE.MOTOR2_ABOUT') }}
-          </span>
-        </button>
+      <div class="px-8 pb-8">
+        <CampaignKindPicker @pick="newMotor2Kind" />
       </div>
     </woot-modal>
   </div>

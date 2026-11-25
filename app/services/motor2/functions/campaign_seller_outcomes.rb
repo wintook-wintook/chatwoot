@@ -60,7 +60,19 @@ class Motor2::Functions::CampaignSellerOutcomes
   def achieved(text)
     note("🎯 Lo logró: #{text}")
     label('achieved')
+    verify_payment(text) if @tracking.contract
     finish("Logrado: #{text}")
+  end
+
+  # Recordar: «ya pagué» lo dice el cliente; queda una tarea para que el responsable del contrato lo verifique.
+  def verify_payment(text)
+    contract = @tracking.contract
+    owner = contract.assignee || @tracking.tracking_campaign&.user
+    CaseTask.create!(account: contract.account, requester: owner, assignee: owner, contact: contract.contact,
+                     title: "Verificar pago: #{contract.title}".first(255), due_at: 1.day.from_now,
+                     description: "El cliente dice que ya pagó (campaña #{@tracking.tracking_campaign&.name}): #{text}".first(2000))
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.warn("[CampaignSellerOutcomes] tarea de pago #{@tracking.id}: #{e.message}")
   end
 
   # «No esta vez»: ya contestó (no salen más toques); se queda esperando si acepta que le escriban la próxima.
@@ -120,16 +132,24 @@ class Motor2::Functions::CampaignSellerOutcomes
   end
 
   def low_scores
-    state['survey'].to_h.values.filter_map { |v| v['calificacion'] }.map(&:to_i).select { |n| n < @function.low_score }
+    state['survey'].to_h.select { |number, v| @function.low_answer?(number, v['calificacion']) }.values
   end
 
   def low_score_case(answers)
-    type_id = @conversation.account.case_types.active.where(case_class: :support).order(:id).pick(:id)
-    target = @function.handoff_target
+    low_case = @function.answer(:low_case).to_h
+    type_id = low_case_type(low_case['case_type_id'])
+    target = low_case['user_id'] || low_case['team_id'] ? { user_id: low_case['user_id'], team_id: low_case['team_id'] } : @function.handoff_target
     Cases::OrchestratorService.new(account: @conversation.account, contact: @conversation.contact, conversation: @conversation)
                               .create_for_manual(title: "Encuesta con calificación baja: #{@conversation.contact&.name}".first(200),
-                                                 description: answers.join("\n"), case_type_id: type_id, priority: 'high',
+                                                 description: answers.join("\n"), case_type_id: type_id,
+                                                 priority: low_case['priority'] || 'high',
                                                  assignee_id: target[:user_id], team_id: target[:team_id])
+  end
+
+  # El tipo de caso que eligió la encuesta o, si no, el primero de soporte.
+  def low_case_type(id)
+    types = @conversation.account.case_types.active
+    (id && types.where(id: id).pick(:id)) || types.where(case_class: :support).order(:id).pick(:id)
   end
 
   # «Ahora no»: un toque más en N días. En WhatsApp, pasadas las 24 h solo sale con plantilla: si ese toque no tiene,

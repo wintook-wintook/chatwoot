@@ -40,11 +40,12 @@ module CatalogItemParameters
   # Lo que se copia a la partida: [{ 'id', 'name', 'percent' }]
   def quote_withholdings = withholding_rates.map(&:snapshot)
 
-  # El precio para la partida: sin el impuesto si el precio ya lo incluye.
-  def quote_unit_price
-    return price unless price_includes_tax?
+  # El precio para la partida: sin el impuesto si el precio ya lo incluye. base: otro precio con la misma regla
+  # (el de promoción de una campaña: TrackingCampaigns::OfferProducts).
+  def quote_unit_price(base = price)
+    return base unless price_includes_tax?
 
-    (price.to_d / (1 + (quote_tax_percent.to_d / 100))).round(2)
+    (base.to_d / (1 + (quote_tax_percent.to_d / 100))).round(2)
   end
 
   private

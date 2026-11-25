@@ -165,7 +165,10 @@
         "excluded": "Removed by you"
       },
       "list": "Upload an email list",
-      "EVENT_OF": "Attendees of this event"
+      "EVENT_OF": "Attendees of this event",
+      "inactive": "Not buying for…",
+      "served": "Recently served",
+      "contracts": "Contracts due soon"
     },
     "MESSAGES": {
       "CHANNEL": "Channel",
@@ -219,7 +222,12 @@
       "TEXT_PLACEHOLDER": "Hi {{contacto}}, …",
       "VAR": {
         "contacto": "+ name",
-        "empresa": "+ company"
+        "empresa": "+ company",
+        "oferta": "+ offer",
+        "ultima_compra": "+ last purchase",
+        "que_vence": "+ what is due",
+        "vence": "+ due date",
+        "monto": "+ amount"
       },
       "UP": "Move up",
       "DOWN": "Move down",
@@ -284,7 +292,10 @@
       "MOTOR2_ABOUT": "Offer, invite, reactivate, renew or survey by WhatsApp or email. The campaign AI Seller handles replies, quotes, books and hands off the interested contact.",
       "MOTOR1": "Classic campaign (Engine 1.0)",
       "MOTOR1_ABOUT": "As always: with a Custom agent and its card.",
-      "BETA": "Beta"
+      "BETA": "Beta",
+      "KIND_TITLE": "What do you want to do with this campaign?",
+      "KIND_SUBTITLE": "Pick the type. Each one has its own steps, file and replies; it cannot be changed later.",
+      "BACK": "‹ Back"
     },
     "STATUS": {
       "saved": "Saved",
@@ -418,7 +429,9 @@
         "future_yes": "Next time OK",
         "opt_out": "Do not want to hear from us",
         "LABEL": "label «{label}»"
-      }
+      },
+      "NPS": "NPS: {score} ({promoters} promoters · {passives} passives · {detractors} detractors)",
+      "COMMENTS": "Comments ({n})"
     },
     "LIST": {
       "HINT": "For an audience that doesn't know you. The list is cleaned before creating anything: missing or malformed email, duplicates, role addresses (info@, sales@…), previously unsubscribed or bounced, and domains that don't receive mail. If the email already belongs to a contact, that one is used. New ones are quarantined: they don't show in Contacts until they reply or click; those who never reply are deleted automatically.",
@@ -762,14 +775,14 @@
       "HIDE_ADVANCED": "Hide advanced options",
       "ENDS_AT_EVENT": "It ends on its own when the event starts.",
       "EVENT_TITLE": "Which event are you inviting to?",
-      "CREATE_EVENT": "Create an event ↗",
+      "CREATE_EVENT": "+ Create event",
       "PICK_EVENT": "Pick the event",
       "NO_EVENTS": "No events from today on. Create one in Events and come back.",
       "WHEN": "When",
       "WHERE": "Where",
       "LINK": "Link",
       "CAPACITY": "Capacity",
-      "FROM_EVENT_HINT": "The AI already knows this (it comes from the event). If something changes, change it in Events.",
+      "FROM_EVENT_HINT": "The AI already knows this (it comes from the event). If something changes, use «Edit event».",
       "CONFIRM_TITLE": "How do they confirm?",
       "GOALS": {
         "confirm": "Here in the chat",
@@ -795,22 +808,225 @@
       "HINTS": {
         "event": "The event you invite to, how they confirm and what the AI must know.",
         "audience": "Which channel and who gets the invitation.",
-        "messages": "The invitation, the full information, follow-ups to those who do not reply and reminders to those who confirm.",
+        "messages": "The invitation, the full information, follow-ups to those who do not reply and the event reminders.",
         "replies": "What it replies at each moment and the label the contact gets. They come ready; customize only if you want.",
         "review": "Name, when it goes out, the review and the tests (Cases run on their own)."
-      }
+      },
+      "EDIT_EVENT": "Edit event",
+      "EVENT_ERROR": "Could not open the event"
     },
     "REMINDERS": {
-      "TITLE": "Reminders to those who confirmed",
-      "HINT": "Only those who said yes (or registered) get them.",
+      "TITLE": "Event reminders",
+      "HINT": "Only to people who have not said no. Choose who gets each one.",
       "KINDS": {
         "day_before": "One day before",
         "hour_before": "One hour before, with the link"
       },
       "VARIABLES": "You can use {{nombre}} {{evento}} {{cuando}} {{lugar}} {{liga}}. Empty = the grey text.",
-      "TEMPLATE": "Template for reminders",
+      "TEMPLATE": "Template for those who confirmed",
       "NO_TEMPLATE": "No template",
-      "TEMPLATE_HINT": "WhatsApp only allows free text 24 h after their last message; after that, the reminder goes with this template."
+      "TEMPLATE_HINT": "WhatsApp only allows free text 24 h after their last message; after that, the reminder goes with this template.",
+      "WHO": {
+        "confirmed": "Only those who confirmed",
+        "pending": "Confirmed and those who have not replied"
+      },
+      "TO_CONFIRMED": "To those who confirmed",
+      "TO_PENDING": "To those who have not replied (last invitation)",
+      "NEVER": "Never to those who said no, asked not to be contacted, unsubscribed or are already with a person. Those who have not replied and still had follow-ups won't get them anymore.",
+      "PENDING_TEMPLATE": "Template for those who have not replied",
+      "SAME_TEMPLATE": "Same as confirmed",
+      "COST_HINT": " Those who have not replied almost always get it with a template: Meta charges it as a marketing message."
+    },
+    "OFFER_FLOW": {
+      "STEPS": {
+        "offer": "The offer",
+        "interest": "When interested",
+        "audience": "Who",
+        "messages": "Messages",
+        "replies": "When they reply",
+        "review": "Review and launch"
+      },
+      "HINTS": {
+        "offer": "What you offer (from the Catalog), the promo price, until when and what the AI must know.",
+        "interest": "What the AI does when they are interested. Pick one; below appears only what it needs.",
+        "audience": "Which channel and who gets the offer.",
+        "messages": "The opener, the full information, follow-ups to those who do not reply and what happens if they replied and went silent.",
+        "replies": "What it replies at each moment and the label the contact gets. They come ready; customize only if you want.",
+        "review": "Name, when it goes out, the review and the tests (Cases run on their own)."
+      },
+      "PRODUCTS_TITLE": "What do you offer?",
+      "PRODUCTS_HINT": "Search your Catalog: each product comes with its name, price, description and photo (the photo is added as the offer image). Set the promo price or the % off.",
+      "NORMAL": "Regular price: {price}",
+      "PROMO": "Promo price",
+      "PROMO_PLACEHOLDER": "No promo",
+      "REMOVE": "Remove",
+      "NO_PRODUCTS": "Not in your Catalog? Write what it is and its price below, in «What the AI knows».",
+      "VALID_UNTIL": "Valid until",
+      "VALID_HINT": "The campaign ends on its own that day; after it, the AI says the promo ended and quotes the regular price.",
+      "KNOWLEDGE_TITLE": "What the AI knows about the offer",
+      "INTEREST": {
+        "CHOICES": {
+          "relay": "Hand over to someone",
+          "quote": "Build the quote",
+          "appointment": "Book an appointment",
+          "external": "Buys online"
+        },
+        "ABOUT": {
+          "relay": "The AI answers questions and, when interested, hands over to the inbox agent or a person.",
+          "quote": "The AI builds the quote with the promo price (draft or sends it) and hands over.",
+          "appointment": "The AI offers times and books in the calendar of whoever you pick.",
+          "external": "We send the purchase link and count it as achieved when they write the keyword."
+        },
+        "QUOTE_PROMO": "While valid, the quote uses each product promo price; after that, the regular one.",
+        "RELAY_TO": "Then hands over to",
+        "CALENDARS": "In whose calendar?",
+        "NO_CALENDARS": "Nobody has Google Calendar connected.",
+        "PURCHASE_URL": "Purchase link",
+        "PURCHASE_PLACEHOLDER": "https://yourstore.com/promo",
+        "PURCHASE_NAME": "Purchase",
+        "KEYWORD": "Keyword",
+        "KEYWORD_HINT": "When they write this word (e.g. DONE), it counts as achieved.",
+        "QUOTE_MODES": {
+          "draft": "Builds a draft and tells the seller to review and send it",
+          "send": "Builds it and sends it to the customer (with the promo price) and tells the seller"
+        }
+      },
+      "ENDS_AT_VALIDITY": "It ends on its own when the promo expires.",
+      "BUILD_CONTENT": "Build the full information from the offer",
+      "CONTENT_VALID": "Valid until {date}.",
+      "SILENT_TITLE": "If they replied and then went silent",
+      "SILENT_HINT": "Follow-ups are for those who never replied; this is for those who chatted and stopped replying.",
+      "WHO": "Who gets the offer"
+    },
+    "REACT_FLOW": {
+      "STEPS": {
+        "audience": "Who to win back",
+        "offer": "What you offer",
+        "interest": "When interested",
+        "messages": "Messages",
+        "replies": "When they reply",
+        "review": "Review and launch"
+      },
+      "HINTS": {
+        "audience": "Customers who stopped buying: pick since how many days and the channel. The sample shows what each one last bought.",
+        "offer": "The news or incentive to come back (from the Catalog with a promo price, or written), until when and what the AI knows.",
+        "interest": "What the AI does when they want to come back. Pick one; below appears only what it needs.",
+        "messages": "The opener (can use {{ultima_compra}}), the full information, follow-ups and what happens if they replied and went silent.",
+        "replies": "What it replies at each moment and the label the contact gets. They come ready; customize only if you want.",
+        "review": "Name, when it goes out, the review and the tests (Cases run on their own)."
+      },
+      "DAYS": "Not buying for (days)",
+      "CATEGORY": "From category (optional)",
+      "ANY_CATEGORY": "Any product",
+      "DAYS_HINT": "Uses their last won quote or contract. Anyone with an active contract is left out (still a customer).",
+      "LAST_PURCHASE": "· {what}, {days} days ago",
+      "PRODUCTS_TITLE": "What do you offer so they come back?",
+      "PRODUCTS_HINT": "Search your Catalog and set the promo price or % off (the photo is added). Or write the news or incentive below.",
+      "NO_PRODUCTS": "Not a product? Write the news or incentive below, in «What the AI knows».",
+      "KNOWLEDGE_TITLE": "What the AI knows to win them back",
+      "WHO": "Who to win back"
+    },
+    "RENEW_FLOW": {
+      "STEPS": {
+        "due": "What you remind",
+        "pay": "How to pay",
+        "messages": "Messages",
+        "replies": "When they reply",
+        "review": "Review and launch"
+      },
+      "HINTS": {
+        "due": "Which contracts and how many days before they are due the messages go out; each contact gets them by THEIR date.",
+        "pay": "What counts as achieved and what the AI knows so they pay or renew (what is due comes from their contract).",
+        "messages": "The text of each reminder (can use {{que_vence}}, {{vence}} and {{monto}}).",
+        "replies": "What it replies at each moment and the label the contact gets. They come ready; customize only if you want.",
+        "review": "Name, the review and the tests. It stays on: each morning the contracts that are due soon come in."
+      },
+      "WHO": "Who comes in now",
+      "DUE_LINE": "· {what}: {date} {amount}",
+      "TYPE": "Which contracts?",
+      "ALL_TYPES": "All types",
+      "WHEN_TITLE": "When do we write?",
+      "ON_DAY": "on the due date",
+      "ONE_DAY": "day before",
+      "DAYS_BEFORE": "days before",
+      "REMOVE": "Remove",
+      "ADD": "+ Another day",
+      "WHEN_HINT": "Up to 4 days. Each contact comes in when their contract falls in the first one and gets a message on each day (10 a.m.). If they reply, the rest stop.",
+      "PACE": "Follow-ups: {days} days before due (by each contract date).",
+      "PAY": {
+        "GOAL_TITLE": "What counts as achieved?",
+        "GOALS": {
+          "done": "Says they already paid or renewed",
+          "relay": "Hand over to someone",
+          "external": "Pays online and tells us"
+        },
+        "ABOUT": {
+          "done": "A task is created for the contract owner to verify the payment.",
+          "relay": "To the person or team you pick, to collect or renew.",
+          "external": "We send the payment link and count it achieved when they write the keyword."
+        },
+        "PAYMENT_PLACEHOLDER": "Payment link: https://…",
+        "PAYMENT_NAME": "Payment",
+        "KNOWLEDGE_TITLE": "What the AI knows (how to pay, where, what if not…)"
+      }
+    },
+    "SURVEY_FLOW": {
+      "STEPS": {
+        "questions": "The questions",
+        "low": "If the rating is low",
+        "audience": "Who",
+        "messages": "Messages",
+        "replies": "When they reply",
+        "review": "Review and launch"
+      },
+      "HINTS": {
+        "questions": "Up to 5 questions, each with its type. The AI asks them as written, one per message, in this order.",
+        "low": "What happens if someone rates low: who gets the case and what we reply.",
+        "audience": "Which channel and who: by default, those you served in the last days.",
+        "messages": "The invitation to answer (by email the first question has buttons) and follow-ups to those who do not reply.",
+        "replies": "What it replies at the end or if they do not want to answer, and the label they get.",
+        "review": "Name, when it goes out, the review and the tests (Cases run on their own)."
+      },
+      "WHO": "Who you ask",
+      "QUESTIONS_TITLE": "The questions",
+      "QUESTIONS_HINT": "The 0–10 one gives the NPS in Results. In rating questions, below the number is «low» and opens a case.",
+      "TYPES": {
+        "scale10": "0 to 10",
+        "scale5": "1 to 5",
+        "yesno": "Yes or no",
+        "open": "Open"
+      },
+      "PLACEHOLDERS": {
+        "scale10": "How likely are you to recommend us?",
+        "scale5": "How do you rate our service?",
+        "yesno": "Was your issue solved?",
+        "open": "What can we improve?"
+      },
+      "LOW_BELOW": "Low if below",
+      "REMOVE": "Remove",
+      "ADD": "+ Add question",
+      "KNOWLEDGE_TITLE": "What the AI knows (purpose, how long…)",
+      "DAYS": "Served in the last (days)",
+      "DAYS_HINT": "Case resolved or closed, or quote won, in those days.",
+      "LOW": {
+        "CASE_TITLE": "The low rating case",
+        "CASE_HINT": "A case is opened with their answers so someone follows up.",
+        "USER": "Assigned to",
+        "TEAM": "Team",
+        "NOBODY": "— Nobody —",
+        "NO_TEAM": "— No team —",
+        "CASE_TYPE": "Case type",
+        "FIRST_SUPPORT": "The first support type",
+        "PRIORITY": "Priority",
+        "PRIORITIES": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "urgent": "Urgent"
+        },
+        "REPLY_TITLE": "What we reply to the customer",
+        "REPLY_HINT": "Sent as written at the end if any answer was low. Empty = the grey text."
+      }
     }
   }
 }

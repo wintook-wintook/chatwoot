@@ -91,7 +91,15 @@ describe('CampaignWizard', () => {
       sources: ['catalog'],
     });
     expect(w.vm.body().attend.settings.tone).toBe('empresa');
-    expect(w.vm.steps).toContain('attend');
+    // Ofrecer: proceso guiado (cómo atiende va en «Cuando le interesa» y en opciones avanzadas).
+    expect(w.vm.steps).toEqual([
+      'offer',
+      'interest',
+      'audience',
+      'messages',
+      'replies',
+      'review',
+    ]);
     await w.vm.$nextTick();
     expect(w.vm.form.brief.offer_what).toBe('');
     w.vm.form.audience.source = { type: 'label', label: 'vip' };
