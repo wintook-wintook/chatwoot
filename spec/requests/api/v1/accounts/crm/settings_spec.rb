@@ -13,15 +13,16 @@ RSpec.describe 'CrmZeus Settings API' do
     get url, headers: agent.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body['settings']).to eq('require_delivery_date' => false, 'show_article_notes' => true)
+    defaults = { 'require_delivery_date' => false, 'show_article_notes' => true, 'show_kit_components' => false }
+    expect(response.parsed_body['settings']).to eq(defaults)
     expect(CrmSetting.where(account: account)).not_to exist
   end
 
   it 'el Administrador los cambia y los catálogos los traen' do
-    patch url, params: { settings: { require_delivery_date: true, show_article_notes: false } },
+    patch url, params: { settings: { require_delivery_date: true, show_article_notes: false, show_kit_components: true } },
                headers: admin.create_new_auth_token, as: :json
 
-    expected = { 'require_delivery_date' => true, 'show_article_notes' => false }
+    expected = { 'require_delivery_date' => true, 'show_article_notes' => false, 'show_kit_components' => true }
     expect(response.parsed_body['settings']).to eq(expected)
     get "/api/v1/accounts/#{account.id}/crm/catalogs", headers: agent.create_new_auth_token, as: :json
     expect(response.parsed_body['settings']).to eq(expected)

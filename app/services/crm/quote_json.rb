@@ -42,6 +42,8 @@ module Crm::QuoteJson
     AMOUNTS.index_with { |name| quote[name].to_f }.merge(
       extra_discount_type: quote.extra_discount_type, exchange_rate: quote.exchange_rate.to_f,
       sat_payment_method: quote.sat_payment_method, items: item_tree(quote),
+      # Q4.0 — «Cantidad en letra» del formulario de master2 (form.jade:402, numeroALetras).
+      amount_in_words: Crm::AmountInWords.new(quote.total, quote.currency&.amount_in_words).to_s,
       tax_summary: quote.tax_summary.map { |row| row.merge(row.slice(*TAX_AMOUNTS).transform_values(&:to_f)) }
     )
   end

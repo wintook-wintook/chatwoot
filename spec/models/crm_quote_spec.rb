@@ -57,6 +57,15 @@ RSpec.describe CrmQuote do
       expect(account.crm_quote_series.find_by!(user: agent).last_number).to eq(125)
     end
 
+    it 'lleva un token único para su página pública (Q4) y la moneda por omisión con el texto de master2' do
+      quote = inventory_example
+      other = inventory_example
+
+      expect(quote.public_token).to be_present
+      expect(quote.public_token).not_to eq(other.public_token)
+      expect(quote.currency.amount_in_words).to eq('PESOS/M.N.')
+    end
+
     it 'copia clave, descripción, unidad e impuesto al cotizar y guarda los importes de cada partida' do
       first = inventory_example.items.first.reload
 

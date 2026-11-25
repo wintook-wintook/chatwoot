@@ -43,6 +43,15 @@ RSpec.describe 'CrmZeus Quotes API' do
     response.parsed_body['quote']
   end
 
+  it 'trae la cantidad en letra del total al guardar y en el cálculo (Q4.0, como master2)' do
+    created = create_quote
+    expect(created).to include('total' => 1165.77, 'amount_in_words' => 'Un mil ciento sesenta y cinco PESOS 77/100 M.N.')
+
+    post "#{url}/calculate", params: { quote: payload(items: [{ description: 'Servicio', quantity: 1, unit_price: 100 }]) },
+                             headers: agent.create_new_auth_token, as: :json
+    expect(response.parsed_body['quote']['amount_in_words']).to eq('Cien PESOS 00/100 M.N.')
+  end
+
   it 'el borrador trae los defaults del cliente y la serie del agente' do
     get "#{url}/new", params: { organization_id: organization.id }, headers: agent.create_new_auth_token, as: :json
 

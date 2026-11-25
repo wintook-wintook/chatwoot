@@ -704,7 +704,13 @@ export default {
                 v-model="form.amount_in_words"
                 type="text"
                 maxlength="50"
+                :placeholder="
+                  $t('CRM_ZEUS.CATALOGS.AMOUNT_IN_WORDS_PLACEHOLDER')
+                "
               />
+              <span class="text-xs text-slate-500 dark:text-slate-400">
+                {{ $t('CRM_ZEUS.CATALOGS.AMOUNT_IN_WORDS_HINT') }}
+              </span>
             </label>
             <label class="flex items-center gap-2">
               <input v-model="form.is_local" type="checkbox" class="!m-0" />

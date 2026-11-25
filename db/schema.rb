@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_25_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1803,6 +1803,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
     t.bigint "updated_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "public_token", null: false
     t.index ["account_id", "folio"], name: "index_crm_quotes_on_account_id_and_folio", unique: true
     t.index ["account_id", "status", "quote_date"], name: "index_crm_quotes_on_account_id_and_status_and_quote_date"
     t.index ["account_id"], name: "index_crm_quotes_on_account_id"
@@ -1811,6 +1812,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
     t.index ["currency_id"], name: "index_crm_quotes_on_currency_id"
     t.index ["organization_id"], name: "index_crm_quotes_on_organization_id"
     t.index ["payment_term_id"], name: "index_crm_quotes_on_payment_term_id"
+    t.index ["public_token"], name: "index_crm_quotes_on_public_token", unique: true
     t.index ["seller_id"], name: "index_crm_quotes_on_seller_id"
     t.index ["shipping_address_id"], name: "index_crm_quotes_on_shipping_address_id"
     t.index ["status_changed_by_id"], name: "index_crm_quotes_on_status_changed_by_id"
@@ -1836,6 +1838,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_24_100000) do
     t.bigint "account_id", null: false
     t.boolean "require_delivery_date", default: false, null: false
     t.boolean "show_article_notes", default: true, null: false
+    t.boolean "show_kit_components", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_crm_settings_on_account_id", unique: true

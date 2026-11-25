@@ -262,6 +262,23 @@ describe('CrmZeusQuoteForm', () => {
     expect(copia.vm.quote.organization_id).toBe(7);
   });
 
+  it('muestra la cantidad en letra que manda el servidor', async () => {
+    CrmQuotes.draft.mockResolvedValue({
+      data: {
+        quote: {
+          ...DRAFT,
+          total: 100,
+          amount_in_words: 'Cien PESOS 00/100 M.N.',
+        },
+        series: null,
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.vm.totals.amount_in_words).toBe('Cien PESOS 00/100 M.N.');
+  });
+
   it('los días de entrega ponen la fecha', () => {
     expect(addDays('2026-11-28', 7)).toBe('2026-12-05');
   });

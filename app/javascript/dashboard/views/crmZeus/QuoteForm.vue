@@ -63,6 +63,7 @@ const AMOUNTS = [
   'total',
   'exchange_rate',
   'sat_payment_method',
+  'amount_in_words',
 ];
 const STATUS_ACTIONS = {
   won: { icon: 'checkmark', scheme: 'success' },
@@ -781,14 +782,6 @@ export default {
                 <input :value="totals.exchange_rate" type="text" disabled />
               </label>
             </div>
-            <label>
-              {{ $t('CRM_ZEUS.QUOTE_FORM.HEADER_NOTES') }}
-              <textarea v-model="quote.header_notes" rows="2" />
-            </label>
-            <label>
-              {{ $t('CRM_ZEUS.QUOTE_FORM.FOOTER_NOTES') }}
-              <textarea v-model="quote.footer_notes" rows="2" />
-            </label>
           </div>
         </fieldset>
       </form>
@@ -962,9 +955,27 @@ export default {
         </div>
       </section>
 
-      <!-- Totales -->
-      <section class="flex justify-end mt-4">
-        <table class="text-sm w-full max-w-md">
+      <!-- Observaciones y cantidad en letra a la izquierda, totales a la derecha (como master2,
+           form.jade:396-410). -->
+      <section class="grid gap-6 mt-4 lg:grid-cols-3">
+        <fieldset
+          :disabled="!editable"
+          class="flex flex-col gap-1 lg:col-span-2"
+        >
+          <label>
+            {{ $t('CRM_ZEUS.QUOTE_FORM.HEADER_NOTES') }}
+            <textarea v-model="quote.header_notes" rows="3" />
+          </label>
+          <label>
+            {{ $t('CRM_ZEUS.QUOTE_FORM.FOOTER_NOTES') }}
+            <textarea v-model="quote.footer_notes" rows="3" />
+          </label>
+          <label>
+            {{ $t('CRM_ZEUS.QUOTE_FORM.AMOUNT_IN_WORDS') }}
+            <textarea :value="totals.amount_in_words" rows="2" disabled />
+          </label>
+        </fieldset>
+        <table class="self-start w-full text-sm">
           <tbody>
             <tr>
               <td class="py-1 text-slate-600">

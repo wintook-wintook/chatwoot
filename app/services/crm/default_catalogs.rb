@@ -43,7 +43,7 @@ class Crm::DefaultCatalogs
     return if CrmCurrency.exists?(account: @account)
 
     CrmCurrency.create!(account: @account, name: 'Peso mexicano', iso_code: 'MXN', symbol: '$',
-                        amount_in_words: 'pesos M.N.', is_local: true, is_default: true)
+                        amount_in_words: 'PESOS/M.N.', is_local: true, is_default: true)
   end
 
   def ensure_cash_payment_term

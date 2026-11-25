@@ -18,6 +18,7 @@
 #  net_amount             :decimal(15, 2)   default(0.0), not null
 #  number                 :integer          not null
 #  other_charges          :decimal(15, 2)   default(0.0), not null
+#  public_token           :string           not null
 #  purchase_order         :string(35)
 #  purchase_order_date    :date
 #  quote_date             :date             not null
@@ -53,6 +54,7 @@
 #  index_crm_quotes_on_currency_id                           (currency_id)
 #  index_crm_quotes_on_organization_id                       (organization_id)
 #  index_crm_quotes_on_payment_term_id                       (payment_term_id)
+#  index_crm_quotes_on_public_token                          (public_token) UNIQUE
 #  index_crm_quotes_on_seller_id                             (seller_id)
 #  index_crm_quotes_on_shipping_address_id                   (shipping_address_id)
 #  index_crm_quotes_on_status_changed_by_id                  (status_changed_by_id)
@@ -88,6 +90,8 @@ class CrmQuote < ApplicationRecord
     'lost' => %w[pending cancelled],
     'cancelled' => %w[lost]
   }.freeze
+
+  has_secure_token :public_token
 
   belongs_to :account
   belongs_to :organization, class_name: 'CrmOrganization'
