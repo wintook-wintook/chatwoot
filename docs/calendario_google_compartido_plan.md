@@ -349,6 +349,23 @@ Google **vencido** (camion01) se puede ver igual si compartió; basta su correo.
 - eslint: ningún archivo quedó con más hallazgos que antes (los previos no se tocaron).
 - **Navegador (pendiente, con Admin #1 y Andres #4 en la cuenta 2):** pasos 1–7 de la §6 F6.
 
+#### F3 — ajustes tras la primera revisión del usuario (25/11/2026)
+
+Pedido: «no veo el botón de compartir (que sea más notorio)», «al palomear no se actualiza
+rápido», «si marco un calendario de compañeros, ¿debe aparecer en Calendarios?».
+
+- **Compañeros dentro de «Calendarios»** (como «Otros calendarios» de Google): grupo
+  «👥 Compañeros» bajo tus cuentas, con el mismo cuadrito de color para palomear; desaparece
+  la sección aparte. Punto rojo = ocupado ahora.
+- **Palomear instantáneo:** se cargan de antemano los eventos de TODOS los que te comparten
+  (no solo los palomeados); palomear solo muestra/oculta. Se vuelven a pedir al cambiar de
+  semana o cuando alguien empieza/deja de compartir. Medido en dev: las rutas responden en
+  0.2–0.6 s; la «lentitud» era pedir al palomear + que Andres no tiene eventos.
+- Palomeado sin eventos en las fechas visibles → «Sin eventos en estas fechas».
+- **«Compartir mi calendario» en la barra de arriba** (junto a «Nueva tarea agendada»), además
+  del enlace al pie del grupo Compañeros.
+- Store spec reescrita (7 casos); specs del front de calendario/agenda: 38/38.
+
 ### F3b — «Agendar a» un compañero (sin quedar en mi calendario)
 
 Hoy (`CreateEventModal.vue`) el evento se crea siempre en un calendario de quien agenda y a los

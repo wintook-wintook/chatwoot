@@ -138,6 +138,97 @@
           </div>
         </div>
 
+        <!-- fix/calendario_google — Compañeros, como «Otros calendarios» de Google: solo
+             se ve lo que cada uno te compartió. Palomear es instantáneo (ya están cargados). -->
+        <div class="select-none">
+          <button
+            class="w-full flex items-center gap-1 px-1 py-1 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+            @click="toggleAccount('coworkers')"
+          >
+            <fluent-icon
+              :icon="
+                isAccountOpen('coworkers') ? 'chevron-down' : 'chevron-right'
+              "
+              size="12"
+              class="text-slate-400 flex-shrink-0"
+            />
+            <fluent-icon
+              icon="people"
+              size="13"
+              class="text-slate-400 flex-shrink-0"
+            />
+            <span
+              class="text-xs font-medium text-slate-600 dark:text-slate-300 truncate"
+            >
+              {{ $t('GOOGLE_CALENDAR.COWORKERS.TITLE') }}
+            </span>
+          </button>
+
+          <div v-if="isAccountOpen('coworkers')" class="pl-5 mt-0.5 space-y-1">
+            <p
+              v-if="coworkersNotice"
+              class="text-xs text-slate-500 dark:text-slate-400"
+            >
+              {{ coworkersNotice }}
+            </p>
+            <template v-else>
+              <p
+                v-if="!coworkerRows.length"
+                class="text-xs text-slate-400 dark:text-slate-500"
+              >
+                {{ $t('GOOGLE_CALENDAR.COWORKERS.EMPTY') }}
+              </p>
+              <label
+                v-for="row in coworkerRows"
+                :key="row.agentId"
+                class="flex items-center gap-2 py-0.5"
+                :class="row.selectable ? 'cursor-pointer' : 'cursor-default'"
+                :title="row.help"
+              >
+                <span
+                  class="w-3 h-3 rounded-sm flex-shrink-0 border-2 transition-all"
+                  :class="{ 'opacity-40': !row.selectable }"
+                  :style="row.squareStyle"
+                />
+                <input
+                  type="checkbox"
+                  class="sr-only"
+                  :checked="row.selected"
+                  :disabled="!row.selectable"
+                  @change="$emit('toggleCoworker', row.agentId)"
+                />
+                <span
+                  class="text-xs truncate flex-1 min-w-0"
+                  :class="
+                    row.selectable
+                      ? 'text-slate-600 dark:text-slate-300'
+                      : 'text-slate-400 dark:text-slate-500'
+                  "
+                >
+                  {{ row.name }}
+                </span>
+                <span
+                  v-if="row.busyNow"
+                  class="w-1.5 h-1.5 rounded-full bg-ruby-400 flex-shrink-0"
+                  :title="$t('GOOGLE_CALENDAR.COWORKERS.BUSY_NOW')"
+                />
+                <span
+                  class="text-[10px] text-slate-400 dark:text-slate-500 flex-shrink-0"
+                >
+                  {{ row.label }}
+                </span>
+              </label>
+            </template>
+            <button
+              class="flex items-center gap-1 text-xs text-woot-500 hover:text-woot-600 pt-1 transition-colors"
+              @click="$emit('openShareCalendar')"
+            >
+              <fluent-icon icon="share" size="12" />
+              {{ $t('GOOGLE_CALENDAR.SHARE_CALENDAR.BUTTON') }}
+            </button>
+          </div>
+        </div>
+
         <!-- Agregar otro calendario (abre modal) -->
         <button
           class="flex items-center gap-1 text-xs text-slate-400 hover:text-woot-500 mt-2 pl-1 transition-colors"
@@ -146,95 +237,6 @@
           <fluent-icon icon="add" size="12" />
           {{ $t('GOOGLE_CALENDAR.CALENDARS.SUBSCRIBE_BUTTON') }}
         </button>
-      </div>
-    </section>
-
-    <!-- Compañeros (fix/calendario_google): solo lo que cada uno te compartió en Google -->
-    <section
-      class="flex flex-col min-h-0 border-b border-slate-100 dark:border-slate-700"
-      :class="{ 'flex-1': openSection === 'availability' }"
-    >
-      <button
-        class="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-        @click="toggleSection('availability')"
-      >
-        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-          {{ $t('GOOGLE_CALENDAR.COWORKERS.TITLE') }}
-        </h3>
-        <fluent-icon
-          :icon="openSection === 'availability' ? 'chevron-up' : 'chevron-down'"
-          size="14"
-          class="text-slate-400"
-        />
-      </button>
-
-      <div
-        v-if="openSection === 'availability'"
-        class="flex-1 overflow-y-auto px-4 pb-4 space-y-2"
-      >
-        <p
-          v-if="coworkersNotice"
-          class="text-xs text-slate-500 dark:text-slate-400"
-        >
-          {{ coworkersNotice }}
-        </p>
-        <template v-else>
-          <p class="text-xs text-slate-400 dark:text-slate-500">
-            {{ $t('GOOGLE_CALENDAR.COWORKERS.HINT') }}
-          </p>
-          <button
-            class="flex items-center gap-1 text-xs text-slate-400 hover:text-woot-500 pl-1 transition-colors"
-            @click="$emit('openShareCalendar')"
-          >
-            <fluent-icon icon="share" size="12" />
-            {{ $t('GOOGLE_CALENDAR.SHARE_CALENDAR.BUTTON') }}
-          </button>
-          <p
-            v-if="!coworkerRows.length"
-            class="text-xs text-slate-400 dark:text-slate-500"
-          >
-            {{ $t('GOOGLE_CALENDAR.COWORKERS.EMPTY') }}
-          </p>
-          <label
-            v-for="row in coworkerRows"
-            :key="row.agentId"
-            class="flex items-center gap-2"
-            :class="row.selectable ? 'cursor-pointer' : 'cursor-default'"
-            :title="row.help"
-          >
-            <input
-              type="checkbox"
-              class="w-4 h-4 rounded accent-woot-500 flex-shrink-0"
-              :class="
-                row.selectable
-                  ? 'cursor-pointer'
-                  : 'opacity-40 cursor-not-allowed'
-              "
-              :checked="row.selected"
-              :disabled="!row.selectable"
-              @change="$emit('toggleCoworker', row.agentId)"
-            />
-            <span
-              class="w-2 h-2 rounded-full flex-shrink-0"
-              :class="row.dotClass"
-              :style="row.selected ? { backgroundColor: row.color } : {}"
-            />
-            <img
-              v-if="row.thumbnail"
-              :src="row.thumbnail"
-              class="w-5 h-5 rounded-full flex-shrink-0 object-cover"
-              :alt="row.name"
-            />
-            <span
-              class="text-xs text-slate-600 dark:text-slate-300 truncate flex-1"
-            >
-              {{ row.name }}
-            </span>
-            <span class="text-xs flex-shrink-0" :class="row.labelClass">
-              {{ row.label }}
-            </span>
-          </label>
-        </template>
       </div>
     </section>
 
@@ -390,12 +392,14 @@ export default {
     coworkers: { type: Array, default: () => [] },
     selectedCoworkerIds: { type: Array, default: () => [] },
     coworkersError: { type: String, default: null },
+    // Eventos ya cargados por compañero: para decir «sin eventos en estas fechas».
+    coworkerEvents: { type: Array, default: () => [] },
     googleEmail: { type: String, default: '' },
   },
   emits: ['toggleCalendar', 'toggleCoworker', 'openShareCalendar'],
   data() {
     return {
-      // Acordeón del panel lateral: 'upcoming' | 'calendars' | 'availability' | null.
+      // Acordeón del panel lateral: 'upcoming' | 'calendars' | null (los compañeros van en Calendarios).
       openSection: 'upcoming',
       // Árbol 'Mis calendarios': { [accountKey]: false } para las cuentas colapsadas
       // (por defecto todas abiertas).
@@ -523,18 +527,20 @@ export default {
         .map(c => {
           const agent = agentsById[c.agent_id];
           const visible = ['details', 'free_busy'].includes(c.access);
+          const selected =
+            visible && this.selectedCoworkerIds.includes(c.agent_id);
+          const color = agentColor(c.agent_id);
           return {
             agentId: c.agent_id,
             name: agent.available_name || agent.name,
             thumbnail: agent.thumbnail,
             selectable: visible,
-            selected: visible && this.selectedCoworkerIds.includes(c.agent_id),
-            color: agentColor(c.agent_id),
-            label: this.accessLabel(c),
-            labelClass: visible
-              ? 'text-slate-500 dark:text-slate-400'
-              : 'text-slate-400 dark:text-slate-500',
-            dotClass: this.dotClass(c, visible),
+            selected,
+            squareStyle: selected
+              ? { backgroundColor: color, borderColor: color }
+              : { borderColor: color, backgroundColor: 'transparent' },
+            busyNow: visible && c.busy_now,
+            label: this.rowLabel(c, selected),
             help: this.accessHelp(c, visible),
           };
         });
@@ -560,10 +566,15 @@ export default {
         `GOOGLE_CALENDAR.COWORKERS.ACCESS.${keys[c.access] || 'ERROR'}`
       );
     },
-    // Punto: rojo/verde = ocupado/libre ahora (solo si comparte); gris = no se sabe.
-    dotClass(c, visible) {
-      if (!visible) return 'bg-slate-300 dark:bg-slate-600';
-      return c.busy_now ? 'bg-ruby-400' : 'bg-green-400';
+    // Palomeado y sin nada en las fechas visibles: decirlo (si no, parece que no cargó).
+    rowLabel(c, selected) {
+      if (selected) {
+        const row = this.coworkerEvents.find(r => r.agent_id === c.agent_id);
+        if (row && !(row.events || []).length) {
+          return this.$t('GOOGLE_CALENDAR.COWORKERS.NO_EVENTS');
+        }
+      }
+      return this.accessLabel(c);
     },
     accessHelp(c, visible) {
       if (c.access === 'none') {

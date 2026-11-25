@@ -121,6 +121,7 @@ export default {
         'Conecta tu Google Calendar para ver la agenda de tus compañeros.',
       RECONNECT:
         'Tu conexión con Google venció. Reconecta para ver a tus compañeros.',
+      NO_EVENTS: 'Sin eventos en estas fechas',
       BUSY_NOW: 'Ocupado ahora',
       FREE_NOW: 'Libre ahora',
       ACCESS: {

@@ -13,6 +13,12 @@ const readSelectedCoworkers = () => {
     return [];
   }
 };
+// Compañeros que me comparten algo (solo ocupado o detalles): de ellos se piden eventos.
+const visibleCoworkerIds = coworkers =>
+  (coworkers || [])
+    .filter(c => ['details', 'free_busy'].includes(c.access))
+    .map(c => c.agent_id)
+    .sort((a, b) => a - b);
 const saveSelectedCoworkers = ids => {
   try {
     window.localStorage.setItem(SELECTED_COWORKERS_KEY, JSON.stringify(ids));
@@ -33,6 +39,7 @@ const state = {
   coworkerEvents: [],
   selectedCoworkerIds: readSelectedCoworkers(),
   coworkersError: null,
+  coworkerRange: {},
   connected: false,
   googleEmail: null,
   uiFlags: {
@@ -88,6 +95,9 @@ const mutations = {
   },
   SET_COWORKER_EVENTS(s, rows) {
     s.coworkerEvents = rows;
+  },
+  SET_COWORKER_RANGE(s, range) {
+    s.coworkerRange = range || {};
   },
   SET_SELECTED_COWORKERS(s, ids) {
     s.selectedCoworkerIds = ids;
@@ -198,7 +208,9 @@ const actions = {
     }
   },
 
-  fetchCoworkers: async ({ commit }) => {
+  // Si cambia quién me comparte, se vuelven a pedir sus eventos (para palomear al instante).
+  fetchCoworkers: async ({ commit, dispatch, state: s }) => {
+    const before = visibleCoworkerIds(s.coworkers).join(',');
     try {
       const { data } = await GoogleCalendarAPI.getCoworkers();
       commit('SET_COWORKERS', { coworkers: data.coworkers || [] });
@@ -209,31 +221,38 @@ const actions = {
         error: reason === 'reconnect' ? 'reconnect' : 'not_connected',
       });
     }
+    if (visibleCoworkerIds(s.coworkers).join(',') !== before) {
+      dispatch('fetchCoworkerEvents', s.coworkerRange);
+    }
   },
 
-  // Solo pide los palomeados; el rango es el visible del calendario.
+  // Eventos de TODOS los que me comparten algo (no solo los palomeados): así palomear es
+  // instantáneo y solo cambia lo que se ve. El rango es el visible del calendario.
   fetchCoworkerEvents: async ({ commit, state: s }, range = {}) => {
-    if (!s.selectedCoworkerIds.length) {
+    commit('SET_COWORKER_RANGE', range);
+    const ids = visibleCoworkerIds(s.coworkers);
+    if (!ids.length) {
       commit('SET_COWORKER_EVENTS', []);
       return;
     }
     try {
-      const { data } = await GoogleCalendarAPI.getCoworkerEvents(
-        s.selectedCoworkerIds,
-        range
-      );
+      const { data } = await GoogleCalendarAPI.getCoworkerEvents(ids, range);
       commit('SET_COWORKER_EVENTS', data.coworkers || []);
     } catch {
       commit('SET_COWORKER_EVENTS', []);
     }
   },
 
-  toggleCoworker: ({ commit, dispatch, state: s }, { agentId, range }) => {
+  toggleCoworker: ({ commit, dispatch, state: s }, { agentId }) => {
     const ids = s.selectedCoworkerIds.includes(agentId)
       ? s.selectedCoworkerIds.filter(id => id !== agentId)
       : [...s.selectedCoworkerIds, agentId];
     commit('SET_SELECTED_COWORKERS', ids);
-    return dispatch('fetchCoworkerEvents', range);
+    // Ya cargados: no hace falta preguntar. Solo si aún no llegaron.
+    const loaded = s.coworkerEvents.some(r => r.agent_id === agentId);
+    if (!loaded && ids.includes(agentId)) {
+      dispatch('fetchCoworkerEvents', s.coworkerRange);
+    }
   },
 
   connectAccount: async ({ commit, dispatch }) => {

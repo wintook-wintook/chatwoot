@@ -114,6 +114,7 @@ export default {
         "Connect your Google Calendar to see your teammates' schedules.",
       RECONNECT:
         'Your Google connection expired. Reconnect to see your teammates.',
+      NO_EVENTS: 'No events in these dates',
       BUSY_NOW: 'Busy now',
       FREE_NOW: 'Free now',
       ACCESS: {

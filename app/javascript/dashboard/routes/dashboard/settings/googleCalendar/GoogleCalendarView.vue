@@ -29,6 +29,16 @@
           >
             {{ $t('GOOGLE_CALENDAR.CONNECT.BUTTON') }}
           </woot-button>
+          <!-- fix/calendario_google F3c — qué ve cada compañero de mi agenda -->
+          <woot-button
+            v-if="isConnected"
+            size="small"
+            variant="smooth"
+            @click="showShareCalendar = true"
+          >
+            <fluent-icon icon="people" size="14" class="mr-1" />
+            {{ $t('GOOGLE_CALENDAR.SHARE_CALENDAR.BUTTON') }}
+          </woot-button>
           <woot-button v-if="isConnected" size="small" variant="smooth" @click="showShareModal = true">
             <fluent-icon icon="send" size="14" class="mr-1" />
             {{ $t('GOOGLE_CALENDAR.SHARE_AGENDA.TITLE') }}
@@ -70,6 +80,7 @@
           :coworkers="coworkers"
           :selected-coworker-ids="selectedCoworkerIds"
           :coworkers-error="coworkersError"
+          :coworker-events="coworkerEvents"
           :google-email="googleEmail || ''"
           @toggleCalendar="toggleCalendar"
           @toggleCoworker="toggleCoworker"
@@ -264,10 +275,7 @@ export default {
       );
     },
     toggleCoworker(agentId) {
-      this.$store.dispatch('googleCalendar/toggleCoworker', {
-        agentId,
-        range: this.currentRange,
-      });
+      this.$store.dispatch('googleCalendar/toggleCoworker', { agentId });
     },
     onCoworkerEventClicked(payload) {
       this.coworkerEvent = payload;
