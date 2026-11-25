@@ -16,6 +16,11 @@ class QuotesAPI extends ApiClient {
     return axios.get(`${this.url}/summary`);
   }
 
+  // Retenciones: { apply } si el cliente (o su organización) es persona moral.
+  withholdingsDefault(params) {
+    return axios.get(`${this.url}/withholdings_default`, { params });
+  }
+
   // payload: { quote: {...}, items: [...], create_opportunity }
   createQuote(payload) {
     return axios.post(this.url, payload);

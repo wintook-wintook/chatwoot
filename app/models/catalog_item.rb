@@ -2,35 +2,48 @@
 #
 # Table name: catalog_items
 #
-#  id          :bigint           not null, primary key
-#  active      :boolean          default(TRUE), not null
-#  category    :string
-#  cost        :decimal(14, 2)
-#  currency    :string(3)        default("MXN"), not null
-#  description :text
-#  kind        :integer          default("product"), not null
-#  name        :string           not null
-#  price       :decimal(14, 2)   default(0.0), not null
-#  sku         :string
-#  unit        :string
-#  created_at  :datetime         not null
-#  updated_at  :datetime         not null
-#  account_id  :bigint           not null
+#  id                   :bigint           not null, primary key
+#  active               :boolean          default(TRUE), not null
+#  category             :string
+#  cost                 :decimal(14, 2)
+#  currency             :string(3)        default("MXN"), not null
+#  description          :text
+#  kind                 :integer          default("product"), not null
+#  name                 :string           not null
+#  price                :decimal(14, 2)   default(0.0), not null
+#  price_includes_tax   :boolean          default(FALSE), not null
+#  sat_code             :string
+#  sku                  :string
+#  unit                 :string
+#  withholding_rate_ids :bigint           default([]), not null, is an Array
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  account_id           :bigint           not null
+#  catalog_category_id  :bigint
+#  catalog_unit_id      :bigint
+#  tax_rate_id          :bigint
 #
 # Indexes
 #
 #  index_catalog_items_on_account_id                      (account_id)
 #  index_catalog_items_on_account_id_and_active_and_kind  (account_id,active,kind)
 #  index_catalog_items_on_account_id_and_sku              (account_id,sku) UNIQUE WHERE (sku IS NOT NULL)
+#  index_catalog_items_on_catalog_category_id             (catalog_category_id)
+#  index_catalog_items_on_catalog_unit_id                 (catalog_unit_id)
+#  index_catalog_items_on_tax_rate_id                     (tax_rate_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (catalog_category_id => catalog_categories.id)
+#  fk_rails_...  (catalog_unit_id => catalog_units.id)
+#  fk_rails_...  (tax_rate_id => tax_rates.id)
 #
 
 # Plan-Catalogo-Cotizaciones C1 — un producto, servicio o refacción del catálogo
 # de la cuenta. Lo usan las cotizaciones (Ventas) y los materiales de las órdenes
 # de trabajo (Servicio). No se borra: se desactiva, para no romper lo que ya lo usa.
+# Categoría, unidad e impuesto salen de las listas de la cuenta (CatalogItemParameters).
 class CatalogItem < ApplicationRecord
   KIND_ALIASES = {
     'producto' => 'product', 'servicio' => 'service', 'refaccion' => 'part', 'refacción' => 'part'
@@ -45,6 +58,7 @@ class CatalogItem < ApplicationRecord
   enum kind: { product: 0, service: 1, part: 2 }
 
   before_validation :normalize
+  include CatalogItemParameters
   after_update :update_contract_prices, if: -> { saved_change_to_price? || saved_change_to_currency? }
 
   validates :name, presence: true, length: { maximum: 200 }

@@ -25,6 +25,8 @@ export default {
     campaignId: { type: Number, default: null },
     save: { type: Function, required: true },
     attempts: { type: Number, default: 1 },
+    // Invitar: cuándo y dónde salen del evento (InviteEvent), no se piden aquí.
+    hiddenFacts: { type: Array, default: () => [] },
   },
   emits: ['update:brief'],
   data() {
@@ -35,7 +37,9 @@ export default {
       return this.kind === 'survey';
     },
     fields() {
-      return (this.kit && this.kit.facts) || ['more'];
+      return ((this.kit && this.kit.facts) || ['more']).filter(
+        key => !this.hiddenFacts.includes(key)
+      );
     },
     facts() {
       return this.brief.facts || {};
@@ -171,7 +175,7 @@ export default {
       <div class="flex flex-wrap items-center justify-between gap-2">
         <p class="m-0 text-sm font-semibold">{{ t('FACTS_TITLE') }}</p>
         <button
-          v-if="kind === 'invite' && event"
+          v-if="kind === 'invite' && event && !hiddenFacts.length"
           type="button"
           class="text-xs text-woot-600 hover:underline"
           @click="fillFromEvent"

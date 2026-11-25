@@ -361,6 +361,38 @@ es:
       someone: "Alguien del equipo"
   contact_trackings:
     opt_out_footer: "¿No quieres recibir más correos? Date de baja aquí: %{url}"
+  quote_formats:
+    copy: 'copia'
+    errors:
+      last: 'Debe quedar al menos un formato.'
+      logo: 'El logo debe ser PNG, JPG o WEBP de hasta 2 MB.'
+      not_found: 'Formato no encontrado'
+    default_name: 'Formato principal'
+    client: 'Cliente'
+    bank: 'Datos para pago'
+    withholdings: 'Retenciones'
+    amount_in_words: 'Importe con letra'
+    client_signature: 'Nombre y firma de aceptación'
+    accepted_on: 'Aceptada el %{date}'
+    pdf_unavailable: 'El PDF no está disponible por ahora; usa Imprimir.'
+    company:
+      legal_name: 'Razón social'
+      tax_id: 'RFC'
+      address: 'Dirección'
+      phone: 'Tel.'
+      email: 'Correo'
+      website: 'Web'
+    client_fields:
+      name: 'Nombre'
+      organization: 'Empresa'
+      tax_id: 'RFC'
+      email: 'Correo'
+      phone: 'Tel.'
+    columns:
+      sku: 'Clave'
+      unit: 'Unidad'
+      tax: 'IVA'
+      price_with_tax: 'Precio c/IVA'
   public_quotes:
     title: 'Cotización'
     for: 'Para %{name}'
@@ -419,6 +451,10 @@ es:
       opportunity_required: 'Tu empresa pide que toda cotización tenga oportunidad'
       no_sales_type: 'Crea primero un tipo de oportunidad en Ajustes › Casos y etapas'
       no_conversation: 'El cliente no tiene conversaciones; copia el enlace y envíaselo por otro medio'
+  catalog_parameters:
+    not_found: 'No se encontró en la lista.'
+    in_use: 'Está en uso: desactívalo para que ya no se ofrezca.'
+    default_tax: 'Es el impuesto por omisión: marca otro antes de borrarlo.'
   catalog_items:
     not_found: 'Producto o servicio no encontrado'
     import:

@@ -1,0 +1,16 @@
+<%# Cotizaciones › Formatos — el documento solo (vista previa del diseñador y PDF con wkhtmltopdf). %>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= doc.folio %></title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #fff; }
+    .q-page { padding: <%= pdf ? '0' : '28px 32px' %>; }
+  </style>
+</head>
+<body>
+  <div class="q-page"><%= render 'quotes/document', doc: doc %></div>
+</body>
+</html>

@@ -28,7 +28,7 @@ RSpec.describe Assistant::QuoteTools do
                       { 'description' => 'Capacitor 35 µF', 'quantity' => 1, 'unit_price' => 180 }])
     labels = result[:proposal]['labels']
     expect(labels['items'].pluck('unit_price')).to eq([1200.0, 180.0])
-    expect(labels['totals']).to eq('net' => 3780.0, 'tax' => 604.8, 'total' => 4384.8)
+    expect(labels['totals']).to eq('net' => 3780.0, 'tax' => 604.8, 'withheld' => 0.0, 'total' => 4384.8)
     expect(labels['rows']).to include(['CLIENT', 'Mario Pérez'])
   end
 

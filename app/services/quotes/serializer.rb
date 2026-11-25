@@ -9,7 +9,7 @@ class Quotes::Serializer
   def as_json(full: false)
     json = base
     json.merge!(details) if full
-    amounts? ? json : json.merge(subtotal: nil, discount_total: nil, tax_total: nil, total: nil)
+    amounts? ? json : json.merge(subtotal: nil, discount_total: nil, tax_total: nil, withholding_total: nil, total: nil)
   end
 
   def self.public_url(quote)
@@ -26,7 +26,8 @@ class Quotes::Serializer
     q = @quote
     { id: q.id, folio: q.folio, number: q.number, version: q.version, status: q.status, expired: q.expired?,
       currency: q.currency, subtotal: q.subtotal.to_f, discount_total: q.discount_total.to_f,
-      tax_total: q.tax_total.to_f, total: q.total.to_f, public_url: self.class.public_url(q) }
+      tax_total: q.tax_total.to_f, withholding_total: q.withholding_total.to_f, apply_withholdings: q.apply_withholdings,
+      total: q.total.to_f, public_url: self.class.public_url(q), quote_format_id: q.quote_format_id }
       .merge(dates).merge(links)
   end
 
@@ -57,7 +58,8 @@ class Quotes::Serializer
   def item_json(item)
     row = { id: item.id, catalog_item_id: item.catalog_item_id, description: item.description, kind: item.kind,
             unit: item.unit, quantity: item.quantity.to_f, unit_price: item.unit_price.to_f,
-            discount_percent: item.discount_percent.to_f, tax_percent: item.tax_percent.to_f, total: item.total.to_f }
+            discount_percent: item.discount_percent.to_f, tax_percent: item.tax_percent.to_f, total: item.total.to_f,
+            tax_rate_id: item.tax_rate_id, withholdings: item.withholdings }
     amounts? ? row : row.merge(unit_price: nil, total: nil)
   end
 

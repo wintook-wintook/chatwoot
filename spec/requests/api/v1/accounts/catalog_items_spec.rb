@@ -76,7 +76,7 @@ RSpec.describe 'Catalog Items API' do
     expect(account.catalog_items.find_by(sku: 'CAP-35').kind).to eq('part')
 
     get "#{url}/export", headers: admin.create_new_auth_token
-    expect(response.body.lines.first.strip).to eq('clave,nombre,tipo,categoria,unidad,precio,moneda,costo,descripcion,activo')
+    expect(response.body.lines.first).to start_with('clave,nombre,tipo,categoria,unidad,precio,moneda,costo,descripcion,activo,impuesto')
     expect(response.body).to include('CAP-35')
   end
 

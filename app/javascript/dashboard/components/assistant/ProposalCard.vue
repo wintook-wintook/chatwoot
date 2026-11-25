@@ -55,7 +55,7 @@ const ICONS = {
   internal_note: 'document',
 };
 
-// Igual que el servidor (Assistant::QuoteTools.totals): descuento por partida, IVA de la partida.
+// Igual que el servidor (Quotes::Withholdings.totals): descuento por partida, IVA y retenciones de la partida.
 const round2 = n => Math.round(n * 100) / 100;
 const itemNet = i =>
   round2(
@@ -167,7 +167,25 @@ export default {
           sum + round2((itemNet(i) * Number(i.tax_percent || 0)) / 100),
         0
       );
-      return { net: round2(net), tax: round2(tax), total: round2(net + tax) };
+      // Retenciones: solo si el cliente es persona moral (lo dice el servidor).
+      const withheld = this.labels.apply_withholdings
+        ? this.form.items.reduce(
+            (sum, i) =>
+              sum +
+              (i.withholdings || []).reduce(
+                (acc, w) =>
+                  acc + round2((itemNet(i) * Number(w.percent)) / 100),
+                0
+              ),
+            0
+          )
+        : 0;
+      return {
+        net: round2(net),
+        tax: round2(tax),
+        withheld: round2(withheld),
+        total: round2(net + tax - withheld),
+      };
     },
     isAction() {
       return (
@@ -767,6 +785,12 @@ export default {
             <span class="text-slate-700 dark:text-slate-200">{{
               money(quoteTotals.tax)
             }}</span>
+          </div>
+          <div v-if="quoteTotals.withheld">
+            {{ t('WITHHELD') }}:
+            <span class="text-slate-700 dark:text-slate-200"
+              >−{{ money(quoteTotals.withheld) }}</span
+            >
           </div>
           <div class="font-semibold text-slate-800 dark:text-slate-100">
             {{ t('TOTAL') }}: {{ money(quoteTotals.total) }}

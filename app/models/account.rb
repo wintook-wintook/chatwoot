@@ -49,6 +49,11 @@ class Account < ApplicationRecord
   has_many :task_reports, dependent: :destroy
   has_many :access_roles, dependent: :destroy # Plan-Roles-Permisos
   has_many :catalog_items, dependent: :destroy # Plan-Catalogo-Cotizaciones
+  # Productos y servicios › Parámetros
+  has_many :catalog_categories, dependent: :delete_all
+  has_many :catalog_units, dependent: :delete_all
+  has_many :tax_rates, dependent: :delete_all
+  has_many :quote_formats, dependent: :destroy # Cotizaciones › Formatos (con su logo)
   has_many :quotes, dependent: :destroy # Plan-Catalogo-Cotizaciones
   has_many :sales_budget_lines, dependent: :delete_all # Presupuesto de ventas
   has_many :customer_assets, dependent: :destroy # Plan-Trabajo-Campo R4

@@ -6,6 +6,7 @@
       · sí, la próxima → respuesta + etiqueta «volver a…»
     No me escriban    respuesta + etiqueta «no…»: la siguiente campaña del mismo tipo ya no lo inscribe
   Vacío = el texto de fábrica (en gris). .sync: brief (replies, labels)
+  compact (Invitar): cada momento en una línea con su texto de fábrica; «Personalizar» abre la caja.
 -->
 <script>
 export default {
@@ -14,8 +15,12 @@ export default {
     brief: { type: Object, required: true },
     kind: { type: String, default: 'offer' },
     kit: { type: Object, default: null },
+    compact: { type: Boolean, default: false },
   },
   emits: ['update:brief'],
+  data() {
+    return { open: {} };
+  },
   computed: {
     asksFuture() {
       return !!(this.kit && this.kit.asks_future);
@@ -66,6 +71,16 @@ export default {
         labels: { ...this.labels, [key]: title },
       });
     },
+    // En modo compacto: abierta si la abrió o si ya tiene un texto propio.
+    expanded(key) {
+      return !this.compact || this.open[key] || !!this.replies[key];
+    },
+    toggle(key) {
+      this.$set(this.open, key, !this.open[key]);
+    },
+    quoted(text) {
+      return `«${text}»`;
+    },
     momentTitle(key) {
       if (key === 'achieved') return this.t(`ACHIEVED.${this.goal || 'relay'}`);
       return this.t(`MOMENTS.${key}`);
@@ -83,7 +98,17 @@ export default {
       :key="m.key"
       class="flex flex-col gap-2 p-3 border rounded-md border-slate-100 dark:border-slate-700"
     >
-      <p class="m-0 text-sm font-semibold">{{ momentTitle(m.key) }}</p>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <p class="m-0 text-sm font-semibold">{{ momentTitle(m.key) }}</p>
+        <button
+          v-if="compact && !replies[m.key]"
+          type="button"
+          class="text-xs text-woot-600 hover:underline"
+          @click="toggle(m.key)"
+        >
+          {{ open[m.key] ? t('USE_DEFAULT') : t('CUSTOMIZE') }}
+        </button>
+      </div>
       <p class="m-0 text-xs text-slate-500">
         {{
           t(`ABOUT.${m.key}`, { kind: $t(`CAMPAIGNS2.KINDS.${kind}.TITLE`) })
@@ -91,7 +116,8 @@ export default {
       </p>
       <label
         v-if="
-          !(m.key === 'achieved' && ['relay', 'appointment'].includes(goal))
+          !(m.key === 'achieved' && ['relay', 'appointment'].includes(goal)) &&
+          expanded(m.key)
         "
         class="block"
       >
@@ -105,6 +131,16 @@ export default {
           @input="setReply(m.key, $event.target.value)"
         />
       </label>
+      <p
+        v-if="
+          !expanded(m.key) &&
+          fallback(m.key) &&
+          !(m.key === 'achieved' && ['relay', 'appointment'].includes(goal))
+        "
+        class="m-0 text-xs italic text-slate-500"
+      >
+        {{ quoted(fallback(m.key)) }}
+      </p>
       <label v-if="m.label" class="flex flex-wrap items-center gap-2 text-sm">
         {{ t('LABEL') }}
         <input

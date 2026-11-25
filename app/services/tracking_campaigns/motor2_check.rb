@@ -14,7 +14,7 @@ class TrackingCampaigns::Motor2Check
 
   def call
     @call ||= [seller, ai, offer, *knowledge, appointment, audience, channel, *list_items, *domain_items, *touch_items, *plan.whatsapp_flow,
-               *plan.seller_templates, plan.cost, relay, window, plan.capacity].compact
+               *plan.seller_templates, plan.cost, relay, window, plan.capacity, reminders].compact
   end
 
   def knowledge = TrackingCampaigns::Motor2KnowledgeCheck.new(@campaign).call
@@ -67,9 +67,22 @@ class TrackingCampaigns::Motor2Check
   def invite
     event = @campaign.account.events.find_by(id: @brief['event_id'])
     return item(:offer, 'error', 'Elige el evento al que invitas.') unless event
-    return item(:offer, 'error', "El evento «#{event.name}» ya pasó.") if event.starts_at && event.starts_at < Time.current
+    return item(:offer, 'error', "El evento «#{event.name}» ya pasó.") if event.starts_at && event.starts_at < today_start
+    return item(:offer, 'warning', "El evento «#{event.name}» ya empezó hoy.") if event.starts_at && event.starts_at < Time.current
 
     item(:offer, 'ok', "Invita a «#{event.name}».")
+  end
+
+  # Invitar: los recordatorios a confirmados (TrackingCampaigns::EventReminders.check).
+  def reminders
+    return nil unless @brief['kind'] == 'invite'
+
+    item(:reminders, *TrackingCampaigns::EventReminders.check(@campaign))
+  end
+
+  # Un evento de hoy todavía se puede invitar (hora de México).
+  def today_start
+    Time.current.in_time_zone('America/Mexico_City').beginning_of_day
   end
 
   def audience
@@ -192,7 +205,11 @@ class TrackingCampaigns::Motor2Check
     return relay_to_agent(person) unless merged['relay'] == 'person'
     return item(:relay, 'ok', "Si le interesa, lo pasa a la persona o equipo #{whose}.") if person
 
-    item(:relay, 'error', 'No hay a quién pasar a los interesados: elige persona o equipo en «Oferta» (Si le interesa, pasa a) o en el vendedor.')
+    if @brief['kind'] == 'invite' # Invitar no pasa interesados: solo al que pide una persona
+      return item(:relay, 'warning', 'Si alguien pide hablar con una persona, no hay a quién pasarlo: elígelo en «Cuando contesta».')
+    end
+
+    item(:relay, 'error', 'No hay a quién pasar a los interesados: elige persona o equipo en «Cómo atiende» (Si le interesa, pasa a).')
   end
 
   # Al agente de la bandeja: si la bandeja no tiene agente que atienda, cae a la persona del vendedor.

@@ -7,7 +7,7 @@ class CatalogItemsAPI extends ApiClient {
     super('catalog_items', { accountScoped: true });
   }
 
-  // params: { q, kind, category, active: 'true' | 'false' | 'all', page }
+  // params: { q, kind, category_id, active: 'true' | 'false' | 'all', page }
   search(params = {}) {
     return axios.get(this.url, { params });
   }
@@ -29,6 +29,31 @@ class CatalogItemsAPI extends ApiClient {
 
   removeImage(id) {
     return axios.delete(`${this.url}/${id}/image`);
+  }
+
+  // Productos y servicios › Parámetros: categorías, impuestos y unidades.
+  parameters() {
+    return axios.get(this.url.replace(/catalog_items$/, 'catalog_parameters'));
+  }
+
+  // list: 'categories' | 'taxes' | 'units'
+  saveParameter(list, record, id = null) {
+    const base = `${this.url.replace(
+      /catalog_items$/,
+      'catalog_parameters'
+    )}/${list}`;
+    return id
+      ? axios.patch(`${base}/${id}`, { record })
+      : axios.post(base, { record });
+  }
+
+  removeParameter(list, id) {
+    return axios.delete(
+      `${this.url.replace(
+        /catalog_items$/,
+        'catalog_parameters'
+      )}/${list}/${id}`
+    );
   }
 
   importCsv(file) {

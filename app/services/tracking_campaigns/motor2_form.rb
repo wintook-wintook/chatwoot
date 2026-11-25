@@ -66,7 +66,7 @@ class TrackingCampaigns::Motor2Form
     { name: @params[:name].to_s.strip.presence || 'Campaña sin nombre', inbox: inbox,
       mode: @params[:mode].to_s.presence_in(TrackingCampaign::MODES) || 'batch',
       purpose: 'prospecting', brief: brief, touches: TrackingCampaigns::Motor2Brief.touches(@params[:touches]),
-      audience: audience }.merge(window, event(brief), subjects)
+      audience: audience }.merge(window(brief), event(brief), subjects)
   end
 
   def audience
@@ -82,19 +82,29 @@ class TrackingCampaigns::Motor2Form
 
   def list_source? = @params.dig(:audience, :source, :type).to_s == 'list'
 
-  def window
-    { scheduled_for: time(@params[:scheduled_for]) || Time.current, ends_at: time(@params[:ends_at]),
+  def window(brief)
+    { scheduled_for: time(@params[:scheduled_for]) || Time.current, ends_at: time(@params[:ends_at]) || event_start(brief),
       entry_delay_minutes: @params[:entry_delay_minutes].to_i.clamp(0, 10_080),
       respect_working_hours: ActiveModel::Type::Boolean.new.cast(@params.fetch(:respect_working_hours, true)),
       daily_cap: @params[:daily_cap].presence&.to_i&.clamp(1, 10_000),
       stop_when_not_interested: true, stop_when_wrong_person: true, retry_not_now: true }
   end
 
-  # Invitar: el evento de la oferta es también el de la campaña (sus asistentes, la audiencia).
+  # Invitar: el evento al que se invita es el de la campaña. El estado de asistentes solo cuenta si la audiencia son
+  # los de ESE evento (si son los de otro evento —p. ej. los que fueron a la expo pasada— va en audience.source).
   def event(brief)
     return { event_id: nil, event_status: nil } unless brief['kind'] == 'invite' && brief['event_id']
 
-    Events::CampaignEvent.attributes(@account, { event_id: brief['event_id'], event_status: @params[:event_status] })
+    audience_event = @params.dig(:audience, :source, :event_id).presence
+    status = audience_event.nil? || audience_event.to_i == brief['event_id'].to_i ? @params[:event_status] : nil
+    Events::CampaignEvent.attributes(@account, { event_id: brief['event_id'], event_status: status })
+  end
+
+  # Invitar: sin fecha de fin, termina cuando empieza el evento.
+  def event_start(brief)
+    return unless brief['kind'] == 'invite' && brief['event_id']
+
+    @account.events.find_by(id: brief['event_id'])&.starts_at
   end
 
   def subjects

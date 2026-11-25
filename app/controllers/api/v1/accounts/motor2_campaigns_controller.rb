@@ -143,8 +143,10 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
                            .filter_map { |i| i.user && { id: i.user.id, name: i.user.name } }
   end
 
+  # Los que empiezan de hoy (desde las 00:00, hora de México) en adelante y no están cerrados.
   def upcoming_events
-    Current.account.events.where(closed_at: nil).where('starts_at > ?', Time.current).order(:starts_at)
+    today = Time.current.in_time_zone('America/Mexico_City').beginning_of_day
+    Current.account.events.where(closed_at: nil).where('starts_at >= ?', today).order(:starts_at)
            .limit(50).map do |e|
              { id: e.id, name: e.name, starts_at: e.starts_at, capacity: e.capacity, location: e.location, meeting_url: e.meeting_url,
                description: e.description.to_s.first(600) }
@@ -153,7 +155,8 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
 
   # Para la audiencia «asistentes de un evento» después del evento (asistió, no se presentó): los de 90 días.
   def recent_events
-    Current.account.events.where(starts_at: 90.days.ago..Time.current).order(starts_at: :desc)
+    today = Time.current.in_time_zone('America/Mexico_City').beginning_of_day # los de hoy ya van en upcoming_events
+    Current.account.events.where(starts_at: 90.days.ago...today).order(starts_at: :desc)
            .limit(50).map { |e| { id: e.id, name: e.name, starts_at: e.starts_at, capacity: e.capacity } }
   end
 
