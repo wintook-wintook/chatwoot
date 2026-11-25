@@ -1,7 +1,9 @@
 # CrmZeus Q0 — folio de una cotización nueva: serie del agente que la crea + siguiente consecutivo
 # (getFolio / F_Folio de CRMZeus). El renglón de la serie se bloquea dentro de la transacción del
 # guardado, así que dos agentes no sacan el mismo folio; si el folio ya existe (p. ej. se bajó el
-# consecutivo a mano) se brinca al siguiente libre, como CRMZeus.
+# consecutivo a mano) se brinca al siguiente libre (decisión del usuario; master2 responde «El Folio:
+# X ya existe.» y no guarda). `last_number` es el último usado; el CONSECUTIVO de master2 es el
+# siguiente a usar, así que al migrar series va `CONSECUTIVO - 1`.
 class Crm::QuoteFolio
   def initialize(quote)
     @quote = quote
