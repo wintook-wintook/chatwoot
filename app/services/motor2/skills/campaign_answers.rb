@@ -104,10 +104,16 @@ module Motor2::Skills::CampaignAnswers
     survey[number.to_s] = { 'respuesta' => args['respuesta'].to_s.first(500), 'calificacion' => args['calificacion'] }.compact
     state['survey'] = survey
     trace.event(:encuesta, "#{number}: #{args['respuesta']}")
-    return { ok: true } if next_question
+    after_answer
+  end
+
+  # La que sigue, tal cual (si no, la IA arrastra el rango de la anterior); al terminar, gracias o «lamentamos…» si fue baja.
+  def after_answer
+    upcoming = next_question
+    return { ok: true, nota: "Guardada. Ahora haz SOLO la pregunta #{upcoming[0]}, tal cual: «#{upcoming[1]}»" } if upcoming
 
     @turn.decide('done', 'Contestó la encuesta')
-    fixed('achieved')
+    fixed(survey.any? { |n, v| function.low_answer?(n, v['calificacion']) } ? 'low' : 'achieved')
   end
 
   NOT_AN_ANSWER = 'Eso no contesta la pregunta (dijo que sí a la encuesta, saludó o preguntó otra cosa): no la guardes; ' \

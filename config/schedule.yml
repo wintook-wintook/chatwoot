@@ -328,3 +328,10 @@ tracking_campaigns_event_reminder_job:
   class: "TrackingCampaigns::EventReminderJob"
   queue: scheduled_jobs
   description: "Remind confirmed contacts one day and one hour before the campaign event"
+
+# Campaña con IA · Recordar — cada mañana mete a los contratos que ya entran en sus días antes de vencer.
+tracking_campaigns_renew_enroll_job:
+  cron: "0 13 * * *"
+  class: "TrackingCampaigns::RenewEnrollJob"
+  queue: scheduled_jobs
+  description: "Enroll contracts due soon into running renew campaigns (touches by due date)"

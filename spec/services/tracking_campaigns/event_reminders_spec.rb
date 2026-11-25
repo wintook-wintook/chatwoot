@@ -18,12 +18,12 @@ RSpec.describe TrackingCampaigns::EventReminders do
                                        brief: TrackingCampaigns::Motor2Brief.brief({ 'kind' => 'invite', 'event_id' => event.id }))
   end
 
-  def tracking(outcome)
+  def tracking(outcome, status: 'completed', last_attempt_at: 2.days.ago)
     contact = create(:contact, account: account, name: 'Mario López', email: "m#{SecureRandom.hex(3)}@ejemplo.com")
     conversation = create(:conversation, account: account, inbox: inbox, contact: contact)
     ContactTracking.create!(account: account, contact: contact, inbox: inbox, tracking_template: seller, tracking_campaign: campaign,
-                            conversation: conversation, scheduled_for: 1.minute.from_now, status: 'completed', max_attempts: 1,
-                            attempt_count: 1, objective: 'Invitar', outcome: outcome)
+                            conversation: conversation, scheduled_for: 1.minute.from_now, status: status, max_attempts: 1,
+                            attempt_count: 1, objective: 'Invitar', outcome: outcome, last_attempt_at: last_attempt_at)
   end
 
   it 'vienen prendidos y el que toca depende de cuánto falta' do
@@ -46,6 +46,25 @@ RSpec.describe TrackingCampaigns::EventReminders do
 
     text = described_class.text(campaign, event, confirmed, 'hour_before')
     expect(text).to include('https://zoom.us/j/1')
+  end
+
+  it 'un día antes también a los que no han contestado (última invitación, con la liga de registro); una hora antes solo confirmados' do
+    campaign.update!(brief: campaign.brief.merge('offer_goal' => 'external',
+                                                 'links' => [{ 'name' => 'Registro', 'url' => 'https://zoom.us/r', 'use' => 'package' }]))
+    silent = tracking(nil, status: 'scheduled')
+    answered = tracking(nil)
+    create(:message, account: account, inbox: inbox, conversation: answered.conversation, message_type: :incoming, content: 'Lo veo')
+    just_touched = tracking(nil, last_attempt_at: 1.hour.ago)
+    allow(Motor2::LateMessage).to receive(:deliver).and_return(true)
+
+    expect(described_class.run(campaign)).to eq(1)
+    expect(Motor2::LateMessage).to have_received(:deliver).with(silent, a_string_including('¿Te apartamos tu lugar?', 'https://zoom.us/r'),
+                                                                template: nil)
+    expect(silent.reload.scheduled_for).to be > event.starts_at # ya no salen sus toques
+    expect(answered.reload.motor2_state.to_h['event_reminders']).to be_nil
+    expect(just_touched.reload.motor2_state.to_h['event_reminders']).to be_nil
+
+    expect(described_class.run(campaign, event.starts_at - 30.minutes)).to eq(0) # una hora antes: solo confirmados
   end
 
   it 'sin fecha de fin, la campaña de Invitar termina cuando empieza el evento; la audiencia de otro evento no pisa el invitado' do

@@ -25,7 +25,7 @@ class TrackingCampaigns::Motor2Cases
     item = cases.find { |c| c[:key] == key.to_s }
     return { key: key, ok: false, reason: 'Ese caso ya no aplica a la campaña.' } unless item
 
-    result = Motor2::Probe.new(@agent, messages: item[:messages], state: item[:state] || {}, answers: @answers).call
+    result = Motor2::Probe.new(@agent, messages: item[:messages], state: item[:state] || {}, answers: item[:answers] || @answers).call
     return { key: key, ok: false, reason: result[:error].to_s } if result[:error]
 
     tools = Array(result.dig(:trace, 'tools')).select { |t| t['ok'] }.pluck('name')
@@ -56,13 +56,13 @@ class TrackingCampaigns::Motor2Cases
 
   def sale_cases
     [interest_case, question_case, keyword_case, not_done_case, confirm_case, not_now_case, future_case, opt_out_case,
-     off_topic_case, thanks_case, *link_cases, later_case]
+     off_topic_case, thanks_case, *link_cases, later_case, *TrackingCampaigns::OfferCases.new(function, @answers, method(:make)).cases]
   end
 
   # opts: expect: { any: [herramientas], none: [herramientas], url: }, messages:, state:, after_package:
   def make(key, title, message, **opts)
     after = opts[:after_package]
-    { key: key, title: title, message: message, expect: opts[:expect] || {},
+    { key: key, title: title, message: message, expect: opts[:expect] || {}, answers: opts[:answers],
       state: opts[:state] || (after ? state_after_package : {}), messages: opts[:messages] || talk(message, after_package: after) }
   end
 
@@ -160,14 +160,24 @@ class TrackingCampaigns::Motor2Cases
   # [ok, motivo]
   def verdict(item, tools, reply)
     expect = item[:expect]
+    problem = tools_problem(expect, tools) || text_problem(expect, reply)
+    problem ? [false, problem] : [true, 'Bien.']
+  end
+
+  def tools_problem(expect, tools)
     if expect[:any] && !expect[:any].intersect?(tools)
-      return [false, "Se esperaba que usara #{expect[:any].join(' o ')}#{tools.any? ? "; usó #{tools.join(', ')}" : '; no usó ninguna'}."]
+      return "Se esperaba que usara #{expect[:any].join(' o ')}#{tools.any? ? "; usó #{tools.join(', ')}" : '; no usó ninguna'}."
     end
 
     wrong = Array(expect[:none]) & tools
-    return [false, "No debía usar #{wrong.join(', ')}."] if wrong.any?
-    return [false, 'La respuesta no trae la liga exacta.'] if expect[:url] && reply.exclude?(expect[:url])
+    "No debía usar #{wrong.join(', ')}." if wrong.any?
+  end
 
-    [true, 'Bien.']
+  # La liga exacta y, en Ofrecer, el precio de promoción (o que ya no lo ofrezca si venció).
+  def text_problem(expect, reply)
+    return 'La respuesta no trae la liga exacta.' if expect[:url] && reply.exclude?(expect[:url])
+    return "La respuesta no trae el precio de promoción (#{expect[:says]})." if expect[:says] && reply.exclude?(expect[:says])
+
+    "No debía ofrecer el precio de promoción (#{expect[:not_says]})." if expect[:not_says] && reply.include?(expect[:not_says])
   end
 end

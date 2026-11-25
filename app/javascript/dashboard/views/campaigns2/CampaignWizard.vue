@@ -9,12 +9,14 @@
   los que confirmaron: EventReminders) · Respuestas (compactas; «Cómo atiende» en opciones avanzadas) · Revisar y
   lanzar (nombre, cuándo —termina al empezar el evento— y los Casos corren solos). La vista de «así le llega» solo
   en Mensajes y Revisar.
-  Ruta: tracking-dashboard/campaigns2/new | campaigns2/:campaignId/edit.
+  El tipo se elige ANTES (cuadro de «Nueva campaña»: ?kind=…; si falta, CampaignKindPicker aquí) y ya no se cambia.
+  Ruta: tracking-dashboard/campaigns2/new?kind=… | campaigns2/:campaignId/edit.
 -->
 <script>
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import Motor2CampaignsAPI from 'dashboard/api/motor2Campaigns';
+import CatalogItemsAPI from 'dashboard/api/catalogItems';
 import WizardTabs from 'dashboard/views/readyAgents/WizardTabs.vue';
 import EmailPreview from './EmailPreview.vue';
 import EmailEditor from './EmailEditor.vue';
@@ -29,6 +31,14 @@ import WhatsappFlow from './WhatsappFlow.vue';
 import ConversationPreview from './ConversationPreview.vue';
 import InviteEvent from './InviteEvent.vue';
 import EventReminders from './EventReminders.vue';
+import CampaignKindPicker from './CampaignKindPicker.vue';
+import OfferProducts from './OfferProducts.vue';
+import OfferInterest from './OfferInterest.vue';
+import SurveyQuestions from './SurveyQuestions.vue';
+import SurveyLow from './SurveyLow.vue';
+import RenewDue from './RenewDue.vue';
+import RenewPay from './RenewPay.vue';
+import FollowUpPlan from 'dashboard/views/readyAgents/FollowUpPlan.vue';
 import { fillTemplate, sampleValues } from './campaignFlow';
 
 // En «Revisar»: probar la campaña completa, no solo al vendedor.
@@ -48,6 +58,35 @@ const STEPS = [
 ];
 // Invitar: en el orden en que piensa quien invita (evento → invitados → mensajes → respuestas → lanzar).
 const INVITE_STEPS = ['event', 'audience', 'messages', 'replies', 'review'];
+// Ofrecer: la oferta (productos y promoción) → qué hace cuando le interesa → a quién → mensajes → respuestas → lanzar.
+const OFFER_STEPS = [
+  'offer',
+  'interest',
+  'audience',
+  'messages',
+  'replies',
+  'review',
+];
+// Reactivar: primero a quién (los que no compran desde N días), luego qué les ofreces y lo demás como Ofrecer.
+const REACTIVATE_STEPS = [
+  'audience',
+  'offer',
+  'interest',
+  'messages',
+  'replies',
+  'review',
+];
+// Encuesta: las preguntas con tipo → si califica bajo → a quién (atendidos hace poco) → mensajes → respuestas → lanzar.
+const SURVEY_STEPS = [
+  'questions',
+  'low',
+  'audience',
+  'messages',
+  'replies',
+  'review',
+];
+// Recordar: qué contratos y en qué días antes de vencer → cómo se paga → mensajes → respuestas → lanzar.
+const RENEW_STEPS = ['due', 'pay', 'messages', 'replies', 'review'];
 const KINDS = ['offer', 'invite', 'reactivate', 'renew', 'survey'];
 const FILTER_TYPE_CONTACT = 'contact';
 const ATTENDEE_STATUSES = [
@@ -135,6 +174,14 @@ export default {
     ConversationPreview,
     InviteEvent,
     EventReminders,
+    CampaignKindPicker,
+    OfferProducts,
+    OfferInterest,
+    SurveyQuestions,
+    SurveyLow,
+    RenewDue,
+    RenewPay,
+    FollowUpPlan,
   },
   data() {
     return {
@@ -160,6 +207,12 @@ export default {
       touchTab: 1,
       testTab: 'cases',
       moreTest: 'simulate',
+      // El tipo se elige antes de entrar (?kind=…) y ya no se cambia; sin tipo, se pregunta primero.
+      showKindPicker: false,
+      // Ofrecer: los productos elegidos (sus datos del Catálogo) y la versión de «Imágenes y archivos» (al pegar la foto).
+      offerItems: {},
+      filesVersion: 0,
+      catalogCategories: [], // Reactivar: para acotar por categoría
       showAdvanced: false,
       sendingTest: false,
       // Lista fría de correos (solo correo)
@@ -185,35 +238,92 @@ export default {
     isInvite() {
       return this.kind === 'invite';
     },
+    isOffer() {
+      return this.kind === 'offer';
+    },
+    isReactivate() {
+      return this.kind === 'reactivate';
+    },
+    // Ofrecer y Reactivar: productos con promoción, «Cuando le interesa» y el seguimiento en Mensajes.
+    offerLike() {
+      return this.isOffer || this.isReactivate;
+    },
+    isSurvey() {
+      return this.kind === 'survey';
+    },
+    isRenew() {
+      return this.kind === 'renew';
+    },
+    // Las variables que se pueden poner en el correo según el tipo (las llena cada contacto: ContactFacts).
+    emailVars() {
+      const base = ['contacto', 'empresa'];
+      if (this.isRenew) return [...base, 'que_vence', 'vence', 'monto'];
+      if (this.kind === 'reactivate')
+        return [...base, 'ultima_compra', 'oferta'];
+      if (this.isSurvey || this.isInvite) return base;
+      return [...base, 'oferta'];
+    },
+    // Recordar: los días antes de vencer en que salen sus toques.
+    renewOffsets() {
+      return ((this.form.brief.renew_source || {}).offsets || [7, 1, 0]).map(
+        Number
+      );
+    },
+    // Proceso guiado (sus propios pasos, respuestas compactas, «Cómo atiende» avanzado).
+    guided() {
+      return this.isInvite || this.offerLike || this.isSurvey || this.isRenew;
+    },
+    guideKey() {
+      if (this.isInvite) return 'INVITE';
+      if (this.isSurvey) return 'SURVEY_FLOW';
+      if (this.isRenew) return 'RENEW_FLOW';
+      return this.isReactivate ? 'REACT_FLOW' : 'OFFER_FLOW';
+    },
     steps() {
-      return this.isInvite ? INVITE_STEPS : STEPS;
+      if (this.isInvite) return INVITE_STEPS;
+      if (this.isReactivate) return REACTIVATE_STEPS;
+      if (this.isSurvey) return SURVEY_STEPS;
+      if (this.isRenew) return RENEW_STEPS;
+      return this.isOffer ? OFFER_STEPS : STEPS;
+    },
+    // Las audiencias de cada tipo (Reactivar: primero «no compran desde N días»).
+    audienceTypes() {
+      const base = ['segment', 'label', 'event', 'continuous'];
+      const list = this.isWhatsapp ? [] : ['list'];
+      if (this.isReactivate) return ['inactive', 'segment', 'label', ...list];
+      if (this.isSurvey) return ['served', ...base, ...list];
+      if (this.isRenew) return ['contracts'];
+      return [...base, ...list];
+    },
+    // Reactivar y Recordar: en la muestra sale lo último que compró o lo que le vence.
+    previewFacts() {
+      return this.isReactivate || this.kind === 'renew';
     },
     testTabs() {
-      return this.isInvite ? INVITE_TEST_TABS : TEST_TABS;
+      return this.guided ? INVITE_TEST_TABS : TEST_TABS;
     },
-    // Invitar: «así le llega» y probar solo donde sirven.
+    // Guiados: «así le llega» y probar solo donde sirven.
     showSide() {
-      return !this.isInvite || ['messages', 'review'].includes(this.step);
+      return !this.guided || ['messages', 'review'].includes(this.step);
     },
     // Audiencia «asistentes de un evento»: su propio evento (puede ser otro, p. ej. la expo pasada).
     audienceEventId() {
       return this.form.audience.source.event_id || this.form.brief.event_id;
     },
-    kinds() {
-      return KINDS;
-    },
     attendeeStatuses() {
       return ATTENDEE_STATUSES;
     },
     stepLabels() {
-      const base = this.isInvite ? 'INVITE.STEPS' : 'STEPS';
+      const base = this.guided ? `${this.guideKey}.STEPS` : 'STEPS';
       return Object.fromEntries(
         this.steps.map(s => [s, this.t(`${base}.${s}`)])
       );
     },
     stepHint() {
       return this.t(
-        this.isInvite ? `INVITE.HINTS.${this.step}` : `HINTS.${this.step}`
+        this.guided
+          ? `${this.guideKey}.HINTS.${this.step}`
+          : `HINTS.${this.step}`
       );
     },
     segments() {
@@ -295,6 +405,39 @@ export default {
           },
         ];
       }
+      if (src.type === 'inactive') {
+        return [
+          {
+            attribute_key: 'inactive_customer',
+            filter_operator: 'equal_to',
+            values: [`${src.days || 180}:${src.category_id || 'any'}`],
+            query_operator: null,
+          },
+        ];
+      }
+      if (src.type === 'contracts') {
+        const type = (this.form.brief.renew_source || {}).contract_type_id;
+        return [
+          {
+            attribute_key: 'contract_due',
+            filter_operator: 'equal_to',
+            values: [
+              `${Math.max(...this.renewOffsets, 0) || 7}:${type || 'any'}`,
+            ],
+            query_operator: null,
+          },
+        ];
+      }
+      if (src.type === 'served') {
+        return [
+          {
+            attribute_key: 'served_recently',
+            filter_operator: 'equal_to',
+            values: [String(src.days || 30)],
+            query_operator: null,
+          },
+        ];
+      }
       if (src.type === 'campaign') return [];
       return [];
     },
@@ -368,11 +511,13 @@ export default {
           ? this.t('REVIEW.STARTS_AT', { at: fmt(f.scheduled_for) })
           : this.t('REVIEW.STARTS_NOW'),
         this.reviewEnd(fmt),
-        this.t('REVIEW.PACE', {
-          n: this.attempts,
-          every: f.touches.every_value,
-          unit: this.t(`SIM.UNITS.${f.touches.every_unit}`),
-        }),
+        this.isRenew
+          ? this.t('RENEW_FLOW.PACE', { days: this.renewOffsets.join(', ') })
+          : this.t('REVIEW.PACE', {
+              n: this.attempts,
+              every: f.touches.every_value,
+              unit: this.t(`SIM.UNITS.${f.touches.every_unit}`),
+            }),
         f.daily_cap
           ? this.t(f.brief.warmup ? 'REVIEW.CAP_WARMUP' : 'REVIEW.CAP', {
               n: f.daily_cap,
@@ -392,6 +537,10 @@ export default {
           return this.t('REVIEW.ENDS_AT', { at: fmt(this.form.ends_at) });
         if (this.isInvite && this.event && this.event.starts_at)
           return this.t('REVIEW.ENDS_AT', { at: fmt(this.event.starts_at) });
+        if (this.offerLike && this.form.brief.valid_until)
+          return this.t('REVIEW.ENDS_AT', {
+            at: fmt(`${this.form.brief.valid_until}T23:59`),
+          });
         return this.t('REVIEW.NO_END');
       };
     },
@@ -417,6 +566,30 @@ export default {
       }
       // Invitar: el evento tiene fecha fija, la regla de «no escribirle si otra campaña…» no aplica por omisión.
       if (kind === 'invite') this.form.brief.rest_days = 0;
+      // Recordar: los contratos por vencer, con sus toques en 7, 1 y 0 días antes (cada uno según su fecha).
+      if (kind === 'renew') {
+        this.form.audience.source = { type: 'contracts' };
+        this.form.brief.rest_days = 0;
+        if (!this.form.brief.renew_source) {
+          this.form.brief.renew_source = { offsets: [7, 1, 0] };
+        }
+        this.form.touches.attempts = this.renewOffsets.length;
+        this.form.brief.offer_goal = 'done';
+      }
+      // Encuesta: la audiencia de entrada es «atendidos en los últimos 30 días».
+      if (kind === 'survey') {
+        this.form.audience.source = { type: 'served', days: 30 };
+        if (!(this.form.brief.survey_items || []).length) {
+          this.form.brief.survey_items = [
+            { text: '', type: 'scale10', low: 7 },
+          ];
+        }
+      }
+      // Reactivar: la audiencia de entrada es «no compran desde hace 180 días».
+      if (kind === 'reactivate') {
+        this.form.audience.source = { type: 'inactive', days: 180 };
+        this.loadCategories();
+      }
       if (!this.relayChoices.includes(this.form.brief.relay)) {
         [this.form.brief.relay] = this.relayChoices;
       }
@@ -428,9 +601,21 @@ export default {
     'form.brief.offer_goal'() {
       if (!this.loading) this.resetLabels();
     },
+    // Recordar: un toque por cada día elegido; la muestra se vuelve a contar.
+    'form.brief.renew_source': {
+      deep: true,
+      handler() {
+        if (!this.isRenew) return;
+        this.form.touches.attempts = this.renewOffsets.length;
+        if (this.step === 'due') this.loadPreview();
+      },
+    },
     // Si el paso ya no existe en este tipo (Invitar tiene otros pasos), al primero.
-    steps(list) {
-      if (!list.includes(this.step)) [this.step] = list;
+    steps: {
+      immediate: true,
+      handler(list) {
+        if (!list.includes(this.step)) [this.step] = list;
+      },
     },
     // Invitar: lo que la ficha sabe del evento sale del evento.
     'form.brief.event_id'() {
@@ -450,7 +635,10 @@ export default {
       this.options = data;
       const id = this.$route.params.campaignId;
       if (id) await this.load(Number(id));
-      else this.applyDefaults();
+      else {
+        this.applyDefaults();
+        if (!KINDS.includes(this.$route.query.kind)) this.showKindPicker = true;
+      }
       if (this.campaignId && this.$route.query.step === 'review') {
         this.$nextTick(() => this.go('review'));
       }
@@ -459,6 +647,10 @@ export default {
       useAlert(this.t('LOAD_ERROR'));
     } finally {
       this.loading = false;
+      // Nueva con su tipo: se aplica ya con la pantalla lista (sus valores de fábrica).
+      const { kind } = this.$route.query;
+      if (!this.campaignId && KINDS.includes(kind)) this.form.brief.kind = kind;
+      if (this.isReactivate) this.loadCategories();
     }
   },
   beforeDestroy() {
@@ -480,7 +672,7 @@ export default {
     },
     go(step) {
       this.step = step;
-      if (step === 'audience') this.loadPreview();
+      if (step === 'audience' || step === 'due') this.loadPreview();
       if (step === 'review') this.saveAndCheck();
     },
     next() {
@@ -512,6 +704,136 @@ export default {
           ? {}
           : { agenda: e.description }),
       };
+    },
+    pickKind(kind) {
+      this.showKindPicker = false;
+      this.$router.replace({ query: { ...this.$route.query, kind } });
+      this.form.brief.kind = kind;
+    },
+    leave() {
+      this.$router.push({ name: 'contact_trackings_campaigns' });
+    },
+    // Creó o editó el evento sin salir: recarga los eventos y deja elegido ese.
+    async onEventSaved(event) {
+      await this.refreshOptions();
+      if (!event) return;
+      this.form.brief.event_id = event.id;
+      this.form.brief.offer_what = event.name;
+    },
+    // Ofrecer: qué es, precio (normal → promoción) y vigencia para la IA, tomados de los productos.
+    offerFacts() {
+      const rows = (this.form.brief.products || [])
+        .map(p => ({ ...p, item: this.offerItems[p.catalog_item_id] }))
+        .filter(p => p.item);
+      if (!this.offerLike || !rows.length) return {};
+      const money = (v, item) =>
+        `$${Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2 })} ${
+          item.currency || 'MXN'
+        }`;
+      const facts = {
+        what_is: rows
+          .map(r =>
+            [r.item.name, r.item.description].filter(Boolean).join(': ')
+          )
+          .join(' · '),
+        price: rows
+          .map(r =>
+            r.promo_price
+              ? `${r.item.name}: ${money(r.promo_price, r.item)} (antes ${money(
+                  r.item.price,
+                  r.item
+                )})`
+              : `${r.item.name}: ${money(r.item.price, r.item)}`
+          )
+          .join(' · '),
+      };
+      // Reactivar: lo que se le ofrece para que vuelva es el incentivo.
+      if (this.isReactivate) {
+        facts.incentive = facts.price;
+        delete facts.price;
+        delete facts.what_is;
+      }
+      if (this.form.brief.valid_until) {
+        facts.valid_until = new Date(
+          `${this.form.brief.valid_until}T12:00`
+        ).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+      }
+      return facts;
+    },
+    offerName() {
+      const first = (this.form.brief.products || [])[0];
+      const item = first && this.offerItems[first.catalog_item_id];
+      if (this.offerLike && item) return item.name;
+      if (this.isRenew) {
+        const id = (this.form.brief.renew_source || {}).contract_type_id;
+        const type = (this.options.contract_types || []).find(
+          c => String(c.id) === String(id)
+        );
+        return type ? type.name : '';
+      }
+      return '';
+    },
+    // Ofrecer: la foto del producto como imagen de la campaña (hace falta guardarla primero).
+    async attachPhoto(catalogItemId) {
+      if (!this.campaignId && !(await this.save())) return;
+      try {
+        await Motor2CampaignsAPI.attachProductPhoto(
+          this.campaignId,
+          catalogItemId
+        );
+        this.filesVersion += 1;
+      } catch {
+        // se puede subir a mano en «Imágenes y archivos»
+      }
+    },
+    // «Información completa» de WhatsApp armada con la oferta (se puede editar).
+    buildOfferContent() {
+      const facts = this.offerFacts();
+      const f = this.form.brief.facts || {};
+      const lines = [
+        facts.what_is || f.what_is,
+        facts.price || f.price,
+        facts.valid_until || f.valid_until
+          ? this.t('OFFER_FLOW.CONTENT_VALID', {
+              date: facts.valid_until || f.valid_until,
+            })
+          : '',
+        f.conditions,
+      ].filter(Boolean);
+      this.form.brief.content = lines.join('\n');
+    },
+    // Reactivar: las categorías del Catálogo para acotar «no compran desde N días».
+    async loadCategories() {
+      if (this.catalogCategories.length) return;
+      try {
+        const { data } = await CatalogItemsAPI.parameters();
+        this.catalogCategories = (data.categories || []).flatMap(c => [
+          { id: c.id, label: c.name },
+          ...(c.children || []).map(k => ({ id: k.id, label: `· ${k.name}` })),
+        ]);
+      } catch {
+        this.catalogCategories = [];
+      }
+    },
+    setAudienceSource(changes) {
+      this.form.audience.source = { ...this.form.audience.source, ...changes };
+      this.loadPreview();
+    },
+    // Lo que se ve junto a cada contacto en la muestra (Reactivar y Recordar).
+    factLine(c) {
+      const f = c.facts || {};
+      if (this.isReactivate && f.last_purchase)
+        return this.t('REACT_FLOW.LAST_PURCHASE', {
+          what: f.last_purchase,
+          days: f.days_since || '—',
+        });
+      if (f.due_what)
+        return this.t('RENEW_FLOW.DUE_LINE', {
+          what: f.due_what,
+          date: f.due_date || '—',
+          amount: f.due_amount || '',
+        });
+      return '';
     },
     setInviteSource(type) {
       this.setSource(type);
@@ -613,6 +935,22 @@ export default {
         this.form.touches.emails.push({ body: '', blocks: [] });
       }
       if (!this.form.brief.labels) this.resetLabels();
+      // Encuesta de antes (solo textos): pasa a preguntas con tipo.
+      if (
+        this.form.brief.kind === 'survey' &&
+        !(this.form.brief.survey_items || []).length
+      ) {
+        this.form.brief.survey_items = this.form.brief.survey_questions
+          .filter(q => q.trim())
+          .map(text => {
+            const ten = /\b[01]\s*(al|a|-)\s*10\b/i.test(text);
+            const five = /\b1\s*(al|a|-)\s*5\b/i.test(text);
+            if (ten)
+              return { text, type: 'scale10', low: data.brief.low_score || 7 };
+            if (five) return { text, type: 'scale5', low: 3 };
+            return { text, type: 'open', low: null };
+          });
+      }
     },
     body() {
       const f = this.form;
@@ -624,15 +962,22 @@ export default {
         brief: {
           ...f.brief,
           survey_questions: f.brief.survey_questions.filter(q => q.trim()),
+          survey_items: (f.brief.survey_items || []).filter(i =>
+            (i.text || '').trim()
+          ),
           objections: f.brief.objections.filter(
             o => o.objection.trim() && o.answer.trim()
           ),
           links: (f.brief.links || []).filter(l => (l.url || '').trim()),
-          facts: { ...f.brief.facts, ...this.eventFacts() },
+          facts: {
+            ...f.brief.facts,
+            ...this.eventFacts(),
+            ...this.offerFacts(),
+          },
           offer_what:
             this.isInvite && this.event
               ? f.brief.offer_what || this.event.name
-              : f.brief.offer_what,
+              : f.brief.offer_what || this.offerName(),
         },
         touches: f.touches,
         audience: {
@@ -735,6 +1080,7 @@ export default {
           template_id: null,
           inbox_id: this.form.inbox_id,
           excluded_contact_ids: this.form.audience.excluded_contact_ids,
+          facts: this.previewFacts ? 1 : undefined,
         });
         this.preview = data;
       } catch (e) {
@@ -859,6 +1205,12 @@ export default {
         <div>
           <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
             {{ campaignId ? t('EDIT_TITLE') : t('NEW_TITLE') }}
+            <span
+              v-if="!showKindPicker"
+              class="ml-1 px-2 py-0.5 align-middle text-xs font-semibold rounded-full bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200"
+            >
+              {{ t(`KINDS.${kind}.TITLE`) }}
+            </span>
           </h1>
           <p class="m-0 mt-1 text-sm text-slate-600 dark:text-slate-400">
             {{ t('SUBTITLE') }}
@@ -893,25 +1245,53 @@ export default {
         >
           <p class="m-0 text-xs text-slate-500">{{ stepHint }}</p>
 
+          <!-- Ofrecer · 1 · La oferta: productos, promoción, vigencia y lo que sabe la IA -->
+          <OfferProducts
+            v-if="step === 'offer'"
+            :kind="kind"
+            :brief.sync="form.brief"
+            :kit="kit"
+            :campaign-id="campaignId"
+            :save="save"
+            :attempts="attempts"
+            :files-version="filesVersion"
+            @photo="attachPhoto"
+            @catalog="offerItems = { ...$event }"
+          />
+
+          <!-- Encuesta · 1 · Las preguntas con tipo · 2 · Si califica bajo -->
+          <SurveyQuestions
+            v-if="step === 'questions'"
+            :brief.sync="form.brief"
+            :kit="kit"
+            :campaign-id="campaignId"
+            :save="save"
+            :attempts="attempts"
+          />
+          <SurveyLow
+            v-if="step === 'low'"
+            :brief.sync="form.brief"
+            :kit="kit"
+            :users="options.users"
+            :teams="options.teams"
+            :case-types="options.case_types || []"
+          />
+
+          <!-- Ofrecer · 2 · Cuando le interesa: el objetivo y lo que hace la IA -->
+          <OfferInterest
+            v-if="step === 'interest'"
+            :brief.sync="form.brief"
+            :attend.sync="form.attend"
+            :kit="kit"
+            :users="options.users"
+            :teams="options.teams"
+            :calendar-users="options.calendar_users || []"
+            :sources="options.sources || []"
+            :templates="inboxTemplates"
+          />
+
           <!-- Invitar · 1 · El evento: tipo, evento, cómo confirma y lo que solo sabe la empresa -->
           <template v-if="step === 'event'">
-            <div class="flex flex-wrap items-center gap-2 text-sm">
-              <span class="text-slate-500">{{ t('INVITE.KIND') }}</span>
-              <button
-                v-for="k in kinds"
-                :key="k"
-                type="button"
-                class="px-3 py-1 text-xs border rounded-full"
-                :class="
-                  kind === k
-                    ? 'border-woot-500 text-woot-700 bg-woot-25 dark:bg-woot-900/20'
-                    : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
-                "
-                @click="form.brief.kind = k"
-              >
-                {{ t(`KINDS.${k}.TITLE`) }}
-              </button>
-            </div>
             <InviteEvent
               :brief.sync="form.brief"
               :events="options.events"
@@ -921,34 +1301,12 @@ export default {
               :campaign-id="campaignId"
               :save="save"
               :attempts="attempts"
+              @eventSaved="onEventSaved"
             />
           </template>
 
           <!-- 1 · Objetivo: tipo, qué cuenta como logrado, nombre corto y canal -->
           <template v-if="step === 'goal'">
-            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <button
-                v-for="k in kinds"
-                :key="k"
-                type="button"
-                class="flex flex-col gap-1 p-3 text-left border rounded-lg"
-                :class="
-                  kind === k
-                    ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20'
-                    : 'border-slate-100 dark:border-slate-700 hover:border-woot-200'
-                "
-                @click="form.brief.kind = k"
-              >
-                <span
-                  class="text-sm font-semibold text-slate-800 dark:text-slate-100"
-                >
-                  {{ t(`KINDS.${k}.TITLE`) }}
-                </span>
-                <span class="text-xs text-slate-500">
-                  {{ t(`KINDS.${k}.ABOUT`) }}
-                </span>
-              </button>
-            </div>
             <fieldset v-if="goals.length > 1" class="flex flex-col gap-1">
               <legend class="field-label">{{ t('GOAL.QUESTION') }}</legend>
               <label
@@ -1057,8 +1415,25 @@ export default {
           />
 
           <!-- 3 · Audiencia (Invitar: «Invitados», con el canal arriba) -->
-          <template v-if="step === 'audience'">
-            <label v-if="isInvite" class="block">
+          <!-- Recordar · 1 · Qué recuerdas: los contratos y los días; debajo, canal y muestra -->
+          <RenewDue
+            v-if="step === 'due'"
+            :brief.sync="form.brief"
+            :contract-types="options.contract_types || []"
+          />
+          <!-- Recordar · 2 · Cómo se paga -->
+          <RenewPay
+            v-if="step === 'pay'"
+            :brief.sync="form.brief"
+            :kit="kit"
+            :users="options.users"
+            :teams="options.teams"
+            :campaign-id="campaignId"
+            :save="save"
+            :attempts="attempts"
+          />
+          <template v-if="step === 'audience' || step === 'due'">
+            <label v-if="guided" class="block">
               <span class="field-label">{{ t('MESSAGES.CHANNEL') }}</span>
               <select v-model="form.inbox_id" @change="loadPreview">
                 <option value="">{{ t('MESSAGES.CHANNEL_PICK') }}</option>
@@ -1078,18 +1453,12 @@ export default {
                 {{ t('MESSAGES.CHANNEL_HINT') }}
               </span>
             </label>
-            <span v-if="isInvite" class="field-label">
-              {{ t('INVITE.WHO') }}
+            <span v-if="guided && audienceTypes.length > 1" class="field-label">
+              {{ t(`${guideKey}.WHO`) }}
             </span>
-            <div class="flex flex-wrap gap-2">
+            <div v-if="audienceTypes.length > 1" class="flex flex-wrap gap-2">
               <button
-                v-for="type in [
-                  'segment',
-                  'label',
-                  'event',
-                  'continuous',
-                  ...(isWhatsapp ? [] : ['list']),
-                ]"
+                v-for="type in audienceTypes"
                 :key="type"
                 type="button"
                 class="px-3 py-1.5 text-sm border rounded-full"
@@ -1098,7 +1467,15 @@ export default {
                     ? 'border-woot-500 text-woot-700 bg-woot-25 dark:bg-woot-900/20'
                     : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
                 "
-                @click="isInvite ? setInviteSource(type) : setSource(type)"
+                @click="
+                  isInvite
+                    ? setInviteSource(type)
+                    : type === 'inactive'
+                    ? setAudienceSource({ type, days: 180 })
+                    : type === 'served'
+                    ? setAudienceSource({ type, days: 30 })
+                    : setSource(type)
+                "
               >
                 {{ t(`AUDIENCE.${type}`) }}
               </button>
@@ -1110,6 +1487,66 @@ export default {
                 })
               }}
             </p>
+            <!-- Encuesta: los que atendimos en los últimos N días -->
+            <label v-if="sourceType === 'served'" class="block">
+              <span class="field-label">{{ t('SURVEY_FLOW.DAYS') }}</span>
+              <input
+                :value="form.audience.source.days || 30"
+                type="number"
+                min="1"
+                max="365"
+                class="!mb-0 !w-40"
+                @change="
+                  setAudienceSource({ days: Number($event.target.value) || 30 })
+                "
+              />
+              <span class="block text-xs text-slate-500">
+                {{ t('SURVEY_FLOW.DAYS_HINT') }}
+              </span>
+            </label>
+            <!-- Reactivar: no compran desde hace N días (y, si quieres, de una categoría) -->
+            <div
+              v-if="sourceType === 'inactive'"
+              class="grid grid-cols-1 gap-2 sm:grid-cols-2"
+            >
+              <label class="block">
+                <span class="field-label">{{ t('REACT_FLOW.DAYS') }}</span>
+                <input
+                  :value="form.audience.source.days || 180"
+                  type="number"
+                  min="1"
+                  max="3650"
+                  class="!mb-0"
+                  @change="
+                    setAudienceSource({
+                      days: Number($event.target.value) || 180,
+                    })
+                  "
+                />
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('REACT_FLOW.CATEGORY') }}</span>
+                <select
+                  :value="form.audience.source.category_id || ''"
+                  class="!mb-0"
+                  @change="
+                    setAudienceSource({ category_id: $event.target.value })
+                  "
+                >
+                  <option value="">{{ t('REACT_FLOW.ANY_CATEGORY') }}</option>
+                  <option
+                    v-for="cat in catalogCategories"
+                    :key="cat.id"
+                    :value="cat.id"
+                  >
+                    {{ cat.label }}
+                  </option>
+                </select>
+              </label>
+              <p class="m-0 text-xs text-slate-500 sm:col-span-2">
+                {{ t('REACT_FLOW.DAYS_HINT') }}
+              </p>
+            </div>
             <label v-if="sourceType === 'segment'" class="block">
               <span class="field-label">{{ t('AUDIENCE.SEGMENT') }}</span>
               <select
@@ -1323,6 +1760,12 @@ export default {
                       <span class="text-xs text-slate-500">
                         {{ isWhatsapp ? c.phone_number : c.email }}
                       </span>
+                      <span
+                        v-if="factLine(c)"
+                        class="text-xs text-woot-700 dark:text-woot-300"
+                      >
+                        {{ factLine(c) }}
+                      </span>
                     </span>
                     <span
                       v-if="c.bucket !== 'ready'"
@@ -1348,7 +1791,11 @@ export default {
                 })
               }}
             </p>
-            <div class="flex flex-wrap items-center gap-2 text-sm">
+            <!-- Recordar: los toques salen en sus días antes de vencer (no «cada N días») -->
+            <p v-if="isRenew" class="m-0 text-sm">
+              {{ t('RENEW_FLOW.PACE', { days: renewOffsets.join(', ') }) }}
+            </p>
+            <div v-else class="flex flex-wrap items-center gap-2 text-sm">
               {{ t('MESSAGES.TOUCHES') }}
               <select
                 v-model.number="form.touches.attempts"
@@ -1371,7 +1818,7 @@ export default {
                 <option value="days">{{ t('MESSAGES.DAYS') }}</option>
               </select>
             </div>
-            <p class="m-0 text-xs text-slate-500">
+            <p v-if="!isRenew" class="m-0 text-xs text-slate-500">
               {{ t('MESSAGES.TOUCHES_HINT') }}
             </p>
 
@@ -1430,6 +1877,7 @@ export default {
                 :key="touchTab"
                 :value="currentEmail"
                 :signature="form.attend ? form.attend.email_signature : ''"
+                :vars="emailVars"
                 @input="setEmail(touchTab, $event)"
               />
               <label v-if="touchTab > 1" class="block">
@@ -1461,6 +1909,45 @@ export default {
             <p v-if="!inbox" class="m-0 text-xs text-slate-500">
               {{ t('MESSAGES.PICK_CHANNEL_FIRST') }}
             </p>
+            <!-- Ofrecer: la información completa armada con la oferta y si contestó y se calla -->
+            <template v-if="offerLike">
+              <button
+                v-if="isWhatsapp"
+                type="button"
+                class="self-start text-sm text-woot-600 hover:underline"
+                @click="buildOfferContent"
+              >
+                {{ t('OFFER_FLOW.BUILD_CONTENT') }}
+              </button>
+              <section
+                v-if="form.attend"
+                class="flex flex-col gap-2 p-3 border rounded-md border-slate-100 dark:border-slate-700"
+              >
+                <p class="m-0 text-sm font-semibold">
+                  {{ t('OFFER_FLOW.SILENT_TITLE') }}
+                </p>
+                <p class="m-0 text-xs text-slate-500">
+                  {{ t('OFFER_FLOW.SILENT_HINT') }}
+                </p>
+                <FollowUpPlan
+                  :value="
+                    (form.attend.settings || {}).follow_up || {
+                      nudges: 2,
+                      templates: [],
+                    }
+                  "
+                  :templates="inboxTemplates"
+                  :quote="(form.attend.settings || {}).quote"
+                  kind="campaign_seller"
+                  @input="
+                    form.attend = {
+                      ...form.attend,
+                      settings: { ...form.attend.settings, follow_up: $event },
+                    }
+                  "
+                />
+              </section>
+            </template>
             <!-- Invitar: recordatorios a los que confirmaron -->
             <EventReminders
               v-if="isInvite"
@@ -1476,11 +1963,12 @@ export default {
             :brief.sync="form.brief"
             :kind="kind"
             :kit="kit"
-            :compact="isInvite"
+            :compact="guided"
           />
           <!-- Invitar: a quién pasa si pide una persona y «Cómo atiende» en opciones avanzadas -->
-          <template v-if="step === 'replies' && isInvite">
+          <template v-if="step === 'replies' && guided">
             <section
+              v-if="isInvite"
               class="grid grid-cols-1 gap-2 p-3 border rounded-md sm:grid-cols-2 border-slate-100 dark:border-slate-700"
             >
               <p class="m-0 text-sm font-semibold sm:col-span-2">
@@ -1526,6 +2014,7 @@ export default {
               :templates="inboxTemplates"
               :is-email="isEmail"
               :appointments="false"
+              :only="['who', 'knows', 'notes']"
             />
           </template>
 
@@ -1687,7 +2176,7 @@ export default {
           <template v-if="step === 'review'">
             <!-- Invitar: nombre y cuándo aquí (no hay paso «Cuándo») -->
             <section
-              v-if="isInvite"
+              v-if="guided"
               class="flex flex-col gap-2 p-3 border rounded-md border-slate-100 dark:border-slate-700"
             >
               <label class="block">
@@ -1728,10 +2217,16 @@ export default {
                 />
               </fieldset>
               <p
-                v-if="!form.ends_at && event"
+                v-if="!form.ends_at && isInvite && event"
                 class="m-0 text-xs text-slate-500"
               >
                 {{ t('INVITE.ENDS_AT_EVENT') }}
+              </p>
+              <p
+                v-if="!form.ends_at && offerLike && form.brief.valid_until"
+                class="m-0 text-xs text-slate-500"
+              >
+                {{ t('OFFER_FLOW.ENDS_AT_VALIDITY') }}
               </p>
               <button
                 type="button"
@@ -1868,6 +2363,7 @@ export default {
             :from="inbox ? inbox.name : ''"
             :blocks="currentEmail.blocks || []"
             :signature="form.attend ? form.attend.email_signature || '' : ''"
+            :brief="form.brief"
           />
           <p v-else class="m-0 text-xs text-slate-500">
             {{ t('PREVIEW.PICK_CHANNEL') }}
@@ -1905,7 +2401,7 @@ export default {
               v-if="testTab === 'cases'"
               :payload="chatPayload"
               :disabled="!hasChannel"
-              :auto-run="isInvite"
+              :auto-run="guided"
             />
             <!-- Invitar: simular y la prueba real, juntas en «Más pruebas» -->
             <template v-else-if="testTab === 'more'">
@@ -1993,5 +2489,15 @@ export default {
         </woot-button>
       </div>
     </template>
+    <!-- Sin tipo (liga vieja o recarga): se elige antes de mostrar el asistente -->
+    <woot-modal :show="showKindPicker" :on-close="leave">
+      <woot-modal-header
+        :header-title="t('CHOICE.KIND_TITLE')"
+        :header-content="t('CHOICE.KIND_SUBTITLE')"
+      />
+      <div class="px-8 pb-8">
+        <CampaignKindPicker @pick="pickKind" />
+      </div>
+    </woot-modal>
   </div>
 </template>

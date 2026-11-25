@@ -545,6 +545,29 @@ export default {
                 t('LOW', { n: kindData.low || 0, cases: kindData.cases || 0 })
               }}
             </button>
+            <!-- NPS de la pregunta de 0 a 10 y comentarios de las abiertas (TrackingCampaigns::SurveyResults) -->
+            <p v-if="kindData.nps" class="m-0 text-sm">
+              {{
+                t('NPS', {
+                  score: kindData.nps.score,
+                  promoters: kindData.nps.promoters,
+                  passives: kindData.nps.passives,
+                  detractors: kindData.nps.detractors,
+                })
+              }}
+            </p>
+            <details v-if="(kindData.comments || []).length" class="text-sm">
+              <summary class="cursor-pointer text-woot-600">
+                {{ t('COMMENTS', { n: kindData.comments.length }) }}
+              </summary>
+              <ul class="flex flex-col gap-1 pl-4 m-0 mt-1 list-disc">
+                <li v-for="(c, i) in kindData.comments" :key="i">
+                  <span class="font-medium">{{ c.contact || '—' }}:</span>
+                  {{ c.answer }}
+                  <span class="text-xs text-slate-500">({{ c.question }})</span>
+                </li>
+              </ul>
+            </details>
           </template>
           <p v-else class="m-0 text-sm text-slate-600">
             {{ campaign.brief && campaign.brief.offer_what }}

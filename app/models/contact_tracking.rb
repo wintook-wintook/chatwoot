@@ -103,6 +103,9 @@ class ContactTracking < ApplicationRecord
   belongs_to :account
   belongs_to :tracking_template, optional: true
   belongs_to :tracking_campaign, optional: true # @campanas_vendedor
+  # Campaña · Recordar: el contrato que se le recuerda y las fechas de sus toques (ContactTrackings::DueSchedule).
+  belongs_to :contract, optional: true
+  prepend ContactTrackings::DueSchedule
 
   # Embudo de contactos — la cita que agenda el agente de seguimiento mueve la
   # tarjeta de la conversación a la columna «se agenda cita».

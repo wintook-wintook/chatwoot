@@ -12,11 +12,11 @@
       <% @questions.each_with_index do |question, i| %>
         <label class="flex flex-col gap-1">
           <span class="font-medium"><%= question %></span>
-          <% if question.match?(TrackingCampaigns::SurveyLink::SCORE) %>
-            <% from = question.match?(/\b1\s*(al|a|-)\s*10\b/i) ? 1 : 0 %>
+          <% scale = TrackingCampaigns::SurveyLink.range(question) %>
+          <% if scale %>
             <select name="answers[<%= i %>]" class="px-3 py-2 border rounded-md border-slate-300">
               <option value=""><%= t('public_campaign_survey.pick') %></option>
-              <% (from..10).each do |n| %>
+              <% scale.each do |n| %>
                 <option value="<%= n %>" <%= 'selected' if i.zero? && @score.to_s == n.to_s %>><%= n %></option>
               <% end %>
             </select>

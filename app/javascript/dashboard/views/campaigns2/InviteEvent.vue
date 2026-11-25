@@ -3,14 +3,19 @@
   escribir; cuándo y dónde de la ficha salen de aquí), cómo confirma (aquí en la plática, o se registra en Zoom /
   formulario: entonces la liga de registro y la palabra clave van juntas) y lo que solo sabe la empresa (para quién
   es, costo, preguntas, otras ligas, archivos: CampaignKnowledge sin cuándo/dónde).
+  «Crear evento» y «Editar evento» abren el formulario de Eventos (EventForm) aquí mismo, sin salir de la campaña;
+  al guardar emite eventSaved (la campaña recarga sus eventos y deja elegido ese).
   .sync: brief (event_id, offer_goal, goal_keyword, links, facts, offer_what…)
 -->
 <script>
+import { useAlert } from 'dashboard/composables';
+import EventsAPI from 'dashboard/api/events';
+import EventForm from 'dashboard/views/events/EventForm.vue';
 import CampaignKnowledge from './CampaignKnowledge.vue';
 
 export default {
   name: 'InviteEvent',
-  components: { CampaignKnowledge },
+  components: { CampaignKnowledge, EventForm },
   props: {
     brief: { type: Object, required: true },
     events: { type: Array, default: () => [] },
@@ -21,7 +26,11 @@ export default {
     save: { type: Function, required: true },
     attempts: { type: Number, default: 1 },
   },
-  emits: ['update:brief'],
+  emits: ['update:brief', 'eventSaved'],
+  data() {
+    // El formulario de Eventos: null = cerrado; {} = nuevo; el evento completo = editar.
+    return { editing: null, loadingEvent: false };
+  },
   computed: {
     external() {
       return this.brief.offer_goal === 'external';
@@ -29,9 +38,6 @@ export default {
     // La liga de registro: la primera que va «con la información».
     registration() {
       return (this.brief.links || []).find(l => l.use === 'package') || null;
-    },
-    eventsUrl() {
-      return `/app/accounts/${this.$route.params.accountId}/events`;
     },
     when() {
       if (!this.event || !this.event.starts_at) return '';
@@ -50,6 +56,26 @@ export default {
     },
     set(field, value) {
       this.$emit('update:brief', { ...this.brief, [field]: value });
+    },
+    newEvent() {
+      this.editing = {};
+    },
+    // Para editar hace falta el evento completo (tipo, estado, fin, responsable).
+    async editEvent() {
+      if (!this.event) return;
+      this.loadingEvent = true;
+      try {
+        const { data } = await EventsAPI.find(this.event.id);
+        this.editing = data.event;
+      } catch {
+        useAlert(this.t('EVENT_ERROR'));
+      } finally {
+        this.loadingEvent = false;
+      }
+    },
+    onSaved(event) {
+      this.editing = null;
+      this.$emit('eventSaved', event);
     },
     setRegistration(url) {
       const links = [...(this.brief.links || [])];
@@ -71,14 +97,24 @@ export default {
     >
       <div class="flex flex-wrap items-center justify-between gap-2">
         <p class="m-0 text-sm font-semibold">{{ t('EVENT_TITLE') }}</p>
-        <a
-          :href="eventsUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="text-xs text-woot-600 hover:underline"
-        >
-          {{ t('CREATE_EVENT') }}
-        </a>
+        <div class="flex items-center gap-3">
+          <button
+            v-if="event"
+            type="button"
+            class="text-xs text-woot-600 hover:underline"
+            :disabled="loadingEvent"
+            @click="editEvent"
+          >
+            {{ t('EDIT_EVENT') }}
+          </button>
+          <button
+            type="button"
+            class="text-xs text-woot-600 hover:underline"
+            @click="newEvent"
+          >
+            {{ t('CREATE_EVENT') }}
+          </button>
+        </div>
       </div>
       <select
         :value="brief.event_id"
@@ -166,6 +202,13 @@ export default {
         </p>
       </div>
     </section>
+
+    <EventForm
+      :show="!!editing"
+      :event="editing && editing.id ? editing : null"
+      @close="editing = null"
+      @saved="onSaved"
+    />
 
     <!-- Lo que solo sabe la empresa -->
     <p class="m-0 text-sm font-semibold">{{ t('KNOWLEDGE_TITLE') }}</p>

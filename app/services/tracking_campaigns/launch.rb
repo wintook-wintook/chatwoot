@@ -28,10 +28,7 @@ class TrackingCampaigns::Launch
     start = [@campaign.scheduled_for, now].compact.max
     open_campaign = -> { @campaign.update!(scheduled_for: start, status: TrackingCampaign.status_for(start, now)) }
 
-    if @campaign.continuous?
-      open_campaign.call
-      return { campaign: @campaign }
-    end
+    return continuous_launch(open_campaign) if @campaign.continuous?
 
     return contacts_launch(open_campaign) if contact_ids.any?
 
@@ -40,6 +37,14 @@ class TrackingCampaigns::Launch
   end
 
   private
+
+  # Continua: queda en curso y entran los que lleguen. Recordar: los contratos que ya entran en sus días, desde ya
+  # (luego cada mañana: TrackingCampaigns::RenewEnrollJob).
+  def continuous_launch(open_campaign)
+    open_campaign.call
+    TrackingCampaigns::RenewEnrollJob.perform_later(@campaign.id) if @campaign.brief.to_h['renew_source'].present?
+    { campaign: @campaign }
+  end
 
   # Campaña con Vendedor IA armada desde otra («con los que les interesó»): la audiencia es una lista de contactos.
   def contact_ids = @campaign.motor2? ? Array(@campaign.audience.to_h['contact_ids']).map(&:to_i) : []

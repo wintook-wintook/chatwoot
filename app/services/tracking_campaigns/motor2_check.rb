@@ -49,12 +49,14 @@ class TrackingCampaigns::Motor2Check
     return nil unless @brief['offer_goal'] == 'appointment' && %w[survey invite].exclude?(@brief['kind'])
     return item(:appointment, 'ok', 'Agenda citas en los calendarios del vendedor.') if Array(answers['appointment_user_ids']).any?
 
-    item(:appointment, 'error', 'La meta es agendar cita, pero el vendedor no tiene con quién: elige los calendarios en su «Cómo platica».')
+    where = %w[offer reactivate].include?(@brief['kind']) ? '«Cuando le interesa»' : '«Cómo atiende»'
+    item(:appointment, 'error', "La meta es agendar cita, pero no hay con quién: elige los calendarios en #{where}.")
   end
 
   def offer
     case @brief['kind']
     when 'invite' then invite
+    when 'renew' then item(:offer, 'ok', 'Recuerda los contratos por vencer (lo que le vence sale de cada contrato).')
     when 'survey'
       return item(:offer, 'error', 'Escribe al menos una pregunta de la encuesta.') if Array(@brief['survey_questions']).empty?
 
@@ -209,8 +211,10 @@ class TrackingCampaigns::Motor2Check
       return item(:relay, 'warning', 'Si alguien pide hablar con una persona, no hay a quién pasarlo: elígelo en «Cuando contesta».')
     end
 
-    item(:relay, 'error', 'No hay a quién pasar a los interesados: elige persona o equipo en «Cómo atiende» (Si le interesa, pasa a).')
+    item(:relay, 'error', "No hay a quién pasar a los interesados: elige persona o equipo en #{relay_step}.")
   end
+
+  def relay_step = %w[offer reactivate].include?(@brief['kind']) ? '«Cuando le interesa»' : '«Cómo atiende» (Si le interesa, pasa a)'
 
   # Al agente de la bandeja: si la bandeja no tiene agente que atienda, cae a la persona del vendedor.
   def relay_to_agent(person)

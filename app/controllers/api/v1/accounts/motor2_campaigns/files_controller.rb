@@ -8,7 +8,8 @@
 # Los generales (catálogo, presentación de la empresa) siguen en el vendedor.
 #
 #   GET    motor2_campaigns/:motor2_campaign_id/files
-#   POST   motor2_campaigns/:motor2_campaign_id/files          { file, about } (multipart)
+#   POST   motor2_campaigns/:motor2_campaign_id/files          { file, about } (multipart) | { catalog_item_id } (Ofrecer:
+#          la foto del producto del Catálogo, sin volver a subirla; va «cuando muestre interés»)
 #   PATCH  motor2_campaigns/:motor2_campaign_id/files/:id      { rules }
 #   DELETE motor2_campaigns/:motor2_campaign_id/files/:id
 class Api::V1::Accounts::Motor2Campaigns::FilesController < Api::V1::Accounts::BaseController
@@ -22,6 +23,7 @@ class Api::V1::Accounts::Motor2Campaigns::FilesController < Api::V1::Accounts::B
 
   def create
     return render_error("Una campaña lleva hasta #{MAX_FILES} archivos.") if @campaign.files.count >= MAX_FILES
+    return product_photo if params[:catalog_item_id].present?
     return render_error('Elige un archivo.') if params[:file].blank?
 
     file = new_file
@@ -52,6 +54,25 @@ class Api::V1::Accounts::Motor2Campaigns::FilesController < Api::V1::Accounts::B
     file = @campaign.files.new(account: Current.account, name: unique_name(params[:file].original_filename),
                                rules: rules(params.permit(:about, :interest, :ask, :confirm, attempts: []).to_h))
     file.file.attach(params[:file])
+    file
+  end
+
+  # La foto del producto (Ofrecer): el mismo archivo del Catálogo; si ya está, no se repite.
+  def product_photo
+    item = Current.account.catalog_items.find(params[:catalog_item_id])
+    return render_error('Ese producto no tiene foto.') unless item.image.attached?
+
+    existing = @campaign.files.joins(file_attachment: :blob).find_by(active_storage_blobs: { id: item.image.blob.id })
+    return render(json: file_json(existing)) if existing
+
+    file = photo_file(item)
+    file.save ? render(json: file_json(file), status: :created) : render_error(file.errors.full_messages.to_sentence)
+  end
+
+  def photo_file(item)
+    file = @campaign.files.new(account: Current.account, name: unique_name(item.name),
+                               rules: rules('about' => "Foto de #{item.name}", 'interest' => true))
+    file.file.attach(item.image.blob)
     file
   end
 

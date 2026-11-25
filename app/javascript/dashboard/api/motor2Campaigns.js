@@ -112,6 +112,13 @@ class Motor2CampaignsAPI extends ApiClient {
     return axios.post(`${this.url}/${id}/files`, data);
   }
 
+  // Ofrecer: la foto del producto del Catálogo como imagen de la campaña.
+  attachProductPhoto(id, catalogItemId) {
+    return axios.post(`${this.url}/${id}/files`, {
+      catalog_item_id: catalogItemId,
+    });
+  }
+
   updateFile(id, fileId, rules) {
     return axios.patch(`${this.url}/${id}/files/${fileId}`, { rules });
   }

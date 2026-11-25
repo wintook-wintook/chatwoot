@@ -6,7 +6,8 @@
 #   draft  (recomendado) queda en borrador; el vendedor recibe una nota con @mención para revisarla y mandarla;
 #   send   se la manda al cliente por su conversación (Quotes::Delivery) y avisa al vendedor; a los N días, si sigue
 #          sin respuesta, le pregunta si pudo revisarla (Motor2::QuoteFollowUpJob).
-# Nunca descuentos ni precios fuera del Catálogo. En el chat de prueba no crea nada (enseña cómo quedaría).
+# Nunca descuentos ni precios fuera del Catálogo, salvo el precio de promoción de la campaña de Ofrecer mientras dure
+# (CampaignSeller#promo_price_for). En el chat de prueba no crea nada (enseña cómo quedaría).
 #
 #   memoria: state['quote'] = { 'id', 'folio' }
 class Motor2::Skills::Quote < Motor2::Skills::Base
@@ -85,7 +86,7 @@ class Motor2::Skills::Quote < Motor2::Skills::Base
   end
 
   def preview(items)
-    lines = items.map { |(item, qty)| { producto: item.name, cantidad: qty, precio: item.price.to_f } }
+    lines = items.map { |(item, qty)| { producto: item.name, cantidad: qty, precio: (promo(item) || item.price).to_f } }
     @turn.seen << lines.to_json
     qualify!('PRUEBA-COT')
     { ok: true, prueba: true, partidas: lines, total: lines.sum { |l| l[:precio] * l[:cantidad] }, nota: note_for_agent }
@@ -104,9 +105,14 @@ class Motor2::Skills::Quote < Motor2::Skills::Base
 
   def item_attrs(item, qty, position)
     { account_id: config.account.id, catalog_item_id: item.id, description: item.name, kind: item.kind, unit: item.unit,
-      quantity: qty, unit_price: item.quote_unit_price, discount_percent: 0, position: position,
+      quantity: qty, unit_price: item.quote_unit_price(promo(item) || item.price), discount_percent: 0, position: position,
       tax_percent: item.quote_tax_percent, tax_rate_id: item.effective_tax_rate&.id, # Productos y servicios › Parámetros
       withholdings: item.quote_withholdings }
+  end
+
+  # El precio de promoción de la campaña (Ofrecer), si el producto lo tiene y sigue vigente.
+  def promo(item)
+    function.respond_to?(:promo_price_for) ? function.promo_price_for(item) : nil
   end
 
   def note_for_agent

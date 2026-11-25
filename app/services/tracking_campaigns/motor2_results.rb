@@ -98,18 +98,8 @@ class TrackingCampaigns::Motor2Results
       declined: counts.fetch('cancelled', 0), attended: counts.fetch('attended', 0), invited: counts.values.sum }
   end
 
-  def survey_results
-    scores = []
-    answered = 0
-    @trackings.where("motor2_state ? 'survey'").pluck(:motor2_state).each do |state|
-      values = state['survey'].to_h.values
-      answered += 1 if values.any?
-      scores.concat(values.filter_map { |v| v['calificacion'] }.map(&:to_f))
-    end
-    low = @campaign.brief.to_h['low_score'].to_i
-    { answered: answered, average: scores.any? ? (scores.sum / scores.size).round(1) : nil,
-      low: scores.count { |s| s < low }, cases: @trackings.where('outcome LIKE ?', 'Encuesta baja%').count }
-  end
+  # Encuesta: contestaron, promedio, bajas, casos, NPS y comentarios (TrackingCampaigns::SurveyResults).
+  def survey_results = TrackingCampaigns::SurveyResults.new(@campaign, @trackings).call
 
   # El objetivo de la campaña (TrackingCampaigns::CampaignKit): lo lograron, «no esta vez», aceptan la próxima, no quieren.
   def goal_results

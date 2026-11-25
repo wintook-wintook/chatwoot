@@ -64,7 +64,7 @@ class TrackingCampaigns::Motor2Form
   def attributes
     brief = TrackingCampaigns::Motor2Brief.brief(@params[:brief])
     { name: @params[:name].to_s.strip.presence || 'Campaña sin nombre', inbox: inbox,
-      mode: @params[:mode].to_s.presence_in(TrackingCampaign::MODES) || 'batch',
+      mode: brief['renew_source'] ? 'continuous' : (@params[:mode].to_s.presence_in(TrackingCampaign::MODES) || 'batch'),
       purpose: 'prospecting', brief: brief, touches: TrackingCampaigns::Motor2Brief.touches(@params[:touches]),
       audience: audience }.merge(window(brief), event(brief), subjects)
   end
@@ -83,7 +83,7 @@ class TrackingCampaigns::Motor2Form
   def list_source? = @params.dig(:audience, :source, :type).to_s == 'list'
 
   def window(brief)
-    { scheduled_for: time(@params[:scheduled_for]) || Time.current, ends_at: time(@params[:ends_at]) || event_start(brief),
+    { scheduled_for: time(@params[:scheduled_for]) || Time.current, ends_at: time(@params[:ends_at]) || event_start(brief) || offer_end(brief),
       entry_delay_minutes: @params[:entry_delay_minutes].to_i.clamp(0, 10_080),
       respect_working_hours: ActiveModel::Type::Boolean.new.cast(@params.fetch(:respect_working_hours, true)),
       daily_cap: @params[:daily_cap].presence&.to_i&.clamp(1, 10_000),
@@ -98,6 +98,11 @@ class TrackingCampaigns::Motor2Form
     audience_event = @params.dig(:audience, :source, :event_id).presence
     status = audience_event.nil? || audience_event.to_i == brief['event_id'].to_i ? @params[:event_status] : nil
     Events::CampaignEvent.attributes(@account, { event_id: brief['event_id'], event_status: status })
+  end
+
+  # Ofrecer y Reactivar: sin fecha de fin, termina cuando vence la promoción.
+  def offer_end(brief)
+    TrackingCampaigns::OfferProducts.ends_at(brief['valid_until']) if %w[offer reactivate].include?(brief['kind'])
   end
 
   # Invitar: sin fecha de fin, termina cuando empieza el evento.

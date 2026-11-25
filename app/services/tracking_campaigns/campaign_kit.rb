@@ -18,7 +18,7 @@
 module TrackingCampaigns::CampaignKit
   KINDS = %w[offer invite reactivate renew survey].freeze
   GOALS = %w[confirm external done relay appointment answers].freeze
-  REPLY_KEYS = %w[achieved not_now future_yes opt_out].freeze
+  REPLY_KEYS = %w[achieved not_now future_yes opt_out low].freeze
   LABEL_KEYS = %w[achieved future_yes opt_out].freeze
   LINK_USES = %w[package request problem].freeze
   MAX_LINKS = 6
@@ -60,6 +60,33 @@ module TrackingCampaigns::CampaignKit
     { 'facts' => sanitize_facts(kind, raw['facts']), 'links' => sanitize_links(raw['links']),
       'replies' => sanitize_replies(raw['replies']), 'labels' => raw['labels'].is_a?(Hash) ? sanitize_labels(raw['labels']) : nil,
       'reminders' => (TrackingCampaigns::EventReminders.sanitize(raw['reminders']) if kind == 'invite') }
+      .merge(offer_products(kind, raw), survey_parts(kind, raw), renew_parts(kind, raw))
+  end
+
+  # Recordar: de qué contratos y en qué días antes de vencer (TrackingCampaigns::RenewEnroll).
+  def renew_parts(kind, raw)
+    return {} unless kind == 'renew' && raw['renew_source'].present?
+
+    { 'renew_source' => TrackingCampaigns::RenewEnroll.sanitize(raw['renew_source']) }
+  end
+
+  # Encuesta: las preguntas con tipo (y el texto que se pregunta) y a quién le llega el caso por calificación baja.
+  def survey_parts(kind, raw)
+    return {} unless kind == 'survey'
+
+    items = TrackingCampaigns::SurveyItems.sanitize(raw['survey_items'])
+    parts = { 'low_case' => TrackingCampaigns::SurveyItems.low_case(raw['low_case']).presence }
+    return parts.compact if items.empty?
+
+    parts.merge('survey_items' => items, 'survey_questions' => TrackingCampaigns::SurveyItems.questions(items)).compact
+  end
+
+  # Ofrecer y Reactivar: los productos del Catálogo con su precio de promoción y la vigencia (TrackingCampaigns::OfferProducts).
+  def offer_products(kind, raw)
+    return {} unless %w[offer reactivate].include?(kind)
+
+    { 'products' => TrackingCampaigns::OfferProducts.sanitize(raw['products']).presence,
+      'valid_until' => TrackingCampaigns::OfferProducts.valid_until(raw['valid_until']) }
   end
 
   # Lo que guarda la campaña: los campos de su tipo; lo vacío se queda vacío (gana lo de fábrica al usarlo).

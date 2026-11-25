@@ -26,8 +26,15 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
   def options
     render json: { attend: TrackingCampaigns::CampaignAgent.defaults(Current.account), sources: Motor2::SourceMap.new(Current.account).available,
                    calendar_users: calendar_users, inboxes: TrackingCampaigns::Motor2Form.inboxes(Current.account).map { |i| inbox_json(i) },
-                   events: upcoming_events, past_events: recent_events, users: names(Current.account.users), teams: names(Current.account.teams),
-                   kit: TrackingCampaigns::CampaignKit.options }
+                   events: TrackingCampaigns::FormEvents.upcoming(Current.account),
+                   past_events: TrackingCampaigns::FormEvents.recent(Current.account), users: names(Current.account.users),
+                   teams: names(Current.account.teams),
+                   kit: TrackingCampaigns::CampaignKit.options }.merge(kind_lists)
+  end
+
+  # Encuesta (tipo del caso por calificación baja) y Recordar (de qué contratos).
+  def kind_lists
+    { case_types: names(Current.account.case_types.active), contract_types: names(Current.account.contract_types) }
   end
 
   def preview
@@ -35,6 +42,7 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
       account: Current.account, current_user: current_user, filter_payload: params.permit!['payload'] || [],
       template_id: params[:template_id], inbox_id: params[:inbox_id], excluded_contact_ids: params[:excluded_contact_ids] || []
     ).call
+    result = TrackingCampaigns::PreviewFacts.call(Current.account, result) if params[:facts].present? # Reactivar y Recordar
     render json: result, status: result[:error] ? :unprocessable_entity : :ok
   end
 
@@ -141,23 +149,6 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
   def calendar_users
     UserCalendarIntegration.where(account_id: Current.account.id).includes(:user)
                            .filter_map { |i| i.user && { id: i.user.id, name: i.user.name } }
-  end
-
-  # Los que empiezan de hoy (desde las 00:00, hora de México) en adelante y no están cerrados.
-  def upcoming_events
-    today = Time.current.in_time_zone('America/Mexico_City').beginning_of_day
-    Current.account.events.where(closed_at: nil).where('starts_at >= ?', today).order(:starts_at)
-           .limit(50).map do |e|
-             { id: e.id, name: e.name, starts_at: e.starts_at, capacity: e.capacity, location: e.location, meeting_url: e.meeting_url,
-               description: e.description.to_s.first(600) }
-           end
-  end
-
-  # Para la audiencia «asistentes de un evento» después del evento (asistió, no se presentó): los de 90 días.
-  def recent_events
-    today = Time.current.in_time_zone('America/Mexico_City').beginning_of_day # los de hoy ya van en upcoming_events
-    Current.account.events.where(starts_at: 90.days.ago...today).order(starts_at: :desc)
-           .limit(50).map { |e| { id: e.id, name: e.name, starts_at: e.starts_at, capacity: e.capacity } }
   end
 
   # Para «Si le interesa, pasa a» de la campaña.

@@ -4,7 +4,7 @@ title: Campañas y eventos
 areas: [campaigns]
 keywords: [ficha de campana, ligas de campana, palabra clave, registrado, no invitar, volver a invitar, casos de prueba, probar campana, simular campana, prueba real, contactos de prueba, lista de correos, lista fria, subir lista, csv, cuarentena, prospectos de lista, lista de exclusion, campana con vendedor ia, motor 2.0, vendedor de campana, campana 2.0, embudo de campana, resumen con ia, prueba a/b, asunto, clics, plantilla por toque, siguiente campana, no leyeron, campana, campanas, campana de agente ia, nueva campana, agregar campana, poner en curso, pausar campana, asignar agente ia, asignacion masiva, segmento, etiqueta, evento, eventos, invitados, confirmo, asistio, check-in, importar csv, pagina web, sms, dashboard de campanas, prospectos, entregar, nfc, etiqueta nfc, acercar el celular, expo, feria, stand, gafete, captar, wa.me, vender un servicio, vender un producto, promocion, promover, campana de sms, campana sms, campana unica, campana continua, campana de pagina web, sitio web, widget, chat del sitio, mensaje proactivo, hora programada, audiencia, campana whatsapp, whatsapp masivo, envio masivo, curso, demostracion, webinar, cupo, cerrar evento, reabrir evento, no asistio, cancelo, quitar del evento, eliminar evento]
 pages: [campaigns, events, campaigns_sms, campaigns_web, contacts, trackings, inboxes, labels]
-sources: [app/javascript/dashboard/views/campaigns2/*.vue, app/controllers/api/v1/accounts/motor2_campaigns_controller.rb, app/services/tracking_campaigns/motor2_*.rb, app/services/tracking_campaigns/event_reminders.rb, app/javascript/dashboard/views/events/*.vue, app/javascript/dashboard/views/events/eventHelpers.js, app/javascript/dashboard/i18n/locale/es/events.json, app/controllers/api/v1/accounts/events_controller.rb, app/controllers/api/v1/accounts/event_capture_links_controller.rb, app/models/event*.rb, app/javascript/dashboard/routes/dashboard/settings/campaigns/*.vue, app/javascript/dashboard/i18n/locale/es/campaign.json, app/models/campaign.rb, app/policies/campaign_policy.rb, app/services/sms/oneoff_sms_campaign_service.rb]
+sources: [app/javascript/dashboard/views/campaigns2/*.vue, app/controllers/api/v1/accounts/motor2_campaigns_controller.rb, app/services/tracking_campaigns/motor2_*.rb, app/services/tracking_campaigns/event_reminder*.rb, app/services/tracking_campaigns/offer_*.rb, app/services/tracking_campaigns/survey_*.rb, app/services/tracking_campaigns/renew_enroll.rb, app/services/contacts/campaign_audience_filters.rb, app/javascript/dashboard/views/events/*.vue, app/javascript/dashboard/views/events/eventHelpers.js, app/javascript/dashboard/i18n/locale/es/events.json, app/controllers/api/v1/accounts/events_controller.rb, app/controllers/api/v1/accounts/event_capture_links_controller.rb, app/models/event*.rb, app/javascript/dashboard/routes/dashboard/settings/campaigns/*.vue, app/javascript/dashboard/i18n/locale/es/campaign.json, app/models/campaign.rb, app/policies/campaign_policy.rb, app/services/sms/oneoff_sms_campaign_service.rb]
 reviewed: 2026-11-25
 ---
 ## Para qué sirve
@@ -23,11 +23,12 @@ En el menú Campañas, en este orden:
 - En la ficha del contacto, la pestaña «Eventos» muestra en cuáles está.
 
 ## Cómo se hace
-Al pulsar «Agregar campaña» eliges cuál: «Campaña clásica (Motor 1.0)», la de siempre con un Agente a medida, o «Campaña con Vendedor IA (Motor 2.0)», marcada como Beta.
+«Agregar campaña» crea una campaña con Vendedor IA (Motor 2.0): primero eliges el tipo.
 
 ### Crear una campaña con Vendedor IA (Motor 2.0)
 La campaña trae todo: qué busca, lo que sabe la IA, qué se manda, a quién, cuándo y cómo contesta. Ocho pasos como pestañas, en el orden de la plática (Invitar tiene sus propios 5 pasos, abajo); a la derecha ves cómo le llega el mensaje y «Probar», donde tú eres el contacto.
-1. Objetivo: el tipo (Ofrecer, Invitar, Reactivar, Recordar o renovar, Encuesta) y «¿Qué cuenta como logrado?» según el tipo: confirma que va; se registra o compra por su cuenta y avisa con una palabra clave (por ejemplo REGISTRADO; «me interesa» no cuenta); confirma que ya pagó o renovó; le interesa y pasa a quien sigue; agenda una cita. También el nombre corto (llena {{oferta}}), el evento en Invitar y el canal (bandeja de WhatsApp o de correo).
+Al pulsar «Agregar campaña» eliges el tipo (Ofrecer, Invitar, Reactivar, Recordar o renovar, Encuesta) y entras directo; ya no se cambia (para otro tipo, crea otra campaña).
+1. Objetivo: «¿Qué cuenta como logrado?» según el tipo: confirma que va; se registra o compra por su cuenta y avisa con una palabra clave (por ejemplo REGISTRADO; «me interesa» no cuenta); confirma que ya pagó o renovó; le interesa y pasa a quien sigue; agenda una cita. También el nombre corto (llena {{oferta}}), el evento en Invitar y el canal (bandeja de WhatsApp o de correo).
 2. La ficha: lo ÚNICO que sabe la IA; si le preguntan algo que no está ni en sus fuentes, dice que no tiene el dato. Los datos del tipo (Invitar: cuándo, dónde, costo, para quién es y para quién no, qué se verá; Ofrecer: qué es, precio, vigencia, condiciones; Reactivar: qué hay de nuevo e incentivo; Recordar: qué le toca, cómo hacerlo, dónde pagar), «Preguntas y objeciones autorizadas», «Ligas» (cada una con cuándo se manda: con la información, solo si la pide o solo si tiene un problema, como «no me llegó el correo») e «Imágenes y archivos» (hasta 10). En Encuesta, hasta 3 preguntas y desde qué calificación es baja.
 3. Audiencia: un segmento, una etiqueta, los asistentes de un evento o «Los que agreguen mis automatizaciones». Ves cuántos le llegan y quiénes quedan fuera y por qué (también los que tienen la etiqueta «no…» de ese tipo de campaña).
    - «Subir una lista de correos» (solo correo: en WhatsApp bloquean tu número): CSV con correo/email (obligatorio), nombre, empresa y teléfono, hasta 5,000 renglones. Se quitan mal escritos, repetidos, de rol (info@…), dados de baja y rebotados. Los nuevos quedan en cuarentena (no salen en Contactos hasta que contestan o dan clic) y se borran solos si nunca contestan; la revisión pide un máximo por día (empieza con 50 a 100).
@@ -40,11 +41,24 @@ La campaña trae todo: qué busca, lo que sabe la IA, qué se manda, a quién, c
 
 ### Campaña para invitar a un evento (Invitar)
 Invitar va en 5 pasos:
-1. El evento: lo eliges (o «Crear un evento ↗») y se ven su fecha, lugar, liga y cupo; la IA ya los sabe (si cambian, cámbialos en Eventos). «¿Cómo confirma?»: «Aquí en la plática» o «Se registra por su cuenta»; en el segundo van juntas la liga de registro y la palabra clave. Abajo, lo que solo tú sabes: costo, para quién es, qué se verá, preguntas, ligas y archivos.
+1. El evento: lo eliges y se ven su fecha, lugar, liga y cupo (la IA ya los sabe). «+ Crear evento» y «Editar evento» abren el formulario ahí mismo, sin salir de la campaña. «¿Cómo confirma?»: «Aquí en la plática» o «Se registra por su cuenta»; en el segundo van juntas la liga de registro y la palabra clave. Abajo: costo, para quién es, preguntas, ligas y archivos.
 2. Invitados: el canal y a quién. En «Asistentes de un evento» puedes elegir OTRO evento (la expo pasada) sin cambiar al que invitas.
-3. Mensajes: invitación, información completa, toques a quien no contesta y «Recordatorios a los que confirmaron» (un día antes y una hora antes con la liga; {{nombre}} {{evento}} {{cuando}} {{lugar}} {{liga}}). En WhatsApp elige su plantilla: pasadas 24 h solo sale con plantilla.
-4. Cuando contesta: respuestas y etiquetas ya listas («Personalizar» abre cada una), a quién pasa si pide una persona y «Opciones avanzadas» (cómo atiende).
+3. Mensajes: invitación, información completa, toques a quien no contesta y «Recordatorios del evento»: un día antes (a los que confirmaron y, con un texto de última invitación, a los que no han contestado) y una hora antes (solo confirmados, con la liga); nunca a quien dijo que no. En WhatsApp, pasadas 24 h solo salen con plantilla (Meta la cobra).
+4. Cuando contesta: respuestas y etiquetas listas («Personalizar»), a quién pasa si pide una persona y «Opciones avanzadas».
 5. Revisar y lanzar: nombre, cuándo empieza (termina sola al empezar el evento), opciones avanzadas y las pruebas (los «Casos» corren solos; «Chatear» y «Más pruebas»).
+
+### Campaña para ofrecer un producto o promoción (Ofrecer)
+Ofrecer va en 6 pasos:
+1. La oferta: busca en tu Catálogo; cada producto llega con su nombre, precio, descripción y foto (la foto se agrega sola como imagen de la oferta). Pon el precio de promoción o el % de descuento y la vigencia (fecha): ese día la campaña termina sola y después la IA dice que la promoción ya terminó. Abajo, condiciones, para quién es, preguntas, ligas y archivos. Si no está en el Catálogo, escribe qué es y su precio.
+2. Cuando le interesa: una opción y su configuración: «Lo paso a alguien» (agente de la bandeja o persona, y en cuánto tiempo le deben escribir), «Le armo la cotización» (borrador o se la manda, con el precio de promoción mientras dure), «Le agendo una cita» (en el calendario de quién) o «Compra en línea» (liga de compra y palabra clave juntas).
+3. A quién: el canal y la audiencia.
+4. Mensajes: apertura, «Armar la información completa con la oferta», toques a quien no contesta y «Si contestó y luego se calla».
+5. Cuando contesta y 6. Revisar y lanzar: como en Invitar. Los Casos incluyen «Pide cotización» (con el precio de promoción) y «La promoción ya venció».
+
+### Reactivar, Recordar y Encuesta
+- Reactivar (6 pasos): primero «A quién reactivas»: «No compran desde hace…» N días (su última cotización ganada o contrato; quien tiene contrato activo no entra) y, si quieres, de una categoría; la muestra dice lo último que compró cada uno. Luego «Qué les ofreces» (productos con precio de promoción y vigencia, como Ofrecer), «Cuando le interesa», Mensajes ({{ultima_compra}}), respuestas y lanzar.
+- Recordar (5 pasos): «Qué recuerdas»: de qué contratos (o todos) y en qué días antes de vencer se le escribe (hasta 4; de fábrica 7, 1 y el día). Cada contacto recibe los suyos según la fecha de SU contrato; la campaña queda prendida y cada mañana entran los que ya les toca. «Cómo se paga»: «Dice que ya pagó» (queda una tarea al responsable del contrato para verificarlo), «Lo paso a alguien» o «Paga en línea» (liga de pago y palabra clave). Los saldos de facturas los cobra el Agente de Cobranza.
+- Encuesta (6 pasos): «Las preguntas»: hasta 5, cada una con su tipo (0–10, 1–5, sí o no, abierta) y desde cuánto es baja. «Si califica bajo»: a quién le llega el caso, tipo, prioridad y qué se le contesta. «A quién»: de entrada «Atendidos hace poco» (caso resuelto o cotización ganada en los últimos N días). En Resultados: NPS de la pregunta de 0 a 10 y los comentarios.
 
 ### Probar la campaña antes de lanzarla
 En «Revisar y lanzar», a la derecha:
@@ -60,14 +74,8 @@ En «Revisar y lanzar», a la derecha:
 - «Resumir con IA» y «Siguiente campaña con…» (los que no leyeron, no contestaron, dieron clic, les interesó o dijeron que no).
 - Arriba: Modificar (si está Guardada), Pausar o Reanudar, Duplicar y Actualizar. En la lista se filtran con «Con Vendedor IA» / «Clásicas».
 
-### Crear una campaña clásica (Motor 1.0)
-1. Entra a Campañas › De agentes IA, pulsa «Agregar campaña» y elige «Campaña clásica (Motor 1.0)».
-2. En «1 · ¿Qué?» escribe el «Nombre de la campaña» y elige el «Agente IA». El canal y las plantillas de WhatsApp de cada intento vienen del agente.
-3. En «2 · ¿A quién?» elige «Un segmento», «Una etiqueta» o «Los que agreguen mis automatizaciones» (campaña continua).
-4. Si es de un evento, en «¿Es de un evento? (opcional)» elige el evento y el estado (por ejemplo, «Asistió»).
-5. En «3 · ¿Cuándo?» pon «Desde» y, si quieres, «Hasta». En «Opciones de envío» van la espera, el tope por día y el horario.
-6. Revisa la audiencia abajo: «Listos para enviar», «Ya en seguimiento», «No contactables» y «Excluidos». Puedes excluir contactos.
-7. Pulsa «Guardar» (no envía nada) o «Guardar y poner en curso».
+### Campañas clásicas (Motor 1.0)
+Ya no se crean campañas nuevas con el Motor 1.0: «Agregar campaña» siempre es con Vendedor IA (Motor 2.0). Las clásicas que ya existen siguen en la lista (filtro «Clásicas (Motor 1.0)»), con sus resultados, y se pueden pausar, reanudar o terminar como siempre.
 
 ### Desde la lista de contactos
 1. En Clientes › Contactos aplica un filtro o abre una etiqueta.

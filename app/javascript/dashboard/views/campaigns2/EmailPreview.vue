@@ -1,8 +1,10 @@
 <!--
   Campaña con Vendedor IA — cómo se ve el correo del toque en la bandeja del contacto (asunto, remitente, bloques y
-  firma), con {{contacto}} / {{empresa}} llenos de ejemplo.
+  firma), con las variables llenas de ejemplo ({{contacto}}, {{empresa}}, {{oferta}}, {{que_vence}}…).
 -->
 <script>
+import { fillCampaignText, sampleValues } from './campaignFlow';
+
 export default {
   name: 'EmailPreview',
   props: {
@@ -10,12 +12,11 @@ export default {
     from: { type: String, default: '' },
     blocks: { type: Array, default: () => [] },
     signature: { type: String, default: '' },
+    brief: { type: Object, default: () => ({}) },
   },
   methods: {
     fill(text) {
-      return (text || '')
-        .replace(/\{\{\s*contacto\s*\}\}/gi, 'Mario')
-        .replace(/\{\{\s*empresa\s*\}\}/gi, 'Grúas del Norte');
+      return fillCampaignText(text, sampleValues(this.brief));
     },
   },
 };

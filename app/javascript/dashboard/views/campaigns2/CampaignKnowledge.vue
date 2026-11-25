@@ -27,6 +27,8 @@ export default {
     attempts: { type: Number, default: 1 },
     // Invitar: cuándo y dónde salen del evento (InviteEvent), no se piden aquí.
     hiddenFacts: { type: Array, default: () => [] },
+    // Encuesta con su propio paso de preguntas (SurveyQuestions): aquí no se piden.
+    noSurvey: { type: Boolean, default: false },
   },
   emits: ['update:brief'],
   data() {
@@ -134,7 +136,7 @@ export default {
 
     <!-- Encuesta: las preguntas -->
     <section
-      v-if="isSurvey"
+      v-if="isSurvey && !noSurvey"
       class="flex flex-col gap-2 p-3 border rounded-md border-slate-100 dark:border-slate-700"
     >
       <p class="m-0 text-sm font-semibold">{{ t('SURVEY_TITLE') }}</p>

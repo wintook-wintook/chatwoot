@@ -38,6 +38,8 @@ export default {
     templates: { type: Array, default: () => [] },
     isEmail: { type: Boolean, default: false },
     appointments: { type: Boolean, default: false },
+    // Invitar y Ofrecer: solo estas pestañas (cotizar, agendar y el seguimiento van en sus pasos).
+    only: { type: Array, default: null },
   },
   emits: ['input'],
   data() {
@@ -45,7 +47,9 @@ export default {
   },
   computed: {
     tabs() {
-      return TABS.map(key => ({ key, label: this.t(`TABS.${key}`) }));
+      return TABS.filter(key => !this.only || this.only.includes(key)).map(
+        key => ({ key, label: this.t(`TABS.${key}`) })
+      );
     },
     settings() {
       return this.value.settings || {};

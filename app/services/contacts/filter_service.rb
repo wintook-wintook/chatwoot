@@ -1,4 +1,5 @@
 class Contacts::FilterService < FilterService
+  include Contacts::CampaignAudienceFilters # Campañas con IA: sin comprar, contrato por vencer, atendidos
   ATTRIBUTE_MODEL = 'contact_attribute'.freeze
 
   def initialize(account, user, params)

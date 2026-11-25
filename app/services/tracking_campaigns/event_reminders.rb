@@ -1,52 +1,32 @@
 # frozen_string_literal: true
 
-# Campaña con IA · Invitar — los recordatorios a los que CONFIRMARON (o se registraron): un día antes y una hora
-# antes del evento, con su fecha, lugar y liga. Los manda TrackingCampaigns::EventReminderJob (cada 10 min).
+# Campaña con IA · Invitar — los recordatorios del evento: un día antes y una hora antes, con su fecha, lugar y liga.
+# Los manda TrackingCampaigns::EventReminderJob (cada 10 min); cómo se configuran: TrackingCampaigns::EventReminderSettings.
 #
-#   brief['reminders'] = { 'day_before' => true, 'hour_before' => true, 'day_text' => '', 'hour_text' => '',
-#                          'template' => 'recordatorio_evento' }
-#   Textos con {{nombre}} {{evento}} {{cuando}} {{lugar}} {{liga}}; vacíos = los de fábrica (DEFAULTS).
+# A quién, según cada recordatorio:
+#   confirmados        los de la campaña que lo lograron (outcome «Logrado: …»): su texto de recordatorio
+#   no han contestado  (si el recordatorio es «confirmados y los que no han contestado») recibieron la invitación y
+#                      nunca escribieron, sin baja ni rebote: su texto de última invitación. Si alguno todavía tenía
+#                      toques, ya no salen (el evento es mañana). A quien le salió un toque hace menos de 12 h, se le
+#                      espera un poco (un solo mensaje de la campaña por día).
+#   nunca              los que dijeron que no, «no me escriban», se dieron de baja o ya atiende una persona (tienen outcome).
 #
-# A quién: los de la campaña que lo lograron (outcome «Logrado: …»). Cada uno una sola vez por recordatorio
-# (motor2_state['event_reminders']). En WhatsApp, pasadas 24 h desde su último mensaje solo sale con la plantilla
-# elegida (Motor2::LateMessage); si no se puede, queda una nota en la conversación para que alguien le escriba.
+# Cada uno una sola vez por recordatorio (motor2_state['event_reminders']). En WhatsApp, pasadas 24 h desde su último
+# mensaje solo sale con plantilla (Motor2::LateMessage); si no se puede y había confirmado, queda una nota en la
+# conversación para que alguien le escriba.
 module TrackingCampaigns::EventReminders
-  KINDS = %w[day_before hour_before].freeze
+  Settings = TrackingCampaigns::EventReminderSettings
+  KINDS = Settings::KINDS
   # Cuándo toca cada uno: [desde, hasta] antes de que empiece.
   WINDOWS = { 'day_before' => [24.hours, 3.hours], 'hour_before' => [1.hour, 0.minutes] }.freeze
-  DEFAULTS = {
-    'day_before' => '¡Hola {{nombre}}! 😊 Te recordamos que mañana es {{evento}}: {{cuando}}. {{lugar}} ¡Te esperamos!',
-    'hour_before' => '¡Hola {{nombre}}! En una hora empieza {{evento}}. {{liga}} ¡Nos vemos!'
-  }.freeze
-  MAX_TEXT = 600
+  RECENT_TOUCH = 12.hours
+  WAITING = %w[pending scheduled active paused].freeze
 
   module_function
 
-  def sanitize(raw)
-    raw = raw.is_a?(Hash) ? raw.stringify_keys : {}
-    {
-      'day_before' => raw.key?('day_before') ? ActiveModel::Type::Boolean.new.cast(raw['day_before']) || false : true,
-      'hour_before' => raw.key?('hour_before') ? ActiveModel::Type::Boolean.new.cast(raw['hour_before']) || false : true,
-      'day_text' => raw['day_text'].to_s.strip.first(MAX_TEXT), 'hour_text' => raw['hour_text'].to_s.strip.first(MAX_TEXT),
-      'template' => raw['template'].to_s.strip.first(200)
-    }
-  end
-
-  def config(campaign) = sanitize(campaign.brief.to_h['reminders'])
-
-  # Para la revisión antes de lanzar: [nivel, texto]. En WhatsApp, pasadas 24 h solo salen con plantilla.
-  def check(campaign)
-    config = config(campaign)
-    on = KINDS.select { |kind| config[kind] }
-    return ['warning', 'Sin recordatorios: a los que confirmen no les llega nada antes del evento.'] if on.empty?
-    if campaign.inbox&.whatsapp? && config['template'].blank?
-      return ['warning', 'Recordatorios sin plantilla: a quien no haya escrito en 24 h no le llegarán. Elige una en «Mensajes».']
-    end
-
-    ['ok', "Recordatorios a los que confirmen: #{on.map { |k| LABELS[k] }.join(' y ')}."]
-  end
-
-  LABELS = { 'day_before' => 'un día antes', 'hour_before' => 'una hora antes' }.freeze
+  def sanitize(raw) = Settings.sanitize(raw)
+  def check(campaign) = Settings.check(campaign)
+  def config(campaign) = Settings.sanitize(campaign.brief.to_h['reminders'])
 
   # El que toca ahora (o nil): según cuánto falta para que empiece el evento.
   def due_kind(event, now = Time.current)
@@ -59,52 +39,84 @@ module TrackingCampaigns::EventReminders
   def run(campaign, now = Time.current)
     event = campaign.event
     kind = due_kind(event, now)
-    return 0 unless kind && config(campaign)[kind]
+    config = config(campaign)
+    return 0 unless kind && config[kind]
 
-    sent = 0
-    pending(campaign, kind).find_each do |tracking|
-      deliver(campaign, event, tracking, kind)
-      sent += 1
-    end
-    sent
+    sent = confirmed(campaign, kind).to_a.count { |tracking| deliver(campaign, event, tracking, kind, pending: false) }
+    return sent unless Settings.pending_on?(config, kind)
+
+    sent + not_answered(campaign, kind).to_a.count { |tracking| ready?(tracking) && deliver(campaign, event, tracking, kind, pending: true) }
   end
 
-  # Los que lo lograron y no han recibido este recordatorio.
-  def pending(campaign, kind)
-    campaign.contact_trackings.where('outcome LIKE ?', 'Logrado:%')
-            .where.not("COALESCE(motor2_state -> 'event_reminders', '[]'::jsonb) ? :kind", kind: kind)
+  # Sin baja y sin un toque reciente (se le espera: un solo mensaje de la campaña por día).
+  def ready?(tracking)
+    return false if tracking.contact&.opted_out?
+
+    tracking.last_attempt_at.nil? || tracking.last_attempt_at <= RECENT_TOUCH.ago
   end
 
-  def deliver(campaign, event, tracking, kind)
-    text = text(campaign, event, tracking, kind)
-    message = Motor2::LateMessage.deliver(tracking, text, template: config(campaign)['template'].presence)
-    not_sent(tracking, kind) unless message
+  def confirmed(campaign, kind) = not_reminded(campaign, kind).where('outcome LIKE ?', 'Logrado:%')
+
+  # Recibieron la invitación, nunca escribieron y no tienen salida (baja, rebote, no esta vez, persona…).
+  def not_answered(campaign, kind)
+    not_reminded(campaign, kind).where(outcome: nil, prospect_exit: nil)
+                                .where('contact_trackings.attempt_count > 0 OR contact_trackings.last_attempt_at IS NOT NULL')
+                                .where.not('EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = contact_trackings.conversation_id ' \
+                                           'AND m.message_type = 0 AND m.created_at > contact_trackings.created_at)')
+  end
+
+  def not_reminded(campaign, kind)
+    campaign.contact_trackings.where.not("COALESCE(motor2_state -> 'event_reminders', '[]'::jsonb) ? :kind", kind: kind)
+  end
+
+  def deliver(campaign, event, tracking, kind, pending:)
+    config = config(campaign)
+    message = Motor2::LateMessage.deliver(tracking, text(campaign, event, tracking, kind, pending: pending),
+                                          template: Settings.template_for(config, pending))
+    not_sent(tracking, kind) if !message && !pending
+    stop_touches(tracking, event) if message && pending
+    true
   rescue StandardError => e
     Rails.logger.warn("[EventReminders] tracking #{tracking.id} #{kind}: #{e.class}: #{e.message}")
+    false
   ensure
     mark(tracking, kind)
   end
 
-  def text(campaign, event, tracking, kind)
-    custom = config(campaign)[kind == 'day_before' ? 'day_text' : 'hour_text']
-    fill(custom.presence || DEFAULTS[kind], values(campaign, event, tracking)).squish
+  def text(campaign, event, tracking, kind, pending: false)
+    fill(Settings.text_for(config(campaign), kind, pending), values(campaign, event, tracking, pending: pending)).squish
   end
 
-  def values(campaign, event, tracking)
+  def values(campaign, event, tracking, pending: false)
     zone = tracking.inbox&.timezone.presence || 'America/Mexico_City'
     name = tracking.contact&.name.to_s.split.first
     { 'nombre' => (name if name.present? && !name.match?(/\A[+\d]/)).to_s, 'evento' => event.name.to_s,
       'cuando' => Motor2::Skills::Appointments.label(event.starts_at.in_time_zone(zone)),
-      'lugar' => event.location.to_s, 'liga' => link(campaign, event).to_s }
+      'lugar' => event.location.to_s, 'liga' => link(campaign, event, pending: pending).to_s }
   end
 
-  # La liga para entrar: la del evento o, si no, la primera de la campaña.
-  def link(campaign, event)
-    event.meeting_url.presence || Array(campaign.brief.to_h['links']).filter_map { |l| l['url'].presence }.first
+  # La liga: al que no ha contestado y se registra por su cuenta, la de registro; a los demás, la del evento.
+  def link(campaign, event, pending: false)
+    links = Array(campaign.brief.to_h['links'])
+    registration = registration_link(campaign, links) if pending
+    registration || event.meeting_url.presence || links.filter_map { |l| l['url'].presence }.first
+  end
+
+  def registration_link(campaign, links)
+    return unless campaign.brief.to_h['offer_goal'] == 'external'
+
+    links.find { |l| l['use'] == 'package' }&.dig('url').presence
   end
 
   def fill(text, values)
-    text.gsub(/\{\{\s*(\w+)\s*\}\}/) { values.fetch(Regexp.last_match(1), '') }.gsub(/\s+([.,!])/, '\1').gsub(/¡\s*!/, '¡')
+    text.gsub(/\{\{\s*(\w+)\s*\}\}/) { values.fetch(Regexp.last_match(1), '') }.gsub(/\s+([.,!?])/, '\1').gsub(/¡\s*!/, '¡')
+  end
+
+  # Ya recibió la última invitación: los toques que faltaban no salen (la campaña termina al empezar el evento).
+  def stop_touches(tracking, event)
+    return unless WAITING.include?(tracking.status) && event.starts_at
+
+    tracking.update_columns(scheduled_for: event.starts_at + 1.minute, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def mark(tracking, kind)
