@@ -1,6 +1,6 @@
 # Ver el calendario de los compañeros (respetando lo que cada uno comparte en Google)
 
-> Rama: `fix/calendario_google` (desde `origin/develop` 92fb814b) · Plan v1.0 · 25/11/2026
+> Rama: `fix/calendario_google` (desde `origin/develop` 92fb814b) · Plan v1.1 · 25/11/2026
 > Estado: **solo plan** — no se programa nada hasta el OK.
 
 ---
@@ -10,6 +10,9 @@
 Entre los agentes de una misma cuenta, poder **revisar la agenda de un compañero** desde la
 pantalla del calendario, **siempre y cuando ese compañero lo permita** en la configuración de
 su Google Calendar («Compartir con personas específicas»).
+
+Y además (v1.1): **agendarle a un compañero sin que el evento quede en el calendario de quien
+lo crea**, también solo si el compañero lo permite (permiso «Hacer cambios en los eventos»).
 
 ---
 
@@ -81,7 +84,7 @@ Lo que A ve por compañero:
   Configuración de B en Google        Estado en el panel     En el calendario
   ─────────────────────────────────   ────────────────────   ─────────────────────────
   «Ver todos los detalles»            Detalles               eventos de B con título
-  «Hacer cambios…» / «Administrar»    Detalles               igual (solo lectura aquí)
+  «Hacer cambios…» / «Administrar»    Puede agendarle        igual + aparece en «Agendar a» (F3b)
   «Ver solo libre/ocupado»            Solo ocupado           bloques «Ocupado»
   No compartido con A                 No compartido          nada
   B no conectó Google en el sistema   Sin conectar           nada
@@ -133,6 +136,8 @@ Detalles que Google resuelve solo:
 ```
 
 - «Compartir agenda» (`sharing_controller.rb`, mandar mi agenda a un contacto) no cambia.
+- **Nunca** se crea ni se lee nada del compañero con SU propia conexión desde la pantalla:
+  eso funcionaría aunque no haya dado permiso, que es justo lo que se quiere evitar.
 - No se cambia el permiso OAuth ni se pide reconectar.
 
 ---
@@ -147,7 +152,11 @@ Rails con el token de A, contra `b@…`, los tres casos de compartir de B:
 |----------------------|--------------------------------------|-------------------------------|
 | Detalles             | ¿200 + `accessRole=reader`?          | ¿busy[]?                      |
 | Solo libre/ocupado   | ¿200 sin títulos o 403/404?          | ¿busy[]?                      |
+| Hacer cambios        | ¿200 + `accessRole=writer`?          | ¿busy[]?                      |
 | No compartido        | ¿404 notFound?                       | ¿`errors: notFound`?          |
+
+Caso extra (escritura, con OK): con «Hacer cambios», A crea un evento de prueba en `b@`
+→ confirmar que aparece en el calendario de B, **no** en el de A, y luego borrarlo.
 
 Se anota lo que responde de verdad; F1 se ajusta a eso.
 
@@ -177,7 +186,8 @@ Conclusiones hasta ahora:
   2. **Permiso vencido del que mira o del compañero** → estado «Reconectar» (hoy el panel de
      disponibilidad lo traga en silencio y lo muestra como «Sin conectar», sin decir que
      basta con reconectar).
-- Pendiente medir «Ver todos los detalles» y «Ver solo libre/ocupado»: requiere que
+- Pendiente medir «Ver todos los detalles», «Ver solo libre/ocupado» y «Hacer cambios»
+  (+ crear y borrar un evento de prueba): requiere que
   camion01 comparta su calendario con aliverio en Google (ver pasos en el chat).
 
 ### F1 — Servicio en el servidor
@@ -223,6 +233,51 @@ Conclusiones hasta ahora:
   prefijo con el nombre) y bloques «Ocupado»; clic → ventanita solo lectura.
 - Sin `?.` ni `??` en `<template>` (webpack 4); verificar «Compiled successfully».
 
+### F3b — «Agendar a» un compañero (sin quedar en mi calendario)
+
+Hoy (`CreateEventModal.vue`) el evento se crea siempre en un calendario de quien agenda y a los
+demás solo se les invita por correo → quien crea queda como organizador y lo tiene en su
+calendario.
+
+```
+  Modal «Crear evento»
+  ┌────────────────────────────────────────────┐
+  │ Agendar a:  [ Mí                       ▾ ] │
+  │             ─────────────────────────────  │
+  │             Mí                             │
+  │             Beto       (puede agendarle)   │
+  │             Caro       (puede agendarle)   │
+  │             ── sin permiso ──  (gris)      │
+  │             Dani  · pídele «Hacer cambios» │
+  │ Calendario: [ Principal ▾ ]  ← solo si «Mí»│
+  │ Título / Fecha / Hora / Invitados …        │
+  └────────────────────────────────────────────┘
+```
+
+```
+  A elige «Agendar a: Beto» y guarda
+        │
+        ▼
+  POST /google_calendar/events  { agent_id: Beto, … }
+        │
+        ▼
+  servidor: ¿A tiene accessRole writer/owner sobre beto@?  (F1, con caché)
+        │
+        ├─ sí ─► GoogleCalendarService(integración DE A)
+        │         .create_event(calendar_id: beto@, …)   ← A NO se agrega como invitado
+        │         → vive solo en el calendario de Beto
+        │
+        └─ no ─► 403 «Beto no te dio permiso de hacer cambios en su calendario»
+```
+
+- Servidor: `events#create` acepta `agent_id` opcional; si viene, valida que sea de la cuenta,
+  que tenga Google conectado y que A tenga permiso de escritura (no confiar en la pantalla).
+- `GET /coworkers` (F2) devuelve también `can_schedule: true/false` por compañero.
+- Pantalla: select nativo «Agendar a»; con un compañero elegido se oculta «Calendario»
+  (siempre su principal) y el evento recién creado se ve en «Compañeros» si Beto está palomeado.
+- Mismo Google (#1 y #4): «Agendar a» al otro = agendarse a sí mismo → se oculta de la lista.
+- Fuera de esta fase: **editar, mover o borrar** eventos del compañero.
+
 ### F4 — Textos
 - `es` / `en` en `GOOGLE_CALENDAR.COWORKERS.*`. Español de México con tú. Nada de «Chatwoot».
 
@@ -240,6 +295,8 @@ Con `POSTGRES_DATABASE=chatwoot_test`:
 6. A desconecta su Google → aviso para conectar; no se ve a nadie.
 7. Evento de B: no se arrastra, no se edita, no se borra.
 8. El bot de IA sigue agendando igual en una conversación de prueba (inbox 493).
+9. B da «Hacer cambios» a A → A «Agendar a: B» → el evento aparece en Google de B y **no** en el de A.
+10. B baja el permiso a «Ver detalles» → B sale de «Agendar a»; forzar la llamada → 403.
 
 ---
 
@@ -249,7 +306,7 @@ Con `POSTGRES_DATABASE=chatwoot_test`:
 |----|----------|---------------|
 | D1 | Las franjas de fondo «ocupado de todos» que se ven hoy, ¿se quitan o también respetan lo compartido? | **Que respeten lo compartido** (pasan a usar el token de A). Si no, seguiría viéndose el ocupado de quien no compartió nada. |
 | D2 | ¿Solo el calendario principal del compañero o también los secundarios que comparta? | **Solo el principal** en esta versión. |
-| D3 | Si B da «Hacer cambios», ¿A puede editar desde aquí? | **No, solo lectura.** Sería otro paso. |
+| D3 | Si B da «Hacer cambios», ¿A puede agendarle desde aquí? | **DECIDIDA (25/11/2026): sí, crear** en el calendario de B (F3b), sin quedar en el de A. Editar/mover/borrar sus eventos: otro paso. |
 | D4 | ¿Mostrar compañeros de todos los agentes de la cuenta o solo de un equipo? | **Todos los de la cuenta** que tengan Google conectado. |
 | D5 | Google Workspace: el administrador puede dejar que todos vean el libre/ocupado de todos sin compartir. | Se respeta tal cual (es la configuración de Google de esa empresa). Solo se avisa. |
 
