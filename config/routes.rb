@@ -1083,7 +1083,11 @@ Rails.application.routes.draw do
             resource :availability, only: [:show], controller: 'availability'
             resource :sharing, only: [:create], controller: 'sharing'
             # fix/calendario_google F3c — «Compartir mi calendario» (reglas de acceso de Google).
-            resources :sharing_rules, only: [:index, :update]
+            resources :sharing_rules, only: [:index, :update] do
+              collection do
+                put :share_email
+              end
+            end
           end
 
           resources :webhooks, only: [:index, :create, :update, :destroy]

@@ -2,9 +2,9 @@
 # Google, qué ve cada compañero de la cuenta. Son las mismas reglas de acceso (ACL) de
 # calendar.google.com: lo que se cambie aquí se ve allá y al revés.
 #
-# Solo se muestran y tocan reglas de compañeros de la cuenta; las demás (otras personas,
-# dominio, público) se dejan como están. Una regla «owner» (Administrar) dada desde Google
-# tampoco se toca desde aquí.
+# Compañeros de la cuenta (por agente) y OTRAS PERSONAS (por correo, cualquiera). Las reglas
+# generales (público, dominio, grupo) solo se muestran, no se tocan desde aquí. Una regla
+# «owner» (Administrar) dada desde Google tampoco se cambia desde aquí.
 class Api::V1::Accounts::GoogleCalendar::SharingRulesController < Api::V1::Accounts::BaseController
   ROLE_BY_LEVEL = { 'free_busy' => 'freeBusyReader', 'details' => 'reader', 'schedule' => 'writer' }.freeze
   LEVEL_BY_ROLE = ROLE_BY_LEVEL.invert.merge('owner' => 'owner').freeze
@@ -16,8 +16,24 @@ class Api::V1::Accounts::GoogleCalendar::SharingRulesController < Api::V1::Accou
   # GET /google_calendar/sharing_rules
   def index
     roles = roles_by_email
-    rows = coworker_users.map { |user| row_for(user, roles) }
-    render json: { sharing_rules: rows, google_email: @integration.google_email }
+    render json: { sharing_rules: coworker_users.map { |user| row_for(user, roles) },
+                   others: other_rows(roles), general_rules: general_rules,
+                   google_email: @integration.google_email }
+  rescue StandardError => e
+    render json: { error: google_message(e) }, status: :unprocessable_entity
+  end
+
+  # PUT /google_calendar/sharing_rules/share_email   { email, level }
+  # Compartir con alguien que NO es agente de la cuenta (cualquier correo). level none = quitar.
+  def share_email
+    email = params[:email].to_s.strip.downcase
+    error = validate_email_share(email)
+    return render json: { error: error }, status: :unprocessable_entity if error
+
+    apply_level(email, params[:level])
+    GoogleCalendarCoworkerService.clear_cache_for(@integration.google_email)
+    level = LEVEL_BY_ROLE.fetch(roles_by_email[email], 'none')
+    render json: { email: email, level: level, status: 'editable' }
   rescue StandardError => e
     render json: { error: google_message(e) }, status: :unprocessable_entity
   end
@@ -61,12 +77,40 @@ class Api::V1::Accounts::GoogleCalendar::SharingRulesController < Api::V1::Accou
     nil
   end
 
+  def validate_email_share(email)
+    return 'invalid_level' unless LEVELS.include?(params[:level])
+    return 'invalid_email' unless email.match?(URI::MailTo::EMAIL_REGEXP)
+    return 'own_email' if email.casecmp?(@integration.google_email.to_s)
+    return 'owner_rule' if roles_by_email[email] == 'owner'
+
+    nil
+  end
+
+  # Personas con acceso que no son compañeros de la cuenta (ni yo). Su correo es MÍO de ver:
+  # son reglas de mi propio calendario.
+  def other_rows(roles)
+    coworker_emails = integrations_by_user.values.map { |i| i.google_email.to_s.downcase }
+    own = @integration.google_email.to_s.downcase
+    roles.except(own, *coworker_emails).sort.map do |email, role|
+      level = LEVEL_BY_ROLE.fetch(role, 'none')
+      { email: email, level: level, status: level == 'owner' ? 'owner_rule' : 'editable' }
+    end
+  end
+
+  # Público / dominio / grupo: solo informativo.
+  def general_rules
+    acl.reject { |rule| rule.dig('scope', 'type') == 'user' }.map do |rule|
+      { type: rule.dig('scope', 'type'), value: rule.dig('scope', 'value'), level: LEVEL_BY_ROLE.fetch(rule['role'], 'none') }
+    end
+  end
+
   def apply_level(email, level)
     if level == 'none'
       @service.delete_acl_rule(email)
     else
       @service.upsert_acl_rule(email, ROLE_BY_LEVEL.fetch(level))
     end
+    @acl = nil
     @roles_by_email = nil
   end
 
@@ -81,9 +125,13 @@ class Api::V1::Accounts::GoogleCalendar::SharingRulesController < Api::V1::Accou
 
   # { correo en minúsculas => role } solo de reglas de personas (scope type user).
   def roles_by_email
-    @roles_by_email ||= @service.list_acl
-                                .select { |rule| rule.dig('scope', 'type') == 'user' }
-                                .to_h { |rule| [rule.dig('scope', 'value').to_s.downcase, rule['role']] }
+    @roles_by_email ||= acl.select { |rule| rule.dig('scope', 'type') == 'user' }
+                           .to_h { |rule| [rule.dig('scope', 'value').to_s.downcase, rule['role']] }
+  end
+
+  # Una sola lectura de las reglas de Google por petición.
+  def acl
+    @acl ||= @service.list_acl
   end
 
   def coworker_users

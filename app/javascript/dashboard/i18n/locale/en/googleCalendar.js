@@ -104,6 +104,43 @@ export default {
       LOAD_ERROR: 'Could not read who you share your calendar with.',
       RECONNECT:
         'Your Google connection expired. Reconnect to share your calendar.',
+      TABS: {
+        COWORKERS: 'Teammates',
+        OTHERS: 'Other people',
+      },
+      ADD: {
+        LABEL: 'Share with someone else',
+        PLACEHOLDER: 'email@example.com',
+        BUTTON: 'Share',
+        HINT: 'For someone who is not an agent in this account. They need a Google account to see your calendar.',
+      },
+      REMOVE: 'Stop sharing',
+      OTHERS_EMPTY:
+        'You do not share your calendar with anyone outside the account yet.',
+      LEVEL_HELP: {
+        FREE_BUSY: 'sees your busy times, without titles or details.',
+        DETAILS:
+          'sees your events with title, place and description (private ones only as busy).',
+        SCHEDULE: 'can also create events on your calendar.',
+      },
+      GENERAL: {
+        PUBLIC:
+          'In Google your calendar is also public ({level}). Change it in Google Calendar.',
+        DOMAIN:
+          'In Google you share it with all of {value} ({level}). Change it in Google Calendar.',
+        GROUP:
+          'In Google you share it with the group {value} ({level}). Change it in Google Calendar.',
+      },
+      ERRORS: {
+        INVALID_EMAIL: 'Enter a valid email.',
+        OWN_EMAIL: 'That is your own email.',
+        OWNER_RULE:
+          'That person manages your calendar: change it in Google Calendar.',
+        NOT_CONNECTED: 'That teammate has no Google connected.',
+        SAME_GOOGLE: 'That teammate uses your same Google.',
+        RECONNECT:
+          'Your Google connection expired. Reconnect to share your calendar.',
+      },
       CLOSE: 'Close',
     },
     COWORKERS: {

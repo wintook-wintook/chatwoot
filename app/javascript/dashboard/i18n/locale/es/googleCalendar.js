@@ -111,6 +111,43 @@ export default {
       LOAD_ERROR: 'No se pudo leer con quién compartes tu calendario.',
       RECONNECT:
         'Tu conexión con Google venció. Reconecta para compartir tu calendario.',
+      TABS: {
+        COWORKERS: 'Compañeros',
+        OTHERS: 'Otras personas',
+      },
+      ADD: {
+        LABEL: 'Compartir con otra persona',
+        PLACEHOLDER: 'correo@ejemplo.com',
+        BUTTON: 'Compartir',
+        HINT: 'Para alguien que no es agente de esta cuenta. Necesita una cuenta de Google para ver tu calendario.',
+      },
+      REMOVE: 'Dejar de compartir',
+      OTHERS_EMPTY:
+        'Todavía no compartes tu calendario con nadie fuera de la cuenta.',
+      LEVEL_HELP: {
+        FREE_BUSY: 've tus horarios ocupados, sin títulos ni detalles.',
+        DETAILS:
+          've tus eventos con título, lugar y descripción (los privados, solo como ocupado).',
+        SCHEDULE: 'además puede crearte eventos en tu calendario.',
+      },
+      GENERAL: {
+        PUBLIC:
+          'En Google tu calendario también es público ({level}). Eso se cambia en Google Calendar.',
+        DOMAIN:
+          'En Google lo compartes con todo {value} ({level}). Eso se cambia en Google Calendar.',
+        GROUP:
+          'En Google lo compartes con el grupo {value} ({level}). Eso se cambia en Google Calendar.',
+      },
+      ERRORS: {
+        INVALID_EMAIL: 'Escribe un correo válido.',
+        OWN_EMAIL: 'Ese es tu propio correo.',
+        OWNER_RULE:
+          'Esa persona administra tu calendario: cámbialo en Google Calendar.',
+        NOT_CONNECTED: 'Ese compañero no tiene Google conectado.',
+        SAME_GOOGLE: 'Ese compañero usa tu mismo Google.',
+        RECONNECT:
+          'Tu conexión con Google venció. Reconecta para compartir tu calendario.',
+      },
       CLOSE: 'Cerrar',
     },
     COWORKERS: {

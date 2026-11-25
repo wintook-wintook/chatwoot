@@ -54,7 +54,15 @@ RSpec.describe 'Google Calendar sharing rules API', type: :request do
       expect(rows[caro.id]).to include('level' => 'owner', 'status' => 'owner_rule')
       expect(rows[dani.id]).to include('status' => 'not_connected')
       expect(rows[twin.id]).to include('status' => 'same_google')
-      expect(response.body).not_to include('jefe@empresa.com')
+    end
+
+    it 'lista aparte a otras personas (no agentes) y las reglas generales, sin repetir compañeros ni a mí' do
+      get url, headers: headers, as: :json
+
+      body = response.parsed_body
+      expect(body['others']).to eq([{ 'email' => 'jefe@empresa.com', 'level' => 'details', 'status' => 'editable' }])
+      expect(body['general_rules']).to eq([{ 'type' => 'default', 'value' => nil, 'level' => 'free_busy' }])
+      expect(google).to have_received(:list_acl).once
     end
 
     it 'pide reconectar si mi permiso de Google venció' do
@@ -103,6 +111,35 @@ RSpec.describe 'Google Calendar sharing rules API', type: :request do
       put "#{url}/#{beto.id}", params: { level: 'details' }, headers: headers, as: :json
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq('Cannot share outside the domain')
+    end
+  end
+
+  describe 'PUT /sharing_rules/share_email' do
+    let(:share_url) { "#{url}/share_email" }
+
+    it 'comparte con cualquier correo (en minúsculas) sin aviso' do
+      put share_url, params: { email: ' Cliente@Hotmail.com ', level: 'free_busy' }, headers: headers, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(google).to have_received(:upsert_acl_rule).with('cliente@hotmail.com', 'freeBusyReader')
+    end
+
+    it 'Nada = quita a esa persona' do
+      put share_url, params: { email: 'jefe@empresa.com', level: 'none' }, headers: headers, as: :json
+      expect(google).to have_received(:delete_acl_rule).with('jefe@empresa.com')
+    end
+
+    it 'rechaza correo inválido, mi propio correo, niveles raros y reglas «Administrar»' do
+      put share_url, params: { email: 'no-es-correo', level: 'details' }, headers: headers, as: :json
+      expect(response.parsed_body['error']).to eq('invalid_email')
+      put share_url, params: { email: 'ANA@gmail.com', level: 'details' }, headers: headers, as: :json
+      expect(response.parsed_body['error']).to eq('own_email')
+      put share_url, params: { email: 'x@y.com', level: 'owner' }, headers: headers, as: :json
+      expect(response.parsed_body['error']).to eq('invalid_level')
+      put share_url, params: { email: 'caro@gmail.com', level: 'none' }, headers: headers, as: :json
+      expect(response.parsed_body['error']).to eq('owner_rule')
+      expect(google).not_to have_received(:upsert_acl_rule)
+      expect(google).not_to have_received(:delete_acl_rule)
     end
   end
 end

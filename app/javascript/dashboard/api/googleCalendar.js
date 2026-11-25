@@ -39,6 +39,11 @@ class GoogleCalendarAPI extends ApiClient {
     return axios.put(`${this.url}/sharing_rules/${agentId}`, { level });
   }
 
+  // Con alguien que no es agente de la cuenta (cualquier correo). level 'none' = dejar de compartir.
+  shareCalendarWithEmail(email, level) {
+    return axios.put(`${this.url}/sharing_rules/share_email`, { email, level });
+  }
+
   getCoworkerEvents(agentIds, params = {}) {
     return axios.get(`${this.url}/coworkers/events`, {
       params: { agent_ids: agentIds, ...params },

@@ -520,6 +520,29 @@ se ve en calendar.google.com y al revés.
 - webpack: «Compiled successfully».
 - **Navegador (pendiente):** pasos 11–13 de la §6 F6.
 
+#### F3c+ — compartir con OTRAS PERSONAS y ventana rehecha (25/11/2026)
+
+Pedido: «¿se puede compartir con otro que no sea agente de la cuenta? agrégalo y que el modal
+se vea mejor».
+
+- Servidor: `GET /sharing_rules` ahora devuelve también `others` (reglas de personas que no
+  son compañeros ni yo: `{ email, level, status }`) y `general_rules` (público / dominio /
+  grupo, **solo informativo**). Nueva `PUT /sharing_rules/share_email { email, level }`:
+  cualquier correo (se guarda en minúsculas), `none` = quitar; rechaza `invalid_email`,
+  `own_email`, `invalid_level`, `owner_rule`. Una sola lectura de la ACL por petición.
+- Ventana (`ShareCalendarModal.vue`), molde nativo: `woot-modal` → `woot-modal-header` →
+  `form` sin relleno propio → `woot-tabs` **«Compañeros (n)» · «Otras personas (n)»** (n =
+  con cuántos compartes) · filas con `Thumbnail` + nombre/correo + select nativo · «Guardando…»
+  / ✓ / motivo por fila · en «Otras personas»: renglón *correo + nivel + Compartir*
+  (`WootSubmitButton`, Enter también) y botón ✕ «Dejar de compartir» · al pie, qué ve cada
+  nivel y aviso si en Google el calendario es público / de dominio / de grupo · «Cerrar».
+  Las listas largas desplazan **solo dentro de la pestaña** (`max-h`), no el modal.
+- Pruebas: spec de la ruta + 4 casos (11 en total); `ShareCalendarModal.spec.js` (4).
+  Ruby 67/67 · front 42/42. **Contra Google real** (Admin, correo reservado
+  `prueba-calendario@example.com`): compartir solo ocupado → aparece en «Otras personas»;
+  cambiar a detalles; correo inválido y propio rechazados; quitar → lista vacía de nuevo.
+
+
 ### F4 — Textos
 - `es` / `en` en `GOOGLE_CALENDAR.COWORKERS.*`. Español de México con tú. Nada de «Chatwoot».
 
