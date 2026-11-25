@@ -379,17 +379,15 @@ Con `POSTGRES_DATABASE=chatwoot_test`:
 
 ---
 
-## 7. Decisiones abiertas
+## 7. Decisiones (todas tomadas 25/11/2026)
 
-| #  | Pregunta | Recomendación |
-|----|----------|---------------|
-| D1 | Las franjas de fondo «ocupado de todos» que se ven hoy, ¿se quitan o también respetan lo compartido? | **Que respeten lo compartido** (pasan a usar el token de A). Si no, seguiría viéndose el ocupado de quien no compartió nada. |
-| D2 | ¿Solo el calendario principal del compañero o también los secundarios que comparta? | **Solo el principal** en esta versión. |
-| D3 | Si B da «Hacer cambios», ¿A puede agendarle desde aquí? | **DECIDIDA (25/11/2026): sí, crear** en el calendario de B (F3b), sin quedar en el de A. Editar/mover/borrar sus eventos: otro paso. |
-| D4 | ¿Mostrar compañeros de todos los agentes de la cuenta o solo de un equipo? | **Todos los de la cuenta** que tengan Google conectado. |
-| D5 | Google Workspace: el administrador puede dejar que todos vean el libre/ocupado de todos sin compartir. | Se respeta tal cual (es la configuración de Google de esa empresa). Solo se avisa. |
-
----
+| #  | Pregunta | Decisión |
+|----|----------|----------|
+| D1 | Franjas «ocupado de todos» que se ven hoy | **Respetan lo compartido**: solo salen de quien compartió al menos «Solo libre/ocupado» (token de quien mira). |
+| D2 | ¿Qué calendarios del compañero? | **Solo el principal** (su correo). Secundarios: después, si se piden. |
+| D3 | Si B da «Hacer cambios», ¿A puede agendarle? | **Sí, crear** en el calendario de B (F3b), sin quedar en el de A. Editar/mover/borrar: otro paso. |
+| D4 | ¿A quién se ve y se comparte? | **Todos los agentes de la cuenta** con Google conectado. |
+| D5 | Google Workspace | **Se respeta lo que diga Workspace**; si Google rechaza compartir, se muestra su motivo. |
 
 ## 8. Riesgos
 
