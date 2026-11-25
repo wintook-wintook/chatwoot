@@ -74,6 +74,31 @@ export default {
       FREE: 'Free',
       NOT_CONNECTED: 'No calendar',
     },
+    SHARE_CALENDAR: {
+      BUTTON: 'Share my calendar',
+      TITLE: 'Share my calendar',
+      DESCRIPTION:
+        'Choose what each teammate sees of your schedule. It is saved to your Google Calendar right away and no email is sent.',
+      LEVELS: {
+        NONE: 'Nothing',
+        FREE_BUSY: 'Free/busy only',
+        DETAILS: 'See all details',
+        SCHEDULE: 'Make changes (can schedule me)',
+      },
+      STATUS: {
+        NOT_CONNECTED: 'No Google',
+        SAME_GOOGLE: 'Same Google as you',
+        OWNER_RULE: 'Manages your calendar (change it in Google)',
+      },
+      LOADING: 'Loading…',
+      SAVING: 'Saving…',
+      SAVED: 'Saved',
+      EMPTY: 'There are no other agents in this account.',
+      LOAD_ERROR: 'Could not read who you share your calendar with.',
+      RECONNECT:
+        'Your Google connection expired. Reconnect to share your calendar.',
+      CLOSE: 'Close',
+    },
     COWORKERS: {
       TITLE: 'Teammates',
       HINT: 'Check a teammate to see their schedule. You only see what they shared with you in Google.',

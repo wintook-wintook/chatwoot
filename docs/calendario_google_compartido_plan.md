@@ -434,6 +434,36 @@ se ve en calendar.google.com y al revés.
 - Orden de trabajo: F3c antes que «Compañeros» y «Agendar a» en la pila de pruebas
   (primero se comparte, luego se ve y se agenda).
 
+#### F3c — HECHA (25/11/2026) · sin probar en navegador
+
+**Qué se hizo**
+- `GoogleCalendarService#list_acl`, `#upsert_acl_rule(email, role)` (PATCH; si 404, INSERT;
+  siempre `sendNotifications=false`) y `#delete_acl_rule(email)` (404 = ya no estaba = ok).
+- `SharingRulesController` — `GET /google_calendar/sharing_rules` y
+  `PUT /google_calendar/sharing_rules/:agent_id { level: none|free_busy|details|schedule }`.
+  - Por compañero: `level` y `status` (`editable` · `not_connected` · `same_google` · `owner_rule`).
+  - Solo reglas de personas que son compañeros de la cuenta; las demás (otras personas,
+    dominio, público) ni se muestran ni se tocan. Una regla «Administrar» (owner) dada en
+    Google no se cambia desde aquí.
+  - Al cambiar: `GoogleCalendarCoworkerService.clear_cache_for(mi correo)` → los compañeros lo
+    ven al instante. Si Google rechaza (Workspace), se devuelve su mensaje.
+- Pantalla: botón **«Compartir mi calendario»** en el panel «Compañeros» → ventana
+  `ShareCalendarModal.vue`: por compañero un select nativo (Nada · Solo libre/ocupado · Ver
+  todos los detalles · Hacer cambios (puede agendarme)); se guarda al cambiar, con
+  «Guardando…» / «Guardado» / motivo de Google; si falla, vuelve al valor anterior.
+- Textos `GOOGLE_CALENDAR.SHARE_CALENDAR.*` (es con tú / en).
+
+**Pila de pruebas**
+- `spec/controllers/api/v1/accounts/google_calendar/sharing_rules_controller_spec.rb` (7) +
+  4 casos nuevos en `spec/services/google_calendar_service_spec.rb`.
+  `POSTGRES_DATABASE=chatwoot_test bundle exec rspec spec/controllers/api/v1/accounts/google_calendar/ spec/services/google_calendar_service_spec.rb spec/services/google_calendar_coworker_service_spec.rb` → 36/36.
+- **Contra Google real** (dev, cuenta 2, vía API): Andres da a Admin «Ver detalles» → Admin lo
+  ve `details`; «Hacer cambios» → `details` + `can_schedule`; «Nada» → `none` (al instante,
+  sin esperar caché). Compartir con #2 (sin Google) → `not_connected`. Estado final: Andres
+  sin compartir con nadie.
+- webpack: «Compiled successfully».
+- **Navegador (pendiente):** pasos 11–13 de la §6 F6.
+
 ### F4 — Textos
 - `es` / `en` en `GOOGLE_CALENDAR.COWORKERS.*`. Español de México con tú. Nada de «Chatwoot».
 

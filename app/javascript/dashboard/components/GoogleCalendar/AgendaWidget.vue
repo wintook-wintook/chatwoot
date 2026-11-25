@@ -182,6 +182,13 @@
           <p class="text-xs text-slate-400 dark:text-slate-500">
             {{ $t('GOOGLE_CALENDAR.COWORKERS.HINT') }}
           </p>
+          <button
+            class="flex items-center gap-1 text-xs text-slate-400 hover:text-woot-500 pl-1 transition-colors"
+            @click="$emit('openShareCalendar')"
+          >
+            <fluent-icon icon="share" size="12" />
+            {{ $t('GOOGLE_CALENDAR.SHARE_CALENDAR.BUTTON') }}
+          </button>
           <p
             v-if="!coworkerRows.length"
             class="text-xs text-slate-400 dark:text-slate-500"
@@ -385,7 +392,7 @@ export default {
     coworkersError: { type: String, default: null },
     googleEmail: { type: String, default: '' },
   },
-  emits: ['toggleCalendar', 'toggleCoworker'],
+  emits: ['toggleCalendar', 'toggleCoworker', 'openShareCalendar'],
   data() {
     return {
       // Acordeón del panel lateral: 'upcoming' | 'calendars' | 'availability' | null.

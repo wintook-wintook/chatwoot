@@ -30,6 +30,15 @@ class GoogleCalendarAPI extends ApiClient {
     return axios.get(`${this.url}/coworkers`);
   }
 
+  // F3c — «Compartir mi calendario»: reglas de acceso de MI Google Calendar.
+  getSharingRules() {
+    return axios.get(`${this.url}/sharing_rules`);
+  }
+
+  updateSharingRule(agentId, level) {
+    return axios.put(`${this.url}/sharing_rules/${agentId}`, { level });
+  }
+
   getCoworkerEvents(agentIds, params = {}) {
     return axios.get(`${this.url}/coworkers/events`, {
       params: { agent_ids: agentIds, ...params },

@@ -81,6 +81,31 @@ export default {
       NOT_CONNECTED: 'Sin calendario',
     },
     // fix/calendario_google — calendario de compañeros (Google aplica lo que cada uno comparte).
+    SHARE_CALENDAR: {
+      BUTTON: 'Compartir mi calendario',
+      TITLE: 'Compartir mi calendario',
+      DESCRIPTION:
+        'Elige qué ve cada compañero de tu agenda. Se guarda en tu Google Calendar al momento y no le llega correo de aviso.',
+      LEVELS: {
+        NONE: 'Nada',
+        FREE_BUSY: 'Solo libre/ocupado',
+        DETAILS: 'Ver todos los detalles',
+        SCHEDULE: 'Hacer cambios (puede agendarme)',
+      },
+      STATUS: {
+        NOT_CONNECTED: 'Sin Google',
+        SAME_GOOGLE: 'Mismo Google que tú',
+        OWNER_RULE: 'Administra tu calendario (cámbialo en Google)',
+      },
+      LOADING: 'Cargando…',
+      SAVING: 'Guardando…',
+      SAVED: 'Guardado',
+      EMPTY: 'No hay más agentes en esta cuenta.',
+      LOAD_ERROR: 'No se pudo leer con quién compartes tu calendario.',
+      RECONNECT:
+        'Tu conexión con Google venció. Reconecta para compartir tu calendario.',
+      CLOSE: 'Cerrar',
+    },
     COWORKERS: {
       TITLE: 'Compañeros',
       HINT: 'Palomea a un compañero para ver su agenda. Solo ves lo que te compartió en Google.',

@@ -73,6 +73,7 @@
           :google-email="googleEmail || ''"
           @toggleCalendar="toggleCalendar"
           @toggleCoworker="toggleCoworker"
+          @openShareCalendar="showShareCalendar = true"
         />
       </div>
     </div>
@@ -90,6 +91,12 @@
     <ShareAgendaModal
       :show="showShareModal"
       @close="showShareModal = false"
+    />
+
+    <!-- fix/calendario_google F3c — con quién comparto mi calendario -->
+    <ShareCalendarModal
+      :show="showShareCalendar"
+      @close="showShareCalendar = false"
     />
 
     <!-- fix/calendario_google — evento de un compañero: solo lectura -->
@@ -139,13 +146,20 @@ import CalendarView from '../../../../components/GoogleCalendar/CalendarView.vue
 import AgendaWidget from '../../../../components/GoogleCalendar/AgendaWidget.vue';
 import CreateEventModal from '../../../../components/GoogleCalendar/CreateEventModal.vue';
 import ShareAgendaModal from '../../../../components/GoogleCalendar/ShareAgendaModal.vue';
+import ShareCalendarModal from '../../../../components/GoogleCalendar/ShareCalendarModal.vue';
 import AgendaItemsAPI from '../../../../api/agendaItems';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export default {
   name: 'GoogleCalendarView',
-  components: { CalendarView, AgendaWidget, CreateEventModal, ShareAgendaModal },
+  components: {
+    CalendarView,
+    AgendaWidget,
+    CreateEventModal,
+    ShareAgendaModal,
+    ShareCalendarModal,
+  },
   data() {
     return {
       showCreateModal: false,
@@ -157,6 +171,7 @@ export default {
       pollInterval: null,
       currentRange: {},
       coworkerEvent: null,
+      showShareCalendar: false,
     };
   },
   computed: {

@@ -36,6 +36,31 @@ class GoogleCalendarService
     { code: response.code, access_role: parsed['accessRole'], items: parsed['items'] || [] }
   end
 
+  # Con quién comparto MI calendario (fix/calendario_google F3c). Solo el dueño puede leer y
+  # cambiar estas reglas; Google las aplica igual que si se cambiaran en calendar.google.com.
+  def list_acl(calendar_id: 'primary')
+    get("/calendars/#{CGI.escape(calendar_id)}/acl")['items'] || []
+  end
+
+  # role: freeBusyReader | reader | writer. Sin correo de aviso (sendNotifications=false).
+  # Cambia la regla si ya existe; si no (404), la crea.
+  def upsert_acl_rule(email, role, calendar_id: 'primary')
+    path = "/calendars/#{CGI.escape(calendar_id)}/acl"
+    response = HTTParty.patch(
+      "#{CALENDAR_API}#{path}/#{CGI.escape("user:#{email}")}",
+      headers: auth_headers, body: { role: role }.to_json, query: { sendNotifications: false }
+    )
+    return response.parsed_response if response.success?
+    raise "Google Calendar API error #{response.code}: #{response.body}" unless response.code == 404
+
+    post(path, { role: role, scope: { type: 'user', value: email } }, query: { sendNotifications: false })
+  end
+
+  # Quitar a alguien que ya no estaba es éxito (delete devuelve :already_gone en 404/410).
+  def delete_acl_rule(email, calendar_id: 'primary')
+    delete("/calendars/#{CGI.escape(calendar_id)}/acl/#{CGI.escape("user:#{email}")}")
+  end
+
   # @tickets_cases F3 — `recurrence`, `with_meet`, `location` y `send_updates` son
   # kwargs NUEVOS y opcionales: los llamadores existentes (events_controller y el
   # job de seguimientos) siguen funcionando igual.

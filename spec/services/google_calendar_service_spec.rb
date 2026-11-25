@@ -80,4 +80,41 @@ RSpec.describe GoogleCalendarService do
       end
     end
   end
+
+  # fix/calendario_google F3c — reglas de acceso de MI calendario.
+  describe 'reglas de acceso (compartir mi calendario)' do
+    it 'upsert_acl_rule cambia la regla si existe, sin correo de aviso' do
+      ok = instance_double(HTTParty::Response, success?: true, parsed_response: { 'role' => 'writer' })
+      allow(HTTParty).to receive(:patch).and_return(ok)
+
+      expect(service.upsert_acl_rule('b@gmail.com', 'writer')).to eq({ 'role' => 'writer' })
+      expect(HTTParty).to have_received(:patch).with(
+        a_string_ending_with('/calendars/primary/acl/user%3Ab%40gmail.com'),
+        hash_including(query: { sendNotifications: false })
+      )
+    end
+
+    it 'upsert_acl_rule crea la regla si no existía (404)' do
+      missing = instance_double(HTTParty::Response, success?: false, code: 404)
+      created = instance_double(HTTParty::Response, success?: true, parsed_response: { 'id' => 'user:b@gmail.com' })
+      allow(HTTParty).to receive_messages(patch: missing, post: created)
+
+      service.upsert_acl_rule('b@gmail.com', 'reader')
+      expect(HTTParty).to have_received(:post).with(
+        a_string_ending_with('/calendars/primary/acl'),
+        hash_including(body: { role: 'reader', scope: { type: 'user', value: 'b@gmail.com' } }.to_json)
+      )
+    end
+
+    it 'upsert_acl_rule propaga otros errores de Google' do
+      denied = instance_double(HTTParty::Response, success?: false, code: 403, body: 'nope')
+      allow(HTTParty).to receive(:patch).and_return(denied)
+      expect { service.upsert_acl_rule('b@gmail.com', 'reader') }.to raise_error(/API error 403/)
+    end
+
+    it 'delete_acl_rule: quitar a quien ya no estaba no es error' do
+      allow(HTTParty).to receive(:delete).and_return(instance_double(HTTParty::Response, code: 404))
+      expect { service.delete_acl_rule('b@gmail.com') }.not_to raise_error
+    end
+  end
 end
