@@ -137,27 +137,30 @@ RSpec.describe 'Motor2 campaign send rules' do # rubocop:disable RSpec/DescribeC
       expect(Motor2::CampaignTouch.text(trk)).to be_nil
     end
 
-    it 'enviar_informacion manda el «Mensaje 2» tal cual después del turno y le_interesa queda para cuando lo quiere' do # -- un recorrido
+    it 'enviar_informacion manda la información tal cual después del turno; le_interesa sale hasta que ya la tiene' do # -- un recorrido
       camp = wa_campaign
       trk = tracking(camp)
       conversation = create(:conversation, account: account, inbox: wa, contact: contact)
       config = Motor2::Config.for(trk)
       after = []
       turn = instance_double(Motor2::Runner, config: config, state: Motor2::State.new, trace: Motor2::Trace.new, test?: false,
-                                             tracking: trk, conversation: conversation, silence!: true)
+                                             tracking: trk, conversation: conversation, silence!: true, last_customer: 'Sí, cuéntame',
+                                             attempt?: false)
       allow(turn).to receive(:after_send) { |&block| after << block }
       allow(turn).to receive(:attach)
       skill = Motor2::Skills::Campaign.new(turn)
       names = skill.tools.map { |t| t.dig(:function, :name) }
-      expect(names).to include('enviar_informacion', 'le_interesa')
-      expect(skill.tools.find { |t| t.dig(:function, :name) == 'le_interesa' }.dig(:function, :description)).to include('YA lo quiere')
+      expect(names).to include('enviar_informacion')
+      expect(names).not_to include('le_interesa')
 
       skill.call('enviar_informacion', {})
       expect(turn.state['content_sent']).to be(true)
       expect(Motor2::Delivery).to receive(:send_reply).with(trk, conversation, 'Hola Mario: todo sobre Mantenimiento gratis')
       after.each(&:call)
-      expect(skill.tools.map { |t| t.dig(:function, :name) }).not_to include('enviar_informacion')
-      expect(config.function.prompt).to include('todo sobre {{oferta}}')
+      expect(skill.tools.map { |t| t.dig(:function, :name) }).not_to include('enviar_informacion', 'le_interesa') # ni en el mismo turno
+      later = described_class_skill_next_turn(turn, config).tools
+      expect(later.find { |t| t.dig(:function, :name) == 'le_interesa' }.dig(:function, :description)).to include('YA lo quiere')
+      expect(later.map { |t| t.dig(:function, :name) }).to include('reenviar_informacion')
     end
 
     it 'la revisión avisa variables sin origen y un «Mensaje 2» vacío' do
@@ -166,6 +169,14 @@ RSpec.describe 'Motor2 campaign send rules' do # rubocop:disable RSpec/DescribeC
       expect(items.find { |i| i[:key] == :vars_1 }[:level]).to eq('warning')
       expect(items.find { |i| i[:key] == :content }[:level]).to eq('warning')
     end
+  end
+
+  # El turno siguiente (la información ya se mandó).
+  def described_class_skill_next_turn(turn, config)
+    following = instance_double(Motor2::Runner, config: config, state: turn.state, trace: Motor2::Trace.new, test?: false,
+                                                tracking: turn.tracking, conversation: turn.conversation, last_customer: '¿y cómo le hago?',
+                                                attempt?: false)
+    Motor2::Skills::Campaign.new(following)
   end
 
   describe 'inscribir' do

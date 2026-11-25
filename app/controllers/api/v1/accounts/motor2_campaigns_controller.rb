@@ -21,12 +21,13 @@
 #   GET   motor2_campaigns/:id/test_run         «Prueba real»: cómo va · POST la arranca { recipients, every_minutes }
 #   DELETE motor2_campaigns/:id/test_run        la termina (cancela los toques que falten)
 class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseController
-  before_action :set_campaign, except: %i[options preview test test_email create]
+  before_action :set_campaign, except: %i[options preview test test_email cases run_case create]
 
   def options
     render json: { attend: TrackingCampaigns::CampaignAgent.defaults(Current.account), sources: Motor2::SourceMap.new(Current.account).available,
                    calendar_users: calendar_users, inboxes: TrackingCampaigns::Motor2Form.inboxes(Current.account).map { |i| inbox_json(i) },
-                   events: upcoming_events, past_events: recent_events, users: names(Current.account.users), teams: names(Current.account.teams) }
+                   events: upcoming_events, past_events: recent_events, users: names(Current.account.users), teams: names(Current.account.teams),
+                   kit: TrackingCampaigns::CampaignKit.options }
   end
 
   def preview
@@ -44,6 +45,11 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
     result = Motor2::Probe.new(seller, messages: test_messages, state: Motor2::Sanitizer.plain(params[:state]), answers: answers).call
     render json: result.merge(tools: Array(result.dig(:trace, 'tools'))), status: result[:error] ? :unprocessable_entity : :ok
   end
+
+  # «Casos»: la lista de pruebas que se arman con la campaña de la pantalla, y correr una (TrackingCampaigns::Motor2Cases).
+  def cases = render(json: { cases: campaign_cases.list })
+
+  def run_case = render(json: campaign_cases.run(params[:key]))
 
   def test_email
     body = Motor2::CampaignTouch.fill(params[:body].to_s.first(6000), Contact.new(name: current_user.name))
@@ -139,7 +145,10 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
 
   def upcoming_events
     Current.account.events.where(closed_at: nil).where('starts_at > ?', Time.current).order(:starts_at)
-           .limit(50).map { |e| { id: e.id, name: e.name, starts_at: e.starts_at, capacity: e.capacity } }
+           .limit(50).map do |e|
+             { id: e.id, name: e.name, starts_at: e.starts_at, capacity: e.capacity, location: e.location, meeting_url: e.meeting_url,
+               description: e.description.to_s.first(600) }
+           end
   end
 
   # Para la audiencia «asistentes de un evento» después del evento (asistió, no se presentó): los de 90 días.
@@ -161,6 +170,11 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
                Current.account.tracking_campaigns.new(engine: '2', name: 'Prueba', brief: {})
     campaign.brief = TrackingCampaigns::Motor2Brief.brief(params[:brief]) if params[:brief]
     TrackingCampaigns::CampaignAgent.new(campaign, current_user).draft(params[:attend]&.permit!&.to_h || {})
+  end
+
+  def campaign_cases
+    answers = TrackingCampaigns::Motor2Brief.seller_answers(TrackingCampaign.new(brief: TrackingCampaigns::Motor2Brief.brief(params[:brief])))
+    TrackingCampaigns::Motor2Cases.new(test_agent, answers, opener: params[:opener].to_s.first(1500))
   end
 
   def test_runner = @test_runner ||= TrackingCampaigns::Motor2TestRun.new(@campaign, current_user)

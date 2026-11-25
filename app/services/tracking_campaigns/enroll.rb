@@ -64,9 +64,8 @@ class TrackingCampaigns::Enroll
     return 'already_enrolled' if @campaign.entries.enrolled.exists?(contact_id: @contact.id)
     return 'daily_cap' if daily_cap_reached?
     return 'active_tracking' if @skip_active && active_tracking?
-    return 'recently_contacted' if recently_contacted?
 
-    contact_reason
+    rest_reason || contact_reason
   end
 
   # prospeccion V4: quien pidió no ser contactado nunca se inscribe, aunque el canal pudiera.
@@ -120,6 +119,22 @@ class TrackingCampaigns::Enroll
     TrackingCampaignEntry.enrolled.where(contact_id: @contact.id, account_id: @campaign.account_id)
                          .where.not(tracking_campaign_id: @campaign.id).where('tracking_campaign_entries.created_at > ?', days.days.ago)
                          .joins(:tracking_campaign).exists?(tracking_campaigns: { engine: '2', test_of_id: nil })
+  end
+
+  # Campaña con IA: otra le escribió hace poco, o pidió no recibir campañas de este tipo.
+  def rest_reason
+    return 'recently_contacted' if recently_contacted?
+
+    'excluded_label' if excluded_label?
+  end
+
+  # Campaña con IA: el que pidió no recibir campañas de este tipo (su etiqueta «no…», TrackingCampaigns::CampaignKit)
+  # no se inscribe. La baja general (opted_out) es aparte.
+  def excluded_label?
+    return false unless @campaign.motor2? && !@campaign.test_run?
+
+    title = TrackingCampaigns::CampaignKit.label(@campaign.brief, 'opt_out')
+    title.present? && @contact.label_list.include?(title)
   end
 
   def active_tracking?

@@ -36,7 +36,7 @@ RSpec.describe 'Motor2 campaign tests' do
       expect(data['touches'][0]).to include('subject' => 'Hola Mario', 'text' => 'Hola Mario, mira la promo')
       expect(data['touches'][2]['wait']).to eq('value' => 4, 'unit' => 'days')
       expect(data['outcomes'].first).to include('kind' => 'relay_person', 'to' => 'Ana Admin')
-      expect(data['outcomes'].pluck('kind')).to include('discarded', 'handoff', 'no_reply')
+      expect(data['outcomes'].pluck('kind')).to include('not_now', 'opt_out', 'handoff', 'no_reply')
     end
 
     it 'WhatsApp: avisa los toques sin plantilla (solo salen dentro de las 24 h)' do

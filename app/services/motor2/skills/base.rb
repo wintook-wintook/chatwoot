@@ -36,6 +36,9 @@ class Motor2::Skills::Base
   # La pregunta con la que debe terminar su mensaje (el código lo revisa), o nil.
   def required_question = nil
 
+  # El texto que sale, con lo que esta habilidad asegura al final (por omisión, tal cual).
+  def polish(reply) = reply
+
   def call(_name, _args) = { error: 'herramienta desconocida' }
 
   private

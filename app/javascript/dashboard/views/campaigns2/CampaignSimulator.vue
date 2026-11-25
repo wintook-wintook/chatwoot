@@ -97,10 +97,17 @@ export default {
         : this.t('FROM_AI');
     },
     outcomeText(o) {
-      return this.t(`OUTCOMES.${o.kind}`, {
+      const text = this.t(`OUTCOMES.${o.kind}`, {
         to: o.to || this.t('NOBODY'),
         n: o.attempts,
+        keyword: o.keyword || '',
+        goal: o.goal ? this.t(`GOALS.${o.goal}`) : '',
+        yes: o.yes_label || '—',
+        no: o.no_label || '—',
       });
+      return o.label && o.kind !== 'not_now'
+        ? `${text} ${this.t('LABEL', { label: o.label })}`
+        : text;
     },
     warningText(w) {
       return this.t(`WARNINGS.${w.kind}`, {
@@ -115,7 +122,11 @@ export default {
         discarded: ['discarded'],
         handoff: ['handoff'],
         later: ['later'],
-        done: ['done'],
+        done: ['done', 'achieved'],
+        achieved: ['achieved'],
+        not_now: ['not_now'],
+        future_yes: ['not_now'],
+        opt_out: ['opt_out'],
       };
       const o = outcomes.find(x => (map[kind] || []).includes(x.kind));
       return o ? this.outcomeText(o) : '';

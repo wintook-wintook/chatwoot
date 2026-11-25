@@ -6,8 +6,9 @@
 # (motor2['answers']):
 #
 #   purpose          invite | offer | reactivate | renew | survey (para qué es la campaña)
-#   offer_what       qué ofrece (o a qué invita)            offer_details  precio, vigencia, condiciones
-#   offer_goal       relay (si le interesa → relevo) | appointment (le agenda la cita)
+#   offer_what       qué ofrece (o a qué invita) · facts: la ficha · links: las ligas con su uso
+#   offer_goal       qué cuenta como logrado (TrackingCampaigns::CampaignKit::GOALS) · goal_keyword
+#   replies / labels respuestas fijas y etiquetas del contacto (TrackingCampaigns::CampaignKit)
 #   event_id         Invitar: el evento de Eventos (fecha, lugar, liga salen de ahí)
 #   survey_questions Encuesta: hasta 3 preguntas, tal cual · low_score: menor a esto (0–10) es «baja»
 #   relay            agent (al agente de la bandeja: prospectos o clientes) | person · user_id / team_id
@@ -23,16 +24,16 @@ class Motor2::Functions::CampaignSeller
   PURPOSES = %w[invite offer reactivate renew survey].freeze
   TEXTS = %w[tone purpose offer_what offer_details offer_goal relay price_source business_what business_who
              business_coverage business_why business_practical].freeze
-  CHOICES = { 'purpose' => PURPOSES, 'offer_goal' => %w[relay appointment], 'relay' => %w[agent person] }.freeze
+  CHOICES = { 'purpose' => PURPOSES, 'offer_goal' => TrackingCampaigns::CampaignKit::GOALS, 'relay' => %w[agent person] }.freeze
   MAX_QUESTIONS = 3
   LOW_SCORE = 7
   BUSINESS = Motor2::Functions::Prospects::BUSINESS
   TONES = Motor2::Functions::Prospects::TONES
   PURPOSE_TEXT = {
-    'invite' => 'INVITAR al evento: que confirme si va (confirmar_asistencia).',
-    'offer' => 'OFRECER: que le interese la oferta.',
-    'reactivate' => 'REACTIVAR a un cliente que hace tiempo no compra: que le interese volver.',
-    'renew' => 'RECORDAR / RENOVAR: que renueve o aproveche antes de que venza.',
+    'invite' => 'INVITAR a un evento.',
+    'offer' => 'OFRECER algo (producto, servicio o promoción).',
+    'reactivate' => 'REACTIVAR a un cliente que hace tiempo no compra: que vuelva.',
+    'renew' => 'RECORDAR algo que le toca (vencimiento, pago, renovación) para que lo haga a tiempo.',
     'survey' => 'ENCUESTA de satisfacción: que conteste las preguntas (guardar_respuesta).'
   }.freeze
 
@@ -105,27 +106,93 @@ class Motor2::Functions::CampaignSeller
 
   def outcomes(tracking, conversation) = Motor2::Functions::CampaignSellerOutcomes.new(tracking, conversation, self)
 
-  def prompt(_conversation = nil)
-    [Motor2::Functions.puesto(KEY), offer_block, business_block, objections_block].map { |b| b.to_s.strip }.compact_blank.join("\n\n")
+  def prompt(conversation = nil)
+    [Motor2::Functions.puesto(KEY), offer_block, facts_block, links_block, contact_block(conversation), business_block,
+     objections_block].map { |b| b.to_s.strip }.compact_blank.join("\n\n")
   end
 
-  # LA OFERTA (también la usa el entrenador del probador).
+  GOAL_TEXT = {
+    'confirm' => 'que confirme si va (confirmar_asistencia).',
+    'external' => 'que lo haga por su cuenta con la liga y te avise escribiendo «%<kw>s». Lo logró SOLO cuando escribe ' \
+                  '«%<kw>s» o confirma sin duda que YA lo hizo (ya_lo_hizo); «me interesa» o «ahorita lo hago» NO cuentan.',
+    'done' => 'que lo haga y te confirme que YA lo hizo (ya_lo_hizo); «sí, luego lo hago» no cuenta.',
+    'relay' => 'que le interese: en cuanto lo quiera, pásalo a quien sigue (le_interesa).',
+    'appointment' => 'que agende una cita (ver_horarios y agendar_cita).',
+    'answers' => 'que conteste la encuesta (guardar_respuesta).'
+  }.freeze
+
+  def goal = TrackingCampaigns::CampaignKit.goal(purpose, answer(:offer_goal))
+
+  def keyword = answer(:goal_keyword).presence || TrackingCampaigns::CampaignKit.kit(purpose)[:keyword]
+
+  def external? = %w[external done].include?(goal)
+
+  def brief = { 'kind' => purpose, 'offer_goal' => goal, 'replies' => answer(:replies), 'labels' => answer(:labels) }.compact
+
+  # La respuesta fija (la de la campaña o la de fábrica) y la etiqueta del contacto.
+  def reply_text(key) = TrackingCampaigns::CampaignKit.reply(brief, key)
+
+  def label_for(key) = TrackingCampaigns::CampaignKit.label(brief, key)
+
+  def asks_future? = TrackingCampaigns::CampaignKit.asks_future?(purpose) && reply_text('not_now').present?
+
+  def facts = answer(:facts).to_h
+
+  def links = Array(answer(:links))
+
+  # LA CAMPAÑA (también la usa el entrenador del probador).
   def offer_block
-    lines = ["LA OFERTA — para qué es la campaña: #{PURPOSE_TEXT[purpose]}"]
+    lines = ["LA CAMPAÑA — para qué es: #{PURPOSE_TEXT[purpose]}"]
+    lines << "- Qué cuenta como logrado: #{format(GOAL_TEXT[goal], kw: keyword)}"
     lines << "- Qué: #{answer(:offer_what)}" if answer(:offer_what).present?
-    lines << "- Precio, vigencia y condiciones: #{answer(:offer_details)}" if answer(:offer_details).present?
     lines << event_line if invite? && event
-    lines << '- Si le interesa: agéndale la cita (ver_horarios y agendar_cita).' if appointment?
     lines << content_line if content.present?
     lines.join("\n")
   end
 
-  # «Mensaje 2» de la campaña (WhatsApp): sale tal cual con enviar_informacion y es lo que sabe de la oferta.
+  AUDIENCE_FACTS = %w[audience not_for].freeze
+
+  def facts_block
+    rows = TrackingCampaigns::CampaignKit.facts(purpose).filter_map do |k|
+      note = AUDIENCE_FACTS.include?(k) ? ' (para contestar si pregunta; no se lo preguntes)' : ''
+      "- #{TrackingCampaigns::CampaignKit::FACT_LABELS[k]}#{note}: #{facts[k]}" if facts[k].present?
+    end
+    # El vendedor de Agentes listos (sin campaña) trae su «precio, vigencia y condiciones».
+    rows << "- Precio, vigencia y condiciones: #{answer(:offer_details)}" if answer(:offer_details).present?
+    return '' if rows.empty?
+
+    'LA FICHA (es lo ÚNICO que sabes de esta campaña y lo puedes decir, aunque sea un precio o costo; si te preguntan algo ' \
+      "que no está aquí ni en tus fuentes, di que no tienes ese dato confirmado y no lo inventes):\n#{rows.join("\n")}"
+  end
+
+  LINK_USE = {
+    'package' => 'va con la información completa y se la vuelves a mandar cada vez que la pida',
+    'request' => 'solo si la pide',
+    'problem' => 'SOLO si tiene un problema para entrar o hacerlo (no le llegó el correo, la otra no le abre); nunca con la información'
+  }.freeze
+
+  def links_block
+    return '' if links.empty?
+
+    rows = links.map { |l| "- #{l['name']}: #{l['url']} — #{LINK_USE[l['use']] || LINK_USE['request']}#{". #{l['note']}" if l['note'].present?}" }
+    "LIGAS (cópialas EXACTAS; no son intercambiables: si pide «la liga» y no se entiende cuál, pregúntale):\n#{rows.join("\n")}"
+  end
+
+  # Datos de ESTE contacto (lo último que compró, lo que le vence): Reactivar y Recordar.
+  def contact_block(conversation)
+    contact = conversation.try(:contact)
+    return '' unless contact.is_a?(Contact) && %w[reactivate renew].include?(purpose)
+
+    rows = TrackingCampaigns::ContactFacts.new(contact).lines
+    rows.empty? ? '' : "DATOS DE ESTE CONTACTO (úsalos con tacto; no le recites todo):\n#{rows.join("\n")}"
+  end
+
+  # «El paquete» (WhatsApp): sale tal cual con enviar_informacion; también lo puedes usar para contestar.
   def content = answer(:content).to_s.strip
 
   def content_line
-    '- LA INFORMACIÓN COMPLETA DE LA OFERTA (es lo que sabes: contesta sus dudas con esto, con tus palabras; no inventes ' \
-      "nada que no esté aquí ni en tus fuentes):\n#{content.first(TrackingCampaigns::Motor2Brief::MAX_CONTENT)}"
+    "- LO QUE DICE LA INFORMACIÓN QUE SE LE MANDA (con enviar_informacion, tal cual; no la escribas tú):\n" \
+      "#{content.first(TrackingCampaigns::Motor2Brief::MAX_CONTENT)}"
   end
 
   private
@@ -157,7 +224,7 @@ class Motor2::Functions::CampaignSeller
     rows = objection_rows.select { |o| o['objection'].present? && o['answer'].present? }
     return '' if rows.empty?
 
-    "OBJECIONES FRECUENTES (contesta con esta idea, con tus palabras; no ofrezcas descuentos que no estén aquí):\n" \
+    "PREGUNTAS Y OBJECIONES AUTORIZADAS (contesta con esta idea, con tus palabras; no ofrezcas descuentos que no estén aquí):\n" \
       "#{rows.map { |o| "- «#{o['objection']}» → #{o['answer']}" }.join("\n")}"
   end
 end

@@ -1,0 +1,33 @@
+<%# Campaña con IA — la encuesta desde el correo (Public::CampaignSurveysController) %>
+<% content_for :title, t('public_campaign_survey.title') %>
+<% content_for :hide_print, true %>
+<div class="p-6 mt-6 bg-white border rounded-xl border-slate-200">
+  <% if @done %>
+    <h1 class="text-xl font-semibold"><%= t('public_campaign_survey.done_title') %></h1>
+    <p class="mt-2 text-slate-600"><%= t('public_campaign_survey.done_body', name: @account.name) %></p>
+  <% else %>
+    <h1 class="text-xl font-semibold"><%= t('public_campaign_survey.title') %></h1>
+    <p class="mt-2 text-slate-600"><%= t('public_campaign_survey.body', name: @account.name) %></p>
+    <%= form_with url: public_campaign_survey_path(params[:token]), method: :post, local: true, class: 'mt-5 flex flex-col gap-4' do %>
+      <% @questions.each_with_index do |question, i| %>
+        <label class="flex flex-col gap-1">
+          <span class="font-medium"><%= question %></span>
+          <% if question.match?(TrackingCampaigns::SurveyLink::SCORE) %>
+            <% from = question.match?(/\b1\s*(al|a|-)\s*10\b/i) ? 1 : 0 %>
+            <select name="answers[<%= i %>]" class="px-3 py-2 border rounded-md border-slate-300">
+              <option value=""><%= t('public_campaign_survey.pick') %></option>
+              <% (from..10).each do |n| %>
+                <option value="<%= n %>" <%= 'selected' if i.zero? && @score.to_s == n.to_s %>><%= n %></option>
+              <% end %>
+            </select>
+          <% else %>
+            <textarea name="answers[<%= i %>]" rows="2" maxlength="500" class="px-3 py-2 border rounded-md border-slate-300"></textarea>
+          <% end %>
+        </label>
+      <% end %>
+      <button type="submit" class="self-start px-4 py-2 font-medium text-white rounded-md bg-indigo-600 hover:bg-indigo-700">
+        <%= t('public_campaign_survey.send') %>
+      </button>
+    <% end %>
+  <% end %>
+</div>

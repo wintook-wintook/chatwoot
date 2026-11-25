@@ -40,9 +40,10 @@
 class TrackingCampaignEntry < ApplicationRecord
   SOURCES = %w[batch automation missed_call event].freeze # missed_call: diag/llamadas_whatsapp (F8); event: Plan-Eventos E3
   STATUSES = %w[enrolled skipped].freeze
-  # invalid_email: prospeccion V7a · recently_contacted: Campaña con Vendedor IA (otra 2.0 le escribió hace poco)
+  # invalid_email: prospeccion V7a · recently_contacted: Campaña con IA (otra 2.0 le escribió hace poco)
+  # excluded_label: Campaña con IA (tiene la etiqueta «no…» de ese tipo de campaña)
   REASONS = %w[campaign_closed already_enrolled active_tracking not_contactable outside_window daily_cap opted_out
-               invalid_email recently_contacted].freeze
+               invalid_email recently_contacted excluded_label].freeze
 
   belongs_to :account
   belongs_to :tracking_campaign

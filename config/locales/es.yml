@@ -334,6 +334,13 @@ es:
       not_found: 'Mantenimiento no encontrado'
       asset_not_found: 'Equipo no encontrado'
   # prospeccion V4 — baja desde el enlace de un correo del Agente IA
+  public_campaign_survey:
+    title: "Tu opinión nos importa"
+    body: "Contesta estas preguntas de %{name}. Toma menos de un minuto."
+    pick: "Elige"
+    send: "Enviar respuestas"
+    done_title: "¡Gracias por tu tiempo!"
+    done_body: "%{name} ya recibió tus respuestas."
   public_opt_out:
     title: "¿Ya no quieres recibir nuestros correos?"
     body: "Confirma y %{name} no volverá a escribirte."

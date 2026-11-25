@@ -68,8 +68,9 @@ module Motor2::ReplyChecks
                  'buscar_en_fuentes antes de contestar y, si no sale, no lo afirmes (sigue CÓMO PLATICAS). Si no tiene que ' \
                  'ver con el negocio, no busques: sigue la regla de «fuera de tema». Luego la pregunta pendiente.'
   SEARCH_TOOLS = %w[buscar_en_fuentes buscar_en_catalogo].freeze
-  # Ya contestó con otra cosa (el estado de su caso, el archivo que pidió): no hace falta buscar.
-  ANSWERED_BY = %w[estado_caso enviar_archivo].freeze
+  # Ya contestó con otra cosa (el estado de su caso, el archivo que pidió, la liga o la información de la campaña): no
+  # hace falta buscar.
+  ANSWERED_BY = %w[estado_caso enviar_archivo mandar_liga enviar_informacion reenviar_informacion].freeze
 
   def ensure_searched(messages, text)
     return text unless unsearched_question?
@@ -82,7 +83,7 @@ module Motor2::ReplyChecks
 
   # Preguntó algo del negocio y no buscó (lo de otro tema sigue la regla de «fuera de tema», sin buscar).
   def unsearched_question?
-    @mode == :reply && @decision.nil? && Motor2::Skills::QualifyFlow.asking_info?(@last_customer) && can_search_unused? &&
+    @mode == :reply && @decision.nil? && !campaign_facts? && Motor2::Skills::QualifyFlow.asking_info?(@last_customer) && can_search_unused? &&
       Motor2::AnswerCheck.new(account: @account).about_business?(message: @last_customer, business: business_text)
   end
 
@@ -90,6 +91,12 @@ module Motor2::ReplyChecks
     find_skill('knowledge')&.searchable? && @trace.tools.none? { |t| ANSWERED_BY.include?(t['name']) && t['ok'] } && @trace.tools.none? do |t|
       SEARCH_TOOLS.include?(t['name'])
     end
+  end
+
+  # Campaña con IA con ficha: lo de la campaña se contesta con LA FICHA (lo demás, con fuentes, lo dice su regla).
+  def campaign_facts?
+    function = @config.function
+    function.is_a?(Motor2::Functions::CampaignSeller) && (function.facts.present? || function.content.present?)
   end
 
   def business_text = @config.function.respond_to?(:business_info) ? @config.function.business_info(:business_what) : @config.objective
