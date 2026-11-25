@@ -7,7 +7,7 @@
 #   rake assistant:guide_gaps:resolve IDS=4,7 NOTE='guía agenda: cómo cambiar el responsable'
 #   rake assistant:guide_gaps:discard IDS=9 NOTE='es del negocio del cliente'
 #   rake assistant:guides:check                       # las guías completas y su búsqueda
-#   rake assistant:guides:portal ACCOUNT=1            # crea el Centro de ayuda global (una vez)
+#   rake assistant:guides:portal ACCOUNT=1            # crea el Centro de ayuda «Guías de Dali» (una vez)
 #   rake assistant:guides:publish                     # guías → artículos del Centro de ayuda (en cada deploy)
 namespace :assistant do
   desc 'Preguntas que Dali no supo contestar (STATUS, REASON, ACCOUNT, LIMIT)'
@@ -82,15 +82,15 @@ end
 
 namespace :assistant do
   namespace :guides do
-    desc 'Crea el Centro de ayuda global de Kontrolya en la cuenta ACCOUNT (slug PLATFORM_HELP_PORTAL_SLUG, «ayuda»)'
+    desc 'Crea el Centro de ayuda «Guías de Dali» en la cuenta ACCOUNT (slug PLATFORM_HELP_PORTAL_SLUG, «ayuda-dali»)'
     task portal: :environment do
-      abort 'Falta ACCOUNT=<id de la cuenta de Kontrolya>' if ENV['ACCOUNT'].blank?
+      abort 'Falta ACCOUNT=<id de la cuenta dueña de las guías>' if ENV['ACCOUNT'].blank?
       portal = Assistant::GuidePublisher.create_portal!(account: Account.find(ENV.fetch('ACCOUNT', nil)),
-                                                        name: ENV.fetch('NAME', 'Ayuda Kontrolya'))
+                                                        name: ENV.fetch('NAME', Assistant::GuidePublisher::DEFAULT_PORTAL_NAME))
       puts "Portal «#{portal.name}» (#{portal.slug}) en la cuenta #{portal.account_id}: /hc/#{portal.slug}/es"
     end
 
-    desc 'Publica las guías como artículos del Centro de ayuda global (crea, actualiza y archiva)'
+    desc 'Publica las guías como artículos del Centro de ayuda «Guías de Dali» (crea, actualiza y archiva)'
     task publish: :environment do
       unless Assistant::GuidePublisher.portal
         puts "Sin portal «#{Assistant::GuidePublisher.portal_slug}»: nada que publicar (rake assistant:guides:portal ACCOUNT=…)"

@@ -11,9 +11,9 @@ RSpec.describe Assistant::GuidePublisher do
   let!(:admin) { create(:user, account: account, role: :administrator) }
   let(:portal) { described_class.create_portal!(account: account) }
 
-  def guide(key, title: key.titleize, areas: ['agenda'], body: "## Para qué sirve\nTexto de #{key}.", category: nil)
-    Assistant::Guides::Guide.new(key: key, title: title, areas: areas, keywords: %w[uno dos], pages: [], body: body,
-                                 category: category)
+  def guide(key, title: key.titleize, areas: ['agenda'], body: "## Para qué sirve\nTexto de #{key}.", **extra)
+    Assistant::Guides::Guide.new(key: key, title: title, areas: areas, body: body,
+                                 **{ keywords: %w[uno dos], pages: [], sources: [] }.merge(extra))
   end
 
   def publish(guides)
@@ -27,6 +27,12 @@ RSpec.describe Assistant::GuidePublisher do
   end
 
   before { stub_const("#{described_class}::SLUG_PREFIX", prefix) }
+
+  it 'usa el portal «ayuda-dali» si no se indica otro' do
+    ClimateControl.modify(PLATFORM_HELP_PORTAL_SLUG: nil) do
+      expect(described_class.portal_slug).to eq('ayuda-dali')
+    end
+  end
 
   it 'crea un artículo publicado por guía, en la categoría de su área' do
     result = publish([guide('agenda'), guide('dali', areas: []), guide('casos', category: 'Primeros pasos')])
@@ -60,6 +66,23 @@ RSpec.describe Assistant::GuidePublisher do
     publish([guide('agenda')])
     expect(described_class.article_url('agenda')).to eq("https://app.test/hc/#{portal.slug}/articles/#{prefix}agenda")
     expect(described_class.article_url('no-existe')).to be_nil
+  end
+
+  it 'guarda en meta toda la cabecera de la guía, con todas sus palabras clave' do
+    keywords = (1..12).map { |n| "palabra#{n}" }
+    publish([guide('agenda', areas: %w[agenda sales], keywords: keywords, pages: %w[agenda],
+                             sources: ['app/models/agenda*.rb'], reviewed: '2026-11-14')])
+
+    meta = portal.articles.find_by(slug: "#{prefix}agenda").meta
+    expect(meta).to eq('guide_key' => 'agenda', 'areas' => %w[agenda sales], 'keywords' => keywords,
+                       'tags' => keywords.first(10), 'pages' => %w[agenda], 'sources' => ['app/models/agenda*.rb'],
+                       'reviewed' => '2026-11-14')
+  end
+
+  it 'marca como actualizada la guía a la que solo le cambió la cabecera' do
+    publish([guide('agenda')])
+    expect(publish([guide('agenda')]).unchanged).to eq(['agenda'])
+    expect(publish([guide('agenda', areas: %w[sales])]).updated).to eq(['agenda'])
   end
 
   it 'publica las guías reales del repo sin errores' do

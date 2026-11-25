@@ -1,21 +1,25 @@
 # frozen_string_literal: true
 
 # Publica las guías de uso (config/assistant/guides, Assistant::Guides) como artículos
-# del Centro de ayuda GLOBAL de Kontrolya: un solo portal, en la cuenta de Kontrolya,
-# público para todos los clientes. Las guías del repo son la única fuente: el artículo
-# se reescribe en cada publicación (no se edita a mano en el portal).
+# del Centro de ayuda «Guías de Dali» (slug `ayuda-dali`): un solo portal para todas las
+# cuentas. Se encuentra SOLO por su slug, nunca por la cuenta dueña. Hoy el artículo se
+# reescribe en cada publicación (no se edita a mano en el portal).
 #
-#   Assistant::GuidePublisher.portal              # el portal (PLATFORM_HELP_PORTAL_SLUG, «ayuda»)
+#   Assistant::GuidePublisher.portal              # el portal (PLATFORM_HELP_PORTAL_SLUG, «ayuda-dali»)
 #   Assistant::GuidePublisher.new.call            # crea/actualiza; archiva lo que ya no existe
 #   Assistant::GuidePublisher.article_url('casos') # para que Dali dé el enlace
 #
-# Cada artículo lleva meta.guide_key = clave de la guía y slug «kontrolya-<clave>».
+# Cada artículo lleva slug «kontrolya-<clave>» y en `meta` toda la cabecera de la guía
+# (guide_key, areas, keywords, pages, sources, reviewed) para poder armar la guía desde el
+# artículo; `tags` (las primeras 10 keywords) se queda para el portal público.
 # Categoría: `category:` de la cabecera de la guía o, si no tiene, la de su primera área.
 # Se corre con `rake assistant:guides:publish` (idempotente; poner en el deploy).
 class Assistant::GuidePublisher
   LOCALE = 'es'
   SLUG_PREFIX = 'kontrolya-'
-  DEFAULT_PORTAL_SLUG = 'ayuda'
+  DEFAULT_PORTAL_SLUG = 'ayuda-dali'
+  DEFAULT_PORTAL_NAME = 'Guías de Dali'
+  MAX_TAGS = 10
 
   # Área → categoría del portal (en el orden en que se muestran).
   CATEGORIES = {
@@ -49,23 +53,40 @@ class Assistant::GuidePublisher
     article && "#{base_url}/hc/#{portal.slug}/articles/#{article.slug}"
   end
 
+  # Pantallas de un registro (Assistant::Pages::RECORDS): no están en el menú, no tienen etiqueta.
+  RECORD_PAGE_LABELS = {
+    'case' => 'Un caso (por su número)',
+    'contact' => 'Un contacto',
+    'organization' => 'Una empresa',
+    'conversation' => 'Una conversación'
+  }.freeze
+
+  # Lo que el editor del Centro de ayuda ofrece para las guías de Dali (ArticleSettings.vue).
+  def self.editor_options
+    pages = Assistant::Pages::MAP.keys.map do |key|
+      { key: key, label: Assistant::Pages.label(key) || RECORD_PAGE_LABELS.fetch(key, key) }
+    end
+    { areas: AccessRole::AREAS, pages: pages }
+  end
+
   def self.base_url
     ENV.fetch('FRONTEND_URL', '').chomp('/')
   end
 
   # Crea el portal global en la cuenta indicada (si no existe).
-  def self.create_portal!(account:, name: 'Ayuda Kontrolya')
+  def self.create_portal!(account:, name: DEFAULT_PORTAL_NAME)
     Portal.find_or_create_by!(slug: portal_slug) do |portal|
       portal.account = account
       portal.name = name
       portal.page_title = name
-      portal.header_text = 'Cómo se usa la plataforma'
+      portal.header_text = 'Las guías con las que Dali te explica cómo se usa la plataforma'
       portal.color = '#1f93ff'
       portal.config = { 'allowed_locales' => [LOCALE], 'default_locale' => LOCALE }
     end
   end
 
-  def initialize(portal: self.class.portal, author: nil, guides: Assistant::Guides.all)
+  # Siempre desde los archivos: Guides.all ya puede venir del mismo portal.
+  def initialize(portal: self.class.portal, author: nil, guides: Assistant::Guides.load_files)
     raise ArgumentError, "No existe el portal «#{self.class.portal_slug}» (rake assistant:guides:portal)" unless portal
 
     @portal = portal
@@ -99,7 +120,18 @@ class Assistant::GuidePublisher
   def article_attrs(guide)
     { account_id: @portal.account_id, author: @author, title: guide.title, content: guide.body,
       description: guide.summary, category: category_for(guide), status: :published, locale: LOCALE,
-      meta: { 'guide_key' => guide.key, 'tags' => guide.keywords.first(10) } }
+      meta: meta_for(guide) }
+  end
+
+  # Toda la cabecera del .md, para que la guía se pueda armar igual desde el artículo.
+  def meta_for(guide)
+    { 'guide_key' => guide.key,
+      'areas' => Array(guide.areas),
+      'keywords' => Array(guide.keywords),
+      'tags' => Array(guide.keywords).first(MAX_TAGS),
+      'pages' => Array(guide.pages),
+      'sources' => Array(guide.sources),
+      'reviewed' => guide.reviewed.presence }.compact
   end
 
   def same?(article, attrs)

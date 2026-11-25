@@ -1,11 +1,16 @@
 # frozen_string_literal: true
 
-# Asistente (Dali) — las guías de uso de la plataforma. Viven en el repo, en
-# config/assistant/guides/*.md (una por tema), y viajan con el código: cuando cambia
-# una función, su guía se actualiza en el mismo commit. Dali no las lleva en el
+# Asistente (Dali) — las guías de uso de la plataforma. Dali no las lleva en el
 # prompt: las busca (search_guides) y lee solo la que necesita (read_guide).
 #
-# Cada archivo empieza con una cabecera YAML:
+# De dónde salen (`all`):
+# 1. Del Centro de ayuda «Guías de Dali» (Assistant::GuidePublisher.portal, slug `ayuda-dali`):
+#    sus artículos publicados en español con meta.guide_key. Es el mismo portal para TODAS las
+#    cuentas: se busca solo por su slug, nunca por Current.account ni por un id de cuenta.
+# 2. Si no hay portal (o no tiene guías): de los archivos config/assistant/guides/*.md
+#    (`load_files`), que también son la fuente de `rake assistant:guides:publish`.
+#
+# Cada archivo empieza con una cabecera YAML (en el portal va en article.meta):
 #   ---
 #   key: casos                      # igual al nombre del archivo
 #   title: Casos y oportunidades
@@ -47,8 +52,9 @@ module Assistant::Guides
 
   module_function
 
+  # En producción se memoriza hasta reiniciar (paso 6 del plan: caché que se vacía al editar).
   def all
-    return load_all if Rails.env.development?
+    return load_all unless Rails.env.production?
 
     @all ||= load_all
   end
@@ -108,9 +114,29 @@ module Assistant::Guides
     end
   end
 
+  def load_all
+    guides = load_portal
+    return guides if guides.any?
+
+    warn_once("[Assistant::Guides] sin portal #{Assistant::GuidePublisher.portal_slug}: usando archivos")
+    load_files
+  end
+
+  # Las guías del portal «Guías de Dali» (Assistant::GuidePortalSource).
+  def load_portal
+    Assistant::GuidePortalSource.load
+  end
+
+  def warn_once(message)
+    return if @warned
+
+    @warned = true
+    Rails.logger.warn(message)
+  end
+
   # Una guía con la cabecera rota se salta (y queda en el log) sin tumbar las demás;
   # `rake assistant:guides:check` y su spec sí la marcan.
-  def load_all
+  def load_files
     Dir[DIR.join('*.md')].filter_map do |path|
       parse(path)
     rescue Psych::Exception => e
