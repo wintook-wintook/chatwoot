@@ -42,6 +42,18 @@ class Motor2::Skills::Files < Motor2::Skills::Base
     names_where(source) { |r| r[rule.to_s] } & attachments.pluck(:name)
   end
 
+  # Los de una regla («interest», «confirm») que aún no se le mandan, al mensaje de este turno. En correo, los de
+  # «interest» ya fueron adjuntos al primer correo (ContactTrackings::AttemptFiles): no se repiten.
+  def self.attach_unsent(turn, config, state, rule)
+    return [] if rule.to_s == 'interest' && sent_by_email?(turn.tracking)
+
+    names = with_rule(config, rule, config.attachments)
+    ids = config.attachments.where(name: names).pluck(:name, :id).to_h
+    names.reject { |name| state.files_sent.include?(ids[name]) }.first(MAX_PER_MESSAGE).each { |name| turn.attach(name) }
+  end
+
+  def self.sent_by_email?(tracking) = tracking&.inbox&.email? && tracking.attempt_count.to_i.positive?
+
   # Los archivos que van con la bienvenida (los manda Motor2::Reply).
   def self.welcome_names(template) = names_where(template) { |rule| rule['welcome'] }
 

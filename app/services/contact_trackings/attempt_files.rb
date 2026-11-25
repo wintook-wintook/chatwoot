@@ -27,7 +27,13 @@ module ContactTrackings::AttemptFiles
     campaign = tracking.tracking_campaign
     return [] unless campaign&.motor2?
 
-    campaign.offer_files.select { |f| Array(f.rules.to_h['attempts']).map(&:to_i).include?(numero.to_i) }.map(&:name)
+    first_email = numero.to_i == 1 && tracking.inbox&.email?
+    campaign.offer_files.select { |f| goes_in?(f.rules.to_h, numero, first_email) }.map(&:name)
+  end
+
+  # En ese toque; en correo, las de «cuando muestre interés» van adjuntas al primer correo (el que lleva todo).
+  def goes_in?(rules, numero, first_email)
+    Array(rules['attempts']).map(&:to_i).include?(numero.to_i) || (first_email && rules['interest'].present?)
   end
 
   def scope_for(tracking)

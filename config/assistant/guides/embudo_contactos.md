@@ -5,7 +5,7 @@ areas: [sales]
 keywords: [embudo, contacto nuevo, primera conversacion, cliente que vuelve a escribir, por que no entra, salir del embudo, sale del embudo, embudo de contactos, prospecto, prospectos, tablero de conversaciones, kanban, columna, tarjeta, mover tarjeta, convertir, convertido, descartar, descartado, frio, sin respuesta, dias sin respuesta, ia mueve, movimiento automatico, bandejas, criterio, metricas del embudo, interesado, cita, embudo por defecto, etapa por defecto, posicion, tipo de columna, agregar columna, eliminar embudo, mas antiguas, quitar del embudo, meter al embudo]
 pages: [contact_funnel, conversation, opportunities, contact_funnels]
 sources: [app/javascript/dashboard/views/kanbanBoard.vue, app/javascript/dashboard/components/kanban/**/*.vue, app/javascript/dashboard/components/settings/KanbanProcesses/*.vue, app/javascript/dashboard/components/settings/KanbanTypeProcesses/*.vue, app/javascript/dashboard/routes/dashboard/settings/kanban/*.vue, app/javascript/dashboard/routes/dashboard/conversation/ConversationAction.vue, app/services/kanban/*.rb, app/jobs/kanban/*.rb, app/models/concerns/kanban_funnel_trackable.rb, app/controllers/api/v1/accounts/conversations/kanban_controller.rb]
-reviewed: 2026-11-14
+reviewed: 2026-11-25
 ---
 ## Para qué sirve
 El Embudo de contactos es la antesala de la oportunidad: muestra las conversaciones con prospectos como tarjetas en columnas, desde que llegan hasta que se convierten en oportunidad o se descartan. La propia conversación mueve su tarjeta según lo que pasa (reglas e inteligencia artificial).

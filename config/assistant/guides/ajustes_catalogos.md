@@ -5,7 +5,7 @@ areas: [settings]
 keywords: [ajustes, configuracion, configuracion de cuenta, nombre de la cuenta, idioma, idioma del sitio, id de la cuenta, logo, marca, color de la empresa, nombre del asistente, modelo de openai, modelos de ia, que modelo usa, resolver automaticamente, facturacion, plan, licencias, catalogo, catalogos, etiquetas, crear etiqueta, atributos personalizados, campo extra, respuestas predefinidas, plantillas de whatsapp, productos y servicios, motivos de cierre, ganada, perdida, pospuesta, cancelada, resultados de tareas, tiempo dedicado, motivos de cancelacion, embudos de contactos, tipos de caso, clasificaciones, politicas sla, tipos de contrato, datos propios, puntaje de tareas, pesos, restaurar de fabrica, casos y etapas, folio]
 pages: [settings, catalog, account_settings, users, roles, teams, inboxes, integrations, billing, case_types, close_reasons, task_outcomes, labels, custom_attributes, canned_responses, whatsapp_templates, contact_funnels, contract_types, sla_policies, classifications, case_rules, task_scoring]
 sources: [app/javascript/dashboard/components/layout/config/sidebarItems/v2/index.js, app/javascript/dashboard/routes/dashboard/settings/account/*.vue, app/javascript/dashboard/routes/dashboard/settings/billing/**/*.vue, app/javascript/dashboard/routes/dashboard/settings/labels/*.vue, app/javascript/dashboard/routes/dashboard/settings/attributes/*.vue, app/javascript/dashboard/views/gestorTickets/OutcomeReasonsConfig.vue, app/javascript/dashboard/views/gestorTickets/commercial/OutcomeReasons.vue, app/javascript/dashboard/views/gestorTickets/TaskOutcomesConfig.vue, app/javascript/dashboard/views/gestorTickets/TaskPriorityConfig.vue, app/javascript/dashboard/views/contracts/ContractTypes.vue, app/javascript/dashboard/i18n/locale/es/generalSettings.json, app/javascript/dashboard/i18n/locale/es/labelsMgmt.json, app/javascript/dashboard/i18n/locale/es/attributesMgmt.json]
-reviewed: 2026-11-14
+reviewed: 2026-11-25
 ---
 ## Para qué sirve
 - Ajustes: la configuración de la cuenta y quién entra y cómo trabaja. Es del Administrador.
@@ -18,6 +18,7 @@ reviewed: 2026-11-14
 - «Equipos», «Bandejas de Entrada» e «Integraciones»: los canales, quién los atiende y las conexiones con otras herramientas. Detalle en la guía bandejas_integraciones.
 - «Facturación»: tu plan y licencias (solo en la versión en la nube).
 - «Puntaje de tareas»: cómo se ordena «Mi día».
+- «Formatos de cotización»: cómo se ven la cotización que abre el cliente y su PDF (bloques, logo, datos de tu empresa, datos bancarios); puedes tener varios y elegir uno por omisión. Detalle en la guía [[cotizaciones]].
 - «Casos y etapas» (se despliega): Reglas de automatización, Inteligencia Artificial, Parámetros de ventas, Resumen del negocio: acceso, Ajustes del módulo y Configuración de folio. Las reglas se explican en la guía reglas_automatizacion_casos.
 
 ### Catálogos

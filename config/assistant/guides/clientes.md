@@ -10,7 +10,7 @@ sources:
   - app/javascript/dashboard/routes/dashboard/organizations/routes.js
   - app/javascript/dashboard/routes/dashboard/contracts/routes.js
   - app/services/access/grant.rb
-reviewed: 2026-11-14
+reviewed: 2026-11-25
 ---
 ## Para qué sirve
 El área Clientes junta a la gente y a las empresas con las que trabajas:

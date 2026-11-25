@@ -431,7 +431,8 @@
         "LABEL": "label «{label}»"
       },
       "NPS": "NPS: {score} ({promoters} promoters · {passives} passives · {detractors} detractors)",
-      "COMMENTS": "Comments ({n})"
+      "COMMENTS": "Comments ({n})",
+      "FINISH": "End"
     },
     "LIST": {
       "HINT": "For an audience that doesn't know you. The list is cleaned before creating anything: missing or malformed email, duplicates, role addresses (info@, sales@…), previously unsubscribed or bounced, and domains that don't receive mail. If the email already belongs to a contact, that one is used. New ones are quarantined: they don't show in Contacts until they reply or click; those who never reply are deleted automatically.",
@@ -570,14 +571,14 @@
       "ABOUT_MISSING": "Without a description the seller does not know when to send it.",
       "TOUCH": "In touch {n}",
       "WHEN": {
-        "interest": "With the details (when they show interest)",
+        "interest": "When they show interest (once)",
         "ask": "When they ask or it helps",
-        "confirm": "When they confirm the event"
+        "confirm": "When they confirm the event (also with the keyword)"
       },
       "ADD": "+ Upload images or files",
       "UPLOADING": "Uploading…",
       "REMOVE": "Remove",
-      "LIMITS": "Up to 10. WhatsApp accepts JPG or PNG up to 5 MB, video up to 16 MB and PDF up to 100 MB. On WhatsApp, a touch file only goes if the contact wrote in the last 24 h (otherwise the template goes, which can carry its header image).",
+      "LIMITS": "Up to 10. WhatsApp accepts JPG or PNG up to 5 MB, video up to 16 MB and PDF up to 100 MB. On WhatsApp, a touch file only goes if the contact wrote in the last 24 h (otherwise the template goes, which can carry its header image). \"When they show interest\" files go once, as soon as they show interest (ask for the info, are interested, ask for a quote or the link); by email they go attached to the first email.",
       "IMAGE_TYPE": "«{name}»: the image must be JPG or PNG.",
       "UPLOAD_ERROR": "Could not upload the file.",
       "UPDATE_ERROR": "Could not save the change."

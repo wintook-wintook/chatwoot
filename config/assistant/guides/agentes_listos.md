@@ -33,7 +33,7 @@ Cada agente tiene su guía con todo lo que hace: [[agentes_atencion_prospectos]]
 - A cada uno ponle una descripción («foto del paquete Básico con su precio», «mapa para llegar al evento»). El agente no ve lo que hay dentro de la imagen: con la descripción sabe cuándo sirve y no inventa lo que trae.
 - Cuándo se manda (puedes marcar varias):
   - Todos: «Cuando lo pida o le sirva».
-  - Vendedor de campaña: «Cuando muestre interés» (sale justo cuando pasa el relevo, antes de que conteste quien sigue), «Al confirmar el evento» (solo en Invitar) y «En el toque N».
+  - Vendedor de campaña: «Cuando muestre interés (una vez)» (sale una sola vez, en la primera muestra de interés: cuando se le manda la información, le interesa y pasa el relevo, pide cotización, pide la liga o dice que ya lo hizo; en correo va adjunta al primer correo), «Al confirmar el evento» (solo en Invitar; también si confirma con la palabra clave) y «En el toque N» (en WhatsApp el toque 1 es la plantilla: solo sale si escribió en las últimas 24 h). «Revisar y lanzar» avisa de la imagen que nunca se mandaría.
   - Atención a prospectos: «Con la bienvenida» y «Al agendar la cita».
   - Atención a clientes: «Al levantar un caso» (va con el folio).
 - La imagen del primer mensaje de una campaña no va aquí: va como encabezado de la plantilla de WhatsApp (Ajustes › Plantillas de WhatsApp).

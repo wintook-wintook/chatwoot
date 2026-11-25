@@ -64,8 +64,17 @@ module Motor2::Skills::CampaignNotes
     link = Array(function.links).find { |l| l['name'] == name.to_s } || Array(function.links).first
     trace.event(:liga, link['name'])
     @link_url = link['url']
+    attach_rule('interest') # pedir la liga ya es interés: sus imágenes van con ella (una vez)
     { ok: true, nota: "Listo. Escribe en una frase «Aquí tienes la liga de #{link['name'].downcase}:» y la liga EXACTA, sin cambiarla: " \
                       "#{link['url']}. Nada más (no ofrezcas la información completa)." }
+  end
+
+  # Invitar: la liga de registro (la que va «con la información») sale con ese texto aunque no la hayan escrito en él.
+  def with_registration(text)
+    return text unless function.invite?
+
+    missing = Array(function.links).select { |l| l['use'] == 'package' && l['url'].present? && text.exclude?(l['url']) }
+    missing.reduce(text.rstrip) { |all, l| "#{all}\n\n#{l['name']}: #{l['url']}" }
   end
 
   # Una pregunta de un dato («¿a qué hora es?», «¿cuánto cuesta?») sin pedir la información: se contesta con la ficha.

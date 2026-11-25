@@ -53,12 +53,12 @@ RSpec.describe TrackingCampaigns::CampaignKit do
                               'PREGUNTAS Y OBJECIONES AUTORIZADAS', '¿Puedo ir solo a la demo?')
   end
 
-  it 'la revisión pide la palabra clave y avisa si la liga de la información no está en su texto' do
+  it 'la revisión pide la palabra clave; en Invitar no avisa de la liga fuera del texto (se pega sola)' do
     wa = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false).inbox
     camp = campaign(invite.merge('goal_keyword' => '', 'content' => 'Sin liga'), inbox: wa)
     items = TrackingCampaigns::Motor2Check.new(camp).call.index_by { |i| i[:key] }
     expect(items[:keyword][:level]).to eq('error')
-    expect(items[:link_Registro][:level]).to eq('warning')
+    expect(items).not_to have_key(:link_Registro)
     expect(items[:facts][:level]).to eq('ok')
   end
 

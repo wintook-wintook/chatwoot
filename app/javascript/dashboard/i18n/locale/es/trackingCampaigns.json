@@ -100,7 +100,12 @@
       "all": "Todas las campañas",
       "motor2": "Con Vendedor IA",
       "classic": "Clásicas (Motor 1.0)"
-    }
+    },
+    "FINISH": "Terminar campaña",
+    "FINISH_CONFIRM": "Queda Terminada y ya no se puede reanudar: no entran contactos nuevos y los mensajes que faltaban por salir se cancelan. La IA sigue contestando a quien ya está platicando y los Resultados se conservan. ¿Terminar la campaña",
+    "FINISH_YES": "Sí, terminar",
+    "FINISH_SUCCESS": "Campaña terminada: {count} mensajes pendientes cancelados.",
+    "FINISH_ERROR": "No se pudo terminar la campaña."
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campañas",

@@ -69,6 +69,8 @@ export default {
       launchingId: null,
       // Pausar / reanudar desde la fila
       campaignToPause: null,
+      campaignToFinish: null,
+      finishingId: null,
       pausingId: null,
       resumingId: null,
       activeTab: 'list', // 'list' · 'new' · 'edit'
@@ -287,6 +289,17 @@ export default {
                   isLoading={this.resumingId === row.id}
                   title={this.$t('TRACKING_CAMPAIGNS_VIEW.RESUME')}
                   onClick={() => this.resumeCampaign(row)}
+                />
+              )}
+              {['saved', 'draft', 'running', 'paused'].includes(row.status) && (
+                <woot-button
+                  variant="smooth"
+                  color-scheme="alert"
+                  size="small"
+                  icon="dismiss-circle"
+                  isLoading={this.finishingId === row.id}
+                  title={this.$t('TRACKING_CAMPAIGNS_VIEW.FINISH')}
+                  onClick={() => this.openFinish(row)}
                 />
               )}
               <woot-button
@@ -639,6 +652,32 @@ export default {
         this.pausingId = null;
       }
     },
+    openFinish(campaign) {
+      this.campaignToFinish = campaign;
+    },
+    // Terminar a mano: Terminada sin vuelta, cancela lo pendiente y conserva los Resultados.
+    async confirmFinish() {
+      const campaign = this.campaignToFinish;
+      if (!campaign) return;
+      this.campaignToFinish = null;
+      this.finishingId = campaign.id;
+      try {
+        const { data } = await TrackingCampaignsAPI.finish(campaign.id);
+        useAlert(
+          this.$t('TRACKING_CAMPAIGNS_VIEW.FINISH_SUCCESS', {
+            count: data.cancelled,
+          })
+        );
+        this.refreshTable();
+      } catch (error) {
+        useAlert(
+          error.response?.data?.error ||
+            this.$t('TRACKING_CAMPAIGNS_VIEW.FINISH_ERROR')
+        );
+      } finally {
+        this.finishingId = null;
+      }
+    },
     async resumeCampaign(campaign) {
       this.resumingId = campaign.id;
       try {
@@ -925,6 +964,16 @@ export default {
       :message="$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_CONFIRM')"
       :message-value="campaignToPause ? ` «${campaignToPause.name}»?` : ''"
       :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_YES')"
+      :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
+    />
+    <woot-delete-modal
+      :show="!!campaignToFinish"
+      :on-close="() => (campaignToFinish = null)"
+      :on-confirm="confirmFinish"
+      :title="$t('TRACKING_CAMPAIGNS_VIEW.FINISH')"
+      :message="$t('TRACKING_CAMPAIGNS_VIEW.FINISH_CONFIRM')"
+      :message-value="campaignToFinish ? ` «${campaignToFinish.name}»?` : ''"
+      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.FINISH_YES')"
       :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
     />
     <CampaignLaunchModal

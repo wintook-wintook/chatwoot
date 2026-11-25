@@ -33,6 +33,7 @@ class TrackingCampaigns::Motor2KnowledgeCheck
   def link_items
     return [item(:links, 'warning', "Agrega en #{link_step} la liga donde lo hace (registro, compra, pago).")] if needs_link?
     return [] unless package_text?
+    return [] if @brief['kind'] == 'invite' # en Invitar se pega sola al final de la información (Skills::Campaign#with_registration)
 
     links.select { |l| l['use'] == 'package' && content.exclude?(l['url']) }.map do |l|
       item(:"link_#{l['name']}", 'warning', "La liga «#{l['name']}» va con la información, pero no está en su texto (en «Mensajes»).")

@@ -100,7 +100,12 @@
       "all": "All campaigns",
       "motor2": "With AI Seller",
       "classic": "Classic (Engine 1.0)"
-    }
+    },
+    "FINISH": "End campaign",
+    "FINISH_CONFIRM": "It will be Finished and cannot be resumed: no new contacts come in and the pending messages are cancelled. The AI keeps replying to whoever is already chatting and the Results are kept. End the campaign",
+    "FINISH_YES": "Yes, end it",
+    "FINISH_SUCCESS": "Campaign ended: {count} pending messages cancelled.",
+    "FINISH_ERROR": "Could not end the campaign."
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campaigns",

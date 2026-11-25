@@ -6,7 +6,7 @@ category: Campañas
 keywords: [ficha de campana, si ya dio clic, encuesta por correo, botones de calificacion, etiqueta del contacto, calentar el dominio, spf, dkim, dmarc, rebotes, campana pausada, prospectos de listas, importo, importar contactos, contactos en cuarentena, cuarentena de contactos, campana por correo, campana de correo, lista fria, lista de correos, subir lista, importar lista, csv, cuarentena, prospectos de lista, de la lista a la venta, proceso completo, flujo de la campana, vendedor ia, vendedor de campana, relevo, atencion a prospectos, calificar, cotizar, oportunidad, seguimiento de cotizacion, cierre, ganada, perdida, limpieza automatica, lista de exclusion, darse de baja, rebote, tope diario, prueba a/b, que hace el humano, automatico]
 pages: [campaigns, ready_agents, contacts, quotes, opportunities, catalog, inboxes]
 sources: [app/javascript/dashboard/views/campaigns2/*.vue, app/services/prospect_lists/import.rb, app/jobs/prospect_lists/cleanup_job.rb, app/services/tracking_campaigns/motor2_*.rb, app/services/motor2/relay.rb, app/services/motor2/skills/quote.rb, app/jobs/motor2/quote_follow_up_job.rb]
-reviewed: 2026-11-24
+reviewed: 2026-11-25
 ---
 ## Para qué sirve
 Una campaña por correo con Vendedor IA lleva a un contacto desde una lista fría hasta una venta ganada. Los agentes hacen casi todo; una persona de tu equipo entra solo en algunos momentos: preparar, lanzar, atender a quien pide hablar con alguien, revisar la cotización y cerrar.
@@ -58,9 +58,11 @@ Las listas son solo para correo. En WhatsApp no se ofrece: escribirle a quien no
 ### 3. Envíos y toques (automático)
 - Cada contacto recibe su primer correo en el horario de atención, sin pasar el tope del día.
 - No se le escribe a quien otra campaña contactó hace poco, a quien se dio de baja ni a quien tiene un correo inválido.
-- El primer correo lleva todo (en correo casi nadie contesta «mándame info»): el que escribiste (con {{contacto}}, {{empresa}}, {{oferta}} y, en Recordar, {{vence}} y {{monto}}) o, si lo dejaste vacío, uno que la IA escribe con lo esencial de «La ficha» y la liga principal como botón. Lleva el asunto A o B, la firma, la liga para darse de baja y ligas que cuentan los clics.
+- El primer correo lleva todo (en correo casi nadie contesta «mándame info»): el que escribiste (con {{contacto}}, {{empresa}}, {{oferta}}; en Reactivar, {{ultima_compra}}; en Recordar, {{que_vence}}, {{vence}} y {{monto}}: el editor del correo pone los botones de las que tiene ese tipo, la vista previa las llena de ejemplo y el asunto también las acepta) o, si lo dejaste vacío, uno que la IA escribe con lo esencial de «La ficha» y la liga principal como botón. Lleva el asunto A o B, la firma, la liga para darse de baja y ligas que cuentan los clics.
 - Si no contesta, sale el siguiente cada N días. Cada toque cambia según lo que hizo: a quien ya dio clic y no confirmó le sale su versión «si ya dio clic» (o la IA le pregunta si pudo hacerlo); a los demás, otro ángulo más corto. En cuanto contesta o lo logra, ya no salen más.
-- Encuesta por correo: la primera pregunta va con botones del 0 al 10; el botón abre una página donde confirma y contesta las demás (abrir la liga no guarda nada). Una calificación baja levanta un caso, como en WhatsApp.
+- Encuesta por correo: la primera pregunta va con botones de su rango (del 0 al 10 o del 1 al 5); el botón abre una página donde confirma y contesta las demás (abrir la liga no guarda nada). Una calificación baja (cada pregunta tiene la suya) levanta el caso que pusiste en «Si califica bajo», como en WhatsApp.
+- Recordar por correo: cada contacto recibe sus correos en los días antes de que venza SU contrato (por omisión 7, 1 y el día), no «cada N días».
+- Para detenerla para siempre: «Terminar campaña» (lista o Resultados): ya no sale nada nuevo, la IA sigue contestando a quien ya platica y los Resultados se quedan.
 
 ### 4. El contacto contesta (automático)
 Al contestar o dar clic sale de la cuarentena y ya es un contacto normal. La campaña contesta sola con «La ficha» (lo que no esté ahí ni en tus fuentes, dice que no lo tiene) y las respuestas de «Respuestas y resultados»; si se queda callado a media plática, le vuelve a escribir.
