@@ -1150,6 +1150,8 @@ Rails.application.routes.draw do
   get  'cotizacion/:token',          to: 'public/quotes#show', as: :public_quote
   get  'reporte/:token',             to: 'public/service_reports#show', as: :public_service_report # Plan-Trabajo-Campo R1
   post 'cotizacion/:token/aceptar',  to: 'public/quotes#accept', as: :public_quote_accept
+  # CrmZeus Q4.1 — la cotización de CrmZeus que ve el cliente por su enlace (solo ver e imprimir).
+  get  'cotizacion-crm/:token',      to: 'public/crm_quotes#show', as: :public_crm_quote
   post 'cotizacion/:token/rechazar', to: 'public/quotes#reject', as: :public_quote_reject
   # prospeccion V4 — baja desde el enlace de un correo del Agente IA (GET confirma, POST da de baja)
   get  'baja/:token', to: 'public/opt_outs#show', as: :public_opt_out

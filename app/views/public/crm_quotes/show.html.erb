@@ -1,0 +1,166 @@
+<%# CrmZeus Q4.1 — formato de la cotización (lo de la plantilla de ejemplo de master2,
+    backend-angular/app/img/quotation.html). Se imprime con window.print desde el layout. %>
+<% content_for(:title, @quote.folio) %>
+<% t_ = ->(key, **args) { t("crm_public_quotes.#{key}", **args) } %>
+<% money = ->(value) { number_to_currency(value, unit: '$', precision: 2) } %>
+<% qty = ->(value) { number_with_precision(value, precision: 4, strip_insignificant_zeros: true, delimiter: ',') } %>
+<% organization = @quote.organization %>
+<% address = organization.home_address %>
+<% components, tops = @quote.items.partition(&:role_component?) %>
+<% by_kit = components.group_by(&:parent_item_id) %>
+<% status_classes = { 'won' => 'bg-green-100 text-green-800', 'lost' => 'bg-red-100 text-red-800',
+                      'cancelled' => 'bg-slate-200 text-slate-700' } %>
+
+<article class="p-6 bg-white shadow-sm rounded-xl print:shadow-none print:p-0">
+  <%# Encabezado: la empresa y los datos del documento %>
+  <div class="flex flex-wrap items-start justify-between gap-4 pb-4 border-b border-slate-200">
+    <div>
+      <p class="m-0 text-xl font-bold text-indigo-900"><%= @account.name %></p>
+      <p class="m-0 mt-3 text-xs font-semibold tracking-wide uppercase text-slate-500"><%= t_.call(:title) %></p>
+      <h1 class="m-0 text-2xl font-bold"><%= @quote.folio %></h1>
+      <% unless @quote.status_pending? %>
+        <span class="inline-block px-2 py-1 mt-2 text-xs font-semibold rounded <%= status_classes[@quote.status] %>">
+          <%= t_.call("statuses.#{@quote.status}") %>
+        </span>
+      <% end %>
+    </div>
+    <dl class="grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 m-0 text-sm">
+      <dt class="text-slate-500"><%= t_.call(:date) %></dt><dd class="m-0"><%= l(@quote.quote_date, format: '%d/%m/%Y') %></dd>
+      <% if @quote.valid_until %>
+        <dt class="text-slate-500"><%= t_.call(:valid_until) %></dt><dd class="m-0"><%= l(@quote.valid_until, format: '%d/%m/%Y') %></dd>
+      <% end %>
+      <% if @quote.seller %>
+        <dt class="text-slate-500"><%= t_.call(:seller) %></dt><dd class="m-0"><%= @quote.seller.name %></dd>
+      <% end %>
+      <% if @quote.payment_term %>
+        <dt class="text-slate-500"><%= t_.call(:payment_term) %></dt><dd class="m-0"><%= @quote.payment_term.name %></dd>
+      <% end %>
+      <% if @quote.currency %>
+        <dt class="text-slate-500"><%= t_.call(:currency) %></dt>
+        <dd class="m-0">
+          <%= [@quote.currency.name, @quote.currency.iso_code.presence && "(#{@quote.currency.iso_code})"].compact.join(' ') %>
+          <% unless @quote.currency.is_local? %>
+            · <%= t_.call(:exchange_rate, rate: qty.call(@quote.exchange_rate)) %>
+          <% end %>
+        </dd>
+      <% end %>
+      <% if @quote.purchase_order.present? %>
+        <dt class="text-slate-500"><%= t_.call(:purchase_order) %></dt>
+        <dd class="m-0">
+          <%= @quote.purchase_order %>
+          <%= @quote.purchase_order_date && "· #{l(@quote.purchase_order_date, format: '%d/%m/%Y')}" %>
+        </dd>
+      <% end %>
+    </dl>
+  </div>
+
+  <%# Cliente y «Enviar a» %>
+  <div class="grid gap-4 py-4 text-sm border-b border-slate-200 sm:grid-cols-2">
+    <div>
+      <p class="m-0 mb-1 text-xs font-semibold tracking-wide uppercase text-slate-500"><%= t_.call(:customer) %></p>
+      <p class="m-0 font-semibold"><%= organization.legal_name %></p>
+      <% if organization.tax_id.present? %>
+        <p class="m-0"><%= t_.call(:tax_id) %>: <%= organization.tax_id %></p>
+      <% end %>
+      <% if address %>
+        <p class="m-0 text-slate-600"><%= address.full_address %></p>
+      <% end %>
+      <% if @quote.contact %>
+        <p class="m-0 mt-1"><%= t_.call(:contact) %>: <%= @quote.contact.name %></p>
+      <% end %>
+    </div>
+    <% if @quote.shipping_address %>
+      <div>
+        <p class="m-0 mb-1 text-xs font-semibold tracking-wide uppercase text-slate-500"><%= t_.call(:ship_to) %></p>
+        <p class="m-0 font-semibold"><%= @quote.shipping_address.consignee_name %></p>
+        <p class="m-0 text-slate-600"><%= @quote.shipping_address.full_address %></p>
+      </div>
+    <% end %>
+  </div>
+
+  <% if @quote.header_notes.present? %>
+    <p class="m-0 mt-4 text-sm whitespace-pre-line"><%= @quote.header_notes %></p>
+  <% end %>
+
+  <%# Partidas %>
+  <div class="mt-4 overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-white bg-indigo-900">
+          <th class="px-2 py-1.5 font-medium"><%= t_.call('columns.key') %></th>
+          <th class="px-2 py-1.5 font-medium"><%= t_.call('columns.description') %></th>
+          <th class="px-2 py-1.5 font-medium text-right"><%= t_.call('columns.quantity') %></th>
+          <th class="px-2 py-1.5 font-medium"><%= t_.call('columns.unit') %></th>
+          <th class="px-2 py-1.5 font-medium text-right"><%= t_.call('columns.price') %></th>
+          <th class="px-2 py-1.5 font-medium text-right"><%= t_.call('columns.discount') %></th>
+          <th class="px-2 py-1.5 font-medium text-right"><%= t_.call('columns.amount') %></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <% tops.sort_by { |item| [item.position, item.id] }.each do |item| %>
+          <tr class="align-top break-inside-avoid">
+            <td class="px-2 py-1.5 whitespace-nowrap text-slate-600"><%= item.key %></td>
+            <td class="px-2 py-1.5">
+              <%= item.description %>
+              <% [item.notes, item.extra_notes].compact_blank.each do |note| %>
+                <p class="m-0 text-xs whitespace-pre-line text-slate-500"><%= note %></p>
+              <% end %>
+            </td>
+            <td class="px-2 py-1.5 text-right whitespace-nowrap"><%= qty.call(item.quantity) %></td>
+            <td class="px-2 py-1.5 whitespace-nowrap"><%= item.unit %></td>
+            <td class="px-2 py-1.5 text-right whitespace-nowrap"><%= money.call(item.unit_price) %></td>
+            <td class="px-2 py-1.5 text-right whitespace-nowrap"><%= item.discount_percent.positive? ? "#{qty.call(item.discount_percent)}%" : '' %></td>
+            <td class="px-2 py-1.5 text-right whitespace-nowrap"><%= money.call(item.net_amount) %></td>
+          </tr>
+          <% if @show_components && item.role_kit? %>
+            <%# showArtComps de master2: sangrados y sin precio %>
+            <% by_kit.fetch(item.id, []).sort_by { |row| [row.position, row.id] }.each do |component| %>
+              <tr class="text-xs align-top text-slate-600 break-inside-avoid">
+                <td class="px-2 py-1 whitespace-nowrap"><%= component.key %></td>
+                <td class="py-1 pl-6 pr-2">· <%= component.description %></td>
+                <td class="px-2 py-1 text-right whitespace-nowrap"><%= qty.call(component.quantity) %></td>
+                <td class="px-2 py-1 whitespace-nowrap"><%= component.unit %></td>
+                <td colspan="3"></td>
+              </tr>
+            <% end %>
+          <% end %>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <%# Cantidad con letra y observaciones a la izquierda; totales a la derecha %>
+  <div class="grid gap-4 mt-4 text-sm sm:grid-cols-3 break-inside-avoid">
+    <div class="sm:col-span-2">
+      <p class="m-0 text-xs font-semibold tracking-wide uppercase text-slate-500"><%= t_.call(:amount_in_words) %></p>
+      <p class="m-0"><%= Crm::AmountInWords.new(@quote.total, @quote.currency&.amount_in_words) %></p>
+      <% if @quote.footer_notes.present? %>
+        <p class="m-0 mt-3 whitespace-pre-line text-slate-600"><%= @quote.footer_notes %></p>
+      <% end %>
+    </div>
+    <dl class="grid grid-cols-2 gap-1 m-0">
+      <dt class="text-slate-500"><%= t_.call(:subtotal) %></dt><dd class="m-0 text-right"><%= money.call(@quote.subtotal) %></dd>
+      <% if @quote.discount_total.positive? %>
+        <dt class="text-slate-500"><%= t_.call(:discount) %></dt><dd class="m-0 text-right">−<%= money.call(@quote.discount_total) %></dd>
+      <% end %>
+      <% if @quote.extra_discount_amount.positive? %>
+        <dt class="text-slate-500"><%= t_.call(:extra_discount) %></dt><dd class="m-0 text-right">−<%= money.call(@quote.extra_discount_amount) %></dd>
+      <% end %>
+      <dt class="text-slate-500"><%= t_.call(:net_amount) %></dt><dd class="m-0 text-right"><%= money.call(@quote.net_amount) %></dd>
+      <% if @quote.freight.positive? %>
+        <dt class="text-slate-500"><%= t_.call(:freight) %></dt><dd class="m-0 text-right"><%= money.call(@quote.freight) %></dd>
+      <% end %>
+      <% if @quote.other_charges.positive? %>
+        <dt class="text-slate-500"><%= t_.call(:other_charges) %></dt><dd class="m-0 text-right"><%= money.call(@quote.other_charges) %></dd>
+      <% end %>
+      <% @quote.taxes.sort_by { |tax| [tax.position, tax.id] }.each do |tax| %>
+        <dt class="text-slate-500"><%= tax.name %></dt>
+        <dd class="m-0 text-right"><%= tax.withholding? ? '−' : '' %><%= money.call(tax.amount.round(2)) %></dd>
+      <% end %>
+      <dt class="pt-1 font-semibold border-t border-slate-200"><%= t_.call(:total) %></dt>
+      <dd class="pt-1 m-0 font-semibold text-right border-t border-slate-200">
+        <%= money.call(@quote.total) %> <%= @quote.currency&.iso_code %>
+      </dd>
+    </dl>
+  </div>
+</article>
