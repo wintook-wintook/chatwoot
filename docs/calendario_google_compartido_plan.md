@@ -321,6 +321,34 @@ Google **vencido** (camion01) se puede ver igual si compartió; basta su correo.
   prefijo con el nombre) y bloques «Ocupado»; clic → ventanita solo lectura.
 - Sin `?.` ni `??` en `<template>` (webpack 4); verificar «Compiled successfully».
 
+#### F3 — HECHA (25/11/2026) · sin probar en navegador
+
+**Qué se hizo**
+- Panel lateral (`AgendaWidget.vue`): «Disponibilidad del equipo» → **«Compañeros»**. Por fila:
+  casilla · punto (rojo/verde = ocupado/libre **ahora**, gris = no se sabe) · foto · nombre ·
+  nivel (`Sin Google`, `No compartido`, `Solo ocupado`, `Ve detalles`, `Puedes agendarle`,
+  `Mismo Google que tú`, `No disponible`). La casilla solo se activa con `Solo ocupado` o
+  detalles. Al pasar el mouse por «No compartido»: «Pídele que comparta su calendario de Google
+  con <tu correo>». Sin Google propio / permiso vencido → aviso en lugar de la lista.
+- Calendario (`CalendarView.vue`): eventos de los palomeados con el color del compañero,
+  `Nombre · Título` (o `Nombre · Ocupado`), borde punteado, **no se arrastran ni se editan**.
+  Clic → ventanita de solo lectura (título u «Ocupado», cuándo, lugar; aviso si es privado).
+  Las franjas de fondo de un compañero palomeado no se repiten.
+- Store (`googleCalendar.js`): `coworkers`, `coworkerEvents`, `selectedCoworkerIds` (recordados
+  en el navegador, `gcal_selected_coworkers`), `coworkersError`; acciones `fetchCoworkers`,
+  `fetchCoworkerEvents(range)`, `toggleCoworker`. El estado se refresca con el sondeo de 30 s
+  (con la caché de 2 min del servidor); los eventos, con cada cambio de semana y sondeo.
+- Color por agente compartido en `components/GoogleCalendar/agentColor.js`.
+- Textos `GOOGLE_CALENDAR.COWORKERS.*` en es (con tú) y en.
+
+**Pila de pruebas**
+- `app/javascript/dashboard/store/modules/specs/googleCalendar/coworkers.spec.js` — 6 casos
+  (estado, reconectar vs sin Google, sin palomeados no consulta, solo palomeados + rango,
+  palomear/despalomear, se recuerda). `TZ=UTC npx vitest --no-watch app/javascript/dashboard/store/modules/specs/googleCalendar/coworkers.spec.js` → 6/6.
+- webpack dev: «Compiled successfully» tras el último cambio.
+- eslint: ningún archivo quedó con más hallazgos que antes (los previos no se tocaron).
+- **Navegador (pendiente, con Admin #1 y Andres #4 en la cuenta 2):** pasos 1–7 de la §6 F6.
+
 ### F3b — «Agendar a» un compañero (sin quedar en mi calendario)
 
 Hoy (`CreateEventModal.vue`) el evento se crea siempre en un calendario de quien agenda y a los

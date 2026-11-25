@@ -74,6 +74,36 @@ export default {
       FREE: 'Free',
       NOT_CONNECTED: 'No calendar',
     },
+    COWORKERS: {
+      TITLE: 'Teammates',
+      HINT: 'Check a teammate to see their schedule. You only see what they shared with you in Google.',
+      EMPTY: 'There are no other agents in this account.',
+      CONNECT_FIRST:
+        "Connect your Google Calendar to see your teammates' schedules.",
+      RECONNECT:
+        'Your Google connection expired. Reconnect to see your teammates.',
+      BUSY_NOW: 'Busy now',
+      FREE_NOW: 'Free now',
+      ACCESS: {
+        NOT_CONNECTED: 'No Google',
+        NONE: 'Not shared',
+        FREE_BUSY: 'Busy only',
+        DETAILS: 'Sees details',
+        CAN_SCHEDULE: 'You can schedule',
+        SAME_GOOGLE: 'Same Google as you',
+        ERROR: 'Unavailable',
+      },
+      NONE_HELP: 'Ask them to share their Google calendar with {email}.',
+      BUSY: 'Busy',
+      EVENT_MODAL: {
+        TITLE: "{name}'s schedule",
+        READ_ONLY: "Read only: this event is on your teammate's calendar.",
+        PRIVATE: "Your teammate doesn't share the details of this event.",
+        WHEN: 'When',
+        WHERE: 'Where',
+        CLOSE: 'Close',
+      },
+    },
     CREATE_EVENT: {
       TITLE: 'Create Event',
       TYPE: {

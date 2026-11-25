@@ -1,12 +1,38 @@
 import GoogleCalendarAPI from '../../api/googleCalendar';
 import AgendaItemsAPI from '../../api/agendaItems';
 
+// fix/calendario_google — compañeros palomeados, recordados por navegador (conveniencia:
+// si el navegador no deja guardar, simplemente arranca sin ninguno).
+const SELECTED_COWORKERS_KEY = 'gcal_selected_coworkers';
+const readSelectedCoworkers = () => {
+  try {
+    const raw = window.localStorage.getItem(SELECTED_COWORKERS_KEY);
+    const ids = raw ? JSON.parse(raw) : [];
+    return Array.isArray(ids) ? ids.map(Number).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+};
+const saveSelectedCoworkers = ids => {
+  try {
+    window.localStorage.setItem(SELECTED_COWORKERS_KEY, JSON.stringify(ids));
+  } catch {
+    // sin almacenamiento: no pasa nada
+  }
+};
+
 const state = {
   events: [],
   agendaItems: [],
   calendars: [],
   enabledCalendarIds: [],
   availability: [],
+  // Compañeros: estado por agente ({ agent_id, access, can_schedule, busy_now }),
+  // eventos de los palomeados y error de la consulta ('reconnect' | 'not_connected' | null).
+  coworkers: [],
+  coworkerEvents: [],
+  selectedCoworkerIds: readSelectedCoworkers(),
+  coworkersError: null,
   connected: false,
   googleEmail: null,
   uiFlags: {
@@ -23,6 +49,10 @@ const getters = {
   getCalendars: s => s.calendars,
   getEnabledCalendarIds: s => s.enabledCalendarIds,
   getCalendarAvailability: s => s.availability,
+  getCoworkers: s => s.coworkers,
+  getCoworkerEvents: s => s.coworkerEvents,
+  getSelectedCoworkerIds: s => s.selectedCoworkerIds,
+  getCoworkersError: s => s.coworkersError,
   isCalendarConnected: s => s.connected,
   getCalendarEmail: s => s.googleEmail,
   getCalendarUIFlags: s => s.uiFlags,
@@ -51,6 +81,17 @@ const mutations = {
   },
   SET_CALENDAR_AVAILABILITY(s, availability) {
     s.availability = availability;
+  },
+  SET_COWORKERS(s, { coworkers, error }) {
+    s.coworkers = coworkers;
+    s.coworkersError = error || null;
+  },
+  SET_COWORKER_EVENTS(s, rows) {
+    s.coworkerEvents = rows;
+  },
+  SET_SELECTED_COWORKERS(s, ids) {
+    s.selectedCoworkerIds = ids;
+    saveSelectedCoworkers(ids);
   },
   SET_CALENDAR_CONNECTED(s, { connected, googleEmail }) {
     s.connected = connected;
@@ -157,6 +198,44 @@ const actions = {
     }
   },
 
+  fetchCoworkers: async ({ commit }) => {
+    try {
+      const { data } = await GoogleCalendarAPI.getCoworkers();
+      commit('SET_COWORKERS', { coworkers: data.coworkers || [] });
+    } catch (error) {
+      const reason = error?.response?.data?.error;
+      commit('SET_COWORKERS', {
+        coworkers: [],
+        error: reason === 'reconnect' ? 'reconnect' : 'not_connected',
+      });
+    }
+  },
+
+  // Solo pide los palomeados; el rango es el visible del calendario.
+  fetchCoworkerEvents: async ({ commit, state: s }, range = {}) => {
+    if (!s.selectedCoworkerIds.length) {
+      commit('SET_COWORKER_EVENTS', []);
+      return;
+    }
+    try {
+      const { data } = await GoogleCalendarAPI.getCoworkerEvents(
+        s.selectedCoworkerIds,
+        range
+      );
+      commit('SET_COWORKER_EVENTS', data.coworkers || []);
+    } catch {
+      commit('SET_COWORKER_EVENTS', []);
+    }
+  },
+
+  toggleCoworker: ({ commit, dispatch, state: s }, { agentId, range }) => {
+    const ids = s.selectedCoworkerIds.includes(agentId)
+      ? s.selectedCoworkerIds.filter(id => id !== agentId)
+      : [...s.selectedCoworkerIds, agentId];
+    commit('SET_SELECTED_COWORKERS', ids);
+    return dispatch('fetchCoworkerEvents', range);
+  },
+
   connectAccount: async ({ commit, dispatch }) => {
     commit('SET_CALENDAR_UI_FLAG', { isConnecting: true });
     try {
@@ -176,6 +255,7 @@ const actions = {
           dispatch('fetchEvents');
           dispatch('fetchCalendars');
           dispatch('fetchAvailability');
+          dispatch('fetchCoworkers');
         }
       }, 600);
     } catch {

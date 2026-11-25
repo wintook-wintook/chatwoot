@@ -80,6 +80,37 @@ export default {
       FREE: 'Libre',
       NOT_CONNECTED: 'Sin calendario',
     },
+    // fix/calendario_google — calendario de compañeros (Google aplica lo que cada uno comparte).
+    COWORKERS: {
+      TITLE: 'Compañeros',
+      HINT: 'Palomea a un compañero para ver su agenda. Solo ves lo que te compartió en Google.',
+      EMPTY: 'No hay más agentes en esta cuenta.',
+      CONNECT_FIRST:
+        'Conecta tu Google Calendar para ver la agenda de tus compañeros.',
+      RECONNECT:
+        'Tu conexión con Google venció. Reconecta para ver a tus compañeros.',
+      BUSY_NOW: 'Ocupado ahora',
+      FREE_NOW: 'Libre ahora',
+      ACCESS: {
+        NOT_CONNECTED: 'Sin Google',
+        NONE: 'No compartido',
+        FREE_BUSY: 'Solo ocupado',
+        DETAILS: 'Ve detalles',
+        CAN_SCHEDULE: 'Puedes agendarle',
+        SAME_GOOGLE: 'Mismo Google que tú',
+        ERROR: 'No disponible',
+      },
+      NONE_HELP: 'Pídele que comparta su calendario de Google con {email}.',
+      BUSY: 'Ocupado',
+      EVENT_MODAL: {
+        TITLE: 'Agenda de {name}',
+        READ_ONLY: 'Solo lectura: es un evento del calendario de tu compañero.',
+        PRIVATE: 'Tu compañero no comparte los detalles de este evento.',
+        WHEN: 'Cuándo',
+        WHERE: 'Lugar',
+        CLOSE: 'Cerrar',
+      },
+    },
     CREATE_EVENT: {
       TITLE: 'Nueva tarea agendada',
       TYPE: {

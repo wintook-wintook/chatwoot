@@ -149,9 +149,8 @@
       </div>
     </section>
 
-    <!-- Disponibilidad del equipo -->
+    <!-- Compañeros (fix/calendario_google): solo lo que cada uno te compartió en Google -->
     <section
-      v-if="agents.length"
       class="flex flex-col min-h-0 border-b border-slate-100 dark:border-slate-700"
       :class="{ 'flex-1': openSection === 'availability' }"
     >
@@ -160,7 +159,7 @@
         @click="toggleSection('availability')"
       >
         <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-          {{ $t('GOOGLE_CALENDAR.AVAILABILITY.TITLE') }}
+          {{ $t('GOOGLE_CALENDAR.COWORKERS.TITLE') }}
         </h3>
         <fluent-icon
           :icon="openSection === 'availability' ? 'chevron-up' : 'chevron-down'"
@@ -173,41 +172,62 @@
         v-if="openSection === 'availability'"
         class="flex-1 overflow-y-auto px-4 pb-4 space-y-2"
       >
-        <div
-          v-for="agent in agentsWithStatus"
-          :key="agent.id"
-          class="flex items-center gap-2"
+        <p
+          v-if="coworkersNotice"
+          class="text-xs text-slate-500 dark:text-slate-400"
         >
-          <span
-            class="w-2 h-2 rounded-full flex-shrink-0"
-            :class="{
-              'bg-green-400': agent.calendarStatus === 'free',
-              'bg-ruby-400': agent.calendarStatus === 'busy',
-              'bg-slate-300 dark:bg-slate-600': agent.calendarStatus === 'not_connected',
-            }"
-          />
-          <img
-            v-if="agent.thumbnail"
-            :src="agent.thumbnail"
-            class="w-5 h-5 rounded-full flex-shrink-0 object-cover"
-            :alt="agent.name"
-          />
-          <span class="text-xs text-slate-600 dark:text-slate-300 truncate flex-1">
-            {{ agent.name }}
-          </span>
-          <span
-            v-if="agent.calendarStatus === 'not_connected'"
-            class="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0"
+          {{ coworkersNotice }}
+        </p>
+        <template v-else>
+          <p class="text-xs text-slate-400 dark:text-slate-500">
+            {{ $t('GOOGLE_CALENDAR.COWORKERS.HINT') }}
+          </p>
+          <p
+            v-if="!coworkerRows.length"
+            class="text-xs text-slate-400 dark:text-slate-500"
           >
-            {{ $t('GOOGLE_CALENDAR.AVAILABILITY.NOT_CONNECTED') }}
-          </span>
-          <span
-            v-else-if="agent.calendarStatus === 'busy'"
-            class="text-xs text-ruby-500 flex-shrink-0"
+            {{ $t('GOOGLE_CALENDAR.COWORKERS.EMPTY') }}
+          </p>
+          <label
+            v-for="row in coworkerRows"
+            :key="row.agentId"
+            class="flex items-center gap-2"
+            :class="row.selectable ? 'cursor-pointer' : 'cursor-default'"
+            :title="row.help"
           >
-            {{ $t('GOOGLE_CALENDAR.AVAILABILITY.BUSY') }}
-          </span>
-        </div>
+            <input
+              type="checkbox"
+              class="w-4 h-4 rounded accent-woot-500 flex-shrink-0"
+              :class="
+                row.selectable
+                  ? 'cursor-pointer'
+                  : 'opacity-40 cursor-not-allowed'
+              "
+              :checked="row.selected"
+              :disabled="!row.selectable"
+              @change="$emit('toggleCoworker', row.agentId)"
+            />
+            <span
+              class="w-2 h-2 rounded-full flex-shrink-0"
+              :class="row.dotClass"
+              :style="row.selected ? { backgroundColor: row.color } : {}"
+            />
+            <img
+              v-if="row.thumbnail"
+              :src="row.thumbnail"
+              class="w-5 h-5 rounded-full flex-shrink-0 object-cover"
+              :alt="row.name"
+            />
+            <span
+              class="text-xs text-slate-600 dark:text-slate-300 truncate flex-1"
+            >
+              {{ row.name }}
+            </span>
+            <span class="text-xs flex-shrink-0" :class="row.labelClass">
+              {{ row.label }}
+            </span>
+          </label>
+        </template>
       </div>
     </section>
 
@@ -343,6 +363,7 @@
 </template>
 
 <script>
+import { agentColor } from './agentColor';
 import { format, isToday, isTomorrow, parseISO } from 'date-fns';
 import { timeZoneOptions } from 'dashboard/routes/dashboard/settings/inbox/helpers/businessHour';
 
@@ -357,10 +378,14 @@ export default {
   props: {
     events: { type: Array, default: () => [] },
     calendars: { type: Array, default: () => [] },
-    availability: { type: Array, default: () => [] },
     agents: { type: Array, default: () => [] },
+    // fix/calendario_google — estado de cada compañero según lo que compartió en Google.
+    coworkers: { type: Array, default: () => [] },
+    selectedCoworkerIds: { type: Array, default: () => [] },
+    coworkersError: { type: String, default: null },
+    googleEmail: { type: String, default: '' },
   },
-  emits: ['toggleCalendar'],
+  emits: ['toggleCalendar', 'toggleCoworker'],
   data() {
     return {
       // Acordeón del panel lateral: 'upcoming' | 'calendars' | 'availability' | null.
@@ -476,21 +501,74 @@ export default {
     calendarColorMap() {
       return Object.fromEntries(this.calendars.map(c => [c.id, c.background_color]));
     },
-    availabilityMap() {
-      return Object.fromEntries(this.availability.map(a => [a.agent_id, a.busy || []]));
+    coworkersNotice() {
+      if (this.coworkersError === 'reconnect')
+        return this.$t('GOOGLE_CALENDAR.COWORKERS.RECONNECT');
+      if (this.coworkersError)
+        return this.$t('GOOGLE_CALENDAR.COWORKERS.CONNECT_FIRST');
+      return '';
     },
-    agentsWithStatus() {
-      return this.agents.map(agent => {
-        const busy = this.availabilityMap[agent.id];
-        let calendarStatus;
-        if (busy === undefined) calendarStatus = 'not_connected';
-        else if (busy.length > 0) calendarStatus = 'busy';
-        else calendarStatus = 'free';
-        return { ...agent, calendarStatus };
-      });
+    // Filas del panel: estado que dio Google (con MI conexión) + nombre/foto del agente.
+    coworkerRows() {
+      const agentsById = Object.fromEntries(this.agents.map(a => [a.id, a]));
+      return this.coworkers
+        .filter(c => agentsById[c.agent_id])
+        .map(c => {
+          const agent = agentsById[c.agent_id];
+          const visible = ['details', 'free_busy'].includes(c.access);
+          return {
+            agentId: c.agent_id,
+            name: agent.available_name || agent.name,
+            thumbnail: agent.thumbnail,
+            selectable: visible,
+            selected: visible && this.selectedCoworkerIds.includes(c.agent_id),
+            color: agentColor(c.agent_id),
+            label: this.accessLabel(c),
+            labelClass: visible
+              ? 'text-slate-500 dark:text-slate-400'
+              : 'text-slate-400 dark:text-slate-500',
+            dotClass: this.dotClass(c, visible),
+            help: this.accessHelp(c, visible),
+          };
+        });
     },
   },
   methods: {
+    accessLabel(c) {
+      const keys = {
+        not_connected: 'NOT_CONNECTED',
+        none: 'NONE',
+        free_busy: 'FREE_BUSY',
+        same_google: 'SAME_GOOGLE',
+        error: 'ERROR',
+      };
+      if (c.access === 'details') {
+        return this.$t(
+          `GOOGLE_CALENDAR.COWORKERS.ACCESS.${
+            c.can_schedule ? 'CAN_SCHEDULE' : 'DETAILS'
+          }`
+        );
+      }
+      return this.$t(
+        `GOOGLE_CALENDAR.COWORKERS.ACCESS.${keys[c.access] || 'ERROR'}`
+      );
+    },
+    // Punto: rojo/verde = ocupado/libre ahora (solo si comparte); gris = no se sabe.
+    dotClass(c, visible) {
+      if (!visible) return 'bg-slate-300 dark:bg-slate-600';
+      return c.busy_now ? 'bg-ruby-400' : 'bg-green-400';
+    },
+    accessHelp(c, visible) {
+      if (c.access === 'none') {
+        return this.$t('GOOGLE_CALENDAR.COWORKERS.NONE_HELP', {
+          email: this.googleEmail,
+        });
+      }
+      if (!visible) return '';
+      return this.$t(
+        `GOOGLE_CALENDAR.COWORKERS.${c.busy_now ? 'BUSY_NOW' : 'FREE_NOW'}`
+      );
+    },
     // Abre la sección indicada y repliega las demás; si ya estaba abierta, la cierra.
     toggleSection(name) {
       this.openSection = this.openSection === name ? null : name;
