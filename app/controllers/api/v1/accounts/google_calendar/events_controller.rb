@@ -15,8 +15,11 @@ class Api::V1::Accounts::GoogleCalendar::EventsController < Api::V1::Accounts::B
   end
 
   def create
+    target_calendar = schedule_target_calendar
+    return if performed?
+
     event = calendar_service.create_event(
-      calendar_id: params[:calendar_id].presence || 'primary',
+      calendar_id: target_calendar,
       summary:     params[:summary],
       description: params[:description],
       attendees:   Array(params[:attendees]),
@@ -46,31 +49,21 @@ class Api::V1::Accounts::GoogleCalendar::EventsController < Api::V1::Accounts::B
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
-  def agent_events
-    agent_integration = UserCalendarIntegration.find_by(
-      user_id: params[:agent_id],
-      account: Current.account
-    )
-    return render json: { error: 'Agent not connected' }, status: :not_found unless agent_integration
-
-    service = GoogleCalendarService.new(agent_integration)
-
-    if params[:agent_id].to_s == current_user.id.to_s
-      events = service.list_events(time_min: time_min, time_max: time_max)
-      render json: { events: events }
-    else
-      busy = service.free_busy(
-        calendars: ['primary'],
-        time_min: time_min,
-        time_max: time_max
-      )
-      render json: { busy: busy.dig('calendars', 'primary', 'busy') || [] }
-    end
-  rescue StandardError => e
-    render json: { error: e.message }, status: :unprocessable_entity
-  end
-
   private
+
+  # F3b «Agendar a» (fix/calendario_google): con `agent_id` de un compañero, el evento va a SU
+  # calendario principal, creado con MI conexión y solo si me dio «Hacer cambios» en Google.
+  # Yo no quedo como invitado: no aparece en mi calendario.
+  def schedule_target_calendar
+    agent_id = params[:agent_id].presence
+    return params[:calendar_id].presence || 'primary' if agent_id.nil? || agent_id.to_i == current_user.id
+
+    guard = GoogleCalendarScheduleGuard.new(account: Current.account, viewer: current_user, agent_id: agent_id).call
+    return guard.coworker_integration.google_email if guard.ok?
+
+    render json: { error: guard.error }, status: :forbidden
+    nil
+  end
 
   def require_integration
     @integration = current_user.user_calendar_integrations.find_by(account: Current.account)

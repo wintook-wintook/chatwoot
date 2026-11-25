@@ -83,13 +83,33 @@ export default {
       toTaskAsk: false,
       toTaskNotify: true,
       toTaskBusy: false,
+      // fix/calendario_google F3b — «Agendar a»: '' = para mí; si no, id del compañero.
+      scheduleFor: '',
     };
   },
   computed: {
     ...mapGetters({
       uiFlags: 'googleCalendar/getCalendarUIFlags',
       calendars: 'googleCalendar/getCalendars',
+      coworkers: 'googleCalendar/getCoworkers',
+      agents: 'agents/getAgents',
     }),
+    // F3b — solo compañeros que me dieron «Hacer cambios» en Google (lo vuelve a revisar el servidor).
+    scheduleOptions() {
+      const names = Object.fromEntries(
+        (this.agents || []).map(a => [a.id, a.available_name || a.name])
+      );
+      return (this.coworkers || [])
+        .filter(c => c.can_schedule && names[c.agent_id])
+        .map(c => ({ id: c.agent_id, name: names[c.agent_id] }));
+    },
+    // El campo solo aparece al crear y donde se cargaron los compañeros (pantalla Calendario).
+    showScheduleFor() {
+      return !this.isEditing && (this.coworkers || []).length > 0;
+    },
+    schedulingForOther() {
+      return !this.isEditing && !!this.scheduleFor;
+    },
     // Solo los calendarios donde el usuario puede escribir (crear/editar eventos),
     // con el principal primero.
     writableCalendars() {
@@ -199,6 +219,7 @@ export default {
       this.contact = this.agendaItem?.contact || this.prefillContact || null;
       this.organization = this.agendaItem?.organization || null;
       this.caseId = '';
+      this.scheduleFor = '';
       if (!this.calendars.length) {
         this.$store.dispatch('googleCalendar/fetchCalendars');
       }
@@ -271,7 +292,10 @@ export default {
         description: this.form.description,
         starts_at: toIso(this.form.start_time),
         ends_at: toIso(this.form.end_time),
-        participant_ids: this.participantIds,
+        // Quien recibe la tarea ya va como responsable: no se repite como participante.
+        participant_ids: (this.participantIds || []).filter(
+          id => String(id) !== String(this.scheduleFor)
+        ),
       };
     },
     async decline() {
@@ -302,8 +326,11 @@ export default {
       }
     },
     createAgendaItem() {
+      // Para un compañero: va a SU calendario principal y él queda como responsable.
+      const forOther = this.schedulingForOther;
       return this.$store.dispatch('googleCalendar/createAgendaItem', {
-        calendar_id: this.form.calendar_id,
+        calendar_id: forOther ? 'primary' : this.form.calendar_id,
+        assignee_id: forOther ? Number(this.scheduleFor) : undefined,
         attendee_emails: this.attendees,
         is_visit: this.isVisit,
         location: this.address.trim() || undefined,
@@ -374,6 +401,8 @@ export default {
         };
       }
       payload.calendar_id = this.form.calendar_id;
+      // F3b — el servidor lo crea en el calendario del compañero (si me dio permiso).
+      if (this.schedulingForOther) payload.agent_id = Number(this.scheduleFor);
       return payload;
     },
     async submit() {
@@ -474,6 +503,36 @@ export default {
 
     <div class="px-6 pb-6 space-y-4">
       <form class="space-y-4" @submit.prevent="submit">
+        <!-- fix/calendario_google F3b — «Agendar a» un compañero (no queda en mi calendario) -->
+        <div v-if="showScheduleFor" class="space-y-1">
+          <label
+            class="block text-sm font-medium text-slate-700 dark:text-slate-200"
+          >
+            {{ $t('GOOGLE_CALENDAR.SCHEDULE_FOR.LABEL') }}
+          </label>
+          <select
+            v-model="scheduleFor"
+            class="w-full px-3 py-2 text-sm border rounded-md border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+          >
+            <option value="">
+              {{ $t('GOOGLE_CALENDAR.SCHEDULE_FOR.ME') }}
+            </option>
+            <option
+              v-for="option in scheduleOptions"
+              :key="option.id"
+              :value="String(option.id)"
+            >
+              {{ option.name }}
+            </option>
+          </select>
+          <p class="m-0 text-xs text-slate-500 dark:text-slate-400">
+            {{
+              schedulingForOther
+                ? $t('GOOGLE_CALENDAR.SCHEDULE_FOR.FOR_OTHER_HINT')
+                : $t('GOOGLE_CALENDAR.SCHEDULE_FOR.HINT')
+            }}
+          </p>
+        </div>
         <!-- Plan-Agenda — de quién es, y en qué caso queda -->
         <div
           v-if="agendaItem"
@@ -543,7 +602,10 @@ export default {
         </div>
 
         <!-- Calendar selector (only if the user has more than one writable calendar) -->
-        <div v-if="writableCalendars.length > 1" class="space-y-1">
+        <div
+          v-if="writableCalendars.length > 1 && !schedulingForOther"
+          class="space-y-1"
+        >
           <label
             class="block text-sm font-medium text-slate-700 dark:text-slate-200"
           >

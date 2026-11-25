@@ -5,6 +5,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import esLocale from '@fullcalendar/core/locales/es';
+import { agentColor } from './agentColor';
 
 const COLORS = [
   '#6366f1',
@@ -14,23 +15,11 @@ const COLORS = [
   '#ef4444',
   '#8b5cf6',
 ];
-const AGENT_COLORS = [
-  '#f43f5e',
-  '#fb923c',
-  '#a3e635',
-  '#22d3ee',
-  '#818cf8',
-  '#e879f9',
-];
 const LOCAL_COLOR = '#475569';
 
 // Color de respaldo cuando no conocemos el calendario del evento (hash del id).
 function fallbackColor(eventId) {
   return COLORS[(eventId?.charCodeAt(0) || 0) % COLORS.length];
-}
-
-function agentColor(agentId) {
-  return AGENT_COLORS[(agentId || 0) % AGENT_COLORS.length];
 }
 
 export default {
@@ -41,8 +30,16 @@ export default {
     agendaItems: { type: Array, default: () => [] },
     availability: { type: Array, default: () => [] },
     calendars: { type: Array, default: () => [] },
+    // fix/calendario_google — compañeros palomeados: [{ agent_id, name, access, events }].
+    coworkerEvents: { type: Array, default: () => [] },
   },
-  emits: ['rangeChanged', 'eventDropped', 'eventClicked', 'dateSelected'],
+  emits: [
+    'rangeChanged',
+    'eventDropped',
+    'eventClicked',
+    'dateSelected',
+    'coworkerEventClicked',
+  ],
   computed: {
     calendarOptions() {
       return {
@@ -93,6 +90,17 @@ export default {
           });
         },
         eventClick: info => {
+          // Evento de un compañero: solo se mira, nunca abre el editor.
+          const coworker = info.event.extendedProps?.coworker;
+          if (coworker) {
+            this.$emit('coworkerEventClicked', {
+              ...coworker,
+              start: info.event.start,
+              end: info.event.end,
+              allDay: info.event.allDay,
+            });
+            return;
+          }
           this.$emit('eventClicked', info.event);
         },
         eventDrop: info => {
@@ -129,6 +137,9 @@ export default {
       this.syncEvents();
     },
     calendars() {
+      this.syncEvents();
+    },
+    coworkerEvents() {
       this.syncEvents();
     },
   },
@@ -214,7 +225,10 @@ export default {
 
       this.addLocalItems(api);
 
+      // Los palomeados ya van como eventos: no repetir su franja de fondo.
+      const shownCoworkers = new Set(this.coworkerEvents.map(c => c.agent_id));
       this.availability.forEach(agent => {
+        if (shownCoworkers.has(agent.agent_id)) return;
         const color = agentColor(agent.agent_id);
         (agent.busy || []).forEach((period, i) => {
           api.addEvent({
@@ -224,6 +238,41 @@ export default {
             display: 'background',
             backgroundColor: color + '33',
             classNames: ['fc-agent-busy'],
+          });
+        });
+      });
+
+      this.addCoworkerEvents(api);
+    },
+    // Eventos de compañeros tal como Google los entregó: sin título = «Ocupado»
+    // (solo libre/ocupado, o evento privado). No se arrastran ni se editan.
+    addCoworkerEvents(api) {
+      this.coworkerEvents.forEach(row => {
+        const color = agentColor(row.agent_id);
+        (row.events || []).forEach(e => {
+          const summary =
+            e.summary || this.$t('GOOGLE_CALENDAR.COWORKERS.BUSY');
+          api.addEvent({
+            id: `coworker-${row.agent_id}-${e.id}`,
+            title: `${row.name} · ${summary}`,
+            start: e.start,
+            end: e.end,
+            allDay: e.all_day,
+            editable: false,
+            startEditable: false,
+            durationEditable: false,
+            backgroundColor: color,
+            borderColor: color,
+            classNames: ['fc-coworker'],
+            extendedProps: {
+              coworker: {
+                agentId: row.agent_id,
+                name: row.name,
+                summary: e.summary,
+                location: e.location,
+                private: e.private,
+              },
+            },
           });
         });
       });
@@ -291,6 +340,13 @@ export default {
 
 .fc-wrapper .fc-event:active {
   cursor: grabbing;
+}
+
+/* fix/calendario_google — evento de un compañero: solo lectura. */
+.fc-wrapper .fc-event.fc-coworker {
+  cursor: pointer;
+  opacity: 0.85;
+  border-style: dashed;
 }
 
 /* Plan-Agenda — evento de Google que aún no tiene tarea. */

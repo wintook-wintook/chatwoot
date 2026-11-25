@@ -1,12 +1,45 @@
 import GoogleCalendarAPI from '../../api/googleCalendar';
 import AgendaItemsAPI from '../../api/agendaItems';
 
+// fix/calendario_google — compañeros palomeados, recordados por navegador (conveniencia:
+// si el navegador no deja guardar, simplemente arranca sin ninguno).
+const SELECTED_COWORKERS_KEY = 'gcal_selected_coworkers';
+const readSelectedCoworkers = () => {
+  try {
+    const raw = window.localStorage.getItem(SELECTED_COWORKERS_KEY);
+    const ids = raw ? JSON.parse(raw) : [];
+    return Array.isArray(ids) ? ids.map(Number).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+};
+// Compañeros que me comparten algo (solo ocupado o detalles): de ellos se piden eventos.
+const visibleCoworkerIds = coworkers =>
+  (coworkers || [])
+    .filter(c => ['details', 'free_busy'].includes(c.access))
+    .map(c => c.agent_id)
+    .sort((a, b) => a - b);
+const saveSelectedCoworkers = ids => {
+  try {
+    window.localStorage.setItem(SELECTED_COWORKERS_KEY, JSON.stringify(ids));
+  } catch {
+    // sin almacenamiento: no pasa nada
+  }
+};
+
 const state = {
   events: [],
   agendaItems: [],
   calendars: [],
   enabledCalendarIds: [],
   availability: [],
+  // Compañeros: estado por agente ({ agent_id, access, can_schedule, busy_now }),
+  // eventos de los palomeados y error de la consulta ('reconnect' | 'not_connected' | null).
+  coworkers: [],
+  coworkerEvents: [],
+  selectedCoworkerIds: readSelectedCoworkers(),
+  coworkersError: null,
+  coworkerRange: {},
   connected: false,
   googleEmail: null,
   uiFlags: {
@@ -23,6 +56,10 @@ const getters = {
   getCalendars: s => s.calendars,
   getEnabledCalendarIds: s => s.enabledCalendarIds,
   getCalendarAvailability: s => s.availability,
+  getCoworkers: s => s.coworkers,
+  getCoworkerEvents: s => s.coworkerEvents,
+  getSelectedCoworkerIds: s => s.selectedCoworkerIds,
+  getCoworkersError: s => s.coworkersError,
   isCalendarConnected: s => s.connected,
   getCalendarEmail: s => s.googleEmail,
   getCalendarUIFlags: s => s.uiFlags,
@@ -51,6 +88,20 @@ const mutations = {
   },
   SET_CALENDAR_AVAILABILITY(s, availability) {
     s.availability = availability;
+  },
+  SET_COWORKERS(s, { coworkers, error }) {
+    s.coworkers = coworkers;
+    s.coworkersError = error || null;
+  },
+  SET_COWORKER_EVENTS(s, rows) {
+    s.coworkerEvents = rows;
+  },
+  SET_COWORKER_RANGE(s, range) {
+    s.coworkerRange = range || {};
+  },
+  SET_SELECTED_COWORKERS(s, ids) {
+    s.selectedCoworkerIds = ids;
+    saveSelectedCoworkers(ids);
   },
   SET_CALENDAR_CONNECTED(s, { connected, googleEmail }) {
     s.connected = connected;
@@ -157,6 +208,53 @@ const actions = {
     }
   },
 
+  // Si cambia quién me comparte, se vuelven a pedir sus eventos (para palomear al instante).
+  fetchCoworkers: async ({ commit, dispatch, state: s }) => {
+    const before = visibleCoworkerIds(s.coworkers).join(',');
+    try {
+      const { data } = await GoogleCalendarAPI.getCoworkers();
+      commit('SET_COWORKERS', { coworkers: data.coworkers || [] });
+    } catch (error) {
+      const reason = error?.response?.data?.error;
+      commit('SET_COWORKERS', {
+        coworkers: [],
+        error: reason === 'reconnect' ? 'reconnect' : 'not_connected',
+      });
+    }
+    if (visibleCoworkerIds(s.coworkers).join(',') !== before) {
+      dispatch('fetchCoworkerEvents', s.coworkerRange);
+    }
+  },
+
+  // Eventos de TODOS los que me comparten algo (no solo los palomeados): así palomear es
+  // instantáneo y solo cambia lo que se ve. El rango es el visible del calendario.
+  fetchCoworkerEvents: async ({ commit, state: s }, range = {}) => {
+    commit('SET_COWORKER_RANGE', range);
+    const ids = visibleCoworkerIds(s.coworkers);
+    if (!ids.length) {
+      commit('SET_COWORKER_EVENTS', []);
+      return;
+    }
+    try {
+      const { data } = await GoogleCalendarAPI.getCoworkerEvents(ids, range);
+      commit('SET_COWORKER_EVENTS', data.coworkers || []);
+    } catch {
+      commit('SET_COWORKER_EVENTS', []);
+    }
+  },
+
+  toggleCoworker: ({ commit, dispatch, state: s }, { agentId }) => {
+    const ids = s.selectedCoworkerIds.includes(agentId)
+      ? s.selectedCoworkerIds.filter(id => id !== agentId)
+      : [...s.selectedCoworkerIds, agentId];
+    commit('SET_SELECTED_COWORKERS', ids);
+    // Ya cargados: no hace falta preguntar. Solo si aún no llegaron.
+    const loaded = s.coworkerEvents.some(r => r.agent_id === agentId);
+    if (!loaded && ids.includes(agentId)) {
+      dispatch('fetchCoworkerEvents', s.coworkerRange);
+    }
+  },
+
   connectAccount: async ({ commit, dispatch }) => {
     commit('SET_CALENDAR_UI_FLAG', { isConnecting: true });
     try {
@@ -176,6 +274,7 @@ const actions = {
           dispatch('fetchEvents');
           dispatch('fetchCalendars');
           dispatch('fetchAvailability');
+          dispatch('fetchCoworkers');
         }
       }, 600);
     } catch {
@@ -206,8 +305,6 @@ const actions = {
     commit('SET_CALENDAR_UI_FLAG', { isCreating: true });
     try {
       await GoogleCalendarAPI.createEvent(payload);
-    } catch (error) {
-      throw new Error(error);
     } finally {
       commit('SET_CALENDAR_UI_FLAG', { isCreating: false });
     }

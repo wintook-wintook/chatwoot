@@ -1066,9 +1066,11 @@ Rails.application.routes.draw do
 
           namespace :google_calendar do
             resource :authorization, only: [:create, :destroy]
-            resources :events, only: [:index, :create, :update] do
+            resources :events, only: [:index, :create, :update]
+            # fix/calendario_google — calendario de compañeros visto con la conexión de quien mira.
+            resources :coworkers, only: [:index] do
               collection do
-                get :agent_events
+                get :events
               end
             end
             resource :calendars, only: [:show, :update], controller: 'calendars' do
@@ -1080,6 +1082,12 @@ Rails.application.routes.draw do
             end
             resource :availability, only: [:show], controller: 'availability'
             resource :sharing, only: [:create], controller: 'sharing'
+            # fix/calendario_google F3c — «Compartir mi calendario» (reglas de acceso de Google).
+            resources :sharing_rules, only: [:index, :update] do
+              collection do
+                put :share_email
+              end
+            end
           end
 
           resources :webhooks, only: [:index, :create, :update, :destroy]

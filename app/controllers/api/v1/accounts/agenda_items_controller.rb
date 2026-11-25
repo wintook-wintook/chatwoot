@@ -59,6 +59,9 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
     ticket = find_ticket
     return render json: { error: FROZEN_MSG }, status: :unprocessable_entity if ticket&.frozen_for_edit?
 
+    schedule_error = assignee_schedule_error
+    return render json: { error: schedule_error }, status: :forbidden if schedule_error
+
     meeting = AgendaItems::Creator.new(account: Current.account, user: current_user, attrs: create_attrs,
                                        client: client_for(ticket), organizer: find_assignee,
                                        participant_ids: params[:participant_ids]).call
@@ -131,6 +134,17 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
   # Por defecto, quien agenda.
   def find_assignee
     Current.account.users.find_by(id: params[:assignee_id])
+  end
+
+  # F3b «Agendar a» (fix/calendario_google): una tarea agendada para OTRO agente acaba en su
+  # Google Calendar → solo si me dio «Hacer cambios». Si no tiene Google, no hay calendario
+  # que invadir y se deja como siempre.
+  def assignee_schedule_error
+    return nil if params[:assignee_id].blank? || params[:assignee_id].to_i == current_user.id
+
+    guard = GoogleCalendarScheduleGuard.new(account: Current.account, viewer: current_user,
+                                            agent_id: params[:assignee_id], allow_without_google: true).call
+    guard.error
   end
 
   def visible_contacts
