@@ -1,6 +1,6 @@
 # Ver el calendario de los compañeros (respetando lo que cada uno comparte en Google)
 
-> Rama: `fix/calendario_google` (desde `origin/develop` 92fb814b) · Plan v1.1 · 25/11/2026
+> Rama: `fix/calendario_google` (desde `origin/develop` 92fb814b) · Plan v1.3 · 25/11/2026 · F0 completa
 > Estado: **solo plan** — no se programa nada hasta el OK.
 
 ---
@@ -13,6 +13,9 @@ su Google Calendar («Compartir con personas específicas»).
 
 Y además (v1.1): **agendarle a un compañero sin que el evento quede en el calendario de quien
 lo crea**, también solo si el compañero lo permite (permiso «Hacer cambios en los eventos»).
+
+Y (v1.2): que cada agente pueda **dar esos permisos desde el propio sistema** («Compartir mi
+calendario»), sin tener que ir a calendar.google.com.
 
 ---
 
@@ -186,34 +189,67 @@ Conclusiones hasta ahora:
   2. **Permiso vencido del que mira o del compañero** → estado «Reconectar» (hoy el panel de
      disponibilidad lo traga en silencio y lo muestra como «Sin conectar», sin decir que
      basta con reconectar).
-- Pendiente medir «Ver todos los detalles», «Ver solo libre/ocupado» y «Hacer cambios»
-  (+ crear y borrar un evento de prueba): requiere que
+- ~~Pendiente medir los demás niveles~~ → hecho abajo (F0 completa). Nota original: requería que
   camion01 comparta su calendario con aliverio en Google (ver pasos en el chat).
+
+#### F0 — resultados completos (25/11/2026, vía ACL desde el sistema)
+
+Pareja: dueño **#4 Andres** (aliverio.col@gmail.com), quien mira **#1 Admin**
+(aliverio.mx@gmail.com). Los permisos se dieron **desde el sistema** con la conexión de Andres
+(ACL `insert/patch` con `sendNotifications=false`) — es decir, F3c ya probada contra Google.
+Al terminar: eventos de prueba borrados (204), regla quitada (204), ACL igual que al inicio
+(`user:owner` solamente).
+
+| Nivel (ACL role)             | `events.list(b@)`                  | Campos que llegan                                     | `freeBusy` |
+|------------------------------|------------------------------------|-------------------------------------------------------|------------|
+| Sin compartir                | **404 notFound**                   | —                                                     | 200 + `errors: notFound` |
+| Ver detalles (`reader`)      | 200, `accessRole=reader`           | título, descripción, lugar, organizador               | ok |
+|   · evento **privado**       |                                    | solo `start/end`, `visibility=private`, **sin título**| |
+| Solo ocupado (`freeBusyReader`)| 200, `accessRole=freeBusyReader` | **todos** sin título: solo `start/end`, `visibility=private` | ok |
+| Hacer cambios (`writer`)     | 200, `accessRole=writer`           | como `reader`                                         | ok |
+
+Escritura:
+
+| Prueba                                   | Resultado |
+|------------------------------------------|-----------|
+| Admin crea en `aliverio.col@` con `writer` | 200 · organizer = **Andres**, creator = **Admin**, sin invitados |
+|   ¿aparece en el calendario de Andres?    | **sí** |
+|   ¿aparece en el calendario de Admin?     | **no** ✔ (justo lo que pide F3b) |
+| Admin crea con `reader`                   | **403 requiredAccessLevel** ✔ |
+
+`calendarList(b@)` de quien mira da 404 en todos los casos (el calendario compartido no se
+suscribe solo) → **no** sirve para saber el permiso; se usa `accessRole` de `events.list`.
+
+**Consecuencias para F1:**
+- **Una sola llamada** (`events.list` con el token de quien mira) da el nivel (`accessRole`) **y**
+  los eventos ya recortados por Google. `freeBusy` deja de hacer falta.
+- Evento sin `summary` → se pinta «Ocupado». No hay que filtrar nada a mano: Google ya oculta.
+- `accessRole ∈ {writer, owner}` → `can_schedule: true` (F3b).
 
 ### F1 — Servicio en el servidor
 `app/services/google_calendar/coworker_calendar_service.rb`
 - Entrada: integración de A (quien mira), integración de B (compañero), rango de fechas.
-- Paso 1: `events.list` con token de A sobre `b.google_email`.
-  - Responde con detalles → `access: 'details'`, eventos limpios (título, inicio, fin, todo el día).
-  - Sin acceso a detalles → paso 2.
-- Paso 2: `freeBusy` con token de A sobre `b.google_email`.
-  - Con bloques → `access: 'free_busy'`, `busy: [...]`.
-  - `errors` / notFound → `access: 'none'`.
+- (Ajustado tras F0) **una llamada:** `events.list` con token de A sobre `b.google_email`.
+  - 200 → `access` según `accessRole`: `freeBusyReader` → `free_busy`; `reader` → `details`;
+    `writer`/`owner` → `details` + `can_schedule: true`. Eventos limpios (id, título o nil,
+    inicio, fin, todo el día); sin título → «Ocupado».
+  - 404 notFound → `access: 'none'`.
+  - Token de A o de B vencido (`invalid_grant`) → `access: 'reconnect'`.
 - Errores de red/Google → `access: 'error'` (no tumba a los demás compañeros).
 - Caché corta en Redis (2 min) por par A→B+rango, para no gastar la cuota de Google en cada
   cambio de semana.
 
 ```
    integración A ─┐
-                  ├─► events.list(b@) ──ok──► details
-   correo de B  ──┘         │
-                        sin acceso
-                            ▼
-                      freeBusy(b@) ──bloques──► free_busy
-                            │
-                         notFound
-                            ▼
-                           none
+                  ├─► events.list(b@)
+   correo de B  ──┘        │
+          ┌────────────────┼──────────────────┬─────────────────┐
+         404         accessRole=          accessRole=        accessRole=
+          │        freeBusyReader          reader          writer / owner
+          ▼               ▼                   ▼                   ▼
+        none          free_busy            details        details + can_schedule
+                  (Google ya quitó    (privados llegan
+                    los títulos)         sin título)
 ```
 
 ### F2 — Ruta en el servidor
@@ -278,6 +314,46 @@ calendario.
 - Mismo Google (#1 y #4): «Agendar a» al otro = agendarse a sí mismo → se oculta de la lista.
 - Fuera de esta fase: **editar, mover o borrar** eventos del compañero.
 
+### F3c — «Compartir mi calendario» desde el sistema
+
+Google permite administrar con quién se comparte un calendario (reglas de acceso, ACL) con el
+permiso que ya pedimos (`auth/calendar`). **Solo el dueño** puede cambiarlas → cada agente, con
+SU conexión, decide quién lo ve y quién le agenda. Va y viene con Google: lo que se cambie aquí
+se ve en calendar.google.com y al revés.
+
+```
+  Calendario → «Compartir mi calendario»  (agente Andres)
+  ┌──────────────────────────────────────────────────────────┐
+  │ Compañero        Permiso                                 │
+  │ Admin            [ Ver todos los detalles        ▾ ]     │
+  │ Jose Luis        [ Nada                          ▾ ]     │
+  │                    Nada                                  │
+  │                    Solo libre/ocupado                    │
+  │                    Ver todos los detalles                │
+  │                    Hacer cambios (puede agendarme)       │
+  └──────────────────────────────────────────────────────────┘
+        │  conexión DE Andres (dueño)
+        ▼
+  Google ACL de su calendario principal (regla «user:<correo del compañero>»)
+     Nada            → DELETE  /calendars/primary/acl/user:<correo>
+     Solo ocupado    → role = freeBusyReader
+     Detalles        → role = reader
+     Hacer cambios   → role = writer
+     (insert/patch con sendNotifications=false: sin correo de aviso)
+```
+
+- Servidor: `GET /google_calendar/sharing_rules` (lee la ACL y la cruza con los compañeros de la
+  cuenta) y `PUT /google_calendar/sharing_rules/:agent_id { level }`.
+  Nombre distinto de `sharing` (ese es «mandar mi agenda a un contacto» y no cambia).
+- Servicio: `GoogleCalendarService#list_acl`, `#upsert_acl_rule(email, role)`, `#delete_acl_rule(email)`.
+- Solo compañeros **de la cuenta** con Google conectado; nunca el propio correo.
+- Reglas que no son de compañeros (otras personas, dominio, público) **no se muestran ni se tocan**.
+- Si Google rechaza (p. ej. Workspace que prohíbe compartir afuera) → aviso con el motivo.
+- Mismo Google en dos agentes → ese compañero no sale en la lista.
+- Al cambiar un permiso se limpia la caché de F1 de ese par.
+- Orden de trabajo: F3c antes que «Compañeros» y «Agendar a» en la pila de pruebas
+  (primero se comparte, luego se ve y se agenda).
+
 ### F4 — Textos
 - `es` / `en` en `GOOGLE_CALENDAR.COWORKERS.*`. Español de México con tú. Nada de «Chatwoot».
 
@@ -297,6 +373,9 @@ Con `POSTGRES_DATABASE=chatwoot_test`:
 8. El bot de IA sigue agendando igual en una conversación de prueba (inbox 493).
 9. B da «Hacer cambios» a A → A «Agendar a: B» → el evento aparece en Google de B y **no** en el de A.
 10. B baja el permiso a «Ver detalles» → B sale de «Agendar a»; forzar la llamada → 403.
+11. Desde «Compartir mi calendario», B da cada nivel a A → en calendar.google.com de B se ve igual.
+12. B cambia el permiso en calendar.google.com → «Compartir mi calendario» lo muestra al recargar.
+13. Reglas ajenas (otra persona / público) siguen intactas tras cambiar las de compañeros.
 
 ---
 
