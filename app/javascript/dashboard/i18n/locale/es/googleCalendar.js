@@ -203,7 +203,7 @@ export default {
     },
     CREATE_FROM_CONVERSATION: 'Crear evento de calendario',
     SHARE_AGENDA: {
-      TITLE: 'Enviar mi agenda',
+      TITLE: 'Enviar agenda a un contacto',
       DESCRIPTION: 'Elige el período y a quién enviarle la agenda.',
       PERIOD: 'Período',
       TODAY: 'Hoy',

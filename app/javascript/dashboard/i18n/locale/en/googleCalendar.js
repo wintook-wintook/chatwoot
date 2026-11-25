@@ -196,7 +196,7 @@ export default {
     },
     CREATE_FROM_CONVERSATION: 'Create Calendar Event',
     SHARE_AGENDA: {
-      TITLE: 'Send my agenda',
+      TITLE: 'Send agenda to a contact',
       DESCRIPTION: 'Choose the period and who to send the agenda to.',
       PERIOD: 'Period',
       TODAY: 'Today',
