@@ -149,7 +149,36 @@ Rails con el token de A, contra `b@…`, los tres casos de compartir de B:
 | Solo libre/ocupado   | ¿200 sin títulos o 403/404?          | ¿busy[]?                      |
 | No compartido        | ¿404 notFound?                       | ¿`errors: notFound`?          |
 
-Se anota lo que responde de verdad; F1 se ajusta a eso. **Necesito tu OK y las dos cuentas.**
+Se anota lo que responde de verdad; F1 se ajusta a eso.
+
+#### F0 — resultados (25/11/2026, cuenta 2 de dev, solo lectura)
+
+Cuentas conectadas en la cuenta 2:
+
+| Agente                    | Correo de Google              | Estado del permiso            |
+|---------------------------|-------------------------------|-------------------------------|
+| #1 Admin                  | aliverio.mx@gmail.com         | sirve                         |
+| #4 Andres Liverio MX      | aliverio.mx@gmail.com         | (mismo Google que #1)         |
+| #24422 Jose Luis Herrera  | camion01kontrolya@gmail.com   | **vencido** (`invalid_grant`) |
+
+Medido (script de solo lectura, sin imprimir títulos):
+
+| A mira a B                         | `events.list(b@)` | `freeBusy(b@)`                 | `calendarList(b@)` |
+|------------------------------------|-------------------|--------------------------------|--------------------|
+| aliverio → camion01 (no compartido)| **404 notFound**  | 200, `errors: ["notFound"]`    | 404                |
+| camion01 → aliverio                | no se pudo: token de camion01 vencido                              |||
+
+Conclusiones hasta ahora:
+- «No compartido» se detecta con certeza: 404 en `events.list` **y** `notFound` en `freeBusy`.
+  Ojo: `freeBusy` responde **200** aunque no haya acceso; hay que leer `errors`, no el código.
+- Dos casos nuevos que el plan no tenía:
+  1. **Mismo Google en dos agentes** (#1 y #4): mirar al «compañero» es mirar tu propio
+     calendario → se trata como detalles completos (sin preguntar a Google).
+  2. **Permiso vencido del que mira o del compañero** → estado «Reconectar» (hoy el panel de
+     disponibilidad lo traga en silencio y lo muestra como «Sin conectar», sin decir que
+     basta con reconectar).
+- Pendiente medir «Ver todos los detalles» y «Ver solo libre/ocupado»: requiere que
+  camion01 comparta su calendario con aliverio en Google (ver pasos en el chat).
 
 ### F1 — Servicio en el servidor
 `app/services/google_calendar/coworker_calendar_service.rb`
