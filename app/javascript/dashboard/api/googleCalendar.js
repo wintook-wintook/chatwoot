@@ -25,9 +25,14 @@ class GoogleCalendarAPI extends ApiClient {
     return axios.patch(`${this.url}/events/${eventId}`, payload);
   }
 
-  getAgentEvents(agentId, params = {}) {
-    return axios.get(`${this.url}/events/agent_events`, {
-      params: { agent_id: agentId, ...params },
+  // fix/calendario_google — compañeros vistos con MI conexión (Google aplica lo compartido).
+  getCoworkers() {
+    return axios.get(`${this.url}/coworkers`);
+  }
+
+  getCoworkerEvents(agentIds, params = {}) {
+    return axios.get(`${this.url}/coworkers/events`, {
+      params: { agent_ids: agentIds, ...params },
     });
   }
 

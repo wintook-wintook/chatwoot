@@ -46,30 +46,6 @@ class Api::V1::Accounts::GoogleCalendar::EventsController < Api::V1::Accounts::B
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
-  def agent_events
-    agent_integration = UserCalendarIntegration.find_by(
-      user_id: params[:agent_id],
-      account: Current.account
-    )
-    return render json: { error: 'Agent not connected' }, status: :not_found unless agent_integration
-
-    service = GoogleCalendarService.new(agent_integration)
-
-    if params[:agent_id].to_s == current_user.id.to_s
-      events = service.list_events(time_min: time_min, time_max: time_max)
-      render json: { events: events }
-    else
-      busy = service.free_busy(
-        calendars: ['primary'],
-        time_min: time_min,
-        time_max: time_max
-      )
-      render json: { busy: busy.dig('calendars', 'primary', 'busy') || [] }
-    end
-  rescue StandardError => e
-    render json: { error: e.message }, status: :unprocessable_entity
-  end
-
   private
 
   def require_integration

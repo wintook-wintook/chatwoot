@@ -286,6 +286,33 @@ Google **vencido** (camion01) se puede ver igual si compartió; basta su correo.
 - `agent_events` (sin uso) se elimina.
 - **D1:** qué pasa con `availability` (franjas de fondo de todos) — ver §7.
 
+#### F2 — HECHA (25/11/2026)
+
+**Qué se hizo**
+- `CoworkersController` (`app/controllers/api/v1/accounts/google_calendar/coworkers_controller.rb`):
+  - `GET /api/v1/accounts/:id/google_calendar/coworkers` → `{ coworkers: [{ agent_id, access,
+    can_schedule, busy_now }], google_email }`. Todos los agentes de la cuenta menos quien mira;
+    `access`: `not_connected` · `none` · `free_busy` · `details` · `same_google` · `error`.
+    `busy_now` = algún evento con hora que cubre este momento (hoy, con caché de 2 min).
+  - `GET …/coworkers/events?agent_ids[]=&start=&end=` → `{ coworkers: [{ agent_id, access,
+    can_schedule, events }] }`. Ignora ids de otra cuenta. **No** devuelve correos de compañeros.
+  - Sin Google conectado → 422; permiso de Google de quien mira vencido → 422 `{ error: 'reconnect' }`.
+- **D1 aplicada** en `AvailabilityController`: misma forma de respuesta (la pantalla actual sigue
+  funcionando), pero los compañeros se consultan con la conexión de quien mira → solo salen los
+  que compartieron al menos libre/ocupado. Mi propio ocupado sigue saliendo (mi conexión, mi calendario).
+- Se eliminó `events#agent_events` + su ruta + `getAgentEvents` del front (nadie lo usaba y leía
+  el calendario ajeno con la conexión del dueño).
+- Front: `GoogleCalendarAPI.getCoworkers()` y `getCoworkerEvents(agentIds, { start, end })`
+  (los usa F3).
+
+**Pila de pruebas**
+- `spec/controllers/api/v1/accounts/google_calendar/coworkers_controller_spec.rb` — 8 casos:
+  sesión, sin Google, reconectar, lista con niveles + `busy_now`, no expone correos, **solo arma la
+  conexión de quien mira**, eventos filtrados por cuenta, `availability` D1.
+  `POSTGRES_DATABASE=chatwoot_test bundle exec rspec spec/controllers/api/v1/accounts/google_calendar/coworkers_controller_spec.rb spec/services/google_calendar_coworker_service_spec.rb` → 18/18.
+- En dev (puerto 3000, Admin #1, cuenta 2): `/coworkers` → Andres y Jose Luis `none`, #2 y #5
+  `not_connected`; `/availability` → solo el propio ocupado de Admin (antes salían todos).
+
 ### F3 — Pantalla
 - `api/googleCalendar.js`: `getCoworkers`, `getCoworkerEvents`.
 - `store/modules/googleCalendar.js`: estado `coworkers`, `coworkerEvents`, `selectedCoworkerIds`.
