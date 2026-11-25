@@ -178,7 +178,10 @@ export default {
       rows[index] = { ...rows[index], units_per_kit: value };
       this.form.components = scaleComponents(rows, this.form.quantity);
     },
+    // Reemplazar depende de REEMPLAZA (`replaceable`), decisión del usuario: en master2 equivale a
+    // quitar y agregar otro. MODIFICA (`units_editable`) solo deja cambiar las unidades.
     replaceComponent(index, article) {
+      if (!this.form.components[index]?.replaceable) return;
       const rows = [...this.form.components];
       rows[index] = {
         ...rows[index],
@@ -208,7 +211,8 @@ export default {
         },
       ];
     },
-    // Solo los reemplazables; el kit se queda con al menos uno (se valida al aceptar).
+    // Quitar depende de REEMPLAZA (`replaceable`), como master2 `removeComp`; el kit se queda
+    // con al menos uno (se valida al aceptar).
     removeComponent(index) {
       if (!this.form.components[index]?.replaceable) return;
       this.form.components = this.form.components.filter((_, i) => i !== index);
@@ -419,6 +423,7 @@ export default {
                 <td class="py-1 pr-2">
                   <ArticlePicker
                     v-if="replacing === index"
+                    allow-stockable-kits
                     :exclude-ids="componentExcludeIds(index)"
                     :placeholder="$t('CRM_ZEUS.QUOTE_FORM.REPLACE_SEARCH')"
                     @pick="article => replaceComponent(index, article)"
@@ -467,6 +472,7 @@ export default {
           </table>
           <ArticlePicker
             class="mt-2"
+            allow-stockable-kits
             :exclude-ids="componentExcludeIds(-1)"
             :placeholder="$t('CRM_ZEUS.QUOTE_FORM.ADD_COMPONENT_SEARCH')"
             @pick="addComponent"

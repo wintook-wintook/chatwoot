@@ -269,7 +269,9 @@ RSpec.describe 'CrmZeus Quotes API' do
         response.parsed_body['message']
       end
 
-      it 'no quita ni cambia un componente no reemplazable' do
+      it 'no quita ni cambia un componente no reemplazable, aunque permita cambiar unidades' do
+        expect(rejected([{ article_id: helmet.id, quantity: 3 }])).to include('«Guantes» del kit «Kit de seguridad» no es reemplazable')
+        safety_kit.components.find_by!(component: gloves).update!(units_editable: true)
         expect(rejected([{ article_id: helmet.id, quantity: 3 }])).to include('«Guantes» del kit «Kit de seguridad» no es reemplazable')
       end
 
@@ -277,10 +279,14 @@ RSpec.describe 'CrmZeus Quotes API' do
         expect(rejected([{ article_id: gloves.id, quantity: 7 }])).to include('«Guantes» del kit «Kit de seguridad» no permite cambiar unidades')
       end
 
-      it 'un kit no puede ser componente ni quedar vacío' do
-        other_kit = account.crm_articles.create!(name: 'Otro kit', is_kit: true)
+      it 'un kit no almacenable no puede ser componente; uno almacenable sí; el kit no queda vacío' do
+        other_kit = account.crm_articles.create!(name: 'Otro kit', is_kit: true, is_stockable: false)
         expect(rejected([{ article_id: gloves.id, quantity: 6 }, { article_id: other_kit.id, quantity: 1 }]))
-          .to include('«Otro kit» es un kit y no puede ser componente')
+          .to include('«Otro kit» es un kit no almacenable y no puede ser componente')
+        stocked_kit = account.crm_articles.create!(name: 'Kit almacenable', is_kit: true, is_stockable: true)
+        create_quote(agent, items: [kit_row(components: [{ article_id: gloves.id, quantity: 6 },
+                                                         { article_id: stocked_kit.id, quantity: 1 }])])
+        expect(response).to have_http_status(:created)
         expect(rejected([])).to include('debe tener al menos un componente')
       end
 

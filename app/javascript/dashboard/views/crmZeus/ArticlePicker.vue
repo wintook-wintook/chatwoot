@@ -4,6 +4,8 @@
   (el propio kit y los que ya están). Emite `pick` con el artículo de la lista.
   Q2: también lo usa la partida de una cotización (con su propio `placeholder`).
   Q3: con `allowKits` también ofrece kits (la partida de una cotización sí puede ser un kit).
+  Q3.1: con `allowStockableKits` ofrece los kits almacenables (componentes de un kit en la
+  cotización: master2 solo rechaza el kit no almacenable).
 -->
 <script>
 import CrmArticles from 'dashboard/api/crmArticles';
@@ -14,6 +16,7 @@ export default {
     excludeIds: { type: Array, default: () => [] },
     placeholder: { type: String, default: '' },
     allowKits: { type: Boolean, default: false },
+    allowStockableKits: { type: Boolean, default: false },
   },
   data() {
     return {
@@ -28,7 +31,9 @@ export default {
     options() {
       return this.results.filter(
         article =>
-          (this.allowKits || !article.is_kit) &&
+          (this.allowKits ||
+            !article.is_kit ||
+            (this.allowStockableKits && article.is_stockable)) &&
           !this.excludeIds.includes(article.id)
       );
     },

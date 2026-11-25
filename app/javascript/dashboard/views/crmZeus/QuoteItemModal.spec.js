@@ -98,15 +98,17 @@ describe('CrmQuoteItemModal (kits)', () => {
     expect(wrapper.vm.form.components.map(c => c.quantity)).toEqual([5, 15]);
   });
 
-  it('reemplaza un componente por otro artículo', async () => {
+  it('reemplaza solo un componente reemplazable (REEMPLAZA)', async () => {
     const wrapper = montar(blankItem());
     await wrapper.vm.pickArticle({ id: 9 });
-    wrapper.vm.replaceComponent(0, {
-      id: 30,
-      key: 'CAS-2',
-      name: 'Casco rojo',
-    });
+    const otro = { id: 30, key: 'CAS-2', name: 'Casco rojo' };
 
+    // Guantes: permite cambiar unidades pero no es reemplazable → no se cambia.
+    wrapper.vm.replaceComponent(1, otro);
+    expect(wrapper.vm.form.components[1]).toMatchObject({ article_id: 21 });
+
+    // Casco: reemplazable → sí.
+    wrapper.vm.replaceComponent(0, otro);
     expect(wrapper.vm.form.components[0]).toMatchObject({
       article_id: 30,
       description: 'Casco rojo',
